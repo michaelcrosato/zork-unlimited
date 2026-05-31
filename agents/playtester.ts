@@ -184,7 +184,10 @@ export async function runRoster(
     findings.push(`Scene "${s}" was never visited by any persona — possibly low-discoverability content.`);
   }
   for (const r of records.filter((r) => r.status === "looped")) {
-    findings.push(`Persona "${r.persona}" (seed ${r.seed}) fell into a loop near "${r.scenes_visited.at(-1)}".`);
+    // The scene where the looping choice was made — the last recorded step.
+    // (scenes_visited is sorted, so its last element is alphabetical, not temporal.)
+    const loopScene = r.steps.at(-1)?.scene_id ?? r.scenes_visited.at(-1);
+    findings.push(`Persona "${r.persona}" (seed ${r.seed}) fell into a loop near "${loopScene}".`);
   }
 
   return {
