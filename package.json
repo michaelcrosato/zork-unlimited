@@ -18,6 +18,7 @@
     "replay": "tsx bin/replay.ts",
     "validate": "tsx bin/validate.ts",
     "play": "tsx bin/play.ts",
+    "playtest": "tsx bin/playtest.ts",
     "mcp": "tsx src/mcp/server.ts"
   },
   "dependencies": {

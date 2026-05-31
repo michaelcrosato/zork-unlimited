@@ -77,9 +77,27 @@ automatically (approve the `adventureforge` server when prompted). The agent loo
 `new_game` → read `observation.available_actions` → `step_action` with a chosen
 `action_id` → repeat until `observation.ended`.
 
-## Next: complete the Stage 1 loop
+### AI playtester loop (§12.4, §12.7)
 
-The pieces above are the engine half. The remaining Stage 1 work (§12–§13) is the
-AI authoring loop with deterministic mock agents: writer → adapter → validator →
-playtester → debugger → fixer, ending in a regression test that locks a found flaw.
-Then Stage 2 graduates the same core to a Zork-style parser adventure.
+A provider-agnostic LLM client (`agents/llm/provider.ts`) with a deterministic
+**MockProvider** default — so the playtester runs in CI with no API keys. The
+playtester (`agents/playtester.ts`) drives the same observation/action loop an
+external agent uses, records each turn (§12.6), and a persona roster aggregates
+route coverage and surfaces honest, non-fabricated findings.
+
+```bash
+npm run playtest -- content/cyoa/pack/watchtower_road.yaml [--out traces/playtests]
+```
+
+On *The Watchtower Road* the mock roster (5 personas × 8 seeds) reaches
+`ending_escape` and `ending_captured` but **not** `ending_truth`, and never visits
+the hidden cache or hermit conversation — a genuine playtest finding: the "good"
+ending is hard to discover without in-world signposting (§17 rule 1). That gap is
+the natural input to the next step: debugger → fixer → regression test (§12.5, §15).
+
+## Next: close the Stage 1 loop
+
+Remaining Stage 1 work (§12.5, §13.6–8, §15): turn the playtester's finding into a
+fix (add clue sources so the truth route is discoverable) and lock it with a
+regression test. Then the writer→adapter half (§12.1–2) for AI-authored packs, and
+Stage 2 graduates the same core to a Zork-style parser adventure.
