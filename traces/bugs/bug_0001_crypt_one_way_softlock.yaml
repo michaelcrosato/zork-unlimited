@@ -1,0 +1,35 @@
+# Bug artifact (spec §15) — surfaced by the §12.8 persona roster during Stage 2
+# development, fixed, and locked by a regression test.
+bug_id: bug_0001
+pack_id: sealed_crypt_v1
+content_hash: e4d3aaecf61057c47e3c998ec484bed3064c91cdf078bf376e47121fbeb534b7   # the PRE-FIX (one-way crypt) variant
+seed: 1
+initial_state: start
+trace:
+  - { type: MOVE, direction: north }   # forest_path → chapel_yard
+  - { type: MOVE, direction: north }   # chapel_yard → chapel_nave
+  - { type: MOVE, direction: down }    # chapel_nave → crypt  (no way back)
+failure:
+  type: soft_lock
+  description: >
+    In the pre-fix pack the crypt had only a (locked) north exit to the catacombs
+    and NO exit back up. A player who descended to the crypt without first solving
+    the rope→well→keys chain could neither open the iron gate nor leave — a classic
+    one-way adventure soft-lock. The roster surfaced it experientially: 17 of 24
+    runs wedged in the crypt, including the dropper and wrong_order personas (§12.8,
+    "out-of-order and dropper personas matter most"). After the descent the engine
+    offered no MOVE actions at all.
+surfaced_by:
+  personas: [mainline, hoarder, dropper, dialogue_skipper, wrong_order, speedrunner]
+  runs_stuck_in_crypt: 17
+expected:
+  - the crypt must remain escapable (add an `up` exit back to the nave), OR
+  - the descent must be gated until the iron key is held
+fix:
+  layer: quest_structure        # one of: content | engine_rule | validator | test | hint_text | quest_structure
+  summary: >
+    Added an `up` exit from crypt → chapel_nave so the descent is reversible. The
+    SOFTLOCK_QUEST_ITEM validator check (strong-connectivity over reachable
+    non-terminal rooms) now rejects the one-way variant, so the regression cannot
+    silently return.
+regression_test: tests/regression/parser_crypt_softlock.test.ts
