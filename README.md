@@ -58,6 +58,25 @@ npm run play -- content/cyoa/pack/watchtower_road.yaml     # Stage 1: play it (i
 Non-interactive play (scriptable / CI): add `--choices id1,id2,...` and optionally
 `--record traces/run.json` to save a replayable trace.
 
+### MCP server — how an agent plays the game (§9.4)
+
+The engine is exposed as an MCP server so any agent harness (Claude Code, Codex,
+Gemini CLI, …) plays via native tool calls over the structured observation/action
+loop — never a raw parser. Tools: `validate_pack`, `load_pack`, `new_game`,
+`get_observation`, `list_legal_actions`, `step_action`, `save_game`, `load_game`,
+`replay_trace`. All paths are confined to the project root; content and traces are
+data only (§16). The handlers (`src/mcp/tools.ts`) are unit-tested directly without
+a live client.
+
+```bash
+npm run mcp   # start the stdio server
+```
+
+The project ships `.mcp.json`, so an MCP client opened in this repo can connect
+automatically (approve the `adventureforge` server when prompted). The agent loop is:
+`new_game` → read `observation.available_actions` → `step_action` with a chosen
+`action_id` → repeat until `observation.ended`.
+
 ## Next: complete the Stage 1 loop
 
 The pieces above are the engine half. The remaining Stage 1 work (§12–§13) is the

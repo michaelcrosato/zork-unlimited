@@ -17,9 +17,11 @@
     "test:watch": "vitest",
     "replay": "tsx bin/replay.ts",
     "validate": "tsx bin/validate.ts",
-    "play": "tsx bin/play.ts"
+    "play": "tsx bin/play.ts",
+    "mcp": "tsx src/mcp/server.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "yaml": "^2.9.0",
     "zod": "^3.23.8"
   },

@@ -1,0 +1,108 @@
+import { describe, it, expect, beforeAll } from "vitest";
+import { writeFileSync, mkdirSync } from "node:fs";
+import { createToolApi } from "../../src/mcp/tools.js";
+import { PathEscapeError } from "../../src/mcp/paths.js";
+import { loadPackFile } from "../../src/cyoa/pack.js";
+import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
+import { recordTrace } from "../../src/trace/record.js";
+
+const ROOT = process.cwd();
+const PACK = "content/cyoa/pack/watchtower_road.yaml";
+const api = () => createToolApi({ root: ROOT });
+
+describe("MCP tools — validate / load (§9.4)", () => {
+  it("validate_pack reports the shipped pack as green", () => {
+    const r = api().validate_pack({ pack_path: PACK });
+    expect(r.ok).toBe(true);
+    expect(r.report.findings.filter((f) => f.severity === "error")).toEqual([]);
+  });
+
+  it("load_pack returns meta + content hash", () => {
+    const r = api().load_pack({ pack_path: PACK });
+    expect(r.ok).toBe(true);
+    expect(r.meta?.id).toBe("watchtower_road_v1");
+    expect(r.content_hash).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("validate_pack on a broken fixture surfaces an error", () => {
+    const r = api().validate_pack({ pack_path: "content/broken-fixtures/softlock.yaml" });
+    expect(r.ok).toBe(false);
+    expect(r.report.findings.map((f) => f.code)).toContain("SOFTLOCK");
+  });
+});
+
+describe("MCP tools — the play loop (§9.1)", () => {
+  it("an agent can play a whole game via observe → choose → step", () => {
+    const a = api();
+    const game = a.new_game({ pack_path: PACK, seed: 5 });
+    expect(game.session_id).toBe("sess_1");
+    expect(game.observation.available_actions.map((x) => x.id)).toContain("go_west");
+
+    // Drive the shortest escape route turn by turn.
+    const route = ["go_west", "ford_brook", "cross_north", "slip_into_woods", "slip_away"];
+    let last;
+    for (const action_id of route) {
+      last = a.step_action({ session_id: game.session_id, action_id });
+      expect(last.ok).toBe(true);
+    }
+    expect(last!.observation.ended).toBe(true);
+    expect(last!.observation.ending_id).toBe("ending_escape");
+    expect(a.list_legal_actions({ session_id: game.session_id }).actions).toEqual([]);
+  });
+
+  it("step_action rejects an illegal action without changing state", () => {
+    const a = api();
+    const game = a.new_game({ pack_path: PACK });
+    const before = a.get_observation({ session_id: game.session_id }).state_hash;
+    const r = a.step_action({ session_id: game.session_id, action_id: "not_a_real_choice" });
+    expect(r.ok).toBe(false);
+    expect(r.rejection_reason).toBeTruthy();
+    expect(r.state_hash).toBe(before);
+  });
+
+  it("refuses to start a game on an unplayable pack", () => {
+    expect(() => api().new_game({ pack_path: "content/broken-fixtures/softlock.yaml" })).toThrow(/not playable/i);
+  });
+});
+
+describe("MCP tools — save / load round-trip (§8.7)", () => {
+  it("a saved game reloads to the identical state hash", () => {
+    const a = api();
+    const game = a.new_game({ pack_path: PACK, seed: 3 });
+    a.step_action({ session_id: game.session_id, action_id: "go_east" });
+    const after = a.get_observation({ session_id: game.session_id }).state_hash;
+
+    const saved = a.save_game({ session_id: game.session_id });
+    const reloaded = a.load_game({ pack_path: PACK, save: saved.save });
+    expect(reloaded.state_hash).toBe(after);
+  });
+});
+
+describe("MCP tools — replay + path confinement", () => {
+  beforeAll(() => {
+    // Record a trace to disk for replay_trace to read.
+    const compiled = loadPackFile(PACK);
+    if (!compiled.ok) throw new Error("pack must compile");
+    const index = indexPack(compiled.compiled.pack);
+    const rules = buildRules(index);
+    const actions = ["go_west", "ford_brook", "cross_north", "slip_into_woods", "slip_away"].map(
+      (id) => ({ type: "CHOOSE" as const, choiceId: id }),
+    );
+    const trace = recordTrace(rules, initStateForPack(index, 1), actions, {
+      trace_id: "tr_mcp",
+      pack_id: compiled.compiled.pack.meta.id,
+      content_hash: compiled.compiled.contentHash,
+    });
+    mkdirSync("traces", { recursive: true });
+    writeFileSync("traces/mcp_replay.json", JSON.stringify(trace));
+  });
+
+  it("replay_trace reproduces the recorded final hash", () => {
+    const r = api().replay_trace({ trace_path: "traces/mcp_replay.json", pack_path: PACK });
+    expect(r.ok).toBe(true);
+  });
+
+  it("rejects a path that escapes the project root", () => {
+    expect(() => api().validate_pack({ pack_path: "../../../etc/passwd" })).toThrow(PathEscapeError);
+  });
+});
