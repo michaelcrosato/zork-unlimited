@@ -1,0 +1,13 @@
+# MUST FAIL at SCHEMA load: an empty room description violates min(1) (§7).
+meta: { id: bad_empty, title: "Bad Empty", start_room: a }
+rooms:
+  - id: a
+    name: "A"
+    description: ""
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]
