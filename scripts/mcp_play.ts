@@ -36,7 +36,7 @@ async function main(): Promise<void> {
     else if (process.argv[i] === "--do") actions = (process.argv[++i] ?? "").split(",").filter(Boolean);
   }
 
-  const transport = new StdioClientTransport({ command: "npx", args: ["tsx", "src/mcp/server.ts"] });
+  const transport = new StdioClientTransport({ command: "npm", args: ["--silent", "run", "mcp"] });
   const client = new Client({ name: "mcp-play-harness", version: "0.1.0" });
   await client.connect(transport);
 

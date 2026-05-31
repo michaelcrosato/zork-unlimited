@@ -9,6 +9,19 @@
 import type { GameState } from "../core/state.js";
 import type { Rules } from "../core/engine.js";
 import type { CyoaIndex } from "../cyoa/runner.js";
+import type { GameEvent } from "../core/events.js";
+
+export type TranscriptTurn = {
+  step: number;
+  scene_id: string;
+  title: string;
+  action_id: string | null;
+  action_text: string | null;
+  events: GameEvent[];
+  result_scene_id: string;
+  ended: boolean;
+  ending_id: string | null;
+};
 
 export type Session = {
   id: string;
@@ -17,6 +30,7 @@ export type Session = {
   index: CyoaIndex;
   rules: Rules;
   state: GameState;
+  transcript: TranscriptTurn[];
 };
 
 export class SessionStore {

@@ -7,5 +7,12 @@ dist/
 # Ad-hoc recorded playthroughs (curated bug artifacts live in traces/bugs/)
 /traces/*.json
 
-# Personal goal/prompt scratch (not part of the project)
-AFKGOAL.md
+# Autonomous AFK loop scratch evidence
+ai-runs/
+saves/*.json
+transcripts/*.md
+coverage/
+
+# Repo-local Codex config is tracked; runtime state/auth/session data is not.
+.codex/*
+!.codex/config.toml

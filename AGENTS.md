@@ -33,3 +33,9 @@ corrupt saves require human review. "A strong model wrote it" is not a safety ar
   in `tests/regression/` (§15).
 - If a requirement is ambiguous, prefer the interpretation that makes the engine
   **stricter** and the content **more validated** (§0).
+- For AFK improvement loops, treat MCP play as mandatory evidence. A meaningful
+  cycle must discover stories, validate the selected pack, run random and
+  coverage playtests, complete a known good ending route, attempt an exploratory
+  route, and record compact durable notes in `AI_LOOP_STATE.md`.
+- Keep raw autonomous evidence in ignored `ai-runs/`; do not commit generated
+  saves, transcripts, coverage, build output, or dependency directories.

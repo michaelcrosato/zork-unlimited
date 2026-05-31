@@ -39,6 +39,18 @@ const PACK = { pack_path: z.string().describe("Path to a CYOA pack (.yaml), rela
 const SESSION = { session_id: z.string().describe("A session id from new_game/load_game.") };
 
 tool("validate_pack", "Validate a CYOA content pack; returns the validation report (§10).", PACK, (a) => api.validate_pack(a));
+tool(
+  "list_stories",
+  "List playable CYOA story packs in content/cyoa/pack and identify the default story for AFK playtesting.",
+  {},
+  () => api.list_stories(),
+);
+tool(
+  "validate_story",
+  "AFK alias for validate_pack; validates one story and returns hard errors/warnings.",
+  { story_path: z.string().describe("Path to a CYOA story pack, relative to the project root.") },
+  (a) => api.validate_story(a),
+);
 tool("load_pack", "Compile a pack and return its metadata, content hash, and validation report.", PACK, (a) => api.load_pack(a));
 
 tool(
@@ -47,8 +59,17 @@ tool(
   { ...PACK, seed: z.number().int().optional().describe("Deterministic seed (default 1).") },
   (a) => api.new_game(a),
 );
+tool(
+  "start_game",
+  "AFK alias for new_game; start a story session for MCP-driven playtesting.",
+  { story_path: z.string().describe("Path to a CYOA story pack."), seed: z.number().int().optional() },
+  (a) => api.start_game(a),
+);
 
 tool("get_observation", "Get the current AI-facing observation for a session (§9.1).", SESSION, (a) => api.get_observation(a));
+tool("get_scene", "AFK alias for get_observation; returns current scene text, state, and visible options.", SESSION, (a) =>
+  api.get_scene(a),
+);
 tool("list_legal_actions", "List the legal actions available right now in a session (§9).", SESSION, (a) => api.list_legal_actions(a));
 
 tool(
@@ -56,6 +77,30 @@ tool(
   "Apply one chosen action (by its id from available_actions); returns events + the new observation.",
   { ...SESSION, action_id: z.string().describe("An action id from the current legal-action set.") },
   (a) => api.step_action(a),
+);
+tool(
+  "choose_option",
+  "AFK alias for step_action; choose one visible option id and return the next scene.",
+  { ...SESSION, option_id: z.string().describe("An option/action id from get_scene().observation.available_actions.") },
+  (a) => api.choose_option(a),
+);
+tool("get_state", "Return the raw deterministic state and state hash for a session.", SESSION, (a) => api.get_state(a));
+tool(
+  "get_transcript",
+  "Return a compact turn transcript with choices, events, inventory, flags, journal, and ending state.",
+  SESSION,
+  (a) => api.get_transcript(a),
+);
+tool(
+  "run_playtest",
+  "Run deterministic automated MCP-style CYOA playtests and summarize endings, coverage, unvisited scenes, and suspicious paths.",
+  {
+    story_path: z.string().describe("Path to a CYOA story pack."),
+    strategy: z.enum(["random", "coverage"]).optional().describe("random samples varied choices; coverage biases toward new/investigative options."),
+    runs: z.number().int().positive().optional().describe("Number of runs, default 100."),
+    max_steps: z.number().int().positive().optional().describe("Per-run step cap, default 80."),
+  },
+  (a) => api.run_playtest(a),
 );
 
 tool("save_game", "Serialize a session to a save string (content-hash bound, §8.7).", SESSION, (a) => api.save_game(a));

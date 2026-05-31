@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "adventureforge": {
-      "command": "npx",
-      "args": ["tsx", "src/mcp/server.ts"],
+      "command": "npm",
+      "args": ["--silent", "run", "mcp"],
       "env": {}
     }
   }
