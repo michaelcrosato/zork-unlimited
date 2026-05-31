@@ -25,6 +25,7 @@ export const EffectSchema = z.union([
   z.object({ unlock_exit: z.object({ from: z.string().min(1), to: z.string().min(1) }).strict() }).strict(),
   z.object({ open_object: z.string().min(1) }).strict(),
   z.object({ set_object_locked: z.object({ id: z.string().min(1), locked: z.boolean() }).strict() }).strict(),
+  z.object({ place_object: z.object({ id: z.string().min(1), room: z.string().min(1) }).strict() }).strict(),
   z.object({ narrate: z.string() }).strict(),
   z.object({ end_game: z.string().min(1) }).strict(),
 ]);
@@ -132,6 +133,15 @@ export function applyEffect(effect: Effect, state: GameState): { state: GameStat
         id: effect.set_object_locked.id,
         locked: effect.set_object_locked.locked,
       },
+    };
+  }
+  if ("place_object" in effect) {
+    // Move an object into a room (e.g. a DROP, or a scripted placement). The
+    // object's room overrides its static home; holding it (inventory) takes
+    // precedence over room when locating it (§7.3, parser object model).
+    return {
+      state: { ...state, objectState: patchObject(state, effect.place_object.id, { room: effect.place_object.room }) },
+      event: { type: "state_change", effect: "place_object", id: effect.place_object.id, room: effect.place_object.room },
     };
   }
   if ("narrate" in effect) {

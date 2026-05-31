@@ -47,6 +47,17 @@ describe("effect reducer", () => {
     expect(s.objectState["chest"]).toEqual({ open: true, locked: false });
   });
 
+  it("place_object records the object's room without disturbing other state", () => {
+    let s = applyEffect({ open_object: "chest" }, base()).state;
+    const r = applyEffect({ place_object: { id: "lantern", room: "cellar" } }, s);
+    expect(r.state.objectState["lantern"]).toEqual({ room: "cellar" });
+    expect(r.state.objectState["chest"]?.open).toBe(true); // unrelated object untouched
+    expect(r.event).toEqual({ type: "state_change", effect: "place_object", id: "lantern", room: "cellar" });
+    // overwrites a prior placement
+    s = applyEffect({ place_object: { id: "lantern", room: "attic" } }, r.state).state;
+    expect(s.objectState["lantern"]?.room).toBe("attic");
+  });
+
   it("end_game terminates", () => {
     const r = applyEffect({ end_game: "ending_x" }, base());
     expect(r.state.ended).toBe(true);

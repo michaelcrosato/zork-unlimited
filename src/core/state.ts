@@ -11,6 +11,7 @@ export type ObjectRuntime = {
   locked?: boolean;
   contents?: string[]; // object ids inside a container
   takenBy?: "player" | "world"; // location bookkeeping
+  room?: string; // current room id if the object has been moved/dropped (Stage 2, §7.3)
 };
 
 export type GameState = {
