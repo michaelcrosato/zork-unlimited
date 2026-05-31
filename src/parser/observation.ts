@@ -7,6 +7,7 @@
  * absent until traversable, so the action set never spoils *how* to open them.
  */
 import type { GameState } from "../core/state.js";
+import type { Action } from "../api/types.js";
 import { evalConditions } from "../core/conditions.js";
 import { type ParserIndex, activeDialogue, visibleObjectIds } from "./model.js";
 import { enumerateActions } from "./legal_actions.js";
@@ -22,7 +23,7 @@ export type ParserObservation = {
   inventory: string[];
   state: { flags: string[]; vars: Record<string, number>; journal: string[] };
   dialogue: { npc: string; npc_text: string } | null;
-  available_actions: { id: string; command: string; action: unknown }[];
+  available_actions: { id: string; command: string; action: Action }[];
   ended: boolean;
   ending_id: string | null;
 };
