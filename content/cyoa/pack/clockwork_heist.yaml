@@ -1,0 +1,181 @@
+# The Clockwork Heist — a CYOA pack (Stage 1 format).
+#
+# A thief in a clockwork manor. Three endings: escape rich (the loot), get caught
+# (force the vault and trip the alarm), or learn the truth (the hidden letter,
+# reachable either through the vault or a secret crawlspace behind the great
+# clock). One condition-locked choice (the vault lock needs the lockpick), one
+# item that gates it (the lockpick, found in the kitchen), and one hidden scene
+# (the crawlspace, found only by inspecting the clock).
+
+meta:
+  id: clockwork_heist_v1
+  title: "The Clockwork Heist"
+  start: foyer
+  flags_init: []
+  vars_init: {}
+
+scenes:
+  - id: foyer
+    title: "The Clockwork Foyer"
+    text: >
+      Moonlight pours through the manor's glass dome onto a thousand turning gears.
+      A grand staircase rises into shadow; a low door leads off to the kitchens; and
+      the great hall clock ticks against the far wall, vast as a coffin.
+    choices:
+      - id: inspect_clock
+        text: "Examine the great clock."
+        conditions: [{ not_flag: saw_clock }]
+        effects:
+          - set_flag: saw_clock
+          - add_journal: "Behind the clock's pendulum runs a faint seam — a hidden panel?"
+        next: foyer
+      - id: pry_panel
+        text: "Pry open the panel behind the clock."
+        conditions: [{ has_flag: saw_clock }, { not_flag: found_passage }]
+        effects:
+          - set_flag: found_passage
+          - add_journal: "The panel swings back on a dusty crawlspace."
+        next: crawlspace
+      - id: climb_stairs
+        text: "Climb the grand staircase."
+        next: landing
+      - id: kitchens
+        text: "Slip through the door to the kitchens."
+        next: kitchen
+
+  - id: kitchen
+    title: "The Cold Kitchen"
+    text: >
+      Copper pots hang in rows above a banked hearth. By the dumbwaiter, a servant
+      has left a slim roll of lockpicks.
+    choices:
+      - id: take_pick
+        text: "Pocket the lockpicks."
+        conditions: [{ not_item: lockpick }]
+        effects:
+          - add_item: lockpick
+          - add_journal: "Lockpicks — exactly what a clockwork vault deserves."
+        next: kitchen
+      - id: dumbwaiter
+        text: "Ride the dumbwaiter up to the gallery."
+        next: landing
+      - id: back_foyer
+        text: "Return to the foyer."
+        next: foyer
+
+  - id: landing
+    title: "The Automaton Gallery"
+    text: >
+      A long gallery lined with frozen automata, their glass eyes following you. The
+      vault door broods at the far end. A study stands ajar to one side.
+    choices:
+      - id: enter_study
+        text: "Step into the study."
+        next: study
+      - id: approach_vault
+        text: "Approach the vault door."
+        next: vault_door
+      - id: back_down
+        text: "Go back down to the foyer."
+        next: foyer
+
+  - id: study
+    title: "The Steward's Study"
+    text: >
+      Ledgers, a cold lamp, and a brass wall-plate engraved: "The vault yields only
+      to a steady hand — never to force."
+    choices:
+      - id: read_ledger
+        text: "Read the open ledger."
+        conditions: [{ not_flag: read_ledger }]
+        effects:
+          - set_flag: read_ledger
+          - add_journal: "The ledger notes a guard who walks the gallery on the hour."
+        next: study
+      - id: leave_study
+        text: "Return to the gallery."
+        next: landing
+
+  - id: vault_door
+    title: "The Vault Door"
+    text: >
+      The vault's clockwork lock ticks under your fingers — a hundred tiny tumblers.
+      The brass plate's warning echoes: force will not open this.
+    choices:
+      - id: pick_lock
+        text: "Pick the lock with the lockpicks."
+        conditions: [{ has_item: lockpick }, { not_flag: alarm }]
+        effects:
+          - set_flag: vault_open
+          - add_journal: "The tumblers fall, one by one. The vault sighs open."
+        next: vault
+      - id: force_door
+        text: "Force the door with your shoulder."
+        effects:
+          - set_flag: alarm
+          - add_journal: "Steel shrieks — and somewhere a bell begins to clang."
+        next: ending_caught
+      - id: retreat
+        text: "Back away to the gallery."
+        next: landing
+
+  - id: vault
+    title: "Inside the Vault"
+    text: >
+      Stacked gold gleams on iron shelves. Apart from it all, on a velvet cushion,
+      lies a single sealed letter addressed to no one.
+    choices:
+      - id: grab_gold
+        text: "Fill your pockets with gold and run."
+        effects:
+          - add_item: gold
+          - add_journal: "Heavy, cold, and yours."
+        next: ending_rich
+      - id: take_letter
+        text: "Take the sealed letter instead."
+        effects:
+          - add_item: letter
+          - set_flag: has_letter
+        next: ending_truth
+
+  - id: crawlspace
+    title: "The Crawlspace"
+    text: >
+      Dust and cobweb and the smell of old brass. The passage runs behind the vault
+      to a forgotten strongbox — and inside it, that same sealed letter.
+    choices:
+      - id: open_strongbox
+        text: "Pick the strongbox open."
+        conditions: [{ has_item: lockpick }]
+        effects:
+          - add_item: letter
+          - set_flag: has_letter
+        next: ending_truth
+      - id: pry_strongbox
+        text: "Lever the rusted strongbox open by hand."
+        conditions: [{ not_item: lockpick }]
+        effects:
+          - add_item: letter
+          - set_flag: has_letter
+        next: ending_truth
+      - id: back_crawl
+        text: "Crawl back out to the foyer."
+        next: foyer
+
+endings:
+  - id: ending_rich
+    title: "Rich"
+    text: >
+      You melt into the night with your pockets full of gold. By dawn you are three
+      towns away, and the clockwork manor is just a story you will never tell.
+  - id: ending_caught
+    title: "Caught"
+    text: >
+      The alarm bell brings the house awake. Lanterns, shouts, the gallery's
+      automata grinding to life around you. There is nowhere in the manor to run.
+  - id: ending_truth
+    title: "The Truth"
+    text: >
+      You break the seal by moonlight. The letter is the steward's confession — the
+      manor's fortune was stolen, every coin of it, from people like you. You leave
+      the gold and take the truth. Some things are worth more than escaping rich.
