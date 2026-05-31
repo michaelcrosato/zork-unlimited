@@ -21,6 +21,7 @@
     "play:parser": "tsx bin/parser_play.ts",
     "playtest": "tsx bin/playtest.ts",
     "playtest:parser": "tsx bin/parser_playtest.ts",
+    "author": "tsx bin/author.ts",
     "mcp": "tsx src/mcp/server.ts"
   },
   "dependencies": {

@@ -9,15 +9,17 @@ import { describe, it, expect } from "vitest";
 import { loadParserPackFile } from "../../src/parser/pack.js";
 import { validateParser } from "../../src/validate/parser_validator.js";
 
-describe("parser validator — shipped pack", () => {
-  it("The Sealed Crypt validates with no errors or warnings", () => {
-    const loaded = loadParserPackFile("content/parser/pack/sealed_crypt.yaml");
-    expect(loaded.ok).toBe(true);
-    if (!loaded.ok) return;
-    const report = validateParser(loaded.compiled.pack);
-    expect(report.ok).toBe(true);
-    expect(report.findings).toHaveLength(0);
-  });
+describe("parser validator — shipped packs", () => {
+  for (const path of ["content/parser/pack/sealed_crypt.yaml", "content/parser/pack/alchemists_tower.yaml"]) {
+    it(`${path} validates with no errors or warnings`, () => {
+      const loaded = loadParserPackFile(path);
+      expect(loaded.ok).toBe(true);
+      if (!loaded.ok) return;
+      const report = validateParser(loaded.compiled.pack);
+      expect(report.ok).toBe(true);
+      expect(report.findings).toHaveLength(0);
+    });
+  }
 });
 
 describe("parser validator — negative fixtures must fail (§10.4)", () => {
@@ -31,6 +33,9 @@ describe("parser validator — negative fixtures must fail (§10.4)", () => {
     ["parser_duplicate_id", "DUPLICATE_ID"],
     ["parser_ambiguous_alias", "AMBIGUOUS_ALIAS"],
     ["parser_dialogue_nonterminating", "DIALOGUE_NONTERMINATING"],
+    ["parser_score_unreachable", "SCORE_UNREACHABLE"],
+    ["parser_end_game_undeclared", "END_GAME_UNDECLARED"],
+    ["parser_win_is_death", "WIN_IS_DEATH"],
   ];
 
   for (const [file, code] of VALIDATOR_FIXTURES) {

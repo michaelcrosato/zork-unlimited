@@ -11,6 +11,7 @@ import type { Action } from "../api/types.js";
 import { evalConditions } from "../core/conditions.js";
 import { type ParserIndex, activeDialogue, visibleObjectIds } from "./model.js";
 import { enumerateActions } from "./legal_actions.js";
+import { SCORE_VAR } from "./schema.js";
 
 export type ParserObservation = {
   mode: "parser";
@@ -24,8 +25,10 @@ export type ParserObservation = {
   state: { flags: string[]; vars: Record<string, number>; journal: string[] };
   dialogue: { npc: string; npc_text: string } | null;
   available_actions: { id: string; command: string; action: Action }[];
+  score: number;
   ended: boolean;
   ending_id: string | null;
+  ending: { id: string; title: string; text: string; death: boolean } | null;
 };
 
 function visible<T>(record: Record<string, T>, keep: (v: T) => boolean): Record<string, T> {
@@ -39,6 +42,7 @@ function visible<T>(record: Record<string, T>, keep: (v: T) => boolean): Record<
 export function buildParserObservation(index: ParserIndex, state: GameState): ParserObservation {
   const room = index.rooms.get(state.current);
   const active = activeDialogue(index, state);
+  const endingDef = state.ended && state.endingId ? index.pack.endings.find((e) => e.id === state.endingId) : undefined;
 
   const visObjs = visibleObjectIds(index, state, state.current).map((id) => ({ id, name: index.objects.get(id)?.name ?? id }));
   const npcs = (index.npcByRoom.get(state.current) ?? []).map((n) => ({ id: n.id, name: n.name }));
@@ -49,8 +53,8 @@ export function buildParserObservation(index: ParserIndex, state: GameState): Pa
   return {
     mode: "parser",
     room: state.current,
-    title: room?.name ?? state.current,
-    description: room?.description ?? "",
+    title: endingDef ? endingDef.title : room?.name ?? state.current,
+    description: endingDef ? endingDef.text : room?.description ?? "",
     visible_objects: visObjs,
     npcs_present: npcs,
     exits,
@@ -62,7 +66,9 @@ export function buildParserObservation(index: ParserIndex, state: GameState): Pa
     },
     dialogue: active ? { npc: active.npc.id, npc_text: active.node.npc_text } : null,
     available_actions: enumerateActions(index, state).map((o) => ({ id: o.id, command: o.command, action: o.action })),
+    score: state.vars[SCORE_VAR] ?? 0,
     ended: state.ended,
     ending_id: state.endingId,
+    ending: endingDef ? { id: endingDef.id, title: endingDef.title, text: endingDef.text, death: endingDef.death } : null,
   };
 }

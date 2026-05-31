@@ -24,6 +24,14 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.content_hash).toMatch(/^[0-9a-f]{64}$/);
   });
 
+  it("adapt_story authors a green CYOA pack from a premise (§12.1–3)", async () => {
+    const r = await api().adapt_story({ premise: "A keeper relights a dead lighthouse." });
+    expect(r.ok).toBe(true);
+    expect(r.report.ok).toBe(true);
+    expect(r.pack?.meta.id).toBe("lighthouse_v1");
+    expect(r.classifications.length).toBeGreaterThanOrEqual(3);
+  });
+
   it("validate_pack on a broken fixture surfaces an error", () => {
     const r = api().validate_pack({ pack_path: "content/broken-fixtures/softlock.yaml" });
     expect(r.ok).toBe(false);

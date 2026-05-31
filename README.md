@@ -74,6 +74,40 @@ locked-exit/locked-container key satisfiability, an item-obtainability fixpoint
 guards (consumption and one-way-map drops), dialogue-tree termination, and
 win reachability — each with a documented conservative approximation.
 
+### Stage 3 — Sierra-Quest style (score · death/restore · puzzle chains) ✅
+
+Same core again, now with a **score**, **death endings recoverable via load**, and
+longer puzzle chains.
+
+| Piece | File |
+|---|---|
+| Score (`inc_var` on a `score` var) + `max_score`, `ending.death` flag | `src/parser/schema.ts` |
+| Validator extensions (§13 Stage 3) | `src/validate/parser_validator.ts` |
+| Sample pack: *The Alchemist's Tower* (brew an antidote; a fatal black phial) | `content/parser/pack/alchemists_tower.yaml` |
+
+Scoring is a conventional `score` var awarded via `inc_var`; death endings are
+terminal non-win endings reached by an `end_game` effect, and are recoverable by
+loading a pre-death save (§8.7). The validator adds **score reachability**
+(`max_score` ≤ total awards), **`end_game` target declared**, **win-is-not-death**,
+and **at-least-one-winnable-ending** — no engine change was needed.
+
+### AI authoring — packs from prose (§11, §12.1–3)
+
+A pack can be **authored from a one-line premise** by the writer → adapter →
+validator loop. The writer drafts prose + beats; the adapter emits a CYOA pack and
+classifies each beat against the engine contract (`content/engine_contract.yaml`,
+§11); it loops against the validator until the report is green — the validator, not
+the model, decides correctness (§16). The default `MockAuthorProvider` is
+deterministic (no API keys); its first attempt ships a dangling reference and
+self-corrects once the validator's errors are fed back. A real provider slots in
+behind an env var (§12.7).
+
+```bash
+npm run author -- "A keeper must relight a dead lighthouse before a ship wrecks."
+```
+
+The same pipeline is exposed over MCP as the `adapt_story` tool.
+
 ## Quickstart
 
 ```bash
@@ -86,6 +120,8 @@ npm run play -- content/cyoa/pack/watchtower_road.yaml     # Stage 1: play it (i
 npm run validate -- content/parser/pack/sealed_crypt.yaml  # Stage 2: validate the parser pack
 npm run play:parser -- content/parser/pack/sealed_crypt.yaml # Stage 2: play it (interactive)
 npm run playtest:parser -- content/parser/pack/sealed_crypt.yaml # Stage 2: the §12.8 roster
+npm run play:parser -- content/parser/pack/alchemists_tower.yaml  # Stage 3: score + death/restore
+npm run author -- "your one-line premise here"             # author a pack from prose (§12.1-3)
 ```
 
 Non-interactive play (scriptable / CI): for CYOA add `--choices id1,id2,...`; for the
@@ -98,7 +134,8 @@ The engine is exposed as an MCP server so any agent harness (Claude Code, Codex,
 Gemini CLI, …) plays via native tool calls over the structured observation/action
 loop — never a raw parser. Tools: `validate_pack`, `load_pack`, `new_game`,
 `get_observation`, `list_legal_actions`, `step_action`, `save_game`, `load_game`,
-`replay_trace`. All paths are confined to the project root; content and traces are
+`replay_trace`, `adapt_story` (author a pack from a premise). All paths are
+confined to the project root; content and traces are
 data only (§16). The handlers (`src/mcp/tools.ts`) are unit-tested directly without
 a live client.
 
@@ -143,9 +180,11 @@ soft-lock now fixed and locked by `bug_0001` (§15).
 npm run playtest:parser -- content/parser/pack/sealed_crypt.yaml [--out traces/playtests]
 ```
 
-## Next: writer → adapter, then Stage 3
+## Next: Stage 4
 
-Stages 0–2 are complete and green. Remaining: the AI **writer → adapter** half
-(§12.1–2) so packs are AI-authored from prose against the engine contract
-(`content/engine_contract.yaml`, §11), then Stage 3 (Sierra-Quest: score, death/restore,
-multi-step puzzle chains) graduating the same deterministic core.
+Stages 0–3 plus the AI authoring pipeline are complete and green. Remaining:
+Stage 4 (Hero's-Quest: character stats in `vars`, deterministic seeded skill
+checks, simple turn-based combat resolved in code, quest stages) — all through
+the §14 engine-extension gate, with combat randomness flowing through the seeded
+PRNG so every fight stays replayable; then Stage 5 (a UI as a view over the same
+headless core).

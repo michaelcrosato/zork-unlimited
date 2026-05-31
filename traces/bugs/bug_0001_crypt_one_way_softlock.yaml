@@ -2,7 +2,7 @@
 # development, fixed, and locked by a regression test.
 bug_id: bug_0001
 pack_id: sealed_crypt_v1
-content_hash: e4d3aaecf61057c47e3c998ec484bed3064c91cdf078bf376e47121fbeb534b7   # the PRE-FIX (one-way crypt) variant
+content_hash: 00b290f529d390b4a0f1a4178db33d846874bedfbd788715be287c89d22d3d01   # the PRE-FIX (one-way crypt) variant
 seed: 1
 initial_state: start
 trace:
