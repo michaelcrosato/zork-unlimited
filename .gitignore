@@ -6,3 +6,6 @@ dist/
 
 # Ad-hoc recorded playthroughs (curated bug artifacts live in traces/bugs/)
 /traces/*.json
+
+# Personal goal/prompt scratch (not part of the project)
+AFKGOAL.md
