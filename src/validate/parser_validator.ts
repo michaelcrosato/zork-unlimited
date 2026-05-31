@@ -304,6 +304,29 @@ function computeObtainable(pack: ParserPack, objById: Map<string, GameObject>, r
         }
       }
     }
+    // Items GRANTED by a reachable interaction (e.g. a brewed antidote) become
+    // obtainable once the interaction's required item and any has_item conditions
+    // are themselves obtainable. (Flag conditions are checked by IMPOSSIBLE_GATE.)
+    for (const o of pack.objects) {
+      const room = homeRoom.get(o.id);
+      if (!room || !reachable.has(room)) continue; // the interaction's object must be reachable
+      for (const it of o.interactions) {
+        const itemOk = it.item === undefined || obtainable.has(it.item);
+        const condItemsOk = itemReqs(it.conditions).every((i) => obtainable.has(i));
+        if (!itemOk || !condItemsOk) continue;
+        for (const e of it.effects) {
+          if ("add_item" in e && !obtainable.has(e.add_item)) {
+            obtainable.add(e.add_item);
+            changed = true;
+          }
+        }
+      }
+    }
+    // Items granted unconditionally by a reachable room's on_enter.
+    for (const r of pack.rooms) {
+      if (!reachable.has(r.id)) continue;
+      for (const e of r.on_enter) if ("add_item" in e && !obtainable.has(e.add_item)) (obtainable.add(e.add_item), (changed = true));
+    }
   }
   return obtainable;
 }

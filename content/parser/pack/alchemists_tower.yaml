@@ -1,0 +1,227 @@
+# The Alchemist's Tower — a Sierra-Quest-style parser pack (Stage 3).
+#
+# Adds, on the same engine: a SCORE (awarded via inc_var on the `score` var), a
+# DEATH ending recoverable via load (§8.7), and a multi-step puzzle chain. Goal:
+# brew the antidote and carry it to the spire. Two clue sources point the way
+# (§17 rule 1): the spellbook recipe and the brewing narration.
+#
+#   courtyard ─N─ great_hall ─N─ laboratory ─up─ spire (WIN: visited + antidote)
+#      │ W: library (recipe, +5)      │ down*: cellar (water_vial)
+#      │ E: garden (herb, brass_key)  │ up: study (strongbox → iron_key)
+#   (* cellar door unlocked with the iron key)
+#
+# Chain: read recipe → herb + brass_key (garden) → unlock strongbox → iron_key →
+# unlock cellar → water_vial → brew (herb then water) → antidote → spire.
+# DEATH: drinking the black phial (the recipe warns against it) — then load + retry.
+
+meta:
+  id: alchemists_tower_v1
+  title: "The Alchemist's Tower"
+  start_room: courtyard
+  max_score: 35
+
+rooms:
+  - id: courtyard
+    name: "Tower Courtyard"
+    description: >
+      A weed-cracked courtyard at the foot of a leaning tower. Doors lead off in
+      every direction: the great hall north, a garden east, a library west.
+    exits:
+      - { direction: north, to: great_hall }
+      - { direction: east, to: garden }
+      - { direction: west, to: library }
+
+  - id: library
+    name: "Dusty Library"
+    description: "Shelves of mildewed books. One lectern holds an open spellbook. The courtyard is east."
+    objects: [spellbook]
+    exits:
+      - { direction: east, to: courtyard }
+
+  - id: garden
+    name: "Overgrown Garden"
+    description: >
+      A walled herb garden gone to seed. A pale medicinal herb still grows by the
+      wall, and something brass glints in the soil. The courtyard is west.
+    objects: [herb, brass_key]
+    exits:
+      - { direction: west, to: courtyard }
+
+  - id: great_hall
+    name: "Great Hall"
+    description: >
+      A vaulted hall. A bolted cellar hatch is set in the floor; a stair winds up
+      to a study, and an archway opens north into the laboratory. The courtyard
+      is south.
+    objects: [cellar_door]
+    exits:
+      - { direction: south, to: courtyard }
+      - { direction: up, to: study }
+      - { direction: north, to: laboratory }
+      - direction: down
+        to: cellar
+        conditions: [{ has_flag: cellar_unlocked }]
+        locked_msg: "The cellar hatch is bolted with an iron lock."
+
+  - id: study
+    name: "Cluttered Study"
+    description: "An alchemist's study. A locked iron strongbox sits on the desk. The hall is back down."
+    objects: [strongbox]
+    exits:
+      - { direction: down, to: great_hall }
+
+  - id: cellar
+    name: "Cold Cellar"
+    description: "A damp store-cellar. A vial of clear spring water rests in a rack. The hatch is back up."
+    objects: [water_vial]
+    exits:
+      - { direction: up, to: great_hall }
+
+  - id: laboratory
+    name: "The Laboratory"
+    description: >
+      The alchemist's laboratory. A great cauldron simmers over a low flame, and a
+      black phial sits apart on the bench. A stair climbs to the spire; the hall
+      is south.
+    objects: [cauldron, black_phial]
+    exits:
+      - { direction: south, to: great_hall }
+      - { direction: up, to: spire }
+
+  - id: spire
+    name: "The Spire"
+    description: >
+      The tower's top room, where the cure must be administered. Wind moans
+      through the broken glass. The laboratory is back down.
+    exits:
+      - { direction: down, to: laboratory }
+
+objects:
+  - id: spellbook
+    name: "open spellbook"
+    aliases: [book, spellbook]
+    description: "A heavy spellbook, open to a stained recipe page."
+    read_text: "The recipe reads: 'The cure is the pale herb steeped in clear water. The BLACK PHIAL is not medicine — it is death. Do not drink it.'"
+    interactions:
+      - verb: READ
+        target: spellbook
+        conditions: [{ not_flag: read_recipe }]
+        effects:
+          - set_flag: read_recipe
+          - inc_var: { name: score, by: 5 }
+
+  - id: herb
+    name: "pale herb"
+    aliases: [herb, leaf]
+    description: "A pale, bitter medicinal herb."
+    takeable: true
+    # An ingredient, consumed by the brew (not quest_critical): its only use makes
+    # progress, and it yields the antidote, which IS the durable quest item.
+
+  - id: brass_key
+    name: "brass key"
+    aliases: [brass]
+    description: "A small brass key, sized for a strongbox."
+    takeable: true
+    quest_critical: true
+
+  - id: strongbox
+    name: "iron strongbox"
+    aliases: [strongbox, box]
+    description: "A squat iron strongbox with a brass lock."
+    container: true
+    openable: true
+    locked: true
+    key_id: brass_key
+    contents: [iron_key]
+
+  - id: iron_key
+    name: "iron key"
+    aliases: [iron]
+    description: "A heavy iron key, black with age."
+    takeable: true
+    quest_critical: true
+
+  - id: cellar_door
+    name: "cellar hatch"
+    aliases: [hatch, bolt]
+    description: "A bolted floor hatch with a great iron lock."
+    interactions:
+      - verb: USE
+        item: iron_key
+        target: cellar_door
+        conditions: [{ not_flag: cellar_unlocked }]
+        effects:
+          - set_flag: cellar_unlocked
+          - unlock_exit: { from: great_hall, to: cellar }
+          - narrate: "The iron key throws the bolt. The cellar hatch swings open."
+
+  - id: water_vial
+    name: "vial of water"
+    aliases: [vial, water]
+    description: "A stoppered vial of clear spring water."
+    takeable: true
+    # An ingredient, consumed by the brew (see herb).
+
+  - id: cauldron
+    name: "great cauldron"
+    aliases: [cauldron, pot]
+    description: "A simmering cauldron, waiting for ingredients."
+    interactions:
+      - verb: USE
+        item: herb
+        target: cauldron
+        conditions: [{ not_flag: herb_added }]
+        effects:
+          - set_flag: herb_added
+          - remove_item: herb
+          - inc_var: { name: score, by: 10 }
+          - narrate: "You steep the pale herb in the cauldron. The brew turns green."
+      - verb: USE
+        item: water_vial
+        target: cauldron
+        conditions: [{ has_flag: herb_added }, { not_flag: antidote_brewed }]
+        effects:
+          - set_flag: antidote_brewed
+          - remove_item: water_vial
+          - add_item: antidote
+          - inc_var: { name: score, by: 20 }
+          - narrate: "You pour the clear water in. The brew clarifies into a pale antidote, which you decant."
+
+  - id: black_phial
+    name: "black phial"
+    aliases: [phial, black]
+    description: "A black glass phial of oily liquid. The recipe warned against it."
+    takeable: true
+    interactions:
+      - verb: USE
+        item: black_phial
+        target: black_phial
+        effects:
+          - narrate: "You unstopper the black phial and drink. Cold spreads through you, and the tower goes dark."
+          - end_game: ending_poisoned
+
+  - id: antidote
+    name: "antidote"
+    aliases: [cure]
+    description: "A vial of pale, finished antidote."
+    takeable: true
+    quest_critical: true
+
+win_conditions:
+  - id: administer_cure
+    conditions: [{ visited: spire }, { has_item: antidote }]
+    ending: ending_cured
+
+endings:
+  - id: ending_cured
+    title: "The Cure"
+    text: >
+      At the spire's height you administer the antidote. Colour returns; the long
+      sickness breaks. You kept the light of the tower. *** You have won. ***
+  - id: ending_poisoned
+    title: "Poisoned"
+    text: >
+      The black phial was no medicine. The tower goes dark around you. (Load a
+      saved game to try again.)
+    death: true
