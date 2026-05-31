@@ -21,3 +21,7 @@ jobs:
         run: npm test
       - name: Replay round-trips a hand-written trace (Stage 0 acceptance)
         run: npm run replay
+      - name: Content pack validates green (Stage 1 acceptance)
+        run: npm run validate -- content/cyoa/pack/watchtower_road.yaml
+      - name: A pack can be played to an ending via the CLI (Stage 1 acceptance)
+        run: npm run play -- content/cyoa/pack/watchtower_road.yaml --choices go_west,ford_brook,cross_north,slip_into_woods,slip_away

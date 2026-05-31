@@ -1,0 +1,15 @@
+# Expect: SOFTLOCK — a reachable scene loops forever, unable to reach any ending.
+meta: { id: bad_softlock, title: "Bad Softlock", start: s1 }
+scenes:
+  - id: s1
+    title: "Start"
+    text: "A trap door and a safe road."
+    choices:
+      - { id: trap, text: "Step on the trap door.", next: pit }
+      - { id: safe, text: "Take the safe road.", next: e_win }
+  - id: pit
+    title: "The Pit"
+    text: "Smooth walls on every side."
+    choices: [ { id: pace, text: "Pace the pit.", next: pit } ]
+endings:
+  - { id: e_win, title: "Win", text: "You made it." }

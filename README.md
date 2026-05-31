@@ -5,9 +5,11 @@ live entirely in pure code** and whose **content lives entirely in AI-generated,
 schema-validated data**. See [`ADVENTUREFORGE_BUILD_SPEC.md`](./ADVENTUREFORGE_BUILD_SPEC.md)
 for the full spec.
 
-## Status — Stage 0 (deterministic core) ✅
+## Status
 
-The trustworthy spine every later stage sits on. No AI, no content yet — just a core
+### Stage 0 — deterministic core ✅
+
+The trustworthy spine every later stage sits on. No content in the engine — just a core
 the AI can later author into but cannot corrupt.
 
 | Piece | File |
@@ -23,27 +25,42 @@ the AI can later author into but cannot corrupt.
 | Trace record / replay (§8.8) | `src/trace/` |
 
 The Layer-2/Layer-3 boundary (§3) is enforced by the `Rules` resolver: the engine asks
-content what an action means, but contains no content itself. Stage 1 (CYOA) and Stage 2
-(parser) each supply their own resolver over this identical core.
+content what an action means, but contains no content itself.
+
+### Stage 1 — CYOA engine ✅ (schema · validator · play CLI)
+
+| Piece | File |
+|---|---|
+| CYOA schema (§7.2) | `src/cyoa/schema.ts` |
+| Pack loader (YAML → validated JSON + content hash) | `src/cyoa/pack.ts` |
+| Runner: pack → `Rules` resolver (§8.4) | `src/cyoa/runner.ts` |
+| AI-/human-facing observation (§9.1) | `src/cyoa/observation.ts` |
+| CYOA validator (§10.1) | `src/validate/cyoa_validator.ts` |
+| Sample pack: *The Watchtower Road* (20 scenes, 3 endings) | `content/cyoa/pack/watchtower_road.yaml` |
+| Negative fixtures that MUST fail (§10.4) | `content/broken-fixtures/` |
+
+The validator checks reference integrity, reachability, ending reachability, soft-locks,
+dead ends, flag/item feasibility, contradictions, and duplicate endings. Where flags/items
+make a property undecidable in general it uses a documented conservative approximation
+(see header comments) rather than silently checking something weaker.
 
 ## Quickstart
 
 ```bash
 npm install
-npm run lint     # typecheck (tsc --noEmit)
-npm test         # unit + property tests (Vitest + fast-check)
-npm run replay   # round-trip a hand-written trace (Stage 0 acceptance)
+npm run lint                                              # typecheck
+npm test                                                  # unit + property tests
+npm run replay                                            # Stage 0: round-trip a trace
+npm run validate -- content/cyoa/pack/watchtower_road.yaml # Stage 1: validate a pack
+npm run play -- content/cyoa/pack/watchtower_road.yaml     # Stage 1: play it (interactive)
 ```
 
-## Stage 0 acceptance (§13)
+Non-interactive play (scriptable / CI): add `--choices id1,id2,...` and optionally
+`--record traces/run.json` to save a replayable trace.
 
-- `npm run replay` round-trips a hand-written trace and reproduces its state hash.
-- The determinism property test passes: random valid action sequences run twice
-  produce byte-identical hashes and events (`tests/property/determinism.test.ts`).
-- CI is green: typecheck + tests + replay (`.github/workflows/ci.yml`).
+## Next: complete the Stage 1 loop
 
-## Next: Stage 1 — CYOA engine
-
-The minimum viable proof of the whole thesis: AI writes a branching story → adapts it
-to a schema-valid pack → the engine validates it → an AI playtests every route →
-records its experience → finds a flaw → fixes it → a regression test locks the fix.
+The pieces above are the engine half. The remaining Stage 1 work (§12–§13) is the
+AI authoring loop with deterministic mock agents: writer → adapter → validator →
+playtester → debugger → fixer, ending in a regression test that locks a found flaw.
+Then Stage 2 graduates the same core to a Zork-style parser adventure.

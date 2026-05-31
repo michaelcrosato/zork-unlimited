@@ -15,9 +15,12 @@
     "lint": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "replay": "tsx bin/replay.ts"
+    "replay": "tsx bin/replay.ts",
+    "validate": "tsx bin/validate.ts",
+    "play": "tsx bin/play.ts"
   },
   "dependencies": {
+    "yaml": "^2.9.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

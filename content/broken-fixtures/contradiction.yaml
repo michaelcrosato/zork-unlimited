@@ -1,0 +1,20 @@
+# Expect: CONTRADICTORY_CONDITION — a choice requires a flag to be both set and unset.
+meta: { id: bad_contradiction, title: "Bad Contradiction", start: s1 }
+scenes:
+  - id: s1
+    title: "Start"
+    text: "A paradoxical door."
+    choices:
+      - id: paradox
+        text: "Open the door that is both locked and open."
+        conditions: [ { all_of: [ { has_flag: x }, { not_flag: x } ] } ]
+        next: e_win
+      - id: setx
+        text: "Throw the switch."
+        effects: [ { set_flag: x } ]
+        next: s1
+      - id: go
+        text: "Just leave."
+        next: e_win
+endings:
+  - { id: e_win, title: "Win", text: "You made it." }

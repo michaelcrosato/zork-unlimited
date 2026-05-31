@@ -1,0 +1,343 @@
+meta:
+  id: watchtower_road_v1
+  title: "The Watchtower Road"
+  start: forest_crossroads
+  vars_init: {}
+  flags_init: []
+
+scenes:
+  # ── The crossroads (start) ──────────────────────────────────────────────
+  - id: forest_crossroads
+    title: "The Forest Crossroads"
+    text: >
+      The road splits beneath the black pines. To the east, smoke rises from a
+      ruined watchtower. To the west, a brook cuts through the moss.
+    choices:
+      - id: go_east
+        text: "Go east, toward the ruined watchtower."
+        effects: [ { set_flag: saw_watchtower } ]
+        next: ruined_watchtower
+      - id: go_west
+        text: "Go west, following the brook."
+        next: mossy_brook
+      - id: inspect_ground
+        text: "Inspect the muddy ground."
+        conditions: [ { not_flag: found_bootprints } ]
+        effects:
+          - set_flag: found_bootprints
+          - add_journal: "Someone dragged a heavy object east, toward the watchtower."
+        next: forest_crossroads
+
+  # ── Watchtower cluster ───────────────────────────────────────────────────
+  - id: ruined_watchtower
+    title: "The Ruined Watchtower"
+    text: >
+      Fire-blackened stone leans against the sky. The door hangs from one hinge,
+      and a cellar stair curls down into the dark on the north side.
+    choices:
+      - id: approach_base
+        text: "Step inside, to the tower base."
+        next: tower_base
+      - id: circle_cellar
+        text: "Circle around to the cellar door."
+        next: cellar_door
+      - id: return_crossroads
+        text: "Return to the crossroads."
+        next: forest_crossroads
+
+  - id: tower_base
+    title: "Tower Base"
+    text: >
+      Rubble and ash. A staircase spirals upward. Against the far wall lies an
+      overturned cart, its contents spilled across the floor.
+    choices:
+      - id: climb_stairs
+        text: "Climb the spiral stairs."
+        next: tower_stairs
+      - id: search_rubble
+        text: "Search the overturned cart."
+        next: abandoned_cart
+      - id: leave_base
+        text: "Step back outside."
+        next: ruined_watchtower
+
+  - id: abandoned_cart
+    title: "The Overturned Cart"
+    text: >
+      A merchant's cart, tipped and looted in a hurry. Among the spilled straw
+      you spot a brass lantern and a wax-sealed letter.
+    choices:
+      - id: take_lantern
+        text: "Take the brass lantern."
+        conditions: [ { not_item: lantern } ]
+        effects: [ { add_item: lantern }, { add_journal: "You pocket a brass lantern." } ]
+        next: abandoned_cart
+      - id: take_letter
+        text: "Take the sealed letter."
+        conditions: [ { not_item: sealed_letter } ]
+        effects: [ { add_item: sealed_letter }, { add_journal: "A wax-sealed letter, addressed to no one." } ]
+        next: abandoned_cart
+      - id: leave_cart
+        text: "Leave the cart."
+        next: tower_base
+
+  - id: tower_stairs
+    title: "Spiral Stairs"
+    text: "The stairs groan underfoot. Cold air pours down from above."
+    choices:
+      - id: continue_up
+        text: "Continue to the top."
+        next: tower_top
+      - id: go_down
+        text: "Go back down."
+        next: tower_base
+
+  - id: tower_top
+    title: "Tower Top"
+    text: >
+      The ruined parapet opens onto the whole valley. The road runs north toward
+      the town. A cold brazier waits, begging for a flame.
+    choices:
+      - id: light_beacon
+        text: "Light the signal beacon with your lantern."
+        conditions: [ { has_item: lantern } ]
+        effects: [ { set_flag: raised_alarm } ]
+        next: signal_fire
+      - id: survey_road
+        text: "Take the road north."
+        next: road_north
+      - id: descend
+        text: "Descend the stairs."
+        next: tower_stairs
+
+  - id: signal_fire
+    title: "The Signal Fire"
+    text: >
+      Flame leaps from the brazier and climbs into the dusk. Somewhere below, a
+      horn answers. Help — or trouble — is coming.
+    choices:
+      - id: watch_for_help
+        text: "Wait and watch the road."
+        next: decision_point
+      - id: back_to_top
+        text: "Step back from the heat."
+        next: tower_top
+
+  # ── Cellar cluster (condition-locked + hidden scene) ──────────────────────
+  - id: cellar_door
+    title: "The Cellar Door"
+    text: >
+      A low door, half off its frame, opens on a stair that drops into total
+      darkness. You will need a light to go down.
+    choices:
+      - id: light_lantern
+        text: "Light the lantern."
+        conditions: [ { all_of: [ { has_item: lantern }, { not_flag: lantern_lit } ] } ]
+        effects: [ { set_flag: lantern_lit }, { narrate: "The wick catches; warm light pushes back the dark." } ]
+        next: cellar_door
+      - id: descend_cellar
+        text: "Descend into the cellar."
+        conditions: [ { has_flag: lantern_lit } ]
+        next: cellar
+      - id: cellar_back
+        text: "Step back from the door."
+        next: ruined_watchtower
+
+  - id: cellar
+    title: "The Cellar"
+    text: >
+      Lantern-light finds rows of barrels — and behind them, a gap in the wall
+      where the mortar was knocked through from inside.
+    on_enter: [ { add_journal: "The cellar smells of pitch and old smoke." } ]
+    choices:
+      - id: search_cache
+        text: "Squeeze through the broken wall."
+        conditions: [ { has_flag: found_bootprints } ]
+        next: hidden_cache
+      - id: examine_barrels
+        text: "Pry open a barrel."
+        conditions: [ { not_flag: learned_truth } ]
+        effects:
+          - set_flag: learned_truth
+          - add_journal: "The barrels are full of lamp oil. The fire was set on purpose."
+        next: cellar
+      - id: climb_out
+        text: "Climb back out."
+        next: cellar_door
+
+  - id: hidden_cache
+    title: "The Hidden Cache"
+    text: >
+      A smuggler's hollow, hastily emptied. A ledger lies forgotten in the dust —
+      names, dates, and a seal you recognize from the letter.
+    on_enter: [ { add_journal: "You found the smugglers' hidden cache." } ]
+    choices:
+      - id: take_ledger
+        text: "Read and pocket the ledger."
+        conditions: [ { not_flag: learned_truth } ]
+        effects: [ { set_flag: learned_truth }, { add_journal: "The ledger names everyone involved." } ]
+        next: hidden_cache
+      - id: leave_cache
+        text: "Slip back out."
+        next: cellar
+
+  # ── Brook + hermit cluster (the NPC conversation) ─────────────────────────
+  - id: mossy_brook
+    title: "The Mossy Brook"
+    text: >
+      The brook chuckles over stones. A thread of smoke marks a small camp
+      downstream, and a shallow ford lies just ahead.
+    choices:
+      - id: ford_brook
+        text: "Cross at the ford."
+        next: brook_ford
+      - id: follow_to_camp
+        text: "Follow the smoke to the camp."
+        next: hermit_camp
+      - id: return_from_brook
+        text: "Return to the crossroads."
+        next: forest_crossroads
+
+  - id: hermit_camp
+    title: "The Hermit's Camp"
+    text: >
+      A lean-to, a low fire, and an old hermit mending a net. He watches you with
+      pale, unsurprised eyes.
+    choices:
+      - id: talk_hermit
+        text: "Approach and speak with him."
+        effects: [ { set_flag: met_hermit } ]
+        next: hermit_talk
+      - id: leave_camp
+        text: "Leave the camp."
+        next: mossy_brook
+
+  - id: hermit_talk
+    title: "The Hermit"
+    text: >
+      "You look lost, traveler," the hermit says. "Or maybe you found something
+      you weren't meant to."
+    choices:
+      - id: ask_about_tower
+        text: "Ask about the burning tower."
+        next: hermit_about_tower
+      - id: show_letter
+        text: "Show him the sealed letter."
+        conditions: [ { has_item: sealed_letter } ]
+        next: hermit_about_letter
+      - id: say_goodbye
+        text: "Say goodbye."
+        next: hermit_camp
+
+  - id: hermit_about_tower
+    title: "About the Tower"
+    text: >
+      "Smugglers," he spits. "They kept their oil in that cellar. When the
+      watch got close, they burned it all and ran north."
+    choices:
+      - id: back_from_tower_talk
+        text: "Return to the conversation."
+        next: hermit_talk
+
+  - id: hermit_about_letter
+    title: "The Letter"
+    text: >
+      The hermit breaks the seal and reads. "This names the man at the
+      checkpoint. Carry it north and the truth carries with you."
+    on_enter: [ { set_flag: learned_truth }, { add_journal: "The hermit confirmed the letter's worth." } ]
+    choices:
+      - id: back_from_letter_talk
+        text: "Return to the conversation."
+        next: hermit_talk
+
+  - id: brook_ford
+    title: "The Ford"
+    text: "Cold water to the knee, then firm gravel and the north bank."
+    choices:
+      - id: cross_north
+        text: "Take the north road."
+        next: road_north
+      - id: ford_back
+        text: "Wade back."
+        next: mossy_brook
+
+  # ── The road north (climax + endings) ─────────────────────────────────────
+  - id: road_north
+    title: "The North Road"
+    text: >
+      The road runs straight toward town. A guarded checkpoint blocks the way,
+      and the treeline offers a quieter path around it.
+    choices:
+      - id: approach_checkpoint
+        text: "Approach the checkpoint."
+        next: checkpoint
+      - id: slip_into_woods
+        text: "Slip into the woods around it."
+        next: decision_point
+      - id: road_back_south
+        text: "Head back south."
+        next: brook_ford
+
+  - id: checkpoint
+    title: "The Checkpoint"
+    text: >
+      A bored sergeant leans on a halberd. "Papers," he says, not really asking.
+    choices:
+      - id: show_papers
+        text: "Present the sealed letter."
+        conditions: [ { has_item: sealed_letter } ]
+        next: confront_smuggler
+      - id: force_through
+        text: "Bluster and shove your way through."
+        next: ending_captured
+      - id: retreat_checkpoint
+        text: "Back away slowly."
+        next: road_north
+
+  - id: confront_smuggler
+    title: "The Sergeant's Face"
+    text: >
+      The sergeant's face goes white as he reads his own name. His hand drifts
+      toward his sword.
+    choices:
+      - id: reveal_evidence
+        text: "Lay out everything you know."
+        conditions: [ { has_flag: learned_truth } ]
+        next: decision_point
+      - id: back_off
+        text: "Take the letter back and retreat."
+        next: road_north
+
+  - id: decision_point
+    title: "The Edge of Town"
+    text: >
+      Town lights flicker ahead. You have what you came for — or enough to vanish
+      with. The choice is yours.
+    choices:
+      - id: expose_the_plot
+        text: "March in and expose the whole conspiracy."
+        conditions: [ { has_flag: learned_truth } ]
+        next: ending_truth
+      - id: slip_away
+        text: "Slip away into the dark and never look back."
+        next: ending_escape
+      - id: turn_back
+        text: "Hesitate, and turn back to the road."
+        next: road_north
+
+endings:
+  - id: ending_truth
+    title: "The Truth, Carried Home"
+    text: >
+      You lay the ledger and the letter before the magistrate. By morning the
+      smugglers are named, and the watchtower's fire has a reckoning.
+  - id: ending_escape
+    title: "Into the Dark"
+    text: >
+      You slip past the lights and onto the open road. Whatever happened at the
+      tower stays behind you — and so does the truth.
+  - id: ending_captured
+    title: "Held at the Gate"
+    text: >
+      The halberd comes down across your chest. "Nobody forces this gate," the
+      sergeant says, and the cell door closes behind you.
