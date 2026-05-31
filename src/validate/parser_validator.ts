@@ -19,7 +19,7 @@
  */
 import { exitFlag, type Effect } from "../core/effects.js";
 import type { Condition } from "../core/conditions.js";
-import type { ParserPack, GameObject } from "../parser/schema.js";
+import { type ParserPack, type GameObject, SCORE_VAR } from "../parser/schema.js";
 import { type Finding, type ValidationReport, makeReport } from "./report.js";
 
 const err = (code: string, message: string, where: string[]): Finding => ({ severity: "error", code, message, where });
@@ -192,6 +192,37 @@ export function validateParser(pack: ParserPack): ValidationReport {
       if (!canEnd.has(node.id) && nodeIds.has(node.id)) {
         findings.push(err("DIALOGUE_NONTERMINATING", `npc "${npc.id}" node "${node.id}" cannot reach an exit — the player would be trapped in conversation.`, [`npc:${npc.id}`]));
       }
+    }
+  }
+
+  // ── Stage 3: endings, scoring, and death recoverability (§13 Stage 3) ────────
+  const declaredEndings = new Map(pack.endings.map((e) => [e.id, e]));
+  // Every end_game target (death endings are reached this way) must be declared.
+  for (const e of allEffects(pack)) {
+    if ("end_game" in e && !declaredEndings.has(e.end_game)) {
+      findings.push(err("END_GAME_UNDECLARED", `an end_game effect targets "${e.end_game}", which is not a declared ending.`, [`ending:${e.end_game}`]));
+    }
+  }
+  // A win condition must not resolve to a death/failure ending — that would be
+  // an unwinnable game dressed as a win.
+  for (const wc of pack.win_conditions) {
+    if (declaredEndings.get(wc.ending)?.death) {
+      findings.push(err("WIN_IS_DEATH", `win_condition "${wc.id}" ends in "${wc.ending}", which is flagged as a death ending.`, [`win:${wc.id}`]));
+    }
+  }
+  // Death endings are recoverable via load (§8.7) so long as the win remains
+  // reachable from the start — which WIN_UNREACHABLE already guards. Here we only
+  // ensure at least one non-death (winnable) ending is declared.
+  if (pack.endings.length > 0 && !pack.endings.some((e) => !e.death)) {
+    findings.push(err("NO_WINNABLE_ENDING", "every declared ending is a death ending — the game cannot be won.", ["meta:endings"]));
+  }
+  // Score reachability: the declared max_score cannot exceed the total points the
+  // pack can ever award (conservative upper bound = initial + all inc_var awards).
+  if (pack.meta.max_score > 0) {
+    let totalAwards = pack.meta.vars_init[SCORE_VAR] ?? 0;
+    for (const e of allEffects(pack)) if ("inc_var" in e && e.inc_var.name === SCORE_VAR) totalAwards += e.inc_var.by;
+    if (totalAwards < pack.meta.max_score) {
+      findings.push(err("SCORE_UNREACHABLE", `meta.max_score is ${pack.meta.max_score} but at most ${totalAwards} point(s) can ever be awarded.`, ["meta:max_score"]));
     }
   }
 

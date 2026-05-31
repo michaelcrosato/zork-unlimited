@@ -110,6 +110,9 @@ export const ParserEndingSchema = z
     id: z.string().min(1),
     title: z.string().min(1),
     text: z.string().min(1),
+    // Stage 3: a death/failure ending is terminal but non-winning; the player is
+    // expected to recover via load (§13 Stage 3). Reached by an `end_game` effect.
+    death: z.boolean().default(false),
   })
   .strict();
 
@@ -120,8 +123,15 @@ export const ParserMetaSchema = z
     start_room: z.string().min(1),
     vars_init: z.record(z.string(), z.number()).default({}),
     flags_init: z.array(z.string()).default([]),
+    // Stage 3: the maximum achievable score, tracked in the `score` var via
+    // inc_var awards. 0 means the pack does not use scoring. The validator checks
+    // that this target is actually reachable (§13 Stage 3).
+    max_score: z.number().int().nonnegative().default(0),
   })
   .strict();
+
+/** The conventional var that holds the player's score (§13 Stage 3). */
+export const SCORE_VAR = "score";
 
 export const ParserPackSchema = z
   .object({
