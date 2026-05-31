@@ -12,14 +12,17 @@
  * persona heuristic. It never sees engine internals — only the observation,
  * exactly like a real model would (§9).
  */
-import { z, type ZodType } from "zod";
+import { z, type ZodType, type ZodTypeDef } from "zod";
 import type { CyoaObservation } from "../../src/cyoa/observation.js";
 
 export type CompletionRequest<T> = {
   system: string;
   user: string; // JSON-encoded payload for the mock; natural-language for real models
   schemaName: string;
-  schema: ZodType<T>;
+  // The validated OUTPUT type is T; the input is left open so schemas that apply
+  // `.default()` (where Zod's input ≠ output type) are accepted — e.g. the CYOA
+  // pack schema the adapter emits.
+  schema: ZodType<T, ZodTypeDef, unknown>;
 };
 
 export interface Provider {

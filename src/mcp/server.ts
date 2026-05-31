@@ -20,9 +20,9 @@ function ok(value: unknown): CallToolResult {
 }
 
 function wrap<A>(handler: (args: A) => unknown) {
-  return (args: A): CallToolResult => {
+  return async (args: A): Promise<CallToolResult> => {
     try {
-      return ok(handler(args));
+      return ok(await handler(args)); // await is a no-op for the sync handlers
     } catch (e) {
       return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
     }
@@ -71,6 +71,13 @@ tool(
   "Replay a recorded trace against a pack and assert its final-state hash (§8.8).",
   { trace_path: z.string().describe("Path to a trace JSON, relative to the project root."), ...PACK },
   (a) => api.replay_trace(a),
+);
+
+tool(
+  "adapt_story",
+  "Author a CYOA pack from a premise via the writer→adapter→validator loop (§12.1–3); returns the pack, validation report, and per-beat classification.",
+  { premise: z.string().describe("A one-sentence story premise to author from.") },
+  (a) => api.adapt_story(a),
 );
 
 async function main(): Promise<void> {

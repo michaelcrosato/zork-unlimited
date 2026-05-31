@@ -23,6 +23,9 @@ import { replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
 import { SessionStore } from "./sessions.js";
+import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
+import { loadEngineContract, runWriter } from "../../agents/authoring/writer.js";
+import { runAdapter } from "../../agents/authoring/adapter.js";
 
 export type ToolApi = ReturnType<typeof createToolApi>;
 
@@ -141,6 +144,25 @@ export function createToolApi(opts: { root: string }) {
         session_id: session.id,
         observation: buildObservation(session.index, session.state),
         state_hash: hashState(session.state),
+      };
+    },
+
+    async adapt_story(args: { premise: string }) {
+      // Author a CYOA pack from a premise via the writer → adapter → validator
+      // loop (§12.1–3). Deterministic MockAuthorProvider default — no keys, no
+      // network. Returns the story, the green/red pack, the validation report, and
+      // the per-beat classification (§11). Never writes files (the caller decides).
+      const provider = new MockAuthorProvider();
+      const contract = loadEngineContract();
+      const story = await runWriter(provider, { premise: args.premise, contract });
+      const result = await runAdapter(provider, { story, contract });
+      return {
+        ok: result.ok,
+        rounds: result.rounds,
+        story: { title: story.title, beats: story.beats.map((b) => b.id) },
+        classifications: result.classifications,
+        pack: result.ok ? result.pack : undefined,
+        report: result.report,
       };
     },
 
