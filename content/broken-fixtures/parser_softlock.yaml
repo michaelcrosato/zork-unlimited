@@ -1,0 +1,19 @@
+# MUST FAIL: a reachable room with no path back to a win → SOFTLOCK.
+meta: { id: bad_softlock, title: "Bad Softlock", start_room: a }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    exits:
+      - { direction: north, to: b }
+      - { direction: down, to: pit }
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+  - id: pit
+    name: "Pit"
+    description: "A pit with no way out."
+    exits: []
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

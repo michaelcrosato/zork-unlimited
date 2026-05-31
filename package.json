@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "AI-authored, deterministic text-adventure engine. Stage 0: deterministic core.",
+  "description": "AI-authored, deterministic text-adventure engine. Stages 0–2: deterministic core, CYOA, Zork-style parser.",
   "engines": {
     "node": ">=22"
   },
@@ -18,7 +18,9 @@
     "replay": "tsx bin/replay.ts",
     "validate": "tsx bin/validate.ts",
     "play": "tsx bin/play.ts",
+    "play:parser": "tsx bin/parser_play.ts",
     "playtest": "tsx bin/playtest.ts",
+    "playtest:parser": "tsx bin/parser_playtest.ts",
     "mcp": "tsx src/mcp/server.ts"
   },
   "dependencies": {

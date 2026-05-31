@@ -1,0 +1,235 @@
+# The Sealed Crypt — a Zork-style parser pack (Stage 2).
+#
+# Goal: reach the catacombs beneath the ruined chapel. The route is a multi-step
+# chain — get the rope, open the well, recover two keys from two containers, and
+# unlock the catacombs gate. Two in-world clue sources point the way (§17 rule 1):
+# the graveyard headstone and the sexton's rumor.
+#
+#   forest_path ─N─ chapel_yard ─N─ chapel_nave ─down─ crypt ─N*─ catacombs (WIN)
+#                    │ U: bell_tower (rope)
+#                    │ E: old_well ─down*─ well_bottom (oak_chest → iron_key)
+#                    │ W: graveyard ─N─ mausoleum (stone_coffer → brass_key)
+#   (* = locked exit)
+
+meta:
+  id: sealed_crypt_v1
+  title: "The Sealed Crypt"
+  start_room: forest_path
+  flags_init: []
+  vars_init: {}
+
+rooms:
+  - id: forest_path
+    name: "Forest Path"
+    description: >
+      A muddy track ends at a lych-gate. Beyond it, the burnt shell of a chapel
+      hunches against the hills. The way north leads into the yard.
+    exits:
+      - { direction: north, to: chapel_yard }
+
+  - id: chapel_yard
+    name: "Chapel Yard"
+    description: >
+      Weeds split the flagstones. A bell tower leans overhead to the up; the
+      nave gapes to the north. A well sits to the east, a graveyard to the west,
+      and the path home runs south.
+    exits:
+      - { direction: south, to: forest_path }
+      - { direction: north, to: chapel_nave }
+      - { direction: east, to: old_well }
+      - { direction: west, to: graveyard }
+      - { direction: up, to: bell_tower }
+
+  - id: bell_tower
+    name: "Bell Tower"
+    description: >
+      The bell is long gone, but its great hemp pull-rope still hangs coiled on
+      a peg. Stairs lead back down.
+    objects: [rope]
+    exits:
+      - { direction: down, to: chapel_yard }
+
+  - id: old_well
+    name: "Old Well"
+    description: >
+      A moss-covered well stands in the corner of the yard, an iron ring bolted
+      to its rim. It is too far to climb down without a rope. The yard is back
+      to the west.
+    objects: [old_well]
+    exits:
+      - { direction: west, to: chapel_yard }
+      - direction: down
+        to: well_bottom
+        conditions: [{ has_flag: rope_attached_to_well }]
+        locked_msg: "It's too far to climb down without a rope tied off above."
+
+  - id: well_bottom
+    name: "Bottom of the Well"
+    description: >
+      Cold water laps at a stone ledge. A banded oak chest sits on the dry side.
+      The rope trails back up.
+    objects: [oak_chest]
+    exits:
+      - { direction: up, to: old_well }
+
+  - id: graveyard
+    name: "Graveyard"
+    description: >
+      Tilted headstones crowd a yew tree. A worn headstone faces the path. The
+      yard is east; a mausoleum stands open to the north.
+    objects: [headstone]
+    exits:
+      - { direction: east, to: chapel_yard }
+      - { direction: north, to: mausoleum }
+
+  - id: mausoleum
+    name: "Mausoleum"
+    description: >
+      Marble shelves line a still, dusty room. A small stone coffer rests on a
+      plinth. The graveyard is back to the south.
+    objects: [stone_coffer]
+    exits:
+      - { direction: south, to: graveyard }
+
+  - id: chapel_nave
+    name: "Chapel Nave"
+    description: >
+      Charred pews face a collapsed altar. A stair descends into darkness on the
+      north side. The sexton lingers among the ruins. The yard is south.
+    exits:
+      - { direction: south, to: chapel_yard }
+      - { direction: down, to: crypt }
+
+  - id: crypt
+    name: "Crypt"
+    description: >
+      Stone sarcophagi crowd a low chamber. To the north, an iron catacombs gate
+      bars the way, its lock shaped for a heavy key. The stair climbs back up.
+    objects: [crypt_gate]
+    exits:
+      - { direction: up, to: chapel_nave }
+      - direction: north
+        to: catacombs
+        conditions: [{ has_flag: catacombs_open }]
+        locked_msg: "The iron gate to the catacombs is locked fast."
+
+  - id: catacombs
+    name: "The Catacombs"
+    description: >
+      Beyond the gate, the catacombs run on into the dark — the resting place you
+      came to find. The crypt is behind you to the south.
+    exits:
+      - { direction: south, to: crypt }
+
+objects:
+  - id: rope
+    name: "coil of rope"
+    aliases: [rope, coil]
+    description: "A sturdy coil of hemp rope, strong enough to bear a climber."
+    takeable: true
+    quest_critical: true
+
+  - id: old_well
+    name: "old well"
+    aliases: [well, ring]
+    description: "Deep, dark, and quiet. An iron ring is bolted to the rim."
+    interactions:
+      - verb: USE
+        item: rope
+        target: old_well
+        conditions: [{ not_flag: rope_attached_to_well }]
+        effects:
+          - set_flag: rope_attached_to_well
+          - unlock_exit: { from: old_well, to: well_bottom }
+          - narrate: "You tie the rope to the iron ring. It uncoils into the dark below."
+
+  - id: stone_coffer
+    name: "stone coffer"
+    aliases: [coffer]
+    description: "A small stone coffer, its lid loose."
+    container: true
+    openable: true
+    contents: [brass_key]
+
+  - id: brass_key
+    name: "brass key"
+    aliases: [brass]
+    description: "A small brass key, green with age — the size for a chest lock."
+    takeable: true
+    quest_critical: true
+
+  - id: oak_chest
+    name: "oak chest"
+    aliases: [chest, oak]
+    description: "A banded oak chest. The lock is a plain brass keyway."
+    container: true
+    openable: true
+    locked: true
+    key_id: brass_key
+    contents: [iron_key]
+
+  - id: iron_key
+    name: "iron key"
+    aliases: [iron]
+    description: "A heavy iron key, black with age — fit for a great iron lock."
+    takeable: true
+    quest_critical: true
+
+  - id: headstone
+    name: "worn headstone"
+    aliases: [headstone, stone, grave]
+    description: "A weathered headstone, its epitaph still legible."
+    read_text: "Carved deep: 'THE CRYPT YIELDS ONLY TO IRON, DRAWN UP FROM THE DEEP.'"
+
+  - id: crypt_gate
+    name: "iron catacombs gate"
+    aliases: [gate, catacombs gate]
+    description: "A heavy iron gate. Its great lock is shaped for an iron key."
+    interactions:
+      - verb: USE
+        item: iron_key
+        target: crypt_gate
+        conditions: [{ not_flag: catacombs_open }]
+        effects:
+          - set_flag: catacombs_open
+          - unlock_exit: { from: crypt, to: catacombs }
+          - narrate: "The iron key turns with a groan. The catacombs gate swings inward."
+
+npcs:
+  - id: sexton
+    name: "the sexton"
+    description: "A stooped old sexton, lantern in hand, watching you sidelong."
+    room: chapel_nave
+    dialogue:
+      root: greet
+      nodes:
+        - id: greet
+          npc_text: "Few come willingly to the sealed crypt, traveler."
+          topics:
+            - { id: crypt, prompt: "Ask about the sealed crypt", goto: about_crypt }
+            - { id: well, prompt: "Ask about the old well", goto: about_well }
+            - { id: bye, prompt: "Say goodbye", end: true }
+        - id: about_crypt
+          npc_text: "The catacombs gate answers only to an iron key — and that key was lost down the well, locked in a chest."
+          effects: [{ set_flag: heard_crypt_rumor }]
+          topics:
+            - { id: well, prompt: "Ask about the old well", goto: about_well }
+            - { id: bye, prompt: "Say goodbye", end: true }
+        - id: about_well
+          npc_text: "Dry rope hangs in the bell tower. Tie it to the ring and the well will give up its chest."
+          effects: [{ set_flag: heard_well_rumor }]
+          topics:
+            - { id: crypt, prompt: "Ask about the sealed crypt", goto: about_crypt }
+            - { id: bye, prompt: "Say goodbye", end: true }
+
+win_conditions:
+  - id: reach_catacombs
+    conditions: [{ visited: catacombs }]
+    ending: ending_victory
+
+endings:
+  - id: ending_victory
+    title: "Into the Catacombs"
+    text: >
+      The gate yields, and the cold breath of the catacombs rolls over you. You
+      step through into the dark you came so far to find. *** You have won. ***

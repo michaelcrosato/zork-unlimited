@@ -1,0 +1,26 @@
+# MUST FAIL: two objects share an alias, so a parser command is ambiguous →
+# AMBIGUOUS_ALIAS.
+meta: { id: bad_alias, title: "Bad Alias", start_room: a }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    objects: [red_key, blue_key]
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+objects:
+  - id: red_key
+    name: "red key"
+    aliases: [key]
+    description: "A red key."
+    takeable: true
+  - id: blue_key
+    name: "blue key"
+    aliases: [key]
+    description: "A blue key."
+    takeable: true
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

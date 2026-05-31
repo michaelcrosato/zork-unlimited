@@ -27,3 +27,9 @@ jobs:
         run: npm run play -- content/cyoa/pack/watchtower_road.yaml --choices go_west,ford_brook,cross_north,slip_into_woods,slip_away
       - name: AI playtester roster runs (mock agents, no keys)
         run: npm run playtest -- content/cyoa/pack/watchtower_road.yaml
+      - name: Parser pack validates green (Stage 2 acceptance #1)
+        run: npm run validate -- content/parser/pack/sealed_crypt.yaml
+      - name: A human can complete the parser game via the controlled CLI (Stage 2 acceptance #2)
+        run: npm run play:parser -- content/parser/pack/sealed_crypt.yaml --commands "go north; up; take rope; down; west; north; open coffer; take brass key; south; east; east; use rope on old well; down; unlock chest with brass key; open chest; take iron key; up; west; north; down; use iron key on gate; north"
+      - name: The §12.8 persona roster runs against the parser pack (Stage 2 acceptance #4)
+        run: npm run playtest:parser -- content/parser/pack/sealed_crypt.yaml
