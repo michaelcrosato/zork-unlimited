@@ -140,6 +140,13 @@ async function main(): Promise<void> {
     rl?.close();
   }
 
+  // In scripted mode the run is an acceptance check: fail loudly if the command
+  // list did not actually reach an ending.
+  if (!interactive && !state.ended) {
+    console.error("\nThe command list did not reach an ending.");
+    process.exitCode = 1;
+  }
+
   if (args.record) {
     const trace = recordTrace(rules, initStateForParserPack(index, args.seed), taken, {
       trace_id: "tr_parser_play",

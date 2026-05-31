@@ -44,6 +44,36 @@ dead ends, flag/item feasibility, contradictions, and duplicate endings. Where f
 make a property undecidable in general it uses a documented conservative approximation
 (see header comments) rather than silently checking something weaker.
 
+### Stage 2 — Zork-style parser adventure ✅
+
+The same Stage-0 core, now driving a parser game: rooms, objects, containers, locked
+doors, an NPC dialogue tree, and USE puzzles — exposed to agents as a Jericho-style
+**legal-action set**, never a raw parser to guess at.
+
+| Piece | File |
+|---|---|
+| Parser schema (§7.3) | `src/parser/schema.ts` |
+| World model: object location, containers, dialogue state | `src/parser/model.ts` |
+| Legal-action generator + resolver (§9, §9.2) | `src/parser/legal_actions.ts` |
+| Runner: pack → `Rules`, win conditions on room entry (§8.4) | `src/parser/runner.ts` |
+| Parser observation (§9.2) | `src/parser/observation.ts` |
+| Controlled human command parser (§9.3) | `src/parser/command_map.ts` |
+| Parser validator (§10.2) | `src/validate/parser_validator.ts` |
+| Sample pack: *The Sealed Crypt* (10 rooms, 8 objects, 2 containers, 2 locked doors, 1 NPC, 2 puzzles) | `content/parser/pack/sealed_crypt.yaml` |
+| Negative fixtures that MUST fail (§10.4) | `content/broken-fixtures/parser_*.yaml` |
+| 8-persona playtester roster (§12.8) | `agents/parser_playtester.ts`, `agents/parser_personas.ts` |
+| Bug artifact + regression (§15) | `traces/bugs/bug_0001_*.yaml`, `tests/regression/parser_crypt_softlock.test.ts` |
+
+Two small **additive** engine extensions went through the §14 gate: an
+`ObjectRuntime.room` field and a `place_object` effect (both needed for DROP).
+Every existing CYOA trace still replays to an identical hash.
+
+The parser validator adds the §10.2 invariants on top of graph reachability:
+locked-exit/locked-container key satisfiability, an item-obtainability fixpoint
+(keys that unlock containers that hold keys…), `quest_critical` permanent-loss
+guards (consumption and one-way-map drops), dialogue-tree termination, and
+win reachability — each with a documented conservative approximation.
+
 ## Quickstart
 
 ```bash
@@ -53,10 +83,14 @@ npm test                                                  # unit + property test
 npm run replay                                            # Stage 0: round-trip a trace
 npm run validate -- content/cyoa/pack/watchtower_road.yaml # Stage 1: validate a pack
 npm run play -- content/cyoa/pack/watchtower_road.yaml     # Stage 1: play it (interactive)
+npm run validate -- content/parser/pack/sealed_crypt.yaml  # Stage 2: validate the parser pack
+npm run play:parser -- content/parser/pack/sealed_crypt.yaml # Stage 2: play it (interactive)
+npm run playtest:parser -- content/parser/pack/sealed_crypt.yaml # Stage 2: the §12.8 roster
 ```
 
-Non-interactive play (scriptable / CI): add `--choices id1,id2,...` and optionally
-`--record traces/run.json` to save a replayable trace.
+Non-interactive play (scriptable / CI): for CYOA add `--choices id1,id2,...`; for the
+parser add `--commands "go north; take rope; ..."`. Both accept `--record traces/run.json`
+to save a replayable trace. `npm run validate` auto-detects CYOA vs parser packs.
 
 ### MCP server — how an agent plays the game (§9.4)
 
@@ -95,9 +129,23 @@ the hidden cache or hermit conversation — a genuine playtest finding: the "goo
 ending is hard to discover without in-world signposting (§17 rule 1). That gap is
 the natural input to the next step: debugger → fixer → regression test (§12.5, §15).
 
-## Next: close the Stage 1 loop
+### Parser playtester roster (§12.8)
 
-Remaining Stage 1 work (§12.5, §13.6–8, §15): turn the playtester's finding into a
-fix (add clue sources so the truth route is discoverable) and lock it with a
-regression test. Then the writer→adapter half (§12.1–2) for AI-authored packs, and
-Stage 2 graduates the same core to a Zork-style parser adventure.
+Eight deterministic personas (mainline, curious, hoarder, dropper, dialogue-skipper,
+wrong-order, adversarial, speedrunner) drive the same structured legal-action loop an
+external agent uses. On *The Sealed Crypt* the heuristic roster reaches 8/10 rooms and
+**wins nothing** — the route needs multi-step planning the heuristics don't do (honest;
+winnability is certified by the walkthrough acceptance test and the validator). During
+development the `dropper`/`wrong_order` personas wedged in a one-way crypt — a genuine
+soft-lock now fixed and locked by `bug_0001` (§15).
+
+```bash
+npm run playtest:parser -- content/parser/pack/sealed_crypt.yaml [--out traces/playtests]
+```
+
+## Next: writer → adapter, then Stage 3
+
+Stages 0–2 are complete and green. Remaining: the AI **writer → adapter** half
+(§12.1–2) so packs are AI-authored from prose against the engine contract
+(`content/engine_contract.yaml`, §11), then Stage 3 (Sierra-Quest: score, death/restore,
+multi-step puzzle chains) graduating the same deterministic core.
