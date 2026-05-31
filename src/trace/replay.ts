@@ -2,9 +2,10 @@
  * Trace replay (spec §8.8).
  *
  * `replay(trace, rules)` reconstructs the initial state and applies the actions
- * through `step`, asserting the final hash if present. Determinism (§8.5) means
- * a correct engine ALWAYS reproduces the recorded hash; a mismatch points at the
- * exact first divergent step, which is how bugs become reproducible (§15).
+ * through `step`, asserting the recorded FINAL hash if present. Determinism
+ * (§8.5) means a correct engine always reproduces that hash; a mismatch is how
+ * bugs become reproducible (§15). Pinpointing the first divergent step needs
+ * per-step baseline hashes, which a v1 Trace does not carry — see `divergedAtStep`.
  */
 import { hashState } from "../core/hash.js";
 import type { Rules } from "../core/engine.js";
@@ -14,7 +15,11 @@ export type ReplayResult = {
   ok: boolean;
   finalHash: string;
   expectedFinalHash?: string;
-  /** Index of the first action whose post-state diverged, if a baseline exists. */
+  /**
+   * Reserved: index of the first action whose post-state diverged from a
+   * recorded baseline. Not populated yet — a v1 Trace stores only the final
+   * hash, so there is no per-step baseline to compare against (a Trace v2 field).
+   */
   divergedAtStep?: number;
   message?: string;
 };

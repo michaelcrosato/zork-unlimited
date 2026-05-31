@@ -9,7 +9,8 @@
  * deterministic and runs in CI.
  */
 import { makeStep } from "../src/core/engine.js";
-import { hashState } from "../src/core/hash.js";
+import { canonicalize, hashState } from "../src/core/hash.js";
+import type { GameState } from "../src/core/state.js";
 import type { GameEvent } from "../src/core/events.js";
 import type { Action } from "../src/api/types.js";
 import { buildObservation } from "../src/cyoa/observation.js";
@@ -24,6 +25,16 @@ import {
 } from "./llm/provider.js";
 
 export type StepResultKind = "progress" | "loop" | "ended" | "stuck";
+
+/**
+ * World-position signature, excluding the monotonic `step` counter. Two states
+ * with the same signature are the same game position even if reached at
+ * different step counts (the full state hash always differs, because `step`
+ * advances every turn — which is why a full-hash repeat can never signal a loop).
+ */
+function worldSig(state: GameState): string {
+  return canonicalize({ ...state, step: 0 });
+}
 
 export type PlaytestStep = {
   step: number;
@@ -60,7 +71,6 @@ export async function runPlaytest(index: CyoaIndex, provider: Provider, opts: Ru
   const maxSteps = opts.maxSteps ?? 80;
 
   let state = initStateForPack(index, opts.seed);
-  const seen = new Set<string>([hashState(state)]);
   const visited = new Set<string>([state.current]);
   const steps: PlaytestStep[] = [];
   let status: PlaytestRecord["status"] = "max_steps";
@@ -90,8 +100,13 @@ export async function runPlaytest(index: CyoaIndex, provider: Provider, opts: Ru
 
     const action: Action = { type: "CHOOSE", choiceId: chosenId };
     const result = step(state, action);
-    const nextHash = hashState(result.state);
-    const kind: StepResultKind = result.state.ended ? "ended" : seen.has(nextHash) ? "loop" : "progress";
+    // Loop detection that is SOUND for a black-box provider: only an immediate
+    // no-progress step (the world is unchanged but for the step counter) is a
+    // provable stuck-loop. A merely-revisited position is NOT — a step-dependent
+    // provider may legitimately choose differently on a return visit, so flagging
+    // that would falsely cut off progressing runs (§12.4).
+    const stalled = !result.state.ended && worldSig(result.state) === worldSig(state);
+    const kind: StepResultKind = result.state.ended ? "ended" : stalled ? "loop" : "progress";
 
     steps.push({
       step: i,
@@ -112,10 +127,9 @@ export async function runPlaytest(index: CyoaIndex, provider: Provider, opts: Ru
       break;
     }
     if (kind === "loop") {
-      status = "looped"; // a deterministic policy revisiting a state == stuck in a cycle
+      status = "looped"; // the chosen action made no progress — a stuck self-loop
       break;
     }
-    seen.add(nextHash);
   }
 
   return {
@@ -184,7 +198,10 @@ export async function runRoster(
     findings.push(`Scene "${s}" was never visited by any persona — possibly low-discoverability content.`);
   }
   for (const r of records.filter((r) => r.status === "looped")) {
-    findings.push(`Persona "${r.persona}" (seed ${r.seed}) fell into a loop near "${r.scenes_visited.at(-1)}".`);
+    // The scene where the looping choice was made — the last recorded step.
+    // (scenes_visited is sorted, so its last element is alphabetical, not temporal.)
+    const loopScene = r.steps.at(-1)?.scene_id ?? r.scenes_visited.at(-1);
+    findings.push(`Persona "${r.persona}" (seed ${r.seed}) fell into a loop near "${loopScene}".`);
   }
 
   return {
