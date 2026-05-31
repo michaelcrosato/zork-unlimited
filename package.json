@@ -1,0 +1,30 @@
+{
+  "name": "adventureforge",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AI-authored, deterministic text-adventure engine. Stage 0: deterministic core.",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "af-replay": "./bin/replay.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "replay": "tsx bin/replay.ts"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.0",
+    "fast-check": "^3.22.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
