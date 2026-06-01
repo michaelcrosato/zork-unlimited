@@ -25,6 +25,23 @@ scenes:
       Moonlight pours through the manor's glass dome onto a thousand turning gears.
       A grand staircase rises into shadow; a low door leads off to the kitchens; and
       the great hall clock ticks against the far wall, vast as a coffin.
+    # The namesake clock stands right here, so the foyer feels the same deadline the
+    # gallery does — even though this safe ground floor never advances `ticks` itself.
+    # Higher threshold first (first match wins), mirroring the gallery's escalation.
+    variants:
+      - when: [{ var_gte: { name: ticks, value: 6 } }]
+        text: >
+          Moonlight pours through the manor's glass dome onto a thousand turning gears.
+          A grand staircase rises into shadow; a low door leads off to the kitchens. The
+          great hall clock has come round to the hour at last, its slow chime rolling
+          through the gears vast as a coffin-lid falling — and somewhere up the stair, on
+          the gallery landing, a watchman's tread answers it.
+      - when: [{ var_gte: { name: ticks, value: 4 } }]
+        text: >
+          Moonlight pours through the manor's glass dome onto a thousand turning gears.
+          A grand staircase rises into shadow; a low door leads off to the kitchens; and
+          the great hall clock grinds toward the hour against the far wall, vast as a
+          coffin — your time in the manor is running short.
     choices:
       - id: inspect_clock
         text: "Examine the great clock."

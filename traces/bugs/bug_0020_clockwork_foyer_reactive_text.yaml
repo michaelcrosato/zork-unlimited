@@ -1,0 +1,60 @@
+bug_id: bug_0020
+pack_id: clockwork_heist_v1
+seed: 67
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  report: ai-runs/2026-06-01T08-10-22-369Z/playtest.md
+  finding: >
+    Playtest target stayed on the assessor's rank-1 candidate, the CYOA pack The
+    Clockwork Heist (2 coverage-unreached endings + 1 unvisited location are the
+    deterministic bot's planning limit, not pack flaws). A fresh, MCP-only blind
+    playtester (seed 67) reached ALL FOUR endings (Truth, Rich, Caught, Caught on
+    the Hour), rating it clarity 5/5, enjoyment 4/5, mechanically flawless (zero
+    rejected actions, no loops, no soft-locks; the bug_0019 deadline "lands
+    perfectly"). Its only concrete finding (report §4 + §5): the time-pressure
+    urgency text added in bug_0019 is scoped to the gallery ONLY. The foyer — which
+    the opening prose says houses the great hall clock itself, "vast as a coffin,"
+    against its far wall — shows no urgency at any tick count. "A player loitering
+    in the foyer gets no warning that the deadline is approaching... which slightly
+    undercuts the omnipresent-clock motif."
+failure:
+  type: stale_scene_text_missing_reactive_variant
+  where: [content:content/cyoa/pack/clockwork_heist.yaml]
+  description: >
+    The foyer is reachable at high `ticks` (climb upstairs, burn the clock, then
+    retreat to the safe ground floor via back_down / back_foyer — neither ticks).
+    At ticks 4-7 the foyer still narrated its calm opening text while the gallery
+    one floor up was visibly counting down to the watchman's patrol, even though
+    the namesake great clock stands right there in the foyer. The clock motif and
+    the bug_0019 deadline both promised omnipresent time pressure the foyer prose
+    did not reflect.
+fix:
+  layer: content
+  summary: >
+    Content-only application of the existing CYOA `variants` reactive-text feature
+    (bug_0018) to the foyer — no engine change. The foyer gains two variants,
+    higher threshold first (first-match-wins), mirroring the gallery's escalation:
+    a tension variant at `var_gte ticks 4` ("the great hall clock grinds toward
+    the hour ... your time in the manor is running short") and an on-the-hour
+    variant at `var_gte ticks 6` ("the great hall clock has come round to the hour
+    ... and somewhere up the stair, on the gallery landing, a watchman's tread
+    answers it"). The foyer remains safe ground: it still never advances `ticks`
+    and its choices are unchanged. Only the narrated text reacts; the on-the-hour
+    variant points the urgency UP the stair (where the patrol actually is) without
+    falsely making the foyer itself dangerous.
+  reachable_endings_changed: false  # text-only; all four endings unchanged
+  content_hash_changed: true        # clockwork_heist yaml: 6c8e8e4583d0... -> 626c00d93cc3730937afd2eb2a9d2f048915206c483c8f822851bf7e3da5ba87 (unpinned; only watchtower_road is pinned in tests)
+related_test_update:
+  - tests/regression/cyoa_reactive_scene_text.test.ts  # bug_0018 backward-compat case repointed off `foyer` (now has variants) onto `vault_door` (still variant-less) — the assertion is unchanged, just on a still-variant-less scene
+regression_test: tests/regression/clockwork_foyer_reactive_text.test.ts
+verified_live: >
+  Through the engine source path exercised by the regression test (the running MCP
+  server predates the content reload; the regression drives the same
+  initStateForPack / makeStep / buildObservation path the server uses, seed 67). A
+  quick out-and-back keeps the foyer at low ticks and it reads the calm base text
+  (no tension, no hour cue). Dawdling study<->gallery to ticks 5 then retreating
+  (back_down) shows the foyer's "running short" tension variant but not yet the
+  hour cue; to ticks 7 then retreating shows the on-the-hour watchman variant. All
+  four endings (ending_truth, ending_caught, ending_rich, ending_patrol) still
+  fire — the edit is text-only and changes no gating.
