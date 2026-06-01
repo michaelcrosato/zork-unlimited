@@ -14,7 +14,8 @@ if [[ ! -d node_modules ]]; then
 fi
 
 latest_prompt() {
-  find ai-runs -path '*/agent-prompt.md' -type f -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR==1 {print $2}'
+  # ai-loop.ts writes the cycle prompt as prompt.md (older runs used agent-prompt.md).
+  find ai-runs \( -path '*/prompt.md' -o -path '*/agent-prompt.md' \) -type f -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR==1 {print $2}'
 }
 
 codex_available() {
@@ -73,32 +74,48 @@ require_playtest_record() {
 }
 
 run_cycle() {
+  # Each gate fails the cycle EXPLICITLY (|| return 1) rather than relying on
+  # `set -e`, so a bad cycle skips its commit and the outer loop continues to the
+  # next one (resilient unattended operation) instead of the whole script dying.
   local baseline start_ref
   baseline="$(git status --porcelain -- "${status_filter[@]}")"
   start_ref="$(git rev-parse HEAD)"
-  npm run ai:loop
-  run_codex_if_available
-  # Trust, but verify: health is a BLOCKING gate (and it runs the static
-  # verifier-integrity check). With `set -e` a failing check aborts the cycle
-  # BEFORE any commit — the loop never commits red work.
-  npm run health
-  # Don't route around the verifier: refuse-and-surface (halt the loop, leave the
-  # work uncommitted for review) if THIS cycle deleted/disabled tests, modified a
-  # protected verification asset, or silently re-pinned a committed hash. A
-  # deliberate verifier edit is acknowledged with AI_LOOP_ALLOW_VERIFIER_EDITS=1.
-  npm run verify:integrity -- --against "$start_ref"
-  # Quality feedback is mandatory: no playtest record ⇒ no commit.
-  require_playtest_record
-  safe_commit_if_enabled "$baseline"
-
+  npm run ai:loop || { echo "ai:loop failed"; return 1; }
+  # The agent does the actual work (and the mandatory blind LLM playtest). If it is
+  # unavailable the cycle simply makes no changes and the gates below skip the commit.
+  run_codex_if_available || echo "(agent step reported an error — continuing to verify)"
+  # Trust, but verify: health is a BLOCKING gate (runs the static verifier-integrity
+  # check too). A red check ⇒ no commit this cycle.
+  npm run health || { echo "health failed — skipping commit this cycle"; return 1; }
+  # Don't route around the verifier: refuse-and-surface if THIS cycle deleted/disabled
+  # tests, modified a protected verification asset, or silently re-pinned a committed
+  # hash (override a deliberate edit with AI_LOOP_ALLOW_VERIFIER_EDITS=1).
+  npm run verify:integrity -- --against "$start_ref" || { echo "verifier touched — skipping commit this cycle"; return 1; }
+  # Quality feedback is mandatory: no blind-playtest record ⇒ no commit.
+  require_playtest_record || return 1
+  safe_commit_if_enabled "$baseline" || { echo "commit failed"; return 1; }
   if [[ "${AI_LOOP_PUSH:-0}" == "1" ]]; then
-    git push
+    git push || { echo "push failed"; return 1; }
   fi
+  return 0
 }
 
 count=0
+fails=0
+max_fails="${AI_LOOP_MAX_CONSECUTIVE_FAILURES:-5}"
+delay="${AI_LOOP_DELAY_SECONDS:-10}"
 while true; do
-  run_cycle
+  if run_cycle; then
+    fails=0
+    echo "✓ cycle $((count + 1)) complete."
+  else
+    fails=$((fails + 1))
+    echo "✗ cycle $((count + 1)) made no committed progress ($fails/$max_fails consecutive)."
+    if [[ "$fails" -ge "$max_fails" ]]; then
+      echo "Circuit breaker: $max_fails consecutive cycles without progress — stopping. Check ai-runs/ and AI_LOOP_STATE.md."
+      break
+    fi
+  fi
   count=$((count + 1))
   if [[ "$once" == "1" ]]; then
     break
@@ -106,4 +123,5 @@ while true; do
   if [[ -n "$cycles" && "$count" -ge "$cycles" ]]; then
     break
   fi
+  sleep "$delay"
 done
