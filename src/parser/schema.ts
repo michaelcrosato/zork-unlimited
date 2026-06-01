@@ -22,11 +22,27 @@ export const ExitSchema = z
   })
   .strict();
 
+/** A state-conditional room description (§7.3 reactive text). When all of `when`
+ *  hold, this `text` replaces the room's base `description`, so a room can react
+ *  to state it changed — a tied-off well, an opened gate — instead of
+ *  contradicting it. Variants are first-match-wins in declared order. */
+export const RoomVariantSchema = z
+  .object({
+    when: z.array(ConditionSchema).min(1),
+    text: z.string().min(1),
+  })
+  .strict();
+
 export const RoomSchema = z
   .object({
     id: z.string().min(1),
     name: z.string().min(1),
     description: z.string().min(1),
+    // Optional reactive descriptions; the first whose `when` holds wins, else
+    // `description`. `.optional()` (not `.default([])`) so an absent field stays
+    // absent in the compiled pack ⇒ packs that don't use it compile byte-identically
+    // and their content hashes are unchanged (mirrors the Stage-4 skill_check rule).
+    variants: z.array(RoomVariantSchema).optional(),
     objects: z.array(z.string().min(1)).default([]),
     exits: z.array(ExitSchema).default([]),
     on_enter: z.array(EffectSchema).default([]),
@@ -162,6 +178,7 @@ export const ParserPackSchema = z
   .strict();
 
 export type Exit = z.infer<typeof ExitSchema>;
+export type RoomVariant = z.infer<typeof RoomVariantSchema>;
 export type Room = z.infer<typeof RoomSchema>;
 export type SkillCheck = z.infer<typeof SkillCheckSchema>;
 export type Interaction = z.infer<typeof InteractionSchema>;

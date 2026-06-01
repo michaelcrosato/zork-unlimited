@@ -21,6 +21,7 @@ import {
   isOpen,
   locateObject,
   nodeOrdinal,
+  roomDescription,
   visibleObjectIds,
 } from "./model.js";
 
@@ -55,7 +56,7 @@ export function resolveParserAction(index: ParserIndex, state: GameState, action
     case "LOOK": {
       if (action.target === undefined) {
         const room = index.rooms.get(here);
-        return room ? { conditions: [], effects: [{ narrate: room.description }] } : null;
+        return room ? { conditions: [], effects: [{ narrate: roomDescription(room, state) }] } : null;
       }
       if (!present(index, state, action.target)) return null;
       const o = index.objects.get(action.target);

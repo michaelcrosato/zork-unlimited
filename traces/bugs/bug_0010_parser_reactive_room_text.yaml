@@ -1,0 +1,52 @@
+bug_id: bug_0010
+pack_id: sealed_crypt_v1
+seed: 7
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  report: ai-runs/2026-06-01T06-21-08-533Z/playtest.md
+  finding: >
+    Playtest target rotated onto the last genuinely UNVERIFIED parser pack, The
+    Sealed Crypt (the deterministic coverage bot is stuck at the entrance, 0/60
+    ended, never reaching the crypt). A fresh, MCP-only blind playtester solved it
+    to ending_victory and probed the no-key failure branch, rating it clarity 5/5,
+    enjoyment 3/5 — confirming the pack is genuinely solvable and fair. Its top
+    concrete finding (report §5), hit twice and matching the deferred
+    alchemists_tower §5(a) "description-reactivity" finding from bug_0009: room
+    descriptions are static and contradict state the player just changed.
+      (1) Old Well: after USE rope on well (rope tied, the down exit opens), the
+          room still reads "It is too far to climb down without a rope."
+      (2) Crypt: after USE iron key on gate (gate swings inward, the north exit
+          opens), the room still reads "an iron catacombs gate bars the way."
+failure:
+  type: stale_room_text
+  where: [engine:src/parser/schema.ts, engine:src/parser/observation.ts, engine:src/parser/legal_actions.ts]
+  description: >
+    A parser room carried exactly one static `description` string, rendered
+    verbatim by the observation builder and the LOOK action regardless of state.
+    There was no mechanism for a room to react to flags/items it had changed, so
+    any room whose state can change (a tied rope, an unlocked gate, a drained
+    well) keeps narrating the pre-change world — a player-facing contradiction.
+    This is a generic engine gap, not a one-pack flaw; the same class of finding
+    was logged on alchemists_tower the prior cycle and deferred as needing "a
+    broader parser description-reactivity feature".
+fix:
+  layer: engine
+  summary: >
+    Generic, pack-agnostic engine feature: reactive room descriptions. (1)
+    src/parser/schema.ts: RoomSchema gains an optional `variants` array of
+    { when: Condition[], text } (RoomVariantSchema); empty by default, so existing
+    packs are byte-identical and re-validate green. (2) src/parser/model.ts adds a
+    pure helper roomDescription(room, state) = the first variant whose `when`
+    conditions all hold (declared order, first-match-wins), else the base
+    `description`. (3) src/parser/observation.ts and src/parser/legal_actions.ts
+    (the LOOK action) both route through that helper, so the observation and an
+    explicit "look" read identically. (4) content/parser/pack/sealed_crypt.yaml:
+    old_well gains a rope-tied variant (when has_flag rope_attached_to_well) and
+    crypt gains a gate-open variant (when has_flag catacombs_open). No flags,
+    items, exits, gating, or reachable endings change — only the narrated text
+    reacts. sealed_crypt has no pinned content hash (only watchtower_road is
+    pinned), so no re-pin was needed.
+  reachable_endings_changed: false
+  content_hash_changed: true   # sealed_crypt yaml (unpinned; recorded for the record)
+regression_test: tests/regression/parser_reactive_room_text.test.ts

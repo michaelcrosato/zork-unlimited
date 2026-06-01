@@ -55,6 +55,12 @@ rooms:
       A moss-covered well stands in the corner of the yard, an iron ring bolted
       to its rim. It is too far to climb down without a rope. The yard is back
       to the west.
+    variants:
+      - when: [{ has_flag: rope_attached_to_well }]
+        text: >
+          A moss-covered well stands in the corner of the yard. The hemp rope is
+          knotted fast to the iron ring and trails down into the dark — the way
+          down is open. The yard is back to the west.
     objects: [old_well]
     exits:
       - { direction: west, to: chapel_yard }
@@ -105,6 +111,12 @@ rooms:
     description: >
       Stone sarcophagi crowd a low chamber. To the north, an iron catacombs gate
       bars the way, its lock shaped for a heavy key. The stair climbs back up.
+    variants:
+      - when: [{ has_flag: catacombs_open }]
+        text: >
+          Stone sarcophagi crowd a low chamber. To the north, the iron catacombs
+          gate stands unlocked and swung inward on darkness. The stair climbs
+          back up.
     objects: [crypt_gate]
     exits:
       - { direction: up, to: chapel_nave }

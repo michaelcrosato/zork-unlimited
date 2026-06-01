@@ -9,7 +9,7 @@
 import type { GameState } from "../core/state.js";
 import type { Action } from "../api/types.js";
 import { evalConditions } from "../core/conditions.js";
-import { type ParserIndex, activeDialogue, visibleObjectIds } from "./model.js";
+import { type ParserIndex, activeDialogue, roomDescription, visibleObjectIds } from "./model.js";
 import { enumerateActions } from "./legal_actions.js";
 import { SCORE_VAR } from "./schema.js";
 
@@ -54,7 +54,7 @@ export function buildParserObservation(index: ParserIndex, state: GameState): Pa
     mode: "parser",
     room: state.current,
     title: endingDef ? endingDef.title : room?.name ?? state.current,
-    description: endingDef ? endingDef.text : room?.description ?? "",
+    description: endingDef ? endingDef.text : room ? roomDescription(room, state) : "",
     visible_objects: visObjs,
     npcs_present: npcs,
     exits,

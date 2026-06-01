@@ -12,6 +12,7 @@
  */
 import { initState, type GameState } from "../core/state.js";
 import { applyEffects } from "../core/effects.js";
+import { evalConditions } from "../core/conditions.js";
 import type { ParserPack, Room, GameObject, Npc, DialogueNode } from "./schema.js";
 
 export type ParserIndex = {
@@ -63,6 +64,18 @@ export function locateObject(index: ParserIndex, state: GameState, id: string): 
 
 export function isOpen(state: GameState, id: string): boolean {
   return state.objectState[id]?.open === true;
+}
+
+/** The room's effective description in the current state: the first reactive
+ *  `variant` whose `when` conditions all hold (declared order), else the base
+ *  `description`. Lets a room narrate state it changed — a tied rope, an opened
+ *  gate — instead of contradicting it (§7.3). Pure; same (room, state) ⇒ same
+ *  text, so both the observation and the LOOK action read identically. */
+export function roomDescription(room: Room, state: GameState): string {
+  for (const v of room.variants ?? []) {
+    if (evalConditions(v.when, state)) return v.text;
+  }
+  return room.description;
 }
 
 /** Is the container `id` locked? Falls back to the pack's static `locked` flag. */
