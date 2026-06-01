@@ -18,26 +18,32 @@ latest_prompt() {
   find ai-runs \( -path '*/prompt.md' -o -path '*/agent-prompt.md' \) -type f -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR==1 {print $2}'
 }
 
-codex_available() {
-  command -v codex >/dev/null 2>&1 && [[ -f "${CODEX_HOME:-$HOME/.codex}/auth.json" ]]
+# Resolve the headless agent command that does each cycle's WORK (incl. the
+# mandatory blind LLM playtest). Precedence:
+#   1. $AI_AGENT_CMD  — explicit, e.g. "claude -p --dangerously-skip-permissions"
+#   2. Claude Code    — `claude -p` (preferred: it has the Task tool, so it can
+#                        spawn the blind-playtest subagent the prompt requires)
+#   3. Codex          — `codex exec` if installed + authed
+#   4. (none)         — evidence-only: the prompt is written but no work is done
+# The chosen command must read the prompt from STDIN (claude -p and codex `-` both do).
+agent_cmd() {
+  if [[ -n "${AI_AGENT_CMD:-}" ]]; then echo "$AI_AGENT_CMD"; return 0; fi
+  if command -v claude >/dev/null 2>&1; then echo "claude -p --dangerously-skip-permissions"; return 0; fi
+  if command -v codex >/dev/null 2>&1 && [[ -f "${CODEX_HOME:-$HOME/.codex}/auth.json" ]]; then
+    echo "codex -a never exec --sandbox ${AI_CODEX_SANDBOX:-workspace-write} --cd $PWD -"; return 0
+  fi
+  echo ""
 }
 
-run_codex_if_available() {
-  local prompt
+run_agent() {
+  local prompt cmd
   prompt="$(latest_prompt)"
-  if [[ -z "$prompt" ]]; then
-    echo "No AFK agent prompt found; skipping Codex handoff."
-    return 0
-  fi
-  if [[ "${AI_LOOP_RUN_CODEX:-1}" != "1" ]]; then
-    echo "AI_LOOP_RUN_CODEX is not 1; prompt is ready at $prompt."
-    return 0
-  fi
-  if ! codex_available; then
-    echo "Codex CLI auth is not available for CODEX_HOME=${CODEX_HOME:-$HOME/.codex}; prompt is ready at $prompt."
-    return 0
-  fi
-  codex -a never exec --sandbox "${AI_CODEX_SANDBOX:-workspace-write}" --cd "$PWD" - < "$prompt"
+  if [[ -z "$prompt" ]]; then echo "No AFK agent prompt found; skipping agent handoff."; return 0; fi
+  if [[ "${AI_LOOP_RUN_AGENT:-1}" != "1" ]]; then echo "AI_LOOP_RUN_AGENT is not 1; prompt is ready at $prompt."; return 0; fi
+  cmd="$(agent_cmd)"
+  if [[ -z "$cmd" ]]; then echo "No agent available (set AI_AGENT_CMD, e.g. 'claude -p --dangerously-skip-permissions'); evidence-only. Prompt at $prompt."; return 0; fi
+  echo "Agent: $cmd   (prompt: $prompt)"
+  eval "$cmd" < "$prompt"
 }
 
 safe_commit_if_enabled() {
@@ -81,9 +87,10 @@ run_cycle() {
   baseline="$(git status --porcelain -- "${status_filter[@]}")"
   start_ref="$(git rev-parse HEAD)"
   npm run ai:loop || { echo "ai:loop failed"; return 1; }
-  # The agent does the actual work (and the mandatory blind LLM playtest). If it is
-  # unavailable the cycle simply makes no changes and the gates below skip the commit.
-  run_codex_if_available || echo "(agent step reported an error — continuing to verify)"
+  # The agent (claude -p by default) does the actual work + the mandatory blind LLM
+  # playtest. If it is unavailable the cycle simply makes no changes and the gates
+  # below skip the commit.
+  run_agent || echo "(agent step reported an error — continuing to verify)"
   # Trust, but verify: health is a BLOCKING gate (runs the static verifier-integrity
   # check too). A red check ⇒ no commit this cycle.
   npm run health || { echo "health failed — skipping commit this cycle"; return 1; }
