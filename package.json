@@ -25,6 +25,7 @@
     "playtest": "tsx bin/playtest.ts",
     "playtest:parser": "tsx bin/parser_playtest.ts",
     "author": "tsx bin/author.ts",
+    "inspect": "tsx bin/inspect.ts",
     "mcp": "tsx src/mcp/server.ts",
     "ai:loop": "tsx src/ai-loop.ts"
   },

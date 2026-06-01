@@ -27,6 +27,9 @@ import { SessionStore } from "./sessions.js";
 import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
 import { loadEngineContract, runWriter } from "../../agents/authoring/writer.js";
 import { runAdapter } from "../../agents/authoring/adapter.js";
+import { diagnose } from "../../agents/debugger.js";
+import { applyContentPatch, ContentPatchProposalSchema, type ContentPatchProposal } from "../../agents/fixer.js";
+import { loadParserPackFile } from "../parser/pack.js";
 
 export type ToolApi = ReturnType<typeof createToolApi>;
 type PlaytestStrategy = "random" | "coverage";
@@ -375,6 +378,60 @@ export function createToolApi(opts: { root: string }) {
       // A trace stores only the final hash, so we surface ok/final/expected.
       // (Per-step divergence pinpointing needs per-step hashes — a Trace v2 field.)
       return replayTrace(trace, rules);
+    },
+
+    inspect_trace(args: { trace_path: string; pack_path: string }) {
+      // Summarize a recorded trace and surface suspected bugs (§9.4). Replays the
+      // actions through the engine for a per-step location/event summary, asserts
+      // the recorded final hash, and runs the debugger's classifier (§12.5).
+      const traceAbs = safeResolve(root, args.trace_path);
+      const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace;
+      const compiled = requirePlayable(args.pack_path);
+      if (trace.content_hash !== compiled.contentHash) {
+        return { ok: false, message: `Trace content ${trace.content_hash} ≠ pack ${compiled.contentHash}.` };
+      }
+      const index = indexPack(compiled.pack);
+      const rules = buildRules(index);
+      const step = makeStep(rules);
+      let state = trace.initial_state;
+      const steps: { i: number; action: Action; ok: boolean; location: string; ended: boolean; ending_id: string | null }[] = [];
+      trace.actions.forEach((action, i) => {
+        const r = step(state, action);
+        state = r.state;
+        steps.push({ i, action, ok: r.ok, location: state.current, ended: state.ended, ending_id: state.endingId });
+      });
+      const replay = replayTrace(trace, rules);
+      // CYOA endings carry no death flag, so any reached ending is a win.
+      const d = diagnose(rules, trace.initial_state, trace.actions);
+      return {
+        ok: true,
+        pack_id: trace.pack_id,
+        content_hash: trace.content_hash,
+        seed: trace.seed,
+        steps: trace.actions.length,
+        hash_ok: replay.ok,
+        final_hash: replay.finalHash,
+        expected_final_hash: replay.expectedFinalHash ?? null,
+        diagnosis: d,
+        step_summary: steps,
+      };
+    },
+
+    apply_content_patch(args: { pack_path: string; proposal: ContentPatchProposal }) {
+      // Apply a structured patch with deterministic code and return the modified
+      // pack + validation report (§9.4, §12.5). The model never writes files: a
+      // patch is data, validated before it can be played (§16). The caller decides
+      // whether to persist the returned pack.
+      const proposal = ContentPatchProposalSchema.parse(args.proposal);
+      const abs = safeResolve(root, args.pack_path);
+      const loaded = proposal.mode === "cyoa" ? loadPackFile(abs) : loadParserPackFile(abs);
+      if (!loaded.ok) {
+        return { ok: false, report: makeReport(args.pack_path, [{ severity: "error" as const, code: "SCHEMA", message: "pack failed to compile", where: [args.pack_path] }]) };
+      }
+      const result = applyContentPatch(loaded.compiled.pack, proposal);
+      return result.ok
+        ? { ok: true, applied: result.applied, report: result.report, pack: result.pack }
+        : { ok: false, report: result.report };
     },
   };
 }

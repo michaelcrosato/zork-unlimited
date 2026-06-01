@@ -125,6 +125,30 @@ tool(
   (a) => api.adapt_story(a),
 );
 
+tool(
+  "inspect_trace",
+  "Summarize a recorded trace: per-step locations/events, final-hash check, and the debugger's suspected-bug classification (§9.4, §12.5).",
+  { trace_path: z.string().describe("Path to a trace JSON, relative to the project root."), ...PACK },
+  (a) => api.inspect_trace(a),
+);
+
+tool(
+  "apply_content_patch",
+  "Apply a structured, whitelisted content patch with deterministic code and return the modified pack + validation report (§9.4, §16). Never writes files; never runs model-issued code.",
+  {
+    ...PACK,
+    proposal: z
+      .object({
+        layer: z.enum(["content", "engine_rule", "validator", "test", "hint_text", "quest_structure"]),
+        mode: z.enum(["cyoa", "parser"]),
+        summary: z.string(),
+        ops: z.array(z.record(z.string(), z.unknown())).describe("Closed-vocabulary patch ops; validated against the fixer's op schema (§12.5)."),
+      })
+      .describe("A ContentPatchProposal: a single-layer, op-based edit applied by code, not the model."),
+  },
+  (a) => api.apply_content_patch(a as never),
+);
+
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);

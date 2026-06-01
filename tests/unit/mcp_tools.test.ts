@@ -151,7 +151,47 @@ describe("MCP tools — replay + path confinement", () => {
     expect(r.ok).toBe(true);
   });
 
+  it("inspect_trace summarizes steps and finds no failure on a winning route (§9.4)", () => {
+    const r = api().inspect_trace({ trace_path: "traces/mcp_replay.json", pack_path: PACK }) as {
+      ok: boolean;
+      hash_ok: boolean;
+      steps: number;
+      diagnosis: { type: string };
+      step_summary: { ended: boolean; ending_id: string | null }[];
+    };
+    expect(r.ok).toBe(true);
+    expect(r.hash_ok).toBe(true);
+    expect(r.steps).toBe(5);
+    expect(r.diagnosis.type).toBe("no_failure");
+    expect(r.step_summary.at(-1)?.ending_id).toBe("ending_escape");
+  });
+
   it("rejects a path that escapes the project root", () => {
     expect(() => api().validate_pack({ pack_path: "../../../etc/passwd" })).toThrow(PathEscapeError);
+  });
+});
+
+describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
+  it("applies a whitelisted hint patch and re-validates green", () => {
+    const r = api().apply_content_patch({
+      pack_path: "content/parser/pack/sealed_crypt.yaml",
+      proposal: {
+        layer: "hint_text",
+        mode: "parser",
+        summary: "signpost the start room",
+        ops: [{ op: "add_room_journal_hint", room: "forest_path", text: "Fresh bootprints lead toward the chapel." }],
+      } as never,
+    }) as { ok: boolean; report: { ok: boolean } };
+    expect(r.ok).toBe(true);
+    expect(r.report.ok).toBe(true);
+  });
+
+  it("refuses a patch whose target is missing (no file written)", () => {
+    const r = api().apply_content_patch({
+      pack_path: "content/parser/pack/sealed_crypt.yaml",
+      proposal: { layer: "content", mode: "parser", summary: "x", ops: [{ op: "set_object_field", id: "ghost", field: "takeable", value: true }] } as never,
+    }) as { ok: boolean; report: { findings: { code: string }[] } };
+    expect(r.ok).toBe(false);
+    expect(r.report.findings[0]?.code).toBe("PATCH_TARGET_MISSING");
   });
 });
