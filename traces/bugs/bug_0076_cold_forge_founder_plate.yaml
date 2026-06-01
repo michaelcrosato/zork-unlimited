@@ -1,0 +1,80 @@
+bug_id: bug_0076
+pack_id: cold_forge_v1
+seed: 17
+type: content_new   # not a defect fix — a new optional beat authored to broaden the forge
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-01T20-10-44-328Z/playtest.md   # clockwork_heist seed 17 (the mandated, over-fitted target)
+  finding: >
+    The cycle's mandated blind pass played the assessor's rank-1 target, the CYOA pack
+    The Clockwork Heist, and returned CLEAN for the ~22nd consecutive time (all endings,
+    clarity 5/5, enjoyment 4/5, zero functional defects — only the long-known atmospheric
+    notes that the `ticks`/chime timer never bites and the guard-rounds ledger is optional,
+    both intentional and examined across bug_0061–0072). Per project memory
+    (content-polish-backlog-exhausted) the polish backlog is exhausted, so the cycle took
+    the charter's allowance to pursue the higher-value STRUCTURAL pivot. cold_forge was the
+    LAST pack still carrying the standing brevity critique that every prior forge playtester
+    landed: bug-free and clarity 5/5, but BRIEF and one-path — "one meaningful choice",
+    enjoyment 3/5 — with the lone fight a real even trade that finishes the player at low HP.
+improvement:
+  layer: content   # purely additive; nothing on the existing critical path changes
+  what: >
+    Gave the forge its second beat — the Founder's Cell. Added a new side cell
+    (founder_cell) reached by a new `west` exit off the Outer Forge, met BEFORE the
+    sentinel, housing the age-dead last master of the forge. It mirrors the proven barrow
+    reaver-shade shape (bug_0075), deepening the world AND offering one earned tactical
+    choice:
+      (a) an epitaph (readable) + a one-shot spirit lore-topic (ask_founder) that names the
+          master who banked the dying fire's last coal into the Ember-Heart, set the
+          sentinel to keep it, and walled himself in with the cold — and SIGNPOSTS the cell
+          to the west. The topic sets heard_founder, journals (the line names "west"), and
+          grants NO stat change by the telling; it then retires (one-shot, cannot be
+          re-told). It loops back to spirit_root whose ungated leave_spirit keeps the node
+          terminating (a gated-only escape would trip DIALOGUE_NONTERMINATING, bug_0014).
+      (b) the master's cold-iron plate (takeable): TAKE it, then DON it (self-USE with
+          command_verb `don`, bug_0074, so the offered + typed verb reads "don cold-iron
+          plate", not the generic "use") for a one-time +2 DEFENSE (defense 2 → 4),
+          journalled. Gated none_of plate_donned, so the don retires after the first use
+          and the +2 cannot be farmed (mirrors the spirit's one-shot +2-attack counsel and
+          the bug_0015 retire-after-success lever).
+  honest_not_oversold: >
+    The +2 defense is the honest DEFENSE complement to the lantern-spirit's +2 ATTACK
+    counsel. Per the forge's honesty discipline (bug_0027/0029/0069/0071) it is not
+    over-sold: the don narration says plainly the plate "will not swing your blade for you,
+    but it will keep you standing to swing it yourself", and the spirit offers it as a
+    moral choice ("Take it, if your conscience lets you"). Combat is d6 + atk − def (min 1),
+    so a +2 ward EASES the sentinel's anvil-blows but never ZEROES them — the fight stays
+    winnable AND lethal from base stats. The seed-1 playtester rated the fight a real even
+    trade finishing at low HP, so easing it genuinely matters; the ward is optional grace,
+    not a requirement.
+  preserves_critical_path: >
+    Nothing on the existing path changes — the rooms (sentinel fight / grate lever / ember
+    chamber), the milestone scoring (still 50), the win (visited ember_chamber), the four
+    spirit nodes, both endings, and every existing cold_forge regression stay green. The
+    cell is a pure detour; the canonical victory route skips it entirely and never gains
+    the +2 defense.
+verification:
+  validate: green (0 errors, 0 warnings) under the full RPG validator
+  content_hash: 9b92fb3545d679176d4e5f216c6ca650f65a34accdf8eaa9cacc32ad336dfc4c   # unpinned (only watchtower_road is pinned in tests); cold_forge has no hash-pin trace
+  reachable_endings: [ending_victory, ending_fallen]
+  ward_mechanic: defense 2 → 4 on don plate, one-shot (interaction retires on plate_donned); awards no score
+  reactive_prose: >
+    founder reads "in cold-iron plate" until the plate is taken (then "bare"); the room and
+    the plate flip to "carried off" / "buckled on" via has_item / plate_donned variants
+    (bug_0023 reactive-description discipline)
+test_assertion_update: >
+  tests/regression/cold_forge_relight_foreclosure.test.ts: the exact-set assertion of the
+  spirit's root topics after ask_forge retires now includes the new ask_founder topic. This
+  is the legitimate update of a test alongside intentional new content (the assertion's
+  intent — ask_forge retires, the other topics remain — is preserved), NOT a weakening; it
+  is surfaced here for review.
+regression_test: tests/regression/cold_forge_founder_plate.test.ts   # 7 cases: validates green; cell reachable + escapable (no soft-lock); take+don is a real one-shot +2 defense (2→4) that retires and rejects a forced re-USE; the offered verb is "don" not "use"; ask_founder is one-shot lore that signposts "west" with no stat change; reactive founder/plate prose; the beat is optional — canonical buffed route ignores the cell, stays at base defense 2, still wins ending_victory 50/50
+verified_live: >
+  Through the same engine source path the regression exercises (initStateForRpgPack /
+  enumerateRpgActions / makeStep / buildParserObservation — the path the MCP server uses):
+  the new `west` exit reaches founder_cell and `east` returns (no soft-lock); TAKE then DON
+  the plate raises defense 2→4 and journals the +2, after which no USE/don action is offered
+  and a forced re-USE is rejected; TALK then ask_founder journals the founder lore (naming
+  "west") and retires without changing defense; and the untouched canonical route still
+  reaches ending_victory at 50/50 at base defense 2.

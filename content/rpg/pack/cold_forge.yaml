@@ -50,12 +50,50 @@ rooms:
       A vaulted hall of dead anvils and silent bellows, the air gone to a grave
       chill. A wrought inscription is set into one wall. By a cold trough lies a
       stout iron pry-bar, and in a niche a single lantern still burns with a thin
-      blue flame that watches you. A passage runs north into deeper dark; the
-      steps climb back toward the surface.
+      blue flame that watches you. A low cell stands half-walled to the west, a
+      passage runs north into deeper dark, and the steps climb back toward the
+      surface.
     objects: [inscription, pry_bar]
     exits:
       - { direction: up, to: forge_steps }
+      - { direction: west, to: founder_cell }
       - { direction: north, to: bellows_walk }
+
+  # An OPTIONAL side beat (the pack's "real second branch", answering every blind
+  # pass's standing note that the forge is bug-free but BRIEF and one-path —
+  # enjoyment 3/5). It mirrors the proven barrow reaver-shade shape (bug_0075): a
+  # cell reached by a new exit, met BEFORE the fight, that deepens the world (who
+  # built the forge, why it died, why the sentinel guards) and offers ONE earned
+  # tactical choice — take and don the dead master's cold-iron plate for a one-time
+  # +2 DEFENSE that turns the worst of the sentinel's anvil-blows (the seed-1
+  # playtester's flagged lethality: an even-ish trade finished at low HP). It is the
+  # DEFENSE complement to the lantern-spirit's +2 ATTACK counsel, and like that
+  # counsel it is OPTIONAL GRACE, honestly framed (the plate "will not swing your
+  # blade for you"): the canonical victory route never comes here, the sentinel
+  # stays winnable AND lethal from base stats (combat is d6+atk-def, min 1 — a +2
+  # ward eases but never zeroes the blow), and the +2 retires after one don so it
+  # cannot be farmed. Purely additive: no existing room/combat/lever/score(50)/win
+  # is touched.
+  - id: founder_cell
+    name: "The Founder's Cell"
+    description: >
+      A narrow cell walled off the outer hall, its doorway half-choked with
+      tumbled stone. Here the forge's last master sits against the cold wall where
+      he chose to die — armoured still in a suit of cold-iron plate, a smith's
+      hammer across his knees, a line of letters cut into the stone above his
+      head. The cold kept him whole, as it kept everything down here.
+    variants:
+      # Reactive room text (bug_0023): once you have lifted the plate the master no
+      # longer sits "armoured still" — examining the cell would otherwise contradict
+      # the missing plate on his bones and the iron now on your own back.
+      - when: [ { has_item: cold_iron_plate } ]
+        text: >
+          The narrow cell where the forge's last master sits against the cold
+          wall, his bones bare now of the plate you carry off, his hammer still
+          across his knees and his name still cut in the stone above his head.
+    objects: [founder, epitaph, cold_iron_plate]
+    exits:
+      - { direction: east, to: outer_forge }
 
   - id: bellows_walk
     name: "The Bellows Walk"
@@ -174,6 +212,59 @@ objects:
     description: "A single coal that glows with its own unfailing warmth."
     takeable: true
 
+  - id: founder
+    name: "dead master"
+    aliases: [master, founder, smith, corpse, body, bones]
+    description: "An age-dead man in cold-iron plate, sat upright against the wall as though he had only just closed his eyes. The deep cold kept him; the deep cold kept everything."
+    # Reactive examine (bug_0023): once his plate is taken he is no longer "in
+    # cold-iron plate" — the description must follow the world it describes.
+    variants:
+      - when: [ { has_item: cold_iron_plate } ]
+        text: "The age-dead master, sat bare against the wall now that his plate is on your back, his hammer fallen across his knees and the cold still keeping his bones whole."
+    takeable: false
+
+  - id: epitaph
+    name: "cut letters"
+    aliases: [letters, epitaph, name, stone, carving]
+    description: "A line of letters cut deep into the stone above the dead master, by his own hand or a mourner's."
+    takeable: false
+    read_text: >
+      HERE SITS THE LAST MASTER OF THE COLD FORGE, WHO WHEN THE GREAT FIRE FAILED
+      WOULD NOT LET IT DIE ENTIRE. HE BANKED ITS LAST LIVE COAL INTO ONE
+      EVERLASTING EMBER, SET THE SLAG SENTINEL TO KEEP IT, AND SEALED HIMSELF IN
+      THE COLD THAT HOLDS THE SENTINEL SLEEPING. CARRY THE HEART OUT, AND THE FORGE
+      IS NOT WHOLLY DEAD.
+
+  - id: cold_iron_plate
+    name: "cold-iron plate"
+    aliases: [plate, armour, armor, cold-iron, mail, suit]
+    description: "A suit of dark cold-iron plate, dead-cold to the touch and heavier than warm steel, but whole and unrusted — iron the slag sentinel's blows would ring off rather than break."
+    # Reactive examine: once buckled on, it is no longer a loose suit to consider but
+    # gear you wear (its self-USE "don" interaction has retired behind plate_donned).
+    variants:
+      - when: [ { has_flag: plate_donned } ]
+        text: "The dead master's cold-iron plate, buckled on now over your own gear; its dead weight sits between you and the next blow."
+    takeable: true
+    interactions:
+      # Self-USE = "wear this thing". command_verb: don (bug_0074) makes the offered
+      # and typed verb match the prose that primes it — you "don" plate, you do not
+      # "use" it ("don" is not a builtin parser verb). One-shot: gated none_of
+      # plate_donned so the action retires after the first don and the +2 cannot be
+      # farmed (mirrors the spirit's one-shot +2-attack counsel and the bug_0015
+      # retire-after-success lever). The +2 DEFENSE is the honest, optional
+      # complement to that +2 attack — it keeps you on your feet against the
+      # sentinel's anvil-blows but does not win the fight for you.
+      - verb: USE
+        item: cold_iron_plate
+        target: cold_iron_plate
+        command_verb: don
+        conditions: [ { none_of: [ { has_flag: plate_donned } ] } ]
+        effects:
+          - set_flag: plate_donned
+          - inc_var: { name: defense, by: 2 }
+          - add_journal: "You buckle the dead master's cold-iron plate over your own gear; it will turn the worst of the sentinel's blows (+2 defense)."
+          - narrate: "You strip the plate from the old master with a murmured word and buckle it on. It is dead-cold and heavier than steel, but it sits between you and the next blow — it will not swing your blade for you, but it will keep you standing to swing it yourself."
+
 npcs:
   - id: lantern_spirit
     name: "lantern-spirit"
@@ -219,6 +310,15 @@ npcs:
               prompt: "Ask whether the dead forge could ever be lit again."
               conditions: [ { not_flag: heard_forge } ]
               goto: spirit_forge
+            # One-shot lore + signpost (gated heard_founder): names the master who
+            # made the Ember-Heart and points at his side-cell to the west, so a
+            # curious player can find the optional plate. No stat/balance effect —
+            # the +2 defense is EARNED by going there and donning the plate, not by
+            # the asking (unlike ask_sentinel, which grants its buff on the telling).
+            - id: ask_founder
+              prompt: "Ask who else ever came down into the cold."
+              conditions: [ { not_flag: heard_founder } ]
+              goto: spirit_founder
             - id: leave_spirit
               prompt: "Step away from the lantern."
               end: true
@@ -269,6 +369,29 @@ npcs:
             - add_journal: "The spirit is plain: the dead forge cannot be relit — the Ember-Heart is the one warmth left to carry out, not a fire to rekindle."
           topics:
             - id: forge_back
+              prompt: "Nod, and ask something else."
+              goto: spirit_root
+        - id: spirit_founder
+          # Pure spoken words, quote-free and no third-person gesture (bug_0071) —
+          # the wrapper renders `lantern-spirit: "<text>"`. One-shot (gated on its
+          # own heard_founder), loops back to spirit_root whose ungated leave_spirit
+          # keeps the node terminating (a gated-only escape would trip
+          # DIALOGUE_NONTERMINATING, bug_0014).
+          npc_text: >
+            One came before you, an age ago, and he never climbed back out — the
+            last master of this forge. When the great fire failed he would not let
+            it die whole; he banked its last live coal into the Ember-Heart, set
+            the slag sentinel to keep it, and walled himself into the side-cell
+            west of here with the cold that holds the sentinel sleeping. His
+            cold-iron plate is on him yet, whole and unrusted. He has no use for it
+            now, and the sentinel's blows fall like dropped anvils. Take it, if
+            your conscience lets you — better his iron on a living back than
+            guarding old bones.
+          effects:
+            - set_flag: heard_founder
+            - add_journal: "The spirit speaks of the forge's last master, walled into the side-cell west of the outer hall, dead in cold-iron plate that might yet turn the sentinel's blows."
+          topics:
+            - id: founder_back
               prompt: "Nod, and ask something else."
               goto: spirit_root
 

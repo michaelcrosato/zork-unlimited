@@ -112,8 +112,9 @@ describe("bug_0059 — the lantern-spirit forecloses the 'relight the forge' tem
     let s = talkingSpirit(1);
     s = act(s, ask("ask_forge")); // now at spirit_forge
     s = act(s, ask("forge_back")); // back to spirit_root
-    // The told topic is gone; the other two info topics + the exit remain.
-    expect(askIds(s).sort()).toEqual(["ask_heart", "ask_sentinel", "leave_spirit"]);
+    // The told topic is gone; the other info topics (incl. the bug_0076 founder
+    // lore-signpost) + the exit remain.
+    expect(askIds(s).sort()).toEqual(["ask_founder", "ask_heart", "ask_sentinel", "leave_spirit"]);
     // Forcing the retired topic is rejected (engine re-check) — it can never re-journal.
     const forge: Action = { type: "ASK", npc: "lantern_spirit", topic: "ask_forge" };
     expect(options(s).some((o) => actionEquals(o.action, forge))).toBe(false);
