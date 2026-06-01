@@ -22,7 +22,13 @@
  */
 import { mkdirSync, writeFileSync, appendFileSync } from "node:fs";
 import { join } from "node:path";
-import { assess, formatAssessment, type Assessment, type ImprovementCandidate, type PackHealth } from "./afk/assessor.js";
+import {
+  assess,
+  formatAssessment,
+  type Assessment,
+  type ImprovementCandidate,
+  type PackHealth,
+} from "./afk/assessor.js";
 import { createToolApi } from "./mcp/tools.js";
 
 function cycleStamp(): string {
@@ -31,7 +37,11 @@ function cycleStamp(): string {
 }
 
 /** Which pack the mandatory playtest targets this cycle. */
-function playtestTarget(a: Assessment, top: ImprovementCandidate | null, mainStory: string): string {
+function playtestTarget(
+  a: Assessment,
+  top: ImprovementCandidate | null,
+  mainStory: string,
+): string {
   if (top && top.category === "content_fix") return top.target; // the pack to improve
   // content_new (a mode) / engine / repo: playtest the main story as a regression baseline.
   return mainStory;
@@ -45,7 +55,8 @@ function main(): void {
 
   const a = assess(root);
   const top = a.top;
-  const mainStory = createToolApi({ root }).list_stories().main_story ?? "content/cyoa/pack/watchtower_road.yaml";
+  const mainStory =
+    createToolApi({ root }).list_stories().main_story ?? "content/cyoa/pack/watchtower_road.yaml";
   const target = playtestTarget(a, top, mainStory);
   const playtestRecord = join(runDir, "playtest.md").replaceAll("\\", "/");
 
@@ -59,7 +70,11 @@ function main(): void {
   // Stable pointer loop.sh reads to enforce the mandatory playtest.
   writeFileSync(
     join("ai-runs", "latest-cycle.json"),
-    JSON.stringify({ runId: stamp, runDir, target, playtestRecord, recommendation: top?.title ?? null }, null, 2),
+    JSON.stringify(
+      { runId: stamp, runDir, target, playtestRecord, recommendation: top?.title ?? null },
+      null,
+      2,
+    ),
   );
   appendState(stamp, a, target);
 
@@ -78,7 +93,9 @@ function buildPrompt(ctx: {
   playtestRecord: string;
 }): string {
   const { a, top, target, targetHealth, playtestRecord } = ctx;
-  const ranked = a.candidates.slice(0, 6).map((c, i) => `  ${i + 1}. [${c.score}] (${c.category}/${c.effort}) ${c.title}`);
+  const ranked = a.candidates
+    .slice(0, 6)
+    .map((c, i) => `  ${i + 1}. [${c.score}] (${c.category}/${c.effort}) ${c.title}`);
   const health = targetHealth
     ? `endings ${targetHealth.endingsReached}/${targetHealth.endingsDeclared}, unvisited ${targetHealth.unvisited.length}${targetHealth.unvisited.length ? ` (${targetHealth.unvisited.slice(0, 8).join(", ")})` : ""}, ${targetHealth.warnings} warning(s)`
     : "(not a pack — engine/repo work; the target pack is the regression baseline)";

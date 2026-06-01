@@ -53,7 +53,12 @@ export type Assessment = {
 
 const EFFORT_COST: Record<ImprovementCandidate["effort"], number> = { S: 1, M: 2, L: 3 };
 // Quality-first weighting: improving what players actually touch beats net-new bulk.
-const CATEGORY_WEIGHT: Record<Category, number> = { content_fix: 1.0, content_new: 0.85, engine: 0.8, repo: 0.6 };
+const CATEGORY_WEIGHT: Record<Category, number> = {
+  content_fix: 1.0,
+  content_new: 0.85,
+  engine: 0.8,
+  repo: 0.6,
+};
 // How many packs per mode is "healthy" before net-new content is deprioritized.
 const TARGET_PER_MODE: Record<string, number> = { cyoa: 2, parser: 2, rpg: 2 };
 
@@ -66,7 +71,9 @@ function listSourceFiles(root: string): string[] {
   const out: string[] = [];
   const walk = (d: string): void => {
     if (!existsSync(d)) return;
-    for (const e of readdirSync(d, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+    for (const e of readdirSync(d, { withFileTypes: true }).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    )) {
       const p = join(d, e.name);
       if (e.isDirectory()) walk(p);
       else if (e.isFile() && /\.ts$/.test(e.name)) out.push(p);
@@ -89,13 +96,22 @@ export function assess(root: string): Assessment {
   for (const s of stories) {
     if (s.mode) packsByMode[s.mode] = (packsByMode[s.mode] ?? 0) + 1;
     if (!s.playable) {
-      packs.push({ path: s.path, mode: s.mode, playable: false, endingsDeclared: 0, endingsReached: 0, unvisited: [], warnings: 0 });
+      packs.push({
+        path: s.path,
+        mode: s.mode,
+        playable: false,
+        endingsDeclared: 0,
+        endingsReached: 0,
+        unvisited: [],
+        warnings: 0,
+      });
       candidates.push({
         id: `fix-unplayable-${s.path}`,
         category: "content_fix",
         target: s.path,
         title: `Fix "${s.id}" — it does not validate (unplayable)`,
-        rationale: "An unplayable pack is the highest-impact thing to fix: nobody can experience it.",
+        rationale:
+          "An unplayable pack is the highest-impact thing to fix: nobody can experience it.",
         evidence: [`${s.path} failed validation`],
         impact: 5,
         effort: "M",
@@ -105,7 +121,7 @@ export function assess(root: string): Assessment {
     }
     const report = api.validate_pack({ pack_path: s.path });
     const warnings = report.report.findings.filter((f) => f.severity === "warning").length;
-    let pt: ReturnType<typeof api.run_playtest> | null = null;
+    let pt: ReturnType<typeof api.run_playtest> | null;
     try {
       pt = api.run_playtest({ story_path: s.path, strategy: "coverage", runs: 30 });
     } catch {
@@ -115,7 +131,15 @@ export function assess(root: string): Assessment {
     const reached = pt ? Object.keys(pt.ending_distribution) : [];
     const unreached = declared.filter((e) => !reached.includes(e));
     const unvisited = pt?.unvisited_scenes ?? [];
-    packs.push({ path: s.path, mode: s.mode, playable: true, endingsDeclared: declared.length, endingsReached: reached.length, unvisited, warnings });
+    packs.push({
+      path: s.path,
+      mode: s.mode,
+      playable: true,
+      endingsDeclared: declared.length,
+      endingsReached: reached.length,
+      unvisited,
+      warnings,
+    });
 
     // content_fix candidate when there is room to improve. CRUCIAL: the coverage
     // BOT is a heuristic with NO planning, so in parser/RPG *puzzle* games its
@@ -134,8 +158,12 @@ export function assess(root: string): Assessment {
       const evidence = warnings ? [`${warnings} validator warning(s)`] : [];
       if (botCoverageIsMeaningful) {
         evidence.push(
-          unreached.length ? `unreached endings: ${unreached.join(", ")}` : "all endings reached by the coverage bot",
-          unvisited.length ? `unvisited: ${unvisited.slice(0, 8).join(", ")}${unvisited.length > 8 ? "…" : ""}` : "full location coverage",
+          unreached.length
+            ? `unreached endings: ${unreached.join(", ")}`
+            : "all endings reached by the coverage bot",
+          unvisited.length
+            ? `unvisited: ${unvisited.slice(0, 8).join(", ")}${unvisited.length > 8 ? "…" : ""}`
+            : "full location coverage",
         );
       }
       candidates.push({
@@ -145,7 +173,8 @@ export function assess(root: string): Assessment {
         title: botCoverageIsMeaningful
           ? `Improve "${s.id}" — ${unreached.length} unreached ending(s), ${unvisited.length} unvisited location(s)${warnings ? `, ${warnings} warning(s)` : ""}`
           : `Fix "${s.id}" — ${warnings} validator warning(s)`,
-        rationale: "An LLM playtest can pinpoint why these are hard to reach (signposting, clue legibility, pacing) and the fix raises player-facing quality.",
+        rationale:
+          "An LLM playtest can pinpoint why these are hard to reach (signposting, clue legibility, pacing) and the fix raises player-facing quality.",
         evidence,
         impact,
         effort: "M",
@@ -160,8 +189,11 @@ export function assess(root: string): Assessment {
         category: "content_fix",
         target: s.path,
         title: `Blind-playtest "${s.id}" — the coverage bot can't solve its puzzles, so quality is unverified`,
-        rationale: "A heuristic bot can't plan multi-step puzzles; only a fresh blind LLM playtest reveals real signposting/clarity issues in this pack.",
-        evidence: [`bot left ${unvisited.length} location(s) unvisited / ${unreached.length} ending(s) unreached — expected for a puzzle game, so this is a review prompt, not a known flaw`],
+        rationale:
+          "A heuristic bot can't plan multi-step puzzles; only a fresh blind LLM playtest reveals real signposting/clarity issues in this pack.",
+        evidence: [
+          `bot left ${unvisited.length} location(s) unvisited / ${unreached.length} ending(s) unreached — expected for a puzzle game, so this is a review prompt, not a known flaw`,
+        ],
         impact: 1,
         effort: "M",
         score: score(1, "M", "content_fix"),
@@ -195,7 +227,8 @@ export function assess(root: string): Assessment {
     text.split("\n").forEach((line, i) => {
       // Anchor to an actual comment marker so prose/regex mentions of the words
       // (like this assessor's own descriptions) aren't counted as debt.
-      if (/(?:\/\/|\/\*)\s*(?:TODO|FIXME|HACK|XXX)\b/.test(line)) markers.push(`${relative(root, f).replaceAll("\\", "/")}:${i + 1}`);
+      if (/(?:\/\/|\/\*)\s*(?:TODO|FIXME|HACK|XXX)\b/.test(line))
+        markers.push(`${relative(root, f).replaceAll("\\", "/")}:${i + 1}`);
     });
   }
   if (markers.length > 0) {
@@ -205,7 +238,8 @@ export function assess(root: string): Assessment {
       category: "engine",
       target: "src/",
       title: `Address ${markers.length} engine TODO/FIXME marker(s)`,
-      rationale: "Code-level debt the engine carries; clearing it keeps the deterministic core honest.",
+      rationale:
+        "Code-level debt the engine carries; clearing it keeps the deterministic core honest.",
       evidence: markers.slice(0, 8),
       impact,
       effort: "M",
@@ -214,14 +248,21 @@ export function assess(root: string): Assessment {
   }
 
   // ── repo: tooling/hygiene gaps (cheap, deterministic checks) ──────────────────
-  const hasEslint = ["eslint.config.js", "eslint.config.mjs", ".eslintrc", ".eslintrc.json", ".eslintrc.cjs"].some((f) => existsSync(join(root, f)));
+  const hasEslint = [
+    "eslint.config.js",
+    "eslint.config.mjs",
+    ".eslintrc",
+    ".eslintrc.json",
+    ".eslintrc.cjs",
+  ].some((f) => existsSync(join(root, f)));
   if (!hasEslint) {
     candidates.push({
       id: "repo-eslint",
       category: "repo",
       target: "tooling",
       title: "Add ESLint + Prettier (lint is currently just tsc)",
-      rationale: "A linter/formatter catches a class of issues the typechecker misses and keeps autonomous edits consistent.",
+      rationale:
+        "A linter/formatter catches a class of issues the typechecker misses and keeps autonomous edits consistent.",
       evidence: ["no eslint/prettier config found"],
       impact: 3,
       effort: "L",
@@ -238,11 +279,17 @@ export function formatAssessment(a: Assessment): string {
   const lines: string[] = [];
   lines.push("# AFK assessment — next best improvement");
   lines.push("");
-  lines.push(`Packs by mode: ${Object.entries(a.packsByMode).map(([m, n]) => `${m}=${n}`).join("  ")}`);
+  lines.push(
+    `Packs by mode: ${Object.entries(a.packsByMode)
+      .map(([m, n]) => `${m}=${n}`)
+      .join("  ")}`,
+  );
   lines.push("");
   lines.push("## Pack health");
   for (const p of a.packs) {
-    lines.push(`- ${p.path} [${p.mode ?? "?"}] ${p.playable ? `endings ${p.endingsReached}/${p.endingsDeclared}, unvisited ${p.unvisited.length}, warnings ${p.warnings}` : "UNPLAYABLE"}`);
+    lines.push(
+      `- ${p.path} [${p.mode ?? "?"}] ${p.playable ? `endings ${p.endingsReached}/${p.endingsDeclared}, unvisited ${p.unvisited.length}, warnings ${p.warnings}` : "UNPLAYABLE"}`,
+    );
   }
   lines.push("");
   lines.push("## Ranked candidates");
@@ -252,7 +299,11 @@ export function formatAssessment(a: Assessment): string {
     for (const e of c.evidence) lines.push(`     · ${e}`);
   });
   lines.push("");
-  lines.push(a.top ? `## ▶ Recommended next: ${a.top.title}` : "## No improvement candidates — the game is healthy.");
+  lines.push(
+    a.top
+      ? `## ▶ Recommended next: ${a.top.title}`
+      : "## No improvement candidates — the game is healthy.",
+  );
   return lines.join("\n");
 }
 

@@ -51,7 +51,9 @@ function main(): void {
   console.log(`actions:      ${trace.actions.length}`);
   console.log(`final hash:   ${result.finalHash}`);
   console.log(`expected:     ${result.expectedFinalHash ?? "(none)"}`);
-  console.log(result.ok ? "REPLAY OK — round-trip reproduced." : `REPLAY DIVERGED — ${result.message}`);
+  console.log(
+    result.ok ? "REPLAY OK — round-trip reproduced." : `REPLAY DIVERGED — ${result.message}`,
+  );
   process.exit(result.ok ? 0 : 1);
 }
 

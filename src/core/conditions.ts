@@ -23,7 +23,11 @@ export const ConditionSchema: z.ZodType<Condition> = z.lazy(() =>
     z.object({ var_lte: VarCmp }).strict(),
     z.object({ var_eq: VarCmp }).strict(),
     // Stage 4 (§13, §14 gate): true when a quest is at a named stage.
-    z.object({ quest_stage: z.object({ quest: z.string().min(1), stage: z.string().min(1) }).strict() }).strict(),
+    z
+      .object({
+        quest_stage: z.object({ quest: z.string().min(1), stage: z.string().min(1) }).strict(),
+      })
+      .strict(),
     z.object({ all_of: z.array(ConditionSchema) }).strict(),
     z.object({ any_of: z.array(ConditionSchema) }).strict(),
     z.object({ none_of: z.array(ConditionSchema) }).strict(),
@@ -56,7 +60,8 @@ export function evalCondition(cond: Condition, state: GameState): boolean {
   if ("var_gte" in cond) return (state.vars[cond.var_gte.name] ?? 0) >= cond.var_gte.value;
   if ("var_lte" in cond) return (state.vars[cond.var_lte.name] ?? 0) <= cond.var_lte.value;
   if ("var_eq" in cond) return (state.vars[cond.var_eq.name] ?? 0) === cond.var_eq.value;
-  if ("quest_stage" in cond) return state.questStage[cond.quest_stage.quest] === cond.quest_stage.stage;
+  if ("quest_stage" in cond)
+    return state.questStage[cond.quest_stage.quest] === cond.quest_stage.stage;
   if ("all_of" in cond) return cond.all_of.every((c) => evalCondition(c, state));
   if ("any_of" in cond) return cond.any_of.some((c) => evalCondition(c, state));
   if ("none_of" in cond) return !cond.none_of.some((c) => evalCondition(c, state));

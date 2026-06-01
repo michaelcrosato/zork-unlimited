@@ -35,18 +35,33 @@ import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../rpg/runner.
 import { buildRpgObservation } from "../rpg/observation.js";
 import { validateRpg } from "../validate/rpg_validator.js";
 
-import { makeReport, formatReport, type Finding, type ValidationReport } from "../validate/report.js";
+import {
+  makeReport,
+  formatReport,
+  type Finding,
+  type ValidationReport,
+} from "../validate/report.js";
 import { save, load } from "../persist/save_load.js";
 import { replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
 import { SessionStore, type Session } from "./sessions.js";
-import { detectMode, type PackMode, type AnyCompiledPack, type AnyIndex, type AnyObservation } from "./types.js";
+import {
+  detectMode,
+  type PackMode,
+  type AnyCompiledPack,
+  type AnyIndex,
+  type AnyObservation,
+} from "./types.js";
 import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
 import { loadEngineContract, runWriter } from "../../agents/authoring/writer.js";
 import { runAdapter } from "../../agents/authoring/adapter.js";
 import { diagnose } from "../../agents/debugger.js";
-import { applyContentPatch, ContentPatchProposalSchema, type ContentPatchProposal } from "../../agents/fixer.js";
+import {
+  applyContentPatch,
+  ContentPatchProposalSchema,
+  type ContentPatchProposal,
+} from "../../agents/fixer.js";
 
 export type ToolApi = ReturnType<typeof createToolApi>;
 type PlaytestStrategy = "random" | "coverage";
@@ -75,14 +90,18 @@ function rulesFor(mode: PackMode, index: AnyIndex): Rules {
 }
 
 function initStateFor(mode: PackMode, index: AnyIndex, seed: number): GameState {
-  if (mode === "cyoa") return initStateForPack(index as Parameters<typeof initStateForPack>[0], seed);
-  if (mode === "parser") return initStateForParserPack(index as Parameters<typeof initStateForParserPack>[0], seed);
+  if (mode === "cyoa")
+    return initStateForPack(index as Parameters<typeof initStateForPack>[0], seed);
+  if (mode === "parser")
+    return initStateForParserPack(index as Parameters<typeof initStateForParserPack>[0], seed);
   return initStateForRpgPack(index as Parameters<typeof initStateForRpgPack>[0], seed);
 }
 
 function buildObsFor(mode: PackMode, index: AnyIndex, state: GameState): AnyObservation {
-  if (mode === "cyoa") return buildObservation(index as Parameters<typeof buildObservation>[0], state);
-  if (mode === "parser") return buildParserObservation(index as Parameters<typeof buildParserObservation>[0], state);
+  if (mode === "cyoa")
+    return buildObservation(index as Parameters<typeof buildObservation>[0], state);
+  if (mode === "parser")
+    return buildParserObservation(index as Parameters<typeof buildParserObservation>[0], state);
   return buildRpgObservation(index as Parameters<typeof buildRpgObservation>[0], state);
 }
 
@@ -108,7 +127,10 @@ function actionForId(obs: AnyObservation, id: string): Action | null {
   return obs.available_actions.find((a) => a.id === id)?.action ?? null;
 }
 
-function schemaFindings(packPath: string, error: { issues: { message: string; path: (string | number)[] }[] }): Finding[] {
+function schemaFindings(
+  packPath: string,
+  error: { issues: { message: string; path: (string | number)[] }[] },
+): Finding[] {
   return error.issues.map((i) => ({
     severity: "error" as const,
     code: "SCHEMA",
@@ -127,11 +149,23 @@ export function createToolApi(opts: { root: string }) {
     const source = readFileSync(abs, "utf8");
     const mode = detectMode(parseYaml(source) as unknown);
     const compileRes =
-      mode === "cyoa" ? compilePack(source) : mode === "parser" ? compileParserPack(source) : compileRpgPack(source);
-    if (!compileRes.ok) return { ok: false, report: makeReport(packPath, schemaFindings(packPath, compileRes.error)) };
+      mode === "cyoa"
+        ? compilePack(source)
+        : mode === "parser"
+          ? compileParserPack(source)
+          : compileRpgPack(source);
+    if (!compileRes.ok)
+      return {
+        ok: false,
+        report: makeReport(packPath, schemaFindings(packPath, compileRes.error)),
+      };
     const pack = compileRes.compiled.pack;
     const report =
-      mode === "cyoa" ? validateCyoa(pack as never) : mode === "parser" ? validateParser(pack as never) : validateRpg(pack as never);
+      mode === "cyoa"
+        ? validateCyoa(pack as never)
+        : mode === "parser"
+          ? validateParser(pack as never)
+          : validateRpg(pack as never);
     return { ok: true, mode, compiled: compileRes.compiled, report };
   }
 
@@ -186,13 +220,21 @@ export function createToolApi(opts: { root: string }) {
 
   // ── Playtest: CYOA path is unchanged (byte-identical); parser/RPG added ───────
 
-  function summarizePlaytest(args: { pack_path: string; runs?: number; strategy?: PlaytestStrategy; max_steps?: number }) {
+  function summarizePlaytest(args: {
+    pack_path: string;
+    runs?: number;
+    strategy?: PlaytestStrategy;
+    max_steps?: number;
+  }) {
     const { mode, compiled } = requirePlayable(args.pack_path);
     if (mode === "cyoa") return summarizeCyoa(compiled as CompiledPack, args);
     return summarizeParserLike(mode, compiled, args);
   }
 
-  function summarizeCyoa(compiled: CompiledPack, args: { runs?: number; strategy?: PlaytestStrategy; max_steps?: number }) {
+  function summarizeCyoa(
+    compiled: CompiledPack,
+    args: { runs?: number; strategy?: PlaytestStrategy; max_steps?: number },
+  ) {
     const index = indexPack(compiled.pack);
     const step = makeStep(buildRules(index));
     const runs = args.runs ?? 100;
@@ -206,7 +248,12 @@ export function createToolApi(opts: { root: string }) {
     ].sort();
     const globalVisited = new Set<string>();
     const endingDistribution: Record<string, number> = {};
-    const suspiciousPathSamples: { run: number; status: string; path: string[]; ending_id: string | null }[] = [];
+    const suspiciousPathSamples: {
+      run: number;
+      status: string;
+      path: string[];
+      ending_id: string | null;
+    }[] = [];
     let ended = 0;
     let unfinished = 0;
 
@@ -230,7 +277,14 @@ export function createToolApi(opts: { root: string }) {
         rng = (rng * 1664525 + 1013904223) >>> 0;
         const scene = index.scenes.get(state.current);
         const choiceIndex =
-          strategy === "random" ? rng % obs.available_actions.length : coverageChoiceIndex(obs.available_actions, scene?.choices ?? [], globalVisited, localVisited);
+          strategy === "random"
+            ? rng % obs.available_actions.length
+            : coverageChoiceIndex(
+                obs.available_actions,
+                scene?.choices ?? [],
+                globalVisited,
+                localVisited,
+              );
         const actionId = obs.available_actions[choiceIndex]?.id ?? obs.available_actions[0]!.id;
         const result = step(state, { type: "CHOOSE", choiceId: actionId });
         state = result.state;
@@ -278,7 +332,9 @@ export function createToolApi(opts: { root: string }) {
       return next !== undefined && !globalVisited.has(next) && !localVisited.has(next);
     });
     if (unseen >= 0) return unseen;
-    const investigative = actions.findIndex((action) => /inspect|search|read|ask|show|examine|talk/i.test(action.text));
+    const investigative = actions.findIndex((action) =>
+      /inspect|search|read|ask|show|examine|talk/i.test(action.text),
+    );
     return investigative >= 0 ? investigative : 0;
   }
 
@@ -305,7 +361,12 @@ export function createToolApi(opts: { root: string }) {
     const endingsDeclared = pack.endings.map((e) => e.id).sort();
     const globalVisited = new Set<string>();
     const endingDistribution: Record<string, number> = {};
-    const suspiciousPathSamples: { run: number; status: string; path: string[]; ending_id: string | null }[] = [];
+    const suspiciousPathSamples: {
+      run: number;
+      status: string;
+      path: string[];
+      ending_id: string | null;
+    }[] = [];
     let ended = 0;
     let unfinished = 0;
 
@@ -346,7 +407,8 @@ export function createToolApi(opts: { root: string }) {
         endingDistribution[ending] = (endingDistribution[ending] ?? 0) + 1;
       } else {
         unfinished++;
-        if (suspiciousPathSamples.length < 5) suspiciousPathSamples.push({ run: run + 1, status, path, ending_id: state.endingId });
+        if (suspiciousPathSamples.length < 5)
+          suspiciousPathSamples.push({ run: run + 1, status, path, ending_id: state.endingId });
       }
     }
 
@@ -392,7 +454,16 @@ export function createToolApi(opts: { root: string }) {
       return { ok: lr.report.ok, report: lr.report };
     },
 
-    list_stories(): { stories: { path: string; id: string; title: string; mode: PackMode | null; playable: boolean }[]; main_story: string | null } {
+    list_stories(): {
+      stories: {
+        path: string;
+        id: string;
+        title: string;
+        mode: PackMode | null;
+        playable: boolean;
+      }[];
+      main_story: string | null;
+    } {
       const dirs: [string, PackMode][] = [
         [join(root, "content", "cyoa", "pack"), "cyoa"],
         [join(root, "content", "parser", "pack"), "parser"],
@@ -411,7 +482,8 @@ export function createToolApi(opts: { root: string }) {
           };
         });
       // Keep watchtower the default main story for the existing AFK loop.
-      const main = stories.find((s) => s.path.endsWith("watchtower_road.yaml")) ?? stories[0] ?? null;
+      const main =
+        stories.find((s) => s.path.endsWith("watchtower_road.yaml")) ?? stories[0] ?? null;
       return { stories, main_story: main?.path ?? null };
     },
 
@@ -428,7 +500,13 @@ export function createToolApi(opts: { root: string }) {
     } {
       const lr = loadAndReport(args.pack_path);
       if (!lr.ok) return { ok: false, report: lr.report };
-      return { ok: lr.report.ok, mode: lr.mode, meta: lr.compiled.pack.meta, content_hash: lr.compiled.contentHash, report: lr.report };
+      return {
+        ok: lr.report.ok,
+        mode: lr.mode,
+        meta: lr.compiled.pack.meta,
+        content_hash: lr.compiled.contentHash,
+        report: lr.report,
+      };
     },
 
     new_game(args: { pack_path: string; seed?: number }) {
@@ -447,7 +525,10 @@ export function createToolApi(opts: { root: string }) {
     },
 
     start_game(args: { story_path: string; seed?: number }) {
-      return this.new_game({ pack_path: args.story_path, ...(args.seed !== undefined ? { seed: args.seed } : {}) });
+      return this.new_game({
+        pack_path: args.story_path,
+        ...(args.seed !== undefined ? { seed: args.seed } : {}),
+      });
     },
 
     get_observation(args: { session_id: string }) {
@@ -475,7 +556,9 @@ export function createToolApi(opts: { root: string }) {
         return {
           ok: false,
           rejection_reason: "That action is not available right now.",
-          events: [{ type: "rejected" as const, reason: "That action is not available right now." }],
+          events: [
+            { type: "rejected" as const, reason: "That action is not available right now." },
+          ],
           observation: before,
           state_hash: hashState(s.state),
         };
@@ -525,13 +608,20 @@ export function createToolApi(opts: { root: string }) {
           ended: s.state.ended,
           ending_id: s.state.endingId,
           inventory: [...s.state.inventory],
-          flags: Object.keys(s.state.flags).filter((f) => s.state.flags[f] === true && !f.startsWith("__")).sort(),
+          flags: Object.keys(s.state.flags)
+            .filter((f) => s.state.flags[f] === true && !f.startsWith("__"))
+            .sort(),
           journal: [...s.state.journal],
         },
       };
     },
 
-    run_playtest(args: { story_path: string; runs?: number; strategy?: PlaytestStrategy; max_steps?: number }) {
+    run_playtest(args: {
+      story_path: string;
+      runs?: number;
+      strategy?: PlaytestStrategy;
+      max_steps?: number;
+    }) {
       return summarizePlaytest({
         pack_path: args.story_path,
         ...(args.runs !== undefined ? { runs: args.runs } : {}),
@@ -543,7 +633,12 @@ export function createToolApi(opts: { root: string }) {
     save_game(args: { session_id: string }) {
       const s = sessions.get(args.session_id);
       // The save records the pack mode so load can refuse a mode mismatch (§8.7).
-      return { save: save(s.state, s.packId, s.contentHash, s.mode), pack_id: s.packId, content_hash: s.contentHash, mode: s.mode };
+      return {
+        save: save(s.state, s.packId, s.contentHash, s.mode),
+        pack_id: s.packId,
+        content_hash: s.contentHash,
+        mode: s.mode,
+      };
     },
 
     load_game(args: { pack_path: string; save: string }) {
@@ -603,16 +698,33 @@ export function createToolApi(opts: { root: string }) {
       const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace;
       const { mode, compiled } = requirePlayable(args.pack_path);
       if (trace.content_hash !== compiled.contentHash) {
-        return { ok: false, message: `Trace content ${trace.content_hash} ≠ pack ${compiled.contentHash}.` };
+        return {
+          ok: false,
+          message: `Trace content ${trace.content_hash} ≠ pack ${compiled.contentHash}.`,
+        };
       }
       const rules = rulesFor(mode, indexFor(mode, compiled.pack));
       const step = makeStep(rules);
       let state = trace.initial_state;
-      const steps: { i: number; action: Action; ok: boolean; location: string; ended: boolean; ending_id: string | null }[] = [];
+      const steps: {
+        i: number;
+        action: Action;
+        ok: boolean;
+        location: string;
+        ended: boolean;
+        ending_id: string | null;
+      }[] = [];
       trace.actions.forEach((action, i) => {
         const r = step(state, action);
         state = r.state;
-        steps.push({ i, action, ok: r.ok, location: state.current, ended: state.ended, ending_id: state.endingId });
+        steps.push({
+          i,
+          action,
+          ok: r.ok,
+          location: state.current,
+          ended: state.ended,
+          ending_id: state.endingId,
+        });
       });
       const replay = replayTrace(trace, rules);
       const d = diagnose(rules, trace.initial_state, trace.actions);
@@ -641,7 +753,17 @@ export function createToolApi(opts: { root: string }) {
       const abs = safeResolve(root, args.pack_path);
       const loaded = proposal.mode === "cyoa" ? loadPackFile(abs) : loadParserPackFile(abs);
       if (!loaded.ok) {
-        return { ok: false, report: makeReport(args.pack_path, [{ severity: "error" as const, code: "SCHEMA", message: "pack failed to compile", where: [args.pack_path] }]) };
+        return {
+          ok: false,
+          report: makeReport(args.pack_path, [
+            {
+              severity: "error" as const,
+              code: "SCHEMA",
+              message: "pack failed to compile",
+              where: [args.pack_path],
+            },
+          ]),
+        };
       }
       const result = applyContentPatch(loaded.compiled.pack, proposal);
       return result.ok

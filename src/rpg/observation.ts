@@ -36,6 +36,10 @@ export function buildRpgObservation(index: RpgIndex, state: GameState): RpgObser
       attack: state.vars[ATTACK_VAR] ?? 0,
       defense: state.vars[DEFENSE_VAR] ?? 0,
     },
-    available_actions: enumerateRpgActions(index, state).map((o) => ({ id: o.id, command: o.command, action: o.action })),
+    available_actions: enumerateRpgActions(index, state).map((o) => ({
+      id: o.id,
+      command: o.command,
+      action: o.action,
+    })),
   };
 }

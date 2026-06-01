@@ -57,7 +57,10 @@ export function extractJson(text: string): unknown {
   throw new Error(`Unbalanced JSON in model reply: ${text.slice(0, 200)}`);
 }
 
-type HttpJson = (url: string, init: { headers: Record<string, string>; body: unknown }) => Promise<unknown>;
+type HttpJson = (
+  url: string,
+  init: { headers: Record<string, string>; body: unknown },
+) => Promise<unknown>;
 
 /** POST JSON and return parsed JSON; thin wrapper so tests can inject a fake. */
 const postJson: HttpJson = async (url, init) => {
@@ -66,7 +69,8 @@ const postJson: HttpJson = async (url, init) => {
     headers: { "content-type": "application/json", ...init.headers },
     body: JSON.stringify(init.body),
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status} from ${url}: ${(await res.text()).slice(0, 300)}`);
+  if (!res.ok)
+    throw new Error(`HTTP ${res.status} from ${url}: ${(await res.text()).slice(0, 300)}`);
   return res.json();
 };
 

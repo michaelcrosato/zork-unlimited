@@ -46,7 +46,9 @@ export function resolveAttack(state: GameState, enemy: Enemy): Resolution {
   const newEnemyHp = curEnemyHp - toEnemy;
   const effects: Effect[] = [
     { set_var: { name: hpVar, value: Math.max(0, newEnemyHp) } },
-    { narrate: `You strike ${enemy.name} for ${toEnemy} (it has ${Math.max(0, newEnemyHp)} HP left).` },
+    {
+      narrate: `You strike ${enemy.name} for ${toEnemy} (it has ${Math.max(0, newEnemyHp)} HP left).`,
+    },
   ];
 
   if (newEnemyHp <= 0) {
@@ -61,10 +63,15 @@ export function resolveAttack(state: GameState, enemy: Enemy): Resolution {
   const newPlayerHp = playerHp - toPlayer;
   effects.push(
     { set_var: { name: HP_VAR, value: Math.max(0, newPlayerHp) } },
-    { narrate: `${enemy.name} hits you for ${toPlayer} (you have ${Math.max(0, newPlayerHp)} HP left).` },
+    {
+      narrate: `${enemy.name} hits you for ${toPlayer} (you have ${Math.max(0, newPlayerHp)} HP left).`,
+    },
   );
   if (newPlayerHp <= 0) {
-    effects.push({ narrate: "Your strength fails and the world goes dark." }, { end_game: enemy.death_ending });
+    effects.push(
+      { narrate: "Your strength fails and the world goes dark." },
+      { end_game: enemy.death_ending },
+    );
   }
   return { conditions: [], effects };
 }

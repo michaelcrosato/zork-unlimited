@@ -38,18 +38,26 @@ function inspectTrace(tracePath: string, packPath: string): void {
     process.exit(1);
   }
   const rules = buildRules(indexPack(loaded.compiled.pack));
-  console.log(`Trace: ${trace.trace_id}  pack: ${trace.pack_id}  seed: ${trace.seed}  steps: ${trace.actions.length}`);
+  console.log(
+    `Trace: ${trace.trace_id}  pack: ${trace.pack_id}  seed: ${trace.seed}  steps: ${trace.actions.length}`,
+  );
   if (trace.content_hash !== loaded.compiled.contentHash) {
-    console.log(`  ! content hash mismatch: trace ${trace.content_hash} ≠ pack ${loaded.compiled.contentHash}`);
+    console.log(
+      `  ! content hash mismatch: trace ${trace.content_hash} ≠ pack ${loaded.compiled.contentHash}`,
+    );
   }
   const step = makeStep(rules);
   let state = trace.initial_state;
   trace.actions.forEach((action, i) => {
     state = step(state, action).state;
-    console.log(`  ${String(i).padStart(3)}  ${JSON.stringify(action)} -> ${state.current}${state.ended ? ` [END ${state.endingId}]` : ""}`);
+    console.log(
+      `  ${String(i).padStart(3)}  ${JSON.stringify(action)} -> ${state.current}${state.ended ? ` [END ${state.endingId}]` : ""}`,
+    );
   });
   const replay = replayTrace(trace, rules);
-  console.log(`\nReplay: ${replay.ok ? "OK" : "DIVERGED"}  final ${replay.finalHash}${replay.expectedFinalHash ? ` (expected ${replay.expectedFinalHash})` : ""}`);
+  console.log(
+    `\nReplay: ${replay.ok ? "OK" : "DIVERGED"}  final ${replay.finalHash}${replay.expectedFinalHash ? ` (expected ${replay.expectedFinalHash})` : ""}`,
+  );
   const d = diagnose(rules, trace.initial_state, trace.actions);
   console.log(`Suspected bug: ${d.type} (${d.severity}) — ${d.description}`);
 }
@@ -68,15 +76,22 @@ function inspectCyoaPack(path: string): void {
   while (queue.length) {
     const id = queue.shift()!;
     for (const c of index.scenes.get(id)?.choices ?? []) {
-      if (!reachable.has(c.next)) (reachable.add(c.next), queue.push(c.next));
+      if (!reachable.has(c.next)) {
+        reachable.add(c.next);
+        queue.push(c.next);
+      }
     }
   }
   const sceneIds = pack.scenes.map((s) => s.id);
   const unreachable = sceneIds.filter((s) => !reachable.has(s));
   const obs = buildObservation(index, initStateForPack(index, 1));
   console.log(`Pack: ${pack.meta.id} "${pack.meta.title}"  mode: cyoa  hash: ${contentHash}`);
-  console.log(`  scenes: ${pack.scenes.length}  endings: ${pack.endings.length}  start: ${pack.meta.start}`);
-  console.log(`  ending scenes: ${index.endingSceneIds.size}  reachable scenes: ${reachable.size - index.endingIds.size}/${sceneIds.length}`);
+  console.log(
+    `  scenes: ${pack.scenes.length}  endings: ${pack.endings.length}  start: ${pack.meta.start}`,
+  );
+  console.log(
+    `  ending scenes: ${index.endingSceneIds.size}  reachable scenes: ${reachable.size - index.endingIds.size}/${sceneIds.length}`,
+  );
   if (unreachable.length) console.log(`  unreachable (by static next): ${unreachable.join(", ")}`);
   console.log(`  opening actions: ${obs.available_actions.map((a) => a.id).join(", ")}`);
   console.log("\n" + formatReport(validateCyoa(pack)));
@@ -90,11 +105,17 @@ function inspectParserPack(path: string): void {
   }
   const { pack, contentHash } = result.compiled;
   console.log(`Pack: ${pack.meta.id} "${pack.meta.title}"  mode: parser  hash: ${contentHash}`);
-  console.log(`  rooms: ${pack.rooms.length}  objects: ${pack.objects.length}  npcs: ${pack.npcs.length}  win_conditions: ${pack.win_conditions.length}`);
+  console.log(
+    `  rooms: ${pack.rooms.length}  objects: ${pack.objects.length}  npcs: ${pack.npcs.length}  win_conditions: ${pack.win_conditions.length}`,
+  );
   console.log(`  start_room: ${pack.meta.start_room}  max_score: ${pack.meta.max_score}`);
   const containers = pack.objects.filter((o) => o.container).length;
-  const lockedExits = pack.rooms.flatMap((r) => r.exits).filter((e) => e.conditions.length > 0).length;
-  console.log(`  containers: ${containers}  quest_critical: ${pack.objects.filter((o) => o.quest_critical).length}  locked exits: ${lockedExits}`);
+  const lockedExits = pack.rooms
+    .flatMap((r) => r.exits)
+    .filter((e) => e.conditions.length > 0).length;
+  console.log(
+    `  containers: ${containers}  quest_critical: ${pack.objects.filter((o) => o.quest_critical).length}  locked exits: ${lockedExits}`,
+  );
   console.log("\n" + formatReport(validateParser(pack)));
 }
 
@@ -129,10 +150,18 @@ function inspectRpgPack(path: string): void {
   }
   const { pack, contentHash } = result.compiled;
   console.log(`Pack: ${pack.meta.id} "${pack.meta.title}"  mode: rpg  hash: ${contentHash}`);
-  console.log(`  rooms: ${pack.rooms.length}  objects: ${pack.objects.length}  enemies: ${pack.enemies.length}  win_conditions: ${pack.win_conditions.length}`);
-  console.log(`  start_room: ${pack.meta.start_room}  stats: ${JSON.stringify(pack.meta.vars_init)}`);
-  const skillChecks = pack.objects.flatMap((o) => o.interactions).filter((it) => it.skill_check).length;
-  console.log(`  enemies: ${pack.enemies.map((e) => `${e.id}(hp${e.hp})`).join(", ") || "none"}  skill checks: ${skillChecks}`);
+  console.log(
+    `  rooms: ${pack.rooms.length}  objects: ${pack.objects.length}  enemies: ${pack.enemies.length}  win_conditions: ${pack.win_conditions.length}`,
+  );
+  console.log(
+    `  start_room: ${pack.meta.start_room}  stats: ${JSON.stringify(pack.meta.vars_init)}`,
+  );
+  const skillChecks = pack.objects
+    .flatMap((o) => o.interactions)
+    .filter((it) => it.skill_check).length;
+  console.log(
+    `  enemies: ${pack.enemies.map((e) => `${e.id}(hp${e.hp})`).join(", ") || "none"}  skill checks: ${skillChecks}`,
+  );
   console.log("\n" + formatReport(validateRpg(pack)));
 }
 

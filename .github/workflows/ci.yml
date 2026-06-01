@@ -22,7 +22,11 @@ jobs:
       - name: Verifier integrity (don't route around the verifier)
         run: npm run verify:integrity
       - name: Typecheck
+        run: npm run typecheck
+      - name: Lint (ESLint)
         run: npm run lint
+      - name: Format check (Prettier)
+        run: npm run format:check
       - name: Tests (unit + property + determinism)
         run: npm test
       - name: Health (validate + playtest across packs)

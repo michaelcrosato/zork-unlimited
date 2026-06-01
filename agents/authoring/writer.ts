@@ -22,7 +22,10 @@ export function loadEngineContract(path = "content/engine_contract.yaml"): unkno
   return parseYaml(readFileSync(path, "utf8"));
 }
 
-export async function runWriter(provider: Provider, opts: { premise: string; contract: unknown }): Promise<WriterStory> {
+export async function runWriter(
+  provider: Provider,
+  opts: { premise: string; contract: unknown },
+): Promise<WriterStory> {
   return provider.completeJson({
     system: WRITER_SYSTEM,
     user: JSON.stringify({ premise: opts.premise, engine_contract: opts.contract }),

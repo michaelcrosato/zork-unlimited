@@ -20,12 +20,19 @@ import { type Finding, type ValidationReport, makeReport } from "./report.js";
 import { type RpgPack, HP_VAR, ATTACK_VAR, DEFENSE_VAR } from "../rpg/schema.js";
 import { SCORE_VAR } from "../parser/schema.js";
 
-const err = (code: string, message: string, where: string[]): Finding => ({ severity: "error", code, message, where });
+const err = (code: string, message: string, where: string[]): Finding => ({
+  severity: "error",
+  code,
+  message,
+  where,
+});
 
 function rpgRuntimeEffects(pack: RpgPack): Effect[] {
   const out: Effect[] = [];
   for (const e of pack.enemies) out.push(...e.on_defeat);
-  for (const o of pack.objects) for (const it of o.interactions) if (it.skill_check) out.push(...it.skill_check.on_success, ...it.skill_check.on_failure);
+  for (const o of pack.objects)
+    for (const it of o.interactions)
+      if (it.skill_check) out.push(...it.skill_check.on_success, ...it.skill_check.on_failure);
   return out;
 }
 
@@ -45,7 +52,8 @@ export function validateRpg(pack: RpgPack): ValidationReport {
   // parser validator's SCORE_UNREACHABLE bound does not scan — fold it in so a
   // score earned by winning a fight or passing a check counts as reachable.
   let extraScoreAwards = 0;
-  for (const e of rpgRuntimeEffects(pack)) if ("inc_var" in e && e.inc_var.name === SCORE_VAR) extraScoreAwards += e.inc_var.by;
+  for (const e of rpgRuntimeEffects(pack))
+    if ("inc_var" in e && e.inc_var.name === SCORE_VAR) extraScoreAwards += e.inc_var.by;
 
   const base = validateParser(pack, { extraSettableFlags, extraObtainable, extraScoreAwards });
   const findings: Finding[] = [...base.findings];
@@ -56,9 +64,19 @@ export function validateRpg(pack: RpgPack): ValidationReport {
   // ── Player stats ─────────────────────────────────────────────────────────────
   const vi = pack.meta.vars_init;
   for (const stat of [HP_VAR, ATTACK_VAR, DEFENSE_VAR]) {
-    if (vi[stat] === undefined) findings.push(err("MISSING_STAT", `meta.vars_init is missing the "${stat}" stat (Stage 4 requires HP/attack/defense).`, ["meta:vars_init"]));
+    if (vi[stat] === undefined)
+      findings.push(
+        err(
+          "MISSING_STAT",
+          `meta.vars_init is missing the "${stat}" stat (Stage 4 requires HP/attack/defense).`,
+          ["meta:vars_init"],
+        ),
+      );
   }
-  if ((vi[HP_VAR] ?? 0) <= 0) findings.push(err("BAD_HP", `meta.vars_init.${HP_VAR} must start positive.`, ["meta:vars_init"]));
+  if ((vi[HP_VAR] ?? 0) <= 0)
+    findings.push(
+      err("BAD_HP", `meta.vars_init.${HP_VAR} must start positive.`, ["meta:vars_init"]),
+    );
 
   const playerHp = vi[HP_VAR] ?? 0;
   const playerAtk = vi[ATTACK_VAR] ?? 0;
@@ -66,10 +84,31 @@ export function validateRpg(pack: RpgPack): ValidationReport {
 
   // ── Enemies ──────────────────────────────────────────────────────────────────
   for (const enemy of pack.enemies) {
-    if (!roomIds.has(enemy.room)) findings.push(err("ENEMY_ROOM_MISSING", `enemy "${enemy.id}" stands in room "${enemy.room}" that does not exist.`, [`enemy:${enemy.id}`]));
+    if (!roomIds.has(enemy.room))
+      findings.push(
+        err(
+          "ENEMY_ROOM_MISSING",
+          `enemy "${enemy.id}" stands in room "${enemy.room}" that does not exist.`,
+          [`enemy:${enemy.id}`],
+        ),
+      );
     const ending = endings.get(enemy.death_ending);
-    if (!ending) findings.push(err("ENEMY_DEATH_ENDING_UNDECLARED", `enemy "${enemy.id}" death_ending "${enemy.death_ending}" is not a declared ending.`, [`enemy:${enemy.id}`]));
-    else if (!ending.death) findings.push(err("ENEMY_DEATH_NOT_DEATH", `enemy "${enemy.id}" death_ending "${enemy.death_ending}" is not flagged as a death ending.`, [`enemy:${enemy.id}`]));
+    if (!ending)
+      findings.push(
+        err(
+          "ENEMY_DEATH_ENDING_UNDECLARED",
+          `enemy "${enemy.id}" death_ending "${enemy.death_ending}" is not a declared ending.`,
+          [`enemy:${enemy.id}`],
+        ),
+      );
+    else if (!ending.death)
+      findings.push(
+        err(
+          "ENEMY_DEATH_NOT_DEATH",
+          `enemy "${enemy.id}" death_ending "${enemy.death_ending}" is not flagged as a death ending.`,
+          [`enemy:${enemy.id}`],
+        ),
+      );
 
     // Winnability: best-case player damage (d6 max = 6) vs. worst-case enemy damage
     // (d6 min = 1). Enemy attacks once per round the player fails to kill it.
@@ -78,7 +117,13 @@ export function validateRpg(pack: RpgPack): ValidationReport {
     const minEnemyDmg = Math.max(1, 1 + enemy.attack - playerDef);
     const worstCaseDamageTaken = minEnemyDmg * (roundsToKill - 1);
     if (worstCaseDamageTaken >= playerHp) {
-      findings.push(err("COMBAT_UNWINNABLE", `enemy "${enemy.id}" cannot be beaten from full HP even with best-case rolls (needs ${roundsToKill} rounds; would take ≥${worstCaseDamageTaken} damage vs ${playerHp} HP).`, [`enemy:${enemy.id}`]));
+      findings.push(
+        err(
+          "COMBAT_UNWINNABLE",
+          `enemy "${enemy.id}" cannot be beaten from full HP even with best-case rolls (needs ${roundsToKill} rounds; would take ≥${worstCaseDamageTaken} damage vs ${playerHp} HP).`,
+          [`enemy:${enemy.id}`],
+        ),
+      );
     }
   }
 
@@ -86,7 +131,8 @@ export function validateRpg(pack: RpgPack): ValidationReport {
   // Best reachable value of a skill = init + every inc_var that targets it.
   const skillCeiling = (skill: string): number => {
     let v = vi[skill] ?? 0;
-    for (const e of [...rpgRuntimeEffects(pack), ...allParserEffects(pack)]) if ("inc_var" in e && e.inc_var.name === skill) v += Math.max(0, e.inc_var.by);
+    for (const e of [...rpgRuntimeEffects(pack), ...allParserEffects(pack)])
+      if ("inc_var" in e && e.inc_var.name === skill) v += Math.max(0, e.inc_var.by);
     return v;
   };
   for (const o of pack.objects) {
@@ -94,7 +140,13 @@ export function validateRpg(pack: RpgPack): ValidationReport {
       const sc = it.skill_check;
       if (!sc) continue;
       if (sc.difficulty > 20 + skillCeiling(sc.skill)) {
-        findings.push(err("SKILL_CHECK_IMPOSSIBLE", `skill check on "${o.id}" needs ${sc.difficulty} but d20 + best "${sc.skill}" tops out at ${20 + skillCeiling(sc.skill)}.`, [`object:${o.id}`]));
+        findings.push(
+          err(
+            "SKILL_CHECK_IMPOSSIBLE",
+            `skill check on "${o.id}" needs ${sc.difficulty} but d20 + best "${sc.skill}" tops out at ${20 + skillCeiling(sc.skill)}.`,
+            [`object:${o.id}`],
+          ),
+        );
       }
     }
   }
@@ -102,7 +154,13 @@ export function validateRpg(pack: RpgPack): ValidationReport {
   // ── end_game targets inside RPG-only effect branches must be declared ─────────
   for (const e of rpgRuntimeEffects(pack)) {
     if ("end_game" in e && !endings.has(e.end_game)) {
-      findings.push(err("END_GAME_UNDECLARED", `an RPG effect (on_defeat/skill check) targets undeclared ending "${e.end_game}".`, [`ending:${e.end_game}`]));
+      findings.push(
+        err(
+          "END_GAME_UNDECLARED",
+          `an RPG effect (on_defeat/skill check) targets undeclared ending "${e.end_game}".`,
+          [`ending:${e.end_game}`],
+        ),
+      );
     }
   }
 

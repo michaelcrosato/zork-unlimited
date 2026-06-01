@@ -35,7 +35,17 @@ export const PARSER_PERSONAS: ParserPersona[] = [
   "speedrunner",
 ];
 
-type Category = "use" | "unlock" | "open" | "take" | "drop" | "move_new" | "move_old" | "talk" | "ask" | "info";
+type Category =
+  | "use"
+  | "unlock"
+  | "open"
+  | "take"
+  | "drop"
+  | "move_new"
+  | "move_old"
+  | "talk"
+  | "ask"
+  | "info";
 
 function hashStr(s: string): number {
   let h = 2166136261 >>> 0;
@@ -47,41 +57,128 @@ function hashStr(s: string): number {
 }
 
 /** Category of an option, refining MOVE by whether the destination is unvisited. */
-function categoryOf(obs: ParserObservation, opt: ParserObservation["available_actions"][number], visited: Set<string>): Category {
+function categoryOf(
+  obs: ParserObservation,
+  opt: ParserObservation["available_actions"][number],
+  visited: Set<string>,
+): Category {
   const a = opt.action;
   switch (a.type) {
-    case "USE": return "use";
-    case "UNLOCK": return "unlock";
-    case "OPEN": return "open";
-    case "TAKE": return "take";
-    case "DROP": return "drop";
-    case "TALK": return "talk";
-    case "ASK": return "ask";
+    case "USE":
+      return "use";
+    case "UNLOCK":
+      return "unlock";
+    case "OPEN":
+      return "open";
+    case "TAKE":
+      return "take";
+    case "DROP":
+      return "drop";
+    case "TALK":
+      return "talk";
+    case "ASK":
+      return "ask";
     case "MOVE": {
       const to = obs.exits.find((e) => e.direction === a.direction)?.to;
       return to && !visited.has(to) ? "move_new" : "move_old";
     }
-    default: return "info"; // LOOK / READ / INSPECT / INVENTORY
+    default:
+      return "info"; // LOOK / READ / INSPECT / INVENTORY
   }
 }
 
 // Per-persona category weights (higher = preferred). Negative ⇒ never chosen.
 const WEIGHTS: Record<ParserPersona, Partial<Record<Category, number>>> = {
-  mainline: { use: 100, unlock: 95, open: 90, take: 80, move_new: 70, talk: 40, move_old: 30, info: 5, drop: 1 },
-  curious: { info: 100, talk: 95, ask: 95, move_new: 85, open: 60, use: 55, take: 50, move_old: 20, drop: 1 },
-  hoarder: { take: 100, open: 90, unlock: 85, move_new: 60, use: 50, move_old: 25, info: 5, talk: 5, drop: -1 },
-  dropper: { drop: 100, take: 70, move_new: 60, move_old: 45, open: 50, use: 40, unlock: 40, info: 5, talk: 5 },
-  dialogue_skipper: { use: 100, unlock: 95, open: 90, take: 80, move_new: 70, move_old: 30, info: 5, talk: -1, ask: -1 },
-  wrong_order: { use: 100, unlock: 100, open: 95, move_new: 90, move_old: 60, take: 50, info: 5, talk: 10 },
+  mainline: {
+    use: 100,
+    unlock: 95,
+    open: 90,
+    take: 80,
+    move_new: 70,
+    talk: 40,
+    move_old: 30,
+    info: 5,
+    drop: 1,
+  },
+  curious: {
+    info: 100,
+    talk: 95,
+    ask: 95,
+    move_new: 85,
+    open: 60,
+    use: 55,
+    take: 50,
+    move_old: 20,
+    drop: 1,
+  },
+  hoarder: {
+    take: 100,
+    open: 90,
+    unlock: 85,
+    move_new: 60,
+    use: 50,
+    move_old: 25,
+    info: 5,
+    talk: 5,
+    drop: -1,
+  },
+  dropper: {
+    drop: 100,
+    take: 70,
+    move_new: 60,
+    move_old: 45,
+    open: 50,
+    use: 40,
+    unlock: 40,
+    info: 5,
+    talk: 5,
+  },
+  dialogue_skipper: {
+    use: 100,
+    unlock: 95,
+    open: 90,
+    take: 80,
+    move_new: 70,
+    move_old: 30,
+    info: 5,
+    talk: -1,
+    ask: -1,
+  },
+  wrong_order: {
+    use: 100,
+    unlock: 100,
+    open: 95,
+    move_new: 90,
+    move_old: 60,
+    take: 50,
+    info: 5,
+    talk: 10,
+  },
   adversarial: {}, // handled specially (probes edges pseudo-randomly)
-  speedrunner: { use: 100, unlock: 98, open: 95, take: 90, move_new: 80, move_old: 50, talk: 10, info: 0, drop: -1 },
+  speedrunner: {
+    use: 100,
+    unlock: 98,
+    open: 95,
+    take: 90,
+    move_new: 80,
+    move_old: 50,
+    talk: 10,
+    info: 0,
+    drop: -1,
+  },
 };
 
 /**
  * Pick one legal action id for a persona. Pure + deterministic given
  * (obs, step, seed, visited). Returns "" only if there are no actions.
  */
-export function pickParserAction(persona: ParserPersona, obs: ParserObservation, step: number, seed: number, visited: Set<string>): string {
+export function pickParserAction(
+  persona: ParserPersona,
+  obs: ParserObservation,
+  step: number,
+  seed: number,
+  visited: Set<string>,
+): string {
   const opts = obs.available_actions;
   if (opts.length === 0) return "";
   if (opts.length === 1) return opts[0]!.id;

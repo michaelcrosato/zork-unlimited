@@ -23,7 +23,13 @@ export type SaveBundle = {
 
 /** Serialize a save to canonical bytes (stable across machines/runs). */
 export function save(state: GameState, packId: string, contentHash: string, mode?: string): string {
-  const bundle: SaveBundle = { version: SAVE_VERSION, packId, contentHash, state, ...(mode !== undefined ? { mode } : {}) };
+  const bundle: SaveBundle = {
+    version: SAVE_VERSION,
+    packId,
+    contentHash,
+    state,
+    ...(mode !== undefined ? { mode } : {}),
+  };
   return canonicalize(bundle);
 }
 
@@ -35,7 +41,11 @@ export class SaveIntegrityError extends Error {}
  * mode, the modes must match too — a save can't be loaded against a different
  * mode. A pre-mode (v1) save carries no mode and skips that check (backward-compat).
  */
-export function load(bytes: string, expectedContentHash?: string, expectedMode?: string): SaveBundle {
+export function load(
+  bytes: string,
+  expectedContentHash?: string,
+  expectedMode?: string,
+): SaveBundle {
   let parsed: unknown;
   try {
     parsed = JSON.parse(bytes);
@@ -53,7 +63,9 @@ export function load(bytes: string, expectedContentHash?: string, expectedMode?:
     );
   }
   if (expectedMode !== undefined && bundle.mode !== undefined && bundle.mode !== expectedMode) {
-    throw new SaveIntegrityError(`Mode mismatch: save is a "${bundle.mode}" game, but the loaded pack is "${expectedMode}".`);
+    throw new SaveIntegrityError(
+      `Mode mismatch: save is a "${bundle.mode}" game, but the loaded pack is "${expectedMode}".`,
+    );
   }
   return bundle;
 }

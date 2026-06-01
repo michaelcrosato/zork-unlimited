@@ -15,8 +15,10 @@ it is the agent's own instrument for *knowing* a change is correct.
 
 ## Verify — the checks are the bar (keep them green)
 
-- `npm run lint` (typecheck) and `npm test` must pass. The autonomous loop and CI
-  treat a failing suite as a hard stop — do not commit or merge red.
+- `npm run typecheck` (tsc), `npm run lint` (ESLint), `npm run format:check`
+  (Prettier), and `npm test` must pass. The autonomous loop and CI treat a failing
+  suite as a hard stop — do not commit or merge red. (`npm run format` auto-fixes
+  formatting.)
 - The **verification suite is the safety net, not a formality**:
   - **Determinism** — the property tests assert *same seed + actions ⇒ identical
     state hash*. Keep it true.
@@ -75,7 +77,7 @@ shows the ranked backlog any time.
 
 - **Runtime:** Node.js **22+** only. No Docker, database, or other services are required for lint, tests, validation, or CLI play.
 - **Install:** Root `npm install` plus `npm --prefix ui install` (the UI is a separate package under `ui/`). Standard commands are in `README.md` and `package.json`.
-- **Verification bar:** `npm run health` (integrity + typecheck + tests + pack validate + mock playtest). Faster checks: `npm run lint`, `npm test`.
+- **Verification bar:** `npm run health` (integrity + typecheck + ESLint + Prettier check + tests + pack validate + mock playtest). Faster checks: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test`.
 - **Web UI (optional for most agent work):** `npm run ui:dev` serves http://localhost:5173. The dev server is not started automatically on VM boot — start it in a tmux session when you need browser testing. Engine logic runs in-browser; no backend API.
 - **CLI play (no server):** `npm run play`, `play:parser`, `play:rpg` with `--choices` / `--commands` for non-interactive runs; see `README.md`.
 - **MCP / LLM:** `npm run mcp` and live LLM authoring/playtest are optional; CI uses deterministic mocks with no API keys.

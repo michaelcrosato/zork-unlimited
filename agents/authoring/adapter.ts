@@ -41,12 +41,22 @@ export async function runAdapter(
   for (let round = 1; round <= maxRounds; round++) {
     const out = await provider.completeJson({
       system: ADAPTER_SYSTEM,
-      user: JSON.stringify({ story: opts.story, engine_contract: opts.contract, prior_errors: priorErrors }),
+      user: JSON.stringify({
+        story: opts.story,
+        engine_contract: opts.contract,
+        prior_errors: priorErrors,
+      }),
       schemaName: "AdapterOutput",
       schema: AdapterOutputSchema,
     });
     const report = validateCyoa(out.pack);
-    last = { ok: report.ok, pack: out.pack, classifications: out.classifications, report, rounds: round };
+    last = {
+      ok: report.ok,
+      pack: out.pack,
+      classifications: out.classifications,
+      report,
+      rounds: round,
+    };
     if (report.ok) return last;
     priorErrors = report.findings.filter((f) => f.severity === "error");
   }

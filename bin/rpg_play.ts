@@ -27,8 +27,10 @@ import { recordTrace } from "../src/trace/record.js";
 function render(obs: RpgObservation): string {
   const lines = [`\n=== ${obs.title} ===`, obs.description.trim()];
   lines.push(`[HP ${obs.stats.hp}  ATK ${obs.stats.attack}  DEF ${obs.stats.defense}]`);
-  if (obs.enemies_present.length) lines.push(`Foes: ${obs.enemies_present.map((e) => `${e.name} (HP ${e.hp})`).join(", ")}.`);
-  if (obs.visible_objects.length) lines.push(`You see: ${obs.visible_objects.map((o) => o.name).join(", ")}.`);
+  if (obs.enemies_present.length)
+    lines.push(`Foes: ${obs.enemies_present.map((e) => `${e.name} (HP ${e.hp})`).join(", ")}.`);
+  if (obs.visible_objects.length)
+    lines.push(`You see: ${obs.visible_objects.map((o) => o.name).join(", ")}.`);
   if (obs.exits.length) lines.push(`Exits: ${obs.exits.map((e) => e.direction).join(", ")}.`);
   if (obs.inventory.length) lines.push(`[carrying: ${obs.inventory.join(", ")}]`);
   if (obs.ended) lines.push(`\n*** ${obs.ending_id} *** — THE END`);
@@ -36,14 +38,20 @@ function render(obs: RpgObservation): string {
 }
 
 /** Resolve a raw command: `attack <foe>` against enemies here, else the parser. */
-function resolve(index: ReturnType<typeof indexRpgPack>, state: import("../src/core/state.js").GameState, raw: string): { ok: true; action: Action } | { ok: false; reason: string } {
+function resolve(
+  index: ReturnType<typeof indexRpgPack>,
+  state: import("../src/core/state.js").GameState,
+  raw: string,
+): { ok: true; action: Action } | { ok: false; reason: string } {
   const text = raw.trim().toLowerCase();
   const m = text.match(/^(attack|fight|kill|hit)\s+(.*)$/);
   if (m) {
     const phrase = m[2]!.replace(/^the\s+/, "");
     const here = index.enemyByRoom.get(state.current) ?? [];
     const enemy = here.find((e) => e.id === phrase || e.name.toLowerCase().includes(phrase));
-    return enemy ? { ok: true, action: { type: "ATTACK", enemy: enemy.id } } : { ok: false, reason: `There's no "${phrase}" to attack here.` };
+    return enemy
+      ? { ok: true, action: { type: "ATTACK", enemy: enemy.id } }
+      : { ok: false, reason: `There's no "${phrase}" to attack here.` };
   }
   return parseCommand(index, state, raw);
 }
@@ -51,7 +59,9 @@ function resolve(index: ReturnType<typeof indexRpgPack>, state: import("../src/c
 async function main(): Promise<void> {
   const path = process.argv[2];
   if (!path || path.startsWith("--")) {
-    console.error('Usage: npm run play:rpg -- <pack.yaml> [--seed N] [--commands "a; b"] [--record file]');
+    console.error(
+      'Usage: npm run play:rpg -- <pack.yaml> [--seed N] [--commands "a; b"] [--record file]',
+    );
     process.exit(2);
   }
   let seed = 1;
@@ -60,7 +70,11 @@ async function main(): Promise<void> {
   for (let i = 3; i < process.argv.length; i++) {
     const a = process.argv[i];
     if (a === "--seed") seed = Number(process.argv[++i]);
-    else if (a === "--commands") commands = (process.argv[++i] ?? "").split(/[;,]/).map((s) => s.trim()).filter(Boolean);
+    else if (a === "--commands")
+      commands = (process.argv[++i] ?? "")
+        .split(/[;,]/)
+        .map((s) => s.trim())
+        .filter(Boolean);
     else if (a === "--record") record = process.argv[++i] ?? null;
   }
 

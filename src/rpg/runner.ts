@@ -19,7 +19,12 @@ import {
   initStateForParserPack,
   activeDialogue,
 } from "../parser/model.js";
-import { enumerateActions, resolveParserAction, useInteraction, type ParserActionOption } from "../parser/legal_actions.js";
+import {
+  enumerateActions,
+  resolveParserAction,
+  useInteraction,
+  type ParserActionOption,
+} from "../parser/legal_actions.js";
 import { evalConditions } from "../core/conditions.js";
 import { winningEnding } from "../parser/runner.js";
 import { type RpgPack, type Enemy } from "./schema.js";
@@ -57,7 +62,11 @@ export function enumerateRpgActions(index: RpgIndex, state: GameState): ParserAc
   const out = enumerateActions(index, state);
   if (state.ended || activeDialogue(index, state)) return out;
   for (const enemy of enemiesHere(index, state)) {
-    out.push({ id: `attack_${enemy.id}`, command: `attack ${enemy.name}`, action: { type: "ATTACK", enemy: enemy.id } });
+    out.push({
+      id: `attack_${enemy.id}`,
+      command: `attack ${enemy.name}`,
+      action: { type: "ATTACK", enemy: enemy.id },
+    });
   }
   return out;
 }

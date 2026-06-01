@@ -58,10 +58,16 @@ export const HASH_PIN_FILES = [
 export const MIN_TEST_CASES = 120;
 
 /** A disabled / focused test marker — any of these in a test file is a red flag. */
-const DISABLED_RE = /\b(?:it|test|describe)\s*\.\s*(?:skip|only|todo)\b|\b(?:xit|xdescribe|xtest)\s*\(/;
+const DISABLED_RE =
+  /\b(?:it|test|describe)\s*\.\s*(?:skip|only|todo)\b|\b(?:xit|xdescribe|xtest)\s*\(/;
 const TESTCASE_RE = /\b(?:it|test)\s*\(/g;
 
-export type Finding = { severity: "error" | "warning"; code: string; message: string; where: string };
+export type Finding = {
+  severity: "error" | "warning";
+  code: string;
+  message: string;
+  where: string;
+};
 
 function listFiles(root: string, dir: string, match: (p: string) => boolean): string[] {
   const abs = join(root, dir);
@@ -88,7 +94,12 @@ export function detectDisabledTests(files: { path: string; text: string }[]): Fi
   for (const f of files) {
     f.text.split("\n").forEach((line, i) => {
       if (DISABLED_RE.test(line)) {
-        findings.push({ severity: "error", code: "TEST_DISABLED", message: `disabled/focused test marker: ${line.trim().slice(0, 80)}`, where: `${f.path}:${i + 1}` });
+        findings.push({
+          severity: "error",
+          code: "TEST_DISABLED",
+          message: `disabled/focused test marker: ${line.trim().slice(0, 80)}`,
+          where: `${f.path}:${i + 1}`,
+        });
       }
     });
   }
@@ -107,22 +118,43 @@ function readAll(root: string, paths: string[]): { path: string; text: string }[
 export function runStatic(root: string): { ok: boolean; findings: Finding[] } {
   const findings: Finding[] = [];
   for (const f of PROTECTED_FILES) {
-    if (!existsSync(join(root, f))) findings.push({ severity: "error", code: "PROTECTED_MISSING", message: `protected verification asset is missing: ${f}`, where: f });
+    if (!existsSync(join(root, f)))
+      findings.push({
+        severity: "error",
+        code: "PROTECTED_MISSING",
+        message: `protected verification asset is missing: ${f}`,
+        where: f,
+      });
   }
   const testFiles = readAll(root, listTestFiles(root));
   findings.push(...detectDisabledTests(testFiles));
   const cases = countTestCases(testFiles);
   if (cases < MIN_TEST_CASES) {
-    findings.push({ severity: "error", code: "TEST_COUNT_FLOOR", message: `only ${cases} test cases found; floor is ${MIN_TEST_CASES} (tests may have been removed)`, where: "tests/" });
+    findings.push({
+      severity: "error",
+      code: "TEST_COUNT_FLOOR",
+      message: `only ${cases} test cases found; floor is ${MIN_TEST_CASES} (tests may have been removed)`,
+      where: "tests/",
+    });
   }
   return { ok: !findings.some((f) => f.severity === "error"), findings };
 }
 
 function gitChangedFiles(root: string, ref: string): string[] {
   // Tracked changes vs ref (incl. working tree + deletions) plus untracked files.
-  const tracked = execFileSync("git", ["diff", "--name-only", ref, "--"], { cwd: root, encoding: "utf8" });
-  const untracked = execFileSync("git", ["ls-files", "--others", "--exclude-standard"], { cwd: root, encoding: "utf8" });
-  return [...new Set([...tracked.split("\n"), ...untracked.split("\n")].map((s) => s.trim()).filter(Boolean))];
+  const tracked = execFileSync("git", ["diff", "--name-only", ref, "--"], {
+    cwd: root,
+    encoding: "utf8",
+  });
+  const untracked = execFileSync("git", ["ls-files", "--others", "--exclude-standard"], {
+    cwd: root,
+    encoding: "utf8",
+  });
+  return [
+    ...new Set(
+      [...tracked.split("\n"), ...untracked.split("\n")].map((s) => s.trim()).filter(Boolean),
+    ),
+  ];
 }
 
 /**
@@ -149,14 +181,36 @@ export function classifyDrift(changed: string[], existsFn: (rel: string) => bool
   const contentChanged = changed.some((f) => f.startsWith("content/"));
   for (const f of changed) {
     if (PROTECTED_FILES.includes(f)) {
-      if (!existsFn(f)) findings.push({ severity: "error", code: "PROTECTED_DELETED", message: `a protected verification asset was deleted this cycle: ${f}`, where: f });
-      else findings.push({ severity: "warning", code: "VERIFIER_TOUCHED", message: `this cycle modified a protected verification asset: ${f} — surfaced for review (the static + count-regression checks guard against weakening)`, where: f });
+      if (!existsFn(f))
+        findings.push({
+          severity: "error",
+          code: "PROTECTED_DELETED",
+          message: `a protected verification asset was deleted this cycle: ${f}`,
+          where: f,
+        });
+      else
+        findings.push({
+          severity: "warning",
+          code: "VERIFIER_TOUCHED",
+          message: `this cycle modified a protected verification asset: ${f} — surfaced for review (the static + count-regression checks guard against weakening)`,
+          where: f,
+        });
     }
     if (HASH_PIN_FILES.includes(f) && existsFn(f)) {
       if (contentChanged) {
-        findings.push({ severity: "warning", code: "HASH_PIN_REPINNED", message: `re-pinned ${f} alongside an intentional content change — the legitimate snapshot-update workflow, recorded for review`, where: f });
+        findings.push({
+          severity: "warning",
+          code: "HASH_PIN_REPINNED",
+          message: `re-pinned ${f} alongside an intentional content change — the legitimate snapshot-update workflow, recorded for review`,
+          where: f,
+        });
       } else {
-        findings.push({ severity: "error", code: "HASH_PIN_UNACCOMPANIED", message: `re-pinned ${f} with NO content change this cycle — a snapshot/hash update with no corresponding edit is the classic launder pattern (override with AI_LOOP_ALLOW_VERIFIER_EDITS=1 for a deliberate algorithm/format change)`, where: f });
+        findings.push({
+          severity: "error",
+          code: "HASH_PIN_UNACCOMPANIED",
+          message: `re-pinned ${f} with NO content change this cycle — a snapshot/hash update with no corresponding edit is the classic launder pattern (override with AI_LOOP_ALLOW_VERIFIER_EDITS=1 for a deliberate algorithm/format change)`,
+          where: f,
+        });
       }
     }
   }
@@ -166,8 +220,14 @@ export function classifyDrift(changed: string[], existsFn: (rel: string) => bool
 /** Count test cases as they were at a git ref (null if the ref can't be read). */
 function countTestCasesAtRef(root: string, ref: string): number | null {
   try {
-    const listed = execFileSync("git", ["ls-tree", "-r", "--name-only", ref], { cwd: root, encoding: "utf8" });
-    const files = listed.split("\n").map((s) => s.trim()).filter((p) => /^tests\/.*\.test\.ts$/.test(p));
+    const listed = execFileSync("git", ["ls-tree", "-r", "--name-only", ref], {
+      cwd: root,
+      encoding: "utf8",
+    });
+    const files = listed
+      .split("\n")
+      .map((s) => s.trim())
+      .filter((p) => /^tests\/.*\.test\.ts$/.test(p));
     let n = 0;
     for (const p of files) {
       const text = execFileSync("git", ["show", `${ref}:${p}`], { cwd: root, encoding: "utf8" });
@@ -186,19 +246,35 @@ function countTestCasesAtRef(root: string, ref: string): number | null {
  * error (a deliberate algorithm/format re-pin); it never downgrades real weakening
  * (deleted/disabled tests, a dropped test count).
  */
-export function runDrift(root: string, ref: string, env: NodeJS.ProcessEnv = process.env): { ok: boolean; findings: Finding[] } {
+export function runDrift(
+  root: string,
+  ref: string,
+  env: NodeJS.ProcessEnv = process.env,
+): { ok: boolean; findings: Finding[] } {
   const findings: Finding[] = [...runStatic(root).findings];
   let changed: string[];
   try {
     changed = gitChangedFiles(root, ref);
   } catch (e) {
-    return { ok: false, findings: [...findings, { severity: "error", code: "GIT_DIFF_FAILED", message: `cannot diff against ${ref}: ${(e as Error).message}`, where: ref }] };
+    return {
+      ok: false,
+      findings: [
+        ...findings,
+        {
+          severity: "error",
+          code: "GIT_DIFF_FAILED",
+          message: `cannot diff against ${ref}: ${(e as Error).message}`,
+          where: ref,
+        },
+      ],
+    };
   }
   const acknowledged = env.AI_LOOP_ALLOW_VERIFIER_EDITS === "1";
   for (const f of classifyDrift(changed, (rel) => existsSync(join(root, rel)))) {
     // The only downgradable error is an unaccompanied re-pin (a deliberate human
     // re-pin of e.g. a hash algorithm). Weakening errors are never downgraded.
-    if (acknowledged && f.code === "HASH_PIN_UNACCOMPANIED") findings.push({ ...f, severity: "warning", message: `${f.message} [acknowledged]` });
+    if (acknowledged && f.code === "HASH_PIN_UNACCOMPANIED")
+      findings.push({ ...f, severity: "warning", message: `${f.message} [acknowledged]` });
     else findings.push(f);
   }
   // Hard guard against silent test removal even while above the static floor: the
@@ -206,7 +282,13 @@ export function runDrift(root: string, ref: string, env: NodeJS.ProcessEnv = pro
   const before = countTestCasesAtRef(root, ref);
   if (before !== null) {
     const now = countTestCases(readAll(root, listTestFiles(root)));
-    if (now < before) findings.push({ severity: "error", code: "TEST_COUNT_REGRESSION", message: `test cases dropped from ${before} to ${now} this cycle — tests were removed/skipped (weakening the verifier is not allowed)`, where: "tests/" });
+    if (now < before)
+      findings.push({
+        severity: "error",
+        code: "TEST_COUNT_REGRESSION",
+        message: `test cases dropped from ${before} to ${now} this cycle — tests were removed/skipped (weakening the verifier is not allowed)`,
+        where: "tests/",
+      });
   }
   return { ok: !findings.some((f) => f.severity === "error"), findings };
 }
@@ -214,8 +296,13 @@ export function runDrift(root: string, ref: string, env: NodeJS.ProcessEnv = pro
 function format(label: string, res: { ok: boolean; findings: Finding[] }): string {
   const errs = res.findings.filter((f) => f.severity === "error").length;
   const warns = res.findings.filter((f) => f.severity === "warning").length;
-  const lines = [`verifier-integrity (${label}): ${res.ok ? "OK" : "FAILED"}  (${errs} error(s), ${warns} warning(s))`];
-  for (const f of res.findings) lines.push(`  [${f.severity === "error" ? "ERROR" : "warn "}] ${f.code}: ${f.message}\n          ${f.where}`);
+  const lines = [
+    `verifier-integrity (${label}): ${res.ok ? "OK" : "FAILED"}  (${errs} error(s), ${warns} warning(s))`,
+  ];
+  for (const f of res.findings)
+    lines.push(
+      `  [${f.severity === "error" ? "ERROR" : "warn "}] ${f.code}: ${f.message}\n          ${f.where}`,
+    );
   return lines.join("\n");
 }
 
@@ -230,6 +317,9 @@ function main(): void {
 }
 
 // Run as CLI only (not when imported by tests). `import.meta.url` ends with this file.
-if (statSync(process.argv[1] ?? "").isFile() && (process.argv[1] ?? "").endsWith("verify-integrity.ts")) {
+if (
+  statSync(process.argv[1] ?? "").isFile() &&
+  (process.argv[1] ?? "").endsWith("verify-integrity.ts")
+) {
   main();
 }

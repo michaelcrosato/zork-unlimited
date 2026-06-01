@@ -17,7 +17,9 @@ import { loadRpgPackFile } from "../src/rpg/pack.js";
 import { validateRpg } from "../src/validate/rpg_validator.js";
 import { formatReport, makeReport, type Finding } from "../src/validate/report.js";
 
-function schemaFindings(error: { issues: { message: string; path: (string | number)[] }[] }): Finding[] {
+function schemaFindings(error: {
+  issues: { message: string; path: (string | number)[] }[];
+}): Finding[] {
   return error.issues.map((i) => ({
     severity: "error" as const,
     code: "SCHEMA",

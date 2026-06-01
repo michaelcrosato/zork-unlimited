@@ -13,7 +13,9 @@ export type CompiledRpgPack = {
   contentHash: string;
 };
 
-export type CompileResult = { ok: true; compiled: CompiledRpgPack } | { ok: false; error: z.ZodError };
+export type CompileResult =
+  | { ok: true; compiled: CompiledRpgPack }
+  | { ok: false; error: z.ZodError };
 
 export function compileRpgPack(source: string): CompileResult {
   const raw = parseYaml(source);

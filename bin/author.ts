@@ -36,12 +36,17 @@ async function main(): Promise<void> {
   const contract = loadEngineContract();
 
   const story = await runWriter(provider, { premise, contract });
-  console.log(`Writer drafted "${story.title}" — ${story.chapters.length} chapters, ${story.beats.length} beats.`);
+  console.log(
+    `Writer drafted "${story.title}" — ${story.chapters.length} chapters, ${story.beats.length} beats.`,
+  );
 
   const result = await runAdapter(provider, { story, contract });
-  console.log(`\nAdapter reached a ${result.ok ? "GREEN" : "RED"} pack in ${result.rounds} round(s).`);
+  console.log(
+    `\nAdapter reached a ${result.ok ? "GREEN" : "RED"} pack in ${result.rounds} round(s).`,
+  );
   console.log("\nBeat classifications (§11):");
-  for (const c of result.classifications) console.log(`  - ${c.beat_id}: ${c.label}${c.note ? ` — ${c.note}` : ""}`);
+  for (const c of result.classifications)
+    console.log(`  - ${c.beat_id}: ${c.label}${c.note ? ` — ${c.note}` : ""}`);
   console.log("\n" + formatReport(result.report));
 
   if (!result.ok) {

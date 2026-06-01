@@ -1,0 +1,101 @@
+bug_id: bug_0031
+pack_id: null                    # repo/tooling improvement — not a content or engine pack bug
+seed: 137                        # the mandatory blind playtest seed this cycle
+type: repo_tooling               # the assessor's standing rank-3 "repo/L" candidate, under trust-but-verify
+evidence:
+  source: blind_playtest + assessor
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-01T10-14-11-953Z/playtest.md
+  playtest_rationale: >
+    The mandatory cycle playtest ran on the assessor's rank-1 target, clockwork_heist_v1
+    (CYOA, seed 137, fresh general-purpose subagent, MCP-only, no source access). It came
+    back STRONG for the ~12th straight cycle: all three endings across four routes, clarity
+    4/5, enjoyment 4/5, zero rejected actions, no loops, no broken state. Its three §4/§5
+    notes were all previously surfaced and adjudicated: (a) the "phantom time / dead ledger"
+    — DELIBERATE per bug_0019/0025/0030 (the deadline DOES fire at ticks>=6 -> ending_patrol;
+    the ledger grants the safe crossing; an efficient player simply keeps ticks low, and
+    tightening would punish efficient play); (b) the duplicated-letter continuity quirk —
+    minor, logged since bug_0022/0023; (c) "no final score shown" — NOT a defect (clockwork
+    is CYOA with no meta.max_score; bug_0026 added the tally to scoring parser/RPG packs
+    only). No NEW actionable on-screen defect. Clockwork is polished past diminishing returns.
+  decision_rationale: >
+    Per the protocol's "you MAY pick a different candidate if your judgement and the playtest
+    say it's higher value", and because content polish across every (blind-verified) pack is
+    at deep diminishing returns, this cycle finally took the standing strongest lever — the
+    ESLint + Prettier tooling gap — deferred since bug_0024 (logged as the next lever in
+    bug_0024/0025/0026/0027/0028/0029/0030). Until now `npm run lint` was only `tsc --noEmit`:
+    a typecheck, with no real static-analysis or formatting gate. This broadens value across
+    the whole codebase rather than adding a ~12th clockwork micro-note.
+finding: >
+  REPO GAP (assessor rank-3, id repo-eslint): "Add ESLint + Prettier (lint is currently just
+  tsc)". A linter/formatter catches a class of issues the typechecker misses (unused
+  vars/imports, confusing comma-sequence statements, dead assignments) and keeps autonomous
+  edits consistent. The repo shipped no eslint/prettier config and `lint` == `format:check`
+  == `tsc --noEmit` (a redundant double typecheck).
+improvement:
+  layer: repo    # tooling + the small, behavior-preserving code fixes ESLint surfaced
+  tooling:
+    - eslint.config.js: >
+        Flat config (ESLint 9). @eslint/js recommended + typescript-eslint recommended
+        (non-type-checked) + eslint-config-prettier (so Prettier owns formatting and the two
+        never fight). Scoped to first-party engine/tooling TS (src, bin, scripts, agents);
+        deliberately NOT tests/ (own conventions; verify-integrity already guards it), content/
+        (content-hash-sensitive YAML), traces/, or ui/ (separate package). no-unused-vars kept
+        as an error with the conventional ^_ escape hatch.
+    - .prettierrc.json + .prettierignore: >
+        printWidth 100, 2-space, double quotes, semicolons, trailing-comma all, always-parens
+        (matches the codebase's existing style). The ignore file is a belt-and-suspenders guard
+        so an accidental `prettier .` never rewrites hash-sensitive content/ or traces/ assets;
+        the format scripts are also explicitly scoped to `src bin scripts agents`.
+    - package.json: >
+        Split the old tsc-aliased scripts into honest roles: typecheck = tsc --noEmit (the
+        typecheck gate, preserved), lint = eslint, format:check = prettier --check, format =
+        prettier --write. health now runs verify:integrity && typecheck && lint && format:check
+        && test && validate(all packs) && playtest.
+    - .github/workflows/ci.yml: >
+        The "Typecheck" step now runs `npm run typecheck`; added explicit Lint (ESLint) and
+        Format check (Prettier) steps. (The final Health step already runs all of them.)
+    - docs (AGENTS.md, README.md): updated the lint-is-typecheck descriptions to the new trio.
+  code_fixes:   # 8 genuine, behavior-PRESERVING findings ESLint surfaced (tests prove no behavior change)
+    - bin/inspect.ts + src/validate/parser_validator.ts (x3): the terse `(a, b)` comma-sequence
+      statement idiom (no-unused-expressions) rewritten to explicit block statements.
+    - bin/play.ts: `let scripted` -> `const scripted` (prefer-const; never reassigned).
+    - src/afk/assessor.ts: dropped the useless `= null` initializer on `pt` (no-useless-assignment;
+      both try and catch assign it).
+    - src/parser/legal_actions.ts: removed the unused `locateObject` import.
+    - src/validate/parser_validator.ts: removed the unused `npcIds` local.
+  reformat: >
+    `prettier --write src bin scripts agents` reformatted 43 files (formatting only: line
+    wrapping at printWidth 100, etc.). The full test suite + tsc prove behavior is byte-for-byte
+    unchanged. The core protected files (engine, rng, hash, sha256, save_load) were already
+    Prettier-clean; among protected files only the 3 validators + verify-integrity.ts were
+    reformatted (surfaced as expected VERIFIER_TOUCHED warnings in drift mode — non-blocking).
+verification:
+  typecheck: green (tsc --noEmit, exit 0)
+  lint: green (eslint src bin scripts agents, exit 0)
+  format_check: green (prettier --check, exit 0)
+  validate: green (0 errors, 0 warnings) — all packs
+  content_hash_changes: none   # no content/ YAML edited; Prettier never touches content/
+  health: exit 0 (verify:integrity OK, typecheck + ESLint + Prettier + all tests + every pack validate + watchtower coverage)
+  verify_integrity_drift: >
+    exit 0 (warnings only). VERIFIER_TOUCHED warnings on the 4 protected files reformatted /
+    lint-fixed (src/validate/{cyoa,parser,rpg}_validator.ts, scripts/verify-integrity.ts) —
+    these are honest, expected, non-blocking surfacings (the static checks + count-regression
+    guard remain the hard gate, and the test suite is green). NO HASH_PIN_FILE was touched (the
+    format scripts exclude tests/ and traces/), so no re-pin and no HASH_PIN_UNACCOMPANIED error.
+regression_test: tests/regression/lint_tooling_wired.test.ts   # 4 cases: (1) npm scripts invoke eslint/prettier/tsc and lint is no longer bare tsc; (2) health runs typecheck+lint+format:check; (3) the config files ship; (4) ESLint actually FUNCTIONS — flags an unused var, passes clean code.
+also_updated_test: tests/unit/assessor.test.ts   # the "spans content and non-content" case repurposed to document the repo-eslint disarm (eslint.config.js now exists ⇒ no repo-eslint candidate), mirroring the existing content_new disarm precedent. It re-arms (and the test catches it) if the tooling is removed.
+closes_deferred:
+  - "repo/ESLint + Prettier tooling gap (lint is still just tsc)"   # bug_0024/0025/0026/0027/0028/0029/0030 deferred[a]
+deferred:
+  - >
+    The assessor now has NO non-content lever left (both content_new and repo-eslint are
+    disarmed), so it will monotonically rank content_fix until a new detector is added. Next
+    non-content levers to consider: (a) extend ESLint/Prettier coverage to tests/ (deliberately
+    excluded here to keep this cycle bounded); (b) give the assessor a real engine detector
+    (the header comment promises TODO/FIXME-marker scanning that the code does not yet emit);
+    (c) lint the ui/ package. Any of these restores the loop's cross-category radar.
+  - >
+    Clockwork's minor duplicated-letter continuity quirk (crawlspace strongbox vs. vault
+    cushion) — cosmetic, logged since bug_0022; only worth a touch if a future playtest
+    flags it as genuine friction.

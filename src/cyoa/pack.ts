@@ -16,9 +16,7 @@ export type CompiledPack = {
   contentHash: string;
 };
 
-export type CompileResult =
-  | { ok: true; compiled: CompiledPack }
-  | { ok: false; error: z.ZodError };
+export type CompileResult = { ok: true; compiled: CompiledPack } | { ok: false; error: z.ZodError };
 
 /** Parse + schema-validate raw YAML/JSON text. Returns either the pack or the Zod error. */
 export function compilePack(source: string): CompileResult {

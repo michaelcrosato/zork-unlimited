@@ -18,7 +18,9 @@ import { runParserRoster } from "../agents/parser_playtester.js";
 function main(): void {
   const path = process.argv[2];
   if (!path || path.startsWith("--")) {
-    console.error("Usage: npm run playtest:parser -- <pack.yaml> [--seeds 1,2,3] [--max 200] [--out dir]");
+    console.error(
+      "Usage: npm run playtest:parser -- <pack.yaml> [--seeds 1,2,3] [--max 200] [--out dir]",
+    );
     process.exit(2);
   }
   let seeds: number[] | undefined;
@@ -26,7 +28,11 @@ function main(): void {
   let out: string | null = null;
   for (let i = 3; i < process.argv.length; i++) {
     const a = process.argv[i];
-    if (a === "--seeds") seeds = (process.argv[++i] ?? "").split(",").map(Number).filter((n) => !Number.isNaN(n));
+    if (a === "--seeds")
+      seeds = (process.argv[++i] ?? "")
+        .split(",")
+        .map(Number)
+        .filter((n) => !Number.isNaN(n));
     else if (a === "--max") maxSteps = Number(process.argv[++i]);
     else if (a === "--out") out = process.argv[++i] ?? null;
   }
@@ -49,15 +55,21 @@ function main(): void {
 
   console.log(`Parser playtest coverage for ${coverage.pack_id} (${coverage.runs} runs)`);
   console.log(`  rooms visited:   ${coverage.rooms_visited.length}/${coverage.rooms_total}`);
-  if (coverage.rooms_unvisited.length) console.log(`  rooms unvisited: ${coverage.rooms_unvisited.join(", ")}`);
-  console.log(`  any win:         ${coverage.any_win} (${coverage.personas_won.join(", ") || "none"})`);
-  console.log(`  completed runs:  ${records.filter((r) => r.status === "completed").length}/${records.length}`);
+  if (coverage.rooms_unvisited.length)
+    console.log(`  rooms unvisited: ${coverage.rooms_unvisited.join(", ")}`);
+  console.log(
+    `  any win:         ${coverage.any_win} (${coverage.personas_won.join(", ") || "none"})`,
+  );
+  console.log(
+    `  completed runs:  ${records.filter((r) => r.status === "completed").length}/${records.length}`,
+  );
   console.log("\nFindings:");
   for (const f of coverage.findings) console.log(`  - ${f}`);
 
   if (out) {
     mkdirSync(out, { recursive: true });
-    for (const r of records) writeFileSync(join(out, `${r.persona}_seed${r.seed}.json`), JSON.stringify(r, null, 2));
+    for (const r of records)
+      writeFileSync(join(out, `${r.persona}_seed${r.seed}.json`), JSON.stringify(r, null, 2));
     console.log(`\nWrote ${records.length} playtest records to ${out}/`);
   }
 }

@@ -39,12 +39,19 @@ export function sha256Hex(input: string): string {
   for (let i = 0; i < 4; i++) msg[total - 8 + i] = (hi >>> (24 - i * 8)) & 0xff;
   for (let i = 0; i < 4; i++) msg[total - 4 + i] = (lo >>> (24 - i * 8)) & 0xff;
 
-  const h = new Uint32Array([0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19]);
+  const h = new Uint32Array([
+    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
+  ]);
   const w = new Uint32Array(64);
 
   for (let off = 0; off < total; off += 64) {
     for (let i = 0; i < 16; i++) {
-      w[i] = ((msg[off + i * 4]! << 24) | (msg[off + i * 4 + 1]! << 16) | (msg[off + i * 4 + 2]! << 8) | msg[off + i * 4 + 3]!) >>> 0;
+      w[i] =
+        ((msg[off + i * 4]! << 24) |
+          (msg[off + i * 4 + 1]! << 16) |
+          (msg[off + i * 4 + 2]! << 8) |
+          msg[off + i * 4 + 3]!) >>>
+        0;
     }
     for (let i = 16; i < 64; i++) {
       const s0 = rotr(w[i - 15]!, 7) ^ rotr(w[i - 15]!, 18) ^ (w[i - 15]! >>> 3);
@@ -60,10 +67,23 @@ export function sha256Hex(input: string): string {
       const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
       const maj = (a & b) ^ (a & c) ^ (b & c);
       const t2 = (S0 + maj) >>> 0;
-      hh = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+      hh = g;
+      g = f;
+      f = e;
+      e = (d + t1) >>> 0;
+      d = c;
+      c = b;
+      b = a;
+      a = (t1 + t2) >>> 0;
     }
-    h[0] = (h[0]! + a) >>> 0; h[1] = (h[1]! + b) >>> 0; h[2] = (h[2]! + c) >>> 0; h[3] = (h[3]! + d) >>> 0;
-    h[4] = (h[4]! + e) >>> 0; h[5] = (h[5]! + f) >>> 0; h[6] = (h[6]! + g) >>> 0; h[7] = (h[7]! + hh) >>> 0;
+    h[0] = (h[0]! + a) >>> 0;
+    h[1] = (h[1]! + b) >>> 0;
+    h[2] = (h[2]! + c) >>> 0;
+    h[3] = (h[3]! + d) >>> 0;
+    h[4] = (h[4]! + e) >>> 0;
+    h[5] = (h[5]! + f) >>> 0;
+    h[6] = (h[6]! + g) >>> 0;
+    h[7] = (h[7]! + hh) >>> 0;
   }
 
   let hex = "";

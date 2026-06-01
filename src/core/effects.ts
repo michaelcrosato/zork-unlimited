@@ -22,13 +22,25 @@ export const EffectSchema = z.union([
   z.object({ dec_var: NameBy }).strict(),
   z.object({ add_journal: z.string() }).strict(),
   z.object({ goto: z.string().min(1) }).strict(),
-  z.object({ unlock_exit: z.object({ from: z.string().min(1), to: z.string().min(1) }).strict() }).strict(),
+  z
+    .object({ unlock_exit: z.object({ from: z.string().min(1), to: z.string().min(1) }).strict() })
+    .strict(),
   z.object({ open_object: z.string().min(1) }).strict(),
-  z.object({ set_object_locked: z.object({ id: z.string().min(1), locked: z.boolean() }).strict() }).strict(),
-  z.object({ place_object: z.object({ id: z.string().min(1), room: z.string().min(1) }).strict() }).strict(),
+  z
+    .object({
+      set_object_locked: z.object({ id: z.string().min(1), locked: z.boolean() }).strict(),
+    })
+    .strict(),
+  z
+    .object({ place_object: z.object({ id: z.string().min(1), room: z.string().min(1) }).strict() })
+    .strict(),
   // Stage 4 (§13, §14 gate): advance a quest to a named stage. Reuses the
   // questStage field already in GameState (§6); deterministic, no randomness.
-  z.object({ set_quest_stage: z.object({ quest: z.string().min(1), stage: z.string().min(1) }).strict() }).strict(),
+  z
+    .object({
+      set_quest_stage: z.object({ quest: z.string().min(1), stage: z.string().min(1) }).strict(),
+    })
+    .strict(),
   z.object({ narrate: z.string() }).strict(),
   z.object({ end_game: z.string().min(1) }).strict(),
 ]);
@@ -50,7 +62,10 @@ function patchObject(
 }
 
 /** Apply ONE effect. Returns the new state and the event it emitted. Pure. */
-export function applyEffect(effect: Effect, state: GameState): { state: GameState; event: GameEvent } {
+export function applyEffect(
+  effect: Effect,
+  state: GameState,
+): { state: GameState; event: GameEvent } {
   if ("set_flag" in effect) {
     return {
       state: { ...state, flags: { ...state.flags, [effect.set_flag]: true } },
@@ -81,7 +96,12 @@ export function applyEffect(effect: Effect, state: GameState): { state: GameStat
   if ("set_var" in effect) {
     return {
       state: { ...state, vars: { ...state.vars, [effect.set_var.name]: effect.set_var.value } },
-      event: { type: "state_change", effect: "set_var", name: effect.set_var.name, value: effect.set_var.value },
+      event: {
+        type: "state_change",
+        effect: "set_var",
+        name: effect.set_var.name,
+        value: effect.set_var.value,
+      },
     };
   }
   if ("inc_var" in effect) {
@@ -128,7 +148,9 @@ export function applyEffect(effect: Effect, state: GameState): { state: GameStat
     return {
       state: {
         ...state,
-        objectState: patchObject(state, effect.set_object_locked.id, { locked: effect.set_object_locked.locked }),
+        objectState: patchObject(state, effect.set_object_locked.id, {
+          locked: effect.set_object_locked.locked,
+        }),
       },
       event: {
         type: "state_change",
@@ -143,14 +165,33 @@ export function applyEffect(effect: Effect, state: GameState): { state: GameStat
     // object's room overrides its static home; holding it (inventory) takes
     // precedence over room when locating it (§7.3, parser object model).
     return {
-      state: { ...state, objectState: patchObject(state, effect.place_object.id, { room: effect.place_object.room }) },
-      event: { type: "state_change", effect: "place_object", id: effect.place_object.id, room: effect.place_object.room },
+      state: {
+        ...state,
+        objectState: patchObject(state, effect.place_object.id, { room: effect.place_object.room }),
+      },
+      event: {
+        type: "state_change",
+        effect: "place_object",
+        id: effect.place_object.id,
+        room: effect.place_object.room,
+      },
     };
   }
   if ("set_quest_stage" in effect) {
     return {
-      state: { ...state, questStage: { ...state.questStage, [effect.set_quest_stage.quest]: effect.set_quest_stage.stage } },
-      event: { type: "state_change", effect: "set_quest_stage", quest: effect.set_quest_stage.quest, stage: effect.set_quest_stage.stage },
+      state: {
+        ...state,
+        questStage: {
+          ...state.questStage,
+          [effect.set_quest_stage.quest]: effect.set_quest_stage.stage,
+        },
+      },
+      event: {
+        type: "state_change",
+        effect: "set_quest_stage",
+        quest: effect.set_quest_stage.quest,
+        stage: effect.set_quest_stage.stage,
+      },
     };
   }
   if ("narrate" in effect) {

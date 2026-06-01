@@ -8,7 +8,9 @@ function printJson(value: unknown): void {
 async function main(): Promise<void> {
   const [, , command, storyPath, ...rest] = process.argv;
   if (!command || !storyPath) {
-    console.error("Usage: npm run cyoa -- <validate|playtest> <story.yaml> [--json] [--runs N] [--strategy random|coverage] [--summary]");
+    console.error(
+      "Usage: npm run cyoa -- <validate|playtest> <story.yaml> [--json] [--runs N] [--strategy random|coverage] [--summary]",
+    );
     process.exit(2);
   }
 

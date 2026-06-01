@@ -17,7 +17,12 @@ import { makeStep } from "../src/core/engine.js";
 import { hashState } from "../src/core/hash.js";
 import type { GameEvent } from "../src/core/events.js";
 import { buildParserObservation } from "../src/parser/observation.js";
-import { indexParserPack, buildParserRules, initStateForParserPack, type ParserIndex } from "../src/parser/runner.js";
+import {
+  indexParserPack,
+  buildParserRules,
+  initStateForParserPack,
+  type ParserIndex,
+} from "../src/parser/runner.js";
 import type { ParserPack } from "../src/parser/schema.js";
 import { PARSER_PERSONAS, pickParserAction, type ParserPersona } from "./parser_personas.js";
 
@@ -42,17 +47,30 @@ export type ParserPlaytestRecord = {
   final_hash: string;
 };
 
-export type ParserRunOptions = { persona: ParserPersona; seed: number; maxSteps?: number; stuckWindow?: number };
+export type ParserRunOptions = {
+  persona: ParserPersona;
+  seed: number;
+  maxSteps?: number;
+  stuckWindow?: number;
+};
 
 /** A monotone progress score: more rooms / flags / items / opened objects = more. */
-function progressScore(roomsVisited: Set<string>, state: import("../src/core/state.js").GameState): number {
+function progressScore(
+  roomsVisited: Set<string>,
+  state: import("../src/core/state.js").GameState,
+): number {
   const flags = Object.values(state.flags).filter(Boolean).length;
-  const opened = Object.values(state.objectState).filter((o) => o.open || o.locked === false).length;
+  const opened = Object.values(state.objectState).filter(
+    (o) => o.open || o.locked === false,
+  ).length;
   return roomsVisited.size * 10 + flags * 3 + state.inventory.length * 3 + opened * 2;
 }
 
 /** Play one parser game to a terminal state or a stuck/step guard, recording turns. */
-export function runParserPlaytest(index: ParserIndex, opts: ParserRunOptions): ParserPlaytestRecord {
+export function runParserPlaytest(
+  index: ParserIndex,
+  opts: ParserRunOptions,
+): ParserPlaytestRecord {
   const rules = buildParserRules(index);
   const step = makeStep(rules);
   const maxSteps = opts.maxSteps ?? 200;
@@ -79,7 +97,14 @@ export function runParserPlaytest(index: ParserIndex, opts: ParserRunOptions): P
     const opt = obs.available_actions.find((a) => a.id === chosenId) ?? obs.available_actions[0]!;
     const result = step(state, opt.action);
 
-    steps.push({ step: i, room: state.current, available: obs.available_actions.map((a) => a.id), chosen_action: opt.id, command: opt.command, events: result.events });
+    steps.push({
+      step: i,
+      room: state.current,
+      available: obs.available_actions.map((a) => a.id),
+      chosen_action: opt.id,
+      command: opt.command,
+      events: result.events,
+    });
 
     state = result.state;
     visited.add(state.current);
@@ -123,7 +148,10 @@ export type ParserCoverageReport = {
   findings: string[];
 };
 
-export type ParserRosterResult = { records: ParserPlaytestRecord[]; coverage: ParserCoverageReport };
+export type ParserRosterResult = {
+  records: ParserPlaytestRecord[];
+  coverage: ParserCoverageReport;
+};
 
 /** Run the full §12.8 persona roster across seeds and aggregate route coverage. */
 export function runParserRoster(
@@ -137,31 +165,50 @@ export function runParserRoster(
   const records: ParserPlaytestRecord[] = [];
   for (const persona of personas) {
     for (const seed of seeds) {
-      records.push(runParserPlaytest(index, { persona, seed, ...(opts.maxSteps ? { maxSteps: opts.maxSteps } : {}) }));
+      records.push(
+        runParserPlaytest(index, {
+          persona,
+          seed,
+          ...(opts.maxSteps ? { maxSteps: opts.maxSteps } : {}),
+        }),
+      );
     }
   }
 
   const allRooms = pack.rooms.map((r) => r.id);
   const roomSet = new Set(allRooms);
-  const roomsVisited = [...new Set(records.flatMap((r) => r.rooms_visited))].filter((r) => roomSet.has(r)).sort();
+  const roomsVisited = [...new Set(records.flatMap((r) => r.rooms_visited))]
+    .filter((r) => roomSet.has(r))
+    .sort();
   const roomsUnvisited = allRooms.filter((r) => !roomsVisited.includes(r)).sort();
-  const endingsReached = [...new Set(records.map((r) => r.ending_id).filter((x): x is string => x !== null))].sort();
-  const personasWon = [...new Set(records.filter((r) => r.status === "completed").map((r) => r.persona))];
+  const endingsReached = [
+    ...new Set(records.map((r) => r.ending_id).filter((x): x is string => x !== null)),
+  ].sort();
+  const personasWon = [
+    ...new Set(records.filter((r) => r.status === "completed").map((r) => r.persona)),
+  ];
 
   const findings: string[] = [];
   if (personasWon.length === 0) {
-    findings.push("No persona completed the game — the win route needs multi-step planning beyond the heuristic personas (expected; the walkthrough acceptance test certifies winnability).");
+    findings.push(
+      "No persona completed the game — the win route needs multi-step planning beyond the heuristic personas (expected; the walkthrough acceptance test certifies winnability).",
+    );
   } else {
     findings.push(`Personas reaching a win: ${personasWon.join(", ")}.`);
   }
-  for (const r of roomsUnvisited) findings.push(`Room "${r}" was never visited by any persona — possibly low-discoverability content.`);
+  for (const r of roomsUnvisited)
+    findings.push(
+      `Room "${r}" was never visited by any persona — possibly low-discoverability content.`,
+    );
   // Surface where stuck personas wedged — the input to the debugger (§12.5).
   const stuckAt = new Map<string, number>();
   for (const rec of records.filter((r) => r.status === "stuck")) {
     stuckAt.set(rec.last_room, (stuckAt.get(rec.last_room) ?? 0) + 1);
   }
   for (const [room, n] of [...stuckAt.entries()].sort((a, b) => b[1] - a[1])) {
-    findings.push(`${n} run(s) got stuck in room "${room}" — a candidate ordering/soft-lock issue to debug.`);
+    findings.push(
+      `${n} run(s) got stuck in room "${room}" — a candidate ordering/soft-lock issue to debug.`,
+    );
   }
 
   return {

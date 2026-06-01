@@ -14,7 +14,13 @@ export const WriterStorySchema = z
   .object({
     title: z.string().min(1),
     premise: z.string().min(1),
-    chapters: z.array(z.object({ id: z.string().min(1), title: z.string().min(1), prose: z.string().min(1) }).strict()).min(1),
+    chapters: z
+      .array(
+        z
+          .object({ id: z.string().min(1), title: z.string().min(1), prose: z.string().min(1) })
+          .strict(),
+      )
+      .min(1),
     beats: z.array(z.object({ id: z.string().min(1), summary: z.string().min(1) }).strict()).min(1),
   })
   .strict();

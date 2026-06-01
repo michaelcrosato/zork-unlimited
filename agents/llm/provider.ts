@@ -55,7 +55,12 @@ function hashStr(s: string): number {
 }
 
 /** Pick a legal action id per persona. Pure + deterministic. */
-export function pickAction(persona: Persona, obs: CyoaObservation, step: number, seed: number): string {
+export function pickAction(
+  persona: Persona,
+  obs: CyoaObservation,
+  step: number,
+  seed: number,
+): string {
   const actions = obs.available_actions;
   const ids = actions.map((a) => a.id);
   if (ids.length <= 1) return ids[0] ?? "";

@@ -31,7 +31,9 @@ type Args = { path: string; seed: number; commands: string[] | null; record: str
 function parseArgs(argv: string[]): Args {
   const path = argv[2];
   if (!path || path.startsWith("--")) {
-    console.error("Usage: npm run play:parser -- <pack.yaml> [--seed N] [--commands \"a; b; c\"] [--record file]");
+    console.error(
+      'Usage: npm run play:parser -- <pack.yaml> [--seed N] [--commands "a; b; c"] [--record file]',
+    );
     process.exit(2);
   }
   let seed = 1;
@@ -40,7 +42,11 @@ function parseArgs(argv: string[]): Args {
   for (let i = 3; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--seed") seed = Number(argv[++i]);
-    else if (a === "--commands") commands = (argv[++i] ?? "").split(/[;,]/).map((s) => s.trim()).filter(Boolean);
+    else if (a === "--commands")
+      commands = (argv[++i] ?? "")
+        .split(/[;,]/)
+        .map((s) => s.trim())
+        .filter(Boolean);
     else if (a === "--record") record = argv[++i] ?? null;
   }
   return { path, seed, commands, record };
@@ -54,8 +60,10 @@ function render(obs: ParserObservation): string {
     for (const a of obs.available_actions) lines.push(`  - ${a.command}`);
     return lines.join("\n");
   }
-  if (obs.visible_objects.length) lines.push(`You see: ${obs.visible_objects.map((o) => o.name).join(", ")}.`);
-  if (obs.npcs_present.length) lines.push(`Here: ${obs.npcs_present.map((n) => n.name).join(", ")}.`);
+  if (obs.visible_objects.length)
+    lines.push(`You see: ${obs.visible_objects.map((o) => o.name).join(", ")}.`);
+  if (obs.npcs_present.length)
+    lines.push(`Here: ${obs.npcs_present.map((n) => n.name).join(", ")}.`);
   if (obs.exits.length) lines.push(`Exits: ${obs.exits.map((e) => e.direction).join(", ")}.`);
   if (obs.inventory.length) lines.push(`[carrying: ${obs.inventory.join(", ")}]`);
   if (obs.ended) lines.push(`\n*** ${obs.ending_id} *** — THE END`);
@@ -63,10 +71,17 @@ function render(obs: ParserObservation): string {
 }
 
 /** A friendly reason a parsed-but-illegal action failed (e.g. a locked exit). */
-function illegalReason(index: ParserIndex, state: import("../src/core/state.js").GameState, action: Action): string {
+function illegalReason(
+  index: ParserIndex,
+  state: import("../src/core/state.js").GameState,
+  action: Action,
+): string {
   if (action.type === "MOVE") {
-    const exit = index.rooms.get(state.current)?.exits.find((e) => e.direction === action.direction);
-    if (exit && !evalConditions(exit.conditions, state)) return exit.locked_msg ?? "You can't go that way yet.";
+    const exit = index.rooms
+      .get(state.current)
+      ?.exits.find((e) => e.direction === action.direction);
+    if (exit && !evalConditions(exit.conditions, state))
+      return exit.locked_msg ?? "You can't go that way yet.";
   }
   return "You can't do that right now.";
 }

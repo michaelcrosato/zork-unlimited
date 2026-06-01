@@ -169,7 +169,9 @@ The same pipeline is exposed over MCP as the `adapt_story` tool.
 
 ```bash
 npm install
-npm run lint                                              # typecheck
+npm run typecheck                                        # tsc --noEmit
+npm run lint                                             # ESLint
+npm run format:check                                     # Prettier (use `npm run format` to fix)
 npm test                                                  # unit + property tests
 npm run replay                                            # Stage 0: round-trip a trace
 npm run validate -- content/cyoa/pack/watchtower_road.yaml # Stage 1: validate a pack

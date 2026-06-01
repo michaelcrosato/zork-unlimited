@@ -31,7 +31,11 @@ const SCENES: Scene[] = [
       {
         id: "grab_gold",
         conditions: [{ has_flag: "has_torch" }],
-        effects: [{ add_item: "gold" }, { inc_var: { name: "score", by: 10 } }, { goto: "treasure" }],
+        effects: [
+          { add_item: "gold" },
+          { inc_var: { name: "score", by: 10 } },
+          { goto: "treasure" },
+        ],
       },
       { id: "leave", effects: [{ goto: "exit" }] },
     ],

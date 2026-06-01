@@ -16,12 +16,18 @@ import { useInteraction } from "./legal_actions.js";
 export type ParseResult = { ok: true; action: Action } | { ok: false; reason: string };
 
 const DIRECTIONS: Record<string, string> = {
-  north: "north", n: "north",
-  south: "south", s: "south",
-  east: "east", e: "east",
-  west: "west", w: "west",
-  up: "up", u: "up",
-  down: "down", d: "down",
+  north: "north",
+  n: "north",
+  south: "south",
+  s: "south",
+  east: "east",
+  e: "east",
+  west: "west",
+  w: "west",
+  up: "up",
+  u: "up",
+  down: "down",
+  d: "down",
 };
 
 const stripArticle = (s: string): string => s.replace(/^\s*(the|a|an)\s+/i, "").trim();
@@ -54,12 +60,16 @@ function resolveObject(index: ParserIndex, phrase: string): string | null {
 function resolveNpc(index: ParserIndex, phrase: string): string | null {
   const norm = stripArticle(phrase).toLowerCase().trim();
   for (const npc of index.npcs.values()) {
-    if (npc.id === norm || npc.name.toLowerCase() === norm || npc.name.toLowerCase().includes(norm)) return npc.id;
+    if (npc.id === norm || npc.name.toLowerCase() === norm || npc.name.toLowerCase().includes(norm))
+      return npc.id;
   }
   return null;
 }
 
-const notUnderstood = (raw: string): ParseResult => ({ ok: false, reason: `I don't understand "${raw}". Try: look, go <dir>, take/drop <obj>, open/unlock <obj>, use <obj> on <obj>, talk to <npc>, ask about <topic>, inventory.` });
+const notUnderstood = (raw: string): ParseResult => ({
+  ok: false,
+  reason: `I don't understand "${raw}". Try: look, go <dir>, take/drop <obj>, open/unlock <obj>, use <obj> on <obj>, talk to <npc>, ask about <topic>, inventory.`,
+});
 
 /** Parse one command line into a structured Action (or a reason it can't be). */
 export function parseCommand(index: ParserIndex, state: GameState, raw: string): ParseResult {
@@ -77,7 +87,11 @@ export function parseCommand(index: ParserIndex, state: GameState, raw: string):
       active.node.topics.find((t) => t.id.toLowerCase() === arg) ??
       active.node.topics.find((t) => t.prompt.toLowerCase().includes(arg) && arg.length > 0) ??
       (arg === "" ? undefined : undefined);
-    if (!topic) return { ok: false, reason: `No such topic. Options: ${active.node.topics.map((t) => t.id).join(", ")}.` };
+    if (!topic)
+      return {
+        ok: false,
+        reason: `No such topic. Options: ${active.node.topics.map((t) => t.id).join(", ")}.`,
+      };
     return { ok: true, action: { type: "ASK", npc: active.npc.id, topic: topic.id } };
   }
   if (active && (verb === "bye" || verb === "goodbye" || verb === "leave")) {
@@ -86,7 +100,8 @@ export function parseCommand(index: ParserIndex, state: GameState, raw: string):
   }
 
   // Bare direction ("north", "n").
-  if (DIRECTIONS[verb] && words.length === 1) return { ok: true, action: { type: "MOVE", direction: DIRECTIONS[verb]! } };
+  if (DIRECTIONS[verb] && words.length === 1)
+    return { ok: true, action: { type: "MOVE", direction: DIRECTIONS[verb]! } };
 
   switch (verb) {
     case "look":
@@ -94,45 +109,62 @@ export function parseCommand(index: ParserIndex, state: GameState, raw: string):
       if (rest === "" || rest === "around") return { ok: true, action: { type: "LOOK" } };
       const at = rest.replace(/^at\s+/, "");
       const id = resolveObject(index, at);
-      return id ? { ok: true, action: { type: "LOOK", target: id } } : { ok: false, reason: `You don't see "${at}" here.` };
+      return id
+        ? { ok: true, action: { type: "LOOK", target: id } }
+        : { ok: false, reason: `You don't see "${at}" here.` };
     }
     case "examine":
     case "x":
     case "inspect": {
       const id = resolveObject(index, rest);
-      return id ? { ok: true, action: { type: "LOOK", target: id } } : { ok: false, reason: `You don't see "${rest}" here.` };
+      return id
+        ? { ok: true, action: { type: "LOOK", target: id } }
+        : { ok: false, reason: `You don't see "${rest}" here.` };
     }
     case "read": {
       const id = resolveObject(index, rest);
-      return id ? { ok: true, action: { type: "READ", target: id } } : { ok: false, reason: `You don't see "${rest}" here.` };
+      return id
+        ? { ok: true, action: { type: "READ", target: id } }
+        : { ok: false, reason: `You don't see "${rest}" here.` };
     }
     case "go":
     case "move": {
       const dir = DIRECTIONS[rest];
-      return dir ? { ok: true, action: { type: "MOVE", direction: dir } } : { ok: false, reason: `Go where? (north/south/east/west/up/down)` };
+      return dir
+        ? { ok: true, action: { type: "MOVE", direction: dir } }
+        : { ok: false, reason: `Go where? (north/south/east/west/up/down)` };
     }
     case "take":
     case "get":
     case "grab": {
       const phrase = rest.replace(/^up\s+/, "");
       const id = resolveObject(index, phrase);
-      return id ? { ok: true, action: { type: "TAKE", item: id } } : { ok: false, reason: `You can't take "${rest}".` };
+      return id
+        ? { ok: true, action: { type: "TAKE", item: id } }
+        : { ok: false, reason: `You can't take "${rest}".` };
     }
     case "drop": {
       const id = resolveObject(index, rest);
-      return id ? { ok: true, action: { type: "DROP", item: id } } : { ok: false, reason: `You aren't carrying "${rest}".` };
+      return id
+        ? { ok: true, action: { type: "DROP", item: id } }
+        : { ok: false, reason: `You aren't carrying "${rest}".` };
     }
     case "open": {
       const id = resolveObject(index, rest);
-      return id ? { ok: true, action: { type: "OPEN", target: id } } : { ok: false, reason: `You can't open "${rest}".` };
+      return id
+        ? { ok: true, action: { type: "OPEN", target: id } }
+        : { ok: false, reason: `You can't open "${rest}".` };
     }
     case "close": {
       const id = resolveObject(index, rest);
-      return id ? { ok: true, action: { type: "CLOSE", target: id } } : { ok: false, reason: `You can't close "${rest}".` };
+      return id
+        ? { ok: true, action: { type: "CLOSE", target: id } }
+        : { ok: false, reason: `You can't close "${rest}".` };
     }
     case "unlock": {
       const m = rest.match(/^(.*?)\s+with\s+(.*)$/);
-      if (!m) return { ok: false, reason: `Unlock what with what? (e.g. "unlock chest with brass key")` };
+      if (!m)
+        return { ok: false, reason: `Unlock what with what? (e.g. "unlock chest with brass key")` };
       const target = resolveObject(index, m[1]!);
       const key = resolveObject(index, m[2]!);
       if (!target || !key) return { ok: false, reason: `Unlock what with what?` };
@@ -150,12 +182,15 @@ export function parseCommand(index: ParserIndex, state: GameState, raw: string):
       // phial, eat the bread). Only accept it when the object actually carries a
       // self-interaction; otherwise the verb still needs a target, so keep the hint.
       const solo = resolveObject(index, rest);
-      if (solo && useInteraction(index, solo, solo)) return { ok: true, action: { type: "USE", item: solo, target: solo } };
+      if (solo && useInteraction(index, solo, solo))
+        return { ok: true, action: { type: "USE", item: solo, target: solo } };
       return { ok: false, reason: `Use what on what? (e.g. "use rope on old well")` };
     }
     case "talk": {
       const npc = resolveNpc(index, rest.replace(/^to\s+/, ""));
-      return npc ? { ok: true, action: { type: "TALK", npc } } : { ok: false, reason: `There's no one called "${rest}" here.` };
+      return npc
+        ? { ok: true, action: { type: "TALK", npc } }
+        : { ok: false, reason: `There's no one called "${rest}" here.` };
     }
     case "inventory":
     case "inv":

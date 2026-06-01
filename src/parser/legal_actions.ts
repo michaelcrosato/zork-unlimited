@@ -19,7 +19,6 @@ import {
   dlgVar,
   isLocked,
   isOpen,
-  locateObject,
   nodeOrdinal,
   objectDescription,
   roomDescription,
@@ -38,8 +37,14 @@ function present(index: ParserIndex, state: GameState, id: string): boolean {
 
 /** Find the USE interaction (if any) for using `item` on `target`. Exported so the
  *  RPG runner (Stage 4) can detect a skill-check interaction before resolving. */
-export function useInteraction(index: ParserIndex, target: string, item: string): Interaction | undefined {
-  return index.objects.get(target)?.interactions.find((it) => it.verb === "USE" && it.item === item && it.target === target);
+export function useInteraction(
+  index: ParserIndex,
+  target: string,
+  item: string,
+): Interaction | undefined {
+  return index.objects
+    .get(target)
+    ?.interactions.find((it) => it.verb === "USE" && it.item === item && it.target === target);
 }
 
 function readInteractions(index: ParserIndex, target: string): Interaction[] {
@@ -51,20 +56,28 @@ function readInteractions(index: ParserIndex, target: string): Interaction[] {
  * if the action is structurally impossible in this state (wrong room, object not
  * present, etc.). Pure: same (index, state, action) ⇒ same resolution.
  */
-export function resolveParserAction(index: ParserIndex, state: GameState, action: Action): Resolution | null {
+export function resolveParserAction(
+  index: ParserIndex,
+  state: GameState,
+  action: Action,
+): Resolution | null {
   const here = state.current;
   switch (action.type) {
     case "LOOK": {
       if (action.target === undefined) {
         const room = index.rooms.get(here);
-        return room ? { conditions: [], effects: [{ narrate: roomDescription(room, state) }] } : null;
+        return room
+          ? { conditions: [], effects: [{ narrate: roomDescription(room, state) }] }
+          : null;
       }
       if (!present(index, state, action.target)) return null;
       const o = index.objects.get(action.target);
       return o ? { conditions: [], effects: [{ narrate: objectDescription(o, state) }] } : null;
     }
     case "INVENTORY": {
-      const items = state.inventory.length ? state.inventory.map((i) => objName(index, i)).join(", ") : "nothing";
+      const items = state.inventory.length
+        ? state.inventory.map((i) => objName(index, i)).join(", ")
+        : "nothing";
       return { conditions: [], effects: [{ narrate: `You are carrying: ${items}.` }] };
     }
     case "READ": {
@@ -83,7 +96,10 @@ export function resolveParserAction(index: ParserIndex, state: GameState, action
       const o = index.objects.get(action.item);
       if (!o || !o.takeable || state.inventory.includes(action.item)) return null;
       if (!visibleObjectIds(index, state, here).includes(action.item)) return null;
-      return { conditions: [], effects: [{ add_item: action.item }, { narrate: `You take the ${o.name}.` }] };
+      return {
+        conditions: [],
+        effects: [{ add_item: action.item }, { narrate: `You take the ${o.name}.` }],
+      };
     }
     case "DROP": {
       if (!state.inventory.includes(action.item)) return null;
@@ -91,28 +107,43 @@ export function resolveParserAction(index: ParserIndex, state: GameState, action
       if (!o) return null;
       return {
         conditions: [],
-        effects: [{ remove_item: action.item }, { place_object: { id: action.item, room: here } }, { narrate: `You drop the ${o.name}.` }],
+        effects: [
+          { remove_item: action.item },
+          { place_object: { id: action.item, room: here } },
+          { narrate: `You drop the ${o.name}.` },
+        ],
       };
     }
     case "OPEN": {
       const o = index.objects.get(action.target);
       if (!o || !o.openable || !present(index, state, action.target)) return null;
       if (isLocked(index, state, action.target) || isOpen(state, action.target)) return null;
-      const reveal = o.contents.length ? ` Inside: ${o.contents.map((c) => objName(index, c)).join(", ")}.` : "";
-      return { conditions: [], effects: [{ open_object: action.target }, { narrate: `You open the ${o.name}.${reveal}` }] };
+      const reveal = o.contents.length
+        ? ` Inside: ${o.contents.map((c) => objName(index, c)).join(", ")}.`
+        : "";
+      return {
+        conditions: [],
+        effects: [{ open_object: action.target }, { narrate: `You open the ${o.name}.${reveal}` }],
+      };
     }
     case "UNLOCK": {
       const o = index.objects.get(action.target);
-      if (!o || !present(index, state, action.target) || !isLocked(index, state, action.target)) return null;
-      if (o.key_id === undefined || action.with !== o.key_id || !state.inventory.includes(o.key_id)) return null;
+      if (!o || !present(index, state, action.target) || !isLocked(index, state, action.target))
+        return null;
+      if (o.key_id === undefined || action.with !== o.key_id || !state.inventory.includes(o.key_id))
+        return null;
       return {
         conditions: [{ has_item: o.key_id }],
-        effects: [{ set_object_locked: { id: action.target, locked: false } }, { narrate: `You unlock the ${o.name}.` }],
+        effects: [
+          { set_object_locked: { id: action.target, locked: false } },
+          { narrate: `You unlock the ${o.name}.` },
+        ],
       };
     }
     case "USE": {
       const it = useInteraction(index, action.target, action.item);
-      if (!it || !state.inventory.includes(action.item) || !present(index, state, action.target)) return null;
+      if (!it || !state.inventory.includes(action.item) || !present(index, state, action.target))
+        return null;
       return { conditions: [{ has_item: action.item }, ...it.conditions], effects: it.effects };
     }
     case "MOVE": {
@@ -129,7 +160,11 @@ export function resolveParserAction(index: ParserIndex, state: GameState, action
       if (!root) return null;
       return {
         conditions: [],
-        effects: [{ set_var: { name: dlgVar(npc.id), value: ord } }, ...root.effects, { narrate: `${npc.name}: "${root.npc_text}"` }],
+        effects: [
+          { set_var: { name: dlgVar(npc.id), value: ord } },
+          ...root.effects,
+          { narrate: `${npc.name}: "${root.npc_text}"` },
+        ],
       };
     }
     case "ASK": {
@@ -141,14 +176,24 @@ export function resolveParserAction(index: ParserIndex, state: GameState, action
       // here by the engine, so a told-once info topic can retire itself.
       const conditions = topic.conditions ?? [];
       if (topic.end || topic.goto === undefined) {
-        return { conditions, effects: [{ set_var: { name: dlgVar(active.npc.id), value: 0 } }, { narrate: `(You end the conversation.)` }] };
+        return {
+          conditions,
+          effects: [
+            { set_var: { name: dlgVar(active.npc.id), value: 0 } },
+            { narrate: `(You end the conversation.)` },
+          ],
+        };
       }
       const targetOrd = nodeOrdinal(active.npc, topic.goto);
       const target = active.npc.dialogue.nodes[targetOrd - 1];
       if (!target) return null;
       return {
         conditions,
-        effects: [{ set_var: { name: dlgVar(active.npc.id), value: targetOrd } }, ...target.effects, { narrate: `${active.npc.name}: "${target.npc_text}"` }],
+        effects: [
+          { set_var: { name: dlgVar(active.npc.id), value: targetOrd } },
+          ...target.effects,
+          { narrate: `${active.npc.name}: "${target.npc_text}"` },
+        ],
       };
     }
     default:
@@ -156,7 +201,13 @@ export function resolveParserAction(index: ParserIndex, state: GameState, action
   }
 }
 
-function option(index: ParserIndex, state: GameState, id: string, command: string, action: Action): ParserActionOption | null {
+function option(
+  index: ParserIndex,
+  state: GameState,
+  id: string,
+  command: string,
+  action: Action,
+): ParserActionOption | null {
   const res = resolveParserAction(index, state, action);
   if (!res || !evalConditions(res.conditions, state)) return null;
   return { id, command, action };
@@ -177,7 +228,13 @@ export function enumerateActions(index: ParserIndex, state: GameState): ParserAc
   const active = activeDialogue(index, state);
   if (active) {
     for (const t of active.node.topics) {
-      push(option(index, state, `ask_${t.id}`, `ask: ${t.prompt}`, { type: "ASK", npc: active.npc.id, topic: t.id }));
+      push(
+        option(index, state, `ask_${t.id}`, `ask: ${t.prompt}`, {
+          type: "ASK",
+          npc: active.npc.id,
+          topic: t.id,
+        }),
+      );
     }
     return out;
   }
@@ -188,19 +245,32 @@ export function enumerateActions(index: ParserIndex, state: GameState): ParserAc
 
   // Movement (sorted by direction for determinism).
   for (const exit of [...room.exits].sort((a, b) => a.direction.localeCompare(b.direction))) {
-    push(option(index, state, `go_${exit.direction}`, `go ${exit.direction}`, { type: "MOVE", direction: exit.direction }));
+    push(
+      option(index, state, `go_${exit.direction}`, `go ${exit.direction}`, {
+        type: "MOVE",
+        direction: exit.direction,
+      }),
+    );
   }
 
   // Objects visible in the room.
   for (const oid of visibleObjectIds(index, state, here)) {
     const o = index.objects.get(oid);
     if (!o) continue;
-    push(option(index, state, `examine_${oid}`, `look at ${o.name}`, { type: "LOOK", target: oid }));
+    push(
+      option(index, state, `examine_${oid}`, `look at ${o.name}`, { type: "LOOK", target: oid }),
+    );
     push(option(index, state, `read_${oid}`, `read ${o.name}`, { type: "READ", target: oid }));
     push(option(index, state, `take_${oid}`, `take ${o.name}`, { type: "TAKE", item: oid }));
     push(option(index, state, `open_${oid}`, `open ${o.name}`, { type: "OPEN", target: oid }));
     if (o.key_id !== undefined) {
-      push(option(index, state, `unlock_${oid}`, `unlock ${o.name} with ${objName(index, o.key_id)}`, { type: "UNLOCK", target: oid, with: o.key_id }));
+      push(
+        option(index, state, `unlock_${oid}`, `unlock ${o.name} with ${objName(index, o.key_id)}`, {
+          type: "UNLOCK",
+          target: oid,
+          with: o.key_id,
+        }),
+      );
     }
   }
 
@@ -208,7 +278,9 @@ export function enumerateActions(index: ParserIndex, state: GameState): ParserAc
   for (const item of [...state.inventory].sort()) {
     const o = index.objects.get(item);
     if (!o) continue;
-    push(option(index, state, `examine_${item}`, `look at ${o.name}`, { type: "LOOK", target: item }));
+    push(
+      option(index, state, `examine_${item}`, `look at ${o.name}`, { type: "LOOK", target: item }),
+    );
     push(option(index, state, `read_${item}`, `read ${o.name}`, { type: "READ", target: item }));
     push(option(index, state, `drop_${item}`, `drop ${o.name}`, { type: "DROP", item }));
   }
@@ -231,7 +303,9 @@ export function enumerateActions(index: ParserIndex, state: GameState): ParserAc
 
   // NPCs present.
   for (const npc of index.npcByRoom.get(here) ?? []) {
-    push(option(index, state, `talk_${npc.id}`, `talk to ${npc.name}`, { type: "TALK", npc: npc.id }));
+    push(
+      option(index, state, `talk_${npc.id}`, `talk to ${npc.name}`, { type: "TALK", npc: npc.id }),
+    );
   }
 
   // Always-available informational actions.

@@ -92,7 +92,13 @@ export function diagnose(
     const id = state.endingId ?? "(unknown)";
     const won = opts.isWinningEnding ? opts.isWinningEnding(id) : true;
     if (won) {
-      return { type: "no_failure", description: `Reached ending "${id}".`, severity: "low", where: [`ending:${id}`], step: actions.length };
+      return {
+        type: "no_failure",
+        description: `Reached ending "${id}".`,
+        severity: "low",
+        where: [`ending:${id}`],
+        step: actions.length,
+      };
     }
     return {
       type: "death_unrecoverable",
@@ -123,7 +129,13 @@ export function diagnose(
   };
 }
 
-export type FixLayer = "content" | "engine_rule" | "validator" | "test" | "hint_text" | "quest_structure";
+export type FixLayer =
+  | "content"
+  | "engine_rule"
+  | "validator"
+  | "test"
+  | "hint_text"
+  | "quest_structure";
 
 /** The §15 bug-artifact shape, ready to serialize to traces/bugs/. */
 export type BugArtifact = {
@@ -164,7 +176,11 @@ export function toBugArtifact(
     seed: initialState.seed,
     initial_state: opts.embedInitialState ? initialState : "start",
     trace: actions,
-    failure: { type: diagnosis.type, description: diagnosis.description, severity: diagnosis.severity },
+    failure: {
+      type: diagnosis.type,
+      description: diagnosis.description,
+      severity: diagnosis.severity,
+    },
     expected: opts.expected ?? defaultExpectations(diagnosis.type),
     ...(opts.fix ? { fix: opts.fix } : {}),
     ...(opts.regressionTest ? { regression_test: opts.regressionTest } : {}),
@@ -174,13 +190,17 @@ export function toBugArtifact(
 function defaultExpectations(type: FailureType): string[] {
   switch (type) {
     case "soft_lock":
-      return ["every reachable non-ending state offers at least one progress-making action (§10, §17.3)"];
+      return [
+        "every reachable non-ending state offers at least one progress-making action (§10, §17.3)",
+      ];
     case "loop":
       return ["loops are intentional and declared; every other path terminates (§17.6)"];
     case "death_unrecoverable":
       return ["death endings remain recoverable via an earlier save (§8.7, §13 Stage 3)"];
     case "rejected_action":
-      return ["the legal-action set never offers an action the engine then rejects (§14 testing strategy)"];
+      return [
+        "the legal-action set never offers an action the engine then rejects (§14 testing strategy)",
+      ];
     case "no_failure":
       return ["no change required"];
   }

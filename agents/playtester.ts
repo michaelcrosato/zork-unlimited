@@ -65,7 +65,11 @@ const SYSTEM =
   "action_id from available_actions and explain briefly. Respond as JSON.";
 
 /** Play one game to a terminal state (or a guard), recording each turn. */
-export async function runPlaytest(index: CyoaIndex, provider: Provider, opts: RunOptions): Promise<PlaytestRecord> {
+export async function runPlaytest(
+  index: CyoaIndex,
+  provider: Provider,
+  opts: RunOptions,
+): Promise<PlaytestRecord> {
   const rules = buildRules(index);
   const step = makeStep(rules);
   const maxSteps = opts.maxSteps ?? 80;
@@ -113,7 +117,9 @@ export async function runPlaytest(index: CyoaIndex, provider: Provider, opts: Ru
       scene_id: obs.scene_id,
       available: obs.available_actions.map((a) => a.id),
       chosen_action: chosenId,
-      reason: legal ? decision.reason : `${decision.reason} (illegal pick "${decision.action_id}"; fell back)`,
+      reason: legal
+        ? decision.reason
+        : `${decision.reason} (illegal pick "${decision.action_id}"; fell back)`,
       expected: decision.expected_result,
       actual_events: result.events,
       result: kind,
@@ -171,7 +177,11 @@ export async function runRoster(
   const records: PlaytestRecord[] = [];
   for (const persona of personas) {
     for (const seed of seeds) {
-      const runOpts: RunOptions = { persona, seed, ...(opts.maxSteps ? { maxSteps: opts.maxSteps } : {}) };
+      const runOpts: RunOptions = {
+        persona,
+        seed,
+        ...(opts.maxSteps ? { maxSteps: opts.maxSteps } : {}),
+      };
       records.push(await runPlaytest(index, new MockProvider(persona, seed), runOpts));
     }
   }
@@ -180,22 +190,30 @@ export async function runRoster(
     ...pack.endings.map((e) => e.id),
     ...pack.scenes.filter((s) => s.is_ending).map((s) => s.id),
   ].sort();
-  const endingsReached = [...new Set(records.map((r) => r.ending_id).filter((x): x is string => x !== null))].sort();
+  const endingsReached = [
+    ...new Set(records.map((r) => r.ending_id).filter((x): x is string => x !== null)),
+  ].sort();
   const endingsMissing = endingsDeclared.filter((e) => !endingsReached.includes(e));
 
   // Scene coverage counts SCENES only — the visited set also includes terminal
   // ending nodes (the player goes there), which are not scenes.
   const allScenes = pack.scenes.map((s) => s.id);
   const sceneSet = new Set(allScenes);
-  const scenesVisited = [...new Set(records.flatMap((r) => r.scenes_visited))].filter((s) => sceneSet.has(s)).sort();
+  const scenesVisited = [...new Set(records.flatMap((r) => r.scenes_visited))]
+    .filter((s) => sceneSet.has(s))
+    .sort();
   const scenesUnvisited = allScenes.filter((s) => !scenesVisited.includes(s)).sort();
 
   const findings: string[] = [];
   for (const e of endingsMissing) {
-    findings.push(`Ending "${e}" was not reached by any persona in ${records.length} runs — it may be hard to discover.`);
+    findings.push(
+      `Ending "${e}" was not reached by any persona in ${records.length} runs — it may be hard to discover.`,
+    );
   }
   for (const s of scenesUnvisited) {
-    findings.push(`Scene "${s}" was never visited by any persona — possibly low-discoverability content.`);
+    findings.push(
+      `Scene "${s}" was never visited by any persona — possibly low-discoverability content.`,
+    );
   }
   for (const r of records.filter((r) => r.status === "looped")) {
     // The scene where the looping choice was made — the last recorded step.

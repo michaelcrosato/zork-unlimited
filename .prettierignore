@@ -1,0 +1,14 @@
+# Prettier is scoped to first-party engine/tooling TS via the format scripts
+# (src bin scripts agents). These globs are a belt-and-suspenders guard so an
+# accidental `prettier .` never rewrites hash-sensitive or generated assets.
+dist
+node_modules
+coverage
+ui
+saves
+ai-runs
+.codex
+# content YAML packs are content-hash-pinned — never reformat.
+content
+# trace fixtures carry committed hashes / known-answer vectors.
+traces

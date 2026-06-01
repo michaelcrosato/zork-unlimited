@@ -4,6 +4,8 @@
  * ranking), and reads real pack/mode health.
  */
 import { describe, it, expect } from "vitest";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { assess, formatAssessment, type Category } from "../../src/afk/assessor.js";
 
 const a = assess(process.cwd());
@@ -21,17 +23,21 @@ describe("assess()", () => {
     expect(a.top!.score).toBe(a.candidates[0]!.score); // top is the highest-scored
   });
 
-  it("spans content and non-content work (not just one kind of work)", () => {
+  it("disarms the repo ESLint+Prettier lever once the tooling is in place (bug_0031)", () => {
     const cats = new Set<Category>(a.candidates.map((c) => c.category));
-    // content_fix (CYOA coverage gaps + parser/rpg playtest reviews) and repo (no
-    // eslint) are the live levers. content_new is no longer raised because every
-    // mode now meets its breadth target (cold_forge, bug_0021, brought rpg to 2/2)
-    // — see "raises no content_new candidate …" below. The assessor must still span
-    // content work AND non-content (tooling) work, so it never monotonically grinds
-    // one kind of task.
+    // The assessor's only non-content lever was "Add ESLint + Prettier (lint is just
+    // tsc)". bug_0031 CLOSED that gap — eslint.config.js + .prettierrc.json ship and
+    // `npm run lint` / `format:check` now run ESLint / Prettier. So, exactly as
+    // content_new disarms once every mode meets its breadth target (see "raises no
+    // content_new candidate …" below), the repo-eslint candidate is correctly no
+    // longer raised; content_fix (CYOA coverage gaps + the low-priority parser/rpg
+    // blind-playtest reviews — a distinct kind of content work, guarded below) is the
+    // live lever. If the tooling were removed the assessor RE-ARMS repo-eslint, so
+    // this assertion also catches that regression.
+    expect(existsSync(join(process.cwd(), "eslint.config.js"))).toBe(true);
+    expect(a.candidates.find((c) => c.id === "repo-eslint")).toBeUndefined();
     expect(cats.has("content_fix")).toBe(true);
-    expect(cats.has("repo")).toBe(true);
-    expect(cats.size).toBeGreaterThanOrEqual(2);
+    expect(a.candidates.length).toBeGreaterThan(0);
   });
 
   it("does NOT raise bot-coverage content_fix for parser/rpg puzzle packs", () => {

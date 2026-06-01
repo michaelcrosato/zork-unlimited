@@ -26,7 +26,11 @@ async function main(): Promise<void> {
   let out: string | null = null;
   for (let i = 3; i < process.argv.length; i++) {
     const a = process.argv[i];
-    if (a === "--seeds") seeds = (process.argv[++i] ?? "").split(",").map(Number).filter((n) => !Number.isNaN(n));
+    if (a === "--seeds")
+      seeds = (process.argv[++i] ?? "")
+        .split(",")
+        .map(Number)
+        .filter((n) => !Number.isNaN(n));
     else if (a === "--max") maxSteps = Number(process.argv[++i]);
     else if (a === "--out") out = process.argv[++i] ?? null;
   }
@@ -51,8 +55,11 @@ async function main(): Promise<void> {
   console.log(`  endings reached:  ${coverage.endings_reached.join(", ") || "(none)"}`);
   console.log(`  endings missing:  ${coverage.endings_missing.join(", ") || "(none)"}`);
   console.log(`  scenes visited:   ${coverage.scenes_visited.length}/${coverage.scenes_total}`);
-  if (coverage.scenes_unvisited.length) console.log(`  scenes unvisited: ${coverage.scenes_unvisited.join(", ")}`);
-  console.log(`  completed runs:   ${records.filter((r) => r.status === "completed").length}/${records.length}`);
+  if (coverage.scenes_unvisited.length)
+    console.log(`  scenes unvisited: ${coverage.scenes_unvisited.join(", ")}`);
+  console.log(
+    `  completed runs:   ${records.filter((r) => r.status === "completed").length}/${records.length}`,
+  );
   if (coverage.findings.length) {
     console.log("\nFindings:");
     for (const f of coverage.findings) console.log(`  - ${f}`);

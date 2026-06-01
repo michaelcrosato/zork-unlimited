@@ -88,7 +88,7 @@ async function main(): Promise<void> {
 
   const interactive = args.choices === null;
   const rl = interactive ? createInterface({ input: stdin, output: stdout }) : null;
-  let scripted = args.choices ?? [];
+  const scripted = args.choices ?? [];
 
   try {
     while (true) {

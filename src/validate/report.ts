@@ -33,7 +33,9 @@ export function formatReport(report: ValidationReport): string {
   lines.push(`Pack: ${report.pack_id}`);
   const errors = report.findings.filter((f) => f.severity === "error").length;
   const warnings = report.findings.filter((f) => f.severity === "warning").length;
-  lines.push(`Result: ${report.ok ? "OK" : "FAILED"}  (${errors} error(s), ${warnings} warning(s))`);
+  lines.push(
+    `Result: ${report.ok ? "OK" : "FAILED"}  (${errors} error(s), ${warnings} warning(s))`,
+  );
   for (const f of report.findings) {
     const tag = f.severity === "error" ? "ERROR" : "warn ";
     lines.push(`  [${tag}] ${f.code}: ${f.message}`);
