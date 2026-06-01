@@ -36,6 +36,14 @@ scenes:
     # The namesake clock stands right here, so the foyer feels the same deadline the
     # gallery does — even though this safe ground floor never advances `ticks` itself.
     # Higher threshold first (first match wins), mirroring the gallery's escalation.
+    # The ticks>=2 variant once said "your time in the manor is running short" — a blind
+    # playtester (seed 17) flagged that this oversells a GLOBAL countdown the engine never
+    # enforces (there is no run-out-of-time loss; the clock's only bite is the watchman it
+    # wakes onto the gallery at the hour). The line now names that real consequence — the
+    # house stirring awake at the chime — instead of an unkept timeout, honest about what
+    # the clock actually does. Atmospheric only (no specific unseen clue is quoted, per the
+    # bug_0058 plate-leak lesson); the ticks>=4 variant already names the watchman. No
+    # flag/tick/route/gating/ending change (bug_0061).
     variants:
       - when: [{ var_gte: { name: ticks, value: 4 } }]
         text: >
@@ -49,7 +57,8 @@ scenes:
           Moonlight pours through the manor's glass dome onto a thousand turning gears.
           A grand staircase rises into shadow; a low door leads off to the kitchens; and
           the great hall clock grinds toward the hour against the far wall, vast as a
-          coffin — your time in the manor is running short.
+          coffin — and a sleeping house keeps its peace only until the chime. Best be
+          done upstairs before the hour stirs the manor awake.
     choices:
       - id: inspect_clock
         text: "Examine the great clock."
@@ -128,7 +137,10 @@ scenes:
       vault door broods at the far end. A study stands ajar to one side.
     # The gallery is where the steward's ledger says a guard walks "on the hour".
     # As ticks climb the prose builds the deadline (first match wins, so the
-    # higher threshold is listed first).
+    # higher threshold is listed first). The ticks>=2 variant likewise dropped the
+    # vague "your time in the manor is running short" for a threat pointed at the real
+    # mechanic: this gallery is the floor the watchman will walk at the hour, so standing
+    # here when it chimes is the actual danger (blind-playtest finding, bug_0061).
     variants:
       - when: [{ var_gte: { name: ticks, value: 4 } }]
         text: >
@@ -141,8 +153,8 @@ scenes:
         text: >
           A long gallery lined with frozen automata, their glass eyes following you.
           The vault door broods at the far end. Somewhere a great mechanism grinds
-          toward the hour, and you sense your time in the manor is running short. A
-          study stands ajar to one side.
+          toward the hour, and you sense this long gallery will be no place to be caught
+          standing when it chimes. A study stands ajar to one side.
     choices:
       - id: enter_study
         text: "Step into the study."
