@@ -44,7 +44,27 @@ scenes:
     # the clock actually does. Atmospheric only (no specific unseen clue is quoted, per the
     # bug_0058 plate-leak lesson); the ticks>=4 variant already names the watchman. No
     # flag/tick/route/gating/ending change (bug_0061).
+    #
+    # Once the panel behind the clock's pendulum is pried open (`found_passage`), the
+    # foyer acknowledges the gaping crawlspace — a blind playtester (seed 29) flagged
+    # that after prying the panel the room still read as a sealed wall, "vast as a
+    # coffin," with no trace of the passage just opened. This is also a legibility
+    # beat: a player who found the passage but has no lockpick sees the `enter_panel`
+    # choice HIDDEN (it gates on the pick), so without this text the only on-screen
+    # trace of the crawlspace is a journal line. The panel-aware variants mirror each
+    # tick tier (found_passage paired with each threshold, first-match-wins), so the
+    # acknowledgment survives the clock's escalation. Atmospheric/continuity only: no
+    # flag/tick/route/gating/ending change, and the non-panel tiers are untouched
+    # (bug_0063).
     variants:
+      - when: [{ var_gte: { name: ticks, value: 4 } }, { has_flag: found_passage }]
+        text: >
+          Moonlight pours through the manor's glass dome onto a thousand turning gears.
+          A grand staircase rises into shadow; a low door leads off to the kitchens; and
+          behind the great clock's pendulum the panel you pried loose still gapes on the
+          dark crawlspace. The clock has come round to the hour at last, its slow chime
+          rolling through the gears vast as a coffin-lid falling — and somewhere up the
+          stair, on the gallery landing, a watchman's tread answers it.
       - when: [{ var_gte: { name: ticks, value: 4 } }]
         text: >
           Moonlight pours through the manor's glass dome onto a thousand turning gears.
@@ -52,6 +72,14 @@ scenes:
           great hall clock has come round to the hour at last, its slow chime rolling
           through the gears vast as a coffin-lid falling — and somewhere up the stair, on
           the gallery landing, a watchman's tread answers it.
+      - when: [{ var_gte: { name: ticks, value: 2 } }, { has_flag: found_passage }]
+        text: >
+          Moonlight pours through the manor's glass dome onto a thousand turning gears.
+          A grand staircase rises into shadow; a low door leads off to the kitchens; and
+          the great hall clock grinds toward the hour against the far wall, the panel you
+          pried loose still open behind its pendulum on the dark crawlspace. A sleeping
+          house keeps its peace only until the chime — best be done before the hour stirs
+          the manor awake.
       - when: [{ var_gte: { name: ticks, value: 2 } }]
         text: >
           Moonlight pours through the manor's glass dome onto a thousand turning gears.
@@ -59,6 +87,12 @@ scenes:
           the great hall clock grinds toward the hour against the far wall, vast as a
           coffin — and a sleeping house keeps its peace only until the chime. Best be
           done upstairs before the hour stirs the manor awake.
+      - when: [{ has_flag: found_passage }]
+        text: >
+          Moonlight pours through the manor's glass dome onto a thousand turning gears.
+          A grand staircase rises into shadow; a low door leads off to the kitchens; and
+          the great hall clock ticks against the far wall, vast as a coffin — and behind
+          its pendulum the panel you pried loose still stands open on the dark crawlspace.
     choices:
       - id: inspect_clock
         text: "Examine the great clock."
