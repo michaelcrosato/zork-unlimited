@@ -126,36 +126,86 @@ export const InteractionSchema = z
     conditions: z.array(ConditionSchema).default([]),
     effects: z.array(EffectSchema).default([]),
     skill_check: SkillCheckSchema.optional(),
-    // Optional natural verb for a self-targeted USE (the "consume this thing"
-    // pattern — drink the phial, eat the bread). When set, the command parser ALSO
-    // accepts "<command_verb> <obj>" (e.g. "drink phial") and the legal-action set
-    // lists the command as "<command_verb> <obj>" instead of the generic "use <obj>",
-    // so the offered verb matches the prose that primes it. A single lowercase word.
+    // Optional natural verb for a USE puzzle, so the offered + typed command matches
+    // the verb the prose primes. It covers two shapes:
+    //   - a self-targeted USE (the "consume this thing" pattern — drink the phial,
+    //     eat the bread): the command reads "<command_verb> <obj>" ("drink phial");
+    //   - an item-on-target USE (the tool-on-thing pattern — tie the rope to the
+    //     well, lever the slab with the bar): the command reads via `command_template`
+    //     ("tie {item} to {target}", "lever {target} with {item}"), so both the verb
+    //     AND the word order/preposition match the prose, instead of the generic
+    //     "use <item> on <target>".
+    // When set, the controlled command parser ALSO accepts the natural phrasing
+    // ("drink phial", "tie rope to well", "lever slab with bar") in addition to the
+    // generic "use" form, which always still works. The action id is unchanged
+    // (`use_<obj>` / `use_<item>_on_<target>`) — verb-agnostic and stable. A single
+    // lowercase word that may not shadow a builtin parser verb (enforced below).
     // `.optional()` (not a default) so an absent field stays absent in the compiled
     // pack ⇒ packs that don't use it compile byte-identically and keep their content
-    // hashes (mirrors variants / skill_check / dialogue-topic conditions). Only
-    // meaningful on a self-USE interaction (item === target); enforced below.
+    // hashes (mirrors variants / skill_check / dialogue-topic conditions).
     command_verb: z
       .string()
       .regex(/^[a-z]+$/, "command_verb must be a single lowercase word")
       .optional(),
+    // Display phrasing for an item-on-target USE's natural command, with `{item}`
+    // and `{target}` placeholders filled by the object names — e.g. "tie {item} to
+    // {target}" or "lever {target} with {item}". Only meaningful alongside a
+    // `command_verb` on a non-self USE; it sets only the DISPLAYED string, never the
+    // action id. The parser resolves the natural command order-independently (the two
+    // nouns + any preposition), so the template is presentation, not grammar. Must
+    // begin with `command_verb` and contain both placeholders (enforced below).
+    // `.optional()` ⇒ absent stays absent (hash-safe), mirroring command_verb.
+    command_template: z.string().min(1).optional(),
   })
   .strict()
   .superRefine((it, ctx) => {
-    if (it.command_verb === undefined) return;
-    if (it.verb !== "USE" || it.item === undefined || it.item !== it.target) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["command_verb"],
-        message: "command_verb is only valid on a self-targeted USE interaction (item === target)",
-      });
+    if (it.command_verb !== undefined) {
+      // command_verb names the natural verb for a USE puzzle — self-USE or
+      // item-on-target — so it requires a USE with both an item and a target.
+      if (it.verb !== "USE" || it.item === undefined || it.target === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["command_verb"],
+          message: "command_verb is only valid on a USE interaction with an item and a target",
+        });
+      } else if (BUILTIN_VERBS.has(it.command_verb)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["command_verb"],
+          message: `command_verb "${it.command_verb}" shadows a builtin parser verb`,
+        });
+      }
     }
-    if (BUILTIN_VERBS.has(it.command_verb)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["command_verb"],
-        message: `command_verb "${it.command_verb}" shadows a builtin parser verb`,
-      });
+    if (it.command_template !== undefined) {
+      if (it.command_verb === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["command_template"],
+          message: "command_template requires a command_verb",
+        });
+      } else if (it.command_template.trim().split(/\s+/)[0] !== it.command_verb) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["command_template"],
+          message:
+            "command_template must begin with command_verb (the displayed command's first word is the verb the parser keys on)",
+        });
+      }
+      if (it.item !== undefined && it.item === it.target) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["command_template"],
+          message:
+            'command_template is only for an item-on-target USE (item !== target); a self-USE shows a single noun (e.g. "drink phial")',
+        });
+      }
+      if (!it.command_template.includes("{item}") || !it.command_template.includes("{target}")) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["command_template"],
+          message: "command_template must contain both {item} and {target} placeholders",
+        });
+      }
     }
   });
 

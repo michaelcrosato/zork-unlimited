@@ -185,13 +185,51 @@ describe("bug_0074 — a self-USE consume action carries its natural verb (comma
       expect(r.success && r.data.command_verb).toBeUndefined();
     });
 
-    it("rejects command_verb on a non-self USE (item !== target)", () => {
+    it("accepts command_verb on an item-on-target USE (item !== target) — bug_0078 widening", () => {
       const r = InteractionSchema.safeParse({
         ...base,
         target: "well",
-        command_verb: "drink",
+        command_verb: "tie",
+        command_template: "tie {item} to {target}",
       });
-      expect(r.success).toBe(false);
+      expect(r.success).toBe(true);
+    });
+
+    it("rejects a command_template that omits a placeholder, mis-leads the verb, or sits on a self-USE", () => {
+      // missing {target}
+      expect(
+        InteractionSchema.safeParse({
+          ...base,
+          target: "well",
+          command_verb: "tie",
+          command_template: "tie {item} to it",
+        }).success,
+      ).toBe(false);
+      // template's first word must equal command_verb
+      expect(
+        InteractionSchema.safeParse({
+          ...base,
+          target: "well",
+          command_verb: "tie",
+          command_template: "fasten {item} to {target}",
+        }).success,
+      ).toBe(false);
+      // a template needs a command_verb
+      expect(
+        InteractionSchema.safeParse({
+          ...base,
+          target: "well",
+          command_template: "tie {item} to {target}",
+        }).success,
+      ).toBe(false);
+      // a self-USE (item === target) shows a single noun, so a two-noun template is invalid
+      expect(
+        InteractionSchema.safeParse({
+          ...base,
+          command_verb: "drink",
+          command_template: "drink {item} from {target}",
+        }).success,
+      ).toBe(false);
     });
 
     it("rejects command_verb on a non-USE verb", () => {

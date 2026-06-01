@@ -52,7 +52,9 @@ describe("GameSession — mode detection + structured play", () => {
       }
       expect(s.choose(byLabel("go east")!).ok).toBe(true);
       for (let i = 0; i < 40; i++) {
-        const use = s.view().choices.find((c) => c.label.includes("on stone slab"));
+        // The slab USE now reads with its natural verb ("lever stone slab with iron
+        // bar"), not the generic "use ... on stone slab" (bug_0078 command_verb).
+        const use = s.view().choices.find((c) => c.label.startsWith("lever"));
         const down = s.view().choices.find((c) => c.label === "go down");
         if (down) break;
         if (use) s.choose(use.id);

@@ -57,21 +57,56 @@ function resolveObject(index: ParserIndex, phrase: string): string | null {
   return hits.size === 1 ? [...hits][0]! : null;
 }
 
-/** Resolve a custom self-USE verb ("drink the phial"): if `verb` is the
- *  `command_verb` of a self-targeted USE interaction (item === target) on the object
- *  named by `phrase`, return that USE action. The schema guarantees `command_verb`
- *  never shadows a builtin verb, so this is only consulted for otherwise-unknown
- *  verbs. Legality (held / present) is re-checked by the engine, exactly as for the
- *  bare "use <obj>" path. */
-function selfUseByVerb(index: ParserIndex, verb: string, phrase: string): Action | null {
-  const id = resolveObject(index, phrase);
-  if (!id) return null;
-  const it = index.objects
-    .get(id)
-    ?.interactions.find(
-      (i) => i.verb === "USE" && i.item === id && i.target === id && i.command_verb === verb,
+/** Connecting prepositions accepted in a natural two-noun custom-verb command
+ *  ("tie rope TO well", "lever slab WITH bar"). The template only drives DISPLAY;
+ *  the parser resolves the two nouns order-independently, so it accepts whichever
+ *  natural preposition the player reaches for. */
+const USE_PREPS = ["on", "with", "to", "into", "onto", "under", "against", "in", "through"];
+
+/** Resolve a custom USE verb ("drink the phial", "tie rope to well", "lever slab
+ *  with bar"): if `verb` is the `command_verb` of a USE interaction, map the rest of
+ *  the command to that interaction's USE action. Two shapes are accepted:
+ *   - self-USE ("drink phial"): a single noun naming a self-targeted (item === target)
+ *     interaction whose command_verb is `verb`;
+ *   - item-on-target ("tie rope to well", "lever slab"): two nouns joined by any
+ *     preposition matching the interaction's {item, target} in EITHER order, or a
+ *     single noun that uniquely names one side of exactly one such interaction.
+ *  The schema guarantees `command_verb` never shadows a builtin verb, so this is only
+ *  consulted for otherwise-unknown verbs. Legality (held / present) is re-checked by
+ *  the engine, exactly as for the generic "use <obj>" / "use <item> on <obj>" paths. */
+function customUseByVerb(index: ParserIndex, verb: string, rest: string): Action | null {
+  // Every USE interaction in the pack whose natural verb is `verb`.
+  const matches: { item: string; target: string }[] = [];
+  for (const o of index.objects.values()) {
+    for (const it of o.interactions) {
+      if (it.verb === "USE" && it.command_verb === verb && it.item && it.target) {
+        matches.push({ item: it.item, target: it.target });
+      }
+    }
+  }
+  if (matches.length === 0) return null;
+
+  // Two-noun form: "<a> <prep> <b>" — resolve both nouns and match the interaction's
+  // {item, target} in either order (display word order is a presentation choice, not
+  // a constraint on what the player may type).
+  const prep = USE_PREPS.map((p) => `(?:${p})`).join("|");
+  const m = rest.match(new RegExp(`^(.*?)\\s+(?:${prep})\\s+(.*)$`));
+  if (m) {
+    const a = resolveObject(index, m[1]!);
+    const b = resolveObject(index, m[2]!);
+    if (!a || !b) return null;
+    const hit = matches.find(
+      (i) => (i.item === a && i.target === b) || (i.item === b && i.target === a),
     );
-  return it ? { type: "USE", item: id, target: id } : null;
+    return hit ? { type: "USE", item: hit.item, target: hit.target } : null;
+  }
+
+  // Single-noun form: "<verb> <noun>" — the noun names one side of exactly one such
+  // interaction (covers self-USE "drink phial" and a tool-less "lever slab").
+  const solo = resolveObject(index, rest);
+  if (!solo) return null;
+  const hits = matches.filter((i) => i.item === solo || i.target === solo);
+  return hits.length === 1 ? { type: "USE", item: hits[0]!.item, target: hits[0]!.target } : null;
 }
 
 function resolveNpc(index: ParserIndex, phrase: string): string | null {
@@ -214,9 +249,10 @@ export function parseCommand(index: ParserIndex, state: GameState, raw: string):
     case "i":
       return { ok: true, action: { type: "INVENTORY" } };
     default: {
-      // An unknown verb may be a pack-declared natural verb for a self-USE
-      // ("drink phial", "eat bread") — the consume-this-thing pattern made legible.
-      const use = selfUseByVerb(index, verb, rest);
+      // An unknown verb may be a pack-declared natural verb for a USE — a self-USE
+      // ("drink phial", "eat bread") or an item-on-target USE ("tie rope to well",
+      // "lever slab with bar") — the prose's verb made legible to the parser.
+      const use = customUseByVerb(index, verb, rest);
       if (use) return { ok: true, action: use };
       return notUnderstood(raw);
     }

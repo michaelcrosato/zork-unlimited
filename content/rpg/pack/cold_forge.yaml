@@ -186,6 +186,15 @@ objects:
       - verb: USE
         item: pry_bar
         target: stone_grate
+        # The prose primes "lever" (the bar is "a lever", the grate "made for a lever"
+        # and "levered up off its lip", the success journal "you lever the slag grate"),
+        # yet the offered command read the generic "use iron pry-bar on slag grate". So
+        # the natural command is "lever slag grate with iron pry-bar" via a per-interaction
+        # command_verb + command_template (bug_0078, generalizing bug_0074's self-USE
+        # command_verb to item-on-target). The id stays `use_pry_bar_on_stone_grate`;
+        # "use iron pry-bar on slag grate" still parses; the skill_check is untouched.
+        command_verb: lever
+        command_template: "lever {target} with {item}"
         # One-shot puzzle: once the grate is levered open the check retires, so the
         # bar can never re-roll and narrate "the grate does not give" while the way
         # down already stands open (the bug_0015 retire-after-success pattern).

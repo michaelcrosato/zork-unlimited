@@ -178,6 +178,13 @@ objects:
       - verb: USE
         item: rope
         target: old_well
+        # The room primes "tie": the rope must be "tied off above", knotted to the
+        # iron ring. So the natural command is "tie rope to old well", not the generic
+        # "use rope on old well" — a per-interaction command_verb + command_template
+        # (bug_0078, generalizing bug_0074's self-USE command_verb to item-on-target).
+        # The id stays `use_rope_on_old_well`; "use rope on old well" still parses.
+        command_verb: tie
+        command_template: "tie {item} to {target}"
         conditions: [{ not_flag: rope_attached_to_well }]
         effects:
           - set_flag: rope_attached_to_well

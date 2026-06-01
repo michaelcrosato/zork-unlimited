@@ -172,6 +172,16 @@ objects:
       - verb: USE
         item: iron_bar
         target: stone_slab
+        # The prose insistently primes "lever" (the bar is "a lever", the slab is
+        # "made to be levered ... leverage is what works it loose", and a blind
+        # playtester at seed 7 flagged that the offered command nonetheless read
+        # "use iron bar on stone slab"). So the natural command is "lever stone slab
+        # with iron bar" via a per-interaction command_verb + command_template
+        # (bug_0078, generalizing bug_0074's self-USE command_verb to item-on-target).
+        # The id stays `use_iron_bar_on_stone_slab`; "use iron bar on stone slab"
+        # still parses; the skill_check below is untouched.
+        command_verb: lever
+        command_template: "lever {target} with {item}"
         # The lever is a one-shot puzzle: once the slab is moved the check
         # retires, so re-using the bar can never re-roll and narrate the slab
         # "does not give" while the stair stands open behind it.

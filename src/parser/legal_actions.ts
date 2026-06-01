@@ -300,12 +300,22 @@ export function enumerateActions(index: ParserIndex, state: GameState): ParserAc
       if (it.verb !== "USE" || it.item === undefined || it.target === undefined) continue;
       const selfUse = it.item === it.target;
       const id = selfUse ? `use_${it.item}` : `use_${it.item}_on_${it.target}`;
-      // A self-USE may declare a natural verb (command_verb: drink) so the listed
-      // command matches the prose that primes it ("drink black phial"); the id stays
-      // `use_<obj>` so the action id is verb-agnostic and stable. Default: "use <obj>".
+      // A USE may declare a natural verb (command_verb) so the listed command matches
+      // the prose that primes it; the id stays verb-agnostic and stable. A self-USE
+      // reads "<verb> <obj>" ("drink black phial"). An item-on-target USE reads via
+      // command_template ("tie {item} to {target}", "lever {target} with {item}") so
+      // the word order/preposition match too, falling back to "<verb> <item> on
+      // <target>" when no template is given, or the generic "use ... on ..." with no
+      // command_verb at all.
+      const itemName = objName(index, it.item);
+      const targetName = objName(index, it.target);
       const command = selfUse
-        ? `${it.command_verb ?? "use"} ${objName(index, it.item)}`
-        : `use ${objName(index, it.item)} on ${objName(index, it.target)}`;
+        ? `${it.command_verb ?? "use"} ${itemName}`
+        : it.command_verb !== undefined
+          ? (it.command_template ?? `${it.command_verb} {item} on {target}`)
+              .replace("{item}", itemName)
+              .replace("{target}", targetName)
+          : `use ${itemName} on ${targetName}`;
       push(option(index, state, id, command, { type: "USE", item: it.item, target: it.target }));
     }
   }
