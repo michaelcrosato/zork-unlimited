@@ -37,6 +37,18 @@ export function isTerminal(index: CyoaIndex, id: string): boolean {
   return index.terminalIds.has(id);
 }
 
+/** The scene's effective text in the current state: the first reactive `variant`
+ *  whose `when` conditions all hold (declared order, first-match-wins), else the
+ *  base `text`. Pure; same (scene, state) ⇒ same text. Lets a scene narrate state
+ *  it changed — an item already taken, a panel already pried — instead of
+ *  contradicting it (mirrors the parser `roomDescription` helper, bug_0010). */
+export function sceneText(scene: Scene, state: GameState): string {
+  for (const v of scene.variants ?? []) {
+    if (evalConditions(v.when, state)) return v.text;
+  }
+  return scene.text;
+}
+
 /** Build the engine rule set for a compiled pack. */
 export function buildRules(index: CyoaIndex): Rules {
   return {

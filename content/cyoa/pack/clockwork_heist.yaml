@@ -48,6 +48,11 @@ scenes:
     text: >
       Copper pots hang in rows above a banked hearth. By the dumbwaiter, a servant
       has left a slim roll of lockpicks.
+    variants:
+      - when: [{ has_item: lockpick }]
+        text: >
+          Copper pots hang in rows above a banked hearth. By the dumbwaiter, the
+          spot where the lockpicks lay is bare — the slim roll is in your pocket now.
     choices:
       - id: take_pick
         text: "Pocket the lockpicks."

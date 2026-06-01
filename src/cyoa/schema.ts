@@ -20,11 +20,25 @@ export const ChoiceSchema = z
   })
   .strict();
 
+export const SceneVariantSchema = z
+  .object({
+    when: z.array(ConditionSchema).min(1),
+    text: z.string().min(1),
+  })
+  .strict();
+
 export const SceneSchema = z
   .object({
     id: z.string().min(1),
     title: z.string().min(1),
     text: z.string().min(1),
+    // Optional reactive descriptions; the first whose `when` holds wins, else
+    // `text`. `.optional()` (not `.default([])`) so an absent field stays absent
+    // in the compiled pack ⇒ packs that don't use it compile byte-identically and
+    // their content hashes are unchanged (mirrors the parser RoomSchema.variants
+    // rule from bug_0010). Lets a scene narrate state it changed — an item already
+    // taken, a panel already pried — instead of contradicting it.
+    variants: z.array(SceneVariantSchema).optional(),
     on_enter: z.array(EffectSchema).default([]),
     is_ending: z.boolean().default(false),
     choices: z.array(ChoiceSchema).default([]),
@@ -58,6 +72,7 @@ export const CyoaPackSchema = z
   .strict();
 
 export type Choice = z.infer<typeof ChoiceSchema>;
+export type SceneVariant = z.infer<typeof SceneVariantSchema>;
 export type Scene = z.infer<typeof SceneSchema>;
 export type Ending = z.infer<typeof EndingSchema>;
 export type CyoaPack = z.infer<typeof CyoaPackSchema>;

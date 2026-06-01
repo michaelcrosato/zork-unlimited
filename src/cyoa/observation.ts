@@ -7,7 +7,7 @@
  */
 import { evalConditions } from "../core/conditions.js";
 import type { GameState } from "../core/state.js";
-import type { CyoaIndex } from "./runner.js";
+import { type CyoaIndex, sceneText } from "./runner.js";
 
 export type CyoaObservation = {
   mode: "cyoa";
@@ -32,7 +32,7 @@ function visibleFlags(state: GameState): string[] {
 }
 
 export function buildObservation(index: CyoaIndex, state: GameState): CyoaObservation {
-  const sceneText = textFor(index, state.current);
+  const nodeText = textFor(index, state.current, state);
   const scene = index.scenes.get(state.current);
 
   const available =
@@ -45,8 +45,8 @@ export function buildObservation(index: CyoaIndex, state: GameState): CyoaObserv
   return {
     mode: "cyoa",
     scene_id: state.current,
-    title: sceneText.title,
-    text: sceneText.text,
+    title: nodeText.title,
+    text: nodeText.text,
     state: {
       flags: visibleFlags(state),
       vars: { ...state.vars },
@@ -59,10 +59,12 @@ export function buildObservation(index: CyoaIndex, state: GameState): CyoaObserv
   };
 }
 
-/** Resolve the title/text for any node id (scene OR ending). */
-function textFor(index: CyoaIndex, id: string): { title: string; text: string } {
+/** Resolve the title/text for any node id (scene OR ending). A scene's text is
+ *  state-reactive (its first matching `variant`, else base text); endings are
+ *  terminal and have no variants. */
+function textFor(index: CyoaIndex, id: string, state: GameState): { title: string; text: string } {
   const scene = index.scenes.get(id);
-  if (scene) return { title: scene.title, text: scene.text };
+  if (scene) return { title: scene.title, text: sceneText(scene, state) };
   const ending = index.pack.endings.find((e) => e.id === id);
   if (ending) return { title: ending.title, text: ending.text };
   return { title: id, text: "" };
