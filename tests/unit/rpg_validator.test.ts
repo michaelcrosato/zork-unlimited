@@ -64,7 +64,10 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // (was 7f322e4c…); and bug_0007 — the hidden_cache no longer re-renders the
     // "ledger lies forgotten" text after the ledger is taken (take_ledger now
     // exits to the cellar) and its description no longer presumes the player saw
-    // the letter (was 46ac6142…). Any *unintended* change to compilation trips this.
-    expect(loaded.compiled.contentHash).toBe("7e3392b6bbf675855db289b57fceea6fc4dc878b9cd7305ae6276748598347bb");
+    // the letter (was 46ac6142…); and bug_0055 — confront_smuggler's scene text is
+    // now reactive (a not_flag learned_truth variant so the no-proof bluff branch no
+    // longer follows text that narrates the sergeant reading his own name)
+    // (was 7e3392b6…). Any *unintended* change to compilation trips this.
+    expect(loaded.compiled.contentHash).toBe("3947f07bb7d8e898b6bf17ce2db6352652ae0171810a705937cea2c95bb428cd");
   });
 });

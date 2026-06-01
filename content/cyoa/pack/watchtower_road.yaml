@@ -317,9 +317,26 @@ scenes:
   - id: confront_smuggler
     title: "The Sergeant's Face"
     text: >
-      The sergeant's face goes white as he reads his own name. His hand drifts
-      toward his sword — but the gate behind him is open, and his men are
-      watching to see what you do.
+      The sergeant reads, and his face goes white as he finds his own name. His
+      hand drifts toward his sword — but the gate behind him is open, and his men
+      are watching to see what you do.
+    # A blind playtester (seed 19) reached this scene having taken the sealed
+    # letter (east) but learned nothing (no cellar, no hermit), and the scene
+    # contradicted itself: the base text narrates the sergeant reading his own
+    # name (damning proof), yet the only forward choice there is `press_bluff` —
+    # "the letter's still sealed and you can prove nothing." You cannot both read
+    # his name AND prove nothing. The base text is the learned_truth payoff (you
+    # know what the letter/ledger holds, so handing it over damns him); this
+    # variant covers the no-proof player, where the sergeant weighs an unbroken
+    # seal he has no reason to open and the bluff that follows reads true. Reactive
+    # text only — no flag/route/ending change; both branches' choices are unchanged.
+    variants:
+      - when: [ { not_flag: learned_truth } ]
+        text: >
+          The sergeant turns the wax-sealed letter over in his hands. The seal is
+          unbroken, and you've no idea what it says — for all either of you knows
+          it's a laundry list. Handing a stranger's sealed letter to the very man
+          it might name is no kind of proof, and his bored stare says he knows it.
     choices:
       - id: reveal_evidence
         text: "Lay out everything you know — the oil, the names, the seal."
