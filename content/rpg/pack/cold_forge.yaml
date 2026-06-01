@@ -91,7 +91,7 @@ rooms:
           The narrow cell where the forge's last master sits against the cold
           wall, his bones bare now of the plate you carry off, his hammer still
           across his knees and his name still cut in the stone above his head.
-    objects: [founder, epitaph, cold_iron_plate]
+    objects: [founder, epitaph, cold_iron_plate, hammer]
     exits:
       - { direction: east, to: outer_forge }
 
@@ -230,6 +230,31 @@ objects:
     variants:
       - when: [ { has_item: cold_iron_plate } ]
         text: "The age-dead master, sat bare against the wall now that his plate is on your back, his hammer fallen across his knees and the cold still keeping his bones whole."
+    takeable: false
+
+  # The master's forge-hammer. Named twice in the cell's prose (the room
+  # description and the founder's own examine variant) but, until now, with no
+  # object behind it — a Chekhov's gun a curious player hunts for and finds
+  # nothing, the one spot that broke the pack's otherwise-complete "everything
+  # named is interactable" promise (a fresh MCP-only blind playtester, seed 37,
+  # ai-runs/2026-06-01T23-06-34-239Z/playtest.md §4/§5, flagged it directly;
+  # first deferred from the prior cycle's seed-23 pass). Deliberately a FLAVOUR
+  # examine, non-takeable: it pays off the curiosity and deepens the founder
+  # (his craft, the lifetime at the anvil that the epitaph eulogises) WITHOUT
+  # adding a second tactical item to balance — it is a tool for shaping iron,
+  # not a weapon, and the prose closes the "why can't I take it" loop honestly
+  # (it is his, and it belongs with him). The plate stays the cell's one earned
+  # tactical choice (bug_0070's +2-defense grace); this touches no
+  # room/combat/score/exit/flag, only adds one inert visible object (bug_0088).
+  - id: hammer
+    name: "smith's hammer"
+    aliases: [hammer, maul, mallet, smithing-hammer, forge-hammer]
+    description: >
+      The dead master's own forge-hammer, its hickory haft worn smooth to the
+      shape of a grip and its face battered bright by a working lifetime against
+      the anvil. It is a tool for shaping iron, not for breaking heads, and it
+      lies where it should — across the knees of the last hand that ever swung
+      it. Leave it to him.
     takeable: false
 
   - id: epitaph

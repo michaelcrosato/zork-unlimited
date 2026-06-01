@@ -1,0 +1,61 @@
+bug_id: bug_0088
+pack_id: cold_forge_v1
+seed: 37
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  report: ai-runs/2026-06-01T23-06-34-239Z/playtest.md
+  finding: >
+    This cycle's mandated blind pass was rotated OFF the over-fitted clockwork target
+    (its 6th consecutive nomination; ~24 clean passes, content complete per
+    bug_0079→0085) onto cold_forge — the least-attended rpg pack and the one carrying
+    the prior cycle's #1 deferred content finding. A fresh MCP-only, source-blind
+    general-purpose subagent (seed 37) reached ending_victory 50/50 on both a full and
+    a minimalist route, rated the pack clarity 5/5 / enjoyment 4/5, and INDEPENDENTLY
+    re-surfaced the phantom hammer as its #1 friction point (§4) and #1 bug (§5): the
+    "smith's hammer" is named prominently TWICE in the Founder's Cell, yet a curious
+    player who tries to examine or take it gets nothing. First flagged the prior cycle
+    (seed-23 pass, ai-runs/2026-06-01T22-46-00-371Z), deferred as the next content_fix.
+failure:
+  type: named_object_not_interactable_chekhovs_gun
+  where:
+    - content:content/rpg/pack/cold_forge.yaml  # room founder_cell
+  description: >
+    The Founder's Cell names "a smith's hammer across his knees" in its room
+    description, and the founder's own plate-taken examine variant repeats "his hammer
+    fallen across his knees" — but no `hammer` object existed and the room's `objects`
+    list was [founder, epitaph, cold_iron_plate]. So the hammer appeared in NO
+    visible_objects entry and offered NO examine/take action: a Chekhov's gun a curious
+    player hunts for and finds nothing. This was the one spot that broke the pack's
+    otherwise-complete "everything the prose names is interactable" promise — every
+    blind pass had remarked on the forge's polish, and this was the lone seam in it.
+fix:
+  layer: content
+  summary: >
+    Add a `hammer` object to the Founder's Cell — deliberately a FLAVOUR examine,
+    NON-TAKEABLE. It pays off the curiosity and deepens the founder (his craft, the
+    lifetime at the anvil the epitaph eulogises) WITHOUT introducing a second tactical
+    item that would need combat/score balancing: it is "a tool for shaping iron, not
+    for breaking heads," and the prose closes the "why can't I take it" loop honestly
+    ("it lies where it should ... Leave it to him"). The cold-iron plate stays the
+    cell's ONE earned tactical choice (bug_0076's +2-defense grace). Purely additive:
+    `objects` gains `hammer`; one inert visible object is defined. No
+    room/combat/score(50)/exit/flag/lever/ending/dialogue is touched, and the existing
+    reactive prose (founder/plate variants, bug_0023) is unchanged. Examining the
+    hammer changes NO state (no flag/var/score), so it cannot affect any route.
+  verification:
+    - "validate_pack cold_forge: ok, 0 findings (RPG validator green)."
+    - "Live MCP (seed 37): founder_cell now lists `hammer` in visible_objects with an
+       `examine_hammer` LOOK action and NO take action (non-takeable); examining it
+       renders the flavour text and leaves flags/vars/score unchanged."
+    - "npm run health green; the canonical buffed route still wins ending_victory 50/50
+       (bug_0076 test (7) unchanged)."
+locked_by:
+  test: tests/regression/cold_forge_phantom_hammer.test.ts
+  asserts:
+    - "the pack still validates green under the full RPG validator"
+    - "the Founder's Cell exposes a `hammer` LOOK target whose prose names a hammer"
+    - "the hammer is NON-TAKEABLE (no TAKE action offered; a forced TAKE is rejected)"
+    - "examining the hammer changes no flag/var/score and ends nothing (inert flavour)"
+    - "the room description and the founder's plate-taken variant both still name the
+       hammer (the prose the object now answers is intact)"
