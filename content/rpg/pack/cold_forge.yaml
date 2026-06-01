@@ -62,8 +62,9 @@ rooms:
     description: >
       A long gallery of slack leather bellows and quenched tuyeres. Across the
       only way east stands a man-high figure of fused slag and cinder — a forge
-      sentinel, cold now but grinding slowly to life as you enter. It blocks the
-      passage deeper in.
+      sentinel. The dead hall holds no fire to rouse it; the deep cold keeps it
+      slow and stiff, stirred only enough to stand and bar the passage deeper in.
+      It will be no swifter than it is now.
     variants:
       - when: [ { has_flag: sentinel_stilled } ]
         text: >
@@ -118,9 +119,10 @@ objects:
     description: "Letters of inlaid brass, cold to the touch."
     takeable: false
     read_text: >
-      THE SENTINEL WAKES TO HEAT AND SLEEPS IN COLD. STRUCK TRUE IN THE CHILL IT
-      WILL NOT RISE AGAIN. THE HEART LIES BEHIND THE SLAG, AND ONLY IRON AND A
-      STRONG ARM WILL OPEN THE WAY.
+      THE SENTINEL WAKES TO HEAT AND SLEEPS IN COLD; AND THIS FORGE-FIRE IS LONG
+      DEAD AND WILL NOT KINDLE. SO IT SLEEPS, AND STRUCK TRUE IN THE CHILL IT WILL
+      NOT RISE AGAIN. THE HEART LIES BEHIND THE SLAG, AND ONLY IRON AND A STRONG
+      ARM WILL OPEN THE WAY.
 
   - id: pry_bar
     name: "iron pry-bar"
@@ -194,10 +196,12 @@ npcs:
               end: true
         - id: spirit_sentinel
           npc_text: >
-            "The sentinel? It is forge-born — it wakes to heat and slows in the
-            cold, and the hall is bitter cold now. Strike it hard and it will not
-            rise twice." The flame gutters toward you. "Here — take what warmth I
-            can spare; let it ride your arm."
+            "The sentinel? It is forge-born — it wakes to heat and sleeps in the
+            cold, and this hall has been bitter cold for an age and will never be
+            warm again. Do not fear that waiting makes it worse: it is as slow now
+            as it will ever be. Strike it hard and it will not rise twice." The
+            flame gutters toward you. "Here — take what warmth I can spare; let it
+            ride your arm."
           effects:
             - set_flag: heard_sentinel
             - inc_var: { name: attack, by: 2 }
@@ -223,7 +227,7 @@ npcs:
 enemies:
   - id: slag_sentinel
     name: "slag sentinel"
-    description: "A man-high figure of fused slag and dead cinder, grinding to cold life to bar the deep forge."
+    description: "A man-high figure of fused slag and dead cinder, holding a slow, cold half-life to bar the deep forge — the chill keeps it as stiff and clumsy as it will ever be."
     room: bellows_walk
     hp: 16
     attack: 4
