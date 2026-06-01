@@ -39,6 +39,20 @@ rooms:
     description: >
       A hall of fitted slabs. A rusted iron bar lies among fallen rubble, and a
       passage runs north into deeper dark. Steps climb back up to the light.
+    # Reactive room text (bug_0011 shape): once the bar is in hand the rubble is
+    # bare, so the room must stop narrating the bar as still lying there. Gated on
+    # `has_item: iron_bar` — the closed condition DSL has no object-in-room
+    # predicate, so the player holding the bar is the durable proxy for "no longer
+    # on the floor" (mirrors guard_crypt's wight_slain variant and bug_0024's
+    # has_item proxy). The bar is the only takeable object here and you take it to
+    # solve the slab; if it is dropped back in this room has_item flips false and
+    # the base text — bar in the rubble — reads true again, matching visible_objects.
+    variants:
+      - when: [ { has_item: iron_bar } ]
+        text: >
+          A hall of fitted slabs. The rubble is scuffed bare where the rusted iron
+          bar lay until you took it up. A passage runs north into deeper dark, and
+          steps climb back up to the light.
     objects: [iron_bar]
     exits:
       - { direction: up, to: barrow_mouth }
