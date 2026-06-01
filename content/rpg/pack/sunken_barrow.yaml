@@ -105,7 +105,7 @@ objects:
   - id: stone_slab
     name: "stone slab"
     aliases: [slab, stone]
-    description: "A great floor slab with an iron-gripped lip. With a lever and real might, it might shift."
+    description: "A great floor slab with an iron-gripped lip. Wedge the bar beneath the lip and it can be levered — not by one heroic effort, but by setting your feet and heaving again and again until the old stone gives."
     takeable: false
     interactions:
       - verb: USE
@@ -123,7 +123,15 @@ objects:
             - inc_var: { name: score, by: 15 }
             - narrate: "Tendons cracking, you heave — and the slab grinds aside, baring a stair down."
           on_failure:
-            - narrate: "The bar bites, your shoulders strain, but the slab does not give. Set your feet and try again."
+            # bug_0027: the failure feedback must read as REPEATABLE PROGRESS, not a
+            # fixed strength threshold — a blind playtester (seed 88) failed twice,
+            # inferred from the "strong enough"/"real might" framing that a missing
+            # strength item was needed, searched the whole map, found none, and quit a
+            # winnable game. might is fixed (no item raises it); the check is a flat,
+            # penalty-free, infinitely-retryable d20+might vs 12 (~60%/try). So the
+            # narration now signals the slab IS shifting and that persistence — not
+            # more muscle or a hidden tool — is the path.
+            - narrate: "The bar bites and the slab grinds a hand's breadth — then grates back into its bed. It IS shifting; you simply haven't caught it at the right moment yet. No greater strength or hidden tool is wanting here — only leverage and a stubborn back. Reset your feet on the iron lip and heave again; keep at it and the stone will come."
 
   - id: circlet
     name: "Barrow-Lord's circlet"

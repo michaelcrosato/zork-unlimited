@@ -1,0 +1,86 @@
+bug_id: bug_0027
+pack_id: sunken_barrow_v1
+seed: 88
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  report: ai-runs/2026-06-01T09-31-14-694Z/playtest.md
+  finding: >
+    Playtest target rotated (per the protocol's "rotate the seed and ... rotate the
+    pack" and the standing "keep rotating" guidance) off the nine-times-pristine
+    clockwork_heist onto the LEAST-recently blind-verified, repeatedly-"thin"-judged
+    pack, the RPG The Sunken Barrow, seed 88. A fresh, MCP-only blind playtester
+    cleared the only combat, solved the only puzzle correctly, exhausted the entire
+    explorable map — and in its first run STILL hit a wall it could not pass and QUIT
+    (clarity 3/5, enjoyment 2/5; verdict "would NOT finish satisfied... a meaningful
+    fraction would not finish at all"). The wall was the slab might-check (Slab
+    Passage): it failed the lever twice and, cued by the slab's "made to be levered,
+    by someone strong enough" / "with a lever and real might" framing and a flat "the
+    slab does not give" failure line, concluded a missing STRENGTH item was needed,
+    backtracked through every room to find one, found none, and gave up at 10/50.
+    (The report's headline "broken dice — rolls of 3, 6, 18 on a d6" finding is a
+    MISREAD, investigated and dismissed: the skill check rolls a d20 (src/rpg/
+    combat.ts resolveSkillCheck), only COMBAT damage uses a d6 (resolveAttack); an 18
+    is a valid d20. Confirmed live via MCP — seed 88 levered on a d20 roll of 19.)
+failure:
+  type: misleading_skill_check_framing
+  where:
+    - content:content/rpg/pack/sunken_barrow.yaml
+  description: >
+    The slab might-check is mechanically a FAIR, PASSABLE, penalty-free, infinitely
+    retryable d20 + might(=3) vs DC 12 (~60% per attempt; the RPG validator's
+    SKILL_CHECK_IMPOSSIBLE bound proves DC 12 <= 20 + might-ceiling 3 = 23, and no
+    effect anywhere raises `might`, so there is no strength item to find and no
+    way — or need — to raise the stat). But its FICTION framed it as a fixed strength
+    THRESHOLD: the examine text said the slab shifts "with a lever and real might",
+    and the on_failure line ("the slab does not give. Set your feet and try again")
+    read as a flat refusal. A sensible player who fails a couple of rolls therefore
+    infers "I'm not strong enough / I'm missing an item", goes hunting for a
+    nonexistent strength boost, and abandons a winnable game — exactly the blind
+    tester's Run 1. The defect is LEGIBILITY, not balance: nothing about the dice,
+    DC, or stat is wrong; the prose mis-signals what failure means.
+fix:
+  layers: [content]
+  summary: >
+    Reframe the slab puzzle, CONTENT-only (no engine/validator/DC/skill/effect
+    change — the check stays the same fair d20+might vs 12), so a failed attempt reads
+    as REPEATABLE PROGRESS via leverage and persistence, not a strength wall:
+      - on_failure narration rewritten to signal the slab IS shifting ("grinds a
+        hand's breadth — then grates back into its bed... It IS shifting"), to deny
+        the missing-item inference outright ("No greater strength or hidden tool is
+        wanting here — only leverage and a stubborn back"), and to invite another
+        attempt plainly ("Reset your feet on the iron lip and heave again; keep at it
+        and the stone will come").
+      - stone_slab examine `description` reframed from "With a lever and real might,
+        it might shift" to "...it can be levered — not by one heroic effort, but by
+        setting your feet and heaving again and again until the old stone gives".
+    No flags / items / exits / quest gating / scoring / reachable endings change. The
+    one-shot retire after success (bug_0015) is untouched: only the FIRST,
+    not-yet-solved lever ever shows the failure text.
+  reachable_endings_changed: false
+  content_hash_changed: true   # sunken_barrow yaml text genuinely changed (two narration/description rewrites)
+  content_hash_before: ba69fcdd664c4a1042aa65841eec6ac4313a3471a3f414a3af7df0f4b2c2e81f
+  content_hash_after: 4e185710daae1ba34062f62968f432f1378158dc93212a23be57d178875dd4f5
+  repin: >
+    Deliberate, surfaced re-pin (NOT a weakening): traces/rpg/barrow_victory.json
+    content_hash updated ba69fcdd... -> 4e185710.... The trace's expected_final_hash
+    is UNCHANGED — only narration/description prose changed; no mechanic, effect, DC,
+    skill, or roll moved, so the seed-1 canonical victory replays to the identical
+    final state hash (rpg_barrow_trace.test.ts green). This is the legitimate
+    snapshot-update workflow the verifier-integrity drift gate classifies as
+    HASH_PIN_REPINNED (warning, accompanied by a real content change), not the
+    unaccompanied launder pattern. No test SOURCE pins this pack's hash (only
+    watchtower_road is pinned).
+deferred:
+  - >
+    Entry Hall stale prose (report §4 + §5 item 3; also bug_0015 deferred[0]):
+    after the iron bar is taken the room still reads "A rusted iron bar lies among
+    fallen rubble" — confirmed live this cycle (visible_objects empties, room text
+    does not). A one-variant reactive-room fix (bug_0011 shape) or an object variant
+    (bug_0023). Left for a future cycle to keep this change focused on the
+    abandonment-causing wall.
+  - >
+    No opening objective line (report §3; also bug_0015 deferred[2]): the goal (the
+    Barrow-Lord's circlet) is only revealed in the final room; a one-line framing in
+    barrow_mouth would orient a first-timer.
+regression_test: tests/regression/rpg_barrow_lever_legibility.test.ts
