@@ -1,0 +1,96 @@
+bug_id: bug_0038
+pack_id: null                    # repo/tooling change — extends the static-analysis gate to the UI package; no content/engine pack bug
+seed: 211                        # the mandatory blind playtest seed this cycle (clockwork_heist)
+type: repo_gate                  # trust-but-verify: widen the ENFORCED bar to cover first-party code it was blind to
+evidence:
+  source: assessor (repo-lint-coverage, the last uncovered dir = ui, score 0.4) + bug_0035/0036 queued lever + AI_LOOP_STATE history
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-01T11-48-15-380Z/playtest.md
+  playtest_rationale: >
+    Mandated cycle playtest: clockwork_heist.yaml, seed 211. Fresh general-purpose subagent, MCP-only,
+    no source access. Reached all three reachable endings (Truth via both the vault and the crawlspace
+    strongbox, Caught, Rich) across four routes; clarity 5/5, enjoyment 4/5; zero rejected actions, no
+    loops, no broken/stale state. Its one substantive finding — the `ticks`/guard-rounds clue reads as
+    a "red herring" that points to a timing mechanic the player "can dawdle indefinitely" past — is the
+    EXACT item already adjudicated DELIBERATE across bug_0019 / bug_0025 / bug_0030 / bug_0032. Verified
+    again from source this cycle: the patrol IS wired and reachable — `cross_gallery` at `var_gte ticks 6`
+    with `not_flag read_ledger` routes to ending_patrol (clockwork_heist.yaml:144-146), and the ledger
+    grants the safe crossing (`var_lte ticks 5` OR `has_flag read_ledger`, line 138). The playtester
+    reached 3/4 endings and never pushed ticks high WITHOUT the ledger, so the fourth ending simply
+    wasn't on their routes — the mechanic is the deliberate "read the ledger to cross safely, or chance
+    it late and get caught" beat, not a dead clue. The strongbox-shortcut and inert-study notes are
+    design-taste, logged since bug_0022/0032. clockwork_heist is blind-verified PRISTINE (15th straight
+    strong run); no NEW actionable content defect.
+  decision_rationale: >
+    Per blind_playtest_protocol.md's "you MAY pick a different candidate if your judgement and the
+    playtest say it's higher value." With clockwork (and every pack) blind-verified and per-pack polish
+    at deep diminishing returns, the genuinely highest-value lever is the standing cross-category
+    candidate the assessor has named since bug_0035 and re-logged in bug_0036/0037 deferred: ui/ is the
+    LAST first-party code dir outside the ESLint/Prettier gate. Closing it finishes the dual of bug_0031
+    that bug_0036 began for tests/, and fully disarms the lint-coverage detector.
+finding: >
+  ui/ holds first-party React/Vite TypeScript (App.tsx, engine.ts, packs.ts, main.tsx + vite.config.ts)
+  with NO static-analysis gate. bug_0031 wired ESLint+Prettier but listed "ui/**" under `ignores` and
+  scoped `files` to src/bin/scripts/agents (later +tests/ in bug_0036); the lint/format npm scripts
+  never named `ui`. So a whole class of issues in the UI — unused vars, unsafe `any`, and especially
+  React hooks misuse (conditional/looped hooks, stale effect deps) — was invisible to `npm run health`.
+  The code was authored cleanly (engine.ts even carries an `eslint-disable-next-line` for its one
+  deliberate `any`), but nothing ENFORCED that; a future UI edit could regress unnoticed.
+improvement:
+  layer: repo      # eslint.config.js + package.json + one new devDependency. NO content/YAML/engine edited.
+  change: >
+    (1) Installed eslint-plugin-react-hooks@^7.1.1 as a devDependency — the one React linter that
+    supports ESLint 10 (peer ^10.0.0). The broader eslint-plugin-react still caps its peer at ESLint 9.7,
+    so it cannot be installed here; the canonical two hooks rules ship now and the Compiler/JSX layer is
+    deferred to a future cycle when upstream supports ESLint 10. (2) eslint.config.js: dropped "ui/**"
+    from `ignores` (added "ui/dist/**" so the build output stays out — it carries no lintable .ts),
+    and added a `{ files: ["ui/**/*.{ts,tsx}"] }` block registering the react-hooks plugin with
+    react-hooks/rules-of-hooks=error + react-hooks/exhaustive-deps=warn, plus the same no-unused-vars
+    policy as first-party code. We pin those two rules explicitly rather than spreading the plugin's
+    `recommended` preset, which under ESLint 10 bundles the opinionated React-Compiler ruleset
+    (purity/immutability/set-state-in-render/...). `no-undef` is off under typescript-eslint, so browser
+    globals need no `globals` entry. (3) package.json: lint/format:check/format scripts now include `ui`,
+    so the gate actually RUNS (a config-only change the npm scripts never invoke would be a no-op).
+    No ui/ source needed fixing — it already passes clean; Prettier already reported it conformant.
+  effect_on_ranking: >
+    The assessor's repo-lint-coverage detector DISARMS for ui/ (eslintCovers(text,"ui") flips to true).
+    ui/ was the last uncovered first-party dir, so the candidate now VANISHES entirely — every
+    first-party code dir is gated. The radar correctly goes silent: it fired while real uncovered code
+    existed and stops once the work is done. The assessor falls back to the uniform 0.5 blind-playtest
+    reviews as its honest top (no high-impact lever remains; the repo is genuinely healthy).
+verification:
+  typecheck: green (tsc --noEmit, exit 0)
+  eslint: green over `src bin scripts agents tests ui` (0 problems) — react-hooks rules confirmed active on ui/*.tsx
+  prettier: green — `prettier --check` over `src bin scripts agents tests ui` (all files conform; ui/ was already clean)
+  unit_tests: green (assessor.test.ts unchanged; eslintCovers predicate unchanged)
+  regression_tests: >
+    tests/regression/eslint_ui_coverage.test.ts green (gate covers ui, scripts run it, react-hooks rules
+    active + bite a conditional-hook violation, shipped ui source clean, detector fully disarmed). Updated
+    in place (surfaced, not laundered): eslint_tests_coverage.test.ts (the bug_0036 "ui remains OUTSIDE"
+    snapshot -> "ui now under the gate") and assessor_lint_coverage.test.ts (the real-config + "surfaces
+    the gap" snapshots -> ui covered / candidate fully disarmed). The synthetic eslintCovers
+    TRUE/FALSE/DISARM/ignore-wins mechanism cases are untouched and still pass.
+  validate: green (0 errors, 0 warnings) — all packs (NO content touched)
+  content_hash_changes: none   # NO content/ YAML edited
+  health: green (verify:integrity static + typecheck + ESLint + Prettier check + tests + every pack validate + watchtower coverage)
+  verify_integrity_drift: >
+    expected exit 0 — no protected file edited, no content hash moved, no traces/ HASH_PIN touched. The
+    new regression file is additive (the test-count floor only rises); two existing lint regression files
+    are edited in place (snapshot updates to the post-bug_0038 truth), introducing no .skip/.only/.todo/xit.
+regression_test: tests/regression/eslint_ui_coverage.test.ts
+closes_deferred:
+  - "ui/ is the last first-party dir outside the gate; wire eslint-plugin-react-hooks + *.tsx globs as a flat-config layer and its own format coverage; the detector disarms fully once ui/ is gated"  # bug_0035/0036/0037 deferred[a]
+deferred:
+  - >
+    The broader eslint-plugin-react (jsx-key, no-unescaped-entities, etc.) and the React-Compiler ruleset
+    (eslint-plugin-react-hooks `recommended` preset) are NOT yet wired: eslint-plugin-react caps its peer
+    at ESLint 9.7 so it cannot install under this repo's ESLint 10, and the Compiler rules are opinionated
+    enough to warrant a deliberate opt-in. Revisit when upstream ships ESLint 10 support; the ui/ files
+    block is the natural home for those rules.
+  - >
+    Both repo levers (lint-coverage, engine TODO/marker scan) are now disarmed — the lint-coverage radar
+    is fully closed out and the marker scan is inert at zero markers. The next cross-category radar to
+    consider is a doc/staleness detector (logged since bug_0035).
+  - >
+    clockwork_heist remains cosmetically open only on design-taste notes (the strongbox shortcut bypasses
+    the vault climax; the study/ledger is optional flavor) — adjudicated not-a-defect since bug_0022/0032.

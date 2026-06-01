@@ -38,9 +38,11 @@ describe("bug_0036 — tests/ is under the ESLint/Prettier gate", () => {
     expect(eslintCovers(eslintText, "agents")).toBe(true);
   });
 
-  it("ui/ remains OUTSIDE the gate (separate Vite/React package — future cycle)", () => {
-    // Documents the deliberately-remaining scope so a later cycle's ui work is expected.
-    expect(eslintCovers(eslintText, "ui")).toBe(false);
+  it("ui/ is now ALSO under the gate (bug_0038 closed the last remaining dir)", () => {
+    // bug_0036 left ui/ as the one first-party dir outside the gate; bug_0038 brought
+    // it under (react-hooks + typescript-eslint over its .tsx). The detector's DISARM
+    // half, live on the real config — every first-party code dir is now gated.
+    expect(eslintCovers(eslintText, "ui")).toBe(true);
   });
 
   it("the lint/format npm scripts actually run over tests/ (not a config-only no-op)", () => {

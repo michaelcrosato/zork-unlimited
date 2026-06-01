@@ -58,42 +58,28 @@ describe("bug_0035 — eslintCovers (the predicate that decides lint-gate member
     expect(eslintCovers(CONFLICTED, "tests")).toBe(false);
   });
 
-  it("matches the SHIPPED eslint.config.js: src+tests covered, ui not", () => {
+  it("matches the SHIPPED eslint.config.js: every first-party dir now covered", () => {
     const real = readFileSync(join(process.cwd(), "eslint.config.js"), "utf8");
     expect(eslintCovers(real, "src")).toBe(true);
     expect(eslintCovers(real, "bin")).toBe(true);
-    // bug_0036 brought tests/ under the gate — the detector's DISARM half, live. The
-    // synthetic DISARM case above proves the mechanism; this is it on the real config.
+    // bug_0036 brought tests/ under the gate; bug_0038 brought ui/ — the detector's
+    // DISARM half, live on the real config. The synthetic DISARM case above proves the
+    // mechanism; this is it fully closed out (no first-party dir left uncovered).
     expect(eslintCovers(real, "tests")).toBe(true);
-    expect(eslintCovers(real, "ui")).toBe(false); // ui/ still outside — a future cycle.
+    expect(eslintCovers(real, "ui")).toBe(true); // bug_0038 — the last dir, now gated.
   });
 });
 
-describe("bug_0035 — assess() surfaces the lint-coverage gap as a real repo lever", () => {
-  it("still raises a repo-lint-coverage candidate while ui/ is outside the gate", () => {
-    // bug_0036 covered tests/, so the candidate disarmed for tests/ and now names ONLY
-    // the genuinely-uncovered remainder (ui/). The radar stays honest: it keeps firing
-    // while real uncovered first-party code exists, and will vanish once ui/ is gated too.
+describe("bug_0035 — the lint-coverage detector tracks remaining work, then disarms", () => {
+  it("has FULLY disarmed now that ui/ is gated too (bug_0038 — no first-party dir left)", () => {
+    // The radar stays honest: it fires while real uncovered first-party code exists and
+    // vanishes once the last dir is gated. bug_0036 covered tests/ (the candidate then
+    // named only ui/, score 0.4 < the 0.5 reviews); bug_0038 covered ui/ — the final
+    // dir — so the candidate is now GONE entirely. Less left, lower rank, then silent.
     const c = a.candidates.find((x) => x.id === LINT_COV);
-    expect(c).toBeDefined();
-    expect(c!.category).toBe("repo");
-    expect(c!.effort).toBe("L");
-    expect(c!.evidence.length).toBeGreaterThan(0);
-    expect(c!.title).not.toMatch(/tests/); // disarmed for tests/ (bug_0036)
-    expect(c!.title).toMatch(/ui/); // ui/ remains the live lever
-  });
-
-  it("scores the lint-coverage lever per the deterministic impact/effort rule", () => {
-    // bug_0035's headline — the lever out-ranking the 0.5 reviews — held while >=2 dirs
-    // were uncovered (impact 3 -> score 0.6 > 0.5). bug_0036 covered tests/, leaving one
-    // uncovered dir (ui): impact 1 + 1 = 2, effort L (cost 3), repo weight 0.6 ->
-    // (2/3)*0.6 = 0.4. The score tracks remaining work HONESTLY: less left, lower rank.
-    // So with one dir left it now sits just BELOW the reviews — correct, not a regression.
-    const c = a.candidates.find((x) => x.id === LINT_COV)!;
-    expect(c.score).toBeCloseTo(0.4, 3);
-    const reviews = a.candidates.filter((x) => x.id.startsWith("playtest-"));
-    expect(reviews.length).toBeGreaterThan(0);
-    for (const r of reviews) expect(c.score).toBeLessThan(r.score);
+    expect(c).toBeUndefined();
+    // The mechanism (fire-while-uncovered, score-tracks-count) is still locked by the
+    // synthetic eslintCovers DISARM/score cases above; this asserts its terminal state.
   });
 
   it("does NOT re-arm the disarmed repo-eslint candidate (config still ships)", () => {

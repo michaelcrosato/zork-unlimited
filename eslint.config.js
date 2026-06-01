@@ -4,14 +4,15 @@
 // formatting; eslint-config-prettier turns off every rule that would fight it, so
 // the two never disagree.
 //
-// Scope is first-party engine/tooling TS (src, bin, scripts, agents) PLUS tests/
-// (brought under the gate in bug_0036 — see the tests-specific rules block below;
-// its first-party .ts had no static-analysis or format gate until now). Deliberately
-// still NOT linting content/ (YAML — content-hash-sensitive), traces/, ui/ (a
-// separate Vite/React package that needs its own React/TSX lint setup).
+// Scope is first-party engine/tooling TS (src, bin, scripts, agents), tests/
+// (bug_0036), AND ui/ (the React/Vite package, brought under the gate in bug_0038 —
+// see the ui-specific block below: typescript-eslint recommended over its .tsx PLUS
+// the canonical react-hooks rules). Deliberately still NOT linting content/ (YAML —
+// content-hash-sensitive) or traces/ (frozen verification snapshots).
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import prettier from "eslint-config-prettier";
+import reactHooks from "eslint-plugin-react-hooks";
 
 export default tseslint.config(
   {
@@ -19,7 +20,7 @@ export default tseslint.config(
       "dist/**",
       "node_modules/**",
       "coverage/**",
-      "ui/**",
+      "ui/dist/**",
       "content/**",
       "traces/**",
       "saves/**",
@@ -52,6 +53,29 @@ export default tseslint.config(
     // code to the same bar as the engine it exercises.
     files: ["tests/**/*.ts"],
     rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
+      ],
+    },
+  },
+  {
+    // ui/ — the React/Vite view package (bug_0038), the last first-party dir that
+    // had no static-analysis gate. It gets the same correctness bar as the engine
+    // (the global js + typescript-eslint recommended sets, unused-vars policy) over
+    // its .ts AND .tsx, PLUS the two canonical react-hooks rules. We pin react-hooks
+    // explicitly rather than spreading its `recommended` preset: under ESLint 10 the
+    // preset bundles the opinionated React-Compiler ruleset (purity/immutability/…),
+    // and the broader eslint-plugin-react (jsx-key etc.) still caps its peer at
+    // ESLint 9 so it can't be installed here yet — so we ship the stable, universally
+    // accepted hooks rules now and leave the Compiler/JSX layer for a future cycle
+    // when upstream supports ESLint 10. `no-undef` is off under typescript-eslint
+    // (TS owns undefined-symbol checking), so browser globals need no `globals` entry.
+    files: ["ui/**/*.{ts,tsx}"],
+    plugins: { "react-hooks": reactHooks },
+    rules: {
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
       "@typescript-eslint/no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
