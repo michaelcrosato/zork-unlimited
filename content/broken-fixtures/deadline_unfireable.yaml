@@ -1,0 +1,38 @@
+# Expect: DEADLINE_UNFIREABLE — a `meta.deadline` whose `when` can PROVABLY never
+# hold, so the declared urgency mechanic is dead (a Chekhov's gun). Here the
+# deadline fires at `doom >= 5`, but no effect ever writes `doom` — it sits at its
+# init 0 forever, so the hour can never turn. This is the sibling of the variant-
+# soundness family (bug_0085 shadowed / bug_0086 vacuous): silently-dead content a
+# blind playtest never surfaces (the threatened ending simply never arrives via the
+# clock). The ending the deadline names is still reachable by a real choice
+# (`give_up`), so the pack is otherwise well-formed and this fixture isolates the
+# new check. Note the engine ALSO advances `ticks` here — a red herring: the
+# deadline watches `doom`, not `ticks`, so writing `ticks` cannot fire it.
+meta:
+  id: dead_deadline
+  title: "Dead Deadline"
+  start: s1
+  flags_init: []
+  vars_init: { ticks: 0, doom: 0 }
+  deadline:
+    when: [ { var_gte: { name: doom, value: 5 } } ]
+    ending: e_overstay
+scenes:
+  - id: s1
+    title: "The Stalled Clock"
+    text: "A clock ticks, but nothing winds it toward the hour."
+    on_enter:
+      - inc_var: { name: ticks, by: 1 }
+    choices:
+      - id: stall
+        text: "Wait, and wait."
+        next: s1
+      - id: give_up
+        text: "Give up and slink out."
+        next: e_overstay
+      - id: escape
+        text: "Escape clean."
+        next: e_win
+endings:
+  - { id: e_overstay, title: "The Hour Turns", text: "Too late — if it ever could be." }
+  - { id: e_win, title: "Win", text: "You made it out." }

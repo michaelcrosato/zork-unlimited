@@ -70,6 +70,9 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
   // pointing at it, so the reachability/soft-lock graph below must be told about
   // it, or it would wrongly read as an unreachable ending. Validate the reference
   // here; register the structural edge inside the successors loop.
+  // Hoisted: what the pack ever provides (flags/items/vars). Needed both by the
+  // deadline-firability check just below and the choice-feasibility check later.
+  const writes = collectWrites(pack);
   const deadline = pack.meta.deadline;
   if (deadline) {
     if (!allNodeIds.has(deadline.ending)) {
@@ -89,6 +92,21 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
         ),
       );
     }
+    // Firability: a deadline that can PROVABLY never fire is a Chekhov's gun — the
+    // declared urgency mechanic (bug_0079/0080) is dead — AND a latent unsoundness
+    // for the soft-lock graph below, which (lines further down) treats the deadline
+    // as a real escape edge whenever a scene writes a watched var. If the `when`
+    // also requires a flag/item that is never provided, that edge is a phantom: the
+    // graph would count a scene as escapable via a deadline that never triggers. The
+    // sibling of the variant-soundness family (bug_0085 shadowed / bug_0086 vacuous),
+    // reusing the same conjunctive machinery and the choice-feasibility logic below.
+    checkDeadlineFirability(
+      deadline.when,
+      pack.meta.flags_init,
+      pack.meta.vars_init,
+      writes,
+      findings,
+    );
   }
   const deadlineVars = deadline ? varNamesInConditions(deadline.when) : new Set<string>();
 
@@ -184,7 +202,7 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
   }
 
   // ── Feasibility + contradiction (flags / items / vars) ─────────────────────
-  const writes = collectWrites(pack);
+  // `writes` is hoisted to the deadline section above and reused here.
   const initVars = pack.meta.vars_init;
   for (const scene of pack.scenes) {
     for (const choice of scene.choices) {
@@ -488,6 +506,58 @@ function checkUnsatisfiable(
           `true and false, or sets crossed var bounds), so it is dead — it can never ` +
           `display/fire. Fix or remove the contradictory condition.`,
         where,
+      ),
+    );
+  }
+}
+
+/** Flag a `meta.deadline` that can PROVABLY never fire — a declared-but-dead
+ *  urgency mechanic (a Chekhov's gun), and a latent unsoundness for the soft-lock
+ *  graph, which treats the deadline as a real escape edge. Two sound grounds, both
+ *  reusing existing machinery and conservative (only fire when firing is provably
+ *  impossible, never on a deadline that is merely hard to reach):
+ *    (a) the `when` is internally contradictory (isUnsatisfiable — bug_0086); or
+ *    (b) it REQUIRES, in AND-context, a flag/item/var that no effect ever
+ *        provides/writes (the choice-feasibility logic, applied to the deadline). */
+function checkDeadlineFirability(
+  when: Condition[],
+  flagsInit: string[],
+  varsInit: Record<string, number>,
+  writes: Writes,
+  findings: Finding[],
+): void {
+  if (isUnsatisfiable(whenProfile(when))) {
+    findings.push(
+      warn(
+        "DEADLINE_UNFIREABLE",
+        "meta.deadline.when is internally contradictory (it pins a flag/item both ways " +
+          "or sets crossed var bounds), so the deadline can never fire — a declared-but-" +
+          "dead urgency mechanic.",
+        ["meta:deadline"],
+      ),
+    );
+    return; // one witness is enough; the (b) scan would only restate it
+  }
+  const req = collectRequired(when);
+  const missing: string[] = [];
+  for (const f of req.reqFlags)
+    if (!writes.setFlags.has(f) && !flagsInit.includes(f)) missing.push(`flag "${f}" (never set)`);
+  for (const it of req.reqItems)
+    if (!writes.addedItems.has(it)) missing.push(`item "${it}" (never granted)`);
+  for (const vr of req.varReqs) {
+    const init = varsInit[vr.name] ?? 0;
+    const needsRaise =
+      (vr.op === "gte" && vr.value > init) || (vr.op === "eq" && vr.value !== init);
+    if (needsRaise && !writes.writtenVars.has(vr.name))
+      missing.push(`var "${vr.name}" ${vr.op} ${vr.value} (never written; init ${init})`);
+  }
+  if (missing.length > 0) {
+    findings.push(
+      warn(
+        "DEADLINE_UNFIREABLE",
+        `meta.deadline.when requires ${missing.join(", ")}, which no effect ever provides, ` +
+          "so the deadline can never fire — a declared-but-dead urgency mechanic.",
+        ["meta:deadline"],
       ),
     );
   }
