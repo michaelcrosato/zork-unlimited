@@ -154,6 +154,12 @@ objects:
           difficulty: 12
           on_success:
             - set_quest_stage: { quest: forge, stage: grate_open }
+            # The grate is the climactic tool-puzzle (+15) and the manor's other two
+            # milestones both journal (the sentinel's defeat and reaching the Heart),
+            # yet levering it open wrote nothing to the player's log — the lone silent
+            # progress beat (blind-playtest finding, bug_0048). The check retires after
+            # success (gated none_of grate_open), so this entry fires exactly once.
+            - add_journal: "You lever the slag grate up off its lip; the way down into the forge's root stands open."
             - inc_var: { name: score, by: 15 }
             - narrate: "You set the bar to the lip and throw your whole weight on it — slag cracks, iron screams, and the grate heaves up off its seat. The way down is open."
           on_failure:

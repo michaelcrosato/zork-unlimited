@@ -1,0 +1,58 @@
+bug_id: bug_0048
+pack_id: cold_forge_v1
+seed: 113                         # this cycle's rotated blind-playtest seed
+type: content_fix                 # one add_journal line — no engine/validator/stat/effect/DC/exit/gating/score change
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-01T14-04-05-750Z/playtest.md   # clockwork_heist (mandated target) — verified clean
+  rotated_finding_from: ai-runs/2026-06-01T14-04-05-750Z (cold_forge blind subagent, seed 113)
+  rotated_result: >
+    ROTATED the actual improvement off the assessor's rank-1 clockwork_heist. The mandated blind
+    playtest (clockwork_heist, seed 113) reached all FIVE endings, clarity 5/5 / enjoyment 4/5,
+    zero rejected actions / no loops / no soft-locks, and surfaced NO concrete bug — its sole
+    friction (the deadline's exact tick tolerance staying implicit) has no good fix without
+    damaging the prose-driven atmosphere. clockwork is pristine on yet another independent blind
+    pass. Per blind_playtest_protocol.md's "rotate the seed and rotate the pack," I then blind-
+    playtested the least-verified pack — The Cold Forge (RPG, only bug_0021 creation + bug_0029
+    sentinel fiction before this) — seed 113 (+ an adversarial base-stats / skip-the-buff run).
+    Result: WON ending_victory 50/50 both runs; clarity 5/5, enjoyment 4/5; zero rejected actions,
+    no loops, no soft-locks; the pry-bar stays recoverable so the grate gate cannot soft-lock.
+  finding: >
+    The Forge Heart (rotated report §5): "levering the grate open does NOT add a journal entry,
+    while reaching the heart, killing the sentinel, and the dialogue hints all do. The grate is the
+    single biggest puzzle beat and silently leaves the journal untouched — a small 'the way down is
+    open' journal line would round it out." The grate's USE skill_check on_success set the quest
+    stage, awarded +15, and narrated — but, alone among the pack's progress milestones, wrote
+    nothing to the player's append-only log. Same class as bug_0004 / bug_0006 (a milestone reveal
+    that journals nothing while every comparable beat journals).
+root_cause: >
+  The grate USE interaction's on_success (objects[stone_grate].interactions[USE].skill_check) had
+  set_quest_stage + inc_var + narrate but no add_journal, whereas slag_sentinel.on_defeat,
+  ember_chamber.on_enter, and both lantern-spirit topic effects all add_journal. The journal line
+  was simply never authored for this one beat.
+improvement:
+  layer: content
+  content:
+    - content/rpg/pack/cold_forge.yaml: >
+        stone_grate's USE skill_check on_success gains ONE add_journal line — "You lever the slag
+        grate up off its lip; the way down into the forge's root stands open." Placed alongside the
+        set_quest_stage milestone, mirroring the sentinel/ember journal beats. The check is gated
+        none_of [ quest_stage forge/grate_open ] and retires on success (bug_0015 pattern), so the
+        entry fires EXACTLY ONCE and can never stack. No flag/item/score/DC/exit/gating/reachable-
+        ending change — the narrate, +15 award, and one-shot retire are all untouched.
+verification:
+  - npm run validate -- content/rpg/pack/cold_forge.yaml          # OK 0/0; content_hash 51ce57a8...
+  - tests/regression/cold_forge_grate_journal.test.ts             # 4 cases (below), all green
+  - npm run health                                                # exit 0 (verify:integrity static + typecheck + ESLint + Prettier + tests + every pack validate + watchtower coverage)
+locked_by:
+  - tests/regression/cold_forge_grate_journal.test.ts             # (a) no grate line before lever; (b) exactly one entry after success + no dup journal; (c) entry can't stack — lever retired + forced re-USE rejected; (d) canonical route still wins 50/50
+notes:
+  verifier_integrity: >
+    content/rpg/pack/cold_forge.yaml is NOT a protected file and NO test pins its content hash
+    (only watchtower_road is hash-pinned), so adding the journal line moves the pack's content hash
+    but requires no re-pin and trips no HASH_PIN drift. No protected source touched, no override used.
+  content_hash: >
+    Deliberate, surfaced cold_forge content-hash change (no test pins it): the pack reads
+    51ce57a8cf788f068af0ff6b48f184a04ddf725c348dc1c5f262776bb453dab9 after the on_success add_journal
+    edit (recorded here only; the regression asserts behavior, not the hash).
