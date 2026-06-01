@@ -94,7 +94,12 @@ describe("bug_0047 — the stone slab's examine reacts to being levered aside", 
     const s = atSlab(1);
     const text = examineSlab(s).toLowerCase();
     expect(text).toContain("wedge the bar");
-    expect(text).toMatch(/heaving again and again|until the old stone gives/);
+    // The base text instructs the player to lever/heave the as-yet-unsolved slab.
+    // (Fingerprint re-pinned by bug_0069: the old "heaving again and again / until
+    // the old stone gives" wording was reworded to stop over-promising a grind; the
+    // invariant under test is unchanged — base examine tells you to heave, and is
+    // NOT the levered-aside text.)
+    expect(text).toMatch(/heave|works the old stone loose/);
     // It must NOT yet claim the slab is open.
     expect(text).not.toContain("levered aside");
   });

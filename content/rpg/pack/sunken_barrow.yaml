@@ -124,7 +124,16 @@ objects:
   - id: stone_slab
     name: "stone slab"
     aliases: [slab, stone]
-    description: "A great floor slab with an iron-gripped lip. Wedge the bar beneath the lip and it can be levered — not by one heroic effort, but by setting your feet and heaving again and again until the old stone gives."
+    # Base (unsolved) examine. bug_0069: the prior wording ("not by one heroic
+    # effort, but ... heaving again and again until the old stone gives") flatly
+    # PROMISED an iterative grind, but the lever is a single seeded d20+might vs 12
+    # that succeeds ~60% on the FIRST use — so a first-roll winner (blind seed 13)
+    # found the prose over-sold a grind that never happened, and it contradicted the
+    # on_success "you heave — and the slab grinds aside" (one heave). The reword reads
+    # true on BOTH paths — it may give on the first heave or take several — while
+    # keeping bug_0027's load-bearing signal that PERSISTENCE (not more muscle or a
+    # missing tool) is the path, so a player who DOES fail still reads "keep at it".
+    description: "A great floor slab with an iron-gripped lip. Wedge the bar beneath the lip and set your stubborn weight to it: it may give on the first heave or take several, but leverage — not raw strength — is what works the old stone loose."
     # Reactive examine (bug_0023/0039/0044 shape): once the slab is levered aside the
     # examine must stop telling the player to wedge the bar and heave — that contradicts
     # the room, which already flips to "Levered aside now ... a stair" on slab_moved. A
