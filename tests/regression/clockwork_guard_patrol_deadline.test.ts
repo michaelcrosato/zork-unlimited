@@ -70,7 +70,8 @@ const READER_TO_GALLERY_T7 = [
 ];
 // Efficient heist: pick from the kitchen, straight to the vault.
 const VAULT_RICH = ["kitchens", "take_pick", "dumbwaiter", "approach_vault", "pick_lock", "grab_gold"];
-const CRAWLSPACE_TRUTH = ["inspect_clock", "pry_panel", "pry_strongbox"];
+// bug_0022: the crawlspace strongbox now needs the lockpick (no brute-force pry).
+const CRAWLSPACE_TRUTH = ["inspect_clock", "kitchens", "take_pick", "back_foyer", "pry_panel", "open_strongbox"];
 const FORCE_CAUGHT = ["climb_stairs", "approach_vault", "force_door"];
 
 const TENSION = /running short|grinds toward the hour/i;

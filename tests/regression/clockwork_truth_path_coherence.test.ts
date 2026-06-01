@@ -39,8 +39,10 @@ function play(ids: string[]) {
   return s;
 }
 
-// Examine the clock first — a natural opening — and slip straight to the truth.
-const CRAWLSPACE_ROUTE = ["inspect_clock", "pry_panel", "pry_strongbox"];
+// The crawlspace route to the truth. Since bug_0022 the strongbox is a true
+// lockbox: discovering the panel no longer slips straight to an ending — you must
+// fetch the lockpick from the kitchen, then crack the box (no more brute-force pry).
+const CRAWLSPACE_ROUTE = ["inspect_clock", "kitchens", "take_pick", "back_foyer", "pry_panel", "open_strongbox"];
 // The full vault route, taking the letter instead of the gold.
 const VAULT_LETTER_ROUTE = ["kitchens", "take_pick", "dumbwaiter", "approach_vault", "pick_lock", "take_letter"];
 // The vault route, grabbing the gold.

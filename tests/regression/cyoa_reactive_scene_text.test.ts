@@ -71,7 +71,8 @@ describe("bug_0018 — reactive CYOA scene text (the kitchen lockpicks)", () => 
     expect(rich.ended).toBe(true);
     expect(rich.endingId).toBe("ending_rich");
 
-    const truth = run(["inspect_clock", "pry_panel", "pry_strongbox"]);
+    // bug_0022: the crawlspace truth now needs the lockpick (no brute-force pry).
+    const truth = run(["inspect_clock", "kitchens", "take_pick", "back_foyer", "pry_panel", "open_strongbox"]);
     expect(truth.ended).toBe(true);
     expect(truth.endingId).toBe("ending_truth");
 

@@ -3,9 +3,13 @@
 # A thief in a clockwork manor. Three endings: escape rich (the loot), get caught
 # (force the vault and trip the alarm), or learn the truth (the hidden letter,
 # reachable either through the vault or a secret crawlspace behind the great
-# clock). One condition-locked choice (the vault lock needs the lockpick), one
-# item that gates it (the lockpick, found in the kitchen), and one hidden scene
-# (the crawlspace, found only by inspecting the clock).
+# clock). The lockpick (found in the kitchen) is the heist's signature item: it
+# gates BOTH routes to the truth — the vault's clockwork lock and the crawlspace
+# strongbox — so the "truth" always sits behind a picked lock, true to the
+# manor's motif ("yields only to a steady hand — never to force"). The crawlspace
+# is a hidden scene (found by inspecting the clock) that complements the vault
+# rather than pre-empting it: discovering it still sends you through the manor for
+# the pick before it pays off, and once found it can be re-entered from the foyer.
 
 meta:
   id: clockwork_heist_v1
@@ -56,6 +60,14 @@ scenes:
         effects:
           - set_flag: found_passage
           - add_journal: "The panel swings back on a dusty crawlspace."
+        next: crawlspace
+      - id: enter_panel
+        # Re-entry once the panel is open AND you hold the pick the strongbox needs.
+        # Gating on the lockpick keeps the crawlspace reachable after you leave to
+        # fetch it, while giving a tool-less player no reason (or way) to bounce
+        # back into a locked box — the nudge already sent them off to find one.
+        text: "Slip back through the open panel behind the clock."
+        conditions: [{ has_flag: found_passage }, { has_item: lockpick }]
         next: crawlspace
       - id: climb_stairs
         text: "Climb the grand staircase."
@@ -207,23 +219,25 @@ scenes:
     title: "The Crawlspace"
     text: >
       Dust and cobweb and the smell of old brass. The passage runs behind the vault
-      to a forgotten strongbox — and inside it, a single sealed letter, addressed to
-      no one.
+      to a forgotten iron strongbox, its lid locked fast — and sealed inside it, you
+      are certain, a single sealed letter, addressed to no one.
     choices:
       - id: open_strongbox
-        text: "Pick the strongbox open."
+        text: "Pick the strongbox's lock with the lockpicks."
         conditions: [{ has_item: lockpick }]
         effects:
           - add_item: letter
           - set_flag: has_letter
         next: ending_truth
-      - id: pry_strongbox
-        text: "Lever the rusted strongbox open by hand."
+      - id: study_strongbox
+        # No-pick nudge: the manor's "never to force" rule holds even here — the
+        # box won't yield to brute force, so this routes OUT to the foyer (a real
+        # scene change = progress, never a self-loop) to go find the tool.
+        text: "Try the rusted strongbox."
         conditions: [{ not_item: lockpick }]
         effects:
-          - add_item: letter
-          - set_flag: has_letter
-        next: ending_truth
+          - narrate: "The lid will not give. The lock is rusted but solid — no hinge to lever, no gap to force, and forcing would only ring through the still house. This wants the same slender tool the vault does: a pick, a probe, something to coax the lock. Better search the manor for it before you crawl back here."
+        next: foyer
       - id: back_crawl
         text: "Crawl back out to the foyer."
         next: foyer

@@ -87,7 +87,10 @@ describe("bug_0020 — the foyer's namesake clock feels the deadline too", () =>
   });
 
   it("reachability unchanged — all four endings still fire (text-only edit)", () => {
-    expect(play(["inspect_clock", "pry_panel", "pry_strongbox"]).endingId).toBe("ending_truth");
+    // bug_0022: the crawlspace truth now needs the lockpick (no brute-force pry).
+    expect(
+      play(["inspect_clock", "kitchens", "take_pick", "back_foyer", "pry_panel", "open_strongbox"]).endingId,
+    ).toBe("ending_truth");
     expect(play(["climb_stairs", "approach_vault", "force_door"]).endingId).toBe("ending_caught");
     expect(
       play(["kitchens", "take_pick", "dumbwaiter", "approach_vault", "pick_lock", "grab_gold"]).endingId,
