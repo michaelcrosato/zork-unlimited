@@ -99,11 +99,18 @@ rooms:
   - id: study
     name: "Cluttered Study"
     description: "An alchemist's study. A locked iron strongbox sits on the desk. The hall is back down."
-    # Reactive prose (bug_0012): holding the iron key means the strongbox has been
-    # unlocked and emptied, so it no longer reads as a locked box.
+    # Reactive prose. The strongbox lifecycle is locked → unlocked → opened → emptied.
+    # bug_0012 only reacted to the EMPTIED end (has_item iron_key, the durable proxy),
+    # so the unlocked-but-not-yet-emptied window still falsely read "A LOCKED iron
+    # strongbox" (blind playtest, this pack). bug_0033 adds the missing middle state
+    # via the new `is_unlocked` runtime predicate: once the brass key throws the lock
+    # the room stops saying "locked". First match wins, so the emptied variant (both
+    # conditions true once the key is taken) is listed FIRST.
     variants:
       - when: [{ has_item: iron_key }]
         text: "An alchemist's study. The iron strongbox sits open and empty on the desk, its brass lock sprung. The hall is back down."
+      - when: [{ is_unlocked: strongbox }]
+        text: "An alchemist's study. The iron strongbox sits unlocked on the desk, its brass lock sprung. The hall is back down."
     objects: [strongbox]
     exits:
       - { direction: down, to: great_hall }
@@ -171,13 +178,20 @@ objects:
     name: "iron strongbox"
     aliases: [strongbox, box]
     description: "A squat iron strongbox with a brass lock."
-    # Reactive examine (bug_0023): once the iron key is in hand the box has been
-    # unlocked and emptied, so examining it no longer reads as a locked, full box —
-    # mirroring the study room's own reactive prose, which gates on the same signal
-    # (has_item iron_key). Examine-only: no flag/item/score/exit/gating change.
+    # Reactive examine. bug_0023/0024 reacted only to the EMPTIED end (has_item
+    # iron_key proxy). bug_0033 makes the examine track the full lifecycle with the
+    # new runtime object-state predicates: emptied (key taken) → opened-with-key-still-
+    # inside (is_open) → unlocked-but-closed (is_unlocked) → base locked box. First
+    # match wins, so the variants run most-emptied first (after the key is taken both
+    # is_open and is_unlocked are still true, but the has_item variant wins).
+    # Examine-only: no flag/item/score/exit/gating change.
     variants:
       - when: [{ has_item: iron_key }]
         text: "The squat iron strongbox sits open and empty, its brass lock sprung and its lid thrown back — nothing left inside but the faint smell of old iron."
+      - when: [{ is_open: strongbox }]
+        text: "The squat iron strongbox stands open, its brass lock sprung and its lid thrown back; a heavy iron key still rests in the tray inside."
+      - when: [{ is_unlocked: strongbox }]
+        text: "The squat iron strongbox's brass lock hangs sprung where your key turned it; the lid is shut but free to lift."
     container: true
     openable: true
     locked: true

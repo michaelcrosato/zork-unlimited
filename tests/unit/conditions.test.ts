@@ -19,6 +19,23 @@ describe("condition evaluator", () => {
     expect(evalCondition({ not_visited: "room9" }, s)).toBe(true);
   });
 
+  it("runtime object-state predicates read GameState.objectState (default false)", () => {
+    const s0 = base();
+    // No objectState yet ⇒ both default false (the box is treated as closed & locked).
+    expect(evalCondition({ is_open: "box" }, s0)).toBe(false);
+    expect(evalCondition({ is_unlocked: "box" }, s0)).toBe(false);
+    // Unlocked at runtime (locked explicitly cleared) ⇒ is_unlocked true, still closed.
+    const unlocked = { ...s0, objectState: { box: { locked: false } } };
+    expect(evalCondition({ is_unlocked: "box" }, unlocked)).toBe(true);
+    expect(evalCondition({ is_open: "box" }, unlocked)).toBe(false);
+    // Opened ⇒ is_open true.
+    const open = { ...s0, objectState: { box: { open: true, locked: false } } };
+    expect(evalCondition({ is_open: "box" }, open)).toBe(true);
+    // A still-locked runtime override is NOT unlocked.
+    const stillLocked = { ...s0, objectState: { box: { locked: true } } };
+    expect(evalCondition({ is_unlocked: "box" }, stillLocked)).toBe(false);
+  });
+
   it("numeric comparisons treat missing vars as 0", () => {
     const s = { ...base(), vars: { hp: 5 } };
     expect(evalCondition({ var_gte: { name: "hp", value: 5 } }, s)).toBe(true);
@@ -40,6 +57,9 @@ describe("condition evaluator", () => {
 
   it("schema rejects unknown keys and accepts nesting", () => {
     expect(ConditionSchema.safeParse({ has_flag: "x" }).success).toBe(true);
+    expect(ConditionSchema.safeParse({ is_open: "box" }).success).toBe(true);
+    expect(ConditionSchema.safeParse({ is_unlocked: "box" }).success).toBe(true);
+    expect(ConditionSchema.safeParse({ is_open: "" }).success).toBe(false);
     expect(ConditionSchema.safeParse({ all_of: [{ has_flag: "x" }] }).success).toBe(true);
     expect(ConditionSchema.safeParse({ bogus: "x" }).success).toBe(false);
     expect(ConditionSchema.safeParse({ has_flag: "x", extra: 1 }).success).toBe(false);

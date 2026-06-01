@@ -75,11 +75,15 @@ describe("bug_0024 — the Alchemist's Tower strongbox examine reacts once it is
     // Before: the static base description.
     expect(examineNarration(s, "strongbox")).toBe("A squat iron strongbox with a brass lock.");
 
-    // Unlock + open, but the key is not yet taken: the examine (like the room) still
-    // reads as the base box — it waits on the durable has_item proxy.
+    // Unlock + open, key not yet taken. bug_0024 ORIGINALLY left this window reading
+    // the base "with a brass lock" (the has_item proxy only flips on EMPTYING); bug_0033
+    // closed that gap with the new runtime object-state predicates, so the examine now
+    // tracks the open-but-not-yet-emptied state and no longer calls the box locked.
     s = play(s, ["unlock_strongbox", "open_strongbox"]);
     expect(s.inventory).not.toContain("iron_key");
-    expect(examineNarration(s, "strongbox")).toBe("A squat iron strongbox with a brass lock.");
+    const mid = examineNarration(s, "strongbox");
+    expect(mid).toContain("stands open");
+    expect(mid).not.toContain("with a brass lock");
 
     // Take the key: now the examine flips — no longer a brass-locked box.
     s = play(s, ["take_iron_key"]);

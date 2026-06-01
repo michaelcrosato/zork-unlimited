@@ -1,0 +1,88 @@
+bug_id: bug_0033
+pack_id: alchemists_tower_v1
+seed: 51                          # the mandated blind playtest seed; the regression also drives seed 1 for the win route
+type: engine + content_fix       # generic engine predicate (the capability) + this pack opting in (the application)
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-01T10-45-49-483Z/playtest.md   # The Alchemist's Tower, seed 51 — the cycle's mandated/rotated target
+  mandated_result: >
+    ROTATED the mandated playtest off the assessor's rank-1 clockwork_heist (blind-verified
+    PRISTINE ~13 straight cycles; bug_0032 made the assessor honest so all six packs are now
+    uniformly LOW-priority 0.5 blind-playtest reviews — none carries a known flaw). Per the
+    protocol's explicit "rotate the seed and rotate the pack", chose the LEAST-recently
+    blind-QUALITY-tested pack: The Alchemist's Tower (parser; last dedicated quality playtest
+    ~bug_0012 — since then only deferred-item closes). Fresh general-purpose subagent, MCP-only,
+    no source access, seed 51 (+52 death route). Result: WON ending_cured 35/35 + the warned
+    ending_poisoned; clarity 5/5, enjoyment 3/5; zero rejected actions, no loops, no broken
+    state. ONE on-screen defect (report §5.1) + two non-defects (water-add sequencing,
+    back-loaded scoring) deliberately not chased.
+  finding: >
+    Cluttered Study, the unlocked-but-not-yet-emptied window: immediately after "You unlock
+    the iron strongbox," the ROOM still read "A locked iron strongbox sits on the desk"; the
+    text only corrected itself once the iron key was TAKEN. A direct on-screen contradiction
+    of the player's own unlocking action (and the same stale-"locked" string bug_0012 had
+    already half-fixed for the EMPTIED end). Reproduced live through the engine: unlock_strongbox
+    sets objectState.strongbox.locked=false yet roomDescription still returned the base "locked"
+    text, because the only reactive variant gated on has_item:iron_key (taken).
+root_cause: >
+  ARCHITECTURAL, and called out by name in bug_0024: the reactive-`variants` system evaluates
+  `when` through the PURE condition DSL (src/core/conditions.ts), which had NO predicate for a
+  container's runtime open/locked state. So every prior reactive fix (bug_0012 room, bug_0023/0024
+  object examine) leaned on a `has_item iron_key` PROXY that flips only on EMPTYING, leaving the
+  lockbox lifecycle locked → unlocked → opened → emptied with a stale "locked" middle. The
+  capability to react to the actual unlock/open transitions simply did not exist in the DSL.
+improvement:
+  layer: engine + content
+  engine:
+    - src/core/conditions.ts: >
+        Added two pure, closed-DSL runtime object-state predicates — `{ is_open: <id> }`
+        (true iff GameState.objectState[id].open === true) and `{ is_unlocked: <id> }` (true iff
+        objectState[id].locked === false, i.e. the lock was cleared at runtime). Both default
+        false until the relevant effect (open_object / set_object_locked) fires, so they let a
+        reactive room/object variant track a container's full lifecycle DIRECTLY instead of via a
+        contained-item proxy. Schema (ConditionSchema union) + Condition type + evalCondition
+        branch, mirroring the existing predicate shape. Pure over GameState — no index/pack needed.
+  content:
+    - content/parser/pack/alchemists_tower.yaml: >
+        Study room: added an `is_unlocked: strongbox` variant ("The iron strongbox sits unlocked
+        on the desk, its brass lock sprung") ABOVE the existing has_item:iron_key emptied variant
+        (first-match-wins keeps emptied primary). Strongbox examine: added `is_open` (opened, key
+        still inside) and `is_unlocked` (unlocked, lid shut) variants ahead of the emptied one, so
+        the examine tracks the whole lifecycle. Variant-only: no flag/item/score/exit/interaction/
+        gating/reachable-ending change.
+verification:
+  typecheck: green (tsc --noEmit)
+  validate: green (0 errors, 0 warnings) — alchemists_tower under the full parser validator
+  content_hash: f73b97fb4e0edf5513621140807c33a225b7205ce66ab916c6c7dd01ab0a6869   # was 04d4e8be75dec47d8b5a92a36d2606b6b0458df116bf8a9ee2d5f8dcc99dcd1e (bug_0024); surfaced, not laundered. Unpinned (only watchtower_road is pinned in tests).
+  health: exit 0 (verify:integrity + typecheck + ESLint + Prettier check + tests + every pack validate + watchtower coverage)
+  reachable_endings_unchanged: [ending_cured, ending_poisoned]   # variant-only; canonical brew route still reaches ending_cured at 35/35
+  validator_safe: >
+    The validator never analyzes variant `when` clauses (checkConds runs only on exit/interaction/
+    win conditions), and its flag/item walkers ignore unrecognized condition kinds — so the new
+    predicates, used here only in variants, cannot affect static analysis. The cyoa validator's
+    condition walk is likewise non-exhaustive (unknown kinds ignored).
+verified_live: >
+  Through the engine render path the regression drives (roomDescription + resolveParserAction LOOK
+  over initStateForParserPack / enumerateActions / makeStep — the MCP server's path): after
+  unlock_strongbox the room reads "sits unlocked … brass lock sprung" and never "locked iron
+  strongbox"; after open_strongbox the examine reads "stands open … key still rests"; after
+  take_iron_key both flip to "open and empty"; a fresh box (no objectState) reads the base prose;
+  and the canonical brew route (seed 1) still reaches ending_cured at 35/35.
+regression_test: tests/regression/alchemists_strongbox_unlock_state.test.ts   # 4 cases: (1) room tracks locked→unlocked→emptied, never re-asserts "locked" once sprung; (2) examine tracks the same lifecycle, never "with a brass lock" once unlocked; (3) predicates inert until their effect fires; (4) reachability/score intact (seed-1 brew route → ending_cured 35/35). Plus tests/unit/conditions.test.ts (+2 cases: eval of is_open/is_unlocked incl. defaults; schema accepts the new kinds, rejects empty id).
+test_updates:
+  - tests/regression/alchemists_strongbox_reactive_examine.test.ts: >
+      bug_0024 case (1) originally ASSERTED the intermediate examine still read the base
+      "A squat iron strongbox with a brass lock." after unlock+open — documenting the very gap
+      bug_0024 deferred. Updated that block to assert the new reactive intermediate ("stands open"
+      / not "with a brass lock"). A surfaced behavior IMPROVEMENT, not a weakening; the emptied and
+      reachability assertions are unchanged.
+closes:
+  - bug_0024 deferred limitation "the closed condition DSL has no object-open predicate" — the
+    predicate now exists; the intermediate stale-"locked" window is closed.
+deferred:
+  - Restore the assessor's cross-category radar (bug_0032 deferred): extend ESLint/Prettier + the
+    assessor's view to tests/ and ui/, or add a docs/staleness detector. The assessor currently
+    surfaces only uniform 0.5 blind-playtest reviews (the repo is genuinely healthy).
+  - alchemists_tower flavor-only notes (not defects): the water-add step is unsignposted until the
+    herb steeps; "use black phial" self-target verb reads slightly unnatural; scoring is back-loaded.
