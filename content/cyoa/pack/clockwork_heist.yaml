@@ -369,12 +369,51 @@ scenes:
 
   - id: crawlspace
     title: "The Crawlspace"
+    # The base text is the clock-quiet fallback: a thief who slipped straight from the
+    # foyer to the crawlspace (the stealth route) has barely stirred the manor, so the
+    # passage is still and timeless.
     text: >
       Dust and cobweb and the smell of old brass. The passage runs behind the vault
       to a forgotten iron strongbox, its lid locked fast — and folded inside it, you
       are certain, a sealed letter in the steward's own hand: not laid out for show
       like a thing meant to be found, but hidden away here in the dark, apart from the
       gold, where he meant no eye ever to fall on it.
+    # The crawlspace was the ONE beat the clock never touched. The clockwork-deadline
+    # arc (bug_0019/0040/0042/0043) made the gallery, the vault door, and the loot room
+    # all feel the hour, but the hidden strongbox route to the truth resolved in clock
+    # silence — a fresh blind playtester (seed 47) flagged exactly this: "the headline
+    # tension mechanic is completely bypassable via the strongbox route, so a player who
+    # beelines the hidden letter may never feel it... the two halves feel tonally
+    # disconnected." The fix mirrors bug_0043's loot-room treatment: content-only reactive
+    # `variants` (first-match-wins, higher threshold first), so a player who wandered the
+    # manor's upstairs rooms before crawling back to crack the box (any ticks>=2 crawlspace
+    # arrival has stood in the gallery at least once — kitchen/landing/study are the only
+    # tick sources) now feels the same clock the rest of the manor drums up, carried down
+    # through the clockwork's gears even into this forgotten passage. Atmospheric only: the
+    # strongbox/hidden-letter framing and every choice/ending are unchanged, and the clock
+    # is named by the manor-wide motif (the gears, the chime), never by a watchman or plate
+    # the crawler may not have met (the bug_0058 leak lesson). The pure-foyer beeliner stays
+    # at low ticks and reads the still base text — the quiet is earned by taking the route
+    # that slips past the gallery entirely (bug_0064).
+    variants:
+      - when: [{ var_gte: { name: ticks, value: 4 } }]
+        text: >
+          Dust and cobweb and the smell of old brass. The passage runs behind the vault
+          to a forgotten iron strongbox, its lid locked fast — and folded inside it, you
+          are certain, a sealed letter in the steward's own hand, hidden away here in the
+          dark where he meant no eye ever to fall on it. The hour has come round at last:
+          the great clock's chime rolls down through the manor's thousand gears and reaches
+          you even here behind the wall, and through the brick a slow tread answers it,
+          passing along the vault's far side and away. Crack the box and crawl clear.
+      - when: [{ var_gte: { name: ticks, value: 2 } }]
+        text: >
+          Dust and cobweb and the smell of old brass. The passage runs behind the vault
+          to a forgotten iron strongbox, its lid locked fast — and folded inside it, you
+          are certain, a sealed letter in the steward's own hand, hidden away here in the
+          dark where he meant no eye ever to fall on it. Somewhere above, the great clock
+          grinds toward the hour, its working carried down through the manor's gears into
+          even this forgotten passage — best crack the box and be gone before the chime
+          wakes the sleeping house.
     choices:
       - id: open_strongbox
         text: "Pick the strongbox's lock with the lockpicks."
