@@ -127,6 +127,88 @@ export function eslintCovers(eslintText: string, dir: string): boolean {
   return inFiles && !ignored;
 }
 
+// ── Doc-staleness radar (bug_0045) ────────────────────────────────────────────
+// The third cross-category repo lever, after eslint-coverage and the engine
+// marker scan (both of which disarm once the code is tidy). It surfaces DOC
+// rot: a canonical, maintained doc that points at a first-party file which no
+// longer exists (a rename/delete the doc was never updated for) — exactly the
+// "currently-invisible work" a radar should catch, and the standing next-best
+// cross-category meta-improvement logged since bug_0032/0035.
+//
+// First-party path prefixes a doc reference can point at. Forward/ephemeral roots
+// (node_modules/, dist/, coverage/, saves/, ai-runs/) are intentionally absent — a
+// doc naming one of those is not a claim that a tracked file exists.
+const DOC_REF_PREFIXES = [
+  "src",
+  "bin",
+  "scripts",
+  "agents",
+  "tests",
+  "traces",
+  "docs",
+  "content",
+  "ui",
+] as const;
+const DOC_REF_RE = new RegExp(`(?:${DOC_REF_PREFIXES.join("|")})/[A-Za-z0-9_./-]+`, "g");
+const DOC_REF_EXT = /\.(?:ts|tsx|js|mjs|cjs|json|yaml|yml|md|sh)$/;
+// A path token is NOT a liveness claim when it is a glob/brace/placeholder pattern
+// (content/cyoa/pack/*.yaml, traces/bugs/bug_0001_*.yaml, ai-runs/<id>/playtest.md)…
+const DOC_REF_PATTERN_CHARS = /[*{}?[\]<>]|\.\.\./;
+// …or a command-line OUTPUT DESTINATION (`--record traces/run.json`, `--out …`,
+// `-o file`, `> file`): the doc tells you to CREATE it, not that it already exists.
+const DOC_REF_OUTPUT_FLAG = /(?:--record|--out|--output|-o|>)\s+$/;
+
+/**
+ * Extract the CONCRETE first-party file references a doc CLAIMS exist and return
+ * those that DON'T resolve via `exists` — i.e. stale doc references to renamed or
+ * deleted files. Pure (disk access injected) so it unit-tests without a fixture,
+ * mirroring {@link eslintCovers}. Conservative by construction: it considers only
+ * tokens under a known first-party dir that carry a concrete file extension, and
+ * skips glob/placeholder patterns and command-line output destinations — the path
+ * shapes a doc legitimately names WITHOUT asserting they already exist on disk. So
+ * a hit is a real "doc points at a file that isn't there", not example/forward text.
+ */
+export function findStaleDocRefs(docText: string, exists: (relPath: string) => boolean): string[] {
+  const stale: string[] = [];
+  const seen = new Set<string>();
+  for (const m of docText.matchAll(DOC_REF_RE)) {
+    const at = m.index ?? 0;
+    if (DOC_REF_OUTPUT_FLAG.test(docText.slice(Math.max(0, at - 14), at))) continue;
+    const tok = m[0].replace(/[).,;:"'`]+$/, "");
+    if (DOC_REF_PATTERN_CHARS.test(tok)) continue;
+    if (!DOC_REF_EXT.test(tok)) continue;
+    if (seen.has(tok)) continue;
+    seen.add(tok);
+    if (!exists(tok)) stale.push(tok);
+  }
+  return stale;
+}
+
+/**
+ * The canonical, CURRENT-system docs whose file references should all resolve.
+ * Deliberately EXCLUDED (scanning them for liveness would be wrong, not missing —
+ * the same discipline as LINT_DIRS omitting data/forward dirs): AI_LOOP_STATE.md (a
+ * historical per-cycle log that records paths/hashes as they were, some since
+ * moved), docs/ROADMAP.md and ADVENTUREFORGE_BUILD_SPEC.md (forward-looking — they
+ * may name planned files that don't exist yet).
+ */
+function docStalenessDocs(root: string): string[] {
+  const out: string[] = [];
+  for (const f of ["AGENTS.md", "README.md", "AI_AGENT_PROMPT.md"]) {
+    if (existsSync(join(root, f))) out.push(f);
+  }
+  const docsDir = join(root, "docs");
+  if (existsSync(docsDir)) {
+    for (const e of readdirSync(docsDir, { withFileTypes: true }).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    )) {
+      if (e.isFile() && e.name.endsWith(".md") && e.name !== "ROADMAP.md")
+        out.push(`docs/${e.name}`);
+    }
+  }
+  return out;
+}
+
 /**
  * Is this CYOA pack PLANNING-GATED? — i.e. does any choice carry a state
  * precondition (a `conditions` entry: item/flag/var/visited/quest gate)?
@@ -383,6 +465,38 @@ export function assess(root: string): Assessment {
         score: score(impact, "L", "repo"),
       });
     }
+  }
+
+  // ── repo: doc staleness — canonical docs referencing renamed/deleted files ────
+  // The third cross-category repo lever (bug_0045). Both others disarm once the
+  // code is tidy (repo-eslint since the config ships; lint-coverage since bug_0038
+  // gated the last dir; the engine TODO/marker scan at zero markers), leaving the
+  // loop with no high-impact non-content lever — yet a canonical doc can still rot
+  // when a file it names is renamed/deleted. This fires when such a reference no
+  // longer resolves and disarms when every one does. It scans only CURRENT-system
+  // docs (see docStalenessDocs): the historical AI_LOOP_STATE.md and the
+  // forward-looking ROADMAP/BUILD_SPEC are out of scope by construction.
+  const staleDocRefs: string[] = [];
+  for (const docPath of docStalenessDocs(root)) {
+    const text = readFileSync(join(root, docPath), "utf8");
+    for (const ref of findStaleDocRefs(text, (rel) => existsSync(join(root, rel)))) {
+      staleDocRefs.push(`${docPath} → ${ref}`);
+    }
+  }
+  if (staleDocRefs.length > 0) {
+    const impact = Math.min(5, 1 + Math.ceil(staleDocRefs.length / 3));
+    candidates.push({
+      id: "repo-doc-staleness",
+      category: "repo",
+      target: "docs",
+      title: `Fix ${staleDocRefs.length} stale doc reference(s) to renamed/deleted files`,
+      rationale:
+        "A canonical doc that points at a file which no longer exists misleads the next reader — a human or a fresh AFK agent navigating by it; updating the reference keeps the docs a trustworthy map of the repo.",
+      evidence: staleDocRefs.slice(0, 8),
+      impact,
+      effort: "S",
+      score: score(impact, "S", "repo"),
+    });
   }
 
   // Deterministic ordering: score desc, then id asc.

@@ -1,0 +1,103 @@
+bug_id: bug_0045
+pack_id: null                    # repo/tooling change — adds an assessor radar; no content/engine pack bug
+seed: 271                        # the mandatory blind playtest seed this cycle (clockwork_heist)
+type: repo_radar                 # trust-but-verify: a new deterministic detector that surfaces currently-invisible work (doc rot)
+evidence:
+  source: >
+    assessor had no live cross-category lever (repo-eslint disarmed since the config ships; lint-coverage
+    fully closed by bug_0038; engine TODO/marker scan inert at zero markers) — the standing next-best
+    cross-category meta-improvement named in every recent cycle's "next suggested focus" and bug artifact
+    deferred list since bug_0032/0035 (re-logged through bug_0044 deferred[b]) was a DOC/STALENESS detector.
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-01T13-25-33-693Z/playtest.md
+  rotated_report: ai-runs/2026-06-01T13-25-33-693Z/playtest_cold_forge.md
+  playtest_rationale: >
+    Mandated cycle playtest: clockwork_heist.yaml, seed 271. Fresh general-purpose subagent, MCP-only,
+    no source access. Reached all FOUR endings across five routes (Truth via the vault AND the crawlspace
+    strongbox, Caught, Caught-on-the-hour/Patrol, Rich); clarity 5/5, enjoyment 4/5; mechanically flawless
+    (zero rejected actions, no loops, no broken/stale text). Its two design notes — the crawlspace strongbox
+    shortcut and the "time running short" copy that over-promises a timeout — are the EXACT items adjudicated
+    DELIBERATE across bug_0019/0022/0032/0040/0042/0043. clockwork is blind-verified PRISTINE on its 6th
+    independent pass (seeds 101/314/91/211/103/271); no NEW actionable content defect.
+  rotated_playtest: >
+    Per blind_playtest_protocol.md's "rotate the seed and rotate the pack", ran a SECOND blind playtest on
+    the least-recently full-blind-quality-tested pack, the rpg The Cold Forge (cold_forge.yaml), seed 73 +
+    an adversarial no-buff run. WON ending_victory 50/50 both runs; clarity 5/5, enjoyment 3/5; zero rejected
+    actions, no loops, no soft-locks, no stale text. Its primary actionable signal — "could not confirm a
+    death ending is wired up; an unlucky base-stat fight could be a frustrating dead end" — was VERIFIED
+    NOT-A-DEFECT from source: slag_sentinel.death_ending = ending_fallen (cold_forge.yaml:236), and
+    ending_fallen exists with death: true (lines 254-260). Combat death routes to a proper death ending.
+    Its other notes (the "cold keeps the sentinel weak / no timer" reassurance reading as a tell; the
+    +15/+15/+20 score awards reading as milestone totals) are taste/cosmetic and internally consistent.
+    cold_forge is clean — no content defect this cycle.
+  decision_rationale: >
+    With BOTH packs blind-verified and NO concrete content defect surfaced this cycle (unlike bug_0039,
+    which had a real stale-text contradiction and so won over this same radar), the genuinely highest-value
+    lever is the standing cross-category candidate. Justified per the protocol's "you MAY pick a different
+    candidate if your judgement and the playtest say it's higher value." Aligned with trust-but-verify: the
+    radar is a verification/hygiene instrument that keeps the docs an honest map for the next fresh agent.
+finding: >
+  After bug_0038 the assessor's only non-content levers were inert, so it surfaced ONLY the uniform 0.5
+  blind-playtest reviews — yet a class of real, currently-invisible work existed: a canonical, maintained
+  doc can rot when a file it references is renamed or deleted and the doc is never updated. Empirically the
+  canonical docs are currently CLEAN of true rot — the one non-resolving concrete path among 58 references
+  (README's `--record traces/run.json`) is a CLI output-destination example, not a stale reference — so the
+  radar must be conservative enough not to false-fire on it, and it ships disarmed.
+improvement:
+  layer: repo      # src/afk/assessor.ts only (+ a regression test). NO content/YAML/engine edited.
+  change: >
+    Added a third cross-category repo radar to src/afk/assessor.ts: (1) a pure, injected-disk function
+    findStaleDocRefs(docText, exists) that extracts CONCRETE first-party file references a doc claims exist
+    and returns those that don't resolve — considering only tokens under a known first-party prefix
+    (src/bin/scripts/agents/tests/traces/docs/content/ui) carrying a concrete extension
+    (.ts/.tsx/.js/.mjs/.cjs/.json/.yaml/.yml/.md/.sh), and SKIPPING glob/placeholder patterns and
+    command-line output destinations (`--record`/`--out`/`-o`/`>`). (2) docStalenessDocs(root) selects the
+    CURRENT-system docs to scan: top-level AGENTS.md/README.md/AI_AGENT_PROMPT.md + docs/**/*.md, excluding
+    docs/ROADMAP.md (forward-looking) by name; AI_LOOP_STATE.md and ADVENTUREFORGE_BUILD_SPEC.md
+    (historical / forward-looking) are out of scope by not being listed — the same "data/forward roots are
+    absent, not missing" discipline as LINT_DIRS. (3) a repo-doc-staleness candidate (effort S) that fires
+    when any reference doesn't resolve and is silent otherwise.
+  effect_on_ranking: >
+    Currently DISARMED — every canonical-doc reference resolves, so no repo-doc-staleness candidate is
+    raised and the assessor's ranking is unchanged (the 0.5 blind-playtest reviews remain the honest top).
+    The radar RE-ARMS the moment a future edit renames/deletes a file a canonical doc points at without
+    updating the doc — exactly the fire-while-real / silent-when-done behavior of the lint-coverage radar.
+verification:
+  typecheck: green (tsc --noEmit, exit 0)
+  eslint: green over `src bin scripts agents tests ui`
+  prettier: green over the same
+  unit_tests: green (assessor.test.ts unchanged — new candidate disarmed, ranking identical)
+  regression_tests: >
+    tests/regression/assessor_doc_staleness.test.ts green (10 cases): findStaleDocRefs flags a non-resolving
+    ref / is silent when all resolve / ignores glob+placeholder+ellipsis patterns / ignores output
+    destinations / ignores bare dirs + non-first-party prefixes / dedups / strips trailing punctuation; the
+    real repo raises NO repo-doc-staleness candidate; the README `--record traces/run.json` example does NOT
+    false-fire; and the mechanism WOULD catch a deleted ref (AGENTS.md's scripts/verify-integrity.ts pretended
+    gone is flagged) — proving it isn't vacuously disarmed.
+  validate: green (0 errors, 0 warnings) — all packs (NO content touched)
+  content_hash_changes: none   # NO content/ YAML edited
+  health: green (verify:integrity static + typecheck + ESLint + Prettier check + tests + every pack validate + watchtower coverage)
+  verify_integrity_drift: >
+    expected exit 0 — no protected file edited, no content hash moved, no traces/ HASH_PIN touched. The new
+    regression file is additive (the test-count floor only rises); src/afk/assessor.ts is additive (new
+    exported function + helper + candidate block, no existing logic changed). No .skip/.only/.todo/xit.
+regression_test: tests/regression/assessor_doc_staleness.test.ts
+closes_deferred:
+  - "a doc/staleness detector (logged since bug_0035)"  # bug_0038 deferred[2], re-logged bug_0039/0041/0042/0044 deferred
+deferred:
+  - >
+    The radar scans a curated CURRENT-system doc set (AGENTS.md, README.md, AI_AGENT_PROMPT.md, docs/** minus
+    ROADMAP.md). A future cycle could (a) extend it to detect stale REFERENCES IN CODE COMMENTS the same way,
+    or (b) add a complementary check for docs referencing retired CONCEPTS (the "§14 ceremony" the charter
+    retired) — a fuzzier, lower-precision signal best left to an LLM-judge, not this deterministic detector.
+  - >
+    clockwork_heist remains cosmetically open only on adjudicated-deliberate design-taste notes (the strongbox
+    shortcut bypasses the vault climax; the "time running short" copy over-promises a timeout) — not-a-defect
+    since bug_0022/0032/0040/0042/0043.
+  - >
+    cold_forge's "the cold keeps the sentinel weak / waiting won't make it worse" reassurance (stated in the
+    room, the inscription, and the spirit) reads to a fresh player as a tell for a re-kindling/timer mechanic
+    that doesn't exist; the lore already closes that door ("this forge-fire is long dead and will not kindle"),
+    so it is internally consistent and was NOT changed this cycle — a future cycle could trim the triple
+    reassurance if it already edits those rooms. Keep rotating the blind playtest seed/pack — sunken_barrow is
+    now the least-recently full-blind-quality-tested.
