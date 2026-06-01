@@ -1,0 +1,250 @@
+# The Cold Forge — a Stage 4 (Hero's-Quest) pack (spec §13, §14 gate).
+#
+# The game's SECOND RPG pack, authored to broaden the game beyond the lone
+# Sunken Barrow. It runs on the same deterministic core and the same gated RPG
+# mechanics, but deliberately covers ground the barrow does not and answers the
+# barrow's standing playtest critiques:
+#   - a TALKING NPC with CONDITIONAL dialogue (bug_0014): the lantern-spirit's
+#     counsel is one-shot (each topic retires after it is told) and MECHANICAL —
+#     hearing how the sentinel fails grants a one-time +2 attack blessing that
+#     genuinely eases the fight (no dead-payload rumor flags).
+#   - combat with REAL TEETH (the barrow's fight was judged "toothless"): the
+#     slag-sentinel hits hard enough to matter, yet the fight is provably winnable
+#     from base stats, and a fall is recoverable via an earlier save (§8.7).
+#   - an EXPLICIT goal stated in the opening room (the barrow's goal was implicit).
+# As in the barrow, the one fight is seeded turn-based combat and the one skill
+# check is a seeded might roll, so every encounter is replayable from its trace
+# (§8.5). The pack passes the full parser validator AND the RPG checks.
+
+meta:
+  id: cold_forge_v1
+  title: "The Cold Forge"
+  start_room: forge_steps
+  vars_init: { hp: 20, attack: 4, defense: 2, might: 3 }
+  flags_init: []
+  # Stage-3 scoring: points awarded once at each of the three beats that mark real
+  # progress — stilling the slag-sentinel that guards the deep forge (+15),
+  # levering the slag-choked grate aside with bar and might (+15), and lifting the
+  # Ember-Heart from its plinth (+20). Each award rides a milestone that only fires
+  # once (the sentinel dies once; the lever retires after success, cf. bug_0015;
+  # the ember chamber ends the game on entry), so the score cannot be farmed and
+  # the intended path reaches the full 50. The `score` var accrues via inc_var; the
+  # RPG validator folds the combat/skill-check awards into the SCORE_UNREACHABLE
+  # upper bound, so the declared max is genuinely reachable (cf. bug_0016).
+  max_score: 50
+
+rooms:
+  - id: forge_steps
+    name: "The Forge Steps"
+    description: >
+      A stair of soot-black stone drops into the mountain's root, toward a cold
+      red glow that is not quite firelight. You came down here for one thing: the
+      Ember-Heart, the last living coal of the old forge, said to lie at its
+      deepest hearth. The only way to it is down.
+    exits:
+      - { direction: down, to: outer_forge }
+
+  - id: outer_forge
+    name: "The Outer Forge"
+    description: >
+      A vaulted hall of dead anvils and silent bellows, the air gone to a grave
+      chill. A wrought inscription is set into one wall. By a cold trough lies a
+      stout iron pry-bar, and in a niche a single lantern still burns with a thin
+      blue flame that watches you. A passage runs north into deeper dark; the
+      steps climb back toward the surface.
+    objects: [inscription, pry_bar]
+    exits:
+      - { direction: up, to: forge_steps }
+      - { direction: north, to: bellows_walk }
+
+  - id: bellows_walk
+    name: "The Bellows Walk"
+    description: >
+      A long gallery of slack leather bellows and quenched tuyeres. Across the
+      only way east stands a man-high figure of fused slag and cinder — a forge
+      sentinel, cold now but grinding slowly to life as you enter. It blocks the
+      passage deeper in.
+    variants:
+      - when: [ { has_flag: sentinel_stilled } ]
+        text: >
+          A long gallery of slack leather bellows and quenched tuyeres. The slag
+          sentinel lies broken across the floor, its cinders dark and cooling, and
+          the passage east into the deep forge stands open.
+    exits:
+      - { direction: south, to: outer_forge }
+      - direction: east
+        to: forge_heart
+        conditions: [ { has_flag: sentinel_stilled } ]
+        locked_msg: "The slag sentinel grinds across the passage; you cannot pass while it stands."
+
+  - id: forge_heart
+    name: "The Forge Heart"
+    description: >
+      The deep hearth, vast as a chapel and just as cold. Its mouth is a great
+      grate of slag-choked iron, sealed by the cooling of ages — but its edge
+      carries a worn lip, made to be levered by bar and brawn. Beyond it, you can
+      feel the Ember-Heart's faint warmth.
+    variants:
+      - when: [ { quest_stage: { quest: forge, stage: grate_open } } ]
+        text: >
+          The deep hearth, vast as a chapel. The great slag grate has been levered
+          up off its lip and stands open, baring a low way down into the warmth at
+          the forge's very root.
+    objects: [stone_grate]
+    exits:
+      - { direction: west, to: bellows_walk }
+      - direction: down
+        to: ember_chamber
+        conditions: [ { quest_stage: { quest: forge, stage: grate_open } } ]
+        locked_msg: "The slag grate is sealed fast. It must be levered aside first."
+
+  - id: ember_chamber
+    name: "The Ember Chamber"
+    description: >
+      Below the grate, a small round chamber that breathes warmth at last. On a
+      plinth of unburnt white stone rests the Ember-Heart: a single coal that
+      glows as if newly drawn from the fire, and never dims.
+    objects: [ember_heart]
+    on_enter:
+      - add_journal: "You have reached the Ember-Heart."
+      - inc_var: { name: score, by: 20 }
+    exits:
+      - { direction: up, to: forge_heart }
+
+objects:
+  - id: inscription
+    name: "wrought inscription"
+    aliases: [inscription, wall, words, runes]
+    description: "Letters of inlaid brass, cold to the touch."
+    takeable: false
+    read_text: >
+      THE SENTINEL WAKES TO HEAT AND SLEEPS IN COLD. STRUCK TRUE IN THE CHILL IT
+      WILL NOT RISE AGAIN. THE HEART LIES BEHIND THE SLAG, AND ONLY IRON AND A
+      STRONG ARM WILL OPEN THE WAY.
+
+  - id: pry_bar
+    name: "iron pry-bar"
+    aliases: [bar, pry-bar, prybar, lever, iron]
+    description: "A stout iron bar the length of your arm, cold but sound — a lever, for an arm strong enough."
+    takeable: true
+
+  - id: stone_grate
+    name: "slag grate"
+    aliases: [grate, slag]
+    description: "A great hearth-grate welded shut by cooled slag, with a worn lip at its edge made for a lever."
+    takeable: false
+    interactions:
+      - verb: USE
+        item: pry_bar
+        target: stone_grate
+        # One-shot puzzle: once the grate is levered open the check retires, so the
+        # bar can never re-roll and narrate "the grate does not give" while the way
+        # down already stands open (the bug_0015 retire-after-success pattern).
+        conditions: [ { none_of: [ { quest_stage: { quest: forge, stage: grate_open } } ] } ]
+        skill_check:
+          skill: might
+          difficulty: 12
+          on_success:
+            - set_quest_stage: { quest: forge, stage: grate_open }
+            - inc_var: { name: score, by: 15 }
+            - narrate: "You set the bar to the lip and throw your whole weight on it — slag cracks, iron screams, and the grate heaves up off its seat. The way down is open."
+          on_failure:
+            - narrate: "The bar bites under the lip and your shoulders strain, but the slag holds and the grate will not lift. Set your feet and try again."
+
+  - id: ember_heart
+    name: "Ember-Heart"
+    aliases: [ember, heart, coal, relic]
+    description: "A single coal that glows with its own unfailing warmth."
+    takeable: true
+
+npcs:
+  - id: lantern_spirit
+    name: "lantern-spirit"
+    description: "A thin blue flame in an old lantern, with the watchful patience of something very old and very tired."
+    room: outer_forge
+    dialogue:
+      root: spirit_root
+      nodes:
+        - id: spirit_root
+          npc_text: >
+            The flame leans toward you. "A warm thing, come down into the cold," it
+            murmurs. "Few do. Ask, if you would — I have watched this forge die by
+            inches and I remember everything."
+          topics:
+            # Each info topic retires once told (gated on its own rumor flag), so
+            # the spirit never re-offers the same counsel and the +2 blessing can be
+            # claimed only once. The ungated "step away" keeps the node terminating
+            # (a gated-only node would be flagged DIALOGUE_NONTERMINATING, bug_0014).
+            - id: ask_sentinel
+              prompt: "Ask how to beat the slag sentinel."
+              conditions: [ { not_flag: heard_sentinel } ]
+              goto: spirit_sentinel
+            - id: ask_heart
+              prompt: "Ask where the Ember-Heart lies."
+              conditions: [ { not_flag: heard_heart } ]
+              goto: spirit_heart
+            - id: leave_spirit
+              prompt: "Step away from the lantern."
+              end: true
+        - id: spirit_sentinel
+          npc_text: >
+            "The sentinel? It is forge-born — it wakes to heat and slows in the
+            cold, and the hall is bitter cold now. Strike it hard and it will not
+            rise twice." The flame gutters toward you. "Here — take what warmth I
+            can spare; let it ride your arm."
+          effects:
+            - set_flag: heard_sentinel
+            - inc_var: { name: attack, by: 2 }
+            - add_journal: "The lantern-spirit's warmth settles into your arm — you feel you could strike harder now (+2 attack)."
+          topics:
+            - id: sentinel_back
+              prompt: "Nod, and ask something else."
+              goto: spirit_root
+        - id: spirit_heart
+          npc_text: >
+            "The Heart? Past the sentinel, in the deep hearth, sealed behind the
+            old slag grate. No flame will melt that grate cold — but its edge has a
+            lip, and a strong arm with a good iron bar will lever it up. There is
+            such a bar by the trough, if no thief has had it."
+          effects:
+            - set_flag: heard_heart
+            - add_journal: "The spirit says the Ember-Heart lies past the sentinel, behind a slag grate that must be levered open with an iron bar and main strength."
+          topics:
+            - id: heart_back
+              prompt: "Thank it, and ask something else."
+              goto: spirit_root
+
+enemies:
+  - id: slag_sentinel
+    name: "slag sentinel"
+    description: "A man-high figure of fused slag and dead cinder, grinding to cold life to bar the deep forge."
+    room: bellows_walk
+    hp: 16
+    attack: 4
+    defense: 2
+    defeat_flag: sentinel_stilled
+    death_ending: ending_fallen
+    on_defeat:
+      - add_journal: "The slag sentinel comes apart in cinders; the way east lies open."
+      - inc_var: { name: score, by: 15 }
+
+win_conditions:
+  - id: claim_ember
+    conditions: [ { visited: ember_chamber } ]
+    ending: ending_victory
+
+endings:
+  - id: ending_victory
+    title: "Keeper of the Ember"
+    text: >
+      You lift the Ember-Heart from its plinth and the cold of the dead forge
+      breaks before it. Warmth climbs the stair ahead of you, anvil by anvil, and
+      by the time you reach the surface the old forge is breathing again.
+    death: false
+  - id: ending_fallen
+    title: "Cold on the Cinders"
+    text: >
+      The sentinel's last blow drops you among the dead anvils, and the grave
+      chill closes over you. The forge keeps its cold, and its Heart, a while
+      longer.
+    death: true

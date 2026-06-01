@@ -21,12 +21,17 @@ describe("assess()", () => {
     expect(a.top!.score).toBe(a.candidates[0]!.score); // top is the highest-scored
   });
 
-  it("spans multiple improvement categories (not just one kind of work)", () => {
+  it("spans content and non-content work (not just one kind of work)", () => {
     const cats = new Set<Category>(a.candidates.map((c) => c.category));
-    // content_fix (coverage gaps exist), content_new (rpg is thin: 1<2), repo (no eslint).
+    // content_fix (CYOA coverage gaps + parser/rpg playtest reviews) and repo (no
+    // eslint) are the live levers. content_new is no longer raised because every
+    // mode now meets its breadth target (cold_forge, bug_0021, brought rpg to 2/2)
+    // — see "raises no content_new candidate …" below. The assessor must still span
+    // content work AND non-content (tooling) work, so it never monotonically grinds
+    // one kind of task.
     expect(cats.has("content_fix")).toBe(true);
-    expect(cats.has("content_new")).toBe(true);
-    expect(cats.size).toBeGreaterThanOrEqual(3);
+    expect(cats.has("repo")).toBe(true);
+    expect(cats.size).toBeGreaterThanOrEqual(2);
   });
 
   it("does NOT raise bot-coverage content_fix for parser/rpg puzzle packs", () => {
@@ -48,10 +53,19 @@ describe("assess()", () => {
     for (const r of reviews) expect(r.score).toBeLessThan(1); // ranked below real fixes + new content
   });
 
-  it("flags the thin rpg mode as a content_new candidate", () => {
-    const rpgNew = a.candidates.find((c) => c.category === "content_new" && c.target === "rpg");
-    expect(rpgNew).toBeTruthy();
-    expect(rpgNew!.title).toMatch(/rpg/i);
+  it("raises no content_new candidate once every mode meets its breadth target", () => {
+    // This cycle authored the game's 2nd RPG pack (The Cold Forge, bug_0021),
+    // bringing every mode to TARGET_PER_MODE (cyoa/parser/rpg = 2/2/2). With the
+    // game no longer thin in any mode, the assessor correctly STOPS recommending new
+    // packs — the success condition of the broadening work. (Previously this test
+    // asserted "flags the thin rpg mode as a content_new candidate"; that premise —
+    // rpg 1<2 — is now false. If an operator wants deeper breadth, raising
+    // TARGET_PER_MODE re-arms content_new; meeting the existing target legitimately
+    // disarms it.)
+    for (const mode of ["cyoa", "parser", "rpg"]) {
+      expect(a.packsByMode[mode]).toBeGreaterThanOrEqual(2);
+    }
+    expect(a.candidates.find((c) => c.category === "content_new")).toBeUndefined();
   });
 
   it("every candidate is well-formed (evidence + score + effort)", () => {
