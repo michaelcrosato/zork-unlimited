@@ -12,7 +12,11 @@ meta:
   title: "The Clockwork Heist"
   start: foyer
   flags_init: []
-  vars_init: {}
+  # `ticks` is the clock creeping toward the hour. Moving through the manor's
+  # upstairs rooms (kitchen, gallery, study) advances it; the ground-floor foyer
+  # is safe ground and does not. On the hour (ticks >= 6) the watchman the
+  # steward's ledger warns of begins his patrol of the gallery — see `landing`.
+  vars_init: { ticks: 0 }
 
 scenes:
   - id: foyer
@@ -45,6 +49,8 @@ scenes:
 
   - id: kitchen
     title: "The Cold Kitchen"
+    on_enter:
+      - inc_var: { name: ticks, by: 1 }
     text: >
       Copper pots hang in rows above a banked hearth. By the dumbwaiter, a servant
       has left a slim roll of lockpicks.
@@ -70,22 +76,53 @@ scenes:
 
   - id: landing
     title: "The Automaton Gallery"
+    on_enter:
+      - inc_var: { name: ticks, by: 1 }
     text: >
       A long gallery lined with frozen automata, their glass eyes following you. The
       vault door broods at the far end. A study stands ajar to one side.
+    # The gallery is where the steward's ledger says a guard walks "on the hour".
+    # As ticks climb the prose builds the deadline (first match wins, so the
+    # higher threshold is listed first).
+    variants:
+      - when: [{ var_gte: { name: ticks, value: 6 } }]
+        text: >
+          A long gallery lined with frozen automata, their glass eyes following you.
+          The vault door broods at the far end — but a watchman's lantern now sweeps
+          the gallery, the hourly patrol the steward's ledger warned of. The long
+          crossing to the vault runs right under his beam. The study still stands
+          ajar to one side, and the stair drops safely back to the foyer.
+      - when: [{ var_gte: { name: ticks, value: 4 } }]
+        text: >
+          A long gallery lined with frozen automata, their glass eyes following you.
+          The vault door broods at the far end. Somewhere a great mechanism grinds
+          toward the hour, and you sense your time in the manor is running short. A
+          study stands ajar to one side.
     choices:
       - id: enter_study
         text: "Step into the study."
         next: study
       - id: approach_vault
-        text: "Approach the vault door."
+        # Safe crossing: before the hour (ticks <= 5), OR you read the ledger and
+        # know the watchman's rounds — the payoff for the study clue.
+        text: "Cross the gallery to the vault door."
+        conditions: [{ any_of: [{ var_lte: { name: ticks, value: 5 } }, { has_flag: read_ledger }] }]
         next: vault_door
+      - id: cross_to_vault_blind
+        # On the hour and you don't know his rounds: crossing is an open gamble,
+        # and the prose has already shown you the patrol. An informed risk, not a
+        # gotcha — the safe study/foyer exits remain.
+        text: "Chance the long crossing to the vault while the guard patrols."
+        conditions: [{ var_gte: { name: ticks, value: 6 } }, { not_flag: read_ledger }]
+        next: ending_patrol
       - id: back_down
         text: "Go back down to the foyer."
         next: foyer
 
   - id: study
     title: "The Steward's Study"
+    on_enter:
+      - inc_var: { name: ticks, by: 1 }
     text: >
       Ledgers, a cold lamp, and a brass wall-plate engraved: "The vault yields only
       to a steady hand — never to force."
@@ -95,7 +132,7 @@ scenes:
         conditions: [{ not_flag: read_ledger }]
         effects:
           - set_flag: read_ledger
-          - add_journal: "The ledger notes a guard who walks the gallery on the hour."
+          - add_journal: "The ledger notes a guard who walks the gallery on the hour. Now that you know his rounds, you could time a crossing he'd never catch."
         next: study
       - id: leave_study
         text: "Return to the gallery."
@@ -185,6 +222,14 @@ endings:
     text: >
       The alarm bell brings the house awake. Lanterns, shouts, the gallery's
       automata grinding to life around you. There is nowhere in the manor to run.
+  - id: ending_patrol
+    title: "Caught on the Hour"
+    text: >
+      Halfway across the gallery the watchman's lantern swings round and pins you
+      against the automata. "On the hour, every hour," he says, almost kindly, as
+      his shout brings the sleeping house awake. The steward's own ledger kept his
+      rounds — if only you had stopped to read it. The cell is cold, and somewhere
+      the great clock keeps ticking.
   - id: ending_truth
     title: "The Truth"
     text: >
