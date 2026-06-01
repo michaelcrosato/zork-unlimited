@@ -1,0 +1,68 @@
+bug_id: bug_0049
+pack_id: n/a                       # docs/process fix — no content pack edited
+seed: 163                         # this cycle's mandated clockwork blind-playtest seed
+type: doc_fix                     # canonical current-process doc contradicted the charter; no engine/validator/content/test-pin change
+evidence:
+  source: blind_playtest + doc audit
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-01T14-16-36-176Z/playtest.md   # clockwork_heist (mandated target), seed 163 — 9th independent blind pass
+  mandated_result: >
+    The mandated blind playtest (clockwork_heist, seed 163, fresh general-purpose subagent, MCP-only,
+    no source access) reached ending_truth / ending_rich / ending_caught across three runs; clarity
+    5/5, enjoyment 4/5; ZERO rejected actions, no loops, no soft-locks, no stale text. Its two §4
+    notes (the narrative-only "time running short" pressure; the honest-but-non-tactical dumbwaiter)
+    are the long-adjudicated-DELIBERATE escapable-deadline invariant (bug_0019/0040/0042/0043) and the
+    intended honest framing (bug_0046). NO new actionable content defect — clockwork is pristine on its
+    9th independent blind pass (seeds 101/314/91/211/103/271/137/113/163).
+  rotation_justification: >
+    Per blind_playtest_protocol.md ("you MAY pick a different candidate if your judgement and the
+    playtest say it's higher value") and AGENTS.md, with the mandated target verified clean the
+    highest-value lever is the long-logged bug_0045 deferred[a] cross-category candidate — docs citing
+    the RETIRED §14 ceremony. A targeted doc audit found one CURRENT-PROCESS doc still instructing it.
+  finding: >
+    docs/blind_playtest_protocol.md (the canonical protocol the AFK loop runs EVERY cycle and wires
+    into the agent prompt via src/ai-loop.ts) carried the pre-charter triage rule at step 4:
+    "`engine_rule` / `validator` / schema → **gated** (§14): propose only; a human reviews. Do not
+    silently change engine rules in an AFK cycle." This directly contradicts the trust-but-verify
+    charter (AGENTS.md: "full authority ... no human-approval gate and no §14 ceremony"; the live
+    cycle prompt likewise says "new mechanics no longer need a §14 ceremony"). A fresh agent following
+    the protocol would REFUSE the very engine/validator fixes the charter grants — a stale doc actively
+    steering behaviour the wrong way, not a harmless history note.
+root_cause: >
+  The §14 human-approval gate was retired when the project moved to "trust, but verify" (AGENTS.md,
+  docs/afk_loop.md, docs/stage4_rpg_gate.md all updated to say the ceremony is GONE), but the blind-
+  playtest protocol's triage step was never updated and kept routing engine_rule/validator/schema
+  findings to a human gate that no longer exists. Same class as bug_0045 (doc rot), but a RETIRED
+  CONCEPT instructed as live rather than a stale FILE reference — the deterministic file-ref radar
+  (bug_0045) does not catch it, so it is locked here with a targeted phrase-level coherence guard.
+improvement:
+  layer: doc
+  files:
+    - docs/blind_playtest_protocol.md: >
+        Step-4 triage rule for engine_rule/validator/schema rewritten to match AGENTS.md: "change them
+        freely under trust, but verify (AGENTS.md): full authority, no human-approval gate, no §14
+        ceremony. The automated verification is the bar — keep `npm run health` green and add a
+        regression test for the new behaviour. Don't route around the verifier." The content/hint/
+        quest-structure bullet and the re-validate/replay line are unchanged.
+verification:
+  - npm run health                                                 # exit 0 (verify:integrity static + typecheck + ESLint + Prettier + tests + every pack validate + watchtower coverage)
+  - tests/regression/docs_trust_but_verify_coherence.test.ts       # 9 cases (below), all green
+  - "no pack edited: every content_hash unchanged; no protected file or HASH_PIN file touched"
+locked_by:
+  - tests/regression/docs_trust_but_verify_coherence.test.ts
+notes:
+  scope: >
+    ONLY current-process docs a fresh agent follows are guarded (AGENTS.md, docs/blind_playtest_protocol.md,
+    docs/afk_loop.md). README's "went through the §14 gate" (history), docs/stage4_rpg_gate.md (records the
+    retired ceremony), docs/ROADMAP.md and ADVENTUREFORGE_BUILD_SPEC.md (forward-looking spec/plan), and the
+    historical AI_LOOP_STATE.md are deliberately OUT of scope — they legitimately RECORD or NEGATE the gate
+    and the guard never flags negations ("no §14 ceremony") or past-tense history.
+  predicate: >
+    instructsRetiredGateAsLive(docText) returns only matches of imperative gate phrasing — "gated (§14)",
+    "propose only; a human reviews", "Do not silently change engine rules" — so it cannot false-fire on the
+    charter docs' negations or on historical records. A "mechanism live" test re-injects the stale line into
+    the real protocol text and asserts it is flagged (the guard is not vacuous).
+  verifier_integrity: >
+    No content pack, protected source file, or HASH_PIN file was touched; no content hash moved; no
+    re-pin; no override used. Only a doc + a new regression test changed (test count goes UP).
+  closes: bug_0045 deferred next-focus (a) — "docs referencing RETIRED CONCEPTS (e.g. the §14 ceremony)".

@@ -39,8 +39,10 @@ precedes "pick one fix" — its findings are a primary input to the fix.
      `mcp__adventureforge__apply_content_patch` with a `ContentPatchProposal`
      (deterministic, whitelisted, re-validated) or a direct YAML edit. Never let
      the model edit files free-hand without re-validation.
-   - `engine_rule` / `validator` / schema → **gated** (§14): propose only; a human
-     reviews. Do not silently change engine rules in an AFK cycle.
+   - `engine_rule` / `validator` / schema → change them **freely under trust, but
+     verify** (`AGENTS.md`): full authority, no human-approval gate, no §14 ceremony.
+     The automated verification is the bar — keep `npm run health` green and add a
+     regression test for the new behaviour. Don't route around the verifier.
    - Re-run `validate_*` until green and replay the affected route.
 
 5. **Lock the fix (§15).** Write/refresh a bug artifact in `traces/bugs/` and add a
