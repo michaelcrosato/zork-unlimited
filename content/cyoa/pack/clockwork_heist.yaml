@@ -223,6 +223,33 @@ scenes:
       Stacked gold gleams on iron shelves. Apart from it all, on a velvet cushion,
       lies a single sealed letter addressed to no one — laid out in plain sight, as
       though its writer meant whoever cracked the vault to find it here among the gold.
+    # The loot room is the one beat the gold route used to reach in clock-silence — a
+    # blind playtester (seed 91) flagged that the marquee deadline "never bites" the
+    # player who beelines for the gold, since the watchman only walks the gallery and
+    # an efficient thief is in and out before the hour. So the room itself now feels
+    # the clock the rest of the manor drums up: the fast thief is warned to grab and
+    # go before the chime, and the careful ledger-reader (the only player who can be
+    # here at/after the hour — see `landing`) feels the watchman patrolling the only
+    # way out. Higher threshold first (first match wins), as elsewhere. Reactive text
+    # only: the gold/letter framing and every choice/ending are unchanged (bug_0043).
+    variants:
+      - when: [{ var_gte: { name: ticks, value: 4 } }]
+        text: >
+          Stacked gold gleams on iron shelves. Apart from it all, on a velvet cushion,
+          lies a single sealed letter addressed to no one — laid out in plain sight, as
+          though its writer meant whoever cracked the vault to find it here among the
+          gold. Beyond the door the watchman's tread passes and returns on his rounds;
+          you came in behind his lantern, and the ledger swears you can go back out the
+          same way — but only while his rounds are still fresh in your head. Whatever
+          you mean to carry off, choose it now.
+      - when: [{ var_gte: { name: ticks, value: 2 } }]
+        text: >
+          Stacked gold gleams on iron shelves. Apart from it all, on a velvet cushion,
+          lies a single sealed letter addressed to no one — laid out in plain sight, as
+          though its writer meant whoever cracked the vault to find it here among the
+          gold. Past the gallery the great clock grinds toward the hour, and you know
+          what the hour wakes: fill your hands and be gone before the chime sets the
+          watchman walking.
     choices:
       - id: grab_gold
         text: "Fill your pockets with gold and run."
