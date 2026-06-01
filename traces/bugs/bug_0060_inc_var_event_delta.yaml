@@ -1,0 +1,61 @@
+bug_id: bug_0060
+pack_id: engine                   # cross-cutting engine fix; surfaced via sealed_crypt_v1, applies to every scored pack
+seed: 13                          # this cycle's rotated blind-playtest seed (sealed_crypt)
+type: engine                      # additive, backward-compatible event-payload field; no content/flag/score change
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-01T16-49-53-395Z/playtest.md   # clockwork_heist (assessor rank-1 mandated) — verified-clean, see below
+  mandated_result: >
+    The mandated blind playtest (clockwork_heist, assessor rank-1, seed 23) reached FIVE endings
+    (Rich, Caught, Caught-on-the-Hour, Truth ×2 reactive epilogues), clarity 5/5 / enjoyment 5/5, zero
+    rejected actions / loops / soft-locks — another independent clean pass. Its only note (the dumbwaiter
+    offers no mechanical edge over the stair) is long-adjudicated-DELIBERATE design (bug_0046, the honest
+    reframing of an over-promising route). No actionable clockwork defect; verified-clean.
+  rotated_result: >
+    Per blind_playtest_protocol.md's "rotate the seed and rotate the pack" and "you MAY pick a higher-
+    value candidate," ran a fresh blind pass on The Sealed Crypt (parser, seed 13) — the least-recently-
+    exercised pack (untouched by the bug_0055-0059 sweep) and the assessor's rank-4 candidate. It
+    surfaced the cycle's one concrete, cross-cutting engine finding (below).
+  finding: >
+    Sealed Crypt (report §5, rooms graveyard/old_well/crypt): the score state_change events were
+    ambiguous. The tester solved the crypt twice and saw the IDENTICAL rope-use milestone (USE rope on
+    old_well, a fixed +10) report `value:15` in the run that had read the +5 headstone first and
+    `value:10` in the run that skipped it; the gate likewise showed value:35 vs value:30. The event's
+    `value` is the var's RUNNING TOTAL, and there was no field for the increment, so "points just earned"
+    could not be recovered from the event alone — "A UI that read `value` as 'points just earned' would
+    mislead." Verdict otherwise bug-free and satisfying; this is the only engine-level item flagged.
+root_cause: >
+  src/core/effects.ts emitted inc_var/dec_var state_change events with only `value: next` (the resulting
+  cumulative total). set_var also uses `value`, but there it IS the whole value being set, so the field's
+  meaning silently differs across effects: for set_var `value` is the new value, for inc/dec it is the
+  post-increment total with the increment itself unrecorded. Any consumer that wants the delta (a UI
+  surfacing "+10", a transcript narrator, the AI experience log) had to diff against a prior total it may
+  not have retained — and at two different running totals the same award looks like two different events.
+improvement:
+  layer: engine
+  engine:
+    - src/core/effects.ts: >
+        inc_var and dec_var state_change events now carry a signed `delta` beside `value`: `+by` for
+        inc_var, `-by` for dec_var. `value` is UNCHANGED (still the resulting total, consistent with
+        set_var's "the var's new value"), so the change is purely additive. The delta makes "the change
+        just applied" readable directly off the event regardless of the running total. set_var is left
+        as-is (its `value` is already the complete new value; no delta is meaningful).
+  why_additive: >
+    GameEvent's `state_change` variant is `{ type, effect, [k]: unknown }` — extra keys are already part
+    of the contract, so adding `delta` needs no type change and breaks no consumer. The observation's
+    `score` reads state.vars (not events), so player-facing score is untouched; only the event payload
+    gains information.
+verification:
+  - npx vitest run tests/regression/score_event_delta.test.ts tests/unit/effects.test.ts tests/regression/sealed_crypt_scoring.test.ts tests/regression/rpg_scoring.test.ts   # 21 passed
+  - validate_pack content/parser/pack/sealed_crypt.yaml            # ok:true, findings:[] (no content change; pack untouched)
+  - npm run health                                                 # exit 0 (verify:integrity static + typecheck + ESLint + Prettier + tests + every pack validate + watchtower coverage + mandated playtest record present)
+locked_by:
+  - tests/regression/score_event_delta.test.ts   # (1) inc_var emits delta:+by, value:total; (2) dec_var emits delta:-by; (3) the playtester's exact scenario — same +10 at totals 5 and 0 yields same delta (10), different value (15 vs 10); (4) set_var unchanged (value, no delta); (5) end-to-end through Sealed Crypt: rope-use milestone reports delta:10 with or without the headstone bonus
+notes:
+  no_content_change: >
+    No pack, flag, item, exit, gating, score total, or reachable ending changed. sealed_crypt is the
+    witness, not the patient — its content hash is unaffected and no hash pin is touched.
+  scope: >
+    The fix benefits every scored/var-tracking pack (alchemists_tower, sunken_barrow, sealed_crypt, the
+    RPG packs) and any future UI/narration that wants to announce a change without diffing totals.

@@ -108,14 +108,34 @@ export function applyEffect(
     const next = (state.vars[effect.inc_var.name] ?? 0) + effect.inc_var.by;
     return {
       state: { ...state, vars: { ...state.vars, [effect.inc_var.name]: next } },
-      event: { type: "state_change", effect: "inc_var", name: effect.inc_var.name, value: next },
+      // `value` is the var's resulting total (consistent with set_var's "new value"),
+      // and `delta` is the signed change just applied (+by). Without delta a consumer
+      // can't recover "points just earned" from the event: a blind playtester
+      // (sealed_crypt, seed 13) saw the identical rope-use score event report
+      // value:15 in one run and value:10 in another and could not tell the +10
+      // increment from the running total (bug_0060).
+      event: {
+        type: "state_change",
+        effect: "inc_var",
+        name: effect.inc_var.name,
+        value: next,
+        delta: effect.inc_var.by,
+      },
     };
   }
   if ("dec_var" in effect) {
     const next = (state.vars[effect.dec_var.name] ?? 0) - effect.dec_var.by;
     return {
       state: { ...state, vars: { ...state.vars, [effect.dec_var.name]: next } },
-      event: { type: "state_change", effect: "dec_var", name: effect.dec_var.name, value: next },
+      // delta is the signed change (-by), so a consumer reads the cost directly off
+      // the event instead of diffing the running total (bug_0060).
+      event: {
+        type: "state_change",
+        effect: "dec_var",
+        name: effect.dec_var.name,
+        value: next,
+        delta: -effect.dec_var.by,
+      },
     };
   }
   if ("add_journal" in effect) {
