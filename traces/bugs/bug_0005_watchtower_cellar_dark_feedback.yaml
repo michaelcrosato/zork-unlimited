@@ -1,0 +1,42 @@
+bug_id: bug_0005
+pack_id: watchtower_road_v1
+seed: 31
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  report: ai-runs/2026-06-01T05-06-44-014Z/playtest.md
+  finding: >
+    A fresh, MCP-only blind playtester's top friction point (report §4): the
+    cellar door is silently gated when the player has no lantern. The Ruined
+    Watchtower scene explicitly invites the player to "Circle around to the
+    cellar door," and a curious first-timer plausibly does so BEFORE looting the
+    cart for the lantern. On arrival the only option is "Step back from the door"
+    — the clearly-described, descendable stair offers no forward action and no
+    in-fiction reason why, so the block reads as a dead end rather than a puzzle.
+failure:
+  type: silent_conditional_gate
+  where: [scene:cellar_door]
+  description: >
+    descend_cellar is gated on a lit lantern and light_lantern is gated on
+    holding the lantern, so a lantern-less player saw neither — leaving only
+    cellar_back. The legal-action set was correct (no soft-lock), but the
+    experience was illegible: the game removed the forward path without telling
+    the player why or what to do about it.
+fix:
+  layer: content
+  summary: >
+    Added a peer_into_dark choice to cellar_door, shown only when the player
+    holds no lantern (conditions: not_item lantern). It emits a narrate event —
+    "The stair drops into pitch black... You'd break your neck going down blind,
+    so you back up the steps — better find a light first." — and routes the
+    player OUT to ruined_watchtower (next: ruined_watchtower). It deliberately
+    does NOT loop back to cellar_door: a same-scene step with no state change is
+    a provable no-progress self-loop that the playtester's sound loop-detector
+    (agents/playtester.ts) flags, so the nudge must make progress. Backing the
+    player out to the hub also naturally steers them toward the cart/lantern.
+    This turns the silent gate into a legible nudge that reinforces the
+    lantern->cellar chain (bug_0003) WITHOUT naming where the lantern is,
+    preserving the puzzle. The choice disappears the moment the player carries a
+    lantern (when light_lantern takes over).
+regression_test: tests/regression/watchtower_cellar_dark_feedback.test.ts
+content_hash_after: 7f322e4cdbf1df48460c76df56fb8bdfd379fc1b755d804fb390542a3b9e71a6

@@ -144,6 +144,11 @@ scenes:
         text: "Descend into the cellar."
         conditions: [ { all_of: [ { has_flag: lantern_lit }, { not_item: ledger } ] } ]
         next: cellar
+      - id: peer_into_dark
+        text: "Lean in and look down the stair."
+        conditions: [ { not_item: lantern } ]
+        effects: [ { narrate: "The stair drops into pitch black; cold air and the smell of old pitch rise from below. You'd break your neck going down blind, so you back up the steps — better find a light first." } ]
+        next: ruined_watchtower
       - id: cellar_back
         text: "Step back from the door."
         next: ruined_watchtower
