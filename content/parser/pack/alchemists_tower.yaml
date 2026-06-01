@@ -166,11 +166,28 @@ rooms:
 
   - id: spire
     name: "The Spire"
+    # Reactive prose (bug_0012 shape). The base description must NOT assume the player
+    # is carrying the antidote: the laboratory→spire stair is unconditional, so a player
+    # can arrive here holding the black phial, the raw herb, or nothing at all. A blind
+    # MCP playtester (seed 31) climbed to the spire carrying only the black phial and was
+    # still told "The pale antidote in your hand is no use until you give it to her" —
+    # prose asserting an item they did not hold. The "give it to her" prompt is now gated
+    # on actually holding the antidote; the base text states the goal without claiming the
+    # cure is in hand, and names no recipe (a player may have skipped the optional library
+    # — the bug_0052 leak lesson). Text-only: no flag/item/score/exit/gating/ending change;
+    # `visited: spire` still fires on entry, so the win condition is untouched (bug_0065).
     description: >
       The tower's top room. On a low pallet beneath the wind-moaning broken glass
       lies the tower's old master, fevered and failing — the patient the whole long
-      climb was for. The pale antidote in your hand is no use until you give it to
-      her. The laboratory is back down.
+      climb was for. Whatever medicine might break her fever, you are not carrying
+      it yet. The laboratory is back down.
+    variants:
+      - when: [{ has_item: antidote }]
+        text: >
+          The tower's top room. On a low pallet beneath the wind-moaning broken glass
+          lies the tower's old master, fevered and failing — the patient the whole long
+          climb was for. The pale antidote in your hand is no use until you give it to
+          her. The laboratory is back down.
     objects: [master]
     exits:
       - { direction: down, to: laboratory }
@@ -336,10 +353,22 @@ objects:
     # (the win flag, checked post-action by the engine's checkWin hook) and consumes
     # the antidote — you poured it into her — so the win no longer needs `has_item:
     # antidote`; it turns on the act, not on merely carrying the vial upstairs.
+    # Reactive examine, same fix as the spire room (bug_0065): the base text must not
+    # claim "the pale vial in your hand", since the master can be examined by a player
+    # who climbed here without the antidote. The vial-in-hand beat is gated on holding
+    # the antidote; otherwise she searches you for a cure you have not brought. After the
+    # cure is administered the antidote is consumed and the game ends, so only these two
+    # states are observable. Examine-only: no flag/item/score/interaction/gating change.
     description: >
       The tower's old master, gaunt and grey on her pallet, the long sickness
-      burning the last colour from her face. She is far too weak to speak — but her
-      eyes find the pale vial in your hand and hold on it.
+      burning the last colour from her face. She is far too weak to speak, and her
+      fever-bright eyes search you for the cure you have not yet brought her.
+    variants:
+      - when: [{ has_item: antidote }]
+        text: >
+          The tower's old master, gaunt and grey on her pallet, the long sickness
+          burning the last colour from her face. She is far too weak to speak — but her
+          eyes find the pale vial in your hand and hold on it.
     interactions:
       - verb: USE
         item: antidote
