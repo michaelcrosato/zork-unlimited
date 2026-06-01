@@ -37,6 +37,16 @@ you must not do is weaken, skip, or delete a check *just to make a red change pa
 If a change can't pass verification, fix the change, not the check. That's the whole
 deal: maximum freedom in design, honesty in verification.
 
+This principle is **enforced**, not just stated — `scripts/verify-integrity.ts`
+(`npm run verify:integrity`, part of `health` and CI) fails if a protected
+verification asset is missing, a test is disabled (`.skip`/`.only`/`.todo`/`xit`),
+or the test count drops below its floor. The autonomous loop additionally runs it in
+`--against <pre-cycle ref>` mode and **refuses-and-surfaces** (halts, leaves work
+uncommitted for review) if a cycle modified a protected asset or silently re-pinned
+a committed hash, unless `AI_LOOP_ALLOW_VERIFIER_EDITS=1` acknowledges a deliberate
+edit. It catches mechanical tampering, not semantic weakening — keep the deal
+honestly.
+
 ## Standing guidance
 
 - Commit in clear increments; land work on `main` (owner preference).

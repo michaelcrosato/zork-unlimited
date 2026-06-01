@@ -19,6 +19,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Verifier integrity (don't route around the verifier)
+        run: npm run verify:integrity
       - name: Typecheck
         run: npm run lint
       - name: Tests (unit + property + determinism)

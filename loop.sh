@@ -54,13 +54,20 @@ safe_commit_if_enabled() {
 }
 
 run_cycle() {
-  local baseline
+  local baseline start_ref
   baseline="$(git status --porcelain -- "${status_filter[@]}")"
+  start_ref="$(git rev-parse HEAD)"
   npm run ai:loop
   run_codex_if_available
-  # Trust, but verify: health is a BLOCKING gate. With `set -e` a failing health
-  # check aborts the cycle BEFORE any commit — the loop never commits red work.
+  # Trust, but verify: health is a BLOCKING gate (and it runs the static
+  # verifier-integrity check). With `set -e` a failing check aborts the cycle
+  # BEFORE any commit — the loop never commits red work.
   npm run health
+  # Don't route around the verifier: refuse-and-surface (halt the loop, leave the
+  # work uncommitted for review) if THIS cycle deleted/disabled tests, modified a
+  # protected verification asset, or silently re-pinned a committed hash. A
+  # deliberate verifier edit is acknowledged with AI_LOOP_ALLOW_VERIFIER_EDITS=1.
+  npm run verify:integrity -- --against "$start_ref"
   safe_commit_if_enabled "$baseline"
 
   if [[ "${AI_LOOP_PUSH:-0}" == "1" ]]; then

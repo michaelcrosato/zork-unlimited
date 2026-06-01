@@ -76,3 +76,10 @@
   3. "broken seal" is referenced (press_bluff text + ending_truth) but no action ever opens the letter — dangling mechanic / continuity slip.
   4. Hermit tower-lore (hermit_about_tower) sets no flag/journal — optional flavor with no mechanical hook.
   5. Cosmetic: search_rubble / search_cache remain offered after the cart/cache are emptied (re-entry shows an empty room).
+
+## Cycle 2026-06-01c — verifier-integrity guard (trust-but-verify keystone)
+
+- Reviewed sibling AFK loops (zork-unlimited-2: bash outer/inner cycle, self-healing autopilot, multi-persona, seed+hash determinism, but unconditional `git add .`; zork-unlimited-3: evidence-driven prompts, MCP evidence, health gate, hardcoded true-ending canary, post-agent verify-before-commit/push) and web-researched 2025–26 AFK techniques (Ralph loop, four-stage gather→act→verify→repeat, Stop-hook gates, EvilGenie reward-hacking + "forbid touching the verifier", externalized state, iteration/cost caps, worktree-per-task).
+- Decision (aligned to our trust-but-verify philosophy): implemented the research's #2 technique — enforce "don't route around the verifier" — which neither sibling has. scripts/verify-integrity.ts: static mode (protected assets present, no .skip/.only/.todo/xit, test-count floor 120) wired into health + CI + npm test; drift mode (--against <ref>) wired into loop.sh as refuse-and-surface (halt + leave uncommitted for review) on protected-file edits or silent hash re-pins, overridable via AI_LOOP_ALLOW_VERIFIER_EDITS=1.
+- Honest limit: catches mechanical tampering (skip/delete/empty/re-pin), not semantic weakening (needs LLM-judge, future). 195 tests + health green.
+- Next AFK candidates from the research, ranked: (1) Milestone 2 multi-mode loop generalization (rotate packs/modes — M1 unblocked it); (2) fresh-context adversarial /code-review of the diff before "done"; (3) iteration/budget + cost caps; (4) worktree-per-task isolation.
