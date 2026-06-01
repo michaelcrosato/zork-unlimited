@@ -61,7 +61,10 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // bug_0006 — the hermit's letter reveal now sets seal_broken + journals and
     // can't re-break an opened seal, and ending_truth no longer presumes the
     // "broken seal" / "oil in the cellar" the player may not have produced
-    // (was 7f322e4c…). Any *unintended* change to compilation trips this.
-    expect(loaded.compiled.contentHash).toBe("46ac614226e8b6e478ea4b3bfeedb92a1cb693646301ec5bae8cec3be3c956d3");
+    // (was 7f322e4c…); and bug_0007 — the hidden_cache no longer re-renders the
+    // "ledger lies forgotten" text after the ledger is taken (take_ledger now
+    // exits to the cellar) and its description no longer presumes the player saw
+    // the letter (was 46ac6142…). Any *unintended* change to compilation trips this.
+    expect(loaded.compiled.contentHash).toBe("7e3392b6bbf675855db289b57fceea6fc4dc878b9cd7305ae6276748598347bb");
   });
 });

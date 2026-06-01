@@ -34,7 +34,7 @@ const optionIds = (s: ReturnType<typeof play>): string[] => buildObservation(ind
 const LEDGER_ROUTE = [
   "inspect_ground", "go_east", "approach_base", "search_rubble", "take_lantern",
   "leave_cart", "leave_base", "circle_cellar", "light_lantern", "descend_cellar",
-  "search_cache", "take_ledger", "leave_cache", "climb_out", "cellar_back",
+  "search_cache", "take_ledger", "climb_out", "cellar_back",
   "approach_base", "climb_stairs", "continue_up", "light_beacon", "watch_for_help",
   "expose_the_plot",
 ].map(choose);
@@ -88,7 +88,7 @@ describe("bug_0002 deferred — structural fixes (orbit + dead-end confrontation
     const ledgerPath = [
       "inspect_ground", "go_east", "approach_base", "search_rubble", "take_lantern", "leave_cart",
       "leave_base", "circle_cellar", "light_lantern", "descend_cellar", "search_cache", "take_ledger",
-      "leave_cache", "climb_out", "cellar_back", "approach_base", "climb_stairs", "continue_up",
+      "climb_out", "cellar_back", "approach_base", "climb_stairs", "continue_up",
       "light_beacon", "watch_for_help",
     ];
     const s = play(ledgerPath);

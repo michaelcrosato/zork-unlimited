@@ -179,8 +179,8 @@ scenes:
     title: "The Hidden Cache"
     text: >
       A smuggler's hollow, hastily emptied — you've found their hidden cache. A
-      ledger lies forgotten in the dust: names, dates, and a seal you recognize
-      from the letter.
+      ledger lies forgotten in the dust, its pages crammed with names and dates,
+      a wax seal pressed into the cover.
     choices:
       - id: take_ledger
         text: "Read and pocket the ledger."
@@ -189,7 +189,7 @@ scenes:
           - add_item: ledger
           - set_flag: learned_truth
           - add_journal: "The ledger names everyone involved. You pocket it."
-        next: hidden_cache
+        next: cellar
       - id: leave_cache
         text: "Slip back out."
         next: cellar

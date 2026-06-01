@@ -68,7 +68,6 @@ describe("bug_0003 — watchtower cellar discoverability", () => {
       "descend_cellar",
       "search_cache",
       "take_ledger",
-      "leave_cache",
     ]);
     expect(s.current).toBe("cellar");
     expect(s.inventory).toContain("ledger");
@@ -88,7 +87,6 @@ describe("bug_0003 — watchtower cellar discoverability", () => {
       "descend_cellar",
       "search_cache",
       "take_ledger",
-      "leave_cache",
       "climb_out",
     ]);
     expect(s.current).toBe("cellar_door");
