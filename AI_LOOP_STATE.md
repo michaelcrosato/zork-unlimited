@@ -83,3 +83,18 @@
 - Decision (aligned to our trust-but-verify philosophy): implemented the research's #2 technique — enforce "don't route around the verifier" — which neither sibling has. scripts/verify-integrity.ts: static mode (protected assets present, no .skip/.only/.todo/xit, test-count floor 120) wired into health + CI + npm test; drift mode (--against <ref>) wired into loop.sh as refuse-and-surface (halt + leave uncommitted for review) on protected-file edits or silent hash re-pins, overridable via AI_LOOP_ALLOW_VERIFIER_EDITS=1.
 - Honest limit: catches mechanical tampering (skip/delete/empty/re-pin), not semantic weakening (needs LLM-judge, future). 195 tests + health green.
 - Next AFK candidates from the research, ranked: (1) Milestone 2 multi-mode loop generalization (rotate packs/modes — M1 unblocked it); (2) fresh-context adversarial /code-review of the diff before "done"; (3) iteration/budget + cost caps; (4) worktree-per-task isolation.
+## Cycle 2026-06-01d — best AFK loop implemented
+
+- Built the loop's brain: src/afk/assessor.ts ranks the next-best improvement across content_fix / content_new / engine / repo from real signals (per-pack coverage playtests, validator warnings, mode thinness, engine TODOs, tooling gaps). `npm run assess` prints the backlog; deterministic + unit-tested.
+- Rewrote src/ai-loop.ts to drive off the assessor (dropped the brittle hardcoded watchtower route), pick a playtest target, emit a cycle prompt that MANDATES a blind LLM playtest each cycle, and record artifacts under ai-runs/.
+- loop.sh enforces the mandate: require_playtest_record refuses to commit a cycle with no blind-playtest report; health + verify:integrity drift gate already block red/verifier-tampering work. Full doc: docs/afk_loop.md.
+- A separate transient run produced the bug_0003 cellar-discoverability fix on watchtower concurrently (see the cycle note below); I kept my AFK-loop commit scoped to its own files and reconciled bug_0003 separately. Its re-pin (watchtower hash → c49b4424…, rpg_validator.test.ts) is deliberate and surfaced, not laundered.
+
+## AFK Cycle 2026-06-01 — cellar discoverability (bug_0003)
+- Target: content/cyoa/pack/watchtower_road.yaml, seed 13.
+- Blind subagent attempt: codex exec could not initialize its app-server client in this sandbox; claude -p was installed but not logged in. No prose-only substitute was used.
+- MCP evidence used: createToolApi run_playtest coverage, 100 runs. Before fix: cellar_door visited, but cellar/hidden_cache unvisited and samples looped tower_base ↔ abandoned_cart after the cart was exhausted.
+- Fix: lantern pickup journal now points to the cellar stair; abandoned_cart offers carry_lantern_to_cellar; search_rubble hides once both cart items are carried; search_cache/descend_cellar hide after ledger pickup so the cellar route exits cleanly.
+- Result: coverage 100/100 ended; endings {"ending_captured":1,"ending_escape":1,"ending_truth":98}; cellar and hidden_cache now visited; no suspicious samples.
+- Locked by traces/bugs/bug_0003_watchtower_cellar_discoverability.yaml and tests/regression/watchtower_cellar_discoverability.test.ts. Content hash now c49b4424ce8ed334324c714ed0d02de9d7260e7b332481b2050b33aec4b51e91.
+- Next weak spots: hermit conversation still unvisited by coverage; confront_smuggler remains low-coverage optional path.

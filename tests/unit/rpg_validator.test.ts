@@ -54,7 +54,8 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // Pinned snapshot of the current pack. The gated Stage-4 DSL additions did not
     // change it (was df85b4f…); this value updated only when the pack content was
     // deliberately edited to fix blind-playtest findings (stale text, duplicate
-    // journal, ledger inventory). Any *unintended* change to compilation trips this.
-    expect(loaded.compiled.contentHash).toBe("4188f7de58079146e00af8c5505094df19540af9d137a3736e26332d197820f0");
+    // journal, ledger inventory) and bug_0003 cellar discoverability. Any
+    // *unintended* change to compilation trips this.
+    expect(loaded.compiled.contentHash).toBe("c49b4424ce8ed334324c714ed0d02de9d7260e7b332481b2050b33aec4b51e91");
   });
 });

@@ -56,6 +56,7 @@ scenes:
         next: tower_stairs
       - id: search_rubble
         text: "Search the overturned cart."
+        conditions: [ { none_of: [ { all_of: [ { has_item: lantern }, { has_item: sealed_letter } ] } ] } ]
         next: abandoned_cart
       - id: leave_base
         text: "Step back outside."
@@ -70,13 +71,17 @@ scenes:
       - id: take_lantern
         text: "Take the brass lantern."
         conditions: [ { not_item: lantern } ]
-        effects: [ { add_item: lantern }, { add_journal: "You pocket a brass lantern." } ]
+        effects: [ { add_item: lantern }, { add_journal: "You pocket a brass lantern — enough light for the cellar stair outside." } ]
         next: abandoned_cart
       - id: take_letter
         text: "Take the sealed letter."
         conditions: [ { not_item: sealed_letter } ]
         effects: [ { add_item: sealed_letter }, { add_journal: "A wax-sealed letter, addressed to no one." } ]
         next: abandoned_cart
+      - id: carry_lantern_to_cellar
+        text: "Carry the lantern out to the cellar stair."
+        conditions: [ { has_item: lantern } ]
+        next: cellar_door
       - id: leave_cart
         text: "Leave the cart."
         next: tower_base
@@ -137,7 +142,7 @@ scenes:
         next: cellar_door
       - id: descend_cellar
         text: "Descend into the cellar."
-        conditions: [ { has_flag: lantern_lit } ]
+        conditions: [ { all_of: [ { has_flag: lantern_lit }, { not_item: ledger } ] } ]
         next: cellar
       - id: cellar_back
         text: "Step back from the door."
@@ -152,6 +157,7 @@ scenes:
     choices:
       - id: search_cache
         text: "Squeeze through the broken wall."
+        conditions: [ { not_item: ledger } ]
         next: hidden_cache
       - id: examine_barrels
         text: "Pry open a barrel."
