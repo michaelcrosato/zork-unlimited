@@ -197,6 +197,17 @@ npcs:
               prompt: "Ask where the Ember-Heart lies."
               conditions: [ { not_flag: heard_heart } ]
               goto: spirit_heart
+            # The forge/fire is the room's most tempting question — a curious player,
+            # standing in a "forge" full of heat-and-kindling lore, naturally wonders if
+            # the dead fire can be relit, yet no such action exists. bug_0029 already
+            # killed the sentinel "warm-up clock" over-promise; this is the SEPARATE
+            # relight temptation a fresh blind playtester (seed 29) still flagged. A
+            # one-shot topic forecloses it outright and re-points at the real goal — the
+            # Ember-Heart is a warmth to carry OUT, not a fire to rekindle (bug_0059).
+            - id: ask_forge
+              prompt: "Ask whether the dead forge could ever be lit again."
+              conditions: [ { not_flag: heard_forge } ]
+              goto: spirit_forge
             - id: leave_spirit
               prompt: "Step away from the lantern."
               end: true
@@ -228,6 +239,29 @@ npcs:
           topics:
             - id: heart_back
               prompt: "Thank it, and ask something else."
+              goto: spirit_root
+        - id: spirit_forge
+          npc_text: >
+            The flame dips, almost sorrowful. "Lit again? No — never. The great
+            fire went out an age ago, and there is no bellows, no kindling, no
+            craft of mine that will wake it; that cold is why the sentinel sleeps,
+            and why a warm thing like you may walk these halls at all. Do not
+            spend your strength hunting a flame to relight — there is none to
+            find, and none to be made." The flame steadies. "One living warmth is
+            left in all this cold, and you came down for it already: the
+            Ember-Heart. Lift it and carry it out into the world above. That is
+            the only fire that leaves this place — let the dead forge keep its
+            long dark."
+          # One-shot like the other two counsels (gated on heard_forge), and it loops
+          # back to spirit_root whose ungated `leave_spirit` keeps the node terminating
+          # (a gated-only escape would trip DIALOGUE_NONTERMINATING, bug_0014). No
+          # stat/effect/flag-gate beyond its own retire flag, so balance is untouched.
+          effects:
+            - set_flag: heard_forge
+            - add_journal: "The spirit is plain: the dead forge cannot be relit — the Ember-Heart is the one warmth left to carry out, not a fire to rekindle."
+          topics:
+            - id: forge_back
+              prompt: "Nod, and ask something else."
               goto: spirit_root
 
 enemies:
