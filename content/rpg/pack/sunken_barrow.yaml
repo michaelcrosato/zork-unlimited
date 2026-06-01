@@ -125,10 +125,25 @@ rooms:
 
   - id: relic_chamber
     name: "Relic Chamber"
+    # The Barrow-Lord himself now lies here, in a sealed sarcophagus — closing the
+    # continuity wobble a blind playtester (seed 7) flagged: the barrow_mouth intro
+    # sings of the crown "still on his brow", yet the chamber showed only a plinth
+    # with no Lord present. The circlet is now described as lifted from his brow to
+    # the plinth for the burying, so the song and the scene agree. More importantly
+    # the chamber telegraphs the warned-against danger IN SCENE (the heavy, wrong air
+    # over the sealed lid), so prising it is an INFORMED choice even for a player who
+    # skipped the shade — never a gotcha (the pack's bug_0027/0029 discipline). The
+    # safe, obvious act — take the crown and climb out — is still front and centre
+    # (bug_0083).
     description: >
-      Below the slab, a small vaulted chamber. On a plinth of black stone rests
-      the Barrow-Lord's circlet, pale with its own light.
-    objects: [circlet]
+      Below the slab, a small vaulted chamber. A great sarcophagus of black stone
+      stands sealed at its heart — the Barrow-Lord himself, laid to his long rest
+      within. Before it, on a low plinth, rests his pale circlet, lifted from his
+      brow and set out at the burying; it glows faintly with its own cold light. The
+      crown is yours for the taking, and the stair climbs back to the light behind
+      you. The sealed lid is another matter: the air over it lies heavy and wrong,
+      and every instinct you own says to let what sleeps beneath it sleep on.
+    objects: [circlet, sarcophagus]
     on_enter:
       - add_journal: "You have reached the relic chamber."
       - inc_var: { name: score, by: 25 }
@@ -209,6 +224,38 @@ objects:
     aliases: [circlet, relic, crown]
     description: "A circlet of pale metal, cold and faintly luminous."
     takeable: true
+
+  # The Barrow-Lord's sealed sarcophagus — the thing the shade warns of (bug_0083).
+  # A blind playtester (seed 7) named the pack's biggest design gap: the shade's
+  # gravest line, "do not think to wake what sleeps beneath the slab", framed the
+  # descent as a real moral choice — heed it and take only the crown, or wake the
+  # Barrow-Lord — yet the warning pointed at NOTHING (no Lord present, no action to
+  # wake him, no consequence). A Chekhov's gun that never fires. This object cashes
+  # it: prising the sealed lid is the warned-against act, and it is real and
+  # terminal. It is the SAME tool-and-back motif as the slab (the iron bar, "prise"
+  # echoing "lever"), and the player always holds the bar here (the slab cannot be
+  # levered without it, bug_0069), so the choice is always offered. The examine
+  # repeats the warning so the act is informed, not a gotcha.
+  - id: sarcophagus
+    name: "sealed sarcophagus"
+    aliases: [sarcophagus, coffin, lid, casket, sepulchre]
+    description: "A great lidded coffin of black stone, its seams run with lead and old wax. The Barrow-Lord lies within, and the shade's warning — if you stopped to hear it — was plain: do not think to wake what sleeps here. Prising the lid would want the iron bar and a stubborn back, the same as the slab did. Far better to take the cold crown from its plinth and climb back to the light."
+    takeable: false
+    interactions:
+      # The warned-against act. Terminal (end_game), so it can fire only once and
+      # needs no retire-condition. command_verb/template give it the natural phrasing
+      # the prose primes ("prise the sealed sarcophagus with the iron bar"), echoing
+      # the slab's "lever ... with the iron bar" (bug_0078). No flag/score/win-condition
+      # change: the peaceful take-the-crown victory (claim_relic → ending_victory) and
+      # the +50 score are untouched; this only adds the doom fork the warning promised.
+      - verb: USE
+        item: iron_bar
+        target: sarcophagus
+        command_verb: prise
+        command_template: "prise {target} with {item}"
+        effects:
+          - add_journal: "You set the iron bar to the leaded seams and, against every warning, prise the Barrow-Lord from his rest."
+          - end_game: ending_woken
 
 npcs:
   # The reaver's shade (content_new, bug_0075): the barrow's first NPC, mirroring the
@@ -328,4 +375,14 @@ endings:
   - id: ending_fallen
     title: "Another Niche Filled"
     text: "The cold closes over you. In time, something else will climb from the niche where you fell."
+    death: true
+    # The doom fork (bug_0083): reached by prising the Barrow-Lord's sealed
+    # sarcophagus — the act the shade warns against. Distinct in cause from
+    # ending_fallen (dying to the guard-wight): here you survive the barrow only to
+    # undo the very thing the shade begged you leave alone. A death ending (death:
+    # true), so it is recoverable from an earlier save (§8.7) like ending_fallen, and
+    # the non-death win (ending_victory) remains, so the game is still winnable.
+  - id: ending_woken
+    title: "What Sleeps Beneath"
+    text: "The lead seams split and the great lid grinds back, and the cold that breathes up out of the dark is older than the wight's, older than the songs — older than the hills that hide this barrow. The Barrow-Lord opens his eyes. You came down for a crown and woke its keeper, and the shade's last counsel rings true after all: the land was the better for his sleeping. There is no climbing back to the light now. Whatever rises from this coffin, the country above will learn its name again before the season turns."
     death: true
