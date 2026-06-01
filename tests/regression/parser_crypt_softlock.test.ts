@@ -12,7 +12,11 @@
 import { describe, it, expect } from "vitest";
 import { loadParserPackFile } from "../../src/parser/pack.js";
 import { validateParser } from "../../src/validate/parser_validator.js";
-import { indexParserPack, buildParserRules, initStateForParserPack } from "../../src/parser/runner.js";
+import {
+  indexParserPack,
+  buildParserRules,
+  initStateForParserPack,
+} from "../../src/parser/runner.js";
 import { enumerateActions } from "../../src/parser/legal_actions.js";
 import { makeStep } from "../../src/core/engine.js";
 import { runParserRoster } from "../../agents/parser_playtester.js";
@@ -41,14 +45,18 @@ function moveActionsInCrypt(pack: ParserPack): string[] {
     state = step(state, opt.action).state;
   }
   expect(state.current).toBe("crypt");
-  return enumerateActions(index, state).filter((o) => o.action.type === "MOVE").map((o) => o.id);
+  return enumerateActions(index, state)
+    .filter((o) => o.action.type === "MOVE")
+    .map((o) => o.id);
 }
 
 describe("bug_0001: one-way crypt soft-lock", () => {
   it("the validator rejects the one-way-crypt variant (soft-lock guard bites)", () => {
     const report = validateParser(oneWayCryptVariant());
     expect(report.ok).toBe(false);
-    expect(report.findings.some((f) => f.code === "SOFTLOCK_QUEST_ITEM" || f.code === "SOFTLOCK")).toBe(true);
+    expect(
+      report.findings.some((f) => f.code === "SOFTLOCK_QUEST_ITEM" || f.code === "SOFTLOCK"),
+    ).toBe(true);
   });
 
   it("the broken variant wedges the player in the crypt (no exit)", () => {

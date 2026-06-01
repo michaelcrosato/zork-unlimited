@@ -65,13 +65,33 @@ const TO_GALLERY_T5 = ["climb_stairs", "enter_study", "leave_study", "enter_stud
 const TO_GALLERY_T7 = [...TO_GALLERY_T5, "enter_study", "leave_study"];
 // Same dawdle, but read the ledger on the first visit to the study.
 const READER_TO_GALLERY_T7 = [
-  "climb_stairs", "enter_study", "read_ledger", "leave_study",
-  "enter_study", "leave_study", "enter_study", "leave_study",
+  "climb_stairs",
+  "enter_study",
+  "read_ledger",
+  "leave_study",
+  "enter_study",
+  "leave_study",
+  "enter_study",
+  "leave_study",
 ];
 // Efficient heist: pick from the kitchen, straight to the vault.
-const VAULT_RICH = ["kitchens", "take_pick", "dumbwaiter", "approach_vault", "pick_lock", "grab_gold"];
+const VAULT_RICH = [
+  "kitchens",
+  "take_pick",
+  "dumbwaiter",
+  "approach_vault",
+  "pick_lock",
+  "grab_gold",
+];
 // bug_0022: the crawlspace strongbox now needs the lockpick (no brute-force pry).
-const CRAWLSPACE_TRUTH = ["inspect_clock", "kitchens", "take_pick", "back_foyer", "pry_panel", "open_strongbox"];
+const CRAWLSPACE_TRUTH = [
+  "inspect_clock",
+  "kitchens",
+  "take_pick",
+  "back_foyer",
+  "pry_panel",
+  "open_strongbox",
+];
 const FORCE_CAUGHT = ["climb_stairs", "approach_vault", "force_door"];
 
 const TENSION = /running short|grinds toward the hour/i;
@@ -83,7 +103,7 @@ describe("bug_0019 — the 'guard on the hour' ledger clue is a real deadline", 
     expect(s.ended).toBe(true);
     expect(s.endingId).toBe("ending_rich");
     // The crossing happened before the hour: ticks stayed well under 6.
-    expect((s.vars.ticks ?? 0)).toBeLessThan(6);
+    expect(s.vars.ticks ?? 0).toBeLessThan(6);
   });
 
   it("on the hour without the ledger: approach_vault is gone, the blind gamble appears, exits remain", () => {

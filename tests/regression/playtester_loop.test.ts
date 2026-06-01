@@ -47,7 +47,10 @@ const index = indexPack(pack);
 
 describe("playtester loop detection (regression)", () => {
   it("flags a no-progress self-loop as 'looped' (the guard is no longer dead)", async () => {
-    const rec = await runPlaytest(index, new MockProvider("mainline"), { persona: "mainline", seed: 1 });
+    const rec = await runPlaytest(index, new MockProvider("mainline"), {
+      persona: "mainline",
+      seed: 1,
+    });
     expect(rec.status).toBe("looped");
     // It made progress (zulu → alpha) before stalling on the self-loop at alpha.
     expect(rec.steps.at(-1)?.scene_id).toBe("alpha");

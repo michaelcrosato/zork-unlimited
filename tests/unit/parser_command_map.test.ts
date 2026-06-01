@@ -4,7 +4,11 @@
  */
 import { describe, it, expect } from "vitest";
 import { loadParserPackFile } from "../../src/parser/pack.js";
-import { indexParserPack, buildParserRules, initStateForParserPack } from "../../src/parser/runner.js";
+import {
+  indexParserPack,
+  buildParserRules,
+  initStateForParserPack,
+} from "../../src/parser/runner.js";
 import { enumerateActions } from "../../src/parser/legal_actions.js";
 import { makeStep } from "../../src/core/engine.js";
 import { parseCommand } from "../../src/parser/command_map.js";
@@ -24,19 +28,37 @@ describe("command_map", () => {
   const start = initStateForParserPack(index, 1);
 
   it("maps directions, bare and explicit", () => {
-    expect(parseCommand(index, start, "go north")).toEqual({ ok: true, action: { type: "MOVE", direction: "north" } });
-    expect(parseCommand(index, start, "north")).toEqual({ ok: true, action: { type: "MOVE", direction: "north" } });
-    expect(parseCommand(index, start, "n")).toEqual({ ok: true, action: { type: "MOVE", direction: "north" } });
+    expect(parseCommand(index, start, "go north")).toEqual({
+      ok: true,
+      action: { type: "MOVE", direction: "north" },
+    });
+    expect(parseCommand(index, start, "north")).toEqual({
+      ok: true,
+      action: { type: "MOVE", direction: "north" },
+    });
+    expect(parseCommand(index, start, "n")).toEqual({
+      ok: true,
+      action: { type: "MOVE", direction: "north" },
+    });
   });
 
   it("resolves objects by name and alias, stripping articles", () => {
     const bell = doId(doId(start, "go_north"), "go_up"); // bell_tower, rope present
-    expect(parseCommand(index, bell, "take the rope")).toEqual({ ok: true, action: { type: "TAKE", item: "rope" } });
-    expect(parseCommand(index, bell, "take coil")).toEqual({ ok: true, action: { type: "TAKE", item: "rope" } });
+    expect(parseCommand(index, bell, "take the rope")).toEqual({
+      ok: true,
+      action: { type: "TAKE", item: "rope" },
+    });
+    expect(parseCommand(index, bell, "take coil")).toEqual({
+      ok: true,
+      action: { type: "TAKE", item: "rope" },
+    });
   });
 
   it("parses multi-word USE and UNLOCK forms", () => {
-    expect(parseCommand(index, start, "use rope on old well")).toEqual({ ok: true, action: { type: "USE", item: "rope", target: "old_well" } });
+    expect(parseCommand(index, start, "use rope on old well")).toEqual({
+      ok: true,
+      action: { type: "USE", item: "rope", target: "old_well" },
+    });
     expect(parseCommand(index, start, "unlock chest with brass key")).toEqual({
       ok: true,
       action: { type: "UNLOCK", target: "oak_chest", with: "brass_key" },
@@ -44,15 +66,24 @@ describe("command_map", () => {
   });
 
   it("maps inventory and look", () => {
-    expect(parseCommand(index, start, "inventory")).toEqual({ ok: true, action: { type: "INVENTORY" } });
+    expect(parseCommand(index, start, "inventory")).toEqual({
+      ok: true,
+      action: { type: "INVENTORY" },
+    });
     expect(parseCommand(index, start, "look")).toEqual({ ok: true, action: { type: "LOOK" } });
-    expect(parseCommand(index, start, "examine old well")).toEqual({ ok: true, action: { type: "LOOK", target: "old_well" } });
+    expect(parseCommand(index, start, "examine old well")).toEqual({
+      ok: true,
+      action: { type: "LOOK", target: "old_well" },
+    });
   });
 
   it("resolves dialogue topics by id and prompt while in conversation", () => {
     const nave = doId(doId(start, "go_north"), "go_north"); // chapel_nave
     const talking = doId(nave, "talk_sexton");
-    expect(parseCommand(index, talking, "ask about crypt")).toEqual({ ok: true, action: { type: "ASK", npc: "sexton", topic: "crypt" } });
+    expect(parseCommand(index, talking, "ask about crypt")).toEqual({
+      ok: true,
+      action: { type: "ASK", npc: "sexton", topic: "crypt" },
+    });
     const bye = parseCommand(index, talking, "bye");
     expect(bye).toEqual({ ok: true, action: { type: "ASK", npc: "sexton", topic: "bye" } });
   });

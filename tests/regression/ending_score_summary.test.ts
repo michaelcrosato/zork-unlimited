@@ -37,11 +37,20 @@
  */
 import { describe, it, expect } from "vitest";
 import { loadParserPackFile } from "../../src/parser/pack.js";
-import { indexParserPack, buildParserRules, initStateForParserPack } from "../../src/parser/runner.js";
+import {
+  indexParserPack,
+  buildParserRules,
+  initStateForParserPack,
+} from "../../src/parser/runner.js";
 import { enumerateActions } from "../../src/parser/legal_actions.js";
 import { buildParserObservation } from "../../src/parser/observation.js";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
-import { indexRpgPack, buildRpgRules, initStateForRpgPack, enumerateRpgActions } from "../../src/rpg/runner.js";
+import {
+  indexRpgPack,
+  buildRpgRules,
+  initStateForRpgPack,
+  enumerateRpgActions,
+} from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
@@ -57,7 +66,12 @@ const cryptStep = makeStep(buildParserRules(cryptIndex));
 function playCrypt(s: GameState, ids: string[]): GameState {
   for (const id of ids) {
     const opt = enumerateActions(cryptIndex, s).find((o) => o.id === id);
-    if (!opt) throw new Error(`"${id}" not legal in ${s.current}: [${enumerateActions(cryptIndex, s).map((o) => o.id).join(", ")}]`);
+    if (!opt)
+      throw new Error(
+        `"${id}" not legal in ${s.current}: [${enumerateActions(cryptIndex, s)
+          .map((o) => o.id)
+          .join(", ")}]`,
+      );
     const r = cryptStep(s, opt.action);
     expect(r.ok).toBe(true);
     s = r.state;
@@ -69,16 +83,43 @@ const cryptObs = (s: GameState) => buildParserObservation(cryptIndex, s);
 // Full solution path (milestones annotated), reused from sealed_crypt_scoring.
 const TO_HEADSTONE = ["go_north", "go_west"];
 const READ = ["read_headstone"]; // +5 (OPTIONAL — the win does not require it)
-const TO_WELL_TIE = ["go_north", "open_stone_coffer", "take_brass_key", "go_south", "go_east", "go_up", "take_rope", "go_down", "go_east"];
+const TO_WELL_TIE = [
+  "go_north",
+  "open_stone_coffer",
+  "take_brass_key",
+  "go_south",
+  "go_east",
+  "go_up",
+  "take_rope",
+  "go_down",
+  "go_east",
+];
 const TIE = ["use_rope_on_old_well"]; // +10
-const TO_GATE = ["go_down", "unlock_oak_chest", "open_oak_chest", "take_iron_key", "go_up", "go_west", "go_north", "go_down"];
+const TO_GATE = [
+  "go_down",
+  "unlock_oak_chest",
+  "open_oak_chest",
+  "take_iron_key",
+  "go_up",
+  "go_west",
+  "go_north",
+  "go_down",
+];
 const OPEN_GATE = ["use_iron_key_on_crypt_gate"]; // +20
 const WIN = ["go_north"];
 
 describe("bug_0026 — endings surface a final-score tally in scoring packs", () => {
   it("sealed_crypt full route: description appends 'Final score: 35 of 35.' and ending.text stays pure", () => {
     let s = initStateForParserPack(cryptIndex, 73);
-    s = playCrypt(s, [...TO_HEADSTONE, ...READ, ...TO_WELL_TIE, ...TIE, ...TO_GATE, ...OPEN_GATE, ...WIN]);
+    s = playCrypt(s, [
+      ...TO_HEADSTONE,
+      ...READ,
+      ...TO_WELL_TIE,
+      ...TIE,
+      ...TO_GATE,
+      ...OPEN_GATE,
+      ...WIN,
+    ]);
 
     const o = cryptObs(s);
     expect(o.ended).toBe(true);
@@ -114,7 +155,9 @@ describe("bug_0026 — endings surface a final-score tally in scoring packs", ()
     expect(start.description).not.toContain("Final score");
     expect(start.max_score).toBe(35);
 
-    const mid = cryptObs(playCrypt(initStateForParserPack(cryptIndex, 73), [...TO_HEADSTONE, ...READ]));
+    const mid = cryptObs(
+      playCrypt(initStateForParserPack(cryptIndex, 73), [...TO_HEADSTONE, ...READ]),
+    );
     expect(mid.ended).toBe(false);
     expect(mid.score).toBe(5);
     expect(mid.description).not.toContain("Final score");
@@ -128,7 +171,12 @@ describe("bug_0026 — endings surface a final-score tally in scoring packs", ()
     const step = makeStep(buildRpgRules(index));
     const act = (s: GameState, pred: (a: Action) => boolean): GameState => {
       const opt = enumerateRpgActions(index, s).find((o) => pred(o.action));
-      if (!opt) throw new Error(`no action in ${s.current}: [${enumerateRpgActions(index, s).map((o) => o.id).join(", ")}]`);
+      if (!opt)
+        throw new Error(
+          `no action in ${s.current}: [${enumerateRpgActions(index, s)
+            .map((o) => o.id)
+            .join(", ")}]`,
+        );
       const r = step(s, opt.action);
       expect(r.ok).toBe(true);
       return r.state;

@@ -30,7 +30,12 @@
  */
 import { describe, it, expect } from "vitest";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
-import { indexRpgPack, buildRpgRules, initStateForRpgPack, enumerateRpgActions } from "../../src/rpg/runner.js";
+import {
+  indexRpgPack,
+  buildRpgRules,
+  initStateForRpgPack,
+  enumerateRpgActions,
+} from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { buildParserObservation } from "../../src/parser/observation.js";
 import { makeStep } from "../../src/core/engine.js";
@@ -50,7 +55,12 @@ const options = (s: GameState) => enumerateRpgActions(index, s);
 
 function act(s: GameState, pred: (a: Action) => boolean): GameState {
   const opt = options(s).find((o) => pred(o.action));
-  if (!opt) throw new Error(`no action; legal=[${options(s).map((o) => o.id).join(", ")}] in ${s.current}`);
+  if (!opt)
+    throw new Error(
+      `no action; legal=[${options(s)
+        .map((o) => o.id)
+        .join(", ")}] in ${s.current}`,
+    );
   const r = step(s, opt.action);
   expect(r.ok).toBe(true);
   if (!r.ok) throw new Error("step failed");
@@ -83,7 +93,9 @@ describe("bug_0029 — the Cold Forge sentinel reads as a settled cold advantage
     // clear no heat is coming.
     expect(inscription).toMatch(/long dead|will not kindle|never .*warm/);
     // The spirit's counsel explicitly denies the false "hurry / it gets harder" read.
-    expect(spiritCounsel).toMatch(/as slow now as it will ever be|will never be warm|do not fear that waiting/);
+    expect(spiritCounsel).toMatch(
+      /as slow now as it will ever be|will never be warm|do not fear that waiting/,
+    );
   });
 
   it("LIVE: the bellows_walk room the player sees carries the reframed prose, not a warm-up clock", () => {

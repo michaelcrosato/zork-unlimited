@@ -22,7 +22,11 @@
  */
 import { describe, it, expect } from "vitest";
 import { loadParserPackFile } from "../../src/parser/pack.js";
-import { indexParserPack, buildParserRules, initStateForParserPack } from "../../src/parser/runner.js";
+import {
+  indexParserPack,
+  buildParserRules,
+  initStateForParserPack,
+} from "../../src/parser/runner.js";
 import { enumerateActions } from "../../src/parser/legal_actions.js";
 import { parseCommand } from "../../src/parser/command_map.js";
 import { makeStep } from "../../src/core/engine.js";
@@ -36,7 +40,12 @@ const aStep = makeStep(buildParserRules(aIndex));
 function play(index: typeof aIndex, step: typeof aStep, s: GameState, ids: string[]): GameState {
   for (const id of ids) {
     const opt = enumerateActions(index, s).find((o) => o.id === id);
-    if (!opt) throw new Error(`"${id}" not legal in ${s.current}: [${enumerateActions(index, s).map((o) => o.id).join(", ")}]`);
+    if (!opt)
+      throw new Error(
+        `"${id}" not legal in ${s.current}: [${enumerateActions(index, s)
+          .map((o) => o.id)
+          .join(", ")}]`,
+      );
     const r = step(s, opt.action);
     expect(r.ok).toBe(true);
     s = r.state;
@@ -46,17 +55,37 @@ function play(index: typeof aIndex, step: typeof aStep, s: GameState, ids: strin
 
 // Reach the laboratory and pocket the black phial (one step from drinking it).
 const TO_PHIAL = [
-  "go_west", "read_spellbook", "go_east", "go_east", "take_herb", "take_brass_key",
-  "go_west", "go_north", "go_up", "unlock_strongbox", "open_strongbox", "take_iron_key",
-  "go_down", "use_iron_key_on_cellar_door", "go_down", "take_water_vial", "go_up",
-  "go_north", "take_black_phial",
+  "go_west",
+  "read_spellbook",
+  "go_east",
+  "go_east",
+  "take_herb",
+  "take_brass_key",
+  "go_west",
+  "go_north",
+  "go_up",
+  "unlock_strongbox",
+  "open_strongbox",
+  "take_iron_key",
+  "go_down",
+  "use_iron_key_on_cellar_door",
+  "go_down",
+  "take_water_vial",
+  "go_up",
+  "go_north",
+  "take_black_phial",
 ];
 
 describe("bug_0009 — a self-targeted USE reads as 'use <obj>', not 'use <obj> on <obj>'", () => {
   it("surfaces the held black phial as `use_black_phial` / 'use black phial' (no self-on-self)", () => {
     const s = play(aIndex, aStep, initStateForParserPack(aIndex, 1), TO_PHIAL);
     const actions = enumerateActions(aIndex, s);
-    const phial = actions.find((a) => a.action.type === "USE" && a.action.item === "black_phial" && a.action.target === "black_phial");
+    const phial = actions.find(
+      (a) =>
+        a.action.type === "USE" &&
+        a.action.item === "black_phial" &&
+        a.action.target === "black_phial",
+    );
     expect(phial).toBeDefined();
     expect(phial!.id).toBe("use_black_phial");
     expect(phial!.command).toBe("use black phial");
@@ -68,7 +97,10 @@ describe("bug_0009 — a self-targeted USE reads as 'use <obj>', not 'use <obj> 
   it("the human parser maps 'use black phial' to the self-USE, which still fires the death ending", () => {
     const s = play(aIndex, aStep, initStateForParserPack(aIndex, 1), TO_PHIAL);
     const parsed = parseCommand(aIndex, s, "use black phial");
-    expect(parsed).toEqual({ ok: true, action: { type: "USE", item: "black_phial", target: "black_phial" } });
+    expect(parsed).toEqual({
+      ok: true,
+      action: { type: "USE", item: "black_phial", target: "black_phial" },
+    });
     const r = aStep(s, parsed.ok ? parsed.action : { type: "LOOK" });
     expect(r.ok).toBe(true);
     expect(r.state.ended).toBe(true);

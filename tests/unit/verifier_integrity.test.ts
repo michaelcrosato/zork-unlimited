@@ -20,7 +20,9 @@ describe("detectDisabledTests catches every disabled/focused marker", () => {
   // Markers are assembled at runtime (not written verbatim) so this test file does
   // not itself trip the guard's scan of tests/ — proving the detector works WITHOUT
   // poking an exclusion hole in the static check.
-  const I = "it", T = "test", D = "describe";
+  const I = "it",
+    T = "test",
+    D = "describe";
   const cases: [string, boolean][] = [
     [`${I}.skip('x', () => {})`, true],
     [`  ${I}.only('x', () => {})`, true],
@@ -52,14 +54,19 @@ describe("classifyDrift — legitimate re-pin vs launder vs weakening (research-
 
   it("ALLOWS (warns) a hash re-pin ACCOMPANIED by a content change — the user's loop case", () => {
     // The exact thing that was wrongly blocking the loop: improve a pack, re-pin its hash.
-    const fs = classifyDrift(["content/cyoa/pack/watchtower_road.yaml", "tests/unit/rpg_validator.test.ts"], () => true);
+    const fs = classifyDrift(
+      ["content/cyoa/pack/watchtower_road.yaml", "tests/unit/rpg_validator.test.ts"],
+      () => true,
+    );
     expect(errs(fs)).toEqual([]); // no hard error → the cycle commits
     expect(fs.some((f) => f.code === "HASH_PIN_REPINNED" && f.severity === "warning")).toBe(true);
   });
 
   it("BLOCKS a re-pin with NO content change (the launder / regenerate-to-green pattern)", () => {
     const fs = classifyDrift(["tests/unit/rpg_validator.test.ts"], () => true);
-    expect(fs.some((f) => f.code === "HASH_PIN_UNACCOMPANIED" && f.severity === "error")).toBe(true);
+    expect(fs.some((f) => f.code === "HASH_PIN_UNACCOMPANIED" && f.severity === "error")).toBe(
+      true,
+    );
   });
 
   it("SURFACES (warns) a modified protected file — free rein over code, weakening caught elsewhere", () => {

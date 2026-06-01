@@ -10,7 +10,10 @@ import { loadParserPackFile } from "../../src/parser/pack.js";
 import { validateParser } from "../../src/validate/parser_validator.js";
 
 describe("parser validator — shipped packs", () => {
-  for (const path of ["content/parser/pack/sealed_crypt.yaml", "content/parser/pack/alchemists_tower.yaml"]) {
+  for (const path of [
+    "content/parser/pack/sealed_crypt.yaml",
+    "content/parser/pack/alchemists_tower.yaml",
+  ]) {
     it(`${path} validates with no errors or warnings`, () => {
       const loaded = loadParserPackFile(path);
       expect(loaded.ok).toBe(true);

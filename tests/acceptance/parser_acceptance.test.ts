@@ -9,7 +9,11 @@
  */
 import { describe, it, expect } from "vitest";
 import { loadParserPackFile } from "../../src/parser/pack.js";
-import { indexParserPack, buildParserRules, initStateForParserPack } from "../../src/parser/runner.js";
+import {
+  indexParserPack,
+  buildParserRules,
+  initStateForParserPack,
+} from "../../src/parser/runner.js";
 import { enumerateActions } from "../../src/parser/legal_actions.js";
 import { parseCommand } from "../../src/parser/command_map.js";
 import { makeStep } from "../../src/core/engine.js";
@@ -25,17 +29,53 @@ const step = makeStep(rules);
 
 // The walkthrough by action id (what the AI sees in available_actions) ...
 const WALKTHROUGH_IDS = [
-  "go_north", "go_up", "take_rope", "go_down", "go_west", "go_north",
-  "open_stone_coffer", "take_brass_key", "go_south", "go_east", "go_east",
-  "use_rope_on_old_well", "go_down", "unlock_oak_chest", "open_oak_chest", "take_iron_key",
-  "go_up", "go_west", "go_north", "go_down", "use_iron_key_on_crypt_gate", "go_north",
+  "go_north",
+  "go_up",
+  "take_rope",
+  "go_down",
+  "go_west",
+  "go_north",
+  "open_stone_coffer",
+  "take_brass_key",
+  "go_south",
+  "go_east",
+  "go_east",
+  "use_rope_on_old_well",
+  "go_down",
+  "unlock_oak_chest",
+  "open_oak_chest",
+  "take_iron_key",
+  "go_up",
+  "go_west",
+  "go_north",
+  "go_down",
+  "use_iron_key_on_crypt_gate",
+  "go_north",
 ];
 // ... and the same route as controlled human commands.
 const WALKTHROUGH_COMMANDS = [
-  "go north", "up", "take rope", "down", "west", "north",
-  "open coffer", "take brass key", "south", "east", "east",
-  "use rope on old well", "down", "unlock chest with brass key", "open chest", "take iron key",
-  "up", "west", "north", "down", "use iron key on gate", "north",
+  "go north",
+  "up",
+  "take rope",
+  "down",
+  "west",
+  "north",
+  "open coffer",
+  "take brass key",
+  "south",
+  "east",
+  "east",
+  "use rope on old well",
+  "down",
+  "unlock chest with brass key",
+  "open chest",
+  "take iron key",
+  "up",
+  "west",
+  "north",
+  "down",
+  "use iron key on gate",
+  "north",
 ];
 
 describe("Stage 2 acceptance — The Sealed Crypt", () => {
@@ -79,7 +119,9 @@ describe("Stage 2 acceptance — The Sealed Crypt", () => {
       const parsed = parseCommand(index, state, cmd);
       expect(parsed.ok, `"${cmd}" should parse in room ${state.current}`).toBe(true);
       if (!parsed.ok) return;
-      const legal = rules.legalActions(state).some((a) => JSON.stringify(a) === JSON.stringify(parsed.action));
+      const legal = rules
+        .legalActions(state)
+        .some((a) => JSON.stringify(a) === JSON.stringify(parsed.action));
       expect(legal, `"${cmd}" should be legal in room ${state.current}`).toBe(true);
       state = step(state, parsed.action).state;
     }

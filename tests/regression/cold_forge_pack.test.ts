@@ -37,7 +37,12 @@
  */
 import { describe, it, expect } from "vitest";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
-import { indexRpgPack, buildRpgRules, initStateForRpgPack, enumerateRpgActions } from "../../src/rpg/runner.js";
+import {
+  indexRpgPack,
+  buildRpgRules,
+  initStateForRpgPack,
+  enumerateRpgActions,
+} from "../../src/rpg/runner.js";
 import { buildParserObservation } from "../../src/parser/observation.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { makeStep } from "../../src/core/engine.js";
@@ -55,7 +60,12 @@ const options = (s: GameState) => enumerateRpgActions(index, s);
 
 function act(s: GameState, pred: (a: Action) => boolean): GameState {
   const opt = options(s).find((o) => pred(o.action));
-  if (!opt) throw new Error(`no action; legal=[${options(s).map((o) => o.id).join(", ")}] in ${s.current}`);
+  if (!opt)
+    throw new Error(
+      `no action; legal=[${options(s)
+        .map((o) => o.id)
+        .join(", ")}] in ${s.current}`,
+    );
   const r = step(s, opt.action);
   expect(r.ok).toBe(true);
   if (!r.ok) throw new Error("step failed");
@@ -67,7 +77,8 @@ const isAttack = (a: Action) => a.type === "ATTACK";
 const isUse = (a: Action) => a.type === "USE";
 const isTake = (a: Action) => a.type === "TAKE";
 const isTalk = (a: Action) => a.type === "TALK";
-const askTopic = (topic: string) => (a: Action) => a.type === "ASK" && (a as { topic?: string }).topic === topic;
+const askTopic = (topic: string) => (a: Action) =>
+  a.type === "ASK" && (a as { topic?: string }).topic === topic;
 const canAsk = (s: GameState, topic: string) => options(s).some((o) => askTopic(topic)(o.action));
 
 describe("bug_0021 — The Cold Forge (second RPG pack) is valid, solvable, and well-formed", () => {

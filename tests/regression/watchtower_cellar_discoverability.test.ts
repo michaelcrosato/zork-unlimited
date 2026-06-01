@@ -19,7 +19,8 @@ function play(ids: string[]) {
   return s;
 }
 
-const optionIds = (s: ReturnType<typeof play>): string[] => buildObservation(index, s).available_actions.map((a) => a.id);
+const optionIds = (s: ReturnType<typeof play>): string[] =>
+  buildObservation(index, s).available_actions.map((a) => a.id);
 
 describe("bug_0003 — watchtower cellar discoverability", () => {
   it("points the lantern discovery at the cellar stair", () => {
@@ -29,7 +30,14 @@ describe("bug_0003 — watchtower cellar discoverability", () => {
   });
 
   it("does not leave an exhausted cart search as the tower base's attractive loop", () => {
-    const s = play(["go_east", "approach_base", "search_rubble", "take_lantern", "take_letter", "leave_cart"]);
+    const s = play([
+      "go_east",
+      "approach_base",
+      "search_rubble",
+      "take_lantern",
+      "take_letter",
+      "leave_cart",
+    ]);
     expect(s.current).toBe("tower_base");
     expect(optionIds(s)).not.toContain("search_rubble");
     expect(optionIds(s)).toEqual(expect.arrayContaining(["climb_stairs", "leave_base"]));

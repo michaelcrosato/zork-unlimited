@@ -34,8 +34,17 @@ const optionIds = (s: ReturnType<typeof play>): string[] =>
 
 // Grab the letter (east), then take it to the hermit and show it (west).
 const TO_LETTER_REVEAL = [
-  "go_east", "approach_base", "search_rubble", "take_letter", "leave_cart", "leave_base",
-  "return_crossroads", "go_west", "follow_to_camp", "talk_hermit", "show_letter",
+  "go_east",
+  "approach_base",
+  "search_rubble",
+  "take_letter",
+  "leave_cart",
+  "leave_base",
+  "return_crossroads",
+  "go_west",
+  "follow_to_camp",
+  "talk_hermit",
+  "show_letter",
   "back_from_letter_talk",
 ];
 
@@ -58,8 +67,15 @@ describe("bug_0006 — the letter reveal is earned-once, recorded, and the endin
 
   it("the hermit/letter route still reaches ending_truth", () => {
     const s = play([
-      ...TO_LETTER_REVEAL, "say_goodbye", "leave_camp", "ford_brook", "cross_north",
-      "approach_checkpoint", "show_papers", "reveal_evidence", "expose_the_plot",
+      ...TO_LETTER_REVEAL,
+      "say_goodbye",
+      "leave_camp",
+      "ford_brook",
+      "cross_north",
+      "approach_checkpoint",
+      "show_papers",
+      "reveal_evidence",
+      "expose_the_plot",
     ]);
     expect(s.ended).toBe(true);
     expect(s.endingId).toBe("ending_truth");

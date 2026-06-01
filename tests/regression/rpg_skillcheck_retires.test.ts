@@ -34,7 +34,12 @@
  */
 import { describe, it, expect } from "vitest";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
-import { indexRpgPack, buildRpgRules, initStateForRpgPack, enumerateRpgActions } from "../../src/rpg/runner.js";
+import {
+  indexRpgPack,
+  buildRpgRules,
+  initStateForRpgPack,
+  enumerateRpgActions,
+} from "../../src/rpg/runner.js";
 import { makeStep, actionEquals } from "../../src/core/engine.js";
 import type { Action } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";

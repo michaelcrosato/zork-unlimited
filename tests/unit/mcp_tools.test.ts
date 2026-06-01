@@ -55,8 +55,11 @@ describe("MCP tools — the play loop (§9.1)", () => {
     const a = api();
     const game = a.start_game({ story_path: PACK, seed: 7 });
     expect(game.mode).toBe("cyoa");
-    if (game.observation.mode === "cyoa") expect(game.observation.scene_id).toBe("forest_crossroads");
-    expect(a.get_scene({ session_id: game.session_id }).observation.available_actions.length).toBeGreaterThan(0);
+    if (game.observation.mode === "cyoa")
+      expect(game.observation.scene_id).toBe("forest_crossroads");
+    expect(
+      a.get_scene({ session_id: game.session_id }).observation.available_actions.length,
+    ).toBeGreaterThan(0);
 
     const route = ["go_west", "ford_brook", "cross_north", "slip_into_woods", "slip_away"];
     let last;
@@ -111,7 +114,9 @@ describe("MCP tools — the play loop (§9.1)", () => {
   });
 
   it("refuses to start a game on an unplayable pack", () => {
-    expect(() => api().new_game({ pack_path: "content/broken-fixtures/softlock.yaml" })).toThrow(/not playable/i);
+    expect(() => api().new_game({ pack_path: "content/broken-fixtures/softlock.yaml" })).toThrow(
+      /not playable/i,
+    );
   });
 });
 
@@ -168,7 +173,9 @@ describe("MCP tools — replay + path confinement", () => {
   });
 
   it("rejects a path that escapes the project root", () => {
-    expect(() => api().validate_pack({ pack_path: "../../../etc/passwd" })).toThrow(PathEscapeError);
+    expect(() => api().validate_pack({ pack_path: "../../../etc/passwd" })).toThrow(
+      PathEscapeError,
+    );
   });
 });
 
@@ -180,7 +187,13 @@ describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
         layer: "hint_text",
         mode: "parser",
         summary: "signpost the start room",
-        ops: [{ op: "add_room_journal_hint", room: "forest_path", text: "Fresh bootprints lead toward the chapel." }],
+        ops: [
+          {
+            op: "add_room_journal_hint",
+            room: "forest_path",
+            text: "Fresh bootprints lead toward the chapel.",
+          },
+        ],
       } as never,
     }) as { ok: boolean; report: { ok: boolean } };
     expect(r.ok).toBe(true);
@@ -190,7 +203,12 @@ describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
   it("refuses a patch whose target is missing (no file written)", () => {
     const r = api().apply_content_patch({
       pack_path: "content/parser/pack/sealed_crypt.yaml",
-      proposal: { layer: "content", mode: "parser", summary: "x", ops: [{ op: "set_object_field", id: "ghost", field: "takeable", value: true }] } as never,
+      proposal: {
+        layer: "content",
+        mode: "parser",
+        summary: "x",
+        ops: [{ op: "set_object_field", id: "ghost", field: "takeable", value: true }],
+      } as never,
     }) as { ok: boolean; report: { findings: { code: string }[] } };
     expect(r.ok).toBe(false);
     expect(r.report.findings[0]?.code).toBe("PATCH_TARGET_MISSING");

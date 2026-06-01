@@ -54,7 +54,18 @@ describe("CYOA runner", () => {
   it("on_enter wiring fires (hermit_about_letter sets learned_truth on entry)", () => {
     const step = makeStep(rules);
     let s = initStateForPack(index, 1);
-    for (const id of ["go_east", "approach_base", "search_rubble", "take_letter", "leave_cart", "leave_base", "return_crossroads", "go_west", "follow_to_camp", "talk_hermit"]) {
+    for (const id of [
+      "go_east",
+      "approach_base",
+      "search_rubble",
+      "take_letter",
+      "leave_cart",
+      "leave_base",
+      "return_crossroads",
+      "go_west",
+      "follow_to_camp",
+      "talk_hermit",
+    ]) {
       s = step(s, choose(id)).state;
     }
     expect(s.flags["learned_truth"]).not.toBe(true);
@@ -68,7 +79,16 @@ describe("CYOA runner", () => {
     // the static scene text, so revisiting it can no longer duplicate the journal.
     const step = makeStep(rules);
     let s = initStateForPack(index, 1);
-    for (const id of ["go_east", "approach_base", "search_rubble", "take_lantern", "leave_cart", "leave_base", "circle_cellar", "light_lantern"]) {
+    for (const id of [
+      "go_east",
+      "approach_base",
+      "search_rubble",
+      "take_lantern",
+      "leave_cart",
+      "leave_base",
+      "circle_cellar",
+      "light_lantern",
+    ]) {
       s = step(s, choose(id)).state;
     }
     s = step(s, choose("descend_cellar")).state; // first entry → cellar
@@ -82,10 +102,25 @@ describe("CYOA runner", () => {
 
 describe("CYOA determinism + replay (Stage 1 acceptance §13.9)", () => {
   const TRUTH_ROUTE = [
-    "inspect_ground", "go_east", "approach_base", "search_rubble", "take_lantern",
-    "take_letter", "leave_cart", "leave_base", "return_crossroads", "go_west",
-    "follow_to_camp", "talk_hermit", "show_letter", "back_from_letter_talk",
-    "say_goodbye", "leave_camp", "ford_brook", "cross_north", "slip_into_woods",
+    "inspect_ground",
+    "go_east",
+    "approach_base",
+    "search_rubble",
+    "take_lantern",
+    "take_letter",
+    "leave_cart",
+    "leave_base",
+    "return_crossroads",
+    "go_west",
+    "follow_to_camp",
+    "talk_hermit",
+    "show_letter",
+    "back_from_letter_talk",
+    "say_goodbye",
+    "leave_camp",
+    "ford_brook",
+    "cross_north",
+    "slip_into_woods",
     "expose_the_plot",
   ].map(choose);
 
@@ -121,7 +156,11 @@ describe("CYOA determinism + replay (Stage 1 acceptance §13.9)", () => {
       for (const id of ids) s = step(s, choose(id)).state;
       return s.endingId;
     };
-    expect(play(["go_west", "ford_brook", "cross_north", "approach_checkpoint", "force_through"])).toBe("ending_captured");
-    expect(play(["go_west", "ford_brook", "cross_north", "slip_into_woods", "slip_away"])).toBe("ending_escape");
+    expect(
+      play(["go_west", "ford_brook", "cross_north", "approach_checkpoint", "force_through"]),
+    ).toBe("ending_captured");
+    expect(play(["go_west", "ford_brook", "cross_north", "slip_into_woods", "slip_away"])).toBe(
+      "ending_escape",
+    );
   });
 });

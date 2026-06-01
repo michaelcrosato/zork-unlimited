@@ -24,7 +24,11 @@
  */
 import { describe, it, expect } from "vitest";
 import { loadParserPackFile } from "../../src/parser/pack.js";
-import { indexParserPack, buildParserRules, initStateForParserPack } from "../../src/parser/runner.js";
+import {
+  indexParserPack,
+  buildParserRules,
+  initStateForParserPack,
+} from "../../src/parser/runner.js";
 import { enumerateActions, resolveParserAction } from "../../src/parser/legal_actions.js";
 import { buildParserObservation } from "../../src/parser/observation.js";
 import { roomDescription } from "../../src/parser/model.js";
@@ -39,7 +43,12 @@ const step = makeStep(buildParserRules(index));
 function play(s: GameState, ids: string[]): GameState {
   for (const id of ids) {
     const opt = enumerateActions(index, s).find((o) => o.id === id);
-    if (!opt) throw new Error(`"${id}" not legal in ${s.current}: [${enumerateActions(index, s).map((o) => o.id).join(", ")}]`);
+    if (!opt)
+      throw new Error(
+        `"${id}" not legal in ${s.current}: [${enumerateActions(index, s)
+          .map((o) => o.id)
+          .join(", ")}]`,
+      );
     const r = step(s, opt.action);
     expect(r.ok).toBe(true);
     s = r.state;
@@ -59,7 +68,13 @@ function lookNarration(s: GameState): string {
 
 describe("bug_0010 — reactive room text replaces stale descriptions after state changes", () => {
   it("Old Well flips from rope-less to rope-tied text once the rope is tied", () => {
-    let s = play(initStateForParserPack(index, 7), ["go_north", "go_up", "take_rope", "go_down", "go_east"]);
+    let s = play(initStateForParserPack(index, 7), [
+      "go_north",
+      "go_up",
+      "take_rope",
+      "go_down",
+      "go_east",
+    ]);
     // Before tying: the base description still warns there's no rope.
     expect(desc(s)).toContain("too far to climb down without a rope");
     s = play(s, ["use_rope_on_old_well"]);
@@ -77,14 +92,26 @@ describe("bug_0010 — reactive room text replaces stale descriptions after stat
     // tie rope → unlock the catacombs gate. The win fires only on entering the
     // catacombs, so in the crypt with the gate open the game is not yet ended.
     const SOLVE = [
-      "go_north",                                  // forest → chapel_yard
-      "go_up", "take_rope", "go_down",             // rope from the bell tower
-      "go_west", "go_north",                       // → graveyard → mausoleum
-      "open_stone_coffer", "take_brass_key",       // brass key
-      "go_south", "go_east", "go_east",            // → graveyard → yard → old well
-      "use_rope_on_old_well",                      // tie the rope (opens the well)
-      "go_down", "unlock_oak_chest", "open_oak_chest", "take_iron_key", "go_up", // iron key
-      "go_west", "go_north", "go_down",            // yard → nave → crypt
+      "go_north", // forest → chapel_yard
+      "go_up",
+      "take_rope",
+      "go_down", // rope from the bell tower
+      "go_west",
+      "go_north", // → graveyard → mausoleum
+      "open_stone_coffer",
+      "take_brass_key", // brass key
+      "go_south",
+      "go_east",
+      "go_east", // → graveyard → yard → old well
+      "use_rope_on_old_well", // tie the rope (opens the well)
+      "go_down",
+      "unlock_oak_chest",
+      "open_oak_chest",
+      "take_iron_key",
+      "go_up", // iron key
+      "go_west",
+      "go_north",
+      "go_down", // yard → nave → crypt
     ];
     let s = play(initStateForParserPack(index, 7), SOLVE);
     expect(s.current).toBe("crypt");

@@ -52,7 +52,12 @@ describe("effect reducer", () => {
     const r = applyEffect({ place_object: { id: "lantern", room: "cellar" } }, s);
     expect(r.state.objectState["lantern"]).toEqual({ room: "cellar" });
     expect(r.state.objectState["chest"]?.open).toBe(true); // unrelated object untouched
-    expect(r.event).toEqual({ type: "state_change", effect: "place_object", id: "lantern", room: "cellar" });
+    expect(r.event).toEqual({
+      type: "state_change",
+      effect: "place_object",
+      id: "lantern",
+      room: "cellar",
+    });
     // overwrites a prior placement
     s = applyEffect({ place_object: { id: "lantern", room: "attic" } }, r.state).state;
     expect(s.objectState["lantern"]?.room).toBe("attic");

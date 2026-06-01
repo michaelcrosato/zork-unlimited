@@ -48,12 +48,23 @@ function play(ids: string[]): GameState {
 // up, oscillate study <-> gallery to burn the clock, then retreat to the foyer.
 //   climb(1) study(2) landing(3) study(4) landing(5) -> back_down to foyer @ t5
 const FOYER_T5 = [
-  "climb_stairs", "enter_study", "leave_study", "enter_study", "leave_study", "back_down",
+  "climb_stairs",
+  "enter_study",
+  "leave_study",
+  "enter_study",
+  "leave_study",
+  "back_down",
 ];
 //   ...study(6) landing(7) -> back_down to foyer @ t7
 const FOYER_T7 = [
-  "climb_stairs", "enter_study", "leave_study", "enter_study", "leave_study",
-  "enter_study", "leave_study", "back_down",
+  "climb_stairs",
+  "enter_study",
+  "leave_study",
+  "enter_study",
+  "leave_study",
+  "enter_study",
+  "leave_study",
+  "back_down",
 ];
 // A quick out-and-back keeps ticks low (climb=1, retreat doesn't tick).
 const FOYER_T1 = ["climb_stairs", "back_down"];
@@ -89,12 +100,16 @@ describe("bug_0020 — the foyer's namesake clock feels the deadline too", () =>
   it("reachability unchanged — all four endings still fire (text-only edit)", () => {
     // bug_0022: the crawlspace truth now needs the lockpick (no brute-force pry).
     expect(
-      play(["inspect_clock", "kitchens", "take_pick", "back_foyer", "pry_panel", "open_strongbox"]).endingId,
+      play(["inspect_clock", "kitchens", "take_pick", "back_foyer", "pry_panel", "open_strongbox"])
+        .endingId,
     ).toBe("ending_truth");
     expect(play(["climb_stairs", "approach_vault", "force_door"]).endingId).toBe("ending_caught");
     expect(
-      play(["kitchens", "take_pick", "dumbwaiter", "approach_vault", "pick_lock", "grab_gold"]).endingId,
+      play(["kitchens", "take_pick", "dumbwaiter", "approach_vault", "pick_lock", "grab_gold"])
+        .endingId,
     ).toBe("ending_rich");
-    expect(play([...FOYER_T7, "climb_stairs", "cross_to_vault_blind"]).endingId).toBe("ending_patrol");
+    expect(play([...FOYER_T7, "climb_stairs", "cross_to_vault_blind"]).endingId).toBe(
+      "ending_patrol",
+    );
   });
 });

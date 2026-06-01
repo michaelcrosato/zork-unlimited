@@ -57,7 +57,11 @@ describe("engine.step (§8.4 resolution order)", () => {
   });
 
   it("actionEquals compares structurally", () => {
-    expect(actionEquals({ type: "CHOOSE", choiceId: "a" }, { type: "CHOOSE", choiceId: "a" })).toBe(true);
-    expect(actionEquals({ type: "CHOOSE", choiceId: "a" }, { type: "CHOOSE", choiceId: "b" })).toBe(false);
+    expect(actionEquals({ type: "CHOOSE", choiceId: "a" }, { type: "CHOOSE", choiceId: "a" })).toBe(
+      true,
+    );
+    expect(actionEquals({ type: "CHOOSE", choiceId: "a" }, { type: "CHOOSE", choiceId: "b" })).toBe(
+      false,
+    );
   });
 });

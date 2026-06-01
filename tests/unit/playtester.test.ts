@@ -34,7 +34,10 @@ describe("MockProvider (§12.7)", () => {
 
 describe("playtester run (§12.4, §12.6)", () => {
   it("mainline completes a game and produces a record", async () => {
-    const rec = await runPlaytest(index, new MockProvider("mainline"), { persona: "mainline", seed: 1 });
+    const rec = await runPlaytest(index, new MockProvider("mainline"), {
+      persona: "mainline",
+      seed: 1,
+    });
     expect(rec.status).toBe("completed");
     expect(rec.ending_id).not.toBeNull();
     expect(rec.steps.length).toBeGreaterThan(0);
@@ -43,15 +46,22 @@ describe("playtester run (§12.4, §12.6)", () => {
   });
 
   it("is deterministic: same persona+seed ⇒ identical record", async () => {
-    const a = await runPlaytest(index, new MockProvider("seeded", 4), { persona: "seeded", seed: 4 });
-    const b = await runPlaytest(index, new MockProvider("seeded", 4), { persona: "seeded", seed: 4 });
+    const a = await runPlaytest(index, new MockProvider("seeded", 4), {
+      persona: "seeded",
+      seed: 4,
+    });
+    const b = await runPlaytest(index, new MockProvider("seeded", 4), {
+      persona: "seeded",
+      seed: 4,
+    });
     expect(a.final_hash).toBe(b.final_hash);
     expect(a.steps.map((s) => s.chosen_action)).toEqual(b.steps.map((s) => s.chosen_action));
   });
 
   it("terminates on every run (loop guard / max steps)", async () => {
     const { records } = await runRoster(pack, { seeds: [1, 2, 3], maxSteps: 80 });
-    for (const r of records) expect(["completed", "looped", "stuck", "max_steps"]).toContain(r.status);
+    for (const r of records)
+      expect(["completed", "looped", "stuck", "max_steps"]).toContain(r.status);
   });
 });
 
@@ -62,7 +72,9 @@ describe("roster coverage (§13.4)", () => {
     // The mock roster reaches at least two of the three endings.
     expect(coverage.endings_reached.length).toBeGreaterThanOrEqual(2);
     // Scene coverage is internally consistent (no ending nodes leaking in).
-    expect(coverage.scenes_visited.length + coverage.scenes_unvisited.length).toBe(coverage.scenes_total);
+    expect(coverage.scenes_visited.length + coverage.scenes_unvisited.length).toBe(
+      coverage.scenes_total,
+    );
     expect(coverage.scenes_total).toBe(20);
     // Coverage findings are derived, not fabricated: any missing ending is reported.
     for (const e of coverage.endings_missing) {

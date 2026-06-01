@@ -31,7 +31,11 @@
  */
 import { describe, it, expect } from "vitest";
 import { loadParserPackFile } from "../../src/parser/pack.js";
-import { indexParserPack, buildParserRules, initStateForParserPack } from "../../src/parser/runner.js";
+import {
+  indexParserPack,
+  buildParserRules,
+  initStateForParserPack,
+} from "../../src/parser/runner.js";
 import { enumerateActions } from "../../src/parser/legal_actions.js";
 import { buildParserObservation } from "../../src/parser/observation.js";
 import { validateParser } from "../../src/validate/parser_validator.js";
@@ -47,7 +51,12 @@ const step = makeStep(buildParserRules(index));
 function play(s: GameState, ids: string[]): GameState {
   for (const id of ids) {
     const opt = enumerateActions(index, s).find((o) => o.id === id);
-    if (!opt) throw new Error(`"${id}" not legal in ${s.current}: [${enumerateActions(index, s).map((o) => o.id).join(", ")}]`);
+    if (!opt)
+      throw new Error(
+        `"${id}" not legal in ${s.current}: [${enumerateActions(index, s)
+          .map((o) => o.id)
+          .join(", ")}]`,
+      );
     const r = step(s, opt.action);
     expect(r.ok).toBe(true);
     s = r.state;
@@ -61,9 +70,28 @@ const actionIds = (s: GameState): string[] => enumerateActions(index, s).map((o)
 // The full solution path, milestones annotated.
 const TO_HEADSTONE = ["go_north", "go_west"];
 const READ = ["read_headstone"]; // +5
-const TO_WELL_TIE = ["go_north", "open_stone_coffer", "take_brass_key", "go_south", "go_east", "go_up", "take_rope", "go_down", "go_east"];
+const TO_WELL_TIE = [
+  "go_north",
+  "open_stone_coffer",
+  "take_brass_key",
+  "go_south",
+  "go_east",
+  "go_up",
+  "take_rope",
+  "go_down",
+  "go_east",
+];
 const TIE = ["use_rope_on_old_well"]; // +10
-const TO_GATE = ["go_down", "unlock_oak_chest", "open_oak_chest", "take_iron_key", "go_up", "go_west", "go_north", "go_down"];
+const TO_GATE = [
+  "go_down",
+  "unlock_oak_chest",
+  "open_oak_chest",
+  "take_iron_key",
+  "go_up",
+  "go_west",
+  "go_north",
+  "go_down",
+];
 const OPEN_GATE = ["use_iron_key_on_crypt_gate"]; // +20
 const WIN = ["go_north"];
 
@@ -107,7 +135,12 @@ describe("bug_0013 — Sealed Crypt scoring accrues 0→5→15→35 across the t
   });
 
   it("re-tying the well does not re-award: the milestone gate has flipped", () => {
-    let s = play(initStateForParserPack(index, 73), [...TO_HEADSTONE, ...READ, ...TO_WELL_TIE, ...TIE]);
+    const s = play(initStateForParserPack(index, 73), [
+      ...TO_HEADSTONE,
+      ...READ,
+      ...TO_WELL_TIE,
+      ...TIE,
+    ]);
     expect(score(s)).toBe(15);
     // use_rope_on_old_well is gated not_flag rope_attached_to_well; after tying, the
     // interaction is gone, so the +10 cannot be repeated by returning to the well.

@@ -13,7 +13,10 @@ import { initState, type GameState } from "../../src/core/state.js";
 import { resolveAttack, resolveSkillCheck, enemyHp, enemyAlive } from "../../src/rpg/combat.js";
 import { enemyHpVar, type Enemy } from "../../src/rpg/schema.js";
 
-const baseState = () => ({ ...initState({ seed: 1, start: "room" }), vars: { hp: 20, attack: 4, defense: 2, might: 3 } });
+const baseState = () => ({
+  ...initState({ seed: 1, start: "room" }),
+  vars: { hp: 20, attack: 4, defense: 2, might: 3 },
+});
 
 const wight: Enemy = {
   id: "wight",
@@ -33,7 +36,12 @@ describe("gated DSL: quest stages (§13, §14)", () => {
     const s0 = initState({ seed: 1, start: "a" });
     const { state, event } = applyEffect({ set_quest_stage: { quest: "main", stage: "act2" } }, s0);
     expect(state.questStage["main"]).toBe("act2");
-    expect(event).toMatchObject({ type: "state_change", effect: "set_quest_stage", quest: "main", stage: "act2" });
+    expect(event).toMatchObject({
+      type: "state_change",
+      effect: "set_quest_stage",
+      quest: "main",
+      stage: "act2",
+    });
     expect(evalCondition({ quest_stage: { quest: "main", stage: "act2" } }, state)).toBe(true);
     expect(evalCondition({ quest_stage: { quest: "main", stage: "act1" } }, state)).toBe(false);
     expect(evalCondition({ quest_stage: { quest: "main", stage: "act2" } }, s0)).toBe(false);
@@ -82,7 +90,12 @@ describe("seeded combat (§8.5)", () => {
 });
 
 describe("seeded skill checks (§8.5)", () => {
-  const check = { skill: "might", difficulty: 12, on_success: [{ set_flag: "moved" } as const], on_failure: [{ narrate: "nope" } as const] };
+  const check = {
+    skill: "might",
+    difficulty: 12,
+    on_success: [{ set_flag: "moved" } as const],
+    on_failure: [{ narrate: "nope" } as const],
+  };
 
   it("is deterministic for a fixed state", () => {
     const s = baseState();

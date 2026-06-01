@@ -13,9 +13,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "format:check": "prettier --check src bin scripts agents",
-    "format": "prettier --write src bin scripts agents",
-    "lint": "eslint src bin scripts agents",
+    "format:check": "prettier --check src bin scripts agents tests",
+    "format": "prettier --write src bin scripts agents tests",
+    "lint": "eslint src bin scripts agents tests",
     "test": "vitest run",
     "verify:integrity": "tsx scripts/verify-integrity.ts",
     "health": "npm run verify:integrity && npm run typecheck && npm run lint && npm run format:check && npm test && npm run validate -- content/cyoa/pack/watchtower_road.yaml && npm run validate -- content/parser/pack/sealed_crypt.yaml && npm run validate -- content/rpg/pack/sunken_barrow.yaml && npm run validate -- content/rpg/pack/cold_forge.yaml && npm run playtest -- content/cyoa/pack/watchtower_road.yaml --seeds 1,2,3",

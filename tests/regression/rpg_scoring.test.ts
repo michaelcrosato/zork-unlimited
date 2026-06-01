@@ -31,7 +31,12 @@
  */
 import { describe, it, expect } from "vitest";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
-import { indexRpgPack, buildRpgRules, initStateForRpgPack, enumerateRpgActions } from "../../src/rpg/runner.js";
+import {
+  indexRpgPack,
+  buildRpgRules,
+  initStateForRpgPack,
+  enumerateRpgActions,
+} from "../../src/rpg/runner.js";
 import { buildParserObservation } from "../../src/parser/observation.js";
 import { validateParser } from "../../src/validate/parser_validator.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
@@ -50,7 +55,12 @@ const options = (s: GameState) => enumerateRpgActions(index, s);
 
 function act(s: GameState, pred: (a: Action) => boolean): GameState {
   const opt = options(s).find((o) => pred(o.action));
-  if (!opt) throw new Error(`no action; legal=[${options(s).map((o) => o.id).join(", ")}] in ${s.current}`);
+  if (!opt)
+    throw new Error(
+      `no action; legal=[${options(s)
+        .map((o) => o.id)
+        .join(", ")}] in ${s.current}`,
+    );
   const r = step(s, opt.action);
   expect(r.ok).toBe(true);
   if (!r.ok) throw new Error("step failed");

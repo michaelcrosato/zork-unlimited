@@ -1,5 +1,5 @@
 # Prettier is scoped to first-party engine/tooling TS via the format scripts
-# (src bin scripts agents). These globs are a belt-and-suspenders guard so an
+# (src bin scripts agents tests). These globs are a belt-and-suspenders guard so an
 # accidental `prettier .` never rewrites hash-sensitive or generated assets.
 dist
 node_modules
@@ -12,3 +12,12 @@ ai-runs
 content
 # trace fixtures carry committed hashes / known-answer vectors.
 traces
+# tests/ is under the Prettier gate (bug_0036) EXCEPT the verification assets the
+# integrity guard (scripts/verify-integrity.ts) freezes: the determinism property
+# tests and the hash-pin/known-answer unit tests. A formatter must not churn a
+# byte-frozen verifier asset (it reads as silent tampering to the drift gate), so
+# these stay excluded — ESLint still lints them; only auto-formatting is held off.
+tests/property/determinism.test.ts
+tests/property/parser_determinism.test.ts
+tests/unit/rpg_validator.test.ts
+tests/unit/sha256.test.ts

@@ -67,12 +67,26 @@ describe("bug_0018 — reactive CYOA scene text (the kitchen lockpicks)", () => 
   });
 
   it("all three endings still fire — text-only, no gating change", () => {
-    const rich = run(["kitchens", "take_pick", "dumbwaiter", "approach_vault", "pick_lock", "grab_gold"]);
+    const rich = run([
+      "kitchens",
+      "take_pick",
+      "dumbwaiter",
+      "approach_vault",
+      "pick_lock",
+      "grab_gold",
+    ]);
     expect(rich.ended).toBe(true);
     expect(rich.endingId).toBe("ending_rich");
 
     // bug_0022: the crawlspace truth now needs the lockpick (no brute-force pry).
-    const truth = run(["inspect_clock", "kitchens", "take_pick", "back_foyer", "pry_panel", "open_strongbox"]);
+    const truth = run([
+      "inspect_clock",
+      "kitchens",
+      "take_pick",
+      "back_foyer",
+      "pry_panel",
+      "open_strongbox",
+    ]);
     expect(truth.ended).toBe(true);
     expect(truth.endingId).toBe("ending_truth");
 

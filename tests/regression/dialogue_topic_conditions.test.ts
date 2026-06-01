@@ -24,7 +24,11 @@
  */
 import { describe, it, expect } from "vitest";
 import { loadParserPackFile } from "../../src/parser/pack.js";
-import { indexParserPack, buildParserRules, initStateForParserPack } from "../../src/parser/runner.js";
+import {
+  indexParserPack,
+  buildParserRules,
+  initStateForParserPack,
+} from "../../src/parser/runner.js";
 import { enumerateActions } from "../../src/parser/legal_actions.js";
 import { makeStep } from "../../src/core/engine.js";
 import { validateParser } from "../../src/validate/parser_validator.js";
@@ -44,7 +48,8 @@ function doId(s: GameState, id: string): GameState {
   return r.state;
 }
 // Reach the chapel nave (the sexton's room) and open the conversation.
-const talkingSexton = (): GameState => doId(doId(doId(initStateForParserPack(index, 1), "go_north"), "go_north"), "talk_sexton");
+const talkingSexton = (): GameState =>
+  doId(doId(doId(initStateForParserPack(index, 1), "go_north"), "go_north"), "talk_sexton");
 
 describe("bug_0014 — dialogue topics retire once told (no infinite ping-pong)", () => {
   it("each info topic is offered exactly once; after both rumors only `bye` remains", () => {
@@ -68,7 +73,9 @@ describe("bug_0014 — dialogue topics retire once told (no infinite ping-pong)"
     s = doId(s, "ask_well"); // hear the well rumor first (alternate order)
     // The well topic has retired — asking it again is not in the legal set.
     expect(ids(s)).not.toContain("ask_well");
-    const wellAgain = enumerateActions(index, talkingSexton()).find((o) => o.id === "ask_well")!.action;
+    const wellAgain = enumerateActions(index, talkingSexton()).find(
+      (o) => o.id === "ask_well",
+    )!.action;
     const r = step(s, wellAgain); // force the retired topic: engine re-check rejects it
     expect(r.ok).toBe(false);
     // bye is always available and leaves the conversation.
@@ -82,7 +89,9 @@ describe("bug_0014 — dialogue topics retire once told (no infinite ping-pong)"
     expect(validateParser(crypt.compiled.pack).findings).toHaveLength(0);
 
     // A dialogue whose only `end` topics are gated has no guaranteed exit.
-    const bad = loadParserPackFile("content/broken-fixtures/parser_dialogue_gated_nonterminating.yaml");
+    const bad = loadParserPackFile(
+      "content/broken-fixtures/parser_dialogue_gated_nonterminating.yaml",
+    );
     expect(bad.ok).toBe(true);
     if (!bad.ok) return;
     const report = validateParser(bad.compiled.pack);

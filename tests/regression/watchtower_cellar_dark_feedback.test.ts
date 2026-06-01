@@ -77,7 +77,11 @@ describe("bug_0005 — lantern-less cellar door gives a legible 'too dark' nudge
 
   it("once a lantern is carried, the nudge is gone and light_lantern takes over", () => {
     const withLantern = run([
-      "go_east", "approach_base", "search_rubble", "take_lantern", "carry_lantern_to_cellar",
+      "go_east",
+      "approach_base",
+      "search_rubble",
+      "take_lantern",
+      "carry_lantern_to_cellar",
     ]);
     expect(withLantern.state.current).toBe("cellar_door");
     expect(withLantern.state.inventory).toContain("lantern");

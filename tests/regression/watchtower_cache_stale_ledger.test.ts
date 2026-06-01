@@ -34,9 +34,15 @@ const optionIds = (s: ReturnType<typeof play>): string[] =>
 
 // Cellar-only route (no letter): lantern → cellar → cache → take ledger.
 const TO_TAKE_LEDGER = [
-  "go_east", "approach_base", "search_rubble", "take_lantern",
-  "carry_lantern_to_cellar", "light_lantern", "descend_cellar",
-  "search_cache", "take_ledger",
+  "go_east",
+  "approach_base",
+  "search_rubble",
+  "take_lantern",
+  "carry_lantern_to_cellar",
+  "light_lantern",
+  "descend_cellar",
+  "search_cache",
+  "take_ledger",
 ];
 
 describe("bug_0007 — taking the ledger exits cleanly and the cache text stays honest", () => {
@@ -59,8 +65,14 @@ describe("bug_0007 — taking the ledger exits cleanly and the cache text stays 
 
   it("the cellar-only route (never seeing the letter) still reaches ending_truth", () => {
     const s = play([
-      ...TO_TAKE_LEDGER, "climb_out", "cellar_back", "approach_base",
-      "climb_stairs", "continue_up", "survey_road", "slip_into_woods",
+      ...TO_TAKE_LEDGER,
+      "climb_out",
+      "cellar_back",
+      "approach_base",
+      "climb_stairs",
+      "continue_up",
+      "survey_road",
+      "slip_into_woods",
       "expose_the_plot",
     ]);
     expect(s.ended).toBe(true);

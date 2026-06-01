@@ -81,7 +81,11 @@ endings:
     const d = diagnose(buildRules(wi), state, actions);
     expect(d.type).toBe("no_failure");
 
-    const artifact = toBugArtifact(state, actions, d, { bugId: "bug_test_0001", packId: "win_pack", contentHash: winPack.contentHash });
+    const artifact = toBugArtifact(state, actions, d, {
+      bugId: "bug_test_0001",
+      packId: "win_pack",
+      contentHash: winPack.contentHash,
+    });
     expect(artifact.bug_id).toBe("bug_test_0001");
     expect(artifact.initial_state).toBe("start");
     expect(artifact.trace).toEqual(actions);
@@ -98,7 +102,13 @@ describe("fixer.applyContentPatch", () => {
       layer: "hint_text",
       mode: "parser",
       summary: "hint at the start room",
-      ops: [{ op: "add_room_journal_hint", room: "forest_path", text: "Mud shows fresh bootprints leading toward the chapel." }],
+      ops: [
+        {
+          op: "add_room_journal_hint",
+          room: "forest_path",
+          text: "Mud shows fresh bootprints leading toward the chapel.",
+        },
+      ],
     };
     const res = applyContentPatch(rawPack, proposal);
     expect(res.ok).toBe(true);
@@ -106,14 +116,24 @@ describe("fixer.applyContentPatch", () => {
   });
 
   it("refuses a patch whose target does not exist", () => {
-    const res = applyContentPatch(rawPack, { layer: "content", mode: "parser", summary: "x", ops: [{ op: "set_object_field", id: "no_such_object", field: "quest_critical", value: true }] });
+    const res = applyContentPatch(rawPack, {
+      layer: "content",
+      mode: "parser",
+      summary: "x",
+      ops: [{ op: "set_object_field", id: "no_such_object", field: "quest_critical", value: true }],
+    });
     expect(res.ok).toBe(false);
     expect(res.report.findings[0]?.code).toBe("PATCH_TARGET_MISSING");
   });
 
   it("refuses a patch that breaks the schema (§16)", () => {
     // max_score must be a number; a string value must be rejected, not shipped.
-    const res = applyContentPatch(rawPack, { layer: "content", mode: "parser", summary: "x", ops: [{ op: "set_meta", field: "max_score", value: "lots" }] });
+    const res = applyContentPatch(rawPack, {
+      layer: "content",
+      mode: "parser",
+      summary: "x",
+      ops: [{ op: "set_meta", field: "max_score", value: "lots" }],
+    });
     expect(res.ok).toBe(false);
     expect(res.report.findings.some((f) => f.code === "PATCH_SCHEMA_BREAK")).toBe(true);
   });
@@ -121,7 +141,10 @@ describe("fixer.applyContentPatch", () => {
 
 describe("fixer.proposeFix", () => {
   it("proposes a single-layer hint for a parser soft-lock", () => {
-    const p = proposeFix({ type: "soft_lock", description: "stuck", severity: "high", where: [], step: 3 }, { mode: "parser", location: "old_well" });
+    const p = proposeFix(
+      { type: "soft_lock", description: "stuck", severity: "high", where: [], step: 3 },
+      { mode: "parser", location: "old_well" },
+    );
     expect(p.layer).toBe("hint_text");
     expect(p.ops).toHaveLength(1);
     expect(p.ops[0]?.op).toBe("add_room_journal_hint");

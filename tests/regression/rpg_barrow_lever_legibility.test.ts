@@ -45,7 +45,9 @@ const step = makeStep(rules);
 const LEVER: Action = { type: "USE", item: "iron_bar", target: "stone_slab" };
 
 const narrations = (effects: readonly Effect[]): string[] =>
-  effects.filter((e): e is { narrate: string } => "narrate" in e).map((e) => (e as { narrate: string }).narrate);
+  effects
+    .filter((e): e is { narrate: string } => "narrate" in e)
+    .map((e) => (e as { narrate: string }).narrate);
 
 /** Reach the slab passage (bar in hand, wight slain, slab not yet moved) at `seed`. */
 function atSlab(seed: number): GameState {

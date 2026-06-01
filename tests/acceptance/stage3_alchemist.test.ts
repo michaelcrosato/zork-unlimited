@@ -9,7 +9,11 @@
  */
 import { describe, it, expect } from "vitest";
 import { loadParserPackFile } from "../../src/parser/pack.js";
-import { indexParserPack, buildParserRules, initStateForParserPack } from "../../src/parser/runner.js";
+import {
+  indexParserPack,
+  buildParserRules,
+  initStateForParserPack,
+} from "../../src/parser/runner.js";
 import { enumerateActions } from "../../src/parser/legal_actions.js";
 import { buildParserObservation } from "../../src/parser/observation.js";
 import { validateParser } from "../../src/validate/parser_validator.js";
@@ -27,7 +31,12 @@ const step = makeStep(rules);
 function play(s: GameState, ids: string[]): GameState {
   for (const id of ids) {
     const opt = enumerateActions(index, s).find((o) => o.id === id);
-    if (!opt) throw new Error(`"${id}" not legal in ${s.current}: [${enumerateActions(index, s).map((o) => o.id).join(", ")}]`);
+    if (!opt)
+      throw new Error(
+        `"${id}" not legal in ${s.current}: [${enumerateActions(index, s)
+          .map((o) => o.id)
+          .join(", ")}]`,
+      );
     const r = step(s, opt.action);
     expect(r.ok).toBe(true);
     s = r.state;
@@ -37,10 +46,26 @@ function play(s: GameState, ids: string[]): GameState {
 
 // Brew the antidote and stand in the laboratory (one step short of the spire).
 const BREW = [
-  "go_west", "read_spellbook", "go_east", "go_east", "take_herb", "take_brass_key",
-  "go_west", "go_north", "go_up", "unlock_strongbox", "open_strongbox", "take_iron_key",
-  "go_down", "use_iron_key_on_cellar_door", "go_down", "take_water_vial", "go_up",
-  "go_north", "use_herb_on_cauldron", "use_water_vial_on_cauldron",
+  "go_west",
+  "read_spellbook",
+  "go_east",
+  "go_east",
+  "take_herb",
+  "take_brass_key",
+  "go_west",
+  "go_north",
+  "go_up",
+  "unlock_strongbox",
+  "open_strongbox",
+  "take_iron_key",
+  "go_down",
+  "use_iron_key_on_cellar_door",
+  "go_down",
+  "take_water_vial",
+  "go_up",
+  "go_north",
+  "use_herb_on_cauldron",
+  "use_water_vial_on_cauldron",
 ];
 
 describe("Stage 3 — The Alchemist's Tower", () => {

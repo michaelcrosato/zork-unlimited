@@ -35,7 +35,11 @@
  */
 import { describe, it, expect } from "vitest";
 import { loadParserPackFile } from "../../src/parser/pack.js";
-import { indexParserPack, buildParserRules, initStateForParserPack } from "../../src/parser/runner.js";
+import {
+  indexParserPack,
+  buildParserRules,
+  initStateForParserPack,
+} from "../../src/parser/runner.js";
 import { enumerateActions, resolveParserAction } from "../../src/parser/legal_actions.js";
 import { buildParserObservation } from "../../src/parser/observation.js";
 import { roomDescription } from "../../src/parser/model.js";
@@ -50,7 +54,12 @@ const step = makeStep(buildParserRules(index));
 function play(s: GameState, ids: string[]): GameState {
   for (const id of ids) {
     const opt = enumerateActions(index, s).find((o) => o.id === id);
-    if (!opt) throw new Error(`"${id}" not legal in ${s.current}: [${enumerateActions(index, s).map((o) => o.id).join(", ")}]`);
+    if (!opt)
+      throw new Error(
+        `"${id}" not legal in ${s.current}: [${enumerateActions(index, s)
+          .map((o) => o.id)
+          .join(", ")}]`,
+      );
     const r = step(s, opt.action);
     expect(r.ok).toBe(true);
     s = r.state;
@@ -92,7 +101,11 @@ describe("bug_0012 — reactive room text replaces stale descriptions in the Alc
 
   it("Study flips from a locked strongbox to an open, empty one once the iron key is held", () => {
     let s = play(initStateForParserPack(index, 29), [
-      "go_east", "take_brass_key", "go_west", "go_north", "go_up",
+      "go_east",
+      "take_brass_key",
+      "go_west",
+      "go_north",
+      "go_up",
     ]);
     expect(s.current).toBe("study");
     expect(desc(s)).toContain("locked iron strongbox");
@@ -106,8 +119,15 @@ describe("bug_0012 — reactive room text replaces stale descriptions in the Alc
 
   it("Great Hall flips from a bolted hatch to a thrown-open one once the cellar is unlocked", () => {
     let s = play(initStateForParserPack(index, 29), [
-      "go_east", "take_brass_key", "go_west", "go_north", "go_up",
-      "unlock_strongbox", "open_strongbox", "take_iron_key", "go_down",
+      "go_east",
+      "take_brass_key",
+      "go_west",
+      "go_north",
+      "go_up",
+      "unlock_strongbox",
+      "open_strongbox",
+      "take_iron_key",
+      "go_down",
     ]);
     expect(s.current).toBe("great_hall");
     expect(desc(s)).toContain("bolted cellar hatch");
@@ -123,9 +143,17 @@ describe("bug_0012 — reactive room text replaces stale descriptions in the Alc
 
   it("Cold Cellar flips from a full rack to an empty one once the vial is taken", () => {
     let s = play(initStateForParserPack(index, 29), [
-      "go_east", "take_brass_key", "go_west", "go_north", "go_up",
-      "unlock_strongbox", "open_strongbox", "take_iron_key", "go_down",
-      "use_iron_key_on_cellar_door", "go_down",
+      "go_east",
+      "take_brass_key",
+      "go_west",
+      "go_north",
+      "go_up",
+      "unlock_strongbox",
+      "open_strongbox",
+      "take_iron_key",
+      "go_down",
+      "use_iron_key_on_cellar_door",
+      "go_down",
     ]);
     expect(s.current).toBe("cellar");
     expect(desc(s)).toContain("rests in a rack");

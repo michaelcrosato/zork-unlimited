@@ -32,7 +32,11 @@ const optionIds = (s: ReturnType<typeof play>): string[] =>
 
 // West route to the hermit, ask about the tower, then return to the conversation.
 const TO_HERMIT_LORE = [
-  "go_west", "follow_to_camp", "talk_hermit", "ask_about_tower", "back_from_tower_talk",
+  "go_west",
+  "follow_to_camp",
+  "talk_hermit",
+  "ask_about_tower",
+  "back_from_tower_talk",
 ];
 
 describe("bug_0004 — hermit lore journals and no longer loops", () => {
@@ -57,7 +61,14 @@ describe("bug_0004 — hermit lore journals and no longer loops", () => {
     const s = play(TO_HERMIT_LORE);
     expect(s.flags["learned_truth"]).not.toBe(true);
     // Carry the hearsay to the climax with no proof: expose is still locked out.
-    const atTown = play([...TO_HERMIT_LORE, "say_goodbye", "leave_camp", "ford_brook", "cross_north", "slip_into_woods"]);
+    const atTown = play([
+      ...TO_HERMIT_LORE,
+      "say_goodbye",
+      "leave_camp",
+      "ford_brook",
+      "cross_north",
+      "slip_into_woods",
+    ]);
     expect(atTown.current).toBe("decision_point");
     expect(optionIds(atTown)).not.toContain("expose_the_plot");
     expect(optionIds(atTown)).toContain("turn_back");

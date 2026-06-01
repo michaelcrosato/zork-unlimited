@@ -40,7 +40,8 @@ describe("GameSession — mode detection + structured play", () => {
   it("plays the RPG pack (combat + skill check) to victory and is deterministic", () => {
     const play = (): string => {
       const s = GameSession.start(read("content/rpg/pack/sunken_barrow.yaml"), 1);
-      const byLabel = (needle: string): string | undefined => s.view().choices.find((c) => c.label.includes(needle))?.id;
+      const byLabel = (needle: string): string | undefined =>
+        s.view().choices.find((c) => c.label.includes(needle))?.id;
       expect(s.choose(byLabel("go down")!).ok).toBe(true);
       expect(s.choose(byLabel("take iron bar")!).ok).toBe(true);
       expect(s.choose(byLabel("go north")!).ok).toBe(true);

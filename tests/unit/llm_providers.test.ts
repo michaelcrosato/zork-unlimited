@@ -25,14 +25,22 @@ describe("resolveProvider", () => {
 
   it("uses the configured backend when its key is present", () => {
     expect(resolveProvider({ mock, env: { OPENAI_API_KEY: "sk-x" } }).name).toMatch(/^openai:/);
-    expect(resolveProvider({ mock, env: { ANTHROPIC_API_KEY: "sk-x" } }).name).toMatch(/^anthropic:/);
+    expect(resolveProvider({ mock, env: { ANTHROPIC_API_KEY: "sk-x" } }).name).toMatch(
+      /^anthropic:/,
+    );
     expect(resolveProvider({ mock, env: { GEMINI_API_KEY: "sk-x" } }).name).toMatch(/^google:/);
   });
 
   it("honors an explicit preference but falls back to mock when that key is missing", () => {
-    expect(resolveProvider({ mock, prefer: "google", env: { OPENAI_API_KEY: "sk-x" } }).name).toBe(mock.name);
-    expect(resolveProvider({ mock, prefer: "openai", env: { OPENAI_API_KEY: "sk-x" } }).name).toMatch(/^openai:/);
-    expect(resolveProvider({ mock, prefer: "mock", env: { OPENAI_API_KEY: "sk-x" } }).name).toBe(mock.name);
+    expect(resolveProvider({ mock, prefer: "google", env: { OPENAI_API_KEY: "sk-x" } }).name).toBe(
+      mock.name,
+    );
+    expect(
+      resolveProvider({ mock, prefer: "openai", env: { OPENAI_API_KEY: "sk-x" } }).name,
+    ).toMatch(/^openai:/);
+    expect(resolveProvider({ mock, prefer: "mock", env: { OPENAI_API_KEY: "sk-x" } }).name).toBe(
+      mock.name,
+    );
   });
 
   it("prefers anthropic when multiple keys are set and none is pinned", () => {
@@ -69,7 +77,10 @@ describe("real adapters (HTTP injected, no network)", () => {
 
   it("Anthropic adapter joins content blocks", async () => {
     const p = new AnthropicProvider("key", "claude-test", async () => ({
-      content: [{ type: "text", text: '{"action_id":' }, { type: "text", text: '"stay"}' }],
+      content: [
+        { type: "text", text: '{"action_id":' },
+        { type: "text", text: '"stay"}' },
+      ],
     }));
     expect(await p.completeJson(req)).toEqual({ action_id: "stay" });
   });

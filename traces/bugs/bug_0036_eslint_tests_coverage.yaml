@@ -1,0 +1,77 @@
+bug_id: bug_0036
+pack_id: null                    # repo/tooling change — extends the static-analysis gate; no content/engine pack bug
+seed: 88                         # the mandatory blind playtest seed this cycle (watchtower_road)
+type: repo_gate                  # trust-but-verify: widen the ENFORCED bar to cover code it was blind to
+evidence:
+  source: assessor (repo-lint-coverage rank-1, score 0.6) + bug_0035 queued lever + AI_LOOP_STATE history
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-01T11-27-07-232Z/playtest.md
+  playtest_rationale: >
+    Mandated cycle playtest: watchtower_road.yaml, seed 88. Fresh general-purpose subagent, MCP-only,
+    no source access. Reached ending_truth and ending_captured across three runs; clarity 5/5,
+    enjoyment 4/5; zero rejected actions, no loops, no soft-locks, no broken/stale state. Its only
+    findings were ALREADY-adjudicated: (a) the two evidence halves (tower/ledger vs brook/checkpoint)
+    don't converge — the long-deferred intentional knowledge-vs-proof gating, not a defect; (b) two
+    cosmetic stale re-offered actions (tower_base "search the cart", forest_crossroads "inspect the
+    ground") that re-fire harmlessly and were left cosmetic in earlier cycles. Watchtower is pristine
+    (heavily polished by bug_0002-0007); no new content defect to fix.
+  decision_rationale: >
+    Per blind_playtest_protocol.md's "you MAY pick a different candidate if your judgement and the
+    playtest say it's higher value." With watchtower (and every pack) blind-verified and per-pack
+    polish at deep diminishing returns, the genuinely highest-value lever is the assessor's honest
+    rank-1 cross-category candidate (repo-lint-coverage, score 0.6) — ACTUALLY extending the ESLint/
+    Prettier gate that bug_0035's detector QUEUED and logged as the explicit next "repo/L" focus.
+    This is the dual of bug_0031 finally closed for the larger of the two queued dirs (tests/).
+finding: >
+  tests/ held 63 first-party .ts files with NO static-analysis or format gate. bug_0031 wired
+  ESLint+Prettier but scoped `files` to src/bin/scripts/agents and listed "tests/**" under `ignores`,
+  and the lint/format npm scripts only named "src bin scripts agents" — so a whole class of lint-level
+  issues in test code (unused vars, prefer-const, unsafe patterns) and all formatting drift there were
+  invisible to `npm run health`. bug_0035 surfaced this gap as repo-lint-coverage; this cycle closes it.
+improvement:
+  layer: repo      # eslint.config.js + package.json + one test fix + Prettier normalization. NO content/YAML edited.
+  change: >
+    (1) eslint.config.js: dropped "tests/**" from `ignores` and added a `{ files: ["tests/**/*.ts"] }`
+    block carrying the same no-unused-vars policy as first-party code. No test-specific rule relaxations
+    were needed — the suite already passes the recommended set clean (measured: 0 no-explicit-any
+    violations; no-non-null-assertion is not in the recommended config, so the 72 deliberate `!`
+    asserts are not flagged). (2) package.json: lint/format:check/format scripts now include `tests`,
+    so the gate actually RUNS (a config-only change the npm scripts never invoke would be a no-op).
+    (3) Fixed the one real finding ESLint surfaced: a `let s` that is never reassigned in
+    tests/regression/sealed_crypt_scoring.test.ts -> `const` (prefer-const). (4) Ran `prettier --write
+    tests` once to normalize formatting across 49 files (pure whitespace/line-wrap; no logic changed).
+  effect_on_ranking: >
+    The assessor's repo-lint-coverage detector DISARMS for tests/ (eslintCovers(text,"tests") flips to
+    true): the candidate now lists only ui/ — the one first-party dir still outside the gate (a
+    separate Vite/React package that needs its own eslint-plugin-react/react-hooks setup, left for a
+    future cycle). Honest partial progress; the radar keeps pointing at the remaining real work.
+verification:
+  typecheck: green (tsc --noEmit, exit 0)
+  eslint: green over `src bin scripts agents tests` (0 problems)
+  prettier: green — `prettier --check` over `src bin scripts agents tests` (all files conform)
+  unit_tests: green (assessor.test.ts unchanged; eslintCovers predicate unchanged)
+  regression_tests: tests/regression/eslint_tests_coverage.test.ts green (gate covers tests, scripts run it, detector disarmed for tests / still names ui)
+  validate: green (0 errors, 0 warnings) — all packs (NO content touched)
+  content_hash_changes: none   # NO content/ YAML edited
+  health: green (verify:integrity static + typecheck + ESLint + Prettier check + tests + every pack validate + watchtower coverage)
+  verify_integrity_drift: >
+    expected exit 0 — no protected file edited, no content hash moved, no traces/ HASH_PIN touched. The
+    new regression file is additive (the test-count floor only rises). Prettier touched test bodies but
+    verify-integrity does not hash test CONTENTS (it checks presence + no .skip/.only/.todo/xit + a
+    test-count floor), and no skip/only markers were introduced.
+regression_test: tests/regression/eslint_tests_coverage.test.ts
+closes_deferred:
+  - "a future repo/L cycle should ACTUALLY extend the gate: add tests/**/*.ts to the ESLint files globs (drop tests/** from ignores) and fix what it flags"   # bug_0035 deferred[a], for the tests/ dir
+deferred:
+  - >
+    ui/ is still outside the gate. It is a separate Vite/React package and needs its own lint setup
+    (eslint-plugin-react + eslint-plugin-react-hooks against the ui tsconfig, plus *.tsx globs) wired
+    as a second flat-config layer, and its own format:check/format coverage. The repo-lint-coverage
+    detector still names it; it disarms fully once ui/ comes under the gate. Bound it per-dir.
+  - >
+    If both repo levers (lint-coverage, engine TODO/marker scan) ever disarm, consider a doc/staleness
+    detector as the next cross-category radar (logged since bug_0035).
+  - >
+    Cosmetic watchtower stale re-offers (tower_base "search the cart" after looting; forest_crossroads
+    "inspect the ground" after the bootprint clue is journaled) — harmless, re-fire cleanly; only worth
+    a pass if a future cycle is already editing those scenes.

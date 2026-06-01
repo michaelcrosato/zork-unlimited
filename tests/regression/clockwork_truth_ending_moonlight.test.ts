@@ -53,11 +53,32 @@ function play(ids: string[]) {
 // Crawlspace route: discover the panel, fetch the lockpick from the kitchen
 // (bug_0022 made the strongbox a true lockbox), crack the strongbox. The player
 // stays behind the clock in the crawlspace — never the foyer's moonlit dome.
-const CRAWLSPACE_ROUTE = ["inspect_clock", "kitchens", "take_pick", "back_foyer", "pry_panel", "open_strongbox"];
+const CRAWLSPACE_ROUTE = [
+  "inspect_clock",
+  "kitchens",
+  "take_pick",
+  "back_foyer",
+  "pry_panel",
+  "open_strongbox",
+];
 // The vault route, taking the letter instead of the gold.
-const VAULT_LETTER_ROUTE = ["kitchens", "take_pick", "dumbwaiter", "approach_vault", "pick_lock", "take_letter"];
+const VAULT_LETTER_ROUTE = [
+  "kitchens",
+  "take_pick",
+  "dumbwaiter",
+  "approach_vault",
+  "pick_lock",
+  "take_letter",
+];
 // The vault route, grabbing the gold.
-const VAULT_GOLD_ROUTE = ["kitchens", "take_pick", "dumbwaiter", "approach_vault", "pick_lock", "grab_gold"];
+const VAULT_GOLD_ROUTE = [
+  "kitchens",
+  "take_pick",
+  "dumbwaiter",
+  "approach_vault",
+  "pick_lock",
+  "grab_gold",
+];
 // Ignore the warning and force the door.
 const FORCE_ROUTE = ["climb_stairs", "approach_vault", "force_door"];
 

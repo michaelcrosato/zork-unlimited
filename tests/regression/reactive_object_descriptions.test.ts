@@ -45,7 +45,12 @@ import { ObjectSchema } from "../../src/parser/schema.js";
 import { objectDescription } from "../../src/parser/model.js";
 import { resolveParserAction } from "../../src/parser/legal_actions.js";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
-import { indexRpgPack, buildRpgRules, initStateForRpgPack, enumerateRpgActions } from "../../src/rpg/runner.js";
+import {
+  indexRpgPack,
+  buildRpgRules,
+  initStateForRpgPack,
+  enumerateRpgActions,
+} from "../../src/rpg/runner.js";
 import { buildParserObservation } from "../../src/parser/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import { initState, type GameState } from "../../src/core/state.js";
@@ -53,11 +58,16 @@ import type { Action } from "../../src/api/types.js";
 
 type GameObject = z.infer<typeof ObjectSchema>;
 
-const baseState = (): GameState => initState({ seed: 1, start: "here", varsInit: {}, flagsInit: [] });
+const baseState = (): GameState =>
+  initState({ seed: 1, start: "here", varsInit: {}, flagsInit: [] });
 
 describe("bug_0023 — reactive object descriptions (objectDescription)", () => {
   it("a variant-less object returns its base description under any state (backward-compat)", () => {
-    const o: GameObject = ObjectSchema.parse({ id: "rope", name: "rope", description: "A coil of rope." });
+    const o: GameObject = ObjectSchema.parse({
+      id: "rope",
+      name: "rope",
+      description: "A coil of rope.",
+    });
     expect(o.variants).toBeUndefined(); // absent field stays absent ⇒ content hash unchanged
     const s1 = baseState();
     const s2: GameState = { ...baseState(), flags: { open: true }, vars: { ticks: 9 } };
@@ -76,9 +86,13 @@ describe("bug_0023 — reactive object descriptions (objectDescription)", () => 
       ],
     });
     expect(objectDescription(o, baseState())).toBe("A locked box."); // no flag → base
-    expect(objectDescription(o, { ...baseState(), flags: { open: true } })).toBe("An open, empty box.");
+    expect(objectDescription(o, { ...baseState(), flags: { open: true } })).toBe(
+      "An open, empty box.",
+    );
     // First-match-wins: when both hold, the earlier-declared variant takes precedence.
-    expect(objectDescription(o, { ...baseState(), flags: { open: true, smashed: true } })).toBe("Splinters.");
+    expect(objectDescription(o, { ...baseState(), flags: { open: true, smashed: true } })).toBe(
+      "Splinters.",
+    );
   });
 });
 
@@ -92,7 +106,12 @@ describe("bug_0023 — live on The Cold Forge: the slag grate stops reading 'wel
 
   function act(s: GameState, pred: (a: Action) => boolean): GameState {
     const opt = options(s).find((o) => pred(o.action));
-    if (!opt) throw new Error(`no action; legal=[${options(s).map((o) => o.id).join(", ")}] in ${s.current}`);
+    if (!opt)
+      throw new Error(
+        `no action; legal=[${options(s)
+          .map((o) => o.id)
+          .join(", ")}] in ${s.current}`,
+      );
     const r = step(s, opt.action);
     expect(r.ok).toBe(true);
     if (!r.ok) throw new Error("step failed");

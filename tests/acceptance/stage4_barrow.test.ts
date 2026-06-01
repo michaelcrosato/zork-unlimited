@@ -108,7 +108,8 @@ describe("Stage 4 — The Sunken Barrow", () => {
 
     // A wounded hero (hp 1) walks into the same fight and dies — a real death ending.
     let doomed: GameState = { ...state, vars: { ...state.vars, hp: 1 } };
-    for (let i = 0; i < 40 && !doomed.ended; i++) doomed = step(doomed, { type: "ATTACK", enemy: "barrow_wight" }).state;
+    for (let i = 0; i < 40 && !doomed.ended; i++)
+      doomed = step(doomed, { type: "ATTACK", enemy: "barrow_wight" }).state;
     expect(doomed.ended).toBe(true);
     expect(doomed.endingId).toBe("ending_fallen");
     expect(compiled.pack.endings.find((e) => e.id === "ending_fallen")?.death).toBe(true);

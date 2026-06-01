@@ -58,35 +58,42 @@ describe("bug_0035 — eslintCovers (the predicate that decides lint-gate member
     expect(eslintCovers(CONFLICTED, "tests")).toBe(false);
   });
 
-  it("matches the SHIPPED eslint.config.js: src covered, tests+ui not", () => {
+  it("matches the SHIPPED eslint.config.js: src+tests covered, ui not", () => {
     const real = readFileSync(join(process.cwd(), "eslint.config.js"), "utf8");
     expect(eslintCovers(real, "src")).toBe(true);
     expect(eslintCovers(real, "bin")).toBe(true);
-    expect(eslintCovers(real, "tests")).toBe(false);
-    expect(eslintCovers(real, "ui")).toBe(false);
+    // bug_0036 brought tests/ under the gate — the detector's DISARM half, live. The
+    // synthetic DISARM case above proves the mechanism; this is it on the real config.
+    expect(eslintCovers(real, "tests")).toBe(true);
+    expect(eslintCovers(real, "ui")).toBe(false); // ui/ still outside — a future cycle.
   });
 });
 
 describe("bug_0035 — assess() surfaces the lint-coverage gap as a real repo lever", () => {
-  it("raises a repo-lint-coverage candidate while tests/ and ui/ are outside the gate", () => {
+  it("still raises a repo-lint-coverage candidate while ui/ is outside the gate", () => {
+    // bug_0036 covered tests/, so the candidate disarmed for tests/ and now names ONLY
+    // the genuinely-uncovered remainder (ui/). The radar stays honest: it keeps firing
+    // while real uncovered first-party code exists, and will vanish once ui/ is gated too.
     const c = a.candidates.find((x) => x.id === LINT_COV);
     expect(c).toBeDefined();
     expect(c!.category).toBe("repo");
     expect(c!.effort).toBe("L");
     expect(c!.evidence.length).toBeGreaterThan(0);
-    // Names the genuinely-uncovered first-party dirs.
-    expect(c!.title).toMatch(/tests/);
-    expect(c!.title).toMatch(/ui/);
+    expect(c!.title).not.toMatch(/tests/); // disarmed for tests/ (bug_0036)
+    expect(c!.title).toMatch(/ui/); // ui/ remains the live lever
   });
 
-  it("ranks the lint-coverage lever ABOVE the uniform blind-playtest reviews", () => {
-    // The whole point: restore a cross-category signal that out-ranks 'just review an
-    // already-pristine pack again' (every content_fix is now a 0.5 review post-bug_0032).
+  it("scores the lint-coverage lever per the deterministic impact/effort rule", () => {
+    // bug_0035's headline — the lever out-ranking the 0.5 reviews — held while >=2 dirs
+    // were uncovered (impact 3 -> score 0.6 > 0.5). bug_0036 covered tests/, leaving one
+    // uncovered dir (ui): impact 1 + 1 = 2, effort L (cost 3), repo weight 0.6 ->
+    // (2/3)*0.6 = 0.4. The score tracks remaining work HONESTLY: less left, lower rank.
+    // So with one dir left it now sits just BELOW the reviews — correct, not a regression.
     const c = a.candidates.find((x) => x.id === LINT_COV)!;
+    expect(c.score).toBeCloseTo(0.4, 3);
     const reviews = a.candidates.filter((x) => x.id.startsWith("playtest-"));
     expect(reviews.length).toBeGreaterThan(0);
-    for (const r of reviews) expect(c.score).toBeGreaterThan(r.score);
-    expect(a.top!.id).toBe(LINT_COV); // it is the honest recommended next lever
+    for (const r of reviews) expect(c.score).toBeLessThan(r.score);
   });
 
   it("does NOT re-arm the disarmed repo-eslint candidate (config still ships)", () => {

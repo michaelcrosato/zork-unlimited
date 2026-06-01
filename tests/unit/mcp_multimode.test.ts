@@ -38,7 +38,11 @@ describe("list_stories spans all three modes", () => {
 
 describe("load_pack / validate_pack report the detected mode", () => {
   it("each pack loads with the right mode and validates green", () => {
-    for (const [path, mode] of [[CYOA, "cyoa"], [PARSER, "parser"], [RPG, "rpg"]] as const) {
+    for (const [path, mode] of [
+      [CYOA, "cyoa"],
+      [PARSER, "parser"],
+      [RPG, "rpg"],
+    ] as const) {
       const r = api().load_pack({ pack_path: path });
       expect(r.ok).toBe(true);
       expect(r.mode).toBe(mode);
@@ -55,7 +59,10 @@ describe("parser pack plays through the structured tool API", () => {
     expect(game.observation.mode).toBe("parser");
     if (game.observation.mode !== "parser") return;
     // Parser actions carry id + command + structured action.
-    const acts = a.list_legal_actions({ session_id: game.session_id }).actions as { id: string; command: string }[];
+    const acts = a.list_legal_actions({ session_id: game.session_id }).actions as {
+      id: string;
+      command: string;
+    }[];
     expect(acts.length).toBeGreaterThan(0);
     expect(acts.every((x) => typeof x.command === "string")).toBe(true);
     // Move along a real exit (whatever the start room offers first).
@@ -87,10 +94,23 @@ describe("RPG pack plays through the structured tool API (incl. combat)", () => 
 
     // down → take iron bar → north → the wight stands in the guard crypt.
     const byCmd = (sid: string, needle: string): string | undefined =>
-      (a.list_legal_actions({ session_id: sid }).actions as { id: string; command: string }[]).find((x) => x.command.includes(needle))?.id;
-    expect(a.step_action({ session_id: game.session_id, action_id: byCmd(game.session_id, "go down")! }).ok).toBe(true);
-    expect(a.step_action({ session_id: game.session_id, action_id: byCmd(game.session_id, "take iron bar")! }).ok).toBe(true);
-    expect(a.step_action({ session_id: game.session_id, action_id: byCmd(game.session_id, "go north")! }).ok).toBe(true);
+      (a.list_legal_actions({ session_id: sid }).actions as { id: string; command: string }[]).find(
+        (x) => x.command.includes(needle),
+      )?.id;
+    expect(
+      a.step_action({ session_id: game.session_id, action_id: byCmd(game.session_id, "go down")! })
+        .ok,
+    ).toBe(true);
+    expect(
+      a.step_action({
+        session_id: game.session_id,
+        action_id: byCmd(game.session_id, "take iron bar")!,
+      }).ok,
+    ).toBe(true);
+    expect(
+      a.step_action({ session_id: game.session_id, action_id: byCmd(game.session_id, "go north")! })
+        .ok,
+    ).toBe(true);
     const attackId = byCmd(game.session_id, "attack");
     expect(attackId).toBeTruthy();
     const r = a.step_action({ session_id: game.session_id, action_id: attackId! });
@@ -116,7 +136,10 @@ describe("save/load is mode-bound (§8.7)", () => {
     const a = api();
     const game = a.new_game({ pack_path: PARSER });
     const acts = a.list_legal_actions({ session_id: game.session_id }).actions as { id: string }[];
-    a.step_action({ session_id: game.session_id, action_id: acts.find((x) => x.id.startsWith("go_"))!.id });
+    a.step_action({
+      session_id: game.session_id,
+      action_id: acts.find((x) => x.id.startsWith("go_"))!.id,
+    });
     const after = a.get_observation({ session_id: game.session_id }).state_hash;
     const saved = a.save_game({ session_id: game.session_id });
     expect(saved.mode).toBe("parser");

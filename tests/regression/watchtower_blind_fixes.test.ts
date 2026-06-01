@@ -28,14 +28,30 @@ function play(ids: string[]) {
   for (const id of ids) s = step(s, choose(id)).state;
   return s;
 }
-const optionIds = (s: ReturnType<typeof play>): string[] => buildObservation(index, s).available_actions.map((a) => a.id);
+const optionIds = (s: ReturnType<typeof play>): string[] =>
+  buildObservation(index, s).available_actions.map((a) => a.id);
 
 // The cellar/ledger truth route: arm up, read the ledger, light the beacon, expose.
 const LEDGER_ROUTE = [
-  "inspect_ground", "go_east", "approach_base", "search_rubble", "take_lantern",
-  "leave_cart", "leave_base", "circle_cellar", "light_lantern", "descend_cellar",
-  "search_cache", "take_ledger", "climb_out", "cellar_back",
-  "approach_base", "climb_stairs", "continue_up", "light_beacon", "watch_for_help",
+  "inspect_ground",
+  "go_east",
+  "approach_base",
+  "search_rubble",
+  "take_lantern",
+  "leave_cart",
+  "leave_base",
+  "circle_cellar",
+  "light_lantern",
+  "descend_cellar",
+  "search_cache",
+  "take_ledger",
+  "climb_out",
+  "cellar_back",
+  "approach_base",
+  "climb_stairs",
+  "continue_up",
+  "light_beacon",
+  "watch_for_help",
   "expose_the_plot",
 ].map(choose);
 
@@ -66,8 +82,18 @@ describe("bug_0002 — watchtower blind-playtest fixes", () => {
 describe("bug_0002 deferred — structural fixes (orbit + dead-end confrontation)", () => {
   // Reach the sergeant holding the letter but WITHOUT having corroborated the truth.
   const TO_CONFRONT_NO_PROOF = [
-    "go_east", "approach_base", "search_rubble", "take_letter", "leave_cart", "leave_base",
-    "return_crossroads", "go_west", "ford_brook", "cross_north", "approach_checkpoint", "show_papers",
+    "go_east",
+    "approach_base",
+    "search_rubble",
+    "take_letter",
+    "leave_cart",
+    "leave_base",
+    "return_crossroads",
+    "go_west",
+    "ford_brook",
+    "cross_north",
+    "approach_checkpoint",
+    "show_papers",
   ];
 
   it("the confrontation is no longer a dead-end: without proof you can press (and get seized)", () => {
@@ -86,10 +112,25 @@ describe("bug_0002 deferred — structural fixes (orbit + dead-end confrontation
   it("at the climax WITH proof, you must commit — no dithering loop back to the road", () => {
     // LEDGER_ROUTE reaches decision_point with learned_truth set.
     const ledgerPath = [
-      "inspect_ground", "go_east", "approach_base", "search_rubble", "take_lantern", "leave_cart",
-      "leave_base", "circle_cellar", "light_lantern", "descend_cellar", "search_cache", "take_ledger",
-      "climb_out", "cellar_back", "approach_base", "climb_stairs", "continue_up",
-      "light_beacon", "watch_for_help",
+      "inspect_ground",
+      "go_east",
+      "approach_base",
+      "search_rubble",
+      "take_lantern",
+      "leave_cart",
+      "leave_base",
+      "circle_cellar",
+      "light_lantern",
+      "descend_cellar",
+      "search_cache",
+      "take_ledger",
+      "climb_out",
+      "cellar_back",
+      "approach_base",
+      "climb_stairs",
+      "continue_up",
+      "light_beacon",
+      "watch_for_help",
     ];
     const s = play(ledgerPath);
     expect(s.current).toBe("decision_point");

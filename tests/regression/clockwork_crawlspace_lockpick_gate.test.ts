@@ -49,9 +49,30 @@ function play(ids: string[]): GameState {
 const optionIds = (s: GameState) => buildObservation(index, s).available_actions.map((a) => a.id);
 
 // New canonical crawlspace truth route: fetch the pick, then crack the box.
-const CRAWLSPACE_TRUTH = ["inspect_clock", "kitchens", "take_pick", "back_foyer", "pry_panel", "open_strongbox"];
-const VAULT_LETTER = ["kitchens", "take_pick", "dumbwaiter", "approach_vault", "pick_lock", "take_letter"];
-const VAULT_GOLD = ["kitchens", "take_pick", "dumbwaiter", "approach_vault", "pick_lock", "grab_gold"];
+const CRAWLSPACE_TRUTH = [
+  "inspect_clock",
+  "kitchens",
+  "take_pick",
+  "back_foyer",
+  "pry_panel",
+  "open_strongbox",
+];
+const VAULT_LETTER = [
+  "kitchens",
+  "take_pick",
+  "dumbwaiter",
+  "approach_vault",
+  "pick_lock",
+  "take_letter",
+];
+const VAULT_GOLD = [
+  "kitchens",
+  "take_pick",
+  "dumbwaiter",
+  "approach_vault",
+  "pick_lock",
+  "grab_gold",
+];
 const FORCE_CAUGHT = ["climb_stairs", "approach_vault", "force_door"];
 
 describe("bug_0022 — the crawlspace truth is gated behind the lockpick", () => {
@@ -87,12 +108,25 @@ describe("bug_0022 — the crawlspace truth is gated behind the lockpick", () =>
     expect(optionIds(noPick)).not.toContain("enter_panel"); // re-entry gated on the pick
 
     // Fetch the pick: re-entry now appears and actually returns to the crawlspace.
-    const withPick = play(["inspect_clock", "pry_panel", "study_strongbox", "kitchens", "take_pick", "back_foyer"]);
+    const withPick = play([
+      "inspect_clock",
+      "pry_panel",
+      "study_strongbox",
+      "kitchens",
+      "take_pick",
+      "back_foyer",
+    ]);
     expect(withPick.current).toBe("foyer");
     expect(withPick.inventory).toContain("lockpick");
     expect(optionIds(withPick)).toContain("enter_panel");
     const reentered = play([
-      "inspect_clock", "pry_panel", "study_strongbox", "kitchens", "take_pick", "back_foyer", "enter_panel",
+      "inspect_clock",
+      "pry_panel",
+      "study_strongbox",
+      "kitchens",
+      "take_pick",
+      "back_foyer",
+      "enter_panel",
     ]);
     expect(reentered.current).toBe("crawlspace");
   });
