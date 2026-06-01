@@ -1,0 +1,66 @@
+bug_id: bug_0039
+pack_id: alchemists_tower_v1
+seed: 137                          # the regression's / blind-playtest's deterministic seed
+type: content_fix                  # pure content; applies the existing bug_0012 room-`variants` + bug_0023 object-`variants` engine features
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-01T12-00-45-068Z/playtest.md   # alchemists_tower seed 137 — this cycle's playtest target
+  rotation_rationale: >
+    Rotated the mandated playtest OFF the assessor's rank-1 clockwork_heist (blind-verified
+    pristine ~15 straight cycles; since bug_0032 every pack ranks as a uniform LOW-priority
+    0.5 review, none carrying a known flaw) onto the LEAST-recently full-blind-quality-tested
+    pack, the parser pack The Alchemist's Tower (its last full quality playtest predates the
+    bug_0024/0033 from-source examine fixes). Per blind_playtest_protocol.md's explicit
+    "rotate the seed and rotate the pack". This rotation surfaced a genuine on-screen defect,
+    chosen over building the speculative doc/staleness assessor radar — a real player-facing
+    contradiction beats a speculative meta-detector (protocol: "you MAY pick a different
+    candidate if your judgement and the playtest say it's higher value").
+  mandated_result: >
+    WON ending_cured 35/35 (clarity 5/5, enjoyment 3/5); zero rejected actions, no loops,
+    no broken state; the key-chain (brass key -> strongbox -> iron key -> cellar), recipe-
+    order brewing, scoring (5/15/35), the poison-trap death ending, and the antidote-gated
+    win all behaved correctly; gating verified (spire with empty inventory does NOT false-win).
+  finding: >
+    The one CONCRETE finding (report §5): after the antidote is brewed the Laboratory ROOM
+    still reads "A great cauldron simmers over a low flame" and the cauldron OBJECT still
+    examines as "A simmering cauldron, waiting for ingredients" — narrated text contradicting
+    a state the player just changed (herb_added / antidote_brewed). Exactly the class fixed
+    elsewhere in this pack: reactive room variants (bug_0012: garden/great_hall/study/cellar)
+    and reactive object examine variants (bug_0023/0024/0033: the strongbox). The laboratory
+    room + its cauldron were the one stale-prone pair never opted in.
+improvement:
+  layer: content                   # pure content; no engine/validator/schema change
+  content:
+    - content/parser/pack/alchemists_tower.yaml: >
+        (1) laboratory room gains `variants` (bug_0012 feature): the cauldron clause now
+        tracks the brew — "simmers... brew steeped a deep herbal green and waiting for clear
+        water" at herb_added, "gone still... drained of the antidote you decanted" at
+        antidote_brewed (first match wins, finished before mid-steep). The phial clause is
+        brew-independent and unchanged for the common route that leaves the trap on the bench.
+        (2) cauldron object gains `variants` (bug_0023 feature) mirroring those states so the
+        examine stops reading "waiting for ingredients" once something is in the pot. Text-only:
+        no flag / item / score / exit / interaction / gating / reachable-ending change.
+  engine:
+    - none: >
+        The generic reactive room (bug_0010/0012) and object (bug_0023) `variants` features
+        already exist and are read by the single observation/LOOK render site. This pack simply
+        opted in. No src/ change, no validator change.
+verification:
+  validate: green (0 errors, 0 warnings) — alchemists_tower under the full parser validator
+  content_hash: 9b75b90486cd373cec6db71dba14c4a8c101341441ff473c59fcea166f7161c6   # was f73b97fb4e0edf5513621140807c33a225b7205ce66ab916c6c7dd01ab0a6869 (bug_0033); surfaced, not laundered. UNPINNED — no test pins this pack's hash (only watchtower_road is pinned); tests/unit/rpg_validator.test.ts only asserts it validates green.
+  health: exit 0 (verify:integrity OK, typecheck + ESLint + Prettier + all tests + every pack validate + watchtower coverage)
+  reachable_endings_unchanged: [ending_cured, ending_poisoned]   # text-only change; canonical brew route still reaches ending_cured at 35/35
+verified_live: >
+  Exercised through the engine render site the regression drives (resolveParserAction
+  LOOK / LOOK->cauldron + buildParserObservation via initStateForParserPack(137) /
+  enumerateActions / makeStep — the same path the MCP server uses): the Laboratory room
+  flips base -> mid-steep green -> drained as the herb then the water go in and never
+  again reads the steeping clue once brewed; the cauldron examine tracks the same three
+  states and never again reads "waiting for ingredients"; the canonical brew route still
+  wins at 35/35.
+regression_test: tests/regression/alchemists_cauldron_reactive_brew.test.ts   # 4 cases: (1) room flips base->mid-steep->drained, LOOK matches the observation; (2) cauldron examine tracks the same three states via the live LOOK render path; (3) a variant-less object (black phial) -> base text under arbitrary states + variants undefined (backward-compat); (4) reachability — canonical brew route still reaches ending_cured at full score.
+deferred:
+  - The black phial reads "sits apart on the bench" even if carried — same staleness class but NOT flagged by the playtest (the trap is meant to tempt on the bench; the common route leaves it), so left out to keep this fix focused.
+  - The black-phial drink is surfaced as "use black phial" (generic verb) rather than "drink" (playtest §4) — a parser-verb nicety, not a defect.
+  - Cross-category assessor radar: with both repo levers disarmed (bug_0038) and every pack blind-verified, a doc/staleness detector is the next-best meta-improvement (logged since bug_0032/0035) — deferred this cycle in favour of the concrete playtest finding above.

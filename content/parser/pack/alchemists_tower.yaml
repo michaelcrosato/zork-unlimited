@@ -132,6 +132,24 @@ rooms:
       The alchemist's laboratory. A great cauldron simmers over a low flame, and a
       black phial sits apart on the bench. A stair climbs to the spire; the hall
       is south.
+    # Reactive prose (bug_0012): the cauldron clause tracks the brew the player has
+    # made — mid-steep green once the herb is in, then drained once the antidote is
+    # decanted — instead of forever reading "simmers... waiting" after the brew is
+    # done (blind playtest, this pack). The phial clause is brew-independent and
+    # stays accurate for the common route that leaves the trap on the bench. First
+    # match wins, so the finished (antidote_brewed) state is listed before the
+    # mid-steep (herb_added) state. Text-only: no flag/item/score/exit/gating change.
+    variants:
+      - when: [{ has_flag: antidote_brewed }]
+        text: >
+          The alchemist's laboratory. The great cauldron has gone still over its
+          guttering flame, drained of the antidote you decanted; a black phial sits
+          apart on the bench. A stair climbs to the spire; the hall is south.
+      - when: [{ has_flag: herb_added }]
+        text: >
+          The alchemist's laboratory. A great cauldron simmers over a low flame, its
+          brew steeped a deep herbal green and waiting for clear water; a black phial
+          sits apart on the bench. A stair climbs to the spire; the hall is south.
     objects: [cauldron, black_phial]
     exits:
       - { direction: south, to: great_hall }
@@ -230,6 +248,16 @@ objects:
     name: "great cauldron"
     aliases: [cauldron, pot]
     description: "A simmering cauldron, waiting for ingredients."
+    # Reactive examine (bug_0023): the cauldron stops reading "waiting for ingredients"
+    # once the player has put something in it — green mid-steep after the herb, then
+    # drained once the antidote is decanted (blind playtest, this pack). Mirrors the
+    # room's brew-state variants above. First match wins (finished before mid-steep).
+    # Examine-only: no flag/item/score/exit/gating change.
+    variants:
+      - when: [{ has_flag: antidote_brewed }]
+        text: "The great cauldron stands drained and still over its dying flame, the inside faintly green-stained — the pale antidote has been decanted from it."
+      - when: [{ has_flag: herb_added }]
+        text: "The simmering cauldron holds a deep green steep of the pale herb, waiting for clear water to finish the cure."
     interactions:
       - verb: USE
         item: herb
