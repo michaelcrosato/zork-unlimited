@@ -41,6 +41,13 @@ rooms:
       Niches line the walls, each holding the dust of a forgotten guard. One
       niche is empty — and something has climbed out of it. An archway east is
       choked with the cold the thing gives off.
+    variants:
+      - when: [ { has_flag: wight_slain } ]
+        text: >
+          Niches line the walls, each holding the dust of a forgotten guard. One
+          niche stands empty, its risen tenant crumbled to grave-dust across the
+          floor. The cold has lifted from the archway east, and the dark beyond
+          it lies open.
     exits:
       - { direction: south, to: entry_hall }
       - direction: east
@@ -53,6 +60,12 @@ rooms:
     description: >
       The passage ends at a great stone slab set flush with the floor, its edge
       gripped by a worn iron lip — made to be levered, by someone strong enough.
+    variants:
+      - when: [ { quest_stage: { quest: barrow, stage: slab_moved } } ]
+        text: >
+          The passage ends where the great stone slab once lay flush with the
+          floor. Levered aside now, it has bared a stair that drops down into the
+          dark of the earth.
     objects: [stone_slab]
     exits:
       - { direction: west, to: guard_crypt }
