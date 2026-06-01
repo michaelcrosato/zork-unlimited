@@ -8,10 +8,11 @@
  * spec names (see the per-check notes). A pack with any error finding is
  * unplayable (§10).
  */
-import type { Condition } from "../core/conditions.js";
+import { type Condition, evalConditions } from "../core/conditions.js";
 import type { Effect } from "../core/effects.js";
+import type { GameState } from "../core/state.js";
 import type { CyoaPack } from "../cyoa/schema.js";
-import { indexPack } from "../cyoa/runner.js";
+import { indexPack, initStateForPack } from "../cyoa/runner.js";
 import { type Finding, type ValidationReport, makeReport } from "./report.js";
 
 export function validateCyoa(pack: CyoaPack): ValidationReport {
@@ -107,6 +108,12 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
       writes,
       findings,
     );
+    // The OPPOSITE soundness failure of firability: a deadline whose `when` already
+    // holds in the INITIAL state and can never be falsified fires on the player's
+    // FIRST action, on every path (engine §8.4.5 checkWin runs post-action, not at
+    // game start — src/core/engine.ts), so no scene past the start is ever playable.
+    // That is unplayable (an ERROR, like START_NOT_SCENE), not a merely-dead mechanic.
+    checkDeadlineFiresAtStart(deadline.when, initStateForPack(index, 0), pack, findings);
   }
   const deadlineVars = deadline ? varNamesInConditions(deadline.when) : new Set<string>();
 
@@ -561,6 +568,128 @@ function checkDeadlineFirability(
       ),
     );
   }
+}
+
+/** Flag a `meta.deadline` that fires on the player's FIRST action regardless of
+ *  what they choose — the symmetric opposite of `checkDeadlineFirability`'s "can
+ *  never fire". The engine's §8.4.5 `checkWin` runs against the post-action state
+ *  (not at game start), so a deadline whose `when` (a) already holds in the initial
+ *  state AND (b) can never be falsified by any effect will end the game at
+ *  `deadline.ending` on whatever the player does first: no scene past the start is
+ *  ever reachable in play, so the pack is unplayable (ERROR, like START_NOT_SCENE).
+ *
+ *  Sound & conservative (no false positives): the initial state is the engine's own
+ *  (`initStateForPack`, start `on_enter` applied) evaluated by the engine's own
+ *  `evalConditions`, and (b) is proven only for a flat conjunction of monotone-
+ *  stable atoms — any disjunction/negation or unanalysed condition we cannot prove
+ *  stable makes us bail (treat as falsifiable ⇒ no finding). A deadline that is
+ *  merely satisfiable-early but escapable, or not yet due, is never flagged. */
+function checkDeadlineFiresAtStart(
+  when: Condition[],
+  initial: GameState,
+  pack: CyoaPack,
+  findings: Finding[],
+): void {
+  if (!evalConditions(when, initial)) return; // healthy: not yet due at game start
+  if (!deadlineStaysTrueForever(when, collectFalsifiers(pack))) return; // some first action could escape it
+  findings.push(
+    err(
+      "DEADLINE_FIRES_AT_START",
+      "meta.deadline.when already holds in the initial state and no effect can falsify it, " +
+        "so the deadline fires on the player's first action on every path (engine §8.4.5 " +
+        "runs the win check post-action) — no scene past the start is ever playable. " +
+        "Raise the threshold, fix the watched var's init value, or gate it behind a flag/item " +
+        "the player must first acquire.",
+      ["meta:deadline"],
+    ),
+  );
+}
+
+/** Every effect in the pack that could move a var, keyed by var name, plus the
+ *  flag/item mutations — the raw material for proving a condition monotone-stable.
+ *  `amount` is the literal `by` (inc/dec, sign-significant) or `value` (set). */
+type VarWrite = { kind: "inc" | "dec" | "set"; amount: number };
+type Falsifiers = {
+  clearedFlags: Set<string>;
+  setFlags: Set<string>;
+  addedItems: Set<string>;
+  removedItems: Set<string>;
+  varWrites: Map<string, VarWrite[]>;
+};
+
+function collectFalsifiers(pack: CyoaPack): Falsifiers {
+  const clearedFlags = new Set<string>();
+  const setFlags = new Set<string>();
+  const addedItems = new Set<string>();
+  const removedItems = new Set<string>();
+  const varWrites = new Map<string, VarWrite[]>();
+  const pushVar = (name: string, w: VarWrite): void => {
+    const arr = varWrites.get(name) ?? [];
+    arr.push(w);
+    varWrites.set(name, arr);
+  };
+  const scan = (effects: Effect[]): void => {
+    for (const e of effects) {
+      if ("set_flag" in e) setFlags.add(e.set_flag);
+      else if ("clear_flag" in e) clearedFlags.add(e.clear_flag);
+      else if ("add_item" in e) addedItems.add(e.add_item);
+      else if ("remove_item" in e) removedItems.add(e.remove_item);
+      else if ("inc_var" in e) pushVar(e.inc_var.name, { kind: "inc", amount: e.inc_var.by });
+      else if ("dec_var" in e) pushVar(e.dec_var.name, { kind: "dec", amount: e.dec_var.by });
+      else if ("set_var" in e) pushVar(e.set_var.name, { kind: "set", amount: e.set_var.value });
+    }
+  };
+  for (const scene of pack.scenes) {
+    scan(scene.on_enter);
+    for (const choice of scene.choices) scan(choice.effects);
+  }
+  return { clearedFlags, setFlags, addedItems, removedItems, varWrites };
+}
+
+// A var that holds `>= floor` now keeps holding it iff no write can push it below
+// floor: inc by a non-negative, dec by a non-positive (`by` is sign-significant —
+// effects.ts allows negative), or set to a value still >= floor. Symmetric for the
+// other two operators. (`inc_var` with a negative `by` really does decrement, so we
+// must inspect the literal, not just the var name.)
+function varNeverDrops(floor: number, writes: VarWrite[] | undefined): boolean {
+  return (writes ?? []).every((w) =>
+    w.kind === "inc" ? w.amount >= 0 : w.kind === "dec" ? w.amount <= 0 : w.amount >= floor,
+  );
+}
+function varNeverRises(ceil: number, writes: VarWrite[] | undefined): boolean {
+  return (writes ?? []).every((w) =>
+    w.kind === "inc" ? w.amount <= 0 : w.kind === "dec" ? w.amount >= 0 : w.amount <= ceil,
+  );
+}
+function varNeverChanges(fixed: number, writes: VarWrite[] | undefined): boolean {
+  return (writes ?? []).every((w) => (w.kind === "set" ? w.amount === fixed : w.amount === 0));
+}
+
+/** True iff `when` (taken as a conjunction) is true now AND stays true under every
+ *  pack effect — so once it holds at init it can never become false. Proven only
+ *  for a flat AND of atoms each individually monotone-stable; any_of/none_of and
+ *  conditions we cannot prove stable (not_visited, object/quest state) make us bail
+ *  to `false` (conservative: we never claim un-falsifiability we can't prove). */
+function deadlineStaysTrueForever(when: Condition[], f: Falsifiers): boolean {
+  let stable = true;
+  const visit = (c: Condition): void => {
+    if (!stable) return;
+    if ("has_flag" in c) stable = !f.clearedFlags.has(c.has_flag);
+    else if ("not_flag" in c) stable = !f.setFlags.has(c.not_flag);
+    else if ("has_item" in c) stable = !f.removedItems.has(c.has_item);
+    else if ("not_item" in c) stable = !f.addedItems.has(c.not_item);
+    else if ("var_gte" in c)
+      stable = varNeverDrops(c.var_gte.value, f.varWrites.get(c.var_gte.name));
+    else if ("var_lte" in c)
+      stable = varNeverRises(c.var_lte.value, f.varWrites.get(c.var_lte.name));
+    else if ("var_eq" in c)
+      stable = varNeverChanges(c.var_eq.value, f.varWrites.get(c.var_eq.name));
+    else if ("visited" in c) {
+      /* `visited` is monotone — once true it stays true; nothing un-visits. */
+    } else stable = false; // any_of/none_of/not_visited/is_open/is_unlocked/quest_stage: not analysed
+  };
+  when.forEach(visit);
+  return stable;
 }
 
 /** Flag any variant whose `when` is entailed by an earlier sibling's `when`: in a
