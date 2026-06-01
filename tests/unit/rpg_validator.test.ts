@@ -57,8 +57,11 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // journal, ledger inventory), bug_0003 cellar discoverability, bug_0004 —
     // the hermit's tower lore now journals + de-loops (was c49b4424…) — and
     // bug_0005: the lantern-less cellar door now gives an in-fiction "too dark"
-    // nudge instead of silently offering only "step back" (was 8094e553…). Any
-    // *unintended* change to compilation trips this.
-    expect(loaded.compiled.contentHash).toBe("7f322e4cdbf1df48460c76df56fb8bdfd379fc1b755d804fb390542a3b9e71a6");
+    // nudge instead of silently offering only "step back" (was 8094e553…); and
+    // bug_0006 — the hermit's letter reveal now sets seal_broken + journals and
+    // can't re-break an opened seal, and ending_truth no longer presumes the
+    // "broken seal" / "oil in the cellar" the player may not have produced
+    // (was 7f322e4c…). Any *unintended* change to compilation trips this.
+    expect(loaded.compiled.contentHash).toBe("46ac614226e8b6e478ea4b3bfeedb92a1cb693646301ec5bae8cec3be3c956d3");
   });
 });

@@ -133,3 +133,29 @@
 - Why: An LLM playtest can pinpoint why these are hard to reach (signposting, clue legibility, pacing) and the fix raises player-facing quality.
 - Mandatory LLM playtest target this cycle: content/cyoa/pack/watchtower_road.yaml.
 - Process: assessor ranks → blind LLM playtest for quality → one improvement → health + verify:integrity green → commit (trust-but-verify).
+## AFK Cycle 2026-06-01T05-33-18-251Z
+- Assessment: packs cyoa=2 parser=2 rpg=1; 7 candidate(s) ranked.
+- Next best improvement (recommended): [content_fix] Improve "watchtower_road_v1" — 0 unreached ending(s), 5 unvisited location(s).
+- Why: An LLM playtest can pinpoint why these are hard to reach (signposting, clue legibility, pacing) and the fix raises player-facing quality.
+- Mandatory LLM playtest target this cycle: content/cyoa/pack/watchtower_road.yaml.
+- Process: assessor ranks → blind LLM playtest for quality → one improvement → health + verify:integrity green → commit (trust-but-verify).
+## AFK Cycle 2026-06-01T05-37-19-193Z
+- Assessment: packs cyoa=2 parser=2 rpg=1; 7 candidate(s) ranked.
+- Next best improvement (recommended): [content_fix] Improve "watchtower_road_v1" — 0 unreached ending(s), 5 unvisited location(s).
+- Why: An LLM playtest can pinpoint why these are hard to reach (signposting, clue legibility, pacing) and the fix raises player-facing quality.
+- Mandatory LLM playtest target this cycle: content/cyoa/pack/watchtower_road.yaml.
+- Process: assessor ranks → blind LLM playtest for quality → one improvement → health + verify:integrity green → commit (trust-but-verify).
+## AFK Cycle 2026-06-01T05-41-02-671Z
+- Assessment: packs cyoa=2 parser=2 rpg=1; 7 candidate(s) ranked.
+- Next best improvement (recommended): [content_fix] Improve "watchtower_road_v1" — 0 unreached ending(s), 5 unvisited location(s).
+- Why: An LLM playtest can pinpoint why these are hard to reach (signposting, clue legibility, pacing) and the fix raises player-facing quality.
+- Mandatory LLM playtest target this cycle: content/cyoa/pack/watchtower_road.yaml.
+- Process: assessor ranks → blind LLM playtest for quality → one improvement → health + verify:integrity green → commit (trust-but-verify).
+
+### Cycle result — sealed-letter proof beat made coherent (bug_0006)
+- Blind LLM playtest: fresh general-purpose subagent, MCP-only, seed 42, report at ai-runs/2026-06-01T05-41-02-671Z/playtest.md. Reached all 3 endings across 3 runs; clarity 4/5, enjoyment 4/5; zero rejected actions, no soft-locks. Verdict: "a compact, well-built branching mystery... a real player would finish satisfied."
+- Findings the playtest surfaced in the sealed-letter thread (§5.1 + §5.3), combined with the deferred bug_0005 next-focus, formed one coherent improvement: (1) "Show him the sealed letter" stayed available after use, re-narrating "The hermit breaks the seal" on an already-broken seal and re-setting learned_truth (same class as bug_0004); (2) hermit_about_letter set learned_truth but journaled NOTHING while every comparable reveal journals; (3) ending_truth claimed "the oil in the cellar, the names, the broken seal" — but the seal is broken only on the hermit route, and the cellar oil is seen only on the cellar route, so every single-route win narrated evidence the player never gathered.
+- Improvement (one, content layer): show_letter now gated on not_flag seal_broken (can't re-break an opened seal); hermit_about_letter.on_enter now also sets seal_broken + adds a journal entry recording the reveal (single gated entry ⇒ no stacking); ending_truth reworded path-agnostic ("the smugglers' scheme, the arson, and the proof that damns them") so it reads truthfully whether you won via the carried ledger or the hermit-opened letter. learned_truth remains the proof gate; which routes can win is unchanged.
+- Evidence: validate green 0/0; full `npm run health` exit 0; 225 tests pass (+4 new); zero new coverage findings (the standing ending_truth/hermit-cluster warnings are the deterministic bot's known puzzle-solving limit, not pack discoverability). Deliberate re-pin: watchtower content hash 7f322e4c… → 46ac614226e8b6e478ea4b3bfeedb92a1cb693646301ec5bae8cec3be3c956d3 (tests/unit/rpg_validator.test.ts comment updated, surfaced not laundered).
+- Locked by traces/bugs/bug_0006_watchtower_letter_proof_coherence.yaml + tests/regression/watchtower_letter_proof_coherence.test.ts (4 cases: reveal journals + sets seal_broken/learned_truth, seal can't re-break, hermit/letter route still reaches ending_truth, ending text no longer presumes broken seal / cellar oil).
+- Next suggested focus (logged this cycle, not yet fixed): (a) presumptive ledger text at hidden_cache — "a seal you recognize from the letter" reads even when the player never picked up the letter (playtest §5.2); (b) the muddled compass geography around the ford/north-road loop (playtest §4) — east/west/north labels don't form a consistent mental map; (c) the beacon's raised_alarm flag never pays off in any ending. Then clockwork_heist_v1 (assessor rank 2) and the unverified parser packs (alchemists_tower, sealed_crypt).

@@ -237,7 +237,7 @@ scenes:
         next: hermit_about_tower
       - id: show_letter
         text: "Show him the sealed letter."
-        conditions: [ { has_item: sealed_letter } ]
+        conditions: [ { all_of: [ { has_item: sealed_letter }, { not_flag: seal_broken } ] } ]
         next: hermit_about_letter
       - id: say_goodbye
         text: "Say goodbye."
@@ -261,7 +261,10 @@ scenes:
     text: >
       The hermit breaks the seal and reads. "This names the man at the
       checkpoint. Carry it north and the truth carries with you."
-    on_enter: [ { set_flag: learned_truth } ]
+    on_enter:
+      - set_flag: learned_truth
+      - set_flag: seal_broken
+      - add_journal: "The hermit broke the letter's seal: it names the man at the checkpoint. Carry it north — the proof goes with you."
     choices:
       - id: back_from_letter_talk
         text: "Return to the conversation."
@@ -353,9 +356,9 @@ endings:
   - id: ending_truth
     title: "The Truth, Carried Home"
     text: >
-      You lay out everything you uncovered before the magistrate — the oil in
-      the cellar, the names, the broken seal. By morning the smugglers are
-      named, and the watchtower's fire has a reckoning.
+      You lay out everything you uncovered before the magistrate — the
+      smugglers' scheme, the arson, and the proof that damns them. By morning
+      the conspirators are named, and the watchtower's fire has a reckoning.
   - id: ending_escape
     title: "Into the Dark"
     text: >

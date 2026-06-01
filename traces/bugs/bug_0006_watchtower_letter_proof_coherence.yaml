@@ -1,0 +1,52 @@
+bug_id: bug_0006
+pack_id: watchtower_road_v1
+seed: 42
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  report: ai-runs/2026-06-01T05-41-02-671Z/playtest.md
+  finding: >
+    A fresh, MCP-only blind playtester (clarity 4/5, enjoyment 4/5, all three
+    endings reached) surfaced two concrete flaws in the sealed-letter proof beat,
+    which combine with the deferred bug_0005 next-focus into one incoherent thread:
+      (1) Re-breakable seal (report §5.1) — "Show him the sealed letter" at
+          hermit_talk stayed available after use, so hermit_about_letter could be
+          re-entered: it re-narrates "The hermit breaks the seal and reads" on an
+          already-broken seal and re-sets the already-set learned_truth flag. Same
+          class as the fixed bug_0004 hermit-lore loop, but on the eastern letter
+          beat.
+      (2) Missing journal entry (report §5.3) — hermit_about_letter set
+          learned_truth but added NO journal line, while every comparable reveal
+          (hermit's tale, oil barrels, ledger) journals. The key "what do I know"
+          record under-recorded the letter reveal.
+      (3) Presumptive ending text (deferred from bug_0005) — ending_truth claimed
+          the magistrate hears "the oil in the cellar, the names, the broken seal."
+          But the seal is broken ONLY on the hermit route (the dominant cellar/
+          ledger route never opens the letter), and "the oil in the cellar" is seen
+          ONLY on the cellar route (the pure hermit route never enters the cellar).
+          So the ending narrated specific evidence the player may never have
+          gathered, on every single-route win.
+failure:
+  type: dialogue_loop_missing_journal_and_presumptive_ending
+  where: [scene:hermit_talk, scene:hermit_about_letter, ending:ending_truth]
+  description: >
+    The proof/letter thread was incoherent: the seal-breaking reveal could repeat
+    with no state change and left no journal trace, and the winning ending asserted
+    route-specific evidence (broken seal / cellar oil) as if always true.
+fix:
+  layer: content
+  summary: >
+    (1) show_letter is now gated on not_flag seal_broken (in addition to
+    has_item sealed_letter), so once the hermit opens the letter the option is
+    gone — the seal can't be re-broken, mirroring the bug_0004 ask_about_tower
+    gate. (2) hermit_about_letter.on_enter now also sets seal_broken and adds a
+    journal entry recording the reveal ("The hermit broke the letter's seal: it
+    names the man at the checkpoint..."), so the eastern proof beat is recorded
+    like the others; the single gated entry means the line cannot stack. (3)
+    ending_truth is reworded to be path-agnostic — it references "the smugglers'
+    scheme, the arson, and the proof that damns them" instead of the route-specific
+    "oil in the cellar" / "broken seal", so it reads truthfully whether the player
+    won via the carried ledger or the hermit-opened letter. learned_truth remains
+    the proof gate; nothing about which routes can win changes.
+regression_test: tests/regression/watchtower_letter_proof_coherence.test.ts
+content_hash_after: 46ac614226e8b6e478ea4b3bfeedb92a1cb693646301ec5bae8cec3be3c956d3
