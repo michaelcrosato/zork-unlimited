@@ -122,6 +122,18 @@ objects:
     name: "stone slab"
     aliases: [slab, stone]
     description: "A great floor slab with an iron-gripped lip. Wedge the bar beneath the lip and it can be levered — not by one heroic effort, but by setting your feet and heaving again and again until the old stone gives."
+    # Reactive examine (bug_0023/0039/0044 shape): once the slab is levered aside the
+    # examine must stop telling the player to wedge the bar and heave — that contradicts
+    # the room, which already flips to "Levered aside now ... a stair" on slab_moved. A
+    # blind playtester (seed 59) hit exactly this: after solving the lever puzzle, `look
+    # at stone slab` still read "Wedge the bar beneath the lip and it can be levered",
+    # instructing them to lever an already-open slab. Gated on the same slab_moved quest
+    # stage the room variant uses (first match wins; there is only one). Examine-only:
+    # no flag/item/score/exit/interaction/gating change, so the lever puzzle, the
+    # one-shot retire (bug_0015), and the win remain untouched.
+    variants:
+      - when: [ { quest_stage: { quest: barrow, stage: slab_moved } } ]
+        text: "The great slab is levered aside now, dragged half off the bed where it lay flush with the floor; its iron-gripped lip juts at an angle and a stair drops away beneath it into the dark of the earth."
     takeable: false
     interactions:
       - verb: USE
