@@ -16,11 +16,14 @@ meta:
   flags_init: []
   # Stage-3 scoring: points are awarded once at each of the three beats that mark
   # real progress through the barrow — slaying the guard-wight that bars the way
-  # (+10), levering the great slab aside with iron and might (+15), and claiming
-  # the Barrow-Lord's circlet at the end (+25). Each award rides a milestone that
+  # (+10), levering the great slab aside with iron and might (+15), and descending
+  # past it into the lord's chamber (+25). Each award rides a milestone that
   # only fires once (the wight dies once; the lever retires after success, bug_0015;
-  # the relic chamber ends the game on entry), so the score cannot be farmed and the
-  # intended path reaches the full 50. The conventional `score` var accrues via
+  # the relic chamber's on_enter fires once on first descent), so the score cannot be
+  # farmed and the intended path reaches the full 50. The win itself is the deliberate
+  # claim — taking the circlet from its plinth (win_conditions, bug_0056) — one beat
+  # after the chamber-reached milestone, so max score is in hand as the player makes
+  # the final grab. The conventional `score` var accrues via
   # inc_var; the RPG validator folds the combat/skill-check awards into the
   # SCORE_UNREACHABLE upper bound, so the declared max is genuinely reachable.
   max_score: 50
@@ -184,14 +187,31 @@ enemies:
       - inc_var: { name: score, by: 10 }
 
 win_conditions:
+  # The win fires on the deliberate CLAIM, not on bare room entry. A blind
+  # playtester (seed 71) reached the relic chamber and the game ended the instant
+  # they walked in: the circlet sat in visible_objects with no actions, and the
+  # ending narrated "You lift the circlet from its plinth" — an act they never
+  # performed. The whole reason the chamber exists (the goal item) was presented
+  # and resolved in the same frame, so the climax was narrated AT the player
+  # instead of earned by a final grab. Adding `has_item: circlet` to the win means
+  # entering the chamber no longer wins (you don't hold the crown yet) — the room
+  # shows it on its plinth and offers "take circlet", and the win fires on that
+  # TAKE via the engine's post-action checkWin hook (src/core/engine.ts §8.4.5).
+  # `visited: relic_chamber` is KEPT deliberately: it is the only `visited` term in
+  # any win, and the parser validator derives its soft-lock guard (every reachable
+  # room can still reach a win) from `visited` win-rooms — dropping it would
+  # silently disable that check. Both conditions must hold (implicit all_of).
   - id: claim_relic
-    conditions: [ { visited: relic_chamber } ]
+    conditions: [ { visited: relic_chamber }, { has_item: circlet } ]
     ending: ending_victory
 
 endings:
+    # Epilogue follows the deliberate TAKE (which narrates "You take the
+    # Barrow-Lord's circlet."), so it no longer re-describes lifting it from the
+    # plinth — it carries the consequence of the claim the player just made.
   - id: ending_victory
     title: "Lord of the Barrow"
-    text: "You lift the circlet from its plinth. The barrow is yours, and the light comes up the stair with you."
+    text: "The cold crown is yours, its pale light steady in your hands. The barrow yields its lord, and the light comes up the stair with you."
     death: false
   - id: ending_fallen
     title: "Another Niche Filled"

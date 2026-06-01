@@ -130,8 +130,11 @@ describe("bug_0027 — the slab lever reads as a retryable attempt, not a streng
     expect(s.questStage["barrow"]).toBe("slab_moved");
     const down = step(s, { type: "MOVE", direction: "down" });
     expect(down.ok).toBe(true);
-    expect(down.state.ended).toBe(true);
-    expect(down.state.endingId).toBe("ending_victory");
-    expect(down.state.vars["score"]).toBe(pack.meta.max_score);
+    expect(down.state.ended).toBe(false); // the win is the claim, not entry (bug_0056)
+    const claim = step(down.state, { type: "TAKE", item: "circlet" });
+    expect(claim.ok).toBe(true);
+    expect(claim.state.ended).toBe(true);
+    expect(claim.state.endingId).toBe("ending_victory");
+    expect(claim.state.vars["score"]).toBe(pack.meta.max_score);
   });
 });

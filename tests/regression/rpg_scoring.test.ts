@@ -94,14 +94,18 @@ describe("bug_0016 — Sunken Barrow scoring accrues 0→10→25→50 across the
     expect(s.questStage["barrow"]).toBe("slab_moved");
     expect(score(s)).toBe(25);
 
-    s = act(s, move("down")); // into the relic chamber → win fires on entry
+    s = act(s, move("down")); // into the relic chamber: +25 milestone, max score in hand
+    expect(s.ended).toBe(false); // the win turns on the claim, not on entry (bug_0056)
+    expect(score(s)).toBe(50);
+    expect(score(s)).toBe(pack.meta.max_score);
+
+    s = act(s, isTake); // claim the circlet → win fires on the deliberate TAKE
     expect(s.ended).toBe(true);
     expect(s.endingId).toBe("ending_victory");
     expect(score(s)).toBe(50);
-    expect(score(s)).toBe(pack.meta.max_score);
   });
 
-  it("each award is one-time: the wight is dead, the lever retires, the relic ends the game", () => {
+  it("each award is one-time: the wight is dead, the lever retires, the relic chamber's +25 fires once", () => {
     let s = act(act(act(initStateForRpgPack(index, 1), move("down")), isTake), move("north"));
     s = act(act(s, isAttack), isAttack);
     // The wight is slain — no ATTACK remains, so the +10 cannot be re-earned.
@@ -114,7 +118,11 @@ describe("bug_0016 — Sunken Barrow scoring accrues 0→10→25→50 across the
     expect(options(s).some((o) => o.action.type === "USE")).toBe(false);
 
     s = act(s, move("down"));
-    // The relic chamber's win ends the game on entry, so its on_enter +25 fires once.
+    // The relic chamber's on_enter +25 fires once on first descent; the win itself
+    // turns on the deliberate claim a beat later (bug_0056), so the +25 cannot be farmed.
+    expect(s.ended).toBe(false);
+    expect(score(s)).toBe(50);
+    s = act(s, isTake); // claim the circlet → win
     expect(s.ended).toBe(true);
     expect(score(s)).toBe(50);
   });

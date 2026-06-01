@@ -64,7 +64,11 @@ function playToVictory(seed: number): { state: GameState; actions: Action[] } {
   }
   expect(state.questStage["barrow"]).toBe("slab_moved");
 
-  state = act(state, { type: "MOVE", direction: "down" }, actions); // relic_chamber → win on enter
+  state = act(state, { type: "MOVE", direction: "down" }, actions); // relic_chamber
+  // The win turns on the deliberate CLAIM, not on bare room entry (bug_0056): entering
+  // the chamber does not end the game — the circlet sits on its plinth and is taken.
+  expect(state.ended, "entering the relic chamber must not auto-win").toBe(false);
+  state = act(state, { type: "TAKE", item: "circlet" }, actions); // claim the circlet → win
   return { state, actions };
 }
 

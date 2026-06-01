@@ -107,6 +107,14 @@ export function buildRpgRules(index: RpgIndex): Rules {
       if (ending) effects.push({ end_game: ending });
       return effects;
     },
+
+    // Mirrors the parser runner: a win that turns on a deliberate non-move action
+    // (claiming the Barrow-Lord's circlet) fires here, against the post-effects
+    // state, rather than on bare room entry. Skipped once the game has ended.
+    checkWin(state: GameState): Effect[] {
+      const ending = winningEnding(index, state);
+      return ending ? [{ end_game: ending }] : [];
+    },
   };
 }
 

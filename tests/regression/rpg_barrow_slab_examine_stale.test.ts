@@ -140,8 +140,11 @@ describe("bug_0047 — the stone slab's examine reacts to being levered aside", 
 
     const down = step(s, { type: "MOVE", direction: "down" });
     expect(down.ok).toBe(true);
-    expect(down.state.ended).toBe(true);
-    expect(down.state.endingId).toBe("ending_victory");
-    expect(down.state.vars["score"]).toBe(pack.meta.max_score);
+    expect(down.state.ended).toBe(false); // the win is the claim, not entry (bug_0056)
+    const claim = step(down.state, { type: "TAKE", item: "circlet" });
+    expect(claim.ok).toBe(true);
+    expect(claim.state.ended).toBe(true);
+    expect(claim.state.endingId).toBe("ending_victory");
+    expect(claim.state.vars["score"]).toBe(pack.meta.max_score);
   });
 });

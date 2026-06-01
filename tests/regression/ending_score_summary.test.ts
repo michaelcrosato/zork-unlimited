@@ -192,7 +192,8 @@ describe("bug_0026 — endings surface a final-score tally in scoring packs", ()
     s = act(s, (a) => a.type === "ATTACK");
     s = act(s, move("east"));
     s = act(s, (a) => a.type === "USE");
-    s = act(s, move("down")); // relic chamber → win on entry
+    s = act(s, move("down")); // relic chamber (not yet won — the win is the claim, bug_0056)
+    s = act(s, (a) => a.type === "TAKE"); // claim the circlet → win
 
     const o = buildRpgObservation(index, s);
     expect(o.ended).toBe(true);

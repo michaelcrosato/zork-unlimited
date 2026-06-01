@@ -115,7 +115,9 @@ describe("bug_0015 — a one-shot skill-check lever retires after success", () =
     for (let i = 0; i < 40 && s.questStage["barrow"] !== "slab_moved"; i++) {
       s = act(s, LEVER);
     }
-    s = act(s, { type: "MOVE", direction: "down" }); // relic_chamber → win
+    s = act(s, { type: "MOVE", direction: "down" }); // relic_chamber (not yet won)
+    expect(s.ended).toBe(false); // the win is the claim, not entry (bug_0056)
+    s = act(s, { type: "TAKE", item: "circlet" }); // claim the circlet → win
     expect(s.ended).toBe(true);
     expect(s.endingId).toBe("ending_victory");
   });

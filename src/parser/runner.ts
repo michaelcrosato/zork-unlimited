@@ -4,11 +4,17 @@
  * resolver for the legal-action set and for what an action means, and fires
  * `onEnter` on room transitions.
  *
- * Win conditions are evaluated on room entry (`onEnter`) against the entering
- * state — the common "reach room / visited X" trigger — and append an
- * `end_game` effect when met. (A win that must fire without a move would need a
- * post-action hook; out of scope for v1 and documented here so packs target
- * room-entry wins, e.g. §7.3's `{ visited: catacombs }`.)
+ * Win conditions are evaluated in two complementary places against the same
+ * `winningEnding` predicate, so a pack can trigger its ending on whichever beat is
+ * dramatically right:
+ *   - `onEnter` — on room entry, the common "reach room / visited X" trigger
+ *     (e.g. §7.3's `{ visited: catacombs }`).
+ *   - `checkWin` — after ANY action's effects, even with no move, for a win that
+ *     turns on a deliberate non-move action: taking the goal item, administering a
+ *     cure. A pack expresses this by adding the act's post-condition to the win
+ *     (e.g. `{ has_item: circlet }` alongside `{ visited: relic_chamber }`), so the
+ *     ending fires on the climactic TAKE instead of on bare room entry. The engine
+ *     skips `checkWin` once the game has ended, so the two paths never double-fire.
  */
 import { evalConditions } from "../core/conditions.js";
 import type { Effect } from "../core/effects.js";
@@ -44,6 +50,11 @@ export function buildParserRules(index: ParserIndex): Rules {
       const ending = winningEnding(index, state);
       if (ending) effects.push({ end_game: ending });
       return effects;
+    },
+
+    checkWin(state: GameState): Effect[] {
+      const ending = winningEnding(index, state);
+      return ending ? [{ end_game: ending }] : [];
     },
   };
 }

@@ -61,6 +61,13 @@ describe("GameSession — mode detection + structured play", () => {
       const down = s.view().choices.find((c) => c.label === "go down");
       expect(down).toBeTruthy();
       s.choose(down!.id);
+      // The win turns on claiming the circlet, not on entering the chamber (bug_0056).
+      expect(s.view().ended).toBe(false);
+      const take = s
+        .view()
+        .choices.find((c) => c.label.includes("take") && c.label.includes("circlet"));
+      expect(take).toBeTruthy();
+      s.choose(take!.id);
       const v = s.view();
       expect(v.ended).toBe(true);
       expect(v.endingId).toBe("ending_victory");

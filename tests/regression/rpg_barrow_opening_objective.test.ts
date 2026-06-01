@@ -72,8 +72,13 @@ describe("bug_0037 — the Barrow Mouth opens with a clear objective", () => {
     expect(s.questStage["barrow"]).toBe("slab_moved");
     const down = step(s, { type: "MOVE", direction: "down" });
     expect(down.ok).toBe(true);
-    expect(down.state.ended).toBe(true);
-    expect(down.state.endingId).toBe("ending_victory");
-    expect(down.state.vars["score"]).toBe(pack.meta.max_score);
+    // Entering the chamber no longer auto-wins (bug_0056) — the win is the claim.
+    expect(down.state.ended).toBe(false);
+    s = down.state;
+    const claim = step(s, { type: "TAKE", item: "circlet" });
+    expect(claim.ok).toBe(true);
+    expect(claim.state.ended).toBe(true);
+    expect(claim.state.endingId).toBe("ending_victory");
+    expect(claim.state.vars["score"]).toBe(pack.meta.max_score);
   });
 });

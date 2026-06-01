@@ -36,6 +36,16 @@ export type Rules = {
   resolve(state: GameState, action: Action): Resolution | null;
   /** Effects fired when a location is entered (scene/room `on_enter`, §8.4 step 4). */
   onEnter?(state: GameState, locationId: string): Effect[];
+  /**
+   * Win conditions evaluated after an action's effects, even when NO location
+   * transition occurred (§8.4.5) — for a win that must fire on a deliberate
+   * non-move action (claiming the goal item, administering a cure) rather than on
+   * bare room entry. Returns the `end_game` effect(s) to append, or `[]` if no win
+   * is met. Optional: a runner whose wins only ever fire on room entry omits it and
+   * keeps `onEnter`'s win check (the two are complementary — `onEnter` covers
+   * reach-the-room wins, `checkWin` covers act-in-the-room wins).
+   */
+  checkWin?(state: GameState): Effect[];
 };
 
 /** Structural equality for actions — used to test membership in the legal set. */
@@ -80,6 +90,16 @@ export function makeStep(rules: Rules) {
       const enter = applyEffects(rules.onEnter(next, next.current), next);
       next = enter.state;
       events.push(...enter.events);
+    }
+
+    // §8.4.5 — post-action win check. A win that turns on a non-move action
+    // (taking the relic, administering the cure) fires here, against the
+    // post-effects state. Skipped when the game already ended — so a win an
+    // effect-level or onEnter `end_game` already fired never double-fires.
+    if (rules.checkWin && !next.ended) {
+      const win = applyEffects(rules.checkWin(next), next);
+      next = win.state;
+      events.push(...win.events);
     }
 
     // §8.4.6 — advance the step counter (state hash is recomputed by callers/trace).
