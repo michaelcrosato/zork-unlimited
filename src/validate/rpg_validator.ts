@@ -18,6 +18,7 @@ import type { Effect } from "../core/effects.js";
 import { validateParser } from "./parser_validator.js";
 import { type Finding, type ValidationReport, makeReport } from "./report.js";
 import { type RpgPack, HP_VAR, ATTACK_VAR, DEFENSE_VAR } from "../rpg/schema.js";
+import { SCORE_VAR } from "../parser/schema.js";
 
 const err = (code: string, message: string, where: string[]): Finding => ({ severity: "error", code, message, where });
 
@@ -40,7 +41,13 @@ export function validateRpg(pack: RpgPack): ValidationReport {
     if ("add_item" in e) extraObtainable.push(e.add_item);
   }
 
-  const base = validateParser(pack, { extraSettableFlags, extraObtainable });
+  // Score awarded through RPG-only branches (combat / skill checks), which the
+  // parser validator's SCORE_UNREACHABLE bound does not scan — fold it in so a
+  // score earned by winning a fight or passing a check counts as reachable.
+  let extraScoreAwards = 0;
+  for (const e of rpgRuntimeEffects(pack)) if ("inc_var" in e && e.inc_var.name === SCORE_VAR) extraScoreAwards += e.inc_var.by;
+
+  const base = validateParser(pack, { extraSettableFlags, extraObtainable, extraScoreAwards });
   const findings: Finding[] = [...base.findings];
 
   const roomIds = new Set(pack.rooms.map((r) => r.id));

@@ -14,7 +14,16 @@ meta:
   start_room: barrow_mouth
   vars_init: { hp: 20, attack: 4, defense: 2, might: 3 }
   flags_init: []
-  max_score: 0
+  # Stage-3 scoring: points are awarded once at each of the three beats that mark
+  # real progress through the barrow — slaying the guard-wight that bars the way
+  # (+10), levering the great slab aside with iron and might (+15), and claiming
+  # the Barrow-Lord's circlet at the end (+25). Each award rides a milestone that
+  # only fires once (the wight dies once; the lever retires after success, bug_0015;
+  # the relic chamber ends the game on entry), so the score cannot be farmed and the
+  # intended path reaches the full 50. The conventional `score` var accrues via
+  # inc_var; the RPG validator folds the combat/skill-check awards into the
+  # SCORE_UNREACHABLE upper bound, so the declared max is genuinely reachable.
+  max_score: 50
 
 rooms:
   - id: barrow_mouth
@@ -82,6 +91,7 @@ rooms:
     objects: [circlet]
     on_enter:
       - add_journal: "You have reached the relic chamber."
+      - inc_var: { name: score, by: 25 }
     exits:
       - { direction: up, to: slab_passage }
 
@@ -110,6 +120,7 @@ objects:
           difficulty: 12
           on_success:
             - set_quest_stage: { quest: barrow, stage: slab_moved }
+            - inc_var: { name: score, by: 15 }
             - narrate: "Tendons cracking, you heave — and the slab grinds aside, baring a stair down."
           on_failure:
             - narrate: "The bar bites, your shoulders strain, but the slab does not give. Set your feet and try again."
@@ -134,6 +145,7 @@ enemies:
     death_ending: ending_fallen
     on_defeat:
       - add_journal: "The barrow-wight crumbles; the cold lifts from the east arch."
+      - inc_var: { name: score, by: 10 }
 
 win_conditions:
   - id: claim_relic

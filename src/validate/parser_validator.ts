@@ -35,6 +35,16 @@ const warn = (code: string, message: string, where: string[]): Finding => ({ sev
 export type ValidateParserOptions = {
   extraSettableFlags?: string[];
   extraObtainable?: string[];
+  /**
+   * Extra `score` points the RPG layer (§13 Stage 4) can award through branches the
+   * parser validator does not scan — enemy `on_defeat` and skill-check
+   * `on_success`/`on_failure`. Folded into the SCORE_UNREACHABLE upper bound so a
+   * score legitimately earned by winning a fight or passing a check is not
+   * mis-flagged unreachable. These award sites are genuinely reachable (combat
+   * winnability and skill-check passability are guarded by the RPG validator), so
+   * counting them sharpens the conservative bound rather than weakening it. Default 0.
+   */
+  extraScoreAwards?: number;
 };
 
 export function validateParser(pack: ParserPack, opts: ValidateParserOptions = {}): ValidationReport {
@@ -239,6 +249,7 @@ export function validateParser(pack: ParserPack, opts: ValidateParserOptions = {
   if (pack.meta.max_score > 0) {
     let totalAwards = pack.meta.vars_init[SCORE_VAR] ?? 0;
     for (const e of allEffects(pack)) if ("inc_var" in e && e.inc_var.name === SCORE_VAR) totalAwards += e.inc_var.by;
+    totalAwards += opts.extraScoreAwards ?? 0;
     if (totalAwards < pack.meta.max_score) {
       findings.push(err("SCORE_UNREACHABLE", `meta.max_score is ${pack.meta.max_score} but at most ${totalAwards} point(s) can ever be awarded.`, ["meta:max_score"]));
     }

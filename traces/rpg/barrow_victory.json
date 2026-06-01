@@ -1,7 +1,7 @@
 {
   "trace_id": "tr_barrow_victory",
   "pack_id": "sunken_barrow_v1",
-  "content_hash": "018c6df54ecca1833422ec9fd9c2abbddd98542ace886df60fbe6bad9791dbb0",
+  "content_hash": "ba69fcdd664c4a1042aa65841eec6ac4313a3471a3f414a3af7df0f4b2c2e81f",
   "seed": 1,
   "initial_state": {
     "seed": 1,
@@ -59,5 +59,5 @@
       "direction": "down"
     }
   ],
-  "expected_final_hash": "007fdea09e361c69c1e8f9064e87ac102a489f41a1d23ca8a4b5363a297d1874"
+  "expected_final_hash": "871ddf3e195a425372692e5fcc512d5291c8fe0a32d267e625b5798ef59fdb56"
 }
