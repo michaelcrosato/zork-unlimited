@@ -96,14 +96,15 @@ describe("bug_0018 — reactive CYOA scene text (the kitchen lockpicks)", () => 
   });
 
   it("backward-compat: a variant-less scene returns its base text byte-identically", () => {
-    // foyer gained reactive variants in bug_0020; use a scene that still has none.
-    const vaultDoor = index.pack.scenes.find((sc) => sc.id === "vault_door");
-    expect(vaultDoor).toBeDefined();
-    expect(vaultDoor!.variants).toBeUndefined();
+    // foyer gained variants in bug_0020 and vault_door in bug_0042; the crawlspace
+    // still has none — use it as the variant-less control.
+    const crawlspace = index.pack.scenes.find((sc) => sc.id === "crawlspace");
+    expect(crawlspace).toBeDefined();
+    expect(crawlspace!.variants).toBeUndefined();
     // Two arbitrary states must both yield the base text unchanged.
     const s0 = initStateForPack(index, 53);
     const s1 = run(["kitchens", "take_pick", "back_foyer"]);
-    expect(sceneText(vaultDoor!, s0)).toBe(vaultDoor!.text);
-    expect(sceneText(vaultDoor!, s1)).toBe(vaultDoor!.text);
+    expect(sceneText(crawlspace!, s0)).toBe(crawlspace!.text);
+    expect(sceneText(crawlspace!, s1)).toBe(crawlspace!.text);
   });
 });

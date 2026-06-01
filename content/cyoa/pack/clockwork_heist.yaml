@@ -178,6 +178,21 @@ scenes:
     text: >
       The vault's clockwork lock ticks under your fingers — a hundred tiny tumblers.
       The brass plate's warning echoes: force will not open this.
+    # Reaching the door at/after the hour (ticks >= 4) is only possible for a
+    # ledger reader — a no-ledger player past the hour gets the blind gamble, never
+    # this safe crossing (see `landing`). So this variant fires exactly when the
+    # player has just timed the patrolled crossing the ledger promised, and gives
+    # that signature beat the on-screen payoff it lacked: the careful player now
+    # *feels* the clock at its tensest moment instead of strolling across in
+    # silence (blind-playtest finding — the deadline never bit careful play).
+    variants:
+      - when: [{ var_gte: { name: ticks, value: 4 } }, { has_flag: read_ledger }]
+        text: >
+          You wait, pressed to the automata, until the watchman's lantern sweeps
+          to the gallery's far end — then cross in its wake and crouch at the vault
+          while his tread recedes, just as the ledger swore you could. The clockwork
+          lock ticks under your fingers, a hundred tiny tumblers. The brass plate's
+          warning echoes: force will not open this.
     choices:
       - id: pick_lock
         text: "Pick the lock with the lockpicks."
