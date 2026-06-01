@@ -81,7 +81,42 @@ scenes:
     # acknowledgment survives the clock's escalation. Atmospheric/continuity only: no
     # flag/tick/route/gating/ending change, and the non-panel tiers are untouched
     # (bug_0063).
+    # The ticks>=7 tier is the deadline's missing middle (bug_0082). bug_0079 gave
+    # the clock real teeth — linger to ticks>=10 and `ending_overstayed` fires — but
+    # every room's reactive prose topped out at the ticks>=4 "the hour has come round"
+    # tier, so a lingering player saw the SAME line at ticks 4 through 9 and then died
+    # at 10 with no mounting dread. A fresh blind playtester (seed 13, ai-runs/
+    # 2026-06-01T21-46-13-894Z/playtest.md §5) caught exactly this: the warning prose
+    # "plateaus after the chime at tick 4 and stops escalating," so the urgency
+    # "overpromises relative to what the clock mechanically enforces" and "a player
+    # can't tell how close the real deadline is." This tier bridges the gap: at the
+    # safe-ground foyer (the namesake-clock hub, the only entrance to the kitchen
+    # tick-source) the house is now shown ROUSING IN EARNEST — the watchman's tread no
+    # longer alone, lamps moving on the landings — escalating toward the ticks>=10
+    # ending's full waking ("the watchman's tread no longer alone but answered now by
+    # others"). Content-only reactive variants, higher threshold first (first match
+    # wins), paired with found_passage like the lower tiers. No choice/flag/tick/gate/
+    # ending change; the foyer never advances ticks and its choices are untouched.
     variants:
+      - when: [{ var_gte: { name: ticks, value: 7 } }, { has_flag: found_passage }]
+        text: >
+          Moonlight pours through the manor's glass dome onto a thousand turning gears.
+          A grand staircase rises into shadow; a low door leads off to the kitchens; and
+          behind the great clock's pendulum the panel you pried loose still gapes on the
+          dark crawlspace. The hour chimed a while ago, and the house no longer merely
+          stirs: lamps are moving on the upper landings, and the watchman's tread no
+          longer walks alone — other feet answer it now, room to room. You have lingered
+          too long; the great clock at the wall, vast as a coffin, has only a few beats
+          left to give before the manor stands fully awake.
+      - when: [{ var_gte: { name: ticks, value: 7 } }]
+        text: >
+          Moonlight pours through the manor's glass dome onto a thousand turning gears.
+          A grand staircase rises into shadow; a low door leads off to the kitchens. The
+          hour chimed a while ago, and the house no longer merely stirs: lamps are moving
+          on the upper landings, and the watchman's tread no longer walks alone — other
+          feet answer it now, room to room. You have lingered too long; the great clock
+          at the wall, vast as a coffin, has only a few beats left to give before the
+          manor stands fully awake.
       - when: [{ var_gte: { name: ticks, value: 4 } }, { has_flag: found_passage }]
         text: >
           Moonlight pours through the manor's glass dome onto a thousand turning gears.
@@ -269,7 +304,40 @@ scenes:
     # he is offered and the vault-door payoff; the non-reader keeps "right under his beam"
     # because his crossing (cross_to_vault_blind → ending_patrol) really is the gamble that
     # framing promises. Atmospheric/legibility only: no flag/tick/route/gating/ending change.
+    # The ticks>=7 tier is the deadline's missing middle (bug_0082), mirroring the
+    # foyer treatment in the gallery — the patrolled danger room and the only entrance
+    # to the study tick-source, so together the two scenes cover every tick-accruing
+    # loop a lingering player can take. Above the ticks>=4 patrol tier (first match
+    # wins, higher threshold first), it escalates from the lone watchman of the hour
+    # toward the ticks>=10 ending's whole-house waking. The read_ledger split is
+    # preserved exactly as at ticks>=4: the reader keeps his ledger callback and the
+    # solved, time-it-in-his-wake framing (no "right under his beam"), matching the
+    # safe approach_vault he is still offered (bug_0066/bug_0067); the non-reader keeps
+    # the real-gamble "right under his beam" danger and is never told of a ledger he
+    # didn't read, matching the blind crossing he is offered. Content-only; no choice/
+    # flag/tick/gate/ending change.
     variants:
+      - when: [{ var_gte: { name: ticks, value: 7 } }, { has_flag: read_ledger }]
+        text: >
+          A long gallery lined with frozen automata, their glass eyes following you. The
+          vault door broods at the far end, and the watchman's lantern still sweeps the
+          gallery on the rounds the steward's ledger warned of — but the hour chimed a
+          while ago, and his tread no longer walks alone. Lamps are stirring along the
+          landings and other feet answer him now, room to room: the house is waking in
+          earnest. You still have his rounds by heart and can time the crossing in his
+          wake just as the ledger swore — but only for a few beats more, before there are
+          too many lanterns to read. The study stands ajar to one side, and the stair
+          drops safely back to the foyer.
+      - when: [{ var_gte: { name: ticks, value: 7 } }]
+        text: >
+          A long gallery lined with frozen automata, their glass eyes following you. The
+          vault door broods at the far end, and a watchman's lantern sweeps the gallery on
+          his slow rounds — the long crossing runs right under his beam. But the hour
+          chimed a while ago, and his tread no longer walks alone: lamps are stirring
+          along the landings and other feet answer him now, room to room, the house waking
+          in earnest around you. There are only a few beats left before there is nowhere
+          on this gallery left to stand unseen. The study stands ajar to one side, and the
+          stair drops safely back to the foyer.
       - when: [{ var_gte: { name: ticks, value: 4 } }, { has_flag: read_ledger }]
         text: >
           A long gallery lined with frozen automata, their glass eyes following you.
