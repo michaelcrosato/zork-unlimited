@@ -11,6 +11,7 @@ import {
   detectDisabledTests,
   countTestCases,
   runStatic,
+  classifyDrift,
   PROTECTED_FILES,
   MIN_TEST_CASES,
 } from "../../scripts/verify-integrity.js";
@@ -43,6 +44,33 @@ describe("countTestCases", () => {
   it("counts it()/test() calls", () => {
     const text = "it('a',()=>{}); test('b',()=>{}); it ('c',()=>{}); describe('grp',()=>{});";
     expect(countTestCases([{ text }])).toBe(3); // two it + one test; describe not counted
+  });
+});
+
+describe("classifyDrift — legitimate re-pin vs launder vs weakening (research-aligned)", () => {
+  const errs = (fs: { severity: string }[]) => fs.filter((f) => f.severity === "error");
+
+  it("ALLOWS (warns) a hash re-pin ACCOMPANIED by a content change — the user's loop case", () => {
+    // The exact thing that was wrongly blocking the loop: improve a pack, re-pin its hash.
+    const fs = classifyDrift(["content/cyoa/pack/watchtower_road.yaml", "tests/unit/rpg_validator.test.ts"], () => true);
+    expect(errs(fs)).toEqual([]); // no hard error → the cycle commits
+    expect(fs.some((f) => f.code === "HASH_PIN_REPINNED" && f.severity === "warning")).toBe(true);
+  });
+
+  it("BLOCKS a re-pin with NO content change (the launder / regenerate-to-green pattern)", () => {
+    const fs = classifyDrift(["tests/unit/rpg_validator.test.ts"], () => true);
+    expect(fs.some((f) => f.code === "HASH_PIN_UNACCOMPANIED" && f.severity === "error")).toBe(true);
+  });
+
+  it("SURFACES (warns) a modified protected file — free rein over code, weakening caught elsewhere", () => {
+    const fs = classifyDrift(["src/core/engine.ts"], () => true);
+    expect(errs(fs)).toEqual([]);
+    expect(fs.some((f) => f.code === "VERIFIER_TOUCHED" && f.severity === "warning")).toBe(true);
+  });
+
+  it("BLOCKS deleting a protected verification asset", () => {
+    const fs = classifyDrift(["tests/property/determinism.test.ts"], () => false);
+    expect(fs.some((f) => f.code === "PROTECTED_DELETED" && f.severity === "error")).toBe(true);
   });
 });
 

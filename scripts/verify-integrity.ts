@@ -126,10 +126,65 @@ function gitChangedFiles(root: string, ref: string): string[] {
 }
 
 /**
- * Drift check for the autonomous loop: did THIS cycle (working tree vs `ref`) touch
- * the verifier? Runs the static checks too, then flags deleted protected files,
- * disabled tests in changed files, and changed hash-pins. Verifier edits are
- * surfaced as errors unless AI_LOOP_ALLOW_VERIFIER_EDITS=1 downgrades them.
+ * Classify what a cycle's changed-file set means for verifier integrity. PURE
+ * (testable without git). The severity model follows current reward-hacking
+ * research (EvilGenie arXiv:2511.21654; METR 2025-06; Anthropic long-running-agents
+ * 2025-11) + snapshot/approval-testing practice (Jest, cargo-insta):
+ *
+ *  - A pinned hash / snapshot is a CHANGE-DETECTOR, not a correctness oracle, and is
+ *    *meant* to be updated when the artifact intentionally changes. So re-pinning a
+ *    hash that is ACCOMPANIED by a real content change is the legitimate workflow →
+ *    a surfaced WARNING (recorded for review, does not block). The behavioral test
+ *    suite — which must be green — is the real guard.
+ *  - A re-pin UNACCOMPANIED by any content change is the "regenerate to make red go
+ *    green" launder pattern → a hard ERROR.
+ *  - Modifying (not deleting) a protected verification file is surfaced (WARNING):
+ *    the agent has free rein over code, and the mechanical weakening it must NOT do
+ *    (disable/delete tests, drop the count) is caught by the static checks + the
+ *    drift count-regression check, both hard errors.
+ *  - Deleting a protected verification asset → hard ERROR.
+ */
+export function classifyDrift(changed: string[], existsFn: (rel: string) => boolean): Finding[] {
+  const findings: Finding[] = [];
+  const contentChanged = changed.some((f) => f.startsWith("content/"));
+  for (const f of changed) {
+    if (PROTECTED_FILES.includes(f)) {
+      if (!existsFn(f)) findings.push({ severity: "error", code: "PROTECTED_DELETED", message: `a protected verification asset was deleted this cycle: ${f}`, where: f });
+      else findings.push({ severity: "warning", code: "VERIFIER_TOUCHED", message: `this cycle modified a protected verification asset: ${f} — surfaced for review (the static + count-regression checks guard against weakening)`, where: f });
+    }
+    if (HASH_PIN_FILES.includes(f) && existsFn(f)) {
+      if (contentChanged) {
+        findings.push({ severity: "warning", code: "HASH_PIN_REPINNED", message: `re-pinned ${f} alongside an intentional content change — the legitimate snapshot-update workflow, recorded for review`, where: f });
+      } else {
+        findings.push({ severity: "error", code: "HASH_PIN_UNACCOMPANIED", message: `re-pinned ${f} with NO content change this cycle — a snapshot/hash update with no corresponding edit is the classic launder pattern (override with AI_LOOP_ALLOW_VERIFIER_EDITS=1 for a deliberate algorithm/format change)`, where: f });
+      }
+    }
+  }
+  return findings;
+}
+
+/** Count test cases as they were at a git ref (null if the ref can't be read). */
+function countTestCasesAtRef(root: string, ref: string): number | null {
+  try {
+    const listed = execFileSync("git", ["ls-tree", "-r", "--name-only", ref], { cwd: root, encoding: "utf8" });
+    const files = listed.split("\n").map((s) => s.trim()).filter((p) => /^tests\/.*\.test\.ts$/.test(p));
+    let n = 0;
+    for (const p of files) {
+      const text = execFileSync("git", ["show", `${ref}:${p}`], { cwd: root, encoding: "utf8" });
+      n += text.match(TESTCASE_RE)?.length ?? 0;
+    }
+    return n;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Drift check for the autonomous loop: what did THIS cycle (working tree vs `ref`)
+ * do to the verifier? = static checks + classifyDrift + a test-count-regression
+ * guard. AI_LOOP_ALLOW_VERIFIER_EDITS=1 downgrades ONLY the unaccompanied-re-pin
+ * error (a deliberate algorithm/format re-pin); it never downgrades real weakening
+ * (deleted/disabled tests, a dropped test count).
  */
 export function runDrift(root: string, ref: string, env: NodeJS.ProcessEnv = process.env): { ok: boolean; findings: Finding[] } {
   const findings: Finding[] = [...runStatic(root).findings];
@@ -140,26 +195,18 @@ export function runDrift(root: string, ref: string, env: NodeJS.ProcessEnv = pro
     return { ok: false, findings: [...findings, { severity: "error", code: "GIT_DIFF_FAILED", message: `cannot diff against ${ref}: ${(e as Error).message}`, where: ref }] };
   }
   const acknowledged = env.AI_LOOP_ALLOW_VERIFIER_EDITS === "1";
-  const sev = acknowledged ? ("warning" as const) : ("error" as const);
-
-  for (const f of changed) {
-    if (PROTECTED_FILES.includes(f)) {
-      const deleted = !existsSync(join(root, f));
-      findings.push({
-        severity: deleted ? "error" : sev,
-        code: deleted ? "PROTECTED_DELETED" : "VERIFIER_TOUCHED",
-        message: deleted ? `a protected verification asset was deleted this cycle: ${f}` : `this cycle modified a protected verification asset: ${f}${acknowledged ? " (acknowledged)" : " — surfacing for review"}`,
-        where: f,
-      });
-    }
-    if (HASH_PIN_FILES.includes(f) && existsSync(join(root, f))) {
-      findings.push({
-        severity: sev,
-        code: "HASH_PIN_CHANGED",
-        message: `this cycle changed a committed hash-pin file: ${f}${acknowledged ? " (acknowledged)" : " — a re-pin must be a deliberate, reviewed change, not a silent launder"}`,
-        where: f,
-      });
-    }
+  for (const f of classifyDrift(changed, (rel) => existsSync(join(root, rel)))) {
+    // The only downgradable error is an unaccompanied re-pin (a deliberate human
+    // re-pin of e.g. a hash algorithm). Weakening errors are never downgraded.
+    if (acknowledged && f.code === "HASH_PIN_UNACCOMPANIED") findings.push({ ...f, severity: "warning", message: `${f.message} [acknowledged]` });
+    else findings.push(f);
+  }
+  // Hard guard against silent test removal even while above the static floor: the
+  // cycle must not REDUCE the test-case count vs the pre-cycle ref.
+  const before = countTestCasesAtRef(root, ref);
+  if (before !== null) {
+    const now = countTestCases(readAll(root, listTestFiles(root)));
+    if (now < before) findings.push({ severity: "error", code: "TEST_COUNT_REGRESSION", message: `test cases dropped from ${before} to ${now} this cycle — tests were removed/skipped (weakening the verifier is not allowed)`, where: "tests/" });
   }
   return { ok: !findings.some((f) => f.severity === "error"), findings };
 }

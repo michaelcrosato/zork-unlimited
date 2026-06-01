@@ -94,10 +94,12 @@ run_cycle() {
   # Trust, but verify: health is a BLOCKING gate (runs the static verifier-integrity
   # check too). A red check ⇒ no commit this cycle.
   npm run health || { echo "health failed — skipping commit this cycle"; return 1; }
-  # Don't route around the verifier: refuse-and-surface if THIS cycle deleted/disabled
-  # tests, modified a protected verification asset, or silently re-pinned a committed
-  # hash (override a deliberate edit with AI_LOOP_ALLOW_VERIFIER_EDITS=1).
-  npm run verify:integrity -- --against "$start_ref" || { echo "verifier touched — skipping commit this cycle"; return 1; }
+  # Don't route around the verifier. A content cycle that re-pins a hash ALONGSIDE a
+  # real content change is the legitimate snapshot-update workflow → surfaced, allowed.
+  # This blocks only actual weakening: deleted/disabled tests, a dropped test count,
+  # a deleted protected asset, or a re-pin with NO content change (the launder pattern).
+  # AI_LOOP_ALLOW_VERIFIER_EDITS=1 overrides only the unaccompanied-re-pin case.
+  npm run verify:integrity -- --against "$start_ref" || { echo "verifier weakened/laundered — skipping commit this cycle"; return 1; }
   # Quality feedback is mandatory: no blind-playtest record ⇒ no commit.
   require_playtest_record || return 1
   safe_commit_if_enabled "$baseline" || { echo "commit failed"; return 1; }

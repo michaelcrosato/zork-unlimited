@@ -32,8 +32,11 @@ loop.sh  (outer driver — orchestration + the bar)
 │
 ├─ 3. VERIFY        the bar, all blocking (set -e aborts the cycle on red):
 │       npm run health            (verify:integrity + lint + tests + validate + playtest)
-│       verify:integrity --against <pre-cycle ref>   (don't route around the verifier;
-│                                                      refuse-and-surface on tampering)
+│       verify:integrity --against <pre-cycle ref>   (don't route around the verifier:
+│                                                      hard-block only on weakening —
+│                                                      deleted/disabled tests, dropped
+│                                                      test count, or a re-pin with no
+│                                                      content change; legit re-pins warn)
 │       require_playtest_record    (no blind-playtest report ⇒ no commit)
 │
 └─ 4. COMMIT/PUSH   git add -A && commit (scope is free — trust; but only after the

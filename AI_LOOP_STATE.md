@@ -127,3 +127,9 @@
 - Evidence: validate green 0/0; full `npm run health` exit 0; 217 tests pass (+3 new); zero loop findings in the coverage playtest. Deliberate re-pin: watchtower content hash 8094e553… → 7f322e4cdbf1df48460c76df56fb8bdfd379fc1b755d804fb390542a3b9e71a6 (tests/unit/rpg_validator.test.ts comment updated, surfaced not laundered).
 - Locked by traces/bugs/bug_0005_watchtower_cellar_dark_feedback.yaml + tests/regression/watchtower_cellar_dark_feedback.test.ts (3 cases: nudge offered when lantern-less, narrates + makes progress / no self-loop, vanishes once equipped).
 - Next suggested focus: the still-deferred narrative-payoff findings on watchtower (the "broken seal" continuity slip — ending_truth references a broken seal the ledger route never opens; the muddled letter↔ledger relationship at the checkpoint), then clockwork_heist_v1 (assessor rank 2) and the unverified parser packs (alchemists_tower, sealed_crypt). The deterministic coverage bot still cannot reach ending_truth / the hermit cluster on seeds 1-3 — its puzzle-solving, not pack discoverability, is the limiter there.
+## AFK Cycle 2026-06-01T05-19-26-831Z
+- Assessment: packs cyoa=2 parser=2 rpg=1; 7 candidate(s) ranked.
+- Next best improvement (recommended): [content_fix] Improve "watchtower_road_v1" — 0 unreached ending(s), 5 unvisited location(s).
+- Why: An LLM playtest can pinpoint why these are hard to reach (signposting, clue legibility, pacing) and the fix raises player-facing quality.
+- Mandatory LLM playtest target this cycle: content/cyoa/pack/watchtower_road.yaml.
+- Process: assessor ranks → blind LLM playtest for quality → one improvement → health + verify:integrity green → commit (trust-but-verify).

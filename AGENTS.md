@@ -38,14 +38,25 @@ If a change can't pass verification, fix the change, not the check. That's the w
 deal: maximum freedom in design, honesty in verification.
 
 This principle is **enforced**, not just stated — `scripts/verify-integrity.ts`
-(`npm run verify:integrity`, part of `health` and CI) fails if a protected
-verification asset is missing, a test is disabled (`.skip`/`.only`/`.todo`/`xit`),
-or the test count drops below its floor. The autonomous loop additionally runs it in
-`--against <pre-cycle ref>` mode and **refuses-and-surfaces** (halts, leaves work
-uncommitted for review) if a cycle modified a protected asset or silently re-pinned
-a committed hash, unless `AI_LOOP_ALLOW_VERIFIER_EDITS=1` acknowledges a deliberate
-edit. It catches mechanical tampering, not semantic weakening — keep the deal
-honestly.
+(`npm run verify:integrity`, part of `health` and CI). It follows current
+reward-hacking research (EvilGenie 2511.21654, METR 2025-06, Anthropic 2025-11) and
+snapshot/approval-testing practice: a pinned hash is a *change-detector*, not a
+correctness oracle, so updating it on an intentional change is the legitimate
+workflow — what blocks is actual **weakening**.
+
+- **Hard blocks** (static + drift): a protected asset missing/deleted, a disabled
+  test (`.skip`/`.only`/`.todo`/`xit`), the test count dropping (below the floor OR
+  vs the pre-cycle ref), and a hash **re-pin with NO accompanying content change**
+  (the "regenerate to make red go green" launder pattern).
+- **Surfaced warnings** (allowed, recorded): re-pinning a hash *alongside* a real
+  content change, and modifying (not deleting) a protected file. The green
+  behavioral suite is the real guard; the pin just ensures nothing changes silently.
+- `AI_LOOP_ALLOW_VERIFIER_EDITS=1` overrides only the unaccompanied-re-pin case (a
+  deliberate hash-algorithm/format change); it never downgrades real weakening.
+
+It catches *mechanical* tampering, not *semantic* weakening (a vacuous assertion) —
+keep the deal honestly. The autonomous loop runs the drift mode each cycle and only
+skips the commit on a hard block, so legitimate content improvements land freely.
 
 ## The autonomous loop
 
