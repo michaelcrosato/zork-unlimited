@@ -130,7 +130,50 @@ scenes:
     text: >
       Copper pots hang in rows above a banked hearth. By the dumbwaiter, a servant
       has left a slim roll of lockpicks.
+    # The kitchen CHARGES a tick on entry (on_enter above), yet it was the last
+    # tick-advancing room the clockwork-deadline arc never made reactive: the gallery,
+    # vault door, loot room (bug_0019/0040/0042/0043), crawlspace (bug_0064), and study
+    # (bug_0068) all feel the hour, but the kitchen stayed clock-silent — bug_0068 even
+    # mislabelled the study the "LAST" such room, overlooking this one. A fresh blind
+    # playtester (seed 59) caught it directly: returning to the kitchen with the patrol
+    # already walking upstairs (ticks high), the Cold Kitchen text was unchanged and
+    # "gave no hint the clock had advanced ... the one spot that feels clock-blind."
+    # The fix is the same content-only `variants` treatment, now COMPOSED with the
+    # existing lockpick-taken state (mirroring the foyer's found_passage × tick pairing):
+    # each tick tier gets a pick-present and a pick-taken wording, first-match-wins,
+    # higher threshold first. The clock is named ONLY by the manor-wide motif (the gears
+    # carrying through the walls, the chime) — never by the watchman, ledger, or plate
+    # (the bug_0058 leak lesson), since a player can stand in this downstairs service room
+    # having met none of them; and the >=4 line speaks of the house overhead stirring,
+    # not of a guard at the kitchen (he walks only the gallery). The base `text` (pick
+    # present, low tick) is UNCHANGED and remains the schema fallback for the first arrival
+    # at ticks 1. No choice/effect/flag/item/exit/tick/gating/ending change (bug_0072).
     variants:
+      - when: [{ var_gte: { name: ticks, value: 4 } }, { has_item: lockpick }]
+        text: >
+          Copper pots hang in rows above a banked hearth. By the dumbwaiter, the spot
+          where the lockpicks lay is bare — the slim roll is in your pocket now. The hour
+          has come round at last: the great clock's chime rolls through the manor's gears
+          and reaches even this cold kitchen, and overhead the sleeping house has begun to
+          stir.
+      - when: [{ var_gte: { name: ticks, value: 4 } }]
+        text: >
+          Copper pots hang in rows above a banked hearth. By the dumbwaiter, a servant
+          has left a slim roll of lockpicks. The hour has come round at last: the great
+          clock's chime rolls through the manor's gears and reaches even this cold kitchen,
+          and overhead the sleeping house has begun to stir.
+      - when: [{ var_gte: { name: ticks, value: 2 } }, { has_item: lockpick }]
+        text: >
+          Copper pots hang in rows above a banked hearth. By the dumbwaiter, the spot
+          where the lockpicks lay is bare — the slim roll is in your pocket now. Even down
+          here the great clock's working carries through the walls, grinding toward the
+          hour — a sleeping house keeps its peace only until the chime.
+      - when: [{ var_gte: { name: ticks, value: 2 } }]
+        text: >
+          Copper pots hang in rows above a banked hearth. By the dumbwaiter, a servant
+          has left a slim roll of lockpicks. Even down here the great clock's working
+          carries through the walls, grinding toward the hour — a sleeping house keeps its
+          peace only until the chime.
       - when: [{ has_item: lockpick }]
         text: >
           Copper pots hang in rows above a banked hearth. By the dumbwaiter, the
