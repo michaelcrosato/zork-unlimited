@@ -1,0 +1,57 @@
+:root {
+  --bg: #14110f;
+  --panel: #1f1b18;
+  --ink: #e8e0d4;
+  --dim: #a89b88;
+  --accent: #c8a55b;
+  --line: #3a332c;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.6 ui-serif, Georgia, "Times New Roman", serif;
+}
+
+.af { max-width: 920px; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+
+header h1 { font-size: 1.8rem; margin: 0; color: var(--accent); letter-spacing: 0.02em; }
+.sub { margin: 0.2rem 0 1rem; color: var(--dim); font-style: italic; }
+
+.controls { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+select, button {
+  font: inherit;
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.45rem 0.7rem;
+  cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+.error { color: #e08585; }
+
+.game { display: grid; grid-template-columns: 1fr 260px; gap: 1.25rem; margin-top: 1.5rem; }
+@media (max-width: 720px) { .game { grid-template-columns: 1fr; } }
+
+.scene { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.25rem; }
+.scene h2 { margin: 0 0 0.5rem; color: var(--accent); font-size: 1.25rem; }
+.text { white-space: pre-wrap; }
+
+.choices { list-style: none; padding: 0; margin: 1rem 0 0; display: flex; flex-direction: column; gap: 0.45rem; }
+.choices button { width: 100%; text-align: left; }
+.ending { margin-top: 1rem; color: var(--accent); font-size: 1.15rem; }
+
+.state { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 1rem; font-size: 0.92rem; }
+.state h3 { margin: 0 0 0.5rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.75rem; }
+.facts { list-style: none; padding: 0; margin: 0 0 0.6rem; color: var(--dim); }
+.journal ul { margin: 0.3rem 0 0; padding-left: 1.1rem; color: var(--dim); }
+.hash { color: #6f6657; font-family: ui-monospace, monospace; font-size: 0.78rem; margin-top: 0.8rem; }
+
+.log { margin-top: 1.5rem; }
+.log h3 { color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.75rem; }
+.log pre { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 1rem; white-space: pre-wrap; color: var(--dim); max-height: 320px; overflow: auto; }

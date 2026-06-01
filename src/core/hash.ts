@@ -7,7 +7,7 @@
  * and the event log). JSON key order, map/set iteration order, etc. must never
  * leak into the hash (§8.5).
  */
-import { createHash } from "node:crypto";
+import { sha256Hex } from "./sha256.js";
 
 /** Deterministic JSON: object keys sorted; arrays preserved; no whitespace. */
 export function canonicalize(value: unknown): string {
@@ -29,7 +29,7 @@ function sortDeep(value: unknown): unknown {
 
 /** Full SHA-256 hex of the canonical form — used for save integrity. */
 export function hashState(value: unknown): string {
-  return createHash("sha256").update(canonicalize(value)).digest("hex");
+  return sha256Hex(canonicalize(value));
 }
 
 /** First 8 hex chars — used in logs and traces (§8.3, §8.6). */

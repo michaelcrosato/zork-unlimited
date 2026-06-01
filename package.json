@@ -27,6 +27,8 @@
     "playtest:parser": "tsx bin/parser_playtest.ts",
     "author": "tsx bin/author.ts",
     "inspect": "tsx bin/inspect.ts",
+    "ui:dev": "npm --prefix ui run dev",
+    "ui:build": "npm --prefix ui run build",
     "mcp": "tsx src/mcp/server.ts",
     "ai:loop": "tsx src/ai-loop.ts"
   },
