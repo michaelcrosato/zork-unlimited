@@ -343,9 +343,16 @@ objects:
         text: "A black glass phial of oily liquid that drinks the light, an acrid reek stinging the back of your throat through its wax-sealed stopper. The recipe was plain about it: this is no medicine but death — do not drink it."
     takeable: true
     interactions:
+      # Self-USE = "consume this thing". `command_verb: drink` makes the offered and
+      # typed verb match the prose that primes it — the recipe and the phial both say
+      # "drink"/"drunk", so the action reads "drink black phial" (and the parser accepts
+      # "drink phial"), not the generic "use black phial". Two blind playtesters (seed 13
+      # bug_0009, seed 29 bug_0074) flagged the drink-vs-use mismatch. Behaviour is
+      # unchanged: still a self-USE firing ending_poisoned; "use black phial" still works.
       - verb: USE
         item: black_phial
         target: black_phial
+        command_verb: drink
         effects:
           - narrate: "You unstopper the black phial and drink. Cold spreads through you, and the tower goes dark."
           - end_game: ending_poisoned

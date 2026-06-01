@@ -64,6 +64,57 @@ export const SkillCheckSchema = z
   })
   .strict();
 
+/**
+ * Verbs the controlled command parser already owns (command_map.ts). A custom
+ * interaction `command_verb` may NOT shadow one of these: the parser's builtin
+ * `switch` would intercept the word first, so the custom self-USE would be
+ * unreachable by that verb. Kept here (data, no imports) so the schema can reject
+ * a shadowing verb at validate time. KEEP IN SYNC with command_map.ts's verbs.
+ */
+export const BUILTIN_VERBS: ReadonlySet<string> = new Set([
+  // object/movement verbs + their short forms
+  "look",
+  "l",
+  "examine",
+  "x",
+  "inspect",
+  "read",
+  "go",
+  "move",
+  "take",
+  "get",
+  "grab",
+  "drop",
+  "open",
+  "close",
+  "unlock",
+  "use",
+  "talk",
+  "inventory",
+  "inv",
+  "i",
+  // directions (bare-direction movement)
+  "north",
+  "n",
+  "south",
+  "s",
+  "east",
+  "e",
+  "west",
+  "w",
+  "up",
+  "u",
+  "down",
+  "d",
+  // dialogue-mode verbs
+  "ask",
+  "say",
+  "topic",
+  "bye",
+  "goodbye",
+  "leave",
+]);
+
 /** A puzzle step: a verb applied to a target (optionally with an item), gated by
  *  conditions, producing effects. The Stage-2 puzzle mechanic (§7.3). A Stage-4
  *  interaction may additionally carry a `skill_check` resolved by the RPG runner. */
@@ -75,8 +126,38 @@ export const InteractionSchema = z
     conditions: z.array(ConditionSchema).default([]),
     effects: z.array(EffectSchema).default([]),
     skill_check: SkillCheckSchema.optional(),
+    // Optional natural verb for a self-targeted USE (the "consume this thing"
+    // pattern — drink the phial, eat the bread). When set, the command parser ALSO
+    // accepts "<command_verb> <obj>" (e.g. "drink phial") and the legal-action set
+    // lists the command as "<command_verb> <obj>" instead of the generic "use <obj>",
+    // so the offered verb matches the prose that primes it. A single lowercase word.
+    // `.optional()` (not a default) so an absent field stays absent in the compiled
+    // pack ⇒ packs that don't use it compile byte-identically and keep their content
+    // hashes (mirrors variants / skill_check / dialogue-topic conditions). Only
+    // meaningful on a self-USE interaction (item === target); enforced below.
+    command_verb: z
+      .string()
+      .regex(/^[a-z]+$/, "command_verb must be a single lowercase word")
+      .optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((it, ctx) => {
+    if (it.command_verb === undefined) return;
+    if (it.verb !== "USE" || it.item === undefined || it.item !== it.target) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["command_verb"],
+        message: "command_verb is only valid on a self-targeted USE interaction (item === target)",
+      });
+    }
+    if (BUILTIN_VERBS.has(it.command_verb)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["command_verb"],
+        message: `command_verb "${it.command_verb}" shadows a builtin parser verb`,
+      });
+    }
+  });
 
 /** A state-conditional object description (§7.3 reactive text, the object analogue
  *  of RoomVariantSchema). When all of `when` hold, this `text` replaces the

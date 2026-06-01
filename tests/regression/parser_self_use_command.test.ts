@@ -88,7 +88,10 @@ describe("bug_0009 — a self-targeted USE reads as 'use <obj>', not 'use <obj> 
     );
     expect(phial).toBeDefined();
     expect(phial!.id).toBe("use_black_phial");
-    expect(phial!.command).toBe("use black phial");
+    // The id stays verb-agnostic (`use_black_phial`), but the displayed command now
+    // honours the pack's `command_verb: drink` (bug_0074) — "drink black phial", which
+    // matches the recipe's "Do not drink it" prose. The old generic "use" wording is gone.
+    expect(phial!.command).toBe("drink black phial");
     // The old nonsensical forms are gone.
     expect(actions.some((a) => a.id === "use_black_phial_on_black_phial")).toBe(false);
     expect(actions.some((a) => a.command.includes("on black phial"))).toBe(false);

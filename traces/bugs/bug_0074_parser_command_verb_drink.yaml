@@ -1,0 +1,94 @@
+bug_id: bug_0074
+pack_id: alchemists_tower_v1
+seed: 29                            # this cycle's blind-playtest seed for alchemists; the regression drives seed 1 for the deterministic routes
+type: engine_feature               # adds a generic parser capability (command_verb), then uses it in one pack
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-01T19-46-49-405Z/playtest.md   # mandated target was clockwork_heist; rotated to alchemists_tower (seed 29) per the protocol's "rotate the pack" + the prior cycle's explicit next-focus note
+  mandated_result: >
+    The assessor's rank-1 mandated target, clockwork_heist, has come back PRISTINE for ~20
+    consecutive blind passes (clarity 5/5, enjoyment 4-5/5, zero actionable findings) and is
+    over-fitted across bug_0019-bug_0072 — forcing another edit there is regression risk for no
+    player-facing gain. Project memory ("content polish backlog exhausted; pivot to structural /
+    engine work") and the prior cycle's next-focus note both call for the stale parser packs +
+    engine work, so this cycle blind-playtested alchemists_tower (seed 29) instead. It rated
+    bug-free, clarity 5/5, enjoyment 4/5, and surfaced exactly ONE concrete actionable finding —
+    the drink-vs-use verb mismatch (report SS4/SS5) — which is the engine task bug_0073's deferred
+    list had already named: "the death action reads `use black phial` rather than a clearer `drink
+    black phial` (would need an engine per-interaction verb/label)."
+  finding: >
+    Laboratory: "the spellbook and phial text repeatedly use the word 'drink' ('Do not drink it',
+    'never brewed to be drunk'), but the offered action is 'use black phial' (a self-targeted USE),
+    not 'drink black phial.' A player who wanted to defy the warning would be hunting for a 'drink'
+    verb that isn't presented. It still works (use = drink), but the verb SHOWN doesn't match the
+    verb the prose PRIMES you for." (seed-29 report SS4.) Independently raised by the seed-13
+    bug_0009 playtester, whose engine fix made the self-USE read "use <obj>" but stopped short of
+    the natural verb.
+root_cause: >
+  The parser modelled "consume this thing" (drink the phial, eat the bread) as a self-targeted USE
+  (item === target). bug_0009 made that render as "use <obj>" instead of the nonsensical
+  "use <obj> on <obj>", but the only verb was still the generic USE: the legal-action set listed
+  "use black phial" and the controlled command parser (command_map.ts) understood only "use" — the
+  natural "drink phial" fell through to "I don't understand". There was no way for a pack to tell
+  the engine that THIS consume action's natural verb is "drink".
+improvement:
+  layer: engine_rule
+  engine:
+    - src/parser/schema.ts: >
+        InteractionSchema gains an optional `command_verb` (single lowercase word, regex
+        /^[a-z]+$/, `.optional()` so absent ⇒ byte-identical compile / unchanged content hashes,
+        mirroring variants / skill_check). A `.superRefine` confines it to self-targeted USE
+        interactions (verb === USE and item === target) and forbids it from shadowing a builtin
+        parser verb (new exported `BUILTIN_VERBS` set, kept in sync with command_map.ts) — a
+        shadowing verb would be intercepted by the parser's builtin switch and never reach the
+        custom path.
+    - src/parser/legal_actions.ts: >
+        the self-USE branch now renders the command as `${command_verb ?? "use"} <obj>` — e.g.
+        "drink black phial" — while the action id stays the verb-agnostic `use_<obj>` (stable id;
+        no churn). Non-self USE is unchanged ("use <item> on <target>").
+    - src/parser/command_map.ts: >
+        new `selfUseByVerb` helper; the parser's `default` (unknown-verb) case now resolves
+        "<command_verb> <obj>" ("drink phial", "drink the phial") to USE(obj, obj) when the named
+        object carries a self-USE interaction with that command_verb. Legality (held / present) is
+        re-checked by the engine, exactly as for the existing bare "use <obj>" path. The bare
+        "use <obj>" path is untouched (backward compatible).
+  content:
+    - content/parser/pack/alchemists_tower.yaml: >
+        the black_phial self-USE interaction gains `command_verb: drink`. No flag/item/score/
+        effect/ending/gating change — still a self-USE firing ending_poisoned, "use black phial"
+        still works; the offered + typed verb now matches the prose. content_hash moves (unpinned).
+verification:
+  typecheck: green (tsc --noEmit)
+  lint_format: green (ESLint + Prettier)
+  validate: green (0 errors, 0 warnings) — every pack, incl. alchemists_tower under the full parser validator
+  content_hash: 4130f145d2882c2606bc14b0370a4048989ce3d00df53c2d8908f63e0c5e9ead   # was 4db3e868cc8298a85487cd4df1765d472578c9eefba6a0fb85b501701a164689 (bug_0073); surfaced, not laundered. Unpinned (only watchtower_road is pinned in tests).
+  health: exit 0 (verify:integrity + typecheck + ESLint + Prettier check + tests + every pack validate + watchtower coverage)
+  backward_compat: >
+    `command_verb` is `.optional()` with no default; every existing pack omits it, so every other
+    pack compiles byte-identically and keeps its content hash. The legal-action id for a self-USE
+    stays `use_<obj>`; only the displayed command string changes when command_verb is present.
+  reachable_endings_unchanged: [ending_cured, ending_poisoned]   # canonical brew route still reaches ending_cured 35/35; the death stays exactly as reachable
+verified_live: >
+  Through the engine render/action path (initStateForParserPack / enumerateActions / makeStep —
+  the MCP server's path): holding the black phial, the self-USE is listed as id `use_black_phial`,
+  command "drink black phial" (no "use black phial", no self-on-self form); parseCommand maps
+  "drink black phial", "drink phial" and "drink the phial" → USE(black_phial, black_phial), each
+  firing ending_poisoned; the bare "use black phial" still parses to the same self-USE; "drink"
+  with no object and "drink herb" (herb has no drink self-USE) are still "not understood"; the full
+  seed-1 win route still reaches ending_cured at 35/35.
+regression_test: tests/regression/parser_command_verb.test.ts   # 11 cases: list shows "drink black phial" w/ verb-agnostic id; parser accepts the natural verb (3 phrasings) firing the death ending; bare "use black phial" still works; unknown/wrong-object verbs rejected; full win route 35/35; + 6 schema-guard cases (self-USE only, non-USE rejected, builtin-verb shadow rejected, non-word rejected, absent ⇒ undefined round-trip)
+test_updates:
+  - tests/regression/parser_self_use_command.test.ts: >
+      bug_0009's assertion `command === "use black phial"` updated to "drink black phial" (the
+      deliberate improvement this bug makes). The id assertion (`use_black_phial`), the parse-and-
+      die assertion for "use black phial", and the non-self-use rope cases are unchanged — no
+      assertion weakened.
+closes:
+  - bug_0073 deferred note: "the death action reads `use black phial` rather than a clearer
+    `drink black phial` (would need an engine per-interaction verb/label)" — now implemented.
+deferred:
+  - The alchemists water-add step is unsignposted until the herb steeps, and scoring is
+    back-loaded (both design-scope, not defects). Other packs' consumable self-USE interactions
+    (if any) could adopt command_verb in a future cycle; this cycle scopes the feature + one
+    canonical use (the black phial) to keep the change small and verified.

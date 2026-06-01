@@ -57,6 +57,23 @@ function resolveObject(index: ParserIndex, phrase: string): string | null {
   return hits.size === 1 ? [...hits][0]! : null;
 }
 
+/** Resolve a custom self-USE verb ("drink the phial"): if `verb` is the
+ *  `command_verb` of a self-targeted USE interaction (item === target) on the object
+ *  named by `phrase`, return that USE action. The schema guarantees `command_verb`
+ *  never shadows a builtin verb, so this is only consulted for otherwise-unknown
+ *  verbs. Legality (held / present) is re-checked by the engine, exactly as for the
+ *  bare "use <obj>" path. */
+function selfUseByVerb(index: ParserIndex, verb: string, phrase: string): Action | null {
+  const id = resolveObject(index, phrase);
+  if (!id) return null;
+  const it = index.objects
+    .get(id)
+    ?.interactions.find(
+      (i) => i.verb === "USE" && i.item === id && i.target === id && i.command_verb === verb,
+    );
+  return it ? { type: "USE", item: id, target: id } : null;
+}
+
 function resolveNpc(index: ParserIndex, phrase: string): string | null {
   const norm = stripArticle(phrase).toLowerCase().trim();
   for (const npc of index.npcs.values()) {
@@ -196,7 +213,12 @@ export function parseCommand(index: ParserIndex, state: GameState, raw: string):
     case "inv":
     case "i":
       return { ok: true, action: { type: "INVENTORY" } };
-    default:
+    default: {
+      // An unknown verb may be a pack-declared natural verb for a self-USE
+      // ("drink phial", "eat bread") — the consume-this-thing pattern made legible.
+      const use = selfUseByVerb(index, verb, rest);
+      if (use) return { ok: true, action: use };
       return notUnderstood(raw);
+    }
   }
 }
