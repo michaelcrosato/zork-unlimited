@@ -13,9 +13,10 @@
  *     clock (the ground-floor foyer is safe and does not; self-goto in-room
  *     actions don't re-tick because the engine fires on_enter only on a genuine
  *     location change).
- *   - the gallery (`landing`) gets reactive `variants`: tension at ticks >= 4,
- *     the watchman's patrol at ticks >= 6.
- *   - on the hour (ticks >= 6) the safe `approach_vault` crossing is gated out
+ *   - the gallery (`landing`) gets reactive `variants`: tension at ticks >= 2,
+ *     the watchman's patrol at ticks >= 4 (bug_0040 retuned these down from 4/6
+ *     so a thorough vault route meets the patrol, not only a dawdler).
+ *   - on the hour (ticks >= 4) the safe `approach_vault` crossing is gated out
  *     UNLESS you read the ledger (has_flag read_ledger) — the payoff for the
  *     clue — and a clearly-labelled gamble `cross_to_vault_blind` appears that
  *     leads to the new `ending_patrol`. The safe `enter_study` / `back_down`
@@ -30,7 +31,7 @@
  *   (3) reading the ledger is the payoff: on the hour the safe approach_vault is
  *       still offered and the blind gamble is NOT;
  *   (4) the gallery prose reacts — base text, then the "running short" tension at
- *       ticks 4-5, then the watchman's-patrol text at ticks >= 6;
+ *       ticks 2-3, then the watchman's-patrol text at ticks >= 4;
  *   (5) the original three endings still fire (rich, truth, caught) and
  *       ending_patrol is a declared, reachable fourth ending.
  */
@@ -59,9 +60,11 @@ const optionIds = (s: GameState): string[] =>
 
 // ticks only advance on a real room-to-room move, so these dawdle routes climb
 // the gallery's clock by oscillating study <-> gallery.
-//   climb(1) study(2) landing(3) study(4) landing(5) -> gallery at ticks 5
-const TO_GALLERY_T5 = ["climb_stairs", "enter_study", "leave_study", "enter_study", "leave_study"];
-//   ...study(6) landing(7) -> gallery on the hour (ticks 7), no ledger read
+//   climb(1) study(2) landing(3) -> gallery in the tension band (ticks 3)
+const TO_GALLERY_T3 = ["climb_stairs", "enter_study", "leave_study"];
+//   ...study(4) landing(5) -> gallery past the hour (ticks 5)
+const TO_GALLERY_T5 = [...TO_GALLERY_T3, "enter_study", "leave_study"];
+//   ...study(6) landing(7) -> gallery well past the hour (ticks 7), no ledger read
 const TO_GALLERY_T7 = [...TO_GALLERY_T5, "enter_study", "leave_study"];
 // Same dawdle, but read the ledger on the first visit to the study.
 const READER_TO_GALLERY_T7 = [
@@ -139,11 +142,11 @@ describe("bug_0019 — the 'guard on the hour' ledger clue is a real deadline", 
     expect(base.text).not.toMatch(TENSION);
     expect(base.text).not.toMatch(PATROL);
 
-    const tension = buildObservation(index, play(TO_GALLERY_T5)); // ticks 5
+    const tension = buildObservation(index, play(TO_GALLERY_T3)); // ticks 3 (tension band 2-3)
     expect(tension.text).toMatch(TENSION);
     expect(tension.text).not.toMatch(PATROL);
 
-    const patrol = buildObservation(index, play(TO_GALLERY_T7)); // ticks 7
+    const patrol = buildObservation(index, play(TO_GALLERY_T5)); // ticks 5 (past the new hour, >= 4)
     expect(patrol.text).toMatch(PATROL);
   });
 

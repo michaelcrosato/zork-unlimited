@@ -11,16 +11,17 @@
  * omnipresent-clock motif."
  *
  * The fix is content-only and uses the existing CYOA `variants` reactive-text
- * feature (bug_0018): the foyer gains a tension variant at ticks >= 4 and an
- * on-the-hour variant at ticks >= 6 (higher threshold first, first-match-wins),
+ * feature (bug_0018): the foyer gains a tension variant at ticks >= 2 and an
+ * on-the-hour variant at ticks >= 4 (higher threshold first, first-match-wins;
+ * bug_0040 retuned these down from 4/6 to track the gallery's retuned deadline),
  * mirroring the gallery's escalation. The foyer remains safe ground — it never
  * advances `ticks` and its choices are unchanged; only the narrated text reacts.
  *
  * Locked here:
  *   (1) the foyer reads its calm base text at low ticks (no tension/hour cue);
- *   (2) at ticks 4-5 (reached by dawdling upstairs then retreating) the foyer
+ *   (2) at ticks 2-3 (reached by dawdling upstairs then retreating) the foyer
  *       shows the "running short" tension variant but not the hour cue;
- *   (3) at ticks >= 6 the foyer shows the on-the-hour / watchman variant;
+ *   (3) at ticks >= 4 the foyer shows the on-the-hour / watchman variant;
  *   (4) reachability is unchanged — all four endings still fire (text-only edit).
  */
 import { describe, it, expect } from "vitest";
@@ -46,16 +47,9 @@ function play(ids: string[]): GameState {
 
 // ticks advance only on a real room change; the foyer never ticks, so we climb
 // up, oscillate study <-> gallery to burn the clock, then retreat to the foyer.
-//   climb(1) study(2) landing(3) study(4) landing(5) -> back_down to foyer @ t5
-const FOYER_T5 = [
-  "climb_stairs",
-  "enter_study",
-  "leave_study",
-  "enter_study",
-  "leave_study",
-  "back_down",
-];
-//   ...study(6) landing(7) -> back_down to foyer @ t7
+//   climb(1) study(2) landing(3) -> back_down to foyer @ t3 (tension band 2-3)
+const FOYER_T3 = ["climb_stairs", "enter_study", "leave_study", "back_down"];
+//   climb(1) study(2) landing(3) study(4) landing(5) study(6) landing(7) -> foyer @ t7
 const FOYER_T7 = [
   "climb_stairs",
   "enter_study",
@@ -80,19 +74,19 @@ describe("bug_0020 — the foyer's namesake clock feels the deadline too", () =>
     expect(obs.text).not.toMatch(HOUR);
   });
 
-  it("at ticks 4-5 the foyer shows the 'running short' tension, not yet the hour", () => {
-    const s = play(FOYER_T5);
+  it("at ticks 2-3 the foyer shows the 'running short' tension, not yet the hour", () => {
+    const s = play(FOYER_T3);
     expect(s.current).toBe("foyer");
-    expect(s.vars.ticks).toBe(5);
+    expect(s.vars.ticks).toBe(3);
     const obs = buildObservation(index, s);
     expect(obs.text).toMatch(TENSION);
     expect(obs.text).not.toMatch(HOUR);
   });
 
-  it("at ticks >= 6 the foyer shows the on-the-hour watchman variant", () => {
+  it("at ticks >= 4 the foyer shows the on-the-hour watchman variant", () => {
     const s = play(FOYER_T7);
     expect(s.current).toBe("foyer");
-    expect(s.vars.ticks).toBeGreaterThanOrEqual(6);
+    expect(s.vars.ticks).toBeGreaterThanOrEqual(4);
     const obs = buildObservation(index, s);
     expect(obs.text).toMatch(HOUR);
   });

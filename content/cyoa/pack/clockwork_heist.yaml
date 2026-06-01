@@ -18,8 +18,12 @@ meta:
   flags_init: []
   # `ticks` is the clock creeping toward the hour. Moving through the manor's
   # upstairs rooms (kitchen, gallery, study) advances it; the ground-floor foyer
-  # is safe ground and does not. On the hour (ticks >= 6) the watchman the
+  # is safe ground and does not. On the hour (ticks >= 4) the watchman the
   # steward's ledger warns of begins his patrol of the gallery — see `landing`.
+  # The hour is tuned so a thorough vault route (kitchen for the pick, the study
+  # for the ledger, then the crossing — about four ticks) arrives just as the
+  # patrol begins, so the ledger is load-bearing, not a clue you only meet by
+  # dawdling (blind-playtest finding, bug_0040 refining bug_0019).
   vars_init: { ticks: 0 }
 
 scenes:
@@ -33,14 +37,14 @@ scenes:
     # gallery does — even though this safe ground floor never advances `ticks` itself.
     # Higher threshold first (first match wins), mirroring the gallery's escalation.
     variants:
-      - when: [{ var_gte: { name: ticks, value: 6 } }]
+      - when: [{ var_gte: { name: ticks, value: 4 } }]
         text: >
           Moonlight pours through the manor's glass dome onto a thousand turning gears.
           A grand staircase rises into shadow; a low door leads off to the kitchens. The
           great hall clock has come round to the hour at last, its slow chime rolling
           through the gears vast as a coffin-lid falling — and somewhere up the stair, on
           the gallery landing, a watchman's tread answers it.
-      - when: [{ var_gte: { name: ticks, value: 4 } }]
+      - when: [{ var_gte: { name: ticks, value: 2 } }]
         text: >
           Moonlight pours through the manor's glass dome onto a thousand turning gears.
           A grand staircase rises into shadow; a low door leads off to the kitchens; and
@@ -114,14 +118,14 @@ scenes:
     # As ticks climb the prose builds the deadline (first match wins, so the
     # higher threshold is listed first).
     variants:
-      - when: [{ var_gte: { name: ticks, value: 6 } }]
+      - when: [{ var_gte: { name: ticks, value: 4 } }]
         text: >
           A long gallery lined with frozen automata, their glass eyes following you.
           The vault door broods at the far end — but a watchman's lantern now sweeps
           the gallery, the hourly patrol the steward's ledger warned of. The long
           crossing to the vault runs right under his beam. The study still stands
           ajar to one side, and the stair drops safely back to the foyer.
-      - when: [{ var_gte: { name: ticks, value: 4 } }]
+      - when: [{ var_gte: { name: ticks, value: 2 } }]
         text: >
           A long gallery lined with frozen automata, their glass eyes following you.
           The vault door broods at the far end. Somewhere a great mechanism grinds
@@ -132,17 +136,19 @@ scenes:
         text: "Step into the study."
         next: study
       - id: approach_vault
-        # Safe crossing: before the hour (ticks <= 5), OR you read the ledger and
-        # know the watchman's rounds — the payoff for the study clue.
+        # Safe crossing: before the hour (ticks <= 3), OR you read the ledger and
+        # know the watchman's rounds — the payoff for the study clue. The hour is
+        # tuned (>= 4) so a thorough vault route arrives just as the patrol starts:
+        # the reader crosses on his rounds here, the un-read player gets the gamble.
         text: "Cross the gallery to the vault door."
-        conditions: [{ any_of: [{ var_lte: { name: ticks, value: 5 } }, { has_flag: read_ledger }] }]
+        conditions: [{ any_of: [{ var_lte: { name: ticks, value: 3 } }, { has_flag: read_ledger }] }]
         next: vault_door
       - id: cross_to_vault_blind
         # On the hour and you don't know his rounds: crossing is an open gamble,
         # and the prose has already shown you the patrol. An informed risk, not a
         # gotcha — the safe study/foyer exits remain.
         text: "Chance the long crossing to the vault while the guard patrols."
-        conditions: [{ var_gte: { name: ticks, value: 6 } }, { not_flag: read_ledger }]
+        conditions: [{ var_gte: { name: ticks, value: 4 } }, { not_flag: read_ledger }]
         next: ending_patrol
       - id: back_down
         text: "Go back down to the foyer."
