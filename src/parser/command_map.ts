@@ -11,6 +11,7 @@
 import type { Action } from "../api/types.js";
 import type { GameState } from "../core/state.js";
 import { type ParserIndex, activeDialogue } from "./model.js";
+import { useInteraction } from "./legal_actions.js";
 
 export type ParseResult = { ok: true; action: Action } | { ok: false; reason: string };
 
@@ -139,11 +140,18 @@ export function parseCommand(index: ParserIndex, state: GameState, raw: string):
     }
     case "use": {
       const m = rest.match(/^(.*?)\s+(?:on|with)\s+(.*)$/);
-      if (!m) return { ok: false, reason: `Use what on what? (e.g. "use rope on old well")` };
-      const item = resolveObject(index, m[1]!);
-      const target = resolveObject(index, m[2]!);
-      if (!item || !target) return { ok: false, reason: `Use what on what?` };
-      return { ok: true, action: { type: "USE", item, target } };
+      if (m) {
+        const item = resolveObject(index, m[1]!);
+        const target = resolveObject(index, m[2]!);
+        if (!item || !target) return { ok: false, reason: `Use what on what?` };
+        return { ok: true, action: { type: "USE", item, target } };
+      }
+      // Bare "use <obj>" is a self-targeted USE — consume the thing (drink the
+      // phial, eat the bread). Only accept it when the object actually carries a
+      // self-interaction; otherwise the verb still needs a target, so keep the hint.
+      const solo = resolveObject(index, rest);
+      if (solo && useInteraction(index, solo, solo)) return { ok: true, action: { type: "USE", item: solo, target: solo } };
+      return { ok: false, reason: `Use what on what? (e.g. "use rope on old well")` };
     }
     case "talk": {
       const npc = resolveNpc(index, rest.replace(/^to\s+/, ""));

@@ -64,8 +64,9 @@ describe("Stage 3 — The Alchemist's Tower", () => {
     // Save before the fatal action.
     const saved = save(atLab, pack.meta.id, loaded.compiled.contentHash);
 
-    // Drink the black phial → a death ending.
-    const dead = play(atLab, ["use_black_phial_on_black_phial"]);
+    // Drink the black phial → a death ending. The self-targeted USE reads as the
+    // legible `use_black_phial` (not the old nonsensical `use_black_phial_on_black_phial`).
+    const dead = play(atLab, ["use_black_phial"]);
     expect(dead.ended).toBe(true);
     expect(dead.endingId).toBe("ending_poisoned");
     expect(buildParserObservation(index, dead).ending?.death).toBe(true);

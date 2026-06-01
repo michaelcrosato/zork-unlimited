@@ -209,16 +209,18 @@ export function enumerateActions(index: ParserIndex, state: GameState): ParserAc
   }
 
   // USE interactions across the pack whose item is held and target is present.
+  // A self-targeted USE (item === target) is the "consume this thing" pattern —
+  // drink the phial, eat the bread — and reads as `use <obj>`, not the nonsensical
+  // `use <obj> on <obj>`.
   for (const o of index.pack.objects) {
     for (const it of o.interactions) {
       if (it.verb !== "USE" || it.item === undefined || it.target === undefined) continue;
-      push(
-        option(index, state, `use_${it.item}_on_${it.target}`, `use ${objName(index, it.item)} on ${objName(index, it.target)}`, {
-          type: "USE",
-          item: it.item,
-          target: it.target,
-        }),
-      );
+      const selfUse = it.item === it.target;
+      const id = selfUse ? `use_${it.item}` : `use_${it.item}_on_${it.target}`;
+      const command = selfUse
+        ? `use ${objName(index, it.item)}`
+        : `use ${objName(index, it.item)} on ${objName(index, it.target)}`;
+      push(option(index, state, id, command, { type: "USE", item: it.item, target: it.target }));
     }
   }
 
