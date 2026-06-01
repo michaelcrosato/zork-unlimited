@@ -271,9 +271,14 @@ scenes:
         next: ending_rich
       - id: take_letter
         text: "Take the sealed letter instead."
+        # The vault copy is the one "laid out in plain sight": flag it so the truth
+        # ending can name how you found it (the displayed copy) rather than printing
+        # one epilogue that fits only the other route (blind-playtest finding,
+        # bug_0051 — the two oppositely-framed letters used to share one text).
         effects:
           - add_item: letter
           - set_flag: has_letter
+          - set_flag: letter_displayed
         next: ending_truth
 
   - id: crawlspace
@@ -288,9 +293,12 @@ scenes:
       - id: open_strongbox
         text: "Pick the strongbox's lock with the lockpicks."
         conditions: [{ has_item: lockpick }]
+        # The crawlspace copy is the one "hidden away in the dark": its own flag, so
+        # the truth ending's hidden-copy epilogue fires for this route (bug_0051).
         effects:
           - add_item: letter
           - set_flag: has_letter
+          - set_flag: letter_hidden
         next: ending_truth
       - id: study_strongbox
         # No-pick nudge: the manor's "never to force" rule holds even here — the
@@ -326,6 +334,33 @@ endings:
       the great clock keeps ticking.
   - id: ending_truth
     title: "The Truth"
+    # Two routes reach this ending carrying two oppositely-framed letters: the vault
+    # copy "laid out in plain sight... meant to be found", the crawlspace copy "hidden
+    # away in the dark... where he meant no eye to fall". A fresh blind playtester
+    # (seed 137) flagged that one shared epilogue contradicts whichever route you just
+    # played. With reactive ending `variants` (engine: endingText, mirrors scene
+    # variants) the epilogue now names the copy you carried — the steward's paired
+    # confession honoured at the payoff, not just at pickup (bug_0041 → bug_0051). The
+    # base text is the route-neutral fallback for any future path that sets neither flag.
+    variants:
+      - when: [{ has_flag: letter_displayed }]
+        text: >
+          You slip out into the dark with the letter still sealed, and break it open by
+          moonlight only once the manor's walls are well behind you. It is the steward's
+          confession — the copy he left lying open among his gold, as though he wanted
+          the one thief good enough to crack his lock to know. The manor's fortune was
+          stolen, every coin of it, from people like you. You came to rob this house and
+          could have vanished rich on its hoard; instead you carry away the truth he meant
+          to be found. Some things are worth more than escaping rich.
+      - when: [{ has_flag: letter_hidden }]
+        text: >
+          You slip out into the dark with the letter still sealed, and break it open by
+          moonlight only once the manor's walls are well behind you. It is the steward's
+          confession — the copy he hid in the dark behind the vault, where he meant no eye
+          ever to fall on it. The manor's fortune was stolen, every coin of it, from people
+          like you. You came to rob this house and could have vanished rich on its hoard;
+          instead you carry away the secret he could not bring himself to burn. Some things
+          are worth more than escaping rich.
     text: >
       You slip out into the dark with the letter still sealed, and break it open by
       moonlight only once the manor's walls are well behind you. It is the steward's

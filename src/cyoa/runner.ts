@@ -13,7 +13,7 @@ import type { Effect } from "../core/effects.js";
 import { applyEffects } from "../core/effects.js";
 import type { Action } from "../api/types.js";
 import type { Resolution, Rules } from "../core/engine.js";
-import type { CyoaPack, Scene } from "./schema.js";
+import type { CyoaPack, Ending, Scene } from "./schema.js";
 
 export type CyoaIndex = {
   pack: CyoaPack;
@@ -47,6 +47,18 @@ export function sceneText(scene: Scene, state: GameState): string {
     if (evalConditions(v.when, state)) return v.text;
   }
   return scene.text;
+}
+
+/** An ending's effective epilogue: the first reactive `variant` whose `when`
+ *  holds (declared order, first-match-wins), else the base `text`. Identical
+ *  rule to `sceneText` — endings two routes converge on can acknowledge which
+ *  route the player actually took (the state is frozen at end_game, so this is
+ *  pure too). */
+export function endingText(ending: Ending, state: GameState): string {
+  for (const v of ending.variants ?? []) {
+    if (evalConditions(v.when, state)) return v.text;
+  }
+  return ending.text;
 }
 
 /** Build the engine rule set for a compiled pack. */

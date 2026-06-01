@@ -50,6 +50,13 @@ export const EndingSchema = z
     id: z.string().min(1),
     title: z.string().min(1),
     text: z.string().min(1),
+    // Optional reactive epilogues — same shape and first-match-wins rule as a
+    // scene's `variants`. An ending two routes converge on can now acknowledge
+    // *how* the player got there (which of two letters they carried out) instead
+    // of printing one text that contradicts the route just played. `.optional()`
+    // (not `.default([])`) so endings that don't use it compile byte-identically
+    // and their content hashes are unchanged (same rule as SceneSchema.variants).
+    variants: z.array(SceneVariantSchema).optional(),
   })
   .strict();
 
