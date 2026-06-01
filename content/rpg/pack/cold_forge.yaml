@@ -132,6 +132,12 @@ objects:
     name: "slag grate"
     aliases: [grate, slag]
     description: "A great hearth-grate welded shut by cooled slag, with a worn lip at its edge made for a lever."
+    # Reactive examine text (bug_0023): once the grate is levered open the slab no
+    # longer reads "welded shut" — examining it would otherwise contradict both the
+    # room's own reactive prose ("stands open") and the player's levering action.
+    variants:
+      - when: [ { quest_stage: { quest: forge, stage: grate_open } } ]
+        text: "The great hearth-grate, levered up off its lip and standing open on its worn edge; below it a low way drops down into the warmth."
     takeable: false
     interactions:
       - verb: USE

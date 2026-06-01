@@ -78,6 +78,19 @@ export function roomDescription(room: Room, state: GameState): string {
   return room.description;
 }
 
+/** The object's effective examine description in the current state: the first
+ *  reactive `variant` whose `when` conditions all hold (declared order), else the
+ *  base `description`. The object analogue of `roomDescription` — lets a thing
+ *  narrate state it changed (an opened box, a levered-open grate) on examine
+ *  instead of repeating its sealed-shut prose (§7.3). Pure; same (object, state)
+ *  ⇒ same text. */
+export function objectDescription(object: GameObject, state: GameState): string {
+  for (const v of object.variants ?? []) {
+    if (evalConditions(v.when, state)) return v.text;
+  }
+  return object.description;
+}
+
 /** Is the container `id` locked? Falls back to the pack's static `locked` flag. */
 export function isLocked(index: ParserIndex, state: GameState, id: string): boolean {
   const rt = state.objectState[id]?.locked;

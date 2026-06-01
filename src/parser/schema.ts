@@ -78,12 +78,32 @@ export const InteractionSchema = z
   })
   .strict();
 
+/** A state-conditional object description (§7.3 reactive text, the object analogue
+ *  of RoomVariantSchema). When all of `when` hold, this `text` replaces the
+ *  object's base `description` on examine, so a thing can narrate state it changed —
+ *  an opened strongbox, a levered-open grate — instead of contradicting it. The
+ *  ROOM may already react via RoomSchema.variants, but examining the OBJECT itself
+ *  fell back to the static `description`; this closes that gap. First-match-wins in
+ *  declared order. */
+export const ObjectVariantSchema = z
+  .object({
+    when: z.array(ConditionSchema).min(1),
+    text: z.string().min(1),
+  })
+  .strict();
+
 export const ObjectSchema = z
   .object({
     id: z.string().min(1),
     name: z.string().min(1),
     aliases: z.array(z.string().min(1)).default([]),
     description: z.string().min(1),
+    // Optional reactive examine descriptions; the first whose `when` holds wins,
+    // else `description`. `.optional()` (not `.default([])`) so an absent field
+    // stays absent in the compiled pack ⇒ packs that don't use it compile
+    // byte-identically and their content hashes are unchanged (mirrors
+    // RoomSchema.variants / skill_check / dialogue-topic conditions).
+    variants: z.array(ObjectVariantSchema).optional(),
     takeable: z.boolean().default(false),
     quest_critical: z.boolean().default(false),
     read_text: z.string().min(1).optional(), // READable signage/notes
@@ -190,6 +210,7 @@ export const ParserPackSchema = z
 export type Exit = z.infer<typeof ExitSchema>;
 export type RoomVariant = z.infer<typeof RoomVariantSchema>;
 export type Room = z.infer<typeof RoomSchema>;
+export type ObjectVariant = z.infer<typeof ObjectVariantSchema>;
 export type SkillCheck = z.infer<typeof SkillCheckSchema>;
 export type Interaction = z.infer<typeof InteractionSchema>;
 export type GameObject = z.infer<typeof ObjectSchema>;

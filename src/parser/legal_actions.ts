@@ -21,6 +21,7 @@ import {
   isOpen,
   locateObject,
   nodeOrdinal,
+  objectDescription,
   roomDescription,
   visibleObjectIds,
 } from "./model.js";
@@ -60,7 +61,7 @@ export function resolveParserAction(index: ParserIndex, state: GameState, action
       }
       if (!present(index, state, action.target)) return null;
       const o = index.objects.get(action.target);
-      return o ? { conditions: [], effects: [{ narrate: o.description }] } : null;
+      return o ? { conditions: [], effects: [{ narrate: objectDescription(o, state) }] } : null;
     }
     case "INVENTORY": {
       const items = state.inventory.length ? state.inventory.map((i) => objName(index, i)).join(", ") : "nothing";
