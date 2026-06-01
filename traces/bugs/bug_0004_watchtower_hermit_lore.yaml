@@ -1,0 +1,40 @@
+bug_id: bug_0004
+pack_id: watchtower_road_v1
+seed: 23
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  report: ai-runs/2026-06-01T04-59-00-714Z/playtest.md
+  finding: >
+    A fresh, MCP-only blind playtester reported two flaws in the hermit
+    conversation — the part the deterministic assessor also flagged as entirely
+    unvisited by the coverage bot (confront_smuggler, hermit_about_letter,
+    hermit_about_tower, hermit_camp, hermit_talk):
+      (1) Inconsistent journaling — hermit_about_tower delivers the west route's
+          single biggest expository reveal ("smugglers kept their oil in that
+          cellar... burned it and ran north") yet set only a met_hermit flag and
+          wrote NOTHING to the journal, so the lore vanished if the player did
+          not remember it.
+      (2) Re-askable dialogue — "Ask about the burning tower" stayed available
+          after being asked, so the identical lore line could be looped
+          indefinitely from hermit_talk.
+failure:
+  type: missing_journal_and_dialogue_loop
+  where: [scene:hermit_about_tower, scene:hermit_talk]
+  description: >
+    The western branch felt less reactive than the eastern one because its
+    keystone lore left no persistent trace and could be repeated with no state
+    change.
+fix:
+  layer: content
+  summary: >
+    hermit_about_tower.on_enter now sets a heard_hermit_lore flag and adds a
+    journal entry recording the hermit's tale (explicitly framed as hearsay that
+    points the player toward the tower cellar — it does NOT grant learned_truth,
+    preserving the deliberate knowledge-vs-proof gate that fences the truth
+    ending). The ask_about_tower choice is gated on not_flag heard_hermit_lore, so
+    the lore is delivered exactly once and the dialogue can no longer loop. The
+    single entry into hermit_about_tower means the appended journal line cannot
+    stack (the journal has no de-dup; the gate is what guarantees uniqueness).
+regression_test: tests/regression/watchtower_hermit_lore.test.ts
+content_hash_after: 8094e553f6a9a9d7a91508b4d8c6056e0082189454aa7184e48650338b42f460

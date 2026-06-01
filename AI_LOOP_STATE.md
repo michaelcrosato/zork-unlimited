@@ -98,3 +98,17 @@
 - Result: coverage 100/100 ended; endings {"ending_captured":1,"ending_escape":1,"ending_truth":98}; cellar and hidden_cache now visited; no suspicious samples.
 - Locked by traces/bugs/bug_0003_watchtower_cellar_discoverability.yaml and tests/regression/watchtower_cellar_discoverability.test.ts. Content hash now c49b4424ce8ed334324c714ed0d02de9d7260e7b332481b2050b33aec4b51e91.
 - Next weak spots: hermit conversation still unvisited by coverage; confront_smuggler remains low-coverage optional path.
+## AFK Cycle 2026-06-01T04-59-00-714Z
+- Assessment: packs cyoa=2 parser=2 rpg=1; 7 candidate(s) ranked.
+- Next best improvement (recommended): [content_fix] Improve "watchtower_road_v1" — 0 unreached ending(s), 5 unvisited location(s).
+- Why: An LLM playtest can pinpoint why these are hard to reach (signposting, clue legibility, pacing) and the fix raises player-facing quality.
+- Mandatory LLM playtest target this cycle: content/cyoa/pack/watchtower_road.yaml.
+- Process: assessor ranks → blind LLM playtest for quality → one improvement → health + verify:integrity green → commit (trust-but-verify).
+
+### Cycle result — hermit lore journaled + de-looped (bug_0004)
+- Blind LLM playtest: fresh general-purpose subagent, MCP-only, seed 23, report at ai-runs/2026-06-01T04-59-00-714Z/playtest.md. Reached all 3 endings; clarity 4/5, enjoyment 4/5. Mechanics clean (zero rejected actions, no soft-locks).
+- Findings the playtest surfaced in the hermit cluster (the same scenes the assessor flagged as coverage-bot-unvisited): (1) hermit_about_tower delivers the west route's biggest reveal but journaled NOTHING (set only met_hermit); (2) "Ask about the burning tower" was re-askable, looping the identical lore line.
+- Improvement (one, content layer): hermit_about_tower.on_enter now sets heard_hermit_lore + adds a journal entry (framed as hearsay pointing to the tower cellar); ask_about_tower gated on not_flag heard_hermit_lore so the lore is delivered exactly once and can't loop or restack the journal. Deliberately does NOT grant learned_truth — the knowledge-vs-proof gate fencing ending_truth is preserved.
+- Evidence: validate green 0/0; full `npm run health` exit 0. Deliberate re-pin: watchtower content hash c49b4424… → 8094e553f6a9a9d7a91508b4d8c6056e0082189454aa7184e48650338b42f460 (tests/unit/rpg_validator.test.ts comment updated, surfaced not laundered).
+- Locked by traces/bugs/bug_0004_watchtower_hermit_lore.yaml + tests/regression/watchtower_hermit_lore.test.ts (3 cases: journals on hearing, single delivery / no loop, proof-gate preserved).
+- Next suggested focus: the under-served sealed_letter / checkpoint "Papers" beat (playtest §4) — the letter is "sealed" and referenced by an ending but never opened on-screen; an LLM playtest of that east-route beat could drive a payoff fix. Then clockwork_heist_v1 (assessor rank 2) and the unverified parser packs (alchemists_tower, sealed_crypt).

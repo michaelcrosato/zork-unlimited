@@ -228,6 +228,7 @@ scenes:
     choices:
       - id: ask_about_tower
         text: "Ask about the burning tower."
+        conditions: [ { not_flag: heard_hermit_lore } ]
         next: hermit_about_tower
       - id: show_letter
         text: "Show him the sealed letter."
@@ -242,6 +243,9 @@ scenes:
     text: >
       "Smugglers," he spits. "They kept their oil in that cellar. When the
       watch got close, they burned it all and ran north."
+    on_enter:
+      - set_flag: heard_hermit_lore
+      - add_journal: "The hermit's tale: smugglers stored oil in the tower cellar and burned it to cover their tracks before fleeing north. Hearsay — but it tells you where to look."
     choices:
       - id: back_from_tower_talk
         text: "Return to the conversation."
