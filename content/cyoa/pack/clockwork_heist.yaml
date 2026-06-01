@@ -101,7 +101,19 @@ scenes:
           - add_journal: "Lockpicks — exactly what a clockwork vault deserves."
         next: kitchen
       - id: dumbwaiter
-        text: "Ride the dumbwaiter up to the gallery."
+        # The dumbwaiter is the kitchen's direct line up to the gallery (saving the
+        # trip back down through the foyer to the grand stair). A blind playtester
+        # (seed 101) flagged that its old "Ride the dumbwaiter up" framing read like a
+        # clever stealth bypass, yet it lands you on the exact same patrolled gallery
+        # the stair does — an over-promise the room never pays off. The fix is honest
+        # reframing only: the choice text + a narration name it the cramped servants'
+        # lift, a quieter and more direct way up that leaves you no closer to the vault
+        # than the steps would. No route/tick/gating change — it still goes to `landing`
+        # (which charges the same gallery tick the stair does), so the watchman/ledger
+        # tuning (bug_0019/0040/0042/0043) is untouched (bug_0046).
+        text: "Take the servants' dumbwaiter straight up to the gallery."
+        effects:
+          - narrate: "Rather than doubling back to the foyer's grand stair, you fold yourself into the cramped servants' lift and haul on its complaining rope. The box grinds up the shaft and you climb out onto the gallery — the very floor the staircase serves. A quieter way up, and a more direct one from the kitchens, but it leaves you no closer to the vault than the open steps would."
         next: landing
       - id: back_foyer
         text: "Return to the foyer."
