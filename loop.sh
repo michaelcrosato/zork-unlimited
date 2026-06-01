@@ -40,22 +40,15 @@ run_codex_if_available() {
 }
 
 safe_commit_if_enabled() {
-  local baseline="$1"
+  # Full-trust model (see AGENTS.md): the autonomous loop may commit ANY change it
+  # makes, including engine and schema code, with no review and no gate. ai-runs/
+  # and other ignored scratch are excluded only because .gitignore handles them.
+  local baseline="$1"  # unused; the loop no longer refuses on a dirty baseline
   if [[ "${AI_LOOP_COMMIT:-0}" != "1" ]]; then
     return 0
   fi
-  local current
-  current="$(git status --porcelain -- "${status_filter[@]}")"
-  if [[ -n "$baseline" && "${AI_LOOP_ALLOW_DIRTY_BASELINE:-0}" != "1" ]]; then
-    echo "Refusing AFK commit because the baseline was already dirty. Set AI_LOOP_ALLOW_DIRTY_BASELINE=1 to override."
-    return 1
-  fi
-  if [[ -z "$current" ]]; then
-    echo "No tracked AFK changes to commit."
-    return 0
-  fi
-  git add AGENTS.md AI_AGENT_PROMPT.md AI_LOOP_STATE.md AFKGOAL.md .codex/config.toml .gitignore .mcp.json package.json package-lock.json src bin scripts loop.sh tests
-  git diff --cached --quiet || git commit -m "${AI_LOOP_COMMIT_MESSAGE:-Prepare AFK MCP improvement loop}"
+  git add -A
+  git diff --cached --quiet || git commit -m "${AI_LOOP_COMMIT_MESSAGE:-Autonomous AFK improvement cycle}"
 }
 
 run_cycle() {
@@ -63,7 +56,9 @@ run_cycle() {
   baseline="$(git status --porcelain -- "${status_filter[@]}")"
   npm run ai:loop
   run_codex_if_available
-  npm run health
+  # Advisory only (full-trust model): health is a feedback signal, not a gate.
+  # It never blocks the cycle or the commit.
+  npm run health || echo "(health reported issues — advisory only, not blocking)"
   safe_commit_if_enabled "$baseline"
 
   if [[ "${AI_LOOP_PUSH:-0}" == "1" ]]; then

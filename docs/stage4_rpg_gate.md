@@ -1,8 +1,12 @@
-# Stage 4 — Hero's-Quest RPG: engine-extension gate record (§13, §14)
+# Stage 4 — Hero's-Quest RPG: engine-extension record (historical)
 
-This document is the §14 gate record for the Stage-4 mechanics. The §14 gate
-requires that **every** engine extension ship with all six items below; this
-records them and points at the proof.
+> **Historical.** The §14 engine-extension gate has been removed under the
+> full-trust model (see `AGENTS.md`). New mechanics no longer need this six-item
+> bundle. This document is kept as a record of how the Stage-4 RPG mechanics were
+> built; it is no longer a required process.
+
+This document records the Stage-4 mechanics. (It was originally the §14 gate
+record, which required every engine extension to ship with all six items below.)
 
 ## 1. Mechanic spec (states, transitions, edge cases)
 

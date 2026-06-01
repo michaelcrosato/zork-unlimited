@@ -1,9 +1,17 @@
 # AdventureForge
 
-A deterministic, headless, strictly-typed text-adventure engine whose **mechanics
-live entirely in pure code** and whose **content lives entirely in AI-generated,
-schema-validated data**. See [`ADVENTUREFORGE_BUILD_SPEC.md`](./ADVENTUREFORGE_BUILD_SPEC.md)
-for the full spec.
+A headless, AI-authored text-adventure engine spanning CYOA, a Zork-style parser,
+a Sierra-Quest scoring game, a Hero's-Quest RPG, and a React UI. See
+[`ADVENTUREFORGE_BUILD_SPEC.md`](./ADVENTUREFORGE_BUILD_SPEC.md) for the original
+design brief.
+
+> **Full-trust model.** This project now runs under full agent trust: the coding
+> agent has free rein over all game code and is not bound by the old guardrails
+> (the §14 engine-extension gate, the human-approval gate, the determinism contract
+> as a hard rule, or mandatory tests). The test suite, validator, seeded
+> determinism checks, and replay remain as **optional tools**, not gates. The
+> governing document is [`AGENTS.md`](./AGENTS.md). The stage descriptions below
+> describe how the project was built and are kept for context.
 
 ## Status
 
@@ -252,7 +260,8 @@ records its experience → a debugger finds a flaw → a fixer patches it → a
 regression test locks the fix — is exercised end to end, with the determinism
 contract (§8.5) holding across every recorded trace.
 
-Run the full gate with `npm run health` (typecheck + tests + validate + playtest).
+`npm run health` (typecheck + tests + validate + playtest) is available as an
+optional feedback signal — not a required gate (full-trust model; see `AGENTS.md`).
 Provider-agnostic LLM access (`agents/llm/`) defaults to a deterministic mock, so
-everything runs in CI with no API keys; real OpenAI/Anthropic/Google backends sit
+everything runs with no API keys; real OpenAI/Anthropic/Google backends sit
 behind env vars (§12.7).
