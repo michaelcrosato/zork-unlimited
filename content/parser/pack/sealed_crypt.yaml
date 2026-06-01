@@ -131,12 +131,21 @@ rooms:
     description: >
       Stone sarcophagi crowd a low chamber. To the north, an iron catacombs gate
       bars the way, its lock shaped for a heavy key. The stair climbs back up.
+    # Once the gate is open the reactive text names the final step explicitly. A
+    # fresh blind playtester (seed 29) noted that unlocking the gate awards the last
+    # points and the score reads "35 of 35" — yet the win only fires on ENTERING the
+    # catacombs (win_conditions: visited catacombs). With the old text ("swung inward
+    # on darkness / the stair climbs back up") a first-timer at max score could read
+    # the puzzle as solved and climb back out, stopping one step short of the ending.
+    # The fix is legibility only: the open-gate text (and the unlock narration below)
+    # now point north through the gate as the journey's last move. No flag/score/exit
+    # change — the route still wins 35/35 on `go_north` (bug_0054).
     variants:
       - when: [{ has_flag: catacombs_open }]
         text: >
           Stone sarcophagi crowd a low chamber. To the north, the iron catacombs
-          gate stands unlocked and swung inward on darkness. The stair climbs
-          back up.
+          gate stands unlocked and swung inward on darkness — and through it, north,
+          run the catacombs you came so far to find. The stair climbs back up.
     objects: [crypt_gate]
     exits:
       - { direction: up, to: chapel_nave }
@@ -240,7 +249,7 @@ objects:
           - set_flag: catacombs_open
           - unlock_exit: { from: crypt, to: catacombs }
           - inc_var: { name: score, by: 20 }
-          - narrate: "The iron key turns with a groan. The catacombs gate swings inward."
+          - narrate: "The iron key turns with a groan, and the catacombs gate swings inward on darkness. Beyond it, north, the catacombs you came so far to find — one step through the open gate and your journey is done."
 
 npcs:
   - id: sexton
