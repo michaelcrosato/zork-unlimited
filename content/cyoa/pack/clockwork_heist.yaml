@@ -208,7 +208,39 @@ scenes:
     # not of a guard at the kitchen (he walks only the gallery). The base `text` (pick
     # present, low tick) is UNCHANGED and remains the schema fallback for the first arrival
     # at ticks 1. No choice/effect/flag/item/exit/tick/gating/ending change (bug_0072).
+    # The ticks>=7 escalation tier completes bug_0082 for the kitchen (bug_0084). bug_0082
+    # gave the foyer and gallery a ticks>=7 tier so a lingering player SEES the deadline
+    # mount on every loop (they re-read one of those two hubs each circuit) — but it argued
+    # the kitchen/study didn't need it, which is true for warning VISIBILITY and false for
+    # IN-ROOM continuity. A fresh blind playtester (seed 31, ai-runs/2026-06-01T22-19-03-485Z/
+    # playtest.md §5) stood IN the kitchen at ticks 9 and saw it revert to the ticks>=4 "the
+    # sleeping house has begun to stir" line — "the same line shown at ticks 5" — so the
+    # kitchen's own prose contradicted how late it was while the foyer/gallery read "waking
+    # in earnest." This tier escalates the kitchen from the >=4 house "begun to stir" toward
+    # the ticks>=10 ending's whole-house waking: overhead the manor waking in earnest, feet
+    # and voices and lamps moving room to room, only a few beats left. It keeps the bug_0072
+    # constraints EXACTLY — clock named only by the manor-wide motif (the clock's working
+    # carried through the walls, the chime) and the house overhead, NEVER the watchman/
+    # ledger/plate (a downstairs-only visitor may have met none of them) — and the existing
+    # lockpick pairing (pick-present vs pick-taken). Above the ticks>=4 tier, first-match-wins,
+    # higher threshold first. No choice/effect/flag/item/exit/tick/gating/ending change.
     variants:
+      - when: [{ var_gte: { name: ticks, value: 7 } }, { has_item: lockpick }]
+        text: >
+          Copper pots hang in rows above a banked hearth. By the dumbwaiter, the spot
+          where the lockpicks lay is bare — the slim roll is in your pocket now. The hour
+          chimed a while ago, and the great clock's working, carried through the walls, no
+          longer grinds toward a sleeping house but a waking one: overhead the manor is
+          waking in earnest — feet and voices and lamps moving room to room on the floors
+          above. Only a few beats left before the whole house stands fully awake.
+      - when: [{ var_gte: { name: ticks, value: 7 } }]
+        text: >
+          Copper pots hang in rows above a banked hearth. By the dumbwaiter, a servant has
+          left a slim roll of lockpicks. The hour chimed a while ago, and the great clock's
+          working, carried through the walls, no longer grinds toward a sleeping house but a
+          waking one: overhead the manor is waking in earnest — feet and voices and lamps
+          moving room to room on the floors above. Only a few beats left before the whole
+          house stands fully awake.
       - when: [{ var_gte: { name: ticks, value: 4 } }, { has_item: lockpick }]
         text: >
           Copper pots hang in rows above a banked hearth. By the dumbwaiter, the spot
@@ -427,7 +459,29 @@ scenes:
     # tick via a tick-charging landing, so a live study visit is always ticks>=2; the base
     # `text` is UNCHANGED and remains the schema fallback. No choice/effect/flag/item/exit/
     # gating/ending change (bug_0068).
+    # The ticks>=7 escalation tier completes bug_0082 for the study, the kitchen's structural
+    # twin (bug_0084). The study is the other remaining tick-charging room a lingering player
+    # stands in at ticks 7-9 (a circling player oscillates study<->gallery to climb the
+    # clock), yet its prose plateaued at the ticks>=4 tier — the same in-room continuity gap a
+    # fresh blind playtester (seed 31) hit in the kitchen, present here too. This tier
+    # escalates from the >=4 "the watch has begun to walk the gallery" toward the ticks>=10
+    # ending's whole-house waking. It keeps the bug_0068 constraints: the clock is named by the
+    # manor-wide motif (gears, chime) and the VISIBLE open ledger page the base text already
+    # describes — and naming "the watch" is sound here (the open page logs its rounds, the
+    # entrant has read the brass plate via saw_plate), exactly as the >=4 variant does. Above
+    # the ticks>=4 tier, first-match-wins, higher threshold first. The load-bearing read_ledger
+    # clue and saw_plate flag are untouched. No choice/effect/flag/item/exit/tick/gating/ending change.
     variants:
+      - when: [{ var_gte: { name: ticks, value: 7 } }]
+        text: >
+          Shelved ledgers, a cold lamp, and a brass wall-plate engraved: "The vault
+          yields only to a steady hand — never to force." One ledger lies open on the
+          desk — the steward's daily reckoning, its last page ruled into the household's
+          hours: when the staff retire, and when the watch walks its rounds. The hour that
+          page names came round a while ago, and the house is waking in earnest now: through
+          the wall the great clock's gears carry the whole manor rousing — lamps on the
+          landings, more feet than the watch's own answering room to room. Only a few beats
+          left before there is no still room left in which to read a stolen page.
       - when: [{ var_gte: { name: ticks, value: 4 } }]
         text: >
           Shelved ledgers, a cold lamp, and a brass wall-plate engraved: "The vault
