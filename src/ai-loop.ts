@@ -1,194 +1,159 @@
-import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
+/**
+ * AdventureForge AFK loop driver (trust-but-verify).
+ *
+ * One cycle of the autonomous improvement loop. This driver is deterministic
+ * tooling (not the engine): it
+ *   1. ASSESSES the whole project (src/afk/assessor.ts) to rank the next-best
+ *      improvement across content_new / content_fix / engine / repo;
+ *   2. picks a target pack to playtest (the candidate's pack, or the main story as
+ *      a regression baseline for engine/repo work);
+ *   3. writes the cycle artifacts to an ignored ai-runs/<id>/ dir, including the
+ *      exact path where the operating agent must drop its MANDATORY LLM playtest
+ *      report; and
+ *   4. emits a cycle prompt that requires the agent to run a blind LLM playtest,
+ *      make ONE focused improvement, and keep `npm run health` (incl. the
+ *      verifier-integrity guard) green.
+ *
+ * The driver does the deterministic *evaluation*; the per-cycle *quality* signal
+ * comes from the agent's blind LLM playtest (docs/afk_loop.md, docs/blind_playtest_protocol.md).
+ * loop.sh enforces the playtest as mandatory (it refuses to commit a cycle that
+ * produced no playtest record) and runs health + the integrity drift gate before
+ * committing. See docs/afk_loop.md for the whole picture.
+ */
+import { mkdirSync, writeFileSync, appendFileSync } from "node:fs";
 import { join } from "node:path";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { assess, formatAssessment, type Assessment, type ImprovementCandidate, type PackHealth } from "./afk/assessor.js";
+import { createToolApi } from "./mcp/tools.js";
 
-type ToolResult = { content: { type: string; text: string }[]; isError?: boolean };
-type Observation = {
-  scene_id: string;
-  text: string;
-  state: { flags: string[]; inventory: string[]; journal: string[] };
-  available_actions: { id: string; text: string }[];
-  ended: boolean;
-  ending_id: string | null;
-};
+function cycleStamp(): string {
+  // Tooling (not the engine), so a wall-clock id is fine here.
+  return new Date().toISOString().replace(/[:.]/g, "-");
+}
 
-const TRUE_ROUTE = [
-  "inspect_ground",
-  "go_east",
-  "approach_base",
-  "search_rubble",
-  "take_lantern",
-  "take_letter",
-  "leave_cart",
-  "leave_base",
-  "circle_cellar",
-  "light_lantern",
-  "descend_cellar",
-  "search_cache",
-  "take_ledger",
-  "leave_cache",
-  "climb_out",
-  "cellar_back",
-  "return_crossroads",
-  "go_west",
-  "follow_to_camp",
-  "talk_hermit",
-  "show_letter",
-  "back_from_letter_talk",
-  "say_goodbye",
-  "leave_camp",
-  "ford_brook",
-  "cross_north",
-  "approach_checkpoint",
-  "show_papers",
-  "reveal_evidence",
-  "expose_the_plot",
-];
+/** Which pack the mandatory playtest targets this cycle. */
+function playtestTarget(a: Assessment, top: ImprovementCandidate | null, mainStory: string): string {
+  if (top && top.category === "content_fix") return top.target; // the pack to improve
+  // content_new (a mode) / engine / repo: playtest the main story as a regression baseline.
+  return mainStory;
+}
 
-async function main(): Promise<void> {
-  const runId = new Date().toISOString().replace(/[:.]/g, "-");
-  const runDir = join("ai-runs", runId);
+function main(): void {
+  const root = process.cwd();
+  const stamp = cycleStamp();
+  const runDir = join("ai-runs", stamp);
   mkdirSync(runDir, { recursive: true });
 
-  const transport = new StdioClientTransport({ command: "npm", args: ["--silent", "run", "mcp"] });
-  const client = new Client({ name: "adventureforge-afk-loop", version: "0.1.0" });
-  await client.connect(transport);
-  try {
-    const stories = await call(client, "list_stories", {});
-    const storyPath = stories.main_story ?? "content/cyoa/pack/watchtower_road.yaml";
-    const validation = await call(client, "validate_story", { story_path: storyPath });
-    if (!validation.ok) throw new Error(`Story validation failed for ${storyPath}`);
+  const a = assess(root);
+  const top = a.top;
+  const mainStory = createToolApi({ root }).list_stories().main_story ?? "content/cyoa/pack/watchtower_road.yaml";
+  const target = playtestTarget(a, top, mainStory);
+  const playtestRecord = join(runDir, "playtest.md").replaceAll("\\", "/");
 
-    const random = await call(client, "run_playtest", { story_path: storyPath, strategy: "random", runs: 100 });
-    const coverage = await call(client, "run_playtest", { story_path: storyPath, strategy: "coverage", runs: 100 });
-    const trueEnding = await playRoute(client, storyPath, 101, TRUE_ROUTE);
-    if (!trueEnding.observation.ended || trueEnding.observation.ending_id !== "ending_truth") {
-      throw new Error(`True-ending route failed: reached ${trueEnding.observation.ending_id ?? trueEnding.observation.scene_id}`);
-    }
-    const exploratory = await playExploratory(client, storyPath, 202, coverage.unvisited_scenes ?? []);
+  const targetHealth = a.packs.find((p) => p.path === target) ?? null;
+  const prompt = buildPrompt({ a, top, target, targetHealth, playtestRecord });
 
-    const evidence = { stories, validation, random, coverage, trueEnding, exploratory };
-    writeFileSync(join(runDir, "mcp-evidence.json"), JSON.stringify(evidence, null, 2));
-    writeFileSync(join(runDir, "agent-prompt.md"), buildAgentPrompt(storyPath, random, coverage, trueEnding, exploratory));
-    appendState(runId, storyPath, random, coverage, trueEnding, exploratory);
+  // Artifacts (all under the ignored ai-runs/).
+  writeFileSync(join(runDir, "assessment.md"), formatAssessment(a));
+  writeFileSync(join(runDir, "assessment.json"), JSON.stringify(a, null, 2));
+  writeFileSync(join(runDir, "prompt.md"), prompt);
+  // Stable pointer loop.sh reads to enforce the mandatory playtest.
+  writeFileSync(
+    join("ai-runs", "latest-cycle.json"),
+    JSON.stringify({ runId: stamp, runDir, target, playtestRecord, recommendation: top?.title ?? null }, null, 2),
+  );
+  appendState(stamp, a, target);
 
-    console.log(`AFK evidence written to ${runDir}/mcp-evidence.json`);
-    console.log(`Agent prompt written to ${runDir}/agent-prompt.md`);
-    console.log(`Next task: ${nextTask(random, coverage)}`);
-  } finally {
-    await client.close();
-  }
+  console.log(`AFK cycle ${stamp}`);
+  console.log(`  assessment: ${runDir}/assessment.md`);
+  console.log(`  prompt:     ${runDir}/prompt.md`);
+  console.log(`  playtest record required at: ${playtestRecord}`);
+  console.log(`  ▶ next best improvement: ${top?.title ?? "(none — game is healthy)"}`);
 }
 
-async function call(client: Client, name: string, args: Record<string, unknown>): Promise<any> {
-  const result = (await client.callTool({ name, arguments: args })) as ToolResult;
-  if (result.isError) throw new Error(result.content[0]?.text ?? `${name} failed`);
-  return JSON.parse(result.content[0]!.text);
+function buildPrompt(ctx: {
+  a: Assessment;
+  top: ImprovementCandidate | null;
+  target: string;
+  targetHealth: PackHealth | null;
+  playtestRecord: string;
+}): string {
+  const { a, top, target, targetHealth, playtestRecord } = ctx;
+  const ranked = a.candidates.slice(0, 6).map((c, i) => `  ${i + 1}. [${c.score}] (${c.category}/${c.effort}) ${c.title}`);
+  const health = targetHealth
+    ? `endings ${targetHealth.endingsReached}/${targetHealth.endingsDeclared}, unvisited ${targetHealth.unvisited.length}${targetHealth.unvisited.length ? ` (${targetHealth.unvisited.slice(0, 8).join(", ")})` : ""}, ${targetHealth.warnings} warning(s)`
+    : "(not a pack — engine/repo work; the target pack is the regression baseline)";
+
+  return [
+    "# AdventureForge AFK improvement cycle (trust, but verify)",
+    "",
+    "You operate inside this repo with FULL authority over all game code (AGENTS.md).",
+    "Make exactly ONE focused, high-impact improvement this cycle and leave the repo",
+    "green. You have broad world knowledge — use it to choose and craft the best",
+    "improvement, but verify everything (don't route around the verifier).",
+    "",
+    "## The assessor's ranked next-best improvements (deterministic)",
+    ...ranked,
+    "",
+    `▶ Recommended: ${top ? `${top.title}` : "(none)"}`,
+    top ? `   why: ${top.rationale}` : "",
+    top ? `   evidence: ${top.evidence.join("; ")}` : "",
+    "",
+    "You MAY pick a different candidate (or something off-list) if your judgement and",
+    "the playtest below say it's higher value — but justify it in AI_LOOP_STATE.md.",
+    "",
+    "## STEP 1 — MANDATORY LLM playtest (quality feedback, every cycle)",
+    "",
+    `Playtest target this cycle: ${target}  (${health})`,
+    "",
+    "- Spawn a FRESH subagent with NO design context (Agent tool general-purpose, or a",
+    "  clean `claude -p` / `codex exec`). Hand it ONLY the locked-down prompt in",
+    "  docs/blind_playtest_protocol.md, with this pack and a seed. It must play purely",
+    "  through the mcp__adventureforge__* tools and must NOT read content/, src/, ui/, tests/.",
+    `- WRITE its structured report (route, mechanics, clarity 1-5, enjoyment 1-5,`,
+    `  confusion, concrete findings, verdict) to: ${playtestRecord}`,
+    "  This file is REQUIRED — loop.sh refuses to commit a cycle with no playtest record.",
+    "- Let the playtest's findings inform the improvement you choose.",
+    "",
+    "## STEP 2 — Make ONE improvement",
+    "",
+    "- content_fix / content_new: edit the pack (or apply_content_patch); re-validate.",
+    "- engine / repo: change freely under trust-but-verify. New mechanics no longer need",
+    "  a §14 ceremony, but keep the verification green and add tests for new behavior.",
+    "- If you fix a bug, add a traces/bugs/ artifact + a tests/regression/ test (§15).",
+    "- A content edit that changes a pinned hash must re-pin it deliberately",
+    "  (tests/unit/rpg_validator.test.ts, traces/bugs/*.yaml) — that is allowed, but it is",
+    "  surfaced; never weaken a check to pass.",
+    "",
+    "## STEP 3 — Verify (the bar)",
+    "",
+    "- `npm run health` must pass (it runs verify:integrity + lint + tests + validate + playtest).",
+    "- Do not disable/delete tests or silently re-pin hashes to go green.",
+    "- Update AI_LOOP_STATE.md with: what you playtested + its clarity/enjoyment scores,",
+    "  what you improved and why, evidence, and the next suggested focus.",
+    "",
+    "## Hard constraints",
+    "- Do not commit ai-runs/, node_modules/, dist/, coverage/, saves/*.json.",
+    "- Keep the game playable; prefer a small, verified change over a broad rewrite.",
+    "",
+  ].join("\n");
 }
 
-async function playRoute(client: Client, storyPath: string, seed: number, route: string[]) {
-  const start = await call(client, "start_game", { story_path: storyPath, seed });
-  const sessionId = start.session_id as string;
-  let observation = start.observation as Observation;
-  for (const optionId of route) {
-    const visible = observation.available_actions.map((a) => a.id);
-    if (!visible.includes(optionId)) throw new Error(`Route wanted ${optionId}, but visible options were ${visible.join(", ")}`);
-    const next = await call(client, "choose_option", { session_id: sessionId, option_id: optionId });
-    observation = next.observation as Observation;
-    if (observation.ended) break;
-  }
-  return { session_id: sessionId, observation, transcript: await call(client, "get_transcript", { session_id: sessionId }) };
-}
-
-async function playExploratory(client: Client, storyPath: string, seed: number, unvisitedScenes: string[]) {
-  const start = await call(client, "start_game", { story_path: storyPath, seed });
-  const sessionId = start.session_id as string;
-  let observation = start.observation as Observation;
-  const tried = new Set<string>();
-  for (let i = 0; i < 14 && !observation.ended; i++) {
-    const option = chooseExploratory(observation, tried, unvisitedScenes);
-    tried.add(option.id);
-    const next = await call(client, "choose_option", { session_id: sessionId, option_id: option.id });
-    observation = next.observation as Observation;
-  }
-  return { session_id: sessionId, observation, transcript: await call(client, "get_transcript", { session_id: sessionId }) };
-}
-
-function chooseExploratory(observation: Observation, tried: Set<string>, unvisitedScenes: string[]) {
-  const actions = observation.available_actions;
-  const risky = actions.find((a) => /force|slip away|retreat|back|turn back|hesitate/i.test(a.text) && !tried.has(a.id));
-  if (risky) return risky;
-  const investigative = actions.find((a) => /inspect|search|read|ask|show|examine|talk/i.test(a.text) && !tried.has(a.id));
-  if (investigative) return investigative;
-  const target = actions.find((a) => unvisitedScenes.some((scene) => a.id.includes(scene) || a.text.includes(scene)));
-  return target ?? actions.find((a) => !tried.has(a.id)) ?? actions[0]!;
-}
-
-function appendState(runId: string, storyPath: string, random: any, coverage: any, trueEnding: any, exploratory: any): void {
+function appendState(stamp: string, a: Assessment, target: string): void {
+  const top = a.top;
   const text = [
     "",
-    `## AFK Cycle ${runId}`,
+    `## AFK Cycle ${stamp}`,
     "",
-    `- Current objective: Keep AdventureForge ready for MCP-driven AFK improvement loops on ${storyPath}.`,
-    `- Last completed improvement: Generated MCP evidence through list_stories, validate_story, random/coverage run_playtest, true-ending regression, and exploratory play.`,
-    `- Evidence summary: random ended ${random.ended}/${random.runs}; coverage ended ${coverage.ended}/${coverage.runs}; coverage unvisited scenes ${coverage.unvisited_scenes.join(", ") || "(none)"}.`,
-    `- MCP playtest notes: true route ended at ${trueEnding.observation.ending_id}; exploratory ended at ${exploratory.observation.ending_id ?? exploratory.observation.scene_id}.`,
-    `- What improved: The loop now records compact JSON evidence under ignored ai-runs/ and keeps durable state here.`,
-    `- What still feels weak: ${nextTask(random, coverage)}.`,
-    `- Highest-priority next task: ${nextTask(random, coverage)}.`,
-    "- Risks/blockers: Preserve uncommitted user content and avoid committing ai-runs/ evidence.",
-    "- Repeated mistake to avoid: Do not treat CLI-only validation as playtesting; use MCP tools for the actual game loop.",
+    `- Assessment: packs cyoa=${a.packsByMode["cyoa"] ?? 0} parser=${a.packsByMode["parser"] ?? 0} rpg=${a.packsByMode["rpg"] ?? 0}; ${a.candidates.length} candidate(s) ranked.`,
+    `- Next best improvement (recommended): ${top ? `[${top.category}] ${top.title}` : "(none — healthy)"}.`,
+    top ? `- Why: ${top.rationale}` : "",
+    `- Mandatory LLM playtest target this cycle: ${target}.`,
+    "- Process: assessor ranks → blind LLM playtest for quality → one improvement → health + verify:integrity green → commit (trust-but-verify).",
     "",
-  ].join("\n");
-  appendFileSync("AI_LOOP_STATE.md", text);
+  ]
+    .filter((l) => l !== "")
+    .join("\n");
+  appendFileSync("AI_LOOP_STATE.md", text + "\n");
 }
 
-function buildAgentPrompt(storyPath: string, random: any, coverage: any, trueEnding: any, exploratory: any): string {
-  return [
-    "# AdventureForge AFK Improvement Task",
-    "",
-    "You are operating inside this repository. Make exactly one focused, high-impact improvement, then leave the repo green.",
-    "",
-    "Hard constraints:",
-    "",
-    "- Preserve unrelated user work and generated scratch files.",
-    "- Do not commit ai-runs/, node_modules/, dist/, coverage/, saves/*.json, or transcripts/*.md.",
-    "- Use MCP gameplay evidence, not prose-only playtesting.",
-    "- Prefer a small story, tooling, transcript, or playtest-strategy improvement over broad rewrites.",
-    "- Run npm run health before finishing.",
-    "",
-    "Required step — BLIND PLAYTEST (docs/blind_playtest_protocol.md):",
-    "",
-    "- Spawn a FRESH subagent with NO design context (Agent tool general-purpose, or a clean `claude -p` / `codex exec`).",
-    `- Hand it ONLY the locked-down prompt in that doc, with pack_path = "${storyPath}" and a seed. It must play purely through the mcp__adventureforge__* tools and must NOT read content/, src/, ui/, or tests/.`,
-    "- Collect its structured report (route, mechanics, clarity/enjoyment, confusion, bugs, verdict).",
-    "- Turn its findings into ONE focused fix: content/hint/quest_structure via apply_content_patch or a re-validated YAML edit; engine-rule/validator/schema stay gated (§14, propose only).",
-    "- Lock the fix with a traces/bugs/ artifact + a tests/regression/ test (§15), then re-validate and run health.",
-    "",
-    "Current MCP evidence:",
-    "",
-    `- Story: ${storyPath}`,
-    `- Random playtest: ${random.ended}/${random.runs} ended; endings ${JSON.stringify(random.ending_distribution)}; unvisited ${random.unvisited_scenes.join(", ") || "(none)"}.`,
-    `- Coverage playtest: ${coverage.ended}/${coverage.runs} ended; endings ${JSON.stringify(coverage.ending_distribution)}; unvisited ${coverage.unvisited_scenes.join(", ") || "(none)"}.`,
-    `- True-ending regression: ${trueEnding.observation.ending_id}`,
-    `- Exploratory route finished at: ${exploratory.observation.ending_id ?? exploratory.observation.scene_id}`,
-    "",
-    `Highest-priority next task: ${nextTask(random, coverage)}.`,
-    "",
-    "After changing anything, rerun MCP validation/playtests or the bounded loop and update AI_LOOP_STATE.md with concise durable notes.",
-    "",
-  ].join("\n");
-}
-
-function nextTask(random: any, coverage: any): string {
-  if (coverage.unvisited_scenes.length > 0) return `Improve discoverability for ${coverage.unvisited_scenes[0]}`;
-  if (random.unfinished > 0) return "Reduce random-route unfinished runs without flattening meaningful backtracking";
-  if (!random.ending_distribution.ending_truth) return "Improve true-ending signposting for normal-player routes";
-  return "Add one small validated story or transcript-quality improvement";
-}
-
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+main();

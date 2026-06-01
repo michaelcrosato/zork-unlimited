@@ -9,6 +9,7 @@ dist/
 
 # Autonomous AFK loop scratch evidence
 ai-runs/
+.tmp/
 saves/*.json
 transcripts/*.md
 coverage/

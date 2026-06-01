@@ -47,6 +47,14 @@ a committed hash, unless `AI_LOOP_ALLOW_VERIFIER_EDITS=1` acknowledges a deliber
 edit. It catches mechanical tampering, not semantic weakening — keep the deal
 honestly.
 
+## The autonomous loop
+
+The AFK improvement loop (`docs/afk_loop.md`) embodies this charter: each cycle it
+**assesses the next-best improvement** across content/engine/repo (`npm run assess`),
+takes a **mandatory blind LLM playtest** for quality feedback, makes one change, and
+commits only after the bar is green and the verifier is untouched. `npm run assess`
+shows the ranked backlog any time.
+
 ## Standing guidance
 
 - Commit in clear increments; land work on `main` (owner preference).

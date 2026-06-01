@@ -53,6 +53,25 @@ safe_commit_if_enabled() {
   git diff --cached --quiet || git commit -m "${AI_LOOP_COMMIT_MESSAGE:-Autonomous AFK improvement cycle}"
 }
 
+require_playtest_record() {
+  # MANDATORY LLM PLAYTEST (every cycle): the agent must produce a blind-playtest
+  # report at the path ai-loop.ts recorded in ai-runs/latest-cycle.json. Refuse to
+  # commit a cycle that skipped it — quality feedback is non-negotiable. Only
+  # enforced when actually committing (evidence-only runs don't commit).
+  [[ "${AI_LOOP_COMMIT:-0}" == "1" ]] || return 0
+  local meta="ai-runs/latest-cycle.json" rec
+  if [[ ! -f "$meta" ]]; then
+    echo "No cycle metadata ($meta); cannot verify the mandatory playtest. Refusing to commit."
+    return 1
+  fi
+  rec="$(node -e 'console.log(JSON.parse(require("node:fs").readFileSync("ai-runs/latest-cycle.json","utf8")).playtestRecord||"")')"
+  if [[ -z "$rec" || ! -s "$rec" ]]; then
+    echo "Mandatory LLM playtest record missing or empty ($rec). Every cycle must run a blind LLM playtest. Refusing to commit."
+    return 1
+  fi
+  echo "✓ mandatory playtest record present: $rec"
+}
+
 run_cycle() {
   local baseline start_ref
   baseline="$(git status --porcelain -- "${status_filter[@]}")"
@@ -68,6 +87,8 @@ run_cycle() {
   # protected verification asset, or silently re-pinned a committed hash. A
   # deliberate verifier edit is acknowledged with AI_LOOP_ALLOW_VERIFIER_EDITS=1.
   npm run verify:integrity -- --against "$start_ref"
+  # Quality feedback is mandatory: no playtest record ⇒ no commit.
+  require_playtest_record
   safe_commit_if_enabled "$baseline"
 
   if [[ "${AI_LOOP_PUSH:-0}" == "1" ]]; then
