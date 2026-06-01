@@ -109,6 +109,12 @@ scenes:
           - set_flag: vault_open
           - add_journal: "The tumblers fall, one by one. The vault sighs open."
         next: vault
+      - id: study_lock
+        text: "Study the clockwork lock for a way through."
+        conditions: [{ not_item: lockpick }, { not_flag: alarm }]
+        effects:
+          - narrate: "A hundred tumblers, each finer than a hair — this is a lock to coax, not to break. Your bare fingers find no purchase, and the brass plate's warning rings true: force will only wake the house. You need a slender tool and a steady hand. Better search the manor for the right instrument before you try the door again."
+        next: landing
       - id: force_door
         text: "Force the door with your shoulder."
         effects:
