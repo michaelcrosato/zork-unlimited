@@ -1,6 +1,6 @@
 bug_id: bug_0002
 pack_id: watchtower_road_v1
-content_hash: 3947f07bb7d8e898b6bf17ce2db6352652ae0171810a705937cea2c95bb428cd  # re-pinned by bug_0055 (confront_smuggler reactive no-proof variant)
+content_hash: 4c971d435f3271731bea8db64c2ac1dfa338f53c010de55d9a3ebd56cde96d31  # re-pinned by bug_0062 (confront_smuggler retreat choice flag-gated; was bug_0055's 3947f07b…)
 seed: 7
 initial_state: start
 # Surfaced by a BLIND MCP playtester subagent (no access to source/content) playing

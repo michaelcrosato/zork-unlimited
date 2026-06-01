@@ -67,7 +67,10 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // the letter (was 46ac6142…); and bug_0055 — confront_smuggler's scene text is
     // now reactive (a not_flag learned_truth variant so the no-proof bluff branch no
     // longer follows text that narrates the sergeant reading his own name)
-    // (was 7e3392b6…). Any *unintended* change to compilation trips this.
-    expect(loaded.compiled.contentHash).toBe("3947f07bb7d8e898b6bf17ce2db6352652ae0171810a705937cea2c95bb428cd");
+    // (was 7e3392b6…); and bug_0062 — confront_smuggler's retreat choice is now
+    // flag-gated (the "find real proof first" line only shows to the no-proof bluffer;
+    // the learned_truth player gets a coherent "hold your tongue" retreat)
+    // (was 3947f07b…). Any *unintended* change to compilation trips this.
+    expect(loaded.compiled.contentHash).toBe("4c971d435f3271731bea8db64c2ac1dfa338f53c010de55d9a3ebd56cde96d31");
   });
 });

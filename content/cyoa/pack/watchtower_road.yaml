@@ -349,6 +349,15 @@ scenes:
         next: ending_captured
       - id: back_off
         text: "Pocket the letter and slip away to find real proof first."
+        conditions: [ { not_flag: learned_truth } ]
+        next: road_north
+      # bug_0062: the learned_truth player ALREADY has their proof, so the no-proof
+      # wording above ("to find real proof first") contradicts their state. Gate that
+      # line to the bluffer and give the proof-bearer a coherent retreat: they have
+      # what damns him but choose not to force it at the gate.
+      - id: hold_off
+        text: "Hold your tongue for now — pocket the letter and back away from the gate."
+        conditions: [ { has_flag: learned_truth } ]
         next: road_north
 
   - id: decision_point
