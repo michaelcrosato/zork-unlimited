@@ -260,6 +260,23 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
     }
   }
 
+  // ── Unreachable reactive variants (first-match-wins shadowing) ─────────────
+  // A scene's / ending's `variants` are evaluated in declared order, first whose
+  // `when` holds wins (runner.ts sceneText/endingText). So a later variant whose
+  // `when` is ENTAILED by an earlier one's can never be the first match — it is
+  // dead content. This is the exact footgun every reactive pack hand-guards in
+  // prose ("higher threshold first, first match wins", repeated ~10× in the
+  // clockwork pack alone); this check makes that ordering invariant machine-
+  // enforced. Sound (no false positives): we only flag when we can PROVE entailment
+  // over a pure conjunction of literals/var-bounds; any `any_of`/`none_of` makes a
+  // `when` opaque and we never prove implication for it (we just detect fewer).
+  for (const scene of pack.scenes) {
+    checkVariantShadowing(scene.variants, `scene:${scene.id}`, findings);
+  }
+  for (const ending of pack.endings) {
+    checkVariantShadowing(ending.variants, `ending:${ending.id}`, findings);
+  }
+
   // ── Duplicate endings (structurally identical title+text) ──────────────────
   const seen = new Map<string, string>();
   const terminals: { id: string; title: string; text: string }[] = [
@@ -326,6 +343,105 @@ function registerTarget(
 
 function gotoTargets(effects: Effect[]): string[] {
   return effects.flatMap((e) => ("goto" in e ? [e.goto] : []));
+}
+
+/**
+ * The conjunctive shape of a variant's `when`: the positive/negative atoms it
+ * pins and the tightest var bounds it implies. `opaque` is set when the `when`
+ * contains an `any_of`/`none_of` (a disjunction we cannot reason about soundly) —
+ * an opaque profile never participates in an entailment proof, so the check stays
+ * sound (it only ever proves implications it can fully justify).
+ */
+type WhenProfile = {
+  pos: Set<string>; // atoms guaranteed true  (flag:f, item:i, visited:r, open:o, unlocked:o, quest:q=s)
+  neg: Set<string>; // atoms guaranteed false (flag:f, item:i, visited:r)
+  lower: Map<string, number>; // strongest var ">=" bound per var
+  upper: Map<string, number>; // strongest var "<=" bound per var
+  opaque: boolean;
+};
+
+function whenProfile(when: Condition[]): WhenProfile {
+  const p: WhenProfile = {
+    pos: new Set(),
+    neg: new Set(),
+    lower: new Map(),
+    upper: new Map(),
+    opaque: false,
+  };
+  const raise = (m: Map<string, number>, k: string, v: number, keepMax: boolean): void => {
+    const cur = m.get(k);
+    if (cur === undefined) m.set(k, v);
+    else m.set(k, keepMax ? Math.max(cur, v) : Math.min(cur, v));
+  };
+  const walk = (c: Condition): void => {
+    if ("has_flag" in c) p.pos.add(`flag:${c.has_flag}`);
+    else if ("not_flag" in c) p.neg.add(`flag:${c.not_flag}`);
+    else if ("has_item" in c) p.pos.add(`item:${c.has_item}`);
+    else if ("not_item" in c) p.neg.add(`item:${c.not_item}`);
+    else if ("visited" in c) p.pos.add(`visited:${c.visited}`);
+    else if ("not_visited" in c) p.neg.add(`visited:${c.not_visited}`);
+    else if ("is_open" in c) p.pos.add(`open:${c.is_open}`);
+    else if ("is_unlocked" in c) p.pos.add(`unlocked:${c.is_unlocked}`);
+    else if ("quest_stage" in c) p.pos.add(`quest:${c.quest_stage.quest}=${c.quest_stage.stage}`);
+    else if ("var_gte" in c) raise(p.lower, c.var_gte.name, c.var_gte.value, true);
+    else if ("var_lte" in c) raise(p.upper, c.var_lte.name, c.var_lte.value, false);
+    else if ("var_eq" in c) {
+      raise(p.lower, c.var_eq.name, c.var_eq.value, true);
+      raise(p.upper, c.var_eq.name, c.var_eq.value, false);
+    } else if ("all_of" in c) c.all_of.forEach(walk);
+    // any_of / none_of are disjunctions we don't model — mark opaque so this
+    // profile is never used to prove (or be proven by) an entailment.
+    else p.opaque = true;
+  };
+  when.forEach(walk);
+  return p;
+}
+
+/** True when every state satisfying `j` also satisfies `i` (j ⟹ i): then an
+ *  earlier `i` always wins over a later `j`, so `j` is dead. Sound, conservative:
+ *  any opaque profile (a disjunction we can't reason about) returns false. */
+function entails(j: WhenProfile, i: WhenProfile): boolean {
+  if (j.opaque || i.opaque) return false;
+  for (const k of i.pos) if (!j.pos.has(k)) return false;
+  for (const k of i.neg) if (!j.neg.has(k)) return false;
+  for (const [name, need] of i.lower) {
+    const have = j.lower.get(name);
+    if (have === undefined || have < need) return false;
+  }
+  for (const [name, need] of i.upper) {
+    const have = j.upper.get(name);
+    if (have === undefined || have > need) return false;
+  }
+  return true;
+}
+
+/** Flag any variant whose `when` is entailed by an earlier sibling's `when`: in a
+ *  first-match-wins list it can never be the first match, so its text is dead. */
+function checkVariantShadowing(
+  variants: { when: Condition[] }[] | undefined,
+  where: string,
+  findings: Finding[],
+): void {
+  if (!variants || variants.length < 2) return;
+  const profiles = variants.map((v) => whenProfile(v.when));
+  for (let j = 1; j < profiles.length; j++) {
+    const later = profiles[j];
+    for (let i = 0; i < j; i++) {
+      const earlier = profiles[i];
+      if (later && earlier && entails(later, earlier)) {
+        findings.push(
+          warn(
+            "UNREACHABLE_VARIANT",
+            `variant #${j + 1} is shadowed by earlier variant #${i + 1}: whenever its ` +
+              `\`when\` holds the earlier one does too, so (first-match-wins) it never ` +
+              `displays. List more specific variants before the more general ones.`,
+            [where, `variant:${j}`],
+          ),
+        );
+        break; // one shadowing witness per variant is enough
+      }
+    }
+  }
 }
 
 /** Var names a condition tree reads (var_gte/var_lte/var_eq), descending through
