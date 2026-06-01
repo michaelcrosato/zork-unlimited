@@ -117,24 +117,54 @@ export function assess(root: string): Assessment {
     const unvisited = pt?.unvisited_scenes ?? [];
     packs.push({ path: s.path, mode: s.mode, playable: true, endingsDeclared: declared.length, endingsReached: reached.length, unvisited, warnings });
 
-    // content_fix candidate when coverage/endings/warnings show room to improve.
-    const gap = unvisited.length + unreached.length * 2 + warnings;
+    // content_fix candidate when there is room to improve. CRUCIAL: the coverage
+    // BOT is a heuristic with NO planning, so in parser/RPG *puzzle* games its
+    // failure to reach an ending (or a gated room) is EXPECTED, not a content flaw
+    // — those packs ship passing walkthrough/acceptance tests proving they're
+    // winnable. Letting bot-coverage drive content_fix there sends the loop chasing
+    // phantom fixes. So bot-coverage is a content_fix signal for CYOA ONLY (where a
+    // no-planning bot can legitimately reach every node); for parser/RPG the real
+    // quality signal is the mandatory blind LLM playtest each cycle + validator
+    // warnings. (See docs/afk_loop.md.)
+    const botCoverageIsMeaningful = s.mode === "cyoa";
+    const coverageGap = botCoverageIsMeaningful ? unvisited.length + unreached.length * 2 : 0;
+    const gap = warnings + coverageGap;
     if (gap > 0) {
       const impact = Math.min(5, 1 + Math.ceil(gap / 3));
+      const evidence = warnings ? [`${warnings} validator warning(s)`] : [];
+      if (botCoverageIsMeaningful) {
+        evidence.push(
+          unreached.length ? `unreached endings: ${unreached.join(", ")}` : "all endings reached by the coverage bot",
+          unvisited.length ? `unvisited: ${unvisited.slice(0, 8).join(", ")}${unvisited.length > 8 ? "…" : ""}` : "full location coverage",
+        );
+      }
       candidates.push({
         id: `fix-${s.path}`,
         category: "content_fix",
         target: s.path,
-        title: `Improve "${s.id}" — ${unreached.length} unreached ending(s), ${unvisited.length} unvisited location(s)${warnings ? `, ${warnings} warning(s)` : ""}`,
+        title: botCoverageIsMeaningful
+          ? `Improve "${s.id}" — ${unreached.length} unreached ending(s), ${unvisited.length} unvisited location(s)${warnings ? `, ${warnings} warning(s)` : ""}`
+          : `Fix "${s.id}" — ${warnings} validator warning(s)`,
         rationale: "An LLM playtest can pinpoint why these are hard to reach (signposting, clue legibility, pacing) and the fix raises player-facing quality.",
-        evidence: [
-          unreached.length ? `unreached endings: ${unreached.join(", ")}` : "all endings reached by the coverage bot",
-          unvisited.length ? `unvisited: ${unvisited.slice(0, 8).join(", ")}${unvisited.length > 8 ? "…" : ""}` : "full location coverage",
-          `${warnings} validator warning(s)`,
-        ],
+        evidence,
         impact,
         effort: "M",
         score: score(impact, "M", "content_fix"),
+      });
+    } else if (!botCoverageIsMeaningful && (unvisited.length > 0 || unreached.length > 0)) {
+      // Parser/RPG puzzle pack the bot can't fully traverse and no validator
+      // warnings: keep it on the radar at LOW priority for a fresh blind LLM
+      // playtest (the only fair judge of its quality), below real fixes/new content.
+      candidates.push({
+        id: `playtest-${s.path}`,
+        category: "content_fix",
+        target: s.path,
+        title: `Blind-playtest "${s.id}" — the coverage bot can't solve its puzzles, so quality is unverified`,
+        rationale: "A heuristic bot can't plan multi-step puzzles; only a fresh blind LLM playtest reveals real signposting/clarity issues in this pack.",
+        evidence: [`bot left ${unvisited.length} location(s) unvisited / ${unreached.length} ending(s) unreached — expected for a puzzle game, so this is a review prompt, not a known flaw`],
+        impact: 1,
+        effort: "M",
+        score: score(1, "M", "content_fix"),
       });
     }
   }
