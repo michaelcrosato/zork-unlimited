@@ -43,7 +43,8 @@ rooms:
     name: "Entry Hall"
     description: >
       A hall of fitted slabs. A rusted iron bar lies among fallen rubble, and a
-      passage runs north into deeper dark. Steps climb back up to the light.
+      passage runs north into deeper dark. A low breach gapes west into a cramped
+      side cell, and steps climb back up to the light.
     # Reactive room text (bug_0011 shape): once the bar is in hand the rubble is
     # bare, so the room must stop narrating the bar as still lying there. Gated on
     # `has_item: iron_bar` — the closed condition DSL has no object-in-room
@@ -56,12 +57,32 @@ rooms:
       - when: [ { has_item: iron_bar } ]
         text: >
           A hall of fitted slabs. The rubble is scuffed bare where the rusted iron
-          bar lay until you took it up. A passage runs north into deeper dark, and
-          steps climb back up to the light.
+          bar lay until you took it up. A passage runs north into deeper dark, a low
+          breach gapes west into a cramped side cell, and steps climb back up to the
+          light.
     objects: [iron_bar]
     exits:
       - { direction: up, to: barrow_mouth }
       - { direction: north, to: guard_crypt }
+      - { direction: west, to: reaver_rest }
+
+  # Optional side beat (content_new, bug_0075). The pack's standing critique across
+  # every blind pass is brevity + linearity — "exactly one path and one meaningful
+  # choice", enjoyment 3/5 (ai-runs/.../playtest.md, seed 31). cold_forge was authored
+  # to answer that critique with a TALKING NPC the barrow itself never received; this
+  # retrofits the barrow with its own — an optional detour off the Entry Hall, met
+  # BEFORE the wight, so its counsel is a real choice the player makes ahead of the
+  # fight. It changes nothing on the existing critical path (rooms/combat/lever/score/
+  # win all untouched); the canonical victory trace simply skips it.
+  - id: reaver_rest
+    name: "The Reaver's Rest"
+    description: >
+      A cramped side cell, little more than a fault in the rock. Propped against the
+      far wall are the bones of some long-dead grave-robber who came down for the
+      same cold crown you seek and never climbed back to the light. A thin grey shade
+      still clings to them — watchful, with no warmth left in it, and no malice either.
+    exits:
+      - { direction: east, to: entry_hall }
 
   - id: guard_crypt
     name: "Guard Crypt"
@@ -179,7 +200,79 @@ objects:
     description: "A circlet of pale metal, cold and faintly luminous."
     takeable: true
 
-npcs: []
+npcs:
+  # The reaver's shade (content_new, bug_0075): the barrow's first NPC, mirroring the
+  # cold_forge lantern-spirit's proven shape — one-shot, conditional, MECHANICAL
+  # counsel, never a dead-payload rumor flag. Each info topic retires once told (gated
+  # on its own flag), so the +2-defense ward can be claimed only once and the node
+  # cannot loop; the ungated `leave_shade` keeps the root TERMINATING (a gated-only
+  # node would trip DIALOGUE_NONTERMINATING, cf. cold_forge bug_0014).
+  #
+  # The ward is HONEST and meaningful, not a toothless gift: the seed-31 blind pass
+  # rated the wight a real "even-ish trade ... I finished at 11 HP", so easing the cold
+  # blows (+2 defense) genuinely matters without trivialising a fight that is still
+  # winnable — and lethal — from base stats (the death ending stays reachable; the
+  # canonical route skips the shade entirely). Per the pack's honesty discipline
+  # (bug_0027/0029/0069) the shade does NOT over-sell the danger: it says plainly the
+  # ward "will not swing your blade for you". Every npc_text is PURE SPOKEN words — the
+  # engine renders `reaver's shade: "<words>"`, so the nodes carry no quote marks and no
+  # third-person stage narration (the sealed_crypt / cold_forge convention, bug_0071).
+  - id: reaver_shade
+    name: "reaver's shade"
+    description: "The thin grey shade of a grave-robber who came down for the crown and stayed — tired past fear and past malice, with nothing left but memory."
+    room: reaver_rest
+    dialogue:
+      root: shade_root
+      nodes:
+        - id: shade_root
+          npc_text: >
+            Another one, come down for the cold crown. I came for it too, once, and
+            got no farther than the wight's hall. Ask, if you will — I have had long
+            years down here with nothing to do but remember.
+          topics:
+            - id: ask_wight
+              prompt: "Ask how the barrow-wight bested him."
+              conditions: [ { not_flag: heard_warding } ]
+              goto: shade_wight
+            - id: ask_lord
+              prompt: "Ask about the Barrow-Lord and his crown."
+              conditions: [ { not_flag: heard_lord_lore } ]
+              goto: shade_lord
+            - id: leave_shade
+              prompt: "Leave the shade to its bones."
+              end: true
+        - id: shade_wight
+          npc_text: >
+            The wight? It is slow, and you are quick — you can best it where I could
+            not. But mind its hands: where they touch, the cold goes into you and the
+            strength runs out of your arm, and that is how it wore me down in the end.
+            Here — take the trick I learned too late: keep your guard close and let the
+            chill slide off the iron, not into you. It will not swing your blade for
+            you, but the cold will bite the less.
+          effects:
+            - set_flag: heard_warding
+            - inc_var: { name: defense, by: 2 }
+            - add_journal: "The reaver's shade teaches you to turn the wight's chill on your guard — its cold blows will bite the less now (+2 defense)."
+          topics:
+            - id: wight_back
+              prompt: "Nod, and ask something else."
+              goto: shade_root
+        - id: shade_lord
+          npc_text: >
+            The Barrow-Lord? A king of these hills before ever the songs were written,
+            laid down here with his pale circlet so the land above would keep its luck.
+            The crown is no cursed thing — only old, and cold, and his. The wight in the
+            empty niche was his sworn guard in life, set to bar the way to him, and it
+            keeps that watch still, long after it has forgotten why. Take the crown, if
+            that is what you came for. Only do not think to wake what sleeps beneath the
+            slab; the Lord is long past waking, and the land is the better for it.
+          effects:
+            - set_flag: heard_lord_lore
+            - add_journal: "The shade names the circlet the Barrow-Lord's own — old and cold, not cursed; the niche-wight was his sworn guard, keeping its watch long after forgetting why."
+          topics:
+            - id: lord_back
+              prompt: "Thank the shade, and ask something else."
+              goto: shade_root
 
 enemies:
   - id: barrow_wight
