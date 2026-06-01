@@ -43,6 +43,31 @@ rooms:
     description: >
       A walled herb garden gone to seed. A pale medicinal herb still grows by the
       wall, and something brass glints in the soil. The courtyard is west.
+    # Reactive prose (bug_0012): the bed/soil report what the player has already
+    # gathered. herb-gone = taken or steeped (any_of); brass-gone = held (the key
+    # is never consumed, so has_item is a durable "taken" signal).
+    variants:
+      - when:
+          - any_of: [{ has_item: herb }, { has_flag: herb_added }]
+          - has_item: brass_key
+        text: >
+          A walled herb garden gone to seed. The herb bed is bare where you cut the
+          pale herb, and the scuffed soil no longer hides anything brass. The
+          courtyard is west.
+      - when:
+          - any_of: [{ has_item: herb }, { has_flag: herb_added }]
+          - not_item: brass_key
+        text: >
+          A walled herb garden gone to seed. The herb bed is bare where you cut the
+          pale herb, but something brass still glints in the soil. The courtyard is
+          west.
+      - when:
+          - none_of: [{ has_item: herb }, { has_flag: herb_added }]
+          - has_item: brass_key
+        text: >
+          A walled herb garden gone to seed. A pale medicinal herb still grows by
+          the wall; the soil is scuffed where you prised something brass free. The
+          courtyard is west.
     objects: [herb, brass_key]
     exits:
       - { direction: west, to: courtyard }
@@ -53,6 +78,14 @@ rooms:
       A vaulted hall. A bolted cellar hatch is set in the floor; a stair winds up
       to a study, and an archway opens north into the laboratory. The courtyard
       is south.
+    # Reactive prose (bug_0012): once the iron key throws the bolt, the hatch reads
+    # as open rather than bolted.
+    variants:
+      - when: [{ has_flag: cellar_unlocked }]
+        text: >
+          A vaulted hall. The cellar hatch stands thrown open in the floor, a dark
+          stair dropping away below; another stair winds up to a study, and an
+          archway opens north into the laboratory. The courtyard is south.
     objects: [cellar_door]
     exits:
       - { direction: south, to: courtyard }
@@ -66,6 +99,11 @@ rooms:
   - id: study
     name: "Cluttered Study"
     description: "An alchemist's study. A locked iron strongbox sits on the desk. The hall is back down."
+    # Reactive prose (bug_0012): holding the iron key means the strongbox has been
+    # unlocked and emptied, so it no longer reads as a locked box.
+    variants:
+      - when: [{ has_item: iron_key }]
+        text: "An alchemist's study. The iron strongbox sits open and empty on the desk, its brass lock sprung. The hall is back down."
     objects: [strongbox]
     exits:
       - { direction: down, to: great_hall }
@@ -73,6 +111,10 @@ rooms:
   - id: cellar
     name: "Cold Cellar"
     description: "A damp store-cellar. A vial of clear spring water rests in a rack. The hatch is back up."
+    # Reactive prose (bug_0012): water-gone = taken or poured into the brew (any_of).
+    variants:
+      - when: [{ any_of: [{ has_item: water_vial }, { has_flag: antidote_brewed }] }]
+        text: "A damp store-cellar. The rack stands empty where the vial of spring water rested. The hatch is back up."
     objects: [water_vial]
     exits:
       - { direction: up, to: great_hall }
