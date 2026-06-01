@@ -14,8 +14,13 @@
  *  - Item obtainability is a fixpoint over reachable rooms + openable containers
  *    whose key is itself obtainable. It ignores ordering ("before it is needed").
  *  - quest_critical loss is guarded two ways: an item consumed by an effect with
- *    no re-grant, and an item droppable in a non-strongly-connected map (a room
- *    you cannot return to). Both are sound over-approximations of "can be lost".
+ *    no re-grant *while it is still needed in hand at a gate that does not consume
+ *    it*, and an item droppable in a non-strongly-connected map (a room you cannot
+ *    return to). An item whose every "must hold it" requirement coincides with the
+ *    interaction that spends it has merely been SPENT for permanent progress (e.g.
+ *    a rope tied off to open a well that then stays open by flag), not lost — so
+ *    consuming it cannot wedge the quest. Both checks are sound over-approximations
+ *    of "can be lost".
  */
 import { exitFlag, type Effect } from "../core/effects.js";
 import type { Condition } from "../core/conditions.js";
@@ -297,6 +302,34 @@ export function validateParser(
         if ("remove_item" in e) removed.set(e.remove_item, `object:${o.id}`);
     }
   }
+  // "Needed in hand somewhere it is NOT spent": an item is only LOST (not merely
+  // SPENT) by a consume if it is still required to be held at a gate that does not
+  // itself consume it. We collect every must-hold-this-item requirement — an
+  // interaction's `item:` field, has_item conditions on exits/interactions/win/
+  // dialogue — and tag whether that same site also removes it. An item required
+  // only at the site(s) that consume it has had its job discharged at the moment
+  // it is spent (a tied-off rope, a key snapped in a one-way lock) and cannot
+  // wedge the quest; an item required anywhere else is genuinely at risk.
+  const neededWhileHeld = new Set<string>();
+  const noteHeld = (id: string, consumedHere: boolean): void => {
+    if (!consumedHere) neededWhileHeld.add(id);
+  };
+  for (const o of pack.objects) {
+    for (const it of o.interactions) {
+      const consumes = (id: string): boolean =>
+        it.effects.some((e) => "remove_item" in e && e.remove_item === id);
+      if (it.item !== undefined) noteHeld(it.item, consumes(it.item));
+      for (const id of itemReqs(it.conditions)) noteHeld(id, consumes(id));
+    }
+  }
+  for (const room of pack.rooms)
+    for (const exit of room.exits) for (const id of itemReqs(exit.conditions)) noteHeld(id, false);
+  for (const wc of pack.win_conditions)
+    for (const id of itemReqs(wc.conditions)) noteHeld(id, false);
+  for (const npc of pack.npcs)
+    for (const node of npc.dialogue.nodes)
+      for (const t of node.topics)
+        for (const id of itemReqs(t.conditions ?? [])) noteHeld(id, false);
   // Strong connectivity over reachable, non-terminal rooms: a droppable item can
   // always be retrieved iff you can return to any room you can leave.
   const safeRooms = [...reachable].filter((r) => !winRooms.has(r));
@@ -304,11 +337,11 @@ export function validateParser(
   for (const o of pack.objects) {
     if (!o.quest_critical) continue;
     const rm = removed.get(o.id);
-    if (rm && !granted.has(o.id)) {
+    if (rm && !granted.has(o.id) && neededWhileHeld.has(o.id)) {
       findings.push(
         err(
           "SOFTLOCK_QUEST_ITEM",
-          `quest_critical "${o.id}" is consumed (removed) with no re-grant — it can be permanently lost.`,
+          `quest_critical "${o.id}" is consumed (removed) with no re-grant while still needed in hand elsewhere — it can be permanently lost.`,
           [`object:${o.id}`],
         ),
       );

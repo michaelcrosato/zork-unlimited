@@ -30,6 +30,7 @@ describe("parser validator — negative fixtures must fail (§10.4)", () => {
     ["parser_win_unreachable", "WIN_UNREACHABLE"],
     ["parser_softlock", "SOFTLOCK"],
     ["parser_softlock_quest_item", "SOFTLOCK_QUEST_ITEM"],
+    ["parser_softlock_quest_item_consumed", "SOFTLOCK_QUEST_ITEM"],
     ["parser_duplicate_id", "DUPLICATE_ID"],
     ["parser_ambiguous_alias", "AMBIGUOUS_ALIAS"],
     ["parser_dialogue_nonterminating", "DIALOGUE_NONTERMINATING"],

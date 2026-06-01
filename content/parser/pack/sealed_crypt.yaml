@@ -160,7 +160,13 @@ objects:
           - set_flag: rope_attached_to_well
           - unlock_exit: { from: old_well, to: well_bottom }
           - inc_var: { name: score, by: 10 }
-          - narrate: "You tie the rope to the iron ring. It uncoils into the dark below."
+          # The rope leaves your hands here: it is knotted fast to the ring and left
+          # trailing down the shaft (it stays your way back up). Removing it keeps
+          # the fiction honest — you no longer "carry" a coil the well now holds. The
+          # well exit stays open by the rope_attached_to_well flag, never by has_item,
+          # so the rope is SPENT, not lost (no soft-lock; see parser_validator).
+          - remove_item: rope
+          - narrate: "You knot the rope fast to the iron ring and pay it out into the dark below. It hangs taut down the shaft now — your way down, and your way back up."
 
   - id: stone_coffer
     name: "stone coffer"
