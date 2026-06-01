@@ -51,6 +51,20 @@ rooms:
     description: >
       The bell is long gone, but its great hemp pull-rope still hangs coiled on
       a peg. Stairs lead back down.
+    # Reactive room text (same pattern as old_well/crypt): while the coil is in your
+    # hands the peg is bare, so the base "still hangs coiled" line no longer describes
+    # a rope the player just pocketed. Keyed on has_item rope (not the well flag) on
+    # purpose — `remove_item` at the well (bug_0034) only empties your hands, it does
+    # not place the rope anywhere, so the object falls back to its home room and is
+    # shown present here again; in that (and the never-taken / dropped-back) state the
+    # rope IS visible in this room, so the base text correctly still applies and never
+    # contradicts visible_objects. Closes the stale-state class the blind playtest
+    # flagged (you take the rope, the room still says it hangs; cf. bug_0007/0039).
+    variants:
+      - when: [{ has_item: rope }]
+        text: >
+          The bell is long gone, and the peg where its great hemp pull-rope hung
+          is bare now — the coil is in your hands. Stairs lead back down.
     objects: [rope]
     exits:
       - { direction: down, to: chapel_yard }

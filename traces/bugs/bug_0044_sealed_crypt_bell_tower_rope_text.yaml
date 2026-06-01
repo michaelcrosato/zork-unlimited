@@ -1,0 +1,66 @@
+bug_id: bug_0044
+pack_id: sealed_crypt_v1
+seed: 47                          # this cycle's rotated blind-playtest seed; the regression drives seed 47
+type: content_fix                 # reactive room text only — no engine/validator/schema/flag/item/score/exit/gating change
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-01T13-07-14-415Z/playtest.md   # clockwork_heist (mandated target) — confabulated finding, see below
+  rotated_report: ai-runs/2026-06-01T13-07-14-415Z/playtest_sealed_crypt.md   # The Sealed Crypt, seed 47 — this fix's source
+  rotated_result: >
+    ROTATED the actual improvement off the assessor's rank-1 clockwork_heist. The mandated blind
+    playtest (clockwork, seed 103) reached all four endings, clarity 5/5 / enjoyment 4/5, and its
+    one "real flaw" — that the shared ending_truth text says the letter was "laid out in plain
+    sight … among the gold," contradicting the crawlspace's hidden-copy framing — was VERIFIED FALSE
+    against the engine: I replayed the crawlspace→ending_truth route via MCP and the actual ending
+    text is path-agnostic ("…nothing but the truth. Some things are worth more than escaping rich."),
+    containing no "plain sight" phrasing. That phrasing lives only in the vault SCENE (bug_0041's
+    paired-copy framing); the playtester attributed a scene description to the ending. clockwork is
+    pristine on its 5th independent blind pass; per blind_playtest_protocol.md's "rotate the seed and
+    rotate the pack" I played the least-recently full-blind-quality-tested pack, The Sealed Crypt
+    (parser), seed 47 (+seed 99 adversarial gating probe). Result: WON ending_victory 35/35; clarity
+    5/5, enjoyment 3/5; zero rejected actions, no loops, no soft-locks; gating clean both directions.
+  finding: >
+    Bell Tower (rotated report §5): after `take rope` the static room description still reads "its
+    great hemp pull-rope still hangs coiled on a peg," even though visible_objects correctly drops the
+    rope and it sits in inventory. Stale "still-present" text contradicting the state the player just
+    made — the same class as bug_0007/0010/0039. The Bell Tower was the one room with a takeable
+    object that never received a reactive `variant` (old_well and crypt already react via variants).
+  also_reported_confabulation: >
+    The same report claimed the crypt-gate score increment is +35 (over-counting past a 15 running
+    total, hidden by max-clamping). VERIFIED FALSE from source AND live engine: the awards are
+    headstone +5, rope-on-well +10, crypt gate +20 = exactly 35 = max_score; no clamp, no over-count.
+    The live score events read +10 and +20, not +15/+35. The playtester misread the increment values.
+    No fix warranted.
+root_cause: >
+  bell_tower.description hard-codes the rope on its peg with no reactive `variant`, so it cannot
+  react when the rope is taken — unlike old_well (rope_attached_to_well variant) and crypt
+  (catacombs_open variant). The reactive-room-text feature (bug_0010) was simply never applied here.
+improvement:
+  layer: content
+  content:
+    - content/parser/pack/sealed_crypt.yaml: >
+        bell_tower gains ONE reactive `variant`, when [{ has_item: rope }] → "the peg where its great
+        hemp pull-rope hung is bare now — the coil is in your hands." Keyed on has_item rope, NOT the
+        rope_attached_to_well flag, ON PURPOSE: `remove_item` at the well (bug_0034) only empties your
+        hands — it does not place the rope in any room — so the object falls back to its home room and
+        is shown present in the Bell Tower again. Keying on the flag would make the text read "bare"
+        while visible_objects still lists the rope (a NEW contradiction); keying on has_item shows
+        "bare" exactly when the rope is in hand (visible_objects empty) and otherwise (never-taken,
+        dropped-back, or returned-home-after-tying) falls back to the base text while the rope IS
+        present — so room text and visible_objects never disagree. No flag/item/score/exit/gating/
+        reachable-ending change.
+verification:
+  - npm run validate -- content/parser/pack/sealed_crypt.yaml    # OK 0/0 (variants carry no effects; reachability/scoring unanalyzed)
+  - live MCP replay (seed 47): before-take shows coiled+rope present; after-take shows "bare now"+rope gone (state_hash byte-identical to pre-fix → prose-only); tie-then-return shows base text+rope present (self-consistent)
+  - npm run health                                               # exit 0 (verify:integrity static + typecheck + ESLint + Prettier + tests + every pack validate + watchtower coverage)
+locked_by:
+  - tests/regression/sealed_crypt_bell_tower_rope_text.test.ts   # 4 cases: coiled+present before take; bare+absent after take (look matches obs); tie→return reverts to base text+present (no text/object contradiction); full route still wins 35/35
+notes:
+  verifier_integrity: >
+    content/parser/pack/sealed_crypt.yaml is NOT a protected file and NO test pins its content hash
+    (only watchtower_road is hash-pinned), so adding the variant moves the pack's content hash but
+    requires no re-pin and trips no HASH_PIN drift. No protected source touched, no override used.
+  content_hash: >
+    Deliberate, surfaced sealed_crypt content-hash change (no test pins it): the pack reads a new
+    hash after the bell_tower variant edit (recorded here only; tests assert behavior, not the hash).
