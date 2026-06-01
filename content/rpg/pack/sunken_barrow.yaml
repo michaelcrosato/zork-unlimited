@@ -1,0 +1,134 @@
+# The Sunken Barrow — a Stage 4 (Hero's-Quest) pack (spec §13, §14 gate).
+#
+# Demonstrates the gated RPG mechanics over the same deterministic core:
+#   - character stats as numeric vars (hp / attack / defense / might)
+#   - one turn-based, seeded fight (the barrow-wight) gating a flag
+#   - one seeded skill check (might) gating a quest stage
+#   - a death ending recoverable via an earlier save (§8.7)
+# Every fight/check is replayable because its randomness flows through the seeded
+# PRNG (§8.5). The pack passes the full parser validator AND the RPG checks.
+
+meta:
+  id: sunken_barrow_v1
+  title: "The Sunken Barrow"
+  start_room: barrow_mouth
+  vars_init: { hp: 20, attack: 4, defense: 2, might: 3 }
+  flags_init: []
+  max_score: 0
+
+rooms:
+  - id: barrow_mouth
+    name: "Barrow Mouth"
+    description: >
+      A low arch of turf-bound stone opens into the hillside. Cold air sighs up
+      from the dark. The only way is down.
+    exits:
+      - { direction: down, to: entry_hall }
+
+  - id: entry_hall
+    name: "Entry Hall"
+    description: >
+      A hall of fitted slabs. A rusted iron bar lies among fallen rubble, and a
+      passage runs north into deeper dark. Steps climb back up to the light.
+    objects: [iron_bar]
+    exits:
+      - { direction: up, to: barrow_mouth }
+      - { direction: north, to: guard_crypt }
+
+  - id: guard_crypt
+    name: "Guard Crypt"
+    description: >
+      Niches line the walls, each holding the dust of a forgotten guard. One
+      niche is empty — and something has climbed out of it. An archway east is
+      choked with the cold the thing gives off.
+    exits:
+      - { direction: south, to: entry_hall }
+      - direction: east
+        to: slab_passage
+        conditions: [ { has_flag: wight_slain } ]
+        locked_msg: "The barrow-wight bars the way; you cannot pass while it stands."
+
+  - id: slab_passage
+    name: "Slab Passage"
+    description: >
+      The passage ends at a great stone slab set flush with the floor, its edge
+      gripped by a worn iron lip — made to be levered, by someone strong enough.
+    objects: [stone_slab]
+    exits:
+      - { direction: west, to: guard_crypt }
+      - direction: down
+        to: relic_chamber
+        conditions: [ { quest_stage: { quest: barrow, stage: slab_moved } } ]
+        locked_msg: "The slab is shut fast. It must be levered aside first."
+
+  - id: relic_chamber
+    name: "Relic Chamber"
+    description: >
+      Below the slab, a small vaulted chamber. On a plinth of black stone rests
+      the Barrow-Lord's circlet, pale with its own light.
+    objects: [circlet]
+    on_enter:
+      - add_journal: "You have reached the relic chamber."
+    exits:
+      - { direction: up, to: slab_passage }
+
+objects:
+  - id: iron_bar
+    name: "iron bar"
+    aliases: [bar, lever, iron]
+    description: "A rusted but sound iron bar, the length of your arm. A lever, if you have the strength."
+    takeable: true
+
+  - id: stone_slab
+    name: "stone slab"
+    aliases: [slab, stone]
+    description: "A great floor slab with an iron-gripped lip. With a lever and real might, it might shift."
+    takeable: false
+    interactions:
+      - verb: USE
+        item: iron_bar
+        target: stone_slab
+        skill_check:
+          skill: might
+          difficulty: 12
+          on_success:
+            - set_quest_stage: { quest: barrow, stage: slab_moved }
+            - narrate: "Tendons cracking, you heave — and the slab grinds aside, baring a stair down."
+          on_failure:
+            - narrate: "The bar bites, your shoulders strain, but the slab does not give. Set your feet and try again."
+
+  - id: circlet
+    name: "Barrow-Lord's circlet"
+    aliases: [circlet, relic, crown]
+    description: "A circlet of pale metal, cold and faintly luminous."
+    takeable: true
+
+npcs: []
+
+enemies:
+  - id: barrow_wight
+    name: "barrow-wight"
+    description: "A grave-cold figure of dried sinew and malice, risen from an empty niche."
+    room: guard_crypt
+    hp: 12
+    attack: 3
+    defense: 1
+    defeat_flag: wight_slain
+    death_ending: ending_fallen
+    on_defeat:
+      - add_journal: "The barrow-wight crumbles; the cold lifts from the east arch."
+
+win_conditions:
+  - id: claim_relic
+    conditions: [ { visited: relic_chamber } ]
+    ending: ending_victory
+
+endings:
+  - id: ending_victory
+    title: "Lord of the Barrow"
+    text: "You lift the circlet from its plinth. The barrow is yours, and the light comes up the stair with you."
+    death: false
+  - id: ending_fallen
+    title: "Another Niche Filled"
+    text: "The cold closes over you. In time, something else will climb from the niche where you fell."
+    death: true

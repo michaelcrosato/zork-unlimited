@@ -1,0 +1,63 @@
+{
+  "trace_id": "tr_barrow_victory",
+  "pack_id": "sunken_barrow_v1",
+  "content_hash": "39f9551e9ca1decd5cbd6ba92ef1b5fe4664f9e07b2500664f07d8ac8ff4add9",
+  "seed": 1,
+  "initial_state": {
+    "seed": 1,
+    "step": 0,
+    "current": "barrow_mouth",
+    "visited": {
+      "barrow_mouth": true
+    },
+    "flags": {},
+    "vars": {
+      "hp": 20,
+      "attack": 4,
+      "defense": 2,
+      "might": 3
+    },
+    "inventory": [],
+    "objectState": {},
+    "journal": [],
+    "questStage": {},
+    "ended": false,
+    "endingId": null
+  },
+  "actions": [
+    {
+      "type": "MOVE",
+      "direction": "down"
+    },
+    {
+      "type": "TAKE",
+      "item": "iron_bar"
+    },
+    {
+      "type": "MOVE",
+      "direction": "north"
+    },
+    {
+      "type": "ATTACK",
+      "enemy": "barrow_wight"
+    },
+    {
+      "type": "ATTACK",
+      "enemy": "barrow_wight"
+    },
+    {
+      "type": "MOVE",
+      "direction": "east"
+    },
+    {
+      "type": "USE",
+      "item": "iron_bar",
+      "target": "stone_slab"
+    },
+    {
+      "type": "MOVE",
+      "direction": "down"
+    }
+  ],
+  "expected_final_hash": "007fdea09e361c69c1e8f9064e87ac102a489f41a1d23ca8a4b5363a297d1874"
+}

@@ -25,7 +25,10 @@ export type Action =
   | { type: "GIVE"; item: string; npc: string }
   | { type: "READ"; target: string }
   | { type: "INSPECT"; target: string }
-  | { type: "INVENTORY" };
+  | { type: "INVENTORY" }
+  // RPG (Stage 4, §13) — arrives through the §14 engine-extension gate. One ATTACK
+  // is one deterministic, seeded combat round resolved entirely in code.
+  | { type: "ATTACK"; enemy: string };
 
 export type StepResult = {
   state: GameState; // NEW state (engine is pure; input state unmutated)

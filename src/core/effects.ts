@@ -26,6 +26,9 @@ export const EffectSchema = z.union([
   z.object({ open_object: z.string().min(1) }).strict(),
   z.object({ set_object_locked: z.object({ id: z.string().min(1), locked: z.boolean() }).strict() }).strict(),
   z.object({ place_object: z.object({ id: z.string().min(1), room: z.string().min(1) }).strict() }).strict(),
+  // Stage 4 (§13, §14 gate): advance a quest to a named stage. Reuses the
+  // questStage field already in GameState (§6); deterministic, no randomness.
+  z.object({ set_quest_stage: z.object({ quest: z.string().min(1), stage: z.string().min(1) }).strict() }).strict(),
   z.object({ narrate: z.string() }).strict(),
   z.object({ end_game: z.string().min(1) }).strict(),
 ]);
@@ -142,6 +145,12 @@ export function applyEffect(effect: Effect, state: GameState): { state: GameStat
     return {
       state: { ...state, objectState: patchObject(state, effect.place_object.id, { room: effect.place_object.room }) },
       event: { type: "state_change", effect: "place_object", id: effect.place_object.id, room: effect.place_object.room },
+    };
+  }
+  if ("set_quest_stage" in effect) {
+    return {
+      state: { ...state, questStage: { ...state.questStage, [effect.set_quest_stage.quest]: effect.set_quest_stage.stage } },
+      event: { type: "state_change", effect: "set_quest_stage", quest: effect.set_quest_stage.quest, stage: effect.set_quest_stage.stage },
     };
   }
   if ("narrate" in effect) {

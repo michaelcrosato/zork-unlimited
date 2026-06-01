@@ -34,8 +34,9 @@ function present(index: ParserIndex, state: GameState, id: string): boolean {
   return visibleObjectIds(index, state, state.current).includes(id);
 }
 
-/** Find the USE interaction (if any) for using `item` on `target`. */
-function useInteraction(index: ParserIndex, target: string, item: string): Interaction | undefined {
+/** Find the USE interaction (if any) for using `item` on `target`. Exported so the
+ *  RPG runner (Stage 4) can detect a skill-check interaction before resolving. */
+export function useInteraction(index: ParserIndex, target: string, item: string): Interaction | undefined {
   return index.objects.get(target)?.interactions.find((it) => it.verb === "USE" && it.item === item && it.target === target);
 }
 

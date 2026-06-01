@@ -25,7 +25,19 @@ import { type Finding, type ValidationReport, makeReport } from "./report.js";
 const err = (code: string, message: string, where: string[]): Finding => ({ severity: "error", code, message, where });
 const warn = (code: string, message: string, where: string[]): Finding => ({ severity: "warning", code, message, where });
 
-export function validateParser(pack: ParserPack): ValidationReport {
+/**
+ * Extra facts a higher layer (the RPG validator, §13 Stage 4) can inject: flags
+ * that runtime mechanics set (enemy defeat flags, skill-check successes) and items
+ * those mechanics grant. They seed the feasibility/obtainability checks so a gate
+ * legitimately satisfied by combat/skills is not mis-flagged as impossible.
+ * Defaults are empty, so Stage-2/3 behavior is byte-identical.
+ */
+export type ValidateParserOptions = {
+  extraSettableFlags?: string[];
+  extraObtainable?: string[];
+};
+
+export function validateParser(pack: ParserPack, opts: ValidateParserOptions = {}): ValidationReport {
   const findings: Finding[] = [];
   const roomIds = new Set(pack.rooms.map((r) => r.id));
   const objById = new Map(pack.objects.map((o) => [o.id, o]));
@@ -113,9 +125,10 @@ export function validateParser(pack: ParserPack): ValidationReport {
 
   // ── Obtainability fixpoint (items reachable to pick up) ──────────────────────
   const obtainable = computeObtainable(pack, objById, reachable);
+  for (const it of opts.extraObtainable ?? []) obtainable.add(it);
 
   // ── Settable flags (provided by some effect or flags_init) ───────────────────
-  const settable = new Set<string>(pack.meta.flags_init);
+  const settable = new Set<string>([...pack.meta.flags_init, ...(opts.extraSettableFlags ?? [])]);
   for (const e of allEffects(pack)) {
     if ("set_flag" in e) settable.add(e.set_flag);
     if ("unlock_exit" in e) settable.add(exitFlag(e.unlock_exit.from, e.unlock_exit.to));

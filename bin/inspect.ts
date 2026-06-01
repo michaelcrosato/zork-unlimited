@@ -17,6 +17,8 @@ import { buildObservation } from "../src/cyoa/observation.js";
 import { validateCyoa } from "../src/validate/cyoa_validator.js";
 import { loadParserPackFile } from "../src/parser/pack.js";
 import { validateParser } from "../src/validate/parser_validator.js";
+import { loadRpgPackFile } from "../src/rpg/pack.js";
+import { validateRpg } from "../src/validate/rpg_validator.js";
 import { makeStep } from "../src/core/engine.js";
 import { diagnose } from "../agents/debugger.js";
 import { replayTrace } from "../src/trace/replay.js";
@@ -113,8 +115,25 @@ function main(): void {
     inspectTrace(path, pack);
     return;
   }
-  if (!!raw && typeof raw === "object" && "rooms" in raw) inspectParserPack(path);
+  const isObj = !!raw && typeof raw === "object";
+  if (isObj && "enemies" in raw) inspectRpgPack(path);
+  else if (isObj && "rooms" in raw) inspectParserPack(path);
   else inspectCyoaPack(path);
+}
+
+function inspectRpgPack(path: string): void {
+  const result = loadRpgPackFile(path);
+  if (!result.ok) {
+    console.error(`Schema error in ${path}.`);
+    process.exit(1);
+  }
+  const { pack, contentHash } = result.compiled;
+  console.log(`Pack: ${pack.meta.id} "${pack.meta.title}"  mode: rpg  hash: ${contentHash}`);
+  console.log(`  rooms: ${pack.rooms.length}  objects: ${pack.objects.length}  enemies: ${pack.enemies.length}  win_conditions: ${pack.win_conditions.length}`);
+  console.log(`  start_room: ${pack.meta.start_room}  stats: ${JSON.stringify(pack.meta.vars_init)}`);
+  const skillChecks = pack.objects.flatMap((o) => o.interactions).filter((it) => it.skill_check).length;
+  console.log(`  enemies: ${pack.enemies.map((e) => `${e.id}(hp${e.hp})`).join(", ") || "none"}  skill checks: ${skillChecks}`);
+  console.log("\n" + formatReport(validateRpg(pack)));
 }
 
 main();

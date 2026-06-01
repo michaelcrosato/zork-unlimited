@@ -33,8 +33,24 @@ export const RoomSchema = z
   })
   .strict();
 
+/**
+ * A seeded skill check (Stage 4, §13, §14 gate). When an interaction carries one,
+ * the RPG runner rolls d20 + the named skill var against `difficulty` using the
+ * step's deterministic PRNG, then applies `on_success` or `on_failure`. Optional
+ * and absent on every Stage-2/3 pack, so those packs' content hashes are unchanged.
+ */
+export const SkillCheckSchema = z
+  .object({
+    skill: z.string().min(1), // the var rolled (e.g. "lockpicking", "might")
+    difficulty: z.number().int(),
+    on_success: z.array(EffectSchema).default([]),
+    on_failure: z.array(EffectSchema).default([]),
+  })
+  .strict();
+
 /** A puzzle step: a verb applied to a target (optionally with an item), gated by
- *  conditions, producing effects. The Stage-2 puzzle mechanic (§7.3). */
+ *  conditions, producing effects. The Stage-2 puzzle mechanic (§7.3). A Stage-4
+ *  interaction may additionally carry a `skill_check` resolved by the RPG runner. */
 export const InteractionSchema = z
   .object({
     verb: z.enum(["USE", "READ", "INSPECT", "OPEN", "CLOSE"]),
@@ -42,6 +58,7 @@ export const InteractionSchema = z
     target: z.string().min(1).optional(),
     conditions: z.array(ConditionSchema).default([]),
     effects: z.array(EffectSchema).default([]),
+    skill_check: SkillCheckSchema.optional(),
   })
   .strict();
 
@@ -146,6 +163,7 @@ export const ParserPackSchema = z
 
 export type Exit = z.infer<typeof ExitSchema>;
 export type Room = z.infer<typeof RoomSchema>;
+export type SkillCheck = z.infer<typeof SkillCheckSchema>;
 export type Interaction = z.infer<typeof InteractionSchema>;
 export type GameObject = z.infer<typeof ObjectSchema>;
 export type DialogueTopic = z.infer<typeof DialogueTopicSchema>;
