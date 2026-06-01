@@ -1,13 +1,111 @@
 # AdventureForge — implementation roadmap (local plan-ultra)
 
-Produced by a 7-agent local planning workflow (6 grounded investigators + 1
-adversarial critic that re-read the source to verify every claim). This is the
-*corrected* plan — the critic found six verified blocking defects in the first
-draft; their fixes are baked into the sequencing and acceptance criteria below.
-
 Guiding invariants (non-negotiable, from the spec): determinism §8.5 · content is
 data never code §16 · new engine verbs only via the §14 gate · every fix gets a
 regression test + bug artifact §15 · tests run on the mock provider, no keys.
+
+---
+
+# Roadmap v2 — post-Milestone-1 (current)
+
+Milestone 1 (multi-mode MCP) is **done and on `main`**. This v2 plan was produced
+by a second 7-agent local workflow that *verified the post-M1 code* first; the
+adversarial critic then caught a false core assumption and a silent determinism
+hole. Corrections are baked in below. (The original pre-M1 plan is preserved
+verbatim further down for provenance.)
+
+## ✅ Confirmed done by Milestone 1 — do NOT redo
+Multi-mode MCP dispatch (`indexFor/rulesFor/initStateFor/buildObsFor`), `list_stories`
+across all three pack dirs, mode-aware `run_playtest` (parser/RPG walk the room
+graph), `Session` carrying `mode`+`AnyIndex`, `RpgObservation.mode:'rpg'`, mode-bound
+save/load. Also already present from Stage 4: `quest_stage` condition +
+`set_quest_stage` effect. And `runActions()` already returns per-step `hashes[]`
+and `ReplayResult.divergedAtStep` is already a reserved field — so Trace v2 (1c) is
+mostly *persisting* what already exists.
+
+## ⚠️ v2 blocking corrections (the critic's verified findings)
+1. **SAFE-0 must be a single canonical item, merged first.** The loop.sh §14
+   git-add leak was triplicated across 2b/M3/4b with *conflicting* whitelists. Make
+   it ONE item that whitelists only `content/**/pack/*.yaml`, `tests/regression/*`,
+   `tests/unit/*hashes*`, `traces/bugs/*`, `AI_LOOP_STATE.md` — and **excludes
+   `src/`, `bin/`, `scripts/`, `loop.sh` itself, and the deleted `AFKGOAL.md`**, and
+   refuses to commit if any `src/` file changed. **Every** autonomous-editing item
+   (2a-4, 2b-4, M3a, M3b-fixer-rpg, 4b-2) depends on SAFE-0. It's the highest-leverage
+   next item (effort S) and the biggest open hole now that M1 is merged.
+2. **The CYOA route is NOT reusable on parser/RPG (false assumption).** Parser/RPG
+   `available_actions` ids are enumerated verb-object ids (`go_north`, `take_rope`),
+   not the watchtower `TRUE_ROUTE` choice ids. `playRoute` would throw on every
+   parser/RPG pack. Correct scope: a **per-pack route registry** + **exits-driven
+   exploration** for parser/RPG. Action *selection* is by `.id` for all modes (the
+   `.text` vs `.command` split only matters for human-readable heuristics). This
+   makes the loop-generalize item **L, not M**.
+3. **Re-pin the RIGHT file.** The live watchtower content-hash pin is in
+   `tests/unit/rpg_validator.test.ts` (line ~58), **not** `watchtower_blind_fixes.test.ts`
+   (which asserts determinism, not a pinned content hash). Any content edit (M3a)
+   must re-pin `rpg_validator.test.ts` **and** `traces/bugs/bug_0002_*.yaml` — missing
+   this is a silent determinism-regression hole.
+4. **Hash-pin drift = refuse-and-surface, never loop auto-repin.** A loop that
+   auto-rewrites a regression test's expected hash and commits can launder a behavior
+   change into a "fix" (§14/§15 hazard). The loop must **refuse and surface** drift
+   for human re-pin. (Drops 2b-5 from M to S.)
+5. **Extending the fixer to RPG must also touch `src/mcp/server.ts`** (its
+   `apply_content_patch` schema mirrors the fixer's `cyoa|parser` enum) and ride the
+   §14 gate. Until then, RPG packs are **playtested but never auto-fixed**.
+6. Don't regenerate committed v1 traces when Trace v2 lands (the "committed trace
+   replays forever" invariant, §8.5); migrate legacy `ai-runs` evidence to `mode:'cyoa'`.
+   Fix Milestone-5 file paths (the agent emitted a `zork-undefined` templating typo).
+
+## Critical path (corrected, ordered)
+```
+SAFE-0  loop.sh §14 whitelist (excl src/bin/scripts/loop.sh/AFKGOAL.md, refuse on src change)  ← FIRST, gates all auto-editing
+  └─ M3-hashpin   pin all 5 pack hashes in ONE place + fix the real pin (rpg_validator.test.ts)
+       └─ M3-ci   CI asserts pinned hashes (drift fails loudly)
+2a-1  ai-loop.ts → AnyObservation union           (unblocks non-CYOA play)
+  └─ 2a-2/2a-3 (L)  per-pack routes + exits-driven exploration; select by .id
+       └─ 2a-4  pack discovery + deterministic rotation
+            └─ 2b-2  blind-playtest handoff (emit locked prompt, parse report)
+                 └─ 2b-3  gate RPG out of apply_content_patch (fixer + server.ts)
+                      └─ 2b-4  auto-apply patch → re-validate → bug artifact + regression (cyoa|parser)
+                           └─ 2b-5  hash-drift = refuse-and-surface (NOT auto-repin)
+M3a  fix 5 watchtower findings + re-pin rpg_validator.test.ts + bug_0002      (after SAFE-0+hashpin)
+```
+Independent / parallel after SAFE-0: **1c (Trace v2)** → M5 replay viewer; **1b
+adapter→parser/RPG** → M3 fresh content + M4 fresh-pack benchmark; cross-cutting
+(ESLint/Prettier **must** depend on SAFE-0; coverage; §16 path-fuzz; CONTRIBUTING/LICENSE).
+
+## Milestones (refreshed)
+- **M2 — autonomous content engine** *(next; needs SAFE-0 first)*: generalize
+  `ai-loop.ts` to rotate packs across modes (per-pack routes + exits exploration),
+  emit the blind-playtest handoff, auto-fix cyoa|parser via `apply_content_patch`
+  with refuse-and-surface drift handling, one-PR-per-cycle, budget caps.
+- **M3 — content/mechanics/gate**: 5 watchtower findings (re-pin correctly);
+  consumables via §14 (new `consume_item` effect + `has_consumed` condition, full
+  gate bundle incl backward-compat replay over ALL committed traces) — *decoupled
+  from the narrative fixes*; multi-enemy/XP/quest-stage RPG depth; 2nd RPG pack;
+  larger Sierra pack; **1b adapter→parser/RPG**; gate-as-CI pinning *every* pack
+  incl `clockwork_heist`.
+- **M4 — benchmark**: objective scorecard from mode-tagged `run_playtest` +
+  persona/blind reports; optional LLM-judge (cost-gated, offline by default);
+  fresh-pack flow depends on 1b. Optional Jericho/TALES adapter.
+- **M5 — UI + Trace v2**: 1c first (additive `per_step_hashes`, populate
+  `divergedAtStep`, backward-compatible with committed traces) → browser save/load,
+  trace replay viewer (needs 1c), validation panel, `adapt_story` playground, then
+  a scene/map renderer over identical structured state.
+- **Cross-cutting**: ESLint+Prettier (L; **after SAFE-0**), coverage in CI,
+  CONTRIBUTING/LICENSE/SECURITY, §16 MCP hardening (sandbox + path-confinement fuzz
+  of `src/mcp/paths.ts`) — required before any networked deployment.
+
+## Recommendation
+**Do SAFE-0 next** — one small, high-leverage commit that closes the §14 leak and
+unblocks the entire autonomous-content-fix loop safely. Then `M3-hashpin`/`M3-ci`
+to establish drift detection, then the `2a → 2b` chain for Milestone 2.
+
+---
+
+# Roadmap v1 — pre-Milestone-1 (preserved for provenance)
+
+Produced by the first 7-agent workflow. Milestone 1 (Phase 1a) below is now done;
+the rest still applies as refined by v2 above.
 
 ---
 
