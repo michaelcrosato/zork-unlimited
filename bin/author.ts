@@ -13,6 +13,7 @@
 import { writeFileSync } from "node:fs";
 import { stringify as toYaml } from "yaml";
 import { MockAuthorProvider } from "../agents/authoring/mock_author.js";
+import { resolveProvider } from "../agents/llm/providers.js";
 import { loadEngineContract, runWriter } from "../agents/authoring/writer.js";
 import { runAdapter } from "../agents/authoring/adapter.js";
 import { formatReport } from "../src/validate/report.js";
@@ -28,7 +29,10 @@ async function main(): Promise<void> {
     if (process.argv[i] === "--out") out = process.argv[++i] ?? null;
   }
 
-  const provider = new MockAuthorProvider();
+  // Deterministic mock by default; a real backend is used only when its key is
+  // present in the environment (§12.7) — CI and key-less runs stay fully offline.
+  const provider = resolveProvider({ mock: new MockAuthorProvider() });
+  if (provider.name !== "mock:author") console.log(`Using live provider: ${provider.name}`);
   const contract = loadEngineContract();
 
   const story = await runWriter(provider, { premise, contract });
