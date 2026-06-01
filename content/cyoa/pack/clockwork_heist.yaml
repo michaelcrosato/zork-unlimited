@@ -148,7 +148,8 @@ scenes:
     title: "The Crawlspace"
     text: >
       Dust and cobweb and the smell of old brass. The passage runs behind the vault
-      to a forgotten strongbox — and inside it, that same sealed letter.
+      to a forgotten strongbox — and inside it, a single sealed letter, addressed to
+      no one.
     choices:
       - id: open_strongbox
         text: "Pick the strongbox open."
@@ -183,5 +184,6 @@ endings:
     title: "The Truth"
     text: >
       You break the seal by moonlight. The letter is the steward's confession — the
-      manor's fortune was stolen, every coin of it, from people like you. You leave
-      the gold and take the truth. Some things are worth more than escaping rich.
+      manor's fortune was stolen, every coin of it, from people like you. There was
+      gold enough in this house to vanish on, but you leave it untouched and carry
+      the truth out instead. Some things are worth more than escaping rich.
