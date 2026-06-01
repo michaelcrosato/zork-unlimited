@@ -26,6 +26,7 @@ export type ParserObservation = {
   dialogue: { npc: string; npc_text: string } | null;
   available_actions: { id: string; command: string; action: Action }[];
   score: number;
+  max_score: number;
   ended: boolean;
   ending_id: string | null;
   ending: { id: string; title: string; text: string; death: boolean } | null;
@@ -44,6 +45,21 @@ export function buildParserObservation(index: ParserIndex, state: GameState): Pa
   const active = activeDialogue(index, state);
   const endingDef = state.ended && state.endingId ? index.pack.endings.find((e) => e.id === state.endingId) : undefined;
 
+  const maxScore = index.pack.meta.max_score ?? 0;
+  const score = state.vars[SCORE_VAR] ?? 0;
+  // At an ending, in a pack that tracks score, give the player closure: append a
+  // "Final score: X of Y." tally to the rendered ending text. The canonical
+  // `ending.text` (and the pack YAML) stay pure — only the player-facing
+  // `description` carries the summary, so every renderer (CLI play bins, the MCP
+  // observation, the UI) surfaces it without any per-pack content edit. Packs with
+  // no score (max_score 0 — e.g. the CYOA packs use a different observation
+  // entirely) are untouched.
+  const endingText = endingDef
+    ? maxScore > 0
+      ? `${endingDef.text.trimEnd()}\n\nFinal score: ${score} of ${maxScore}.`
+      : endingDef.text
+    : undefined;
+
   const visObjs = visibleObjectIds(index, state, state.current).map((id) => ({ id, name: index.objects.get(id)?.name ?? id }));
   const npcs = (index.npcByRoom.get(state.current) ?? []).map((n) => ({ id: n.id, name: n.name }));
   const exits = room
@@ -54,7 +70,7 @@ export function buildParserObservation(index: ParserIndex, state: GameState): Pa
     mode: "parser",
     room: state.current,
     title: endingDef ? endingDef.title : room?.name ?? state.current,
-    description: endingDef ? endingDef.text : room ? roomDescription(room, state) : "",
+    description: endingText ?? (room ? roomDescription(room, state) : ""),
     visible_objects: visObjs,
     npcs_present: npcs,
     exits,
@@ -66,7 +82,8 @@ export function buildParserObservation(index: ParserIndex, state: GameState): Pa
     },
     dialogue: active ? { npc: active.npc.id, npc_text: active.node.npc_text } : null,
     available_actions: enumerateActions(index, state).map((o) => ({ id: o.id, command: o.command, action: o.action })),
-    score: state.vars[SCORE_VAR] ?? 0,
+    score,
+    max_score: maxScore,
     ended: state.ended,
     ending_id: state.endingId,
     ending: endingDef ? { id: endingDef.id, title: endingDef.title, text: endingDef.text, death: endingDef.death } : null,
