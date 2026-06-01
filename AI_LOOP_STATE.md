@@ -60,3 +60,10 @@
 - Deferred (structural, next cycle — see bug_0002 deferred_findings): the decision_point↔road_north↔checkpoint orbit and the payoff-less confront_smuggler dead-end. These are flow/design tightenings, not faults; gating is correct.
 - Protocol is now wired into AGENTS.md and the ai-loop generated agent-prompt, so future cycles run the blind subagent step automatically.
 - Pack content hash: e83eef5a3e12d55df5df576f9b893dc7134d13897f5a99dfdf2db2790ebe1c5e.
+
+## Cycle 2026-06-01b — deferred structural findings resolved (bug_0002)
+
+- Tackled the two deferred structural findings from the blind playtest.
+- confront_smuggler dead-end → real stakes: press_bluff (no proof) → ending_captured; reveal_evidence (proof) → win path; back_off reframed as retreat-to-gather-proof. No node is a no-op dead-end now.
+- decision_point↔road_north↔checkpoint orbit → broken for the prepared player: turn_back gated on not_flag learned_truth, so with proof you must commit (expose/slip_away); without proof a signposted back-path to find proof remains, slip_away always exits (no soft-lock).
+- Locked by tests/regression/watchtower_blind_fixes.test.ts (describe "bug_0002 deferred"); content hash 4188f7de58079146e00af8c5505094df19540af9d137a3736e26332d197820f0. 174 tests + health green.

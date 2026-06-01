@@ -300,14 +300,20 @@ scenes:
     title: "The Sergeant's Face"
     text: >
       The sergeant's face goes white as he reads his own name. His hand drifts
-      toward his sword.
+      toward his sword — but the gate behind him is open, and his men are
+      watching to see what you do.
     choices:
       - id: reveal_evidence
-        text: "Lay out everything you know."
+        text: "Lay out everything you know — the oil, the names, the seal."
         conditions: [ { has_flag: learned_truth } ]
         next: decision_point
+      - id: press_bluff
+        text: "Press him, though the letter's still sealed and you can prove nothing."
+        conditions: [ { not_flag: learned_truth } ]
+        effects: [ { add_journal: "You pushed without proof. The sergeant simply had you seized." } ]
+        next: ending_captured
       - id: back_off
-        text: "Take the letter back and retreat."
+        text: "Pocket the letter and slip away to find real proof first."
         next: road_north
 
   - id: decision_point
@@ -324,7 +330,8 @@ scenes:
         text: "Slip away into the dark and never look back."
         next: ending_escape
       - id: turn_back
-        text: "Hesitate, and turn back to the road."
+        text: "You've no proof yet — turn back to find some before you act."
+        conditions: [ { not_flag: learned_truth } ]
         next: road_north
 
 endings:

@@ -1,6 +1,6 @@
 bug_id: bug_0002
 pack_id: watchtower_road_v1
-content_hash: e83eef5a3e12d55df5df576f9b893dc7134d13897f5a99dfdf2db2790ebe1c5e
+content_hash: 4188f7de58079146e00af8c5505094df19540af9d137a3736e26332d197820f0
 seed: 7
 initial_state: start
 # Surfaced by a BLIND MCP playtester subagent (no access to source/content) playing
@@ -70,13 +70,20 @@ second_pass:
     - where: scene:decision_point
       description: reworded text that implied you'd already succeeded ("you have what you came for") so it no longer mis-signals a win when you lack evidence.
 
-# Deferred to a future cycle (structural flow changes, not cosmetic — logged so they
-# are not silently dropped, per docs/blind_playtest_protocol.md). These are design
-# choices, not faults: the gating is correct, but the experience could be tightened.
-deferred_findings:
+# Third pass — the two structural findings, now RESOLVED (regression-locked in
+# tests/regression/watchtower_blind_fixes.test.ts, describe "bug_0002 deferred").
+structural_resolved:
   - where: [scene:decision_point, scene:road_north, scene:checkpoint]
-    description: a circular region a player can orbit with no state change (always has an exit, so not a soft-lock).
+    was: a circular region a player could orbit with no state change.
+    fix: >
+      turn_back at decision_point is now gated on not_flag learned_truth — once you
+      hold proof you must commit (expose / slip away), so the prepared player has no
+      dithering loop; the unprepared player keeps a signposted back-path to go find
+      proof, with slip_away always available as a clean exit.
   - where: scene:confront_smuggler
-    description: >
-      without learned_truth the only option is "back off" with no payoff; the
-      reveal-evidence branch is correctly gated but the dead-end beat feels flat.
+    was: without learned_truth the only option was a no-op "back off" — the reveal had no payoff.
+    fix: >
+      added press_bluff (gated not_flag learned_truth) → ending_captured: pressing
+      the sergeant with a sealed letter and no proof gets you seized — a real
+      consequence. With proof, reveal_evidence pays off into the win path; back_off
+      is reframed as a purposeful retreat to gather proof. No node is a dead-end now.
