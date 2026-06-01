@@ -1,0 +1,79 @@
+bug_id: bug_0081
+pack_id: alchemists_tower_v1
+seed: 23                     # this cycle's blind-playtest seed for clockwork_heist; the regression drives seed 1 deterministic routes
+type: content_fix            # applies the existing bug_0078 command_verb/command_template feature to the one pack that never got it
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-01T21-34-50-169Z/playtest.md   # mandated target was clockwork_heist (seed 23)
+  mandated_result: >
+    The assessor's rank-1 mandated target, clockwork_heist, came back PRISTINE again (seed 23):
+    four endings reached (truth/rich/caught/patrol), mechanically flawless, clarity 5/5, enjoyment
+    4/5, zero functional bugs. This is ~23 consecutive clean blind passes (bug_0019-bug_0080 of
+    micro-tuning + feature work) — exactly the "content-polish backlog exhausted; pivot to
+    structural / engine work" state recorded in project memory. The charter permits a different,
+    higher-value improvement when judgement supports it. I also audited the prior cycle's deferred
+    RPG question (sunken_barrow's "+2 defense buff appears inert"): the combat formula in
+    src/rpg/combat.ts DOES subtract playerDef from incoming damage (the ward shifts the d6+atk-def
+    range down by 2, capped by the min-1 floor) — it only LOOKS inert at seed 7 because the wight
+    dies in ~2 rounds so the player absorbs few counter-hits. No engine bug there.
+  finding: >
+    Completing the bug_0078 item-on-target command_verb arc. bug_0074 gave the tower's SELF-USE
+    (the black phial) its natural verb ("drink"); bug_0078 generalized command_verb to item-on-target
+    USE and applied it to sealed_crypt (rope/TIE), cold_forge (pry-bar/LEVER), and sunken_barrow
+    (iron-bar/LEVER) — but The Alchemist's Tower, which has THREE item-on-target USEs, was left as
+    the lone holdout still surfacing the generic "use X on Y" while its prose insistently primes a
+    specific verb. This is the same prose-says-X / button-says-Y legibility gap bug_0074/0078 closed
+    everywhere else; multiple prior tower playtesters (seed 13/bug_0009, seed 29/bug_0074) flagged
+    the drink-vs-use form of it, and the same reasoning applies to its three brew/cure interactions.
+root_cause: >
+  command_verb + command_template (bug_0074/0078) is an additive, opt-in display+parse feature: an
+  interaction without it renders and parses as the generic "use <item> on <target>". The tower's
+  three item-on-target USEs (herb->cauldron, water_vial->cauldron, antidote->master) were never
+  annotated, so they still read "use pale herb on great cauldron" etc. while their effect prose says
+  "you STEEP the pale herb", "you POUR the clear water", and the antidote climax (raising her head,
+  tipping the cure between her lips) sets the win literally named `administer_cure`.
+improvement:
+  layer: content
+  content:
+    - content/parser/pack/alchemists_tower.yaml: >
+        herb->cauldron gains `command_verb: steep` + `command_template: "steep {item} in {target}"`;
+        water_vial->cauldron gains `command_verb: pour` + `command_template: "pour {item} into
+        {target}"`; antidote->master gains `command_verb: give` + `command_template: "give {item} to
+        {target}"`. No flag/item/score/effect/condition/exit/gating/ending change. Action ids stay
+        verb-agnostic (`use_<item>_on_<target>`); the bare "use ... on ..." still parses. content_hash
+        moves abf886f1... (surfaced, not laundered; alchemists_tower is NOT pinned — only watchtower_road
+        is hash-pinned in tests/unit/rpg_validator.test.ts; the tower is checked there only for
+        "validates green").
+verification:
+  typecheck: green (tsc --noEmit)
+  lint_format: green (ESLint + Prettier)
+  validate: >
+    green (0 errors, 0 warnings) for alchemists_tower (content_hash abf886f1211fa5c3ae9a47facead9dcf2814e7d4319471e9ab7fa740d5886fea)
+    and every other pack (no other pack touched).
+  health: exit 0 (verify:integrity + typecheck + ESLint + Prettier + tests + every pack validate + playtest)
+  backward_compat: >
+    purely additive — only the three displayed command strings change. The action ids are unchanged,
+    every id-driven route/test is untouched, and "use herb on cauldron" / "use water vial on
+    cauldron" / "use antidote on master" all still parse.
+  reachable_endings_unchanged: >
+    The full canonical win route still reaches ending_cured at 35/35; the natural commands perform
+    the identical interactions as the id-driven actions.
+verified_live: >
+  Through the engine render/parse path (initStateForParserPack / enumerateActions / parseCommand):
+  at the cauldron holding the herb the brew step lists id `use_herb_on_cauldron`, command "steep
+  pale herb in great cauldron"; once steeped the water step lists `use_water_vial_on_cauldron`,
+  "pour vial of water into great cauldron"; in the spire holding the antidote the cure lists
+  `use_antidote_on_master`, "give antidote to fevered master". parseCommand maps the full and
+  abbreviated natural phrasings ("steep herb in cauldron", "pour water into cauldron", "give
+  antidote to master") AND the bare "use ... on ..." forms to the same USE actions.
+regression_test: tests/regression/alchemists_use_command_verbs.test.ts   # 5 cases: each interaction's displayed natural command + verb-agnostic id (never "use ... on ..."); natural and bare-use phrasings parse to the right USE; the full win route still reaches ending_cured at 35/35.
+closes:
+  - bug_0078 was the last pack edit of the item-on-target command_verb arc but left alchemists_tower
+    unconverted; project-memory note "(1) adopt command_verb on other USEs where prose primes a
+    non-USE verb (audit first)" — audited: alchemists_tower was the only holdout, now done.
+deferred:
+  - The verify-integrity semantic-weakening blind spot (mechanical re-pin/skip detection only; wants
+    an LLM-judge for loose-assert swaps) remains the standing structural move.
+  - clockwork_heist stays deprioritized (~23 clean blind passes); keep rotating the mandated blind
+    pass onto less-attended packs.

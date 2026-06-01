@@ -305,6 +305,15 @@ objects:
       - verb: USE
         item: herb
         target: cauldron
+        # The prose primes "steep": the effect narrates "You steep the pale herb in
+        # the cauldron", and the cauldron's reactive examine reads "a deep green steep
+        # of the pale herb". So the natural command is "steep pale herb in great
+        # cauldron", not the generic "use pale herb on great cauldron" — a per-interaction
+        # command_verb + command_template (bug_0081, completing the bug_0078 item-on-target
+        # arc; alchemists_tower was the lone pack whose item-on-target USEs never got it).
+        # The id stays `use_herb_on_cauldron`; "use pale herb on great cauldron" still parses.
+        command_verb: steep
+        command_template: "steep {item} in {target}"
         conditions: [{ not_flag: herb_added }]
         effects:
           - set_flag: herb_added
@@ -314,6 +323,13 @@ objects:
       - verb: USE
         item: water_vial
         target: cauldron
+        # The prose primes "pour": the effect narrates "You pour the clear water in".
+        # So the natural command is "pour vial of water into great cauldron", not the
+        # generic "use vial of water on great cauldron" (bug_0081, see herb above). The
+        # id stays `use_water_vial_on_cauldron`; "use vial of water on great cauldron"
+        # still parses.
+        command_verb: pour
+        command_template: "pour {item} into {target}"
         conditions: [{ has_flag: herb_added }, { not_flag: antidote_brewed }]
         effects:
           - set_flag: antidote_brewed
@@ -394,6 +410,14 @@ objects:
       - verb: USE
         item: antidote
         target: master
+        # The climax is giving the cure: the effect narrates raising the master's head
+        # and tipping the antidote between her lips, and the win it sets is named
+        # `administer_cure`. So the natural command is "give antidote to fevered master",
+        # not the generic "use antidote on fevered master" (bug_0081, see herb above).
+        # The id stays `use_antidote_on_master`; "use antidote on fevered master" still
+        # parses.
+        command_verb: give
+        command_template: "give {item} to {target}"
         conditions: [{ not_flag: cure_administered }]
         effects:
           - set_flag: cure_administered
