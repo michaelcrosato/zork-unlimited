@@ -1,0 +1,62 @@
+bug_id: bug_0086
+pack_id: null   # engine/validator soundness guard; not specific to one pack
+seed: 19
+evidence:
+  source: blind_playtest + validator_audit
+  protocol: docs/blind_playtest_protocol.md
+  report: ai-runs/2026-06-01T22-46-00-371Z/playtest.md
+  finding: >
+    This cycle's mandated blind pass rotated OFF the over-fitted clockwork pack (~24 clean
+    passes; its content is complete per bug_0079→0085) onto the two least-attended packs.
+    Sealed Crypt (parser, seed 19) and Cold Forge (rpg, seed 23) were both blind-played by
+    fresh MCP-only subagents. Sealed Crypt: clarity 5/5, enjoyment 3/5, ZERO bugs — flawless
+    lock-and-key vignette; the only critique was scope (one linear path, one ending), a
+    content_new question, not a defect. With no functional fault surfaced in either target,
+    I took the prior cycle's explicit next-focus #3 — "a sibling soundness guard for ...
+    always-false reactive `when` (vacuous variant), extending bug_0085's profile machinery" —
+    and closed that gap at the validator layer (same trust-but-verify pivot as bug_0085).
+failure:
+  type: validator_missing_check_dead_content
+  where:
+    - engine:src/validate/cyoa_validator.ts
+  description: >
+    bug_0085 added shadowing detection: a variant pre-empted by an earlier sibling is dead.
+    Its sibling class went unguarded — a guard CONTRADICTORY IN ITSELF, whose conjunction can
+    never hold, so whatever it gates is dead for a different reason (not pre-empted, but
+    unsatisfiable). Two concrete shapes a maintainer can ship by a copy-paste slip:
+    (a) the same flag/item/visited pinned both true and false (has_flag:x ∧ not_flag:x), and
+    (b) crossed var bounds (var_gte 5 ∧ var_lte 3, an empty interval). Such a variant `when`
+    never displays and such a choice `conditions` never offers the choice. As with shadowing,
+    the blind playtest is a weak backstop — the content simply never appears, so its absence
+    reads as normal.
+fix:
+  layer: validator
+  summary: >
+    Add `isUnsatisfiable(WhenProfile)` (reusing bug_0085's conjunctive profile): true when an
+    atom is in both pos and neg, or a var's lower bound exceeds its upper bound. A contradiction
+    among the CONJUNCTIVE atoms makes the whole top-level AND unsatisfiable regardless of any
+    `any_of`/`none_of` sibling (a disjunction can only further constrain), so the check is sound
+    even on an opaque profile. `checkUnsatisfiable` emits a WARNING UNSATISFIABLE_CONDITION
+    (severity matches the sibling reachability/shadowing findings). Applied to every scene
+    variant `when`, ending variant `when`, and choice `conditions`. No schema, runner, or
+    content change.
+  reachable_endings_changed: false
+  content_hash_changed: false        # no content pack edited
+  regression_test: tests/regression/cyoa_unsatisfiable_condition.test.ts
+  unit_tests:
+    - tests/unit/cyoa_validator.test.ts   # new negative fixture: unsatisfiable_condition.yaml -> UNSATISFIABLE_CONDITION
+  fixtures:
+    - content/broken-fixtures/unsatisfiable_condition.yaml
+verified_live: >
+    Bug-first: a synthetic pack with a flag pinned both ways in a variant `when`, crossed var
+    bounds in a variant `when`, a contradictory choice `conditions` (item both ways), and a
+    contradictory ending variant all yield UNSATISFIABLE_CONDITION; a satisfiable guard (incl.
+    one carrying an any_of disjunction) does NOT. A contradiction in the conjunctive part still
+    bites even alongside a disjunction. The two shipped CYOA packs (clockwork_heist,
+    watchtower_road) produce ZERO UNSATISFIABLE_CONDITION findings and stay green.
+    `npm run health` green.
+note: >
+    Soundness over coverage (same stance as bug_0085): only flags contradictions provable over
+    the conjunctive atoms; it cannot prove unsatisfiability that depends on the semantics of a
+    disjunction, so it detects fewer cases, never wrong ones. Together bug_0085 (shadowed) and
+    bug_0086 (vacuous) cover the two ways a reactive guard can be silently dead.

@@ -1,0 +1,30 @@
+# Expect: UNSATISFIABLE_CONDITION — a guard whose conjunction can never hold, so
+# whatever it gates is dead content. Two independent contradictions are present:
+#   • scene s1's second variant pins the same flag both ways (has_flag:alarm AND
+#     not_flag:alarm) — no state satisfies it, so the variant can never display.
+#   • the `peek` choice sets crossed var bounds (ticks >= 5 AND ticks <= 3) — the
+#     interval is empty, so the choice can never be offered.
+# Both are sibling footguns to the shadowing check (bug_0085): silently-dead
+# content a blind playtest never surfaces (it simply never appears). The fix is to
+# remove or correct the contradictory condition. The pack is otherwise well-formed
+# (a real exit to the ending exists), so this fixture isolates the new check.
+meta: { id: bad_guard, title: "Vacuous Guard", start: s1, flags_init: [], vars_init: { ticks: 0 } }
+scenes:
+  - id: s1
+    title: "Start"
+    text: "The base text."
+    variants:
+      - when: [ { has_flag: alarm } ]
+        text: "The alarm is ringing."
+      - when: [ { has_flag: alarm }, { not_flag: alarm } ]
+        text: "This can never display — `alarm` cannot be both set and unset."
+    choices:
+      - id: peek
+        text: "Peek (never offered — crossed var bounds)."
+        conditions: [ { var_gte: { name: ticks, value: 5 } }, { var_lte: { name: ticks, value: 3 } } ]
+        next: e_win
+      - id: go
+        text: "Leave."
+        next: e_win
+endings:
+  - { id: e_win, title: "Win", text: "You made it." }

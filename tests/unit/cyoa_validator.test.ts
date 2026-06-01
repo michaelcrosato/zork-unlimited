@@ -33,6 +33,7 @@ describe("CYOA validator — negative fixtures must bite (§10.4)", () => {
     ["softlock.yaml", "SOFTLOCK"],
     ["contradiction.yaml", "CONTRADICTORY_CONDITION"],
     ["unreachable_variant.yaml", "UNREACHABLE_VARIANT"],
+    ["unsatisfiable_condition.yaml", "UNSATISFIABLE_CONDITION"],
   ])("%s fails with %s", (file, code) => {
     const { schemaFailed, codes } = codesFor(FIX(file));
     expect(schemaFailed).toBe(false);

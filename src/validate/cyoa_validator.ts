@@ -277,6 +277,42 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
     checkVariantShadowing(ending.variants, `ending:${ending.id}`, findings);
   }
 
+  // ── Vacuously-false guards (a condition that can never hold) ────────────────
+  // Sibling of the shadowing check above: where shadowing flags a guard a sibling
+  // pre-empts, this flags a guard CONTRADICTORY in itself (a flag/item/visited
+  // pinned both ways, or crossed var bounds). Such a `when`/`conditions` is dead
+  // for a different reason — it can never be true at all — so the variant never
+  // displays and the choice is never offered. Same sound-over-a-conjunction basis
+  // as bug_0085; both surface silently-dead content a blind playtest can't see.
+  for (const scene of pack.scenes) {
+    for (let i = 0; i < (scene.variants?.length ?? 0); i++) {
+      checkUnsatisfiable(
+        scene.variants?.[i]?.when,
+        [`scene:${scene.id}`, `variant:${i}`],
+        `scene "${scene.id}" variant #${i + 1}`,
+        findings,
+      );
+    }
+    for (const choice of scene.choices) {
+      checkUnsatisfiable(
+        choice.conditions,
+        [`scene:${scene.id}`, `choice:${choice.id}`],
+        `choice "${choice.id}" in scene "${scene.id}"`,
+        findings,
+      );
+    }
+  }
+  for (const ending of pack.endings) {
+    for (let i = 0; i < (ending.variants?.length ?? 0); i++) {
+      checkUnsatisfiable(
+        ending.variants?.[i]?.when,
+        [`ending:${ending.id}`, `variant:${i}`],
+        `ending "${ending.id}" variant #${i + 1}`,
+        findings,
+      );
+    }
+  }
+
   // ── Duplicate endings (structurally identical title+text) ──────────────────
   const seen = new Map<string, string>();
   const terminals: { id: string; title: string; text: string }[] = [
@@ -413,6 +449,48 @@ function entails(j: WhenProfile, i: WhenProfile): boolean {
     if (have === undefined || have > need) return false;
   }
   return true;
+}
+
+/** True when a profile's conjunction is internally contradictory, so NO state can
+ *  satisfy it — the guard is vacuously false and whatever it gates is dead content.
+ *  Two sound contradictions over a pure conjunction:
+ *    • the same atom pinned true AND false (e.g. `has_flag:x` ∧ `not_flag:x`), and
+ *    • a var's `>=` lower bound exceeding its `<=` upper bound (e.g. ticks>=5 ∧ ticks<=3).
+ *  `opaque` is irrelevant here: a contradiction among the CONJUNCTIVE atoms makes the
+ *  whole top-level AND unsatisfiable regardless of any `any_of`/`none_of` sibling (a
+ *  disjunction can only further constrain, never rescue, an already-false conjunction).
+ *  So this stays sound even when `whenProfile` marked the profile opaque. */
+function isUnsatisfiable(p: WhenProfile): boolean {
+  for (const k of p.pos) if (p.neg.has(k)) return true;
+  for (const [name, lo] of p.lower) {
+    const hi = p.upper.get(name);
+    if (hi !== undefined && lo > hi) return true;
+  }
+  return false;
+}
+
+/** Flag any guard (variant `when` or choice `conditions`) that can never hold: its
+ *  conjunction is internally contradictory, so the variant never displays / the
+ *  choice is never offered. Sibling of the shadowing check (bug_0085) — both surface
+ *  silently-dead content the blind playtest can't see (it simply never appears). */
+function checkUnsatisfiable(
+  conditions: Condition[] | undefined,
+  where: string[],
+  label: string,
+  findings: Finding[],
+): void {
+  if (!conditions || conditions.length === 0) return;
+  if (isUnsatisfiable(whenProfile(conditions))) {
+    findings.push(
+      warn(
+        "UNSATISFIABLE_CONDITION",
+        `${label} has a guard that can never hold (it pins a flag/item/visited both ` +
+          `true and false, or sets crossed var bounds), so it is dead — it can never ` +
+          `display/fire. Fix or remove the contradictory condition.`,
+        where,
+      ),
+    );
+  }
 }
 
 /** Flag any variant whose `when` is entailed by an earlier sibling's `when`: in a
