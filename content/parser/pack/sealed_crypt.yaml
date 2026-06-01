@@ -17,6 +17,12 @@ meta:
   start_room: forest_path
   flags_init: []
   vars_init: {}
+  # Stage-3 scoring: points are awarded once at each of the three milestones that
+  # mark real progress — reading the headstone clue (+5), solving the well to raise
+  # the keys from the deep (+10), and unlocking the catacombs gate (+20). Each award
+  # rides a one-time gated interaction, so the score cannot be farmed by repeating an
+  # action, and the intended solution path reaches the full 35.
+  max_score: 35
 
 rooms:
   - id: forest_path
@@ -153,6 +159,7 @@ objects:
         effects:
           - set_flag: rope_attached_to_well
           - unlock_exit: { from: old_well, to: well_bottom }
+          - inc_var: { name: score, by: 10 }
           - narrate: "You tie the rope to the iron ring. It uncoils into the dark below."
 
   - id: stone_coffer
@@ -192,6 +199,13 @@ objects:
     aliases: [headstone, stone, grave]
     description: "A weathered headstone, its epitaph still legible."
     read_text: "Carved deep: 'THE CRYPT YIELDS ONLY TO IRON, DRAWN UP FROM THE DEEP.'"
+    interactions:
+      - verb: READ
+        target: headstone
+        conditions: [{ not_flag: read_headstone }]
+        effects:
+          - set_flag: read_headstone
+          - inc_var: { name: score, by: 5 }
 
   - id: crypt_gate
     name: "iron catacombs gate"
@@ -205,6 +219,7 @@ objects:
         effects:
           - set_flag: catacombs_open
           - unlock_exit: { from: crypt, to: catacombs }
+          - inc_var: { name: score, by: 20 }
           - narrate: "The iron key turns with a groan. The catacombs gate swings inward."
 
 npcs:
