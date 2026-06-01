@@ -67,3 +67,12 @@
 - confront_smuggler dead-end → real stakes: press_bluff (no proof) → ending_captured; reveal_evidence (proof) → win path; back_off reframed as retreat-to-gather-proof. No node is a no-op dead-end now.
 - decision_point↔road_north↔checkpoint orbit → broken for the prepared player: turn_back gated on not_flag learned_truth, so with proof you must commit (expose/slip_away); without proof a signposted back-path to find proof remains, slip_away always exits (no soft-lock).
 - Locked by tests/regression/watchtower_blind_fixes.test.ts (describe "bug_0002 deferred"); content hash 4188f7de58079146e00af8c5505094df19540af9d137a3736e26332d197820f0. 174 tests + health green.
+
+### Verification (blind run, seed 7) — structural findings CONFIRMED resolved
+- Blind playtester confirmed the checkpoint/town-edge region "is NOT pointless orbiting" and the guard confrontation "produces clearly different, meaningful outcomes" with vs. without evidence. Both deferred findings closed.
+- New findings for a future cycle (logged, not yet fixed — narrative payoff/continuity, not structural):
+  1. reveal_evidence (confront_smuggler) → decision_point is a silent teleport; the standoff's most dramatic beat has no on-screen payoff. Add a resolving narration/journal line.
+  2. Ledger is never presentable at the checkpoint (only the sealed letter is); the letter/ledger relationship is muddled.
+  3. "broken seal" is referenced (press_bluff text + ending_truth) but no action ever opens the letter — dangling mechanic / continuity slip.
+  4. Hermit tower-lore (hermit_about_tower) sets no flag/journal — optional flavor with no mechanical hook.
+  5. Cosmetic: search_rubble / search_cache remain offered after the cart/cache are emptied (re-entry shows an empty room).
