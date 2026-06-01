@@ -206,7 +206,8 @@ scenes:
     title: "Inside the Vault"
     text: >
       Stacked gold gleams on iron shelves. Apart from it all, on a velvet cushion,
-      lies a single sealed letter addressed to no one.
+      lies a single sealed letter addressed to no one — laid out in plain sight, as
+      though its writer meant whoever cracked the vault to find it here among the gold.
     choices:
       - id: grab_gold
         text: "Fill your pockets with gold and run."
@@ -225,8 +226,10 @@ scenes:
     title: "The Crawlspace"
     text: >
       Dust and cobweb and the smell of old brass. The passage runs behind the vault
-      to a forgotten iron strongbox, its lid locked fast — and sealed inside it, you
-      are certain, a single sealed letter, addressed to no one.
+      to a forgotten iron strongbox, its lid locked fast — and folded inside it, you
+      are certain, a sealed letter in the steward's own hand: not laid out for show
+      like a thing meant to be found, but hidden away here in the dark, apart from the
+      gold, where he meant no eye ever to fall on it.
     choices:
       - id: open_strongbox
         text: "Pick the strongbox's lock with the lockpicks."
