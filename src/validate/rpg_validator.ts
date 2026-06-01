@@ -17,7 +17,7 @@
 import type { Effect } from "../core/effects.js";
 import { validateParser } from "./parser_validator.js";
 import { type Finding, type ValidationReport, makeReport } from "./report.js";
-import { type RpgPack, HP_VAR, ATTACK_VAR, DEFENSE_VAR } from "../rpg/schema.js";
+import { type RpgPack, HP_VAR, ATTACK_VAR, DEFENSE_VAR, enemyHpVar } from "../rpg/schema.js";
 import { SCORE_VAR } from "../parser/schema.js";
 
 const err = (code: string, message: string, where: string[]): Finding => ({
@@ -55,7 +55,23 @@ export function validateRpg(pack: RpgPack): ValidationReport {
   for (const e of rpgRuntimeEffects(pack))
     if ("inc_var" in e && e.inc_var.name === SCORE_VAR) extraScoreAwards += e.inc_var.by;
 
-  const base = validateParser(pack, { extraSettableFlags, extraObtainable, extraScoreAwards });
+  // The WIN_FIRES_AT_START stability proof must also see RPG-only falsifiers:
+  // combat / skill branches can falsify a start-true win (extraFalsifierEffects),
+  // and combat mutates HP via dynamic set_var the parser scan never sees, so the
+  // player + enemy HP vars are volatile (a win condition on them is escapable).
+  const extraVolatileVars = [
+    HP_VAR,
+    ATTACK_VAR,
+    DEFENSE_VAR,
+    ...pack.enemies.map((e) => enemyHpVar(e.id)),
+  ];
+  const base = validateParser(pack, {
+    extraSettableFlags,
+    extraObtainable,
+    extraScoreAwards,
+    extraFalsifierEffects: rpgRuntimeEffects(pack),
+    extraVolatileVars,
+  });
   const findings: Finding[] = [...base.findings];
 
   const roomIds = new Set(pack.rooms.map((r) => r.id));

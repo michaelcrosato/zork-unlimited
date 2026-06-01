@@ -41,6 +41,7 @@ describe("parser validator — negative fixtures must fail (§10.4)", () => {
     ["parser_score_unreachable", "SCORE_UNREACHABLE"],
     ["parser_end_game_undeclared", "END_GAME_UNDECLARED"],
     ["parser_win_is_death", "WIN_IS_DEATH"],
+    ["parser_win_fires_at_start", "WIN_FIRES_AT_START"],
   ];
 
   for (const [file, code] of VALIDATOR_FIXTURES) {

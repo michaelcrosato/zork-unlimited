@@ -23,7 +23,8 @@
  *    of "can be lost".
  */
 import { exitFlag, type Effect } from "../core/effects.js";
-import type { Condition } from "../core/conditions.js";
+import { evalConditions, type Condition } from "../core/conditions.js";
+import { indexParserPack, initStateForParserPack } from "../parser/model.js";
 import { type ParserPack, type GameObject, SCORE_VAR } from "../parser/schema.js";
 import { type Finding, type ValidationReport, makeReport } from "./report.js";
 
@@ -60,6 +61,21 @@ export type ValidateParserOptions = {
    * counting them sharpens the conservative bound rather than weakening it. Default 0.
    */
   extraScoreAwards?: number;
+  /**
+   * Declared effects the RPG layer (§13 Stage 4) fires through branches the parser
+   * scan never walks — enemy `on_defeat`, skill-check `on_success`/`on_failure`.
+   * Folded into the WIN_FIRES_AT_START falsifier set so a win that one of those
+   * branches can falsify is correctly judged escapable (not flagged). Default empty.
+   */
+  extraFalsifierEffects?: Effect[];
+  /**
+   * Vars that runtime mechanics mutate WITHOUT a declared effect the scan can see —
+   * the player/enemy HP combat writes via dynamic `set_var` (rpg/combat.ts), not a
+   * YAML `inc_var`. The WIN_FIRES_AT_START stability proof treats any condition on
+   * one of these as falsifiable (bails), so it never claims an un-falsifiability
+   * combat could break. Default empty (pure parser packs have no such vars).
+   */
+  extraVolatileVars?: string[];
 };
 
 export function validateParser(
@@ -469,7 +485,63 @@ export function validateParser(
     }
   }
 
+  // ── A win condition already met at game start (§8.4.5 fires-at-start) ─────────
+  checkWinFiresAtStart(
+    pack,
+    opts.extraFalsifierEffects ?? [],
+    opts.extraVolatileVars ?? [],
+    findings,
+  );
+
   return makeReport(pack.meta.id, findings);
+}
+
+/**
+ * Flag a `win_condition` that ALREADY HOLDS in the initial state and can never be
+ * falsified — so it fires on the player's FIRST action on every path. The engine's
+ * §8.4.5 `checkWin` runs against the POST-action state (src/core/engine.ts), never
+ * at game start, so such a win ends the game at turn 1 on whatever the player does
+ * first: no room past the start is ever played and the goal is granted for nothing.
+ * That is an unplayable pack, so it is an ERROR — the parser/RPG analogue of the
+ * CYOA validator's DEADLINE_FIRES_AT_START (a deadline that fires at start). The
+ * existing IMPOSSIBLE_GATE / ITEM_REQUIRED_UNOBTAINABLE / WIN_UNREACHABLE checks
+ * already guard the OPPOSITE degeneracy (a win that can never fire); this brackets
+ * the other end.
+ *
+ * Sound & conservative (no false positives): the initial state is the engine's own
+ * (`initStateForParserPack`, start `on_enter` applied, start room marked visited),
+ * evaluated by the engine's own `evalConditions`; and un-falsifiability is proven
+ * only for a flat conjunction of monotone-stable atoms — any disjunction/negation,
+ * a `not_visited`/object/quest condition, or a condition on a combat-volatile var
+ * makes us bail (treat as falsifiable ⇒ no finding). A win merely satisfiable early
+ * but escapable on the first move is never flagged.
+ */
+function checkWinFiresAtStart(
+  pack: ParserPack,
+  extraFalsifierEffects: Effect[],
+  volatileVars: string[],
+  findings: Finding[],
+): void {
+  if (pack.win_conditions.length === 0) return;
+  const index = indexParserPack(pack);
+  const initial = initStateForParserPack(index, 0);
+  const falsifiers = collectFalsifiers(pack, extraFalsifierEffects);
+  const volatile = new Set(volatileVars);
+  for (const wc of pack.win_conditions) {
+    if (!evalConditions(wc.conditions, initial)) continue; // healthy: not met at start
+    if (!winStaysTrueForever(wc.conditions, falsifiers, volatile)) continue; // first move can escape
+    findings.push(
+      err(
+        "WIN_FIRES_AT_START",
+        `win_condition "${wc.id}" already holds in the initial state and no effect can falsify it, ` +
+          "so it fires on the player's first action on every path (engine §8.4.5 runs the win check " +
+          "post-action, never at game start) — the game is won at turn 1 with no room past the start " +
+          "ever played. Gate it behind a flag/item/room the player must first reach, or fix the " +
+          "condition's threshold or initial value.",
+        [`win:${wc.id}`],
+      ),
+    );
+  }
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────────
@@ -592,6 +664,107 @@ function computeObtainable(
     }
   }
   return obtainable;
+}
+
+// ── WIN_FIRES_AT_START support: falsifiers + a monotone-stability proof ──────────
+// Mirrors the CYOA validator's deadline machinery (collectFalsifiers /
+// deadlineStaysTrueForever), reused here for win_conditions.
+
+/** A single var mutation, `amount` being the literal `by` (inc/dec — sign-significant,
+ *  effects.ts allows a negative) or `value` (set). */
+type VarWrite = { kind: "inc" | "dec" | "set"; amount: number };
+type Falsifiers = {
+  clearedFlags: Set<string>;
+  setFlags: Set<string>;
+  addedItems: Set<string>;
+  removedItems: Set<string>;
+  varWrites: Map<string, VarWrite[]>;
+};
+
+/** Every mutation the pack can make (all declared parser effects + any extra RPG
+ *  runtime effects), the raw material for proving a condition monotone-stable. */
+function collectFalsifiers(pack: ParserPack, extra: Effect[]): Falsifiers {
+  const clearedFlags = new Set<string>();
+  const setFlags = new Set<string>();
+  const addedItems = new Set<string>();
+  const removedItems = new Set<string>();
+  const varWrites = new Map<string, VarWrite[]>();
+  const pushVar = (name: string, w: VarWrite): void => {
+    const arr = varWrites.get(name) ?? [];
+    arr.push(w);
+    varWrites.set(name, arr);
+  };
+  const scan = (effects: Effect[]): void => {
+    for (const e of effects) {
+      if ("set_flag" in e) setFlags.add(e.set_flag);
+      else if ("clear_flag" in e) clearedFlags.add(e.clear_flag);
+      else if ("unlock_exit" in e) setFlags.add(exitFlag(e.unlock_exit.from, e.unlock_exit.to));
+      else if ("add_item" in e) addedItems.add(e.add_item);
+      else if ("remove_item" in e) removedItems.add(e.remove_item);
+      else if ("inc_var" in e) pushVar(e.inc_var.name, { kind: "inc", amount: e.inc_var.by });
+      else if ("dec_var" in e) pushVar(e.dec_var.name, { kind: "dec", amount: e.dec_var.by });
+      else if ("set_var" in e) pushVar(e.set_var.name, { kind: "set", amount: e.set_var.value });
+    }
+  };
+  scan(allEffects(pack));
+  scan(extra);
+  return { clearedFlags, setFlags, addedItems, removedItems, varWrites };
+}
+
+// A var that holds `>= floor` keeps holding it iff no write can push it below floor:
+// inc by a non-negative, dec by a non-positive, or set to a value still >= floor.
+// Symmetric for the other operators (`by` is sign-significant — effects.ts allows a
+// negative inc that really decrements, so we inspect the literal, not the var name).
+function varNeverDrops(floor: number, writes: VarWrite[] | undefined): boolean {
+  return (writes ?? []).every((w) =>
+    w.kind === "inc" ? w.amount >= 0 : w.kind === "dec" ? w.amount <= 0 : w.amount >= floor,
+  );
+}
+function varNeverRises(ceil: number, writes: VarWrite[] | undefined): boolean {
+  return (writes ?? []).every((w) =>
+    w.kind === "inc" ? w.amount <= 0 : w.kind === "dec" ? w.amount >= 0 : w.amount <= ceil,
+  );
+}
+function varNeverChanges(fixed: number, writes: VarWrite[] | undefined): boolean {
+  return (writes ?? []).every((w) => (w.kind === "set" ? w.amount === fixed : w.amount === 0));
+}
+
+/** True iff `conditions` (taken as a conjunction) hold now AND stay true under every
+ *  pack effect — so once met at init they can never become false. Proven only for a
+ *  flat AND of individually monotone-stable atoms; any_of/none_of, not_visited,
+ *  object/quest state, or a condition on a combat-volatile var make us bail to false
+ *  (conservative: we never claim an un-falsifiability we cannot prove). */
+function winStaysTrueForever(
+  conditions: Condition[],
+  f: Falsifiers,
+  volatileVars: Set<string>,
+): boolean {
+  let stable = true;
+  const visit = (c: Condition): void => {
+    if (!stable) return;
+    if ("has_flag" in c) stable = !f.clearedFlags.has(c.has_flag);
+    else if ("not_flag" in c) stable = !f.setFlags.has(c.not_flag);
+    else if ("has_item" in c) stable = !f.removedItems.has(c.has_item);
+    else if ("not_item" in c) stable = !f.addedItems.has(c.not_item);
+    else if ("var_gte" in c)
+      stable =
+        !volatileVars.has(c.var_gte.name) &&
+        varNeverDrops(c.var_gte.value, f.varWrites.get(c.var_gte.name));
+    else if ("var_lte" in c)
+      stable =
+        !volatileVars.has(c.var_lte.name) &&
+        varNeverRises(c.var_lte.value, f.varWrites.get(c.var_lte.name));
+    else if ("var_eq" in c)
+      stable =
+        !volatileVars.has(c.var_eq.name) &&
+        varNeverChanges(c.var_eq.value, f.varWrites.get(c.var_eq.name));
+    else if ("visited" in c) {
+      /* `visited` is monotone — once true it stays true; nothing un-visits. */
+    } else if ("all_of" in c) c.all_of.forEach(visit);
+    else stable = false; // any_of/none_of/not_visited/is_open/is_unlocked/quest_stage: not analysed
+  };
+  conditions.forEach(visit);
+  return stable;
 }
 
 function allEffects(pack: ParserPack): Effect[] {

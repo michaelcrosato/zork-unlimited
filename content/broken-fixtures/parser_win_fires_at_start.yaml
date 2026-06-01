@@ -1,0 +1,16 @@
+# MUST FAIL: the win condition {visited: a} already holds at game start (initState
+# marks the start room visited) and `visited` is monotone, so it fires on the
+# player's first action on every path → WIN_FIRES_AT_START. The game is won at turn
+# 1 with no room past the start ever played.
+meta: { id: insta_win, title: "Insta Win", start_room: a }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A — the start."
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+win_conditions: [{ id: w, conditions: [{ visited: a }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]
