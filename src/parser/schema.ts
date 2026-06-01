@@ -101,6 +101,16 @@ export const DialogueTopicSchema = z
   .object({
     id: z.string().min(1),
     prompt: z.string().min(1),
+    // Optional gate: while any `conditions` entry fails the topic is hidden from
+    // the legal set (the player can't ask it) and ASK resolution re-checks it, so
+    // an info topic can be retired once its rumor has been told instead of
+    // re-offering forever. `.optional()` (not `.default([])`) so a topic without a
+    // gate compiles byte-identically ⇒ packs that don't use it keep their content
+    // hash (mirrors the RoomSchema.variants / skill_check backward-compat rule).
+    // Termination safety: the validator treats only UNCONDITIONAL topics as
+    // guaranteed escape routes, so a node must always keep an ungated way out
+    // (typically an ungated `end` topic) or it is flagged DIALOGUE_NONTERMINATING.
+    conditions: z.array(ConditionSchema).optional(),
     goto: z.string().min(1).optional(),
     end: z.boolean().default(false),
   })

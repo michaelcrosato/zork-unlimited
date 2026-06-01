@@ -1,0 +1,34 @@
+# MUST FAIL: every escape from this dialogue is CONDITIONAL. The only `end` topics
+# are gated on a flag (`dismissed`) that nothing ever sets, so in the start state
+# the player has no guaranteed way out → DIALOGUE_NONTERMINATING. Termination must
+# hold using unconditional topics alone; a gated `end` cannot be relied upon.
+meta: { id: bad_gated_dialogue, title: "Bad Gated Dialogue", start_room: a }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+npcs:
+  - id: gate_keeper
+    name: "the gatekeeper"
+    description: "He only lets you go once you're dismissed — and you never are."
+    room: a
+    dialogue:
+      root: greet
+      nodes:
+        - id: greet
+          npc_text: "Round we go."
+          topics:
+            - { id: more, prompt: "Go on", goto: chatter }
+            - { id: bye, prompt: "Leave", end: true, conditions: [{ has_flag: dismissed }] }
+        - id: chatter
+          npc_text: "And round again."
+          topics:
+            - { id: back, prompt: "Back", goto: greet }
+            - { id: bye, prompt: "Leave", end: true, conditions: [{ has_flag: dismissed }] }
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

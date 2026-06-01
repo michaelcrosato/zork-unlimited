@@ -230,23 +230,27 @@ npcs:
     dialogue:
       root: greet
       nodes:
+        # Each info topic is gated on its own "not yet heard" flag, so once the
+        # sexton has told a rumour it retires from the menu instead of re-offering
+        # forever (the bug_0014 ping-pong fix). The ungated `bye` keeps every node
+        # terminating in all states; when both rumours are heard only `bye` remains.
         - id: greet
           npc_text: "Few come willingly to the sealed crypt, traveler."
           topics:
-            - { id: crypt, prompt: "Ask about the sealed crypt", goto: about_crypt }
-            - { id: well, prompt: "Ask about the old well", goto: about_well }
+            - { id: crypt, prompt: "Ask about the sealed crypt", goto: about_crypt, conditions: [{ not_flag: heard_crypt_rumor }] }
+            - { id: well, prompt: "Ask about the old well", goto: about_well, conditions: [{ not_flag: heard_well_rumor }] }
             - { id: bye, prompt: "Say goodbye", end: true }
         - id: about_crypt
           npc_text: "The catacombs gate answers only to an iron key — and that key was lost down the well, locked in a chest."
           effects: [{ set_flag: heard_crypt_rumor }]
           topics:
-            - { id: well, prompt: "Ask about the old well", goto: about_well }
+            - { id: well, prompt: "Ask about the old well", goto: about_well, conditions: [{ not_flag: heard_well_rumor }] }
             - { id: bye, prompt: "Say goodbye", end: true }
         - id: about_well
           npc_text: "Dry rope hangs in the bell tower. Tie it to the ring and the well will give up its chest."
           effects: [{ set_flag: heard_well_rumor }]
           topics:
-            - { id: crypt, prompt: "Ask about the sealed crypt", goto: about_crypt }
+            - { id: crypt, prompt: "Ask about the sealed crypt", goto: about_crypt, conditions: [{ not_flag: heard_crypt_rumor }] }
             - { id: bye, prompt: "Say goodbye", end: true }
 
 win_conditions:

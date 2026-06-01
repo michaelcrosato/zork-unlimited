@@ -33,6 +33,7 @@ describe("parser validator — negative fixtures must fail (§10.4)", () => {
     ["parser_duplicate_id", "DUPLICATE_ID"],
     ["parser_ambiguous_alias", "AMBIGUOUS_ALIAS"],
     ["parser_dialogue_nonterminating", "DIALOGUE_NONTERMINATING"],
+    ["parser_dialogue_gated_nonterminating", "DIALOGUE_NONTERMINATING"],
     ["parser_score_unreachable", "SCORE_UNREACHABLE"],
     ["parser_end_game_undeclared", "END_GAME_UNDECLARED"],
     ["parser_win_is_death", "WIN_IS_DEATH"],

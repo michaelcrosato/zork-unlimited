@@ -1,0 +1,78 @@
+bug_id: bug_0014
+pack_id: sealed_crypt_v1
+seed: 91
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  report: ai-runs/2026-06-01T07-03-45-157Z/playtest.md
+  finding: >
+    Cashes in the deferred finding logged at the end of bug_0013 (and earlier across
+    bug_0010 / bug_0012): the sexton dialogue topic-menu re-ask. A fresh, MCP-only
+    blind playtester (seed 91) solved The Sealed Crypt to ending_victory (score
+    35/35), rating it clarity 4/5, enjoyment 3/5, and re-confirmed the flaw exactly
+    (report findings A + B):
+      (A) DIALOGUE TOPIC PING-PONG: the sexton's two info topics ("Ask about the
+          sealed crypt" / "Ask about the old well") are mutually re-enabling. Asking
+          one sets its rumor flag and removes it from the menu, but the OTHER node
+          re-offers it, so __dlg_sexton just oscillates 2<->3 and the player can
+          re-ask the same two questions verbatim forever, each re-firing the same
+          set_flag and the identical narration. "Say goodbye" resets to 0, so
+          re-entry restarts the loop. The dialogue never reaches an exhausted state.
+      (B) INERT FLAGS: the heard_crypt_rumor / heard_well_rumor flags are set on
+          hearing each rumor but read by nothing — dead payload.
+failure:
+  type: dialogue_topic_never_exhausts
+  where:
+    - engine:src/parser/schema.ts
+    - engine:src/parser/legal_actions.ts
+    - engine:src/validate/parser_validator.ts
+    - content:content/parser/pack/sealed_crypt.yaml
+  description: >
+    Dialogue topics had no way to be conditionally hidden: DialogueTopicSchema
+    carried only id/prompt/goto/end, and the ASK resolution returned no conditions,
+    so every topic offered at a node was always offered. An info topic that should
+    retire once told (its rumor flag is set) re-appeared forever, and the rumor flag
+    it set gated nothing. The same gap meant a content author had no mechanism to
+    retire a told-once topic at all.
+fix:
+  layer: engine_rule + content
+  summary: >
+    Generic, pack-agnostic engine feature — conditional dialogue topics — plus the
+    sealed_crypt content application that uses it.
+    ENGINE:
+      (1) src/parser/schema.ts: DialogueTopicSchema gains an optional
+          `conditions: ConditionSchema[]`. `.optional()` (NOT `.default([])`) so a
+          topic without a gate compiles byte-identically => packs that don't use it
+          keep their content hash (the same RoomSchema.variants / skill_check
+          backward-compat rule; bug_0010's lesson).
+      (2) src/parser/legal_actions.ts: the ASK resolution now returns the topic's
+          `conditions`, so a gated topic is filtered from the legal set (via the
+          `option` helper's evalConditions) AND re-checked by the engine — a
+          told-once info topic retires itself.
+      (3) src/validate/parser_validator.ts: the dialogue TERMINATION analysis now
+          counts only UNCONDITIONAL topics as guaranteed escape routes (gated gotos
+          are excluded from the reachability graph; only an unconditional `end`
+          topic marks an end node). A node whose every exit is gated is flagged
+          DIALOGUE_NONTERMINATING — so a content author must always keep an ungated
+          way out. (A bad `goto` is still DIALOGUE_GOTO_MISSING even when gated.)
+    CONTENT (content/parser/pack/sealed_crypt.yaml):
+      the sexton's two info topics are gated `not_flag heard_crypt_rumor` /
+      `not_flag heard_well_rumor`, so each retires after one telling; the ungated
+      `bye` keeps every node terminating, and once both rumors are heard only `bye`
+      remains. The previously-inert rumor flags now drive the gating (fixes B too).
+  reachable_endings_changed: false
+  content_hash_changed: true   # sealed_crypt: 11dab666... -> e03a1622d5966f06702db0e13d2f7c612721a3ed62adc8b31ebaa8cd66f11451 (unpinned — only watchtower_road is pinned; recorded for the record)
+  backward_compat: >
+    Packs with no gated topics (every shipped pack except this change) compile
+    byte-identically — the `conditions` key is absent unless authored, so no other
+    content hash drifts. alchemists_tower / sunken_barrow have no NPCs; the only
+    other dialogue is the broken-fixtures, whose intended failures are preserved.
+regression_test: tests/regression/dialogue_topic_conditions.test.ts
+broken_fixture: content/broken-fixtures/parser_dialogue_gated_nonterminating.yaml
+deferred_findings:
+  - >
+    Design thinness (out of scope for an engine fix): The Sealed Crypt is short,
+    linear, single-solution, one ending, no failure states, and the sexton hints
+    arrive after the puzzle is typically already solved (the nave is the natural
+    last-explored exit). A future cycle could add a branch, a failure state, or
+    move the hint-giver earlier — or author a new pack to broaden the game.

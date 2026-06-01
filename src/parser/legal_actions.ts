@@ -136,14 +136,17 @@ export function resolveParserAction(index: ParserIndex, state: GameState, action
       if (!active || active.npc.id !== action.npc) return null;
       const topic = active.node.topics.find((t) => t.id === action.topic);
       if (!topic) return null;
+      // A gated topic is filtered from the legal set (via `option`) and re-checked
+      // here by the engine, so a told-once info topic can retire itself.
+      const conditions = topic.conditions ?? [];
       if (topic.end || topic.goto === undefined) {
-        return { conditions: [], effects: [{ set_var: { name: dlgVar(active.npc.id), value: 0 } }, { narrate: `(You end the conversation.)` }] };
+        return { conditions, effects: [{ set_var: { name: dlgVar(active.npc.id), value: 0 } }, { narrate: `(You end the conversation.)` }] };
       }
       const targetOrd = nodeOrdinal(active.npc, topic.goto);
       const target = active.npc.dialogue.nodes[targetOrd - 1];
       if (!target) return null;
       return {
-        conditions: [],
+        conditions,
         effects: [{ set_var: { name: dlgVar(active.npc.id), value: targetOrd } }, ...target.effects, { narrate: `${active.npc.name}: "${target.npc_text}"` }],
       };
     }

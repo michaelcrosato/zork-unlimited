@@ -187,19 +187,24 @@ export function validateParser(pack: ParserPack, opts: ValidateParserOptions = {
   for (const npc of pack.npcs) {
     const nodeIds = new Set(npc.dialogue.nodes.map((n) => n.id));
     if (!nodeIds.has(npc.dialogue.root)) findings.push(err("DIALOGUE_ROOT_MISSING", `npc "${npc.id}" root node "${npc.dialogue.root}" does not exist.`, [`npc:${npc.id}`]));
+    // A topic is only a GUARANTEED escape route if it is unconditional: a gated
+    // topic may be hidden in some states, so termination must hold without it.
+    // (A bad `goto` is still an error even when gated — that's a structural bug.)
+    const unconditional = (t: { conditions?: unknown[] | undefined }): boolean => !t.conditions || t.conditions.length === 0;
     const gotoEdges = new Map<string, Set<string>>();
     for (const node of npc.dialogue.nodes) {
       const outs = new Set<string>();
       for (const t of node.topics) {
         if (t.goto !== undefined) {
           if (!nodeIds.has(t.goto)) findings.push(err("DIALOGUE_GOTO_MISSING", `npc "${npc.id}" node "${node.id}" topic "${t.id}" goes to missing node "${t.goto}".`, [`npc:${npc.id}`]));
-          else outs.add(t.goto);
+          else if (unconditional(t)) outs.add(t.goto);
         }
       }
       gotoEdges.set(node.id, outs);
     }
-    // Every node must be able to reach a node offering an `end` topic (the tree terminates).
-    const endNodes = new Set(npc.dialogue.nodes.filter((n) => n.topics.some((t) => t.end)).map((n) => n.id));
+    // Every node must reach (via unconditional edges) a node offering an
+    // unconditional `end` topic — only then is an exit guaranteed in every state.
+    const endNodes = new Set(npc.dialogue.nodes.filter((n) => n.topics.some((t) => t.end && unconditional(t))).map((n) => n.id));
     const canEnd = reverseReach(endNodes, gotoEdges);
     for (const node of npc.dialogue.nodes) {
       if (!canEnd.has(node.id) && nodeIds.has(node.id)) {
