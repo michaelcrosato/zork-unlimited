@@ -64,7 +64,10 @@ rooms:
       only way east stands a man-high figure of fused slag and cinder — a forge
       sentinel. The dead hall holds no fire to rouse it; the deep cold keeps it
       slow and stiff, stirred only enough to stand and bar the passage deeper in.
-      It will be no swifter than it is now.
+      It will be no swifter than it is now. Slow is not the same as soft, though:
+      it is a man-high weight of fused slag, and the blows it does land fall like
+      a dropped anvil. Better not to meet it under-armed — face it with every
+      edge you can bring to bear.
     variants:
       - when: [ { has_flag: sentinel_stilled } ]
         text: >
