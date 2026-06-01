@@ -105,7 +105,7 @@ const TO_GATE = [
   "go_north",
   "go_down",
 ];
-const OPEN_GATE = ["use_iron_key_on_crypt_gate"]; // +20
+const OPEN_GATE = ["unlock_crypt_gate"]; // +20
 const WIN = ["go_north"];
 
 describe("bug_0026 — endings surface a final-score tally in scoring packs", () => {

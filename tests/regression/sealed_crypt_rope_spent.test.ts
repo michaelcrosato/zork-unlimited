@@ -70,7 +70,7 @@ const WIN_ROUTE = [
   "go_west", // → chapel_yard
   "go_north", // → chapel_nave
   "go_down", // → crypt
-  "use_iron_key_on_crypt_gate", // +20
+  "unlock_crypt_gate", // +20
   "go_north", // → catacombs (WIN)
 ];
 

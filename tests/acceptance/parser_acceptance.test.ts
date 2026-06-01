@@ -49,7 +49,7 @@ const WALKTHROUGH_IDS = [
   "go_west",
   "go_north",
   "go_down",
-  "use_iron_key_on_crypt_gate",
+  "unlock_crypt_gate",
   "go_north",
 ];
 // ... and the same route as controlled human commands.
@@ -74,7 +74,7 @@ const WALKTHROUGH_COMMANDS = [
   "west",
   "north",
   "down",
-  "use iron key on gate",
+  "unlock gate with iron key",
   "north",
 ];
 

@@ -116,7 +116,7 @@ describe("bug_0010 — reactive room text replaces stale descriptions after stat
     let s = play(initStateForParserPack(index, 7), SOLVE);
     expect(s.current).toBe("crypt");
     expect(desc(s)).toContain("bars the way");
-    s = play(s, ["use_iron_key_on_crypt_gate"]);
+    s = play(s, ["unlock_crypt_gate"]);
     expect(s.flags["catacombs_open"]).toBe(true);
     expect(s.current).toBe("crypt");
     expect(s.ended).toBe(false);

@@ -92,7 +92,7 @@ const TO_GATE = [
   "go_north",
   "go_down",
 ];
-const OPEN_GATE = ["use_iron_key_on_crypt_gate"]; // +20
+const OPEN_GATE = ["unlock_crypt_gate"]; // +20
 const WIN = ["go_north"];
 
 describe("bug_0013 — Sealed Crypt scoring accrues 0→5→15→35 across the three milestones", () => {

@@ -129,7 +129,7 @@ describe("bug_0044 — Bell Tower text reacts to the rope being taken", () => {
       "go_west",
       "go_north",
       "go_down",
-      "use_iron_key_on_crypt_gate",
+      "unlock_crypt_gate",
       "go_north",
     ];
     const s = play(initStateForParserPack(index, 47), WIN_ROUTE);

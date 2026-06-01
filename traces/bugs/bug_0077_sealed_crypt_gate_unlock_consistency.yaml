@@ -1,0 +1,87 @@
+bug_id: bug_0077
+pack_id: sealed_crypt_v1
+seed: 61                           # the cycle's blind-playtest seed; the regression drives seed 61 for the full win route
+type: engine_rule                  # teaches the engine's first-class UNLOCK to carry score + narration; pack re-modelled onto it
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-01T20-26-26-385Z/playtest.md
+  mandated_target_rotation: >
+    The assessor's rank-1 mandated target was clockwork_heist; rotated onto sealed_crypt per the
+    standing next-focus note (clockwork is over-fitted — ~22 consecutive pristine blind passes,
+    micro-tuned across bug_0019–bug_0072, explicitly deprioritized; rotate the blind pass onto a
+    less-attended pack, sealed_crypt was named). The cycle charter permits a different target "if
+    your judgement and the playtest say it's higher value," and the playtest found a concrete,
+    high-confidence flaw on sealed_crypt where clockwork has none left.
+  finding: >
+    Sealed Crypt (seed 61, ALSO seen seed 29): "Verb-grammar inconsistency between the two lock
+    puzzles. The oak chest offers a proper natural command, `unlock oak chest with brass key`
+    (UNLOCK). The catacombs gate, an identical 'lock shaped for a key' puzzle, offers only the
+    generic `use iron key on iron catacombs gate` (USE). Two equivalent puzzles, two different
+    grammars. The gate's prose ('its lock shaped for a heavy key') primes UNLOCK, but only USE is
+    accepted — made more glaring because the very same game demonstrates the correct UNLOCK grammar
+    one room earlier." Ranked the pack's #1 flaw. (Clarity 5/5, enjoyment 3/5; no state corruption.)
+root_cause: >
+  Two layers. (1) Content: the catacombs gate was authored as a plain object with a hand-written
+  `USE iron_key on crypt_gate` interaction (set_flag catacombs_open + unlock_exit + inc_var score 20
+  + a dramatic narrate), gated one-shot by `not_flag: catacombs_open`. The oak chest, by contrast,
+  is a first-class locked object (`locked` + `key_id`) opened by the engine's built-in UNLOCK verb
+  (src/parser/legal_actions.ts enumerates `unlock <obj> with <key>` for any present, locked object
+  naming an obtainable key_id). So one key+lock used the engine verb and the other a bespoke USE —
+  the same act, two grammars. This is the same defect bug_0073 fixed in alchemists_tower; sealed_crypt
+  was left inconsistent. (2) Engine — the ROOT cause of the recurring split: the engine's first-class
+  UNLOCK resolution (legal_actions.ts `case "UNLOCK"`) emitted ONLY `[set_object_locked, narrate "You
+  unlock the X."]`. It could not award score or narrate richly, so a CLIMACTIC unlock (the +20-point,
+  dramatically-narrated catacombs gate) had no choice but to fall back to a bespoke USE interaction.
+  That is exactly the incentive that breeds the bug_0073/bug_0077 class.
+improvement:
+  layer: engine_rule
+  engine:
+    - src/parser/schema.ts: >
+        ObjectSchema gains two optional fields — `unlock_narrate` (a string that replaces the default
+        "You unlock the X." line) and `unlock_effects` (an Effect[] that fires after the unlock, e.g.
+        inc_var score / unlock_exit / set_flag). Both `.optional()` (not defaults) so an absent field
+        keeps the compiled pack byte-identical ⇒ packs that don't use them keep their content hash
+        (mirrors variants / command_verb / skill_check). A superRefine rejects either field when the
+        object has no `key_id` (they fire on the first-class UNLOCK, which needs a key).
+    - src/parser/legal_actions.ts: >
+        the UNLOCK resolution now emits `[set_object_locked, narrate (unlock_narrate ?? default),
+        ...(unlock_effects ?? [])]`. One-shot is intrinsic: once the lock is sprung the object is no
+        longer `isLocked`, so UNLOCK no longer resolves and the effects never re-fire (no point-farm) —
+        exactly what the old `not_flag` guard did. Default path (no unlock content) is byte-identical.
+    - src/validate/parser_validator.ts: >
+        allEffects() now also collects each object's `unlock_effects`, so the SCORE_UNREACHABLE upper
+        bound, add_item granting, and unknown-effect scans stay sound (the gate's +20 simply moved from
+        a USE interaction to unlock_effects — the validator must still see it).
+  content:
+    - content/parser/pack/sealed_crypt.yaml: >
+        crypt_gate: removed the bespoke `USE iron_key on crypt_gate` interaction and modelled the gate
+        with the engine lock mechanism — `locked: true` + `key_id: iron_key` — carrying its dramatic
+        line as `unlock_narrate` and its [set_flag catacombs_open, unlock_exit, inc_var score 20] as
+        `unlock_effects`. The player now opens it with the SAME `unlock iron catacombs gate with iron
+        key` (UNLOCK) verb the oak chest uses. No route/score/gating/reachable-ending change — the gate
+        keeps its +20, its narration, and its opened north exit.
+verification:
+  typecheck: green (tsc --noEmit)
+  validate: green (0 errors, 0 warnings) — sealed_crypt under the full parser validator; every pack validates 0/0
+  content_hash: d994378c966b3370b942e80d62b7bcd3aaeaa25fe2befffb3ae6f77aa43daaf3   # was aee45ad99338eaebbf5f1eb413414b6f3badbee0860c25820afb99acb626fcf4; surfaced, not laundered. sealed_crypt is unpinned (only watchtower_road is pinned in tests).
+  health: exit 0 (verify:integrity + typecheck + ESLint + Prettier check + tests + every pack validate + watchtower coverage)
+  reachable_endings_unchanged: [ending_victory]   # the canonical solve route still reaches ending_victory at 35/35 through the new unlock step
+  live_engine_verified: >
+    Drove the engine source path (seed 61): the gate offers `unlock iron catacombs gate with iron
+    key` (id unlock_crypt_gate, type UNLOCK) — the old use_iron_key_on_crypt_gate id is gone; the
+    typed command "unlock iron catacombs gate with iron key" parses to the same UNLOCK action;
+    unlocking emits the custom dramatic narration, sets catacombs_open, opens go_north, and raises
+    score 15→35; the unlock action then leaves the legal set (one-shot, unfarmable); go_north reaches
+    catacombs → ending_victory at 35/35. The oak chest (no unlock content) still resolves to exactly
+    [set_object_locked, "You unlock the oak chest."], proving the feature is opt-in / byte-identical.
+locked_by:
+  - tests/regression/sealed_crypt_gate_unlock_consistency.test.ts  # 8 cases (see file header)
+deferred:
+  - >
+    Rope/well verb mismatch (Old Well): the prose and the sexton both prime "tie the rope to the iron
+    ring", but only `use coil of rope on old well` is offered. This is a DIFFERENT feature than
+    bug_0074's self-USE command_verb — item-on-target USEs have a natural preposition and word order
+    that vary by verb ("tie rope TO well" vs "pry slab WITH bar"), so generalizing command_verb to
+    item-on-target needs its own design (liberal two-noun parse + a per-interaction phrasing). Defer
+    to a dedicated cycle.

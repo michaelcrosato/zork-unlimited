@@ -135,7 +135,7 @@ describe("parser win condition", () => {
       "go_west",
       "go_north",
       "go_down",
-      "use_iron_key_on_crypt_gate",
+      "unlock_crypt_gate",
       "go_north",
     ];
     const s = go(initStateForParserPack(index, 1), walkthrough);

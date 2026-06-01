@@ -132,11 +132,17 @@ export function resolveParserAction(
         return null;
       if (o.key_id === undefined || action.with !== o.key_id || !state.inventory.includes(o.key_id))
         return null;
+      // A keyed lock may carry its own narration + effects (score, unlock_exit,
+      // set_flag) so a climactic unlock no longer needs a bespoke `USE key on lock`
+      // interaction to award points or narrate richly — both grammars now lead to the
+      // engine's first-class UNLOCK (bug_0077). Default narration/effects are unchanged
+      // when the pack declares neither, so existing packs resolve byte-identically.
       return {
         conditions: [{ has_item: o.key_id }],
         effects: [
           { set_object_locked: { id: action.target, locked: false } },
-          { narrate: `You unlock the ${o.name}.` },
+          { narrate: o.unlock_narrate ?? `You unlock the ${o.name}.` },
+          ...(o.unlock_effects ?? []),
         ],
       };
     }

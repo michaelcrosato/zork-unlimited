@@ -597,7 +597,10 @@ function computeObtainable(
 function allEffects(pack: ParserPack): Effect[] {
   const out: Effect[] = [];
   for (const r of pack.rooms) out.push(...r.on_enter);
-  for (const o of pack.objects) for (const it of o.interactions) out.push(...it.effects);
+  for (const o of pack.objects) {
+    for (const it of o.interactions) out.push(...it.effects);
+    if (o.unlock_effects) out.push(...o.unlock_effects); // first-class UNLOCK content (bug_0077)
+  }
   for (const n of pack.npcs) for (const node of n.dialogue.nodes) out.push(...node.effects);
   return out;
 }

@@ -239,17 +239,30 @@ objects:
   - id: crypt_gate
     name: "iron catacombs gate"
     aliases: [gate, catacombs gate]
+    # bug_0077: the gate is a key+lock exactly like the Bottom-of-the-Well oak chest,
+    # yet it was opened by a hand-authored `USE iron key on crypt gate` interaction
+    # while the chest (one room earlier) uses the engine's first-class `UNLOCK <obj>
+    # with <key>` verb (driven by `key_id`). Two blind playtesters (seeds 29, 61) flagged
+    # the split grammar — "made more glaring because the very same game demonstrates the
+    # correct UNLOCK grammar one room earlier," and the gate's own prose ("its lock shaped
+    # for a heavy key") primes UNLOCK, not USE. This is the same defect bug_0073 fixed in
+    # alchemists_tower; sealed_crypt was left inconsistent. The reason the gate couldn't
+    # already use first-class UNLOCK is that the engine's UNLOCK awarded no score and
+    # narrated only "You unlock the X." — so a climactic, +20-point, richly-narrated
+    # unlock had to fall back to a bespoke USE. bug_0077 teaches the engine's first-class
+    # UNLOCK to carry `unlock_narrate` + `unlock_effects`, so the gate now reads through the
+    # SAME `unlock iron catacombs gate with iron key` grammar as the chest while keeping its
+    # dramatic line, its +20 score, and the opened-exit. One-shot is intrinsic (once the
+    # lock is sprung it is no longer `isLocked`, so UNLOCK can't re-fire) — exactly what the
+    # old `not_flag: catacombs_open` guard did. No route/score/reachable-ending change.
     description: "A heavy iron gate. Its great lock is shaped for an iron key."
-    interactions:
-      - verb: USE
-        item: iron_key
-        target: crypt_gate
-        conditions: [{ not_flag: catacombs_open }]
-        effects:
-          - set_flag: catacombs_open
-          - unlock_exit: { from: crypt, to: catacombs }
-          - inc_var: { name: score, by: 20 }
-          - narrate: "The iron key turns with a groan, and the catacombs gate swings inward on darkness. Beyond it, north, the catacombs you came so far to find — one step through the open gate and your journey is done."
+    locked: true
+    key_id: iron_key
+    unlock_narrate: "The iron key turns with a groan, and the catacombs gate swings inward on darkness. Beyond it, north, the catacombs you came so far to find — one step through the open gate and your journey is done."
+    unlock_effects:
+      - set_flag: catacombs_open
+      - unlock_exit: { from: crypt, to: catacombs }
+      - inc_var: { name: score, by: 20 }
 
 npcs:
   - id: sexton

@@ -98,7 +98,7 @@ describe("bug_0054 — the Sealed Crypt's final step into the catacombs is signp
   it("at the unlock: the +20 lands (35/35) and both the narration and the open-gate room text name the north step", () => {
     const { state, narration } = play(initStateForParserPack(index, 29), [
       ...ROUTE_TO_GATE,
-      "use_iron_key_on_crypt_gate",
+      "unlock_crypt_gate",
     ]);
     expect(state.current).toBe("crypt");
     expect(state.flags["catacombs_open"]).toBe(true);
@@ -118,7 +118,7 @@ describe("bug_0054 — the Sealed Crypt's final step into the catacombs is signp
   it("the legibility edit is purely cosmetic — the full route still wins ending_victory 35/35", () => {
     const { state } = play(initStateForParserPack(index, 29), [
       ...ROUTE_TO_GATE,
-      "use_iron_key_on_crypt_gate",
+      "unlock_crypt_gate",
       "go_north",
     ]);
     expect(state.ended).toBe(true);

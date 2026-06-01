@@ -193,10 +193,40 @@ export const ObjectSchema = z
     openable: z.boolean().default(false),
     locked: z.boolean().default(false),
     key_id: z.string().min(1).optional(),
+    // First-class UNLOCK content: a keyed lock can carry the score, narration, and
+    // state changes that used to force a bespoke `USE key on lock` interaction —
+    // the very split that bred the two-grammar inconsistency two blind playtesters
+    // flagged (bug_0073: chest uses `unlock … with …`, an identical gate uses
+    // `use key on gate`). When the player unlocks this object with its key:
+    //   - `unlock_narrate` (if set) replaces the plain "You unlock the X." line, and
+    //   - `unlock_effects` (if set) fire after the unlock (e.g. inc_var score,
+    //     unlock_exit, set_flag) — so the climactic key-turn keeps its points and prose
+    //     while reading through the SAME `unlock <obj> with <key>` grammar as every
+    //     other lock. One-shot is intrinsic: once unlocked the object isn't `isLocked`,
+    //     so UNLOCK no longer resolves and the effects never re-fire.
+    // Both `.optional()` (not a default) so an absent field keeps the compiled pack
+    // byte-identical ⇒ packs that don't use them keep their content hash (mirrors
+    // variants / command_verb / skill_check). Only meaningful on a keyed lock; the
+    // superRefine below rejects them without a `key_id`.
+    unlock_narrate: z.string().min(1).optional(),
+    unlock_effects: z.array(EffectSchema).optional(),
     contents: z.array(z.string().min(1)).default([]),
     interactions: z.array(InteractionSchema).default([]),
   })
-  .strict();
+  .strict()
+  .superRefine((o, ctx) => {
+    if (
+      (o.unlock_narrate !== undefined || o.unlock_effects !== undefined) &&
+      o.key_id === undefined
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["unlock_effects"],
+        message:
+          "unlock_narrate/unlock_effects require a key_id (they fire on the first-class UNLOCK)",
+      });
+    }
+  });
 
 export const DialogueTopicSchema = z
   .object({
