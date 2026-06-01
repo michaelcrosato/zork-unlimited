@@ -26,6 +26,7 @@ import { buildObservation } from "../../src/cyoa/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { Action } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
+import type { Scene } from "../../src/cyoa/schema.js";
 
 const loaded = loadPackFile("content/cyoa/pack/clockwork_heist.yaml");
 if (!loaded.ok) throw new Error("clockwork_heist pack must compile");
@@ -96,16 +97,21 @@ describe("bug_0018 — reactive CYOA scene text (the kitchen lockpicks)", () => 
   });
 
   it("backward-compat: a variant-less scene returns its base text byte-identically", () => {
-    // Most clockwork scenes gained reactive variants over the polish family (foyer
-    // bug_0020, vault_door bug_0042, vault bug_0043, crawlspace bug_0064); the study
-    // still has none — use it as the variant-less control.
-    const study = index.pack.scenes.find((sc) => sc.id === "study");
-    expect(study).toBeDefined();
-    expect(study!.variants).toBeUndefined();
+    // Every clockwork scene gained reactive variants over the polish family (foyer
+    // bug_0020, kitchen bug_0018, landing/gallery, vault_door bug_0042, vault bug_0043,
+    // crawlspace bug_0064, and study bug_0068), so the variant-less control is now a
+    // synthetic scene — it exercises the sceneText helper's "no variants" path directly,
+    // exactly what a pack that never uses the field relies on.
+    const plain = {
+      id: "plain",
+      title: "Plain",
+      text: "A still room, unchanged by any state.",
+    } as Scene;
+    expect(plain.variants).toBeUndefined();
     // Two arbitrary states must both yield the base text unchanged.
     const s0 = initStateForPack(index, 53);
     const s1 = run(["kitchens", "take_pick", "back_foyer"]);
-    expect(sceneText(study!, s0)).toBe(study!.text);
-    expect(sceneText(study!, s1)).toBe(study!.text);
+    expect(sceneText(plain, s0)).toBe(plain.text);
+    expect(sceneText(plain, s1)).toBe(plain.text);
   });
 });

@@ -273,6 +273,43 @@ scenes:
     # an honest pull and pre-seeding the gallery's later "the hourly patrol the
     # steward's ledger warned of" callback. No flag/tick/route/gating/ending change;
     # the read_ledger payoff (journal + safe-crossing gate) is untouched (bug_0053).
+    #
+    # The study was the LAST upstairs (tick-charging) room the clock never touched: the
+    # deadline arc gave the foyer, gallery, vault door, loot room (bug_0019/0040/0042/0043),
+    # and finally the crawlspace (bug_0064) reactive clock prose, but the study — the very
+    # room where the player reads that the watch walks "on the hour" — stayed clock-silent.
+    # A fresh blind playtester (seed 91) rated the pack 5/5 clarity but flagged that the
+    # hour's approach "reads as atmosphere, not a solvable timing puzzle … a player can't
+    # tell how close the hour is." The fix mirrors the bug_0064 crawlspace treatment:
+    # content-only reactive `variants` (first-match-wins, higher threshold first) so the
+    # clock the rest of the manor drums up is felt HERE too — at the exact moment the player
+    # learns the watch's rounds, the room tells them that very hour is grinding near, tying
+    # the ledger clue to the live deadline. The clock is named by the manor-wide motif (the
+    # gears, the chime) and the visible open ledger page, never by foreknowledge the entrant
+    # lacks (the bug_0058 leak lesson) — so the >=4 variant is sound for the no-ledger player
+    # who can also stand here past the hour (gallery→enter_study). Every study entry costs a
+    # tick via a tick-charging landing, so a live study visit is always ticks>=2; the base
+    # `text` is UNCHANGED and remains the schema fallback. No choice/effect/flag/item/exit/
+    # gating/ending change (bug_0068).
+    variants:
+      - when: [{ var_gte: { name: ticks, value: 4 } }]
+        text: >
+          Shelved ledgers, a cold lamp, and a brass wall-plate engraved: "The vault
+          yields only to a steady hand — never to force." One ledger lies open on the
+          desk — the steward's daily reckoning, its last page ruled into the household's
+          hours: when the staff retire, and when the watch walks its rounds. And the hour
+          that page names has come round at last: the great clock's chime rolls up through
+          the manor's gears even into this still room, and beyond the door the watch has
+          begun to walk the gallery.
+      - when: [{ var_gte: { name: ticks, value: 2 } }]
+        text: >
+          Shelved ledgers, a cold lamp, and a brass wall-plate engraved: "The vault
+          yields only to a steady hand — never to force." One ledger lies open on the
+          desk — the steward's daily reckoning, its last page ruled into the household's
+          hours: when the staff retire, and when the watch walks its rounds. Through the
+          wall the great clock grinds toward that very hour — a sleeping house keeps its
+          peace only until the chime, so take what this page can tell you and be gone
+          before it strikes.
     choices:
       - id: read_ledger
         text: "Read the open ledger's account of the watch's rounds."
