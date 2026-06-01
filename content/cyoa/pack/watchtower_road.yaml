@@ -65,7 +65,7 @@ scenes:
     title: "The Overturned Cart"
     text: >
       A merchant's cart, tipped and looted in a hurry. Spilled straw and split
-      crates cover the floor, and a few small things were missed in the rush.
+      crates cover the floor.
     choices:
       - id: take_lantern
         text: "Take the brass lantern."
@@ -127,8 +127,8 @@ scenes:
   - id: cellar_door
     title: "The Cellar Door"
     text: >
-      A low door, half off its frame, opens on a stair that drops into total
-      darkness.
+      A low door, half off its frame, opens on a stair that drops steeply out
+      of sight.
     choices:
       - id: light_lantern
         text: "Light the lantern to see your way down."
@@ -152,7 +152,6 @@ scenes:
     choices:
       - id: search_cache
         text: "Squeeze through the broken wall."
-        conditions: [ { has_flag: found_bootprints } ]
         next: hidden_cache
       - id: examine_barrels
         text: "Pry open a barrel."
@@ -314,8 +313,8 @@ scenes:
   - id: decision_point
     title: "The Edge of Town"
     text: >
-      Town lights flicker ahead. You have what you came for — or enough to vanish
-      with. The choice is yours.
+      Town lights flicker ahead. The road runs in toward the magistrate's hall;
+      the dark runs the other way. The choice is yours.
     choices:
       - id: expose_the_plot
         text: "March in and expose the whole conspiracy."

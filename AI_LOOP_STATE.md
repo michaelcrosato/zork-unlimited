@@ -51,3 +51,12 @@
 - Highest-priority next task: Improve discoverability for cellar.
 - Risks/blockers: Preserve uncommitted user content and avoid committing ai-runs/ evidence.
 - Repeated mistake to avoid: Do not treat CLI-only validation as playtesting; use MCP tools for the actual game loop.
+
+## Cycle 2026-06-01 — blind playtest loop closed (bug_0002)
+
+- Ran the blind-playtest step per docs/blind_playtest_protocol.md (fresh subagent, MCP-only, no source access) twice on watchtower_road seed 7.
+- Findings fixed (content/hint, all re-validated green, locked by tests/regression/watchtower_blind_fixes.test.ts + traces/bugs/bug_0002): stale cart text, stale cellar-door text, duplicate cellar journal (on_enter→scene text), ledger now a carried item + path-agnostic ending_truth, ungated the visible cellar "gap in the wall", de-misleading decision_point framing.
+- Second blind run confirmed duplicate_journal and ledger issues resolved; the good ending now reads as earned.
+- Deferred (structural, next cycle — see bug_0002 deferred_findings): the decision_point↔road_north↔checkpoint orbit and the payoff-less confront_smuggler dead-end. These are flow/design tightenings, not faults; gating is correct.
+- Protocol is now wired into AGENTS.md and the ai-loop generated agent-prompt, so future cycles run the blind subagent step automatically.
+- Pack content hash: e83eef5a3e12d55df5df576f9b893dc7134d13897f5a99dfdf2db2790ebe1c5e.

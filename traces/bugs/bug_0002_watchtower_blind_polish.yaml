@@ -1,6 +1,6 @@
 bug_id: bug_0002
 pack_id: watchtower_road_v1
-content_hash: b6208913c0a83e6acb2b052500d5af703ada8ddeaf4dcfb8652fd198bd2238a0
+content_hash: e83eef5a3e12d55df5df576f9b893dc7134d13897f5a99dfdf2db2790ebe1c5e
 seed: 7
 initial_state: start
 # Surfaced by a BLIND MCP playtester subagent (no access to source/content) playing
@@ -52,3 +52,31 @@ fix:
     per-entry on_enter journals into static scene text, made the ledger a real
     carried item, and softened ending_truth to be path-agnostic.
 regression_test: tests/regression/watchtower_blind_fixes.test.ts
+
+# A second blind run (same protocol) confirmed duplicate_journal and
+# ledger_not_carried are gone, and refined two originals + raised structural ones.
+second_pass:
+  confirmed_fixed: [duplicate_journal, ledger_not_carried]
+  refined:
+    - where: scene:cellar_door
+      description: removed the lingering "total darkness" descriptor that read stale once the lantern was lit.
+    - where: scene:abandoned_cart
+      description: removed "a few small things were missed in the rush", which still implied leftover loot after taking the items.
+    - where: scene:cellar
+      description: >
+        the described "gap in the wall" was only actionable if you'd inspected the
+        crossroads earlier (search_cache was gated on found_bootprints) — removed
+        the gate so the visible passage is always usable.
+    - where: scene:decision_point
+      description: reworded text that implied you'd already succeeded ("you have what you came for") so it no longer mis-signals a win when you lack evidence.
+
+# Deferred to a future cycle (structural flow changes, not cosmetic — logged so they
+# are not silently dropped, per docs/blind_playtest_protocol.md). These are design
+# choices, not faults: the gating is correct, but the experience could be tightened.
+deferred_findings:
+  - where: [scene:decision_point, scene:road_north, scene:checkpoint]
+    description: a circular region a player can orbit with no state change (always has an exit, so not a soft-lock).
+  - where: scene:confront_smuggler
+    description: >
+      without learned_truth the only option is "back off" with no payoff; the
+      reveal-evidence branch is correctly gated but the dead-end beat feels flat.

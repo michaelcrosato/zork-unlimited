@@ -55,6 +55,6 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // change it (was df85b4f…); this value updated only when the pack content was
     // deliberately edited to fix blind-playtest findings (stale text, duplicate
     // journal, ledger inventory). Any *unintended* change to compilation trips this.
-    expect(loaded.compiled.contentHash).toBe("b6208913c0a83e6acb2b052500d5af703ada8ddeaf4dcfb8652fd198bd2238a0");
+    expect(loaded.compiled.contentHash).toBe("e83eef5a3e12d55df5df576f9b893dc7134d13897f5a99dfdf2db2790ebe1c5e");
   });
 });
