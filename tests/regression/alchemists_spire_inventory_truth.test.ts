@@ -90,7 +90,7 @@ const SPIRE_WITH_ANTIDOTE = [
   "open_strongbox",
   "take_iron_key",
   "go_down",
-  "use_iron_key_on_cellar_door",
+  "unlock_cellar_door",
   "go_down",
   "take_water_vial",
   "go_up",

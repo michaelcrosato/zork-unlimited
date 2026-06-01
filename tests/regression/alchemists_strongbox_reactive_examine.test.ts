@@ -131,7 +131,7 @@ describe("bug_0024 — the Alchemist's Tower strongbox examine reacts once it is
       "open_strongbox",
       "take_iron_key",
       "go_down",
-      "use_iron_key_on_cellar_door",
+      "unlock_cellar_door",
       "go_down",
       "take_water_vial",
       "go_up",

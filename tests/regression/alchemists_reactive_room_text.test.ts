@@ -132,8 +132,10 @@ describe("bug_0012 — reactive room text replaces stale descriptions in the Alc
     expect(s.current).toBe("great_hall");
     expect(desc(s)).toContain("bolted cellar hatch");
 
-    s = play(s, ["use_iron_key_on_cellar_door"]);
-    expect(s.flags["cellar_unlocked"]).toBe(true);
+    s = play(s, ["unlock_cellar_door"]);
+    // bug_0073: the cellar hatch now uses the engine UNLOCK verb (key_id), so its
+    // unlocked state lives in objectState (locked === false), not a `cellar_unlocked` flag.
+    expect(s.objectState["cellar_door"]?.locked).toBe(false);
     expect(s.current).toBe("great_hall");
     expect(s.ended).toBe(false);
     expect(desc(s)).toContain("thrown open");
@@ -152,7 +154,7 @@ describe("bug_0012 — reactive room text replaces stale descriptions in the Alc
       "open_strongbox",
       "take_iron_key",
       "go_down",
-      "use_iron_key_on_cellar_door",
+      "unlock_cellar_door",
       "go_down",
     ]);
     expect(s.current).toBe("cellar");

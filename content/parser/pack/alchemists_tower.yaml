@@ -87,10 +87,12 @@ rooms:
       A vaulted hall. A bolted cellar hatch is set in the floor; a stair winds up
       to a study, and an archway opens north into the laboratory. The courtyard
       is south.
-    # Reactive prose (bug_0012): once the iron key throws the bolt, the hatch reads
-    # as open rather than bolted.
+    # Reactive prose (bug_0012): once the cellar hatch is unlocked, it reads as open
+    # rather than bolted. bug_0073 retires the `cellar_unlocked` flag in favour of the
+    # hatch's own runtime unlocked state (the engine UNLOCK verb now opens it — see the
+    # cellar_door object), so this gates on `is_unlocked: cellar_door` instead.
     variants:
-      - when: [{ has_flag: cellar_unlocked }]
+      - when: [{ is_unlocked: cellar_door }]
         text: >
           A vaulted hall. The cellar hatch stands thrown open in the floor, a dark
           stair dropping away below; another stair winds up to a study, and an
@@ -102,7 +104,9 @@ rooms:
       - { direction: north, to: laboratory }
       - direction: down
         to: cellar
-        conditions: [{ has_flag: cellar_unlocked }]
+        # bug_0073: gated on the hatch's unlocked state (set by the engine UNLOCK verb),
+        # mirroring how the study's iron key is reached behind the strongbox's lock.
+        conditions: [{ is_unlocked: cellar_door }]
         locked_msg: "The cellar hatch is bolted with an iron lock."
 
   - id: study
@@ -255,16 +259,26 @@ objects:
   - id: cellar_door
     name: "cellar hatch"
     aliases: [hatch, bolt]
+    # bug_0073: the cellar hatch is a key+lock exactly like the study's iron strongbox,
+    # yet it was opened by a hand-authored `USE iron key on cellar hatch` interaction
+    # while the strongbox uses the engine's first-class `UNLOCK <obj> with <key>` verb
+    # (driven by `key_id`). Two independent blind playtesters of this pack flagged the
+    # split grammar — two different verbs for the same conceptual act. Modelling the
+    # hatch with the same engine lock mechanism (`locked` + `key_id: iron_key`) gives
+    # the player ONE uniform unlock grammar and drops both the bespoke interaction and
+    # the `cellar_unlocked` flag. The down exit and the Great Hall's reactive prose now
+    # gate on the hatch's runtime unlocked state (`is_unlocked: cellar_door`, set by the
+    # engine UNLOCK) instead of the retired flag, so the vivid "thrown open" room text is
+    # preserved; only the momentary action line becomes the engine's plain "You unlock
+    # the cellar hatch", matching the strongbox. A reactive examine variant is added (the
+    # pack's established discipline, cf. bug_0033) so the hatch stops reading "bolted"
+    # once its lock is sprung. No route/score/reachable-ending change.
     description: "A bolted floor hatch with a great iron lock."
-    interactions:
-      - verb: USE
-        item: iron_key
-        target: cellar_door
-        conditions: [{ not_flag: cellar_unlocked }]
-        effects:
-          - set_flag: cellar_unlocked
-          - unlock_exit: { from: great_hall, to: cellar }
-          - narrate: "The iron key throws the bolt. The cellar hatch swings open."
+    variants:
+      - when: [{ is_unlocked: cellar_door }]
+        text: "The floor hatch stands unbolted, its great iron lock sprung; the dark stair drops away into the cellar below."
+    locked: true
+    key_id: iron_key
 
   - id: water_vial
     name: "vial of water"
