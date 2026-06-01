@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "AI-authored, deterministic text-adventure engine. Stages 0–2: deterministic core, CYOA, Zork-style parser.",
+  "description": "AI-authored, deterministic text-adventure engine. Stages 0–5: deterministic core, CYOA, Zork-style parser, Sierra-Quest scoring, Hero's-Quest RPG, and a React web UI.",
   "engines": {
     "node": ">=22"
   },
@@ -15,7 +15,7 @@
     "format:check": "tsc -p tsconfig.json --noEmit",
     "lint": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "health": "npm run format:check && npm run lint && npm test && npm run validate -- content/cyoa/pack/watchtower_road.yaml && npm run playtest -- content/cyoa/pack/watchtower_road.yaml --seeds 1,2,3",
+    "health": "npm run format:check && npm run lint && npm test && npm run validate -- content/cyoa/pack/watchtower_road.yaml && npm run validate -- content/parser/pack/sealed_crypt.yaml && npm run validate -- content/rpg/pack/sunken_barrow.yaml && npm run playtest -- content/cyoa/pack/watchtower_road.yaml --seeds 1,2,3",
     "test:watch": "vitest",
     "replay": "tsx bin/replay.ts",
     "cyoa": "tsx bin/cyoa.ts",

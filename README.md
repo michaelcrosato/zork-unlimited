@@ -91,6 +91,55 @@ loading a pre-death save (§8.7). The validator adds **score reachability**
 (`max_score` ≤ total awards), **`end_game` target declared**, **win-is-not-death**,
 and **at-least-one-winnable-ending** — no engine change was needed.
 
+### Stage 4 — Hero's-Quest RPG (stats · seeded combat · skill checks · quest stages) ✅
+
+The same headless core, now with character stats, a seeded turn-based fight, and a
+seeded d20 skill check — all through the **§14 engine-extension gate**, with every
+roll flowing through the PRNG so fights replay exactly (§8.5).
+
+| Piece | File |
+|---|---|
+| RPG schema (parser pack + enemies; `skill_check` on interactions) | `src/rpg/schema.ts` |
+| Seeded combat + skill-check resolvers (randomness in the pure resolver) | `src/rpg/combat.ts` |
+| RPG runner (parser actions + `ATTACK`) + observation | `src/rpg/runner.ts`, `src/rpg/observation.ts` |
+| RPG validator (winnability, skill passability, stat/death-ending checks) | `src/validate/rpg_validator.ts` |
+| Gated core DSL additions: `set_quest_stage` effect, `quest_stage` condition, `ATTACK` action | `src/core/`, `src/api/types.ts` |
+| Sample pack: *The Sunken Barrow* | `content/rpg/pack/sunken_barrow.yaml` |
+| Negative fixture (`COMBAT_UNWINNABLE`) | `content/broken-fixtures/rpg_unwinnable.yaml` |
+| §14 gate record (all six items) | [`docs/stage4_rpg_gate.md`](./docs/stage4_rpg_gate.md) |
+| Acceptance + unit + regression tests, recorded victory trace | `tests/`, `traces/rpg/barrow_victory.json` |
+
+Stage 4 is **backward-compatible**: the additions are optional or top-level, so
+every Stage 0–3 pack compiles to identical content (the CYOA content hash is
+asserted unchanged) and every prior trace still replays.
+
+### Stage 5 — Web UI (React + Vite) ✅
+
+A **view** over the headless engine: it compiles a pack in-browser and drives the
+same `step` reducer the CLI and MCP server use — one code path for CYOA, parser,
+and RPG packs. The engine stays authoritative; the UI never decides legality.
+
+| Piece | File |
+|---|---|
+| Browser engine client (one `GameSession` for all modes) | `ui/src/engine.ts` |
+| React play view + pack picker | `ui/src/App.tsx`, `ui/src/packs.ts` |
+| Pure-JS SHA-256 (makes the core browser-safe; byte-identical digests) | `src/core/sha256.ts` |
+| Node test proving the UI uses only the structured API | `tests/unit/ui_engine.test.ts` |
+
+```bash
+npm run ui:dev     # http://localhost:5173 (after: npm --prefix ui install)
+npm run ui:build   # production bundle in ui/dist
+```
+
+### Debugger + Fixer agents (§12.5, §15)
+
+`agents/debugger.ts` replays a trace through the pure engine and classifies the
+outcome (soft-lock / loop / unrecoverable death / rejected action / no failure),
+then emits the §15 bug artifact. `agents/fixer.ts` proposes a **closed,
+whitelisted** `ContentPatchProposal` that deterministic code applies and
+re-validates — a model never edits files or runs shell (§16); a patch that breaks
+the schema or fails validation is refused. Exposed over MCP as `apply_content_patch`.
+
 ### AI authoring — packs from prose (§11, §12.1–3)
 
 A pack can be **authored from a one-line premise** by the writer → adapter →
@@ -121,12 +170,17 @@ npm run validate -- content/parser/pack/sealed_crypt.yaml  # Stage 2: validate t
 npm run play:parser -- content/parser/pack/sealed_crypt.yaml # Stage 2: play it (interactive)
 npm run playtest:parser -- content/parser/pack/sealed_crypt.yaml # Stage 2: the §12.8 roster
 npm run play:parser -- content/parser/pack/alchemists_tower.yaml  # Stage 3: score + death/restore
+npm run validate -- content/rpg/pack/sunken_barrow.yaml    # Stage 4: validate the RPG pack
+npm run play:rpg -- content/rpg/pack/sunken_barrow.yaml     # Stage 4: play it (combat + skill check)
+npm run inspect -- content/rpg/pack/sunken_barrow.yaml      # summarize a pack (or a trace)
 npm run author -- "your one-line premise here"             # author a pack from prose (§12.1-3)
+npm run ui:dev                                             # Stage 5: web UI (after npm --prefix ui install)
 ```
 
 Non-interactive play (scriptable / CI): for CYOA add `--choices id1,id2,...`; for the
-parser add `--commands "go north; take rope; ..."`. Both accept `--record traces/run.json`
-to save a replayable trace. `npm run validate` auto-detects CYOA vs parser packs.
+parser/RPG add `--commands "go north; take rope; attack wight; ..."`. Both accept
+`--record traces/run.json` to save a replayable trace. `npm run validate` and
+`npm run inspect` auto-detect CYOA vs parser vs RPG packs.
 
 ### MCP server — how an agent plays the game (§9.4)
 
@@ -134,10 +188,11 @@ The engine is exposed as an MCP server so any agent harness (Claude Code, Codex,
 Gemini CLI, …) plays via native tool calls over the structured observation/action
 loop — never a raw parser. Tools: `validate_pack`, `load_pack`, `new_game`,
 `get_observation`, `list_legal_actions`, `step_action`, `save_game`, `load_game`,
-`replay_trace`, `adapt_story` (author a pack from a premise). All paths are
-confined to the project root; content and traces are
-data only (§16). The handlers (`src/mcp/tools.ts`) are unit-tested directly without
-a live client.
+`replay_trace`, `inspect_trace` (per-step summary + suspected bugs),
+`apply_content_patch` (deterministic, whitelisted patch), `adapt_story` (author a
+pack from a premise). All paths are confined to the project root; content and
+traces are data only (§16). The handlers (`src/mcp/tools.ts`) are unit-tested
+directly without a live client.
 
 ```bash
 npm run mcp   # start the stdio server
@@ -180,11 +235,19 @@ soft-lock now fixed and locked by `bug_0001` (§15).
 npm run playtest:parser -- content/parser/pack/sealed_crypt.yaml [--out traces/playtests]
 ```
 
-## Next: Stage 4
+## Status: all stages complete ✅
 
-Stages 0–3 plus the AI authoring pipeline are complete and green. Remaining:
-Stage 4 (Hero's-Quest: character stats in `vars`, deterministic seeded skill
-checks, simple turn-based combat resolved in code, quest stages) — all through
-the §14 engine-extension gate, with combat randomness flowing through the seeded
-PRNG so every fight stays replayable; then Stage 5 (a UI as a view over the same
-headless core).
+Stages 0–5 are implemented and green — the full proof path from a deterministic
+core, through CYOA, a Zork-style parser, a Sierra-Quest scoring/death game, a
+Hero's-Quest RPG (stats + seeded combat + skill checks via the §14 gate), to a
+React web UI that is a pure view over the same headless engine. The complete loop
+from the thesis — AI writes a story → adapts it to a validated pack → the engine
+validates it → an AI plays every route through the structured legal-action API →
+records its experience → a debugger finds a flaw → a fixer patches it → a
+regression test locks the fix — is exercised end to end, with the determinism
+contract (§8.5) holding across every recorded trace.
+
+Run the full gate with `npm run health` (typecheck + tests + validate + playtest).
+Provider-agnostic LLM access (`agents/llm/`) defaults to a deterministic mock, so
+everything runs in CI with no API keys; real OpenAI/Anthropic/Google backends sit
+behind env vars (§12.7).
