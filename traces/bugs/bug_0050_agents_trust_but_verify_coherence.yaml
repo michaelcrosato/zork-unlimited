@@ -1,0 +1,66 @@
+bug_id: bug_0050
+pack_id: null  # repo/doc-coherence fix — no content pack edited
+seed: 197
+evidence:
+  source: blind_playtest + doc/code audit
+  protocol: docs/blind_playtest_protocol.md
+  report: ai-runs/2026-06-01T14-23-53-934Z/playtest.md
+  finding: >
+    The mandated blind playtest this cycle (clockwork_heist, seed 197 — 10th
+    independent blind pass) reached all three endings, clarity 5/5, enjoyment 4/5,
+    mechanically flawless. Its one concrete note (the two letter sources' hidden-vs-
+    displayed framing) is a re-raise of the already-adjudicated bug_0041 paired-letter
+    design on an otherwise-pristine pack — a low-value cosmetic nit, deferred. Per the
+    protocol's "you MAY pick a different candidate if it is higher value," the
+    improvement rotated to the highest-value standing cross-category lever:
+    bug_0049 deferred next-focus (a)(i) — the sibling stale §14-as-live phrasing in
+    agent-facing CODE COMMENTS, which bug_0049 named (`agents/fixer.ts:14`).
+failure:
+  type: retired_concept_instructed_as_live
+  where: [code:agents/fixer.ts]
+  description: >
+    The project charter is "trust, but verify": the agent has full authority over ALL
+    game code (engine, validators, schemas) gated only by the automated verification
+    (AGENTS.md — "no human-approval gate and no §14 ceremony"; the live AFK cycle
+    prompt — "new mechanics no longer need a §14 ceremony"). But agents/fixer.ts still
+    carried the pre-charter human-approval ceremony as LIVE policy in two agent-facing
+    comments: the file header ("engine_rule/validator/test changes are gated (§14) and
+    produce a proposal only — code edits stay with the human supervisor") and an inline
+    echo ("Loops, rejected actions, and engine-touching fixes are proposals only
+    (gated, §14)"), plus a runtime diagnosis summary framed as "Reviewer action
+    required". A fresh fixer/agent reading these would refuse the very engine/validator
+    fixes the charter grants — a stale map steering behaviour the wrong way, the exact
+    code-comment sibling of the bug_0049 doc fix (and the long-logged bug_0045
+    deferred[a] / bug_0049 deferred (a)(i) lever).
+fix:
+  layer: repo  # agent-facing code comments + a shared coherence predicate + guard; NO engine/validator/schema/content change
+  summary: >
+    (1) Reworded agents/fixer.ts's two stale comments to match the charter: engine_rule/
+    validator/test changes fall OUTSIDE the fixer's structured-patch vocabulary, so the
+    fixer surfaces them as a diagnosis and the AGENT edits that code DIRECTLY under
+    trust, but verify (full authority, no human-approval gate, no §14 ceremony), with
+    `npm run health` as the bar. The real §16 safety property — the model stays on the
+    data-in/validated-data-out path — is PRESERVED and reframed as not-a-human-gate. The
+    runtime summary "Reviewer action required for ..." became "Direct code fix required
+    (no content-patch op) for ...". (2) Extracted the bug_0049 conservative predicate
+    into a shared module src/afk/gate_coherence.ts, broadened with two code-comment
+    signatures ("proposals only (gated, §14)"; "code edits stay with the human
+    supervisor") — the legitimate §14 SPEC references (e.g. debugger.ts's "(§14 testing
+    strategy)") match no signature and are NOT flagged. (3) bug_0049's doc test now
+    imports the shared predicate (single source of truth); a new bug_0050 test scans all
+    agents/*.ts.
+  reachable_endings_changed: false  # no content/engine touched at all
+  content_hash_changed: false       # no pack edited
+regression_test: tests/regression/agents_trust_but_verify_coherence.test.ts
+verified:
+  - "typecheck + ESLint + Prettier green; full `npm run health` exit 0."
+  - "agents/*.ts scanned clean by instructsRetiredGateAsLive; debugger.ts's §14 spec ref NOT flagged."
+  - "mechanism non-vacuous: re-injecting a stale 'gated (§14): a human reviews' line into fixer.ts is flagged."
+  - "not-vacuous-by-deletion: fixer.ts still affirmatively routes engine fixes via trust-but-verify (no §14 ceremony)."
+  - "no protected source touched; no hash-pin moved; no content hash moved; no override used."
+deferred:
+  - "The clockwork two-letter hidden-vs-displayed framing (playtest §5): if a future cycle wants the bug_0041 'two copies' intent fully legible without breaking the bug_0017/0025 stands-alone discipline, establish in each scene that the confession was copied (written more than once) so neither placement contradicts the other."
+  - "Sibling spec/history docs and the spec's §14 engine-extension-gate concept are legitimate and out of scope; only CURRENT-PROCESS material (docs a fresh agent follows + agent-facing code comments) is guarded."
+  - "The semantic-weakening blind spot in verify-integrity (catches mechanical tampering, not a meaning-preserving check weakening — needs an LLM-judge), noted since cycle 2026-06-01c."
+notes:
+  closes: "bug_0049 deferred next-focus (a)(i) — stale §14-as-live phrasing in code comments (agents/fixer.ts)."

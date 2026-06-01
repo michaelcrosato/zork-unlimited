@@ -11,8 +11,13 @@
  *
  * The fixer touches exactly one of {content, engine_rule, validator, test,
  * hint_text, quest_structure}. Content/hint/quest patches are expressed as the
- * ops below; engine_rule/validator/test changes are gated (§14) and produce a
- * proposal only — code edits stay with the human supervisor.
+ * whitelisted ops below and applied deterministically. engine_rule/validator/test
+ * changes fall OUTSIDE this structured-patch vocabulary: the fixer surfaces them as
+ * a diagnosis and the agent makes those code edits directly under trust, but verify
+ * (AGENTS.md — full authority, no human-approval gate, no §14 ceremony), with the
+ * automated verification (`npm run health`) as the bar. Keeping the model on the
+ * data-in/validated-data-out path is the §16 safety property; it is no longer a
+ * human-approval gate.
  */
 import { z } from "zod";
 import { CyoaPackSchema } from "../src/cyoa/schema.js";
@@ -239,12 +244,14 @@ export function proposeFix(
       ],
     };
   }
-  // Loops, rejected actions, and engine-touching fixes are proposals only (gated, §14).
+  // Loops, rejected actions, and engine-touching fixes have no content-patch op:
+  // the fixer surfaces them as a diagnosis (empty ops) for the agent to fix in code
+  // directly under trust, but verify — not a human-approval gate.
   const layer: FixLayer = diagnosis.type === "loop" ? "quest_structure" : "content";
   return {
     layer,
     mode: ctx.mode,
-    summary: `Reviewer action required for "${diagnosis.type}" at ${ctx.location ?? "unknown"}: ${diagnosis.description}`,
+    summary: `Direct code fix required (no content-patch op) for "${diagnosis.type}" at ${ctx.location ?? "unknown"}: ${diagnosis.description}`,
     ops: [],
   };
 }

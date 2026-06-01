@@ -22,30 +22,9 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-
-/**
- * Pure predicate: return the substrings in `docText` that instruct the retired §14
- * human-approval gate as LIVE, mandatory process. Conservative by construction — it
- * matches only imperative gate phrasings, never a negation ("no §14 ceremony") or a
- * past-tense historical record ("went through the §14 gate").
- */
-export function instructsRetiredGateAsLive(docText: string): string[] {
-  const SIGNATURES: RegExp[] = [
-    // "gated (§14)" / "gated** (§14)" as an instruction (a NEGATION reads "no §14
-    // ceremony" / "need no §14 ceremony" and never matches "gated (§14)").
-    /gated\*{0,2}\s*\(§14\)/i,
-    // "propose only; a human reviews" — the human-gate instruction itself.
-    /propose only;?\s*a human\s+reviews/i,
-    // "Do not silently change engine rules" — forbids the authority the charter grants.
-    /do not silently change engine rules/i,
-  ];
-  const hits: string[] = [];
-  for (const re of SIGNATURES) {
-    const m = docText.match(re);
-    if (m) hits.push(m[0]);
-  }
-  return hits;
-}
+// The conservative predicate now lives in a shared module (bug_0050 reuses it to
+// guard agent-facing code comments as well as these current-process docs).
+import { instructsRetiredGateAsLive } from "../../src/afk/gate_coherence.js";
 
 const read = (rel: string): string => readFileSync(join(process.cwd(), rel), "utf8");
 
