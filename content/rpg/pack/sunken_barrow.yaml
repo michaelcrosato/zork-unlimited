@@ -29,8 +29,10 @@ rooms:
   - id: barrow_mouth
     name: "Barrow Mouth"
     description: >
-      A low arch of turf-bound stone opens into the hillside. Cold air sighs up
-      from the dark. The only way is down.
+      A low arch of turf-bound stone opens into the hillside — the Sunken Barrow,
+      where the old songs lay the Barrow-Lord to rest with his pale circlet still
+      on his brow. That crown is what you came down out of the daylight to take.
+      Cold air sighs up from the dark, and the only way to it is down.
     exits:
       - { direction: down, to: entry_hall }
 

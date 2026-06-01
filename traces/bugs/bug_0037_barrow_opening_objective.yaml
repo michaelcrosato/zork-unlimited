@@ -1,0 +1,69 @@
+bug_id: bug_0037
+pack_id: sunken_barrow_v1
+seed: 99
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  report: ai-runs/2026-06-01T11-40-54-593Z/playtest.md
+  finding: >
+    Playtest target rotated (per the protocol's "rotate the seed and ... rotate the
+    pack" and the standing "keep rotating" guidance) off the ~14-times-pristine
+    clockwork_heist onto the LEAST-recently blind-quality-tested pack, the RPG The
+    Sunken Barrow (its last full quality playtest predates bug_0015), seed 99. A
+    fresh, MCP-only blind playtester cleared the pack flawlessly — won ending_victory
+    50/50, clarity 5/5, enjoyment 3/5, zero rejected actions, no loops, no broken or
+    stale state, and the missing-tool soft-lock case gated gracefully. It found NO
+    bug. Its one recurring, actionable note (report §3) was that the goal is
+    "implicit": the player descends knowing only "the only way is down" and learns
+    what they actually came for — the Barrow-Lord's circlet — only in the final room.
+    This corroborates a finding deferred across multiple cycles (bug_0015 deferred[2],
+    bug_0027 deferred[1], re-logged bug_0030 deferred(b)).
+failure:
+  type: missing_opening_objective
+  where:
+    - content:content/rpg/pack/sunken_barrow.yaml
+  description: >
+    The start room barrow_mouth's description ("A low arch of turf-bound stone opens
+    into the hillside. Cold air sighs up from the dark. The only way is down.") gave
+    the player a direction but no AIM. The quest's prize, the Barrow-Lord's circlet,
+    was named for the first time only in relic_chamber — the last room of the game,
+    reached AFTER every fight and puzzle is already solved. A first-time player thus
+    spent the whole adventure orienting on momentum ("go deeper") rather than on a
+    goal, weakening the framing of an otherwise well-signposted vignette. Not a
+    mechanical defect (the pack is winnable and pristine) — a player-facing clarity /
+    motivation gap.
+fix:
+  layers: [content]
+  summary: >
+    CONTENT-only orientation line (no engine/validator/flag/item/exit/quest-gating/
+    scoring/reachable-ending change): barrow_mouth's description now names the place
+    (the Sunken Barrow), the prize (the Barrow-Lord's circlet, framed as legend — "the
+    old songs lay the Barrow-Lord to rest with his pale circlet still on his brow"),
+    and the player's motive ("That crown is what you came down out of the daylight to
+    take"), while preserving the original orientation beat ("the only way to it is
+    down"). The goal is now stated up front WITHOUT spoiling its location (the circlet
+    still rests behind the slab in relic_chamber; nothing about the route is revealed).
+  reachable_endings_changed: false
+  content_hash_changed: true   # sunken_barrow yaml text genuinely changed (one room description rewrite)
+  content_hash_before: e88bc2c096e1e8ab4c425d2c25682bef5e959158a116b0131c739f9709df6844
+  content_hash_after: 7480eb9ab5644a28af9161e0bf9a767f53911dcb28411f96fcb0fc31860c7bbf
+  repin: >
+    Deliberate, surfaced re-pin (NOT a weakening): traces/rpg/barrow_victory.json
+    content_hash updated e88bc2c0... -> 7480eb9a... to match the pack it was recorded
+    against (§8.8; rpg_barrow_trace.test.ts asserts trace.content_hash ===
+    compiled.contentHash). The trace's expected_final_hash is UNCHANGED — only a room
+    DESCRIPTION (pack text, not game state) changed; no flag, item, effect, exit, DC,
+    skill, or roll moved, so the seed-1 canonical victory replays to the identical
+    final state hash (rpg_barrow_trace.test.ts green). The verifier-integrity drift
+    gate classifies this as HASH_PIN_REPINNED (warning, accompanied by a real content
+    change) — the legitimate snapshot-update workflow, not the unaccompanied launder
+    pattern. No test SOURCE pins this pack's hash (only watchtower_road is pinned).
+deferred:
+  - >
+    Brevity / low challenge (report §3, §6): a tight ~6-action vignette with one fight
+    and one puzzle; reads more like a polished tutorial than a full adventure. A
+    content-expansion candidate, not a defect — out of scope for a small verified edit.
+  - >
+    The iron bar has no combat relevance (report §4): a player might briefly read it as
+    a weapon, though its examine text frames it as a lever. Cosmetic; not chased.
+regression_test: tests/regression/rpg_barrow_opening_objective.test.ts
