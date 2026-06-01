@@ -175,12 +175,33 @@ scenes:
     # vague "your time in the manor is running short" for a threat pointed at the real
     # mechanic: this gallery is the floor the watchman will walk at the hour, so standing
     # here when it chimes is the actual danger (blind-playtest finding, bug_0061).
+    #
+    # The ticks>=4 case is split on `read_ledger` (blind-playtest finding, bug_0066,
+    # continuing the bug_0058 plate-leak lesson). The patrol-at-the-hour text once
+    # named "the hourly patrol the steward's ledger warned of" unconditionally — but a
+    # player can reach the gallery at the hour without ever reading (or even seeing) the
+    # ledger (e.g. pacing up the stair and back), and `cross_to_vault_blind` only exists
+    # for exactly that no-ledger player. Naming the ledger to someone who never read it
+    # attributes foreknowledge they don't have — out of character for a pack whose every
+    # other reactive line is gated on what the player actually knows. The reader gets the
+    # ledger callback (the payoff for the study clue, pre-seeded by the read_ledger
+    # journal line); the non-reader simply sees the watchman appear at the chime, with no
+    # claim of prior warning. No flag/tick/route/gating/ending change: the choice gates
+    # already mirror this split (approach_vault for ticks<=3 OR read_ledger;
+    # cross_to_vault_blind for ticks>=4 AND not read_ledger).
     variants:
-      - when: [{ var_gte: { name: ticks, value: 4 } }]
+      - when: [{ var_gte: { name: ticks, value: 4 } }, { has_flag: read_ledger }]
         text: >
           A long gallery lined with frozen automata, their glass eyes following you.
           The vault door broods at the far end — but a watchman's lantern now sweeps
           the gallery, the hourly patrol the steward's ledger warned of. The long
+          crossing to the vault runs right under his beam. The study still stands
+          ajar to one side, and the stair drops safely back to the foyer.
+      - when: [{ var_gte: { name: ticks, value: 4 } }]
+        text: >
+          A long gallery lined with frozen automata, their glass eyes following you.
+          The vault door broods at the far end — but the hour has chimed, and a
+          watchman's lantern now sweeps the gallery on his slow rounds. The long
           crossing to the vault runs right under his beam. The study still stands
           ajar to one side, and the stair drops safely back to the foyer.
       - when: [{ var_gte: { name: ticks, value: 2 } }]
