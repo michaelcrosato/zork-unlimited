@@ -92,6 +92,25 @@ export function buildRules(index: CyoaIndex): Rules {
     onEnter(_state: GameState, locationId: string): Effect[] {
       return index.scenes.get(locationId)?.on_enter ?? [];
     },
+
+    // §8.4.5 — the optional pack-level `deadline`. The engine calls this after every
+    // action's effects (and any on_enter), but only while the game has NOT already
+    // ended — so a choice that fires its own `end_game` (rich/truth/caught/patrol)
+    // never collides with the deadline. When `deadline.when` holds we end the game,
+    // mirroring the terminal-choice transition (goto + end_game) so the observation
+    // renders the ending's epilogue: `buildObservation` keys the displayed text off
+    // `state.current`, so without the `goto` the player would see the scene they were
+    // standing in (e.g. the gallery) under an `ended` flag instead of the epilogue.
+    checkWin(state: GameState): Effect[] {
+      const deadline = index.pack.meta.deadline;
+      if (!deadline) return [];
+      // Defensive: only end toward a real terminal. The validator already rejects a
+      // deadline whose ending isn't a declared terminal; this guard keeps a slipped-
+      // through misconfig from gotoing a non-terminal scene and stranding the player.
+      if (!isTerminal(index, deadline.ending)) return [];
+      if (!evalConditions(deadline.when, state)) return [];
+      return [{ goto: deadline.ending }, { end_game: deadline.ending }];
+    },
   };
 }
 

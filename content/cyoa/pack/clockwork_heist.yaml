@@ -25,6 +25,31 @@ meta:
   # patrol begins, so the ledger is load-bearing, not a clue you only meet by
   # dawdling (blind-playtest finding, bug_0040 refining bug_0019).
   vars_init: { ticks: 0 }
+  # The clock's teeth — the namesake mechanic, finally made real. A fresh blind
+  # playtester (seed 7, ai-runs/2026-06-01T21-00-24-111Z/playtest.md §4/§5/§6) reached
+  # all endings, rated the pack 5/5 clarity, and flagged ONE thing in three sections:
+  # the ticking clock is the LOUDEST mechanic ("be gone before the chime"), yet `ticks`
+  # was never enforced — a Chekhov's gun, urgency text writing a check the engine never
+  # cashed. bug_0061 made that text honest (it points the urgency at the house/watchman
+  # waking at the hour, not a phantom global timeout), but the warning still had no
+  # consequence of its own. This gives it a real, if distant, bite via the engine's
+  # `checkWin` deadline (§8.4.5): linger long enough — ticks >= 10 — and the hour fully
+  # turns, the woken house closes in, and you end at `ending_overstayed`.
+  #
+  # Tuned GENEROUS on purpose, so it never punishes honest play, only aimless circling:
+  # the efficient vault route is ~4 ticks; a maximally thorough first-timer (explore
+  # upstairs, poke the vault before finding the pick, backtrack for it, return) wins at
+  # ticks 6 (verified live, seed 7); and the existing patrol-deadline regression
+  # (clockwork_guard_patrol_deadline) deliberately drives legitimate dawdle routes to
+  # ticks 7 at the gallery and treats them as still-playable. So 10 fires ONLY on
+  # genuine aimless wandering of the patrolled upstairs — never on the thorough
+  # exploration the same playtest asked for MORE of. ticks advance only upstairs
+  # (kitchen, gallery, study), so this is a clock, not a global move counter: the
+  # crawlspace/foyer "stealth" route stays at low ticks and is never threatened, which
+  # is right — that route slips past the clock entirely. (bug_0079.)
+  deadline:
+    when: [{ var_gte: { name: ticks, value: 10 } }]
+    ending: ending_overstayed
 
 scenes:
   - id: foyer
@@ -572,6 +597,22 @@ endings:
       his shout brings the sleeping house awake. The steward's own ledger kept his
       rounds — if only you had stopped to read it. The cell is cold, and somewhere
       the great clock keeps ticking.
+  - id: ending_overstayed
+    # The deadline ending (meta.deadline, ticks >= 10). Distinct in cause from the
+    # other two losses: ending_caught is forcing the vault (the alarm bell), and
+    # ending_patrol is being caught crossing the gallery on the hour. This one is
+    # simply staying too long — the hour turns while you are still circling the house,
+    # the manor wakes around you, and the clock the whole pack drums up finally bites.
+    title: "The Hour Turns"
+    text: >
+      You lingered too long, and the great clock keeps no secrets. Its slow chime
+      rolls through the manor's thousand gears, and the sleeping house wakes around
+      you — lamps flaring along the landings, a steward's startled voice, the
+      watchman's tread no longer alone but answered now by others. The frozen automata
+      catch the rising light, their glass eyes turning. Whatever you came to carry off,
+      and wherever you meant to be by the hour, you are still here when it strikes — and
+      there is no corner of the clockwork manor left dark enough to hide a thief who
+      stayed past his welcome.
   - id: ending_truth
     title: "The Truth"
     # Two routes reach this ending carrying two oppositely-framed letters: the vault

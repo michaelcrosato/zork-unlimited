@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
 import { hashState } from "../../src/core/hash.js";
-import { loadPackFile } from "../../src/cyoa/pack.js";
+import { compilePack, loadPackFile } from "../../src/cyoa/pack.js";
 import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
 import { buildObservation } from "../../src/cyoa/observation.js";
 import { runActions, type Trace } from "../../src/trace/record.js";
@@ -162,5 +162,64 @@ describe("CYOA determinism + replay (Stage 1 acceptance §13.9)", () => {
     expect(play(["go_west", "ford_brook", "cross_north", "slip_into_woods", "slip_away"])).toBe(
       "ending_escape",
     );
+  });
+});
+
+describe("CYOA runner — meta.deadline (engine §8.4.5 checkWin)", () => {
+  // A minimal pack whose only loss is the global deadline: bouncing between rooms a
+  // and b ticks `t` (each genuine room change fires on_enter — a self-goto would not),
+  // and at t >= 3 the game ends at `over`. Exercises the general engine feature
+  // independent of any shipped pack's content.
+  const DEADLINE_SRC = `
+meta:
+  id: d
+  title: D
+  start: a
+  vars_init: { t: 0 }
+  deadline: { when: [ { var_gte: { name: t, value: 3 } } ], ending: over }
+scenes:
+  - id: a
+    title: A
+    text: room a
+    on_enter: [ { inc_var: { name: t, by: 1 } } ]
+    choices:
+      - { id: tob, text: to b, next: b }
+      - { id: go, text: go, next: win }
+  - id: b
+    title: B
+    text: room b
+    on_enter: [ { inc_var: { name: t, by: 1 } } ]
+    choices:
+      - { id: toa, text: to a, next: a }
+endings:
+  - { id: win, title: W, text: won }
+  - { id: over, title: O, text: "the clock ran out" }
+`;
+  const r = compilePack(DEADLINE_SRC);
+  if (!r.ok) throw new Error("deadline fixture must compile");
+  const dIndex = indexPack(r.compiled.pack);
+  const dRules = buildRules(dIndex);
+
+  it("ends the game at the deadline ending once `when` holds, rendering its epilogue", () => {
+    const step = makeStep(dRules);
+    let s = initStateForPack(dIndex, 1); // start on_enter -> t = 1
+    expect(s.vars.t).toBe(1);
+    s = step(s, choose("tob")).state; // b: t = 2, still playing
+    expect(s.ended).toBe(false);
+    s = step(s, choose("toa")).state; // a: t = 3 -> deadline fires
+    expect(s.ended).toBe(true);
+    expect(s.endingId).toBe("over");
+    const obs = buildObservation(dIndex, s);
+    expect(obs.scene_id).toBe("over"); // checkWin's goto repointed current to the ending
+    expect(obs.text).toMatch(/clock ran out/);
+    expect(obs.available_actions).toEqual([]);
+  });
+
+  it("does not pre-empt a choice that reaches its own ending first", () => {
+    const step = makeStep(dRules);
+    let s = initStateForPack(dIndex, 1); // t = 1
+    s = step(s, choose("go")).state; // -> win, before the deadline could ever trip
+    expect(s.ended).toBe(true);
+    expect(s.endingId).toBe("win");
   });
 });

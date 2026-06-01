@@ -64,6 +64,34 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
     );
   }
 
+  // ── Deadline (meta-level global terminal) ──────────────────────────────────
+  // A `meta.deadline` ends the game at `deadline.ending` whenever `deadline.when`
+  // holds (engine §8.4.5 checkWin). It is reached WITHOUT any choice `next`/`goto`
+  // pointing at it, so the reachability/soft-lock graph below must be told about
+  // it, or it would wrongly read as an unreachable ending. Validate the reference
+  // here; register the structural edge inside the successors loop.
+  const deadline = pack.meta.deadline;
+  if (deadline) {
+    if (!allNodeIds.has(deadline.ending)) {
+      findings.push(
+        err(
+          "REF_UNRESOLVED",
+          `meta.deadline.ending "${deadline.ending}" does not resolve to any scene or ending.`,
+          ["meta:deadline"],
+        ),
+      );
+    } else if (!terminalIds.has(deadline.ending)) {
+      findings.push(
+        err(
+          "DEADLINE_NOT_TERMINAL",
+          `meta.deadline.ending "${deadline.ending}" is not a terminal (declared ending or is_ending scene).`,
+          ["meta:deadline"],
+        ),
+      );
+    }
+  }
+  const deadlineVars = deadline ? varNamesInConditions(deadline.when) : new Set<string>();
+
   // ── Reference integrity: every transition target resolves ──────────────────
   const successors = new Map<string, Set<string>>();
   for (const scene of pack.scenes) {
@@ -79,6 +107,15 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
     }
     for (const t of gotoTargets(scene.on_enter))
       registerTarget(t, outs, allNodeIds, findings, [`scene:${scene.id}`, "on_enter"]);
+    // The deadline can fire on entering this scene if its on_enter advances a var
+    // the deadline watches (the ref is already validated above, so add directly).
+    if (
+      deadline &&
+      terminalIds.has(deadline.ending) &&
+      [...varsWrittenByEffects(scene.on_enter)].some((v) => deadlineVars.has(v))
+    ) {
+      outs.add(deadline.ending);
+    }
     successors.set(scene.id, outs);
   }
 
@@ -283,6 +320,33 @@ function registerTarget(
 
 function gotoTargets(effects: Effect[]): string[] {
   return effects.flatMap((e) => ("goto" in e ? [e.goto] : []));
+}
+
+/** Var names a condition tree reads (var_gte/var_lte/var_eq), descending through
+ *  all_of/any_of/none_of. Used to know which scenes can trip a var-keyed deadline. */
+function varNamesInConditions(conds: Condition[]): Set<string> {
+  const out = new Set<string>();
+  const walk = (c: Condition): void => {
+    if ("var_gte" in c) out.add(c.var_gte.name);
+    else if ("var_lte" in c) out.add(c.var_lte.name);
+    else if ("var_eq" in c) out.add(c.var_eq.name);
+    else if ("all_of" in c) c.all_of.forEach(walk);
+    else if ("any_of" in c) c.any_of.forEach(walk);
+    else if ("none_of" in c) c.none_of.forEach(walk);
+  };
+  conds.forEach(walk);
+  return out;
+}
+
+/** Var names a list of effects writes (set_var/inc_var/dec_var). */
+function varsWrittenByEffects(effects: Effect[]): Set<string> {
+  const out = new Set<string>();
+  for (const e of effects) {
+    if ("set_var" in e) out.add(e.set_var.name);
+    else if ("inc_var" in e) out.add(e.inc_var.name);
+    else if ("dec_var" in e) out.add(e.dec_var.name);
+  }
+  return out;
 }
 
 function bfs(start: string, successors: Map<string, Set<string>>): Set<string> {

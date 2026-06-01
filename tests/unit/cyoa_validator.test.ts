@@ -60,4 +60,54 @@ endings: [ { id: e, title: E, text: "done" } ]
     // No ending is reachable at all from start.
     expect(report.findings.map((f) => f.code)).toContain("NO_REACHABLE_ENDING");
   });
+
+  // ── meta.deadline (global terminal via engine §8.4.5 checkWin) ──────────────
+  // A deadline ending is reached without any choice `next`/`goto` pointing at it;
+  // the validator must (a) treat it as reachable when some scene can advance the
+  // var it watches, and (b) reject a deadline whose `ending` is missing or not a
+  // terminal — else the engine guard would silently swallow the deadline.
+  const deadlinePack = (deadlineEnding: string): string => `
+meta:
+  id: d
+  title: D
+  start: a
+  vars_init: { t: 0 }
+  deadline: { when: [ { var_gte: { name: t, value: 3 } } ], ending: ${deadlineEnding} }
+scenes:
+  - id: a
+    title: A
+    text: x
+    on_enter: [ { inc_var: { name: t, by: 1 } } ]
+    choices:
+      - { id: wait, text: wait, next: a }
+      - { id: go, text: go, next: win }
+endings:
+  - { id: win, title: W, text: won }
+  - { id: over, title: O, text: "out of time" }
+`;
+
+  it("a deadline ending reachable only via the deadline is NOT flagged unreachable", () => {
+    const r = compilePack(deadlinePack("over"));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const report = validateCyoa(r.compiled.pack);
+    expect(report.findings.filter((f) => f.severity === "error")).toEqual([]);
+    expect(report.findings.some((f) => f.code === "ENDING_UNREACHABLE")).toBe(false);
+  });
+
+  it("a deadline pointing at a missing node fails REF_UNRESOLVED", () => {
+    const r = compilePack(deadlinePack("nope"));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const report = validateCyoa(r.compiled.pack);
+    expect(report.findings.some((f) => f.code === "REF_UNRESOLVED")).toBe(true);
+  });
+
+  it("a deadline pointing at a non-terminal scene fails DEADLINE_NOT_TERMINAL", () => {
+    const r = compilePack(deadlinePack("a")); // `a` is a scene, not a terminal
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const report = validateCyoa(r.compiled.pack);
+    expect(report.findings.some((f) => f.code === "DEADLINE_NOT_TERMINAL")).toBe(true);
+  });
 });

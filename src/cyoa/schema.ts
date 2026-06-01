@@ -60,6 +60,19 @@ export const EndingSchema = z
   })
   .strict();
 
+// A global terminal: after ANY action, if every condition in `when` holds, the
+// game ends at `ending`. Evaluated by the engine's §8.4.5 `checkWin` hook (see the
+// CYOA runner), so it fires whether or not the action moved between scenes — a
+// time/deadline loss (the clock running out) that no single choice's `next` models.
+// `ending` is a terminal id; the reference (and that it really is a terminal, and
+// that it stays reachable) is checked by the validator, not the schema.
+export const DeadlineSchema = z
+  .object({
+    when: z.array(ConditionSchema).min(1),
+    ending: z.string().min(1),
+  })
+  .strict();
+
 export const MetaSchema = z
   .object({
     id: z.string().min(1),
@@ -67,6 +80,10 @@ export const MetaSchema = z
     start: z.string().min(1),
     vars_init: z.record(z.string(), z.number()).default({}),
     flags_init: z.array(z.string()).default([]),
+    // Optional global deadline (above). `.optional()` (not a default) so packs that
+    // don't declare one compile byte-identically and their content hashes are
+    // unchanged — same rule as SceneSchema/EndingSchema `variants`.
+    deadline: DeadlineSchema.optional(),
   })
   .strict();
 
@@ -79,6 +96,7 @@ export const CyoaPackSchema = z
   .strict();
 
 export type Choice = z.infer<typeof ChoiceSchema>;
+export type Deadline = z.infer<typeof DeadlineSchema>;
 export type SceneVariant = z.infer<typeof SceneVariantSchema>;
 export type Scene = z.infer<typeof SceneSchema>;
 export type Ending = z.infer<typeof EndingSchema>;
