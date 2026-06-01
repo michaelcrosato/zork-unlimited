@@ -2,16 +2,25 @@
 #
 # Adds, on the same engine: a SCORE (awarded via inc_var on the `score` var), a
 # DEATH ending recoverable via load (§8.7), and a multi-step puzzle chain. Goal:
-# brew the antidote and carry it to the spire. Two clue sources point the way
-# (§17 rule 1): the spellbook recipe and the brewing narration.
+# brew the antidote and carry it to the spire, where the tower's fevered master
+# lies — then ADMINISTER it. Two clue sources point the way (§17 rule 1): the
+# spellbook recipe and the brewing narration.
 #
-#   courtyard ─N─ great_hall ─N─ laboratory ─up─ spire (WIN: visited + antidote)
+#   courtyard ─N─ great_hall ─N─ laboratory ─up─ spire (master; WIN: administer antidote)
 #      │ W: library (recipe, +5)      │ down*: cellar (water_vial)
 #      │ E: garden (herb, brass_key)  │ up: study (strongbox → iron_key)
 #   (* cellar door unlocked with the iron key)
 #
 # Chain: read recipe → herb + brass_key (garden) → unlock strongbox → iron_key →
-# unlock cellar → water_vial → brew (herb then water) → antidote → spire.
+# unlock cellar → water_vial → brew (herb then water) → antidote → spire → give
+# the antidote to the master. The climactic cure is a DELIBERATE act (USE antidote
+# on the master), not an auto-completion on room entry: a blind playtester (seed
+# 67) reached the spire holding the antidote and the win fired on the bare `go up`,
+# the ending narrating "you administer the antidote" — an act they never chose
+# (bug_0057, the parser-pack twin of sunken_barrow's bug_0056 claim-the-relic fix).
+# The win now turns on the administer interaction's `cure_administered` flag via the
+# engine's post-action checkWin hook (§8.4.5); `visited: spire` is KEPT so the
+# parser validator's soft-lock guard still derives the spire as a win-room.
 # DEATH: drinking the black phial (the recipe warns against it) — then load + retry.
 
 meta:
@@ -158,8 +167,11 @@ rooms:
   - id: spire
     name: "The Spire"
     description: >
-      The tower's top room, where the cure must be administered. Wind moans
-      through the broken glass. The laboratory is back down.
+      The tower's top room. On a low pallet beneath the wind-moaning broken glass
+      lies the tower's old master, fevered and failing — the patient the whole long
+      climb was for. The pale antidote in your hand is no use until you give it to
+      her. The laboratory is back down.
+    objects: [master]
     exits:
       - { direction: down, to: laboratory }
 
@@ -314,17 +326,50 @@ objects:
     takeable: true
     quest_critical: true
 
+  - id: master
+    name: "fevered master"
+    aliases: [master, alchemist, figure, patient, woman]
+    # The patient who waited at the top of the puzzle chain. Not takeable; her sole
+    # role is to be the deliberate TARGET of the cure, so the climax is an act the
+    # player CHOOSES (USE antidote on the master), not one the engine performs for
+    # them on bare room entry (bug_0057). The interaction sets `cure_administered`
+    # (the win flag, checked post-action by the engine's checkWin hook) and consumes
+    # the antidote — you poured it into her — so the win no longer needs `has_item:
+    # antidote`; it turns on the act, not on merely carrying the vial upstairs.
+    description: >
+      The tower's old master, gaunt and grey on her pallet, the long sickness
+      burning the last colour from her face. She is far too weak to speak — but her
+      eyes find the pale vial in your hand and hold on it.
+    interactions:
+      - verb: USE
+        item: antidote
+        target: master
+        conditions: [{ not_flag: cure_administered }]
+        effects:
+          - set_flag: cure_administered
+          - remove_item: antidote
+          - narrate: "You raise the master's head and tip the pale antidote between her cracked lips, a slow and careful measure, until the vial runs empty."
+
 win_conditions:
   - id: administer_cure
-    conditions: [{ visited: spire }, { has_item: antidote }]
+    # `visited: spire` is KEPT (not redundant): the parser validator derives its
+    # soft-lock guard from the `visited` rooms named in win conditions, so dropping
+    # it would silently disable that check (same reasoning as bug_0056). The win now
+    # also requires `cure_administered` — set only by USE-antidote-on-master in the
+    # spire — so it fires on the deliberate cure via checkWin, never on bare entry.
+    conditions: [{ visited: spire }, { has_flag: cure_administered }]
     ending: ending_cured
 
 endings:
   - id: ending_cured
     title: "The Cure"
+    # Reworded for bug_0057: the player now performs the administering themselves (the
+    # USE-antidote-on-master interaction narrates the act), so the ending carries the
+    # AFTERMATH rather than narrating an act the player never chose.
     text: >
-      At the spire's height you administer the antidote. Colour returns; the long
-      sickness breaks. You kept the light of the tower. *** You have won. ***
+      For a long moment nothing — then colour creeps back into the master's face,
+      breath by breath, and the long sickness breaks at last. The old alchemist will
+      live, and the light of the tower with her. *** You have won. ***
   - id: ending_poisoned
     title: "Poisoned"
     text: >

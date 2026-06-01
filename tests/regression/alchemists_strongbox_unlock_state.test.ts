@@ -186,6 +186,7 @@ describe("bug_0033 — the Study/strongbox stop reading 'locked' once the lock i
       "use_herb_on_cauldron",
       "use_water_vial_on_cauldron",
       "go_up",
+      "use_antidote_on_master", // bug_0057: the win is the deliberate cure, not bare spire entry
     ]);
     expect(won.ended).toBe(true);
     expect(won.endingId).toBe("ending_cured");

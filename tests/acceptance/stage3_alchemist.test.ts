@@ -76,7 +76,13 @@ describe("Stage 3 — The Alchemist's Tower", () => {
   });
 
   it("the AI completes the game via the legal-action API at full score", () => {
-    const state = play(initStateForParserPack(index, 1), [...BREW, "go_up"]);
+    // bug_0057: reaching the spire no longer auto-wins; the climax is the deliberate
+    // act of administering the antidote to the fevered master.
+    const state = play(initStateForParserPack(index, 1), [
+      ...BREW,
+      "go_up",
+      "use_antidote_on_master",
+    ]);
     const obs = buildParserObservation(index, state);
     expect(state.ended).toBe(true);
     expect(state.endingId).toBe("ending_cured");
@@ -99,7 +105,7 @@ describe("Stage 3 — The Alchemist's Tower", () => {
     // Restore the pre-death save and go on to win — the death was recoverable.
     const restored = load(saved, loaded.compiled.contentHash).state;
     expect(restored.ended).toBe(false);
-    const won = play(restored, ["go_up"]);
+    const won = play(restored, ["go_up", "use_antidote_on_master"]); // bug_0057: deliberate cure
     expect(won.ended).toBe(true);
     expect(won.endingId).toBe("ending_cured");
   });

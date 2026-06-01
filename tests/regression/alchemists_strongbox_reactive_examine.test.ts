@@ -139,6 +139,7 @@ describe("bug_0024 — the Alchemist's Tower strongbox examine reacts once it is
       "use_herb_on_cauldron",
       "use_water_vial_on_cauldron",
       "go_up",
+      "use_antidote_on_master", // bug_0057: the win is the deliberate cure, not bare spire entry
     ]);
     expect(won.ended).toBe(true);
     expect(won.endingId).toBe("ending_cured");
