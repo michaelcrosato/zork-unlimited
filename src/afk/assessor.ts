@@ -18,6 +18,8 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { createToolApi } from "../mcp/tools.js";
+import { loadPackFile } from "../cyoa/pack.js";
+import type { CyoaPack } from "../cyoa/schema.js";
 import type { PackMode } from "../mcp/types.js";
 
 export type Category = "content_fix" | "content_new" | "engine" | "repo";
@@ -83,6 +85,35 @@ function listSourceFiles(root: string): string[] {
   return out;
 }
 
+/**
+ * Is this CYOA pack PLANNING-GATED? — i.e. does any choice carry a state
+ * precondition (a `conditions` entry: item/flag/var/visited/quest gate)?
+ *
+ * This is the deterministic test for "the coverage bot's reach is trustworthy
+ * here". The planning-free bot picks choices greedily with no lookahead, so it
+ * cannot deliberately gather a prerequisite item/flag and come back to satisfy a
+ * gate — exactly the limit already documented for parser/RPG puzzle packs. So in a
+ * GATED CYOA pack its failure to reach an ending/scene is a PLANNING limit, not a
+ * content flaw (e.g. clockwork_heist: ending_rich/ending_truth sit behind the
+ * lockpick chain, ending_patrol behind a deliberate ledger-skip — all reached by
+ * the blind LLM playtest every cycle, none by the bot). A PURE-BRANCHING CYOA pack
+ * (no choice conditions anywhere) keeps the reliable-bot assumption: the bot can
+ * reach every node, so there a coverage gap IS a real structural signal.
+ */
+export function cyoaPackIsGated(pack: CyoaPack): boolean {
+  return pack.scenes.some((scene) => scene.choices.some((choice) => choice.conditions.length > 0));
+}
+
+/**
+ * Disk wrapper for {@link cyoaPackIsGated}. Falls back to `false` (reliable-bot /
+ * pre-bug_0032 behavior) if the pack can't be loaded — the caller only invokes
+ * this for packs already known playable.
+ */
+function isPlanningGatedCyoa(root: string, packPath: string): boolean {
+  const loaded = loadPackFile(join(root, packPath));
+  return loaded.ok && cyoaPackIsGated(loaded.compiled.pack);
+}
+
 /** Deterministically assess the repo and rank the next-best improvements. */
 export function assess(root: string): Assessment {
   const api = createToolApi({ root });
@@ -142,15 +173,23 @@ export function assess(root: string): Assessment {
     });
 
     // content_fix candidate when there is room to improve. CRUCIAL: the coverage
-    // BOT is a heuristic with NO planning, so in parser/RPG *puzzle* games its
-    // failure to reach an ending (or a gated room) is EXPECTED, not a content flaw
-    // — those packs ship passing walkthrough/acceptance tests proving they're
-    // winnable. Letting bot-coverage drive content_fix there sends the loop chasing
-    // phantom fixes. So bot-coverage is a content_fix signal for CYOA ONLY (where a
-    // no-planning bot can legitimately reach every node); for parser/RPG the real
-    // quality signal is the mandatory blind LLM playtest each cycle + validator
-    // warnings. (See docs/afk_loop.md.)
-    const botCoverageIsMeaningful = s.mode === "cyoa";
+    // BOT is a heuristic with NO planning, so in *puzzle* games its failure to reach
+    // an ending (or a gated room) is EXPECTED, not a content flaw — those packs ship
+    // passing walkthrough/acceptance tests proving they're winnable. Letting
+    // bot-coverage drive content_fix there sends the loop chasing phantom fixes.
+    //
+    // The dividing line is PLANNING-GATING, not the mode label. Parser/RPG are
+    // gated by nature, so bot-coverage is never a content_fix signal there. CYOA is
+    // gated only if its choices carry preconditions: a PURE-BRANCHING CYOA pack lets
+    // the no-planning bot reach every node (coverage gap ⇒ real signal), but a
+    // GATED CYOA pack (e.g. the lockpick-gated clockwork_heist, whose
+    // ending_rich/ending_truth/ending_patrol the bot reaches 1/4 every cycle while
+    // the blind LLM playtest reaches all of them) is exactly as unreachable-by-bot
+    // as a parser/RPG puzzle. So bot-coverage is a content_fix signal ONLY for
+    // ungated CYOA; for gated CYOA and all parser/RPG the real quality signal is the
+    // mandatory blind LLM playtest each cycle + validator warnings. (See
+    // docs/afk_loop.md.)
+    const botCoverageIsMeaningful = s.mode === "cyoa" && !isPlanningGatedCyoa(root, s.path);
     const coverageGap = botCoverageIsMeaningful ? unvisited.length + unreached.length * 2 : 0;
     const gap = warnings + coverageGap;
     if (gap > 0) {

@@ -44,13 +44,11 @@ describe("assess()", () => {
     // The planning-free coverage bot can't solve multi-step puzzles, so its failure
     // to reach a parser/rpg ending is expected — not a content flaw. Those packs
     // must not produce a high-impact `fix-` candidate from bot coverage alone.
+    // (bug_0032 generalized this to PLANNING-GATED CYOA too — see
+    // tests/regression/assessor_gated_cyoa_coverage.test.ts.)
     for (const p of a.packs.filter((p) => (p.mode === "parser" || p.mode === "rpg") && p.warnings === 0)) {
       expect(a.candidates.find((c) => c.id === `fix-${p.path}`)).toBeUndefined();
     }
-    // Any content_fix the assessor *recommends* must target a CYOA pack (where the
-    // bot's coverage is a fair signal), never a parser/rpg bot-coverage phantom.
-    const topPack = a.packs.find((p) => p.path === a.top!.target);
-    if (topPack) expect(topPack.mode).toBe("cyoa");
   });
 
   it("keeps parser/rpg packs on the radar as low-priority blind-playtest reviews", () => {
