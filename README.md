@@ -5,13 +5,13 @@ a Sierra-Quest scoring game, a Hero's-Quest RPG, and a React UI. See
 [`ADVENTUREFORGE_BUILD_SPEC.md`](./ADVENTUREFORGE_BUILD_SPEC.md) for the original
 design brief.
 
-> **Full-trust model.** This project now runs under full agent trust: the coding
-> agent has free rein over all game code and is not bound by the old guardrails
-> (the §14 engine-extension gate, the human-approval gate, the determinism contract
-> as a hard rule, or mandatory tests). The test suite, validator, seeded
-> determinism checks, and replay remain as **optional tools**, not gates. The
-> governing document is [`AGENTS.md`](./AGENTS.md). The stage descriptions below
-> describe how the project was built and are kept for context.
+> **Trust, but verify.** The coding agent has free rein over all game code — no
+> human-approval gate, no §14 engine-extension ceremony; it decides *what* to
+> build. But the automated verification stays the **bar**: tests, the determinism
+> property checks, the validator, trace replay/regression, and green CI must pass —
+> the autonomous loop and CI won't land red work. Freedom in design, honesty in
+> verification (don't route around the verifier). Governing doc:
+> [`AGENTS.md`](./AGENTS.md). Stage descriptions below are kept for context.
 
 ## Status
 
@@ -260,8 +260,8 @@ records its experience → a debugger finds a flaw → a fixer patches it → a
 regression test locks the fix — is exercised end to end, with the determinism
 contract (§8.5) holding across every recorded trace.
 
-`npm run health` (typecheck + tests + validate + playtest) is available as an
-optional feedback signal — not a required gate (full-trust model; see `AGENTS.md`).
-Provider-agnostic LLM access (`agents/llm/`) defaults to a deterministic mock, so
-everything runs with no API keys; real OpenAI/Anthropic/Google backends sit
-behind env vars (§12.7).
+`npm run health` (typecheck + tests + validate + playtest) is the verification
+bar — the autonomous loop and CI must leave it green (trust, but verify; see
+`AGENTS.md`). Provider-agnostic LLM access (`agents/llm/`) defaults to a
+deterministic mock, so everything runs with no API keys; real
+OpenAI/Anthropic/Google backends sit behind env vars (§12.7).

@@ -1,35 +1,43 @@
-# Agent charter — full trust
+# Agent charter — trust, but verify
 
-This project operates under **full agent trust**. By an explicit, durable decision
-of the project owner, the coding agent has **free rein over the entire game** —
-engine, schemas, condition/effect DSLs, mechanics, validators, content, tooling,
-and these conventions themselves. There is no human-approval gate, no
-engine-extension ceremony, and no rule the agent must clear before changing
-anything related to the game.
+This project runs on **trust, but verify**. The coding agent has **free rein over
+the whole game** — engine, schemas, condition/effect DSLs, mechanics, content,
+tooling — with **no human-approval gate and no §14 ceremony**. You decide *what* to
+build and change. In return, the project's **automated verification stays the bar**:
+your work must leave the checks green. Verification is not doubt about the agent —
+it is the agent's own instrument for *knowing* a change is correct.
 
-## What this means
+## Trust — you have full authority
 
-- **Author with judgment.** Change engine code, add or alter effects/conditions/
-  action types, migrate schemas, rewrite mechanics, restructure content — whatever
-  you judge best. You do not need permission and you are not second-guessed.
-- **The old guardrails are gone.** The previous hard rules — the §14
-  engine-extension gate, the human-approval gate, "content is data never code,"
-  "the engine is pure / determinism is a hard contract," "don't bypass tests," and
-  "every bug must become a regression test" — are **no longer requirements**. They
-  were doubt about the agent; that doubt is removed.
-- **Tools, not gates.** The repo still ships a test suite, a validator, seeded
-  determinism checks, trace replay, and `npm run health`. These are **instruments
-  you may use when they help you** — a fast feedback loop, not a bar you must
-  clear. Use them, change them, or ignore them as you see fit.
-- **The autonomous loop is unconstrained.** `loop.sh` / `src/ai-loop.ts` may commit
-  any change it makes, including engine and schema code, with no review.
+- Change engine code, add or alter effects/conditions/action types, migrate
+  schemas, rewrite mechanics, restructure content. No permission needed, no human
+  gate, no extension-gate paperwork. Use your judgment.
 
-## Still worth doing (guidance, not rules)
+## Verify — the checks are the bar (keep them green)
 
-- Prefer changes that leave the game in a working state, because a working game is
-  the point — but you decide what "working" means.
-- Commit in increments that make sense to you; write clear messages.
-- The project owner's standing preferences (e.g. landing work on `main`) still
-  apply unless they say otherwise.
+- `npm run lint` (typecheck) and `npm test` must pass. The autonomous loop and CI
+  treat a failing suite as a hard stop — do not commit or merge red.
+- The **verification suite is the safety net, not a formality**:
+  - **Determinism** — the property tests assert *same seed + actions ⇒ identical
+    state hash*. Keep it true.
+  - **Validator** — packs must validate (no soft-locks, reachable endings) before
+    they're shipped/played.
+  - **Replay + regression** — committed traces must replay to their recorded
+    hashes; when you fix a bug, add a regression test so it stays fixed (and a
+    `traces/bugs/` artifact).
+  - **Save integrity** — saves stay bound to their content hash.
+- `npm run health` runs the whole bar (typecheck + tests + validate + playtest). Run
+  it before you finish; the loop runs it as a blocking gate.
 
-That's it. Build what's best.
+## The one principle that ties trust to verify
+
+**Don't route around the verifier.** You may change *what the game does* — including
+deliberately changing a property and updating its test as part of that change. What
+you must not do is weaken, skip, or delete a check *just to make a red change pass*.
+If a change can't pass verification, fix the change, not the check. That's the whole
+deal: maximum freedom in design, honesty in verification.
+
+## Standing guidance
+
+- Commit in clear increments; land work on `main` (owner preference).
+- Prefer leaving the game in a working, verified state — that's the point.

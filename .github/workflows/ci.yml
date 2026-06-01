@@ -1,8 +1,8 @@
-name: CI (advisory)
+name: CI
 
-# Full-trust model (see AGENTS.md): these checks are ADVISORY signals, not gates.
-# Every step is continue-on-error, so the workflow never blocks a push or PR — the
-# coding agent decides what "working" means. Use the output as feedback if helpful.
+# Trust, but verify (see AGENTS.md): the agent has free rein over game code, but
+# these checks are the BAR — they block a red push/PR. Verification is the agent's
+# own instrument for knowing a change is correct, not a human gate.
 
 on:
   push:
@@ -19,12 +19,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Typecheck (advisory)
-        continue-on-error: true
+      - name: Typecheck
         run: npm run lint
-      - name: Tests (advisory)
-        continue-on-error: true
+      - name: Tests (unit + property + determinism)
         run: npm test
-      - name: Health (advisory)
-        continue-on-error: true
+      - name: Health (validate + playtest across packs)
         run: npm run health

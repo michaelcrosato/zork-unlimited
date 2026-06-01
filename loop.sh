@@ -40,10 +40,12 @@ run_codex_if_available() {
 }
 
 safe_commit_if_enabled() {
-  # Full-trust model (see AGENTS.md): the autonomous loop may commit ANY change it
-  # makes, including engine and schema code, with no review and no gate. ai-runs/
-  # and other ignored scratch are excluded only because .gitignore handles them.
-  local baseline="$1"  # unused; the loop no longer refuses on a dirty baseline
+  # Trust, but verify (see AGENTS.md): the loop may commit ANY change it makes,
+  # including engine/schema code, with no human review — but only AFTER `npm run
+  # health` passed in run_cycle (it aborts the cycle before reaching here on a red
+  # check). So commits are unconstrained in scope yet always verified. ai-runs/ and
+  # other ignored scratch are excluded only because .gitignore handles them.
+  local baseline="$1"  # unused; the loop does not refuse on a dirty baseline
   if [[ "${AI_LOOP_COMMIT:-0}" != "1" ]]; then
     return 0
   fi
@@ -56,9 +58,9 @@ run_cycle() {
   baseline="$(git status --porcelain -- "${status_filter[@]}")"
   npm run ai:loop
   run_codex_if_available
-  # Advisory only (full-trust model): health is a feedback signal, not a gate.
-  # It never blocks the cycle or the commit.
-  npm run health || echo "(health reported issues — advisory only, not blocking)"
+  # Trust, but verify: health is a BLOCKING gate. With `set -e` a failing health
+  # check aborts the cycle BEFORE any commit — the loop never commits red work.
+  npm run health
   safe_commit_if_enabled "$baseline"
 
   if [[ "${AI_LOOP_PUSH:-0}" == "1" ]]; then

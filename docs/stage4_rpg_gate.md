@@ -1,9 +1,11 @@
-# Stage 4 — Hero's-Quest RPG: engine-extension record (historical)
+# Stage 4 — Hero's-Quest RPG: engine-extension record (historical process)
 
-> **Historical.** The §14 engine-extension gate has been removed under the
-> full-trust model (see `AGENTS.md`). New mechanics no longer need this six-item
-> bundle. This document is kept as a record of how the Stage-4 RPG mechanics were
-> built; it is no longer a required process.
+> **Process note (trust, but verify — see `AGENTS.md`).** The §14 *human-approval
+> ceremony* is gone: new mechanics no longer need this six-item bundle reviewed
+> before they land. But the *verification* parts it relied on are still in force —
+> unit + scenario tests, determinism, and backward-compat trace replay must stay
+> green. So: add mechanics freely; just keep them verified. This doc is kept as a
+> record of how the Stage-4 RPG mechanics were built.
 
 This document records the Stage-4 mechanics. (It was originally the §14 gate
 record, which required every engine extension to ship with all six items below.)
