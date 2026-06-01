@@ -37,5 +37,14 @@ corrupt saves require human review. "A strong model wrote it" is not a safety ar
   cycle must discover stories, validate the selected pack, run random and
   coverage playtests, complete a known good ending route, attempt an exploratory
   route, and record compact durable notes in `AI_LOOP_STATE.md`.
+- **Run the blind playtest each cycle** per [`docs/blind_playtest_protocol.md`](docs/blind_playtest_protocol.md):
+  spawn a fresh subagent with NO design context that plays the pack only through
+  the `mcp__adventureforge__*` tools (it must not read `content/`, `src/`, `ui/`,
+  or `tests/`), collect its structured report, and turn its findings into one
+  focused fix. The heuristic `run_playtest` checks structure; the blind subagent
+  checks the player experience — run both. Apply content/hint fixes via the fixer
+  (`apply_content_patch`) or a re-validated YAML edit; engine-rule/validator/schema
+  changes stay gated (§14). Lock every fix with a `traces/bugs/` artifact + a
+  `tests/regression/` test (§15).
 - Keep raw autonomous evidence in ignored `ai-runs/`; do not commit generated
   saves, transcripts, coverage, build output, or dependency directories.

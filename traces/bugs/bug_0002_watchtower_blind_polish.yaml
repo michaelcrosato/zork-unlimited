@@ -1,0 +1,54 @@
+bug_id: bug_0002
+pack_id: watchtower_road_v1
+content_hash: b6208913c0a83e6acb2b052500d5af703ada8ddeaf4dcfb8652fd198bd2238a0
+seed: 7
+initial_state: start
+# Surfaced by a BLIND MCP playtester subagent (no access to source/content) playing
+# The Watchtower Road end to end — see docs/blind_playtest_protocol.md.
+findings:
+  - id: stale_cart_text
+    where: scene:abandoned_cart
+    severity: low
+    description: >
+      Scene text named the brass lantern and sealed letter as lying in the cart;
+      after taking them the static prose still claimed they were there.
+    fix: reword the description neutrally; item names live in the choice text.
+  - id: stale_gate_text
+    where: scene:cellar_door
+    severity: low
+    description: >
+      Scene text said "You will need a light to go down" even after the lantern
+      was lit and the descend option had appeared.
+    fix: drop the persistent line; move the hint into the light_lantern choice.
+  - id: duplicate_journal
+    where: scene:cellar
+    severity: medium
+    description: >
+      An on_enter add_journal ("The cellar smells of pitch and old smoke.") fired
+      on every entry, stacking duplicate journal lines on revisit. The same
+      class affected hidden_cache and hermit_about_letter.
+    fix: >
+      Move ambiance prose into the static scene text and remove the per-entry
+      on_enter add_journal (discovery flags stay in on_enter; they are idempotent).
+  - id: ledger_not_carried
+    where: [scene:hidden_cache, ending:ending_truth]
+    severity: medium
+    description: >
+      Both endings referenced "the ledger" as evidence, but it was never added to
+      inventory — only a flag was set, so the player visibly left it behind.
+    fix: >
+      add_item ledger when the player reads it (gated by not_item), and soften the
+      ending text to reference the evidence generally so all truth-paths are consistent.
+failure:
+  type: design_polish
+  description: >
+    No engine fault or determinism break — content/cosmetic flaws a first-time
+    player notices. Caught by the playtester step of the loop (§12.4-5), not the
+    validator (which checks solvability, not narrative freshness).
+fix:
+  layer: content        # one of: content | engine_rule | validator | test | hint_text | quest_structure
+  summary: >
+    Reworded two stale scene descriptions, moved cellar/cache ambiance from
+    per-entry on_enter journals into static scene text, made the ledger a real
+    carried item, and softened ending_truth to be path-agnostic.
+regression_test: tests/regression/watchtower_blind_fixes.test.ts

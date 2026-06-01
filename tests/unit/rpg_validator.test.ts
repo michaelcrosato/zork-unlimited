@@ -47,12 +47,14 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     }
   });
 
-  it("the CYOA pack content hash is stable after the gated DSL additions", () => {
+  it("the CYOA pack compiles to its pinned content hash (determinism snapshot)", () => {
     const loaded = loadPackFile("content/cyoa/pack/watchtower_road.yaml");
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
-    // This hash was recorded before Stage 4; adding union members to the
-    // condition/effect DSLs must not change content the pack does not use.
-    expect(loaded.compiled.contentHash).toBe("df85b4fcfa088a71f31f6d65edced57ed9065ed870182f3d94f9f9d1e5e92fef");
+    // Pinned snapshot of the current pack. The gated Stage-4 DSL additions did not
+    // change it (was df85b4f…); this value updated only when the pack content was
+    // deliberately edited to fix blind-playtest findings (stale text, duplicate
+    // journal, ledger inventory). Any *unintended* change to compilation trips this.
+    expect(loaded.compiled.contentHash).toBe("b6208913c0a83e6acb2b052500d5af703ada8ddeaf4dcfb8652fd198bd2238a0");
   });
 });

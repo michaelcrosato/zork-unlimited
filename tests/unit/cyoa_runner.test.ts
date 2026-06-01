@@ -51,21 +51,32 @@ describe("CYOA runner", () => {
     expect(buildObservation(index, r.state).available_actions).toEqual([]);
   });
 
-  it("the start scene's on_enter fires once at init", () => {
-    // hermit_about_letter sets learned_truth on_enter; verify on_enter wiring via cellar.
+  it("on_enter wiring fires (hermit_about_letter sets learned_truth on entry)", () => {
     const step = makeStep(rules);
     let s = initStateForPack(index, 1);
-    s = step(s, choose("go_east")).state;
-    s = step(s, choose("approach_base")).state;
-    s = step(s, choose("search_rubble")).state;
-    s = step(s, choose("take_lantern")).state;
-    s = step(s, choose("leave_cart")).state;
-    s = step(s, choose("leave_base")).state;
-    s = step(s, choose("circle_cellar")).state;
-    s = step(s, choose("light_lantern")).state;
-    const enter = step(s, choose("descend_cellar"));
-    expect(enter.ok).toBe(true);
-    expect(enter.state.journal).toContain("The cellar smells of pitch and old smoke.");
+    for (const id of ["go_east", "approach_base", "search_rubble", "take_letter", "leave_cart", "leave_base", "return_crossroads", "go_west", "follow_to_camp", "talk_hermit"]) {
+      s = step(s, choose(id)).state;
+    }
+    expect(s.flags["learned_truth"]).not.toBe(true);
+    s = step(s, choose("show_letter")).state; // → hermit_about_letter, on_enter sets the flag
+    expect(s.current).toBe("hermit_about_letter");
+    expect(s.flags["learned_truth"]).toBe(true);
+  });
+
+  it("re-entering the cellar does not stack journal entries (blind-playtest fix)", () => {
+    // The cellar's ambiance was moved from a per-entry on_enter add_journal into
+    // the static scene text, so revisiting it can no longer duplicate the journal.
+    const step = makeStep(rules);
+    let s = initStateForPack(index, 1);
+    for (const id of ["go_east", "approach_base", "search_rubble", "take_lantern", "leave_cart", "leave_base", "circle_cellar", "light_lantern"]) {
+      s = step(s, choose(id)).state;
+    }
+    s = step(s, choose("descend_cellar")).state; // first entry → cellar
+    const afterFirst = [...s.journal];
+    s = step(s, choose("climb_out")).state; // back to cellar_door
+    s = step(s, choose("descend_cellar")).state; // second entry → cellar
+    expect(s.journal).toEqual(afterFirst); // no growth, no duplicate ambiance
+    expect(s.journal.some((j) => /smells of pitch/.test(j))).toBe(false);
   });
 });
 
