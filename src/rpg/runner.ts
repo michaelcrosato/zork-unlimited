@@ -20,6 +20,7 @@ import {
   activeDialogue,
 } from "../parser/model.js";
 import { enumerateActions, resolveParserAction, useInteraction, type ParserActionOption } from "../parser/legal_actions.js";
+import { evalConditions } from "../core/conditions.js";
 import { winningEnding } from "../parser/runner.js";
 import { type RpgPack, type Enemy } from "./schema.js";
 import { resolveAttack, resolveSkillCheck, enemyAlive } from "./combat.js";
@@ -76,8 +77,14 @@ export function buildRpgRules(index: RpgIndex): Rules {
       if (action.type === "USE") {
         const it = useInteraction(index, action.target, action.item);
         if (it?.skill_check) {
-          // Offer-legality still requires holding the item and meeting conditions.
+          // Offer-legality still requires holding the item AND meeting the
+          // interaction's own conditions. Enforcing the conditions here — not
+          // just hiding the action during enumeration — means a gate that
+          // retires the check after success (e.g. a one-shot lever) cannot be
+          // re-fired by a forced/stale step, so it can never re-roll and
+          // narrate a contradictory failure on an already-resolved puzzle.
           if (!state.inventory.includes(action.item)) return null;
+          if (!evalConditions(it.conditions, state)) return null;
           return resolveSkillCheck(state, it.skill_check);
         }
       }

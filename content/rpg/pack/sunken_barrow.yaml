@@ -101,6 +101,10 @@ objects:
       - verb: USE
         item: iron_bar
         target: stone_slab
+        # The lever is a one-shot puzzle: once the slab is moved the check
+        # retires, so re-using the bar can never re-roll and narrate the slab
+        # "does not give" while the stair stands open behind it.
+        conditions: [ { none_of: [ { quest_stage: { quest: barrow, stage: slab_moved } } ] } ]
         skill_check:
           skill: might
           difficulty: 12

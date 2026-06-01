@@ -1,0 +1,82 @@
+bug_id: bug_0015
+pack_id: sunken_barrow_v1
+seed: 17
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  report: ai-runs/2026-06-01T07-13-47-984Z/playtest.md
+  finding: >
+    Playtest target rotated (per the standing "keep rotating" guidance — watchtower
+    is heavily polished bug_0002–0007) onto the RPG pack The Sunken Barrow to cash
+    in the long-deferred backlog item logged across bug_0011/bug_0014: the
+    "repeatable lever action after success". A fresh, MCP-only blind playtester
+    (seed 17) solved the barrow to ending_victory and probed the no-bar gate,
+    rating it clarity 4/5, enjoyment 2/5. Its #1 concrete finding (report §5):
+    after a successful might check levers the slab aside (quest_stage
+    barrow/slab_moved; the down stair open), `use iron bar on stone slab` STAYS in
+    the action list. Re-using it re-rolls the might check and re-narrates "the slab
+    grinds aside" on an already-open slab; and because the re-roll can FAIL, it can
+    narrate "the slab does not give" while the bared stair stands open behind it —
+    a player-facing contradiction the playtester called out explicitly (report §5,
+    items 1 and 4).
+failure:
+  type: stale_skill_check_action
+  where:
+    - content:content/rpg/pack/sunken_barrow.yaml
+    - engine:src/rpg/runner.ts
+  description: >
+    A one-shot skill-check puzzle (lever the slab) never retired after it
+    succeeded, so it could be re-fired indefinitely, re-rolling the check and
+    narrating text that contradicts the now-changed world. Two gaps combined:
+      (1) CONTENT — the stone_slab USE interaction carried no `conditions`, so it
+          stayed offered after slab_moved was set.
+      (2) ENGINE — the RPG runner's skill-check resolve branch only checked that
+          the item was held; its comment claimed it also enforced "meeting
+          conditions", but it never called evalConditions on the interaction's
+          own `conditions`. So even with a content gate, a FORCED/stale step that
+          bypassed enumeration could still re-roll the check.
+    (A non-skill-check USE was already safe: resolveParserAction threads
+    it.conditions, so enumeration AND the engine's §8.4.2 condition check both
+    honour them. Only the skill-check fast-path in the RPG runner skipped them.)
+fix:
+  layers: [content, engine_rule]
+  summary: >
+    Retire the lever after success at BOTH layers:
+      - CONTENT: the stone_slab USE interaction is gated
+        `conditions: [ { none_of: [ { quest_stage: { quest: barrow, stage:
+        slab_moved } } ] } ]`, so once the slab is moved the action drops out of
+        the legal set (enumeration already honours interaction conditions via
+        resolveParserAction).
+      - ENGINE (generic, pack-agnostic): src/rpg/runner.ts resolve() now calls
+        evalConditions(it.conditions, state) before resolving a skill-check USE,
+        matching its own long-standing comment and the non-skill USE path. A gated
+        skill check is therefore enforced even against a forced step — it can never
+        re-roll or narrate a contradiction once its gate closes. This applies to any
+        gated skill-check interaction in any current or future pack.
+    No flags' meaning, items, exits, gating of OTHER actions, or reachable endings
+    change — only the now-solved lever retires. Verified live through the engine
+    (seed 17): the lever is offered before success, leaves the legal set after
+    slab_moved, a forced re-lever is rejected, and ending_victory still fires.
+  reachable_endings_changed: false
+  content_hash_changed: true   # sunken_barrow yaml genuinely changed (added the gate condition)
+  content_hash_before: ca34eeb606051cb97f81917360322322aad818f1c1e6a88964043635f67d00b4
+  content_hash_after: 018c6df54ecca1833422ec9fd9c2abbddd98542ace886df60fbe6bad9791dbb0
+  repin: >
+    Deliberate, surfaced re-pin (not a weakening): traces/rpg/barrow_victory.json
+    content_hash updated ca34eeb6… → 018c6df5…. The trace's expected_final_hash is
+    UNCHANGED because the canonical victory levers the slab exactly once — the gate
+    only blocks redundant re-levers, never the first one — so the Stage-4 victory
+    replays to the identical final hash (rpg_barrow_trace.test.ts green). No test
+    source pins this pack's hash (only watchtower_road is pinned).
+deferred:
+  - >
+    Entry Hall stale prose (report §5, item 2): after the iron bar is taken the
+    room still reads "A rusted iron bar lies among fallen rubble" — a one-variant
+    reactive-room content fix (same shape as bug_0011), left for a future cycle.
+  - >
+    No combat reward / scoring: max_score is 0 and stays 0 through a kill and a
+    win (report §5, item 3) — wire Stage-3 scoring like sealed_crypt (bug_0013).
+  - >
+    Auto-win on entering the relic chamber with no "take the circlet" agency
+    (report §5) and no opening quest/objective line (report §3) — framing polish.
+regression_test: tests/regression/rpg_skillcheck_retires.test.ts
