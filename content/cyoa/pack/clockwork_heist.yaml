@@ -189,14 +189,28 @@ scenes:
     # claim of prior warning. No flag/tick/route/gating/ending change: the choice gates
     # already mirror this split (approach_vault for ticks<=3 OR read_ledger;
     # cross_to_vault_blind for ticks>=4 AND not read_ledger).
+    #
+    # The reader's ticks>=4 line further reframes the crossing from danger to informed
+    # confidence (blind-playtest finding, bug_0067). It once said the crossing "runs
+    # right under his beam" — the same threat framing as the non-reader's variant — even
+    # though for the reader that crossing is the SAFE ledger payoff (`approach_vault`), the
+    # one the vault-door beat then rewards with "just as the ledger swore you could." A
+    # fresh playtester (seed 73) read this solved threat as a live timing puzzle and
+    # over-dodged it, hesitating at a crossing the ledger had already made safe. The reader
+    # now sees that he knows the rounds and can time the crossing, matching the safe choice
+    # he is offered and the vault-door payoff; the non-reader keeps "right under his beam"
+    # because his crossing (cross_to_vault_blind → ending_patrol) really is the gamble that
+    # framing promises. Atmospheric/legibility only: no flag/tick/route/gating/ending change.
     variants:
       - when: [{ var_gte: { name: ticks, value: 4 } }, { has_flag: read_ledger }]
         text: >
           A long gallery lined with frozen automata, their glass eyes following you.
-          The vault door broods at the far end — but a watchman's lantern now sweeps
-          the gallery, the hourly patrol the steward's ledger warned of. The long
-          crossing to the vault runs right under his beam. The study still stands
-          ajar to one side, and the stair drops safely back to the foyer.
+          The vault door broods at the far end — and a watchman's lantern now sweeps
+          the gallery, the hourly patrol the steward's ledger warned of. But you have
+          his rounds by heart: you can read the slow swing of his lantern and pick the
+          moment it turns away, crossing to the vault in his wake just as the ledger
+          swore you could. The study still stands ajar to one side, and the stair drops
+          safely back to the foyer.
       - when: [{ var_gte: { name: ticks, value: 4 } }]
         text: >
           A long gallery lined with frozen automata, their glass eyes following you.
