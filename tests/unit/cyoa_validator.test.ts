@@ -110,4 +110,38 @@ endings:
     const report = validateCyoa(r.compiled.pack);
     expect(report.findings.some((f) => f.code === "DEADLINE_NOT_TERMINAL")).toBe(true);
   });
+
+  // ── deadline driven by a CHOICE effect, not on_enter (bug_0080) ─────────────
+  // The engine's checkWin fires after a choice's effects too, so a deadline whose
+  // watched var is advanced only by a choice effect (a natural "spend an hour"
+  // action) really can end the game. The validator's reachability edge once looked
+  // ONLY at on_enter var writes, so it wrongly flagged such a deadline ending
+  // ENDING_UNREACHABLE. Here `t` is advanced solely by the `wait` choice's effect.
+  const choiceDeadlinePack = `
+meta:
+  id: dc
+  title: DC
+  start: a
+  vars_init: { t: 0 }
+  deadline: { when: [ { var_gte: { name: t, value: 3 } } ], ending: over }
+scenes:
+  - id: a
+    title: A
+    text: x
+    choices:
+      - { id: wait, text: wait, effects: [ { inc_var: { name: t, by: 3 } } ], next: a }
+      - { id: go, text: go, next: win }
+endings:
+  - { id: win, title: W, text: won }
+  - { id: over, title: O, text: "out of time" }
+`;
+
+  it("a deadline whose var is advanced only by a choice effect is reachable, not unreachable", () => {
+    const r = compilePack(choiceDeadlinePack);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const report = validateCyoa(r.compiled.pack);
+    expect(report.findings.filter((f) => f.severity === "error")).toEqual([]);
+    expect(report.findings.some((f) => f.code === "ENDING_UNREACHABLE")).toBe(false);
+  });
 });

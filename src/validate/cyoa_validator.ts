@@ -107,14 +107,20 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
     }
     for (const t of gotoTargets(scene.on_enter))
       registerTarget(t, outs, allNodeIds, findings, [`scene:${scene.id}`, "on_enter"]);
-    // The deadline can fire on entering this scene if its on_enter advances a var
-    // the deadline watches (the ref is already validated above, so add directly).
-    if (
-      deadline &&
-      terminalIds.has(deadline.ending) &&
-      [...varsWrittenByEffects(scene.on_enter)].some((v) => deadlineVars.has(v))
-    ) {
-      outs.add(deadline.ending);
+    // The deadline can fire after ANY action whose effects advance a var it
+    // watches — on entering this scene (on_enter) OR on taking any of its choices
+    // (choice effects) — because the engine's §8.4.5 checkWin runs against the
+    // post-effects state for both (src/core/engine.ts). Register the structural
+    // edge for either, so a deadline driven purely by a choice effect (a natural
+    // "spend an hour searching" action that never advances the var via on_enter)
+    // is still seen as reachable and as an escape, not spuriously ENDING_UNREACHABLE
+    // or a false SOFTLOCK. The ref is already validated above, so add directly.
+    if (deadline && terminalIds.has(deadline.ending)) {
+      const writesWatched = (effects: Effect[]): boolean =>
+        [...varsWrittenByEffects(effects)].some((v) => deadlineVars.has(v));
+      if (writesWatched(scene.on_enter) || scene.choices.some((c) => writesWatched(c.effects))) {
+        outs.add(deadline.ending);
+      }
     }
     successors.set(scene.id, outs);
   }
