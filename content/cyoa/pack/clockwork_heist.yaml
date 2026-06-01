@@ -171,11 +171,24 @@ scenes:
     on_enter:
       - inc_var: { name: ticks, by: 1 }
     text: >
-      Ledgers, a cold lamp, and a brass wall-plate engraved: "The vault yields only
-      to a steady hand — never to force."
+      Shelved ledgers, a cold lamp, and a brass wall-plate engraved: "The vault
+      yields only to a steady hand — never to force." One ledger lies open on the
+      desk — the steward's daily reckoning, its last page ruled into the household's
+      hours: when the staff retire, and when the watch walks its rounds.
+    # The open ledger is the heist's load-bearing clue (bug_0040): reading it is what
+    # lets you time the watchman's crossing on the hour. But a fresh blind playtester
+    # (seed 211) found its value "subtle" — the study named "Ledgers" only as ambient
+    # furniture and the wall-plate speaks to the LOCK, so nothing told a first-timer
+    # the open ledger logs the WATCH before they committed to reading it, and a player
+    # could leave the study having skipped its whole point. The fix is legibility only:
+    # the scene text now draws the eye to the one open ledger and names what its last
+    # page records (the watch's rounds), and the read choice says so — giving the clue
+    # an honest pull and pre-seeding the gallery's later "the hourly patrol the
+    # steward's ledger warned of" callback. No flag/tick/route/gating/ending change;
+    # the read_ledger payoff (journal + safe-crossing gate) is untouched (bug_0053).
     choices:
       - id: read_ledger
-        text: "Read the open ledger."
+        text: "Read the open ledger's account of the watch's rounds."
         conditions: [{ not_flag: read_ledger }]
         effects:
           - set_flag: read_ledger
