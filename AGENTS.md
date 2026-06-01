@@ -59,3 +59,12 @@ shows the ranked backlog any time.
 
 - Commit in clear increments; land work on `main` (owner preference).
 - Prefer leaving the game in a working, verified state — that's the point.
+
+## Cursor Cloud specific instructions
+
+- **Runtime:** Node.js **22+** only. No Docker, database, or other services are required for lint, tests, validation, or CLI play.
+- **Install:** Root `npm install` plus `npm --prefix ui install` (the UI is a separate package under `ui/`). Standard commands are in `README.md` and `package.json`.
+- **Verification bar:** `npm run health` (integrity + typecheck + tests + pack validate + mock playtest). Faster checks: `npm run lint`, `npm test`.
+- **Web UI (optional for most agent work):** `npm run ui:dev` serves http://localhost:5173. The dev server is not started automatically on VM boot — start it in a tmux session when you need browser testing. Engine logic runs in-browser; no backend API.
+- **CLI play (no server):** `npm run play`, `play:parser`, `play:rpg` with `--choices` / `--commands` for non-interactive runs; see `README.md`.
+- **MCP / LLM:** `npm run mcp` and live LLM authoring/playtest are optional; CI uses deterministic mocks with no API keys.
