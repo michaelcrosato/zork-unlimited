@@ -170,6 +170,12 @@ scenes:
     title: "The Steward's Study"
     on_enter:
       - inc_var: { name: ticks, by: 1 }
+      # The brass wall-plate ("yields only to a steady hand — never to force") hangs
+      # HERE in the study, so simply entering this room is when the thief reads its
+      # warning. Record that so the vault door only "echoes" the plate to a player who
+      # has actually seen it — a no-study route up the grand stair must not quote a
+      # warning the player never read (blind-playtest finding, bug_0058).
+      - set_flag: saw_plate
     text: >
       Shelved ledgers, a cold lamp, and a brass wall-plate engraved: "The vault
       yields only to a steady hand — never to force." One ledger lies open on the
@@ -200,9 +206,19 @@ scenes:
 
   - id: vault_door
     title: "The Vault Door"
+    # The base text is the PLATE-NAIVE fallback: a thief who came straight up the
+    # grand stair to the vault never passed through the study, so cannot "echo" the
+    # steward's brass plate. It still telegraphs pick-don't-force, but from the lock's
+    # own patient, fastidious feel rather than by quoting a warning the player has not
+    # read. A blind playtester (seed 53) hit the leak on the climb_stairs→approach_vault
+    # route: the door "echoed" a brass-plate warning they had never seen. The fix gates
+    # every brass-plate reference on `saw_plate` (set on entering the study) — see the
+    # `saw_plate` variant below and the reworded `study_lock` narration (bug_0058).
     text: >
-      The vault's clockwork lock ticks under your fingers — a hundred tiny tumblers.
-      The brass plate's warning echoes: force will not open this.
+      The vault's clockwork lock ticks under your fingers — a hundred tiny tumblers,
+      each finer than a hair. This is plainly no door for a crowbar: it has the
+      patient, fastidious look of a thing that will yield only to a steady, coaxing
+      hand, and never to force.
     # Reaching the door at/after the hour (ticks >= 4) is only possible for a
     # ledger reader — a no-ledger player past the hour gets the blind gamble, never
     # this safe crossing (see `landing`). So this variant fires exactly when the
@@ -210,6 +226,7 @@ scenes:
     # that signature beat the on-screen payoff it lacked: the careful player now
     # *feels* the clock at its tensest moment instead of strolling across in
     # silence (blind-playtest finding — the deadline never bit careful play).
+    # (read_ledger implies a study visit, so quoting the brass plate here is sound.)
     variants:
       - when: [{ var_gte: { name: ticks, value: 4 } }, { has_flag: read_ledger }]
         text: >
@@ -218,6 +235,13 @@ scenes:
           while his tread recedes, just as the ledger swore you could. The clockwork
           lock ticks under your fingers, a hundred tiny tumblers. The brass plate's
           warning echoes: force will not open this.
+      # Plate-aware: you stood in the study and read the steward's brass plate, so its
+      # warning is yours to echo at the lock. Below the ticks>=4 patrol case, above the
+      # plate-naive base (first match wins), so a study-visitor before the hour gets it.
+      - when: [{ has_flag: saw_plate }]
+        text: >
+          The vault's clockwork lock ticks under your fingers — a hundred tiny tumblers.
+          The brass plate's warning echoes: force will not open this.
     choices:
       - id: pick_lock
         text: "Pick the lock with the lockpicks."
@@ -230,7 +254,10 @@ scenes:
         text: "Study the clockwork lock for a way through."
         conditions: [{ not_item: lockpick }, { not_flag: alarm }]
         effects:
-          - narrate: "A hundred tumblers, each finer than a hair — this is a lock to coax, not to break. Your bare fingers find no purchase, and the brass plate's warning rings true: force will only wake the house. You need a slender tool and a steady hand. Better search the manor for the right instrument before you try the door again."
+          # No brass-plate reference here: this nudge can fire on a no-study route, so
+          # it learns "force won't open it" from the lock's own feel, not from a plate
+          # the player may never have read (bug_0058). Keeps tool/instrument/steady-hand.
+          - narrate: "A hundred tumblers, each finer than a hair — this is a lock to coax, not to break. Your bare fingers find no purchase, and you can feel it in the mechanism: force will only wake the house. You need a slender tool and a steady hand. Better search the manor for the right instrument before you try the door again."
         next: landing
       - id: force_door
         text: "Force the door with your shoulder."
