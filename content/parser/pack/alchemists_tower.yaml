@@ -282,7 +282,22 @@ objects:
   - id: black_phial
     name: "black phial"
     aliases: [phial, black]
-    description: "A black glass phial of oily liquid. The recipe warned against it."
+    # Reactive examine (bug_0023/0033/0039/0044 shape). The lethal trap must telegraph
+    # itself IN PLACE: the base description carries an intrinsic, sensory dread that
+    # does NOT assume the player read the recipe. A blind playtester (seed 67) reached
+    # ending_poisoned having skipped the optional Library and judged the death
+    # "arbitrary" — the only warning lived in a room they never entered, and the old
+    # base text ("The recipe warned against it") even referenced a recipe they had not
+    # read (a quiet contradiction for that player). Now the bottle itself reeks of
+    # death for everyone, while a recipe reader gets the sharper, named callback. The
+    # `read_recipe` flag is the same one the spellbook READ sets (first match wins;
+    # there is exactly one variant). Examine-only: no flag/item/score/exit/interaction/
+    # gating change — the drink interaction and ending_poisoned are untouched, so the
+    # death stays exactly as reachable as before (bug_0052).
+    description: "A black glass phial of oily liquid that seems to drink the light. An acrid reek bleeds from under its wax-sealed stopper and stings the back of your throat — whatever this is, it was never brewed to be drunk."
+    variants:
+      - when: [{ has_flag: read_recipe }]
+        text: "A black glass phial of oily liquid that drinks the light, an acrid reek stinging the back of your throat through its wax-sealed stopper. The recipe was plain about it: this is no medicine but death — do not drink it."
     takeable: true
     interactions:
       - verb: USE

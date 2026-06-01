@@ -26,9 +26,10 @@
  *   (2) the cauldron OBJECT examine tracks the same three states through the live
  *       resolveParserAction LOOK render site (the path the MCP server uses), and never
  *       again reads "waiting for ingredients" once something is in the pot;
- *   (3) a variant-less object (the black phial) returns its base description under
- *       arbitrary states and carries `variants` undefined (backward-compat: only the
- *       laboratory room + cauldron edits move the pack's content hash);
+ *   (3) a variant-less object (the pale herb — the black phial gained a danger-cue
+ *       variant in bug_0052, so the herb is now this pack's variant-less control)
+ *       returns its base description under arbitrary states and carries `variants`
+ *       undefined (backward-compat: an absent field stays absent);
  *   (4) reachability unchanged: the canonical brew route still reaches ending_cured at
  *       full score (35/35) — the variants are text-only.
  */
@@ -155,16 +156,20 @@ describe("bug_0039 — the Laboratory and cauldron text react to the brew state"
   });
 
   it("a variant-less object returns its base description under any state (backward-compat)", () => {
-    const phial = index.objects.get("black_phial")!;
-    expect(phial.variants).toBeUndefined(); // absent field stays absent ⇒ only the lab room + cauldron edits move the hash
+    // The pale herb carries no variants (bug_0052 gave the black phial a danger-cue
+    // variant, so the herb is now this pack's variant-less control). An absent
+    // `variants` field stays absent ⇒ that object contributes nothing reactive and
+    // always renders its static description.
+    const herb = index.objects.get("herb")!;
+    expect(herb.variants).toBeUndefined();
     const s0 = initStateForParserPack(index, 137);
     const s1: GameState = {
       ...s0,
       flags: { herb_added: true, antidote_brewed: true },
       inventory: ["antidote"],
     };
-    expect(objectDescription(phial, s0)).toBe(phial.description);
-    expect(objectDescription(phial, s1)).toBe(phial.description);
+    expect(objectDescription(herb, s0)).toBe(herb.description);
+    expect(objectDescription(herb, s1)).toBe(herb.description);
   });
 
   it("reachability unchanged: the canonical brew route still reaches ending_cured at full score", () => {
