@@ -85,6 +85,48 @@ function listSourceFiles(root: string): string[] {
   return out;
 }
 
+// First-party code dirs we'd expect under a static-analysis/format gate. Pure
+// data/build dirs (content/ YAML, traces/ snapshots, dist/, coverage/, node_modules/,
+// saves/, ai-runs/) are intentionally NOT here — linting them is wrong, not missing.
+const LINT_DIRS = ["src", "bin", "scripts", "agents", "tests", "ui"] as const;
+
+/** Does `dir` (under root) hold any first-party, lintable .ts/.tsx (not .d.ts, not vendored)? */
+function dirHasLintableTs(root: string, dir: string): boolean {
+  let found = false;
+  const walk = (d: string): void => {
+    if (found || !existsSync(d)) return;
+    for (const e of readdirSync(d, { withFileTypes: true })) {
+      if (found) return;
+      if (e.isDirectory()) {
+        if (e.name === "node_modules" || e.name === "dist" || e.name === "coverage") continue;
+        walk(join(d, e.name));
+      } else if (e.isFile() && /\.tsx?$/.test(e.name) && !/\.d\.ts$/.test(e.name)) {
+        found = true;
+      }
+    }
+  };
+  walk(join(root, dir));
+  return found;
+}
+
+/**
+ * Is `dir` actually under the ESLint config's gate? — true iff some `files:` glob
+ * names it AND no `ignores:` glob excludes it. Robust to glob shape (a bare
+ * recursive glob, a typed-extension glob, brace forms): it keys off the dir prefix in the relevant
+ * array bodies, so it disarms the moment a future cycle adds the dir to `files`
+ * and drops it from `ignores`. Parses the flat-config text rather than executing
+ * it — same lightweight, deterministic style as the TODO/marker scan below.
+ */
+export function eslintCovers(eslintText: string, dir: string): boolean {
+  const bodies = (key: string): string =>
+    [...eslintText.matchAll(new RegExp(`${key}\\s*:\\s*\\[([^\\]]*)\\]`, "g"))]
+      .map((m) => m[1])
+      .join(",");
+  const inFiles = new RegExp(`["'\`]${dir}/`).test(bodies("files"));
+  const ignored = new RegExp(`["'\`]${dir}/\\*\\*`).test(bodies("ignores"));
+  return inFiles && !ignored;
+}
+
 /**
  * Is this CYOA pack PLANNING-GATED? — i.e. does any choice carry a state
  * precondition (a `conditions` entry: item/flag/var/visited/quest gate)?
@@ -287,14 +329,16 @@ export function assess(root: string): Assessment {
   }
 
   // ── repo: tooling/hygiene gaps (cheap, deterministic checks) ──────────────────
-  const hasEslint = [
+  const eslintConfig = [
     "eslint.config.js",
     "eslint.config.mjs",
     ".eslintrc",
     ".eslintrc.json",
     ".eslintrc.cjs",
-  ].some((f) => existsSync(join(root, f)));
-  if (!hasEslint) {
+  ]
+    .map((f) => join(root, f))
+    .find((p) => existsSync(p));
+  if (!eslintConfig) {
     candidates.push({
       id: "repo-eslint",
       category: "repo",
@@ -307,6 +351,38 @@ export function assess(root: string): Assessment {
       effort: "L",
       score: score(3, "L", "repo"),
     });
+  } else {
+    // ESLint IS wired (bug_0031) — the next repo lever is COVERAGE. bug_0031
+    // deliberately scoped the gate to src/bin/scripts/agents and excluded tests/
+    // and ui/ "to keep that cycle bounded", but those dirs hold real first-party TS
+    // with no static-analysis or format gate — exactly the "currently-invisible
+    // work" a cross-category radar should surface (bug_0032 deferred). This fires
+    // while a first-party code dir exists, holds lintable TS, yet sits outside the
+    // ESLint config's `files` globs; it disarms the moment a cycle brings the dir
+    // under the gate. (The engine TODO/FIXME detector is the other non-content
+    // lever; it's correctly inert while the codebase carries zero markers.)
+    const eslintText = readFileSync(eslintConfig, "utf8");
+    const uncovered = LINT_DIRS.filter(
+      (d) => dirHasLintableTs(root, d) && !eslintCovers(eslintText, d),
+    );
+    if (uncovered.length > 0) {
+      const impact = Math.min(5, 1 + uncovered.length);
+      candidates.push({
+        id: "repo-lint-coverage",
+        category: "repo",
+        target: "tooling",
+        title: `Extend ESLint/Prettier coverage to ${uncovered.length} first-party code dir(s) outside the lint gate (${uncovered.join(", ")})`,
+        rationale:
+          "ESLint/Prettier is wired but scoped to src/bin/scripts/agents; first-party TS in these dirs has no static-analysis or format gate, so a class of issues there is invisible to the loop.",
+        evidence: [
+          `${uncovered.join(", ")} hold first-party .ts/.tsx but are absent from the ESLint config's files globs`,
+          "excluded when ESLint was first added (bug_0031) to keep that cycle bounded; ui/ also needs its own React/TSX lint setup",
+        ],
+        impact,
+        effort: "L",
+        score: score(impact, "L", "repo"),
+      });
+    }
   }
 
   // Deterministic ordering: score desc, then id asc.

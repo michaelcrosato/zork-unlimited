@@ -1,0 +1,89 @@
+bug_id: bug_0035
+pack_id: null                    # AFK-loop "brain" (assessor) enrichment — not a content/engine pack bug
+seed: 64                         # the mandatory blind playtest seed this cycle (cold_forge)
+type: loop_brain                 # trust-but-verify keystone: keep the deterministic evaluator HONEST + un-blind it
+evidence:
+  source: blind_playtest + assessor + AI_LOOP_STATE history (bug_0031/0032/0033/0034 deferred)
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-01T11-16-04-840Z/playtest.md
+  playtest_rationale: >
+    ROTATED the mandatory cycle playtest off the assessor's pristine rank-1 clockwork_heist
+    (blind-verified ~13 straight cycles) per blind_playtest_protocol.md's explicit "rotate the
+    seed and rotate the pack". Played the least-recently blind-QUALITY-tested pack, the rpg
+    The Cold Forge (last full quality playtest at bug_0029), seed 64 (+seed 7 no-buff/min probe);
+    fresh general-purpose subagent, MCP-only, no source access. Result: WON ending_victory 50/50;
+    clarity 5/5, enjoyment 4/5; zero rejected actions, no loops, no broken/stale state; the
+    missing-pry-bar case is GATED gracefully (no soft-lock, recoverable). Its only §4/§5 findings
+    were the two ALREADY-adjudicated items: (a) the "heat wakes the sentinel / waiting doesn't
+    make it worse" lore reads as flavor for mechanics that never materialize — this is the
+    bug_0029 fix WORKING (bug_0029 deliberately reframed those four sites to DENY a warm-up clock
+    the static 16-HP fight never delivers); (b) the low-stakes optional +2 buff — the bug_0029
+    deferred balance wrinkle, to act on "only if a future playtest reports a genuine abandonment
+    risk", which this playtest explicitly does NOT ("fine for a gentle game"). cold_forge is
+    blind-verified clean; no content defect to fix.
+  decision_rationale: >
+    Per the protocol's "you MAY pick a different candidate if your judgement and the playtest say
+    it's higher value." With cold_forge (and every pack) blind-verified and per-pack content
+    polish at deep diminishing returns, the genuinely highest-value work is the lever logged as
+    "next suggested focus" in EVERY cycle since bug_0031: restore the assessor's cross-category
+    radar. Post-bug_0032 the assessor surfaces ONLY uniform 0.5 blind-playtest reviews because its
+    two non-content detectors are both inert (repo-eslint disarmed since the config ships;
+    engine-todos inert at zero markers) — yet there is real, currently-invisible work: tests/ (63
+    files) and ui/ hold first-party TS with NO static-analysis or format gate. Surfacing that is
+    the bug_0032 keystone (make the loop's brain honest) applied to its BLIND SPOT, and is bounded,
+    pure, and unit-testable — unlike actually extending lint coverage (an unbounded "repo/L" change
+    bug_0031 deliberately deferred, which this detector now correctly QUEUES as the next lever).
+finding: >
+  The AFK assessor (src/afk/assessor.ts) had no live cross-category lever after bug_0032. Its repo
+  detector only checked "does an ESLint config EXIST?" — disarmed since bug_0031 shipped
+  eslint.config.js. But bug_0031 scoped that gate to src/bin/scripts/agents and explicitly excluded
+  tests/ and ui/ "to keep that cycle bounded". Those dirs hold real first-party .ts/.tsx with no
+  lint/format gate, so a whole class of issues there is invisible to the loop — and the assessor
+  could not see the gap, so it kept reporting the repo as having no high-impact lever (only 0.5
+  pack reviews). The evaluator was blind to genuine work, the dual of the bug_0032 false positive.
+improvement:
+  layer: engine    # the AFK assessor / loop brain (src/afk/assessor.ts) — NO content/YAML edited
+  change: >
+    Added a deterministic lint-COVERAGE detector to the repo section. It runs only when an ESLint
+    config exists (the bug_0031 success state) and emits a `repo-lint-coverage` candidate listing
+    every first-party code dir (LINT_DIRS = src/bin/scripts/agents/tests/ui) that (1) exists and
+    holds lintable .ts/.tsx (dirHasLintableTs — walks the dir, skips node_modules/dist/coverage and
+    .d.ts) yet (2) is NOT under the gate (eslintCovers — true iff a `files:` glob names the dir AND
+    no `ignores:` glob excludes it; parses the flat-config text, same lightweight style as the
+    existing TODO/marker scan). impact = 1 + uncovered-dir count (capped 5), effort L, repo weight
+    0.6. eslintCovers is exported + pure for unit testing.
+  effect_on_ranking: >
+    The assessor now surfaces "Extend ESLint/Prettier coverage to 2 first-party code dir(s) outside
+    the lint gate (tests, ui)" at score 0.6 as the honest rank-1 lever — ABOVE the uniform 0.5
+    blind-playtest reviews (a real cross-category signal beats re-reviewing an already-pristine
+    pack). It DISARMS automatically the moment a future cycle adds tests/ + ui/ to the ESLint
+    `files` globs and drops them from `ignores` (proven by the eslintCovers DISARM test case).
+    ai-loop.ts is unaffected: playtestTarget() falls back to the main story for an engine/repo top,
+    and the mandatory blind playtest still runs every cycle regardless of the top candidate.
+verification:
+  typecheck: green (tsc --noEmit, exit 0)
+  unit_tests: tests/unit/assessor.test.ts 10/10 green (unchanged — repo-lint-coverage has a distinct id, no invariant disturbed)
+  regression_tests: tests/regression/assessor_lint_coverage.test.ts 9/9 green; assessor_gated_cyoa_coverage.test.ts 6/6 green
+  validate: green (0 errors, 0 warnings) — all packs (NO content touched)
+  content_hash_changes: none   # NO content/ YAML edited — loop-brain change only
+  health: green (verify:integrity static + typecheck + ESLint + Prettier check + tests + every pack validate + watchtower coverage)
+  verify_integrity_drift: >
+    expected exit 0, 0 warnings — assessor.ts is not a protected file, no content hash moved, no
+    HASH_PIN (traces/) pin touched. The new test file is additive (test-count floor rises).
+regression_test: tests/regression/assessor_lint_coverage.test.ts   # 9 cases: eslintCovers TRUE for files-named/un-ignored dirs, FALSE for ignored/absent dirs, DISARMS when a dir is added to files & dropped from ignores, ignore-wins on conflict, matches the shipped config (src covered / tests+ui not); assess() raises repo-lint-coverage naming tests+ui, ranks it above the 0.5 reviews as the assessor top, and does NOT re-arm repo-eslint.
+closes_deferred:
+  - "restore the assessor's cross-category radar — ADD a detector that FIRES on currently-invisible work: extend ESLint/Prettier + the assessor's view to tests/ and ui/"   # bug_0031 deferred[a] / bug_0032 deferred / bug_0033 deferred[a] / bug_0034 deferred[a]
+deferred:
+  - >
+    The DETECTOR now queues the work; a future "repo/L" cycle should ACTUALLY extend the gate:
+    add tests/**/*.ts to the ESLint files globs (drop "tests/**" from ignores) and fix whatever it
+    flags; ui/ additionally needs its own React/TSX lint setup (eslint-plugin-react/react-hooks +
+    the ui tsconfig) since it is a separate Vite package. Budget it as bounded-per-dir — tests/ has
+    63 files. The detector disarms each dir as it comes under the gate.
+  - >
+    The engine TODO/FIXME detector remains the other non-content lever and is correctly inert
+    (Grep confirms zero markers). If both repo levers ever disarm, consider a doc/staleness detector.
+  - >
+    cold_forge's "heat wakes the sentinel" lore (intentional, denied at point of use by bug_0029)
+    and its low-stakes optional buff (bug_0029 deferred) — only revisit if a future playtest reports
+    the buff as a genuine abandonment risk; this cycle's playtest did not.
