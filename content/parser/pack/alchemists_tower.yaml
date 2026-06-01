@@ -171,6 +171,13 @@ objects:
     name: "iron strongbox"
     aliases: [strongbox, box]
     description: "A squat iron strongbox with a brass lock."
+    # Reactive examine (bug_0023): once the iron key is in hand the box has been
+    # unlocked and emptied, so examining it no longer reads as a locked, full box —
+    # mirroring the study room's own reactive prose, which gates on the same signal
+    # (has_item iron_key). Examine-only: no flag/item/score/exit/gating change.
+    variants:
+      - when: [{ has_item: iron_key }]
+        text: "The squat iron strongbox sits open and empty, its brass lock sprung and its lid thrown back — nothing left inside but the faint smell of old iron."
     container: true
     openable: true
     locked: true
