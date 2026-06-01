@@ -54,7 +54,8 @@ describe("MCP tools — the play loop (§9.1)", () => {
   it("AFK aliases can play and transcript a route", () => {
     const a = api();
     const game = a.start_game({ story_path: PACK, seed: 7 });
-    expect(game.observation.scene_id).toBe("forest_crossroads");
+    expect(game.mode).toBe("cyoa");
+    if (game.observation.mode === "cyoa") expect(game.observation.scene_id).toBe("forest_crossroads");
     expect(a.get_scene({ session_id: game.session_id }).observation.available_actions.length).toBeGreaterThan(0);
 
     const route = ["go_west", "ford_brook", "cross_north", "slip_into_woods", "slip_away"];

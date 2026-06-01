@@ -8,8 +8,8 @@
  */
 import type { GameState } from "../core/state.js";
 import type { Rules } from "../core/engine.js";
-import type { CyoaIndex } from "../cyoa/runner.js";
 import type { GameEvent } from "../core/events.js";
+import type { AnyIndex, PackMode } from "./types.js";
 
 export type TranscriptTurn = {
   step: number;
@@ -27,7 +27,10 @@ export type Session = {
   id: string;
   packId: string;
   contentHash: string;
-  index: CyoaIndex;
+  /** The pack's mode — the discriminator used to route observation/playtest. */
+  mode: PackMode;
+  /** Exactly one of CyoaIndex | ParserIndex | RpgIndex, matching `mode`. */
+  index: AnyIndex;
   rules: Rules;
   state: GameState;
   transcript: TranscriptTurn[];

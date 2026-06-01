@@ -5,92 +5,173 @@
  * built — the engine stays the source of truth. These are unit-tested directly,
  * without a live MCP client (a §9.4 rule); server.ts only adapts them to stdio.
  *
- * Stage 1 exposes the CYOA-playable subset: validate/load a pack, start a game,
- * observe, list legal actions, step, save/load, and replay a trace. Content and
- * traces are data only — no handler runs shell or code (§16).
+ * The tools are MULTI-MODE (roadmap Milestone 1): one session abstraction plays
+ * CYOA, parser, and RPG packs. Mode is detected from the pack structure
+ * (`detectMode`, never a field in content, §16) and every play/validate/playtest
+ * tool dispatches on it. CYOA behavior is kept byte-identical (its playtest path
+ * is unchanged). Content and traces are data only — no handler runs shell or
+ * code (§16).
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import { parse as parseYaml } from "yaml";
 import { hashState } from "../core/hash.js";
-import { makeStep } from "../core/engine.js";
+import { makeStep, type Rules } from "../core/engine.js";
 import type { Action } from "../api/types.js";
-import { loadPackFile, type CompiledPack } from "../cyoa/pack.js";
+import type { GameState } from "../core/state.js";
+
+import { compilePack, loadPackFile, type CompiledPack } from "../cyoa/pack.js";
 import { indexPack, buildRules, initStateForPack } from "../cyoa/runner.js";
 import { buildObservation } from "../cyoa/observation.js";
 import { validateCyoa } from "../validate/cyoa_validator.js";
-import { makeReport, formatReport, type ValidationReport } from "../validate/report.js";
+
+import { compileParserPack, loadParserPackFile } from "../parser/pack.js";
+import { indexParserPack, buildParserRules, initStateForParserPack } from "../parser/runner.js";
+import { buildParserObservation } from "../parser/observation.js";
+import { validateParser } from "../validate/parser_validator.js";
+
+import { compileRpgPack } from "../rpg/pack.js";
+import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../rpg/runner.js";
+import { buildRpgObservation } from "../rpg/observation.js";
+import { validateRpg } from "../validate/rpg_validator.js";
+
+import { makeReport, formatReport, type Finding, type ValidationReport } from "../validate/report.js";
 import { save, load } from "../persist/save_load.js";
 import { replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
-import { SessionStore } from "./sessions.js";
+import { SessionStore, type Session } from "./sessions.js";
+import { detectMode, type PackMode, type AnyCompiledPack, type AnyIndex, type AnyObservation } from "./types.js";
 import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
 import { loadEngineContract, runWriter } from "../../agents/authoring/writer.js";
 import { runAdapter } from "../../agents/authoring/adapter.js";
 import { diagnose } from "../../agents/debugger.js";
 import { applyContentPatch, ContentPatchProposalSchema, type ContentPatchProposal } from "../../agents/fixer.js";
-import { loadParserPackFile } from "../parser/pack.js";
 
 export type ToolApi = ReturnType<typeof createToolApi>;
 type PlaytestStrategy = "random" | "coverage";
 
 type LoadResult =
-  | { ok: true; compiled: CompiledPack; report: ValidationReport }
+  | { ok: true; mode: PackMode; compiled: AnyCompiledPack; report: ValidationReport }
   | { ok: false; report: ValidationReport };
+
+const INVESTIGATIVE = /inspect|search|read|ask|show|examine|talk|look|use|attack|open|take/i;
+
+// ── Mode-aware dispatch (the §3 Layer-2/3 boundary stays per-mode) ──────────────
+// `mode` and `index` are always created together (startSession), so narrowing the
+// AnyIndex union by `mode` in these switches is sound — a localized, documented
+// cast rather than a structural guess.
+
+function indexFor(mode: PackMode, pack: AnyCompiledPack["pack"]): AnyIndex {
+  if (mode === "cyoa") return indexPack(pack as Parameters<typeof indexPack>[0]);
+  if (mode === "parser") return indexParserPack(pack as Parameters<typeof indexParserPack>[0]);
+  return indexRpgPack(pack as Parameters<typeof indexRpgPack>[0]);
+}
+
+function rulesFor(mode: PackMode, index: AnyIndex): Rules {
+  if (mode === "cyoa") return buildRules(index as Parameters<typeof buildRules>[0]);
+  if (mode === "parser") return buildParserRules(index as Parameters<typeof buildParserRules>[0]);
+  return buildRpgRules(index as Parameters<typeof buildRpgRules>[0]);
+}
+
+function initStateFor(mode: PackMode, index: AnyIndex, seed: number): GameState {
+  if (mode === "cyoa") return initStateForPack(index as Parameters<typeof initStateForPack>[0], seed);
+  if (mode === "parser") return initStateForParserPack(index as Parameters<typeof initStateForParserPack>[0], seed);
+  return initStateForRpgPack(index as Parameters<typeof initStateForRpgPack>[0], seed);
+}
+
+function buildObsFor(mode: PackMode, index: AnyIndex, state: GameState): AnyObservation {
+  if (mode === "cyoa") return buildObservation(index as Parameters<typeof buildObservation>[0], state);
+  if (mode === "parser") return buildParserObservation(index as Parameters<typeof buildParserObservation>[0], state);
+  return buildRpgObservation(index as Parameters<typeof buildRpgObservation>[0], state);
+}
+
+/** The current location id, normalized across modes (scene id ⟷ room id). */
+function obsLocation(obs: AnyObservation): string {
+  return obs.mode === "cyoa" ? obs.scene_id : obs.room;
+}
+
+/** The human label for an action id in this observation (choice text ⟷ command). */
+function obsActionText(obs: AnyObservation, id: string): string | null {
+  if (obs.mode === "cyoa") return obs.available_actions.find((a) => a.id === id)?.text ?? null;
+  return obs.available_actions.find((a) => a.id === id)?.command ?? null;
+}
+
+/**
+ * Map an action id (from the observation's legal set) to a structured Action.
+ * CYOA always yields a CHOOSE (an unknown id is rejected by the engine, preserving
+ * the "illegal action, no state change" path); parser/RPG look up the action
+ * object the legal-action generator already attached.
+ */
+function actionForId(obs: AnyObservation, id: string): Action | null {
+  if (obs.mode === "cyoa") return { type: "CHOOSE", choiceId: id };
+  return obs.available_actions.find((a) => a.id === id)?.action ?? null;
+}
+
+function schemaFindings(packPath: string, error: { issues: { message: string; path: (string | number)[] }[] }): Finding[] {
+  return error.issues.map((i) => ({
+    severity: "error" as const,
+    code: "SCHEMA",
+    message: `${i.message} (${i.path.join(".") || "<root>"})`,
+    where: [i.path.join(".") || "<root>"],
+  }));
+}
 
 export function createToolApi(opts: { root: string }) {
   const root = opts.root;
   const sessions = new SessionStore();
 
+  /** Read a pack, detect its mode, compile + validate with the right loader. */
   function loadAndReport(packPath: string): LoadResult {
     const abs = safeResolve(root, packPath);
-    const result = loadPackFile(abs);
-    if (!result.ok) {
-      const findings = result.error.issues.map((i) => ({
-        severity: "error" as const,
-        code: "SCHEMA",
-        message: `${i.message} (${i.path.join(".") || "<root>"})`,
-        where: [i.path.join(".") || "<root>"],
-      }));
-      return { ok: false, report: makeReport(packPath, findings) };
-    }
-    const report = validateCyoa(result.compiled.pack);
-    return { ok: true, compiled: result.compiled, report };
+    const source = readFileSync(abs, "utf8");
+    const mode = detectMode(parseYaml(source) as unknown);
+    const compileRes =
+      mode === "cyoa" ? compilePack(source) : mode === "parser" ? compileParserPack(source) : compileRpgPack(source);
+    if (!compileRes.ok) return { ok: false, report: makeReport(packPath, schemaFindings(packPath, compileRes.error)) };
+    const pack = compileRes.compiled.pack;
+    const report =
+      mode === "cyoa" ? validateCyoa(pack as never) : mode === "parser" ? validateParser(pack as never) : validateRpg(pack as never);
+    return { ok: true, mode, compiled: compileRes.compiled, report };
   }
 
   /** Compile + validate, refusing to play an invalid pack (§0, §10). */
-  function requirePlayable(packPath: string): CompiledPack {
+  function requirePlayable(packPath: string): { mode: PackMode; compiled: AnyCompiledPack } {
     const lr = loadAndReport(packPath);
     if (!lr.ok || !lr.report.ok) {
-      throw new Error(`Pack is not playable:\n${formatReport(lr.report)}`);
+      throw new Error(`Pack is not playable:\n${formatReport(lr.ok ? lr.report : lr.report)}`);
     }
-    return lr.compiled;
+    return { mode: lr.mode, compiled: lr.compiled };
   }
 
-  function startSession(compiled: CompiledPack, state = initStateForPack(indexPack(compiled.pack), 1)) {
-    const index = indexPack(compiled.pack);
+  function startSession(mode: PackMode, compiled: AnyCompiledPack, state?: GameState): Session {
+    const index = indexFor(mode, compiled.pack);
+    const st = state ?? initStateFor(mode, index, 1);
     const session = sessions.create({
       packId: compiled.pack.meta.id,
       contentHash: compiled.contentHash,
+      mode,
       index,
-      rules: buildRules(index),
-      state,
+      rules: rulesFor(mode, index),
+      state: st,
       transcript: [],
     });
-    const obs = buildObservation(session.index, session.state);
+    const obs = buildObsFor(mode, index, st);
     session.transcript.push({
-      step: session.state.step,
-      scene_id: obs.scene_id,
+      step: st.step,
+      scene_id: obsLocation(obs),
       title: obs.title,
       action_id: null,
       action_text: null,
       events: [],
-      result_scene_id: obs.scene_id,
+      result_scene_id: obsLocation(obs),
       ended: obs.ended,
       ending_id: obs.ending_id,
     });
     return session;
   }
+
+  const obsOf = (s: Session): AnyObservation => buildObsFor(s.mode, s.index, s.state);
 
   function listYamlFiles(dir: string): string[] {
     try {
@@ -103,8 +184,15 @@ export function createToolApi(opts: { root: string }) {
     }
   }
 
+  // ── Playtest: CYOA path is unchanged (byte-identical); parser/RPG added ───────
+
   function summarizePlaytest(args: { pack_path: string; runs?: number; strategy?: PlaytestStrategy; max_steps?: number }) {
-    const compiled = requirePlayable(args.pack_path);
+    const { mode, compiled } = requirePlayable(args.pack_path);
+    if (mode === "cyoa") return summarizeCyoa(compiled as CompiledPack, args);
+    return summarizeParserLike(mode, compiled, args);
+  }
+
+  function summarizeCyoa(compiled: CompiledPack, args: { runs?: number; strategy?: PlaytestStrategy; max_steps?: number }) {
     const index = indexPack(compiled.pack);
     const step = makeStep(buildRules(index));
     const runs = args.runs ?? 100;
@@ -165,6 +253,7 @@ export function createToolApi(opts: { root: string }) {
     const visitedScenes = [...globalVisited].filter((s) => sceneSet.has(s)).sort();
     return {
       pack_id: compiled.pack.meta.id,
+      mode: "cyoa" as const,
       strategy,
       runs,
       ended,
@@ -193,6 +282,108 @@ export function createToolApi(opts: { root: string }) {
     return investigative >= 0 ? investigative : 0;
   }
 
+  /**
+   * Playtest a parser or RPG pack. Coverage uses the room graph: prefer a MOVE
+   * whose destination room is unvisited (the observation exposes exits with
+   * targets), else an investigative command, else the first action. Visited
+   * tracking is over rooms (state.current), endings over the pack's endings list.
+   */
+  function summarizeParserLike(
+    mode: PackMode,
+    compiled: AnyCompiledPack,
+    args: { runs?: number; strategy?: PlaytestStrategy; max_steps?: number },
+  ) {
+    const index = indexFor(mode, compiled.pack);
+    const rules = rulesFor(mode, index);
+    const step = makeStep(rules);
+    const runs = args.runs ?? 100;
+    const maxSteps = args.max_steps ?? 80;
+    const strategy = args.strategy ?? "coverage";
+    const pack = compiled.pack as { rooms: { id: string }[]; endings: { id: string }[] };
+    const allRooms = pack.rooms.map((r) => r.id);
+    const roomSet = new Set(allRooms);
+    const endingsDeclared = pack.endings.map((e) => e.id).sort();
+    const globalVisited = new Set<string>();
+    const endingDistribution: Record<string, number> = {};
+    const suspiciousPathSamples: { run: number; status: string; path: string[]; ending_id: string | null }[] = [];
+    let ended = 0;
+    let unfinished = 0;
+
+    for (let run = 0; run < runs; run++) {
+      let state = initStateFor(mode, index, run + 1);
+      let rng = (run + 1) * 2654435761;
+      const path = [state.current];
+      const localVisited = new Set<string>([state.current]);
+      let status = "max_steps";
+
+      for (let turn = 0; turn < maxSteps; turn++) {
+        if (state.ended) {
+          status = "ended";
+          break;
+        }
+        const obs = buildObsFor(mode, index, state);
+        const actions = obs.mode === "cyoa" ? [] : obs.available_actions; // narrowing; parser/rpg only here
+        if (actions.length === 0) {
+          status = "stuck";
+          break;
+        }
+        rng = (rng * 1664525 + 1013904223) >>> 0;
+        const exits = obs.mode === "cyoa" ? [] : obs.exits;
+        const pick =
+          strategy === "random"
+            ? rng % actions.length
+            : coverageActionIndex(actions, exits, globalVisited, localVisited);
+        const chosen = actions[pick] ?? actions[0]!;
+        const result = step(state, chosen.action);
+        state = result.state;
+        path.push(state.current);
+        localVisited.add(state.current);
+      }
+      for (const room of localVisited) globalVisited.add(room);
+      if (state.ended) {
+        ended++;
+        const ending = state.endingId ?? "(unknown)";
+        endingDistribution[ending] = (endingDistribution[ending] ?? 0) + 1;
+      } else {
+        unfinished++;
+        if (suspiciousPathSamples.length < 5) suspiciousPathSamples.push({ run: run + 1, status, path, ending_id: state.endingId });
+      }
+    }
+
+    const visited = [...globalVisited].filter((r) => roomSet.has(r)).sort();
+    return {
+      pack_id: compiled.pack.meta.id,
+      mode,
+      strategy,
+      runs,
+      ended,
+      unfinished,
+      endings_declared: endingsDeclared,
+      ending_distribution: endingDistribution,
+      visited_scenes: visited,
+      unvisited_scenes: allRooms.filter((r) => !visited.includes(r)).sort(),
+      suspicious_path_samples: suspiciousPathSamples,
+    };
+  }
+
+  function coverageActionIndex(
+    actions: { id: string; command: string; action: Action }[],
+    exits: { direction: string; to: string }[],
+    globalVisited: Set<string>,
+    localVisited: Set<string>,
+  ): number {
+    const exitTo = new Map(exits.map((e) => [e.direction, e.to]));
+    // Prefer a move into an unvisited room.
+    const toUnseen = actions.findIndex((a) => {
+      if (a.action.type !== "MOVE") return false;
+      const to = exitTo.get(a.action.direction);
+      return to !== undefined && !globalVisited.has(to) && !localVisited.has(to);
+    });
+    if (toUnseen >= 0) return toUnseen;
+    const investigative = actions.findIndex((a) => INVESTIGATIVE.test(a.command));
+    return investigative >= 0 ? investigative : 0;
+  }
+
   return {
     sessions,
 
@@ -201,17 +392,25 @@ export function createToolApi(opts: { root: string }) {
       return { ok: lr.report.ok, report: lr.report };
     },
 
-    list_stories(): { stories: { path: string; id: string; title: string; playable: boolean }[]; main_story: string | null } {
-      const paths = listYamlFiles(join(root, "content", "cyoa", "pack"));
-      const stories = paths.map((path) => {
-        const lr = loadAndReport(path);
-        return {
-          path,
-          id: lr.ok ? lr.compiled.pack.meta.id : path,
-          title: lr.ok ? lr.compiled.pack.meta.title : path,
-          playable: lr.ok && lr.report.ok,
-        };
-      });
+    list_stories(): { stories: { path: string; id: string; title: string; mode: PackMode | null; playable: boolean }[]; main_story: string | null } {
+      const dirs: [string, PackMode][] = [
+        [join(root, "content", "cyoa", "pack"), "cyoa"],
+        [join(root, "content", "parser", "pack"), "parser"],
+        [join(root, "content", "rpg", "pack"), "rpg"],
+      ];
+      const stories = dirs
+        .flatMap(([dir]) => listYamlFiles(dir))
+        .map((path) => {
+          const lr = loadAndReport(path);
+          return {
+            path,
+            id: lr.ok ? lr.compiled.pack.meta.id : path,
+            title: lr.ok ? lr.compiled.pack.meta.title : path,
+            mode: lr.ok ? lr.mode : null,
+            playable: lr.ok && lr.report.ok,
+          };
+        });
+      // Keep watchtower the default main story for the existing AFK loop.
       const main = stories.find((s) => s.path.endsWith("watchtower_road.yaml")) ?? stories[0] ?? null;
       return { stories, main_story: main?.path ?? null };
     },
@@ -222,23 +421,27 @@ export function createToolApi(opts: { root: string }) {
 
     load_pack(args: { pack_path: string }): {
       ok: boolean;
-      meta?: CompiledPack["pack"]["meta"];
+      mode?: PackMode;
+      meta?: AnyCompiledPack["pack"]["meta"];
       content_hash?: string;
       report: ValidationReport;
     } {
       const lr = loadAndReport(args.pack_path);
       if (!lr.ok) return { ok: false, report: lr.report };
-      return { ok: lr.report.ok, meta: lr.compiled.pack.meta, content_hash: lr.compiled.contentHash, report: lr.report };
+      return { ok: lr.report.ok, mode: lr.mode, meta: lr.compiled.pack.meta, content_hash: lr.compiled.contentHash, report: lr.report };
     },
 
     new_game(args: { pack_path: string; seed?: number }) {
-      const compiled = requirePlayable(args.pack_path);
-      const index = indexPack(compiled.pack);
-      const state = initStateForPack(index, args.seed ?? 1);
-      const session = startSession(compiled, state);
+      const { mode, compiled } = requirePlayable(args.pack_path);
+      const session = startSession(mode, compiled, undefined);
+      if (args.seed !== undefined && args.seed !== 1) {
+        // Re-seed: rebuild the initial state at the requested seed.
+        session.state = initStateFor(mode, session.index, args.seed);
+      }
       return {
         session_id: session.id,
-        observation: buildObservation(session.index, session.state),
+        mode,
+        observation: obsOf(session),
         state_hash: hashState(session.state),
       };
     },
@@ -249,7 +452,7 @@ export function createToolApi(opts: { root: string }) {
 
     get_observation(args: { session_id: string }) {
       const s = sessions.get(args.session_id);
-      return { observation: buildObservation(s.index, s.state), state_hash: hashState(s.state) };
+      return { observation: obsOf(s), state_hash: hashState(s.state) };
     },
 
     get_scene(args: { session_id: string }) {
@@ -258,27 +461,36 @@ export function createToolApi(opts: { root: string }) {
 
     list_legal_actions(args: { session_id: string }) {
       const s = sessions.get(args.session_id);
-      return { actions: buildObservation(s.index, s.state).available_actions };
+      return { actions: obsOf(s).available_actions };
     },
 
     step_action(args: { session_id: string; action_id: string }) {
       const s = sessions.get(args.session_id);
-      const before = buildObservation(s.index, s.state);
+      const before = obsOf(s);
       const beforeStep = s.state.step;
-      const choice = before.available_actions.find((a) => a.id === args.action_id);
-      // CYOA: an action_id is a choice id (§9.1). The legal-action set is ground truth.
-      const action: Action = { type: "CHOOSE", choiceId: args.action_id };
+      const actionText = obsActionText(before, args.action_id);
+      const action = actionForId(before, args.action_id);
+      if (action === null) {
+        // Parser/RPG: an id not in the legal set never reaches the engine.
+        return {
+          ok: false,
+          rejection_reason: "That action is not available right now.",
+          events: [{ type: "rejected" as const, reason: "That action is not available right now." }],
+          observation: before,
+          state_hash: hashState(s.state),
+        };
+      }
       const result = makeStep(s.rules)(s.state, action);
       sessions.update(s.id, result.state);
-      const after = buildObservation(s.index, result.state);
+      const after = obsOf(s);
       s.transcript.push({
         step: beforeStep,
-        scene_id: before.scene_id,
+        scene_id: obsLocation(before),
         title: before.title,
         action_id: args.action_id,
-        action_text: choice?.text ?? null,
+        action_text: actionText,
         events: result.events,
-        result_scene_id: after.scene_id,
+        result_scene_id: obsLocation(after),
         ended: after.ended,
         ending_id: after.ending_id,
       });
@@ -286,7 +498,7 @@ export function createToolApi(opts: { root: string }) {
         ok: result.ok,
         rejection_reason: result.rejectionReason ?? null,
         events: result.events,
-        observation: buildObservation(s.index, result.state),
+        observation: after,
         state_hash: hashState(result.state),
       };
     },
@@ -305,6 +517,7 @@ export function createToolApi(opts: { root: string }) {
       return {
         session_id: s.id,
         pack_id: s.packId,
+        mode: s.mode,
         turns: s.transcript,
         summary: {
           steps: s.transcript.filter((t) => t.action_id !== null).length,
@@ -329,17 +542,20 @@ export function createToolApi(opts: { root: string }) {
 
     save_game(args: { session_id: string }) {
       const s = sessions.get(args.session_id);
-      return { save: save(s.state, s.packId, s.contentHash), pack_id: s.packId, content_hash: s.contentHash };
+      // The save records the pack mode so load can refuse a mode mismatch (§8.7).
+      return { save: save(s.state, s.packId, s.contentHash, s.mode), pack_id: s.packId, content_hash: s.contentHash, mode: s.mode };
     },
 
     load_game(args: { pack_path: string; save: string }) {
-      const compiled = requirePlayable(args.pack_path);
-      // Content-hash check is enforced by load() against the loaded pack (§8.7).
-      const bundle = load(args.save, compiled.contentHash);
-      const session = startSession(compiled, bundle.state);
+      const { mode, compiled } = requirePlayable(args.pack_path);
+      // Content-hash check is enforced by load() against the loaded pack (§8.7);
+      // mode is verified too, so a save can't be loaded against a different mode.
+      const bundle = load(args.save, compiled.contentHash, mode);
+      const session = startSession(mode, compiled, bundle.state);
       return {
         session_id: session.id,
-        observation: buildObservation(session.index, session.state),
+        mode,
+        observation: obsOf(session),
         state_hash: hashState(session.state),
       };
     },
@@ -366,15 +582,14 @@ export function createToolApi(opts: { root: string }) {
     replay_trace(args: { trace_path: string; pack_path: string }) {
       const traceAbs = safeResolve(root, args.trace_path);
       const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace;
-      const compiled = requirePlayable(args.pack_path);
+      const { mode, compiled } = requirePlayable(args.pack_path);
       if (trace.content_hash !== compiled.contentHash) {
         return {
           ok: false,
           message: `Trace was recorded against content ${trace.content_hash}, but the pack is ${compiled.contentHash}.`,
         };
       }
-      const index = indexPack(compiled.pack);
-      const rules = buildRules(index);
+      const rules = rulesFor(mode, indexFor(mode, compiled.pack));
       // A trace stores only the final hash, so we surface ok/final/expected.
       // (Per-step divergence pinpointing needs per-step hashes — a Trace v2 field.)
       return replayTrace(trace, rules);
@@ -386,12 +601,11 @@ export function createToolApi(opts: { root: string }) {
       // the recorded final hash, and runs the debugger's classifier (§12.5).
       const traceAbs = safeResolve(root, args.trace_path);
       const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace;
-      const compiled = requirePlayable(args.pack_path);
+      const { mode, compiled } = requirePlayable(args.pack_path);
       if (trace.content_hash !== compiled.contentHash) {
         return { ok: false, message: `Trace content ${trace.content_hash} ≠ pack ${compiled.contentHash}.` };
       }
-      const index = indexPack(compiled.pack);
-      const rules = buildRules(index);
+      const rules = rulesFor(mode, indexFor(mode, compiled.pack));
       const step = makeStep(rules);
       let state = trace.initial_state;
       const steps: { i: number; action: Action; ok: boolean; location: string; ended: boolean; ending_id: string | null }[] = [];
@@ -401,10 +615,10 @@ export function createToolApi(opts: { root: string }) {
         steps.push({ i, action, ok: r.ok, location: state.current, ended: state.ended, ending_id: state.endingId });
       });
       const replay = replayTrace(trace, rules);
-      // CYOA endings carry no death flag, so any reached ending is a win.
       const d = diagnose(rules, trace.initial_state, trace.actions);
       return {
         ok: true,
+        mode,
         pack_id: trace.pack_id,
         content_hash: trace.content_hash,
         seed: trace.seed,
@@ -420,8 +634,9 @@ export function createToolApi(opts: { root: string }) {
     apply_content_patch(args: { pack_path: string; proposal: ContentPatchProposal }) {
       // Apply a structured patch with deterministic code and return the modified
       // pack + validation report (§9.4, §12.5). The model never writes files: a
-      // patch is data, validated before it can be played (§16). The caller decides
-      // whether to persist the returned pack.
+      // patch is data, validated before it can be played (§16). The fixer supports
+      // cyoa | parser only — RPG packs are intentionally out of the auto-fix path
+      // until the fixer is extended (roadmap), so a proposal.mode is never 'rpg'.
       const proposal = ContentPatchProposalSchema.parse(args.proposal);
       const abs = safeResolve(root, args.pack_path);
       const loaded = proposal.mode === "cyoa" ? loadPackFile(abs) : loadParserPackFile(abs);

@@ -11,7 +11,12 @@ import { HP_VAR, ATTACK_VAR, DEFENSE_VAR } from "./schema.js";
 import { type RpgIndex, enumerateRpgActions } from "./runner.js";
 import { enemyHp, enemyAlive } from "./combat.js";
 
-export type RpgObservation = ParserObservation & {
+// RPG observation reuses the parser shape but MUST carry its own `mode` so it is
+// a real discriminator: an RPG pack is a parser pack + enemies, so without this
+// override every consumer would see mode:"parser" and dispatch the wrong runner
+// (see docs/ROADMAP.md item 1a-0). Omit the inherited literal and redeclare it.
+export type RpgObservation = Omit<ParserObservation, "mode" | "available_actions"> & {
+  mode: "rpg";
   enemies_present: { id: string; name: string; hp: number }[];
   stats: { hp: number; attack: number; defense: number };
   available_actions: { id: string; command: string; action: Action }[];
@@ -24,6 +29,7 @@ export function buildRpgObservation(index: RpgIndex, state: GameState): RpgObser
     .map((e) => ({ id: e.id, name: e.name, hp: enemyHp(state, e) }));
   return {
     ...base,
+    mode: "rpg",
     enemies_present: enemies,
     stats: {
       hp: state.vars[HP_VAR] ?? 0,

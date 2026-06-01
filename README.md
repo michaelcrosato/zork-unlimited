@@ -186,13 +186,18 @@ parser/RPG add `--commands "go north; take rope; attack wight; ..."`. Both accep
 
 The engine is exposed as an MCP server so any agent harness (Claude Code, Codex,
 Gemini CLI, …) plays via native tool calls over the structured observation/action
-loop — never a raw parser. Tools: `validate_pack`, `load_pack`, `new_game`,
-`get_observation`, `list_legal_actions`, `step_action`, `save_game`, `load_game`,
+loop — never a raw parser. **The tools are multi-mode**: the same `new_game` /
+`step_action` / `get_observation` / `run_playtest` / `validate_pack` / save·load /
+replay path plays CYOA, parser, and RPG packs — mode is auto-detected from the
+pack's structure (never a field in content, §16) and carried on every observation
+as `mode`. Tools: `validate_pack`, `load_pack`, `new_game`, `get_observation`,
+`list_legal_actions`, `step_action`, `save_game`, `load_game`, `run_playtest`,
 `replay_trace`, `inspect_trace` (per-step summary + suspected bugs),
-`apply_content_patch` (deterministic, whitelisted patch), `adapt_story` (author a
-pack from a premise). All paths are confined to the project root; content and
-traces are data only (§16). The handlers (`src/mcp/tools.ts`) are unit-tested
-directly without a live client.
+`apply_content_patch` (deterministic, whitelisted patch — cyoa/parser),
+`adapt_story` (author a pack from a premise). `list_stories` discovers packs
+across `content/{cyoa,parser,rpg}/pack` with each pack's mode. All paths are
+confined to the project root; content and traces are data only (§16). The handlers
+(`src/mcp/tools.ts`) are unit-tested directly without a live client.
 
 ```bash
 npm run mcp   # start the stdio server

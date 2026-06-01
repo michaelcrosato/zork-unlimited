@@ -15,12 +15,15 @@ export type SaveBundle = {
   version: typeof SAVE_VERSION;
   packId: string;
   contentHash: string;
+  /** Pack mode (cyoa|parser|rpg). Optional for backward-compat with v1 saves
+   *  written before multi-mode; when present, load can refuse a mode mismatch. */
+  mode?: string;
   state: GameState;
 };
 
 /** Serialize a save to canonical bytes (stable across machines/runs). */
-export function save(state: GameState, packId: string, contentHash: string): string {
-  const bundle: SaveBundle = { version: SAVE_VERSION, packId, contentHash, state };
+export function save(state: GameState, packId: string, contentHash: string, mode?: string): string {
+  const bundle: SaveBundle = { version: SAVE_VERSION, packId, contentHash, state, ...(mode !== undefined ? { mode } : {}) };
   return canonicalize(bundle);
 }
 
@@ -28,9 +31,11 @@ export class SaveIntegrityError extends Error {}
 
 /**
  * Deserialize a save. If `expectedContentHash` is given, the save's contentHash
- * must match it exactly — otherwise a SaveIntegrityError is thrown (§8.7).
+ * must match it exactly (§8.7). If `expectedMode` is given AND the save records a
+ * mode, the modes must match too — a save can't be loaded against a different
+ * mode. A pre-mode (v1) save carries no mode and skips that check (backward-compat).
  */
-export function load(bytes: string, expectedContentHash?: string): SaveBundle {
+export function load(bytes: string, expectedContentHash?: string, expectedMode?: string): SaveBundle {
   let parsed: unknown;
   try {
     parsed = JSON.parse(bytes);
@@ -46,6 +51,9 @@ export function load(bytes: string, expectedContentHash?: string): SaveBundle {
       `Content hash mismatch: save was made against ${bundle.contentHash}, ` +
         `but the loaded pack is ${expectedContentHash}.`,
     );
+  }
+  if (expectedMode !== undefined && bundle.mode !== undefined && bundle.mode !== expectedMode) {
+    throw new SaveIntegrityError(`Mode mismatch: save is a "${bundle.mode}" game, but the loaded pack is "${expectedMode}".`);
   }
   return bundle;
 }

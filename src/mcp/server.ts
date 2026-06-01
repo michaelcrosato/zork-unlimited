@@ -35,46 +35,46 @@ function tool(name: string, description: string, inputSchema: ZodRawShape, handl
   server.registerTool(name, { description, inputSchema }, wrap(handler) as never);
 }
 
-const PACK = { pack_path: z.string().describe("Path to a CYOA pack (.yaml), relative to the project root.") };
+const PACK = { pack_path: z.string().describe("Path to a content pack (.yaml) — CYOA, parser, or RPG; mode is auto-detected — relative to the project root.") };
 const SESSION = { session_id: z.string().describe("A session id from new_game/load_game.") };
 
-tool("validate_pack", "Validate a CYOA content pack; returns the validation report (§10).", PACK, (a) => api.validate_pack(a));
+tool("validate_pack", "Validate a content pack (CYOA, parser, or RPG — auto-detected); returns the validation report (§10).", PACK, (a) => api.validate_pack(a));
 tool(
   "list_stories",
-  "List playable CYOA story packs in content/cyoa/pack and identify the default story for AFK playtesting.",
+  "List playable packs across content/{cyoa,parser,rpg}/pack with each pack's mode, and identify the default story for AFK playtesting.",
   {},
   () => api.list_stories(),
 );
 tool(
   "validate_story",
-  "AFK alias for validate_pack; validates one story and returns hard errors/warnings.",
-  { story_path: z.string().describe("Path to a CYOA story pack, relative to the project root.") },
+  "AFK alias for validate_pack; validates one pack (any mode) and returns hard errors/warnings.",
+  { story_path: z.string().describe("Path to a content pack (any mode), relative to the project root.") },
   (a) => api.validate_story(a),
 );
-tool("load_pack", "Compile a pack and return its metadata, content hash, and validation report.", PACK, (a) => api.load_pack(a));
+tool("load_pack", "Compile a pack (any mode) and return its mode, metadata, content hash, and validation report.", PACK, (a) => api.load_pack(a));
 
 tool(
   "new_game",
-  "Start a new game on a (playable) pack; returns a session id and the first observation.",
+  "Start a new game on a (playable) pack of any mode; returns a session id, the detected mode, and the first observation.",
   { ...PACK, seed: z.number().int().optional().describe("Deterministic seed (default 1).") },
   (a) => api.new_game(a),
 );
 tool(
   "start_game",
-  "AFK alias for new_game; start a story session for MCP-driven playtesting.",
-  { story_path: z.string().describe("Path to a CYOA story pack."), seed: z.number().int().optional() },
+  "AFK alias for new_game; start a session on a pack of any mode for MCP-driven playtesting.",
+  { story_path: z.string().describe("Path to a content pack (any mode)."), seed: z.number().int().optional() },
   (a) => api.start_game(a),
 );
 
-tool("get_observation", "Get the current AI-facing observation for a session (§9.1).", SESSION, (a) => api.get_observation(a));
-tool("get_scene", "AFK alias for get_observation; returns current scene text, state, and visible options.", SESSION, (a) =>
+tool("get_observation", "Get the current AI-facing observation for a session (§9.1). The `mode` field discriminates cyoa | parser | rpg.", SESSION, (a) => api.get_observation(a));
+tool("get_scene", "AFK alias for get_observation; returns current scene/room text, state, and visible options.", SESSION, (a) =>
   api.get_scene(a),
 );
-tool("list_legal_actions", "List the legal actions available right now in a session (§9).", SESSION, (a) => api.list_legal_actions(a));
+tool("list_legal_actions", "List the legal actions available right now in a session, any mode (§9).", SESSION, (a) => api.list_legal_actions(a));
 
 tool(
   "step_action",
-  "Apply one chosen action (by its id from available_actions); returns events + the new observation.",
+  "Apply one chosen action by its id from available_actions (any mode — CYOA choice or parser/RPG command); returns events + the new observation.",
   { ...SESSION, action_id: z.string().describe("An action id from the current legal-action set.") },
   (a) => api.step_action(a),
 );
@@ -93,27 +93,27 @@ tool(
 );
 tool(
   "run_playtest",
-  "Run deterministic automated MCP-style CYOA playtests and summarize endings, coverage, unvisited scenes, and suspicious paths.",
+  "Run deterministic automated MCP-style playtests on a pack of any mode (CYOA scenes or parser/RPG rooms) and summarize endings, coverage, unvisited locations, and suspicious paths.",
   {
-    story_path: z.string().describe("Path to a CYOA story pack."),
-    strategy: z.enum(["random", "coverage"]).optional().describe("random samples varied choices; coverage biases toward new/investigative options."),
+    story_path: z.string().describe("Path to a content pack (any mode)."),
+    strategy: z.enum(["random", "coverage"]).optional().describe("random samples varied actions; coverage biases toward new locations / investigative options."),
     runs: z.number().int().positive().optional().describe("Number of runs, default 100."),
     max_steps: z.number().int().positive().optional().describe("Per-run step cap, default 80."),
   },
   (a) => api.run_playtest(a),
 );
 
-tool("save_game", "Serialize a session to a save string (content-hash bound, §8.7).", SESSION, (a) => api.save_game(a));
+tool("save_game", "Serialize a session to a save string (content-hash + mode bound, §8.7).", SESSION, (a) => api.save_game(a));
 tool(
   "load_game",
-  "Load a save against a pack (content-hash verified) and return a fresh session.",
+  "Load a save against a pack (content-hash + mode verified) and return a fresh session.",
   { ...PACK, save: z.string().describe("A save string produced by save_game.") },
   (a) => api.load_game(a),
 );
 
 tool(
   "replay_trace",
-  "Replay a recorded trace against a pack and assert its final-state hash (§8.8).",
+  "Replay a recorded trace against a pack of any mode and assert its final-state hash (§8.8).",
   { trace_path: z.string().describe("Path to a trace JSON, relative to the project root."), ...PACK },
   (a) => api.replay_trace(a),
 );
