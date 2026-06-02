@@ -95,18 +95,18 @@ describe("bug_0016 — Sunken Barrow scoring accrues 0→10→25→50 across the
     expect(s.questStage["barrow"]).toBe("slab_moved");
     expect(score(s)).toBe(25);
 
-    s = act(s, move("down")); // into the relic chamber: +25 milestone, max score in hand
+    s = act(s, move("down")); // into the relic chamber: NO score here (bug_0107) — the final beat rides the claim
     expect(s.ended).toBe(false); // the win turns on the claim, not on entry (bug_0056)
-    expect(score(s)).toBe(50);
-    expect(score(s)).toBe(pack.meta.max_score);
+    expect(score(s)).toBe(25);
 
-    s = act(s, isTake); // claim the circlet → win fires on the deliberate TAKE
+    s = act(s, isTake); // claim the circlet → +25 (take_effects) AND the win fires on the deliberate TAKE
     expect(s.ended).toBe(true);
     expect(s.endingId).toBe("ending_victory");
     expect(score(s)).toBe(50);
+    expect(score(s)).toBe(pack.meta.max_score);
   });
 
-  it("each award is one-time: the wight is dead, the lever retires, the relic chamber's +25 fires once", () => {
+  it("each award is one-time: the wight is dead, the lever retires, the circlet's take_effects +25 fires once", () => {
     let s = act(act(act(initStateForRpgPack(index, 1), move("down")), isTake), move("north"));
     while (!s.ended && !s.flags["wight_slain"]) s = act(s, isAttack);
     // The wight is slain — no ATTACK remains, so the +10 cannot be re-earned.
@@ -119,11 +119,12 @@ describe("bug_0016 — Sunken Barrow scoring accrues 0→10→25→50 across the
     expect(options(s).some((o) => o.action.type === "USE")).toBe(false);
 
     s = act(s, move("down"));
-    // The relic chamber's on_enter +25 fires once on first descent; the win itself
-    // turns on the deliberate claim a beat later (bug_0056), so the +25 cannot be farmed.
+    // No score on chamber entry now (bug_0107): the final +25 rides the circlet's
+    // take_effects, which fire on the single pickup that ALSO ends the game (claim_relic
+    // → ending_victory), so the award is one-shot and cannot be farmed.
     expect(s.ended).toBe(false);
-    expect(score(s)).toBe(50);
-    s = act(s, isTake); // claim the circlet → win
+    expect(score(s)).toBe(25);
+    s = act(s, isTake); // claim the circlet → +25 then win
     expect(s.ended).toBe(true);
     expect(score(s)).toBe(50);
   });
@@ -131,8 +132,9 @@ describe("bug_0016 — Sunken Barrow scoring accrues 0→10→25→50 across the
   it("the validator fold-in is real: parser-only bound under-counts (25), RPG bound reaches 50", () => {
     expect(pack.meta.max_score).toBe(50);
 
-    // Without the RPG runtime awards, only the relic on_enter +25 is in a scanned
-    // location, so the parser-only bound is 25 < 50 → SCORE_UNREACHABLE must fire.
+    // Without the RPG runtime awards, only the circlet's take_effects +25 is in a
+    // parser-scanned location (allEffects now folds in take_effects, bug_0107), so the
+    // parser-only bound is 25 < 50 → SCORE_UNREACHABLE must fire.
     const parserOnly = validateParser(pack);
     expect(parserOnly.findings.find((f) => f.code === "SCORE_UNREACHABLE")).toBeDefined();
 

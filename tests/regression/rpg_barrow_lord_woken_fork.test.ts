@@ -29,8 +29,10 @@
  *   (3) the DOOM fork is real: prising the sarcophagus with the iron bar ends the run
  *       at ending_woken (a death ending), and the prise action is offered in the
  *       chamber (the descended player always holds the bar);
- *   (4) the fork does not perturb scoring — both endings occur at 50/50 (the chamber
- *       on_enter award is the last point; neither terminal adds score).
+ *   (4) the two endings now score DIFFERENTLY (bug_0107): the peaceful victory takes the
+ *       crown, whose take_effects award the final +25 → 50/50; the doom fork prises the
+ *       sarcophagus WITHOUT ever taking the crown, so it tops out at 25/50 — the score
+ *       tally now distinguishes the true win from the irreversible doom.
  */
 import { describe, it, expect } from "vitest";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
@@ -97,7 +99,7 @@ function descendToChamber(seed: number): GameState {
     s = act(s, isLeverSlab); // might check; retry until it gives
     if (++guard > 40) throw new Error("slab never moved");
   }
-  s = act(s, move("down")); // → Relic Chamber (+25 on entry)
+  s = act(s, move("down")); // → Relic Chamber (no score on entry; the +25 rides the claim, bug_0107)
   expect(s.current).toBe("relic_chamber");
   return s;
 }
@@ -134,7 +136,10 @@ describe("bug_0083 — the Barrow-Lord's sarcophagus: cashing the shade's 'do no
     expect(s.endingId).toBe("ending_woken");
     // Distinct from ending_fallen (dying to the wight) and from ending_victory.
     expect(s.endingId).not.toBe("ending_fallen");
-    // The fork does not perturb scoring: the doom occurs at the same 50/50.
-    expect(score(s)).toBe(50);
+    // The doom is now scored DISTINCTLY from the victory (bug_0107): prising the
+    // sarcophagus never takes the crown, so its take_effects +25 never fires — the
+    // doom tops out at 25/50, half the true victory's 50/50.
+    expect(score(s)).toBe(25);
+    expect(score(s)).toBeLessThan(pack.meta.max_score);
   });
 });

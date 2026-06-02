@@ -16,16 +16,18 @@ meta:
   flags_init: []
   # Stage-3 scoring: points are awarded once at each of the three beats that mark
   # real progress through the barrow — slaying the guard-wight that bars the way
-  # (+10), levering the great slab aside with iron and might (+15), and descending
-  # past it into the lord's chamber (+25). Each award rides a milestone that
-  # only fires once (the wight dies once; the lever retires after success, bug_0015;
-  # the relic chamber's on_enter fires once on first descent), so the score cannot be
-  # farmed and the intended path reaches the full 50. The win itself is the deliberate
-  # claim — taking the circlet from its plinth (win_conditions, bug_0056) — one beat
-  # after the chamber-reached milestone, so max score is in hand as the player makes
-  # the final grab. The conventional `score` var accrues via
-  # inc_var; the RPG validator folds the combat/skill-check awards into the
-  # SCORE_UNREACHABLE upper bound, so the declared max is genuinely reachable.
+  # (+10), levering the great slab aside with iron and might (+15), and CLAIMING the
+  # crown (+25). Each award rides a milestone that only fires once (the wight dies
+  # once; the lever retires after success, bug_0015; the circlet's take_effects fire on
+  # the single pickup, which also ends the game — bug_0107), so the score cannot be
+  # farmed and the intended path reaches the full 50. The final +25 deliberately rides
+  # the CLAIM — taking the circlet from its plinth (win_conditions, bug_0056) — not bare
+  # chamber entry: that is what keeps max score from being in hand BEFORE the final
+  # crown-vs-coffin choice, so the irreversible doom fork (prising the sarcophagus,
+  # ending_woken, without ever taking the crown) tops out at 25/50 while only the true
+  # victory reaches 50 (bug_0107, a blind-playtest finding). The conventional `score`
+  # var accrues via inc_var; the RPG validator folds the combat/skill-check awards into
+  # the SCORE_UNREACHABLE upper bound, so the declared max is genuinely reachable.
   max_score: 50
 
 rooms:
@@ -147,9 +149,18 @@ rooms:
       you. The sealed lid is another matter: the air over it lies heavy and wrong,
       and every instinct you own says to let what sleeps beneath it sleep on.
     objects: [circlet, sarcophagus]
+    # bug_0107: the +25 final-beat award no longer rides this on_enter. A blind
+    # playtester (seed 23/7, ai-runs/2026-06-02T08-19-08-656Z/playtest.md §4/§5) flagged
+    # that arriving in the chamber pushed the score to the full 50/50 BEFORE the final
+    # crown-vs-coffin choice — so the irreversible DOOM ending (prising the sarcophagus,
+    # ending_woken) also read "Final score: 50 of 50," the same tally as the true
+    # victory, undercutting score as a signal of having won. The award now fires on the
+    # deliberate CLAIM (the circlet's take_effects below), so the doom fork tops out at
+    # 25/50 (incomplete) and only taking the crown reaches 50. The chamber-reached
+    # journal stays — reaching the chamber is still a logged beat — but it no longer
+    # carries points.
     on_enter:
       - add_journal: "You have reached the relic chamber."
-      - inc_var: { name: score, by: 25 }
     exits:
       - { direction: up, to: slab_passage }
 
@@ -227,6 +238,14 @@ objects:
     aliases: [circlet, relic, crown]
     description: "A circlet of pale metal, cold and faintly luminous."
     takeable: true
+    # The final +25 beat (bug_0107): awarded on the deliberate CLAIM, not on chamber
+    # entry. take_effects fire right after the pickup and one-shot intrinsically (once
+    # held the circlet isn't takeable-visible, and the TAKE also satisfies claim_relic →
+    # ending_victory, so the game ends and it can't re-fire). Moving the award here is
+    # what makes the doom fork (prising the sarcophagus without ever taking the crown)
+    # read 25/50 while only the true victory reaches the full 50.
+    take_effects:
+      - inc_var: { name: score, by: 25 }
 
   # The Barrow-Lord's sealed sarcophagus — the thing the shade warns of (bug_0083).
   # A blind playtester (seed 7) named the pack's biggest design gap: the shade's

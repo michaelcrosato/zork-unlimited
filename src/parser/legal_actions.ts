@@ -96,9 +96,16 @@ export function resolveParserAction(
       const o = index.objects.get(action.item);
       if (!o || !o.takeable || state.inventory.includes(action.item)) return null;
       if (!visibleObjectIds(index, state, here).includes(action.item)) return null;
+      // take_effects (bug_0107) fire after the pickup, so a goal item can award its
+      // climactic points on the deliberate CLAIM. One-shot: once held the object isn't
+      // takeable-visible, so TAKE can't re-resolve and the effects can't re-fire.
       return {
         conditions: [],
-        effects: [{ add_item: action.item }, { narrate: `You take the ${o.name}.` }],
+        effects: [
+          { add_item: action.item },
+          { narrate: `You take the ${o.name}.` },
+          ...(o.take_effects ?? []),
+        ],
       };
     }
     case "DROP": {

@@ -879,6 +879,7 @@ function allEffects(pack: ParserPack): Effect[] {
   for (const o of pack.objects) {
     for (const it of o.interactions) out.push(...it.effects);
     if (o.unlock_effects) out.push(...o.unlock_effects); // first-class UNLOCK content (bug_0077)
+    if (o.take_effects) out.push(...o.take_effects); // first-class TAKE content (bug_0107)
   }
   for (const n of pack.npcs) for (const node of n.dialogue.nodes) out.push(...node.effects);
   return out;

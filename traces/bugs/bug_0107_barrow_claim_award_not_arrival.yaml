@@ -1,0 +1,82 @@
+bug_id: bug_0107
+pack_id: sunken_barrow_v1
+seed: 23   # plus seed 7 for the doom path
+type: content_fix   # + a small, general, well-precedented engine feature (take_effects)
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-02T08-19-08-656Z/playtest.md   # sunken_barrow seeds 23 (good path) + 7 (doom path)
+  finding: >
+    This cycle's mandated blind pass rotated onto The Sunken Barrow (the least-attended
+    RPG pack). A fresh MCP-only playtester reached BOTH endings, rated clarity 5/5 /
+    enjoyment 4/5, and raised one finding TWICE (report §4 confusion + §5 design flaw):
+    the score reaches the full 50/50 the instant you ENTER the Relic Chamber — before the
+    final crown-vs-coffin choice — because the +25 final-beat award rode the chamber's
+    on_enter. So the irreversible DOOM ending (prising the Barrow-Lord's sarcophagus →
+    ending_woken, death) also reads "Final score: 50 of 50," the SAME tally as the true
+    victory, "undercutting score as a signal of having won correctly." The player's
+    suggested fix, verbatim: "not awarding the final score chunk until the crown is
+    actually taken, or reflecting the choice in the score." This is the same honesty
+    discipline the pack already enforces elsewhere (bug_0027/0029/0069: don't let the
+    surfaced signal say something the mechanics don't): the score tally should distinguish
+    the won game from the lost one.
+improvement:
+  layer: content + engine   # the award moves in content; a new general engine hook carries it
+  engine_feature: >
+    Added `take_effects` to the parser object schema — the symmetric twin of the existing
+    `unlock_effects` (bug_0077). A takeable object may carry effects that fire right AFTER
+    it is picked up (the TAKE resolution appends them after the default add_item + "You
+    take the X." narration). One-shot is intrinsic: once held the object is no longer
+    takeable-visible, so TAKE cannot re-resolve and the effects cannot re-fire (mirrors
+    unlock_effects' isLocked self-retire). Schema superRefine rejects take_effects without
+    `takeable: true`. The field is `.optional()` (no default) so every pack that does not
+    use it compiles byte-identically and keeps its content hash. The parser validator's
+    allEffects() now folds take_effects in, so the SCORE_UNREACHABLE upper bound, the
+    INERT_FLAG written-flag set (bug_0106), and the WIN_FIRES_AT_START falsifier scan all
+    account for them uniformly. TAKE delegates to resolveParserAction for BOTH parser and
+    RPG packs (src/rpg/runner.ts), so the feature is available to both modes.
+  content_change: >
+    Moved the barrow's final +25 award off relic_chamber.on_enter onto the circlet's new
+    take_effects. The chamber-reached journal stays (reaching the chamber is still a
+    logged beat) but no longer carries points. Result: the three milestones are now wight
+    +10, slab +15, and CLAIM +25 (on the take). Entering the chamber leaves the score at
+    25; only TAKING the crown reaches 50. The doom fork — prising the sarcophagus without
+    ever taking the crown — therefore tops out at 25/50, so the score now distinguishes
+    the true victory (50/50) from the irreversible doom (25/50).
+  preserves_critical_path: >
+    The canonical victory route's FINAL state is byte-identical: score still reaches 50
+    (10+15+25), inventory/flags/quest/journal unchanged — only the turn at which the +25
+    increments moves (chamber-entry → the take a beat later). So the pinned trace's
+    expected_final_hash is UNCHANGED; only the content hash (and the trace's content_hash
+    pin) moves. No change to combat, the lever puzzle, the win condition, the endings, or
+    any exit.
+verification:
+  validate: green (0 errors, 0 warnings) under the full RPG validator
+  content_hash_before: 54712ef3d1e2d44f979c29887f5ac163a4a509cf7626177fb64f77321301fbc6
+  content_hash_after: c187324c0d39b671e88a178b02fabf652aa3ffb636bd5f5d2eda324b997d8668
+  trace_repin: >
+    traces/rpg/barrow_victory.json content_hash 54712ef3… → c187324c… — the legitimate
+    snapshot-update workflow (HASH_PIN_REPINNED is a surfaced WARNING in verify-integrity
+    drift mode, accompanied by this intentional content change). The canonical route's
+    final STATE is unchanged, so the recorded expected_final_hash
+    (e55b00ebe5081633dd41d3d37610588e8c5e0873d289b1c5e4f3adca7a511935) is UNCHANGED,
+    re-confirmed by replay — only the content-hash pin moved. This trace is the only live
+    hash pin for sunken_barrow.
+  reachable_endings: [ending_victory, ending_fallen, ending_woken]   # unchanged
+verified_live: >
+  Through the MCP/RPG engine over the compiled pack: seed 23/1 — entering the Relic
+  Chamber leaves the score at 25 (was 50), the game does not end, and TAKING the circlet
+  awards +25 → 50/50 and fires ending_victory. seed 7/1 — prising the sarcophagus without
+  taking the crown fires ending_woken (death) at 25/50, now visibly less than the true
+  victory's 50/50. The lever/wight awards and the one-shot guarantees are untouched.
+regression_test: >
+  tests/regression/rpg_take_effects.test.ts (new — locks the take_effects engine feature:
+  effects fire on pickup, are one-shot, schema rejects take_effects without takeable, and
+  the doom fork now scores 25/50 vs the victory's 50/50). Existing barrow tests updated to
+  the moved award: rpg_scoring (timeline 0→10→25 at chamber entry→50 on the claim),
+  rpg_barrow_claim_relic (25 on entry, 50 on claim), rpg_barrow_lord_woken_fork (doom
+  25/50 < victory 50/50).
+notes: >
+  take_effects is a general, reusable hook, not a barrow-only patch — any goal item in any
+  parser/RPG pack can now award its climactic points (or set a flag) on the deliberate
+  claim rather than on bare room entry.

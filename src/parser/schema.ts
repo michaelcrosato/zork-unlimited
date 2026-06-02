@@ -260,6 +260,18 @@ export const ObjectSchema = z
     // superRefine below rejects them without a `key_id`.
     unlock_narrate: z.string().min(1).optional(),
     unlock_effects: z.array(EffectSchema).optional(),
+    // First-class TAKE content (bug_0107), the symmetric twin of unlock_effects: a
+    // takeable object can carry effects that fire AFTER it is picked up (e.g. inc_var
+    // score, set_flag), so the climactic CLAIM of a goal item can award its points on
+    // the deliberate grab rather than on bare room entry — which is what lets a pack
+    // distinguish "reached the chamber" from "took the crown" in the score. The TAKE
+    // resolution appends these after the default `add_item` + "You take the X." line.
+    // One-shot is intrinsic: once held, the object isn't visible-to-take, so TAKE no
+    // longer resolves and the effects never re-fire (mirrors unlock_effects' isLocked
+    // self-retire). `.optional()` (not a default) so an absent field keeps the compiled
+    // pack byte-identical ⇒ packs that don't use it keep their content hash. Only
+    // meaningful on a takeable object; the superRefine below rejects them otherwise.
+    take_effects: z.array(EffectSchema).optional(),
     contents: z.array(z.string().min(1)).default([]),
     interactions: z.array(InteractionSchema).default([]),
   })
@@ -274,6 +286,13 @@ export const ObjectSchema = z
         path: ["unlock_effects"],
         message:
           "unlock_narrate/unlock_effects require a key_id (they fire on the first-class UNLOCK)",
+      });
+    }
+    if (o.take_effects !== undefined && !o.takeable) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["take_effects"],
+        message: "take_effects require takeable: true (they fire on the first-class TAKE)",
       });
     }
   });

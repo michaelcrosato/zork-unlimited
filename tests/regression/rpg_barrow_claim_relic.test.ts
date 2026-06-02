@@ -27,8 +27,9 @@
  * Locked here:
  *   (a) ENGINE CONTRACT (synthetic Rules): checkWin fires a win on a non-move action,
  *       is skipped once the game has ended (no double-fire), and is optional.
- *   (b) CONTENT: entering relic_chamber does NOT end; taking the circlet ends with
- *       ending_victory at full score; the score-on-entry milestone still fires once.
+ *   (b) CONTENT: entering relic_chamber does NOT end (score 25, win pending); taking the
+ *       circlet awards the final +25 via take_effects AND ends with ending_victory at
+ *       full score (bug_0107 moved the last beat off chamber entry onto the claim).
  *   (c) the win condition retains BOTH terms (visited + has_item).
  */
 import { describe, it, expect } from "vitest";
@@ -125,8 +126,10 @@ describe("bug_0056 — The Sunken Barrow wins on the claim, not on entry", () =>
     expect(s.current).toBe("relic_chamber");
     expect(s.ended).toBe(false);
     expect(s.endingId).toBeNull();
-    // max score is in hand on entry (the chamber-reached milestone), win still pending.
-    expect(s.vars["score"]).toBe(pack.meta.max_score);
+    // max score is NOT yet in hand on entry (bug_0107): the final +25 rides the claim
+    // (the circlet's take_effects), so on entry the score is 25 and the win is pending.
+    expect(s.vars["score"]).toBe(25);
+    expect(s.vars["score"]).toBeLessThan(pack.meta.max_score);
     expect(s.inventory).not.toContain("circlet");
     const takeCirclet = rules
       .legalActions(s)
