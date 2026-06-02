@@ -9,6 +9,7 @@ import { join } from "node:path";
 import {
   assess,
   formatAssessment,
+  packStem,
   parseAttendanceOffsets,
   type Category,
 } from "../../src/afk/assessor.js";
@@ -132,37 +133,64 @@ describe("frontier lever + blind-pass rotation (ULTRAPLAN 2026-06-02)", () => {
     }
   });
 
-  it("parseAttendanceOffsets keeps the MOST RECENT mention and strips trailing punctuation", () => {
-    const text = [
-      "- Mandatory LLM playtest target this cycle: content/cyoa/pack/clockwork_heist.yaml.",
-      "noise",
-      "- Mandatory LLM playtest target this cycle: content/rpg/pack/cold_forge.yaml.",
-      "- Mandatory LLM playtest target this cycle: content/cyoa/pack/clockwork_heist.yaml.",
-    ].join("\n");
-    const offsets = parseAttendanceOffsets(text);
-    expect(offsets.has("content/cyoa/pack/clockwork_heist.yaml")).toBe(true);
-    expect(offsets.has("content/rpg/pack/cold_forge.yaml")).toBe(true);
-    // clockwork's recorded offset is its LAST (largest) mention, after cold_forge's.
-    expect(offsets.get("content/cyoa/pack/clockwork_heist.yaml")!).toBeGreaterThan(
-      offsets.get("content/rpg/pack/cold_forge.yaml")!,
-    );
+  it("packStem normalizes a pack path OR a bare id to the same stem", () => {
+    expect(packStem("content/cyoa/pack/clockwork_heist.yaml")).toBe("clockwork_heist");
+    expect(packStem("content/rpg/pack/cold_forge.yml")).toBe("cold_forge");
+    expect(packStem("clockwork_heist")).toBe("clockwork_heist");
   });
 
-  it("rotates the blind pass onto the least-recently-attended pack (no clockwork lock-in)", () => {
+  it("parseAttendanceOffsets keeps the MOST RECENT (topmost) mention in the newest-first log (bug_0128)", () => {
+    // AI_LOOP_STATE.md is NEWEST-FIRST (each cycle PREPENDS at the top), so a pack's
+    // FIRST (smallest-offset) mention is its most recent. Here clockwork appears at the
+    // very top (most recent) and again at the bottom (older); cold_forge sits between.
+    const text = [
+      "- Mandated blind pass ran on clockwork_heist (CYOA, seed 3).", // most recent
+      "noise noise noise",
+      "- Mandated blind pass ran on cold_forge (rpg, seed 7).",
+      "- Mandated blind pass ran on clockwork_heist (CYOA, seed 99).", // older repeat
+    ].join("\n");
+    const offsets = parseAttendanceOffsets(text);
+    // Keyed by stem, recognizing the CURRENT prose phrasing + a bare id token.
+    expect(offsets.has("clockwork_heist")).toBe(true);
+    expect(offsets.has("cold_forge")).toBe(true);
+    // clockwork's kept offset is its FIRST (topmost = most recent) mention, BEFORE
+    // cold_forge's — the opposite of the pre-bug_0128 last-write-wins behaviour.
+    expect(offsets.get("clockwork_heist")!).toBeLessThan(offsets.get("cold_forge")!);
+  });
+
+  it("parseAttendanceOffsets still recognizes the legacy structured-header marker", () => {
+    const text =
+      "- Mandatory LLM playtest target this cycle: content/cyoa/pack/wreckers_light.yaml.";
+    const offsets = parseAttendanceOffsets(text);
+    expect(offsets.has("wreckers_light")).toBe(true);
+  });
+
+  it("rotates the blind pass onto the LEAST-recently-attended pack, never-attended first (bug_0128)", () => {
     const loopState = join(process.cwd(), "AI_LOOP_STATE.md");
     if (!existsSync(loopState)) return; // rotation is a no-op without the log
     const offsets = parseAttendanceOffsets(readFileSync(loopState, "utf8"));
     const reviews = a.candidates.filter((c) => c.id.startsWith("playtest-"));
     if (reviews.length < 2) return;
-    // The assessor's actual order, restricted to the blind-playtest stubs.
     const actual = reviews.map((c) => c.target);
-    // Expected: ascending recency offset (never-attended = -1 first), then id asc.
+    // The SEMANTIC property, computed independently of the implementation: a pack
+    // never attended (no mention) sorts first; otherwise the one whose most-recent
+    // mention is OLDEST (largest offset in this newest-first log) sorts first; id asc
+    // breaks exact ties. Earlier this test mirrored the production sort expression, so
+    // it could not catch a wrong sort DIRECTION — it now states the property outright.
+    const rank = (target: string): number => {
+      const off = offsets.get(packStem(target));
+      return off === undefined ? Number.MIN_SAFE_INTEGER : -off;
+    };
     const expected = [...reviews]
-      .sort(
-        (x, y) =>
-          (offsets.get(x.target) ?? -1) - (offsets.get(y.target) ?? -1) || x.id.localeCompare(y.id),
-      )
+      .sort((x, y) => rank(x.target) - rank(y.target) || x.id.localeCompare(y.id))
       .map((c) => c.target);
     expect(actual).toEqual(expected);
+    // And concretely: the first-nominated pack must NOT be more recently attended
+    // than the last-nominated one (the lock-in symptom was the reverse).
+    const firstOff = offsets.get(packStem(actual[0]!));
+    const lastOff = offsets.get(packStem(actual[actual.length - 1]!));
+    if (firstOff !== undefined && lastOff !== undefined) {
+      expect(firstOff).toBeGreaterThanOrEqual(lastOff); // larger offset = less recent
+    }
   });
 });

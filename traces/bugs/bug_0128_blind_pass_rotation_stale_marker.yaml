@@ -1,0 +1,72 @@
+bug_id: bug_0128
+pack_id: N/A   # engine/loop-brain defect in src/afk/assessor.ts (the AFK assessor)
+seed: 3
+evidence:
+  source: blind_playtest + loop-brain audit
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-02T13-31-14-318Z/playtest.md   # clockwork_heist, seed 3
+  finding: >
+    The mandated rank-1 target this cycle was, once again, The Clockwork Heist — a pack
+    blind-clean for ~30 straight cycles. The seed-3 blind pass confirmed it: a fresh
+    source-blind MCP-only subagent reached three endings (Truth/Rich/Caught), clarity 5/5,
+    enjoyment 4/5, ZERO bugs; its only finding (the "toothless" clock/guard) is the
+    documented recurring false positive — the teeth (meta.deadline ticks>=10 ->
+    ending_overstayed; cross_to_vault_blind -> ending_patrol) are real and test-locked, but
+    efficient blind play never triggers them (project memory cyoa-exhaustive-solver). Per
+    memory, the clock must NOT be re-fixed. The real signal was WHY clockwork keeps being
+    nominated: the assessor's blind-pass RECENCY ROTATION — added expressly to "cure the
+    clockwork_heist lock-in that re-nominated one pack" — was silently dead.
+failure:
+  type: stale_marker + inverted_file_order
+  location: src/afk/assessor.ts parseAttendanceOffsets() + assess() recency tiebreak
+  description: >
+    Two coupled defects made the recency rotation a no-op that fell back to alphabetical
+    (clockwork_heist sorts first), exactly the lock-in it was meant to cure:
+      1. STALE MARKER. parseAttendanceOffsets matched ONLY the old structured-header line
+         "Mandatory LLM playtest target this cycle: <path>". That header was abandoned ~15
+         cycles ago; current cycles record attendance as prose, "Mandated blind pass ran on
+         <pack>". So every recent attendance was invisible and the recency map was frozen at
+         whenever the format last drifted.
+      2. INVERTED FILE ORDER. Even for matched lines, the code did map.set(target, offset)
+         for every occurrence top-to-bottom and commented "last write wins (most recent)".
+         That is correct only for an OLDEST-FIRST (append-at-bottom) log; AI_LOOP_STATE.md is
+         NEWEST-FIRST (each cycle PREPENDS at the top), so last-write-wins kept each pack's
+         OLDEST mention, not its most recent. The downstream sort then treated a smaller
+         offset as older, inverting the intended "least-recently-attended first" order.
+    The existing unit test masked both: its fixture was written oldest-first (the opposite of
+    the real file) and its rotation assertion MIRRORED the production sort expression, so it
+    could only confirm the code matched itself — never that the direction was right. Net
+    effect: the deterministic assessor re-nominated clockwork_heist regardless of true
+    recency; agents had been rotating the blind pass MANUALLY to compensate.
+fix:
+  layer: engine   # the loop's deterministic brain; trust-but-verify, full authority
+  summary: >
+    parseAttendanceOffsets now (a) recognizes BOTH the current "Mandated blind pass ran on
+    <pack>" prose AND the legacy "Mandatory LLM playtest target this cycle: <path>" header,
+    (b) accepts a path OR a bare id token and keys the map by packStem() (a new exported
+    helper: path-or-id -> stem, e.g. content/cyoa/pack/clockwork_heist.yaml -> clockwork_heist),
+    and (c) keeps each stem's FIRST (topmost = most recent) mention, honest about the
+    newest-first log. assess()'s recency tiebreak resolves c.target via packStem and negates
+    the offset so a less-recent (larger-offset) pack sorts EARLIER, with never-attended
+    (MIN_SAFE_INTEGER) earliest of all and non-playtest candidates (MAX_SAFE_INTEGER) last —
+    so it still only reorders the equal-scored 0.5 playtest stubs. Incidental captures (e.g.
+    "...ran on the assessor") land under a stem no candidate queries and are harmless.
+  files:
+    - src/afk/assessor.ts
+  regression_test: tests/regression/assessor_blind_pass_rotation.test.ts
+  unit_tests: tests/unit/assessor.test.ts   # rewrote the two attendance tests to assert the
+    # semantic property (newest-first, least-recently-attended first) instead of mirroring
+    # the implementation; added packStem + legacy-marker cases
+  reachable_endings_changed: false   # no pack/content touched
+  content_hash_changed: false        # no pack edited; no hash pin moved
+verified_live: >
+  Against the real AI_LOOP_STATE.md, the fixed parser reads the current prose format and the
+  rotation now nominates wreckers_light first (least-recently blind-attended), places
+  clockwork_heist mid-list, and watchtower_road last (it was bug_0127, the most recent pass)
+  — matching the actual cycle history. The pre-fix parser produced an order driven by each
+  pack's OLDEST mention and fell to alphabetical when the data went stale (clockwork first).
+notes: >
+  This does not weaken the bar: the loop is free to override the deterministic recommendation
+  (this very cycle did, completing the mandated clockwork pass while fixing the rotation). The
+  value is that the assessor's RECOMMENDATION is now an honest recency signal again, so future
+  autonomous cycles rotate the mandated blind pass correctly without manual steering.

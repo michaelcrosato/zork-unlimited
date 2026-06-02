@@ -239,20 +239,45 @@ function isPlanningGatedCyoa(root: string, packPath: string): boolean {
 }
 
 /**
- * Parse, from the AI_LOOP_STATE.md log, the MOST RECENT character offset at which
- * each pack was named the mandated blind-playtest target. A larger offset means
- * more recently attended. Pure (text in, map out) so it unit-tests without a
- * fixture. Used to rotate the blind pass onto the LEAST-recently-attended pack
- * instead of re-nominating the alphabetically-first one every cycle.
+ * Normalize a pack reference — a full path OR a bare id — to its stem, so an
+ * attendance line that names a pack either way maps to the same key. E.g.
+ * "content/cyoa/pack/clockwork_heist.yaml" → "clockwork_heist", and a bare
+ * "clockwork_heist" is returned unchanged.
+ */
+export function packStem(ref: string): string {
+  const base = ref.split("/").pop() ?? ref;
+  return base.replace(/\.ya?ml$/i, "");
+}
+
+/**
+ * Parse, from the AI_LOOP_STATE.md log, each pack's MOST RECENT blind-playtest
+ * attendance — its character offset — keyed by {@link packStem}. A SMALLER offset
+ * means more recently attended, because the log is written NEWEST-FIRST (every cycle
+ * PREPENDS its entry at the top): a stem's FIRST match is its most recent attendance,
+ * so we keep the first and ignore older repeats. Pure (text in, map out) so it
+ * unit-tests without a fixture. Used to rotate the blind pass onto the
+ * LEAST-recently-attended pack instead of re-nominating the alphabetically-first one.
+ *
+ * Recognizes BOTH the cycle-result phrasing the log actually uses today ("Mandated
+ * blind pass ran on <pack>") AND the older structured-header marker ("Mandatory LLM
+ * playtest target this cycle: <path>"); a token in either form may be a path or a
+ * bare id. This is the bug_0128 fix: the parser previously matched ONLY the old
+ * header — abandoned ~15 cycles ago for the prose format — so the recency signal had
+ * frozen and the rotation silently fell back to alphabetical, re-nominating
+ * clockwork_heist (the very lock-in the rotation was meant to cure). The caller
+ * resolves only real pack stems, so incidental captures (e.g. "…ran on the assessor")
+ * land under a stem no candidate queries and are harmless.
  */
 export function parseAttendanceOffsets(loopStateText: string): Map<string, number> {
   const map = new Map<string, number>();
-  const re = /Mandatory LLM playtest target this cycle:\s*(\S+)/g;
+  const re =
+    /(?:Mandatory LLM playtest target this cycle:|Mandated blind pass ran on)\s+([A-Za-z0-9_./-]+)/g;
   for (const m of loopStateText.matchAll(re)) {
     const captured = m[1];
     if (captured === undefined) continue;
-    const target = captured.replace(/[.,;]+$/, ""); // strip the sentence-ending punctuation
-    map.set(target, m.index ?? 0); // matchAll is in order → the last write wins (most recent)
+    const stem = packStem(captured.replace(/[.,;]+$/, "")); // strip sentence-ending punctuation
+    if (!stem) continue;
+    if (!map.has(stem)) map.set(stem, m.index ?? 0); // newest-first ⇒ first match is most recent
   }
   return map;
 }
@@ -558,15 +583,22 @@ export function assess(root: string): Assessment {
   }
 
   // Deterministic ordering: score desc, then — among equal scores — rotate the
-  // blind-playtest pass onto the LEAST-recently-attended pack (oldest/never first),
-  // then id asc as the final stable tiebreak. The recency term only separates
-  // equal-scored `playtest-*` stubs (all at 0.5); every other candidate gets a
-  // sentinel so its relative order is unchanged. Reading the tracked
-  // AI_LOOP_STATE.md keeps this a pure function of repo state (same repo ⇒ same
-  // ranking), curing the clockwork_heist lock-in that re-nominated one pack ~107×.
+  // blind-playtest pass onto the LEAST-recently-attended pack (never-attended first,
+  // then the oldest most-recent attendance first), then id asc as the final stable
+  // tiebreak. The recency term only separates equal-scored `playtest-*` stubs (all at
+  // 0.5); every other candidate gets a sentinel (MAX_SAFE_INTEGER) so its relative
+  // order is unchanged. attendance offsets come from the NEWEST-FIRST log, so a
+  // SMALLER offset is MORE recent — we negate it so a less-recent (larger-offset) pack
+  // sorts EARLIER, and a never-attended pack (MIN_SAFE_INTEGER) sorts earliest of all.
+  // c.target is a path; the attendance map is stem-keyed, so resolve via packStem.
+  // Reading the tracked AI_LOOP_STATE.md keeps this a pure function of repo state
+  // (same repo ⇒ same ranking), curing the clockwork_heist lock-in (bug_0128).
   const attendance = lastAttendanceOffsets(root);
-  const recencyOf = (c: ImprovementCandidate): number =>
-    c.id.startsWith("playtest-") ? (attendance.get(c.target) ?? -1) : Number.MAX_SAFE_INTEGER;
+  const recencyOf = (c: ImprovementCandidate): number => {
+    if (!c.id.startsWith("playtest-")) return Number.MAX_SAFE_INTEGER;
+    const off = attendance.get(packStem(c.target));
+    return off === undefined ? Number.MIN_SAFE_INTEGER : -off;
+  };
   candidates.sort(
     (a, b) => b.score - a.score || recencyOf(a) - recencyOf(b) || a.id.localeCompare(b.id),
   );
