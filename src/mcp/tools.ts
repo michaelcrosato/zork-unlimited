@@ -54,6 +54,7 @@ import {
   type AnyObservation,
 } from "./types.js";
 import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
+import { resolveProvider } from "../../agents/llm/providers.js";
 import { loadEngineContract, runWriter } from "../../agents/authoring/writer.js";
 import { runAdapter } from "../../agents/authoring/adapter.js";
 import { diagnose } from "../../agents/debugger.js";
@@ -657,10 +658,13 @@ export function createToolApi(opts: { root: string }) {
 
     async adapt_story(args: { premise: string }) {
       // Author a CYOA pack from a premise via the writer → adapter → validator
-      // loop (§12.1–3). Deterministic MockAuthorProvider default — no keys, no
-      // network. Returns the story, the green/red pack, the validation report, and
-      // the per-beat classification (§11). Never writes files (the caller decides).
-      const provider = new MockAuthorProvider();
+      // loop (§12.1–3). Uses a REAL frontier model when a provider key is present
+      // (ANTHROPIC/OPENAI/GOOGLE, or AF_LLM_PROVIDER), falling back to the
+      // deterministic MockAuthorProvider when none is set — so CI and key-less runs
+      // stay green and offline while a keyed run exercises the genuine §1 author.
+      // Mirrors bin/author.ts. Returns the story, the green/red pack, the validation
+      // report, and the per-beat classification (§11). Never writes files.
+      const provider = resolveProvider({ mock: new MockAuthorProvider() });
       const contract = loadEngineContract();
       const story = await runWriter(provider, { premise: args.premise, contract });
       const result = await runAdapter(provider, { story, contract });
