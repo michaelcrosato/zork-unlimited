@@ -12,7 +12,8 @@
  *
  * The fix is pure CONTENT and purely ADDITIVE: a new room (reaver_rest), a new NPC
  * (reaver_shade), and a `west` exit on entry_hall. The shade's counsel is one-shot,
- * conditional, and MECHANICAL (a +2-defense ward, no dead-payload rumor flag), plus a
+ * conditional, and MECHANICAL (a +3-defense ward — +2 originally, raised to +3 in
+ * bug_0113 so prepared play reliably survives — no dead-payload rumor flag), plus a
  * lore topic that deepens the world. Honest, not over-sold (bug_0027/0029/0069): the
  * seed-31 blind pass rated the wight a real "even-ish trade … I finished at 11 HP", so
  * easing its cold blows genuinely matters, yet the shade says plainly the ward "will not
@@ -24,8 +25,8 @@
  *       new room's reachability/soft-lock and the new dialogue's termination all hold);
  *   (2) the new side cell is an optional, bidirectional detour off the Entry Hall (no
  *       soft-lock: you can always walk back east to the critical path);
- *   (3) the shade's ward is REAL and MECHANICAL: ask_wight raises defense 2→4 once,
- *       sets heard_warding, journals the +2 — and the topic then RETIRES (one-shot, can't
+ *   (3) the shade's ward is REAL and MECHANICAL: ask_wight raises defense 2→5 once,
+ *       sets heard_warding, journals the +3 — and the topic then RETIRES (one-shot, can't
  *       be farmed); the lore topic ask_lord is likewise one-shot; leave_shade ends the
  *       dialogue; talking awards NO score (the milestone scoring is untouched);
  *   (4) the shade is OPTIONAL: the canonical route ignores it and still reaches
@@ -110,14 +111,14 @@ describe("bug_0075 — the reaver's shade: an optional, mechanical second beat i
     expect(canAsk(s, "ask_wight")).toBe(true);
     expect(canAsk(s, "ask_lord")).toBe(true);
 
-    s = act(s, askTopic("ask_wight")); // grants the +2 defense ward
+    s = act(s, askTopic("ask_wight")); // grants the +3 defense ward (bug_0113)
     expect(s.flags["heard_warding"]).toBe(true);
-    expect(s.vars["defense"]).toBe(4); // the ward is real and mechanical (2 → 4)
-    expect(s.journal.some((j) => j.includes("+2 defense"))).toBe(true);
+    expect(s.vars["defense"]).toBe(5); // the ward is real and mechanical (2 → 5)
+    expect(s.journal.some((j) => j.includes("+3 defense"))).toBe(true);
     s = act(s, askTopic("wight_back")); // back to root
     // One-shot: the warding topic retired; it cannot be re-asked or farmed.
     expect(canAsk(s, "ask_wight")).toBe(false);
-    expect(s.vars["defense"]).toBe(4); // still 4, not re-buffed
+    expect(s.vars["defense"]).toBe(5); // still 5, not re-buffed
 
     // The lore topic is likewise one-shot and deepens the world.
     expect(canAsk(s, "ask_lord")).toBe(true);

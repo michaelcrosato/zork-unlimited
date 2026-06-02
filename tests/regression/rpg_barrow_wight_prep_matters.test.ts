@@ -15,7 +15,7 @@
  * The fix retunes the wight to hp22/atk5/def2 (the bug_0101 move applied to this
  * pack). This is the sound "gear up first" design the bug_0097 winnability proof was
  * widened to permit: that proof credits the player's BEST REACHABLE stats (init +
- * the reachable +2 shade ward = def4), so the fight is still PROVABLY winnable to the
+ * the reachable shade ward — +2 here, later +3/def5 in bug_0113), so the fight is still PROVABLY winnable to the
  * validator and sunken_barrow stays a clean 0-finding pack — while BASE-stat play is
  * a genuine, lethal gamble the bar never required to be safe. Verified live over
  * seeds 1-40 on the real route (__probe2.ts): under-armed wins only 17/40 (loses on a
@@ -116,13 +116,13 @@ describe("bug_0102 — The Sunken Barrow wight has real teeth, so the shade's wa
     expect(pack.endings.find((e) => e.id === "ending_fallen")?.death).toBe(true);
   });
 
-  it("(4) prep decides it: the SAME seed 2, with only the shade's +2-defense ward, flips to ending_victory 50/50", () => {
+  it("(4) prep decides it: the SAME seed 2, with only the shade's defense ward, flips to ending_victory 50/50", () => {
     let s = initStateForRpgPack(index, 2);
     s = act(s, move("down")); // → entry_hall
     s = act(s, move("west")); // → reaver_rest (the optional detour, met before the fight)
     s = act(s, isTalk); // the reaver's shade
-    s = act(s, askTopic("ask_wight")); // the ONLY difference from case (3): +2 defense ward
-    expect(s.vars["defense"]).toBe(4);
+    s = act(s, askTopic("ask_wight")); // the ONLY difference from case (3): the shade's defense ward
+    expect(s.vars["defense"]).toBe(5); // bug_0113: ward raised +2→+3 (def 2→5)
     s = act(s, askTopic("wight_back"));
     s = act(s, askTopic("leave_shade"));
     s = act(s, move("east")); // → entry_hall

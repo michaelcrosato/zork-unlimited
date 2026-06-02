@@ -302,15 +302,28 @@ npcs:
   # node would trip DIALOGUE_NONTERMINATING, cf. cold_forge bug_0014).
   #
   # The ward is HONEST and DECISIVE, not a toothless gift (bug_0102): against the
-  # retuned wight (hp22/atk5/def2) the +2 defense is the difference between a losing
-  # gamble and a clear favourite — under-armed the fight is lethal on a majority of
-  # seeds (~43% win), warded it is a reliable ~70% win (verified live, __probe2.ts).
-  # This is the cold-blow danger the shade names finally cashed: easing those blows
-  # (+2 defense) genuinely decides the fight, where a fresh blind pass (seed 37,
+  # retuned wight (hp22/atk5/def2) it is the difference between a losing gamble and a
+  # clear favourite — under-armed the fight is lethal on a majority of seeds (~43%
+  # win). This is the cold-blow danger the shade names finally cashed: easing those
+  # blows genuinely decides the fight, where a fresh blind pass (seed 37,
   # ai-runs/2026-06-02T02-14-47-663Z) had found the OLD soft wight died in two rounds
   # warded or not, the ward shaving a single HP. The fight stays winnable — and now
-  # truly lethal — from base stats (the death ending stays reachable). Per the pack's
-  # honesty discipline
+  # truly lethal — from base stats (the death ending stays reachable).
+  #
+  # bug_0113 — the ward is +3 (was +2), so PREPARED play RELIABLY survives. A fresh
+  # blind pass on the warded route (seed 11, ai-runs/2026-06-02T09-48-19-753Z/playtest.md
+  # §4/§5) won twice but finished at exactly 3 HP both times and flagged the marquee
+  # fight as razor-thin: "an unlucky early run of high wight rolls can kill a fully-
+  # prepared, 'correct play' player … no recovery beyond fleeing." At +2 the warded
+  # route won only ~70% of seeds and a third of correct-play runs DIED — the prep
+  # decided the fight (bug_0102) but did not make it safe to do everything right.
+  # Raising the ward +2→+3 lifts the warded route to a reliable ~88% win with a real
+  # HP cushion (avg survivor HP 5.4→7.5, the ≤3-HP nail-biters more than halved),
+  # verified live over seeds 1-40 on the REAL routes (__probe3.ts) — WITHOUT touching
+  # the wight, so under-armed stays exactly the ~43% lethal gamble bug_0102 made it
+  # and the prep gap WIDENS (43% vs 88%). It is still no guaranteed win (~12% of
+  # warded seeds lose, recoverable via save §8.7), so the pack keeps the tension its
+  # "careful play isn't free" identity demands. Per the pack's honesty discipline
   # (bug_0027/0029/0069) the shade does NOT over-sell the danger: it says plainly the
   # ward "will not swing your blade for you". Every npc_text is PURE SPOKEN words — the
   # engine renders `reaver's shade: "<words>"`, so the nodes carry no quote marks and no
@@ -349,8 +362,8 @@ npcs:
             you, but the cold will bite the less.
           effects:
             - set_flag: heard_warding
-            - inc_var: { name: defense, by: 2 }
-            - add_journal: "The reaver's shade teaches you to turn the wight's chill on your guard — its cold blows will bite the less now (+2 defense)."
+            - inc_var: { name: defense, by: 3 }
+            - add_journal: "The reaver's shade teaches you to turn the wight's chill on your guard — its cold blows will bite the less now (+3 defense)."
           topics:
             - id: wight_back
               prompt: "Nod, and ask something else."
@@ -389,13 +402,15 @@ enemies:
   # route (__probe2.ts, throwaway, the exact action sequence the trace records, not an
   # abstract sweep): UNDER-ARMED (def2) now LOSES on a majority of seeds (wins 17/40 ≈
   # 43%, and the survivors scrape through at ~4 HP of 20 — the cold-blow danger the
-  # shade names is finally real), while the shade's +2 ward (def4) is the DECISIVE
-  # survival lever (wins 28/40 ≈ 70% — a likely-dead gamble becomes a clear favourite),
-  # exactly the buff the tester called one-HP-cosmetic. 15 seeds are clean "prep decides
-  # it" cases (under-armed dies, the same seed warded reaches ending_victory). Still
-  # provably winnable from best-reachable stats (the bug_0097 proof, which credits the
-  # +2 ward): bestPlayerDmg=8 (atk4 vs def2), roundsToKill=ceil(22/8)=3,
-  # worstCaseDamageTaken=4 < 20 reachable HP. The death ending stays reachable and the
+  # shade names is finally real), while the shade's ward is the DECISIVE survival lever
+  # (a likely-dead gamble becomes a clear favourite), exactly the buff the seed-37 tester
+  # called one-HP-cosmetic. (bug_0113 later raised that ward +2→+3 so prepared play
+  # RELIABLY survives, lifting the warded route ~70%→~88% with a real HP cushion while
+  # leaving this wight — and so the under-armed gamble — untouched; numbers in the npc
+  # block above.) Still provably winnable from best-reachable stats (the bug_0097 proof,
+  # which credits the reachable ward — now +3, def5): bestPlayerDmg=8 (atk4 vs def2),
+  # roundsToKill=ceil(22/8)=3, worst wight blow d6+5−5 ≤ 6 < 20 reachable HP, so the
+  # validator still proves the fight winnable. The death ending stays reachable and the
   # canonical victory trace now runs the warded route (the intended prepared path), per
   # bug_0101's "switch helpers to the canonical buffed route." Defense 1→2 also slows
   # the player's own blade (atk4 vs def2 = d6+2, not d6+3), lengthening the fight so the
