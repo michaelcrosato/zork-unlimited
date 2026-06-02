@@ -74,6 +74,10 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
   // Hoisted: what the pack ever provides (flags/items/vars). Needed both by the
   // deadline-firability check just below and the choice-feasibility check later.
   const writes = collectWrites(pack);
+  // Direction-aware var writes (kind + signed amount). Shared by both deadline
+  // soundness checks AND the choice-feasibility loop's direction-aware var-gate
+  // check (bug_0110) — computed once.
+  const falsifiers = collectFalsifiers(pack);
   const deadline = pack.meta.deadline;
   // Whether the deadline can PROVABLY never fire. A provably-unfireable deadline must
   // NOT contribute its escape edge to the soft-lock graph below — doing so would let a
@@ -97,9 +101,6 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
         ),
       );
     }
-    // Direction-aware var writes (kind + signed amount), shared by both deadline
-    // soundness checks below — computed once.
-    const falsifiers = collectFalsifiers(pack);
     // Firability: a deadline that can PROVABLY never fire is a Chekhov's gun — the
     // declared urgency mechanic (bug_0079/0080) is dead — AND a latent unsoundness
     // for the soft-lock graph below, which (lines further down) treats the deadline
@@ -278,16 +279,37 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
       }
       for (const vr of req.varReqs) {
         const init = initVars[vr.name] ?? 0;
-        const needsRaise =
-          (vr.op === "gte" && vr.value > init) || (vr.op === "eq" && vr.value !== init);
-        if (needsRaise && !writes.writtenVars.has(vr.name)) {
-          findings.push(
-            err(
-              "IMPOSSIBLE_GATE",
-              `choice requires var "${vr.name}" ${vr.op} ${vr.value} but nothing ever writes it (init ${init}).`,
-              where,
-            ),
-          );
+        if (vr.op === "gte" && vr.value > init) {
+          // Direction-aware (bug_0110), mirroring the deadline-firability fix
+          // (bug_0109): a var that IS written but only ever DROPS (decrements,
+          // no-op/negative incs, or sets that land below the bound) can never rise
+          // to a higher `gte` threshold from its init, so the gate is just as
+          // impossible as an unwritten var — the choice is never offered. The
+          // coarse `writtenVars.has` test let this through. Sound & conservative:
+          // one write that can raise the var to the bound (a positive inc or a
+          // set >= value) makes us treat it as reachable, so a live gate is never
+          // wrongly errored.
+          if (!varCanReachGte(vr.value, falsifiers.varWrites.get(vr.name))) {
+            findings.push(
+              err(
+                "IMPOSSIBLE_GATE",
+                `choice requires var "${vr.name}" gte ${vr.value} but no effect can ever raise it to that bound (init ${init}).`,
+                where,
+              ),
+            );
+          }
+        } else if (vr.op === "eq" && vr.value !== init) {
+          // `eq` stays on the coarse test: an inc/dec/set could land on the value,
+          // so a written var is not provably dead — only an entirely unwritten one.
+          if (!writes.writtenVars.has(vr.name)) {
+            findings.push(
+              err(
+                "IMPOSSIBLE_GATE",
+                `choice requires var "${vr.name}" eq ${vr.value} but nothing ever writes it (init ${init}).`,
+                where,
+              ),
+            );
+          }
         }
       }
     }
