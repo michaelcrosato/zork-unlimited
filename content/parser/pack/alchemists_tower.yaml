@@ -27,7 +27,15 @@ meta:
   id: alchemists_tower_v1
   title: "The Alchemist's Tower"
   start_room: courtyard
-  max_score: 35
+  # bug_0104: max_score raised 35 → 40 so the perfect score coincides with the WIN.
+  # The score chain used to top out at 35 (read recipe +5, steep herb +10, decant
+  # antidote +20) one full action BEFORE the game ends — the climactic, deliberate
+  # cure (give antidote to the master, the bug_0057 act that IS the win) awarded
+  # nothing, so a score-watching player hit a "perfect score yet unfinished" state
+  # (blind playtest seed 89, this pack). The +5 capstone now lives on the cure act
+  # (master's USE-antidote interaction), so 35/40 at the brew and 40/40 only on the
+  # cure. Every prior award is unchanged.
+  max_score: 40
 
 rooms:
   - id: courtyard
@@ -461,9 +469,14 @@ objects:
         command_verb: give
         command_template: "give {item} to {target}"
         conditions: [{ not_flag: cure_administered }]
+        # bug_0104: the climactic cure carries the FINAL +5, so the perfect score
+        # (40/40) is reached on this act — the win — not one step earlier at the brew
+        # (35/40). The whole puzzle chain culminates here; before this fix the bug_0057
+        # deliberate-cure act, the literal point of the pack, was the one unscored move.
         effects:
           - set_flag: cure_administered
           - remove_item: antidote
+          - inc_var: { name: score, by: 5 }
           - narrate: "You raise the master's head and tip the pale antidote between her cracked lips, a slow and careful measure, until the vial runs empty."
 
 win_conditions:

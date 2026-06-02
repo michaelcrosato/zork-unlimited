@@ -12,7 +12,7 @@
  *
  * The fix is a GENERIC engine/UX capability, not a one-pack content edit — it
  * affects every scoring pack (sealed_crypt 35, sunken_barrow 50, cold_forge 50,
- * alchemists_tower 35). buildParserObservation now:
+ * alchemists_tower 40 since bug_0104). buildParserObservation now:
  *   (1) surfaces meta.max_score as the new `max_score` field (the denominator,
  *       previously absent from the observation); and
  *   (2) when ended AND max_score > 0, appends "Final score: X of Y." to the

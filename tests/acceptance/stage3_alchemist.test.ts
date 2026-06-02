@@ -86,7 +86,7 @@ describe("Stage 3 — The Alchemist's Tower", () => {
     const obs = buildParserObservation(index, state);
     expect(state.ended).toBe(true);
     expect(state.endingId).toBe("ending_cured");
-    expect(obs.score).toBe(pack.meta.max_score); // 35/35 — score target is reachable
+    expect(obs.score).toBe(pack.meta.max_score); // 40/40 (bug_0104) — full score on the cure
     expect(obs.ending?.death).toBe(false);
   });
 

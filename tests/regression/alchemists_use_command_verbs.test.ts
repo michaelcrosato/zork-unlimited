@@ -176,10 +176,13 @@ describe("bug_0081 — the alchemist's item-on-target USEs carry their natural v
     }
   });
 
-  it("the full win route is unaffected — still reaches ending_cured at 35/35", () => {
+  it("the full win route is unaffected — still reaches ending_cured at full score (40/40 after bug_0104)", () => {
     const s = play(initStateForParserPack(index, 1), WIN_ROUTE);
     expect(s.ended).toBe(true);
     expect(s.endingId).toBe("ending_cured");
-    expect(s.vars["score"]).toBe(35);
+    // bug_0104: the climactic cure now carries the final +5, so the win lands at 40/40
+    // (5 recipe + 10 steep + 20 decant + 5 cure) instead of the old 35.
+    expect(s.vars["score"]).toBe(alch.compiled.pack.meta.max_score);
+    expect(s.vars["score"]).toBe(40);
   });
 });

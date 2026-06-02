@@ -159,11 +159,12 @@ describe("bug_0074 — a self-USE consume action carries its natural verb (comma
     expect(parseCommand(index, s, "drink herb").ok).toBe(false); // herb has no drink self-USE
   });
 
-  it("the full win route is unaffected — still reaches ending_cured at 35/35", () => {
+  it("the full win route is unaffected — still reaches ending_cured at full score (40/40 after bug_0104)", () => {
     const s = play(initStateForParserPack(index, 1), WIN_ROUTE);
     expect(s.ended).toBe(true);
     expect(s.endingId).toBe("ending_cured");
-    expect(s.vars["score"]).toBe(35);
+    expect(s.vars["score"]).toBe(alch.compiled.pack.meta.max_score);
+    expect(s.vars["score"]).toBe(40);
   });
 
   describe("schema guards", () => {

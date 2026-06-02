@@ -1,0 +1,64 @@
+bug_id: bug_0104
+pack_id: alchemists_tower_v1
+seed: 89                           # this cycle's rotated blind-playtest seed; the regression drives seed 1 (deterministic canonical route)
+type: content_fix                  # one +5 score award on the existing cure interaction + a max_score bump — no engine/validator/schema/flag/item/exit/gating/reachable-ending change
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-02T07-40-46-287Z/playtest.md   # rotated onto alchemists_tower — this fix's source
+  mandated_result: >
+    Fresh general-purpose MCP-only subagent, no source access, seed 89: WON ending_cured 35/35 on the
+    intended brew route; reached ending_poisoned on the trap route (drink the black phial); edge-probed
+    gating (pour never offered before the herb is steeped). Clarity 5/5, enjoyment 4/5; zero rejected
+    commands, no loops, no soft-locks; room/object text stayed in sync with every state change. ZERO
+    functional bugs. ONE concrete actionable finding, raised in BOTH report §4 and §5 (below).
+  finding: >
+    Laboratory / Spire (report §4 + §5): "The score hits the maximum 35/35 when you brew the antidote — one
+    full step before the game actually ends (giving it to the master). A score-watching player might think
+    they've finished and stop, or be briefly confused that max score doesn't equal game over. A perfect-
+    score-yet-unfinished state is slightly odd." The tester's explicit suggestion: "award the final points on
+    administering the cure so score and victory coincide."
+root_cause: >
+  The score chain awarded 5 (read recipe) + 10 (steep herb) + 20 (decant antidote) = 35 = the old max_score,
+  ALL of it before the spire. The bug_0057 climax — the deliberate USE-antidote-on-master cure, the literal
+  point of the pack and the act the win condition turns on — awarded NOTHING, so the perfect score was
+  reached one full action before the win and the most important act in the pack was the one unscored move.
+improvement:
+  layer: content   # score balance — one added inc_var on an existing interaction + a max_score bump
+  content:
+    - content/parser/pack/alchemists_tower.yaml: >
+        (1) meta.max_score raised 35 → 40. (2) The master's USE-antidote-on-master interaction (the bug_0057
+        deliberate cure, the win act) gains a final `inc_var { name: score, by: 5 }` alongside its existing
+        set_flag cure_administered / remove_item antidote / narrate effects. The brew now tops out at 35/40,
+        and the perfect 40/40 is reached ONLY on the cure — score and victory coincide. Every prior award
+        (5/10/20) is unchanged; no flag/item/exit/gating/interaction-shape/reachable-ending change, no new
+        action, no route change. Design comments added on meta and the interaction.
+verification:
+  - vitest (new): tests/regression/alchemists_score_victory_coincide.test.ts (5 cases, live engine)
+  - max_score is 40; standing at the spire pre-cure the score is 35 (< max, the regression — it used to EQUAL max); the cure awards +5 and lands the win at exactly 40/40; the cure interaction carries inc_var score by 5; the pack validates green
+  - vitest (updated): alchemists_administer_cure_agency.test.ts (pre-cure score now asserted < max == max-5; the win-at-full-score case still passes, max is now 40); alchemists_use_command_verbs.test.ts (win route now 40/40 via pack.meta.max_score); stage3_alchemist.test.ts (stale "35/35" comment corrected)
+  - npm run health   # see locked_by / notes
+locked_by:
+  - tests/regression/alchemists_score_victory_coincide.test.ts        # 5 cases: max_score==40; pre-cure score==35<max; cure awards +5 → 40/40 win; interaction carries inc_var; validates green
+  - tests/regression/alchemists_administer_cure_agency.test.ts         # UPDATED: bug_0057's "full score in hand before the cure" assertion is the very smell bug_0104 fixes — repointed to assert the pre-cure score is strictly below max (== max-5); the administer-wins-at-full-score case is unchanged (max is now 40)
+  - tests/regression/alchemists_use_command_verbs.test.ts              # UPDATED: the win-route score assertion 35 → pack.meta.max_score (40)
+  - tests/acceptance/stage3_alchemist.test.ts                          # UPDATED: stale "35/35" comment on the full-score assertion corrected to 40/40 (it already used pack.meta.max_score symbolically)
+notes:
+  test_update: >
+    bug_0057's regression asserted the player held FULL score (== max_score) while standing at the spire
+    before administering the cure — that assertion ENCODES the exact "perfect score before the win" state
+    the blind tester flagged. It was repointed to assert the pre-cure score is strictly below max (== max-5);
+    the companion "administering wins at full score" case is unchanged and now lands at 40/40. No check was
+    deleted or weakened; the deliberate-cure agency, the consume-the-vial behaviour, and the win-condition
+    shape are all still asserted exactly as before.
+  verifier_integrity: >
+    NO protected SOURCE file touched; NO HASH_PIN file touched. alchemists_tower is NOT hash-pinned by any
+    test or trace (only watchtower_road is hash-pinned, and this pack has no committed replay trace), so the
+    content edit moves the pack's content hash with nothing to re-pin. No override used.
+  content_hash: >
+    alchemists_tower content hash moves (max_score 35 → 40 + one inc_var on the cure interaction). No live pin
+    references it; historical bug artifacts (bug_0012/0023/0024/0033/0039/0052/0057/0065/0073/0081/0093/0103)
+    record prior hashes and are left untouched (frozen records).
+  benchmark_scorecard: >
+    traces/benchmark/scorecard.json is a generated coverage artifact (not in `npm run health`, regenerated by
+    `npm run benchmark`); it records ending/scene coverage, not max_score, so no re-pin is needed.

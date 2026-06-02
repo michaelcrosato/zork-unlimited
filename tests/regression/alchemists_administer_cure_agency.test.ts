@@ -104,8 +104,11 @@ describe("bug_0057 — the Alchemist's Tower climax is a deliberate cure, not an
     // Regression: this MOVE used to fire ending_cured. It must not anymore.
     expect(s.current).toBe("spire");
     expect(s.ended).toBe(false);
-    // Full score is already in hand as the player makes the final cure.
-    expect(buildParserObservation(index, s).score).toBe(pack.meta.max_score);
+    // bug_0104: the score is NOT yet maxed here — the brew tops out at 35, and the
+    // final +5 capstone is reserved for the deliberate cure act below, so the perfect
+    // score coincides with the win rather than this pre-cure standing-at-the-spire moment.
+    expect(buildParserObservation(index, s).score).toBeLessThan(pack.meta.max_score);
+    expect(buildParserObservation(index, s).score).toBe(pack.meta.max_score - 5);
 
     // The patient is present and the deliberate cure is offered.
     const ids = enumerateActions(index, s).map((o) => o.id);
