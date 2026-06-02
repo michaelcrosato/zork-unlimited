@@ -1,0 +1,19 @@
+# MUST WARN: UNSATISFIABLE_CONDITION — the room variant's `when` pins flag "x" both set
+# (has_flag) and unset (not_flag), an internally contradictory conjunction no state can
+# satisfy, so the variant can never display: dead content. The same check also covers
+# exit/interaction `conditions`. Fix or remove the contradictory condition.
+meta: { id: parser_unsat, title: "Unsatisfiable Guard", start_room: a }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A — the start."
+    variants:
+      - when: [{ has_flag: x }, { not_flag: x }]
+        text: "Dead — flag x cannot be both set and unset at once."
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

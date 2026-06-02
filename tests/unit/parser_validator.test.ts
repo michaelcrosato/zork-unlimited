@@ -55,6 +55,24 @@ describe("parser validator — negative fixtures must fail (§10.4)", () => {
     });
   }
 
+  // Warning-severity fixtures: dead reactive content (a shadowed or unsatisfiable
+  // variant/guard). These do NOT make the pack unplayable (report.ok stays true), so
+  // we assert the code is present rather than report.ok === false (mirrors the CYOA
+  // validator's UNREACHABLE_VARIANT / UNSATISFIABLE_CONDITION fixtures).
+  const WARNING_FIXTURES: [string, string][] = [
+    ["parser_unreachable_variant", "UNREACHABLE_VARIANT"],
+    ["parser_unsatisfiable_condition", "UNSATISFIABLE_CONDITION"],
+  ];
+  for (const [file, code] of WARNING_FIXTURES) {
+    it(`${file} is flagged ${code} (warning)`, () => {
+      const loaded = loadParserPackFile(`content/broken-fixtures/${file}.yaml`);
+      expect(loaded.ok).toBe(true);
+      if (!loaded.ok) return;
+      const report = validateParser(loaded.compiled.pack);
+      expect(report.findings.map((f) => f.code)).toContain(code);
+    });
+  }
+
   const SCHEMA_FIXTURES = ["parser_empty_text", "parser_unknown_effect"];
   for (const file of SCHEMA_FIXTURES) {
     it(`${file} is rejected by the schema (content is data, never code — §16)`, () => {

@@ -485,6 +485,62 @@ export function validateParser(
     }
   }
 
+  // ── Dead reactive content: shadowed / unsatisfiable variants & guards ────────
+  // Parser rooms and objects carry reactive `variants` (RoomVariantSchema /
+  // ObjectVariantSchema), evaluated first-match-wins (model.ts roomDescription /
+  // objectDescription) — the EXACT semantics the CYOA validator already guards on
+  // scenes/endings (bug_0085 shadowing, bug_0086 unsatisfiable). The parser validator
+  // never checked them: a later variant whose `when` is entailed by an earlier
+  // sibling's can never be the first match (dead text), and a variant `when` (or an
+  // exit/interaction `conditions`) that is internally contradictory can never hold at
+  // all (dead text / a gate never offered). Both are silently-dead content a blind
+  // playtest can't see — it simply never appears. This ports the two CYOA checks to
+  // parser room/object variants, plus the unsatisfiable-guard check to exit and
+  // interaction conditions (the parser analogue of CYOA choice conditions). Sound &
+  // conservative: see the helper notes — opaque disjunctions never drive a finding.
+  for (const room of pack.rooms) {
+    checkVariantShadowing(room.variants, `room:${room.id}`, findings);
+    for (let i = 0; i < (room.variants?.length ?? 0); i++)
+      checkUnsatisfiable(
+        room.variants?.[i]?.when,
+        [`room:${room.id}`, `variant:${i}`],
+        `room "${room.id}" variant #${i + 1}`,
+        findings,
+      );
+    for (const exit of room.exits)
+      checkUnsatisfiable(
+        exit.conditions,
+        [`room:${room.id}`, `exit:${exit.direction}`],
+        `exit ${exit.direction} from room "${room.id}"`,
+        findings,
+      );
+  }
+  for (const o of pack.objects) {
+    checkVariantShadowing(o.variants, `object:${o.id}`, findings);
+    for (let i = 0; i < (o.variants?.length ?? 0); i++)
+      checkUnsatisfiable(
+        o.variants?.[i]?.when,
+        [`object:${o.id}`, `variant:${i}`],
+        `object "${o.id}" variant #${i + 1}`,
+        findings,
+      );
+    for (const it of o.interactions)
+      checkUnsatisfiable(
+        it.conditions,
+        [`object:${o.id}`, `verb:${it.verb}`],
+        `interaction "${it.verb}" on object "${o.id}"`,
+        findings,
+      );
+  }
+  // A win_condition is the parser/RPG analogue of CYOA's meta.deadline — an
+  // internally contradictory `conditions` can never fire (the DEADLINE_UNFIREABLE
+  // analogue), and like the deadline it is a latent soft-lock unsoundness: a `visited`
+  // room inside such a never-firing win is still added to `winRooms` above as a real
+  // escape target, so an unsatisfiable win could mask a true SOFTLOCK. Surfacing it
+  // points at that root cause.
+  for (const wc of pack.win_conditions)
+    checkUnsatisfiable(wc.conditions, [`win:${wc.id}`], `win_condition "${wc.id}"`, findings);
+
   // ── A win condition already met at game start (§8.4.5 fires-at-start) ─────────
   checkWinFiresAtStart(
     pack,
@@ -780,6 +836,149 @@ function allEffects(pack: ParserPack): Effect[] {
 
 function visitedRoom(c: Condition): string | null {
   return "visited" in c ? c.visited : null;
+}
+
+// ── Dead-content analysis: variant shadowing + unsatisfiable guards ──────────────
+// Mirrors the CYOA validator's WhenProfile / entails / isUnsatisfiable /
+// checkVariantShadowing / checkUnsatisfiable (bug_0085/0086), reused here for parser
+// room/object variants (first-match-wins, model.ts) and exit/interaction conditions.
+// Same soundness stance: every proof is over a pure conjunction of literals/var-bounds;
+// any any_of/none_of makes a `when` opaque so it never drives a finding (no false
+// positives — we detect fewer cases, never wrong ones).
+
+/**
+ * The conjunctive shape of a `when`/`conditions`: the positive/negative atoms it pins
+ * and the tightest var bounds it implies. `opaque` is set when an `any_of`/`none_of`
+ * (a disjunction we cannot reason about soundly) appears — an opaque profile never
+ * participates in an entailment proof, keeping the shadowing check sound.
+ */
+type WhenProfile = {
+  pos: Set<string>; // atoms guaranteed true  (flag:f, item:i, visited:r, open:o, unlocked:o, quest:q=s)
+  neg: Set<string>; // atoms guaranteed false (flag:f, item:i, visited:r)
+  lower: Map<string, number>; // strongest var ">=" bound per var
+  upper: Map<string, number>; // strongest var "<=" bound per var
+  opaque: boolean;
+};
+
+function whenProfile(when: Condition[]): WhenProfile {
+  const p: WhenProfile = {
+    pos: new Set(),
+    neg: new Set(),
+    lower: new Map(),
+    upper: new Map(),
+    opaque: false,
+  };
+  const raise = (m: Map<string, number>, k: string, v: number, keepMax: boolean): void => {
+    const cur = m.get(k);
+    if (cur === undefined) m.set(k, v);
+    else m.set(k, keepMax ? Math.max(cur, v) : Math.min(cur, v));
+  };
+  const walk = (c: Condition): void => {
+    if ("has_flag" in c) p.pos.add(`flag:${c.has_flag}`);
+    else if ("not_flag" in c) p.neg.add(`flag:${c.not_flag}`);
+    else if ("has_item" in c) p.pos.add(`item:${c.has_item}`);
+    else if ("not_item" in c) p.neg.add(`item:${c.not_item}`);
+    else if ("visited" in c) p.pos.add(`visited:${c.visited}`);
+    else if ("not_visited" in c) p.neg.add(`visited:${c.not_visited}`);
+    else if ("is_open" in c) p.pos.add(`open:${c.is_open}`);
+    else if ("is_unlocked" in c) p.pos.add(`unlocked:${c.is_unlocked}`);
+    else if ("quest_stage" in c) p.pos.add(`quest:${c.quest_stage.quest}=${c.quest_stage.stage}`);
+    else if ("var_gte" in c) raise(p.lower, c.var_gte.name, c.var_gte.value, true);
+    else if ("var_lte" in c) raise(p.upper, c.var_lte.name, c.var_lte.value, false);
+    else if ("var_eq" in c) {
+      raise(p.lower, c.var_eq.name, c.var_eq.value, true);
+      raise(p.upper, c.var_eq.name, c.var_eq.value, false);
+    } else if ("all_of" in c) c.all_of.forEach(walk);
+    // any_of / none_of: disjunctions we don't model — mark opaque.
+    else p.opaque = true;
+  };
+  when.forEach(walk);
+  return p;
+}
+
+/** True when every state satisfying `j` also satisfies `i` (j ⟹ i): then an earlier
+ *  `i` always wins over a later `j`, so `j` is dead. Sound: any opaque profile
+ *  (a disjunction we can't reason about) returns false. */
+function entails(j: WhenProfile, i: WhenProfile): boolean {
+  if (j.opaque || i.opaque) return false;
+  for (const k of i.pos) if (!j.pos.has(k)) return false;
+  for (const k of i.neg) if (!j.neg.has(k)) return false;
+  for (const [name, need] of i.lower) {
+    const have = j.lower.get(name);
+    if (have === undefined || have < need) return false;
+  }
+  for (const [name, need] of i.upper) {
+    const have = j.upper.get(name);
+    if (have === undefined || have > need) return false;
+  }
+  return true;
+}
+
+/** True when a profile's conjunction is internally contradictory, so NO state can
+ *  satisfy it. Two sound contradictions over a pure conjunction: the same atom pinned
+ *  true AND false, or a var's `>=` lower bound exceeding its `<=` upper bound. `opaque`
+ *  is irrelevant — a contradiction among the conjunctive atoms makes the whole top-level
+ *  AND unsatisfiable regardless of any disjunction sibling (which can only further
+ *  constrain, never rescue, an already-false conjunction). */
+function isUnsatisfiable(p: WhenProfile): boolean {
+  for (const k of p.pos) if (p.neg.has(k)) return true;
+  for (const [name, lo] of p.lower) {
+    const hi = p.upper.get(name);
+    if (hi !== undefined && lo > hi) return true;
+  }
+  return false;
+}
+
+/** Flag any variant whose `when` is entailed by an earlier sibling's: in a
+ *  first-match-wins list it can never be the first match, so its text is dead. */
+function checkVariantShadowing(
+  variants: { when: Condition[] }[] | undefined,
+  where: string,
+  findings: Finding[],
+): void {
+  if (!variants || variants.length < 2) return;
+  const profiles = variants.map((v) => whenProfile(v.when));
+  for (let j = 1; j < profiles.length; j++) {
+    const later = profiles[j];
+    for (let i = 0; i < j; i++) {
+      const earlier = profiles[i];
+      if (later && earlier && entails(later, earlier)) {
+        findings.push(
+          warn(
+            "UNREACHABLE_VARIANT",
+            `variant #${j + 1} is shadowed by earlier variant #${i + 1}: whenever its ` +
+              `\`when\` holds the earlier one does too, so (first-match-wins) it never ` +
+              `displays. List more specific variants before the more general ones.`,
+            [where, `variant:${j}`],
+          ),
+        );
+        break; // one shadowing witness per variant is enough
+      }
+    }
+  }
+}
+
+/** Flag any guard (variant `when` or exit/interaction `conditions`) that can never
+ *  hold: its conjunction is internally contradictory, so the variant never displays /
+ *  the gate is never offered — silently-dead content the blind playtest can't see. */
+function checkUnsatisfiable(
+  conditions: Condition[] | undefined,
+  where: string[],
+  label: string,
+  findings: Finding[],
+): void {
+  if (!conditions || conditions.length === 0) return;
+  if (isUnsatisfiable(whenProfile(conditions))) {
+    findings.push(
+      warn(
+        "UNSATISFIABLE_CONDITION",
+        `${label} has a guard that can never hold (it pins a flag/item/visited both ` +
+          `true and false, or sets crossed var bounds), so it is dead — it can never ` +
+          `display/fire. Fix or remove the contradictory condition.`,
+        where,
+      ),
+    );
+  }
 }
 
 function flagReqs(conds: Condition[]): string[] {
