@@ -16,6 +16,14 @@
  *    intentional "preparation is a real gamble" tuning, bug_0101/0102) is PERMITTED,
  *    not flagged. (bug_0113: this proof once claimed a worst-case guarantee it never
  *    computed — the contract now matches the code.)
+ *  - OPT-IN FAIRNESS (bug_0114): a pack may set `meta.combat_guaranteed: true` to
+ *    PROMISE its fights are not a gamble. Then each fight must also clear the UPPER
+ *    bound — best reachable stats but the player's WORST rolls (player min damage,
+ *    enemy max damage): if even a fully-prepared player can be felled on the unluckiest
+ *    rolls, the promise is broken (`COMBAT_NOT_GUARANTEED`). The gamble packs above do
+ *    NOT set the flag and stay unflagged; this is the sound next-shape bug_0113 named,
+ *    closing the player-experience gap every RPG playtest raises by making "this fight
+ *    is fair" a DECLARED, AUDITED property instead of an unverifiable hope.
  *  - every skill check is PASSABLE — d20 + the best reachable skill can meet the
  *    difficulty;
  *  - every end_game inside on_defeat / on_success / on_failure is declared.
@@ -173,6 +181,33 @@ export function validateRpg(pack: RpgPack): ValidationReport {
           [`enemy:${enemy.id}`],
         ),
       );
+    }
+
+    // Opt-in fairness guarantee (bug_0114). The check above is a LOWER bound that
+    // permits a luck-dependent gamble; a pack that PROMISES fair fights declares
+    // `meta.combat_guaranteed: true` and must also clear the UPPER bound — best
+    // reachable stats but the player's UNLUCKIEST rolls (player min damage d6=1,
+    // enemy max damage d6=6). This is the exact mirror of the best-case math, rolls
+    // flipped: min player damage MAXIMISES rounds-to-kill, so the enemy retaliates
+    // the MOST times (worstRoundsToKill - 1, the player still striking first), each
+    // for the MOST it can deal — the true maximum total damage any roll sequence can
+    // inflict. If that still drops a best-prepared player, the fight is a gamble and
+    // the promise is false (ERROR). When it does NOT, the player survives on EVERY
+    // possible sequence, so the guarantee is sound.
+    if (pack.meta.combat_guaranteed) {
+      const worstPlayerDmg = Math.max(1, 1 + playerAtk - enemy.defense);
+      const worstRoundsToKill = Math.ceil(enemy.hp / worstPlayerDmg);
+      const maxEnemyDmg = Math.max(1, 6 + enemy.attack - playerDef);
+      const maxDamageTaken = maxEnemyDmg * (worstRoundsToKill - 1);
+      if (maxDamageTaken >= playerHp) {
+        findings.push(
+          err(
+            "COMBAT_NOT_GUARANTEED",
+            `meta.combat_guaranteed is set, but enemy "${enemy.id}" can still fell a best-prepared player on worst-case rolls (needs ${worstRoundsToKill} rounds; would take up to ${maxDamageTaken} damage vs ${playerHp} reachable HP). Make the fight winnable on every roll, or drop the guarantee and let it stand as a declared gamble.`,
+            [`enemy:${enemy.id}`],
+          ),
+        );
+      }
     }
   }
 

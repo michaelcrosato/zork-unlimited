@@ -11,7 +11,7 @@
  */
 import { z } from "zod";
 import { EffectSchema } from "../core/effects.js";
-import { ParserPackSchema } from "../parser/schema.js";
+import { ParserMetaSchema, ParserPackSchema } from "../parser/schema.js";
 
 /** Conventional player-stat var names (§13 Stage 4). The validator checks they exist. */
 export const HP_VAR = "hp";
@@ -41,7 +41,29 @@ export const EnemySchema = z
   })
   .strict();
 
+/**
+ * RPG meta = the parser meta PLUS an optional fairness opt-in.
+ *
+ * `combat_guaranteed` lets a pack PROMISE its fights are not a gamble. By default
+ * the combat-winnability proof is a deliberately conservative LOWER bound: it
+ * forbids only a TRULY impossible fight and PERMITS a luck-dependent one a
+ * fully-prepared player can still lose on bad rolls (bug_0101/0102's intentional
+ * "preparation is a real gamble" tuning, contract made honest in bug_0113). Every
+ * RPG blind playtest names that same gap — an unlucky prepared player dies with no
+ * recourse — but for a gamble pack that is by design. When a pack sets
+ * `combat_guaranteed: true`, the validator additionally proves the UPPER bound:
+ * with best reachable stats but the WORST rolls, the player must still survive
+ * every fight (`COMBAT_NOT_GUARANTEED` errors otherwise). `.optional()` (not a
+ * default) so an absent field stays absent in the compiled pack ⇒ packs that don't
+ * use it compile byte-identically and their content hashes are unchanged (mirrors
+ * RoomSchema.variants / skill_check). bug_0114.
+ */
+export const RpgMetaSchema = ParserMetaSchema.extend({
+  combat_guaranteed: z.boolean().optional(),
+}).strict();
+
 export const RpgPackSchema = ParserPackSchema.extend({
+  meta: RpgMetaSchema,
   enemies: z.array(EnemySchema).default([]),
 }).strict();
 
