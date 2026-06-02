@@ -116,6 +116,68 @@ function lighthousePack(broken: boolean) {
   };
 }
 
+// ── The parser pack the "adapter" emits for parser mode (fixed form) ──────────
+// The SAME lighthouse story, adapted to a Zork-style parser pack: rooms joined by
+// exits, a flavor object, and a `visited`-gated win (the canonical parser win shape,
+// as in sealed_crypt's `visited: catacombs`). Climb the cliff (north) to the door,
+// up to the lamp room → you keep the light. The first-attempt defect is the exact
+// parser analogue of the CYOA mock's dangling choice: an exit whose `to` names no
+// room, which `validateParser` rejects (EXIT_TARGET_MISSING) until it is corrected.
+function lighthouseParserPack(broken: boolean) {
+  return {
+    meta: { id: "lighthouse_parser_v1", title: "The Lighthouse", start_room: "cliff_path" },
+    rooms: [
+      {
+        id: "cliff_path",
+        name: "The Cliff Path",
+        description:
+          "Rain drives off the black sea. A dead lighthouse looms to the north; the path home falls away below.",
+        exits: [
+          // The deliberate first-attempt defect: a dangling exit target the validator rejects.
+          { direction: "north", to: broken ? "lighthouse_dor" : "lighthouse_door" },
+        ],
+      },
+      {
+        id: "lighthouse_door",
+        name: "The Lighthouse Door",
+        description:
+          "The door bangs on its hinge. A cold spiral stair climbs up; the path is south.",
+        exits: [
+          { direction: "up", to: "lamp_room" },
+          { direction: "south", to: "cliff_path" },
+        ],
+      },
+      {
+        id: "lamp_room",
+        name: "The Lamp Room",
+        description:
+          "The great lamp fills the glass chamber. Below, a ship's horn sounds, far too close. The stair drops away down.",
+        objects: ["lamp"],
+        exits: [{ direction: "down", to: "lighthouse_door" }],
+      },
+    ],
+    objects: [
+      {
+        id: "lamp",
+        name: "the great lamp",
+        aliases: ["lamp", "light"],
+        description:
+          "A vast brass lamp, its wick trimmed and ready. Reaching it is the whole climb.",
+      },
+    ],
+    win_conditions: [
+      { id: "reach_lamp", conditions: [{ visited: "lamp_room" }], ending: "ending_saved" },
+    ],
+    endings: [
+      {
+        id: "ending_saved",
+        title: "The Light Returns",
+        text: "You reach the lamp room as the beam can still be made to sweep out. You kept the light.",
+      },
+    ],
+  };
+}
+
 export class MockAuthorProvider implements Provider {
   readonly name = "mock:author";
 
@@ -127,6 +189,15 @@ export class MockAuthorProvider implements Provider {
       const sawErrors = /"prior_errors":\s*\[\s*\{/.test(req.user);
       return req.schema.parse({
         pack: lighthousePack(!sawErrors),
+        classifications: CLASSIFICATIONS,
+      });
+    }
+    if (req.schemaName === "ParserAdapterOutput") {
+      // Same revise contract as the CYOA path: the first attempt ships a dangling
+      // exit target; once the validator's errors are fed back, return the fix.
+      const sawErrors = /"prior_errors":\s*\[\s*\{/.test(req.user);
+      return req.schema.parse({
+        pack: lighthouseParserPack(!sawErrors),
         classifications: CLASSIFICATIONS,
       });
     }

@@ -3,19 +3,20 @@
  * bin/author — author a content pack from a premise (spec §12.1–3).
  *
  * Usage:
- *   npm run author -- "a premise sentence" [--out content/cyoa/pack/foo.yaml]
+ *   npm run author -- "a premise sentence" [--mode cyoa|parser] [--out content/.../foo.yaml]
  *
  * Runs the writer → adapter → validator loop with the deterministic
- * MockAuthorProvider (no API keys). Prints the per-beat classification and the
- * validation report; with --out, writes the green pack as YAML. A real provider
- * would slot in behind an env var (§12.7).
+ * MockAuthorProvider (no API keys). `--mode parser` routes through the richer
+ * Zork-style parser validator (default: cyoa). Prints the per-beat classification
+ * and the validation report; with --out, writes the green pack as YAML. A real
+ * provider would slot in behind an env var (§12.7).
  */
 import { writeFileSync } from "node:fs";
 import { stringify as toYaml } from "yaml";
 import { MockAuthorProvider } from "../agents/authoring/mock_author.js";
 import { resolveProvider } from "../agents/llm/providers.js";
 import { loadEngineContract, runWriter } from "../agents/authoring/writer.js";
-import { runAdapter } from "../agents/authoring/adapter.js";
+import { runAdapter, runParserAdapter } from "../agents/authoring/adapter.js";
 import { formatReport } from "../src/validate/report.js";
 
 async function main(): Promise<void> {
@@ -25,8 +26,17 @@ async function main(): Promise<void> {
     process.exit(2);
   }
   let out: string | null = null;
+  let mode: "cyoa" | "parser" = "cyoa";
   for (let i = 3; i < process.argv.length; i++) {
     if (process.argv[i] === "--out") out = process.argv[++i] ?? null;
+    else if (process.argv[i] === "--mode") {
+      const m = process.argv[++i];
+      if (m !== "cyoa" && m !== "parser") {
+        console.error(`--mode must be cyoa or parser, got "${m}"`);
+        process.exit(2);
+      }
+      mode = m;
+    }
   }
 
   // Deterministic mock by default; a real backend is used only when its key is
@@ -40,9 +50,12 @@ async function main(): Promise<void> {
     `Writer drafted "${story.title}" — ${story.chapters.length} chapters, ${story.beats.length} beats.`,
   );
 
-  const result = await runAdapter(provider, { story, contract });
+  const result =
+    mode === "parser"
+      ? await runParserAdapter(provider, { story, contract })
+      : await runAdapter(provider, { story, contract });
   console.log(
-    `\nAdapter reached a ${result.ok ? "GREEN" : "RED"} pack in ${result.rounds} round(s).`,
+    `\nAdapter reached a ${result.ok ? "GREEN" : "RED"} ${mode} pack in ${result.rounds} round(s).`,
   );
   console.log("\nBeat classifications (§11):");
   for (const c of result.classifications)

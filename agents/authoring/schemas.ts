@@ -9,6 +9,7 @@
  */
 import { z } from "zod";
 import { CyoaPackSchema } from "../../src/cyoa/schema.js";
+import { ParserPackSchema } from "../../src/parser/schema.js";
 
 export const WriterStorySchema = z
   .object({
@@ -52,3 +53,17 @@ export const AdapterOutputSchema = z
   })
   .strict();
 export type AdapterOutput = z.infer<typeof AdapterOutputSchema>;
+
+/** The parser-mode Adapter's output: a schema-valid PARSER pack (rooms, objects,
+ *  exits, win_conditions, endings) + the same per-beat classification. Same role as
+ *  AdapterOutputSchema but routed through the richer parser validator (reference
+ *  integrity / reachability / soft-lock / win-reachability), so the same author →
+ *  validate → revise loop now covers Zork-style packs, not just CYOA (ULTRAPLAN
+ *  §Week.4: parser/RPG behind a real authoring loop). */
+export const ParserAdapterOutputSchema = z
+  .object({
+    pack: ParserPackSchema,
+    classifications: z.array(BeatClassificationSchema).min(1),
+  })
+  .strict();
+export type ParserAdapterOutput = z.infer<typeof ParserAdapterOutputSchema>;

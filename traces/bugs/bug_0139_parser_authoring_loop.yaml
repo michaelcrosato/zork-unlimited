@@ -1,0 +1,63 @@
+bug_id: bug_0139
+pack_id: null   # engine/agent feature, not a content defect — extends the authoring pipeline itself
+seed: 47
+type: engine_feature
+layer: engine_rule   # agents/authoring (adapter + mock provider) + bin/author; deterministic, no LLM-judge, no API key
+evidence:
+  source: blind_playtest + ULTRAPLAN
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-02T16-27-01-825Z/playtest.md   # sealed_crypt seeds 47/99/123 (the cycle's mandated, assessor-rank-1 target)
+  finding: >
+    The mandated blind pass on The Sealed Crypt (parser; seeds 47 victory / 99 plunder
+    / 123 doom) reached ALL THREE declared endings and rated the pack clarity 5/5,
+    enjoyment 4/5, ZERO bugs — content is blind-clean. So there was NO actionable
+    content defect this cycle: per [[content-polish-backlog-exhausted]] /
+    [[verifier-assertion-guard]] the deterministic assessor is collapsed to the 0.5
+    floor with every self-extinguishing structural lever disarmed. The highest-value
+    off-list move is the on-plan lever bug_0137 AND bug_0138 both named as next-focus
+    #2: extend the author -> validate -> revise loop beyond CYOA to parser, putting the
+    project's richest validator behind a real authoring loop (ULTRAPLAN §Week.4).
+root_cause: >
+  The authoring pipeline (agents/authoring) only ever produced CYOA packs: the adapter
+  hard-coded validateCyoa + AdapterOutputSchema (CyoaPackSchema), and the mock author
+  emitted only a CYOA pack. So the Zork-style parser validator — the project's richest,
+  with reference integrity, reachability, soft-lock, win-reachability and score-peak
+  analysis — was never exercised by the authoring loop. The true goal (a contamination-
+  free benchmark of a real model AUTHORING validated games) is undersold if authoring
+  only covers the simplest mode.
+fix: >
+  Engine/agent, trust-but-verify (deterministic; no clock/RNG; no LLM-judge; no API key —
+  runs under the default MockAuthorProvider). (1) Generalized the adapter's revise loop
+  into a mode-agnostic runAdaptLoop(provider, opts, cfg) parametrized by {system,
+  schemaName, schema, validate}; runAdapter (CYOA, validateCyoa) keeps its exact public
+  signature + behaviour, and a new runParserAdapter routes a parser pack through
+  validateParser. (2) Added ParserAdapterOutputSchema (ParserPackSchema + the same
+  per-beat classification) to agents/authoring/schemas.ts. (3) Extended MockAuthorProvider
+  with a parser pack (the same Lighthouse story adapted to rooms+exits+a visited-gated win,
+  the canonical parser win shape) whose FIRST attempt ships a dangling exit target — the
+  exact parser analogue of the CYOA mock's dangling choice reference — corrected once the
+  validator's errors are fed back. (4) bin/author gained --mode cyoa|parser (default cyoa,
+  byte-identical to before).
+within_bar: >
+  No engine/runtime/validator/schema CHANGE — validateParser and ParserPackSchema are
+  reused as-is. No content pack edited. NO hash pin moved. The runAdapter refactor is
+  behaviour-preserving (the existing CYOA authoring tests still pass: converges green in
+  >=2 rounds, classifies beats, plays to ending_saved). verify:integrity stays green; the
+  only expected drift signal is the touched-file set, not any count regression.
+verification:
+  regression_test: tests/regression/parser_authoring_loop.test.ts
+  unit_test: tests/unit/authoring.test.ts   # added a parser-adapter parity block
+  pins: >
+    The first parser attempt is genuinely REJECTED by validateParser with
+    EXIT_TARGET_MISSING (maxRounds:1 -> ok:false) — the validator decides correctness,
+    not the model (§16); the loop converges to a GREEN parser pack in a corrective round
+    (rounds>=2); the produced pack independently re-validates green; it is actually
+    playable to ending_saved through the parser engine (go_north -> go_up); and the
+    shared-loop refactor leaves the CYOA path green.
+  health: npm run health  # verify:integrity + lint + typecheck + full suite + validate + playtest, EXIT 0
+notes: >
+  RPG is the remaining authoring mode (validateRpg) — the natural follow-on, the same
+  runAdaptLoop with an RpgAdapterOutputSchema + a canned RPG pack. The API-keyed keystone
+  (a REAL frontier model driving runWriter/runParserAdapter) stays deferred per
+  docs/ULTRAPLAN-2026-06-02.md; this lands the key-free half (the loop is mode-complete
+  for parser, ready for a real provider to slot in behind the env var).

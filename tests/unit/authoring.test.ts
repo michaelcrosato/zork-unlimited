@@ -10,8 +10,9 @@
 import { describe, it, expect } from "vitest";
 import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
 import { loadEngineContract, runWriter } from "../../agents/authoring/writer.js";
-import { runAdapter } from "../../agents/authoring/adapter.js";
+import { runAdapter, runParserAdapter } from "../../agents/authoring/adapter.js";
 import { validateCyoa } from "../../src/validate/cyoa_validator.js";
+import { validateParser } from "../../src/validate/parser_validator.js";
 import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
 import { buildObservation } from "../../src/cyoa/observation.js";
 import { makeStep } from "../../src/core/engine.js";
@@ -67,5 +68,26 @@ describe("adapter (§12.2–3)", () => {
     }
     expect(state.ended).toBe(true);
     expect(state.endingId).toBe("ending_saved");
+  });
+});
+
+describe("parser adapter (§12.2–3, bug_0139)", () => {
+  it("loops against the PARSER validator and converges to a GREEN pack", async () => {
+    const story = await runWriter(provider, { premise: PREMISE, contract });
+    const result = await runParserAdapter(provider, { story, contract });
+    expect(result.ok).toBe(true);
+    expect(result.report.ok).toBe(true);
+    // The mock's first parser attempt ships a dangling exit, so convergence revises.
+    expect(result.rounds).toBeGreaterThanOrEqual(2);
+    // The produced pack independently re-validates green through the parser validator.
+    expect(validateParser(result.pack).ok).toBe(true);
+  });
+
+  it("classifies every beat (the writer is mode-agnostic; same beats as CYOA)", async () => {
+    const story = await runWriter(provider, { premise: PREMISE, contract });
+    const result = await runParserAdapter(provider, { story, contract });
+    expect(result.classifications.map((c) => c.beat_id).sort()).toEqual(
+      story.beats.map((b) => b.id).sort(),
+    );
   });
 });
