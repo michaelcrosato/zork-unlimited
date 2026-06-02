@@ -84,7 +84,12 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // ai-runs/2026-06-02T08-37-28-787Z/playtest.md §5) took the letter on the tower/
     // beacon route, never reached the hermit or checkpoint, and reported it as a
     // Chekhov's gun that never fires; this hint_text-only nudge signposts its purpose
-    // (was f6b64fd9…). Any *unintended* change to compilation trips this.
-    expect(loaded.compiled.contentHash).toBe("862b33adb10a4982aa8a963dbf676a77d58fb81c813940184e0615e5c52ddd7a");
+    // (was f6b64fd9…); and bug_0120 — tower_top now gates light_beacon one-shot on
+    // not_flag raised_alarm and carries a raised_alarm scene variant so a player who
+    // relit the beacon no longer saw "a cold brazier waits, begging for a flame" while
+    // the already-done "Light the signal beacon" choice was re-offered (blind seed 11,
+    // ai-runs/2026-06-02T11-34-06-334Z/playtest.md §5; was 862b33ad…). Any *unintended*
+    // change to compilation trips this.
+    expect(loaded.compiled.contentHash).toBe("cd749bd5dd9c7c456f6b539989496ad0171734c4538fbb1dad1a802bc27e3698");
   });
 });

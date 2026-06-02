@@ -98,13 +98,31 @@ scenes:
 
   - id: tower_top
     title: "Tower Top"
+    # bug_0120: a blind playtester (seed 11, ai-runs/2026-06-02T11-34-06-334Z/playtest.md
+    # §5) lit the beacon, returned to the tower top, and found the scene STILL reading "a
+    # cold brazier waits, begging for a flame" while RE-OFFERING "Light the signal beacon."
+    # The light_beacon choice gated only on carrying the lantern — never on whether the
+    # alarm was already raised — so it stayed selectable and repeatable over an already-
+    # blazing fire, and the base text contradicted the player's own completed action. Fix:
+    # gate light_beacon on not_flag raised_alarm (a one-shot that retires once fired) and
+    # add a raised_alarm scene variant so the returning player sees the fire they lit.
+    # Reactive text + one-shot gate only — no new flag/route/ending: raised_alarm is still
+    # set exactly once on the same first lighting, and the un-alarmed player sees the
+    # original base text and the light_beacon choice verbatim (first-match-wins).
+    variants:
+      - when: [ { has_flag: raised_alarm } ]
+        text: >
+          The ruined parapet opens onto the whole valley, the road running north
+          toward the town. In the brazier the beacon you kindled still blazes,
+          flinging its light far down the dark — and below, the horn that answered
+          it has not yet fallen silent.
     text: >
       The ruined parapet opens onto the whole valley. The road runs north toward
       the town. A cold brazier waits, begging for a flame.
     choices:
       - id: light_beacon
         text: "Light the signal beacon with your lantern."
-        conditions: [ { has_item: lantern } ]
+        conditions: [ { all_of: [ { has_item: lantern }, { not_flag: raised_alarm } ] } ]
         effects: [ { set_flag: raised_alarm } ]
         next: signal_fire
       - id: survey_road

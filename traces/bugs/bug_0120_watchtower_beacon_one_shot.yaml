@@ -1,0 +1,65 @@
+bug_id: bug_0120
+pack_id: watchtower_road_v1
+seed: 11
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-02T11-34-06-334Z/playtest.md   # watchtower_road, seed 11
+  finding: >
+    The assessor's mandated target this cycle was watchtower_road (seed 11; last attended at
+    seed 53). A fresh source-blind MCP-only subagent played 4 routes to all THREE endings
+    (truth/escape/captured), confirmed the reactive beacon epilogue (bug_0098) adapts to the
+    raised_alarm flag, and rated the pack clarity 5/5, enjoyment 4/5 with zero functional
+    blockers. Its first §5 finding was a concrete state/text contradiction: after lighting the
+    beacon and setting raised_alarm, returning to Tower Top still showed "A cold brazier waits,
+    begging for a flame" and RE-OFFERED "Light the signal beacon" — the choice gated only on
+    carrying the lantern, never on whether the alarm was already raised.
+failure:
+  type: stale_scene_text_and_repeatable_action
+  scene: [tower_top]
+  description: >
+    tower_top.light_beacon set raised_alarm but its condition was only { has_item: lantern }.
+    The lantern is never consumed, so a player who lit the beacon, walked into signal_fire, and
+    stepped back to the tower top (signal_fire.back_to_top) found the choice still present and
+    selectable — they could "light" an already-blazing beacon a second time. Worse, the scene's
+    single static text still read "A cold brazier waits, begging for a flame," directly
+    contradicting the fire the player had just kindled (and which signal_fire and every ending's
+    raised_alarm variant already describe as lit). The beacon was a one-shot dramatic act
+    rendered as a repeatable, state-blind toggle.
+fix:
+  layer: content   # one-shot choice gate + raised_alarm-aware scene variant (the reactive-prose device, bug_0098/0055/0099)
+  pack: content/cyoa/pack/watchtower_road.yaml
+  summary: >
+    Two changes to tower_top, both purely cosmetic to route/ending reachability:
+      - light_beacon condition tightened from { has_item: lantern } to
+        all_of [ has_item: lantern, not_flag: raised_alarm ]: the beacon fires exactly once
+        and the choice retires after, so it can no longer be re-offered over an already-lit fire.
+      - Added a raised_alarm scene variant (most-specific-first, first-match-wins) so the player
+        returning to a lit tower top reads the beacon they kindled "still blazes... and below,
+        the horn that answered it has not yet fallen silent" instead of the un-lit base text.
+    The un-alarmed player sees the original base text AND the original light_beacon choice
+    verbatim. raised_alarm is still set exactly once, on the same first lighting, by the same
+    effect — no new flag, route, or ending.
+  reachable_endings_changed: false   # same three endings; same routes; the beacon route still lights once and reaches them
+  content_hash_changed: true         # tower_top variant + tightened condition
+  old_pack_hash: 862b33adb10a4982aa8a963dbf676a77d58fb81c813940184e0615e5c52ddd7a   # bug_0108
+  new_pack_hash: cd749bd5dd9c7c456f6b539989496ad0171734c4538fbb1dad1a802bc27e3698
+  repinned:                          # watchtower_road's hash is pinned in two HASH_PIN_FILES; re-pinned deliberately (HASH_PIN_REPINNED, accompanied by this content change)
+    - tests/unit/rpg_validator.test.ts
+    - traces/bugs/bug_0002_watchtower_blind_polish.yaml
+  regression_test: tests/regression/watchtower_beacon_relight.test.ts
+verified_live: >
+    validate_pack reports ok / 0 findings. New regression test passes: at tower_top BEFORE
+    lighting (lantern in hand, raised_alarm unset) the scene text contains "begging for a flame"
+    and the available actions include light_beacon; AFTER lighting and stepping back from
+    signal_fire (raised_alarm set) the scene text contains "still blazes" and NOT "begging for a
+    flame", and light_beacon is absent from the available actions. The existing
+    watchtower_beacon_alarm_payoff.test.ts (bug_0098) still passes unchanged — lighting once
+    still sets raised_alarm and every ending still renders its alarm variant on the beacon route,
+    confirming no route or reachable ending changed.
+playtest_coverage:
+  note: >
+    The deterministic coverage bot cannot plan the multi-step lantern->tower->relight route (a
+    standing heuristic-planner limit), so the blind LLM playtest is the load-bearing quality
+    signal — here a fresh seed-11 pass, clean at clarity 5/5, enjoyment 4/5 with this one
+    stale-text/repeatable-action gap, now closed.

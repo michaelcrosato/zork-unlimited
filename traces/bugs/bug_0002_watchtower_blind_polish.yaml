@@ -1,6 +1,6 @@
 bug_id: bug_0002
 pack_id: watchtower_road_v1
-content_hash: 862b33adb10a4982aa8a963dbf676a77d58fb81c813940184e0615e5c52ddd7a  # re-pinned by bug_0108 (take_letter pickup journal now foreshadows the letter's checkpoint/hermit uses; was bug_0104's f6b64fd9… — itself after bug_0098's 95cf3665…)
+content_hash: cd749bd5dd9c7c456f6b539989496ad0171734c4538fbb1dad1a802bc27e3698  # re-pinned by bug_0120 (tower_top one-shot light_beacon gate + raised_alarm scene variant; was bug_0108's 862b33ad… — itself after bug_0104's f6b64fd9… and bug_0098's 95cf3665…)
 seed: 7
 initial_state: start
 # Surfaced by a BLIND MCP playtester subagent (no access to source/content) playing
