@@ -129,6 +129,29 @@ export type ExhaustiveResult = {
 };
 
 /**
+ * Optional knobs on the search, all defaulting to the reachability-tuned behaviour so
+ * every existing caller is byte-for-byte unchanged:
+ *   - `explore` — the action policy: which legal actions the BFS steps. Defaults to
+ *     `isProgressAction` (skip reversible/observation moves), the MONOTONE restriction
+ *     that is sound for the every-ending-reachable PROOF (restricting actions can only
+ *     HIDE an ending → a loud failure, never invent one). That restriction is NOT sound
+ *     for a LIVENESS proof, where skipping a state that displays a variant would FALSELY
+ *     call the variant dead (a false positive). The parser variant-liveness caller
+ *     therefore widens the policy to step every action EXCEPT those that provably cannot
+ *     gate a variant (the pure-observation verbs and DROP — see that test's header), so
+ *     a variant is called dead only when the reachable region genuinely never displays
+ *     it. (READ in particular carries interaction `effects` — e.g. a `read_recipe` flag —
+ *     so it is NOT pure narration and a liveness search must step it; the reachability
+ *     search skips it soundly only because no ROUTE gates on a read flag, just reactive
+ *     prose. This is the exact caveat the bug_0145 next-focus named.)
+ *   - `key` — the dedupe fingerprint. Defaults to `stateKey`.
+ */
+export type SearchOpts = {
+  explore?: (a: Action) => boolean;
+  key?: (s: GameState) => string;
+};
+
+/**
  * Exhaustively explore a pack from `start` through its own `Rules` over the progress-action
  * set; return every ending id reachable by concrete play. Mode-agnostic: the caller
  * supplies the mode's compiled rules and initial state. A rejected action does not change
@@ -142,8 +165,9 @@ export function exhaustiveEndings(
   start: GameState,
   maxStates: number,
   onState?: (s: GameState) => void,
+  opts?: SearchOpts,
 ): ExhaustiveResult {
-  return exhaustiveEndingsMulti([rules], start, maxStates, onState);
+  return exhaustiveEndingsMulti([rules], start, maxStates, onState, opts);
 }
 
 /**
@@ -175,14 +199,17 @@ export function exhaustiveEndingsMulti(
   start: GameState,
   maxStates: number,
   onState?: (s: GameState) => void,
+  opts?: SearchOpts,
 ): ExhaustiveResult {
   const primary = ruleSets[0];
   if (!primary) throw new Error("exhaustiveEndingsMulti requires at least one rule set");
+  const explore = opts?.explore ?? isProgressAction;
+  const key = opts?.key ?? stateKey;
   const steps = ruleSets.map((r) => makeStep(r));
   const reached = new Set<string>();
   const seen = new Set<string>();
   const queue: GameState[] = [start];
-  seen.add(stateKey(start));
+  seen.add(key(start));
 
   while (queue.length > 0) {
     if (seen.size > maxStates) return { reached, states: seen.size, cappedOut: true };
@@ -198,13 +225,13 @@ export function exhaustiveEndingsMulti(
       continue; // a terminal state offers no further actions
     }
     for (const a of primary.legalActions(s)) {
-      if (!isProgressAction(a)) continue; // reversible / observation-only — never a route step
+      if (!explore(a)) continue; // outside the caller's action policy (default: progress-only)
       for (const step of steps) {
         const r = step(s, a);
         if (!r.ok) continue; // a rejected action does not change state
-        const key = stateKey(r.state);
-        if (seen.has(key)) continue;
-        seen.add(key);
+        const k = key(r.state);
+        if (seen.has(k)) continue;
+        seen.add(k);
         queue.push(r.state);
       }
     }
