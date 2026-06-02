@@ -28,18 +28,23 @@
  * from content/cyoa/pack, so a new pack is covered the moment it ships (cf. the
  * health-covers-all-packs bar).
  *
- * Scope is CYOA (choice-only action space, finite & cheap to exhaust); the parser/RPG
- * modes, whose action space is verb×object, are the natural next extension.
+ * Scope is CYOA (choice-only action space, finite & cheap to exhaust). The PARSER mode,
+ * also deterministic, gets the same ground-truth proof via the shared solver in
+ * parser_all_endings_reachable.test.ts. RPG (seeded combat/skill rolls keyed on
+ * state.step) is the remaining extension — its winnability is proven separately by the
+ * combat-bound checks (src/validate/rpg_validator.ts), since a pure-fingerprint BFS
+ * cannot soundly exhaust its randomness.
+ *
+ * The BFS itself (over the engine's own `rules.legalActions` set) is mode-agnostic and
+ * lives in support/exhaustive_endings.ts; this file supplies the CYOA wiring and the
+ * per-pack assertions.
  */
 import { describe, it, expect } from "vitest";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { loadPackFile } from "../../src/cyoa/pack.js";
 import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
-import { buildObservation } from "../../src/cyoa/observation.js";
-import { makeStep } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
-import type { GameState } from "../../src/core/state.js";
+import { exhaustiveEndings } from "./support/exhaustive_endings.js";
 
 const PACK_DIR = "content/cyoa/pack";
 const packFiles = readdirSync(PACK_DIR)
@@ -51,24 +56,6 @@ const packFiles = readdirSync(PACK_DIR)
 // FUTURE pack fails loudly here (cap hit) instead of hanging or silently truncating.
 const MAX_STATES = 200_000;
 
-// A total, order-independent fingerprint of a game state — current scene, the set of
-// true flags, carried inventory, and every numeric var (e.g. clockwork's `ticks`). Two
-// states with the same fingerprint are interchangeable for reachability, so the BFS
-// visits each once and is guaranteed to terminate on any finite state space.
-function stateKey(s: GameState): string {
-  const flags = Object.entries(s.flags)
-    .filter(([, v]) => v)
-    .map(([k]) => k)
-    .sort()
-    .join(",");
-  const inv = [...s.inventory].sort().join(",");
-  const vars = Object.entries(s.vars)
-    .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([k, v]) => `${k}=${v}`)
-    .join(",");
-  return `${s.current}|${flags}|${inv}|${vars}`;
-}
-
 /** Exhaustively explore a pack from its initial state; return every ending id reached. */
 function reachableEndings(packPath: string): {
   reached: Set<string>;
@@ -79,32 +66,7 @@ function reachableEndings(packPath: string): {
   if (!loaded.ok) throw new Error(`pack must compile: ${packPath}`);
   const index = indexPack(loaded.compiled.pack);
   const rules = buildRules(index);
-  const step = makeStep(rules);
-  const choose = (id: string): Action => ({ type: "CHOOSE", choiceId: id });
-
-  const reached = new Set<string>();
-  const seen = new Set<string>();
-  const start = initStateForPack(index, 7);
-  const queue: GameState[] = [start];
-  seen.add(stateKey(start));
-
-  while (queue.length > 0) {
-    if (seen.size > MAX_STATES) return { reached, states: seen.size, cappedOut: true };
-    const s = queue.shift()!;
-    if (s.ended) {
-      if (s.endingId) reached.add(s.endingId);
-      continue; // a terminal state offers no further actions
-    }
-    for (const a of buildObservation(index, s).available_actions) {
-      const r = step(s, choose(a.id));
-      if (!r.ok) continue; // a rejected choice does not change state
-      const key = stateKey(r.state);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      queue.push(r.state);
-    }
-  }
-  return { reached, states: seen.size, cappedOut: false };
+  return exhaustiveEndings(rules, initStateForPack(index, 7), MAX_STATES);
 }
 
 describe("bug_0121 — every declared ending of every CYOA pack is reachable by concrete play", () => {
