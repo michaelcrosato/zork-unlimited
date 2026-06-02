@@ -213,8 +213,18 @@ scenes:
         conditions: [{ has_item: lamp_oil }, { has_item: striker }]
         next: ending_wrecker
       - id: climb_to_wreck
-        # Informed risk, not a gotcha: the prose has shown the drop and the white water.
-        text: "Climb down the cliff toward the rocks now."
+        # A CHOSEN, plainly-lethal act, not a curiosity trap. The gallery prose already
+        # shows the "sickening drop" and the "sea exploding white on the rocks," but a fresh
+        # blind playtester (seed 7, ai-runs/2026-06-02T01-45-25-898Z/playtest.md §5) flagged
+        # that the old label "Climb down the cliff toward the rocks now" read as purposeful
+        # exploration — so the instant drown landed as a punish for curiosity rather than a
+        # fate the player elects. The label now NAMES the descent for what it is (over the
+        # rail, down the storm-slick rungs, into the breaking sea below) so it foreshadows
+        # its own lethality, matching the pack's other deliberate-terminal beat (tend_keeper:
+        # "Deliberate and terminal ... never an accidental dead end") and the manor's
+        # force-the-door reframe (clockwork bug_0046, honest choice-text only). Text only:
+        # same choice id, same ending_drowned target, no flag/route/ending change.
+        text: "Climb over the rail and down the storm-slick rungs into the breaking sea below."
         next: ending_drowned
       - id: back_in
         text: "Duck back inside to the watch room."
