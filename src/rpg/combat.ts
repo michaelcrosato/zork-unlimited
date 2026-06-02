@@ -18,7 +18,27 @@ import type { GameState } from "../core/state.js";
 import type { Resolution } from "../core/engine.js";
 import { HP_VAR, ATTACK_VAR, DEFENSE_VAR, enemyHpVar, type Enemy } from "./schema.js";
 
-const dmg = (roll: number, atk: number, def: number): number => Math.max(1, roll + atk - def);
+/**
+ * One damage roll and a LEGIBLE breakdown of how it was computed. The numeric
+ * `dealt` is `max(1, roll + atk - def)` — byte-identical to the old `dmg()` — so
+ * behaviour, determinism, and every trace's final hash are unchanged. The `how`
+ * string mirrors the skill-check narration's transparent `rolled X + bonus`
+ * format so a player can SEE the attack and defense at work: the same d6 roll
+ * lands for less when the defender is better armoured, which is the only way the
+ * player perceives that gear (e.g. the cold-iron plate's +2 defense) is doing
+ * anything — a blind playtester flagged that the plate "felt invisible" because
+ * the old narration showed only the final number, swamped by d6 variance
+ * (bug_0131; the same is true of the barrow ward, cf. bug_0119). The `min 1`
+ * floor is stated honestly when a blow is blunted to it, so the shown breakdown
+ * can never silently fail to add up to the damage dealt.
+ */
+function rollDamage(roll: number, atk: number, def: number): { dealt: number; how: string } {
+  const raw = roll + atk - def;
+  const dealt = Math.max(1, raw);
+  const base = `d6 ${roll} + ${atk} atk - ${def} def`;
+  const how = raw < dealt ? `${base} = ${raw}, blunted to the floor of ${dealt}` : base;
+  return { dealt, how };
+}
 
 /** Current HP of an enemy (its full HP until combat writes the hidden var). */
 export function enemyHp(state: GameState, enemy: Enemy): number {
@@ -52,12 +72,12 @@ export function resolveAttack(
   const playerAtk = state.vars[ATTACK_VAR] ?? 0;
   const playerDef = state.vars[DEFENSE_VAR] ?? 0;
 
-  const toEnemy = dmg(rng.int(1, 6), playerAtk, enemy.defense);
-  const newEnemyHp = curEnemyHp - toEnemy;
+  const strike = rollDamage(rng.int(1, 6), playerAtk, enemy.defense);
+  const newEnemyHp = curEnemyHp - strike.dealt;
   const effects: Effect[] = [
     { set_var: { name: hpVar, value: Math.max(0, newEnemyHp) } },
     {
-      narrate: `You strike ${enemy.name} for ${toEnemy} (it has ${Math.max(0, newEnemyHp)} HP left).`,
+      narrate: `You strike ${enemy.name} for ${strike.dealt} (${strike.how}; it has ${Math.max(0, newEnemyHp)} HP left).`,
     },
   ];
 
@@ -69,12 +89,12 @@ export function resolveAttack(
   }
 
   // Enemy counterattacks (it drew the next value from the same stream → ordered).
-  const toPlayer = dmg(rng.int(1, 6), enemy.attack, playerDef);
-  const newPlayerHp = playerHp - toPlayer;
+  const blow = rollDamage(rng.int(1, 6), enemy.attack, playerDef);
+  const newPlayerHp = playerHp - blow.dealt;
   effects.push(
     { set_var: { name: HP_VAR, value: Math.max(0, newPlayerHp) } },
     {
-      narrate: `${enemy.name} hits you for ${toPlayer} (you have ${Math.max(0, newPlayerHp)} HP left).`,
+      narrate: `${enemy.name} hits you for ${blow.dealt} (${blow.how}; you have ${Math.max(0, newPlayerHp)} HP left).`,
     },
   );
   if (newPlayerHp <= 0) {
