@@ -547,13 +547,35 @@ objects:
     # choice, not a detour. Awards no score (max_score stays 40, so the perfect score still
     # coincides with the cure, bug_0104) and adds no item (the stone is only narrated; the
     # game ends in your hand). Not on the win path — no exit/flag/gating change there.
+    #
+    # bug_0123 BASE-TEXT terminality telegraph. bug_0114 made this a real moral fork, but for
+    # the fork to MEAN something the player must understand they are CHOOSING betrayal — not
+    # stumbling into it. A fresh blind MCP playtester (alchemists_tower seed 19,
+    # ai-runs/2026-06-02T12-34-33-369Z/playtest.md §5) won all three endings, rated the pack
+    # clarity 5/5 / enjoyment 4/5, ZERO bugs — but flagged ONE real friction they actually hit
+    # in Run 1: holding the finished cure, they popped the casket "for the last 5 points,"
+    # expecting an optional treasure/bonus, and were railroaded into ending_betrayal with no
+    # warning. The trap is that the casket's examine framed it as treasure ("the Great Work …
+    # worth a hundred towers") with no signal that opening it is terminal and forecloses the
+    # cure. The has_item:antidote variant already carries that weight ("to choose the Work over
+    # the maker … leave her to the fever"), but a player who examines the casket BEFORE brewing
+    # (as the tester did) sees only the BASE text, which read as a free bonus. The fix gives the
+    # base text the same terminal/greed telegraph — to set iron to the clasp is to turn from her
+    # pallet to her coffer, and the act cannot be undone — so the betrayal is always a deliberate
+    # choice, never an ambush. Keeps "masterwork"/"locked away within arm's reach" (the bug_0114
+    # base-text regex) and never names where the iron key is nor assumes the antidote (the
+    # bug_0052/0065 leak discipline). Text-only: no flag/item/score/exit/key/gating/ending change
+    # — the down exit, the casket's UNLOCK→ending_betrayal, and the canonical cure are untouched.
     description: >
       A small silver casket on a stand beside the master's pallet, its lid bound by a
       clasp shaped for an iron key — the very twin of the cellar hatch's. Through the
       seam leaks a hard, steady light, gold and unwavering: the alchemist's masterwork,
       the Great Work of her whole long life, locked away within arm's reach of her
       deathbed. The tower yields to iron, the recipe might as well have said, and so
-      would this clasp.
+      would this clasp — but to set the iron key to it is to turn from her pallet to her
+      coffer, to answer her dying with your hands full of her treasure and not her cure.
+      Lift this lid and there is no closing it after: it is a thing chosen once and for
+      good.
     variants:
       - when: [{ has_item: antidote }]
         text: >

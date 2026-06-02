@@ -1,0 +1,83 @@
+id: bug_0123
+title: "The Alchemist's Tower's silver casket reads as a free bonus, so the betrayal fork can be triggered by accident — the base examine now telegraphs it as a terminal greed choice"
+kind: content_fix
+mode: parser
+severity: polish
+pack: content/parser/pack/alchemists_tower.yaml
+
+summary: >
+  bug_0114 made the spire a real, non-death moral fork: GIVE the antidote to the
+  master → ending_cured (the win), or UNLOCK the silver casket at her deathbed →
+  ending_betrayal (greed; terminal; forecloses the cure via end_game). For the fork
+  to MEAN something the player must understand they are CHOOSING betrayal — not
+  stumbling into it. The casket's has_item:antidote examine variant already carries
+  that weight ("to choose the Work over the maker … leave her to the fever"), but the
+  BASE examine (the one a player sees if they examine the casket BEFORE brewing) framed
+  it as treasure — "the alchemist's masterwork … worth a hundred towers" — with no
+  signal that opening it is terminal and forecloses the cure. So a completionist who
+  examined early and came back with the finished antidote popped the casket "for the
+  last 5 points" and was railroaded into the dark ending, an ambush rather than a choice.
+
+blind_playtest:
+  run: ai-runs/2026-06-02T12-34-33-369Z/playtest.md
+  pack: content/parser/pack/alchemists_tower.yaml
+  seed: 19
+  result: "Reached ALL THREE endings (ending_betrayal 35/40, ending_poisoned death, ending_cured 40/40); clarity 5/5, enjoyment 4/5; ZERO functional bugs"
+  the_finding: >
+    §5 (the one real friction, hit in Run 1): "unlocking the silver casket immediately
+    ends the game in the betrayal ending, with no confirmation. The casket's examine text
+    frames it as 'the Great Work… worth a hundred towers,' which reads like an optional
+    treasure/bonus. A curious completionist holding the finished cure will naturally pop
+    the casket for 'the last 5 points' and get railroaded into the dark ending instead …
+    the lack of any 'are you sure / you could still cure her first' beat means the branch
+    can be triggered accidentally rather than as a deliberate choice."
+
+the_fix: >
+  Give the BASE casket examine the same terminal/greed telegraph the antidote variant
+  already has — closing the gap for the player who examines BEFORE brewing. The base text
+  now adds: "to set the iron key to it is to turn from her pallet to her coffer, to answer
+  her dying with your hands full of her treasure and not her cure. Lift this lid and there
+  is no closing it after: it is a thing chosen once and for good." That makes the betrayal
+  a DELIBERATE choice (it states, in fiction, both the moral weight and the one-way
+  terminality — the "are you sure" beat the tester missed) without an engine confirmation
+  prompt, which would break the Sierra genre this pack emulates (deliberate traps,
+  recoverable via load §8.7). It keeps the bug_0114 base-text anchors ("masterwork",
+  "locked away within arm's reach"), never names where the iron key is, and never assumes
+  the antidote (the bug_0052/0065 leak discipline — the spire stair is unconditional).
+
+why_within_the_bar: >
+  Text-only. No flag/item/score/exit/key/gating/ending change. The casket still fires
+  ending_betrayal ONLY via its unlock_effects end_game (bug_0114), so the fork's mechanics,
+  mutual exclusivity with the cure, and the byte-identical victory route are all untouched
+  (max_score stays 40; bug_0104 score-coincides-with-win intact). The bug_0114 regression
+  test's loose base-text regex (/locked away within arm's reach|masterwork/i, and the
+  not-match on "choose the Work over the maker") still passes against the new base text.
+  Validator stays green (verified 0 findings): no SOFTLOCK / END_GAME_UNDECLARED /
+  WIN_IS_DEATH / NO_WINNABLE_ENDING change — ending_cured remains the sole non-death win.
+
+verification:
+  command: npm run health
+  regression_test: tests/regression/alchemists_casket_terminal_telegraph.test.ts
+  cases:
+    - "the BASE casket examine (no antidote held) telegraphs the act as terminal (one-way / 'no closing it after') AND as a betrayal of the master (turn from her pallet to her coffer / treasure not her cure)"
+    - "the bug_0114 base anchors survive ('masterwork' / 'locked away within arm's reach') and the base text still does NOT leak the antidote-only 'choose the Work over the maker' line"
+    - "the antidote-bearer variant stays the sharper, distinct one"
+    - "unlocking the casket still ends in ending_betrayal (non-death), master never cured"
+    - "the canonical solve still wins ending_cured 40/40"
+    - "the pack validates clean (0 findings)"
+
+content_hash:
+  pack: content/parser/pack/alchemists_tower.yaml
+  before: cf894dbe5154425802bf5c9d08f04580f3fe2c1086c9d16c370446fd639131ca
+  after: 99e598672e44fe50611a3d9bc3ab83336616bfb494c145b7922cbe75b8e1f2e6
+  note: >
+    Deliberate, surfaced alchemists_tower content-hash change (the before value is bug_0114's
+    after). alchemists_tower is NOT a protected file and NO test pins its content hash
+    (cf. bug_0093/0103/0104/0111/0114, all of which recorded the same), so the hash moves
+    with nothing to re-pin.
+
+notes: >
+  The complement to bug_0114: that fix ADDED the moral fork; this one makes the fork
+  legible as a CHOICE rather than an ambush, addressing the only friction the latest blind
+  pass actually experienced. Both endings stay exactly as reachable; only the casket's base
+  examine prose changes.
