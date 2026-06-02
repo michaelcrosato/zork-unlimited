@@ -1,0 +1,62 @@
+bug_id: bug_0118
+pack_id: cold_forge_v1
+seed: 7
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-02T11-14-01-076Z/playtest.md   # cold_forge, seed 7
+  finding: >
+    The assessor's mandated target this cycle was cold_forge (the coverage bot leaves its
+    multi-step puzzles unsolved, a standing heuristic-planner limit). A fresh source-blind
+    MCP-only subagent (seed 7) played two routes — the full geared victory (50/50,
+    ending_victory) and an under-armed stress run — rated it clarity 5/5, enjoyment 4/5, and
+    found ZERO functional bugs (no rejected actions, loops, or broken state; reactive room
+    text, dialogue, and item-gating all verified). It raised exactly ONE actionable friction
+    point (§4): the founder's cold-iron plate is a TWO-STEP — TAKE only carries it, a separate
+    USE ("don") buckles it on for the +2 defense. A hasty player can therefore walk into the
+    slag-sentinel fight with the plate slung loose at +0 defense and no nudge they are
+    under-armed; the only "+2 defense" feedback is the journal line that appears when you DO
+    don it, so the silent gap is easy to miss.
+failure:
+  type: payoff_legibility_design_gap
+  scene: [bellows_walk]
+  description: >
+    The Bellows Walk (the combat-approach scene) warned "Better not to meet it under-armed —
+    face it with every edge you can bring to bear", but read identically whether the player
+    had the plate buckled on, carried loose, or never picked up. The +2-defense grace was
+    fully telegraphed at the founder's cell and on donning, but at the moment that actually
+    matters — standing before the sentinel — a carried-but-unworn plate produced no signal.
+    The reward (preparation visibly paying off) was real but, for the hasty player, the GAP
+    (carrying armour you forgot to buckle) was invisible. The pack is otherwise fully reactive
+    (outer_forge pry-bar bug_0094, founder_cell plate bug_0023, sentinel_stilled), so this was
+    the one unreactive seam at the pack's single decision-under-pressure beat.
+fix:
+  layer: content   # a knows-its-own-state reactive room variant, the bug_0023/0094 reactive-prose device
+  pack: content/rpg/pack/cold_forge.yaml
+  summary: >
+    Added a second reactive variant to bellows_walk, declared AFTER the existing
+    sentinel_stilled variant so the broken-sentinel prose still wins once the fight is over
+    (first matching variant in declared order wins — src/parser/model.ts roomDescription). The
+    new variant fires when [has_item cold_iron_plate, none_of plate_donned] — i.e. only
+    PRE-combat and only while the plate is held but not buckled — and reframes the threat text
+    to name the loose plate: "The dead master's cold-iron plate still hangs loose and
+    unbuckled at your side — better to don it now than to meet that anvil-weight under-armed."
+    Players who never took the plate, or who already donned it, see the original base threat
+    text verbatim.
+  reachable_endings_changed: false   # same single ending; same routes; no new choices/flags/gates
+  content_hash_changed: true         # text-only additive variant; cold_forge is NOT a HASH_PIN_FILE, no test pins its hash
+  regression_test: tests/regression/cold_forge_unworn_plate_nudge.test.ts
+verified_live: >
+    validate_pack reports ok / 0 findings. The new regression test (5 cases) passes: the
+    Bellows Walk reads the base threat (no nudge) with no plate and again once the plate is
+    DONNED, reads the "hangs loose and unbuckled / better to don it now" nudge while the plate
+    is carried-unworn, and — proving declared-order precedence — shows the broken-sentinel
+    prose (not the nudge) once sentinel_stilled is set even while the plate is still
+    carried-unworn. The variant is description-only: it adds no choice, flag, exit, score, or
+    ending, so no route is touched.
+playtest_coverage:
+  note: >
+    The deterministic coverage bot cannot plan cold_forge's arm-then-fight-then-lever route (a
+    standing heuristic-planner limit, bug_0008), so the blind LLM playtest is the load-bearing
+    quality signal — clean at clarity 5/5, enjoyment 4/5 with this one legibility gap, now
+    closed at the moment of choice.

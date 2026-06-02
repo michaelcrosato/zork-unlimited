@@ -141,6 +141,27 @@ rooms:
           A long gallery of slack leather bellows and quenched tuyeres. The slag
           sentinel lies broken across the floor, its cinders dark and cooling, and
           the passage east into the deep forge stands open.
+      # bug_0118: carried-but-unworn plate is legible at the moment of choice. A
+      # blind playtester noted the take-then-don two-step is easy to miss — a hasty
+      # player can walk into the fight with the cold-iron plate slung loose at +0
+      # defense and no nudge. This variant fires only PRE-combat (sentinel_stilled
+      # is checked first, so the broken-sentinel text still wins once it is down)
+      # and only when the plate is held but not yet donned, turning the silent gap
+      # into an honest prompt to buckle it on before the anvil-weight lands.
+      - when:
+          - { has_item: cold_iron_plate }
+          - { none_of: [ { has_flag: plate_donned } ] }
+        text: >
+          A long gallery of slack leather bellows and quenched tuyeres. Across the
+          only way east stands a man-high figure of fused slag and cinder — a forge
+          sentinel. The dead hall holds no fire to rouse it; the deep cold keeps it
+          slow and stiff, stirred only enough to stand and bar the passage deeper
+          in. It will be no swifter than it is now. Slow is not the same as soft,
+          though: it is a man-high weight of fused slag, and the blows it does land
+          fall like a dropped anvil. The dead master's cold-iron plate still hangs
+          loose and unbuckled at your side — better to don it now than to meet that
+          anvil-weight under-armed; face the sentinel with every edge you can bring
+          to bear.
     exits:
       - { direction: south, to: outer_forge }
       - direction: east
