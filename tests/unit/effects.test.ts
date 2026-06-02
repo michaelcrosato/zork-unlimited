@@ -84,3 +84,31 @@ describe("effect reducer", () => {
     expect(EffectSchema.safeParse({ teleport: "x" }).success).toBe(false);
   });
 });
+
+describe("finite-number guard (vars never become NaN/Infinity)", () => {
+  it("schema rejects non-finite var literals as hard validation errors", () => {
+    expect(EffectSchema.safeParse({ set_var: { name: "s", value: Infinity } }).success).toBe(false);
+    expect(EffectSchema.safeParse({ set_var: { name: "s", value: NaN } }).success).toBe(false);
+    expect(EffectSchema.safeParse({ inc_var: { name: "s", by: -Infinity } }).success).toBe(false);
+    expect(EffectSchema.safeParse({ set_var: { name: "s", value: 42 } }).success).toBe(true);
+  });
+
+  it("rejects a runtime overflow to Infinity, keeps the prior value, reports a diagnostic", () => {
+    let s = base();
+    s = applyEffect({ set_var: { name: "score", value: Number.MAX_VALUE } }, s).state;
+    const r = applyEffect({ inc_var: { name: "score", by: Number.MAX_VALUE } }, s);
+    expect(Number.isFinite(r.state.vars["score"])).toBe(true);
+    expect(r.state.vars["score"]).toBe(Number.MAX_VALUE); // unchanged — write rejected
+    expect(r.event).toMatchObject({ effect: "inc_var", value: Number.MAX_VALUE, delta: 0 });
+    expect((r.event as Record<string, unknown>).diagnostic).toContain("non-finite");
+  });
+
+  it("normal finite arithmetic is unchanged and carries no diagnostic", () => {
+    let s = base();
+    s = applyEffect({ inc_var: { name: "score", by: 5 } }, s).state;
+    const r = applyEffect({ dec_var: { name: "score", by: 2 } }, s);
+    expect(r.state.vars["score"]).toBe(3);
+    expect(r.event).toMatchObject({ effect: "dec_var", value: 3, delta: -2 });
+    expect((r.event as Record<string, unknown>).diagnostic).toBeUndefined();
+  });
+});
