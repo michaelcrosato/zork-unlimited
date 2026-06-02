@@ -1,6 +1,6 @@
 bug_id: bug_0002
 pack_id: watchtower_road_v1
-content_hash: 4c971d435f3271731bea8db64c2ac1dfa338f53c010de55d9a3ebd56cde96d31  # re-pinned by bug_0062 (confront_smuggler retreat choice flag-gated; was bug_0055's 3947f07b…)
+content_hash: 95cf36659af3fc6edf5e9b8952f6eff19a0ba46679819267dcad28976d50264e  # re-pinned by bug_0098 (lit-beacon raised_alarm now fires reactive ending variants; was bug_0062's 4c971d43…)
 seed: 7
 initial_state: start
 # Surfaced by a BLIND MCP playtester subagent (no access to source/content) playing

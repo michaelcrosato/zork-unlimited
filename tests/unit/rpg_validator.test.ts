@@ -70,7 +70,10 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // (was 7e3392b6…); and bug_0062 — confront_smuggler's retreat choice is now
     // flag-gated (the "find real proof first" line only shows to the no-proof bluffer;
     // the learned_truth player gets a coherent "hold your tongue" retreat)
-    // (was 3947f07b…). Any *unintended* change to compilation trips this.
-    expect(loaded.compiled.contentHash).toBe("4c971d435f3271731bea8db64c2ac1dfa338f53c010de55d9a3ebd56cde96d31");
+    // (was 3947f07b…); and bug_0098 — the lit signal beacon's `raised_alarm` flag
+    // now fires reactive variants on all three endings (the beacon's "help — or
+    // trouble — is coming" finally materialises in the epilogue instead of being a
+    // dead flag) (was 4c971d43…). Any *unintended* change to compilation trips this.
+    expect(loaded.compiled.contentHash).toBe("95cf36659af3fc6edf5e9b8952f6eff19a0ba46679819267dcad28976d50264e");
   });
 });

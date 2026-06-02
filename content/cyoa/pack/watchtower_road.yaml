@@ -378,20 +378,65 @@ scenes:
         conditions: [ { not_flag: learned_truth } ]
         next: road_north
 
+# The lit signal beacon (`raised_alarm`, set on tower_top → light_beacon) was a
+# Chekhov's gun the engine never fired. The signal_fire scene narrates "a horn
+# answers. Help — or trouble — is coming," yet `raised_alarm` was set and then
+# read NOWHERE: a player who lit the beacon and one who never climbed the tower
+# reached the same Edge of Town with identical epilogues, so the dramatic promise
+# never materialised. A fresh blind playtester (seed 19, ai-runs/
+# 2026-06-02T01-02-26-045Z/playtest.md §1/§5) flagged it directly: the beacon
+# "promises a consequence that never materializes differently from the un-alarmed
+# path." Rather than defuse the gun (mute the prose, the bug_0061 move when a clock
+# had no teeth), this FIRES it: each ending the beacon route can reach now carries a
+# reactive `raised_alarm` variant (engine endingText, first-match-wins, the same
+# reactive-ending machinery as clockwork's ending_truth, bug_0051) so the watch the
+# player summoned actually shows up in the epilogue. No scene/choice/route/gating
+# change and no new ending — the base text is the un-alarmed fallback; only the
+# beacon-lighter sees a divergent close. raised_alarm co-occurs with all three
+# endings (truth: light then expose with proof; escape: light then slip away;
+# captured: light, find no proof, turn back and force the gate), so all three get a
+# variant, and "help — or trouble —" lands as help (truth), cover (escape), or the
+# noose you tightened yourself (captured) (bug_0098).
 endings:
   - id: ending_truth
     title: "The Truth, Carried Home"
+    variants:
+      - when: [ { has_flag: raised_alarm } ]
+        text: >
+          The beacon you lit still burns on the tower behind you, and the watch it
+          called is already converging on the smugglers' cellar by the time you
+          reach the magistrate's hall. You lay out everything you uncovered — the
+          scheme, the arson, the proof that damns them — and find the reckoning
+          half-begun: by morning the conspirators are named and run to ground,
+          caught in the open by the very alarm you raised against them.
     text: >
       You lay out everything you uncovered before the magistrate — the
       smugglers' scheme, the arson, and the proof that damns them. By morning
       the conspirators are named, and the watchtower's fire has a reckoning.
   - id: ending_escape
     title: "Into the Dark"
+    variants:
+      - when: [ { has_flag: raised_alarm } ]
+        text: >
+          Behind you the beacon still burns, and the horn you woke has drawn the
+          watch toward the tower in a scatter of lanterns and shouting. You use the
+          confusion for cover, slip past the lights, and take the open road.
+          Whatever happened at the tower stays behind you — along with the watch,
+          still chasing the alarm you raised and then walked away from — and so does
+          the truth.
     text: >
       You slip past the lights and onto the open road. Whatever happened at the
       tower stays behind you — and so does the truth.
   - id: ending_captured
     title: "Held at the Gate"
+    variants:
+      - when: [ { has_flag: raised_alarm } ]
+        text: >
+          The beacon you lit had already roused the whole watch — horns down the
+          valley, lanterns at every post, men awake who should have been asleep.
+          There is no slipping a gate you yourself set ringing. The halberd comes
+          down across your chest. "Nobody forces this gate," the sergeant says, and
+          the cell door closes behind you.
     text: >
       The halberd comes down across your chest. "Nobody forces this gate," the
       sergeant says, and the cell door closes behind you.

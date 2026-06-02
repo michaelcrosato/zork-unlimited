@@ -1,0 +1,78 @@
+bug_id: bug_0098
+pack_id: watchtower_road_v1
+seed: 19
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  report: ai-runs/2026-06-02T01-02-26-045Z/playtest.md
+  finding: >
+    The assessor's rank-1 mandated target was The Clockwork Heist again, but it has had
+    ~30 consecutive clean blind passes and The Watchtower Road had NOT appeared in the
+    last 40 ai-runs (last content touch bug_0062). Per the protocol's "rotate the seed
+    and rotate the pack" and project memory (rotate onto the least-attended pack), the
+    mandated pass rotated onto The Watchtower Road (cyoa, seed 19, plus strategy runs at
+    seeds 42/7/99). The fresh general-purpose MCP-only source-blind subagent reached all
+    three endings (truth/escape/captured), rated clarity 5/5 enjoyment 4/5, found ZERO
+    functional bugs, and raised ONE concrete actionable finding (report §1/§5): the lit
+    signal beacon "is a flavor/route beat that funnels into the same decision point
+    rather than producing a distinct consequence. The horn's 'Help — or trouble — is
+    coming' promises a consequence that never materializes differently from the
+    un-alarmed path."
+failure:
+  type: chekhovs_gun_dead_flag
+  where:
+    - content:content/cyoa/pack/watchtower_road.yaml#signal_fire
+    - content:content/cyoa/pack/watchtower_road.yaml#ending_truth
+    - content:content/cyoa/pack/watchtower_road.yaml#ending_escape
+    - content:content/cyoa/pack/watchtower_road.yaml#ending_captured
+  description: >
+    tower_top's `light_beacon` choice set the flag `raised_alarm` and routed to
+    signal_fire, whose prose narrates "Flame leaps from the brazier ... a horn answers.
+    Help — or trouble — is coming." But `raised_alarm` was set in exactly one place and
+    READ in none — a grep confirms a single occurrence in the whole repo (the set_flag
+    effect itself). A player who lit the beacon and one who never climbed the tower
+    reached the same Edge of Town and the same epilogues, so the loud dramatic promise
+    of the signal fire never cashed. This is the same over-promise / urgency-text-writes-
+    a-check-the-engine-never-pays class the clockwork pack's bug_0061 fought.
+fix:
+  layer: content
+  summary: >
+    Rather than DEFUSE the gun (mute the signal_fire prose — the bug_0061 move, taken
+    there only because that clock genuinely had no teeth yet), this FIRES it. Each of the
+    three endings the beacon route can reach now carries a reactive `raised_alarm`
+    variant (engine endingText, declared-order first-match-wins — the same reactive-ending
+    machinery as clockwork's ending_truth, bug_0051), so the watch the player summoned
+    actually shows up in the epilogue: as help (ending_truth — the watch is already
+    converging on the cellar when you reach the magistrate), as cover (ending_escape — you
+    use the confusion to slip the other way), and as the noose you tightened yourself
+    (ending_captured — the roused watch is why you can't force the gate). The base text is
+    the un-alarmed fallback, unchanged. signal_fire's own prose is untouched — it was
+    always honest setup; only the payoff was missing. raised_alarm co-occurs with all
+    three endings (truth: light then expose with proof; escape: light then slip away;
+    captured: light, find no proof, turn back and force the gate), so all three get a
+    variant. No scene/choice/route/gating change and no new ending; the beacon-lighter
+    reaches the SAME endingId as the un-alarmed player.
+  reachable_endings_changed: false  # still truth/escape/captured; routes/gates intact
+  content_hash_changed: true        # watchtower_road edited; canonical pin lives in
+                                    # traces/bugs/bug_0002 (a HASH_PIN_FILE), re-pinned
+                                    # deliberately alongside this content change, and the
+                                    # compile-pin assertion in tests/unit/rpg_validator.test.ts.
+                                    # 4c971d435f3271731bea8db64c2ac1dfa338f53c010de55d9a3ebd56cde96d31
+                                    # -> 95cf36659af3fc6edf5e9b8952f6eff19a0ba46679819267dcad28976d50264e
+  regression_test: tests/regression/watchtower_beacon_alarm_payoff.test.ts
+verified_live: >
+    Through the engine over the compiled pack, building observations the way the MCP
+    server does (buildObservation → endingText). Lighting the beacon sets raised_alarm;
+    not climbing/lighting leaves it unset. On the beacon route each ending
+    (escape/truth/captured) renders an epilogue containing "beacon"; off the beacon route
+    each renders its base text, which does not. The variant is cosmetic: beacon and
+    no-beacon routes converge on the same endingId for all three endings, so no route,
+    gate, or reachable ending changed. The pack validates 0 findings.
+playtest_coverage:
+  note: >
+    The deterministic coverage bot cannot plan the multi-step letter/proof/beacon routes
+    (a standing heuristic-planner limit since bug_0008), so the blind LLM playtest remains
+    the load-bearing quality signal here. This fix closes the rotated cycle's single
+    actionable finding by turning a dead flag into a consequential choice, without
+    touching the pack's routes, gates, or reachable endings; clockwork (the assessor's
+    nominal mandated target) remains verified-clean at ~30 consecutive blind passes.
