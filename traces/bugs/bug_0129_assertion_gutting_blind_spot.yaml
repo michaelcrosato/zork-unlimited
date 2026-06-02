@@ -1,0 +1,72 @@
+bug_id: bug_0129
+pack_id: N/A   # verifier hardening in scripts/verify-integrity.ts (the trust-but-verify guard)
+seed: N/A
+evidence:
+  source: assessor stall analysis + verifier audit
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-02T13-49-47-140Z/playtest.md   # wreckers_light, seed 41
+  finding: >
+    The mandated rank-1 blind pass this cycle (wreckers_light, seed 41) came back
+    clarity 5/5, enjoyment 5/5, ZERO bugs — the strongest pack played here, confirming
+    content is blind-exhausted (project memory content-polish-backlog-exhausted). The
+    deterministic assessor has fully collapsed to seven identical 0.5 blind-playtest
+    stubs: every self-extinguishing structural lever (eslint config, lint coverage,
+    doc-staleness, TODO/FIXME markers, thin-modes, the frontier benchmark scorecard) has
+    fired and disarmed. With nothing above the 0.5 floor, the highest-leverage move is to
+    harden the project's CORE trust mechanism — the verifier — since every future
+    autonomous cycle's credibility rests on it being un-gameable. An audit of
+    scripts/verify-integrity.ts found a concrete, dangerous laundering hole its own
+    header already admitted ("not semantic weakening").
+failure:
+  type: verifier_blind_spot   # assertion gutting passes the it()-count-only guard
+  location: scripts/verify-integrity.ts countTestCases() + TEST_COUNT_REGRESSION
+  description: >
+    The verifier-integrity guard counted only it()/test() SHELLS. TEST_COUNT_FLOOR
+    (static) and TEST_COUNT_REGRESSION (drift) both fire on a drop in that count. But an
+    agent reward-hacking the bar can keep every it() shell intact — so the case count is
+    unchanged and both guards stay silent — while DELETING the expect() assertions inside
+    a test body, leaving a green test that verifies nothing. This is exactly the "swap a
+    strict assert for a loose one / gut the body" semantic weakening the script's own
+    header (lines 24-26) confessed it did not catch. The behavioral suite stays green
+    because a body with no assertions cannot fail, so the hole is invisible to the rest of
+    the bar too.
+fix:
+  layer: engine   # the verifier itself; trust-but-verify, full authority, no content touched
+  summary: >
+    Added a PARALLEL assertion-count guard that mirrors the existing test-case guard
+    exactly, closing the gut-the-body launder:
+      - ASSERTION_RE = /\bexpect\s*\(/g + countAssertions() count the expect() calls in
+        every test body (sibling of TESTCASE_RE/countTestCases).
+      - MIN_ASSERTIONS static floor (ASSERTION_COUNT_FLOOR in runStatic) — a mass-deletion
+        tripwire parallel to MIN_TEST_CASES, set well below the current ~2950.
+      - detectCountRegressions(before, now) — a NEW pure function (counts in, findings out)
+        that emits TEST_COUNT_REGRESSION when cases drop AND ASSERTION_COUNT_REGRESSION when
+        assertions drop. Because the two counts are independent, gutting a body (cases held,
+        assertions dropped) trips the assertion guard even when the case guard stays silent.
+        Extracting it pure also makes the previously-inline, untested TEST_COUNT_REGRESSION
+        unit-testable on synthetic numbers.
+      - countTestCasesAtRef became countTestArtifactsAtRef, returning {cases, assertions} in
+        one git pass (no extra git cost); runDrift feeds before/now into detectCountRegressions.
+    Honest limitation that remains (documented in the header): a COUNT-PRESERVING swap of a
+    strict assert for a loose one (toBe -> toBeDefined) is still not caught — that needs a
+    semantic judge, which would forfeit this script's pure-determinism (no clock/RNG/network).
+  files:
+    - scripts/verify-integrity.ts
+  regression_test: tests/regression/verifier_assertion_gutting.test.ts
+  unit_tests: tests/unit/verifier_integrity.test.ts   # added countAssertions, the three
+    # detectCountRegressions cases (both-grow / case-drop / body-gut), and the real-repo
+    # ASSERTION_COUNT_FLOOR check
+  reachable_endings_changed: false   # no pack/content touched
+  content_hash_changed: false        # no pack edited; no hash pin moved
+verified_live: >
+  detectCountRegressions({cases:100,assertions:300},{cases:100,assertions:297}) returns
+  exactly [ASSERTION_COUNT_REGRESSION] (error) — the gut-the-body case the old it()-count
+  guard missed — while a both-grow cycle returns []. runStatic on the real repo reports no
+  ASSERTION_COUNT_FLOOR finding (~2950 assertions, floor 400). npm run health stays green;
+  this cycle ADDS assertions so it trips nothing.
+notes: >
+  This does not weaken the bar — it strengthens it, and adds no false-positive risk to honest
+  cycles (the regression guard only fires on a NET DROP, exactly like the accepted
+  TEST_COUNT_REGRESSION). It is the deterministic, in-design answer to the long-standing
+  "verify-integrity semantic-weakening blind spot" standing lever (project memory), chosen
+  over an LLM-judge because a non-deterministic judge would break the script's pure design.

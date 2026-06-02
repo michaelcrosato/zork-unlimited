@@ -20,10 +20,16 @@
  *     changed a committed hash-pin, the guard REFUSES AND SURFACES it for human
  *     review (set AI_LOOP_ALLOW_VERIFIER_EDITS=1 to acknowledge a deliberate edit).
  *
- * Honest limitation: this catches MECHANICAL tampering (skip/delete/empty/re-pin),
- * not semantic weakening (e.g. swapping a strict assert for a loose one). An agent
- * with write access to this script could also edit the guard itself — the point is
- * to make tampering visible, effortful, and against the rules, not impossible.
+ * It catches MECHANICAL tampering (skip/delete/empty/re-pin) AND assertion gutting:
+ * the test-case count guards the `it()`/`test()` SHELLS, and a parallel assertion
+ * count guards the `expect()` calls INSIDE them — closing the launder where a cycle
+ * keeps every `it()` shell (so the case count holds) but deletes the assertions in a
+ * test body, leaving a green test that verifies nothing. Honest limitation that
+ * remains: a COUNT-PRESERVING swap of a strict assert for a loose one (e.g.
+ * `toBe(x)` → `toBeDefined()`) is not caught — that needs a semantic judge, which
+ * would forfeit this script's pure-determinism. An agent with write access to this
+ * script could also edit the guard itself — the point is to make tampering visible,
+ * effortful, and against the rules, not impossible.
  * Pure + deterministic: no clock, no RNG, no network.
  */
 import { execFileSync } from "node:child_process";
@@ -54,13 +60,22 @@ export const HASH_PIN_FILES = [
   "traces/rpg/barrow_victory.json",
 ];
 
-/** Never drop below this many test cases (a mass-deletion tripwire). Currently ~165. */
+/** Never drop below this many test cases (a mass-deletion tripwire). Currently ~890. */
 export const MIN_TEST_CASES = 120;
+
+/** Never drop below this many `expect()` assertions (the assertion-gutting tripwire,
+ *  parallel to MIN_TEST_CASES). Currently ~2950; set well below as a mass-deletion
+ *  floor, while the drift ASSERTION_COUNT_REGRESSION guards the precise per-cycle drop. */
+export const MIN_ASSERTIONS = 400;
 
 /** A disabled / focused test marker — any of these in a test file is a red flag. */
 const DISABLED_RE =
   /\b(?:it|test|describe)\s*\.\s*(?:skip|only|todo)\b|\b(?:xit|xdescribe|xtest)\s*\(/;
 const TESTCASE_RE = /\b(?:it|test)\s*\(/g;
+/** An assertion call. Counting these guards the test BODIES (vitest's `expect(`),
+ *  so gutting a test's assertions while keeping its `it()` shell is caught even
+ *  though the case count is unchanged. */
+const ASSERTION_RE = /\bexpect\s*\(/g;
 
 export type Finding = {
   severity: "error" | "warning";
@@ -110,6 +125,10 @@ export function countTestCases(files: { text: string }[]): number {
   return files.reduce((n, f) => n + (f.text.match(TESTCASE_RE)?.length ?? 0), 0);
 }
 
+export function countAssertions(files: { text: string }[]): number {
+  return files.reduce((n, f) => n + (f.text.match(ASSERTION_RE)?.length ?? 0), 0);
+}
+
 function readAll(root: string, paths: string[]): { path: string; text: string }[] {
   return paths.map((p) => ({ path: p, text: readFileSync(join(root, p), "utf8") }));
 }
@@ -134,6 +153,15 @@ export function runStatic(root: string): { ok: boolean; findings: Finding[] } {
       severity: "error",
       code: "TEST_COUNT_FLOOR",
       message: `only ${cases} test cases found; floor is ${MIN_TEST_CASES} (tests may have been removed)`,
+      where: "tests/",
+    });
+  }
+  const assertions = countAssertions(testFiles);
+  if (assertions < MIN_ASSERTIONS) {
+    findings.push({
+      severity: "error",
+      code: "ASSERTION_COUNT_FLOOR",
+      message: `only ${assertions} expect() assertions found; floor is ${MIN_ASSERTIONS} (test bodies may have been gutted while keeping their it() shells)`,
       where: "tests/",
     });
   }
@@ -217,8 +245,41 @@ export function classifyDrift(changed: string[], existsFn: (rel: string) => bool
   return findings;
 }
 
-/** Count test cases as they were at a git ref (null if the ref can't be read). */
-function countTestCasesAtRef(root: string, ref: string): number | null {
+export type TestArtifactCounts = { cases: number; assertions: number };
+
+/**
+ * Pure regression detector: a cycle must not REDUCE either the test-case count or the
+ * assertion count vs the pre-cycle ref. Splitting the two closes the gut-the-body
+ * launder — deleting a test's expect()s while keeping its it() shell leaves `cases`
+ * unchanged but drops `assertions`, so it surfaces as ASSERTION_COUNT_REGRESSION even
+ * when TEST_COUNT_REGRESSION stays silent. Pure (counts in, findings out) so it
+ * unit-tests on synthetic numbers, mirroring detectDisabledTests/classifyDrift.
+ */
+export function detectCountRegressions(
+  before: TestArtifactCounts,
+  now: TestArtifactCounts,
+): Finding[] {
+  const findings: Finding[] = [];
+  if (now.cases < before.cases)
+    findings.push({
+      severity: "error",
+      code: "TEST_COUNT_REGRESSION",
+      message: `test cases dropped from ${before.cases} to ${now.cases} this cycle — tests were removed/skipped (weakening the verifier is not allowed)`,
+      where: "tests/",
+    });
+  if (now.assertions < before.assertions)
+    findings.push({
+      severity: "error",
+      code: "ASSERTION_COUNT_REGRESSION",
+      message: `expect() assertions dropped from ${before.assertions} to ${now.assertions} this cycle — a test body was gutted of its assertions (weakening the verifier is not allowed)`,
+      where: "tests/",
+    });
+  return findings;
+}
+
+/** Count test cases AND expect() assertions as they were at a git ref, in a single
+ *  pass over the ref's test files (null if the ref can't be read). */
+function countTestArtifactsAtRef(root: string, ref: string): TestArtifactCounts | null {
   try {
     const listed = execFileSync("git", ["ls-tree", "-r", "--name-only", ref], {
       cwd: root,
@@ -228,12 +289,14 @@ function countTestCasesAtRef(root: string, ref: string): number | null {
       .split("\n")
       .map((s) => s.trim())
       .filter((p) => /^tests\/.*\.test\.ts$/.test(p));
-    let n = 0;
+    let cases = 0;
+    let assertions = 0;
     for (const p of files) {
       const text = execFileSync("git", ["show", `${ref}:${p}`], { cwd: root, encoding: "utf8" });
-      n += text.match(TESTCASE_RE)?.length ?? 0;
+      cases += text.match(TESTCASE_RE)?.length ?? 0;
+      assertions += text.match(ASSERTION_RE)?.length ?? 0;
     }
-    return n;
+    return { cases, assertions };
   } catch {
     return null;
   }
@@ -277,18 +340,16 @@ export function runDrift(
       findings.push({ ...f, severity: "warning", message: `${f.message} [acknowledged]` });
     else findings.push(f);
   }
-  // Hard guard against silent test removal even while above the static floor: the
-  // cycle must not REDUCE the test-case count vs the pre-cycle ref.
-  const before = countTestCasesAtRef(root, ref);
+  // Hard guard against silent verification removal even while above the static
+  // floors: the cycle must not REDUCE the test-case count NOR the assertion count vs
+  // the pre-cycle ref. The assertion-count check closes the gut-the-body launder —
+  // deleting a test's expect()s while keeping its it() shell leaves the case count
+  // unchanged but drops the assertion count, so it is caught here.
+  const before = countTestArtifactsAtRef(root, ref);
   if (before !== null) {
-    const now = countTestCases(readAll(root, listTestFiles(root)));
-    if (now < before)
-      findings.push({
-        severity: "error",
-        code: "TEST_COUNT_REGRESSION",
-        message: `test cases dropped from ${before} to ${now} this cycle — tests were removed/skipped (weakening the verifier is not allowed)`,
-        where: "tests/",
-      });
+    const nowFiles = readAll(root, listTestFiles(root));
+    const now = { cases: countTestCases(nowFiles), assertions: countAssertions(nowFiles) };
+    findings.push(...detectCountRegressions(before, now));
   }
   return { ok: !findings.some((f) => f.severity === "error"), findings };
 }

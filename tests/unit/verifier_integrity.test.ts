@@ -10,10 +10,13 @@ import { describe, it, expect } from "vitest";
 import {
   detectDisabledTests,
   countTestCases,
+  countAssertions,
+  detectCountRegressions,
   runStatic,
   classifyDrift,
   PROTECTED_FILES,
   MIN_TEST_CASES,
+  MIN_ASSERTIONS,
 } from "../../scripts/verify-integrity.js";
 
 describe("detectDisabledTests catches every disabled/focused marker", () => {
@@ -46,6 +49,43 @@ describe("countTestCases", () => {
   it("counts it()/test() calls", () => {
     const text = "it('a',()=>{}); test('b',()=>{}); it ('c',()=>{}); describe('grp',()=>{});";
     expect(countTestCases([{ text }])).toBe(3); // two it + one test; describe not counted
+  });
+});
+
+describe("countAssertions", () => {
+  it("counts expect() calls (the test-body guard, not it()/test())", () => {
+    const text = "it('a',()=>{ expect(1).toBe(1); expect (x).toEqual(y); }); test('b',()=>{});";
+    expect(countAssertions([{ text }])).toBe(2); // two expect( ; it/test not counted
+  });
+});
+
+describe("detectCountRegressions — neither test cases NOR assertions may drop", () => {
+  const codes = (fs: { code: string }[]) => fs.map((f) => f.code);
+
+  it("passes when both counts grow (a normal +tests cycle)", () => {
+    expect(
+      detectCountRegressions({ cases: 100, assertions: 300 }, { cases: 103, assertions: 312 }),
+    ).toEqual([]);
+  });
+
+  it("BLOCKS a dropped test-case count (tests removed/skipped)", () => {
+    const fs = detectCountRegressions(
+      { cases: 100, assertions: 300 },
+      { cases: 99, assertions: 300 },
+    );
+    expect(codes(fs)).toContain("TEST_COUNT_REGRESSION");
+    expect(fs.every((f) => f.severity === "error")).toBe(true);
+  });
+
+  it("BLOCKS gutting a test body — cases held, assertions dropped (the launder this closes)", () => {
+    // The exact reward-hack the it()-count-only guard misses: keep every it() shell so
+    // the case count is unchanged, but delete the expect()s inside one of them.
+    const fs = detectCountRegressions(
+      { cases: 100, assertions: 300 },
+      { cases: 100, assertions: 297 },
+    );
+    expect(codes(fs)).toEqual(["ASSERTION_COUNT_REGRESSION"]);
+    expect(fs[0]!.severity).toBe("error");
   });
 });
 
@@ -101,5 +141,11 @@ describe("runStatic on the real repo (this is the bar)", () => {
   it("the repo is comfortably above the test-count floor", () => {
     expect(MIN_TEST_CASES).toBeGreaterThan(0);
     // If this ever trips, tests were mass-removed — investigate, don't lower the floor.
+  });
+
+  it("passes the assertion-count floor — no test body has been mass-gutted", () => {
+    expect(MIN_ASSERTIONS).toBeGreaterThan(0);
+    expect(res.findings.filter((f) => f.code === "ASSERTION_COUNT_FLOOR")).toEqual([]);
+    // If this ever trips, expect()s were mass-removed — investigate, don't lower the floor.
   });
 });
