@@ -105,8 +105,10 @@ describe("bug_0069 — the slab's base examine is honest about the single-heave 
     expect(claim.state.vars["score"]).toBe(pack.meta.max_score);
   });
 
-  it("the failure mechanic is unchanged — seed 2 first lever fails penalty-free and stays retryable", () => {
-    const s = atSlab(2); // seed 2: first lever rolls 8 + 3 = 11 vs 12 — a failure
+  it("the failure mechanic is unchanged — seed 3 first lever fails penalty-free and stays retryable", () => {
+    // seed 3 survives the wight under-armed (bug_0102 retune hp22/atk5/def2) AND its
+    // first lever roll fails — verified live; the on_failure effects are seed-independent.
+    const s = atSlab(3);
     const res = rules.resolve(s, LEVER);
     expect(res).not.toBeNull();
     const ns = narrations(res!.effects).join(" ").toLowerCase();

@@ -73,7 +73,10 @@ rooms:
   # retrofits the barrow with its own — an optional detour off the Entry Hall, met
   # BEFORE the wight, so its counsel is a real choice the player makes ahead of the
   # fight. It changes nothing on the existing critical path (rooms/combat/lever/score/
-  # win all untouched); the canonical victory trace simply skips it.
+  # win all untouched). Since bug_0102 made the wight a genuine lethal gamble under-armed
+  # and the shade's +2-defense ward the decisive survival lever, the canonical victory
+  # trace now runs THROUGH this detour (the intended prepared path), per bug_0101's
+  # "switch helpers to the canonical buffed route."
   - id: reaver_rest
     name: "The Reaver's Rest"
     description: >
@@ -279,11 +282,16 @@ npcs:
   # cannot loop; the ungated `leave_shade` keeps the root TERMINATING (a gated-only
   # node would trip DIALOGUE_NONTERMINATING, cf. cold_forge bug_0014).
   #
-  # The ward is HONEST and meaningful, not a toothless gift: the seed-31 blind pass
-  # rated the wight a real "even-ish trade ... I finished at 11 HP", so easing the cold
-  # blows (+2 defense) genuinely matters without trivialising a fight that is still
-  # winnable — and lethal — from base stats (the death ending stays reachable; the
-  # canonical route skips the shade entirely). Per the pack's honesty discipline
+  # The ward is HONEST and DECISIVE, not a toothless gift (bug_0102): against the
+  # retuned wight (hp22/atk5/def2) the +2 defense is the difference between a losing
+  # gamble and a clear favourite — under-armed the fight is lethal on a majority of
+  # seeds (~43% win), warded it is a reliable ~70% win (verified live, __probe2.ts).
+  # This is the cold-blow danger the shade names finally cashed: easing those blows
+  # (+2 defense) genuinely decides the fight, where a fresh blind pass (seed 37,
+  # ai-runs/2026-06-02T02-14-47-663Z) had found the OLD soft wight died in two rounds
+  # warded or not, the ward shaving a single HP. The fight stays winnable — and now
+  # truly lethal — from base stats (the death ending stays reachable). Per the pack's
+  # honesty discipline
   # (bug_0027/0029/0069) the shade does NOT over-sell the danger: it says plainly the
   # ward "will not swing your blade for you". Every npc_text is PURE SPOKEN words — the
   # engine renders `reaver's shade: "<words>"`, so the nodes carry no quote marks and no
@@ -346,13 +354,40 @@ npcs:
               goto: shade_root
 
 enemies:
+  # bug_0102 — the shade's +2-defense ward finally MATTERS (the bug_0101 "make the
+  # telegraphed prep decisive" move, applied to this pack's cosmetic lever). A fresh
+  # blind playtester ran the explicit prepared-vs-under-armed comparison (seed 37,
+  # ai-runs/2026-06-02T02-14-47-663Z/playtest.md §5) and found the old hp12/atk3/def1
+  # wight "dies in 2 rounds either way": warded it hit for 3, under-armed for 4 — the
+  # ward "saved a single HP" (finished 17/20 vs 16/20), so the prep was "mechanically
+  # genuine but the fight is so short and tilted you win trivially at near-full HP
+  # regardless." The same "careful play is trivially safe / the telegraphed ward is
+  # cosmetic" note both RPG packs kept raising (sunken_barrow bug_0095, cold_forge
+  # bug_0092→0101), deferred pending author intent — and under the full-trust model the
+  # agent IS the author. Retuned hp12/atk3/def1 → hp22/atk5/def2: the two-stat lift
+  # (longer fight + harder blows) that makes the +2 ward compound over several rounds
+  # instead of shaving one HP. Verified live over seeds 1-40 on the REAL canonical
+  # route (__probe2.ts, throwaway, the exact action sequence the trace records, not an
+  # abstract sweep): UNDER-ARMED (def2) now LOSES on a majority of seeds (wins 17/40 ≈
+  # 43%, and the survivors scrape through at ~4 HP of 20 — the cold-blow danger the
+  # shade names is finally real), while the shade's +2 ward (def4) is the DECISIVE
+  # survival lever (wins 28/40 ≈ 70% — a likely-dead gamble becomes a clear favourite),
+  # exactly the buff the tester called one-HP-cosmetic. 15 seeds are clean "prep decides
+  # it" cases (under-armed dies, the same seed warded reaches ending_victory). Still
+  # provably winnable from best-reachable stats (the bug_0097 proof, which credits the
+  # +2 ward): bestPlayerDmg=8 (atk4 vs def2), roundsToKill=ceil(22/8)=3,
+  # worstCaseDamageTaken=4 < 20 reachable HP. The death ending stays reachable and the
+  # canonical victory trace now runs the warded route (the intended prepared path), per
+  # bug_0101's "switch helpers to the canonical buffed route." Defense 1→2 also slows
+  # the player's own blade (atk4 vs def2 = d6+2, not d6+3), lengthening the fight so the
+  # ward has rounds to matter; prose/flags/score/endings/exits untouched.
   - id: barrow_wight
     name: "barrow-wight"
     description: "A grave-cold figure of dried sinew and malice, risen from an empty niche."
     room: guard_crypt
-    hp: 12
-    attack: 3
-    defense: 1
+    hp: 22
+    attack: 5
+    defense: 2
     defeat_flag: wight_slain
     death_ending: ending_fallen
     on_defeat:

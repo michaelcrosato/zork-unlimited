@@ -72,8 +72,10 @@ const isAttack = (a: Action) => a.type === "ATTACK";
 const isUse = (a: Action) => a.type === "USE";
 const isTake = (a: Action) => a.type === "TAKE";
 
-// Seed 1 mirrors traces/rpg/barrow_victory.json: 2 attacks fell the wight, 1 USE
-// levers the slab — both deterministic at this seed.
+// Seed 1 under-armed: the wight (bug_0102 retune hp22/atk5/def2) falls after a few
+// seeded rounds — loop ATTACK until wight_slain — and the first USE then levers the
+// slab. Both deterministic at this seed; the score milestones are independent of the
+// exact round/lever count.
 describe("bug_0016 — Sunken Barrow scoring accrues 0→10→25→50 across the three milestones", () => {
   it("score climbs at each beat and is full (50/50) at the victory ending", () => {
     let s = initStateForRpgPack(index, 1);
@@ -84,8 +86,7 @@ describe("bug_0016 — Sunken Barrow scoring accrues 0→10→25→50 across the
     s = act(s, move("north"));
     expect(score(s)).toBe(0);
 
-    s = act(s, isAttack);
-    s = act(s, isAttack); // wight falls
+    while (!s.ended && !s.flags["wight_slain"]) s = act(s, isAttack); // wight falls
     expect(s.flags["wight_slain"]).toBe(true);
     expect(score(s)).toBe(10);
 
@@ -107,7 +108,7 @@ describe("bug_0016 — Sunken Barrow scoring accrues 0→10→25→50 across the
 
   it("each award is one-time: the wight is dead, the lever retires, the relic chamber's +25 fires once", () => {
     let s = act(act(act(initStateForRpgPack(index, 1), move("down")), isTake), move("north"));
-    s = act(act(s, isAttack), isAttack);
+    while (!s.ended && !s.flags["wight_slain"]) s = act(s, isAttack);
     // The wight is slain — no ATTACK remains, so the +10 cannot be re-earned.
     expect(options(s).some((o) => o.action.type === "ATTACK")).toBe(false);
 

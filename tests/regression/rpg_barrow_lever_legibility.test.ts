@@ -102,7 +102,9 @@ describe("bug_0027 — the slab lever reads as a retryable attempt, not a streng
   });
 
   it("a LIVE failed check surfaces the improved retry guidance and changes no state (penalty-free, retryable)", () => {
-    const s = atSlab(2); // seed 2: first lever rolls 8 + 3 = 11 vs 12 — a failure
+    // seed 3 survives the wight under-armed (bug_0102 retune hp22/atk5/def2) AND its
+    // first lever roll fails — verified live; the on_failure effects are seed-independent.
+    const s = atSlab(3);
     const res = rules.resolve(s, LEVER);
     expect(res).not.toBeNull();
     const ns = narrations(res!.effects);

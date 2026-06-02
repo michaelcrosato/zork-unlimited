@@ -1,7 +1,7 @@
 {
   "trace_id": "tr_barrow_victory",
   "pack_id": "sunken_barrow_v1",
-  "content_hash": "952216649e978c0ce07c890b1ea1ef53ef5c9735c0327cbe78ce8e8d7e7f727c",
+  "content_hash": "54712ef3d1e2d44f979c29887f5ac163a4a509cf7626177fb64f77321301fbc6",
   "seed": 1,
   "initial_state": {
     "seed": 1,
@@ -30,12 +30,43 @@
       "direction": "down"
     },
     {
+      "type": "MOVE",
+      "direction": "west"
+    },
+    {
+      "type": "TALK",
+      "npc": "reaver_shade"
+    },
+    {
+      "type": "ASK",
+      "npc": "reaver_shade",
+      "topic": "ask_wight"
+    },
+    {
+      "type": "ASK",
+      "npc": "reaver_shade",
+      "topic": "wight_back"
+    },
+    {
+      "type": "ASK",
+      "npc": "reaver_shade",
+      "topic": "leave_shade"
+    },
+    {
+      "type": "MOVE",
+      "direction": "east"
+    },
+    {
       "type": "TAKE",
       "item": "iron_bar"
     },
     {
       "type": "MOVE",
       "direction": "north"
+    },
+    {
+      "type": "ATTACK",
+      "enemy": "barrow_wight"
     },
     {
       "type": "ATTACK",
@@ -55,6 +86,11 @@
       "target": "stone_slab"
     },
     {
+      "type": "USE",
+      "item": "iron_bar",
+      "target": "stone_slab"
+    },
+    {
       "type": "MOVE",
       "direction": "down"
     },
@@ -63,5 +99,5 @@
       "item": "circlet"
     }
   ],
-  "expected_final_hash": "e6de3a9cc373783059ed4a0f01713040af493ae4d7d8e8f127f0aca657e2cacb"
+  "expected_final_hash": "e55b00ebe5081633dd41d3d37610588e8c5e0873d289b1c5e4f3adca7a511935"
 }

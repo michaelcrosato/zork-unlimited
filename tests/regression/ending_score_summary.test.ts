@@ -183,13 +183,13 @@ describe("bug_0026 — endings surface a final-score tally in scoring packs", ()
     };
     const move = (dir: string) => (a: Action) => a.type === "MOVE" && a.direction === dir;
 
-    // Seed 1: 2 attacks fell the wight, 1 USE levers the slab (deterministic).
+    // Seed 1 under-armed: the wight (bug_0102 retune hp22/atk5/def2) falls after a few
+    // seeded rounds — loop ATTACK until slain — then 1 USE levers the slab (deterministic).
     let s = initStateForRpgPack(index, 1);
     s = act(s, move("down"));
     s = act(s, (a) => a.type === "TAKE");
     s = act(s, move("north"));
-    s = act(s, (a) => a.type === "ATTACK");
-    s = act(s, (a) => a.type === "ATTACK");
+    while (!s.ended && !s.flags["wight_slain"]) s = act(s, (a) => a.type === "ATTACK");
     s = act(s, move("east"));
     s = act(s, (a) => a.type === "USE");
     s = act(s, move("down")); // relic chamber (not yet won — the win is the claim, bug_0056)
