@@ -242,6 +242,7 @@ export function createToolApi(opts: { root: string }) {
     runs?: number;
     strategy?: PlaytestStrategy;
     max_steps?: number;
+    hide_graph?: boolean;
   }) {
     const { mode, compiled } = requirePlayable(args.pack_path);
     if (mode === "cyoa") return summarizeCyoa(compiled as CompiledPack, args);
@@ -250,7 +251,7 @@ export function createToolApi(opts: { root: string }) {
 
   function summarizeCyoa(
     compiled: CompiledPack,
-    args: { runs?: number; strategy?: PlaytestStrategy; max_steps?: number },
+    args: { runs?: number; strategy?: PlaytestStrategy; max_steps?: number; hide_graph?: boolean },
   ) {
     const index = indexPack(compiled.pack);
     const step = makeStep(buildRules(index));
@@ -364,7 +365,7 @@ export function createToolApi(opts: { root: string }) {
   function summarizeParserLike(
     mode: PackMode,
     compiled: AnyCompiledPack,
-    args: { runs?: number; strategy?: PlaytestStrategy; max_steps?: number },
+    args: { runs?: number; strategy?: PlaytestStrategy; max_steps?: number; hide_graph?: boolean },
   ) {
     const index = indexFor(mode, compiled.pack);
     const rules = rulesFor(mode, index);
@@ -399,7 +400,7 @@ export function createToolApi(opts: { root: string }) {
           status = "ended";
           break;
         }
-        const obs = buildObsFor(mode, index, state);
+        const obs = buildObsFor(mode, index, state, { hideGraph: args.hide_graph ?? false });
         const actions = obs.mode === "cyoa" ? [] : obs.available_actions; // narrowing; parser/rpg only here
         if (actions.length === 0) {
           status = "stuck";
@@ -447,8 +448,10 @@ export function createToolApi(opts: { root: string }) {
 
   function coverageActionIndex(
     actions: { id: string; command: string; action: Action }[],
-    // The internal bot always builds observations WITHOUT hideGraph, so `to` is
-    // present here; the optional type just matches the widened observation shape.
+    // `to` is present when the bot built the observation WITHOUT hideGraph (the
+    // default + the graph cells); under the benchmark's hide_graph cell `to` is
+    // undefined, so the prefer-unvisited branch falls through to blind navigation
+    // (investigative, else first) — the deterministic floor for spatial reasoning.
     exits: { direction: string; to?: string }[],
     globalVisited: Set<string>,
     localVisited: Set<string>,
@@ -643,12 +646,14 @@ export function createToolApi(opts: { root: string }) {
       runs?: number;
       strategy?: PlaytestStrategy;
       max_steps?: number;
+      hide_graph?: boolean;
     }) {
       return summarizePlaytest({
         pack_path: args.story_path,
         ...(args.runs !== undefined ? { runs: args.runs } : {}),
         ...(args.strategy !== undefined ? { strategy: args.strategy } : {}),
         ...(args.max_steps !== undefined ? { max_steps: args.max_steps } : {}),
+        ...(args.hide_graph !== undefined ? { hide_graph: args.hide_graph } : {}),
       });
     },
 

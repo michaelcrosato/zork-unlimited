@@ -12,6 +12,13 @@
  * so real frontier-model rows slot in later beside it (the contamination-free
  * held-out scores the benchmark ultimately reports). Metrics borrow the TextQuests
  * vocabulary (progress/coverage) adapted to a structured-action game.
+ *
+ * The hide_graph axis (ULTRAPLAN §Week.4, bug_0137/0138) makes the spatial-reasoning
+ * difficulty measurable: the coverage bot is scored both with the room graph shown
+ * (exits reveal their destination) and hidden (it must navigate blind). The
+ * shown→hidden scene-coverage drop on parser/RPG packs is the deterministic baseline
+ * a spatial-reasoning model is measured against; CYOA has no room graph so its hidden
+ * row equals its shown row.
  */
 import { createToolApi } from "../mcp/tools.js";
 
@@ -21,6 +28,14 @@ export type BenchmarkRow = {
   mode: string;
   agent: string;
   strategy: string;
+  /**
+   * Whether the room graph was HIDDEN from the agent's observation (exits show a
+   * direction but not their destination, ULTRAPLAN §Week.4). The spatial-difficulty
+   * axis: with the graph the bot reads adjacency off the observation; with it
+   * hidden the bot must navigate blind. A no-op for CYOA (it has no room graph), so
+   * a CYOA pack's hidden row equals its shown row — the honest "no spatial dimension".
+   */
+  hide_graph: boolean;
   runs: number;
   completed: number;
   unfinished: number;
@@ -36,11 +51,14 @@ export type BenchmarkRow = {
   scene_coverage: number;
 };
 
+/** A scored configuration: one play strategy, with the room graph shown or hidden. */
+export type BenchmarkCell = { strategy: "coverage" | "random"; hide_graph: boolean };
+
 export type Scorecard = {
   generated_by: string;
   agent: string;
   runs_per_cell: number;
-  strategies: string[];
+  cells: BenchmarkCell[];
   rows: BenchmarkRow[];
   /** Packs that could not be scored (e.g. failed to run), with the reason. */
   skipped: { pack: string; reason: string }[];
@@ -49,9 +67,22 @@ export type Scorecard = {
 export type BenchmarkOptions = {
   root: string;
   runs?: number;
-  strategies?: ("coverage" | "random")[];
+  cells?: BenchmarkCell[];
   agent?: string;
 };
+
+/**
+ * The default scored cells. `random` is graph-agnostic (it never consults exit
+ * destinations), so it is scored only with the graph shown — a hidden-graph random
+ * row would be byte-identical noise. `coverage` is scored BOTH ways: the delta
+ * between its shown and hidden scene-coverage is the measurable cost of hiding the
+ * graph — the deterministic baseline a spatial-reasoning model is measured against.
+ */
+const DEFAULT_CELLS: BenchmarkCell[] = [
+  { strategy: "coverage", hide_graph: false },
+  { strategy: "random", hide_graph: false },
+  { strategy: "coverage", hide_graph: true },
+];
 
 const r3 = (n: number): number => Math.round(n * 1000) / 1000;
 const ratio = (num: number, den: number): number => (den > 0 ? r3(num / den) : 1);
@@ -59,7 +90,7 @@ const ratio = (num: number, den: number): number => (den > 0 ? r3(num / den) : 1
 /** Build the scorecard by playing every playable pack with the deterministic bot. */
 export function buildScorecard(opts: BenchmarkOptions): Scorecard {
   const runs = opts.runs ?? 50;
-  const strategies = opts.strategies ?? ["coverage", "random"];
+  const cells = opts.cells ?? DEFAULT_CELLS;
   const agent = opts.agent ?? "deterministic-bot";
   const api = createToolApi({ root: opts.root });
   const { stories } = api.list_stories();
@@ -72,9 +103,14 @@ export function buildScorecard(opts: BenchmarkOptions): Scorecard {
       skipped.push({ pack: s.path, reason: "unplayable (failed validation)" });
       continue;
     }
-    for (const strategy of strategies) {
+    for (const cell of cells) {
       try {
-        const pt = api.run_playtest({ story_path: s.path, strategy, runs });
+        const pt = api.run_playtest({
+          story_path: s.path,
+          strategy: cell.strategy,
+          runs,
+          hide_graph: cell.hide_graph,
+        });
         const declared = pt.endings_declared ?? [];
         const reached = Object.keys(pt.ending_distribution ?? {});
         const scenesVisited = pt.visited_scenes?.length ?? 0;
@@ -83,7 +119,8 @@ export function buildScorecard(opts: BenchmarkOptions): Scorecard {
           pack_id: pt.pack_id,
           mode: pt.mode,
           agent,
-          strategy,
+          strategy: cell.strategy,
+          hide_graph: cell.hide_graph,
           runs: pt.runs,
           completed: pt.ended,
           unfinished: pt.unfinished,
@@ -96,7 +133,8 @@ export function buildScorecard(opts: BenchmarkOptions): Scorecard {
           scene_coverage: ratio(scenesVisited, scenesTotal),
         });
       } catch (e) {
-        skipped.push({ pack: s.path, reason: `${strategy}: ${(e as Error).message}` });
+        const tag = `${cell.strategy}${cell.hide_graph ? " (hidden graph)" : ""}`;
+        skipped.push({ pack: s.path, reason: `${tag}: ${(e as Error).message}` });
       }
     }
   }
@@ -106,7 +144,8 @@ export function buildScorecard(opts: BenchmarkOptions): Scorecard {
     (a, b) =>
       a.mode.localeCompare(b.mode) ||
       a.pack_id.localeCompare(b.pack_id) ||
-      a.strategy.localeCompare(b.strategy),
+      a.strategy.localeCompare(b.strategy) ||
+      Number(a.hide_graph) - Number(b.hide_graph),
   );
   skipped.sort((a, b) => a.pack.localeCompare(b.pack));
 
@@ -114,7 +153,7 @@ export function buildScorecard(opts: BenchmarkOptions): Scorecard {
     generated_by: "bin/benchmark.ts",
     agent,
     runs_per_cell: runs,
-    strategies,
+    cells,
     rows,
     skipped,
   };
@@ -130,19 +169,24 @@ export function renderMarkdown(card: Scorecard): string {
   const lines: string[] = [];
   lines.push("# Benchmark Scorecard");
   lines.push("");
-  lines.push(
-    `Agent: \`${card.agent}\` · ${card.runs_per_cell} runs/cell · strategies: ${card.strategies.join(", ")}`,
-  );
+  const cellList = card.cells
+    .map((c) => `${c.strategy}${c.hide_graph ? "/hidden-graph" : ""}`)
+    .join(", ");
+  lines.push(`Agent: \`${card.agent}\` · ${card.runs_per_cell} runs/cell · cells: ${cellList}`);
   lines.push("");
   lines.push(
     "Objective metrics from the deterministic structured-action playtest (TextQuests-style progress/coverage). A baseline row; real frontier-model rows slot in beside it.",
   );
   lines.push("");
-  lines.push("| Pack | Mode | Strategy | Completion | Endings | Ending cov | Scene cov |");
-  lines.push("| --- | --- | --- | --: | --: | --: | --: |");
+  lines.push(
+    "The `Graph` column marks whether the room graph was hidden (ULTRAPLAN §Week.4): with it hidden the bot must navigate blind, so the coverage drop from `shown`→`hidden` on parser/RPG packs is the spatial-reasoning difficulty a model is scored against. CYOA has no room graph, so its hidden row matches its shown row.",
+  );
+  lines.push("");
+  lines.push("| Pack | Mode | Strategy | Graph | Completion | Endings | Ending cov | Scene cov |");
+  lines.push("| --- | --- | --- | --- | --: | --: | --: | --: |");
   for (const row of card.rows) {
     lines.push(
-      `| ${row.pack_id} | ${row.mode} | ${row.strategy} | ${pct(row.completion_rate)} | ${row.endings_reached}/${row.endings_declared} | ${pct(row.ending_coverage)} | ${pct(row.scene_coverage)} |`,
+      `| ${row.pack_id} | ${row.mode} | ${row.strategy} | ${row.hide_graph ? "hidden" : "shown"} | ${pct(row.completion_rate)} | ${row.endings_reached}/${row.endings_declared} | ${pct(row.ending_coverage)} | ${pct(row.scene_coverage)} |`,
     );
   }
   if (card.skipped.length > 0) {
