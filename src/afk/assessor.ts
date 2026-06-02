@@ -238,6 +238,32 @@ function isPlanningGatedCyoa(root: string, packPath: string): boolean {
   return loaded.ok && cyoaPackIsGated(loaded.compiled.pack);
 }
 
+/**
+ * Parse, from the AI_LOOP_STATE.md log, the MOST RECENT character offset at which
+ * each pack was named the mandated blind-playtest target. A larger offset means
+ * more recently attended. Pure (text in, map out) so it unit-tests without a
+ * fixture. Used to rotate the blind pass onto the LEAST-recently-attended pack
+ * instead of re-nominating the alphabetically-first one every cycle.
+ */
+export function parseAttendanceOffsets(loopStateText: string): Map<string, number> {
+  const map = new Map<string, number>();
+  const re = /Mandatory LLM playtest target this cycle:\s*(\S+)/g;
+  for (const m of loopStateText.matchAll(re)) {
+    const captured = m[1];
+    if (captured === undefined) continue;
+    const target = captured.replace(/[.,;]+$/, ""); // strip the sentence-ending punctuation
+    map.set(target, m.index ?? 0); // matchAll is in order → the last write wins (most recent)
+  }
+  return map;
+}
+
+/** Disk wrapper for {@link parseAttendanceOffsets}; empty map when the log is absent. */
+function lastAttendanceOffsets(root: string): Map<string, number> {
+  const p = join(root, "AI_LOOP_STATE.md");
+  if (!existsSync(p)) return new Map();
+  return parseAttendanceOffsets(readFileSync(p, "utf8"));
+}
+
 /** Deterministically assess the repo and rank the next-best improvements. */
 export function assess(root: string): Assessment {
   const api = createToolApi({ root });
@@ -499,8 +525,51 @@ export function assess(root: string): Assessment {
     });
   }
 
-  // Deterministic ordering: score desc, then id asc.
-  candidates.sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
+  // ── frontier: the strategic lever once content is clean (ULTRAPLAN 2026-06-02) ─
+  // When every pack validates and all blind-pass nominations have collapsed to the
+  // 0.5 saturation floor, polishing already-clean prose is the lowest-value thing
+  // the loop can do (the frozen-verifier + frozen-distribution stall). The repo's
+  // named successor goal is a contamination-free benchmark of REAL-model authoring,
+  // whose concrete first step is an objective scorecard. This lever fires while no
+  // benchmark scorecard tool exists and disarms the moment one ships — the same
+  // self-extinguishing shape as the eslint-coverage and doc-staleness levers. Scored
+  // ABOVE the 0.5 floor so the loop reaches for structural work over re-polish, yet
+  // below a genuine unplayable-pack fix (impact 5).
+  const hasBenchmarkTool = [
+    join(root, "bin", "benchmark.ts"),
+    join(root, "scripts", "benchmark.ts"),
+  ].some((p) => existsSync(p));
+  if (!hasBenchmarkTool) {
+    candidates.push({
+      id: "frontier-benchmark-scorecard",
+      category: "engine",
+      target: "bin/benchmark.ts",
+      title: "Build the objective benchmark scorecard (the ULTRAPLAN differentiator)",
+      rationale:
+        "Content is clean and blind-pass nominations have saturated at the 0.5 floor, so re-polishing is the lowest-value move. The repo's successor goal is a contamination-free benchmark of real-model authoring; its first concrete step is a scorecard that runs personas/models across every pack via run_playtest and emits a stable, comparable JSON+markdown metric (Game Progress, coverage, deaths, illegal-action rate, turns-to-win). Without a comparable number there is no benchmark.",
+      evidence: [
+        "no bin/benchmark.ts or scripts/benchmark.ts present",
+        "see docs/ULTRAPLAN-2026-06-02.md (week horizon: objective scorecard)",
+      ],
+      impact: 4,
+      effort: "L",
+      score: score(4, "L", "engine"),
+    });
+  }
+
+  // Deterministic ordering: score desc, then — among equal scores — rotate the
+  // blind-playtest pass onto the LEAST-recently-attended pack (oldest/never first),
+  // then id asc as the final stable tiebreak. The recency term only separates
+  // equal-scored `playtest-*` stubs (all at 0.5); every other candidate gets a
+  // sentinel so its relative order is unchanged. Reading the tracked
+  // AI_LOOP_STATE.md keeps this a pure function of repo state (same repo ⇒ same
+  // ranking), curing the clockwork_heist lock-in that re-nominated one pack ~107×.
+  const attendance = lastAttendanceOffsets(root);
+  const recencyOf = (c: ImprovementCandidate): number =>
+    c.id.startsWith("playtest-") ? (attendance.get(c.target) ?? -1) : Number.MAX_SAFE_INTEGER;
+  candidates.sort(
+    (a, b) => b.score - a.score || recencyOf(a) - recencyOf(b) || a.id.localeCompare(b.id),
+  );
   return { packsByMode, packs, candidates, top: candidates[0] ?? null };
 }
 

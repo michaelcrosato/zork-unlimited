@@ -4,9 +4,14 @@
  * ranking), and reads real pack/mode health.
  */
 import { describe, it, expect } from "vitest";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { assess, formatAssessment, type Category } from "../../src/afk/assessor.js";
+import {
+  assess,
+  formatAssessment,
+  parseAttendanceOffsets,
+  type Category,
+} from "../../src/afk/assessor.js";
 
 const a = assess(process.cwd());
 
@@ -100,5 +105,64 @@ describe("assess()", () => {
     const out = formatAssessment(a);
     expect(out).toContain("next best improvement");
     expect(out).toContain("Recommended next");
+  });
+});
+
+describe("frontier lever + blind-pass rotation (ULTRAPLAN 2026-06-02)", () => {
+  it("raises the benchmark-scorecard lever above the 0.5 polish floor while no tool exists", () => {
+    const hasTool = [
+      join(process.cwd(), "bin", "benchmark.ts"),
+      join(process.cwd(), "scripts", "benchmark.ts"),
+    ].some((p) => existsSync(p));
+    const frontier = a.candidates.find((c) => c.id === "frontier-benchmark-scorecard");
+    if (hasTool) {
+      // The lever self-extinguishes once the scorecard ships (like repo-eslint).
+      expect(frontier).toBeUndefined();
+    } else {
+      expect(frontier).toBeDefined();
+      expect(frontier!.score).toBeGreaterThan(0.5);
+      // It outranks every saturated blind-playtest stub, so the loop reaches for
+      // structural work instead of re-polishing clean prose.
+      const polishTop = Math.max(
+        0,
+        ...a.candidates.filter((c) => c.id.startsWith("playtest-")).map((c) => c.score),
+      );
+      expect(frontier!.score).toBeGreaterThan(polishTop);
+      expect(a.top!.id).toBe("frontier-benchmark-scorecard");
+    }
+  });
+
+  it("parseAttendanceOffsets keeps the MOST RECENT mention and strips trailing punctuation", () => {
+    const text = [
+      "- Mandatory LLM playtest target this cycle: content/cyoa/pack/clockwork_heist.yaml.",
+      "noise",
+      "- Mandatory LLM playtest target this cycle: content/rpg/pack/cold_forge.yaml.",
+      "- Mandatory LLM playtest target this cycle: content/cyoa/pack/clockwork_heist.yaml.",
+    ].join("\n");
+    const offsets = parseAttendanceOffsets(text);
+    expect(offsets.has("content/cyoa/pack/clockwork_heist.yaml")).toBe(true);
+    expect(offsets.has("content/rpg/pack/cold_forge.yaml")).toBe(true);
+    // clockwork's recorded offset is its LAST (largest) mention, after cold_forge's.
+    expect(offsets.get("content/cyoa/pack/clockwork_heist.yaml")!).toBeGreaterThan(
+      offsets.get("content/rpg/pack/cold_forge.yaml")!,
+    );
+  });
+
+  it("rotates the blind pass onto the least-recently-attended pack (no clockwork lock-in)", () => {
+    const loopState = join(process.cwd(), "AI_LOOP_STATE.md");
+    if (!existsSync(loopState)) return; // rotation is a no-op without the log
+    const offsets = parseAttendanceOffsets(readFileSync(loopState, "utf8"));
+    const reviews = a.candidates.filter((c) => c.id.startsWith("playtest-"));
+    if (reviews.length < 2) return;
+    // The assessor's actual order, restricted to the blind-playtest stubs.
+    const actual = reviews.map((c) => c.target);
+    // Expected: ascending recency offset (never-attended = -1 first), then id asc.
+    const expected = [...reviews]
+      .sort(
+        (x, y) =>
+          (offsets.get(x.target) ?? -1) - (offsets.get(y.target) ?? -1) || x.id.localeCompare(y.id),
+      )
+      .map((c) => c.target);
+    expect(actual).toEqual(expected);
   });
 });
