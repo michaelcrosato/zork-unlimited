@@ -91,7 +91,10 @@ describe("bug_0119 — the shade's ward counsel says it's the only aid; press on
     // Positive: it must say the ward is the whole of the aid, that the scare is the
     // wight's wearing-down (not the true odds), and to keep striking.
     expect(spoken).toMatch(/no balm|no second blade|no charm|whole of the help/);
-    expect(spoken).toMatch(/wearing a man down|not the truth of the odds/);
+    // bug_0132 retired the flat "not the truth of the odds" guarantee; the
+    // wearing-down framing it leant on stays (see rpg_barrow_ward_honest_odds.test.ts
+    // for the honest-hedge lock that replaced the over-promise).
+    expect(spoken).toMatch(/wearing a man down/);
     expect(spoken).toMatch(/keep striking|set your feet/);
     // Negative: it must NOT leave open the idea that more preparation is out there to
     // find, nor that breaking off to search is the path — the readings that drove the

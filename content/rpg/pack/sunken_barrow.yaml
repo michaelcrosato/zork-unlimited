@@ -346,6 +346,34 @@ npcs:
   # ward "will not swing your blade for you". Every npc_text is PURE SPOKEN words — the
   # engine renders `reaver's shade: "<words>"`, so the nodes carry no quote marks and no
   # third-person stage narration (the sealed_crypt / cold_forge convention, bug_0071).
+  #
+  # bug_0132 — the ward counsel no longer OVER-PROMISES the warded fight. bug_0119 added
+  # "that is the wight's way of wearing a man down, not the truth of the odds. Set your
+  # feet and keep striking." to stop a player retreating from a winnable fight (the
+  # bug_0027 quit-a-winnable-game failure, here on the wight). That cured the retreat but
+  # over-corrected into a flat GUARANTEE: it told the player the lost-looking moment was
+  # categorically "not the truth of the odds," yet bug_0113 keeps ~12% of warded seeds a
+  # genuine loss BY DESIGN (the "careful play isn't free" identity). A fresh blind
+  # playtester (seed 19, ai-runs/2026-06-02T14-34-47-326Z/playtest.md §5) took the ward,
+  # obeyed the counsel to the letter — "set your feet and keep striking, do not break off"
+  # — and STILL DIED, wight on 4 HP, two max cold-rolls in the last rounds; they flagged
+  # the shade's promise as not strictly true ("obey the hint and you'll *probably* be
+  # fine") and a full-restart on a broken promise as the one thing that would leave a real
+  # player unsatisfied. That is the SAME honesty defect this pack fights everywhere a line
+  # writes a contract the engine never cashes (bug_0027/0029/0069 over-sold grinds,
+  # bug_0095 the sarcophagus examine promising the slab's skill_check). The fix is the
+  # same discipline applied to the spoken counsel: it now keeps the load-bearing
+  # anti-retreat message (the dread is MOSTLY the wight's wearing-down trick; there is no
+  # aid to find; breaking off only returns you to the same fight) but admits plainly that
+  # warded play can still lose — "the better of it is not the sure of it ... it can yet go
+  # hard against you, even done right ... not every time, and I will not swear you safe."
+  # So pressing on is honestly framed as the BEST chance, not a sure thing — the retreat
+  # cure survives, the broken promise does not. PURE SPOKEN npc_text — no flag/var/journal/
+  # score/topic/DC/stat/enemy/ending change (the ward is still +3, one-shot, journalled;
+  # the wight keeps bug_0102's stats; the ~12% warded loss the design demands is untouched).
+  # Only the pack content_hash shifts (the canonical victory trace runs through this node),
+  # re-pinned in traces/rpg/barrow_victory.json + traces/bugs/bug_0119; the trace's
+  # state-based expected_final_hash is unchanged because no STATE changed, only spoken text.
   - id: reaver_shade
     name: "reaver's shade"
     description: "The thin grey shade of a grave-robber who came down for the crown and stayed — tired past fear and past malice, with nothing left but memory."
@@ -380,10 +408,16 @@ npcs:
             you, but the cold will bite the less. And do not break off to hunt for more
             than this: there is no balm in the barrow, no second blade, no charm laid
             by for the next fool — this ward is the whole of the help you will find, and
-            it is help enough. There will come a moment in the cold of it when the fight
-            looks lost; that is the wight's way of wearing a man down, not the truth of
-            the odds. Set your feet and keep striking. Step back to seek aid that is not
-            here and you only come again to the same fight, no fresher than you left it.
+            it tips the long odds your way. I will not gild it as the songs would: warded
+            and willing, you have the better of the fight — but the better of it is not the
+            sure of it. It is a true fight still, and the dead have their lucky nights; it
+            can yet go hard against you, even done right. There will come a moment in the
+            cold of it when the fight looks lost; that is the wight's way of wearing a man
+            down, and most times the dread is the trick of it and not the truth. But not
+            every time, and I will not swear you safe. Even so, your one best chance is
+            here, feet set and guard up: keep striking. Step back to seek aid that is not
+            here and you only come again to the same fight, no fresher than you left it,
+            and no likelier to live.
           effects:
             - set_flag: heard_warding
             - inc_var: { name: defense, by: 3 }

@@ -1,0 +1,64 @@
+bug_id: bug_0132
+pack_id: sunken_barrow_v1
+seed: 19
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  report: ai-runs/2026-06-02T14-34-47-326Z/playtest.md
+  finding: >
+    Mandated blind pass of The Sunken Barrow (seed 19). A fresh, MCP-only, source-blind
+    playtester reached all three endings and rated the pack clarity 5/5, enjoyment 4/5
+    with NO mechanical bugs. Its one substantive finding (§5): on seed 19 it took the
+    shade's +3 ward and obeyed the counsel to the letter — "set your feet and keep
+    striking, do not break off" — and STILL DIED, wight on 4 HP, two max cold-rolls in
+    the last rounds. It named the shade's promise as not strictly true ("obey the hint
+    and you'll *probably* be fine"), and called losing the single gating combat to bad
+    dice AFTER doing everything the game explicitly told you to do — then being bounced
+    to a full restart — the one thing that would leave a real player unsatisfied.
+failure:
+  type: text_over_promises_contract_engine_does_not_cash
+  where:
+    - content:content/rpg/pack/sunken_barrow.yaml   # npc reaver_shade, node shade_wight
+  description: >
+    bug_0119 added "that is the wight's way of wearing a man down, not the truth of the
+    odds. Set your feet and keep striking." to stop a prepared player retreating from a
+    winnable fight (the bug_0027 quit-a-winnable-game failure mode, here on the wight).
+    That cured the retreat but over-corrected into a flat GUARANTEE: it told the player
+    the lost-looking moment was categorically "not the truth of the odds." But bug_0113
+    deliberately keeps ~12% of warded seeds a genuine LOSS (the "careful play isn't free"
+    identity, verified live over seeds 1-40). seed 19 is one of those ~12%. So the line
+    writes a contract — "play right and the scary moment is illusory" — that the engine
+    does not honour ~1 run in 8. This is the SAME honesty defect the pack fights wherever
+    prose out-promises mechanics: bug_0069 (slab text over-sold a grind), bug_0095 (the
+    sarcophagus examine promised the slab's skill_check the prise never carries),
+    bug_0027/0029 (failure feedback implying a missing item). The defect is the false
+    certainty, NOT the balance — the ~12% warded loss is intended and stays.
+fix:
+  layers: [content, hint_text]
+  summary: >
+    Apply the pack's honesty discipline to the shade's spoken ward counsel. The
+    ask_wight npc_text KEEPS the load-bearing bug_0119 anti-retreat message (the
+    mid-fight dread is MOSTLY the wight's wearing-down trick; there is no balm/second
+    blade/charm to find; breaking off only returns you to the same fight no fresher) but
+    now ADMITS plainly the warded fight is not a sure thing: "the better of it is not the
+    sure of it ... it can yet go hard against you, even done right ... not every time,
+    and I will not swear you safe." Pressing on is honestly framed as the BEST chance,
+    not a guarantee — the retreat cure survives, the broken promise does not. PURE spoken
+    npc_text: no flag / var / journal / score / topic / DC / stat / enemy / ending
+    change. The +3 ward (defense 2->5), its one-shot retire, the wight's bug_0102 stats,
+    the ~12% warded loss the design demands, and the canonical victory trace's recorded
+    JOURNAL text are all untouched.
+  reachable_endings_changed: false
+  content_hash_changed: true   # sunken_barrow yaml text genuinely changed (one npc_text rewrite)
+  content_hash_before: 7546c419122ed8348ddac8ed43f4ffca440710312445be7598cfccadd1a5af45
+  content_hash_after: 7791fc144ecb4589e5b13ecef591b9cc62bdc2c886ba88b0f60d23e595aff08b
+  repin: >
+    Deliberate, surfaced re-pin (NOT a weakening): traces/rpg/barrow_victory.json
+    content_hash updated 7546c419... -> 7791fc1.... The trace's expected_final_hash is
+    UNCHANGED: only spoken npc_text changed — narration, not state — so the canonical
+    seed-1 warded victory replays to the identical final state hash (rpg_barrow_trace.test.ts
+    green). The legitimate snapshot-update workflow (HASH_PIN_REPINNED accompanied by a
+    real content change), not an unaccompanied launder. No test SOURCE pins this pack's
+    hash (only watchtower_road is pinned); bug_0119's historical content_hash_after is
+    left at 7546c419 (the state THAT bug produced), not rewritten.
+regression_test: tests/regression/rpg_barrow_ward_honest_odds.test.ts
