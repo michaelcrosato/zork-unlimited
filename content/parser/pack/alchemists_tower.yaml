@@ -25,6 +25,18 @@
 # BRANCH (bug_0111): the spire climax is a real decision, not a single act — give the
 # master the antidote (WIN) or the black phial (a distinct death, ending_master_poisoned),
 # the wrong-fork twin of drinking it yourself. Heavily telegraphed; recoverable via load.
+# MORAL FORK (bug_0114): bug_0111's branches are BOTH deaths, so the pack still had exactly
+# ONE satisfying outcome — the recurring "no real choice / fully linear" knock every blind
+# report raises (this cycle: seed 41, enjoyment 3/5, "the puzzle solves itself … no real
+# choice or misdirection beyond the obvious poison trap"). The proven lever (bug_0099's
+# branching pack 5/5; bug_0105's sealed_crypt moral fork 3→4) is a NON-DEATH meaningful
+# fork, and alchemists_tower was the last linear pack without it. The iron key the player
+# already carries (it opened the cellar hatch) now becomes a FORK, exactly the sealed_crypt
+# device: beside the master's pallet a locked silver casket holds the alchemist's Great Work,
+# keyed to that same iron. CURE her (ending_cured, the canonical altruistic win) — or crack
+# the casket and climb away with her masterwork while the fever finishes her (ending_betrayal,
+# a non-death greed ending, mutually exclusive with the cure via end_game). The win route is
+# byte-identical (the casket adds no score/exit/flag to it; max_score stays 40). Content-only.
 
 meta:
   id: alchemists_tower_v1
@@ -194,16 +206,18 @@ rooms:
     description: >
       The tower's top room. On a low pallet beneath the wind-moaning broken glass
       lies the tower's old master, fevered and failing — the patient the whole long
-      climb was for. Whatever medicine might break her fever, you are not carrying
-      it yet. The laboratory is back down.
+      climb was for. A small silver casket rests on a stand at her side, its clasp
+      cut for an iron key. Whatever medicine might break her fever, you are not
+      carrying it yet. The laboratory is back down.
     variants:
       - when: [{ has_item: antidote }]
         text: >
           The tower's top room. On a low pallet beneath the wind-moaning broken glass
           lies the tower's old master, fevered and failing — the patient the whole long
-          climb was for. The pale antidote in your hand is no use until you give it to
-          her. The laboratory is back down.
-    objects: [master]
+          climb was for. A small silver casket rests on a stand at her side, its clasp
+          cut for an iron key. The pale antidote in your hand is no use until you give
+          it to her. The laboratory is back down.
+    objects: [master, silver_casket]
     exits:
       - { direction: down, to: laboratory }
 
@@ -518,6 +532,51 @@ objects:
           - narrate: "You raise the master's head and tip the black phial between her cracked lips before you think better of it. She stiffens, one shuddering breath — and then the fever, and all the rest, goes still."
           - end_game: ending_master_poisoned
 
+  - id: silver_casket
+    name: "silver casket"
+    aliases: [casket, coffer, masterwork, work, stone]
+    # bug_0114 MORAL FORK: the alchemist's Great Work, locked at her deathbed and keyed
+    # to the SAME iron key that opens the cellar hatch (the sealed_crypt bug_0105 device —
+    # one key, two locks: the cure path and the greed path). The base description must NOT
+    # assume the player holds the antidote (the spire stair is unconditional and the iron
+    # key can be carried here without ever brewing — the bug_0052/0065 leak discipline); the
+    # has_item:antidote variant sharpens the moral weight for the player who could cure her
+    # and chooses the Work instead. Modelled on the engine's first-class UNLOCK + key_id +
+    # unlock_effects path (bug_0077), exactly like sealed_crypt's founder's coffin: opening
+    # it fires end_game, making it MUTUALLY EXCLUSIVE with the cure — a genuine terminal
+    # choice, not a detour. Awards no score (max_score stays 40, so the perfect score still
+    # coincides with the cure, bug_0104) and adds no item (the stone is only narrated; the
+    # game ends in your hand). Not on the win path — no exit/flag/gating change there.
+    description: >
+      A small silver casket on a stand beside the master's pallet, its lid bound by a
+      clasp shaped for an iron key — the very twin of the cellar hatch's. Through the
+      seam leaks a hard, steady light, gold and unwavering: the alchemist's masterwork,
+      the Great Work of her whole long life, locked away within arm's reach of her
+      deathbed. The tower yields to iron, the recipe might as well have said, and so
+      would this clasp.
+    variants:
+      - when: [{ has_item: antidote }]
+        text: >
+          A small silver casket on a stand beside the master's pallet, its lid bound by
+          a clasp shaped for an iron key — the twin of the cellar hatch's. Through the
+          seam leaks a hard, steady golden light: the alchemist's masterwork, the Great
+          Work of her whole life, locked within arm's reach of her deathbed. The tower
+          yields to iron, and so would this — but to crack it now, with her cure already
+          in your hand, is to choose the Work over the maker and leave her to the fever
+          you climbed all this way to break.
+    locked: true
+    key_id: iron_key
+    unlock_narrate: >
+      You set the iron key to the casket's clasp, and the lid lifts on the master's
+      Great Work: a single stone that holds its own hard golden light, warm as a coal
+      that will never cool. Worth a hundred towers — and a thousand lives that are not
+      hers. You close your fist around it and start back down the long stair while the
+      fever finishes what you would not, the last light of the tower going down the
+      steps with you. Some things are worth more than one old woman's breath, you tell
+      yourself, all the way down.
+    unlock_effects:
+      - end_game: ending_betrayal
+
 win_conditions:
   - id: administer_cure
     # `visited: spire` is KEPT (not redundant): the parser validator derives its
@@ -557,3 +616,17 @@ endings:
       whole tower to save her, and ended her at the last. (Load a saved game to try
       again.)
     death: true
+  - id: ending_betrayal
+    title: "The Great Work"
+    # bug_0114: the NON-DEATH moral fork — the iron key opens the cellar (cure path) OR
+    # the master's silver casket (greed path), the sealed_crypt bug_0105 shape. You live;
+    # she does not. Not a death ending (the PLAYER survives, walks away rich) and not a win
+    # (no win_condition resolves to it; it fires only by the casket's end_game), so
+    # NO_WINNABLE_ENDING / WIN_IS_DEATH are unaffected — ending_cured stays the sole
+    # non-death win. Mutually exclusive with the cure: opening the casket ends the game.
+    text: >
+      You came to save the tower's master and climb away instead with the one thing she
+      could never remake — her Great Work cold and bright in your fist, her breath
+      failing somewhere in the dark behind you. You will be rich past reckoning, and the
+      tower's light is yours now, such as it is. Some prices you only learn the size of
+      later, on the nights you cannot sleep. *** You have taken the Great Work. ***
