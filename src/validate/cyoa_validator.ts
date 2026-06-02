@@ -75,6 +75,10 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
   // deadline-firability check just below and the choice-feasibility check later.
   const writes = collectWrites(pack);
   const deadline = pack.meta.deadline;
+  // Whether the deadline can PROVABLY never fire. A provably-unfireable deadline must
+  // NOT contribute its escape edge to the soft-lock graph below — doing so would let a
+  // dead terminal mask a true SOFTLOCK (bug_0092). Set by checkDeadlineFirability.
+  let deadlineUnfireable = false;
   if (deadline) {
     if (!allNodeIds.has(deadline.ending)) {
       findings.push(
@@ -101,7 +105,7 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
     // graph would count a scene as escapable via a deadline that never triggers. The
     // sibling of the variant-soundness family (bug_0085 shadowed / bug_0086 vacuous),
     // reusing the same conjunctive machinery and the choice-feasibility logic below.
-    checkDeadlineFirability(
+    deadlineUnfireable = checkDeadlineFirability(
       deadline.when,
       pack.meta.flags_init,
       pack.meta.vars_init,
@@ -140,7 +144,7 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
     // "spend an hour searching" action that never advances the var via on_enter)
     // is still seen as reachable and as an escape, not spuriously ENDING_UNREACHABLE
     // or a false SOFTLOCK. The ref is already validated above, so add directly.
-    if (deadline && terminalIds.has(deadline.ending)) {
+    if (deadline && terminalIds.has(deadline.ending) && !deadlineUnfireable) {
       const writesWatched = (effects: Effect[]): boolean =>
         [...varsWrittenByEffects(effects)].some((v) => deadlineVars.has(v));
       if (writesWatched(scene.on_enter) || scene.choices.some((c) => writesWatched(c.effects))) {
@@ -532,7 +536,7 @@ function checkDeadlineFirability(
   varsInit: Record<string, number>,
   writes: Writes,
   findings: Finding[],
-): void {
+): boolean {
   if (isUnsatisfiable(whenProfile(when))) {
     findings.push(
       warn(
@@ -543,7 +547,7 @@ function checkDeadlineFirability(
         ["meta:deadline"],
       ),
     );
-    return; // one witness is enough; the (b) scan would only restate it
+    return true; // one witness is enough; the (b) scan would only restate it
   }
   const req = collectRequired(when);
   const missing: string[] = [];
@@ -567,7 +571,9 @@ function checkDeadlineFirability(
         ["meta:deadline"],
       ),
     );
+    return true;
   }
+  return false;
 }
 
 /** Flag a `meta.deadline` that fires on the player's FIRST action regardless of

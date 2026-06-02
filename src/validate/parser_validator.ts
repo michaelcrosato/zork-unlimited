@@ -212,9 +212,18 @@ export function validateParser(
   // ── Win-trigger rooms + soft-lock (every reachable room can still reach a win)
   const winRooms = new Set<string>();
   for (const wc of pack.win_conditions) {
-    for (const c of wc.conditions) {
-      const v = visitedRoom(c);
-      if (v) winRooms.add(v);
+    // A win_condition whose `conditions` are internally contradictory can NEVER
+    // fire (the UNSATISFIABLE_CONDITION warning is raised separately below). Its
+    // `visited` rooms are therefore NOT real escape targets: adding a dead
+    // terminal's room to `winRooms` would let it mask a true SOFTLOCK — exactly the
+    // soft-lock-graph pollution the win-condition guard comment below warns of
+    // (bug_0092). Skip the room-adding for a provably-dead win (but still run the
+    // ENDING_UNDECLARED reference check, which is independent of firability).
+    if (!isUnsatisfiable(whenProfile(wc.conditions))) {
+      for (const c of wc.conditions) {
+        const v = visitedRoom(c);
+        if (v) winRooms.add(v);
+      }
     }
     if (wc.ending && !pack.endings.some((e) => e.id === wc.ending)) {
       findings.push(
@@ -535,9 +544,10 @@ export function validateParser(
   // A win_condition is the parser/RPG analogue of CYOA's meta.deadline — an
   // internally contradictory `conditions` can never fire (the DEADLINE_UNFIREABLE
   // analogue), and like the deadline it is a latent soft-lock unsoundness: a `visited`
-  // room inside such a never-firing win is still added to `winRooms` above as a real
-  // escape target, so an unsatisfiable win could mask a true SOFTLOCK. Surfacing it
-  // points at that root cause.
+  // room inside such a never-firing win would, if treated as a real escape target,
+  // mask a true SOFTLOCK. The `winRooms` construction above now EXCLUDES such dead
+  // wins from the escape graph (bug_0092); this warning still names the contradictory
+  // win so the author can fix or remove it.
   for (const wc of pack.win_conditions)
     checkUnsatisfiable(wc.conditions, [`win:${wc.id}`], `win_condition "${wc.id}"`, findings);
 
