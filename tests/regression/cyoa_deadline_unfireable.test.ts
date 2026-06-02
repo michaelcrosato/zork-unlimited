@@ -98,3 +98,64 @@ describe("bug_0087 — the validator flags a deadline that can never fire", () =
     expect(codes(src)).not.toContain("DEADLINE_UNFIREABLE");
   });
 });
+
+/**
+ * bug_0109 — the var-firability check is now DIRECTION-AWARE. bug_0087 only asked
+ * "is the watched var ever written?"; a `var_gte` deadline whose var IS written but
+ * only ever DROPS (decrements, no-op incs, or `set`s that land below the bound)
+ * starts below the bound and can never reach it — just as dead as an unwritten var,
+ * but the coarse test let it through. This is the exact "clock with no teeth" class a
+ * fresh blind playtester flagged on The Clockwork Heist (seed 5, ai-runs/
+ * 2026-06-02T08-47-43-611Z/playtest.md §4): urgency prose promising a deadline that
+ * never actually bites. (clockwork itself is sound — `ticks` is incremented by +1, so
+ * it still must NOT be flagged; asserted by the bug_0087 suite above.)
+ */
+// A deadline gated on `doom >= 5` from a sub-bound init (0), with `doom` driven only
+// by the supplied effect — so the 'needs raise' branch is always exercised.
+const directionPack = (doomEffect: string): string => `
+meta:
+  id: t
+  title: T
+  start: s
+  flags_init: []
+  vars_init: { doom: 0 }
+  deadline: { when: [ { var_gte: { name: doom, value: 5 } } ], ending: e_over }
+scenes:
+  - id: s
+    title: S
+    text: "x"
+    on_enter: [ ${doomEffect} ]
+    choices:
+      - { id: g, text: go, next: e }
+      - { id: quit, text: quit, next: e_over }
+      - { id: stay, text: stay, next: s }
+endings:
+  - { id: e, title: E, text: "done" }
+  - { id: e_over, title: O, text: "the hour turns" }
+`;
+
+describe("bug_0109 — a var-gte deadline whose var only ever DROPS is flagged dead", () => {
+  it("flags a deadline whose watched var is only ever DECREMENTED", () => {
+    expect(codes(directionPack("{ dec_var: { name: doom, by: 1 } }"))).toContain(
+      "DEADLINE_UNFIREABLE",
+    );
+  });
+
+  it("flags a deadline whose var is only ever SET below the bound", () => {
+    expect(codes(directionPack("{ set_var: { name: doom, value: 2 } }"))).toContain(
+      "DEADLINE_UNFIREABLE",
+    );
+  });
+
+  it("does NOT flag when some effect can RAISE the var to the bound (positive inc)", () => {
+    expect(codes(directionPack("{ inc_var: { name: doom, by: 1 } }"))).not.toContain(
+      "DEADLINE_UNFIREABLE",
+    );
+  });
+
+  it("does NOT flag when a `set` lands AT/ABOVE the bound — soundness", () => {
+    expect(codes(directionPack("{ set_var: { name: doom, value: 7 } }"))).not.toContain(
+      "DEADLINE_UNFIREABLE",
+    );
+  });
+});

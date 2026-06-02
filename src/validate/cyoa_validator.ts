@@ -97,6 +97,9 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
         ),
       );
     }
+    // Direction-aware var writes (kind + signed amount), shared by both deadline
+    // soundness checks below — computed once.
+    const falsifiers = collectFalsifiers(pack);
     // Firability: a deadline that can PROVABLY never fire is a Chekhov's gun — the
     // declared urgency mechanic (bug_0079/0080) is dead — AND a latent unsoundness
     // for the soft-lock graph below, which (lines further down) treats the deadline
@@ -110,6 +113,7 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
       pack.meta.flags_init,
       pack.meta.vars_init,
       writes,
+      falsifiers.varWrites,
       findings,
     );
     // The OPPOSITE soundness failure of firability: a deadline whose `when` already
@@ -117,7 +121,7 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
     // FIRST action, on every path (engine §8.4.5 checkWin runs post-action, not at
     // game start — src/core/engine.ts), so no scene past the start is ever playable.
     // That is unplayable (an ERROR, like START_NOT_SCENE), not a merely-dead mechanic.
-    checkDeadlineFiresAtStart(deadline.when, initStateForPack(index, 0), pack, findings);
+    checkDeadlineFiresAtStart(deadline.when, initStateForPack(index, 0), falsifiers, findings);
   }
   const deadlineVars = deadline ? varNamesInConditions(deadline.when) : new Set<string>();
 
@@ -556,12 +560,17 @@ function checkUnsatisfiable(
  *  impossible, never on a deadline that is merely hard to reach):
  *    (a) the `when` is internally contradictory (isUnsatisfiable — bug_0086); or
  *    (b) it REQUIRES, in AND-context, a flag/item/var that no effect ever
- *        provides/writes (the choice-feasibility logic, applied to the deadline). */
+ *        provides/writes (the choice-feasibility logic, applied to the deadline).
+ *  For a `var_gte` bound the check is direction-aware (bug_0109): a watched var that
+ *  IS written but only ever DROPS (decrements, no-op incs, or sets that land below
+ *  the bound) can never reach a higher threshold, so the deadline is just as dead as
+ *  one whose var is never written — the coarse "is it ever written?" test missed this. */
 function checkDeadlineFirability(
   when: Condition[],
   flagsInit: string[],
   varsInit: Record<string, number>,
   writes: Writes,
+  varWrites: Map<string, VarWrite[]>,
   findings: Finding[],
 ): boolean {
   if (isUnsatisfiable(whenProfile(when))) {
@@ -584,10 +593,20 @@ function checkDeadlineFirability(
     if (!writes.addedItems.has(it)) missing.push(`item "${it}" (never granted)`);
   for (const vr of req.varReqs) {
     const init = varsInit[vr.name] ?? 0;
-    const needsRaise =
-      (vr.op === "gte" && vr.value > init) || (vr.op === "eq" && vr.value !== init);
-    if (needsRaise && !writes.writtenVars.has(vr.name))
-      missing.push(`var "${vr.name}" ${vr.op} ${vr.value} (never written; init ${init})`);
+    if (vr.op === "gte" && vr.value > init) {
+      // Needs to RISE to the bound: dead unless some write can actually raise it
+      // there. A var written only by decrements/no-op incs/sub-bound sets stays
+      // below the bound forever — a Chekhov's gun the coarse test let through.
+      if (!varCanReachGte(vr.value, varWrites.get(vr.name)))
+        missing.push(
+          `var "${vr.name}" gte ${vr.value} (no effect can raise it to that bound; init ${init})`,
+        );
+    } else if (vr.op === "eq" && vr.value !== init) {
+      // `eq` left to the coarse test: an inc/dec/set could land on the value, so a
+      // written var is not provably dead — only an entirely unwritten one is.
+      if (!writes.writtenVars.has(vr.name))
+        missing.push(`var "${vr.name}" eq ${vr.value} (never written; init ${init})`);
+    }
   }
   if (missing.length > 0) {
     findings.push(
@@ -620,11 +639,11 @@ function checkDeadlineFirability(
 function checkDeadlineFiresAtStart(
   when: Condition[],
   initial: GameState,
-  pack: CyoaPack,
+  falsifiers: Falsifiers,
   findings: Finding[],
 ): void {
   if (!evalConditions(when, initial)) return; // healthy: not yet due at game start
-  if (!deadlineStaysTrueForever(when, collectFalsifiers(pack))) return; // some first action could escape it
+  if (!deadlineStaysTrueForever(when, falsifiers)) return; // some first action could escape it
   findings.push(
     err(
       "DEADLINE_FIRES_AT_START",
@@ -696,6 +715,17 @@ function varNeverRises(ceil: number, writes: VarWrite[] | undefined): boolean {
 }
 function varNeverChanges(fixed: number, writes: VarWrite[] | undefined): boolean {
   return (writes ?? []).every((w) => (w.kind === "set" ? w.amount === fixed : w.amount === 0));
+}
+
+// Can any effect actually push a var (starting below `value`) up to a `>= value`
+// bound? Only a positive `inc` (repeatable round a loop, so it accumulates) or a
+// `set` that lands at/above the bound can. Decrements, no-op/negative incs, and
+// sub-bound sets never get there. Sound & conservative: one such write is enough to
+// treat the bound as reachable, so we never call a live deadline dead (bug_0109).
+function varCanReachGte(value: number, writes: VarWrite[] | undefined): boolean {
+  return (writes ?? []).some(
+    (w) => (w.kind === "inc" && w.amount > 0) || (w.kind === "set" && w.amount >= value),
+  );
 }
 
 /** True iff `when` (taken as a conjunction) is true now AND stays true under every
