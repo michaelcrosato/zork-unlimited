@@ -1,0 +1,239 @@
+# The White Stag — a CYOA pack (Stage 1 format).
+#
+# A starving winter, a hunter, and the white stag run to ground at last on a
+# frozen tarn. Like wreckers_light, the heart of this story is a MORAL FORK, not a
+# lock-and-key chain — and the obvious goal is the DARK one: the village's children
+# have gone quiet with hunger and the lord has set gold on the white stag's hide, so
+# from the first beat a first-timer knows exactly what the hunt is for. To KILL is
+# the easy, sanctioned choice; the depth is the player who stays the hand.
+#
+#   * loose your one good arrow and take the stag   → ending_quarry (the kill)
+#   * lower the bow and let it walk                 → ending_thaw   (mercy on instinct)
+#   * lay bow and arrow on the ice as an offering   → ending_offering (the knowing rite)
+#   * chance the rotten tarn ice straight across    → ending_lost   (an informed risk)
+#
+# A hidden "truth" reframes the choice rather than adding a route, exactly as the
+# manor's letter and the keeper's journal do: a leaning, carved boundary-stone at
+# the tarn's edge tells what the white stag is — the wood's bound heart, the winter's
+# keeper — and how, generations gone, the last hunter to fell a white one brought a
+# winter that did not break for nine years and emptied these valleys. Reading it sets
+# `knows_truth`, which fires reactive endingText variants on the kill (ignorant tragedy
+# vs a knowing, desperate damnation) and on the sparing (pity vs understanding), and
+# UNLOCKS the offering — the fullest ending, a gated payoff for the player who stopped
+# to read the stone. The dramatic irony the truth reveals: the desperate obvious choice
+# (kill to feed them now) is the one that dooms the valley, while the harder mercy is
+# what actually buys the thaw — so the kill is a tragedy of not knowing, and the worst
+# kill is the one made in full knowledge. Every terminal beat is the player's deliberate
+# turn, telegraphed in plain prose (the rotten ice "ticks" before you step on it), never
+# an ambush — the wreckers_light / bug_0123 / bug_0130 discipline.
+
+meta:
+  id: white_stag_v1
+  title: "The White Stag"
+  start: trail_end
+  flags_init: []
+
+scenes:
+  - id: trail_end
+    title: "The End of the Track"
+    text: >
+      Four days you have followed it through the iron cold, and the trail ends here
+      at the lip of a frozen tarn ringed in black pine. You came for this: the village
+      behind you is down to bark-bread and silence, the children gone quiet in a way
+      that frightens you more than any crying, and the lord's man swore gold — a winter
+      of gold — for the hide of the white stag that haunts these woods. The tracks run
+      down to the ice ahead, and somewhere past the pines a great pale shape is waiting.
+    choices:
+      - id: go_on
+        text: "Go down to the tarn."
+        next: tarn
+
+  - id: tarn
+    title: "The Frozen Tarn"
+    text: >
+      The tarn lies flat and black underfoot, and across it, on a low spit of firm
+      ground, stands the white stag. It does not run. It stands at bay in the falling
+      light, breath smoking, and watches you come with eyes too steady and too old for
+      a beast — as though it has been waiting four days for you, and is not afraid. The
+      ice between you and it is rotten, ticking and groaning in the cold, fit to drop a
+      man through to the freezing dark below. A firmer way runs round the shore to a
+      bluff within bowshot. And at the bank, leaning out of the snow, juts an old stone,
+      its face worn but carved.
+    # Once the stone is read, the tarn reads differently — you cross this place knowing
+    # what stands on the spit (reactive prose, first-match-wins). No flag/route change.
+    variants:
+      - when: [{ has_flag: knows_truth }]
+        text: >
+          The tarn lies flat and black underfoot, and across it, on the low spit of firm
+          ground, stands the white stag — the winter's keeper, the stone behind you says,
+          the bound heart of the wood. It does not run. It stands at bay and watches you
+          come with those steady, ancient eyes, and you cannot now unsee what the carved
+          stone named. The ice between is rotten, ticking and groaning, fit to drop a man
+          through to the freezing dark. A firmer way runs round the shore to a bluff within
+          bowshot, and the leaning stone keeps its old vow at the bank.
+    choices:
+      - id: read_stone
+        text: "Read the leaning, carved stone at the bank."
+        next: shrine
+      - id: take_shore
+        text: "Pick your way round the firm shore to the bluff within bowshot."
+        next: bluff
+      - id: cross_ice
+        # A CHOSEN, plainly-lethal shortcut, not a curiosity trap — the base text already
+        # names the ice "rotten, ticking and groaning ... fit to drop a man through," and
+        # the label names the gamble outright (wreckers_light climb_to_wreck discipline:
+        # the death foreshadows itself in the choice text). No flag/route change.
+        text: "Chance the rotten ice straight across toward the stag."
+        next: ending_lost
+
+  - id: shrine
+    title: "The Leaning Stone"
+    text: >
+      It is no boundary-marker. Under the lichen a stag is cut deep into the granite,
+      antlers spread like bare branches, and below it a worn legend you must kneel to
+      read.
+    # Reading sets knows_truth (the pack's only "truth" flag, the wreckers_light device).
+    # A second visit, already-read, simply re-shows the carved face without re-revealing.
+    variants:
+      - when: [{ has_flag: knows_truth }]
+        text: >
+          The carved stag watches from the granite, antlers spread like bare branches.
+          You have read what is cut below it, and kneeling here a second time does not
+          unsay it: the white one on the spit is the wood's bound heart, and the stone
+          is a vow.
+    choices:
+      - id: decipher
+        text: "Kneel and decipher the worn legend."
+        conditions: [{ not_flag: knows_truth }]
+        effects:
+          - set_flag: knows_truth
+          - add_journal: >
+              The legend is a warning and a vow. The white stag is no quarry but the
+              winter's keeper — the wood's bound heart, and the thread by which the spring
+              finds its way back each year. Nine generations gone, a hunter felled a white
+              stag for a starving lord, and the winter that followed did not break for nine
+              years: the valleys emptied, the villages went under the snow and did not come
+              out. They set this stone after, so no hunter again would loose on the white
+              one — for to kill it is to feed your people one winter and freeze them through
+              all the winters after.
+        next: shrine
+      - id: leave_stone
+        text: "Rise and go back to the tarn's edge."
+        next: tarn
+
+  - id: bluff
+    title: "Within Bowshot"
+    text: >
+      The shore brings you out on a low bluff, and there it is — the white stag broadside
+      on the spit, a long stone's throw off, an easy mark for a steady hand. It has not
+      moved. It turns its head and looks at you across the bowshot, calm as a thing that
+      has already made its peace, and waits to see what you will do.
+    # Knowing what it is colors the shot in the MOMENT, not only the epilogue (the
+    # wreckers_light lantern_room/gallery device): the bluff reframes when knows_truth.
+    variants:
+      - when: [{ has_flag: knows_truth }]
+        text: >
+          The shore brings you out on a low bluff, and there it is — the white stag broadside
+          on the spit, a long stone's throw off, an easy mark for a steady hand. But the
+          stone's warning is in you now, and you cannot look at it as quarry: this is the
+          winter's keeper, the wood's bound heart, the thread the spring climbs back along.
+          It turns its head and looks at you across the bowshot, calm as a thing that has
+          already made its peace, and waits to see whether you have understood.
+    choices:
+      - id: loose_arrow
+        text: "Loose your one good arrow and take the stag."
+        next: ending_quarry
+      - id: lower_bow
+        text: "Lower the bow and let it walk."
+        next: ending_thaw
+      - id: lay_offering
+        # The gated "best" ending — only the player who read the stone can lay the means
+        # down as a knowing rite (proof-gated finale, cf. watchtower). Surrendering the bow
+        # and arrow is the mirror of the kill: the same one object, the opposite act
+        # (the wreckers_light oil+striker symmetry).
+        text: "Kneel and lay your bow and your one arrow on the ice, an offering."
+        conditions: [{ has_flag: knows_truth }]
+        next: ending_offering
+      - id: back_to_tarn
+        text: "Step back from the bluff to the tarn's edge."
+        next: tarn
+
+endings:
+  - id: ending_quarry
+    title: "The Hide and the Gold"
+    # knows_truth reframes the SAME act: the ignorant kill is a tragedy of not knowing;
+    # the knowing kill is a desperate damnation chosen over a plain warning (the paired
+    # reactive epilogue device — wreckers_light ending_wrecker, the manor's two letters).
+    variants:
+      - when: [{ has_flag: knows_truth }]
+        text: >
+          You knew, and you loosed all the same. The stone said it plain — the winter's
+          keeper, the thread the spring climbs back along — and you weighed nine years of
+          snow against the quiet of your own children tonight, and chose tonight. The arrow
+          flies true. The white stag folds onto the ice without a sound, and the cold comes
+          down out of the pines like a held breath let go. You carry the hide home and the
+          gold buys bread, and the children eat, and you watch the door for the thaw that
+          you already know will not come — not this spring, nor the next, nor for a long
+          count of winters you will not all live to see the end of. You fed them once. You
+          will answer for the rest.
+    text: >
+      You draw, and hold, and loose. The arrow flies true; the white stag folds onto the
+      ice without a sound, and a great stillness comes down out of the pines. You carry the
+      heavy white hide home through the dark, and the lord's gold is real and cold in your
+      hand, and the children eat at last. It is only later — when the spring will not come,
+      when the snow lies into what should be summer and the old folk begin to speak of a
+      curse and a stone they should have read — that you wonder what it was, exactly, that
+      you killed on the ice that night, and what its dying took down with it.
+
+  - id: ending_thaw
+    title: "The Stag Walks"
+    # knows_truth reframes mercy from instinct to understanding (still good, but not the
+    # full rite the offering is).
+    variants:
+      - when: [{ has_flag: knows_truth }]
+        text: >
+          You lower the bow, because the stone told you true and you will not be the hunter
+          on it. For a long moment the keeper holds your eye — and then it turns, unhurried,
+          and walks the spit into the pines, and is gone like breath off cold iron. You go
+          home empty-handed to a hungry house, and you cannot make them believe the why of
+          it. But the wind shifts in the night. Inside a week the eaves are dripping; inside
+          a fortnight the river breaks its ice early and the deep snow goes off the south
+          slopes, and the lean weeks pass and do not become the killing ones. The thread of
+          the spring held, because you let it. No one will ever thank you for the meat you
+          did not bring. You know what you did, and the wood knows, and that is the whole of
+          your wage.
+    text: >
+      Something in the way it stands — unafraid, waiting, too steady — turns your hand. You
+      lower the bow. For a long moment the white stag holds your eye, and then it turns and
+      walks the spit into the pines, unhurried, and is gone. You go home empty-handed to a
+      hungry house and no good answer for it. But the wind shifts in the night, and within
+      the week the eaves are dripping and the river breaks early and the deep snow goes off
+      the slopes, and the lean weeks pass and do not become the killing ones. You never quite
+      understand it — only that you spared a strange white beast on the ice, and the spring
+      came kind, and the children lived to see it.
+
+  - id: ending_offering
+    title: "The Hunter Who Knelt"
+    # The gated finale: only the player who read the stone (knows_truth) can reach this.
+    # No variant needed — it is unreachable without the truth.
+    text: >
+      You understand now what stands on the spit, and you will not weigh it. You kneel on
+      the bluff and lay your bow down on the black ice, and your one good arrow across it,
+      and you take your hands away — the hunt set down, freely, before the winter's keeper.
+      The white stag lowers its great head to you across the bowshot, slow and grave, the
+      way one keeper of a hard country acknowledges another. Then it is gone into the pines.
+      The thaw that follows is the swiftest in living memory — the river loud, the slopes
+      bared, the first green a fortnight early — and that lean spring the wood is strangely
+      good to your village: deer come down to easy ground, the snares fill, a fall of timber
+      no one felled lies ready by the path. You brought home no hide and no gold. You brought
+      home the spring itself, and the wood does not forget the hunter who knelt.
+
+  - id: ending_lost
+    title: "The Black Water"
+    text: >
+      You step out onto the tarn, and for six strides the rotten ice only ticks and sighs
+      beneath your boots. On the seventh it lets go. There is no cold like the first of it,
+      and then there is no cold at all — only the black water closing green and quiet over
+      your head, and far above, through the splintered ice, a pale shape standing patient on
+      the spit, watching the place where you went down. The wood keeps its heart. It does not
+      give up the foolish, or the hide they came for.
