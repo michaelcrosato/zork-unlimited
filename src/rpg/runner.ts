@@ -26,7 +26,8 @@ import {
   type ParserActionOption,
 } from "../parser/legal_actions.js";
 import { evalConditions } from "../core/conditions.js";
-import { winningEnding } from "../parser/runner.js";
+import type { GameEvent } from "../core/events.js";
+import { winningEnding, scoreChangeNarrations } from "../parser/runner.js";
 import { type RpgPack, type Enemy } from "./schema.js";
 import { resolveAttack, resolveSkillCheck, enemyAlive } from "./combat.js";
 
@@ -114,6 +115,13 @@ export function buildRpgRules(index: RpgIndex): Rules {
     checkWin(state: GameState): Effect[] {
       const ending = winningEnding(index, state);
       return ending ? [{ end_game: ending }] : [];
+    },
+
+    // Same Zork-style score feedback the parser runner emits — RPG packs track score
+    // through the conventional `score` var too (§13 Stage 4 awards), so a +N here
+    // (e.g. claiming the relic) gets the player-facing "[Your score has gone up…]" line.
+    decorateEvents(events: GameEvent[]): GameEvent[] {
+      return scoreChangeNarrations(events, index.pack.meta.max_score ?? 0);
     },
   };
 }

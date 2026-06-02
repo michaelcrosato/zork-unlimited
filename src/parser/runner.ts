@@ -20,9 +20,11 @@ import { evalConditions } from "../core/conditions.js";
 import type { Effect } from "../core/effects.js";
 import type { Action } from "../api/types.js";
 import type { GameState } from "../core/state.js";
+import type { GameEvent } from "../core/events.js";
 import type { Resolution, Rules } from "../core/engine.js";
 import { type ParserIndex } from "./model.js";
 import { enumerateActions, resolveParserAction } from "./legal_actions.js";
+import { SCORE_VAR } from "./schema.js";
 
 export { indexParserPack, initStateForParserPack, type ParserIndex } from "./model.js";
 
@@ -34,7 +36,47 @@ export function winningEnding(index: ParserIndex, state: GameState): string | nu
   return null;
 }
 
+/**
+ * Zork-style score feedback (§13 Stage 3) — the player-facing narrator for a score
+ * change. bug_0060 added a signed `delta` to `score` inc_var/dec_var events *so that*
+ * a narrator could surface "points just earned"; this is that narrator. For each
+ * score-var change in a step's events it emits one narration line — the classic
+ * "[Your score has gone up by N points; it is now M of T.]" — so a first-time player
+ * SEES the award land instead of watching the HUD number jump unexplained (the lone
+ * concrete finding of the sealed_crypt blind playtest, ai-runs/2026-06-02T09-21-43-791Z).
+ *
+ * Engine chrome, not content: it is derived generically from the conventional `score`
+ * var and `meta.max_score`, so every parser/rpg pack that tracks score gets the feedback
+ * with no per-pack authoring (the same pattern as observation.ts's "Final score: X of Y."
+ * ending closure). Packs that don't track score (max_score 0 — e.g. CYOA) get nothing.
+ * Authored `narrate` text on the same effect is untouched; the score line is appended
+ * after it, mirroring how Zork prints the score note at the end of the turn.
+ */
+export function scoreChangeNarrations(events: GameEvent[], maxScore: number): GameEvent[] {
+  if (maxScore <= 0) return [];
+  const out: GameEvent[] = [];
+  for (const e of events) {
+    if (e.type !== "state_change") continue;
+    const ev = e as Record<string, unknown>;
+    if ((ev.effect !== "inc_var" && ev.effect !== "dec_var") || ev.name !== SCORE_VAR) continue;
+    const delta = ev.delta;
+    // delta is 0 when a non-finite result was rejected (the guardFinite path) — no
+    // real change happened, so say nothing rather than narrate a phantom "+0 points".
+    if (typeof delta !== "number" || delta === 0) continue;
+    const total = typeof ev.value === "number" ? ev.value : 0;
+    const mag = Math.abs(delta);
+    const dir = delta > 0 ? "gone up" : "gone down";
+    const pts = mag === 1 ? "point" : "points";
+    out.push({
+      type: "narration",
+      text: `[Your score has ${dir} by ${mag} ${pts}; it is now ${total} of ${maxScore}.]`,
+    });
+  }
+  return out;
+}
+
 export function buildParserRules(index: ParserIndex): Rules {
+  const maxScore = index.pack.meta.max_score ?? 0;
   return {
     legalActions(state: GameState): Action[] {
       return enumerateActions(index, state).map((o) => o.action);
@@ -55,6 +97,10 @@ export function buildParserRules(index: ParserIndex): Rules {
     checkWin(state: GameState): Effect[] {
       const ending = winningEnding(index, state);
       return ending ? [{ end_game: ending }] : [];
+    },
+
+    decorateEvents(events: GameEvent[]): GameEvent[] {
+      return scoreChangeNarrations(events, maxScore);
     },
   };
 }

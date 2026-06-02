@@ -46,6 +46,17 @@ export type Rules = {
    * reach-the-room wins, `checkWin` covers act-in-the-room wins).
    */
   checkWin?(state: GameState): Effect[];
+  /**
+   * Optional: append extra events derived from the events a step just produced —
+   * engine *chrome*, not content. The canonical use is Zork-style score feedback:
+   * the parser/rpg runners turn a `score` inc_var/dec_var event into a player-facing
+   * "[Your score has gone up by N points…]" narration (the same generic-chrome idea
+   * as the observation's "Final score: X of Y." closure). Pure: it sees the full,
+   * ordered event list for the step and returns only the events to append. The
+   * content-free engine never inspects which var is "score" — that knowledge stays
+   * in the content layer that supplies this hook. Omitted ⇒ no decoration (CYOA).
+   */
+  decorateEvents?(events: GameEvent[]): GameEvent[];
 };
 
 /** Structural equality for actions — used to test membership in the legal set. */
@@ -100,6 +111,14 @@ export function makeStep(rules: Rules) {
       const win = applyEffects(rules.checkWin(next), next);
       next = win.state;
       events.push(...win.events);
+    }
+
+    // Engine chrome: append decoration events (e.g. score-change feedback) derived
+    // from everything that just happened this step. State-free — it adds player-facing
+    // narration only, never mutates `next` — so determinism and the state hash are
+    // untouched. Run last, so the score line lands after the action's own narration.
+    if (rules.decorateEvents) {
+      events.push(...rules.decorateEvents(events));
     }
 
     // §8.4.6 — advance the step counter (state hash is recomputed by callers/trace).
