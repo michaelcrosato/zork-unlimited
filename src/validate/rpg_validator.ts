@@ -7,9 +7,15 @@
  * check is not mis-flagged impossible. Then we add Stage-4 invariants:
  *  - the player has the conventional stat vars (HP/attack/defense), HP > 0;
  *  - every enemy stands in a real room and names a declared DEATH ending;
- *  - every fight is WINNABLE — even best-case player (best reachable HP/attack/
- *    defense) vs. worst-case-for-them rolls must not kill the player before the
- *    enemy falls (conservative: only a truly impossible fight is an error);
+ *  - every fight is WINNABLE — on the player's BEST reachable HP/attack/defense and
+ *    the LUCKIEST rolls (player max damage, enemy min damage), the player must still
+ *    be standing when the enemy falls. This is a deliberately CONSERVATIVE lower
+ *    bound: an ERROR fires only on a fight that is impossible even then. It is NOT a
+ *    worst-case-roll survival guarantee — a deliberately luck-dependent fight that a
+ *    fully-prepared player can still LOSE on bad rolls (cold_forge/sunken_barrow's
+ *    intentional "preparation is a real gamble" tuning, bug_0101/0102) is PERMITTED,
+ *    not flagged. (bug_0113: this proof once claimed a worst-case guarantee it never
+ *    computed — the contract now matches the code.)
  *  - every skill check is PASSABLE — d20 + the best reachable skill can meet the
  *    difficulty;
  *  - every end_game inside on_defeat / on_success / on_failure is declared.
@@ -146,18 +152,24 @@ export function validateRpg(pack: RpgPack): ValidationReport {
         ),
       );
 
-    // Winnability: best-case player damage (d6 max = 6, with best reachable attack)
-    // vs. worst-case enemy damage (d6 min = 1, against best reachable defense), from
-    // best reachable HP. Enemy attacks once per round the player fails to kill it.
+    // Winnability is proved on the LUCKIEST rolls for the player: max player damage
+    // (d6 = 6, with best reachable attack) ends the fight in the FEWEST rounds, and
+    // min enemy damage (d6 = 1, against best reachable defense) is the LEAST the
+    // player can take per surviving round — so `minDamageTaken` is the smallest total
+    // damage any run could inflict. The player attacks first each round, so the enemy
+    // retaliates only on the rounds it survives (roundsToKill - 1). If even that
+    // best-case total would drop the player, NO sequence of rolls can win → the fight
+    // is truly impossible (an ERROR). A fight winnable here but lethal on WORSE rolls
+    // is a permitted gamble, deliberately NOT flagged (see the file docstring).
     const bestPlayerDmg = Math.max(1, 6 + playerAtk - enemy.defense);
     const roundsToKill = Math.ceil(enemy.hp / bestPlayerDmg);
     const minEnemyDmg = Math.max(1, 1 + enemy.attack - playerDef);
-    const worstCaseDamageTaken = minEnemyDmg * (roundsToKill - 1);
-    if (worstCaseDamageTaken >= playerHp) {
+    const minDamageTaken = minEnemyDmg * (roundsToKill - 1);
+    if (minDamageTaken >= playerHp) {
       findings.push(
         err(
           "COMBAT_UNWINNABLE",
-          `enemy "${enemy.id}" cannot be beaten even with best-case rolls and the player's best reachable stats (needs ${roundsToKill} rounds; would take ≥${worstCaseDamageTaken} damage vs ${playerHp} reachable HP).`,
+          `enemy "${enemy.id}" cannot be beaten even with best-case rolls and the player's best reachable stats (needs ${roundsToKill} rounds; would take ≥${minDamageTaken} damage vs ${playerHp} reachable HP).`,
           [`enemy:${enemy.id}`],
         ),
       );
