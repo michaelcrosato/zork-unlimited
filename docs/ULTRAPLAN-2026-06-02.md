@@ -6,6 +6,28 @@ autonomous-improvement/reward-hacking research, distribution paths) → one synt
 then verified against the live repo. This supersedes `ROADMAP.md` as the strategic
 layer; the roadmap's milestone mechanics remain valid where not contradicted here.
 
+> **Implementation status (2026-06-02).** The hour/day/week infrastructure has
+> landed on `main`, all green (`npm run health`: 721 tests + integrity static &
+> drift):
+> - ✅ **Keystone** — `adapt_story` now calls `resolveProvider({ mock })`: a real
+>   ANTHROPIC/OPENAI/GOOGLE model authors when its key is set, mock otherwise. The
+>   §1 author is now reachable without a key in CI. *(A keyed end-to-end run remains
+>   the one step that needs an API key.)*
+> - ✅ **Trace v2** — `per_step_hashes` persisted; replay reports `divergedAtStep`.
+> - ✅ **Correctness guards** — finite-number guard on vars (no NaN/Infinity
+>   poisoning); differential SHA-256 conformance vs `node:crypto`.
+> - ✅ **Loop salvage** — assessor rotates the blind pass onto the least-recently
+>   attended pack (no clockwork lock-in) and raises a self-extinguishing frontier
+>   benchmark lever.
+> - ✅ **Benchmark scorecard** — `npm run benchmark` (`bin/benchmark.ts`) emits a
+>   deterministic JSON+markdown scorecard over every pack; first row committed at
+>   `traces/benchmark/scorecard.{md,json}`.
+> - ✅ **Governance** — `ROADMAP.md` reconciled to the trust-but-verify charter.
+>
+> Still ahead (need a key or are larger/external): the keyed real-model
+> author→play→fix→lock run, the fresh-pack generator, the GitHub-Pages demo, and the
+> preprint. The loop is intentionally left stopped until the keyed run.
+
 ---
 
 ## 1. The honest status: the proof is done — against a mock
