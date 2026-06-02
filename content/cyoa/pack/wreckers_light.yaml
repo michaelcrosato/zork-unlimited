@@ -157,6 +157,18 @@ scenes:
       gropes along the coast — the ship, still seaward of the reef, still saveable, if
       the lamp would only burn.
     variants:
+      # Most-specific first (first-match-wins): once you've read the journal AND carry the
+      # means, the save-beat itself is reframed — you light the way KNOWING whose hand is at
+      # the wheel. This makes the journal's payoff legible at the moment of choice, not only
+      # in the epilogue (blind-playtest finding, ai-runs/2026-06-02T10-35-28-612Z).
+      - when: [{ has_item: lamp_oil }, { has_item: striker }, { has_flag: knows_truth }]
+        text: >
+          Glass on every side and the storm clawing at it. The great lamp crouches cold at
+          the center, its wick dry, its mirrors blind — and you have oil to fill it and a
+          striker to wake it. Far below, the small light still gropes seaward of the reef:
+          the Mourning Star, and the man at her wheel who ran the keeper's son onto these
+          rocks and called it law. One spark steers him clear into the dawn. To wake the
+          lamp now is to pay a debt with a steady hand that a vengeful one never could.
       - when: [{ has_item: lamp_oil }, { has_item: striker }]
         text: >
           Glass on every side and the storm clawing at it. The great lamp crouches cold
@@ -200,6 +212,18 @@ scenes:
       teeth. Out in the dark the real ship gropes nearer, trusting a coast that shows
       her nothing.
     variants:
+      # Most-specific first (first-match-wins): the informed wreck-beat is vengeance, not
+      # greed — the journal's truth colors the false-light choice in the moment, mirroring
+      # the reactive epilogue (blind-playtest finding, ai-runs/2026-06-02T10-35-28-612Z).
+      - when: [{ has_item: lamp_oil }, { has_item: striker }, { has_flag: knows_truth }]
+        text: >
+          A slick iron balcony girdling the tower, the sea exploding white on the rocks a
+          sickening drop below. The rusted bracket juts low at the rail — and you carry the
+          means to fill it and light it. Out in the dark gropes the Mourning Star, the man
+          who drowned the keeper's son standing at her wheel, trusting a coast that shows
+          her nothing. A false low light here would walk him onto the teeth that took the
+          boy. The sea gave the keeper no justice these seven winters; it could give you
+          this, and call the cargo on the tideline your wage.
       - when: [{ has_item: lamp_oil }, { has_item: striker }]
         text: >
           A slick iron balcony girdling the tower, the sea exploding white on the rocks a
