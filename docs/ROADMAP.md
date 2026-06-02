@@ -1,8 +1,18 @@
 # AdventureForge — implementation roadmap (local plan-ultra)
 
-Guiding invariants (non-negotiable, from the spec): determinism §8.5 · content is
-data never code §16 · new engine verbs only via the §14 gate · every fix gets a
-regression test + bug artifact §15 · tests run on the mock provider, no keys.
+> **⚠️ Governance + currency note (2026-06-02).** The governing charter is
+> [`AGENTS.md`](../AGENTS.md): **trust, but verify** — the agent has full authority
+> over all game code and the **§14 engine-extension gate is RETIRED**. Where this
+> roadmap below calls the §14 gate a "non-negotiable invariant," read that as
+> *historical* context: a new effect/condition/verb needs no gate ceremony, only a
+> green verification bar (`npm run health` + `verify:integrity`). The **strategic
+> layer is now [`docs/ULTRAPLAN-2026-06-02.md`](./ULTRAPLAN-2026-06-02.md)**; the
+> milestones below are largely delivered and kept for provenance.
+
+Guiding invariants (still in force, from the spec): determinism §8.5 · content is
+data never code §16 · every fix gets a regression test + bug artifact §15 · tests
+run on the mock provider, no keys. (The §14 engine-extension gate is **retired**
+under trust-but-verify — verification is the only bar; see the note above.)
 
 ---
 
