@@ -287,3 +287,7 @@ bar — the autonomous loop and CI must leave it green (trust, but verify; see
 `AGENTS.md`). Provider-agnostic LLM access (`agents/llm/`) defaults to a
 deterministic mock, so everything runs with no API keys; real
 OpenAI/Anthropic/Google backends sit behind env vars (§12.7).
+
+## License
+
+Released under the [MIT License](LICENSE). Copyright (c) 2026 Michael Crosato.

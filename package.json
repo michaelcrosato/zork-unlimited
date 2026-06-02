@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "license": "MIT",
   "description": "AI-authored, deterministic text-adventure engine. Stages 0–5: deterministic core, CYOA, Zork-style parser, Sierra-Quest scoring, Hero's-Quest RPG, and a React web UI.",
   "engines": {
     "node": ">=22"
