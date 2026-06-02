@@ -63,3 +63,42 @@ describe("trace record / replay (§8.8)", () => {
     expect(result.message).toContain("!=");
   });
 });
+
+describe("trace v2: per-step divergence localization (§8.8)", () => {
+  const newTrace = () =>
+    recordTrace(microRules, microInitState(), WIN, {
+      trace_id: "tr_v2",
+      pack_id: MICRO_PACK_ID,
+      content_hash: MICRO_CONTENT_HASH,
+    });
+
+  it("records a per-step hash for every action", () => {
+    const trace = newTrace();
+    expect(trace.per_step_hashes).toBeDefined();
+    expect(trace.per_step_hashes).toHaveLength(WIN.length);
+  });
+
+  it("a faithful replay reports no divergence", () => {
+    const result = replayTrace(newTrace(), microRules);
+    expect(result.ok).toBe(true);
+    expect(result.divergedAtStep).toBeUndefined();
+  });
+
+  it("localizes the FIRST divergent action when a per-step baseline is tampered", () => {
+    const trace = newTrace();
+    const hashes = [...trace.per_step_hashes!];
+    hashes[2] = "0".repeat(64); // corrupt the 3rd step's recorded baseline
+    const tampered = { ...trace, per_step_hashes: hashes };
+    const result = replayTrace(tampered, microRules);
+    expect(result.ok).toBe(false);
+    expect(result.divergedAtStep).toBe(2);
+    expect(result.message).toContain("step 2");
+  });
+
+  it("a v1 trace (no per_step_hashes) replays exactly as before — backward compatible", () => {
+    const { per_step_hashes: _omit, ...v1 } = newTrace();
+    const result = replayTrace(v1, microRules);
+    expect(result.ok).toBe(true);
+    expect(result.divergedAtStep).toBeUndefined();
+  });
+});

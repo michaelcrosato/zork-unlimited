@@ -21,6 +21,13 @@ export type Trace = {
   actions: Action[];
   /** Optional; asserted on replay (§8.8). */
   expected_final_hash?: string;
+  /**
+   * Trace v2 (optional, additive). The post-state hash after each action, in
+   * order — `per_step_hashes[i]` is the hash after `actions[i]`. When present,
+   * replay pinpoints the FIRST divergent action (`divergedAtStep`) instead of
+   * only the final hash. Omitted on v1 traces, which replay unchanged.
+   */
+  per_step_hashes?: string[];
 };
 
 export type RunResult = {
@@ -67,5 +74,6 @@ export function recordTrace(
     initial_state: initialState,
     actions,
     expected_final_hash: hashState(run.finalState),
+    per_step_hashes: run.hashes,
   };
 }
