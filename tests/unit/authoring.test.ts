@@ -10,9 +10,10 @@
 import { describe, it, expect } from "vitest";
 import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
 import { loadEngineContract, runWriter } from "../../agents/authoring/writer.js";
-import { runAdapter, runParserAdapter } from "../../agents/authoring/adapter.js";
+import { runAdapter, runParserAdapter, runRpgAdapter } from "../../agents/authoring/adapter.js";
 import { validateCyoa } from "../../src/validate/cyoa_validator.js";
 import { validateParser } from "../../src/validate/parser_validator.js";
+import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
 import { buildObservation } from "../../src/cyoa/observation.js";
 import { makeStep } from "../../src/core/engine.js";
@@ -86,6 +87,29 @@ describe("parser adapter (§12.2–3, bug_0139)", () => {
   it("classifies every beat (the writer is mode-agnostic; same beats as CYOA)", async () => {
     const story = await runWriter(provider, { premise: PREMISE, contract });
     const result = await runParserAdapter(provider, { story, contract });
+    expect(result.classifications.map((c) => c.beat_id).sort()).toEqual(
+      story.beats.map((b) => b.id).sort(),
+    );
+  });
+});
+
+describe("rpg adapter (§12.2–3, §13 Stage 4, bug_0140)", () => {
+  it("loops against the RICHEST validator (validateRpg) and converges to a GREEN pack", async () => {
+    const story = await runWriter(provider, { premise: PREMISE, contract });
+    const result = await runRpgAdapter(provider, { story, contract });
+    expect(result.ok).toBe(true);
+    expect(result.report.ok).toBe(true);
+    // The mock's first RPG attempt ships an undeclared enemy death_ending, so it revises.
+    expect(result.rounds).toBeGreaterThanOrEqual(2);
+    // The produced pack independently re-validates green through the RPG validator, and is
+    // a genuine Stage-4 shape (enemies on top of the parser pack).
+    expect(validateRpg(result.pack).ok).toBe(true);
+    expect(result.pack.enemies.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("classifies every beat (the writer is mode-agnostic; same beats as CYOA/parser)", async () => {
+    const story = await runWriter(provider, { premise: PREMISE, contract });
+    const result = await runRpgAdapter(provider, { story, contract });
     expect(result.classifications.map((c) => c.beat_id).sort()).toEqual(
       story.beats.map((b) => b.id).sort(),
     );

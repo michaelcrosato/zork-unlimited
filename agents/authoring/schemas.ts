@@ -10,6 +10,7 @@
 import { z } from "zod";
 import { CyoaPackSchema } from "../../src/cyoa/schema.js";
 import { ParserPackSchema } from "../../src/parser/schema.js";
+import { RpgPackSchema } from "../../src/rpg/schema.js";
 
 export const WriterStorySchema = z
   .object({
@@ -67,3 +68,18 @@ export const ParserAdapterOutputSchema = z
   })
   .strict();
 export type ParserAdapterOutput = z.infer<typeof ParserAdapterOutputSchema>;
+
+/** The RPG-mode Adapter's output: a schema-valid RPG pack (a parser pack PLUS enemies,
+ *  stats, and skill checks — §13 Stage 4) + the same per-beat classification. Same role
+ *  as the CYOA/parser schemas but routed through the RICHEST validator, `validateRpg`:
+ *  every parser invariant (reference integrity / reachability / soft-lock / win) PLUS the
+ *  Stage-4 layer — player stat vars, enemies in real rooms naming declared DEATH endings,
+ *  combat winnability, and skill-check passability. This closes the authoring loop over all
+ *  three modes (ULTRAPLAN §Week.4: the richest validators behind a real authoring loop). */
+export const RpgAdapterOutputSchema = z
+  .object({
+    pack: RpgPackSchema,
+    classifications: z.array(BeatClassificationSchema).min(1),
+  })
+  .strict();
+export type RpgAdapterOutput = z.infer<typeof RpgAdapterOutputSchema>;

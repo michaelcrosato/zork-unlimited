@@ -11,19 +11,25 @@
  * The loop is mode-agnostic (`runAdaptLoop`): `runAdapter` routes a CYOA pack through
  * `validateCyoa`, `runParserAdapter` routes a Zork-style PARSER pack through the
  * richer `validateParser` (reference integrity / reachability / soft-lock / win
- * reachability). Same author → validate → revise machinery, now covering parser as
- * well as CYOA (ULTRAPLAN §Week.4: the richest validators behind a real authoring loop).
+ * reachability), and `runRpgAdapter` routes an RPG pack through the RICHEST validator,
+ * `validateRpg` (every parser invariant PLUS the Stage-4 layer: player stats, enemies
+ * naming declared death endings, combat winnability, skill-check passability). Same
+ * author → validate → revise machinery, now covering all three modes (ULTRAPLAN
+ * §Week.4: the richest validators behind a real authoring loop).
  */
 import type { Provider } from "../llm/provider.js";
 import {
   AdapterOutputSchema,
   ParserAdapterOutputSchema,
+  RpgAdapterOutputSchema,
   type BeatClassification,
 } from "./schemas.js";
 import type { CyoaPack } from "../../src/cyoa/schema.js";
 import type { ParserPack } from "../../src/parser/schema.js";
+import type { RpgPack } from "../../src/rpg/schema.js";
 import { validateCyoa } from "../../src/validate/cyoa_validator.js";
 import { validateParser } from "../../src/validate/parser_validator.js";
+import { validateRpg } from "../../src/validate/rpg_validator.js";
 import type { Finding, ValidationReport } from "../../src/validate/report.js";
 import type { WriterStory } from "./schemas.js";
 import type { ZodType, ZodTypeDef } from "zod";
@@ -39,6 +45,14 @@ const PARSER_ADAPTER_SYSTEM =
   "PARSER content pack (rooms, objects, exits, win_conditions, endings) and classify " +
   "every beat against the engine contract's adaptation labels. If prior_errors are " +
   "present, fix exactly those reference/reachability/soft-lock issues. Respond as JSON.";
+
+const RPG_ADAPTER_SYSTEM =
+  "You are a game designer. Adapt the story + beats into a schema-valid Stage-4 RPG " +
+  "content pack (a parser pack PLUS player stats in meta.vars_init, enemies, and skill " +
+  "checks) and classify every beat against the engine contract's adaptation labels. " +
+  "Every enemy must stand in a real room and name a declared DEATH ending; every fight " +
+  "must be winnable and every skill check passable. If prior_errors are present, fix " +
+  "exactly those reference/reachability/soft-lock/combat/skill-check issues. Respond as JSON.";
 
 export type AdaptResult<P = CyoaPack> = {
   ok: boolean;
@@ -120,5 +134,21 @@ export function runParserAdapter(
     schemaName: "ParserAdapterOutput",
     schema: ParserAdapterOutputSchema,
     validate: (pack) => validateParser(pack),
+  });
+}
+
+/** Adapt a story into a validated RPG pack, looping until the RICHEST validator —
+ *  `validateRpg` (the full parser checks PLUS the Stage-4 combat/skill-check layer) — is
+ *  green. The same loop as runAdapter/runParserAdapter, behind the deepest validator;
+ *  completes the authoring pipeline's coverage of all three engine modes. */
+export function runRpgAdapter(
+  provider: Provider,
+  opts: { story: WriterStory; contract: unknown; maxRounds?: number },
+): Promise<AdaptResult<RpgPack>> {
+  return runAdaptLoop(provider, opts, {
+    system: RPG_ADAPTER_SYSTEM,
+    schemaName: "RpgAdapterOutput",
+    schema: RpgAdapterOutputSchema,
+    validate: (pack) => validateRpg(pack),
   });
 }
