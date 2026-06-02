@@ -1,6 +1,6 @@
 bug_id: bug_0002
 pack_id: watchtower_road_v1
-content_hash: cd749bd5dd9c7c456f6b539989496ad0171734c4538fbb1dad1a802bc27e3698  # re-pinned by bug_0120 (tower_top one-shot light_beacon gate + raised_alarm scene variant; was bug_0108's 862b33ad… — itself after bug_0104's f6b64fd9… and bug_0098's 95cf3665…)
+content_hash: f989028090c8dd6aa2ba27e54cd400b3ae970d53b579840fdfd2beadd044b33a  # re-pinned by bug_0127 (take_letter journal disambiguated: "the right pair of eyes — not your own" replaces "a knowing eye" so it no longer reads as a self-affordance; was bug_0120's cd749bd5… — itself after bug_0108's 862b33ad…, bug_0104's f6b64fd9…, bug_0098's 95cf3665…)
 seed: 7
 initial_state: start
 # Surfaced by a BLIND MCP playtester subagent (no access to source/content) playing

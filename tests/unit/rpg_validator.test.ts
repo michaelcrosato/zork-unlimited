@@ -88,8 +88,14 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // not_flag raised_alarm and carries a raised_alarm scene variant so a player who
     // relit the beacon no longer saw "a cold brazier waits, begging for a flame" while
     // the already-done "Light the signal beacon" choice was re-offered (blind seed 11,
-    // ai-runs/2026-06-02T11-34-06-334Z/playtest.md §5; was 862b33ad…). Any *unintended*
-    // change to compilation trips this.
-    expect(loaded.compiled.contentHash).toBe("cd749bd5dd9c7c456f6b539989496ad0171734c4538fbb1dad1a802bc27e3698");
+    // ai-runs/2026-06-02T11-34-06-334Z/playtest.md §5; was 862b33ad…); and bug_0127 —
+    // bug_0108's take_letter journal still read "a knowing eye could break open and read"
+    // as a SELF-affordance, so a fresh blind playtester on the east-only route (seed 12,
+    // ai-runs/2026-06-02T13-20-51-530Z/playtest.md §4/§5) hunted for a way to crack the
+    // seal themselves and never found one (only the hermit, west, breaks it). The journal
+    // now says "the right pair of eyes — not your own; the seal is set too hard for that —
+    // could break open and read," disclaiming the self-action while keeping bug_0108's
+    // two-use foreshadow (was cd749bd5…). Any *unintended* change to compilation trips this.
+    expect(loaded.compiled.contentHash).toBe("f989028090c8dd6aa2ba27e54cd400b3ae970d53b579840fdfd2beadd044b33a");
   });
 });
