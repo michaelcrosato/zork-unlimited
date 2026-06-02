@@ -32,7 +32,8 @@
       "ending_coverage": 0.4,
       "scenes_total": 7,
       "scenes_visited": 6,
-      "scene_coverage": 0.857
+      "scene_coverage": 0.857,
+      "mean_turns_to_end": 13.8
     },
     {
       "pack_id": "clockwork_heist_v1",
@@ -49,7 +50,8 @@
       "ending_coverage": 0.4,
       "scenes_total": 7,
       "scenes_visited": 6,
-      "scene_coverage": 0.857
+      "scene_coverage": 0.857,
+      "mean_turns_to_end": 13.8
     },
     {
       "pack_id": "clockwork_heist_v1",
@@ -66,7 +68,8 @@
       "ending_coverage": 1,
       "scenes_total": 7,
       "scenes_visited": 7,
-      "scene_coverage": 1
+      "scene_coverage": 1,
+      "mean_turns_to_end": 12.6
     },
     {
       "pack_id": "tithe_barn_v1",
@@ -83,7 +86,8 @@
       "ending_coverage": 0.5,
       "scenes_total": 4,
       "scenes_visited": 4,
-      "scene_coverage": 1
+      "scene_coverage": 1,
+      "mean_turns_to_end": 4
     },
     {
       "pack_id": "tithe_barn_v1",
@@ -100,7 +104,8 @@
       "ending_coverage": 0.5,
       "scenes_total": 4,
       "scenes_visited": 4,
-      "scene_coverage": 1
+      "scene_coverage": 1,
+      "mean_turns_to_end": 4
     },
     {
       "pack_id": "tithe_barn_v1",
@@ -117,7 +122,8 @@
       "ending_coverage": 0.75,
       "scenes_total": 4,
       "scenes_visited": 4,
-      "scene_coverage": 1
+      "scene_coverage": 1,
+      "mean_turns_to_end": 4.6
     },
     {
       "pack_id": "watchtower_road_v1",
@@ -134,7 +140,8 @@
       "ending_coverage": 1,
       "scenes_total": 20,
       "scenes_visited": 15,
-      "scene_coverage": 0.75
+      "scene_coverage": 0.75,
+      "mean_turns_to_end": 18.5
     },
     {
       "pack_id": "watchtower_road_v1",
@@ -151,7 +158,8 @@
       "ending_coverage": 1,
       "scenes_total": 20,
       "scenes_visited": 15,
-      "scene_coverage": 0.75
+      "scene_coverage": 0.75,
+      "mean_turns_to_end": 18.5
     },
     {
       "pack_id": "watchtower_road_v1",
@@ -168,7 +176,8 @@
       "ending_coverage": 0.667,
       "scenes_total": 20,
       "scenes_visited": 15,
-      "scene_coverage": 0.75
+      "scene_coverage": 0.75,
+      "mean_turns_to_end": 6.7
     },
     {
       "pack_id": "white_stag_v1",
@@ -185,7 +194,8 @@
       "ending_coverage": 0.5,
       "scenes_total": 4,
       "scenes_visited": 4,
-      "scene_coverage": 1
+      "scene_coverage": 1,
+      "mean_turns_to_end": 4
     },
     {
       "pack_id": "white_stag_v1",
@@ -202,7 +212,8 @@
       "ending_coverage": 0.5,
       "scenes_total": 4,
       "scenes_visited": 4,
-      "scene_coverage": 1
+      "scene_coverage": 1,
+      "mean_turns_to_end": 4
     },
     {
       "pack_id": "white_stag_v1",
@@ -219,7 +230,8 @@
       "ending_coverage": 0.75,
       "scenes_total": 4,
       "scenes_visited": 4,
-      "scene_coverage": 1
+      "scene_coverage": 1,
+      "mean_turns_to_end": 4.6
     },
     {
       "pack_id": "wreckers_light_v1",
@@ -236,7 +248,8 @@
       "ending_coverage": 0.5,
       "scenes_total": 5,
       "scenes_visited": 5,
-      "scene_coverage": 1
+      "scene_coverage": 1,
+      "mean_turns_to_end": 4.1
     },
     {
       "pack_id": "wreckers_light_v1",
@@ -253,7 +266,8 @@
       "ending_coverage": 0.5,
       "scenes_total": 5,
       "scenes_visited": 5,
-      "scene_coverage": 1
+      "scene_coverage": 1,
+      "mean_turns_to_end": 4.1
     },
     {
       "pack_id": "wreckers_light_v1",
@@ -270,7 +284,8 @@
       "ending_coverage": 1,
       "scenes_total": 5,
       "scenes_visited": 5,
-      "scene_coverage": 1
+      "scene_coverage": 1,
+      "mean_turns_to_end": 8.4
     },
     {
       "pack_id": "alchemists_tower_v1",
@@ -287,7 +302,8 @@
       "ending_coverage": 0,
       "scenes_total": 8,
       "scenes_visited": 6,
-      "scene_coverage": 0.75
+      "scene_coverage": 0.75,
+      "mean_turns_to_end": 0
     },
     {
       "pack_id": "alchemists_tower_v1",
@@ -304,7 +320,8 @@
       "ending_coverage": 0,
       "scenes_total": 8,
       "scenes_visited": 1,
-      "scene_coverage": 0.125
+      "scene_coverage": 0.125,
+      "mean_turns_to_end": 0
     },
     {
       "pack_id": "alchemists_tower_v1",
@@ -321,7 +338,8 @@
       "ending_coverage": 0.5,
       "scenes_total": 8,
       "scenes_visited": 7,
-      "scene_coverage": 0.875
+      "scene_coverage": 0.875,
+      "mean_turns_to_end": 39.1
     },
     {
       "pack_id": "sealed_crypt_v1",
@@ -338,7 +356,8 @@
       "ending_coverage": 0,
       "scenes_total": 10,
       "scenes_visited": 3,
-      "scene_coverage": 0.3
+      "scene_coverage": 0.3,
+      "mean_turns_to_end": 0
     },
     {
       "pack_id": "sealed_crypt_v1",
@@ -355,7 +374,8 @@
       "ending_coverage": 0,
       "scenes_total": 10,
       "scenes_visited": 1,
-      "scene_coverage": 0.1
+      "scene_coverage": 0.1,
+      "mean_turns_to_end": 0
     },
     {
       "pack_id": "sealed_crypt_v1",
@@ -372,7 +392,8 @@
       "ending_coverage": 0,
       "scenes_total": 10,
       "scenes_visited": 9,
-      "scene_coverage": 0.9
+      "scene_coverage": 0.9,
+      "mean_turns_to_end": 0
     },
     {
       "pack_id": "cold_forge_v1",
@@ -389,7 +410,8 @@
       "ending_coverage": 0,
       "scenes_total": 6,
       "scenes_visited": 3,
-      "scene_coverage": 0.5
+      "scene_coverage": 0.5,
+      "mean_turns_to_end": 0
     },
     {
       "pack_id": "cold_forge_v1",
@@ -406,7 +428,8 @@
       "ending_coverage": 0,
       "scenes_total": 6,
       "scenes_visited": 1,
-      "scene_coverage": 0.167
+      "scene_coverage": 0.167,
+      "mean_turns_to_end": 0
     },
     {
       "pack_id": "cold_forge_v1",
@@ -423,7 +446,8 @@
       "ending_coverage": 0.5,
       "scenes_total": 6,
       "scenes_visited": 5,
-      "scene_coverage": 0.833
+      "scene_coverage": 0.833,
+      "mean_turns_to_end": 51
     },
     {
       "pack_id": "sunken_barrow_v1",
@@ -440,7 +464,8 @@
       "ending_coverage": 0,
       "scenes_total": 6,
       "scenes_visited": 3,
-      "scene_coverage": 0.5
+      "scene_coverage": 0.5,
+      "mean_turns_to_end": 0
     },
     {
       "pack_id": "sunken_barrow_v1",
@@ -457,7 +482,8 @@
       "ending_coverage": 0,
       "scenes_total": 6,
       "scenes_visited": 1,
-      "scene_coverage": 0.167
+      "scene_coverage": 0.167,
+      "mean_turns_to_end": 0
     },
     {
       "pack_id": "sunken_barrow_v1",
@@ -474,7 +500,8 @@
       "ending_coverage": 0.667,
       "scenes_total": 6,
       "scenes_visited": 6,
-      "scene_coverage": 1
+      "scene_coverage": 1,
+      "mean_turns_to_end": 35.7
     }
   ],
   "skipped": []

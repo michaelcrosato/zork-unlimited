@@ -49,6 +49,16 @@ export type BenchmarkRow = {
   scenes_visited: number;
   /** Locations visited / total (exploration breadth). */
   scene_coverage: number;
+  /**
+   * Mean actions taken to reach an ending, over the COMPLETED runs only (0 when none
+   * completed; rendered `—`). An efficiency axis (ULTRAPLAN §Week.4): fewer turns = a
+   * more direct route. Designed to pair with `hide_graph` as a second spatial signal —
+   * an agent that completes a parser/RPG pack both ways wanders more when blind, so the
+   * shown→hidden RISE in turns-to-end complements the scene-coverage drop. (The baseline
+   * coverage bot completes 0% of the spatial puzzle packs, so that pairing only populates
+   * for more capable agent rows.) CYOA has no room graph, so its hidden value equals shown.
+   */
+  mean_turns_to_end: number;
 };
 
 /** A scored configuration: one play strategy, with the room graph shown or hidden. */
@@ -131,6 +141,7 @@ export function buildScorecard(opts: BenchmarkOptions): Scorecard {
           scenes_total: scenesTotal,
           scenes_visited: scenesVisited,
           scene_coverage: ratio(scenesVisited, scenesTotal),
+          mean_turns_to_end: pt.mean_turns_to_end ?? 0,
         });
       } catch (e) {
         const tag = `${cell.strategy}${cell.hide_graph ? " (hidden graph)" : ""}`;
@@ -182,11 +193,20 @@ export function renderMarkdown(card: Scorecard): string {
     "The `Graph` column marks whether the room graph was hidden (ULTRAPLAN §Week.4): with it hidden the bot must navigate blind, so the coverage drop from `shown`→`hidden` on parser/RPG packs is the spatial-reasoning difficulty a model is scored against. CYOA has no room graph, so its hidden row matches its shown row.",
   );
   lines.push("");
-  lines.push("| Pack | Mode | Strategy | Graph | Completion | Endings | Ending cov | Scene cov |");
-  lines.push("| --- | --- | --- | --- | --: | --: | --: | --: |");
+  lines.push(
+    "`Turns→end` is the mean number of actions to reach an ending over completed runs (efficiency: fewer = a more direct route; `—` when no run completed). It is designed to pair with the `Graph` axis: an agent that completes a parser/RPG pack BOTH ways takes more turns navigating blind, so a shown→hidden rise in turns-to-end is a second spatial-difficulty signal beside the scene-coverage drop. The baseline coverage bot completes 0% of the spatial puzzle packs (it can't plan multi-step solutions), so its turns-to-end there reads `—`; the pairing populates as capable agent rows are added.",
+  );
+  lines.push("");
+  lines.push(
+    "| Pack | Mode | Strategy | Graph | Completion | Endings | Ending cov | Scene cov | Turns→end |",
+  );
+  lines.push("| --- | --- | --- | --- | --: | --: | --: | --: | --: |");
   for (const row of card.rows) {
+    // Turns-to-end is meaningful only when the bot actually completed a run; show a
+    // dash rather than a misleading "0.0" when nothing ended.
+    const turns = row.completed > 0 ? row.mean_turns_to_end.toFixed(1) : "—";
     lines.push(
-      `| ${row.pack_id} | ${row.mode} | ${row.strategy} | ${row.hide_graph ? "hidden" : "shown"} | ${pct(row.completion_rate)} | ${row.endings_reached}/${row.endings_declared} | ${pct(row.ending_coverage)} | ${pct(row.scene_coverage)} |`,
+      `| ${row.pack_id} | ${row.mode} | ${row.strategy} | ${row.hide_graph ? "hidden" : "shown"} | ${pct(row.completion_rate)} | ${row.endings_reached}/${row.endings_declared} | ${pct(row.ending_coverage)} | ${pct(row.scene_coverage)} | ${turns} |`,
     );
   }
   if (card.skipped.length > 0) {

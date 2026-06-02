@@ -39,6 +39,14 @@ describe("buildScorecard()", () => {
       }
       expect(row.endings_reached).toBeLessThanOrEqual(row.endings_declared);
       expect(row.scenes_visited).toBeLessThanOrEqual(row.scenes_total);
+      // Turns-to-end is defined only over completed runs: a completed row took at
+      // least one action to reach an ending; a 0%-completion row reads exactly 0.
+      if (row.completed > 0) {
+        expect(row.mean_turns_to_end).toBeGreaterThanOrEqual(1);
+        expect(row.mean_turns_to_end).toBeLessThanOrEqual(80); // a mean ≤ the max_steps cap
+      } else {
+        expect(row.mean_turns_to_end).toBe(0);
+      }
     }
   });
 
@@ -58,6 +66,8 @@ describe("buildScorecard()", () => {
       expect(hidden.scene_coverage).toBe(shown.scene_coverage);
       expect(hidden.completion_rate).toBe(shown.completion_rate);
       expect(hidden.ending_coverage).toBe(shown.ending_coverage);
+      // CYOA has no room graph, so turns-to-end is graph-agnostic too.
+      expect(hidden.mean_turns_to_end).toBe(shown.mean_turns_to_end);
     }
 
     // Spatial modes: at least one pack loses scene coverage when the graph is hidden
@@ -85,8 +95,11 @@ describe("buildScorecard()", () => {
     const md = renderMarkdown(card);
     expect(md).toContain("# Benchmark Scorecard");
     expect(md).toContain("| Pack | Mode | Strategy | Graph |");
+    expect(md).toContain("Turns→end |"); // the efficiency axis column
     expect(md).toContain("| hidden |");
     expect(md).toContain("| shown |");
+    // A 0%-completion row renders turns-to-end as a dash, not a misleading "0.0".
+    if (card.rows.some((r) => r.completed === 0)) expect(md).toContain("| — |");
     // One table row per scored cell (plus header + separator).
     const tableRows = md.split("\n").filter((l) => l.startsWith("| ") && !l.includes("---"));
     expect(tableRows.length).toBe(card.rows.length + 1); // +1 header

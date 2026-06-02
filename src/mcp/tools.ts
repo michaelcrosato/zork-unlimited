@@ -237,6 +237,11 @@ export function createToolApi(opts: { root: string }) {
 
   // ── Playtest: CYOA path is unchanged (byte-identical); parser/RPG added ───────
 
+  /** Mean actions per ended run, rounded to 1 decimal (0 when no run ended). */
+  function meanTurns(total: number, ended: number): number {
+    return ended > 0 ? Math.round((total / ended) * 10) / 10 : 0;
+  }
+
   function summarizePlaytest(args: {
     pack_path: string;
     runs?: number;
@@ -274,6 +279,11 @@ export function createToolApi(opts: { root: string }) {
     }[] = [];
     let ended = 0;
     let unfinished = 0;
+    // Sum of actions taken on runs that REACHED an ending — the numerator of the
+    // mean_turns_to_end efficiency axis (ULTRAPLAN §Week.4). Each action pushes one
+    // entry onto `path` past the initial scene, so an ended run's action count is
+    // `path.length - 1`. CYOA has no room graph, so its turns-to-end is graph-agnostic.
+    let turnsToEndTotal = 0;
 
     for (let run = 0; run < runs; run++) {
       let state = initStateForPack(index, run + 1);
@@ -312,6 +322,7 @@ export function createToolApi(opts: { root: string }) {
       for (const scene of localVisited) globalVisited.add(scene);
       if (state.ended) {
         ended++;
+        turnsToEndTotal += path.length - 1;
         const ending = state.endingId ?? "(unknown)";
         endingDistribution[ending] = (endingDistribution[ending] ?? 0) + 1;
       } else {
@@ -330,6 +341,10 @@ export function createToolApi(opts: { root: string }) {
       runs,
       ended,
       unfinished,
+      // Mean actions to reach an ending, over ENDED runs only (0 when none ended).
+      // A 1-decimal efficiency axis: shorter paths to an ending mean a more direct
+      // route (ULTRAPLAN §Week.4). Deterministic — same seeds, same mean.
+      mean_turns_to_end: meanTurns(turnsToEndTotal, ended),
       endings_declared: endingsDeclared,
       ending_distribution: endingDistribution,
       visited_scenes: visitedScenes,
@@ -387,6 +402,11 @@ export function createToolApi(opts: { root: string }) {
     }[] = [];
     let ended = 0;
     let unfinished = 0;
+    // Sum of actions over ended runs — the mean_turns_to_end numerator (see the CYOA
+    // twin). On parser/RPG this axis PAIRS WITH hide_graph: a graph-blind bot wanders
+    // before it stumbles onto a win room, so hiding the graph tends to lengthen the
+    // route to an ending — a second spatial-difficulty signal beside scene coverage.
+    let turnsToEndTotal = 0;
 
     for (let run = 0; run < runs; run++) {
       let state = initStateFor(mode, index, run + 1);
@@ -421,6 +441,7 @@ export function createToolApi(opts: { root: string }) {
       for (const room of localVisited) globalVisited.add(room);
       if (state.ended) {
         ended++;
+        turnsToEndTotal += path.length - 1;
         const ending = state.endingId ?? "(unknown)";
         endingDistribution[ending] = (endingDistribution[ending] ?? 0) + 1;
       } else {
@@ -438,6 +459,9 @@ export function createToolApi(opts: { root: string }) {
       runs,
       ended,
       unfinished,
+      // Mean actions to reach an ending over ended runs (0 when none ended); pairs
+      // with hide_graph as a second spatial signal (see the loop comment above).
+      mean_turns_to_end: meanTurns(turnsToEndTotal, ended),
       endings_declared: endingsDeclared,
       ending_distribution: endingDistribution,
       visited_scenes: visited,
