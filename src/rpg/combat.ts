@@ -22,8 +22,8 @@ import { HP_VAR, ATTACK_VAR, DEFENSE_VAR, enemyHpVar, type Enemy } from "./schem
  * One damage roll and a LEGIBLE breakdown of how it was computed. The numeric
  * `dealt` is `max(1, roll + atk - def)` — byte-identical to the old `dmg()` — so
  * behaviour, determinism, and every trace's final hash are unchanged. The `how`
- * string mirrors the skill-check narration's transparent `rolled X + bonus`
- * format so a player can SEE the attack and defense at work: the same d6 roll
+ * string mirrors the skill-check narration's transparent `d20 X + bonus = total
+ * vs DC` format so a player can SEE the attack and defense at work: the same d6 roll
  * lands for less when the defender is better armoured, which is the only way the
  * player perceives that gear (e.g. the cold-iron plate's +2 defense) is doing
  * anything — a blind playtester flagged that the plate "felt invisible" because
@@ -120,7 +120,14 @@ export function resolveSkillCheck(
   const total = roll + (state.vars[check.skill] ?? 0);
   const success = total >= check.difficulty;
   const lead: Effect = {
-    narrate: `${check.skill} check: rolled ${roll} + ${state.vars[check.skill] ?? 0} = ${total} vs ${check.difficulty} — ${success ? "success" : "failure"}.`,
+    // Name the die (d20), mirroring combat's `d6 <roll> + <atk> atk - <def> def`
+    // breakdown. A failed check showed only "rolled 7 + 3 = 10 vs 12", which a
+    // blind playtester (sunken_barrow, seed 29, ai-runs/2026-06-02T16-59-57-928Z/
+    // playtest.md §4/§5) read against the visible d6 combat die and briefly feared
+    // the slab might be impossible (3 + max-6 = 9 < 12). Showing the d20 surfaces
+    // the ceiling — max 20 + might 3 = 23 ≥ 12 — so the check reads as passable on
+    // a better roll, the symmetric follow-on to bug_0131's combat legibility fix.
+    narrate: `${check.skill} check: d20 ${roll} + ${state.vars[check.skill] ?? 0} = ${total} vs ${check.difficulty} — ${success ? "success" : "failure"}.`,
   };
   return { conditions: [], effects: [lead, ...(success ? check.on_success : check.on_failure)] };
 }

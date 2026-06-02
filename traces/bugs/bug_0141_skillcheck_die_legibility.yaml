@@ -1,0 +1,54 @@
+bug_id: bug_0141
+pack_id: null   # engine fix, not a content defect — affects every RPG pack with a skill_check
+seed: 29
+type: engine_fix
+layer: engine_rule   # src/rpg/combat.ts narration; deterministic, no LLM-judge
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-02T16-59-57-928Z/playtest.md   # sunken_barrow seed 29 (the cycle's mandated, correctly-rotated target)
+  finding: >
+    A fresh MCP-only source-blind playtester of The Sunken Barrow (seed 29) reached
+    all THREE declared endings (ending_victory 50/50; ending_fallen, death, by
+    skipping the shade's ward; ending_woken, death, by prising the sarcophagus),
+    rated the pack clarity 5/5, enjoyment 4/5, ZERO bugs. Its one concrete friction
+    note (§4 AND §5) was that the might-check die was OPAQUE: "Combat is clearly d6,
+    but the slab/sarcophagus might checks roll a much larger, undisclosed die —
+    observed rolls of 5, 7, 8, 10, 15 against DC 12 with might 3. A solo failed slab
+    heave can't tell you whether you can ever pass (3 + d6 max 9 would be impossible),
+    which briefly made me wonder if I was stuck." The encouraging "keep at it" retry
+    text mitigated it, but the player could not see the die's ceiling.
+root_cause: >
+  The reverse of bug_0131's asymmetry, in the same file (src/rpg/combat.ts). After
+  bug_0131 the COMBAT resolver names its die — "d6 <roll> + <atk> atk - <def> def" —
+  but the skill-check resolver (resolveSkillCheck) narrated only
+  "rolled <roll> + <bonus> = <total> vs <DC>", naming no die. A player reads the two
+  systems together: seeing an explicit d6 in combat and an unnamed roll in the check,
+  the natural inference is that the check is also a d6 — under which might 3 + max 6 = 9
+  can never reach DC 12, i.e. the puzzle looks impossible. It is actually a d20
+  (max 20 + 3 = 23 >= 12, comfortably passable), but nothing surfaced the die.
+fix: >
+  Engine, trust-but-verify (deterministic; no clock/RNG-in-narration; no LLM-judge).
+  Named the d20 in resolveSkillCheck's lead narration, so a check now reads
+  "might check: d20 <roll> + <bonus> = <total> vs <DC> — success/failure." This
+  mirrors combat's d6 breakdown and surfaces the ceiling, so a player who fails can
+  see success is reachable on a better roll. The roll, the bonus, the total, the DC,
+  and the success/failure DECISION are all computed exactly as before — only the
+  narration string gained the "d20 " prefix. Narration is not part of the state hash
+  (cf. bug_0119/0131), so determinism, replay, and every trace's expected_final_hash
+  are unchanged. No content/pack edited; no validator/schema change; no hash pin moved.
+within_bar: >
+  Engine-only narration change. The pass/fail routing (which on_success/on_failure
+  effects fire) is identical across the full d20 range, so the seeded determinism
+  tests (tests/unit/rpg.test.ts), the skill-check retire test
+  (tests/regression/rpg_skillcheck_retires.test.ts), the exhaustive RPG
+  ending-reachability proof (tests/regression/rpg_all_endings_reachable.test.ts,
+  which forces rolls via the rng seam and asserts on routing, not narration text),
+  and all nine packs' validators (0/0) pass unchanged. No trace pins the skill-check
+  narration string (traces store state-based final hashes, not narration logs).
+regression_test: tests/regression/rpg_skillcheck_die_legible.test.ts
+test_cases:
+  - "a failing might check shows the d20 so the player can see the check is still passable (d20 7 + 3 = 10 vs 12 — failure)"
+  - "a passing might check reads d20 + bonus = total vs DC and fires on_success, not on_failure"
+  - "a missing skill var reads as +0 (no NaN) and the math still adds up"
+  - "the pass/fail decision is unchanged across the full d20 range 1-20 — narration-only refactor"

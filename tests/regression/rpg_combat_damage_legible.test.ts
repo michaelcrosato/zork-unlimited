@@ -1,7 +1,8 @@
 /**
  * Regression for bug_0131: combat damage narration is LEGIBLE — it decomposes
  * every blow into `d6 <roll> + <atk> atk - <def> def`, mirroring the skill-check
- * resolver's transparent `rolled X + bonus = total vs DC` format.
+ * resolver's transparent `d20 X + bonus = total vs DC` format (the die name was
+ * added to the skill check in the symmetric follow-on, bug_0141).
  *
  * A fresh source-blind playtester (cold_forge, seed 13,
  * ai-runs/2026-06-02T14-22-55-560Z/playtest.md §4/§5) reported that the
