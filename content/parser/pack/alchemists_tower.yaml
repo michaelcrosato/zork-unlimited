@@ -22,6 +22,9 @@
 # engine's post-action checkWin hook (§8.4.5); `visited: spire` is KEPT so the
 # parser validator's soft-lock guard still derives the spire as a win-room.
 # DEATH: drinking the black phial (the recipe warns against it) — then load + retry.
+# BRANCH (bug_0111): the spire climax is a real decision, not a single act — give the
+# master the antidote (WIN) or the black phial (a distinct death, ending_master_poisoned),
+# the wrong-fork twin of drinking it yourself. Heavily telegraphed; recoverable via load.
 
 meta:
   id: alchemists_tower_v1
@@ -450,12 +453,24 @@ objects:
       The tower's old master, gaunt and grey on her pallet, the long sickness
       burning the last colour from her face. She is far too weak to speak, and her
       fever-bright eyes search you for the cure you have not yet brought her.
+    # The bug_0111 BRANCH foreshadow: a player who carries the black phial up to the
+    # spire (most leave the trap on the lab bench, but a curious / recipe-skipping
+    # player may pocket it) now sees the master visibly recoil from it, telegraphing
+    # that giving HER the dark potion is the wrong move before they can make it. Gated
+    # has_item: black_phial + not_item: antidote, placed AFTER the antidote variant so
+    # the success state wins if both are somehow held; first-match-wins. Examine-only.
     variants:
       - when: [{ has_item: antidote }]
         text: >
           The tower's old master, gaunt and grey on her pallet, the long sickness
           burning the last colour from her face. She is far too weak to speak — but her
           eyes find the pale vial in your hand and hold on it.
+      - when: [{ has_item: black_phial }, { not_item: antidote }]
+        text: >
+          The tower's old master, gaunt and grey on her pallet, the long sickness
+          burning the last colour from her face. Her fever-bright eyes catch the black
+          phial in your hand and widen, and some last failing instinct in her shrinks
+          from the oily dark behind its glass.
     interactions:
       - verb: USE
         item: antidote
@@ -478,6 +493,30 @@ objects:
           - remove_item: antidote
           - inc_var: { name: score, by: 5 }
           - narrate: "You raise the master's head and tip the pale antidote between her cracked lips, a slow and careful measure, until the vial runs empty."
+      # The bug_0111 BRANCH: the climax is now a real DECISION — give her the right
+      # potion (the antidote, above → the win) or the wrong one. A blind playtester
+      # (this cycle, seed 101; the same note recurs from seed 67) flagged that a player
+      # who reaches the spire carrying the black phial had NO "give black phial to
+      # master" action at all, so the trap only ever punished self-experimentation
+      # (drink it yourself), never the more natural mistake of dosing the patient with
+      # the wrong vial. This adds that act. It is heavily telegraphed as wrong (the
+      # recipe names the phial death; the phial's own examine reeks of it; the master
+      # visibly recoils from it via the variant above), so an informed player avoids it
+      # and an experimenting one gets a meaningful, Sierra-style consequence recoverable
+      # via load (§8.7) — the genre this pack emulates. A deliberate, command-verb
+      # `give` act mirroring the antidote interaction's grammar; awards no score (a
+      # failure) and sets no flag (no INERT_FLAG); guarded not_flag cure_administered
+      # for symmetry though the win ends the game first. Distinct ending in fiction:
+      # you kill the patient you climbed to save, not yourself (ending_master_poisoned).
+      - verb: USE
+        item: black_phial
+        target: master
+        command_verb: give
+        command_template: "give {item} to {target}"
+        conditions: [{ not_flag: cure_administered }]
+        effects:
+          - narrate: "You raise the master's head and tip the black phial between her cracked lips before you think better of it. She stiffens, one shuddering breath — and then the fever, and all the rest, goes still."
+          - end_game: ending_master_poisoned
 
 win_conditions:
   - id: administer_cure
@@ -504,4 +543,17 @@ endings:
     text: >
       The black phial was no medicine. The tower goes dark around you. (Load a
       saved game to try again.)
+    death: true
+  - id: ending_master_poisoned
+    title: "The Wrong Vial"
+    # bug_0111: the death branch for dosing the MASTER with the black phial (the trap
+    # potion) instead of the antidote — the climax's wrong-fork twin of ending_poisoned
+    # (drinking it yourself). A failure ending, recoverable via load (§8.7); distinct in
+    # fiction — you kill the patient you climbed to save, not yourself. NO_WINNABLE_ENDING
+    # is unaffected (ending_cured is still a non-death win).
+    text: >
+      The black phial was never medicine. The master's struggle ebbs and stops, and
+      the tower's long-failing light goes out for good in your hands. You climbed the
+      whole tower to save her, and ended her at the last. (Load a saved game to try
+      again.)
     death: true

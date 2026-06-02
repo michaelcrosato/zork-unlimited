@@ -111,11 +111,17 @@ describe("bug_0065 — the Alchemist's Tower spire stops claiming an antidote th
     expect(t).not.toContain("antidote in your hand");
   });
 
-  it("the master examine reads the antidote-free base text when you arrive without it", () => {
+  it("the master examine never claims an antidote when you arrive without it", () => {
+    // bug_0065's invariant is "no false antidote-in-hand claim". This route carries the
+    // black phial, which since bug_0111 routes to the more specific recoil variant (she
+    // shrinks from the dark phial) rather than the generic base text — still antidote-free
+    // and never claiming a vial in hand. The truly-bare base text ("search you for the
+    // cure you have not yet brought") is covered by alchemists_master_wrong_vial_branch.
     const s = play(initStateForParserPack(index, 31), SPIRE_NO_ANTIDOTE);
     const t = examineNarration(s, "master");
-    expect(t).toContain("search you for the cure you have not yet brought");
-    expect(t).not.toContain("vial in your hand");
+    expect(t).toMatch(/black phial in your hand|shrinks from the oily dark/i);
+    expect(t).not.toContain("pale vial in your hand");
+    expect(t).not.toContain("antidote");
   });
 
   it("both flip to the in-your-hand prose once the antidote is actually held", () => {
