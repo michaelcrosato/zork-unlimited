@@ -273,10 +273,32 @@ objects:
     # the cellar hatch", matching the strongbox. A reactive examine variant is added (the
     # pack's established discipline, cf. bug_0033) so the hatch stops reading "bolted"
     # once its lock is sprung. No route/score/reachable-ending change.
+    #
+    # The has_item-brass_key variant is the WRONG-KEY foreshadow (bug_0103). A fresh blind
+    # MCP playtester (alchemists_tower seed 53, ai-runs/2026-06-02T02-40-31-708Z/playtest.md
+    # §4 — rotated off the over-fitted clockwork_heist onto the least-attended parser pack)
+    # won ending_cured 35/35, rated clarity 5/5, and flagged ONE friction: standing in the
+    # Great Hall already carrying the brass key (taken in the garden, just before this room
+    # on the canonical route) with no iron key yet, the hatch reads only as a "great iron
+    # lock" with no unlock action and no hint the brass key won't fit — so a player "wonders
+    # why they can't even try the key they have." The fix mirrors the strongbox's WRONG-key
+    # discipline (the brass key is described "sized for a strongbox"): a reactive examine
+    # variant that, when the player holds the brass key but not yet the iron key, says the
+    # iron lock dwarfs the little brass key and wants a key of iron to match — disambiguating
+    # the wrong key and FORESHADOWING the iron key (which the study strongbox holds), without
+    # naming where it is. Gated on has_item brass_key so it never fires for a player who has
+    # not been to the garden (the bug_0052 leak lesson); listed AFTER the is_unlocked variant
+    # so once the hatch is sprung the unbolted text wins, and the not_item iron_key guard
+    # means it stops firing the moment the player holds the matching key (the base "great iron
+    # lock" — accurate, still locked — returns). Examine-only: no flag/item/score/exit/route/
+    # gating/ending change; the down exit still gates on is_unlocked and the canonical solve
+    # is untouched.
     description: "A bolted floor hatch with a great iron lock."
     variants:
       - when: [{ is_unlocked: cellar_door }]
         text: "The floor hatch stands unbolted, its great iron lock sprung; the dark stair drops away into the cellar below."
+      - when: [{ has_item: brass_key }, { not_item: iron_key }]
+        text: "A bolted floor hatch with a great iron lock — a heavy, iron-mouthed thing far too big for the little brass key you carry, which was cut for some smaller box. A lock this size will yield only to a key of iron to match it."
     locked: true
     key_id: iron_key
 
