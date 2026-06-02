@@ -1,0 +1,90 @@
+id: bug_0130
+title: "The Sealed Crypt gains its first failure pole — a third iron-key fork (the lead-sealed plague tomb → ending_doom)"
+kind: content_new
+mode: parser
+severity: enhancement
+pack: content/parser/pack/sealed_crypt.yaml
+
+summary: >
+  Every blind playtest of The Sealed Crypt has rated it clarity 5/5 but enjoyment
+  only 4/5, and the single repeated knock since bug_0105 added the moral fork was
+  always the same: it is short and low-stakes — "you cannot fail." The pack had NO
+  death/failure ending at all; victory (reach the catacombs) and plunder (rob the
+  founder, bug_0105) are both "complete" outcomes, so the iron key's two-way fork
+  carried no real risk. The standing project-memory lever was breadth: deepen the
+  thinnest linear-ish pack with one meaningful branch + alternate ending. bug_0130
+  does exactly that with a CONTENT-ONLY third fork that is also the pack's first
+  failure pole — genuine stakes — and, in doing so, answers a question the fiction
+  never did: WHY the crypt is "sealed" and the chapel above a "burnt shell."
+
+blind_playtest:
+  run: ai-runs/2026-06-02T14-04-41-399Z/playtest.md
+  pack: content/parser/pack/sealed_crypt.yaml
+  seeds: [47, 99]
+  result: "WON ending_victory 35/35; reached ending_plunder 10/35; clarity 5/5, enjoyment 4/5; ZERO bugs"
+  the_knock: >
+    "Tight and satisfying; loses a point only for being short and fully linear once
+    the chain is understood." The pack has no failure state, so the climactic moral
+    fork (gate vs coffin) is a choice between two safe outcomes — there is no risk to
+    weigh against the founder's silver.
+
+the_fix: >
+  A new object, bound_tomb, sits among the lesser dead in the crypt: a squat tomb
+  banded in iron and run round with lead, keyed — like the catacombs gate and the
+  founder's coffin — to the iron key the player already carries ("THE CRYPT YIELDS
+  ONLY TO IRON" now reads THREE ways). Its examine telegraphs in plain terms that
+  this seal keeps the parish plague IN, that the chapel above was burned to be rid of
+  it, and that opening it is one-way and unlike the gate (the way on) and the coffin
+  (greed). Unlocking it fires end_game: ending_doom (a DEATH ending, death: true,
+  recoverable via an earlier save, §8.7). The iron key is now a genuine three-pole
+  choice:
+    • UNLOCK the catacombs gate  → press on → ending_victory  (the UNCHANGED win)
+    • UNLOCK the founder's coffin → take its silver → ending_plunder  (greed; terminal)
+    • UNLOCK the lead-sealed tomb → break the plague-seal → ending_doom  (hubris; death)
+  Per the founders_coffin / bug_0123 discipline the doom fork is NEVER an ambush — it
+  is a deliberate, clearly-warned act, exactly the Sierra-genre load-recoverable trap.
+
+why_within_the_bar: >
+  Content-only, no engine/validator/schema change. The VICTORY and PLUNDER routes are
+  byte-identical: bound_tomb adds no inc_var (meta.max_score stays 35), no flag, and no
+  exit/gating to either route, so every prior route/score test (sealed_crypt_scoring,
+  ending_score_summary, parser_acceptance, sealed_crypt_final_step_legibility,
+  sealed_crypt_plunder_fork) is unaffected. The two test-pinned crypt phrases are kept
+  verbatim — the base description still contains "bars the way" and the catacombs_open
+  variant still contains "north" and "catacombs you came so far to find." The validator
+  stays green (0 findings): END_GAME_UNDECLARED is satisfied (ending_doom declared);
+  WIN_IS_DEATH cannot fire (no win_condition resolves to ending_doom, which is the only
+  death ending); NO_WINNABLE_ENDING cannot fire (ending_victory, a non-death win,
+  remains). No new exit means no SOFTLOCK risk; a persona that opens the tomb ends the
+  game (dead), it does not wedge (parser_crypt_softlock's stuck-in-crypt guard is unmoved).
+
+verification:
+  command: npm run health
+  regression_test: tests/regression/sealed_crypt_doom_fork.test.ts
+  exhaustive_proof: tests/regression/parser_all_endings_reachable.test.ts
+  exhaustive_result: "5160 states explored (cap 200000, no cap-out); reached == declared == {ending_victory, ending_plunder, ending_doom}"
+  cases:
+    - "the fork is now three-way: at the crypt with the iron key, unlock_crypt_gate, unlock_founders_coffin AND unlock_bound_tomb are all legal in the same state"
+    - "breaking the lead seal ends in ending_doom (a DEATH ending), never reaches the catacombs, distinct from victory and plunder; narration names the plague/fever-dead/seal"
+    - "ending_doom is the pack's only death ending, reached ONLY by end_game; no win_condition resolves to it; ending_victory stays the sole winnable win"
+    - "the tomb needs the iron key — reaching the crypt without it offers examine but not unlock"
+    - "the victory route still wins ending_victory 35/35 and the plunder route still ends in ending_plunder (no regression); max_score stays 35"
+    - "the pack validates clean (no SOFTLOCK / END_GAME_UNDECLARED / WIN_IS_DEATH / NO_WINNABLE_ENDING)"
+
+content_hash:
+  pack: content/parser/pack/sealed_crypt.yaml
+  before: 0ff57a59f6d9070b95dbeb7b0c7262138ff5d5a353d0904d2e2a5a4219e6b6c5
+  after: c3c4298468bf223351ff04839b92b029ab9e7208c558a1131673f05504ce304d
+  note: >
+    Deliberate, surfaced sealed_crypt content-hash change. sealed_crypt is NOT a
+    protected file and NO test pins its content hash (only watchtower_road is pinned,
+    in tests/unit/rpg_validator.test.ts; confirmed, cf. bug_0034/0044/0054/0077/0105
+    which all recorded the same), so the hash moves with nothing to re-pin.
+
+notes: >
+  This is the second branch retrofitted onto this pack (after bug_0105's gate/coffin
+  fork) and its FIRST failure ending. It attacks the one enjoyment knock every blind
+  report still raised (no stakes) using only proven mechanics (first-class UNLOCK +
+  end_game, the bug_0077/0105 path), keeps the canonical win and every prior route
+  test byte-identical, and gives the pack's title and its "burnt shell" chapel a
+  coherent backstory — the crypt was sealed against the plague dead.

@@ -5,14 +5,21 @@
 # unlock the catacombs gate. Two in-world clue sources point the way (§17 rule 1):
 # the graveyard headstone and the sexton's rumor.
 #
-# The climax is a MORAL FORK (bug_0105): in the crypt, the iron key opens either
-# the catacombs gate (press on → ending_victory, the canonical win) OR the
-# founder's own coffin (rob the dead of its silver → ending_plunder). The fork is
-# the iron key itself — "THE CRYPT YIELDS ONLY TO IRON" reads two ways.
+# The climax is a THREE-WAY iron-key fork in the crypt — "THE CRYPT YIELDS ONLY TO
+# IRON" reads three ways, because everything down here is iron-locked:
+#   • the catacombs gate    (press on → ending_victory, the canonical win)        [bug_0105]
+#   • the founder's coffin   (rob the dead of its silver → ending_plunder, greed)  [bug_0105]
+#   • the lead-sealed tomb   (break the plague-seal → ending_doom, a DEATH)        [bug_0130]
+# The third fork answers a question the pack never did — WHY the crypt is "sealed"
+# and the chapel above a "burnt shell": the parish plague was leaded shut down here
+# and the chapel burned to be rid of it. The bound_tomb is a deliberate, telegraphed
+# one-way hubris choice (the founders_coffin discipline, bug_0123/§8.7) and gives the
+# pack the failure pole — genuine stakes — every blind pass said it lacked.
 #
 #   forest_path ─N─ chapel_yard ─N─ chapel_nave ─down─ crypt ─N*─ catacombs (WIN)
-#                    │ U: bell_tower (rope)                  └ founders_coffin → ending_plunder (iron key)
-#                    │ E: old_well ─down*─ well_bottom (oak_chest → iron_key)
+#                    │ U: bell_tower (rope)                  ├ founders_coffin → ending_plunder (iron key)
+#                    │ E: old_well ─down*─ well_bottom        └ bound_tomb     → ending_doom    (iron key)
+#                    │      (oak_chest → iron_key)
 #                    │ W: graveyard ─N─ mausoleum (stone_coffer → brass_key)
 #   (* = locked exit)
 
@@ -135,9 +142,10 @@ rooms:
     name: "Crypt"
     description: >
       Stone sarcophagi crowd a low chamber; one, set apart and greater than the
-      rest, is the founder's, its lid bound shut by a heavy iron clasp. To the
-      north, an iron catacombs gate bars the way, its lock shaped for a heavy key.
-      The stair climbs back up.
+      rest, is the founder's, its lid bound shut by a heavy iron clasp. Against the
+      far wall a smaller tomb stands alone, banded in iron and run round with lead,
+      a ring of wardmarks bitten deep into its lid. To the north, an iron catacombs
+      gate bars the way, its lock shaped for a heavy key. The stair climbs back up.
     # Once the gate is open the reactive text names the final step explicitly. A
     # fresh blind playtester (seed 29) noted that unlocking the gate awards the last
     # points and the score reads "35 of 35" — yet the win only fires on ENTERING the
@@ -151,10 +159,12 @@ rooms:
       - when: [{ has_flag: catacombs_open }]
         text: >
           Stone sarcophagi crowd a low chamber; the founder's, set apart, still
-          lies sealed under its iron clasp. To the north, the iron catacombs gate
-          stands unlocked and swung inward on darkness — and through it, north, run
-          the catacombs you came so far to find. The stair climbs back up.
-    objects: [crypt_gate, founders_coffin]
+          lies sealed under its iron clasp, and against the far wall the iron-bound,
+          lead-sealed tomb stands shut as it has these hundred years. To the north,
+          the iron catacombs gate stands unlocked and swung inward on darkness — and
+          through it, north, run the catacombs you came so far to find. The stair
+          climbs back up.
+    objects: [crypt_gate, founders_coffin, bound_tomb]
     exits:
       - { direction: up, to: chapel_nave }
       - direction: north
@@ -313,6 +323,51 @@ objects:
     unlock_effects:
       - end_game: ending_plunder
 
+  # bug_0130 — the climactic fork's THIRD prong, and the pack's first failure pole.
+  # Every blind playtest rated this pack clarity 5/5 but enjoyment only 4/5, and the
+  # single standing knock was always the same: short, low-stakes, "you cannot fail."
+  # The pack had no death/failure ending at all — victory and plunder are both
+  # "complete" outcomes — so the iron key's two-way fork (gate vs coffin, bug_0105)
+  # carried no real risk. This adds the missing pole and, in doing so, answers a
+  # question the fiction never did: WHY the crypt is "sealed" and the chapel above a
+  # "burnt shell". The parish plague was leaded shut down here and the chapel burned
+  # to be rid of it. The founder and the honoured dead lie in the catacombs; THIS one
+  # squat tomb, banded in iron and run round with lead, holds the fever-dead.
+  #
+  # It is keyed, like the gate and the founder's clasp, to the iron key the player
+  # already carries ("THE CRYPT YIELDS ONLY TO IRON" now reads three ways). Breaking
+  # its seal fires end_game: ending_doom (a DEATH ending, recoverable via load, §8.7).
+  # Per the founders_coffin / bug_0123 discipline it is NEVER an ambush: the examine
+  # telegraphs in plain terms that this seal keeps the pestilence IN, that opening it
+  # is one-way, and that it is unlike the gate (the way on) and the coffin (greed).
+  # The victory and plunder routes are byte-identical — bound_tomb adds no inc_var
+  # (max_score stays 35), no flag, and no exit; it only adds a new terminal choice.
+  - id: bound_tomb
+    name: "lead-sealed tomb"
+    aliases: [tomb, sealed tomb, bound tomb, lead tomb, warded tomb, fever tomb]
+    description: >
+      Set apart from the founder and the honoured dead, against the far wall, one
+      squat tomb is banded in iron and run round with lead, its seams still sound.
+      A warning is cut into the lid in the same blunt hand as the headstone above:
+      'HERE LIE THE FEVER-DEAD. SEAL THEM DEEP AND BURN WHAT THEY TOUCHED.' This is
+      why the chapel overhead is a burnt shell and why the crypt was ever sealed:
+      the plague that emptied the parish was shut down here under lead and left to
+      lie. The clasp is shaped for an iron key like all the rest — but where the
+      gate opens the way on and the founder's coffin opens to greed, this lid was
+      leaded shut to keep the living OUT and the pestilence IN. To break that seal
+      is to breathe what emptied the village, and there is no breathing it back out.
+    locked: true
+    key_id: iron_key
+    unlock_narrate: >
+      The iron key turns, the lead seams crack, and the breath of the fever-dead
+      sighs up out of the dark — a sweet, rotten cold that was sealed down here a
+      hundred years and has lost none of its hunger. You have just time to understand
+      what the leaded lid was holding back, and what you have let out, before the
+      crypt swims and the cold draws you down among them. The seal was the only mercy
+      this place had, and you broke it.
+    unlock_effects:
+      - end_game: ending_doom
+
 npcs:
   - id: sexton
     name: "the sexton"
@@ -367,3 +422,17 @@ endings:
       The catacombs stay shut to you now, their dead undisturbed but for one — and
       the founder's reliquary will keep you through many a hard winter, if its
       weight ever lets you sleep easy again. *** You have taken the silver. ***
+  # bug_0130 — the pack's first DEATH ending (death: true), reached only by breaking
+  # the lead seal on the fever-dead's tomb (bound_tomb's end_game). Recoverable via an
+  # earlier save (§8.7). It is NOT a win_condition ending, so WIN_IS_DEATH cannot fire
+  # and ending_victory remains the sole winnable ending (NO_WINNABLE_ENDING is silent).
+  - id: ending_doom
+    title: "What the Crypt Was Sealed Against"
+    text: >
+      You came for the sealed crypt and learned, too late, what it was sealed
+      against. The plague the parish burned its own chapel to be rid of had waited
+      under the lead, patient as only the dead are, and now it takes you down among
+      them. No silver, no catacombs, no climb back into the light — only one more
+      name for the fever-dead, and one more reason the next to come will find the lid
+      leaded shut. *** You have died. ***
+    death: true
