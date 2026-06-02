@@ -53,6 +53,28 @@ rooms:
       blue flame that watches you. A low cell stands half-walled to the west, a
       passage runs north into deeper dark, and the steps climb back toward the
       surface.
+    # Reactive room text (bug_0023): once the pry-bar has been lifted the hall no
+    # longer reads "By a cold trough lies a stout iron pry-bar" — it is gone from
+    # visible_objects, so the static line would otherwise contradict the empty trough
+    # and the bar now in the player's own hands on every revisit. This was the one
+    # tick-blind seam in an otherwise fully-reactive pack: the Founder's Cell (plate
+    # taken) and the Bellows Walk (sentinel killed) both update their prose, but the
+    # Outer Forge stayed static. A fresh blind playtester (seed 53, ai-runs/
+    # 2026-06-02T00-23-22-281Z/playtest.md §5) flagged it as the pack's lone concrete
+    # defect ("the one inconsistent room"), independently re-confirming the prior
+    # cycle's seed-37 deferral (bug_0088). The variant drops the pry-bar clause and
+    # names the trough now bare, mirroring the founder/grate reactive treatment.
+    # Content-only: no object/exit/flag/quest/score/ending change; visible_objects
+    # already drops the taken bar.
+    variants:
+      - when: [ { has_item: pry_bar } ]
+        text: >
+          A vaulted hall of dead anvils and silent bellows, the air gone to a grave
+          chill. A wrought inscription is set into one wall. The cold trough stands
+          bare now — the stout iron pry-bar that lay beside it is in your own hands.
+          In a niche a single lantern still burns with a thin blue flame that watches
+          you. A low cell stands half-walled to the west, a passage runs north into
+          deeper dark, and the steps climb back toward the surface.
     objects: [inscription, pry_bar]
     exits:
       - { direction: up, to: forge_steps }

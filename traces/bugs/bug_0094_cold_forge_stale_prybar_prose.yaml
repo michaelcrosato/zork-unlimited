@@ -1,0 +1,46 @@
+bug_id: bug_0094
+pack_id: cold_forge_v1
+seed: 53
+type: content_fix          # one reactive room variant; the bug_0023 reactive-prose pattern
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_target: clockwork_heist_v1     # the assessor's ~25th straight nomination
+  mandated_report: ai-runs/2026-06-02T00-23-22-281Z/playtest.md
+  rotation_rationale: >
+    Per the protocol's "you MAY pick a different candidate if your judgement and the
+    playtest say it's higher value" and the standing loop guidance, the mandated blind
+    pass was ROTATED off the content-complete clockwork pack (blind-verified clean ~24
+    times, bug_0079→0085) onto cold_forge — the least-attended rpg pack carrying the
+    previous cycle's (bug_0088) open #1 deferred content finding. The pass both gives
+    current quality feedback AND independently re-tests that finding on a fresh seed
+    (53; prior cold_forge passes were seeds 23 and 37).
+  finding: >
+    The Outer Forge room description statically reads "By a cold trough lies a stout
+    iron pry-bar". Once the bar is taken it is correctly removed from visible_objects,
+    but the prose paragraph kept narrating it lying by the trough for the rest of the
+    game — on every revisit (and the player crosses this hub room repeatedly: spirit,
+    cell, sentinel, grate). It was the ONE non-reactive seam in an otherwise fully
+    reactive pack: the Founder's Cell (plate taken) and the Bellows Walk (sentinel
+    killed) already update their prose (bug_0023), and the stone_grate examine does
+    too. A fresh blind playtester (seed 53, §5) flagged it as the pack's lone concrete
+    defect — "the one inconsistent room" — independently re-confirming the bug_0088
+    seed-37 deferral.
+improvement:
+  layer: content
+  content:
+    - content/rpg/pack/cold_forge.yaml: >
+        Added a reactive room `variant` to `outer_forge` gated on `has_item: pry_bar`
+        that drops the pry-bar clause and names the trough now bare ("The cold trough
+        stands bare now — the stout iron pry-bar that lay beside it is in your own
+        hands."), mirroring the founder/grate bug_0023 reactive treatment. The base
+        description (bar still present) is the unchanged first-arrival fallback.
+  invariants:
+    - The Outer Forge reads the base "lies a stout iron pry-bar" line before the bar
+      is taken, and the bare-trough variant after — the static line never contradicts
+      an empty trough again.
+    - Content-only: no object/exit/flag/quest/score(50)/win/ending change; taking the
+      bar is inert beyond inventory + the variant swap; the canonical victory route
+      still wins ending_victory 50/50; pack validates 0/0.
+locked_by:
+  - tests/regression/cold_forge_stale_prybar_prose.test.ts
