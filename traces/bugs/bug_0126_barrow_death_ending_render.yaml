@@ -1,0 +1,63 @@
+bug_id: bug_0126
+pack_id: sunken_barrow_v1
+seed: 42   # mandated blind playtest; the regression pins seed 2 (deterministic wight death) + seed 1 (doom fork)
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-02T13-11-26-441Z/playtest.md   # sunken_barrow, seed 42
+  finding: >
+    The mandated rank-1 target this cycle, The Sunken Barrow (RPG, seed 42), came back
+    clean: a fresh source-blind MCP-only subagent ran three playthroughs and reached ALL
+    THREE endings — ending_victory (50/50), ending_fallen (die to the wight, 0/50), and
+    ending_woken (prise the sealed sarcophagus, 25/50) — rated it clarity 5/5 enjoyment
+    4/5, ZERO mechanical defects. It confirmed the death-ending EXPERIENCE from real play
+    (unlike cold_forge's seed-11 pass, where every run survived), but only at the
+    transcript level — nothing in the suite locked the RENDERED death observation. The
+    prior cycle's handoff (AI_LOOP_STATE.md, 2026-06-02T13-02-56-343Z) named exactly this
+    as the cheap next lock: mirror bug_0125's render assertion onto the barrow's death path.
+failure:
+  type: not_a_defect_coverage_gap
+  description: >
+    The barrow's TWO death endings (ending_fallen "Another Niche Filled"; ending_woken
+    "What Sleeps Beneath") are well covered for REACHABILITY and for the internal
+    end-state, but NOT for what the player actually SEES at the moment of death:
+      - bug_0124's exhaustive solver proves both are route-reachable (abstract BFS over
+        best/worst dice brackets), but never renders an observation.
+      - rpg_barrow_wight_prep_matters.test.ts case (3) drives an under-armed thief to
+        death and asserts state.endingId === "ending_fallen" + the pack's death boolean;
+        rpg_barrow_lord_woken_fork.test.ts drives the prise to ending_woken and asserts
+        state.endingId + score. Both inspect the GameState, never the player-facing
+        observation. Neither builds buildParserObservation at the death moment, so nothing
+        locks that the player is shown the death ending's TITLE and TEXT, nor the
+        score-closure tally the renderer appends.
+    The render path itself is sound (src/parser/observation.ts: title = endingDef.title,
+    description = ending text + "Final score: X of Y." when max_score > 0, regardless of
+    death); this bug only closes the missing lock around it, matching cold_forge bug_0125.
+fix:
+  layer: test   # pure test addition; no content, engine, validator, or hash change
+  summary: >
+    Add rpg_barrow_death_ending_render.test.ts: drive both death forks and assert the
+    player-facing parser observation at the ended state.
+      ending_fallen (under-armed seed-2 route, die to the wight):
+        - observation.ended === true, ending_id === "ending_fallen";
+        - observation.ending === { id: ending_fallen, title: "Another Niche Filled",
+          text: <pack text>, death: true };
+        - observation.title (rendered) === "Another Niche Filled" (the death title, not
+          the room name); observation.description carries the death text AND the closure
+          "Final score: 0 of 50." (a wight death scores nothing — no milestone fired);
+        - genuinely fatal: no wight_slain flag, no +10 award.
+      ending_woken (canonical descent seed 1, then prise the sarcophagus):
+        - observation.ended === true, ending_id === "ending_woken";
+        - observation.ending === { id: ending_woken, title: "What Sleeps Beneath",
+          text: <pack text>, death: true };
+        - observation.title (rendered) === "What Sleeps Beneath"; observation.description
+          carries the doom text AND the PARTIAL closure "Final score: 25 of 50." (the doom
+          never takes the crown, so the circlet's +25 take_effect never fires — bug_0107;
+          the partial tally reads "incomplete", distinct from the 50/50 win).
+    For both: the canonical ending.text stays pure (no "Final score" in it). Complements
+    prep_matters case (3) + the woken-fork test (internal end-state) and bug_0124
+    (abstract reachability) with the rendered-experience layer, mirroring cold_forge
+    bug_0125 onto the barrow.
+verification:
+  regression_test: tests/regression/rpg_barrow_death_ending_render.test.ts
+  health: npm run health   # must stay green; no content hash moves (no pack edit)
