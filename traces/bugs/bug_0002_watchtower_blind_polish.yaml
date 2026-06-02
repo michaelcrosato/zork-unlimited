@@ -1,6 +1,6 @@
 bug_id: bug_0002
 pack_id: watchtower_road_v1
-content_hash: 95cf36659af3fc6edf5e9b8952f6eff19a0ba46679819267dcad28976d50264e  # re-pinned by bug_0098 (lit-beacon raised_alarm now fires reactive ending variants; was bug_0062's 4c971d43…)
+content_hash: 862b33adb10a4982aa8a963dbf676a77d58fb81c813940184e0615e5c52ddd7a  # re-pinned by bug_0108 (take_letter pickup journal now foreshadows the letter's checkpoint/hermit uses; was bug_0104's f6b64fd9… — itself after bug_0098's 95cf3665…)
 seed: 7
 initial_state: start
 # Surfaced by a BLIND MCP playtester subagent (no access to source/content) playing

@@ -75,7 +75,7 @@ scenes:
       - id: take_letter
         text: "Take the sealed letter."
         conditions: [ { not_item: sealed_letter } ]
-        effects: [ { add_item: sealed_letter }, { add_journal: "A wax-sealed letter, addressed to no one." } ]
+        effects: [ { add_item: sealed_letter }, { add_journal: "A wax-sealed letter, addressed to no one — but it reads like the kind of papers a checkpoint guard would demand to see, or that a knowing eye could break open and read." } ]
         next: abandoned_cart
       - id: carry_lantern_to_cellar
         text: "Carry the lantern out to the cellar stair."

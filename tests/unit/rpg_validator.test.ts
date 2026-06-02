@@ -77,7 +77,14 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // surfaced two genuinely dead flags here (met_hermit, saw_watchtower: set on the
     // talk_hermit / go_east choices but read by no condition — the scene transition
     // already carries that state), and their no-op `set_flag` effects were removed
-    // (was 95cf3665…). Any *unintended* change to compilation trips this.
-    expect(loaded.compiled.contentHash).toBe("f6b64fd996b722769b9d7559a53523ec7289fcd17207dacc401e444536d70120");
+    // (was 95cf3665…); and bug_0108 — the take_letter pickup journal now foreshadows
+    // the letter's two real uses (papers to present at the checkpoint via show_papers;
+    // a seal a "knowing eye" — the hermit — can break) instead of the bare, inert-
+    // reading "addressed to no one." A blind playtester (seed 7,
+    // ai-runs/2026-06-02T08-37-28-787Z/playtest.md §5) took the letter on the tower/
+    // beacon route, never reached the hermit or checkpoint, and reported it as a
+    // Chekhov's gun that never fires; this hint_text-only nudge signposts its purpose
+    // (was f6b64fd9…). Any *unintended* change to compilation trips this.
+    expect(loaded.compiled.contentHash).toBe("862b33adb10a4982aa8a963dbf676a77d58fb81c813940184e0615e5c52ddd7a");
   });
 });
