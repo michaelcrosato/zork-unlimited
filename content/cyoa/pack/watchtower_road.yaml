@@ -15,7 +15,6 @@ scenes:
     choices:
       - id: go_east
         text: "Go east, toward the ruined watchtower."
-        effects: [ { set_flag: saw_watchtower } ]
         next: ruined_watchtower
       - id: go_west
         text: "Go west, following the brook."
@@ -219,7 +218,6 @@ scenes:
     choices:
       - id: talk_hermit
         text: "Approach and speak with him."
-        effects: [ { set_flag: met_hermit } ]
         next: hermit_talk
       - id: leave_camp
         text: "Leave the camp."

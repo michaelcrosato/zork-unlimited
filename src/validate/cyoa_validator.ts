@@ -342,6 +342,33 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
     }
   }
 
+  // ── Inert flags (set but never read) ────────────────────────────────────────
+  // The newest member of the soundness family above and the flag-side sibling of
+  // DEADLINE_UNFIREABLE: a flag that some `set_flag` effect writes (or that
+  // flags_init declares) but that NO condition anywhere reads — has_flag/not_flag,
+  // including nested all_of/any_of/none_of — is dead bookkeeping. The write changes
+  // nothing the game ever consults: a Chekhov's gun set but never fired upon. A blind
+  // playtester cannot judge this from inside the game (a seed-23 wreckers_light pass
+  // asked exactly "is this flag inert?" and could not tell — bug_0104); this check
+  // answers it statically, turning that manual worry into the enforced bar. Sound (no
+  // false positives): a flag is flagged ONLY when it has provably zero readers across
+  // the whole pack — choices, scene/ending variants, and the deadline `when`. Warning,
+  // not error: an inert flag is a no-op, never a soft-lock — advisory like its siblings.
+  const flagReads = collectFlagReads(pack);
+  for (const f of new Set<string>([...writes.setFlags, ...pack.meta.flags_init])) {
+    if (!flagReads.has(f)) {
+      findings.push(
+        warn(
+          "INERT_FLAG",
+          `flag "${f}" is set (or declared in flags_init) but never read by any ` +
+            `condition — a no-op write (dead bookkeeping). Gate something on it, or ` +
+            `remove the set so the pack states only what it uses.`,
+          [`flag:${f}`],
+        ),
+      );
+    }
+  }
+
   // ── Duplicate endings (structurally identical title+text) ──────────────────
   const seen = new Map<string, string>();
   const terminals: { id: string; title: string; text: string }[] = [
@@ -725,6 +752,31 @@ function checkVariantShadowing(
       }
     }
   }
+}
+
+/** Every flag name a pack READS — has_flag/not_flag in any choice `conditions`,
+ *  scene/ending variant `when`, or the deadline `when`, descending all_of/any_of/
+ *  none_of. The set of consumers: a flag written by `set_flag` (or declared in
+ *  flags_init) yet absent here is inert (INERT_FLAG). */
+function collectFlagReads(pack: CyoaPack): Set<string> {
+  const reads = new Set<string>();
+  const walk = (c: Condition): void => {
+    if ("has_flag" in c) reads.add(c.has_flag);
+    else if ("not_flag" in c) reads.add(c.not_flag);
+    else if ("all_of" in c) c.all_of.forEach(walk);
+    else if ("any_of" in c) c.any_of.forEach(walk);
+    else if ("none_of" in c) c.none_of.forEach(walk);
+  };
+  const walkAll = (conds: Condition[] | undefined): void => (conds ?? []).forEach(walk);
+  for (const scene of pack.scenes) {
+    for (const v of scene.variants ?? []) walkAll(v.when);
+    for (const choice of scene.choices) walkAll(choice.conditions);
+  }
+  for (const ending of pack.endings) {
+    for (const v of ending.variants ?? []) walkAll(v.when);
+  }
+  if (pack.meta.deadline) walkAll(pack.meta.deadline.when);
+  return reads;
 }
 
 /** Var names a condition tree reads (var_gte/var_lte/var_eq), descending through

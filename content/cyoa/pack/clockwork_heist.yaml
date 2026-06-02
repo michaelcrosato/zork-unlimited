@@ -555,7 +555,6 @@ scenes:
         text: "Pick the lock with the lockpicks."
         conditions: [{ has_item: lockpick }, { not_flag: alarm }]
         effects:
-          - set_flag: vault_open
           - add_journal: "The tumblers fall, one by one. The vault sighs open."
         next: vault
       - id: study_lock
@@ -625,7 +624,6 @@ scenes:
         # bug_0051 — the two oppositely-framed letters used to share one text).
         effects:
           - add_item: letter
-          - set_flag: has_letter
           - set_flag: letter_displayed
         next: ending_truth
 
@@ -684,7 +682,6 @@ scenes:
         # the truth ending's hidden-copy epilogue fires for this route (bug_0051).
         effects:
           - add_item: letter
-          - set_flag: has_letter
           - set_flag: letter_hidden
         next: ending_truth
       - id: study_strongbox

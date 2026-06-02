@@ -73,7 +73,11 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // (was 3947f07b…); and bug_0098 — the lit signal beacon's `raised_alarm` flag
     // now fires reactive variants on all three endings (the beacon's "help — or
     // trouble — is coming" finally materialises in the epilogue instead of being a
-    // dead flag) (was 4c971d43…). Any *unintended* change to compilation trips this.
-    expect(loaded.compiled.contentHash).toBe("95cf36659af3fc6edf5e9b8952f6eff19a0ba46679819267dcad28976d50264e");
+    // dead flag) (was 4c971d43…); and bug_0104 — the new INERT_FLAG validator check
+    // surfaced two genuinely dead flags here (met_hermit, saw_watchtower: set on the
+    // talk_hermit / go_east choices but read by no condition — the scene transition
+    // already carries that state), and their no-op `set_flag` effects were removed
+    // (was 95cf3665…). Any *unintended* change to compilation trips this.
+    expect(loaded.compiled.contentHash).toBe("f6b64fd996b722769b9d7559a53523ec7289fcd17207dacc401e444536d70120");
   });
 });
