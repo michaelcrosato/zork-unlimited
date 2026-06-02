@@ -1,0 +1,47 @@
+bug_id: bug_0096
+pack_id: n/a              # a defect in the verification bar itself, not a content pack
+seed: 88
+type: engine_fix         # verification-coverage / "don't route around the verifier" (AGENTS.md)
+evidence:
+  source: blind_playtest + repo audit
+  protocol: docs/blind_playtest_protocol.md
+  mandated_target: clockwork_heist_v1     # the assessor's ~28th straight nomination
+  mandated_report: ai-runs/2026-06-02T00-45-56-977Z/playtest.md
+  rotation_rationale: >
+    The mandated blind pass ran ON the assessor's rank-1 target (clockwork_heist, seed
+    88, a fresh seed) and re-confirmed it clean: reached 4 distinct endings (Rich, The
+    Truth ×2 flag-variants, Caught), clarity 5/5, enjoyment 4/5, ZERO bugs — its ~28th
+    straight clean blind pass. With no content fix indicated and the project's content
+    backlog blind-verified exhausted, this cycle's improvement is structural, per the
+    protocol's "you MAY pick a higher-value candidate if your judgement says it's higher
+    value." A repo audit of the bar surfaced the defect below.
+  finding: >
+    `npm run health` — the enforced verification bar (AGENTS.md trust-but-verify) — ran
+    its content-validation step from a HAND-LISTED chain of `npm run validate --` calls
+    that had drifted behind the content. It validated only 4 of the 6 shipped packs:
+    watchtower_road (cyoa), sealed_crypt (parser), sunken_barrow + cold_forge (rpg). The
+    other two shipped packs — clockwork_heist (cyoa) and alchemists_tower (parser) — were
+    NEVER validated by health. Both validate clean today, but a future schema/soundness
+    regression in either (or in any new pack added without remembering to extend the
+    string) would pass the bar undetected. Per-pack regression tests cover specific
+    scenes; nothing asserted that EVERY pack still validates, nor that the bar looks at it.
+improvement:
+  layer: engine            # package.json bar + a discovery-based guard test
+  changes:
+    - package.json: >
+        Added the two omitted packs to the `health` validate chain — clockwork_heist and
+        alchemists_tower — so all 6 shipped packs are validated by the human-facing bar.
+    - tests/regression/all_packs_validated_by_bar.test.ts: >
+        New guard that closes the hole by DISCOVERY, not a hand list, so it can't drift
+        again: (1) every pack under content/{cyoa,parser,rpg}/pack/*.yaml loads and
+        validates with zero errors, mode auto-detected exactly as bin/validate.ts does;
+        (2) the `health` script contains a `validate --` step for every discovered pack.
+        Adding a new pack now FAILS until it both validates clean and is wired into health.
+  invariants:
+    - All 6 shipped packs validate with zero errors (cyoa/parser/rpg, correct validator).
+    - The `health` npm script lists a `npm run validate -- <pack>` step for every pack
+      discovered under the three content pack directories.
+    - A newly added pack that fails validation, or is omitted from health, fails the guard.
+  non_regression: >
+    No content or engine behavior changed; clockwork_heist and alchemists_tower content
+    hashes are untouched (65cd79a6… and c12f7a7c…). This only widens what the bar checks.
