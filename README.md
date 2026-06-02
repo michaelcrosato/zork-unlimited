@@ -165,7 +165,7 @@ npm run author -- "A keeper must relight a dead lighthouse before a ship wrecks.
 
 The same pipeline is exposed over MCP as the `adapt_story` tool.
 
-## Content library (8 packs)
+## Content library (9 packs)
 
 The shipped, validated content — every pack passes the validator and is wired into
 `npm run health`:
@@ -176,6 +176,7 @@ The shipped, validated content — every pack passes the validator and is wired 
 | CYOA | The Clockwork Heist | `content/cyoa/pack/clockwork_heist.yaml` |
 | CYOA | The Wrecker's Light | `content/cyoa/pack/wreckers_light.yaml` |
 | CYOA | The White Stag | `content/cyoa/pack/white_stag.yaml` |
+| CYOA | The Tithe-Barn | `content/cyoa/pack/tithe_barn.yaml` |
 | Parser | The Sealed Crypt | `content/parser/pack/sealed_crypt.yaml` |
 | Parser | The Alchemist's Tower | `content/parser/pack/alchemists_tower.yaml` |
 | RPG | The Sunken Barrow | `content/rpg/pack/sunken_barrow.yaml` |
