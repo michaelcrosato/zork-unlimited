@@ -243,6 +243,24 @@ scenes:
 
   - id: hermit_talk
     title: "The Hermit"
+    # bug_0134: a blind playtester (seed 88, ai-runs/2026-06-02T15-08-35-167Z/
+    # playtest.md §4) returned to the conversation after the hermit had already told
+    # the smuggler's tale (heard_hermit_lore) and/or broken the letter's seal
+    # (seal_broken), and met the IDENTICAL cold first-meeting greeting — "You look
+    # lost, traveler. Or maybe you found something you weren't meant to." — as if a
+    # stranger, contradicting the exchange just had (reproduced live: ask_about_tower
+    # → back_from_tower_talk re-shows the stranger greeting). Same stale-on-re-entry
+    # class as bug_0120 (tower_top brazier) and confront_smuggler's variants: gate a
+    # reactive variant on having already spoken so a returning player sees a hermit
+    # who knows them, and re-point him at the goal (north). Reactive text only —
+    # first-match-wins, no choice/flag/route/ending change; the un-spoken player sees
+    # the original greeting verbatim (first entry has neither flag set).
+    variants:
+      - when: [ { any_of: [ { has_flag: heard_hermit_lore }, { has_flag: seal_broken } ] } ]
+        text: >
+          The hermit looks up from his net again. "Still here," he says, not
+          unkindly. "I've told you what I know, and the road north is where the
+          rest of it waits. Ask what's left to ask, or go and see for yourself."
     text: >
       "You look lost, traveler," the hermit says. "Or maybe you found something
       you weren't meant to."

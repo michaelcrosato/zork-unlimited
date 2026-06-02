@@ -95,7 +95,12 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // seal themselves and never found one (only the hermit, west, breaks it). The journal
     // now says "the right pair of eyes — not your own; the seal is set too hard for that —
     // could break open and read," disclaiming the self-action while keeping bug_0108's
-    // two-use foreshadow (was cd749bd5…). Any *unintended* change to compilation trips this.
-    expect(loaded.compiled.contentHash).toBe("f989028090c8dd6aa2ba27e54cd400b3ae970d53b579840fdfd2beadd044b33a");
+    // two-use foreshadow (was cd749bd5…); and bug_0134 — hermit_talk now carries a
+    // reactive re-entry variant (any_of heard_hermit_lore/seal_broken) so a player who
+    // returns to the conversation after already hearing the lore or breaking the seal no
+    // longer meets the cold first-meeting greeting "You look lost, traveler" as a stranger
+    // (blind seed 88, ai-runs/2026-06-02T15-08-35-167Z/playtest.md §4; was f989028090…).
+    // Any *unintended* change to compilation trips this.
+    expect(loaded.compiled.contentHash).toBe("8990abbad966eec6b5d9a177abdb74e5f3191eb78e2c5d25c9d7d99a6b1a3a46");
   });
 });

@@ -73,9 +73,15 @@ describe("bug_0128 — blind-pass rotation tracks true recency", () => {
     if (topOff !== undefined && attendedOffs.length > 0) {
       const mostRecentOff = Math.min(...attendedOffs);
       expect(topOff).toBeGreaterThanOrEqual(mostRecentOff);
-      // Concretely on today's log the most-recently-attended pack is watchtower_road
-      // (bug_0127); the rotation must not put it first.
-      expect(topStem).not.toBe("watchtower_road");
+      // The rotation must not put the single MOST-recently-attended pack first. Compute
+      // that pack dynamically from the live log rather than hardcoding a name — the
+      // rotation advances every cycle (it was watchtower_road at bug_0128, alchemists_tower
+      // by bug_0133), and a hardcoded stem goes stale the moment the rotation reaches it.
+      const mostRecentStem = reviews
+        .map((c) => ({ stem: packStem(c.target), off: offsets.get(packStem(c.target)) }))
+        .filter((x): x is { stem: string; off: number } => x.off !== undefined)
+        .sort((x, y) => x.off - y.off)[0]!.stem;
+      expect(topStem).not.toBe(mostRecentStem);
     }
   });
 });

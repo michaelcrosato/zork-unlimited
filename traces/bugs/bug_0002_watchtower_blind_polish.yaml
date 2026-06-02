@@ -1,6 +1,6 @@
 bug_id: bug_0002
 pack_id: watchtower_road_v1
-content_hash: f989028090c8dd6aa2ba27e54cd400b3ae970d53b579840fdfd2beadd044b33a  # re-pinned by bug_0127 (take_letter journal disambiguated: "the right pair of eyes — not your own" replaces "a knowing eye" so it no longer reads as a self-affordance; was bug_0120's cd749bd5… — itself after bug_0108's 862b33ad…, bug_0104's f6b64fd9…, bug_0098's 95cf3665…)
+content_hash: 8990abbad966eec6b5d9a177abdb74e5f3191eb78e2c5d25c9d7d99a6b1a3a46  # re-pinned by bug_0134 (hermit_talk gains a reactive re-entry variant so a returning player who already heard the lore / broke the seal no longer meets the cold first-meeting greeting; was bug_0127's f989028090…, itself after bug_0120's cd749bd5…, bug_0108's 862b33ad…, bug_0104's f6b64fd9…, bug_0098's 95cf3665…)
 seed: 7
 initial_state: start
 # Surfaced by a BLIND MCP playtester subagent (no access to source/content) playing
