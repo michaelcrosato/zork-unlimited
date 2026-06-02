@@ -1,0 +1,72 @@
+bug_id: bug_0097
+pack_id: null   # engine/validator soundness fix; not specific to one pack
+seed: 97
+evidence:
+  source: blind_playtest + validator_audit
+  protocol: docs/blind_playtest_protocol.md
+  report: ai-runs/2026-06-02T00-53-10-360Z/playtest.md
+  finding: >
+    This cycle's mandated blind pass ran on the assessor's rank-1 clockwork_heist (seed 97,
+    plus 42/7/13), a fresh general-purpose MCP-only source-blind subagent. It reached four
+    endings (The Truth via the hidden AND the displayed letter, Rich, Caught), found ZERO
+    functional bugs, and rated the pack clarity 5/5 / enjoyment 4/5 — clockwork's ~29th
+    consecutive clean blind pass. Its two notes (the watchman/ledger tension is cosmetic on
+    the efficient path; the crawlspace route is a shorter, asymmetric experience) are the
+    author-intentional "careful play is safe" non-defects the bug_0061..0084 reactive arc and
+    prior cycles already settled. With the blind target proven clean and the content-polish
+    backlog blind-exhausted (project memory), I pursued the standing next-focus's STRUCTURAL
+    item (b): extend the RPG combat-winnability proof to account for the player's best
+    reachable attack/defense — "it currently uses init stats only".
+failure:
+  type: validator_unsound_false_positive
+  where:
+    - engine:src/validate/rpg_validator.ts
+  description: >
+    The RPG validator's COMBAT_UNWINNABLE check ("only a TRULY impossible fight is an error")
+    proved winnability from the player's INIT stats alone — playerHp/playerAtk/playerDef read
+    straight off meta.vars_init. But the sibling SKILL_CHECK_IMPOSSIBLE proof right below it
+    already used a "best reachable" ceiling (init + every positive inc_var that targets the
+    skill, scanned across combat on_defeat + skill-check branches + all parser effects). The
+    two were inconsistent: a fight winnable only AFTER a reachable buff — cold_forge's
+    lantern-spirit +2 attack and founder's-plate +2 defense, sunken_barrow's reaver-shade +2
+    defense ward — would be FALSELY flagged COMBAT_UNWINNABLE, because the proof refused to
+    credit the player a buff the very same pack guarantees is reachable before the fight. A
+    pack that legitimately gates a hard fight behind "gear up first" could not ship. The
+    shipped packs do not trip it today (their fights are winnable at init too), so this was a
+    LATENT false-positive class, not a live failure — but it blocks a sound design pattern and
+    contradicts the skill-check sibling, so it is the unsound-over-strict direction.
+fix:
+  layer: validator
+  summary: >
+    Route both the combat and the skill-check proofs through ONE shared statCeiling(name) =
+    init + every POSITIVE inc_var targeting that var, scanned across rpgRuntimeEffects (enemy
+    on_defeat + skill_check on_success/on_failure) + allParserEffects (room on_enter, object
+    interactions, NPC dialogue). playerHp/playerAtk/playerDef now = statCeiling(HP/attack/
+    defense); the skill-check loop reuses statCeiling (the old skillCeiling, identical body, is
+    removed). Soundness: COMBAT_UNWINNABLE means "only a TRULY impossible fight is an error",
+    so OVER-approximating player power (assume every buff obtained) can only REMOVE false
+    positives, never add one — if a fight is unwinnable even crediting every reachable buff, it
+    is genuinely impossible on every path. A negative inc_var (a debuff) is ignored via
+    Math.max(0, by), exactly as the skill ceiling already did, so the bar is never lowered.
+    No schema, runner, engine, or content change; purely a validator permissiveness widening
+    that unifies combat with the skill-check proof.
+  reachable_endings_changed: false
+  content_hash_changed: false        # no content pack edited
+  regression_test: tests/regression/rpg_combat_winnable_with_reachable_buff.test.ts
+  unit_tests:
+    - tests/unit/rpg_validator.test.ts   # existing rpg_unwinnable fixture (no buffs) still flags COMBAT_UNWINNABLE
+verified_live: >
+    Bug-first: a one-room pack (brute hp 30 atk 3, player hp 10 atk 1) is unwinnable at init
+    (16 dmg vs 10 HP) and IS flagged COMBAT_UNWINNABLE with no buff; adding a reachable +6
+    attack on_enter buff makes the SAME enemy winnable (8 dmg vs 10 HP) and it is NOT flagged
+    (and validates fully green). Soundness/no-false-positive: the same fight with only a +1
+    attack buff (still 12 dmg vs 10 HP) stays flagged, and a -5 attack debuff is never credited
+    (stays flagged). The existing rpg_unwinnable fixture (no buffs → ceiling = init) still
+    yields COMBAT_UNWINNABLE. Shipped RPG packs sunken_barrow and cold_forge validate with zero
+    findings before and after. `npm run health` exit 0.
+note: >
+    Soundness over coverage, same stance as the recent validator arc (bug_0085..0092): the
+    change makes the proof MORE permissive in the sound direction (it credits provably-reachable
+    buffs the skill-check proof already credited), unifying the two stat ceilings so combat and
+    skill checks reason about the player's power identically. It can only un-flag fights that
+    are genuinely winnable; it never masks a truly impossible fight.

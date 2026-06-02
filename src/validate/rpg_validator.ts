@@ -7,9 +7,9 @@
  * check is not mis-flagged impossible. Then we add Stage-4 invariants:
  *  - the player has the conventional stat vars (HP/attack/defense), HP > 0;
  *  - every enemy stands in a real room and names a declared DEATH ending;
- *  - every fight is WINNABLE — even best-case player vs. worst-case-for-them rolls
- *    must not kill the player before the enemy falls (conservative: only a truly
- *    impossible fight is an error);
+ *  - every fight is WINNABLE — even best-case player (best reachable HP/attack/
+ *    defense) vs. worst-case-for-them rolls must not kill the player before the
+ *    enemy falls (conservative: only a truly impossible fight is an error);
  *  - every skill check is PASSABLE — d20 + the best reachable skill can meet the
  *    difficulty;
  *  - every end_game inside on_defeat / on_success / on_failure is declared.
@@ -94,9 +94,29 @@ export function validateRpg(pack: RpgPack): ValidationReport {
       err("BAD_HP", `meta.vars_init.${HP_VAR} must start positive.`, ["meta:vars_init"]),
     );
 
-  const playerHp = vi[HP_VAR] ?? 0;
-  const playerAtk = vi[ATTACK_VAR] ?? 0;
-  const playerDef = vi[DEFENSE_VAR] ?? 0;
+  // Best reachable value of a stat/skill = init + every positive inc_var that
+  // targets it, across all reachable effect sources (room on_enter, object
+  // interactions, NPC dialogue, combat on_defeat, and skill-check branches). This
+  // mirrors the skill-check ceiling used below: the combat-winnability proof must
+  // credit the player the SAME buffs a skill check does, or a fight winnable only
+  // after a reachable +attack weapon / +defense ward (e.g. cold_forge's lantern-
+  // spirit +2 attack and founder's-plate +2 defense, sunken_barrow's shade ward)
+  // is wrongly flagged COMBAT_UNWINNABLE. COMBAT_UNWINNABLE means "only a TRULY
+  // impossible fight is an error", so over-approximating player power (assume every
+  // buff obtained) is the sound direction — it can only REMOVE false positives,
+  // never add one. A negative inc_var (a debuff) is ignored (Math.max(0, by)),
+  // exactly as the skill ceiling does, so it never over-credits.
+  const buffEffects = [...rpgRuntimeEffects(pack), ...allParserEffects(pack)];
+  const statCeiling = (name: string): number => {
+    let v = vi[name] ?? 0;
+    for (const e of buffEffects)
+      if ("inc_var" in e && e.inc_var.name === name) v += Math.max(0, e.inc_var.by);
+    return v;
+  };
+
+  const playerHp = statCeiling(HP_VAR);
+  const playerAtk = statCeiling(ATTACK_VAR);
+  const playerDef = statCeiling(DEFENSE_VAR);
 
   // ── Enemies ──────────────────────────────────────────────────────────────────
   for (const enemy of pack.enemies) {
@@ -126,8 +146,9 @@ export function validateRpg(pack: RpgPack): ValidationReport {
         ),
       );
 
-    // Winnability: best-case player damage (d6 max = 6) vs. worst-case enemy damage
-    // (d6 min = 1). Enemy attacks once per round the player fails to kill it.
+    // Winnability: best-case player damage (d6 max = 6, with best reachable attack)
+    // vs. worst-case enemy damage (d6 min = 1, against best reachable defense), from
+    // best reachable HP. Enemy attacks once per round the player fails to kill it.
     const bestPlayerDmg = Math.max(1, 6 + playerAtk - enemy.defense);
     const roundsToKill = Math.ceil(enemy.hp / bestPlayerDmg);
     const minEnemyDmg = Math.max(1, 1 + enemy.attack - playerDef);
@@ -136,7 +157,7 @@ export function validateRpg(pack: RpgPack): ValidationReport {
       findings.push(
         err(
           "COMBAT_UNWINNABLE",
-          `enemy "${enemy.id}" cannot be beaten from full HP even with best-case rolls (needs ${roundsToKill} rounds; would take ≥${worstCaseDamageTaken} damage vs ${playerHp} HP).`,
+          `enemy "${enemy.id}" cannot be beaten even with best-case rolls and the player's best reachable stats (needs ${roundsToKill} rounds; would take ≥${worstCaseDamageTaken} damage vs ${playerHp} reachable HP).`,
           [`enemy:${enemy.id}`],
         ),
       );
@@ -144,22 +165,16 @@ export function validateRpg(pack: RpgPack): ValidationReport {
   }
 
   // ── Skill checks ─────────────────────────────────────────────────────────────
-  // Best reachable value of a skill = init + every inc_var that targets it.
-  const skillCeiling = (skill: string): number => {
-    let v = vi[skill] ?? 0;
-    for (const e of [...rpgRuntimeEffects(pack), ...allParserEffects(pack)])
-      if ("inc_var" in e && e.inc_var.name === skill) v += Math.max(0, e.inc_var.by);
-    return v;
-  };
+  // Best reachable value of a skill uses the same statCeiling as combat above.
   for (const o of pack.objects) {
     for (const it of o.interactions) {
       const sc = it.skill_check;
       if (!sc) continue;
-      if (sc.difficulty > 20 + skillCeiling(sc.skill)) {
+      if (sc.difficulty > 20 + statCeiling(sc.skill)) {
         findings.push(
           err(
             "SKILL_CHECK_IMPOSSIBLE",
-            `skill check on "${o.id}" needs ${sc.difficulty} but d20 + best "${sc.skill}" tops out at ${20 + skillCeiling(sc.skill)}.`,
+            `skill check on "${o.id}" needs ${sc.difficulty} but d20 + best "${sc.skill}" tops out at ${20 + statCeiling(sc.skill)}.`,
             [`object:${o.id}`],
           ),
         );
