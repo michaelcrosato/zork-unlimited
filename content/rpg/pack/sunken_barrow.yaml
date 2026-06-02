@@ -311,7 +311,25 @@ npcs:
   # truly lethal — from base stats (the death ending stays reachable).
   #
   # bug_0113 — the ward is +3 (was +2), so PREPARED play RELIABLY survives. A fresh
-  # blind pass on the warded route (seed 11, ai-runs/2026-06-02T09-48-19-753Z/playtest.md
+  # bug_0119 — the ward counsel now also tells the player the ward is ALL the aid the
+  # barrow gives and the close fight is won by pressing on, not by retreating to look for
+  # more. A fresh blind pass on the warded route (seed 7, ai-runs/2026-06-02T11-22-38-112Z/
+  # playtest.md §4/§5) won but hit "a genuine scare ... I retreated thinking I was under-
+  # prepared," and warned that with no heal/rest mechanic "a cautious player could
+  # reasonably conclude the encounter is unwinnable and quit" — searching for healing or
+  # gear that does not exist. That is exactly the bug_0027 failure mode (a player quits a
+  # winnable game hunting for a missing item the pack never has), here on the wight rather
+  # than the slab. The fix is the same honesty discipline applied to the shade's spoken
+  # counsel: it now says plainly there is no balm, no second blade, no charm to find — the
+  # ward is the whole of the help, the grim mid-fight moment is the wight's way of wearing
+  # you down (not the true odds), and breaking off only returns you to the same fight no
+  # fresher. Pure spoken npc_text — no flag/var/journal/score/ending/topic change, so the
+  # ward (+3), the one-shot retire, the canonical trace's recorded journal, and its final
+  # state hash are all untouched (only the pack content_hash shifts, re-pinned in
+  # traces/rpg/barrow_victory.json). The under-armed player who skips the shade never hears
+  # it and stays in bug_0102's intended lethal gamble.
+  #
+  # A prior blind pass on the warded route (seed 11, ai-runs/2026-06-02T09-48-19-753Z/playtest.md
   # §4/§5) won twice but finished at exactly 3 HP both times and flagged the marquee
   # fight as razor-thin: "an unlucky early run of high wight rolls can kill a fully-
   # prepared, 'correct play' player … no recovery beyond fleeing." At +2 the warded
@@ -359,7 +377,13 @@ npcs:
             strength runs out of your arm, and that is how it wore me down in the end.
             Here — take the trick I learned too late: keep your guard close and let the
             chill slide off the iron, not into you. It will not swing your blade for
-            you, but the cold will bite the less.
+            you, but the cold will bite the less. And do not break off to hunt for more
+            than this: there is no balm in the barrow, no second blade, no charm laid
+            by for the next fool — this ward is the whole of the help you will find, and
+            it is help enough. There will come a moment in the cold of it when the fight
+            looks lost; that is the wight's way of wearing a man down, not the truth of
+            the odds. Set your feet and keep striking. Step back to seek aid that is not
+            here and you only come again to the same fight, no fresher than you left it.
           effects:
             - set_flag: heard_warding
             - inc_var: { name: defense, by: 3 }
