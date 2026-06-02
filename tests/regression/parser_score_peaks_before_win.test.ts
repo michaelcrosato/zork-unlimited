@@ -8,14 +8,19 @@
  * cure — the deliberate USE-antidote-on-master act the win turns on, the literal point
  * of the pack — which awarded nothing. bug_0104 fixed THAT pack (the cure now carries
  * the final +5, max_score 35 → 40). This check generalizes the lesson: when a SINGLE
- * win_condition turns on a `has_flag` the player must deliberately set, the perfect
- * score should not already be reachable WITHOUT performing that climactic act.
+ * win_condition turns on a deliberate climactic ACT the player must perform, the perfect
+ * score should not already be reachable WITHOUT performing it. bug_0117 widened "act"
+ * from `has_flag` (SET the win flag) to also cover `has_item` (CLAIM the relic the win
+ * turns on — taking it is a chosen act, structurally the alchemists cure / the sunken
+ * barrow circlet's +25 take_effects). `visited` stays excluded: a navigation win's final
+ * step is mere LOCOMOTION, a denouement that rightly awards nothing — a blind playtester
+ * confirmed sealed_crypt's "35/35 one step before the win" reads as intentional (seed 29).
  *
  * Sound & conservative — it fires ONLY when all hold (so it detects fewer cases, never
- * wrong ones): exactly one win_condition; the win requires a guaranteed `has_flag` F
- * (top-level or in all_of; any_of/none_of are opaque); F is settable; and max_score is
- * reachable by score awards none co-located with a setter of F. A WARNING, not an error
- * (a peaked-early score is a quality nit, not a broken game).
+ * wrong ones): exactly one win_condition; the win requires a guaranteed `has_flag` F or
+ * `has_item` I (top-level or in all_of; any_of/none_of are opaque); the act is
+ * performable (some list sets F / grants I); and max_score is reachable by score awards
+ * none co-located with it. A WARNING, not an error (a peaked-early score is a quality nit).
  *
  * Locked here:
  *   (1) the four shipped SCORING packs produce ZERO SCORE_PEAKS_BEFORE_WIN findings and
@@ -29,7 +34,12 @@
  *       cold_forge / sunken_barrow denouement-step shape — not the smell);
  *   (5) a pack with MORE THAN ONE win_condition is left alone (a second, flagless win
  *       could be the real climax — the multi-win soundness guard);
- *   (6) an RPG pack reaches the check through validateRpg (the delegation path).
+ *   (6) an RPG pack reaches the check through validateRpg (the delegation path);
+ *   (7) bug_0117 — a `has_item` win whose winning relic is CLAIMED by an UNSCORED act
+ *       (take_effects present but no score) while max_score is reachable before it IS
+ *       flagged; moving the capstone onto the relic's take_effects (or an add_item that
+ *       grants it) clears it; and a purely-implicit take (a takeable relic with NO
+ *       take_effects / add_item — no scriptable act list) is conservatively NOT flagged.
  */
 import { describe, it, expect } from "vitest";
 import { compileParserPack, loadParserPackFile } from "../../src/parser/pack.js";
@@ -161,6 +171,62 @@ win_conditions:
 endings: [{ id: e, title: E, text: "done" }]
 `;
 
+/**
+ * bug_0117 — a `has_item` win: the player wins by CLAIMING the `relic` in room b (the
+ * sunken_barrow circlet shape). The `book` READ in room a awards `bookScore`; the relic
+ * is claimed by TAKE.
+ *  - `relicScore > 0` → the relic's take_effects award it (the capstone lives on the
+ *    claim, like the circlet's +25);
+ *  - `relicScore === 0` → take_effects exist but carry no score (the smell: a scripted
+ *    claim act that awards nothing while max is reached on the book);
+ *  - `implicit` → the relic has NO take_effects at all (a purely implicit take — no
+ *    scriptable act list, conservatively NOT flagged).
+ */
+const itemWinPack = (
+  bookScore: number,
+  relicScore: number,
+  maxScore: number,
+  implicit = false,
+): string => {
+  const takeBlock = implicit
+    ? ""
+    : `
+    take_effects:
+${relicScore > 0 ? `      - inc_var: { name: score, by: ${relicScore} }` : `      - narrate: "You lift the relic."`}`;
+  return `
+meta: { id: t, title: T, start_room: a, max_score: ${maxScore} }
+rooms:
+  - id: a
+    name: A
+    description: "base"
+    objects: [book]
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: B
+    description: "B"
+    objects: [relic]
+    exits: [{ direction: south, to: a }]
+objects:
+  - id: book
+    name: book
+    description: "a book"
+    read_text: "words"
+    interactions:
+      - verb: READ
+        target: book
+        conditions: [{ not_flag: read_book }]
+        effects:
+          - set_flag: read_book
+          - inc_var: { name: score, by: ${bookScore} }
+  - id: relic
+    name: relic
+    description: "a relic"
+    takeable: true${takeBlock}
+win_conditions: [{ id: w, conditions: [{ has_item: relic }], ending: e }]
+endings: [{ id: e, title: E, text: "done" }]
+`;
+};
+
 describe("bug_0116 — the parser/RPG validator flags a perfect score reachable before the win", () => {
   it("the four shipped scoring packs produce ZERO SCORE_PEAKS_BEFORE_WIN findings and stay green", () => {
     for (const path of [
@@ -263,5 +329,109 @@ endings: [{ id: e, title: E, text: "done" }]
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(validateRpg(r.compiled.pack).findings.map((f) => f.code)).toContain(CODE);
+  });
+
+  // ── bug_0117: the has_item extension ───────────────────────────────────────────
+  it("flags a has_item win when the winning relic's claim awards nothing and max is reached first", () => {
+    // book +15 == max, relic take_effects exist but score 0 → perfect score before the claim.
+    const codes = parserCodes(itemWinPack(15, 0, 15));
+    expect(codes).toContain(CODE);
+    const r = compileParserPack(itemWinPack(15, 0, 15));
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      const f = validateParser(r.compiled.pack).findings.find((x) => x.code === CODE);
+      expect(f?.severity).toBe("warning");
+      expect(f?.message).toContain("relic");
+      expect(f?.message).toContain("claiming");
+    }
+  });
+
+  it("clears the finding once the capstone award lives on the relic's claim (take_effects)", () => {
+    // book +10 (not on the claim) + relic claim +5 = 15 = max, co-located with the win act.
+    expect(parserCodes(itemWinPack(10, 5, 15))).not.toContain(CODE);
+  });
+
+  it("never flags a purely-implicit take (no take_effects / add_item — no scriptable claim act)", () => {
+    // book +15 == max; relic has NO take_effects, so there is no act list to score —
+    // conservatively skipped (WIN_UNREACHABLE's territory), mirroring an unsettable flag.
+    expect(parserCodes(itemWinPack(15, 0, 15, true))).not.toContain(CODE);
+  });
+
+  it("clears the finding when the relic is granted by a scored add_item act", () => {
+    // The relic is handed over (add_item) by a lever pull that also awards the capstone,
+    // so max is NOT reachable without that act. book +10 + grant +5 = 15 = max.
+    const src = `
+meta: { id: t, title: T, start_room: a, max_score: 15 }
+rooms:
+  - id: a
+    name: A
+    description: "base"
+    objects: [book, lever]
+    exits: []
+objects:
+  - id: book
+    name: book
+    description: "a book"
+    read_text: "words"
+    interactions:
+      - verb: READ
+        target: book
+        conditions: [{ not_flag: read_book }]
+        effects:
+          - set_flag: read_book
+          - inc_var: { name: score, by: 10 }
+  - id: lever
+    name: lever
+    description: "a lever"
+    interactions:
+      - verb: USE
+        target: lever
+        conditions: [{ not_flag: pulled }]
+        effects:
+          - set_flag: pulled
+          - add_item: relic
+          - inc_var: { name: score, by: 5 }
+win_conditions: [{ id: w, conditions: [{ has_item: relic }], ending: e }]
+endings: [{ id: e, title: E, text: "done" }]
+`;
+    expect(parserCodes(src)).not.toContain(CODE);
+  });
+
+  it("flags a has_item win when the granting add_item act is unscored and max is reached first", () => {
+    // Same shape, but the lever grant awards nothing and the book carries the full max.
+    const src = `
+meta: { id: t, title: T, start_room: a, max_score: 15 }
+rooms:
+  - id: a
+    name: A
+    description: "base"
+    objects: [book, lever]
+    exits: []
+objects:
+  - id: book
+    name: book
+    description: "a book"
+    read_text: "words"
+    interactions:
+      - verb: READ
+        target: book
+        conditions: [{ not_flag: read_book }]
+        effects:
+          - set_flag: read_book
+          - inc_var: { name: score, by: 15 }
+  - id: lever
+    name: lever
+    description: "a lever"
+    interactions:
+      - verb: USE
+        target: lever
+        conditions: [{ not_flag: pulled }]
+        effects:
+          - set_flag: pulled
+          - add_item: relic
+win_conditions: [{ id: w, conditions: [{ has_item: relic }], ending: e }]
+endings: [{ id: e, title: E, text: "done" }]
+`;
+    expect(parserCodes(src)).toContain(CODE);
   });
 });

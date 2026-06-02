@@ -509,35 +509,43 @@ export function validateParser(
   }
 
   // Score/win coincidence — the bug_0104 generalization, as a quality WARNING.
-  // When a SINGLE win_condition turns on a flag the player must deliberately SET (a
-  // `has_flag` the win requires, written by an interaction / unlock / dialogue act —
-  // the climactic "administer / activate / claim" beat), the perfect score should not
-  // already be reachable WITHOUT performing that act. alchemists_tower pre-bug_0104
-  // was exactly this smell: read +5, steep +10, decant +20 = 35 = max_score, ALL
-  // before the cure (the act the win turns on), while the cure itself — the literal
-  // point of the pack — awarded nothing, so a player hit a "perfect score yet
-  // unfinished" state (blind playtest seed 89). bug_0104 fixed it by moving the final
-  // +5 onto the cure act; this check catches the class STRUCTURALLY at authoring time
-  // instead of relying on a blind playtester to notice it.
+  // When a SINGLE win_condition turns on a deliberate climactic ACT the player must
+  // perform — SETTING a `has_flag` (administer / activate the win flag) or CLAIMING a
+  // `has_item` (grab the relic the win turns on) — the perfect score should not already
+  // be reachable WITHOUT performing that act. alchemists_tower pre-bug_0104 was exactly
+  // this smell: read +5, steep +10, decant +20 = 35 = max_score, ALL before the cure
+  // (the act the win turns on), while the cure itself — the literal point of the pack —
+  // awarded nothing, so a player hit a "perfect score yet unfinished" state (blind
+  // playtest seed 89). bug_0104 fixed it by moving the final +5 onto the cure act; this
+  // check catches the class STRUCTURALLY at authoring time instead of relying on a blind
+  // playtester to notice it. (sunken_barrow already does it right: the +25 capstone
+  // lives on the circlet's take_effects — the very CLAIM the win turns on, bug_0107 —
+  // so its perfect score is reachable only WITH the claim and it is NOT flagged.)
   //
-  // Sound & conservative — it fires only when ALL of these hold, so no current pack
-  // is flagged (verified: sealed_crypt/cold_forge/sunken_barrow win on `visited` /
-  // `has_item`, never a `has_flag`, and alchemists' cure act now carries +5):
+  // `visited` is deliberately NOT treated as a climactic act: a navigation win's final
+  // step is mere LOCOMOTION (walk through the open gate), a denouement that rightly
+  // awards nothing — a blind playtester confirmed sealed_crypt's "35/35 one step before
+  // the win" reads as intentional, not a trap (seed 29). Setting a flag or claiming an
+  // item is a chosen ACT; arriving in a room is not.
+  //
+  // Sound & conservative — it fires only when ALL of these hold, so no current pack is
+  // flagged (verified: sealed_crypt/cold_forge win on `visited`; sunken_barrow's
+  // `has_item` claim carries +25; alchemists' cure act carries +5):
   //   • exactly ONE win_condition — a second, flagless win could be the real climax,
   //     so multi-win packs are left alone (no false positive);
-  //   • the win REQUIRES a `has_flag` F (a guaranteed conjunctive literal: top-level
-  //     or inside all_of; any_of / none_of are opaque and never drive the finding);
-  //   • F is actually settable (some effect list writes it — an unsettable F is
-  //     WIN_UNREACHABLE's concern, not this one); AND
-  //   • max_score is reachable by score awards NONE of which is co-located with a
-  //     setter of F — i.e. the player can hit the perfect score without ever firing
-  //     the win-trigger act. Excluding EVERY F-setting list (even a scored one) only
-  //     LOWERS the without-F total, so the bar errs toward NOT warning.
+  //   • the win REQUIRES a `has_flag` F or a `has_item` I (a guaranteed conjunctive
+  //     literal: top-level or inside all_of; any_of / none_of are opaque and never
+  //     drive the finding);
+  //   • that act is actually performable — some effect list SETS F, or some list GRANTS
+  //     I (an `add_item: I`, or object I's `take_effects` — taking I is what grants it);
+  //     an unreachable flag/item is WIN_UNREACHABLE's concern, not this one; AND
+  //   • max_score is reachable by score awards NONE of which is co-located with the
+  //     win-trigger act — i.e. the player can hit the perfect score without ever firing
+  //     it. Excluding EVERY win-act list (even a scored one) only LOWERS the without-act
+  //     total, so the bar errs toward NOT warning.
   if (pack.meta.max_score > 0 && pack.win_conditions.length === 1) {
     const wc = pack.win_conditions[0]!;
     const lists = [...effectLists(pack), ...(opts.extraEffectLists ?? [])];
-    const setsFlag = (es: Effect[], f: string): boolean =>
-      es.some((e) => "set_flag" in e && e.set_flag === f);
     const scoreOf = (es: Effect[]): number =>
       es.reduce(
         (s, e) =>
@@ -545,18 +553,42 @@ export function validateParser(
         0,
       );
     const initScore = pack.meta.vars_init[SCORE_VAR] ?? 0;
+    // The perfect score reachable WITHOUT the win-trigger act = init + every award not
+    // co-located with it. `winActLists` is the set of effect-list references that fire
+    // the act; excluding them by identity matches each declared act list exactly.
+    const scoreWithout = (winActLists: Set<Effect[]>): number =>
+      initScore + lists.filter((es) => !winActLists.has(es)).reduce((s, es) => s + scoreOf(es), 0);
+    const peaksWarn = (act: string, term: string): void => {
+      findings.push(
+        warn(
+          "SCORE_PEAKS_BEFORE_WIN",
+          `meta.max_score (${pack.meta.max_score}) is reachable without ${act}, which win_condition "${wc.id}" turns on — a player can hit the perfect score before the climactic act that wins (cf. bug_0104). Award some score on ${term}, or raise max_score so the perfect score coincides with the win.`,
+          ["meta:max_score", `win:${wc.id}`],
+        ),
+      );
+    };
     for (const f of requiredFlags(wc.conditions)) {
-      if (!lists.some((es) => setsFlag(es, f))) continue;
-      const scoreWithoutF =
-        initScore + lists.filter((es) => !setsFlag(es, f)).reduce((s, es) => s + scoreOf(es), 0);
-      if (scoreWithoutF >= pack.meta.max_score) {
-        findings.push(
-          warn(
-            "SCORE_PEAKS_BEFORE_WIN",
-            `meta.max_score (${pack.meta.max_score}) is reachable without setting "${f}", the flag win_condition "${wc.id}" turns on — a player can hit the perfect score before the climactic act that wins (cf. bug_0104). Award some score on the act that sets "${f}", or raise max_score so the perfect score coincides with the win.`,
-            ["meta:max_score", `win:${wc.id}`],
-          ),
-        );
+      const setters = new Set(
+        lists.filter((es) => es.some((e) => "set_flag" in e && e.set_flag === f)),
+      );
+      if (setters.size === 0) continue; // unsettable F is WIN_UNREACHABLE's concern
+      if (scoreWithout(setters) >= pack.meta.max_score) {
+        peaksWarn(`setting "${f}"`, `the act that sets "${f}"`);
+      }
+    }
+    for (const i of requiredItems(wc.conditions)) {
+      // Granting acts for item I: object I's take_effects (taking I grants it), plus any
+      // list that explicitly `add_item: I`s it. A purely implicit take (a takeable I with
+      // NO take_effects and no add_item) has no scriptable act list to attach score to,
+      // so — like an unsettable flag — it is left to WIN_UNREACHABLE, not flagged here.
+      const granters = new Set<Effect[]>();
+      const obj = pack.objects.find((o) => o.id === i);
+      if (obj?.take_effects) granters.add(obj.take_effects);
+      for (const es of lists)
+        if (es.some((e) => "add_item" in e && e.add_item === i)) granters.add(es);
+      if (granters.size === 0) continue;
+      if (scoreWithout(granters) >= pack.meta.max_score) {
+        peaksWarn(`claiming "${i}"`, `the act that grants "${i}" (its take_effects / add_item)`);
       }
     }
   }
@@ -971,6 +1003,20 @@ function requiredFlags(conds: Condition[]): string[] {
   const out: string[] = [];
   const walk = (c: Condition): void => {
     if ("has_flag" in c) out.push(c.has_flag);
+    else if ("all_of" in c) c.all_of.forEach(walk);
+  };
+  conds.forEach(walk);
+  return out;
+}
+
+// The has_item twin of requiredFlags: the items a conjunctive condition array
+// GUARANTEES the player holds (top-level or in all_of; any_of/none_of are opaque and
+// skipped, same soundness stance). Used by SCORE_PEAKS_BEFORE_WIN to treat "claim the
+// winning relic" as a climactic act — unlike a `visited` win, which is mere locomotion.
+function requiredItems(conds: Condition[]): string[] {
+  const out: string[] = [];
+  const walk = (c: Condition): void => {
+    if ("has_item" in c) out.push(c.has_item);
     else if ("all_of" in c) c.all_of.forEach(walk);
   };
   conds.forEach(walk);
