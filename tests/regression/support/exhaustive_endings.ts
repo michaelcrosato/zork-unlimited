@@ -141,8 +141,9 @@ export function exhaustiveEndings(
   rules: Rules,
   start: GameState,
   maxStates: number,
+  onState?: (s: GameState) => void,
 ): ExhaustiveResult {
-  return exhaustiveEndingsMulti([rules], start, maxStates);
+  return exhaustiveEndingsMulti([rules], start, maxStates, onState);
 }
 
 /**
@@ -173,6 +174,7 @@ export function exhaustiveEndingsMulti(
   ruleSets: Rules[],
   start: GameState,
   maxStates: number,
+  onState?: (s: GameState) => void,
 ): ExhaustiveResult {
   const primary = ruleSets[0];
   if (!primary) throw new Error("exhaustiveEndingsMulti requires at least one rule set");
@@ -185,6 +187,12 @@ export function exhaustiveEndingsMulti(
   while (queue.length > 0) {
     if (seen.size > maxStates) return { reached, states: seen.size, cappedOut: true };
     const s = queue.shift()!;
+    // Observe every DISTINCT reachable state exactly once (each is enqueued once,
+    // dequeued once). Lets a caller mine the full reachable region — e.g. which
+    // reactive scene/ending variant is the first match in each viewing context —
+    // without the generic BFS needing any mode-specific knowledge. Called for the
+    // start, terminal, and interior states alike.
+    if (onState) onState(s);
     if (s.ended) {
       if (s.endingId) reached.add(s.endingId);
       continue; // a terminal state offers no further actions

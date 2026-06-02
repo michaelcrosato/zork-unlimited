@@ -1,0 +1,70 @@
+bug_id: bug_0145
+pack_id: all_cyoa            # structural invariant over every shipped CYOA pack (auto-discovered)
+seed: 7
+type: invariant_lock        # no defect found in shipped content; machine-enforces a hand-obeyed authoring invariant
+layer: test                 # regression-only + a backward-compatible test-support hook; NO content/engine/validator/schema change, NO hash pin moved
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-02T17-47-04-289Z/playtest.md   # white_stag seed 91 (the cycle's mandated, correctly-rotated target — least-recently blind-played)
+  finding: >
+    The mandated blind pass on The White Stag (CYOA, seed 91 — the least-recently
+    blind-played pack per [[assessor-blind-pass-rotation]]) reached FOUR endings
+    (quarry / thaw / offering / lost) and rated the pack clarity 5/5, enjoyment 5/5,
+    ZERO bugs — re-confirmed blind-clean (a point higher on enjoyment than the
+    bug_0135 seed-23 pass). No actionable content defect; content is blind-exhausted
+    per [[content-polish-backlog-exhausted]]. The tester's one structural OBSERVATION
+    was the seam this cycle closes: "Five reachable outcomes exist; I confirmed four —
+    the fifth (loosing the arrow AFTER reading the stone, the knowing-kill reactive
+    epilogue) I did not trigger this run." Reactive ending/scene VARIANTS are prose a
+    single blind run can silently miss, and nothing proved each one is actually
+    reachable as displayed text.
+root_cause: >
+  A gap in the structural-verification net, not a content defect. "Dead reactive
+  prose" — a scene/ending `variants:` entry whose text can never appear to a player —
+  has two causes, and only one was machine-checked:
+    (1) SHADOWING (bug_0085, cyoa_variant_shadowing): a later sibling whose `when` is
+        PROVABLY ENTAILED by an earlier sibling's can never be the first match
+        (first-match-wins). Caught statically — but soundly partial: it reasons only
+        over pure conjunctions of literals/var-bounds and never over the pack's actual
+        gating.
+    (2) UNREACHABLE GUARD (this bug): a variant whose `when` is never SATISFIABLE by
+        any state the player can reach AT that scene/ending — a guard flag only set on
+        a branch that leads away and never back, a var threshold the gating never lets
+        the counter reach, a flag pair two mutually-exclusive choices forbid. Not
+        shadowed by a sibling; its guard is simply unreachable. No static check sees
+        this, and no blind playtest is GUARANTEED to surface it (the prose just never
+        appears on the routes a tester happens to walk).
+  The bug_0121 exhaustive solver already enumerates the COMPLETE concrete reachable
+  state region of every CYOA pack; it just discarded everything but the terminal
+  ending ids. The information needed to prove variant liveness was computed and thrown
+  away (the bug_0138 "computed-but-invisible" class).
+fix: >
+  Test-only (§15 lock-the-finding) + a backward-compatible test-support hook. Adds an
+  optional `onState` visitor to the shared exhaustive BFS
+  (tests/regression/support/exhaustive_endings.ts) that observes every DISTINCT
+  reachable state exactly once — the generic, mode-agnostic seam; no behaviour change
+  for existing callers (the param is optional). A new regression
+  (cyoa_variant_liveness.test.ts) uses it to record, at each reachable state, which
+  scene/ending variant is the FIRST match (computed with the engine's own
+  evalConditions, identical to runner.ts sceneText/endingText) and asserts every
+  declared variant of every auto-discovered CYOA pack is the first match in SOME
+  reachable state. The dynamic complement to bug_0085: together they close the
+  dead-reactive-prose defect class. No content/engine/validator/schema change.
+within_bar: >
+  Regression test only, plus an optional, behaviour-preserving param on a TEST-support
+  helper. No pack edited; no validator/schema/engine change; NO hash pin moved (all 9
+  packs validate 0/0, content_hashes unchanged). Deterministic, no LLM-judge, NO API
+  key. Sound by construction (no false positives): for CYOA the only action is CHOOSE
+  so the BFS is complete, the search FAILS on cappedOut (never truncates silently), and
+  a variant is called dead only when the full reachable region genuinely never displays
+  it. A planted-dead-variant negative control proves the check actually bites. The full
+  pre-existing suite passes unchanged (existing BFS consumers — cyoa/parser/rpg
+  all-endings-reachable — green), plus the new cases below.
+result:
+  shipped_packs_all_live: true   # every reactive variant in all 5 shipped CYOA packs is reachable as displayed text
+regression_test: tests/regression/cyoa_variant_liveness.test.ts
+test_cases:
+  - "discovers the shipped CYOA packs (guards against a vacuous pass if the glob yields nothing)"
+  - "every shipped CYOA pack: every declared scene/ending variant is the first match in some reachable state (search not capped)"
+  - "FAILS on a planted dead variant (a scene variant guarded on flags no path sets) — the negative control for the whole proof"
