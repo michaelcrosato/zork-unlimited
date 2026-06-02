@@ -69,6 +69,18 @@ export function validateRpg(pack: RpgPack): ValidationReport {
   for (const e of rpgRuntimeEffects(pack))
     if ("inc_var" in e && e.inc_var.name === SCORE_VAR) extraScoreAwards += e.inc_var.by;
 
+  // The grouped RPG-only effect lists (each enemy on_defeat, each skill-check
+  // on_success/on_failure), handed to the parser validator's SCORE_PEAKS_BEFORE_WIN
+  // check so a score award co-located with a combat/skill act that sets a win-trigger
+  // flag is seen as such. No current RPG pack wins on a has_flag, so this changes no
+  // result today; it is coverage for a future RPG pack whose win turns on a defeat flag.
+  const extraEffectLists: Effect[][] = [];
+  for (const enemy of pack.enemies) extraEffectLists.push(enemy.on_defeat);
+  for (const o of pack.objects)
+    for (const it of o.interactions)
+      if (it.skill_check)
+        extraEffectLists.push(it.skill_check.on_success, it.skill_check.on_failure);
+
   // The WIN_FIRES_AT_START stability proof must also see RPG-only falsifiers:
   // combat / skill branches can falsify a start-true win (extraFalsifierEffects),
   // and combat mutates HP via dynamic set_var the parser scan never sees, so the
@@ -85,6 +97,7 @@ export function validateRpg(pack: RpgPack): ValidationReport {
     extraScoreAwards,
     extraFalsifierEffects: rpgRuntimeEffects(pack),
     extraVolatileVars,
+    extraEffectLists,
   });
   const findings: Finding[] = [...base.findings];
 

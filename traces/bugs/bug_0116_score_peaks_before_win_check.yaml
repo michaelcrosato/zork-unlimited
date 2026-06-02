@@ -1,0 +1,74 @@
+bug_id: bug_0116
+pack_id: n/a   # validator capability (cross-pack), not a single-pack content bug
+seed: 23
+evidence:
+  source: blind_playtest + structural follow-on
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-02T10-44-32-963Z/playtest.md   # alchemists_tower, seed 23
+  finding: >
+    The mandated blind pass rotated onto alchemists_tower (parser, seed 23 — a fresh seed;
+    recent passes used 41/89/53/101). A fresh, source-blind, MCP-only general-purpose subagent
+    played three routes: WON ending_cured 40/40 (full brew→cure), reached ending_betrayal (the
+    bug_0114 non-death greed fork), and ending_poisoned (drank the black phial); it also observed
+    the fourth available action (give black phial to master). It rated the pack clarity 5/5,
+    enjoyment 4/5, and found ZERO functional bugs — no rejected actions, loops, soft-locks, or
+    stale prose; every reactive room/object text, the key/brew dependency chain, the scoring, and
+    all branches stayed in sync; determinism held. The pack is blind-clean and content-complete;
+    its only knock (a short, low-resistance golden path) is the inherent brevity the bug_0114
+    moral fork already addressed as far as content polish can. Per project memory (content polish
+    is exhausted; the next high-value moves are STRUCTURAL — resist churning blind-clean packs),
+    the cycle's improvement is structural: the long-standing, repeatedly-listed next-focus item
+    "a validator WARNING that flags max_score reachable before any win_condition fires — the
+    bug_0104 generalization, caught structurally rather than by blind playtest."
+failure:
+  type: missing_quality_check
+  scope: src/validate/parser_validator.ts  (and so src/validate/rpg_validator.ts, which delegates to it)
+  description: >
+    bug_0104 fixed a "perfect score yet unfinished" smell in alchemists_tower discovered ONLY by a
+    blind playtester (seed 89): the score chain awarded 5 (read recipe) + 10 (steep herb) + 20
+    (decant antidote) = 35 = the old max_score, ALL before the spire, while the bug_0057 climax —
+    the deliberate USE-antidote-on-master cure, the act the win turns on and the literal point of
+    the pack — awarded nothing. A score-watching player hit 35/35 one full action before the game
+    could end. bug_0104 moved the final +5 onto the cure act (max_score 35 → 40) so the perfect
+    score now coincides with the win. But that was a one-pack content fix; NOTHING structurally
+    prevented the same class from recurring (in alchemists or any future pack), and the repeated
+    next-focus note asked for it to be caught at authoring time by the validator instead of relying
+    on a human blind pass to notice.
+fix:
+  layer: validator   # trust-but-verify: changed the validator freely, added a regression test
+  summary: >
+    Added SCORE_PEAKS_BEFORE_WIN (a WARNING) to validateParser, placed right after the existing
+    SCORE_UNREACHABLE check. When a pack has exactly ONE win_condition and that win REQUIRES a
+    `has_flag` F the player must deliberately set (a guaranteed conjunctive literal — top-level or
+    inside all_of; any_of/none_of are opaque and never drive the finding), the check computes the
+    maximum score reachable by awards NONE of which is co-located (in the same effect list) with a
+    setter of F. If that without-F total already reaches max_score, the player can hit the perfect
+    score before the climactic win-trigger act — warned. Two new helpers: `effectLists(pack)` (the
+    grouped twin of allEffects, keeping each declared effect LIST intact so co-location is
+    decidable) and `requiredFlags(conds)` (flags a conjunctive condition array guarantees true).
+    The RPG validator now also passes its runtime effect lists (each enemy on_defeat, each
+    skill-check on_success/on_failure) via a new `extraEffectLists` option, so the check covers a
+    future RPG pack whose win turns on a defeat flag.
+  soundness: >
+    Fires only when ALL conditions hold, so it detects fewer cases but never wrong ones — a quality
+    WARNING, never an error (a peaked-early score is a nit, not a broken game). The single-win guard
+    avoids a false positive on a multi-win pack whose flagless second win is the real climax.
+    Excluding EVERY F-setting list (even a scored one) only LOWERS the without-F total, so the bar
+    errs toward NOT warning. any_of/none_of are skipped — the same soundness stance as the existing
+    dead-content analysis.
+  audit_result: >
+    Auditing the four shipped scoring packs found ZERO findings, and no content changed (no hash
+    moved): sealed_crypt (win on `visited: catacombs`), cold_forge (`visited: ember_chamber`), and
+    sunken_barrow (`visited: relic_chamber` + `has_item: circlet`) win on navigation/possession,
+    not a has_flag, so the check never engages; alchemists_tower wins on `has_flag:
+    cure_administered` whose setter act now carries the bug_0104 +5, so the without-F max is 35 <
+    40 — no warning. The pre-bug_0104 alchemists shape (cure act unscored, 35 reachable before it)
+    WOULD now be flagged, proven by the regression's synthetic bug-first case.
+verification:
+  - "npm run health: green (verify:integrity + typecheck + lint + format:check + tests + validate + playtest)"
+  - "all four parser/rpg scoring packs validate 0 error / 0 warning (no false positives)"
+  - "tests/regression/parser_score_peaks_before_win.test.ts: 6 cases pass"
+  - "no content pack edited; no content_hash re-pinned (audit found nothing to fix)"
+locked_by:
+  - traces/bugs/bug_0116_score_peaks_before_win_check.yaml
+  - tests/regression/parser_score_peaks_before_win.test.ts

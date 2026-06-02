@@ -81,6 +81,15 @@ export type ValidateParserOptions = {
    * combat could break. Default empty (pure parser packs have no such vars).
    */
   extraVolatileVars?: string[];
+  /**
+   * Effect lists the RPG layer fires through branches the parser scan never groups —
+   * each enemy `on_defeat` and each skill-check `on_success`/`on_failure`. Handed to
+   * the SCORE_PEAKS_BEFORE_WIN check (below) as whole lists (not a flattened scalar
+   * like `extraScoreAwards`) so it can tell whether a score award is CO-LOCATED with
+   * the act that sets a win-trigger flag. Default empty; no current RPG pack wins on a
+   * `has_flag`, so this is coverage for future packs, never a behaviour change today.
+   */
+  extraEffectLists?: Effect[][];
 };
 
 export function validateParser(
@@ -499,6 +508,59 @@ export function validateParser(
     }
   }
 
+  // Score/win coincidence — the bug_0104 generalization, as a quality WARNING.
+  // When a SINGLE win_condition turns on a flag the player must deliberately SET (a
+  // `has_flag` the win requires, written by an interaction / unlock / dialogue act —
+  // the climactic "administer / activate / claim" beat), the perfect score should not
+  // already be reachable WITHOUT performing that act. alchemists_tower pre-bug_0104
+  // was exactly this smell: read +5, steep +10, decant +20 = 35 = max_score, ALL
+  // before the cure (the act the win turns on), while the cure itself — the literal
+  // point of the pack — awarded nothing, so a player hit a "perfect score yet
+  // unfinished" state (blind playtest seed 89). bug_0104 fixed it by moving the final
+  // +5 onto the cure act; this check catches the class STRUCTURALLY at authoring time
+  // instead of relying on a blind playtester to notice it.
+  //
+  // Sound & conservative — it fires only when ALL of these hold, so no current pack
+  // is flagged (verified: sealed_crypt/cold_forge/sunken_barrow win on `visited` /
+  // `has_item`, never a `has_flag`, and alchemists' cure act now carries +5):
+  //   • exactly ONE win_condition — a second, flagless win could be the real climax,
+  //     so multi-win packs are left alone (no false positive);
+  //   • the win REQUIRES a `has_flag` F (a guaranteed conjunctive literal: top-level
+  //     or inside all_of; any_of / none_of are opaque and never drive the finding);
+  //   • F is actually settable (some effect list writes it — an unsettable F is
+  //     WIN_UNREACHABLE's concern, not this one); AND
+  //   • max_score is reachable by score awards NONE of which is co-located with a
+  //     setter of F — i.e. the player can hit the perfect score without ever firing
+  //     the win-trigger act. Excluding EVERY F-setting list (even a scored one) only
+  //     LOWERS the without-F total, so the bar errs toward NOT warning.
+  if (pack.meta.max_score > 0 && pack.win_conditions.length === 1) {
+    const wc = pack.win_conditions[0]!;
+    const lists = [...effectLists(pack), ...(opts.extraEffectLists ?? [])];
+    const setsFlag = (es: Effect[], f: string): boolean =>
+      es.some((e) => "set_flag" in e && e.set_flag === f);
+    const scoreOf = (es: Effect[]): number =>
+      es.reduce(
+        (s, e) =>
+          "inc_var" in e && e.inc_var.name === SCORE_VAR ? s + Math.max(0, e.inc_var.by) : s,
+        0,
+      );
+    const initScore = pack.meta.vars_init[SCORE_VAR] ?? 0;
+    for (const f of requiredFlags(wc.conditions)) {
+      if (!lists.some((es) => setsFlag(es, f))) continue;
+      const scoreWithoutF =
+        initScore + lists.filter((es) => !setsFlag(es, f)).reduce((s, es) => s + scoreOf(es), 0);
+      if (scoreWithoutF >= pack.meta.max_score) {
+        findings.push(
+          warn(
+            "SCORE_PEAKS_BEFORE_WIN",
+            `meta.max_score (${pack.meta.max_score}) is reachable without setting "${f}", the flag win_condition "${wc.id}" turns on — a player can hit the perfect score before the climactic act that wins (cf. bug_0104). Award some score on the act that sets "${f}", or raise max_score so the perfect score coincides with the win.`,
+            ["meta:max_score", `win:${wc.id}`],
+          ),
+        );
+      }
+    }
+  }
+
   // ── Dead reactive content: shadowed / unsatisfiable variants & guards ────────
   // Parser rooms and objects carry reactive `variants` (RoomVariantSchema /
   // ObjectVariantSchema), evaluated first-match-wins (model.ts roomDescription /
@@ -882,6 +944,36 @@ function allEffects(pack: ParserPack): Effect[] {
     if (o.take_effects) out.push(...o.take_effects); // first-class TAKE content (bug_0107)
   }
   for (const n of pack.npcs) for (const node of n.dialogue.nodes) out.push(...node.effects);
+  return out;
+}
+
+// The grouped twin of allEffects: each declared effect LIST kept intact (not
+// flattened), so a check can ask "is this score award in the SAME act as this
+// set_flag?" — co-location the SCORE_PEAKS_BEFORE_WIN check needs.
+function effectLists(pack: ParserPack): Effect[][] {
+  const out: Effect[][] = [];
+  for (const r of pack.rooms) out.push(r.on_enter);
+  for (const o of pack.objects) {
+    for (const it of o.interactions) out.push(it.effects);
+    if (o.unlock_effects) out.push(o.unlock_effects);
+    if (o.take_effects) out.push(o.take_effects);
+  }
+  for (const n of pack.npcs) for (const node of n.dialogue.nodes) out.push(node.effects);
+  return out;
+}
+
+// Flags a conjunctive condition array GUARANTEES are true: top-level literals and
+// those nested in all_of (also a conjunction). any_of / none_of are disjunctions /
+// negations we cannot soundly treat as "required", so they are skipped — keeping the
+// SCORE_PEAKS_BEFORE_WIN check free of false positives (it detects fewer cases, never
+// wrong ones), the same soundness stance as the dead-content analysis below.
+function requiredFlags(conds: Condition[]): string[] {
+  const out: string[] = [];
+  const walk = (c: Condition): void => {
+    if ("has_flag" in c) out.push(c.has_flag);
+    else if ("all_of" in c) c.all_of.forEach(walk);
+  };
+  conds.forEach(walk);
   return out;
 }
 
