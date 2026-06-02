@@ -47,6 +47,11 @@ const warn = (code: string, message: string, where: string[]): Finding => ({
  * those mechanics grant. They seed the feasibility/obtainability checks so a gate
  * legitimately satisfied by combat/skills is not mis-flagged as impossible.
  * Defaults are empty, so Stage-2/3 behavior is byte-identical.
+ *
+ * `extraSettableFlags` doubles as the runtime-WRITTEN flag set for the INERT_FLAG
+ * check below: by construction the RPG validator only ever fills it with flags a
+ * mechanic genuinely sets (enemy `defeat_flag`, on_defeat / skill-check `set_flag`),
+ * so a defeat flag that no condition anywhere reads is correctly flagged inert.
  */
 export type ValidateParserOptions = {
   extraSettableFlags?: string[];
@@ -551,6 +556,41 @@ export function validateParser(
   for (const wc of pack.win_conditions)
     checkUnsatisfiable(wc.conditions, [`win:${wc.id}`], `win_condition "${wc.id}"`, findings);
 
+  // ── Inert flags (set but never read) ─────────────────────────────────────────
+  // The flag-side port of the CYOA validator's INERT_FLAG check (bug_0104) and the
+  // newest member of the soundness family already mirrored here (UNREACHABLE_VARIANT
+  // shadowing, UNSATISFIABLE_CONDITION). A flag that some `set_flag` effect writes —
+  // a room on_enter, an interaction, an object's unlock_effects, an NPC dialogue node,
+  // or (RPG) an enemy `defeat_flag` / on_defeat / skill-check branch — or that
+  // flags_init declares, but that NO condition anywhere READS (has_flag/not_flag,
+  // descending all_of/any_of/none_of across exit/interaction/win conditions, room &
+  // object variant `when`s, and dialogue-topic gates) is dead bookkeeping: the write
+  // changes nothing the game ever consults. A blind playtester cannot judge this from
+  // inside the game (bug_0104). Sound (no false positives): a flag is flagged ONLY
+  // when it has provably zero readers across the whole pack; a flag consulted only via
+  // not_flag (the one-shot dialogue-topic idiom these packs lean on) or only inside a
+  // disjunction still counts as read and is never flagged. Warning, not error — an
+  // inert flag is a no-op, never a soft-lock, exactly like its CYOA sibling.
+  const flagReads = collectFlagReads(pack);
+  const writtenFlags = new Set<string>([
+    ...pack.meta.flags_init,
+    ...(opts.extraSettableFlags ?? []),
+  ]);
+  for (const e of allEffects(pack)) if ("set_flag" in e) writtenFlags.add(e.set_flag);
+  for (const f of writtenFlags) {
+    if (!flagReads.has(f)) {
+      findings.push(
+        warn(
+          "INERT_FLAG",
+          `flag "${f}" is set (or declared in flags_init / by a combat-or-skill mechanic) ` +
+            `but never read by any condition — a no-op write (dead bookkeeping). Gate ` +
+            `something on it, or remove the set so the pack states only what it uses.`,
+          [`flag:${f}`],
+        ),
+      );
+    }
+  }
+
   // ── A win condition already met at game start (§8.4.5 fires-at-start) ─────────
   checkWinFiresAtStart(
     pack,
@@ -1009,4 +1049,34 @@ function itemReqs(conds: Condition[]): string[] {
   };
   conds.forEach(walk);
   return out;
+}
+
+/** Every flag name a parser/RPG pack READS — has_flag/not_flag in any exit,
+ *  interaction, or win condition, any room/object variant `when`, or any dialogue-
+ *  topic gate, descending all_of/any_of/none_of. The set of consumers for the
+ *  INERT_FLAG check: a written flag (set_flag / flags_init / a combat-or-skill
+ *  mechanic) absent here is inert. Mirrors the CYOA validator's collectFlagReads
+ *  (bug_0104), widened to the parser's condition-bearing sites. */
+function collectFlagReads(pack: ParserPack): Set<string> {
+  const reads = new Set<string>();
+  const walk = (c: Condition): void => {
+    if ("has_flag" in c) reads.add(c.has_flag);
+    else if ("not_flag" in c) reads.add(c.not_flag);
+    else if ("all_of" in c) c.all_of.forEach(walk);
+    else if ("any_of" in c) c.any_of.forEach(walk);
+    else if ("none_of" in c) c.none_of.forEach(walk);
+  };
+  const walkAll = (conds: Condition[] | undefined): void => (conds ?? []).forEach(walk);
+  for (const room of pack.rooms) {
+    for (const v of room.variants ?? []) walkAll(v.when);
+    for (const exit of room.exits) walkAll(exit.conditions);
+  }
+  for (const o of pack.objects) {
+    for (const v of o.variants ?? []) walkAll(v.when);
+    for (const it of o.interactions) walkAll(it.conditions);
+  }
+  for (const wc of pack.win_conditions) walkAll(wc.conditions);
+  for (const npc of pack.npcs)
+    for (const node of npc.dialogue.nodes) for (const t of node.topics) walkAll(t.conditions);
+  return reads;
 }
