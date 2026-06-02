@@ -1,0 +1,50 @@
+bug_id: bug_0095
+pack_id: sunken_barrow_v1
+seed: 5
+type: content_fix          # examine-only reword; the bug_0069 honesty-discipline pattern
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_target: clockwork_heist_v1     # the assessor's rank-1 nomination again
+  mandated_report: ai-runs/2026-06-02T00-34-06-096Z/playtest.md
+  rotation_rationale: >
+    Per the protocol's "rotate the seed and rotate the pack" guidance, the standing
+    next-focus, and the project memory (rotate the mandated pass onto the least-attended
+    packs), the blind pass was ROTATED off the content-complete clockwork pack (~27
+    straight clean passes) onto sunken_barrow — the one pack that had NEVER had a blind
+    LLM combat playtest (cold_forge got its first in bug_0092; sunken_barrow had not
+    appeared in the last 40 ai-runs). Fresh general-purpose MCP-only subagent, seed 5,
+    no source access: reached BOTH ending_victory (peaceful, 50/50) and ending_woken
+    (the doom fork), ZERO functional bugs, clarity 5/5, enjoyment 4/5.
+  finding: >
+    The sealed sarcophagus's examine read "Prising the lid would want the iron bar and
+    a stubborn back, the same as the slab did." That explicitly promises the SLAB's
+    mechanic — a might `skill_check` (difficulty 12) that the slab's own prose says
+    "may give on the first heave or take several". But the prise interaction carries NO
+    skill_check: it fires `end_game: ending_woken` instantly on the first use, with no
+    roll and no "stubborn back" struggle. The tester (§4/§5) flagged the examine/action
+    mismatch directly: the text "implying another might check — but the prise action
+    triggers the ending instantly with no roll." Text writing a check the engine never
+    cashes is the exact over-promise this pack's honesty discipline fights
+    (bug_0027/0029, and the slab's own bug_0069 reword that stopped over-selling a grind).
+improvement:
+  layer: content        # hint_text / examine prose only
+  content:
+    - content/rpg/pack/sunken_barrow.yaml: >
+        Reworded the `sarcophagus` object `description` so it no longer claims the
+        prise is "the same as the slab did". It still names the iron bar (genuinely
+        required — `item: iron_bar` on the interaction) but now reads true to the
+        terminal act: "this is no patient slab to be worked loose by degrees: one
+        wrench of the lid and the deed is done, past all undoing." The warning and the
+        signposted-safe alternative (take the crown, climb out) are kept.
+  invariants:
+    - The sarcophagus examine no longer promises the slab's repeatable might-check — it
+      contains neither "the same as the slab" nor "a stubborn back", and signals a
+      single irrevocable act; it still names the iron bar and repeats the warning.
+    - The prise interaction is UNCHANGED and still has no skill_check: prising the
+      sarcophagus with the iron bar fires ending_woken instantly on the first use
+      (text now matches that one-wrench reality).
+    - Examine-only: no object/interaction/flag/quest/score(50)/win/ending change; the
+      peaceful canonical route still wins ending_victory 50/50; pack validates 0/0.
+locked_by:
+  - tests/regression/rpg_barrow_sarcophagus_examine_mismatch.test.ts

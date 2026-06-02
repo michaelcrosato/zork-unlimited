@@ -236,10 +236,24 @@ objects:
   # echoing "lever"), and the player always holds the bar here (the slab cannot be
   # levered without it, bug_0069), so the choice is always offered. The examine
   # repeats the warning so the act is informed, not a gotcha.
+  #
+  # The examine no longer says prising "would want the iron bar and a stubborn back,
+  # THE SAME AS THE SLAB DID" (bug_0095). A fresh blind playtester (seed 5, ai-runs/
+  # 2026-06-02T00-34-06-096Z/playtest.md §4/§5) flagged that line as an examine/action
+  # mismatch: it explicitly promised the SLAB's mechanic — a might `skill_check` that
+  # "may give on the first heave or take several" — but the prise interaction below
+  # carries NO skill_check; it fires `end_game: ending_woken` instantly on the first
+  # use. Text writing a check the engine never cashes is exactly the over-promise this
+  # pack's honesty discipline fights (bug_0027/0029/0069, the slab's own bug_0069
+  # reword). The line still names the iron bar (it IS required — `item: iron_bar`
+  # below) but now reads true to the terminal act: NOT the slab's patient, repeatable
+  # leverage puzzle, but one decisive, irrevocable wrench. No flag/score/item/exit/
+  # interaction/gating/reachable-ending change — examine-only, the doom fork and the
+  # peaceful victory are untouched.
   - id: sarcophagus
     name: "sealed sarcophagus"
     aliases: [sarcophagus, coffin, lid, casket, sepulchre]
-    description: "A great lidded coffin of black stone, its seams run with lead and old wax. The Barrow-Lord lies within, and the shade's warning — if you stopped to hear it — was plain: do not think to wake what sleeps here. Prising the lid would want the iron bar and a stubborn back, the same as the slab did. Far better to take the cold crown from its plinth and climb back to the light."
+    description: "A great lidded coffin of black stone, its seams run with lead and old wax. The Barrow-Lord lies within, and the shade's warning — if you stopped to hear it — was plain: do not think to wake what sleeps here. The iron bar would set to the leaded seams readily enough — but this is no patient slab to be worked loose by degrees: one wrench of the lid and the deed is done, past all undoing. Far better to take the cold crown from its plinth and climb back to the light."
     takeable: false
     interactions:
       # The warned-against act. Terminal (end_game), so it can fire only once and
