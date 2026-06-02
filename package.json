@@ -33,6 +33,8 @@
     "inspect": "tsx bin/inspect.ts",
     "assess": "tsx bin/assess.ts",
     "benchmark": "tsx bin/benchmark.ts",
+    "blind": "bash blind-tester/run.sh",
+    "blind:smoke": "node blind-tester/smoke.mjs",
     "ui:dev": "npm --prefix ui run dev",
     "ui:build": "npm --prefix ui run build",
     "mcp": "tsx src/mcp/server.ts",

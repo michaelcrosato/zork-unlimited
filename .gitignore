@@ -17,3 +17,7 @@ coverage/
 # Repo-local Codex config is tracked; runtime state/auth/session data is not.
 .codex/*
 !.codex/config.toml
+
+# Blind-tester run outputs (regenerable; not source)
+blind-tester/reports/*
+!blind-tester/reports/.gitkeep
