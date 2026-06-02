@@ -68,11 +68,19 @@ const isUse = (a: Action) => a.type === "USE";
 const GRATE_RE = /grate.*open|way down.*stands open/i;
 const grateEntries = (s: GameState) => s.journal.filter((j) => GRATE_RE.test(j));
 
-/** Reach The Forge Heart with the pry-bar, sentinel slain, grate not yet levered. */
+/** Reach The Forge Heart with the pry-bar, sentinel slain, grate not yet levered.
+ *  Takes the lantern-spirit's +2-attack counsel first: since bug_0101 retuned the
+ *  sentinel for real teeth, an under-armed thief dies on seed 1, so the buffed route
+ *  is how a player reliably reaches the grate. This test's concern is the grate
+ *  JOURNAL line, not the fight, so it uses the canonical (survivable) approach. */
 function atForgeHeart(seed: number): GameState {
   let s = initStateForRpgPack(index, seed);
   s = act(s, move("down")); // → outer_forge
   s = act(s, (a) => a.type === "TAKE"); // pry-bar
+  s = act(s, (a) => a.type === "TALK"); // lantern-spirit
+  s = act(s, (a) => a.type === "ASK" && (a as { topic?: string }).topic === "ask_sentinel"); // +2 attack
+  s = act(s, (a) => a.type === "ASK" && (a as { topic?: string }).topic === "sentinel_back");
+  s = act(s, (a) => a.type === "ASK" && (a as { topic?: string }).topic === "leave_spirit");
   s = act(s, move("north")); // → bellows_walk
   let guard = 0;
   while (!s.flags["sentinel_stilled"] && !s.ended) {

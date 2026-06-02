@@ -9,8 +9,12 @@
 #     hearing how the sentinel fails grants a one-time +2 attack blessing that
 #     genuinely eases the fight (no dead-payload rumor flags).
 #   - combat with REAL TEETH (the barrow's fight was judged "toothless"): the
-#     slag-sentinel hits hard enough to matter, yet the fight is provably winnable
-#     from base stats, and a fall is recoverable via an earlier save (§8.7).
+#     slag-sentinel hits hard enough that PREPARATION decides it — under-armed play
+#     is a lethal gamble, the lantern-spirit's +2-attack counsel is the survival
+#     lever, and the founder's plate is the cushion. The fight stays provably
+#     winnable for the validator via the player's BEST REACHABLE stats (the bug_0097
+#     proof), and a fall is recoverable via an earlier save (§8.7). (Retuned to
+#     genuine teeth in bug_0101 — see the enemy block below.)
 #   - an EXPLICIT goal stated in the opening room (the barrow's goal was implicit).
 # As in the barrow, the one fight is seeded turn-based combat and the one skill
 # check is a seeded might roll, so every encounter is replayable from its trace
@@ -91,11 +95,14 @@ rooms:
   # playtester's flagged lethality: an even-ish trade finished at low HP). It is the
   # DEFENSE complement to the lantern-spirit's +2 ATTACK counsel, and like that
   # counsel it is OPTIONAL GRACE, honestly framed (the plate "will not swing your
-  # blade for you"): the canonical victory route never comes here, the sentinel
-  # stays winnable AND lethal from base stats (combat is d6+atk-def, min 1 — a +2
-  # ward eases but never zeroes the blow), and the +2 retires after one don so it
-  # cannot be farmed. Purely additive: no existing room/combat/lever/score(50)/win
-  # is touched.
+  # blade for you"): the canonical victory route never comes here, the spirit's +2
+  # attack already wins the fight reliably without the plate (combat is d6+atk-def,
+  # min 1 — a +2 ward eases but never zeroes the blow), and the +2 retires after one
+  # don so it cannot be farmed. With the bug_0101 retune the plate is no longer the
+  # difference between a low-HP win and a comfortable one but the difference between a
+  # ~90% win and a near-certain one — still optional, now meaningfully so. Purely
+  # additive: no existing room/lever/score(50)/win is touched (the bug_0101 stat
+  # retune lives in the enemy block, not here).
   - id: founder_cell
     name: "The Founder's Cell"
     description: >
@@ -452,12 +459,44 @@ npcs:
               goto: spirit_root
 
 enemies:
+  # The fight finally has the TEETH its prose has always promised (bug_0101). Every
+  # blind pass of this pack lands the same note — and the seed-23 pass that prompted
+  # this one put it plainly: there is "no real failure state", the sentinel "dies in
+  # exactly 3 hits whether I had attack 4 or attack 6", and the room's own warning
+  # ("better not to meet it under-armed — face it with every edge you can bring to
+  # bear") "writes a check the mechanics don't cash." The old hp16/atk4 sentinel was
+  # too soft: an under-armed thief strolled through it (the seed-23 tester won with 9
+  # HP to spare) and the lantern-spirit's +2-attack counsel changed nothing, because
+  # base attack already cleared 16 HP in the same ~3 rounds. So preparation — the
+  # whole "ask the spirit, find the plate" arc — was cosmetic.
+  #
+  # Retuned to hp18/atk7 (defense unchanged). Combat is one ATTACK = one round:
+  # player deals d6+atk-2, the sentinel (if it survives) deals d6+7-def (min 1). The
+  # numbers now make every tier of preparation MATTER (verified live over seeds 1-40,
+  # __probe.ts), turning a guided tour into a real, winnable gamble:
+  #   - UNDER-ARMED (atk4/def2): lethal more often than not — it kills the player on a
+  #     majority of seeds (seed 1, 2, 4, 9, 10… all fall), so the "don't meet it
+  #     under-armed" warning is finally honest, not bluster.
+  #   - the SPIRIT'S +2 ATTACK (atk6/def2, on the mandatory Outer-Forge path): the
+  #     decisive survival lever — it ends the fight a round sooner, lifting the win
+  #     rate from ~45% to ~90%. The buff the seed-23 pass called "pointless" is now
+  #     the thing that saves you.
+  #   - the FOUNDER'S PLATE (+2 defense) on top: optional grace still — the spirit
+  #     route wins reliably without it — but it blunts the anvil-blow to a near-certain
+  #     win with a comfortable HP cushion (atk6/def4 wins every seed tested).
+  # This is exactly the sound "gear up first" design the bug_0097 winnability proof was
+  # widened to permit: it credits the player's BEST REACHABLE stats (init + every
+  # reachable +attack/+defense buff = atk6/def4), so the fight is still PROVABLY
+  # winnable to the validator (best-case roll: 2 rounds to kill, ≥4 damage taken vs 20
+  # reachable HP) and cold_forge stays a clean 0-finding pack — while base-stat play is
+  # a genuine, lethal gamble the bar never required to be safe. A fall is still
+  # save-recoverable (§8.7); the death ending (ending_fallen) is unchanged.
   - id: slag_sentinel
     name: "slag sentinel"
     description: "A man-high figure of fused slag and dead cinder, holding a slow, cold half-life to bar the deep forge — the chill keeps it as stiff and clumsy as it will ever be."
     room: bellows_walk
-    hp: 16
-    attack: 4
+    hp: 18
+    attack: 7
     defense: 2
     defeat_flag: sentinel_stilled
     death_ending: ending_fallen

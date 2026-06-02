@@ -108,11 +108,15 @@ describe("bug_0029 — the Cold Forge sentinel reads as a settled cold advantage
     expect(shown).toMatch(/no swifter than it is now|holds no fire to rouse it/);
   });
 
-  it("reachability/balance intact — sentinel stats untouched; canonical buffed route (seed 1) still wins 50/50", () => {
-    // The fight is unchanged: the prose reframe touched no stats.
+  it("reachability/balance intact — sentinel retuned for teeth (bug_0101); canonical buffed route (seed 1) still wins 50/50", () => {
+    // bug_0029's prose reframe touched no stats (the fight was then hp16/atk4).
+    // bug_0101 later retuned the sentinel to hp18/atk7 so under-armed play is lethal
+    // and the spirit's +2 attack is the survival lever; re-pinned here (a surfaced,
+    // deliberate value change, not a weakening). The bug_0029 settled-cold prose
+    // guards above and the buffed seed-1 victory below are unchanged.
     const sentinel = pack.enemies.find((e) => e.id === "slag_sentinel")!;
-    expect(sentinel.hp).toBe(16);
-    expect(sentinel.attack).toBe(4);
+    expect(sentinel.hp).toBe(18);
+    expect(sentinel.attack).toBe(7);
     expect(sentinel.defense).toBe(2);
 
     let s = initStateForRpgPack(index, 1);

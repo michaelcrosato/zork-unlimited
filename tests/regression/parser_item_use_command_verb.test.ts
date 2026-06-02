@@ -191,11 +191,19 @@ describe("bug_0078 — cold_forge: 'lever slag grate with iron pry-bar'", () => 
   const index = indexRpgPack(loaded.compiled.pack);
   const step = makeStep(buildRpgRules(index));
 
-  /** Reach the forge heart (pry-bar in hand, sentinel slain, grate not levered). */
+  /** Reach the forge heart (pry-bar in hand, sentinel slain, grate not levered).
+   *  Takes the lantern-spirit's +2-attack counsel first: since bug_0101 retuned the
+   *  sentinel for real teeth, an under-armed thief dies on seed 1, so the buffed
+   *  route is how a player reliably reaches the grate. This describe-block's concern
+   *  is the grate's "lever" command verb, not the fight. */
   function atGrate(): GameState {
     let s = initStateForRpgPack(index, 1);
     s = step(s, { type: "MOVE", direction: "down" }).state;
     s = step(s, { type: "TAKE", item: "pry_bar" }).state;
+    s = step(s, { type: "TALK", npc: "lantern_spirit" }).state;
+    s = step(s, { type: "ASK", npc: "lantern_spirit", topic: "ask_sentinel" }).state; // +2 attack
+    s = step(s, { type: "ASK", npc: "lantern_spirit", topic: "sentinel_back" }).state;
+    s = step(s, { type: "ASK", npc: "lantern_spirit", topic: "leave_spirit" }).state;
     s = step(s, { type: "MOVE", direction: "north" }).state;
     for (let i = 0; i < 40 && !s.ended && !s.flags["sentinel_stilled"]; i++) {
       s = step(s, { type: "ATTACK", enemy: "slag_sentinel" }).state;

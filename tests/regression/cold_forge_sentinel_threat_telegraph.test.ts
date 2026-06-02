@@ -14,13 +14,15 @@
  * (cold_forge_pack.test.ts) is a fight "with REAL TEETH" whose death ending is reachable
  * from base stats — so the honest cue was missing, not the danger.
  *
- * The fix is CONTENT-only (no engine/validator/stat/effect/DC/flag/score/ending change —
- * the fight stays the identical static 16-HP encounter the bug_0021 proofs require): the
- * bellows_walk base prose now adds an honest threat-and-preparation beat — slow is not the
+ * The bug_0070 fix was CONTENT-only (no engine/validator/stat/effect/DC/flag/score/ending
+ * change — the fight then stayed the identical static 16-HP encounter).
+ * (NOTE: bug_0101 later retuned the sentinel to hp18/atk7 to give that very cue real
+ * teeth; the stat assertion in the last test below is re-pinned accordingly.)
+ * The bellows_walk base prose now adds an honest threat-and-preparation beat — slow is not the
  * same as soft; its blows "fall like a dropped anvil"; "better not to meet it under-armed
  * — face it with every edge you can bring to bear" — nudging the player toward the
- * spirit's offered warmth WITHOUT claiming the buff is mandatory (base stats is provably
- * winnable, so a hard requirement would be a lie).
+ * spirit's offered warmth WITHOUT claiming the buff is mandatory (even post-retune a
+ * base-stat fight can still be won on a lucky run, so a hard requirement would be a lie).
  *
  * Locked here:
  *   (a) the bellows_walk base prose carries the honest threat/preparation cue;
@@ -105,10 +107,18 @@ describe("bug_0070 — the Cold Forge bellows_walk honestly telegraphs a hard fi
     expect(shown).toMatch(/no swifter than it is now/);
   });
 
-  it("reachability/balance intact — sentinel stats untouched; buffed route (seed 1) still wins 50/50", () => {
+  it("reachability/balance intact — sentinel retuned for teeth (bug_0101); buffed route (seed 1) still wins 50/50", () => {
+    // bug_0070 (this file) gave the bellows_walk prose an honest "don't meet it
+    // under-armed" cue but DELIBERATELY left the sentinel at hp16/atk4, since the
+    // fight was then winnable from base stats. bug_0101 cashed that cheque: the
+    // sentinel is retuned to hp18/atk7 so under-armed play is genuinely lethal and
+    // the spirit's +2 attack is the survival lever — the prose cue this test guards
+    // is now backed by real teeth. Re-pinned here (a surfaced, deliberate value
+    // change accompanying a content edit, not a weakening): the buffed seed-1 victory
+    // and the "no false hard requirement" prose guard below are unchanged.
     const sentinel = pack.enemies.find((e) => e.id === "slag_sentinel")!;
-    expect(sentinel.hp).toBe(16);
-    expect(sentinel.attack).toBe(4);
+    expect(sentinel.hp).toBe(18);
+    expect(sentinel.attack).toBe(7);
     expect(sentinel.defense).toBe(2);
 
     let s = initStateForRpgPack(index, 1);
