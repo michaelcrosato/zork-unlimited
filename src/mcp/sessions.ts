@@ -34,6 +34,10 @@ export type Session = {
   rules: Rules;
   state: GameState;
   transcript: TranscriptTurn[];
+  /** Difficulty: when true, the agent-facing observation hides each exit's
+   *  destination (`exit.to`) so the spatial graph must be reasoned out, not read
+   *  off. Default false — full graph, the legacy behavior. */
+  hideGraph?: boolean;
 };
 
 export class SessionStore {

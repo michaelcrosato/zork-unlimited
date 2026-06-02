@@ -31,7 +31,15 @@ function visibleFlags(state: GameState): string[] {
     .sort();
 }
 
-export function buildObservation(index: CyoaIndex, state: GameState): CyoaObservation {
+// `_opts` (e.g. hideGraph) is accepted for a uniform cross-mode dispatcher
+// signature but is a no-op here: a CYOA observation already surfaces only choice
+// `text`/`id`, never the destination scene (`choice.next`), so the branch graph
+// is hidden by construction.
+export function buildObservation(
+  index: CyoaIndex,
+  state: GameState,
+  _opts: { hideGraph?: boolean } = {},
+): CyoaObservation {
   const nodeText = textFor(index, state.current, state);
   const scene = index.scenes.get(state.current);
 

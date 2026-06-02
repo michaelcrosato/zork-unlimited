@@ -5,6 +5,14 @@
  * structured `action`). No engine internals leak; internal bookkeeping vars/flags
  * (the `__` convention, e.g. dialogue state) are hidden. Locked exits are simply
  * absent until traversable, so the action set never spoils *how* to open them.
+ *
+ * Difficulty (ULTRAPLAN 2026-06-02 §Week.4): with `hideGraph`, each exit reports
+ * only its `direction` and NOT its destination (`to`) — the agent still knows it
+ * can go north, but not where north leads until it goes. This turns the structured
+ * API from "here is the adjacency list" into a real spatial-reasoning test (the
+ * thing TALES/Jericho measure), while the legal MOVE action and the engine's
+ * resolution are untouched. Default off: the internal coverage bot and every
+ * existing consumer keep the full graph.
  */
 import type { GameState } from "../core/state.js";
 import type { Action } from "../api/types.js";
@@ -13,6 +21,10 @@ import { type ParserIndex, activeDialogue, roomDescription, visibleObjectIds } f
 import { enumerateActions } from "./legal_actions.js";
 import { SCORE_VAR } from "./schema.js";
 
+/** Agent-facing observation options shared across modes. `hideGraph` omits each
+ *  exit's destination (`to`) — see the file header. */
+export type ObservationOptions = { hideGraph?: boolean };
+
 export type ParserObservation = {
   mode: "parser";
   room: string;
@@ -20,7 +32,8 @@ export type ParserObservation = {
   description: string;
   visible_objects: { id: string; name: string }[];
   npcs_present: { id: string; name: string }[];
-  exits: { direction: string; to: string }[];
+  // `to` is omitted under `hideGraph` (the destination is hidden until traversed).
+  exits: { direction: string; to?: string }[];
   inventory: string[];
   state: { flags: string[]; vars: Record<string, number>; journal: string[] };
   dialogue: { npc: string; npc_text: string } | null;
@@ -40,7 +53,11 @@ function visible<T>(record: Record<string, T>, keep: (v: T) => boolean): Record<
   return out;
 }
 
-export function buildParserObservation(index: ParserIndex, state: GameState): ParserObservation {
+export function buildParserObservation(
+  index: ParserIndex,
+  state: GameState,
+  opts: ObservationOptions = {},
+): ParserObservation {
   const room = index.rooms.get(state.current);
   const active = activeDialogue(index, state);
   const endingDef =
@@ -71,7 +88,9 @@ export function buildParserObservation(index: ParserIndex, state: GameState): Pa
   const exits = room
     ? room.exits
         .filter((e) => evalConditions(e.conditions, state))
-        .map((e) => ({ direction: e.direction, to: e.to }))
+        .map((e) =>
+          opts.hideGraph ? { direction: e.direction } : { direction: e.direction, to: e.to },
+        )
         .sort((a, b) => a.direction.localeCompare(b.direction))
     : [];
 

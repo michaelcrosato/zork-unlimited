@@ -98,12 +98,21 @@ function initStateFor(mode: PackMode, index: AnyIndex, seed: number): GameState 
   return initStateForRpgPack(index as Parameters<typeof initStateForRpgPack>[0], seed);
 }
 
-function buildObsFor(mode: PackMode, index: AnyIndex, state: GameState): AnyObservation {
+function buildObsFor(
+  mode: PackMode,
+  index: AnyIndex,
+  state: GameState,
+  opts: { hideGraph?: boolean } = {},
+): AnyObservation {
   if (mode === "cyoa")
-    return buildObservation(index as Parameters<typeof buildObservation>[0], state);
+    return buildObservation(index as Parameters<typeof buildObservation>[0], state, opts);
   if (mode === "parser")
-    return buildParserObservation(index as Parameters<typeof buildParserObservation>[0], state);
-  return buildRpgObservation(index as Parameters<typeof buildRpgObservation>[0], state);
+    return buildParserObservation(
+      index as Parameters<typeof buildParserObservation>[0],
+      state,
+      opts,
+    );
+  return buildRpgObservation(index as Parameters<typeof buildRpgObservation>[0], state, opts);
 }
 
 /** The current location id, normalized across modes (scene id ⟷ room id). */
@@ -179,7 +188,12 @@ export function createToolApi(opts: { root: string }) {
     return { mode: lr.mode, compiled: lr.compiled };
   }
 
-  function startSession(mode: PackMode, compiled: AnyCompiledPack, state?: GameState): Session {
+  function startSession(
+    mode: PackMode,
+    compiled: AnyCompiledPack,
+    state?: GameState,
+    opts: { hideGraph?: boolean } = {},
+  ): Session {
     const index = indexFor(mode, compiled.pack);
     const st = state ?? initStateFor(mode, index, 1);
     const session = sessions.create({
@@ -190,6 +204,7 @@ export function createToolApi(opts: { root: string }) {
       rules: rulesFor(mode, index),
       state: st,
       transcript: [],
+      ...(opts.hideGraph ? { hideGraph: true } : {}),
     });
     const obs = buildObsFor(mode, index, st);
     session.transcript.push({
@@ -206,7 +221,8 @@ export function createToolApi(opts: { root: string }) {
     return session;
   }
 
-  const obsOf = (s: Session): AnyObservation => buildObsFor(s.mode, s.index, s.state);
+  const obsOf = (s: Session): AnyObservation =>
+    buildObsFor(s.mode, s.index, s.state, { hideGraph: s.hideGraph ?? false });
 
   function listYamlFiles(dir: string): string[] {
     try {
@@ -431,7 +447,9 @@ export function createToolApi(opts: { root: string }) {
 
   function coverageActionIndex(
     actions: { id: string; command: string; action: Action }[],
-    exits: { direction: string; to: string }[],
+    // The internal bot always builds observations WITHOUT hideGraph, so `to` is
+    // present here; the optional type just matches the widened observation shape.
+    exits: { direction: string; to?: string }[],
     globalVisited: Set<string>,
     localVisited: Set<string>,
   ): number {
@@ -510,9 +528,11 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    new_game(args: { pack_path: string; seed?: number }) {
+    new_game(args: { pack_path: string; seed?: number; hide_graph?: boolean }) {
       const { mode, compiled } = requirePlayable(args.pack_path);
-      const session = startSession(mode, compiled, undefined);
+      const session = startSession(mode, compiled, undefined, {
+        ...(args.hide_graph ? { hideGraph: true } : {}),
+      });
       if (args.seed !== undefined && args.seed !== 1) {
         // Re-seed: rebuild the initial state at the requested seed.
         session.state = initStateFor(mode, session.index, args.seed);
@@ -525,10 +545,11 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    start_game(args: { story_path: string; seed?: number }) {
+    start_game(args: { story_path: string; seed?: number; hide_graph?: boolean }) {
       return this.new_game({
         pack_path: args.story_path,
         ...(args.seed !== undefined ? { seed: args.seed } : {}),
+        ...(args.hide_graph ? { hide_graph: true } : {}),
       });
     },
 

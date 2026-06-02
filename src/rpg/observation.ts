@@ -6,7 +6,11 @@
  */
 import type { GameState } from "../core/state.js";
 import type { Action } from "../api/types.js";
-import { buildParserObservation, type ParserObservation } from "../parser/observation.js";
+import {
+  buildParserObservation,
+  type ParserObservation,
+  type ObservationOptions,
+} from "../parser/observation.js";
 import { HP_VAR, ATTACK_VAR, DEFENSE_VAR } from "./schema.js";
 import { type RpgIndex, enumerateRpgActions } from "./runner.js";
 import { enemyHp, enemyAlive } from "./combat.js";
@@ -22,8 +26,12 @@ export type RpgObservation = Omit<ParserObservation, "mode" | "available_actions
   available_actions: { id: string; command: string; action: Action }[];
 };
 
-export function buildRpgObservation(index: RpgIndex, state: GameState): RpgObservation {
-  const base = buildParserObservation(index, state);
+export function buildRpgObservation(
+  index: RpgIndex,
+  state: GameState,
+  opts: ObservationOptions = {},
+): RpgObservation {
+  const base = buildParserObservation(index, state, opts);
   const enemies = (index.enemyByRoom.get(state.current) ?? [])
     .filter((e) => enemyAlive(state, e))
     .map((e) => ({ id: e.id, name: e.name, hp: enemyHp(state, e) }));

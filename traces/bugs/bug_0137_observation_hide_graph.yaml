@@ -1,0 +1,57 @@
+bug_id: bug_0137
+pack_id: null   # engine/benchmark feature, not a content defect — applies to every parser/RPG pack
+seed: 5
+type: engine_feature
+layer: engine_rule   # agent-facing observation (src/parser|rpg|cyoa/observation.ts) + MCP session plumbing; deterministic, no LLM-judge
+evidence:
+  source: blind_playtest + ULTRAPLAN
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-02T16-00-34-202Z/playtest.md   # tithe_barn seed 5 (the cycle's mandated, correctly-rotated target)
+  finding: >
+    The mandated blind pass on The Tithe-Barn (seed 5) reached all five endings,
+    rated the pack clarity 5/5, enjoyment 5/5, ZERO bugs — content is blind-clean
+    (the wreckers_light high-water mark, confirming the four-non-converging-stances
+    structure lifts a branching pack to 5/5). So there was NO actionable content
+    defect this cycle: per [[content-polish-backlog-exhausted]] / [[verifier-assertion-guard]]
+    the deterministic assessor is correctly collapsed to the 0.5 floor with every
+    self-extinguishing structural lever disarmed (the frontier benchmark scorecard,
+    the woken-Barrow-Lord fork bug_0083, eslint/doc-staleness all shipped). The
+    highest-value off-list move is the next on-plan benchmark lever that needs no API
+    key: ULTRAPLAN-2026-06-02 §Week.4 — a hidden-graph observation difficulty.
+root_cause: >
+  The structured agent-facing observation LEAKS the room adjacency graph. For
+  parser/RPG packs each exit is rendered as { direction, to }, where `to` is the
+  destination room id — so a model reading one observation is handed the full local
+  map ("north → guard_crypt, east → slab_passage") and never has to reason about
+  where a move leads. That trivializes the spatial-reasoning task TALES/Jericho
+  measure and makes the structured-API mode a weaker benchmark than it should be.
+  (CYOA already hides its branch graph: the observation surfaces only choice
+  text/id, never choice.next.)
+fix: >
+  Engine, trust-but-verify (deterministic; no clock/RNG; no LLM-judge). Added an
+  opt-in `hide_graph` difficulty, strictly ADDITIVE and DEFAULT-OFF. A new
+  ObservationOptions { hideGraph? } threads from MCP new_game/start_game(hide_graph)
+  onto the Session and into buildObsFor → buildParserObservation/buildRpgObservation.
+  When hideGraph is set, each exit is rendered as { direction } only — the
+  destination `to` is omitted, so the agent still sees it CAN go a direction but not
+  where until it moves. The legal MOVE action and the engine's destination
+  resolution are untouched, so the game stays fully playable and deterministic. With
+  no flag the observation is byte-identical to the legacy full-graph shape, so the
+  internal coverage bot (which never sets hide_graph) keeps the destinations it uses
+  to plan — exactly the plan's "kept for the internal coverage bot". CYOA accepts the
+  option as a documented no-op (its branch graph is hidden by construction). The
+  observation type's `exits[].to` becomes optional to express the hidden shape.
+within_bar: >
+  Additive engine feature. Observation is not part of the state hash, so determinism,
+  replay, and every trace's expected_final_hash are unchanged (the new test pins that
+  the state_hash is identical with and without the flag). No content/pack edited; no
+  validator/schema change; NO hash pin moved. Typecheck + lint + format clean; the
+  full pre-existing suite (919 tests) passes unchanged, plus the new cases below.
+regression_test: tests/regression/observation_hide_graph.test.ts
+test_cases:
+  - "DEFAULT: parser/RPG exits carry a string destination (full graph, legacy unchanged)"
+  - "HIDDEN: hide_graph drops every exit's `to` while keeping the same set of directions"
+  - "hide_graph is observation-only — the state_hash is identical with and without it"
+  - "still playable: a MOVE under hide_graph relocates the player (engine resolves the hidden destination), and the flag persists across the session's later observations"
+  - "CYOA no-op: the observation and state_hash are unchanged under hide_graph and it stays playable"
+  - "the start_game AFK alias honors hide_graph (and keeps the full graph without it)"

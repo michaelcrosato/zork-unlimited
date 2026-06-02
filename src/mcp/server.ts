@@ -48,6 +48,14 @@ const PACK = {
     ),
 };
 const SESSION = { session_id: z.string().describe("A session id from new_game/load_game.") };
+const HIDE_GRAPH = {
+  hide_graph: z
+    .boolean()
+    .optional()
+    .describe(
+      "Difficulty: when true, exits report only their direction, not their destination — the spatial map must be reasoned out, not read off (parser/RPG; no-op for CYOA). Default false.",
+    ),
+};
 
 tool(
   "validate_pack",
@@ -81,7 +89,11 @@ tool(
 tool(
   "new_game",
   "Start a new game on a (playable) pack of any mode; returns a session id, the detected mode, and the first observation.",
-  { ...PACK, seed: z.number().int().optional().describe("Deterministic seed (default 1).") },
+  {
+    ...PACK,
+    seed: z.number().int().optional().describe("Deterministic seed (default 1)."),
+    ...HIDE_GRAPH,
+  },
   (a) => api.new_game(a),
 );
 tool(
@@ -90,6 +102,7 @@ tool(
   {
     story_path: z.string().describe("Path to a content pack (any mode)."),
     seed: z.number().int().optional(),
+    ...HIDE_GRAPH,
   },
   (a) => api.start_game(a),
 );
