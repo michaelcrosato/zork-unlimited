@@ -5,8 +5,13 @@
 # unlock the catacombs gate. Two in-world clue sources point the way (§17 rule 1):
 # the graveyard headstone and the sexton's rumor.
 #
+# The climax is a MORAL FORK (bug_0105): in the crypt, the iron key opens either
+# the catacombs gate (press on → ending_victory, the canonical win) OR the
+# founder's own coffin (rob the dead of its silver → ending_plunder). The fork is
+# the iron key itself — "THE CRYPT YIELDS ONLY TO IRON" reads two ways.
+#
 #   forest_path ─N─ chapel_yard ─N─ chapel_nave ─down─ crypt ─N*─ catacombs (WIN)
-#                    │ U: bell_tower (rope)
+#                    │ U: bell_tower (rope)                  └ founders_coffin → ending_plunder (iron key)
 #                    │ E: old_well ─down*─ well_bottom (oak_chest → iron_key)
 #                    │ W: graveyard ─N─ mausoleum (stone_coffer → brass_key)
 #   (* = locked exit)
@@ -129,8 +134,10 @@ rooms:
   - id: crypt
     name: "Crypt"
     description: >
-      Stone sarcophagi crowd a low chamber. To the north, an iron catacombs gate
-      bars the way, its lock shaped for a heavy key. The stair climbs back up.
+      Stone sarcophagi crowd a low chamber; one, set apart and greater than the
+      rest, is the founder's, its lid bound shut by a heavy iron clasp. To the
+      north, an iron catacombs gate bars the way, its lock shaped for a heavy key.
+      The stair climbs back up.
     # Once the gate is open the reactive text names the final step explicitly. A
     # fresh blind playtester (seed 29) noted that unlocking the gate awards the last
     # points and the score reads "35 of 35" — yet the win only fires on ENTERING the
@@ -143,10 +150,11 @@ rooms:
     variants:
       - when: [{ has_flag: catacombs_open }]
         text: >
-          Stone sarcophagi crowd a low chamber. To the north, the iron catacombs
-          gate stands unlocked and swung inward on darkness — and through it, north,
-          run the catacombs you came so far to find. The stair climbs back up.
-    objects: [crypt_gate]
+          Stone sarcophagi crowd a low chamber; the founder's, set apart, still
+          lies sealed under its iron clasp. To the north, the iron catacombs gate
+          stands unlocked and swung inward on darkness — and through it, north, run
+          the catacombs you came so far to find. The stair climbs back up.
+    objects: [crypt_gate, founders_coffin]
     exits:
       - { direction: up, to: chapel_nave }
       - direction: north
@@ -271,6 +279,40 @@ objects:
       - unlock_exit: { from: crypt, to: catacombs }
       - inc_var: { name: score, by: 20 }
 
+  # bug_0105 — the climactic MORAL FORK (the standing "retrofit a branch onto a
+  # linear pack" next-focus; the blind report's only enjoyment knock was a single
+  # ending). The founder's own coffin sits in the crypt under an iron clasp keyed,
+  # like the gate, to the iron key the player already carries. So the iron key is a
+  # FORK, not just a key: the headstone's "THE CRYPT YIELDS ONLY TO IRON" gains a
+  # darker second reading. Turn it on the gate and press on to the resting place you
+  # came for (ending_victory, the unchanged canonical win); or turn it on the
+  # founder's coffin and leave rich, the dead robbed (ending_plunder). The plunder
+  # act is terminal (end_game on the first-class UNLOCK, the SAME bug_0077 path the
+  # gate uses), so the two endings are mutually exclusive — a genuine choice, not a
+  # detour. No flag/score/exit/gating change to the victory route: the coffin adds
+  # no inc_var (max_score stays 35) and no exit, so every prior route test is
+  # byte-identical. ending_plunder is non-death (you don't die; you choose greed).
+  - id: founders_coffin
+    name: "founder's coffin"
+    aliases: [coffin, founder, founders coffin]
+    description: >
+      A great stone coffin set apart from the lesser dead, its lid bound by a heavy
+      iron clasp. Through a hairline crack the dull gleam of a silver reliquary
+      shows within — grave-silver, worth more than the whole burnt chapel above.
+      The clasp is shaped for an iron key, the very twin of the gate's: the crypt
+      yields to iron, the headstone said, and so would this. To force it is to turn
+      the rest you came to find into a robbery.
+    locked: true
+    key_id: iron_key
+    unlock_narrate: >
+      You set the iron key to the founder's clasp and his coffin grinds open. The
+      silver reliquary is cold and heavy in your hands, worth a year of winters. The
+      catacombs can keep their dark now; you have what the living pay for — and you
+      climb back toward the light a thief in a holy place, the founder's rest broken
+      behind you.
+    unlock_effects:
+      - end_game: ending_plunder
+
 npcs:
   - id: sexton
     name: "the sexton"
@@ -313,3 +355,15 @@ endings:
     text: >
       The gate yields, and the cold breath of the catacombs rolls over you. You
       step through into the dark you came so far to find. *** You have won. ***
+  # bug_0105 — the dark mirror of ending_victory, reached by turning the iron key on
+  # the founder's coffin instead of the catacombs gate. Non-death: the player is not
+  # killed, only damned to a meaner ending of their own choosing. It is NOT a
+  # win_condition ending (it fires by end_game from the coffin's unlock_effects), so
+  # WIN_IS_DEATH cannot apply and ending_victory remains the only winnable ending.
+  - id: ending_plunder
+    title: "The Grave-Robber's Wage"
+    text: >
+      You came seeking the sealed crypt's rest and leave instead with its silver.
+      The catacombs stay shut to you now, their dead undisturbed but for one — and
+      the founder's reliquary will keep you through many a hard winter, if its
+      weight ever lets you sleep easy again. *** You have taken the silver. ***
