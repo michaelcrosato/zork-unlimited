@@ -15,10 +15,12 @@
  * Soundness rests on three properties of the modes this serves:
  *   1. DETERMINISM — `resolve` is pure (same state + action ⇒ same result). CYOA and the
  *      parser stage have NO randomness, so one step per (state, action) explores every
- *      transition. (RPG's seeded combat/skill rolls are keyed on `state.step`, so a
- *      single fingerprint can transition many ways; a pure-fingerprint BFS cannot soundly
- *      exhaust it. RPG is therefore deliberately out of scope here — its winnability is
- *      proven separately by the combat-bound checks, src/validate/rpg_validator.ts.)
+ *      transition. RPG's seeded combat/skill rolls would defeat a single-rules BFS (one
+ *      fingerprint can transition many ways), so the RPG caller uses `exhaustiveEndingsMulti`
+ *      with two rule sets that bracket the player's best/worst rolls — see that function's
+ *      doc and rpg_all_endings_reachable.test.ts. (RPG winnability under WORST rolls stays
+ *      proven separately by the combat-bound checks, src/validate/rpg_validator.ts; this
+ *      proves ROUTE EXISTENCE — every declared ending is reachable under SOME play.)
  *   2. FINITENESS — the fingerprint collapses interchangeable states, and every shipped
  *      pack's vars are bounded (CYOA's deadline counters, the parser `score`, both capped
  *      by gating), so the visited set is finite and the BFS terminates. The MAX_STATES
@@ -140,7 +142,41 @@ export function exhaustiveEndings(
   start: GameState,
   maxStates: number,
 ): ExhaustiveResult {
-  const step = makeStep(rules);
+  return exhaustiveEndingsMulti([rules], start, maxStates);
+}
+
+/**
+ * The generalization that backs `exhaustiveEndings` and lifts the search into the RPG mode.
+ *
+ * CYOA and the parser stage are fully DETERMINISTIC, so one `Rules` whose `resolve` is pure
+ * suffices: stepping each legal action explores every transition. RPG breaks that — its
+ * ATTACK rounds and skill checks draw a seeded die, so a single (state, action) can resolve
+ * many ways and one `Rules` can't enumerate the outcomes. The fix is to step each action
+ * under SEVERAL rule sets that differ ONLY in the rolls their combat/skill resolver draws.
+ * The RPG caller passes two: one forcing the player's BEST rolls (max strike, min damage
+ * taken, max skill roll), one their WORST. Because the only routing-relevant consequence of
+ * a round is monotonic in the roll — did the enemy reach 0 HP, did the player reach 0 HP,
+ * did the d20 meet the difficulty — those two extremes bracket every outcome a middle roll
+ * could produce, so any ending reachable under SOME rolls is reached here (and conversely
+ * every state visited is a real, legal playthrough on real die values, so nothing spurious
+ * is reached). See rpg_all_endings_reachable.test.ts for the full soundness argument and the
+ * load-bearing assumption it guards (no ending gates on a raw HP value).
+ *
+ * `legalActions` does NOT depend on the roll (legality is rng-independent in every mode), so
+ * the legal set is taken from the first rule set and each action is stepped under all of
+ * them; a rejected step (e.g. an action a regime makes unavailable) is simply skipped. For a
+ * single deterministic rule set this is identical to the original single-rules BFS — the
+ * second-and-later steps just reproduce the first and dedupe away — so CYOA/parser behaviour
+ * is unchanged.
+ */
+export function exhaustiveEndingsMulti(
+  ruleSets: Rules[],
+  start: GameState,
+  maxStates: number,
+): ExhaustiveResult {
+  const primary = ruleSets[0];
+  if (!primary) throw new Error("exhaustiveEndingsMulti requires at least one rule set");
+  const steps = ruleSets.map((r) => makeStep(r));
   const reached = new Set<string>();
   const seen = new Set<string>();
   const queue: GameState[] = [start];
@@ -153,14 +189,16 @@ export function exhaustiveEndings(
       if (s.endingId) reached.add(s.endingId);
       continue; // a terminal state offers no further actions
     }
-    for (const a of rules.legalActions(s)) {
+    for (const a of primary.legalActions(s)) {
       if (!isProgressAction(a)) continue; // reversible / observation-only — never a route step
-      const r = step(s, a);
-      if (!r.ok) continue; // a rejected action does not change state
-      const key = stateKey(r.state);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      queue.push(r.state);
+      for (const step of steps) {
+        const r = step(s, a);
+        if (!r.ok) continue; // a rejected action does not change state
+        const key = stateKey(r.state);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        queue.push(r.state);
+      }
     }
   }
   return { reached, states: seen.size, cappedOut: false };

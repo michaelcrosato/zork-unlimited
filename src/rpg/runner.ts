@@ -30,6 +30,7 @@ import type { GameEvent } from "../core/events.js";
 import { winningEnding, scoreChangeNarrations } from "../parser/runner.js";
 import { type RpgPack, type Enemy } from "./schema.js";
 import { resolveAttack, resolveSkillCheck, enemyAlive } from "./combat.js";
+import { rngForStep, type Rng } from "../core/rng.js";
 
 export type RpgIndex = ParserIndex & {
   rpgPack: RpgPack;
@@ -72,7 +73,19 @@ export function enumerateRpgActions(index: RpgIndex, state: GameState): ParserAc
   return out;
 }
 
-export function buildRpgRules(index: RpgIndex): Rules {
+/**
+ * `rngFor` supplies the PRNG a combat round / skill check draws from. It defaults to
+ * the step-keyed stream (core/rng.ts), so production callers pass nothing and play is
+ * byte-identical. The parameter is a verification seam ONLY: the exhaustive RPG
+ * ending-reachability proof builds two rule sets — one whose rng forces the player's
+ * BEST rolls, one their WORST — and steps every action under both, so combat and
+ * skill-check outcomes (the engine's only randomness) become enumerable rather than a
+ * single seeded draw (tests/regression/rpg_all_endings_reachable.test.ts).
+ */
+export function buildRpgRules(
+  index: RpgIndex,
+  rngFor: (state: GameState) => Rng = (s) => rngForStep(s.seed, s.step),
+): Rules {
   return {
     legalActions(state: GameState): Action[] {
       return enumerateRpgActions(index, state).map((o) => o.action);
@@ -82,7 +95,7 @@ export function buildRpgRules(index: RpgIndex): Rules {
       if (action.type === "ATTACK") {
         const enemy = index.enemies.get(action.enemy);
         if (!enemy || enemy.room !== state.current || !enemyAlive(state, enemy)) return null;
-        return resolveAttack(state, enemy);
+        return resolveAttack(state, enemy, rngFor(state));
       }
       if (action.type === "USE") {
         const it = useInteraction(index, action.target, action.item);
@@ -95,7 +108,7 @@ export function buildRpgRules(index: RpgIndex): Rules {
           // narrate a contradictory failure on an already-resolved puzzle.
           if (!state.inventory.includes(action.item)) return null;
           if (!evalConditions(it.conditions, state)) return null;
-          return resolveSkillCheck(state, it.skill_check);
+          return resolveSkillCheck(state, it.skill_check, rngFor(state));
         }
       }
       return resolveParserAction(index, state, action);

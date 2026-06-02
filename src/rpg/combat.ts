@@ -12,7 +12,7 @@
  * defeated enemy fires its `on_defeat` effects; a fallen player hits `end_game`
  * on the enemy's death ending (recoverable via an earlier save, §8.7).
  */
-import { rngForStep } from "../core/rng.js";
+import { rngForStep, type Rng } from "../core/rng.js";
 import type { Effect } from "../core/effects.js";
 import type { GameState } from "../core/state.js";
 import type { Resolution } from "../core/engine.js";
@@ -33,9 +33,19 @@ export function enemyAlive(state: GameState, enemy: Enemy): boolean {
 /**
  * Resolve one combat round into concrete effects. Pure: same (state, enemy) ⇒
  * same effects, because the only randomness is the (seed, step)-derived PRNG.
+ *
+ * `rng` defaults to that step-keyed stream — production play passes nothing, so
+ * behaviour is unchanged. The seam exists ONLY so structural verification can drive
+ * a fight under chosen rolls (the exhaustive RPG ending-reachability proof steps the
+ * fight under player-best and player-worst rolls to prove both combat outcomes are
+ * reachable; see tests/regression/rpg_all_endings_reachable.test.ts). The two d6
+ * draws below come from this one `rng` in order: player strike, then enemy reply.
  */
-export function resolveAttack(state: GameState, enemy: Enemy): Resolution {
-  const rng = rngForStep(state.seed, state.step);
+export function resolveAttack(
+  state: GameState,
+  enemy: Enemy,
+  rng: Rng = rngForStep(state.seed, state.step),
+): Resolution {
   const hpVar = enemyHpVar(enemy.id);
   const curEnemyHp = enemyHp(state, enemy);
   const playerHp = state.vars[HP_VAR] ?? 0;
@@ -84,8 +94,8 @@ export function resolveAttack(state: GameState, enemy: Enemy): Resolution {
 export function resolveSkillCheck(
   state: GameState,
   check: { skill: string; difficulty: number; on_success: Effect[]; on_failure: Effect[] },
+  rng: Rng = rngForStep(state.seed, state.step),
 ): Resolution {
-  const rng = rngForStep(state.seed, state.step);
   const roll = rng.int(1, 20);
   const total = roll + (state.vars[check.skill] ?? 0);
   const success = total >= check.difficulty;

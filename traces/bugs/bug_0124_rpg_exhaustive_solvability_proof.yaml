@@ -1,0 +1,107 @@
+bug_id: bug_0124
+pack_id: ALL_RPG   # cold_forge_v1, sunken_barrow_v1
+seed: 7
+evidence:
+  source: blind_playtest + structural_gap_analysis
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-02T12-44-46-086Z/playtest.md   # sealed_crypt, seed 7
+  finding: >
+    The mandated rank-1 target this cycle, The Sealed Crypt (parser, seed 7), came back
+    clean again: a fresh source-blind MCP-only subagent reached BOTH endings (ending_victory
+    and ending_plunder), rated it clarity 5/5 enjoyment 4/5, ZERO functional defects.
+    Content stays blind-exhausted across every pack (project memory:
+    content-polish-backlog-exhausted), and the assessor's rank-list remains the same six
+    identical "blind-playtest pack X — the coverage bot can't solve its puzzles, so quality
+    is unverified" items. That recurring "unverified" complaint is the structural signal.
+    bug_0121 (CYOA) and bug_0122 (parser) closed it with an exhaustive concrete solver and
+    both explicitly named the RPG mode the last, genuinely-harder extension. This cycle does
+    the RPG half — completing the proof across all three modes.
+failure:
+  type: not_a_defect_structural_verification
+  description: >
+    The RPG packs (cold_forge, sunken_barrow) are perpetually "unverified" for the same gap
+    bug_0121/0122 identified, plus a third dimension the deterministic modes lacked —
+    randomness:
+      - The parser validator's reachability (which the RPG validator delegates to for the
+        non-combat routing) is a conservative STATIC approximation, sound for "unreachable"
+        but not a proof that a declared ending IS reachable.
+      - `npm run health`'s only DYNAMIC playthrough runs on a single CYOA pack via the
+        heuristic coverage bot, which never touches an RPG pack.
+      - RPG adds the engine's only randomness: an ATTACK round draws a d6 for the player's
+        strike and a d6 for the enemy's reply, a skill check draws a d20 (src/rpg/combat.ts,
+        all from the (seed, step)-keyed PRNG). A single seeded draw per (state, action)
+        explores ONE outcome, so the deterministic single-Rules BFS bug_0121/0122 used
+        cannot soundly exhaust RPG — which is exactly why those bugs deferred it. Each RPG
+        pack's dynamic solvability rested on the combat-winnability bound (winnable?) plus
+        scattered golden routes; no single guarantee asserted "every declared ending,
+        including the death ending, is reachable by concrete play."
+fix:
+  layer: engine_seam + test   # tiny behaviour-preserving rng seam + pure test addition; no content touched
+  summary: >
+    Extend bug_0121/0122's exhaustive concrete solver to the RPG mode by making the engine's
+    only randomness ENUMERABLE rather than a single seeded draw, then bracketing it with the
+    player's best/worst rolls. Two rule sets are built that differ ONLY in the rolls their
+    combat/skill resolver draws — BEST for the player (max strike d6=6, min damage taken
+    enemy d6=1, max skill roll d20=20) and WORST (min strike d6=1, max damage taken enemy
+    d6=6, min skill roll d20=1). The shared BFS (now exhaustiveEndingsMulti) steps every
+    legal action under BOTH and unions the reachable states, asserting the endings ACTUALLY
+    reached equal the set declared in pack.endings. Auto-discovered from content/rpg/pack
+    (health-covers-all-packs bar, bug_0096).
+  engine_seam:
+    - >
+      resolveAttack / resolveSkillCheck (src/rpg/combat.ts) gained an optional `rng: Rng`
+      param defaulting to the existing rngForStep(state.seed, state.step) stream;
+      buildRpgRules (src/rpg/runner.ts) gained an optional `rngFor: (state) => Rng` defaulting
+      to that same step-keyed stream and threading it to both resolvers. Production callers
+      pass nothing, so play is BYTE-IDENTICAL and no content hash moves. The seam exists only
+      so structural verification can drive a fight under chosen rolls.
+  soundness:
+    - >
+      NO false positives: every successor is produced by a real makeStep on a real, LEGAL die
+      value (1 and 6 are legal d6 faces; 1 and 20 are legal d20 faces), so any ending reached
+      is reachable by some concrete seed/play.
+    - >
+      NO silent false negatives: the only routing-relevant consequence of a combat round or
+      skill check is MONOTONE in the roll — did the enemy reach 0 HP, did the player reach
+      0 HP, did d20+skill meet the difficulty — so the best/worst extremes bracket every
+      outcome a middle roll could yield. An ending reachable under SOME rolls is reached
+      under one of the two regimes. A whole fight resolves round-by-round (each ATTACK is one
+      legal action the BFS steps); BEST drives toward enemy-defeat, WORST toward the player's
+      death, both bounded because each round strictly lowers someone's HP.
+    - >
+      The one way the bracket could miss is an ending that gates on a RAW HP VALUE (a middle
+      roll lands an HP the extremes skip). The test ASSERTS no pack condition reads an HP var
+      (player `hp` or an `__enemy_hp_*` var) via a recursive scan of var_gte/var_lte/var_eq
+      condition nodes. A pack that violates it trips a loud, explained failure (extend the
+      solver to branch HP), never a silent pass — matching the helper's standing guarantee.
+  proves_vs_validator: >
+    This is ROUTE EXISTENCE — every declared ending (including the death ending, reachable by
+    an under-prepared or unlucky player) is reachable under SOME play. The combat-bound checks
+    (src/validate/rpg_validator.ts, bug_0113/0114) separately prove winnability under the
+    player's WORST rolls. Complementary: existence here, worst-case guarantee there.
+  regression_test: tests/regression/rpg_all_endings_reachable.test.ts
+  shared_helper: tests/regression/support/exhaustive_endings.ts   # exhaustiveEndingsMulti added; single-rules exhaustiveEndings delegates to it (CYOA/parser unchanged)
+  reachable_endings_changed: false   # proves existing reachability; changes no content
+  content_hash_changed: false        # no pack edited; rng seam defaults preserve production behaviour
+verified_live: >
+  Ran the two-regime solver (seed 7, 200k-state cap) over all shipped RPG packs, and the
+  single-regime searches to prove BOTH regimes are necessary (the proof is not vacuous):
+    - cold_forge:    19005 states, reaches BOTH declared endings. best-only reaches only
+      ending_victory; worst-only reaches only ending_fallen — the union is what proves both.
+    - sunken_barrow: 1885 states, reaches ALL THREE (ending_victory, ending_woken via the
+      best regime, ending_fallen via the worst). best-only misses ending_fallen; worst-only
+      misses ending_victory and ending_woken.
+  Both searches exhausted well under the cap; missing-ending set empty, undeclared-ending set
+  empty for both. The HP-routing assumption guard passes (no pack gates a condition on hp).
+  The CYOA (bug_0121) and parser (bug_0122) suites stay green on the shared helper, which now
+  delegates the single-rules path through exhaustiveEndingsMulti unchanged.
+playtest_coverage:
+  note: >
+    This completes the exhaustive every-declared-ending-reachable proof across ALL THREE
+    modes: 3 CYOA (bug_0121) + 2 parser (bug_0122) + 2 RPG (this bug) = every shipped pack now
+    has a green, deterministic, sound reachability guarantee in the test bar — the automated
+    dynamic check the manual blind playtests stand in for. The RPG validator's
+    combat-winnability bound (bug_0113/0114) is now joined by a concrete route-existence proof
+    for every RPG ending. A new RPG pack is auto-covered the moment it ships (directory
+    discovery, bug_0096). The sealed_crypt blind pass this cycle remains verified-clean; this
+    cycle's improvement is the structural pivot the exhausted content backlog calls for.
