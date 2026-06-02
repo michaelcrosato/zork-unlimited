@@ -1,0 +1,302 @@
+# The Wrecker's Light — a CYOA pack (Stage 1 format).
+#
+# A storm night at a lighthouse whose lamp has gone dark, with a ship foundering on
+# the rocks below and the old keeper collapsed at the foot of the stair. Unlike the
+# pack's linear siblings, the heart of this story is a MORAL fork, not a lock-and-key
+# chain: the same two tools (the cask of lamp-oil below and the keeper's striker on
+# the mantel) arm BOTH the honest act and its dark mirror, so it is WHERE you carry
+# them that decides the night —
+#   * up the ladder to the great lamp        → relight it, steer the ship clear (ending_saved)
+#   * out to the gallery to hang a false low light → wreck her on the reef and plunder (ending_wrecker)
+#   * stay at the dying keeper's side instead → the ship is lost but a life is not (ending_mercy)
+#   * scramble down to the rocks too soon     → the sea takes you (ending_drowned, an informed risk)
+#
+# A hidden "truth" reframes the choice rather than adding a route: behind the keeper's
+# iron key, in the oil store, his journal names the foundering ship as the Mourning
+# Star — the revenue cutter that years ago drove his own son onto these same rocks,
+# her master now at the wheel. Reading it (or hearing it from the keeper's own lips on
+# the mercy route) sets `knows_truth`, which fires reactive endingText variants on the
+# save and wreck endings: saving her becomes mercy past justice, wrecking her becomes
+# vengeance rather than greed (the same paired-epilogue device the manor's two letters
+# use). The goal is legible from the first beat — the keeper rasps that the lamp must
+# burn or the ship is lost, and points at the oil below and the flame in his hand — so
+# a first-timer always knows the honest path; the darkness is a turn the PLAYER takes.
+
+meta:
+  id: wreckers_light_v1
+  title: "The Wrecker's Light"
+  start: cliff_path
+  flags_init: []
+
+scenes:
+  - id: cliff_path
+    title: "The Cliff Path"
+    text: >
+      Rain drives sideways off a black sea, and the lighthouse stands dark against
+      it — its great lamp, that should be sweeping the rocks, gone cold. Somewhere
+      below, under the boom of the surf, a ship's bell tolls ragged and afraid: she
+      is feeling her way toward a coast she cannot see. The keeper's door bangs open
+      and shut on the wind, unlatched.
+    choices:
+      - id: enter
+        text: "Push inside, out of the storm."
+        next: watch_room
+
+  - id: watch_room
+    title: "The Watch Room"
+    text: >
+      A round stone room at the tower's foot. The old keeper lies crumpled by the
+      cold stove, breathing shallow and slow. An iron ladder climbs into the dark
+      toward the lantern room above; a narrow stair drops to the oil store below; and
+      a low door lets out onto the storm gallery and the rocks. On the mantel, where a
+      keeper keeps it close, rests a flint-and-steel striker.
+    # Reactive prose: once the striker is pocketed the mantel reads bare. (The keeper's
+    # state is carried by his own choices, not a variant, to keep the ordering simple.)
+    variants:
+      - when: [{ has_item: striker }]
+        text: >
+          A round stone room at the tower's foot. The old keeper lies crumpled by the
+          cold stove, breathing shallow and slow. An iron ladder climbs into the dark
+          toward the lantern room above; a narrow stair drops to the oil store below;
+          and a low door lets out onto the storm gallery and the rocks. The mantel
+          where the striker lay is bare — the flint-and-steel is in your pocket now.
+    choices:
+      - id: hear_keeper
+        text: "Kneel by the keeper and listen."
+        conditions: [{ not_flag: met_keeper }]
+        effects:
+          - set_flag: met_keeper
+          - add_journal: "The keeper grips your sleeve: 'The lamp — light the lamp, or she's lost on the teeth. Oil's in the store below. Strike a flame, lad, and pray.' His other hand is closed white-knuckled round a small iron key."
+        next: watch_room
+      - id: search_keeper
+        # The iron key gates the sea-chest's journal (the "truth"). Taking it from his
+        # failing hand is its own small choice — you came to a dying man and lifted a key.
+        text: "Ease the iron key from his closed hand."
+        conditions: [{ has_flag: met_keeper }, { not_item: keeper_key }]
+        effects:
+          - add_item: keeper_key
+          - add_journal: "A small iron key, still warm from his grip."
+        next: watch_room
+      - id: tend_keeper
+        # The mercy commit: spend the night on the man, not the lamp. Deliberate and
+        # terminal (like the manor's force-the-door beat), never an accidental dead end.
+        text: "Stay at his side and tend him through the night."
+        conditions: [{ has_flag: met_keeper }]
+        next: ending_mercy
+      - id: take_striker
+        text: "Take the flint-and-steel from the mantel."
+        conditions: [{ not_item: striker }]
+        effects:
+          - add_item: striker
+          - add_journal: "A keeper's striker — flint, steel, and a coil of charred tow to catch the spark."
+        next: watch_room
+      - id: climb_ladder
+        text: "Climb the iron ladder toward the lantern room."
+        next: lantern_room
+      - id: go_down
+        text: "Go down the narrow stair to the oil store."
+        next: oil_store
+      - id: out_gallery
+        text: "Open the low door onto the storm gallery."
+        next: gallery
+
+  - id: oil_store
+    title: "The Oil Store"
+    text: >
+      A cramped vault under the tower, thick with the reek of whale-oil. A squat cask
+      of lamp-oil stands ready by the stair, a tin dipper hung on its side. Against the
+      far wall a small sea-chest sits banded in rust, its hasp held by an iron lock.
+    variants:
+      # Most-specific first so neither general case can shadow it (first-match-wins).
+      - when: [{ has_item: lamp_oil }, { has_flag: chest_open }]
+        text: >
+          A cramped vault under the tower, thick with the reek of whale-oil. The cask by
+          the stair stands dipped and lighter now, your flask of lamp-oil filled from it.
+          The sea-chest gapes open against the far wall, its rusted hasp sprung.
+      - when: [{ has_item: lamp_oil }]
+        text: >
+          A cramped vault under the tower, thick with the reek of whale-oil. The cask by
+          the stair stands dipped and lighter now, your flask of lamp-oil filled from it.
+          Against the far wall the rust-banded sea-chest still sits locked.
+      - when: [{ has_flag: chest_open }]
+        text: >
+          A cramped vault under the tower, thick with the reek of whale-oil. A squat cask
+          of lamp-oil stands ready by the stair, a tin dipper hung on its side. The
+          sea-chest gapes open against the far wall, its rusted hasp sprung.
+    choices:
+      - id: take_oil
+        text: "Fill a flask of lamp-oil from the cask."
+        conditions: [{ not_item: lamp_oil }]
+        effects:
+          - add_item: lamp_oil
+          - add_journal: "A flask of lamp-oil, enough to wake the great lamp — or any lamp."
+        next: oil_store
+      - id: unlock_chest
+        text: "Unlock the sea-chest with the iron key."
+        conditions: [{ has_item: keeper_key }, { not_flag: chest_open }]
+        effects:
+          - set_flag: chest_open
+          - add_journal: "Inside the chest, wrapped in oilcloth, lies the keeper's own journal."
+        next: oil_store
+      - id: read_journal
+        text: "Read the keeper's journal."
+        conditions: [{ has_flag: chest_open }, { not_flag: knows_truth }]
+        effects:
+          - set_flag: knows_truth
+          - add_journal: "The journal names the ship feeling for harbor tonight: the revenue cutter Mourning Star. Seven winters back her master ran the keeper's own son onto these rocks and called it the law, and let the sea have him. The same man stands at her wheel out there in the dark. The keeper has watched for her every storm since."
+        next: oil_store
+      - id: back_up
+        text: "Climb back up to the watch room."
+        next: watch_room
+
+  - id: lantern_room
+    title: "The Lantern Room"
+    text: >
+      Glass on every side and the storm clawing at it. The great lamp crouches cold at
+      the center, its wick dry, its mirrors blind. Far below, a small tossing light
+      gropes along the coast — the ship, still seaward of the reef, still saveable, if
+      the lamp would only burn.
+    variants:
+      - when: [{ has_item: lamp_oil }, { has_item: striker }]
+        text: >
+          Glass on every side and the storm clawing at it. The great lamp crouches cold
+          at the center, its wick dry, its mirrors blind. You have oil to fill it and a
+          striker to wake it — and far below, the ship's small light still gropes seaward
+          of the reef, still saveable. One spark and the coast lights up for her.
+      - when: [{ has_item: lamp_oil }]
+        text: >
+          Glass on every side and the storm clawing at it. The great lamp crouches cold,
+          its wick dry. You have oil to fill it — but no way to strike a flame, and a
+          keeper keeps his striker close. Far below the ship's light still gropes seaward
+          of the reef.
+      - when: [{ has_item: striker }]
+        text: >
+          Glass on every side and the storm clawing at it. The great lamp crouches cold,
+          its mirrors blind. You have a striker to wake it — but the wick is bone-dry and
+          will not catch without oil, and the oil is stored below. Far below the ship's
+          light still gropes seaward of the reef.
+    choices:
+      - id: light_lamp
+        text: "Fill the lamp and strike it alight."
+        conditions: [{ has_item: lamp_oil }, { has_item: striker }]
+        next: ending_saved
+      - id: study_lamp
+        text: "Try to wake the lamp."
+        conditions: [{ any_of: [{ not_item: lamp_oil }, { not_item: striker }] }]
+        effects:
+          - narrate: "Bare hands and good intentions do nothing — a dry wick will not catch, and there is no flame without a striker. You need oil from the store below and the keeper's flint both, before the lamp will burn."
+        next: watch_room
+      - id: back_down
+        text: "Climb back down to the watch room."
+        next: watch_room
+
+  - id: gallery
+    title: "The Storm Gallery"
+    text: >
+      A slick iron balcony girdling the tower, the sea exploding white on the rocks a
+      sickening drop below. A rusted bracket juts here at the rail, low on the cliff's
+      seaward face — the wreckers' trick, the keeper would spit: a lantern hung low
+      enough apes a safe harbor riding-light and walks a blind ship straight onto the
+      teeth. Out in the dark the real ship gropes nearer, trusting a coast that shows
+      her nothing.
+    variants:
+      - when: [{ has_item: lamp_oil }, { has_item: striker }]
+        text: >
+          A slick iron balcony girdling the tower, the sea exploding white on the rocks a
+          sickening drop below. The rusted bracket juts low at the rail — and you carry
+          the means to fill it and light it: a false low light to ape a safe harbor and
+          draw the groping ship onto the teeth, her cargo to come ashore at your feet by
+          morning. Out in the dark she trusts a coast that shows her nothing.
+    choices:
+      - id: hang_false_light
+        text: "Fill the bracket lamp and hang a false low light."
+        conditions: [{ has_item: lamp_oil }, { has_item: striker }]
+        next: ending_wrecker
+      - id: climb_to_wreck
+        # Informed risk, not a gotcha: the prose has shown the drop and the white water.
+        text: "Climb down the cliff toward the rocks now."
+        next: ending_drowned
+      - id: back_in
+        text: "Duck back inside to the watch room."
+        next: watch_room
+
+endings:
+  - id: ending_saved
+    title: "The Light Holds"
+    # knows_truth reframes the same act: you saved her KNOWING whose hand is at the wheel.
+    variants:
+      - when: [{ has_flag: knows_truth }]
+        text: >
+          The wick catches, the oil takes, and the great lamp throws its long arm of
+          light across the water. Out on the black sea the Mourning Star sees the reef
+          at last and hauls hard away, and you watch her stagger clear — carrying the man
+          who murdered the keeper's son and called it law, alive into the dawn because of
+          you. You light the way for him. Some debts a steady hand pays that a vengeful
+          one never could; the keeper, had he the breath, might have cursed you or blessed
+          you, and you will never be sure which you deserve. But the rocks stay hungry and
+          empty tonight, and no new name joins the drowned.
+    text: >
+      The wick catches, the oil takes, and the great lamp throws its long arm of light
+      across the water. Out on the black sea the groping ship sees the reef at last and
+      hauls hard away, her ragged bell turning glad. You stand in the blaze of the lamp
+      you woke and watch her stand off into the dawn, every soul aboard alive who would
+      have been bones on the rocks by morning. The keeper's last work is done, and well.
+
+  - id: ending_wrecker
+    title: "The False Light"
+    variants:
+      - when: [{ has_flag: knows_truth }]
+        text: >
+          You hang the low lamp and it burns sweet and treacherous on the cliff's face,
+          and the Mourning Star turns toward it like a moth — toward the harbor it
+          promises, onto the teeth it hides. She strikes, and breaks, and the sea makes
+          short work of the man who once did the same to a keeper's boy on these very
+          rocks. This was never about the cargo washing up at your feet. You tell
+          yourself it was justice, the only kind these waters ever gave; you tell
+          yourself the old man would have thanked you. By the cold grey light you go down
+          to the wrack and the bodies and take what the sea hands up, and try not to
+          count whether any of them deserved it.
+    text: >
+      You hang the low lamp and it burns sweet and treacherous on the cliff's face, and
+      the groping ship turns toward it like a moth — toward the harbor it promises, onto
+      the teeth it hides. She strikes, and breaks, and the screaming carries thin over
+      the surf and then stops. By the cold grey light you go down to the wrack scattered
+      along the tideline and fill your arms with what the drowned no longer need. You are
+      a rich man by dawn, and a wrecker forever, and the lamp above you stays dark.
+
+  - id: ending_mercy
+    title: "A Life, Not a Light"
+    # When the player already read the journal, the keeper's whisper CONFIRMS the
+    # grief rather than revealing it fresh — same knows_truth reframing the save/wreck
+    # endings carry (blind-playtest finding: mercy was the one ending that re-revealed
+    # a truth the informed player already knew).
+    variants:
+      - when: [{ has_flag: knows_truth }]
+        text: >
+          You let the lamp stay dark and the ship find her own fate, and you stay where
+          you are, on your knees by the old man, warming his hands and holding his head
+          through the worst of it. Somewhere below the sea takes what it came for; you do
+          not go to watch. But the keeper does not die. Toward morning his breathing
+          steadies, and when his eyes find yours he sees that you already know — that you
+          read it in his own hand, the Mourning Star and the son she drowned seven winters
+          gone. He does not have to tell it. He only grips your hand the harder, and weeps,
+          and is not alone with it for the first time in seven years. You could not save
+          the ship. You saved the one life that was yours to save, and the sea cannot say
+          that of anyone.
+    text: >
+      You let the lamp stay dark and the ship find her own fate, and you stay where you
+      are, on your knees by the old man, warming his hands and holding his head through
+      the worst of it. Somewhere below the sea takes what it came for; you do not go to
+      watch. But the keeper does not die. Toward morning his breathing steadies, and he
+      tells you, in a cracked whisper, about the Mourning Star and the son she drowned
+      seven winters gone — the grief he has kept these rocks against ever since. You
+      could not save the ship. You saved the one life that was yours to save, and you
+      sat with a man so he would not be alone, and the sea cannot say that of anyone.
+
+  - id: ending_drowned
+    title: "The Sea Takes You"
+    text: >
+      The iron is slick and the wind has weight, and a dozen rungs down the cliff your
+      foot finds only rain. The fall is short. The white water is not cold for long.
+      Above you the lighthouse stands dark, and out in the storm a ship's bell tolls on,
+      feeling for a coast that will never answer it now — not from you.
