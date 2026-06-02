@@ -1,0 +1,54 @@
+bug_id: bug_0143
+pack_id: null   # engine/MCP-tool fix, not a content defect — applies to any trace
+seed: 17
+type: engine_feature
+layer: engine_rule   # MCP inspect_trace surfacing (src/mcp/tools.ts); deterministic, no LLM-judge, NO API key
+evidence:
+  source: blind_playtest + last-cycle next-focus (bug_0142)
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-02T17-25-16-992Z/playtest.md   # watchtower_road seed 17 (the cycle's mandated, correctly-rotated target — least-recently blind-played at bug_0134)
+  finding: >
+    The mandated blind pass on The Watchtower Road (CYOA, seed 17 — the
+    least-recently blind-played pack per the rotation, last attended at bug_0134)
+    reached all THREE declared endings (truth / captured / escape) and rated the pack
+    clarity 5/5, enjoyment 4/5, ZERO bugs — content is blind-clean. Its ONE friction
+    note (inspect_ground "reappears on revisit") was checked empirically via MCP and
+    is FALSE: inspect_ground is gated `not_flag: found_bootprints` and is correctly
+    gone from the very next observation after one use (verified live, sess_4). So
+    there was NO actionable content defect: per [[content-polish-backlog-exhausted]]
+    the deterministic assessor is collapsed to the 0.5 floor. The highest-value
+    key-free move is the cleanup bug_0142's next-focus named — and inspecting it
+    revealed a real surfacing gap, not just a stale comment.
+root_cause: >
+  Per-step divergence localization is a finished Trace-v2 feature: recordTrace stamps
+  per_step_hashes and replayTrace returns divergedAtStep, the index of the FIRST action
+  whose post-state diverged from that baseline (src/trace/replay.ts, covered by
+  tests/unit/save_trace.test.ts). But the MCP inspect_trace tool — the project's
+  bug-summarizing entry point (§9.4, §12.5) — called replayTrace and then returned only
+  hash_ok / final_hash / expected_final_hash, DROPPING replay.divergedAtStep. So the one
+  tool whose whole job is to localize a bug reported "hash_ok: false" without saying
+  WHERE, even though the localization had already been computed and discarded. Two stale
+  comments compounded it: replay_trace's claimed "a trace stores only the final hash …
+  per-step divergence needs a Trace v2 field" (already shipped), and inspect_trace's
+  claimed it only "asserts the recorded final hash."
+fix: >
+  Engine/MCP, trust-but-verify (deterministic; no clock/RNG/network; no LLM-judge; NO
+  API key). (1) inspect_trace's return object gains `diverged_at_step: replay.divergedAtStep
+  ?? null` — the first divergent action's index (which aligns 1:1 with step_summary /
+  actions), or null when the trace is faithful or carries no per-step baseline (v1). This
+  catches a MID-trace divergence that a self-correcting final hash would miss. (2) The two
+  stale comments (replay_trace and inspect_trace) are corrected to describe the shipped
+  Trace-v2 localization. No behavioural change to replay/record — only the surfacing.
+within_bar: >
+  Additive MCP-tool field. No engine/runtime/validator/schema change; replayTrace and
+  recordTrace are untouched (reused as-is). No content/pack edited; no validator/schema
+  change; NO hash pin moved. The new field is surfaced (deliberately strengthened, not
+  weakened) in the inspect_trace unit test, which now asserts diverged_at_step is null on
+  the faithful winning route. Typecheck + lint + format clean; the full pre-existing suite
+  passes unchanged, plus the new cases below.
+regression_test: tests/regression/inspect_trace_divergence.test.ts
+test_cases:
+  - "a faithful Trace-v2 trace localizes nothing — diverged_at_step null, hash_ok true"
+  - "a mid-trace per-step baseline divergence is localized to the exact step AND flips hash_ok false EVEN WHEN the final hash still matches (the headline value the final-hash check alone misses)"
+  - "a v1 trace (no per_step_hashes) reports diverged_at_step null — no per-step baseline to compare"
+unit_test_strengthened: tests/unit/mcp_tools.test.ts   # the inspect_trace case now asserts diverged_at_step is null on the faithful ending_escape route

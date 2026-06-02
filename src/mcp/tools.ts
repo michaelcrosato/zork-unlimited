@@ -739,15 +739,19 @@ export function createToolApi(opts: { root: string }) {
         };
       }
       const rules = rulesFor(mode, indexFor(mode, compiled.pack));
-      // A trace stores only the final hash, so we surface ok/final/expected.
-      // (Per-step divergence pinpointing needs per-step hashes — a Trace v2 field.)
+      // Replay asserts the recorded final hash, and — for a Trace-v2 trace that
+      // also carries `per_step_hashes` — localizes the FIRST divergent action via
+      // `divergedAtStep` (returned straight through). A v1 trace (final hash only)
+      // surfaces ok/final/expected as before.
       return replayTrace(trace, rules);
     },
 
     inspect_trace(args: { trace_path: string; pack_path: string }) {
       // Summarize a recorded trace and surface suspected bugs (§9.4). Replays the
       // actions through the engine for a per-step location/event summary, asserts
-      // the recorded final hash, and runs the debugger's classifier (§12.5).
+      // the recorded final hash, localizes the first divergent step when the trace
+      // carries a Trace-v2 per-step baseline (§8.8), and runs the debugger's
+      // classifier (§12.5).
       const traceAbs = safeResolve(root, args.trace_path);
       const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace;
       const { mode, compiled } = requirePlayable(args.pack_path);
@@ -792,6 +796,11 @@ export function createToolApi(opts: { root: string }) {
         hash_ok: replay.ok,
         final_hash: replay.finalHash,
         expected_final_hash: replay.expectedFinalHash ?? null,
+        // The first action whose post-state diverged from the trace's Trace-v2
+        // per-step baseline (index into step_summary / actions), or null when the
+        // trace is faithful or carries no per-step baseline (v1). This catches a
+        // mid-trace divergence that a self-correcting final hash would miss.
+        diverged_at_step: replay.divergedAtStep ?? null,
         diagnosis: d,
         step_summary: steps,
       };

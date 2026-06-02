@@ -162,12 +162,16 @@ describe("MCP tools — replay + path confinement", () => {
       ok: boolean;
       hash_ok: boolean;
       steps: number;
+      diverged_at_step: number | null;
       diagnosis: { type: string };
       step_summary: { ended: boolean; ending_id: string | null }[];
     };
     expect(r.ok).toBe(true);
     expect(r.hash_ok).toBe(true);
     expect(r.steps).toBe(5);
+    // A faithful Trace-v2 trace (mcp_replay.json carries per_step_hashes) has no
+    // divergence to localize.
+    expect(r.diverged_at_step).toBeNull();
     expect(r.diagnosis.type).toBe("no_failure");
     expect(r.step_summary.at(-1)?.ending_id).toBe("ending_escape");
   });
