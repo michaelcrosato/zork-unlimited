@@ -141,8 +141,14 @@ describe("bug_0039 — the Laboratory and cauldron text react to the brew state"
   it("the cauldron examine tracks the same three states (live LOOK render path)", () => {
     let s = play(initStateForParserPack(index, 137), TO_LAB_READY);
 
-    // Base examine: the static "waiting for ingredients".
-    expect(examineNarration(s, "cauldron")).toBe("A simmering cauldron, waiting for ingredients.");
+    // Pre-herb examine: TO_LAB_READY reads the spellbook, so read_recipe is set and the
+    // bug_0093 brew-order hint fires (the static "waiting for ingredients" base is the
+    // NON-reader fallback, asserted in the bug_0093 regression). It must still NOT read
+    // any post-herb brew state.
+    const preHerb = examineNarration(s, "cauldron");
+    expect(preHerb).toContain("two steps");
+    expect(preHerb).not.toContain("deep green steep");
+    expect(preHerb).not.toContain("drained and still");
 
     s = play(s, ["use_herb_on_cauldron"]);
     const mid = examineNarration(s, "cauldron");

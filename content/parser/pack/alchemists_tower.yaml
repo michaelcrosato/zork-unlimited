@@ -296,11 +296,31 @@ objects:
     # drained once the antidote is decanted (blind playtest, this pack). Mirrors the
     # room's brew-state variants above. First match wins (finished before mid-steep).
     # Examine-only: no flag/item/score/exit/gating change.
+    #
+    # The read_recipe variant is the brew-ORDER legibility fix (bug_0093). A fresh blind
+    # playtester (alchemists_tower seeds 11/7/3, ai-runs/2026-06-02T00-13-20-449Z/playtest.md
+    # §4 — rotated off the ~27×-blind-clean clockwork_heist onto the least-attended parser
+    # pack) rated the pack 5/5 clarity but flagged ONE friction: standing in the lab with
+    # the herb but no water yet, the recipe says "the pale herb steeped in clear water" as a
+    # single combined state, while the mechanic is two ordered steps (steep herb FIRST, then
+    # pour the cellar's clear spring water in). The cauldron's pre-herb examine — the static
+    # "waiting for ingredients" — gave no hint of the sequence, so a careful reader couldn't
+    # tell whether the cauldron's OWN simmering liquid already counted as the recipe's clear
+    # water or whether the cellar vial was still needed. This variant resolves both: it names
+    # the cauldron's simmer as NOT the recipe's clear water, and spells out the two-step order.
+    # Gated on read_recipe (the flag the spellbook READ sets) so it never quotes a recipe a
+    # library-skipper has not read (the bug_0052 leak lesson); the non-reader keeps the
+    # intrinsic static base. Listed AFTER the brew-state variants, so once the herb is in,
+    # the herb_added text (which already says "waiting for clear water to finish the cure")
+    # wins — this only fires in the pre-herb decision moment. First match wins. Examine-only:
+    # no flag/item/score/exit/gating/ending change.
     variants:
       - when: [{ has_flag: antidote_brewed }]
         text: "The great cauldron stands drained and still over its dying flame, the inside faintly green-stained — the pale antidote has been decanted from it."
       - when: [{ has_flag: herb_added }]
         text: "The simmering cauldron holds a deep green steep of the pale herb, waiting for clear water to finish the cure."
+      - when: [{ has_flag: read_recipe }]
+        text: "A great cauldron of plain water simmering over a low flame, empty of any ingredient yet — its own simmer is not the clear water the recipe means. By that recipe the cure is brewed here in two steps: first steep the pale herb in it, then finish the green steep with the clear spring water poured in."
     interactions:
       - verb: USE
         item: herb
