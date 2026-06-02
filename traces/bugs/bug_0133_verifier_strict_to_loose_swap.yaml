@@ -1,0 +1,79 @@
+bug_id: bug_0133
+pack_id: N/A   # verifier hardening in scripts/verify-integrity.ts (the trust-but-verify guard)
+seed: N/A
+evidence:
+  source: assessor stall analysis + verifier audit (continuation of bug_0129)
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-02T14-47-19-549Z/playtest.md   # alchemists_tower, seed 73
+  finding: >
+    The mandated rank-1 blind pass this cycle (alchemists_tower, seed 73) came back
+    clarity 5/5, enjoyment 4/5, ZERO real bugs — its one §5 "bug" (a held-item examine
+    action still offered after the herb was taken) was reproduced via MCP and confirmed
+    CORRECT behaviour: the carried herb's examine comes from the held-objects loop
+    (legal_actions.ts:295), paired with drop_herb; visible_objects correctly drops it.
+    So content stays blind-exhausted and the deterministic assessor remains collapsed to
+    six identical 0.5 blind-playtest stubs. The highest-leverage move is again to harden
+    the project's CORE trust mechanism — the verifier — closing the last laundering hole
+    bug_0129 EXPLICITLY left open and called unreachable without a semantic judge.
+failure:
+  type: verifier_blind_spot   # count-preserving strict->loose matcher swap evades the expect()-count guard
+  location: scripts/verify-integrity.ts countAssertions() + ASSERTION_COUNT_REGRESSION
+  description: >
+    bug_0129 added a parallel expect()-count guard, closing the gut-the-body launder
+    (keep the it() shell, delete the assertions). But its own header (and artifact) then
+    confessed a deeper launder it did NOT catch: a COUNT-PRESERVING swap of a strict
+    assert for a loose one — keep every it() shell AND every expect() call, but rewrite
+    `expect(x).toBe(value)` into `expect(x).toBeDefined()` / `.toBeTruthy()`. The case
+    count and the expect() count are both unchanged, so TEST_COUNT_REGRESSION and
+    ASSERTION_COUNT_REGRESSION stay silent; the behavioural suite stays green (a
+    toBeDefined() on a defined value passes); and the test now verifies nothing specific.
+    bug_0129 declared this "needs a semantic judge, which would forfeit pure-determinism."
+fix:
+  layer: engine   # the verifier itself; trust-but-verify, full authority, no content touched
+  summary: >
+    The strict->loose swap does NOT need a semantic judge — it is a MECHANICAL change in
+    the MATCHER, catchable by a third deterministic count parallel to the existing two:
+      - STRONG_ASSERTION_RE + countStrongAssertions() count the value-PINNING matchers
+        (toBe/toEqual/toStrictEqual/toContain[Equal]/toMatch[Object]/toThrow/toHaveLength/
+        toHaveProperty/toHaveBeenCalledWith/the ordering comparators/toBeCloseTo/
+        toBeInstanceOf). The weak existence matchers (toBeDefined/toBeTruthy/toBeUndefined/
+        toBeNull/toBeFalsy) are deliberately excluded — they are the swap TARGETS. The
+        `\s*\(` anchor stops the `toBe` alternative from also matching the `toBe`-prefixed
+        weak matchers; negated specific matchers (.not.toContain(, .not.toBe() still count.
+      - MIN_STRONG_ASSERTIONS static floor (STRONG_ASSERTION_FLOOR in runStatic), a mass
+        tripwire parallel to MIN_ASSERTIONS, set well below the current ~2890.
+      - detectCountRegressions gains a STRONG_ASSERTION_REGRESSION branch: when the strong
+        count drops while the expect() count holds, the swap is surfaced as a hard error.
+        `strong` is OPTIONAL on TestArtifactCounts so legacy {cases, assertions} call sites
+        (and bug_0129's tests) stay valid; the strong guard fires only when both sides
+        supply it (runDrift always does).
+      - countTestArtifactsAtRef now returns {cases, assertions, strong} in the same single
+        git pass (no extra git cost); runDrift feeds the strong count through.
+    Honest limitation that now remains (documented in the header): a swap that keeps a
+    STRONG matcher but makes it vacuous (`expect(true).toBe(true)`) is still not caught —
+    THAT would need a semantic judge. The mechanical strict->loose matcher swap no longer
+    does.
+  files:
+    - scripts/verify-integrity.ts
+  regression_test: tests/regression/verifier_strict_to_loose_swap.test.ts
+  unit_tests: tests/unit/verifier_integrity.test.ts   # added countStrongAssertions, the
+    # STRONG_ASSERTION_REGRESSION + legacy-absent cases in detectCountRegressions, and the
+    # real-repo STRONG_ASSERTION_FLOOR check
+  reachable_endings_changed: false   # no pack/content touched
+  content_hash_changed: false        # no pack edited; no hash pin moved
+verified_live: >
+  detectCountRegressions({cases:100,assertions:300,strong:290},{cases:100,assertions:300,
+  strong:287}) returns exactly [STRONG_ASSERTION_REGRESSION] (error) — the strict->loose
+  swap bug_0129 left open — while neither the case nor the assertion guard fires. The same
+  call with strong absent returns [] (legacy-safe). runStatic on the real repo reports no
+  STRONG_ASSERTION_FLOOR finding (~2890 strong matchers of ~3035 expect()s, floor 400).
+  npm run health stays green; this cycle ADDS strong matchers so it trips nothing.
+notes: >
+  This strengthens the bar without false-positive risk to honest cycles: like the accepted
+  TEST_COUNT_REGRESSION / ASSERTION_COUNT_REGRESSION, the strong guard fires only on a NET
+  DROP across the whole suite. The three counts (shells, assertions, strong matchers) now
+  rise together for any honest +tests cycle and pull apart only under a specific launder,
+  each count pinning the launder one level deeper than the last. This is the deterministic,
+  in-design closure of the "verify-integrity strict->loose swap" standing lever (project
+  memory verifier-assertion-guard), chosen over an LLM-judge for the same reason bug_0129
+  was — a non-deterministic judge would break the script's pure design (no clock/RNG/network).

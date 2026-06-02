@@ -20,16 +20,19 @@
  *     changed a committed hash-pin, the guard REFUSES AND SURFACES it for human
  *     review (set AI_LOOP_ALLOW_VERIFIER_EDITS=1 to acknowledge a deliberate edit).
  *
- * It catches MECHANICAL tampering (skip/delete/empty/re-pin) AND assertion gutting:
- * the test-case count guards the `it()`/`test()` SHELLS, and a parallel assertion
- * count guards the `expect()` calls INSIDE them — closing the launder where a cycle
- * keeps every `it()` shell (so the case count holds) but deletes the assertions in a
- * test body, leaving a green test that verifies nothing. Honest limitation that
- * remains: a COUNT-PRESERVING swap of a strict assert for a loose one (e.g.
- * `toBe(x)` → `toBeDefined()`) is not caught — that needs a semantic judge, which
- * would forfeit this script's pure-determinism. An agent with write access to this
- * script could also edit the guard itself — the point is to make tampering visible,
- * effortful, and against the rules, not impossible.
+ * It catches MECHANICAL tampering (skip/delete/empty/re-pin) AND assertion gutting,
+ * on three independent counts that rise together only for an honest +tests cycle:
+ * the test-case count guards the `it()`/`test()` SHELLS; the `expect()` count guards
+ * that the bodies still ASSERT; and the STRONG-matcher count guards that those
+ * assertions still PIN A VALUE — closing the launder where a cycle keeps every shell
+ * and every `expect()` but swaps a strict matcher for a loose existence check
+ * (`toBe(x)` → `toBeDefined()`), leaving a green test that no longer checks anything
+ * specific. A net drop in ANY of the three across a cycle is a hard regression. Honest
+ * limitation that remains: a count-preserving swap that keeps a STRONG matcher but
+ * makes it vacuous (`expect(true).toBe(true)`) is still not caught — that needs a
+ * semantic judge, which would forfeit this script's pure-determinism. An agent with
+ * write access to this script could also edit the guard itself — the point is to make
+ * tampering visible, effortful, and against the rules, not impossible.
  * Pure + deterministic: no clock, no RNG, no network.
  */
 import { execFileSync } from "node:child_process";
@@ -68,6 +71,11 @@ export const MIN_TEST_CASES = 120;
  *  floor, while the drift ASSERTION_COUNT_REGRESSION guards the precise per-cycle drop. */
 export const MIN_ASSERTIONS = 400;
 
+/** Never drop below this many STRONG (value-pinning) matchers — the strict→loose-swap
+ *  tripwire, parallel to MIN_ASSERTIONS. Currently ~2890; set well below as a mass
+ *  tripwire, while the drift STRONG_ASSERTION_REGRESSION guards the precise per-cycle drop. */
+export const MIN_STRONG_ASSERTIONS = 400;
+
 /** A disabled / focused test marker — any of these in a test file is a red flag. */
 const DISABLED_RE =
   /\b(?:it|test|describe)\s*\.\s*(?:skip|only|todo)\b|\b(?:xit|xdescribe|xtest)\s*\(/;
@@ -76,6 +84,17 @@ const TESTCASE_RE = /\b(?:it|test)\s*\(/g;
  *  so gutting a test's assertions while keeping its `it()` shell is caught even
  *  though the case count is unchanged. */
 const ASSERTION_RE = /\bexpect\s*\(/g;
+/** A STRONG (value-pinning) matcher: one asserting a SPECIFIC value, content, or
+ *  relationship — toBe/toEqual/toContain/toMatch, the ordering comparators, toThrow,
+ *  toHaveLength, etc. Counting these catches the count-preserving strict→loose swap the
+ *  expect() count alone misses: replacing `toBe(x)` with a weak existence matcher
+ *  (toBeDefined/toBeTruthy/toBeUndefined/toBeNull/toBeFalsy) keeps the expect() count
+ *  but drops the strong count, surfacing the laundered weakening. Negated specific
+ *  matchers (`.not.toContain(`, `.not.toBe(`) count too — they still pin a value; the
+ *  weak existence matchers are deliberately excluded. The `\s*\(` anchor stops the
+ *  `toBe` alternative from also matching the `toBe`-prefixed weak matchers. */
+const STRONG_ASSERTION_RE =
+  /\.(?:toBe|toEqual|toStrictEqual|toContain|toContainEqual|toMatch|toMatchObject|toMatchSnapshot|toMatchInlineSnapshot|toThrow|toThrowError|toHaveLength|toHaveProperty|toHaveBeenCalledWith|toHaveReturnedWith|toBeGreaterThan|toBeGreaterThanOrEqual|toBeLessThan|toBeLessThanOrEqual|toBeCloseTo|toBeInstanceOf)\s*\(/g;
 
 export type Finding = {
   severity: "error" | "warning";
@@ -129,6 +148,10 @@ export function countAssertions(files: { text: string }[]): number {
   return files.reduce((n, f) => n + (f.text.match(ASSERTION_RE)?.length ?? 0), 0);
 }
 
+export function countStrongAssertions(files: { text: string }[]): number {
+  return files.reduce((n, f) => n + (f.text.match(STRONG_ASSERTION_RE)?.length ?? 0), 0);
+}
+
 function readAll(root: string, paths: string[]): { path: string; text: string }[] {
   return paths.map((p) => ({ path: p, text: readFileSync(join(root, p), "utf8") }));
 }
@@ -162,6 +185,15 @@ export function runStatic(root: string): { ok: boolean; findings: Finding[] } {
       severity: "error",
       code: "ASSERTION_COUNT_FLOOR",
       message: `only ${assertions} expect() assertions found; floor is ${MIN_ASSERTIONS} (test bodies may have been gutted while keeping their it() shells)`,
+      where: "tests/",
+    });
+  }
+  const strong = countStrongAssertions(testFiles);
+  if (strong < MIN_STRONG_ASSERTIONS) {
+    findings.push({
+      severity: "error",
+      code: "STRONG_ASSERTION_FLOOR",
+      message: `only ${strong} strong (value-pinning) matchers found; floor is ${MIN_STRONG_ASSERTIONS} (strict asserts may have been swapped for loose existence checks)`,
       where: "tests/",
     });
   }
@@ -245,15 +277,21 @@ export function classifyDrift(changed: string[], existsFn: (rel: string) => bool
   return findings;
 }
 
-export type TestArtifactCounts = { cases: number; assertions: number };
+export type TestArtifactCounts = { cases: number; assertions: number; strong?: number };
 
 /**
- * Pure regression detector: a cycle must not REDUCE either the test-case count or the
- * assertion count vs the pre-cycle ref. Splitting the two closes the gut-the-body
- * launder — deleting a test's expect()s while keeping its it() shell leaves `cases`
- * unchanged but drops `assertions`, so it surfaces as ASSERTION_COUNT_REGRESSION even
- * when TEST_COUNT_REGRESSION stays silent. Pure (counts in, findings out) so it
- * unit-tests on synthetic numbers, mirroring detectDisabledTests/classifyDrift.
+ * Pure regression detector: a cycle must not REDUCE the test-case count, the assertion
+ * count, NOR the strong-matcher count vs the pre-cycle ref. The three counts close
+ * three nested launders:
+ *   - dropping `cases` = removing/skipping tests (TEST_COUNT_REGRESSION).
+ *   - holding `cases` but dropping `assertions` = gutting a body of its expect()s while
+ *     keeping its it() shell (ASSERTION_COUNT_REGRESSION).
+ *   - holding both but dropping `strong` = swapping a strict matcher for a loose
+ *     existence check (toBe(x) → toBeDefined()) — the body still asserts, but no longer
+ *     pins a value (STRONG_ASSERTION_REGRESSION).
+ * `strong` is optional so legacy {cases, assertions} call sites stay valid; the strong
+ * guard only fires when both before/now supply it (runDrift always does). Pure (counts
+ * in, findings out) so it unit-tests on synthetic numbers, mirroring classifyDrift.
  */
 export function detectCountRegressions(
   before: TestArtifactCounts,
@@ -274,6 +312,13 @@ export function detectCountRegressions(
       message: `expect() assertions dropped from ${before.assertions} to ${now.assertions} this cycle — a test body was gutted of its assertions (weakening the verifier is not allowed)`,
       where: "tests/",
     });
+  if (before.strong !== undefined && now.strong !== undefined && now.strong < before.strong)
+    findings.push({
+      severity: "error",
+      code: "STRONG_ASSERTION_REGRESSION",
+      message: `strong (value-pinning) matchers dropped from ${before.strong} to ${now.strong} this cycle — a strict assertion was swapped for a loose existence check (toBe(x) → toBeDefined()); weakening the verifier is not allowed`,
+      where: "tests/",
+    });
   return findings;
 }
 
@@ -291,12 +336,14 @@ function countTestArtifactsAtRef(root: string, ref: string): TestArtifactCounts 
       .filter((p) => /^tests\/.*\.test\.ts$/.test(p));
     let cases = 0;
     let assertions = 0;
+    let strong = 0;
     for (const p of files) {
       const text = execFileSync("git", ["show", `${ref}:${p}`], { cwd: root, encoding: "utf8" });
       cases += text.match(TESTCASE_RE)?.length ?? 0;
       assertions += text.match(ASSERTION_RE)?.length ?? 0;
+      strong += text.match(STRONG_ASSERTION_RE)?.length ?? 0;
     }
-    return { cases, assertions };
+    return { cases, assertions, strong };
   } catch {
     return null;
   }
@@ -341,14 +388,19 @@ export function runDrift(
     else findings.push(f);
   }
   // Hard guard against silent verification removal even while above the static
-  // floors: the cycle must not REDUCE the test-case count NOR the assertion count vs
-  // the pre-cycle ref. The assertion-count check closes the gut-the-body launder —
-  // deleting a test's expect()s while keeping its it() shell leaves the case count
-  // unchanged but drops the assertion count, so it is caught here.
+  // floors: the cycle must not REDUCE the test-case count, the assertion count, NOR
+  // the strong-matcher count vs the pre-cycle ref. The assertion-count check closes
+  // the gut-the-body launder (delete a test's expect()s, keep its it() shell); the
+  // strong-matcher check closes the strict→loose swap launder (turn `toBe(x)` into
+  // `toBeDefined()`) — the expect() count holds but the strong count drops, caught here.
   const before = countTestArtifactsAtRef(root, ref);
   if (before !== null) {
     const nowFiles = readAll(root, listTestFiles(root));
-    const now = { cases: countTestCases(nowFiles), assertions: countAssertions(nowFiles) };
+    const now = {
+      cases: countTestCases(nowFiles),
+      assertions: countAssertions(nowFiles),
+      strong: countStrongAssertions(nowFiles),
+    };
     findings.push(...detectCountRegressions(before, now));
   }
   return { ok: !findings.some((f) => f.severity === "error"), findings };

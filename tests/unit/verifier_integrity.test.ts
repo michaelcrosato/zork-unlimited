@@ -11,12 +11,14 @@ import {
   detectDisabledTests,
   countTestCases,
   countAssertions,
+  countStrongAssertions,
   detectCountRegressions,
   runStatic,
   classifyDrift,
   PROTECTED_FILES,
   MIN_TEST_CASES,
   MIN_ASSERTIONS,
+  MIN_STRONG_ASSERTIONS,
 } from "../../scripts/verify-integrity.js";
 
 describe("detectDisabledTests catches every disabled/focused marker", () => {
@@ -59,12 +61,35 @@ describe("countAssertions", () => {
   });
 });
 
-describe("detectCountRegressions — neither test cases NOR assertions may drop", () => {
+describe("countStrongAssertions", () => {
+  it("counts value-pinning matchers but not weak existence checks", () => {
+    const text =
+      "expect(a).toBe(1); expect(b).toEqual(2); expect(c).toContain('z'); expect(d).toBeDefined(); expect(e).toBeTruthy();";
+    expect(countStrongAssertions([{ text }])).toBe(3); // toBe/toEqual/toContain; not toBeDefined/toBeTruthy
+  });
+});
+
+describe("detectCountRegressions — neither test cases, assertions, NOR strong matchers may drop", () => {
   const codes = (fs: { code: string }[]) => fs.map((f) => f.code);
 
   it("passes when both counts grow (a normal +tests cycle)", () => {
     expect(
       detectCountRegressions({ cases: 100, assertions: 300 }, { cases: 103, assertions: 312 }),
+    ).toEqual([]);
+  });
+
+  it("BLOCKS a strict→loose swap — cases AND assertions held, strong dropped (bug_0133)", () => {
+    const fs = detectCountRegressions(
+      { cases: 100, assertions: 300, strong: 290 },
+      { cases: 100, assertions: 300, strong: 287 }, // 3 strict matchers turned loose
+    );
+    expect(codes(fs)).toEqual(["STRONG_ASSERTION_REGRESSION"]);
+    expect(fs.every((f) => f.severity === "error")).toBe(true);
+  });
+
+  it("the strong guard is silent when the strong counts are absent (legacy two-count call sites)", () => {
+    expect(
+      detectCountRegressions({ cases: 100, assertions: 300 }, { cases: 100, assertions: 300 }),
     ).toEqual([]);
   });
 
@@ -147,5 +172,11 @@ describe("runStatic on the real repo (this is the bar)", () => {
     expect(MIN_ASSERTIONS).toBeGreaterThan(0);
     expect(res.findings.filter((f) => f.code === "ASSERTION_COUNT_FLOOR")).toEqual([]);
     // If this ever trips, expect()s were mass-removed — investigate, don't lower the floor.
+  });
+
+  it("passes the strong-matcher floor — no mass strict→loose swap (bug_0133)", () => {
+    expect(MIN_STRONG_ASSERTIONS).toBeGreaterThan(0);
+    expect(res.findings.filter((f) => f.code === "STRONG_ASSERTION_FLOOR")).toEqual([]);
+    // If this ever trips, strict matchers were swapped en masse for loose ones — investigate.
   });
 });
