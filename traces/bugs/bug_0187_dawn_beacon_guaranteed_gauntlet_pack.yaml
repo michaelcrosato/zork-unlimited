@@ -1,0 +1,101 @@
+id: bug_0187
+title: "The Dawn Beacon — the project's 12th pack, 3rd RPG, and FIRST curated combat_guaranteed FAIR GAUNTLET (breadth lever)"
+kind: content_new
+mode: rpg
+pack: content/rpg/pack/dawn_beacon.yaml
+content_hash: f5a8b65e520b59527d1c9944aae0b91d13aa1d700ea46acdd0a88056ee6164ea
+# Informational. No test pins this pack's content_hash (only watchtower_road pins a content_hash
+# in test files), so nothing was forced; recorded for accuracy.
+
+summary: >
+  The mandated blind pass this cycle (clockwork_heist, CYOA, seed 23 — the least-recently blind-played
+  pack per [[assessor-blind-pass-rotation]], NOT the assessor's recency-blind rank-1 friars_postern,
+  which was played last cycle bug_0186) re-confirmed the content set is blind-clean: clarity 5/5,
+  enjoyment 5/5, FOUR endings reached, ZERO mechanical bugs; the only notes were explicit not-a-bug
+  design nuances. The deterministic assessor has collapsed to six identical 0.5 blind-playtest stubs
+  with every structural lever disarmed ([[content-polish-backlog-exhausted]], [[verifier-assertion-guard]]);
+  the standing genuine lever is BREADTH, and RPG was the under-represented mode (2 packs vs 6 CYOA, 3
+  parser) AND the mode whose richest verifier surfaces — the opt-in fairness UPPER bound (bug_0114) and
+  the cumulative-HP gauntlet bound (bug_0172) — had NO curated witness. bug_0187 ships the 12th pack to
+  that gap with a NEW mechanic axis: the first hand-authored pack to PROMISE fair combat.
+
+mandated_blind_playtest:
+  run: ai-runs/2026-06-03T16-06-11-103Z/playtest.md
+  pack: content/cyoa/pack/clockwork_heist.yaml
+  seed: 23
+  result: "reached ending_truth (two text variants), ending_rich, ending_caught, ending_patrol; clarity 5/5, enjoyment 5/5; ZERO bugs"
+  rotation: >
+    The assessor's flat 0.5 ranking cannot see recency and re-nominated friars_postern (played LAST
+    cycle, bug_0186). Per the documented rotation tiebreaker the blind pass went to clockwork_heist —
+    the genuinely least-recently blind-played pack (last dedicated pass bug_0173) — to maximize coverage.
+  triage: >
+    No actionable content defect — clockwork is blind-clean and its timer/guard mechanic is real and
+    test-locked ([[cyoa-exhaustive-solver]]); the tester's only notes (the strongbox shortcut to the
+    "best" ending; asymmetric edge tick-costs) were rated by-design, not bugs. Per the saturated-set
+    discipline the cycle spent the signal on the named breadth lever, not on churning a clean pack.
+
+new_pack:
+  pack: content/rpg/pack/dawn_beacon.yaml
+  proven: >
+    Auto-discovered by every structural suite the moment it shipped: rpg_all_endings_reachable reaches
+    BOTH declared endings by concrete best/worst-roll play (ending_lit via the prepared route, ending_fallen
+    via under-armed worst rolls); no_dead_pocket proves no soft-lock pocket; rpg_score_economy_sound proves
+    reachable max == 50; rpg_variant_liveness + rpg_action_id_unique pass.
+
+design:
+  thesis: >
+    A frontier watch-keep the night a raiding host means to ford the river below at first light. The keep's
+    warning-beacon is the only thing that can wake the valley, and two raiders have slipped in to keep it
+    dark. You are the last of the watch: cut past the gate-raider and the raider-captain on the beacon-stair,
+    lever the toppled cresset upright (one seeded might check), climb the crown and light the beacon (the win).
+  mechanic_axis: >
+    GUARANTEED FAIR COMBAT — the opposite design pole from the two existing RPG packs. cold_forge (bug_0101)
+    and sunken_barrow (bug_0102) are deliberate GAMBLES: even a fully-prepared player can die on bad rolls,
+    neither opts in, so the validator's UPPER-bound checks were only ever exercised GREEN by the GENERATOR
+    (bug_0173) and RED by synthetic packs (rpg_combat_guaranteed_optin, the negative corpus bug_0182). The
+    Dawn Beacon is the FIRST curated pack to set meta.combat_guaranteed: true, and the first to drive those
+    checks green on disk. The fiction earns it: the antagonists are LIVING men evenly matched with a trained
+    soldier, so the old watchman can make a TRUE promise the barrow's hedging shade never could — "warded
+    and counseled, no raider on that stair will put you down." That promise is the combat_guaranteed flag
+    spoken aloud, honest BECAUSE the validator proves it.
+  combat_math: >
+    Best reachable stats = init (hp26/atk4/def2/might3) + the watchman's +2 attack counsel + the garrison
+    mail's +2 defense = atk6/def4/hp26. Combat is one ATTACK = one round, player strikes first, dmg =
+    max(1, d6 + atk - enemyDef); enemy retaliates on rounds it survives. Per-fight worst-case (player min
+    roll, enemy max roll): gate-raider (hp12/atk5/def1) -> 2 rounds, 7 damage; raider-captain (hp13/atk5/def2)
+    -> 3 rounds, 14 damage. Each < 26 (COMBAT_NOT_GUARANTEED clears) and cumulative 7+14 = 21 < 26
+    (COMBAT_GAUNTLET_NOT_GUARANTEED clears) with margin. base-stat play (no prep) on worst rolls still dies
+    in fight B (cumulative would exceed 26), so the death ending stays genuinely reachable — the guarantee
+    only ever covers the BEST-prepared player (bug_0114).
+  endings:
+    - id: ending_lit
+      reach: "(prepared) read orders +5 -> don mail (+2 def) -> hear counsel (+2 atk) -> kill gate-raider +10 -> kill captain +10 -> lever cresset (might) +10 -> climb to crown +15 = 50/50"
+      note: "the sole win; visited: beacon_crown (locomotion win, like cold_forge's ember chamber); SCORE_PEAKS does not fire on a navigation win"
+    - id: ending_fallen
+      reach: "(under-armed) skip the mail and/or counsel, take worst rolls -> fall to a raider on the stair"
+      note: "DEATH (both enemies' death_ending); recoverable via load (§8.7); not a win_condition"
+
+within_the_bar: >
+  Additive content only — no engine/validator/schema change, and a NEW pack pins no production hash, so NO
+  hash pin moved. validate_story 0/0 (zero errors AND zero warnings; combat_guaranteed audited GREEN — both
+  guarantee codes absent). Wired into the bar per [[verification-bar-covers-all-packs]]: added a
+  `validate -- content/rpg/pack/dawn_beacon.yaml` step to the `health` npm script, and extended the
+  all_packs_validated_by_bar discovery list (eleven -> twelve, "eleven" -> "twelve"). list_stories and the UI
+  catalog auto-discover it (the UI globs content/**/pack/*.yaml). The benchmark curated split (discovered
+  from content/*/pack) gains one low-scoring RPG puzzle row, which benchmark_headline_no_regression confirms
+  stays within the curated floor (>= 0.40) and the held-out < curated gap (>= 0.05).
+
+locked_by:
+  test: tests/regression/dawn_beacon_guaranteed_gauntlet.test.ts
+  cases: 4
+  asserts:
+    - "the curated pack validates with ZERO errors AND genuinely opts in (combat_guaranteed === true, 2 enemies), with COMBAT_NOT_GUARANTEED / COMBAT_GAUNTLET_NOT_GUARANTEED / COMBAT_UNWINNABLE all ABSENT — the fair gauntlet exercised GREEN on disk"
+    - "load-bearing #1 (the MULTI-FIGHT surface): zero the mail's +2 defense (best def 4->2) and the pack fails ONLY COMBAT_GAUNTLET_NOT_GUARANTEED (each fight still clears the per-fight bound; jointly 9+18=27 >= 26) — the mail is exactly what clears the cumulative bound"
+    - "load-bearing #2: zero the watchman's +2 attack (best atk 6->4) and the longer fights breach the per-fight bound too (fight B worst-case 28 >= 26 -> COMBAT_NOT_GUARANTEED + the cumulative one)"
+    - "no false guarantee: the two existing RPG packs (cold_forge, sunken_barrow) remain gambles — combat_guaranteed undefined"
+  also: >
+    tests/regression/all_packs_validated_by_bar.test.ts (twelve-pack discovery + health validate step) +
+    rpg_all_endings_reachable + no_dead_pocket + rpg_score_economy_sound + rpg_variant_liveness +
+    rpg_action_id_unique (all auto-cover dawn_beacon).
+
+verify: "npm run health EXIT 0 — see AI_LOOP_STATE.md for the suite count."
