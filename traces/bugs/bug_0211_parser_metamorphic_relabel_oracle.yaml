@@ -1,0 +1,105 @@
+id: bug_0211
+title: "The metamorphic contamination-robustness oracle covered only CYOA — extended it to the PARSER mode, the deferred CYOA→parser follow-on"
+kind: verification_oracle # metamorphic / isomorphism oracle, additive (the parser half of bug_0209)
+mode: parser
+# Informational. NO src/ change, NO content change, NO hash re-pin, NO protected file
+# touched. One new test-support file + one new test + this artifact only — verify:integrity
+# stays EXIT 0 with no VERIFIER_TOUCHED / GUARD_WEAKENED / HASH_PIN. No pack content_hash,
+# scorecard byte, or corpus seal moves.
+
+summary: >
+  A GAP in the verification net, not a defect in shipped behaviour. bug_0209 added the
+  project's first METAMORPHIC oracle — a pack's behaviour must be INVARIANT under a
+  consistent renaming of its identifiers (the id-driven, content-free engine never
+  special-cases a literal id string) — but only for the CYOA mode. bug_0211 extends that
+  oracle to the PARSER mode, the natural next extension bug_0209 itself named in its
+  `scope` field, following the exact CYOA→parser→rpg growth path the bug_0121
+  reachability oracle took.
+
+context: >
+  This is the deferred "extend the metamorphic relabel oracle to the PARSER mode" lever
+  named as next-focus #1/#2 across the last several cycles (bug_0209 scope; bug_0210
+  next-focus #2). Content is saturated/blind-clean — this cycle's mandated blind pass
+  rotated (per [[assessor-blind-pass-rotation]]) OFF the harness recency-blind rank-1
+  lamplighters_round (blind-played clean AND fixed last cycle, bug_0210) onto the
+  most-overdue dedicated-blind target white_stag (CYOA, seed 31, last dedicated pass
+  bug_0189): 5 playthroughs reached all 4 endings / 5 distinct ending texts at clarity
+  5/5, enjoyment 4/5, ZERO bugs (ai-runs/2026-06-03T22-38-31-023Z/playtest.md). A clean
+  pass on a clean pack is the saturation signal, so the cycle spent its lever on the named
+  structural oracle, not on churning a clean pack ([[content-polish-backlog-exhausted]]).
+
+mechanism: >
+  tests/regression/support/relabel_parser.ts — relabelParserPack(pack) walks the pack with
+  a TYPED traversal over the closed Condition/Effect DSLs and the full parser schema,
+  rewriting every IDENTIFIER (room/object/npc/dialogue-node/topic/win-condition/ending
+  ids, flags, non-reserved var names, key_id, container contents, object refs inside
+  conditions/effects/interactions, the pack id) to an opaque mx_<n> token via one memoized
+  bijection, while leaving byte-identical (a) all PROSE — names, descriptions, variant
+  text, titles, ending text, read_text, narrate, add_journal, unlock_narrate, npc_text,
+  topic prompt, locked_msg — and (b) all player-facing COMMAND VOCABULARY — object
+  aliases, exit direction (north/south/…), and the command_verb/command_template of a USE
+  puzzle (grammar the controlled parser matches typed text against, not content ids).
+  PARSER-SPECIFIC WRINKLE vs the CYOA relabeler: the `score` var (SCORE_VAR) is
+  special-cased by the runner, observation, and validator (max_score economy), so it is an
+  ENGINE KEYWORD, not an author id — held as a relabel FIXED POINT (var-name positions
+  route through a reserved-aware `rvar`), exactly as a builtin verb or compass direction
+  would be. In the shipped packs `score` is the only var, so the var map is empty after
+  the fixed point; the machinery stays correct for any future non-score var.
+
+oracle: >
+  tests/regression/parser_metamorphic_relabel.test.ts — for each shipped PARSER pack it
+  computes three ground-truth artefacts on the original (exhaustive ending-reachability
+  census via the shared support/exhaustive_endings.ts BFS over the engine's own
+  legalActions; distinct-state count; validateParser finding-code multiset), builds the
+  relabeled twin, recomputes the same three, and asserts the metamorphic relation: (1) the
+  twin's reached-ending set equals the original's mapped through the bijection (and 1b: no
+  original ending id survives — the ids really changed); (2) the distinct-state counts are
+  EQUAL (a true graph isomorphism explores exactly as many states — confirmed despite the
+  runner synthesising a per-npc dialogue var __dlg_<npcid> from the relabeled npc id, since
+  dialogue position is tracked by node ORDINAL, not id string); (3) the validateParser
+  finding-code multiset is identical (validation output is id-invariant). NON-VACUITY is
+  asserted explicitly: the map is non-empty, no id maps to itself (reserved fixed points
+  are never entered into the map, so this stays clean), and the twin re-parses against the
+  .strict() ParserPackSchema.
+
+value: >
+  Two payoffs, mirroring the CYOA oracle. (a) Soundness witness for the whole id-driven
+  design across the parser surface (rooms/objects/exits/containers/NPC dialogue trees): if
+  a future engine/runner change ever made parser behaviour depend on a literal id, every
+  literal-pack oracle would still pass while THIS one diverged — a loud signal nothing else
+  gives. (b) Contamination-robustness witness for the benchmark
+  ([[ultraplan-true-goal-pivot]]) on the very mode the gap-analysis (bug_0198) flagged as
+  the thinnest curated witness: a model that "solved" a parser pack by memorising its id
+  strings gains nothing on the surface-different but structurally identical twin, so the
+  eval measures structure-following, not string recall.
+
+scope: >
+  Parser this cycle (deterministic — no RNG — so a single Rules BFS exhausts the concrete
+  state space, exactly as the CYOA oracle and the parser reachability oracle do). RPG is
+  the remaining extension; its seeded combat/skill rolls would need the best/worst-roll
+  bracket the rpg reachability oracle (bug_0124) already uses, plus relabeling the enemy /
+  skill-check surface.
+
+out_of_band_teeth: >
+  Genuine behavioural witness, not vacuous green. Temporarily breaking the relabeler at a
+  LOAD-BEARING id site — making relabelExit keep the OLD `to` room id (a dangling exit
+  target) — fails all 4 parser packs: the twin's exits point at nonexistent rooms, the BFS
+  cannot move, and the twin reaches ZERO endings (expected mapped set {mx_23,mx_24,mx_34}
+  on lamplighters_round vs actual []), so the metamorphic relation diverges loudly.
+  Restoring r(x.to) returns 5/5 green (1 discovery guard + 4 packs).
+
+regression_test: tests/regression/parser_metamorphic_relabel.test.ts
+
+verification: >
+  npx vitest run tests/regression/parser_metamorphic_relabel.test.ts → 5 passed (1
+  discovery guard + 4 parser packs: alchemists_tower, friars_postern, lamplighters_round,
+  sealed_crypt). Non-vacuity confirmed by the broken-`to` witness above. npm run health
+  GREEN (EXIT 0): verify:integrity OK (no GUARD_WEAKENED / VERIFIER_TOUCHED / HASH_PIN /
+  PROTECTED — only new test + support + trace), typecheck/lint/prettier clean, full suite
+  green (+1 file / +5 cases), all 15 packs validate 0/0, coverage playtest ✓. No pack
+  hash, scorecard byte, or corpus seal moved.
+
+files_changed:
+  - tests/regression/support/relabel_parser.ts               # typed metamorphic relabeler for parser packs (new)
+  - tests/regression/parser_metamorphic_relabel.test.ts      # the parser contamination-robustness oracle (new)
+  - traces/bugs/bug_0211_parser_metamorphic_relabel_oracle.yaml
