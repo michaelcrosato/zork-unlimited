@@ -4,7 +4,11 @@ kind: content_new
 mode: parser
 severity: enhancement
 pack: content/parser/pack/friars_postern.yaml
-content_hash: 563ffba38271cc3dc6383f147e242562c8d5573d983d7ffaa09e907c01e62e95
+content_hash: 12e4da8a224335eb568e24a6227b29fe82f7152943bb2e84a4c360dddfacb275
+# Re-pinned by bug_0186 (was 563ffba3…): a blind playtest (seed 11) found the ending_thief
+# epilogue asserted "she never told you the postern's trick" on a route where she HAD, so the
+# epilogue text was rewritten to be true in both reachable states. Content-only; no test pins
+# this hash (it is informational — see within_the_bar), re-pinned deliberately for accuracy.
 
 summary: >
   The mandated blind pass this cycle (alchemists_tower, seed 47) re-confirmed the content set is

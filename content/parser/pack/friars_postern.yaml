@@ -318,12 +318,17 @@ endings:
     # last pennies of people poorer than themselves. NOT a win_condition ending (fires
     # only by the alms-box's end_game), so WIN_IS_DEATH cannot apply and ending_free
     # stays the sole winnable ending.
+    # bug_0186: this ending is reachable from BOTH states — robbing the box with or
+    # without having first learned the postern from the old woman. The epilogue must be
+    # TRUE in both, so it no longer asserts "she never told you the trick" (false on the
+    # rob-after-learning route a blind playtest, seed 11, took); it names the honest way
+    # out only as the thing the player turned from, which holds whether or not it was known.
     text: >
       You went out the easy way and the rich way, the wretches' poor-fund cold in your
       fist — the sick men's bread, the dead men's coffins. You will eat well for a while
-      on it. The old woman never told you the postern's trick, and now she never will,
-      and somewhere behind you a sick man waits on bread that isn't coming. *** You have
-      taken the poor-fund. ***
+      on it. Whatever honest way out of this house there was, you have turned your back on
+      it for this; and somewhere behind you a sick man waits on bread that isn't coming.
+      *** You have taken the poor-fund. ***
   - id: ending_taken
     title: "What Waited at the Gate"
     # The DEATH pole (death: true), reached only by unlocking the watched night-gate.
