@@ -1,0 +1,367 @@
+meta:
+  id: genrpg_2_v1
+  title: "Crypt: A Hero's Descent"
+  start_room: entry
+  vars_init:
+    hp: 20
+    attack: 4
+    defense: 2
+    might: 3
+  flags_init: []
+  max_score: 50
+rooms:
+  - id: entry
+    name: The Crypt Stair
+    description: "A way drops down into the under-crypt of a fallen abbey, where a
+      reliquary of unburnt gold waits behind the last sealed door. You came for
+      one thing: the abbey reliquary. The only road to it is down."
+    objects: []
+    exits:
+      - direction: down
+        to: hall
+        conditions: []
+    on_enter: []
+  - id: hall
+    name: The Ossuary
+    description: A cold vaulted hall. A worn inscription is cut into one wall, and
+      by it lies a stout iron crow-bar. A candle-wisp hangs in a niche, watching
+      you. A low cell stands to the west, a passage runs north into the dark,
+      and the way climbs back up behind you.
+    variants:
+      - when:
+          - has_item: bar
+        text: A cold vaulted hall. A worn inscription is cut into one wall; the floor by
+          it is bare now, the iron crow-bar that lay there in your own hands. A
+          candle-wisp hangs in a niche. A low cell stands to the west, a passage
+          runs north, and the way climbs back up.
+    objects:
+      - inscription
+      - bar
+    exits:
+      - direction: up
+        to: entry
+        conditions: []
+      - direction: west
+        to: cell
+        conditions: []
+      - direction: north
+        to: gallery
+        conditions: []
+    on_enter: []
+  - id: cell
+    name: The Hermit's Recess
+    description: A narrow side cell. Against the wall lies the long-dead one who
+      came before you, still wearing a whole suit of saint's mail-shirt the cold
+      kept from rotting. He has no use for it now.
+    objects:
+      - ward
+    exits:
+      - direction: east
+        to: hall
+        conditions: []
+    on_enter: []
+  - id: gallery
+    name: The Nave Below
+    description: A long gallery. Across the only way east stands the bound revenant
+      — A penitent dead thing wound in grave-linen, risen stiff and cold to
+      guard the gold it died beside. Slow is not the same as soft; better not to
+      meet it under-armed. The way south leads back to the hall.
+    variants:
+      - when:
+          - has_flag: foe_down
+        text: A long gallery. The bound revenant lies broken across the floor, and the
+          way east stands open. The way south leads back to the hall.
+    objects: []
+    exits:
+      - direction: south
+        to: hall
+        conditions: []
+      - direction: east
+        to: hearth
+        conditions:
+          - has_flag: foe_down
+        locked_msg: The bound revenant bars the way east while it still stands.
+    on_enter: []
+  - id: hearth
+    name: The Sealed Choir
+    description: The deep chamber at the quest's root. The way down is closed by a
+      lead-sealed door, sealed by the weight of ages — but its edge carries a
+      worn lip, made to be levered by bar and brawn.
+    variants:
+      - when:
+          - quest_stage:
+              quest: way
+              stage: open
+        text: The deep chamber at the quest's root. The lead-sealed door has been
+          levered up off its lip and stands open, baring a low way down into the
+          dark below.
+    objects:
+      - seal
+    exits:
+      - direction: west
+        to: gallery
+        conditions: []
+      - direction: down
+        to: vault
+        conditions:
+          - quest_stage:
+              quest: way
+              stage: open
+        locked_msg: The lead-sealed door is sealed fast. It must be levered aside first.
+    on_enter: []
+  - id: vault
+    name: The Reliquary Vault
+    description: A small round chamber at the very bottom. On a plinth of pale stone
+      rests the abbey reliquary, whole and waiting, just as the old tales said.
+    objects:
+      - relic
+    exits:
+      - direction: up
+        to: hearth
+        conditions: []
+    on_enter:
+      - add_journal: You have reached the abbey reliquary.
+      - inc_var:
+          name: score
+          by: 20
+objects:
+  - id: inscription
+    name: worn inscription
+    aliases:
+      - inscription
+      - wall
+      - words
+      - letters
+    description: Letters cut deep into the cold stone.
+    takeable: false
+    quest_critical: false
+    read_text: THE GUARDIAN IS SLOW IN THE COLD AND WILL NOT RISE TWICE IF STRUCK
+      TRUE. THE ABBEY RELIQUARY LIES BELOW THE SEAL, AND ONLY A STRONG ARM AND A
+      GOOD BAR WILL OPEN THE WAY.
+    container: false
+    openable: false
+    locked: false
+    contents: []
+    interactions: []
+  - id: bar
+    name: iron crow-bar
+    aliases:
+      - bar
+      - lever
+      - pry-bar
+      - prybar
+    description: A stout iron bar the length of your arm, cold but sound — a lever,
+      for an arm strong enough.
+    takeable: true
+    quest_critical: false
+    container: false
+    openable: false
+    locked: false
+    contents: []
+    interactions: []
+  - id: ward
+    name: saint's mail-shirt
+    aliases:
+      - ward
+      - armour
+      - armor
+      - mail
+      - plate
+      - suit
+    description: A whole suit of saint's mail-shirt, heavy and cold but unrusted —
+      iron the guardian's blows would ring off.
+    variants:
+      - when:
+          - has_flag: ward_donned
+        text: The saint's mail-shirt, buckled on now over your own gear; its weight sits
+          between you and the next blow.
+    takeable: true
+    quest_critical: false
+    container: false
+    openable: false
+    locked: false
+    contents: []
+    interactions:
+      - verb: USE
+        item: ward
+        target: ward
+        conditions:
+          - none_of:
+              - has_flag: ward_donned
+        effects:
+          - set_flag: ward_donned
+          - inc_var:
+              name: defense
+              by: 2
+          - add_journal: You buckle on the saint's mail-shirt; it will turn the worst of the
+              guardian's blows (+2 defense).
+          - narrate: You strip the saint's mail-shirt from the old bones and buckle it on.
+              It is cold and heavy, but it sits between you and the next blow.
+        command_verb: don
+  - id: seal
+    name: lead-sealed door
+    aliases:
+      - seal
+      - grate
+      - slab
+      - door
+      - grille
+      - hatch
+    description: A lead-sealed door sealed fast by the weight of ages, with a worn
+      lip at its edge made for a lever.
+    variants:
+      - when:
+          - quest_stage:
+              quest: way
+              stage: open
+        text: The lead-sealed door, levered up off its lip and standing open; below it a
+          low way drops down into the dark.
+    takeable: false
+    quest_critical: false
+    container: false
+    openable: false
+    locked: false
+    contents: []
+    interactions:
+      - verb: USE
+        item: bar
+        target: seal
+        conditions:
+          - none_of:
+              - quest_stage:
+                  quest: way
+                  stage: open
+        effects: []
+        skill_check:
+          skill: might
+          difficulty: 14
+          on_success:
+            - set_quest_stage:
+                quest: way
+                stage: open
+            - add_journal: You lever the lead-sealed door up off its lip; the way down stands
+                open.
+            - inc_var:
+                name: score
+                by: 15
+            - narrate: You set the bar to the lip and throw your weight on it — stone cracks
+                and the lead-sealed door heaves up off its seat. The way down is
+                open.
+          on_failure:
+            - narrate: The bar bites under the lip and your shoulders strain, but the
+                lead-sealed door holds. Set your feet and try again.
+        command_verb: force
+        command_template: force {target} with {item}
+  - id: relic
+    name: abbey reliquary
+    aliases:
+      - relic
+      - prize
+      - treasure
+      - heart
+      - crown
+      - orb
+    description: The abbey reliquary itself, whole and waiting — the one thing you
+      came down here to carry out.
+    takeable: false
+    quest_critical: false
+    container: false
+    openable: false
+    locked: false
+    contents: []
+    interactions: []
+npcs:
+  - id: spirit
+    name: candle-wisp
+    description: A guttering flame with no candle under it, leaning toward you as if
+      to whisper.
+    room: hall
+    dialogue:
+      root: spirit_root
+      nodes:
+        - id: spirit_root
+          npc_text: A warm thing, come down into the cold. Few do. Ask, if you would — I
+            have watched this place a long age and remember everything.
+          effects: []
+          topics:
+            - id: ask_foe
+              prompt: Ask how to beat the bound revenant.
+              conditions:
+                - not_flag: heard_foe
+              goto: spirit_foe
+              end: false
+            - id: ask_ward
+              prompt: Ask who else ever came down here.
+              conditions:
+                - not_flag: heard_ward
+              goto: spirit_ward
+              end: false
+            - id: leave_spirit
+              prompt: Step away.
+              end: true
+        - id: spirit_foe
+          npc_text: The guardian? It is slow in the cold and will never be warmer. Do not
+            fear that waiting makes it worse. Strike it hard and it will not
+            rise twice. Here — take what warmth I can spare; let it ride your
+            arm.
+          effects:
+            - set_flag: heard_foe
+            - inc_var:
+                name: attack
+                by: 2
+            - add_journal: The candle-wisp's warmth settles into your arm — you feel you could
+                strike harder now (+2 attack).
+          topics:
+            - id: foe_back
+              prompt: Nod, and ask something else.
+              goto: spirit_root
+              end: false
+        - id: spirit_ward
+          npc_text: One came before you, an age ago, and never climbed back out. He lies
+            in the side-cell west of here, still in his saint's mail-shirt,
+            whole and unrusted. He has no use for it now — better his iron on a
+            living back than guarding old bones.
+          effects:
+            - set_flag: heard_ward
+            - add_journal: The candle-wisp speaks of one who came before, dead in the
+                side-cell west of the hall in saint's mail-shirt that might yet
+                turn the guardian's blows.
+          topics:
+            - id: ward_back
+              prompt: Nod, and ask something else.
+              goto: spirit_root
+              end: false
+win_conditions:
+  - id: claim_relic
+    conditions:
+      - visited: vault
+    ending: ending_victory
+endings:
+  - id: ending_victory
+    title: Bearer of the abbey reliquary
+    text: You lift the abbey reliquary from its plinth and turn back toward the
+      light above. The long cold keeps the rest of this place, but its one
+      living prize climbs the stair in your hands.
+    death: false
+  - id: ending_fallen
+    title: Cold on the Stones
+    text: The guardian's last blow drops you among the dead, and the grave chill
+      closes over you. The abbey reliquary waits a while longer for a stronger
+      arm.
+    death: true
+enemies:
+  - id: foe
+    name: bound revenant
+    description: A penitent dead thing wound in grave-linen, risen stiff and cold to
+      guard the gold it died beside.
+    room: gallery
+    hp: 18
+    attack: 7
+    defense: 2
+    defeat_flag: foe_down
+    death_ending: ending_fallen
+    on_defeat:
+      - add_journal: The bound revenant comes apart; the way east lies open.
+      - inc_var:
+          name: score
+          by: 15

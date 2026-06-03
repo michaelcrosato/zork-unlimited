@@ -1,0 +1,61 @@
+{
+  "generated_by": "bin/seal-corpus.ts",
+  "entries": [
+    {
+      "content_hash": "5cae7694f62e82f293be2de7a76bfbcc04981876b73274549b94b59feba93873",
+      "generator_version": 1,
+      "mode": "cyoa",
+      "pack_id": "gen_0_v1",
+      "seed": 0
+    },
+    {
+      "content_hash": "eb1e0ceb9ef53c17c7bdb6d1d692197cb9faf6b36147a907b201795aa9ccc77d",
+      "generator_version": 1,
+      "mode": "cyoa",
+      "pack_id": "gen_1_v1",
+      "seed": 1
+    },
+    {
+      "content_hash": "22e4c351b3ded60b4095c947194cfe24227fb03274d3ab50a875af42e37f3c58",
+      "generator_version": 1,
+      "mode": "cyoa",
+      "pack_id": "gen_2_v1",
+      "seed": 2
+    },
+    {
+      "content_hash": "76497bbf005b7e7daaf18d56eba42188a769b044df650594ebb8761534424e89",
+      "generator_version": 1,
+      "mode": "cyoa",
+      "pack_id": "gen_3_v1",
+      "seed": 3
+    },
+    {
+      "content_hash": "d7ae2de8cbafc6d356fd2b4667b44a92eb2bc5e72069518f94caf59967cb8036",
+      "generator_version": 1,
+      "mode": "rpg",
+      "pack_id": "genrpg_0_v1",
+      "seed": 0
+    },
+    {
+      "content_hash": "792068343a19c7212f8c2e7d5bfafb1d4dc96ed621349d8e43e91c76a5800880",
+      "generator_version": 1,
+      "mode": "rpg",
+      "pack_id": "genrpg_1_v1",
+      "seed": 1
+    },
+    {
+      "content_hash": "84577eb71f315d3fbb7fbc0456f4fff83868d2c2ab5e0d8ddf28c1104130186d",
+      "generator_version": 1,
+      "mode": "rpg",
+      "pack_id": "genrpg_2_v1",
+      "seed": 2
+    },
+    {
+      "content_hash": "4a8f1807d3279d434463667b54bad1be76f1a00b11462c3b73d56302559fbbf4",
+      "generator_version": 1,
+      "mode": "rpg",
+      "pack_id": "genrpg_3_v1",
+      "seed": 3
+    }
+  ]
+}

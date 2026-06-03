@@ -1,0 +1,98 @@
+meta:
+  id: gen_2_v1
+  title: "Tithe: A Tithe Fork"
+  start: hub
+  vars_init: {}
+  flags_init: []
+scenes:
+  - id: hub
+    title: the locked gatehouse
+    text: "You stand in a plague village the manor has quietly sealed from within:
+      the locked gatehouse, the sick on one side and the well road on the other.
+      the bailiff's sealed order lies nailed inside the gate-ward's box. What
+      kind of person are you, here, tonight?"
+    variants:
+      - when:
+          - has_flag: truth
+        text: You stand in a plague village the manor has quietly sealed from within,
+          and you cannot look at it the way you did before. You have read the
+          bailiff's sealed order; you know what it was kept for. the locked
+          gatehouse, the sick on one side and the well road on the other.
+    on_enter: []
+    is_ending: false
+    choices:
+      - id: investigate
+        text: Read the bailiff's sealed order, nailed inside the gate-ward's box.
+        conditions:
+          - not_flag: truth
+        effects: []
+        next: clue
+      - id: stance_0
+        text: Keep the gate sealed as the order commands.
+        conditions: []
+        effects: []
+        next: ending_stance_0
+      - id: stance_1
+        text: Quietly let one cart of the well slip out by night.
+        conditions: []
+        effects: []
+        next: ending_stance_1
+      - id: act_on_truth
+        text: Break the seal and read the order aloud to the whole village.
+        conditions:
+          - has_flag: truth
+        effects: []
+        next: ending_truth
+      - id: climb_gamble
+        text: Scale the crumbling curtain-wall to signal the road.
+        conditions: []
+        effects: []
+        next: ending_fall
+  - id: clue
+    title: Bailiff'S Sealed Order
+    text: "You take up the bailiff's sealed order nailed inside the gate-ward's box
+      and read it through. It is all set down plainly: what you are guarding was
+      made a lie on purpose."
+    on_enter: []
+    is_ending: false
+    choices:
+      - id: learn
+        text: Read it through to the end, and understand.
+        conditions:
+          - not_flag: truth
+        effects:
+          - set_flag: truth
+          - add_journal: "the bailiff's sealed order damns the whole of it: a plague village
+              the manor has quietly sealed from within is no accident. You know
+              now what only the act of opening it can answer."
+        next: hub
+      - id: back
+        text: Set it down and turn back.
+        conditions: []
+        effects: []
+        next: hub
+endings:
+  - id: ending_stance_0
+    title: "Stance: Keep the gate sealed as the order commands"
+    text: You make your choice in a plague village the manor has quietly sealed from
+      within. Keep the gate sealed as the order commands. What follows is the
+      contagion held and the village left to burn itself out, and you carry it
+      with you after.
+  - id: ending_stance_1
+    title: "Stance: Quietly let one cart of the well slip out by night"
+    text: You make your choice in a plague village the manor has quietly sealed from
+      within. Quietly let one cart of the well slip out by night. What follows
+      is a few carried clear, the gate sealed again behind them, and you carry
+      it with you after.
+  - id: ending_truth
+    title: The Truth Acted On
+    text: You read the bailiff's sealed order and you will not keep its lie one more
+      hour. Break the seal and read the order aloud to the whole village. What
+      follows is the lie undone, the gate thrown open, and the manor's hand
+      shown to all — the act only the one who learned the truth could take.
+  - id: ending_fall
+    title: The Fall
+    text: "You set yourself to the gamble the prose named outright. Scale the
+      crumbling curtain-wall to signal the road. It does not hold: the
+      frost-rotten parapet sloughs away and the drop takes you. A chosen risk,
+      foreshadowed, never an ambush."

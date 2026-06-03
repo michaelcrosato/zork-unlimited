@@ -32,6 +32,15 @@
 import { CyoaPackSchema, type CyoaPack } from "../cyoa/schema.js";
 
 /**
+ * Generator version stamp (bug_0163, held-out corpus persistence). This does NOT change any
+ * emitted pack — it is recorded only in `corpus/manifest.json` so that a FUTURE change to the
+ * generator surfaces as a loud, diagnosable manifest mismatch ("generator changed", a deliberate
+ * version bump) rather than silent corpus rot vs a tampered content hash. Bump it whenever the
+ * emitted pack shape changes; the re-seal then re-stamps every entry.
+ */
+export const CYOA_GENERATOR_VERSION = 1;
+
+/**
  * A tiny deterministic PRNG (mulberry32). Pure and self-contained: no global RNG, no
  * Date — the whole point of the generator is reproducibility (§8.5), so randomness comes
  * only from the integer seed threaded here. `next()` returns a float in [0, 1); `int(n)`

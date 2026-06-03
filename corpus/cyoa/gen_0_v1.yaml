@@ -1,0 +1,98 @@
+meta:
+  id: gen_0_v1
+  title: "Barn: A Tithe Fork"
+  start: hub
+  vars_init: {}
+  flags_init: []
+scenes:
+  - id: hub
+    title: the dark barn
+    text: "You stand in a lord's full grain-barn over a starving town: the dark
+      barn, the thief frozen against the sacks, the only door at your back. the
+      steward's account-book lies open on the table by the door. What kind of
+      person are you, here, tonight?"
+    variants:
+      - when:
+          - has_flag: truth
+        text: You stand in a lord's full grain-barn over a starving town, and you cannot
+          look at it the way you did before. You have read the steward's
+          account-book; you know what it was kept for. the dark barn, the thief
+          frozen against the sacks, the only door at your back.
+    on_enter: []
+    is_ending: false
+    choices:
+      - id: investigate
+        text: Read the steward's account-book, open on the table by the door.
+        conditions:
+          - not_flag: truth
+        effects: []
+        next: clue
+      - id: stance_0
+        text: Seize the thief and call the lord's men for the bounty.
+        conditions: []
+        effects: []
+        next: ending_stance_0
+      - id: stance_1
+        text: Stand aside and let her slip out with her one sack.
+        conditions: []
+        effects: []
+        next: ending_stance_1
+      - id: act_on_truth
+        text: Throw the great doors wide and call the whole town to the grain.
+        conditions:
+          - has_flag: truth
+        effects: []
+        next: ending_truth
+      - id: climb_gamble
+        text: Climb the rotten loft-ladder to the older stores above.
+        conditions: []
+        effects: []
+        next: ending_fall
+  - id: clue
+    title: Steward'S Account-Book
+    text: "You take up the steward's account-book open on the table by the door and
+      read it through. It is all set down plainly: what you are guarding was
+      made a lie on purpose."
+    on_enter: []
+    is_ending: false
+    choices:
+      - id: learn
+        text: Read it through to the end, and understand.
+        conditions:
+          - not_flag: truth
+        effects:
+          - set_flag: truth
+          - add_journal: "the steward's account-book damns the whole of it: a lord's full
+              grain-barn over a starving town is no accident. You know now what
+              only the act of opening it can answer."
+        next: hub
+      - id: back
+        text: Set it down and turn back.
+        conditions: []
+        effects: []
+        next: hub
+endings:
+  - id: ending_stance_0
+    title: "Stance: Seize the thief and call the lord's men for the bounty"
+    text: You make your choice in a lord's full grain-barn over a starving town.
+      Seize the thief and call the lord's men for the bounty. What follows is
+      the lord's silver and a hanging on the green, and you carry it with you
+      after.
+  - id: ending_stance_1
+    title: "Stance: Stand aside and let her slip out with her one sack"
+    text: You make your choice in a lord's full grain-barn over a starving town.
+      Stand aside and let her slip out with her one sack. What follows is one
+      family fed, the barn still locked on the rest, and you carry it with you
+      after.
+  - id: ending_truth
+    title: The Truth Acted On
+    text: You read the steward's account-book and you will not keep its lie one more
+      hour. Throw the great doors wide and call the whole town to the grain.
+      What follows is a fed town, a barn open to the morning, and your name an
+      outlaw's — the act only the one who learned the truth could take.
+  - id: ending_fall
+    title: The Fall
+    text: "You set yourself to the gamble the prose named outright. Climb the rotten
+      loft-ladder to the older stores above. It does not hold: the grey wood
+      gives, and a winter's grain comes down on top of you. A chosen risk,
+      foreshadowed, never an ambush."

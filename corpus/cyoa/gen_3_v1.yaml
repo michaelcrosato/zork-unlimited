@@ -1,0 +1,101 @@
+meta:
+  id: gen_3_v1
+  title: "Forge: A Tithe Fork"
+  start: hub
+  vars_init: {}
+  flags_init: []
+scenes:
+  - id: hub
+    title: the casting floor
+    text: "You stand in a war-foundry casting blades the general means for a
+      massacre: the casting floor, the cooling moulds, the muster horns sounding
+      outside. the quartermaster's order-slate lies chalked and propped against
+      the tuyère. What kind of person are you, here, tonight?"
+    variants:
+      - when:
+          - has_flag: truth
+        text: You stand in a war-foundry casting blades the general means for a
+          massacre, and you cannot look at it the way you did before. You have
+          read the quartermaster's order-slate; you know what it was kept for.
+          the casting floor, the cooling moulds, the muster horns sounding
+          outside.
+    on_enter: []
+    is_ending: false
+    choices:
+      - id: investigate
+        text: Read the quartermaster's order-slate, chalked and propped against the
+          tuyère.
+        conditions:
+          - not_flag: truth
+        effects: []
+        next: clue
+      - id: stance_0
+        text: Pour the heat and finish the order as cast.
+        conditions: []
+        effects: []
+        next: ending_stance_0
+      - id: stance_1
+        text: Quench the crucible and quietly spoil this one pour.
+        conditions: []
+        effects: []
+        next: ending_stance_1
+      - id: act_on_truth
+        text: Crack the moulds and ring the foundry-bell to stop the muster.
+        conditions:
+          - has_flag: truth
+        effects: []
+        next: ending_truth
+      - id: climb_gamble
+        text: Climb the slag-loose gantry over the crucible for the bell-rope.
+        conditions: []
+        effects: []
+        next: ending_fall
+  - id: clue
+    title: Quartermaster'S Order-Slate
+    text: "You take up the quartermaster's order-slate chalked and propped against
+      the tuyère and read it through. It is all set down plainly: what you are
+      guarding was made a lie on purpose."
+    on_enter: []
+    is_ending: false
+    choices:
+      - id: learn
+        text: Read it through to the end, and understand.
+        conditions:
+          - not_flag: truth
+        effects:
+          - set_flag: truth
+          - add_journal: "the quartermaster's order-slate damns the whole of it: a
+              war-foundry casting blades the general means for a massacre is no
+              accident. You know now what only the act of opening it can
+              answer."
+        next: hub
+      - id: back
+        text: Set it down and turn back.
+        conditions: []
+        effects: []
+        next: hub
+endings:
+  - id: ending_stance_0
+    title: "Stance: Pour the heat and finish the order as cast"
+    text: You make your choice in a war-foundry casting blades the general means for
+      a massacre. Pour the heat and finish the order as cast. What follows is
+      the blades shipped and your wage paid in full, and you carry it with you
+      after.
+  - id: ending_stance_1
+    title: "Stance: Quench the crucible and quietly spoil this one pour"
+    text: You make your choice in a war-foundry casting blades the general means for
+      a massacre. Quench the crucible and quietly spoil this one pour. What
+      follows is one batch ruined, the next already ordered, and you carry it
+      with you after.
+  - id: ending_truth
+    title: The Truth Acted On
+    text: You read the quartermaster's order-slate and you will not keep its lie one
+      more hour. Crack the moulds and ring the foundry-bell to stop the muster.
+      What follows is the casting wrecked, the order read out, and the muster
+      broken cold — the act only the one who learned the truth could take.
+  - id: ending_fall
+    title: The Fall
+    text: "You set yourself to the gamble the prose named outright. Climb the
+      slag-loose gantry over the crucible for the bell-rope. It does not hold:
+      the heat-eaten walkway buckles and drops you to the molten pour. A chosen
+      risk, foreshadowed, never an ambush."

@@ -1,0 +1,99 @@
+meta:
+  id: gen_1_v1
+  title: "Lighthouse: A Tithe Fork"
+  start: hub
+  vars_init: {}
+  flags_init: []
+scenes:
+  - id: hub
+    title: the cold lamp-room
+    text: "You stand in a wreckers' coast where a false light draws ships onto the
+      rocks: the cold lamp-room, the unlit lens, the storm-bound ship standing
+      in toward the reef. the keeper's logbook lies left open beside the dead
+      wick. What kind of person are you, here, tonight?"
+    variants:
+      - when:
+          - has_flag: truth
+        text: You stand in a wreckers' coast where a false light draws ships onto the
+          rocks, and you cannot look at it the way you did before. You have read
+          the keeper's logbook; you know what it was kept for. the cold
+          lamp-room, the unlit lens, the storm-bound ship standing in toward the
+          reef.
+    on_enter: []
+    is_ending: false
+    choices:
+      - id: investigate
+        text: Read the keeper's logbook, left open beside the dead wick.
+        conditions:
+          - not_flag: truth
+        effects: []
+        next: clue
+      - id: stance_0
+        text: Light the false beacon the wreckers paid for.
+        conditions: []
+        effects: []
+        next: ending_stance_0
+      - id: stance_1
+        text: Leave the tower dark and let the ship pass blind.
+        conditions: []
+        effects: []
+        next: ending_stance_1
+      - id: act_on_truth
+        text: Light the true channel-mark and guide the ship clear.
+        conditions:
+          - has_flag: truth
+        effects: []
+        next: ending_truth
+      - id: climb_gamble
+        text: Climb the storm-loose gallery rail for a better sightline.
+        conditions: []
+        effects: []
+        next: ending_fall
+  - id: clue
+    title: Keeper'S Logbook
+    text: "You take up the keeper's logbook left open beside the dead wick and read
+      it through. It is all set down plainly: what you are guarding was made a
+      lie on purpose."
+    on_enter: []
+    is_ending: false
+    choices:
+      - id: learn
+        text: Read it through to the end, and understand.
+        conditions:
+          - not_flag: truth
+        effects:
+          - set_flag: truth
+          - add_journal: "the keeper's logbook damns the whole of it: a wreckers' coast
+              where a false light draws ships onto the rocks is no accident. You
+              know now what only the act of opening it can answer."
+        next: hub
+      - id: back
+        text: Set it down and turn back.
+        conditions: []
+        effects: []
+        next: hub
+endings:
+  - id: ending_stance_0
+    title: "Stance: Light the false beacon the wreckers paid for"
+    text: You make your choice in a wreckers' coast where a false light draws ships
+      onto the rocks. Light the false beacon the wreckers paid for. What follows
+      is a ship broken on the rocks and silver in your hand, and you carry it
+      with you after.
+  - id: ending_stance_1
+    title: "Stance: Leave the tower dark and let the ship pass blind"
+    text: You make your choice in a wreckers' coast where a false light draws ships
+      onto the rocks. Leave the tower dark and let the ship pass blind. What
+      follows is the ship gropes by in the dark, neither saved nor sunk, and you
+      carry it with you after.
+  - id: ending_truth
+    title: The Truth Acted On
+    text: You read the keeper's logbook and you will not keep its lie one more hour.
+      Light the true channel-mark and guide the ship clear. What follows is a
+      ship brought safe to harbour and the wreckers' trade ended on your word —
+      the act only the one who learned the truth could take.
+  - id: ending_fall
+    title: The Fall
+    text: "You set yourself to the gamble the prose named outright. Climb the
+      storm-loose gallery rail for a better sightline. It does not hold: the
+      rusted rail parts and the long fall takes you to the rocks below. A chosen
+      risk, foreshadowed, never an ambush."
