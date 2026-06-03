@@ -1,0 +1,108 @@
+id: bug_0171
+title: "Deepen the RPG generator to a two-fight gauntlet — the bug_0168/0169 named structural lever"
+kind: engine
+mode: meta
+severity: enhancement
+layer: generator
+artifact:
+  source: src/gen/rpg_generator.ts
+  test: tests/regression/rpg_generator_two_fight_gauntlet.test.ts
+
+summary: >
+  The mandated blind pass this cycle (alchemists_tower, parser, seeds 77/88/99 — the assessor rank-1
+  target) came back blind-clean: clarity 5/5, enjoyment 4/5, ZERO mechanical bugs across THREE routes
+  to ALL THREE declared endings (ending_cured 40/40, ending_poisoned death, ending_betrayal the
+  non-death greed fork), with the adaptive room/examine prose, exact 5+10+20+5=40 score economy, key
+  typing, and the dynamic casket warning all confirmed live. Its only notes were brevity and an
+  optional polish suggestion (one more red-herring / a reward for resisting the casket), neither an
+  actionable content defect. A blind-clean pass on a clean pack is the saturation signal
+  ([[content-polish-backlog-exhausted]]); per docs/afk_loop.md the loop pivots to structural work. The
+  documented standing lever was the generator-deepening item named by bug_0168 AND bug_0169: the parser
+  generator was deepened to a depth-2 chain (bug_0168) and the CYOA generator to a two-axis 2x2 fork
+  (bug_0169), leaving the RPG generator the shallowest — a SINGLE fight + one skill check + a
+  three-award economy. bug_0170's carried brief (the sunken_barrow §6 blind note) named the exact
+  deepening: "a deeper RPG vertical slice — more than one combat + one skill check."
+
+mandated_blind_playtest:
+  run: ai-runs/2026-06-03T11-48-54-507Z/playtest.md
+  pack: content/parser/pack/alchemists_tower.yaml
+  seeds: [77, 88, 99]
+  result: "reached ending_cured (40/40, the cure), ending_poisoned (drink the black phial, death), ending_betrayal (crack the silver casket for the Great Work, non-death greed); clarity 5/5, enjoyment 4/5; ZERO mechanical bugs; adaptive prose, score economy, key typing, and the dynamic casket warning all confirmed live"
+  triage: >
+    No actionable content defect — alchemists_tower is blind-clean. The two notes (brevity; an optional
+    extra red-herring / casket-resist reward) were scope observations the tester rated not-needed. Per
+    [[content-polish-backlog-exhausted]] the only live lever is structural, so the cycle advanced the
+    plan's named next slice — deepening the RPG generator's emitted combat structure — instead of
+    churning a clean pack.
+
+what:
+  - >
+    src/gen/rpg_generator.ts — the emitted RPG pack grew a SECOND combat tier (RPG_GENERATOR_VERSION
+    1 -> 2). v1 emitted a single gallery fight + one skill check + a THREE-award economy across SIX
+    rooms (entry -> hall -> gallery[foe] -> hearth -> vault, + the optional cell). v2 is a TWO-FIGHT
+    GAUNTLET across SEVEN rooms: entry -> hall -> gallery[LESSER sentinel "foe"] -> span[GREATER
+    guardian "warden"] -> hearth[lever check] -> vault[relic], + the optional ward cell. The Theme type
+    gained wardenName/wardenDesc + spanName for all 6 themes, with the inscription clue and the spirit's
+    counsel rewritten to signpost two keepers; the spirit's one-shot +2 attack and the cell ward's
+    one-shot +2 defense now serve BOTH fights. Each combat room's east exit gates on that enemy's own
+    defeat flag (FOE_DOWN / WARDEN_DOWN), so the descent runs fight -> fight -> lever. The economy moved
+    from three awards (foe/lever/relic) to FOUR (sentinel/guardian/lever/relic), max_score = their exact
+    sum (each 10/15/20 => [40,80]), so SCORE_UNREACHABLE's upper bound stays tight on a richer economy.
+    Two DISTINCT death endings (ending_fallen_sentinel / ending_fallen_guardian) plus ending_victory =
+    a 3-ending census.
+  - >
+    Combat tuning kept provably winnable. The sentinel is the LESSER fight (hp12 atk7? -> hp12 atk5
+    def2) and the guardian the GREATER (cold_forge's bug_0101-proven hp18 atk7 def2). Each is winnable
+    on the player's BEST reachable stats independently (the validator checks each fight against full HP
+    crediting all reachable buffs: atk 4+2, def 2+2), and the best-line CUMULATIVE HP survives BOTH
+    fights (20 -> ~18 -> ~14) — the bracket proof the single fight never stressed. Deliberately NOT
+    meta.combat_guaranteed: that flag is single-fight-sound only (the validator checks each enemy
+    against full HP and cannot see cumulative drain), so two "guaranteed" fights could still fell a
+    best-prepared player on worst cumulative rolls. Both fights stay real gambles on worse rolls, so
+    both death endings are reachable (fall to the sentinel under-armed; survive it and fall to the
+    guardian).
+  - >
+    corpus/ re-sealed (npm run corpus:seal) — the 4 held-out RPG packs (genrpg_0..3) re-stamped to
+    generator_version 2 with new content hashes; corpus/manifest.json updated. This is the sanctioned
+    deepen workflow bug_0167 documented: a generator edit surfaces a non-blocking VERIFIER_TOUCHED
+    warning (src/gen/rpg_generator.ts is in PROTECTED_FILES), and the version bump + re-seal keep
+    held_out_corpus_sealed.test.ts's version-match + re-mint-determinism assertions green. The
+    cyoa/parser corpus entries are byte-unchanged (the change is rpg-only). The re-seal is deterministic
+    (a second seal produced a byte-identical tree).
+  - >
+    tests/regression/rpg_generator_two_fight_gauntlet.test.ts (new) — locks the two-fight SHAPE so a
+    future flattening back to one fight fails loudly even though it would still pass the generic bar:
+    two distinct enemies in sequence (gallery sentinel -> span guardian), distinct defeat flags +
+    distinct death endings, each combat-room east exit gated on its enemy's defeat, escalating HP, and
+    a four-award economy. BEHAVIORALLY (exhaustive best/worst bracket): the FIRST fight gates the whole
+    descent (never striking the sentinel => no ending at all, since combat is player-initiated), and the
+    SECOND fight is load-bearing (beating only the sentinel => victory AND the guardian's death
+    unreachable, while the sentinel's own death stays reachable — a non-vacuous walk).
+    tests/unit/rpg_generator.test.ts was updated for the new shape (reached.size 2 -> 3; a new
+    two-fight-structure case; the gate-load-bearing case now asserts BOTH east gates).
+    tests/unit/mcp_generate_rpg_pack.test.ts counts updated (room 6->7, enemy 1->2, ending 2->3,
+    max_score 30-60 -> 40-80).
+
+why: >
+  The contamination-free benchmark thesis rests on the generators being a never-frozen MOVING target
+  (docs/ULTRAPLAN-2026-06-02.md; the frozen-verifier reward-hacking result, [[verifier-assertion-guard]]
+  arXiv 2510.14253). RPG owns the richest verifier surfaces in the suite — COMBAT winnability (the
+  best/worst-roll bound) and SCORE-economy soundness — yet a single-fight generator exercised the
+  winnability proof on exactly one enemy and never stressed cumulative-HP survival across a gauntlet.
+  With content blind-saturated and the deterministic assessor at the 0.5 floor, deepening the eval
+  distribution is the genuine lever: every mint now forces validateRpg to prove TWO independent fights
+  winnable and a four-term economy tight, and the exhaustive bracket to survive both fights cumulatively
+  to a 3-ending census — a strictly harder fresh distribution every cycle. This completes the
+  generator-deepening arc across all three modes (parser bug_0168, CYOA bug_0169, RPG now).
+
+verification: >
+  npm run health EXIT 0. tests/unit/rpg_generator.test.ts (24 seeds) green: every v2 pack is
+  schema-valid, validateRpg-clean (ZERO findings — combat winnability, score economy, soft-lock all
+  pass), exhaustively solvable (all 3 endings reached, none undeclared, no cap-out). The new
+  tests/regression/rpg_generator_two_fight_gauntlet.test.ts (15 cases) proves both combat tiers
+  load-bearing via the best/worst bracket. held_out_corpus_sealed.test.ts green (rpg entries re-mint to
+  the sealed hashes, version==2); assessor_generator_rpg_mint_and_check.test.ts +
+  benchmark_held_out_split.test.ts green. The change is generator+corpus+test+artifact: no
+  engine/validator/schema/assessor behavior change, no test deleted/disabled, no curated content touched
+  (the 10 packs validate 0/0), no curated hash re-pin (sunken_barrow + cold_forge unchanged). The corpus
+  hash change is a deliberate, surfaced re-seal behind a generator_version bump, not a weakened check.

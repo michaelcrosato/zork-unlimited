@@ -38,13 +38,14 @@ describe("bug_0160 — generate_rpg_pack MCP tool mints + validates a fresh RPG 
     expect(r.pack_id).toBe("genrpg_0_v1");
     expect(r.meta.id).toBe("genrpg_0_v1");
     expect(r.content_hash).toMatch(/^[0-9a-f]{64}$/);
-    // The proven hero's-descent shape: six rooms, one winnable fight, two endings.
-    expect(r.room_count).toBe(6);
-    expect(r.enemy_count).toBe(1);
-    expect(r.ending_count).toBe(2);
-    // The declared max_score is the seed-chosen sum of the three awards (each 10/15/20).
-    expect(r.meta.max_score).toBeGreaterThanOrEqual(30);
-    expect(r.meta.max_score).toBeLessThanOrEqual(60);
+    // The deepened hero's-descent shape (bug_0171): seven rooms, a TWO-fight gauntlet, three
+    // endings (victory + a distinct death per guardian).
+    expect(r.room_count).toBe(7);
+    expect(r.enemy_count).toBe(2);
+    expect(r.ending_count).toBe(3);
+    // The declared max_score is the seed-chosen sum of the FOUR awards (each 10/15/20).
+    expect(r.meta.max_score).toBeGreaterThanOrEqual(40);
+    expect(r.meta.max_score).toBeLessThanOrEqual(80);
     // The reported hash is exactly the compiled-pack hash (no drift between mint and report).
     expect(r.content_hash).toBe(hashState(generateRpgPack(0)));
   });

@@ -17,28 +17,43 @@
  * What it is. `generateRpgPack(seed)` is a PURE, DETERMINISTIC function (same seed ⇒
  * byte-identical pack — no Date/Math.random, §8.5) that emits a schema-valid `RpgPack` of the
  * proven AdventureForge hero's-quest shape, anchored structurally on cold_forge's CLEAN
- * skeleton so every parser + RPG invariant holds by construction:
- *   - a linear descent (entry → hall → gallery → hearth → vault) plus one OPTIONAL side cell;
- *   - an NPC whose counsel grants a one-shot +2 attack (the survival lever) and signposts the
- *     optional defensive ward;
- *   - one WINNABLE fight (enemy tuned to cold_forge's proven hp18/atk7/def2 — winnable on the
- *     player's BEST reachable stats: init atk + the spirit's +2 and init def + the ward's +2);
+ * skeleton so every parser + RPG invariant holds by construction.
+ *
+ * v2 (bug_0171) DEEPENED this to a TWO-FIGHT GAUNTLET — the RPG analogue of bug_0168's depth-2
+ * parser chain and bug_0169's two-axis CYOA fork, and the explicit "more than one combat + one
+ * skill check" brief the sunken_barrow §6 blind note left. v1 emitted a SINGLE fight (one
+ * gallery foe) + one skill check + a THREE-award economy: the COMBAT-winnability proof ran on
+ * exactly one enemy, the exhaustive best/worst bracket had only one fight's cumulative HP to
+ * survive, and the score scan summed three terms. v2 grows a SECOND combat tier:
+ *   - a linear descent (entry → hall → gallery → SPAN → hearth → vault) plus one OPTIONAL side
+ *     cell — SEVEN rooms, a longer obtainability chain;
+ *   - an NPC whose counsel grants a one-shot +2 attack (the survival lever applied to BOTH
+ *     fights) and signposts the optional defensive ward (+2 defense, also both fights);
+ *   - TWO winnable fights in sequence, each its own validator winnability proof and each a
+ *     load-bearing gate: a LESSER sentinel in the gallery (the gallery's east exit gates on its
+ *     defeat) and the GREATER guardian in the span (the span's east exit gates on ITS defeat).
+ *     Tuned so each is individually winnable on the player's BEST reachable stats (init atk +
+ *     the spirit's +2 and init def + the ward's +2) AND the best-line CUMULATIVE HP survives
+ *     both — the bracket proof the single fight never stressed — while each remains a real
+ *     gamble on worse rolls (NOT meta.combat_guaranteed: that flag is single-fight-sound only,
+ *     since the validator checks each fight against full HP and cannot see cumulative drain);
  *   - one PASSABLE seeded skill check (a might roll to lever the sealed way open);
- *   - a score economy whose three awards (defeat the foe, lever the way, claim the relic) sum
- *     EXACTLY to the declared max_score, so SCORE_UNREACHABLE's upper bound is tight;
- *   - two endings — the relic-claimed victory and the foe's death ending.
- * The seed selects the theme, the skill difficulty, and the three award amounts, so the eval
+ *   - a score economy whose FOUR awards (fell each guardian, lever the way, claim the relic) sum
+ *     EXACTLY to the declared max_score, so SCORE_UNREACHABLE's upper bound is tight on a richer
+ *     economy;
+ *   - THREE endings — the relic-claimed victory and a DISTINCT death ending per guardian (fall
+ *     to the sentinel / fall to the guardian), so the exhaustive bracket must reach a 3-ending
+ *     census (every one provable by concrete play).
+ * The seed selects the theme, the skill difficulty, and the four award amounts, so the eval
  * distribution genuinely varies (the validators see different score economies / difficulties)
  * while every path stays provable. The output is validated by the SAME `validateRpg` and proven
  * solvable by the SAME `exhaustiveEndingsMulti` best/worst-roll bracket that guard the shipped
  * RPG packs — so a generated pack is held to the identical bar (tests/unit/rpg_generator.test.ts).
  *
- * What it is NOT (yet). Like the CYOA generator's first slice (bug_0156), this is the minting
- * core: the generated packs are NOT committed under content/rpg/pack (an on-demand eval
- * distribution, not curated showcase content — no blind-playtest obligation, no pollution of
- * the hand-authored set), and the deferred slices (an MCP tool surface, an assessor lever that
- * mints-and-checks an RPG pack each cycle, persistence of a held-out corpus) are explicitly
- * next, not here — kept out so this stays one focused, green-bar change.
+ * What it is NOT. Like the CYOA generator's first slice (bug_0156), the generated packs are NOT
+ * committed under content/rpg/pack (an on-demand eval distribution, not curated showcase content
+ * — no blind-playtest obligation, no pollution of the hand-authored set). They ARE persisted as
+ * the sealed held-out corpus (bug_0163, behind a generator_version bump + re-seal).
  */
 import { RpgPackSchema, type RpgPack } from "../rpg/schema.js";
 
@@ -47,9 +62,10 @@ import { RpgPackSchema, type RpgPack } from "../rpg/schema.js";
  * emitted pack — it is recorded only in `corpus/manifest.json` so that a FUTURE change to the
  * generator surfaces as a loud, diagnosable manifest mismatch ("generator changed", a deliberate
  * version bump) rather than silent corpus rot vs a tampered content hash. Bump it whenever the
- * emitted pack shape changes; the re-seal then re-stamps every entry.
+ * emitted pack shape changes; the re-seal then re-stamps every entry. v1 → v2: the two-fight
+ * gauntlet deepening (bug_0171).
  */
-export const RPG_GENERATOR_VERSION = 1;
+export const RPG_GENERATOR_VERSION = 2;
 
 /**
  * The same tiny deterministic PRNG (mulberry32) the CYOA generator uses. Pure and
@@ -76,7 +92,7 @@ function makeRng(seed: number): { int: (n: number) => number; pick: <T>(xs: read
  * A theme is the cosmetic skin over the fixed, proven structural skeleton. It varies the
  * setting, the room/enemy/item prose, and the natural command verb for the lever-puzzle, so
  * two seeds read as different quests while the proof-relevant shape (descent → optional ward →
- * winnable fight → passable check → relic) is constant. `leverVerb` is the natural verb the
+ * TWO winnable fights → passable check → relic) is constant. `leverVerb` is the natural verb the
  * puzzle's command primes ("lever"/"force"/...) — it must not shadow a builtin parser verb.
  */
 type Theme = {
@@ -87,10 +103,13 @@ type Theme = {
   hallName: string;
   cellName: string;
   galleryName: string;
+  spanName: string; // the SECOND combat room (the greater guardian), between gallery and hearth
   hearthName: string;
   vaultName: string;
-  foeName: string;
+  foeName: string; // the LESSER sentinel, in the gallery (the first fight)
   foeDesc: string;
+  wardenName: string; // the GREATER guardian, in the span (the second fight)
+  wardenDesc: string;
   wardName: string; // the optional +2-defense item
   barName: string; // the lever tool (the skill-check item)
   sealName: string; // the sealed obstacle the bar levers open
@@ -109,11 +128,15 @@ const THEMES: readonly Theme[] = [
     hallName: "The Outer Forge",
     cellName: "The Founder's Cell",
     galleryName: "The Bellows Walk",
+    spanName: "The Anvil Floor",
     hearthName: "The Forge Heart",
     vaultName: "The Ember Chamber",
     foeName: "slag sentinel",
     foeDesc:
       "A man-high figure of fused slag and dead cinder, slow with the deep cold but built to bar the way.",
+    wardenName: "cinder-wraith",
+    wardenDesc:
+      "A taller horror of welded iron and banked coals, heavier and harder than the slag thing above, set to keep the inmost heat.",
     wardName: "cold-iron plate",
     barName: "iron pry-bar",
     sealName: "slag grate",
@@ -130,11 +153,15 @@ const THEMES: readonly Theme[] = [
     hallName: "The Antechamber",
     cellName: "The Oarsman's Niche",
     galleryName: "The Shield-Hall",
+    spanName: "The Drowned Gallery",
     hearthName: "The Sunken Stair",
     vaultName: "The Tide Cell",
     foeName: "barrow-draugr",
     foeDesc:
       "A grave-cold corpse risen in rusted mail, salt-stiff and slow, set to keep the crown from living hands.",
+    wardenName: "tide-wight",
+    wardenDesc:
+      "A king's huscarl drowned in his own war-gear, broader and grimmer than the draugr behind you, the crown's last keeper.",
     wardName: "kelp-green hauberk",
     barName: "bronze prise-bar",
     sealName: "barnacled slab",
@@ -151,11 +178,15 @@ const THEMES: readonly Theme[] = [
     hallName: "The Ossuary",
     cellName: "The Hermit's Recess",
     galleryName: "The Nave Below",
-    hearthName: "The Sealed Choir",
+    spanName: "The Lower Choir",
+    hearthName: "The Sealed Sanctuary",
     vaultName: "The Reliquary Vault",
     foeName: "bound revenant",
     foeDesc:
       "A penitent dead thing wound in grave-linen, risen stiff and cold to guard the gold it died beside.",
+    wardenName: "choir-shade",
+    wardenDesc:
+      "A great cowled dead thing taller than the revenant before it, iron-girt under its grave-linen, the reliquary's last warden.",
     wardName: "saint's mail-shirt",
     barName: "iron crow-bar",
     sealName: "lead-sealed door",
@@ -172,11 +203,15 @@ const THEMES: readonly Theme[] = [
     hallName: "The Pump-House",
     cellName: "The Timberman's Stall",
     galleryName: "The Old Stope",
+    spanName: "The Flooded Drift",
     hearthName: "The Choked Drift",
     vaultName: "The Lowest Stope",
     foeName: "rock-golem",
     foeDesc:
       "A lurching shape of fused tailings and dead ore, slow as the mountain but hard as the seam it guards.",
+    wardenName: "deep-haunt",
+    wardenDesc:
+      "A vast thing of caked ore and old timber, larger and meaner than the golem above, hunched over the silver glow.",
     wardName: "rivet-plate jack",
     barName: "miner's gad-bar",
     sealName: "rubble-choked grille",
@@ -194,11 +229,15 @@ const THEMES: readonly Theme[] = [
     hallName: "The Scriptorium",
     cellName: "The Apprentice's Cell",
     galleryName: "The Orrery Hall",
-    hearthName: "The Warded Landing",
+    spanName: "The Warded Stair",
+    hearthName: "The High Landing",
     vaultName: "The High Cell",
     foeName: "clay homunculus",
     foeDesc:
       "A man-shaped thing of baked clay and old sigils, dull-eyed and slow, wound to keep the orb turning alone.",
+    wardenName: "iron-bound watcher",
+    wardenDesc:
+      "A great sigil-stitched automaton, taller and surer than the homunculus below, the orb's last unsleeping warden.",
     wardName: "sigil-stitched coat",
     barName: "brass lever-rod",
     sealName: "rune-locked hatch",
@@ -211,10 +250,11 @@ const THEMES: readonly Theme[] = [
 
 /**
  * Generate a schema-valid RPG pack from an integer seed. Deterministic and pure: the same
- * seed always yields the identical pack. The structure is the proven cold_forge skeleton; the
- * seed selects the theme, the skill difficulty (always passable), and the three score awards
- * (which always sum to the declared max_score), so the eval distribution varies without any
- * path becoming unprovable, the fight becoming unwinnable, or the score becoming unreachable.
+ * seed always yields the identical pack. The structure is the proven cold_forge skeleton grown
+ * to a two-fight gauntlet; the seed selects the theme, the skill difficulty (always passable),
+ * and the four score awards (which always sum to the declared max_score), so the eval
+ * distribution varies without any path becoming unprovable, either fight becoming unwinnable,
+ * or the score becoming unreachable.
  *
  * The returned object is run through `RpgPackSchema.parse`, so a malformed emission throws HERE
  * (a generator self-check) rather than slipping downstream — and the result carries the schema's
@@ -224,14 +264,16 @@ export function generateRpgPack(seed: number): RpgPack {
   const rng = makeRng(seed);
   const theme = THEMES[Math.abs(Math.trunc(seed)) % THEMES.length] as Theme;
 
-  // Score economy: three awards (defeat the foe, lever the way, claim the relic) seed-chosen
-  // from a small pool, with max_score = their exact sum. Varying the split changes what the
-  // SCORE_UNREACHABLE upper bound sees while keeping it tight (declared == reachable sum).
+  // Score economy: FOUR awards (fell the sentinel, fell the guardian, lever the way, claim the
+  // relic) seed-chosen from a small pool, with max_score = their exact sum. Varying the split
+  // changes what the SCORE_UNREACHABLE upper bound sees while keeping it tight (declared ==
+  // reachable sum) on a richer four-term economy than v1's three.
   const AWARD_POOL = [10, 15, 20] as const;
   const foeAward = rng.pick(AWARD_POOL);
+  const wardenAward = rng.pick(AWARD_POOL);
   const leverAward = rng.pick(AWARD_POOL);
   const relicAward = rng.pick(AWARD_POOL);
-  const maxScore = foeAward + leverAward + relicAward;
+  const maxScore = foeAward + wardenAward + leverAward + relicAward;
 
   // Skill difficulty in [10, 14] — always passable: best reachable might (init 3, no buff) gives
   // a d20 ceiling of 23, well above 14, so SKILL_CHECK_IMPOSSIBLE never fires.
@@ -239,6 +281,7 @@ export function generateRpgPack(seed: number): RpgPack {
 
   const id = `genrpg_${Math.abs(Math.trunc(seed))}_v1`;
   const FOE_DOWN = "foe_down";
+  const WARDEN_DOWN = "warden_down";
   const WARD_DONNED = "ward_donned";
   const HEARD_FOE = "heard_foe";
   const HEARD_WARD = "heard_ward";
@@ -321,9 +364,34 @@ export function generateRpgPack(seed: number): RpgPack {
           { direction: "south", to: "hall" },
           {
             direction: "east",
-            to: "hearth",
+            to: "span",
             conditions: [{ has_flag: FOE_DOWN }],
             locked_msg: `The ${theme.foeName} bars the way east while it still stands.`,
+          },
+        ],
+      },
+      {
+        id: "span",
+        name: theme.spanName,
+        description:
+          `A deeper hall, colder than the last. Across the only way east stands the ${theme.wardenName} ` +
+          `— ${theme.wardenDesc} It is the worse of the two; come to it armed and counselled. The way west ` +
+          `leads back to the gallery.`,
+        variants: [
+          {
+            when: [{ has_flag: WARDEN_DOWN }],
+            text:
+              `A deeper hall, colder than the last. The ${theme.wardenName} lies broken across the floor, and the ` +
+              `way east stands open. The way west leads back to the gallery.`,
+          },
+        ],
+        exits: [
+          { direction: "west", to: "gallery" },
+          {
+            direction: "east",
+            to: "hearth",
+            conditions: [{ has_flag: WARDEN_DOWN }],
+            locked_msg: `The ${theme.wardenName} bars the way east while it still stands.`,
           },
         ],
       },
@@ -332,18 +400,19 @@ export function generateRpgPack(seed: number): RpgPack {
         name: theme.hearthName,
         description:
           `The deep chamber at the quest's root. The way down is closed by a ${theme.sealName}, sealed ` +
-          `by the weight of ages — but its edge carries a worn lip, made to be levered by bar and brawn.`,
+          `by the weight of ages — but its edge carries a worn lip, made to be levered by bar and brawn. ` +
+          `The way west leads back.`,
         variants: [
           {
             when: [{ quest_stage: { quest: GRATE_OPEN.quest, stage: GRATE_OPEN.stage } }],
             text:
               `The deep chamber at the quest's root. The ${theme.sealName} has been levered up off its lip ` +
-              `and stands open, baring a low way down into the dark below.`,
+              `and stands open, baring a low way down into the dark below. The way west leads back.`,
           },
         ],
         objects: [SEAL],
         exits: [
-          { direction: "west", to: "gallery" },
+          { direction: "west", to: "span" },
           {
             direction: "down",
             to: "vault",
@@ -374,8 +443,9 @@ export function generateRpgPack(seed: number): RpgPack {
         description: "Letters cut deep into the cold stone.",
         takeable: false,
         read_text:
-          `THE GUARDIAN IS SLOW IN THE COLD AND WILL NOT RISE TWICE IF STRUCK TRUE. THE ${theme.relic.toUpperCase()} ` +
-          `LIES BELOW THE SEAL, AND ONLY A STRONG ARM AND A GOOD BAR WILL OPEN THE WAY.`,
+          `TWO KEEPERS HOLD THE DEEP WAY. BOTH ARE SLOW IN THE COLD AND WILL NOT RISE TWICE IF STRUCK TRUE; ` +
+          `THE SECOND IS THE WORSE. THE ${theme.relic.toUpperCase()} LIES BELOW THE SEAL, AND ONLY A STRONG ` +
+          `ARM AND A GOOD BAR WILL OPEN THE WAY.`,
       },
       {
         id: BAR,
@@ -388,7 +458,7 @@ export function generateRpgPack(seed: number): RpgPack {
         id: WARD,
         name: theme.wardName,
         aliases: ["ward", "armour", "armor", "mail", "plate", "suit"],
-        description: `A whole suit of ${theme.wardName}, heavy and cold but unrusted — iron the guardian's blows would ring off.`,
+        description: `A whole suit of ${theme.wardName}, heavy and cold but unrusted — iron the keepers' blows would ring off.`,
         // Reactive examine once donned (a single variant ⇒ cannot shadow).
         variants: [
           {
@@ -399,7 +469,7 @@ export function generateRpgPack(seed: number): RpgPack {
         takeable: true,
         interactions: [
           // Self-USE = "wear this". command_verb "don" (not a builtin verb); one-shot, gated
-          // none_of ward_donned so the +2 defense cannot be farmed.
+          // none_of ward_donned so the +2 defense cannot be farmed. The buff serves BOTH fights.
           {
             verb: "USE" as const,
             item: WARD,
@@ -410,7 +480,7 @@ export function generateRpgPack(seed: number): RpgPack {
               { set_flag: WARD_DONNED },
               { inc_var: { name: "defense", by: 2 } },
               {
-                add_journal: `You buckle on the ${theme.wardName}; it will turn the worst of the guardian's blows (+2 defense).`,
+                add_journal: `You buckle on the ${theme.wardName}; it will turn the worst of the keepers' blows (+2 defense).`,
               },
               {
                 narrate: `You strip the ${theme.wardName} from the old bones and buckle it on. It is cold and heavy, but it sits between you and the next blow.`,
@@ -490,7 +560,7 @@ export function generateRpgPack(seed: number): RpgPack {
                 // claimable only once. The ungated leave keeps the node terminating.
                 {
                   id: "ask_foe",
-                  prompt: `Ask how to beat the ${theme.foeName}.`,
+                  prompt: `Ask how to beat the keepers below.`,
                   conditions: [{ not_flag: HEARD_FOE }],
                   goto: "spirit_foe",
                 },
@@ -505,12 +575,12 @@ export function generateRpgPack(seed: number): RpgPack {
             },
             {
               id: "spirit_foe",
-              npc_text: `The guardian? It is slow in the cold and will never be warmer. Do not fear that waiting makes it worse. Strike it hard and it will not rise twice. Here — take what warmth I can spare; let it ride your arm.`,
+              npc_text: `Two keepers stand between you and the deep — the ${theme.foeName} first, then the worse ${theme.wardenName} below it. Both are slow in the cold and will never be warmer; waiting does not mend them. Strike each hard and it will not rise twice. Here — take what warmth I can spare; let it ride your arm for both.`,
               effects: [
                 { set_flag: HEARD_FOE },
                 { inc_var: { name: "attack", by: 2 } },
                 {
-                  add_journal: `The ${theme.spiritName}'s warmth settles into your arm — you feel you could strike harder now (+2 attack).`,
+                  add_journal: `The ${theme.spiritName}'s warmth settles into your arm — you feel you could strike harder now, against both keepers (+2 attack).`,
                 },
               ],
               topics: [
@@ -519,11 +589,11 @@ export function generateRpgPack(seed: number): RpgPack {
             },
             {
               id: "spirit_ward",
-              npc_text: `One came before you, an age ago, and never climbed back out. He lies in the side-cell west of here, still in his ${theme.wardName}, whole and unrusted. He has no use for it now — better his iron on a living back than guarding old bones.`,
+              npc_text: `One came before you, an age ago, and never climbed back out. He lies in the side-cell west of here, still in his ${theme.wardName}, whole and unrusted. He has no use for it now — better his iron on a living back than guarding old bones. You will want it for the second keeper.`,
               effects: [
                 { set_flag: HEARD_WARD },
                 {
-                  add_journal: `The ${theme.spiritName} speaks of one who came before, dead in the side-cell west of the hall in ${theme.wardName} that might yet turn the guardian's blows.`,
+                  add_journal: `The ${theme.spiritName} speaks of one who came before, dead in the side-cell west of the hall in ${theme.wardName} that might yet turn the keepers' blows.`,
                 },
               ],
               topics: [
@@ -540,16 +610,36 @@ export function generateRpgPack(seed: number): RpgPack {
         name: theme.foeName,
         description: theme.foeDesc,
         room: "gallery",
-        // cold_forge's bug_0101-proven tuning: winnable on best reachable stats (atk 4+2, def 2+2,
-        // hp 20 ⇒ best dmg 10, 2 rounds, ≥4 taken vs 20), a lethal gamble at base stats.
-        hp: 18,
-        attack: 7,
+        // The LESSER first fight. Winnable on best reachable stats (atk 4+2, def 2+2, hp 20 ⇒
+        // best dmg 10, 1-2 rounds, little taken), a lethal gamble at base stats — and tuned light
+        // enough that the best-line CUMULATIVE HP survives BOTH this and the heavier guardian.
+        hp: 12,
+        attack: 5,
         defense: 2,
         defeat_flag: FOE_DOWN,
-        death_ending: "ending_fallen",
+        death_ending: "ending_fallen_sentinel",
         on_defeat: [
           { add_journal: `The ${theme.foeName} comes apart; the way east lies open.` },
           { inc_var: { name: "score", by: foeAward } },
+        ],
+      },
+      {
+        id: "warden",
+        name: theme.wardenName,
+        description: theme.wardenDesc,
+        room: "span",
+        // The GREATER second fight (cold_forge's bug_0101-proven tuning): winnable on best
+        // reachable stats (best dmg 10, 2 rounds, ≥4 taken vs 20), a real gamble at base stats.
+        // NOT meta.combat_guaranteed: the validator's guarantee is single-fight-sound only, and
+        // two guaranteed fights could still drain a best-prepared player on worst cumulative rolls.
+        hp: 18,
+        attack: 7,
+        defense: 2,
+        defeat_flag: WARDEN_DOWN,
+        death_ending: "ending_fallen_guardian",
+        on_defeat: [
+          { add_journal: `The ${theme.wardenName} comes apart; the last way east lies open.` },
+          { inc_var: { name: "score", by: wardenAward } },
         ],
       },
     ],
@@ -566,11 +656,19 @@ export function generateRpgPack(seed: number): RpgPack {
         death: false,
       },
       {
-        id: "ending_fallen",
+        id: "ending_fallen_sentinel",
         title: "Cold on the Stones",
         text:
-          `The guardian's last blow drops you among the dead, and the grave chill closes over you. The ` +
-          `${theme.relic} waits a while longer for a stronger arm.`,
+          `The ${theme.foeName}'s last blow drops you among the dead in the gallery, and the grave chill ` +
+          `closes over you. The ${theme.relic} waits a while longer for a stronger arm.`,
+        death: true,
+      },
+      {
+        id: "ending_fallen_guardian",
+        title: "Fallen at the Deep Door",
+        text:
+          `You went down under the ${theme.wardenName}'s blows a stone's throw from the deep, and the cold ` +
+          `takes you there. So near, and the ${theme.relic} no nearer for it.`,
         death: true,
       },
     ],

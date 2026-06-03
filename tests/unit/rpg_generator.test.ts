@@ -18,13 +18,15 @@
  *      validators the CYOA generator never touches, the whole point of widening the mode.
  *   4. EXHAUSTIVELY SOLVABLE — the shared `exhaustiveEndingsMulti` best/worst-roll bracket (the
  *      ground-truth proof behind bug_0124/0147) reaches EVERY declared ending by concrete play
- *      and no undeclared one, without hitting the state cap: the relic-claimed victory (which
- *      requires winning the fight AND passing the lever check) and the foe's death ending (an
- *      under-prepared/unlucky player). The same HP-gate assumption guard the shipped RPG suites
- *      use protects the bracket's completeness.
- *   5. LOAD-BEARING GATES — the only path to victory runs through both the combat (east exit
- *      gated on the defeat flag) and the skill check (down exit gated on the levered quest
- *      stage), the RPG analogue of the CYOA generator's truth-gate proof.
+ *      and no undeclared one, without hitting the state cap. After the bug_0171 two-fight
+ *      deepening that is a THREE-ending census: the relic-claimed victory (which requires winning
+ *      BOTH fights AND passing the lever check — the best-line cumulative HP surviving both is the
+ *      bracket proof v1's single fight never stressed) and a DISTINCT death per guardian (fall to
+ *      the gallery sentinel under-armed; survive it but fall to the deeper guardian). The same
+ *      HP-gate assumption guard the shipped RPG suites use protects the bracket's completeness.
+ *   5. LOAD-BEARING GATES — the only path to victory runs through BOTH fights (each room's east
+ *      exit gated on that enemy's defeat flag) and the skill check (down exit gated on the levered
+ *      quest stage), the RPG analogue of the CYOA generator's truth-gate proof.
  *
  * Run across a spread of seeds so the proof covers the whole emitted distribution, not one
  * lucky pack. If a future change emits an unsolvable/unclean/unwinnable pack, the seed fails here.
@@ -116,7 +118,7 @@ describe("the procedural RPG generator emits packs that clear the shipped RPG ba
       ).toEqual([]);
       expect(report.ok).toBe(true);
 
-      // The score economy is tight and non-trivial: declared max == the three awards' sum.
+      // The score economy is tight and non-trivial: declared max == the four awards' sum (bug_0171).
       expect(pack.meta.max_score).toBeGreaterThan(0);
 
       // (4) exhaustively solvable — best/worst-roll bracket reaches every declared ending.
@@ -144,25 +146,58 @@ describe("the procedural RPG generator emits packs that clear the shipped RPG ba
         undeclared,
         `seed ${seed} reached endings not declared: ${undeclared.join(", ")}`,
       ).toEqual([]);
-      // The pack genuinely forks: both the victory and the death ending are live.
-      expect(reached.size).toBe(2);
+      // The pack genuinely forks three ways (bug_0171): the victory and a DISTINCT death per
+      // guardian (fall to the gallery sentinel; survive it and fall to the deeper guardian) — all
+      // three reached by concrete best/worst-roll play.
+      expect(reached.size).toBe(3);
     });
   }
 
-  it("the path to victory is gated on both the fight and the skill check", () => {
-    // Prove the gates are load-bearing, not decorative (the RPG analogue of the CYOA generator's
-    // truth-gate proof): the gallery's east exit requires the enemy defeat flag, and the hearth's
-    // down exit requires the levered quest stage — so victory cannot be reached without winning
-    // the fight (which sets the flag) AND passing the lever check (which sets the stage).
+  it("emits a TWO-FIGHT gauntlet: two distinct enemies, each its own room + death ending (bug_0171)", () => {
+    // Lock the deepened shape so a future flattening back to one fight fails loudly even though a
+    // single-fight pack would still pass the generic bar above.
+    const pack = generateRpgPack(0);
+    expect(pack.enemies).toHaveLength(2);
+
+    const [sentinel, guardian] = pack.enemies;
+    // The lesser sentinel stands in the gallery (the first fight, the one the MCP surface attacks);
+    // the greater guardian stands deeper in the span (the second fight).
+    expect(sentinel?.id).toBe("foe");
+    expect(sentinel?.room).toBe("gallery");
+    expect(guardian?.id).toBe("warden");
+    expect(guardian?.room).toBe("span");
+
+    // Distinct defeat flags and distinct DEATH endings (so the bracket proves a 3-ending census).
+    expect(sentinel?.defeat_flag).not.toBe(guardian?.defeat_flag);
+    expect(sentinel?.death_ending).toBe("ending_fallen_sentinel");
+    expect(guardian?.death_ending).toBe("ending_fallen_guardian");
+    const deaths = pack.endings.filter((e) => e.death).map((e) => e.id);
+    expect(new Set(deaths)).toEqual(new Set(["ending_fallen_sentinel", "ending_fallen_guardian"]));
+
+    // The greater guardian is genuinely the harder fight (escalation, not a duplicate).
+    expect(guardian?.hp ?? 0).toBeGreaterThan(sentinel?.hp ?? 0);
+  });
+
+  it("the path to victory is gated on BOTH fights and the skill check", () => {
+    // Prove every gate is load-bearing, not decorative (the RPG analogue of the CYOA generator's
+    // truth-gate proof): the gallery's east exit requires the SENTINEL's defeat flag, the span's
+    // east exit requires the GUARDIAN's defeat flag, and the hearth's down exit requires the
+    // levered quest stage — so victory cannot be reached without winning BOTH fights AND passing
+    // the lever check. (The exhaustive solver above proves the dynamic counterpart: no win without
+    // surviving both and levering the seal.)
     const pack = generateRpgPack(0);
     const gallery = pack.rooms.find((r) => r.id === "gallery");
+    const span = pack.rooms.find((r) => r.id === "span");
     const hearth = pack.rooms.find((r) => r.id === "hearth");
-    const east = gallery?.exits.find((e) => e.direction === "east");
+    const galleryEast = gallery?.exits.find((e) => e.direction === "east");
+    const spanEast = span?.exits.find((e) => e.direction === "east");
     const down = hearth?.exits.find((e) => e.direction === "down");
-    const foeDefeatFlag = pack.enemies[0]?.defeat_flag;
+    const sentinelFlag = pack.enemies.find((e) => e.id === "foe")?.defeat_flag;
+    const guardianFlag = pack.enemies.find((e) => e.id === "warden")?.defeat_flag;
 
-    // The east exit is gated on the enemy's own defeat flag.
-    expect(east?.conditions).toEqual([{ has_flag: foeDefeatFlag }]);
+    // Each combat-room east exit is gated on that enemy's own defeat flag.
+    expect(galleryEast?.conditions).toEqual([{ has_flag: sentinelFlag }]);
+    expect(spanEast?.conditions).toEqual([{ has_flag: guardianFlag }]);
     // The down exit is gated on the quest stage the skill check sets.
     expect(down?.conditions).toContainEqual({ quest_stage: { quest: "way", stage: "open" } });
   });

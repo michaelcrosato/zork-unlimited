@@ -8,7 +8,7 @@ meta:
     defense: 2
     might: 3
   flags_init: []
-  max_score: 40
+  max_score: 50
 rooms:
   - id: entry
     name: The Mine Adit
@@ -77,16 +77,40 @@ rooms:
         to: hall
         conditions: []
       - direction: east
-        to: hearth
+        to: span
         conditions:
           - has_flag: foe_down
         locked_msg: The rock-golem bars the way east while it still stands.
+    on_enter: []
+  - id: span
+    name: The Flooded Drift
+    description: A deeper hall, colder than the last. Across the only way east
+      stands the deep-haunt — A vast thing of caked ore and old timber, larger
+      and meaner than the golem above, hunched over the silver glow. It is the
+      worse of the two; come to it armed and counselled. The way west leads back
+      to the gallery.
+    variants:
+      - when:
+          - has_flag: warden_down
+        text: A deeper hall, colder than the last. The deep-haunt lies broken across the
+          floor, and the way east stands open. The way west leads back to the
+          gallery.
+    objects: []
+    exits:
+      - direction: west
+        to: gallery
+        conditions: []
+      - direction: east
+        to: hearth
+        conditions:
+          - has_flag: warden_down
+        locked_msg: The deep-haunt bars the way east while it still stands.
     on_enter: []
   - id: hearth
     name: The Choked Drift
     description: The deep chamber at the quest's root. The way down is closed by a
       rubble-choked grille, sealed by the weight of ages — but its edge carries
-      a worn lip, made to be levered by bar and brawn.
+      a worn lip, made to be levered by bar and brawn. The way west leads back.
     variants:
       - when:
           - quest_stage:
@@ -94,12 +118,12 @@ rooms:
               stage: open
         text: The deep chamber at the quest's root. The rubble-choked grille has been
           levered up off its lip and stands open, baring a low way down into the
-          dark below.
+          dark below. The way west leads back.
     objects:
       - seal
     exits:
       - direction: west
-        to: gallery
+        to: span
         conditions: []
       - direction: down
         to: vault
@@ -136,9 +160,9 @@ objects:
     description: Letters cut deep into the cold stone.
     takeable: false
     quest_critical: false
-    read_text: THE GUARDIAN IS SLOW IN THE COLD AND WILL NOT RISE TWICE IF STRUCK
-      TRUE. THE VEIN-HEART LIES BELOW THE SEAL, AND ONLY A STRONG ARM AND A GOOD
-      BAR WILL OPEN THE WAY.
+    read_text: TWO KEEPERS HOLD THE DEEP WAY. BOTH ARE SLOW IN THE COLD AND WILL NOT
+      RISE TWICE IF STRUCK TRUE; THE SECOND IS THE WORSE. THE VEIN-HEART LIES
+      BELOW THE SEAL, AND ONLY A STRONG ARM AND A GOOD BAR WILL OPEN THE WAY.
     container: false
     openable: false
     locked: false
@@ -170,7 +194,7 @@ objects:
       - plate
       - suit
     description: A whole suit of rivet-plate jack, heavy and cold but unrusted —
-      iron the guardian's blows would ring off.
+      iron the keepers' blows would ring off.
     variants:
       - when:
           - has_flag: ward_donned
@@ -195,7 +219,7 @@ objects:
               name: defense
               by: 2
           - add_journal: You buckle on the rivet-plate jack; it will turn the worst of the
-              guardian's blows (+2 defense).
+              keepers' blows (+2 defense).
           - narrate: You strip the rivet-plate jack from the old bones and buckle it on. It
               is cold and heavy, but it sits between you and the next blow.
         command_verb: don
@@ -235,7 +259,7 @@ objects:
         effects: []
         skill_check:
           skill: might
-          difficulty: 11
+          difficulty: 12
           on_success:
             - set_quest_stage:
                 quest: way
@@ -286,7 +310,7 @@ npcs:
           effects: []
           topics:
             - id: ask_foe
-              prompt: Ask how to beat the rock-golem.
+              prompt: Ask how to beat the keepers below.
               conditions:
                 - not_flag: heard_foe
               goto: spirit_foe
@@ -301,17 +325,18 @@ npcs:
               prompt: Step away.
               end: true
         - id: spirit_foe
-          npc_text: The guardian? It is slow in the cold and will never be warmer. Do not
-            fear that waiting makes it worse. Strike it hard and it will not
-            rise twice. Here — take what warmth I can spare; let it ride your
-            arm.
+          npc_text: Two keepers stand between you and the deep — the rock-golem first,
+            then the worse deep-haunt below it. Both are slow in the cold and
+            will never be warmer; waiting does not mend them. Strike each hard
+            and it will not rise twice. Here — take what warmth I can spare; let
+            it ride your arm for both.
           effects:
             - set_flag: heard_foe
             - inc_var:
                 name: attack
                 by: 2
             - add_journal: The damp-light's warmth settles into your arm — you feel you could
-                strike harder now (+2 attack).
+                strike harder now, against both keepers (+2 attack).
           topics:
             - id: foe_back
               prompt: Nod, and ask something else.
@@ -321,12 +346,13 @@ npcs:
           npc_text: One came before you, an age ago, and never climbed back out. He lies
             in the side-cell west of here, still in his rivet-plate jack, whole
             and unrusted. He has no use for it now — better his iron on a living
-            back than guarding old bones.
+            back than guarding old bones. You will want it for the second
+            keeper.
           effects:
             - set_flag: heard_ward
             - add_journal: The damp-light speaks of one who came before, dead in the side-cell
                 west of the hall in rivet-plate jack that might yet turn the
-                guardian's blows.
+                keepers' blows.
           topics:
             - id: ward_back
               prompt: Nod, and ask something else.
@@ -344,10 +370,17 @@ endings:
       above. The long cold keeps the rest of this place, but its one living
       prize climbs the stair in your hands.
     death: false
-  - id: ending_fallen
+  - id: ending_fallen_sentinel
     title: Cold on the Stones
-    text: The guardian's last blow drops you among the dead, and the grave chill
-      closes over you. The vein-heart waits a while longer for a stronger arm.
+    text: The rock-golem's last blow drops you among the dead in the gallery, and
+      the grave chill closes over you. The vein-heart waits a while longer for a
+      stronger arm.
+    death: true
+  - id: ending_fallen_guardian
+    title: Fallen at the Deep Door
+    text: You went down under the deep-haunt's blows a stone's throw from the deep,
+      and the cold takes you there. So near, and the vein-heart no nearer for
+      it.
     death: true
 enemies:
   - id: foe
@@ -355,13 +388,28 @@ enemies:
     description: A lurching shape of fused tailings and dead ore, slow as the
       mountain but hard as the seam it guards.
     room: gallery
-    hp: 18
-    attack: 7
+    hp: 12
+    attack: 5
     defense: 2
     defeat_flag: foe_down
-    death_ending: ending_fallen
+    death_ending: ending_fallen_sentinel
     on_defeat:
       - add_journal: The rock-golem comes apart; the way east lies open.
       - inc_var:
           name: score
           by: 20
+  - id: warden
+    name: deep-haunt
+    description: A vast thing of caked ore and old timber, larger and meaner than
+      the golem above, hunched over the silver glow.
+    room: span
+    hp: 18
+    attack: 7
+    defense: 2
+    defeat_flag: warden_down
+    death_ending: ending_fallen_guardian
+    on_defeat:
+      - add_journal: The deep-haunt comes apart; the last way east lies open.
+      - inc_var:
+          name: score
+          by: 10
