@@ -1,0 +1,119 @@
+id: bug_0212
+title: "The metamorphic contamination-robustness oracle covered CYOA + PARSER — extended it to the RPG mode, COMPLETING the trilogy"
+kind: verification_oracle # metamorphic / isomorphism oracle, additive (the RPG third of bug_0209/bug_0211)
+mode: rpg
+# Informational. NO src/ change, NO content change, NO hash re-pin, NO protected file
+# touched. One new test-support file + a small ADDITIVE refactor of the parser relabeler
+# (parameterised reserved-var set + two exported reuse points, parser behaviour
+# byte-identical) + one new test + this artifact. verify:integrity stays EXIT 0 with no
+# VERIFIER_TOUCHED / GUARD_WEAKENED / HASH_PIN. No pack content_hash, scorecard byte, or
+# corpus seal moves.
+
+summary: >
+  A GAP in the verification net, not a defect in shipped behaviour. bug_0209 added the
+  project's first METAMORPHIC oracle — a pack's behaviour must be INVARIANT under a
+  consistent renaming of its identifiers (the id-driven, content-free engine never
+  special-cases a literal id string) — for CYOA; bug_0211 extended it to PARSER. bug_0212
+  extends it to the RPG mode, the LAST of the three and the natural completion both prior
+  artefacts named, following the exact CYOA→parser→rpg growth path the bug_0121
+  reachability oracle took. The metamorphic oracle now covers all three modes.
+
+context: >
+  This is the deferred "extend the metamorphic relabel oracle to the RPG mode" lever named
+  as next-focus #1 across the last several cycles (bug_0211 next-focus #1; bug_0209
+  scope). Content is saturated/blind-clean — this cycle's mandated blind pass rotated (per
+  [[assessor-blind-pass-rotation]]) OFF the harness recency-blind rank-1 lamplighters_round
+  (blind-played clean AND fixed two cycles back, bug_0210) onto the most-overdue
+  dedicated-blind target dead_reckoning (CYOA, seed 19, last dedicated pass bug_0193): 3
+  playthroughs reached 3 distinct endings (ending_landfall / ending_holdfast / ending_jonah)
+  at clarity 5/5, enjoyment 5/5, ZERO bugs (ai-runs/2026-06-03T22-52-44-417Z/playtest.md).
+  A clean pass on a clean pack is the saturation signal, so the cycle spent its lever on the
+  named structural oracle, not on churning a clean pack ([[content-polish-backlog-exhausted]]).
+
+mechanism: >
+  tests/regression/support/relabel_rpg.ts — relabelRpgPack(pack) REUSES the parser body
+  walk verbatim (relabelParserBody, the typed traversal over the closed Condition/Effect
+  DSLs and parser schema from relabel_parser.ts) driven by one shared bijection, then
+  relabels the RPG-only surface on top: each ENEMY's id, its `room` (a room-id ref), its
+  `defeat_flag` (a flag), its `death_ending` (an ending id), and its `on_defeat` effects
+  (via the now-exported relabelEffect). meta.combat_guaranteed is a boolean fairness
+  opt-in (not an id) carried through byte-identical with absent-vs-present preserved.
+  Enemy name/description are prose and hp/attack/defense are numbers — untouched. As in
+  the other two relabelers, all prose and player-facing command vocabulary stay
+  byte-identical.
+  RPG-SPECIFIC WRINKLE vs the parser relabeler: RPG special-cases THREE more player-stat
+  vars by LITERAL name — hp/attack/defense (HP_VAR/ATTACK_VAR/DEFENSE_VAR), read as
+  state.vars[HP_VAR] etc. by the combat resolver (src/rpg/combat.ts:71-73) and the
+  observation builder (src/rpg/observation.ts:43-45). They are ENGINE KEYWORDS, not author
+  ids — so the relabeler widens the reserved set to {score, hp, attack, defense} and holds
+  all four as relabel FIXED POINTS (passed to makeParserRelabeler, whose reserved set is
+  now a parameter defaulting to the parser's {score}). A skill-check's `skill` is by
+  contrast a normal author var (read via state.vars[check.skill]) and relabels —
+  consistently at both its skill_check.skill site and its vars_init key. The hidden
+  per-enemy HP var __enemy_hp_<id> is SYNTHESISED from the enemy id (enemyHpVar,
+  schema.ts:74) exactly as the parser runner synthesises __dlg_<npcid>, so relabeling the
+  enemy id consistently makes the synthesised var follow for free — no author site to
+  relabel (no pack ever authors __enemy_hp_*; the rpg reachability oracle asserts no
+  condition even reads an HP var).
+
+oracle: >
+  tests/regression/rpg_metamorphic_relabel.test.ts — for each shipped RPG pack it computes
+  three ground-truth artefacts on the original, builds the relabeled twin, recomputes the
+  same three, and asserts the metamorphic relation. Because RPG is NOT deterministic
+  (ATTACK rounds and skill checks draw the seeded PRNG), the ending-reachability census is
+  computed over the BEST/WORST-roll BRACKET — two rule sets (player's best / worst rolls)
+  unioned by exhaustiveEndingsMulti, the same bracket the RPG reachability oracle
+  (rpg_all_endings_reachable.test.ts, bug_0124) uses, complete because the shipped packs
+  gate routing on defeat_flags never on a raw HP value. The three assertions: (1) the
+  twin's reached-ending set equals the original's mapped through the bijection (and 1b: no
+  original ending id survives — the ids really changed); (2) the distinct-state counts are
+  EQUAL (a true graph isomorphism, INCLUDING the synthesised __enemy_hp_<id> vars that
+  follow the relabeled enemy ids); (3) the validateRpg finding-code multiset is identical.
+  NON-VACUITY is asserted explicitly: the map is non-empty, no id maps to itself (reserved
+  fixed points {score,hp,attack,defense} are never entered into the map), and the twin
+  re-parses against the .strict() RpgPackSchema.
+
+value: >
+  Two payoffs, mirroring the CYOA/parser oracles, now closed across ALL THREE modes. (a)
+  Soundness witness for the whole id-driven design across the RPG combat surface
+  (enemies / defeat-flags / death-endings / on-defeat effects / skill-check vars): if a
+  future engine/runner change ever made RPG behaviour depend on a literal id, every
+  literal-pack oracle would still pass while THIS one diverged — a loud signal nothing else
+  gives. (b) Contamination-robustness witness for the benchmark
+  ([[ultraplan-true-goal-pivot]]): a model that "solved" an RPG pack by memorising its id
+  strings (enemy ids, defeat flags) gains nothing on the surface-different but structurally
+  identical twin, so the eval measures structure-following, not string recall.
+
+scope: >
+  All three modes now covered (CYOA bug_0209, parser bug_0211, RPG bug_0212) — the
+  metamorphic relabel oracle trilogy is COMPLETE, matching the bug_0121 reachability
+  oracle's CYOA→parser→rpg path. The RPG relabeler reuses the parser body walk and adds
+  only the enemy surface + the wider reserved-var set, so a future content-DSL addition is
+  still a COMPILE error in the shared relabelEffect/relabelCondition `never` guards.
+
+out_of_band_teeth: >
+  Genuine behavioural witness, not vacuous green. Temporarily breaking the relabeler at a
+  LOAD-BEARING RPG id site — making relabelEnemy keep the OLD `death_ending` (a dangling
+  ending ref in the twin) — fails 4 of the 5 RPG packs (every combat pack; only the
+  combatless breaking_weir, which has no enemy death ending, is unaffected): the twin's
+  reached-ending set and validateRpg finding codes diverge loudly. Restoring
+  r(e.death_ending) returns 6/6 green (1 discovery guard + 5 packs). The parser/CYOA
+  oracles' own witnesses are unchanged by the additive relabel_parser.ts refactor.
+
+regression_test: tests/regression/rpg_metamorphic_relabel.test.ts
+
+verification: >
+  npx vitest run rpg_metamorphic_relabel parser_metamorphic_relabel cyoa_metamorphic_relabel
+  → 18 passed (3 discovery guards + 6 CYOA + 4 parser + 5 RPG packs), confirming the
+  additive relabel_parser.ts refactor left the parser/CYOA oracles byte-identical in
+  behaviour. Non-vacuity confirmed by the broken-death_ending witness above. npm run health
+  GREEN (EXIT 0): verify:integrity OK (no GUARD_WEAKENED / VERIFIER_TOUCHED / HASH_PIN /
+  PROTECTED — only new test + support + the additive parser-relabeler refactor + trace),
+  typecheck/lint/prettier clean, full suite green (+1 file / +6 cases), all 15 packs
+  validate 0/0, coverage playtest ✓. No pack hash, scorecard byte, or corpus seal moved.
+
+files_changed:
+  - tests/regression/support/relabel_rpg.ts                  # typed metamorphic relabeler for RPG packs (new)
+  - tests/regression/rpg_metamorphic_relabel.test.ts         # the RPG contamination-robustness oracle (new)
+  - tests/regression/support/relabel_parser.ts               # additive: parameterised reserved-var set + exported relabelEffect/relabelParserBody/PARSER_RESERVED_VARS (parser behaviour byte-identical)
+  - traces/bugs/bug_0212_rpg_metamorphic_relabel_oracle.yaml

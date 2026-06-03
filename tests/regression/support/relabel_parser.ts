@@ -92,12 +92,19 @@ export type ParserRelabeler = {
 };
 
 /** Var names the engine reserves and special-cases — held FIXED by the relabel, like a
- *  builtin verb or a compass direction (kept in sync with src/parser/schema.ts SCORE_VAR). */
-const RESERVED_VARS: ReadonlySet<string> = new Set([SCORE_VAR]);
+ *  builtin verb or a compass direction (kept in sync with src/parser/schema.ts SCORE_VAR).
+ *  The RPG relabeler (relabel_rpg.ts) widens this with the player-stat vars hp/attack/defense,
+ *  which src/rpg/combat.ts + observation.ts read by literal name — so it passes its own,
+ *  wider reserved set to `makeParserRelabeler`. */
+export const PARSER_RESERVED_VARS: ReadonlySet<string> = new Set([SCORE_VAR]);
 
 /** Build a fresh memoized bijection. Distinct olds get distinct `mx_<n>` tokens; reserved
- *  var names are never entered into the map (so it can never contain an identity entry). */
-export function makeParserRelabeler(): ParserRelabeler {
+ *  var names are never entered into the map (so it can never contain an identity entry). The
+ *  reserved set is a parameter so a mode with more engine-keyword vars (RPG: hp/attack/defense)
+ *  can hold them fixed too; it defaults to the parser's `{score}`. */
+export function makeParserRelabeler(
+  reserved: ReadonlySet<string> = PARSER_RESERVED_VARS,
+): ParserRelabeler {
   const map = new Map<string, string>();
   let n = 0;
   const r = (id: string): string => {
@@ -108,7 +115,7 @@ export function makeParserRelabeler(): ParserRelabeler {
     }
     return v;
   };
-  const rvar = (name: string): string => (RESERVED_VARS.has(name) ? name : r(name));
+  const rvar = (name: string): string => (reserved.has(name) ? name : r(name));
   return { r, rvar, map };
 }
 
@@ -143,7 +150,11 @@ function relabelCondition(
   return _exhaustive;
 }
 
-function relabelEffect(e: Effect, r: (id: string) => string, rv: (n: string) => string): Effect {
+export function relabelEffect(
+  e: Effect,
+  r: (id: string) => string,
+  rv: (n: string) => string,
+): Effect {
   if ("set_flag" in e) return { set_flag: r(e.set_flag) };
   if ("clear_flag" in e) return { clear_flag: r(e.clear_flag) };
   if ("add_item" in e) return { add_item: r(e.add_item) };
@@ -350,9 +361,20 @@ export function relabelParserPack(pack: ParserPack): {
   relabeler: ParserRelabeler;
 } {
   const relabeler = makeParserRelabeler();
+  return { pack: relabelParserBody(pack, relabeler), relabeler };
+}
+
+/**
+ * Relabel just the PARSER-shaped body of a pack with an ALREADY-BUILT relabeler, returning
+ * the parser pack. Split out of `relabelParserPack` so the RPG relabeler (relabel_rpg.ts)
+ * can reuse the exact same typed walk — driving it with a relabeler whose reserved-var set
+ * also holds hp/attack/defense fixed — then add the RPG-only `enemies` / `combat_guaranteed`
+ * on top. A ParserPack's meta has no `combat_guaranteed`; an RPG caller re-attaches it.
+ */
+export function relabelParserBody(pack: ParserPack, relabeler: ParserRelabeler): ParserPack {
   const { r, rvar } = relabeler;
   const meta = pack.meta;
-  const relabeled: ParserPack = {
+  return {
     meta: {
       id: r(meta.id),
       title: meta.title, // prose
@@ -367,5 +389,4 @@ export function relabelParserPack(pack: ParserPack): {
     win_conditions: pack.win_conditions.map((w) => relabelWinCondition(w, r, rvar)),
     endings: pack.endings.map((e) => relabelEnding(e, r)),
   };
-  return { pack: relabeled, relabeler };
 }
