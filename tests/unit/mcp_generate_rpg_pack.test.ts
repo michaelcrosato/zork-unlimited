@@ -129,6 +129,9 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
   });
 
   it("new_game with no pack source (no pack_path / generate_seed / generate_rpg_seed) errors clearly", () => {
-    expect(() => api().new_game({})).toThrow(/pack_path, generate_seed, or generate_rpg_seed/);
+    // The message now names all four sources (generate_parser_seed added in bug_0192).
+    expect(() => api().new_game({})).toThrow(
+      /pack_path, generate_seed, generate_rpg_seed, or generate_parser_seed/,
+    );
   });
 });

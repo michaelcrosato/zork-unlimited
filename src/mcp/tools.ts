@@ -29,6 +29,8 @@ import { buildObservation } from "../cyoa/observation.js";
 import { validateCyoa } from "../validate/cyoa_validator.js";
 
 import { compileParserPack, loadParserPackFile } from "../parser/pack.js";
+import { generateParserPack } from "../gen/parser_generator.js";
+import type { ParserPack } from "../parser/schema.js";
 import { indexParserPack, buildParserRules, initStateForParserPack } from "../parser/runner.js";
 import { buildParserObservation } from "../parser/observation.js";
 import { validateParser } from "../validate/parser_validator.js";
@@ -309,6 +311,33 @@ export function createToolApi(opts: { root: string }) {
       );
     }
     return { mode: "rpg", compiled: { pack, contentHash: hashState(pack) } };
+  }
+
+  /**
+   * The PARSER twin of `requireGeneratedPlayable`/`requireGeneratedRpgPlayable` — the third and
+   * final mode of the generator program (the assessor already mints from `generateParserPack`,
+   * src/afk/assessor.ts:843; this closes the MCP authoring asymmetry so all three generators are
+   * reachable through the same agent-facing seam). Mints a fresh parser pack from a seed and
+   * refuses to play it unless it clears the SAME `validateParser` gate the curated parser packs
+   * clear — so the parser verifier surfaces (depth-2 obtainability / soft-lock, the moral
+   * same-key fork) face a moving target, not just the frozen hand-authored parser packs. The
+   * generator already returns a `ParserPackSchema.parse`d pack, so `{ pack, contentHash:
+   * hashState(pack) }` is byte-identical to what `compileParserPack` produces from the same pack's
+   * YAML — no file is written (the server stays read-only/least-privilege, §16), and the minted
+   * pack never lands under content/parser/pack to pollute the hand-authored showcase set.
+   */
+  function requireGeneratedParserPlayable(seed: number): {
+    mode: PackMode;
+    compiled: AnyCompiledPack;
+  } {
+    const pack = generateParserPack(seed); // mints + schema self-check (throws on malformed emission)
+    const report = validateParser(pack);
+    if (!report.ok) {
+      throw new Error(
+        `Generated parser pack (seed ${seed}) is not playable:\n${formatReport(report)}`,
+      );
+    }
+    return { mode: "parser", compiled: { pack, contentHash: hashState(pack) } };
   }
 
   function startSession(
@@ -756,31 +785,73 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
+    /**
+     * Mint a fresh PARSER pack from a seed and validate it against the SAME `validateParser` gate
+     * the curated parser packs clear (the THIRD mode of "evolve the eval distribution", closing the
+     * MCP authoring asymmetry — the assessor already mints parser packs from `generateParserPack`,
+     * src/afk/assessor.ts:843, but no MCP tool exposed it). The parser twin of `generate_pack` /
+     * `generate_rpg_pack`: it exposes the parser generator (src/gen/parser_generator.ts) through the
+     * MCP surface so a never-authored, never-seen pack exercises the parser-only verifier surfaces
+     * (depth-2 obtainability / soft-lock, the moral same-key fork) the CYOA and RPG generators never
+     * touch. Pure + deterministic (same seed ⇒ identical pack) and read-only — nothing is written to
+     * disk. To PLAY the minted pack, pass the same value to `new_game`'s `generate_parser_seed`.
+     */
+    generate_parser_pack(args: { seed: number }): {
+      ok: boolean;
+      mode: PackMode;
+      pack_id: string;
+      content_hash: string;
+      seed: number;
+      meta: ParserPack["meta"];
+      room_count: number;
+      object_count: number;
+      ending_count: number;
+      report: ValidationReport;
+    } {
+      const pack = generateParserPack(args.seed);
+      const report = validateParser(pack);
+      return {
+        ok: report.ok,
+        mode: "parser",
+        pack_id: pack.meta.id,
+        content_hash: hashState(pack),
+        seed: args.seed,
+        meta: pack.meta,
+        room_count: pack.rooms.length,
+        object_count: pack.objects.length,
+        ending_count: pack.endings.length,
+        report,
+      };
+    },
+
     new_game(args: {
       pack_path?: string;
       generate_seed?: number;
       generate_rpg_seed?: number;
+      generate_parser_seed?: number;
       seed?: number;
       hide_graph?: boolean;
     }) {
       // Either load a pack from disk OR mint a fresh one in-memory from `generate_seed`
-      // (a CYOA pack) / `generate_rpg_seed` (an RPG pack) — the eval-distribution path, a
-      // never-authored pack held to the same playable bar. The generate_* seed selects the
-      // minted pack's THEME/structure; `seed` still seeds runtime state, so the two are
-      // independent.
+      // (a CYOA pack) / `generate_rpg_seed` (an RPG pack) / `generate_parser_seed` (a parser
+      // pack) — the eval-distribution path, a never-authored pack held to the same playable
+      // bar. The generate_* seed selects the minted pack's THEME/structure; `seed` still seeds
+      // runtime state, so the two are independent.
       const { mode, compiled } =
         args.generate_seed !== undefined
           ? requireGeneratedPlayable(args.generate_seed)
           : args.generate_rpg_seed !== undefined
             ? requireGeneratedRpgPlayable(args.generate_rpg_seed)
-            : requirePlayable(
-                args.pack_path ??
-                  ((): never => {
-                    throw new Error(
-                      "new_game requires pack_path, generate_seed, or generate_rpg_seed.",
-                    );
-                  })(),
-              );
+            : args.generate_parser_seed !== undefined
+              ? requireGeneratedParserPlayable(args.generate_parser_seed)
+              : requirePlayable(
+                  args.pack_path ??
+                    ((): never => {
+                      throw new Error(
+                        "new_game requires pack_path, generate_seed, generate_rpg_seed, or generate_parser_seed.",
+                      );
+                    })(),
+                );
       const session = startSession(mode, compiled, undefined, {
         ...(args.hide_graph ? { hideGraph: true } : {}),
       });

@@ -113,7 +113,9 @@ describe("bug_0157 — new_game(generate_seed) plays a fresh minted pack in-memo
   });
 
   it("new_game with no pack source errors clearly", () => {
-    // The message now names all three sources (generate_rpg_seed added in bug_0160).
-    expect(() => api().new_game({})).toThrow(/pack_path, generate_seed, or generate_rpg_seed/);
+    // The message now names all four sources (generate_parser_seed added in bug_0192).
+    expect(() => api().new_game({})).toThrow(
+      /pack_path, generate_seed, generate_rpg_seed, or generate_parser_seed/,
+    );
   });
 });
