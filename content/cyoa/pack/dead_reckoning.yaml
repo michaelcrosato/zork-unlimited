@@ -1,0 +1,326 @@
+# Dead Reckoning — a CYOA pack (Stage 1 format).
+#
+# A merchantman becalmed in the doldrums, the captain three days dead of fever, the
+# water cask nearly dry, and the mate — you — left holding the only key to it. Like
+# white_stag and wreckers_light the heart is a MORAL FORK rather than a lock-and-key
+# chain, and the obvious goal is plain from the first beat: get the boat through alive.
+# But where white_stag turns on a SINGLE hidden truth, this pack is deliberately a
+# TWO-AXIS story — TWO independent things the player can choose to learn, in either
+# order, that COMBINE to reframe one climactic decision at the cask. That is the breadth
+# lever every recent cycle named (branching, not length): the blind-tester critique of
+# the single-fork packs is always "short — essentially one rich decision," and this is
+# the answer — two consequential investigations, a 2x2 of knowledge over the finale.
+#
+# The two truths (each a side-room off the deck, each setting one flag):
+#   * the captain's locked sea-chest holds his log → `knows_course`: he had a true
+#     reckoning before the fever took him — landfall lies two days east on the set of
+#     the current, IF the men can be held to a course and the water made to last.
+#   * the stowaway in the hold is a coaster's daughter → `knows_pilot`: she can read
+#     the inshore current and find the green water, but the thirst-maddened crew have
+#     decided she is the Jonah who becalmed them and want her over the side.
+#
+# The finale at the cask offers four deliberate, telegraphed acts (never an ambush —
+# the wreckers_light / white_stag discipline):
+#   * ration the water evenly and hold on        → ending_holdfast (discipline)
+#   * give the helm to the stowaway               → ending_landfall (gated on knows_pilot)
+#   * give the stowaway to the crew's superstition→ ending_jonah    (the dark choice)
+#   * seize the cask and the key for yourself     → ending_adrift   (greed)
+#
+# Knowledge does not add routes; it REFRAMES them (the paired-epilogue device —
+# white_stag's ending_quarry, the manor's two letters):
+#   * `knows_pilot` UNLOCKS `trust_pilot` (the surest ending is gated behind learning
+#     who she is — a payoff for the player who went below, cf. white_stag's offering);
+#   * `knows_course` fires reactive endingText on holdfast (a read course vs a blind
+#     guess), on adrift (you hoarded over a landfall you KNEW was two days off — the
+#     worst), and on landfall (you knew AND trusted — the surest of all);
+#   * `knows_pilot` fires reactive endingText on the jonah ending — the ignorant
+#     sacrifice is a superstitious tragedy; the knowing one is a damnation (you drowned
+#     the one hand who could have read the wind home).
+# The dramatic irony the two truths reveal: the crew's "obvious" remedy — appease the
+# sea by drowning the Jonah — kills the only navigator aboard, while the harder mercies
+# (hold the course, trust the girl) are what actually buy landfall.
+
+meta:
+  id: dead_reckoning_v1
+  title: "Dead Reckoning"
+  start: deck
+  flags_init: []
+
+scenes:
+  - id: deck
+    title: "Becalmed"
+    text: >
+      Nine days without a breath of wind. The sea lies round the Marigold like beaten
+      pewter, flat to every horizon, and the sails hang dead off the yards and do not
+      so much as stir. Captain Hale went into it three days back, the fever in him, and
+      you buried him over the side and have been mate-and-master since — which means the
+      key on the cord round your neck is the only key aboard: to the water cask lashed
+      amidships, near dry now, and to the captain's locked sea-chest in the stern cabin.
+      Forward, in the waist, the three hands you have left sit in what shade the boat
+      throws and watch you with cracked lips and a stillness you do not like. And
+      somewhere below, in the hold, is the stowaway girl the watch turned up on the
+      second day — whom the men have started, low and certain, to call the Jonah. The
+      water will not last another two days shared four ways, let alone five. Something
+      must be decided, and you are the one holding the key to it.
+    choices:
+      - id: to_chest
+        text: "Go aft to the captain's cabin and his locked sea-chest."
+        next: chest
+      - id: to_hold
+        text: "Go below to the hold, and the stowaway girl."
+        next: hold
+      - id: to_cask
+        text: "Go to the water cask amidships, where the men are waiting."
+        next: cask
+
+  - id: chest
+    title: "The Captain's Chest"
+    text: >
+      Hale's cabin is close and sour with the smell of his dying. The sea-chest stands
+      under the stern windows, brass-bound, and your key turns in it. Inside, under a
+      spare coat and a cased pistol, lies the ship's log in his square clerk's hand, the
+      last entry made the morning before the fever closed his eyes for good. The page is
+      open to a column of figures — soundings, the noon sight, a reckoning — that you
+      could read, if you cared to, or leave shut and go back up to the waiting deck.
+    # Once read, the chest reads differently — the log is known, not a question (reactive
+    # prose, first-match-wins). No flag/route change.
+    variants:
+      - when: [{ has_flag: knows_course }]
+        text: >
+          Hale's cabin is close and sour, and the chest stands open as you left it, the
+          log face-up under the stern windows. You have read his last reckoning now and
+          it does not change for the reading again: land two days east on the set of the
+          current, IF the men hold the course and the water is made to last. The cased
+          pistol lies beside it. There is nothing more in the chest the page has not
+          already told you.
+    choices:
+      - id: read_log
+        text: "Read the captain's last reckoning in the log."
+        conditions: [{ not_flag: knows_course }]
+        effects:
+          - set_flag: knows_course
+          - add_journal: >
+              Hale's last entry is a reckoning, not a deathbed scrawl: he had the noon
+              sight and the set of the current both, and he was sure of it. Land lies two
+              days east — not far, for a boat that holds her course and rations what water
+              is left. Drift, or fall to fighting over the cask, or scatter the crew, and
+              the same two days are a death sentence. The course is true. Whether it is
+              kept is not the sea's doing now but mine.
+        next: chest
+      - id: leave_chest
+        text: "Shut the chest and go back up to the deck."
+        next: deck
+
+  - id: hold
+    title: "The Stowaway"
+    text: >
+      The hold is dark and stifling and smells of bilge and old cargo. The girl is
+      wedged between two water-casks that rang empty when the watch sounded them — which
+      is half of why the men hate her, that and the dead wind. She is perhaps fifteen,
+      sun-dark, salt-scabbed, and she does not cower so much as watch you the way a
+      cornered cat does, measuring. "You're the mate," she says. "They've decided what I
+      am, up there. I can hear them through the deck." She wets her lips. "I'm not what
+      they think. Ask me, if you want to know — or leave me down here for them, like the
+      rest of you mean to."
+    # Speaking with her reveals what she is — known, not a question (reactive prose).
+    variants:
+      - when: [{ has_flag: knows_pilot }]
+        text: >
+          The hold is dark and close. The girl watches you come back down, and there is
+          no measuring in it now — you have heard her out, and you both know what she is:
+          a coaster's daughter who has read the inshore water since before she could read
+          letters, the one soul aboard who could find the green current and the land it
+          runs to. "You know now," she says quietly. "So you also know what it'd be, to
+          give me to them." She holds your eye. "It's your key. It's your call."
+    choices:
+      - id: speak_girl
+        text: "Hear her out — ask her who she is."
+        conditions: [{ not_flag: knows_pilot }]
+        effects:
+          - set_flag: knows_pilot
+          - add_journal: >
+              The girl is no Jonah. She is a coaster's daughter out of the salt-marsh
+              towns, put aboard by a father who owed money, and she has read the inshore
+              current — the green water, the way the land pulls the set of it — since she
+              was small. She knows these soundings. Given the helm and a breath of the
+              wind that must come, she could find the landfall a deepwater man would sail
+              clean past. The men want her over the side to break the calm. Drowning her
+              would drown the one navigator left aboard.
+        next: hold
+      - id: leave_hold
+        text: "Say nothing, and go back up to the deck."
+        next: deck
+
+  - id: cask
+    title: "The Cask"
+    text: >
+      The water cask sits amidships in the full glare, and the three hands have drawn in
+      around it without seeming to, the way dogs draw in. Tarrant, the bosun, does the
+      talking. "It won't last, and you know it won't," he says, low. "Not five ways. The
+      wind died the hour that girl came aboard, and it won't lift while she's breathing.
+      Give her to the sea and the rest of us have a chance — water enough and a fair
+      wind both." His eyes go to the key on your neck. The others say nothing, but they
+      have stopped looking like men who will keep waiting. The key is yours. What you do
+      with it now, here, is the whole of it.
+    # The cask reframes by what you have learned. Most-specific (both flags) FIRST so a
+    # single-flag variant never shadows it (first-match-wins; cyoa_variant_shadowing).
+    variants:
+      - when: [{ all_of: [{ has_flag: knows_course }, { has_flag: knows_pilot }] }]
+        text: >
+          The cask sits amidships in the glare, the three hands drawn in around it, and
+          Tarrant talking low about the Jonah and the dead wind. But you have read Hale's
+          reckoning and you have heard the girl out, and you know two things they do not:
+          that land lies two days east if the course is held and the water made to last,
+          and that the child they want to drown is the one hand aboard who could read the
+          boat onto it. "Give her to the sea," Tarrant says, "and we have a chance."
+          You know exactly what that chance is worth. The key is yours.
+      - when: [{ has_flag: knows_course }]
+        text: >
+          The cask sits amidships, the hands drawn in, Tarrant talking low about the Jonah
+          and the dead wind. But Hale's log is in your head now: land two days east, if the
+          course is held and the water is stretched to reach it. The arithmetic is cruel
+          and it is also simple, and it does not require drowning anyone — only nerve, and
+          a fair hand with the cask. "Give her to the sea," Tarrant says. You weigh two
+          days against the thing he is asking. The key is yours.
+      - when: [{ has_flag: knows_pilot }]
+        text: >
+          The cask sits amidships in the glare, the hands drawn in, Tarrant talking low
+          about the Jonah who killed the wind. You have been below, though, and heard her
+          out, and you cannot now hear "the Jonah" and see anything but a marsh-town girl
+          who can read the inshore water better than any man aboard. Tarrant wants her over
+          the side to buy water and wind. You know what else would go over with her. The
+          key is yours.
+    choices:
+      - id: ration
+        text: "Ration the water dead even, five ways, and hold on."
+        next: ending_holdfast
+      - id: trust_pilot
+        # The gated "surest" ending — only the player who went below and learned what she
+        # is can put the boat in her hands (a payoff reserved for the investigation, cf.
+        # white_stag's offering / watchtower's proof-gated finale).
+        text: "Give the girl the helm, and the boat, and trust her to find the land."
+        conditions: [{ has_flag: knows_pilot }]
+        next: ending_landfall
+      - id: give_jonah
+        # The dark, sanctioned choice, fully telegraphed by Tarrant's speech above — never
+        # an ambush. Reactive epilogue by knows_pilot: ignorant superstition vs knowing murder.
+        text: "Give the stowaway to the sea, as the men demand."
+        next: ending_jonah
+      - id: seize
+        # The plainly self-damning act, owned outright in the label (wreckers_light's
+        # climb_to_wreck discipline): no curiosity trap, the cost is named in the choice.
+        text: "Keep the key, take the water for yourself, and let the rest fend."
+        next: ending_adrift
+      - id: back_deck
+        text: "Decide nothing yet — step back from the cask."
+        next: deck
+
+endings:
+  - id: ending_holdfast
+    title: "The Long Reach"
+    # knows_course reframes the SAME act: a held course you READ vs an even-handed guess.
+    variants:
+      - when: [{ has_flag: knows_course }]
+        text: >
+          You split the water dead even, five tin cups twice a day, and you tell them
+          plain what Hale's log told you: two days east, if the course is held. They do
+          not believe it at first — thirst makes a man sure the world has ended just past
+          the rail — but you hold them to it, cup by measured cup, the girl below given her
+          share like any soul aboard. On the night of the second day the wind comes back,
+          a true land-breeze off nothing they can see, and at the grey of the third morning
+          the lookout's voice cracks on the word land. It is exactly where the dead captain
+          said it would be. You brought them in on his reckoning and your own nerve, and
+          not one of the five went over the side to do it.
+    text: >
+      You split what water is left dead even, five tin cups twice a day, yourself no more
+      than the least of them, the girl below given her share. You do not know that the wind
+      will come; you only know that drowning a child for it is the act of men who have given
+      up, and you have not. So you ration, and you wait, and you keep the peace over the cask
+      by main force of being the one who is fair. The thirst is a slow horror and two of the
+      hands are half out of their heads by the end — but the calm breaks before the water
+      quite does, a breath and then a breeze, and you raise a low grey coast you cannot name
+      a few days on. It was nearer than despair had let any of you believe. You held on, and
+      holding on was enough.
+
+  - id: ending_landfall
+    title: "The Green Water"
+    # The gated finale (knows_pilot). Reactive on knows_course: trusting her with the
+    # course already known is the surest landfall of all.
+    variants:
+      - when: [{ has_flag: knows_course }]
+        text: >
+          You knew where the land was — two days east, on Hale's reckoning — and you knew
+          who could read the boat onto it, and so you did the only sane thing left and put
+          both into one pair of hands. You give the girl the helm over Tarrant's snarl, and
+          when the first cat's-paw of wind comes she is ready for it, feeling the set of the
+          current through the tiller like a thread drawn taut. She finds the green water
+          where it cuts inshore, water no deepwater man would have trusted, and rides it.
+          You make your landfall a full day before the captain's column of figures said you
+          could — because his reckoning got you the right sea, and her hands got you through
+          it. Five souls walk up a strange beach alive. The men who wanted her drowned cannot
+          quite meet her eye.
+    text: >
+      You do the thing that costs you Tarrant's loyalty and maybe more: you put the boat in
+      the stowaway's hands. The men curse you for it, but the wind is dead and a curse moves
+      nothing, and when at last a breath comes off the empty horizon the girl is the only one
+      aboard who knows what to do with it. She feels the inshore current through the tiller
+      the way you feel a stair in the dark, and she chases the green water where it runs, and
+      somewhere past a haze that was not there before there is land — low, real, hers to find
+      and yours only to trust. You come in on the strength of the one soul the rest of them
+      would have thrown away. It is the surest landfall a becalmed boat ever made.
+
+  - id: ending_jonah
+    title: "The Jonah"
+    # knows_pilot reframes the SAME act: ignorant superstition (tragedy) vs knowing the
+    # one navigator aboard was the one they drowned (damnation) — the white_stag device.
+    variants:
+      - when: [{ has_flag: knows_pilot }]
+        text: >
+          You knew what she was, and you gave her to them anyway. You told yourself it was
+          for the five against the one, for water and a wind, but you had been below and
+          heard her out and you knew — knew she was no Jonah but a marsh girl who could have
+          read this boat home — and you weighed her life against a sailor's superstition and
+          let the superstition win. They put her over at dusk. The sea takes her without a
+          sound, and the wind does not come for it, because the wind was never hers to
+          withhold. You drift on with water enough now and no hand aboard who can find the
+          land, and that is the whole and exact price of it: you drowned your pilot to please
+          a ghost, and the ghost was never there, and the land you could have reached recedes
+          with every dead and aimless day. You will carry her face longer than the thirst.
+    text: >
+      In the end you let the men have their way, because their way is old as sailors and
+      yours is only nerve, and nerve runs out before water does. They take the girl up from
+      the hold at dusk, and she does not scream, only looks at you once, and they put her over
+      the side. The sea closes flat and grey, exactly as before. You wait for the wind her
+      drowning was meant to buy. It does not come that night, nor the next. The calm holds as
+      dead as it ever was, because a dead wind was never a girl's doing, and somewhere under
+      that pewter water a child is owed a debt none of you can pay. When a breeze does finally
+      stir, days on, it stirs over four sullen men who cannot look at one another, and a fifth
+      cup nobody will fill.
+
+  - id: ending_adrift
+    title: "The Last Cup"
+    # knows_course reframes greed into something worse: you hoarded over a landfall you KNEW
+    # was two days off and reachable — the most damning epilogue in the pack.
+    variants:
+      - when: [{ has_flag: knows_course }]
+        text: >
+          You knew. That is the unbearable part of it, after. You had read Hale's reckoning
+          — land two days east, water enough if it were only shared and the course held — and
+          you took the cask and the key and you kept it, because thirst had narrowed the world
+          to your own cracked throat and you could not make your hands open. The men come for
+          it on the second night, of course they do, and there is no holding three desperate
+          men off a thing they can see, and in the dark over the cask the water you would not
+          share is spilled out into the bilge where no one drinks it at all. You knew the land
+          was there. You knew the way. You damned five souls inside a reach a steady cup of
+          water would have carried, over nothing, over the refusal to share what was already
+          enough. The boat drifts where the dead current leaves it.
+    text: >
+      You keep the key, and you keep the cask, and you tell yourself it is only sense — that
+      a captain looks to himself first or there is no captain. You drink in the dark while
+      they ration spit, and it does not stay secret, because nothing aboard a dying boat stays
+      secret. They come for the cask on the second night. There is no speech for it and no
+      mercy in it, only hands in the dark and the cask going over with someone's weight behind
+      it, and the last of the water sheeting out across the deck to dry in the morning glare.
+      After that the Marigold is only a thing the slack current pushes about, with whatever is
+      left aboard her past caring which way. You held the water to the end, and the end is
+      this, and you held it alone.
