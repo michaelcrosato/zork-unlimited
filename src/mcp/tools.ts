@@ -21,6 +21,8 @@ import type { Action } from "../api/types.js";
 import type { GameState } from "../core/state.js";
 
 import { compilePack, loadPackFile, type CompiledPack } from "../cyoa/pack.js";
+import { generateCyoaPack } from "../gen/cyoa_generator.js";
+import type { CyoaPack } from "../cyoa/schema.js";
 import { indexPack, buildRules, initStateForPack } from "../cyoa/runner.js";
 import { buildObservation } from "../cyoa/observation.js";
 import { validateCyoa } from "../validate/cyoa_validator.js";
@@ -186,6 +188,27 @@ export function createToolApi(opts: { root: string }) {
       throw new Error(`Pack is not playable:\n${formatReport(lr.ok ? lr.report : lr.report)}`);
     }
     return { mode: lr.mode, compiled: lr.compiled };
+  }
+
+  /**
+   * Mint a fresh CYOA pack from a seed and refuse to play it unless it clears the SAME
+   * validator the curated packs clear (the generate_pack/new_game seam — the MCP slice of
+   * "evolve the eval distribution", docs/CURRENT_PLAN.md). The pack is compiled IN-MEMORY:
+   * the generator already returns a `CyoaPackSchema.parse`d pack, so `{ pack, contentHash:
+   * hashState(pack) }` is byte-identical to what `compilePack` produces from the same pack's
+   * YAML — no file is written (the server stays read-only/least-privilege, §16), and the
+   * generated pack never lands under content/ to pollute the hand-authored showcase set.
+   */
+  function requireGeneratedPlayable(seed: number): {
+    mode: PackMode;
+    compiled: AnyCompiledPack;
+  } {
+    const pack = generateCyoaPack(seed); // mints + schema self-check (throws on malformed emission)
+    const report = validateCyoa(pack);
+    if (!report.ok) {
+      throw new Error(`Generated pack (seed ${seed}) is not playable:\n${formatReport(report)}`);
+    }
+    return { mode: "cyoa", compiled: { pack, contentHash: hashState(pack) } };
   }
 
   function startSession(
@@ -555,8 +578,60 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    new_game(args: { pack_path: string; seed?: number; hide_graph?: boolean }) {
-      const { mode, compiled } = requirePlayable(args.pack_path);
+    /**
+     * Mint a fresh CYOA pack from a seed and validate it against the SAME `validateCyoa`
+     * gate the curated packs clear (the first deferred slice of "evolve the eval
+     * distribution", docs/CURRENT_PLAN.md / bug_0156 → bug_0157). This exposes the
+     * generator (src/gen/cyoa_generator.ts) through the MCP surface: a never-authored,
+     * never-seen pack whose structure the verifier must hold on. Pure + deterministic
+     * (same seed ⇒ identical pack) and read-only — nothing is written to disk. To PLAY
+     * the minted pack, pass the same value to `new_game`'s `generate_seed`.
+     */
+    generate_pack(args: { seed: number }): {
+      ok: boolean;
+      mode: PackMode;
+      pack_id: string;
+      content_hash: string;
+      seed: number;
+      meta: CyoaPack["meta"];
+      scene_count: number;
+      ending_count: number;
+      report: ValidationReport;
+    } {
+      const pack = generateCyoaPack(args.seed);
+      const report = validateCyoa(pack);
+      return {
+        ok: report.ok,
+        mode: "cyoa",
+        pack_id: pack.meta.id,
+        content_hash: hashState(pack),
+        seed: args.seed,
+        meta: pack.meta,
+        scene_count: pack.scenes.length,
+        ending_count: pack.endings.length,
+        report,
+      };
+    },
+
+    new_game(args: {
+      pack_path?: string;
+      generate_seed?: number;
+      seed?: number;
+      hide_graph?: boolean;
+    }) {
+      // Either load a pack from disk OR mint a fresh one in-memory from `generate_seed`
+      // (the eval-distribution path — a never-authored pack, held to the same playable
+      // bar). `generate_seed` selects the generated pack's THEME/structure; `seed` still
+      // seeds runtime state, so the two are independent.
+      const { mode, compiled } =
+        args.generate_seed !== undefined
+          ? requireGeneratedPlayable(args.generate_seed)
+          : requirePlayable(
+              args.pack_path ??
+                ((): never => {
+                  throw new Error("new_game requires either pack_path or generate_seed.");
+                })(),
+            );
       const session = startSession(mode, compiled, undefined, {
         ...(args.hide_graph ? { hideGraph: true } : {}),
       });

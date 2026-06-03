@@ -87,11 +87,32 @@ tool(
 );
 
 tool(
-  "new_game",
-  "Start a new game on a (playable) pack of any mode; returns a session id, the detected mode, and the first observation.",
+  "generate_pack",
+  "Mint a FRESH procedural CYOA pack from a seed and validate it against the same gate the curated packs clear (the eval-distribution lever: a never-authored pack the verifier must hold on). Pure + deterministic; writes nothing. Play it with new_game's generate_seed.",
   {
-    ...PACK,
-    seed: z.number().int().optional().describe("Deterministic seed (default 1)."),
+    seed: z.number().int().describe("Generation seed — selects the minted pack's theme/structure."),
+  },
+  (a) => api.generate_pack(a),
+);
+
+tool(
+  "new_game",
+  "Start a new game on a (playable) pack of any mode; returns a session id, the detected mode, and the first observation. Provide pack_path to load from disk, OR generate_seed to mint+play a fresh procedural CYOA pack in-memory.",
+  {
+    pack_path: z
+      .string()
+      .optional()
+      .describe(
+        "Path to a content pack (.yaml) — CYOA, parser, or RPG; mode is auto-detected — relative to the project root. Omit when using generate_seed.",
+      ),
+    generate_seed: z
+      .number()
+      .int()
+      .optional()
+      .describe(
+        "Instead of pack_path: mint and play a fresh procedural CYOA pack from this seed (see generate_pack). Independent of `seed` (which seeds runtime state).",
+      ),
+    seed: z.number().int().optional().describe("Deterministic runtime seed (default 1)."),
     ...HIDE_GRAPH,
   },
   (a) => api.new_game(a),
