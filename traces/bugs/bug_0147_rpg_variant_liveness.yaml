@@ -1,0 +1,79 @@
+bug_id: bug_0147
+pack_id: all_rpg            # structural invariant over every shipped RPG pack (auto-discovered)
+seed: 7
+type: invariant_lock        # no defect found in shipped content; machine-enforces a hand-obeyed authoring invariant
+layer: test                 # regression-only; reuses the existing exhaustiveEndingsMulti seam; NO content/engine/validator/schema change, NO hash pin moved
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-03T04-05-46-678Z/playtest.md   # wreckers_light seeds 11-14 (the cycle's mandated, correctly-rotated target — least-recently blind-played)
+  finding: >
+    The mandated blind pass on The Wrecker's Light (CYOA, seeds 11-14 — the
+    least-recently blind-played pack per [[assessor-blind-pass-rotation]], last
+    attended bug_0138 seed 53) played four routes to four endings (saved / drowned /
+    wrecker / mercy), confirmed flawless gating and reactive prose in every scene, and
+    rated the pack clarity 5/5, enjoyment 5/5, ZERO bugs — re-confirmed blind-clean (a
+    point higher than the bug_0138 pass). No actionable content defect; content is
+    blind-exhausted per [[content-polish-backlog-exhausted]]. The cycle's lever is
+    therefore the on-plan KEY-FREE structural item bug_0146's next-focus named: extend
+    the dynamic variant-liveness proof to the RPG mode, the third and last variant-bearing
+    mode.
+root_cause: >
+  A gap in the structural-verification net, not a content defect — the RPG completion of
+  the "dead reactive prose" liveness trilogy. The class has two causes; for RPG only the
+  static SHADOWING half was machine-checked (RPG rooms/objects reuse the parser schema, so
+  bug_0091's parser_variant_shadowing already covers them). The UNREACHABLE-GUARD half — a
+  room/object variant whose `when` no reachable viewing state can satisfy (an enemy never
+  defeated, a skill flag never set, a forbidden flag pair) — was unchecked for RPG, and no
+  blind playtest is GUARANTEED to surface it (the prose just never appears).
+  bug_0146's own next-focus flagged the precondition for the RPG extension: the every-ending
+  RPG proof drives a best/worst-roll bracket (bug_0124), and "an RPG liveness proof must
+  first confirm no RPG variant guard turns on a roll-dependent transient (e.g. a mid-combat
+  HP threshold) that the best/worst bracket skips over." It does NOT: RPG variants gate on
+  flags / items / non-HP vars / object state / visited, all of which evolve by roll-
+  independent actions or by MONOTONE combat consequences (defeat_flag/on_defeat on a kill,
+  on_success/on_failure on the best/worst skill roll) the bracket reaches — and the suite
+  ASSERTS no condition reads a raw HP var (player `hp` / hidden `__enemy_hp_*`), the same
+  load-bearing guard rpg_all_endings_reachable makes, here covering variant `when`s as a
+  subset of all conditions. A future HP-gated variant would FAIL LOUD (branch the HP),
+  never silently under-credit.
+fix: >
+  Test-only (§15 lock-the-finding), reusing the existing exhaustiveEndingsMulti best/worst-
+  roll bracket and the bug_0146 `explore`/onState seam — NO new support-helper change. A new
+  regression (rpg_variant_liveness.test.ts) drives the bracket under the LIVENESS action
+  policy that steps every action EXCEPT the ones that provably cannot gate a variant —
+  LOOK/INVENTORY/INSPECT (narrate-only or never legal), CLOSE (no resolver case), DROP (the
+  documented boundary) — and so DOES step READ, ATTACK, and the skill-check USE. At each
+  reachable state it records the first-match room variant (current room) and each PRESENT
+  object's first-match variant (visible-or-held — examinable here), computed with the
+  engine's own evalConditions semantics, and asserts every declared variant of every
+  auto-discovered RPG pack is displayed somewhere. No content/engine/validator/schema change.
+within_bar: >
+  Regression test only — no new production or support-helper code (it reuses the
+  behaviour-preserving params bug_0145/bug_0146 added). No pack edited; no validator/schema/
+  engine change; NO hash pin moved (all 9 packs validate 0/0, content_hashes unchanged).
+  Deterministic, no LLM-judge, NO API key. Sound by construction: every successor is a real
+  makeStep on a LEGAL die face (1/6 for d6, 1/20 for d20), so nothing spurious is visited;
+  the only routing-relevant combat/skill consequence is MONOTONE in the roll, so the best/
+  worst extremes bracket every middle-roll outcome; the search FAILS on cappedOut (never
+  truncates silently); the no-HP-gating guard closes the one way a middle-roll transient
+  could be skipped; and a variant is credited only when it is the first match AND its
+  subject is in view in a genuinely-reachable state. The only error direction is a
+  conservative FALSE ALARM, never a silent pass of dead prose.
+result:
+  shipped_packs_all_live: true   # every reactive room/object variant in both shipped RPG packs is reachable as displayed text
+  states_explored: { cold_forge: 19005, sunken_barrow: 1885 }   # best/worst bracket + liveness policy, well under the 200k cap
+  variant_counts: { cold_forge: 7, sunken_barrow: 4 }
+regression_test: tests/regression/rpg_variant_liveness.test.ts
+test_cases:
+  - "discovers the shipped RPG packs (guards against a vacuous pass if the glob yields nothing)"
+  - "cold_forge: every declared room/object variant is the first match in some viewing state (no HP-gated guard; search not capped)"
+  - "sunken_barrow: every declared room/object variant is the first match in some viewing state (no HP-gated guard; search not capped)"
+  - "FAILS on a planted dead variant (a room variant guarded on flags no path sets) — the negative control"
+  - "CREDITS a variant reachable only by WINNING a fight (best regime kills the enemy, worst regime dies), and a worst-regime-alone control FAILS to credit it — proving the best-roll regime is load-bearing"
+notes: >
+  Completes the dead-reactive-prose liveness trilogy across all three modes: CYOA
+  (bug_0085 static + bug_0145 dynamic), parser (bug_0091 static + bug_0146 dynamic), RPG
+  (bug_0091 static — shared parser schema — + bug_0147 dynamic here). RPG endings reuse
+  ParserEndingSchema, which has no `variants`, so room + object variants are the whole
+  scope, exactly as in the parser proof. See [[cyoa-exhaustive-solver]].
