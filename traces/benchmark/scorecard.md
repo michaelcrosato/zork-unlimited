@@ -19,6 +19,19 @@ One comparable number per split: `Score` is the mean over the split's packs of e
 | curated | 14 | 22.4% | 25.0% | 66.7% | **38.1%** |
 | held-out | 12 | 1.7% | 23.6% | 69.9% | **31.7%** |
 
+### Per-mode (composition-robust)
+
+The headline `Score` is a flat mean over a split's packs, so it moves with the split's mode MIX: the baseline bot completes CYOA packs but cannot plan the multi-step parser/RPG puzzles, so a puzzle-heavy split scores lower regardless of contamination. The curated split keeps gaining authored puzzle packs while the held-out corpus stays mode-balanced, so the cross-mode curated→held-out gap erodes as a composition artifact. This slice reads the held-out-vs-curated signal WITHIN each mode, where difficulty is roughly constant — the contamination gap is real only in the mode the bot can complete (CYOA); the puzzle modes floor out near the bot's planning ceiling in both splits.
+
+| Mode | Split | Packs | **Score** |
+| --- | --- | --: | --: |
+| cyoa | curated | 6 | **68.0%** |
+| cyoa | held-out | 4 | **58.6%** |
+| parser | curated | 3 | **16.4%** |
+| parser | held-out | 4 | **22.2%** |
+| rpg | curated | 5 | **15.1%** |
+| rpg | held-out | 4 | **14.3%** |
+
 ## Per-pack rows
 
 | Pack | Mode | Strategy | Graph | Split | Completion | Endings | Ending cov | Scene cov | Turns→end |

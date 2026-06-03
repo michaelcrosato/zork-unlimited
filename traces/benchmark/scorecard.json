@@ -1522,5 +1522,55 @@
       "score": 0.317
     }
   ],
+  "mode_summary": [
+    {
+      "split": "curated",
+      "mode": "cyoa",
+      "strategy": "coverage",
+      "hide_graph": false,
+      "packs": 6,
+      "score": 0.68
+    },
+    {
+      "split": "held_out",
+      "mode": "cyoa",
+      "strategy": "coverage",
+      "hide_graph": false,
+      "packs": 4,
+      "score": 0.586
+    },
+    {
+      "split": "curated",
+      "mode": "parser",
+      "strategy": "coverage",
+      "hide_graph": false,
+      "packs": 3,
+      "score": 0.164
+    },
+    {
+      "split": "held_out",
+      "mode": "parser",
+      "strategy": "coverage",
+      "hide_graph": false,
+      "packs": 4,
+      "score": 0.222
+    },
+    {
+      "split": "curated",
+      "mode": "rpg",
+      "strategy": "coverage",
+      "hide_graph": false,
+      "packs": 5,
+      "score": 0.151
+    },
+    {
+      "split": "held_out",
+      "mode": "rpg",
+      "strategy": "coverage",
+      "hide_graph": false,
+      "packs": 4,
+      "score": 0.143
+    }
+  ],
   "skipped": []
 }

@@ -109,6 +109,31 @@ export type BenchmarkSummary = {
   score: number;
 };
 
+/**
+ * The same headline composite as `BenchmarkSummary`, but sliced per MODE within a
+ * split (bug_0198). The cross-mode `BenchmarkSummary` score is a flat mean over a
+ * split's packs, so it is sensitive to the split's MODE COMPOSITION: the coverage
+ * bot completes CYOA packs (~0.7 composite) but cannot plan the multi-step parser/RPG
+ * puzzle packs (~0.15), so a split that is CYOA-heavy scores higher than one that is
+ * puzzle-heavy regardless of any contamination signal. The curated split keeps
+ * gaining hand-authored puzzle packs while the held-out corpus stays mode-balanced
+ * (4 CYOA / 4 parser / 4 RPG), so the cross-mode curated→held-out gap was eroding
+ * toward `MIN_SPLIT_GAP` purely as a composition artifact — the `benchmark_headline`
+ * WATCH (bug_0196). This per-mode slice measures the contamination signal
+ * apples-to-apples: held-out vs curated WITHIN the same mode, where pack difficulty is
+ * held roughly constant, so the gap reflects the held-out-vs-curated difference rather
+ * than the mode mix. The signal is real only in the mode the bot can actually complete
+ * (CYOA); in the puzzle modes both splits floor out near the bot's planning ceiling.
+ */
+export type BenchmarkModeSummary = {
+  split: "curated" | "held_out";
+  mode: string;
+  strategy: "coverage" | "random";
+  hide_graph: boolean;
+  packs: number;
+  score: number;
+};
+
 export type Scorecard = {
   generated_by: string;
   agent: string;
@@ -121,6 +146,15 @@ export type Scorecard = {
    * (e.g. a custom `--cells` run) — the per-row table is always authoritative.
    */
   summary: BenchmarkSummary[];
+  /**
+   * The headline composite sliced per (split, mode) over the primary baseline cell
+   * (bug_0198), ordered mode-alphabetical with curated before held-out within each
+   * mode so each mode's curated/held-out pair sits adjacent. The composition-robust
+   * companion to `summary`: the contamination signal read apples-to-apples within a
+   * mode, immune to the curated split's drifting mode mix. Empty under the same
+   * condition as `summary` (no primary-cell rows scored).
+   */
+  mode_summary: BenchmarkModeSummary[];
   /** Packs that could not be scored (e.g. failed to run), with the reason. */
   skipped: { pack: string; reason: string }[];
 };
@@ -191,6 +225,38 @@ function summarize(rows: BenchmarkRow[]): BenchmarkSummary[] {
       mean_scene_coverage: r3(mean(cellRows.map((r) => r.scene_coverage))),
       score: r3(mean(cellRows.map(rowScore))),
     });
+  }
+  return out;
+}
+
+/**
+ * Slice the primary-cell rows into one composite per (split, mode) — the
+ * composition-robust companion to `summarize` (bug_0198). Ordered mode-alphabetical,
+ * curated before held-out within each mode, so each mode's curated/held-out pair is
+ * adjacent in the rendered table; a (split, mode) with no primary-cell rows is omitted.
+ */
+function summarizeByMode(rows: BenchmarkRow[]): BenchmarkModeSummary[] {
+  const primary = rows.filter(
+    (r) => r.strategy === PRIMARY_CELL.strategy && r.hide_graph === PRIMARY_CELL.hide_graph,
+  );
+  const modes = [...new Set(primary.map((r) => r.mode))].sort((a, b) => a.localeCompare(b));
+  const out: BenchmarkModeSummary[] = [];
+  for (const mode of modes) {
+    for (const [split, heldOut] of [
+      ["curated", false],
+      ["held_out", true],
+    ] as const) {
+      const cellRows = primary.filter((r) => r.mode === mode && r.held_out === heldOut);
+      if (cellRows.length === 0) continue;
+      out.push({
+        split,
+        mode,
+        strategy: PRIMARY_CELL.strategy,
+        hide_graph: PRIMARY_CELL.hide_graph,
+        packs: cellRows.length,
+        score: r3(mean(cellRows.map(rowScore))),
+      });
+    }
   }
   return out;
 }
@@ -291,6 +357,7 @@ export function buildScorecard(opts: BenchmarkOptions): Scorecard {
     cells,
     rows,
     summary: summarize(rows),
+    mode_summary: summarizeByMode(rows),
     skipped,
   };
 }
@@ -346,6 +413,28 @@ export function renderMarkdown(card: Scorecard): string {
       );
     }
     lines.push("");
+
+    // The composition-robust slice (bug_0198): the same composite per (split, mode).
+    // The cross-mode Score above is a flat pack-mean, so it tracks the split's mode MIX
+    // (the bot completes CYOA but cannot plan parser/RPG puzzles); read the
+    // contamination gap mode-by-mode here, where pack difficulty is roughly held
+    // constant, rather than off the composition-sensitive headline.
+    if (card.mode_summary.length > 0) {
+      lines.push("### Per-mode (composition-robust)");
+      lines.push("");
+      lines.push(
+        "The headline `Score` is a flat mean over a split's packs, so it moves with the split's mode MIX: the baseline bot completes CYOA packs but cannot plan the multi-step parser/RPG puzzles, so a puzzle-heavy split scores lower regardless of contamination. The curated split keeps gaining authored puzzle packs while the held-out corpus stays mode-balanced, so the cross-mode curated→held-out gap erodes as a composition artifact. This slice reads the held-out-vs-curated signal WITHIN each mode, where difficulty is roughly constant — the contamination gap is real only in the mode the bot can complete (CYOA); the puzzle modes floor out near the bot's planning ceiling in both splits.",
+      );
+      lines.push("");
+      lines.push("| Mode | Split | Packs | **Score** |");
+      lines.push("| --- | --- | --: | --: |");
+      for (const s of card.mode_summary) {
+        lines.push(
+          `| ${s.mode} | ${s.split === "held_out" ? "held-out" : "curated"} | ${s.packs} | **${pct(s.score)}** |`,
+        );
+      }
+      lines.push("");
+    }
   }
 
   lines.push("## Per-pack rows");
