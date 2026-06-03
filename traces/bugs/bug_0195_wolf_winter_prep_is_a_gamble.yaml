@@ -1,0 +1,68 @@
+id: bug_0195
+title: "wolf_winter: day-book 'BOTH, OR NOTHING' over-claimed the stakes — skipping prep is a GAMBLE, not certain death (blind playtest finding)"
+kind: content_fix
+mode: rpg
+severity: minor
+pack: content/rpg/pack/wolf_winter.yaml
+content_hash: 7d43e6518b4219343c69283f7515fd5584c58eaa72c93dc7207594e726fbd66e
+
+summary: >
+  The mandated blind pass ran on wolf_winter (the 13th pack / 4th RPG), RPG, seeds 7 & 3, and rated it
+  clarity 5/5, enjoyment 4/5, mechanics flawless, ZERO bugs — but the independent blind tester surfaced
+  one real FICTION-vs-MECHANIC mismatch. The day-book's prep clue (reworded by bug_0191) ended on
+  "BOTH, OR NOTHING", which reads as a binary promise: do both prep steps (heed Cade for +2 attack,
+  don the byre-jerkin for +2 defense) or be pulled down. But the mechanic is not binary. On BOTH seeds
+  the tester tried, a completely unprepared rush (base atk5/def3, no counsel, no jerkin) cleared all
+  three wolves comfortably (ended hp 13 and 14). Skipping prep is a genuine GAMBLE — winnable on
+  average/good rolls, lethal only on bad ones — so the loud "or nothing" over-claimed the stakes, and a
+  first-timer who blew off the warning and still won easily could conclude the prep was pointless / the
+  game had bluffed. The validator-proven half ("speared right and padded, no wolf will pull you down")
+  and Cade's own spoken line ("gambling the cattle on a bad night") were already honest; only the
+  day-book's binary framing was not.
+
+reproduction:
+  pack: content/rpg/pack/wolf_winter.yaml
+  route: "skip the day-book/Cade/store -> march north -> fight yearling, flank-wolf, grey leader -> reach the cattle"
+  observed: >
+    The day-book promises "BOTH, OR NOTHING" and Cade's counsel is framed as the line between living and
+    being pulled down, implying skipping prep is near-certain death. But an unprepared hunter on typical
+    d6 rolls clears the three-fight gauntlet with HP to spare on multiple seeds — the advertised cost of
+    ignoring the prep does not materialise on average dice, undercutting the tension the prose builds.
+  expected: >
+    The clue promises what is mechanically true: doing both prep steps GUARANTEES survival (validator-
+    proven), while doing less is a real gamble — survivable on good luck, fatal on bad — not a binary
+    "prep or die".
+
+fix:
+  layer: content
+  change: >
+    Content-only, no engine/validator/schema change and no combat-math change (both prep buffs and all
+    enemy stats are untouched, so the combat_guaranteed gauntlet bound is unchanged). The day-book's
+    final clause "BOTH, OR NOTHING." becomes "DO BOTH AND NO WOLF WILL TOUCH YOU; DO LESS AND YOU MAY
+    HOLD THE BYRE YET, BUT YOU GAMBLE IT ON THE NIGHT'S LUCK." — which names the true guarantee (both ->
+    safe), keeps urging both halves (the §17 clue still points at Cade + the jerkin), and is honest that
+    less is a gamble (winnable, but luck-dependent) rather than certain loss. Cade's spoken line is left
+    as-is: it was already honest ("Skip either and you're gambling the cattle on a bad night").
+
+within_the_bar: >
+  validate_story stays 0/0 (content_hash -> 7d43e6518b4219343c69283f7515fd5584c58eaa72c93dc7207594e726fbd66e).
+  No test pins this pack's content_hash. bug_0191's regression (wolf_winter_phantom_spear.test.ts) still
+  passes: its day-book assertions require the text to NOT read "SPEAR AND PADDING", to name CADE + JERKIN,
+  and to note the spear is ALREADY had — all still true; it never pinned the literal "BOTH, OR NOTHING".
+  The bug_0189 gauntlet regression passes unchanged (it asserts combat math + max_score, never the prose).
+
+locked_by:
+  test: tests/regression/wolf_winter_prep_is_a_gamble_not_certain_death.test.ts
+  asserts:
+    - "the SAME unprepared corridor rush (no prep flag set, atk/def still 5/3) WINS (ending_held, hp>0, score 45) under the player's BEST rolls"
+    - "the SAME rush DIES (a death:true ending, hp<=0) under the player's WORST rolls"
+    - "so skipping prep genuinely straddles win/death from one route — the 'it's a gamble' the recalibrated day-book now promises, not a bluff and not certain death"
+  rationale: >
+    Dynamic-play complement to the existing static bounds: combat_guaranteed proves the PREPARED hunter
+    always lives (rpg_validator + wolf_winter_three_fight_gauntlet), and the all-endings solver proves the
+    death ending is reachable. Neither asserts that an UNPREPARED hunter straddles both outcomes from one
+    route, which is exactly what makes "it's a gamble" true rather than decorative. Both regimes draw only
+    legal d6 faces (1 and 6), so each outcome is reachable by some concrete seed — the same soundness the
+    all-endings solver rests on.
+
+verify: "npm run health EXIT 0"
