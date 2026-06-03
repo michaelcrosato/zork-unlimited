@@ -22,7 +22,9 @@ import { loadPackFile } from "../cyoa/pack.js";
 import type { CyoaPack } from "../cyoa/schema.js";
 import type { PackMode } from "../mcp/types.js";
 import { generateCyoaPack } from "../gen/cyoa_generator.js";
+import { generateRpgPack } from "../gen/rpg_generator.js";
 import { validateCyoa } from "../validate/cyoa_validator.js";
+import { validateRpg } from "../validate/rpg_validator.js";
 import type { ValidationReport } from "../validate/report.js";
 
 export type Category = "content_fix" | "content_new" | "engine" | "repo";
@@ -369,6 +371,55 @@ export function generatorDriftCandidate(checks: GeneratedPackCheck[]): Improveme
   };
 }
 
+// ── RPG generator mint-and-check lever (bug_0162) ─────────────────────────────
+// The RPG twin of {@link generatorDriftCandidate} — the bug_0158 analogue one mode over.
+// The CYOA generator went core (bug_0156) → MCP (bug_0157) → assessor mint-and-check
+// (bug_0158); the RPG generator (src/gen/rpg_generator.ts) went core (bug_0159) → MCP
+// (bug_0160), and this lands its mint-and-check slice (docs/CURRENT_PLAN.md /
+// [[fresh-pack-generator]]; named as the open next-slice by bug_0160 and bug_0161). It is the
+// HIGHER-value half: it extends the per-cycle moving target to the RICHEST verifier surfaces in
+// the suite — COMBAT winnability (the bug_0097/0113/0114 best/worst-roll bound) and
+// SCORE-ECONOMY soundness (declared max_score == reachable award sum) — the RPG-only checks the
+// CYOA generator never touches, which until now ran ONLY against the two FROZEN hand-authored
+// RPG packs (sunken_barrow, cold_forge), the memorisable-target condition the frozen-verifier
+// literature warns against (arXiv 2510.14253; [[verifier-assertion-guard]]).
+
+/**
+ * The RPG generator mint-and-check verdict. Given this cycle's freshly minted-and-validated
+ * generated RPG packs, return an improvement candidate IFF the production `validateRpg` did NOT
+ * hold on one of them — i.e. a minted pack carries ANY finding (error OR warning), the same
+ * zero-findings bar the curated RPG packs and the generator's own test (rpg_generator.test.ts)
+ * clear, which INCLUDES the RPG-only COMBAT_UNWINNABLE / SCORE_UNREACHABLE /
+ * SKILL_CHECK_IMPOSSIBLE checks. A clean sweep returns null (the verifier held on this cycle's
+ * RPG moving target — the healthy state, so the lever does NOT mask the 0.5 saturation floor).
+ * When it fires it is a genuine, fixable problem — the RPG generator emitted an
+ * unclean/unwinnable/score-unreachable shape, OR the fresh distribution surfaced a verifier gap
+ * — scored high so the loop closes the divergence rather than re-polishing clean prose. Pure
+ * (validated checks in, candidate out) so the negative path unit-tests against the REAL
+ * validateRpg with no disk and no clock, exactly like {@link generatorDriftCandidate}.
+ */
+export function generatorRpgDriftCandidate(
+  checks: GeneratedPackCheck[],
+): ImprovementCandidate | null {
+  const bad = checks.filter((c) => c.report.findings.length > 0);
+  if (bad.length === 0) return null;
+  return {
+    id: "generator-rpg-drift",
+    category: "engine",
+    target: "src/gen/rpg_generator.ts",
+    title: `The RPG pack generator minted ${bad.length} pack(s) the verifier rejects — the evolving RPG eval distribution has drifted from the shipped bar`,
+    rationale:
+      "Evolving the RPG eval distribution only works if every minted pack clears the SAME zero-findings bar the curated RPG packs do — which for RPG includes COMBAT winnability and SCORE-economy soundness (docs/CURRENT_PLAN.md). A generated RPG pack the production validateRpg flags is a real defect: either the generator emits an unclean/unwinnable/score-unreachable shape, or the fresh distribution has surfaced a verifier gap. Fixing it keeps the RPG generator a trustworthy moving target instead of a source of false signal.",
+    evidence: bad.map(
+      (c) =>
+        `seed ${c.seed} (${c.pack_id}): ${c.report.findings.map((f) => `${f.severity}:${f.code}`).join(", ")}`,
+    ),
+    impact: 5,
+    effort: "M",
+    score: score(5, "M", "engine"),
+  };
+}
+
 /**
  * The score at/below which only ROUTINE work remains. The blind-playtest review
  * stubs (the rotation candidates raised for gated/puzzle packs) all land on this
@@ -701,6 +752,26 @@ export function assess(root: string): Assessment {
   });
   const genDrift = generatorDriftCandidate(genChecks);
   if (genDrift) candidates.push(genDrift);
+
+  // ── eval-distribution: the SAME lever one mode over — mint-and-check a fresh RPG window ──
+  // The RPG twin (bug_0162) of the CYOA mint-and-check above. The two levers SHARE the advancing
+  // seed base (so both stay deterministic for a snapshot yet sweep a fresh window each cycle) but
+  // draw from INDEPENDENT generators — `generateCyoaPack` vs `generateRpgPack` — so each confronts
+  // its own never-frozen distribution; within each generator the per-cycle windows are disjoint
+  // (base advances by GEN_EVAL_CHECK_COUNT each cycle). This window exercises the production
+  // `validateRpg` — the full parser bar PLUS the RPG-only COMBAT_UNWINNABLE / SCORE_UNREACHABLE /
+  // SKILL_CHECK_IMPOSSIBLE checks, the richest verifier surfaces in the suite — against fresh,
+  // never-seen RPG packs, so those checks stop being exercised only by the two frozen hand packs.
+  const rpgGenChecks: GeneratedPackCheck[] = Array.from(
+    { length: GEN_EVAL_CHECK_COUNT },
+    (_, i) => {
+      const seed = genBase + i;
+      const pack = generateRpgPack(seed);
+      return { seed, pack_id: pack.meta.id, report: validateRpg(pack) };
+    },
+  );
+  const rpgGenDrift = generatorRpgDriftCandidate(rpgGenChecks);
+  if (rpgGenDrift) candidates.push(rpgGenDrift);
 
   // Deterministic ordering: score desc, then — among equal scores — rotate the
   // blind-playtest pass onto the LEAST-recently-attended pack (never-attended first,

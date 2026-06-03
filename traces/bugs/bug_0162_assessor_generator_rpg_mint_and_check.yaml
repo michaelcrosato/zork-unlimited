@@ -1,0 +1,86 @@
+id: bug_0162
+title: "RPG generator mint-and-check lever — extend the live, self-renewing eval signal to the RICHEST verifier surfaces (combat winnability + score economy)"
+kind: engine
+mode: rpg
+severity: enhancement
+layer: afk-assessor
+artifact:
+  source: src/afk/assessor.ts
+  test: tests/regression/assessor_generator_rpg_mint_and_check.test.ts
+
+summary: >
+  The mandated blind pass this cycle (watchtower_road, CYOA, seed 41) re-confirmed content is
+  blind-clean: clarity 5/5, enjoyment 4/5, ZERO mechanical bugs across THREE distinct declared
+  endings (ending_truth, ending_captured, ending_escape). Inventory-gated choices, evidence-gated
+  endings, and state-aware reactive epilogues all confirmed working; the tester found nothing to
+  fix. Per [[content-polish-backlog-exhausted]] that is the saturated state, not a content brief.
+  The documented standing lever (docs/CURRENT_PLAN.md / [[fresh-pack-generator]]) is the fresh-pack
+  GENERATOR program. Its CYOA leg is complete — core (bug_0156) → MCP (bug_0157) → assessor
+  mint-and-check (bug_0158). The RPG leg built core (bug_0159) → MCP (bug_0160); this lands its
+  NAMED open next-slice (per bug_0160 and bug_0161's next-focus): the RPG assessor mint-and-check —
+  the bug_0158 analogue one mode over, and the HIGHER-value half because it puts the suite's richest
+  verifier surfaces (combat winnability + score economy) on a moving target.
+
+mandated_blind_playtest:
+  run: ai-runs/2026-06-03T09-36-04-895Z/playtest.md
+  pack: content/cyoa/pack/watchtower_road.yaml
+  seed: 41
+  result: "reached ending_truth (investigate→evidence→expose), ending_captured (no-letter bluster), ending_escape (beacon→slip away); clarity 5/5, enjoyment 4/5; ZERO bugs; inventory-gated choices, evidence-gated justice ending, and state-aware reactive epilogue (beacon folded into ending_escape) all confirmed live"
+  triage: >
+    No actionable content defect — watchtower_road is blind-clean. Its two soft notes (the optional
+    west/hermit branch is skippable; light_beacon doesn't require the lantern_lit flag) the tester
+    itself judged intentional, sound design — not flaws. Per [[content-polish-backlog-exhausted]] the
+    only live lever is structural/breadth, so the cycle advanced the plan's named next slice instead
+    of churning a clean pack.
+
+what:
+  - >
+    src/afk/assessor.ts — generatorRpgDriftCandidate(checks): a PURE verdict over this cycle's
+    minted-and-validated generated RPG packs (the RPG twin of generatorDriftCandidate). Returns null
+    on a clean sweep (the verifier held — the healthy state, which correctly does NOT mask the 0.5
+    saturation floor); returns a high-priority engine candidate (impact 5 / effort M / score 2.0,
+    target src/gen/rpg_generator.ts) IFF any minted pack carries ANY finding (error OR warning — the
+    same zero-findings bar the curated RPG packs and rpg_generator.test.ts clear, which INCLUDES the
+    RPG-only COMBAT_UNWINNABLE / SCORE_UNREACHABLE / SKILL_CHECK_IMPOSSIBLE checks), naming the
+    offending seed + finding codes.
+  - >
+    src/afk/assessor.ts — assess() now ALSO mints a WINDOW of GEN_EVAL_CHECK_COUNT (4) fresh RPG
+    packs each run at the SAME advancing seed base the CYOA lever uses (base = generatedEvalSeedBase
+    * GEN_EVAL_CHECK_COUNT, sourced from the tracked AI_LOOP_STATE.md — no clock/RNG), validates each
+    with the production validateRpg, and pushes generatorRpgDriftCandidate(...) when non-null. The
+    two levers SHARE the advancing base but draw from INDEPENDENT generators (generateCyoaPack vs
+    generateRpgPack), so each confronts its own never-frozen distribution; within each generator the
+    per-cycle windows are disjoint. assess() stays deterministic for a given repo snapshot.
+
+why: >
+  The richest verifier surfaces in the suite are the RPG-only proofs — COMBAT winnability (the
+  bug_0097/0113/0114 best/worst-roll bound) and SCORE-ECONOMY soundness (declared max_score ==
+  reachable award sum, folding in combat/skill awards the parser scan can't see). Until now those
+  ran ONLY against the two FROZEN hand-authored RPG packs (sunken_barrow, cold_forge) — exactly the
+  memorisable-target condition the frozen-verifier literature warns against (arXiv 2510.14253; the
+  assessor's own 0.5-floor collapse, [[verifier-assertion-guard]]). bug_0159/0160 made RPG minting
+  reachable; this slice makes it LIVE — the assessor now provably exercises validateRpg (combat +
+  score included) against fresh, never-seen RPG packs EVERY cycle. When the RPG generator and
+  verifier ever diverge (an unclean/unwinnable/score-unreachable emitted shape, or a verifier gap the
+  fresh distribution surfaces) the lever raises a high-priority fix; while they agree it is silent and
+  self-extinguishing, exactly like its CYOA twin and the eslint-coverage / doc-staleness levers.
+
+verification:
+  - "npm run health EXIT 0 — additive: one new pure function + one assess() block + a regression test; no test deleted/disabled, no hash pin moved (sunken_barrow + cold_forge content_hashes untouched), no guard weakening (verify-integrity.ts untouched), no content/engine/validator/schema change beyond the assessor."
+  - "tests/regression/assessor_generator_rpg_mint_and_check.test.ts: generatorRpgDriftCandidate clean⇒null / dirty⇒engine candidate proven against the REAL validateRpg (a max_score bumped above the reachable award sum trips the RPG-only SCORE_UNREACHABLE — the bite the CYOA lever cannot reach — the clean control is not blamed); the real repo raises NO generator-rpg-drift candidate AND the current RPG window is non-vacuously clean (the green is real, the COMBAT/SCORE checks genuinely held on seeds past 0); assess() determinism preserved."
+
+next_suggested_focus: >
+  The generator program now has BOTH modes live as self-renewing eval signals (CYOA bug_0158 + RPG
+  bug_0162), exercising the full validator suite — including the richest RPG-only combat/score
+  checks — against a moving target every cycle. Remaining deferred slices: (a) PERSISTENCE of a
+  post-cutoff-timestamped held-out corpus (the contamination control no other IF eval has,
+  [[ultraplan-true-goal-pivot]]); (b) DEEPEN the generators (multiple enemies, a combat_guaranteed
+  fairness variant, deeper maps for RPG; deeper graphs / vars / multi-axis knowledge for CYOA) so
+  each mint stresses MORE of the validator; and a parser generator to complete the mode trilogy. The
+  keyed real-model author→play→fix→lock run remains the highest-value move overall but stays gated on
+  owner API-key authorization. Blind-pass rotation: watchtower_road is now most-recently blind-played;
+  reading the dedicated-pass log newest→oldest (watchtower bug_0162 / alchemists bug_0161 /
+  sunken_barrow bug_0160 / cold_forge bug_0159 / sealed_crypt bug_0158 / wreckers bug_0157 /
+  tithe_barn bug_0156 / dead_reckoning bug_0155 / white_stag bug_0154 / clockwork bug_0153), the
+  least-recently blind-played pack is now clockwork_heist (CYOA, last dedicated pass bug_0153) —
+  rotate the next mandated pass there.
