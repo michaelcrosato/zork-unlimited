@@ -56,6 +56,16 @@ const packFiles = readdirSync(PACK_DIR)
 // FUTURE pack fails loudly here (cap hit) instead of hanging or silently truncating.
 const MAX_STATES = 200_000;
 
+// watchtower_road's full reachable CYOA region is the largest shipped pack (tens of thousands
+// of distinct states); its BFS completes in ~2s standalone but can nudge past vitest's 5s
+// DEFAULT timeout under parallel suite load (the same wall-clock flake bug_0150/bug_0152
+// documented and fixed for their own large-watchtower tests — surfaced here once bug_0153 added
+// another CYOA BFS to the parallel pool). Give the per-pack walk a generous explicit ceiling,
+// matching cyoa_variant_liveness / no_dead_pocket: this guards ONLY against a wall-clock FLAKE —
+// a genuine non-termination still trips the MAX_STATES cap (a loud `cappedOut` failure), not the
+// wall clock. No assertion changed.
+const TEST_TIMEOUT_MS = 60_000;
+
 /** Exhaustively explore a pack from its initial state; return every ending id reached. */
 function reachableEndings(packPath: string): {
   reached: Set<string>;
@@ -77,34 +87,38 @@ describe("bug_0121 — every declared ending of every CYOA pack is reachable by 
   });
 
   for (const file of packFiles) {
-    it(`${file}: the exhaustive solver reaches every declared ending`, () => {
-      const path = join(PACK_DIR, file);
-      const loaded = loadPackFile(path);
-      expect(loaded.ok).toBe(true);
-      if (!loaded.ok) return;
-      const declared = new Set(loaded.compiled.pack.endings.map((e) => e.id));
+    it(
+      `${file}: the exhaustive solver reaches every declared ending`,
+      () => {
+        const path = join(PACK_DIR, file);
+        const loaded = loadPackFile(path);
+        expect(loaded.ok).toBe(true);
+        if (!loaded.ok) return;
+        const declared = new Set(loaded.compiled.pack.endings.map((e) => e.id));
 
-      const { reached, states, cappedOut } = reachableEndings(path);
+        const { reached, states, cappedOut } = reachableEndings(path);
 
-      // The search must have actually completed — a cap-out means the state space was
-      // not exhausted, so any "all endings reached" claim would be unproven.
-      expect(cappedOut, `state-space search hit the ${MAX_STATES} cap (explored ${states})`).toBe(
-        false,
-      );
-      // At least one ending fires — the pack is finishable, not a dead walk.
-      expect(reached.size).toBeGreaterThan(0);
-      // Ground truth: every declared ending is dynamically reachable...
-      const missing = [...declared].filter((e) => !reached.has(e));
-      expect(
-        missing,
-        `declared endings never reached by concrete play: ${missing.join(", ")}`,
-      ).toEqual([]);
-      // ...and no ending fires that the pack never declared (dangling end target).
-      const undeclared = [...reached].filter((e) => !declared.has(e));
-      expect(
-        undeclared,
-        `reached endings not declared in pack.endings: ${undeclared.join(", ")}`,
-      ).toEqual([]);
-    });
+        // The search must have actually completed — a cap-out means the state space was
+        // not exhausted, so any "all endings reached" claim would be unproven.
+        expect(cappedOut, `state-space search hit the ${MAX_STATES} cap (explored ${states})`).toBe(
+          false,
+        );
+        // At least one ending fires — the pack is finishable, not a dead walk.
+        expect(reached.size).toBeGreaterThan(0);
+        // Ground truth: every declared ending is dynamically reachable...
+        const missing = [...declared].filter((e) => !reached.has(e));
+        expect(
+          missing,
+          `declared endings never reached by concrete play: ${missing.join(", ")}`,
+        ).toEqual([]);
+        // ...and no ending fires that the pack never declared (dangling end target).
+        const undeclared = [...reached].filter((e) => !declared.has(e));
+        expect(
+          undeclared,
+          `reached endings not declared in pack.endings: ${undeclared.join(", ")}`,
+        ).toEqual([]);
+      },
+      TEST_TIMEOUT_MS,
+    );
   }
 });
