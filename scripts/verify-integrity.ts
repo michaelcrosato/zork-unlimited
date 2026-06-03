@@ -67,6 +67,16 @@ export const PROTECTED_FILES = [
   "src/gen/rpg_generator.ts",
   "src/gen/parser_generator.ts",
   "bin/seal-corpus.ts",
+  // The sealed held-out corpus manifest is the OUTPUT of the seal CLI above and the
+  // committed pin the contamination-free benchmark rests on (bug_0163/bug_0165): each
+  // entry fixes a generated pack content_hash plus generator_version for a frozen seed
+  // window. The generators that mint it are guarded above, but a manual re-seal that
+  // rewrites these hashes WITHOUT a generator change would otherwise slip past the drift
+  // check unseen, laundering a degraded eval distribution into the held-out split.
+  // Guarding the manifest makes any re-seal surface VERIFIER_TOUCHED for review and a
+  // deletion a hard PROTECTED_DELETED error, while held_out_corpus_sealed.test.ts proves
+  // the pins still re-mint deterministically. bug_0176, the bug_0172 deferred lever c.
+  "corpus/manifest.json",
   "scripts/verify-integrity.ts",
 ];
 
