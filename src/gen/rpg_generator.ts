@@ -31,12 +31,7 @@
  *     fights) and signposts the optional defensive ward (+2 defense, also both fights);
  *   - TWO winnable fights in sequence, each its own validator winnability proof and each a
  *     load-bearing gate: a LESSER sentinel in the gallery (the gallery's east exit gates on its
- *     defeat) and the GREATER guardian in the span (the span's east exit gates on ITS defeat).
- *     Tuned so each is individually winnable on the player's BEST reachable stats (init atk +
- *     the spirit's +2 and init def + the ward's +2) AND the best-line CUMULATIVE HP survives
- *     both — the bracket proof the single fight never stressed — while each remains a real
- *     gamble on worse rolls (NOT meta.combat_guaranteed: that flag is single-fight-sound only,
- *     since the validator checks each fight against full HP and cannot see cumulative drain);
+ *     defeat) and the GREATER guardian in the span (the span's east exit gates on ITS defeat);
  *   - one PASSABLE seeded skill check (a might roll to lever the sealed way open);
  *   - a score economy whose FOUR awards (fell each guardian, lever the way, claim the relic) sum
  *     EXACTLY to the declared max_score, so SCORE_UNREACHABLE's upper bound is tight on a richer
@@ -49,6 +44,25 @@
  * while every path stays provable. The output is validated by the SAME `validateRpg` and proven
  * solvable by the SAME `exhaustiveEndingsMulti` best/worst-roll bracket that guard the shipped
  * RPG packs — so a generated pack is held to the identical bar (tests/unit/rpg_generator.test.ts).
+ *
+ * v3 (bug_0173) TURNS THE GAUNTLET INTO A DECLARED, CUMULATIVE-AWARE GUARANTEE. v2 left the two
+ * fights an undeclared gamble: each was winnable on best reachable stats but the validator's then
+ * per-fight `combat_guaranteed` upper bound (bug_0114) could not see cumulative drain, so two
+ * "guaranteed" fights could still jointly fell a best-prepared player and the generator dared not
+ * set the flag. bug_0172 closed that blind spot — `validateRpg` now sums each enemy's worst-case
+ * damage across the whole gauntlet (`COMBAT_GAUNTLET_NOT_GUARANTEED`) — but that hardest check ran
+ * only against frozen witness packs in a regression test, never against the per-cycle MOVING
+ * distribution. v3 re-tunes the two enemies so a FULLY-PREPARED descent (the spirit's +2 attack and
+ * the cell ward's +2 defense, both OPTIONAL) survives BOTH fights on EVERY roll AND survives them
+ * CUMULATIVELY — best reachable atk6/def4: foe (hp6/atk1/def4) worst-case takes 3, warden
+ * (hp9/atk2/def4) worst-case takes 8, joint 11 < 20 reachable HP — so the pack now soundly sets
+ * `meta.combat_guaranteed: true` and EVERY mint exercises the cumulative upper bound as a GREEN
+ * case, turning the validator's hardest check into a per-mint obligation rather than a frozen
+ * target. The promise is conditional on PREPARATION (it is exactly the best-reachable-stats bound
+ * the validator proves): an UNDER-prepared player who skips the spirit/ward is still under the high
+ * enemy defense a true gamble and CAN fall to each keeper on worse rolls, so BOTH death endings
+ * stay reachable and the 3-ending census holds — preparation is now a guaranteed-sufficient
+ * strategy, not a hope, the player-experience contract every RPG blind playtest asks for.
  *
  * What it is NOT. Like the CYOA generator's first slice (bug_0156), the generated packs are NOT
  * committed under content/rpg/pack (an on-demand eval distribution, not curated showcase content
@@ -63,9 +77,10 @@ import { RpgPackSchema, type RpgPack } from "../rpg/schema.js";
  * generator surfaces as a loud, diagnosable manifest mismatch ("generator changed", a deliberate
  * version bump) rather than silent corpus rot vs a tampered content hash. Bump it whenever the
  * emitted pack shape changes; the re-seal then re-stamps every entry. v1 → v2: the two-fight
- * gauntlet deepening (bug_0171).
+ * gauntlet deepening (bug_0171). v2 → v3: the gauntlet becomes a declared, cumulative-survivable
+ * `combat_guaranteed` promise (bug_0173) — the enemy stats and the meta flag change.
  */
-export const RPG_GENERATOR_VERSION = 2;
+export const RPG_GENERATOR_VERSION = 3;
 
 /**
  * The same tiny deterministic PRNG (mulberry32) the CYOA generator uses. Pure and
@@ -302,6 +317,14 @@ export function generateRpgPack(seed: number): RpgPack {
       vars_init: { hp: 20, attack: 4, defense: 2, might: 3 },
       flags_init: [] as string[],
       max_score: maxScore,
+      // The two-fight gauntlet is a DECLARED guarantee (bug_0173): a fully-prepared player (the
+      // spirit's +2 attack and the cell ward's +2 defense, best reachable atk6/def4) survives BOTH
+      // keepers on EVERY roll AND cumulatively (worst-case 3 + 8 = 11 < 20 HP), so validateRpg's
+      // cumulative-HP-aware upper bound (COMBAT_GAUNTLET_NOT_GUARANTEED, bug_0172) passes GREEN on
+      // every mint. The promise is the validator's best-reachable-stats bound: an UNDER-prepared
+      // player who skips the buffs faces the keepers' high defense as a real gamble and can still
+      // fall to either, so both death endings stay reachable (the 3-ending census holds).
+      combat_guaranteed: true,
     },
     rooms: [
       {
@@ -610,12 +633,15 @@ export function generateRpgPack(seed: number): RpgPack {
         name: theme.foeName,
         description: theme.foeDesc,
         room: "gallery",
-        // The LESSER first fight. Winnable on best reachable stats (atk 4+2, def 2+2, hp 20 ⇒
-        // best dmg 10, 1-2 rounds, little taken), a lethal gamble at base stats — and tuned light
-        // enough that the best-line CUMULATIVE HP survives BOTH this and the heavier guardian.
-        hp: 12,
-        attack: 5,
-        defense: 2,
+        // The LESSER first fight (bug_0173 cumulative-guarantee tuning). PREPARED (atk6/def4):
+        // worst player dmg max(1,1+6-4)=3 ⇒ worstRounds ceil(6/3)=2; the ward floors its blow to
+        // max(1,6+1-4)=3 ⇒ takes 3 — survivable on every roll, and only 3 of the joint 11-damage
+        // budget. UNPREPARED (atk4/def2): worst player dmg max(1,1+4-4)=1 ⇒ 6 rounds, and its blow
+        // is max(1,6+1-2)=5 ⇒ up to 25 ≥ 20 HP — a real, lethal gamble, so ending_fallen_sentinel
+        // stays reachable for a player who skips the spirit's counsel and the ward.
+        hp: 6,
+        attack: 1,
+        defense: 4,
         defeat_flag: FOE_DOWN,
         death_ending: "ending_fallen_sentinel",
         on_defeat: [
@@ -628,13 +654,17 @@ export function generateRpgPack(seed: number): RpgPack {
         name: theme.wardenName,
         description: theme.wardenDesc,
         room: "span",
-        // The GREATER second fight (cold_forge's bug_0101-proven tuning): winnable on best
-        // reachable stats (best dmg 10, 2 rounds, ≥4 taken vs 20), a real gamble at base stats.
-        // NOT meta.combat_guaranteed: the validator's guarantee is single-fight-sound only, and
-        // two guaranteed fights could still drain a best-prepared player on worst cumulative rolls.
-        hp: 18,
-        attack: 7,
-        defense: 2,
+        // The GREATER second fight (bug_0173 cumulative-guarantee tuning) — strictly tougher than
+        // the sentinel (more HP, higher attack). PREPARED (atk6/def4): worst player dmg
+        // max(1,1+6-4)=3 ⇒ worstRounds ceil(9/3)=3; its blow floors to max(1,6+2-4)=4 ⇒ takes 8.
+        // Joint with the sentinel's 3 that is 11 < 20, so the prepared player clears the WHOLE
+        // gauntlet on every roll — the cumulative guarantee (bug_0172) passes green. UNPREPARED
+        // (atk4/def2): worst player dmg max(1,1+4-4)=1 ⇒ 9 rounds, its blow max(1,6+2-2)=6 ⇒ up to
+        // 48, lethal even after a best-roll pass through the sentinel, so ending_fallen_guardian
+        // stays reachable for the unprepared.
+        hp: 9,
+        attack: 2,
+        defense: 4,
         defeat_flag: WARDEN_DOWN,
         death_ending: "ending_fallen_guardian",
         on_defeat: [

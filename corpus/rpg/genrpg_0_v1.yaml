@@ -9,6 +9,7 @@ meta:
     might: 3
   flags_init: []
   max_score: 65
+  combat_guaranteed: true
 rooms:
   - id: entry
     name: The Forge Steps
@@ -384,9 +385,9 @@ enemies:
     description: A man-high figure of fused slag and dead cinder, slow with the deep
       cold but built to bar the way.
     room: gallery
-    hp: 12
-    attack: 5
-    defense: 2
+    hp: 6
+    attack: 1
+    defense: 4
     defeat_flag: foe_down
     death_ending: ending_fallen_sentinel
     on_defeat:
@@ -399,9 +400,9 @@ enemies:
     description: A taller horror of welded iron and banked coals, heavier and harder
       than the slag thing above, set to keep the inmost heat.
     room: span
-    hp: 18
-    attack: 7
-    defense: 2
+    hp: 9
+    attack: 2
+    defense: 4
     defeat_flag: warden_down
     death_ending: ending_fallen_guardian
     on_defeat:

@@ -9,6 +9,7 @@ meta:
     might: 3
   flags_init: []
   max_score: 70
+  combat_guaranteed: true
 rooms:
   - id: entry
     name: The Crypt Stair
@@ -388,9 +389,9 @@ enemies:
     description: A penitent dead thing wound in grave-linen, risen stiff and cold to
       guard the gold it died beside.
     room: gallery
-    hp: 12
-    attack: 5
-    defense: 2
+    hp: 6
+    attack: 1
+    defense: 4
     defeat_flag: foe_down
     death_ending: ending_fallen_sentinel
     on_defeat:
@@ -403,9 +404,9 @@ enemies:
     description: A great cowled dead thing taller than the revenant before it,
       iron-girt under its grave-linen, the reliquary's last warden.
     room: span
-    hp: 18
-    attack: 7
-    defense: 2
+    hp: 9
+    attack: 2
+    defense: 4
     defeat_flag: warden_down
     death_ending: ending_fallen_guardian
     on_defeat:

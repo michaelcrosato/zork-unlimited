@@ -9,6 +9,7 @@ meta:
     might: 3
   flags_init: []
   max_score: 55
+  combat_guaranteed: true
 rooms:
   - id: entry
     name: The Barrow Mouth
@@ -387,9 +388,9 @@ enemies:
     description: A grave-cold corpse risen in rusted mail, salt-stiff and slow, set
       to keep the crown from living hands.
     room: gallery
-    hp: 12
-    attack: 5
-    defense: 2
+    hp: 6
+    attack: 1
+    defense: 4
     defeat_flag: foe_down
     death_ending: ending_fallen_sentinel
     on_defeat:
@@ -402,9 +403,9 @@ enemies:
     description: A king's huscarl drowned in his own war-gear, broader and grimmer
       than the draugr behind you, the crown's last keeper.
     room: span
-    hp: 18
-    attack: 7
-    defense: 2
+    hp: 9
+    attack: 2
+    defense: 4
     defeat_flag: warden_down
     death_ending: ending_fallen_guardian
     on_defeat:

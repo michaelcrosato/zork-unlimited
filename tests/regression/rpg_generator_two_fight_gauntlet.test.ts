@@ -82,8 +82,11 @@ const exceptAttacking =
     !SKIPPED.has(a.type) && !(a.type === "ATTACK" && a.enemy === enemyId);
 
 describe("bug_0171 — the RPG generator emits a two-fight gauntlet", () => {
-  it("the generator version is bumped to 2 (the v2 deepening; the corpus is re-sealed to match)", () => {
-    expect(RPG_GENERATOR_VERSION).toBe(2);
+  it("the generator version is at least 2 (the v2 two-fight deepening; later bumps re-seal the corpus)", () => {
+    // bug_0171 introduced the two-fight gauntlet at v2; bug_0173 re-tuned it into a declared
+    // cumulative-survivable combat_guaranteed promise at v3. This SHAPE guard is version-agnostic
+    // from v2 on — the two-fight structure it pins is preserved across the v3 stat re-tune.
+    expect(RPG_GENERATOR_VERSION).toBeGreaterThanOrEqual(2);
   });
 
   for (const seed of SEEDS) {
