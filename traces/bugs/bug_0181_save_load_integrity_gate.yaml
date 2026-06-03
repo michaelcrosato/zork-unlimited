@@ -1,0 +1,82 @@
+id: bug_0181
+title: "Close the §16 load-integrity hole — load() now STRUCTURALLY + FINITENESS validates bundle.state (rejects forged/poisoned saves; the Infinity->conditions.ts:75 var_gte witness)"
+kind: engine
+mode: meta
+severity: enhancement
+layer: persistence/load-integrity
+artifact:
+  source: src/persist/save_load.ts
+  test: tests/regression/save_integrity_adversarial.test.ts
+
+summary: >
+  load() (src/persist/save_load.ts) checked only version, contentHash, and mode, then cast the untrusted
+  payload straight into the engine (`const bundle = parsed as SaveBundle; ... return bundle;`) with NO
+  structural or finiteness validation of `bundle.state`. The file's own header (lines 5-7) declares the §16
+  "integrity at load" promise, but it was only HALF kept: the contentHash check guards WHICH pack a save was
+  made against; nothing guarded WHETHER the loaded state is a well-formed, finite GameState. This cycle adds
+  a module-level `GameStateSchema` (zod, mirroring GameState field-for-field, .strict()) plus a single
+  safeParse/throw guard inside load() — AFTER the existing version/contentHash/mode checks (byte-unchanged,
+  their messages are pinned by save_trace.test.ts) and BEFORE `return bundle`. A malformed or non-finite save
+  is now a hard `SaveIntegrityError`. The gate REJECTS, never coerces — it validates without substituting
+  parsedState.data, so every valid engine state still round-trips byte-identically (validation runs before
+  hashing; no hash moves, no HASH_PIN/curated re-pin).
+
+root_cause: >
+  Not a defect in any one pack — a soundness hole at the single unguarded entry point into the otherwise-pure
+  deterministic engine. The effects-layer finite guard (effects.ts guardFinite) only fires on EFFECT
+  APPLICATION during play; it never runs on a load-injected value. A forged save bypasses it entirely:
+  `JSON.parse('{"...":1e999}')` yields Infinity; a string for a numeric var, a missing `current`, a
+  non-boolean flag, a malformed objectState entry all parse through untouched. The MCP `load_game`
+  (src/mcp/tools.ts) feeds an arbitrary `args.save` string's `bundle.state` straight into
+  startSession(...) -> engine, so the forged-save vector lands exactly on the load->replay->play path the
+  contamination-free benchmark's credibility rests on (ULTRAPLAN §16).
+
+witness: >
+  THE HEADLINE HOLE: an Infinity numeric var silently corrupts gate logic. conditions.ts:75-77 read
+  var_gte as `(state.vars[name] ?? 0) >= value`. With Infinity that is ALWAYS true — a forged save unlocks
+  every var_gte-gated route, ending, and win; with NaN every var_gte/var_lte/var_eq is ALWAYS false (silently
+  locks the game). VarCmp (conditions.ts:12) is a z.number() on the CONTENT side and never sees the LOADED
+  operand. The new regression plants the construction-known-bad saves load() MUST reject: vars.hp=1e999
+  (->Infinity, the headline WITNESS, with the conditions.ts:75 citation in-test), a NaN var, a -Infinity var,
+  seed=Infinity, a wrong-type flag (string not boolean), a missing `current`, a malformed objectState
+  (box.open="true"), and an unknown objectState key (the .strict mirror of ObjectRuntime). This is the
+  SoundnessBench (arXiv:2412.03154, TMLR Dec 2025) REJECTION-DIRECTION oracle: a verifier is credibly sound
+  only if it rejects instances known-bad BY CONSTRUCTION, not merely accepts the ones it is fed — the
+  pre-existing save_trace.test.ts covered only the ACCEPTANCE direction. load() was precisely the ASL
+  (arXiv:2510.14253, cited in bug_0176) "present-but-incomplete checker fed only well-behaved input"
+  exploit surface. The offline, key-free analogue of EvilGenie's (arXiv:2511.21654) LLM-judge ground-truth
+  oracle is exactly this construction-based negative corpus.
+
+fix: >
+  src/persist/save_load.ts: ADD a module-level ObjectRuntimeSchema (.strict, mirroring ObjectRuntime
+  state.ts:9-15) and GameStateSchema (.strict, mirroring GameState state.ts:17-39 field-for-field). The
+  load-bearing finiteness gates are `vars: z.record(z.number().finite())` and finite `seed`/`step`
+  (rejects Infinity/-Infinity/NaN). Inside load(), after the mode check and before `return bundle`, a single
+  `const parsedState = GameStateSchema.safeParse((bundle as {state?: unknown}).state);` then throw
+  SaveIntegrityError on `!parsedState.success`. The version/contentHash/mode checks stay byte-for-byte. NEW
+  tests/regression/save_integrity_adversarial.test.ts (10 cases): 8 forged-save rejections + 2 GREEN
+  round-trips (the clean micro round-trip with hashState unchanged, AND a rich finite state with populated
+  vars/flags/inventory/objectState/journal/questStage — incl. a negative var — proving the gate accepts
+  non-trivial valid states, not just initState). NO edit to conditions.ts, effects.ts, state.ts, any matcher,
+  any MIN_* floor, GEN_EVAL_CHECK_COUNT, the generator, the corpus, or the scorecard. The belt-and-suspenders
+  conditions.ts read-site fix is the REJECTED alternative (it masks rather than rejects; the load gate is the
+  root fix).
+
+verification: >
+  npx vitest run tests/regression/save_integrity_adversarial.test.ts tests/unit/save_trace.test.ts
+  tests/property/determinism.test.ts -> all GREEN (23 tests; the new suite adds 10). npm run health -> GREEN.
+  src/persist/save_load.ts is already in PROTECTED_FILES (scripts/verify-integrity.ts), so verify:integrity
+  surfaces an EXPECTED, non-blocking VERIFIER_TOUCHED for that file — this is a STRENGTHENING (adds a stronger
+  rejection gate), NOT a GUARD_WEAKENED and NOT a PROTECTED_DELETED. No floor/matcher change; net test-case
+  count RISES. Every valid engine-produced state still round-trips byte-identically (validation runs before
+  hashing) so no HASH_PIN/curated re-pin, no generator_version bump, no corpus re-seal; held_out_corpus_sealed
+  and the determinism property tests stay green unchanged.
+
+blind_playtest: >
+  Mandated blind pass ran on `alchemists_tower` (parser, seed 7) — clean, clarity 5/5, no fix indicated.
+
+regression: >
+  The new adversarial suite IS the regression: it fails loudly if the load-side finiteness/structural gate is
+  ever removed or weakened (any forged save would then flow into the engine). The two GREEN cases are the
+  false-rejection guard — they fail loudly if the schema ever drifts tighter than GameState and wrongly
+  rejects a legitimate save. No pinned hash changes (no content/state changed).
