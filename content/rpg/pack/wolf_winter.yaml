@@ -1,0 +1,390 @@
+# The Wolf-Winter — a Stage 4 (Hero's-Quest) pack (spec §13, §14 gate).
+#
+# The game's FOURTH RPG pack, and the SECOND to set `meta.combat_guaranteed: true`
+# (after The Dawn Beacon, bug_0187). Where the Beacon is a TWO-fight guaranteed
+# gauntlet, this is a THREE-fight one — the first curated pack to stress the
+# cumulative-HP gauntlet bound (`COMBAT_GAUNTLET_NOT_GUARANTEED`, bug_0172) across
+# three sequential fights. The cumulative bound is the distinctive RPG guarantee
+# surface: each fight can clear the per-fight upper bound alone yet the sequence
+# still fell a prepared player on worst cumulative rolls, and a third fight makes
+# that surface strictly harder to satisfy. Here BOTH prep buffs are load-bearing on
+# the cumulative bound specifically — drop either and the gauntlet stops being
+# jointly survivable while every single fight still passes in isolation (see the
+# enemies block and tests/regression/wolf_winter_three_fight_gauntlet.test.ts).
+#
+# The fiction earns the mechanic the same way the Beacon does: not luck but skill
+# and preparation decide the fights, so the promise can be honest. A killing winter
+# has driven a wolf-pack down out of the high wood onto a lone steading, and three of
+# them have come over the broken paling at the byre where the last of the cattle —
+# the family's whole winter — are penned. You are the steading's hunter, the only one
+# left awake. The old houndsman by the byre door can no longer hold a spear, but he
+# has run wolves off this steading for forty winters and there is nothing about how a
+# wolf comes in that he does not know; heed him (where the rush leaves the throat open,
+# +2 attack) AND pull on the padded byre-jerkin from the store (a wolf's teeth ring off
+# the layered hide, +2 defense) and he can make a true promise: "speared right and
+# padded, lad, no wolf in that pack will pull you down." That promise is the
+# combat_guaranteed flag spoken aloud, honest because the validator proves it — atk7,
+# def5, hp30, the player's WORST rolls, and the three of them still cannot bring you
+# down across the whole night. Skip the prep and it is a real gamble again: under-armed
+# and unlucky the pack pulls you under the byre door (the death ending stays reachable),
+# the guarantee covering only the BEST-prepared hunter, exactly as bug_0114 defines it.
+#
+#   steading_yard ─N─ byre_yard (houndsman; day-book +5)
+#   (start)            │ W: store (padded byre-jerkin, +2 defense)
+#                      │ N: paling_gap (the yearling wolf — FIGHT 1)
+#                           │ N*: byre_door (the flank-wolf — FIGHT 2)
+#                                │ N*: byre_mouth (the grey leader — FIGHT 3)
+#                                     │ N*: cattle_stand (the pack breaks at dawn — WIN, +15)
+#   (* each gated on the prior wolf being put down)
+#
+# Score (max 50, the milestone economy the curated RPG packs share): read the day-book
+# the houndsman keeps (+5, the §17 clue that names the pack and points at the jerkin and
+# his counsel), put down each of the three wolves (+10 each), and reach the cattle with
+# the pack broken (+15 — the locomotion win, like cold_forge's ember chamber and the
+# Beacon's crown). The perfect 50 coincides with reaching the safe cattle, never before;
+# SCORE_PEAKS_BEFORE_WIN does not fire on a navigation win (bug_0116).
+
+meta:
+  id: wolf_winter_v1
+  title: "The Wolf-Winter"
+  start_room: steading_yard
+  vars_init: { hp: 30, attack: 5, defense: 3 }
+  flags_init: []
+  # The opt-in fairness promise (bug_0114). With this set the validator proves the
+  # per-fight UPPER bound for every wolf AND the cumulative-HP bound across the whole
+  # three-fight gauntlet (bug_0172): with the hunter's BEST reachable stats (init + the
+  # houndsman's +2 attack + the byre-jerkin's +2 defense = atk7/def5/hp30) but the
+  # WORST rolls, total damage across all three fights must stay below reachable HP.
+  # Tuned so it does, with margin (per-fight worst-case 5/6/14; cumulative 25 < 30) —
+  # see the enemies block. base-stat play (no counsel, no jerkin) can still die.
+  combat_guaranteed: true
+  # The milestone economy: 5 + 10 + 10 + 10 + 15 = 50. Each award rides a beat that
+  # fires once (the read retires on read_tally; each wolf dies once; the cattle is the
+  # game-ending win), so the score cannot be farmed and the intended path reaches 50.
+  max_score: 50
+
+rooms:
+  - id: steading_yard
+    name: "The Steading Yard"
+    description: >
+      The yard of a lone hill-steading in the black of a killing winter night. The
+      house is shuttered and dark behind you; somewhere up the high wood a pack is
+      singing, close and getting closer, and down here the cattle have begun to low
+      and shove in their pen. The byre and its yard lie through the gate to the north.
+    exits:
+      - { direction: north, to: byre_yard }
+
+  - id: byre_yard
+    name: "The Byre-Yard"
+    description: >
+      The trampled yard before the cattle-byre. An old houndsman stands propped in the
+      byre door with a lantern and a stick, too stiff in the hands to hold a spear but
+      square in the doorway all the same. A weathered day-book hangs on its nail by the
+      jamb, and the store-shed stands open to the west. North, past the broken paling,
+      the byre runs back to where the cattle are penned — and the first of the wolves is
+      already through the gap. The yard gate is back to the south.
+    objects: [day_book]
+    exits:
+      - { direction: south, to: steading_yard }
+      - { direction: west, to: store }
+      - { direction: north, to: paling_gap }
+
+  - id: store
+    name: "The Store-Shed"
+    description: >
+      A low store-shed off the byre-yard, hung with harness and winter gear. On a peg by
+      the door hangs the steading's padded byre-jerkin — layered hide and stuffed wool,
+      the thing the herders pull on to work the horns and hooves of frightened cattle. The
+      byre-yard is back to the east.
+    objects: [byre_jerkin]
+    exits:
+      - { direction: east, to: byre_yard }
+
+  - id: paling_gap
+    name: "The Broken Paling"
+    description: >
+      The gap where the wolves have broken the paling-fence to come at the byre. A young
+      wolf stands in the breach, all hunger and no caution, hackles up and head low — the
+      first of the pack through, and between you and it there is nothing but a spear's
+      length of trampled snow. The byre-yard is back to the south.
+    variants:
+      - when: [{ has_flag: yearling_down }]
+        text: >
+          The gap in the broken paling, the young wolf dead in the snow of it now and the
+          breach held. The byre runs on north past the door; the byre-yard is back to the
+          south.
+    exits:
+      - { direction: south, to: byre_yard }
+      - direction: north
+        to: byre_door
+        conditions: [{ has_flag: yearling_down }]
+        locked_msg: "The young wolf holds the breach, hackled and snarling; you cannot pass it by while it stands."
+
+  - id: byre_door
+    name: "The Byre Door"
+    description: >
+      The mouth of the cattle-byre proper. A second wolf has slipped the breach and
+      turned at the door to face you — a rangy flank-wolf, quicker and warier than the
+      yearling, circling for your off side. Behind it the byre runs back into the dark
+      where the cattle stamp. The paling is back to the south.
+    variants:
+      - when: [{ has_flag: flank_wolf_down }]
+        text: >
+          The mouth of the cattle-byre, the flank-wolf down and still across the
+          threshold. The byre runs back north into the dark; the paling is back to the south.
+    exits:
+      - { direction: south, to: paling_gap }
+      - direction: north
+        to: byre_mouth
+        conditions: [{ has_flag: flank_wolf_down }]
+        locked_msg: "The flank-wolf circles the door, teeth bared; you cannot push past it into the byre while it stands."
+
+  - id: byre_mouth
+    name: "Deep in the Byre"
+    description: >
+      The dark heart of the byre, the cattle crowded and bellowing at the far wall. Here
+      the pack-leader has come to a stand between you and them — the old grey bitch that
+      leads them, lean and scarred and wholly unhurried, who has killed in byres before
+      and means to again. She does not rush. She waits for you to be careless. The door is
+      back to the south.
+    variants:
+      - when: [{ has_flag: leader_down }]
+        text: >
+          The dark heart of the byre. The grey leader lies dead among the trampled straw,
+          and beyond her the cattle have gone quiet, unhurt against the far wall. A last
+          stride takes you north to stand among them. The door is back to the south.
+    exits:
+      - { direction: south, to: byre_door }
+      - direction: north
+        to: cattle_stand
+        conditions: [{ has_flag: leader_down }]
+        locked_msg: "The grey leader stands between you and the cattle, unhurried and waiting; you cannot reach them while she lives."
+
+  - id: cattle_stand
+    name: "Among the Cattle"
+    description: >
+      The penned end of the byre, the cattle warm and whole and pressing close around
+      you. Beyond the broken paling the rest of the pack has heard the leader fall and
+      gone silent in the high wood, and the first grey of dawn is coming up cold over the
+      hill. The byre is held. The dark of the byre is back to the south.
+    # The locomotion win (visited: cattle_stand), like the Beacon's crown and cold_forge's
+    # ember chamber: the +15 capstone rides reaching the safe cattle with all three wolves
+    # down (the chained exit gates), so the full 50 coincides with the byre being held,
+    # never before. SCORE_PEAKS_BEFORE_WIN does not fire on a navigation win (bug_0116).
+    on_enter:
+      - add_journal: "The pack has broken and gone, and the cattle stand whole around you in the first grey light."
+      - inc_var: { name: score, by: 15 }
+    exits:
+      - { direction: south, to: byre_mouth }
+
+objects:
+  - id: day_book
+    name: "day-book"
+    aliases: [book, daybook, tally, log, journal, nail, notice]
+    description: "The steading's day-book on its nail by the byre door, the last days' entries scrawled in the houndsman's hard hand."
+    read_text: >
+      The last entries read: 'SNOW TO THE EAVES, THE HIGH WOOD EMPTY OF DEER. THE PACK
+      IS DOWN ON US — THREE BOLD ONES AT THE PALING, THE OLD GREY BITCH LEADING. SPEAR
+      AND PADDING OR NOTHING: THE BYRE-JERKIN IS IN THE STORE, AND MIND OLD CADE ON HOW A
+      WOLF COMES IN. HOLD THE BYRE TILL DAWN. — the byre is the winter.'
+    interactions:
+      - verb: READ
+        target: day_book
+        conditions: [{ not_flag: read_tally }]
+        effects:
+          - set_flag: read_tally
+          - inc_var: { name: score, by: 5 }
+
+  - id: byre_jerkin
+    name: "padded byre-jerkin"
+    aliases: [jerkin, padding, jacket, hide, leathers, coat]
+    description: "The steading's padded byre-jerkin — layered hide and stuffed wool, heavy and stiff, the kind of armour a wolf's teeth catch and tear at without ever reaching the man inside."
+    # Reactive examine (bug_0023): once pulled on it is gear you wear, not a loose jerkin
+    # on a peg to consider (its self-USE "don" interaction has retired behind jerkin_donned).
+    variants:
+      - when: [{ has_flag: jerkin_donned }]
+        text: "The padded byre-jerkin, pulled on now over your own coat; its layered hide sits stiff and heavy between you and the next set of teeth."
+    takeable: true
+    interactions:
+      # Self-USE = "wear this thing" (cold_forge plate / dawn_beacon mail, bug_0074).
+      # command_verb: don makes the offered and typed verb match the prose. One-shot
+      # (gated none_of jerkin_donned) so the +2 cannot be farmed. The +2 defense is half
+      # of the houndsman's promised safety; with his +2-attack counsel it is exactly what
+      # carries the cumulative gauntlet bound GREEN for the fully-prepared hunter.
+      - verb: USE
+        item: byre_jerkin
+        target: byre_jerkin
+        command_verb: don
+        conditions: [{ none_of: [{ has_flag: jerkin_donned }] }]
+        effects:
+          - set_flag: jerkin_donned
+          - inc_var: { name: defense, by: 2 }
+          - add_journal: "You haul the padded byre-jerkin on over your coat; stiff and heavy, but a wolf's teeth will catch in the hide and never reach you (+2 defense)."
+          - narrate: "You pull the padded byre-jerkin down off its peg and drag it on over your coat. It is stiff and weighs on the shoulders, but the layered hide sits steady between you and the next set of teeth — half of old Cade's promise, the padded half."
+
+npcs:
+  - id: houndsman
+    name: "old Cade the houndsman"
+    description: >
+      A bent old houndsman in a wolfskin cap, propped in the byre door with a lantern and
+      a stick. Too stiff in the hands to hold a spear this winter, but clear-eyed and
+      unafraid, and plainly glad the steading's hunter has come down awake.
+    room: byre_yard
+    # Every npc_text is PURE SPOKEN words (the bug_0071 convention): the engine renders
+    # `old Cade the houndsman: "<npc_text>"`. The counsel topic retires once told (gated
+    # not_flag heard_counsel) so the +2 attack is one-shot; the ungated `leave` keeps the
+    # root TERMINATING (a gated-only node would trip DIALOGUE_NONTERMINATING, bug_0014).
+    dialogue:
+      root: cade_root
+      nodes:
+        - id: cade_root
+          npc_text: >
+            You came down awake — good. I cannot hold the door myself this winter, these
+            hands are done, but you can, and you must: the byre is the whole winter, lad,
+            lose the cattle and we starve before spring. Three of them are through the
+            paling already and the old grey bitch leads them. Ask, if you would — I have
+            run wolves off this steading forty winters and there's little about them I
+            don't know.
+          topics:
+            - id: ask_wolves
+              prompt: "Ask how to fight the wolves and live."
+              conditions: [{ not_flag: heard_counsel }]
+              goto: cade_wolves
+            - id: ask_byre
+              prompt: "Ask how the byre is to be held."
+              conditions: [{ not_flag: heard_plan }]
+              goto: cade_byre
+            - id: leave_cade
+              prompt: "Leave old Cade and hold the byre."
+              end: true
+        - id: cade_wolves
+          # The combat_guaranteed promise spoken aloud — and TRUE, because the validator
+          # proves it for the fully-prepared hunter (jerkin + this counsel). It names BOTH
+          # halves of the prep plainly, so the player who heeds it is the player the
+          # guarantee covers.
+          npc_text: >
+            A wolf is all rush, lad — it comes in low and fast and throws its weight at
+            you, and for that half-breath its throat and shoulder are wide open. Don't
+            flinch back; step in and take it there, hard, the moment it commits. The
+            yearling at the paling has no patience and the flank-wolf will try your off
+            side, but the grey bitch — she'll hang back and wait you out, so be the one
+            who closes. Do that, the way I've shown you, AND pull the padded jerkin on out
+            of the store — both, mind, not one — and I'll give you a houndsman's word, not
+            a hope: speared right and padded, no wolf in that pack will pull you down.
+            Skip either and you're gambling the cattle on a bad night.
+          effects:
+            - set_flag: heard_counsel
+            - inc_var: { name: attack, by: 2 }
+            - add_journal: "Old Cade shows you where a wolf's rush leaves its throat and shoulder open — you feel you could strike truer now (+2 attack)."
+          topics:
+            - id: wolves_back
+              prompt: "Nod, and ask something else."
+              goto: cade_root
+        - id: cade_byre
+          npc_text: >
+            The byre's simple enough: there's the one way in, past the broken paling and
+            up through the door to where the beasts are penned at the back, and the wolves
+            must come at you one at a time down that throat — they can't flank you in a
+            corridor. So hold the line and work forward, paling to door to the back wall,
+            and don't let one slip past you to the cattle. Put down the three that are in
+            and the rest of the pack loses its nerve and goes. That's the whole of it.
+          effects:
+            - set_flag: heard_plan
+            - add_journal: "Old Cade says to hold the byre's one corridor and work forward — paling to door to the back wall — and the pack will break once its three boldest are down."
+          topics:
+            - id: byre_back
+              prompt: "Thank him, and ask something else."
+              goto: cade_root
+
+enemies:
+  # The fair three-fight gauntlet (combat_guaranteed). Combat is one ATTACK = one round:
+  # the player deals d6 + attack - wolf.defense (min 1), and the wolf, if it survives,
+  # deals d6 + wolf.attack - playerDef (min 1). The player strikes first each round.
+  #
+  # Tuned so the fully-prepared hunter (best reachable stats: atk 7 from Cade's counsel,
+  # def 5 from the byre-jerkin, hp 30) survives the WHOLE three-fight gauntlet on the
+  # WORST rolls — the property combat_guaranteed promises and the validator audits:
+  #   - yearling (hp11/atk4/def2): worst player dmg 1+7-2 = 6, so 2 rounds; worst incoming
+  #     6+4-5 = 5, over the 1 round it survives = 5.
+  #   - flank-wolf (hp12/atk5/def2): worst player dmg 6, so 2 rounds; worst incoming
+  #     6+5-5 = 6, over 1 round = 6.
+  #   - grey leader (hp13/atk6/def2): worst player dmg 6, so 3 rounds; worst incoming
+  #     6+6-5 = 7, over the 2 rounds she survives = 14.
+  #   - cumulative worst-case = 5 + 6 + 14 = 25 < 30 reachable HP, with margin, so the
+  #     gauntlet clears COMBAT_NOT_GUARANTEED (each fight) AND the cumulative-HP bound
+  #     COMBAT_GAUNTLET_NOT_GUARANTEED (bug_0172) — the first curated THREE-fight pack to.
+  # BOTH prep buffs are load-bearing on the CUMULATIVE bound specifically: drop the
+  # jerkin's +2 def and worst incoming rises to 7/8/9 -> 7+8+18 = 33 >= 30 (cumulative
+  # fails) while each fight alone (7/8/18) still clears; drop Cade's +2 atk and worst
+  # player dmg falls to 4, rounds rise to 3/3/4 -> 10+12+21 = 43 >= 30 (cumulative fails)
+  # while each fight alone (<=21) still clears. Either prep alone leaves the SEQUENCE
+  # lethal though every single fight passes — which is exactly the surface the
+  # cumulative bound exists to catch, and what a third fight stresses harder than two.
+  # Skipping the prep makes it a real gamble: under base stats (atk5/def3) and worst
+  # rolls the pack pulls the hunter down, so the death ending stays genuinely reachable
+  # for the under-armed and unlucky — the guarantee covers only the BEST-prepared hunter
+  # (bug_0114). All three wolves are telegraphed in the room prose (never an ambush,
+  # bug_0123); a fall is save-recoverable (§8.7).
+  - id: yearling_wolf
+    name: "yearling wolf"
+    description: "A young wolf in the broken paling, all hunger and no caution, hackles up and head low — the first of the pack through the gap."
+    room: paling_gap
+    hp: 11
+    attack: 4
+    defense: 2
+    defeat_flag: yearling_down
+    death_ending: ending_pulled_down
+    on_defeat:
+      - add_journal: "You take the yearling on its rush, the way Cade said, and it goes down in the snow of the breach. The byre runs on north."
+      - inc_var: { name: score, by: 10 }
+  - id: flank_wolf
+    name: "flank-wolf"
+    description: "A rangy flank-wolf turned at the byre door, quicker and warier than the yearling, circling for your off side."
+    room: byre_door
+    hp: 12
+    attack: 5
+    defense: 2
+    defeat_flag: flank_wolf_down
+    death_ending: ending_pulled_down
+    on_defeat:
+      - add_journal: "You meet the flank-wolf as it cuts for your off side and put it down across the threshold; the dark of the byre runs on north."
+      - inc_var: { name: score, by: 10 }
+  - id: grey_leader
+    name: "grey leader"
+    description: "The pack-leader deep in the byre: the old grey bitch, lean and scarred and unhurried, who has killed in byres before and waits for you to be careless."
+    room: byre_mouth
+    hp: 13
+    attack: 6
+    defense: 2
+    defeat_flag: leader_down
+    death_ending: ending_pulled_down
+    on_defeat:
+      - add_journal: "You close on the grey leader before she can wait you out, and she falls among the straw; beyond her the cattle stand unhurt."
+      - inc_var: { name: score, by: 10 }
+
+win_conditions:
+  # Locomotion win, like the Beacon (visited: beacon_crown) and cold_forge (ember_chamber):
+  # reaching the cattle — only possible once all three wolves are down (the chained exit
+  # gates) — fires the win via the engine's post-action checkWin. SCORE_PEAKS_BEFORE_WIN
+  # does not fire on a navigation win (bug_0116), and the +15 capstone is the accepted
+  # denouement-step (sealed_crypt seed 29 / dawn_beacon).
+  - id: hold_the_byre
+    conditions: [{ visited: cattle_stand }]
+    ending: ending_held
+
+endings:
+  - id: ending_held
+    title: "The Byre Held"
+    text: >
+      You stand among the warm and breathing cattle as the grey dawn comes up cold over
+      the hill, and out in the high wood the broken pack is silent and going. The byre is
+      whole; the winter, that meant to take the steading one cow at a time and then the
+      lot of you, will be only a hard one now and not a last one. Old Cade is in the
+      byre-yard below, leaning on his stick, and he does not need to be told. *** You have won. ***
+  - id: ending_pulled_down
+    title: "Pulled Under the Byre Door"
+    text: >
+      The wolf's weight bears you down into the trampled snow and the rest of the pack is
+      on you before you can rise, and the byre goes to them and the cattle with it. Up at
+      the dark house the family will wake to an opened byre and a hard, short spring. *** You have fallen. ***
+    death: true

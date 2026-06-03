@@ -1,0 +1,110 @@
+id: bug_0189
+title: "The Wolf-Winter — the project's 13th pack, 4th RPG, and FIRST curated THREE-fight combat_guaranteed gauntlet (breadth lever; stresses the cumulative-HP bound)"
+kind: content_new
+mode: rpg
+pack: content/rpg/pack/wolf_winter.yaml
+content_hash: fae4039e373c616009f024bfc4cc2af5fb35fd94e4f79363d330336ac8f00596
+# Informational. No test pins this pack's content_hash (only watchtower_road pins a content_hash
+# in test files), so nothing was forced; the disk hash is whatever `npm run validate` reports.
+
+summary: >
+  The mandated blind pass this cycle (white_stag, CYOA, seed 23 — the least-recently blind-played
+  pack per [[assessor-blind-pass-rotation]], NOT the assessor's recency-blind rank-1 dawn_beacon,
+  which was played LAST cycle bug_0188) re-confirmed the content set is blind-clean: clarity 5/5,
+  enjoyment 5/5, ALL FOUR endings reached, ZERO mechanical bugs; the only note was the standing
+  brevity ceiling, not a defect. The deterministic assessor has collapsed to six identical 0.5
+  blind-playtest stubs with every structural lever disarmed ([[content-polish-backlog-exhausted]],
+  [[verifier-assertion-guard]]); the standing genuine lever is BREADTH. bug_0187's named next-focus
+  was "a guaranteed gauntlet with a 3rd fight to stress the cumulative bound harder" — this ships
+  exactly that: the 13th pack, a fair THREE-fight combat_guaranteed gauntlet, the first curated pack
+  to drive the cumulative-HP gauntlet bound (bug_0172) across three sequential fights.
+
+mandated_blind_playtest:
+  run: ai-runs/2026-06-03T16-41-29-209Z/playtest.md
+  pack: content/cyoa/pack/white_stag.yaml
+  seed: 23
+  result: "reached ending_offering, ending_lost, ending_quarry, ending_thaw (all four); clarity 5/5, enjoyment 5/5; ZERO bugs"
+  rotation: >
+    The assessor's flat 0.5 ranking cannot see recency and re-nominated dawn_beacon (played LAST cycle,
+    bug_0188). bug_0187's next-focus had named white_stag the least-recently blind-played (last dedicated
+    pass bug_0174); bug_0188 then played dawn_beacon (newest), leaving white_stag still oldest. Per the
+    documented rotation tiebreaker the blind pass went to white_stag.
+  triage: >
+    No actionable content defect — white_stag is blind-clean and its knowledge-flag gating / reactive
+    prose / two tonally-distinct mercy endings were confirmed live and rated deliberate. Per the
+    saturated-set discipline the cycle spent the signal on the named breadth lever, not on churning a
+    clean pack.
+
+new_pack:
+  pack: content/rpg/pack/wolf_winter.yaml
+  proven: >
+    Auto-discovered by every structural suite the moment it shipped: rpg_all_endings_reachable reaches
+    BOTH declared endings by concrete best/worst-roll play (ending_held via the prepared route, ending_pulled_down
+    via under-armed worst rolls); no_dead_pocket proves no soft-lock pocket; rpg_score_economy_sound proves
+    reachable max == 50; rpg_variant_liveness + rpg_action_id_unique pass. A manual full-prep MCP playthrough
+    (seed 7) reached ending_held 50/50, surviving all three fights with HP to spare (combat narration confirmed
+    the validator's exact d6+atk-def model, player-strikes-first).
+
+design:
+  thesis: >
+    A killing winter has driven a wolf-pack down out of the high wood onto a lone hill-steading, and three of
+    them have come over the broken paling at the byre where the last of the cattle — the family's whole winter —
+    are penned. You are the steading's hunter, the only one awake. Read the day-book (+5), heed old Cade the
+    houndsman (+2 attack, where a wolf's rush leaves its throat open) AND pull on the padded byre-jerkin from
+    the store (+2 defense), then hold the byre's one corridor: put down the yearling at the paling, the
+    flank-wolf at the door, and the grey leader deep in the byre, and reach the cattle as the pack breaks at
+    dawn (the locomotion win, +15).
+  mechanic_axis: >
+    A THREE-FIGHT guaranteed gauntlet — the deepening bug_0187 named. The Dawn Beacon is the only other
+    combat_guaranteed pack and it runs TWO fights; no curated pack drove the cumulative-HP bound
+    (COMBAT_GAUNTLET_NOT_GUARANTEED, bug_0172) over three. The cumulative bound is an order-independent
+    OVER-approximation of worst total damage (sum of each fight's worst-case maxDamageTaken), so a third
+    fight makes the surface strictly harder to satisfy: one more term to sum against the same reachable-HP
+    budget. The fiction earns the guarantee the same way the Beacon's does — skill and prep decide, not luck
+    (a properly speared-and-padded hunter who reads the rush is not pulled down) — so Cade can make a true
+    promise the gamble packs' hedging never could.
+  combat_math: >
+    Best reachable stats = init (hp30/atk5/def3) + Cade's +2 attack counsel + the byre-jerkin's +2 defense =
+    atk7/def5/hp30. Wolves are def2, atk 4/5/6, hp 11/12/13. Per-fight worst-case (player min roll, enemy
+    max roll): yearling -> 2 rounds, 5 damage; flank-wolf -> 2 rounds, 6 damage; grey leader -> 3 rounds,
+    14 damage. Each < 30 (COMBAT_NOT_GUARANTEED clears) and cumulative 5+6+14 = 25 < 30
+    (COMBAT_GAUNTLET_NOT_GUARANTEED clears) with margin. Distinctively (the three-fight property): BOTH
+    buffs are load-bearing on the CUMULATIVE bound SPECIFICALLY and NEITHER on any single fight — drop the
+    jerkin (def5->3) and per-fight rises to 7/8/18 (each STILL < 30) but cumulative 33 >= 30; drop the
+    counsel (atk7->5) and per-fight rises to 10/12/21 (each STILL < 30) but cumulative 43 >= 30. Each prep
+    is required by the SEQUENCE, not by any fight in isolation. base-stat play (no prep) on worst rolls dies,
+    so the death ending stays genuinely reachable — the guarantee covers only the BEST-prepared hunter (bug_0114).
+  endings:
+    - id: ending_held
+      reach: "(prepared) read day-book +5 -> don jerkin (+2 def) -> hear counsel (+2 atk) -> down yearling +10 -> down flank-wolf +10 -> down grey leader +10 -> reach cattle +15 = 50/50"
+      note: "the sole win; visited: cattle_stand (locomotion win, like the Beacon's crown / cold_forge's ember chamber); SCORE_PEAKS does not fire on a navigation win"
+    - id: ending_pulled_down
+      reach: "(under-armed) skip the jerkin and/or counsel, take worst rolls -> pulled down by a wolf over the gauntlet"
+      note: "DEATH (all three wolves' death_ending); recoverable via load (§8.7); not a win_condition"
+
+within_the_bar: >
+  Additive content only — no engine/validator/schema change, and a NEW pack pins no production hash, so NO
+  hash pin moved. validate_story 0/0 (zero errors AND zero warnings; combat_guaranteed audited GREEN — both
+  guarantee codes absent). Wired into the bar per [[verification-bar-covers-all-packs]]: added a
+  `validate -- content/rpg/pack/wolf_winter.yaml` step to the `health` npm script, and extended the
+  all_packs_validated_by_bar discovery list (twelve -> thirteen, "twelve" -> "thirteen"). list_stories and the
+  UI catalog auto-discover it (the UI globs content/**/pack/*.yaml). README content table brought current
+  (12 -> 13 packs; The Wolf-Winter listed). The benchmark curated split (discovered from content/*/pack) gains
+  one low-scoring RPG combat row, which benchmark_headline_no_regression confirms stays within the curated
+  floor (>= 0.40) and the held-out < curated gap (>= 0.05).
+
+locked_by:
+  test: tests/regression/wolf_winter_three_fight_gauntlet.test.ts
+  cases: 5
+  asserts:
+    - "the curated pack validates with ZERO errors AND genuinely opts in (combat_guaranteed === true, 3 enemies), with COMBAT_NOT_GUARANTEED / COMBAT_GAUNTLET_NOT_GUARANTEED / COMBAT_UNWINNABLE all ABSENT — the fair three-fight gauntlet GREEN on disk"
+    - "load-bearing #1 (cumulative-only): zero the byre-jerkin's +2 defense (best def 5->3) and the pack fails ONLY COMBAT_GAUNTLET_NOT_GUARANTEED (each fight still clears the per-fight bound; jointly 7+8+18=33 >= 30)"
+    - "load-bearing #2 (cumulative-only): zero Cade's +2 attack (best atk 7->5) and again ONLY COMBAT_GAUNTLET_NOT_GUARANTEED fails (per-fight 10/12/21 each < 30; jointly 43 >= 30) — across three fights BOTH buffs serve the SEQUENCE, neither any single fight"
+    - "stripping BOTH buffs still never trips COMBAT_UNWINNABLE — the unprepared hunter can win on lucky rolls, so the gauntlet stays a genuine gamble (death reachable, not an unwinnable wall)"
+    - "the score economy declares max_score 50 (5 + 10x3 + 15)"
+  also: >
+    tests/regression/all_packs_validated_by_bar.test.ts (thirteen-pack discovery + health validate step) +
+    rpg_all_endings_reachable + no_dead_pocket + rpg_score_economy_sound + rpg_variant_liveness +
+    rpg_action_id_unique (all auto-cover wolf_winter).
+
+verify: "npm run health EXIT 0 — see AI_LOOP_STATE.md for the suite count."

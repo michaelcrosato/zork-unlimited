@@ -186,7 +186,7 @@ carry no blind-playtest obligation and never pollute the hand-authored set.
 The CYOA generator is exposed over MCP as `generate_pack` (mint + validate a fresh pack,
 read-only) and is playable in-memory via `new_game`'s `generate_seed`.
 
-## Content library (12 packs)
+## Content library (13 packs)
 
 The shipped, validated content — every pack passes the validator and is wired into
 `npm run health`:
@@ -205,6 +205,7 @@ The shipped, validated content — every pack passes the validator and is wired 
 | RPG | The Sunken Barrow | `content/rpg/pack/sunken_barrow.yaml` |
 | RPG | The Cold Forge | `content/rpg/pack/cold_forge.yaml` |
 | RPG | The Dawn Beacon | `content/rpg/pack/dawn_beacon.yaml` |
+| RPG | The Wolf-Winter | `content/rpg/pack/wolf_winter.yaml` |
 
 Most of this library — plus engine refinements like reactive room/scene descriptions
 (`variants`), an opt-in `meta.deadline` timer, and natural USE-verbs — was produced
