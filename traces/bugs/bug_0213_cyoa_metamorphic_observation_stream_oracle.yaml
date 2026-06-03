@@ -1,0 +1,106 @@
+id: bug_0213
+title: "The metamorphic oracle proved only TERMINAL/AGGREGATE isomorphism — added a PER-STEP observation-stream witness (CYOA, the deeper id-invariance lever bug_0212 named as next-focus #1)"
+kind: verification_oracle # metamorphic / isomorphism oracle, additive; the per-step companion to bug_0209
+mode: cyoa
+# Informational. NO src/ change, NO content change, NO hash re-pin, NO protected file
+# touched. ONE new test file that reuses the existing relabel_cyoa.ts + exhaustive_endings.ts
+# support and the production buildObservation. verify:integrity stays EXIT 0 with no
+# VERIFIER_TOUCHED / GUARD_WEAKENED / HASH_PIN. No pack content_hash, scorecard byte, or
+# corpus seal moves.
+
+summary: >
+  A GAP in the verification net, not a defect in shipped behaviour. The bug_0209/0211/0212
+  metamorphic oracle TRILOGY proves a pack and its identifier-relabeled twin are isomorphic
+  on three TERMINAL/AGGREGATE artefacts: the exhaustive ending-reachability census, the
+  distinct-state COUNT, and the validator finding-code multiset. Those are end-of-run
+  summaries. They would still pass if the engine emitted subtly DIFFERENT player-facing
+  OBSERVATIONS along the way (a scene's text, the enumerated choices, the surfaced
+  flags/vars/inventory) as long as the same endings stayed reachable and the state graph
+  kept the same size. bug_0213 closes that gap for CYOA with a PER-STEP witness: every
+  observation along the whole reachable graph must be identical (modulo the bijection) on
+  the twin.
+
+context: >
+  This is the deferred "assert the relabeled-twin's per-step observation stream is
+  isomorphic, not just its ending census/state-count — a deeper id-invariance witness"
+  lever named verbatim as bug_0212's next-focus #1. Content is saturated/blind-clean — this
+  cycle's mandated blind pass rotated (per [[assessor-blind-pass-rotation]]) OFF the harness
+  recency-blind rank-1 lamplighters_round (blind-played clean AND fixed two cycles back,
+  bug_0210) onto the most-overdue dedicated-blind target tithe_barn (CYOA, seed 23, last
+  dedicated pass bug_0194 — older than every other pack, explicitly named most-overdue by
+  the prior cycle bug_0212). Four playthroughs reached ALL FOUR endings (ending_doors /
+  ending_fall / ending_bounty / ending_mercy) at clarity 5/5, enjoyment 5/5, ZERO bugs
+  (ai-runs/2026-06-03T23-06-03-927Z/playtest.md). A clean pass on a clean pack is the
+  saturation signal, so the cycle spent its lever on the named structural oracle, not on
+  churning a clean pack ([[content-polish-backlog-exhausted]]).
+
+mechanism: >
+  tests/regression/cyoa_metamorphic_observation_stream.test.ts — for each shipped CYOA pack
+  it relabels the pack into a structurally-isomorphic twin (relabelCyoaPack, the existing
+  bug_0209 support) and walks the ENTIRE reachable state graph in LOCK-STEP on the original
+  and the twin. From corresponding states it takes corresponding (bijection-mapped) actions
+  and, at EVERY state, asserts the twin's production buildObservation equals the original's
+  observation pushed through the relabeling: scene_id, the available-action ids, and the
+  surfaced flag/var/inventory names all mapped through the bijection; the prose (title,
+  scene/ending text, choice text, journal) byte-identical. Flag lists are re-sorted after
+  mapping (visibleFlags sorts the ORIGINAL names, whose relabeled tokens sort differently and
+  the twin sorts its own); inventory is mapped WITHOUT re-sorting (it is insertion-ordered,
+  so an order divergence is still caught). It also asserts ok-PARITY on every step (a legal
+  original action maps to a legal twin action and vice versa).
+
+oracle: >
+  The lock-step walk is sound because both games are FULLY DETERMINISTIC (CYOA has no
+  randomness) and the relabel is a bijection: at every pair of corresponding states the
+  legal-action sets correspond under the map and stepping corresponding actions yields
+  corresponding successors, so the two walks stay in exact correspondence by construction.
+  Dedupe is on the ORIGINAL state fingerprint (stateKey from exhaustive_endings.ts), so each
+  distinct original state has its observation checked exactly once; by determinism the twin
+  state paired with a given original state is path-independent, so single-visit dedupe is
+  sound (the same argument bug_0121/0209 rely on). mapId is a NON-MUTATING lookup over the
+  frozen bijection map (relabeler.map.get(id) ?? id) — an unmapped id (a relabeler
+  incompleteness bug) is kept as itself and then mismatches the twin's relabeled id, a loud
+  failure rather than a silently-minted matching token.
+
+value: >
+  A deeper, intermediate-state-aware id-invariance witness that strictly subsumes what the
+  terminal census can see. (a) Soundness witness for the id-driven design at OBSERVATION
+  granularity: if a future engine/runner change ever made an observation depend on a literal
+  id — a scene id leaking into rendered text, choices ordered by id, a flag surfaced by name
+  — bug_0209's census could still pass while THIS diverges loudly at the first affected step.
+  (b) Contamination-robustness witness for the benchmark ([[ultraplan-true-goal-pivot]]) at
+  the granularity a model actually reasons over: the eval measures structure-following turn
+  by turn, not string recall — a model that memorised the original's id strings gains nothing
+  at ANY intermediate observation, not merely at the final ending.
+
+scope: >
+  CYOA this cycle, matching the bug_0121 reachability / bug_0209 metamorphic CYOA→parser→rpg
+  growth path (one mode per cycle). The next-focus is the PARSER then RPG extension of this
+  per-step observation-stream witness — the parser/RPG relabelers and observation builders
+  (buildParserObservation, buildRpgObservation) already exist, but the lock-step walk for RPG
+  must bracket the seeded combat/skill rolls exactly as exhaustiveEndingsMulti does (a single
+  deterministic walk is unsound there), so the parser extension lands first.
+
+out_of_band_teeth: >
+  Genuine behavioural witness, not vacuous green. Temporarily making buildObservation depend
+  on the LITERAL id FORM — `if (!state.current.startsWith("mx_")) nodeText.text += " [SABOTAGE]"`,
+  which fires only on original (non-relabeled) scene ids — fails ALL SIX CYOA packs: the
+  original's observation text diverges from the twin's at the first state. Reverting returns
+  7/7 green (1 discovery guard + 6 packs). The NON-VACUITY guards in the test also prove it
+  is a real metamorphic relation, not a pack compared to itself: the bijection map is
+  non-empty with no id mapping to itself, the RAW (pre-relabel) start observations of original
+  and twin DIFFER, and more than one state is compared per pack.
+
+regression_test: tests/regression/cyoa_metamorphic_observation_stream.test.ts
+
+verification: >
+  npx vitest run cyoa_metamorphic_observation_stream → 7 passed (1 discovery guard + 6 CYOA
+  packs). Non-vacuity confirmed by the [SABOTAGE] witness above (6/6 fail, then 7/7 green on
+  revert). npm run health GREEN (EXIT 0): verify:integrity OK (no GUARD_WEAKENED /
+  VERIFIER_TOUCHED / HASH_PIN / PROTECTED — only one new test + this trace), typecheck/lint/
+  prettier clean, full suite green (+1 file / +7 cases), all 15 packs validate 0/0, coverage
+  playtest ✓. No pack hash, scorecard byte, or corpus seal moved (no content edit → discovered
+  set unchanged → bug_0194 freshness pin stays green).
+
+files_changed:
+  - tests/regression/cyoa_metamorphic_observation_stream.test.ts  # the CYOA per-step observation-stream oracle (new)
+  - traces/bugs/bug_0213_cyoa_metamorphic_observation_stream_oracle.yaml
