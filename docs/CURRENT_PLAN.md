@@ -9,105 +9,236 @@ to do the work.
 
 ---
 
-## Ultraplan synthesis — 2026-06-03 (re-aim cycle #2)
+## Ultraplan synthesis — 2026-06-03 (re-aim cycle #3)
 
 Produced by a bounded local ultraplan (4 repo reviewers — engine/determinism ·
 content/authoring · verification&benchmark · loop/strategy — + 2 web researchers →
 1 synthesis), grounded in [`docs/ULTRAPLAN-2026-06-02.md`](./ULTRAPLAN-2026-06-02.md)
-and verified against the live tree. It **advances** the strategic layer; it does not
-restart it. The prior plan's chosen move (trust-boundary `GUARD_WEAKENED`, bug_0155)
-and the entire fresh-pack generator program it named as "next" have **all shipped**
-(CYOA core/MCP/assessor = bug_0156/0157/0158; RPG core/MCP/assessor = bug_0159/0160/0162).
-This cycle picks the next de-bundled slice.
+and [`docs/ROADMAP.md`](./ROADMAP.md), and verified against the live tree. It
+**advances** the strategic layer; it does not restart it.
 
-## Where the project stands
+The prior re-aim cycles' chosen moves have all shipped: held-out corpus persistence
+(bug_0163/0165), generator program under the integrity guard (bug_0167), and the
+**generator-deepening arc across all three modes** — parser depth-2 chain (bug_0168),
+CYOA two-axis 2×2 moral fork (bug_0169), RPG two-fight gauntlet (bug_0171). The
+content backlog is blind-saturated (10 packs clean) and the deterministic assessor
+sits at its 0.5 floor by construction. This cycle picks the next de-bundled
+structural slice.
 
-AdventureForge is a deterministic IF engine + MCP server + autonomous AFK loop, positioned to be the first contamination-free benchmark for real-frontier-model game authoring. Verified against the live tree this cycle:
+## Where the project stands (verified this cycle)
 
-- **Generators are LIVE and pure.** `src/gen/cyoa_generator.ts` and `src/gen/rpg_generator.ts` return fully schema-validated `CyoaPack`/`RpgPack` objects (pure mulberry32, no wall-clock). The assessor mints a disjoint window of `GEN_EVAL_CHECK_COUNT` (=4) packs per mode each cycle and asserts `validateCyoa`/`validateRpg` return zero findings — then **discards every minted pack**. No `writeFileSync`/`mkdir` exists in `src/gen/` or the assessor mint path.
-- **Deterministic-proof axes are saturated** across all 3 modes (endings-reachable, variant-liveness, score-economy, softlock-liveness, id-uniqueness). The assessor sits at its 0.5 floor; the generator-drift levers only fire on a *rejection*, which the fixed clean skeleton prevents. So deepening the validator surface cannot move the assessor and produces no publishable artifact.
-- **The benchmark scorecard is the last frozen-distribution surface.** `buildScorecard` plays only the curated disk YAML and never touches a generator.
-- **Hashing primitives exist:** `hashState(value)` (`src/core/hash.ts:31`) = SHA-256 over a recursively key-sorted canonical form — a wall-clock-free reproducibility seal. `yaml` v2.9 is already a dependency (`parse`/`stringify`).
-- **Hard guard to respect:** `tests/regression/all_packs_validated_by_bar.test.ts` asserts (`toEqual`) that discovery over `PACK_DIRS = content/{cyoa,parser,rpg}/pack` returns EXACTLY the 10 curated packs. Generated YAML MUST NOT land in those dirs (would fail this test + add a blind-playtest obligation).
-- `ai-runs/` is gitignored loop telemetry, not a committed corpus. A NEW top-level `corpus/` dir is committable and clean (it does not exist yet).
+- **The RPG combat validator has a known, live soundness blind spot.** `validateRpg`
+  (`src/validate/rpg_validator.ts:148-225`) proves combat winnability **per-fight,
+  each against the player's FULL reachable HP**: a lower `COMBAT_UNWINNABLE` bound
+  (best-case rolls, lines 185-197) and, when a pack opts in with
+  `meta.combat_guaranteed`, an upper `COMBAT_NOT_GUARANTEED` bound (worst-case rolls,
+  lines 210-224, `maxDamageTaken = maxEnemyDmg * (worstRoundsToKill - 1)`). Neither
+  threads HP **cumulatively** across sequential fights. So two fights that each pass
+  the upper bound alone can still kill a best-prepared player **jointly**.
+- **The just-shipped two-fight gauntlet relies on this blind spot staying open.**
+  `src/gen/rpg_generator.ts` (v2, bug_0171) deliberately does **NOT** set
+  `meta.combat_guaranteed` — its own docstring (≈lines 38-39, 633-634) says two
+  "guaranteed" fights "could still drain a best-prepared player on worst cumulative
+  rolls," so it leaves both fights as declared gambles. That is correct today only
+  *because* the validator cannot audit a multi-fight guarantee. bug_0171's own
+  "next suggested focus" named this exact check: *"make `validateRpg`'s combat bound
+  CUMULATIVE across multiple fights … the genuinely next-harder check."*
+- **Quantified witness** (against the live `max(1, d6 + atk − def)` math in
+  `src/rpg/combat.ts:35`): player hp20/atk6/def4, two sequential gated enemies each
+  hp13/atk5/def2. Per fight: worst player dmg `max(1,1+6−2)=5` → `ceil(13/5)=3`
+  rounds → enemy retaliates 2× at `max(1,6+5−4)=7` → `maxDamageTaken = 14 < 20`
+  (passes per-fight). Cumulative: `14 + 14 = 28 ≥ 20` (the guarantee is false across
+  the gauntlet).
+- **The held-out-vs-curated DELTA metric (lever a) is information-free this cycle.**
+  The only offline agent is the deterministic bot (0% on parser/RPG; byte-identical
+  hidden==shown CYOA rows), so a delta would measure generator difficulty, not
+  contamination. The benchmark-inflation literature (Retro-Holdouts / 2410.09247,
+  LiveBench, AntiLeakBench) is unanimous: a held-out delta is undefined without a
+  capable contamination-exposed agent scoring both arms — which is gated on the
+  owner API key and out of scope. Deferred, not chosen.
+- **Curated packs are single-enemy.** `cold_forge` and `sunken_barrow` each have one
+  enemy, so the cumulative sum equals the existing single term — they are provably
+  **unaffected** (no hash re-pin). The committed corpus generator does **not** set
+  `combat_guaranteed`, so no minted pack's verdict changes (no `generator_version`
+  bump, no re-seal).
 
-**Why this move wins this cycle.** Both research reports converge: the procedural *generator* is the contamination defense (BALROG/TextWorld/LiveBench), and a *sealed, timestamped, held-out test split* is the credibility anchor that makes any single reported number defensibly uncontaminated (sealed-exam literature; TALES held-out split; the frozen-verifier finding that a small injection of real held-out verification data raises the ceiling). AdventureForge already HAS the generator live in the loop's brain; the one missing piece is **persistence** — converting the throwaway in-memory windows into a committed, content-hash-sealed artifact. The strategy docs name this as the #1 deferred slice (`docs/ULTRAPLAN-2026-06-02.md` Year deliverable; the prior `CURRENT_PLAN.md` "fresh-pack generator + persistence … do it next"), and it is now de-bundled from the finished generator/MCP/assessor work (bug_0156–0162), so it is a small additive single-cycle slice. It is key-free, deterministic, strengthens the bar (adds a standing re-mint-and-verify check), and creates the on-disk substrate the scorecard and the future keyed real-model run both need.
+**Why this move wins this cycle.** Both web researchers and all four reviewers
+converge on lever (b) and reject lever (a). For *this* benchmark class the
+literature (BALROG ICLR'25, TALES, SoundnessBench) treats **verifier soundness** —
+procedurally-fresh instances *paired with a soundness-proving verifier* — as the
+load-bearing, most-citable property; the reward-hacking literature (arXiv 2510.14253
+which this repo already cites, EvilGenie 2511.21654) names a *present-but-incomplete
+checker* as the canonical exploit surface and a deepening-generator + frozen-verifier
+config as the reward-hacking trigger — exactly this repo's state. Closing a live
+verifier soundness hole is strictly higher-credibility, offline, than adding a
+reporting metric that has no signal yet. The fix is purely **additive**, **strengthens**
+the bar (lowers no `MIN_*`/`GEN_EVAL_CHECK_COUNT` floor, relaxes no matcher), is
+S-effort and surgical, key-free/deterministic, and regresses zero curated content.
 
 ---
 
-## Chosen move: HELD-OUT CORPUS PERSISTENCE
+## Chosen move: CUMULATIVE-HP-AWARE RPG COMBAT GUARANTEE
 
-Stand up a committed, content-hash-sealed held-out corpus of generator-minted packs
-under a new top-level `corpus/` dir, with a seal CLI and a re-mint-and-verify
-regression test wired into `npm run health`, turning the throwaway in-memory mint
-windows into the contamination-control artifact the benchmark thesis requires.
+Make `validateRpg`'s **opt-in** `combat_guaranteed` (upper) bound cumulative-HP-aware
+across a multi-fight gauntlet: sum each enemy's existing worst-case `maxDamageTaken`
+across all enemies and fire a new `COMBAT_GAUNTLET_NOT_GUARANTEED` error when the
+running total `>= playerHp`, even when every individual fight clears the per-fight
+bound. This turns *"every guaranteed-fair RPG must prove its fights JOINTLY
+survivable, not just individually"* into a declared, audited, **sound** property.
+
+### CRITICAL direction (do not get this wrong)
+
+Make the **UPPER / guarantee** bound cumulative, **NOT** the lower
+`COMBAT_UNWINNABLE` bound. The lower bound is a route-**existence** proof (*some*
+roll sequence wins); summing it across fights would be **unsound** — it would forbid
+a legitimate gamble gauntlet that a lucky player CAN clear, over-flagging deliberate
+design. Only the opt-in safety **promise** legitimately must hold across the whole
+sequence. The cumulative sum is an order-independent over-approximation (sums every
+enemy's worst case, ignoring fight order and optional/mutually-exclusive enemies):
+correct-conservative for a SAFETY promise because it can only **refuse** an unsafe
+guarantee, never falsely grant one. It must NOT be "tightened" into the lower bound.
 
 ### What (numbered concrete steps)
 
-1. **Add a `generator_version` stamp to each generator.** In `src/gen/cyoa_generator.ts` export `export const CYOA_GENERATOR_VERSION = 1;` and in `src/gen/rpg_generator.ts` export `export const RPG_GENERATOR_VERSION = 1;`. These do NOT change pack output — they are recorded in the manifest only, so a future generator change is a loud, diagnosable manifest mismatch ("generator changed") rather than silent corpus rot.
-
-2. **Create `bin/seal-corpus.ts`** (mirror the style of `bin/benchmark.ts`; `#!/usr/bin/env -S npx tsx`). It must:
-   - Mint a FIXED, explicit seed window for each mode (CYOA seeds `[0,1,2,3]`, RPG seeds `[0,1,2,3]` — hard-code these constants in the file; do NOT read `AI_LOOP_STATE.md`, the corpus must be a stable committed snapshot, not a moving window).
-   - For each seed: `generateCyoaPack(seed)` / `generateRpgPack(seed)`, then `validateCyoa` (from `src/validate/cyoa_validator.ts`) / `validateRpg` (from `src/validate/rpg_validator.ts`). If any pack has findings, throw (refuse to seal a dirty corpus).
-   - Write each pack as YAML via `import { stringify } from "yaml"` to `corpus/cyoa/<pack_id>.yaml` / `corpus/rpg/<pack_id>.yaml` (create dirs with `mkdirSync({recursive:true})`).
-   - Write `corpus/manifest.json` with a deterministic, key-sorted array of entries `{ mode, seed, pack_id, generator_version, content_hash }` where `content_hash = hashState(pack)` (from `src/core/hash.ts` — the SAME hash the MCP `generate_pack`/`generate_rpg_pack` tools already emit). Serialize with sorted keys / stable ordering so the committed file is byte-stable.
-
-3. **Run `npx tsx bin/seal-corpus.ts` once** and COMMIT the emitted `corpus/cyoa/*.yaml`, `corpus/rpg/*.yaml`, and `corpus/manifest.json`. This is the first sealed window; the git commit timestamp (post the relevant model cutoffs) supplies the contamination chain-of-custody.
-
-4. **Add a regression test `tests/regression/held_out_corpus_sealed.test.ts`** (mirror `tests/regression/all_packs_validated_by_bar.test.ts`'s discovery/zero-error pattern; note the generator tests in `tests/unit/cyoa_generator.test.ts` / `tests/unit/rpg_generator.test.ts` show the `validateCyoa`/`validateRpg` → `report.findings` usage and validator import paths). For each `corpus/manifest.json` entry it must assert ALL of:
-   - **Re-mint determinism:** re-mint from the recorded `seed` via the same generator and assert `hashState(remint) === entry.content_hash` (tamper/determinism evidence, no wall-clock).
-   - **Generator version match:** `entry.generator_version === CYOA_GENERATOR_VERSION` / `RPG_GENERATOR_VERSION`.
-   - **YAML round-trip stability:** `parse` the committed `corpus/<mode>/<pack_id>.yaml`, re-`hashState` it, and assert it equals `entry.content_hash` (the on-disk YAML is byte-faithful to the minted pack).
-   - **Production-bar clean:** `validateCyoa`/`validateRpg` on the re-mint returns zero findings (the corpus still clears the SAME bar the curated packs do — strengthens, never weakens).
-   - Assert the manifest entry count equals the seeded window size (no silent drop/add).
-
-5. **Wire a `corpus:seal` script into `package.json`** (`"corpus:seal": "npx tsx bin/seal-corpus.ts"`). The *verify* is the regression test itself, which already runs under `npm test` (the `tests/regression/` glob) and therefore under `npm run health` — confirm it is picked up; do not add a redundant health step.
-
-### Why
-
-- This is slice (a) done concretely and additively. It makes the contamination-free held-out set REAL (committed, content-hash-sealed, deterministically reproducible) WITHOUT a wall-clock — the `hashState` seal IS the reproducibility proof, sidestepping the engine's wall-clock ban.
-- It keeps generated YAML OUT of `content/{cyoa,parser,rpg}/pack`, so `all_packs_validated_by_bar.test.ts` stays green and no blind-playtest obligation is added.
-- The verify test STRENGTHENS the bar (a standing tamper/determinism + zero-findings check tied to the production validators), matching the "never weaken a check" constraint.
-- `generator_version` makes future deepening (the right NEXT cycle) honest: a hash mismatch becomes diagnosable as "generator changed" vs "corpus tampered."
+1. **Read first** `src/validate/rpg_validator.ts:144-225` and `src/rpg/combat.ts:35-107`
+   to confirm the combat math (player strikes first; damage `= max(1, d6 + atk − def)`;
+   enemy retaliates only on rounds it survives, i.e. `roundsToKill − 1`).
+2. In `validateRpg`, **before** the `for (const enemy of pack.enemies)` loop (≈line
+   149), declare `let cumulativeWorstDamage = 0;` (only meaningful when
+   `pack.meta.combat_guaranteed`).
+3. **Inside** the existing `if (pack.meta.combat_guaranteed)` block (lines 210-224),
+   after `maxDamageTaken` is computed (line 214), add
+   `cumulativeWorstDamage += maxDamageTaken;`. **Leave the existing per-fight
+   `COMBAT_NOT_GUARANTEED` finding (215-223) UNCHANGED.**
+4. **After** the per-enemy loop closes (after line 225), add:
+   `if (pack.meta.combat_guaranteed && cumulativeWorstDamage >= playerHp)` →
+   `findings.push(err("COMBAT_GAUNTLET_NOT_GUARANTEED", <message naming
+   cumulativeWorstDamage vs playerHp and stating the promise is broken across the
+   gauntlet even though each fight passes alone>, ["meta:combat_guaranteed"]));`.
+   Add a code comment stating it is an order-independent, guarantee-direction-only
+   over-approximation that can only refuse an unsafe guarantee — and must NOT be
+   moved/tightened into the lower bound or it becomes unsound.
+5. **Do NOT** modify the `COMBAT_UNWINNABLE` lower bound (185-197), **do NOT** add a
+   cumulative term to it, **do NOT** touch `combat.ts`, and **do NOT** lower any
+   `MIN_*` floor, `GEN_EVAL_CHECK_COUNT`, `PROTECTED_FILES`/`HASH_PIN_FILES` entry,
+   or relax any matcher.
+6. Add regression cases to `tests/regression/rpg_combat_guaranteed_optin.test.ts`
+   (a new `describe` block; keep ALL existing tests unchanged and passing). Follow
+   the worked-arithmetic style of the existing bug_0114 comments (≈lines 88-119) and
+   **recompute every expected number against the live `max(1, d6 ± …)` math.** Pin:
+   - **WITNESS:** a two-enemy `combat_guaranteed` pack (player hp20/atk6/def4, two
+     enemies each hp13/atk5/def2) does NOT trip the per-fight `COMBAT_NOT_GUARANTEED`
+     (each fight 14<20) but DOES trip the new `COMBAT_GAUNTLET_NOT_GUARANTEED`
+     (28≥20).
+   - **Fair gauntlet:** a genuinely-fair two-fight `combat_guaranteed` gauntlet (e.g.
+     high player def so each fight's worst `maxDamageTaken` is tiny and the sum stays
+     `< HP`) trips NEITHER code.
+   - **Single-fight monotonicity:** for any single-enemy pack, the new code fires
+     **iff** the per-fight `COMBAT_NOT_GUARANTEED` fires (cumulative == single term) —
+     pin both a single-fight pack that trips both, and a single-fight fair pack that
+     trips neither (so curated cold_forge/sunken_barrow are unaffected).
+   - **`>=` boundary:** cumulative sum `== playerHp` fires; `== playerHp − 1` is clean
+     (mirror bug_0114's boundary discipline).
+7. Write `traces/bugs/bug_0172_rpg_cumulative_combat_winnability.yaml` in the
+   bug_0171 artifact format (id, title, kind: engine, mode/meta, severity:
+   enhancement, layer: validator, `artifact.source: src/validate/rpg_validator.ts`,
+   `artifact.test: tests/regression/rpg_combat_guaranteed_optin.test.ts`, summary +
+   root_cause + fix + regression). Cite the witness and that it is the
+   genuinely-next-harder VALIDATOR-deepening check bug_0171 named; note curated packs
+   are single-enemy so unaffected; note the protected-file `VERIFIER_TOUCHED` is
+   expected and this is a strengthening, not a `GUARD_WEAKENED`.
+8. Verify: `npx vitest run tests/regression/rpg_combat_guaranteed_optin.test.ts
+   tests/unit/rpg_validator.test.ts` green, then `npm run health` fully green.
 
 ### Exact files
 
-- `src/gen/cyoa_generator.ts` — add `CYOA_GENERATOR_VERSION` export ONLY; do NOT alter emitted pack shape/bytes.
-- `src/gen/rpg_generator.ts` — add `RPG_GENERATOR_VERSION` export ONLY.
-- `bin/seal-corpus.ts` — NEW; uses `generateCyoaPack`/`generateRpgPack`, `validateCyoa`/`validateRpg`, `hashState` from `src/core/hash.ts`, `stringify` from `yaml`.
-- `corpus/manifest.json` — NEW, committed.
-- `corpus/cyoa/*.yaml`, `corpus/rpg/*.yaml` — NEW, committed; emitted by the CLI.
-- `tests/regression/held_out_corpus_sealed.test.ts` — NEW; mirrors `tests/regression/all_packs_validated_by_bar.test.ts`.
-- `package.json` — add `corpus:seal` script.
-- `traces/bugs/bug_0163_held_out_corpus_persistence.yaml` — NEW artifact (`type: invariant_lock`, `layer: test`; record the closed gap: generator output was minted-and-discarded, now sealed + re-mint-verified; cite the contamination-control thesis and `docs/ULTRAPLAN-2026-06-02.md`). Follow the bug_0162 artifact shape (bug_id, type, layer, evidence, root_cause, fix, regression).
+- `src/validate/rpg_validator.ts` — ADD the cumulative accumulator + the new
+  post-loop `COMBAT_GAUNTLET_NOT_GUARANTEED` finding + the do-not-tighten comment.
+  Per-fight lower and upper bounds stay byte-for-byte as-is. (This file is in
+  `PROTECTED_FILES` — the edit surfaces an expected, non-blocking `VERIFIER_TOUCHED`
+  warning; that is allowed. A `GUARD_WEAKENED` is forbidden.)
+- `tests/regression/rpg_combat_guaranteed_optin.test.ts` — ADD the cumulative-gauntlet
+  `describe` block (witness, fair gauntlet, single-fight monotonicity, `>=` boundary).
+- `traces/bugs/bug_0172_rpg_cumulative_combat_winnability.yaml` — NEW artifact.
 
 ### Acceptance check (concrete, verifiable)
 
-- `npm run health` is GREEN (verify:integrity, typecheck, lint, format:check, test, all curated validate steps, playtest) — the prior ~1150 tests PLUS the new corpus test passing.
-- `npm run verify:integrity` is GREEN with NO `GUARD_WEAKENED` / protected-deletion finding (no protected file altered; the generators get an additive export only — `src/gen/*` are NOT in `PROTECTED_FILES`, so editing them does not trip the guard).
-- The new `tests/regression/held_out_corpus_sealed.test.ts` PASSES: every `corpus/manifest.json` entry re-mints to a byte-identical `content_hash`, its committed YAML round-trips to the same hash, its `generator_version` matches, and `validateCyoa`/`validateRpg` returns zero findings.
-- `tests/regression/all_packs_validated_by_bar.test.ts` STILL PASSES (discovery still returns EXACTLY the 10 curated packs — proof `corpus/` did not pollute `content/*/pack`).
-- Running `npm run corpus:seal` a SECOND time produces a byte-identical `corpus/` tree and `manifest.json` (`git diff` empty) — proves determinism end-to-end.
-- Net test-case count RISES (new test), so the guard's own count-regression checks stay satisfied.
+- `npm run health` is fully GREEN; the only `verify:integrity` output is a
+  non-blocking `VERIFIER_TOUCHED` for `src/validate/rpg_validator.ts` — **NO
+  `GUARD_WEAKENED`**, no floor/matcher change, and **no change to
+  `tests/unit/rpg_validator.test.ts` pinned content hashes** (curated packs are
+  single-enemy and survive cumulatively).
+- The new regression proves the WITNESS (two-fight guaranteed pack passes per-fight
+  14<20 but trips `COMBAT_GAUNTLET_NOT_GUARANTEED` at 28≥20) and that a genuinely-fair
+  two-fight guaranteed gauntlet trips NEITHER.
+- Single-fight monotonicity is pinned (new code fires iff the per-fight code fires for
+  single-enemy packs), so curated `cold_forge`/`sunken_barrow` and all single-enemy
+  fixtures are unaffected.
+- The `>=` boundary is pinned (sum `== playerHp` fires; `== playerHp − 1` clean).
+- The committed held-out corpus and the generator are UNTOUCHED — no
+  `generator_version` bump, no re-seal; `held_out_corpus_sealed.test.ts` stays green.
+- Net test-case count RISES (new tests), so the guard's count-regression checks stay
+  satisfied.
+- `traces/bugs/bug_0172_rpg_cumulative_combat_winnability.yaml` exists in the
+  bug_0171 format.
 
 ---
 
 ## Hard constraints (every cycle)
 
-- **Never weaken a check.** No edits to any `PROTECTED_FILES` entry, no lowering of `MIN_*` floors or `GEN_EVAL_CHECK_COUNT`, no relaxing of matchers. The corpus test only ADDS a stronger gate.
-- **One focused change.** Persistence only. Do NOT deepen generators, do NOT add a parser generator, do NOT touch the scorecard or the assessor mint loop this cycle.
-- **Key-free / offline.** No outbound model calls; generators are pure mulberry32. No wall-clock, no nondeterministic RNG — the seal is `hashState`, the timestamp is the git commit.
-- **Corpus YAML MUST live under the new `corpus/` dir, NEVER under `content/{cyoa,parser,rpg}/pack`.**
-- **Do NOT commit** `ai-runs/`, `node_modules/`, `dist/`, `coverage/`, or `saves/*.json`. DO commit `corpus/` (it is the deliverable).
-- Generator edits are additive exports ONLY — the emitted pack bytes must not change, or every existing seed-pinned test and the new corpus hashes shift.
+- **Never weaken a check.** No edits to any `PROTECTED_FILES` semantics that lower a
+  gate, no lowering of `MIN_*` floors or `GEN_EVAL_CHECK_COUNT`, no relaxing of
+  matchers. This cycle only ADDS a stronger error code.
+- **One focused change.** The validator soundness fix only. Do NOT re-tune the
+  generator, do NOT bump `generator_version`, do NOT re-seal the corpus, do NOT touch
+  the scorecard or `combat.ts` this cycle.
+- **Key-free / offline / deterministic.** No outbound model calls; no wall-clock; no
+  nondeterministic RNG.
+- **Do NOT commit** `ai-runs/`, `node_modules/`, `dist/`, `coverage/`, or
+  `saves/*.json`.
 
 ---
 
 ## Rejected alternatives (this cycle)
 
-- **(b) Deepen the generators** (deadline/vars/multi-axis CYOA; combat_guaranteed/varied-enemy/deeper-map RPG) — real value and the right NEXT cycle, but the validator surface is already saturated/green by construction and the generator-drift lever only fires on a rejection the skeleton prevents, so it cannot move the assessor off 0.5 and produces no publishable artifact. Worse: deepening BEFORE persistence means depth lands in a discarded in-memory window. Deepen the thing you are now persisting — do it after (a); `generator_version` (added here) makes that safe.
-- **(c) Parser-only generator** — lowest strategic leverage: no strategy doc names it next, parser validators are largely a subset of the RPG surface the RPG generator already drives, and it still yields only a discarded in-memory window with no benchmark artifact. Defer until after the held-out corpus exists.
-- **Wire the corpus into the benchmark scorecard** — the true thesis bridge, but meaningless until a corpus is persisted; it is the natural FOLLOW-UP once `corpus/` exists, and bundling it here would exceed one focused single-cycle change.
-- **Route `adapt_story`'s mock fallback through the generator** — improves the key-free authoring path but carries high behavioral coupling (the `MockAuthorProvider` revise-loop contract and several pinned authoring tests). Sequence after persistence.
-- **Add generators to `PROTECTED_FILES` / guard `GEN_EVAL_CHECK_COUNT`** — worthwhile hardening, but a separate trust-boundary cycle; combining it with persistence violates the one-focused-change constraint. Note for a future cycle.
-- **The keyed real-model author→play→fix→lock run** — highest-value move overall, but GATED on owner API-key authorization; out of scope for an autonomous, key-free cycle.
+- **(a) Held-out-vs-curated DELTA metric in `renderMarkdown`** — information-free
+  key-free: the only offline agent is the deterministic bot (0% parser/RPG,
+  byte-identical hidden==shown CYOA rows), so the delta measures generator difficulty,
+  not contamination; the literature (2410.09247, LiveBench, AntiLeakBench) says a
+  held-out delta is undefined without a capable contamination-exposed agent scoring
+  both arms — gated on the owner API key. Shipping it now risks a misleading all-floor
+  metric. Defer to the post-keyed-run cycle.
+- **Make the `COMBAT_UNWINNABLE` LOWER bound cumulative** — UNSOUND. It is a
+  route-existence proof; summing it would forbid a legitimate gamble gauntlet a lucky
+  player can clear. Only the opt-in upper/guarantee bound legitimately holds across
+  the sequence (confirmed by the generator's own docstring).
+- **Re-tune the RPG generator so the gauntlet SOUNDLY sets `combat_guaranteed`** —
+  real value and the right NEXT cycle, but it couples a validator deepening with a
+  distribution change (touches a PROTECTED generator, forces a `generator_version`
+  bump + corpus re-seal, risks over-tuning fights to triviality). Larger blast radius;
+  violates one-focused-change. Sequence AFTER this lands.
+- **Refresh + freshness-pin the committed scorecard** (`traces/benchmark/scorecard.*`,
+  stale since bug_0165) — a clean, low-risk win, but reporting hygiene, not a
+  bar-strengthening structural move. Strong candidate for a NEXT cycle.
+- **Corpus growth / route MockAuthor through generators** — pure breadth or negative
+  value (the mock exists to exercise the revise loop; generators emit validator-clean
+  packs by construction, destroying that coverage).
+- **Guard `corpus/manifest.json` against silent deletion** — a legitimate low-effort
+  tightening but does not strengthen a correctness oracle against the harder
+  distribution. Park as an optional small follow-up.
+- **The keyed real-model author→play→fix→lock run** — highest-value overall, but
+  GATED on owner API-key authorization; out of scope for an autonomous, key-free cycle.
+
+---
+
+## Deferred to next cycle (explicit)
+
+After the cumulative bound lands: **re-tune the RPG generator so its two-fight
+gauntlet SOUNDLY sets `meta.combat_guaranteed: true`** (behind a `generator_version`
+bump + corpus re-seal), making every RPG mint exercise the new cumulative upper bound
+as a *green* case — turning the validator's hardest check into a per-mint obligation
+rather than a frozen target (optionally paired with a validator-independent exhaustive
+cumulative-survival cross-check in `tests/regression/support/exhaustive_endings.ts`).
+Then: the DELTA metric + scorecard refresh (load-bearing once a keyed agent row
+exists); the keyed real-model run (gated on API key); optional trust tightening
+(add `corpus/manifest.json` to `PROTECTED_FILES`).

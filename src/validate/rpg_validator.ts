@@ -146,6 +146,11 @@ export function validateRpg(pack: RpgPack): ValidationReport {
   const playerDef = statCeiling(DEFENSE_VAR);
 
   // ── Enemies ──────────────────────────────────────────────────────────────────
+  // Cumulative worst-case damage across the whole opt-in `combat_guaranteed`
+  // gauntlet (bug_0172). Only meaningful when the pack PROMISES fair fights: it
+  // sums each enemy's per-fight worst-case `maxDamageTaken` so a multi-fight
+  // guarantee can be audited JOINTLY, not just per-fight. See the post-loop check.
+  let cumulativeWorstDamage = 0;
   for (const enemy of pack.enemies) {
     if (!roomIds.has(enemy.room))
       findings.push(
@@ -212,6 +217,7 @@ export function validateRpg(pack: RpgPack): ValidationReport {
       const worstRoundsToKill = Math.ceil(enemy.hp / worstPlayerDmg);
       const maxEnemyDmg = Math.max(1, 6 + enemy.attack - playerDef);
       const maxDamageTaken = maxEnemyDmg * (worstRoundsToKill - 1);
+      cumulativeWorstDamage += maxDamageTaken;
       if (maxDamageTaken >= playerHp) {
         findings.push(
           err(
@@ -222,6 +228,32 @@ export function validateRpg(pack: RpgPack): ValidationReport {
         );
       }
     }
+  }
+
+  // Cumulative-HP-aware gauntlet guarantee (bug_0172). The per-fight upper bound
+  // above proves each fight survivable against the player's FULL reachable HP, but
+  // never threads HP across SEQUENTIAL fights — so two fights that each clear the
+  // bound alone can still jointly fell a best-prepared player on worst cumulative
+  // rolls. When a pack PROMISES fair fights (`meta.combat_guaranteed`), that safety
+  // promise must hold across the WHOLE gauntlet, not just each fight in isolation.
+  //
+  // The sum of every enemy's worst-case `maxDamageTaken` is an order-independent
+  // OVER-approximation of the worst total damage a player can take: it ignores fight
+  // order and treats optional/mutually-exclusive enemies as all-fought. That is the
+  // correct-conservative direction for a SAFETY promise — it can only REFUSE an
+  // unsafe guarantee, never falsely grant one. It is therefore tied to the UPPER /
+  // guarantee bound ONLY. Do NOT move or "tighten" this into the lower
+  // COMBAT_UNWINNABLE bound: that bound is a route-EXISTENCE proof (some roll
+  // sequence wins), and summing it would forbid a legitimate gamble gauntlet a lucky
+  // player CAN clear — i.e. it would be UNSOUND. Keep it post-loop and upper-only.
+  if (pack.meta.combat_guaranteed && cumulativeWorstDamage >= playerHp) {
+    findings.push(
+      err(
+        "COMBAT_GAUNTLET_NOT_GUARANTEED",
+        `meta.combat_guaranteed is set, but the fights are not jointly survivable: across the gauntlet the player can take up to ${cumulativeWorstDamage} cumulative damage on worst-case rolls vs ${playerHp} reachable HP, so a best-prepared player can fall over the sequence even though each fight passes alone. Make the gauntlet survivable on every roll, or drop the guarantee and let it stand as a declared gamble.`,
+        ["meta:combat_guaranteed"],
+      ),
+    );
   }
 
   // ── Skill checks ─────────────────────────────────────────────────────────────
