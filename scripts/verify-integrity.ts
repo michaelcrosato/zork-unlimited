@@ -51,6 +51,22 @@ export const PROTECTED_FILES = [
   "src/validate/parser_validator.ts",
   "src/validate/rpg_validator.ts",
   "src/persist/save_load.ts",
+  // The generator program is the eval-distribution credibility anchor. These files
+  // mint the never-frozen procedural packs the assessor mint-and-check levers confront
+  // every cycle (CYOA bug_0158 / RPG bug_0162 / parser bug_0166) AND seal the committed
+  // held-out corpus the benchmark thesis rests on (bug_0163/bug_0165). A SILENT
+  // weakening of a generator or the seal CLI would let a degraded eval distribution
+  // through the OUTPUT gates unnoticed, so the SOURCE is guarded too: deleting one is
+  // now a hard error and editing one (a deliberate deepen cycle behind a
+  // generator_version bump) surfaces a VERIFIER_TOUCHED warning for review. bug_0167,
+  // the bug_0164 deferred item c.
+  //
+  // NOTE: keep this comment free of apostrophes/quotes/brackets — parseGuardConstants
+  // pure-parses this array literal and a stray quote would read as a phantom entry.
+  "src/gen/cyoa_generator.ts",
+  "src/gen/rpg_generator.ts",
+  "src/gen/parser_generator.ts",
+  "bin/seal-corpus.ts",
   "scripts/verify-integrity.ts",
 ];
 

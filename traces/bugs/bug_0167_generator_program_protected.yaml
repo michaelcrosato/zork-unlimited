@@ -1,0 +1,74 @@
+id: bug_0167
+title: "Place the generator program (the eval distribution's credibility anchor) under the verifier-integrity guard"
+kind: engine
+mode: meta
+severity: enhancement
+layer: verifier-integrity
+artifact:
+  source: scripts/verify-integrity.ts
+  test: tests/regression/generator_program_protected.test.ts
+
+summary: >
+  The mandated blind pass this cycle (wreckers_light, CYOA, seed 7) re-confirmed content is
+  blind-clean: clarity 5/5, enjoyment 5/5, ZERO mechanical bugs across FOUR routes to ALL FOUR
+  declared endings (ending_saved with the knows_truth reactive epilogue, ending_drowned,
+  ending_wrecker, ending_mercy), with the inventory-gated hang_false_light, the knowledge-gated
+  gallery/lantern prose, and the reactive mantel/cask/chest text all confirmed live. The tester's
+  lone note (the gallery climb-to-wreck death is unsignposted) was NOT actionable — that label was
+  already renamed in a prior cycle to foreshadow its own lethality ("Climb over the rail and down the
+  storm-slick rungs into the breaking sea below", ai-runs/2026-06-02T01-45-25-898Z) and the gallery
+  prose already shows the sickening drop; the tester explicitly rated it not-a-bug. So there was no
+  content defect. Per [[content-polish-backlog-exhausted]] that is the saturated state, and the
+  documented standing structural lever (bug_0166 / bug_0164 next-focus item (c)) is the trust-boundary
+  hardening: the generator program had sat OUTSIDE the verifier-integrity guard's PROTECTED_FILES.
+
+mandated_blind_playtest:
+  run: ai-runs/2026-06-03T10-47-36-428Z/playtest.md
+  pack: content/cyoa/pack/wreckers_light.yaml
+  seed: 7
+  result: "reached ending_saved (light the lamp knowing whose hand is at the wheel), ending_drowned (climb into the sea), ending_wrecker (hang a false light), ending_mercy (tend the keeper); clarity 5/5, enjoyment 5/5; ZERO bugs; inventory-gated and knowledge-gated choices/prose all confirmed live"
+  triage: >
+    No actionable content defect — wreckers_light is blind-clean. The tester's lone note (gallery
+    death is unsignposted) was already addressed in a prior cycle and rated not-a-bug. Per
+    [[content-polish-backlog-exhausted]] the only live lever is structural, so the cycle advanced the
+    plan's named next slice — hardening the trust boundary around the generator program — instead of
+    churning a clean pack.
+
+what:
+  - >
+    scripts/verify-integrity.ts — added the generator program to PROTECTED_FILES:
+    src/gen/cyoa_generator.ts, src/gen/rpg_generator.ts, src/gen/parser_generator.ts, and the seal
+    CLI bin/seal-corpus.ts. These mint the never-frozen procedural packs the assessor mint-and-check
+    levers confront every cycle (CYOA bug_0158 / RPG bug_0162 / parser bug_0166) and seal the
+    committed held-out corpus the benchmark thesis rests on (bug_0163/bug_0165). Adding entries is
+    pure TIGHTENING of the guard surface (never a GUARD_WEAKENED): deleting one is now a hard
+    PROTECTED_DELETED error, editing one (e.g. a deliberate `deepen` cycle behind a generator_version
+    bump) surfaces a non-blocking VERIFIER_TOUCHED warning for review, and dropping one back out of
+    PROTECTED_FILES is itself the DGM "edit-the-checker" launder (GUARD_WEAKENED).
+  - >
+    tests/regression/generator_program_protected.test.ts (+6 cases) — exercises the REAL pure
+    detectors on the REAL PROTECTED_FILES list: every generator-program file is in PROTECTED_FILES
+    and exists on disk; the real runStatic raises no PROTECTED_MISSING for them; classifyDrift treats
+    a generator DELETION as a hard PROTECTED_DELETED error and a generator EDIT as a non-blocking
+    VERIFIER_TOUCHED warning (so deepen cycles stay legal); and detectGuardWeakening fires
+    GUARD_WEAKENED if a future cycle removes one from the protected list.
+
+why: >
+  Trust-but-verify (AGENTS.md): under full agent trust the dominant failure mode is reward-hacking —
+  silently weakening the very assets that establish correctness. The verifier-integrity guard already
+  protects the engine, validators, persistence, determinism property tests, and itself. But the loop
+  has since made the GENERATORS first-class verification assets — they ARE the moving target the
+  mint-and-check levers and the held-out corpus depend on for their contamination-free credibility.
+  A silent degradation of a generator (e.g. quietly narrowing what it emits so the validators only
+  ever see trivial packs) would pass the downstream OUTPUT gates while hollowing out the eval signal.
+  Guarding the SOURCE closes that gap: the weakening must now be visible and against the rules, not
+  silent.
+
+verification: >
+  npm run health EXIT 0. verify:integrity static OK (the four added paths all exist; PROTECTED_MISSING
+  empty). NO GUARD_WEAKENED — the change only ADDS entries to PROTECTED_FILES (tightening); the drift
+  self-check compares ref→tree and finds nothing removed. The parseGuardConstants round-trip test
+  (verifier_integrity.test.ts) still passes — it reads PROTECTED_FILES from the same source it parses.
+  Additive: a guard-list extension + a new regression test + this artifact. No test deleted/disabled,
+  no count regression, no hash re-pin (sunken_barrow 7791fc14… + cold_forge 8590fefd… unchanged), no
+  content/engine/validator/schema/generator/assessor behavior change.
