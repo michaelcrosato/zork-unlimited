@@ -1,0 +1,83 @@
+bug_id: bug_0148
+pack_id: all_parser         # structural invariant over every shipped PARSER pack (auto-discovered)
+seed: 7
+type: invariant_lock        # no defect found in shipped content; machine-enforces a hand-obeyed authoring invariant
+layer: test                 # regression-only; NO content/engine/validator/schema change, NO hash pin moved
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-03T04-17-43-894Z/playtest.md   # sealed_crypt seed 37 (the cycle's mandated, correctly-rotated target — least-recently blind-played per [[assessor-blind-pass-rotation]])
+  finding: >
+    The mandated blind pass on The Sealed Crypt (parser, seed 37 — the least-recently
+    blind-played pack per [[assessor-blind-pass-rotation]], last dedicated pass bug_0139)
+    played three routes to all three declared endings (victory 35/35, doom death, plunder
+    greed) and rated the pack clarity 5/5, enjoyment 4/5, ZERO bugs — re-confirmed
+    blind-clean. Its only structural note was about the SCORE shown at the bad endings
+    (10/35), which it correctly judged conventional IF behaviour, not a bug. Content is
+    blind-exhausted per [[content-polish-backlog-exhausted]]. With the assessor collapsed
+    to the 0.5 floor and the keystone (a real frontier model) deferred for want of a
+    provider key (docs/ULTRAPLAN-2026-06-02.md), the cycle's lever is a KEY-FREE §15
+    structural guarantee — and the playtest's focus on the score readout pointed at the
+    one economy property the verification net never machine-checked.
+root_cause: >
+  A gap in the structural-verification net, not a content defect — the SCORE-ECONOMY
+  analogue of the bug_0145/0146/0147 variant-liveness proofs. The corpus already proves
+  exhaustively that every declared ENDING is reachable (parser_all_endings_reachable) and
+  every reactive VARIANT is live (parser_variant_liveness), but NOTHING proved the score
+  economy sound. Two real defects slip through every current check:
+    (1) BOUNDED OVERFLOW — a misconfigured / double-counted / re-farmable award pushes the
+        reachable score PAST the declared ceiling (a "37/35"). The exhaustive ending solver
+        catches only an UNBOUNDED farm (the score var never settles -> the BFS hits its
+        state cap -> a loud cappedOut). A BOUNDED over-award (two one-time awards summing
+        above max_score, or a single miscalibrated inc_var) keeps the state space finite,
+        so the solver passes and nothing flags it.
+    (2) PHANTOM POINTS — max_score is declared HIGHER than any route can reach (the
+        completionist's "35/40 and no points left anywhere"). The reachability proof checks
+        only WHICH endings fire, never the score AT them, so an unreachable max is invisible
+        to it. The exact dual of bug_0104 ("score peaks early"): there the max is reached
+        too SOON, here it is never reached at all. bug_0116's SCORE_PEAKS_BEFORE_WIN reasons
+        about WHEN the peak lands relative to the win act; it never asserts the peak EQUALS
+        the declared max.
+fix: >
+  Test-only (§15 lock-the-finding), REUSING the existing exhaustive-BFS seam — no helper
+  change. A new regression (parser_score_economy_sound.test.ts) drives the shared BFS
+  (support/exhaustive_endings.ts) with the LIVENESS action policy bug_0146 established
+  (step every action except the pure-observation verbs and DROP — crucially DOES step READ,
+  which carries sealed_crypt's +5 headstone award) and, via the onState hook, records the
+  maximum `score` var over the COMPLETE reachable region. It asserts that reachable maximum
+  equals pack.meta.max_score EXACTLY for every auto-discovered parser pack — one tight
+  invariant catching both directions: reachable max > declared is overflow/farm/under-
+  declared max_score; reachable max < declared is phantom points. No content/engine/
+  validator/schema change.
+within_bar: >
+  Regression test only; NO new support-helper code (reuses the behaviour-preserving
+  explore/onState params bug_0145/0146 added). No pack edited; no validator/schema/engine
+  change; NO hash pin moved (all 9 packs validate 0/0, content_hashes unchanged).
+  Deterministic, no LLM-judge, NO API key. Sound by construction: the liveness policy steps
+  READ and every progress action so every score-award state is visited; every state it
+  visits is a real, legal playthrough so the observed maximum is the TRUE reachable maximum
+  (no over- or under-count — no award gates on a dropped-item location, the one thing the
+  skipped DROP could affect); and the search FAILS on cappedOut, never truncating into a
+  silent pass.
+result:
+  shipped_packs_economy_sound: true   # reachable max == declared max_score for both shipped parser packs
+  reachable_maxima: { sealed_crypt: 35, alchemists_tower: 40 }   # each exactly equals its declared max_score
+regression_test: tests/regression/parser_score_economy_sound.test.ts
+test_cases:
+  - "discovers the shipped parser packs (guards against a vacuous pass if the glob yields nothing)"
+  - "the shipped corpus actually exercises scoring (some pack declares max_score > 0) — anti-vacuity guard"
+  - "sealed_crypt: reachable max score == declared max_score (35), search not capped"
+  - "alchemists_tower: reachable max score == declared max_score (40), search not capped"
+  - "FAILS on a planted OVERFLOW pack (two gated awards sum to 20 > declared 15) — the solver would NOT catch this bounded over-award"
+  - "FAILS on a planted PHANTOM-POINTS pack (only 10 reachable, max_score declares 20)"
+  - "PASSES a sound economy (two gated awards sum EXACTLY to a correctly-declared max of 15) — the no-false-alarm positive control"
+notes: >
+  Together with bug_0116 (SCORE_PEAKS_BEFORE_WIN, the static "when does the peak land"
+  smell) this closes the score-economy defect class for the parser mode: the static check
+  guards the peak's TIMING relative to the win act, this dynamic check guards the peak's
+  VALUE equals the declared max. The natural extension is the RPG mode (also score-bearing:
+  cold_forge 40, sunken_barrow 50), which would drive the best/worst-roll bracket
+  (exhaustiveEndingsMulti, bug_0124) under the same liveness policy — but must first confirm
+  no score award is gated on a roll-dependent transient the best/worst extremes skip (the
+  same caveat bug_0147 resolved for RPG variant liveness). CYOA packs do not use milestone
+  scoring, so the parser+RPG modes are the whole scope. See [[cyoa-exhaustive-solver]].
