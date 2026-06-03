@@ -1,0 +1,117 @@
+id: bug_0214
+title: "Extended the PER-STEP metamorphic observation-stream oracle to the PARSER mode (the deeper id-invariance witness bug_0213 named as next-focus #1)"
+kind: verification_oracle # metamorphic / isomorphism oracle, additive; the parser companion to bug_0213 (CYOA) and the per-step deepening of the bug_0211 parser census
+mode: parser
+# Informational. NO src/ change, NO content change, NO hash re-pin, NO protected file
+# touched. ONE new test file that reuses the existing relabel_parser.ts + exhaustive_endings.ts
+# (stateKey) support and the production buildParserObservation. verify:integrity stays EXIT 0
+# with no VERIFIER_TOUCHED / GUARD_WEAKENED / HASH_PIN. No pack content_hash, scorecard byte,
+# or corpus seal moves.
+
+summary: >
+  A GAP in the verification net, not a defect in shipped behaviour. The bug_0211 PARSER
+  metamorphic census proves a parser pack and its identifier-relabeled twin are isomorphic
+  on three TERMINAL/AGGREGATE artefacts: the exhaustive ending-reachability census, the
+  distinct-state COUNT, and the validateParser finding-code multiset. Those are end-of-run
+  summaries. They would still pass if the engine emitted subtly DIFFERENT player-facing
+  OBSERVATIONS along the way (a room's description, the enumerated commands, the surfaced
+  flags/vars/inventory, the blocked-exit hints) as long as the same endings stayed reachable
+  and the state graph kept the same size. bug_0214 closes that gap for PARSER with a PER-STEP
+  witness: every observation along the whole reachable graph must be identical (modulo the
+  bijection) on the twin — the exact parser analogue of bug_0213's CYOA per-step oracle.
+
+context: >
+  This is the deferred "extend THIS per-step observation-stream witness to PARSER then RPG
+  (the CYOA->parser->rpg path the census/metamorphic oracles both took)" lever named verbatim
+  as bug_0213's next-focus #1. Content is saturated/blind-clean — this cycle's mandated blind
+  pass ran on lamplighters_round (parser, seed 23; the harness/assessor recency-blind rank-1
+  and freshest parser pack). Fresh general-purpose subagent, no design context, MCP-tools-only,
+  THREE playthroughs reaching ALL THREE endings (ending_guided WIN 35/35 / ending_caught DEATH
+  / ending_thief greed), clarity 5/5, enjoyment 4/5, mechanics flawless, ZERO bugs
+  (ai-runs/2026-06-03T23-18-47-895Z/playtest.md). A clean pass on a clean pack is the
+  saturation signal, so the cycle spent its lever on the named structural oracle, not on
+  churning a clean pack ([[content-polish-backlog-exhausted]]).
+
+mechanism: >
+  tests/regression/parser_metamorphic_observation_stream.test.ts — for each shipped PARSER
+  pack it relabels the pack into a structurally-isomorphic twin (relabelParserPack, the
+  existing bug_0211 support) and walks the reachable state graph in LOCK-STEP on the original
+  and the twin. From corresponding states it takes corresponding (bijection-mapped) actions
+  and, at EVERY state, asserts the twin's production buildParserObservation equals the
+  original's observation pushed through the relabeling: room id, visible_objects[].id,
+  npcs_present[].id, exits[].to, inventory, the surfaced flag/var names, dialogue.npc,
+  ending/ending_id, and every available_actions entry's structured action ids AND its derived
+  id all mapped through the bijection; the prose (names, descriptions, variant text, npc_text,
+  journal, ending title/text, blocked-exit message) and the per-action command VOCABULARY
+  string left byte-identical. Each action id is re-derived from its mapped structured action by
+  a local optionId() that mirrors enumerateActions, and that formula is CROSS-CHECKED against
+  the production id on every original observation so a drift fails here rather than masking a
+  divergence. It also asserts ok-PARITY on every explored step.
+
+oracle: >
+  The lock-step walk is sound because both games are FULLY DETERMINISTIC (the shipped parser
+  packs carry no skill-check randomness on the reachable graph — the census treats each as
+  deterministic) and the relabel is a bijection: at every pair of corresponding states the
+  legal-action sets correspond under the map and stepping corresponding actions yields
+  corresponding successors, so the two walks stay in exact correspondence by construction.
+  Dedupe is on the ORIGINAL state fingerprint (stateKey from exhaustive_endings.ts). EXPLORATION
+  uses the LIVENESS policy (parser_variant_liveness.test.ts): skip {DROP, CLOSE, LOOK, INVENTORY,
+  INSPECT} as recursion EDGES but step READ (it carries sticky interaction effects — e.g.
+  lamplighters' notice sets read_notice + score, driving reactive variants). Skipped verbs are
+  still observation-CHECKED at every state via the full available_actions comparison; excluding
+  only the combinatorial DROP-into-every-room edge keeps the verb x object x room graph under the
+  200k state cap (a cap-out fails loudly). ORDER NORMALISATION: visible_objects / npcs_present /
+  inventory / state.flags / available_actions are emitted in id-SORTED order by the builder, and
+  opaque mx_<n> tokens sort differently from the originals, so those arrays are compared as SETS
+  (a canonical() re-sort by id applied identically to BOTH sides — a real content divergence
+  still fails; order-bearing journal/exits left in order). mapId is a NON-MUTATING lookup over
+  the frozen bijection map (relabeler.map.get(id) ?? id), with score a fixed point (never in the
+  map) exactly as the relabeler holds it — an unmapped id is kept as itself and then mismatches
+  the twin's relabeled id, a loud failure rather than a silently-minted matching token.
+
+value: >
+  A deeper, intermediate-state-aware id-invariance witness for PARSER that strictly subsumes
+  what the bug_0211 terminal census can see. (a) Soundness witness for the id-driven design at
+  OBSERVATION granularity: if a future engine/runner change ever made a parser observation
+  depend on a literal id — a room id leaking into rendered text, commands ordered or named by
+  id, a flag surfaced by raw name — bug_0211's census could still pass while THIS diverges
+  loudly at the first affected step. (b) Contamination-robustness witness for the benchmark
+  ([[ultraplan-true-goal-pivot]]) at the granularity a model actually reasons over: the eval
+  measures structure-following turn by turn, not string recall — a model that memorised the
+  original's id strings gains nothing at ANY intermediate observation, not merely at the final
+  ending.
+
+scope: >
+  PARSER this cycle, matching the bug_0121 reachability / bug_0209/0213 metamorphic
+  CYOA->parser->rpg growth path (one mode per cycle). The next-focus is the RPG extension of
+  this per-step observation-stream witness — buildRpgObservation and relabel_rpg.ts already
+  exist, but the RPG lock-step walk must BRACKET the seeded combat/skill rolls exactly as
+  exhaustiveEndingsMulti does (a single deterministic walk is unsound there — one state
+  transitions many ways), so RPG lands last and is the deferred follow-on.
+
+out_of_band_teeth: >
+  Genuine behavioural witness, not vacuous green. Temporarily making buildParserObservation
+  depend on the LITERAL id FORM — appending " [SABOTAGE]" to the room description when
+  `!state.current.startsWith("mx_")`, firing only on original (non-relabeled) room ids — fails
+  ALL FOUR shipped parser packs: the original's description diverges from the twin's at the
+  first state. Reverting returns 5/5 green (1 discovery guard + 4 packs). The NON-VACUITY guards
+  in the test also prove it is a real metamorphic relation, not a pack compared to itself: the
+  bijection map is non-empty with no id mapping to itself, the RAW (pre-relabel) start
+  observations of original and twin DIFFER, more than one state is compared per pack, and
+  optionId is cross-checked against the production action ids on every original observation.
+
+regression_test: tests/regression/parser_metamorphic_observation_stream.test.ts
+
+verification: >
+  npx vitest run parser_metamorphic_observation_stream → 5 passed (1 discovery guard + 4 PARSER
+  packs: alchemists_tower, friars_postern, lamplighters_round, sealed_crypt). Non-vacuity
+  confirmed by the [SABOTAGE] witness above (4/4 fail, then 5/5 green on revert). npm run health
+  GREEN (EXIT 0): verify:integrity OK (no GUARD_WEAKENED / VERIFIER_TOUCHED / HASH_PIN /
+  PROTECTED — only one new test + this trace), typecheck/lint/prettier clean, full suite green
+  (+1 file / +5 cases), all 15 packs validate 0/0, coverage playtest ✓. No pack hash, scorecard
+  byte, or corpus seal moved (no content edit → discovered set unchanged → bug_0194 freshness
+  pin stays green).
+
+files_changed:
+  - tests/regression/parser_metamorphic_observation_stream.test.ts  # the PARSER per-step observation-stream oracle (new)
+  - traces/bugs/bug_0214_parser_metamorphic_observation_stream_oracle.yaml
