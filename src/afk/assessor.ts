@@ -21,6 +21,9 @@ import { createToolApi } from "../mcp/tools.js";
 import { loadPackFile } from "../cyoa/pack.js";
 import type { CyoaPack } from "../cyoa/schema.js";
 import type { PackMode } from "../mcp/types.js";
+import { generateCyoaPack } from "../gen/cyoa_generator.js";
+import { validateCyoa } from "../validate/cyoa_validator.js";
+import type { ValidationReport } from "../validate/report.js";
 
 export type Category = "content_fix" | "content_new" | "engine" | "repo";
 
@@ -287,6 +290,83 @@ function lastAttendanceOffsets(root: string): Map<string, number> {
   const p = join(root, "AI_LOOP_STATE.md");
   if (!existsSync(p)) return new Map();
   return parseAttendanceOffsets(readFileSync(p, "utf8"));
+}
+
+// ── Generator mint-and-check lever (bug_0158) ─────────────────────────────────
+// The fresh-pack generator (src/gen/cyoa_generator.ts, bug_0156) exists to EVOLVE
+// the eval distribution so the verifier faces a MOVING target rather than a
+// memorisable frozen set — the published cure for the frozen-verifier stall the
+// assessor itself collapsed into (arXiv 2510.14253; [[fresh-pack-generator]],
+// [[verifier-assertion-guard]]). bug_0156 built the minting core, bug_0157 exposed
+// it through MCP; this is the next documented slice (docs/CURRENT_PLAN.md): make
+// the assessor mint-and-check a fresh slice of the distribution EVERY cycle, so the
+// production verifier is provably exercised against never-seen packs each pass, not
+// just the curated ten.
+
+/**
+ * How many completed improvement cycles AI_LOOP_STATE.md records — each cycle PREPENDS
+ * one "### Cycle result" entry, so this count grows by one per cycle. It is the per-cycle
+ * base for the generator mint-and-check below: a PURE function of repo state (same log ⇒
+ * same count, so `assess()` stays deterministic) that nonetheless ADVANCES every cycle, so
+ * successive cycles confront DISJOINT windows of the generated seed space rather than
+ * re-checking one frozen pack. That advancing-yet-deterministic seed is exactly the
+ * "moving target" property the frozen-verifier literature prescribes.
+ */
+export function generatedEvalSeedBase(loopStateText: string): number {
+  return (loopStateText.match(/^### Cycle result/gm) ?? []).length;
+}
+
+/** Disk wrapper for {@link generatedEvalSeedBase}; 0 when the log is absent. */
+function generatedEvalSeedBaseFromDisk(root: string): number {
+  const p = join(root, "AI_LOOP_STATE.md");
+  if (!existsSync(p)) return 0;
+  return generatedEvalSeedBase(readFileSync(p, "utf8"));
+}
+
+/**
+ * How many fresh generated packs the assessor mints-and-checks each cycle. A small WINDOW
+ * (not one pack) so a single cycle confronts several themes/structures; combined with the
+ * advancing {@link generatedEvalSeedBase}, successive cycles sweep disjoint windows of the
+ * seed space, exercising the verifier across an ever-widening, never-frozen slice.
+ */
+export const GEN_EVAL_CHECK_COUNT = 4;
+
+/** One minted-and-validated generated pack: the seed, its id, and the production report. */
+export type GeneratedPackCheck = { seed: number; pack_id: string; report: ValidationReport };
+
+/**
+ * The generator mint-and-check verdict. Given this cycle's freshly minted-and-validated
+ * generated packs, return an improvement candidate IFF the production verifier did NOT hold
+ * on one of them — i.e. a minted pack carries ANY finding (error OR warning), the same
+ * zero-findings bar the curated packs and the generator's own test (cyoa_generator.test.ts)
+ * clear. A clean sweep returns null: the verifier held on this cycle's moving target, the
+ * healthy state (so the lever correctly does NOT mask the 0.5 saturation floor — it only
+ * lifts above it when there is a real defect). When it fires it is a genuine, fixable
+ * problem — the generator emitted an unclean/unsolvable shape, OR the fresh distribution
+ * surfaced a verifier gap — scored high (a minted pack the verifier rejects is nearly as
+ * urgent as an unplayable curated pack), so the loop spends the cycle closing the
+ * generator/verifier divergence rather than re-polishing clean prose. Pure (validated
+ * checks in, candidate out) so the negative path unit-tests against the REAL validateCyoa
+ * with no disk and no clock.
+ */
+export function generatorDriftCandidate(checks: GeneratedPackCheck[]): ImprovementCandidate | null {
+  const bad = checks.filter((c) => c.report.findings.length > 0);
+  if (bad.length === 0) return null;
+  return {
+    id: "generator-drift",
+    category: "engine",
+    target: "src/gen/cyoa_generator.ts",
+    title: `The pack generator minted ${bad.length} pack(s) the verifier rejects — the evolving eval distribution has drifted from the shipped bar`,
+    rationale:
+      "Evolving the eval distribution only works if every minted pack clears the SAME zero-findings bar the curated packs do (docs/CURRENT_PLAN.md). A generated pack the production validateCyoa flags is a real defect: either the generator emits an unclean/unsolvable shape, or the fresh distribution has surfaced a verifier gap. Fixing it keeps the generator a trustworthy moving target instead of a source of false signal.",
+    evidence: bad.map(
+      (c) =>
+        `seed ${c.seed} (${c.pack_id}): ${c.report.findings.map((f) => `${f.severity}:${f.code}`).join(", ")}`,
+    ),
+    impact: 5,
+    effort: "M",
+    score: score(5, "M", "engine"),
+  };
 }
 
 /**
@@ -603,6 +683,24 @@ export function assess(root: string): Assessment {
       score: score(4, "L", "engine"),
     });
   }
+
+  // ── eval-distribution: mint-and-check a fresh slice of the generated distribution ──
+  // Make the generator a LIVE, self-renewing eval signal (bug_0158, the slice after the
+  // MCP generate_pack tool of bug_0157; docs/CURRENT_PLAN.md / [[fresh-pack-generator]]).
+  // Every cycle the assessor mints a fresh WINDOW of never-seen packs — the seed base
+  // advances with the cycle count, so the windows are DISJOINT cycle-to-cycle — and asserts
+  // the SAME zero-findings validateCyoa bar the curated packs clear holds on them. A clean
+  // sweep adds no candidate (the verifier held on this cycle's moving target); a miss
+  // surfaces a high-priority engine fix. `assess()` stays deterministic because the seed
+  // base is a pure function of the tracked AI_LOOP_STATE.md, not a clock or RNG.
+  const genBase = generatedEvalSeedBaseFromDisk(root) * GEN_EVAL_CHECK_COUNT;
+  const genChecks: GeneratedPackCheck[] = Array.from({ length: GEN_EVAL_CHECK_COUNT }, (_, i) => {
+    const seed = genBase + i;
+    const pack = generateCyoaPack(seed);
+    return { seed, pack_id: pack.meta.id, report: validateCyoa(pack) };
+  });
+  const genDrift = generatorDriftCandidate(genChecks);
+  if (genDrift) candidates.push(genDrift);
 
   // Deterministic ordering: score desc, then — among equal scores — rotate the
   // blind-playtest pass onto the LEAST-recently-attended pack (never-attended first,
