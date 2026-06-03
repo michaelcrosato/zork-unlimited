@@ -1,0 +1,85 @@
+bug_id: bug_0149
+pack_id: all_rpg            # structural invariant over every shipped RPG pack (auto-discovered)
+seed: 7
+type: invariant_lock       # no defect found in shipped content; machine-enforces a hand-obeyed authoring invariant
+layer: test                # regression-only; NO content/engine/validator/schema change, NO hash pin moved
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-03T04-32-03-346Z/playtest.md   # cold_forge seed 53 (the cycle's mandated, correctly-rotated target — least-recently blind-played per [[assessor-blind-pass-rotation]], last attended bug_0140)
+  finding: >
+    The mandated blind pass on The Cold Forge (RPG, seed 53 — the least-recently blind-played
+    pack per [[assessor-blind-pass-rotation]], last dedicated pass bug_0140) played two routes:
+    the full-preparation WIN (50/50, ending_victory) and the under-armed DEATH (0/50,
+    ending_fallen). Rated clarity 5/5, enjoyment 4/5, ZERO bugs — re-confirmed blind-clean.
+    Its §5 note read: "Max score is exactly reachable and the +15/+15/+20 awards sum cleanly
+    to the declared 50" — precisely the score-economy property bug_0148 machine-proved for the
+    PARSER mode but which the RPG mode never had. Content is blind-exhausted per
+    [[content-polish-backlog-exhausted]]. With the assessor collapsed to the 0.5 floor and the
+    keystone (a real frontier model) deferred for want of a provider key
+    (docs/ULTRAPLAN-2026-06-02.md), the cycle's lever is the KEY-FREE §15 structural guarantee
+    the playtest's own focus surfaced — the exact on-plan extension bug_0148's next-focus named.
+root_cause: >
+  A gap in the structural-verification net, not a content defect — the RPG completion of
+  bug_0148's parser score-economy proof, and the score analogue of the bug_0145/0146/0147
+  variant-liveness trilogy. The corpus already proves exhaustively that every declared RPG
+  ENDING is reachable (rpg_all_endings_reachable, bug_0124) and every reactive VARIANT is live
+  (rpg_variant_liveness, bug_0147), but NOTHING proved the RPG score economy sound. Two real
+  defects slip through every current check:
+    (1) BOUNDED OVERFLOW — a misconfigured / double-counted / re-farmable award pushes the
+        reachable score PAST the declared ceiling (a "55/50"). The exhaustive ending solver
+        catches only an UNBOUNDED farm (the score var never settles -> the BFS hits its state
+        cap -> a loud cappedOut). A BOUNDED over-award keeps the state space finite, so the
+        solver passes and nothing flags it.
+    (2) PHANTOM POINTS — max_score declared HIGHER than any route can reach (the completionist's
+        "25/50 and no points left anywhere"). The reachability proof checks only WHICH endings
+        fire, never the score AT them, so an unreachable max is invisible to it.
+fix: >
+  Test-only (§15 lock-the-finding), REUSING the existing exhaustive-BFS seam — no helper
+  change. A new regression (rpg_score_economy_sound.test.ts) drives the best/worst-roll bracket
+  (exhaustiveEndingsMulti under two rule sets, the bug_0124 seam) with the bug_0146 LIVENESS
+  action policy and, via the onState hook, records the maximum `score` var over the COMPLETE
+  reachable region (including TERMINAL states — both packs' top award lands AT the win:
+  cold_forge's +20 ember on_enter, sunken_barrow's +25 circlet take_effects). It asserts that
+  reachable maximum equals pack.meta.max_score EXACTLY for every auto-discovered RPG pack —
+  one tight invariant catching both directions. No content/engine/validator/schema change.
+within_bar: >
+  Regression test only; NO new support-helper code (reuses the behaviour-preserving
+  explore/onState params bug_0145/0146 added and the best/worst bracket bug_0124/0147 use).
+  No pack edited; no validator/schema/engine change; NO hash pin moved (all 9 packs validate
+  0/0, content_hashes unchanged). Deterministic, no LLM-judge, NO API key.
+soundness: >
+  observed max <= true reachable max always (every visited state is a real, legal play on a
+  legal die face), so OVERFLOW detection is unconditionally sound. observed max >= true max
+  (needed so a false PHANTOM alarm is impossible) rests on the bracket reaching a true-maximum
+  path, which holds because the BEST-roll regime collects every roll-independent award AND
+  every roll-WINNING award (an enemy on_defeat fires when it dies; a skill check on_success
+  fires on the max d20). The only award site the best regime skips is a skill-check on_failure
+  (roll-losing); there is no "survive a lost fight" award (a lost fight ends at death_ending,
+  terminal). So the suite ASSERTS no score award rides an on_failure (scoreAwardOnFailure
+  guard) — a future one fails LOUD rather than under-counting into a false phantom alarm. It
+  also reuses the bug_0124/0147 no-HP-gating guard (the bracket reaches the right STATES only
+  if no routing condition reads a roll-dependent HP transient). Both shipped packs satisfy both
+  guards. The search FAILS on cappedOut, never truncating into a silent pass.
+result:
+  shipped_packs_economy_sound: true   # reachable max == declared max_score for both shipped RPG packs
+  reachable_maxima: { cold_forge: 50, sunken_barrow: 50 }   # each exactly equals its declared max_score
+regression_test: tests/regression/rpg_score_economy_sound.test.ts
+test_cases:
+  - "discovers the shipped RPG packs (guards against a vacuous pass if the glob yields nothing)"
+  - "the shipped corpus actually exercises scoring (some pack declares max_score > 0) — anti-vacuity guard"
+  - "cold_forge: reachable max score == declared max_score (50), search not capped"
+  - "sunken_barrow: reachable max score == declared max_score (50), search not capped"
+  - "FAILS on a planted OVERFLOW pack (read +20 + take +15 = 35 > declared 30) — the solver would NOT catch this bounded over-award"
+  - "FAILS on a planted PHANTOM-POINTS pack (only 20 reachable, max_score declares 50)"
+  - "CREDITS a +10 award reachable ONLY by winning a fight (best regime wins / worst regime dies at 0) — the best-roll regime is load-bearing for the score economy"
+  - "the on_failure-award guard BITES on a score award in a skill-check on_failure, and does NOT trip on either shipped pack (whose on_failure only narrates)"
+notes: >
+  Together with bug_0148 (parser) this closes the score-economy defect class for BOTH
+  score-bearing modes — CYOA packs carry no milestone scoring, so parser + RPG are the whole
+  scope. The structural-verification net is now exhaustive across all three modes on BOTH axes:
+  every-ending reachability (bug_0121/0122/0124) AND every-variant liveness (bug_0145/0146/0147)
+  AND, for the two scoring modes, score-economy soundness (bug_0148/0149). The one remaining
+  HIGH-value lever is the keystone — a real frontier model driving the author->validate->revise
+  loop and playing the spatial packs — deferred per docs/ULTRAPLAN-2026-06-02.md (needs a
+  provider key; no outbound API calls without owner authorization). See [[cyoa-exhaustive-solver]].
