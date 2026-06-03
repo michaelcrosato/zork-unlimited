@@ -165,7 +165,28 @@ npm run author -- "A keeper must relight a dead lighthouse before a ship wrecks.
 
 The same pipeline is exposed over MCP as the `adapt_story` tool.
 
-## Content library (9 packs)
+### Procedural pack generation — evolving the eval distribution
+
+Every structural proof in the suite (endings-reachable, variant-liveness, soft-lock
+liveness, score-economy, menu-integrity) is exercised against the ten curated packs
+below. A *frozen* eval set is the condition under which a self-improving loop's verifier
+stops being a moving target and becomes a memorisable one. The antidote is to **evolve the
+distribution**: mint fresh, never-authored packs the same checks must hold on.
+
+`src/gen/cyoa_generator.ts` (`generateCyoaPack(seed)`) and `src/gen/rpg_generator.ts`
+(`generateRpgPack(seed)`) are **pure, deterministic** minting cores — same seed ⇒
+byte-identical pack (no `Date`/`Math.random`, §8.5). Each emits a schema-valid pack of a
+proven AdventureForge shape (a knowledge-gated moral fork; a winnable hero's-quest with a
+tight score economy) and is held to the **identical bar** as the curated content: the same
+`validateCyoa`/`validateRpg` validator and the same exhaustive best/worst-roll solver that
+prove the shipped packs. Generated packs are deliberately **not** committed under
+`content/` — they are an on-demand eval distribution, not curated showcase content, so they
+carry no blind-playtest obligation and never pollute the hand-authored set.
+
+The CYOA generator is exposed over MCP as `generate_pack` (mint + validate a fresh pack,
+read-only) and is playable in-memory via `new_game`'s `generate_seed`.
+
+## Content library (10 packs)
 
 The shipped, validated content — every pack passes the validator and is wired into
 `npm run health`:
@@ -176,6 +197,7 @@ The shipped, validated content — every pack passes the validator and is wired 
 | CYOA | The Clockwork Heist | `content/cyoa/pack/clockwork_heist.yaml` |
 | CYOA | The Wrecker's Light | `content/cyoa/pack/wreckers_light.yaml` |
 | CYOA | The White Stag | `content/cyoa/pack/white_stag.yaml` |
+| CYOA | Dead Reckoning | `content/cyoa/pack/dead_reckoning.yaml` |
 | CYOA | The Tithe-Barn | `content/cyoa/pack/tithe_barn.yaml` |
 | Parser | The Sealed Crypt | `content/parser/pack/sealed_crypt.yaml` |
 | Parser | The Alchemist's Tower | `content/parser/pack/alchemists_tower.yaml` |
@@ -226,7 +248,9 @@ as `mode`. Tools: `validate_pack`, `load_pack`, `new_game`, `get_observation`,
 `list_legal_actions`, `step_action`, `save_game`, `load_game`, `run_playtest`,
 `replay_trace`, `inspect_trace` (per-step summary + suspected bugs),
 `apply_content_patch` (deterministic, whitelisted patch — cyoa/parser),
-`adapt_story` (author a pack from a premise). `list_stories` discovers packs
+`adapt_story` (author a pack from a premise),
+`generate_pack` (mint + validate a fresh procedural CYOA pack from a seed — read-only;
+play it in-memory via `new_game`'s `generate_seed`). `list_stories` discovers packs
 across `content/{cyoa,parser,rpg}/pack` with each pack's mode. All paths are
 confined to the project root; content and traces are data only (§16). The handlers
 (`src/mcp/tools.ts`) are unit-tested directly without a live client.
