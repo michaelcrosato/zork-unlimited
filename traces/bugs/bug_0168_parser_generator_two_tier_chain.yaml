@@ -1,0 +1,88 @@
+id: bug_0168
+title: "Deepen the parser generator to a two-tier (depth-2) obtainability chain — the bug_0167 named structural lever"
+kind: engine
+mode: meta
+severity: enhancement
+layer: generator
+artifact:
+  source: src/gen/parser_generator.ts
+  test: tests/regression/parser_generator_two_tier_chain.test.ts
+
+summary: >
+  The mandated blind pass this cycle (sealed_crypt, parser, seed 13 — the assessor rank-1 target AND
+  the least-recently blind-played pack per [[assessor-blind-pass-rotation]], last dedicated pass
+  bug_0158) came back blind-clean: clarity 5/5, enjoyment 4/5, ZERO mechanical bugs across THREE
+  routes to ALL THREE declared endings (ending_victory 35/35, ending_plunder greed/non-death,
+  ending_doom death), with the context-sensitive action surfacing, reactive room text, determinism,
+  and exact 35/35 score economy all confirmed live. Its lone findings were cosmetic and not
+  actionable (terminal observations list held keys — expected; the pack is short/linear — a scope
+  choice, tester rated not-a-bug). A blind-clean pass on a clean pack is the saturation signal
+  ([[content-polish-backlog-exhausted]]); per docs/afk_loop.md the loop pivots to structural work,
+  and the documented standing lever was bug_0167's next-focus (a): DEEPEN the generators behind a
+  generator_version bump. The parser generator was the named target — "a fixed 3-room spine with one
+  key/one gate (a second lock tier or multi-room obtainability chain would exercise the fixpoint
+  deeper)" — and parser owns the strictest validator in the suite (obtainability fixpoint, soft-lock,
+  score economy), so deepening it stresses the most checks per mint.
+
+mandated_blind_playtest:
+  run: ai-runs/2026-06-03T10-57-24-904Z/playtest.md
+  pack: content/parser/pack/sealed_crypt.yaml
+  seed: 13
+  result: "reached ending_victory (35/35, the gate route), ending_plunder (rob the founder's coffin, non-death), ending_doom (break the lead-sealed plague tomb, death); clarity 5/5, enjoyment 4/5; ZERO mechanical bugs; context-sensitive actions, reactive prose, determinism, and score economy all confirmed live"
+  triage: >
+    No actionable content defect — sealed_crypt is blind-clean. The two cosmetic notes (held keys
+    shown in terminal observations; short/linear puzzle) were rated not-a-bug. Per
+    [[content-polish-backlog-exhausted]] the only live lever is structural, so the cycle advanced the
+    plan's named next slice — deepening the parser generator's emitted obtainability chain — instead
+    of churning a clean pack.
+
+what:
+  - >
+    src/gen/parser_generator.ts — the emitted parser pack grew a SECOND lock tier (PARSER_GENERATOR_
+    VERSION 1 -> 2). v1 was depth-1: a key in an UNLOCKED hub coffer opened the gate. v2 is depth-2:
+    an entrance coffer (unlocked) holds a LESSER key that opens a LOCKED hub strongbox, and only the
+    GREAT key cased inside it opens the gate (win) and the hazard (the death fork — the same key, the
+    sealed_crypt iron-key discipline). So the goal's obtainability chain now runs key->lock->key->lock
+    across two rooms. The Theme type gained lesserKey{Name,Alias,Desc} + strongbox{Name,Alias,Desc}
+    for all 6 themes, with each clue/NPC hint rewritten to signpost the two-step route. The score
+    economy moved from read(+5)+gate(+10)=15 to three one-shot +5 milestones (read clue, unlock
+    strongbox, unlock gate) = 15, so the SCORE_UNREACHABLE/no-farm fixpoint is exercised at the new
+    tier too. max_score stays 15; both endings stay reachable.
+  - >
+    corpus/ re-sealed (npm run corpus:seal) — the 4 held-out parser packs (genpar_0..3) re-stamped to
+    generator_version 2 with new content hashes; corpus/manifest.json updated. This is the sanctioned
+    deepen workflow bug_0167 documented: a generator edit surfaces a non-blocking VERIFIER_TOUCHED
+    warning (the generator program is in PROTECTED_FILES), and the version bump + re-seal keep
+    held_out_corpus_sealed.test.ts's version-match + re-mint-determinism assertions green. The cyoa/rpg
+    corpus entries are byte-unchanged (the change is parser-only). The re-seal is deterministic (a
+    second seal produced no further diff).
+  - >
+    tests/regression/parser_generator_two_tier_chain.test.ts (new) — locks the depth-2 SHAPE so a
+    future flattening back to one key/one gate fails loudly even though it would still pass the generic
+    bar: two distinct quest-critical keys; the great key cased behind a LOCKED strongbox keyed to the
+    lesser key; the strongbox awards the second milestone; the chain spans entrance->hub; and
+    BEHAVIORALLY (exhaustive solver) the second tier is load-bearing — without ever taking the lesser
+    key, the great key and BOTH endings are unreachable. tests/unit/parser_generator.test.ts's
+    "gate is load-bearing" case was updated for the new chain (block the strongbox/great-key path).
+
+why: >
+  The contamination-free benchmark thesis rests on the generators being a never-frozen MOVING target
+  (docs/ULTRAPLAN-2026-06-02.md; the frozen-verifier reward-hacking result, [[verifier-assertion-guard]]
+  arXiv 2510.14253). A generator that only ever emits a trivial depth-1 shape exercises a shrinking
+  slice of the strictest validator's reasoning — its obtainability fixpoint barely has to recurse. With
+  content blind-clean and the deterministic assessor at the 0.5 floor, deepening the eval distribution
+  is the genuine lever: every mint now forces the validator to prove a depth-2, cross-room, key->lock->
+  key->lock obtainability chain and a three-milestone score economy, holding the parser bar against a
+  harder fresh distribution every cycle.
+
+verification: >
+  npm run health EXIT 0. tests/unit/parser_generator.test.ts (24 seeds) green: every v2 pack is
+  schema-valid, validator-clean (ZERO findings — obtainability/soft-lock/score all pass), exhaustively
+  solvable (both endings reached, none undeclared, no cap-out), exact 5+5+5=15 economy. held_out_corpus_
+  sealed.test.ts green (parser entries re-mint to the sealed hashes, version==2). A live MCP playthrough
+  of corpus/parser/genpar_0_v1.yaml walked the full chain to ending_win 15/15 (read +5, open font, take
+  lesser key, north, unlock casket +5, open, take iron key, unlock gate +5, north -> win), with the
+  iron key offering BOTH the gate and the hazard (the fork live). The change is generator+corpus+test+
+  artifact: no engine/validator/schema/assessor behavior change, no test deleted/disabled, no curated
+  content touched (the 10 packs validate 0/0), no curated hash re-pin. The corpus hash change is a
+  deliberate, surfaced re-seal behind a generator_version bump, not a weakened check.

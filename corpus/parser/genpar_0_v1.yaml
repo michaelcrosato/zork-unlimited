@@ -9,10 +9,12 @@ rooms:
   - id: entrance
     name: "The Reliquary Vault: Threshold"
     description: a drowned chapel under the fens. Black water laps the threshold of
-      a chapel the marsh has half-swallowed; a graven slab leans by the door.
-      The way on lies north into the dark.
+      a chapel the marsh has half-swallowed; a graven slab leans by the door. A
+      stone font stands beside the threshold. The way on lies north into the
+      dark.
     objects:
       - clue
+      - coffer
     exits:
       - direction: north
         to: hub
@@ -21,19 +23,19 @@ rooms:
   - id: hub
     name: The Inner Chamber
     description: The nave opens into a low vault where the dead were laid; a verger
-      keeps a guttering lamp. A stone font stands here. To the north, the iron
-      gate bars the way on, and apart from it the lead-sealed tomb waits. The
-      threshold is back to the south.
+      keeps a guttering lamp. A reliquary casket stands here. To the north, the
+      iron gate bars the way on, and apart from it the lead-sealed tomb waits.
+      The threshold is back to the south.
     variants:
       - when:
           - has_flag: gate_open
         text: The nave opens into a low vault where the dead were laid; a verger keeps a
           guttering lamp. The iron gate stands open now, and through it, north,
-          lies the reliquary chamber. The stone font stands open by the wall,
-          and apart from it the lead-sealed tomb waits still. The threshold is
-          back to the south.
+          lies the reliquary chamber. The reliquary casket stands open by the
+          wall, and apart from it the lead-sealed tomb waits still. The
+          threshold is back to the south.
     objects:
-      - coffer
+      - strongbox
       - gate
       - hazard
     exits:
@@ -65,8 +67,8 @@ objects:
     description: A weathered slab, an epitaph still legible under the lichen.
     takeable: false
     quest_critical: false
-    read_text: "Cut deep into the stone: 'THE VAULT YIELDS TO THE IRON LAID UP IN
-      THE FONT.'"
+    read_text: "Cut deep into the stone: 'THE FONT GIVES UP THE LESSER KEY; THE
+      LESSER OPENS THE CASKET, AND THE IRON LAID WITHIN OPENS THE VAULT.'"
     container: false
     openable: false
     locked: false
@@ -85,12 +87,44 @@ objects:
     name: stone font
     aliases:
       - font
-    description: A dry baptismal font; something heavy rests in its basin.
+    description: A dry baptismal font; a small key glints in its basin.
     takeable: false
     quest_critical: false
     container: true
     openable: true
     locked: false
+    contents:
+      - lesser_key
+    interactions: []
+  - id: lesser_key
+    name: brass font-key
+    aliases:
+      - fontkey
+    description: A small brass key from the font — too slight for any great lock,
+      but it fits a casket's wards.
+    takeable: true
+    quest_critical: true
+    container: false
+    openable: false
+    locked: false
+    contents: []
+    interactions: []
+  - id: strongbox
+    name: reliquary casket
+    aliases:
+      - casket
+    description: An iron-bound casket set on the bier, its lock cut for a small key;
+      something heavier shifts within.
+    takeable: false
+    quest_critical: false
+    container: true
+    openable: true
+    locked: true
+    key_id: lesser_key
+    unlock_effects:
+      - inc_var:
+          name: score
+          by: 5
     contents:
       - key
     interactions: []
@@ -125,7 +159,7 @@ objects:
       - set_flag: gate_open
       - inc_var:
           name: score
-          by: 10
+          by: 5
     contents: []
     interactions: []
   - id: hazard
@@ -169,8 +203,8 @@ npcs:
               prompt: Say goodbye
               end: true
         - id: tell
-          npc_text: The gate answers only to the iron key — and that was laid up in the
-            font.
+          npc_text: The font holds a small brass key; it opens the casket on the bier, and
+            the iron key laid up inside opens the gate.
           effects: []
           topics:
             - id: bye

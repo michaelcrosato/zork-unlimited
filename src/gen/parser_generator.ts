@@ -21,16 +21,21 @@
  *     (no quest-item soft-lock), the goal gated behind a flag-locked exit;
  *   - a readable CLUE that awards the first milestone score and an NPC that signposts the route
  *     (two in-world clue sources, §17);
- *   - a KEY recovered from an openable coffer in the hub;
- *   - a first-class UNLOCK gate (the key opens the way north, sets the gate flag, awards the second
- *     milestone score) — the canonical win on reaching the goal;
- *   - a telegraphed DEATH fork: the SAME key opens a plainly-warned hazard that ends the game
+ *   - a TWO-TIER key chain (the v2 deepening, bug_0168): a LESSER key recovered from an unlocked
+ *     coffer in the entrance opens a LOCKED strongbox in the hub, and only the GREAT key cased
+ *     inside it opens the gate. So the goal's obtainability chain runs key→lock→key→lock across two
+ *     rooms — a depth-2 fixpoint, exercising the parser validator's obtainability/soft-lock pass
+ *     far harder than the old single key/single gate (the named deepening from bug_0167);
+ *   - a first-class UNLOCK strongbox (the lesser key opens it, awarding the second milestone score)
+ *     and a first-class UNLOCK gate (the great key opens the way north, sets the gate flag, awards
+ *     the third milestone score) — the canonical win on reaching the goal;
+ *   - a telegraphed DEATH fork: the SAME great key opens a plainly-warned hazard that ends the game
  *     (the failure pole every blind pass asks for, the sealed_crypt bound_tomb discipline) — never
  *     an ambush, the warning is cut into its prose.
  * The output is validated by the SAME `validateParser` and proven solvable by the SAME exhaustive
  * BFS that guard the shipped parser packs, so a generated pack is held to the identical bar (see
- * tests/unit/parser_generator.test.ts). The score economy is exact: read (+5) + unlock (+10) = the
- * declared max_score 15, reachable and never farmable.
+ * tests/unit/parser_generator.test.ts). The score economy is exact: read (+5) + strongbox (+5) +
+ * gate (+5) = the declared max_score 15, each one-shot, reachable and never farmable.
  *
  * Generated packs are NOT committed under content/parser/pack: they are an on-demand eval
  * distribution, not curated showcase content, so they incur no blind-playtest obligation and never
@@ -45,8 +50,13 @@ import { ParserPackSchema, type ParserPack } from "../parser/schema.js";
  * surfaces as a loud, diagnosable manifest mismatch ("generator changed", a deliberate version
  * bump) rather than silent corpus rot vs a tampered content hash. Bump it whenever the emitted
  * pack shape changes; the re-seal then re-stamps every entry.
+ *
+ * v2 (bug_0168): the emitted spine grew a SECOND lock tier — an entrance coffer holds a lesser key
+ * that opens a locked hub strongbox holding the great key — deepening the obtainability fixpoint to
+ * depth-2 across two rooms. Every emitted pack changed shape, so this bump + a `npm run corpus:seal`
+ * re-stamp every parser corpus entry (held_out_corpus_sealed.test.ts checks version == this).
  */
-export const PARSER_GENERATOR_VERSION = 1;
+export const PARSER_GENERATOR_VERSION = 2;
 
 /**
  * A theme is the cosmetic skin over the fixed structural skeleton: it varies the prose, the
@@ -68,10 +78,16 @@ type Theme = {
   clueAlias: string;
   clueDesc: string;
   clueText: string; // the in-world hint (read_text) the clue carries
-  cofferName: string;
+  cofferName: string; // the OUTER, unlocked container (in the entrance) holding the lesser key
   cofferAlias: string;
   cofferDesc: string;
-  keyName: string;
+  lesserKeyName: string; // tier-1 key: opens the strongbox, not the gate (the depth-2 chain)
+  lesserKeyAlias: string;
+  lesserKeyDesc: string;
+  strongboxName: string; // the INNER, LOCKED container (in the hub) the lesser key opens
+  strongboxAlias: string;
+  strongboxDesc: string;
+  keyName: string; // tier-2 GREAT key (cased in the strongbox): the gate/hazard fork
   keyAlias: string;
   keyDesc: string;
   gateName: string;
@@ -107,10 +123,19 @@ const THEMES: readonly Theme[] = [
     clueName: "graven slab",
     clueAlias: "slab",
     clueDesc: "A weathered slab, an epitaph still legible under the lichen.",
-    clueText: "Cut deep into the stone: 'THE VAULT YIELDS TO THE IRON LAID UP IN THE FONT.'",
+    clueText:
+      "Cut deep into the stone: 'THE FONT GIVES UP THE LESSER KEY; THE LESSER OPENS THE CASKET, AND THE IRON LAID WITHIN OPENS THE VAULT.'",
     cofferName: "stone font",
     cofferAlias: "font",
-    cofferDesc: "A dry baptismal font; something heavy rests in its basin.",
+    cofferDesc: "A dry baptismal font; a small key glints in its basin.",
+    lesserKeyName: "brass font-key",
+    lesserKeyAlias: "fontkey",
+    lesserKeyDesc:
+      "A small brass key from the font — too slight for any great lock, but it fits a casket's wards.",
+    strongboxName: "reliquary casket",
+    strongboxAlias: "casket",
+    strongboxDesc:
+      "An iron-bound casket set on the bier, its lock cut for a small key; something heavier shifts within.",
     keyName: "iron key",
     keyAlias: "key",
     keyDesc: "A heavy iron key, black with age — fit for a great lock.",
@@ -129,7 +154,8 @@ const THEMES: readonly Theme[] = [
     npcName: "the verger",
     npcDesc: "A stooped verger, lamp in hand, watching you sidelong.",
     npcGreet: "Few come willingly down to the sealed vault, traveler.",
-    npcHint: "The gate answers only to the iron key — and that was laid up in the font.",
+    npcHint:
+      "The font holds a small brass key; it opens the casket on the bier, and the iron key laid up inside opens the gate.",
     winTitle: "Into the Reliquary",
     winText:
       "The gate yields, and the cold breath of the vault rolls over you. You step through to the saint's casket at last. *** You have won. ***",
@@ -151,10 +177,19 @@ const THEMES: readonly Theme[] = [
     clueName: "tide-board",
     clueAlias: "board",
     clueDesc: "A slate tide-board, a keeper's hand chalked across it.",
-    clueText: "Chalked plain: 'THE HATCH TAKES THE BRASS KEY KEPT IN THE OIL-LOCKER.'",
+    clueText:
+      "Chalked plain: 'THE OIL-LOCKER KEEPS THE LOCKER KEY; IT OPENS THE SEA-CHEST, AND THE BRASS KEY WITHIN LIFTS THE HATCH.'",
     cofferName: "oil-locker",
     cofferAlias: "locker",
-    cofferDesc: "A squat iron oil-locker; something rattles loose inside.",
+    cofferDesc: "A squat iron oil-locker; a stubby key rattles loose inside.",
+    lesserKeyName: "locker key",
+    lesserKeyAlias: "lockerkey",
+    lesserKeyDesc:
+      "A stubby key from the oil-locker — no good on the hatch, but it throws a sea-chest's lock.",
+    strongboxName: "keeper's sea-chest",
+    strongboxAlias: "seachest",
+    strongboxDesc:
+      "A banded sea-chest under the bench, its lock cut for a small key; the brass hatch-key is said to lie within.",
     keyName: "brass key",
     keyAlias: "key",
     keyDesc: "A salt-greened brass key, fit for a heavy hatch-lock.",
@@ -173,7 +208,8 @@ const THEMES: readonly Theme[] = [
     npcName: "the old keeper",
     npcDesc: "A salt-cured old keeper, hands shaking, eyes on the dark sea.",
     npcGreet: "You'll have come for the light, then. They always do.",
-    npcHint: "The hatch wants the brass key — I keep it in the oil-locker, away from damp.",
+    npcHint:
+      "Find the locker key in the oil-locker; it opens my sea-chest, and the brass key kept in there lifts the hatch.",
     winTitle: "The True Light",
     winText:
       "The hatch lifts and you set the beacon burning down the true channel. Out on the black water a ship's lamp answers and stands off the reef. *** You have won. ***",
@@ -195,10 +231,19 @@ const THEMES: readonly Theme[] = [
     clueName: "order-slate",
     clueAlias: "slate",
     clueDesc: "A chalked order-slate, the quartermaster's hand still legible.",
-    clueText: "Chalked across it: 'THE WICKET TAKES THE WARD-KEY DROPPED IN THE QUENCH-TROUGH.'",
+    clueText:
+      "Chalked across it: 'THE TROUGH KEEPS THE TALLY KEY; IT OPENS THE STRONGBOX, AND THE WARD-KEY WITHIN OPENS THE WICKET.'",
     cofferName: "quench-trough",
     cofferAlias: "trough",
-    cofferDesc: "A long iron quench-trough, dry now; something lies on its bed.",
+    cofferDesc: "A long iron quench-trough, dry now; a light key lies on its bed.",
+    lesserKeyName: "tally key",
+    lesserKeyAlias: "tallykey",
+    lesserKeyDesc:
+      "A light tally key from the trough — it won't bite the wicket, but it springs a strongbox.",
+    strongboxName: "iron strongbox",
+    strongboxAlias: "strongbox",
+    strongboxDesc:
+      "A squat iron strongbox bolted to the floor, its lock cut for a small key; the ward-key is kept inside.",
     keyName: "ward-key",
     keyAlias: "key",
     keyDesc: "A toothed ward-key of blued steel, cut for a foundry lock.",
@@ -218,7 +263,7 @@ const THEMES: readonly Theme[] = [
     npcDesc: "A soot-streaked tally-master, ledger under one arm, sizing you up.",
     npcGreet: "No muster today. So what brings you to the cold forge?",
     npcHint:
-      "The store wicket wants the ward-key — it went into the quench-trough when we banked down.",
+      "The trough holds the tally key; it opens the strongbox by the wall, and the ward-key in there opens the store wicket.",
     winTitle: "The Master-Pattern",
     winText:
       "The wicket opens and the master-pattern is yours, the proof the whole foundry guarded. You carry it out into the cold morning. *** You have won. ***",
@@ -240,10 +285,19 @@ const THEMES: readonly Theme[] = [
     clueName: "duty-roll",
     clueAlias: "roll",
     clueDesc: "A pinned duty-roll, the porter's hand legible above the water-stain.",
-    clueText: "Inked plain: 'THE GRILLE TAKES THE GILT KEY CASED IN THE DESPATCH-BOX.'",
+    clueText:
+      "Inked plain: 'THE DESPATCH-BOX HOLDS THE CLERK'S KEY; IT OPENS THE MUNIMENT CHEST, AND THE GILT KEY WITHIN OPENS THE GRILLE.'",
     cofferName: "despatch-box",
     cofferAlias: "box",
-    cofferDesc: "A japanned despatch-box, lid unlatched; something gleams within.",
+    cofferDesc: "A japanned despatch-box, lid unlatched; a slight key gleams within.",
+    lesserKeyName: "clerk's key",
+    lesserKeyAlias: "clerkkey",
+    lesserKeyDesc:
+      "A slight clerk's key from the despatch-box — useless on the grille, but it opens a muniment chest.",
+    strongboxName: "muniment chest",
+    strongboxAlias: "muniment",
+    strongboxDesc:
+      "An iron muniment chest on the dry shelf, its lock cut for a small key; the gilt key is cased within.",
     keyName: "gilt key",
     keyAlias: "key",
     keyDesc: "A small gilt key, tarnished green, cut for a record-grille.",
@@ -263,7 +317,7 @@ const THEMES: readonly Theme[] = [
     npcDesc: "A wax-pale under-clerk, sleeves rolled, ink to the elbow.",
     npcGreet: "Mind the water. Few come down to the sunken archive on purpose.",
     npcHint:
-      "The grille wants the gilt key — it's cased in the despatch-box, where the flood couldn't reach.",
+      "The despatch-box holds the clerk's key; it opens the muniment chest, and the gilt key cased in there opens the record grille.",
     winTitle: "The Sealed Roll",
     winText:
       "The grille folds back and the sealed roll is in your hands at last, dry and whole through flood and fire. You climb back toward the light with the record safe. *** You have won. ***",
@@ -285,10 +339,19 @@ const THEMES: readonly Theme[] = [
     clueName: "rune-stone",
     clueAlias: "runestone",
     clueDesc: "A leaning rune-stone, its incised verse still sharp under the frost.",
-    clueText: "Bitten into the rune-stone: 'THE SLAB OPENS TO THE BONE KEY HID IN THE GRAVE-URN.'",
+    clueText:
+      "Bitten into the rune-stone: 'THE URN KEEPS THE HORN KEY; IT OPENS THE RELIQUARY, AND THE BONE KEY WITHIN OPENS THE SLAB.'",
     cofferName: "grave-urn",
     cofferAlias: "urn",
-    cofferDesc: "A wide grave-urn, its lid askew; something pale rests inside.",
+    cofferDesc: "A wide grave-urn, its lid askew; a small pale key rests inside.",
+    lesserKeyName: "horn key",
+    lesserKeyAlias: "hornkey",
+    lesserKeyDesc:
+      "A little key of carved horn from the urn — no use on the slab, but it fits a reliquary's lock.",
+    strongboxName: "warded reliquary",
+    strongboxAlias: "reliquary",
+    strongboxDesc:
+      "A small iron-strapped reliquary among the grave-goods, its lock cut for a slight key; the bone key lies within.",
     keyName: "bone key",
     keyAlias: "key",
     keyDesc: "A key carved from old bone, yellowed and cold, cut for a barrow-lock.",
@@ -308,7 +371,7 @@ const THEMES: readonly Theme[] = [
     npcDesc: "A grey barrow-warden's shade, sword across its knees, watching without malice.",
     npcGreet: "Living feet, in the king's frost barrow. Tread carefully, grave-breaker.",
     npcHint:
-      "The slab opens to the bone key — the old folk hid it in the grave-urn, against thieves.",
+      "The grave-urn holds a horn key; it opens the reliquary among the grave-goods, and the bone key inside opens the slab.",
     winTitle: "The Pale Circlet",
     winText:
       "The slab grinds aside and the king's circlet of pale gold is yours, cold and heavy and whole. You bear it back up into the living air. *** You have won. ***",
@@ -330,10 +393,19 @@ const THEMES: readonly Theme[] = [
     clueName: "grant-board",
     clueAlias: "grantboard",
     clueDesc: "A framed grant-board, the water-court's hand legible behind the glass.",
-    clueText: "Lettered plain: 'THE SLUICE TAKES THE COPPER KEY SUNK IN THE MEAL-ARK.'",
+    clueText:
+      "Lettered plain: 'THE MEAL-ARK HOLDS THE MILLER'S KEY; IT OPENS THE STRONGBOX, AND THE COPPER KEY WITHIN FREES THE SLUICE.'",
     cofferName: "meal-ark",
     cofferAlias: "ark",
-    cofferDesc: "A great oak meal-ark, lid thrown back; something sits in the spoiled meal.",
+    cofferDesc: "A great oak meal-ark, lid thrown back; a small key sits in the spoiled meal.",
+    lesserKeyName: "miller's key",
+    lesserKeyAlias: "millerkey",
+    lesserKeyDesc:
+      "A small miller's key from the meal-ark — it won't free the sluice, but it opens a strongbox.",
+    strongboxName: "oak strongbox",
+    strongboxAlias: "strongbox",
+    strongboxDesc:
+      "An oak strongbox on the dry mound, its lock cut for a small key; the copper key sits inside.",
     keyName: "copper key",
     keyAlias: "key",
     keyDesc: "A green copper key, water-pitted, cut for a sluice-lock.",
@@ -353,7 +425,7 @@ const THEMES: readonly Theme[] = [
     npcDesc: "A gaunt miller, sodden to the waist, bailing at a flood he cannot win.",
     npcGreet: "Come for the grant, have you? Everyone wants the mill but the water.",
     npcHint:
-      "The sluice wants the copper key — it went down in the meal-ark when the race first burst.",
+      "The meal-ark holds the miller's key; it opens the strongbox on the mound, and the copper key in there frees the sluice-gate.",
     winTitle: "The Strong-Room",
     winText:
       "The sluice hauls up and the strong-room is open, the grant and the gold dry on their mound through all the flood. You carry them out past the black water. *** You have won. ***",
@@ -366,9 +438,13 @@ const THEMES: readonly Theme[] = [
 /**
  * Generate a schema-valid PARSER pack from an integer seed. Deterministic and pure: the same
  * seed always yields the identical pack. The structure is fixed (entrance → hub → goal spine, a
- * flag-locked goal, a clue + NPC signposting, a key in a coffer, a first-class UNLOCK gate, a
- * telegraphed death fork, an exact 5+10 = 15 score economy); the seed selects the theme, so the
- * eval distribution varies without any route ever becoming unprovable or any check flagging.
+ * flag-locked goal, a clue + NPC signposting, a TWO-TIER key chain — a lesser key in an entrance
+ * coffer opens a locked hub strongbox holding the great key that opens the gate — a first-class
+ * UNLOCK at each tier, a telegraphed death fork, an exact 5+5+5 = 15 score economy); the seed
+ * selects the theme, so the eval distribution varies without any route ever becoming unprovable
+ * or any check flagging. The depth-2 obtainability chain (key→lock→key→lock, spanning two rooms)
+ * is the point: it exercises the parser validator's obtainability/soft-lock/score fixpoints far
+ * harder than v1's single key/single gate (bug_0168, the bug_0167 named deepening).
  *
  * The returned object is run through `ParserPackSchema.parse`, so a malformed emission throws
  * HERE (a generator self-check) rather than slipping downstream — and the result carries the
@@ -385,32 +461,36 @@ export function generateParserPack(seed: number): ParserPack {
   const ENDING_DOOM = "ending_doom";
 
   // ── Rooms: a three-room spine. The two non-win rooms (entrance, hub) are strongly
-  //    connected via the north/south pair, so the takeable quest_critical key can never be
-  //    stranded (parser SOFTLOCK_QUEST_ITEM). The goal is reachable only through the flag-
-  //    locked gate exit. The hub re-narrates once the gate is open (a live reactive variant).
+  //    connected via the north/south pair, so BOTH takeable quest_critical keys can never be
+  //    stranded (parser SOFTLOCK_QUEST_ITEM): the lesser key is taken in the entrance coffer and
+  //    spent on the hub strongbox; the great key is taken from the strongbox and spent in the hub.
+  //    The goal is reachable only through the flag-locked gate exit. The hub re-narrates once the
+  //    gate is open (a live reactive variant).
   const entrance = {
     id: "entrance",
     name: `${theme.title}: Threshold`,
-    description: `${theme.setting}. ${theme.entranceFlavor} The way on lies north into the dark.`,
-    objects: ["clue"],
+    description:
+      `${theme.setting}. ${theme.entranceFlavor} A ${theme.cofferName} stands beside the threshold. ` +
+      `The way on lies north into the dark.`,
+    objects: ["clue", "coffer"],
     exits: [{ direction: "north", to: "hub" }],
   };
   const hub = {
     id: "hub",
     name: "The Inner Chamber",
     description:
-      `${theme.hubFlavor} A ${theme.cofferName} stands here. To the north, the ${theme.gateName} ` +
+      `${theme.hubFlavor} A ${theme.strongboxName} stands here. To the north, the ${theme.gateName} ` +
       `bars the way on, and apart from it the ${theme.hazardName} waits. The threshold is back to the south.`,
     variants: [
       {
         when: [{ has_flag: GATE_OPEN }],
         text:
           `${theme.hubFlavor} The ${theme.gateName} stands open now, and through it, north, lies ` +
-          `${theme.goalShort}. The ${theme.cofferName} stands open by the wall, and apart from it the ` +
+          `${theme.goalShort}. The ${theme.strongboxName} stands open by the wall, and apart from it the ` +
           `${theme.hazardName} waits still. The threshold is back to the south.`,
       },
     ],
-    objects: ["coffer", "gate", "hazard"],
+    objects: ["strongbox", "gate", "hazard"],
     exits: [
       { direction: "south", to: "entrance" },
       {
@@ -446,7 +526,8 @@ export function generateParserPack(seed: number): ParserPack {
       },
     ],
   };
-  // coffer: an openable, unlocked container holding the key — so the key is obtainable.
+  // coffer (tier-1): an openable, UNLOCKED container in the entrance holding the LESSER key — so
+  // the first link of the chain is freely obtainable.
   const coffer = {
     id: "coffer",
     name: theme.cofferName,
@@ -454,8 +535,35 @@ export function generateParserPack(seed: number): ParserPack {
     description: theme.cofferDesc,
     container: true,
     openable: true,
+    contents: ["lesser_key"],
+  };
+  // lesser_key (tier-1): opens the strongbox ONLY, never the gate/hazard — the depth-2 chain.
+  const lesserKey = {
+    id: "lesser_key",
+    name: theme.lesserKeyName,
+    aliases: [theme.lesserKeyAlias],
+    description: theme.lesserKeyDesc,
+    takeable: true,
+    quest_critical: true,
+  };
+  // strongbox (tier-2): a LOCKED container in the hub whose key is the lesser key; inside lies the
+  // great key. The first-class UNLOCK awards the SECOND milestone (+5) and is one-shot intrinsic
+  // (once unlocked it isn't isLocked, so the award can't be farmed). The validator must now prove a
+  // depth-2 obtainability chain (lesser key → unlock strongbox → great key) to reach the great key.
+  const strongbox = {
+    id: "strongbox",
+    name: theme.strongboxName,
+    aliases: [theme.strongboxAlias],
+    description: theme.strongboxDesc,
+    container: true,
+    openable: true,
+    locked: true,
+    key_id: "lesser_key",
+    unlock_effects: [{ inc_var: { name: "score", by: 5 } }],
     contents: ["key"],
   };
+  // key (tier-2, the GREAT key): cased in the strongbox; opens the gate (the way on) AND the
+  // hazard (the death fork) — the SAME key, a moral fork (the sealed_crypt iron-key discipline).
   const key = {
     id: "key",
     name: theme.keyName,
@@ -465,8 +573,8 @@ export function generateParserPack(seed: number): ParserPack {
     quest_critical: true,
   };
   // gate: the first-class UNLOCK that opens the way on — sets the gate flag the goal exit reads
-  // and awards the second milestone (+10). One-shot is intrinsic (once unlocked it isn't
-  // isLocked, so UNLOCK can't re-fire and the award can't be farmed).
+  // and awards the THIRD milestone (+5). One-shot is intrinsic (once unlocked it isn't isLocked,
+  // so UNLOCK can't re-fire and the award can't be farmed).
   const gate = {
     id: "gate",
     name: theme.gateName,
@@ -475,7 +583,7 @@ export function generateParserPack(seed: number): ParserPack {
     locked: true,
     key_id: "key",
     unlock_narrate: theme.gateNarrate,
-    unlock_effects: [{ set_flag: GATE_OPEN }, { inc_var: { name: "score", by: 10 } }],
+    unlock_effects: [{ set_flag: GATE_OPEN }, { inc_var: { name: "score", by: 5 } }],
   };
   // hazard: the telegraphed DEATH fork — the SAME key, an end_game, a warning cut into its prose
   // (never an ambush; the sealed_crypt bound_tomb discipline). It awards no score and sets no
@@ -526,7 +634,7 @@ export function generateParserPack(seed: number): ParserPack {
       max_score: 15,
     },
     rooms: [entrance, hub, goal],
-    objects: [clue, coffer, key, gate, hazard],
+    objects: [clue, coffer, lesserKey, strongbox, key, gate, hazard],
     npcs: [npc],
     win_conditions: [{ id: "reach_goal", conditions: [{ visited: "goal" }], ending: ENDING_WIN }],
     endings: [

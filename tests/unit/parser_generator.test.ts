@@ -128,17 +128,18 @@ describe("procedural PARSER generator emits packs that clear the shipped bar", (
     });
   }
 
-  it("the gate is load-bearing: the goal is unreachable until the key opens it", () => {
-    // Prove the lock is real, not decorative: walking only the moves available WITHOUT the key
-    // (never opening the coffer, never taking the key, never unlocking the gate) can never set
-    // the gate flag, so `go north` to the goal stays rejected and no win fires. We confirm by
-    // restricting the search to the actions that do NOT touch the key chain.
+  it("the gate is load-bearing: the goal is unreachable until the great key opens it", () => {
+    // Prove the lock is real, not decorative: walking only the moves available WITHOUT the
+    // great-key chain (never opening the strongbox, never taking the great key, never unlocking
+    // the gate) can never set the gate flag, so `go north` to the goal stays rejected and no win
+    // fires. We confirm by restricting the search to the actions that do NOT touch that chain —
+    // the v2 depth-2 chain means the great key is cased in the locked strongbox, not the coffer.
     const pack = generateParserPack(0);
     const index = indexParserPack(pack);
     const rules = buildParserRules(index);
     const noKeyChain = (a: Action): boolean =>
       !(
-        (a.type === "OPEN" && a.target === "coffer") ||
+        (a.type === "OPEN" && a.target === "strongbox") ||
         (a.type === "TAKE" && a.item === "key") ||
         (a.type === "UNLOCK" && a.target === "gate")
       );

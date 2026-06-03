@@ -10,9 +10,11 @@ rooms:
     name: "The Cold Forge: Threshold"
     description: a war-foundry gone quiet between musters. Cold slag crunches
       underfoot at the foundry door; an order-slate is propped against the jamb.
-      The way on lies north into the dark.
+      A quench-trough stands beside the threshold. The way on lies north into
+      the dark.
     objects:
       - clue
+      - coffer
     exits:
       - direction: north
         to: hub
@@ -21,19 +23,19 @@ rooms:
   - id: hub
     name: The Inner Chamber
     description: The casting floor stands silent, moulds cooling in their pits; a
-      tally-master lingers by the dead crucible. A quench-trough stands here. To
-      the north, the store wicket bars the way on, and apart from it the
+      tally-master lingers by the dead crucible. A iron strongbox stands here.
+      To the north, the store wicket bars the way on, and apart from it the
       blast-furnace door waits. The threshold is back to the south.
     variants:
       - when:
           - has_flag: gate_open
         text: The casting floor stands silent, moulds cooling in their pits; a
           tally-master lingers by the dead crucible. The store wicket stands
-          open now, and through it, north, lies the pattern-store. The
-          quench-trough stands open by the wall, and apart from it the
-          blast-furnace door waits still. The threshold is back to the south.
+          open now, and through it, north, lies the pattern-store. The iron
+          strongbox stands open by the wall, and apart from it the blast-furnace
+          door waits still. The threshold is back to the south.
     objects:
-      - coffer
+      - strongbox
       - gate
       - hazard
     exits:
@@ -65,8 +67,8 @@ objects:
     description: A chalked order-slate, the quartermaster's hand still legible.
     takeable: false
     quest_critical: false
-    read_text: "Chalked across it: 'THE WICKET TAKES THE WARD-KEY DROPPED IN THE
-      QUENCH-TROUGH.'"
+    read_text: "Chalked across it: 'THE TROUGH KEEPS THE TALLY KEY; IT OPENS THE
+      STRONGBOX, AND THE WARD-KEY WITHIN OPENS THE WICKET.'"
     container: false
     openable: false
     locked: false
@@ -85,12 +87,44 @@ objects:
     name: quench-trough
     aliases:
       - trough
-    description: A long iron quench-trough, dry now; something lies on its bed.
+    description: A long iron quench-trough, dry now; a light key lies on its bed.
     takeable: false
     quest_critical: false
     container: true
     openable: true
     locked: false
+    contents:
+      - lesser_key
+    interactions: []
+  - id: lesser_key
+    name: tally key
+    aliases:
+      - tallykey
+    description: A light tally key from the trough — it won't bite the wicket, but
+      it springs a strongbox.
+    takeable: true
+    quest_critical: true
+    container: false
+    openable: false
+    locked: false
+    contents: []
+    interactions: []
+  - id: strongbox
+    name: iron strongbox
+    aliases:
+      - strongbox
+    description: A squat iron strongbox bolted to the floor, its lock cut for a
+      small key; the ward-key is kept inside.
+    takeable: false
+    quest_critical: false
+    container: true
+    openable: true
+    locked: true
+    key_id: lesser_key
+    unlock_effects:
+      - inc_var:
+          name: score
+          by: 5
     contents:
       - key
     interactions: []
@@ -125,7 +159,7 @@ objects:
       - set_flag: gate_open
       - inc_var:
           name: score
-          by: 10
+          by: 5
     contents: []
     interactions: []
   - id: hazard
@@ -169,8 +203,8 @@ npcs:
               prompt: Say goodbye
               end: true
         - id: tell
-          npc_text: The store wicket wants the ward-key — it went into the quench-trough
-            when we banked down.
+          npc_text: The trough holds the tally key; it opens the strongbox by the wall,
+            and the ward-key in there opens the store wicket.
           effects: []
           topics:
             - id: bye

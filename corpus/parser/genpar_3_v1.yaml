@@ -10,9 +10,11 @@ rooms:
     name: "The Sunken Archive: Threshold"
     description: a flooded record-vault beneath a drowned chancery. Water stands
       shin-deep over the archive steps; a duty-roll is pinned above the
-      tide-line by the door. The way on lies north into the dark.
+      tide-line by the door. A despatch-box stands beside the threshold. The way
+      on lies north into the dark.
     objects:
       - clue
+      - coffer
     exits:
       - direction: north
         to: hub
@@ -21,19 +23,19 @@ rooms:
   - id: hub
     name: The Inner Chamber
     description: The muniment room rises out of the flood on a dry shelf of stone;
-      an under-clerk waits among the ruined presses. A despatch-box stands here.
-      To the north, the record grille bars the way on, and apart from it the
-      fumigation valve waits. The threshold is back to the south.
+      an under-clerk waits among the ruined presses. A muniment chest stands
+      here. To the north, the record grille bars the way on, and apart from it
+      the fumigation valve waits. The threshold is back to the south.
     variants:
       - when:
           - has_flag: gate_open
         text: The muniment room rises out of the flood on a dry shelf of stone; an
           under-clerk waits among the ruined presses. The record grille stands
           open now, and through it, north, lies the sealed-roll niche. The
-          despatch-box stands open by the wall, and apart from it the fumigation
-          valve waits still. The threshold is back to the south.
+          muniment chest stands open by the wall, and apart from it the
+          fumigation valve waits still. The threshold is back to the south.
     objects:
-      - coffer
+      - strongbox
       - gate
       - hazard
     exits:
@@ -65,7 +67,8 @@ objects:
     description: A pinned duty-roll, the porter's hand legible above the water-stain.
     takeable: false
     quest_critical: false
-    read_text: "Inked plain: 'THE GRILLE TAKES THE GILT KEY CASED IN THE DESPATCH-BOX.'"
+    read_text: "Inked plain: 'THE DESPATCH-BOX HOLDS THE CLERK'S KEY; IT OPENS THE
+      MUNIMENT CHEST, AND THE GILT KEY WITHIN OPENS THE GRILLE.'"
     container: false
     openable: false
     locked: false
@@ -84,12 +87,44 @@ objects:
     name: despatch-box
     aliases:
       - box
-    description: A japanned despatch-box, lid unlatched; something gleams within.
+    description: A japanned despatch-box, lid unlatched; a slight key gleams within.
     takeable: false
     quest_critical: false
     container: true
     openable: true
     locked: false
+    contents:
+      - lesser_key
+    interactions: []
+  - id: lesser_key
+    name: clerk's key
+    aliases:
+      - clerkkey
+    description: A slight clerk's key from the despatch-box — useless on the grille,
+      but it opens a muniment chest.
+    takeable: true
+    quest_critical: true
+    container: false
+    openable: false
+    locked: false
+    contents: []
+    interactions: []
+  - id: strongbox
+    name: muniment chest
+    aliases:
+      - muniment
+    description: An iron muniment chest on the dry shelf, its lock cut for a small
+      key; the gilt key is cased within.
+    takeable: false
+    quest_critical: false
+    container: true
+    openable: true
+    locked: true
+    key_id: lesser_key
+    unlock_effects:
+      - inc_var:
+          name: score
+          by: 5
     contents:
       - key
     interactions: []
@@ -124,7 +159,7 @@ objects:
       - set_flag: gate_open
       - inc_var:
           name: score
-          by: 10
+          by: 5
     contents: []
     interactions: []
   - id: hazard
@@ -168,8 +203,8 @@ npcs:
               prompt: Say goodbye
               end: true
         - id: tell
-          npc_text: The grille wants the gilt key — it's cased in the despatch-box, where
-            the flood couldn't reach.
+          npc_text: The despatch-box holds the clerk's key; it opens the muniment chest,
+            and the gilt key cased in there opens the record grille.
           effects: []
           topics:
             - id: bye

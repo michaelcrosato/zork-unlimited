@@ -9,10 +9,12 @@ rooms:
   - id: entrance
     name: "The Wreckers' Light: Threshold"
     description: a storm-bound lighthouse on a wreckers' coast. Spray bursts over
-      the rocks at the tower's foot; a tide-board is bolted by the inner door.
-      The way on lies north into the dark.
+      the rocks at the tower's foot; a tide-board is bolted by the inner door. A
+      oil-locker stands beside the threshold. The way on lies north into the
+      dark.
     objects:
       - clue
+      - coffer
     exits:
       - direction: north
         to: hub
@@ -21,19 +23,19 @@ rooms:
   - id: hub
     name: The Inner Chamber
     description: The lamp-room is cold and dark, the great lens unlit; a old keeper
-      hunches by the dead wick. A oil-locker stands here. To the north, the
-      lamp-room hatch bars the way on, and apart from it the signal-rocket
+      hunches by the dead wick. A keeper's sea-chest stands here. To the north,
+      the lamp-room hatch bars the way on, and apart from it the signal-rocket
       waits. The threshold is back to the south.
     variants:
       - when:
           - has_flag: gate_open
         text: The lamp-room is cold and dark, the great lens unlit; a old keeper hunches
           by the dead wick. The lamp-room hatch stands open now, and through it,
-          north, lies the beacon stage. The oil-locker stands open by the wall,
-          and apart from it the signal-rocket waits still. The threshold is back
-          to the south.
+          north, lies the beacon stage. The keeper's sea-chest stands open by
+          the wall, and apart from it the signal-rocket waits still. The
+          threshold is back to the south.
     objects:
-      - coffer
+      - strongbox
       - gate
       - hazard
     exits:
@@ -65,7 +67,8 @@ objects:
     description: A slate tide-board, a keeper's hand chalked across it.
     takeable: false
     quest_critical: false
-    read_text: "Chalked plain: 'THE HATCH TAKES THE BRASS KEY KEPT IN THE OIL-LOCKER.'"
+    read_text: "Chalked plain: 'THE OIL-LOCKER KEEPS THE LOCKER KEY; IT OPENS THE
+      SEA-CHEST, AND THE BRASS KEY WITHIN LIFTS THE HATCH.'"
     container: false
     openable: false
     locked: false
@@ -84,12 +87,44 @@ objects:
     name: oil-locker
     aliases:
       - locker
-    description: A squat iron oil-locker; something rattles loose inside.
+    description: A squat iron oil-locker; a stubby key rattles loose inside.
     takeable: false
     quest_critical: false
     container: true
     openable: true
     locked: false
+    contents:
+      - lesser_key
+    interactions: []
+  - id: lesser_key
+    name: locker key
+    aliases:
+      - lockerkey
+    description: A stubby key from the oil-locker — no good on the hatch, but it
+      throws a sea-chest's lock.
+    takeable: true
+    quest_critical: true
+    container: false
+    openable: false
+    locked: false
+    contents: []
+    interactions: []
+  - id: strongbox
+    name: keeper's sea-chest
+    aliases:
+      - seachest
+    description: A banded sea-chest under the bench, its lock cut for a small key;
+      the brass hatch-key is said to lie within.
+    takeable: false
+    quest_critical: false
+    container: true
+    openable: true
+    locked: true
+    key_id: lesser_key
+    unlock_effects:
+      - inc_var:
+          name: score
+          by: 5
     contents:
       - key
     interactions: []
@@ -124,7 +159,7 @@ objects:
       - set_flag: gate_open
       - inc_var:
           name: score
-          by: 10
+          by: 5
     contents: []
     interactions: []
   - id: hazard
@@ -168,8 +203,8 @@ npcs:
               prompt: Say goodbye
               end: true
         - id: tell
-          npc_text: The hatch wants the brass key — I keep it in the oil-locker, away from
-            damp.
+          npc_text: Find the locker key in the oil-locker; it opens my sea-chest, and the
+            brass key kept in there lifts the hatch.
           effects: []
           topics:
             - id: bye
