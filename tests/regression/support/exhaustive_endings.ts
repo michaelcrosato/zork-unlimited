@@ -145,10 +145,18 @@ export type ExhaustiveResult = {
  *     search skips it soundly only because no ROUTE gates on a read flag, just reactive
  *     prose. This is the exact caveat the bug_0145 next-focus named.)
  *   - `key` — the dedupe fingerprint. Defaults to `stateKey`.
+ *   - `onEdge` — observe every TRANSITION the search produces, as a `(fromKey, toKey)`
+ *     pair of state fingerprints, INCLUDING edges into already-seen states (which the BFS
+ *     would otherwise drop on the dedupe check). Lets a caller reconstruct the full
+ *     reachable transition graph — e.g. to run a backward-liveness fixpoint proving every
+ *     reachable state can still reach a terminal (no dynamic soft-lock pocket — see
+ *     no_dead_pocket.test.ts). Default undefined: when omitted NO edge work is done and the
+ *     search is byte-for-byte the original BFS, so every existing caller is unchanged.
  */
 export type SearchOpts = {
   explore?: (a: Action) => boolean;
   key?: (s: GameState) => string;
+  onEdge?: (fromKey: string, toKey: string) => void;
 };
 
 /**
@@ -205,6 +213,7 @@ export function exhaustiveEndingsMulti(
   if (!primary) throw new Error("exhaustiveEndingsMulti requires at least one rule set");
   const explore = opts?.explore ?? isProgressAction;
   const key = opts?.key ?? stateKey;
+  const onEdge = opts?.onEdge;
   const steps = ruleSets.map((r) => makeStep(r));
   const reached = new Set<string>();
   const seen = new Set<string>();
@@ -222,14 +231,20 @@ export function exhaustiveEndingsMulti(
     if (onState) onState(s);
     if (s.ended) {
       if (s.endingId) reached.add(s.endingId);
-      continue; // a terminal state offers no further actions
+      continue; // a terminal state offers no further actions (a graph sink)
     }
+    // Only fingerprint the source state when a caller is collecting edges.
+    const fromKey = onEdge ? key(s) : "";
     for (const a of primary.legalActions(s)) {
       if (!explore(a)) continue; // outside the caller's action policy (default: progress-only)
       for (const step of steps) {
         const r = step(s, a);
         if (!r.ok) continue; // a rejected action does not change state
         const k = key(r.state);
+        // Surface the transition BEFORE the dedupe check, so edges into an already-seen
+        // state (a join in the graph) are reported too — a backward-liveness fixpoint needs
+        // every edge, not just tree edges.
+        if (onEdge) onEdge(fromKey, k);
         if (seen.has(k)) continue;
         seen.add(k);
         queue.push(r.state);
