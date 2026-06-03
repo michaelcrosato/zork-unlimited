@@ -23,7 +23,8 @@ import type { GameState } from "../core/state.js";
 import { compilePack, loadPackFile, type CompiledPack } from "../cyoa/pack.js";
 import { generateCyoaPack } from "../gen/cyoa_generator.js";
 import type { CyoaPack } from "../cyoa/schema.js";
-import { indexPack, buildRules, initStateForPack } from "../cyoa/runner.js";
+import { indexPack, buildRules, initStateForPack, type CyoaIndex } from "../cyoa/runner.js";
+import type { ParserIndex } from "../parser/model.js";
 import { buildObservation } from "../cyoa/observation.js";
 import { validateCyoa } from "../validate/cyoa_validator.js";
 
@@ -45,7 +46,7 @@ import {
   type Finding,
   type ValidationReport,
 } from "../validate/report.js";
-import { save, load } from "../persist/save_load.js";
+import { save, load, SaveIntegrityError } from "../persist/save_load.js";
 import { replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
@@ -117,6 +118,47 @@ function buildObsFor(
       opts,
     );
   return buildRpgObservation(index as Parameters<typeof buildRpgObservation>[0], state, opts);
+}
+
+/**
+ * Referential-integrity gate for a LOADED state (§16 "integrity at load") — the
+ * pack-aware complement to save_load.ts's `GameStateSchema` (bug_0181). That
+ * schema guards WHETHER a loaded state is well-formed and finite, but `load()`
+ * holds only the content hash, not the pack, so it cannot tell whether the
+ * state's symbols actually EXIST. A forged-but-finite save (valid structure,
+ * correct hash) can set `current` to a phantom location — the engine would then
+ * render the whole game from a room/scene that does not exist — or `endingId` to
+ * a fabricated ending. This runs at `startSession`, the one chokepoint that has
+ * BOTH the loaded state and the index, and REJECTS such a save (throws
+ * `SaveIntegrityError`); it never coerces. It is the SoundnessBench
+ * REJECTION-DIRECTION oracle (cf. bug_0181) carried from finiteness to reference.
+ *
+ * CYOA terminals are reached by goto+end_game (cyoa/runner.ts), so a legitimately
+ * ENDED CYOA save carries `current`/`endingId` = a terminal id that is NOT a
+ * scene; the valid sets fold in `terminalIds` so those real saves still load.
+ * Parser/RPG keep the player in a room at end_game, so their `current` is always
+ * a room id and their `endingId` a declared ending.
+ */
+function assertLoadedStateRefs(mode: PackMode, index: AnyIndex, state: GameState): void {
+  let locations: Set<string>;
+  let endings: Set<string>;
+  if (mode === "cyoa") {
+    const ix = index as CyoaIndex;
+    locations = new Set<string>([...ix.scenes.keys(), ...ix.terminalIds]);
+    endings = ix.terminalIds;
+  } else {
+    const ix = index as ParserIndex;
+    locations = new Set<string>(ix.rooms.keys());
+    endings = new Set<string>(ix.pack.endings.map((e) => e.id));
+  }
+  if (!locations.has(state.current)) {
+    throw new SaveIntegrityError(
+      `Save references unknown ${mode === "cyoa" ? "scene" : "room"} "${state.current}".`,
+    );
+  }
+  if (state.endingId !== null && !endings.has(state.endingId)) {
+    throw new SaveIntegrityError(`Save references unknown ending "${state.endingId}".`);
+  }
 }
 
 /** The current location id, normalized across modes (scene id ⟷ room id). */
@@ -247,6 +289,11 @@ export function createToolApi(opts: { root: string }) {
   ): Session {
     const index = indexFor(mode, compiled.pack);
     const st = state ?? initStateFor(mode, index, 1);
+    // §16 integrity at load: a PROVIDED state is untrusted (it came off a save
+    // file via load_game), so its `current`/`endingId` must name symbols that
+    // exist in THIS pack before it is handed to the engine. A freshly-built init
+    // state (state === undefined) is trusted and skipped. Rejects, never coerces.
+    if (state !== undefined) assertLoadedStateRefs(mode, index, st);
     const session = sessions.create({
       packId: compiled.pack.meta.id,
       contentHash: compiled.contentHash,
