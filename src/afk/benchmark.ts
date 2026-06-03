@@ -20,6 +20,8 @@
  * a spatial-reasoning model is measured against; CYOA has no room graph so its hidden
  * row equals its shown row.
  */
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { createToolApi } from "../mcp/tools.js";
 
 /** One scored cell: a pack played by an agent under a strategy. */
@@ -36,6 +38,18 @@ export type BenchmarkRow = {
    * a CYOA pack's hidden row equals its shown row — the honest "no spatial dimension".
    */
   hide_graph: boolean;
+  /**
+   * Whether this row scores a pack from the contamination-free HELD-OUT split — a
+   * procedurally-generated pack sealed under `corpus/` (never under a curated
+   * `content/<mode>/pack` dir, so no external agent or training corpus could have
+   * seen it; the git commit
+   * timestamp is its chain-of-custody). The curated rows (`held_out: false`) score the
+   * ten authored disk packs; the held-out rows are the uncontaminated signal the
+   * benchmark thesis ultimately reports (ULTRAPLAN 2026-06-02; sealed by
+   * `bin/seal-corpus.ts`, re-mint-verified by the held-out-corpus regression gate).
+   * The split is per-row so the same table reports both side by side.
+   */
+  held_out: boolean;
   runs: number;
   completed: number;
   unfinished: number;
@@ -108,15 +122,15 @@ export function buildScorecard(opts: BenchmarkOptions): Scorecard {
   const rows: BenchmarkRow[] = [];
   const skipped: { pack: string; reason: string }[] = [];
 
-  for (const s of stories) {
-    if (!s.playable) {
-      skipped.push({ pack: s.path, reason: "unplayable (failed validation)" });
-      continue;
-    }
+  // Score one pack across every configured cell, tagging its rows with the split it
+  // belongs to (curated authored packs vs the held-out corpus). Shared so both splits
+  // are measured through the identical run_playtest path — the only difference is the
+  // `held_out` flag, which keeps the two comparable in one table.
+  const scorePack = (storyPath: string, heldOut: boolean): void => {
     for (const cell of cells) {
       try {
         const pt = api.run_playtest({
-          story_path: s.path,
+          story_path: storyPath,
           strategy: cell.strategy,
           runs,
           hide_graph: cell.hide_graph,
@@ -131,6 +145,7 @@ export function buildScorecard(opts: BenchmarkOptions): Scorecard {
           agent,
           strategy: cell.strategy,
           hide_graph: cell.hide_graph,
+          held_out: heldOut,
           runs: pt.runs,
           completed: pt.ended,
           unfinished: pt.unfinished,
@@ -145,14 +160,39 @@ export function buildScorecard(opts: BenchmarkOptions): Scorecard {
         });
       } catch (e) {
         const tag = `${cell.strategy}${cell.hide_graph ? " (hidden graph)" : ""}`;
-        skipped.push({ pack: s.path, reason: `${tag}: ${(e as Error).message}` });
+        skipped.push({ pack: storyPath, reason: `${tag}: ${(e as Error).message}` });
       }
+    }
+  };
+
+  // The curated split: the authored disk packs discovered under content/*/pack.
+  for (const s of stories) {
+    if (!s.playable) {
+      skipped.push({ pack: s.path, reason: "unplayable (failed validation)" });
+      continue;
+    }
+    scorePack(s.path, false);
+  }
+
+  // The held-out split: the sealed procedural corpus (corpus/manifest.json is its
+  // authoritative membership). Scored through the SAME bot/cells so its rows slot into
+  // the same table as the uncontaminated counterpart to the curated rows. Absent
+  // (un-sealed) corpus simply yields no held-out rows — the scorecard stays valid.
+  const manifestPath = join(opts.root, "corpus", "manifest.json");
+  if (existsSync(manifestPath)) {
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+      entries?: { mode: string; pack_id: string }[];
+    };
+    for (const entry of manifest.entries ?? []) {
+      scorePack(join(opts.root, "corpus", entry.mode, `${entry.pack_id}.yaml`), true);
     }
   }
 
-  // Stable, deterministic ordering independent of directory traversal order.
+  // Stable, deterministic ordering independent of directory traversal order. The
+  // curated split sorts before the held-out split so the table reads as two blocks.
   rows.sort(
     (a, b) =>
+      Number(a.held_out) - Number(b.held_out) ||
       a.mode.localeCompare(b.mode) ||
       a.pack_id.localeCompare(b.pack_id) ||
       a.strategy.localeCompare(b.strategy) ||
@@ -198,15 +238,19 @@ export function renderMarkdown(card: Scorecard): string {
   );
   lines.push("");
   lines.push(
-    "| Pack | Mode | Strategy | Graph | Completion | Endings | Ending cov | Scene cov | Turns→end |",
+    "The `Split` column marks whether the pack is `curated` (an authored disk pack under content/*/pack) or `held-out` (a procedurally-generated pack sealed under corpus/ that no external agent or training set could have seen). The held-out rows are the contamination-free signal the benchmark ultimately reports — measured through the identical bot and cells, so they are directly comparable to the curated baseline.",
   );
-  lines.push("| --- | --- | --- | --- | --: | --: | --: | --: | --: |");
+  lines.push("");
+  lines.push(
+    "| Pack | Mode | Strategy | Graph | Split | Completion | Endings | Ending cov | Scene cov | Turns→end |",
+  );
+  lines.push("| --- | --- | --- | --- | --- | --: | --: | --: | --: | --: |");
   for (const row of card.rows) {
     // Turns-to-end is meaningful only when the bot actually completed a run; show a
     // dash rather than a misleading "0.0" when nothing ended.
     const turns = row.completed > 0 ? row.mean_turns_to_end.toFixed(1) : "—";
     lines.push(
-      `| ${row.pack_id} | ${row.mode} | ${row.strategy} | ${row.hide_graph ? "hidden" : "shown"} | ${pct(row.completion_rate)} | ${row.endings_reached}/${row.endings_declared} | ${pct(row.ending_coverage)} | ${pct(row.scene_coverage)} | ${turns} |`,
+      `| ${row.pack_id} | ${row.mode} | ${row.strategy} | ${row.hide_graph ? "hidden" : "shown"} | ${row.held_out ? "held-out" : "curated"} | ${pct(row.completion_rate)} | ${row.endings_reached}/${row.endings_declared} | ${pct(row.ending_coverage)} | ${pct(row.scene_coverage)} | ${turns} |`,
     );
   }
   if (card.skipped.length > 0) {

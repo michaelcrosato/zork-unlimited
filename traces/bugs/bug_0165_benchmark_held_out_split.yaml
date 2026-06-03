@@ -1,0 +1,131 @@
+id: bug_0165
+title: "Benchmark scorecard scores the contamination-free HELD-OUT corpus split — the thesis bridge from a sealed corpus to a reportable uncontaminated number"
+kind: invariant_lock
+mode: cyoa+parser+rpg
+severity: enhancement
+layer: test
+artifact:
+  source: src/afk/benchmark.ts
+  corpus: corpus/manifest.json
+  test: tests/regression/benchmark_held_out_split.test.ts
+
+summary: >
+  The objective benchmark scorecard (src/afk/benchmark.ts, ULTRAPLAN 2026-06-02) is the repo's
+  successor goal: one comparable number per (pack, agent) so real frontier-model rows can slot in
+  beside the deterministic-bot baseline. But buildScorecard played ONLY list_stories() — the ten
+  authored disk packs under content/*/pack — so the contamination-free HELD-OUT split (the procedural
+  corpus sealed under corpus/ by bug_0163, the entire credibility anchor of the benchmark thesis)
+  never appeared in the scorecard at all. The scorecard reported only the committed/curated rows a
+  frontier model could plausibly have seen, and NONE of the uncontaminated signal. This lands the #1
+  deferred slice every recent cycle named ("wire corpus/ into the benchmark scorecard — the thesis
+  bridge, sensible now that the corpus is real"): buildScorecard now ALSO scores every sealed corpus
+  pack through the IDENTICAL bot/cells, tags each row held_out, and renders a Split column — so the
+  same table reports the curated baseline and the held-out signal side by side, directly comparable.
+
+mandated_blind_playtest:
+  target: content/cyoa/pack/dead_reckoning.yaml
+  seed: 7
+  report: ai-runs/2026-06-03T10-26-28-335Z/playtest.md
+  result: >
+    Fresh general-purpose MCP-only source-blind subagent played FOUR routes to ALL FOUR declared
+    endings — ending_landfall (full knowledge: read the log + heard the girl, gave her the helm),
+    ending_holdfast (zero knowledge: ration even), ending_jonah (knows_pilot only: drown her — the
+    knowing tragedy), ending_adrift (zero knowledge: seize the cask). Rated clarity 5/5, enjoyment
+    5/5, ZERO mechanical bugs. Confirmed the two-axis 2x2-knowledge design holds under blind play: the
+    Cask scene has three distinct narration variants (none / knows_pilot / both flags) and the
+    trust_pilot option only appears once you've met the girl (knows_pilot-gated). Lone nit: the cased
+    pistol in the chest is non-interactable atmosphere — reads as intentional restraint. "Clean,
+    polished, the strongest-written pack I've blind-tested."
+  rotation_note: >
+    dead_reckoning was the assessor's rank-1 target AND genuinely the least-recently blind-played pack
+    (last dedicated pass bug_0155, older than every other pack). The bug_0164 next-focus mis-named
+    watchtower_road as least-recent, but its own dedicated-pass log list shows dead_reckoning at
+    bug_0155 is the oldest — the deterministic assessor independently corrected the rotation. This
+    cycle's lever is a structural/breadth slice (benchmark), not a content fix; no content/engine/
+    validator/schema changed.
+
+root_cause: >
+  The benchmark and the held-out corpus were built in separate cycles and never connected.
+  buildScorecard's pack-discovery loop iterated solely over api.list_stories(), whose dirs list is
+  hard-coded to content/{cyoa,parser,rpg}/pack (the curated set). bug_0163 sealed the procedural mint
+  windows into a committed corpus/ split with a re-mint-verify gate, but deliberately stopped short of
+  scoring it ("the thesis bridge, meaningless until the corpus exists — the natural follow-up"). So a
+  scorecard meant to report a contamination-free number reported only the curated rows; the
+  uncontaminated held-out rows it was ultimately for were absent.
+
+what:
+  - >
+    src/afk/benchmark.ts — BenchmarkRow gains a `held_out: boolean` field: true for a pack scored from
+    the sealed corpus/ split (never seen by any external agent/training set), false for a curated
+    authored disk pack. Per-row so both splits live in one comparable table.
+  - >
+    src/afk/benchmark.ts — buildScorecard refactors the per-pack cell loop into a shared scorePack(
+    storyPath, heldOut) closure (identical run_playtest path; the only difference is the held_out tag).
+    The curated loop calls scorePack(s.path, false) as before. A NEW held-out loop reads
+    corpus/manifest.json (its authoritative membership), and for each entry scores
+    corpus/<mode>/<pack_id>.yaml via scorePack(..., true). An absent/un-sealed corpus (existsSync false)
+    simply yields no held-out rows — the scorecard stays valid. No clock/RNG/network added.
+  - >
+    src/afk/benchmark.ts — the deterministic row sort gains held_out as its FIRST key (curated block
+    then held-out block), so output is stable and the table reads as two splits. renderMarkdown adds a
+    `Split` column (curated | held-out) after Graph, plus an explanatory note; the existing
+    "| Pack | Mode | Strategy | Graph |" header substring is preserved (the new column follows it), so
+    the prior benchmark.test.ts header assertion still holds.
+  - >
+    tests/regression/benchmark_held_out_split.test.ts — NEW gate (+7 cases): every manifest entry is
+    scored once per cell tagged held_out (held row count == membership x cells); the split spans all
+    three modes; it is genuinely PLAYED not enumerated (every held row ran the full run count over a
+    real pack with scenes_total>0, and at least one reaches a declared ending — the bot solves
+    generated CYOA); held rows are well-formed fractions; the curated split is NOT polluted (no corpus
+    pack_id appears as curated); determinism preserved (re-run byte-identical); the Split column
+    renders both labels and the table row count equals card.rows.length + 1.
+
+fix: >
+  The benchmark scorecard now reports the contamination-free held-out corpus as first-class rows
+  alongside the curated baseline, measured through the identical deterministic bot and cells. This
+  STRENGTHENS the benchmark (the uncontaminated signal it exists to report is now actually in it) and
+  weakens nothing: the curated rows are byte-for-byte unchanged, the new held_out rows are purely
+  additive, and the held-out scoring degrades gracefully to nothing if the corpus is un-sealed.
+  Observed shape mirrors the curated baseline honestly — the bot fully solves generated CYOA (4/4
+  endings) but not the generated parser/RPG spatial-puzzle packs (0% completion, partial scene
+  coverage), exactly as it does on the curated packs of each mode.
+
+regression:
+  test: tests/regression/benchmark_held_out_split.test.ts
+  asserts: >
+    Every corpus/manifest.json entry is scored once per configured cell with held_out=true and the
+    right mode; the held-out split spans cyoa+parser+rpg and is genuinely played (full runs, real
+    scenes, at least one ending reached); held-out rows are well-formed fractional metrics; no corpus
+    pack_id leaks into the curated split; the scorecard stays deterministic; and renderMarkdown emits
+    a Split column distinguishing held-out from curated.
+
+verification:
+  - "npm run health EXIT 0 — additive: one BenchmarkRow field + a scorePack refactor + a held-out
+    scoring loop + a Split column + a new regression test + this bug artifact; no test deleted/disabled,
+    no hash pin moved (sunken_barrow 7791fc14... + cold_forge 8590fefd... unchanged), no guard
+    weakening (verify-integrity.ts untouched), no content/engine/validator/schema/generator change.
+    Net test count RISES, so the guard's count-regression checks stay satisfied."
+  - "npm run verify:integrity GREEN, no GUARD_WEAKENED / protected-deletion finding (src/afk/benchmark.ts
+    is not a protected file; the change is additive)."
+  - "The existing tests/unit/benchmark.test.ts still passes unchanged — its CYOA-no-op and spatial-drop
+    assertions now also cover the held-out rows of each mode (held-out CYOA hidden==shown; held-out
+    parser/RPG hidden<=shown), and its header/determinism assertions hold."
+  - "all_packs_validated_by_bar.test.ts STILL returns EXACTLY the 10 curated packs — proof the
+    held-out scoring reads corpus/ without polluting content/*/pack discovery."
+
+next_suggested_focus: >
+  The held-out corpus is now both SEALED (bug_0163) and SCORED (this cycle) — the scorecard reports a
+  contamination-free number per held-out pack beside the curated baseline. Remaining deferred slices,
+  in order: (a) DEEPEN the generators behind a generator_version bump + re-seal (deeper maps /
+  multi-key tiers / USE puzzles for parser; multiple enemies / combat_guaranteed fairness for RPG;
+  deeper graphs / vars / multi-axis knowledge for CYOA) so each mint — and now each held-out scorecard
+  row — stresses MORE of the validator and the bot; (b) add the held-out vs curated DELTA as a summary
+  metric / chart in renderMarkdown once a capable (non-bot) agent row exists to make the gap
+  meaningful; (c) add the generators / GEN_EVAL_CHECK_COUNT / bin/seal-corpus.ts to PROTECTED_FILES as
+  a trust-boundary hardening cycle. The keyed real-model author->play->fix->lock run remains the
+  highest-value move overall but stays gated on owner API-key authorization. Blind-pass rotation:
+  dead_reckoning is now most-recently blind-played; reading the dedicated-pass log newest->oldest
+  (dead_reckoning THIS cycle / white_stag bug_0164 / clockwork bug_0163 / watchtower bug_0162 /
+  alchemists bug_0161 / sunken_barrow bug_0160 / cold_forge bug_0159 / sealed_crypt bug_0158 /
+  wreckers bug_0157 / tithe_barn bug_0156), the least-recently blind-played pack is now
+  watchtower_road (CYOA, last dedicated pass bug_0162) — rotate the next mandated pass there.
