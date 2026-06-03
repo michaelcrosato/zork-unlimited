@@ -1,0 +1,60 @@
+id: bug_0204
+title: "The Breaking Weir — the lethal storm-walk gamble was hidden behind a stat; un-counselled crossing now reads as the gamble it is"
+kind: content_fix
+mode: rpg
+pack: content/rpg/pack/breaking_weir.yaml
+# Informational. No test pins breaking_weir's content_hash, so nothing was forced; this
+# content edit moves the pack hash, and the regression pins the BEHAVIOUR (the gamble cue
+# keyed on heard_walk across the three storm-walk states), not the bytes.
+
+summary: >
+  The mandated blind pass this cycle (The Breaking Weir, RPG, seed 11 — the assessor's rank-1
+  and freshest pack) returned clarity 5/5, enjoyment 4/5, two WON runs (50/50 prepared, 45/50
+  lean/un-counselled), ZERO mechanical bugs. Its one concrete finding was a design-honesty gap
+  (no winnability effect): the storm-walk's lethal "go cold and rash, the water decides" gamble
+  is heavily advertised in the prose, but at the moment of crossing the room and the walk_span
+  object read IDENTICALLY whether or not the player had heard Pell's counsel. The prep-vs-gamble
+  is REAL — crossing un-counselled is base nerve 3 vs DC 9 (~25% death), counselled is nerve 8
+  (safe on the worst roll, 1+8>=9), proven by breaking_weir_skill_chain.test.ts — but it was
+  hidden behind a stat, so the danger only ever bit as a dice failure, never as a choice the
+  player could SEE they were taking. "Slightly undersells the agency the prose promises."
+
+root_cause: >
+  The crossing is one forward action ("rig {target} with {item}", life_line on walk_span) and the
+  only thing that changes the odds is whether nerve is 3 (Pell un-asked) or 8 (ask_walk heard, +5).
+  That earlier dialogue choice is the gamble, but nothing AT the storm-walk surfaced it: the room
+  and object descriptions were static, so a blind player perceived the crossing button as identical
+  either way and the gamble as invisible. The prose promised agency the decision point did not show.
+
+fix: >
+  Content-only, no engine/validator/solver change. The storm-walk ROOM (weir_walk) and the
+  walk_span OBJECT each gain an additive reactive `variant` keyed on `not_flag heard_walk` that
+  names the gamble plainly at the decision point — "you never had Pell's telling… go out on it now
+  and it is on raw nerve alone… whether you cross or the race takes you is the water's to say." It
+  does NOT hard-gate (you can still cross; it stays a gamble, not a wall) and does NOT over-promise
+  certain death (the bug_0027/0114/0200 honesty discipline: the water MAY have you, ~75% pass). The
+  `walk_crossed` variant is declared FIRST, so a crossed walk never shows the cue; a counselled-but-
+  not-yet-crossed player falls to the base text, which reads true once you know the trick. The new
+  walk_span variant carries NO `name` override, so the object name stays "storm-walk" and the
+  bug_0197 reactive-name pins (head_rack/race_winch) are untouched.
+
+out_of_band_teeth: >
+  The regression (breaking_weir_gamble_legible.test.ts) drives the REAL pack's roomDescription /
+  objectDescription / objectName across the three storm-walk states and asserts: UN-COUNSELLED
+  (no heard_walk) → both room and object surface the gamble cue AND the room still points onward
+  (cue, not wall); COUNSELLED (heard_walk) → neither does; CROSSED (walk_crossed) → the crossed
+  variant wins, never the cue; the warning never reads as CERTAIN death (may/whether/to-say); and
+  the object NAME stays "storm-walk" in every state. Reverting the content edit fails the first
+  assertion, so it is a behavioural witness, not a vacuous green.
+
+regression_test: tests/regression/breaking_weir_gamble_legible.test.ts
+
+verification: >
+  npm run health green (verify:integrity + lint + tests + validate + playtest). breaking_weir
+  validate_story stays 0 errors / 0 warnings; the auto-discovered RPG suites (all-endings
+  reachability for ending_held + ending_swept, no soft-lock, score economy max==50, action-id
+  uniqueness, variant liveness) stay green — additive text-only variants, no structural change.
+
+files_changed:
+  - content/rpg/pack/breaking_weir.yaml  # weir_walk room + walk_span object: not_flag heard_walk gamble-cue variants
+  - tests/regression/breaking_weir_gamble_legible.test.ts  # new; pins the gamble cue across the 3 storm-walk states + name-unchanged

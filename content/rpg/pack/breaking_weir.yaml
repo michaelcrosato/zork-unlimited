@@ -116,6 +116,24 @@ rooms:
           The plank-walk across the spillway, crossed now, your line still snapped to the
           run-wire and trailing back the way you came. The race-house is just north; the
           weir-head is back to the south.
+      # The un-counselled crossing made VISIBLE as the gamble it is (bug_0204): a player who
+      # never asked Pell how a man crosses (not_flag heard_walk) goes out on raw nerve (base
+      # nerve 3, DC 9, ~25% death), but at base the room read identically to the steadied
+      # crossing, so the gamble was hidden behind a stat. This variant surfaces it AT THE
+      # DECISION POINT without hard-gating — you can still go (it stays a gamble, not a wall),
+      # and it stays HONEST (the water MAY have you, not certain death) the way the prose and
+      # Pell are honest elsewhere (bug_0027/0114/0200). The walk_crossed variant matches first,
+      # so a crossed walk never shows this; a counselled-but-not-yet-crossed player falls to the
+      # base text, which reads true once you know the trick.
+      - when: [{ not_flag: heard_walk }]
+        text: >
+          A single plank-walk runs out across the spillway, no rail to it and the flood sheeting
+          over the boards inches deep, hammering at your shins and trying to take your feet from
+          under you. One slip here and the race has you, and the race does not give a man back.
+          You never had Pell's telling of how a man crosses this and lives — go out on it now and
+          it is on raw nerve alone, to find the trick of it under your feet or be taught it by the
+          water. The life-line's snap will catch the run-wire; clip on and you may yet make it. The
+          far side and the race-house lie north; the weir-head is back to the south.
     objects: [walk_span]
     exits:
       - { direction: south, to: weir_head }
@@ -242,6 +260,12 @@ objects:
     variants:
       - when: [{ has_flag: walk_crossed }]
         text: "The plank-walk across the spillway, crossed now and your line still trailing from the run-wire — slick and awash, but behind you."
+      # examine-side twin of the room's gamble cue (bug_0204): on a closer look the un-counselled
+      # player is told plainly that the knack of the crossing — the half Pell would teach — is the
+      # half that keeps you UPRIGHT, so going un-told is the gamble. No `name` override here, so the
+      # object name stays "storm-walk" (the bug_0197 reactive-name pins are untouched).
+      - when: [{ not_flag: heard_walk }]
+        text: "The plank-walk out across the spillway, the flood sheeting over it and no rail to hand. The run-wire is strung taut down its length at waist height; clip the life-line's snap to it and the wire will hold you to the boards if you go down. But Pell has not yet shown you HOW a man crosses this and lives, and that knack is the half that keeps you upright — go out now, un-told and on raw nerve, and whether you cross or the race takes you is the water's to say, not yours."
     takeable: false
     interactions:
       # nerve skill check — the ONE LETHAL obstacle (the pack's prep-vs-gamble identity, the
