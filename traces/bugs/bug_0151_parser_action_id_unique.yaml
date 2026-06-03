@@ -1,0 +1,83 @@
+bug_id: bug_0151
+pack_id: all_parser         # structural invariant over every shipped PARSER pack (auto-discovered)
+seed: 11
+type: invariant_lock        # no defect found in shipped content; machine-enforces a load-bearing runtime contract
+layer: test                 # regression-only; NO content/engine/validator/schema change, NO helper change, NO hash pin moved
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-03T05-02-45-372Z/playtest.md   # alchemists_tower seed 11 (the cycle's mandated, correctly-rotated target — least-recently blind-played)
+  finding: >
+    The mandated blind pass on Alchemist's Tower (parser, seeds 11/22/33 — the
+    least-recently blind-played pack per [[assessor-blind-pass-rotation]], last dedicated
+    pass bug_0142) reached all three declared endings (the cure 40/40, betrayal 0/40,
+    poison/death 0/40), confirmed flawless mechanics, and rated the pack clarity 5/5,
+    enjoyment 4/5, ZERO real bugs — re-confirmed blind-clean. Its ONE structural note was
+    cosmetic: "after taking the herb, the room reads 'the herb bed is bare' yet the action
+    list still offered `examine_herb` ('look at pale herb') for one observation." Verified
+    a FALSE POSITIVE: examining a HELD item is intended (you can look at what you carry),
+    `visibleObjectIds` excludes held objects so a taken item is offered examine EXACTLY
+    once (from the inventory loop, never duplicated with the room loop), and the herb's
+    description is location-neutral ("A pale, bitter medicinal herb."). No actionable
+    content defect; content is blind-exhausted per [[content-polish-backlog-exhausted]].
+    Per the standing guidance, the cycle's lever is a §15 invariant-lock that CERTIFIES
+    the tester's exact worry — that an examine action has been duplicated — can never
+    actually happen, at any reachable state.
+root_cause: >
+  A gap in the structural-verification net, not a content defect. The MCP/UI layer
+  resolves a player's chosen action by a FIRST-MATCH id lookup
+  (src/mcp/tools.ts actionForId: `available_actions.find((a) => a.id === id)`). If an
+  observation ever offered two options with the same `id`, the SECOND would be
+  permanently UNSELECTABLE — picking it silently yields the first — a phantom menu entry.
+  Nothing proved this can never happen:
+    - enumerateActions mints runtime action ids from templates (`go_<dir>`,
+      `examine_<oid>`, `read_<oid>`, `use_<item>_on_<target>`, `unlock_<oid>_with_<key>`,
+      ...). The shipped packs avoid collisions only incidentally (object ids are unique
+      and visibleObjectIds excludes held objects, so room-visible and held examine/read
+      ids are disjoint), but no check enforces it.
+    - The validators check duplicate ROOM/OBJECT/ENDING ids (parser_validator DUPLICATE_ID),
+      never the enumerator-minted runtime ids. Two exits sharing a direction (allowed by
+      the schema — `direction` is just a non-empty string) mint two `go_<dir>` options with
+      the same id that the static check cannot see.
+    - `option()` already calls resolveParserAction + evalConditions, so "every offered
+      action RESOLVES" is true by construction (vacuous). Uniqueness is the orthogonal,
+      uncovered property: two distinct, individually-resolvable options can still collide
+      on their id string. The every-ending / variant-liveness / score-economy proofs
+      (bug_0121/0146/0148) reason about content reachability over the same BFS; none
+      inspects the action MENU's internal well-formedness.
+fix: >
+  Test-only (§15 lock-the-finding). New tests/regression/parser_action_id_unique.test.ts
+  runs the shared exhaustive concrete BFS (tests/regression/support/exhaustive_endings.ts)
+  under the bug_0146 LIVENESS action policy (step every action except DROP/CLOSE and the
+  pure-observation verbs — the widest tractable reachable region, visiting read-flag
+  states too) and, at EVERY distinct reachable non-terminal state, calls the engine's own
+  enumerateActions and asserts its option ids are pairwise distinct. The menu inspected at
+  each state is independent of which actions the BFS chooses to STEP, so the policy only
+  widens the set of menus examined — strictly more thorough. No content/engine/validator/
+  schema change, NO helper change (reuses the behaviour-preserving `explore` param
+  bug_0145/0146 added).
+within_bar: >
+  Regression test ONLY. No pack edited; no validator/schema/engine/helper change; NO hash
+  pin moved (all 9 packs validate 0/0, content_hashes unchanged). Deterministic, no
+  LLM-judge, NO API key. Sound: every state visited is a real legal playthrough, the menu
+  is the engine's own enumerateActions output, the search FAILS on cappedOut (never
+  truncates silently), and terminal states (no menu) are skipped. Anti-vacuity guards
+  assert real menus were inspected (statesChecked > 0, actionsSeen > statesChecked) so the
+  pass cannot be vacuous.
+result:
+  shipped_packs_all_unique: true   # no reachable state of either shipped parser pack ever offers two actions with the same id
+  reachable_region: same as bug_0146 (identical BFS + liveness policy) — alchemists_tower ~5.7k / sealed_crypt ~9.6k states, well under the 200k cap
+regression_test: tests/regression/parser_action_id_unique.test.ts
+test_cases:
+  - "discovers the shipped parser packs (guards against a vacuous pass if the glob yields nothing)"
+  - "alchemists_tower: no reachable state ever offers two actions with the same id (search not capped; menus actually inspected)"
+  - "sealed_crypt: no reachable state ever offers two actions with the same id (search not capped; menus actually inspected)"
+  - "FAILS on a planted duplicate action id (two same-direction exits → two `go_north`) — the negative control the static DUPLICATE_ID validator does not catch"
+  - "PASSES a clean twin (same shape, distinct directions) — proving the control bites on the duplication, not the shape"
+notes: >
+  Certifies the blind tester's exact worry (a duplicated examine action) can never occur
+  at any reachable state, and guards the load-bearing find-by-id contract in
+  src/mcp/tools.ts actionForId. PARSER scope (the mode of the finding). RPG reuses the
+  parser enumerator but adds seeded combat actions (needs the best/worst-roll bracket);
+  CYOA mints CHOOSE ids from scene choice ids — extending the same menu-integrity
+  assertion to those two modes is the natural follow-on. See [[cyoa-exhaustive-solver]].
