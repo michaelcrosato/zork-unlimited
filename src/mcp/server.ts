@@ -96,14 +96,23 @@ tool(
 );
 
 tool(
+  "generate_rpg_pack",
+  "Mint a FRESH procedural RPG pack from a seed and validate it against the same gate the curated RPG packs clear — exercising the combat-winnability and score-economy proofs (the verifier surfaces generate_pack's CYOA packs never touch) against a moving target. Pure + deterministic; writes nothing. Play it with new_game's generate_rpg_seed.",
+  {
+    seed: z.number().int().describe("Generation seed — selects the minted pack's theme/structure."),
+  },
+  (a) => api.generate_rpg_pack(a),
+);
+
+tool(
   "new_game",
-  "Start a new game on a (playable) pack of any mode; returns a session id, the detected mode, and the first observation. Provide pack_path to load from disk, OR generate_seed to mint+play a fresh procedural CYOA pack in-memory.",
+  "Start a new game on a (playable) pack of any mode; returns a session id, the detected mode, and the first observation. Provide pack_path to load from disk, OR generate_seed to mint+play a fresh procedural CYOA pack, OR generate_rpg_seed for a fresh procedural RPG pack — both in-memory.",
   {
     pack_path: z
       .string()
       .optional()
       .describe(
-        "Path to a content pack (.yaml) — CYOA, parser, or RPG; mode is auto-detected — relative to the project root. Omit when using generate_seed.",
+        "Path to a content pack (.yaml) — CYOA, parser, or RPG; mode is auto-detected — relative to the project root. Omit when using generate_seed/generate_rpg_seed.",
       ),
     generate_seed: z
       .number()
@@ -111,6 +120,13 @@ tool(
       .optional()
       .describe(
         "Instead of pack_path: mint and play a fresh procedural CYOA pack from this seed (see generate_pack). Independent of `seed` (which seeds runtime state).",
+      ),
+    generate_rpg_seed: z
+      .number()
+      .int()
+      .optional()
+      .describe(
+        "Instead of pack_path: mint and play a fresh procedural RPG pack from this seed (see generate_rpg_pack). Independent of `seed` (which seeds runtime state).",
       ),
     seed: z.number().int().optional().describe("Deterministic runtime seed (default 1)."),
     ...HIDE_GRAPH,

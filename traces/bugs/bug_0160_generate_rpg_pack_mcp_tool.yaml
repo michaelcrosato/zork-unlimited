@@ -1,0 +1,99 @@
+id: bug_0160
+title: "generate_rpg_pack MCP tool + new_game(generate_rpg_seed) — expose the procedural RPG generator through the agent surface"
+kind: engine
+mode: rpg
+severity: enhancement
+layer: mcp
+artifact:
+  source: src/mcp/tools.ts
+  also: src/mcp/server.ts
+  test: tests/unit/mcp_generate_rpg_pack.test.ts
+
+summary: >
+  The mandated blind pass this cycle (sunken_barrow, RPG, seed 7) re-confirmed content is blind-clean:
+  clarity 5/5, enjoyment 4/5, ZERO mechanical bugs across BOTH declared endings (ending_victory 50/50
+  and ending_woken death 25/50). Combat math fully transparent, the +3-defense ward a real effect, the
+  might check and score economy (10+15+25 = 50/50) all confirmed working. Per
+  [[content-polish-backlog-exhausted]] its only note — that combat luck can make the optional ward feel
+  non-mandatory (consistent with the shade's honest framing) — is an intentional design observation, not
+  a defect; manufacturing an edit to a clean pack is the churn the plan rejects. The standing product
+  lever (docs/CURRENT_PLAN.md + [[fresh-pack-generator]]) is the fresh-pack GENERATOR. bug_0159 built the
+  RPG minting core; bug_0160 lands the NEXT named slice (the bug_0157 analogue, one mode over): expose
+  that generator through the MCP surface so a never-authored RPG pack can be minted, validated, AND PLAYED.
+
+mandated_blind_playtest:
+  run: ai-runs/2026-06-03T09-13-43-464Z/playtest.md
+  pack: content/rpg/pack/sunken_barrow.yaml
+  seed: 7
+  result: "reached ending_victory (50/50) and ending_woken (death, 25/50); clarity 5/5, enjoyment 4/5; ZERO bugs; transparent combat (d6 rolls shown), the +3-defense ward a real def 2→5 effect, might check vs DC 12, score tallies exactly to max_score"
+  triage: >
+    No actionable content defect — sunken_barrow is blind-clean and its combat/score/ward mechanics were
+    confirmed working, not bugs. The one soft note (swingy combat can let a lucky unwarded run win, so the
+    optional ward feels non-mandatory) the tester itself judged intentional given the shade's framing
+    ("the better of it is not the sure of it"). Rather than manufacture an edit to a clean pack or author
+    a redundant RPG #3, the cycle advanced the plan's named next lever: the RPG generator's MCP slice —
+    thematically convergent, since the playtest target was itself an RPG pack and the validators most
+    distinctive to RPG (combat, score economy) are exactly what this exposes to a moving target.
+
+what:
+  - >
+    src/mcp/tools.ts — generate_rpg_pack(seed): a PURE, read-only handler that MINTS a fresh RPG pack via
+    generateRpgPack(seed) and validates it with the SAME production validateRpg gate the curated RPG packs
+    clear (zero findings of ANY severity — the full parser bar PLUS the RPG-only COMBAT_UNWINNABLE /
+    SCORE_UNREACHABLE / SKILL_CHECK_IMPOSSIBLE checks), returning { ok, mode, pack_id, content_hash, seed,
+    meta, room_count, enemy_count, ending_count, report }. The content_hash is exactly hashState(pack), so
+    the reported hash never drifts from the compiled pack. Writes nothing to disk.
+  - >
+    src/mcp/tools.ts — requireGeneratedRpgPlayable(seed): the RPG twin of requireGeneratedPlayable. Mints
+    in-memory and refuses to play unless validateRpg is clean. The in-memory CompiledRpgPack is
+    { pack, contentHash: hashState(pack) } — byte-identical to what compileRpgPack produces from the same
+    pack's YAML — so NO file is written and the server keeps its read-only / least-privilege stance (§16).
+  - >
+    src/mcp/tools.ts — new_game now accepts an optional generate_rpg_seed alongside generate_seed: when
+    present it mints + plays a fresh RPG pack in-memory. generate_seed (CYOA) / generate_rpg_seed (RPG)
+    select the minted pack's theme/structure; the runtime seed is independent. new_game with none of
+    pack_path / generate_seed / generate_rpg_seed throws clearly (message updated).
+  - >
+    src/mcp/server.ts — registers the generate_rpg_pack tool and adds the optional generate_rpg_seed input
+    to new_game, with descriptions guiding the mint-then-play flow and naming the combat/score surfaces.
+
+why: >
+  The richest verifier surfaces in the suite are the RPG-only proofs — COMBAT winnability (the
+  bug_0097/0113/0114 best/worst-roll bound) and SCORE-economy soundness (declared max_score == reachable
+  award sum). They ran only against the two FROZEN hand-authored RPG packs (sunken_barrow, cold_forge) —
+  the memorisable-target condition the frozen-verifier literature warns against (arXiv 2510.14253;
+  [[verifier-assertion-guard]]). bug_0159 built the RPG minting core but left it test-only. Exposing it
+  through MCP is the first deferred slice bug_0159's docstring + docs/CURRENT_PLAN.md name: it lets the
+  agent/loop (and a future assessor mint-and-play lever) confront a fresh, never-seen RPG pack held to the
+  identical shipped bar — extending the moving-target property to the validators that matter most for the
+  RPG mode. Key-free, no outbound model call, no new write capability.
+
+scope_deliberately_excluded: >
+  Still NEXT, kept out so this stays one focused, green-bar change (docs/CURRENT_PLAN.md next): an assessor
+  lever that mints-and-validates a fresh RPG pack each cycle (the bug_0158 analogue, turning the RPG
+  COMBAT/SCORE validators into a LIVE self-renewing eval signal — the actual cure for the 0.5-floor stall
+  on the RPG axis), persistence of a held-out corpus, and deepening the RPG generator (multiple enemies,
+  a combat_guaranteed fairness variant, deeper maps). Generated packs remain in-memory only — never written
+  under content/rpg/pack — so they incur no blind-playtest obligation and never pollute the curated set.
+
+regression:
+  test: tests/unit/mcp_generate_rpg_pack.test.ts
+  guards: >
+    Locks the MCP path to the shipped bar (8 cases): generate_rpg_pack must report a minted pack
+    validateRpg-clean with the schema-stamped id/hash and the proven 6-room / 1-enemy / 2-ending shape,
+    its max_score within the seed-chosen [30,60] band, and content_hash === hashState(generateRpgPack(seed))
+    (no mint/report drift); determinism must carry through the tool (same seed ⇒ identical hash+meta);
+    distinct themes must differ; a spread of seeds must all validate clean; and new_game(generate_rpg_seed)
+    must genuinely PLAY a minted pack through the live engine, with init stats surfaced, the COMBAT gate
+    load-bearing on that surface (foe present + attack_foe offered in the gallery; go_east absent while the
+    foe stands, present only after defeat), and the optional NPC's +2-attack counsel applying live. new_game
+    with no pack source must error with the updated message.
+
+related:
+  - bug_0159 (the RPG generator's pure minting core — this exposes it through MCP)
+  - bug_0157 (the CYOA generate_pack MCP tool — the direct analogue this mirrors one mode over)
+  - bug_0124 (rpg exhaustive solvability via the best/worst-roll bracket — the solvability bar the generated pack clears)
+  - bug_0101 (the proven hp18/atk7/def2 winnable-fight tuning the generator anchors on)
+  - fresh-pack-generator (the breadth lever: mode-widening MCP tool was the named next slice)
+  - content-polish-backlog-exhausted (breadth is the standing product lever)
+  - verifier-assertion-guard (frozen-verifier reward hacking — the motivation; RPG validators were the most-frozen)

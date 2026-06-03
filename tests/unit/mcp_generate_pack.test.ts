@@ -109,7 +109,8 @@ describe("bug_0157 — new_game(generate_seed) plays a fresh minted pack in-memo
     expect(end.observation.mode === "cyoa" && end.observation.ending_id).toBe("ending_stance_0");
   });
 
-  it("new_game with neither pack_path nor generate_seed errors clearly", () => {
-    expect(() => api().new_game({})).toThrow(/pack_path or generate_seed/);
+  it("new_game with no pack source errors clearly", () => {
+    // The message now names all three sources (generate_rpg_seed added in bug_0160).
+    expect(() => api().new_game({})).toThrow(/pack_path, generate_seed, or generate_rpg_seed/);
   });
 });

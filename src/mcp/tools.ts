@@ -33,6 +33,8 @@ import { buildParserObservation } from "../parser/observation.js";
 import { validateParser } from "../validate/parser_validator.js";
 
 import { compileRpgPack } from "../rpg/pack.js";
+import { generateRpgPack } from "../gen/rpg_generator.js";
+import type { RpgPack } from "../rpg/schema.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../rpg/runner.js";
 import { buildRpgObservation } from "../rpg/observation.js";
 import { validateRpg } from "../validate/rpg_validator.js";
@@ -209,6 +211,32 @@ export function createToolApi(opts: { root: string }) {
       throw new Error(`Generated pack (seed ${seed}) is not playable:\n${formatReport(report)}`);
     }
     return { mode: "cyoa", compiled: { pack, contentHash: hashState(pack) } };
+  }
+
+  /**
+   * The RPG twin of `requireGeneratedPlayable` (the MODE-WIDENING slice of the generator
+   * program — bug_0159 built the RPG minting core, this exposes it through the same seam).
+   * Mints a fresh RPG pack from a seed and refuses to play it unless it clears the SAME
+   * `validateRpg` gate the curated RPG packs clear — so the COMBAT-winnability and
+   * SCORE-economy proofs (the richest verifier surfaces in the suite) face a moving target,
+   * not just the two frozen hand-authored packs. The generator already returns an
+   * `RpgPackSchema.parse`d pack, so `{ pack, contentHash: hashState(pack) }` is byte-identical
+   * to what `compileRpgPack` produces from the same pack's YAML — no file is written (the
+   * server stays read-only/least-privilege, §16), and the minted pack never lands under
+   * content/rpg/pack to pollute the hand-authored showcase set.
+   */
+  function requireGeneratedRpgPlayable(seed: number): {
+    mode: PackMode;
+    compiled: AnyCompiledPack;
+  } {
+    const pack = generateRpgPack(seed); // mints + schema self-check (throws on malformed emission)
+    const report = validateRpg(pack);
+    if (!report.ok) {
+      throw new Error(
+        `Generated RPG pack (seed ${seed}) is not playable:\n${formatReport(report)}`,
+      );
+    }
+    return { mode: "rpg", compiled: { pack, contentHash: hashState(pack) } };
   }
 
   function startSession(
@@ -613,25 +641,69 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
+    /**
+     * Mint a fresh RPG pack from a seed and validate it against the SAME `validateRpg` gate
+     * the curated RPG packs clear (the MODE-WIDENING slice of "evolve the eval distribution",
+     * docs/CURRENT_PLAN.md / bug_0159 → this). The RPG twin of `generate_pack`: it exposes the
+     * RPG generator (src/gen/rpg_generator.ts) through the MCP surface so a never-authored,
+     * never-seen pack exercises the COMBAT-winnability and SCORE-economy proofs — the verifier
+     * surfaces the CYOA generator never touches. Pure + deterministic (same seed ⇒ identical
+     * pack) and read-only — nothing is written to disk. To PLAY the minted pack, pass the same
+     * value to `new_game`'s `generate_rpg_seed`.
+     */
+    generate_rpg_pack(args: { seed: number }): {
+      ok: boolean;
+      mode: PackMode;
+      pack_id: string;
+      content_hash: string;
+      seed: number;
+      meta: RpgPack["meta"];
+      room_count: number;
+      enemy_count: number;
+      ending_count: number;
+      report: ValidationReport;
+    } {
+      const pack = generateRpgPack(args.seed);
+      const report = validateRpg(pack);
+      return {
+        ok: report.ok,
+        mode: "rpg",
+        pack_id: pack.meta.id,
+        content_hash: hashState(pack),
+        seed: args.seed,
+        meta: pack.meta,
+        room_count: pack.rooms.length,
+        enemy_count: pack.enemies.length,
+        ending_count: pack.endings.length,
+        report,
+      };
+    },
+
     new_game(args: {
       pack_path?: string;
       generate_seed?: number;
+      generate_rpg_seed?: number;
       seed?: number;
       hide_graph?: boolean;
     }) {
       // Either load a pack from disk OR mint a fresh one in-memory from `generate_seed`
-      // (the eval-distribution path — a never-authored pack, held to the same playable
-      // bar). `generate_seed` selects the generated pack's THEME/structure; `seed` still
-      // seeds runtime state, so the two are independent.
+      // (a CYOA pack) / `generate_rpg_seed` (an RPG pack) — the eval-distribution path, a
+      // never-authored pack held to the same playable bar. The generate_* seed selects the
+      // minted pack's THEME/structure; `seed` still seeds runtime state, so the two are
+      // independent.
       const { mode, compiled } =
         args.generate_seed !== undefined
           ? requireGeneratedPlayable(args.generate_seed)
-          : requirePlayable(
-              args.pack_path ??
-                ((): never => {
-                  throw new Error("new_game requires either pack_path or generate_seed.");
-                })(),
-            );
+          : args.generate_rpg_seed !== undefined
+            ? requireGeneratedRpgPlayable(args.generate_rpg_seed)
+            : requirePlayable(
+                args.pack_path ??
+                  ((): never => {
+                    throw new Error(
+                      "new_game requires pack_path, generate_seed, or generate_rpg_seed.",
+                    );
+                  })(),
+              );
       const session = startSession(mode, compiled, undefined, {
         ...(args.hide_graph ? { hideGraph: true } : {}),
       });
