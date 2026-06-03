@@ -46,7 +46,7 @@ import {
   type Finding,
   type ValidationReport,
 } from "../validate/report.js";
-import { save, load, SaveIntegrityError } from "../persist/save_load.js";
+import { save, load, SaveIntegrityError, assertWellFormedState } from "../persist/save_load.js";
 import { replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
@@ -962,6 +962,11 @@ export function createToolApi(opts: { root: string }) {
           message: `Trace was recorded against content ${trace.content_hash}, but the pack is ${compiled.contentHash}.`,
         };
       }
+      // §16 integrity at load: trace.initial_state came off an UNTRUSTED file (the
+      // content-hash check above guards WHICH pack, not WHETHER the state is well-
+      // formed). Gate it the same way a loaded save is gated, BEFORE any engine call.
+      assertWellFormedState(trace.initial_state);
+      assertLoadedStateRefs(mode, indexFor(mode, compiled.pack), trace.initial_state);
       const rules = rulesFor(mode, indexFor(mode, compiled.pack));
       // Replay asserts the recorded final hash, and — for a Trace-v2 trace that
       // also carries `per_step_hashes` — localizes the FIRST divergent action via
@@ -985,6 +990,11 @@ export function createToolApi(opts: { root: string }) {
           message: `Trace content ${trace.content_hash} ≠ pack ${compiled.contentHash}.`,
         };
       }
+      // §16 integrity at load: same untrusted-file gate as replay_trace — the state
+      // is fed RAW into the per-step loop (let state = trace.initial_state) and into
+      // diagnose() below, so it must be well-formed + referentially sound first.
+      assertWellFormedState(trace.initial_state);
+      assertLoadedStateRefs(mode, indexFor(mode, compiled.pack), trace.initial_state);
       const rules = rulesFor(mode, indexFor(mode, compiled.pack));
       const step = makeStep(rules);
       let state = trace.initial_state;
