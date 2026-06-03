@@ -7,7 +7,7 @@
  * but never a fresh PARSER pack. This exposes it through the SAME seam so a fresh, never-authored
  * parser pack can be minted, validated against the SAME `validateParser` gate the curated parser
  * packs clear, and PLAYED — extending the moving-target property to the PARSER-only verifier surfaces
- * (depth-2 obtainability / soft-lock, the moral same-key fork) which the CYOA and RPG generators never
+ * (depth-3 obtainability / soft-lock, the moral same-key fork) which the CYOA and RPG generators never
  * touch and which until now ran only against the FROZEN hand-authored parser packs.
  *
  * These tests hold the MCP path to the same bar the generator's own unit test (parser_generator.test.ts)
@@ -15,10 +15,10 @@
  *   1. generate_parser_pack MINTS + VALIDATES — a minted pack is reported playable (validateParser-clean,
  *      zero findings of ANY severity) with the schema-stamped id/hash, never weaker than a shipped pack.
  *   2. DETERMINISM (§8.5) carries through the tool — same seed ⇒ identical content hash + meta.
- *   3. new_game(generate_parser_seed) genuinely PLAYS the minted pack through the live engine, and the
- *      flag-gated exit is load-bearing on that live surface: from the hub the way ON (north, to the goal)
- *      is GATED on the gate flag — ABSENT while the gate stands locked — while the way back (south) is
- *      open, exactly the depth-2 chain the parser validator proves obtainable.
+ *   3. new_game(generate_parser_seed) genuinely PLAYS the minted pack through the live engine, and a
+ *      flag-gated exit is load-bearing on that live surface: from the hub the way DEEPER IN (north, to
+ *      the inner cell) is GATED on HUB_OPEN — ABSENT until the strongbox is unlocked — while the way
+ *      back (south) is open, exactly the depth-3 chain the parser validator proves obtainable (bug_0199).
  *   4. The seam is read-only and well-guarded: new_game with no pack source errors clearly, and the
  *      error now names generate_parser_seed (the seam is discoverable from the failure).
  */
@@ -40,12 +40,13 @@ describe("generate_parser_pack MCP tool mints + validates a fresh parser pack", 
     expect(r.pack_id).toBe("genpar_0_v1");
     expect(r.meta.id).toBe("genpar_0_v1");
     expect(r.content_hash).toMatch(/^[0-9a-f]{64}$/);
-    // The three-room spine (entrance → hub → goal), seven objects (clue, coffer, lesser key,
-    // strongbox, great key, gate, hazard), two endings (the win + the telegraphed death fork).
-    expect(r.room_count).toBe(3);
-    expect(r.object_count).toBe(7);
+    // The four-room spine (entrance → hub → inner → goal), nine objects (clue, coffer, lesser key,
+    // strongbox, middle key, inner chest, great key, gate, hazard), two endings (the win + the
+    // telegraphed death fork). The v3 depth-3 chain (bug_0199).
+    expect(r.room_count).toBe(4);
+    expect(r.object_count).toBe(9);
     expect(r.ending_count).toBe(2);
-    expect(r.meta.max_score).toBe(15);
+    expect(r.meta.max_score).toBe(20);
     // The reported hash is exactly the compiled-pack hash (no drift between mint and report).
     expect(r.content_hash).toBe(hashState(generateParserPack(0)));
   });
@@ -84,23 +85,25 @@ describe("new_game(generate_parser_seed) plays a fresh minted parser pack in-mem
     expect(g.observation.available_actions.map((x) => x.id)).toContain("go_north");
   });
 
-  it("the flag-gated exit is load-bearing on the live surface: the goal is sealed until the gate opens", () => {
+  it("the flag-gated exit is load-bearing on the live surface: the deep cell is sealed until the strongbox opens", () => {
     const a = api();
     const g = a.new_game({ generate_parser_seed: 3 });
     const sid = g.session_id;
 
-    // Step from the threshold north into the inner chamber (the hub).
-    a.step_action({ session_id: sid, action_id: "go_north" });
+    // Step from the threshold north into the hub (the strongbox chamber).
+    a.step_action({ session_id: sid, action_id: "go_north" }); // entrance → hub
     const hub = a.get_observation({ session_id: sid }).observation;
     const ids = hub.available_actions.map((x) => x.id);
 
     // The way back (south, to the threshold) is open...
     expect(ids).toContain("go_south");
-    // ...and the way ON (north, to the goal) is GATED on the gate flag: absent while it stands locked.
+    // ...and the way DEEPER IN (north, to the inner cell) is GATED on HUB_OPEN: absent until the
+    // strongbox is unlocked (the v3 depth-3 chain routes the lesser tier through this exit, so the
+    // deep cell — and the gate/great key it holds — cannot be reached by free locomotion).
     expect(ids).not.toContain("go_north");
-    // The locked gate object is present here (the depth-2 chain's last link) — examinable now,
-    // unlockable only once the great key is in hand.
-    expect(ids).toContain("examine_gate");
+    // The locked strongbox (the depth-3 chain's FIRST lock) is present here — examinable now,
+    // unlockable only once the lesser key is in hand.
+    expect(ids).toContain("examine_strongbox");
   });
 
   it("new_game with no pack source errors clearly, naming the generate_parser_seed seam", () => {

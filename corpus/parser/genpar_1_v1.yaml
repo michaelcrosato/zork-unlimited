@@ -4,7 +4,7 @@ meta:
   start_room: entrance
   vars_init: {}
   flags_init: []
-  max_score: 15
+  max_score: 20
 rooms:
   - id: entrance
     name: "The Wreckers' Light: Threshold"
@@ -23,24 +23,49 @@ rooms:
   - id: hub
     name: The Inner Chamber
     description: The lamp-room is cold and dark, the great lens unlit; a old keeper
-      hunches by the dead wick. A keeper's sea-chest stands here. To the north,
+      hunches by the dead wick. A keeper's sea-chest stands here, and beyond it
+      a low passage is barred until the strongbox gives. The threshold is back
+      to the south.
+    variants:
+      - when:
+          - has_flag: hub_open
+        text: The lamp-room is cold and dark, the great lens unlit; a old keeper hunches
+          by the dead wick. The keeper's sea-chest stands open by the wall, and
+          the low passage north into the deep cell lies clear. The threshold is
+          back to the south.
+    objects:
+      - strongbox
+    exits:
+      - direction: south
+        to: entrance
+        conditions: []
+      - direction: north
+        to: inner
+        conditions:
+          - has_flag: hub_open
+        locked_msg: The passage deeper in is barred until the keeper's sea-chest is opened.
+    on_enter: []
+  - id: inner
+    name: The Deep Cell
+    description: A cramped service-gallery rings the lens-housing, a watch-locker
+      bolted under the trimming-bench. A watch-locker stands here. To the north,
       the lamp-room hatch bars the way on, and apart from it the signal-rocket
-      waits. The threshold is back to the south.
+      waits. The chamber is back to the south.
     variants:
       - when:
           - has_flag: gate_open
-        text: The lamp-room is cold and dark, the great lens unlit; a old keeper hunches
-          by the dead wick. The lamp-room hatch stands open now, and through it,
-          north, lies the beacon stage. The keeper's sea-chest stands open by
-          the wall, and apart from it the signal-rocket waits still. The
-          threshold is back to the south.
+        text: A cramped service-gallery rings the lens-housing, a watch-locker bolted
+          under the trimming-bench. The lamp-room hatch stands open now, and
+          through it, north, lies the beacon stage. The watch-locker stands open
+          by the wall, and apart from it the signal-rocket waits still. The
+          chamber is back to the south.
     objects:
-      - strongbox
+      - inner_chest
       - gate
       - hazard
     exits:
       - direction: south
-        to: entrance
+        to: hub
         conditions: []
       - direction: north
         to: goal
@@ -55,7 +80,7 @@ rooms:
     objects: []
     exits:
       - direction: south
-        to: hub
+        to: inner
         conditions: []
     on_enter: []
 objects:
@@ -68,7 +93,8 @@ objects:
     takeable: false
     quest_critical: false
     read_text: "Chalked plain: 'THE OIL-LOCKER KEEPS THE LOCKER KEY; IT OPENS THE
-      SEA-CHEST, AND THE BRASS KEY WITHIN LIFTS THE HATCH.'"
+      SEA-CHEST, THE SEA-CHEST GIVES THE WATCH KEY, AND THE WATCH KEY OPENS THE
+      WATCH-LOCKER WHERE THE BRASS KEY THAT LIFTS THE HATCH IS KEPT.'"
     container: false
     openable: false
     locked: false
@@ -113,14 +139,47 @@ objects:
     name: keeper's sea-chest
     aliases:
       - seachest
-    description: A banded sea-chest under the bench, its lock cut for a small key;
-      the brass hatch-key is said to lie within.
+    description: A banded sea-chest under the bench, its lock cut for a small key; a
+      watch key lies within.
     takeable: false
     quest_critical: false
     container: true
     openable: true
     locked: true
     key_id: lesser_key
+    unlock_effects:
+      - set_flag: hub_open
+      - inc_var:
+          name: score
+          by: 5
+    contents:
+      - middle_key
+    interactions: []
+  - id: middle_key
+    name: watch key
+    aliases:
+      - watchkey
+    description: A worn watch key from the sea-chest — no good on the hatch, but it
+      opens the watch-locker.
+    takeable: true
+    quest_critical: true
+    container: false
+    openable: false
+    locked: false
+    contents: []
+    interactions: []
+  - id: inner_chest
+    name: watch-locker
+    aliases:
+      - watchlocker
+    description: A bolted watch-locker under the trimming-bench, its lock cut for a
+      small key; the brass hatch-key lies within.
+    takeable: false
+    quest_critical: false
+    container: true
+    openable: true
+    locked: true
+    key_id: middle_key
     unlock_effects:
       - inc_var:
           name: score
@@ -203,8 +262,9 @@ npcs:
               prompt: Say goodbye
               end: true
         - id: tell
-          npc_text: Find the locker key in the oil-locker; it opens my sea-chest, and the
-            brass key kept in there lifts the hatch.
+          npc_text: Find the locker key in the oil-locker; it opens my sea-chest, the
+            watch key inside opens the watch-locker in the gallery beyond, and
+            the brass key kept in there lifts the hatch.
           effects: []
           topics:
             - id: bye

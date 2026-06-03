@@ -4,7 +4,7 @@ meta:
   start_room: entrance
   vars_init: {}
   flags_init: []
-  max_score: 15
+  max_score: 20
 rooms:
   - id: entrance
     name: "The Cold Forge: Threshold"
@@ -23,24 +23,49 @@ rooms:
   - id: hub
     name: The Inner Chamber
     description: The casting floor stands silent, moulds cooling in their pits; a
-      tally-master lingers by the dead crucible. A iron strongbox stands here.
-      To the north, the store wicket bars the way on, and apart from it the
-      blast-furnace door waits. The threshold is back to the south.
+      tally-master lingers by the dead crucible. A iron strongbox stands here,
+      and beyond it a low passage is barred until the strongbox gives. The
+      threshold is back to the south.
+    variants:
+      - when:
+          - has_flag: hub_open
+        text: The casting floor stands silent, moulds cooling in their pits; a
+          tally-master lingers by the dead crucible. The iron strongbox stands
+          open by the wall, and the low passage north into the deep cell lies
+          clear. The threshold is back to the south.
+    objects:
+      - strongbox
+    exits:
+      - direction: south
+        to: entrance
+        conditions: []
+      - direction: north
+        to: inner
+        conditions:
+          - has_flag: hub_open
+        locked_msg: The passage deeper in is barred until the iron strongbox is opened.
+    on_enter: []
+  - id: inner
+    name: The Deep Cell
+    description: Off the casting floor the pattern-shop stands shuttered, a bonded
+      coffer chained to the master's bench. A bonded coffer stands here. To the
+      north, the store wicket bars the way on, and apart from it the
+      blast-furnace door waits. The chamber is back to the south.
     variants:
       - when:
           - has_flag: gate_open
-        text: The casting floor stands silent, moulds cooling in their pits; a
-          tally-master lingers by the dead crucible. The store wicket stands
-          open now, and through it, north, lies the pattern-store. The iron
-          strongbox stands open by the wall, and apart from it the blast-furnace
-          door waits still. The threshold is back to the south.
+        text: Off the casting floor the pattern-shop stands shuttered, a bonded coffer
+          chained to the master's bench. The store wicket stands open now, and
+          through it, north, lies the pattern-store. The bonded coffer stands
+          open by the wall, and apart from it the blast-furnace door waits
+          still. The chamber is back to the south.
     objects:
-      - strongbox
+      - inner_chest
       - gate
       - hazard
     exits:
       - direction: south
-        to: entrance
+        to: hub
         conditions: []
       - direction: north
         to: goal
@@ -55,7 +80,7 @@ rooms:
     objects: []
     exits:
       - direction: south
-        to: hub
+        to: inner
         conditions: []
     on_enter: []
 objects:
@@ -68,7 +93,8 @@ objects:
     takeable: false
     quest_critical: false
     read_text: "Chalked across it: 'THE TROUGH KEEPS THE TALLY KEY; IT OPENS THE
-      STRONGBOX, AND THE WARD-KEY WITHIN OPENS THE WICKET.'"
+      STRONGBOX, THE STRONGBOX HOLDS THE BENCH KEY, AND THE BENCH KEY OPENS THE
+      BONDED COFFER WHERE THE WARD-KEY THAT OPENS THE WICKET IS KEPT.'"
     container: false
     openable: false
     locked: false
@@ -114,13 +140,46 @@ objects:
     aliases:
       - strongbox
     description: A squat iron strongbox bolted to the floor, its lock cut for a
-      small key; the ward-key is kept inside.
+      small key; a bench key is kept inside.
     takeable: false
     quest_critical: false
     container: true
     openable: true
     locked: true
     key_id: lesser_key
+    unlock_effects:
+      - set_flag: hub_open
+      - inc_var:
+          name: score
+          by: 5
+    contents:
+      - middle_key
+    interactions: []
+  - id: middle_key
+    name: bench key
+    aliases:
+      - benchkey
+    description: A toothed bench key from the strongbox — useless on the wicket, but
+      it opens the bonded coffer.
+    takeable: true
+    quest_critical: true
+    container: false
+    openable: false
+    locked: false
+    contents: []
+    interactions: []
+  - id: inner_chest
+    name: bonded coffer
+    aliases:
+      - coffer-bonded
+    description: A bonded coffer chained to the master's bench, its lock cut for a
+      small key; the ward-key is kept inside.
+    takeable: false
+    quest_critical: false
+    container: true
+    openable: true
+    locked: true
+    key_id: middle_key
     unlock_effects:
       - inc_var:
           name: score
@@ -204,7 +263,8 @@ npcs:
               end: true
         - id: tell
           npc_text: The trough holds the tally key; it opens the strongbox by the wall,
-            and the ward-key in there opens the store wicket.
+            the bench key inside opens the bonded coffer in the pattern-shop
+            beyond, and the ward-key in there opens the store wicket.
           effects: []
           topics:
             - id: bye

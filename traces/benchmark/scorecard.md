@@ -17,7 +17,7 @@ One comparable number per split: `Score` is the mean over the split's packs of e
 | Split | Packs | Completion | Ending cov | Scene cov | **Score** |
 | --- | --: | --: | --: | --: | --: |
 | curated | 14 | 22.4% | 25.0% | 66.7% | **38.1%** |
-| held-out | 12 | 1.7% | 23.6% | 69.9% | **31.7%** |
+| held-out | 12 | 1.7% | 23.6% | 64.3% | **29.9%** |
 
 ### Per-mode (composition-robust)
 
@@ -28,7 +28,7 @@ The headline `Score` is a flat mean over a split's packs, so it moves with the s
 | cyoa | curated | 6 | **68.0%** |
 | cyoa | held-out | 4 | **58.6%** |
 | parser | curated | 3 | **16.4%** |
-| parser | held-out | 4 | **22.2%** |
+| parser | held-out | 4 | **16.7%** |
 | rpg | curated | 5 | **15.1%** |
 | rpg | held-out | 4 | **14.3%** |
 
@@ -90,18 +90,18 @@ The headline `Score` is a flat mean over a split's packs, so it moves with the s
 | gen_3_v1 | cyoa | coverage | shown | held-out | 4.0% | 2/3 | 66.7% | 100.0% | 3.0 |
 | gen_3_v1 | cyoa | coverage | hidden | held-out | 4.0% | 2/3 | 66.7% | 100.0% | 3.0 |
 | gen_3_v1 | cyoa | random | shown | held-out | 100.0% | 2/3 | 66.7% | 100.0% | 3.0 |
-| genpar_0_v1 | parser | coverage | shown | held-out | 0.0% | 0/2 | 0.0% | 66.7% | — |
-| genpar_0_v1 | parser | coverage | hidden | held-out | 0.0% | 0/2 | 0.0% | 33.3% | — |
-| genpar_0_v1 | parser | random | shown | held-out | 26.0% | 2/2 | 100.0% | 100.0% | 66.7 |
-| genpar_1_v1 | parser | coverage | shown | held-out | 0.0% | 0/2 | 0.0% | 66.7% | — |
-| genpar_1_v1 | parser | coverage | hidden | held-out | 0.0% | 0/2 | 0.0% | 33.3% | — |
-| genpar_1_v1 | parser | random | shown | held-out | 26.0% | 2/2 | 100.0% | 100.0% | 66.7 |
-| genpar_2_v1 | parser | coverage | shown | held-out | 0.0% | 0/2 | 0.0% | 66.7% | — |
-| genpar_2_v1 | parser | coverage | hidden | held-out | 0.0% | 0/2 | 0.0% | 33.3% | — |
-| genpar_2_v1 | parser | random | shown | held-out | 26.0% | 2/2 | 100.0% | 100.0% | 66.7 |
-| genpar_3_v1 | parser | coverage | shown | held-out | 0.0% | 0/2 | 0.0% | 66.7% | — |
-| genpar_3_v1 | parser | coverage | hidden | held-out | 0.0% | 0/2 | 0.0% | 33.3% | — |
-| genpar_3_v1 | parser | random | shown | held-out | 26.0% | 2/2 | 100.0% | 100.0% | 66.7 |
+| genpar_0_v1 | parser | coverage | shown | held-out | 0.0% | 0/2 | 0.0% | 50.0% | — |
+| genpar_0_v1 | parser | coverage | hidden | held-out | 0.0% | 0/2 | 0.0% | 25.0% | — |
+| genpar_0_v1 | parser | random | shown | held-out | 0.0% | 0/2 | 0.0% | 75.0% | — |
+| genpar_1_v1 | parser | coverage | shown | held-out | 0.0% | 0/2 | 0.0% | 50.0% | — |
+| genpar_1_v1 | parser | coverage | hidden | held-out | 0.0% | 0/2 | 0.0% | 25.0% | — |
+| genpar_1_v1 | parser | random | shown | held-out | 0.0% | 0/2 | 0.0% | 75.0% | — |
+| genpar_2_v1 | parser | coverage | shown | held-out | 0.0% | 0/2 | 0.0% | 50.0% | — |
+| genpar_2_v1 | parser | coverage | hidden | held-out | 0.0% | 0/2 | 0.0% | 25.0% | — |
+| genpar_2_v1 | parser | random | shown | held-out | 0.0% | 0/2 | 0.0% | 75.0% | — |
+| genpar_3_v1 | parser | coverage | shown | held-out | 0.0% | 0/2 | 0.0% | 50.0% | — |
+| genpar_3_v1 | parser | coverage | hidden | held-out | 0.0% | 0/2 | 0.0% | 25.0% | — |
+| genpar_3_v1 | parser | random | shown | held-out | 0.0% | 0/2 | 0.0% | 75.0% | — |
 | genrpg_0_v1 | rpg | coverage | shown | held-out | 0.0% | 0/3 | 0.0% | 42.9% | — |
 | genrpg_0_v1 | rpg | coverage | hidden | held-out | 0.0% | 0/3 | 0.0% | 14.3% | — |
 | genrpg_0_v1 | rpg | random | shown | held-out | 0.0% | 0/3 | 0.0% | 85.7% | — |

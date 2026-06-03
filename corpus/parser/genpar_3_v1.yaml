@@ -4,7 +4,7 @@ meta:
   start_room: entrance
   vars_init: {}
   flags_init: []
-  max_score: 15
+  max_score: 20
 rooms:
   - id: entrance
     name: "The Sunken Archive: Threshold"
@@ -24,23 +24,48 @@ rooms:
     name: The Inner Chamber
     description: The muniment room rises out of the flood on a dry shelf of stone;
       an under-clerk waits among the ruined presses. A muniment chest stands
-      here. To the north, the record grille bars the way on, and apart from it
-      the fumigation valve waits. The threshold is back to the south.
+      here, and beyond it a low passage is barred until the strongbox gives. The
+      threshold is back to the south.
+    variants:
+      - when:
+          - has_flag: hub_open
+        text: The muniment room rises out of the flood on a dry shelf of stone; an
+          under-clerk waits among the ruined presses. The muniment chest stands
+          open by the wall, and the low passage north into the deep cell lies
+          clear. The threshold is back to the south.
+    objects:
+      - strongbox
+    exits:
+      - direction: south
+        to: entrance
+        conditions: []
+      - direction: north
+        to: inner
+        conditions:
+          - has_flag: hub_open
+        locked_msg: The passage deeper in is barred until the muniment chest is opened.
+    on_enter: []
+  - id: inner
+    name: The Deep Cell
+    description: A deed-room opens off the muniment shelf, a registry casket bricked
+      into its dry wall. A registry casket stands here. To the north, the record
+      grille bars the way on, and apart from it the fumigation valve waits. The
+      chamber is back to the south.
     variants:
       - when:
           - has_flag: gate_open
-        text: The muniment room rises out of the flood on a dry shelf of stone; an
-          under-clerk waits among the ruined presses. The record grille stands
-          open now, and through it, north, lies the sealed-roll niche. The
-          muniment chest stands open by the wall, and apart from it the
-          fumigation valve waits still. The threshold is back to the south.
+        text: A deed-room opens off the muniment shelf, a registry casket bricked into
+          its dry wall. The record grille stands open now, and through it,
+          north, lies the sealed-roll niche. The registry casket stands open by
+          the wall, and apart from it the fumigation valve waits still. The
+          chamber is back to the south.
     objects:
-      - strongbox
+      - inner_chest
       - gate
       - hazard
     exits:
       - direction: south
-        to: entrance
+        to: hub
         conditions: []
       - direction: north
         to: goal
@@ -55,7 +80,7 @@ rooms:
     objects: []
     exits:
       - direction: south
-        to: hub
+        to: inner
         conditions: []
     on_enter: []
 objects:
@@ -68,7 +93,9 @@ objects:
     takeable: false
     quest_critical: false
     read_text: "Inked plain: 'THE DESPATCH-BOX HOLDS THE CLERK'S KEY; IT OPENS THE
-      MUNIMENT CHEST, AND THE GILT KEY WITHIN OPENS THE GRILLE.'"
+      MUNIMENT CHEST, THE MUNIMENT CHEST GIVES THE REGISTRY KEY, AND THE
+      REGISTRY KEY OPENS THE REGISTRY CASKET WHERE THE GILT KEY THAT OPENS THE
+      GRILLE IS CASED.'"
     container: false
     openable: false
     locked: false
@@ -114,13 +141,46 @@ objects:
     aliases:
       - muniment
     description: An iron muniment chest on the dry shelf, its lock cut for a small
-      key; the gilt key is cased within.
+      key; a registry key is cased within.
     takeable: false
     quest_critical: false
     container: true
     openable: true
     locked: true
     key_id: lesser_key
+    unlock_effects:
+      - set_flag: hub_open
+      - inc_var:
+          name: score
+          by: 5
+    contents:
+      - middle_key
+    interactions: []
+  - id: middle_key
+    name: registry key
+    aliases:
+      - registrykey
+    description: A slight registry key from the muniment chest — useless on the
+      grille, but it opens the registry casket.
+    takeable: true
+    quest_critical: true
+    container: false
+    openable: false
+    locked: false
+    contents: []
+    interactions: []
+  - id: inner_chest
+    name: registry casket
+    aliases:
+      - registrycasket
+    description: An iron registry casket bricked into the deed-room wall, its lock
+      cut for a small key; the gilt key is cased within.
+    takeable: false
+    quest_critical: false
+    container: true
+    openable: true
+    locked: true
+    key_id: middle_key
     unlock_effects:
       - inc_var:
           name: score
@@ -204,7 +264,8 @@ npcs:
               end: true
         - id: tell
           npc_text: The despatch-box holds the clerk's key; it opens the muniment chest,
-            and the gilt key cased in there opens the record grille.
+            the registry key inside opens the registry casket in the deed-room
+            beyond, and the gilt key cased in there opens the record grille.
           effects: []
           topics:
             - id: bye

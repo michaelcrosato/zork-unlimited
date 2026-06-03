@@ -20,7 +20,8 @@
  *      hitting the state cap.
  *   5. SCORE ECONOMY EXACT — under the liveness action policy (bug_0146, which steps READ), the
  *      maximum score reachable over the COMPLETE reachable region equals the declared max_score
- *      (15) — no overflow/farm, no phantom points (the bug_0148 invariant, applied to the mint).
+ *      (20, the v3 4×5 economy) — no overflow/farm, no phantom points (the bug_0148 invariant,
+ *      applied to the mint).
  *   6. GATE IS REAL — the goal is structurally unreachable until the key opens the gate (the lock
  *      is load-bearing, not decorative).
  *

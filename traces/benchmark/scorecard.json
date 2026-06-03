@@ -1057,9 +1057,9 @@
       "endings_declared": 2,
       "endings_reached": 0,
       "ending_coverage": 0,
-      "scenes_total": 3,
+      "scenes_total": 4,
       "scenes_visited": 2,
-      "scene_coverage": 0.667,
+      "scene_coverage": 0.5,
       "mean_turns_to_end": 0
     },
     {
@@ -1076,9 +1076,9 @@
       "endings_declared": 2,
       "endings_reached": 0,
       "ending_coverage": 0,
-      "scenes_total": 3,
+      "scenes_total": 4,
       "scenes_visited": 1,
-      "scene_coverage": 0.333,
+      "scene_coverage": 0.25,
       "mean_turns_to_end": 0
     },
     {
@@ -1089,16 +1089,16 @@
       "hide_graph": false,
       "held_out": true,
       "runs": 50,
-      "completed": 13,
-      "unfinished": 37,
-      "completion_rate": 0.26,
+      "completed": 0,
+      "unfinished": 50,
+      "completion_rate": 0,
       "endings_declared": 2,
-      "endings_reached": 2,
-      "ending_coverage": 1,
-      "scenes_total": 3,
+      "endings_reached": 0,
+      "ending_coverage": 0,
+      "scenes_total": 4,
       "scenes_visited": 3,
-      "scene_coverage": 1,
-      "mean_turns_to_end": 66.7
+      "scene_coverage": 0.75,
+      "mean_turns_to_end": 0
     },
     {
       "pack_id": "genpar_1_v1",
@@ -1114,9 +1114,9 @@
       "endings_declared": 2,
       "endings_reached": 0,
       "ending_coverage": 0,
-      "scenes_total": 3,
+      "scenes_total": 4,
       "scenes_visited": 2,
-      "scene_coverage": 0.667,
+      "scene_coverage": 0.5,
       "mean_turns_to_end": 0
     },
     {
@@ -1133,9 +1133,9 @@
       "endings_declared": 2,
       "endings_reached": 0,
       "ending_coverage": 0,
-      "scenes_total": 3,
+      "scenes_total": 4,
       "scenes_visited": 1,
-      "scene_coverage": 0.333,
+      "scene_coverage": 0.25,
       "mean_turns_to_end": 0
     },
     {
@@ -1146,16 +1146,16 @@
       "hide_graph": false,
       "held_out": true,
       "runs": 50,
-      "completed": 13,
-      "unfinished": 37,
-      "completion_rate": 0.26,
+      "completed": 0,
+      "unfinished": 50,
+      "completion_rate": 0,
       "endings_declared": 2,
-      "endings_reached": 2,
-      "ending_coverage": 1,
-      "scenes_total": 3,
+      "endings_reached": 0,
+      "ending_coverage": 0,
+      "scenes_total": 4,
       "scenes_visited": 3,
-      "scene_coverage": 1,
-      "mean_turns_to_end": 66.7
+      "scene_coverage": 0.75,
+      "mean_turns_to_end": 0
     },
     {
       "pack_id": "genpar_2_v1",
@@ -1171,9 +1171,9 @@
       "endings_declared": 2,
       "endings_reached": 0,
       "ending_coverage": 0,
-      "scenes_total": 3,
+      "scenes_total": 4,
       "scenes_visited": 2,
-      "scene_coverage": 0.667,
+      "scene_coverage": 0.5,
       "mean_turns_to_end": 0
     },
     {
@@ -1190,9 +1190,9 @@
       "endings_declared": 2,
       "endings_reached": 0,
       "ending_coverage": 0,
-      "scenes_total": 3,
+      "scenes_total": 4,
       "scenes_visited": 1,
-      "scene_coverage": 0.333,
+      "scene_coverage": 0.25,
       "mean_turns_to_end": 0
     },
     {
@@ -1203,16 +1203,16 @@
       "hide_graph": false,
       "held_out": true,
       "runs": 50,
-      "completed": 13,
-      "unfinished": 37,
-      "completion_rate": 0.26,
+      "completed": 0,
+      "unfinished": 50,
+      "completion_rate": 0,
       "endings_declared": 2,
-      "endings_reached": 2,
-      "ending_coverage": 1,
-      "scenes_total": 3,
+      "endings_reached": 0,
+      "ending_coverage": 0,
+      "scenes_total": 4,
       "scenes_visited": 3,
-      "scene_coverage": 1,
-      "mean_turns_to_end": 66.7
+      "scene_coverage": 0.75,
+      "mean_turns_to_end": 0
     },
     {
       "pack_id": "genpar_3_v1",
@@ -1228,9 +1228,9 @@
       "endings_declared": 2,
       "endings_reached": 0,
       "ending_coverage": 0,
-      "scenes_total": 3,
+      "scenes_total": 4,
       "scenes_visited": 2,
-      "scene_coverage": 0.667,
+      "scene_coverage": 0.5,
       "mean_turns_to_end": 0
     },
     {
@@ -1247,9 +1247,9 @@
       "endings_declared": 2,
       "endings_reached": 0,
       "ending_coverage": 0,
-      "scenes_total": 3,
+      "scenes_total": 4,
       "scenes_visited": 1,
-      "scene_coverage": 0.333,
+      "scene_coverage": 0.25,
       "mean_turns_to_end": 0
     },
     {
@@ -1260,16 +1260,16 @@
       "hide_graph": false,
       "held_out": true,
       "runs": 50,
-      "completed": 13,
-      "unfinished": 37,
-      "completion_rate": 0.26,
+      "completed": 0,
+      "unfinished": 50,
+      "completion_rate": 0,
       "endings_declared": 2,
-      "endings_reached": 2,
-      "ending_coverage": 1,
-      "scenes_total": 3,
+      "endings_reached": 0,
+      "ending_coverage": 0,
+      "scenes_total": 4,
       "scenes_visited": 3,
-      "scene_coverage": 1,
-      "mean_turns_to_end": 66.7
+      "scene_coverage": 0.75,
+      "mean_turns_to_end": 0
     },
     {
       "pack_id": "genrpg_0_v1",
@@ -1518,8 +1518,8 @@
       "packs": 12,
       "mean_completion_rate": 0.017,
       "mean_ending_coverage": 0.236,
-      "mean_scene_coverage": 0.699,
-      "score": 0.317
+      "mean_scene_coverage": 0.643,
+      "score": 0.299
     }
   ],
   "mode_summary": [
@@ -1553,7 +1553,7 @@
       "strategy": "coverage",
       "hide_graph": false,
       "packs": 4,
-      "score": 0.222
+      "score": 0.167
     },
     {
       "split": "curated",
