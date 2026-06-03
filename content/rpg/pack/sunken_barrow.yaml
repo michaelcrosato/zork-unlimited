@@ -46,7 +46,26 @@ rooms:
     description: >
       A hall of fitted slabs. A rusted iron bar lies among fallen rubble, and a
       passage runs north into deeper dark. A low breach gapes west into a cramped
-      side cell, and steps climb back up to the light.
+      side cell, and from its dark a cold breath drifts, prickling the neck —
+      something lingers in there, watchful. Steps climb back up to the light.
+    # bug_0170: the west breach now telegraphs the shade IN SCENE ("a cold breath
+    # ... something lingers in there, watchful"). This is the Entry Hall fork — west
+    # to the optional shade, north into the lethal wight — and a fresh blind
+    # playtester (seed 42/7, ai-runs/2026-06-03T11-37-52-305Z/playtest.md §5) flagged
+    # that the OLD text read the side cell as an empty "cramped side cell," giving a
+    # first-timer no cue to investigate it before committing north. Since bug_0102
+    # made the under-armed wight a genuine ~43% lethal gamble and the shade's +3 ward
+    # (bug_0113) the decisive survival lever, walking past the cell blind means dying
+    # to RNG with no signpost the counsel existed — the exact bug_0027/0029 anti-gotcha
+    # defect this pack fights (a player loses a winnable game for want of a telegraph).
+    # The cue makes the PREPARED path discoverable, so skipping the shade is now an
+    # INFORMED gamble, not a blind one — bug_0102's intended lethal gamble for whoever
+    # chooses it is untouched (the shade stays optional; no flag/var/exit/score/ending
+    # change). The cue reads true throughout: the shade never leaves the cell, so it
+    # holds after the ward is taken too. Mirrored into the has_item: iron_bar variant
+    # below so both renderings agree. Examine/room-text only; the canonical victory
+    # trace's STATE-based expected_final_hash is unchanged, only the pack content_hash
+    # shifts (re-pinned in traces/rpg/barrow_victory.json).
     # Reactive room text (bug_0011 shape): once the bar is in hand the rubble is
     # bare, so the room must stop narrating the bar as still lying there. Gated on
     # `has_item: iron_bar` — the closed condition DSL has no object-in-room
@@ -59,9 +78,10 @@ rooms:
       - when: [ { has_item: iron_bar } ]
         text: >
           A hall of fitted slabs. The rubble is scuffed bare where the rusted iron
-          bar lay until you took it up. A passage runs north into deeper dark, a low
-          breach gapes west into a cramped side cell, and steps climb back up to the
-          light.
+          bar lay until you took it up. A passage runs north into deeper dark, and a
+          low breach gapes west into a cramped side cell from which a cold breath
+          drifts, prickling the neck — something lingers in there, watchful. Steps
+          climb back up to the light.
     objects: [iron_bar]
     exits:
       - { direction: up, to: barrow_mouth }

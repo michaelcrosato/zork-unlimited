@@ -1,0 +1,69 @@
+bug_id: bug_0170
+pack_id: sunken_barrow_v1
+seed: 42
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  report: ai-runs/2026-06-03T11-37-52-305Z/playtest.md
+  finding: >
+    Fresh MCP-only blind playtest of The Sunken Barrow (seed 42 warded victory, seed 7
+    unwarded doom) came back clean and strong — clarity 5/5, enjoyment 4/5, both
+    reachable endings hit, no mechanical defects. Its one actionable design finding (§5):
+    the unwarded wight fight is genuinely swingy (won at exactly 2 HP on seed 7, ~43%
+    lethal per bug_0102), and the optional shade in the side cell — whose +3 ward
+    (bug_0113) is the decisive survival lever — has NO in-scene cue drawing a first-timer
+    to it. The Entry Hall described the west breach as a bare "cramped side cell," giving
+    no reason to investigate west before committing north into the lethal fight. A player
+    who walks past it dies to RNG with no signpost the load-bearing counsel ever existed.
+failure:
+  type: missing_signpost
+  where:
+    - content:content/rpg/pack/sunken_barrow.yaml
+  description: >
+    The Entry Hall is the pack's real fork — west to the optional shade (the prepared
+    path), north into the under-armed, ~43%-lethal wight (bug_0102). The shade's ward
+    is the decisive survival lever, yet the room narrated the side cell with no hint
+    anything was there, so the prepared path was easy to miss entirely. Skipping it then
+    became a BLIND gamble rather than an informed one — the exact bug_0027/0029 anti-gotcha
+    failure mode this pack fights everywhere else (a player loses a winnable game for want
+    of a telegraph), here on the wight rather than the slab.
+fix:
+  layers: [content]
+  summary: >
+    Pure CONTENT fix (no engine/validator/schema change): the Entry Hall west-breach
+    prose now telegraphs the shade IN SCENE — "a low breach gapes west into a cramped
+    side cell, and from its dark a cold breath drifts, prickling the neck — something
+    lingers in there, watchful." A sensible first-timer is now drawn to investigate west
+    before plunging north, so the prepared path is DISCOVERABLE and skipping the shade is
+    an INFORMED gamble. The cue is mirrored into the has_item:iron_bar variant so both
+    renderings agree, and it reads true throughout the game (the shade never leaves the
+    cell, so it holds after the ward is taken too — no third variant needed). Crucially
+    the shade stays OPTIONAL and bug_0102's intended lethal under-armed gamble for whoever
+    chooses to skip it is untouched — this only signposts the choice, it does not soften
+    the fight. No flags / vars / items / exits / quest gating / scoring / reachable
+    endings change.
+  reachable_endings_changed: false
+  content_hash_changed: true   # sunken_barrow yaml text genuinely changed (two room-text edits)
+  content_hash_before: 7791fc144ecb4589e5b13ecef591b9cc62bdc2c886ba88b0f60d23e595aff08b
+  content_hash_after: f24f792c87f6f922a4c54f2fe353bfe1977fd51ea9cd36ad89215a3c171ce94a
+  repin: >
+    Deliberate, surfaced re-pin (NOT a weakening): traces/rpg/barrow_victory.json
+    content_hash updated 7791fc1... -> f24f792c.... The trace's expected_final_hash is
+    UNCHANGED — both edits are description text carrying NO effects, so the seed-1
+    canonical victory replays to the identical final state hash (rpg_barrow_trace.test.ts
+    green on BOTH assertions). This is the legitimate snapshot-update workflow the
+    verifier-integrity drift gate classifies as HASH_PIN_REPINNED (a warning accompanied
+    by a real content change), not the unaccompanied launder pattern. No test SOURCE pins
+    this pack's hash (only watchtower_road / sealed_crypt are pinned in rpg_validator).
+deferred:
+  - >
+    Scope, not quality (blind playtest §6, repeated note): the barrow is a tidy ~10-step
+    vertical slice with one combat and one skill check, so replay value is limited to
+    seeing the two endings. Not a defect; a content-expansion call, out of scope for a
+    focused fix cycle. Spend it as the brief for a future net-new pack.
+  - >
+    Minor (blind playtest §4): the shade's wight monologue is long and slightly
+    over-hedged; the load-bearing anti-retreat point is buried in repetition. Left as-is
+    — the honest-odds wording is deliberately bought (bug_0119/bug_0132) and tightening
+    it risks re-opening those fixes.
+regression_test: tests/regression/rpg_barrow_shade_signpost.test.ts
