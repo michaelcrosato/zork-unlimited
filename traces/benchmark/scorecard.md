@@ -16,7 +16,7 @@ One comparable number per split: `Score` is the mean over the split's packs of e
 
 | Split | Packs | Completion | Ending cov | Scene cov | **Score** |
 | --- | --: | --: | --: | --: | --: |
-| curated | 14 | 22.4% | 25.0% | 66.7% | **38.1%** |
+| curated | 15 | 20.9% | 23.3% | 65.6% | **36.6%** |
 | held-out | 12 | 1.7% | 23.6% | 64.3% | **29.9%** |
 
 ### Per-mode (composition-robust)
@@ -27,7 +27,7 @@ The headline `Score` is a flat mean over a split's packs, so it moves with the s
 | --- | --- | --: | --: |
 | cyoa | curated | 6 | **68.0%** |
 | cyoa | held-out | 4 | **58.6%** |
-| parser | curated | 3 | **16.4%** |
+| parser | curated | 4 | **16.5%** |
 | parser | held-out | 4 | **16.7%** |
 | rpg | curated | 5 | **15.1%** |
 | rpg | held-out | 4 | **14.3%** |
@@ -60,6 +60,9 @@ The headline `Score` is a flat mean over a split's packs, so it moves with the s
 | friars_postern_v1 | parser | coverage | shown | curated | 0.0% | 0/3 | 0.0% | 42.9% | — |
 | friars_postern_v1 | parser | coverage | hidden | curated | 0.0% | 0/3 | 0.0% | 14.3% | — |
 | friars_postern_v1 | parser | random | shown | curated | 10.0% | 2/3 | 66.7% | 85.7% | 37.8 |
+| lamplighters_round_v1 | parser | coverage | shown | curated | 0.0% | 0/3 | 0.0% | 50.0% | — |
+| lamplighters_round_v1 | parser | coverage | hidden | curated | 0.0% | 0/3 | 0.0% | 16.7% | — |
+| lamplighters_round_v1 | parser | random | shown | curated | 0.0% | 0/3 | 0.0% | 83.3% | — |
 | sealed_crypt_v1 | parser | coverage | shown | curated | 0.0% | 0/3 | 0.0% | 30.0% | — |
 | sealed_crypt_v1 | parser | coverage | hidden | curated | 0.0% | 0/3 | 0.0% | 10.0% | — |
 | sealed_crypt_v1 | parser | random | shown | curated | 0.0% | 0/3 | 0.0% | 90.0% | — |

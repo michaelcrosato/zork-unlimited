@@ -1,0 +1,225 @@
+/**
+ * Regression (§15) for bug_0205 — The Lamplighter's Round: the project's 15th pack and
+ * 4th PARSER pack (content/parser/pack/lamplighters_round.yaml). Parser was the under-
+ * represented mode (3 vs 6 cyoa / 5 rpg) and the one the benchmark gap-analysis (bug_0198)
+ * flagged as the thinnest / most-inverted CURATED witness, so a new hand-authored parser
+ * pack strengthens exactly that set; it also spends the standing "too short / near-linear"
+ * blind-pass note (every clean pack returns it) on a LONGER, well-clued chain than the
+ * curated norm — brass-key → cupboard → store-key → store door → oil-cask → carry oil →
+ * light the great lamp → guide the lost home (five gated milestones, not three).
+ *
+ * The auto-discovered parser suites already prove the GENERIC structure the moment it ships
+ * (all-endings reachability for all three of ending_guided/ending_thief/ending_caught, no
+ * soft-lock pocket, score economy max==35, action-id uniqueness, variant liveness). This
+ * pins the pack-SPECIFIC claims those generic suites do not — and, like sealed_crypt's
+ * three-way iron-key fork (bug_0105/0130), the climax here is a THREE-WAY EXCISE-KEY fork:
+ * everything impounded in the excise store answers to the one store-key, which reads three
+ * ways —
+ *   • the oil-cask         → draw the oil, light the lamp, guide the child → ending_guided (the win)
+ *   • the excise strongbox → take the Crown's seized silver and slip away → ending_thief (greed; terminal)
+ *   • the sealed spirit-cask → force the impounded naphtha by your lit lantern → ending_caught (a DEATH)
+ * ending_caught is the failure pole, reached by end_game in unlock_effects (the sealed_crypt
+ * bound_tomb path), telegraphed by the notice, the watchman, AND the cask's own warning
+ * (the §8.7 / bug_0123 "never an ambush" discipline), recoverable via an earlier save.
+ *
+ * Locked here on the REAL engine (enumerateActions + makeStep), out-of-band teeth and all:
+ *   (1) the fork is genuinely THREE-way — in the excise store holding the store-key, the
+ *       oil-cask, the strongbox AND the spirit-cask can all be unlocked in the SAME state;
+ *   (2) the win route reaches ending_guided at the full 35/35 (read notice +5, store door
+ *       +10, light lamp +20), and lighting the lamp opens the way down to the strand;
+ *   (3) taking the silver fires ending_thief (NON-death), the lamp left dark (no lamp_lit);
+ *   (4) forcing the spirit-cask fires ending_caught (a DEATH), distinct from guided/thief,
+ *       the strand never reached, and its narration names the rock-spirit and the flame;
+ *   (5) ending_caught is the pack's ONLY death ending, reached ONLY by end_game; ending_guided
+ *       stays the sole winnable ending (no win_condition resolves to a fork);
+ *   (6) the great lamp HARD-requires the oil (has_item whale_oil): reaching the staith-head
+ *       without the oil offers the lamp to examine but NOT to light; lighting CONSUMES the
+ *       oil and is one-shot (+20 cannot re-fire);
+ *   (7) the death is telegraphed off-stage too — the notice, the spirit-cask examine, and the
+ *       watchman all warn the rock-spirit takes fire from the lighter's own flame.
+ */
+import { describe, it, expect } from "vitest";
+import { loadParserPackFile } from "../../src/parser/pack.js";
+import {
+  indexParserPack,
+  buildParserRules,
+  initStateForParserPack,
+} from "../../src/parser/runner.js";
+import { enumerateActions } from "../../src/parser/legal_actions.js";
+import { buildParserObservation } from "../../src/parser/observation.js";
+import { validateParser } from "../../src/validate/parser_validator.js";
+import { makeStep } from "../../src/core/engine.js";
+import type { GameState } from "../../src/core/state.js";
+
+const loaded = loadParserPackFile("content/parser/pack/lamplighters_round.yaml");
+if (!loaded.ok) throw new Error("lamplighters_round must compile");
+const pack = loaded.compiled.pack;
+const index = indexParserPack(pack);
+const step = makeStep(buildParserRules(index));
+
+function play(s: GameState, ids: string[]): { state: GameState; narration: string } {
+  let narration = "";
+  for (const id of ids) {
+    const opt = enumerateActions(index, s).find((o) => o.id === id);
+    if (!opt)
+      throw new Error(
+        `"${id}" not legal in ${s.current}: [${enumerateActions(index, s)
+          .map((o) => o.id)
+          .join(", ")}]`,
+      );
+    const r = step(s, opt.action);
+    expect(r.ok).toBe(true);
+    s = r.state;
+    narration = r.events
+      .filter((e): e is { type: "narration"; text: string } => e.type === "narration")
+      .map((e) => e.text)
+      .join(" ");
+  }
+  return { state: s, narration };
+}
+
+const actionIds = (s: GameState): string[] => enumerateActions(index, s).map((o) => o.id);
+
+// Read the notice (+5), gather the tools, win the store-key from the watch-house cupboard
+// and unlock the excise-store door (+10) — the point at which the three-way fork is live,
+// store-key in hand, score 15, nothing in the store opened yet.
+const ROUTE_TO_STORE_WITH_KEY = [
+  "read_night_notice",
+  "take_brass_key",
+  "take_tinderbox",
+  "go_north",
+  "go_west",
+  "unlock_wall_cupboard",
+  "open_wall_cupboard",
+  "take_store_key",
+  "go_east",
+  "unlock_store_door",
+  "go_east",
+];
+
+describe("bug_0205 — The Lamplighter's Round: the three-way excise-key fork (oil / silver / spirit)", () => {
+  it("validates clean as a parser pack, max_score 35", () => {
+    const report = validateParser(pack);
+    expect(report.ok).toBe(true);
+    expect(report.findings.filter((f) => f.severity === "error")).toEqual([]);
+    expect(pack.meta.max_score).toBe(35);
+  });
+
+  it("the fork is genuinely three-way: in the store with the key, oil-cask, strongbox AND spirit-cask can all be unlocked", () => {
+    const { state } = play(initStateForParserPack(index, 3), ROUTE_TO_STORE_WITH_KEY);
+    expect(state.current).toBe("excise_store");
+    expect(state.inventory).toContain("store_key");
+    expect(state.vars.score).toBe(15); // +5 notice, +10 door; the lamp's +20 not yet earned
+    const ids = actionIds(state);
+    expect(ids).toContain("unlock_oil_cask"); // draw the oil → light the lamp → the win
+    expect(ids).toContain("unlock_excise_box"); // OR take the Crown's silver (greed)
+    expect(ids).toContain("unlock_spirit_cask"); // OR force the rock-spirit (death)
+  });
+
+  it("the win route reaches ending_guided at the full 35/35, and lighting the lamp opens the way down", () => {
+    const win = play(initStateForParserPack(index, 3), [
+      ...ROUTE_TO_STORE_WITH_KEY,
+      "unlock_oil_cask",
+      "open_oil_cask",
+      "take_whale_oil",
+      "go_west",
+      "go_north",
+      "use_tinderbox_on_harbour_lamp",
+      "go_down",
+    ]);
+    expect(win.state.ended).toBe(true);
+    expect(win.state.endingId).toBe("ending_guided");
+    expect(win.state.visited.the_strand).toBe(true);
+    expect(win.state.flags["lamp_lit"]).toBe(true);
+    expect(buildParserObservation(index, win.state).score).toBe(35);
+  });
+
+  it("taking the silver fires ending_thief (a NON-death greed end) — the lamp left dark, no win", () => {
+    const { state } = play(initStateForParserPack(index, 3), [
+      ...ROUTE_TO_STORE_WITH_KEY,
+      "unlock_excise_box",
+    ]);
+    expect(state.ended).toBe(true);
+    expect(state.endingId).toBe("ending_thief");
+    expect(state.flags["lamp_lit"]).toBeFalsy(); // the great lamp never lit
+    expect(state.visited.the_strand).toBeFalsy();
+    expect(state.vars.score).toBe(15); // no score rides the greed fork
+    const thief = pack.endings.find((e) => e.id === "ending_thief");
+    expect(thief!.death).toBeFalsy(); // you are not killed; you chose the silver
+  });
+
+  it("forcing the spirit-cask fires ending_caught (a DEATH), distinct from guided/thief, the strand never reached, and the narration names the flame", () => {
+    const { state, narration } = play(initStateForParserPack(index, 3), [
+      ...ROUTE_TO_STORE_WITH_KEY,
+      "unlock_spirit_cask",
+    ]);
+    expect(state.ended).toBe(true);
+    expect(state.endingId).toBe("ending_caught");
+    expect(state.endingId).not.toBe("ending_guided");
+    expect(state.endingId).not.toBe("ending_thief");
+    expect(state.visited.the_strand).toBeFalsy();
+    expect(state.vars.score).toBe(15); // no score rides the death fork
+    const n = narration.toLowerCase();
+    expect(n).toContain("rock-spirit");
+    expect(n).toContain("flame");
+  });
+
+  it("ending_caught is the pack's only death ending, reached ONLY by end_game — ending_guided stays the sole winnable win", () => {
+    const caught = pack.endings.find((e) => e.id === "ending_caught");
+    expect(caught!.death).toBe(true);
+    expect(pack.endings.filter((e) => e.death).map((e) => e.id)).toEqual(["ending_caught"]);
+    // No win_condition resolves to a fork ending — both forks are pure end_game.
+    expect(pack.win_conditions.some((w) => w.ending === "ending_caught")).toBe(false);
+    expect(pack.win_conditions.some((w) => w.ending === "ending_thief")).toBe(false);
+    expect(pack.win_conditions.every((w) => w.ending === "ending_guided")).toBe(true);
+  });
+
+  it("the great lamp HARD-requires the oil: reaching the staith-head without it offers the lamp to examine but not to light", () => {
+    // tools but no oil: river_stair → lamp_walk → harbour_head, the oil still locked in the store.
+    const { state } = play(initStateForParserPack(index, 3), [
+      "take_tinderbox",
+      "go_north",
+      "go_north",
+    ]);
+    expect(state.current).toBe("harbour_head");
+    expect(state.inventory).not.toContain("whale_oil");
+    const ids = actionIds(state);
+    expect(ids).toContain("examine_harbour_lamp"); // visible…
+    expect(ids).not.toContain("use_tinderbox_on_harbour_lamp"); // …but un-lightable dry
+    // and the strand stays barred while the lamp is dark.
+    expect(ids).not.toContain("go_down");
+  });
+
+  it("lighting CONSUMES the oil and is one-shot: after lighting, the oil is gone and the lamp cannot be re-lit for more score", () => {
+    const lit = play(initStateForParserPack(index, 3), [
+      ...ROUTE_TO_STORE_WITH_KEY,
+      "unlock_oil_cask",
+      "open_oil_cask",
+      "take_whale_oil",
+      "go_west",
+      "go_north",
+      "use_tinderbox_on_harbour_lamp",
+    ]);
+    expect(lit.state.flags["lamp_lit"]).toBe(true);
+    expect(lit.state.inventory).not.toContain("whale_oil"); // poured into the font and burned
+    expect(lit.state.vars.score).toBe(35);
+    // The light action retires (gated not_flag lamp_lit AND on the now-spent oil) — no farming.
+    expect(actionIds(lit.state)).not.toContain("use_tinderbox_on_harbour_lamp");
+  });
+
+  it("the death is telegraphed off-stage too: the notice, the spirit-cask examine, and the watchman all warn the flame fires the spirit", () => {
+    const notice = pack.objects.find((o) => o.id === "night_notice")!;
+    expect(notice.read_text!.toUpperCase()).toContain("NEVER BRING A FLAME");
+    expect(notice.read_text!.toUpperCase()).toContain("ROCK-SPIRIT");
+
+    const cask = pack.objects.find((o) => o.id === "spirit_cask")!;
+    expect(cask.description.toLowerCase()).toContain("naked light");
+    expect(cask.description.toLowerCase()).toContain("spark");
+
+    const watchman = pack.npcs.find((n) => n.id === "watchman")!;
+    const warns = watchman.dialogue.nodes.some((node) =>
+      /rock-spirit|leaded it shut|open flame/i.test(node.npc_text),
+    );
+    expect(warns).toBe(true);
+  });
+});

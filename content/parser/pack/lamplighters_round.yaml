@@ -1,0 +1,391 @@
+# The Lamplighter's Round — a Zork-style parser pack (Stage 2/3), the project's
+# 15TH pack and 4TH PARSER pack (parser was the under-represented mode: 3 vs 6 cyoa /
+# 5 rpg, and the mode the benchmark gap-analysis (bug_0198) flagged as the thinnest /
+# most-inverted CURATED witness — so a new hand-authored parser pack strengthens the
+# exact set the headline composite most needs). It also answers the standing brevity
+# note every blind pass on the clean packs returns ([[content-polish-backlog-exhausted]]):
+# a LONGER, well-clued puzzle chain than the curated norm — brass-key → cupboard →
+# store-key → excise-store door → oil-cask → carry oil → light the great lamp → guide
+# the lost home — five gated milestones, not three.
+#
+# Goal: you are the harbour lamplighter on your night round in a river fog, and the
+# great harbour-lamp at the head of the staith is out. A child is lost down on the
+# strand in the dark and the tide is making; light the lamp and the strand below comes
+# out of the dark and the child can find the way up to you (ending_guided, the win).
+#
+# The climax is the §8.7 / sealed_crypt three-way moral fork, here turned on the
+# EXCISE-KEEPER'S KEY: everything impounded in the excise store answers to the one
+# store-key, and "the store-key opens all of it" reads three ways —
+#   • the oil-cask     (draw the lamp-oil, light the lamp, guide the child → ending_guided)
+#   • the excise strongbox (take the Crown's seized silver and slip away → ending_thief, greed)
+#   • the sealed spirit-cask (force the impounded naphtha by your lit round-lantern → ending_caught, a DEATH)
+# The third fork is a deliberate, telegraphed one-way hubris choice (the founders_coffin /
+# bound_tomb discipline, bug_0123/0130, §8.7): the notice, the watchman, and the cask's own
+# warning all say plainly that the excise sealed the rock-spirit against exactly the open
+# flame a lamplighter carries, and that there is no breathing the fumes back out. It gives
+# the pack its failure pole — real stakes — without ever being an ambush.
+#
+#   river_stair ─N─ lamp_walk ─N*─ harbour_head ─down**─ the_strand (WIN, ending_guided)
+#     (start;         (hub)         (the great lamp;       (the lost child,
+#      tinderbox,       │E*  excise_store              out of the dark once
+#      brass key,       │     ├ oil_cask    → whale-oil   the lamp is lit)
+#      night-notice)    │     ├ excise_box  → ending_thief
+#                       │W    └ spirit_cask → ending_caught (DEATH)
+#                    watch_box
+#                     (watchman;
+#                      wall-cupboard → store-key)
+#   (*   E to excise_store gated on store_open — the excise-store door, store-key)
+#   (*   N to harbour_head is open; the lamp there is the puzzle, not a locked exit)
+#   (**  down to the_strand gated on lamp_lit — the strand is lightless till the lamp burns)
+#
+# Score (max 35, the curated parser milestone economy sealed_crypt shares): read the
+# night-notice (+5, the §17 clue naming the oil, the flame, the store-key in the
+# watch-house cupboard, and the one thing never to force), unlock the excise-store door
+# (+10), and light the great lamp (+20 — the climax). Each rides a one-time gated step,
+# so score cannot be farmed, and the win path reaches the full 35. No score rides the
+# greed or death fork (the bracket-completeness rule the score-economy solver proves).
+
+meta:
+  id: lamplighters_round_v1
+  title: "The Lamplighter's Round"
+  start_room: river_stair
+  flags_init: []
+  vars_init: {}
+  max_score: 35
+
+rooms:
+  - id: river_stair
+    name: "The River Stair"
+    description: >
+      Fog stands thick on the river-stair, and your little round-lantern throws no
+      more than a yard of it back. A pasted night-notice peels from the wall by the
+      handrail. A tinderbox lies on the sill where the last lighter left it, and a
+      small brass tally-key hangs on a nail beside it. The staith runs on north into
+      the murk; the dark water laps somewhere below.
+    objects: [night_notice, tinderbox, brass_key]
+    exits:
+      - { direction: north, to: lamp_walk }
+
+  - id: lamp_walk
+    name: "The Lamp-Walk"
+    description: >
+      The walk along the head of the staith, where the row of harbour-lamps should
+      stand and burn. Tonight they gutter low in the fog and the greatest of them, north
+      at the staith-head, is wholly out — a black shape against a blacker river. The
+      excise store stands shut to the east behind a stout barred door; the watch-box
+      leans to the west with a lantern-glow in its window; the river-stair is back to
+      the south.
+    objects: [store_door]
+    exits:
+      - { direction: south, to: river_stair }
+      - { direction: west, to: watch_box }
+      - { direction: north, to: harbour_head }
+      - direction: east
+        to: excise_store
+        conditions: [{ has_flag: store_open }]
+        locked_msg: "The excise-store door is barred and locked; until it is opened you cannot get at what the Crown has impounded within."
+
+  - id: watch_box
+    name: "The Watch-Box"
+    description: >
+      A cramped plank shelter against the cold, a brazier dead in the corner and a
+      watchman hunched over its last warmth. A wall-cupboard hangs by the door, its
+      little lock shaped for a tally-key. The lamp-walk is back to the east.
+    objects: [wall_cupboard]
+    exits:
+      - { direction: east, to: lamp_walk }
+
+  - id: excise_store
+    name: "The Excise Store"
+    description: >
+      A low brick store stacked with the things the preventive-men have seized off the
+      smuggling boats — kegs and bales and bundles, all of it under the Crown's lock. A
+      squat oil-cask stands by the door, a banded strongbox on a shelf above it, and apart
+      against the far wall, set well off from the rest, a single cask run round with wax and
+      lead and stencilled in red. Every lock in the place is shaped for the one store-key.
+      The lamp-walk is back to the west.
+    objects: [oil_cask, excise_box, spirit_cask]
+    exits:
+      - { direction: west, to: lamp_walk }
+
+  - id: harbour_head
+    name: "The Staith-Head"
+    description: >
+      The very head of the staith, where the great harbour-lamp stands on its iron post
+      above the drop to the water — the one light that reaches right down onto the strand
+      below, and it is dark. The wick is dry: it wants oil poured into the font and a flame
+      set to it. Below, in the lightless dark, the tide is making over the strand. The
+      lamp-walk is back to the south.
+    variants:
+      - when: [{ has_flag: lamp_lit }]
+        text: >
+          The head of the staith, and the great harbour-lamp burning gold and steady on
+          its post at last, throwing its light right down the drop and out across the
+          strand below — the dark down there is dark no longer. The way down to the strand
+          drops away to the north-east; the lamp-walk is back to the south.
+    objects: [harbour_lamp]
+    exits:
+      - { direction: south, to: lamp_walk }
+      - direction: down
+        to: the_strand
+        conditions: [{ has_flag: lamp_lit }]
+        locked_msg: "The strand below is pitch-dark and the tide is making over it; you'll not go down into that until the great lamp is lit to show the ground."
+
+  - id: the_strand
+    name: "The Strand, Lit at Last"
+    description: >
+      The foreshore below the staith, and the great lamp's light lies across it gold and
+      plain where a moment ago was only black water and fog. There, up the shingle out of
+      the dark, comes the lost child toward the light — toward you. The way back up the
+      staith is behind you.
+    exits:
+      - { direction: up, to: harbour_head }
+
+objects:
+  - id: night_notice
+    name: "night-notice"
+    aliases: [notice, note, bill, paper, poster]
+    description: "A weather-stained night-notice from the harbour-board, pasted to the wall by the stair."
+    read_text: >
+      The board's standing order to the lighter: 'LIGHT EVERY LAMP ON THE ROUND, AND
+      ABOVE ALL THE GREAT STAITH-HEAD LAMP — DRAW ITS OIL FROM THE EXCISE STORE; THE
+      STORE-KEY IS IN THE WATCH-HOUSE CUPBOARD, WHICH OPENS TO THE LIGHTER'S TALLY-KEY.
+      POUR THE FONT AND STRIKE THE LIGHT, AND THE STRAND BELOW IS SAFE TO GO DOWN. AND
+      MIND: NEVER BRING A FLAME NEAR THE RED-STENCILLED CASK — IT IS ROCK-SPIRIT SEALED
+      OFF THE BOATS, AND THE EXCISE LEADED IT SHUT AGAINST JUST THE LANTERN YOU CARRY.'
+    interactions:
+      - verb: READ
+        target: night_notice
+        conditions: [{ not_flag: read_notice }]
+        effects:
+          - set_flag: read_notice
+          - inc_var: { name: score, by: 5 }
+
+  - id: tinderbox
+    name: "tinderbox"
+    aliases: [tinder, flint, steel, char-cloth]
+    description: "A lighter's tinderbox, flint and steel and a twist of char-cloth — enough to strike a flame for the lamp."
+    takeable: true
+    quest_critical: true
+
+  - id: brass_key
+    name: "brass tally-key"
+    aliases: [brass, tally, tally-key, tally key, small key]
+    description: "A small brass tally-key, the lighter's own — the size for the watch-house cupboard lock."
+    takeable: true
+    quest_critical: true
+
+  - id: wall_cupboard
+    name: "wall-cupboard"
+    aliases: [cupboard, locker, press, wall cupboard]
+    description: "A little wall-cupboard by the watch-box door, its lock shaped for a brass tally-key."
+    container: true
+    openable: true
+    locked: true
+    key_id: brass_key
+    contents: [store_key]
+
+  - id: store_key
+    name: "store-key"
+    aliases: [store, key, excise key, iron key, keeper's key, keepers key]
+    description: "The heavy excise store-key, black iron — and the keeper's tale is true, it is cut to every lock in the store, the casks and the strongbox no less than the door."
+    takeable: true
+    quest_critical: true
+
+  - id: store_door
+    name: "excise-store door"
+    aliases: [door, store door, barred door, excise door]
+    # First-class UNLOCK with unlock_effects, exactly the sealed_crypt crypt_gate shape
+    # (bug_0077): the climactic +10 milestone and the opened exit ride the engine's own
+    # `unlock excise-store door with store-key` grammar, one-shot because once the lock is
+    # sprung the door is no longer isLocked and UNLOCK cannot re-fire (no farming the +10).
+    description: "A stout barred door into the excise store, its great lock shaped for the iron store-key."
+    locked: true
+    key_id: store_key
+    unlock_narrate: >
+      The store-key turns hard in the cold lock and the bar lifts; the excise-store door
+      swings in on a smell of tar and spirits and sea-damp. The harbour's seized goods are
+      stacked within — and somewhere among them the oil for your lamp.
+    unlock_effects:
+      - set_flag: store_open
+      - unlock_exit: { from: lamp_walk, to: excise_store }
+      - inc_var: { name: score, by: 10 }
+
+  - id: oil_cask
+    name: "oil-cask"
+    aliases: [cask, oil cask, oil-cask, barrel]
+    description: "A squat cask of whale-oil by the store door, a tin dipper chained to its rim — lamp-oil, and the store-key fits its hasp."
+    container: true
+    openable: true
+    locked: true
+    key_id: store_key
+    contents: [whale_oil]
+
+  - id: whale_oil
+    name: "flask of whale-oil"
+    aliases: [oil, whale oil, whale-oil, flask, lamp oil, lamp-oil]
+    description: "A flask of clear whale-oil dipped from the cask — clean lamp-oil, enough to fill the great lamp's font and burn till dawn."
+    takeable: true
+    quest_critical: true
+
+  - id: excise_box
+    name: "excise strongbox"
+    aliases: [strongbox, box, strong box, chest, silver]
+    # The GREED fork (sealed_crypt founders_coffin, bug_0105): the seized Crown silver,
+    # behind the same store-key. Forcing it is terminal — you take the money and slip off
+    # the round, the great lamp left dark and the child left lost — so it is a real mutually
+    # exclusive CHOICE, not a detour. Non-death (you are not killed; you choose the silver).
+    # No score, no flag, no exit change to the win route (max_score stays 35).
+    description: >
+      A banded iron strongbox on the shelf, the excise seal still bright on its hasp and
+      the dull clink of coin within — the Crown's silver, seized off the boats and bound
+      for the customs-house. Its lock is the store-key's like all the rest. To open it is
+      to walk off your round a thief, with the silver and a dark lamp behind you.
+    locked: true
+    key_id: store_key
+    unlock_narrate: >
+      The store-key bites and the excise seal cracks; the strongbox lid lifts on more
+      seized silver than a lighter sees in ten years of nights. You fill your coat with the
+      cold weight of it and go quiet down the back stair, off your round and out of the
+      fog — and behind you the great lamp stands dark over a strand you will not think
+      about, and a child you will not think about, ever again, if you can help it.
+    unlock_effects:
+      - end_game: ending_thief
+
+  - id: spirit_cask
+    name: "sealed spirit-cask"
+    aliases: [spirit cask, red cask, sealed cask, naphtha, rock-spirit, rock spirit, waxed cask]
+    # The DEATH fork (sealed_crypt bound_tomb, bug_0130) and the pack's failure pole. Keyed,
+    # like the door and the strongbox, to the store-key the player carries ("the store-key
+    # opens all of it" now reads three ways). NEVER an ambush (§8.7, bug_0123): the notice,
+    # the watchman, and this examine all say plainly the cask is rock-spirit the excise leaded
+    # shut against an open flame — and a lamplighter is never without one. Forcing it is one-
+    # way. Recoverable via an earlier save (§8.7). Not a win_condition ending, so WIN_IS_DEATH
+    # cannot fire and ending_guided stays the sole winnable ending. No score / flag / exit.
+    description: >
+      Set well apart from the rest, against the far wall, one squat cask is run round with
+      wax and lead and stencilled in red: 'ROCK-SPIRIT — NO NAKED LIGHT'. This is the
+      naphtha the preventive-men took off a runner and sealed down here, and the excise
+      leaded it shut for one reason — the fumes of it take fire from the least spark, and
+      you stand here with a lit round-lantern on your belt. Its hasp is the store-key's
+      like all the others. Where the oil-cask gives you your light and the strongbox gives
+      you your sin, this one gives only the fire that the lead was holding back.
+    locked: true
+    key_id: store_key
+    unlock_narrate: >
+      The store-key turns against your own better sense; the wax seal splits and the lead
+      peels and the rock-spirit's reek rolls up thick and sweet into the fog — straight into
+      the little flame burning honest on your belt, the way the stencil swore it would. There
+      is a soft blue rush of light, no louder than a held breath, and then the dark store and
+      the seized boats and the whole drowned harbour go up white around you, and the lighter
+      who would not heed the lead goes up with them.
+    unlock_effects:
+      - end_game: ending_caught
+
+  - id: harbour_lamp
+    name: "great harbour-lamp"
+    aliases: [lamp, great lamp, harbour lamp, harbor lamp, light, font, wick]
+    # The CLIMAX (+20), folded into one legible act: light the dry lamp once its font is
+    # filled. The whale-oil is a HARD precondition (has_item whale_oil) and is consumed
+    # (remove_item) — poured into the font and burned — so the +20 is one-shot (gated
+    # not_flag lamp_lit AND gated on the now-spent oil), and lighting the lamp opens the
+    # way DOWN to the strand (the locomotion win). command_verb `light` so the natural
+    # `light great harbour-lamp with tinderbox` parses (the bug_0078 item-on-target verb).
+    description: >
+      The great staith-head lamp on its iron post — a deep brass font and a broad wick, the
+      one lamp on the round that throws its light right down onto the strand below. Its font
+      is dry: pour in lamp-oil and strike a flame to the wick and it will burn till dawn.
+    variants:
+      - when: [{ has_flag: lamp_lit }]
+        text: "The great harbour-lamp burning gold and steady, its light lying right down the drop and out across the strand below."
+    takeable: false
+    interactions:
+      - verb: USE
+        item: tinderbox
+        target: harbour_lamp
+        command_verb: light
+        command_template: "light {target} with {item}"
+        conditions: [{ has_item: whale_oil }, { not_flag: lamp_lit }]
+        effects:
+          - set_flag: lamp_lit
+          - remove_item: whale_oil
+          - inc_var: { name: score, by: 20 }
+          - unlock_exit: { from: harbour_head, to: the_strand }
+          - add_journal: "You poured the font full and struck the light, and the great harbour-lamp took and burned, throwing its gold right down onto the dark strand below."
+          - narrate: >
+              You tip the whole flask into the deep brass font, set the char-cloth smouldering
+              and lay it to the broad wick. The wick draws, catches, and steadies — and the
+              great lamp swells gold on its post and pours its light straight down the drop and
+              out across the strand, and the lightless dark below is dark no longer.
+
+npcs:
+  - id: watchman
+    name: "the watchman"
+    description: "A stiff old harbour-watchman over a dead brazier, glad of any voice in the fog."
+    room: watch_box
+    dialogue:
+      root: greet
+      nodes:
+        # Each info topic retires once heard (its own not_flag gate), the bug_0014 ping-pong
+        # fix; the ungated `bye` keeps every node terminating in all states. The watchman is a
+        # second §17 clue source reinforcing the notice: the store-key/cupboard chain and the
+        # plain, twice-told warning off the red-stencilled rock-spirit cask.
+        - id: greet
+          npc_text: "Cold work, lighter, and the great lamp out — there's a young one lost down on the strand, I'm told, and the tide making. Best you light it quick. Ask me what you need."
+          topics:
+            - { id: oil, prompt: "Ask where the lamp's oil is to be had", goto: about_oil, conditions: [{ not_flag: heard_oil }] }
+            - { id: store, prompt: "Ask about the red-stencilled cask in the store", goto: about_store, conditions: [{ not_flag: heard_store }] }
+            - { id: bye, prompt: "Say goodbye", end: true }
+        - id: about_oil
+          npc_text: "Whale-oil's in the excise store, in the squat cask by the door — but it's all under the Crown's lock. The store-key's in my wall-cupboard there, and that opens to your own brass tally-key. Door, then cask, then up to the great lamp."
+          effects: [{ set_flag: heard_oil }]
+          topics:
+            - { id: store, prompt: "Ask about the red-stencilled cask in the store", goto: about_store, conditions: [{ not_flag: heard_store }] }
+            - { id: bye, prompt: "Say goodbye", end: true }
+        - id: about_store
+          npc_text: "That red cask off in the corner — leave it lie, for God's sake. Rock-spirit, that is, seized off a runner, and the excise leaded it shut against an open flame. Crack it with that lantern on your belt and they'll be scraping neither of us off the staith. The store-key fits it, aye — that's no reason to turn it."
+          effects: [{ set_flag: heard_store }]
+          topics:
+            - { id: oil, prompt: "Ask where the lamp's oil is to be had", goto: about_oil, conditions: [{ not_flag: heard_oil }] }
+            - { id: bye, prompt: "Say goodbye", end: true }
+
+win_conditions:
+  # Locomotion win (sealed_crypt's catacombs / friars_postern's night_street): reaching the
+  # strand fires the win via the engine's post-action checkWin. `visited: the_strand` is KEPT
+  # deliberately — the parser validator derives its soft-lock guard from the rooms named in
+  # win conditions (alchemists_tower note, bug_0056), and the_strand is reachable only via the
+  # `lamp_lit` down-exit, so the only way to satisfy this is to have lit the lamp first.
+  - id: reach_strand
+    conditions: [{ visited: the_strand }]
+    ending: ending_guided
+
+endings:
+  - id: ending_guided
+    title: "The Lamp Holds the Dark"
+    text: >
+      You go down the lit shingle and the lost child comes the last of the way into the
+      lamp's gold and takes your hand, and the two of you climb back up the staith out of
+      the dark with the great lamp burning steady at your back. The tide can make all it
+      likes now; the strand is no place to be lost in tonight, with that light on it. Up in
+      the watch-box the old man hears your boots on the stair and a child's voice with them,
+      and he lets out the breath he had been holding. *** You have won. ***
+  - id: ending_thief
+    title: "The Lighter's Wage"
+    text: >
+      The Crown's silver is a cold weight against your ribs all the long fog-blind walk off
+      the harbour, and it will keep you through more winters than your lamp-wages ever would.
+      But the great lamp stands dark on its post behind you over a strand you have made
+      yourself not to think of, and some nights, when the fog comes in off the river, you
+      will think of it anyway, and of how quiet it was down there in the dark. *** You have
+      taken the silver. ***
+  - id: ending_caught
+    title: "No Naked Light"
+    text: >
+      The lead held that rock-spirit a long patient while, sealed down in the dark against
+      exactly the flame you carried in to it — and the stencil had said so, and the watchman
+      had said so, and you turned the key on it anyway. The harbour wakes to the white flash
+      and the long roll of it off the water, and to a great lamp still dark at the staith-head,
+      and to a strand below where the tide is making over a child no one will reach now. The
+      excise sealed the spirit against the naked light. You were the naked light. *** You
+      have died. ***
+    death: true
