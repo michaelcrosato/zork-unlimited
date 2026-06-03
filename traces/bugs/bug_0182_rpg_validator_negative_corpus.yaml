@@ -1,0 +1,73 @@
+id: bug_0182
+title: "SoundnessBench negative corpus for validateRpg — pin the six previously-untested error branches in the REJECTION direction"
+kind: test
+mode: rpg
+severity: enhancement
+layer: validate/rpg-soundness
+artifact:
+  source: src/validate/rpg_validator.ts
+  test: tests/regression/rpg_validator_negative_corpus.test.ts
+
+summary: >
+  validateRpg (src/validate/rpg_validator.ts) emits ten Stage-4 error codes, but an audit this cycle found
+  that SIX of them had NO rejection-direction witness anywhere in the test suite — only COMBAT_UNWINNABLE,
+  COMBAT_NOT_GUARANTEED, COMBAT_GAUNTLET_NOT_GUARANTEED and ENEMY_DEATH_ENDING_UNDECLARED were pinned
+  red-going. The unwitnessed six were MISSING_STAT, BAD_HP, ENEMY_ROOM_MISSING, ENEMY_DEATH_NOT_DEATH,
+  SKILL_CHECK_IMPOSSIBLE and END_GAME_UNDECLARED (the RPG-only on_defeat / skill-check branch path, distinct
+  from the parser-level END_GAME_UNDECLARED). This cycle adds a deliberately-UNSOUND negative corpus — one
+  single-defect mutation per code — that validateRpg MUST reject, closing the present-but-untested-checker
+  surface. It is the generator/validator-boundary twin of bug_0181's load-boundary rejection gate.
+
+root_cause: >
+  Not a defect in any pack or in the validator's logic — a verification-DEPTH gap. Every shipped/generated
+  RPG pack validates green, and the suite leaned almost entirely on the ACCEPTANCE direction plus the four
+  combat codes. The six branches above were live in src but never exercised on input that SHOULD trip them,
+  so a regression that silently broke one (a dropped findings.push, an inverted guard like
+  `else if (!ending.death)`, a `?? 0` default that swallows a missing stat) would pass every existing test
+  GREEN. This is the single-checker / untested-failing-branch blind spot named by SoundnessBench
+  (arXiv:2412.03154) and the ASL present-but-incomplete-checker surface (arXiv:2510.14253,
+  [[verifier-assertion-guard]]).
+
+witness: >
+  THE TEETH, verified out of band: temporarily inverting the ENEMY_DEATH_NOT_DEATH guard
+  (`else if (!ending.death)` -> `else if (false && !ending.death)`) turned the corpus RED — exactly the
+  ENEMY_DEATH_NOT_DEATH rejection case AND the non-degenerate case failed (the mutation becomes a no-op when
+  the branch is disabled, so codesOf(mutant) is empty), with no other case affected; the validator was then
+  restored byte-identically (git diff clean). The differential anchor proves each code is ABSENT on the green
+  base until its mutation introduces it. This is the SoundnessBench rejection-direction oracle applied at the
+  Stage-4 generator/validator boundary: a verifier is credibly sound only if it rejects instances known-bad
+  BY CONSTRUCTION, not merely accepts the ones it is fed.
+
+fix: >
+  NEW tests/regression/rpg_validator_negative_corpus.test.ts (8 cases). The GREEN base is the canonical sound
+  pack generateRpgPack(0) (pinned green by rpg_generator.test.ts), which carries every structure the defects
+  need: two enemies with on_defeat, a `might` skill_check, vars_init {hp,attack,defense,might}, and a declared
+  non-death ending (ending_victory). Each case structuredClone()s the base and applies EXACTLY ONE mutation
+  (the bug_0118/0179 copy-mutate discipline): delete vars_init.defense (MISSING_STAT); vars_init.hp=0
+  (BAD_HP); enemy.room="no_such_room" (ENEMY_ROOM_MISSING); enemy.death_ending -> the non-death
+  ending_victory (ENEMY_DEATH_NOT_DEATH); skill_check.difficulty=100 (SKILL_CHECK_IMPOSSIBLE); push
+  {end_game:"no_such_ending"} onto enemy.on_defeat (END_GAME_UNDECLARED, RPG-only path the parser validator
+  never scans). Plus a differential-anchor test (green base validates clean AND carries none of the six codes)
+  and a non-degeneracy test (every mutation flips the clean base to >=1 error). PURELY ADDITIVE: no
+  source/validator/engine/schema/generator/corpus/protected-file change, no hash re-pin — validateRpg is
+  exercised exactly as shipped.
+
+verification: >
+  npx vitest run tests/regression/rpg_validator_negative_corpus.test.ts -> 8 GREEN. npm run health -> GREEN.
+  verify:integrity static OK; NO GUARD_WEAKENED, NO VERIFIER_TOUCHED (no protected/source file touched —
+  src/validate/rpg_validator.ts byte-unchanged, confirmed by git diff; the cycle adds only a regression test
+  + this artifact). No MIN_*/GEN_EVAL_CHECK_COUNT floor change, no matcher relaxed, net test count ROSE. No
+  curated content touched (10 packs validate 0/0); no curated hash re-pin; no corpus re-seal.
+
+blind_playtest: >
+  Mandated blind pass ran on `watchtower_road` (CYOA, seed 29) — the least-recently blind-played pack per the
+  rotation (last dedicated pass bug_0172); the assessor re-nominated alchemists_tower but that was the prior
+  cycle's pass (bug_0181). Clean: clarity 5/5, enjoyment 4/5, ZERO mechanical bugs across three runs reaching
+  ending_truth / ending_captured / ending_escape. Report: ai-runs/2026-06-03T14-49-19-857Z/playtest.md. A
+  blind-clean pass on a clean pack is the saturation signal, so the cycle's lever was this structural slice.
+
+regression: >
+  The negative corpus IS the regression: it fails loudly if any of the six rejection branches is ever removed
+  or weakened (the validator would then accept a pack it must reject). The differential anchor doubles as a
+  false-rejection guard — if the validator ever drifts to flag the clean base on one of these codes, the
+  anchor fails. No pinned hash changes (no content/source changed).
