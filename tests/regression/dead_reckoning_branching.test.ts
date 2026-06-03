@@ -26,6 +26,15 @@
  *   (6) those variants are cosmetic — informed and uninformed routes to the SAME act
  *       converge on the SAME endingId (the truths change prose and unlock trust_pilot,
  *       never silently reroute an existing choice).
+ *
+ * bug_0175 adds a FIFTH act and locks it here too: the captain's pistol (a THIRD optional
+ * thing to take from the chest, `has_pistol`) unlocks `draw_pistol` at the cask — ruling the
+ * boat by lethal force, ending_irons. It is the investigate-to-unlock symmetry of trust_pilot
+ * (the choice is ABSENT until you take the pistol, PRESENT after), the take is INDEPENDENT and
+ * order-free vs the two truths, and ending_irons fires a knows_course reactive variant (a true
+ * course enforced at the gun vs a blind gamble). Promoting the pistol — described in the chest
+ * but previously inert, the one concrete finding of the seed-7 blind playtest — to a real
+ * affordance, so the named object now fires.
  */
 import { describe, it, expect } from "vitest";
 import { loadPackFile } from "../../src/cyoa/pack.js";
@@ -69,6 +78,20 @@ const COURSE_SEIZE = [...LEARN_COURSE, "to_cask", "seize"];
 const PILOT_JONAH = [...LEARN_PILOT, "to_cask", "give_jonah"];
 const PILOT_LANDFALL = [...LEARN_PILOT, "to_cask", "trust_pilot"]; // gated on knows_pilot
 const BOTH_LANDFALL = [...LEARN_COURSE, ...LEARN_PILOT, "to_cask", "trust_pilot"];
+
+// Take the captain's pistol from the chest and return to the deck (bug_0175). A THIRD
+// optional take, independent of the two truths; it unlocks the fifth act at the cask.
+const TAKE_PISTOL = ["to_chest", "take_pistol", "leave_chest"];
+const PISTOL_IRONS = [...TAKE_PISTOL, "to_cask", "draw_pistol"]; // gated on has_pistol
+// Read the log AND take the pistol in one chest visit, then rule by force (knows_course cell).
+const COURSE_PISTOL_IRONS = [
+  "to_chest",
+  "read_log",
+  "take_pistol",
+  "leave_chest",
+  "to_cask",
+  "draw_pistol",
+];
 
 describe("dead_reckoning — four distinct endings are all reachable (anti-linearity)", () => {
   it("reaches holdfast / landfall / jonah / adrift, each a distinct endingId", () => {
@@ -142,5 +165,44 @@ describe("dead_reckoning — the truth variants are cosmetic, not route changes"
     expect(endId(play(COURSE_RATION))).toBe(endId(play(RATION)));
     expect(endId(play(COURSE_SEIZE))).toBe(endId(play(SEIZE)));
     expect(endId(play(PILOT_JONAH))).toBe(endId(play(JONAH)));
+  });
+});
+
+describe("dead_reckoning — the pistol unlocks a fifth act, ruling by force (bug_0175)", () => {
+  it("draw_pistol is ABSENT at the cask until the pistol is taken, PRESENT after (has_pistol load-bearing)", () => {
+    const unarmed = actionIds(play(AT_CASK));
+    expect(unarmed).not.toContain("draw_pistol"); // no gun, no fifth act
+    // The four prior acts are unaffected by the addition.
+    expect(unarmed).toEqual(expect.arrayContaining(["ration", "give_jonah", "seize", "back_deck"]));
+
+    const armed = actionIds(play([...TAKE_PISTOL, "to_cask"]));
+    expect(armed).toContain("draw_pistol"); // taking the pistol unlocks it
+  });
+
+  it("draw_pistol reaches ending_irons — a fifth, distinct endingId", () => {
+    expect(endId(play(PISTOL_IRONS))).toBe("ending_irons");
+    // Genuinely a new ending, not an alias of the prior four.
+    const all = [RATION, PILOT_LANDFALL, JONAH, SEIZE, PISTOL_IRONS].map((r) => endId(play(r)));
+    expect(new Set(all).size).toBe(5);
+  });
+
+  it("taking the pistol is INDEPENDENT and order-free vs the two truths", () => {
+    // take_pistol present at the chest regardless of whether the log is read or the girl heard.
+    expect(actionIds(play(["to_chest"]))).toContain("take_pistol");
+    expect(actionIds(play([...LEARN_COURSE, "to_chest"]))).toContain("take_pistol"); // after course
+    expect(actionIds(play([...LEARN_PILOT, "to_chest"]))).toContain("take_pistol"); // after pilot
+    // ...and reading the log still works after the pistol is taken (neither gates the other).
+    expect(actionIds(play(["to_chest", "take_pistol"]))).toContain("read_log");
+    // The both-knowledge finale is still reachable when also armed.
+    expect(endId(play([...LEARN_PILOT, ...TAKE_PISTOL, "to_cask", "trust_pilot"]))).toBe(
+      "ending_landfall",
+    );
+  });
+
+  it("ending_irons fires a knows_course reactive variant (a true course enforced at the gun)", () => {
+    expect(text(play(COURSE_PISTOL_IRONS))).toContain("you used the gun to buy those two days");
+    expect(text(play(PISTOL_IRONS))).not.toContain("you used the gun to buy those two days");
+    // The uninformed pistol ending renders the base text (fear, not fairness).
+    expect(text(play(PISTOL_IRONS))).toContain("fear and not fairness");
   });
 });

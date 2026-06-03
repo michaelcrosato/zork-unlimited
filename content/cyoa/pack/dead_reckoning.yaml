@@ -19,12 +19,19 @@
 #     the inshore current and find the green water, but the thirst-maddened crew have
 #     decided she is the Jonah who becalmed them and want her over the side.
 #
-# The finale at the cask offers four deliberate, telegraphed acts (never an ambush —
+# The finale at the cask offers five deliberate, telegraphed acts (never an ambush —
 # the wreckers_light / white_stag discipline):
 #   * ration the water evenly and hold on        → ending_holdfast (discipline)
 #   * give the helm to the stowaway               → ending_landfall (gated on knows_pilot)
 #   * give the stowaway to the crew's superstition→ ending_jonah    (the dark choice)
 #   * seize the cask and the key for yourself     → ending_adrift   (greed)
+#   * draw the captain's pistol and rule by force → ending_irons    (gated on has_pistol)
+# The pistol is the captain's authority made lethal: a THIRD optional thing to learn/take
+# (the chest holds it beside the log), unlocking a fifth stance — survival bought with fear,
+# distinct from holdfast's peace-by-fairness and adrift's greed, never converging on either.
+# It is the investigate-to-unlock symmetry of trust_pilot: a payoff reserved for the player
+# who opened the chest. Resolves a blind-playtest finding (the pistol was shown twice but had
+# no affordance — a Chekhov's gun); now it fires.
 #
 # Knowledge does not add routes; it REFRAMES them (the paired-epilogue device —
 # white_stag's ending_quarry, the manor's two letters):
@@ -82,16 +89,31 @@ scenes:
       last entry made the morning before the fever closed his eyes for good. The page is
       open to a column of figures — soundings, the noon sight, a reckoning — that you
       could read, if you cared to, or leave shut and go back up to the waiting deck.
-    # Once read, the chest reads differently — the log is known, not a question (reactive
-    # prose, first-match-wins). No flag/route change.
+    # Once read/emptied, the chest reads differently — the log is known and the pistol
+    # taken, not questions (reactive prose, first-match-wins). Most-specific (both flags)
+    # FIRST so a single-flag variant never shadows it (cyoa_variant_shadowing). No route
+    # change: the variants only keep the prose honest about what the chest still holds.
     variants:
+      - when: [{ all_of: [{ has_flag: knows_course }, { has_flag: has_pistol }] }]
+        text: >
+          Hale's cabin is close and sour, and the chest stands open and all but empty as
+          you left it — the log read, the cased pistol now a cold weight at your own hip.
+          The reckoning does not change for the reading again: land two days east on the
+          set of the current, IF the men hold the course and the water is made to last.
+          There is nothing more in the chest. What it held that matters, you carry.
+      - when: [{ has_flag: has_pistol }]
+        text: >
+          Hale's cabin is close and sour. The sea-chest stands open, the captain's pistol
+          gone from it and heavy at your hip now, but the log still lies face-up under the
+          stern windows — its last page of figures, soundings and a noon sight and a
+          reckoning, unread. You could read it yet, or shut the chest and go back up.
       - when: [{ has_flag: knows_course }]
         text: >
           Hale's cabin is close and sour, and the chest stands open as you left it, the
           log face-up under the stern windows. You have read his last reckoning now and
           it does not change for the reading again: land two days east on the set of the
           current, IF the men hold the course and the water is made to last. The cased
-          pistol lies beside it. There is nothing more in the chest the page has not
+          pistol lies beside it still. There is nothing more in the chest the page has not
           already told you.
     choices:
       - id: read_log
@@ -106,6 +128,21 @@ scenes:
               is left. Drift, or fall to fighting over the cask, or scatter the crew, and
               the same two days are a death sentence. The course is true. Whether it is
               kept is not the sea's doing now but mine.
+        next: chest
+      - id: take_pistol
+        # The third optional learning/taking — independent of read_log, like the two truths.
+        # Sets has_pistol, which unlocks the fifth act (draw_pistol) at the cask. The pistol
+        # was already named in the chest prose; this gives the named object an affordance.
+        text: "Take the captain's cased pistol from the chest."
+        conditions: [{ not_flag: has_pistol }]
+        effects:
+          - set_flag: has_pistol
+          - add_journal: >
+              The captain's pistol is a heavy, sea-kept thing, the load dry under wax, and
+              it sits at your hip now like a second key — the kind that opens an argument
+              the crew cannot. A drawn gun aboard a thirst-mad boat is a thing that ends a
+              mutiny or starts one, and there is no third way once the hammer is back. You
+              hope not to need it. You take it anyway.
         next: chest
       - id: leave_chest
         text: "Shut the chest and go back up to the deck."
@@ -211,6 +248,14 @@ scenes:
         # climb_to_wreck discipline): no curiosity trap, the cost is named in the choice.
         text: "Keep the key, take the water for yourself, and let the rest fend."
         next: ending_adrift
+      - id: draw_pistol
+        # The fifth act, unlocked only by taking the captain's pistol from the chest (the
+        # investigate-to-unlock symmetry with trust_pilot). Rule by lethal force — owned in
+        # the label, never an ambush. Reactive epilogue by knows_course: a TRUE course
+        # enforced at the point of the gun vs a blind gamble held the same way.
+        text: "Draw the captain's pistol and hold the cask — and the boat — under your gun."
+        conditions: [{ has_flag: has_pistol }]
+        next: ending_irons
       - id: back_deck
         text: "Decide nothing yet — step back from the cask."
         next: deck
@@ -324,3 +369,33 @@ endings:
       After that the Marigold is only a thing the slack current pushes about, with whatever is
       left aboard her past caring which way. You held the water to the end, and the end is
       this, and you held it alone.
+
+  - id: ending_irons
+    title: "Under the Gun"
+    # The fifth stance (gated on has_pistol): authority made lethal. Survival bought with fear,
+    # distinct from holdfast's peace-by-fairness and adrift's greed — never converging on either.
+    # knows_course reframes it: a TRUE course enforced at pistol-point vs a blind gamble held so.
+    variants:
+      - when: [{ has_flag: knows_course }]
+        text: >
+          You knew the land was two days east — Hale's reckoning, landfall if only the course
+          were held — and you used the gun to buy those two days. You drew the captain's pistol
+          over the cask and held them to the course at the point of it: even shares measured
+          under your eye, no hand to the water but at your word, the wind they waited on hurried
+          by nothing but the certainty in your fist. It worked, exactly because the course was
+          true and the gun made them keep it. The calm broke, the coast came up where the dead
+          man's column of figures said it would, and five souls walked up a strange beach alive.
+          Not one of them called you captain. They called you the man with the pistol, and you
+          slept with it in your hand the whole reach, and you will wonder for a long time whether
+          fair words would have carried them the same and left you a crew instead of a cowed deck.
+    text: >
+      You draw the captain's pistol and put the whole boat under it. There is a moment when
+      Tarrant measures the distance and the barrel both, and then the fight goes out of him,
+      because a dry throat will gamble on the sea but not on a steady gun a yard off. You ration
+      the water at the point of it, dead even, yourself no more than the least — but now it is
+      fear and not fairness that holds the cask, and the difference shows in every face turned
+      from you. The calm breaks before the water quite does, the way it was always going to, and
+      you raise a low coast and bring them in. You held the boat together. You did it by making
+      hostages of it, and you came ashore the master of a crew that will not meet your eye, your
+      authority the length of a loaded barrel and not an inch past it. Survival — and the cost of
+      it written plain in how they keep their backs to you.
