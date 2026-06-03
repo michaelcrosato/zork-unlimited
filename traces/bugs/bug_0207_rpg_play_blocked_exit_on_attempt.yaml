@@ -1,0 +1,43 @@
+id: bug_0207
+title: "RPG CLI's on-attempt message dropped a barred exit's locked_msg (parser CLI parity gap)"
+severity: minor
+class: ui
+status: fixed
+discovered_by: blind_playtest
+discovered_in:
+  - "ai-runs/2026-06-03T21-42-02-179Z/playtest.md (dawn_beacon, RPG, seeds 7/3 — blocked_exits load-bearing live, zero bugs)"
+  - "bug_0206 cycle next-focus (2): named bin/rpg_play.ts's flat on-attempt message as the remaining parity gap"
+
+summary: >
+  bug_0201 surfaced a barred exit's authored `locked_msg` in the structured
+  `blocked_exits` hint (agent surface); bug_0206 rendered that hint on the human
+  surfaces (CLI bins + UI). One human path stayed generic: when a player actually
+  TYPED a move onto a barred exit, bin/parser_play.ts answered with the exit's
+  locked_msg (via its illegalReason helper), while bin/rpg_play.ts printed a flat
+  "You can't do that right now." — dropping the very string the author wrote to
+  explain the wall, even though RpgObservation already carries it.
+
+root_cause: >
+  bin/rpg_play.ts had no illegalReason helper: its main loop's legality check
+  (line ~133) logged a hard-coded "You can't do that right now." for every illegal
+  parsed action, including a MOVE onto a present-but-condition-blocked exit.
+  bin/parser_play.ts had the helper since the blocked-exit work; the RPG bin was
+  never brought to parity.
+
+fix: >
+  Additive, bin-only — no engine/observation/state/content change. Transplanted the
+  parser bin's illegalReason into bin/rpg_play.ts (RpgIndex extends ParserIndex, so
+  `.rooms` and each exit's conditions/locked_msg are the same shape) and called it at
+  the illegal-action site. A typed MOVE onto a barred exit now returns the author's
+  locked_msg (the same string the structured blocked_exits hint carries); ATTACK and
+  non-MOVE actions, and directions with no exit, fall back to the generic line. How to
+  clear the exit stays hidden (never a selectable command). illegalReason is exported
+  so it is unit-testable, mirroring the exported render() (bug_0206).
+
+regression_test: tests/regression/rpg_play_blocked_exit_on_attempt.test.ts
+notes: >
+  No content edit, no hash re-pin, no verifier edit, no protected file touched. Game
+  outcomes, the exhaustive solvers, and the coverage bot are unaffected (they read
+  available_actions / the structured observation, not this renderer). Closes the
+  blocked-exit arc fully: a barred way now reads as barred-with-reason on EVERY human
+  path — passive hint AND on-attempt message — for both parser and RPG packs.

@@ -16,6 +16,7 @@ import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { pathToFileURL } from "node:url";
 import { makeStep, actionEquals } from "../src/core/engine.js";
+import { evalConditions } from "../src/core/conditions.js";
 import type { Action } from "../src/api/types.js";
 import { loadRpgPackFile } from "../src/rpg/pack.js";
 import { validateRpg } from "../src/validate/rpg_validator.js";
@@ -39,6 +40,29 @@ export function render(obs: RpgObservation): string {
   if (obs.inventory.length) lines.push(`[carrying: ${obs.inventory.join(", ")}]`);
   if (obs.ended) lines.push(`\n*** ${obs.ending_id} *** — THE END`);
   return lines.join("\n");
+}
+
+/**
+ * A friendly reason a parsed-but-illegal action failed — parity with bin/parser_play.ts
+ * (bug_0206 follow-on): an attempted MOVE onto a barred-but-present exit surfaces the
+ * author's `locked_msg` (the same string the structured `blocked_exits` hint carries),
+ * not a flat "You can't do that right now." It never reveals HOW to clear the exit (that
+ * stays a hidden, not-yet-legal command). RpgIndex extends ParserIndex, so `.rooms` and
+ * each exit's `conditions`/`locked_msg` are the same shape the parser bin reads.
+ */
+export function illegalReason(
+  index: ReturnType<typeof indexRpgPack>,
+  state: import("../src/core/state.js").GameState,
+  action: Action,
+): string {
+  if (action.type === "MOVE") {
+    const exit = index.rooms
+      .get(state.current)
+      ?.exits.find((e) => e.direction === action.direction);
+    if (exit && !evalConditions(exit.conditions, state))
+      return exit.locked_msg ?? "You can't go that way yet.";
+  }
+  return "You can't do that right now.";
 }
 
 /** Resolve a raw command: `attack <foe>` against enemies here, else the parser. */
@@ -131,7 +155,7 @@ async function main(): Promise<void> {
         continue;
       }
       if (!rules.legalActions(state).some((a) => actionEquals(a, parsed.action))) {
-        console.log("You can't do that right now.");
+        console.log(illegalReason(index, state, parsed.action));
         continue;
       }
       const r = step(state, parsed.action);
