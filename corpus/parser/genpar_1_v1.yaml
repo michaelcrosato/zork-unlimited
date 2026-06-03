@@ -1,0 +1,195 @@
+meta:
+  id: genpar_1_v1
+  title: The Wreckers' Light
+  start_room: entrance
+  vars_init: {}
+  flags_init: []
+  max_score: 15
+rooms:
+  - id: entrance
+    name: "The Wreckers' Light: Threshold"
+    description: a storm-bound lighthouse on a wreckers' coast. Spray bursts over
+      the rocks at the tower's foot; a tide-board is bolted by the inner door.
+      The way on lies north into the dark.
+    objects:
+      - clue
+    exits:
+      - direction: north
+        to: hub
+        conditions: []
+    on_enter: []
+  - id: hub
+    name: The Inner Chamber
+    description: The lamp-room is cold and dark, the great lens unlit; a old keeper
+      hunches by the dead wick. A oil-locker stands here. To the north, the
+      lamp-room hatch bars the way on, and apart from it the signal-rocket
+      waits. The threshold is back to the south.
+    variants:
+      - when:
+          - has_flag: gate_open
+        text: The lamp-room is cold and dark, the great lens unlit; a old keeper hunches
+          by the dead wick. The lamp-room hatch stands open now, and through it,
+          north, lies the beacon stage. The oil-locker stands open by the wall,
+          and apart from it the signal-rocket waits still. The threshold is back
+          to the south.
+    objects:
+      - coffer
+      - gate
+      - hazard
+    exits:
+      - direction: south
+        to: entrance
+        conditions: []
+      - direction: north
+        to: goal
+        conditions:
+          - has_flag: gate_open
+        locked_msg: The lamp-room hatch is locked fast; it will not yield without its key.
+    on_enter: []
+  - id: goal
+    name: The Last Chamber
+    description: Past the hatch the true channel-beacon waits, trimmed and ready to
+      light the ship clear of the reef. The way back is south.
+    objects: []
+    exits:
+      - direction: south
+        to: hub
+        conditions: []
+    on_enter: []
+objects:
+  - id: clue
+    name: tide-board
+    aliases:
+      - board
+      - clue
+    description: A slate tide-board, a keeper's hand chalked across it.
+    takeable: false
+    quest_critical: false
+    read_text: "Chalked plain: 'THE HATCH TAKES THE BRASS KEY KEPT IN THE OIL-LOCKER.'"
+    container: false
+    openable: false
+    locked: false
+    contents: []
+    interactions:
+      - verb: READ
+        target: clue
+        conditions:
+          - not_flag: read_clue
+        effects:
+          - set_flag: read_clue
+          - inc_var:
+              name: score
+              by: 5
+  - id: coffer
+    name: oil-locker
+    aliases:
+      - locker
+    description: A squat iron oil-locker; something rattles loose inside.
+    takeable: false
+    quest_critical: false
+    container: true
+    openable: true
+    locked: false
+    contents:
+      - key
+    interactions: []
+  - id: key
+    name: brass key
+    aliases:
+      - key
+    description: A salt-greened brass key, fit for a heavy hatch-lock.
+    takeable: true
+    quest_critical: true
+    container: false
+    openable: false
+    locked: false
+    contents: []
+    interactions: []
+  - id: gate
+    name: lamp-room hatch
+    aliases:
+      - hatch
+      - door
+    description: A bolted hatch leads up north to the lamp stage. Its lock is
+      plainly shaped for a brass key.
+    takeable: false
+    quest_critical: false
+    container: false
+    openable: false
+    locked: true
+    key_id: key
+    unlock_narrate: The brass key bites and the hatch lifts on its hinges — above,
+      north, the true beacon waits to be lit.
+    unlock_effects:
+      - set_flag: gate_open
+      - inc_var:
+          name: score
+          by: 10
+    contents: []
+    interactions: []
+  - id: hazard
+    name: signal-rocket
+    aliases:
+      - rocket
+    description: A wreckers' signal-rocket sits primed in a cradle, its firing-lock
+      keyed like the hatch. Loose it and the false light flares — but the powder
+      is rotten and packed wrong, and the man who lit the last one is a stain on
+      the wall. This is a one-way mistake.
+    takeable: false
+    quest_critical: false
+    container: false
+    openable: false
+    locked: true
+    key_id: key
+    unlock_narrate: The key turns the firing-lock and the rotten charge goes all at
+      once, not up the flue but out into the room. There is a white roar and
+      then nothing at all.
+    unlock_effects:
+      - end_game: ending_doom
+    contents: []
+    interactions: []
+npcs:
+  - id: guide
+    name: the old keeper
+    description: A salt-cured old keeper, hands shaking, eyes on the dark sea.
+    room: hub
+    dialogue:
+      root: greet
+      nodes:
+        - id: greet
+          npc_text: You'll have come for the light, then. They always do.
+          effects: []
+          topics:
+            - id: hint
+              prompt: Ask the way on
+              goto: tell
+              end: false
+            - id: bye
+              prompt: Say goodbye
+              end: true
+        - id: tell
+          npc_text: The hatch wants the brass key — I keep it in the oil-locker, away from
+            damp.
+          effects: []
+          topics:
+            - id: bye
+              prompt: Say goodbye
+              end: true
+win_conditions:
+  - id: reach_goal
+    conditions:
+      - visited: goal
+    ending: ending_win
+endings:
+  - id: ending_win
+    title: The True Light
+    text: The hatch lifts and you set the beacon burning down the true channel. Out
+      on the black water a ship's lamp answers and stands off the reef. *** You
+      have won. ***
+    death: false
+  - id: ending_doom
+    title: The Rotten Charge
+    text: You reached for the wreckers' trade and it took you the way it took the
+      last keeper — all at once, in a white roar. The reef keeps its ships and
+      its fools alike. *** You have died. ***
+    death: true

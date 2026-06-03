@@ -1,0 +1,195 @@
+meta:
+  id: genpar_3_v1
+  title: The Sunken Archive
+  start_room: entrance
+  vars_init: {}
+  flags_init: []
+  max_score: 15
+rooms:
+  - id: entrance
+    name: "The Sunken Archive: Threshold"
+    description: a flooded record-vault beneath a drowned chancery. Water stands
+      shin-deep over the archive steps; a duty-roll is pinned above the
+      tide-line by the door. The way on lies north into the dark.
+    objects:
+      - clue
+    exits:
+      - direction: north
+        to: hub
+        conditions: []
+    on_enter: []
+  - id: hub
+    name: The Inner Chamber
+    description: The muniment room rises out of the flood on a dry shelf of stone;
+      an under-clerk waits among the ruined presses. A despatch-box stands here.
+      To the north, the record grille bars the way on, and apart from it the
+      fumigation valve waits. The threshold is back to the south.
+    variants:
+      - when:
+          - has_flag: gate_open
+        text: The muniment room rises out of the flood on a dry shelf of stone; an
+          under-clerk waits among the ruined presses. The record grille stands
+          open now, and through it, north, lies the sealed-roll niche. The
+          despatch-box stands open by the wall, and apart from it the fumigation
+          valve waits still. The threshold is back to the south.
+    objects:
+      - coffer
+      - gate
+      - hazard
+    exits:
+      - direction: south
+        to: entrance
+        conditions: []
+      - direction: north
+        to: goal
+        conditions:
+          - has_flag: gate_open
+        locked_msg: The record grille is locked fast; it will not yield without its key.
+    on_enter: []
+  - id: goal
+    name: The Last Chamber
+    description: Past the grille the sealed roll lies dry in its lead tube — the one
+      record the flood and the fire both failed to take. The way back is south.
+    objects: []
+    exits:
+      - direction: south
+        to: hub
+        conditions: []
+    on_enter: []
+objects:
+  - id: clue
+    name: duty-roll
+    aliases:
+      - roll
+      - clue
+    description: A pinned duty-roll, the porter's hand legible above the water-stain.
+    takeable: false
+    quest_critical: false
+    read_text: "Inked plain: 'THE GRILLE TAKES THE GILT KEY CASED IN THE DESPATCH-BOX.'"
+    container: false
+    openable: false
+    locked: false
+    contents: []
+    interactions:
+      - verb: READ
+        target: clue
+        conditions:
+          - not_flag: read_clue
+        effects:
+          - set_flag: read_clue
+          - inc_var:
+              name: score
+              by: 5
+  - id: coffer
+    name: despatch-box
+    aliases:
+      - box
+    description: A japanned despatch-box, lid unlatched; something gleams within.
+    takeable: false
+    quest_critical: false
+    container: true
+    openable: true
+    locked: false
+    contents:
+      - key
+    interactions: []
+  - id: key
+    name: gilt key
+    aliases:
+      - key
+    description: A small gilt key, tarnished green, cut for a record-grille.
+    takeable: true
+    quest_critical: true
+    container: false
+    openable: false
+    locked: false
+    contents: []
+    interactions: []
+  - id: gate
+    name: record grille
+    aliases:
+      - grille
+      - door
+    description: An iron record-grille closes the north niche. Its lock is plainly
+      cut for the gilt key.
+    takeable: false
+    quest_critical: false
+    container: false
+    openable: false
+    locked: true
+    key_id: key
+    unlock_narrate: The gilt key turns and the grille folds back — beyond it, north,
+      the sealed roll in its lead tube.
+    unlock_effects:
+      - set_flag: gate_open
+      - inc_var:
+          name: score
+          by: 10
+    contents: []
+    interactions: []
+  - id: hazard
+    name: fumigation valve
+    aliases:
+      - valve
+    description: A brass fumigation valve stands keyed to the same gilt key, feeding
+      the old vermin-gas the archive used to kill the bookworm. The lines were
+      never bled. Open it in this dead air and you breathe what was meant for
+      the worms. There is no second breath of it.
+    takeable: false
+    quest_critical: false
+    container: false
+    openable: false
+    locked: true
+    key_id: key
+    unlock_narrate: The gilt key frees the valve and the sweet vermin-gas pours up
+      out of the bled lines into the still air. You have one breath to know it
+      for what it is, and it is the last.
+    unlock_effects:
+      - end_game: ending_doom
+    contents: []
+    interactions: []
+npcs:
+  - id: guide
+    name: the under-clerk
+    description: A wax-pale under-clerk, sleeves rolled, ink to the elbow.
+    room: hub
+    dialogue:
+      root: greet
+      nodes:
+        - id: greet
+          npc_text: Mind the water. Few come down to the sunken archive on purpose.
+          effects: []
+          topics:
+            - id: hint
+              prompt: Ask the way on
+              goto: tell
+              end: false
+            - id: bye
+              prompt: Say goodbye
+              end: true
+        - id: tell
+          npc_text: The grille wants the gilt key — it's cased in the despatch-box, where
+            the flood couldn't reach.
+          effects: []
+          topics:
+            - id: bye
+              prompt: Say goodbye
+              end: true
+win_conditions:
+  - id: reach_goal
+    conditions:
+      - visited: goal
+    ending: ending_win
+endings:
+  - id: ending_win
+    title: The Sealed Roll
+    text: The grille folds back and the sealed roll is in your hands at last, dry
+      and whole through flood and fire. You climb back toward the light with the
+      record safe. *** You have won. ***
+    death: false
+  - id: ending_doom
+    title: What the Lines Still Held
+    text: You set the gilt key to the valve and the archive's old poison answered,
+      patient in the unbled lines. No roll, no climb back — only one more breath
+      that was never meant for you. *** You have died. ***
+    death: true

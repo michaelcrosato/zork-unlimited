@@ -32,14 +32,16 @@ import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { generateCyoaPack, CYOA_GENERATOR_VERSION } from "../../src/gen/cyoa_generator.js";
 import { generateRpgPack, RPG_GENERATOR_VERSION } from "../../src/gen/rpg_generator.js";
+import { generateParserPack, PARSER_GENERATOR_VERSION } from "../../src/gen/parser_generator.js";
 import { validateCyoa } from "../../src/validate/cyoa_validator.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
+import { validateParser } from "../../src/validate/parser_validator.js";
 import { hashState } from "../../src/core/hash.js";
 
 const root = process.cwd();
 
 type ManifestEntry = {
-  mode: "cyoa" | "rpg";
+  mode: "cyoa" | "rpg" | "parser";
   seed: number;
   pack_id: string;
   generator_version: number;
@@ -56,14 +58,19 @@ const ENTRIES = manifest.entries;
 // entry (or a generator that stops emitting one) is caught by the count assertion below.
 const CYOA_WINDOW = 4;
 const RPG_WINDOW = 4;
+const PARSER_WINDOW = 4;
 
 describe("bug_0163 — the held-out generator corpus is sealed, deterministic, and bar-clean", () => {
   it("the manifest entry count equals the seeded window size (no silent drop/add)", () => {
     const cyoa = ENTRIES.filter((e) => e.mode === "cyoa");
     const rpg = ENTRIES.filter((e) => e.mode === "rpg");
+    const parser = ENTRIES.filter((e) => e.mode === "parser");
     expect(cyoa.length, "cyoa corpus window size drifted").toBe(CYOA_WINDOW);
     expect(rpg.length, "rpg corpus window size drifted").toBe(RPG_WINDOW);
-    expect(ENTRIES.length, "total corpus window size drifted").toBe(CYOA_WINDOW + RPG_WINDOW);
+    expect(parser.length, "parser corpus window size drifted").toBe(PARSER_WINDOW);
+    expect(ENTRIES.length, "total corpus window size drifted").toBe(
+      CYOA_WINDOW + RPG_WINDOW + PARSER_WINDOW,
+    );
   });
 
   it.each(ENTRIES.map((e) => [`${e.mode}/${e.pack_id} (seed ${e.seed})`, e] as const))(
@@ -95,7 +102,7 @@ describe("bug_0163 — the held-out generator corpus is sealed, deterministic, a
           `corpus pack ${entry.pack_id} has findings: ` +
             report.findings.map((f) => `${f.severity}/${f.code}: ${f.message}`).join(" | "),
         ).toEqual([]);
-      } else {
+      } else if (entry.mode === "rpg") {
         // (1) re-mint determinism.
         const remint = generateRpgPack(entry.seed);
         expect(hashState(remint), "re-mint hash drifted from the sealed content_hash").toBe(
@@ -116,6 +123,32 @@ describe("bug_0163 — the held-out generator corpus is sealed, deterministic, a
 
         // (4) production-bar clean — the full parser + RPG bar (combat/score included).
         const report = validateRpg(remint);
+        expect(
+          report.findings,
+          `corpus pack ${entry.pack_id} has findings: ` +
+            report.findings.map((f) => `${f.severity}/${f.code}: ${f.message}`).join(" | "),
+        ).toEqual([]);
+      } else {
+        // (1) re-mint determinism.
+        const remint = generateParserPack(entry.seed);
+        expect(hashState(remint), "re-mint hash drifted from the sealed content_hash").toBe(
+          entry.content_hash,
+        );
+
+        // (2) generator version match.
+        expect(entry.generator_version, "generator_version mismatch — generator changed?").toBe(
+          PARSER_GENERATOR_VERSION,
+        );
+
+        // (3) committed YAML round-trips to the same hash.
+        const yamlPath = join(root, "corpus", "parser", `${entry.pack_id}.yaml`);
+        const fromDisk = parseYaml(readFileSync(yamlPath, "utf8"));
+        expect(hashState(fromDisk), "committed YAML does not round-trip to the sealed hash").toBe(
+          entry.content_hash,
+        );
+
+        // (4) production-bar clean — the strictest validator in the suite, zero findings.
+        const report = validateParser(remint);
         expect(
           report.findings,
           `corpus pack ${entry.pack_id} has findings: ` +

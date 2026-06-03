@@ -30,6 +30,34 @@
       "seed": 3
     },
     {
+      "content_hash": "b856733b3e42a88148ec75e111f553a93233133f40abfba44e2e5721b9501523",
+      "generator_version": 1,
+      "mode": "parser",
+      "pack_id": "genpar_0_v1",
+      "seed": 0
+    },
+    {
+      "content_hash": "465f3390b5000e70eb9eeedeb0e5679059b9841b32a7f3a0f9b0aee1779d9df7",
+      "generator_version": 1,
+      "mode": "parser",
+      "pack_id": "genpar_1_v1",
+      "seed": 1
+    },
+    {
+      "content_hash": "58fca3dce5b3e8619f1336d1cb631fb0dd3c6951bcba8d7c046b4690e486021c",
+      "generator_version": 1,
+      "mode": "parser",
+      "pack_id": "genpar_2_v1",
+      "seed": 2
+    },
+    {
+      "content_hash": "cf42a11ec009e01696b9dd2bccba7fdc8a30793b899e21da60fbb94def6515a1",
+      "generator_version": 1,
+      "mode": "parser",
+      "pack_id": "genpar_3_v1",
+      "seed": 3
+    },
+    {
       "content_hash": "d7ae2de8cbafc6d356fd2b4667b44a92eb2bc5e72069518f94caf59967cb8036",
       "generator_version": 1,
       "mode": "rpg",

@@ -1,0 +1,195 @@
+meta:
+  id: genpar_0_v1
+  title: The Reliquary Vault
+  start_room: entrance
+  vars_init: {}
+  flags_init: []
+  max_score: 15
+rooms:
+  - id: entrance
+    name: "The Reliquary Vault: Threshold"
+    description: a drowned chapel under the fens. Black water laps the threshold of
+      a chapel the marsh has half-swallowed; a graven slab leans by the door.
+      The way on lies north into the dark.
+    objects:
+      - clue
+    exits:
+      - direction: north
+        to: hub
+        conditions: []
+    on_enter: []
+  - id: hub
+    name: The Inner Chamber
+    description: The nave opens into a low vault where the dead were laid; a verger
+      keeps a guttering lamp. A stone font stands here. To the north, the iron
+      gate bars the way on, and apart from it the lead-sealed tomb waits. The
+      threshold is back to the south.
+    variants:
+      - when:
+          - has_flag: gate_open
+        text: The nave opens into a low vault where the dead were laid; a verger keeps a
+          guttering lamp. The iron gate stands open now, and through it, north,
+          lies the reliquary chamber. The stone font stands open by the wall,
+          and apart from it the lead-sealed tomb waits still. The threshold is
+          back to the south.
+    objects:
+      - coffer
+      - gate
+      - hazard
+    exits:
+      - direction: south
+        to: entrance
+        conditions: []
+      - direction: north
+        to: goal
+        conditions:
+          - has_flag: gate_open
+        locked_msg: The iron gate is locked fast; it will not yield without its key.
+    on_enter: []
+  - id: goal
+    name: The Last Chamber
+    description: Past the gate the reliquary stands untouched on its plinth — the
+      saint's casket you waded the fens to find. The way back is south.
+    objects: []
+    exits:
+      - direction: south
+        to: hub
+        conditions: []
+    on_enter: []
+objects:
+  - id: clue
+    name: graven slab
+    aliases:
+      - slab
+      - clue
+    description: A weathered slab, an epitaph still legible under the lichen.
+    takeable: false
+    quest_critical: false
+    read_text: "Cut deep into the stone: 'THE VAULT YIELDS TO THE IRON LAID UP IN
+      THE FONT.'"
+    container: false
+    openable: false
+    locked: false
+    contents: []
+    interactions:
+      - verb: READ
+        target: clue
+        conditions:
+          - not_flag: read_clue
+        effects:
+          - set_flag: read_clue
+          - inc_var:
+              name: score
+              by: 5
+  - id: coffer
+    name: stone font
+    aliases:
+      - font
+    description: A dry baptismal font; something heavy rests in its basin.
+    takeable: false
+    quest_critical: false
+    container: true
+    openable: true
+    locked: false
+    contents:
+      - key
+    interactions: []
+  - id: key
+    name: iron key
+    aliases:
+      - key
+    description: A heavy iron key, black with age — fit for a great lock.
+    takeable: true
+    quest_critical: true
+    container: false
+    openable: false
+    locked: false
+    contents: []
+    interactions: []
+  - id: gate
+    name: iron gate
+    aliases:
+      - gate
+      - door
+    description: A heavy iron gate bars the way north. Its great lock is plainly
+      shaped for an iron key.
+    takeable: false
+    quest_critical: false
+    container: false
+    openable: false
+    locked: true
+    key_id: key
+    unlock_narrate: The iron key turns with a groan and the gate swings inward —
+      beyond it, north, the reliquary you came so far to find.
+    unlock_effects:
+      - set_flag: gate_open
+      - inc_var:
+          name: score
+          by: 10
+    contents: []
+    interactions: []
+  - id: hazard
+    name: lead-sealed tomb
+    aliases:
+      - tomb
+    description: One squat tomb stands apart, banded in iron and run round with
+      lead, a fever-warning cut into its lid. The same iron key would open it —
+      but the lead was laid to keep the living OUT and the pestilence IN, and
+      there is no breathing it back out.
+    takeable: false
+    quest_critical: false
+    container: false
+    openable: false
+    locked: true
+    key_id: key
+    unlock_narrate: The lead seams crack and the breath of the fever-dead sighs up
+      out of the dark — sealed down here a hundred years and none of its hunger
+      lost. You understand what the lead held back a moment too late.
+    unlock_effects:
+      - end_game: ending_doom
+    contents: []
+    interactions: []
+npcs:
+  - id: guide
+    name: the verger
+    description: A stooped verger, lamp in hand, watching you sidelong.
+    room: hub
+    dialogue:
+      root: greet
+      nodes:
+        - id: greet
+          npc_text: Few come willingly down to the sealed vault, traveler.
+          effects: []
+          topics:
+            - id: hint
+              prompt: Ask the way on
+              goto: tell
+              end: false
+            - id: bye
+              prompt: Say goodbye
+              end: true
+        - id: tell
+          npc_text: The gate answers only to the iron key — and that was laid up in the
+            font.
+          effects: []
+          topics:
+            - id: bye
+              prompt: Say goodbye
+              end: true
+win_conditions:
+  - id: reach_goal
+    conditions:
+      - visited: goal
+    ending: ending_win
+endings:
+  - id: ending_win
+    title: Into the Reliquary
+    text: The gate yields, and the cold breath of the vault rolls over you. You step
+      through to the saint's casket at last. *** You have won. ***
+    death: false
+  - id: ending_doom
+    title: What the Lead Held Back
+    text: You came for the reliquary and learned, too late, what the crypt was
+      sealed against. The plague takes you down among the fever-dead. *** You
+      have died. ***
+    death: true

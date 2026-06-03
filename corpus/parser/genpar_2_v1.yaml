@@ -1,0 +1,196 @@
+meta:
+  id: genpar_2_v1
+  title: The Cold Forge
+  start_room: entrance
+  vars_init: {}
+  flags_init: []
+  max_score: 15
+rooms:
+  - id: entrance
+    name: "The Cold Forge: Threshold"
+    description: a war-foundry gone quiet between musters. Cold slag crunches
+      underfoot at the foundry door; an order-slate is propped against the jamb.
+      The way on lies north into the dark.
+    objects:
+      - clue
+    exits:
+      - direction: north
+        to: hub
+        conditions: []
+    on_enter: []
+  - id: hub
+    name: The Inner Chamber
+    description: The casting floor stands silent, moulds cooling in their pits; a
+      tally-master lingers by the dead crucible. A quench-trough stands here. To
+      the north, the store wicket bars the way on, and apart from it the
+      blast-furnace door waits. The threshold is back to the south.
+    variants:
+      - when:
+          - has_flag: gate_open
+        text: The casting floor stands silent, moulds cooling in their pits; a
+          tally-master lingers by the dead crucible. The store wicket stands
+          open now, and through it, north, lies the pattern-store. The
+          quench-trough stands open by the wall, and apart from it the
+          blast-furnace door waits still. The threshold is back to the south.
+    objects:
+      - coffer
+      - gate
+      - hazard
+    exits:
+      - direction: south
+        to: entrance
+        conditions: []
+      - direction: north
+        to: goal
+        conditions:
+          - has_flag: gate_open
+        locked_msg: The store wicket is locked fast; it will not yield without its key.
+    on_enter: []
+  - id: goal
+    name: The Last Chamber
+    description: Past the wicket the master-pattern lies in its case — the
+      proof-mould the whole foundry was raised to guard. The way back is south.
+    objects: []
+    exits:
+      - direction: south
+        to: hub
+        conditions: []
+    on_enter: []
+objects:
+  - id: clue
+    name: order-slate
+    aliases:
+      - slate
+      - clue
+    description: A chalked order-slate, the quartermaster's hand still legible.
+    takeable: false
+    quest_critical: false
+    read_text: "Chalked across it: 'THE WICKET TAKES THE WARD-KEY DROPPED IN THE
+      QUENCH-TROUGH.'"
+    container: false
+    openable: false
+    locked: false
+    contents: []
+    interactions:
+      - verb: READ
+        target: clue
+        conditions:
+          - not_flag: read_clue
+        effects:
+          - set_flag: read_clue
+          - inc_var:
+              name: score
+              by: 5
+  - id: coffer
+    name: quench-trough
+    aliases:
+      - trough
+    description: A long iron quench-trough, dry now; something lies on its bed.
+    takeable: false
+    quest_critical: false
+    container: true
+    openable: true
+    locked: false
+    contents:
+      - key
+    interactions: []
+  - id: key
+    name: ward-key
+    aliases:
+      - key
+    description: A toothed ward-key of blued steel, cut for a foundry lock.
+    takeable: true
+    quest_critical: true
+    container: false
+    openable: false
+    locked: false
+    contents: []
+    interactions: []
+  - id: gate
+    name: store wicket
+    aliases:
+      - wicket
+      - door
+    description: An iron wicket-gate closes off the north store. Its lock is plainly
+      cut for a ward-key.
+    takeable: false
+    quest_critical: false
+    container: false
+    openable: false
+    locked: true
+    key_id: key
+    unlock_narrate: The ward-key throws the bolt and the wicket grinds open — beyond
+      it, north, the master-pattern in its case.
+    unlock_effects:
+      - set_flag: gate_open
+      - inc_var:
+          name: score
+          by: 10
+    contents: []
+    interactions: []
+  - id: hazard
+    name: blast-furnace door
+    aliases:
+      - furnace
+    description: The great blast-furnace stands banked but not dead, its
+      charging-door locked to the same ward-key. The gauge reads full of pent
+      gas; crack the door cold and it back-drafts. The scorch-marks on the floor
+      are a man's shadow. Open it and you do not close it again.
+    takeable: false
+    quest_critical: false
+    container: false
+    openable: false
+    locked: true
+    key_id: key
+    unlock_narrate: The ward-key frees the charging-door, the banked gas finds air,
+      and the furnace breathes back in a sheet of fire that fills the floor. You
+      are the next shadow on the stone.
+    unlock_effects:
+      - end_game: ending_doom
+    contents: []
+    interactions: []
+npcs:
+  - id: guide
+    name: the tally-master
+    description: A soot-streaked tally-master, ledger under one arm, sizing you up.
+    room: hub
+    dialogue:
+      root: greet
+      nodes:
+        - id: greet
+          npc_text: No muster today. So what brings you to the cold forge?
+          effects: []
+          topics:
+            - id: hint
+              prompt: Ask the way on
+              goto: tell
+              end: false
+            - id: bye
+              prompt: Say goodbye
+              end: true
+        - id: tell
+          npc_text: The store wicket wants the ward-key — it went into the quench-trough
+            when we banked down.
+          effects: []
+          topics:
+            - id: bye
+              prompt: Say goodbye
+              end: true
+win_conditions:
+  - id: reach_goal
+    conditions:
+      - visited: goal
+    ending: ending_win
+endings:
+  - id: ending_win
+    title: The Master-Pattern
+    text: The wicket opens and the master-pattern is yours, the proof the whole
+      foundry guarded. You carry it out into the cold morning. *** You have won.
+      ***
+    death: false
+  - id: ending_doom
+    title: The Back-Draft
+    text: You set the ward-key to the furnace and it answered with fire, the way
+      banked iron always answers a fool. No pattern, no morning — only one more
+      shadow burned into the foundry floor. *** You have died. ***
+    death: true
