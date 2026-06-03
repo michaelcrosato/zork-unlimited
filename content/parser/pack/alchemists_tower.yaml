@@ -203,19 +203,38 @@ rooms:
     # cure is in hand, and names no recipe (a player may have skipped the optional library
     # — the bug_0052 leak lesson). Text-only: no flag/item/score/exit/gating/ending change;
     # `visited: spire` still fires on entry, so the win condition is untouched (bug_0065).
+    # bug_0161 ROOM-LEVEL terminality telegraph. bug_0123 put the betrayal-fork's
+    # "this is a one-way greed choice" warning on the silver casket's OWN examine, but a
+    # fresh blind MCP playtester (seed 23, ai-runs/2026-06-03T09-26-03-752Z/playtest.md §4-5)
+    # showed that warning is bypassable: reaching the spire with the iron key but no cure
+    # yet, they unlocked the casket straight from the ROOM view — "the same verb that was
+    # safe on the strongbox" — without ever examining the object, and were railroaded into
+    # ending_betrayal. The room text mentioned the casket neutrally ("its clasp cut for an
+    # iron key"), which "actively invites trying the key you're already holding," so the
+    # only warning lived in an examine they never ran. The fix carries the casket's terminal/
+    # greed telegraph up to the SPIRE ROOM description (both states), so the warning reaches
+    # the player at the actual decision point. Preserves the bug_0065 anchors verbatim ("you
+    # are not carrying it yet" in base; "pale antidote in your hand is no use until you give
+    # it to her" in the variant) and the leak discipline (base names no recipe/antidote-in-
+    # hand). Text-only: no flag/item/score/exit/key/gating/ending change — the casket's
+    # UNLOCK→ending_betrayal and the canonical cure are untouched.
     description: >
       The tower's top room. On a low pallet beneath the wind-moaning broken glass
       lies the tower's old master, fevered and failing — the patient the whole long
       climb was for. A small silver casket rests on a stand at her side, its clasp
-      cut for an iron key. Whatever medicine might break her fever, you are not
-      carrying it yet. The laboratory is back down.
+      cut for an iron key; but to set iron to that clasp is to turn from her pallet
+      to her coffer — a thing chosen once and not undone, her treasure bought against
+      her cure. Whatever medicine might break her fever, you are not carrying it yet.
+      The laboratory is back down.
     variants:
       - when: [{ has_item: antidote }]
         text: >
           The tower's top room. On a low pallet beneath the wind-moaning broken glass
           lies the tower's old master, fevered and failing — the patient the whole long
           climb was for. A small silver casket rests on a stand at her side, its clasp
-          cut for an iron key. The pale antidote in your hand is no use until you give
+          cut for an iron key; to crack it now, with her cure in your hand, would be to
+          choose the Work over the maker and leave her to the fever — a thing chosen
+          once and not undone. The pale antidote in your hand is no use until you give
           it to her. The laboratory is back down.
     objects: [master, silver_casket]
     exits:
