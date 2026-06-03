@@ -1,6 +1,6 @@
 meta:
   id: gen_2_v1
-  title: "Tithe: A Tithe Fork"
+  title: "Tithe: A Two-Truth Fork"
   start: hub
   vars_init: {}
   flags_init: []
@@ -8,91 +8,153 @@ scenes:
   - id: hub
     title: the locked gatehouse
     text: "You stand in a plague village the manor has quietly sealed from within:
-      the locked gatehouse, the sick on one side and the well road on the other.
-      the bailiff's sealed order lies nailed inside the gate-ward's box. What
-      kind of person are you, here, tonight?"
+      the locked gatehouse, the sick on one side and the open road on the other.
+      the bailiff's sealed order lies nailed inside the gate-ward's box, and the
+      herb-wife they have blamed is shut in the gate-ward's lean-to, called the
+      one who brought the curse. What kind of person are you, here, tonight?"
     variants:
       - when:
-          - has_flag: truth
-        text: You stand in a plague village the manor has quietly sealed from within,
-          and you cannot look at it the way you did before. You have read the
-          bailiff's sealed order; you know what it was kept for. the locked
-          gatehouse, the sick on one side and the well road on the other.
+          - all_of:
+              - has_flag: knows_way
+              - has_flag: knows_ally
+        text: "You stand in a plague village the manor has quietly sealed from within,
+          and you can no longer pretend not to know. You have read the bailiff's
+          sealed order and you have heard the herb-wife they have blamed out:
+          you know there is a way through this for everyone, and you know whose
+          hands could take it. the locked gatehouse, the sick on one side and
+          the open road on the other."
+      - when:
+          - has_flag: knows_way
+        text: "You stand in a plague village the manor has quietly sealed from within,
+          and the bailiff's sealed order has changed what you see: the contagion
+          has all but burned out and the manor knows it — the gate is kept shut
+          not to hold sickness but to hide a debt the dead can no longer claim.
+          the locked gatehouse, the sick on one side and the open road on the
+          other."
+      - when:
+          - has_flag: knows_ally
+        text: "You stand in a plague village the manor has quietly sealed from within,
+          and you cannot now look at the herb-wife they have blamed the way the
+          others do: she has nursed the sick through and knows exactly who may
+          safely pass and who must wait — the one judgement that could open the
+          gate without spreading death. the locked gatehouse, the sick on one
+          side and the open road on the other."
     on_enter: []
     is_ending: false
     choices:
-      - id: investigate
+      - id: learn_way
         text: Read the bailiff's sealed order, nailed inside the gate-ward's box.
         conditions:
-          - not_flag: truth
+          - not_flag: knows_way
         effects: []
-        next: clue
-      - id: stance_0
-        text: Keep the gate sealed as the order commands.
-        conditions: []
-        effects: []
-        next: ending_stance_0
-      - id: stance_1
-        text: Quietly let one cart of the well slip out by night.
-        conditions: []
-        effects: []
-        next: ending_stance_1
-      - id: act_on_truth
-        text: Break the seal and read the order aloud to the whole village.
+        next: clue_way
+      - id: learn_ally
+        text: Hear out the herb-wife they have blamed.
         conditions:
-          - has_flag: truth
+          - not_flag: knows_ally
         effects: []
-        next: ending_truth
-      - id: climb_gamble
-        text: Scale the crumbling curtain-wall to signal the road.
+        next: clue_ally
+      - id: hold
+        text: Keep the gate sealed as the order commands and wait for the fever to pass.
         conditions: []
         effects: []
-        next: ending_fall
-  - id: clue
+        next: ending_hold
+      - id: best
+        text: Hand the herb-wife the gate-key and let her pass out whoever she judges
+          clear.
+        conditions:
+          - has_flag: knows_ally
+        effects: []
+        next: ending_best
+      - id: dark
+        text: Give the herb-wife to the villagers as the witch they want burned.
+        conditions: []
+        effects: []
+        next: ending_dark
+  - id: clue_way
     title: Bailiff'S Sealed Order
     text: "You take up the bailiff's sealed order nailed inside the gate-ward's box
-      and read it through. It is all set down plainly: what you are guarding was
-      made a lie on purpose."
+      and read it through. It is plain enough: the contagion has all but burned
+      out and the manor knows it — the gate is kept shut not to hold sickness
+      but to hide a debt the dead can no longer claim."
     on_enter: []
     is_ending: false
     choices:
       - id: learn
-        text: Read it through to the end, and understand.
+        text: Take in what it means, and turn back.
         conditions:
-          - not_flag: truth
+          - not_flag: knows_way
         effects:
-          - set_flag: truth
-          - add_journal: "the bailiff's sealed order damns the whole of it: a plague village
-              the manor has quietly sealed from within is no accident. You know
-              now what only the act of opening it can answer."
+          - set_flag: knows_way
+          - add_journal: "the bailiff's sealed order: the contagion has all but burned out
+              and the manor knows it — the gate is kept shut not to hold
+              sickness but to hide a debt the dead can no longer claim. The
+              crisis has a way through it that you can no longer un-know."
         next: hub
       - id: back
-        text: Set it down and turn back.
+        text: Set it down and go back without reading.
+        conditions: []
+        effects: []
+        next: hub
+  - id: clue_ally
+    title: Herb-Wife They Have Blamed
+    text: "You hear the herb-wife they have blamed out where they are shut in the
+      gate-ward's lean-to, called the one who brought the curse. The truth of it
+      is not what the others have decided: she has nursed the sick through and
+      knows exactly who may safely pass and who must wait — the one judgement
+      that could open the gate without spreading death."
+    on_enter: []
+    is_ending: false
+    choices:
+      - id: learn
+        text: Believe them, and turn back.
+        conditions:
+          - not_flag: knows_ally
+        effects:
+          - set_flag: knows_ally
+          - add_journal: "the herb-wife they have blamed: she has nursed the sick through
+              and knows exactly who may safely pass and who must wait — the one
+              judgement that could open the gate without spreading death. The
+              one the others would throw away is the one who could mend it."
+        next: hub
+      - id: back
+        text: Say nothing, and go back.
         conditions: []
         effects: []
         next: hub
 endings:
-  - id: ending_stance_0
-    title: "Stance: Keep the gate sealed as the order commands"
-    text: You make your choice in a plague village the manor has quietly sealed from
-      within. Keep the gate sealed as the order commands. What follows is the
-      contagion held and the village left to burn itself out, and you carry it
-      with you after.
-  - id: ending_stance_1
-    title: "Stance: Quietly let one cart of the well slip out by night"
-    text: You make your choice in a plague village the manor has quietly sealed from
-      within. Quietly let one cart of the well slip out by night. What follows
-      is a few carried clear, the gate sealed again behind them, and you carry
-      it with you after.
-  - id: ending_truth
-    title: The Truth Acted On
-    text: You read the bailiff's sealed order and you will not keep its lie one more
-      hour. Break the seal and read the order aloud to the whole village. What
-      follows is the lie undone, the gate thrown open, and the manor's hand
-      shown to all — the act only the one who learned the truth could take.
-  - id: ending_fall
-    title: The Fall
-    text: "You set yourself to the gamble the prose named outright. Scale the
-      crumbling curtain-wall to signal the road. It does not hold: the
-      frost-rotten parapet sloughs away and the drop takes you. A chosen risk,
-      foreshadowed, never an ambush."
+  - id: ending_hold
+    title: Hold the Line
+    text: You choose discipline in a plague village the manor has quietly sealed
+      from within. Keep the gate sealed as the order commands and wait for the
+      fever to pass. What follows is the sickness held and the village left to
+      burn itself slowly out.
+    variants:
+      - when:
+          - has_flag: knows_way
+        text: "You choose discipline, but not in ignorance: you held the seal knowing
+          the fever was already spent — obedience kept over a lie meant only to
+          bury a debt."
+  - id: ending_best
+    title: The Surest Hand
+    text: Because you learned who they truly are, you can do the one thing the rest
+      would not. Hand the herb-wife the gate-key and let her pass out whoever
+      she judges clear. What follows is the well led safely out and the sick
+      still tended, by the one who knew which was which.
+    variants:
+      - when:
+          - has_flag: knows_way
+        text: "You knew the way out and you knew whose hands could take it: you knew the
+          danger was past AND whose judgement could be trusted, and you opened
+          the gate by her word — mercy without a single new death."
+  - id: ending_dark
+    title: The Sanctioned Wrong
+    text: You take the act everyone around you is urging. Give the herb-wife to the
+      villagers as the witch they want burned. What follows is a fire at the
+      gate and a fear that buys you a night's quiet.
+    variants:
+      - when:
+          - has_flag: knows_ally
+        text: "You had heard them out, so this is no superstition but a thing done with
+          open eyes: you knew she was the one healer who could have freed them
+          safely, and you fed her to their fear to be rid of the choice."

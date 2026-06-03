@@ -1,101 +1,163 @@
 meta:
   id: gen_3_v1
-  title: "Forge: A Tithe Fork"
+  title: "Foundry: A Two-Truth Fork"
   start: hub
   vars_init: {}
   flags_init: []
 scenes:
   - id: hub
     title: the casting floor
-    text: "You stand in a war-foundry casting blades the general means for a
+    text: "You stand in a war-foundry casting the blades a general means for a
       massacre: the casting floor, the cooling moulds, the muster horns sounding
-      outside. the quartermaster's order-slate lies chalked and propped against
-      the tuyère. What kind of person are you, here, tonight?"
+      beyond the doors. the quartermaster's order-slate lies chalked and propped
+      against the cold tuyère, and the branded furnace-slave is chained by the
+      crucible, marked the one who fouled the last heat. What kind of person are
+      you, here, tonight?"
     variants:
       - when:
-          - has_flag: truth
-        text: You stand in a war-foundry casting blades the general means for a
-          massacre, and you cannot look at it the way you did before. You have
-          read the quartermaster's order-slate; you know what it was kept for.
-          the casting floor, the cooling moulds, the muster horns sounding
-          outside.
+          - all_of:
+              - has_flag: knows_way
+              - has_flag: knows_ally
+        text: "You stand in a war-foundry casting the blades a general means for a
+          massacre, and you can no longer pretend not to know. You have read the
+          quartermaster's order-slate and you have heard the branded
+          furnace-slave out: you know there is a way through this for everyone,
+          and you know whose hands could take it. the casting floor, the cooling
+          moulds, the muster horns sounding beyond the doors."
+      - when:
+          - has_flag: knows_way
+        text: "You stand in a war-foundry casting the blades a general means for a
+          massacre, and the quartermaster's order-slate has changed what you
+          see: the muster turns on this one pour: spoil it and there are no
+          blades to march behind, and the order itself names the village it was
+          cast to put to the sword. the casting floor, the cooling moulds, the
+          muster horns sounding beyond the doors."
+      - when:
+          - has_flag: knows_ally
+        text: "You stand in a war-foundry casting the blades a general means for a
+          massacre, and you cannot now look at the branded furnace-slave the way
+          the others do: he has read these furnaces for twenty years and can
+          wreck the pour clean, as a flaw and not a sabotage — the one hand who
+          can stop it without bringing the lash on the floor. the casting floor,
+          the cooling moulds, the muster horns sounding beyond the doors."
     on_enter: []
     is_ending: false
     choices:
-      - id: investigate
-        text: Read the quartermaster's order-slate, chalked and propped against the
+      - id: learn_way
+        text: Read the quartermaster's order-slate, chalked and propped against the cold
           tuyère.
         conditions:
-          - not_flag: truth
+          - not_flag: knows_way
         effects: []
-        next: clue
-      - id: stance_0
-        text: Pour the heat and finish the order as cast.
-        conditions: []
-        effects: []
-        next: ending_stance_0
-      - id: stance_1
-        text: Quench the crucible and quietly spoil this one pour.
-        conditions: []
-        effects: []
-        next: ending_stance_1
-      - id: act_on_truth
-        text: Crack the moulds and ring the foundry-bell to stop the muster.
+        next: clue_way
+      - id: learn_ally
+        text: Hear out the branded furnace-slave.
         conditions:
-          - has_flag: truth
+          - not_flag: knows_ally
         effects: []
-        next: ending_truth
-      - id: climb_gamble
-        text: Climb the slag-loose gantry over the crucible for the bell-rope.
+        next: clue_ally
+      - id: hold
+        text: Finish the pour true and trust the muster to be called off in time.
         conditions: []
         effects: []
-        next: ending_fall
-  - id: clue
+        next: ending_hold
+      - id: best
+        text: Let the furnace-slave foul the heat his own way, and cover for him.
+        conditions:
+          - has_flag: knows_ally
+        effects: []
+        next: ending_best
+      - id: dark
+        text: Name the slave to the overseer to clear yourself and keep the floor
+          moving.
+        conditions: []
+        effects: []
+        next: ending_dark
+  - id: clue_way
     title: Quartermaster'S Order-Slate
     text: "You take up the quartermaster's order-slate chalked and propped against
-      the tuyère and read it through. It is all set down plainly: what you are
-      guarding was made a lie on purpose."
+      the cold tuyère and read it through. It is plain enough: the muster turns
+      on this one pour: spoil it and there are no blades to march behind, and
+      the order itself names the village it was cast to put to the sword."
     on_enter: []
     is_ending: false
     choices:
       - id: learn
-        text: Read it through to the end, and understand.
+        text: Take in what it means, and turn back.
         conditions:
-          - not_flag: truth
+          - not_flag: knows_way
         effects:
-          - set_flag: truth
-          - add_journal: "the quartermaster's order-slate damns the whole of it: a
-              war-foundry casting blades the general means for a massacre is no
-              accident. You know now what only the act of opening it can
-              answer."
+          - set_flag: knows_way
+          - add_journal: "the quartermaster's order-slate: the muster turns on this one
+              pour: spoil it and there are no blades to march behind, and the
+              order itself names the village it was cast to put to the sword.
+              The crisis has a way through it that you can no longer un-know."
         next: hub
       - id: back
-        text: Set it down and turn back.
+        text: Set it down and go back without reading.
+        conditions: []
+        effects: []
+        next: hub
+  - id: clue_ally
+    title: Branded Furnace-Slave
+    text: "You hear the branded furnace-slave out where they are chained by the
+      crucible, marked the one who fouled the last heat. The truth of it is not
+      what the others have decided: he has read these furnaces for twenty years
+      and can wreck the pour clean, as a flaw and not a sabotage — the one hand
+      who can stop it without bringing the lash on the floor."
+    on_enter: []
+    is_ending: false
+    choices:
+      - id: learn
+        text: Believe them, and turn back.
+        conditions:
+          - not_flag: knows_ally
+        effects:
+          - set_flag: knows_ally
+          - add_journal: "the branded furnace-slave: he has read these furnaces for twenty
+              years and can wreck the pour clean, as a flaw and not a sabotage —
+              the one hand who can stop it without bringing the lash on the
+              floor. The one the others would throw away is the one who could
+              mend it."
+        next: hub
+      - id: back
+        text: Say nothing, and go back.
         conditions: []
         effects: []
         next: hub
 endings:
-  - id: ending_stance_0
-    title: "Stance: Pour the heat and finish the order as cast"
-    text: You make your choice in a war-foundry casting blades the general means for
-      a massacre. Pour the heat and finish the order as cast. What follows is
-      the blades shipped and your wage paid in full, and you carry it with you
-      after.
-  - id: ending_stance_1
-    title: "Stance: Quench the crucible and quietly spoil this one pour"
-    text: You make your choice in a war-foundry casting blades the general means for
-      a massacre. Quench the crucible and quietly spoil this one pour. What
-      follows is one batch ruined, the next already ordered, and you carry it
-      with you after.
-  - id: ending_truth
-    title: The Truth Acted On
-    text: You read the quartermaster's order-slate and you will not keep its lie one
-      more hour. Crack the moulds and ring the foundry-bell to stop the muster.
-      What follows is the casting wrecked, the order read out, and the muster
-      broken cold — the act only the one who learned the truth could take.
-  - id: ending_fall
-    title: The Fall
-    text: "You set yourself to the gamble the prose named outright. Climb the
-      slag-loose gantry over the crucible for the bell-rope. It does not hold:
-      the heat-eaten walkway buckles and drops you to the molten pour. A chosen
-      risk, foreshadowed, never an ambush."
+  - id: ending_hold
+    title: Hold the Line
+    text: You choose discipline in a war-foundry casting the blades a general means
+      for a massacre. Finish the pour true and trust the muster to be called off
+      in time. What follows is good blades shipped and your wage paid in full,
+      and the marching left to others.
+    variants:
+      - when:
+          - has_flag: knows_way
+        text: "You choose discipline, but not in ignorance: you poured it true knowing
+          this batch was the muster's whole edge — clean work, done for a thing
+          you knew it was for."
+  - id: ending_best
+    title: The Surest Hand
+    text: Because you learned who they truly are, you can do the one thing the rest
+      would not. Let the furnace-slave foul the heat his own way, and cover for
+      him. What follows is a pour wrecked past saving and no lash that falls, by
+      the one who knew how.
+    variants:
+      - when:
+          - has_flag: knows_way
+        text: "You knew the way out and you knew whose hands could take it: you knew the
+          muster hung on this heat AND whose hand could spoil it cleanly, and
+          you let him — the march broken and no one burned for it."
+  - id: ending_dark
+    title: The Sanctioned Wrong
+    text: You take the act everyone around you is urging. Name the slave to the
+      overseer to clear yourself and keep the floor moving. What follows is a
+      flogging at the crucible and a pour that runs on without you.
+    variants:
+      - when:
+          - has_flag: knows_ally
+        text: "You had heard them out, so this is no superstition but a thing done with
+          open eyes: you knew he was the one man who could have stopped the
+          massacre, and you gave him to the lash to save your own back."

@@ -29,6 +29,7 @@ import { generateCyoaPack } from "../../src/gen/cyoa_generator.js";
 import { CyoaPackSchema } from "../../src/cyoa/schema.js";
 import { validateCyoa } from "../../src/validate/cyoa_validator.js";
 import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
+import { makeStep } from "../../src/core/engine.js";
 import { exhaustiveEndings } from "../regression/support/exhaustive_endings.js";
 
 // A spread of seeds covering every theme (× the 2-vs-3-stance branch) and then some.
@@ -87,25 +88,48 @@ describe("bug_0156 — procedural CYOA generator emits packs that clear the ship
         undeclared,
         `seed ${seed} reached endings not declared: ${undeclared.join(", ")}`,
       ).toEqual([]);
-      // The pack genuinely forks: at least three distinct endings (two stances + gated best).
+      // The pack genuinely forks: at least three distinct endings (hold + gated best + dark).
       expect(reached.size).toBeGreaterThanOrEqual(3);
     });
   }
 
-  it("the truth-gated 'best' ending is gated: unreachable without learning the truth", () => {
-    // Prove the gate is load-bearing, not decorative: if we never set `truth`, the gated
-    // ending is structurally absent from any legal action set. We confirm this by walking
-    // only the un-gated stance choices from the hub and checking ending_truth is offered
-    // nowhere along them.
+  it("the two-axis design (bug_0169): both investigations gate, the 'best' act is gated on the PERSONAL axis", () => {
+    // Prove the deepened shape: from the pristine hub BOTH investigations are offered and the
+    // gated `best` act is NOT (it needs the personal `knows_ally` flag, not the situational one).
     const pack = generateCyoaPack(0);
     const index = indexPack(pack);
     const rules = buildRules(index);
+    const step = makeStep(rules);
     const start = initStateForPack(index, 0);
-    const hubActions = rules
-      .legalActions(start)
-      .map((a) => (a.type === "CHOOSE" ? a.choiceId : ""));
-    // From the pristine (untruthed) hub, the gated act is NOT offered, but investigation is.
-    expect(hubActions).not.toContain("act_on_truth");
-    expect(hubActions).toContain("investigate");
+    const hubIds = (s: typeof start): string[] =>
+      rules.legalActions(s).map((a) => (a.type === "CHOOSE" ? a.choiceId : ""));
+    // Walk a sequence of CHOOSE actions from the start, asserting each step is accepted.
+    const walk = (ids: string[]): typeof start => {
+      let s = start;
+      for (const id of ids) {
+        const r = step(s, { type: "CHOOSE", choiceId: id });
+        expect(r.ok, `step "${id}" was rejected`).toBe(true);
+        s = r.state;
+      }
+      return s;
+    };
+
+    const pristine = hubIds(start);
+    expect(pristine).toContain("learn_way");
+    expect(pristine).toContain("learn_ally");
+    expect(pristine).not.toContain("best"); // gated on knows_ally
+    expect(pristine).toContain("hold"); // an ungated act is always available
+    expect(pristine).toContain("dark");
+
+    // Learning the SITUATIONAL truth alone does NOT open the gate — it is the PERSONAL axis
+    // (knows_ally) the `best` act turns on. This proves the two axes are independent gates.
+    const afterWay = walk(["learn_way", "learn"]);
+    expect(hubIds(afterWay)).not.toContain("best");
+    expect(hubIds(afterWay)).not.toContain("learn_way"); // the situational investigation retires
+
+    // Learning the PERSONAL truth opens the gate.
+    const afterAlly = walk(["learn_ally", "learn"]);
+    expect(hubIds(afterAlly)).toContain("best");
+    expect(hubIds(afterAlly)).not.toContain("learn_ally"); // the personal investigation retires once known
   });
 });

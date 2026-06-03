@@ -12,8 +12,9 @@
  *      with the schema-stamped id/hash, never weaker than a shipped pack.
  *   2. DETERMINISM (§8.5) carries through the tool — same seed ⇒ identical content hash + meta.
  *   3. new_game(generate_seed) genuinely PLAYS the minted pack through the live engine, and the
- *      truth gate is load-bearing on that live surface: `act_on_truth` is ABSENT at the pristine
- *      hub and PRESENT only after the investigation sets the flag, ending at `ending_truth`.
+ *      knowledge gate is load-bearing on that live surface: the gated `best` act is ABSENT at the
+ *      pristine hub and PRESENT only after the personal investigation sets its flag, ending at
+ *      `ending_best` (the bug_0169 two-axis 2x2 shape; was the single-axis `act_on_truth`).
  *   4. The seam is read-only and well-guarded: new_game with neither pack_path nor generate_seed
  *      errors; an invalid mint would refuse to play (the generator can't emit one, so this is the
  *      contract, asserted via the determinism/validator-clean guarantees above).
@@ -36,9 +37,10 @@ describe("bug_0157 — generate_pack MCP tool mints + validates a fresh pack", (
     expect(r.pack_id).toBe("gen_0_v1");
     expect(r.meta.id).toBe("gen_0_v1");
     expect(r.content_hash).toMatch(/^[0-9a-f]{64}$/);
-    // A genuine fork: at least three endings (>= 2 stances + the gated best) and the two scenes.
+    // A genuine fork: at least three endings (hold + gated best + dark) and the three scenes
+    // (hub + the two investigation scenes — the bug_0169 two-axis shape).
     expect(r.ending_count).toBeGreaterThanOrEqual(3);
-    expect(r.scene_count).toBe(2);
+    expect(r.scene_count).toBe(3);
     // The reported hash is exactly the compiled-pack hash (no drift between mint and report).
     expect(r.content_hash).toBe(hashState(generateCyoaPack(0)));
   });
@@ -75,38 +77,39 @@ describe("bug_0157 — new_game(generate_seed) plays a fresh minted pack in-memo
     expect(g.state_hash).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it("the truth gate is load-bearing on the live play surface: investigate → learn → act_on_truth → ending_truth", () => {
+  it("the knowledge gate is load-bearing on the live play surface: learn_ally → learn → best → ending_best", () => {
     const a = api();
     const g = a.new_game({ generate_seed: 0 });
     const sid = g.session_id;
 
-    // Pristine hub: the gated act is NOT offered yet; the investigation IS.
+    // Pristine hub: the gated `best` act is NOT offered yet; both investigations ARE.
     const hubIds = g.observation.available_actions.map((x) => x.id);
-    expect(hubIds).not.toContain("act_on_truth");
-    expect(hubIds).toContain("investigate");
+    expect(hubIds).not.toContain("best");
+    expect(hubIds).toContain("learn_way");
+    expect(hubIds).toContain("learn_ally");
 
-    // Read the clue, learn the truth, return to the hub.
-    a.step_action({ session_id: sid, action_id: "investigate" });
+    // Hear out the maligned figure (the PERSONAL axis), believe them, return to the hub.
+    a.step_action({ session_id: sid, action_id: "learn_ally" });
     a.step_action({ session_id: sid, action_id: "learn" });
     const backAtHub = a.get_observation({ session_id: sid });
     const knownIds = backAtHub.observation.available_actions.map((x) => x.id);
-    // Now the gated act IS offered and the spent investigation is gone.
-    expect(knownIds).toContain("act_on_truth");
-    expect(knownIds).not.toContain("investigate");
+    // Now the gated `best` act IS offered and the spent investigation is gone.
+    expect(knownIds).toContain("best");
+    expect(knownIds).not.toContain("learn_ally");
 
-    // Take the truth-gated best ending.
-    const end = a.step_action({ session_id: sid, action_id: "act_on_truth" });
+    // Take the knowledge-gated best ending.
+    const end = a.step_action({ session_id: sid, action_id: "best" });
     expect(end.ok).toBe(true);
     expect(end.observation.ended).toBe(true);
-    expect(end.observation.mode === "cyoa" && end.observation.ending_id).toBe("ending_truth");
+    expect(end.observation.mode === "cyoa" && end.observation.ending_id).toBe("ending_best");
   });
 
-  it("a plainly-labelled stance reaches its own ending without ever learning the truth", () => {
+  it("a plainly-labelled act reaches its own ending without ever learning anything", () => {
     const a = api();
     const g = a.new_game({ generate_seed: 0 });
-    const end = a.step_action({ session_id: g.session_id, action_id: "stance_0" });
+    const end = a.step_action({ session_id: g.session_id, action_id: "hold" });
     expect(end.observation.ended).toBe(true);
-    expect(end.observation.mode === "cyoa" && end.observation.ending_id).toBe("ending_stance_0");
+    expect(end.observation.mode === "cyoa" && end.observation.ending_id).toBe("ending_hold");
   });
 
   it("new_game with no pack source errors clearly", () => {

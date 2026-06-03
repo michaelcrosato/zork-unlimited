@@ -1,0 +1,98 @@
+id: bug_0169
+title: "Deepen the CYOA generator to a two-axis (2x2-knowledge) moral fork — the bug_0168 named structural lever"
+kind: engine
+mode: meta
+severity: enhancement
+layer: generator
+artifact:
+  source: src/gen/cyoa_generator.ts
+  test: tests/regression/cyoa_generator_two_axis_fork.test.ts
+
+summary: >
+  The mandated blind pass this cycle (cold_forge, rpg, seed 61 — the assessor rank-1 target AND the
+  least-recently blind-played pack per [[assessor-blind-pass-rotation]], last dedicated pass bug_0159)
+  came back blind-clean: clarity 5/5, enjoyment 4/5, ZERO mechanical bugs across TWO routes to BOTH
+  declared endings (ending_victory the full-prep 50/50 win, ending_fallen the under-armed death on
+  round two — verified from the same seed), with reactive room text, transparent combat math,
+  one-shot dialogue, determinism, and the back-loaded 50/50 score economy all confirmed live. Its only
+  observations were design notes the tester rated not-a-bug (score stays 0 through the prep phase; the
+  founder-looting moral hook stays cosmetic; the examine-only smith's hammer is deliberate restraint).
+  A blind-clean pass on a clean pack is the saturation signal ([[content-polish-backlog-exhausted]]);
+  per docs/afk_loop.md the loop pivots to structural work, and the documented standing lever was
+  bug_0168's next-focus (a): DEEPEN the generators behind a generator_version bump. The CYOA generator
+  was the named target — "the shallowest (single `truth` flag / single gate — it cannot emit the
+  two-axis 2x2 moral fork dead_reckoning has; a second knowledge axis or a second gate tier would
+  deepen it)".
+
+mandated_blind_playtest:
+  run: ai-runs/2026-06-03T11-19-32-362Z/playtest.md
+  pack: content/rpg/pack/cold_forge.yaml
+  seed: 61
+  result: "reached ending_victory (50/50, full-prep: spirit +2 attack, founder's plate +2 defense, sentinel slain, grate levered, Ember-Heart lifted) and ending_fallen (under-armed rush, death on round two); clarity 5/5, enjoyment 4/5; ZERO mechanical bugs; reactive prose, combat math, one-shot dialogue, determinism, and the 50/50 economy all confirmed live"
+  triage: >
+    No actionable content defect — cold_forge is blind-clean. The three notes (back-loaded score during
+    prep; the founder-looting moral hook never becomes a real branch; the examine-only hammer) were rated
+    not-a-bug / deliberate restraint. Per [[content-polish-backlog-exhausted]] the only live lever is
+    structural, so the cycle advanced the plan's named next slice — deepening the shallowest generator
+    (CYOA) — instead of churning a clean pack. (Thematically convergent: the playtest's lone narrative
+    note was an UNSPENT moral axis, and the deepening adds exactly a second moral/knowledge axis.)
+
+what:
+  - >
+    src/gen/cyoa_generator.ts — the emitted CYOA pack grew a SECOND knowledge axis (CYOA_GENERATOR_
+    VERSION 1 -> 2). v1 was single-axis: one investigation set one `truth` flag and one "best" ending
+    gated on it (one gate, one reactive variant, no shadowing stack to order). v2 is the two-axis 2x2
+    the hand-authored frontier pack dead_reckoning has: TWO independent investigations, in either order,
+    each setting its own flag — a SITUATIONAL truth (knows_way: the crisis is engineered and relief is
+    at hand) and a PERSONAL truth (knows_ally: the maligned figure is the one who can mend it) — over a
+    finale of three-or-four telegraphed acts: HOLD the line (reframed by knows_way), empower the ALLY
+    (the surest act, GATED on knows_ally; reframed by knows_way), the DARK sanctioned act (reframed by
+    knows_ally — ignorant vs knowing), and (seed-chosen) GREED (reframed by knows_way). Knowledge does
+    not add routes; it REFRAMES them via reactive endingText variants (the white_stag paired-epilogue
+    device), and the hub now carries a THREE-variant first-match-wins stack (both flags, then each
+    alone) ordered most-specific-first. The Theme type was rewritten for two Truth axes + four Acts
+    across all 6 themes; the optional fourth "greed" act is the seed-chosen variety knob (the old
+    2-vs-3-stance knob), and both 3-act and 4-act mints keep BOTH flags read. scene_count 2 -> 3 (hub +
+    two clue scenes); ending_count 3 or 4.
+  - >
+    corpus/ re-sealed (npm run corpus:seal) — the 4 held-out CYOA packs (gen_0..3) re-stamped to
+    generator_version 2 with new content hashes; corpus/manifest.json updated. This is the sanctioned
+    deepen workflow bug_0167 documented: a generator edit surfaces a non-blocking VERIFIER_TOUCHED
+    warning (the generator program is in PROTECTED_FILES), and the version bump + re-seal keep
+    held_out_corpus_sealed.test.ts's version-match + re-mint-determinism assertions green. The rpg/parser
+    corpus entries are byte-unchanged (the change is cyoa-only). The re-seal is deterministic (a second
+    seal produced no further diff).
+  - >
+    tests/regression/cyoa_generator_two_axis_fork.test.ts (new) — locks the two-axis SHAPE so a future
+    collapse back to one axis / one gate fails loudly even though it would still pass the generic bar:
+    two distinct investigation scenes each setting their own flag; the `best` act gated on the PERSONAL
+    axis only; the hub's three-variant reframe stack ordered most-specific-first (both-flags first, then
+    each single-flag); the 2x2 ending reframing keyed on the right axis; and BEHAVIORALLY (exhaustive
+    solver) BOTH the load-bearingness (no knows_ally -> ending_best unreachable, other acts still reach)
+    AND the independence (no knows_way -> ending_best STILL reachable, so the two axes are distinct
+    gates). tests/unit/cyoa_generator.test.ts's gate case and tests/unit/mcp_generate_pack.test.ts
+    (scene_count, the live play-surface gate, the ungated-act case) were updated for the new shape.
+
+why: >
+  The contamination-free benchmark thesis rests on the generators being a never-frozen MOVING target
+  (docs/ULTRAPLAN-2026-06-02.md; the frozen-verifier reward-hacking result, [[verifier-assertion-guard]]
+  arXiv 2510.14253). A generator that only ever emits a single-axis, single-gate fork exercises a
+  shrinking slice of the CYOA validator — one gate to check, one reactive variant, no shadowing stack to
+  order. With content blind-clean and the deterministic assessor at the 0.5 floor, deepening the eval
+  distribution is the genuine lever: every mint now forces the validator to prove a two-flag obtainability
+  (both knows_way and knows_ally reachable), a real load-bearing gate on the personal axis, AND a
+  correctly-ordered shadowing-clean three-variant stack (the exact UNREACHABLE_VARIANT footgun every
+  reactive pack hand-guards) — holding the CYOA bar against a strictly harder fresh distribution every
+  cycle, the dead_reckoning frontier shape the generator previously could not emit.
+
+verification: >
+  npm run health EXIT 0. tests/unit/cyoa_generator.test.ts (24 seeds) green: every v2 pack is
+  schema-valid, validator-clean (ZERO findings — reachability/soft-lock/shadowing/inert-flag/feasibility
+  all pass), and exhaustively solvable (every declared ending reached, none undeclared, no cap-out).
+  tests/regression/cyoa_generator_two_axis_fork.test.ts (12 seeds + 2 behavioral) green. held_out_corpus_
+  sealed.test.ts green (cyoa entries re-mint to the sealed hashes, version==2; rpg/parser unchanged).
+  benchmark_held_out_split.test.ts green (the deterministic bot still reaches a declared ending on the
+  held-out CYOA split — an ungated finale act ends the game). The change is generator+corpus+test+
+  artifact: no engine/validator/schema/assessor behavior change, no test deleted/disabled, no curated
+  content touched (the 10 packs validate 0/0), no curated hash re-pin. The corpus hash change is a
+  deliberate, surfaced re-seal behind a generator_version bump, not a weakened check.
