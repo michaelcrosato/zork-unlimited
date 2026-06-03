@@ -1,0 +1,96 @@
+bug_id: bug_0152
+pack_id: all_rpg            # structural invariant over every shipped RPG pack (auto-discovered)
+seed: 13
+type: invariant_lock        # no defect found in shipped content; machine-enforces a load-bearing runtime contract
+layer: test                 # regression-only; NO content/engine/validator/schema change, NO helper change, NO hash pin moved
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-03T05-17-00-132Z/playtest.md   # watchtower_road seed 13 (the cycle's mandated, correctly-rotated target — least-recently blind-played)
+  finding: >
+    The mandated blind pass on The Watchtower Road (CYOA, seed 13 — the least-recently
+    blind-played pack per [[assessor-blind-pass-rotation]], last dedicated pass bug_0143)
+    played three routes to three of the declared endings (ending_truth via the east
+    evidence route, ending_captured via the no-proof bluster, ending_escape via the
+    letter-confrontation) and confirmed the fourth-plus reachable, rated the pack
+    clarity 5/5, enjoyment 4/5, ZERO mechanical bugs — re-confirmed blind-clean. It
+    verified the reactive item-gating in BOTH directions (cellar requires a lit lantern,
+    checkpoint/hermit letter options appear only with the letter in inventory, hermit
+    greeting rewrites after first meeting). Its ONE §5 note was a content worry about
+    ending_truth hardcoding "the beacon you lit still burns" — VERIFIED a FALSE POSITIVE:
+    that line lives in ending_truth's `raised_alarm`-gated VARIANT (the bug_0098 fired-
+    Chekhov's-gun design), and the base text is beacon-neutral ("You lay out everything
+    you uncovered before the magistrate..."), so a west-route player with raised_alarm
+    unset gets the neutral base by first-match-wins — never a reference to a beacon they
+    never lit. (bug_0145 already proves every such variant is LIVE/reachable.) No
+    actionable content defect; content is blind-exhausted per [[content-polish-backlog-exhausted]].
+    Per the standing guidance, the cycle's lever is the on-plan KEY-FREE structural
+    follow-on bug_0151's next-focus named: complete the menu-integrity proof for the RPG mode.
+root_cause: >
+  A gap in the structural-verification net, not a content defect. The MCP/UI layer (and the
+  RPG runner itself) resolves a player's chosen action by a FIRST-MATCH id lookup
+  (src/mcp/tools.ts actionForId: `available_actions.find((a) => a.id === id)`). If an
+  observation ever offered two options with the same `id`, the SECOND would be permanently
+  UNSELECTABLE — picking it silently yields the first — a phantom menu entry. bug_0151
+  proved this can never happen for the two shipped PARSER packs, but left RPG uncovered:
+    - bug_0151's test globs `content/parser/pack` only, so the RPG packs' parser-shaped
+      menus were never inspected — and RPG opens a DIFFERENT reachable region (combat
+      reaches post-defeat states the parser BFS cannot), so coverage does not transfer.
+    - enumerateRpgActions (src/rpg/runner.ts) returns the FULL parser action set
+      (enumerateActions) PLUS one `attack_<enemy.id>` per living enemy in the room — an
+      id family the parser enumerator never mints. Two collision surfaces, neither checked:
+        * the inherited parser templates (`go_<dir>`, `examine_<oid>`, ...) — two exits
+          sharing a direction mint a duplicate `go_<dir>` the static DUPLICATE_ID validator
+          (rooms/objects/npcs only) cannot see;
+        * `attack_<enemy.id>` — the parser validator dup-checks room/object/npc ids and the
+          RPG validator adds enemy room/death_ending checks but NO enemy-id uniqueness check,
+          so two enemies sharing an id in one room mint two identical `attack_<id>` options
+          the static layer is blind to.
+    - enumerateRpgActions builds each option through the resolvable-only `option()` path, so
+      "every offered action RESOLVES" is true by construction (vacuous). Uniqueness is the
+      orthogonal, uncovered property.
+  (CYOA needs no dynamic analogue: its menu ids ARE the scene's declared choice ids, which
+  cyoa_validator already dup-checks per scene, and the runtime menu is a condition-filtered
+  SUBSET of those statically-unique ids — unique by construction. PARSER and RPG are the two
+  modes whose enumerators mint ids the static checks cannot see.)
+fix: >
+  Test-only (§15 lock-the-finding). New tests/regression/rpg_action_id_unique.test.ts runs
+  the shared exhaustive concrete BFS (tests/regression/support/exhaustive_endings.ts) under
+  the SAME best/worst-roll bracket the every-ending / variant-liveness RPG proofs use
+  (exhaustiveEndingsMulti over two rule sets forcing the player's best vs worst rolls,
+  bug_0124/0147) with the bug_0146 LIVENESS action policy (step every action except DROP/
+  CLOSE and the pure-observation verbs — visits read-flag and post-combat states too). At
+  EVERY distinct reachable non-terminal state it calls the engine's own enumerateRpgActions
+  and asserts its option ids are pairwise distinct. The menu inspected at each state is
+  independent of which actions the BFS steps and of the roll regime (enumerateRpgActions is
+  rng-independent), so the bracket only widens the set of menus examined — strictly more
+  thorough. No content/engine/validator/schema change, NO helper change (reuses the
+  behaviour-preserving `explore` param bug_0145/0146 added).
+within_bar: >
+  Regression test ONLY. No pack edited; no validator/schema/engine/helper change; NO hash
+  pin moved (sunken_barrow 7791fc14…, cold_forge 8590fefd…, all 9 packs validate 0/0,
+  content_hashes unchanged). Deterministic, no LLM-judge, NO API key. Sound: every state
+  visited is a real legal playthrough on a legal die face, the menu is the engine's own
+  enumerateRpgActions output, the search FAILS on cappedOut (never truncates silently), and
+  terminal states (no menu) are skipped. The best/worst bracket reaches every routing-
+  relevant state soundly under the new readsHpInCondition guard (no route gates on a raw HP
+  value the extremes skip — both shipped packs pass). Anti-vacuity guards assert real menus
+  were inspected (statesChecked > 0, actionsSeen > statesChecked) so the pass cannot be vacuous.
+result:
+  shipped_packs_all_unique: true   # no reachable state of either shipped RPG pack ever offers two actions with the same id
+  reachable_region: same best/worst-roll bracket as bug_0147 — well under the 200k cap
+regression_test: tests/regression/rpg_action_id_unique.test.ts
+test_cases:
+  - "discovers the shipped RPG packs (guards against a vacuous pass if the glob yields nothing)"
+  - "cold_forge: no reachable state ever offers two actions with the same id (HP-guard holds; search not capped; menus actually inspected)"
+  - "sunken_barrow: no reachable state ever offers two actions with the same id (HP-guard holds; search not capped; menus actually inspected)"
+  - "FAILS on a planted duplicate parser-template id (two same-direction exits → two `go_north`, surfaced through the RPG enumerator)"
+  - "FAILS on a planted duplicate RPG-only id (two same-id enemies in one room → two `attack_<id>`) — the collision NO static check catches"
+  - "PASSES a clean twin (distinct exit directions + distinct enemy ids) — proving the controls bite on the duplication, not the shape"
+notes: >
+  Completes the menu-integrity proof for RPG, the on-plan follow-on bug_0151 named. Together
+  bug_0151 (parser, runtime proof) + bug_0152 (RPG, runtime proof) + CYOA (closed statically
+  by construction — cyoa_validator DUPLICATE_ID choice check + the runtime menu being a
+  filtered subset) cover the find-by-id contract (src/mcp/tools.ts actionForId) across all
+  three modes. RPG adds genuinely-uncovered coverage: a new pack set, the combat-minted
+  `attack_<id>` family, and the post-combat reachable region. See [[cyoa-exhaustive-solver]].

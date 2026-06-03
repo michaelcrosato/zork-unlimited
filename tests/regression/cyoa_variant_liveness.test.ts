@@ -56,6 +56,14 @@ const packFiles = readdirSync(PACK_DIR)
 // pack fails loudly (cap hit) rather than truncating silently.
 const MAX_STATES = 200_000;
 
+// watchtower_road's full reachable CYOA region is the largest of the shipped packs (tens of
+// thousands of distinct states — see no_dead_pocket.test.ts); its BFS completes in ~2s
+// standalone but can nudge just past vitest's 5s DEFAULT under parallel suite load. Give the
+// per-pack walk a generous explicit ceiling, matching no_dead_pocket's TEST_TIMEOUT_MS: this
+// guards only against a wall-clock FLAKE, never a real blowup — a genuine non-termination
+// still trips the MAX_STATES cap (a loud `cappedOut` failure), not the wall clock.
+const TEST_TIMEOUT_MS = 60_000;
+
 /** The index of the first variant whose `when` holds in `state` (first-match-wins,
  *  identical to runner.ts sceneText/endingText), or -1 for the base text. */
 function firstMatch(variants: readonly SceneVariant[], state: GameState): number {
@@ -127,16 +135,20 @@ describe("bug_0145 — every reactive variant of every CYOA pack is reachable as
   });
 
   for (const file of packFiles) {
-    it(`${file}: every declared variant is the first match in some reachable state`, () => {
-      const { displayed, declared, cappedOut } = analyze(`${PACK_DIR}/${file}`);
-      // The search must have exhausted the reachable region, else "not displayed" is
-      // unproven (it could lie in the truncated tail).
-      expect(cappedOut).toBe(false);
-      // Every reactive pack ships at least one variant; a pack with none would pass
-      // vacuously, which is fine, but the shipped set is reactive by design.
-      const dead = declared.filter((d) => !displayed.has(d.key)).map((d) => d.where);
-      expect(dead).toEqual([]);
-    });
+    it(
+      `${file}: every declared variant is the first match in some reachable state`,
+      () => {
+        const { displayed, declared, cappedOut } = analyze(`${PACK_DIR}/${file}`);
+        // The search must have exhausted the reachable region, else "not displayed" is
+        // unproven (it could lie in the truncated tail).
+        expect(cappedOut).toBe(false);
+        // Every reactive pack ships at least one variant; a pack with none would pass
+        // vacuously, which is fine, but the shipped set is reactive by design.
+        const dead = declared.filter((d) => !displayed.has(d.key)).map((d) => d.where);
+        expect(dead).toEqual([]);
+      },
+      TEST_TIMEOUT_MS,
+    );
   }
 
   it("FAILS on a planted dead variant (guards against the check silently passing)", () => {
