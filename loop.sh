@@ -43,6 +43,12 @@ run_agent() {
   cmd="$(agent_cmd)"
   if [[ -z "$cmd" ]]; then echo "No agent available (set AI_AGENT_CMD, e.g. 'claude -p --dangerously-skip-permissions'); evidence-only. Prompt at $prompt."; return 0; fi
   local budget="${AI_AGENT_TIMEOUT_SECONDS:-2400}"
+  # Per-cycle override: ai-loop.ts writes agentTimeoutSeconds into latest-cycle.json
+  # for ultraplan cycles, which run a bounded multi-agent Workflow and need a larger
+  # budget than a routine cycle. Falls back to the default when absent.
+  local override
+  override="$(node -e 'try{const t=JSON.parse(require("node:fs").readFileSync("ai-runs/latest-cycle.json","utf8")).agentTimeoutSeconds;if(typeof t==="number"&&t>0)process.stdout.write(String(t))}catch{}' 2>/dev/null || true)"
+  [[ -n "$override" ]] && budget="$override"
   echo "Agent: $cmd   (prompt: $prompt, timeout: ${budget}s)"
   # Bound the agent turn. The loop has NO other recovery for an agent that never
   # returns (a hung `claude -p` once wedged the loop for ~9h: the circuit breaker

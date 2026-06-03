@@ -4,8 +4,8 @@ An autonomous improvement loop that **constantly evaluates the next-best
 improvement** across the whole project, makes one focused change per cycle, takes
 **mandatory LLM-playtest quality feedback every cycle**, and lands it under
 **trust-but-verify** (see `AGENTS.md`). It draws on the agent's broad knowledge to
-*choose and craft* improvements, and on the deterministic verification suite to
-*prove* they're correct.
+_choose and craft_ improvements, and on the deterministic verification suite to
+_prove_ they're correct.
 
 ## One cycle
 
@@ -43,6 +43,41 @@ loop.sh  (outer driver — orchestration + the bar)
        bar passed — verify). Optional push. Durable handoff in AI_LOOP_STATE.md.
 ```
 
+## Saturation-triggered ultraplan
+
+The deterministic assessor is cheap and good at routine work, but it has no
+strategic imagination: once every high-value lever has disarmed (content clean,
+modes at their breadth target, no engine/repo/frontier candidate), every remaining
+candidate collapses to the **0.5 routine-blind-pass floor** — `isSaturated(a)` in
+`src/afk/assessor.ts`. That is the diminishing-returns state that once pinned the
+loop to clockwork-polish.
+
+When the loop hits it, a cycle **re-aims with a bounded multi-agent ultraplan**
+instead of spending another pass on polish:
+
+```
+ASSESS → isSaturated?  ── no ──▶ standard cycle (as above)
+                       └─ yes, and off cooldown ──▶ ULTRAPLAN cycle:
+   1. Workflow ultraplan (≈6-9 agents: repo reviewers + web researchers + synthesis)
+      picks the single highest-value STRUCTURAL move, grounded in docs/ULTRAPLAN-*.md
+      and docs/ROADMAP.md (advance them, don't restart).
+   2. Writes the plan to docs/CURRENT_PLAN.md  ← the rolling plan + hand-off doc.
+   3. A FRESH implementation subagent reads ONLY docs/CURRENT_PLAN.md + the files it
+      names (clean context, not the whole repo) and makes the one change.
+   4. Same mandatory blind playtest + green bar as every cycle.
+```
+
+**Cost control.** An ultraplan is ~12-agent / multi-minute work, so it must not fire
+every ~15-min cycle while saturation persists. A **cooldown** (`ai-runs/
+saturation-state.json`, default 8 cycles, `AI_LOOP_ULTRAPLAN_COOLDOWN`) bounds it to
+at most once per N cycles. Ultraplan cycles also get a larger agent budget
+(`AI_LOOP_ULTRAPLAN_TIMEOUT_SECONDS`, default 3600s) via the per-cycle
+`agentTimeoutSeconds` that `ai-loop.ts` writes into `latest-cycle.json`.
+
+The fresh-context-per-phase shape is free here: each cycle's agent is already a new
+`claude -p`, and Step 3's implementer is a fresh `Agent`-tool subagent — so the plan
+is handed off as a _document_, not a context window.
+
 ## Why this shape (grounded in 2025–26 practice)
 
 - **Hard, machine-readable verification gate + "don't route around the verifier"**
@@ -53,10 +88,10 @@ loop.sh  (outer driver — orchestration + the bar)
 - **Evidence-driven work selection** (not a hand-fed TODO list): the assessor turns
   real signals — coverage gaps, unreached endings, validator warnings, thin modes,
   engine TODOs, missing tooling — into a ranked backlog, so the loop always works the
-  highest-value thing and a human can see *why*.
+  highest-value thing and a human can see _why_.
 - **An LLM playtest is the quality oracle.** Heuristic `run_playtest` measures
-  *structure* (coverage, soft-locks); a reasoning agent playing blind measures the
-  *experience* (clarity, fun, confusing branches). The loop makes that mandatory
+  _structure_ (coverage, soft-locks); a reasoning agent playing blind measures the
+  _experience_ (clarity, fun, confusing branches). The loop makes that mandatory
   every cycle — it's the feedback that actually improves the game.
 - **Externalized state + one change per cycle**: `AI_LOOP_STATE.md` is the durable
   handoff; `ai-runs/<id>/` holds the (ignored) per-cycle evidence and playtest report.
@@ -75,10 +110,11 @@ Key env (see `loop.sh`): `AI_LOOP_COMMIT=1` to commit, `AI_LOOP_PUSH=1` to push,
 `AI_LOOP_ALLOW_VERIFIER_EDITS=1` to acknowledge a deliberate verifier change.
 
 ## Honest limits
+
 - The mandate is enforced as "a non-empty playtest report exists for the cycle"; it
-  can't *prove* an LLM truly played — but combined with the report's structure and
+  can't _prove_ an LLM truly played — but combined with the report's structure and
   the verification gate, it keeps the quality step real.
-- The verifier-integrity guard catches *mechanical* tampering (skip/delete/empty/
-  re-pin), not *semantic* weakening (a future LLM-judge could).
+- The verifier-integrity guard catches _mechanical_ tampering (skip/delete/empty/
+  re-pin), not _semantic_ weakening (a future LLM-judge could).
 - The loop makes one change per cycle by design; broad multi-step work should be
   several cycles, each verified.

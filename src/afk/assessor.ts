@@ -289,6 +289,28 @@ function lastAttendanceOffsets(root: string): Map<string, number> {
   return parseAttendanceOffsets(readFileSync(p, "utf8"));
 }
 
+/**
+ * The score at/below which only ROUTINE work remains. The blind-playtest review
+ * stubs (the rotation candidates raised for gated/puzzle packs) all land on this
+ * 0.5 floor — `score(1, "M", "content_fix")` — and a tiny ungated-CYOA coverage
+ * gap also bottoms out here. So a top candidate at this floor means every
+ * higher-value lever (real content gaps, net-new content, engine/repo, the
+ * frontier benchmark lever) has disarmed.
+ */
+export const SATURATION_FLOOR = 0.5;
+
+/**
+ * Has the deterministic assessor run dry of STRATEGIC direction? True when the
+ * top candidate is at/below {@link SATURATION_FLOOR} (only routine rotation work
+ * left) or there is no candidate at all. This is the exact diminishing-returns
+ * signal — the state that once pinned the loop to clockwork-polish — and the
+ * moment a multi-agent ultraplan re-aim earns its cost (see docs/afk_loop.md,
+ * the saturation-triggered ultraplan mode).
+ */
+export function isSaturated(a: Assessment): boolean {
+  return a.top === null || a.top.score <= SATURATION_FLOOR;
+}
+
 /** Deterministically assess the repo and rank the next-best improvements. */
 export function assess(root: string): Assessment {
   const api = createToolApi({ root });

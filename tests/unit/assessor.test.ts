@@ -9,9 +9,13 @@ import { join } from "node:path";
 import {
   assess,
   formatAssessment,
+  isSaturated,
   packStem,
   parseAttendanceOffsets,
+  SATURATION_FLOOR,
+  type Assessment,
   type Category,
+  type ImprovementCandidate,
 } from "../../src/afk/assessor.js";
 
 const a = assess(process.cwd());
@@ -192,5 +196,43 @@ describe("frontier lever + blind-pass rotation (ULTRAPLAN 2026-06-02)", () => {
     if (firstOff !== undefined && lastOff !== undefined) {
       expect(firstOff).toBeGreaterThanOrEqual(lastOff); // larger offset = less recent
     }
+  });
+});
+
+describe("isSaturated — the saturation-triggered ultraplan signal", () => {
+  const candidate = (score: number): ImprovementCandidate => ({
+    id: "c",
+    category: "content_fix",
+    target: "content/cyoa/pack/x.yaml",
+    title: "t",
+    rationale: "r",
+    evidence: ["e"],
+    impact: 1,
+    effort: "M",
+    score,
+  });
+  const withTop = (top: ImprovementCandidate | null): Assessment => ({
+    packsByMode: {},
+    packs: [],
+    candidates: top ? [top] : [],
+    top,
+  });
+
+  it("is saturated when the top candidate sits at/below the 0.5 floor", () => {
+    expect(isSaturated(withTop(candidate(SATURATION_FLOOR)))).toBe(true);
+    expect(isSaturated(withTop(candidate(0.4)))).toBe(true);
+  });
+
+  it("is saturated when there is no candidate at all", () => {
+    expect(isSaturated(withTop(null))).toBe(true);
+  });
+
+  it("is NOT saturated when a higher-value lever is present", () => {
+    expect(isSaturated(withTop(candidate(0.51)))).toBe(false);
+    expect(isSaturated(withTop(candidate(1.067)))).toBe(false); // e.g. the frontier benchmark lever
+  });
+
+  it("agrees with the real repo's top score", () => {
+    expect(isSaturated(a)).toBe(a.top !== null && a.top.score <= SATURATION_FLOOR);
   });
 });
