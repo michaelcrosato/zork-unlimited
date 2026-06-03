@@ -202,7 +202,11 @@ objects:
     aliases: [rack, grating, grate, head, drift]
     description: "The iron head-rack, choked solid with a winter's drift — branches and weed and a drowned hurdle, all of it packed hard by the press of the water. Set the weir-iron behind the worst of the jam and lever it: the drift will come away by degrees, and the more you clear the faster the rest will shift. Patience and leverage, not brute strength."
     variants:
+      # name override (bug_0188 reactive-name shape) so visible_objects and the
+      # enumerated commands stop labelling it "jammed" once the rack is clear — the
+      # stale label contradicted this variant's own text on the winning path.
       - when: [{ has_flag: rack_freed }]
+        name: "cleared head-rack"
         text: "The head-rack, dragged clear of its drift now, the water drawing down through the bars in a steady comb instead of climbing the lip."
     takeable: false
     interactions:
@@ -262,7 +266,11 @@ objects:
           on_success:
             - set_flag: walk_crossed
             - inc_var: { name: score, by: 10 }
-            - add_journal: "Clipped to the run-wire and going low and steady the way Pell told you, you cross the awash spillway-walk and reach the far side with the race grasping at your heels."
+            # journal stays true on BOTH paths: the crossing is reachable un-counselled
+            # (the gamble path, base nerve 3 needing d20>=6), where "the way Pell told you"
+            # asserted advice never given. The HOW (clipped, low, steady) is the keeper's
+            # craft either way; we just stop crediting a conversation that may not have happened.
+            - add_journal: "Clipped to the run-wire and going low and steady, you cross the awash spillway-walk and reach the far side with the race grasping at your heels."
             - narrate: "You snap the life-line to the run-wire and go out low, hands on the wire, feet feeling the slick boards under the sheeting water. The race claws at your shins and once your foot skates and the line takes your weight — but you keep your head and your nerve and come off the far end of the walk on solid stone, the spillway behind you."
           on_failure:
             - add_journal: "Out on the awash spillway-walk your nerve broke at the wrong instant; a slipped foot, a snatched breath, and the race took you off the boards and was gone with you under the weir."
@@ -274,7 +282,10 @@ objects:
     aliases: [winch, gate, wheel, crank, race]
     description: "The relief-race winch-gate, seized fast in its frame with rust and the swell of the wet timber. Set the weir-iron through the spokes of the winch-wheel for a long lever and throw your back into it: it may break free on the first heave or take several, but it is leverage and a stubborn back that frees it, not raw muscle alone."
     variants:
+      # name override (bug_0188) so the gate stops reading "seized" once it is hauled
+      # open — the stale label contradicted this variant's own text and the room prose.
       - when: [{ has_flag: race_open }]
+        name: "open winch-gate"
         text: "The winch-gate, hauled up and made fast in its frame, the relief-race running full and white beneath the floor."
     takeable: false
     interactions:

@@ -1,0 +1,74 @@
+id: bug_0197
+title: "The Breaking Weir blind-playtest polish — two stale object names + a journal crediting unheard counsel"
+kind: content_fix
+mode: rpg
+pack: content/rpg/pack/breaking_weir.yaml
+# Informational. No test pins breaking_weir's content_hash (only watchtower_road pins one),
+# so nothing was forced. These content edits move the pack hash; the regression pins the
+# behaviour, not the bytes.
+
+summary: >
+  The mandated blind pass this cycle (The Breaking Weir, RPG, seed 7 — the assessor's
+  recency-blind rank-1 and the freshest pack, shipped last cycle bug_0196, the project's
+  first combatless skill-check-chain pack) returned clarity 5/5, enjoyment 4/5, a WON run
+  (50/50, ending_held) plus a survived gamble run, ZERO mechanical bugs. Its concrete
+  findings were two narration-vs-state honesty flaws — prose contradicting the actual game
+  state — neither affecting winnability.
+
+surfaced_by_blind_playtest:
+  run: ai-runs/2026-06-03T18-54-37-935Z/playtest.md
+  pack: content/rpg/pack/breaking_weir.yaml
+  seed: 7
+  result: "WON 50/50 (ending_held) + survived gamble run; clarity 5/5, enjoyment 4/5; ZERO mechanical bugs"
+  findings:
+    - >
+      "Stale object name (Weir-Head, Relief-Race House): after clearing/opening, visible_objects
+      still lists 'jammed head-rack' and 'seized winch-gate' even though the descriptions say they're
+      now clear/hauled-up. The object NAME isn't updated post-state." (On the canonical winning path.)
+    - >
+      "Hardcoded success narration ignores prep (Storm-Walk): the crossing-success journal says
+      'going low and steady the way Pell told you' even on the reckless path where Pell was never
+      asked about the walk." (A falsehood on the reachable gamble path.)
+
+root_cause: >
+  (1) The head-rack and relief-race winch each carry a reactive examine `variant` (cleared /
+  hauled-open text), but only the `text` reacted — their display `name` stayed frozen at
+  "jammed head-rack" / "seized winch-gate". This is precisely the reactive-name asymmetry the
+  ENGINE already closed in bug_0188 (ObjectVariantSchema gained optional `name`, resolved by
+  objectName()); breaking_weir simply never used the field on these two objects, so the stale
+  labels persisted on the winning path. (2) The storm-walk nerve check's on_success add_journal
+  hard-coded "the way Pell told you", but the crossing is reachable un-counselled (base nerve 3
+  on d20>=6 — the declared gamble, proven by breaking_weir_skill_chain.test.ts), so the journal
+  asserted advice a reckless player never received.
+
+fix: >
+  Content-only, no engine change. (1) The rack_freed variant of head_rack now also carries
+  name "cleared head-rack"; the race_open variant of race_winch now carries name "open
+  winch-gate" — so visible_objects and the enumerated commands re-label once the obstacle is
+  cleared, matching the variant text and room prose (the bug_0188 mechanism, applied in
+  content). (2) The storm-walk success journal drops the Pell attribution: "Clipped to the
+  run-wire and going low and steady, you cross the awash spillway-walk…". The HOW (clipped,
+  low, steady) is the keeper's craft on either path, so the line stays true whether or not
+  Pell was heeded; the on_success narrate never mentioned Pell, so it was untouched.
+
+out_of_band_teeth: >
+  The regression asserts on the REAL breaking_weir observation surface and the REAL roll
+  mechanic: before each flag, head_rack reads "jammed head-rack" and race_winch "seized
+  winch-gate"; with rack_freed / race_open set, the SAME objects read "cleared head-rack" /
+  "open winch-gate" in visible_objects and the stale "jammed"/"seized" is gone. For the journal,
+  it drives resolveSkillCheck on an UNPREPARED-but-lucky crossing (base nerve 3, max d20 → 23
+  >= 9 success) and asserts the success branch DOES emit a journal but it matches no /Pell/i —
+  a behavioural witness that the gamble-path journal credits no one the player never spoke to.
+  Reverting either content edit fails an assertion, so this is a genuine witness, not a vacuous green.
+
+regression_test: tests/regression/breaking_weir_blind_polish.test.ts
+
+verification: >
+  npm run health green (verify:integrity + lint + tests + validate + playtest). breaking_weir
+  validate_story stays 0 errors / 0 warnings; the auto-discovered RPG suites (all-endings
+  reachability for ending_held + ending_swept, no soft-lock, score economy max==50, action-id
+  uniqueness, variant liveness) stay green — this change is name/journal text only, no structural change.
+
+files_changed:
+  - content/rpg/pack/breaking_weir.yaml  # rack_freed/ race_open variants gain `name`; success journal drops Pell attribution
+  - tests/regression/breaking_weir_blind_polish.test.ts
