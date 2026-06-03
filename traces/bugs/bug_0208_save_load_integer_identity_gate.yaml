@@ -1,0 +1,80 @@
+id: bug_0208
+title: "Save-load integrity gate — seed/step gated finiteness only while the MCP entry boundary gates .int(); a forged non-integer determinism identity (entry↔disk asymmetry) was accepted at load"
+kind: engine_integrity # load_integrity
+mode: n/a # boundary fix is mode-agnostic; the rejection oracle uses the micro demo pack
+# Informational. No pack content changed, so nothing re-pins. No pack content_hash,
+# scorecard byte, or corpus seal moves — verify:integrity stays EXIT 0 with only the
+# precedented non-blocking VERIFIER_TOUCHED warning for the PROTECTED save_load.ts
+# (it still EXISTS — a warning, not a hard error; NO AI_LOOP_ALLOW_VERIFIER_EDITS).
+
+summary: >
+  Boundary-symmetry / type-confusion hardening on the determinism-identity fields.
+  The two trust boundaries that admit a GameState gated seed/step INCONSISTENTLY:
+  the MCP entry boundary (src/mcp/server.ts:147,157) gates seed: z.number().int(),
+  so a non-integer seed is rejected before it can ever enter a GameState; but the
+  disk/load boundary (src/persist/save_load.ts:45-46) gated only seed/step
+  z.number().finite(), so a forged/corrupted save carrying a NON-INTEGER seed or
+  step (e.g. 1.5, 4294967301.5) was ACCEPTED. This completes the otherwise-closed
+  "integrity at load" arc (bug_0181 finiteness; bug_0183/0184 referential; bug_0190
+  the trace twin), whose one un-gated sub-case was integer-ness of seed/step.
+
+root_cause: >
+  The load-side GameStateSchema gated seed/step finiteness only (z.number().finite())
+  while the engine consumes both as INTEGERS: rngForStep (src/core/rng.ts:44) computes
+  `seed >>> 0` and `step >>> 0`. A finite non-integer (1.5) is silently truncated by
+  `>>> 0` (1.5 >>> 0 === 1) to a DIFFERENT value than the one the save's content hash
+  committed to (src/core/hash.ts `canonicalize` stringifies the raw 1.5), so the loaded
+  game would run a deterministic stream diverging from its own recorded identity. The
+  finiteness gate (bug_0181, the Infinity/NaN -> conditions.ts:75 var_gte hole) closed
+  Infinity/NaN but never integer-ness; the entry boundary's .int() gate had no disk twin.
+
+scope: >
+  HONEST SCOPE — this is boundary-symmetry / type-confusion hardening, NOT an
+  unlock-exploit like bug_0181 (Infinity -> var_gte always-true). A non-integer seed is
+  self-consistent within a single save (it loads to the same value and runs the same
+  stream as its own hash). The value is completing entry↔disk symmetry on the
+  determinism-identity fields so a malformed save is rejected at BOTH boundaries, with
+  an adversarial rejection witness — smallest-blast-radius, strongest-free-oracle move.
+
+fix: >
+  Additive, ONE schema file + its test. Tighten the load gate to match the entry
+  boundary EXACTLY: seed: z.number().int() (bare — NO sign/range bound; negative seeds
+  are legitimate, mulberry32 does `seed >>> 0` which is defined for negatives, and the
+  entry boundary server.ts:147 permits them) and step: z.number().int().nonnegative()
+  (step is a counter from 0, src/core/state.ts:20, so it is tighter still). The gate
+  NARROWS the accepted set: integer ⊂ finite, so it rejects strictly more (non-integers)
+  and accepts everything it accepted before except non-integers (never legitimate). No
+  floor lowered, no matcher relaxed, no .finite() weakened. The vars/flags/objectState
+  gates are UNCHANGED (the vars finiteness gate is the bug_0181 hole, unrelated here).
+  The schema doc comment is updated to record the integer-domain rationale.
+
+out_of_band_teeth: >
+  Three forged-save REJECTION witnesses planted in the adversarial suite (built with the
+  existing forgeWithToken helper, sanity-asserting the forged bytes really parse to the
+  intended non-integer before asserting the throw): seed = 1.5, seed = 4294967301.5
+  (fractional and above 2^32-1 — finite, non-integer), and step = 1.5. Each is RED
+  against the pre-change .finite() schema (no throw — the value is finite) and GREEN
+  (throws SaveIntegrityError) against the tightened .int() gate — genuine witnesses, the
+  same SoundnessBench rejection-direction oracle as the existing seed=Infinity case. A
+  bare integer above 2^32-1 (e.g. 4294967301) is intentionally NOT rejected — it is a
+  legitimate .int() value. One GREEN over-restriction guard (seed:-3, step:0) proves the
+  bare .int() gate did NOT over-restrict to gte(0)/a range bound: a negative integer seed
+  still round-trips with hashState(loaded.state) === hashState(original) byte-identically.
+
+regression_test: tests/regression/save_integrity_adversarial.test.ts
+
+verification: >
+  npx tsc --noEmit clean. npx vitest run tests/regression/save_integrity_adversarial.test.ts
+  green (the 3 new rejection cases throw, the new negative-seed case round-trips
+  hash-identically, all pre-existing cases still pass). Non-vacuity confirmed: temporarily
+  reverting save_load.ts:45-46 to .finite() makes the 3 new rejection cases FAIL (no throw);
+  restored. npm run health GREEN (EXIT 0). npm run verify:integrity EXIT 0 with only the
+  expected non-blocking VERIFIER_TOUCHED warning for the PROTECTED-but-present
+  src/persist/save_load.ts — NO GUARD_WEAKENED / PROTECTED_DELETED / HASH_PIN_UNACCOMPANIED /
+  TEST/ASSERTION/STRONG count regression; NO AI_LOOP_ALLOW_VERIFIER_EDITS needed. No pack
+  hash, scorecard byte, or corpus seal moved.
+
+files_changed:
+  - src/persist/save_load.ts                                  # seed/step gate .finite() -> .int() / .int().nonnegative() + doc comment
+  - tests/regression/save_integrity_adversarial.test.ts       # 3 non-integer rejection witnesses + 1 negative-seed over-restriction guard
+  - traces/bugs/bug_0208_save_load_integer_identity_gate.yaml

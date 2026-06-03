@@ -85,6 +85,36 @@ describe("save/load integrity gate — forged-save REJECTION (§16, SoundnessBen
     expect(() => load(forged, MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
   });
 
+  it("WITNESS: seed = 1.5 (fractional, truncates to a different stream) is a hard SaveIntegrityError", () => {
+    // 1.5 is finite, so the old `.finite()` gate accepted it — but `rngForStep`
+    // consumes `seed >>> 0`, and `1.5 >>> 0 === 1`, so the loaded game would run
+    // a DIFFERENT deterministic stream than the value the save's content hash
+    // committed to (hash.ts canonicalizes the raw 1.5). The `.int()` gate rejects.
+    const forged = forgeWithToken((s) => ({ ...microInitState(), seed: s }), "1.5");
+    expect((JSON.parse(forged) as { state: { seed: number } }).state.seed).toBe(1.5);
+    expect(() => load(forged, MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
+  });
+
+  it("WITNESS: seed = 4294967301.5 (fractional, > 2^32-1) is a hard SaveIntegrityError", () => {
+    // A fractional seed ABOVE the 2^32 range: finite (so the old `.finite()` gate
+    // accepted it) but non-integer, and `>>> 0` both truncates the fraction AND
+    // wraps the magnitude (4294967301.5 >>> 0 === 5) — doubly divergent from the
+    // hash-committed value. NOTE: a bare INTEGER above 2^32-1 (e.g. 4294967301)
+    // is a legitimate `.int()` value and is intentionally NOT rejected (see
+    // CRITICAL #1: no sign/range bound on seed); only the non-integer is forged here.
+    const forged = forgeWithToken((s) => ({ ...microInitState(), seed: s }), "4294967301.5");
+    expect((JSON.parse(forged) as { state: { seed: number } }).state.seed).toBe(4294967301.5);
+    expect(() => load(forged, MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
+  });
+
+  it("WITNESS: step = 1.5 (fractional, truncates to a different stream) is a hard SaveIntegrityError", () => {
+    // step is consumed as `step >>> 0` too (rngForStep); a fractional step
+    // diverges from the hash-committed value. The `.int().nonnegative()` gate rejects.
+    const forged = forgeWithToken((s) => ({ ...microInitState(), step: s }), "1.5");
+    expect((JSON.parse(forged) as { state: { step: number } }).state.step).toBe(1.5);
+    expect(() => load(forged, MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
+  });
+
   it("wrong-type flag (flags.lever = string, not boolean) is a hard SaveIntegrityError", () => {
     const state = { ...microInitState(), flags: { lever: "yes" } } as unknown as GameState;
     const bytes = cleanBytes(state);
@@ -125,6 +155,20 @@ describe("save/load integrity gate — GREEN round-trip (no false rejection)", (
       loaded = load(bytes, MICRO_CONTENT_HASH);
     }).not.toThrow();
     // validation runs BEFORE hashing — valid-state bytes/hash stay byte-identical.
+    expect(hashState(loaded.state)).toBe(hashState(s));
+  });
+
+  it("OVER-RESTRICTION GUARD: a NEGATIVE integer seed (seed:-3) still round-trips with hash unchanged", () => {
+    // The new `.int()` gate must match the entry boundary (server.ts:147 bare
+    // .int()) EXACTLY — a negative seed is legitimate (`mulberry32(-3 >>> 0)` is
+    // well-defined), so it MUST NOT be false-rejected. This proves the gate did
+    // NOT over-restrict to `gte(0)` / a 2^32 range bound.
+    const s: GameState = { ...microInitState(), seed: -3, step: 0 };
+    const bytes = cleanBytes(s);
+    let loaded!: ReturnType<typeof load>;
+    expect(() => {
+      loaded = load(bytes, MICRO_CONTENT_HASH);
+    }).not.toThrow();
     expect(hashState(loaded.state)).toBe(hashState(s));
   });
 

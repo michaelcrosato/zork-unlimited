@@ -20,11 +20,21 @@ export const SAVE_VERSION = 1 as const;
  * value injected by a forged save. The contentHash check below guards WHICH
  * pack a save was made against; this guards WHETHER the state is well-formed.
  *
- * The load-bearing gates are `vars: z.record(z.number().finite())` and the
- * finite `seed`/`step`: `JSON.parse('{"...":1e999}')` yields `Infinity`, which
- * — left unguarded — flows into `conditions.ts:75` `var_gte` and makes EVERY
- * `var_gte` gate always-true (NaN makes every `var_*` always-false). The gate
- * REJECTS such a save (throws `SaveIntegrityError`); it never coerces/clamps.
+ * The load-bearing gate is `vars: z.record(z.number().finite())`:
+ * `JSON.parse('{"...":1e999}')` yields `Infinity`, which — left unguarded —
+ * flows into `conditions.ts:75` `var_gte` and makes EVERY `var_gte` gate
+ * always-true (NaN makes every `var_*` always-false). The gate REJECTS such a
+ * save (throws `SaveIntegrityError`); it never coerces/clamps.
+ *
+ * `seed`/`step` are gated to the INTEGER domain `rngForStep` (rng.ts:44)
+ * consumes via `seed >>> 0` / `step >>> 0` — a non-integer would silently
+ * truncate to a DIFFERENT value than the one the save's content hash
+ * (hash.ts `canonicalize`) committed to. This restores entry↔disk symmetry
+ * with the MCP entry boundary (server.ts:147), which already gates
+ * `seed: z.number().int()`; `step` is a counter from 0 (state.ts:20), so it is
+ * additionally `.nonnegative()`. No sign/range bound is placed on `seed` —
+ * negative seeds are legitimate (`mulberry32` does `seed >>> 0`, defined for
+ * negatives) and the entry boundary accepts them.
  *
  * `objectState` mirrors `ObjectRuntime` (state.ts:9–15) with `.strict()` so an
  * unknown or wrong-typed key is rejected, not silently carried into the engine.
@@ -41,9 +51,12 @@ const ObjectRuntimeSchema = z
 
 const GameStateSchema = z
   .object({
-    // identity / determinism — finite numbers only (rejects Infinity/-Infinity/NaN)
-    seed: z.number().finite(),
-    step: z.number().finite(),
+    // identity / determinism — INTEGER domain only (the values rngForStep
+    // consumes via `>>> 0`); rejects non-integers AND Infinity/-Infinity/NaN.
+    // Matches the MCP entry gate (server.ts:147) exactly: bare .int() on seed
+    // (negative seeds are legitimate); step is a counter from 0 so .nonnegative().
+    seed: z.number().int(),
+    step: z.number().int().nonnegative(),
     // location
     current: z.string(),
     visited: z.record(z.boolean()),
