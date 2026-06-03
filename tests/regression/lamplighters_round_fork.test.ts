@@ -32,9 +32,10 @@
  *       the strand never reached, and its narration names the rock-spirit and the flame;
  *   (5) ending_caught is the pack's ONLY death ending, reached ONLY by end_game; ending_guided
  *       stays the sole winnable ending (no win_condition resolves to a fork);
- *   (6) the great lamp HARD-requires the oil (has_item whale_oil): reaching the staith-head
- *       without the oil offers the lamp to examine but NOT to light; lighting CONSUMES the
- *       oil and is one-shot (+20 cannot re-fire);
+ *   (6) the climax is the TWO-BEAT the prose promises (bug_0210): `pour` the carried oil into
+ *       the font (consumes the oil, sets font_filled, no score), THEN `light` the now-filled
+ *       font with the tinderbox (+20). The oil stays the hard precondition (no oil → no pour →
+ *       a dry font is un-lightable → strand barred); the +20 rides the one-shot light only;
  *   (7) the death is telegraphed off-stage too — the notice, the spirit-cask examine, and the
  *       watchman all warn the rock-spirit takes fire from the lighter's own flame.
  */
@@ -124,7 +125,8 @@ describe("bug_0205 — The Lamplighter's Round: the three-way excise-key fork (o
       "take_whale_oil",
       "go_west",
       "go_north",
-      "use_tinderbox_on_harbour_lamp",
+      "use_whale_oil_on_harbour_lamp", // pour the font…
+      "use_tinderbox_on_harbour_lamp", // …then strike the light (the two-beat climax, bug_0210)
       "go_down",
     ]);
     expect(win.state.ended).toBe(true);
@@ -174,7 +176,7 @@ describe("bug_0205 — The Lamplighter's Round: the three-way excise-key fork (o
     expect(pack.win_conditions.every((w) => w.ending === "ending_guided")).toBe(true);
   });
 
-  it("the great lamp HARD-requires the oil: reaching the staith-head without it offers the lamp to examine but not to light", () => {
+  it("the great lamp HARD-requires the oil: reaching the staith-head without it offers the lamp to examine but neither to pour nor to light", () => {
     // tools but no oil: river_stair → lamp_walk → harbour_head, the oil still locked in the store.
     const { state } = play(initStateForParserPack(index, 3), [
       "take_tinderbox",
@@ -185,26 +187,41 @@ describe("bug_0205 — The Lamplighter's Round: the three-way excise-key fork (o
     expect(state.inventory).not.toContain("whale_oil");
     const ids = actionIds(state);
     expect(ids).toContain("examine_harbour_lamp"); // visible…
-    expect(ids).not.toContain("use_tinderbox_on_harbour_lamp"); // …but un-lightable dry
+    expect(ids).not.toContain("use_whale_oil_on_harbour_lamp"); // …no oil to pour into the font…
+    expect(ids).not.toContain("use_tinderbox_on_harbour_lamp"); // …and a dry font cannot be lit
     // and the strand stays barred while the lamp is dark.
     expect(ids).not.toContain("go_down");
   });
 
-  it("lighting CONSUMES the oil and is one-shot: after lighting, the oil is gone and the lamp cannot be re-lit for more score", () => {
-    const lit = play(initStateForParserPack(index, 3), [
+  it("the climax is the two-beat the prose promises (bug_0210): pour the font, THEN strike the light — the dry lamp is un-lightable, and lighting needs no oil in hand", () => {
+    // Arrive at the staith-head with the oil and the tinderbox, the font still dry.
+    const dry = play(initStateForParserPack(index, 3), [
       ...ROUTE_TO_STORE_WITH_KEY,
       "unlock_oil_cask",
       "open_oil_cask",
       "take_whale_oil",
       "go_west",
       "go_north",
-      "use_tinderbox_on_harbour_lamp",
     ]);
+    expect(dry.state.flags["font_filled"]).toBeFalsy();
+    const dryIds = actionIds(dry.state);
+    expect(dryIds).toContain("use_whale_oil_on_harbour_lamp"); // can pour…
+    expect(dryIds).not.toContain("use_tinderbox_on_harbour_lamp"); // …but a DRY font cannot be lit
+
+    // Pour: consumes the oil, fills the font, no score yet, and the pour retires (one-shot).
+    const poured = play(dry.state, ["use_whale_oil_on_harbour_lamp"]);
+    expect(poured.state.flags["font_filled"]).toBe(true);
+    expect(poured.state.inventory).not.toContain("whale_oil"); // poured into the font
+    expect(poured.state.vars.score).toBe(15); // the +20 rides the LIGHT, not the pour
+    const pouredIds = actionIds(poured.state);
+    expect(pouredIds).not.toContain("use_whale_oil_on_harbour_lamp"); // no re-pour (oil spent)
+    expect(pouredIds).toContain("use_tinderbox_on_harbour_lamp"); // NOW the filled font can be lit
+
+    // Strike: the +20 rides here, needs only font_filled (no oil in hand), and retires.
+    const lit = play(poured.state, ["use_tinderbox_on_harbour_lamp"]);
     expect(lit.state.flags["lamp_lit"]).toBe(true);
-    expect(lit.state.inventory).not.toContain("whale_oil"); // poured into the font and burned
     expect(lit.state.vars.score).toBe(35);
-    // The light action retires (gated not_flag lamp_lit AND on the now-spent oil) — no farming.
-    expect(actionIds(lit.state)).not.toContain("use_tinderbox_on_harbour_lamp");
+    expect(actionIds(lit.state)).not.toContain("use_tinderbox_on_harbour_lamp"); // one-shot, no farming
   });
 
   it("the death is telegraphed off-stage too: the notice, the spirit-cask examine, and the watchman all warn the flame fires the spirit", () => {

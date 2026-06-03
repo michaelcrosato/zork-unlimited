@@ -285,12 +285,21 @@ objects:
   - id: harbour_lamp
     name: "great harbour-lamp"
     aliases: [lamp, great lamp, harbour lamp, harbor lamp, light, font, wick]
-    # The CLIMAX (+20), folded into one legible act: light the dry lamp once its font is
-    # filled. The whale-oil is a HARD precondition (has_item whale_oil) and is consumed
-    # (remove_item) — poured into the font and burned — so the +20 is one-shot (gated
-    # not_flag lamp_lit AND gated on the now-spent oil), and lighting the lamp opens the
-    # way DOWN to the strand (the locomotion win). command_verb `light` so the natural
-    # `light great harbour-lamp with tinderbox` parses (the bug_0078 item-on-target verb).
+    # The CLIMAX (+20), staged as the TWO-BEAT act the prose has promised all along — the
+    # notice and this examine both order 'POUR THE FONT AND STRIKE THE LIGHT', so the parser
+    # now delivers both verbs instead of folding them into one (bug_0210, the lamplighters
+    # blind-pass finding: the pour was invisible — the only offered lamp verb was `light`,
+    # which silently poured the carried flask, leaving the stated two-step without a matching
+    # affordance). Now:
+    #   • `pour flask of whale-oil into great harbour-lamp` — HARD-requires the carried oil
+    #     (has_item whale_oil, auto-added by the USE grammar), CONSUMES it (remove_item) and
+    #     sets font_filled. No score; one-shot (gated not_flag font_filled, and the oil is
+    #     spent so it cannot re-fire).
+    #   • `light great harbour-lamp with tinderbox` — now gated on has_flag font_filled (a dry
+    #     font cannot be lit), awards the +20, opens the way DOWN to the strand, one-shot
+    #     (not_flag lamp_lit). command_verb `light` so the natural phrasing parses (bug_0078).
+    # The oil stays the hard precondition for the whole climax (no oil → no pour → no light →
+    # strand barred); the +20 still rides a single one-time gated step; max_score stays 35.
     description: >
       The great staith-head lamp on its iron post — a deep brass font and a broad wick, the
       one lamp on the round that throws its light right down onto the strand below. Its font
@@ -298,25 +307,43 @@ objects:
     variants:
       - when: [{ has_flag: lamp_lit }]
         text: "The great harbour-lamp burning gold and steady, its light lying right down the drop and out across the strand below."
+      - when: [{ has_flag: font_filled }, { not_flag: lamp_lit }]
+        text: >
+          The great staith-head lamp on its iron post, its deep brass font brimming with
+          whale-oil now and the broad wick standing soaked and ready — it wants only a flame
+          struck to it.
     takeable: false
     interactions:
+      - verb: USE
+        item: whale_oil
+        target: harbour_lamp
+        command_verb: pour
+        command_template: "pour {item} into {target}"
+        conditions: [{ has_item: whale_oil }, { not_flag: font_filled }, { not_flag: lamp_lit }]
+        effects:
+          - set_flag: font_filled
+          - remove_item: whale_oil
+          - add_journal: "You poured the whole flask of whale-oil into the great lamp's dry font, brimming it ready for a flame."
+          - narrate: >
+              You tip the whole flask of whale-oil into the deep brass font, slow and careful,
+              until it stands brimming and the broad wick draws the oil up dark and soaked. The
+              font is full now; it wants only the flame.
       - verb: USE
         item: tinderbox
         target: harbour_lamp
         command_verb: light
         command_template: "light {target} with {item}"
-        conditions: [{ has_item: whale_oil }, { not_flag: lamp_lit }]
+        conditions: [{ has_flag: font_filled }, { not_flag: lamp_lit }]
         effects:
           - set_flag: lamp_lit
-          - remove_item: whale_oil
           - inc_var: { name: score, by: 20 }
           - unlock_exit: { from: harbour_head, to: the_strand }
-          - add_journal: "You poured the font full and struck the light, and the great harbour-lamp took and burned, throwing its gold right down onto the dark strand below."
+          - add_journal: "You struck the light to the filled font, and the great harbour-lamp took and burned, throwing its gold right down onto the dark strand below."
           - narrate: >
-              You tip the whole flask into the deep brass font, set the char-cloth smouldering
-              and lay it to the broad wick. The wick draws, catches, and steadies — and the
-              great lamp swells gold on its post and pours its light straight down the drop and
-              out across the strand, and the lightless dark below is dark no longer.
+              You set the char-cloth smouldering in the tinderbox and lay it to the soaked
+              wick. The wick draws, catches, and steadies — and the great lamp swells gold on
+              its post and pours its light straight down the drop and out across the strand,
+              and the lightless dark below is dark no longer.
 
 npcs:
   - id: watchman
