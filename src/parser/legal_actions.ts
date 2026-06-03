@@ -21,13 +21,20 @@ import {
   isOpen,
   nodeOrdinal,
   objectDescription,
+  objectName,
   roomDescription,
   visibleObjectIds,
 } from "./model.js";
 
 export type ParserActionOption = { id: string; command: string; action: Action };
 
-const objName = (index: ParserIndex, id: string): string => index.objects.get(id)?.name ?? id;
+// State-aware so an enumerated command shows the object's REACTIVE name (bug_0188):
+// a righted "toppled cresset" re-labels itself rather than freezing the stale word
+// into "look at toppled cresset". Absent any variant `name` this is the base name.
+const objName = (index: ParserIndex, state: GameState, id: string): string => {
+  const o = index.objects.get(id);
+  return o ? objectName(o, state) : id;
+};
 
 /** True if `id` is reachable for the player right now (held or visible in the room). */
 function present(index: ParserIndex, state: GameState, id: string): boolean {
@@ -76,7 +83,7 @@ export function resolveParserAction(
     }
     case "INVENTORY": {
       const items = state.inventory.length
-        ? state.inventory.map((i) => objName(index, i)).join(", ")
+        ? state.inventory.map((i) => objName(index, state, i)).join(", ")
         : "nothing";
       return { conditions: [], effects: [{ narrate: `You are carrying: ${items}.` }] };
     }
@@ -126,7 +133,7 @@ export function resolveParserAction(
       if (!o || !o.openable || !present(index, state, action.target)) return null;
       if (isLocked(index, state, action.target) || isOpen(state, action.target)) return null;
       const reveal = o.contents.length
-        ? ` Inside: ${o.contents.map((c) => objName(index, c)).join(", ")}.`
+        ? ` Inside: ${o.contents.map((c) => objName(index, state, c)).join(", ")}.`
         : "";
       return {
         conditions: [],
@@ -270,19 +277,24 @@ export function enumerateActions(index: ParserIndex, state: GameState): ParserAc
   for (const oid of visibleObjectIds(index, state, here)) {
     const o = index.objects.get(oid);
     if (!o) continue;
-    push(
-      option(index, state, `examine_${oid}`, `look at ${o.name}`, { type: "LOOK", target: oid }),
-    );
-    push(option(index, state, `read_${oid}`, `read ${o.name}`, { type: "READ", target: oid }));
-    push(option(index, state, `take_${oid}`, `take ${o.name}`, { type: "TAKE", item: oid }));
-    push(option(index, state, `open_${oid}`, `open ${o.name}`, { type: "OPEN", target: oid }));
+    const oName = objectName(o, state);
+    push(option(index, state, `examine_${oid}`, `look at ${oName}`, { type: "LOOK", target: oid }));
+    push(option(index, state, `read_${oid}`, `read ${oName}`, { type: "READ", target: oid }));
+    push(option(index, state, `take_${oid}`, `take ${oName}`, { type: "TAKE", item: oid }));
+    push(option(index, state, `open_${oid}`, `open ${oName}`, { type: "OPEN", target: oid }));
     if (o.key_id !== undefined) {
       push(
-        option(index, state, `unlock_${oid}`, `unlock ${o.name} with ${objName(index, o.key_id)}`, {
-          type: "UNLOCK",
-          target: oid,
-          with: o.key_id,
-        }),
+        option(
+          index,
+          state,
+          `unlock_${oid}`,
+          `unlock ${oName} with ${objName(index, state, o.key_id)}`,
+          {
+            type: "UNLOCK",
+            target: oid,
+            with: o.key_id,
+          },
+        ),
       );
     }
   }
@@ -291,11 +303,12 @@ export function enumerateActions(index: ParserIndex, state: GameState): ParserAc
   for (const item of [...state.inventory].sort()) {
     const o = index.objects.get(item);
     if (!o) continue;
+    const oName = objectName(o, state);
     push(
-      option(index, state, `examine_${item}`, `look at ${o.name}`, { type: "LOOK", target: item }),
+      option(index, state, `examine_${item}`, `look at ${oName}`, { type: "LOOK", target: item }),
     );
-    push(option(index, state, `read_${item}`, `read ${o.name}`, { type: "READ", target: item }));
-    push(option(index, state, `drop_${item}`, `drop ${o.name}`, { type: "DROP", item }));
+    push(option(index, state, `read_${item}`, `read ${oName}`, { type: "READ", target: item }));
+    push(option(index, state, `drop_${item}`, `drop ${oName}`, { type: "DROP", item }));
   }
 
   // USE interactions across the pack whose item is held and target is present.
@@ -314,8 +327,8 @@ export function enumerateActions(index: ParserIndex, state: GameState): ParserAc
       // the word order/preposition match too, falling back to "<verb> <item> on
       // <target>" when no template is given, or the generic "use ... on ..." with no
       // command_verb at all.
-      const itemName = objName(index, it.item);
-      const targetName = objName(index, it.target);
+      const itemName = objName(index, state, it.item);
+      const targetName = objName(index, state, it.target);
       const command = selfUse
         ? `${it.command_verb ?? "use"} ${itemName}`
         : it.command_verb !== undefined

@@ -215,11 +215,22 @@ export const InteractionSchema = z
  *  an opened strongbox, a levered-open grate — instead of contradicting it. The
  *  ROOM may already react via RoomSchema.variants, but examining the OBJECT itself
  *  fell back to the static `description`; this closes that gap. First-match-wins in
- *  declared order. */
+ *  declared order.
+ *
+ *  Optional `name` (bug_0188): the same variant may ALSO swap the object's display
+ *  NAME, not just its examine text. The reactive-text convention let a thing narrate
+ *  changed state on examine, but its NAME — shown in `visible_objects` and in every
+ *  enumerated command ("look at toppled cresset", "lever toppled cresset with …") —
+ *  stayed frozen at the base `name`, so a name that encodes a transient state ("the
+ *  TOPPLED cresset") kept contradicting a room/examine that had moved on (a blind
+ *  playtester hit exactly this on dawn_beacon's righted cresset). When this `name`
+ *  is set on the matched variant it replaces the base `name` everywhere the name
+ *  renders; when absent (every pack today) the base `name` is used, byte-identically. */
 export const ObjectVariantSchema = z
   .object({
     when: z.array(ConditionSchema).min(1),
     text: z.string().min(1),
+    name: z.string().min(1).optional(),
   })
   .strict();
 

@@ -1,0 +1,69 @@
+id: bug_0188
+title: "Reactive OBJECT NAME — a thing whose name encodes transient state could re-narrate its examine text but not its NAME"
+kind: engine_fix
+mode: parser # shared parser/RPG object surface; surfaced on an RPG pack
+pack: content/rpg/pack/dawn_beacon.yaml
+# Informational. No test pins dawn_beacon's content_hash (only watchtower_road pins one),
+# so nothing was forced. The cresset variant edit moved the pack hash:
+#   f5a8b65e520b59527d1c9944aae0b91d13aa1d700ea46acdd0a88056ee6164ea  (bug_0187, as shipped)
+#   7c59faf5ab71211347de629c3550e77f8df14c50054327dc07e55d02c2ac52b5  (this fix; +variant name)
+
+summary: >
+  The mandated blind pass this cycle (The Dawn Beacon, RPG, seed 7 — the assessor's recency-blind
+  rank-1 and the freshest pack, shipped last cycle bug_0187) returned clarity 5/5, enjoyment 4/5,
+  TWO complete playthroughs (prepared 50/50, under-prepared 45/50), both reaching ending_lit, ZERO
+  mechanical bugs. Its ONE concrete finding was a reactive-text asymmetry: after the player levers the
+  toppled cresset upright, the room prose AND the cresset's examine text correctly update (both already
+  carry reactive variants, bug_0011 / bug_0023), but the OBJECT'S NAME — "toppled cresset" — stays
+  frozen, so visible_objects and every enumerated command ("look at toppled cresset") keep contradicting
+  the righted state. The engine could re-narrate an object's examine text on state change but not its NAME.
+
+surfaced_by_blind_playtest:
+  run: ai-runs/2026-06-03T16-28-18-783Z/playtest.md
+  pack: content/rpg/pack/dawn_beacon.yaml
+  seed: 7
+  result: "prepared 50/50 + under-prepared 45/50, both ending_lit; clarity 5/5, enjoyment 4/5; ZERO mechanical bugs"
+  finding: >
+    "Stale object name (Beacon-Stage): After levering the cresset upright, the room prose correctly reads
+    'stands upright on its pivot once more' and the examine text updates, but the object in
+    available_actions / visible_objects and the examine command is still named 'toppled cresset'."
+
+root_cause: >
+  visible_objects (parser/observation.ts) and every command label in the legal-action set
+  (parser/legal_actions.ts) read the object's STATIC `name` field directly. The reactive-text
+  convention (ObjectVariantSchema { when, text }) only ever replaced the examine DESCRIPTION
+  (objectDescription, bug_0023); there was no name analogue, so a name carrying a transient state
+  word ("toppled") could never react. A purely engine-level gap, not pack-specific — any object whose
+  identity changes with state hit it.
+
+fix: >
+  Close the asymmetry generically. (1) ObjectVariantSchema gains an optional `name`. (2) New pure helper
+  objectName(object, state) in parser/model.ts — the name analogue of objectDescription — returns the
+  first matching variant that carries a `name`, else the base `name`. (3) objectName is used everywhere
+  the name renders: visible_objects (parser/observation.ts) and every command label + the INVENTORY/OPEN
+  contents listings (parser/legal_actions.ts, via a now state-aware objName). The RPG observation reuses
+  the parser surface, so RPG packs inherit it. Backward-compatible: a variant with no `name` (every other
+  pack today) yields the base name byte-identically, so no other pack's observations or hashes change.
+  Content side: dawn_beacon's righted-cresset variant now also carries `name: "upright cresset"`.
+
+out_of_band_teeth: >
+  The regression asserts on the REAL dawn_beacon observation: before righting, visible_objects AND the
+  examine command label read "toppled cresset"; once the cresset_raised quest stage holds, the SAME
+  object reads "upright cresset" on both surfaces and the stale word is gone; an object with no variant
+  name (the orders-board) keeps its base name in both states (fallback intact). The before/after split
+  fails on the pre-fix engine (the name was frozen), so this is a genuine witness, not a vacuous green.
+
+regression_test: tests/regression/dawn_beacon_reactive_cresset_name.test.ts
+
+verification: >
+  npm run health green (verify:integrity + lint + tests + validate + playtest). tsc --noEmit clean.
+  dawn_beacon validate_story stays 0 errors / 0 warnings (combat_guaranteed audited GREEN, both bounds
+  absent — the bug_0187 guarantee surface is untouched; this change is name-rendering only).
+
+files_changed:
+  - src/parser/schema.ts            # ObjectVariantSchema: optional `name`
+  - src/parser/model.ts             # new objectName(object, state) helper
+  - src/parser/observation.ts       # visible_objects uses objectName
+  - src/parser/legal_actions.ts     # state-aware objName + command labels use reactive name
+  - content/rpg/pack/dawn_beacon.yaml  # righted cresset variant: name "upright cresset"
+  - tests/regression/dawn_beacon_reactive_cresset_name.test.ts

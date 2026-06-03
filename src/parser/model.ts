@@ -91,6 +91,21 @@ export function objectDescription(object: GameObject, state: GameState): string 
   return object.description;
 }
 
+/** The object's effective display NAME in the current state: the first reactive
+ *  `variant` whose `when` holds AND carries a `name` override wins, else the base
+ *  `name` (bug_0188). The name analogue of `objectDescription` — lets a thing whose
+ *  name encodes a transient state (a "toppled" cresset) re-label itself once it has
+ *  changed, so `visible_objects` and the enumerated commands stop contradicting a
+ *  room/examine that already moved on. A variant with no `name` is skipped for the
+ *  name (its `text` still drives the description), so this is purely additive. Pure;
+ *  same (object, state) ⇒ same name. */
+export function objectName(object: GameObject, state: GameState): string {
+  for (const v of object.variants ?? []) {
+    if (v.name !== undefined && evalConditions(v.when, state)) return v.name;
+  }
+  return object.name;
+}
+
 /** Is the container `id` locked? Falls back to the pack's static `locked` flag. */
 export function isLocked(index: ParserIndex, state: GameState, id: string): boolean {
   const rt = state.objectState[id]?.locked;

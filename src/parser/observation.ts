@@ -17,7 +17,13 @@
 import type { GameState } from "../core/state.js";
 import type { Action } from "../api/types.js";
 import { evalConditions } from "../core/conditions.js";
-import { type ParserIndex, activeDialogue, roomDescription, visibleObjectIds } from "./model.js";
+import {
+  type ParserIndex,
+  activeDialogue,
+  objectName,
+  roomDescription,
+  visibleObjectIds,
+} from "./model.js";
 import { enumerateActions } from "./legal_actions.js";
 import { SCORE_VAR } from "./schema.js";
 
@@ -80,10 +86,10 @@ export function buildParserObservation(
       : endingDef.text
     : undefined;
 
-  const visObjs = visibleObjectIds(index, state, state.current).map((id) => ({
-    id,
-    name: index.objects.get(id)?.name ?? id,
-  }));
+  const visObjs = visibleObjectIds(index, state, state.current).map((id) => {
+    const o = index.objects.get(id);
+    return { id, name: o ? objectName(o, state) : id };
+  });
   const npcs = (index.npcByRoom.get(state.current) ?? []).map((n) => ({ id: n.id, name: n.name }));
   const exits = room
     ? room.exits
