@@ -1,0 +1,77 @@
+id: bug_0174
+title: "Add a VALIDATOR-INDEPENDENT concrete-play SECOND WITNESS to the RPG generator's cumulative-survival combat_guaranteed promise — bug_0173's named next-focus (a)"
+kind: test
+mode: meta
+severity: enhancement
+layer: verification
+artifact:
+  source: src/gen/rpg_generator.ts
+  test: tests/regression/rpg_generator_cumulative_survival.test.ts
+
+summary: >
+  The generated RPG packs (rpg_generator.ts v3, bug_0173) declare meta.combat_guaranteed: true on a
+  two-fight gauntlet — a player who PREPARES (the optional spirit +2 attack and cell ward +2 defense ⇒
+  best reachable atk6/def4, hp20) and THEN descends survives BOTH keepers on every roll AND
+  cumulatively. Until now that promise was proven only ONE way: arithmetically, by validateRpg's
+  cumulative-HP-aware upper bound (COMBAT_GAUNTLET_NOT_GUARANTEED, bug_0172, which sums each enemy's
+  worst-case maxDamageTaken and fires when the running total >= playerHp). Every test of the guarantee
+  (tests/unit/rpg_generator.test.ts, tests/regression/rpg_generator_guaranteed_gauntlet.test.ts) leans
+  on that SAME validator arithmetic, so a subtle error in the validator's combat math would pass an
+  unsound guarantee AND be rubber-stamped by every test trusting it — the canonical single-checker
+  blind spot the verifier-soundness literature warns about (arXiv 2510.14253, [[verifier-assertion-guard]]).
+  bug_0173's "next suggested focus" named this exact slice: "an optional validator-INDEPENDENT exhaustive
+  cumulative-survival cross-check ... prove the fully-buffed best/worst bracket survives both fights by
+  concrete play, a second witness beside the validator's arithmetic." This adds it.
+
+root_cause: >
+  Not a defect — a verification-depth gap. The cumulative combat-guarantee had a SINGLE arithmetic
+  oracle (validateRpg) and no independent corroboration by concrete play, so the contamination-free
+  benchmark's hardest combat check rested on one checker the rest of the suite trusts transitively.
+
+fix: >
+  NEW tests/regression/rpg_generator_cumulative_survival.test.ts (12 seeds, all five themes) — a witness
+  that NEVER imports validateRpg. It plays the gauntlet for real through the production engine (makeStep
+  via the shared exhaustiveEndingsMulti solver) under the player's WORST combat rolls (own strike d6=1,
+  damage taken d6=6 — real legal faces), in three phases matching the validator's ACTUAL claim (prepare
+  fully, THEN fight — a guaranteed-sufficient strategy, not a property of any play that merely ends
+  buffed): (A) reach a READY state by exploring everything EXCEPT ATTACK — fully buffed (best reachable
+  atk/def derived BY PLAY as the max over the combat-free region, never hardcoded) and pristine (HP
+  still full, no keeper engaged); (B) from READY, exhaustively play every worst-roll continuation — NO
+  death ending is reachable (the independent counterpart to COMBAT_GAUNTLET_NOT_GUARANTEED) and some
+  continuation fells BOTH keepers while still standing (hp>0, warden defeat flag set) so the result is
+  non-vacuous; (C) from the START with combat allowed, BOTH keeper deaths stay reachable under worst
+  rolls by under-prepared play, so the guarantee is earned by preparation, not by toothless enemies. No
+  change to the generator, the validator, the engine, the schema, the corpus, or any curated content.
+
+witness: >
+  The first draft defined "prepared" as best stats AT THE TERMINAL and asserted ALL such terminals
+  survive; it FAILED on every seed (ending_fallen_guardian), correctly exposing that the claim is too
+  strong: a player can don the ward, grind the FIRST keeper at low attack (max(1,1+4-4)=1 dmg/strike ⇒
+  6 rounds ⇒ ~15 damage taken), survive, THEN take the attack buff and die to the warden — ending
+  atk6/def4 but never "prepared for the fight it lost". The validator's bound credits BEST stats in
+  EACH fight, so that ordering is correctly outside the promise. The corrected witness stages
+  preparation BEFORE combat (Phase A pristine ready state), matching the guarantee. Teeth verified out
+  of band: a throwaway run mutating the warden to hp30/atk20 made Phase B surface a prepared death
+  (preparedDeaths.length > 0), confirming the NEGATIVE assertion is non-vacuous. Live engine math for
+  the real v3 pack: prepared atk6/def4 takes 3 from the foe (hp6/atk1/def4) + 8 from the warden
+  (hp9/atk2/def4) = 11 < 20 across the gauntlet ⇒ survives every worst-roll path; an under-prepared
+  player meets the keepers' def4 as a real, lethal gamble ⇒ both deaths reachable.
+
+regression: >
+  The new suite IS the regression: it fails loudly if a future generator re-tune makes a prepared
+  worst-roll descent lethal (Phase B NEGATIVE), if the buffs stop being reachable without fighting or a
+  prepared player can no longer clear the gauntlet alive (Phase A guard + Phase B POSITIVE), or if the
+  fights become unloseable so the guarantee is no longer earned (Phase C). It corroborates — and is
+  fully independent of — validateRpg's COMBAT_GAUNTLET_NOT_GUARANTEED arithmetic, so a divergence
+  between the two oracles surfaces as a test failure rather than a silently-trusted unsound guarantee.
+
+curated_impact: >
+  None. The witness reads only the generator's emitted packs (which all set combat_guaranteed: true) via
+  the production engine; it touches no curated content, no committed corpus, no protected file, no
+  pinned hash. The two hand-authored RPG packs (cold_forge, sunken_barrow) are single-enemy, do not set
+  combat_guaranteed, and are not in scope.
+
+verification: >
+  npm run health green. verify:integrity static OK (0/0); additive — a new regression test + a bug
+  artifact, no test deleted/disabled, no MIN_* / GEN_EVAL_CHECK_COUNT floor change, no matcher relaxed,
+  no hash re-pin, net test count rose. No source/validator/engine/schema/generator behavior change.
