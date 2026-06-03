@@ -1,0 +1,118 @@
+id: bug_0196
+title: "The Breaking Weir — the project's 14th pack, 5th RPG, and FIRST COMBATLESS one (breadth lever; a non-combat skill-check chain over the RPG core)"
+kind: content_new
+mode: rpg
+pack: content/rpg/pack/breaking_weir.yaml
+content_hash: cd5907417c0c0697e69eb8e45be4a960189416a98c1d118d462d4700d71f0bdd
+# Informational. No test pins this pack's content_hash; the disk hash is whatever
+# `npm run validate` reports. The scorecard freshness pin (bug_0194) DID require a
+# deliberate regen this cycle — see scorecard_regen below.
+
+summary: >
+  The mandated blind pass this cycle ran on wreckers_light (CYOA, seed 37) — the
+  least-recently blind-played pack per [[assessor-blind-pass-rotation]], NOT the
+  harness/assessor rank-1 (wolf_winter), which was just played LAST cycle (bug_0195) and
+  is blind-clean 4x. wreckers_light came back CLEAN: clarity 5/5, enjoyment 5/5, all four
+  endings reached, ZERO bugs. Blind-clean on a clean pack is the saturation signal
+  ([[content-polish-backlog-exhausted]]); the deterministic assessor has collapsed to six
+  identical 0.5 blind-playtest stubs with every structural lever disarmed
+  ([[verifier-assertion-guard]]). The standing genuine autonomous lever is BREADTH (the
+  keyed real-model run is gated on the owner's API key). The explicitly-named untried RPG
+  axis ([[load-integrity-arc-closed]], [[content-polish-backlog-exhausted]]) was a
+  NON-COMBAT skill-check-chain RPG — every existing RPG pack (cold_forge / sunken_barrow /
+  dawn_beacon / wolf_winter) turns on combat. This ships exactly that: the 14th pack, the
+  5th RPG, and the FIRST with `enemies: []`.
+
+mandated_blind_playtest:
+  run: ai-runs/2026-06-03T18-25-06-674Z/playtest.md
+  pack: content/cyoa/pack/wreckers_light.yaml
+  seed: 37
+  result: "reached ending_saved, ending_wrecker, ending_drowned, ending_mercy (all four); clarity 5/5, enjoyment 5/5; ZERO bugs"
+  rotation: >
+    The harness set the playtest target to wolf_winter and the assessor's flat 0.5 ranking
+    re-nominated it, but wolf_winter was played LAST cycle (bug_0195) and is blind-clean 4x.
+    Reading the dedicated-pass log newest->oldest, the least-recently blind-played pack is
+    wreckers_light (last dedicated pass bug_0177) — the documented rotation tiebreaker. The
+    memory index also named it explicitly ("Next blind pass -> wreckers_light").
+  triage: >
+    No actionable content defect — wreckers_light is blind-clean and its knowledge-reactive
+    Storm Gallery prose, oil/striker gating, and four morally-distinct endings were confirmed
+    live and rated deliberate craft. Per the saturated-set discipline the cycle spent the
+    signal on the named breadth lever, not on churning a clean pack.
+
+new_pack:
+  pack: content/rpg/pack/breaking_weir.yaml
+  proven: >
+    Auto-discovered by every structural suite the moment it shipped: rpg_all_endings_reachable
+    reaches BOTH declared endings by concrete best/worst-roll play (ending_held via the
+    prepared/best-roll route, ending_swept via the worst-roll storm-walk failure); the
+    soft-lock guard proves no dead pocket; rpg_score_economy_sound proves reachable max == 50;
+    rpg_variant_liveness + rpg_action_id_unique pass. All 34 RPG-suite tests green with the new
+    pack discovered. A pack-specific regression
+    (tests/regression/breaking_weir_skill_chain.test.ts) drives the REAL resolveSkillCheck on
+    the worst roll to pin the prep-vs-gamble contract behaviourally.
+
+design:
+  thesis: >
+    A week of storm-rain has the river in spate and the great weir above the valley is choking
+    — head-rack jammed with drift, relief-race seized shut — and if the water tops the weir
+    before dawn the sleeping valley drowns. The old weir-keeper, Pell, is down with a broken leg
+    and cannot work it himself, but he knows the weir to the inch. Read his flood-book (+5),
+    heed his counsel on the one place that kills — the storm-walk across the spillway (+5 nerve)
+    — take his weir-iron and life-line, and work the weir in order: free the choked head-rack
+    (craft), cross the awash storm-walk (nerve), heave open the seized relief-race winch (might),
+    and reach the valley-rim with the weir held (the locomotion win, +15).
+  mechanic_axis: >
+    A NON-COMBAT skill-check CHAIN — the untried RPG axis. `enemies: []`, no ATTACK, no fight; the
+    whole spine is three seeded d20 + skill checks (craft / nerve / might), each gating a flag that
+    opens the next stretch of weir (the sunken_barrow tool-on-target skill_check shape, generalised
+    to a full chain). RPG mode is detected by the PRESENCE of the `enemies` key (src/mcp/types.ts),
+    so an empty enemy set runs as RPG and the combat-winnability / gauntlet bounds simply have
+    nothing to prove — only the skill-check passability bound (each DC <= 20 + best reachable skill)
+    and the parser-layer soundness apply. This exercises the RPG validator and the exhaustive
+    ending/liveness/score solvers on a pack with zero combat — coverage no curated pack had.
+  prep_vs_gamble: >
+    The prep-vs-gamble identity (bug_0114), transposed from combat to a skill check. The storm-walk
+    is the ONE lethal obstacle (DC-9 nerve crossing; on_failure ends the game at ending_swept). Base
+    nerve 3: the worst roll fails (1 + 3 = 4 < 9), so an under-prepared crossing is a genuine ~25%
+    gamble and the death is reachable for the rash. Pell's +5 counsel lifts nerve to 8: the WORST
+    roll still passes (1 + 8 = 9 >= 9), so heeding him makes the killing walk safe — the +5 is
+    load-bearing, not decorative, exactly as the prose promises (and honest per bug_0132: he says
+    heeding him makes it safe, not that the walk is harmless). The two MECHANICAL checks (rack/craft,
+    winch/might) are deliberately NON-lethal and RETRYABLE (failure reads as repeatable progress per
+    bug_0027 — no missing-tool / strength-wall over-promise), so persistence always clears them and a
+    player can never be hard-locked out of the valley; only the walk can kill.
+  honesty: >
+    Both the flood-book and Pell name the storm-walk as the one killer and point at Pell's counsel as
+    what makes it safe, so a crossing made cold is an INFORMED gamble, never a gotcha (bug_0027/0029
+    discipline). The skill-check narration is transparent ("nerve check: d20 X + N = total vs 9").
+  score_economy: >
+    5 (flood-book) + 10 (rack) + 10 (walk) + 10 (winch) + 15 (valley-rim capstone) = 50, the curated
+    RPG milestone economy (same 5+10+10+10+15 shape as wolf_winter). Each award is one-shot (gated
+    none_of its success flag; the read retires on read_marks; the capstone rides the game-ending
+    navigation win). NO score on any skill check's on_failure (the rpg_score_economy_sound
+    bracket-completeness rule). The +15 rides reaching the rim, so max 50 coincides with the win and
+    SCORE_PEAKS_BEFORE_WIN does not fire on a navigation win (bug_0116).
+  endings:
+    - id: ending_held
+      reach: "(prepared) read flood-book +5 -> hear Pell's walk-counsel (+5 nerve) -> take weir-iron + life-line -> free head-rack +10 -> cross storm-walk +10 -> heave relief-race +10 -> reach valley-rim +15 = 50/50"
+      note: "the sole win; visited: valley_held (locomotion win, like wolf_winter's cattle / the Beacon's crown); SCORE_PEAKS does not fire on a navigation win"
+    - id: ending_swept
+      reach: "(rash) cross the storm-walk under-prepared (base nerve 3) and fail the d20+nerve-vs-9 roll -> the race takes you"
+      note: "death: true; reachable by worst-roll play, recoverable from an earlier save (§8.7); the prep-vs-gamble stake"
+
+wiring:
+  - "content/rpg/pack/breaking_weir.yaml (new; validates 0 errors / 0 warnings)"
+  - "package.json scripts.health: added `npm run validate -- content/rpg/pack/breaking_weir.yaml`"
+  - "tests/regression/all_packs_validated_by_bar.test.ts: pinned pack list 13 -> 14 (breaking_weir added to content/rpg/pack/* group, alphabetical)"
+  - "tests/regression/breaking_weir_skill_chain.test.ts (new; pins combatless + lethal-walk prep-vs-gamble + score economy)"
+  - "traces/benchmark/scorecard.{json,md}: regenerated at runs=50 (the bug_0194 freshness pin requires a regen the same cycle as any new pack)"
+
+scorecard_regen: >
+  Adding the 14th pack makes the bug_0194 freshness pin (benchmark_scorecard_fresh.test.ts) RED until
+  the committed scorecard is rebuilt — exactly its intended behaviour ("a pack added without
+  regenerating the card fails here"). Regenerated via `npm run benchmark -- --runs 50 --out
+  traces/benchmark/scorecard`. The deterministic coverage bot cannot plan the multi-step skill-check
+  solution (as for every parser/RPG puzzle pack), so breaking_weir's curated row reads low (completion
+  0%, ending 0%, partial scene coverage) and nudges the curated headline down slightly while staying
+  well above the no-regression floor and preserving the curated>held-out gap (bug_0178).

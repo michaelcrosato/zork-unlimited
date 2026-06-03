@@ -1,0 +1,413 @@
+# The Breaking Weir — a Stage 4 (Hero's-Quest) pack (spec §13, §14 gate).
+#
+# The game's FIFTH RPG pack — and the FIRST COMBATLESS one: `enemies: []`, no ATTACK,
+# no hp loss in a fight. Where cold_forge / sunken_barrow / dawn_beacon / wolf_winter
+# all turn on turn-based combat, this pack's whole spine is a CHAIN OF SKILL CHECKS over
+# the same deterministic RPG core — three distinct skills (craft / nerve / might), each a
+# seeded d20 + skill vs a difficulty, gating a flag that opens the next stretch of the
+# weir. It is the untried RPG axis the loop has been pointing at (the non-combat
+# skill-check-chain pack): it exercises the RPG validator's skill-check passability proof
+# (SKILL_CHECK_IMPOSSIBLE), the exhaustive ending-reachability / liveness / score-economy
+# solvers, and the §17 prep-vs-gamble identity — all with ZERO enemies.
+#
+# The fiction earns the mechanic the same honesty the combat packs earn theirs (bug_0027/
+# 0029/0069/0114): not blind luck but skill and preparation decide the night. A week of
+# storm-rain has the river in spate, and the great weir above the valley is choking — the
+# head-rack jammed with drift, the relief-race shut — and if the water tops the weir before
+# dawn the whole valley below drowns in its sleep. The old weir-keeper, Pell, has gone down
+# with a broken leg and cannot work the weir himself this night; but he has held this weir
+# forty winters and there is nothing about it he does not know. Heed him on the one place
+# that KILLS men — the storm-walk out across the spillway, where a wrong step puts you in
+# the race (his counsel steadies your nerve, +5) — and the crossing is safe; go onto that
+# walk cold and unsteadied and the flood may yet have you (the death ending stays reachable
+# for the rash, telegraphed in the room prose and by Pell and the flood-book, never a
+# gotcha). The two MECHANICAL obstacles either side of it — freeing the jammed head-rack
+# (craft) and heaving the seized relief-race winch (might) — are not killers but honest
+# work: they yield to the knack and a stubborn back, retryable until they give (the
+# sunken_barrow slab pattern), so a player can never be hard-locked out of the valley.
+#
+#   keeper_lodge ─N─ weir_head ─N*─ weir_walk ─N**─ race_house ─N***─ valley_held (WIN, +15)
+#   (start; Pell,    (head-rack:     (storm-walk:     (relief-race
+#    flood-book,      free with       LETHAL nerve     winch: heave
+#    weir-iron,       weir-iron,      crossing,        with weir-iron,
+#    life-line)       craft, retry)   life-line)       might, retry)
+#   (*   N gated on rack_freed   — the freed head-rack)
+#   (**  N gated on walk_crossed — the safely-crossed storm-walk)
+#   (*** N gated on race_open    — the heaved relief-race)
+#
+# Score (max 50, the milestone economy the curated RPG packs share — the exact 5+10+10+10+15
+# shape as wolf_winter): read Pell's flood-book (+5, the §17 clue that names the three
+# obstacles, the two tools, and points at Pell's counsel), clear each of the three obstacles
+# (+10 each, on the SUCCESS of each skill check, one-shot), and reach the valley with the
+# weir held (+15 — the locomotion win, like wolf_winter's cattle and the Beacon's crown).
+# The perfect 50 coincides with reaching the saved valley, never before; SCORE_PEAKS_BEFORE_WIN
+# does not fire on a navigation win (bug_0116). No score rides any skill check's on_failure
+# (the score-economy bracket-completeness rule, rpg_score_economy_sound.test.ts).
+
+meta:
+  id: breaking_weir_v1
+  title: "The Breaking Weir"
+  start_room: keeper_lodge
+  # hp is required by the RPG validator (> 0) and present for the core, but nothing in
+  # this combatless pack damages it — there is no fight. attack/defense are 0 (no combat).
+  # The three SKILLS are the live stats: craft (working the old gate-iron), nerve
+  # (steadiness on the killing storm-walk), might (heaving the seized winch). Base 3 each:
+  # an unprepared check is a real d20+3-vs-9 roll (~75%/try); Pell's counsel lifts nerve to
+  # 8, so the one LETHAL check (the walk) becomes a guaranteed-safe min-roll pass (1+8>=9).
+  vars_init: { hp: 20, attack: 0, defense: 0, craft: 3, nerve: 3, might: 3 }
+  flags_init: []
+  # No combat_guaranteed flag — there is no combat to guarantee. The safety the prep buys
+  # on the lethal walk is proven the ordinary way: with Pell's +5 nerve counsel the DC-9
+  # crossing passes on the player's WORST roll (1 + 8 = 9 >= 9), so heeding him is safe; the
+  # under-prepared crossing (base nerve 3, needs d20>=6) is the declared gamble (bug_0114's
+  # "the guarantee covers only the best-prepared" contract, here as honest prep-vs-rush).
+  max_score: 50
+
+rooms:
+  - id: keeper_lodge
+    name: "The Keeper's Lodge"
+    description: >
+      The weir-keeper's lodge, a stone hut wedged against the weir-bank in the roar of the
+      flood. Old Pell is laid out on the cot by the cold hearth, his leg splinted and useless,
+      and the river is loud and wrong outside — too high, too fast. His flood-book lies open
+      on the table where he was reading the marks; his weir-iron, the long pry-bar he works
+      the gates with, leans by the door, and his life-line, a coil of tarred rope with a snap
+      at one end, hangs on its peg beside it. The weir itself is out through the door to the
+      north.
+    objects: [flood_book, weir_iron, life_line]
+    exits:
+      - { direction: north, to: weir_head }
+
+  - id: weir_head
+    name: "The Weir-Head"
+    description: >
+      The head of the weir, the black water sliding over the lip a hand's breadth from the
+      top and rising. Here the head-rack — the iron grating that should comb the drift from
+      the race — stands jammed solid with a winter's worth of broken branches and weed, and
+      until it is cleared the water has nowhere to go but up and over. The weir-iron will work
+      it, set right. Beyond the rack the storm-walk runs out north across the spillway; the
+      lodge is back to the south.
+    variants:
+      - when: [{ has_flag: rack_freed }]
+        text: >
+          The head of the weir. The head-rack stands clear now, the drift dragged out of it
+          and the first of the water drawing down through the bars instead of climbing the lip.
+          The storm-walk runs out north across the spillway; the lodge is back to the south.
+    objects: [head_rack]
+    exits:
+      - { direction: south, to: keeper_lodge }
+      - direction: north
+        to: weir_walk
+        conditions: [{ has_flag: rack_freed }]
+        locked_msg: "The jammed head-rack has the head of the weir choked and awash; you cannot get out onto the spillway-walk until it is cleared."
+
+  - id: weir_walk
+    name: "The Storm-Walk"
+    description: >
+      A single plank-walk runs out across the spillway, no rail to it and the flood sheeting
+      over the boards inches deep, hammering at your shins and trying to take your feet from
+      under you. One slip here and the race has you, and the race does not give a man back.
+      The life-line's snap will catch the run-wire strung the length of it — clip on and go
+      steady and you cross; go cold and rash and the water decides. The far side and the
+      race-house lie north; the weir-head is back to the south.
+    variants:
+      - when: [{ has_flag: walk_crossed }]
+        text: >
+          The plank-walk across the spillway, crossed now, your line still snapped to the
+          run-wire and trailing back the way you came. The race-house is just north; the
+          weir-head is back to the south.
+    objects: [walk_span]
+    exits:
+      - { direction: south, to: weir_head }
+      - direction: north
+        to: race_house
+        conditions: [{ has_flag: walk_crossed }]
+        locked_msg: "The spillway-walk is still ahead of you, awash and uncrossed; the race-house lies beyond it."
+
+  - id: race_house
+    name: "The Relief-Race House"
+    description: >
+      A low stone house over the relief-race — the second channel that carries the flood off
+      safe around the valley, shut now behind a great winch-gate that has seized in its frame
+      with rust and the swelling of the wet. Get the winch turning and the race opens and the
+      weir is saved; the weir-iron will give you the purchase, but it will want a stubborn
+      back. The walk is back to the south.
+    variants:
+      - when: [{ has_flag: race_open }]
+        text: >
+          The race-house, the great winch-gate hauled up in its frame and the relief-race
+          running full and white beneath the floor, carrying the flood off safe. The way on
+          lies north to the valley-rim; the walk is back to the south.
+    objects: [race_winch]
+    exits:
+      - { direction: south, to: weir_walk }
+      - direction: north
+        to: valley_held
+        conditions: [{ has_flag: race_open }]
+        locked_msg: "The relief-race is still shut behind its seized winch-gate; until it runs you have done nothing, and the water still climbs the weir."
+
+  - id: valley_held
+    name: "The Valley-Rim, at Dawn"
+    description: >
+      The rim above the valley, and the first grey of dawn coming up cold over it. Below you
+      the weir holds — the head-rack combing the drift, the relief-race running full and white
+      around the valley's edge — and the water that meant to drown the sleeping farms is going
+      off harmless down the second channel instead. The river has crested and is falling. The
+      race-house is back to the south.
+    # The locomotion win (visited: valley_held), like wolf_winter's cattle and the Beacon's
+    # crown: the +15 capstone rides reaching the rim with the weir held (the chained exit
+    # gates make that reachable only with all three obstacles cleared), so the full 50
+    # coincides with the valley being saved, never before. SCORE_PEAKS_BEFORE_WIN does not
+    # fire on a navigation win (bug_0116).
+    on_enter:
+      - add_journal: "The river has crested and is falling, and the weir holds; the valley below sleeps on, dry and safe in the first grey light."
+      - inc_var: { name: score, by: 15 }
+    exits:
+      - { direction: south, to: race_house }
+
+objects:
+  - id: flood_book
+    name: "flood-book"
+    aliases: [book, floodbook, log, journal, marks, tally, notice]
+    description: "Pell's flood-book on the table, the rising marks scrawled down the margin in a keeper's hard hand, the last of them near the top of the page."
+    read_text: >
+      The last marks read: 'WATER OVER THE WINTER LINE AND STILL CLIMBING. THREE THINGS HOLD
+      THE WEIR AND ALL THREE ARE AGAINST US TONIGHT — THE HEAD-RACK CHOKED, THE STORM-WALK
+      AWASH, THE RELIEF-RACE SEIZED SHUT. TAKE THE WEIR-IRON FOR THE RACK AND THE WINCH, AND
+      THE LIFE-LINE FOR THE WALK, AND DO NOT SET FOOT ON THAT WALK TILL PELL HAS TOLD YOU HOW
+      A MAN CROSSES IT — IT IS THE ONE PLACE OUT THERE THAT KILLS. CLEAR THE RACK, CROSS THE
+      WALK, OPEN THE RACE, AND HOLD THE WEIR TILL DAWN. — the weir is the valley.'
+    interactions:
+      - verb: READ
+        target: flood_book
+        conditions: [{ not_flag: read_marks }]
+        effects:
+          - set_flag: read_marks
+          - inc_var: { name: score, by: 5 }
+
+  - id: weir_iron
+    name: "weir-iron"
+    aliases: [iron, bar, pry, prybar, crowbar, lever]
+    description: "Pell's weir-iron, a long pry-bar worn bright at the grip — the tool he works the weir's gates and grating with. A lever and a pry, in a strong and knowing hand."
+    takeable: true
+
+  - id: life_line
+    name: "life-line"
+    aliases: [line, lifeline, rope, cord, snap]
+    description: "A coil of tarred rope with an iron snap spliced at one end — the keeper's life-line, made to clip onto the run-wire strung the length of the storm-walk so the flood cannot take a man off the boards."
+    takeable: true
+
+  - id: head_rack
+    name: "jammed head-rack"
+    aliases: [rack, grating, grate, head, drift]
+    description: "The iron head-rack, choked solid with a winter's drift — branches and weed and a drowned hurdle, all of it packed hard by the press of the water. Set the weir-iron behind the worst of the jam and lever it: the drift will come away by degrees, and the more you clear the faster the rest will shift. Patience and leverage, not brute strength."
+    variants:
+      - when: [{ has_flag: rack_freed }]
+        text: "The head-rack, dragged clear of its drift now, the water drawing down through the bars in a steady comb instead of climbing the lip."
+    takeable: false
+    interactions:
+      # craft skill check (the §13 RPG mechanic, sunken_barrow's slab shape). Tool-on-target
+      # USE — the RPG runner requires the player to HOLD the item (runner.ts), so every skill
+      # check here is "weir-iron / life-line on <obstacle>". RETRYABLE and NON-LETHAL: on a
+      # failed roll the rack simply does not give yet (no death, no penalty), so a player can
+      # never be hard-locked out — leverage and persistence always clear it (the bug_0027
+      # honesty discipline: the failure prose reads as repeatable progress, not a missing
+      # tool or a strength wall). One-shot award: gated none_of rack_freed, so the +10 cannot
+      # be farmed by re-levering an already-clear rack.
+      - verb: USE
+        item: weir_iron
+        target: head_rack
+        command_verb: free
+        command_template: "free {target} with {item}"
+        conditions: [{ none_of: [{ has_flag: rack_freed }] }]
+        skill_check:
+          skill: craft
+          difficulty: 9
+          on_success:
+            - set_flag: rack_freed
+            - inc_var: { name: score, by: 10 }
+            - add_journal: "You set the weir-iron behind the jam and work it; the packed drift comes away in a rush and the water drops down through the cleared rack at last."
+            - narrate: "You wedge the weir-iron behind the worst of the jam and throw your weight on it. The drift gives — first a branch, then the whole packed mass of it sliding free — and the head-rack stands clear, the water combing down through the bars instead of climbing the lip."
+          on_failure:
+            - narrate: "The iron bites and a tangle of drift tears loose, but the jam packs back in behind it almost as fast. It IS coming away — no greater strength or other tool is wanting, only to keep at it. Reset the bar behind the next of it and lever again."
+
+  - id: walk_span
+    name: "storm-walk"
+    aliases: [walk, span, plank, boards, planks, spillway, runwire, wire]
+    description: "The plank-walk out across the spillway, the flood sheeting over it and no rail to hand. The run-wire is strung taut down its length at waist height; clip the life-line's snap to it before you trust a foot to the boards, and cross low and steady. Cross it cold — rash and unsteadied — and one slip puts you in the race, and the race keeps what it takes."
+    variants:
+      - when: [{ has_flag: walk_crossed }]
+        text: "The plank-walk across the spillway, crossed now and your line still trailing from the run-wire — slick and awash, but behind you."
+    takeable: false
+    interactions:
+      # nerve skill check — the ONE LETHAL obstacle (the pack's prep-vs-gamble identity, the
+      # wolf_winter/bug_0114 contract transposed to a skill check). Tool-on-target USE: the
+      # life-line must be HELD to attempt the crossing at all (you cannot clip on without it),
+      # so the death is reachable only by a held-line player who fails the roll. NON-retryable:
+      # on_failure ends the game (ending_swept) — a slip into the race is final. Gated none_of
+      # walk_crossed so a re-USE after success cannot re-roll a fatal fall on an already-crossed
+      # walk. DC 9 vs nerve: base nerve 3 needs d20>=6 (~75%, a real gamble); Pell's +5 counsel
+      # lifts nerve to 8 so the WORST roll still passes (1+8>=9) — heeding him makes the
+      # crossing safe, exactly the load-bearing prep the prose promises. No score on the fatal
+      # branch (score-economy bracket rule); the +10 rides the safe crossing only.
+      - verb: USE
+        item: life_line
+        target: walk_span
+        command_verb: rig
+        command_template: "rig {target} with {item}"
+        conditions: [{ none_of: [{ has_flag: walk_crossed }] }]
+        skill_check:
+          skill: nerve
+          difficulty: 9
+          on_success:
+            - set_flag: walk_crossed
+            - inc_var: { name: score, by: 10 }
+            - add_journal: "Clipped to the run-wire and going low and steady the way Pell told you, you cross the awash spillway-walk and reach the far side with the race grasping at your heels."
+            - narrate: "You snap the life-line to the run-wire and go out low, hands on the wire, feet feeling the slick boards under the sheeting water. The race claws at your shins and once your foot skates and the line takes your weight — but you keep your head and your nerve and come off the far end of the walk on solid stone, the spillway behind you."
+          on_failure:
+            - add_journal: "Out on the awash spillway-walk your nerve broke at the wrong instant; a slipped foot, a snatched breath, and the race took you off the boards and was gone with you under the weir."
+            - narrate: "You go out onto the boards too high and too quick, and halfway across the flood takes your feet from under you. The snap-line was never clipped right in your haste; the run-wire whips past your grasping hand, and the race has you, and the cold black water folds over your head and carries you down under the weir."
+            - end_game: ending_swept
+
+  - id: race_winch
+    name: "seized winch-gate"
+    aliases: [winch, gate, wheel, crank, race]
+    description: "The relief-race winch-gate, seized fast in its frame with rust and the swell of the wet timber. Set the weir-iron through the spokes of the winch-wheel for a long lever and throw your back into it: it may break free on the first heave or take several, but it is leverage and a stubborn back that frees it, not raw muscle alone."
+    variants:
+      - when: [{ has_flag: race_open }]
+        text: "The winch-gate, hauled up and made fast in its frame, the relief-race running full and white beneath the floor."
+    takeable: false
+    interactions:
+      # might skill check — the third obstacle, RETRYABLE and NON-LETHAL like the rack (a
+      # seized winch is honest work, not a killer). Tool-on-target USE (weir-iron held). The
+      # failure prose reads as repeatable progress (bug_0027), so persistence always opens the
+      # race and the valley can never be hard-locked off. One-shot +10 (gated none_of race_open).
+      - verb: USE
+        item: weir_iron
+        target: race_winch
+        command_verb: heave
+        command_template: "heave {target} with {item}"
+        conditions: [{ none_of: [{ has_flag: race_open }] }]
+        skill_check:
+          skill: might
+          difficulty: 9
+          on_success:
+            - set_flag: race_open
+            - inc_var: { name: score, by: 10 }
+            - add_journal: "With the weir-iron through the spokes for a lever you break the seized winch free and haul the gate up; the relief-race opens with a roar and the flood begins to run off safe around the valley."
+            - narrate: "You run the weir-iron through the winch-spokes and set your whole weight to it. For a long moment nothing — then, with a crack of breaking rust, the wheel turns, and turns again, and the gate grinds up in its frame. The relief-race opens with a white roar beneath the floor and takes the climbing flood off down its channel."
+          on_failure:
+            - narrate: "The wheel grinds a hand's turn and the rust catches it again. It IS shifting — no stronger man or other tool is wanting, only to keep the lever working. Reset the iron in the spokes and heave again; the seize is breaking."
+
+# No NPC combat counsel here — Pell is a weir-keeper, not a war-captain. His one
+# load-bearing counsel (ask_walk, +5 nerve) is what makes the lethal storm-walk safe; his
+# second topic (ask_weir) is pure lore/plan with no buff (the wolf_winter Cade shape:
+# one mechanical topic, one lore topic, an ungated leave to keep the root TERMINATING so
+# DIALOGUE_NONTERMINATING cannot fire). Every npc_text is PURE SPOKEN words (bug_0071): the
+# engine renders `old Pell the weir-keeper: "<npc_text>"`.
+npcs:
+  - id: pell
+    name: "old Pell the weir-keeper"
+    description: >
+      The old weir-keeper, laid out on the cot with his leg splinted and his face grey with
+      the pain of it, but clear-eyed and urgent — forty winters on this weir and he knows to
+      the inch what the river means to do tonight, and that he cannot get up to stop it himself.
+    room: keeper_lodge
+    dialogue:
+      root: pell_root
+      nodes:
+        - id: pell_root
+          npc_text: >
+            Thank God someone came. I can't stand on this leg, let alone work the weir, and she's
+            going to top before dawn and drown the whole valley if she's let. You'll have to be
+            the keeper tonight, lad. Ask me what you need — I know this weir better than I know my
+            own hands, and I'll tell you all of it, but be quick.
+          topics:
+            - id: ask_walk
+              prompt: "Ask how a man crosses the storm-walk and lives."
+              conditions: [{ not_flag: heard_walk }]
+              goto: pell_walk
+            - id: ask_weir
+              prompt: "Ask how the weir is to be held tonight."
+              conditions: [{ not_flag: heard_plan }]
+              goto: pell_weir
+            - id: leave_pell
+              prompt: "Take up the tools and go to the weir."
+              end: true
+        - id: pell_walk
+          # The load-bearing counsel — and TRUE: with +5 nerve the DC-9 crossing passes on the
+          # WORST roll (1+8>=9), so a player who heeds Pell crosses safe, and one who skips this
+          # goes onto a killing walk under-steadied (base nerve 3, ~75%). Pell names plainly that
+          # the line is what keeps you ON the walk and a steady nerve is what keeps you UPRIGHT —
+          # both, and the honest stakes (the race keeps what it takes). No over-promise (bug_0132):
+          # he says heeding him makes it safe, not that the walk is harmless.
+          npc_text: >
+            The storm-walk is the one place out there that kills, so hear me before you set a foot
+            on it. First the line — clip the snap to the run-wire before you leave the stone, and
+            never unclip till you're across; the wire is what keeps the race from taking you if you
+            go down. Then your nerve — go LOW, both hands on the wire, and slide your feet, don't
+            step; the flood wants to hurry you and hurrying is what drowns men out there. Do it that
+            way, clipped and low and steady, and the walk's no danger to you at all. Go out cold and
+            rash, upright and quick to be done with it, and it's the race that decides, not you —
+            and the race gives nothing back.
+          effects:
+            - set_flag: heard_walk
+            - inc_var: { name: nerve, by: 5 }
+            - add_journal: "Pell shows you how a keeper crosses the storm-walk — clipped to the run-wire, low, both hands on the wire, sliding your feet — and your nerve settles for it (+5 nerve)."
+          topics:
+            - id: walk_back
+              prompt: "Nod, and ask something else."
+              goto: pell_root
+        - id: pell_weir
+          npc_text: >
+            Three things hold this weir and all three are against you tonight. The head-rack at the
+            top is choked with drift — clear it with the iron or the water's nowhere to go but over.
+            Then the storm-walk, which I've told you of. Then the relief-race, shut behind its winch
+            down in the race-house — get that open and the flood runs off safe around the valley and
+            you've won. Take my weir-iron for the rack and the winch, and the life-line for the walk,
+            and work it in order: rack, walk, race. The rack and the winch are only seized — stubborn,
+            not deadly; keep at them and they'll come. It's the walk that wants your care.
+          effects:
+            - set_flag: heard_plan
+            - add_journal: "Pell lays out the night: clear the choked head-rack, cross the storm-walk, open the seized relief-race — rack, walk, race, in that order — the iron for the rack and winch, the line for the walk."
+          topics:
+            - id: weir_back
+              prompt: "Thank him, and ask something else."
+              goto: pell_root
+
+# The defining line of this pack: no enemies. The whole challenge is the skill-check chain
+# above. The RPG validator runs cleanly with an empty enemy set (mode is detected by the
+# PRESENCE of the `enemies` key, src/mcp/types.ts), and the combat-winnability / gauntlet
+# bounds simply have nothing to prove — only the skill-check passability bound (each DC <=
+# 20 + best reachable skill) and the parser-layer soundness apply.
+enemies: []
+
+win_conditions:
+  # Locomotion win, like wolf_winter (visited: cattle_stand) and the Beacon (visited:
+  # beacon_crown): reaching the valley-rim — only possible once all three obstacles are
+  # cleared (the chained exit gates) — fires the win via the engine's post-action checkWin.
+  # SCORE_PEAKS_BEFORE_WIN does not fire on a navigation win (bug_0116), and the +15 capstone
+  # is the accepted denouement-step.
+  - id: hold_the_weir
+    conditions: [{ visited: valley_held }]
+    ending: ending_held
+
+endings:
+  - id: ending_held
+    title: "The Weir Holds"
+    text: >
+      The dawn comes up grey and cold over a valley still asleep, and below you the weir holds:
+      the head-rack combing the drift, the relief-race running full and white around the valley's
+      rim, the killing water going off harmless down the second channel. The farms will wake to a
+      high brown river and never know how near a thing it was in the dark. Down in the lodge old
+      Pell is listening to the change in the water's voice, and he does not need to be told.
+      *** You have won. ***
+  - id: ending_swept
+    title: "The Race Takes You"
+    text: >
+      The black water folds over your head and the weir's roar goes muffled and far, and the
+      relief-race carries you down and away into the dark under the weir. Up at the head the
+      water finds the unwatched lip and begins, at last, to go over — and below, in the sleeping
+      valley, the first of the farms will wake to it too late. The weir wanted a keeper tonight,
+      and the storm-walk takes the ones who do not heed it. *** You have fallen. ***
+    death: true

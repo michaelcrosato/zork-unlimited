@@ -16,7 +16,7 @@ One comparable number per split: `Score` is the mean over the split's packs of e
 
 | Split | Packs | Completion | Ending cov | Scene cov | **Score** |
 | --- | --: | --: | --: | --: | --: |
-| curated | 13 | 24.2% | 26.9% | 68.8% | **40.0%** |
+| curated | 14 | 22.4% | 25.0% | 66.7% | **38.1%** |
 | held-out | 12 | 1.7% | 23.6% | 69.9% | **31.7%** |
 
 ## Per-pack rows
@@ -50,6 +50,9 @@ One comparable number per split: `Score` is the mean over the split's packs of e
 | sealed_crypt_v1 | parser | coverage | shown | curated | 0.0% | 0/3 | 0.0% | 30.0% | — |
 | sealed_crypt_v1 | parser | coverage | hidden | curated | 0.0% | 0/3 | 0.0% | 10.0% | — |
 | sealed_crypt_v1 | parser | random | shown | curated | 0.0% | 0/3 | 0.0% | 90.0% | — |
+| breaking_weir_v1 | rpg | coverage | shown | curated | 0.0% | 0/2 | 0.0% | 40.0% | — |
+| breaking_weir_v1 | rpg | coverage | hidden | curated | 0.0% | 0/2 | 0.0% | 20.0% | — |
+| breaking_weir_v1 | rpg | random | shown | curated | 6.0% | 2/2 | 100.0% | 100.0% | 33.7 |
 | cold_forge_v1 | rpg | coverage | shown | curated | 0.0% | 0/2 | 0.0% | 50.0% | — |
 | cold_forge_v1 | rpg | coverage | hidden | curated | 0.0% | 0/2 | 0.0% | 16.7% | — |
 | cold_forge_v1 | rpg | random | shown | curated | 8.0% | 1/2 | 50.0% | 83.3% | 51.0 |
