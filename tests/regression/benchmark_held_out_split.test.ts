@@ -91,8 +91,11 @@ describe("benchmark scorecard — held-out corpus split", () => {
     expect(md).toContain("| Pack | Mode | Strategy | Graph | Split |");
     expect(md).toContain("| held-out |");
     expect(md).toContain("| curated |");
-    // One table row per scored cell across BOTH splits (plus the header row).
-    const tableRows = md.split("\n").filter((l) => l.startsWith("| ") && !l.includes("---"));
+    // One table row per scored cell across BOTH splits (plus the header row),
+    // counted within the per-pack section so the headline summary table above it
+    // is not miscounted as data rows.
+    const perPack = md.slice(md.indexOf("## Per-pack rows"));
+    const tableRows = perPack.split("\n").filter((l) => l.startsWith("| ") && !l.includes("---"));
     expect(tableRows.length).toBe(card.rows.length + 1);
   });
 });

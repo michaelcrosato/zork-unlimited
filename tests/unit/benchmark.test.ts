@@ -100,8 +100,10 @@ describe("buildScorecard()", () => {
     expect(md).toContain("| shown |");
     // A 0%-completion row renders turns-to-end as a dash, not a misleading "0.0".
     if (card.rows.some((r) => r.completed === 0)) expect(md).toContain("| — |");
-    // One table row per scored cell (plus header + separator).
-    const tableRows = md.split("\n").filter((l) => l.startsWith("| ") && !l.includes("---"));
+    // One table row per scored cell (plus header), counted within the per-pack
+    // section so the headline summary table above it is not miscounted as data rows.
+    const perPack = md.slice(md.indexOf("## Per-pack rows"));
+    const tableRows = perPack.split("\n").filter((l) => l.startsWith("| ") && !l.includes("---"));
     expect(tableRows.length).toBe(card.rows.length + 1); // +1 header
   });
 });

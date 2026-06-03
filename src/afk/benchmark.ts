@@ -78,12 +78,49 @@ export type BenchmarkRow = {
 /** A scored configuration: one play strategy, with the room graph shown or hidden. */
 export type BenchmarkCell = { strategy: "coverage" | "random"; hide_graph: boolean };
 
+/**
+ * The rolled-up headline figure for one split (curated vs held-out), aggregated over
+ * the PRIMARY baseline cell only (coverage / graph shown — see `PRIMARY_CELL`). The
+ * benchmark thesis (ULTRAPLAN 2026-06-02) names "a single, comparable NUMBER per
+ * (pack, agent)" as the precondition for a benchmark at all; the per-row table is the
+ * evidence, but a reader still has to mean ~30 rows by hand to get the figure the
+ * thesis says the benchmark "ultimately reports". This is that figure, computed
+ * deterministically so the held-out (contamination-free) signal is reported as one
+ * number beside the curated baseline rather than left implicit in the table.
+ */
+export type BenchmarkSummary = {
+  split: "curated" | "held_out";
+  /** The cell this summary aggregates (the documented baseline). */
+  strategy: "coverage" | "random";
+  hide_graph: boolean;
+  /** Packs in this split scored under the primary cell. */
+  packs: number;
+  mean_completion_rate: number;
+  mean_ending_coverage: number;
+  mean_scene_coverage: number;
+  /**
+   * The composite 0–1 benchmark score: the mean over this split's packs of each
+   * pack's own mean of (completion_rate, ending_coverage, scene_coverage). One
+   * comparable number per (agent, split) — the headline the thesis calls step one.
+   * The three TextQuests-style progress/coverage fractions are equally weighted;
+   * `mean_turns_to_end` is deliberately excluded (an efficiency axis on a different,
+   * un-normalised scale, not a 0–1 progress fraction).
+   */
+  score: number;
+};
+
 export type Scorecard = {
   generated_by: string;
   agent: string;
   runs_per_cell: number;
   cells: BenchmarkCell[];
   rows: BenchmarkRow[];
+  /**
+   * Per-split headline aggregates over the primary baseline cell, curated split
+   * before held-out. Empty when the primary cell was not among the scored cells
+   * (e.g. a custom `--cells` run) — the per-row table is always authoritative.
+   */
+  summary: BenchmarkSummary[];
   /** Packs that could not be scored (e.g. failed to run), with the reason. */
   skipped: { pack: string; reason: string }[];
 };
@@ -108,8 +145,55 @@ const DEFAULT_CELLS: BenchmarkCell[] = [
   { strategy: "coverage", hide_graph: true },
 ];
 
+/**
+ * The cell the headline summary aggregates: the coverage bot with the room graph
+ * SHOWN. This is the canonical baseline — `random` is graph-agnostic noise and the
+ * `hidden` row is an auxiliary spatial-difficulty axis, so neither is the figure a
+ * model is primarily compared against. Aggregating one well-defined cell keeps the
+ * single number meaning the same thing for every agent.
+ */
+const PRIMARY_CELL: BenchmarkCell = { strategy: "coverage", hide_graph: false };
+
 const r3 = (n: number): number => Math.round(n * 1000) / 1000;
 const ratio = (num: number, den: number): number => (den > 0 ? r3(num / den) : 1);
+
+/** A row's composite progress score: the equal-weight mean of its three 0–1 fractions. */
+const rowScore = (r: BenchmarkRow): number =>
+  (r.completion_rate + r.ending_coverage + r.scene_coverage) / 3;
+
+const mean = (xs: number[]): number =>
+  xs.length > 0 ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
+
+/**
+ * Roll the primary-cell rows up into one headline figure per split. Curated before
+ * held-out (matching the row ordering); a split with no primary-cell rows is omitted.
+ */
+function summarize(rows: BenchmarkRow[]): BenchmarkSummary[] {
+  const out: BenchmarkSummary[] = [];
+  for (const [split, heldOut] of [
+    ["curated", false],
+    ["held_out", true],
+  ] as const) {
+    const cellRows = rows.filter(
+      (r) =>
+        r.held_out === heldOut &&
+        r.strategy === PRIMARY_CELL.strategy &&
+        r.hide_graph === PRIMARY_CELL.hide_graph,
+    );
+    if (cellRows.length === 0) continue;
+    out.push({
+      split,
+      strategy: PRIMARY_CELL.strategy,
+      hide_graph: PRIMARY_CELL.hide_graph,
+      packs: cellRows.length,
+      mean_completion_rate: r3(mean(cellRows.map((r) => r.completion_rate))),
+      mean_ending_coverage: r3(mean(cellRows.map((r) => r.ending_coverage))),
+      mean_scene_coverage: r3(mean(cellRows.map((r) => r.scene_coverage))),
+      score: r3(mean(cellRows.map(rowScore))),
+    });
+  }
+  return out;
+}
 
 /** Build the scorecard by playing every playable pack with the deterministic bot. */
 export function buildScorecard(opts: BenchmarkOptions): Scorecard {
@@ -206,6 +290,7 @@ export function buildScorecard(opts: BenchmarkOptions): Scorecard {
     runs_per_cell: runs,
     cells,
     rows,
+    summary: summarize(rows),
     skipped,
   };
 }
@@ -240,6 +325,30 @@ export function renderMarkdown(card: Scorecard): string {
   lines.push(
     "The `Split` column marks whether the pack is `curated` (an authored disk pack under content/*/pack) or `held-out` (a procedurally-generated pack sealed under corpus/ that no external agent or training set could have seen). The held-out rows are the contamination-free signal the benchmark ultimately reports — measured through the identical bot and cells, so they are directly comparable to the curated baseline.",
   );
+  lines.push("");
+
+  // The headline: roll the per-split rows up into the single comparable number the
+  // benchmark thesis names as step one, so the contamination-free held-out score is
+  // reported as a figure rather than left to be averaged out of the table by hand.
+  const [primary] = card.summary;
+  if (primary) {
+    lines.push("## Headline");
+    lines.push("");
+    lines.push(
+      `One comparable number per split: \`Score\` is the mean over the split's packs of each pack's mean of (completion, ending coverage, scene coverage), scored on the baseline \`${primary.strategy}\` strategy with the graph shown. The \`held-out\` score is the contamination-free figure the benchmark ultimately reports.`,
+    );
+    lines.push("");
+    lines.push("| Split | Packs | Completion | Ending cov | Scene cov | **Score** |");
+    lines.push("| --- | --: | --: | --: | --: | --: |");
+    for (const s of card.summary) {
+      lines.push(
+        `| ${s.split === "held_out" ? "held-out" : "curated"} | ${s.packs} | ${pct(s.mean_completion_rate)} | ${pct(s.mean_ending_coverage)} | ${pct(s.mean_scene_coverage)} | **${pct(s.score)}** |`,
+      );
+    }
+    lines.push("");
+  }
+
+  lines.push("## Per-pack rows");
   lines.push("");
   lines.push(
     "| Pack | Mode | Strategy | Graph | Split | Completion | Endings | Ending cov | Scene cov | Turns→end |",
