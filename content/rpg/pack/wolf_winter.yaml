@@ -68,9 +68,10 @@ rooms:
     name: "The Steading Yard"
     description: >
       The yard of a lone hill-steading in the black of a killing winter night. The
-      house is shuttered and dark behind you; somewhere up the high wood a pack is
-      singing, close and getting closer, and down here the cattle have begun to low
-      and shove in their pen. The byre and its yard lie through the gate to the north.
+      house is shuttered and dark behind you and your hunting-spear is already in your
+      fist — the steading's only spear, and yours by trade; somewhere up the high wood a
+      pack is singing, close and getting closer, and down here the cattle have begun to
+      low and shove in their pen. The byre and its yard lie through the gate to the north.
     exits:
       - { direction: north, to: byre_yard }
 
@@ -184,9 +185,10 @@ objects:
     description: "The steading's day-book on its nail by the byre door, the last days' entries scrawled in the houndsman's hard hand."
     read_text: >
       The last entries read: 'SNOW TO THE EAVES, THE HIGH WOOD EMPTY OF DEER. THE PACK
-      IS DOWN ON US — THREE BOLD ONES AT THE PALING, THE OLD GREY BITCH LEADING. SPEAR
-      AND PADDING OR NOTHING: THE BYRE-JERKIN IS IN THE STORE, AND MIND OLD CADE ON HOW A
-      WOLF COMES IN. HOLD THE BYRE TILL DAWN. — the byre is the winter.'
+      IS DOWN ON US — THREE BOLD ONES AT THE PALING, THE OLD GREY BITCH LEADING. THE
+      HUNTER HAS HIS SPEAR ALREADY; WHAT HE LACKS IS THE KNACK OF IT AND A HIDE TO HIS
+      BACK — SO MIND OLD CADE ON HOW A WOLF COMES IN, AND PULL ON THE BYRE-JERKIN FROM
+      THE STORE. BOTH, OR NOTHING. HOLD THE BYRE TILL DAWN. — the byre is the winter.'
     interactions:
       - verb: READ
         target: day_book
@@ -335,7 +337,7 @@ enemies:
     defeat_flag: yearling_down
     death_ending: ending_pulled_down
     on_defeat:
-      - add_journal: "You take the yearling on its rush, the way Cade said, and it goes down in the snow of the breach. The byre runs on north."
+      - add_journal: "You take the yearling on its rush as it commits, and it goes down in the snow of the breach. The byre runs on north."
       - inc_var: { name: score, by: 10 }
   - id: flank_wolf
     name: "flank-wolf"
