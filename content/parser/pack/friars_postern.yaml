@@ -63,8 +63,8 @@ rooms:
     description: >
       A long vaulted gallery, once a cloister-walk and now a run of barred cells.
       Snores drift from the turnkey's lodge to the east; the debtors' commons opens
-      west, a stair climbs up to the old chapel, and steps drop down to the night-
-      gate. Your own cell is back to the south.
+      west, a stair climbs up to the old chapel, and steps drop down to the
+      night-gate. Your own cell is back to the south.
     exits:
       - { direction: south, to: cell }
       - { direction: west, to: commons }
