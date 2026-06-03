@@ -71,6 +71,28 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     expect(() => api().load_game({ pack_path: PARSER, save: forged })).toThrow(SaveIntegrityError);
     expect(() => api().load_game({ pack_path: PARSER, save: forged })).toThrow(/unknown ending/);
   });
+
+  it("parser: a phantom inventory item is a hard SaveIntegrityError (bug_0184)", () => {
+    // A phantom item renders verbatim in the observation and in the INVENTORY
+    // narration, so it is the third "render a nonexistent symbol" hole. The valid
+    // item set (declared objects ∪ add_item targets) is provably complete, so this
+    // id — neither — can never be held legitimately.
+    const forged = forgeSave(PARSER, (s) => {
+      s.inventory = ["no_such_item"];
+    });
+    expect(() => api().load_game({ pack_path: PARSER, save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ pack_path: PARSER, save: forged })).toThrow(/unknown item/);
+  });
+
+  it("CYOA: a phantom inventory item is a hard SaveIntegrityError (bug_0184)", () => {
+    // CYOA has no object namespace, so its only legitimate items are add_item
+    // targets; an arbitrary id is therefore unambiguously forged.
+    const forged = forgeSave(CYOA, (s) => {
+      s.inventory = ["no_such_item"];
+    });
+    expect(() => api().load_game({ pack_path: CYOA, save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ pack_path: CYOA, save: forged })).toThrow(/unknown item/);
+  });
 });
 
 describe("save/load referential integrity — GREEN false-rejection guards", () => {
@@ -81,6 +103,46 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
     const before = a.get_observation({ session_id: game.session_id }).state_hash;
     const saved = a.save_game({ session_id: game.session_id });
     const reloaded = a.load_game({ pack_path: CYOA, save: saved.save });
+    expect(reloaded.state_hash).toBe(before);
+  });
+
+  it("a parser save holding a legitimately TAKEN item still loads (bug_0184 guard)", () => {
+    // The inventory gate must never reject a real declared object the player
+    // picked up. We explore until a take action is offered (the start room may
+    // hold nothing), preferring an unvisited move, so the guard stays robust to
+    // pack edits without reading the YAML.
+    const a = api();
+    const game = a.new_game({ pack_path: PARSER, seed: 1 });
+    const sid = game.session_id;
+    const seenRooms = new Set<string>();
+    let took = false;
+    for (let i = 0; i < 30 && !took; i++) {
+      const obs = a.get_observation({ session_id: sid }).observation as {
+        room: string;
+        exits: { direction: string; to?: string }[];
+        available_actions: { id: string }[];
+      };
+      seenRooms.add(obs.room);
+      const take = obs.available_actions.find((act) => act.id.startsWith("take_"));
+      if (take) {
+        a.step_action({ session_id: sid, action_id: take.id });
+        took = true;
+        break;
+      }
+      // Walk toward an unvisited room (using the exit destinations) to avoid
+      // ping-ponging; fall back to any exit if all neighbours are seen.
+      const exits = obs.exits;
+      const exit = exits.find((e) => e.to !== undefined && !seenRooms.has(e.to)) ?? exits[0];
+      if (!exit) break;
+      a.step_action({ session_id: sid, action_id: `go_${exit.direction}` });
+    }
+    expect(took, "should reach a takeable item within 30 steps").toBe(true);
+    const before = a.get_observation({ session_id: sid }).state_hash;
+    const saved = a.save_game({ session_id: sid });
+    // Sanity: the save really carries a held item (so the gate is exercised).
+    const bundle = JSON.parse(saved.save) as { state: { inventory: string[] } };
+    expect(bundle.state.inventory.length).toBeGreaterThan(0);
+    const reloaded = a.load_game({ pack_path: PARSER, save: saved.save });
     expect(reloaded.state_hash).toBe(before);
   });
 

@@ -138,10 +138,34 @@ function buildObsFor(
  * scene; the valid sets fold in `terminalIds` so those real saves still load.
  * Parser/RPG keep the player in a room at end_game, so their `current` is always
  * a room id and their `endingId` a declared ending.
+ *
+ * `inventory` is the third rendered referential field (bug_0184): a phantom item
+ * id surfaces verbatim in the observation and in the `INVENTORY` narration ("You
+ * are carrying: <phantom>"), so an un-gated forged save shows the player a symbol
+ * the pack never declares — the same "render a nonexistent symbol" hole bug_0183
+ * closed for `current`. The valid item set is PROVABLY COMPLETE, so gating it can
+ * never false-reject a legitimate save: an item can only enter inventory via a
+ * parser/RPG `TAKE` (which only succeeds for a DECLARED object, legal_actions.ts)
+ * or an `add_item` effect — so `declared objects ∪ every add_item target in the
+ * pack` is exactly the set a real playthrough could ever hold. CYOA has no object
+ * namespace, so its legitimate items are the add_item targets alone.
  */
+function collectAddItemTargets(node: unknown, acc: Set<string>): Set<string> {
+  if (Array.isArray(node)) {
+    for (const el of node) collectAddItemTargets(el, acc);
+  } else if (node !== null && typeof node === "object") {
+    for (const [k, v] of Object.entries(node)) {
+      if (k === "add_item" && typeof v === "string") acc.add(v);
+      collectAddItemTargets(v, acc);
+    }
+  }
+  return acc;
+}
+
 function assertLoadedStateRefs(mode: PackMode, index: AnyIndex, state: GameState): void {
   let locations: Set<string>;
   let endings: Set<string>;
+  const items = collectAddItemTargets(index.pack, new Set<string>());
   if (mode === "cyoa") {
     const ix = index as CyoaIndex;
     locations = new Set<string>([...ix.scenes.keys(), ...ix.terminalIds]);
@@ -150,6 +174,7 @@ function assertLoadedStateRefs(mode: PackMode, index: AnyIndex, state: GameState
     const ix = index as ParserIndex;
     locations = new Set<string>(ix.rooms.keys());
     endings = new Set<string>(ix.pack.endings.map((e) => e.id));
+    for (const id of ix.objects.keys()) items.add(id);
   }
   if (!locations.has(state.current)) {
     throw new SaveIntegrityError(
@@ -158,6 +183,11 @@ function assertLoadedStateRefs(mode: PackMode, index: AnyIndex, state: GameState
   }
   if (state.endingId !== null && !endings.has(state.endingId)) {
     throw new SaveIntegrityError(`Save references unknown ending "${state.endingId}".`);
+  }
+  for (const id of state.inventory) {
+    if (!items.has(id)) {
+      throw new SaveIntegrityError(`Save references unknown item "${id}".`);
+    }
   }
 }
 
