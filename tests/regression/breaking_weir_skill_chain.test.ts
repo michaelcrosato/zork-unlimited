@@ -123,4 +123,21 @@ describe("bug_0196 — The Breaking Weir: a combatless skill-check chain", () =>
     const endGame = res.effects.find((e) => "end_game" in e) as { end_game?: string } | undefined;
     expect(endGame?.end_game).toBe("ending_swept");
   });
+
+  it("the failure narration is HONEST: the death is nerve breaking, not a line that was 'never clipped' (bug_0200)", () => {
+    // The crossing is reached only via the USE action "rig storm-walk with life-line"
+    // (the life-line must be HELD and is clipped on by the player's own choice). So the
+    // failure prose must not claim the line was never/badly clipped — that contradicts the
+    // chosen action and the failure journal, which attributes the death to nerve breaking.
+    // (Symmetric to bug_0197, which fixed the SAME narration-vs-state flaw on the SUCCESS path.)
+    const pack = loadPack();
+    const check = walkNerveCheck(pack);
+    const narr = check.on_failure
+      .filter((e) => "narrate" in e)
+      .map((e) => (e as { narrate: string }).narrate)
+      .join(" ");
+    expect(narr, "failure narrate must exist").not.toBe("");
+    expect(narr.toLowerCase()).not.toContain("never clipped");
+    expect(narr.toLowerCase()).toContain("nerve"); // the death is nerve failing, honestly
+  });
 });

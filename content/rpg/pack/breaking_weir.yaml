@@ -274,7 +274,7 @@ objects:
             - narrate: "You snap the life-line to the run-wire and go out low, hands on the wire, feet feeling the slick boards under the sheeting water. The race claws at your shins and once your foot skates and the line takes your weight — but you keep your head and your nerve and come off the far end of the walk on solid stone, the spillway behind you."
           on_failure:
             - add_journal: "Out on the awash spillway-walk your nerve broke at the wrong instant; a slipped foot, a snatched breath, and the race took you off the boards and was gone with you under the weir."
-            - narrate: "You go out onto the boards too high and too quick, and halfway across the flood takes your feet from under you. The snap-line was never clipped right in your haste; the run-wire whips past your grasping hand, and the race has you, and the cold black water folds over your head and carries you down under the weir."
+            - narrate: "You clip the life-line to the run-wire and step out — but your nerve fails you, and you go too high and too quick instead of low and steady. Halfway across a foot skates on the slick planking and the flood takes your legs from under you; you grab for the wire and miss, and as the race wrenches you off the boards the snap is torn loose behind you. The cold black water folds over your head and carries you down under the weir."
             - end_game: ending_swept
 
   - id: race_winch
