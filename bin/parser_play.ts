@@ -14,6 +14,7 @@
 import { writeFileSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
+import { pathToFileURL } from "node:url";
 import { makeStep, actionEquals } from "../src/core/engine.js";
 import { evalConditions } from "../src/core/conditions.js";
 import type { Action } from "../src/api/types.js";
@@ -52,7 +53,7 @@ function parseArgs(argv: string[]): Args {
   return { path, seed, commands, record };
 }
 
-function render(obs: ParserObservation): string {
+export function render(obs: ParserObservation): string {
   const lines = [`\n=== ${obs.title} ===`, obs.description.trim()];
   if (obs.dialogue) {
     lines.push(`\n${obs.dialogue.npc}: "${obs.dialogue.npc_text}"`);
@@ -65,6 +66,11 @@ function render(obs: ParserObservation): string {
   if (obs.npcs_present.length)
     lines.push(`Here: ${obs.npcs_present.map((n) => n.name).join(", ")}.`);
   if (obs.exits.length) lines.push(`Exits: ${obs.exits.map((e) => e.direction).join(", ")}.`);
+  // Blocked-exit hints (bug_0201): a way exists here but is currently barred — show
+  // its direction and the author's reason, so a human player (like the agent surface)
+  // can tell a gated-but-present exit from a non-existent one. How to clear it stays
+  // hidden (it is not a selectable command); the structured observation drives this.
+  for (const b of obs.blocked_exits) lines.push(`Blocked (${b.direction}): ${b.message}`);
   if (obs.inventory.length) lines.push(`[carrying: ${obs.inventory.join(", ")}]`);
   if (obs.ended) lines.push(`\n*** ${obs.ending_id} *** — THE END`);
   return lines.join("\n");
@@ -173,7 +179,11 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+// Run only when invoked directly (not when imported for testing the pure render()),
+// mirroring the src/ai-loop.ts entry guard.
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

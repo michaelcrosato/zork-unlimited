@@ -14,6 +14,7 @@
 import { writeFileSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
+import { pathToFileURL } from "node:url";
 import { makeStep, actionEquals } from "../src/core/engine.js";
 import type { Action } from "../src/api/types.js";
 import { loadRpgPackFile } from "../src/rpg/pack.js";
@@ -24,7 +25,7 @@ import { buildRpgObservation, type RpgObservation } from "../src/rpg/observation
 import { parseCommand } from "../src/parser/command_map.js";
 import { recordTrace } from "../src/trace/record.js";
 
-function render(obs: RpgObservation): string {
+export function render(obs: RpgObservation): string {
   const lines = [`\n=== ${obs.title} ===`, obs.description.trim()];
   lines.push(`[HP ${obs.stats.hp}  ATK ${obs.stats.attack}  DEF ${obs.stats.defense}]`);
   if (obs.enemies_present.length)
@@ -32,6 +33,9 @@ function render(obs: RpgObservation): string {
   if (obs.visible_objects.length)
     lines.push(`You see: ${obs.visible_objects.map((o) => o.name).join(", ")}.`);
   if (obs.exits.length) lines.push(`Exits: ${obs.exits.map((e) => e.direction).join(", ")}.`);
+  // Blocked-exit hints (bug_0201) — see bin/parser_play.ts; RpgObservation inherits the
+  // field, so the human RPG surface gets the same "a barred way exists here, because X" cue.
+  for (const b of obs.blocked_exits) lines.push(`Blocked (${b.direction}): ${b.message}`);
   if (obs.inventory.length) lines.push(`[carrying: ${obs.inventory.join(", ")}]`);
   if (obs.ended) lines.push(`\n*** ${obs.ending_id} *** — THE END`);
   return lines.join("\n");
@@ -159,7 +163,11 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+// Run only when invoked directly (not when imported for testing the pure render()),
+// mirroring the src/ai-loop.ts entry guard.
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

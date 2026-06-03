@@ -180,7 +180,14 @@ export class GameSession {
         text: o.dialogue ? `${o.description}\n\n${o.dialogue.npc}: "${o.dialogue.npc_text}"` : o.description,
         choices: o.available_actions.map((a) => ({ id: a.id, label: a.command })),
         inventory: o.inventory,
-        facts: [...o.exits.map((e) => `exit: ${e.direction}`), ...o.visible_objects.map((v) => `here: ${v.name}`)],
+        facts: [
+          ...o.exits.map((e) => `exit: ${e.direction}`),
+          // Blocked-exit hints (bug_0201): a barred way exists here and why — parity with
+          // the agent observation and the CLIs, so the human UI player can tell a
+          // gated-but-present exit from a non-existent one (how to clear it stays hidden).
+          ...o.blocked_exits.map((e) => `blocked: ${e.direction} — ${e.message}`),
+          ...o.visible_objects.map((v) => `here: ${v.name}`),
+        ],
         journal: o.state.journal,
         ended: o.ended,
         endingId: o.ending_id,
@@ -199,6 +206,8 @@ export class GameSession {
         `HP ${o.stats.hp}  ATK ${o.stats.attack}  DEF ${o.stats.defense}`,
         ...o.enemies_present.map((e) => `foe: ${e.name} (HP ${e.hp})`),
         ...o.exits.map((e) => `exit: ${e.direction}`),
+        // Blocked-exit hints (bug_0201): the RPG UI surface gets the same barred-way cue.
+        ...o.blocked_exits.map((e) => `blocked: ${e.direction} — ${e.message}`),
       ],
       journal: o.state.journal,
       ended: o.ended,
