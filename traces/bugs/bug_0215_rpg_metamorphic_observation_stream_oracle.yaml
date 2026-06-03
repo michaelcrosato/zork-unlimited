@@ -1,0 +1,141 @@
+id: bug_0215
+title: "Extended the PER-STEP metamorphic observation-stream oracle to the RPG mode — COMPLETES the CYOA->parser->rpg trilogy bug_0214 named as next-focus #1"
+kind: verification_oracle # metamorphic / isomorphism oracle, additive; the RPG companion to bug_0213 (CYOA) + bug_0214 (parser), and the per-step deepening of the bug_0212 RPG census
+mode: rpg
+# Informational. NO src/ change, NO content change, NO hash re-pin, NO protected file
+# touched. ONE new test file that reuses the existing relabel_rpg.ts + relabel_parser.ts +
+# exhaustive_endings.ts (stateKey) support and the production buildRpgObservation /
+# buildRpgRules / enumerateRpgActions. verify:integrity stays EXIT 0 with no
+# VERIFIER_TOUCHED / GUARD_WEAKENED / HASH_PIN. No pack content_hash, scorecard byte, or
+# corpus seal moves.
+
+summary: >
+  A GAP in the verification net, not a defect in shipped behaviour. The bug_0212 RPG
+  metamorphic census proves an RPG pack and its identifier-relabeled twin are isomorphic on
+  three TERMINAL/AGGREGATE artefacts: the best/worst-roll ending-reachability census, the
+  distinct-state COUNT, and the validateRpg finding-code multiset. Those are end-of-run
+  summaries. They would still pass if the engine emitted subtly DIFFERENT player-facing
+  OBSERVATIONS along the way — a room's description, the enumerated commands, the surfaced
+  flags/vars/inventory, the blocked-exit hints, and the RPG-only surfaces the census never
+  inspects at all: the ENEMIES standing here (id, name, and the live combat HP that ticks
+  down a fight) and the player's STATS (hp/attack/defense) — as long as the same endings
+  stayed reachable and the state graph kept the same size. bug_0215 closes that gap for RPG
+  with a PER-STEP witness: every observation across the bracketed reachable graph must be
+  identical (modulo the bijection) on the twin, completing the CYOA (bug_0213) -> parser
+  (bug_0214) -> rpg per-step observation-stream trilogy.
+
+context: >
+  This is the deferred "extend THIS per-step observation-stream witness to RPG (the last
+  mode; the CYOA->parser->rpg path closes here)" lever named verbatim as bug_0214's
+  next-focus #1. Content is saturated/blind-clean — this cycle's mandated blind pass rotated
+  OFF the assessor's recency-blind rank-1 (lamplighters_round, blind-played clean LAST cycle
+  bug_0214/bug_0210) per [[assessor-blind-pass-rotation]] onto the genuinely most-overdue
+  dedicated-blind target: wolf_winter (RPG, last dedicated pass bug_0195 — older than every
+  other pack's last pass). Fresh general-purpose subagent, no design context, MCP-tools-only,
+  three playthroughs (prepared 50/50 HP22; rushed seed-11 45/50 HP13; unprepared seed-3),
+  clarity 5/5, enjoyment 4/5, mechanics flawless, ZERO bugs
+  (ai-runs/2026-06-03T23-40-52-832Z/playtest.md). Its one design note (the day-book threatens
+  a deadly gamble the average roll rarely enforces) is the KNOWN, already-handled bug_0195
+  property — the day-book was recalibrated to promise a GAMBLE not certain death, and
+  death-reachability is proven by rpg_all_endings_reachable (worst-roll regime) +
+  wolf_winter_prep_is_a_gamble_not_certain_death.test.ts (same rush WINS on best rolls, DIES
+  on worst). A clean pass on a clean pack is the saturation signal, so the cycle spent its
+  lever on the named structural oracle, not on churning a clean pack
+  ([[content-polish-backlog-exhausted]]).
+
+mechanism: >
+  tests/regression/rpg_metamorphic_observation_stream.test.ts — for each shipped RPG pack it
+  relabels the pack into a structurally-isomorphic twin (relabelRpgPack, the existing
+  bug_0212 support: the parser body walk PLUS enemy ids / room / defeat_flag / death_ending /
+  on_defeat, with {score,hp,attack,defense} held fixed) and walks the reachable state graph in
+  LOCK-STEP on the original and the twin. At EVERY state it asserts the twin's production
+  buildRpgObservation equals the original's observation pushed through the relabeling: room id,
+  visible_objects[].id, npcs_present[].id, exits[].to, inventory, the surfaced flag/var names,
+  dialogue.npc, ending/ending_id, every available_actions entry's structured action ids
+  (INCLUDING the RPG-only ATTACK.enemy id and its derived attack_<enemy> id), and the RPG
+  additions enemies_present[].id all mapped through the bijection; the prose (names,
+  descriptions, variant text, npc_text, journal, ending title/text, blocked-exit message, enemy
+  name) and per-action command VOCABULARY left byte-identical; and the NUMBERS —
+  enemies_present[].hp, stats.{hp,attack,defense}, score — left EQUAL. The mid-fight enemy HP is
+  the distinctive RPG surface: it is read from the synthesised __enemy_hp_<id> var (combat.ts),
+  which follows the relabeled enemy id, so a twin that reported a different remaining HP — or
+  surfaced the wrong enemy under its id — diverges loudly here while bug_0212's terminal census
+  stays green. Each action id is re-derived from its mapped structured action by a local
+  rpgOptionId() that mirrors enumerateRpgActions, CROSS-CHECKED against the production id on
+  every original observation. It also asserts ok-PARITY on every explored step under every
+  regime.
+
+oracle: >
+  RPG is NOT fully deterministic — an ATTACK round and a skill check draw from the seeded
+  PRNG, so a single (state, action) resolves many ways and a single-rules lock-step DFS (the
+  parser oracle's shape) is unsound. So, exactly like rpg_all_endings_reachable.test.ts and
+  the bug_0212 census, the walk is computed over the BEST/WORST-roll BRACKET: a BFS over state
+  PAIRS {o, t} steps every explored action under BOTH a best-roll and a worst-roll regime on
+  both packs. The only routing-relevant consequence of a round is monotone in the roll (did the
+  enemy reach 0 HP, did the player reach 0 HP, did the d20 meet the difficulty), so the two
+  extremes bracket every middle outcome and every distinct reachable state — hence every
+  distinct observation — is visited. The legal-action set is rng-INDEPENDENT in every mode, so
+  it is read from the best-roll rules and each action stepped under both regimes (mirroring
+  exhaustiveEndingsMulti reading legalActions from ruleSets[0]). Dedupe is on the ORIGINAL
+  fingerprint stateKey(o) (which covers the __enemy_hp_<id> vars, so two states with the same
+  key share their combat progress); the twin paired with a given original state is
+  path-independent because the relabel is a bijection and corresponding actions are stepped
+  under corresponding regimes, so single-visit dedupe is sound. Within a visited pair the two
+  states were stepped in lock-step, so their order-bearing journals are byte-identical by
+  construction. EXPLORATION uses the LIVENESS policy (skip {DROP,CLOSE,LOOK,INVENTORY,INSPECT}
+  as recursion EDGES; step READ + USE skill-checks + ATTACK); skipped verbs are still
+  observation-CHECKED at every state via the full available_actions comparison, keeping the
+  graph under the 200k cap (a cap-out fails loudly). ORDER NORMALISATION: visible_objects /
+  npcs_present / enemies_present / inventory / state.flags / available_actions compared as SETS
+  via a canonical() re-sort by id applied identically to both sides (a real content divergence
+  still fails; order-bearing journal/exits left in order). mapId is a NON-MUTATING lookup over
+  the frozen bijection (relabeler.map.get(id) ?? id), with score/hp/attack/defense fixed points
+  exactly as the relabeler holds them — an unmapped id is kept as itself and then mismatches the
+  twin's relabeled id, a loud failure rather than a silently-minted matching token.
+
+value: >
+  A deeper, intermediate-state-aware id-invariance witness for RPG that strictly subsumes what
+  the bug_0212 terminal census can see, and the FIRST oracle to check the RPG-only enemy/stat
+  surfaces (mid-fight enemy HP, player stats) per step. (a) Soundness witness for the id-driven
+  design at OBSERVATION granularity: if a future engine/runner change ever made an RPG
+  observation depend on a literal id — an enemy id leaking into rendered text, an attack command
+  ordered or named by id, a wrong enemy surfaced under its hp, a flag surfaced by raw name —
+  bug_0212's census could still pass while THIS diverges loudly at the first affected step.
+  (b) Contamination-robustness witness for the benchmark ([[ultraplan-true-goal-pivot]]) at the
+  granularity a model actually reasons over: a model that "solved" an RPG pack by memorising its
+  id strings (enemy ids, defeat flags) gains nothing at ANY intermediate observation, not merely
+  at the final ending.
+
+scope: >
+  RPG this cycle CLOSES the per-step observation-stream trilogy across all three modes
+  (CYOA bug_0213 / parser bug_0214 / rpg bug_0215), matching the bug_0121 reachability and
+  bug_0209/0211/0212 metamorphic-census CYOA->parser->rpg growth path. Don't re-attempt the
+  per-step observation oracle on any mode — it is now complete.
+
+out_of_band_teeth: >
+  Genuine behavioural witness, not vacuous green. Temporarily making buildParserObservation
+  (which buildRpgObservation builds on) depend on the LITERAL id FORM — appending " [SABOTAGE]"
+  to the room description when `!state.current.startsWith("mx_")`, firing only on original
+  (non-relabeled) room ids — fails ALL FIVE shipped RPG packs (breaking_weir, cold_forge,
+  dawn_beacon, sunken_barrow, wolf_winter): the original's description diverges from the twin's
+  at the first state. Reverting returns 6/6 green (1 discovery guard + 5 packs). The NON-VACUITY
+  guards in the test also prove it is a real metamorphic relation, not a pack compared to
+  itself: the bijection map is non-empty with no id mapping to itself, the RAW (pre-relabel)
+  start observations of original and twin DIFFER, more than one state is compared per pack, and
+  rpgOptionId is cross-checked against the production action ids on every original observation.
+
+regression_test: tests/regression/rpg_metamorphic_observation_stream.test.ts
+
+verification: >
+  npx vitest run rpg_metamorphic_observation_stream → 6 passed (1 discovery guard + 5 RPG packs:
+  breaking_weir, cold_forge, dawn_beacon, sunken_barrow, wolf_winter). Non-vacuity confirmed by
+  the [SABOTAGE] witness above (5/5 fail, then 6/6 green on revert). npm run health GREEN
+  (EXIT 0): verify:integrity OK (no GUARD_WEAKENED / VERIFIER_TOUCHED / HASH_PIN / PROTECTED —
+  only one new test + this trace), typecheck/lint/prettier clean, full suite green (+1 file /
+  +6 cases), all 15 packs validate 0/0, coverage playtest ✓. No pack hash, scorecard byte, or
+  corpus seal moved (no content edit → discovered set unchanged → bug_0194 freshness pin stays
+  green).
+
+files_changed:
+  - tests/regression/rpg_metamorphic_observation_stream.test.ts  # the RPG per-step observation-stream oracle (new)
+  - traces/bugs/bug_0215_rpg_metamorphic_observation_stream_oracle.yaml
