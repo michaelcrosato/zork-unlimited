@@ -3,8 +3,18 @@
  * the room, what's visible, where the exits go, the inventory, and the
  * enumerated legal actions (each with a stable `id`, a human `command`, and the
  * structured `action`). No engine internals leak; internal bookkeeping vars/flags
- * (the `__` convention, e.g. dialogue state) are hidden. Locked exits are simply
- * absent until traversable, so the action set never spoils *how* to open them.
+ * (the `__` convention, e.g. dialogue state) are hidden. Locked exits are absent
+ * from the traversable `exits` list and the action set, so the action set never
+ * spoils *how* to open them.
+ *
+ * A locked exit whose author gave it a `locked_msg`, however, is surfaced as a
+ * `blocked_exits` HINT — its direction and that message — WITHOUT being a
+ * selectable action. This brings the structured observation to parity with the
+ * free-text parser (where attempting a blocked move prints `locked_msg`, see
+ * bin/parser_play.ts): a blind player who reads room prose mentioning a way that
+ * isn't in `exits` ("an archway east, choked with cold") now learns the way exists
+ * and WHY it's blocked, without learning how to clear it (that action stays hidden).
+ * Opt-in per exit: an exit with no `locked_msg` is silent, exactly as before.
  *
  * Difficulty (ULTRAPLAN 2026-06-02 §Week.4): with `hideGraph`, each exit reports
  * only its `direction` and NOT its destination (`to`) — the agent still knows it
@@ -40,6 +50,11 @@ export type ParserObservation = {
   npcs_present: { id: string; name: string }[];
   // `to` is omitted under `hideGraph` (the destination is hidden until traversed).
   exits: { direction: string; to?: string }[];
+  // Currently-blocked exits the author hinted with a `locked_msg`: a "there is a
+  // way here and it's blocked because X" cue, NOT a selectable action (the action
+  // to clear it stays hidden). Only exits whose conditions are unmet AND that carry
+  // a `locked_msg` appear; the destination is never leaked (hideGraph-safe).
+  blocked_exits: { direction: string; message: string }[];
   inventory: string[];
   state: { flags: string[]; vars: Record<string, number>; journal: string[] };
   dialogue: { npc: string; npc_text: string } | null;
@@ -99,6 +114,15 @@ export function buildParserObservation(
         )
         .sort((a, b) => a.direction.localeCompare(b.direction))
     : [];
+  // Blocked-exit hints: an exit whose conditions are NOT met but which the author
+  // gave a `locked_msg`. Never includes traversable exits (those are in `exits`),
+  // and never leaks the destination — only the direction and the authored message.
+  const blockedExits = room
+    ? room.exits
+        .filter((e) => e.locked_msg !== undefined && !evalConditions(e.conditions, state))
+        .map((e) => ({ direction: e.direction, message: e.locked_msg as string }))
+        .sort((a, b) => a.direction.localeCompare(b.direction))
+    : [];
 
   return {
     mode: "parser",
@@ -108,6 +132,7 @@ export function buildParserObservation(
     visible_objects: visObjs,
     npcs_present: npcs,
     exits,
+    blocked_exits: blockedExits,
     inventory: [...state.inventory].sort(),
     state: {
       flags: Object.keys(state.flags)
