@@ -641,8 +641,8 @@ endings:
   - id: ending_poisoned
     title: "Poisoned"
     text: >
-      The black phial was no medicine. The tower goes dark around you. (Load a
-      saved game to try again.)
+      The black phial was no medicine. The tower goes dark around you, and the long
+      sickness it was brewed for is yours now, and quick. *** You have died. ***
     death: true
   - id: ending_master_poisoned
     title: "The Wrong Vial"
@@ -654,8 +654,7 @@ endings:
     text: >
       The black phial was never medicine. The master's struggle ebbs and stops, and
       the tower's long-failing light goes out for good in your hands. You climbed the
-      whole tower to save her, and ended her at the last. (Load a saved game to try
-      again.)
+      whole tower to save her, and ended her at the last. *** You have failed her. ***
     death: true
   - id: ending_betrayal
     title: "The Great Work"
