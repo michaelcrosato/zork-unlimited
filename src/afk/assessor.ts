@@ -23,8 +23,10 @@ import type { CyoaPack } from "../cyoa/schema.js";
 import type { PackMode } from "../mcp/types.js";
 import { generateCyoaPack } from "../gen/cyoa_generator.js";
 import { generateRpgPack } from "../gen/rpg_generator.js";
+import { generateParserPack } from "../gen/parser_generator.js";
 import { validateCyoa } from "../validate/cyoa_validator.js";
 import { validateRpg } from "../validate/rpg_validator.js";
+import { validateParser } from "../validate/parser_validator.js";
 import type { ValidationReport } from "../validate/report.js";
 
 export type Category = "content_fix" | "content_new" | "engine" | "repo";
@@ -420,6 +422,58 @@ export function generatorRpgDriftCandidate(
   };
 }
 
+// ── Parser generator mint-and-check lever (bug_0166) ──────────────────────────
+// The THIRD twin of {@link generatorDriftCandidate} — the lever that completes the
+// generator trilogy on the assessor side. The CYOA generator went core (bug_0156) →
+// MCP (bug_0157) → assessor mint-and-check (bug_0158); the RPG generator went core
+// (bug_0159) → MCP (bug_0160) → assessor mint-and-check (bug_0162); the PARSER generator
+// (src/gen/parser_generator.ts) went core+MCP (bug_0164) and was sealed into the held-out
+// corpus (bug_0163) and scored (bug_0165) — but it never got its per-cycle mint-and-check
+// half. This lands it. Parser owns the STRICTEST validator in the suite (the obtainability
+// fixpoint, soft-lock detection, the WIN_FIRES_AT_START stability proof, and the
+// SCORE_UNREACHABLE economy check ~1200 lines), so until now those checks ran against fresh
+// generated content ONLY via the static 24-seed unit test and the 4-seed sealed corpus —
+// never against the per-cycle MOVING window the CYOA and RPG levers already give. Completing
+// the trilogy makes the per-cycle never-frozen-target property hold for all THREE modes, not
+// two — the memorisable-target condition the frozen-verifier literature warns against
+// (arXiv 2510.14253; [[verifier-assertion-guard]]) closed on the strictest verifier.
+
+/**
+ * The parser generator mint-and-check verdict. Given this cycle's freshly minted-and-validated
+ * generated parser packs, return an improvement candidate IFF the production `validateParser` did
+ * NOT hold on one of them — i.e. a minted pack carries ANY finding (error OR warning), the same
+ * zero-findings bar the curated parser packs and the generator's own test (parser_generator.test.ts)
+ * clear, which INCLUDES the parser-only obtainability / soft-lock / SCORE_UNREACHABLE checks. A
+ * clean sweep returns null (the verifier held on this cycle's parser moving target — the healthy
+ * state, so the lever does NOT mask the 0.5 saturation floor). When it fires it is a genuine,
+ * fixable problem — the parser generator emitted an unclean/unsolvable/score-unreachable shape, OR
+ * the fresh distribution surfaced a verifier gap — scored high so the loop closes the divergence
+ * rather than re-polishing clean prose. Pure (validated checks in, candidate out) so the negative
+ * path unit-tests against the REAL validateParser with no disk and no clock, exactly like
+ * {@link generatorDriftCandidate} and {@link generatorRpgDriftCandidate}.
+ */
+export function generatorParserDriftCandidate(
+  checks: GeneratedPackCheck[],
+): ImprovementCandidate | null {
+  const bad = checks.filter((c) => c.report.findings.length > 0);
+  if (bad.length === 0) return null;
+  return {
+    id: "generator-parser-drift",
+    category: "engine",
+    target: "src/gen/parser_generator.ts",
+    title: `The parser pack generator minted ${bad.length} pack(s) the verifier rejects — the evolving parser eval distribution has drifted from the shipped bar`,
+    rationale:
+      "Evolving the parser eval distribution only works if every minted pack clears the SAME zero-findings bar the curated parser packs do — which for parser includes the strictest checks in the suite: obtainability fixpoint, soft-lock detection, and SCORE-economy soundness (docs/CURRENT_PLAN.md). A generated parser pack the production validateParser flags is a real defect: either the generator emits an unclean/unsolvable/score-unreachable shape, or the fresh distribution has surfaced a verifier gap. Fixing it keeps the parser generator a trustworthy moving target instead of a source of false signal.",
+    evidence: bad.map(
+      (c) =>
+        `seed ${c.seed} (${c.pack_id}): ${c.report.findings.map((f) => `${f.severity}:${f.code}`).join(", ")}`,
+    ),
+    impact: 5,
+    effort: "M",
+    score: score(5, "M", "engine"),
+  };
+}
+
 /**
  * The score at/below which only ROUTINE work remains. The blind-playtest review
  * stubs (the rotation candidates raised for gated/puzzle packs) all land on this
@@ -772,6 +826,26 @@ export function assess(root: string): Assessment {
   );
   const rpgGenDrift = generatorRpgDriftCandidate(rpgGenChecks);
   if (rpgGenDrift) candidates.push(rpgGenDrift);
+
+  // ── eval-distribution: the SAME lever a THIRD mode over — mint-and-check a fresh parser window ──
+  // The parser twin (bug_0166) that completes the generator trilogy on the assessor side. It shares
+  // the SAME advancing `genBase` as the CYOA and RPG levers (so all three stay deterministic for a
+  // snapshot yet sweep a fresh, disjoint window each cycle) but draws from the INDEPENDENT
+  // `generateParserPack`, so it confronts its own never-frozen distribution. This window exercises
+  // the production `validateParser` — the STRICTEST verifier in the suite (obtainability fixpoint,
+  // soft-lock detection, WIN_FIRES_AT_START stability, SCORE_UNREACHABLE economy) — against fresh,
+  // never-seen parser packs, so those checks stop being exercised against generated content only by
+  // the static 24-seed unit test and the 4-seed sealed corpus.
+  const parserGenChecks: GeneratedPackCheck[] = Array.from(
+    { length: GEN_EVAL_CHECK_COUNT },
+    (_, i) => {
+      const seed = genBase + i;
+      const pack = generateParserPack(seed);
+      return { seed, pack_id: pack.meta.id, report: validateParser(pack) };
+    },
+  );
+  const parserGenDrift = generatorParserDriftCandidate(parserGenChecks);
+  if (parserGenDrift) candidates.push(parserGenDrift);
 
   // Deterministic ordering: score desc, then — among equal scores — rotate the
   // blind-playtest pass onto the LEAST-recently-attended pack (never-attended first,
