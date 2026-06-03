@@ -42,8 +42,20 @@ run_agent() {
   if [[ "${AI_LOOP_RUN_AGENT:-1}" != "1" ]]; then echo "AI_LOOP_RUN_AGENT is not 1; prompt is ready at $prompt."; return 0; fi
   cmd="$(agent_cmd)"
   if [[ -z "$cmd" ]]; then echo "No agent available (set AI_AGENT_CMD, e.g. 'claude -p --dangerously-skip-permissions'); evidence-only. Prompt at $prompt."; return 0; fi
-  echo "Agent: $cmd   (prompt: $prompt)"
-  eval "$cmd" < "$prompt"
+  local budget="${AI_AGENT_TIMEOUT_SECONDS:-2400}"
+  echo "Agent: $cmd   (prompt: $prompt, timeout: ${budget}s)"
+  # Bound the agent turn. The loop has NO other recovery for an agent that never
+  # returns (a hung `claude -p` once wedged the loop for ~9h: the circuit breaker
+  # only counts COMPLETED no-progress cycles, so it can't catch a stuck turn). On
+  # timeout, SIGTERM then SIGKILL after a 30s grace; swallow the error so the cycle
+  # proceeds to the verify gates, which decide whether anything is committable (a
+  # timed-out turn that left nothing simply becomes a no-progress cycle).
+  local rc=0
+  timeout --kill-after=30 "$budget" bash -c "$cmd" < "$prompt" || rc=$?
+  if [[ "$rc" -eq 124 || "$rc" -eq 137 ]]; then
+    echo "⏱ Agent exceeded ${budget}s and was terminated — continuing to verify."
+  fi
+  return 0
 }
 
 safe_commit_if_enabled() {
