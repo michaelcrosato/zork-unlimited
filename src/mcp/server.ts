@@ -250,8 +250,14 @@ tool(
 
 tool(
   "adapt_story",
-  "Author a CYOA pack from a premise via the writer→adapter→validator loop (§12.1–3); returns the pack, validation report, and per-beat classification.",
-  { premise: z.string().describe("A one-sentence story premise to author from.") },
+  "Author a pack from a premise via the writer→adapter→validator loop (§12.1–3); returns the pack, validation report, and per-beat classification. `mode` selects the engine mode (cyoa default, parser, or rpg) — the same story is adapted behind that mode's validator.",
+  {
+    premise: z.string().describe("A one-sentence story premise to author from."),
+    mode: z
+      .enum(["cyoa", "parser", "rpg"])
+      .optional()
+      .describe("Engine mode to author for (default cyoa)."),
+  },
   (a) => api.adapt_story(a),
 );
 
