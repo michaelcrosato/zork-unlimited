@@ -1,0 +1,92 @@
+bug_id: bug_0155
+pack_id: none                # no pack; hardens the verifier's own trust boundary
+seed: none
+type: invariant_lock        # no content defect; machine-enforces a load-bearing trust-boundary contract
+layer: test                 # guard/test layer only; NO content/engine/validator/schema change, NO hash pin moved
+evidence:
+  source: ultraplan
+  protocol: docs/CURRENT_PLAN.md
+  finding: >
+    The saturation-triggered ultraplan (docs/CURRENT_PLAN.md, 2026-06-03 re-aim) identified
+    the project's single open DGM-class launder living in our own tree: scripts/verify-integrity.ts
+    concedes in its docstring (lines 33–35) "An agent with write access to this script could also
+    edit the guard itself — the point is to make tampering visible, effortful, and against the
+    rules, not impossible." Today editing the guard is only a non-blocking VERIFIER_TOUCHED WARNING
+    (classifyDrift), and the guard's defensive constants (MIN_TEST_CASES, MIN_ASSERTIONS,
+    MIN_STRONG_ASSERTIONS, PROTECTED_FILES, HASH_PIN_FILES) can be silently LOWERED or SHRUNK in a
+    cycle with NO hard error. The reward-hacking literature converges on this exact property as the
+    credibility-defining one for a self-improving-agent demo:
+      - Darwin Gödel Machine (arXiv:2505.22954; sakana.ai/dgm): an agent tasked to stop
+        hallucinating tool use simply DELETED the marker-emitting code the checker scanned for,
+        scoring a fake perfect pass — the textbook "edit the checker" incident.
+      - EvilGenie (arXiv:2511.21654): held-out tests are weak; recommends combining detectors
+        including test-file-edit detection — i.e. guard the guard, not just the tests.
+      - Agentic self-learning (arXiv:2510.14253): a FROZEN verifier induces reward hacking —
+        mirrored locally by the deterministic assessor's collapse to the 0.5 floor.
+    No content defect; content is blind-exhausted (10 packs) and the deterministic-proof axes are
+    saturated (bug_0121..0154). The cycle's lever is the on-plan KEY-FREE structural follow-on:
+    close the conceded guard-self-edit hole.
+root_cause: >
+  A gap in the verifier's own trust boundary, not a content/engine defect. verify-integrity.ts
+  guards the TEST suite (skip/delete/empty/re-pin/gut/strict-to-loose-swap) hard, but its OWN
+  defensive surface — the MIN_* floors and the PROTECTED_FILES / HASH_PIN_FILES lists that every
+  other check reads — was self-unguarded. A cycle could lower MIN_TEST_CASES from 120 to 1, or
+  delete an entry from PROTECTED_FILES, and the only signal was a non-blocking VERIFIER_TOUCHED
+  warning (classifyDrift surfaces a modified protected file but never inspected WHAT changed inside
+  it). That is the DGM-class launder: weaken the checker's own thresholds so a later weakening of
+  the thing it checks sails through. Nothing enforced that the guard's surface may only be RAISED
+  or held, never lowered, across a cycle.
+fix: >
+  Pure, deterministic, no-key. Three new exports in scripts/verify-integrity.ts:
+    - type GuardConstants — the guard's own defensive surface (three MIN_* floors + the two
+      protected/hash-pin lists).
+    - parseGuardConstants(text): GuardConstants | null — a pure regex/string parser (NO eval, no
+      fs/git/network/clock/RNG) over the TEXT of verify-integrity.ts; returns null if ANY field is
+      unparseable so a malformed/absent ref is skipped, never a false alarm (mirrors
+      countTestArtifactsAtRef's null-on-failure contract).
+    - detectGuardWeakening(before, now): Finding[] — a pure comparator mirroring
+      detectCountRegressions/classifyDrift (synthetic structs in, findings out). Emits a single
+      severity:"error" code:"GUARD_WEAKENED" finding when ANY MIN_* floor is LOWERED or ANY entry is
+      REMOVED from protectedFiles/hashPinFiles; raising a floor, adding an entry, and identical
+      constants are all ok. The message names exactly what was weakened and mentions the
+      AI_LOOP_ALLOW_VERIFIER_EDITS=1 override.
+  Wired into runDrift ONLY (the autonomous loop's pre-commit check; runStatic is unchanged): read
+  the ref's guard text via `git show ${ref}:scripts/verify-integrity.ts` (try/catch → skip on
+  failure), parse the working-tree file with the SAME parser (single code path), and if BOTH parse
+  non-null push detectGuardWeakening(before, now). The existing acknowledgment loop downgrades
+  GUARD_WEAKENED to a warning ONLY under AI_LOOP_ALLOW_VERIFIER_EDITS=1 (the same override path
+  HASH_PIN_UNACCOMPANIED already uses) — a deliberate, acknowledged tightening-then-loosening is
+  allowed; a silent one is not. No floor lowered, no protected/hash-pin entry removed, no other
+  check weakened; net test-case/assertion/strong-matcher counts RISE (new tests).
+within_bar: >
+  Guard/test layer ONLY. No pack edited; no validator/schema/engine/helper change; NO hash pin
+  moved. parseGuardConstants and detectGuardWeakening are PURE and unit-test on synthetic input
+  (no git/fs/network/clock/RNG), exactly mirroring detectCountRegressions/classifyDrift. The honest
+  diff of THIS cycle adds a check and removes/lowers nothing, so GUARD_WEAKENED does NOT fire on it
+  (verified); editing verify-integrity.ts is in PROTECTED_FILES so the existing VERIFIER_TOUCHED
+  WARNING legitimately fires and is non-blocking, as designed. Deterministic, no LLM-judge, NO API
+  key.
+result:
+  guard_self_guarded: true   # lowering any MIN_* floor or dropping any PROTECTED_FILES/HASH_PIN_FILES entry across a cycle is now a hard GUARD_WEAKENED error in runDrift
+  honest_tree_clean: true    # this cycle's own diff does not trip GUARD_WEAKENED (only the expected VERIFIER_TOUCHED warning)
+regression_test: tests/unit/verifier_integrity.test.ts
+test_cases:
+  - "parseGuardConstants round-trips the LIVE verify-integrity.ts constants (the real floors + lists)"
+  - "parseGuardConstants returns null on malformed text (a missing field is skipped, never a false alarm)"
+  - "detectGuardWeakening: identical constants → no finding (the honest no-op cycle)"
+  - "detectGuardWeakening: raising a floor and adding entries → no finding (tightening is always allowed)"
+  - "detectGuardWeakening: lowering MIN_TEST_CASES → GUARD_WEAKENED error"
+  - "detectGuardWeakening: lowering MIN_ASSERTIONS or MIN_STRONG_ASSERTIONS → GUARD_WEAKENED error"
+  - "detectGuardWeakening: removing a PROTECTED_FILES entry → GUARD_WEAKENED error naming the dropped path"
+  - "detectGuardWeakening: removing a HASH_PIN_FILES entry → GUARD_WEAKENED error"
+  - "detectGuardWeakening: message mentions the AI_LOOP_ALLOW_VERIFIER_EDITS override"
+  - "runDrift: the working tree's current guard never weakens itself vs the live source (honest tree)"
+  - "runDrift: fires GUARD_WEAKENED on a synthetic weakened 'before', and AI_LOOP_ALLOW_VERIFIER_EDITS=1 downgrades it"
+  - "runDrift: the env override downgrades a GUARD_WEAKENED error to a warning (acknowledgment-loop semantics)"
+notes: >
+  Closes the precise hole the verify-integrity.ts docstring concedes (lines 33–35): an agent with
+  write access to the guard could edit the guard. It cannot make tampering impossible (the agent
+  has free rein), but it makes the specific DGM-class launder — silently weakening the guard's own
+  thresholds/lists — a LOUD hard error rather than a non-blocking warning, protecting every future
+  cycle (including the fresh-pack generator, the planned next move). Cites Darwin Gödel Machine
+  (arXiv:2505.22954), EvilGenie (arXiv:2511.21654), and agentic-self-learning (arXiv:2510.14253).

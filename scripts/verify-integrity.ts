@@ -322,6 +322,96 @@ export function detectCountRegressions(
   return findings;
 }
 
+/**
+ * The guard's OWN defensive surface: the floors and protected/hash-pin lists this
+ * script enforces. Locking these closes the DGM-class launder where an agent tasked
+ * to pass a checker simply edits the checker — deletes the marker it scans for, or
+ * lowers the floor it compares against (Darwin Gödel Machine, arXiv:2505.22954;
+ * EvilGenie, arXiv:2511.21654; agentic-self-learning, arXiv:2510.14253). The docstring
+ * (lines 33–35) concedes this exact hole; `detectGuardWeakening` turns it from a
+ * non-blocking VERIFIER_TOUCHED warning into a hard error when the surface SHRINKS.
+ */
+export type GuardConstants = {
+  minTestCases: number;
+  minAssertions: number;
+  minStrongAssertions: number;
+  protectedFiles: string[];
+  hashPinFiles: string[];
+};
+
+/**
+ * Pure parser over the TEXT of verify-integrity.ts. Extracts the three MIN_* floors
+ * and the two protected/hash-pin array literals by regex/string parsing only (NO eval,
+ * no fs/git/network/clock/RNG) so it is deterministic and unit-tests on synthetic input.
+ * Returns null if ANY field can't be parsed — a malformed/absent ref is skipped, never a
+ * false alarm (mirrors countTestArtifactsAtRef's null-on-failure contract).
+ */
+export function parseGuardConstants(text: string): GuardConstants | null {
+  const num = (name: string): number | null => {
+    const m = new RegExp(`export const ${name}\\s*=\\s*(\\d+)`).exec(text);
+    return m ? Number(m[1]) : null;
+  };
+  const arr = (name: string): string[] | null => {
+    const m = new RegExp(`export const ${name}\\s*=\\s*\\[([\\s\\S]*?)\\]`).exec(text);
+    if (!m) return null;
+    const entries = m[1]!.match(/"([^"]*)"|'([^']*)'/g);
+    if (!entries) return null;
+    return entries.map((e) => e.slice(1, -1));
+  };
+  const minTestCases = num("MIN_TEST_CASES");
+  const minAssertions = num("MIN_ASSERTIONS");
+  const minStrongAssertions = num("MIN_STRONG_ASSERTIONS");
+  const protectedFiles = arr("PROTECTED_FILES");
+  const hashPinFiles = arr("HASH_PIN_FILES");
+  if (
+    minTestCases === null ||
+    minAssertions === null ||
+    minStrongAssertions === null ||
+    protectedFiles === null ||
+    hashPinFiles === null
+  )
+    return null;
+  return { minTestCases, minAssertions, minStrongAssertions, protectedFiles, hashPinFiles };
+}
+
+/**
+ * Pure comparator (mirrors detectCountRegressions / classifyDrift: synthetic structs in,
+ * findings out; no git/fs/network/clock/RNG). Emits a single severity:"error",
+ * code:"GUARD_WEAKENED" finding when the guard's defensive surface SHRINKS across a cycle:
+ *   - any MIN_* floor is LOWERED (now.minX < before.minX), or
+ *   - any entry is REMOVED from protectedFiles or hashPinFiles.
+ * Raising a floor, adding an entry, and identical constants are all OK (no finding). The
+ * message names exactly what was weakened and mentions the AI_LOOP_ALLOW_VERIFIER_EDITS=1
+ * override (a deliberate, acknowledged loosening is allowed; a silent one is not).
+ */
+export function detectGuardWeakening(before: GuardConstants, now: GuardConstants): Finding[] {
+  const weakened: string[] = [];
+  if (now.minTestCases < before.minTestCases)
+    weakened.push(`MIN_TEST_CASES lowered ${before.minTestCases} → ${now.minTestCases}`);
+  if (now.minAssertions < before.minAssertions)
+    weakened.push(`MIN_ASSERTIONS lowered ${before.minAssertions} → ${now.minAssertions}`);
+  if (now.minStrongAssertions < before.minStrongAssertions)
+    weakened.push(
+      `MIN_STRONG_ASSERTIONS lowered ${before.minStrongAssertions} → ${now.minStrongAssertions}`,
+    );
+  const removedFrom = (name: string, was: string[], is: string[]): void => {
+    const nowSet = new Set(is);
+    for (const entry of was)
+      if (!nowSet.has(entry)) weakened.push(`${name} entry removed: ${entry}`);
+  };
+  removedFrom("PROTECTED_FILES", before.protectedFiles, now.protectedFiles);
+  removedFrom("HASH_PIN_FILES", before.hashPinFiles, now.hashPinFiles);
+  if (weakened.length === 0) return [];
+  return [
+    {
+      severity: "error",
+      code: "GUARD_WEAKENED",
+      message: `the verifier guard's own defensive surface was weakened this cycle: ${weakened.join("; ")} — lowering a floor or shrinking a protected/hash-pin list is the DGM "edit-the-checker" launder (override with AI_LOOP_ALLOW_VERIFIER_EDITS=1 for a deliberate, acknowledged loosening)`,
+      where: "scripts/verify-integrity.ts",
+    },
+  ];
+}
+
 /** Count test cases AND expect() assertions as they were at a git ref, in a single
  *  pass over the ref's test files (null if the ref can't be read). */
 function countTestArtifactsAtRef(root: string, ref: string): TestArtifactCounts | null {
@@ -349,12 +439,26 @@ function countTestArtifactsAtRef(root: string, ref: string): TestArtifactCounts 
   }
 }
 
+/** The guard's OWN defensive constants as they were at a git ref (null if unreadable —
+ *  a malformed/absent ref is skipped, never a false alarm). Pure-parse the same source. */
+function parseGuardConstantsAtRef(root: string, ref: string): GuardConstants | null {
+  try {
+    const text = execFileSync("git", ["show", `${ref}:scripts/verify-integrity.ts`], {
+      cwd: root,
+      encoding: "utf8",
+    });
+    return parseGuardConstants(text);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Drift check for the autonomous loop: what did THIS cycle (working tree vs `ref`)
  * do to the verifier? = static checks + classifyDrift + a test-count-regression
- * guard. AI_LOOP_ALLOW_VERIFIER_EDITS=1 downgrades ONLY the unaccompanied-re-pin
- * error (a deliberate algorithm/format re-pin); it never downgrades real weakening
- * (deleted/disabled tests, a dropped test count).
+ * guard + a guard-self-integrity check. AI_LOOP_ALLOW_VERIFIER_EDITS=1 downgrades ONLY
+ * the unaccompanied-re-pin error and a deliberately-acknowledged GUARD_WEAKENED; it
+ * never downgrades real test weakening (deleted/disabled tests, a dropped count).
  */
 export function runDrift(
   root: string,
@@ -380,10 +484,22 @@ export function runDrift(
     };
   }
   const acknowledged = env.AI_LOOP_ALLOW_VERIFIER_EDITS === "1";
-  for (const f of classifyDrift(changed, (rel) => existsSync(join(root, rel)))) {
-    // The only downgradable error is an unaccompanied re-pin (a deliberate human
-    // re-pin of e.g. a hash algorithm). Weakening errors are never downgraded.
-    if (acknowledged && f.code === "HASH_PIN_UNACCOMPANIED")
+  // Guard-self-integrity: did this cycle weaken the guard's OWN defensive surface
+  // (lower a MIN_* floor, drop a protected/hash-pin entry)? Read the ref's guard text
+  // and the working-tree guard text through the SAME pure parser; only compare when
+  // BOTH parse non-null (a malformed/absent ref is skipped, never a false alarm).
+  const guardBefore = parseGuardConstantsAtRef(root, ref);
+  const guardNow = parseGuardConstants(
+    readFileSync(join(root, "scripts/verify-integrity.ts"), "utf8"),
+  );
+  const driftFindings = classifyDrift(changed, (rel) => existsSync(join(root, rel)));
+  if (guardBefore !== null && guardNow !== null)
+    driftFindings.push(...detectGuardWeakening(guardBefore, guardNow));
+  for (const f of driftFindings) {
+    // Downgradable errors (only with explicit acknowledgment): an unaccompanied re-pin
+    // (a deliberate hash/format re-pin) and a deliberately-acknowledged guard loosening.
+    // Real test weakening (deleted/disabled tests, a dropped count) is never downgraded.
+    if (acknowledged && (f.code === "HASH_PIN_UNACCOMPANIED" || f.code === "GUARD_WEAKENED"))
       findings.push({ ...f, severity: "warning", message: `${f.message} [acknowledged]` });
     else findings.push(f);
   }

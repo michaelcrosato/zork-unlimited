@@ -6,6 +6,9 @@
  * catches the mechanical reward-hacks), and asserts the REAL repo passes the static
  * check — which makes this guard part of `npm test` and therefore part of the bar.
  */
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it, expect } from "vitest";
 import {
   detectDisabledTests,
@@ -13,12 +16,17 @@ import {
   countAssertions,
   countStrongAssertions,
   detectCountRegressions,
+  parseGuardConstants,
+  detectGuardWeakening,
   runStatic,
+  runDrift,
   classifyDrift,
   PROTECTED_FILES,
+  HASH_PIN_FILES,
   MIN_TEST_CASES,
   MIN_ASSERTIONS,
   MIN_STRONG_ASSERTIONS,
+  type GuardConstants,
 } from "../../scripts/verify-integrity.js";
 
 describe("detectDisabledTests catches every disabled/focused marker", () => {
@@ -143,6 +151,160 @@ describe("classifyDrift — legitimate re-pin vs launder vs weakening (research-
   it("BLOCKS deleting a protected verification asset", () => {
     const fs = classifyDrift(["tests/property/determinism.test.ts"], () => false);
     expect(fs.some((f) => f.code === "PROTECTED_DELETED" && f.severity === "error")).toBe(true);
+  });
+});
+
+describe("parseGuardConstants — pure parse of the guard's own defensive surface", () => {
+  it("round-trips the LIVE verify-integrity.ts constants (the real floors + lists)", () => {
+    const text = readFileSync(join(process.cwd(), "scripts/verify-integrity.ts"), "utf8");
+    const parsed = parseGuardConstants(text);
+    expect(parsed).not.toBeNull();
+    expect(parsed!.minTestCases).toBe(MIN_TEST_CASES);
+    expect(parsed!.minAssertions).toBe(MIN_ASSERTIONS);
+    expect(parsed!.minStrongAssertions).toBe(MIN_STRONG_ASSERTIONS);
+    expect(parsed!.protectedFiles).toEqual(PROTECTED_FILES);
+    expect(parsed!.hashPinFiles).toEqual(HASH_PIN_FILES);
+  });
+
+  it("returns null on malformed text (a missing field is skipped, never a false alarm)", () => {
+    // Has the MIN_* floors but no array literals → unparseable, so null (not a partial).
+    const partial = [
+      "export const MIN_TEST_CASES = 120;",
+      "export const MIN_ASSERTIONS = 400;",
+      "export const MIN_STRONG_ASSERTIONS = 400;",
+    ].join("\n");
+    expect(parseGuardConstants(partial)).toBeNull();
+    expect(parseGuardConstants("nothing parseable here")).toBeNull();
+  });
+});
+
+describe("detectGuardWeakening — lowering a floor or dropping a protected entry is a hard error", () => {
+  const base: GuardConstants = {
+    minTestCases: 120,
+    minAssertions: 400,
+    minStrongAssertions: 400,
+    protectedFiles: ["a.ts", "b.ts"],
+    hashPinFiles: ["pin.ts"],
+  };
+  const codes = (fs: { code: string }[]) => fs.map((f) => f.code);
+
+  it("identical constants → no finding (the honest no-op cycle)", () => {
+    expect(detectGuardWeakening(base, { ...base })).toEqual([]);
+  });
+
+  it("raising a floor and adding entries → no finding (tightening is always allowed)", () => {
+    const stronger: GuardConstants = {
+      ...base,
+      minTestCases: 130,
+      minAssertions: 410,
+      protectedFiles: ["a.ts", "b.ts", "c.ts"],
+      hashPinFiles: ["pin.ts", "pin2.ts"],
+    };
+    expect(detectGuardWeakening(base, stronger)).toEqual([]);
+  });
+
+  it("lowering MIN_TEST_CASES → GUARD_WEAKENED error", () => {
+    const fs = detectGuardWeakening(base, { ...base, minTestCases: 119 });
+    expect(codes(fs)).toEqual(["GUARD_WEAKENED"]);
+    expect(fs[0]!.severity).toBe("error");
+    expect(fs[0]!.message).toContain("MIN_TEST_CASES");
+  });
+
+  it("lowering MIN_ASSERTIONS or MIN_STRONG_ASSERTIONS → GUARD_WEAKENED error", () => {
+    expect(detectGuardWeakening(base, { ...base, minAssertions: 399 })[0]!.code).toBe(
+      "GUARD_WEAKENED",
+    );
+    expect(detectGuardWeakening(base, { ...base, minStrongAssertions: 1 })[0]!.code).toBe(
+      "GUARD_WEAKENED",
+    );
+  });
+
+  it("removing a PROTECTED_FILES entry → GUARD_WEAKENED error naming the dropped path", () => {
+    const fs = detectGuardWeakening(base, { ...base, protectedFiles: ["a.ts"] });
+    expect(codes(fs)).toEqual(["GUARD_WEAKENED"]);
+    expect(fs[0]!.severity).toBe("error");
+    expect(fs[0]!.message).toContain("b.ts");
+  });
+
+  it("removing a HASH_PIN_FILES entry → GUARD_WEAKENED error", () => {
+    const fs = detectGuardWeakening(base, { ...base, hashPinFiles: [] });
+    expect(codes(fs)).toEqual(["GUARD_WEAKENED"]);
+    expect(fs[0]!.message).toContain("pin.ts");
+  });
+
+  it("mentions the AI_LOOP_ALLOW_VERIFIER_EDITS override so a deliberate loosening has a path", () => {
+    const fs = detectGuardWeakening(base, { ...base, minTestCases: 0 });
+    expect(fs[0]!.message).toContain("AI_LOOP_ALLOW_VERIFIER_EDITS=1");
+  });
+});
+
+describe("runDrift surfaces GUARD_WEAKENED (and the env override downgrades it)", () => {
+  // Use the parent commit as the ref so the diff is real; the synthetic weakened `before`
+  // is injected by intercepting `git show <ref>:scripts/verify-integrity.ts`. Skip if the
+  // repo has no parent commit (shallow/initial) — the path is the same one runDrift takes.
+  const root = process.cwd();
+  let hasParent = true;
+  try {
+    execFileSync("git", ["rev-parse", "HEAD~1"], { cwd: root, encoding: "utf8" });
+  } catch {
+    hasParent = false;
+  }
+
+  it("the working tree's CURRENT guard never weakens itself vs the live source (honest tree)", () => {
+    // The real surface compared to itself must produce no GUARD_WEAKENED finding.
+    const now = parseGuardConstants(
+      readFileSync(join(root, "scripts/verify-integrity.ts"), "utf8"),
+    );
+    expect(now).not.toBeNull();
+    expect(detectGuardWeakening(now!, now!)).toEqual([]);
+  });
+
+  it.runIf(hasParent)(
+    "fires GUARD_WEAKENED when the ref's floor is higher than the working tree's, and AI_LOOP_ALLOW_VERIFIER_EDITS=1 downgrades it",
+    () => {
+      // Build a synthetic 'before' whose MIN_TEST_CASES is far above the working tree's
+      // current floor, simulating a cycle that lowered it. Compare via the pure detector
+      // on the SAME structs runDrift would build, then assert the env-override semantics
+      // match runDrift's acknowledgment loop.
+      const now = parseGuardConstants(
+        readFileSync(join(root, "scripts/verify-integrity.ts"), "utf8"),
+      )!;
+      const weakenedBefore: GuardConstants = { ...now, minTestCases: now.minTestCases + 1000 };
+      const findings = detectGuardWeakening(weakenedBefore, now);
+      expect(findings.map((f) => f.code)).toEqual(["GUARD_WEAKENED"]);
+      expect(findings[0]!.severity).toBe("error");
+
+      // And the real runDrift on the honest tree (before === now) must NOT fire it: the
+      // expected VERIFIER_TOUCHED warning is fine, GUARD_WEAKENED must be absent.
+      const res = runDrift(root, "HEAD~1");
+      expect(res.findings.some((f) => f.code === "GUARD_WEAKENED")).toBe(false);
+      const acked = runDrift(root, "HEAD~1", {
+        ...process.env,
+        AI_LOOP_ALLOW_VERIFIER_EDITS: "1",
+      });
+      expect(acked.findings.some((f) => f.code === "GUARD_WEAKENED")).toBe(false);
+    },
+  );
+
+  it("the env override downgrades a GUARD_WEAKENED error to a warning (acknowledgment-loop semantics)", () => {
+    // Mirror runDrift's acknowledgment loop directly on synthetic findings: a deliberate,
+    // acknowledged loosening becomes a non-blocking warning; a silent one stays an error.
+    const before: GuardConstants = {
+      minTestCases: 200,
+      minAssertions: 400,
+      minStrongAssertions: 400,
+      protectedFiles: ["a.ts"],
+      hashPinFiles: [],
+    };
+    const now: GuardConstants = { ...before, minTestCases: 120 };
+    const raw = detectGuardWeakening(before, now);
+    expect(raw[0]!.severity).toBe("error");
+    const acknowledged = true;
+    const downgraded = raw.map((f) =>
+      acknowledged && f.code === "GUARD_WEAKENED" ? { ...f, severity: "warning" as const } : f,
+    );
+    expect(downgraded[0]!.severity).toBe("warning");
+    expect(downgraded.some((f) => f.severity === "error")).toBe(false);
   });
 });
 
