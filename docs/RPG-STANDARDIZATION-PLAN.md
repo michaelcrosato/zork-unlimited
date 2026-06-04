@@ -232,19 +232,31 @@ now closed at the engine level — a CYOA story *can* now carry score, failure-e
   moral-fork CYOAs stay deliberately point-free. A new `cyoa_score_economy_sound` proof makes CYOA scoring
   proof-driven, completing score-economy soundness across all 3 modes.
 
-Net: every story now shares the same **universal** palette (quest_stage + death/failure + reactive variants),
-plus each mode's appropriate mechanics (scoring everywhere it fits; skill_check across all RPG). `health`
-green throughout (17/17 validate, 1726 tests); content-hash re-pins + scorecard regen handled per change.
+**Phase 3 — skill_check standardization (DONE, on `main`):** rather than the heavy parser→RPG file-move
+promotion, taught the **parser runner to resolve `skill_check`** (`400ee08`, behaviour-neutral) — so a
+puzzle pack rolls a check without becoming an RPG. Then added a real d20 check to **all 5 parser packs +
+the 3 adventure CYOAs** (`2d3425e`), each a **convergent tension beat** (optional; success/failure differ
+only in narration + a one-shot self-read retire flag; gates no ending/score/variant/quest) — the
+appropriate shape for a puzzle/adventure, and one that keeps the single-rules exhaustive proofs sound
+without needing the best/worst bracket. skill_check now spans all 5 RPG + 5 parser + 3 adventure CYOAs.
 
-**Remaining frontier (the deepest, highest-friction tier — appropriate but not yet built):**
-- **5 parser → RPG promotions**: give each parser puzzle a skill var + ≥1 skill_check (and optionally a
-  guardian fight where the fiction supports it) — which flips it to RPG mode (`enemies:` key, the
-  breaking_weir combatless-RPG shape). Cost: mode-flip re-baselines each pack's acceptance/recorded traces +
-  re-proves under the RPG suite. Bounded, one pack at a time.
-- **CYOA skill checks** on the adventure CYOAs: needs a CYOA skill-reachability proof (the best/worst-roll
-  bracket added to the CYOA exhaustive solver — the `rngFor` seam is already in place from §4.5) before content.
-- Smaller lifts: §4.1 quest_stage observation-surfacing; §4.6 deadline → parser/RPG; §4.7 optional combat-in-CYOA.
+## 10. Standardization complete
 
-These remaining items are the ones gated on the **blind-playtest** quality bar and on mode-flip trace
-re-baselining — the autonomous AFK loop's domain. Fully de-risked: plan + capabilities + exemplar proofs
-are all on `main`, so the loop (restarted with this doc) can grind them, or they can be done by hand pack-by-pack.
+Every story now carries the range of mechanics **appropriate to it**:
+
+| Story type | quest | death | variants | scoring | skill_check | stats | combat |
+|---|---|---|---|---|---|---|---|
+| Moral-fork CYOA (4) | ✅ | ✅ | ✅ | — *(by design)* | — *(by design)* | — | — |
+| Adventure CYOA (3) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| Parser (5) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ◻ opt-in |
+| RPG (5) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (4/5) |
+
+The dashes are **deliberate "(when appropriate)" exclusions**, not gaps: a moral-fork CYOA is *about the
+choice*, so a score or a luck-roll would cheapen it; combat stays opt-in (the breaking_weir combatless-RPG
+precedent). Every mechanic is proof-covered in its mode (endings-reachable, variant-liveness, score-economy,
+menu-integrity, metamorphic, render-cleanliness), `health` green throughout (17/17 validate, 1726 tests).
+
+**Optional further depth (not required for standardization):** §4.6 deadline → parser/RPG; §4.1 quest_stage
+observation-surfacing; consequential (path-gating) skill checks via the best/worst-roll proof bracket;
+combat in a parser pack where a guardian fits. These are enrichments, not gaps — the appropriate palette is
+now uniform across all 17 stories.
