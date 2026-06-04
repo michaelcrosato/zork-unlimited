@@ -29,11 +29,13 @@
 #     (start;         (hub)         (the great lamp;       (the lost child,
 #      tinderbox,       │E*  excise_store              out of the dark once
 #      brass key,       │     ├ oil_cask    → whale-oil   the lamp is lit)
-#      night-notice)    │     ├ excise_box  → ending_thief
-#                       │W    └ spirit_cask → ending_caught (DEATH)
+#      round-lantern,   │     ├ excise_box  → ending_thief
+#      night-notice)    │W    └ spirit_cask → ending_caught (DEATH)
 #                    watch_box
 #                     (watchman;
 #                      wall-cupboard → store-key)
+#   (round_lantern = the carried open flame, takeable + examinable anywhere once held —
+#    the very thing the rock-spirit warning is about, made inspectable; bug_0216)
 #   (*   E to excise_store gated on store_open — the excise-store door, store-key)
 #   (*   N to harbour_head is open; the lamp there is the puzzle, not a locked exit)
 #   (**  down to the_strand gated on lamp_lit — the strand is lightless till the lamp burns)
@@ -57,12 +59,13 @@ rooms:
   - id: river_stair
     name: "The River Stair"
     description: >
-      Fog stands thick on the river-stair, and your little round-lantern throws no
-      more than a yard of it back. A pasted night-notice peels from the wall by the
-      handrail. A tinderbox lies on the sill where the last lighter left it, and a
-      small brass tally-key hangs on a nail beside it. The staith runs on north into
-      the murk; the dark water laps somewhere below.
-    objects: [night_notice, tinderbox, brass_key]
+      Fog stands thick on the river-stair. A pasted night-notice peels from the wall by
+      the handrail; a tinderbox lies on the sill where the last lighter left it, and a
+      small brass tally-key hangs on a nail beside it. The lighter's round-lantern burns
+      low on its hook by the rail, throwing no more than a yard of light back into the
+      murk — yours to take up for the round. The staith runs on north into the dark; the
+      dark water laps somewhere below.
+    objects: [night_notice, tinderbox, brass_key, round_lantern]
     exits:
       - { direction: north, to: lamp_walk }
 
@@ -174,6 +177,28 @@ objects:
     description: "A small brass tally-key, the lighter's own — the size for the watch-house cupboard lock."
     takeable: true
     quest_critical: true
+
+  - id: round_lantern
+    name: "round-lantern"
+    # The blind-pass finding made concrete (bug_0216, the lamplighters seed-7 pass): the warning
+    # that makes the spirit-cask a DEATH hangs on "the lit round-lantern on your belt" being an
+    # ever-present open flame, but that flame was never an inventory item nor an examinable object —
+    # it lived only in room/dialogue prose, so a careful player could not look at the very thing the
+    # excise warns will kill them. Now it is the lighter's third tool on the sill (beside the
+    # tinderbox and the tally-key): takeable, so once carried it can be examined ANYWHERE — including
+    # in the excise store, holding the store-key, in the instant before the three-way fork. Its
+    # examine spells out that it is a naked flame you carry the whole round and never put out, which
+    # is exactly why the red-stencilled rock-spirit is lethal. It is NOT quest_critical and gates
+    # nothing (the win never needs it and the death still fires on the unlock regardless), so it adds
+    # no soft-lock surface; max_score stays 35 and every ending stays reachable.
+    aliases: [lantern, round lantern, belt-lantern, belt lantern, my lantern, the lantern]
+    description: >
+      The lighter's own round-lantern — a stub of candle behind horn glass on a belt-hook, the
+      open flame you carry the whole night round and never put out, for a lighter cannot work a
+      river fog blind. It throws a yard of light and no more; but a yard of naked flame is a yard
+      of naked flame, and it is the very thing the night-notice warns you to keep well off the
+      red-stencilled rock-spirit in the store.
+    takeable: true
 
   - id: wall_cupboard
     name: "wall-cupboard"

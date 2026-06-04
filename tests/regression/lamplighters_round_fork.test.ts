@@ -240,3 +240,97 @@ describe("bug_0205 — The Lamplighter's Round: the three-way excise-key fork (o
     expect(warns).toBe(true);
   });
 });
+
+/**
+ * Regression (§15) for bug_0216 — the lamplighters seed-7 blind pass (clarity 5/5,
+ * enjoyment 4/5, mechanics flawless across all three endings) returned ONE actionable
+ * finding: the warning that makes the spirit-cask a DEATH hangs on "the lit round-lantern
+ * on your belt" being an ever-present open flame, but that flame was never an inventory
+ * item nor an examinable object — it lived only in room/dialogue prose, so a careful
+ * player could not look at the very thing the excise warns will kill them. The fix
+ * instantiates `round_lantern` as the lighter's third tool on the river-stair sill:
+ * takeable (so once carried it is examinable ANYWHERE, including in the excise store at
+ * the instant of the three-way fork), its examine spelling out the carried naked flame and
+ * the rock-spirit danger. It is NOT quest_critical and gates nothing, so it adds no
+ * soft-lock surface and changes none of the three routes. This pins exactly that.
+ */
+describe("bug_0216 — the round-lantern: the carried open flame, now a takeable + examinable object", () => {
+  it("round_lantern exists, is takeable, NOT quest_critical, and gates nothing (no soft-lock surface added)", () => {
+    const lantern = pack.objects.find((o) => o.id === "round_lantern");
+    expect(lantern).toBeDefined();
+    expect(lantern!.takeable).toBe(true);
+    expect(lantern!.quest_critical).toBeFalsy();
+    // It is referenced by no exit / win / interaction condition and by no key_id — purely
+    // an examinable affordance, so it cannot wedge the quest or be required to win.
+    const id = "round_lantern";
+    const inExitConds = pack.rooms.some((r) =>
+      r.exits.some((e) => JSON.stringify(e.conditions ?? []).includes(id)),
+    );
+    const inWinConds = pack.win_conditions.some((w) => JSON.stringify(w.conditions).includes(id));
+    const asKey = pack.objects.some((o) => o.key_id === id);
+    const inInteractions = pack.objects.some((o) =>
+      o.interactions.some((it) => it.item === id || JSON.stringify(it.conditions).includes(id)),
+    );
+    expect(inExitConds || inWinConds || asKey || inInteractions).toBe(false);
+  });
+
+  it("its examine names the carried open flame and ties it to the rock-spirit warning (telegraph reinforcement)", () => {
+    const lantern = pack.objects.find((o) => o.id === "round_lantern")!;
+    const d = lantern.description.toLowerCase();
+    expect(d).toContain("flame");
+    expect(d).toContain("rock-spirit");
+  });
+
+  it("the lantern starts on the river-stair sill and can be carried, then examined at the excise-store fork (with the store-key, before any cask is opened)", () => {
+    // Lift the lantern at the start, then run the standard route to the store with the key.
+    const { state } = play(initStateForParserPack(index, 3), [
+      "take_round_lantern",
+      ...ROUTE_TO_STORE_WITH_KEY,
+    ]);
+    expect(state.current).toBe("excise_store");
+    expect(state.inventory).toContain("round_lantern"); // carried into the store…
+    expect(state.inventory).toContain("store_key");
+    const ids = actionIds(state);
+    // …and examinable RIGHT HERE, in the instant the three-way fork is live.
+    expect(ids).toContain("examine_round_lantern");
+    // The fork is still genuinely three-way with the lantern in hand — nothing changed.
+    expect(ids).toContain("unlock_oil_cask");
+    expect(ids).toContain("unlock_excise_box");
+    expect(ids).toContain("unlock_spirit_cask");
+  });
+
+  it("carrying the lantern leaves all three endings reachable and unchanged (win 35/35, thief, death)", () => {
+    // Win, lantern in hand throughout.
+    const win = play(initStateForParserPack(index, 3), [
+      "take_round_lantern",
+      ...ROUTE_TO_STORE_WITH_KEY,
+      "unlock_oil_cask",
+      "open_oil_cask",
+      "take_whale_oil",
+      "go_west",
+      "go_north",
+      "use_whale_oil_on_harbour_lamp",
+      "use_tinderbox_on_harbour_lamp",
+      "go_down",
+    ]);
+    expect(win.state.endingId).toBe("ending_guided");
+    expect(buildParserObservation(index, win.state).score).toBe(35);
+    expect(win.state.inventory).toContain("round_lantern"); // never spent
+
+    // Death still fires on forcing the spirit-cask, lantern carried.
+    const death = play(initStateForParserPack(index, 3), [
+      "take_round_lantern",
+      ...ROUTE_TO_STORE_WITH_KEY,
+      "unlock_spirit_cask",
+    ]);
+    expect(death.state.endingId).toBe("ending_caught");
+
+    // Greed still fires on the strongbox, lantern carried.
+    const thief = play(initStateForParserPack(index, 3), [
+      "take_round_lantern",
+      ...ROUTE_TO_STORE_WITH_KEY,
+      "unlock_excise_box",
+    ]);
+    expect(thief.state.endingId).toBe("ending_thief");
+  });
+});
