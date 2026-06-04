@@ -1,0 +1,61 @@
+bug_id: bug_0249
+pack_id: lamplighters_round_v1
+content_hash: ccb1304581d0945eb7374e56fdb9403c447333a72dc37734711ced00d0e9ecee  # after the fix
+seed: 41
+initial_state: start
+# Surfaced during the mandated blind-playtest cycle on lamplighters_round (seed 41 blind
+# pass came back clean — clarity 5/5, enjoyment 4/5, all three endings, ZERO mechanical
+# bugs; see ai-runs/2026-06-04T19-47-10-975Z/playtest.md). The blind tester flagged the
+# redundant `round_begun` quest-stage re-fire on hub re-entry as "harmless and player-
+# invisible"; investigating it revealed it was NOT harmless — it reverted a stage that a
+# reactive scene variant elsewhere read, producing observable stale text. Found by reading
+# the pack's own (incorrect) design comment and DISPROVING it live via the MCP tools.
+findings:
+  - id: staith_head_reverts_to_dry_font_after_hub_detour
+    where: scene:harbour_head
+    severity: low
+    description: >
+      The harbour_head ("The Staith-Head") "deep font brimming with the oil you have just
+      drawn and poured" reactive variant was gated on `quest_stage: the_round == font_filled`.
+      The quest stage is NON-monotonic, and lamp_walk.on_enter UNCONDITIONALLY re-fires
+      `set_quest_stage round_begun` on EVERY entry — so a player who poured the oil
+      (set_flag font_filled, set_quest_stage font_filled) and then stepped south to the hub
+      and back regressed the stage to round_begun, and the brimming-font variant stopped
+      matching on the walk north. The room reverted to its BASE description — "The wick is
+      dry: it wants oil poured into the font and a flame set to it" — even though the font was
+      demonstrably full: the font_filled FLAG was still set, the pour was in the journal, and
+      the `light great harbour-lamp with tinderbox` action was still offered. Same stale-on-
+      re-entry class as bug_0248 (watchtower on_the_trail), bug_0120 (tower_top brazier) and
+      bug_0134 (hermit greeting). The pack's design comment explicitly (and wrongly) claimed
+      the variant "displays route-independently … with no on_enter between" — true only on the
+      direct pour→light path; a detour through the hub inserts exactly such an on_enter.
+      Reproduced live (seed 41): pour the oil at harbour_head → go_south to lamp_walk →
+      go_north re-shows the dry-font base text at font_filled.
+    fix: >
+      Gate the scene variant on the MONOTONIC flag `has_flag: font_filled` (plus
+      `not_flag: lamp_lit` to stay mutually exclusive with the lamp_lit variant), exactly
+      mirroring the flag-keyed harbour_lamp OBJECT variant that was always correct. Flags
+      survive the detour; the stage does not. set_quest_stage on the_round is now a pure
+      never-read progress marker (no prose, exit, ending, interaction or win keys off it), so
+      its harmless re-set on hub re-entry can no longer surface as stale text. Reactive TEXT
+      ONLY — no flag/var/score/exit/ending change; all three endings stay reachable.
+failure:
+  type: design_polish
+  description: >
+    No engine fault or determinism break — stale-on-re-entry scene text (the bug_0120 /
+    bug_0134 / bug_0248 reactive-text honesty class). Caught by reasoning over the blind
+    tester's "harmless" note plus the pack's own (incorrect) design comment, and confirmed
+    with the MCP tools, not by the validator (which checks solvability/liveness, not narrative
+    freshness). The fix alters only displayed text, never state — the lamp stays lightable and
+    the win reachable through the detour.
+fix:
+  layer: content        # one of: content | engine_rule | validator | test | hint_text | quest_structure
+  summary: >
+    harbour_head's brimming-font variant now keys off has_flag font_filled (+ not_flag
+    lamp_lit), the monotonic flag, instead of the non-monotonic quest_stage the hub's on_enter
+    regresses — so a player who pours the oil and dips back to the hub is no longer told the
+    wick is dry on their return.
+regression_test: tests/regression/lamplighters_round_fork.test.ts  # appended bug_0249 describe block
+# The content_hash field here is documentary (not test-enforced); lamplighters_round has no
+# pinned-hash snapshot in tests/unit. The discovered pack SET is unchanged (no pack added or
+# removed), so the scorecard freshness pin (bug_0194) is untouched — no scorecard regen needed.

@@ -414,3 +414,104 @@ describe("bug_0229 — the lit Staith-Head names the waiting child (the 35/35 'a
     expect(obs.available_actions.map((a) => a.id)).toContain("go_down"); // …and the way down is open to it
   });
 });
+
+/**
+ * Regression (§15) for bug_0249 — The Lamplighter's Round: the Staith-Head re-showed its base
+ * "the wick is dry" description to a player who had ALREADY poured the oil, if they stepped south
+ * to the hub after pouring and came back.
+ *
+ * Root cause (the SAME class as bug_0248 / bug_0120 / bug_0134, stale-on-re-entry reactive text).
+ * The harbour_head "deep font brimming…" variant was gated on `quest_stage: the_round == font_filled`.
+ * The quest stage is NON-monotonic, and lamp_walk.on_enter unconditionally re-fires
+ * `set_quest_stage round_begun` on EVERY entry — so a single dip south to the hub after pouring
+ * REGRESSED the stage to round_begun, and the brimming-font variant stopped matching on the walk
+ * back north. The room reverted to its base prose ("The wick is dry: it wants oil poured into the
+ * font and a flame set to it") even though the font was demonstrably full: the font_filled FLAG was
+ * still set, the pour was in the journal, and the `light great harbour-lamp` action was still offered.
+ * The pack's own design comment wrongly claimed the variant "displays route-independently … with no
+ * on_enter between" — true only on the direct pour→light path; a detour through the hub inserts
+ * exactly such an on_enter. Reproduced live via the MCP tools (seed 41) before fixing.
+ *
+ * Fix (content only): gate the scene variant on the MONOTONIC flag `has_flag: font_filled` (plus
+ * `not_flag: lamp_lit` to stay mutually exclusive with the lit variant), exactly mirroring the
+ * flag-keyed harbour_lamp OBJECT variant that was always correct. Flags survive the detour; the
+ * stage does not. set_quest_stage on the_round is now a pure never-read progress marker. Reactive
+ * TEXT ONLY — no flag/var/score/exit/ending change; all three endings stay reachable. This locks:
+ *   (1) right after pouring (no detour) the room reads the brimming-font variant, stage == font_filled;
+ *   (2) a dip south to the hub and back REGRESSES the stage to round_begun (the latent hazard is real);
+ *   (3) yet after that detour the room STILL reads the brimming-font variant and NOT the dry base —
+ *       the stale-on-re-entry bug is gone, the font_filled flag is set, and the lamp is still lightable;
+ *   (4) the win is still reachable THROUGH the detour (light → go down → ending_guided at 35/35);
+ *   (5) structural pin: the brimming-font variant keys off has_flag font_filled, never off quest_stage.
+ */
+const BRIMMING = "brimming with the oil you have just drawn and poured";
+const DRY_BASE = "the wick is dry: it wants oil poured into the font";
+
+// Route to the staith-head with the oil POURED (font_filled set, stage font_filled), still at the head.
+const ROUTE_TO_FONT_FILLED = [
+  ...ROUTE_TO_STORE_WITH_KEY,
+  "unlock_oil_cask",
+  "open_oil_cask",
+  "take_whale_oil",
+  "go_west",
+  "go_north",
+  "use_whale_oil_on_harbour_lamp",
+];
+
+describe("bug_0249 — the Staith-Head does not revert to 'the wick is dry' after a hub detour post-pour", () => {
+  it("(1) right after pouring (no detour) the room reads the brimming-font variant, stage == font_filled", () => {
+    const { state } = play(initStateForParserPack(index, 3), ROUTE_TO_FONT_FILLED);
+    expect(state.current).toBe("harbour_head");
+    expect(state.flags["font_filled"]).toBe(true);
+    expect(state.questStage["the_round"]).toBe("font_filled");
+    const desc = buildParserObservation(index, state).description.toLowerCase();
+    expect(desc).toContain(BRIMMING);
+    expect(desc).not.toContain(DRY_BASE);
+  });
+
+  it("(2) a dip south to the hub and back regresses the quest stage to round_begun (the latent hazard)", () => {
+    const { state } = play(initStateForParserPack(index, 3), [
+      ...ROUTE_TO_FONT_FILLED,
+      "go_south", // lamp_walk.on_enter re-fires set_quest_stage round_begun…
+      "go_north", // …and we return to the head with the stage regressed
+    ]);
+    expect(state.current).toBe("harbour_head");
+    expect(state.questStage["the_round"]).toBe("round_begun"); // the stage really did go backwards
+    expect(state.flags["font_filled"]).toBe(true); // but the flag never cleared
+  });
+
+  it("(3) after the detour the room STILL shows the brimming-font variant, not the dry base; lamp still lightable", () => {
+    const { state } = play(initStateForParserPack(index, 3), [
+      ...ROUTE_TO_FONT_FILLED,
+      "go_south",
+      "go_north",
+    ]);
+    const obs = buildParserObservation(index, state);
+    const desc = obs.description.toLowerCase();
+    expect(desc).toContain(BRIMMING); // the reactive prose survives the detour…
+    expect(desc).not.toContain(DRY_BASE); // …and the stale "the wick is dry" is gone
+    expect(obs.available_actions.map((a) => a.id)).toContain("use_tinderbox_on_harbour_lamp");
+  });
+
+  it("(4) the win is still reachable THROUGH the detour (light → down → ending_guided at 35/35)", () => {
+    const { state } = play(initStateForParserPack(index, 3), [
+      ...ROUTE_TO_FONT_FILLED,
+      "go_south",
+      "go_north",
+      "use_tinderbox_on_harbour_lamp",
+      "go_down",
+    ]);
+    expect(state.ended).toBe(true);
+    expect(state.endingId).toBe("ending_guided");
+    expect(buildParserObservation(index, state).score).toBe(35);
+  });
+
+  it("(5) structural pin: the brimming-font variant keys off has_flag font_filled, never off quest_stage", () => {
+    const head = pack.rooms.find((r) => r.id === "harbour_head")!;
+    const brimming = head.variants!.find((v) => v.text.toLowerCase().includes(BRIMMING))!;
+    expect(brimming).toBeDefined();
+    const conds = JSON.stringify(brimming.when);
+    expect(conds).toContain('"has_flag":"font_filled"');
+    expect(conds).not.toContain("quest_stage"); // the non-monotonic stage must NOT gate the prose
+  });
+});

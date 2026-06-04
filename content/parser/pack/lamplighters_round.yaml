@@ -139,13 +139,21 @@ rooms:
       below, and it is dark. The wick is dry: it wants oil poured into the font and a flame
       set to it. Below, in the lightless dark, the tide is making over the strand. The
       lamp-walk is back to the south.
-    # First variant (lamp_lit) wins once the lamp burns; the second reacts to the round's
-    # `font_filled` stage — the beat AFTER the oil is poured but BEFORE the flame is struck.
-    # Both are reactive prose only; neither gates anything. The stage is set by the lamp's
-    # own `pour` interaction HERE at harbour_head and read HERE, with no on_enter between, so
-    # this variant displays route-independently in that one-action window and is never dead.
-    # The stages are mutually exclusive (font_filled precedes lamp_lit), so the order is also
-    # correct on its own; lamp_lit is listed first so the lit description always takes first match.
+    # First variant (lamp_lit) wins once the lamp burns; the second reacts to the beat AFTER
+    # the oil is poured but BEFORE the flame is struck. Both are reactive prose only; neither
+    # gates anything. BOTH variants key off the MONOTONIC FLAGS lamp_lit / font_filled — set
+    # once by the lamp's own pour/light interactions and never cleared — NOT off the quest
+    # stage. That distinction is load-bearing (bug_0249): the quest stage is NON-monotonic and
+    # is re-set to round_begun by lamp_walk.on_enter on EVERY entry, so gating the brimming-font
+    # prose on `quest_stage: font_filled` made it go stale the instant the player dipped south to
+    # the hub after pouring and came back — the room reverted to its base "the wick is dry"
+    # description even though the font was full (flag font_filled + the journal both said so, and
+    # the `light` action was offered). Flags survive the detour; the stage does not. The flag-keyed
+    # font_filled object variant on harbour_lamp was always correct — the scene variant now matches
+    # it. lamp_lit is listed first and `not_flag: lamp_lit` makes the two mutually exclusive, so
+    # the lit description always takes first match once the lamp burns. set_quest_stage on
+    # the_round is now a pure never-read progress marker (no prose, exit, ending, or win keys off
+    # it), so its harmless re-set on hub re-entry can no longer surface as stale text.
     variants:
       - when: [{ has_flag: lamp_lit }]
         text: >
@@ -155,7 +163,7 @@ rooms:
           shingle a small figure stirs and turns up toward the light: the lost child, still
           to be reached. The way down to the strand drops away to the north-east; the
           lamp-walk is back to the south.
-      - when: [{ quest_stage: { quest: the_round, stage: font_filled } }]
+      - when: [{ has_flag: font_filled }, { not_flag: lamp_lit }]
         text: >
           The very head of the staith, the great harbour-lamp on its iron post above the
           drop — its deep font brimming with the oil you have just drawn and poured, the
