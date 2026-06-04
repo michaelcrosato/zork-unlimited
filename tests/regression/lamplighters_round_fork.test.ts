@@ -242,24 +242,39 @@ describe("bug_0205 — The Lamplighter's Round: the three-way excise-key fork (o
 });
 
 /**
- * Regression (§15) for bug_0216 — the lamplighters seed-7 blind pass (clarity 5/5,
- * enjoyment 4/5, mechanics flawless across all three endings) returned ONE actionable
- * finding: the warning that makes the spirit-cask a DEATH hangs on "the lit round-lantern
- * on your belt" being an ever-present open flame, but that flame was never an inventory
- * item nor an examinable object — it lived only in room/dialogue prose, so a careful
- * player could not look at the very thing the excise warns will kill them. The fix
- * instantiates `round_lantern` as the lighter's third tool on the river-stair sill:
- * takeable (so once carried it is examinable ANYWHERE, including in the excise store at
- * the instant of the three-way fork), its examine spelling out the carried naked flame and
- * the rock-spirit danger. It is NOT quest_critical and gates nothing, so it adds no
- * soft-lock surface and changes none of the three routes. This pins exactly that.
+ * Regression (§15) for bug_0216 → bug_0220 — the round-lantern: the carried open flame the
+ * whole death fork turns on, now made literally ALWAYS-CARRIED.
+ *
+ * History. The lamplighters seed-7 blind pass (clarity 5/5, enjoyment 4/5, mechanics flawless
+ * across all three endings) flagged that the warning making the spirit-cask a DEATH hangs on
+ * "the lit round-lantern on your belt" being an ever-present open flame, yet that flame lived
+ * only in prose — uninspectable. bug_0216 first answered that by instantiating `round_lantern`
+ * as a TAKEABLE object so a careful player could examine the very thing the excise warns will
+ * kill them.
+ *
+ * The gap bug_0220 closes. "Takeable" let the player NOT carry it — leave it on the stair, or
+ * never lift it. A seed-7 replay forcing the spirit-cask while carrying ONLY the keys (lantern
+ * left behind) STILL fired ending_caught, whose every line presupposes a flame the player
+ * demonstrably was not carrying ("the little flame burning honest on your belt", "the flame you
+ * carried in to it", "you were the naked light"). A sealed naphtha cask cracked with NO open
+ * flame near it would not even take fire — so the death was unsound, not merely mis-narrated.
+ *
+ * The fix makes the fiction true in STATE via the new engine primitive `held: true`: the lighter
+ * carries this lit lantern from the first turn and can never set it down (it is seeded into the
+ * starting inventory and DROP is refused for it), exactly as a lamplighter on the round never is
+ * without one. So the death is sound on EVERY path that reaches it, and the lantern stays
+ * examinable ANYWHERE (always in hand). It is NOT takeable (already held), NOT quest_critical and
+ * gates nothing, so it adds no soft-lock surface and changes none of the three routes.
  */
-describe("bug_0216 — the round-lantern: the carried open flame, now a takeable + examinable object", () => {
-  it("round_lantern exists, is takeable, NOT quest_critical, and gates nothing (no soft-lock surface added)", () => {
+describe("bug_0216 → bug_0220 — the round-lantern: a HELD (always-carried, never-dropped) open flame", () => {
+  it("round_lantern is held (not takeable), NOT quest_critical, gates nothing, and is not also placed in a room", () => {
     const lantern = pack.objects.find((o) => o.id === "round_lantern");
     expect(lantern).toBeDefined();
-    expect(lantern!.takeable).toBe(true);
+    expect(lantern!.held).toBe(true);
+    expect(lantern!.takeable).toBeFalsy(); // already carried; the schema forbids held + takeable
     expect(lantern!.quest_critical).toBeFalsy();
+    // A held object is carried, never placed — it must not appear in any room's object list.
+    expect(pack.rooms.some((r) => r.objects.includes("round_lantern"))).toBe(false);
     // It is referenced by no exit / win / interaction condition and by no key_id — purely
     // an examinable affordance, so it cannot wedge the quest or be required to win.
     const id = "round_lantern";
@@ -281,28 +296,46 @@ describe("bug_0216 — the round-lantern: the carried open flame, now a takeable
     expect(d).toContain("rock-spirit");
   });
 
-  it("the lantern starts on the river-stair sill and can be carried, then examined at the excise-store fork (with the store-key, before any cask is opened)", () => {
-    // Lift the lantern at the start, then run the standard route to the store with the key.
-    const { state } = play(initStateForParserPack(index, 3), [
-      "take_round_lantern",
-      ...ROUTE_TO_STORE_WITH_KEY,
-    ]);
+  it("the lantern is carried from the VERY FIRST turn — examinable at the start, never offered to take, never droppable", () => {
+    const start = initStateForParserPack(index, 3);
+    expect(start.inventory).toContain("round_lantern"); // in hand before any action
+    const startIds = actionIds(start);
+    expect(startIds).toContain("examine_round_lantern"); // examinable immediately…
+    expect(startIds).not.toContain("take_round_lantern"); // …never taken (already held)…
+    expect(startIds).not.toContain("drop_round_lantern"); // …and never set down
+  });
+
+  it("it is STILL in hand and examinable at the three-way fork, with no extra step needed to carry it", () => {
+    // The standard route never touches the lantern, yet it is carried into the store.
+    const { state } = play(initStateForParserPack(index, 3), ROUTE_TO_STORE_WITH_KEY);
     expect(state.current).toBe("excise_store");
-    expect(state.inventory).toContain("round_lantern"); // carried into the store…
+    expect(state.inventory).toContain("round_lantern"); // carried into the store, hands-free
     expect(state.inventory).toContain("store_key");
     const ids = actionIds(state);
-    // …and examinable RIGHT HERE, in the instant the three-way fork is live.
-    expect(ids).toContain("examine_round_lantern");
+    expect(ids).toContain("examine_round_lantern"); // examinable RIGHT at the live fork
+    expect(ids).not.toContain("drop_round_lantern"); // and still cannot be set down here
     // The fork is still genuinely three-way with the lantern in hand — nothing changed.
     expect(ids).toContain("unlock_oil_cask");
     expect(ids).toContain("unlock_excise_box");
     expect(ids).toContain("unlock_spirit_cask");
   });
 
-  it("carrying the lantern leaves all three endings reachable and unchanged (win 35/35, thief, death)", () => {
-    // Win, lantern in hand throughout.
+  it("SOUNDNESS: forcing the spirit-cask kills you on the MINIMAL route (no take step) — the flame the death names is provably in hand", () => {
+    // bug_0220's exact witness: run to the cask carrying ONLY what the route grabs (the keys),
+    // never touching the lantern — yet it is held, so the death's "flame on your belt" is true.
+    const { state, narration } = play(initStateForParserPack(index, 3), [
+      ...ROUTE_TO_STORE_WITH_KEY,
+      "unlock_spirit_cask",
+    ]);
+    expect(state.endingId).toBe("ending_caught");
+    expect(state.inventory).toContain("round_lantern"); // the carried flame the prose presupposes
+    const n = narration.toLowerCase();
+    expect(n).toContain("flame");
+    expect(n).toContain("belt"); // the death narration's "flame burning honest on your belt"
+  });
+
+  it("all three endings stay reachable and unchanged with the lantern always in hand (win 35/35, thief, death)", () => {
     const win = play(initStateForParserPack(index, 3), [
-      "take_round_lantern",
       ...ROUTE_TO_STORE_WITH_KEY,
       "unlock_oil_cask",
       "open_oil_cask",
@@ -315,19 +348,15 @@ describe("bug_0216 — the round-lantern: the carried open flame, now a takeable
     ]);
     expect(win.state.endingId).toBe("ending_guided");
     expect(buildParserObservation(index, win.state).score).toBe(35);
-    expect(win.state.inventory).toContain("round_lantern"); // never spent
+    expect(win.state.inventory).toContain("round_lantern"); // never spent, never dropped
 
-    // Death still fires on forcing the spirit-cask, lantern carried.
     const death = play(initStateForParserPack(index, 3), [
-      "take_round_lantern",
       ...ROUTE_TO_STORE_WITH_KEY,
       "unlock_spirit_cask",
     ]);
     expect(death.state.endingId).toBe("ending_caught");
 
-    // Greed still fires on the strongbox, lantern carried.
     const thief = play(initStateForParserPack(index, 3), [
-      "take_round_lantern",
       ...ROUTE_TO_STORE_WITH_KEY,
       "unlock_excise_box",
     ]);

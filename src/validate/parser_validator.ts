@@ -172,6 +172,29 @@ export function validateParser(
         ]),
       );
     }
+    // A held object starts in the player's inventory; listing it ALSO in a room or
+    // a container would give it two homes (inventory wins, so the room/container
+    // copy is dead) — almost certainly an authoring slip. Flag it.
+    if (o.held) {
+      const inRoom = pack.rooms.find((r) => r.objects.includes(o.id));
+      if (inRoom)
+        findings.push(
+          err(
+            "HELD_ALSO_PLACED",
+            `held object "${o.id}" is also listed in room "${inRoom.id}"; a held object is carried, not placed.`,
+            [`object:${o.id}`],
+          ),
+        );
+      const inContainer = pack.objects.find((c) => c.contents.includes(o.id));
+      if (inContainer)
+        findings.push(
+          err(
+            "HELD_ALSO_PLACED",
+            `held object "${o.id}" is also inside container "${inContainer.id}"; a held object is carried, not placed.`,
+            [`object:${o.id}`],
+          ),
+        );
+    }
   }
   for (const npc of pack.npcs) {
     if (!roomIds.has(npc.room))

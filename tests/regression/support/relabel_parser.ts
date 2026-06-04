@@ -269,6 +269,7 @@ function relabelObject(
     description: o.description, // prose
     ...(o.variants ? { variants: o.variants.map((v) => relabelObjectVariant(v, r, rv)) } : {}),
     takeable: o.takeable,
+    ...(o.held !== undefined ? { held: o.held } : {}), // carried-state flag; no id to relabel
     quest_critical: o.quest_critical,
     ...(o.read_text !== undefined ? { read_text: o.read_text } : {}), // prose
     container: o.container,

@@ -42,6 +42,7 @@ describe("parser validator — negative fixtures must fail (§10.4)", () => {
     ["parser_end_game_undeclared", "END_GAME_UNDECLARED"],
     ["parser_win_is_death", "WIN_IS_DEATH"],
     ["parser_win_fires_at_start", "WIN_FIRES_AT_START"],
+    ["parser_held_also_placed", "HELD_ALSO_PLACED"],
   ];
 
   for (const [file, code] of VALIDATOR_FIXTURES) {
@@ -73,7 +74,7 @@ describe("parser validator — negative fixtures must fail (§10.4)", () => {
     });
   }
 
-  const SCHEMA_FIXTURES = ["parser_empty_text", "parser_unknown_effect"];
+  const SCHEMA_FIXTURES = ["parser_empty_text", "parser_unknown_effect", "parser_held_takeable"];
   for (const file of SCHEMA_FIXTURES) {
     it(`${file} is rejected by the schema (content is data, never code — §16)`, () => {
       expect(loadParserPackFile(`content/broken-fixtures/${file}.yaml`).ok).toBe(false);

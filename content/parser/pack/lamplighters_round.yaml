@@ -29,13 +29,16 @@
 #     (start;         (hub)         (the great lamp;       (the lost child,
 #      tinderbox,       │E*  excise_store              out of the dark once
 #      brass key,       │     ├ oil_cask    → whale-oil   the lamp is lit)
-#      round-lantern,   │     ├ excise_box  → ending_thief
-#      night-notice)    │W    └ spirit_cask → ending_caught (DEATH)
-#                    watch_box
+#      night-notice;    │     ├ excise_box  → ending_thief
+#      round-lantern    │W    └ spirit_cask → ending_caught (DEATH)
+#      HELD from t=0)  watch_box
 #                     (watchman;
 #                      wall-cupboard → store-key)
-#   (round_lantern = the carried open flame, takeable + examinable anywhere once held —
-#    the very thing the rock-spirit warning is about, made inspectable; bug_0216)
+#   (round_lantern = the carried open flame; `held: true`, so it is in hand from the first
+#    turn and can NEVER be dropped (bug_0220) — the death prose's "flame on your belt" is
+#    therefore true on EVERY path that reaches the spirit-cask, and it stays examinable
+#    anywhere, incl. at the fork. bug_0216 first made it an examinable object; bug_0220
+#    closed the gap where, being merely takeable, it could be left behind yet still "kill" you)
 #   (*   E to excise_store gated on store_open — the excise-store door, store-key)
 #   (*   N to harbour_head is open; the lamp there is the puzzle, not a locked exit)
 #   (**  down to the_strand gated on lamp_lit — the strand is lightless till the lamp burns)
@@ -61,11 +64,11 @@ rooms:
     description: >
       Fog stands thick on the river-stair. A pasted night-notice peels from the wall by
       the handrail; a tinderbox lies on the sill where the last lighter left it, and a
-      small brass tally-key hangs on a nail beside it. The lighter's round-lantern burns
-      low on its hook by the rail, throwing no more than a yard of light back into the
-      murk — yours to take up for the round. The staith runs on north into the dark; the
-      dark water laps somewhere below.
-    objects: [night_notice, tinderbox, brass_key, round_lantern]
+      small brass tally-key hangs on a nail beside it. Your own round-lantern burns low at
+      your belt as it has all the round, throwing no more than a yard of light back into
+      the murk — a lighter cannot work a river fog without it. The staith runs on north
+      into the dark; the dark water laps somewhere below.
+    objects: [night_notice, tinderbox, brass_key]
     exits:
       - { direction: north, to: lamp_walk }
 
@@ -180,17 +183,21 @@ objects:
 
   - id: round_lantern
     name: "round-lantern"
-    # The blind-pass finding made concrete (bug_0216, the lamplighters seed-7 pass): the warning
-    # that makes the spirit-cask a DEATH hangs on "the lit round-lantern on your belt" being an
-    # ever-present open flame, but that flame was never an inventory item nor an examinable object —
-    # it lived only in room/dialogue prose, so a careful player could not look at the very thing the
-    # excise warns will kill them. Now it is the lighter's third tool on the sill (beside the
-    # tinderbox and the tally-key): takeable, so once carried it can be examined ANYWHERE — including
-    # in the excise store, holding the store-key, in the instant before the three-way fork. Its
-    # examine spells out that it is a naked flame you carry the whole round and never put out, which
-    # is exactly why the red-stencilled rock-spirit is lethal. It is NOT quest_critical and gates
-    # nothing (the win never needs it and the death still fires on the unlock regardless), so it adds
-    # no soft-lock surface; max_score stays 35 and every ending stays reachable.
+    # The carried open flame the whole death fork turns on — now made literally always-carried
+    # (bug_0220). History: bug_0216 (the seed-7 blind pass) first instantiated the lantern as a
+    # TAKEABLE object so a careful player could examine the very thing the excise warns will kill
+    # them. But "takeable" let the player set it down (or never lift it at all): a seed-7 replay
+    # forcing the spirit-cask while carrying ONLY the keys — the lantern left behind on the stair —
+    # still fired the DEATH, whose prose ("the little flame burning honest on your belt", "the flame
+    # you carried in to it", "you were the naked light") presupposes a flame the player demonstrably
+    # was not carrying. A sealed naphtha cask cracked with NO open flame near it would not even take
+    # fire. The fix makes the fiction true in state: `held: true` — the lighter carries this lit
+    # lantern from the first turn and can never put it down (it starts in inventory and DROP is
+    # refused), exactly as a lamplighter on the round never is without one. So the death is sound on
+    # EVERY path that reaches it, and the lantern stays examinable ANYWHERE (it is always in hand,
+    # incl. at the three-way fork). It is NOT takeable (already held), NOT quest_critical and gates
+    # nothing — the win never needs it and the death still fires on the unlock regardless — so it
+    # adds no soft-lock surface; max_score stays 35 and every ending stays reachable.
     aliases: [lantern, round lantern, belt-lantern, belt lantern, my lantern, the lantern]
     description: >
       The lighter's own round-lantern — a stub of candle behind horn glass on a belt-hook, the
@@ -198,7 +205,7 @@ objects:
       river fog blind. It throws a yard of light and no more; but a yard of naked flame is a yard
       of naked flame, and it is the very thing the night-notice warns you to keep well off the
       red-stencilled rock-spirit in the store.
-    takeable: true
+    held: true
 
   - id: wall_cupboard
     name: "wall-cupboard"

@@ -1,0 +1,20 @@
+# MUST FAIL (schema): a `held` object is already carried, so it cannot also be `takeable`
+# — the ObjectSchema superRefine rejects the contradiction (content is data, never code).
+meta: { id: bad_held_takeable, title: "Bad Held Takeable", start_room: a }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+objects:
+  - id: lantern
+    name: "lantern"
+    description: "A lantern flagged both held and takeable, which is contradictory."
+    held: true
+    takeable: true
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

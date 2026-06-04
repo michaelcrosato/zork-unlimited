@@ -247,6 +247,18 @@ export const ObjectSchema = z
     // RoomSchema.variants / skill_check / dialogue-topic conditions).
     variants: z.array(ObjectVariantSchema).optional(),
     takeable: z.boolean().default(false),
+    // An object the player carries from the START of the game and can NEVER set
+    // down — a worn/equipped/bound item (the lamplighter's own lit round-lantern,
+    // a familiar, clothing). Placed in the starting inventory by
+    // `initStateForParserPack`, and DROP is refused for it (`legal_actions`), so the
+    // fiction "you carry X the whole round" is enforced by state, not merely
+    // asserted in prose — closing the bug_0220 gap where a "carried flame" the
+    // death narration presupposed could actually be left behind. `.optional()` (NOT
+    // a default) so an absent field stays absent in the compiled pack ⇒ every pack
+    // that doesn't use it keeps its content hash byte-for-byte (mirrors variants /
+    // unlock_effects / take_effects). A held object is already in hand, so it is
+    // not `takeable` (the superRefine below rejects the contradiction).
+    held: z.boolean().optional(),
     quest_critical: z.boolean().default(false),
     read_text: z.string().min(1).optional(), // READable signage/notes
     // Container facets.
@@ -304,6 +316,13 @@ export const ObjectSchema = z
         code: z.ZodIssueCode.custom,
         path: ["take_effects"],
         message: "take_effects require takeable: true (they fire on the first-class TAKE)",
+      });
+    }
+    if (o.held && o.takeable) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["held"],
+        message: "a held object is already carried and must not also be takeable",
       });
     }
   });

@@ -166,12 +166,19 @@ export function activeDialogue(
  *  CYOA's initStateForPack). */
 export function initStateForParserPack(index: ParserIndex, seed: number): GameState {
   const meta = index.pack.meta;
-  const base = initState({
+  const seeded = initState({
     seed,
     start: meta.start_room,
     varsInit: meta.vars_init,
     flagsInit: meta.flags_init,
   });
+  // Held objects (worn/equipped/bound — schema `held: true`) are carried from the
+  // very first turn and can never be dropped, so the player genuinely possesses
+  // them on every reachable path. Listed in pack order for a deterministic state.
+  const heldIds = index.pack.objects.filter((o) => o.held).map((o) => o.id);
+  const base = heldIds.length
+    ? { ...seeded, inventory: [...seeded.inventory, ...heldIds] }
+    : seeded;
   const startRoom = index.rooms.get(meta.start_room);
   if (!startRoom || startRoom.on_enter.length === 0) return base;
   return applyEffects(startRoom.on_enter, base).state;
