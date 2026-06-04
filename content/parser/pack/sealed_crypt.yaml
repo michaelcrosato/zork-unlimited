@@ -269,7 +269,18 @@ objects:
   - id: iron_key
     name: "iron key"
     aliases: [iron]
-    description: "A heavy iron key, black with age — fit for a great iron lock."
+    # The examine text telegraphs the OPTIONAL nerve beat below (the self-USE `grip
+    # iron key`). Repeated blind passes flagged that bare action as vestigial — a
+    # player can't tell what "gripping a key" does before committing. The controlled
+    # parser only accepts `<verb> <noun>`, so the offered command must stay typeable as
+    # "grip iron key"; the legibility fix is therefore CONTEXT, not the label. Naming
+    # the impulse to steady your hand here makes the beat read as an intentional,
+    # clued tension moment. Pure prose — gates nothing, changes no flag/score/exit, so
+    # every structural proof and the 35-point economy stay byte-identical (bug_0241).
+    description: >
+      A heavy iron key, black with age — fit for a great iron lock. The cold of it
+      climbs your wrist; whatever you mean to turn it on down here, you might grip it
+      a moment first and steady your hand before you do.
     takeable: true
     quest_critical: true
     # An OPTIONAL nerve TENSION beat — the Stage-4 d20 skill_check standardized into this
