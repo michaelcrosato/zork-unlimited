@@ -80,6 +80,45 @@ describe("canonicalize — non-JSON-safe value contract (bug_0230)", () => {
   });
 });
 
+describe("canonicalize — the ±0 sign-of-zero collapse (bug_0240)", () => {
+  // The bug_0230 family froze the non-finite numeric collapse (NaN/±Infinity → the
+  // string "null"). It left ONE member of the same numeric-collapse family unpinned:
+  // the sign of zero. `JSON.stringify(-0) === "0"`, so negative zero serializes
+  // IDENTICALLY to positive zero and is hash-indistinguishable from it — but, unlike
+  // the non-finite class, it collapses to "0", NOT to "null". A future canonicalizer
+  // that preserved -0 (e.g. a replacer emitting "-0") would silently shift the digest
+  // of any state holding a negative zero while every bug_0230 test stayed GREEN. This
+  // pins that last numeric-collapse member, same SoundnessBench absolute-witness
+  // discipline (parity with bug_0228/0230).
+  it('-0 serializes to "0" — identical to +0, at every nesting depth', () => {
+    expect(canonicalize(-0)).toBe("0");
+    expect(canonicalize(-0)).toBe(canonicalize(0));
+    expect(canonicalize({ a: -0, b: 0 })).toBe('{"a":0,"b":0}');
+    expect(canonicalize([-0, 0])).toBe("[0,0]");
+  });
+
+  it('the ±0 collapse is the "0" class, NOT the non-finite "null" class (non-vacuity)', () => {
+    // Separates the sign-of-zero collapse from the NaN/±Infinity → null collapse: a
+    // future uniform-null serializer would fail HERE by turning -0 into "null".
+    expect(canonicalize(-0)).not.toBe("null");
+    expect(canonicalize(-0)).not.toBe(canonicalize(NaN));
+  });
+});
+
+describe("hashState — the ±0 sign-of-zero collapse witness (bug_0240)", () => {
+  it("a -0 var collapses to the SAME hash as +0", () => {
+    expect(hashState({ vars: { score: -0 } })).toBe(hashState({ vars: { score: 0 } }));
+  });
+
+  it("but that collapse does NOT swallow distinct finite values (non-vacuity)", () => {
+    // Proves the equality above is the sign-of-zero contract, not "all numbers hash
+    // the same": a real negative value hashes differently from the ±0 class.
+    const hZero = hashState({ vars: { score: 0 } });
+    expect(hashState({ vars: { score: -1 } })).not.toBe(hZero);
+    expect(hashState({ vars: { score: 1 } })).not.toBe(hZero);
+  });
+});
+
 describe("hashState — the untrusted-Infinity load-integrity witness (bug_0230)", () => {
   it("a non-finite numeric var collapses to the SAME hash as null (the bug_0190 hp:1e999 case)", () => {
     // traces/bug_0190_infinity.json loads vars.hp = 1e999 (Infinity) off disk. Hashing

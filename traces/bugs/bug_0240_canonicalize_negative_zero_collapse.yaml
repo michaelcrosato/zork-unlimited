@@ -1,0 +1,78 @@
+id: bug_0240
+title: "Absolute contract pin for the canonicalizer's ±0 sign-of-zero collapse — the last unpinned member of the numeric-collapse family bug_0230 froze (non-finite → null), completing the determinism-keystone witness set"
+kind: verification_oracle
+mode: meta/tooling
+severity: enhancement
+layer: verification/determinism-keystone
+artifact:
+  source:
+    - src/core/hash.ts
+  test:
+    - tests/regression/canonicalize_nonjson_value_contract.test.ts
+
+summary: >
+  hashState — the save-integrity / trace-replay / scorecard determinism keystone — rests entirely on
+  canonicalize(value) = JSON.stringify(sortDeep(value)) (src/core/hash.ts, spec §8.6). bug_0230 froze the canonicalizer's
+  behaviour on the NON-FINITE numeric class (NaN/±Infinity → the string "null") plus undefined/function/BigInt and the
+  object-drop vs array-null asymmetry. It left ONE member of the same numeric-collapse family unpinned: the SIGN OF ZERO.
+  JSON.stringify(-0) === "0", so negative zero serializes byte-identically to positive zero and is hash-indistinguishable
+  from it — but, unlike the non-finite class, it collapses to "0", NOT to "null". This cycle pins that final member, the
+  same SoundnessBench absolute-witness discipline bug_0228 brought to the RNG (known-answer vector) and bug_0230 brought
+  to the rest of the canonicalizer contract.
+
+root_cause: >
+  Not a defect in canonicalize and NOT a discovered live bug — a verification-DEPTH asymmetry, the symmetric follow-on to
+  bug_0230. canonicalize is correct today; the gap is that the non-finite collapse was frozen while the adjacent
+  sign-of-zero collapse was not. A future change to the canonicalizer — a JSON.stringify replacer that preserved -0 as
+  "-0", or any sign-aware serializer — would silently shift the digest of any state holding a negative zero while every
+  bug_0230 canonicalize test stayed GREEN, invalidating dependent trace hashes with no attributable cause. -0 is unlikely
+  but not impossible in-domain (JS yields it from products/quotients like 0*-1 or -5*0; the load boundary and numeric
+  validators gate ranges, not zero-sign), and the witness discipline pins the serializer contract regardless of domain
+  reachability — exact parity with bug_0230's untrusted-Infinity witness. Triggered by the deterministic content assessor
+  running SATURATED (all 17 packs blind-clean; this cycle's mandated blind pass on wreckers_light came back clean, 5/5
+  clarity / 5/5 enjoyment, zero findings — all four endings reached), so the lever rotated to this verified-OPEN
+  structural asymmetry rather than churn a clean, floor-balanced pack.
+
+witness: >
+  THE TEETH, verified out of band (non-vacuity): with the suite passing 14/14 against the real module, perturbing
+  sortDeep to preserve negative zero (Object.is(value, -0) ? "-0" : value) turned exactly 2 of the 14 tests RED — the
+  canonicalize '-0 serializes to "0"' contract and the hashState '-0 collapses to the SAME hash as +0' witness. The two
+  non-vacuity guards (-0 is the "0" class NOT the "null" class; the ±0 hash collapse does not swallow distinct finite
+  values) stayed correctly green under that perturbation, proving they assert the SIGN contract specifically and not a
+  blanket equality. Restoring the file from git (git checkout -- src/core/hash.ts; git diff empty) returned the suite to
+  14/14 GREEN.
+
+fix: >
+  Two new describe blocks appended to the existing tests/regression/canonicalize_nonjson_value_contract.test.ts (importing
+  the REAL canonicalize/hashState from src/core/hash.js, never a reimplementation), freezing the sign-of-zero contract:
+  canonicalize(-0) === "0" === canonicalize(0) at top level, in an object value, and in an array element; the collapse is
+  asserted to be the "0" class and explicitly NOT the non-finite "null" class (non-vacuity, catches a future uniform-null
+  serializer); hashState({vars:{score:-0}}) collapses to the same digest as +0 but NOT to that of a distinct finite value
+  (-1/1 hash differently — non-vacuity).
+
+scope_honesty: >
+  This is the absolute-contract WITNESS for a canonicalizer that is already correct today (parity with
+  bug_0182/0218/0227/0228/0230) — NOT a discovered live defect, NOT a soundness exploit, and NOT a claim that the
+  -0 → 0 collapse is wrong (it is the deliberate JSON contract). Pure test addition: NO change to src/core/hash.ts or any
+  other source byte, NO engine/validator/schema/generator change, NO pack YAML, NO trace hash re-pin, NO scorecard byte,
+  NO corpus/manifest change. Every frozen vector was generated FROM the live implementation and verified against the real
+  module before committing.
+
+verification: >
+  npx vitest run tests/regression/canonicalize_nonjson_value_contract.test.ts -> 14 GREEN (was 10; +4 new: 2 canonicalize
+  cases + 2 hashState witness cases). Non-vacuity confirmed (see witness; src/core/hash.ts restored byte-identical, git
+  diff empty). npm run health -> GREEN (exit 0), net test count ROSE by exactly the 4 new cases. No source/script/
+  validator/schema/generator/engine change, no pack YAML, no scorecard byte, no corpus/manifest -> bug_0194 scorecard
+  freshness pin stays green, no regen; verify:integrity has no VERIFIER_TOUCHED / GUARD_WEAKENED / HASH_PIN regression
+  (the test file is not protected; src/core/hash.ts byte-unchanged).
+
+files_changed:
+  - tests/regression/canonicalize_nonjson_value_contract.test.ts (EXTENDED, +4 cases / 2 describe blocks)
+  - traces/bugs/bug_0240_canonicalize_negative_zero_collapse.yaml (NEW, this file)
+
+regression: >
+  The contract IS the regression: it fails loudly if the canonicalizer's treatment of the sign of zero ever drifts (a
+  replacer preserving -0, a sign-aware serializer) — exactly the change that would silently shift the digest of every
+  state hashing a negative zero while every other canonicalize test stayed green. On a deliberate canonicalizer change,
+  the operator must re-derive these contracts AND re-pin every dependent trace expected_final_hash — never relax the
+  assertion to pass. Purely additive (1 extended test file, 1 new bug artifact); src/core/hash.ts byte-unchanged.
