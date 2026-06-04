@@ -140,7 +140,14 @@ rooms:
       - direction: north
         to: race_house
         conditions: [{ has_flag: walk_crossed }]
-        locked_msg: "The spillway-walk is still ahead of you, awash and uncrossed; the race-house lies beyond it."
+        # locked_msg names the PRECONDITION (the life-line clipped to the run-wire), the house
+        # style of the lamplighters harbour_head down-exit ("…until the great lamp is lit") — WHY
+        # blocked, not HOW to clear (the crossing action stays hidden until the line is held,
+        # the bug_0201 blocked_exits discipline). The bug_0225 blind-pass finding: the old generic
+        # "still ahead of you" named no precondition, so a player who left the life-line in the
+        # lodge stood on the awash walk with ominous prose, a blocked north, and no signpost to
+        # what was missing. Naming the line turns the dead-end into a pointer back to the rope.
+        locked_msg: "The spillway-walk is still ahead of you, awash and uncrossed, and the race below keeps what it takes — you'll not chance the crossing without the life-line clipped to the run-wire. The race-house lies beyond."
 
   - id: race_house
     name: "The Relief-Race House"

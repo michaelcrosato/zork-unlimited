@@ -1,0 +1,65 @@
+id: bug_0225
+title: "Breaking-Weir blind-pass: the storm-walk north-exit locked_msg named no precondition — a player who left the life-line behind stood on the awash walk with ominous prose, a blocked north, and no signpost to what was missing. Reworded to name the precondition (the line clipped to the run-wire), the lamplighters harbour_head house style."
+kind: content_fix
+mode: rpg
+pack: content/rpg/pack/breaking_weir.yaml
+# Informational. The edit changes ONE locked_msg STRING on the weir_walk → race_house exit.
+# It touches no action, gate, flag, score, ending, or the discovered pack set, and the
+# heuristic benchmark bot never reads locked_msg text (a blocked exit is simply not a legal
+# action), so the bot's seeded trajectory and the scorecard are unchanged — unlike the
+# bug_0216 object-add, NO scorecard regen is required and no pinned hash is touched. The
+# auto-discovered RPG bar (ending reachability, liveness, score-economy max==50, skill-check
+# passability, blocked_exits surfacing) re-derives clean over the edited pack; max_score 50.
+
+summary: >
+  The mandated blind pass this cycle (The Breaking Weir, rpg, seeds 7/23 — the most-overdue
+  dedicated-blind target per [[assessor-blind-pass-rotation]], rotated off the assessor's
+  recency-blind rank-1 lamplighters_round) returned clarity 5/5, enjoyment 4/5, mechanics
+  flawless: a WON 50/50 run (seed 7, all three skill checks passed) plus the DEATH fork
+  (ending_swept, seed 23 — the un-counselled gamble crossing failing on raw nerve), both
+  endings reached cleanly with zero rejected actions, zero loops, zero broken state. Its one
+  concrete friction finding: on the storm-walk WITHOUT the life-line, the room prose dangles
+  the crossing in front of the player, but `go north` is blocked with a GENERIC message
+  ("…still ahead of you; the race-house lies beyond it") that names no precondition, so a
+  player who left the line in the lodge gets a wall of "you could die out here" text, a
+  blocked exit, and no signpost to what is actually missing — they must infer the trek back
+  for the rope.
+
+root_cause: >
+  Since bug_0201 a locked exit's authored `locked_msg` is surfaced to the player as a
+  `blocked_exits` HINT in the structured observation (WHY blocked, never HOW to clear). The
+  weir_walk north exit's locked_msg was the one in the pack that named NO precondition — it
+  only restated that the walk is uncrossed. Compare the pack's own house style elsewhere
+  (and the lamplighters harbour_head down-exit, "…you'll not go down into that until the
+  great lamp is lit"): a good locked_msg names the missing precondition so the player knows
+  what the way is waiting on. The crossing's real precondition is the life-line held and
+  clipped to the run-wire (the tool-on-target USE requires holding the line), and that was
+  the exact thing the blind player could not infer from the generic message.
+
+fix: >
+  Reword the weir_walk → race_house `locked_msg` to name the precondition the way the rest
+  of the packs do: "The spillway-walk is still ahead of you, awash and uncrossed, and the
+  race below keeps what it takes — you'll not chance the crossing without the life-line
+  clipped to the run-wire. The race-house lies beyond." This:
+    • names the missing precondition (life-line on the run-wire), turning the dead-end into a
+      pointer back to the rope for the player who left it in the lodge — the friction fixed;
+    • preserves the bug_0201 WHY-not-HOW discipline: it states the precondition (as the lamp
+      and barred-door locked_msgs do) but does NOT spell the crossing command — the `rig
+      storm-walk with life-line` action still surfaces only once the line is actually held;
+    • keeps the lethal stakes tone ("the race below keeps what it takes").
+  No route, gate, score, or ending change: every ending stays reachable, max_score stays 50,
+  the skill-check chain is untouched. Purely a player-facing-string clarity fix on a blocked
+  path.
+
+regression_test: tests/regression/breaking_weir_blind_polish.test.ts
+# New `describe` block (bug_0225): at weir_walk with the rack freed but the walk not yet
+# crossed (the exact state the no-line player stands in), the north blocked_exits hint NAMES
+# the precondition (matches /life-line/ and /run-wire/) and is NOT the old generic string,
+# while staying free of the crossing command verb (no "rig") so the WHY-not-HOW discipline
+# holds. The pre-existing bug_0197 cases (reactive names, journal honesty) are untouched and
+# still green.
+
+verify:
+  - "validate_story content/rpg/pack/breaking_weir.yaml → ok, max_score 50, 0 findings"
+  - "npx vitest run tests/regression/breaking_weir_blind_polish.test.ts → all passed"
+  - "npm run health → green (verify:integrity + typecheck + lint + format + tests + validate + playtest)"

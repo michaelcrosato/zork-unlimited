@@ -94,3 +94,52 @@ describe("bug_0197 — The Breaking Weir blind-playtest polish (narration-vs-sta
     expect(journal).not.toMatch(/Pell/i); // …but credits no one the gambler never spoke to
   });
 });
+
+/**
+ * Regression (§15) for bug_0225 — blind-pass polish: the storm-walk north-exit locked_msg
+ * named no precondition. Since bug_0201 a locked exit's `locked_msg` is surfaced to the
+ * player as a `blocked_exits` HINT. The seed-7/23 blind pass found the weir_walk → race_house
+ * hint was the one in the pack that named nothing the way was waiting on ("…still ahead of
+ * you; the race-house lies beyond it"), so a player who left the life-line in the lodge stood
+ * on the awash walk with ominous prose, a blocked north, and no signpost to the missing rope.
+ * The fix names the precondition (the life-line clipped to the run-wire) the way the rest of
+ * the packs' locked_msgs do, WITHOUT spelling the crossing command (the bug_0201 WHY-not-HOW
+ * discipline — the `rig` action still surfaces only once the line is held).
+ *
+ * Locked BEHAVIOURALLY on the real observation at the exact state the no-line player stands in
+ * (weir_walk, rack freed, walk not crossed): the north blocked_exits hint names the
+ * precondition and is not the old generic string, while staying free of the command verb.
+ */
+const NORTH_HINT = (s: GameState): string | undefined =>
+  buildRpgObservation(index, s).blocked_exits.find((e) => e.direction === "north")?.message;
+
+describe("bug_0225 — The Breaking Weir storm-walk blocked-north hint names its precondition", () => {
+  it("at the uncrossed walk the north hint names the life-line on the run-wire", () => {
+    // The exact state the blind tester hit: rack freed (so they reached the walk), walk not
+    // yet crossed (so north is still gated) — and, critically, the life-line possibly left
+    // behind, which is why the precondition must be legible from the hint alone.
+    const hint = NORTH_HINT(inRoom("weir_walk", { rack_freed: true }));
+    expect(hint).toBeDefined(); // the gated exit IS surfaced as a hint (bug_0201)
+    expect(hint).toMatch(/life-line/i); // names the missing precondition…
+    expect(hint).toMatch(/run-wire/i); // …and where it clips
+  });
+
+  it("the hint is no longer the generic precondition-less string and spoils no command verb", () => {
+    const hint = NORTH_HINT(inRoom("weir_walk", { rack_freed: true }))!;
+    // The old generic message named nothing the way was waiting on — regression witness.
+    expect(hint).not.toBe(
+      "The spillway-walk is still ahead of you, awash and uncrossed; the race-house lies beyond it.",
+    );
+    // WHY-not-HOW (bug_0201): names the precondition but not the crossing command (`rig`).
+    expect(hint).not.toMatch(/\brig\b/i);
+  });
+
+  it("once the walk is crossed the north hint retires (the way is open)", () => {
+    const obs = buildRpgObservation(
+      index,
+      inRoom("weir_walk", { rack_freed: true, walk_crossed: true }),
+    );
+    expect(obs.exits.some((e) => e.direction === "north")).toBe(true); // traversable now
+    expect(obs.blocked_exits.some((e) => e.direction === "north")).toBe(false); // hint gone
+  });
+});
