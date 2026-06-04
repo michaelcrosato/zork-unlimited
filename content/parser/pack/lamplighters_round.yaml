@@ -81,6 +81,16 @@ rooms:
       excise store stands shut to the east behind a stout barred door; the watch-box
       leans to the west with a lantern-glow in its window; the river-stair is back to
       the south.
+    # Reaching the hub is the first milestone of the round (quest "the_round"): from here
+    # the chain opens out east to the store and north to the dark lamp. set_quest_stage
+    # TRACKS PROGRESS ONLY — it gates no exit, ending, interaction, or win, touches no
+    # score, and changes no existing effect. The reactive prose that reads the quest lives
+    # at harbour_head (on the `font_filled` stage), set and read in that same room with no
+    # intervening on_enter, so it is route-independent; this `round_begun` ping is a pure
+    # progress marker and is deliberately not relied on for any room's text (re-entering
+    # the hub harmlessly re-sets the same early stage, but no prose keys off it here).
+    on_enter:
+      - set_quest_stage: { quest: the_round, stage: round_begun }
     objects: [store_door]
     exits:
       - { direction: south, to: river_stair }
@@ -122,6 +132,13 @@ rooms:
       below, and it is dark. The wick is dry: it wants oil poured into the font and a flame
       set to it. Below, in the lightless dark, the tide is making over the strand. The
       lamp-walk is back to the south.
+    # First variant (lamp_lit) wins once the lamp burns; the second reacts to the round's
+    # `font_filled` stage — the beat AFTER the oil is poured but BEFORE the flame is struck.
+    # Both are reactive prose only; neither gates anything. The stage is set by the lamp's
+    # own `pour` interaction HERE at harbour_head and read HERE, with no on_enter between, so
+    # this variant displays route-independently in that one-action window and is never dead.
+    # The stages are mutually exclusive (font_filled precedes lamp_lit), so the order is also
+    # correct on its own; lamp_lit is listed first so the lit description always takes first match.
     variants:
       - when: [{ has_flag: lamp_lit }]
         text: >
@@ -131,6 +148,13 @@ rooms:
           shingle a small figure stirs and turns up toward the light: the lost child, still
           to be reached. The way down to the strand drops away to the north-east; the
           lamp-walk is back to the south.
+      - when: [{ quest_stage: { quest: the_round, stage: font_filled } }]
+        text: >
+          The very head of the staith, the great harbour-lamp on its iron post above the
+          drop — its deep font brimming with the oil you have just drawn and poured, the
+          broad wick standing soaked and dark and wanting only a flame. Below, in the
+          lightless dark still, the tide is making over the strand. Strike the light and
+          it will reach right down onto it. The lamp-walk is back to the south.
     objects: [harbour_lamp]
     exits:
       - { direction: south, to: lamp_walk }
@@ -242,6 +266,7 @@ objects:
       stacked within — and somewhere among them the oil for your lamp.
     unlock_effects:
       - set_flag: store_open
+      - set_quest_stage: { quest: the_round, stage: store_open }
       - unlock_exit: { from: lamp_walk, to: excise_store }
       - inc_var: { name: score, by: 10 }
 
@@ -356,6 +381,7 @@ objects:
         conditions: [{ has_item: whale_oil }, { not_flag: font_filled }, { not_flag: lamp_lit }]
         effects:
           - set_flag: font_filled
+          - set_quest_stage: { quest: the_round, stage: font_filled }
           - remove_item: whale_oil
           - add_journal: "You poured the whole flask of whale-oil into the great lamp's dry font, brimming it ready for a flame."
           - narrate: >
@@ -370,6 +396,7 @@ objects:
         conditions: [{ has_flag: font_filled }, { not_flag: lamp_lit }]
         effects:
           - set_flag: lamp_lit
+          - set_quest_stage: { quest: the_round, stage: lamp_lit }
           - inc_var: { name: score, by: 20 }
           - unlock_exit: { from: harbour_head, to: the_strand }
           - add_journal: "You struck the light to the filled font, and the great harbour-lamp took and burned, throwing its gold right down onto the dark strand below."

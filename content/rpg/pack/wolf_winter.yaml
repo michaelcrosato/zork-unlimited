@@ -72,6 +72,17 @@ rooms:
       fist — the steading's only spear, and yours by trade; somewhere up the high wood a
       pack is singing, close and getting closer, and down here the cattle have begun to
       low and shove in their pen. The byre and its yard lie through the gate to the north.
+    # The yard re-describes itself once the watch is taken up (quest the_watch). Reactive
+    # prose only — no exit, win or ending turns on the stage. (A later byre_held variant was
+    # cut: after the leader falls the player wins at cattle_stand without re-viewing the yard,
+    # so that stage is never a viewing context here — the bug_0147 liveness proof requires
+    # every declared variant to be the first match in some reachable state.)
+    variants:
+      - when: [{ quest_stage: { quest: the_watch, stage: watch_set } }]
+        text: >
+          The steading yard, the dark house shuttered at your back and your spear in your
+          fist. The watch is taken up now — the byre is the whole of the night, and the
+          wolves are in it. The byre and its yard lie through the gate to the north.
     exits:
       - { direction: north, to: byre_yard }
 
@@ -85,6 +96,12 @@ rooms:
       the byre runs back to where the cattle are penned — and the first of the wolves is
       already through the gap. The yard gate is back to the south.
     objects: [day_book]
+    # Reaching the byre is where the night's work begins — the watch is taken up here
+    # (quest the_watch, stage watch_set). Pure progress-tracking: no exit, enemy, win or
+    # ending turns on it; it only marks the milestone and lets the prose react (see the
+    # steading_yard variants). The flag economy that gates the gauntlet is untouched.
+    on_enter:
+      - set_quest_stage: { quest: the_watch, stage: watch_set }
     exits:
       - { direction: south, to: steading_yard }
       - { direction: west, to: store }
@@ -340,6 +357,9 @@ enemies:
     on_defeat:
       - add_journal: "You take the yearling on its rush as it commits, and it goes down in the snow of the breach. The byre runs on north."
       - inc_var: { name: score, by: 10 }
+      # Milestone: the breach is held (quest the_watch). Progress-tracking only — the way
+      # north still gates on the yearling_down FLAG, not on this stage; nothing changes.
+      - set_quest_stage: { quest: the_watch, stage: breach_held }
   - id: flank_wolf
     name: "flank-wolf"
     description: "A rangy flank-wolf turned at the byre door, quicker and warier than the yearling, circling for your off side."
@@ -352,6 +372,9 @@ enemies:
     on_defeat:
       - add_journal: "You meet the flank-wolf as it cuts for your off side and put it down across the threshold; the dark of the byre runs on north."
       - inc_var: { name: score, by: 10 }
+      # Milestone: the threshold is held (quest the_watch). Progress-tracking only — the
+      # way north still gates on the flank_wolf_down FLAG, not on this stage.
+      - set_quest_stage: { quest: the_watch, stage: threshold_held }
   - id: grey_leader
     name: "grey leader"
     description: "The pack-leader deep in the byre: the old grey bitch, lean and scarred and unhurried, who has killed in byres before and waits for you to be careless."
@@ -364,6 +387,9 @@ enemies:
     on_defeat:
       - add_journal: "You close on the grey leader before she can wait you out, and she falls among the straw; beyond her the cattle stand unhurt."
       - inc_var: { name: score, by: 10 }
+      # Milestone: the byre is held (quest the_watch) — the last of the three down. Progress
+      # tracking only; the cattle-stand win still gates on the leader_down FLAG, not on this.
+      - set_quest_stage: { quest: the_watch, stage: byre_held }
 
 win_conditions:
   # Locomotion win, like the Beacon (visited: beacon_crown) and cold_forge (ember_chamber):

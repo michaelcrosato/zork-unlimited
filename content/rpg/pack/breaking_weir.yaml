@@ -74,6 +74,22 @@ rooms:
       the gates with, leans by the door, and his life-line, a coil of tarred rope with a snap
       at one end, hangs on its peg beside it. The weir itself is out through the door to the
       north.
+    # NON-VACUOUS reactive read of the quest progress (§13): once the relief-race is running
+    # (the_weir at stage race_running) the climbing flood has somewhere to go, and the river's
+    # voice outside the lodge changes from the rising roar to a steadier note — the change Pell
+    # is listening for from his cot, named here so a player who comes back down to the lodge
+    # after opening the race hears the night turning. Keys off the stage, not the flag, and
+    # changes only prose: it gates no exit, alters no score, and the north signpost is kept.
+    variants:
+      - when: [{ quest_stage: { quest: the_weir, stage: race_running } }]
+        text: >
+          The weir-keeper's lodge, the stone hut still loud with the flood — but the river's
+          voice outside has changed, the rising roar gone over to a steadier, falling note now
+          that the relief-race is carrying the worst of it off around the valley. Old Pell lies
+          quiet on his cot by the cold hearth, his eyes shut and his head cocked to the water,
+          listening to the night turn; he hears the difference, and he does not need to be told.
+          His flood-book lies open on the table. The weir is still out through the door to the
+          north, the last of the work up there in the dark.
     objects: [flood_book, weir_iron, life_line]
     exits:
       - { direction: north, to: weir_head }
@@ -185,6 +201,11 @@ rooms:
     # coincides with the valley being saved, never before. SCORE_PEAKS_BEFORE_WIN does not
     # fire on a navigation win (bug_0116).
     on_enter:
+      # Quest progress (§13): the_weir reaches its final stage, weir_held, as you make the
+      # rim and the valley is saved. Pure progress-tracking on the denouement step beside the
+      # +15 capstone — it gates nothing (the win still rides `visited: valley_held` below) and
+      # leaves the score economy untouched; it simply records that the night was won.
+      - set_quest_stage: { quest: the_weir, stage: weir_held }
       - add_journal: "The river has crested and is falling, and the weir holds; the valley below sleeps on, dry and safe in the first grey light."
       - inc_var: { name: score, by: 15 }
     exits:
@@ -254,6 +275,11 @@ objects:
           difficulty: 9
           on_success:
             - set_flag: rack_freed
+            # Quest progress (§13): the_weir advances to rack_cleared the instant the rack
+            # gives. Pure progress-tracking alongside the existing rack_freed flag (which the
+            # north exit still gates on) — it changes no gate, DC, or score; it is what the
+            # lodge's reactive read keys off to know the keeper is one obstacle into the night.
+            - set_quest_stage: { quest: the_weir, stage: rack_cleared }
             - inc_var: { name: score, by: 10 }
             - add_journal: "You set the weir-iron behind the jam and work it; the packed drift comes away in a rush and the water drops down through the cleared rack at last."
             - narrate: "You wedge the weir-iron behind the worst of the jam and throw your weight on it. The drift gives — first a branch, then the whole packed mass of it sliding free — and the head-rack stands clear, the water combing down through the bars instead of climbing the lip."
@@ -296,6 +322,11 @@ objects:
           difficulty: 9
           on_success:
             - set_flag: walk_crossed
+            # Quest progress (§13): the_weir advances to walk_won when the storm-walk is
+            # behind you — the night's one killing place crossed. Tracks alongside the
+            # walk_crossed flag (which the north exit still gates on); no gate, DC, or score
+            # touched. The stage name is walk_won so it cannot be confused with the flag.
+            - set_quest_stage: { quest: the_weir, stage: walk_won }
             - inc_var: { name: score, by: 10 }
             # journal stays true on BOTH paths: the crossing is reachable un-counselled
             # (the gamble path, base nerve 3 needing d20>=6), where "the way Pell told you"
@@ -335,6 +366,12 @@ objects:
           difficulty: 9
           on_success:
             - set_flag: race_open
+            # Quest progress (§13): the_weir advances to race_running the moment the relief-
+            # race opens and the flood starts to draw off safe — the turn of the night, the
+            # weir saved though the valley is not yet reached. Tracks alongside the race_open
+            # flag (which the north exit still gates on); no gate, DC, or score touched. This
+            # is the stage the keeper's-lodge variant reads to change the river's voice below.
+            - set_quest_stage: { quest: the_weir, stage: race_running }
             - inc_var: { name: score, by: 10 }
             - add_journal: "With the weir-iron through the spokes for a lever you break the seized winch free and haul the gate up; the relief-race opens with a roar and the flood begins to run off safe around the valley."
             - narrate: "You run the weir-iron through the winch-spokes and set your whole weight to it. For a long moment nothing — then, with a crack of breaking rust, the wheel turns, and turns again, and the gate grinds up in its frame. The relief-race opens with a white roar beneath the floor and takes the climbing flood off down its channel."
