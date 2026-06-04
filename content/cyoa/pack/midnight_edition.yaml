@@ -1,0 +1,284 @@
+# The Midnight Edition — a CYOA pack (Stage 1 format). The project's 17TH pack and 7TH
+# CYOA — shipped as a deliberately BOT-COMPLETABLE curated pack, the move the standing
+# CRITICAL WATCH calls for: the curated benchmark floor had thinned to 0.357 (vs the 0.35
+# CURATED_FLOOR in benchmark_headline_no_regression), so the next bot-UNSOLVABLE puzzle
+# pack would have breached it. A CYOA the planning-free coverage bot can finish (its six
+# CYOA siblings average ~0.68 on the coverage strategy) raises the curated mean and WIDENS
+# the curated→held-out split gap instead of eroding it — breadth that strengthens, not
+# strains, the headline guard. (Setting is wholly new: a Victorian small-town newspaper
+# at the lock-up, no overlap with the lighthouse/manor/watchtower/hunt/sea-navigation/
+# village packs.)
+#
+# The heart is a DILIGENCE fork, not a lock-and-key chain and not (like wreckers_light) a
+# pure moral mirror: you are the night sub-editor alone in the composing room as the front
+# page locks up at dawn. A source's letter on the stone accuses the town's benefactor — the
+# mill-owner Garrow — of causing the weir-sluice drowning that killed three of his own men
+# and then buying the inquest. The decisive act is the same verb on every route (send the
+# page to press, or pull it), but WHAT YOU KNOW WHEN YOU PULL THE LEVER is what the night
+# turns on:
+#   * verify FIRST — read the letter (→ read_letter), take the spare key from the desk,
+#     unlock the editor's safe (→ safe_open), and read the suppressed inspector's report
+#     inside (→ knows_proof) — THEN print  → ending_vindicated (the considered win: the
+#     truth holds because it is PROVEN, and Garrow cannot sue a signed government report)
+#   * print on the source's word ALONE, unverified                → ending_libel (a careless
+#     ruin: one charge in the letter is wrong, Garrow sues for libel, the paper is broken
+#     and an innocent clerk wrongly named — courage without diligence does harm)
+#   * pull the story and set the safe column in its place         → ending_spiked (the
+#     cowardly/complicit pole: you keep your place and the dead keep theirs, unspoken)
+#   * go out to the alley to face Garrow's men at the door        → ending_silenced (the
+#     rash pole, plainly telegraphed: they have come with hammers for the press, and for
+#     you; you go out anyway and the page never runs)
+#
+# Why it is genuinely a BENCHMARK pack and not just easy filler: the bot completes (every
+# ending is one direct choice from a hub or sub-scene, so completion ≈ 100% like wreckers_
+# light / watchtower_road), but the CONSIDERED ending is gated behind a four-step read-and-
+# verify chain a greedy, no-planning agent reaches only by covering everything first — the
+# spike and libel poles are the trivially-reachable ones, vindicated is the earned one. The
+# discrimination is "did the agent do the diligence before the irreversible act", which is
+# exactly the reasoning a real model is scored on and the coverage bot has no plan for.
+#
+# Fair-play discipline (§8.7, bug_0123 "never an ambush"): both bad poles are telegraphed
+# before they fire. The letter itself warns one of its charges is unproven and that the
+# proof is in Garrow's own suppressed report; the press-floor prose names plainly, when you
+# hold only the source's word, that printing now is a gamble on a man's name; and the alley
+# scene shows the men and their hammers before the door is opened. No route is a curiosity
+# trap; each terminal is a turn the PLAYER elects with the cost in front of them.
+#
+# Structure mirrors wreckers_light's proven, bot-completable skeleton (hub + sub-scenes +
+# direct ending links + a read-chain knowledge flag that reframes the climax), reskinned to
+# a new setting and a new decision axis (diligence vs courage vs complicity vs rashness).
+# Reactive variants keep every scene honest about state it has changed (letter read, safe
+# open, proof in hand) — the bug_0232 stale-prose discipline applied from the start.
+
+meta:
+  id: midnight_edition_v1
+  title: "The Midnight Edition"
+  start: composing_room
+  flags_init: []
+
+scenes:
+  - id: composing_room
+    title: "The Composing Room"
+    text: >
+      Gaslight and the smell of hot metal and oil. The town's one newspaper sleeps around
+      you — every page of the morning edition locked up in its forme and waiting, but the
+      front page, which is yours to close before the press rolls at dawn. On the imposing
+      stone lies a letter that came up the back stairs an hour ago in a workman's hand, and
+      it has sat in your chest like a coal ever since. An iron stair climbs north to the
+      editor's office, dark and empty at this hour; the press floor drops away below to the
+      south; and out past the inking-room a door gives on the alley, where, this last
+      half-hour, there have been boots on the cobbles that do not sound like printers going
+      home.
+    # Reactive prose: once the letter is read it is no longer the unread coal on the stone.
+    variants:
+      - when: [{ has_flag: read_letter }]
+        text: >
+          Gaslight and the smell of hot metal and oil. The morning edition sleeps locked in
+          its formes around you, all but the front page that is yours to close before the
+          press rolls at dawn. The workman's letter lies open on the imposing stone where
+          you read it, and it has not got lighter for the reading: somewhere above you, in
+          Garrow's own office safe, is the report that would make it true or break it. The
+          iron stair climbs north to that office; the press floor drops away south; and out
+          past the inking-room the alley door stands shut on the boots that keep pacing the
+          cobbles beyond it.
+    choices:
+      - id: read_letter
+        text: "Read the letter on the stone."
+        conditions: [{ not_flag: read_letter }]
+        effects:
+          - set_flag: read_letter
+          - add_journal: >
+              The letter is from a sluice-man at Garrow's mill. He swears the weir-gate that
+              drowned three men in the spring was known rotten for a year, that Garrow was
+              warned in writing and ran it anyway to save the cost, and that the coroner was
+              paid to call it an act of God. But he writes plainly that he cannot prove the
+              warning himself — only that the inspector's condemned report exists, and that
+              Garrow keeps it locked in the office safe upstairs rather than burn it, the way
+              a frightened man keeps the very thing that damns him. The spare key, he says, is
+              taped under the lip of the editor's desk drawer.
+        next: composing_room
+      - id: go_office
+        text: "Climb the iron stair to the editor's office."
+        next: editors_office
+      - id: go_press
+        text: "Go down to the press floor and the waiting front page."
+        next: press_floor
+      - id: go_alley
+        text: "Go to the alley door and the boots on the cobbles."
+        next: alley_door
+
+  - id: editors_office
+    title: "The Editor's Office"
+    text: >
+      The editor's room over the press, all leather and cold pipe-smoke, the great safe
+      squatting black in the corner like a thing that knows it is hated. Garrow sits on the
+      paper's board and keeps a room here, and keeps that safe, and the desk between you and
+      it is a clutter of proofs and bills and a locked shallow drawer.
+    variants:
+      # Most-specific first (first-match-wins): proof read ⇒ the safe stands open and emptied.
+      - when: [{ has_flag: knows_proof }]
+        text: >
+          The editor's room over the press, leather and cold pipe-smoke. The great safe
+          stands open in the corner where you left it, the inspector's report spread on the
+          desk under the lamp — condemned, signed, dated a year before the weir took those
+          three men, with Garrow's own initials acknowledging it. There is no unreading it
+          now. The desk drawer hangs open and empty, the spare key still in its lock.
+      - when: [{ has_flag: safe_open }]
+        text: >
+          The editor's room over the press, leather and cold pipe-smoke. The great safe
+          stands open in the corner, its door swung wide on the bundle of papers inside. The
+          shallow desk drawer hangs open, the spare key you found taped beneath its lip still
+          turned in the safe's lock.
+    choices:
+      - id: search_desk
+        # Gated on read_letter — the letter is what tells you the key is under the drawer
+        # lip; without it there is no reason to prise the desk. (Mirrors wreckers_light's
+        # met_keeper-gates-search_keeper chain; keeps the proof behind the diligence step.)
+        text: "Prise the locked desk drawer and feel under its lip for the key."
+        conditions: [{ has_flag: read_letter }, { not_item: safe_key }]
+        effects:
+          - add_item: safe_key
+          - add_journal: "A small brass safe-key, taped to the underside of the drawer lip exactly as the letter said. Garrow's own clerk must have hidden it where his master would never stoop to look."
+        next: editors_office
+      - id: open_safe
+        text: "Unlock the great safe with the brass key."
+        conditions: [{ has_item: safe_key }, { not_flag: safe_open }]
+        effects:
+          - set_flag: safe_open
+          - add_journal: "The safe swings open on a bundle of papers tied in pink legal tape — and on top, a government envelope stamped CONDEMNED and INSPECTOR OF WORKS."
+        next: editors_office
+      - id: read_report
+        text: "Read the condemned inspector's report from the safe."
+        conditions: [{ has_flag: safe_open }, { not_flag: knows_proof }]
+        effects:
+          - set_flag: knows_proof
+          - add_journal: >
+              The report is everything the sluice-man swore and worse: the weir-gate
+              condemned in writing a full year before it failed, the warning served on
+              Garrow by name, his own initials in the margin acknowledging receipt — and
+              the cost of the repair he refused, noted to the shilling. This is not a
+              workman's grievance any more. It is proof, signed and dated by a Crown
+              inspector, and no libel suit can touch a word the paper prints if it prints
+              THIS beside the story.
+        next: editors_office
+      - id: leave_office
+        text: "Go back down to the composing room."
+        next: composing_room
+
+  - id: press_floor
+    title: "The Press Floor"
+    text: >
+      The great fl-bed press fills the floor below, the front-page forme already on it and
+      locked but for the lead column, the safe set-matter waiting in the galley alongside —
+      a mild notice of the spring's drownings, the coroner's verdict, nothing that would
+      cost a sleeping town its benefactor. One column, one pull of the bed-lever, decides
+      which of the two the morning carries. The stairs climb back up to the composing room.
+    variants:
+      # Most-specific first: holding the proof reframes the lever as a sure thing, not a
+      # gamble; holding only the source's word names plainly that printing now risks a man's
+      # name on one unproven charge (the bug_0123 "never an ambush" telegraph in the moment).
+      - when: [{ has_flag: knows_proof }]
+        text: >
+          The flat-bed press fills the floor, the front-page forme locked but for the lead
+          column. You carry the inspector's signed report now, and with it the story is not
+          an accusation but a proven fact — Garrow cannot sue what a Crown seal already
+          condemned. Set THIS column and pull the lever, and the truth runs ten thousand
+          times before he is out of bed, and stands. The safe set-matter — the gentle,
+          forgetful notice — waits in the galley beside it for the coward's hand. The stairs
+          climb back up to the composing room.
+      - when: [{ has_flag: read_letter }]
+        text: >
+          The flat-bed press fills the floor, the front-page forme locked but for the lead
+          column. You have the sluice-man's letter and his word — but he wrote himself that
+          he cannot prove the warning, and the proof is still in the safe upstairs you have
+          not opened. Set this column on his word alone and pull the lever, and you stake the
+          paper, and a named man's good name, on a charge you have not seen proved; if one
+          line of it is wrong, the wrong falls on the page in your hand. The safe set-matter
+          waits in the galley beside it. The stairs climb back up to the composing room.
+    choices:
+      - id: print_verified
+        text: "Set the proven story and pull the bed-lever — run the front page."
+        conditions: [{ has_flag: knows_proof }]
+        next: ending_vindicated
+      - id: print_unverified
+        text: "Set the story on the source's word and pull the bed-lever — run it now."
+        conditions: [{ not_flag: knows_proof }]
+        next: ending_libel
+      - id: spike_story
+        text: "Pull the story and set the safe notice in its place."
+        next: ending_spiked
+      - id: leave_press
+        text: "Go back up to the composing room."
+        next: composing_room
+
+  - id: alley_door
+    title: "The Alley Door"
+    text: >
+      The inking-room door, and beyond its frosted pane the alley — and four shapes in it
+      now, close in under the gas-bracket, and the dull gleam of what they carry. Garrow's
+      yard-men, and not a printer's tool among the hammers and the wrecking-bar: they have
+      come for the press, to pi the type into the gutter and break the bed before a word of
+      it can run, and they will not be gentle with whoever opens to them. One of them tries
+      the latch as you watch. The composing room is back behind you.
+    choices:
+      - id: confront_men
+        # The rash pole — plainly lethal and plainly elected. The men and the bar are shown
+        # before the door is opened; going out is the player's choice, not an ambush.
+        text: "Throw the bolt back and go out into the alley to face them."
+        next: ending_silenced
+      - id: bar_door
+        text: "Drop the bar across the door and step back inside."
+        next: composing_room
+
+endings:
+  - id: ending_vindicated
+    title: "Proven, and Printed"
+    text: >
+      You set the column with the inspector's seal in it and throw your weight on the
+      bed-lever, and the press takes the page and begins to breathe — once, twice, then the
+      long sure roar of ten thousand impressions, the truth multiplying faster than any man
+      can buy it back. By the time Garrow's lawyers are awake the edition is on every step
+      and in every hand, and there is nothing in it he can sue, because every word stands on
+      a Crown inspector's signature he himself acknowledged and could not bring himself to
+      burn. The three drowned men get their names said true at last, and the town that loved
+      its benefactor learns what the loving cost. You did not just have the courage to print
+      it. You did the work to make it unbreakable first — and that is why, this morning, it
+      cannot be unsaid.
+
+  - id: ending_libel
+    title: "The Word Alone"
+    text: >
+      You set the story on the sluice-man's word and pull the lever, and it runs, and for
+      one bright hour you are the bravest pen in the county. Then Garrow's lawyers find the
+      one charge the letter got wrong — a name, a date, a clerk accused who only carried the
+      orders — and they fall on it and on the paper with everything money can hire. The true
+      heart of the thing drowns in the one false limb of it; the retraction runs bigger than
+      the story did; the clerk you named is ruined for a thing he did not do, and the paper
+      with him, and Garrow walks away the wronged and pitied man. You were right about the
+      weir. You will never get a single soul to believe it now. Courage was the cheap half of
+      the job, and you spent it without ever paying the dear half, which was to be sure.
+
+  - id: ending_spiked
+    title: "The Safe Column"
+    text: >
+      You lift the story out of the forme and set the gentle notice in its place — the
+      coroner's verdict, the act of God, the benefactor's grief at the loss of his good men —
+      and you pull the lever and the morning runs smooth and forgetful over the top of three
+      graves. Garrow keeps his name and you keep your place, and the letter goes in the stove,
+      and the inspector's report stays locked in the dark where it has always been safe. No
+      one will ever sue you. No one will ever thank you either, because no one will ever know
+      there was anything to thank you for. Some nights, setting other men's small news, you
+      will think of the lever you did not pull, and how light it would have been.
+
+  - id: ending_silenced
+    title: "Out in the Alley"
+    text: >
+      You throw the bolt and step out, because some part of you will not be driven in your
+      own house — and the alley closes round you in the gaslight, and the wrecking-bar comes
+      down before you have got a word out. They go in over you and break the bed and pi the
+      type into the running gutter, the front page and the safe page and the whole edition
+      with it, and they are gone before the constable they own will trouble to come. The
+      morning carries no news at all from this house. Whatever you knew or did not know, whom
+      you would have saved or named, it is in the gutter now with the type, and you are a long
+      while mending, and the press is longer. Courage in the wrong doorway buys nothing the
+      morning can spend.

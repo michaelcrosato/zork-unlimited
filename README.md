@@ -186,7 +186,7 @@ carry no blind-playtest obligation and never pollute the hand-authored set.
 The CYOA generator is exposed over MCP as `generate_pack` (mint + validate a fresh pack,
 read-only) and is playable in-memory via `new_game`'s `generate_seed`.
 
-## Content library (16 packs)
+## Content library (17 packs)
 
 The shipped, validated content — every pack passes the validator and is wired into
 `npm run health`:
@@ -199,6 +199,7 @@ The shipped, validated content — every pack passes the validator and is wired 
 | CYOA | The White Stag | `content/cyoa/pack/white_stag.yaml` |
 | CYOA | Dead Reckoning | `content/cyoa/pack/dead_reckoning.yaml` |
 | CYOA | The Tithe-Barn | `content/cyoa/pack/tithe_barn.yaml` |
+| CYOA | The Midnight Edition | `content/cyoa/pack/midnight_edition.yaml` |
 | Parser | The Sealed Crypt | `content/parser/pack/sealed_crypt.yaml` |
 | Parser | The Alchemist's Tower | `content/parser/pack/alchemists_tower.yaml` |
 | Parser | The Friars' Postern | `content/parser/pack/friars_postern.yaml` |

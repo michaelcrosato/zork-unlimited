@@ -16,7 +16,7 @@ One comparable number per split: `Score` is the mean over the split's packs of e
 
 | Split | Packs | Completion | Ending cov | Scene cov | **Score** |
 | --- | --: | --: | --: | --: | --: |
-| curated | 16 | 19.6% | 21.9% | 65.7% | **35.7%** |
+| curated | 17 | 18.7% | 23.5% | 67.7% | **36.6%** |
 | held-out | 12 | 1.7% | 23.6% | 64.3% | **29.9%** |
 
 ### Per-mode (composition-robust)
@@ -25,7 +25,7 @@ The headline `Score` is a flat mean over a split's packs, so it moves with the s
 
 | Mode | Split | Packs | **Score** |
 | --- | --- | --: | --: |
-| cyoa | curated | 6 | **68.0%** |
+| cyoa | curated | 7 | **65.7%** |
 | cyoa | held-out | 4 | **58.6%** |
 | parser | curated | 5 | **17.6%** |
 | parser | held-out | 4 | **16.7%** |
@@ -42,6 +42,9 @@ The headline `Score` is a flat mean over a split's packs, so it moves with the s
 | dead_reckoning_v1 | cyoa | coverage | shown | curated | 6.0% | 3/5 | 60.0% | 100.0% | 4.3 |
 | dead_reckoning_v1 | cyoa | coverage | hidden | curated | 6.0% | 3/5 | 60.0% | 100.0% | 4.3 |
 | dead_reckoning_v1 | cyoa | random | shown | curated | 100.0% | 4/5 | 80.0% | 100.0% | 10.2 |
+| midnight_edition_v1 | cyoa | coverage | shown | curated | 4.0% | 2/4 | 50.0% | 100.0% | 3.0 |
+| midnight_edition_v1 | cyoa | coverage | hidden | curated | 4.0% | 2/4 | 50.0% | 100.0% | 3.0 |
+| midnight_edition_v1 | cyoa | random | shown | curated | 100.0% | 3/4 | 75.0% | 100.0% | 5.9 |
 | tithe_barn_v1 | cyoa | coverage | shown | curated | 4.0% | 2/4 | 50.0% | 100.0% | 4.0 |
 | tithe_barn_v1 | cyoa | coverage | hidden | curated | 4.0% | 2/4 | 50.0% | 100.0% | 4.0 |
 | tithe_barn_v1 | cyoa | random | shown | curated | 100.0% | 3/4 | 75.0% | 100.0% | 4.6 |
