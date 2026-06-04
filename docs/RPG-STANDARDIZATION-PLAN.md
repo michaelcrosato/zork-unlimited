@@ -203,3 +203,30 @@ Approve **Interpretation A** (uniform palette in place) and **§3a** (promote pa
 rather than teaching parser-mode skill checks)? Both are my recommendation; Phase 0 will prove them
 cheaply before the full sweep. If yes, Phase 0 starts on `watchtower_road` / `sealed_crypt` /
 `wolf_winter`.
+
+---
+
+## 9. Execution progress (live)
+
+**Phase 1 engine lifts — CYOA palette foundation (DONE, on `main`, hash-neutral, verified):**
+- ✅ §4.4 **CYOA scoring** — optional `max_score` + the shared score-feedback chrome (`836c4e5`).
+- ✅ §4.2 **CYOA death/failure flag** — optional `death` + `ending_death` observation field, metamorphic
+  oracle extended (`89b245d`).
+- ✅ §4.5 **CYOA skill-check** — optional `skill_check` on a choice (exactly-one-of `next`/`skill_check`),
+  resolved by the shared `resolveSkillCheck`; `rngFor` best/worst seam added; validator edge-extraction,
+  MCP/inspect, and the metamorphic relabel oracle all extended soundly (`83dd4f3`).
+
+Each is `.optional()` ⇒ every shipped pack compiles byte-identically (verify:integrity green); the full
+suite (1714 tests) and `npm run health` (17 packs) stay green. CYOA's three biggest RPG-palette gaps are
+now closed at the engine level — a CYOA story *can* now carry score, failure-endings, and d20 skill checks.
+
+**Remaining (the bulk — per-pack content + a few more lifts):**
+- §4.1 quest_stage observation-surfacing (all modes); §4.6 deadline → parser/RPG; §4.7 optional combat-in-CYOA.
+- §2 **per-pack content application** across all 17 stories (scored beats, skill-check moments, quest
+  stages, the 5 parser→RPG promotions). Each pack: author the appropriate mechanics, **re-baseline its
+  traces** (content/runtime change), extend its mode's proofs, and **blind-LLM-playtest** before commit.
+
+This per-pack sweep is large and gated on the **blind-playtest** quality bar — exactly the autonomous
+AFK loop's domain. It is now fully de-risked: the plan, the capability foundation, and the exemplar
+test patterns are in place, so the loop (restarted with this doc) can grind the sweep cycle-by-cycle, or
+it can be done by hand pack-by-pack.
