@@ -2,7 +2,20 @@ meta:
   id: watchtower_road_v1
   title: "The Watchtower Road"
   start: forest_crossroads
-  vars_init: {}
+  # `nerve` (value 3) is the d20 skill rolled by the single skill-checked choice in this
+  # pack — force_door on ruined_watchtower (below), where the door hanging from one hinge
+  # invites a roll to shoulder past it. CYOA skill checks are now first-class (the shared
+  # resolveSkillCheck d20 + skill var vs difficulty), but this beat is a TENSION beat, not
+  # a gate: its on_success and on_failure both route to the SAME scene (tower_base),
+  # differing only in narration (a deft shove vs a fumble that still gets you through), so
+  # no route, ending, score award, or reactive variant turns on the outcome. The check
+  # therefore changes no state the BFS fingerprints (only the append-only journal differs,
+  # which stateKey excludes), so a success and a failure are interchangeable states — the
+  # exhaustive every-ending-reachable and score-economy proofs (single deterministic rule
+  # set, one seeded roll per step) stay sound: whichever way the seed rolls, the search
+  # reaches tower_base all the same. Difficulty 12 is beatable on a mid roll (d20 9 + 3),
+  # well under the 20 + 3 = 23 ceiling — a real swing, never luck-gating the story.
+  vars_init: { nerve: 3 }
   flags_init: []
   # Stage-3 scoring (CYOA scoring is now first-class, mirroring parser/RPG): points
   # reward the investigation — uncovering the truth, not a moral judgment. Each award
@@ -88,6 +101,32 @@ scenes:
       - id: approach_base
         text: "Step inside, to the tower base."
         next: tower_base
+      # A d20 tension beat (CYOA skill checks are first-class): the door hangs from one
+      # hinge and won't swing — set your shoulder to it. This is a CONVERGENT check, not a
+      # gate: on_success (a clean shove) and on_failure (a graceless tumble) BOTH route to
+      # the SAME scene, tower_base — exactly where the plain `approach_base` above leads —
+      # so the roll never branches the story, blocks the way, awards score, sets a read
+      # flag, or flips an ending; it only colours HOW you got inside. The two branches
+      # differ solely in their `add_journal` narration; tower_base has no on_enter, so both
+      # outcomes leave identical state (the journal is append-only and excluded from the
+      # BFS fingerprint). Hence the exhaustive every-ending-reachable and score-economy
+      # proofs stay sound under their single seeded roll per step: success and failure are
+      # interchangeable states that both reach tower_base. NO `next` — a skill-checked
+      # choice routes via its branches' goto effects (schema: exactly one of next /
+      # skill_check). Difficulty 12 vs d20 + nerve(3) is a true mid-roll swing (beat it on
+      # a 9), well under the 20 + 3 ceiling. No re-offer guard is needed: both outcomes go
+      # to tower_base regardless, so a return-and-retry is harmless and idempotent.
+      - id: force_door
+        text: "Set your shoulder to the sagging door and force your way in."
+        skill_check:
+          skill: nerve
+          difficulty: 12
+          on_success:
+            - add_journal: "You judge the hinge, plant your boot, and the door gives at the first clean shove — you step into the tower base."
+            - goto: tower_base
+          on_failure:
+            - add_journal: "The door fights back, the rotten frame snags your sleeve, and you half-fall through in a clatter of splinters — but you're inside the tower base all the same."
+            - goto: tower_base
       - id: circle_cellar
         text: "Circle around to the cellar door."
         next: cellar_door

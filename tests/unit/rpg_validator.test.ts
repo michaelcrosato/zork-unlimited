@@ -109,8 +109,11 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // gates nothing (was 59f7225260...);
     // ...and the scoring palette lift — six one-shot `inc_var: score` awards + `max_score: 45`
     // (the CYOA scoring standardization; reachable max == 45 is proven by the new
-    // cyoa_score_economy_sound proof), another deliberate, gating-nothing edit (was 45b8dbee0b...).
+    // cyoa_score_economy_sound proof), another deliberate, gating-nothing edit (was 45b8dbee0b...);
+    // ...and the skill-check palette lift — a `nerve` var + an optional `force_door` d20 check whose
+    // success/failure both route to the same scene (a convergent tension beat that gates nothing, so
+    // the exhaustive proofs stay sound), another deliberate edit (was 83826e0fc8...).
     // Any *unintended* change to compilation trips this.
-    expect(loaded.compiled.contentHash).toBe("83826e0fc8fa16bf55c9c8e844a5a25378ea90d85bd2aaa3420cfb772b51f17c");
+    expect(loaded.compiled.contentHash).toBe("a1226aa17f84fb50ed8f58765211e5c8566d1d6eb7efc0a11ff8abdffa9c02a8");
   });
 });

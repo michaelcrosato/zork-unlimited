@@ -28,7 +28,14 @@ meta:
   title: "The Sealed Crypt"
   start_room: forest_path
   flags_init: []
-  vars_init: {}
+  # `nerve` (value 3) is the player's steadiness, rolled by the OPTIONAL nerve check on
+  # the iron key below (a d20 + nerve TENSION beat the player sees, key in hand, before
+  # the crypt's three iron locks). It is the Stage-4 skill_check mechanic standardized
+  # into this parser puzzle — a real roll, never a luck-gate: the check sits OFF the
+  # critical path and gates no exit, ending, score, or reactive variant (see the iron
+  # key's USE interaction), so the score economy (35) and every ending/variant stay
+  # reachable on either roll outcome.
+  vars_init: { nerve: 3 }
   # Stage-3 scoring: points are awarded once at each of the three milestones that
   # mark real progress — reading the headstone clue (+5), solving the well to raise
   # the keys from the deep (+10), and unlocking the catacombs gate (+20). Each award
@@ -265,6 +272,44 @@ objects:
     description: "A heavy iron key, black with age — fit for a great iron lock."
     takeable: true
     quest_critical: true
+    # An OPTIONAL nerve TENSION beat — the Stage-4 d20 skill_check standardized into this
+    # parser pack, resolved exactly as the RPG runner does: the runner applies on_success/
+    # on_failure INSTEAD of this interaction's `effects`, then PREPENDS the roll narration
+    # the player sees ("nerve check: d20 <roll> + 3 = <total> vs 12 — success/failure.").
+    # This is a self-USE on the iron key you carry — a private "grip the cold iron and
+    # steel yourself" moment, fittingly the very key the headstone warns the crypt yields
+    # to, taken in hand before the three iron locks (gate / founder's coffin / lead tomb).
+    #
+    # It is a real roll, NOT a luck-gate, and is deliberately CONVERGENT — it gates
+    # NOTHING the structural proofs turn on:
+    #   • The three iron locks are SEPARATE first-class UNLOCK acts (crypt_gate /
+    #     founders_coffin / bound_tomb, each keyed by `key_id: iron_key`); this beat is a
+    #     distinct USE iron-key-on-iron-key and touches none of them. It sets no win flag,
+    #     opens no exit, awards no score, and no `when:` variant reads its flag — so on
+    #     EITHER outcome every ending (victory / plunder / doom), the win, the exact
+    #     35-point economy, and every reactive variant stay reachable byte-for-byte.
+    #   • difficulty 12 vs d20 + nerve 3 (range 4–23) is passable on a mid roll (≥ 9, ~60%)
+    #     and well under the 23 ceiling — mirrors the proven sunken_barrow DC-12 check.
+    #   • One-shot via `not_flag: steeled_at_the_iron`: on SUCCESS the flag retires the beat
+    #     (it is read ONLY by this condition — no other reader anywhere, so it cannot
+    #     re-fire and re-roll a contradictory line). on FAILURE the flag stays unset, so the
+    #     beat is simply RETRYABLE and the player proceeds to the locks regardless. Because
+    #     the iron key is never consumed (the locks UNLOCK, they do not remove it), no
+    #     softlock can arise from the beat — the key remains in hand for the real choice.
+    interactions:
+      - verb: USE
+        item: iron_key
+        target: iron_key
+        command_verb: grip
+        conditions: [{ not_flag: steeled_at_the_iron }]
+        skill_check:
+          skill: nerve
+          difficulty: 12
+          on_success:
+            - set_flag: steeled_at_the_iron
+            - narrate: "You close your fist on the cold iron and make yourself breathe. The crypt yields only to iron, the stone said — and the iron is in your hand now. Whatever you turn it on, you will turn it steady."
+          on_failure:
+            - narrate: "The iron is colder than it has any right to be, and your hand will not quite stop shaking around it. Better to gather yourself before you set this key to anything down here."
 
   - id: headstone
     name: "worn headstone"

@@ -55,7 +55,13 @@ meta:
   title: "The Lamplighter's Round"
   start_room: river_stair
   flags_init: []
-  vars_init: {}
+  # `steadiness` (value 3) is the lighter's steady hand, rolled by the OPTIONAL steadiness
+  # check on the takeable horn windscreen below (a d20 + steadiness TENSION beat the player
+  # sees — set your back to the river and break a fog-gust off the flame you carry). It is the
+  # Stage-4 skill_check mechanic standardized into PARSER mode (the same shape sealed_crypt
+  # ships its `nerve` check on), resolved exactly as the RPG runner does. It gates NOTHING the
+  # exhaustive proofs turn on — see the horn_windscreen interaction's note for why it is convergent.
+  vars_init: { steadiness: 3 }
   max_score: 35
 
 rooms:
@@ -64,11 +70,12 @@ rooms:
     description: >
       Fog stands thick on the river-stair. A pasted night-notice peels from the wall by
       the handrail; a tinderbox lies on the sill where the last lighter left it, and a
-      small brass tally-key hangs on a nail beside it. Your own round-lantern burns low at
-      your belt as it has all the round, throwing no more than a yard of light back into
-      the murk — a lighter cannot work a river fog without it. The staith runs on north
-      into the dark; the dark water laps somewhere below.
-    objects: [night_notice, tinderbox, brass_key]
+      small brass tally-key hangs on a nail beside it. A loose horn windscreen — a curved
+      pane the last lighter clipped off some old lantern — leans forgotten against the sill
+      as well. Your own round-lantern burns low at your belt as it has all the round, throwing
+      no more than a yard of light back into the murk — a lighter cannot work a river fog
+      without it. The staith runs on north into the dark; the dark water laps somewhere below.
+    objects: [night_notice, tinderbox, brass_key, horn_windscreen]
     exits:
       - { direction: north, to: lamp_walk }
 
@@ -232,6 +239,71 @@ objects:
       of naked flame, and it is the very thing the night-notice warns you to keep well off the
       red-stencilled rock-spirit in the store.
     held: true
+
+  - id: horn_windscreen
+    name: "horn windscreen"
+    aliases: [windscreen, screen, shield, horn screen, horn pane, pane, lantern-shield, lantern shield, windshield]
+    # The prop the OPTIONAL steadiness TENSION beat hangs on — a loose curved pane of horn the
+    # last lighter clipped off some old lantern and left on the river-stair sill. It is purely
+    # OPTIONAL scenery: takeable, NOT quest_critical, never consumed, and the win/score never
+    # touch it (the great lamp is lit with the tinderbox + whale-oil, not this). A red-herring
+    # comfort the player may pick up to steel the flame against the fog, nothing more.
+    description: >
+      A curved pane of scraped horn on a little wire clip — a windscreen struck off some old
+      lantern, gone amber and crazed with age. Held up to leeward it will break a gust off your
+      flame; the last lighter must have carried it for the worst of the river fog and then left
+      it behind.
+    takeable: true
+    # An OPTIONAL steadiness TENSION beat — the Stage-4 d20 skill_check standardized into this
+    # parser pack (the very shape sealed_crypt's `nerve` check ships on its iron key), resolved
+    # exactly as the RPG runner does: the runner applies on_success/on_failure INSTEAD of this
+    # interaction's `effects`, then PREPENDS the roll narration the player sees ("steadiness
+    # check: d20 <roll> + 3 = <total> vs 12 — success/failure."). It is a self-USE on this horn
+    # screen once you have taken it up — a private "set your back to the river and break the gust
+    # off the flame you carry" moment, fitting for the open flame the lighter must keep alight all
+    # the foggy round and the whole death fork turns on.
+    #
+    # It is a real roll, NOT a luck-gate, and is deliberately CONVERGENT — it gates NOTHING the
+    # structural proofs (exhaustive solver, liveness BFS, exact score economy) turn on:
+    #   • It sits OFF the critical path entirely, on an optional prop. The five-step chain — read
+    #     notice → cupboard (brass-key) → store-key → unlock store-door → oil-cask → pour → light
+    #     the great lamp → down to the strand — runs through SEPARATE acts (first-class UNLOCKs and
+    #     the lamp's pour/light USEs), none of which this beat touches. It sets no win flag, no
+    #     quest_stage, opens no exit, awards no score, and no `when:` variant or other condition
+    #     reads its flag — so on EITHER outcome every ending (guided / thief / caught), the win,
+    #     the exact 35-point economy, and every reactive variant stay reachable byte-for-byte. The
+    #     screen is never required and never consumed, so skipping it (or failing the roll) changes
+    #     nothing the player can reach.
+    #   • difficulty 12 vs d20 + steadiness 3 (range 4–23) is passable on a mid roll (≥ 9, ~60%)
+    #     and well under the 23 ceiling — mirrors the proven sealed_crypt / sunken_barrow DC-12.
+    #   • One-shot via `not_flag: steadied_the_flame`: on SUCCESS the flag retires the beat (it is
+    #     read ONLY by this condition — no other reader anywhere, so it cannot re-fire and re-roll
+    #     a contradictory line). on FAILURE the flag stays unset, so the beat is simply RETRYABLE
+    #     and the player proceeds with the round regardless. The screen is NOT quest_critical and is
+    #     never removed, so it opens no soft-lock surface even on the map's one-way bits. No `score`
+    #     rides the check (economy proven exact).
+    interactions:
+      - verb: USE
+        item: horn_windscreen
+        target: horn_windscreen
+        command_verb: steady
+        conditions: [{ not_flag: steadied_the_flame }]
+        skill_check:
+          skill: steadiness
+          difficulty: 12
+          on_success:
+            - set_flag: steadied_the_flame
+            - narrate: >
+                You set your back to the river and hold the horn pane up to leeward, and the little
+                flame on your belt stops its guttering and stands up straight and honest behind the
+                glass again. A lighter learns to carry a light through a fog like this; your hand is
+                steady on it now, and it will not go out on you tonight.
+          on_failure:
+            - narrate: >
+                A gust comes cold off the dark water and gets in past the pane all the same; the
+                flame ducks and streams flat and for a breath you think it gone — but it holds,
+                just. Your hand is not as steady as you would like in this murk. Best set your feet
+                and gather yourself and try the screen to it again before you trust it to anything.
 
   - id: wall_cupboard
     name: "wall-cupboard"

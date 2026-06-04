@@ -42,6 +42,13 @@ meta:
   id: alchemists_tower_v1
   title: "The Alchemist's Tower"
   start_room: courtyard
+  # `steadiness` is the skill rolled by the OPTIONAL d20 TENSION beat on the iron key
+  # (its USE interaction below) — the Stage-4 skill_check mechanic standardized into this
+  # parser puzzle, exactly the proven sealed_crypt shape (nerve 3, DC 12). It is a REAL
+  # roll, never a luck-gate: the beat sits OFF the critical path and gates no exit, ending,
+  # win, score, or reactive variant, so the exhaustive proofs (every ending reachable; the
+  # 40-point economy exact) hold byte-for-byte on EITHER roll outcome — see the iron key.
+  vars_init: { steadiness: 3 }
   # bug_0104: max_score raised 35 → 40 so the perfect score coincides with the WIN.
   # The score chain used to top out at 35 (read recipe +5, steep herb +10, decant
   # antidote +20) one full action BEFORE the game ends — the climactic, deliberate
@@ -322,6 +329,55 @@ objects:
     description: "A heavy iron key, black with age."
     takeable: true
     quest_critical: true
+    # An OPTIONAL `steadiness` TENSION beat — the Stage-4 d20 skill_check standardized into
+    # this parser pack, resolved exactly as the RPG runner does: the runner applies
+    # on_success/on_failure INSTEAD of this interaction's `effects`, then PREPENDS the roll
+    # narration the player sees ("steadiness check: d20 <roll> + 3 = <total> vs 12 —
+    # success/failure."). It is a self-USE on the iron key you carry — a private "grip the
+    # cold iron and steady your hand" moment before you set this key to anything: fittingly
+    # the very key that decides the whole tower (it throws the cellar hatch on the cure
+    # route, and it is the casket's clasp on the betrayal route).
+    #
+    # It is a real roll, NOT a luck-gate, and is deliberately CONVERGENT — it gates NOTHING
+    # the structural proofs turn on:
+    #   • The iron key's two real acts are SEPARATE first-class UNLOCKs (cellar_door and
+    #     silver_casket, each keyed by `key_id: iron_key`); this beat is a distinct USE
+    #     iron-key-on-iron-key and touches neither. It sets no win flag, opens no exit,
+    #     awards no `score` (the economy is proven exact at 40 — bug_0104), and no `when:`
+    #     variant reads its flag — so on EITHER outcome every ending (cured / poisoned /
+    #     master_poisoned / betrayal), the win, the exact 40-point economy, and every
+    #     reactive variant stay reachable byte-for-byte. The exhaustive concrete BFS that
+    #     proves those (cyoa-exhaustive-solver trilogy) explores ONE roll outcome per step;
+    #     because nothing downstream reads success-vs-failure, both branches converge.
+    #   • difficulty 12 vs d20 + steadiness 3 (range 4–23) is passable on a mid roll (≥ 9,
+    #     ~60%) and well under the 23 ceiling — mirrors the proven sunken_barrow / sealed_crypt
+    #     DC-12 check, so the roll reads as winnable on a better throw, never impossible.
+    #   • One-shot via `not_flag: steadied_at_the_iron`: on SUCCESS the flag retires the beat
+    #     (it is read ONLY by this condition — no other reader anywhere, so it cannot re-fire
+    #     and re-roll a contradictory line). on FAILURE the flag stays unset, so the beat is
+    #     simply RETRYABLE and the player proceeds to the locks regardless. Because the iron
+    #     key is never consumed (the two locks UNLOCK it, they do not remove it) and the map
+    #     is strongly connected (every region is two-way), the validator's SOFTLOCK_QUEST_ITEM
+    #     heuristic — which fires only on a quest_critical item that is consumed-while-needed
+    #     OR takeable-into-a-one-way-region — provably cannot trip on this beat: the key stays
+    #     in hand for the real choice. (The standalone parser validator does not scan
+    #     skill_check branches, so the `set_flag` is invisible to its writtenFlags set and the
+    #     flag is not mis-flagged INERT; its `not_flag` read keeps the gate honest — the
+    #     identical, shipped sealed_crypt shape.)
+    interactions:
+      - verb: USE
+        item: iron_key
+        target: iron_key
+        command_verb: grip
+        conditions: [{ not_flag: steadied_at_the_iron }]
+        skill_check:
+          skill: steadiness
+          difficulty: 12
+          on_success:
+            - set_flag: steadied_at_the_iron
+            - narrate: "You close your fist on the cold iron and make your hand stop shaking. The tower yields to iron, the recipe all but said — and the iron is in your grip now. Whatever you turn it on down here, you will turn it steady."
+          on_failure:
+            - narrate: "The old iron is colder than it has any right to be, and your hand will not quite settle around it. Better to gather yourself before you set this key to any lock in the tower."
 
   - id: cellar_door
     name: "cellar hatch"

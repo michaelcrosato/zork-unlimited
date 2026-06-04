@@ -63,6 +63,13 @@ meta:
   title: "The Midnight Edition"
   start: composing_room
   flags_init: []
+  # A `nerve` skill var (init 3) — the single stat the alley_door TENSION beat below rolls
+  # (d20 + nerve vs a fixed difficulty, the shared resolveSkillCheck). It is read ONLY by
+  # that one convergent skill check and gates NOTHING else: no choice condition, variant
+  # `when`, deadline, or ending consults it, and no effect ever writes it, so it cannot move
+  # the score economy or open/close a route. (CYOA skill checks are first-class — same
+  # resolver the parser/RPG modes use; mechanic-palette standardization.)
+  vars_init: { nerve: 3 }
   # SCORING (§13 Stage 3, CYOA-first-class): the night's diligence is also tracked as a
   # Zork-style score on the conventional `score` var — points for ACCOMPLISHMENT (sourcing,
   # verifying, and printing the proven truth), not moral judgment, which suits this
@@ -325,6 +332,36 @@ scenes:
         # before the door is opened; going out is the player's choice, not an ambush.
         text: "Throw the bolt back and go out into the alley to face them."
         next: ending_silenced
+      # A d20 TENSION beat (CYOA skill checks are first-class), not a gate: the latch is
+      # lifting under a yard-man's hand and you must get the heavy bar across before it gives
+      # — steady your nerve and slam it home. This is a CONVERGENT check: on_success (the bar
+      # drops clean and true) and on_failure (your hands shake, you fumble it, but it crashes
+      # into its bracket in time all the same) BOTH route to the SAME scene, composing_room —
+      # exactly where the plain `bar_door` below leads — so the roll never branches the story,
+      # blocks the way, ends the game, awards `score`, sets a flag, or advances the_edition.
+      # It only colours HOW you got the door shut. The two branches differ SOLELY in their
+      # `add_journal` narration; composing_room has no on_enter, so both outcomes leave
+      # byte-identical state (the journal is append-only, read by no condition, and EXCLUDED
+      # from the exhaustive BFS fingerprint — support/exhaustive_endings.ts stateKey). Hence
+      # both the every-ending-reachable and the EXACT max_score=35 score-economy proofs stay
+      # sound under the single seeded roll per step: success and failure are interchangeable
+      # states that both reach composing_room with the same vars/flags/quest, so the
+      # single-rule-set BFS loses nothing by firing only one branch. NO `next` — a
+      # skill-checked choice routes via its branches' goto effects (schema: exactly one of
+      # next / skill_check). Difficulty 12 vs d20 + nerve(3) is a true mid-roll swing (beat it
+      # on a 9), well under the 20 + 3 ceiling. No re-offer guard is needed: both outcomes go
+      # to composing_room regardless, so a return-and-retry is harmless and idempotent.
+      - id: steady_and_bar
+        text: "Steady your nerve, heave the bar up, and slam it across before the latch gives."
+        skill_check:
+          skill: nerve
+          difficulty: 12
+          on_success:
+            - add_journal: "You take one breath, judge the swing of the heavy bar, and drop it clean into its brackets — the door shudders once under a shoulder from the alley and holds. You step back into the composing room."
+            - goto: composing_room
+          on_failure:
+            - add_journal: "Your hands will not quite keep still; the bar skids in your grip and the latch is half-lifted before you wrestle it crashing home — but it holds, and the door bucks and holds, and you back away into the composing room with your heart going like the press."
+            - goto: composing_room
       - id: bar_door
         text: "Drop the bar across the door and step back inside."
         next: composing_room

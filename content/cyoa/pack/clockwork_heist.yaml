@@ -24,7 +24,26 @@ meta:
   # for the ledger, then the crossing — about four ticks) arrives just as the
   # patrol begins, so the ledger is load-bearing, not a clue you only meet by
   # dawdling (blind-playtest finding, bug_0040 refining bug_0019).
-  vars_init: { ticks: 0 }
+  # `guile` (value 3) is the d20 skill rolled by the single skill-checked choice in this
+  # pack — `slip_out_quiet` on the kitchen scene (below), where withdrawing through the
+  # dark service room without rattling its hanging copper invites a roll for a thief's
+  # quiet hands. CYOA skill checks are now first-class (the shared resolveSkillCheck d20 +
+  # skill var vs difficulty), but this beat is a TENSION beat, not a gate: its on_success
+  # and on_failure both route to the SAME scene (foyer) — the very safe ground the
+  # kitchen's own `back_foyer` choice leads to, the hub the thief circles back to anyway —
+  # differing solely in NARRATION (a soundless withdrawal vs a heart-stopping near-miss
+  # that still settles into silence). No route, ending, score award, tick, quest_stage, or
+  # reactive variant turns on the outcome, and the destination foyer's on_enter advances no
+  # tick (it only re-seats the `infiltrating` quest stage every return, as it already does
+  # on any foyer arrival — see foyer), so a success and a failure leave IDENTICAL
+  # BFS-fingerprinted state (only the append-only journal differs, which stateKey excludes).
+  # The exhaustive every-ending-reachable and score-economy proofs therefore stay sound
+  # under their single seeded roll per step: whichever way the seed rolls, the search reaches
+  # the foyer all the same. Difficulty 12 is beatable on a mid roll (d20 9 + guile 3 = 12),
+  # well under the 20 + 3 = 23 ceiling — a real swing, never luck-gating the story. Sits
+  # alongside `ticks`; nothing is gated on `guile`, and no condition/next/ending/quest_stage/
+  # deadline/tick is touched.
+  vars_init: { ticks: 0, guile: 3 }
   # The heist's SCORE ceiling — a thief's scorecard, in the conventional `score` var
   # (tracked by `inc_var` awards on the beats below; CYOA scoring is first-class —
   # `meta.max_score` + the runner's Zork-style "[Your score has gone up…]" feedback,
@@ -352,6 +371,40 @@ scenes:
         effects:
           - narrate: "Rather than doubling back to the foyer's grand stair, you fold yourself into the cramped servants' lift and haul on its complaining rope. The box grinds up the shaft and you climb out onto the gallery — the very floor the staircase serves. A quieter way up, and a more direct one from the kitchens, but it leaves you no closer to the vault than the open steps would."
         next: landing
+      # A d20 tension beat (CYOA skill checks are first-class): the cold kitchen hangs
+      # thick with copper pots and a banked hearth's iron, and slipping back out of it
+      # toward the foyer — past the dumbwaiter's slack rope and a floor of loose
+      # flagstones — without setting any of it ringing in the sleeping house is a test
+      # of a thief's quiet hands. This is a CONVERGENT check, not a gate: on_success
+      # (a soundless withdrawal) and on_failure (a copper pot rocks on its hook, a
+      # heart-stopping beat — then settles into silence) BOTH route to the SAME scene,
+      # `foyer` — exactly where the plain `back_foyer` below leads, the safe ground the
+      # thief circles back to anyway — so the roll never branches the story, blocks the
+      # way, advances the clock, awards score, sets a flag/quest_stage, or flips an
+      # ending; it only colours HOW quietly you withdrew. The two branches differ solely
+      # in their `add_journal` narration; the foyer's on_enter advances no tick (it only
+      # re-seats the `infiltrating` quest stage, as it already does on every foyer return,
+      # so arriving via this choice sets nothing a `back_foyer` return wouldn't), leaving
+      # both outcomes identical state (the journal is append-only and excluded from the
+      # BFS fingerprint). Hence the exhaustive every-ending-reachable and score-economy
+      # proofs stay sound under their single seeded roll per step: success and failure are
+      # interchangeable states that both reach the foyer. NO `next` — a skill-checked
+      # choice routes via its branches' goto effects (schema: exactly one of next /
+      # skill_check). Difficulty 12 vs d20 + guile(3) is a true mid-roll swing (beat it on
+      # a 9), well under the 20 + 3 ceiling. No re-offer guard is needed: both outcomes go
+      # to the foyer regardless, so a return-and-retry is harmless and idempotent, and the
+      # kitchen's existing tick is charged on ENTRY (on_enter), never by this exit choice.
+      - id: slip_out_quiet
+        text: "Slip quietly back to the foyer through the dark kitchen."
+        skill_check:
+          skill: guile
+          difficulty: 12
+          on_success:
+            - add_journal: "You step between the loose flagstones and the slack dumbwaiter rope, easing past the hanging copper without a whisper — and gain the foyer with the sleeping house none the wiser."
+            - goto: foyer
+          on_failure:
+            - add_journal: "Your sleeve catches a hanging pot; it rocks on its hook with a soft copper murmur and your breath stops — but it settles back to silence, and you reach the foyer with the house still sleeping."
+            - goto: foyer
       - id: back_foyer
         text: "Return to the foyer."
         next: foyer

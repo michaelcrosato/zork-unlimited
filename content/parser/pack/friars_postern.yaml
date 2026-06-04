@@ -44,7 +44,13 @@ meta:
   title: "The Friars' Postern"
   start_room: cell
   flags_init: []
-  vars_init: {}
+  # `nerve` (value 3) is the debtor's steadiness, rolled by the OPTIONAL nerve check on
+  # the turnkey's key-ring below (a d20 + nerve TENSION beat the player sees, iron in
+  # hand, with the watch a stair below). It is the Stage-4 skill_check mechanic now
+  # standardized into PARSER mode (sealed_crypt's `nerve` sibling), resolved exactly as
+  # the RPG runner does. Touches no win, ending, score, exit, variant, or dialogue — see
+  # the gate_key beat's note — so every exhaustive proof over this pack holds byte-for-byte.
+  vars_init: { nerve: 3 }
   max_score: 35
 
 rooms:
@@ -211,6 +217,45 @@ objects:
     # The genre-reflex red herring: the obvious "way out" is iron, and the iron opens
     # only the death (the watched gate) and the greed (the alms-box). Not quest_critical
     # (the win never needs it), so taking, dropping, or never touching it is all safe.
+    #
+    # An OPTIONAL nerve TENSION beat — the Stage-4 d20 skill_check standardized into this
+    # parser pack (sealed_crypt's `nerve` sibling), resolved exactly as the RPG runner does:
+    # the runner applies on_success/on_failure INSTEAD of this interaction's `effects` and
+    # PREPENDS the roll narration the player sees ("nerve check: d20 <roll> + 3 = <total>
+    # vs 12 — success/failure."). It is a self-USE on the key-ring you carry — a private
+    # "weigh the cold iron in the dark and master the urge to bolt for a lock" moment,
+    # fittingly the very ring the wall-scratches warn the gate (and the alms-box) yields to.
+    #
+    # It is a real roll, NOT a luck-gate, and is deliberately CONVERGENT — it gates NOTHING
+    # the exhaustive proofs turn on:
+    #   • The two BAD outcomes the ring opens are SEPARATE first-class UNLOCK acts (iron_gate
+    #     → ending_taken, alms_box → ending_thief, each keyed `key_id: gate_key`); this beat
+    #     is a distinct USE key-ring-on-key-ring and touches neither. It sets no win flag,
+    #     opens no exit, awards no score, and no `when:` variant reads its flag — so on
+    #     EITHER outcome every ending (free / taken / thief), the visited-night_street win,
+    #     the exact 35-point economy, and every reactive variant stay reachable byte-for-byte.
+    #   • difficulty 12 vs d20 + nerve 3 (range 4–23) is passable on a mid roll (≥ 9, ~60%)
+    #     and well under the 23 ceiling — mirrors the proven sealed_crypt / sunken_barrow DC-12.
+    #   • One-shot via `not_flag: weighed_the_iron`: on SUCCESS the flag retires the beat (it
+    #     is read ONLY by this condition — no other reader anywhere, so it cannot re-fire and
+    #     re-roll a contradictory line). on FAILURE the flag stays unset, so the beat is simply
+    #     RETRYABLE and the player proceeds regardless. The skill_check replaces `effects`, so
+    #     neither branch removes or relocks the ring — it stays in hand for the real choice,
+    #     and no softlock can arise (the win never needs the ring at all).
+    interactions:
+      - verb: USE
+        item: gate_key
+        target: gate_key
+        command_verb: heft
+        conditions: [{ not_flag: weighed_the_iron }]
+        skill_check:
+          skill: nerve
+          difficulty: 12
+          on_success:
+            - set_flag: weighed_the_iron
+            - narrate: "You weigh the cold ring in your palm and make yourself breathe. Every key on it was cut to keep a debtor in, not let one out — the scratches were plain on that. You let it settle quiet against your leg, and the urge to run for the nearest lock goes still in you."
+          on_failure:
+            - narrate: "The keys chime once, too loud in the dark, and your hand will not quite stop wanting to fit one to a lock and be gone. Best to steady yourself before the iron talks you into the gate the scratches warned you off."
 
   - id: font
     name: "stone font"

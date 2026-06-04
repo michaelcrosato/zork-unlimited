@@ -63,7 +63,15 @@ meta:
   title: "The Tide-Mill"
   start_room: mill_house
   flags_init: []
-  vars_init: {}
+  # `nerve` (3) backs an OPTIONAL d20 skill_check TENSION beat — the Stage-4 mechanic
+  # standardized into PARSER mode (sealed_crypt's nerve pattern), a private "steady the
+  # storm-lantern against the dark" moment on the night shift. It is CONVERGENT and gates
+  # NOTHING the exhaustive proofs turn on (see the tide_lantern object): it touches neither
+  # order-independent sub-puzzle, awards no score, opens no exit, sets no win/quest flag, and
+  # no `when:` variant reads its one self-read retire flag — so on EITHER outcome, in EITHER
+  # puzzle order, every ending / the 45-point economy / every reactive variant stay reachable
+  # byte-for-byte. The single var is bounded (never inc'd), so the state space stays finite.
+  vars_init: { nerve: 3 }
   max_score: 45
 
 rooms:
@@ -98,7 +106,7 @@ rooms:
           arch the wheel-room stands over the race; a low door east opens on the miller's
           counting-nook. Out beyond the weir, in the falling dark, the caught boat is
           settling lower on the going water, and there is not the night to waste.
-    objects: [millboard]
+    objects: [millboard, tide_lantern]
     exits:
       - { direction: north, to: wheel_room }
       - { direction: east, to: counting_nook }
@@ -237,6 +245,68 @@ objects:
           # mill_house variant reads, set here on the start-room floor before either fault is
           # touched. Pure progress tracking — gates nothing.
           - set_quest_stage: { quest: the_mill, stage: begun }
+
+  - id: tide_lantern
+    name: "storm-lantern"
+    aliases: [lantern, lamp, storm lantern, light, hand-lamp]
+    # The anchor for an OPTIONAL nerve TENSION beat — the Stage-4 d20 skill_check
+    # standardized into this parser pack, resolved exactly as the RPG runner does: the
+    # runner applies on_success/on_failure INSTEAD of this interaction's `effects`, then
+    # PREPENDS the roll the player sees ("nerve check: d20 <roll> + 3 = <total> vs 12 —
+    # success/failure."). It is the night hand's own hand-lamp, hung by the door on the
+    # start floor — a deliberately PLAIN flavour item (NOT quest_critical, awards no score,
+    # carried by no puzzle), so steadying yourself by it is a private mood beat and nothing
+    # the world turns on. The self-USE is `steady storm-lantern` (command_verb `steady`,
+    # a verb used by no other interaction and not a builtin, so it never collides).
+    #
+    # CONVERGENT by construction — it gates NOTHING the structural proofs rest on, and
+    # (the NON-LINEAR pack's extra care) is OFF BOTH order-independent tracks, so it cannot
+    # make any valid puzzle ORDER depend on the roll:
+    #   • The two faults are SEPARATE first-class USE acts on OTHER objects — cut the
+    #     choked_sluice with the billhook (track A) and free the brake_pawl with the crow-bar
+    #     (track B); the +20 climax winds the sea_winch with the crank-handle once BOTH flags
+    #     are set. This beat is a self-USE on the lantern and touches none of them. It sets no
+    #     sluice_clear / pawl_free / gate_up, opens no exit, awards no score, and no `when:`
+    #     variant reads its flag — so on EITHER outcome BOTH orders (sluice-first AND
+    #     pawl-first) still reach ending_saved at the full 45/45, and the greed/death forks
+    #     and every reactive variant stay reachable byte-for-byte.
+    #   • difficulty 12 vs d20 + nerve 3 (range 4–23) is passable on a mid roll (≥ 9, ~60%)
+    #     and well under the 23 ceiling — the proven sealed_crypt / sunken_barrow DC-12 bracket.
+    #   • One-shot via `not_flag: nerve_held`: on SUCCESS the flag retires the beat (it is
+    #     read ONLY by this condition — no other reader anywhere, so it can never re-fire and
+    #     re-roll a contradictory line; and because that set lives inside on_success, which the
+    #     parser score/falsifier scan does not walk, the flag is not even a tracked write — it
+    #     is purely a self-gate). On FAILURE the flag stays unset, so the beat is simply
+    #     RETRYABLE and play proceeds to the faults regardless. The lantern is never consumed,
+    #     so no soft-lock can arise from it.
+    description: >
+      The night hand's storm-lantern, hung by the door — a stub of candle behind soot-dark
+      glass, throwing a small steady light against the dust and the dark. It is yours to
+      carry while the orders are seen to; it turns no wheel and opens no gate, but a man
+      works a falling tide easier with a light in his hand than without.
+    takeable: true
+    interactions:
+      - verb: USE
+        item: tide_lantern
+        target: tide_lantern
+        command_verb: steady
+        conditions: [{ not_flag: nerve_held }]
+        skill_check:
+          skill: nerve
+          difficulty: 12
+          on_success:
+            - set_flag: nerve_held
+            - narrate: >
+                You hold the lantern up a moment and make yourself breathe slow, and the
+                small light steadies in your hand. Out beyond the weir the caught boat is
+                only a shape on the going water, and there is work between you and it — but
+                the shake is gone from your grip now, and you will do it steady.
+          on_failure:
+            - narrate: >
+                You lift the lantern and the light shakes with your hand, throwing the dark
+                about, and out past the weir you can just hear the boat working on the
+                falling water. Best stand a moment and gather yourself before you take up
+                the night's work in earnest.
 
   - id: coin_bag
     name: "coin-bag"
