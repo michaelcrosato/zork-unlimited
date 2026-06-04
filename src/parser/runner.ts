@@ -22,8 +22,10 @@ import type { Action } from "../api/types.js";
 import type { GameState } from "../core/state.js";
 import type { GameEvent } from "../core/events.js";
 import type { Resolution, Rules } from "../core/engine.js";
+import { rngForStep, type Rng } from "../core/rng.js";
 import { type ParserIndex } from "./model.js";
-import { enumerateActions, resolveParserAction } from "./legal_actions.js";
+import { enumerateActions, resolveParserAction, useInteraction } from "./legal_actions.js";
+import { resolveSkillCheck } from "../rpg/combat.js";
 import { SCORE_VAR } from "./schema.js";
 
 export { indexParserPack, initStateForParserPack, type ParserIndex } from "./model.js";
@@ -75,7 +77,10 @@ export function scoreChangeNarrations(events: GameEvent[], maxScore: number): Ga
   return out;
 }
 
-export function buildParserRules(index: ParserIndex): Rules {
+export function buildParserRules(
+  index: ParserIndex,
+  rngFor: (state: GameState) => Rng = (s) => rngForStep(s.seed, s.step),
+): Rules {
   const maxScore = index.pack.meta.max_score ?? 0;
   return {
     legalActions(state: GameState): Action[] {
@@ -83,6 +88,21 @@ export function buildParserRules(index: ParserIndex): Rules {
     },
 
     resolve(state: GameState, action: Action): Resolution | null {
+      // A USE interaction may carry a seeded skill check (the Stage-4 mechanic, now available in
+      // PARSER mode too — palette standardization, so a puzzle pack can roll a lockpick/might/nerve
+      // check without becoming an RPG). Resolved here exactly as the RPG runner does: offer-legality
+      // still requires holding the item AND meeting the interaction's own conditions, so a one-shot
+      // check can't be re-fired by a forced/stale step and re-roll a contradictory result. `rngFor`
+      // is the verification seam — default is the step-keyed PRNG, so production play is
+      // byte-identical and replayable (§8.5); proofs pass a forced best/worst roll.
+      if (action.type === "USE") {
+        const it = useInteraction(index, action.target, action.item);
+        if (it?.skill_check) {
+          if (!state.inventory.includes(action.item)) return null;
+          if (!evalConditions(it.conditions, state)) return null;
+          return resolveSkillCheck(state, it.skill_check, rngFor(state));
+        }
+      }
       return resolveParserAction(index, state, action);
     },
 
