@@ -124,7 +124,9 @@ rooms:
       The gap where the wolves have broken the paling-fence to come at the byre. A young
       wolf stands in the breach, all hunger and no caution, hackles up and head low — the
       first of the pack through, and between you and it there is nothing but a spear's
-      length of trampled snow. The byre-yard is back to the south.
+      length of trampled snow. One stout rail of the broken paling has fallen clear into
+      the snow at your feet, heavy and sound. The byre-yard is back to the south.
+    objects: [paling_rail]
     variants:
       - when: [{ has_flag: yearling_down }]
         text: >
@@ -241,6 +243,54 @@ objects:
           - inc_var: { name: defense, by: 2 }
           - add_journal: "You haul the padded byre-jerkin on over your coat; stiff and heavy, but a wolf's teeth will catch in the hide and never reach you (+2 defense)."
           - narrate: "You pull the padded byre-jerkin down off its peg and drag it on over your coat. It is stiff and weighs on the shoulders, but the layered hide sits steady between you and the next set of teeth — half of old Cade's promise, the padded half."
+
+  # The one skill_check this pack carries — added so the RPG mode is uniform (every
+  # curated RPG pack now has at least one §13 check). It is a defence skill check, the
+  # breaking_weir tool-on-target shape: wedge a fallen paling-rail back across the breach
+  # to shore the line. CRITICAL — it is an OPTIONAL AID, never a gate: no exit, win or
+  # ending turns on its flag (the north exit still gates only on yearling_down). A
+  # blocked breach simply braces the gauntlet's fiction; failing it costs nothing the
+  # player cannot recover from.
+  #   - skill: defense (the only fitting reachable stat — vars_init.defense 3, +2 from the
+  #     byre-jerkin = ceiling 5; shoring a defensive line is defence work, not the spear-arm).
+  #   - difficulty 11: passable on a MID roll at BASE defence (d20 + 3 ≥ 11 needs a roll of
+  #     8, ~65%) and easier once the jerkin is on (d20 + 5, roll of 6). Well under the
+  #     SKILL_CHECK_IMPOSSIBLE ceiling 20 + 5 = 25, so the check always reads as winnable.
+  #   - on_success: a one-shot flag + journal + narration, NO stat or score change — so the
+  #     fair-gauntlet tuning (atk7/def5/hp30, cumulative worst 25 < 30) and the 5+10+10+10+15
+  #     = 50 economy are BYTE-UNCHANGED. breach_braced is read by this interaction's own
+  #     none_of gate (so it is not an INERT_FLAG) and gates nothing else; it only retires the
+  #     check so a braced breach cannot be re-wedged (the bug_0015 retire-after-success rule).
+  #   - on_failure: narration ONLY — retryable and non-lethal (the breaking_weir honesty
+  #     discipline). The rail simply will not seat in the frozen ground yet; the player can
+  #     try again, and the byre's one-throat corridor still funnels the wolves one at a time
+  #     exactly as old Cade says. So on_failure removes no path: both endings stay reachable
+  #     (ending_held via cattle_stand, ending_pulled_down via a lost fight), unchanged.
+  - id: paling_rail
+    name: "fallen paling-rail"
+    aliases: [rail, paling-rail, post, stake, timber, bar]
+    description: "A stout length of the broken paling, splintered off at one end but seasoned and sound — the kind of heavy timber a man could wedge across a gap to slow what tries to come through it."
+    takeable: true
+    interactions:
+      # Self-USE = "wedge this rail into the breach" (the byre-jerkin's self-USE shape,
+      # command_verb so the offered and typed verb match the prose). The RPG runner
+      # requires the rail in hand (runner.ts), so the natural play is take, then "wedge
+      # rail". One-shot (gated none_of breach_braced); on a failed roll it does not retire,
+      # so the player can simply try again.
+      - verb: USE
+        item: paling_rail
+        target: paling_rail
+        command_verb: wedge
+        conditions: [{ none_of: [{ has_flag: breach_braced }] }]
+        skill_check:
+          skill: defense
+          difficulty: 11
+          on_success:
+            - set_flag: breach_braced
+            - add_journal: "You wedge the fallen rail back across the breach and stamp it home; the gap is half-shut now, and what comes through must come singly and slow."
+            - narrate: "You heft the rail and drive its splintered end down hard into the trampled snow, then lever the length of it up across the breach and set your shoulder to it till it bites. The gap is half-shut now — no wolf will come through it but singly, and none of them fast."
+          on_failure:
+            - narrate: "You set the rail to the gap and lean your weight on it, but the ground is frozen iron-hard and the splintered end skids and will not seat. Reset it and bear down again — it will take, with stubbornness if not the first time."
 
 npcs:
   - id: houndsman
