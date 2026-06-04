@@ -69,8 +69,20 @@ scenes:
       south; and out past the inking-room a door gives on the alley, where, this last
       half-hour, there have been boots on the cobbles that do not sound like printers going
       home.
-    # Reactive prose: once the letter is read it is no longer the unread coal on the stone.
+    # Reactive prose (most-specific first, first-match-wins): once the proof is in hand the
+    # hub must not still call the safe report a thing that "would make it true or break it"
+    # (the bug_0232 stale-prose discipline) — that question is settled.
     variants:
+      - when: [{ has_flag: knows_proof }]
+        text: >
+          Gaslight and the smell of hot metal and oil. The morning edition sleeps locked in
+          its formes around you, all but the front page that is yours to close before the
+          press rolls at dawn. The workman's letter lies open on the imposing stone, and you
+          carry now what it only pointed to: the inspector's condemned report, read and
+          proven, Garrow's own initials on it. The question is no longer whether it is true —
+          it is which page you set. The iron stair climbs north to the rifled office; the
+          press floor drops away south to the waiting lever; and out past the inking-room the
+          alley door stands shut on the boots that keep pacing the cobbles beyond it.
       - when: [{ has_flag: read_letter }]
         text: >
           Gaslight and the smell of hot metal and oil. The morning edition sleeps locked in
@@ -168,7 +180,7 @@ scenes:
   - id: press_floor
     title: "The Press Floor"
     text: >
-      The great fl-bed press fills the floor below, the front-page forme already on it and
+      The great flat-bed press fills the floor below, the front-page forme already on it and
       locked but for the lead column, the safe set-matter waiting in the galley alongside —
       a mild notice of the spring's drownings, the coroner's verdict, nothing that would
       cost a sleeping town its benefactor. One column, one pull of the bed-lever, decides
