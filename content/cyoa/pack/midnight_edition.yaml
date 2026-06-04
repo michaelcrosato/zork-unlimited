@@ -129,6 +129,20 @@ scenes:
           iron stair climbs north to that office; the press floor drops away south; and out
           past the inking-room the alley door stands shut on the boots that keep pacing the
           cobbles beyond it.
+      # Barred-but-letter-unread case (knows_proof / read_letter both win above this when set):
+      # once you have been out to the alley, seen Garrow's men, and barred the door, the hub
+      # must not still call them merely "boots that do not sound like printers going home" as
+      # though their nature were unknown and the door open (the bug_0232 stale-prose discipline,
+      # same class as bug_0248/0249/0250). Fires only with door_barred and neither flag set.
+      - when: [{ has_flag: door_barred }]
+        text: >
+          Gaslight and the smell of hot metal and oil. The town's one newspaper sleeps around
+          you, the front page still yours to close before the press rolls at dawn, and the
+          workman's letter still lies unread on the imposing stone where it came up the back
+          stairs an hour ago. The iron stair climbs north to the editor's dark office; the press
+          floor drops away south; and out past the inking-room the alley door is barred now on
+          the men you found waiting there — Garrow's, by the hammers they carried — who have
+          given up the latch but not the cobbles.
     choices:
       - id: read_letter
         text: "Read the letter on the stone."
@@ -301,7 +315,28 @@ scenes:
     # only on the read_letter / open_safe / read_report choices; this scene has no on_enter,
     # so the stage cannot be clobbered, and the door is always reachable from the hub at any
     # stage (read the letter, then come to the alley). Latest stage first, first-match-wins.
+    #
+    # MOST-SPECIFIC of all: once the door is barred (door_barred, set by bar_door or either
+    # branch of the steady_and_bar check below), this scene must not re-present the unbarred,
+    # latch-being-tried menace byte-for-byte as though nothing had happened — the bug_0250 /
+    # bug_0232 stale-on-re-entry class, and the no-progress LOOP a blind playtest hit (you could
+    # re-bar the same door forever and the text never changed). With door_barred set, the two
+    # bar choices are gated off (you cannot re-bar a barred door) and a plain `back_inside`
+    # return appears, so the scene resolves instead of looping; the rash `confront_men` pole
+    # stays open (you may still throw the bolt and go out). Placed first ⇒ wins over the
+    # quest_stage variants once barred; door_barred is monotonic (never cleared), so no
+    # regression. This variant carries no quest-stage flavour by design — the barred door is the
+    # salient fact now, at whatever stage you reached it.
     variants:
+      - when: [{ has_flag: door_barred }]
+        text: >
+          The inking-room door — and the heavy bar is across it now, dropped hard into its
+          brackets where you slammed it. Beyond the frosted pane the four shapes are still in the
+          alley under the gas-bracket, the hammers and the wrecking-bar still with them; one sets
+          a shoulder to the wood and it shudders and holds. They have not gone, and they will not,
+          while there is a press behind you worth the breaking. You can leave the door barred and
+          turn back to your work, or throw the bolt back even now and go out to them. The
+          composing room is behind you.
       - when: [{ quest_stage: { quest: the_edition, stage: proof_found } }]
         text: >
           The inking-room door, and beyond its frosted pane the alley — and four shapes in it
@@ -338,32 +373,51 @@ scenes:
       # drops clean and true) and on_failure (your hands shake, you fumble it, but it crashes
       # into its bracket in time all the same) BOTH route to the SAME scene, composing_room —
       # exactly where the plain `bar_door` below leads — so the roll never branches the story,
-      # blocks the way, ends the game, awards `score`, sets a flag, or advances the_edition.
-      # It only colours HOW you got the door shut. The two branches differ SOLELY in their
-      # `add_journal` narration; composing_room has no on_enter, so both outcomes leave
-      # byte-identical state (the journal is append-only, read by no condition, and EXCLUDED
-      # from the exhaustive BFS fingerprint — support/exhaustive_endings.ts stateKey). Hence
-      # both the every-ending-reachable and the EXACT max_score=35 score-economy proofs stay
-      # sound under the single seeded roll per step: success and failure are interchangeable
-      # states that both reach composing_room with the same vars/flags/quest, so the
-      # single-rule-set BFS loses nothing by firing only one branch. NO `next` — a
-      # skill-checked choice routes via its branches' goto effects (schema: exactly one of
-      # next / skill_check). Difficulty 12 vs d20 + nerve(3) is a true mid-roll swing (beat it
-      # on a 9), well under the 20 + 3 ceiling. No re-offer guard is needed: both outcomes go
-      # to composing_room regardless, so a return-and-retry is harmless and idempotent.
+      # blocks the way, ends the game, awards `score`, or advances the_edition. Both branches
+      # set the SAME monotonic flag, door_barred — identically — so the convergence is exact:
+      # the only state difference between success and failure is the `add_journal` narration
+      # (append-only, read by no condition, and EXCLUDED from the exhaustive BFS fingerprint —
+      # support/exhaustive_endings.ts stateKey). It only colours HOW you got the door shut.
+      # door_barred is what kills the no-progress LOOP (gating the two bar choices off and
+      # surfacing `back_inside` once set) and feeds the alley/hub barred-door variants; it gates
+      # no choice the bot needs for completion, opens/closes no ending, and rides no score.
+      # Because both branches reach composing_room with IDENTICAL vars/flags/quest, both the
+      # every-ending-reachable and the EXACT max_score=35 score-economy proofs stay sound under
+      # the single seeded roll per step — the single-rule-set BFS loses nothing by firing only
+      # one branch. Gated `not_flag: door_barred`: you cannot re-bar a door already barred (the
+      # loop fix). NO `next` — a skill-checked choice routes via its branches' goto effects
+      # (schema: exactly one of next / skill_check). Difficulty 12 vs d20 + nerve(3) is a true
+      # mid-roll swing (beat it on a 9), well under the 20 + 3 ceiling.
       - id: steady_and_bar
         text: "Steady your nerve, heave the bar up, and slam it across before the latch gives."
+        conditions: [{ not_flag: door_barred }]
         skill_check:
           skill: nerve
           difficulty: 12
           on_success:
             - add_journal: "You take one breath, judge the swing of the heavy bar, and drop it clean into its brackets — the door shudders once under a shoulder from the alley and holds. You step back into the composing room."
+            - set_flag: door_barred
             - goto: composing_room
           on_failure:
             - add_journal: "Your hands will not quite keep still; the bar skids in your grip and the latch is half-lifted before you wrestle it crashing home — but it holds, and the door bucks and holds, and you back away into the composing room with your heart going like the press."
+            - set_flag: door_barred
             - goto: composing_room
+      # The plain, unrolled way to bar the door (no nerve check). Like both branches of the
+      # check above it sets the monotonic door_barred and returns to the composing room; gated
+      # not_flag door_barred so it cannot re-fire on an already-barred door.
       - id: bar_door
         text: "Drop the bar across the door and step back inside."
+        conditions: [{ not_flag: door_barred }]
+        effects:
+          - set_flag: door_barred
+        next: composing_room
+      # Once the door is barred (door_barred), a plain return so the scene resolves instead of
+      # forcing the rash confront_men pole — the player may leave the barred door and go back to
+      # the night's real work. Gated to appear ONLY in the barred state (the unbarred scene's
+      # return IS bar_door, which barring-and-stepping-back already does).
+      - id: back_inside
+        text: "Leave the door barred and go back up to the composing room."
+        conditions: [{ has_flag: door_barred }]
         next: composing_room
 
 endings:
