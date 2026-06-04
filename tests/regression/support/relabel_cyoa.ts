@@ -165,6 +165,10 @@ function relabelEnding(e: Ending, r: (id: string) => string): Ending {
     title: e.title, // prose
     text: e.text, // prose
     ...(e.variants ? { variants: e.variants.map((v) => relabelVariant(v, r)) } : {}),
+    // `death` is a boolean failure-marker — label-invariant, so it passes through unchanged
+    // (preserve absent-vs-present for schema parity, like `variants`). Required once a pack
+    // uses it, or the relabeled twin's observation `ending_death` diverges from the original's.
+    ...(e.death !== undefined ? { death: e.death } : {}),
   };
 }
 

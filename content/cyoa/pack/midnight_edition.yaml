@@ -258,6 +258,7 @@ endings:
       cannot be unsaid.
 
   - id: ending_libel
+    death: true
     title: "The Word Alone"
     text: >
       You set the story on the sluice-man's word and pull the lever, and it runs, and for

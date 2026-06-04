@@ -244,6 +244,7 @@ endings:
       of it eating behind you, and you find a man can walk a long way on that.
 
   - id: ending_fall
+    death: true
     title: "The Rotten Loft"
     # The death pole — telegraphed (the ladder "grey and soft with rot" in the base text, the gamble
     # named in the choice label). A chosen risk after the older stores, never an ambush.

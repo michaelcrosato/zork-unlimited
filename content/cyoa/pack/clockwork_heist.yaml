@@ -704,11 +704,13 @@ endings:
       You melt into the night with your pockets full of gold. By dawn you are three
       towns away, and the clockwork manor is just a story you will never tell.
   - id: ending_caught
+    death: true
     title: "Caught"
     text: >
       The alarm bell brings the house awake. Lanterns, shouts, the gallery's
       automata grinding to life around you. There is nowhere in the manor to run.
   - id: ending_patrol
+    death: true
     title: "Caught on the Hour"
     text: >
       Halfway across the gallery the watchman's lantern swings round and pins you
@@ -722,6 +724,7 @@ endings:
     # ending_patrol is being caught crossing the gallery on the hour. This one is
     # simply staying too long — the hour turns while you are still circling the house,
     # the manor wakes around you, and the clock the whole pack drums up finally bites.
+    death: true
     title: "The Hour Turns"
     text: >
       You lingered too long, and the great clock keeps no secrets. Its slow chime

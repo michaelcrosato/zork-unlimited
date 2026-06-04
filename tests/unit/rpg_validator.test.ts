@@ -99,8 +99,12 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // reactive re-entry variant (any_of heard_hermit_lore/seal_broken) so a player who
     // returns to the conversation after already hearing the lore or breaking the seal no
     // longer meets the cold first-meeting greeting "You look lost, traveler" as a stranger
-    // (blind seed 88, ai-runs/2026-06-02T15-08-35-167Z/playtest.md §4; was f989028090…).
+    // (blind seed 88, ai-runs/2026-06-02T15-08-35-167Z/playtest.md §4; was f989028090…);
+    // and the RPG-mechanic standardization — ending_captured is now flagged `death: true`
+    // (the CYOA death/failure-ending palette lift, RPG-STANDARDIZATION-PLAN), a deliberate
+    // metadata edit that changes the content hash without changing runtime state or any
+    // recorded trace (was 8990abbad9…).
     // Any *unintended* change to compilation trips this.
-    expect(loaded.compiled.contentHash).toBe("8990abbad966eec6b5d9a177abdb74e5f3191eb78e2c5d25c9d7d99a6b1a3a46");
+    expect(loaded.compiled.contentHash).toBe("59f722526f2a4463927f63c582aa1b2178a5e85c9a06f5ec58edd9734cd3ed5e");
   });
 });

@@ -229,6 +229,7 @@ endings:
       home the spring itself, and the wood does not forget the hunter who knelt.
 
   - id: ending_lost
+    death: true
     title: "The Black Water"
     text: >
       You step out onto the tarn, and for six strides the rotten ice only ticks and sighs

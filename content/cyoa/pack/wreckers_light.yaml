@@ -328,6 +328,7 @@ endings:
       sat with a man so he would not be alone, and the sea cannot say that of anyone.
 
   - id: ending_drowned
+    death: true
     title: "The Sea Takes You"
     text: >
       The iron is slick and the wind has weight, and a dozen rungs down the cliff your

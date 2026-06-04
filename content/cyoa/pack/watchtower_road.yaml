@@ -462,6 +462,7 @@ endings:
       You slip past the lights and onto the open road. Whatever happened at the
       tower stays behind you — and so does the truth.
   - id: ending_captured
+    death: true
     title: "Held at the Gate"
     variants:
       - when: [ { has_flag: raised_alarm } ]
