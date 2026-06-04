@@ -163,6 +163,20 @@ const CASES: NegativeCase[] = [
       wc.ending = "no_such_ending";
     },
   },
+  {
+    // bug_0244: the IMPOSSIBLE_GATE reachability family silently skipped the
+    // `quest_stage` condition kind. gen(0) writes NO set_quest_stage effect, so any
+    // positively-required quest_stage gate references a (quest, stage) pair that no
+    // effect ever sets ⇒ IMPOSSIBLE_QUEST_STAGE. The error severity is pinned by the
+    // differential/non-degenerate anchors, which use the error-only `codesOf`.
+    code: "IMPOSSIBLE_QUEST_STAGE",
+    why: "a win condition requires a quest_stage that no set_quest_stage effect ever writes",
+    mutate: (p) => {
+      const wc = p.win_conditions[0];
+      if (!wc) throw new Error("base pack has no win_condition to mutate");
+      wc.conditions.push({ quest_stage: { quest: "phantom_quest", stage: "phantom_stage" } });
+    },
+  },
 ];
 
 describe("validateParser negative corpus — rejection-direction witnesses (bug_0218)", () => {

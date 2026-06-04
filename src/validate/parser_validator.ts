@@ -90,6 +90,16 @@ export type ValidateParserOptions = {
    * `has_flag`, so this is coverage for future packs, never a behaviour change today.
    */
   extraEffectLists?: Effect[][];
+  /**
+   * Quest stages that runtime mechanics set through branches the parser scan never
+   * walks — enemy `on_defeat`, skill-check `on_success`/`on_failure`. Each entry is a
+   * `questStageKey(quest, stage)` composite key. Folded into the settable-stages set
+   * for the IMPOSSIBLE_QUEST_STAGE feasibility check so a quest_stage gate legitimately
+   * satisfied by a combat/skill-check `set_quest_stage` (e.g. an RPG pack that levers a
+   * seal open on a skill check) is not mis-flagged impossible. Mirrors
+   * `extraSettableFlags`. Default empty, so pure parser packs are byte-identical.
+   */
+  extraSettableQuestStages?: string[];
 };
 
 export function validateParser(
@@ -306,6 +316,15 @@ export function validateParser(
     if ("unlock_exit" in e) settable.add(exitFlag(e.unlock_exit.from, e.unlock_exit.to));
   }
 
+  // ── Settable quest stages (provided by some set_quest_stage effect) ──────────
+  // questStage inits to {} and there is no quest_init path, so the write-set is
+  // PURELY set_quest_stage effects — every satisfiable quest_stage gate must have
+  // a matching write. Mirrors the settable-flags set above for IMPOSSIBLE_GATE.
+  const settableQuestStages = new Set<string>(opts.extraSettableQuestStages ?? []);
+  for (const e of allEffects(pack)) {
+    if ("set_quest_stage" in e) settableQuestStages.add(questStageKey(e.set_quest_stage));
+  }
+
   // ── Feasibility of every gate (locked exits, interactions, win conditions) ───
   const checkConds = (conds: Condition[], where: string[]): void => {
     for (const f of flagReqs(conds)) {
@@ -323,6 +342,18 @@ export function validateParser(
             where,
           ),
         );
+    }
+    for (const qs of questStageReqs(conds)) {
+      if (!settableQuestStages.has(qs)) {
+        const [quest, stage] = qs.split("\0");
+        findings.push(
+          err(
+            "IMPOSSIBLE_QUEST_STAGE",
+            `condition requires quest "${quest}" at stage "${stage}" that no effect ever sets.`,
+            where,
+          ),
+        );
+      }
     }
   };
   for (const room of pack.rooms) {
@@ -1207,6 +1238,25 @@ function itemReqs(conds: Condition[]): string[] {
   const out: string[] = [];
   const walk = (c: Condition): void => {
     if ("has_item" in c) out.push(c.has_item);
+    else if ("all_of" in c) c.all_of.forEach(walk);
+  };
+  conds.forEach(walk);
+  return out;
+}
+
+// Composite key joining quest+stage with a NUL separator that cannot occur in an
+// id, so `(q1,"ab")` and `(q1a,"b")` can never collide.
+function questStageKey(qs: { quest: string; stage: string }): string {
+  return `${qs.quest}\0${qs.stage}`;
+}
+
+// Required (quest, stage) pairs in AND-context — top-level + all_of only,
+// mirroring flagReqs/itemReqs. any_of/none_of are NOT descended (conservative:
+// guarantees zero false positives on healthy packs).
+function questStageReqs(conds: Condition[]): string[] {
+  const out: string[] = [];
+  const walk = (c: Condition): void => {
+    if ("quest_stage" in c) out.push(questStageKey(c.quest_stage));
     else if ("all_of" in c) c.all_of.forEach(walk);
   };
   conds.forEach(walk);

@@ -320,6 +320,22 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
           }
         }
       }
+      // A required quest_stage that no set_quest_stage effect ever writes is a dead
+      // gate (questStage inits to {} — there is no quest_init path, so every
+      // satisfiable quest_stage gate MUST have a matching set_quest_stage write).
+      // Mirrors IMPOSSIBLE_GATE for the quest_stage condition kind.
+      for (const qs of req.reqQuestStages) {
+        if (!writes.setQuestStages.has(qs)) {
+          const [quest, stage] = qs.split("\0");
+          findings.push(
+            err(
+              "IMPOSSIBLE_QUEST_STAGE",
+              `choice requires quest "${quest}" at stage "${stage}" that no effect ever sets.`,
+              where,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -905,12 +921,24 @@ function reverseReach(
   return seen;
 }
 
-type Writes = { setFlags: Set<string>; addedItems: Set<string>; writtenVars: Set<string> };
+type Writes = {
+  setFlags: Set<string>;
+  addedItems: Set<string>;
+  writtenVars: Set<string>;
+  setQuestStages: Set<string>;
+};
+
+// Composite key joining quest+stage with a NUL separator that cannot occur in an
+// id, so `(q1,"ab")` and `(q1a,"b")` can never collide.
+function questStageKey(qs: { quest: string; stage: string }): string {
+  return `${qs.quest}\0${qs.stage}`;
+}
 
 function collectWrites(pack: CyoaPack): Writes {
   const setFlags = new Set<string>();
   const addedItems = new Set<string>();
   const writtenVars = new Set<string>();
+  const setQuestStages = new Set<string>();
   const scan = (effects: Effect[]): void => {
     for (const e of effects) {
       if ("set_flag" in e) setFlags.add(e.set_flag);
@@ -918,13 +946,14 @@ function collectWrites(pack: CyoaPack): Writes {
       else if ("set_var" in e) writtenVars.add(e.set_var.name);
       else if ("inc_var" in e) writtenVars.add(e.inc_var.name);
       else if ("dec_var" in e) writtenVars.add(e.dec_var.name);
+      else if ("set_quest_stage" in e) setQuestStages.add(questStageKey(e.set_quest_stage));
     }
   };
   for (const scene of pack.scenes) {
     scan(scene.on_enter);
     for (const choice of scene.choices) scan(choice.effects);
   }
-  return { setFlags, addedItems, writtenVars };
+  return { setFlags, addedItems, writtenVars, setQuestStages };
 }
 
 type VarReq = { name: string; op: "gte" | "eq"; value: number };
@@ -935,6 +964,7 @@ type Required = {
   forbidItems: Set<string>;
   varReqs: VarReq[];
   eqValues: Map<string, Set<number>>;
+  reqQuestStages: Set<string>;
 };
 
 /**
@@ -951,6 +981,7 @@ function collectRequired(conditions: Condition[]): Required {
     forbidItems: new Set(),
     varReqs: [],
     eqValues: new Map(),
+    reqQuestStages: new Set(),
   };
   const walk = (cond: Condition): void => {
     if ("has_flag" in cond) out.reqFlags.add(cond.has_flag);
@@ -964,7 +995,8 @@ function collectRequired(conditions: Condition[]): Required {
       const set = out.eqValues.get(cond.var_eq.name) ?? new Set<number>();
       set.add(cond.var_eq.value);
       out.eqValues.set(cond.var_eq.name, set);
-    } else if ("all_of" in cond) cond.all_of.forEach(walk);
+    } else if ("quest_stage" in cond) out.reqQuestStages.add(questStageKey(cond.quest_stage));
+    else if ("all_of" in cond) cond.all_of.forEach(walk);
     // any_of / none_of / var_lte / visited: not treated as hard requirements here.
   };
   conditions.forEach(walk);

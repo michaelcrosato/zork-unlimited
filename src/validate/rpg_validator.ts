@@ -57,9 +57,17 @@ export function validateRpg(pack: RpgPack): ValidationReport {
   for (const enemy of pack.enemies) {
     if (enemy.defeat_flag) extraSettableFlags.push(enemy.defeat_flag);
   }
+  // Quest stages set through RPG-only branches (combat on_defeat, skill-check
+  // on_success/on_failure) — the parser scan never walks these, so without folding
+  // them in a quest_stage gate satisfied by a skill check (e.g. levering a seal open)
+  // would be mis-flagged IMPOSSIBLE_QUEST_STAGE. Keyed with the SAME NUL separator the
+  // parser validator's questStageKey uses, so the keys match. Mirrors extraSettableFlags.
+  const extraSettableQuestStages: string[] = [];
   for (const e of rpgRuntimeEffects(pack)) {
     if ("set_flag" in e) extraSettableFlags.push(e.set_flag);
     if ("add_item" in e) extraObtainable.push(e.add_item);
+    if ("set_quest_stage" in e)
+      extraSettableQuestStages.push(`${e.set_quest_stage.quest}\0${e.set_quest_stage.stage}`);
   }
 
   // Score awarded through RPG-only branches (combat / skill checks), which the
@@ -98,6 +106,7 @@ export function validateRpg(pack: RpgPack): ValidationReport {
     extraFalsifierEffects: rpgRuntimeEffects(pack),
     extraVolatileVars,
     extraEffectLists,
+    extraSettableQuestStages,
   });
   const findings: Finding[] = [...base.findings];
 
