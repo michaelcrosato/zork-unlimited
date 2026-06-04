@@ -67,8 +67,9 @@ scenes:
       throws and watch you with cracked lips and a stillness you do not like. And
       somewhere below, in the hold, is the stowaway girl the watch turned up on the
       second day — whom the men have started, low and certain, to call the Jonah. The
-      water will not last another two days shared four ways, let alone five. Something
-      must be decided, and you are the one holding the key to it.
+      water will not last another two days shared five ways — nor four, the way the
+      hands have begun to reckon it. Something must be decided, and you are the one
+      holding the key to it.
     # The sole reactive read of quest "the_reckoning" (bug_0145 CYOA variant-liveness).
     # The `adrift` stage is set by each of the three departures below; the deck's own
     # `on_enter` is empty, so re-entering the deck never RESETS the quest (bug_0145
