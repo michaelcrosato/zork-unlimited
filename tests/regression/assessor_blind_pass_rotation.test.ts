@@ -85,3 +85,64 @@ describe("bug_0128 — blind-pass rotation tracks true recency", () => {
     }
   });
 });
+
+describe("bug_0235 — recency rotation sees BACKTICK/BOLD-wrapped attendance entries", () => {
+  it("parses the `backtick`-wrapped format the log ACTUALLY writes (the blindness recurrence)", () => {
+    // The live log writes the pack bold+backticked:
+    //   - **Mandated blind pass ran on `midnight_edition`** (cyoa, seed 4) — …
+    // Pre-fix the capture class excluded the backtick, so the match FAILED at the opening
+    // tick and the entry was invisible → the just-played pack looked never-attended.
+    const text = [
+      "- **Mandated blind pass ran on `midnight_edition`** (cyoa, seed 4) — clean.", // newest
+      "- **Mandated blind pass ran on `tide_mill`** (parser, seed 41).",
+      "- Mandated blind pass ran on `clockwork_heist` (cyoa, seed 2).", // oldest
+    ].join("\n");
+    const offsets = parseAttendanceOffsets(text);
+    expect(offsets.has("midnight_edition")).toBe(true); // pre-fix: false (backtick-blind)
+    expect(offsets.has("tide_mill")).toBe(true);
+    expect(offsets.has("clockwork_heist")).toBe(true);
+    // newest-first log ⇒ the topmost (just-played) pack carries the SMALLEST offset.
+    expect(offsets.get("midnight_edition")!).toBeLessThan(offsets.get("clockwork_heist")!);
+  });
+
+  it("a freshly-attended backtick pack sorts LAST in the rotation, never first", () => {
+    const log = [
+      "- **Mandated blind pass ran on `midnight_edition`** (cyoa, seed 4).", // most recent
+      "- Mandated blind pass ran on `clockwork_heist` (cyoa, seed 2).",
+    ].join("\n");
+    const offsets = parseAttendanceOffsets(log);
+    const rank = (stem: string): number => {
+      const off = offsets.get(stem);
+      return off === undefined ? Number.MIN_SAFE_INTEGER : -off;
+    };
+    // white_stag is never mentioned (genuinely never-attended).
+    const order = ["midnight_edition", "clockwork_heist", "white_stag"].sort(
+      (x, y) => rank(x) - rank(y) || x.localeCompare(y),
+    );
+    // Pre-fix midnight_edition was INVISIBLE (undefined ⇒ MIN_SAFE_INTEGER) and, being
+    // alphabetically before white_stag, sorted FIRST — the exact "re-nominate the
+    // just-played pack" bug. Post-fix it carries a real recent offset and sorts last.
+    expect(order[0]).toBe("white_stag"); // never attended → first
+    expect(order[order.length - 1]).toBe("midnight_edition"); // most recent → last
+  });
+
+  it("on the real repo, the most-recent backtick pack is parsed and NOT re-nominated first", () => {
+    const loopState = join(process.cwd(), "AI_LOOP_STATE.md");
+    if (!existsSync(loopState)) return;
+    const raw = readFileSync(loopState, "utf8");
+    // Independently locate the log's single most-recent "ran on `X`" mention.
+    const m = raw.match(/Mandated blind pass ran on\s+`([a-z0-9_]+)`/i);
+    if (!m) return;
+    const mostRecent = m[1]!;
+    const offsets = parseAttendanceOffsets(raw);
+    // The parser MUST see it (pre-fix this was undefined — the vacuous-skip that let the
+    // bug_0128 real-repo guard pass while the bug was live).
+    expect(offsets.has(mostRecent)).toBe(true);
+    const a = assess(process.cwd());
+    const reviews = a.candidates.filter((c) => c.id.startsWith("playtest-"));
+    if (reviews.length >= 2) {
+      // The just-played pack must not be the rotation's top nominee.
+      expect(packStem(reviews[0]!.target)).not.toBe(mostRecent);
+    }
+  });
+});

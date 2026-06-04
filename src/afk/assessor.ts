@@ -274,11 +274,21 @@ export function packStem(ref: string): string {
  * clockwork_heist (the very lock-in the rotation was meant to cure). The caller
  * resolves only real pack stems, so incidental captures (e.g. "…ran on the assessor")
  * land under a stem no candidate queries and are harmless.
+ *
+ * bug_0235: the same blindness recurred via MARKDOWN WRAPPING. The log writes the pack
+ * bold+backticked — `- **Mandated blind pass ran on \`midnight_edition\`** …` — but the
+ * capture class [A-Za-z0-9_./-] excluded the backtick, so the match failed at the opening
+ * tick and EVERY recent entry was invisible: the just-played pack looked never-attended
+ * (undefined offset) and the rotation re-nominated it FIRST (observed: midnight_edition
+ * ranked #1 the cycle after it was played). The optional `[\`*]*` wrapper below skips a
+ * leading backtick/asterisk run; the capture still stops at the CLOSING tick (a backtick
+ * is not in the class), so the bare stem is recovered. Unwrapped prose and path forms are
+ * unaffected ([\`*]* matches zero).
  */
 export function parseAttendanceOffsets(loopStateText: string): Map<string, number> {
   const map = new Map<string, number>();
   const re =
-    /(?:Mandatory LLM playtest target this cycle:|Mandated blind pass ran on)\s+([A-Za-z0-9_./-]+)/g;
+    /(?:Mandatory LLM playtest target this cycle:|Mandated blind pass ran on)\s+[`*]*([A-Za-z0-9_./-]+)/g;
   for (const m of loopStateText.matchAll(re)) {
     const captured = m[1];
     if (captured === undefined) continue;
