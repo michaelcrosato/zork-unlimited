@@ -182,6 +182,26 @@ rooms:
           The deep hearth, vast as a chapel. The great slag grate has been levered
           up off its lip and stands open, baring a low way down into the warmth at
           the forge's very root.
+      # bug_0259: arrive-without-the-bar legibility. A fresh source-blind MCP
+      # playtester (seed 11, ai-runs/2026-06-04T23-33-49-294Z/playtest.md §4) flagged
+      # the one remaining friction in this otherwise blind-clean pack — a player can
+      # descend to the Forge Heart having skipped the pry-bar, find the grate sealed,
+      # and have to backtrack with no in-room reminder of WHERE the bar is. The static
+      # `locked_msg` on the `down` exit cannot reference inventory, so this reactive
+      # variant carries the cue: it fires only when the bar is NOT held and the grate
+      # is not yet open (the grate_open variant is declared FIRST, so the open prose
+      # always wins once it is levered; and the bar is never consumed, so once taken
+      # this variant can never fire), pointing the player back to the cold trough in
+      # the outer forge — the same place the lantern-spirit's heart-counsel names.
+      # Content-only: no object/exit/flag/quest/score/ending change.
+      - when: [ { none_of: [ { has_item: pry_bar } ] } ]
+        text: >
+          The deep hearth, vast as a chapel and just as cold. Its mouth is a great
+          grate of slag-choked iron, sealed by the cooling of ages — its edge carries
+          a worn lip made to be levered, but you carry nothing strong enough to set
+          against it. There was a stout iron pry-bar by the cold trough back in the
+          outer forge. Beyond the sealed grate you can feel the Ember-Heart's faint
+          warmth.
     objects: [stone_grate]
     exits:
       - { direction: west, to: bellows_walk }
