@@ -220,13 +220,31 @@ Each is `.optional()` ⇒ every shipped pack compiles byte-identically (verify:i
 suite (1714 tests) and `npm run health` (17 packs) stay green. CYOA's three biggest RPG-palette gaps are
 now closed at the engine level — a CYOA story *can* now carry score, failure-endings, and d20 skill checks.
 
-**Remaining (the bulk — per-pack content + a few more lifts):**
-- §4.1 quest_stage observation-surfacing (all modes); §4.6 deadline → parser/RPG; §4.7 optional combat-in-CYOA.
-- §2 **per-pack content application** across all 17 stories (scored beats, skill-check moments, quest
-  stages, the 5 parser→RPG promotions). Each pack: author the appropriate mechanics, **re-baseline its
-  traces** (content/runtime change), extend its mode's proofs, and **blind-LLM-playtest** before commit.
+**Phase 2 — per-pack content application (DONE for the universally/where-appropriate mechanics, on `main`):**
+- ✅ **death/failure flag** applied across the CYOA stories (`c394db2`) — all 17 now label failure outcomes
+  uniformly (parser/RPG had it built-in).
+- ✅ **quest_stage progression** applied to ALL 14 packs that lacked it (`499d7bf`, `784b07d`, `7f7a4c2`) —
+  **all 17 stories now track quest progression** (milestone stages + a reachable reactive variant each,
+  bug_0145/0146/0147 liveness-verified).
+- ✅ **skill_check** added to `wolf_winter` (`b8c68de`) — **all 5 RPG packs now carry a skill_check** (mode-uniform).
+- ✅ **scoring** applied to the 3 adventure CYOAs (`6c95c3c`: watchtower 45, midnight 35, clockwork 45) —
+  scoring is now present **everywhere it is appropriate** (parser 5 + RPG 5 + adventure CYOA 3); the
+  moral-fork CYOAs stay deliberately point-free. A new `cyoa_score_economy_sound` proof makes CYOA scoring
+  proof-driven, completing score-economy soundness across all 3 modes.
 
-This per-pack sweep is large and gated on the **blind-playtest** quality bar — exactly the autonomous
-AFK loop's domain. It is now fully de-risked: the plan, the capability foundation, and the exemplar
-test patterns are in place, so the loop (restarted with this doc) can grind the sweep cycle-by-cycle, or
-it can be done by hand pack-by-pack.
+Net: every story now shares the same **universal** palette (quest_stage + death/failure + reactive variants),
+plus each mode's appropriate mechanics (scoring everywhere it fits; skill_check across all RPG). `health`
+green throughout (17/17 validate, 1726 tests); content-hash re-pins + scorecard regen handled per change.
+
+**Remaining frontier (the deepest, highest-friction tier — appropriate but not yet built):**
+- **5 parser → RPG promotions**: give each parser puzzle a skill var + ≥1 skill_check (and optionally a
+  guardian fight where the fiction supports it) — which flips it to RPG mode (`enemies:` key, the
+  breaking_weir combatless-RPG shape). Cost: mode-flip re-baselines each pack's acceptance/recorded traces +
+  re-proves under the RPG suite. Bounded, one pack at a time.
+- **CYOA skill checks** on the adventure CYOAs: needs a CYOA skill-reachability proof (the best/worst-roll
+  bracket added to the CYOA exhaustive solver — the `rngFor` seam is already in place from §4.5) before content.
+- Smaller lifts: §4.1 quest_stage observation-surfacing; §4.6 deadline → parser/RPG; §4.7 optional combat-in-CYOA.
+
+These remaining items are the ones gated on the **blind-playtest** quality bar and on mode-flip trace
+re-baselining — the autonomous AFK loop's domain. Fully de-risked: plan + capabilities + exemplar proofs
+are all on `main`, so the loop (restarted with this doc) can grind them, or they can be done by hand pack-by-pack.
