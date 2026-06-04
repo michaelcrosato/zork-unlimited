@@ -106,8 +106,11 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // recorded trace (was 8990abbad9…).
     // ...and the quest_stage palette lift — a `the_road` progression (set_quest_stage
     // milestones + a reactive `on_the_trail` scene variant), another deliberate edit that
-    // gates nothing (was 59f7225260...).
+    // gates nothing (was 59f7225260...);
+    // ...and the scoring palette lift — six one-shot `inc_var: score` awards + `max_score: 45`
+    // (the CYOA scoring standardization; reachable max == 45 is proven by the new
+    // cyoa_score_economy_sound proof), another deliberate, gating-nothing edit (was 45b8dbee0b...).
     // Any *unintended* change to compilation trips this.
-    expect(loaded.compiled.contentHash).toBe("45b8dbee0b4b15b2639b3e8be8d41f96bcf6686aa0b160fa57634cfc1d8fc730");
+    expect(loaded.compiled.contentHash).toBe("83826e0fc8fa16bf55c9c8e844a5a25378ea90d85bd2aaa3420cfb772b51f17c");
   });
 });

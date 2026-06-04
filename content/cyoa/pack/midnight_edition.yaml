@@ -63,6 +63,27 @@ meta:
   title: "The Midnight Edition"
   start: composing_room
   flags_init: []
+  # SCORING (§13 Stage 3, CYOA-first-class): the night's diligence is also tracked as a
+  # Zork-style score on the conventional `score` var — points for ACCOMPLISHMENT (sourcing,
+  # verifying, and printing the proven truth), not moral judgment, which suits this
+  # diligence adventure. The runner appends "[Your score has gone up by N points…]"
+  # feedback off this ceiling (decorateEvents, shared scoreChangeNarrations chrome); the
+  # awards sit on the SAME choices as the existing effects and gate nothing — every choice,
+  # next, ending, and the `the_edition` quest stay exactly as reachable as before.
+  #
+  # SCORE-ECONOMY SOUNDNESS (the exhaustive proof checks this EXACTLY: the max score
+  # reachable by any single concrete playthrough must EQUAL max_score). All five awards are
+  # collectible TOGETHER on the one best path — the verified-print route — and each is
+  # one-shot (it rides a choice whose existing `conditions` already forbid a re-fire, or a
+  # choice that ends the game), so no loop can re-farm a point and no other route can exceed
+  # the ceiling. The other three endings carry NO awards of their own; the +10 for the
+  # verified print is reachable ONLY by the win, so 35 is hit on exactly that path and never
+  # surpassed. Best path, traced explicitly (= max_score):
+  #   read_letter (+5, story in hand)  → go_office → search_desk (+5, proof sought: key found)
+  #   → open_safe (+5, safe open)      → read_report (+10, suppressed proof read, knows_proof)
+  #   → leave_office → go_press → print_verified (+10, the VERIFIED edition runs — the win)
+  #   total 5 + 5 + 5 + 10 + 10 = 35
+  max_score: 35
 
 scenes:
   - id: composing_room
@@ -107,6 +128,9 @@ scenes:
         conditions: [{ not_flag: read_letter }]
         effects:
           - set_flag: read_letter
+          # Score +5: the accusing story is in hand. One-shot — the `not_flag: read_letter`
+          # condition above forbids taking this choice twice, so the award can't re-fire.
+          - inc_var: { name: score, by: 5 }
           # Quest `the_edition` tracks the diligence arc as progress only (it gates no
           # choice/next/ending and changes no existing flag): the accusing story is now in
           # hand. Stage advances on the open_safe and read_report choices below; read back
@@ -164,6 +188,9 @@ scenes:
         conditions: [{ has_flag: read_letter }, { not_item: safe_key }]
         effects:
           - add_item: safe_key
+          # Score +5: the diligence is begun — the proof is sought, the key in hand. One-shot
+          # — the `not_item: safe_key` condition above bars retaking it, so it can't re-fire.
+          - inc_var: { name: score, by: 5 }
           - add_journal: "A small brass safe-key, taped to the underside of the drawer lip exactly as the letter said. Garrow's own clerk must have hidden it where his master would never stoop to look."
         next: editors_office
       - id: open_safe
@@ -171,6 +198,9 @@ scenes:
         conditions: [{ has_item: safe_key }, { not_flag: safe_open }]
         effects:
           - set_flag: safe_open
+          # Score +5: the safe is open — the suppressed report is within reach. One-shot —
+          # the `not_flag: safe_open` condition above bars retaking it, so it can't re-fire.
+          - inc_var: { name: score, by: 5 }
           - set_quest_stage: { quest: the_edition, stage: proof_sought }
           - add_journal: "The safe swings open on a bundle of papers tied in pink legal tape — and on top, a government envelope stamped CONDEMNED and INSPECTOR OF WORKS."
         next: editors_office
@@ -179,6 +209,10 @@ scenes:
         conditions: [{ has_flag: safe_open }, { not_flag: knows_proof }]
         effects:
           - set_flag: knows_proof
+          # Score +10: the heart of the diligence — the suppressed inspector's report is
+          # read and the story is PROVEN. One-shot — the `not_flag: knows_proof` condition
+          # above bars retaking it, so the award can't re-fire.
+          - inc_var: { name: score, by: 10 }
           - set_quest_stage: { quest: the_edition, stage: proof_found }
           - add_journal: >
               The report is everything the sluice-man swore and worse: the weir-gate
@@ -227,6 +261,12 @@ scenes:
       - id: print_verified
         text: "Set the proven story and pull the bed-lever — run the front page."
         conditions: [{ has_flag: knows_proof }]
+        effects:
+          # Score +10: the considered win — the VERIFIED edition runs, the truth unbreakable.
+          # One-shot — `next` ends the game at ending_vindicated, so the press can't roll
+          # twice. This award is reachable ONLY by the win, so the perfect 35 lands exactly
+          # here, on the one best path, and no other route can match it.
+          - inc_var: { name: score, by: 10 }
         next: ending_vindicated
       - id: print_unverified
         text: "Set the story on the source's word and pull the bed-lever — run it now."

@@ -4,6 +4,25 @@ meta:
   start: forest_crossroads
   vars_init: {}
   flags_init: []
+  # Stage-3 scoring (CYOA scoring is now first-class, mirroring parser/RPG): points
+  # reward the investigation — uncovering the truth, not a moral judgment. Each award
+  # rides a one-shot, already-guarded choice so the conventional `score` var can't be
+  # farmed past the ceiling, and every award lies on one traversable run, so the
+  # best-scoring playthrough reaches the full 45:
+  #   +5  inspect_ground   — the bootprints, the first trail east (not_flag found_bootprints)
+  #   +5  take_letter      — recovering the sealed papers (not_item sealed_letter)
+  #   +10 examine_barrels  — the lamp oil: proof the fire was set (not_flag learned_truth)
+  #   +10 take_ledger      — the ledger naming everyone involved (not_item ledger)
+  #   +5  ask_about_tower  — the hermit's corroborating account (not_flag heard_hermit_lore)
+  #   +10 expose_the_plot  — carrying the truth home to the magistrate (ending_truth)
+  # Best single path (all six combine): inspect_ground (+5) → east → cart: take_lantern,
+  # take_letter (+5) → cellar: examine_barrels (+10) → hidden_cache: take_ledger (+10) —
+  # pry the barrel BEFORE the ledger, since taking the ledger sets learned_truth and
+  # retires the barrel choice — → west → hermit: ask_about_tower (+5) → north →
+  # decision_point: expose_the_plot (+10) = 45. No award double-counts (each on a distinct
+  # one-shot choice), so the reachable maximum equals max_score exactly (bug_0148-class
+  # score-economy soundness). Scoring is silent mechanics — no prose change.
+  max_score: 45
 
 scenes:
   # ── The crossroads (start) ──────────────────────────────────────────────
@@ -39,6 +58,9 @@ scenes:
         effects:
           - set_flag: found_bootprints
           - add_journal: "Someone dragged a heavy object east, toward the watchtower."
+          # +5 score: the first clue uncovered (the bootprints, the trail east). One-shot —
+          # the not_flag found_bootprints guard above retires this choice once it fires.
+          - inc_var: { name: score, by: 5 }
         next: forest_crossroads
 
   # ── Watchtower cluster ───────────────────────────────────────────────────
@@ -104,7 +126,9 @@ scenes:
       - id: take_letter
         text: "Take the sealed letter."
         conditions: [ { not_item: sealed_letter } ]
-        effects: [ { add_item: sealed_letter }, { add_journal: "A wax-sealed letter, addressed to no one — but it reads like the kind of papers a checkpoint guard would demand to see, or that the right pair of eyes — not your own; the seal is set too hard for that — could break open and read." } ]
+        # +5 score: recovering the sealed papers — a clue in hand. One-shot — the not_item
+        # sealed_letter guard above retires this choice once the letter is taken.
+        effects: [ { add_item: sealed_letter }, { add_journal: "A wax-sealed letter, addressed to no one — but it reads like the kind of papers a checkpoint guard would demand to see, or that the right pair of eyes — not your own; the seal is set too hard for that — could break open and read." }, { inc_var: { name: score, by: 5 } } ]
         next: abandoned_cart
       - id: carry_lantern_to_cellar
         text: "Carry the lantern out to the cellar stair."
@@ -219,6 +243,11 @@ scenes:
           # in lockstep with the existing learned_truth flag. Tracking only; gates nothing.
           - set_quest_stage: { quest: the_road, stage: truth_known }
           - add_journal: "The barrels are full of lamp oil. The fire was set on purpose."
+          # +10 score: uncovering the arson (the lamp oil — the fire was set on purpose).
+          # One-shot — the not_flag learned_truth guard above retires this choice once it
+          # fires; collectible alongside the ledger only by prying the barrel FIRST, since
+          # take_ledger also sets learned_truth (the best-path ordering, see meta).
+          - inc_var: { name: score, by: 10 }
         next: cellar
       - id: climb_out
         text: "Climb back out."
@@ -240,6 +269,10 @@ scenes:
           # Quest milestone (mirrors the barrel branch): "the_road" reaches `truth_known`.
           - set_quest_stage: { quest: the_road, stage: truth_known }
           - add_journal: "The ledger names everyone involved. You pocket it."
+          # +10 score: recovering the ledger that names everyone involved — the hard
+          # evidence. One-shot — the not_item ledger guard above retires this choice once
+          # the ledger is pocketed.
+          - inc_var: { name: score, by: 10 }
         next: cellar
       - id: leave_cache
         text: "Slip back out."
@@ -302,6 +335,12 @@ scenes:
       - id: ask_about_tower
         text: "Ask about the burning tower."
         conditions: [ { not_flag: heard_hermit_lore } ]
+        # +5 score: the hermit's corroborating account of the smugglers. One-shot — the
+        # not_flag heard_hermit_lore guard above retires this choice, and hermit_about_tower's
+        # on_enter sets that flag on arrival, so it cannot re-fire. (Independent of
+        # learned_truth, so it stacks with both cellar discoveries on the best path.)
+        effects:
+          - inc_var: { name: score, by: 5 }
         next: hermit_about_tower
       - id: show_letter
         text: "Show him the sealed letter."
@@ -439,6 +478,10 @@ scenes:
       - id: expose_the_plot
         text: "March in and expose the whole conspiracy."
         conditions: [ { has_flag: learned_truth } ]
+        # +10 score: carrying the truth home — the best ending. Terminal (next is an
+        # ending), so it fires exactly once and tops out the best-scoring run at 45.
+        effects:
+          - inc_var: { name: score, by: 10 }
         next: ending_truth
       - id: slip_away
         text: "Slip away into the dark and never look back."

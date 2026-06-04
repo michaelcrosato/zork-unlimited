@@ -25,6 +25,30 @@ meta:
   # patrol begins, so the ledger is load-bearing, not a clue you only meet by
   # dawdling (blind-playtest finding, bug_0040 refining bug_0019).
   vars_init: { ticks: 0 }
+  # The heist's SCORE ceiling — a thief's scorecard, in the conventional `score` var
+  # (tracked by `inc_var` awards on the beats below; CYOA scoring is first-class —
+  # `meta.max_score` + the runner's Zork-style "[Your score has gone up…]" feedback,
+  # same chrome as parser/RPG). A heist scores the JOB: intel, the signature feat, and
+  # the haul you carry out the door. Four one-shot awards, each on a flag-/terminal-
+  # guarded beat so it can never re-fire as the clock loops (CRITICAL here — the foyer/
+  # gallery/study form a re-enterable circuit and `ticks` advances on every upstairs
+  # loop, so a score award on a re-firing beat would FARM points and break the
+  # exact-max invariant). The awards:
+  #   • read the ledger (intel)            +10  — `read_ledger` choice, `not_flag: read_ledger`
+  #   • crack the clockwork vault (feat)   +15  — `pick_lock` choice (the picked route only)
+  #   • carry off the gold (the haul)      +20  — `grab_gold` choice → ending_rich (terminal)
+  #   • carry off the confession (the haul)+20  — `take_letter`/`open_strongbox` → ending_truth (terminal)
+  # The gold and the letter are the vault's two MUTUALLY-EXCLUSIVE prizes (each choice
+  # terminates the game), so no single playthrough can bank both hauls. The max-scoring
+  # single path is the full vault job — read the ledger, crack the vault, take a haul:
+  # 10 + 15 + 20 = 45, reached by BOTH the rich (grab_gold) and truth-via-vault
+  # (take_letter) escapes. No phantom points (max_score == that best path) and no farm
+  # (every award one-shot), so the reachable max equals max_score EXACTLY. The stealth
+  # crawlspace route to the truth (intel + confession, skipping the vault feat) tops out
+  # lower at 30 — earned texture: slipping past the vault costs you its points. Sits
+  # alongside `ticks`/`deadline`; nothing is gated on `score`, and no condition/next/
+  # ending/quest_stage/deadline/tick is touched.
+  max_score: 45
   # The clock's teeth — the namesake mechanic, finally made real. A fresh blind
   # playtester (seed 7, ai-runs/2026-06-01T21-00-24-111Z/playtest.md §4/§5/§6) reached
   # all endings, rated the pack 5/5 clarity, and flagged ONE thing in three sections:
@@ -545,6 +569,11 @@ scenes:
           # alongside the load-bearing read_ledger flag (untouched) so the job's
           # progression advances at the moment the thief learns the watch's rounds.
           - set_quest_stage: { quest: the_heist, stage: ledger_read }
+          # SCORE: the intel award (+10). One-shot — the choice's existing
+          # `not_flag: read_ledger` guard (and the flag set above) means it can be
+          # taken only once, so re-entering the study (study<->gallery loop) never
+          # re-banks it. Pure additive effect: the read_ledger flag/gate is untouched.
+          - inc_var: { name: score, by: 10 }
           - add_journal: "The ledger notes a guard who walks the gallery on the hour. Now that you know his rounds, you could time a crossing he'd never catch."
         next: study
       - id: leave_study
@@ -600,6 +629,14 @@ scenes:
           # picked route earns it — forcing the door (force_door) trips the alarm and
           # ends at ending_caught, never reaching this stage, which is right.
           - set_quest_stage: { quest: the_heist, stage: vaulted }
+          # SCORE: the vault-cracked award (+15) — the heist's signature feat. One-shot
+          # WITHOUT a new guard: picking the lock routes to `vault` (next, below), whose
+          # only choices (grab_gold/take_letter) both END the game, so the player can
+          # never loop back to this door to pick it again — the award fires at most once
+          # per playthrough. Earned only on the picked route (force_door ends at
+          # ending_caught, never here). Pure additive effect; the choice's conditions/
+          # next are untouched.
+          - inc_var: { name: score, by: 15 }
           - add_journal: "The tumblers fall, one by one. The vault sighs open."
         next: vault
       - id: study_lock
@@ -659,6 +696,12 @@ scenes:
         text: "Fill your pockets with gold and run."
         effects:
           - add_item: gold
+          # SCORE: the gold haul (+20) — the loot carried out the door, the clean
+          # rich getaway. One-shot: this choice routes straight to ending_rich (a
+          # terminal), so it fires exactly once. Mutually exclusive with the letter
+          # haul below (the vault's two choices both end the game), so no single
+          # playthrough banks both 20s. Pure additive effect; next is untouched.
+          - inc_var: { name: score, by: 20 }
           - add_journal: "Heavy, cold, and yours."
         next: ending_rich
       - id: take_letter
@@ -670,6 +713,13 @@ scenes:
         effects:
           - add_item: letter
           - set_flag: letter_displayed
+          # SCORE: the confession haul (+20) — the steward's letter carried off, the
+          # vault route's prize. Same award as the gold (a haul is a haul on the
+          # scorecard; the truth's premium over riches is the ending's MORAL, not a
+          # point bonus) and MUTUALLY EXCLUSIVE with it, so the best vault path scores
+          # 45 either way. One-shot: routes straight to ending_truth (a terminal).
+          # Pure additive effect; the letter_displayed flag/route are untouched.
+          - inc_var: { name: score, by: 20 }
         next: ending_truth
 
   - id: crawlspace
@@ -728,6 +778,13 @@ scenes:
         effects:
           - add_item: letter
           - set_flag: letter_hidden
+          # SCORE: the confession haul (+20) — the SAME prize as the vault's take_letter
+          # (one letter, two routes to it), so the haul scores the same however found.
+          # One-shot: routes straight to ending_truth (a terminal). This stealth route
+          # skips the vault feat, so its best total is intel(10) + this(20) = 30 — below
+          # the vault job's 45, the deliberate texture scoring adds. Additive only; the
+          # letter_hidden flag/route are untouched.
+          - inc_var: { name: score, by: 20 }
         next: ending_truth
       - id: study_strongbox
         # No-pick nudge: the manor's "never to force" rule holds even here — the
