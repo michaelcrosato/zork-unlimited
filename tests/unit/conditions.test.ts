@@ -19,6 +19,15 @@ describe("condition evaluator", () => {
     expect(evalCondition({ not_visited: "room9" }, s)).toBe(true);
   });
 
+  it("in_room reads the CURRENT room, distinct from the sticky visited", () => {
+    // Start in room0, then move to room1: both are `visited`, but only room1 is current.
+    const s = { ...base(), current: "room1", visited: { room0: true, room1: true } };
+    expect(evalCondition({ in_room: "room1" }, s)).toBe(true);
+    expect(evalCondition({ in_room: "room0" }, s)).toBe(false); // visited, but not current
+    expect(evalCondition({ visited: "room0" }, s)).toBe(true);
+    expect(evalCondition({ in_room: "room9" }, s)).toBe(false);
+  });
+
   it("runtime object-state predicates read GameState.objectState (default false)", () => {
     const s0 = base();
     // No objectState yet ⇒ both default false (the box is treated as closed & locked).
@@ -59,6 +68,8 @@ describe("condition evaluator", () => {
     expect(ConditionSchema.safeParse({ has_flag: "x" }).success).toBe(true);
     expect(ConditionSchema.safeParse({ is_open: "box" }).success).toBe(true);
     expect(ConditionSchema.safeParse({ is_unlocked: "box" }).success).toBe(true);
+    expect(ConditionSchema.safeParse({ in_room: "crypt" }).success).toBe(true);
+    expect(ConditionSchema.safeParse({ in_room: "" }).success).toBe(false);
     expect(ConditionSchema.safeParse({ is_open: "" }).success).toBe(false);
     expect(ConditionSchema.safeParse({ all_of: [{ has_flag: "x" }] }).success).toBe(true);
     expect(ConditionSchema.safeParse({ bogus: "x" }).success).toBe(false);

@@ -137,6 +137,7 @@ function relabelCondition(
   if ("not_item" in c) return { not_item: r(c.not_item) };
   if ("visited" in c) return { visited: r(c.visited) };
   if ("not_visited" in c) return { not_visited: r(c.not_visited) };
+  if ("in_room" in c) return { in_room: r(c.in_room) };
   if ("is_open" in c) return { is_open: r(c.is_open) };
   if ("is_unlocked" in c) return { is_unlocked: r(c.is_unlocked) };
   if ("var_gte" in c) return { var_gte: { name: rv(c.var_gte.name), value: c.var_gte.value } };

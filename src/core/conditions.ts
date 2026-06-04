@@ -19,6 +19,14 @@ export const ConditionSchema: z.ZodType<Condition> = z.lazy(() =>
     z.object({ not_item: z.string().min(1) }).strict(),
     z.object({ visited: z.string().min(1) }).strict(),
     z.object({ not_visited: z.string().min(1) }).strict(),
+    // The player's CURRENT location (`state.current`), the non-monotone dual of
+    // `visited` (which is sticky once true). `visited` answers "have you EVER been
+    // in room X"; `in_room` answers "are you in room X RIGHT NOW". This lets a
+    // self-USE interaction on a carried item, or a reactive variant, be gated to the
+    // place its fiction belongs — e.g. a tension beat you take "before the iron locks"
+    // should only offer in the crypt, not trail the player into every room they carry
+    // the key through (the sealed_crypt blind-playtest "grip iron key" wart, bug_0258).
+    z.object({ in_room: z.string().min(1) }).strict(),
     // Runtime object-state predicates (parser+): read the per-object open/locked
     // runtime overrides in GameState.objectState. `is_open` is true once the object
     // has been opened during play; `is_unlocked` is true once its lock has been
@@ -52,6 +60,7 @@ export type Condition =
   | { not_item: string }
   | { visited: string }
   | { not_visited: string }
+  | { in_room: string }
   | { is_open: string }
   | { is_unlocked: string }
   | { var_gte: { name: string; value: number } }
@@ -70,6 +79,7 @@ export function evalCondition(cond: Condition, state: GameState): boolean {
   if ("not_item" in cond) return !state.inventory.includes(cond.not_item);
   if ("visited" in cond) return state.visited[cond.visited] === true;
   if ("not_visited" in cond) return state.visited[cond.not_visited] !== true;
+  if ("in_room" in cond) return state.current === cond.in_room;
   if ("is_open" in cond) return state.objectState[cond.is_open]?.open === true;
   if ("is_unlocked" in cond) return state.objectState[cond.is_unlocked]?.locked === false;
   if ("var_gte" in cond) return (state.vars[cond.var_gte.name] ?? 0) >= cond.var_gte.value;

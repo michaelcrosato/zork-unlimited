@@ -307,12 +307,22 @@ objects:
     #     beat is simply RETRYABLE and the player proceeds to the locks regardless. Because
     #     the iron key is never consumed (the locks UNLOCK, they do not remove it), no
     #     softlock can arise from the beat — the key remains in hand for the real choice.
+    #   • Gated `{ in_room: crypt }` (bug_0258): a self-USE on a CARRIED item otherwise
+    #     surfaces in EVERY room from the moment you pocket the key at the well — a blind
+    #     playtester (seed 43) flagged the action trailing them into the graveyard, the
+    #     yard, the forest path, places its "steel yourself before the three iron locks"
+    #     fiction makes no sense ("a small wart"). `in_room` is the non-monotone dual of
+    #     `visited`: it offers the beat ONLY where the three iron locks actually stand —
+    #     the crypt, exactly the "down here" the iron key's examine already names. Pure
+    #     legibility: still optional, still convergent — it gates no exit, ending, score,
+    #     or variant on either roll outcome, so every structural proof and the 35-point
+    #     economy stay byte-identical; it only narrows WHERE the optional beat appears.
     interactions:
       - verb: USE
         item: iron_key
         target: iron_key
         command_verb: grip
-        conditions: [{ not_flag: steeled_at_the_iron }]
+        conditions: [{ not_flag: steeled_at_the_iron }, { in_room: crypt }]
         skill_check:
           skill: nerve
           difficulty: 12

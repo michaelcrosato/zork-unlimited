@@ -96,8 +96,18 @@ describe("bug_0241 — the iron key's examine text telegraphs the optional grip/
     expect(text).toContain("great iron lock");
   });
 
-  it("the telegraph matches a real action: `grip iron key` (the self-USE) is offered", () => {
-    const s = play(initStateForParserPack(index, 11), TO_IRON_KEY);
+  it("the telegraph matches a real action: `grip iron key` (the self-USE) is offered in the crypt", () => {
+    // bug_0258 relocates the beat: it is now offered only where the three iron locks
+    // stand (the crypt), not the moment the key is pocketed at the well. Walk down to
+    // the crypt, then assert the self-USE surfaces with its `grip iron key` command.
+    const s = play(initStateForParserPack(index, 11), [
+      ...TO_IRON_KEY,
+      "go_up",
+      "go_west",
+      "go_north",
+      "go_down",
+    ]);
+    expect(s.current).toBe("crypt");
     const grip = enumerateActions(index, s).find(
       (a) =>
         a.action.type === "USE" && a.action.item === "iron_key" && a.action.target === "iron_key",
@@ -108,14 +118,14 @@ describe("bug_0241 — the iron key's examine text telegraphs the optional grip/
   });
 
   it("the change is cosmetic — the grip beat gates nothing and the intended route still wins 35/35", () => {
-    // Deliberately exercise the grip beat mid-run, then finish the canonical win.
+    // Deliberately exercise the grip beat in the crypt (bug_0258), then finish the win.
     const s = play(initStateForParserPack(index, 11), [
       ...TO_IRON_KEY,
-      "use_iron_key", // the optional nerve beat — must not consume the key or block the route
       "go_up",
       "go_west",
       "go_north",
       "go_down",
+      "use_iron_key", // the optional nerve beat — must not consume the key or block the route
       "unlock_crypt_gate",
       "go_north",
     ]);
