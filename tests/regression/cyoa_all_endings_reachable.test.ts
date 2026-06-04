@@ -35,6 +35,13 @@
  * combat-bound checks (src/validate/rpg_validator.ts), since a pure-fingerprint BFS
  * cannot soundly exhaust its randomness.
  *
+ * CYOA is "deterministic" for this single-rules BFS even though three shipped packs carry a
+ * seeded skill_check (clockwork_heist, watchtower_road, midnight_edition): every such check is
+ * CONVERGENT (on_success/on_failure `goto` the same scene, touching no flag/var/tick/quest/
+ * ending), so both die outcomes share one stateKey and the seeded roll never changes which
+ * region the BFS explores. That convergence is locked by cyoa_convergent_skill_check_sound.test.ts
+ * (bug_0252); a DIVERGENT skill_check would need the best/worst-roll bracket the RPG solver uses.
+ *
  * The BFS itself (over the engine's own `rules.legalActions` set) is mode-agnostic and
  * lives in support/exhaustive_endings.ts; this file supplies the CYOA wiring and the
  * per-pack assertions.

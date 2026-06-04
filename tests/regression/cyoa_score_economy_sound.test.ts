@@ -20,9 +20,20 @@
  * no reversible/observation verbs to skip). Every CHOOSE-reachable state is therefore visited,
  * and every state visited is a real, legal playthrough, so the observed maximum is the TRUE
  * reachable maximum. The search FAILS on cappedOut, so it can never pass by truncating an
- * unexplored region. (The scored CYOA packs carry no skill_check, so play is fully
- * deterministic and a single rule set suffices; a future pack mixing score + skill_check would
- * need the best/worst-roll bracket, exactly as the RPG score proof uses.)
+ * unexplored region.
+ *
+ * Determinism with a skill_check present: scored CYOA packs DO carry skill checks
+ * (clockwork_heist, watchtower_road, midnight_edition all declare max_score AND a skill_check),
+ * which draw a seeded d20 — so this single-rules BFS is NOT trivially deterministic over them.
+ * It stays sound because every shipped CYOA skill_check is CONVERGENT: on_success and on_failure
+ * `goto` the same scene and touch no flag/var/tick/quest/ending, so both die outcomes produce
+ * the SAME stateKey the BFS dedupes on. The seeded roll the search happens to draw is therefore
+ * irrelevant to the score maximum (both branches reach the same fingerprint, carrying the same
+ * score). That convergence is the load-bearing assumption here, and it is locked directly by
+ * cyoa_convergent_skill_check_sound.test.ts (bug_0252) — if a future edit diverged a branch, that
+ * test fails loudly rather than letting this proof silently inspect only the seed's branch. A
+ * future pack mixing score with a DIVERGENT skill_check would instead need the best/worst-roll
+ * bracket, exactly as the RPG score proof (rpg_score_economy_sound) uses.
  *
  * Packs are auto-discovered from content/cyoa/pack, so a new CYOA pack is covered the moment
  * it ships (the health-covers-all-packs bar, bug_0096). Unscored packs (max_score absent ⇒ 0 —
