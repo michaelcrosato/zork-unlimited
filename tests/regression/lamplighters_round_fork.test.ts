@@ -363,3 +363,54 @@ describe("bug_0216 → bug_0220 — the round-lantern: a HELD (always-carried, n
     expect(thief.state.endingId).toBe("ending_thief");
   });
 });
+
+/**
+ * Regression (§15) for bug_0229 — the lit Staith-Head names the waiting child, closing the
+ * "am I finished at 35/35?" beat the seed-23 blind pass flagged.
+ *
+ * The win is a LOCOMOTION win: lighting the great lamp earns the final +20 (score 35/35) but the
+ * game does not end until you walk `down` to the strand and reach the child. The seed-23 blind
+ * pass (clarity 5/5, enjoyment 4/5, all three endings, zero bugs) noted that the lit-room text
+ * pointed "down to the strand" without naming the child below, so at the moment the score reads
+ * full the REMAINING goal was implicit — a small "am I done?" friction. The fix surfaces the
+ * child in the lamp_lit variant of harbour_head, so the lit room itself states the last step.
+ * Pure prose: no mechanic, score, flag, exit or ending changes; the +20 still rides the one-shot
+ * light, max_score stays 35, and the generic bar (all-endings reachability, no soft-lock, score
+ * economy, action-id uniqueness, variant liveness) re-derives clean over the edited pack.
+ */
+describe("bug_0229 — the lit Staith-Head names the waiting child (the 35/35 'am I finished?' beat)", () => {
+  it("the unlit Staith-Head room does NOT mention the child — the strand below is still dark", () => {
+    // tools but lamp unlit: arrive at harbour_head, font dry, nothing said of a child yet.
+    const { state } = play(initStateForParserPack(index, 3), [
+      "take_tinderbox",
+      "go_north",
+      "go_north",
+    ]);
+    expect(state.current).toBe("harbour_head");
+    expect(state.flags["lamp_lit"]).toBeFalsy();
+    const desc = buildParserObservation(index, state).description.toLowerCase();
+    expect(desc).not.toContain("child"); // the strand below is lightless; the child is unseen
+  });
+
+  it("once the lamp is lit (35/35, before going down) the room itself names the child still to be reached", () => {
+    // Full win route, stopped one beat short of the ending — lamp lit, score 35, still at the head.
+    const { state } = play(initStateForParserPack(index, 3), [
+      ...ROUTE_TO_STORE_WITH_KEY,
+      "unlock_oil_cask",
+      "open_oil_cask",
+      "take_whale_oil",
+      "go_west",
+      "go_north",
+      "use_whale_oil_on_harbour_lamp",
+      "use_tinderbox_on_harbour_lamp",
+    ]);
+    expect(state.current).toBe("harbour_head");
+    expect(state.flags["lamp_lit"]).toBe(true);
+    expect(state.ended).toBeFalsy(); // the win still wants the walk DOWN
+    const obs = buildParserObservation(index, state);
+    expect(obs.score).toBe(35); // max score already reached…
+    const desc = obs.description.toLowerCase();
+    expect(desc).toContain("child"); // …yet the lit room names the remaining goal explicitly…
+    expect(obs.available_actions.map((a) => a.id)).toContain("go_down"); // …and the way down is open to it
+  });
+});

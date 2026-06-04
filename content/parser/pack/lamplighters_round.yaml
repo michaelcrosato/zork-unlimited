@@ -127,8 +127,10 @@ rooms:
         text: >
           The head of the staith, and the great harbour-lamp burning gold and steady on
           its post at last, throwing its light right down the drop and out across the
-          strand below — the dark down there is dark no longer. The way down to the strand
-          drops away to the north-east; the lamp-walk is back to the south.
+          strand below — the dark down there is dark no longer, and far down on the lit
+          shingle a small figure stirs and turns up toward the light: the lost child, still
+          to be reached. The way down to the strand drops away to the north-east; the
+          lamp-walk is back to the south.
     objects: [harbour_lamp]
     exits:
       - { direction: south, to: lamp_walk }
