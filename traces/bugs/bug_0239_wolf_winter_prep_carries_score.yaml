@@ -1,0 +1,67 @@
+id: bug_0239
+title: "wolf_winter: preparation bought an HP cushion but almost no SCORE — the prepared and reckless lines scored within 5 of each other (blind playtest finding)"
+kind: content_fix
+mode: rpg
+severity: minor
+pack: content/rpg/pack/wolf_winter.yaml
+content_hash: 7b3a504794d188df7934374c1cc65ff9280b50513e30b9d1103b34297bc626af
+
+summary: >
+  The mandated 2026-06-04 blind pass ran on wolf_winter (RPG, seed 11; a reckless run on seed 3) and
+  rated it clarity 5/5, enjoyment 4/5, mechanics flawless, ZERO bugs — but surfaced one real design
+  finding: the score economy was nearly decoupled from preparation. The prepared route scored 50/50 and
+  the reckless rush 45/50, only the day-book's +5 apart. The two LOAD-BEARING prep acts — heeding old
+  Cade for +2 attack and donning the byre-jerkin for +2 defense — bought a real HP cushion (and the
+  validator-proven combat_guaranteed safety) but NO score. So the diligence the whole fiction sells, and
+  Cade's emphatic "do BOTH, mind, not one" promise, left almost no mark on the scoreboard; a player
+  optimising for points barely needed the prep. The "do both" advice and the score economy were misaligned.
+
+reproduction:
+  pack: content/rpg/pack/wolf_winter.yaml
+  route: "compare two wins: (A) read day-book, heed Cade, don jerkin, fight all three, reach cattle; (B) skip all prep, rush north, fight all three, reach cattle"
+  observed: >
+    Route A (fully prepared) scored 50; route B (reckless) scored 45 — a 5-point gap that is ENTIRELY the
+    day-book read. Heeding Cade and donning the jerkin moved the score not at all, so preparation's only
+    payoff was HP survival, and the prepared/reckless fork the fiction builds carried no score signal.
+  expected: >
+    Preparation that the day-book and Cade both press should be worth a meaningful score signal, so the
+    "do both" advice aligns with the score economy and the prepared hunter is rewarded on the scoreboard,
+    not only in HP.
+
+fix:
+  layer: content
+  change: >
+    Content-only, no engine/validator/schema change and no combat-math change (both prep buffs and all
+    enemy stats are byte-unchanged, so the bug_0114 fairness guarantee, the three-fight cumulative-gauntlet
+    bound, and the death ending are all preserved). Each of the two prep acts now also awards score:
+    heeding Cade's counsel (gated one-shot behind heard_counsel) adds +5 alongside its +2 attack, and
+    donning the byre-jerkin (gated one-shot behind jerkin_donned) adds +5 alongside its +2 defense.
+    meta.max_score rises 50 -> 60 (now 5 day-book + 5 counsel + 5 jerkin + 10·3 wolves + 15 cattle). The
+    prepared hunter scores the full 60; the reckless rush still WINS but tops out at 45 — a real 15-point
+    diligence gap, up from 5. This deliberately breaks from the 50-point milestone economy the other
+    curated RPG packs share, earned by wolf_winter's distinctive prep fork.
+
+within_the_bar: >
+  validate_story stays 0/0 (content_hash -> 7b3a504794d188df7934374c1cc65ff9280b50513e30b9d1103b34297bc626af).
+  No test pins this pack's content_hash. The auto-discovered rpg_score_economy_sound proves the reachable
+  maximum score equals the new declared max_score EXACTLY (60 == 60, no overflow / no phantom points): the
+  two new awards are one-shot (gated behind their flags) so they cannot be farmed, and both ride
+  roll-INDEPENDENT acts (a dialogue topic and an object USE) the best/worst-roll bracket collects under both
+  regimes. The validator's SCORE_UNREACHABLE upper bound sums them via allEffects (object-interaction +
+  NPC-dialogue effects) + extraScoreAwards (the on_defeat +10s) to exactly 60. SCORE_PEAKS_BEFORE_WIN does
+  not fire — the win is a navigation win (visited: cattle_stand), not a has_flag/has_item climax. The
+  bug_0189 gauntlet regression is updated deliberately (max_score 50 -> 60) and otherwise passes unchanged;
+  the bug_0195 gamble regression (unprepared rush == 45) is untouched and still passes.
+
+locked_by:
+  test: tests/regression/wolf_winter_prep_carries_score.test.ts
+  asserts:
+    - "the FULLY-PREPARED route (read day-book, heed Cade [+heard_counsel], don jerkin [+jerkin_donned], all three wolves, reach the cattle) scores EXACTLY 60 and reaches ending_held alive (hp>0), with atk 7 / def 5"
+    - "the diligence GAP is real: prepared 60 - unprepared 45 (the companion bug_0195 test) == 15, up from the old 5"
+  rationale: >
+    The score complement of the combat_guaranteed safety the gauntlet test proves and the
+    reachable-max-equals-declared invariant rpg_score_economy_sound proves generically — pinned here to the
+    CONCRETE prepared route so a future retune cannot silently re-decouple preparation from score (drop an
+    award, or move points onto the kills both lines collect) without shrinking the gap and going red.
+
+verify: "npm run health EXIT 0"

@@ -37,12 +37,24 @@
 #                                     │ N*: cattle_stand (the pack breaks at dawn — WIN, +15)
 #   (* each gated on the prior wolf being put down)
 #
-# Score (max 50, the milestone economy the curated RPG packs share): read the day-book
-# the houndsman keeps (+5, the §17 clue that names the pack and points at the jerkin and
-# his counsel), put down each of the three wolves (+10 each), and reach the cattle with
-# the pack broken (+15 — the locomotion win, like cold_forge's ember chamber and the
-# Beacon's crown). The perfect 50 coincides with reaching the safe cattle, never before;
-# SCORE_PEAKS_BEFORE_WIN does not fire on a navigation win (bug_0116).
+# Score (max 60): read the day-book the houndsman keeps (+5, the §17 clue that names the
+# pack and points at the jerkin and his counsel), HEED old Cade's counsel (+5) and DON the
+# byre-jerkin (+5) — the two load-bearing prep acts the day-book and Cade both press —, put
+# down each of the three wolves (+10 each), and reach the cattle with the pack broken
+# (+15 — the locomotion win, like cold_forge's ember chamber and the Beacon's crown). The
+# perfect 60 coincides with reaching the safe cattle, never before; SCORE_PEAKS_BEFORE_WIN
+# does not fire on a navigation win (bug_0116).
+#
+# bug_0239 — the prep acts now SCORE (+5 each), deliberately breaking from the 50-point
+# milestone economy the other curated RPG packs share. A 2026-06-04 blind playtest found
+# the prepared and reckless lines scored almost the same (50 vs 45 — only the day-book's
+# +5 apart): preparation bought an HP cushion but almost no SCORE, so the diligence old
+# Cade's promise sells, and the whole fiction of heeding-and-arming, carried no score
+# signal. Tying +5 to each of the two prep flags (heard_counsel, jerkin_donned) aligns the
+# score economy with the "do both" advice: the prepared hunter scores the full 60, the
+# reckless rush still wins but tops out at 45 (a real 15-point diligence gap), and the
+# bug_0114 fairness guarantee, the cumulative-gauntlet combat tuning, and the death ending
+# are all BYTE-UNCHANGED (the awards add score only, never a stat or combat consequence).
 
 meta:
   id: wolf_winter_v1
@@ -58,10 +70,12 @@ meta:
   # Tuned so it does, with margin (per-fight worst-case 5/6/14; cumulative 25 < 30) —
   # see the enemies block. base-stat play (no counsel, no jerkin) can still die.
   combat_guaranteed: true
-  # The milestone economy: 5 + 10 + 10 + 10 + 15 = 50. Each award rides a beat that
-  # fires once (the read retires on read_tally; each wolf dies once; the cattle is the
-  # game-ending win), so the score cannot be farmed and the intended path reaches 50.
-  max_score: 50
+  # The economy: 5 + 5 + 5 + 10 + 10 + 10 + 15 = 60 (bug_0239 — the two prep acts now
+  # score +5 each; see the header). Each award rides a beat that fires ONCE (the read
+  # retires on read_tally; the counsel on heard_counsel; the don on jerkin_donned; each
+  # wolf dies once; the cattle is the game-ending win), so the score cannot be farmed and
+  # the fully-prepared path reaches exactly 60 (rpg_score_economy_sound proves it).
+  max_score: 60
 
 rooms:
   - id: steading_yard
@@ -241,6 +255,10 @@ objects:
         effects:
           - set_flag: jerkin_donned
           - inc_var: { name: defense, by: 2 }
+          # The diligence award (bug_0239): donning the jerkin is the other prep act the
+          # day-book presses, so it scores +5. One-shot — gated behind jerkin_donned (the
+          # don interaction retires once worn), so the +5 cannot be farmed.
+          - inc_var: { name: score, by: 5 }
           - add_journal: "You haul the padded byre-jerkin on over your coat; stiff and heavy, but a wolf's teeth will catch in the hide and never reach you (+2 defense)."
           - narrate: "You pull the padded byre-jerkin down off its peg and drag it on over your coat. It is stiff and weighs on the shoulders, but the layered hide sits steady between you and the next set of teeth — half of old Cade's promise, the padded half."
 
@@ -345,6 +363,10 @@ npcs:
           effects:
             - set_flag: heard_counsel
             - inc_var: { name: attack, by: 2 }
+            # The diligence award (bug_0239): heeding Cade is one of the two prep acts the
+            # day-book presses, so it scores +5. One-shot — gated behind heard_counsel
+            # (the topic retires once told), so the +5 cannot be farmed.
+            - inc_var: { name: score, by: 5 }
             - add_journal: "Old Cade shows you where a wolf's rush leaves its throat and shoulder open — you feel you could strike truer now (+2 attack)."
           topics:
             - id: wolves_back

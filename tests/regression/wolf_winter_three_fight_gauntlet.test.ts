@@ -123,8 +123,10 @@ describe("bug_0189 — The Wolf-Winter: a fair THREE-fight combat_guaranteed gau
     expect(c).not.toContain("COMBAT_UNWINNABLE");
   });
 
-  it("the score economy sums to the declared max (5 + 10·3 + 15 = 50)", () => {
+  it("the score economy sums to the declared max (5 + 5 + 5 + 10·3 + 15 = 60, bug_0239)", () => {
     const pack = loadPack();
-    expect(pack.meta.max_score).toBe(50);
+    // bug_0239: the two prep acts (heed counsel, don jerkin) now score +5 each on top of
+    // the day-book +5, the three +10 wolf kills, and the +15 cattle capstone.
+    expect(pack.meta.max_score).toBe(60);
   });
 });
