@@ -99,6 +99,13 @@ rooms:
       runs choked and slack. The iron sea-gate winch stands by the wheel with a socket
       for its crank-handle, and the handle itself hangs on a peg beside it. The head-race
       opens west; the tool-shed is east; the mill-floor is back to the south.
+    # Reactive room text (§7.3): the base description names BOTH faults (pawl locked AND
+    # race choked) as still wrong, so it must not persist once either is put right or it
+    # contradicts the world the player just changed (blind-pass finding, bug_0232). First
+    # match wins in declared order (roomDescription), so the variants run MOST-specific
+    # first: gate_up (climax, both faults + wound) → both-faults-fixed (wheel ready, gate
+    # not yet wound) → pawl-only → sluice-only. Each names exactly what is now true and
+    # what still remains, so the room reads consistently after every sub-puzzle.
     variants:
       - when: [{ has_flag: gate_up }]
         text: >
@@ -107,6 +114,30 @@ rooms:
           stands open below and the held water is going down through it in a long brown
           slide. The way down to the staith drops away to the north; the head-race opens
           west, the tool-shed is east, the mill-floor is back to the south.
+      - when: [{ has_flag: sluice_clear }, { has_flag: pawl_free }]
+        text: >
+          The great undershot wheel turns free and strong over the head-race now, both
+          faults put right at last — the brake-pawl levered up clear of the gear and the
+          freed race running fast below, so the wheel bites the water and drives the gear
+          with it. The iron sea-gate winch stands ready by the wheel with its crank-handle
+          socket, only waiting to be wound. The head-race opens west; the tool-shed is
+          east; the mill-floor is back to the south.
+      - when: [{ has_flag: pawl_free }]
+        text: >
+          The great undershot wheel stands over the head-race, its brake-pawl levered up
+          clear of the gear so the wheel is free to turn at last — but the race that should
+          drive it still runs choked and slack, and gives it no water to bite, so the wheel
+          hangs idle. The iron sea-gate winch stands by the wheel with a socket for its
+          crank-handle, and the handle hangs on its peg beside it. The head-race opens west;
+          the tool-shed is east; the mill-floor is back to the south.
+      - when: [{ has_flag: sluice_clear }]
+        text: >
+          The great undershot wheel stands over the head-race, the freed race running fast
+          and full below it at last — but the wheel will not stir for it: its brake-pawl is
+          still dropped and locked hard into the drive-gear and holds it fast against the
+          water. The iron sea-gate winch stands by the wheel with a socket for its
+          crank-handle, and the handle hangs on its peg beside it. The head-race opens west;
+          the tool-shed is east; the mill-floor is back to the south.
     objects: [brake_pawl, sea_winch, crank_handle]
     exits:
       - { direction: south, to: mill_house }
@@ -235,7 +266,12 @@ objects:
       across the channel so the water stands slack and dead and the wheel gets no drive
       from it. The long billhook would cut the whole mess clear if you set it to work.
     variants:
+      # Reactive NAME override too (bug_0188 asymmetry, same blind-pass finding bug_0232):
+      # once cut clear the object is no longer "choked", so visible_objects and the
+      # enumerated examine command must stop labelling it so — the name drops to plain
+      # "head-race", matching the cleared variant text and the room prose.
       - when: [{ has_flag: sluice_clear }]
+        name: "head-race"
         text: "The head-race running free and full where the choke was cut away, the water sliding fast and strong down onto the wheel."
     interactions:
       - verb: USE
