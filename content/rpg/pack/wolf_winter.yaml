@@ -141,12 +141,34 @@ rooms:
       length of trampled snow. One stout rail of the broken paling has fallen clear into
       the snow at your feet, heavy and sound. The byre-yard is back to the south.
     objects: [paling_rail]
+    # Reactive prose keys off BOTH the yearling's death AND breach_braced (the optional
+    # wedge), so a player who spends the turn to wedge the rail SEES the world acknowledge
+    # it — the half-shut breach and the one-throat funnel old Cade promised (bug_0256). The
+    # exits are UNCHANGED — the north gate still rides yearling_down alone, the wedge gates
+    # nothing — so this is pure §7.3 reactive text. Variants are ordered most-specific-first
+    # and every one is the first match in a reachable state (bug_0147 liveness):
+    #   1) yearling_down ∧ breach_braced  — wedge then kill (or kill then wedge);
+    #   2) yearling_down ∧ ¬braced        — kill without wedging;
+    #   3) ¬yearling_down ∧ breach_braced — wedge before the kill (the rail is here, ungated);
+    #   4) neither                        — the base description on first arrival.
     variants:
+      - when: [{ has_flag: yearling_down }, { has_flag: breach_braced }]
+        text: >
+          The gap in the broken paling, the young wolf dead in the snow of it now and the
+          fallen rail wedged hard across the breach — the gap half-shut, so whatever comes
+          behind must come through it singly and slow, the way old Cade swore the byre would
+          funnel them. The byre runs on north past the door; the byre-yard is back to the south.
       - when: [{ has_flag: yearling_down }]
         text: >
           The gap in the broken paling, the young wolf dead in the snow of it now and the
           breach held. The byre runs on north past the door; the byre-yard is back to the
           south.
+      - when: [{ has_flag: breach_braced }]
+        text: >
+          The gap in the broken paling, the fallen rail wedged hard across it now and the
+          breach half-shut. The young wolf still holds what is left of the gap, hackled and
+          snarling, but it can only come at you singly and slow through the narrowed throat,
+          the way old Cade swore the byre would funnel them. The byre-yard is back to the south.
     exits:
       - { direction: south, to: byre_yard }
       - direction: north
@@ -275,10 +297,12 @@ objects:
   #     8, ~65%) and easier once the jerkin is on (d20 + 5, roll of 6). Well under the
   #     SKILL_CHECK_IMPOSSIBLE ceiling 20 + 5 = 25, so the check always reads as winnable.
   #   - on_success: a one-shot flag + journal + narration, NO stat or score change — so the
-  #     fair-gauntlet tuning (atk7/def5/hp30, cumulative worst 25 < 30) and the 5+10+10+10+15
-  #     = 50 economy are BYTE-UNCHANGED. breach_braced is read by this interaction's own
-  #     none_of gate (so it is not an INERT_FLAG) and gates nothing else; it only retires the
-  #     check so a braced breach cannot be re-wedged (the bug_0015 retire-after-success rule).
+  #     fair-gauntlet tuning (atk7/def5/hp30, cumulative worst 25 < 30) and the prep-weighted
+  #     score economy are BYTE-UNCHANGED. breach_braced is read by this interaction's own
+  #     none_of gate (so it is not an INERT_FLAG) AND by the paling_gap / paling_rail reactive
+  #     prose (bug_0256 — the wedge's legible, observable payoff in the fiction); it gates NO
+  #     exit, win or ending. The none_of gate also retires the check so a braced breach cannot
+  #     be re-wedged (the bug_0015 retire-after-success rule).
   #   - on_failure: narration ONLY — retryable and non-lethal (the breaking_weir honesty
   #     discipline). The rail simply will not seat in the frozen ground yet; the player can
   #     try again, and the byre's one-throat corridor still funnels the wolves one at a time
@@ -287,7 +311,15 @@ objects:
   - id: paling_rail
     name: "fallen paling-rail"
     aliases: [rail, paling-rail, post, stake, timber, bar]
-    description: "A stout length of the broken paling, splintered off at one end but seasoned and sound — the kind of heavy timber a man could wedge across a gap to slow what tries to come through it."
+    description: "A stout length of the broken paling, splintered off at one end but seasoned and sound — the kind of heavy timber a man could wedge across a gap to half-shut it, so what comes through must come singly."
+    # Reactive examine twin (bug_0023, the byre-jerkin's donned shape): once wedged it is no
+    # longer a loose rail in the snow to consider but the brace half-shutting the breach. With
+    # the paling_gap variants above, breach_braced now drives reactive prose on BOTH the room
+    # and the object, so the optional wedge has a legible, observable payoff in the fiction
+    # rather than reading as an inert skill check (bug_0256) — no stat, score or combat change.
+    variants:
+      - when: [{ has_flag: breach_braced }]
+        text: "The fallen paling-rail, wedged hard across the breach now and stamped home — the gap half-shut, so what comes through the paling must come singly and slow."
     takeable: true
     interactions:
       # Self-USE = "wedge this rail into the breach" (the byre-jerkin's self-USE shape,
