@@ -84,6 +84,16 @@ export const MetaSchema = z
     // don't declare one compile byte-identically and their content hashes are
     // unchanged — same rule as SceneSchema/EndingSchema `variants`.
     deadline: DeadlineSchema.optional(),
+    // Optional milestone score ceiling — the CYOA analogue of ParserMetaSchema.max_score
+    // (§13 Stage 3), part of standardizing the mechanic palette across modes. Score is
+    // tracked in the conventional `score` var via `inc_var` awards on choices; when this
+    // is set the runner appends the same Zork-style "[Your score has gone up…]" feedback
+    // (shared `scoreChangeNarrations` chrome) and the validator proves the ceiling is
+    // reachable. `.optional()` (NOT `.default(0)`, unlike the parser's): an absent field
+    // stays absent in the compiled pack ⇒ every existing CYOA pack compiles
+    // byte-identically and keeps its content hash (mirrors `deadline`/`variants`). Absent
+    // or 0 ⇒ the pack does not track score (the score chrome is a no-op).
+    max_score: z.number().int().nonnegative().optional(),
   })
   .strict();
 

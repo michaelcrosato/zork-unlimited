@@ -12,7 +12,9 @@ import { evalConditions } from "../core/conditions.js";
 import type { Effect } from "../core/effects.js";
 import { applyEffects } from "../core/effects.js";
 import type { Action } from "../api/types.js";
+import type { GameEvent } from "../core/events.js";
 import type { Resolution, Rules } from "../core/engine.js";
+import { scoreChangeNarrations } from "../parser/runner.js";
 import type { CyoaPack, Ending, Scene } from "./schema.js";
 
 export type CyoaIndex = {
@@ -110,6 +112,17 @@ export function buildRules(index: CyoaIndex): Rules {
       if (!isTerminal(index, deadline.ending)) return [];
       if (!evalConditions(deadline.when, state)) return [];
       return [{ goto: deadline.ending }, { end_game: deadline.ending }];
+    },
+
+    // Engine chrome: the same Zork-style score feedback the parser/RPG runners emit,
+    // now available to CYOA too (mechanic-palette standardization). A choice's
+    // `inc_var`/`dec_var` on the conventional `score` var gets a "[Your score has gone
+    // up by N points…]" line. Derived generically from `meta.max_score` (shared helper),
+    // so no per-pack authoring. State-free (the engine appends these events without
+    // touching `next`), so determinism and every CYOA trace's hash are unchanged; and
+    // when `max_score` is absent/0 — every CYOA pack today — it returns [] (a true no-op).
+    decorateEvents(events: GameEvent[]): GameEvent[] {
+      return scoreChangeNarrations(events, index.pack.meta.max_score ?? 0);
     },
   };
 }
