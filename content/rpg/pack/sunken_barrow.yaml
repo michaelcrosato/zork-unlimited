@@ -418,11 +418,30 @@ npcs:
             - id: leave_shade
               prompt: "Leave the shade to its bones."
               end: true
+        # bug_0222 — the wight-counsel no longer OVER-PROMISES an attack-drain the engine
+        # never cashes. The old line said the wight's touch makes "the strength runs out of
+        # your arm" — language that promises a STRENGTH/ATTACK debuff. But barrow_wight has
+        # no such effect (only HP damage via its blows); a fresh MCP-only, source-blind
+        # playtester (seed 7, ai-runs/2026-06-04T01-48-35-512Z/playtest.md §4a/§5) noticed
+        # their attack stayed 4 throughout the fight and flagged the line as flavor "a
+        # careful player might expect to bite." That is the SAME honesty defect this pack
+        # fights everywhere a line writes a contract the engine never cashes (bug_0027/0029/
+        # 0069 over-sold grinds, bug_0095 the sarcophagus examine promising the slab's
+        # skill_check, bug_0132 the ward's over-promised odds). The reword keeps the line's
+        # load-bearing job — motivating the +3-defense ward by naming the cold blows that
+        # wear you down — but frames it as the HP-sapping the wight ACTUALLY deals ("bites
+        # deep and wears you down, blow on blow"), which the ward genuinely lessens ("the
+        # cold will bite the less"), with no false attack-drain. PURE SPOKEN npc_text — no
+        # flag/var/journal/score/topic/DC/stat/enemy/ending change (ward still +3, one-shot,
+        # journalled; wight keeps bug_0102's hp22/atk5/def2; player attack is untouched in
+        # combat). Only the pack content_hash shifts (the canonical victory trace runs through
+        # this node), re-pinned in traces/rpg/barrow_victory.json; the trace's state-based
+        # expected_final_hash is unchanged because no STATE changed, only spoken text.
         - id: shade_wight
           npc_text: >
             The wight? It is slow, and you are quick — you can best it where I could
-            not. But mind its hands: where they touch, the cold goes into you and the
-            strength runs out of your arm, and that is how it wore me down in the end.
+            not. But mind its hands: where they touch, the grave-cold bites deep and
+            wears you down, blow on blow, and that is how it bested me in the end.
             Here — take the trick I learned too late: keep your guard close and let the
             chill slide off the iron, not into you. It will not swing your blade for
             you, but the cold will bite the less. And do not break off to hunt for more
