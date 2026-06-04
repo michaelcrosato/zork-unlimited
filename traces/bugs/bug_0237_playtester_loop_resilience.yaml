@@ -1,0 +1,56 @@
+id: bug_0237
+title: "Playtester loop aborts the whole roster run on the first off-shape model reply — completeJson throws (extractJson failure OR strict-schema parse) straight out of runPlaytest, while an illegal-but-parseable pick was already tolerated"
+kind: engine_fix
+mode: agents/playtester
+severity: defect
+layer: agents/playtester (observation → decide → step loop)
+artifact:
+  source:
+    - agents/playtester.ts
+  test:
+    - tests/regression/playtester_loop_resilience.test.ts
+
+summary: >
+  runPlaytest (agents/playtester.ts) drives a game one turn at a time; each turn's only model call,
+  provider.completeJson(...), does `schema.parse(extractJson(text))` and THROWS on both failure modes:
+  extractJson throws when no balanced JSON can be pulled from the reply (prose, code fences, truncation),
+  and the `.strict()` PlaytesterDecisionSchema throws a ZodError on any extra key or off shape. The call
+  sat OUTSIDE any try/catch, so a single off-shape reply propagated straight out of runPlaytest — and since
+  runRoster awaits each record in sequence, one bad turn aborted the ENTIRE roster run with a raw,
+  unattributed error, no fallback, and no record of the offending turn. This is the sibling of bug_0236
+  (which hardened the AUTHOR revise loop's identical bare completeJson call), named in bug_0236's own
+  next-focus.
+
+root_cause: >
+  The loop already embodied the right philosophy for a BAD-BUT-PARSEABLE decision: "the legal-action set is
+  ground truth — if the model picks a non-listed id, fall back to the first legal action and note it (a real
+  agent's miss)." But it implicitly assumed every reply at least parses into a PlaytesterDecision, so the
+  completeJson call that produces that decision was left unguarded. That holds for the deterministic
+  MockProvider (it always constructs a valid decision and parses it), the only provider exercised in tests/CI,
+  so the gap was invisible to the whole suite. A LIVE frontier model — the keystone keyed real-model run
+  (ultraplan true-goal pivot) — routinely returns prose/fences/extra keys, any of which makes completeJson
+  throw. The result was a strict inconsistency: an illegal-but-parseable pick degraded gracefully, yet a
+  strictly-worse UNPARSEABLE reply crashed the whole roster.
+
+fix: >
+  Wrap the completeJson call in runPlaytest in try/catch. A thrown completion is now treated as the severest
+  form of the "real agent's miss" the legal-action fallback already handled: `decision` is left null, the
+  legality check short-circuits, and the turn falls back to the first legal action — exactly as an illegal
+  pick does — recording the provider error honestly in the step's reason ("provider returned no parseable
+  decision (<err>); fell back to first legal action") with expected = "(no decision returned)". One bad turn
+  no longer aborts the run; the record stays complete and the fallback is visible in the playtest record
+  rather than surfacing as a crash. Behaviour on the mock path is unchanged (it never throws), so all existing
+  playtester/roster tests stay green.
+
+regression_guard: >
+  tests/regression/playtester_loop_resilience.test.ts wraps MockProvider in a FlakyProvider that throws on its
+  first N completeJson calls. (1) A TRANSIENT bad reply (throwFirst=1) self-heals: runPlaytest no longer
+  rejects, the record reaches a terminal ending, the offending FIRST turn carries the /no parseable decision/
+  note over a legal action, and later turns are NOT all fallbacks (non-vacuous: proves normal decisions
+  resumed). (2) A PERSISTENTLY broken backend (throwFirst=Infinity) still yields a completed record — every
+  turn falling back to the first legal action (the mainline trajectory), each step reason matching /no
+  parseable decision/ and expected === "(no decision returned)" — instead of throwing. Both FAIL against the
+  pre-fix loop, where the first throw escapes runPlaytest and rejects the awaited call.
+
+status: fixed
+date: 2026-06-04

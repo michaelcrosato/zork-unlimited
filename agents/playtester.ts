@@ -18,6 +18,7 @@ import { indexPack, buildRules, initStateForPack, type CyoaIndex } from "../src/
 import type { CyoaPack } from "../src/cyoa/schema.js";
 import {
   PlaytesterDecisionSchema,
+  type PlaytesterDecision,
   type Persona,
   type Provider,
   PERSONAS,
@@ -90,17 +91,33 @@ export async function runPlaytest(
       break;
     }
 
-    const decision = await provider.completeJson({
-      system: SYSTEM,
-      user: JSON.stringify({ observation: obs, step: i }),
-      schemaName: "PlaytesterDecision",
-      schema: PlaytesterDecisionSchema,
-    });
+    let decision: PlaytesterDecision | null = null;
+    let providerError: string | null = null;
+    try {
+      decision = await provider.completeJson({
+        system: SYSTEM,
+        user: JSON.stringify({ observation: obs, step: i }),
+        schemaName: "PlaytesterDecision",
+        schema: PlaytesterDecisionSchema,
+      });
+    } catch (err) {
+      // A real model can return prose, code fences, extra keys (PlaytesterDecisionSchema
+      // is `.strict()`), or otherwise off-shape JSON — `completeJson` throws on BOTH the
+      // `extractJson` failure and the Zod parse. The MockProvider never does either, but a
+      // live frontier model will (the same keyed-run risk bug_0236 hardened the author loop
+      // against). A thrown reply is the SEVEREST form of the "agent's miss" the legal-action
+      // fallback below already tolerates for an illegal-but-parseable pick: don't let one
+      // bad turn abort the whole roster — fall back to the first legal action and record it
+      // honestly so it surfaces in the playtest record rather than crashing the run.
+      providerError = err instanceof Error ? err.message : String(err);
+    }
 
-    // The legal-action set is ground truth: if the model picks a non-listed id,
-    // fall back to the first legal action and note it (a real agent's miss).
-    const legal = obs.available_actions.some((a) => a.id === decision.action_id);
-    const chosenId = legal ? decision.action_id : obs.available_actions[0]!.id;
+    // The legal-action set is ground truth: if the model picks a non-listed id (or
+    // returned nothing parseable at all), fall back to the first legal action and note it
+    // (a real agent's miss).
+    const legal =
+      decision !== null && obs.available_actions.some((a) => a.id === decision!.action_id);
+    const chosenId = legal ? decision!.action_id : obs.available_actions[0]!.id;
 
     const action: Action = { type: "CHOOSE", choiceId: chosenId };
     const result = step(state, action);
@@ -118,9 +135,11 @@ export async function runPlaytest(
       available: obs.available_actions.map((a) => a.id),
       chosen_action: chosenId,
       reason: legal
-        ? decision.reason
-        : `${decision.reason} (illegal pick "${decision.action_id}"; fell back)`,
-      expected: decision.expected_result,
+        ? decision!.reason
+        : decision !== null
+          ? `${decision.reason} (illegal pick "${decision.action_id}"; fell back)`
+          : `provider returned no parseable decision (${providerError}); fell back to first legal action`,
+      expected: decision?.expected_result ?? "(no decision returned)",
       actual_events: result.events,
       result: kind,
     });

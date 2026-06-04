@@ -7,12 +7,15 @@ export default defineConfig({
     // Determinism: tests must not depend on wall-clock ordering or shared state.
     isolate: true,
     // The exhaustive ground-truth regression proofs (e.g. rpg_all_endings_reachable,
-    // rpg_score_economy_sound, rpg_variant_liveness) BFS the full reachable state
-    // space of the largest packs — deterministic but compute-heavy, ~6s on cold_forge.
-    // The vitest default (5000ms) sits right on that edge, so they flake under CPU
-    // load (concurrent work, or a slower/shared CI runner). A generous explicit
-    // timeout removes the flake without loosening correctness — a real hang still
+    // rpg_score_economy_sound, rpg_variant_liveness, rpg_action_id_unique) BFS the full
+    // reachable state space of the largest packs — deterministic but compute-heavy,
+    // ~6-12s on the big RPG packs. The vitest default (5000ms) sits right on that edge,
+    // so they flake under CPU load; 30000ms still flaked when the full 262-file suite runs
+    // ~28-way in parallel ON TOP OF a concurrent AFK loop, starving these census `it`s
+    // past 30s (bug_0237 — three sibling RPG census suites timed out together under that
+    // contention, while each passes in ~12s isolated). Raised to 60000ms: a generous
+    // explicit timeout removes the flake without loosening correctness — a real hang still
     // fails, just with headroom (the solvers are bounded by an internal state cap).
-    testTimeout: 30000,
+    testTimeout: 60000,
   },
 });
