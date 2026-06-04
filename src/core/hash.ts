@@ -18,7 +18,17 @@ function sortDeep(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(sortDeep);
   if (value !== null && typeof value === "object") {
     const obj = value as Record<string, unknown>;
-    const out: Record<string, unknown> = {};
+    // A NULL-PROTOTYPE accumulator so a key literally named "__proto__" is stored as
+    // an own data property. With a normal `{}`, `out["__proto__"] = v` hits Object's
+    // `__proto__` SETTER: a primitive v is silently dropped, and an object v re-points
+    // the accumulator's prototype instead of becoming a key — JSON.stringify then omits
+    // it either way. That would canonicalize a state carrying a "__proto__" key to a
+    // string COLLIDING with the same state lacking it, breaking the §8.6 "equal hash ⇒
+    // equal state" invariant (and the save-integrity check that rests on it). Such a key
+    // is reachable off the untrusted-save boundary (JSON.parse makes "__proto__" an own
+    // enumerable property — the load-integrity threat model, cf. bug_0190). Normal states
+    // carry no such key, so every existing hash is byte-identical.
+    const out = Object.create(null) as Record<string, unknown>;
     for (const key of Object.keys(obj).sort()) {
       out[key] = sortDeep(obj[key]);
     }

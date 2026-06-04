@@ -146,3 +146,55 @@ describe("hashState — the untrusted-Infinity load-integrity witness (bug_0230)
     expect(hashState(() => {})).toBe(SHA256_EMPTY);
   });
 });
+
+describe('canonicalize — the "__proto__" state-key collision contract (bug_0247)', () => {
+  // A DISCOVERED defect (unlike the bug_0230/0240 absolute witnesses above): the
+  // sortDeep accumulator used a normal `{}`, so `out["__proto__"] = v` hit Object's
+  // __proto__ SETTER instead of creating a key — a primitive v was silently dropped,
+  // an object v re-pointed the accumulator's prototype — and JSON.stringify then
+  // omitted it either way. Two DISTINCT states then canonicalized to the SAME string,
+  // colliding their hashes and breaking the §8.6 "equal hash ⇒ equal state" invariant
+  // the save-integrity check rests on. A "__proto__" key is reachable off the
+  // untrusted-save boundary: JSON.parse('{"__proto__":...}') makes it an OWN enumerable
+  // property (the bug_0190 load-integrity threat model). Fixed with a null-prototype
+  // accumulator. These witnesses fail RED against the pre-fix `{}` accumulator.
+
+  // JSON.parse, not an object literal: a literal `{ __proto__: 5 }` sets the prototype
+  // rather than a key, so we must build the inputs exactly as the untrusted boundary does.
+  const withProto = JSON.parse('{"score":10,"__proto__":5}');
+  const withoutProto = JSON.parse('{"score":10}');
+
+  it('a primitive "__proto__"-valued key is PRESERVED, not dropped', () => {
+    // The pre-fix code returned '{"score":10}' here (the key silently swallowed by the
+    // __proto__ setter), colliding with the key-less state below.
+    expect(canonicalize(withProto)).toBe('{"__proto__":5,"score":10}');
+  });
+
+  it('a state with a "__proto__" key does NOT collide with the same state lacking it', () => {
+    expect(canonicalize(withProto)).not.toBe(canonicalize(withoutProto));
+    expect(hashState(withProto)).not.toBe(hashState(withoutProto));
+  });
+
+  it('an OBJECT-valued "__proto__" key is preserved (no prototype pollution / drop)', () => {
+    const nested = JSON.parse('{"score":1,"__proto__":{"polluted":true}}');
+    // Pre-fix: '{"score":1}' — the object value re-pointed the accumulator's prototype.
+    expect(canonicalize(nested)).toBe('{"__proto__":{"polluted":true},"score":1}');
+    // And the live runtime prototype is never touched (the canonicalizer pollutes nothing).
+    expect(Object.prototype.hasOwnProperty.call({}, "polluted")).toBe(false);
+  });
+
+  it('a NESTED "__proto__" key (the GameState vars/flags shape) is preserved too', () => {
+    const a = JSON.parse('{"vars":{"score":10}}');
+    const b = JSON.parse('{"vars":{"score":10,"__proto__":5}}');
+    expect(canonicalize(b)).toBe('{"vars":{"__proto__":5,"score":10}}');
+    expect(hashState(a)).not.toBe(hashState(b));
+  });
+
+  it("normal states without a __proto__ key hash byte-identically (no churn)", () => {
+    // The null-prototype accumulator changes NOTHING for ordinary states: key-sort,
+    // recursive sort and array-order are unaffected. Frozen so the fix carries no
+    // collateral hash discontinuity for any real pack/save/trace.
+    expect(canonicalize({ b: 2, a: 1, c: { z: 1, a: 2 } })).toBe('{"a":1,"b":2,"c":{"a":2,"z":1}}');
+    expect(canonicalize({ constructor: 9, score: 1 })).toBe('{"constructor":9,"score":1}');
+  });
+});

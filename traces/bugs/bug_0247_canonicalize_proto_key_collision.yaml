@@ -1,0 +1,81 @@
+id: bug_0247
+title: "Canonicalizer collapsed a \"__proto__\" state-key into Object's __proto__ setter — two distinct states hashed identically, breaking the §8.6 equal-hash⇒equal-state invariant the save-integrity check rests on"
+kind: verification_oracle
+mode: meta/determinism-keystone
+severity: bug
+layer: core/determinism-keystone
+artifact:
+  source:
+    - src/core/hash.ts
+  test:
+    - tests/regression/canonicalize_nonjson_value_contract.test.ts
+
+summary: >
+  hashState — the save-integrity / trace-replay / scorecard determinism keystone — rests entirely on
+  canonicalize(value) = JSON.stringify(sortDeep(value)) (src/core/hash.ts, spec §8.6, "two states with identical hashes
+  are identical games"). sortDeep built its sorted accumulator with a NORMAL object literal `const out = {}` and assigned
+  `out[key] = sortDeep(obj[key])`. For the one key literally named "__proto__" that bracket-assignment does NOT create a
+  property — it invokes Object.prototype's __proto__ SETTER: a PRIMITIVE value is silently discarded, and an OBJECT value
+  re-points the accumulator's own prototype instead of becoming a key. JSON.stringify then omits it either way. So a state
+  carrying a "__proto__" key canonicalized to a string IDENTICAL to the same state lacking that key, COLLIDING their
+  SHA-256 hashes. This is a real soundness break of the determinism keystone, not a missing witness.
+
+root_cause: >
+  A genuine defect in canonicalize (contrast bug_0230/0240, which were absolute witnesses for already-correct code). The
+  accumulator's prototype made "__proto__" a magic accessor key rather than ordinary data. The key is reachable off the
+  UNTRUSTED-SAVE boundary the load-integrity arc (bug_0181/0183/0184/0190) defends: JSON.parse('{"__proto__":...}') makes
+  "__proto__" an OWN enumerable property (V8/JSON spec special-cases it via defineProperty, NOT prototype assignment), so a
+  crafted save/trace whose vars or flags object carries a "__proto__" key parses into a real GameState that then hashes —
+  and collides with the benign state. Two distinct game states sharing a hash is exactly what §8.6 forbids; the save-load
+  integrity check (recompute-and-compare) and trace replay both trust that a matching hash means a matching state, so the
+  collision could let a tampered state pass integrity. Surfaced while the deterministic content assessor ran SATURATED
+  (all 17 packs blind-clean; this cycle's mandated blind pass on dawn_beacon came back clean — 5/5 clarity, 4/5 enjoyment,
+  win ending reached on two routes, zero mechanical bugs), so the lever went to the determinism-keystone source de-risk
+  bug_0244's next-focus named and deferred.
+
+witness: >
+  Pre-fix reproduction (the SAME sortDeep logic): canonicalize(JSON.parse('{"vars":{"__proto__":5,"score":10}}')) returned
+  '{"vars":{"score":10}}' — byte-identical to canonicalize(JSON.parse('{"vars":{"score":10}}')) — so the two distinct
+  states COLLIDE (hashState equal). An object-valued '{"__proto__":{"polluted":true},"score":1}' canonicalized to
+  '{"score":1}' (the value silently re-pointed the accumulator's prototype). THE TEETH: against the pre-fix `{}`
+  accumulator, 4 of the 5 new bug_0247 cases go RED (primitive-key-preserved, no-collision, object-key-preserved,
+  nested-key-preserved); the 5th — normal states hash byte-identically — correctly stays GREEN both ways (the non-vacuity
+  guard proving the fix carries NO collateral hash churn). With the fix the full suite is 19/19 GREEN.
+
+fix: >
+  One-line core change in src/core/hash.ts sortDeep: build the sorted accumulator with `Object.create(null)` (a
+  null-prototype object) instead of `{}`. With no inherited __proto__ accessor, `out["__proto__"] = v` stores an ordinary
+  OWN data property that JSON.stringify serializes as "__proto__":v. Behaviour is byte-identical for every object WITHOUT a
+  "__proto__" key (key-sort, recursive sort, array-order all unchanged), so no existing pack/save/trace/scorecard hash
+  moves. The accumulator is local and discarded after stringification, so nothing pollutes the live runtime prototype
+  (asserted in the test). Five regression cases appended to the existing
+  tests/regression/canonicalize_nonjson_value_contract.test.ts, importing the REAL canonicalize/hashState (never a
+  reimplementation), built via JSON.parse so the "__proto__" key is an own property exactly as the untrusted boundary
+  produces it.
+
+scope_honesty: >
+  A real defect fix, not a witness-only cycle. Source change is confined to the sortDeep accumulator construction in
+  src/core/hash.ts (1 line + an explanatory comment). NO validator/schema/generator/engine-logic change, NO pack YAML, NO
+  trace-hash re-pin (no real pack/save/trace carries a "__proto__" key, so every existing hash is byte-identical — verified
+  by health staying green with no scorecard regen), NO scorecard byte, NO corpus/manifest change. src/core/hash.ts is not a
+  verify:integrity-protected file and no guard was weakened.
+
+verification: >
+  npx vitest run tests/regression/canonicalize_nonjson_value_contract.test.ts -> 19 GREEN (was 14; +5 new). Teeth
+  confirmed: reverting the accumulator to `{}` turns exactly the 4 collision/preservation cases RED, the no-churn guard
+  stays green; restored byte-identical. npm run health -> GREEN (exit 0) under taskset -c 0-3, net test count rose by
+  exactly the 5 new cases, all 17 packs validate clean. npm run verify:integrity -> EXIT 0 (no VERIFIER_TOUCHED /
+  GUARD_WEAKENED / HASH_PIN / count regression). bug_0194 scorecard freshness pin stays green (no discovered-set change,
+  no regen).
+
+files_changed:
+  - src/core/hash.ts (sortDeep accumulator {} -> Object.create(null), + comment)
+  - tests/regression/canonicalize_nonjson_value_contract.test.ts (EXTENDED, +5 cases / 1 describe block)
+  - traces/bugs/bug_0247_canonicalize_proto_key_collision.yaml (NEW, this file)
+
+regression: >
+  The contract IS the regression: it fails loudly if the canonicalizer ever again drops or collapses a "__proto__" key
+  (e.g. a refactor back to a normal-object accumulator, or a replacer that special-cases the key). Any deliberate future
+  change to canonicalize must keep distinct states distinct AND re-derive these contracts — never relax an assertion to
+  pass. Completes the determinism-keystone source de-risk alongside the bug_0228 RNG KAT and the bug_0230/0240
+  canonicalizer absolute-witness family.
