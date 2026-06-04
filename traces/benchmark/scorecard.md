@@ -16,7 +16,7 @@ One comparable number per split: `Score` is the mean over the split's packs of e
 
 | Split | Packs | Completion | Ending cov | Scene cov | **Score** |
 | --- | --: | --: | --: | --: | --: |
-| curated | 15 | 20.9% | 23.3% | 65.6% | **36.6%** |
+| curated | 16 | 19.6% | 21.9% | 65.7% | **35.7%** |
 | held-out | 12 | 1.7% | 23.6% | 64.3% | **29.9%** |
 
 ### Per-mode (composition-robust)
@@ -27,7 +27,7 @@ The headline `Score` is a flat mean over a split's packs, so it moves with the s
 | --- | --- | --: | --: |
 | cyoa | curated | 6 | **68.0%** |
 | cyoa | held-out | 4 | **58.6%** |
-| parser | curated | 4 | **16.5%** |
+| parser | curated | 5 | **17.6%** |
 | parser | held-out | 4 | **16.7%** |
 | rpg | curated | 5 | **15.1%** |
 | rpg | held-out | 4 | **14.3%** |
@@ -66,6 +66,9 @@ The headline `Score` is a flat mean over a split's packs, so it moves with the s
 | sealed_crypt_v1 | parser | coverage | shown | curated | 0.0% | 0/3 | 0.0% | 30.0% | — |
 | sealed_crypt_v1 | parser | coverage | hidden | curated | 0.0% | 0/3 | 0.0% | 10.0% | — |
 | sealed_crypt_v1 | parser | random | shown | curated | 0.0% | 0/3 | 0.0% | 90.0% | — |
+| tide_mill_v1 | parser | coverage | shown | curated | 0.0% | 0/3 | 0.0% | 66.7% | — |
+| tide_mill_v1 | parser | coverage | hidden | curated | 0.0% | 0/3 | 0.0% | 16.7% | — |
+| tide_mill_v1 | parser | random | shown | curated | 80.0% | 2/3 | 66.7% | 83.3% | 25.7 |
 | breaking_weir_v1 | rpg | coverage | shown | curated | 0.0% | 0/2 | 0.0% | 40.0% | — |
 | breaking_weir_v1 | rpg | coverage | hidden | curated | 0.0% | 0/2 | 0.0% | 20.0% | — |
 | breaking_weir_v1 | rpg | random | shown | curated | 6.0% | 2/2 | 100.0% | 100.0% | 33.7 |
