@@ -3568,3 +3568,10 @@
 - Why: A heuristic bot can't plan multi-step puzzles; only a fresh blind LLM playtest reveals real signposting/clarity issues in this pack.
 - Mandatory LLM playtest target this cycle: content/cyoa/pack/midnight_edition.yaml.
 - Process: assessor ranks → blind LLM playtest for quality → one improvement → health + verify:integrity green → commit (trust-but-verify).
+## AFK Cycle 2026-06-04T14-28-41-026Z — ULTRAPLAN (saturation re-aim)
+- Assessment: packs cyoa=7 parser=5 rpg=5; 17 candidate(s) ranked.
+- Next best improvement (recommended): [content_fix] Blind-playtest "white_stag_v1" — the coverage bot can't solve its puzzles, so quality is unverified.
+- Why: A heuristic bot can't plan multi-step puzzles; only a fresh blind LLM playtest reveals real signposting/clarity issues in this pack.
+- ⟳ SATURATED: top candidate at the 0.5 floor → this cycle runs a multi-agent ultraplan to re-aim (plan → docs/CURRENT_PLAN.md), then implements in a fresh context.
+- Mandatory LLM playtest target this cycle: content/cyoa/pack/white_stag.yaml.
+- Process: assessor ranks → blind LLM playtest for quality → one improvement → health + verify:integrity green → commit (trust-but-verify).
