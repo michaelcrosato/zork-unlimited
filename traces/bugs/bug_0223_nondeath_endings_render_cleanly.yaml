@@ -1,0 +1,72 @@
+bug_id: bug_0223
+pack_id: ALL   # cross-pack structural oracle (4 parser + 5 RPG packs, 13 non-death endings)
+seed: 13       # this cycle's mandated blind playtest (alchemists_tower); the oracle itself is seedless (exhaustive)
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-04T02-02-39-263Z/playtest.md   # alchemists_tower, seeds 13/7/99
+  finding: >
+    Rotated the mandated blind pass OFF the assessor's recency-blind rank-1
+    (lamplighters_round, blind-played AND content+engine-edited very recently —
+    bug_0220/0216/0210) per [[assessor-blind-pass-rotation]] onto the single
+    most-overdue dedicated-blind target: alchemists_tower (parser), the oldest parser
+    pass (last dedicated pass bug_0185), named as the next rotation target by both
+    bug_0222 and bug_0221's next-focus. A fresh source-blind MCP-only subagent reached
+    ALL THREE endings — ending_cured (win, 40/40, seed 13), ending_poisoned (death,
+    seed 7), ending_betrayal (the non-death greed/betrayal fork, "The Great Work",
+    0/40, seed 99) — rated it clarity 5/5 enjoyment 4/5, ZERO mechanical defects /
+    rejected actions / loops / stale text. A clean pass on a clean pack (the
+    content-polish-backlog-exhausted saturation signal) → spend the cycle's lever on a
+    structural oracle, not on churning the pack.
+failure:
+  type: not_a_defect_coverage_gap
+  description: >
+    The NON-DEATH ending RENDER — what a player who reaches a WIN ending or a non-death
+    moral-failure ending (the greed/betrayal forks) is actually SHOWN — had no absolute
+    systematic lock. Three layers touch these endings, and none locks the player-facing
+    render:
+      - {parser,rpg}_all_endings_reachable.test.ts prove every declared ending is
+        route-reachable, but over an ABSTRACT BFS on GameState that "never renders an
+        observation".
+      - the score-economy oracles prove reachable max score == max_score, on state.
+      - the metamorphic per-step observation oracles (bug_0213/0214/0215) prove the
+        render is RELABEL-INVARIANT (original congruent to id-relabeled twin) — a
+        RELATIVE isomorphism, not an absolute contract: a renderer that showed the stale
+        ROOM name instead of the ending title at every win would still be isomorphic to
+        its twin and pass.
+    bug_0221 closed the ABSOLUTE render gap for DEATH endings only (it filters
+    death === true). So the WIN render — the single most important thing a satisfied
+    player ever sees — and the non-death moral endings (ending_betrayal / ending_thief /
+    ending_plunder / …) were exercised only IMPLICITLY by the blind playtests, never
+    systematically asserted. The render path is sound (src/parser/observation.ts); this
+    only closes the missing systematic lock around it, uniformly and for every future pack.
+fix:
+  layer: test   # pure test addition; no content, engine, validator, or hash change
+  summary: >
+    Add tests/regression/nondeath_endings_render_cleanly.test.ts, the exact COMPLEMENT of
+    bug_0221's death_endings_render_cleanly.test.ts: where that oracle render-checks
+    endings with death:true, this one render-checks endings with death:false — the WIN
+    endings and the non-death moral-failure forks — over all parser + RPG packs
+    (auto-discovered, so a new pack is covered the moment it ships — the bug_0096 bar).
+    Together the two oracles cover the FULL declared ending set with an absolute render
+    proof. For each pack it collects the non-death endings, runs the shared exhaustive
+    solver (support/exhaustive_endings.ts) with an onState hook capturing the first
+    terminal WITNESS state for each — for RPG under the same best/worst-roll bracket the
+    reachability proof uses, so a WIN falls out of the BEST-roll regime — then builds the
+    real player-facing buildParserObservation on that witness and asserts a clean render:
+    obs.title == the ending's title (not the room name), obs.description leads with the
+    epilogue text, obs.ending.death == false, the structured block carries id/title/text
+    faithfully, and a "Final score: X of Y." closure rides the description only (canonical
+    ending text stays pure). A declared non-death ending never witnessed FAILS loudly
+    (severed route), so the render checks can never pass vacuously; a discovery guard
+    asserts >= 10 non-death endings across the shipped packs so a broken glob fails rather
+    than going silently vacuous. CYOA is out of scope by construction (no death field, a
+    different observation builder), exactly as in bug_0221.
+  teeth_verified: >
+    Confirmed the oracle catches a real render regression: temporarily changing
+    src/parser/observation.ts so the ending observation shows the room name instead of
+    the ending title fails 9 of the 10 tests (only the discovery guard survives);
+    reverted. Probe confirmed all 13 non-death endings (4 parser x 2 + 5 RPG x 1) are
+    witnessed by concrete play under the bracket (none missing, none capped).
+locked_by:
+  - tests/regression/nondeath_endings_render_cleanly.test.ts
