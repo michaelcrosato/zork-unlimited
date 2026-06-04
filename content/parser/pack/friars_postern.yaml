@@ -54,6 +54,15 @@ rooms:
       A cold stone cell, its door left carelessly off the latch — the turnkey was
       well in his cups at lock-up. Someone before you scratched a message deep into
       the wall by the cot. The gallery lies north through the open door.
+    # Opening beat of the quest "the_postern" (a pure progress spine, mirroring
+    # lamplighters_round's "the_round"): set_quest_stage TRACKS PROGRESS ONLY — it
+    # gates no exit, ending, interaction, win, or dialogue, touches no score, and
+    # changes no existing flag or effect. The reactive prose that READS the quest
+    # lives at the gallery (on the `told_of_way` stage), never here; re-entering this
+    # start cell harmlessly re-sets the same earliest stage, but no prose keys off
+    # `imprisoned`, so the re-fire is inert (the bug_0146 dead-variant discipline).
+    on_enter:
+      - set_quest_stage: { quest: the_postern, stage: imprisoned }
     objects: [wall_scratches]
     exits:
       - { direction: north, to: gallery }
@@ -65,6 +74,25 @@ rooms:
       Snores drift from the turnkey's lodge to the east; the debtors' commons opens
       west, a stair climbs up to the old chapel, and steps drop down to the
       night-gate. Your own cell is back to the south.
+    # Reactive prose (bug_0012 shape) keyed to the quest's MIDDLE stage `told_of_way`,
+    # set when the old woman first names the postern in the commons. The window is the
+    # walk from her bench (where the stage is set) east to fetch her pipe from the
+    # lodge: the player MUST cross the gallery at exactly this stage, before handing the
+    # pipe over advances the quest to `latch_known`. The gallery has NO quest-touching
+    # on_enter (pitfall (a)), and `told_of_way` is an EARLY stage with the whole fetch-
+    # return-learn-and-walk-out chain still ahead of it (pitfall (b)), so this variant is
+    # live displayed text — read while still at the stage, never dead. It only re-colours
+    # the prose; it gates no exit, flag, score, ending, or dialogue (bug_0052 leaks nothing
+    # the base text didn't already: the lodge to the east and its snoring turnkey).
+    variants:
+      - when: [{ quest_stage: { quest: the_postern, stage: told_of_way } }]
+        text: >
+          The long vaulted gallery, once a cloister-walk and now a run of barred cells.
+          The old woman's postern is somewhere overhead past the chapel stair — but her
+          price comes first, and the snores that drift from the turnkey's lodge to the
+          east are the surest road to her pipe. The debtors' commons opens west, a stair
+          climbs up to the old chapel, and steps drop down to the night-gate. Your own
+          cell is back to the south.
     exits:
       - { direction: south, to: cell }
       - { direction: west, to: commons }
@@ -276,18 +304,29 @@ npcs:
             - { id: bye, prompt: "Say nothing more", end: true }
         - id: about_postern
           npc_text: "A way out? ... There's the friars' old postern, walled up behind the chapel font — the brothers slipped through it long before this house was ever a gaol. But my old wits want coaxing, and my throat's dry as a lime-pit. They took my pipe to the turnkey's nook off the gallery. Fetch it back and I'll dredge up the trick of the latch for you."
+          # Middle quest beat: she has named the postern but not its trick. Set ALONGSIDE
+          # the existing heard_postern flag and +10 (an additive progress marker; it
+          # changes no existing effect and gates nothing). This is the stage the gallery
+          # variant reads, during the fetch-the-pipe walk that necessarily follows.
           effects:
             - set_flag: heard_postern
             - inc_var: { name: score, by: 10 }
+            - set_quest_stage: { quest: the_postern, stage: told_of_way }
           topics:
             - { id: give_pipe, prompt: "Offer her the clay pipe", goto: take_pipe, conditions: [{ has_item: clay_pipe }, { not_flag: knows_postern }] }
             - { id: bye, prompt: "Say nothing more for now", end: true }
         - id: take_pipe
           npc_text: "(She packs the bowl with a stub of tallow and draws on it long and slow, eyes closing.) ... Aye. Behind the font, the third stone up from the floor — press it slow and even and the postern gives inward. Go on with you, and don't wait on me; I've debts in here a postern won't clear, and I'm too old now for night air."
+          # Final quest beat: the latch's trick is now known (the literal key to the win).
+          # Set ALONGSIDE the existing knows_postern flag, +20, and pipe-removal — a pure
+          # additive marker that changes none of them and gates nothing. No prose reads
+          # `latch_known`: the reactive read stays on the EARLY `told_of_way` stage, so
+          # this terminal stage is never depended on right before the win (pitfall (b)).
           effects:
             - set_flag: knows_postern
             - inc_var: { name: score, by: 20 }
             - remove_item: clay_pipe
+            - set_quest_stage: { quest: the_postern, stage: latch_known }
           topics:
             - { id: bye, prompt: "Thank her, and go", end: true }
         - id: her_story

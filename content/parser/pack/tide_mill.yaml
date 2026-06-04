@@ -75,6 +75,29 @@ rooms:
       north arch the wheel-room stands over the race; a low door east opens on the
       miller's counting-nook. Out beyond the weir, somewhere in the falling dark, a boat
       is caught above the water with the tide going out from under it.
+    # The sole reactive read of the quest "the_mill" (§7.3, bug_0146 variant-liveness).
+    # The `begun` stage is set ONCE by READING the millboard (the interaction below), NOT
+    # by any on_enter — mill_house has no on_enter, so re-entering never resets the quest
+    # (bug_0146 pitfall a avoided). It is set BEFORE either sub-puzzle (the board is read
+    # on the mill-floor, the start room, before you ever leave to cut the race or free the
+    # pawl), so this variant is reachable as displayed text in BOTH puzzle orders alike:
+    # read the orders, then tackle EITHER fault first, and on the next look at the floor
+    # the work is taken up. It is a TRANSIENT window (lamplighters' font_filled pattern):
+    # the per-track stages below clobber `begun`, so once you cut the race or free the pawl
+    # the quest moves on and this room falls back to its base prose — the base description
+    # is live both BEFORE the board is read (quest unset) and AFTER the first fault is put
+    # right (quest past `begun`), so nothing here goes dead. Gates nothing — no exit, win,
+    # ending, interaction, or score keys off any quest_stage; the quest is progress-tracking
+    # only and the win stays wholly flag-based (gate_up + visited the_staith).
+    variants:
+      - when: [{ quest_stage: { quest: the_mill, stage: begun } }]
+        text: >
+          The floor of the tide-mill, all dust and the smell of old grain and salt, and
+          the orders off the board taken now: free the wheel of its two faults and wind
+          the gate before the tide is wholly out from under the boat. Through the north
+          arch the wheel-room stands over the race; a low door east opens on the miller's
+          counting-nook. Out beyond the weir, in the falling dark, the caught boat is
+          settling lower on the going water, and there is not the night to waste.
     objects: [millboard]
     exits:
       - { direction: north, to: wheel_room }
@@ -208,6 +231,12 @@ objects:
         effects:
           - set_flag: read_board
           - inc_var: { name: score, by: 5 }
+          # Quest "the_mill" begins the night's work the moment the orders are read (one-shot
+          # via the not_flag read_board guard above; set alongside the unchanged +5 and
+          # read_board flag). This `begun` stage is the EARLY, order-independent marker the
+          # mill_house variant reads, set here on the start-room floor before either fault is
+          # touched. Pure progress tracking — gates nothing.
+          - set_quest_stage: { quest: the_mill, stage: begun }
 
   - id: coin_bag
     name: "coin-bag"
@@ -283,6 +312,12 @@ objects:
         effects:
           - set_flag: sluice_clear
           - inc_var: { name: score, by: 10 }
+          # Quest track A (order-independent with the pawl). Advances "the_mill" past `begun`;
+          # names ONLY this fault, assuming nothing about the pawl, so it is valid whether
+          # this is the first or second sub-puzzle solved. Clobbering `begun` is what makes
+          # the mill_house `begun` variant a transient window (it reads true only before the
+          # FIRST fault is put right). Pure progress tracking — sets no behaviour, gates nothing.
+          - set_quest_stage: { quest: the_mill, stage: sluice_cut }
           - add_journal: "You cut the weed and the drowned bough clear of the head-race, and the water ran free down onto the wheel."
           - narrate: >
               You set the billhook into the matted weed and the drowned bough and cut and
@@ -316,6 +351,12 @@ objects:
         effects:
           - set_flag: pawl_free
           - inc_var: { name: score, by: 10 }
+          # Quest track B (order-independent with the sluice). Advances "the_mill" past
+          # `begun`; names ONLY this fault, assuming nothing about the race, so it is valid
+          # whether this is the first or second sub-puzzle solved. Like track A it clobbers
+          # `begun`, closing the mill_house variant's transient window. Pure progress
+          # tracking — sets no behaviour, gates nothing.
+          - set_quest_stage: { quest: the_mill, stage: pawl_freed }
           - add_journal: "You levered the dropped brake-pawl up out of the drive-gear with the crow-bar, and the wheel came free to turn."
           - narrate: >
               You set the crow-bar under the dropped pawl and throw your weight on it, and
@@ -382,6 +423,13 @@ objects:
           - set_flag: gate_up
           - inc_var: { name: score, by: 20 }
           - unlock_exit: { from: wheel_room, to: the_staith }
+          # Quest "the_mill" reaches its held stage at the climax — reachable ONLY here, where
+          # the interaction's own conditions above (has_flag sluice_clear AND has_flag
+          # pawl_free) guarantee BOTH faults are already put right, so this stage is order-
+          # robust by construction (it can be entered from either track-A-first or
+          # track-B-first). Pure progress tracking: the win is the gate_up flag + reaching the
+          # staith, not this stage; nothing keys off quest_stage.
+          - set_quest_stage: { quest: the_mill, stage: mill_held }
           - add_journal: "With the race running and the pawl freed, the wheel drove the gear, and you wound the sea-gate up and let the held water down to the staith."
           - narrate: >
               You drop the crank-handle into the winch-socket and lean on it — and this

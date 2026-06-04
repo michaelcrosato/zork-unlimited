@@ -66,6 +66,24 @@ rooms:
   - id: library
     name: "Dusty Library"
     description: "Shelves of mildewed books. One lectern holds an open spellbook. The courtyard is east."
+    # The reactive READ of the quest "the_cure" (bug_0162 — the one quest_stage pack for
+    # the parser mode, the lamplighters_round shape). The spellbook's READ interaction sets
+    # the quest to `cure_known` (its first stage) in THIS room, and READ does not move the
+    # player, so right after the read the player is still standing in the library at exactly
+    # that stage and the room re-renders to this variant. The library has NO on_enter, so
+    # nothing resets the stage on entry (the bug_0146 dead-variant pitfall (a)); and this is
+    # an EARLY stage read in the room where it is set, not a late stage before an unavoidable
+    # win (pitfall (b)) — so the variant is route-independently reachable as displayed text.
+    # The later stages (`herb_steeped`, `antidote_ready`) supersede `cure_known` once the brew
+    # begins, so this text reads only in the window between learning the cure and steeping the
+    # herb — exactly when a player lingers over the recipe. TRACKS PROGRESS ONLY: gates no
+    # exit/ending/interaction/win, touches no score/flag, changes no existing effect.
+    variants:
+      - when: [{ quest_stage: { quest: the_cure, stage: cure_known } }]
+        text: >
+          Shelves of mildewed books, and the open spellbook on its lectern — the stained
+          recipe read and held in your head now: the pale herb, the clear water, and the
+          black phial that is no medicine. The courtyard is east.
     objects: [spellbook]
     exits:
       - { direction: east, to: courtyard }
@@ -252,6 +270,11 @@ objects:
         conditions: [{ not_flag: read_recipe }]
         effects:
           - set_flag: read_recipe
+          # bug_0162: stage 1 of quest "the_cure" — the player now KNOWS the cure. Set
+          # here (alongside the existing flag/score, the natural recipe milestone) and read
+          # by the library room's reactive variant; guarded by `not_flag: read_recipe`, so it
+          # fires exactly once and is never reset. Progress-only — gates nothing.
+          - set_quest_stage: { quest: the_cure, stage: cure_known }
           - inc_var: { name: score, by: 5 }
 
   - id: herb
@@ -403,6 +426,9 @@ objects:
         conditions: [{ not_flag: herb_added }]
         effects:
           - set_flag: herb_added
+          # bug_0162: stage 2 of quest "the_cure" — the brew is begun. Guarded by
+          # `not_flag: herb_added`, so it fires once and supersedes `cure_known`. Progress-only.
+          - set_quest_stage: { quest: the_cure, stage: herb_steeped }
           - remove_item: herb
           - inc_var: { name: score, by: 10 }
           - narrate: "You steep the pale herb in the cauldron. The brew turns green."
@@ -419,6 +445,11 @@ objects:
         conditions: [{ has_flag: herb_added }, { not_flag: antidote_brewed }]
         effects:
           - set_flag: antidote_brewed
+          # bug_0162: stage 3 (final) of quest "the_cure" — the antidote is in hand, ready to
+          # carry to the spire. Guarded by `not_flag: antidote_brewed`, so it fires once and
+          # supersedes `herb_steeped`. Progress-only; not read by any variant (the climactic
+          # cure is the bug_0057 deliberate act, never gated on quest_stage).
+          - set_quest_stage: { quest: the_cure, stage: antidote_ready }
           - remove_item: water_vial
           - add_item: antidote
           - inc_var: { name: score, by: 20 }

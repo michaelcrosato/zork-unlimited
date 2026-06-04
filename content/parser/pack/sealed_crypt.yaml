@@ -115,6 +115,19 @@ rooms:
     description: >
       Tilted headstones crowd a yew tree. A worn headstone faces the path. The
       yard is east; a mausoleum stands open to the north.
+    # Reactive room text for quest "the_crypt", keyed on the EARLY `clue_read` stage the
+    # headstone's READ sets (above) in this very room. The stage is set HERE and read HERE
+    # with no on_enter between (this pack has none), so the variant displays in the window
+    # right after the player reads the epitaph — provably the first match in a reachable
+    # viewing state, never dead (bug_0146). It only colours the prose once the clue is in
+    # hand (the carved words now linger as the player stands among the graves); it gates
+    # nothing, and a later stage simply drops the description back to the base line.
+    variants:
+      - when: [{ quest_stage: { quest: the_crypt, stage: clue_read } }]
+        text: >
+          Tilted headstones crowd a yew tree, and the worn one's carved words sit
+          heavy now you have read them: the crypt yields only to iron, drawn up from
+          the deep. The yard is east; a mausoleum stands open to the north.
     objects: [headstone]
     exits:
       - { direction: east, to: chapel_yard }
@@ -208,6 +221,11 @@ objects:
           - set_flag: rope_attached_to_well
           - unlock_exit: { from: old_well, to: well_bottom }
           - inc_var: { name: score, by: 10 }
+          # Second milestone of the descent: the well is open and the deep will give up
+          # its iron key. Pure progress marker for quest "the_crypt" (no gating, no score,
+          # no change to the effects above); the reactive prose keys off the EARLY
+          # `clue_read` stage in the graveyard, not this one.
+          - set_quest_stage: { quest: the_crypt, stage: well_opened }
           # The rope leaves your hands here: it is knotted fast to the ring and left
           # trailing down the shaft (it stays your way back up). Removing it keeps
           # the fiction honest — you no longer "carry" a coil the well now holds. The
@@ -260,6 +278,15 @@ objects:
         effects:
           - set_flag: read_headstone
           - inc_var: { name: score, by: 5 }
+          # Reading the headstone is the first real milestone of the descent (quest
+          # "the_crypt"): the clue that names the way down. set_quest_stage TRACKS
+          # PROGRESS ONLY — it gates no exit, ending, interaction, or win, touches no
+          # score, and changes no existing effect. The reactive prose that reads this
+          # stage lives in the graveyard (this very room, below): the stage is SET here
+          # by the READ and the variant is READ in the same room with no on_enter (this
+          # pack has none) to overwrite it, so it displays in the post-read window and is
+          # never dead (bug_0146). `clue_read` is the EARLIEST stage and is never reset.
+          - set_quest_stage: { quest: the_crypt, stage: clue_read }
 
   - id: crypt_gate
     name: "iron catacombs gate"
@@ -288,6 +315,12 @@ objects:
       - set_flag: catacombs_open
       - unlock_exit: { from: crypt, to: catacombs }
       - inc_var: { name: score, by: 20 }
+      # Final milestone of the descent: the iron gate is sprung and the way on is open.
+      # Pure progress marker for quest "the_crypt" — no gating, no score, no change to
+      # the effects above. Deliberately NOT read by any variant (it is a LATE stage set
+      # right before the win, which a variant could not re-view from — bug_0146 pitfall);
+      # the reactive prose reads the early `clue_read` stage in the graveyard instead.
+      - set_quest_stage: { quest: the_crypt, stage: gate_open }
 
   # bug_0105 — the climactic MORAL FORK (the standing "retrofit a branch onto a
   # linear pack" next-focus; the blind report's only enjoyment knock was a single
