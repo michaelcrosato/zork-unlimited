@@ -18,6 +18,14 @@
  * collapses the generator back to a single axis / single gate (which would still pass the generic
  * bar but quietly hollow out the deepening). It asserts both the static structure and the
  * BEHAVIORAL independence + load-bearingness of the two axes.
+ *
+ * bug_0219 (v3 depth deepening): the personal-axis gate was deepened from depth-1 to depth-3 by
+ * interposing a fourth `reckoning` scene — the `best` act now gates on `resolved` (set ONLY in the
+ * reckoning, which is itself gated on `knows_ally`), not on `knows_ally` directly. This guard is
+ * updated to pin the deepened gate WHILE preserving every two-axis invariant it already proved: the
+ * situational axis still never gates `best`, the two investigations are still independent, and the
+ * reframe stack is unchanged. The depth-3 obtainability chain itself (three load-bearing ordered
+ * flips) is proven independently of the validator by cyoa_generator_depth_floor.test.ts.
  */
 import { describe, it, expect } from "vitest";
 import { generateCyoaPack, CYOA_GENERATOR_VERSION } from "../../src/gen/cyoa_generator.js";
@@ -29,6 +37,7 @@ const SEEDS = Array.from({ length: 12 }, (_, i) => i);
 const MAX_STATES = 50_000;
 const WAY = "knows_way";
 const ALLY = "knows_ally";
+const RESOLVE = "resolved"; // v3 depth tier (bug_0219): the reckoning's commitment, gates `best`
 
 // The flag a `{ has_flag: x }` condition reads (or undefined for any other shape).
 const hasFlag = (c: unknown): string | undefined =>
@@ -37,8 +46,8 @@ const hasFlag = (c: unknown): string | undefined =>
     : undefined;
 
 describe("bug_0169 — the CYOA generator emits a two-axis (2x2-knowledge) moral fork", () => {
-  it("the generator version is bumped to 2 (the v2 deepening; the corpus is re-sealed to match)", () => {
-    expect(CYOA_GENERATOR_VERSION).toBe(2);
+  it("the generator version is bumped to 3 (the v3 depth deepening; the corpus is re-sealed to match)", () => {
+    expect(CYOA_GENERATOR_VERSION).toBe(3);
   });
 
   for (const seed of SEEDS) {
@@ -64,15 +73,39 @@ describe("bug_0169 — the CYOA generator emits a two-axis (2x2-knowledge) moral
       expect(WAY).not.toBe(ALLY);
 
       // The hub offers both investigations (each gated not_flag on its own axis) and the gated
-      // `best` act keyed on the PERSONAL axis only.
+      // `best` act, now keyed on the depth-3 `resolved` tier (v3, bug_0219).
       const learnWay = hub!.choices.find((c) => c.id === "learn_way")!;
       const learnAlly = hub!.choices.find((c) => c.id === "learn_ally")!;
       const best = hub!.choices.find((c) => c.id === "best")!;
       expect(learnWay.conditions.map(hasFlag)).not.toContain(WAY); // gated not_flag, so retires once known
       expect(learnAlly.conditions.map(hasFlag)).not.toContain(ALLY);
-      // The `best` act gates on the PERSONAL axis (knows_ally), NOT the situational one.
-      expect(best.conditions.map(hasFlag)).toContain(ALLY);
+      // The `best` act now gates on the depth-3 `resolved` tier (v3), NOT on `knows_ally` directly
+      // and NEVER on the situational `knows_way` — so its axis is preserved, only deepened.
+      expect(best.conditions.map(hasFlag)).toContain(RESOLVE);
       expect(best.conditions.map(hasFlag)).not.toContain(WAY);
+      expect(best.conditions.map(hasFlag)).not.toContain(ALLY);
+
+      // The v3 depth tier (bug_0219): a `reckoning` scene reachable from the hub via `go_reckon`,
+      // gated on the PERSONAL axis only (knows_ally), retiring once resolved — and its `commit`
+      // choice is the SOLE setter of `resolved`. This is what makes the personal-axis gate depth-3
+      // (learn_ally ⇒ go_reckon ⇒ commit ⇒ best) without ever letting the situational axis gate it.
+      const reckoning = sceneById.get("reckoning");
+      expect(reckoning, "missing the v3 reckoning depth scene").toBeDefined();
+      const goReckon = hub!.choices.find((c) => c.id === "go_reckon")!;
+      expect(goReckon, "missing the go_reckon depth-tier choice").toBeDefined();
+      expect(goReckon.next).toBe("reckoning");
+      expect(goReckon.conditions.map(hasFlag)).toContain(ALLY); // gated on the personal axis
+      expect(goReckon.conditions.map(hasFlag)).not.toContain(WAY); // never the situational one
+      const commitSets = (reckoning!.choices.find((c) => c.id === "commit")?.effects ?? []).flatMap(
+        (e) => ("set_flag" in e ? [e.set_flag] : []),
+      );
+      expect(commitSets).toContain(RESOLVE);
+      // `resolved` is set ONLY in the reckoning (nowhere else in the pack), so the tier is genuine.
+      const allSetters = pack.scenes
+        .flatMap((s) => s.choices)
+        .flatMap((c) => c.effects)
+        .flatMap((e) => ("set_flag" in e ? [e.set_flag] : []));
+      expect(allSetters.filter((f) => f === RESOLVE).length).toBe(1);
 
       // The hub's reactive stack is ordered MOST-SPECIFIC FIRST: the both-flags variant precedes
       // each single-flag variant, or the validator's UNREACHABLE_VARIANT shadowing check fires.

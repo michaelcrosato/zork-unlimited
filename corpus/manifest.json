@@ -2,29 +2,29 @@
   "generated_by": "bin/seal-corpus.ts",
   "entries": [
     {
-      "content_hash": "02535e92a15265548de57f4aa97fb50facba80862724634f6b619790527f1a6c",
-      "generator_version": 2,
+      "content_hash": "2825f16a37fee8753acf76a94f08b7f8b313582cc4f196217a832cce20799f87",
+      "generator_version": 3,
       "mode": "cyoa",
       "pack_id": "gen_0_v1",
       "seed": 0
     },
     {
-      "content_hash": "ccd2999241044d8d67dd307f8570007e7c27d373b7cd4f78e981d69afdde75a8",
-      "generator_version": 2,
+      "content_hash": "d0007246ea0a71edf71bdb64fd8f544d4ded6106f7ec00b6e5a49ad3e5830894",
+      "generator_version": 3,
       "mode": "cyoa",
       "pack_id": "gen_1_v1",
       "seed": 1
     },
     {
-      "content_hash": "afd7a9027409bfd679753adca471876d7321cd2c4ecbd52d464118c8e1107e3e",
-      "generator_version": 2,
+      "content_hash": "bea8e9a24366223a1da12daf60be652d45ed28ef238016a938613f3ab3e26dd1",
+      "generator_version": 3,
       "mode": "cyoa",
       "pack_id": "gen_2_v1",
       "seed": 2
     },
     {
-      "content_hash": "633a7474355e868cd3cc7d6a8af55984a146c438b522d0ad05df6360c53d0052",
-      "generator_version": 2,
+      "content_hash": "2e98518ec3409a7d64cdae399e412ee72b4e4221b9f73eee23612da6662b3fc0",
+      "generator_version": 3,
       "mode": "cyoa",
       "pack_id": "gen_3_v1",
       "seed": 3

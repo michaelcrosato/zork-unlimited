@@ -93,9 +93,10 @@ describe("bug_0156 — procedural CYOA generator emits packs that clear the ship
     });
   }
 
-  it("the two-axis design (bug_0169): both investigations gate, the 'best' act is gated on the PERSONAL axis", () => {
+  it("the two-axis design (bug_0169) + v3 depth (bug_0219): both investigations gate; the 'best' act sits behind the personal axis's depth-3 reckoning tier", () => {
     // Prove the deepened shape: from the pristine hub BOTH investigations are offered and the
-    // gated `best` act is NOT (it needs the personal `knows_ally` flag, not the situational one).
+    // gated `best` act is NOT (it needs the depth-3 `resolved` flag, reached only via the personal
+    // `knows_ally` axis and the reckoning — not the situational one).
     const pack = generateCyoaPack(0);
     const index = indexPack(pack);
     const rules = buildRules(index);
@@ -127,9 +128,17 @@ describe("bug_0156 — procedural CYOA generator emits packs that clear the ship
     expect(hubIds(afterWay)).not.toContain("best");
     expect(hubIds(afterWay)).not.toContain("learn_way"); // the situational investigation retires
 
-    // Learning the PERSONAL truth opens the gate.
+    // Learning the PERSONAL truth no longer opens `best` DIRECTLY (v3, bug_0219): it opens the depth
+    // tier — the `go_reckon` choice — while `best` stays gated on the deeper `resolved` flag.
     const afterAlly = walk(["learn_ally", "learn"]);
-    expect(hubIds(afterAlly)).toContain("best");
+    expect(hubIds(afterAlly)).not.toContain("best"); // still gated on `resolved`
+    expect(hubIds(afterAlly)).toContain("go_reckon"); // the reckoning depth tier is now offered
     expect(hubIds(afterAlly)).not.toContain("learn_ally"); // the personal investigation retires once known
+
+    // Only committing in the reckoning (which sets `resolved`) finally offers the best act — the
+    // depth-3 chain learn_ally ⇒ go_reckon ⇒ commit ⇒ best.
+    const afterReckon = walk(["learn_ally", "learn", "go_reckon", "commit"]);
+    expect(hubIds(afterReckon)).toContain("best");
+    expect(hubIds(afterReckon)).not.toContain("go_reckon"); // the depth tier retires once resolved
   });
 });

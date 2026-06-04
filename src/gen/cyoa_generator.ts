@@ -40,6 +40,26 @@
  * `validateCyoa` and proven solvable by the SAME exhaustive BFS that guard the shipped packs
  * (tests/unit/cyoa_generator.test.ts).
  *
+ * Generator depth (v3, bug_0219 — the deferred CYOA leg of the generator-deepen line). v2 was the
+ * SHALLOWEST of the three generators: parser and RPG both went to v3 (a depth-3 obtainability
+ * fixpoint — parser_generator.ts PARSER_GENERATOR_VERSION=3, rpg likewise) while CYOA's best-act
+ * gate stayed depth-1 (learn the ally ⇒ the `best` act appears immediately). Two concrete costs of
+ * that shallowness, both visible in the benchmark scorecard: (1) a real depth/version ASYMMETRY
+ * across the three generators, and (2) every generated CYOA pack pinned `scene cov = 100%` on the
+ * coverage bot — only three directly-hub-reachable scenes, so the scene-coverage DIMENSION of the
+ * held-out CYOA score carried ZERO discriminative signal (a constant 1.0). v3 deepens the PERSONAL
+ * axis's gate from depth-1 to depth-3 by interposing a fourth scene — the `reckoning` — reachable
+ * only after hearing the ally out: there you must COMMIT (set `resolved`) before turning back, and
+ * the `best` act now gates on `resolved`, not on `knows_ally` directly. The obtainability chain for
+ * the best ending is now THREE ordered, individually load-bearing state-flips across a new scene
+ * (learn_ally ⇒ go_reckon ⇒ commit ⇒ best), recomputed independently of validateCyoa by the
+ * tier-knockout oracle in tests/regression/cyoa_generator_depth_floor.test.ts (the CYOA analogue of
+ * the parser depth-floor oracle). Crucially this PRESERVES the v2 two-axis independence the
+ * generator's whole shape rests on: the SITUATIONAL axis (`knows_way`) still does NOT gate `best`
+ * (the reckoning is gated on `knows_ally` only, and `knows_way` only ever REFRAMES), so a deeper
+ * personal gate buys real difficulty without collapsing the 2x2. Every mint stays schema-valid,
+ * validator-clean, and exhaustively solvable under the SAME checks (tests/unit/cyoa_generator.test.ts).
+ *
  * The generated packs are NOT committed under content/cyoa/pack: they are an on-demand eval
  * distribution, not curated showcase content, so they incur no blind-playtest obligation and
  * never pollute the hand-authored set. The held-out CORPUS (bug_0163, corpus/cyoa/*.yaml +
@@ -54,9 +74,11 @@ import { CyoaPackSchema, type CyoaPack } from "../cyoa/schema.js";
  * generator surfaces as a loud, diagnosable manifest mismatch ("generator changed", a deliberate
  * version bump) rather than silent corpus rot vs a tampered content hash. Bump it whenever the
  * emitted pack shape changes; the re-seal then re-stamps every entry. v2 = the bug_0169 two-axis
- * 2x2 deepening (was v1, the single-`truth`-axis fork).
+ * 2x2 deepening (was v1, the single-`truth`-axis fork); v3 = the bug_0219 depth-3 deepening (the
+ * `reckoning` scene interposed on the personal-axis gate, bringing CYOA to depth parity with the
+ * parser/RPG generators).
  */
-export const CYOA_GENERATOR_VERSION = 2;
+export const CYOA_GENERATOR_VERSION = 3;
 
 /**
  * A tiny deterministic PRNG (mulberry32). Pure and self-contained: no global RNG, no
@@ -385,6 +407,7 @@ export function generateCyoaPack(seed: number): CyoaPack {
   const id = `gen_${Math.abs(Math.trunc(seed))}_v1`;
   const WAY = "knows_way"; // situational axis
   const ALLY = "knows_ally"; // personal axis
+  const RESOLVE = "resolved"; // v3 depth tier: the reckoning's commitment, gates the best act
 
   // ── Endings: discipline, the gated best, the dark act, and (sometimes) greed. Each has a
   //    single reactive variant its reframing axis unlocks — one variant ⇒ no shadowing stack
@@ -453,7 +476,11 @@ export function generateCyoaPack(seed: number): CyoaPack {
     {
       id: "best",
       text: theme.best.label,
-      conditions: [{ has_flag: ALLY }],
+      // v3 (bug_0219): the best act now gates on `resolved` — the reckoning's commitment — not on
+      // `knows_ally` directly. `resolved` is obtainable ONLY via the reckoning scene, which is in
+      // turn gated on `knows_ally`, so this DEEPENS the personal-axis gate to depth-3 (learn_ally
+      // ⇒ go_reckon ⇒ commit ⇒ best) while preserving its axis: `knows_way` still never gates it.
+      conditions: [{ has_flag: RESOLVE }],
       next: "ending_best",
     },
     {
@@ -506,7 +533,54 @@ export function generateCyoaPack(seed: number): CyoaPack {
         conditions: [{ not_flag: ALLY }],
         next: "clue_ally",
       },
+      {
+        // v3 (bug_0219): the depth-3 tier. Once the ally has been heard out, you may step apart to
+        // the `reckoning` to commit. Gated on the PERSONAL axis only (not the situational one), so
+        // the 2x2 independence holds; retires once `resolved` so it is one-shot.
+        id: "go_reckon",
+        text: `Step apart and reckon with what ${theme.ally.name} has told you.`,
+        conditions: [{ has_flag: ALLY }, { not_flag: RESOLVE }],
+        next: "reckoning",
+      },
       ...finaleChoices,
+    ],
+  };
+  // reckoning (v3, bug_0219): the interposed depth tier. Reachable only once the personal truth is
+  // known (the `go_reckon` gate); here a single COMMIT sets `resolved` — the flag the `best` act now
+  // gates on — and turns you back to the hub to act. A `when: knows_way` variant reframes the
+  // reckoning for a player who ALSO read the situational truth (so `knows_way` is read here too,
+  // reinforcing the 2x2 without ever gating the act). The commit is one-shot (`not_flag resolved`);
+  // `back` is the always-available escape so the scene can never dead-end or soft-lock.
+  const reckoning = {
+    id: "reckoning",
+    title: "The Reckoning",
+    text:
+      `You step apart from the press of it to reckon with what hearing ${theme.ally.name} out has ` +
+      `laid on you: ${theme.ally.reveal}. Knowing that, there is one course the rest would never ` +
+      `take — but it asks you to commit to it, with open eyes, before you turn back to act.`,
+    variants: [
+      {
+        when: [{ has_flag: WAY }],
+        text:
+          `You step apart to reckon with it, and you can no longer pretend the crisis is what it ` +
+          `seemed: ${theme.way.reveal}. Knowing the way through AND whose hands can take it, the ` +
+          `course is plain — but it asks you to commit to it, with open eyes, before you turn back.`,
+      },
+    ],
+    choices: [
+      {
+        id: "commit",
+        text: `Resolve it: when you turn back, you will ${lowerFirst(theme.best.label)}`,
+        conditions: [{ not_flag: RESOLVE }],
+        effects: [
+          { set_flag: RESOLVE },
+          {
+            add_journal: `The reckoning is made: ${theme.best.label} — the course the rest would not take, chosen with open eyes.`,
+          },
+        ],
+        next: "hub",
+      },
+      { id: "back", text: "Turn back without resolving anything yet.", next: "hub" },
     ],
   };
   // clue_way: reading sets `knows_way` (read by the hub/ending variants ⇒ never inert). The
@@ -557,10 +631,10 @@ export function generateCyoaPack(seed: number): CyoaPack {
   const pack = {
     meta: {
       id,
-      title: `${titleCase(theme.key)}: A Two-Truth Fork`,
+      title: `${titleCase(theme.key)}: A Two-Truth Reckoning`,
       start: "hub",
     },
-    scenes: [hub, clueWay, clueAlly],
+    scenes: [hub, clueWay, clueAlly, reckoning],
     endings,
   };
 
@@ -575,4 +649,10 @@ export function generateCyoaPack(seed: number): CyoaPack {
  *  "Steward's Account-Book"). Pure, ASCII-only, deterministic. */
 function titleCase(s: string): string {
   return s.replace(/^the\s+/i, "").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** Lower-case the first letter of a string — for splicing an act's capitalised label ("Give the
+ *  thief the keys…") mid-sentence ("…you will give the thief the keys…"). Pure, deterministic. */
+function lowerFirst(s: string): string {
+  return s.length === 0 ? s : s[0]!.toLowerCase() + s.slice(1);
 }

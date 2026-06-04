@@ -1,6 +1,6 @@
 meta:
   id: gen_3_v1
-  title: "Foundry: A Two-Truth Fork"
+  title: "Foundry: A Two-Truth Reckoning"
   start: hub
   vars_init: {}
   flags_init: []
@@ -56,6 +56,13 @@ scenes:
           - not_flag: knows_ally
         effects: []
         next: clue_ally
+      - id: go_reckon
+        text: Step apart and reckon with what the branded furnace-slave has told you.
+        conditions:
+          - has_flag: knows_ally
+          - not_flag: resolved
+        effects: []
+        next: reckoning
       - id: hold
         text: Finish the pour true and trust the muster to be called off in time.
         conditions: []
@@ -64,7 +71,7 @@ scenes:
       - id: best
         text: Let the furnace-slave foul the heat his own way, and cover for him.
         conditions:
-          - has_flag: knows_ally
+          - has_flag: resolved
         effects: []
         next: ending_best
       - id: dark
@@ -122,6 +129,42 @@ scenes:
         next: hub
       - id: back
         text: Say nothing, and go back.
+        conditions: []
+        effects: []
+        next: hub
+  - id: reckoning
+    title: The Reckoning
+    text: "You step apart from the press of it to reckon with what hearing the
+      branded furnace-slave out has laid on you: he has read these furnaces for
+      twenty years and can wreck the pour clean, as a flaw and not a sabotage —
+      the one hand who can stop it without bringing the lash on the floor.
+      Knowing that, there is one course the rest would never take — but it asks
+      you to commit to it, with open eyes, before you turn back to act."
+    variants:
+      - when:
+          - has_flag: knows_way
+        text: "You step apart to reckon with it, and you can no longer pretend the
+          crisis is what it seemed: the muster turns on this one pour: spoil it
+          and there are no blades to march behind, and the order itself names
+          the village it was cast to put to the sword. Knowing the way through
+          AND whose hands can take it, the course is plain — but it asks you to
+          commit to it, with open eyes, before you turn back."
+    on_enter: []
+    is_ending: false
+    choices:
+      - id: commit
+        text: "Resolve it: when you turn back, you will let the furnace-slave foul the
+          heat his own way, and cover for him."
+        conditions:
+          - not_flag: resolved
+        effects:
+          - set_flag: resolved
+          - add_journal: "The reckoning is made: Let the furnace-slave foul the heat his own
+              way, and cover for him. — the course the rest would not take,
+              chosen with open eyes."
+        next: hub
+      - id: back
+        text: Turn back without resolving anything yet.
         conditions: []
         effects: []
         next: hub

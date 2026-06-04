@@ -1,6 +1,6 @@
 meta:
   id: gen_1_v1
-  title: "Lighthouse: A Two-Truth Fork"
+  title: "Lighthouse: A Two-Truth Reckoning"
   start: hub
   vars_init: {}
   flags_init: []
@@ -54,6 +54,13 @@ scenes:
           - not_flag: knows_ally
         effects: []
         next: clue_ally
+      - id: go_reckon
+        text: Step apart and reckon with what the keeper's mute boy has told you.
+        conditions:
+          - has_flag: knows_ally
+          - not_flag: resolved
+        effects: []
+        next: reckoning
       - id: hold
         text: Light nothing, and ride the storm out behind a barred door.
         conditions: []
@@ -62,7 +69,7 @@ scenes:
       - id: best
         text: Put the boy at the lens and let him lay the true beam on the channel.
         conditions:
-          - has_flag: knows_ally
+          - has_flag: resolved
         effects: []
         next: ending_best
       - id: dark
@@ -123,6 +130,42 @@ scenes:
         next: hub
       - id: back
         text: Say nothing, and go back.
+        conditions: []
+        effects: []
+        next: hub
+  - id: reckoning
+    title: The Reckoning
+    text: "You step apart from the press of it to reckon with what hearing the
+      keeper's mute boy out has laid on you: he has run this lens since he could
+      climb the stair and can lay the true beam on the channel by feel in the
+      dark — the one hand aboard who can save the ship. Knowing that, there is
+      one course the rest would never take — but it asks you to commit to it,
+      with open eyes, before you turn back to act."
+    variants:
+      - when:
+          - has_flag: knows_way
+        text: "You step apart to reckon with it, and you can no longer pretend the
+          crisis is what it seemed: the true channel is marked plain and still
+          passable: the wreck is no accident of weather but a trade, and a
+          single honest light would clear the ship. Knowing the way through AND
+          whose hands can take it, the course is plain — but it asks you to
+          commit to it, with open eyes, before you turn back."
+    on_enter: []
+    is_ending: false
+    choices:
+      - id: commit
+        text: "Resolve it: when you turn back, you will put the boy at the lens and let
+          him lay the true beam on the channel."
+        conditions:
+          - not_flag: resolved
+        effects:
+          - set_flag: resolved
+          - add_journal: "The reckoning is made: Put the boy at the lens and let him lay the
+              true beam on the channel. — the course the rest would not take,
+              chosen with open eyes."
+        next: hub
+      - id: back
+        text: Turn back without resolving anything yet.
         conditions: []
         effects: []
         next: hub

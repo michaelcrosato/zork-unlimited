@@ -37,10 +37,11 @@ describe("bug_0157 — generate_pack MCP tool mints + validates a fresh pack", (
     expect(r.pack_id).toBe("gen_0_v1");
     expect(r.meta.id).toBe("gen_0_v1");
     expect(r.content_hash).toMatch(/^[0-9a-f]{64}$/);
-    // A genuine fork: at least three endings (hold + gated best + dark) and the three scenes
-    // (hub + the two investigation scenes — the bug_0169 two-axis shape).
+    // A genuine fork: at least three endings (hold + gated best + dark) and the four scenes
+    // (hub + the two investigation scenes + the v3 reckoning depth scene — bug_0169 two-axis
+    // shape deepened by bug_0219).
     expect(r.ending_count).toBeGreaterThanOrEqual(3);
-    expect(r.scene_count).toBe(3);
+    expect(r.scene_count).toBe(4);
     // The reported hash is exactly the compiled-pack hash (no drift between mint and report).
     expect(r.content_hash).toBe(hashState(generateCyoaPack(0)));
   });
@@ -77,7 +78,7 @@ describe("bug_0157 — new_game(generate_seed) plays a fresh minted pack in-memo
     expect(g.state_hash).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it("the knowledge gate is load-bearing on the live play surface: learn_ally → learn → best → ending_best", () => {
+  it("the depth-3 gate is load-bearing on the live play surface: learn_ally → learn → go_reckon → commit → best → ending_best", () => {
     const a = api();
     const g = a.new_game({ generate_seed: 0 });
     const sid = g.session_id;
@@ -91,13 +92,26 @@ describe("bug_0157 — new_game(generate_seed) plays a fresh minted pack in-memo
     // Hear out the maligned figure (the PERSONAL axis), believe them, return to the hub.
     a.step_action({ session_id: sid, action_id: "learn_ally" });
     a.step_action({ session_id: sid, action_id: "learn" });
-    const backAtHub = a.get_observation({ session_id: sid });
-    const knownIds = backAtHub.observation.available_actions.map((x) => x.id);
-    // Now the gated `best` act IS offered and the spent investigation is gone.
-    expect(knownIds).toContain("best");
-    expect(knownIds).not.toContain("learn_ally");
+    const afterAlly = a
+      .get_observation({ session_id: sid })
+      .observation.available_actions.map((x) => x.id);
+    // v3 (bug_0219): hearing the ally no longer offers `best` directly — it offers the reckoning
+    // depth tier (`go_reckon`); `best` stays gated on the deeper `resolved` flag.
+    expect(afterAlly).not.toContain("best");
+    expect(afterAlly).toContain("go_reckon");
+    expect(afterAlly).not.toContain("learn_ally");
 
-    // Take the knowledge-gated best ending.
+    // Step into the reckoning and commit (sets `resolved`), then return to the hub.
+    a.step_action({ session_id: sid, action_id: "go_reckon" });
+    a.step_action({ session_id: sid, action_id: "commit" });
+    const resolvedIds = a
+      .get_observation({ session_id: sid })
+      .observation.available_actions.map((x) => x.id);
+    // Only NOW is the best act offered, and the spent depth tier is gone.
+    expect(resolvedIds).toContain("best");
+    expect(resolvedIds).not.toContain("go_reckon");
+
+    // Take the depth-gated best ending.
     const end = a.step_action({ session_id: sid, action_id: "best" });
     expect(end.ok).toBe(true);
     expect(end.observation.ended).toBe(true);

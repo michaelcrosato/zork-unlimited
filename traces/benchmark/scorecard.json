@@ -886,10 +886,10 @@
       "endings_declared": 4,
       "endings_reached": 3,
       "ending_coverage": 0.75,
-      "scenes_total": 3,
-      "scenes_visited": 3,
+      "scenes_total": 4,
+      "scenes_visited": 4,
       "scene_coverage": 1,
-      "mean_turns_to_end": 2.3
+      "mean_turns_to_end": 3
     },
     {
       "pack_id": "gen_0_v1",
@@ -905,10 +905,10 @@
       "endings_declared": 4,
       "endings_reached": 3,
       "ending_coverage": 0.75,
-      "scenes_total": 3,
-      "scenes_visited": 3,
+      "scenes_total": 4,
+      "scenes_visited": 4,
       "scene_coverage": 1,
-      "mean_turns_to_end": 2.3
+      "mean_turns_to_end": 3
     },
     {
       "pack_id": "gen_0_v1",
@@ -924,9 +924,9 @@
       "endings_declared": 4,
       "endings_reached": 3,
       "ending_coverage": 0.75,
-      "scenes_total": 3,
+      "scenes_total": 4,
       "scenes_visited": 3,
-      "scene_coverage": 1,
+      "scene_coverage": 0.75,
       "mean_turns_to_end": 2.9
     },
     {
@@ -943,10 +943,10 @@
       "endings_declared": 4,
       "endings_reached": 3,
       "ending_coverage": 0.75,
-      "scenes_total": 3,
-      "scenes_visited": 3,
+      "scenes_total": 4,
+      "scenes_visited": 4,
       "scene_coverage": 1,
-      "mean_turns_to_end": 2.3
+      "mean_turns_to_end": 3
     },
     {
       "pack_id": "gen_1_v1",
@@ -962,10 +962,10 @@
       "endings_declared": 4,
       "endings_reached": 3,
       "ending_coverage": 0.75,
-      "scenes_total": 3,
-      "scenes_visited": 3,
+      "scenes_total": 4,
+      "scenes_visited": 4,
       "scene_coverage": 1,
-      "mean_turns_to_end": 2.3
+      "mean_turns_to_end": 3
     },
     {
       "pack_id": "gen_1_v1",
@@ -981,9 +981,9 @@
       "endings_declared": 4,
       "endings_reached": 3,
       "ending_coverage": 0.75,
-      "scenes_total": 3,
+      "scenes_total": 4,
       "scenes_visited": 3,
-      "scene_coverage": 1,
+      "scene_coverage": 0.75,
       "mean_turns_to_end": 2.9
     },
     {
@@ -1000,10 +1000,10 @@
       "endings_declared": 3,
       "endings_reached": 2,
       "ending_coverage": 0.667,
-      "scenes_total": 3,
-      "scenes_visited": 3,
+      "scenes_total": 4,
+      "scenes_visited": 4,
       "scene_coverage": 1,
-      "mean_turns_to_end": 3
+      "mean_turns_to_end": 4
     },
     {
       "pack_id": "gen_2_v1",
@@ -1019,10 +1019,10 @@
       "endings_declared": 3,
       "endings_reached": 2,
       "ending_coverage": 0.667,
-      "scenes_total": 3,
-      "scenes_visited": 3,
+      "scenes_total": 4,
+      "scenes_visited": 4,
       "scene_coverage": 1,
-      "mean_turns_to_end": 3
+      "mean_turns_to_end": 4
     },
     {
       "pack_id": "gen_2_v1",
@@ -1038,9 +1038,9 @@
       "endings_declared": 3,
       "endings_reached": 2,
       "ending_coverage": 0.667,
-      "scenes_total": 3,
+      "scenes_total": 4,
       "scenes_visited": 3,
-      "scene_coverage": 1,
+      "scene_coverage": 0.75,
       "mean_turns_to_end": 3
     },
     {
@@ -1057,10 +1057,10 @@
       "endings_declared": 3,
       "endings_reached": 2,
       "ending_coverage": 0.667,
-      "scenes_total": 3,
-      "scenes_visited": 3,
+      "scenes_total": 4,
+      "scenes_visited": 4,
       "scene_coverage": 1,
-      "mean_turns_to_end": 3
+      "mean_turns_to_end": 4
     },
     {
       "pack_id": "gen_3_v1",
@@ -1076,10 +1076,10 @@
       "endings_declared": 3,
       "endings_reached": 2,
       "ending_coverage": 0.667,
-      "scenes_total": 3,
-      "scenes_visited": 3,
+      "scenes_total": 4,
+      "scenes_visited": 4,
       "scene_coverage": 1,
-      "mean_turns_to_end": 3
+      "mean_turns_to_end": 4
     },
     {
       "pack_id": "gen_3_v1",
@@ -1095,9 +1095,9 @@
       "endings_declared": 3,
       "endings_reached": 2,
       "ending_coverage": 0.667,
-      "scenes_total": 3,
+      "scenes_total": 4,
       "scenes_visited": 3,
-      "scene_coverage": 1,
+      "scene_coverage": 0.75,
       "mean_turns_to_end": 3
     },
     {
