@@ -121,13 +121,28 @@ function relabelVariant(v: SceneVariant, r: (id: string) => string): SceneVarian
   return { when: v.when.map((c) => relabelCondition(c, r)), text: v.text };
 }
 
+function relabelSkillCheck(
+  sc: NonNullable<Choice["skill_check"]>,
+  r: (id: string) => string,
+): NonNullable<Choice["skill_check"]> {
+  return {
+    skill: r(sc.skill), // a var name — relabeled like every other id (cf. relabelEffect's inc_var)
+    difficulty: sc.difficulty,
+    on_success: sc.on_success.map((x) => relabelEffect(x, r)),
+    on_failure: sc.on_failure.map((x) => relabelEffect(x, r)),
+  };
+}
+
 function relabelChoice(c: Choice, r: (id: string) => string): Choice {
   return {
     id: r(c.id),
     text: c.text, // prose — untouched
     conditions: c.conditions.map((x) => relabelCondition(x, r)),
     effects: c.effects.map((x) => relabelEffect(x, r)),
-    next: r(c.next),
+    // Preserve absent-vs-present so the relabeled twin keeps schema parity: a plain choice
+    // carries `next`, a skill-checked one carries `skill_check` (never both, never neither).
+    ...(c.next !== undefined ? { next: r(c.next) } : {}),
+    ...(c.skill_check ? { skill_check: relabelSkillCheck(c.skill_check, r) } : {}),
   };
 }
 

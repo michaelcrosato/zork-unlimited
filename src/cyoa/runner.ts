@@ -13,8 +13,10 @@ import type { Effect } from "../core/effects.js";
 import { applyEffects } from "../core/effects.js";
 import type { Action } from "../api/types.js";
 import type { GameEvent } from "../core/events.js";
+import { rngForStep, type Rng } from "../core/rng.js";
 import type { Resolution, Rules } from "../core/engine.js";
 import { scoreChangeNarrations } from "../parser/runner.js";
+import { resolveSkillCheck } from "../rpg/combat.js";
 import type { CyoaPack, Ending, Scene } from "./schema.js";
 
 export type CyoaIndex = {
@@ -63,8 +65,19 @@ export function endingText(ending: Ending, state: GameState): string {
   return ending.text;
 }
 
-/** Build the engine rule set for a compiled pack. */
-export function buildRules(index: CyoaIndex): Rules {
+/**
+ * Build the engine rule set for a compiled pack.
+ *
+ * `rngFor` supplies the PRNG a skill-checked choice draws its d20 from. It defaults to the
+ * step-keyed stream (core/rng.ts), so production callers pass nothing and play is
+ * byte-identical and replayable (§8.5). The parameter is a verification seam ONLY — the
+ * exhaustive ending/score proofs drive a skill-checked choice under the player's best and
+ * worst rolls by passing a forced rng, exactly as the parser/RPG runners do (buildRpgRules).
+ */
+export function buildRules(
+  index: CyoaIndex,
+  rngFor: (state: GameState) => Rng = (s) => rngForStep(s.seed, s.step),
+): Rules {
   return {
     legalActions(state: GameState): Action[] {
       if (state.ended) return [];
@@ -83,10 +96,21 @@ export function buildRules(index: CyoaIndex): Rules {
       const choice = scene?.choices.find((c) => c.id === action.choiceId);
       if (!choice) return null;
       const effects: Effect[] = [...choice.effects];
-      if (isTerminal(index, choice.next)) {
-        effects.push({ goto: choice.next }, { end_game: choice.next });
+      if (choice.skill_check) {
+        // A skill-checked choice rolls d20 + the named skill var vs `difficulty` (the shared
+        // resolver), then applies its on_success / on_failure effects — which carry their OWN
+        // `goto`/`end_game` routing, so the check self-routes (no `next`). Any pre-roll
+        // `choice.effects` are already applied above (e.g. spend an item before the attempt).
+        const res = resolveSkillCheck(state, choice.skill_check, rngFor(state));
+        effects.push(...res.effects);
+        return { conditions: choice.conditions, effects };
+      }
+      // Plain choice: `next` is guaranteed present by the schema's exactly-one-of rule.
+      const next = choice.next as string;
+      if (isTerminal(index, next)) {
+        effects.push({ goto: next }, { end_game: next });
       } else {
-        effects.push({ goto: choice.next });
+        effects.push({ goto: next });
       }
       return { conditions: choice.conditions, effects };
     },

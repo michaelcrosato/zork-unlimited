@@ -76,9 +76,19 @@ function inspectCyoaPack(path: string): void {
   while (queue.length) {
     const id = queue.shift()!;
     for (const c of index.scenes.get(id)?.choices ?? []) {
-      if (!reachable.has(c.next)) {
-        reachable.add(c.next);
-        queue.push(c.next);
+      // A plain choice routes via `next`; a skill-checked one via the goto/end_game in its
+      // on_success / on_failure branches. Collect either as the choice's transition targets.
+      const targets: string[] = c.next !== undefined ? [c.next] : [];
+      for (const e of c.skill_check
+        ? [...c.skill_check.on_success, ...c.skill_check.on_failure]
+        : [])
+        if ("goto" in e) targets.push(e.goto);
+        else if ("end_game" in e) targets.push(e.end_game);
+      for (const t of targets) {
+        if (!reachable.has(t)) {
+          reachable.add(t);
+          queue.push(t);
+        }
       }
     }
   }

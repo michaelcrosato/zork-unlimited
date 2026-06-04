@@ -132,11 +132,19 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
     if (scene.is_ending) continue;
     const outs = new Set<string>();
     for (const choice of scene.choices) {
-      registerTarget(choice.next, outs, allNodeIds, findings, [
-        `scene:${scene.id}`,
-        `choice:${choice.id}`,
-      ]);
-      for (const t of gotoTargets(choice.effects))
+      if (choice.next !== undefined) {
+        registerTarget(choice.next, outs, allNodeIds, findings, [
+          `scene:${scene.id}`,
+          `choice:${choice.id}`,
+        ]);
+      }
+      // A skill-checked choice carries no `next`; its routing lives in the on_success /
+      // on_failure effects (their goto/end_game), so register THOSE as the choice's
+      // transition edges — the reachability/soft-lock graph must see both branch outcomes.
+      const skillEffects = choice.skill_check
+        ? [...choice.skill_check.on_success, ...choice.skill_check.on_failure]
+        : [];
+      for (const t of gotoTargets([...choice.effects, ...skillEffects]))
         registerTarget(t, outs, allNodeIds, findings, [`scene:${scene.id}`, `choice:${choice.id}`]);
     }
     for (const t of gotoTargets(scene.on_enter))

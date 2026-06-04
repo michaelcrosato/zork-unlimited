@@ -512,7 +512,10 @@ export function createToolApi(opts: { root: string }) {
 
   function coverageChoiceIndex(
     actions: { id: string; text: string }[],
-    choices: { id: string; next: string }[],
+    // `next` is optional: a skill-checked choice has none (its destination is roll-dependent),
+    // so it is simply never preferred as a "leads-somewhere-unvisited" move — the body already
+    // guards `next !== undefined` and falls through to the investigative/first heuristic.
+    choices: { id: string; next?: string | undefined }[],
     globalVisited: Set<string>,
     localVisited: Set<string>,
   ): number {
