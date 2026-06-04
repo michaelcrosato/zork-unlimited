@@ -1,0 +1,57 @@
+bug_id: bug_0248
+pack_id: watchtower_road_v1
+content_hash: d3090c658665c91502d823f8930154c84552a929733c4bc76aeea5798e9f2fda  # after the fix (was a1226aa17f…)
+seed: 23
+initial_state: start
+# Surfaced during the blind-playtest cycle on watchtower_road (seed 23 blind pass came
+# back clean — clarity 5/5, enjoyment 4/5, all three endings, ZERO mechanical bugs; see
+# ai-runs/2026-06-04T19-28-44-838Z/playtest.md). This defect was found by READING the
+# pack's own design comment, which asserted the on_the_trail variant could not re-match a
+# returning player, and then DISPROVING it live via the MCP tools.
+findings:
+  - id: trail_variant_re_shows_after_truth_known
+    where: scene:ruined_watchtower
+    severity: low
+    description: >
+      The ruined_watchtower scene's reactive `on_the_trail` variant — "Fire-blackened
+      stone leans against the sky. You've left the crossroads behind for the smoke … the
+      trail you came to follow runs in there." — was gated ONLY on the quest stage being
+      `on_the_trail`. forest_crossroads' on_enter UNCONDITIONALLY re-seats the quest
+      `the_road` to `setting_out` on every revisit, and go_east re-advances it to
+      `on_the_trail`, so a player who had already pried the barrels (set_flag learned_truth,
+      quest truth_known, +10 score) and looped back through the crossroads re-matched the
+      variant and re-read the first-arrival flavor — told "the trail you came to follow runs
+      in there" after having already followed it in and learned the truth. Same stale-on-
+      re-entry class as bug_0120 (tower_top brazier) and bug_0134 (hermit greeting). An
+      EARLIER design comment in the pack explicitly claimed a later return "no longer
+      matches" (it assumed the stage would still be truth_known) — that claim was wrong,
+      because the crossroads regresses the stage. Reproduced live (seed 23): examine_barrels
+      → climb_out → cellar_back → return_crossroads → go_east re-shows the variant at
+      learned_truth.
+    fix: >
+      Add a second `not_flag: learned_truth` guard to the variant's `when`
+      (now [quest_stage on_the_trail, not_flag learned_truth]). Once the truth is out the
+      variant is suppressed and the base watchtower text shows; the un-informed first-timer
+      (no flag) still sees the trail flavor verbatim. learned_truth is the pack's established
+      "I already know what's going on" signal (cf. confront_smuggler, decision_point, the
+      ending variants). Reactive TEXT ONLY — no choice/flag/route/ending change.
+failure:
+  type: design_polish
+  description: >
+    No engine fault or determinism break — stale-on-re-entry scene text (the bug_0120 /
+    bug_0134 reactive-text honesty class). Caught by reasoning over the pack's own (incorrect)
+    design comment and confirmed with the MCP tools, not by the validator (which checks
+    solvability/liveness, not narrative freshness). Every state_hash on the repro route is
+    byte-identical pre/post-fix — the variant alters only displayed text, never state.
+fix:
+  layer: content        # one of: content | engine_rule | validator | test | hint_text | quest_structure
+  summary: >
+    ruined_watchtower's on_the_trail variant gains a not_flag learned_truth guard so a
+    player who looped back to the crossroads after learning the truth is no longer told
+    "the trail you came to follow runs in there" a second time.
+regression_test: tests/regression/watchtower_trail_variant_stale_reentry.test.ts
+# Deliberate, surfaced content-hash re-pin. The ENFORCED pin lives in
+# tests/unit/rpg_validator.test.ts ("pinned content hash" snapshot), moved
+# a1226aa17f… → d3090c658665… alongside this real content change. (The hash field in
+# traces/bugs/bug_0002_watchtower_blind_polish.yaml is documentary only — not test-
+# enforced — and has been left as-is per the project's treatment of it.)

@@ -113,7 +113,15 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // ...and the skill-check palette lift — a `nerve` var + an optional `force_door` d20 check whose
     // success/failure both route to the same scene (a convergent tension beat that gates nothing, so
     // the exhaustive proofs stay sound), another deliberate edit (was 83826e0fc8...).
+    // ...and bug_0248 — the ruined_watchtower `on_the_trail` reactive variant now also carries a
+    // `not_flag: learned_truth` guard. forest_crossroads' on_enter unconditionally re-seats the quest
+    // to `setting_out` on every revisit, so a player who learned the truth then looped back through the
+    // crossroads re-advanced the stage to `on_the_trail` and saw the "the trail you came to follow runs
+    // in there" line a second time as if arriving fresh (stale-on-re-entry, the bug_0120/bug_0134 class;
+    // reproduced live via MCP, seed 23). Gating the variant on not_flag learned_truth suppresses it once
+    // the truth is out; the un-informed first-timer still sees it verbatim. Reactive TEXT ONLY — every
+    // state_hash on the repro route is byte-identical pre/post-fix (was a1226aa17f...).
     // Any *unintended* change to compilation trips this.
-    expect(loaded.compiled.contentHash).toBe("a1226aa17f84fb50ed8f58765211e5c8566d1d6eb7efc0a11ff8abdffa9c02a8");
+    expect(loaded.compiled.contentHash).toBe("d3090c658665c91502d823f8930154c84552a929733c4bc76aeea5798e9f2fda");
   });
 });

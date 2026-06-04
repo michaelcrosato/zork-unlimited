@@ -83,12 +83,25 @@ scenes:
     # choice that brings you here (forest_crossroads, above). This scene has no on_enter,
     # so on arrival from the crossroads the stage is still `on_the_trail` and this variant
     # is the first match — the safe set-on-the-edge / read-on-the-destination pattern, so
-    # it is never dead prose (bug_0145). It only colours the prose the first time you turn
-    # off the road toward the smoke; a later return (the quest by then at `truth_known`,
-    # set in the cellar/hermit milestones below) no longer matches, and the base text
-    # shows. Reactive text only — first-match-wins, no choice/route/ending/gating change.
+    # it is never dead prose (bug_0145). It colours the prose the first time you turn off
+    # the road toward the smoke.
+    #
+    # bug_0248: the second `not_flag: learned_truth` guard is the staleness fix. An EARLIER
+    # comment here claimed a later return "no longer matches" because the quest would by
+    # then sit at `truth_known` — but that was WRONG: forest_crossroads' on_enter UNCON-
+    # ditionally re-seats the quest to `setting_out` on every revisit, and a subsequent
+    # go_east re-advances it to `on_the_trail`, so a player who had already pried the barrels
+    # (learned_truth, score on the board) and looped back through the crossroads saw this
+    # "the trail you came to follow runs in there" line a SECOND time, as if arriving fresh
+    # — the same stale-on-re-entry class as bug_0120 (tower_top brazier) and bug_0134
+    # (hermit greeting). Reproduced live via the MCP tools (seed 23): barrels → return_cross-
+    # roads → go_east re-showed the variant at learned_truth. Gating the variant on
+    # `not_flag: learned_truth` (the pack's established "I already know what's going on"
+    # signal — cf. confront_smuggler, decision_point, the ending variants) suppresses it
+    # once the truth is out; the un-informed first-timer (no flag) still sees it verbatim.
+    # Reactive text only — first-match-wins, no choice/route/ending/gating change.
     variants:
-      - when: [ { quest_stage: { quest: the_road, stage: on_the_trail } } ]
+      - when: [ { quest_stage: { quest: the_road, stage: on_the_trail } }, { not_flag: learned_truth } ]
         text: >
           Fire-blackened stone leans against the sky. You've left the crossroads
           behind for the smoke, and up close the ruin tells its own tale: the door
