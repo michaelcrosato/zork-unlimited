@@ -74,14 +74,26 @@ rooms:
       the gates with, leans by the door, and his life-line, a coil of tarred rope with a snap
       at one end, hangs on its peg beside it. The weir itself is out through the door to the
       north.
-    # NON-VACUOUS reactive read of the quest progress (§13): once the relief-race is running
-    # (the_weir at stage race_running) the climbing flood has somewhere to go, and the river's
-    # voice outside the lodge changes from the rising roar to a steadier note — the change Pell
-    # is listening for from his cot, named here so a player who comes back down to the lodge
-    # after opening the race hears the night turning. Keys off the stage, not the flag, and
-    # changes only prose: it gates no exit, alters no score, and the north signpost is kept.
+    # NON-VACUOUS reactive read (§13): once the relief-race is open the climbing flood has
+    # somewhere to go, and the river's voice outside the lodge changes from the rising roar to a
+    # steadier, falling note — the change Pell is listening for from his cot, named here so a
+    # player who comes back down to the lodge after opening the race hears the night turning.
+    # Changes only prose: it gates no exit, alters no score, and the north signpost is kept.
+    #
+    # bug_0250 (the bug_0248/0249 stale-on-regression class): this variant ORIGINALLY keyed off
+    # `quest_stage the_weir == race_running`, but a quest stage is NON-MONOTONIC — entering
+    # valley_held re-seats the_weir to `weir_held`, so at that stage this variant would stop
+    # matching and the lodge would revert to its BASE text ("the river is loud and wrong … too
+    # high, too fast"), which flatly CONTRADICTS a world where the flood has already been
+    # diverted. Today that contradiction is unreachable only by luck — the `visited: valley_held`
+    # win ends the game the instant weir_held is set, so the lodge is never observed at that
+    # stage — but the prose must not depend on that coincidence. Re-keyed onto the MONOTONIC,
+    # never-unset `race_open` flag (set in the SAME race_winch on_success that sets race_running),
+    # exactly mirroring this pack's own sibling rooms (weir_head keys on `rack_freed`, race_house
+    # on `race_open`). race_open ⟺ race_running on every state reachable AT the lodge, so play is
+    # byte-identical, but the calmed-water prose can now never revert to the contradictory base.
     variants:
-      - when: [{ quest_stage: { quest: the_weir, stage: race_running } }]
+      - when: [{ has_flag: race_open }]
         text: >
           The weir-keeper's lodge, the stone hut still loud with the flood — but the river's
           voice outside has changed, the rising roar gone over to a steadier, falling note now
