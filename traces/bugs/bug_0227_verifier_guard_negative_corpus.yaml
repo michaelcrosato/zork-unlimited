@@ -1,0 +1,88 @@
+id: bug_0227
+title: "SoundnessBench negative corpus for the verify-integrity GUARD itself — pin its OWN previously-untested error branches in the REJECTION direction (the META-VERIFIER leg of the bug_0182/0218 pattern)"
+kind: verification_oracle
+mode: meta/tooling
+severity: enhancement
+layer: verification/meta-verifier-soundness
+artifact:
+  source:
+    - scripts/verify-integrity.ts
+  test:
+    - tests/regression/verifier_static_rejection_corpus.test.ts
+
+summary: >
+  bug_0182 built the first SoundnessBench-style negative corpus (a checker is only proven sound if its FAILING
+  branches are exercised on input that SHOULD fail) for validateRpg; bug_0218 completed the validator trilogy for
+  validateCyoa + validateParser. That discipline was NEVER applied to scripts/verify-integrity.ts — the
+  meta-verifier the entire trust-but-verify bar rests on. An audit this cycle confirmed its own error-emitting
+  branches had ZERO rejection-direction witness anywhere: every existing runStatic/runDrift call in the suite
+  (tests/unit/verifier_integrity.test.ts, tests/regression/verifier_assertion_gutting.test.ts,
+  verifier_strict_to_loose_swap.test.ts, generator_program_protected.test.ts, sealed_corpus_manifest_protected.test.ts)
+  asserts these codes ABSENT against the healthy process.cwd(); grep GIT_DIFF_FAILED tests/ was empty. This cycle
+  adds the META-VERIFIER leg, bringing the guard to soundness-proof PARITY with the content validators. The five
+  guard error codes now pinned in the REJECTION direction: PROTECTED_MISSING, TEST_COUNT_FLOOR, ASSERTION_COUNT_FLOOR,
+  STRONG_ASSERTION_FLOOR (in runStatic) and GIT_DIFF_FAILED (in runDrift).
+
+root_cause: >
+  Not a defect in the guard and NOT a live verifier defect — a verification-DEPTH asymmetry. Every audited branch is
+  correctly emitted today; the gap is that the FAILING path was untested for these specific codes, so a future
+  regression (a dropped findings.push, an inverted floor comparison, a broken GIT_DIFF_FAILED catch) could silently
+  disarm the guard while leaving every existing test GREEN — the present-but-untested-checker surface named by
+  SoundnessBench (arXiv:2412.03154) and the single-checker / ASL present-but-incomplete blind spot
+  (arXiv:2510.14253, [[verifier-assertion-guard]]). This is the exact gap bug_0182/0218 closed for the content
+  validators, applied to the one verification asset that pattern never covered. Triggered by the deterministic
+  content assessor running SATURATED (re-aim cycle #9): all structural content levers disarmed, all 15 packs
+  blind-clean, so the lever rotated to a verified-OPEN structural asymmetry.
+
+witness: >
+  THE TEETH, verified out of band (non-vacuity spot-check): a LOCAL scratch copy of scripts/verify-integrity.ts
+  (/tmp/vi_scratch.ts — never committed, the repo file left byte-identical, git diff clean) with the
+  PROTECTED_MISSING findings.push DISABLED produced ZERO PROTECTED_MISSING findings on the synthetic bad root — so
+  the corpus's set-equality assertion (PROTECTED_MISSING where-set EQUALS PROTECTED_FILES; missing.length ===
+  PROTECTED_FILES.length) goes RED, proving that case is non-vacuous and attributable. The differential anchor in
+  the same file proves each targeted code is ABSENT on the healthy process.cwd(), so every firing is attributable to
+  the synthetic-bad root. Observed live on the synthetic root: PROTECTED_MISSING fires 16x (== PROTECTED_FILES.length),
+  exactly one each of TEST_COUNT_FLOOR/ASSERTION_COUNT_FLOOR/STRONG_ASSERTION_FLOOR, ok===false; runDrift on the
+  bogus all-zeros ref emits GIT_DIFF_FAILED severity:error with where === that ref.
+
+fix: >
+  ONE new regression file following the bug_0182/0218 copy-mutate discipline applied to the meta-verifier: a synthetic
+  BAD root built in beforeAll via fs.mkdtempSync (string literals only — no clock/RNG/timestamp in any asserted
+  content), cleaned in afterAll. The root holds a tests/ subdir with ONE tiny .test.ts whose body has FEWER than
+  MIN_TEST_CASES it()/test() shells, FEWER than MIN_ASSERTIONS expect() calls, and FEWER than MIN_STRONG_ASSERTIONS
+  strong matchers (one it() + one expect(...).toBe(...)), and NONE of the PROTECTED_FILES paths — so all four
+  runStatic codes fire together. Cases: (a) runStatic asserts a PROTECTED_MISSING error for EVERY imported
+  PROTECTED_FILES entry with .where === that path AND set-equality of the where-set with PROTECTED_FILES; (b) exactly
+  one each of TEST_COUNT_FLOOR / ASSERTION_COUNT_FLOOR / STRONG_ASSERTION_FLOOR at severity:error and res.ok===false;
+  (c) runDrift(syntheticRoot, '0000000000000000000000000000000000000000') asserts a GIT_DIFF_FAILED error with .where
+  === that ref. DIFFERENTIAL ANCHOR: runStatic(process.cwd()) raises NONE of the four runStatic codes (non-vacuity).
+  The constants/array are IMPORTED from "../../scripts/verify-integrity.js" and iterated — never hardcoded — so a
+  future re-pin of PROTECTED_FILES or a floor change cannot silently desync the test.
+
+scope_honesty: >
+  This is the rejection-direction WITNESS for guard branches that are already correct today (parity with
+  bug_0182/0218) — NOT a discovered live guard defect and NOT a soundness exploit. scripts/verify-integrity.ts is in
+  PROTECTED_FILES; it was NOT edited (editing it self-trips VERIFIER_TOUCHED). The new file only ADDS
+  it()/expect()/strong matchers, so all three guard counts RISE — it can never lower a floor or weaken a check. NO
+  source byte, NO MIN_*/GEN_EVAL_CHECK_COUNT/SATURATION_FLOOR change, NO matcher relaxed, NO pack hash, NO scorecard
+  byte, NO corpus seal, NO corpus/manifest.json change.
+
+verification: >
+  npx vitest run tests/regression/verifier_static_rejection_corpus.test.ts -> 12 GREEN (PROTECTED_MISSING set-equality;
+  one each of the three floors; res.ok===false; all-four-present; GIT_DIFF_FAILED on the bogus ref; 5-case differential
+  anchor on the healthy repo). Non-vacuity spot-check confirmed (see witness; scratch discarded, repo file
+  byte-identical). npm run health -> GREEN (exit 0), net test count ROSE. npm run verify:integrity -> exit 0, NO
+  VERIFIER_TOUCHED / GUARD_WEAKENED / PROTECTED_DELETED / HASH_PIN / TEST-ASSERTION-STRONG count regression (the new
+  test file is not protected; scripts/verify-integrity.ts byte-unchanged, confirmed by git diff).
+
+files_changed:
+  - tests/regression/verifier_static_rejection_corpus.test.ts (NEW)
+  - traces/bugs/bug_0227_verifier_guard_negative_corpus.yaml (NEW, this file)
+
+regression: >
+  The corpus IS the regression: it fails loudly if any of the guard's pinned rejection branches is ever removed or
+  weakened (a dropped findings.push, an inverted floor comparison, a broken GIT_DIFF_FAILED catch) — the guard would
+  then pass a repo it must reject. The differential anchor doubles as a false-rejection guard — if the guard ever
+  drifts to flag the healthy repo on one of these codes, the anchor fails. No source/script/validator/schema/generator/
+  engine change, no pack YAML, no corpus/manifest.json, no scorecard byte, no scripts/verify-integrity.ts change —
+  purely additive (2 new files).
