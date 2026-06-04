@@ -1,0 +1,82 @@
+bug_id: bug_0253
+component: verification   # a missing rejection-direction branch in validateParser, not a content/pack defect
+# Surfaced by ultraplan re-aim cycle #11: the IMPOSSIBLE/UNOBTAINABLE static-feasibility
+# family in the parser validator covered flags (IMPOSSIBLE_GATE), items
+# (ITEM_REQUIRED_UNOBTAINABLE), and quest-stages (IMPOSSIBLE_QUEST_STAGE, bug_0244), but
+# the two object-state condition kinds — is_open / is_unlocked — were SILENTLY SKIPPED by
+# checkConds. They are the last major condition kind with no rejection-direction witness
+# in the parser feasibility loop. Object-state is a runtime-readable per-object progress
+# boundary (the same kind of local-region progress marker as quest_stage), so sealing its
+# reachability is a direct precondition for lifting intra-pack proofs to world scale.
+class: missing_rejection_direction_branch
+title: >
+  validateParser silently skipped is_open / is_unlocked object-state gates in its
+  static-feasibility loop — a satisfiable-looking gate that NO authored effect and NO
+  built-in OPEN/UNLOCK verb path can ever establish was accepted as feasible.
+findings:
+  - id: parser_impossible_object_state_unwitnessed
+    where: src/validate/parser_validator.ts checkConds (exits / interactions / win_conditions)
+    severity: low   # latent: no shipped pack currently trips it (all object-state gates today are settable)
+    description: >
+      checkConds enumerates flagReqs / itemReqs / questStageReqs in the conservative
+      AND-context (top-level + all_of only) and rejects a gate whose required value no
+      path can ever write. The two object-state predicates — is_open (conditions.ts:
+      objectState[id].open === true) and is_unlocked (objectState[id].locked === false),
+      BOTH default-false since objectState inits to {} — had NO such branch. A reachable
+      exit / interaction / win_condition gating on an is_open object that is never
+      opened, or an is_unlocked object that is never unlocked, was accepted as feasible
+      even though it can never fire. No shipped pack does this today (alchemists_tower is
+      the only object-state pack and all its checkConds-scope gates are settable via the
+      built-in keyed UNLOCK), so the gap was a present-but-untested checker surface: a
+      future authored or generated pack with an unsettable object-state gate would have
+      validated GREEN and shipped a dead gate / soft-lock.
+    fix: >
+      (1) Add the helper objectStateReqs(conds) beside questStageReqs — walk top-level +
+      all_of ONLY (do NOT descend any_of/none_of; a disjunctive branch is escapable, so
+      flagging it would be a false positive), returning tagged atoms
+      {kind:"open"|"unlocked"; id}. (2) Build two SOUND (over-approximating) settable
+      sets alongside the existing settable (flags) / settableQuestStages sets, AFTER
+      obtainable is computed so it can be reused (not recomputed): openableObjects = ids
+      with an open_object effect OR a defined object with openable===true;
+      unlockableObjects = ids with a set_object_locked(locked:false) effect OR a defined
+      object statically locked===true with a defined key_id whose key is in obtainable.
+      (3) Add a feasibility branch in checkConds: for each objectStateReqs atom not in
+      its matching settable set, push err("IMPOSSIBLE_OBJECT_STATE", ...) (one code, two
+      messages distinguishing kind). An undefined id is in neither set, so the same miss
+      carries the object-not-defined case (no objById pre-check). winStaysTrueForever's
+      conservative bail-to-unstable on is_open/is_unlocked is left UNCHANGED (already
+      sound; extending it is a separable forward-hardening deferred to a later cycle).
+soundness_argument: >
+  The CRITICAL subtlety is that settability for object-state has TWO write sources, not
+  one: an authored effect (open_object / set_object_locked) OR the engine's built-in
+  OPEN / UNLOCK verbs (legal_actions.ts). The built-in OPEN verb emits {open_object: id}
+  for any present, unlocked, openable===true object; the built-in UNLOCK verb emits
+  {set_object_locked: {id, locked:false}} for any present, statically-locked object whose
+  key_id matches a HELD key. Collecting only the authored effects would FALSE-POSITIVE on
+  alchemists_tower — whose cellar_door / strongbox are unlocked exclusively via the
+  built-in keyed UNLOCK, never an authored set_object_locked — and turn npm run health
+  RED. The openable===true clause (is_open) and the locked && key_id ∈ obtainable clause
+  (is_unlocked) are therefore LOAD-BEARING and keep the rule sound by over-approximating
+  settability: it admits MORE ids than strictly reachable, so the only thing it ever
+  flags is a GENUINELY unsettable gate — it cannot produce a false positive that would
+  tempt weakening a real pack. NOTE (is_unlocked has no static fallback): the is_unlocked
+  CONDITION reads objectState[id].locked===false directly and does NOT use model.ts's
+  isLocked static fallback, so a statically-UNLOCKED object with no unlock path can never
+  satisfy is_unlocked — settability is genuinely ONLY an explicit
+  set_object_locked(locked:false) effect or a built-in keyed UNLOCK (which requires the
+  object START locked). The check is purely ADDITIVE (a new error code) so it weakens no
+  existing matcher; verify:integrity's count/floor guards remain the bar and stay green.
+  The negative corpus proves the REJECTION direction (mutants MUST be rejected) and a
+  GREEN differential anchor pins that the clean base does NOT emit the new code, so a
+  future regression that guts the branch — or a vacuous always-fire implementation —
+  turns the test RED (the SoundnessBench discipline, arXiv:2412.03154, that
+  bug_0182/0218/0244 use). Non-vacuity teeth (scratch, discarded): adding the matching
+  settability source — flip openable=true, or add an open_object / set_object_locked
+  effect — makes the finding disappear, proving the check keys on the actual settability
+  path, not the mere presence of a gate.
+failure:
+  type: latent_soundness_gap
+  description: >
+    The static-feasibility loop's last major condition kind (object-state) had no
+    rejection-direction witness; an unsettable is_open/is_unlocked gate validated GREEN.
+regression_test: tests/regression/parser_validator_negative_corpus.test.ts

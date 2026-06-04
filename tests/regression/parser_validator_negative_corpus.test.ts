@@ -25,6 +25,9 @@
  *   - DIALOGUE_ROOT_MISSING    — an npc's dialogue root node does not exist
  *   - DIALOGUE_GOTO_MISSING    — a dialogue topic goes to a missing node
  *   - ENDING_UNDECLARED        — a win_condition ends in an undeclared ending
+ *   - IMPOSSIBLE_QUEST_STAGE   — a quest_stage gate no set_quest_stage effect writes
+ *   - IMPOSSIBLE_OBJECT_STATE  — an is_open/is_unlocked gate no effect or built-in
+ *                                OPEN/UNLOCK verb path can ever establish (bug_0253)
  *
  * NOTE on coverage (honest, not inflated). The remaining `validateParser` `error`
  * codes already carry a rejection-direction witness in `tests/unit/parser_validator.ts`
@@ -175,6 +178,37 @@ const CASES: NegativeCase[] = [
       const wc = p.win_conditions[0];
       if (!wc) throw new Error("base pack has no win_condition to mutate");
       wc.conditions.push({ quest_stage: { quest: "phantom_quest", stage: "phantom_stage" } });
+    },
+  },
+  {
+    // bug_0253: the IMPOSSIBLE_GATE reachability family silently skipped the
+    // `is_open` object-state condition kind. The `hazard` is a NON-openable object
+    // (openable falsy in gen(0)) and gen(0) writes no `open_object: hazard` effect, so
+    // it is in neither the authored-effect nor the built-in-OPEN settable set — an
+    // `is_open: hazard` gate can never become true ⇒ IMPOSSIBLE_OBJECT_STATE.
+    code: "IMPOSSIBLE_OBJECT_STATE",
+    why: "a win condition requires is_open on a non-openable object no open_object effect ever opens",
+    mutate: (p) => {
+      const hazard = objById(p, "hazard");
+      hazard.openable = false; // explicit: never openable by the built-in OPEN verb
+      const wc = p.win_conditions[0];
+      if (!wc) throw new Error("base pack has no win_condition to mutate");
+      wc.conditions.push({ is_open: "hazard" });
+    },
+  },
+  {
+    // bug_0253: the `is_unlocked` arm of the same gap. `phantom_vault` is an undefined
+    // object id (in neither the authored set_object_locked(locked:false) set nor the
+    // built-in keyed-UNLOCK set, which requires a defined statically-locked object with
+    // an obtainable key) ⇒ an `is_unlocked: phantom_vault` gate can never become true
+    // ⇒ IMPOSSIBLE_OBJECT_STATE. The undefined-id case is carried by the same
+    // settable-set miss (no objById pre-check), confirming that arm too.
+    code: "IMPOSSIBLE_OBJECT_STATE",
+    why: "a win condition requires is_unlocked on an object with no effect or keyed-unlock path",
+    mutate: (p) => {
+      const wc = p.win_conditions[0];
+      if (!wc) throw new Error("base pack has no win_condition to mutate");
+      wc.conditions.push({ is_unlocked: "phantom_vault" });
     },
   },
 ];

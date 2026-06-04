@@ -325,6 +325,39 @@ export function validateParser(
     if ("set_quest_stage" in e) settableQuestStages.add(questStageKey(e.set_quest_stage));
   }
 
+  // ── Settable object-state (is_open / is_unlocked) ────────────────────────────
+  // objectState inits to {} (state.ts) and both predicates DEFAULT FALSE
+  // (conditions.ts: is_open ⇒ objectState[id].open===true, is_unlocked ⇒
+  // objectState[id].locked===false). So a satisfiable gate needs a path that WRITES
+  // the matching flip. CRITICAL: there are TWO write sources for each — an authored
+  // effect, OR the engine's built-in OPEN/UNLOCK verbs (legal_actions.ts) — and the
+  // built-in path is why every shipped object-state pack stays green. We
+  // over-approximate settability (deliberately admit more ids) so the only thing we
+  // flag is a GENUINELY unsettable gate; that keeps the rule sound (no false positive).
+  //
+  //   openableObjects: an `open_object: id` effect, OR a defined object with
+  //     openable===true (the built-in OPEN verb emits `{ open_object: id }` for any
+  //     present, unlocked, openable object — legal_actions.ts).
+  //   unlockableObjects: a `set_object_locked: { id, locked:false }` effect, OR a
+  //     defined object that statically locked===true with a defined key_id whose key
+  //     is obtainable (the built-in UNLOCK verb emits `{ set_object_locked: {id,
+  //     locked:false} }` and requires the player hold the matching key —
+  //     legal_actions.ts). NOTE: a STATICALLY-unlocked object is NOT unlock-settable —
+  //     is_unlocked reads objectState[id].locked===false directly (no static fallback),
+  //     so only an explicit relock-then-unlock effect or a keyed UNLOCK can make it true.
+  const openableObjects = new Set<string>();
+  const unlockableObjects = new Set<string>();
+  for (const e of allEffects(pack)) {
+    if ("open_object" in e) openableObjects.add(e.open_object);
+    if ("set_object_locked" in e && e.set_object_locked.locked === false)
+      unlockableObjects.add(e.set_object_locked.id);
+  }
+  for (const o of pack.objects) {
+    if (o.openable === true) openableObjects.add(o.id);
+    if (o.locked === true && o.key_id !== undefined && obtainable.has(o.key_id))
+      unlockableObjects.add(o.id);
+  }
+
   // ── Feasibility of every gate (locked exits, interactions, win conditions) ───
   const checkConds = (conds: Condition[], where: string[]): void => {
     for (const f of flagReqs(conds)) {
@@ -354,6 +387,29 @@ export function validateParser(
           ),
         );
       }
+    }
+    // An object-state gate (is_open/is_unlocked) whose id is in neither
+    // over-approximating settable set can NEVER become true: no authored effect and
+    // no built-in OPEN/UNLOCK verb path establishes it. (An undefined id is in neither
+    // set, so the same miss carries the "object not defined" case — no objById
+    // pre-check needed.)
+    for (const os of objectStateReqs(conds)) {
+      if (os.kind === "open" && !openableObjects.has(os.id))
+        findings.push(
+          err(
+            "IMPOSSIBLE_OBJECT_STATE",
+            `condition requires object "${os.id}" to be open, but no effect or openable verb can ever open it.`,
+            where,
+          ),
+        );
+      else if (os.kind === "unlocked" && !unlockableObjects.has(os.id))
+        findings.push(
+          err(
+            "IMPOSSIBLE_OBJECT_STATE",
+            `condition requires object "${os.id}" to be unlocked, but no effect or keyed unlock can ever unlock it.`,
+            where,
+          ),
+        );
     }
   };
   for (const room of pack.rooms) {
@@ -1270,6 +1326,21 @@ function questStageReqs(conds: Condition[]): string[] {
   const out: string[] = [];
   const walk = (c: Condition): void => {
     if ("quest_stage" in c) out.push(questStageKey(c.quest_stage));
+    else if ("all_of" in c) c.all_of.forEach(walk);
+  };
+  conds.forEach(walk);
+  return out;
+}
+
+// Required object-state atoms in AND-context — top-level + all_of only, mirroring
+// flagReqs/itemReqs/questStageReqs. any_of/none_of are NOT descended (conservative:
+// guarantees zero false positives). Distinguishes the two predicate kinds so the
+// feasibility branch can route each to its own (over-approximating) settable set.
+function objectStateReqs(conds: Condition[]): { kind: "open" | "unlocked"; id: string }[] {
+  const out: { kind: "open" | "unlocked"; id: string }[] = [];
+  const walk = (c: Condition): void => {
+    if ("is_open" in c) out.push({ kind: "open", id: c.is_open });
+    else if ("is_unlocked" in c) out.push({ kind: "unlocked", id: c.is_unlocked });
     else if ("all_of" in c) c.all_of.forEach(walk);
   };
   conds.forEach(walk);
