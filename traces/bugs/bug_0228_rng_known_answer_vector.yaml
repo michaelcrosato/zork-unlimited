@@ -1,0 +1,80 @@
+id: bug_0228
+title: "Absolute known-answer vector (KAT) for the engine RNG — pin the actual mulberry32/rngForStep byte-stream, not just its relative properties (the determinism-keystone leg of the bug_0182/0218/0227 negative-corpus discipline)"
+kind: verification_oracle
+mode: meta/tooling
+severity: enhancement
+layer: verification/determinism-keystone
+artifact:
+  source:
+    - src/core/rng.ts
+  test:
+    - tests/regression/rng_known_answer_vector.test.ts
+
+summary: >
+  The engine's only RNG (src/core/rng.ts: mulberry32 + rngForStep, spec §4.1/§8.5) is the determinism keystone the
+  entire benchmark's reproducibility rests on — "identical seed ⇒ identical state hashes" (re-confirmed live by every
+  blind playtest), every pinned trace expected_final_hash, every best/worst-roll reachability bracket, every scorecard
+  row, and every save-replay hash are all computed THROUGH its stream. Yet the only existing RNG coverage
+  (tests/unit/hash_rng.test.ts) asserts nothing but RELATIVE properties: same seed ⇒ same stream, different seeds ⇒
+  different streams, rngForStep reproducible per (seed,step), int() in range. ALL FOUR survive a wholesale swap of
+  mulberry32 for a different PRNG, or a silent change to a mixing constant / shift amount / the int() floor-range
+  mapping. This cycle adds the missing ABSOLUTE known-answer vector — the determinism-keystone leg of the same
+  SoundnessBench negative-corpus discipline bug_0182/0218 brought to the content validators and bug_0227 to the
+  meta-verifier guard.
+
+root_cause: >
+  Not a defect in the RNG and NOT a discovered live bug — a verification-DEPTH asymmetry. mulberry32/rngForStep are
+  correct and deterministic today; the gap is that the only thing pinned was self-consistency, never the actual
+  numeric output. A future regression that changed the stream while preserving self-consistency (a refactor to a
+  different PRNG, a typo'd mixing constant such as 0x6d2b79f5 / 0x9e3779b1 / 0x85ebca6b, an off-by-one in int()'s
+  range, a floor→round swap) would keep every existing RNG test GREEN while silently invalidating EVERY pinned trace
+  hash and the benchmark's reproducibility guarantee at once — surfacing only as a confusing cascade of trace-replay
+  failures with no single attributable cause. Triggered by the deterministic content assessor running SATURATED (all
+  15 packs blind-clean; ranked list fifteen 0.5-floor blind-playtest stubs), so the lever rotated to a verified-OPEN
+  structural asymmetry — the "rng absolute known-answer vector" named explicitly in bug_0227's next-focus (4).
+
+witness: >
+  THE TEETH, verified out of band (non-vacuity): with the test passing 6/6 against the real module, a one-character
+  perturbation of a single mixing constant in src/core/rng.ts (0x6d2b79f5 -> 0x6d2b79f6) turned 5 of the 6 tests RED
+  (every float/int/per-step vector; only the distinctness guard survived, by chance). Restoring the file from git
+  (git checkout -- src/core/rng.ts; git diff empty) returned the suite to 6/6 GREEN. So each pinned vector is a
+  genuine, attributable witness of the exact stream — a change to the PRNG itself fails HERE, at the root, not as a
+  downstream trace-replay cascade.
+
+fix: >
+  ONE new regression file, tests/regression/rng_known_answer_vector.test.ts, importing the REAL mulberry32/rngForStep
+  from src/core/rng.js (never a reimplementation) and asserting FROZEN golden vectors generated from this exact
+  implementation: mulberry32(0) and mulberry32(42) first-5 float streams; mulberry32(7).int(1,6) x10 = [1,1,6,5,4,3,3,2,4,5]
+  (pinning the int() floor-range mapping the combat/skill-check die-roll layer uses, plus a first-principles [1,6]
+  bound); rngForStep(123,456) and rngForStep(7,3) first-3 per-step streams (pinning the (seed,step) mix on a
+  non-degenerate pair, the engine's actual per-step entry point); and a distinctness guard (the four leading draws form
+  a 4-element Set) so a careless re-pin cannot collapse the vectors into a vacuously co-satisfiable copy. The vectors
+  are deterministic IEEE-754 doubles (Math.imul integer ops then an exact divide by 2^32), reproducible bit-for-bit on
+  every conforming JS engine, so toEqual equality is correct and portable, not platform-brittle.
+
+scope_honesty: >
+  This is the absolute-output WITNESS for an RNG that is already correct today (parity with bug_0182/0218/0227) — NOT a
+  discovered live defect and NOT a soundness exploit. Pure test addition: NO change to src/core/rng.ts or any other
+  source byte, NO engine/validator/schema/generator change, NO pack YAML, NO trace hash re-pin, NO scorecard byte, NO
+  corpus/manifest change. The golden vectors were generated FROM the live implementation and verified against the real
+  module (both the byte-identical reimpl and a direct tsx import of src/core/rng.ts agreed) before freezing.
+
+verification: >
+  npx vitest run tests/regression/rng_known_answer_vector.test.ts -> 6 GREEN (two float-stream vectors, the int d6
+  vector + bound, two per-step vectors, the distinctness guard). Non-vacuity confirmed (see witness; src/core/rng.ts
+  restored byte-identical, git diff empty). npm run health -> GREEN (exit 0), net test count ROSE by exactly the 6 new
+  cases. npm run verify:integrity -> exit 0, NO VERIFIER_TOUCHED / GUARD_WEAKENED / HASH_PIN / assertion-count
+  regression (the new file is not protected; src/core/rng.ts byte-unchanged).
+
+files_changed:
+  - tests/regression/rng_known_answer_vector.test.ts (NEW)
+  - traces/bugs/bug_0228_rng_known_answer_vector.yaml (NEW, this file)
+
+regression: >
+  The KAT IS the regression: it fails loudly if the RNG's actual output stream ever drifts (a different PRNG, a
+  changed mixing constant or shift, a broken int() range/floor mapping) — exactly the change that would silently
+  invalidate every pinned trace hash and the benchmark reproducibility guarantee while every relative RNG test stayed
+  green. On a deliberate re-pin (an intentional RNG change), the operator must re-derive these vectors AND re-pin every
+  dependent trace expected_final_hash — never relax the assertion to pass. No source/script/validator/schema/generator/
+  engine change, no pack YAML, no scorecard byte, no corpus/manifest, no src/core/rng.ts change — purely additive (2
+  new files).
