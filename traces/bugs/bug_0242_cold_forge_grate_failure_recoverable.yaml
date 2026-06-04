@@ -1,0 +1,62 @@
+bug_id: bug_0242
+pack_id: cold_forge_v1
+seed: 17                          # this cycle's mandated blind-playtest seed
+type: verification_oracle         # test-only: locks a recoverability invariant; NO content/engine/validator change
+evidence:
+  source: blind_playtest
+  protocol: docs/blind_playtest_protocol.md
+  mandated_report: ai-runs/2026-06-04T17-10-26-555Z/playtest.md   # cold_forge (mandated target) — clean WIN+DEATH
+  mandated_result: >
+    The mandated blind pass rotated onto cold_forge (RPG, the least-recently-played pack and the
+    assessor's rank-1 nominee). A fresh general-purpose subagent, NO design context, MCP-tools-only,
+    ran TWO playthroughs: a prepared WIN (ask spirit +2 atk → don plate +2 def → kill sentinel →
+    lever grate → Ember-Heart) reaching ending_victory 50/50, and an under-armed DEATH reaching
+    ending_fallen. Clarity 5/5, enjoyment 4/5, ZERO bugs, no rejected actions / loops / stale text;
+    combat math fully legible, both endings correct.
+  finding: >
+    Report §5, the one concrete actionable note: "The grate DC-12 might check (d20+3) succeeds only
+    on a roll of 9+. On a fail, I don't know if the game offers a retry or soft-locks the run — I
+    never saw a failure because seed 17 rolled a 9. Worth confirming the fail branch is recoverable."
+    The recoverability is REAL (the lever is gated only none_of [grate_open], so a failed check —
+    which sets nothing — leaves the action legal and signposts "Set your feet and try again"), but it
+    was UNPINNED, and the two existing structural proofs both miss the regression that would break it.
+root_cause: >
+  No oracle pinned the FAILURE branch of the grate skill-check. rpg_skillcheck_retires.test.ts proves
+  the lever retires AFTER SUCCESS (so it can't re-roll a contradiction once open) but says nothing
+  about failure. rpg_all_endings_reachable.test.ts unions a best- AND worst-roll regime from EACH
+  state, so it reaches grate_open via the best regime's lucky FIRST roll — it would still reach
+  ending_victory even if a failed check wrongly retired the lever, so it cannot catch a
+  retire-on-failure soft-lock. A future edit that gated the lever on (or whose on_failure set)
+  grate_open / any one-shot flag would hard soft-lock any player who failed the first heave — and
+  stay GREEN under both existing proofs. Confirmed: injecting `on_failure: set_quest_stage grate_open`
+  turns 4 of the 5 new cases RED (the pre-attempt case correctly stays green); restored byte-identical.
+improvement:
+  layer: test
+  test:
+    - tests/regression/cold_forge_grate_failure_recoverable.test.ts: >
+        New regression. Drives the buildRpgRules(index, rngFor) seam (default = real step-keyed PRNG,
+        so production is byte-identical) to manufacture a concrete fail-then-succeed d20 sequence
+        (roll 1 = 4 < 12 fail; roll 20 = 23 ≥ 12 success — both legal faces) while forcing player-best
+        combat rolls so the base-stat fight wins and the grate stays the isolated concern. Asserts
+        (a) the lever is legal pre-attempt; (b) a failed heave narrates an honest "…vs 12 — failure"
+        with the "try again" retry signpost and writes NO quest-stage/score effect; (c) CRUCIAL — the
+        lever is STILL legal after the failure (no soft-lock); (d) a retry succeeds, awards +15, and
+        only then retires (bug_0015 still holds); (e) the win is reachable THROUGH a failure → down →
+        ending_victory 50/50.
+verification:
+  - npx vitest run tests/regression/cold_forge_grate_failure_recoverable.test.ts   # 5/5 green
+  - teeth: inject on_failure→set_quest_stage grate_open ⇒ 4/5 RED; file restored (git diff empty)
+  - npm run health                                                                  # exit 0
+locked_by:
+  - tests/regression/cold_forge_grate_failure_recoverable.test.ts
+notes:
+  no_content_change: >
+    content/rpg/pack/cold_forge.yaml is UNTOUCHED — this cycle adds an oracle, not a pack edit. No
+    content hash moves, no validator re-pin, no protected source touched, no override used. The blind
+    pass confirmed the pack is clean (5/5 clarity, both endings, zero bugs), so the cycle's lever went
+    to closing the verified-OPEN soundness gap the pass surfaced (recoverability of a failed
+    skill-check) rather than churning a clean pack.
+  scope: >
+    The test is cold_forge-specific (the grate is the pack's lone skill-check), but the invariant it
+    guards — a non-retiring skill-check stays recoverable on failure — generalizes; any future RPG
+    pack with a retry-on-failure check should carry the analogous pin.
