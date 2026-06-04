@@ -468,6 +468,19 @@ export function validateParser(
       !t.conditions || t.conditions.length === 0;
     const gotoEdges = new Map<string, Set<string>>();
     for (const node of npc.dialogue.nodes) {
+      // Dead reactive content on a node's spoken-line `variants` — the dialogue
+      // analogue of the room/object variant guards below (a later variant entailed
+      // by an earlier sibling never displays; an internally contradictory `when`
+      // can never hold). Same first-match-wins semantics (model.ts nodeText), held
+      // to the same soundness bar so a silently-dead NPC line can't slip past.
+      checkVariantShadowing(node.variants, `npc:${npc.id}:node:${node.id}`, findings);
+      for (let i = 0; i < (node.variants?.length ?? 0); i++)
+        checkUnsatisfiable(
+          node.variants?.[i]?.when,
+          [`npc:${npc.id}`, `node:${node.id}`, `variant:${i}`],
+          `npc "${npc.id}" node "${node.id}" variant #${i + 1}`,
+          findings,
+        );
       const outs = new Set<string>();
       for (const t of node.topics) {
         if (t.goto !== undefined) {
@@ -1289,6 +1302,9 @@ function collectFlagReads(pack: ParserPack): Set<string> {
   }
   for (const wc of pack.win_conditions) walkAll(wc.conditions);
   for (const npc of pack.npcs)
-    for (const node of npc.dialogue.nodes) for (const t of node.topics) walkAll(t.conditions);
+    for (const node of npc.dialogue.nodes) {
+      for (const v of node.variants ?? []) walkAll(v.when); // reactive NPC-line guards (bug_0246)
+      for (const t of node.topics) walkAll(t.conditions);
+    }
   return reads;
 }

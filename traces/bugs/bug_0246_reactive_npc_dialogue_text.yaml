@@ -1,0 +1,70 @@
+id: bug_0246
+title: "Engine DEPTH + content: reactive NPC dialogue text. DialogueNode now carries the same optional `variants` (first-match-wins `when` → `text`) that rooms and objects already have, so an NPC line can react to state it/the player changed instead of replaying one fixed line. Motivated by a blind-pass finding — Breaking-Weir's Pell re-delivered his whole first-meeting emergency every time the player returned to his topic menu (read 'robotic'). His root node now greets you fully on first contact and tersely on return."
+kind: engine
+mode: rpg
+pack: content/rpg/pack/breaking_weir.yaml
+# Engine/schema feature (not a pure content_fix). The change is reusable across all 17 packs'
+# NPCs; the Breaking-Weir Pell edit is the first consumer. breaking_weir carries NO pinned
+# content hash (only watchtower_road is pinned), so adding the node `variants` re-pins nothing.
+# A pack that declares no node variants compiles byte-identically (the field is `.optional()`,
+# not `.default([])`) so every other pack's content hash is unchanged.
+
+summary: >
+  The mandated blind pass this cycle (The Breaking Weir, rpg, seed 11 —
+  ai-runs/2026-06-04T18-48-55-835Z/playtest.md) returned clarity 5/5, enjoyment 4/5, mechanics
+  flawless: a WON 50/50 run and a 45/50 rash run, both reaching ending_held with zero rejected
+  actions, zero loops, zero broken state, NO true bug. Its one concrete friction finding (§4):
+  old Pell re-delivered his whole first-meeting emergency opening ("Thank God someone came… You'll
+  have to be the keeper tonight, lad…") EVERY time the player returned to his topic menu after
+  asking a question — "reads slightly robotic." The dialogue tree could only ever speak ONE fixed
+  `npc_text` per node, even though rooms and objects had had reactive `variants` for many cycles.
+
+root_cause: >
+  A structural gap, not a defect: DialogueNodeSchema held a single immutable `npc_text`, while
+  RoomSchema and ObjectSchema both carried optional reactive `variants` (the §7.3 reactive-text
+  convention, model.ts roomDescription / objectDescription). So an NPC could not narrate state it
+  or the player had changed — a keeper mid-emergency had to re-introduce the whole situation on
+  every return to his menu. The dialogue layer was the one member of the reactive-text family that
+  was missing.
+
+fix: >
+  Bring the reactive-`variants` pattern to dialogue nodes — a contained, reusable engine/schema
+  feature mirroring the room/object precedent exactly:
+    • SCHEMA (src/parser/schema.ts): new DialogueNodeVariantSchema ({ when: Condition[], text }),
+      added as optional `variants` on DialogueNodeSchema. `.optional()` so every pack without it
+      compiles byte-identically and keeps its content hash. Type DialogueNodeVariant exported.
+    • ENGINE (src/parser/model.ts): new `nodeText(node, state)` — first variant whose `when` holds,
+      else `npc_text` — the dialogue analogue of roomDescription/objectDescription. Used at the two
+      NPC-line render sites in legal_actions.ts (TALK root, ASK goto) and in the observation builder
+      (observation.ts dialogue.npc_text), so narration and the structured observation agree.
+    • VALIDATOR (src/validate/parser_validator.ts): the dead-reactive-content guards rooms/objects
+      get — UNREACHABLE_VARIANT (a later variant a sibling always pre-empts) and
+      UNSATISFIABLE_CONDITION (a `when` that pins a flag both true and false) — now also run on each
+      dialogue node's variants, holding the new field to the SAME soundness bar (no silently-dead
+      NPC line). Only the spoken TEXT varies; topics/effects (hence dialogue termination &
+      reachability, DIALOGUE_NONTERMINATING) are untouched.
+    • METAMORPHIC ORACLE (tests/regression/support/relabel_parser.ts): relabelNode now relabels
+      node `variants` (their `when` flags through the id bijection; `text` is prose, byte-identical),
+      so the contamination-robustness twin's census stays isomorphic.
+    • CONTENT (breaking_weir.yaml): Pell's pell_root node gets two variants — when heard_walk OR
+      heard_plan — both speaking a terse "Aye — what else, lad? Be quick…" return greeting. Either
+      topic asked first makes the return terse; first contact (no flag) still gets the full opening.
+  No route, gate, score, ending, or discovered-pack change: every ending stays reachable, max_score
+  stays 50, the skill-check chain is untouched. The benchmark bot never reads npc_text, so no
+  scorecard regen and no pinned hash is touched.
+
+regression_test: tests/regression/dialogue_reactive_npc_text.test.ts
+# Locks the engine surface AND the real pack: (1) driving the actual TALK/ASK engine path on the
+# real Breaking-Weir Pell, first contact speaks the full emergency and the return-to-menu speaks
+# the terse variant (for BOTH topic-first orders), and the observation's dialogue.npc_text agrees;
+# (2) the validator flags a SHADOWED and an UNSATISFIABLE dialogue variant (cloning the real pack
+# and rewriting Pell's root variants), and the unmodified pack validates error-free. The
+# rpg_metamorphic_relabel suite now also auto-exercises the new relabel path (breaking_weir carries
+# a node with variants whose when-flags must relabel for the twin census to match).
+
+verify:
+  - "npx tsc --noEmit → clean"
+  - "validate content/rpg/pack/breaking_weir.yaml → OK, 0 error(s), 0 warning(s), max_score 50"
+  - "npx vitest run tests/regression/dialogue_reactive_npc_text.test.ts → 6 passed"
+  - "npx vitest run rpg_metamorphic_relabel + breaking_weir_{blind_polish,skill_chain,gamble_legible} → 22 passed"
+  - "npm run health → green (verify:integrity + typecheck + lint + format + tests + validate + playtest)"

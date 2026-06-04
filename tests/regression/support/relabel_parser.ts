@@ -72,6 +72,7 @@ import type {
   SkillCheck,
   Npc,
   DialogueNode,
+  DialogueNodeVariant,
   DialogueTopic,
   WinCondition,
   ParserEnding,
@@ -304,6 +305,14 @@ function relabelTopic(
   };
 }
 
+function relabelNodeVariant(
+  v: DialogueNodeVariant,
+  r: (id: string) => string,
+  rv: (n: string) => string,
+): DialogueNodeVariant {
+  return { when: v.when.map((c) => relabelCondition(c, r, rv)), text: v.text }; // text is prose
+}
+
 function relabelNode(
   node: DialogueNode,
   r: (id: string) => string,
@@ -312,6 +321,8 @@ function relabelNode(
   return {
     id: r(node.id),
     npc_text: node.npc_text, // prose
+    // Preserve absent-vs-present so an unused field stays absent (schema/hash parity).
+    ...(node.variants ? { variants: node.variants.map((v) => relabelNodeVariant(v, r, rv)) } : {}),
     effects: node.effects.map((e) => relabelEffect(e, r, rv)),
     topics: node.topics.map((t) => relabelTopic(t, r, rv)),
   };

@@ -401,6 +401,23 @@ npcs:
             going to top before dawn and drown the whole valley if she's let. You'll have to be
             the keeper tonight, lad. Ask me what you need — I know this weir better than I know my
             own hands, and I'll tell you all of it, but be quick.
+          # Reactive greeting (the bug_0246 dialogue-variant feature, the §7.3 reactive-text
+          # convention brought to NPC lines): once Pell has told you ANYTHING — the walk
+          # (heard_walk) or the plan (heard_plan) — coming back to his menu no longer replays
+          # the whole "Thank God someone came" emergency, which read robotic to a blind
+          # playtester on a return loop. He just asks what else you need. Two variants (one per
+          # flag) so EITHER topic first makes the return terse; first-match-wins, both the same
+          # spoken line. Only the text changes — the topics (hence dialogue termination) are
+          # untouched, and a fresh first contact still gets the full opening.
+          variants:
+            - when: [{ has_flag: heard_walk }]
+              text: >
+                Aye — what else, lad? Be quick about it; the river's climbing while we talk, and
+                there's no part of this weir I'll not tell you of.
+            - when: [{ has_flag: heard_plan }]
+              text: >
+                Aye — what else, lad? Be quick about it; the river's climbing while we talk, and
+                there's no part of this weir I'll not tell you of.
           topics:
             - id: ask_walk
               prompt: "Ask how a man crosses the storm-walk and lives."

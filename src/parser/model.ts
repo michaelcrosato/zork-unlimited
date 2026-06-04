@@ -106,6 +106,21 @@ export function objectName(object: GameObject, state: GameState): string {
   return object.name;
 }
 
+/** The NPC node's effective spoken line in the current state: the first reactive
+ *  `variant` whose `when` conditions all hold (declared order), else the base
+ *  `npc_text`. The dialogue analogue of `roomDescription` / `objectDescription` —
+ *  lets an NPC react to state it (or the player) changed, e.g. greet you with the
+ *  whole emergency on first contact but a terse line when you come back to the menu,
+ *  instead of re-delivering the opening every return. Pure; same (node, state) ⇒ same
+ *  text, so the TALK/ASK narration and the observation's `dialogue.npc_text` read
+ *  identically. */
+export function nodeText(node: DialogueNode, state: GameState): string {
+  for (const v of node.variants ?? []) {
+    if (evalConditions(v.when, state)) return v.text;
+  }
+  return node.npc_text;
+}
+
 /** Is the container `id` locked? Falls back to the pack's static `locked` flag. */
 export function isLocked(index: ParserIndex, state: GameState, id: string): boolean {
   const rt = state.objectState[id]?.locked;

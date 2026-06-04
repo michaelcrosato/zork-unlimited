@@ -346,10 +346,32 @@ export const DialogueTopicSchema = z
   })
   .strict();
 
+/** A state-conditional NPC line (§7.3 reactive text, the dialogue analogue of
+ *  RoomVariantSchema / ObjectVariantSchema). When all of `when` hold, this `text`
+ *  replaces the node's base `npc_text` when the node is spoken, so an NPC can react
+ *  to state it (or the player) changed — a keeper who greets you with the whole
+ *  emergency the FIRST time but a terse "what else, lad?" when you come back to the
+ *  menu, instead of re-delivering his opening every return. First-match-wins in
+ *  declared order. Only the spoken TEXT varies; the node's `effects` and `topics`
+ *  (hence dialogue termination/reachability) are unchanged, so this is purely a
+ *  prose layer over the same tree. `.optional()` (not `.default([])`) so a node
+ *  without it compiles byte-identically ⇒ every pack that doesn't use it keeps its
+ *  content hash (mirrors RoomSchema.variants / ObjectSchema.variants / skill_check). */
+export const DialogueNodeVariantSchema = z
+  .object({
+    when: z.array(ConditionSchema).min(1),
+    text: z.string().min(1),
+  })
+  .strict();
+
 export const DialogueNodeSchema = z
   .object({
     id: z.string().min(1),
     npc_text: z.string().min(1),
+    // Optional reactive spoken lines; the first whose `when` holds replaces
+    // `npc_text` when this node is spoken, else `npc_text`. See
+    // DialogueNodeVariantSchema for the backward-compat / hash rationale.
+    variants: z.array(DialogueNodeVariantSchema).optional(),
     effects: z.array(EffectSchema).default([]),
     topics: z.array(DialogueTopicSchema).default([]),
   })
@@ -425,6 +447,7 @@ export type SkillCheck = z.infer<typeof SkillCheckSchema>;
 export type Interaction = z.infer<typeof InteractionSchema>;
 export type GameObject = z.infer<typeof ObjectSchema>;
 export type DialogueTopic = z.infer<typeof DialogueTopicSchema>;
+export type DialogueNodeVariant = z.infer<typeof DialogueNodeVariantSchema>;
 export type DialogueNode = z.infer<typeof DialogueNodeSchema>;
 export type Npc = z.infer<typeof NpcSchema>;
 export type WinCondition = z.infer<typeof WinConditionSchema>;

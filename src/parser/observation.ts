@@ -30,6 +30,7 @@ import { evalConditions } from "../core/conditions.js";
 import {
   type ParserIndex,
   activeDialogue,
+  nodeText,
   objectName,
   roomDescription,
   visibleObjectIds,
@@ -141,7 +142,7 @@ export function buildParserObservation(
       vars: visible(state.vars, () => true),
       journal: [...state.journal],
     },
-    dialogue: active ? { npc: active.npc.id, npc_text: active.node.npc_text } : null,
+    dialogue: active ? { npc: active.npc.id, npc_text: nodeText(active.node, state) } : null,
     available_actions: enumerateActions(index, state).map((o) => ({
       id: o.id,
       command: o.command,

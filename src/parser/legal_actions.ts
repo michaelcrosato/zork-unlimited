@@ -20,6 +20,7 @@ import {
   isLocked,
   isOpen,
   nodeOrdinal,
+  nodeText,
   objectDescription,
   objectName,
   roomDescription,
@@ -186,7 +187,7 @@ export function resolveParserAction(
         effects: [
           { set_var: { name: dlgVar(npc.id), value: ord } },
           ...root.effects,
-          { narrate: `${npc.name}: "${root.npc_text}"` },
+          { narrate: `${npc.name}: "${nodeText(root, state)}"` },
         ],
       };
     }
@@ -215,7 +216,7 @@ export function resolveParserAction(
         effects: [
           { set_var: { name: dlgVar(active.npc.id), value: targetOrd } },
           ...target.effects,
-          { narrate: `${active.npc.name}: "${target.npc_text}"` },
+          { narrate: `${active.npc.name}: "${nodeText(target, state)}"` },
         ],
       };
     }
