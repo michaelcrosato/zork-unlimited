@@ -57,6 +57,17 @@ scenes:
     choices:
       - id: go_in
         text: "Go in after the sound."
+        # First milestone of the night's watch (quest "the_barn", the lamplighters_round /
+        # tide_mill progress-tracking shape — bug_0162 in CYOA). Going in BEGINS the watch in
+        # earnest: set HERE, on the go-in CHOICE (not on any on_enter), so it fires exactly once
+        # as the player commits and never re-sets. set_quest_stage TRACKS PROGRESS ONLY — it
+        # gates no choice, next, ending, or flag, and changes no existing effect. The reactive
+        # prose that reads this EARLY stage lives in granary_floor below (the hub this choice
+        # opens onto), which has no on_enter to reset it; reading the book later advances the
+        # quest to `truth_read`, superseding `watch_begun`, so that variant is a transient window
+        # and the existing knows_truth prose is untouched (the tide_mill `begun` pattern).
+        effects:
+          - set_quest_stage: { quest: the_barn, stage: watch_begun }
         next: granary_floor
 
   - id: granary_floor
@@ -70,9 +81,26 @@ scenes:
       has set on them. On the steward's table by the door his account-book lies open where
       he left it. And against the wall a ladder climbs to a loft of older stores, its rungs
       grey and soft with rot.
-    # Once the book is read, the barn reads differently — you stand in a storehouse you know
-    # the lie of (reactive prose, first-match-wins). No flag/route change.
+    # Two reactive layers on the same hub, first-match-wins, and TEMPORALLY MUTUALLY EXCLUSIVE
+    # so neither suppresses the other. (1) Quest "the_barn" at `watch_begun`: the window after
+    # you have gone in but before you have read the book — set on the go-in choice (above), read
+    # HERE, and this hub has no on_enter to reset it, so it shows on the very first look inside
+    # the barn (provably reachable as displayed text — bug_0145/0146). Reading the book advances
+    # the quest to `truth_read`, which clobbers `watch_begun`, so the `when` below goes false the
+    # instant the next layer becomes true. (2) Once the book is read (knows_truth), the barn reads
+    # differently — you stand in a storehouse you know the lie of. The stage moves past
+    # `watch_begun` exactly when knows_truth fires, so the two never compete. No flag/route change;
+    # quest_stage gates nothing.
     variants:
+      - when: [{ quest_stage: { quest: the_barn, stage: watch_begun } }]
+        text: >
+          Moonlight falls in bars onto the mountains of sacked grain, and you are in it now —
+          past the door, the only door, with the thief frozen against the far sacks and the
+          half-filled sack at their feet. They do not run. They wait to see what kind of man the
+          lord has set on them, and the law the steward read you sits in your head like a stone:
+          a thief at the grain is a hanging matter, and the silver goes to the man who brings one
+          in. On the table by the door the steward's account-book lies open where he left it. The
+          loft-ladder climbs grey and soft with rot into the dark. Whatever you do here, you do.
       - when: [{ has_flag: knows_truth }]
         text: >
           Moonlight falls in bars onto the mountains of sacked grain, and you cannot look at
@@ -122,6 +150,12 @@ scenes:
         conditions: [{ not_flag: knows_truth }]
         effects:
           - set_flag: knows_truth
+          # Second milestone of quest "the_barn", set in lockstep with the truth-flag it mirrors:
+          # reading the book to the foot of the page is the moment the watch turns on its head.
+          # `truth_read` supersedes `watch_begun`, retiring the granary_floor `watch_begun` variant
+          # exactly as knows_truth lights its own variant there (so the two hub layers never clash).
+          # TRACKS PROGRESS ONLY — gates nothing; all gating stays on knows_truth, unchanged.
+          - set_quest_stage: { quest: the_barn, stage: truth_read }
           - add_journal: >
               The steward's own book damns him. The barn has stood full since autumn — fuller:
               three carts of grain were turned away to rot in the low field rather than sell
@@ -156,9 +190,21 @@ scenes:
     choices:
       - id: take_her
         text: "Seize her and call the lord's men for the bounty."
+        # Final milestone of quest "the_barn": committing to a stance at the fork. Each of the
+        # three deliberate stances (and only those — `back_to_floor` keeps you turning it over)
+        # advances the quest to `stance_taken` as you step into the ending. set_quest_stage is a
+        # pure progress marker added ALONGSIDE the existing `next` — it gates nothing, adds no
+        # condition, and changes no route; all four endings stay exactly as reachable as before,
+        # and the truth-flag gating on `open_doors` is untouched. No variant reads this LATE stage
+        # (it is set as you leave for an ending — the bug_0146 late-stage pitfall — so it is the
+        # tracked terminus only; the reactive prose reads the EARLY `watch_begun` stage instead).
+        effects:
+          - set_quest_stage: { quest: the_barn, stage: stance_taken }
         next: ending_bounty
       - id: let_her_go
         text: "Stand aside and let her go with the sack."
+        effects:
+          - set_quest_stage: { quest: the_barn, stage: stance_taken }
         next: ending_mercy
       - id: open_doors
         # The gated "best" ending — only the player who read the book can throw the barn open
@@ -167,6 +213,8 @@ scenes:
         # everyone, and the distinct fourth moral stance the lever wants.
         text: "Throw the great doors wide and call the whole town to the grain."
         conditions: [{ has_flag: knows_truth }]
+        effects:
+          - set_quest_stage: { quest: the_barn, stage: stance_taken }
         next: ending_doors
       - id: back_to_floor
         text: "Step back and look again at the dark barn."

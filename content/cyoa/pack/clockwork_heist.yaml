@@ -58,6 +58,20 @@ scenes:
       Moonlight pours through the manor's glass dome onto a thousand turning gears.
       A grand staircase rises into shadow; a low door leads off to the kitchens; and
       the great hall clock ticks against the far wall, vast as a coffin.
+    # The heist's one quest, `the_heist`, tracks the thief's progression through the
+    # job as named stages (core DSL questStage, §6). The foyer is the START scene, so
+    # this on_enter fires at game start — the moment the thief is inside the manor — and
+    # opens the quest at `infiltrating`. The later milestones are set as the thief earns
+    # them: `ledger_read` when the steward's ledger is read (study), and `vaulted` when
+    # the clockwork vault is cracked (vault door). The foyer is safe ground the thief
+    # circles back to, so this on_enter RE-FIRES on every return and re-opens the quest
+    # at `infiltrating`; that is harmless here, because the one reactive read of this
+    # quest is OF the `infiltrating` stage on this same foyer (the panel-naive early-job
+    # variant below), so the foyer is always self-consistent with what it sets, and the
+    # later stages are job milestones, not a strict ratchet. Sits alongside the existing
+    # flags/ticks; no choice/flag/tick/route/gating/ending/deadline change.
+    on_enter:
+      - set_quest_stage: { quest: the_heist, stage: infiltrating }
     # The namesake clock stands right here, so the foyer feels the same deadline the
     # gallery does — even though this safe ground floor never advances `ticks` itself.
     # Higher threshold first (first match wins), mirroring the gallery's escalation.
@@ -153,6 +167,27 @@ scenes:
           A grand staircase rises into shadow; a low door leads off to the kitchens; and
           the great hall clock ticks against the far wall, vast as a coffin — and behind
           its pendulum the panel you pried loose still stands open on the dark crawlspace.
+      # The quest's one reactive read (`the_heist` at `infiltrating`): the early-job foyer,
+      # AFTER the thief has examined the clock and found the seam (saw_clock) but BEFORE the
+      # panel is pried (not_flag found_passage). Declared LAST among the foyer's variants and
+      # guarded by `not_flag: found_passage`, so it can never shadow the clock tiers (all of
+      # which sit above it and win first when ticks>=2) nor the found-passage tiers (it cannot
+      # match once the panel is open). It is reachable as displayed text: `inspect_clock` is
+      # offered at the start (its only gate, not_flag saw_clock, holds at the start), it sets
+      # saw_clock and returns to the foyer — whose on_enter re-opens the quest at infiltrating
+      # — and on that re-display ticks are still 0 and the panel unpried, so every earlier
+      # variant fails and this one shows (bug_0145 CYOA variant-liveness). The base `text`
+      # remains the true opening, shown at turn 0 before the clock is examined. Atmospheric/
+      # legibility only, matching the foyer voice (glass dome, turning gears, the coffin-clock);
+      # no choice/flag/tick/route/gating/ending/deadline change.
+      - when: [{ quest_stage: { quest: the_heist, stage: infiltrating } }, { has_flag: saw_clock }, { not_flag: found_passage }]
+        text: >
+          Moonlight pours through the manor's glass dome onto a thousand turning gears.
+          A grand staircase rises into shadow; a low door leads off to the kitchens; and
+          the great hall clock ticks against the far wall, vast as a coffin. The job is
+          only begun, and the house still keeps its sleeping peace — but you have the
+          measure of it now: behind the clock's slow pendulum runs the faint seam you
+          marked, a hidden panel waiting on a steadier moment to be pried.
     choices:
       - id: inspect_clock
         text: "Examine the great clock."
@@ -506,6 +541,10 @@ scenes:
         conditions: [{ not_flag: read_ledger }]
         effects:
           - set_flag: read_ledger
+          # The heist quest's second milestone: reading the steward's ledger. Sits
+          # alongside the load-bearing read_ledger flag (untouched) so the job's
+          # progression advances at the moment the thief learns the watch's rounds.
+          - set_quest_stage: { quest: the_heist, stage: ledger_read }
           - add_journal: "The ledger notes a guard who walks the gallery on the hour. Now that you know his rounds, you could time a crossing he'd never catch."
         next: study
       - id: leave_study
@@ -555,6 +594,12 @@ scenes:
         text: "Pick the lock with the lockpicks."
         conditions: [{ has_item: lockpick }, { not_flag: alarm }]
         effects:
+          # The heist quest's final milestone: the clockwork vault is cracked. Set on
+          # the choice that opens the vault (alongside the existing journal line), so the
+          # job's progression reaches `vaulted` exactly as the door swings. Only the
+          # picked route earns it — forcing the door (force_door) trips the alarm and
+          # ends at ending_caught, never reaching this stage, which is right.
+          - set_quest_stage: { quest: the_heist, stage: vaulted }
           - add_journal: "The tumblers fall, one by one. The vault sighs open."
         next: vault
       - id: study_lock

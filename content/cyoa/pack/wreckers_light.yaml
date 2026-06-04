@@ -40,6 +40,15 @@ scenes:
     choices:
       - id: enter
         text: "Push inside, out of the storm."
+        # Quest "the_light" tracks the night's watch as a named arc alongside the existing
+        # flags (quest_stage is core DSL). Its first stage, `the_watch_begun`, is set HERE on
+        # the one-way step in from the cliff — cliff_path is the start and nothing ever routes
+        # back to it, so this fires exactly once and is never re-clobbered (bug_0146 pitfall a
+        # avoided: it is deliberately NOT on watch_room's on_enter, which re-fires every time
+        # the hub is revisited and would reset a later stage). Pure progress tracking: no
+        # choice/next/ending keys off quest_stage; every ending stays reachable.
+        effects:
+          - set_quest_stage: { quest: the_light, stage: the_watch_begun }
         next: watch_room
 
   - id: watch_room
@@ -143,6 +152,14 @@ scenes:
         conditions: [{ has_flag: chest_open }, { not_flag: knows_truth }]
         effects:
           - set_flag: knows_truth
+          # Quest advances to `truth_known` the moment the logbook's truth is read, set
+          # alongside the unchanged knows_truth flag (one-shot via the not_flag knows_truth
+          # guard above, so it never re-clobbers a later stage). This is the stage the gallery's
+          # reactive variant reads. It is set on the journal-read choice (A→A self-loop on
+          # oil_store), and read DOWNSTREAM on the gallery, which no on_enter resets — and the
+          # hub the truth-path traverses to reach the gallery (watch_room) sets NO stage, so
+          # `truth_known` survives intact to the read (bug_0145 variant-liveness honoured).
+          - set_quest_stage: { quest: the_light, stage: truth_known }
           - add_journal: "The journal names the ship feeling for harbor tonight: the revenue cutter Mourning Star. Seven winters back her master ran the keeper's own son onto these rocks and called it the law, and let the sea have him. The same man stands at her wheel out there in the dark. The keeper has watched for her every storm since."
         next: oil_store
       - id: back_up
@@ -191,6 +208,12 @@ scenes:
       - id: light_lamp
         text: "Fill the lamp and strike it alight."
         conditions: [{ has_item: lamp_oil }, { has_item: striker }]
+        # The quest's terminal stage, `light_chosen`: the watch ends the instant a light is
+        # made (here, the TRUE beacon). Set alongside the unchanged routing; `next` still goes
+        # straight to ending_saved, so this gates nothing and re-reads no scene — pure progress
+        # tracking, mirrored on the gallery's false-light beat.
+        effects:
+          - set_quest_stage: { quest: the_light, stage: light_chosen }
         next: ending_saved
       - id: study_lamp
         text: "Try to wake the lamp."
@@ -231,10 +254,31 @@ scenes:
           the means to fill it and light it: a false low light to ape a safe harbor and
           draw the groping ship onto the teeth, her cargo to come ashore at your feet by
           morning. Out in the dark she trusts a coast that shows her nothing.
+      # The NON-VACUOUS reactive read of quest "the_light": placed LAST so first-match-wins
+      # keeps the two armed beats above intact — it fires only when the watch has reached
+      # `truth_known` but neither tool is in hand yet, i.e. you have come out to the wreckers'
+      # rail KNOWING the Mourning Star's master for what he is, with empty hands. REACHABLE:
+      # the journal is read with the keeper's key alone (no oil, no striker required), then
+      # back_up to the watch_room (which sets no stage) and out the low door — so you can stand
+      # here, truth known, carrying neither tool, and this variant is the first match.
+      - when: [{ quest_stage: { quest: the_light, stage: truth_known } }]
+        text: >
+          A slick iron balcony girdling the tower, the sea exploding white on the rocks a
+          sickening drop below. The rusted bracket juts low at the rail where a wrecker's
+          false light would hang — but your hands are empty of oil and flame, and a lamp
+          unlit lures no one. The journal's truth rides the wind with you now: out in the
+          dark gropes the Mourning Star, the man who ran the keeper's son onto these teeth
+          and called it law still at her wheel. Whatever you mean to do to him or for him,
+          the rail gives you nothing without the cask below and the keeper's flint in hand.
     choices:
       - id: hang_false_light
         text: "Fill the bracket lamp and hang a false low light."
         conditions: [{ has_item: lamp_oil }, { has_item: striker }]
+        # Same terminal `light_chosen` stage as the true-beacon beat above — a light is made,
+        # the watch is over — set alongside the unchanged routing to ending_wrecker. Gates
+        # nothing; pure progress tracking.
+        effects:
+          - set_quest_stage: { quest: the_light, stage: light_chosen }
         next: ending_wrecker
       - id: climb_to_wreck
         # A CHOSEN, plainly-lethal act, not a curiosity trap. The gallery prose already

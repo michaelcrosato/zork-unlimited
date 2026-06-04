@@ -9,12 +9,26 @@ scenes:
   # ── The crossroads (start) ──────────────────────────────────────────────
   - id: forest_crossroads
     title: "The Forest Crossroads"
+    # Quest "the_road" (the investigation): this START scene's on_enter fires at game
+    # start, opening the quest at `setting_out`. It re-fires on every return to the
+    # crossroads, harmlessly re-seating that opening stage — no later stage is ever read
+    # HERE (the reactive read lives on ruined_watchtower, below), so the revisit reset
+    # touches no displayed variant. Tracking only; gates nothing.
+    on_enter:
+      - set_quest_stage: { quest: the_road, stage: setting_out }
     text: >
       The road splits beneath the black pines. To the east, smoke rises from a
       ruined watchtower. To the west, a brook cuts through the moss.
     choices:
       - id: go_east
         text: "Go east, toward the ruined watchtower."
+        # Committing east puts the quest at `on_the_trail` as you LEAVE the crossroads.
+        # ruined_watchtower (next) has no on_enter touching the quest, so on arrival the
+        # stage is `on_the_trail` and its variant is the first match — provably live
+        # (bug_0145): the very first go_east reaches that scene at that stage. Tracking
+        # only; the route/next is unchanged.
+        effects:
+          - set_quest_stage: { quest: the_road, stage: on_the_trail }
         next: ruined_watchtower
       - id: go_west
         text: "Go west, following the brook."
@@ -30,6 +44,21 @@ scenes:
   # ── Watchtower cluster ───────────────────────────────────────────────────
   - id: ruined_watchtower
     title: "The Ruined Watchtower"
+    # Reactive read for quest "the_road" at stage `on_the_trail`, set on the go_east
+    # choice that brings you here (forest_crossroads, above). This scene has no on_enter,
+    # so on arrival from the crossroads the stage is still `on_the_trail` and this variant
+    # is the first match — the safe set-on-the-edge / read-on-the-destination pattern, so
+    # it is never dead prose (bug_0145). It only colours the prose the first time you turn
+    # off the road toward the smoke; a later return (the quest by then at `truth_known`,
+    # set in the cellar/hermit milestones below) no longer matches, and the base text
+    # shows. Reactive text only — first-match-wins, no choice/route/ending/gating change.
+    variants:
+      - when: [ { quest_stage: { quest: the_road, stage: on_the_trail } } ]
+        text: >
+          Fire-blackened stone leans against the sky. You've left the crossroads
+          behind for the smoke, and up close the ruin tells its own tale: the door
+          hangs from one hinge, and a cellar stair curls down into the dark on the
+          north side — the trail you came to follow runs in there.
     text: >
       Fire-blackened stone leans against the sky. The door hangs from one hinge,
       and a cellar stair curls down into the dark on the north side.
@@ -186,6 +215,9 @@ scenes:
         conditions: [ { not_flag: learned_truth } ]
         effects:
           - set_flag: learned_truth
+          # Quest milestone: learning the truth advances "the_road" to `truth_known`,
+          # in lockstep with the existing learned_truth flag. Tracking only; gates nothing.
+          - set_quest_stage: { quest: the_road, stage: truth_known }
           - add_journal: "The barrels are full of lamp oil. The fire was set on purpose."
         next: cellar
       - id: climb_out
@@ -205,6 +237,8 @@ scenes:
         effects:
           - add_item: ledger
           - set_flag: learned_truth
+          # Quest milestone (mirrors the barrel branch): "the_road" reaches `truth_known`.
+          - set_quest_stage: { quest: the_road, stage: truth_known }
           - add_journal: "The ledger names everyone involved. You pocket it."
         next: cellar
       - id: leave_cache
@@ -298,6 +332,8 @@ scenes:
     on_enter:
       - set_flag: learned_truth
       - set_flag: seal_broken
+      # Quest milestone (mirrors the cellar branches): "the_road" reaches `truth_known`.
+      - set_quest_stage: { quest: the_road, stage: truth_known }
       - add_journal: "The hermit broke the letter's seal: it names the man at the checkpoint. Carry it north — the proof goes with you."
     choices:
       - id: back_from_letter_talk

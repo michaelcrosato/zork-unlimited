@@ -69,15 +69,46 @@ scenes:
       second day — whom the men have started, low and certain, to call the Jonah. The
       water will not last another two days shared four ways, let alone five. Something
       must be decided, and you are the one holding the key to it.
+    # The sole reactive read of quest "the_reckoning" (bug_0145 CYOA variant-liveness).
+    # The `adrift` stage is set by each of the three departures below; the deck's own
+    # `on_enter` is empty, so re-entering the deck never RESETS the quest (bug_0145
+    # pitfall (a) avoided). So this variant is LIVE in every play-order: whichever side
+    # the player turns to first sets `adrift`, and on the next look at the deck — back
+    # from the chest (leave_chest) or the hold (leave_hold), neither of which touches the
+    # quest — the deck is taken up as the deliberation it now is. It is a TRANSIENT
+    # window (tide_mill's `begun` discipline): entering the cask advances the quest to
+    # `at_the_cask`, so coming back to the deck from there (back_deck) drops past this
+    # variant to the base text below — which is therefore live both BEFORE the first move
+    # (quest unset) AND after the cask (quest `at_the_cask`), and nothing here goes dead.
+    # Gates nothing — no choice/next/ending keys off any quest_stage; the quest is
+    # progress-tracking only and every ending stays reachable in every order.
+    variants:
+      - when: [{ quest_stage: { quest: the_reckoning, stage: adrift } }]
+        text: >
+          Still becalmed, still the beaten-pewter sea flat to every horizon, and the
+          Marigold's sails dead off the yards. You have begun to move on the question now
+          — back on deck with the key warm from your hand, having gone looking already for
+          what might answer it — but nothing of it is decided yet. Forward in the waist the
+          three hands sit in the boat's thin shade and watch you with cracked lips, and
+          below in the hold the girl they call the Jonah waits to learn what you mean to
+          do. The water will not last another two days shared five ways. The reckoning is
+          underway and the key is still yours, and what you do with it is still, wholly,
+          to be done.
     choices:
       - id: to_chest
         text: "Go aft to the captain's cabin and his locked sea-chest."
+        effects:
+          - set_quest_stage: { quest: the_reckoning, stage: adrift }
         next: chest
       - id: to_hold
         text: "Go below to the hold, and the stowaway girl."
+        effects:
+          - set_quest_stage: { quest: the_reckoning, stage: adrift }
         next: hold
       - id: to_cask
         text: "Go to the water cask amidships, where the men are waiting."
+        effects:
+          - set_quest_stage: { quest: the_reckoning, stage: adrift }
         next: cask
 
   - id: chest
@@ -190,6 +221,15 @@ scenes:
 
   - id: cask
     title: "The Cask"
+    # Reaching the cask advances quest "the_reckoning" past `adrift` to its second and
+    # final stage, `at_the_cask` — the boat is no longer merely drifting on the question
+    # but standing at the point of decision. No reactive text reads this stage and no
+    # choice/ending gates on it (the finale forks on flags alone, exactly as before); it
+    # is a pure progress marker, and it is what makes the deck's `adrift` variant a
+    # transient window rather than a one-way latch (see the deck note). on_enter RE-FIRES
+    # on every entry, which is harmless here — it only ever sets the same later stage.
+    on_enter:
+      - set_quest_stage: { quest: the_reckoning, stage: at_the_cask }
     text: >
       The water cask sits amidships in the full glare, and the three hands have drawn in
       around it without seeming to, the way dogs draw in. Tarrant, the bosun, does the

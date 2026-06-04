@@ -104,7 +104,10 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // (the CYOA death/failure-ending palette lift, RPG-STANDARDIZATION-PLAN), a deliberate
     // metadata edit that changes the content hash without changing runtime state or any
     // recorded trace (was 8990abbad9…).
+    // ...and the quest_stage palette lift — a `the_road` progression (set_quest_stage
+    // milestones + a reactive `on_the_trail` scene variant), another deliberate edit that
+    // gates nothing (was 59f7225260...).
     // Any *unintended* change to compilation trips this.
-    expect(loaded.compiled.contentHash).toBe("59f722526f2a4463927f63c582aa1b2178a5e85c9a06f5ec58edd9734cd3ed5e");
+    expect(loaded.compiled.contentHash).toBe("45b8dbee0b4b15b2639b3e8be8d41f96bcf6686aa0b160fa57634cfc1d8fc730");
   });
 });

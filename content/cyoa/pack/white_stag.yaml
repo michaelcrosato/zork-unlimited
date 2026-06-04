@@ -36,6 +36,14 @@ meta:
 scenes:
   - id: trail_end
     title: "The End of the Track"
+    # Quest "the_hunt" (the chase → the bay → the deed): this START scene's on_enter
+    # opens it at `hunt_begun` the instant play begins (the four-day track ends HERE).
+    # Nothing routes back to trail_end, so on_enter fires once; no later stage is read on
+    # this scene. Tracking only — set_quest_stage gates NOTHING here or anywhere (every
+    # ending, the lethal ice included, stays reached by its existing `next`). Core DSL
+    # set_quest_stage / quest_stage (§13), standardized in alongside the knows_truth flag.
+    on_enter:
+      - set_quest_stage: { quest: the_hunt, stage: hunt_begun }
     text: >
       Four days you have followed it through the iron cold, and the trail ends here
       at the lip of a frozen tarn ringed in black pine. You came for this: the village
@@ -71,12 +79,40 @@ scenes:
           stone named. The ice between is rotten, ticking and groaning, fit to drop a man
           through to the freezing dark. A firmer way runs round the shore to a bluff within
           bowshot, and the leaning stone keeps its old vow at the bank.
+      # Reactive read for quest "the_hunt" at stage `at_bay`, set on the take_shore edge
+      # (above) that carries you round to the bluff. Placed AFTER the knows_truth variant
+      # so that reframe keeps first-match priority; this one therefore fires only when you
+      # have come within bowshot and stepped back to the tarn's edge WITHOUT yet reading
+      # the stone (knows_truth false). PROVABLY LIVE (bug_0145): trail_end → go_on → tarn
+      # → take_shore (sets at_bay) → bluff → back_to_tarn → tarn reaches this scene at
+      # `at_bay` with knows_truth false, so the knows_truth variant is skipped and this is
+      # the first match. It shadows nothing: the base text still shows on the first descent
+      # (stage `hunt_begun`), and the knows_truth variant still shows on the read-stone path.
+      # Reactive text only — first-match-wins; no choice/route/ending/gating change.
+      - when: [{ quest_stage: { quest: the_hunt, stage: at_bay } }]
+        text: >
+          You have stood within bowshot and come back to the tarn's edge, and the black
+          ice reads no kinder for the second look. The white stag waits on its spit where
+          you left it, breath smoking, those steady old eyes never leaving you, as though
+          it has counted your retreat and is content to wait out whatever you decide. The
+          rotten ice still ticks and groans between the two of you, fit to drop a man
+          through to the freezing dark; the firm shore still runs round to the bluff; and
+          the leaning, carved stone still juts from the snow at the bank, unread. The hunt
+          is run to ground. All that is left is the choosing.
     choices:
       - id: read_stone
         text: "Read the leaning, carved stone at the bank."
         next: shrine
       - id: take_shore
         text: "Pick your way round the firm shore to the bluff within bowshot."
+        # Turning round the firm shore brings the stag to bay within bowshot: advance the
+        # quest to `at_bay` as you LEAVE the tarn for the bluff (set-on-the-edge idiom).
+        # bluff (next) has no on_enter touching the quest, so on arrival the stage is
+        # `at_bay`, and the only read of `at_bay` lives back on the tarn hub (its variant
+        # below) — reached when you step back from the bluff (bluff's back_to_tarn → tarn).
+        # Tracking only; the route/next is unchanged and no choice/ending is gated on it.
+        effects:
+          - set_quest_stage: { quest: the_hunt, stage: at_bay }
         next: bluff
       - id: cross_ice
         # A CHOSEN, plainly-lethal shortcut, not a curiosity trap — the base text already
@@ -84,6 +120,11 @@ scenes:
         # the label names the gamble outright (wreckers_light climb_to_wreck discipline:
         # the death foreshadows itself in the choice text). No flag/route change.
         text: "Chance the rotten ice straight across toward the stag."
+        # The choice IS made — to gamble the crossing — so the quest reaches `choice_made`
+        # as you commit. The ending is reached by `next` exactly as before; the stage is
+        # pure tracking and gates nothing (ending_lost stays freely reachable).
+        effects:
+          - set_quest_stage: { quest: the_hunt, stage: choice_made }
         next: ending_lost
 
   - id: shrine
@@ -142,9 +183,17 @@ scenes:
     choices:
       - id: loose_arrow
         text: "Loose your one good arrow and take the stag."
+        # The choice is made — advance the quest to `choice_made` as the deed is done.
+        # Tracking only; ending_quarry is reached by `next` as before and is not gated.
+        effects:
+          - set_quest_stage: { quest: the_hunt, stage: choice_made }
         next: ending_quarry
       - id: lower_bow
         text: "Lower the bow and let it walk."
+        # The choice is made — advance the quest to `choice_made` as the hand stays.
+        # Tracking only; ending_thaw is reached by `next` as before and is not gated.
+        effects:
+          - set_quest_stage: { quest: the_hunt, stage: choice_made }
         next: ending_thaw
       - id: lay_offering
         # The gated "best" ending — only the player who read the stone can lay the means
@@ -153,6 +202,11 @@ scenes:
         # (the wreckers_light oil+striker symmetry).
         text: "Kneel and lay your bow and your one arrow on the ice, an offering."
         conditions: [{ has_flag: knows_truth }]
+        # The choice is made — advance the quest to `choice_made` as the hunt is laid down.
+        # Additive: the existing knows_truth condition and the next are untouched, and the
+        # stage gates nothing (ending_offering stays reached by its existing `next`).
+        effects:
+          - set_quest_stage: { quest: the_hunt, stage: choice_made }
         next: ending_offering
       - id: back_to_tarn
         text: "Step back from the bluff to the tarn's edge."
