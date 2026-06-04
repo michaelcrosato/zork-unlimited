@@ -35,7 +35,7 @@
 #                    │ N: gate_arch (the gate-raider — FIGHT 1)
 #                         │ N*: stair_head (the raider-captain — FIGHT 2)
 #                              │ N*: beacon_stage (toppled cresset; might check to right it, +10)
-#                                   │ up*: beacon_crown (light the beacon — WIN, +15)
+#                                   │ up*: beacon_crown (strike the flint to the laid fire — WIN, +15)
 #   (* each gated on the prior beat: fight 1 won / fight 2 won / cresset righted)
 #
 # Score (max 50, the milestone economy the two existing RPG packs share so the curve
@@ -43,14 +43,18 @@
 # the raiders' plan and points at the mail and the bar), cut down the gate-raider
 # (+10) and the raider-captain (+10), heave the toppled cresset upright with the
 # winch-bar and a strong back (+10, the one seeded might check), and light the beacon
-# (+20 — split as the deliberate denouement: reaching the crown is the locomotion win,
-# +15 lands there). The perfect 50 coincides with the lit beacon, never before it. The
-# win is `visited: beacon_crown` (a locomotion win, like cold_forge's ember chamber and
-# the catacombs of sealed_crypt) — SCORE_PEAKS_BEFORE_WIN does not fire on a navigation
-# win (bug_0116), and the accepted denouement-step reads right for a `visited` win
-# (sealed_crypt seed 29). A fall to either raider is recoverable via an earlier save
-# (§8.7); both fights are telegraphed in place per the bug_0123 "never an ambush"
-# discipline.
+# (+15 — the climactic act: strike the watch's flint to the laid fire at the crown).
+# The perfect 50 coincides with the struck flame, never before it. The win turns on
+# `visited: beacon_crown` AND `has_flag: beacon_lit` together — the sunken_barrow
+# claim_relic shape: the `visited` term keeps the parser validator's soft-lock guard fed
+# with a real win-room, while the `has_flag` term means bare entry no longer wins, so the
+# player performs the deliberate LIGHT act the orders-board and watchman both call for
+# (the dawn_beacon blind pass found the old auto-on-entry climax read as narrated-AT-the-
+# player, the same finding sunken_barrow's seed-71 pass surfaced, bug_0107). SCORE_PEAKS_-
+# BEFORE_WIN now actively proves the capstone rides that act (35 reachable without it < 50),
+# where the old locomotion win was merely exempt (bug_0116). A fall to either raider is
+# recoverable via an earlier save (§8.7); both fights are telegraphed in place per the
+# bug_0123 "never an ambush" discipline.
 
 meta:
   id: dawn_beacon_v1
@@ -68,8 +72,8 @@ meta:
   combat_guaranteed: true
   # The milestone economy: 5 + 10 + 10 + 10 + 15 = 50. Each award rides a beat that
   # fires once (the read retires on read_orders; each raider dies once; the cresset
-  # check retires after success; the crown is the game-ending win), so the score cannot
-  # be farmed and the intended path reaches the full 50. The RPG validator folds the
+  # check retires after success; the +15 light retires on beacon_lit, the game-ending
+  # act), so the score cannot be farmed and the intended path reaches the full 50. The RPG validator folds the
   # combat/skill awards into the SCORE_UNREACHABLE upper bound (cf. bug_0016).
   max_score: 50
 
@@ -189,15 +193,23 @@ rooms:
     name: "The Crown of the Tower"
     description: >
       The crown of the beacon-tower, the whole black valley spread below and the first
-      grey of dawn coming up over the river. The righted cresset's fire-bed waits at
-      your hand, the watch's flint and the laid pitch-pine with it.
-    # The locomotion win (visited: beacon_crown), like cold_forge's ember chamber: the
-    # +15 capstone rides reaching the crown, where lighting the beacon is the denouement
-    # the ending narrates. Reaching the crown requires the cresset righted (the exit
-    # gate), so the full 50 coincides with the moment the beacon can be lit, never before.
-    on_enter:
-      - add_journal: "You set the watch's flint to the laid pitch-pine, and the beacon takes."
-      - inc_var: { name: score, by: 15 }
+      grey of dawn coming up over the river. The righted cresset's deep fire-bed stands
+      at your hand, heaped with the dry pitch-pine the watch laid ready, and the watch's
+      own flint lies in the bed beside it. It wants only a struck spark to wake the valley.
+    # The win fires on the deliberate LIGHT act, not on bare room entry — the sunken_barrow
+    # claim_relic treatment (bug_0107 and its seed-71 blind finding), mirrored here after
+    # this pack's own blind pass found the same smell: the climax was narrated AT the player
+    # the instant they climbed up, with no light verb to perform, though the orders-board
+    # and the watchman both say plainly "LIGHT THE BEACON". Now the crown shows the laid
+    # fire (beacon_fire) and the flint and offers "light beacon with flint"; the +15 capstone
+    # rides THAT act (set_flag beacon_lit), and the win turns on `visited: beacon_crown` AND
+    # `has_flag: beacon_lit` together — entering no longer wins (the beacon is still dark),
+    # yet the `visited` term is KEPT so the parser validator's soft-lock guard still has its
+    # win-room. The full 50 coincides with the struck flame, and SCORE_PEAKS_BEFORE_WIN now
+    # actively proves it (35 reachable without the light act < 50). Reaching the crown still
+    # requires the cresset righted (the up-exit gate); the `down` exit keeps the crown from
+    # being a soft-lock if the player climbs up before striking the spark.
+    objects: [beacon_fire, flint]
     exits:
       - { direction: down, to: beacon_stage }
 
@@ -294,6 +306,53 @@ objects:
             - narrate: "You wedge the bar beneath the frame's lip and throw your weight on it — the iron grinds, swings, and the cresset heaves up onto its pivot and settles. The way to the crown is clear."
           on_failure:
             - narrate: "The bar bites under the lip and your shoulders strain, but the heavy iron only rocks and grinds back down. Set your feet and try again."
+
+  - id: beacon_fire
+    name: "beacon"
+    aliases: [beacon, fire, fire-bed, firebed, bed, pitch-pine, pitch pine, pine, laid fire]
+    # The explicit climactic act the blind pass asked for: the laid fire at the crown, lit
+    # with the watch's flint. command_verb `light` + template so the offered command reads
+    # "light beacon with flint" (bug_0078), matching the orders-board and the watchman's
+    # repeated "light the beacon". One-shot (not_flag beacon_lit); HARD-requires the flint
+    # in hand (has_item, the USE-offer rule). Lighting sets beacon_lit and awards the +15
+    # capstone, and the engine's post-action checkWin fires the `visited beacon_crown +
+    # has_flag beacon_lit` win the same frame (the sunken_barrow circlet pattern). NOT
+    # takeable — you light the bed, you do not carry it off. No lit `variant` is declared:
+    # the win ends the game on the same action, so a beacon_lit variant would be unreachable
+    # text under the reactive-variant liveness oracle (bug_0145) — the ending prose carries
+    # the blaze. Gates nothing but its own one award, so it adds no soft-lock surface.
+    description: >
+      The great cresset's fire-bed at the crown, heaped deep with the dry resinous
+      pitch-pine the watch laid by against this very night. It is bone-dry and ready; set
+      a spark to it with the flint and it will stand up in a column of fire over the river.
+    takeable: false
+    interactions:
+      - verb: USE
+        item: flint
+        target: beacon_fire
+        command_verb: light
+        command_template: "light {target} with {item}"
+        conditions: [{ has_item: flint }, { not_flag: beacon_lit }]
+        effects:
+          - set_flag: beacon_lit
+          - inc_var: { name: score, by: 15 }
+          - add_journal: "You struck the watch's flint to the laid pitch-pine, and the great beacon took and stood up in fire over the valley."
+          - narrate: >
+              You kneel to the fire-bed and strike the flint down its iron edge — a spray of
+              sparks, a catch, and the dry pitch-pine takes all at once with a soft roar. The
+              great beacon stands up in a column of fire over the black river, and below you
+              the dark valley begins, hill by hill, to wake.
+
+  - id: flint
+    name: "flint"
+    aliases: [flint, steel, flint and steel, striker, fire-steel, firesteel]
+    # The held striker the light act needs (a USE is only offered when its item is in hand),
+    # the lamplighters_round tinderbox analogue. Laid ready in the fire-bed at the crown, so
+    # it is taken and used in the same room as the beacon — no carry-distance, no soft-lock
+    # surface (and the map is strongly connected besides). Not quest_critical: the winch_bar
+    # rationale (a connected map cannot lose it); it gates nothing but the one light act.
+    description: "The watch's own flint-and-steel, laid ready in the beacon's fire-bed — a hard edge and a fire-steel, enough to strike the spark the pitch-pine wants."
+    takeable: true
 
 npcs:
   - id: watchman
@@ -419,13 +478,15 @@ enemies:
       - inc_var: { name: score, by: 10 }
 
 win_conditions:
-  # Locomotion win, like cold_forge (visited: ember_chamber): reaching the crown — only
-  # possible once both raiders are down AND the cresset is righted (the chained exit
-  # gates) — fires the win via the engine's post-action checkWin. SCORE_PEAKS_BEFORE_WIN
-  # does not fire on a navigation win (bug_0116), and the +15 crown award is the accepted
-  # denouement-step (sealed_crypt seed 29).
+  # The win turns on the deliberate LIGHT act, the sunken_barrow claim_relic shape: BOTH
+  # `visited: beacon_crown` AND `has_flag: beacon_lit` must hold (implicit all_of). The
+  # `visited` term is KEPT so the parser validator still derives its soft-lock guard (every
+  # reachable room can reach a win) from a real win-room; the `has_flag` term means bare
+  # entry no longer wins — the player must strike the flint to the laid fire (beacon_fire),
+  # which the engine's post-action checkWin then resolves the same frame. Reaching the crown
+  # already requires both raiders down AND the cresset righted (the chained up-exit gates).
   - id: light_beacon
-    conditions: [{ visited: beacon_crown }]
+    conditions: [{ visited: beacon_crown }, { has_flag: beacon_lit }]
     ending: ending_lit
 
 endings:
