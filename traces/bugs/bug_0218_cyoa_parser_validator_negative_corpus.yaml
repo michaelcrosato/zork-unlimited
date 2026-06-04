@@ -1,0 +1,97 @@
+id: bug_0218
+title: "SoundnessBench negative corpus for validateCyoa + validateParser — pin the previously-untested error branches in the REJECTION direction (the open two-thirds of the bug_0182 trilogy)"
+kind: verification_oracle
+mode: cyoa+parser
+severity: enhancement
+layer: validate/cyoa+parser-soundness
+artifact:
+  source:
+    - src/validate/cyoa_validator.ts
+    - src/validate/parser_validator.ts
+  test:
+    - tests/regression/cyoa_validator_negative_corpus.test.ts
+    - tests/regression/parser_validator_negative_corpus.test.ts
+
+summary: >
+  bug_0182 built a SoundnessBench-style negative corpus (a checker is only proven sound if its FAILING
+  branches are exercised on input that SHOULD fail) for validateRpg ONLY — it was the SINGLE *negative*
+  file in the whole suite. validateCyoa and validateParser each emit many error-severity codes via
+  err("CODE", ...), and an audit this cycle found a large set of those error branches had ZERO
+  rejection-direction witness anywhere: they were exercised almost entirely in the ACCEPT direction by the
+  curated + generated clean packs. This cycle adds the CYOA and PARSER legs of the negative-corpus trilogy,
+  bringing both validators to soundness-proof PARITY with validateRpg (bug_0182). CYOA codes pinned:
+  DEAD_END, START_MISSING, START_NOT_SCENE, ITEM_UNOBTAINABLE. Parser codes pinned: START_MISSING,
+  ROOM_OBJECT_MISSING, CONTAINER_CONTENT_MISSING, LOCKED_NO_KEY, NPC_ROOM_MISSING, KEY_UNOBTAINABLE,
+  DIALOGUE_ROOT_MISSING, DIALOGUE_GOTO_MISSING, ENDING_UNDECLARED.
+
+root_cause: >
+  Not a defect in any pack and NOT a live validator defect — a verification-DEPTH asymmetry. Every audited
+  branch is correctly emitted today; the gap is that the FAILING path is untested for these specific codes,
+  so a future regression (a dropped findings.push, an inverted guard, a `??` default that swallows the case)
+  could silently disarm it while leaving every existing test GREEN — the present-but-untested-checker
+  surface named by SoundnessBench (arXiv:2412.03154) and the single-checker / ASL present-but-incomplete
+  blind spot (arXiv:2510.14253, [[verifier-assertion-guard]]). The error codes left UN-pinned here already
+  carry a rejection-direction witness in tests/unit/cyoa_validator.ts / tests/unit/parser_validator.ts or a
+  regression test (CYOA: DUPLICATE_ID, REF_UNRESOLVED, NO_REACHABLE_ENDING, ENDING_UNREACHABLE, SOFTLOCK,
+  IMPOSSIBLE_GATE, CONTRADICTORY_CONDITION, the DEADLINE_* family; parser: DUPLICATE_ID, EXIT_TARGET_MISSING,
+  KEY_MISSING, AMBIGUOUS_ALIAS, IMPOSSIBLE_GATE, ITEM_REQUIRED_UNOBTAINABLE, SOFTLOCK, SOFTLOCK_QUEST_ITEM,
+  WIN_UNREACHABLE, WIN_IS_DEATH, NO_WINNABLE_ENDING, SCORE_UNREACHABLE, END_GAME_UNDECLARED,
+  DIALOGUE_NONTERMINATING, WIN_FIRES_AT_START), so they were intentionally not re-pinned. The CYOA
+  DEADLINE_* codes are additionally not even mutate-reachable from generateCyoaPack(0), which carries no
+  meta.deadline — documented and skipped rather than forced behind a contrived multi-defect base.
+
+witness: >
+  THE TEETH, verified out of band (non-vacuity spot-check): temporarily commenting the LOCKED_NO_KEY
+  findings.push emit in src/validate/parser_validator.ts turned the parser corpus RED — exactly the
+  `REJECTS LOCKED_NO_KEY` case AND the non-degenerate aggregate case failed (with the emit disabled, the
+  hazard-key_id-drop mutation produces ZERO errors, proving clean single-defect attribution), with NO other
+  case affected; the validator was then restored byte-identically (git diff clean). The differential anchor
+  in each file proves each targeted code is ABSENT on the green base until its single mutation introduces it,
+  so every firing is attributable to that one defect.
+
+fix: >
+  TWO new regression files, each following the bug_0182 copy-mutate discipline: a single GREEN base
+  (generateCyoaPack(0) / generateParserPack(0), each pinned green by the generator's own test), a
+  codesOf(pack) helper filtering severity==='error', a CASES array of one-defect mutations, structuredClone
+  per case, an assertion that codesOf(twin) .includes(EXACT_CODE) (never just .ok===false), a differential
+  anchor (green base validates clean AND carries none of the targeted codes), and a non-degeneracy test
+  (every mutation flips the clean base to >=1 error). CYOA cases (4): empty a reachable side-scene's choices
+  (DEAD_END); meta.start -> a non-existent node (START_MISSING); meta.start -> the declared ending_hold
+  (START_NOT_SCENE); push {has_item:"phantom_relic"} onto a hub choice's conditions (ITEM_UNOBTAINABLE —
+  gen(0) has no items, so any required item is unobtainable). Parser cases (9): meta.start_room -> a
+  non-room (START_MISSING); push a bogus id onto entrance.objects (ROOM_OBJECT_MISSING); push a bogus id
+  onto coffer.contents (CONTAINER_CONTENT_MISSING); delete the off-the-win-path hazard's key_id
+  (LOCKED_NO_KEY); npc.room -> a non-room (NPC_ROOM_MISSING); lesser_key.takeable=false so the strongbox's
+  key is unobtainable (KEY_UNOBTAINABLE); dialogue.root -> a missing node (DIALOGUE_ROOT_MISSING); a greet
+  topic goto -> a missing node (DIALOGUE_GOTO_MISSING); win_condition.ending -> an undeclared ending
+  (ENDING_UNDECLARED). Where a minimal defect unavoidably trips a companion code, the case asserts via
+  .includes(...) (NOT exact-set-equals) plus the green differential anchor, exactly as the RPG corpus does.
+  The validators are called directly on the mutated (already-parsed) object, never re-parsed through the
+  schema, so a schema-level superRefine never runs — these tests pin the VALIDATOR's own branches.
+
+scope_honesty: >
+  This is the rejection-direction WITNESS for branches that are already correct today (parity with
+  bug_0182) — NOT a discovered live validator defect and NOT a soundness exploit. It moves NO pack hash, NO
+  scorecard byte, and NO corpus seal: the generators are called in-memory (pure, §8.5, no disk write).
+
+verification: >
+  npx vitest run tests/regression/cyoa_validator_negative_corpus.test.ts
+  tests/regression/parser_validator_negative_corpus.test.ts -> 17 GREEN (CYOA 6: 4 cases + anchor +
+  non-degenerate; parser 11: 9 cases + anchor + non-degenerate). Non-vacuity spot-check confirmed (see
+  witness). npm run health -> GREEN (exit 0). npm run verify:integrity -> exit 0, NO GUARD_WEAKENED /
+  PROTECTED_DELETED / HASH_PIN_UNACCOMPANIED / TEST-ASSERTION-STRONG count regression (validator/test files
+  are not protected; src/validate/{cyoa,parser}_validator.ts byte-unchanged, confirmed by git diff). No
+  MIN_*/GEN_EVAL_CHECK_COUNT/SATURATION_FLOOR change, no matcher relaxed, net test count ROSE. No curated
+  content touched, no curated hash re-pin, no corpus re-seal.
+
+files_changed:
+  - tests/regression/cyoa_validator_negative_corpus.test.ts (NEW)
+  - tests/regression/parser_validator_negative_corpus.test.ts (NEW)
+  - traces/bugs/bug_0218_cyoa_parser_validator_negative_corpus.yaml (NEW, this file)
+
+regression: >
+  The two corpora ARE the regression: each fails loudly if any of its pinned rejection branches is ever
+  removed or weakened (the validator would then accept a pack it must reject). The differential anchor
+  doubles as a false-rejection guard — if a validator ever drifts to flag the clean base on one of these
+  codes, the anchor fails. No source/validator/schema/generator/engine change, no pack YAML, no
+  corpus/manifest.json, no scorecard byte, no scripts/verify-integrity.ts change — purely additive.

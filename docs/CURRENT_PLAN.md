@@ -9,226 +9,267 @@ to do the work.
 
 ---
 
-## Synthesis — re-aim cycle #7 (2026-06-03)
+## Synthesis — re-aim cycle #8 (2026-06-03/04)
 
 The deterministic content assessor is SATURATED (every structural content lever disarmed;
 all 15 packs blind-clean; the assessor's whole ranked list is fifteen 0.5-floor blind-playtest
-stubs — `SATURATION_FLOOR=0.5`, src/afk/assessor.ts). A bounded ultraplan ran this cycle —
-**4 repo reviewers** (engine/determinism · content/authoring+generators · verification/benchmark ·
-loop/strategy) **+ 2 web researchers** (frontier IF/agentic benchmarks · autonomous-improvement
-reward-hacking) **→ 1 synthesis**, each verified against the live repo at HEAD≈bug_0207.
+stubs — `SATURATION_FLOOR=0.5`, `src/afk/assessor.ts`). Since the LAST ultraplan (re-aim #7 →
+bug_0208, the seed/step integer-identity load gate), the loop completed the standing deferred
+structural lever — the **metamorphic oracle trilogy AND its per-step deepening across all three
+modes** (bug_0209–0212 terminal-census + bug_0213–0215 per-step observation-stream) — plus minor
+content polish (bug_0210/0216 lamplighters). That lever is now CLOSED on curated packs.
 
-**Convergent verdict.** The closed arcs are reconfirmed done (do NOT re-propose): the blocked-exit
-hint arc across EVERY surface (agent observation + CLI passive hint + CLI on-attempt + UI) for
-parser+RPG (bug_0201–0207); the generator-deepen trilogy incl. parser v2→v3 (bug_0199 — the
-per-mode scorecard now reads parser curated **16.5%** vs held-out **16.7%** = parity, so a parser
-v4 deepen is NOT warranted; CYOA is the only mode carrying a real contamination gap, 68.0%/58.6%);
-the load-integrity FINITENESS arc on save+trace (bug_0181–0190); benchmark gap-erosion defused via
-the per-mode slice (bug_0198); exhaustive structural solvers across all 3 modes. The engine
-reviewer found NO open *exploitable* soundness hole. The keyed real-model author→play→fix→lock run
-remains the standing TRUE-GOAL keystone but is OWNER-API-KEY-GATED → out of scope for a key-free
-cycle ([[ultraplan-true-goal-pivot]]).
+A bounded ultraplan ran this cycle — **4 repo reviewers** (engine/determinism ·
+content/authoring+generators · verification/benchmark · loop/strategy) **+ 2 web researchers**
+(frontier IF/agentic benchmarks · autonomous-improvement reward-hacking) **→ 1 synthesis**, each
+verified against the live repo at HEAD≈bug_0216 (7 agents, 162 tool-uses).
 
-**The chosen move (a verified OPEN boundary-symmetry gap, not a hypothetical).** The
-determinism-identity fields `seed`/`step` are gated **inconsistently across the two trust
-boundaries**:
+**Convergent verdict.** The closed arcs are reconfirmed done (do NOT re-propose):
+- Load/save/trace untrusted-state integrity arc **incl. the seed/step integer-identity gate**
+  (bug_0181/0183/0184/0190/0208) — CLOSED on both boundaries.
+- Metamorphic identifier-relabel oracle **+ per-step observation-stream oracle** — CLOSED on all
+  3 modes on CURATED packs (bug_0209–0215).
+- Exhaustive all-endings-reachable + variant-liveness + score-economy solvers — CLOSED all 3 modes.
+- Generator-deepen v2 line: parser v2→v3 at PARITY (per-mode scorecard parser 16.5%/16.7% — NO v4),
+  RPG guarantee re-tune, CYOA v2 two-axis — closed. *(The CYOA SCENE-GRAPH depth axis remains
+  genuinely untouched — a valid FUTURE move, not this cycle: it re-seals the corpus + forces a
+  scorecard regen = large blast radius.)*
+- Blocked-exit hint parity across agent/CLI/Web for parser+RPG (bug_0201–0207) — CLOSED.
+- Verifier assertion-gutting / strict→loose-swap / guard-self-integrity launders — CLOSED.
+- **RPG validator negative corpus (bug_0182) — CLOSED for `validateRpg` specifically.** This is the
+  hinge: the SAME SoundnessBench-style pattern was NEVER built for `validateCyoa` or `validateParser`.
 
-- **Entry boundary (MCP):** `src/mcp/server.ts:147` (and `:157`) gate `seed: z.number().int()` —
-  a non-integer seed is *rejected* before it can ever enter a `GameState`.
-- **Disk/load boundary:** `src/persist/save_load.ts:45-46` gate only `seed: z.number().finite()`
-  and `step: z.number().finite()` — a forged/corrupted save carrying a **non-integer** seed/step
-  (e.g. `1.5`, `-3.5`, `4294967301.5`) is *accepted*.
+The engine reviewer found NO open *exploitable* soundness hole. The keyed real-model
+author→play→fix→lock run remains the standing TRUE-GOAL keystone but is OWNER-API-KEY-GATED → out
+of scope for a key-free cycle ([[ultraplan-true-goal-pivot]]).
 
-`src/core/state.ts:19-20` documents both as integers (`step` = "monotonically increasing action
-counter"). `src/core/rng.ts:44` (`rngForStep`) consumes them as `seed >>> 0` / `step >>> 0`, which
-silently truncates any non-integer to a *different* value than the save's content hash committed to
-(`src/core/hash.ts` `canonicalize` stringifies the raw `1.5`). So the load boundary admits a
-type-confused determinism identity the entry boundary would never accept — the one **un-gated
-sub-case** of the otherwise-closed "integrity at load" arc, which gated *finiteness* (bug_0181:
-Infinity/NaN → `var_gte`) but never *integer-ness*.
+**The chosen move (a verified OPEN, named ASYMMETRY — not regression-hardening of correct code).**
+`tests/regression/rpg_validator_negative_corpus.test.ts` is the **ONLY** negative corpus in the whole
+suite (verified: `ls tests/regression` matches exactly one `*negative*` file). bug_0182 closed the
+rejection-DIRECTION witness for `validateRpg` and stated the soundness principle verbatim: *"a checker
+is only proven sound if its FAILING branches are exercised on input that SHOULD fail"* (SoundnessBench
+arXiv:2412.03154; single-checker blind spot arXiv:2510.14253). The CYOA and parser validators emit many
+`error`-severity codes via `err("CODE", msg, where[])` — and a whole-suite audit found a large set of
+those error branches have **ZERO rejection-direction witness anywhere** (they are exercised almost
+entirely in the ACCEPT direction by the curated + generated clean packs). A future regression that drops
+a `findings.push`, inverts a guard, or adds a `??` default swallowing the case would leave **every
+existing test GREEN**. This is the exact present-but-untested-checker surface bug_0182 closed for RPG
+only — the open two-thirds of the trilogy.
 
-**Honest scope (do not over-claim).** This is **boundary-symmetry / type-confusion hardening**,
-NOT an unlock-exploit like bug_0181's Infinity→`var_gte`→every-gate-true. A non-integer seed is
-self-consistent within a single save (it loads to the same value and runs the same deterministic
-stream). The value is completing the entry↔disk symmetry on the determinism-identity fields so a
-malformed save is rejected at *both* boundaries, with an adversarial rejection witness — the
-smallest-blast-radius, strongest-free-oracle structural move available this cycle.
+**Honest scope (do not over-claim).** This IS two purely-additive regression tests pinning the
+rejection-DIRECTION firing of CYOA + parser validator error branches that have no negative witness
+today, plus the bug_0218 artifact — bringing the CYOA/parser validators to soundness-proof PARITY with
+RPG (bug_0182). It is **NOT** a discovered live validator defect and **NOT** a soundness exploit: every
+audited branch is correctly emitted today; the gap is that the FAILING path is untested, so a future
+regression could silently disarm it. Smallest blast radius (test-only), strongest free oracle (each
+branch must FIRE), and it moves NO pack hash / scorecard byte / corpus seal.
 
-## Chosen move: tighten the load-integrity gate so `seed`/`step` are INTEGERS (entry↔disk symmetry)
+## Chosen move: add a SoundnessBench-style negative corpus for `validateCyoa` + `validateParser`
 
-In `src/persist/save_load.ts` change `seed`/`step` from bare `z.number().finite()` to an **integer**
-gate matching the entry boundary, and add adversarial REJECTION witnesses (non-integer seed/step)
-plus a GREEN over-restriction witness (a legitimate **negative** integer seed must still
-round-trip), mirroring the existing `seed = Infinity` case.
+Two new regression tests that, per validator, take the canonical clean pack `generate{Cyoa,Parser}Pack(0)`
+as the GREEN base and — using the bug_0182 copy-mutate discipline — introduce EXACTLY ONE defect per case,
+asserting the targeted `error` code fires. Plus a `bug_0218` artifact. **No source/validator/schema/
+generator/engine/content/corpus/scorecard change.**
+
+### VERIFIED anchors (confirmed live this cycle — build against these, but RE-DERIVE from source)
+
+- **Finding shape** (`src/validate/report.ts`): `Finding = { severity: 'error'|'warning', code: string,
+  message: string, where: string[] }`. `makeReport` sets `ok = !findings.some(f => f.severity==='error')`.
+  → The negative corpus targets **`error`-severity codes ONLY**. `warn(...)` codes (e.g. CYOA
+  `UNREACHABLE_SCENE`) are advisory and MUST NOT be targeted.
+- **Generators** (both validate CLEAN at seed 0 — confirmed): `generateCyoaPack(seed: number): CyoaPack`
+  (`src/gen/cyoa_generator.ts:376`); `generateParserPack(seed: number): ParserPack`
+  (`src/gen/parser_generator.ts:536`).
+- **Validators return `ValidationReport`**: `validateCyoa(pack: CyoaPack)` (`src/validate/cyoa_validator.ts`);
+  `validateParser(pack: ParserPack)` (`src/validate/parser_validator.ts`).
+- **`err(...)` calls are frequently MULTI-LINE** (the code string sits on its own line, e.g. CYOA
+  `ITEM_UNOBTAINABLE` at `cyoa_validator.ts:273`). A single-line `grep 'err("CODE"'` will MISS these — the
+  subagent MUST read the emit sites directly (`Read`/`sed`/`awk`), not a line-anchored grep, and note that
+  the host `grep` mis-detects these validator files as binary (sed/awk read them fine).
+- **CYOA `error` codes** (confirmed emit sites): `START_MISSING` (:54), `START_NOT_SCENE` (:61),
+  `DUPLICATE_ID` (:38), `ENDING_UNREACHABLE` (:188), `SOFTLOCK` (:203), `DEAD_END` (:215),
+  `ITEM_UNOBTAINABLE` (:273, multi-line), `IMPOSSIBLE_GATE`, and more at the multi-line `err(` calls
+  (lines ~60/89/97/178). `UNREACHABLE_SCENE` (:167) is a **warning**, not a target.
+- **Parser `error` codes** (confirmed emit sites): `START_MISSING` (:123), `ROOM_OBJECT_MISSING` (:133),
+  `CONTAINER_CONTENT_MISSING` (~:155), `LOCKED_NO_KEY` (:170), `NPC_ROOM_MISSING` (~:180),
+  `KEY_UNOBTAINABLE` (:313), `DIALOGUE_ROOT_MISSING` (~:405), `DIALOGUE_GOTO_MISSING` (:423),
+  plus `KEY_MISSING`, `AMBIGUOUS_ALIAS`, `IMPOSSIBLE_GATE`, `SOFTLOCK`, `DUPLICATE_ID`.
 
 ### CRITICAL directions (what NOT to get wrong)
 
-1. **Use `.int()`, NOT `.gte(0).lte(0xffffffff)`.** The entry boundary `src/mcp/server.ts:147`
-   allows ANY integer seed including **negative** (`mulberry32` does `seed >>> 0`, which is defined
-   for negatives; default is 1 but the API permits negatives). A `gte(0)`/`lte(2^32-1)` gate would
-   **false-reject a legitimate negative-seed save** — a real regression. The gate must match the
-   entry boundary EXACTLY: `seed: z.number().int()`. `step` is a counter from 0
-   (`src/core/state.ts:20`), so `step: z.number().int().nonnegative()` is correct and tighter
-   (a save can never legitimately carry a negative step).
-2. **ADDITIVE only — the gate NARROWS the accepted set.** It rejects strictly more (non-integers)
-   and accepts everything it accepted before EXCEPT non-integers (which were never legitimate).
-   No floor lowered, no matcher relaxed, no `.finite()` weakened (integer ⊂ finite). The two
-   existing GREEN round-trip tests (seed:7/step:12, and the rich state) MUST still pass byte- and
-   hash-identically — proving no hash moved and no false rejection.
-3. **Prove non-vacuity in BOTH directions.** The new rejection cases MUST fail (no throw) against
-   the OLD `.finite()` schema and pass against the tightened one (a genuine witness, like the
-   `seed = Infinity` case). The new GREEN negative-seed case MUST pass under the new gate (proving
-   `.int()` did not over-restrict to `gte(0)`).
-4. **`save_load.ts` is PROTECTED — expect ONE non-blocking warning, no hard error.**
-   `scripts/verify-integrity.ts:53` lists `src/persist/save_load.ts` in `PROTECTED_FILES`; editing
-   a PROTECTED file that still EXISTS surfaces a **non-blocking VERIFIER_TOUCHED warning**
-   (verify-integrity.ts:269-283) — the precedented bug_0167/0176 path, NOT a hard error, NO
-   `AI_LOOP_ALLOW_VERIFIER_EDITS` needed. A DELETED protected file or a removed PROTECTED/HASH_PIN
-   entry is a hard error — do neither. The test file is not protected.
-5. **DO NOT touch `src/core/rng.ts`, `scripts/verify-integrity.ts`, the scorecard, the corpus, or
-   any generator.** No re-seal, no benchmark rebuild — this change does not move any pack hash,
-   scorecard byte, or corpus seal. Keep blast radius to the one schema file + its adversarial test.
+1. **COPY the bug_0182 discipline EXACTLY.** Read
+   `tests/regression/rpg_validator_negative_corpus.test.ts` in full first. Mirror it precisely:
+   - a single GREEN base = `generate{Cyoa,Parser}Pack(0)`;
+   - a `codesOf(pack)` helper = `validate{Cyoa,Parser}(pack).findings.filter(f => f.severity === 'error').map(f => f.code)`;
+   - a `CASES` array where each case = `{ code, why, mutate: (p) => void }`;
+   - per case: `structuredClone(GREEN)` → apply **EXACTLY ONE** mutation → assert
+     `codesOf(twin)` **`.includes(EXPECTED_CODE)`**;
+   - a **differential anchor** test asserting `codesOf(GREEN)` includes NONE of the targeted codes
+     (so every firing is attributable to the single mutation).
+2. **DERIVE the real targeted set from SOURCE — do not trust a hardcoded list.** For each validator,
+   read the actual `err(...)` emit sites, build the set of `error` codes, cross-reference which have NO
+   existing rejection-direction witness in `tests/` (the audit list above is the starting point, not
+   gospel — confirm each code EXISTS and is an `error`, and that the GREEN base does NOT already raise it).
+   Target the codes that are (a) `error`-severity, (b) currently un-witnessed, and (c) cleanly
+   mutate-reachable from `gen(0)`.
+3. **One defect per case; assert the SPECIFIC code, never just `.ok===false`.** A vacuous test asserting
+   only `report.ok===false` or `findings.length>0` would pass even if the WRONG branch fired or a schema
+   parse threw. Always `codesOf(twin).includes(EXACT_CODE)`. Where a minimal mutation unavoidably trips a
+   companion code, use `.includes(expected)` (NOT exact-set-equals) plus the GREEN differential anchor —
+   exactly as the RPG test does.
+4. **If a code is NOT cleanly mutate-reachable from `gen(0)` alone, DOCUMENT WHY in a comment and SKIP
+   it** — do not force a contrived multi-defect base or silently drop it. (Honest coverage > inflated count.)
+5. **ADDITIVE only.** Do NOT touch any validator / schema / generator / engine source, any pack YAML, the
+   corpus manifest, or any scorecard byte. No `findings.push` removed, no guard inverted, no `MIN_*`/floor
+   lowered, no existing assertion relaxed. The validators are exercised **exactly as shipped**.
+6. **No side-effecting imports.** The tests only CALL `generate{Cyoa,Parser}Pack(0)` in-memory (pure, no
+   disk writes) and `validate*`. Confirm `git status` shows NO scorecard/`corpus/manifest.json` churn
+   before finishing.
 
 ### What — numbered concrete steps
 
-1. **Read first** (READ-ONLY): `src/core/rng.ts` (confirm `seed >>> 0` / `step >>> 0` at line 44),
-   `src/core/state.ts:17-39` (seed/step are integers), `src/core/hash.ts` (`canonicalize` stringifies
-   the raw value), `src/mcp/server.ts:147,157` (the entry `.int()` gate this restores symmetry with),
-   and `scripts/verify-integrity.ts:43-53` (confirm `save_load.ts` is PROTECTED → warning path).
+1. **Read first** (READ-ONLY): `tests/regression/rpg_validator_negative_corpus.test.ts` (the discipline to
+   copy), `src/validate/report.ts` (Finding shape), `src/validate/cyoa_validator.ts` (all `err(...)` emit
+   sites — multi-line aware), `src/validate/parser_validator.ts` (same), `src/gen/cyoa_generator.ts:376`
+   and `src/gen/parser_generator.ts:536` (gen(0) shape — what structure exists to mutate).
 
-2. **Tighten the gate** (`src/persist/save_load.ts`, the `GameStateSchema`, lines 45-46):
-   - `seed: z.number().finite(),` → `seed: z.number().int(),`
-   - `step: z.number().finite(),` → `step: z.number().int().nonnegative(),`
-   Update the schema doc comment (the lines 22-27 region) to note that seed/step are now gated to
-   the INTEGER domain `rngForStep` consumes (`>>> 0`), restoring entry↔disk symmetry with the
-   `server.ts:147` `.int()` gate (the finiteness gate on `vars` stays exactly as-is — it is the
-   bug_0181 hole and is unrelated). Do NOT add sign/range bounds to seed (see CRITICAL #1).
+2. **Create `tests/regression/cyoa_validator_negative_corpus.test.ts`** — GREEN base
+   `generateCyoaPack(0)`; one case per targeted CYOA `error` code that has no existing witness and is
+   mutate-reachable from gen(0). Confirmed-good candidates (verify live, add any other un-witnessed `error`
+   codes you find, skip any not cleanly reachable with a documented comment):
+   - `DEAD_END` — set a reachable non-ending scene's `choices` to `[]`.
+   - `START_MISSING` — set `meta.start` to a non-existent node id.
+   - `ITEM_UNOBTAINABLE` — add a condition to a choice positively requiring an item that nothing grants
+     (gen(0) may have no `add_item` effects, so add the require-item condition such that the item is
+     never obtainable).
+   Header docstring names bug_0218, the bug_0182 lineage, and states this is the CYOA leg of the
+   negative-corpus trilogy. Differential anchor included.
 
-3. **Add adversarial REJECTION witnesses** in
-   `tests/regression/save_integrity_adversarial.test.ts`, inside the first `describe` block, after
-   the `seed = Infinity` case (line 86), reusing the existing `forgeWithToken` helper:
-   - `seed = 1.5` (fractional; `1.5 >>> 0 === 1` — would truncate to a different stream than its
-     hash committed to): forge with token `"1.5"`, sanity-assert
-     `JSON.parse(forged).state.seed === 1.5`, then `expect(() => load(forged, MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError)`.
-   - `seed = 4294967301` (> 2^32-1; `>>> 0 === 5`): token `"4294967301"`, same sanity + throw pattern.
-   - `step = 1.5` (fractional): forge `{ ...microInitState(), step: s }` with token `"1.5"`, same
-     sanity (`JSON.parse(forged).state.step === 1.5`) + throw pattern.
-   (Use real numeric tokens valid in JSON — `1.5`, `4294967301` — NOT the `1e999` Infinity trick;
-   these parse to finite non-integers, exactly the gap the new gate closes.)
+3. **Create `tests/regression/parser_validator_negative_corpus.test.ts`** — GREEN base
+   `generateParserPack(0)`; one case per targeted parser `error` code that has no existing witness and is
+   mutate-reachable from gen(0). Confirmed-good candidate set (verify each emit condition at its line and
+   craft the minimal single mutation; skip-with-comment any not cleanly reachable):
+   `ROOM_OBJECT_MISSING`, `CONTAINER_CONTENT_MISSING`, `LOCKED_NO_KEY` (drop `key_id` + any unlock path
+   on a locked object), `NPC_ROOM_MISSING` (point an npc at a non-existent room), `KEY_UNOBTAINABLE`,
+   `DIALOGUE_ROOT_MISSING`, `DIALOGUE_GOTO_MISSING`, `START_MISSING` (non-room `meta.start_room`).
+   Differential anchor included.
 
-4. **Add a GREEN over-restriction witness** in the second (`GREEN round-trip`) `describe` block:
-   a state with a **negative integer seed** (e.g. `seed: -3, step: 0`, otherwise the micro/rich
-   shape) MUST `load()` without throwing AND `hashState(loaded.state) === hashState(original)` —
-   proving the new `.int()` gate accepts the full legitimate integer domain (incl. negatives the
-   entry allows) and did NOT over-restrict to `gte(0)`. (`mulberry32(-3 >>> 0)` is well-defined.)
+4. **For BOTH tests**, run them and read each twin's full `findings` to confirm the expected code is
+   present AND attributable to the single mutation; tune mutations so each case is a clean single-defect
+   attribution.
 
-5. **NEW artifact** `traces/bugs/bug_0208_save_load_integer_identity_gate.yaml` in the
-   bug_0207 format (id, title, kind: `engine_integrity` / `load_integrity`, mode: n/a, summary,
-   root_cause, fix, out_of_band_teeth, regression_test, verification). Root cause: the disk/load
-   boundary gated `seed`/`step` finiteness only (`z.number().finite()`) while the MCP entry boundary
-   gates `.int()` (server.ts:147) — a forged save could inject a NON-INTEGER determinism identity
-   the entry never accepts, which `rngForStep`'s `>>> 0` then truncates to a value diverging from the
-   save's content hash. Fix: tighten the load gate to `seed: z.number().int()` /
-   `step: z.number().int().nonnegative()`, restoring entry↔disk symmetry. out_of_band_teeth: the new
-   rejection cases (`seed=1.5`, `seed=4294967301`, `step=1.5`) are RED against the pre-change
-   `.finite()` schema (no throw) and the negative-seed GREEN case proves no over-restriction.
-   regression_test: `tests/regression/save_integrity_adversarial.test.ts`.
+5. **NEW artifact** `traces/bugs/bug_0218_cyoa_parser_validator_negative_corpus.yaml` mirroring the
+   bug_0182/bug_0215 artifact shape (id, title, kind: `verification_oracle`, mode: `cyoa+parser`, summary,
+   context naming the audited un-witnessed `error`-code sets + the bug_0182 lineage + the saturation
+   signal, mechanism describing the copy-mutate discipline, files_changed = the two new test files,
+   verification = the test command). Record explicitly: NO source/hash/scorecard/corpus change.
 
-6. **Verify** (key-free, offline, deterministic): `npx tsc --noEmit` clean; the updated test green
-   (both new rejection cases throw, the new negative-seed case round-trips hash-identically, all
-   pre-existing cases still pass); `npm run health` GREEN (EXIT 0); `npm run verify:integrity`
-   reports only the **one expected non-blocking VERIFIER_TOUCHED** warning for
-   `src/persist/save_load.ts` (PROTECTED-but-present) and NO GUARD_WEAKENED / PROTECTED_DELETED /
-   HASH_PIN_UNACCOMPANIED / TEST/ASSERTION/STRONG count regression. Sanity that the witnesses are
-   genuine: temporarily revert `save_load.ts:45-46` to `.finite()` locally → the 3 new rejection
-   cases FAIL (no throw); restore — do NOT commit that experiment.
+6. **Verify** (key-free, offline, deterministic): the two new tests GREEN (every targeted case fires its
+   code; differential anchor passes); **non-vacuity spot-check** — temporarily comment ONE targeted
+   `err(...)` emit in the validator locally → exactly that case goes RED; restore (do NOT commit the
+   experiment). `npm run health` GREEN (EXIT 0). `npm run verify:integrity` EXIT 0 — NO new
+   VERIFIER_TOUCHED / GUARD_WEAKENED / PROTECTED_DELETED / HASH_PIN / TEST/ASSERTION/STRONG count
+   regression (validator/test files are NOT protected; no `AI_LOOP_ALLOW_VERIFIER_EDITS` needed).
+   `git status` shows ONLY the 3 new files.
 
 ### Exact files
 
-- **READ-ONLY**: `src/core/rng.ts`, `src/core/state.ts`, `src/core/hash.ts`, `src/mcp/server.ts`,
-  `scripts/verify-integrity.ts`.
-- **EDIT**: `src/persist/save_load.ts` (the `seed`/`step` gate + doc comment);
-  `tests/regression/save_integrity_adversarial.test.ts` (3 rejection cases + 1 GREEN negative-seed
-  case).
-- **NEW**: `traces/bugs/bug_0208_save_load_integer_identity_gate.yaml`.
-- **DO NOT EDIT / DO NOT REGENERATE**: `src/core/rng.ts`, `scripts/verify-integrity.ts` (and its
-  PROTECTED_FILES / HASH_PIN_FILES / MIN_* sets), the scorecard, the corpus, any generator. No
-  re-seal, no benchmark rebuild (no pack hash / scorecard byte / corpus seal moves).
+- **READ-ONLY**: `tests/regression/rpg_validator_negative_corpus.test.ts`, `src/validate/report.ts`,
+  `src/validate/cyoa_validator.ts`, `src/validate/parser_validator.ts`, `src/gen/cyoa_generator.ts`,
+  `src/gen/parser_generator.ts`.
+- **NEW**: `tests/regression/cyoa_validator_negative_corpus.test.ts`,
+  `tests/regression/parser_validator_negative_corpus.test.ts`,
+  `traces/bugs/bug_0218_cyoa_parser_validator_negative_corpus.yaml`.
+- **DO NOT EDIT / DO NOT REGENERATE**: any validator/schema/generator/engine source, any pack YAML,
+  `corpus/manifest.json`, the scorecard, `scripts/verify-integrity.ts`. No re-seal, no benchmark rebuild
+  (no pack hash / scorecard byte / corpus seal moves).
 
 ### Acceptance check (concrete / verifiable)
 
-- `src/persist/save_load.ts` gates `seed: z.number().int()` and `step: z.number().int().nonnegative()`;
-  the `vars`/`flags`/`objectState` gates are UNCHANGED.
-- `tests/regression/save_integrity_adversarial.test.ts`: the 3 new rejection cases (`seed=1.5`,
-  `seed=4294967301`, `step=1.5`) throw `SaveIntegrityError` and FAIL (no throw) against the
-  pre-change `.finite()` schema (genuine witness); the new GREEN negative-seed (`seed:-3`) case
-  round-trips with `hashState` unchanged; all pre-existing cases still pass.
-- `npm run health` GREEN (EXIT 0); `npm run verify:integrity` EXIT 0 with exactly ONE non-blocking
-  VERIFIER_TOUCHED warning (`src/persist/save_load.ts`) — NO GUARD_WEAKENED / PROTECTED_DELETED /
-  HASH_PIN_UNACCOMPANIED / count regression. No floor lowered, no matcher relaxed, no test
-  skipped/deleted. No `AI_LOOP_ALLOW_VERIFIER_EDITS` needed.
-- `traces/bugs/bug_0208_save_load_integer_identity_gate.yaml` exists in the bug_0207 format.
-- No pack hash, scorecard byte, or corpus seal moved (the change touches one schema file + its test).
+- Two NEW regression files exist, each following the bug_0182 copy-mutate discipline (single GREEN base
+  from `generate{Cyoa,Parser}Pack(0)`, `structuredClone` per case, one defect per case, `codesOf` filters
+  `severity==='error'`).
+- Each CYOA case asserts `validateCyoa(twin)` emits its targeted code; each parser case asserts
+  `validateParser(twin)` emits its targeted code. Any `error` code legitimately not mutate-reachable from
+  gen(0) is explicitly commented, not silently dropped.
+- A differential-anchor assertion in each file proves the GREEN base raises NONE of the targeted codes.
+- Each test is NON-VACUOUS: it goes RED if the corresponding `err(...)` emit is removed or its guard
+  inverted (confirmable by temporarily commenting one emit site and seeing exactly that case fail).
+- `npm run health` GREEN (EXIT 0); `npm run verify:integrity` EXIT 0 with NO GUARD_WEAKENED /
+  PROTECTED_DELETED / HASH_PIN_UNACCOMPANIED / count regression. No floor lowered, no matcher relaxed,
+  no test skipped/deleted (a documented-skip of an unreachable code is fine), no source touched.
+- `traces/bugs/bug_0218_cyoa_parser_validator_negative_corpus.yaml` exists in the bug_0215 format.
+- `git status` shows ONLY the 3 new files. No pack hash, scorecard byte, or corpus seal moved.
 
 ## Hard constraints (every cycle)
 
 - Key-free / offline / deterministic: no outbound model calls, no wall-clock, no RNG.
-- ONE focused STRUCTURAL change (not content polish); additive/strengthening only; NEVER weaken a
-  check (no lowering `MIN_*` / `GEN_EVAL_CHECK_COUNT` / `SATURATION_FLOOR`, no relaxing matchers, no
+- ONE focused STRUCTURAL change (not content polish); additive/strengthening only; NEVER weaken a check
+  (no lowering `MIN_*` / `GEN_EVAL_CHECK_COUNT` / `SATURATION_FLOOR`, no relaxing matchers, no
   `GUARD_WEAKENED`, no shrinking PROTECTED/HASH_PIN lists).
 - Keep the game playable and `npm run health` green.
 
 ## Reward-hacking guardrails (from the web research — bake these in)
 
-- **PITFALL: over-claiming a soundness exploit (Goodhart / inflated severity).** GUARD: framed
-  honestly as boundary-symmetry / type-confusion hardening, NOT an unlock-exploit; the witness is
-  the entry↔disk asymmetry (server.ts:147 `.int()` vs save_load.ts:45 `.finite()`), not a
-  reachable always-true gate.
-- **PITFALL: difficulty/strictness bought by breaking legitimate inputs** (setter-solver
-  feasibility, EvilGenie arXiv:2511.21654). GUARD: the GREEN negative-seed round-trip witness pins
-  the legitimate domain stays accepted — the gate matches the entry boundary EXACTLY (`.int()`, no
-  sign/range bound), so no real save is false-rejected.
-- **PITFALL: a present-but-incomplete checker fed only well-behaved input** (ASL arXiv:2510.14253;
-  SoundnessBench arXiv:2412.03154). GUARD: adversarial REJECTION-direction witnesses (forged
-  non-integer seed/step) that are RED against the old gate — the same oracle the existing
-  `seed=Infinity` / forged-save suite uses.
-- **PITFALL: re-seal / scorecard blast radius.** GUARD: this change moves NO pack hash, scorecard
-  byte, or corpus seal — `save_load.ts` + its test only; no `corpus:seal`, no benchmark rebuild.
+- **PITFALL: a vacuous negative test asserting merely `report.ok===false`** (any failure) instead of the
+  SPECIFIC code — it would pass even if the wrong branch fired or a schema parse threw. GUARD:
+  `codesOf(twin).includes(EXACT_CODE)`, never just `.ok` or `.length>0`.
+- **PITFALL: a mutation tripping MULTIPLE codes, making attribution ambiguous** (ASL arXiv:2510.14253;
+  SoundnessBench arXiv:2412.03154). GUARD: minimal single-defect mutation; where a companion code is
+  unavoidable use `.includes(expected)` PLUS the GREEN differential anchor — do NOT exact-equals the
+  whole code set.
+- **PITFALL: mutating the shared GREEN base in place** so later cases inherit prior defects. GUARD:
+  `structuredClone(GREEN)` at the top of every case, exactly as bug_0182.
+- **PITFALL: over-claiming a discovered validator defect (Goodhart / inflated severity, EvilGenie
+  arXiv:2511.21654).** GUARD: the artifact + test docstrings frame this as adding the missing
+  rejection-direction WITNESS for already-correct branches (parity with bug_0182), NOT a fixed live defect.
+- **PITFALL: re-seal / scorecard blast radius.** GUARD: tests only CALL the generators in-memory (pure,
+  no disk writes); confirm `git status` shows no scorecard / `corpus/manifest.json` churn before finishing.
 
 ## Rejected alternatives (this cycle)
 
-- **`seed` gate `gte(0).lte(0xffffffff)`** (the raw synthesis proposal) — WRONG: would false-reject
-  legitimate negative-seed saves the entry boundary (`server.ts:147` bare `.int()`) allows. Use
-  `.int()` to match the entry exactly.
-- **TextQuests dual-metric "harm" axis on the scorecard** — valuable but MEDIUM effort, requires a
-  `run_playtest` return-field change AND a scorecard rebuild (bug_0194 freshness pin) = much larger
-  blast radius; and the coverage bot floors out on the puzzle modes, so a harm metric would be thin.
-- **Metamorphic isomorphic-relabel / IPT oracle over packs** — a strong research-class idea but
-  MEDIUM effort with new oracle infrastructure (a `relabelPack` bijection across exits/conditions/
-  effects); not a named live defect. Defer to a future cycle.
-- **`validateParser` known-shallow negative corpus** — additive and precedented (bug_0182) but it
-  hardens an already-correct validator (test-only value); weaker than closing a real boundary gap.
-- **MCP path-confinement fuzz of `safeResolve`** — `safeResolve` is empirically already sound;
-  regression-hardening of a correct boundary, not a live-defect fix.
-- **Keyed real-model author→play→fix→lock run** — OWNER-API-KEY-GATED; out of scope for a key-free
-  cycle. Remains the standing true-goal keystone ([[ultraplan-true-goal-pivot]]).
-- **More breadth/content packs / parser v4 deepen** — content (saturated, all 15 blind-clean) or
-  unwarranted (the per-mode scorecard shows parser at parity 16.5%/16.7%, not re-inverted).
+- **Deepen the CYOA generator v2→v3 to multi-stage SCENE-GRAPH topology** (close the 0.68/0.586
+  curated/held-out gap) — genuinely a live distribution defect and highest-ceiling, but MEDIUM effort with
+  the LARGEST blast radius: bumps `CYOA_GENERATOR_VERSION`, re-seals all 4 CYOA corpus entries (new
+  `content_hash`es in `corpus/manifest.json`), and forces a runs=50 scorecard regen to keep
+  `benchmark_scorecard_fresh.test.ts` green — moving corpus seal + scorecard bytes, exactly what the brief
+  avoids unless that IS the whole point. **Deferred to a future cycle** once a low-risk strengthening lands.
+- **TextQuests death/harm axis on the scorecard** — real and open, but trips the bug_0194 freshness pin
+  (row-shape change forces same-cycle runs=50 scorecard regen, moving scorecard bytes) and the
+  deterministic baseline bot floors at 0% on parser/RPG so the column is thin until a keyed real-model row
+  lands (owner-API-key-gated). Larger blast radius for equal-or-lower immediate signal.
+- **Extend the metamorphic relabel/observation-stream oracle to the GENERATED/held-out corpus** —
+  strategically appealing (the contamination claim rests on held-out packs, yet the id-invariance oracle
+  only runs on curated), but it is regression-hardening of an already-proven property (same engine + relabel
+  path, proven sound on curated) and the metamorphic trilogy is marked CLOSED. Lower marginal soundness than
+  wiring up a rejection-direction witness that today does not exist at all for the un-witnessed validator codes.
+- **Mutation-kill harness for vacuous-but-strong asserts** — named open gap and high-value, but LARGE
+  effort (a new mutation-kill harness script under `scripts/` cataloguing mutants + per-mutant suite runs as a hard bar) with flake/runtime
+  risk, and a new oracle CLASS rather than a named live asymmetry. The negative corpus closes a concrete
+  present-but-untested-checker surface at a fraction of the effort/blast radius. **Strong future cycle.**
+- **Gate the trace top-level envelope (`actions`/`content_hash`/`seed`) with a `TraceSchema` before replay**
+  — the reviewer itself flags `is_live_defect:false`: a malformed envelope cannot corrupt state or yield a
+  wrong-but-accepted hash; boundary-symmetry cosmetics, strictly weaker than adding missing soundness
+  witnesses.
+- **Keyed real-model author→play→fix→lock run** — OWNER-API-KEY-GATED; out of scope for a key-free cycle.
+  Remains the standing true-goal keystone ([[ultraplan-true-goal-pivot]]).
 
 ## Deferred to next cycle
 
 1. The keyed real-model author→play→fix→lock run (owner-API-key-gated) — the standing keystone.
-2. The TextQuests harm axis on the scorecard (needs a run_playtest field + scorecard rebuild).
-3. The metamorphic relabel/IPT oracle (a key-free contamination/robustness oracle, medium effort).
+2. The CYOA generator v2→v3 SCENE-GRAPH-depth deepen (closes the real CYOA contamination gap; accepts the
+   corpus re-seal + scorecard-regen blast radius as the whole point of that cycle).
+3. The TextQuests harm axis on the scorecard (needs a `run_playtest` field + scorecard rebuild).
+4. The mutation-kill harness (a key-free vacuous-assert oracle CLASS, large effort).
 
 ## Mandated blind playtest (this cycle)
 
-Per the dedicated-pass rotation ([[assessor-blind-pass-rotation]]), the orchestrator runs the
-mandated blind pass on the most-overdue dedicated target, deliberately deviating from the harness's
-recency-blind nominee (`lamplighters_round`, blind-played clean LAST cycle bug_0206) so the rotation
-does not re-freeze. Reading the dedicated-pass log newest→oldest, the most-overdue is
-**watchtower_road** (CYOA, last dedicated pass bug_0182) — a branch-walk-legibility target where the
-blocked-exit hint is a no-op (CYOA has no exits), exercising a different surface than the recent
-RPG/parser passes. Report to `ai-runs/2026-06-03T21-51-53-950Z/playtest.md` (the loop.sh-required
-path). Record "Mandated blind pass ran on watchtower_road" in the AI_LOOP_STATE.md cycle entry
-(newest-first). Handled by the orchestrator, not the implementation subagent.
+Per the dedicated-pass rotation ([[assessor-blind-pass-rotation]]), the orchestrator runs the mandated
+blind pass on the most-overdue dedicated target, deliberately deviating from the harness's recency-blind
+nominee (`lamplighters_round`, blind-played clean LAST cycle bug_0216 and bug_0210) so the rotation does
+not re-freeze. Reading the dedicated-pass log newest→oldest, the most-overdue is **`wreckers_light`**
+(CYOA, last dedicated pass bug_0196 — older than every other pack; named the most-overdue target in
+bug_0215's own next-focus). It is also thematically apt — this cycle's move hardens the CYOA validator, and
+`wreckers_light` is a CYOA branch-walk pack. Report to `ai-runs/2026-06-04T00-10-24-722Z/playtest.md` (the
+loop.sh-required path). Record "Mandated blind pass ran on wreckers_light" in the AI_LOOP_STATE.md cycle
+entry (newest-first). Handled by the orchestrator, not the implementation subagent.
