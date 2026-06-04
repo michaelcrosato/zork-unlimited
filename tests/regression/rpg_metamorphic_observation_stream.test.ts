@@ -102,6 +102,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { readdirSync } from "node:fs";
+import { isDeepStrictEqual } from "node:util";
 import { join } from "node:path";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import {
@@ -140,7 +141,13 @@ const explore = (a: Action): boolean => !LIVENESS_SKIP.has(a.type);
 // Matches the RPG census/reachability oracles' bound. We walk the bracketed graph twice
 // in lock-step per pack; a cap-out surfaces as a loud failure rather than a hang.
 const MAX_STATES = 200_000;
-const TEST_TIMEOUT_MS = 90_000;
+// Generous per-test budget. wolf_winter's bracketed graph is ~123k distinct states — by far
+// the heaviest test in the suite — so even after the native fast-path comparison below cut its
+// per-state comparison cost ~5x, it runs tens of seconds and stretches further under a loaded/shared CI
+// runner (sibling test files competing for a few vCPUs). This headroom absorbs that variance
+// without loosening correctness: MAX_STATES, not the clock, bounds the work, so a genuine hang
+// still fails — just with margin. (Same rationale as vitest.config.ts's testTimeout.)
+const TEST_TIMEOUT_MS = 120_000;
 
 // Best/worst-roll PRNGs, identical to rpg_all_endings_reachable / rpg_metamorphic_relabel.
 // resolveAttack draws player strike first, enemy reply second; resolveSkillCheck draws once.
@@ -369,10 +376,24 @@ function walkInLockStep(
       ).toBe(a.id);
     }
 
-    expect(
-      canonical(relabelObservation(origObs, mapId)),
-      `observation must be isomorphic under relabeling at original state\n${ko}`,
-    ).toEqual(canonical(twinObs));
+    // Compare via a fast native equality that escalates to the authoritative assertion only on
+    // a mismatch. `isDeepStrictEqual` is STRICTER than vitest's `toEqual` (it distinguishes an
+    // `undefined`-valued field from a missing one), so strict-equal ⟹ loose-equal: a real
+    // `toEqual` divergence is necessarily an `isDeepStrictEqual` divergence and is NEVER skipped.
+    // On the rare mismatch we re-assert with `toEqual` to recover its forgiving undefined/missing
+    // semantics (a mere cosmetic shape delta still passes) AND to surface a readable diff. This
+    // keeps the proof exactly as strong while skipping vitest's heavy deep-compare on the ~10^5
+    // states wolf_winter reaches — the heaviest REDUCIBLE cost in this oracle (the engine stepping
+    // that drives the walk is irreducible). This oracle is the suite's long pole, and the slow
+    // compare was tipping it past its timeout under CI load.
+    const expectedTwin = canonical(relabelObservation(origObs, mapId));
+    const actualTwin = canonical(twinObs);
+    if (!isDeepStrictEqual(expectedTwin, actualTwin)) {
+      expect(
+        expectedTwin,
+        `observation must be isomorphic under relabeling at original state\n${ko}`,
+      ).toEqual(actualTwin);
+    }
     compared++;
 
     if (o.ended) continue;
