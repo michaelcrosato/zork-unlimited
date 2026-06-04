@@ -212,7 +212,9 @@ objects:
     description: >
       A heavy iron ring of the turnkey's keys, every one of them shaped for a lock that
       keeps a debtor IN — the night-gate, the alms-box. None of them was ever cut to let
-      a debtor out.
+      a debtor out. The cold weight of it pulls your hand toward the nearest lock; you
+      might heft the ring a moment and steady yourself before you trust it with anything
+      down here.
     takeable: true
     # The genre-reflex red herring: the obvious "way out" is iron, and the iron opens
     # only the death (the watched gate) and the greed (the alms-box). Not quest_critical
