@@ -99,6 +99,7 @@ function relabelObservation(o: CyoaObservation, mapId: (id: string) => string): 
     available_actions: o.available_actions.map((a) => ({ id: mapId(a.id), text: a.text })),
     ended: o.ended,
     ending_id: o.ending_id === null ? null : mapId(o.ending_id),
+    ending_death: o.ending_death, // a boolean failure-marker — label-invariant, like `ended`
   };
 }
 

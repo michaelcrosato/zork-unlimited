@@ -57,6 +57,15 @@ export const EndingSchema = z
     // (not `.default([])`) so endings that don't use it compile byte-identically
     // and their content hashes are unchanged (same rule as SceneSchema.variants).
     variants: z.array(SceneVariantSchema).optional(),
+    // Optional death/failure marker — the CYOA analogue of ParserEndingSchema.death
+    // (§13 Stage 3), part of standardizing the mechanic palette across modes. Marks a
+    // terminal as a non-winning failure outcome (a lethal gamble, a moral capitulation)
+    // so the observation and validators can distinguish a "you lost" terminal from a
+    // win/neutral one uniformly across CYOA/parser/RPG. `.optional()` (NOT `.default(false)`,
+    // unlike the parser's): an absent field stays absent in the compiled pack ⇒ every
+    // existing CYOA pack compiles byte-identically and keeps its content hash (mirrors
+    // `variants`). Absent ⇒ the ending is not flagged a failure.
+    death: z.boolean().optional(),
   })
   .strict();
 

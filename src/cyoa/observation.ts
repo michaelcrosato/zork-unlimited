@@ -23,6 +23,11 @@ export type CyoaObservation = {
   available_actions: { id: string; text: string }[];
   ended: boolean;
   ending_id: string | null;
+  // null while playing; once ended, whether the reached terminal is a declared
+  // death/failure ending (`death: true`). Lets a client distinguish a "you lost"
+  // terminal from a win/neutral one uniformly with parser/RPG. An `is_ending` scene
+  // (not in the endings list) carries no death flag ⇒ false.
+  ending_death: boolean | null;
 };
 
 function visibleFlags(state: GameState): string[] {
@@ -64,6 +69,9 @@ export function buildObservation(
     available_actions: available,
     ended: state.ended,
     ending_id: state.endingId,
+    ending_death: state.ended
+      ? (index.pack.endings.find((e) => e.id === (state.endingId ?? state.current))?.death ?? false)
+      : null,
   };
 }
 
