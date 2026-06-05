@@ -217,6 +217,8 @@ each change blind-playtested and gated green.
 
 ## Quickstart
 
+**Prerequisite:** Node 22+ — `.nvmrc` pins the toolchain (matching `package.json`'s `engines` and CI).
+
 ```bash
 npm install
 npm run typecheck                                        # tsc --noEmit
