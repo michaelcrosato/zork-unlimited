@@ -376,6 +376,27 @@ endings:
   - id: ending_drowned
     death: true
     title: "The Sea Takes You"
+    # knows_truth reframes even the drowning. The journal-read informed climb and the
+    # ignorant one BOTH reach this death (gallery -> climb_to_wreck is never gated on the
+    # truth), so — like the saved/wrecker/mercy endings, and exactly the gap closed on
+    # tithe_barn's ending_fall (bug_0272) — the one remaining non-gated ending must reframe
+    # too, or the player who went over the rail KNOWING whose bell tolls in the dark reads
+    # the same death as one who never learned. Variant ABOVE base, first-match-wins: the
+    # informed climb renders the reframed death (the Mourning Star and her guilty master
+    # drown with you because the lamp stays dark), the ignorant climb still renders the base.
+    # Both paths are reachable, so the base is no dead fallback; same death id, same telegraph,
+    # no flag/route/ending/quest_stage/scoring change — pure reactive-epilogue depth.
+    variants:
+      - when: [{ has_flag: knows_truth }]
+        text: >
+          The iron is slick and the wind has weight, and a dozen rungs down the cliff your
+          foot finds only rain. The fall is short, and you go down knowing whose bell still
+          tolls in the dark — the Mourning Star, and the man at her wheel who ran the keeper's
+          son onto these very rocks and called it law. Whatever you climbed down to do to him
+          or for him, the sea has no patience for it. Above you the lighthouse stands dark and
+          stays dark, and she feels her way toward a coast that will never answer her now. The
+          man who drowned the boy and the one who came after him both go to the same teeth, and
+          the rocks do not trouble to tell them apart.
     text: >
       The iron is slick and the wind has weight, and a dozen rungs down the cliff your
       foot finds only rain. The fall is short. The white water is not cold for long.
