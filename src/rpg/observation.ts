@@ -23,7 +23,14 @@ export type RpgObservation = Omit<ParserObservation, "mode" | "available_actions
   mode: "rpg";
   enemies_present: { id: string; name: string; hp: number }[];
   stats: { hp: number; attack: number; defense: number };
-  available_actions: { id: string; command: string; action: Action }[];
+  // A skill-checked USE carries the rolled stat + difficulty (bug_0274), surfaced through
+  // the shared parser enumeration; omitted on plain actions and on ATTACK.
+  available_actions: {
+    id: string;
+    command: string;
+    action: Action;
+    skill_check?: { skill: string; difficulty: number };
+  }[];
 };
 
 export function buildRpgObservation(
@@ -48,6 +55,7 @@ export function buildRpgObservation(
       id: o.id,
       command: o.command,
       action: o.action,
+      ...(o.skill_check ? { skill_check: o.skill_check } : {}),
     })),
   };
 }

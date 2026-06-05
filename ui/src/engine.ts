@@ -186,7 +186,15 @@ export class GameSession {
         location: o.room,
         title: o.title,
         text: o.dialogue ? `${o.description}\n\n${o.dialogue.npc}: "${o.dialogue.npc_text}"` : o.description,
-        choices: o.available_actions.map((a) => ({ id: a.id, label: a.command })),
+        // A skill-checked command shows the stat it rolls and the difficulty (bug_0274,
+        // the parser/RPG sibling of the CYOA bug_0269), so the displayed skill var no
+        // longer reads as a vestigial number; a plain command keeps its bare label.
+        choices: o.available_actions.map((a) => ({
+          id: a.id,
+          label: a.skill_check
+            ? `${a.command}  ⟨${a.skill_check.skill} check, DC ${a.skill_check.difficulty}⟩`
+            : a.command,
+        })),
         inventory: o.inventory,
         facts: [
           ...o.exits.map((e) => `exit: ${e.direction}`),
@@ -208,7 +216,13 @@ export class GameSession {
       location: o.room,
       title: o.title,
       text: o.description,
-      choices: o.available_actions.map((a) => ({ id: a.id, label: a.command })),
+      // Skill-checked commands carry their stat + DC here too (bug_0274).
+      choices: o.available_actions.map((a) => ({
+        id: a.id,
+        label: a.skill_check
+          ? `${a.command}  ⟨${a.skill_check.skill} check, DC ${a.skill_check.difficulty}⟩`
+          : a.command,
+      })),
       inventory: o.inventory,
       facts: [
         `HP ${o.stats.hp}  ATK ${o.stats.attack}  DEF ${o.stats.defense}`,

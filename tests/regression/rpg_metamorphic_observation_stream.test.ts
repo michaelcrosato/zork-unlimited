@@ -295,7 +295,21 @@ function relabelObservation(o: RpgObservation, mapId: (id: string) => string): R
     dialogue: o.dialogue ? { npc: mapId(o.dialogue.npc), npc_text: o.dialogue.npc_text } : null,
     available_actions: o.available_actions.map((a) => {
       const action = relabelAction(a.action, mapId);
-      return { id: rpgOptionId(action), command: a.command, action };
+      // The surfaced skill name is an author var (e.g. `might`) → it IS in the bijection
+      // and must map through, exactly like the var keys in `state.vars` above (bug_0274).
+      return {
+        id: rpgOptionId(action),
+        command: a.command,
+        action,
+        ...(a.skill_check
+          ? {
+              skill_check: {
+                skill: mapId(a.skill_check.skill),
+                difficulty: a.skill_check.difficulty,
+              },
+            }
+          : {}),
+      };
     }),
     score: o.score,
     max_score: o.max_score,

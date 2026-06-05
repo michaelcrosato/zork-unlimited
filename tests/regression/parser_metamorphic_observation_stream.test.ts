@@ -255,7 +255,22 @@ function relabelObservation(
     dialogue: o.dialogue ? { npc: mapId(o.dialogue.npc), npc_text: o.dialogue.npc_text } : null,
     available_actions: o.available_actions.map((a) => {
       const action = relabelAction(a.action, mapId);
-      return { id: optionId(action), command: a.command, action };
+      // The surfaced skill name is an author var (e.g. `nerve`) → it IS in the bijection
+      // and must map through, exactly like the var keys in `state.vars` above (bug_0274).
+      // difficulty is a number, byte-identical. Omitted ⇒ stays omitted on the twin.
+      return {
+        id: optionId(action),
+        command: a.command,
+        action,
+        ...(a.skill_check
+          ? {
+              skill_check: {
+                skill: mapId(a.skill_check.skill),
+                difficulty: a.skill_check.difficulty,
+              },
+            }
+          : {}),
+      };
     }),
     score: o.score,
     max_score: o.max_score,

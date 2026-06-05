@@ -27,7 +27,20 @@ import {
   visibleObjectIds,
 } from "./model.js";
 
-export type ParserActionOption = { id: string; command: string; action: Action };
+// A USE action that carries a `skill_check` (resolved by the runner as a d20 + skill
+// roll, parser/RPG alike) is annotated with the rolled stat + difficulty, so a player
+// (and a client) can SEE a stat is in play before committing — without it a declared
+// skill var reads as vestigial (a blind playtester flagged exactly this for sealed_crypt's
+// `nerve`, bug_0274; the CYOA sibling was bug_0269). Only `skill`/`difficulty` surface —
+// never the check's `on_success`/`on_failure` effects, which carry score/flag/end_game
+// routing — so the destination graph stays hidden, exactly as a plain command never leaks
+// its effects. Omitted on every non-skill action, so the legacy option shape is unchanged.
+export type ParserActionOption = {
+  id: string;
+  command: string;
+  action: Action;
+  skill_check?: { skill: string; difficulty: number };
+};
 
 // State-aware so an enumerated command shows the object's REACTIVE name (bug_0188):
 // a righted "toppled cresset" re-labels itself rather than freezing the stale word
@@ -340,7 +353,18 @@ export function enumerateActions(index: ParserIndex, state: GameState): ParserAc
               .replace("{item}", itemName)
               .replace("{target}", targetName)
           : `use ${itemName} on ${targetName}`;
-      push(option(index, state, id, command, { type: "USE", item: it.item, target: it.target }));
+      const opt = option(index, state, id, command, {
+        type: "USE",
+        item: it.item,
+        target: it.target,
+      });
+      // Surface ONLY the rolled skill + difficulty when this USE is a skill check, so the
+      // listed command reads as the intentional roll it is (bug_0274). Never the branch
+      // effects, which would leak score/flag/end_game routing.
+      if (opt && it.skill_check) {
+        opt.skill_check = { skill: it.skill_check.skill, difficulty: it.skill_check.difficulty };
+      }
+      push(opt);
     }
   }
 

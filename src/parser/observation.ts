@@ -59,7 +59,15 @@ export type ParserObservation = {
   inventory: string[];
   state: { flags: string[]; vars: Record<string, number>; journal: string[] };
   dialogue: { npc: string; npc_text: string } | null;
-  available_actions: { id: string; command: string; action: Action }[];
+  // A skill-checked USE carries a `skill_check` annotation (rolled stat + difficulty), so
+  // a declared skill var no longer reads as vestigial (bug_0274; CYOA sibling bug_0269).
+  // Omitted on every plain action ⇒ byte-identical to the legacy shape for non-skill packs.
+  available_actions: {
+    id: string;
+    command: string;
+    action: Action;
+    skill_check?: { skill: string; difficulty: number };
+  }[];
   score: number;
   max_score: number;
   ended: boolean;
@@ -147,6 +155,7 @@ export function buildParserObservation(
       id: o.id,
       command: o.command,
       action: o.action,
+      ...(o.skill_check ? { skill_check: o.skill_check } : {}),
     })),
     score,
     max_score: maxScore,
