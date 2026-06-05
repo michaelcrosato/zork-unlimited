@@ -19,6 +19,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { createToolApi } from "../mcp/tools.js";
 import type { PackMode } from "../mcp/types.js";
+import { totalCycleCount } from "./loop_state.js";
 import { generateCyoaPack } from "../gen/cyoa_generator.js";
 import { generateRpgPack } from "../gen/rpg_generator.js";
 import { generateParserPack } from "../gen/parser_generator.js";
@@ -296,11 +297,14 @@ export function generatedEvalSeedBase(loopStateText: string): number {
   return (loopStateText.match(/^### Cycle result/gm) ?? []).length;
 }
 
-/** Disk wrapper for {@link generatedEvalSeedBase}; 0 when the log is absent. */
+/**
+ * Disk wrapper: total completed cycles across the live log + the rotated archive
+ * ({@link totalCycleCount}), so the generator seed window stays monotonic even after
+ * AI_LOOP_STATE.md is trimmed by the rotation. {@link generatedEvalSeedBase} remains the
+ * pure, single-file counter the unit tests pin.
+ */
 function generatedEvalSeedBaseFromDisk(root: string): number {
-  const p = join(root, "AI_LOOP_STATE.md");
-  if (!existsSync(p)) return 0;
-  return generatedEvalSeedBase(readFileSync(p, "utf8"));
+  return totalCycleCount(root);
 }
 
 /**

@@ -13,6 +13,8 @@ ai-runs/
 saves/*.json
 transcripts/*.md
 coverage/
+# Rotated tail of the AFK loop log (git history preserves old AI_LOOP_STATE.md versions)
+AI_LOOP_STATE_ARCHIVE.md
 
 # Repo-local Codex config is tracked; runtime state/auth/session data is not.
 .codex/*

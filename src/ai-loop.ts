@@ -32,6 +32,7 @@ import {
   type PackHealth,
 } from "./afk/assessor.js";
 import { createToolApi } from "./mcp/tools.js";
+import { rotateLoopState } from "./afk/loop_state.js";
 
 // ── Saturation-triggered ultraplan (docs/afk_loop.md) ──────────────────────────
 // When the deterministic assessor runs dry (isSaturated), a cycle re-aims the
@@ -81,6 +82,9 @@ function playtestTarget(
 
 function main(): void {
   const root = process.cwd();
+  // Keep the loop log token-small: archive all but the most recent cycles before we
+  // assess and hand the prompt to the agent (which reads + prepends to it each cycle).
+  rotateLoopState(root);
   const stamp = cycleStamp();
   const runDir = join("ai-runs", stamp);
   mkdirSync(runDir, { recursive: true });
@@ -207,6 +211,10 @@ function buildPrompt(ctx: {
     "## Hard constraints",
     "- Do not commit ai-runs/, node_modules/, dist/, coverage/, saves/*.json.",
     "- Keep the game playable; prefer a small, verified change over a broad rewrite.",
+    "- Token economy: read files in RANGES (offset/limit), not wholesale, and don't",
+    "  re-read unchanged files. AI_LOOP_STATE.md is auto-trimmed to recent cycles — older",
+    "  history lives in the gitignored AI_LOOP_STATE_ARCHIVE.md (read it only if you truly",
+    "  need deep history). `npm test` uses --reporter=dot, so keep diagnostics terse.",
     "",
   ].join("\n");
 }
@@ -286,6 +294,8 @@ function buildUltraplanPrompt(ctx: {
     "## Hard constraints",
     "- Do not commit ai-runs/, node_modules/, dist/, coverage/, saves/*.json.",
     "- ONE focused structural change; keep the game playable and the bar green.",
+    "- Token economy: ranged file reads (offset/limit), no redundant re-reads; the loop",
+    "  log is auto-trimmed (deep history in the gitignored AI_LOOP_STATE_ARCHIVE.md).",
     "",
   ].join("\n");
 }
