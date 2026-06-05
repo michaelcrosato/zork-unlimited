@@ -19,6 +19,7 @@ import { hashState } from "../core/hash.js";
 import { makeStep, type Rules } from "../core/engine.js";
 import type { Action } from "../api/types.js";
 import type { GameState } from "../core/state.js";
+import type { GameEvent } from "../core/events.js";
 
 import { compilePack, loadPackFile, type CompiledPack } from "../cyoa/pack.js";
 import { generateCyoaPack } from "../gen/cyoa_generator.js";
@@ -196,6 +197,33 @@ function assertLoadedStateRefs(mode: PackMode, index: AnyIndex, state: GameState
 /** The current location id, normalized across modes (scene id ⟷ room id). */
 function obsLocation(obs: AnyObservation): string {
   return obs.mode === "cyoa" ? obs.scene_id : obs.room;
+}
+
+/**
+ * Strip internal-bookkeeping `state_change` events from the player-facing event
+ * stream (bug_0260, a blind-playtest finding). Some engine effects write `__`-
+ * prefixed vars/flags that exist only to drive mechanics, never to be read by the
+ * player: the per-enemy HP tracker `__enemy_hp_<id>` (rpg/schema enemyHpVar, set
+ * each combat round) and the dialogue-progress flag `__dlg_<npc>` (parser/model).
+ * observation.ts ALREADY hides these from `state.flags`/`state.vars` (and
+ * get_transcript's summary.flags filters them too), but the raw `events` array
+ * returned by step_action — and recorded in the transcript get_transcript shows —
+ * still surfaced them as `set_var`/`set_flag` state_change events, leaking
+ * `__enemy_hp_barrow_wight` / `__dlg_reaver_shade` into a source-blind player's
+ * view (sunken_barrow seed 13 §4, ai-runs/2026-06-04T23-46-24-371Z/playtest.md).
+ * The legible combat/dialogue NARRATION events ("You strike … it has N HP left")
+ * are not `__`-prefixed and are untouched, so the player loses no information.
+ * This filters DISPLAY ONLY: the engine's effects, the stored GameState, and the
+ * state_hash are unchanged (determinism/save integrity §8.5/§8.7 hold), and the
+ * engine-level `result.events` stays complete for tests, traces, and debugging.
+ */
+function playerVisibleEvents(events: GameEvent[]): GameEvent[] {
+  return events.filter((e) => {
+    if (e.type !== "state_change") return true;
+    const sc = e as { flag?: unknown; name?: unknown };
+    const key = typeof sc.flag === "string" ? sc.flag : typeof sc.name === "string" ? sc.name : "";
+    return !key.startsWith("__");
+  });
 }
 
 /** The human label for an action id in this observation (choice text ⟷ command). */
@@ -927,7 +955,7 @@ export function createToolApi(opts: { root: string }) {
       return {
         ok: result.ok,
         rejection_reason: result.rejectionReason ?? null,
-        events: result.events,
+        events: playerVisibleEvents(result.events),
         observation: after,
         state_hash: hashState(result.state),
       };
@@ -948,7 +976,9 @@ export function createToolApi(opts: { root: string }) {
         session_id: s.id,
         pack_id: s.packId,
         mode: s.mode,
-        turns: s.transcript,
+        // Filter internal-bookkeeping events the same way step_action does, so the
+        // transcript a player reads never surfaces `__`-prefixed vars/flags (bug_0260).
+        turns: s.transcript.map((t) => ({ ...t, events: playerVisibleEvents(t.events) })),
         summary: {
           steps: s.transcript.filter((t) => t.action_id !== null).length,
           scenes: [...new Set(s.transcript.flatMap((t) => [t.scene_id, t.result_scene_id]))].sort(),
