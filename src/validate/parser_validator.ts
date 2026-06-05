@@ -910,10 +910,12 @@ export function validateParser(
  * Sound & conservative (no false positives): the initial state is the engine's own
  * (`initStateForParserPack`, start `on_enter` applied, start room marked visited),
  * evaluated by the engine's own `evalConditions`; and un-falsifiability is proven
- * only for a flat conjunction of monotone-stable atoms — any disjunction/negation,
- * a `not_visited`/object/quest condition, or a condition on a combat-volatile var
- * makes us bail (treat as falsifiable ⇒ no finding). A win merely satisfiable early
- * but escapable on the first move is never flagged.
+ * only for a flat conjunction of monotone-stable atoms (incl. `is_open`, which no
+ * effect can close, and `is_unlocked` when nothing can relock it) — any
+ * disjunction/negation, a `not_visited`/quest condition, a relockable `is_unlocked`,
+ * or a condition on a combat-volatile var makes us bail (treat as falsifiable ⇒ no
+ * finding). A win merely satisfiable early but escapable on the first move is never
+ * flagged.
  */
 function checkWinFiresAtStart(
   pack: ParserPack,
@@ -1078,6 +1080,11 @@ type Falsifiers = {
   addedItems: Set<string>;
   removedItems: Set<string>;
   varWrites: Map<string, VarWrite[]>;
+  // Objects a `set_object_locked: { locked: true }` can re-lock — the only effect
+  // that falsifies an `is_unlocked` condition. (There is NO object-CLOSE effect in
+  // the closed effect DSL and the CLOSE verb is unresolvable, so `is_open` has no
+  // falsifier set: once open, an object stays open — see winStaysTrueForever.)
+  relockedObjects: Set<string>;
 };
 
 /** Every mutation the pack can make (all declared parser effects + any extra RPG
@@ -1087,6 +1094,7 @@ function collectFalsifiers(pack: ParserPack, extra: Effect[]): Falsifiers {
   const setFlags = new Set<string>();
   const addedItems = new Set<string>();
   const removedItems = new Set<string>();
+  const relockedObjects = new Set<string>();
   const varWrites = new Map<string, VarWrite[]>();
   const pushVar = (name: string, w: VarWrite): void => {
     const arr = varWrites.get(name) ?? [];
@@ -1100,6 +1108,8 @@ function collectFalsifiers(pack: ParserPack, extra: Effect[]): Falsifiers {
       else if ("unlock_exit" in e) setFlags.add(exitFlag(e.unlock_exit.from, e.unlock_exit.to));
       else if ("add_item" in e) addedItems.add(e.add_item);
       else if ("remove_item" in e) removedItems.add(e.remove_item);
+      else if ("set_object_locked" in e && e.set_object_locked.locked)
+        relockedObjects.add(e.set_object_locked.id);
       else if ("inc_var" in e) pushVar(e.inc_var.name, { kind: "inc", amount: e.inc_var.by });
       else if ("dec_var" in e) pushVar(e.dec_var.name, { kind: "dec", amount: e.dec_var.by });
       else if ("set_var" in e) pushVar(e.set_var.name, { kind: "set", amount: e.set_var.value });
@@ -1107,7 +1117,7 @@ function collectFalsifiers(pack: ParserPack, extra: Effect[]): Falsifiers {
   };
   scan(allEffects(pack));
   scan(extra);
-  return { clearedFlags, setFlags, addedItems, removedItems, varWrites };
+  return { clearedFlags, setFlags, addedItems, removedItems, varWrites, relockedObjects };
 }
 
 // A var that holds `>= floor` keeps holding it iff no write can push it below floor:
@@ -1130,9 +1140,12 @@ function varNeverChanges(fixed: number, writes: VarWrite[] | undefined): boolean
 
 /** True iff `conditions` (taken as a conjunction) hold now AND stay true under every
  *  pack effect — so once met at init they can never become false. Proven only for a
- *  flat AND of individually monotone-stable atoms; any_of/none_of, not_visited,
- *  object/quest state, or a condition on a combat-volatile var make us bail to false
- *  (conservative: we never claim an un-falsifiability we cannot prove). */
+ *  flat AND of individually monotone-stable atoms (flags, items, sign-significant
+ *  var bounds, `visited`, plus object open/unlock state: `is_open` is monotone — no
+ *  effect closes an object — and `is_unlocked` is stable unless a `set_object_locked`
+ *  can relock it); any_of/none_of, not_visited, quest_stage, or a condition on a
+ *  combat-volatile var make us bail to false (conservative: we never claim an
+ *  un-falsifiability we cannot prove). */
 function winStaysTrueForever(
   conditions: Condition[],
   f: Falsifiers,
@@ -1159,8 +1172,20 @@ function winStaysTrueForever(
         varNeverChanges(c.var_eq.value, f.varWrites.get(c.var_eq.name));
     else if ("visited" in c) {
       /* `visited` is monotone — once true it stays true; nothing un-visits. */
+    } else if ("is_open" in c) {
+      // Object open-state is monotone: the closed effect DSL has no object-CLOSE
+      // effect (only `open_object`, which sets open=true), and the CLOSE verb is
+      // unresolvable (`resolveParserAction` has no CLOSE case, so it is never
+      // enumerated or applied). Nothing can shut an opened object, so an `is_open`
+      // win that holds at start can never be falsified — always stable.
+    } else if ("is_unlocked" in c) {
+      // A lock CAN be re-set: `set_object_locked: { locked: true }` is the sole
+      // effect that falsifies an `is_unlocked` win. Stable iff no such relock
+      // targets this object (UNLOCK and `set_object_locked: { locked: false }`
+      // only ever help, so they are not falsifiers).
+      stable = !f.relockedObjects.has(c.is_unlocked);
     } else if ("all_of" in c) c.all_of.forEach(visit);
-    else stable = false; // any_of/none_of/not_visited/is_open/is_unlocked/quest_stage: not analysed
+    else stable = false; // any_of/none_of/not_visited/quest_stage: not analysed
   };
   conditions.forEach(visit);
   return stable;

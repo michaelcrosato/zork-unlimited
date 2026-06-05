@@ -247,7 +247,12 @@ describe("bug_0152 — every reachable action menu of every RPG pack has unique 
       expect(statesChecked).toBeGreaterThan(0);
       expect(actionsSeen).toBeGreaterThan(statesChecked); // every state offers ≥1 action
       expect(collisions).toEqual([]);
-    }, 30_000);
+      // 120s budget (not 30s): wolf_winter's best/worst-roll bracket BFS walks ~123k
+      // states and runs ~9s in isolation, but balloons past 30s under full-suite
+      // parallel load — the same load-induced flake class as the health metamorphic
+      // oracle (bug f9e43b6: budget raised for exactly this pack). The headroom keeps
+      // `npm test` reliably green under contention without weakening any assertion.
+    }, 120_000);
   }
 
   it("FAILS on a planted duplicate parser-template id (two same-direction exits → go_north)", () => {
