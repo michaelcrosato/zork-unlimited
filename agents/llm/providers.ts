@@ -2,9 +2,10 @@
  * Real, provider-agnostic LLM backends (spec §12.7).
  *
  * Each adapter implements the same `Provider.completeJson` contract as the
- * deterministic MockProvider, so any agent role (writer/adapter/playtester/
- * debugger/fixer) can swap a live model for the mock without code changes. The
- * adapters sit behind environment variables and are NEVER reached in tests or CI:
+ * deterministic per-role mock (e.g. MockAuthorProvider), so any agent role
+ * (writer/adapter/debugger/fixer) can swap a live model for the mock without code
+ * changes. The adapters sit behind environment variables and are NEVER reached in
+ * tests or CI:
  * `resolveProvider` returns the caller-supplied mock fallback whenever the
  * relevant key is absent (§0, §12.7). No secrets live in the repo — only env var
  * names. The model's reply is parsed as JSON and validated against the requested

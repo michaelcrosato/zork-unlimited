@@ -21,7 +21,7 @@ import type { Action } from "../api/types.js";
 import type { GameState } from "../core/state.js";
 import type { GameEvent } from "../core/events.js";
 
-import { compilePack, loadPackFile, type CompiledPack } from "../cyoa/pack.js";
+import { compilePack, loadPackFile } from "../cyoa/pack.js";
 import { generateCyoaPack } from "../gen/cyoa_generator.js";
 import type { CyoaPack } from "../cyoa/schema.js";
 import { indexPack, buildRules, initStateForPack, type CyoaIndex } from "../cyoa/runner.js";
@@ -73,13 +73,10 @@ import {
 } from "../../agents/fixer.js";
 
 export type ToolApi = ReturnType<typeof createToolApi>;
-type PlaytestStrategy = "random" | "coverage";
 
 type LoadResult =
   | { ok: true; mode: PackMode; compiled: AnyCompiledPack; report: ValidationReport }
   | { ok: false; report: ValidationReport };
-
-const INVESTIGATIVE = /inspect|search|read|ask|show|examine|talk|look|use|attack|open|take/i;
 
 // ── Mode-aware dispatch (the §3 Layer-2/3 boundary stays per-mode) ──────────────
 // `mode` and `index` are always created together (startSession), so narrowing the
@@ -420,266 +417,6 @@ export function createToolApi(opts: { root: string }) {
     }
   }
 
-  // ── Playtest: CYOA path is unchanged (byte-identical); parser/RPG added ───────
-
-  /** Mean actions per ended run, rounded to 1 decimal (0 when no run ended). */
-  function meanTurns(total: number, ended: number): number {
-    return ended > 0 ? Math.round((total / ended) * 10) / 10 : 0;
-  }
-
-  function summarizePlaytest(args: {
-    pack_path: string;
-    runs?: number;
-    strategy?: PlaytestStrategy;
-    max_steps?: number;
-    hide_graph?: boolean;
-  }) {
-    const { mode, compiled } = requirePlayable(args.pack_path);
-    if (mode === "cyoa") return summarizeCyoa(compiled as CompiledPack, args);
-    return summarizeParserLike(mode, compiled, args);
-  }
-
-  function summarizeCyoa(
-    compiled: CompiledPack,
-    args: { runs?: number; strategy?: PlaytestStrategy; max_steps?: number; hide_graph?: boolean },
-  ) {
-    const index = indexPack(compiled.pack);
-    const step = makeStep(buildRules(index));
-    const runs = args.runs ?? 100;
-    const maxSteps = args.max_steps ?? 80;
-    const strategy = args.strategy ?? "coverage";
-    const allScenes = compiled.pack.scenes.map((s) => s.id);
-    const sceneSet = new Set(allScenes);
-    const endingsDeclared = [
-      ...compiled.pack.endings.map((e) => e.id),
-      ...compiled.pack.scenes.filter((s) => s.is_ending).map((s) => s.id),
-    ].sort();
-    const globalVisited = new Set<string>();
-    const endingDistribution: Record<string, number> = {};
-    const suspiciousPathSamples: {
-      run: number;
-      status: string;
-      path: string[];
-      ending_id: string | null;
-    }[] = [];
-    let ended = 0;
-    let unfinished = 0;
-    // Sum of actions taken on runs that REACHED an ending — the numerator of the
-    // mean_turns_to_end efficiency axis (ULTRAPLAN §Week.4). Each action pushes one
-    // entry onto `path` past the initial scene, so an ended run's action count is
-    // `path.length - 1`. CYOA has no room graph, so its turns-to-end is graph-agnostic.
-    let turnsToEndTotal = 0;
-
-    for (let run = 0; run < runs; run++) {
-      let state = initStateForPack(index, run + 1);
-      let rng = (run + 1) * 2654435761;
-      const path = [state.current];
-      const localVisited = new Set<string>([state.current]);
-      let status = "max_steps";
-
-      for (let turn = 0; turn < maxSteps; turn++) {
-        if (state.ended) {
-          status = "ended";
-          break;
-        }
-        const obs = buildObservation(index, state);
-        if (obs.available_actions.length === 0) {
-          status = "stuck";
-          break;
-        }
-        rng = (rng * 1664525 + 1013904223) >>> 0;
-        const scene = index.scenes.get(state.current);
-        const choiceIndex =
-          strategy === "random"
-            ? rng % obs.available_actions.length
-            : coverageChoiceIndex(
-                obs.available_actions,
-                scene?.choices ?? [],
-                globalVisited,
-                localVisited,
-              );
-        const actionId = obs.available_actions[choiceIndex]?.id ?? obs.available_actions[0]!.id;
-        const result = step(state, { type: "CHOOSE", choiceId: actionId });
-        state = result.state;
-        path.push(state.current);
-        localVisited.add(state.current);
-      }
-      for (const scene of localVisited) globalVisited.add(scene);
-      if (state.ended) {
-        ended++;
-        turnsToEndTotal += path.length - 1;
-        const ending = state.endingId ?? "(unknown)";
-        endingDistribution[ending] = (endingDistribution[ending] ?? 0) + 1;
-      } else {
-        unfinished++;
-        if (suspiciousPathSamples.length < 5) {
-          suspiciousPathSamples.push({ run: run + 1, status, path, ending_id: state.endingId });
-        }
-      }
-    }
-
-    const visitedScenes = [...globalVisited].filter((s) => sceneSet.has(s)).sort();
-    return {
-      pack_id: compiled.pack.meta.id,
-      mode: "cyoa" as const,
-      strategy,
-      runs,
-      ended,
-      unfinished,
-      // Mean actions to reach an ending, over ENDED runs only (0 when none ended).
-      // A 1-decimal efficiency axis: shorter paths to an ending mean a more direct
-      // route (ULTRAPLAN §Week.4). Deterministic — same seeds, same mean.
-      mean_turns_to_end: meanTurns(turnsToEndTotal, ended),
-      endings_declared: endingsDeclared,
-      ending_distribution: endingDistribution,
-      visited_scenes: visitedScenes,
-      unvisited_scenes: allScenes.filter((s) => !visitedScenes.includes(s)).sort(),
-      suspicious_path_samples: suspiciousPathSamples,
-    };
-  }
-
-  function coverageChoiceIndex(
-    actions: { id: string; text: string }[],
-    // `next` is optional: a skill-checked choice has none (its destination is roll-dependent),
-    // so it is simply never preferred as a "leads-somewhere-unvisited" move — the body already
-    // guards `next !== undefined` and falls through to the investigative/first heuristic.
-    choices: { id: string; next?: string | undefined }[],
-    globalVisited: Set<string>,
-    localVisited: Set<string>,
-  ): number {
-    const byId = new Map(choices.map((choice) => [choice.id, choice]));
-    const unseen = actions.findIndex((action) => {
-      const next = byId.get(action.id)?.next;
-      return next !== undefined && !globalVisited.has(next) && !localVisited.has(next);
-    });
-    if (unseen >= 0) return unseen;
-    const investigative = actions.findIndex((action) =>
-      /inspect|search|read|ask|show|examine|talk/i.test(action.text),
-    );
-    return investigative >= 0 ? investigative : 0;
-  }
-
-  /**
-   * Playtest a parser or RPG pack. Coverage uses the room graph: prefer a MOVE
-   * whose destination room is unvisited (the observation exposes exits with
-   * targets), else an investigative command, else the first action. Visited
-   * tracking is over rooms (state.current), endings over the pack's endings list.
-   */
-  function summarizeParserLike(
-    mode: PackMode,
-    compiled: AnyCompiledPack,
-    args: { runs?: number; strategy?: PlaytestStrategy; max_steps?: number; hide_graph?: boolean },
-  ) {
-    const index = indexFor(mode, compiled.pack);
-    const rules = rulesFor(mode, index);
-    const step = makeStep(rules);
-    const runs = args.runs ?? 100;
-    const maxSteps = args.max_steps ?? 80;
-    const strategy = args.strategy ?? "coverage";
-    const pack = compiled.pack as { rooms: { id: string }[]; endings: { id: string }[] };
-    const allRooms = pack.rooms.map((r) => r.id);
-    const roomSet = new Set(allRooms);
-    const endingsDeclared = pack.endings.map((e) => e.id).sort();
-    const globalVisited = new Set<string>();
-    const endingDistribution: Record<string, number> = {};
-    const suspiciousPathSamples: {
-      run: number;
-      status: string;
-      path: string[];
-      ending_id: string | null;
-    }[] = [];
-    let ended = 0;
-    let unfinished = 0;
-    // Sum of actions over ended runs — the mean_turns_to_end numerator (see the CYOA
-    // twin). On parser/RPG this axis PAIRS WITH hide_graph: a graph-blind bot wanders
-    // before it stumbles onto a win room, so hiding the graph tends to lengthen the
-    // route to an ending — a second spatial-difficulty signal beside scene coverage.
-    let turnsToEndTotal = 0;
-
-    for (let run = 0; run < runs; run++) {
-      let state = initStateFor(mode, index, run + 1);
-      let rng = (run + 1) * 2654435761;
-      const path = [state.current];
-      const localVisited = new Set<string>([state.current]);
-      let status = "max_steps";
-
-      for (let turn = 0; turn < maxSteps; turn++) {
-        if (state.ended) {
-          status = "ended";
-          break;
-        }
-        const obs = buildObsFor(mode, index, state, { hideGraph: args.hide_graph ?? false });
-        const actions = obs.mode === "cyoa" ? [] : obs.available_actions; // narrowing; parser/rpg only here
-        if (actions.length === 0) {
-          status = "stuck";
-          break;
-        }
-        rng = (rng * 1664525 + 1013904223) >>> 0;
-        const exits = obs.mode === "cyoa" ? [] : obs.exits;
-        const pick =
-          strategy === "random"
-            ? rng % actions.length
-            : coverageActionIndex(actions, exits, globalVisited, localVisited);
-        const chosen = actions[pick] ?? actions[0]!;
-        const result = step(state, chosen.action);
-        state = result.state;
-        path.push(state.current);
-        localVisited.add(state.current);
-      }
-      for (const room of localVisited) globalVisited.add(room);
-      if (state.ended) {
-        ended++;
-        turnsToEndTotal += path.length - 1;
-        const ending = state.endingId ?? "(unknown)";
-        endingDistribution[ending] = (endingDistribution[ending] ?? 0) + 1;
-      } else {
-        unfinished++;
-        if (suspiciousPathSamples.length < 5)
-          suspiciousPathSamples.push({ run: run + 1, status, path, ending_id: state.endingId });
-      }
-    }
-
-    const visited = [...globalVisited].filter((r) => roomSet.has(r)).sort();
-    return {
-      pack_id: compiled.pack.meta.id,
-      mode,
-      strategy,
-      runs,
-      ended,
-      unfinished,
-      // Mean actions to reach an ending over ended runs (0 when none ended); pairs
-      // with hide_graph as a second spatial signal (see the loop comment above).
-      mean_turns_to_end: meanTurns(turnsToEndTotal, ended),
-      endings_declared: endingsDeclared,
-      ending_distribution: endingDistribution,
-      visited_scenes: visited,
-      unvisited_scenes: allRooms.filter((r) => !visited.includes(r)).sort(),
-      suspicious_path_samples: suspiciousPathSamples,
-    };
-  }
-
-  function coverageActionIndex(
-    actions: { id: string; command: string; action: Action }[],
-    // `to` is present when the bot built the observation WITHOUT hideGraph (the
-    // default + the graph cells); under the benchmark's hide_graph cell `to` is
-    // undefined, so the prefer-unvisited branch falls through to blind navigation
-    // (investigative, else first) — the deterministic floor for spatial reasoning.
-    exits: { direction: string; to?: string }[],
-    globalVisited: Set<string>,
-    localVisited: Set<string>,
-  ): number {
-    const exitTo = new Map(exits.map((e) => [e.direction, e.to]));
-    // Prefer a move into an unvisited room.
-    const toUnseen = actions.findIndex((a) => {
-      if (a.action.type !== "MOVE") return false;
-      const to = exitTo.get(a.action.direction);
-      return to !== undefined && !globalVisited.has(to) && !localVisited.has(to);
-    });
-    if (toUnseen >= 0) return toUnseen;
-    const investigative = actions.findIndex((a) => INVESTIGATIVE.test(a.command));
-    return investigative >= 0 ? investigative : 0;
-  }
-
   return {
     sessions,
 
@@ -991,22 +728,6 @@ export function createToolApi(opts: { root: string }) {
           journal: [...s.state.journal],
         },
       };
-    },
-
-    run_playtest(args: {
-      story_path: string;
-      runs?: number;
-      strategy?: PlaytestStrategy;
-      max_steps?: number;
-      hide_graph?: boolean;
-    }) {
-      return summarizePlaytest({
-        pack_path: args.story_path,
-        ...(args.runs !== undefined ? { runs: args.runs } : {}),
-        ...(args.strategy !== undefined ? { strategy: args.strategy } : {}),
-        ...(args.max_steps !== undefined ? { max_steps: args.max_steps } : {}),
-        ...(args.hide_graph !== undefined ? { hide_graph: args.hide_graph } : {}),
-      });
     },
 
     save_game(args: { session_id: string }) {

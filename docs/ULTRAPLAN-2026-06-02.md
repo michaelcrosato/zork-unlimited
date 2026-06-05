@@ -19,9 +19,9 @@ layer; the roadmap's milestone mechanics remain valid where not contradicted her
 > - ✅ **Loop salvage** — assessor rotates the blind pass onto the least-recently
 >   attended pack (no clockwork lock-in) and raises a self-extinguishing frontier
 >   benchmark lever.
-> - ✅ **Benchmark scorecard** — `npm run benchmark` (`bin/benchmark.ts`) emits a
->   deterministic JSON+markdown scorecard over every pack; first row committed at
->   `traces/benchmark/scorecard.{md,json}`.
+> - ✅ **Benchmark scorecard** — a deterministic coverage-bot scorecard over every
+>   pack was built here, then REMOVED when testing collapsed to two modes (dev tests +
+>   blind LLM playtest); the future real-model benchmark rebuilds fresh on the blindtest.
 > - ✅ **Governance** — `ROADMAP.md` reconciled to the trust-but-verify charter.
 >
 > Still ahead (need a key or are larger/external): the keyed real-model
@@ -147,12 +147,13 @@ curation; let the held-out set accrete from real runs.
    real-author + scorecard work instead of re-polishing clarity-5 prose.
 
 ### 📆 Week — make it measurable and end-to-end real
-1. **Build the objective scorecard** (ROADMAP M4, still unrealized): `bin/benchmark`
-   runs N personas/models across all packs via MCP `run_playtest`, emitting stable
-   JSON+markdown — Game Progress + Harm (TextQuests vocabulary), route coverage, deaths,
+1. **Build the objective scorecard** (the future real-model benchmark): a stable
+   JSON+markdown metric across packs from real frontier-model **blind** playtests —
+   Game Progress + Harm (TextQuests vocabulary), route coverage, deaths,
    illegal-action rate, softlock count, turns-to-win, normalized per (pack, agent). The
-   day's first real-model run is row 1. **Without a comparable number, there is no
-   benchmark.**
+   day's first real-model run is row 1. (The earlier heuristic coverage-bot scorecard
+   was removed when testing collapsed to two modes; this rebuilds fresh on the
+   blindtest.) **Without a comparable number, there is no benchmark.**
 2. **Wire a real LLM provider into the loop's `content_new` path** so every *new* pack
    is genuine writer→adapter→validator authoring with a post-cutoff timestamp — building
    the contamination-free held-out set directly.

@@ -7,7 +7,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { MockProvider } from "../../agents/llm/provider.js";
+import type { Provider } from "../../agents/llm/provider.js";
 import {
   resolveProvider,
   extractJson,
@@ -16,7 +16,12 @@ import {
   GoogleProvider,
 } from "../../agents/llm/providers.js";
 
-const mock = new MockProvider("mainline");
+// A minimal stand-in Provider — resolveProvider only ever reads `.name` here; the
+// real backends are exercised separately through an injected HTTP fake below.
+const mock: Provider = {
+  name: "mock:test",
+  completeJson: () => Promise.reject(new Error("not used in resolveProvider tests")),
+};
 
 describe("resolveProvider", () => {
   it("returns the mock when no keys are present (CI default)", () => {

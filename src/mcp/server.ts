@@ -209,23 +209,6 @@ tool(
   (a) => api.get_transcript(a),
 );
 tool(
-  "run_playtest",
-  "Run deterministic automated MCP-style playtests on a pack of any mode (CYOA scenes or parser/RPG rooms) and summarize endings, coverage, unvisited locations, and suspicious paths.",
-  {
-    story_path: z.string().describe("Path to a content pack (any mode)."),
-    strategy: z
-      .enum(["random", "coverage"])
-      .optional()
-      .describe(
-        "random samples varied actions; coverage biases toward new locations / investigative options.",
-      ),
-    runs: z.number().int().positive().optional().describe("Number of runs, default 100."),
-    max_steps: z.number().int().positive().optional().describe("Per-run step cap, default 80."),
-  },
-  (a) => api.run_playtest(a),
-);
-
-tool(
   "save_game",
   "Serialize a session to a save string (content-hash + mode bound, §8.7).",
   SESSION,

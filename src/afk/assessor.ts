@@ -9,8 +9,8 @@
  *   - repo         : project hygiene (missing tooling, docs, etc.)
  *
  * The assessor gathers evidence DETERMINISTICALLY through the same tool API the MCP
- * server exposes (list_stories / validate / run_playtest) — no clock, no RNG, no
- * network — scores candidates, and recommends the single highest-value next action.
+ * server exposes (list_stories / validate) — no clock, no RNG, no network — scores
+ * candidates, and recommends the single highest-value next action.
  * It is the deterministic *evaluator*; the actual quality judgement each cycle comes
  * from a mandatory LLM playtest (see docs/afk_loop.md). Pure enough to unit-test:
  * same repo ⇒ same ranking.
@@ -18,8 +18,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { createToolApi } from "../mcp/tools.js";
-import { loadPackFile } from "../cyoa/pack.js";
-import type { CyoaPack } from "../cyoa/schema.js";
 import type { PackMode } from "../mcp/types.js";
 import { generateCyoaPack } from "../gen/cyoa_generator.js";
 import { generateRpgPack } from "../gen/rpg_generator.js";
@@ -47,9 +45,6 @@ export type PackHealth = {
   path: string;
   mode: PackMode | null;
   playable: boolean;
-  endingsDeclared: number;
-  endingsReached: number;
-  unvisited: string[];
   warnings: number;
 };
 
@@ -214,35 +209,6 @@ function docStalenessDocs(root: string): string[] {
     }
   }
   return out;
-}
-
-/**
- * Is this CYOA pack PLANNING-GATED? — i.e. does any choice carry a state
- * precondition (a `conditions` entry: item/flag/var/visited/quest gate)?
- *
- * This is the deterministic test for "the coverage bot's reach is trustworthy
- * here". The planning-free bot picks choices greedily with no lookahead, so it
- * cannot deliberately gather a prerequisite item/flag and come back to satisfy a
- * gate — exactly the limit already documented for parser/RPG puzzle packs. So in a
- * GATED CYOA pack its failure to reach an ending/scene is a PLANNING limit, not a
- * content flaw (e.g. clockwork_heist: ending_rich/ending_truth sit behind the
- * lockpick chain, ending_patrol behind a deliberate ledger-skip — all reached by
- * the blind LLM playtest every cycle, none by the bot). A PURE-BRANCHING CYOA pack
- * (no choice conditions anywhere) keeps the reliable-bot assumption: the bot can
- * reach every node, so there a coverage gap IS a real structural signal.
- */
-export function cyoaPackIsGated(pack: CyoaPack): boolean {
-  return pack.scenes.some((scene) => scene.choices.some((choice) => choice.conditions.length > 0));
-}
-
-/**
- * Disk wrapper for {@link cyoaPackIsGated}. Falls back to `false` (reliable-bot /
- * pre-bug_0032 behavior) if the pack can't be loaded — the caller only invokes
- * this for packs already known playable.
- */
-function isPlanningGatedCyoa(root: string, packPath: string): boolean {
-  const loaded = loadPackFile(join(root, packPath));
-  return loaded.ok && cyoaPackIsGated(loaded.compiled.pack);
 }
 
 /**
@@ -515,19 +481,11 @@ export function assess(root: string): Assessment {
   const packs: PackHealth[] = [];
   const candidates: ImprovementCandidate[] = [];
 
-  // ── Per-pack health via deterministic coverage playtest (fixed runs) ──────────
+  // ── Per-pack health: validator findings (the deterministic dev-test signal) ───
   for (const s of stories) {
     if (s.mode) packsByMode[s.mode] = (packsByMode[s.mode] ?? 0) + 1;
     if (!s.playable) {
-      packs.push({
-        path: s.path,
-        mode: s.mode,
-        playable: false,
-        endingsDeclared: 0,
-        endingsReached: 0,
-        unvisited: [],
-        warnings: 0,
-      });
+      packs.push({ path: s.path, mode: s.mode, playable: false, warnings: 0 });
       candidates.push({
         id: `fix-unplayable-${s.path}`,
         category: "content_fix",
@@ -544,86 +502,40 @@ export function assess(root: string): Assessment {
     }
     const report = api.validate_pack({ pack_path: s.path });
     const warnings = report.report.findings.filter((f) => f.severity === "warning").length;
-    let pt: ReturnType<typeof api.run_playtest> | null;
-    try {
-      pt = api.run_playtest({ story_path: s.path, strategy: "coverage", runs: 30 });
-    } catch {
-      pt = null;
-    }
-    const declared = pt?.endings_declared ?? [];
-    const reached = pt ? Object.keys(pt.ending_distribution) : [];
-    const unreached = declared.filter((e) => !reached.includes(e));
-    const unvisited = pt?.unvisited_scenes ?? [];
-    packs.push({
-      path: s.path,
-      mode: s.mode,
-      playable: true,
-      endingsDeclared: declared.length,
-      endingsReached: reached.length,
-      unvisited,
-      warnings,
-    });
+    packs.push({ path: s.path, mode: s.mode, playable: true, warnings });
 
-    // content_fix candidate when there is room to improve. CRUCIAL: the coverage
-    // BOT is a heuristic with NO planning, so in *puzzle* games its failure to reach
-    // an ending (or a gated room) is EXPECTED, not a content flaw — those packs ship
-    // passing walkthrough/acceptance tests proving they're winnable. Letting
-    // bot-coverage drive content_fix there sends the loop chasing phantom fixes.
-    //
-    // The dividing line is PLANNING-GATING, not the mode label. Parser/RPG are
-    // gated by nature, so bot-coverage is never a content_fix signal there. CYOA is
-    // gated only if its choices carry preconditions: a PURE-BRANCHING CYOA pack lets
-    // the no-planning bot reach every node (coverage gap ⇒ real signal), but a
-    // GATED CYOA pack (e.g. the lockpick-gated clockwork_heist, whose
-    // ending_rich/ending_truth/ending_patrol the bot reaches 1/4 every cycle while
-    // the blind LLM playtest reaches all of them) is exactly as unreachable-by-bot
-    // as a parser/RPG puzzle. So bot-coverage is a content_fix signal ONLY for
-    // ungated CYOA; for gated CYOA and all parser/RPG the real quality signal is the
-    // mandatory blind LLM playtest each cycle + validator warnings. (See
-    // docs/afk_loop.md.)
-    const botCoverageIsMeaningful = s.mode === "cyoa" && !isPlanningGatedCyoa(root, s.path);
-    const coverageGap = botCoverageIsMeaningful ? unvisited.length + unreached.length * 2 : 0;
-    const gap = warnings + coverageGap;
-    if (gap > 0) {
-      const impact = Math.min(5, 1 + Math.ceil(gap / 3));
-      const evidence = warnings ? [`${warnings} validator warning(s)`] : [];
-      if (botCoverageIsMeaningful) {
-        evidence.push(
-          unreached.length
-            ? `unreached endings: ${unreached.join(", ")}`
-            : "all endings reached by the coverage bot",
-          unvisited.length
-            ? `unvisited: ${unvisited.slice(0, 8).join(", ")}${unvisited.length > 8 ? "…" : ""}`
-            : "full location coverage",
-        );
-      }
+    // content_fix is driven by VALIDATOR findings — the deterministic, code-checkable
+    // signal (the "specific dev tests"). Player-facing QUALITY (signposting, clarity,
+    // pacing) is judged only by the mandatory blind LLM playtest each cycle, so a
+    // structurally-clean pack carries a low-priority blind-playtest rotation stub rather
+    // than any heuristic-bot coverage score. (Two testing modes only: dev tests + blindtest.)
+    if (warnings > 0) {
+      const impact = Math.min(5, 1 + Math.ceil(warnings / 3));
       candidates.push({
         id: `fix-${s.path}`,
         category: "content_fix",
         target: s.path,
-        title: botCoverageIsMeaningful
-          ? `Improve "${s.id}" — ${unreached.length} unreached ending(s), ${unvisited.length} unvisited location(s)${warnings ? `, ${warnings} warning(s)` : ""}`
-          : `Fix "${s.id}" — ${warnings} validator warning(s)`,
+        title: `Fix "${s.id}" — ${warnings} validator warning(s)`,
         rationale:
-          "An LLM playtest can pinpoint why these are hard to reach (signposting, clue legibility, pacing) and the fix raises player-facing quality.",
-        evidence,
+          "Validator warnings are concrete, code-checkable content defects; clearing them keeps the pack sound and raises player-facing quality.",
+        evidence: [`${warnings} validator warning(s)`],
         impact,
         effort: "M",
         score: score(impact, "M", "content_fix"),
       });
-    } else if (!botCoverageIsMeaningful && (unvisited.length > 0 || unreached.length > 0)) {
-      // Parser/RPG puzzle pack the bot can't fully traverse and no validator
-      // warnings: keep it on the radar at LOW priority for a fresh blind LLM
-      // playtest (the only fair judge of its quality), below real fixes/new content.
+    } else {
+      // Structurally clean (the validator + exhaustive solver prove it winnable and
+      // sound): keep it on the radar as a LOW-priority blind-playtest review, rotated by
+      // recency. The blind LLM playtest is the only judge of its signposting/clarity/pacing.
       candidates.push({
         id: `playtest-${s.path}`,
         category: "content_fix",
         target: s.path,
-        title: `Blind-playtest "${s.id}" — the coverage bot can't solve its puzzles, so quality is unverified`,
+        title: `Blind-playtest "${s.id}" — structurally clean; only a fresh blind LLM player can judge its quality`,
         rationale:
-          "A heuristic bot can't plan multi-step puzzles; only a fresh blind LLM playtest reveals real signposting/clarity issues in this pack.",
+          "The validator and exhaustive solver prove this pack is winnable and sound; only a fresh blind LLM playtest reveals signposting/clarity/pacing issues a static check can't see.",
         evidence: [
-          `bot left ${unvisited.length} location(s) unvisited / ${unreached.length} ending(s) unreached — expected for a puzzle game, so this is a review prompt, not a known flaw`,
+          "validator clean; due for a fresh blind LLM playtest (the rotation's quality judge)",
         ],
         impact: 1,
         effort: "M",
@@ -767,38 +679,6 @@ export function assess(root: string): Assessment {
     });
   }
 
-  // ── frontier: the strategic lever once content is clean (ULTRAPLAN 2026-06-02) ─
-  // When every pack validates and all blind-pass nominations have collapsed to the
-  // 0.5 saturation floor, polishing already-clean prose is the lowest-value thing
-  // the loop can do (the frozen-verifier + frozen-distribution stall). The repo's
-  // named successor goal is a contamination-free benchmark of REAL-model authoring,
-  // whose concrete first step is an objective scorecard. This lever fires while no
-  // benchmark scorecard tool exists and disarms the moment one ships — the same
-  // self-extinguishing shape as the eslint-coverage and doc-staleness levers. Scored
-  // ABOVE the 0.5 floor so the loop reaches for structural work over re-polish, yet
-  // below a genuine unplayable-pack fix (impact 5).
-  const hasBenchmarkTool = [
-    join(root, "bin", "benchmark.ts"),
-    join(root, "scripts", "benchmark.ts"),
-  ].some((p) => existsSync(p));
-  if (!hasBenchmarkTool) {
-    candidates.push({
-      id: "frontier-benchmark-scorecard",
-      category: "engine",
-      target: "bin/benchmark.ts",
-      title: "Build the objective benchmark scorecard (the ULTRAPLAN differentiator)",
-      rationale:
-        "Content is clean and blind-pass nominations have saturated at the 0.5 floor, so re-polishing is the lowest-value move. The repo's successor goal is a contamination-free benchmark of real-model authoring; its first concrete step is a scorecard that runs personas/models across every pack via run_playtest and emits a stable, comparable JSON+markdown metric (Game Progress, coverage, deaths, illegal-action rate, turns-to-win). Without a comparable number there is no benchmark.",
-      evidence: [
-        "no bin/benchmark.ts or scripts/benchmark.ts present",
-        "see docs/ULTRAPLAN-2026-06-02.md (week horizon: objective scorecard)",
-      ],
-      impact: 4,
-      effort: "L",
-      score: score(4, "L", "engine"),
-    });
-  }
-
   // ── eval-distribution: mint-and-check a fresh slice of the generated distribution ──
   // Make the generator a LIVE, self-renewing eval signal (bug_0158, the slice after the
   // MCP generate_pack tool of bug_0157; docs/CURRENT_PLAN.md / [[fresh-pack-generator]]).
@@ -893,7 +773,7 @@ export function formatAssessment(a: Assessment): string {
   lines.push("## Pack health");
   for (const p of a.packs) {
     lines.push(
-      `- ${p.path} [${p.mode ?? "?"}] ${p.playable ? `endings ${p.endingsReached}/${p.endingsDeclared}, unvisited ${p.unvisited.length}, warnings ${p.warnings}` : "UNPLAYABLE"}`,
+      `- ${p.path} [${p.mode ?? "?"}] ${p.playable ? `${p.warnings} warning(s)` : "UNPLAYABLE"}`,
     );
   }
   lines.push("");

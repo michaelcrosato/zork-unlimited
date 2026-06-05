@@ -75,16 +75,6 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(a.get_state({ session_id: game.session_id }).state_hash).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it("run_playtest summarizes random and coverage evidence", () => {
-    const a = api();
-    const random = a.run_playtest({ story_path: PACK, strategy: "random", runs: 10 });
-    const coverage = a.run_playtest({ story_path: PACK, strategy: "coverage", runs: 10 });
-    expect(random.runs).toBe(10);
-    expect(coverage.runs).toBe(10);
-    expect(random.visited_scenes.length).toBeGreaterThan(0);
-    expect(coverage.endings_declared).toContain("ending_truth");
-  });
-
   it("an agent can play a whole game via observe → choose → step", () => {
     const a = api();
     const game = a.new_game({ pack_path: PACK, seed: 5 });

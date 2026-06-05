@@ -19,7 +19,6 @@ import {
 } from "../../src/parser/runner.js";
 import { enumerateActions } from "../../src/parser/legal_actions.js";
 import { makeStep } from "../../src/core/engine.js";
-import { runParserRoster } from "../../agents/parser_playtester.js";
 import type { ParserPack } from "../../src/parser/schema.js";
 
 const loaded = loadParserPackFile("content/parser/pack/sealed_crypt.yaml");
@@ -65,12 +64,7 @@ describe("bug_0001: one-way crypt soft-lock", () => {
 
   it("the shipped pack keeps the crypt escapable (the fix)", () => {
     expect(moveActionsInCrypt(goodPack)).toContain("go_up");
-    // And the shipped pack validates clean.
+    // And the shipped pack validates clean (the validator's soft-lock check passes).
     expect(validateParser(goodPack).ok).toBe(true);
-  });
-
-  it("no persona wedges in the crypt on the shipped pack", () => {
-    const { records } = runParserRoster(goodPack, { seeds: [1, 2, 3] });
-    expect(records.filter((r) => r.status === "stuck" && r.last_room === "crypt")).toHaveLength(0);
   });
 });

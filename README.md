@@ -69,7 +69,6 @@ doors, an NPC dialogue tree, and USE puzzles — exposed to agents as a Jericho-
 | Parser validator (§10.2) | `src/validate/parser_validator.ts` |
 | Sample pack: *The Sealed Crypt* (10 rooms, 8 objects, 2 containers, 2 locked doors, 1 NPC, 2 puzzles) | `content/parser/pack/sealed_crypt.yaml` |
 | Negative fixtures that MUST fail (§10.4) | `content/broken-fixtures/parser_*.yaml` |
-| 8-persona playtester roster (§12.8) | `agents/parser_playtester.ts`, `agents/parser_personas.ts` |
 | Bug artifact + regression (§15) | `traces/bugs/bug_0001_*.yaml`, `tests/regression/parser_crypt_softlock.test.ts` |
 
 Two small **additive** engine extensions went through the §14 gate: an
@@ -229,7 +228,6 @@ npm run validate -- content/cyoa/pack/watchtower_road.yaml # Stage 1: validate a
 npm run play -- content/cyoa/pack/watchtower_road.yaml     # Stage 1: play it (interactive)
 npm run validate -- content/parser/pack/sealed_crypt.yaml  # Stage 2: validate the parser pack
 npm run play:parser -- content/parser/pack/sealed_crypt.yaml # Stage 2: play it (interactive)
-npm run playtest:parser -- content/parser/pack/sealed_crypt.yaml # Stage 2: the §12.8 roster
 npm run play:parser -- content/parser/pack/alchemists_tower.yaml  # Stage 3: score + death/restore
 npm run validate -- content/rpg/pack/sunken_barrow.yaml    # Stage 4: validate the RPG pack
 npm run play:rpg -- content/rpg/pack/sunken_barrow.yaml     # Stage 4: play it (combat + skill check)
@@ -248,11 +246,11 @@ parser/RPG add `--commands "go north; take rope; attack wight; ..."`. Both accep
 The engine is exposed as an MCP server so any agent harness (Claude Code, Codex,
 Gemini CLI, …) plays via native tool calls over the structured observation/action
 loop — never a raw parser. **The tools are multi-mode**: the same `new_game` /
-`step_action` / `get_observation` / `run_playtest` / `validate_pack` / save·load /
+`step_action` / `get_observation` / `validate_pack` / save·load /
 replay path plays CYOA, parser, and RPG packs — mode is auto-detected from the
 pack's structure (never a field in content, §16) and carried on every observation
 as `mode`. Tools: `validate_pack`, `load_pack`, `new_game`, `get_observation`,
-`list_legal_actions`, `step_action`, `save_game`, `load_game`, `run_playtest`,
+`list_legal_actions`, `step_action`, `save_game`, `load_game`,
 `replay_trace`, `inspect_trace` (per-step summary + suspected bugs),
 `apply_content_patch` (deterministic, whitelisted patch — cyoa/parser),
 `adapt_story` (author a pack from a premise),
@@ -271,33 +269,24 @@ automatically (approve the `adventureforge` server when prompted). The agent loo
 `new_game` → read `observation.available_actions` → `step_action` with a chosen
 `action_id` → repeat until `observation.ended`.
 
-### AI playtester loop (§12.4, §12.7)
+### Testing: two modes — dev tests + a blind LLM playtest
 
-A provider-agnostic LLM client (`agents/llm/provider.ts`) with a deterministic
-**MockProvider** default — so the playtester runs in CI with no API keys. The
-playtester (`agents/playtester.ts`) drives the same observation/action loop an
-external agent uses, records each turn (§12.6), and a persona roster aggregates
-route coverage and surfaces honest, non-fabricated findings.
+Quality rests on exactly two kinds of testing, nothing in between:
 
-```bash
-npm run playtest -- content/cyoa/pack/watchtower_road.yaml [--out traces/playtests]
-```
+- **Dev tests** (full knowledge, specific assertions): the vitest unit/regression
+  suite plus the validators (`src/validate/`) and the exhaustive BFS solver, which
+  *prove* every declared ending is reachable, no path soft-locks, and the score
+  economy is sound. These run in `npm run health`.
+- **Blind LLM playtest**: a fresh subagent with NO repo access plays a pack purely
+  through the MCP tools and reports its route, step count, choices, and a
+  clarity/enjoyment/confusion read — the only judge of player-facing quality
+  (signposting, pacing, discoverability) a static check can't see. The harness is in
+  `blind-tester/` and the protocol in `docs/blind_playtest_protocol.md`; the AFK loop
+  runs one every cycle.
 
-On *The Watchtower Road* the mock roster (5 personas × 8 seeds) reaches
-`ending_escape` and `ending_captured` but **not** `ending_truth`, and never visits
-the hidden cache or hermit conversation — a genuine playtest finding: the "good"
-ending is hard to discover without in-world signposting (§17 rule 1). That gap is
-the natural input to the next step: debugger → fixer → regression test (§12.5, §15).
-
-### Parser playtester roster (§12.8)
-
-Eight deterministic personas (mainline, curious, hoarder, dropper, dialogue-skipper,
-wrong-order, adversarial, speedrunner) drive the same structured legal-action loop an
-external agent uses. On *The Sealed Crypt* the heuristic roster reaches 8/10 rooms and
-**wins nothing** — the route needs multi-step planning the heuristics don't do (honest;
-winnability is certified by the walkthrough acceptance test and the validator). During
-development the `dropper`/`wrong_order` personas wedged in a one-way crypt — a genuine
-soft-lock now fixed and locked by `bug_0001` (§15).
+The LLM client (`agents/llm/providers.ts`) is provider-agnostic: real
+OpenAI/Anthropic/Google backends sit behind env vars and fall back to a deterministic
+keyless mock, so authoring/adapting runs in CI with no API keys.
 
 ```bash
 npm run playtest:parser -- content/parser/pack/sealed_crypt.yaml [--out traces/playtests]

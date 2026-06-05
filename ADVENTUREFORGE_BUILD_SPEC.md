@@ -208,15 +208,14 @@ Target layout (TypeScript naming shown; mirror for Python):
 │  │  └─ save_load.ts              # serialize/deserialize a save
 │  ├─ mcp/                         # optional MCP server exposing the engine as tools (§9.4)
 │  │  ├─ server.ts
-│  │  └─ tools.ts                  # load_pack / new_game / step_action / run_playtest / replay_trace …
+│  │  └─ tools.ts                  # load_pack / new_game / step_action / replay_trace …
 │  └─ index.ts
 ├─ agents/                         # AI roles (each is a thin LLM-driven script)
 │  ├─ writer.ts
 │  ├─ adapter.ts
-│  ├─ playtester.ts
 │  ├─ debugger.ts
 │  ├─ fixer.ts
-│  └─ llm/                         # provider-agnostic client: MockProvider (default) + optional OpenAI/Anthropic/Google adapters (§12.7)
+│  └─ llm/                         # provider-agnostic client: per-role keyless mock default (e.g. MockAuthorProvider) + optional OpenAI/Anthropic/Google adapters (§12.7)
 ├─ content/
 │  ├─ engine_contract.yaml         # capabilities the writer is given (§11)
 │  ├─ cyoa/
@@ -236,7 +235,6 @@ Target layout (TypeScript naming shown; mirror for Python):
    ├─ play          # interactive human play (CLI)
    ├─ validate      # run validator on a content pack
    ├─ replay        # replay a trace / bug artifact
-   ├─ playtest      # run an AI (mock-by-default) playtester against a pack
    ├─ adapt-story   # story draft → schema-valid content pack (mock adapter by default)
    └─ inspect       # summarize a pack or a trace (stats, reachability, suspected bugs)
 ```
@@ -647,7 +645,6 @@ Tools to expose (JSON-serializable in/out):
 | `list_legal_actions` | session id → legal actions |
 | `step_action` | session id, action_id → action result, new observation, state hash |
 | `save_game` / `load_game` | session id ↔ serialized save (+ content-hash check, §8.7) |
-| `run_playtest` | pack path, persona, seed, max steps → playtest report + trace |
 | `replay_trace` | trace path → replay result + first divergent step if any |
 | `inspect_trace` | trace path → summary, steps, suspected bugs |
 | `adapt_story` | story text, target mode → draft content pack + adaptation report |
@@ -806,9 +803,9 @@ Output: a schema-valid content pack, plus a per-beat classification (§11). Extr
 ### 12.3 Validator-runner
 Pure code (not an LLM). Compiles the pack and produces the `ValidationReport`. The adapter loops against it until green.
 
-### 12.4 Playtester
-Input each turn: current observation, current objective, inventory, known map, quest log, recent event history.
-Output each turn (structured): `chosen_action`, `reason`, `expected_result`, plus per-step diagnostics. After the run it emits a **playtest record** (§12.6). Run a *roster* of playtester personas (§12.8) to stress different play orders.
+### 12.4 Playtester (blind LLM playtest)
+Input each turn: current observation, current objective, inventory, known map, quest log, recent event history — and **nothing else**: the playtester is a fresh subagent with no repo access that touches the game only through the `mcp__adventureforge__*` tools.
+Output each turn (structured): `chosen_action`, `reason`, `expected_result`, plus per-step diagnostics. After the run it emits a **playtest record** (§12.6) — game log, step count, choices made, and qualitative feedback (clarity / pacing / confusion). This blind LLM playtest is the **only** judge of player-facing quality; structural soundness (reachable endings, no soft-locks) is proven separately by the validator + exhaustive solver (the dev tests, §12.8).
 
 ### 12.5 Debugger + Fixer
 Debugger: turns a failed/odd playthrough into a **bug artifact** (replayable trace + diagnosis). Fixer: patches exactly one of `{content, engine_rule, validator, test, hint_text, quest_structure}` and adds a regression test (§15). Engine-rule changes are gated (§14).
@@ -850,29 +847,41 @@ recommendation:
 The point: the AI does not just check *whether* the game works — it records *what it experienced* and pinpoints *where the design is unclear.*
 
 ### 12.7 LLM client (provider-agnostic)
-Implement one interface (e.g. `completeJson<T>({system, user, schemaName, schema})`) with multiple backends. The **default is a deterministic `MockProvider`** that returns canned/heuristic JSON, so all agent roles — writer, adapter, the playtester personas (§12.8), debugger, fixer — run in tests and CI with **no live calls and no API keys**. Real adapters (OpenAI / Anthropic / Google) sit behind environment variables and are skipped when keys are absent. As of this writing the relevant frontier models are (verify IDs/pricing at provider docs before wiring):
+Implement one interface (e.g. `completeJson<T>({system, user, schemaName, schema})`) with multiple backends. The **default is a deterministic, keyless per-role mock** (e.g. `MockAuthorProvider`) that returns canned/heuristic JSON, so the authoring agent roles — writer, adapter, debugger, fixer — run in tests and CI with **no live calls and no API keys**. Real adapters (OpenAI / Anthropic / Google) sit behind environment variables and are skipped when keys are absent. As of this writing the relevant frontier models are (verify IDs/pricing at provider docs before wiring):
 
 - **Anthropic Claude Opus 4.8** (`claude-opus-4-8`, released 2026-05-28; ~$5/$25 per 1M tokens, 1M context). Leads issue-level coding — **69.2% SWE-Bench Pro** (vs GPT-5.5's 58.6%), 88.6% SWE-Bench Verified — and reports ~4× fewer self-introduced code defects vs 4.7, with configurable Effort Modes. **Dynamic Workflows** (research preview in Claude Code) can fan a task across up to ~1,000 parallel subagents (16 concurrent) with built-in verification. Best fit for the **builder/debugger** role and large content-validation sweeps.
 - **OpenAI GPT-5.5** (Codex `gpt-5.5`, released 2026-04-23; ~$5/$30 per 1M tokens, 1M context). Leads terminal/CLI workflows — **82.7% Terminal-Bench 2.0** (state of the art) — and is strong on long debug/test/validate loops; 58.6% SWE-Bench Pro. Co-leads the **builder/debugger** role, especially for the CLI runner and test harness.
-- **Google Gemini 3.5 Flash** (`gemini-3.5-flash`, GA 2026-05-19; ~$1.50/$9 per 1M tokens, 1M context / 65k output, no Computer Use). Fast and cheap with strong agentic + tool-use. Best fit for the **writer** and the many **playtester** runs, where you want throughput at low cost.
+- **Google Gemini 3.5 Flash** (`gemini-3.5-flash`, GA 2026-05-19; ~$1.50/$9 per 1M tokens, 1M context / 65k output, no Computer Use). Fast and cheap with strong agentic + tool-use. Best fit for the **writer** and the **blind LLM playtest** runs, where you want throughput at low cost.
 
 The role split above is a suggestion, not a constraint — keep the client abstraction so any model can be swapped per role.
 
 > Caveat backed by the research in §2: do not over-trust *any* model as the live rule engine. The whole point of the structured API + validator is that the engine, not the model, guarantees correctness.
 
-### 12.8 Playtester persona roster (Stage 2 stress test)
-Run all of these against every parser pack:
+### 12.8 The two-mode testing model
+Testing collapses to exactly **two** complementary modes. (The earlier heuristic
+**playtester persona roster** — eight in-process player bots — and the
+`run_playtest` coverage/random-walk bot have been **removed** in favor of these two;
+they conflated full-knowledge structural checking with player-facing quality, and a
+heuristic bot was never an honest proxy for either.)
 
-- mainline player (does the obvious thing)
-- curious explorer (visits everything)
-- inventory hoarder (takes everything)
-- inventory dropper (drops things in odd places — catches soft-locks)
-- dialogue skipper
-- wrong-order solver (does puzzles out of intended sequence)
-- adversarial command user (probes edge cases of the controlled parser)
-- speedrunner (shortest path to win)
+1. **Dev tests (full knowledge, specific assertions).** The Vitest unit/regression
+   suite + the validators (`validateCyoa` / `validateParser` / `validateRpg`) + the
+   **exhaustive BFS solver**. Together these *prove* the structural properties a
+   persona roster could only ever sample for: every declared ending is reachable, no
+   reachable state soft-locks, ordering is order-independent where claimed, and the
+   score economy is sound (reachable max == declared max). They run in `npm run
+   health` and are deterministic — the same play orders the dropper / out-of-order
+   personas used to probe are now covered exhaustively, not heuristically.
+2. **Blind LLM playtest (§12.4).** A fresh subagent with **no repo access** plays a
+   pack purely through the `mcp__adventureforge__*` tools and reports its game log,
+   step count, choices made, and qualitative feedback (clarity / pacing / confusion).
+   This is the **only** judge of player-facing quality (signposting, pacing, fun) —
+   the part no deterministic check can score. It lives in `blind-tester/`, follows
+   `docs/blind_playtest_protocol.md`, and is run per-cycle by the autonomous loop,
+   rotating across packs.
 
-Out-of-order and dropper personas matter most: classic adventures fail exactly when players act out of the designer's expected order.
+Net: structural soundness is *proven* by mode 1; player experience is *judged* by
+mode 2. Nothing relies on a heuristic bot pretending to be a player.
 
 ---
 
@@ -905,13 +914,13 @@ This single loop is the whole thesis in miniature. Do not move on until it passe
 Build the parser schema, legal-action generator, controlled command parser (human side), parser validator, and the structured action API for the AI. Reuse the entire Stage-0 core and the agent loop.
 
 Target first content pack:
-- 10 rooms, 8 objects, 2 containers, 2 locked doors, 1 NPC with a dialogue tree, 2 puzzles, 1 win condition, controlled parser, legal-action API, trace replay, full playtester roster.
+- 10 rooms, 8 objects, 2 containers, 2 locked doors, 1 NPC with a dialogue tree, 2 puzzles, 1 win condition, controlled parser, legal-action API, trace replay, exhaustive-solver coverage, and a blind LLM playtest (§12.8).
 
 **Stage 2 acceptance:**
 1. Pack passes the full parser validator (§10.2), including the `quest_critical` soft-lock guard.
 2. A human can complete the game through the controlled CLI parser.
 3. The AI completes the game using only the structured legal-action API (no raw-parser guessing).
-4. The full persona roster (§12.8) runs; the dropper/out-of-order personas surface at least one real soft-lock or ordering issue during development, which is then fixed and regression-tested.
+4. Soft-locks and out-of-order play are proven **absent** by the dev tests (§12.8) — the validator's `quest_critical` / unreachable-state checks plus the exhaustive BFS solver (every ending reachable, no reachable soft-lock); a real one found during development is fixed and regression-tested. A blind LLM playtest (§12.8) plays the pack over MCP and reports player-facing clarity/pacing.
 5. Determinism holds across all recorded traces.
 6. At least one bug becomes a `traces/bugs/` artifact and a regression test (§15).
 
@@ -942,8 +951,9 @@ Without the gate the engine bloats and loses determinism. With it, the engine be
 **Testing strategy across all stages** — coverage is necessary but not sufficient; the determinism and purity *properties* below are what actually guarantee correctness, so do not treat a coverage percentage as the goal:
 - **Unit tests**: each condition, each effect, each action type.
 - **Property tests** (fast-check / Hypothesis): (a) determinism — random valid action sequences run twice produce identical traces; (b) purity — `step` never mutates input; (c) save/load round-trips to an identical state hash; (d) the legal-action set never contains an action that `step` then rejects as *illegal* (conditions may still fail, but legality must agree).
+- **Validator + exhaustive BFS solver**: prove, over the whole reachable state space, that every declared ending is reachable, no state soft-locks, and the score economy is sound (the structural net; see §12.8 mode 1).
 - **Regression tests**: one per fixed bug (§15).
-- **AI playtests**: the persona roster, recorded as traces.
+- **Blind LLM playtest** (§12.8 mode 2): a no-repo-access subagent plays over MCP and reports player-facing clarity/pacing; the only judge of subjective quality.
 
 ---
 
@@ -1000,7 +1010,7 @@ Reference frameworks: OWASP Top 10 for LLM Applications (esp. LLM01 Prompt Injec
 
 ## 17. CONTENT DESIGN RULES (guardrails for the writer/adapter agents)
 
-These keep AI-generated content *fun and solvable*, not just schema-valid. Bake them into the writer/adapter prompts and, where checkable, into the validator and playtester.
+These keep AI-generated content *fun and solvable*, not just schema-valid. Bake them into the writer/adapter prompts and, where checkable, into the validator and the blind LLM playtest (§12.8).
 
 1. Every puzzle has **at least two clue sources** (e.g. a room description and an NPC line).
 2. Red herrings are signposted **in the narrative**, never by hidden designer intent.
@@ -1009,7 +1019,7 @@ These keep AI-generated content *fun and solvable*, not just schema-valid. Bake 
 5. NPC dialogue carries **actionable** hints; `inspect`/`look` reward curiosity.
 6. Loops are intentional and declared; every other path terminates.
 7. A player who follows the main objective can always finish; an explorer finds optional content; an out-of-order player gets coherent feedback.
-8. Structural problems are caught by the validator **before** runtime; playtest reports surface *confusion*, not just crashes.
+8. Structural problems are caught by the validator + exhaustive solver **before** runtime (the dev tests); the blind LLM playtest surfaces *confusion*, not just crashes.
 
 ---
 

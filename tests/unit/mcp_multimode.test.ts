@@ -118,17 +118,6 @@ describe("RPG pack plays through the structured tool API (incl. combat)", () => 
     // A combat round narrates a strike.
     expect(r.events.some((e) => e.type === "narration" && /strike/i.test(e.text))).toBe(true);
   });
-
-  it("run_playtest (coverage) explores RPG rooms and reports mode 'rpg'", () => {
-    const summary = api().run_playtest({ story_path: RPG, strategy: "coverage", runs: 8 }) as {
-      mode: string;
-      runs: number;
-      visited_scenes: string[];
-    };
-    expect(summary.mode).toBe("rpg");
-    expect(summary.runs).toBe(8);
-    expect(summary.visited_scenes.length).toBeGreaterThan(1); // explored beyond the start room
-  });
 });
 
 describe("save/load is mode-bound (§8.7)", () => {

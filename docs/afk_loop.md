@@ -86,13 +86,14 @@ is handed off as a _document_, not a context window.
   `npm run health` is the gate, and `scripts/verify-integrity.ts` makes
   test-weakening / silent hash re-pins fail loudly.
 - **Evidence-driven work selection** (not a hand-fed TODO list): the assessor turns
-  real signals — coverage gaps, unreached endings, validator warnings, thin modes,
-  engine TODOs, missing tooling — into a ranked backlog, so the loop always works the
+  real signals — validator warnings, thin modes, engine TODOs, missing tooling,
+  generated-pack drift — into a ranked backlog, so the loop always works the
   highest-value thing and a human can see _why_.
-- **An LLM playtest is the quality oracle.** Heuristic `run_playtest` measures
-  _structure_ (coverage, soft-locks); a reasoning agent playing blind measures the
-  _experience_ (clarity, fun, confusing branches). The loop makes that mandatory
-  every cycle — it's the feedback that actually improves the game.
+- **An LLM playtest is the quality oracle.** The validators + exhaustive solver prove
+  _structure_ (every ending reachable, no soft-locks, sound scoring) as dev tests; a
+  reasoning agent playing blind measures the _experience_ (clarity, fun, confusing
+  branches). The loop makes that blind playtest mandatory every cycle — it's the
+  feedback that actually improves the game. These are the only two testing modes.
 - **Externalized state + one change per cycle**: `AI_LOOP_STATE.md` is the durable
   handoff; `ai-runs/<id>/` holds the (ignored) per-cycle evidence and playtest report.
 

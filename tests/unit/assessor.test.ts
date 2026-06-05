@@ -113,30 +113,7 @@ describe("assess()", () => {
   });
 });
 
-describe("frontier lever + blind-pass rotation (ULTRAPLAN 2026-06-02)", () => {
-  it("raises the benchmark-scorecard lever above the 0.5 polish floor while no tool exists", () => {
-    const hasTool = [
-      join(process.cwd(), "bin", "benchmark.ts"),
-      join(process.cwd(), "scripts", "benchmark.ts"),
-    ].some((p) => existsSync(p));
-    const frontier = a.candidates.find((c) => c.id === "frontier-benchmark-scorecard");
-    if (hasTool) {
-      // The lever self-extinguishes once the scorecard ships (like repo-eslint).
-      expect(frontier).toBeUndefined();
-    } else {
-      expect(frontier).toBeDefined();
-      expect(frontier!.score).toBeGreaterThan(0.5);
-      // It outranks every saturated blind-playtest stub, so the loop reaches for
-      // structural work instead of re-polishing clean prose.
-      const polishTop = Math.max(
-        0,
-        ...a.candidates.filter((c) => c.id.startsWith("playtest-")).map((c) => c.score),
-      );
-      expect(frontier!.score).toBeGreaterThan(polishTop);
-      expect(a.top!.id).toBe("frontier-benchmark-scorecard");
-    }
-  });
-
+describe("blind-pass rotation (bug_0128)", () => {
   it("packStem normalizes a pack path OR a bare id to the same stem", () => {
     expect(packStem("content/cyoa/pack/clockwork_heist.yaml")).toBe("clockwork_heist");
     expect(packStem("content/rpg/pack/cold_forge.yml")).toBe("cold_forge");

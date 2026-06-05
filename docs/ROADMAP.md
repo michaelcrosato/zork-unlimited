@@ -26,12 +26,14 @@ verbatim further down for provenance.)
 
 ## ✅ Confirmed done by Milestone 1 — do NOT redo
 Multi-mode MCP dispatch (`indexFor/rulesFor/initStateFor/buildObsFor`), `list_stories`
-across all three pack dirs, mode-aware `run_playtest` (parser/RPG walk the room
-graph), `Session` carrying `mode`+`AnyIndex`, `RpgObservation.mode:'rpg'`, mode-bound
-save/load. Also already present from Stage 4: `quest_stage` condition +
-`set_quest_stage` effect. And `runActions()` already returns per-step `hashes[]`
-and `ReplayResult.divergedAtStep` is already a reserved field — so Trace v2 (1c) is
-mostly *persisting* what already exists.
+across all three pack dirs, `Session` carrying `mode`+`AnyIndex`,
+`RpgObservation.mode:'rpg'`, mode-bound save/load. Also already present from Stage 4:
+`quest_stage` condition + `set_quest_stage` effect. And `runActions()` already returns
+per-step `hashes[]` and `ReplayResult.divergedAtStep` is already a reserved field — so
+Trace v2 (1c) is mostly *persisting* what already exists. (The mode-aware
+`run_playtest` coverage bot once listed here has since been **removed** — content
+health now comes from the validator + exhaustive solver, and player-facing quality
+from the blind LLM playtest; see M4 below.)
 
 ## ⚠️ v2 blocking corrections (the critic's verified findings)
 1. **SAFE-0 must be a single canonical item, merged first.** The loop.sh §14
@@ -94,9 +96,13 @@ adapter→parser/RPG** → M3 fresh content + M4 fresh-pack benchmark; cross-cut
   from the narrative fixes*; multi-enemy/XP/quest-stage RPG depth; 2nd RPG pack;
   larger Sierra pack; **1b adapter→parser/RPG**; gate-as-CI pinning *every* pack
   incl `clockwork_heist`.
-- **M4 — benchmark**: objective scorecard from mode-tagged `run_playtest` +
-  persona/blind reports; optional LLM-judge (cost-gated, offline by default);
-  fresh-pack flow depends on 1b. Optional Jericho/TALES adapter.
+- **M4 — benchmark** *(future north-star; nothing live)*: the heuristic-bot
+  scorecard (`run_playtest` + persona-bot scoring) has been **removed** — that was
+  never an honest proxy for player quality. The surviving goal is a
+  **contamination-free benchmark of real frontier models**, rebuilt fresh on the
+  blind LLM playtest (no repo access, plays over MCP) and scored against the sealed
+  held-out generator **corpus** (`corpus/`, `bin/seal-corpus.ts`); fresh-pack flow
+  depends on 1b. Optional Jericho/TALES adapter.
 - **M5 — UI + Trace v2**: 1c first (additive `per_step_hashes`, populate
   `divergedAtStep`, backward-compatible with committed traces) → browser save/load,
   trace replay viewer (needs 1c), validation panel, `adapt_story` playground, then
@@ -193,9 +199,12 @@ just CYOA. Order: **1a-0 → 1a-1 → 1a-6 → 1a-2 → 1a-3(+list_stories) → 
 - `1a-3` **(M)** dispatch layer in `tools.ts` (`loadAndCompilePack` /
   `validatePackByMode` / `startSessionByMode` / `buildObservationByMode`) **+
   multi-mode `list_stories`** scanning all three pack dirs.
-- `1a-4` **(L, was M)** mode-aware `run_playtest`: generalize visited-tracking
-  (rooms vs scenes), ending detection, and coverage heuristics; enumerate legal
-  actions for parser/RPG instead of always `CHOOSE`.
+- `1a-4` **(L, was M)** *(SUPERSEDED — the `run_playtest` coverage bot this item
+  built has since been removed; content health now comes from the validator +
+  exhaustive solver, player quality from the blind LLM playtest).* As written: make
+  the (now-removed) playtest walker mode-aware — generalize visited-tracking (rooms
+  vs scenes), ending detection, and coverage heuristics; enumerate legal actions for
+  parser/RPG instead of always `CHOOSE`.
 - `1a-5` **(M)** persist pack mode in saves + verify on load; **update the
   `save_game`/`load_game` handlers** (the `save()` call sites) too.
 - `1a-7` **(S)** server tool schemas accept any pack mode.
@@ -244,10 +253,12 @@ over MCP; all existing CYOA tests + hashes unchanged.
   ships the §14 six-item bundle.
 
 ### Milestone 5 — Benchmark, UI, DevEx (Phases 4, 5, cross-cutting) · mostly independent
-- **4 benchmark:** objective scorecard from `run_playtest` (depends `1a-4` for
-  multi-mode metrics) + optional LLM-as-judge subjective scoring (RPGBench split,
-  §2); generate a fresh pack → N personas play via MCP → score. Optional
-  Jericho/TALES adapter.
+- **4 benchmark** *(reframed; future north-star)*: the heuristic `run_playtest`
+  scorecard and persona-bot scoring described here have been **removed**. The
+  surviving goal is a contamination-free benchmark of real frontier models, rebuilt
+  fresh on the blind LLM playtest (no repo access, plays over MCP) against the sealed
+  held-out generator corpus, with optional LLM-as-judge subjective scoring (RPGBench
+  split, §2). Optional Jericho/TALES adapter.
 - **5 UI:** browser save/load → trace replay viewer (depends 1c) → validation
   panel → in-browser `adapt_story` playground → scene/map renderer over identical
   structured state.

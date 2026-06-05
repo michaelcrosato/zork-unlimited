@@ -153,7 +153,7 @@ function buildPrompt(ctx: {
     .slice(0, 6)
     .map((c, i) => `  ${i + 1}. [${c.score}] (${c.category}/${c.effort}) ${c.title}`);
   const health = targetHealth
-    ? `endings ${targetHealth.endingsReached}/${targetHealth.endingsDeclared}, unvisited ${targetHealth.unvisited.length}${targetHealth.unvisited.length ? ` (${targetHealth.unvisited.slice(0, 8).join(", ")})` : ""}, ${targetHealth.warnings} warning(s)`
+    ? `${targetHealth.warnings} validator warning(s)`
     : "(not a pack — engine/repo work; the target pack is the regression baseline)";
 
   return [
@@ -199,7 +199,7 @@ function buildPrompt(ctx: {
     "",
     "## STEP 3 — Verify (the bar)",
     "",
-    "- `npm run health` must pass (it runs verify:integrity + lint + tests + validate + playtest).",
+    "- `npm run health` must pass (it runs verify:integrity + lint + tests + validate).",
     "- Do not disable/delete tests or silently re-pin hashes to go green.",
     "- Update AI_LOOP_STATE.md with: what you playtested + its clarity/enjoyment scores,",
     "  what you improved and why, evidence, and the next suggested focus.",
@@ -247,7 +247,7 @@ function buildUltraplanPrompt(ctx: {
 }): string {
   const { target, targetHealth, playtestRecord } = ctx;
   const health = targetHealth
-    ? `endings ${targetHealth.endingsReached}/${targetHealth.endingsDeclared}, unvisited ${targetHealth.unvisited.length}, ${targetHealth.warnings} warning(s)`
+    ? `${targetHealth.warnings} validator warning(s)`
     : "(regression baseline)";
   return [
     "# AdventureForge AFK cycle — ULTRAPLAN MODE (the assessor is saturated)",
@@ -259,8 +259,8 @@ function buildUltraplanPrompt(ctx: {
     "",
     "## STEP 1 — Run a LOCAL ULTRAPLAN (the Workflow tool)",
     "- Use the Workflow tool to fan out a BOUNDED ultraplan (≈6-9 agents total): a few",
-    "  parallel repo reviewers (engine/determinism · content/authoring · verification &",
-    "  benchmark · loop/strategy) + 1-2 web researchers (frontier-LLM capability, IF/",
+    "  parallel repo reviewers (engine/determinism · content/authoring · verification ·",
+    "  loop/strategy) + 1-2 web researchers (frontier-LLM capability, IF/",
     "  agentic benchmarks) → ONE synthesis that picks the single highest-value STRUCTURAL",
     "  next move (not content polish).",
     "- Ground it in docs/ULTRAPLAN-2026-06-02.md and docs/ROADMAP.md (the strategic",

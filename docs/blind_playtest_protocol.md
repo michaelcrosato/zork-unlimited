@@ -1,10 +1,11 @@
 # Blind playtest protocol (the §12.4 "fresh player" step)
 
 This is the canonical, repeatable procedure for the playtest step of an
-improvement cycle — manual or autonomous (AFK). The heuristic `run_playtest` tool
-measures *structure* (coverage, soft-locks); this step measures the *experience* a
-real first-time player has, which only a reasoning agent that **did not design the
-game** can report. The two are complementary: run both.
+improvement cycle — manual or autonomous (AFK). It is one of the project's two
+testing modes: the dev tests (validators + exhaustive solver) prove *structure*
+(every ending reachable, no soft-locks, sound scoring), while this step measures the
+*experience* a real first-time player has, which only a reasoning agent that **did
+not design the game** can report.
 
 The whole point is **isolation**: the playtester must judge the game from the
 inside, using only what the game shows it. If it reads the YAML, the source, or
@@ -12,8 +13,8 @@ the solution, the test is worthless.
 
 ## When to run it
 Once per improvement cycle, after the pack validates green. In the AFK loop it is
-the step that follows `validate_story` + `run_playtest` (random & coverage) and
-precedes "pick one fix" — its findings are a primary input to the fix.
+the step that follows `validate_story` and precedes "pick one fix" — its findings
+are a primary input to the fix.
 
 ## Procedure (5 steps)
 

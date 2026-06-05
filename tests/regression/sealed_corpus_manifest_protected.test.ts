@@ -1,11 +1,12 @@
 /**
  * bug_0176 — the sealed held-out corpus manifest is under the verifier-integrity guard.
  *
- * corpus/manifest.json is the OUTPUT of bin/seal-corpus.ts and the committed pin the
- * contamination-free benchmark rests on (bug_0163/bug_0165): each entry fixes a generated
- * pack content_hash + generator_version for a frozen seed window, defining the held-out
- * split src/afk/benchmark.ts scores against. The generators that MINT it (src/gen/*) were
- * locked under PROTECTED_FILES in bug_0167, but the manifest itself sat OUTSIDE the guard —
+ * corpus/manifest.json is the OUTPUT of bin/seal-corpus.ts and a committed,
+ * contamination-free held-out generator corpus (bug_0163/bug_0165): each entry fixes a
+ * generated pack content_hash + generator_version for a frozen seed window — a sealed,
+ * timestamped held-out split kept aside for any future real-model evaluation. The
+ * generators that MINT it (src/gen/*) were locked under PROTECTED_FILES in bug_0167, but
+ * the manifest itself sat OUTSIDE the guard —
  * so a manual re-seal that rewrites these hashes WITHOUT a generator change (the launder
  * that swaps in a degraded eval distribution and re-pins to make held_out_corpus_sealed
  * go green) would slip past the drift check unseen. This was the standing trust-tightening
