@@ -9,6 +9,18 @@ on:
     branches: [main]
   pull_request:
 
+# Least-privilege CI token: this workflow only READS the repo (checkout, install,
+# build, test, validate) and never writes — so drop the default broad GITHUB_TOKEN
+# scope to read-only (supply-chain hardening; no behavioural change to the checks).
+permissions:
+  contents: read
+
+# Don't pile up redundant runs: a newer commit on the same ref cancels the older,
+# still-running CI for that ref (the AFK loop can push frequently).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-test:
     runs-on: ubuntu-latest
