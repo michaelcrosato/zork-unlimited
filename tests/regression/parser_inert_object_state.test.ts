@@ -28,6 +28,17 @@
  *       proving the check keys on the genuine write/read slack, not the effect's presence;
  *   (e) an is_open/is_unlocked READ on an object NO authored effect writes (the built-in
  *       verb / alchemists_tower shape) does NOT warn — the dual stays on the write side.
+ *
+ * bug_0263 completes the check over set_object_locked's FULL domain — the liveness
+ * question ("does any condition read is_unlocked?") is independent of the boolean written,
+ * so a `locked: true` re-lock is just as inert as a `locked: false` unlock when nothing
+ * reads is_unlocked. The original bug_0262 check filtered `locked === false`, letting an
+ * unread re-lock escape. Also locked here:
+ *   (f) a set_object_locked(locked:true) write with no is_unlocked reader IS flagged at
+ *       severity `warning` (the gap bug_0262 left);
+ *   (g) NON-VACUITY: adding an is_unlocked reader to the case-(f) mutant clears the warning;
+ *   (h) DEDUP: an object both unlocked AND re-locked by effects, with no is_unlocked reader,
+ *       warns EXACTLY once (not twice).
  */
 import { describe, it, expect } from "vitest";
 import { existsSync, readdirSync } from "node:fs";
@@ -184,5 +195,67 @@ win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
 endings: [{ id: e, title: E, text: "done" }]
 `;
     expect(parserCodes(src)).not.toContain("INERT_OBJECT_STATE");
+  });
+
+  it("(f) bug_0263: flags a set_object_locked(locked:true) re-lock whose unlocked state no condition reads", () => {
+    const src = pack({
+      objectRefs: "gate",
+      objects: `  - id: gate
+    name: gate
+    description: "a gate"
+    locked: true
+    key_id: brass_key
+    interactions:
+      - { verb: USE, effects: [ { set_object_locked: { id: gate, locked: true } } ] }`,
+    });
+    const codes = parserCodes(src);
+    expect(codes).toContain("INERT_OBJECT_STATE");
+    const r = compileParserPack(src);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      const f = validateParser(r.compiled.pack).findings.find(
+        (x) => x.code === "INERT_OBJECT_STATE",
+      );
+      expect(f?.severity).toBe("warning");
+      expect(f?.message).toContain("gate");
+      expect(f?.message).toContain("is_unlocked");
+    }
+  });
+
+  it("(g) NON-VACUITY: adding an is_unlocked reader to the case-(f) re-lock mutant clears the warning", () => {
+    const src = pack({
+      objectRefs: "gate",
+      objects: `  - id: gate
+    name: gate
+    description: "a gate"
+    locked: true
+    key_id: brass_key
+    interactions:
+      - { verb: USE, effects: [ { set_object_locked: { id: gate, locked: true } } ] }`,
+      // A win condition that reads the written lock state — a genuine reader, so NOT inert.
+      winConds: ", { is_unlocked: gate }",
+    });
+    expect(parserCodes(src)).not.toContain("INERT_OBJECT_STATE");
+  });
+
+  it("(h) DEDUP: an object both unlocked AND re-locked by effects, never read, warns exactly once", () => {
+    const src = pack({
+      objectRefs: "gate",
+      objects: `  - id: gate
+    name: gate
+    description: "a gate"
+    locked: true
+    key_id: brass_key
+    interactions:
+      - { verb: USE, effects: [ { set_object_locked: { id: gate, locked: false } }, { set_object_locked: { id: gate, locked: true } } ] }`,
+    });
+    const r = compileParserPack(src);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      const inert = validateParser(r.compiled.pack).findings.filter(
+        (x) => x.code === "INERT_OBJECT_STATE" && x.where.includes("object:gate"),
+      );
+      expect(inert).toHaveLength(1);
+    }
   });
 });

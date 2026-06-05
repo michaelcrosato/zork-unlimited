@@ -808,27 +808,38 @@ export function validateParser(
     }
   }
 
-  // ── INERT object-state: an AUTHORED open/unlock write nothing ever reads ──────
+  // ── INERT object-state: an AUTHORED open/lock-state write nothing ever reads ──
   // The LIVENESS dual of bug_0253's IMPOSSIBLE_OBJECT_STATE (feasibility) — the
   // object-state analogue of INERT_FLAG. An AUTHORED `open_object` /
-  // `set_object_locked(locked:false)` effect whose target object's is_open /
-  // is_unlocked state is NEVER read by any condition pack-wide is dead bookkeeping:
-  // the write changes nothing the game ever consults. CRITICAL SOUNDNESS BOUNDARY:
-  // key the write-set STRICTLY on these authored effects — do NOT fold in the
-  // over-approximating openableObjects/unlockableObjects sets (the built-in
-  // OPEN/UNLOCK verb settability), which would false-warn on every openable scenery
-  // object. This mirrors INERT_FLAG (keyed on the authored set_flag write, never on a
-  // reachability source) and is the precise dual of the bug_0253 subtlety
-  // (feasibility OVER-approximates settability; liveness keys on the AUTHORED write).
-  // Reads descend all_of/any_of/none_of (a disjunction-guarded read still consumes).
-  // Warning, not error — an inert open/unlock is a no-op, never a soft-lock.
+  // `set_object_locked` effect whose target object's is_open / is_unlocked state is
+  // NEVER read by any condition pack-wide is dead bookkeeping: the write changes
+  // nothing the game ever consults. CRITICAL SOUNDNESS BOUNDARY: key the write-set
+  // STRICTLY on these authored effects — do NOT fold in the over-approximating
+  // openableObjects/unlockableObjects sets (the built-in OPEN/UNLOCK verb
+  // settability), which would false-warn on every openable scenery object. This
+  // mirrors INERT_FLAG (keyed on the authored set_flag write, never on a reachability
+  // source) and is the precise dual of the bug_0253 subtlety (feasibility
+  // OVER-approximates settability; liveness keys on the AUTHORED write). Reads descend
+  // all_of/any_of/none_of (a disjunction-guarded read still consumes). Warning, not
+  // error — an inert open/lock-state write is a no-op, never a soft-lock.
+  //
+  // bug_0263 completes bug_0262 over set_object_locked's FULL domain: the liveness
+  // question is "does any condition read is_unlocked for this id?", which is
+  // INDEPENDENT of the boolean written. A `set_object_locked(locked: true)` re-lock is
+  // just as inert as a `locked: false` unlock when nothing reads is_unlocked — the
+  // original check filtered `locked === false`, so an unread re-lock escaped it. Both
+  // directions are now tracked (deduped so an object both unlocked AND re-locked by
+  // effects, still never read, warns exactly once).
   const objStateReads = collectObjectStateReads(pack);
   const writtenOpen = new Set<string>();
   const writtenUnlocked = new Set<string>();
+  const writtenLocked = new Set<string>();
   for (const e of allEffects(pack)) {
     if ("open_object" in e) writtenOpen.add(e.open_object);
-    else if ("set_object_locked" in e && e.set_object_locked.locked === false)
-      writtenUnlocked.add(e.set_object_locked.id);
+    else if ("set_object_locked" in e) {
+      if (e.set_object_locked.locked === false) writtenUnlocked.add(e.set_object_locked.id);
+      else writtenLocked.add(e.set_object_locked.id);
+    }
   }
   for (const id of writtenOpen) {
     if (!objStateReads.open.has(id)) {
@@ -849,6 +860,22 @@ export function validateParser(
         warn(
           "INERT_OBJECT_STATE",
           `object "${id}" is unlocked by an effect but no condition ever reads its ` +
+            `unlocked state — a no-op write (dead bookkeeping). Gate something on ` +
+            `\`is_unlocked: ${id}\`, or remove the effect.`,
+          [`object:${id}`],
+        ),
+      );
+    }
+  }
+  for (const id of writtenLocked) {
+    // A `set_object_locked(locked: true)` re-lock is inert under the SAME condition —
+    // is_unlocked is never read. Deduped against writtenUnlocked so an object that is
+    // both unlocked and re-locked by effects (and still never read) warns just once.
+    if (!objStateReads.unlocked.has(id) && !writtenUnlocked.has(id)) {
+      findings.push(
+        warn(
+          "INERT_OBJECT_STATE",
+          `object "${id}" is locked by an effect but no condition ever reads its ` +
             `unlocked state — a no-op write (dead bookkeeping). Gate something on ` +
             `\`is_unlocked: ${id}\`, or remove the effect.`,
           [`object:${id}`],

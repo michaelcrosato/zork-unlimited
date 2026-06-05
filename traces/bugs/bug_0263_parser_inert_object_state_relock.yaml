@@ -1,0 +1,71 @@
+bug_id: bug_0263
+component: verification   # an incomplete-domain liveness warning in validateParser, not a content/pack defect
+# Surfaced by the blind-playtest cycle following bug_0262: the new INERT_OBJECT_STATE
+# liveness check (bug_0262) was sealed for `open_object` and for the `locked: false`
+# (unlock) half of `set_object_locked` — but it filtered `e.set_object_locked.locked ===
+# false`, so the `locked: true` (re-lock) half escaped the check. The liveness question is
+# "does ANY condition read is_unlocked for this id?", and that is INDEPENDENT of the boolean
+# written: a re-lock writes objectState[id].locked = true (is_unlocked ⇒ false), which is
+# just as inert as an unlock when nothing ever reads is_unlocked. bug_0262 sealed object-
+# state on both EDGES (feasibility bug_0253 + liveness bug_0262) but only HALF the
+# set_object_locked effect domain on the liveness edge; this completes the domain so the
+# liveness boundary is total over the effect that writes it — the discipline a sound exported
+# guarantee predicate at a future world-frame region edge requires.
+class: incomplete_liveness_domain
+title: >
+  INERT_OBJECT_STATE (bug_0262) filtered set_object_locked to `locked === false`, so a
+  `set_object_locked(locked: true)` re-lock whose written is_unlocked state NO condition
+  ever reads escaped the liveness check and validated GREEN as live — a no-op write
+  (dead bookkeeping) the symmetric unlock would have caught.
+findings:
+  - id: parser_inert_object_state_relock_unwitnessed
+    where: src/validate/parser_validator.ts validateParser body (the INERT_OBJECT_STATE block)
+    severity: low   # latent: no shipped pack authors any set_object_locked effect, so none trips it
+    description: >
+      The bug_0262 write-set built writtenUnlocked from `set_object_locked` effects whose
+      `locked === false` only. A `set_object_locked(locked: true)` effect — a re-lock —
+      writes objectState[id].locked = true, i.e. is_unlocked becomes false; if NO condition
+      anywhere reads is_unlocked for that id, the re-lock changes nothing the game consults
+      and is dead bookkeeping, exactly as an unread unlock is. But it was unwitnessed: the
+      `=== false` filter dropped it from the write-set, so it never reached the warning loop.
+      No shipped pack authors any set_object_locked effect at all (grep -rn "set_object_locked"
+      content/ hits ONLY content/engine_contract.yaml lines 63-64, the effect-name registry),
+      so the gap was a present-but-untested checker surface: a future authored or generated
+      pack with an unread re-lock would have validated GREEN and shipped a no-op write a blind
+      playtester cannot judge from inside the game — while the symmetric unlock was caught.
+    fix: >
+      In the INERT_OBJECT_STATE block, split the set_object_locked write-set by the boolean:
+      keep writtenUnlocked for `locked === false` (unchanged), and add writtenLocked for the
+      `else` (locked: true). After the existing writtenUnlocked warning loop, add a parallel
+      loop over writtenLocked that warns `INERT_OBJECT_STATE` ("…is locked by an effect but no
+      condition ever reads its unlocked state…") for each id absent from
+      objStateReads.unlocked. DEDUP: skip an id already in writtenUnlocked so an object both
+      unlocked AND re-locked by effects (still never read) warns exactly once, not twice. The
+      read-walker collectObjectStateReads and the is_unlocked consumer set are reused as-is —
+      the liveness question is unchanged; only the write-set domain is completed.
+soundness_argument: >
+  The change is purely a DOMAIN COMPLETION of an existing additive warning — it adds no new
+  code, weakens no matcher, and cannot red a shipped pack (zero shipped packs author any
+  set_object_locked effect; the auto-discover invariant test asserts every parser + RPG pack
+  still produces zero INERT_OBJECT_STATE findings). The soundness boundary is identical to
+  bug_0262's: the write-set is keyed STRICTLY on AUTHORED effects (here the `locked: true`
+  set_object_locked), NEVER on the over-approximating unlockableObjects set (built-in keyed-
+  UNLOCK settability), so it cannot false-warn on alchemists_tower's built-in-unlock objects.
+  The is_unlocked consumer set still descends all three connectives, so a disjunction-guarded
+  read is counted and never false-warned. Severity stays `warning`, never `error`: an inert
+  re-lock is a no-op, not a soft-lock. The dedup keying on writtenUnlocked membership ensures
+  a single id never double-warns. The regression adds the LIVENESS direction for the re-lock
+  (case f: an unread `locked: true` write MUST warn at severity warning), NON-VACUITY (case g:
+  adding an is_unlocked reader clears it — the check keys on the genuine write/read SLACK, not
+  the effect's presence), and the DEDUP invariant (case h: unlock + re-lock of one never-read
+  object warns exactly once) — the same SoundnessBench discipline (arXiv:2412.03154) bug_0262
+  and INERT_FLAG use. With this, the object-state liveness edge is TOTAL over the
+  set_object_locked effect domain (both boolean values) as well as over open_object — the
+  completeness a sound exported guarantee predicate at a world-frame region edge requires.
+failure:
+  type: latent_soundness_gap
+  description: >
+    The object-state liveness check covered only half the set_object_locked effect domain
+    (locked: false); an authored `locked: true` re-lock that no condition reads validated
+    GREEN, while the symmetric unlock was caught.
+regression_test: tests/regression/parser_inert_object_state.test.ts
