@@ -562,7 +562,29 @@ endings:
     # undo the very thing the shade begged you leave alone. A death ending (death:
     # true), so it is recoverable from an earlier save (§8.7) like ending_fallen, and
     # the non-death win (ending_victory) remains, so the game is still winnable.
+  # bug_0276 — reactive epilogue (the bug_0275 surface, now spent on this pack). A
+  # fresh blind MCP playtester (seeds 11 & 5, ai-runs/2026-06-05T07-11-45-654Z/
+  # playtest.md §5) reached this doom ending on a run that SKIPPED the shade entirely
+  # (straight north to the wight, never west to the cell) and flagged the base prose's
+  # closing line — "the shade's last counsel rings true after all" — as a non-sequitur:
+  # it presumes the player heard the shade's "do not wake what sleeps beneath the slab"
+  # warning, yet ending_woken is reachable with the heard_lord_lore flag UNSET (the
+  # shade is optional, bug_0075; you can prise the sarcophagus having never spoken to
+  # it). This is the reactive-ending-blindness class (bug_0272/0275): a terminal
+  # reachable on BOTH an informed and an uninformed path whose single text presumes the
+  # informed one. The fix mirrors cold_forge's ending variants exactly — the base text
+  # (below) drops the shade callback so it reads true to a player who never met the
+  # shade, and a heard_lord_lore variant (above, first-match-wins) keeps the callback
+  # for the player who DID hear the warning and ignored it. Both paths stay reachable
+  # (the under-armed straight-to-the-fight route never sets heard_lord_lore; the
+  # shade-warded route does), same ending id, prose-only — no flag/score/quest/exit/
+  # win-condition/reachable-ending change. ending_woken is not on the canonical victory
+  # trace, so that trace's state-based expected_final_hash is unchanged; only the pack
+  # content_hash shifts (re-pinned in traces/rpg/barrow_victory.json).
   - id: ending_woken
     title: "What Sleeps Beneath"
-    text: "The lead seams split and the great lid grinds back, and the cold that breathes up out of the dark is older than the wight's, older than the songs — older than the hills that hide this barrow. The Barrow-Lord opens his eyes. You came down for a crown and woke its keeper, and the shade's last counsel rings true after all: the land was the better for his sleeping. There is no climbing back to the light now. Whatever rises from this coffin, the country above will learn its name again before the season turns."
+    variants:
+      - when: [ { has_flag: heard_lord_lore } ]
+        text: "The lead seams split and the great lid grinds back, and the cold that breathes up out of the dark is older than the wight's, older than the songs — older than the hills that hide this barrow. The Barrow-Lord opens his eyes. You came down for a crown and woke its keeper, and the shade's last counsel rings true after all: the land was the better for his sleeping. There is no climbing back to the light now. Whatever rises from this coffin, the country above will learn its name again before the season turns."
+    text: "The lead seams split and the great lid grinds back, and the cold that breathes up out of the dark is older than the wight's, older than the songs — older than the hills that hide this barrow. The Barrow-Lord opens his eyes. You came down for a crown and woke its keeper, and some instinct older than reason tells you the land was the better for his sleeping. There is no climbing back to the light now. Whatever rises from this coffin, the country above will learn its name again before the season turns."
     death: true
