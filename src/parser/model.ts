@@ -13,7 +13,7 @@
 import { initState, type GameState } from "../core/state.js";
 import { applyEffects } from "../core/effects.js";
 import { evalConditions } from "../core/conditions.js";
-import type { ParserPack, Room, GameObject, Npc, DialogueNode } from "./schema.js";
+import type { ParserPack, Room, GameObject, Npc, DialogueNode, ParserEnding } from "./schema.js";
 
 export type ParserIndex = {
   pack: ParserPack;
@@ -119,6 +119,20 @@ export function nodeText(node: DialogueNode, state: GameState): string {
     if (evalConditions(v.when, state)) return v.text;
   }
   return node.npc_text;
+}
+
+/** The ending's effective epilogue in the current state: the first reactive
+ *  `variant` whose `when` conditions all hold (declared order), else the base
+ *  `text`. The terminal-state analogue of `roomDescription` / `objectDescription`
+ *  — lets an ending two routes converge on acknowledge how the player reached it
+ *  (the lore they learned, the relic they carried) instead of printing one epilogue
+ *  that ignores the route just played (§7.3). Pure; same (ending, state) ⇒ same text,
+ *  so the observation's rendered `description` and structured `ending.text` agree. */
+export function endingText(ending: ParserEnding, state: GameState): string {
+  for (const v of ending.variants ?? []) {
+    if (evalConditions(v.when, state)) return v.text;
+  }
+  return ending.text;
 }
 
 /** Is the container `id` locked? Falls back to the pack's static `locked` flag. */

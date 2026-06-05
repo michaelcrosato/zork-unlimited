@@ -81,7 +81,7 @@ import {
 import { buildParserRules } from "../../src/parser/runner.js";
 import { evalConditions } from "../../src/core/conditions.js";
 import type { GameState } from "../../src/core/state.js";
-import type { RoomVariant, ObjectVariant } from "../../src/parser/schema.js";
+import type { RoomVariant, ObjectVariant, ParserEndingVariant } from "../../src/parser/schema.js";
 import type { Action } from "../../src/api/types.js";
 import { exhaustiveEndings } from "./support/exhaustive_endings.js";
 
@@ -113,7 +113,10 @@ const livenessExplore = (a: Action): boolean => !LIVENESS_SKIP.has(a.type);
 
 /** The index of the first variant whose `when` holds in `state` (first-match-wins,
  *  identical to model.ts roomDescription/objectDescription), or -1 for the base text. */
-function firstMatch(variants: readonly (RoomVariant | ObjectVariant)[], state: GameState): number {
+function firstMatch(
+  variants: readonly (RoomVariant | ObjectVariant | ParserEndingVariant)[],
+  state: GameState,
+): number {
   for (let i = 0; i < variants.length; i++) {
     if (evalConditions(variants[i]!.when, state)) return i;
   }
@@ -121,7 +124,7 @@ function firstMatch(variants: readonly (RoomVariant | ObjectVariant)[], state: G
 }
 
 type Liveness = {
-  /** "room:<id>#<i>" / "object:<id>#<i>" keys that are the first match in some viewing state. */
+  /** "room:<id>#<i>" / "object:<id>#<i>" / "ending:<id>#<i>" keys first-matched in some state. */
   displayed: Set<string>;
   /** Every declared variant key that must therefore be displayed somewhere. */
   declared: { key: string; where: string }[];
@@ -130,7 +133,7 @@ type Liveness = {
 
 function analyze(index: ParserIndex): Liveness {
   const displayed = new Set<string>();
-  const record = (kind: "room" | "object", id: string, idx: number): void => {
+  const record = (kind: "room" | "object" | "ending", id: string, idx: number): void => {
     if (idx >= 0) displayed.add(`${kind}:${id}#${idx}`);
   };
 
@@ -140,9 +143,13 @@ function analyze(index: ParserIndex): Liveness {
     initStateForParserPack(index, 7),
     MAX_STATES,
     (s) => {
-      // Parser endings carry no variants (ParserEndingSchema has no `variants`), so a
-      // terminal state shows only fixed ending text — nothing to credit here.
-      if (s.ended) return;
+      // At a terminal the player sees the ending's epilogue — credit the reactive ending
+      // variant that fired (first-match-wins, exactly what model.ts endingText displays).
+      if (s.ended) {
+        const ending = s.endingId ? index.pack.endings.find((e) => e.id === s.endingId) : undefined;
+        if (ending?.variants?.length) record("ending", ending.id, firstMatch(ending.variants, s));
+        return;
+      }
       // The room you stand in: its description is always shown.
       const room = index.rooms.get(s.current);
       if (room?.variants?.length) record("room", room.id, firstMatch(room.variants, s));
@@ -167,6 +174,11 @@ function analyze(index: ParserIndex): Liveness {
   for (const obj of index.pack.objects) {
     (obj.variants ?? []).forEach((_, i) =>
       declared.push({ key: `object:${obj.id}#${i}`, where: `object "${obj.id}" variant #${i}` }),
+    );
+  }
+  for (const e of index.pack.endings) {
+    (e.variants ?? []).forEach((_, i) =>
+      declared.push({ key: `ending:${e.id}#${i}`, where: `ending "${e.id}" variant #${i}` }),
     );
   }
 

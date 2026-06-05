@@ -763,6 +763,20 @@ export function validateParser(
         findings,
       );
   }
+  // Endings carry reactive `variants` too (ParserEndingVariantSchema, first-match-wins
+  // via model.ts endingText) — the terminal-state sibling of room/object variants. Apply
+  // the SAME two dead-content guards: a later epilogue entailed by an earlier sibling can
+  // never be the first match, and an internally-contradictory `when` can never hold at all.
+  for (const e of pack.endings) {
+    checkVariantShadowing(e.variants, `ending:${e.id}`, findings);
+    for (let i = 0; i < (e.variants?.length ?? 0); i++)
+      checkUnsatisfiable(
+        e.variants?.[i]?.when,
+        [`ending:${e.id}`, `variant:${i}`],
+        `ending "${e.id}" variant #${i + 1}`,
+        findings,
+      );
+  }
   // A win_condition is the parser/RPG analogue of CYOA's meta.deadline — an
   // internally contradictory `conditions` can never fire (the DEADLINE_UNFIREABLE
   // analogue), and like the deadline it is a latent soft-lock unsoundness: a `visited`
@@ -1473,6 +1487,7 @@ function collectFlagReads(pack: ParserPack): Set<string> {
     for (const it of o.interactions) walkAll(it.conditions);
   }
   for (const wc of pack.win_conditions) walkAll(wc.conditions);
+  for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when); // reactive epilogue guards
   for (const npc of pack.npcs)
     for (const node of npc.dialogue.nodes) {
       for (const v of node.variants ?? []) walkAll(v.when); // reactive NPC-line guards (bug_0246)
@@ -1511,6 +1526,7 @@ function collectObjectStateReads(pack: ParserPack): { open: Set<string>; unlocke
     for (const it of o.interactions) walkAll(it.conditions);
   }
   for (const wc of pack.win_conditions) walkAll(wc.conditions);
+  for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when);
   for (const npc of pack.npcs)
     for (const node of npc.dialogue.nodes) {
       for (const v of node.variants ?? []) walkAll(v.when);

@@ -354,11 +354,26 @@ function relabelWinCondition(
   };
 }
 
-function relabelEnding(e: ParserEnding, r: (id: string) => string): ParserEnding {
+function relabelEnding(
+  e: ParserEnding,
+  r: (id: string) => string,
+  rv: (n: string) => string,
+): ParserEnding {
   return {
     id: r(e.id),
     title: e.title, // prose
     text: e.text, // prose
+    // Reactive epilogue variants: `text` is prose, but `when` references ids/vars that
+    // ARE relabeled — so the twin's epilogue gates resolve identically (else its
+    // census / validator finding codes would diverge from the original's).
+    ...(e.variants
+      ? {
+          variants: e.variants.map((v) => ({
+            when: v.when.map((c) => relabelCondition(c, r, rv)),
+            text: v.text, // prose
+          })),
+        }
+      : {}),
     death: e.death,
   };
 }
@@ -400,6 +415,6 @@ export function relabelParserBody(pack: ParserPack, relabeler: ParserRelabeler):
     objects: pack.objects.map((o) => relabelObject(o, r, rvar)),
     npcs: pack.npcs.map((npc) => relabelNpc(npc, r, rvar)),
     win_conditions: pack.win_conditions.map((w) => relabelWinCondition(w, r, rvar)),
-    endings: pack.endings.map((e) => relabelEnding(e, r)),
+    endings: pack.endings.map((e) => relabelEnding(e, r, rvar)),
   };
 }

@@ -400,11 +400,30 @@ export const WinConditionSchema = z
   })
   .strict();
 
+/** A state-conditional ending epilogue (§7.3 reactive text, ending edition). When
+ *  all of `when` hold, this `text` replaces the ending's base `text`, so a terminal
+ *  two routes converge on can acknowledge *how* the player got there — the lore they
+ *  learned, the relics they carried — instead of printing one epilogue that ignores
+ *  the route just played. First-match-wins in declared order, exactly like
+ *  RoomVariantSchema / ObjectVariantSchema (and the CYOA EndingSchema.variants this
+ *  ports to parser/RPG, completing the reactive-prose trilogy across all 3 modes). */
+export const ParserEndingVariantSchema = z
+  .object({
+    when: z.array(ConditionSchema).min(1),
+    text: z.string().min(1),
+  })
+  .strict();
+
 export const ParserEndingSchema = z
   .object({
     id: z.string().min(1),
     title: z.string().min(1),
     text: z.string().min(1),
+    // Optional reactive epilogues; the first whose `when` holds replaces `text`, else
+    // `text`. `.optional()` (not `.default([])`) so an absent field stays absent in the
+    // compiled pack ⇒ packs that don't use it compile byte-identically and keep their
+    // content hashes (mirrors RoomSchema/ObjectSchema variants and the skill_check rule).
+    variants: z.array(ParserEndingVariantSchema).optional(),
     // Stage 3: a death/failure ending is terminal but non-winning; the player is
     // expected to recover via load (§13 Stage 3). Reached by an `end_game` effect.
     death: z.boolean().default(false),
@@ -451,5 +470,6 @@ export type DialogueNodeVariant = z.infer<typeof DialogueNodeVariantSchema>;
 export type DialogueNode = z.infer<typeof DialogueNodeSchema>;
 export type Npc = z.infer<typeof NpcSchema>;
 export type WinCondition = z.infer<typeof WinConditionSchema>;
+export type ParserEndingVariant = z.infer<typeof ParserEndingVariantSchema>;
 export type ParserEnding = z.infer<typeof ParserEndingSchema>;
 export type ParserPack = z.infer<typeof ParserPackSchema>;

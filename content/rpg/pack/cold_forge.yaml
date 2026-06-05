@@ -551,8 +551,38 @@ win_conditions:
     ending: ending_victory
 
 endings:
+  # bug_0275: reactive epilogues — the terminal-state sibling of this pack's already
+  # fully-reactive rooms/objects. A fresh blind MCP playtester (cold_forge, seeds 17 &
+  # 3, ai-runs/2026-06-05T06-39-54-147Z/playtest.md §5) found the pack bug-free but
+  # noted that thorough exploration — hearing the lantern-spirit's tale of the forge's
+  # last master, finding his cell, reading his epitaph — earns the SAME epilogue as a
+  # rusher who skipped it all: "a thorough player gets no payoff for exploring the
+  # dialogue and the west cell." The optional founder arc is the pack's whole second
+  # branch, and its emotional point — you are carrying out the dead master's last work,
+  # fulfilling the plea cut into his stone ("Carry the Heart out, and the forge is not
+  # wholly dead") — was invisible at the one moment it should land. These variants pay
+  # the curiosity off: a player who learned the master's story (visited his cell OR
+  # heard the spirit name him) gets an ending that knows it, on BOTH the win and the
+  # death (the reactive-ending-blindness class — if one terminal reframes by knowledge,
+  # every terminal reachable on both an informed and an uninformed path must too). The
+  # `knows_founder` predicate fires on either path to the knowledge; the base epilogue
+  # stays for the player who skipped both (still reachable — the under-armed straight-to-
+  # the-fight route never visits the cell or asks the spirit). No score/flag/quest/exit
+  # change: prose-only, and prep stays about survival, not points (the pack's design).
   - id: ending_victory
     title: "Keeper of the Ember"
+    variants:
+      - when:
+          - any_of:
+              - { visited: founder_cell }
+              - { has_flag: heard_founder }
+        text: >
+          You lift the Ember-Heart from its plinth and the cold of the dead forge
+          breaks before it. You know now whose fire this was — the last master's,
+          banked into one everlasting coal and left under guard against exactly this
+          hour. Warmth climbs the stair ahead of you, anvil by anvil, and you carry
+          his Heart up into the world above: the forge is not wholly dead, and you are
+          the hand that kept it so.
     text: >
       You lift the Ember-Heart from its plinth and the cold of the dead forge
       breaks before it. Warmth climbs the stair ahead of you, anvil by anvil, and
@@ -560,6 +590,17 @@ endings:
     death: false
   - id: ending_fallen
     title: "Cold on the Cinders"
+    variants:
+      - when:
+          - any_of:
+              - { visited: founder_cell }
+              - { has_flag: heard_founder }
+        text: >
+          The sentinel's last blow drops you among the dead anvils, and the grave
+          chill closes over you. You came to know the last master's story before the
+          end — how he too came down into this cold and never climbed back out — and
+          now you keep him company in it. The forge keeps its cold, and its Heart, and
+          one more set of bones the deep chill will hold whole, a while longer.
     text: >
       The sentinel's last blow drops you among the dead anvils, and the grave
       chill closes over you. The forge keeps its cold, and its Heart, a while

@@ -88,7 +88,7 @@ import { visibleObjectIds } from "../../src/parser/model.js";
 import { evalConditions } from "../../src/core/conditions.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
-import type { RoomVariant, ObjectVariant } from "../../src/parser/schema.js";
+import type { RoomVariant, ObjectVariant, ParserEndingVariant } from "../../src/parser/schema.js";
 import type { Action } from "../../src/api/types.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 
@@ -180,7 +180,10 @@ function readsHpInCondition(node: unknown): boolean {
 
 /** The index of the first variant whose `when` holds in `state` (first-match-wins,
  *  identical to model.ts roomDescription/objectDescription), or -1 for the base text. */
-function firstMatch(variants: readonly (RoomVariant | ObjectVariant)[], state: GameState): number {
+function firstMatch(
+  variants: readonly (RoomVariant | ObjectVariant | ParserEndingVariant)[],
+  state: GameState,
+): number {
   for (let i = 0; i < variants.length; i++) {
     if (evalConditions(variants[i]!.when, state)) return i;
   }
@@ -188,7 +191,7 @@ function firstMatch(variants: readonly (RoomVariant | ObjectVariant)[], state: G
 }
 
 type Liveness = {
-  /** "room:<id>#<i>" / "object:<id>#<i>" keys that are the first match in some viewing state. */
+  /** "room:<id>#<i>" / "object:<id>#<i>" / "ending:<id>#<i>" keys first-matched in some state. */
   displayed: Set<string>;
   /** Every declared variant key that must therefore be displayed somewhere. */
   declared: { key: string; where: string }[];
@@ -198,7 +201,7 @@ type Liveness = {
 /** Run the best/worst-roll bracket under the liveness policy and mine displayed variants. */
 function analyze(index: RpgIndex, explore: (a: Action) => boolean = livenessExplore): Liveness {
   const displayed = new Set<string>();
-  const record = (kind: "room" | "object", id: string, idx: number): void => {
+  const record = (kind: "room" | "object" | "ending", id: string, idx: number): void => {
     if (idx >= 0) displayed.add(`${kind}:${id}#${idx}`);
   };
 
@@ -208,9 +211,13 @@ function analyze(index: RpgIndex, explore: (a: Action) => boolean = livenessExpl
     initStateForRpgPack(index, 7),
     MAX_STATES,
     (s) => {
-      // RPG endings carry no variants (ParserEndingSchema has none) — a terminal state
-      // shows only fixed ending text, nothing to credit.
-      if (s.ended) return;
+      // At a terminal the player sees the ending's epilogue — credit the reactive ending
+      // variant that fired (first-match-wins, exactly what model.ts endingText displays).
+      if (s.ended) {
+        const ending = s.endingId ? index.pack.endings.find((e) => e.id === s.endingId) : undefined;
+        if (ending?.variants?.length) record("ending", ending.id, firstMatch(ending.variants, s));
+        return;
+      }
       const room = index.rooms.get(s.current);
       if (room?.variants?.length) record("room", room.id, firstMatch(room.variants, s));
       // Objects are shown on examine — credit a variant only when the object is actually
@@ -232,6 +239,11 @@ function analyze(index: RpgIndex, explore: (a: Action) => boolean = livenessExpl
   for (const obj of index.pack.objects) {
     (obj.variants ?? []).forEach((_, i) =>
       declared.push({ key: `object:${obj.id}#${i}`, where: `object "${obj.id}" variant #${i}` }),
+    );
+  }
+  for (const e of index.pack.endings) {
+    (e.variants ?? []).forEach((_, i) =>
+      declared.push({ key: `ending:${e.id}#${i}`, where: `ending "${e.id}" variant #${i}` }),
     );
   }
 

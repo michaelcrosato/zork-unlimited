@@ -30,6 +30,7 @@ import { evalConditions } from "../core/conditions.js";
 import {
   type ParserIndex,
   activeDialogue,
+  endingText as resolveEndingText,
   nodeText,
   objectName,
   roomDescription,
@@ -97,6 +98,11 @@ export function buildParserObservation(
 
   const maxScore = index.pack.meta.max_score ?? 0;
   const score = state.vars[SCORE_VAR] ?? 0;
+  // The epilogue the player actually sees: the first reactive ending `variant` whose
+  // `when` holds, else the base `text` (model.ts endingText — the terminal analogue of
+  // roomDescription). Resolved once so the rendered `description` and the structured
+  // `ending.text` block agree on which epilogue fired.
+  const resolvedEnding = endingDef ? resolveEndingText(endingDef, state) : undefined;
   // At an ending, in a pack that tracks score, give the player closure: append a
   // "Final score: X of Y." tally to the rendered ending text. The canonical
   // `ending.text` (and the pack YAML) stay pure — only the player-facing
@@ -104,11 +110,12 @@ export function buildParserObservation(
   // observation, the UI) surfaces it without any per-pack content edit. Packs with
   // no score (max_score 0 — e.g. the CYOA packs use a different observation
   // entirely) are untouched.
-  const endingText = endingDef
-    ? maxScore > 0
-      ? `${endingDef.text.trimEnd()}\n\nFinal score: ${score} of ${maxScore}.`
-      : endingDef.text
-    : undefined;
+  const endingText =
+    endingDef && resolvedEnding !== undefined
+      ? maxScore > 0
+        ? `${resolvedEnding.trimEnd()}\n\nFinal score: ${score} of ${maxScore}.`
+        : resolvedEnding
+      : undefined;
 
   const visObjs = visibleObjectIds(index, state, state.current).map((id) => {
     const o = index.objects.get(id);
@@ -162,7 +169,14 @@ export function buildParserObservation(
     ended: state.ended,
     ending_id: state.endingId,
     ending: endingDef
-      ? { id: endingDef.id, title: endingDef.title, text: endingDef.text, death: endingDef.death }
+      ? {
+          id: endingDef.id,
+          title: endingDef.title,
+          // The reactive epilogue the player saw (the resolved variant, else base text),
+          // pure of the score tally — that closure rides `description` only.
+          text: resolvedEnding ?? endingDef.text,
+          death: endingDef.death,
+        }
       : null,
   };
 }
