@@ -244,3 +244,90 @@ describe("bug_0231 — The Tide-Mill: a NON-LINEAR win (two order-independent su
     expect(pawlUse.command_verb).not.toBe(hatchUse.command_verb);
   });
 });
+
+/**
+ * Regression (§15) for bug_0267 — The Tide-Mill: the OPTIONAL storm-lantern "nerve" beat's
+ * FAILURE prose no longer implies it is a prerequisite for the night's work.
+ *
+ * The seed-11 blind pass (clarity 5/5, enjoyment 4/5, all three endings, zero hard bugs;
+ * ai-runs/2026-06-05T02-07-52-466Z/playtest.md) flagged the storm-lantern's "steady" use as
+ * reading like it MIGHT be mandatory ("the lantern has a 'steady' action but it was never
+ * needed … a first-time player may waste a turn or two probing it"). The tide_lantern nerve
+ * skill_check is in fact 100% CONVERGENT — its only flag `nerve_held` is read by nothing but
+ * its own one-shot `not_flag` guard, so it gates no exit, win, score, or reactive variant (the
+ * non-linearity / all-endings / score-economy proofs above all hold without it; both puzzle
+ * orders reach ending_saved at 45/45 untouched). This is the SAME narrative-honesty footgun
+ * just fixed on the sibling pack last cycle (bug_0266, lamplighters_round): the tester's d20
+ * roll (range 4–23 vs DC 12, ~40% miss) did not surface the FAILURE branch, and reading it
+ * showed it ended "...gather yourself BEFORE you take up the night's work in earnest" — telling
+ * a player who keeps missing to steady up before doing the work (cut the race / free the pawl /
+ * wind the gate), falsely implying the steadied lantern is a gate on a beat that gates nothing.
+ *
+ * Fix (hint_text / content only): rewrite the on_failure prose to drop the false-gate clause and
+ * state plainly the work goes on regardless — the lantern "is lit and burning and will see you
+ * about the mill well enough … that work waits on no man's grip." No mechanic, flag, score, exit
+ * or ending change; the beat stays optional, retryable-on-failure, one-shot-on-success. Locks:
+ *   (1) convergence: `nerve_held` is read by NO condition other than the beat's own one-shot
+ *       guard, and the check awards no score / sets no other flag / opens no exit / ends nothing;
+ *   (2) the failure prose drops the false-gate clause and signals the work continues;
+ *   (3) behaviour: performing the steady beat (pass OR fail) does not end the game, and the full
+ *       45/45 win is still completable afterward — the beat is genuinely off the critical path.
+ */
+describe("bug_0267 — the optional storm-lantern 'nerve' beat's failure prose no longer implies a gate", () => {
+  const lantern = pack.objects.find((o) => o.id === "tide_lantern")!;
+  const steadyInteraction = lantern.interactions.find((it) => it.skill_check)!;
+
+  it("(1) convergence: nerve_held is read only by the beat's own one-shot guard; the check gates nothing structural", () => {
+    expect(steadyInteraction).toBeDefined();
+    expect(steadyInteraction.skill_check!.skill).toBe("nerve");
+    expect(steadyInteraction.skill_check!.difficulty).toBe(12);
+    // The ONLY references to nerve_held anywhere in the compiled pack are the guard condition
+    // (not_flag) + the on_success set_flag — exactly 2; nothing else reads it.
+    const blob = JSON.stringify(pack);
+    expect(blob.split("nerve_held").length - 1).toBe(2);
+    expect(JSON.stringify(steadyInteraction.conditions)).toContain("nerve_held");
+    // The check awards no score, sets no other flag, opens no exit, and ends no game (either branch).
+    const outcomes = JSON.stringify(steadyInteraction.skill_check);
+    expect(outcomes).not.toContain("score");
+    expect(outcomes).not.toContain("unlock_exit");
+    expect(outcomes).not.toContain("end_game");
+    // No exit / win condition reads the flag — the beat is off every gated path.
+    const inExit = pack.rooms.some((r) =>
+      r.exits.some((e) => JSON.stringify(e.conditions ?? []).includes("nerve_held")),
+    );
+    const inWin = pack.win_conditions.some((w) =>
+      JSON.stringify(w.conditions).includes("nerve_held"),
+    );
+    expect(inExit || inWin).toBe(false);
+  });
+
+  it("(2) the failure prose drops the false-gate clause and signals the work continues regardless", () => {
+    const onFailure = JSON.stringify(steadyInteraction.skill_check!.on_failure).toLowerCase();
+    expect(onFailure).not.toContain("before you take up the night's work"); // the removed false-gate clause
+    expect(onFailure).toContain("steady or no"); // explicitly optional
+    expect(onFailure).toContain("waits on no man's grip"); // the work does not wait on the beat
+    expect(onFailure).toMatch(/wheel|gate/); // names the real remaining work — the beat is not it
+  });
+
+  it("(3) performing the steady beat (pass or fail) does not end the game, and the 45/45 win is still completable afterward", () => {
+    // Take the lantern, perform the optional beat once, then run the full win.
+    let s = initStateForParserPack(index, 1);
+    s = play(s, ["take_tide_lantern"]).state;
+    expect(actionIds(s)).toContain("use_tide_lantern"); // the optional beat is offered with the lamp in hand
+    const afterSteady = play(s, ["use_tide_lantern"]);
+    expect(afterSteady.state.ended).toBeFalsy(); // the beat never ends the game, pass or fail
+    // The full win is still reachable after the detour through the optional beat.
+    const done = play(afterSteady.state, [
+      ...GATHER,
+      "go_west", // wheel_room → head_race
+      "use_billhook_on_choked_sluice", // +10, sluice_clear
+      "go_east", // back to wheel_room
+      "use_crow_bar_on_brake_pawl", // +10, pawl_free
+      "use_crank_handle_on_sea_winch", // +20, gate_up, opens the way down
+      "go_down",
+    ]);
+    expect(done.state.ended).toBe(true);
+    expect(done.state.endingId).toBe("ending_saved");
+    expect(buildParserObservation(index, done.state).score).toBe(45);
+  });
+});

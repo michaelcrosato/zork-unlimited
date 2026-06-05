@@ -305,8 +305,11 @@ objects:
             - narrate: >
                 You lift the lantern and the light shakes with your hand, throwing the dark
                 about, and out past the weir you can just hear the boat working on the
-                falling water. Best stand a moment and gather yourself before you take up
-                the night's work in earnest.
+                falling water. Steady or no, the lantern is lit and burning and will see you
+                about the mill well enough — the wheel still wants its two faults put right
+                and the gate winding before the tide is wholly out, and that work waits on
+                no man's grip. Take it up when you will, and steady the light again if it
+                eases you.
 
   - id: coin_bag
     name: "coin-bag"
