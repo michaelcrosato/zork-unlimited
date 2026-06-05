@@ -107,9 +107,10 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // ...and the quest_stage palette lift — a `the_road` progression (set_quest_stage
     // milestones + a reactive `on_the_trail` scene variant), another deliberate edit that
     // gates nothing (was 59f7225260...);
-    // ...and the scoring palette lift — six one-shot `inc_var: score` awards + `max_score: 45`
-    // (the CYOA scoring standardization; reachable max == 45 is proven by the new
-    // cyoa_score_economy_sound proof), another deliberate, gating-nothing edit (was 45b8dbee0b...);
+    // ...and the scoring palette lift — one-shot `inc_var: score` awards (six at first, then
+    // seven with bug_0265's show_letter; see below) summing to `max_score` (45, then 50 with
+    // bug_0265; reachable max is proven equal by the cyoa_score_economy_sound proof), a
+    // deliberate, gating-nothing edit (was 45b8dbee0b...);
     // ...and the skill-check palette lift — a `nerve` var + an optional `force_door` d20 check whose
     // success/failure both route to the same scene (a convergent tension beat that gates nothing, so
     // the exhaustive proofs stay sound), another deliberate edit (was 83826e0fc8...).
@@ -121,7 +122,15 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // reproduced live via MCP, seed 23). Gating the variant on not_flag learned_truth suppresses it once
     // the truth is out; the un-informed first-timer still sees it verbatim. Reactive TEXT ONLY — every
     // state_hash on the repro route is byte-identical pre/post-fix (was a1226aa17f...).
+    // ...and bug_0265 — the western route's key discovery now scores. show_letter (the hermit
+    // breaking the seal and naming the checkpoint man) previously awarded 0 while the
+    // mechanically-equivalent eastern evidence trail paid +20, so a blind playtester (seed 7,
+    // ai-runs/2026-06-05T01-31-00-798Z/playtest.md §4/§5) reaching the win via the hermit felt
+    // under-rewarded. show_letter now grants +5 (one-shot on its existing not_flag seal_broken
+    // guard, the ask_about_tower pattern) and max_score lifts 45 → 50. Deliberate scoring edit:
+    // the new award rides the seal_broken flag dimension (so no new states), and reachable max
+    // == 50 stays proven exhaustively by cyoa_score_economy_sound (was d3090c6586...).
     // Any *unintended* change to compilation trips this.
-    expect(loaded.compiled.contentHash).toBe("d3090c658665c91502d823f8930154c84552a929733c4bc76aeea5798e9f2fda");
+    expect(loaded.compiled.contentHash).toBe("f1d127c8ce0966696fbbc223eb01e60bb9d10acc996e0f5e8f07461a5adb7da7");
   });
 });

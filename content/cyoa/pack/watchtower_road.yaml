@@ -21,21 +21,29 @@ meta:
   # reward the investigation — uncovering the truth, not a moral judgment. Each award
   # rides a one-shot, already-guarded choice so the conventional `score` var can't be
   # farmed past the ceiling, and every award lies on one traversable run, so the
-  # best-scoring playthrough reaches the full 45:
+  # best-scoring playthrough reaches the full 50:
   #   +5  inspect_ground   — the bootprints, the first trail east (not_flag found_bootprints)
   #   +5  take_letter      — recovering the sealed papers (not_item sealed_letter)
   #   +10 examine_barrels  — the lamp oil: proof the fire was set (not_flag learned_truth)
   #   +10 take_ledger      — the ledger naming everyone involved (not_item ledger)
   #   +5  ask_about_tower  — the hermit's corroborating account (not_flag heard_hermit_lore)
+  #   +5  show_letter      — the hermit breaks the seal, naming the checkpoint man (not_flag seal_broken; bug_0265)
   #   +10 expose_the_plot  — carrying the truth home to the magistrate (ending_truth)
-  # Best single path (all six combine): inspect_ground (+5) → east → cart: take_lantern,
+  # bug_0265: show_letter — the western route's key discovery (the hermit reads the letter
+  # and names the man at the checkpoint) — previously scored 0 while the mechanically-
+  # equivalent eastern discoveries paid +20, so a west-leaning blind playtester (seed 7)
+  # reached the win feeling under-rewarded. It now awards +5, restoring parity with the
+  # other corroborating clues and lifting the ceiling 45 → 50.
+  # Best single path (all seven combine): inspect_ground (+5) → east → cart: take_lantern,
   # take_letter (+5) → cellar: examine_barrels (+10) → hidden_cache: take_ledger (+10) —
   # pry the barrel BEFORE the ledger, since taking the ledger sets learned_truth and
-  # retires the barrel choice — → west → hermit: ask_about_tower (+5) → north →
-  # decision_point: expose_the_plot (+10) = 45. No award double-counts (each on a distinct
-  # one-shot choice), so the reachable maximum equals max_score exactly (bug_0148-class
-  # score-economy soundness). Scoring is silent mechanics — no prose change.
-  max_score: 45
+  # retires the barrel choice — → west → hermit: ask_about_tower (+5), show_letter (+5) —
+  # both are collectible AFTER learned_truth is set (their guards key off heard_hermit_lore /
+  # seal_broken, not learned_truth) — → north → decision_point: expose_the_plot (+10) = 50.
+  # No award double-counts (each on a distinct one-shot choice), so the reachable maximum
+  # equals max_score exactly (bug_0148-class score-economy soundness, proven exhaustively by
+  # cyoa_score_economy_sound). Scoring is silent mechanics — no prose change.
+  max_score: 50
 
 scenes:
   # ── The crossroads (start) ──────────────────────────────────────────────
@@ -397,6 +405,20 @@ scenes:
       - id: show_letter
         text: "Show him the sealed letter."
         conditions: [ { all_of: [ { has_item: sealed_letter }, { not_flag: seal_broken } ] } ]
+        # +5 score: the hermit breaks the seal and reads — the letter NAMES the man at the
+        # checkpoint, the single most pointed piece of evidence on the western route. This
+        # was the one investigative discovery that paid nothing: a blind playtester (seed 7,
+        # ai-runs/2026-06-05T01-31-00-798Z/playtest.md §4/§5) reached the win via the hermit
+        # having learned the truth here yet scored far below the eastern evidence trail
+        # (barrels +10, ledger +10), so the mechanically-equivalent western "learn the truth"
+        # beat felt unrewarded (bug_0265). Awarding it removes that imbalance and lets the
+        # west route corroborate the score. One-shot — the not_flag seal_broken guard above
+        # retires this choice, and hermit_about_letter's on_enter sets seal_broken on arrival,
+        # so it cannot re-fire (the same one-shot pattern as ask_about_tower / heard_hermit_lore).
+        # Independent of learned_truth, so on the best path it stacks AFTER the eastern barrel/
+        # ledger awards (which set learned_truth) without retiring either of them.
+        effects:
+          - inc_var: { name: score, by: 5 }
         next: hermit_about_letter
       - id: say_goodbye
         text: "Say goodbye."
