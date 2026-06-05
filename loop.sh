@@ -28,7 +28,19 @@ latest_prompt() {
 # The chosen command must read the prompt from STDIN (claude -p and codex `-` both do).
 agent_cmd() {
   if [[ -n "${AI_AGENT_CMD:-}" ]]; then echo "$AI_AGENT_CMD"; return 0; fi
-  if command -v claude >/dev/null 2>&1; then echo "claude -p --dangerously-skip-permissions"; return 0; fi
+  if command -v claude >/dev/null 2>&1; then
+    # Token-efficient defaults (all overridable). The loop's work is well-scoped and
+    # health-gated, so Sonnet (≈5x cheaper than Opus and far easier on the weekly usage
+    # limit) is plenty; set AI_LOOP_MODEL=opus to restore max capability. Optional
+    # per-cycle compute guards: AI_LOOP_EFFORT (low|medium|high|xhigh|max — trims Opus
+    # 4.8's default-high thinking on routine cycles) and AI_LOOP_BUDGET_USD (a
+    # runaway-spend cap). Left unset by default so behaviour stays unsurprising.
+    local flags="--model ${AI_LOOP_MODEL:-sonnet} --dangerously-skip-permissions"
+    [[ -n "${AI_LOOP_EFFORT:-}" ]] && flags="--effort ${AI_LOOP_EFFORT} ${flags}"
+    [[ -n "${AI_LOOP_BUDGET_USD:-}" ]] && flags="${flags} --max-budget-usd ${AI_LOOP_BUDGET_USD}"
+    echo "claude -p ${flags}"
+    return 0
+  fi
   if command -v codex >/dev/null 2>&1 && [[ -f "${CODEX_HOME:-$HOME/.codex}/auth.json" ]]; then
     echo "codex -a never exec --sandbox ${AI_CODEX_SANDBOX:-workspace-write} --cd $PWD -"; return 0
   fi
