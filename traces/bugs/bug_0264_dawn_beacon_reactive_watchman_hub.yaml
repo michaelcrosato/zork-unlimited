@@ -1,0 +1,60 @@
+id: bug_0264
+title: "Content polish: The Dawn Beacon's old watchman now greets the player tersely on return to his topic hub instead of re-delivering his whole first-meeting opening every time. A CONTENT application of the bug_0246 reactive-dialogue engine feature to the second NPC that needed it, motivated by this cycle's mandated blind pass."
+kind: content_fix
+mode: rpg
+pack: content/rpg/pack/dawn_beacon.yaml
+# Pure content_fix — no engine/schema/validator change. The reactive-`variants` capability on
+# dialogue nodes already shipped (bug_0246) and is exercised by breaking_weir; this is the second
+# NPC to adopt it. dawn_beacon carries NO pinned content hash (only watchtower_road is pinned), and
+# the benchmark bot never reads npc_text, so no scorecard regen and no pinned hash is touched. The
+# discovered pack set is unchanged (an existing pack edited, none added) so the freshness pin
+# (bug_0194) is untouched.
+
+summary: >
+  The mandated blind pass this cycle (The Dawn Beacon, rpg, seeds 7 prepared + 19 rush —
+  ai-runs/2026-06-05T01-15-25-287Z/playtest.md) returned clarity 5/5, enjoyment 4/5, mechanics
+  flawless: a WON 50/50 prepared run and a 45/50 rash run, both reaching ending_lit with zero
+  rejected actions, zero loops, no stale or contradictory text, NO true bug. Its one concrete
+  friction finding (§4): the old watchman's `watch_root` topic hub "re-prints the same hub intro
+  line ('You came up the yard — good lad…') after every sub-answer, which reads slightly
+  repetitively across three asks." This is the identical friction the Breaking-Weir Pell blind pass
+  surfaced (bug_0246) — but dawn_beacon's watchman pre-dated that feature and never adopted it.
+
+root_cause: >
+  Not a defect: the engine has carried reactive `variants` on dialogue nodes since bug_0246 (the
+  §7.3 reactive-text convention, the third member of the room/object/dialogue variant family,
+  resolved by model.ts nodeText). The Dawn Beacon's watchman simply still spoke a single immutable
+  `npc_text` at his root, so every return to the topic menu after asking a question replayed his
+  whole first-meeting emergency — the exact "reads robotic" smell the feature exists to cure. The
+  capability was present and tested; this NPC had not yet been wired to use it.
+
+fix: >
+  Content only — add two reactive `variants` to the `watch_root` node, mirroring breaking_weir's
+  Pell exactly:
+    • when `has_flag heard_counsel` OR when `has_flag heard_beacon` (two entries, since a single
+      `when` is all_of, so the OR needs one entry per flag — the breaking_weir pattern), both
+      speaking a terse "Aye, lad — what else? Ask quick; the dark won't hold past dawn, and there is
+      little on these walls I cannot tell you." in the watchman's established voice.
+    • First contact (neither flag set) still speaks the full "You came up the yard — good lad"
+      opening; once EITHER topic has been heard the return greeting is terse.
+  Only the spoken TEXT varies — the node's topics/effects are untouched, so dialogue termination &
+  reachability, the one-shot `heard_counsel` +2-attack counsel, the `heard_beacon` briefing, the
+  combat_guaranteed gauntlet bound, and the 5+10+10+10+15 score economy are all unchanged. Both
+  variant `when`s are reachable (heard_counsel and heard_beacon are both set on the intended path),
+  so the reactive-variant liveness oracle (bug_0145) and the dead-reactive-content validator guards
+  (UNREACHABLE_VARIANT / UNSATISFIABLE_CONDITION, extended to dialogue nodes by bug_0246) pass clean.
+
+regression_test: tests/regression/dawn_beacon_reactive_watchman_hub.test.ts
+# Locks the real pack on the actual TALK/ASK engine path: (1) first contact speaks the full opening,
+# not the terse line; (2) ask the fight counsel + return → the terse "what else" greeting and NOT the
+# full opening (the heard_counsel variant), with the counsel node's +2-attack effect confirmed fired;
+# (3) the same terse greeting when the BEACON topic is asked first (the heard_beacon OR-variant); (4)
+# the observation's dialogue.npc_text agrees with the narration; and the shipped pack validates
+# error-free. The rpg_metamorphic_relabel suite also auto-exercises the new node variants' relabel
+# path (their when-flags must relabel consistently for the contamination-twin census to match).
+
+verify:
+  - "validate content/rpg/pack/dawn_beacon.yaml → OK, 0 error(s), 0 warning(s), max_score 50"
+  - "MCP replay (seed 7): TALK → full 'You came up the yard' opening; ASK ask_fight → counsel + heard_counsel; ASK fight_back → terse 'Aye, lad — what else?' return line, ask_fight topic correctly retired"
+  - "npx vitest run tests/regression/dawn_beacon_reactive_watchman_hub.test.ts → 4 passed"
+  - "npm run health → green (verify:integrity + typecheck + lint + format + tests + validate + playtest)"

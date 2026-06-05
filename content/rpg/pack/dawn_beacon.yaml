@@ -377,6 +377,22 @@ npcs:
             valley gets, and there are two of them on the stair set to keep it dark. Ask,
             if you would — I have soldiered these walls thirty years and there is little
             on them I do not know.
+          # Reactive hub line (§7.3, the bug_0204 breaking_weir keeper treatment): the
+          # blind pass found the watchman re-delivering his whole opening every time the
+          # player came back to the menu after a topic. Once he has counseled OR briefed
+          # you (either retiring flag set), the return greeting drops to a terse "what
+          # else, lad?" instead of the full emergency. Two entries to express the OR
+          # (a single `when` is all_of); only the SPOKEN text varies, so the node's
+          # effects/topics — and dialogue termination/reachability — are unchanged.
+          variants:
+            - when: [{ has_flag: heard_counsel }]
+              text: >
+                Aye, lad — what else? Ask quick; the dark won't hold past dawn, and there
+                is little on these walls I cannot tell you.
+            - when: [{ has_flag: heard_beacon }]
+              text: >
+                Aye, lad — what else? Ask quick; the dark won't hold past dawn, and there
+                is little on these walls I cannot tell you.
           topics:
             - id: ask_fight
               prompt: "Ask how to get past the two raiders."
