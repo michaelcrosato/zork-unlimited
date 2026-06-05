@@ -216,6 +216,21 @@ export function validateParser(
         ),
       );
   }
+  // A room id named by a `visited`/`not_visited`/`in_room` condition or a
+  // `goto`/`place_object.room` effect that is absent from pack.rooms is a dangling
+  // reference: the gate evaluates false forever (conditions.ts) or the effect targets
+  // nowhere — the room-id analogue of EXIT_TARGET_MISSING, and a structural bug, not a
+  // deliberate transient. Error severity (bug_0277). ONE code for all four ref kinds.
+  for (const id of collectRoomRefs(pack)) {
+    if (!roomIds.has(id))
+      findings.push(
+        err(
+          "UNRESOLVED_ROOM_REFERENCE",
+          `condition/effect references room "${id}" that does not exist.`,
+          [`room:${id}`],
+        ),
+      );
+  }
 
   // ── Ambiguous aliases: a name/alias must not resolve to two objects (§10.4) ──
   const aliasOwner = new Map<string, string>();
@@ -1533,4 +1548,49 @@ function collectObjectStateReads(pack: ParserPack): { open: Set<string>; unlocke
       for (const t of node.topics) walkAll(t.conditions);
     }
   return { open, unlocked };
+}
+
+/** Every room id a parser/RPG pack REFERENCES — by a `visited` / `not_visited` /
+ *  `in_room` condition in any exit, interaction, or win condition, any room/object
+ *  variant `when`, any ending variant `when`, or any dialogue-node-variant/topic gate
+ *  (DESCENDING all_of/any_of/none_of, so a disjunction-guarded room ref still counts),
+ *  PLUS by a `goto` / `place_object.room` effect target (the only two room-id-bearing
+ *  effects, src/core/effects.ts). A referenced id absent from pack.rooms is a dangling
+ *  reference — a permanently-dead gate (visited/in_room evaluate false forever) or a
+ *  goto/place_object into nowhere — the room-id analogue of EXIT_TARGET_MISSING.
+ *  Mirrors collectFlagReads EXACTLY — NOT objectStateReqs, which descends only all_of
+ *  for the conservative AND-context feasibility check and would under-count refs inside
+ *  a disjunction (bug_0277). */
+function collectRoomRefs(pack: ParserPack): Set<string> {
+  const refs = new Set<string>();
+  const walk = (c: Condition): void => {
+    if ("visited" in c) refs.add(c.visited);
+    else if ("not_visited" in c) refs.add(c.not_visited);
+    else if ("in_room" in c) refs.add(c.in_room);
+    else if ("all_of" in c) c.all_of.forEach(walk);
+    else if ("any_of" in c) c.any_of.forEach(walk);
+    else if ("none_of" in c) c.none_of.forEach(walk);
+  };
+  const walkAll = (conds: Condition[] | undefined): void => (conds ?? []).forEach(walk);
+  for (const room of pack.rooms) {
+    for (const v of room.variants ?? []) walkAll(v.when);
+    for (const exit of room.exits) walkAll(exit.conditions);
+  }
+  for (const o of pack.objects) {
+    for (const v of o.variants ?? []) walkAll(v.when);
+    for (const it of o.interactions) walkAll(it.conditions);
+  }
+  for (const wc of pack.win_conditions) walkAll(wc.conditions);
+  for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when);
+  for (const npc of pack.npcs)
+    for (const node of npc.dialogue.nodes) {
+      for (const v of node.variants ?? []) walkAll(v.when);
+      for (const t of node.topics) walkAll(t.conditions);
+    }
+  // Effect-side room refs: goto + place_object.room (the only room-id-bearing effects).
+  for (const e of allEffects(pack)) {
+    if ("goto" in e) refs.add(e.goto);
+    else if ("place_object" in e) refs.add(e.place_object.room);
+  }
+  return refs;
 }

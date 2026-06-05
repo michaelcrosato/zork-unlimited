@@ -1,0 +1,86 @@
+bug_id: bug_0277
+component: verification   # a missing reference-integrity error in validateParser, not a content/pack defect
+# Surfaced by ultraplan re-aim cycle #13: the parser validator's reference-integrity family
+# checks roomIds membership at exactly three sites — meta.start_room (START_MISSING),
+# exit.to (EXIT_TARGET_MISSING), and npc.room (NPC_ROOM_MISSING) — but NEVER on a room id
+# named by a `visited` / `not_visited` / `in_room` condition nor on a `goto` /
+# `place_object.room` effect target. Those condition kinds are bare strings in the schema
+# (conditions.ts: z.string().min(1)); a typo'd room id silently evaluates FALSE forever
+# (conditions.ts: visited reads state.visited[id]→undefined→false; in_room compares
+# state.current) — a permanently-dead gate. Cycle #12 sealed the object-state LOCAL
+# boundary on feasibility (IMPOSSIBLE_OBJECT_STATE, bug_0253) + liveness (INERT_OBJECT_STATE,
+# bug_0262) + win-stability (bug_0270); the next genuinely-open rung on the same
+# assume-guarantee ladder is INTRA-FRAME room-reference integrity, which this seals.
+class: missing_reference_integrity_error
+title: >
+  validateParser checked roomIds membership only at start_room / exit.to / npc.room — a
+  room id named by a visited / not_visited / in_room condition or a goto / place_object.room
+  effect could dangle (reference a room absent from pack.rooms) and validate GREEN, a
+  permanently-dead gate or an effect into nowhere that no existing oracle catches.
+findings:
+  - id: parser_unresolved_room_reference_unwitnessed
+    where: src/validate/parser_validator.ts validateParser body (the roomIds.has reference checks)
+    severity: low   # latent: all 10 shipped parser+RPG packs have 14 room refs, 0 dangling, so none trips it
+    description: >
+      roomIds (the Set of declared room ids) is consulted ONLY at start_room, exit.to, and
+      npc.room. The room-naming conditions (visited / not_visited / in_room) and the two
+      room-id-bearing effects (goto, place_object: { id, room }) are NEVER reference-checked.
+      A typo'd room id in any of these silently evaluates false forever (visited reads
+      state.visited[id]→undefined→false; in_room compares state.current) or sends goto /
+      place_object into a nonexistent room. The static SOFTLOCK pass treats such a dead gate
+      as a deliberate stable-false gate; the exhaustive-BFS solver sees it as an unreachable
+      atom; the metamorphic relabel oracle is bijectively blind to it (the twin keeps the
+      same typo). No shipped pack does this today (a real YAML parse over all parser+RPG
+      packs, walking the exact sites collectRoomRefs walks plus goto/place_object effects,
+      found 14 room refs, 0 dangling — and zero shipped pack authors a goto/place_object room
+      effect), so the gap was a present-but-untested checker surface: a future authored or
+      generated pack with a typo'd room ref would have validated GREEN and shipped a
+      permanently-dead gate a blind playtester cannot judge from inside the game.
+    fix: >
+      (1) Add a FRESH read-walker collectRoomRefs(pack) directly after
+      collectObjectStateReads, returning Set<string>. Mirror collectFlagReads EXACTLY — the
+      same walkAll over rooms+variant-when+exit conditions, objects+variant-when+interaction
+      conditions, win_conditions, ending variants, and NPC dialogue nodes+variant-when+topic
+      conditions — collecting visited / not_visited / in_room room ids, DESCENDING
+      all_of/any_of/none_of (a ref inside ANY connective, even a disjunction, counts). Do NOT
+      reuse objectStateReqs (all_of-only, the conservative AND-context feasibility helper): it
+      would UNDER-count refs inside a disjunction. (2) In the same walker, iterate
+      allEffects(pack) and add e.goto (when 'goto' in e) and e.place_object.room (when
+      'place_object' in e) — the only two room-id-bearing effects (effects.ts). (3) In the
+      validator body, in the same region as the existing roomIds.has reference checks, for
+      each collected ref NOT in roomIds push err("UNRESOLVED_ROOM_REFERENCE", <message>,
+      ["room:"+id]). ONE code for all four ref kinds; the condition-vs-effect distinction
+      lives in the message only. Severity is `error` (the err() default), the same as
+      EXIT_TARGET_MISSING. (4) RPG is covered for free: rpg_validator.ts delegates to
+      validateParser — no rpg_validator edit.
+soundness_argument: >
+  This seals INTRA-FRAME room-reference integrity, the next rung on the assume-guarantee
+  ladder toward the deferred world-frame manifest: a region cannot soundly EXPORT a
+  reachability guarantee at a cross-region edge if its own visited / in_room / goto /
+  place_object room refs may dangle. Error severity is sound here (unlike the unordered-string
+  quest-stage caveat, which deliberately tolerates transient windows): a dangling room ref is
+  a structural defect like a missing exit target — visited/in_room evaluate false forever, and
+  goto/place_object into a nonexistent room is a runtime nonsense — never a deliberate transient.
+  The read-walker descends all three connectives (all_of/any_of/none_of), so a disjunction-
+  guarded room ref is correctly counted and never missed (the bug_0262 lesson: objectStateReqs
+  is all_of-only and would under-count). The check keys STRICTLY on roomIds membership (the same
+  Set the start_room / exit.to / npc.room checks use), so it cannot false-positive on a declared
+  room and tempt a weakening of a real pack to silence it. The check is purely ADDITIVE (a new
+  error code) so it weakens no existing matcher; verify:integrity's count/floor guards remain the
+  bar and stay green. The dedicated regression proves the check FIRES on a dangling ref — both
+  condition (visited, in_room) and effect (goto, place_object.room) kinds — AND non-vacuity
+  (correcting the bogus id to a DECLARED room clears the finding, proving the check keys on the
+  genuine dangling ref, not the condition/effect's mere presence), the same SoundnessBench
+  discipline (arXiv:2412.03154) the INERT_OBJECT_STATE / negative corpora (bug_0182/0218/0253/
+  0262) use. The shipped-packs-stay-green invariant (auto-discover + iterate every parser + RPG
+  pack, assert zero UNRESOLVED_ROOM_REFERENCE) pins that no real pack emits the new code (verified:
+  14 refs, 0 dangling), preventing a vacuous always-fire implementation. CYOA packs are scene-graph
+  (no rooms) and untouched. The metamorphic relabel oracles need no edit — room ids already pass
+  through the relabel bijection, so the twin's finding-code census stays isomorphic.
+failure:
+  type: latent_soundness_gap
+  description: >
+    The reference-integrity family checked roomIds membership only at start_room / exit.to /
+    npc.room; a room id named by a visited / not_visited / in_room condition or a goto /
+    place_object.room effect could dangle and validate GREEN.
+regression_test: tests/regression/parser_unresolved_room_reference.test.ts

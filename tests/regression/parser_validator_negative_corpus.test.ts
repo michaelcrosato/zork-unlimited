@@ -197,6 +197,21 @@ const CASES: NegativeCase[] = [
     },
   },
   {
+    // bug_0277: a `visited` condition naming a room id absent from pack.rooms is a
+    // dangling reference (the gate evaluates false forever) ⇒ UNRESOLVED_ROOM_REFERENCE,
+    // the room-id analogue of EXIT_TARGET_MISSING. gen(0)'s sole win_condition gates on
+    // `{ visited: goal }`; repointing it at a bogus room id is the single defect.
+    code: "UNRESOLVED_ROOM_REFERENCE",
+    why: "a win condition's `visited` names a room that does not exist",
+    mutate: (p) => {
+      const wc = p.win_conditions[0];
+      if (!wc) throw new Error("base pack has no win_condition to mutate");
+      const visited = wc.conditions.find((c) => "visited" in c) as { visited: string } | undefined;
+      if (!visited) throw new Error("base pack win_condition has no `visited` gate to mutate");
+      visited.visited = "no_such_room";
+    },
+  },
+  {
     // bug_0253: the `is_unlocked` arm of the same gap. `phantom_vault` is an undefined
     // object id (in neither the authored set_object_locked(locked:false) set nor the
     // built-in keyed-UNLOCK set, which requires a defined statically-locked object with

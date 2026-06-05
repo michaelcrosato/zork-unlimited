@@ -9,291 +9,293 @@ to do the work.
 
 ---
 
-# Ultraplan re-aim cycle #12 (HEAD = bug_0261; next free id = bug_0262)
+# Ultraplan re-aim cycle #13 (HEAD = bug_0276; next free id = bug_0277)
 
 ## Synthesis
 
 A bounded ultraplan ran this cycle — **4 repo reviewers** (engine/determinism ·
 content/authoring+generators · verification/benchmark · loop/strategy) **+ 2 web
 researchers** (frontier IF/agentic benchmarks · verification-at-scale + reward-hacking)
-**→ 1 synthesis** (7 agents, 244 tool-uses, ~414k subagent tokens), each grounded against
-the live repo at HEAD = bug_0261, then the chosen move was **independently re-verified by
+**→ 1 synthesis** (7 agents, 144 tool-uses, ~331k subagent tokens), each grounded against
+the live repo at HEAD = bug_0276, then the chosen move was **independently re-verified by
 the orchestrator against source** before being committed here.
 
-All six reviewers converged on the **object-state local-proof family** as the highest-value
-open structural lever. Two reviewer top-picks were already-CLOSED traps and were rejected by
-the synthesis: the `__proto__` canonicalize collision (bug_0247) and the convergent
-skill-check soundness lock (bug_0252) — both artifacts verified on disk. The static-reachability
-family (IMPOSSIBLE_GATE / ITEM_REQUIRED_UNOBTAINABLE / IMPOSSIBLE_QUEST_STAGE / IMPOSSIBLE_OBJECT_STATE)
-is condition-kind-COMPLETE on the **feasibility (safety)** edge, but object-state is sealed only
-on that one edge.
+**All four reviewers independently converged on the same top pick**, and the prior cycle's
+two heaviest deferred levers were correctly re-deferred again (see "WHY this, not the
+runner-ups"). The cycle-#12 chosen move (INERT_OBJECT_STATE, bug_0262) and its deferred
+safety sibling (WIN_FIRES_AT_START object-state, bug_0270) BOTH landed since, so the
+object-state local boundary is now sealed on feasibility + liveness + relock + win-stability.
+The next genuinely-open rung on the same assume-guarantee ladder toward the deferred
+world-frame manifest is **intra-frame reference integrity** for room ids.
 
-The chosen move is the smallest, highest-confidence, tightest-fit play that advances the
-open-world / verification-at-scale ladder: **add `INERT_OBJECT_STATE` — the LIVENESS dual of
-bug_0253's IMPOSSIBLE_OBJECT_STATE.** It is the exact same shape bug_0106 used to add `INERT_FLAG`
-(the liveness dual of the flag-feasibility checks), ported to object-state. The assume-guarantee
-composition literature (each local boundary must be sealed on BOTH safety _and_ liveness before
-it can be a sound exported guarantee predicate at a future world-frame region edge) makes sealing
-the liveness edge of object-state a **precondition** for the deferred world-frame manifest — not a
-detour. It is the last condition-kind with a feasibility witness but no liveness witness in the
-parser validator (flags have INERT_FLAG; object-state has IMPOSSIBLE_OBJECT_STATE but no inert dual).
+The chosen move is **`UNRESOLVED_ROOM_REFERENCE` — a static room-reference-integrity check**
+in the parser validator (and via delegation the RPG validator) that errs every room id named
+by a `visited` / `not_visited` / `in_room` condition or a `goto` / `place_object.room` effect
+when that id is absent from `pack.rooms`. It is the verbatim cycle-#12 deferred lever
+("UNRESOLVED_ROOM_REFERENCE … ABSENT in src/validate/"), genuinely open, and it exactly
+mirrors the existing `EXIT_TARGET_MISSING` / `NPC_ROOM_MISSING` reference checks.
 
-**Why it is provably green-preserving (orchestrator-verified):** `grep -rn
-"open_object\|set_object_locked" content/` returns ONLY `content/engine_contract.yaml` lines 63-64
-(the effect-NAME registry, not a pack) — **ZERO shipped packs (parser or RPG) author an `open_object`
-or `set_object_locked` effect**. The check keys the write-set strictly on AUTHORED effects, so no
-pack can produce the warning today: pure forward-hardening. (`content/parser/pack/alchemists_tower.yaml`
-only _reads_ `is_open`/`is_unlocked` on `cellar_door`/`strongbox` via the built-in OPEN/UNLOCK verbs —
-it authors no such effect, so the write-keyed INERT check never touches it.)
+**Why it is a real latent footgun no existing oracle catches (orchestrator-verified in source):**
+`roomIds` (`src/validate/parser_validator.ts:110`) is consulted ONLY at `start_room` (:131),
+`exit.to` (:150), and `npc.room` (:210) — **never** on a condition's room id nor on
+`goto`/`place_object.room` effect targets. The room-naming conditions are bare strings in the
+schema (`src/core/conditions.ts:20-29`, all `z.string().min(1)`), and a typo'd room id silently
+evaluates **false forever** (`src/core/conditions.ts:80-82`: `visited` reads
+`state.visited[id]`→`undefined`→`false`; `in_room` compares `state.current`) — a permanently-dead
+gate that:
+- the static SOFTLOCK pass treats as a deliberate stable-false gate,
+- the exhaustive-BFS solver just sees as an unreachable atom, and
+- the metamorphic relabel oracle is bijectively blind to (the twin keeps the same typo).
+
+**Why it is provably green-preserving (orchestrator-verified):** a standalone YAML scan over
+all shipped parser+RPG packs (walking the exact sites `collectRoomRefs` will walk, descending
+`all_of`/`any_of`/`none_of`, plus `goto`/`place_object.room` effects) found **14 room refs, 0
+dangling** — every shipped ref resolves to a declared room, and no shipped pack authors a
+`goto`/`place_object` room effect. So the new error code fires ZERO times on every shipped pack;
+`npm run health` stays exit-0 by construction. (The two "apparent" dangling refs another reviewer
+flagged at `breaking_weir.yaml`/`wolf_winter.yaml` are inside YAML `#` comments and never parse
+into conditions — confirmed 0 dangling after a real YAML parse.) CYOA packs are scene-graph
+(no rooms) and untouched.
 
 ## Chosen move — WHAT (numbered, concrete)
 
-**Goal:** the parser validator (and via delegation the RPG validator) emits a NEW **warning**
-`INERT_OBJECT_STATE` when an AUTHORED `open_object` / `set_object_locked(locked: false)` effect targets
-an object whose `is_open` / `is_unlocked` state is NEVER read by any condition pack-wide — dead
-bookkeeping, the object-state analogue of `INERT_FLAG`. Zero shipped packs regress (none author these
-effects); two synthetic mutants prove the warning fires; one read-added mutant proves non-vacuity.
+**Goal:** the parser validator emits a NEW **error** `UNRESOLVED_ROOM_REFERENCE` when a
+`visited`/`not_visited`/`in_room` condition or a `goto`/`place_object.room` effect names a room id
+absent from `pack.rooms` — the room-id analogue of the existing `EXIT_TARGET_MISSING`. Zero shipped
+packs regress (all 10 parser+RPG packs verified clean); synthetic mutants prove the error fires;
+a corrected-id variant proves non-vacuity. RPG is covered for free via delegation.
 
-1. **Add a complete read-set walker `collectObjectStateReads(pack)`** directly after `collectFlagReads`
-   (`src/validate/parser_validator.ts`, the helper at ~line 1356). Return
-   `{ open: Set<string>; unlocked: Set<string> }`. Mirror `collectFlagReads` EXACTLY — the same `walkAll`
-   over rooms+variant-`when`s+exit conditions, objects+variant-`when`s+interaction conditions,
-   win_conditions, and NPC dialogue nodes+variant-`when`s+topic conditions — but collect `is_open`→`open`
-   and `is_unlocked`→`unlocked`, **descending `all_of`/`any_of`/`none_of`** (a read inside ANY connective,
-   even a disjunction, counts as consumed). **Do NOT reuse the existing `objectStateReqs` helper**
-   (`src/validate/parser_validator.ts` ~line 1339): it deliberately descends only `all_of` for the
-   conservative AND-context feasibility check and would UNDER-count reads, producing false-positive INERT
-   warnings on disjunction-guarded reads. (`collectFlagReads` is the correct template — it descends all
-   three connectives.)
+1. **Add a read-walker `collectRoomRefs(pack)`** in `src/validate/parser_validator.ts`, placed
+   IMMEDIATELY after `collectObjectStateReads` (the helper at ~`:1509`). Copy the `walk`/`walkAll`
+   structure of `collectFlagReads` (~`:1471`) **EXACTLY** — it is the correct template because it
+   descends ALL THREE connectives (`all_of`/`any_of`/`none_of`). Do **NOT** reuse `objectStateReqs`
+   (all_of-only — it would under-count refs inside a disjunction). The `walk` arm collects room ids:
+   `if ('visited' in c) refs.add(c.visited); else if ('not_visited' in c) refs.add(c.not_visited);
+   else if ('in_room' in c) refs.add(c.in_room); else if ('all_of' in c) c.all_of.forEach(walk);
+   else if ('any_of' …) …; else if ('none_of' …) …`. Walk the SAME sites `collectFlagReads` walks:
+   room variants `v.when` + `exit.conditions`; object variants + `interaction.conditions`;
+   `win_conditions`; ending variants `v.when`; NPC dialogue node variants + `topic.conditions`.
+   Return a `Set<string>`.
 
-2. **Build the AUTHORED-WRITE sets** in the validator body, immediately AFTER the INERT_FLAG block
-   (`src/validate/parser_validator.ts` ~lines 797-809). Iterate `allEffects(pack)` (the same enumeration
-   INERT_FLAG uses at ~line 796 — it already covers room `on_enter`, interaction `effects`, `unlock_effects`,
-   `take_effects`, and dialogue-node `effects`):
-   - `writtenOpen` = the id from every `open_object` effect.
-   - `writtenUnlocked` = the `id` from every `set_object_locked` effect whose `locked === false`.
-   - **CRITICAL SOUNDNESS BOUNDARY:** key the write-set ONLY on these authored effects. Do **NOT** fold in
-     the over-approximating `openableObjects` / `unlockableObjects` sets (`src/validate/parser_validator.ts`
-     ~lines 348-359), which include the built-in OPEN/UNLOCK verb settability (`openable===true`, keyed
-     unlock) — folding those in would false-warn on every openable scenery object. This mirrors INERT_FLAG,
-     which keys on the authored `set_flag`/`flags_init` write, never on a hypothetical reachability source.
-     This is the precise dual of the bug_0253 subtlety (feasibility OVER-approximates settability; liveness
-     keys on the AUTHORED write).
+2. **Collect EFFECT-side room refs.** Iterate `allEffects(pack)` (the enumerator at `:1208`, already
+   used at `:314`/`:324`/`:350`/`:805`/`:851`) and add `e.goto` (when `'goto' in e`) and
+   `e.place_object.room` (when `'place_object' in e`). `src/core/effects.ts:29` (goto) and `:40`
+   (place_object) confirm these are the only two room-id-bearing effects. Fold these into the same
+   set returned by step 1 (or a parallel set — your choice; one shared emit loop is simplest).
 
-3. **Emit the warning.** For each id in `writtenOpen` not in `reads.open`, push
-   `warn("INERT_OBJECT_STATE", <message naming is_open>, ["object:" + id])`; symmetrically for each id in
-   `writtenUnlocked` not in `reads.unlocked` with an `is_unlocked`-worded message. ONE code
-   `INERT_OBJECT_STATE` (the open-vs-unlocked distinction lives in the message string only). Use the
-   3-arg `warn(code, msg, breadcrumbs)` helper exactly as the INERT_FLAG block does
-   (`src/validate/parser_validator.ts` ~lines 799-806). **Severity MUST be `warning`, never `error`** — an
-   inert open/unlock is a no-op, not a soft-lock (the INERT_FLAG contract). Suggested message shape (match
-   the INERT_FLAG wording register): `` `object "${id}" is opened by an effect but no condition ever reads
-   its open state — a no-op write (dead bookkeeping). Gate something on \`is_open: ${id}\`, or remove the
-   effect.` `` and the `is_unlocked` twin.
+3. **Emit the findings** in the main `validate` body, in the same region as the existing
+   `roomIds.has(...)` reference checks (near `:131`/`:150`/`:210`). For each collected ref NOT in
+   `roomIds` (the set built at `:110`), push
+   `err("UNRESOLVED_ROOM_REFERENCE", \`condition/effect references room "${id}" that does not exist.\`, [<breadcrumb>])`.
+   Use the `err(code, message, where)` helper (`:31`) — it defaults to **error** severity, the same
+   as `EXIT_TARGET_MISSING`. A dangling room ref is a structural bug, NOT a deliberate transient — so
+   error severity is sound here (this is unlike the unordered-string quest-stage caveat at `:1187-1202`,
+   which you must NOT touch). ONE code `UNRESOLVED_ROOM_REFERENCE` for all four ref kinds (the
+   condition-vs-effect / which-room distinction lives in the message + breadcrumb only).
 
-4. **Add the dedicated regression test** `tests/regression/parser_inert_object_state.test.ts`, modelled on
-   `tests/regression/parser_inert_flag.test.ts` (reuse its `parserCodes(src)` / `rpgCodes(src)` helpers and
-   the minimal-YAML-`pack(...)` builder idiom; objects need an `objects:` block with `openable: true` and/or
-   `locked: true` + `key_id` as appropriate so the mutant effect is well-typed). Lock these cases:
-   - **(a) Invariant:** ALL shipped parser + RPG packs produce ZERO `INERT_OBJECT_STATE` findings and stay
-     green (they author no `open_object`/`set_object_locked` effects — a structural invariant, mirror
-     `parser_inert_flag.test.ts` case (1) which auto-discovers + iterates the shipped packs).
-   - **(b) Positive (open):** take a minimal/`generateParserPack(0)` GREEN pack, add an `open_object: <id>`
-     effect (e.g. a room `on_enter` or an interaction `effects`) with NO `is_open` gate anywhere → assert
-     the codes include `INERT_OBJECT_STATE` AND that finding's `severity === "warning"`.
-   - **(c) Positive (unlock):** add a `set_object_locked: { id: <id>, locked: false }` effect with NO
-     `is_unlocked` gate → assert `INERT_OBJECT_STATE` fires.
-   - **(d) Non-vacuity (mandatory):** to the case-(b) mutant ALSO add an exit/interaction/win condition
-     `{ is_open: <id> }` → assert `INERT_OBJECT_STATE` is now ABSENT. This proves the warning keys on the
-     genuine write/read SLACK, not the mere presence of the effect (without this the check could be a
-     tautology).
-   - **(e) Negative (built-in-verb shape):** a pack with an `is_open`/`is_unlocked` READ on an object that
-     no authored effect writes (the `alchemists_tower` shape) does NOT warn — proving the dual stays on the
-     write side and never collides with the bug_0253 feasibility check.
+4. **RPG is covered for free** — `src/validate/rpg_validator.ts:102` calls `validateParser`. No
+   `rpg_validator.ts` edit needed (confirm at `:32` import + `:102` delegation).
 
-5. **(Optional, thin anchor)** the corpus `tests/regression/parser_validator_negative_corpus.test.ts`'s
-   `codesOf` filters `severity === "error"` (line ~69), so a warning-severity finding will NOT appear there.
-   Do NOT alter the existing error-only `codesOf` or `CASES` array. If you want a second witness location,
-   add a small parallel `warningCodesOf` (filtering `severity === "warning"`) + ONE open_object-without-reader
-   row asserting `INERT_OBJECT_STATE` fires and is ABSENT on the GREEN base. Otherwise SKIP this step — the
-   dedicated file in step 4 carries the full discipline (the `parser_inert_flag.test.ts` precedent keeps its
-   teeth in its own file, not the corpus).
+5. **Add a broken fixture** `content/broken-fixtures/parser_unresolved_room_reference.yaml`, modelled
+   on `content/broken-fixtures/parser_exit_target_missing.yaml`: a tiny 2-room (a/b) winnable parser
+   pack, but with a `win_condition` or an exit `conditions` entry `{ visited: nowhere_room }` naming a
+   room that is NOT declared. Register it in `tests/unit/parser_validator.test.ts` `VALIDATOR_FIXTURES`
+   (the `[string,string][]` at `:29`, next to `["parser_exit_target_missing","EXIT_TARGET_MISSING"]`)
+   as `["parser_unresolved_room_reference","UNRESOLVED_ROOM_REFERENCE"]`.
 
-6. **Create the SoundnessBench artifact** `traces/bugs/bug_0262_parser_inert_object_state.yaml` (mirror the
-   field shape of `traces/bugs/bug_0253_parser_impossible_object_state.yaml` — read it for the exact fields:
-   id, title, class, summary, the gap, the fix, the soundness argument, and the regression-lock filename).
-   State the soundness argument: this seals the object-state local boundary on BOTH edges (feasibility
-   bug_0253 + liveness bug_0262), a precondition for a future sound exported guarantee predicate at a
-   world-frame region edge. Reference arXiv:2412.03154 (SoundnessBench) consistent with the negative-corpus
-   file header.
+6. **Add negative-corpus CASES** in `tests/regression/parser_validator_negative_corpus.test.ts` (the
+   `CASES` array at `:85`), mutating the `GREEN = generateParserPack(0)` base (`:65`). Because
+   `UNRESOLVED_ROOM_REFERENCE` is **error**-severity, the file's existing error-only `codesOf` (`:67`)
+   already surfaces it — NO parallel warning filter needed (this is simpler than the INERT_OBJECT_STATE
+   case which needed one). Add one case mutating a `win_condition`/exit `visited` to a bogus room id
+   (assert `codesOf(mutant)` includes `UNRESOLVED_ROOM_REFERENCE`), and — only if convenient on the
+   generated base — one mutating a `goto`/`place_object.room` target; otherwise leave effect coverage to
+   the dedicated test in step 7. Do not weaken the existing `codesOf`/`CASES` discipline.
+
+7. **Add the dedicated §15 regression test** `tests/regression/parser_unresolved_room_reference.test.ts`,
+   modelled on `tests/regression/parser_inert_object_state.test.ts` (reuse its `parserCodes(src)` helper
+   `:50` and the `readdirSync` shipped-pack iteration idiom `:83`). Lock these cases:
+   - **(a) Invariant:** ALL shipped parser + RPG packs (`content/parser/pack` + `content/rpg/pack`,
+     auto-discovered via `readdirSync`) produce ZERO `UNRESOLVED_ROOM_REFERENCE` findings and stay green.
+   - **(b) Positive (condition):** a synthetic pack with a `visited`/`in_room` condition naming an
+     undeclared room → assert the codes include `UNRESOLVED_ROOM_REFERENCE` AND that finding's
+     `severity === "error"`.
+   - **(c) Positive (effect):** a synthetic pack with a `goto` and/or `place_object: { room: <typo> }`
+     effect naming an undeclared room → assert `UNRESOLVED_ROOM_REFERENCE` fires.
+   - **(d) Non-vacuity (mandatory):** correct the bogus id in the case-(b)/(c) mutant to a DECLARED room
+     → assert `UNRESOLVED_ROOM_REFERENCE` is now ABSENT. Proves the check keys on the genuine dangling
+     ref, not the mere presence of the condition/effect.
+
+8. **Create the SoundnessBench artifact** `traces/bugs/bug_0277_parser_unresolved_room_reference.yaml`
+   (mirror the field shape of `traces/bugs/bug_0262_parser_inert_object_state.yaml` — read it for the
+   exact fields: id, title, class, summary, the gap, the fix, the soundness argument, and the
+   regression-lock filename). State the soundness argument: this seals **intra-frame room-reference
+   integrity**, the next rung on the assume-guarantee ladder toward the deferred world-frame manifest
+   (a region cannot soundly EXPORT a reachability guarantee at a cross-region edge if its own
+   `visited`/`in_room`/`goto`/`place_object` room refs may dangle). Reference arXiv:2412.03154
+   (SoundnessBench) consistent with the negative-corpus file header.
 
 ## WHY this, not the runner-ups
 
-- **vs. WIN_FIRES_AT_START object-state stability (the SAFETY sibling):** also forward-hardening, but it
-  touches the live `winStaysTrueForever` monotonicity proof (`src/validate/parser_validator.ts` ~lines
-  1060-1091, the `stable = false` bail on `is_open`/`is_unlocked` at ~line 1087) — a sharper
-  soundness-regression surface. The liveness dual is smaller and provably green-preserving; the
-  monotone-progress argument says land liveness first. **DEFERRED to next cycle.**
-- **vs. a general no-reachable-dead-end / AG(EF goal) reachability oracle (the web-research headline):** the
-  strongest LONG-TERM move, but its substrate (`support/exhaustive_endings.ts`) is a TEST-ONLY BFS helper
-  NOT wired into any validator; promoting it to a per-pack validator-integrated forward-reachability proof is
-  medium-to-large blast radius, must deconflict with the closed SOFTLOCK_QUEST_ITEM / one-way arcs and the
-  existing dead-pocket test — scope-collapse risk, too big for one clean cycle. **DEFERRED.**
-- **vs. World-frame manifest + modular cross-region reachability (3 reviewers' architectural top pick):** the
-  right open-world lever, but explicitly PREMATURE until BOTH local object-state edges are sealed; this move
-  seals one of the two remaining edges and is its precondition. Net-new schema + validator entry point.
-  **DEFERRED.**
-- **vs. the Goal-2 dev/blind-test loop split:** a process/infra lever that advances the benchmark path but
-  not the verification-at-scale soundness ladder, and ships no SoundnessBench-sense witness. Lower structural
-  value this cycle. **DEFERRED (independent track).**
-- **vs. `__proto__` canonicalize / convergent skill-check (two reviewers' HIGH picks):** BOTH ALREADY CLOSED
-  (bug_0247, bug_0252 — artifacts verified on disk). Re-proposing is forbidden.
+- **vs. promoting the test-only forward-reachability / no-dead-pocket BFS
+  (`tests/regression/support/exhaustive_endings.ts`, bug_0150) into a validator-integrated AG(EF goal)
+  pass:** blast radius **L** — moving an ~80k-state per-pack BFS into the `validate` path that
+  `npm run health` runs on ALL packs materially raises validate-time cost and reintroduces the
+  health-load-flake timeout surface (per the health-load-flake note + the 60s per-pack ceiling in
+  `no_dead_pocket.test.ts`). It is also largely duplicative — bug_0150 already dynamically certifies
+  every shipped pack has no reachable soft-lock pocket with negative controls. Correctly sequenced
+  AFTER this cheap reference-integrity rung. **DEFERRED.**
+- **vs. World-frame manifest schema + modular cross-region static reachability (assume-guarantee
+  composition):** the right open-world lever, but blast radius **L** and multi-cycle (schema + manifest
+  + per-region validators + cross-region composition) — not shippable in one clean offline cycle. Its
+  OWN precondition is that a region seal intra-frame reference integrity before it can soundly export a
+  reachability guarantee at a region edge — which is exactly why `UNRESOLVED_ROOM_REFERENCE` lands
+  first as the next rung. **DEFERRED (this move is its precondition).**
+- **vs. a per-step oracle/RLVR trajectory verifier or a differential-model monotonicity validator
+  (Gaia2/AutoEnv-style, from web research):** high long-term leverage, but the RLVR per-step verifier
+  needs a new agent-scoring subsystem (not a small additive validator pass), and the monotonicity
+  validator requires running two policies of differing strength — effectively a keyed/model-driven run,
+  explicitly out of scope this cycle. **DEFERRED.**
 
-This move wins on all four selection criteria: genuinely open (verified the liveness gap in source —
-feasibility witness exists, liveness witness does not), tightest frontier fit (seals the second of two local
-object-state edges the modular pivot composes on), smallest blast radius that still delivers (one new warning
-keyed on authored writes, ~100% scaffolding reuse), clean additive/key-free/no-weaken/green-preserving profile.
+This move wins on all four selection criteria: genuinely open (orchestrator re-verified the gap in
+source — no room-ref check exists), tightest frontier fit (cross-region room references are exactly what
+an assemble-from-packs open world produces; this is the intra-frame precondition), smallest blast radius
+that still delivers (one new error code keyed on a fresh read-walker, ~100% scaffolding reuse, all 10
+packs already clean), clean additive/key-free/no-weaken/green-preserving profile.
 
 ## VERIFIED anchors (orchestrator opened + confirmed in source at HEAD — re-derive, do not trust line numbers blindly)
 
-- `src/validate/parser_validator.ts` ~line 791-809 — the INERT_FLAG block: `collectFlagReads(pack)`, the
-  `writtenFlags` set built from `flags_init` + `allEffects(pack)` `set_flag` effects, and the
-  `warn("INERT_FLAG", …, ["flag:"+f])` emit. THIS is the structural template to mirror.
-- `src/validate/parser_validator.ts` ~line 1356 — `collectFlagReads` walks `has_flag`/`not_flag` descending
-  `all_of`/`any_of`/`none_of` over rooms (variant `when` + exits), objects (variant `when` + interactions),
-  win_conditions, and NPC dialogue (node variant `when` + topics). The correct read-walker template (descends
-  all three connectives).
-- `src/validate/parser_validator.ts` ~line 1339 — `objectStateReqs` walks `is_open`/`is_unlocked` but descends
-  ONLY `all_of` (conservative AND-context for the feasibility check). Do NOT reuse it for the read-set.
-- `src/validate/parser_validator.ts` ~lines 348-359 — `openableObjects`/`unlockableObjects` OVER-approximating
-  settable sets (fold in built-in-verb settability). Do NOT key the write-set on these.
-- `src/validate/parser_validator.ts` ~lines 391-414 — the existing IMPOSSIBLE_OBJECT_STATE feasibility branch
-  (bug_0253), this move's safety counterpart.
-- `src/validate/parser_validator.ts` ~line 1093 — `allEffects(pack)` enumerates room `on_enter`, interaction
-  `effects`, `unlock_effects`, `take_effects`, dialogue-node `effects` — the complete authored-write source.
-- `src/core/effects.ts` — `open_object` (sets `open:true`) / `set_object_locked` (sets `locked` to the given
-  boolean) effect shapes.
-- `src/core/conditions.ts` — `is_open` ⇒ `objectState[id].open===true`, `is_unlocked` ⇒
-  `objectState[id].locked===false` (the read predicates).
-- `tests/regression/parser_inert_flag.test.ts` — the test template (`parserCodes`/`rpgCodes` helpers, minimal
-  `pack(...)` YAML builder, shipped-packs-stay-green invariant via auto-discovery, positive + not-flagged-reader
-  + disjunction cases). `validateRpg` delegates to the parser body, so the new check covers RPG packs too.
-- `tests/regression/parser_validator_negative_corpus.test.ts` ~line 69 — `codesOf` filters
-  `severity === "error"` (so the warning needs a parallel filter if step 5 is taken).
-- `content/engine_contract.yaml` lines 63-64 — `open_object`/`set_object_locked` appear ONLY as the effect-name
-  registry; **no content pack authors these effects** (green-preservation proof: `grep -rn
-  "open_object\|set_object_locked" content/` hits only this file).
-- `content/parser/pack/alchemists_tower.yaml` — the only pack that READS `is_open`/`is_unlocked`; it authors no
-  `open_object`/`set_object_locked` effect (opens/unlocks via built-in verbs), so the write-keyed INERT check
-  never warns on it (the case-(e) negative).
-- `traces/bugs/bug_0253_parser_impossible_object_state.yaml` — the feasibility sibling; copy its artifact field
-  shape for bug_0262.
+- `src/validate/parser_validator.ts:110` — `roomIds = new Set(pack.rooms.map(r => r.id))`.
+- `src/validate/parser_validator.ts:131 / :150 / :210` — the ONLY existing `roomIds.has(...)` checks
+  (`start_room`, `exit.to`, `npc.room`). No condition-room-id or effect-room-id check exists.
+- `src/validate/parser_validator.ts:31` — `err(code, message, where)` helper, defaults to **error**.
+- `src/validate/parser_validator.ts:1471` — `collectFlagReads` (the correct read-walker template;
+  descends all_of/any_of/none_of over rooms+exits, objects+interactions, win_conditions, ending
+  variants, NPC dialogue). MIRROR this.
+- `src/validate/parser_validator.ts:1509` — `collectObjectStateReads` (place `collectRoomRefs` right
+  after it). Do NOT reuse `objectStateReqs` (all_of-only, would under-count).
+- `src/validate/parser_validator.ts:1208` — `allEffects(pack)` enumerates every authored effect (the
+  goto/place_object source).
+- `src/core/conditions.ts:20-29` — `visited`/`not_visited`/`in_room` are bare `z.string().min(1)`.
+- `src/core/conditions.ts:80-82` — a typo'd id silently evaluates false forever (the latent footgun).
+- `src/core/effects.ts:29` (`goto`) + `:40` (`place_object: { id, room }`) — the only room-id effects.
+- `src/validate/rpg_validator.ts:32` (import) + `:102` (`validateParser` delegation) — RPG covered free.
+- `content/broken-fixtures/parser_exit_target_missing.yaml` — the fixture template.
+- `tests/unit/parser_validator.test.ts:29` — `VALIDATOR_FIXTURES` registry.
+- `tests/regression/parser_validator_negative_corpus.test.ts:65` (`GREEN`), `:67` (`codesOf`,
+  error-only), `:85` (`CASES`).
+- `tests/regression/parser_inert_object_state.test.ts:50` (`parserCodes`), `:83` (`readdirSync`
+  shipped-pack iteration) — the dedicated-test template.
+- `traces/bugs/bug_0262_parser_inert_object_state.yaml` — copy the artifact field shape for bug_0277.
 
 ## CRITICAL directions / what NOT to get wrong
 
-1. **Key the write-set on AUTHORED effects ONLY** (`allEffects` `open_object` / `set_object_locked(locked:false)`).
-   Do NOT fold in `openableObjects`/`unlockableObjects` (the built-in-verb over-approximation) or every openable
-   scenery object false-warns. This is the load-bearing soundness boundary.
-2. **Use a FRESH `collectFlagReads`-style read walker** that descends `all_of`/`any_of`/`none_of`. Do NOT reuse
-   `objectStateReqs` (all_of-only) — a disjunction-guarded read would be miscounted as inert (false positive).
-3. **Severity MUST be `warning`** — assert it in the test. An error here would be unsound (an inert write is a
-   no-op, not a soft-lock) and could falsely red a future legitimate pack.
-4. **Non-vacuity case (4d) is mandatory** — the read-added variant must clear the warning, proving the check
-   keys on genuine write/read slack, not the effect's mere presence.
-5. **New error CODE name is exactly `INERT_OBJECT_STATE`** (one code, open-vs-unlocked distinguished in the
-   message). Adding a new code is additive and weakens no matcher.
-6. **Do NOT edit** the schema, engine, effects/conditions runtime, generators, corpus seal, scorecard, any pack
-   hash, or `scripts/verify-integrity.ts` (PROTECTED). The validator is exercised as shipped; the test builds
-   packs in-memory.
+1. **Use a FRESH `collectFlagReads`-style read walker** that descends `all_of`/`any_of`/`none_of`. Do
+   NOT reuse `objectStateReqs` (all_of-only) — a disjunction-guarded room ref would be missed.
+2. **Severity MUST be `error`** (the `err()` default) — assert it in test case (b). A dangling room ref
+   is a structural defect like a missing exit target, not a transient.
+3. **Non-vacuity case (7d) is mandatory** — the corrected-id variant must clear the warning, proving the
+   check keys on the genuine dangling ref, not the condition/effect's mere presence.
+4. **New code name is exactly `UNRESOLVED_ROOM_REFERENCE`**, ONE code for all four ref kinds. Additive —
+   weakens no existing matcher.
+5. **Do NOT edit** the schema, engine, effects/conditions runtime, generators, RPG validator, corpus
+   seal, scorecard, any pack hash, or `scripts/verify-integrity.ts` (PROTECTED). The metamorphic relabel
+   oracles need NO edit (room ids already pass through the relabel bijection — the twin's finding-code
+   census stays isomorphic).
+6. **No content pack edit.** All 10 shipped parser+RPG packs are already clean (14 refs, 0 dangling) —
+   if any pack appears to warn, STOP: that is a real latent bug to surface, not a reason to weaken the
+   check (but the scan says none do).
 
 ## Files
 
 **DO-NOT-EDIT (protected):**
 - `scripts/verify-integrity.ts` — PROTECTED. Never edit. Do not lower any
-  MIN_*/SATURATION_FLOOR/GEN_EVAL_CHECK_COUNT/PROTECTED/HASH_PIN, do not relax any matcher.
+  MIN_*/SATURATION_FLOOR/GEN_EVAL_CHECK_COUNT/PROTECTED/HASH_PIN, do not relax any matcher. (Test count
+  only RISES, strengthening its TEST_COUNT guard.)
 
 **READ-ONLY (confirm anchors, do not change):**
-- `src/core/conditions.ts` — `is_open`/`is_unlocked` read predicates.
-- `src/core/effects.ts` — `open_object` / `set_object_locked` effect shapes.
-- `tests/regression/parser_inert_flag.test.ts` — the test template.
-- `tests/regression/cyoa_inert_flag.test.ts` — the original CYOA INERT_FLAG sibling (secondary reference).
-- `content/parser/pack/alchemists_tower.yaml` — the only object-state-reading pack; confirm it stays clean.
-- `content/engine_contract.yaml` — confirms no pack authors `open_object`/`set_object_locked` (lines 63-64).
-- `traces/bugs/bug_0253_parser_impossible_object_state.yaml` — copy the artifact field shape.
+- `src/core/conditions.ts` — `visited`/`not_visited`/`in_room` read predicates.
+- `src/core/effects.ts` — `goto` / `place_object.room` effect shapes.
+- `src/validate/rpg_validator.ts` — confirms `validateParser` delegation (RPG covered free).
+- `content/broken-fixtures/parser_exit_target_missing.yaml` — fixture template.
+- `tests/regression/parser_inert_object_state.test.ts` — dedicated-test template.
+- `traces/bugs/bug_0262_parser_inert_object_state.yaml` — artifact field-shape template.
 
 **EDIT:**
-- `src/validate/parser_validator.ts` — add `collectObjectStateReads` (near `collectFlagReads`, ~line 1356),
-  build `writtenOpen`/`writtenUnlocked` from `allEffects` (after the INERT_FLAG block, ~lines 797-809), emit
-  the `INERT_OBJECT_STATE` warning.
-- `tests/regression/parser_validator_negative_corpus.test.ts` — ONLY if step 5 is taken (optional warning anchor;
-  leave the error-only `codesOf`/`CASES` untouched).
+- `src/validate/parser_validator.ts` — add `collectRoomRefs` (after `collectObjectStateReads`, ~`:1509`),
+  collect goto/place_object refs from `allEffects`, emit `UNRESOLVED_ROOM_REFERENCE` near the existing
+  `roomIds.has` checks.
+- `tests/unit/parser_validator.test.ts` — register the new fixture in `VALIDATOR_FIXTURES` (`:29`).
+- `tests/regression/parser_validator_negative_corpus.test.ts` — add the dangling-room-ref CASE(s)
+  (`:85`); leave the existing `codesOf`/`CASES` discipline untouched.
 
 **NEW:**
-- `tests/regression/parser_inert_object_state.test.ts` — the dedicated liveness test (cases a-e).
-- `traces/bugs/bug_0262_parser_inert_object_state.yaml` — the SoundnessBench-lineage bug artifact.
+- `content/broken-fixtures/parser_unresolved_room_reference.yaml` — the broken fixture.
+- `tests/regression/parser_unresolved_room_reference.test.ts` — the dedicated reference-integrity test
+  (cases a-d).
+- `traces/bugs/bug_0277_parser_unresolved_room_reference.yaml` — the SoundnessBench-lineage bug artifact.
 
 ## Acceptance check (concrete, verifiable)
 
-1. `npx vitest run tests/regression/parser_inert_object_state.test.ts` — GREEN: the open_object-without-reader
-   and set_object_locked(false)-without-reader mutants both fire `INERT_OBJECT_STATE` at severity `warning`; the
-   read-added variant clears it (non-vacuity); the built-in-verb (alchemists_tower) shape does NOT warn; all
-   shipped parser + RPG packs emit zero `INERT_OBJECT_STATE`.
-2. `npm run health` — EXIT 0, all 17 packs validate clean with ZERO `INERT_OBJECT_STATE` warnings. Verify the
-   EXIT CODE under load per the health-load-flake note (`taskset -c 0-3 npm run health` if available), not one
-   fast run.
-3. `npm run verify:integrity` — EXIT 0, no GUARD_WEAKENED / VERIFIER_TOUCHED / count regression; test count
-   strictly ABOVE the prior 1824.
-4. `traces/bugs/bug_0262_parser_inert_object_state.yaml` exists and parses as YAML.
-5. **Non-vacuity teeth** (already encoded as test case 4d): the read-added mutant clears the warning, proving
-   the check keys on the actual write/read slack, not the mere presence of an effect.
+1. `npx vitest run tests/regression/parser_unresolved_room_reference.test.ts` — GREEN: the condition and
+   effect mutants both fire `UNRESOLVED_ROOM_REFERENCE` at severity `error`; the corrected-id variant
+   clears it (non-vacuity); all shipped parser + RPG packs emit zero `UNRESOLVED_ROOM_REFERENCE`.
+2. `npx vitest run tests/unit/parser_validator.test.ts` — GREEN: the new fixture
+   `parser_unresolved_room_reference` validates with code `UNRESOLVED_ROOM_REFERENCE`.
+3. `npm run health` — EXIT 0, all 17 packs validate clean with ZERO `UNRESOLVED_ROOM_REFERENCE`
+   findings. Verify the EXIT CODE under load per the health-load-flake note
+   (`taskset -c 0-3 npm run health` if available), not one fast run.
+4. `npm run verify:integrity` — EXIT 0, no GUARD_WEAKENED / VERIFIER_TOUCHED / count regression; test
+   count strictly ABOVE the prior 1833.
+5. `traces/bugs/bug_0277_parser_unresolved_room_reference.yaml` exists and parses as YAML.
 
 ## Hard constraints
 
-- ONE focused, key-free, OFFLINE, deterministic, ADDITIVE/strengthening STRUCTURAL change. No content polish, no
-  new curated pack, no keyed run.
-- No floor lowered, no matcher relaxed, no PROTECTED/HASH_PIN shrunk, `scripts/verify-integrity.ts` untouched.
+- ONE focused, key-free, OFFLINE, deterministic, ADDITIVE/strengthening STRUCTURAL change. No content
+  polish, no new curated pack, no keyed run.
+- No floor lowered, no matcher relaxed, no PROTECTED/HASH_PIN shrunk, `scripts/verify-integrity.ts`
+  untouched.
 - No engine/schema/effects/conditions runtime change; no pack hash / scorecard / corpus-seal movement; no
-  generator-version bump.
+  generator-version bump; no RPG-validator edit.
 - Game stays playable; `npm run health` stays green.
 
 ## Reward-hacking guardrails (baked in)
 
-- The check is ADDITIVE (a new warning code), so it cannot weaken any existing assertion; verify:integrity's
+- The check is ADDITIVE (a new error code), so it cannot weaken any existing assertion; verify:integrity's
   count/floor guards remain the bar and must stay green.
-- The dedicated test proves the LIVENESS direction (an inert authored write MUST warn) AND non-vacuity (a read
-  clears it) — the same SoundnessBench discipline (arXiv:2412.03154) INERT_FLAG and the negative corpora use.
-- The shipped-packs-stay-green invariant pins that no real pack emits the new code, preventing a vacuous
-  always-fire implementation; the soundness boundary (authored writes only) keeps it from false-positiving and
-  tempting a weakening of a real pack to silence it.
+- The dedicated test proves the check FIRES on a dangling ref (both condition and effect kinds) AND
+  non-vacuity (a corrected id clears it) — the same SoundnessBench discipline (arXiv:2412.03154) the
+  INERT_OBJECT_STATE / negative corpora use.
+- The shipped-packs-stay-green invariant pins that no real pack emits the new code (verified: 14 refs, 0
+  dangling), preventing a vacuous always-fire implementation; keying strictly on `roomIds` membership keeps
+  it from false-positiving and tempting a weakening of a real pack to silence it.
 
 ## Rejected alternatives & deferred to next cycle
 
-- **DEFERRED — WIN_FIRES_AT_START object-state stability (the safety sibling):** extend `winStaysTrueForever`
-  (`src/validate/parser_validator.ts` ~lines 1060-1091, the `stable=false` bail at ~line 1087) to mark a win
-  UNSTABLE when it gates on `is_open`/`is_unlocked` AND a close/relock (`set_object_locked locked:true`) effect
-  exists. Land next cycle now the liveness edge is sealed.
-- **DEFERRED — UNRESOLVED_ROOM_REFERENCE for `in_room`/`visited` (bug_0258):** a small reference-integrity check,
-  separable.
-- **DEFERRED — general no-reachable-dead-end (AG(EF goal)) reachability oracle:** the headline frontier move,
-  but requires promoting the test-only `support/exhaustive_endings.ts` BFS into a validator-integrated
-  forward-reachability pass — medium/large, sequence after both local object-state edges are sealed.
-- **DEFERRED — World-frame manifest schema + modular cross-region static reachability (assume-guarantee
-  composition):** unblocked only after object-state is sealed on both edges; net-new schema + validator entry
-  point.
-- **DEFERRED — Goal-2 dev/blind-test loop split:** extract persona testing into a separate target + a
-  structured-feedback bucket schema/aggregator; process/infra, independent track.
-- **REJECTED — `__proto__` canonicalize fix, convergent skill-check hardening:** ALREADY CLOSED (bug_0247,
-  bug_0252). Do not re-attempt.
-- **REJECTED — multi-detector LLM-judge guard, observation_difficulty, post-cutoff timestamping, keyed real-model
-  run:** key-gated and/or PROTECTED-touching and/or out-of-scope this cycle.
+- **DEFERRED — validator-integrated forward-reachability (AG(EF goal)) BFS:** promote the test-only
+  `support/exhaustive_endings.ts` BFS into a per-pack validator pass. Blast radius L; risks the health
+  time budget; largely duplicative of bug_0150's dynamic no-dead-pocket certification. Sequence after this.
+- **DEFERRED — World-frame manifest schema + modular cross-region static reachability:** the open-world
+  lever; multi-cycle; unblocked once intra-frame reference integrity (THIS move) is sealed.
+- **DEFERRED — Goal-2 dev/blind-test loop split:** process/infra; independent track; ships no
+  SoundnessBench-sense witness this cycle.
+- **DEFERRED — per-step RLVR/Gaia2 trajectory verifier · differential-model monotonicity validator:** new
+  subsystem and/or keyed/model-driven; out of scope this offline cycle.
+- **NOTED (blind-pass finding, NOT this cycle's move) — alchemists_tower `grip iron key` steadiness check
+  is legible (bug_0274) but mechanically INERT:** the cellar unlocks without it, the `steadiness` flag has
+  no observed downstream effect, and the action lingers after it is useful. This is the recurring
+  vestigial-self-USE skill_check family (see [[affordance-signpost-class]]); a candidate content/quest fix
+  for a FUTURE cycle (telegraph-then-room-gate or give the check a real consequence), not this structural
+  cycle. Recorded in the playtest report below.
 
-## Mandated blind playtest (this cycle)
+## Mandated blind playtest (this cycle — DONE)
 
-Per the harness directive and the dedicated-pass rotation, the orchestrator runs the mandated blind pass this
-cycle on **`content/parser/pack/friars_postern.yaml`** (parser; expect 0/3 endings reached on a single honest
-run, 4 unvisited, 0 warnings per `docs/blind_playtest_protocol.md`). Report at
-`ai-runs/2026-06-05T00-19-47-051Z/playtest.md`. NOTE for that pass: friars_postern's optional `heft` nerve beat
-(bug_0245 heft telegraph) is gated only by `not_flag: weighed_the_iron` (NOT room-gated) — check whether it is
-also room-gateable, since the telegraph-then-room-gate pair (bug_0241 + bug_0258/0261) is now the standard
-resolution for the recurring "vestigial self-USE skill_check" finding-family. Record "Mandated blind pass ran on
-friars_postern" in the AI_LOOP_STATE.md cycle entry (newest-first).
+Per the harness directive and the dedicated-pass rotation, the mandated blind pass ran this cycle on
+**`content/parser/pack/alchemists_tower.yaml`** (parser, the longest-overdue rank-2 nominee; seeds 7/13/3;
+fresh MCP-only general-purpose subagent, no content/src/ui/tests access). Report:
+`ai-runs/2026-06-05T07-29-21-465Z/playtest.md`. Result: **STRONG — clarity 5/5, enjoyment 4/5**, all three
+declared endings reached (`ending_cured` 40/40 win · `ending_poisoned` death · `ending_betrayal` 30/40),
+**mechanically flawless** (zero rejected actions, zero broken state, no loops; reactive prose + lock/key +
+score economy all verified), **ZERO mechanical bugs**. Sole §5 note: the `grip iron key` steadiness check
+is legible but inert (see "NOTED" above). Recorded for AI_LOOP_STATE.md as "Mandated blind pass ran on
+alchemists_tower".
