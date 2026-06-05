@@ -296,6 +296,33 @@ endings:
     title: "The Rotten Loft"
     # The death pole — telegraphed (the ladder "grey and soft with rot" in the base text, the gamble
     # named in the choice label). A chosen risk after the older stores, never an ambush.
+    #
+    # knows_truth reframes the SAME death, completing the pack's reactive-epilogue device on the one
+    # non-gated ending it had been missing (the bounty and the mercy already reframe; the doors are
+    # gated ON knows_truth so they are ALWAYS the knowing act and need no variant — this closes the
+    # set). The informed fall is genuinely reachable (read the book, return to the hub, climb anyway:
+    # go_in -> read_book -> decipher -> leave_book -> climb_loft), so the base text below stays
+    # reached by the uninformed climb (go_in -> climb_loft) and this variant covers the knowing one —
+    # the same first-match-wins, both-reachable shape as ending_bounty/ending_mercy (no dead fallback).
+    # The dramatic irony deepens precisely when you KNEW: you read that the loft holds the oldest of a
+    # hoard left to rot for the price of it, bread enough for the whole parish, and you climbed after
+    # more of it for yourself alone — and that same hoard comes down and buries the one man who read
+    # the lie, and the lie goes on. Telegraphed exactly as the base is; no flag/route/quest change.
+    variants:
+      - when: [{ has_flag: knows_truth }]
+        text: >
+          You set a boot to the ladder KNOWING — knowing from the steward's own book that the dark
+          above you is no hungry man's last store but the oldest of a hoard held back to rot for the
+          price of it, bread enough for the whole parish, and you climbing after more of it for
+          yourself alone. For three rungs the soft grey wood only gives a little under you, spongy
+          and damp in the cold. On the fourth it goes. There is the long splintering give, and then
+          the loft floor comes down with it, and a winter's worth of old sacked grain comes down on
+          top of that — the very waste you read of in the ledger, come down to bury the one man who
+          read it — pinning you into the dark while you breathe the dust of it, and then breathe
+          none. They dig you out in the morning when the lord's men come. The grain is barely
+          spoiled. They sweep it up and sack it again, every last measure of it, and weigh it, and
+          lock the barn, and set a new man to watch it by nightfall. The book lies open on the table
+          still, and no one left who knew to read it.
     text: >
       You set a boot to the ladder, and for three rungs the soft grey wood only gives a little under
       you, spongy and damp in the cold. On the fourth it goes. There is the long splintering give,
