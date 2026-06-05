@@ -515,3 +515,97 @@ describe("bug_0249 — the Staith-Head does not revert to 'the wick is dry' afte
     expect(conds).not.toContain("quest_stage"); // the non-monotonic stage must NOT gate the prose
   });
 });
+
+/**
+ * Regression (§15) for bug_0266 — The Lamplighter's Round: the OPTIONAL steadiness beat's
+ * FAILURE prose no longer implies it is a prerequisite for the climax.
+ *
+ * The seed-11 blind pass (clarity 5/5, enjoyment 4/5, all three endings, zero hard bugs) flagged
+ * one real friction (§4): "it wasn't obvious whether steadying the flame was mandatory before
+ * striking the lamp." The horn-windscreen steadiness check is in fact 100% CONVERGENT — its only
+ * flag `steadied_the_flame` is read by nothing but its own one-shot `not_flag` guard, so it gates
+ * no exit, win, score, or variant (the exhaustive solver / liveness BFS / score-economy proofs
+ * all hold without it). But its `on_failure` narration ended "...try the screen to it again before
+ * you trust it to anything," which actively told a FAILING player to keep retrying before doing
+ * anything else — falsely implying the steadied flame was a gate on the rest of the round. A player
+ * who kept rolling under 12 (range 4–23, ~40% miss) could believe they were blocked from lighting
+ * the great lamp and burn turns on a beat that gates nothing.
+ *
+ * Fix (hint_text / content only): rewrite the on_failure prose to drop the false-gate clause and
+ * explicitly state the round goes on regardless — the carried flame "is not going out tonight,
+ * screen or no, and there is still the great lamp ... to light." No mechanic, flag, score, exit, or
+ * ending change; the beat stays optional, retryable-on-failure, one-shot-on-success. This locks:
+ *   (1) convergence: steadied_the_flame is read by NO condition other than the beat's own one-shot
+ *       guard, and the check awards no score / sets no other flag / opens no exit;
+ *   (2) the failure prose no longer implies a prerequisite, and signals the round continues;
+ *   (3) behaviour: performing the steady beat does not end the game, and the win is still
+ *       completable afterward — the beat is genuinely off the critical path.
+ */
+describe("bug_0266 — the optional steadiness beat's failure prose no longer implies a gate", () => {
+  const horn = pack.objects.find((o) => o.id === "horn_windscreen")!;
+  const steadyInteraction = horn.interactions.find((it) => it.skill_check)!;
+
+  it("(1) convergence: steadied_the_flame is read only by the beat's own one-shot guard; the check gates nothing structural", () => {
+    expect(steadyInteraction).toBeDefined();
+    expect(steadyInteraction.skill_check!.skill).toBe("steadiness");
+    // The ONLY reader of steadied_the_flame anywhere in the pack is this interaction's not_flag guard.
+    const blob = JSON.stringify(pack);
+    const readers = blob.split("steadied_the_flame").length - 1;
+    // 2 occurrences: the guard condition + the set_flag effect; nothing else references it.
+    expect(readers).toBe(2);
+    expect(JSON.stringify(steadyInteraction.conditions)).toContain("steadied_the_flame");
+    // The check awards no score and sets no other flag (on either branch) and opens no exit.
+    const outcomes = JSON.stringify(steadyInteraction.skill_check);
+    expect(outcomes).not.toContain("score");
+    expect(outcomes).not.toContain("unlock_exit");
+    expect(outcomes).not.toContain("end_game");
+    // No exit / win condition reads the flag — the beat is off every gated path.
+    const inExit = pack.rooms.some((r) =>
+      r.exits.some((e) => JSON.stringify(e.conditions ?? []).includes("steadied_the_flame")),
+    );
+    const inWin = pack.win_conditions.some((w) =>
+      JSON.stringify(w.conditions).includes("steadied_the_flame"),
+    );
+    expect(inExit || inWin).toBe(false);
+  });
+
+  it("(2) the failure prose drops the false-gate clause and signals the round continues regardless", () => {
+    const onFailure = JSON.stringify(steadyInteraction.skill_check!.on_failure).toLowerCase();
+    expect(onFailure).not.toContain("before you trust it to anything"); // the removed false-gate clause
+    expect(onFailure).toContain("screen or no"); // explicitly optional
+    expect(onFailure).toContain("great lamp"); // names the real remaining goal — the beat is not it
+  });
+
+  it("(3) performing the steady beat does not end the game, and the win is still completable afterward", () => {
+    // Take the windscreen, perform the steady beat once (pass OR fail), then run the full win.
+    let s = initStateForParserPack(index, 3);
+    s = play(s, ["take_brass_key", "take_tinderbox", "take_horn_windscreen"]).state;
+    const steadyId = actionIds(s).find(
+      (id) => id.includes("horn_windscreen") && !/^(take|examine|drop)_/.test(id),
+    );
+    expect(steadyId).toBeDefined(); // the optional beat is offered once the screen is in hand
+    const afterSteady = play(s, [steadyId!]);
+    expect(afterSteady.state.ended).toBeFalsy(); // the beat never ends the game, pass or fail
+    // The full win is still reachable after the detour through the optional beat.
+    const done = play(afterSteady.state, [
+      "go_north",
+      "go_west",
+      "unlock_wall_cupboard",
+      "open_wall_cupboard",
+      "take_store_key",
+      "go_east",
+      "unlock_store_door",
+      "go_east",
+      "unlock_oil_cask",
+      "open_oil_cask",
+      "take_whale_oil",
+      "go_west",
+      "go_north",
+      "use_whale_oil_on_harbour_lamp",
+      "use_tinderbox_on_harbour_lamp",
+      "go_down",
+    ]);
+    expect(done.state.ended).toBe(true);
+    expect(done.state.endingId).toBe("ending_guided");
+  });
+});
