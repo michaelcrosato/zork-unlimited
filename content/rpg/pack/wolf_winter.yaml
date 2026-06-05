@@ -354,6 +354,16 @@ npcs:
     # `old Cade the houndsman: "<npc_text>"`. The counsel topic retires once told (gated
     # not_flag heard_counsel) so the +2 attack is one-shot; the ungated `leave` keeps the
     # root TERMINATING (a gated-only node would trip DIALOGUE_NONTERMINATING, bug_0014).
+    # bug_0258 — the cade_byre counsel now SIGNPOSTS the optional wedge (take the fallen
+    # rail, wedge it across the breach). A 2026-06-05 blind playtest (seed 11) found the
+    # wedge skill_check undiscoverable: the USE/wedge action only surfaces once the rail is
+    # IN HAND, so a player whose instinct is to fight the wolf never takes the rail and
+    # reads the rail as a vestigial dead clue — the bug_0256 reactive-prose payoff never
+    # reached. Cade meeting the player BEFORE the paling and naming the take-then-wedge is
+    # the natural in-fiction info path; it also makes the paling_gap reactive line "the way
+    # old Cade swore the byre would funnel them" literally true. PURE spoken prose + a
+    # journal note — no flag/condition/effect/route/ending change; the wedge stays an
+    # optional, stat-neutral aid (bug_0256) gating nothing.
     dialogue:
       root: cade_root
       nodes:
@@ -409,12 +419,16 @@ npcs:
             The byre's simple enough: there's the one way in, past the broken paling and
             up through the door to where the beasts are penned at the back, and the wolves
             must come at you one at a time down that throat — they can't flank you in a
-            corridor. So hold the line and work forward, paling to door to the back wall,
-            and don't let one slip past you to the cattle. Put down the three that are in
-            and the rest of the pack loses its nerve and goes. That's the whole of it.
+            corridor. And mind the paling where they've broken through: one stout rail's
+            fallen clear into the snow there. Take it up and wedge it back across the gap,
+            stamp it home, and you'll half-shut the breach — what comes through after must
+            come singly and slow, and that's a mercy in a hard fight. So hold the line and
+            work forward, paling to door to the back wall, and don't let one slip past you
+            to the cattle. Put down the three that are in and the rest of the pack loses
+            its nerve and goes. That's the whole of it.
           effects:
             - set_flag: heard_plan
-            - add_journal: "Old Cade says to hold the byre's one corridor and work forward — paling to door to the back wall — and the pack will break once its three boldest are down."
+            - add_journal: "Old Cade says to hold the byre's one corridor and work forward — paling to door to the back wall — and the pack will break once its three boldest are down. He says too there's a fallen rail at the paling: take it up and wedge it across the breach to half-shut the gap."
           topics:
             - id: byre_back
               prompt: "Thank him, and ask something else."
