@@ -808,6 +808,55 @@ export function validateParser(
     }
   }
 
+  // ── INERT object-state: an AUTHORED open/unlock write nothing ever reads ──────
+  // The LIVENESS dual of bug_0253's IMPOSSIBLE_OBJECT_STATE (feasibility) — the
+  // object-state analogue of INERT_FLAG. An AUTHORED `open_object` /
+  // `set_object_locked(locked:false)` effect whose target object's is_open /
+  // is_unlocked state is NEVER read by any condition pack-wide is dead bookkeeping:
+  // the write changes nothing the game ever consults. CRITICAL SOUNDNESS BOUNDARY:
+  // key the write-set STRICTLY on these authored effects — do NOT fold in the
+  // over-approximating openableObjects/unlockableObjects sets (the built-in
+  // OPEN/UNLOCK verb settability), which would false-warn on every openable scenery
+  // object. This mirrors INERT_FLAG (keyed on the authored set_flag write, never on a
+  // reachability source) and is the precise dual of the bug_0253 subtlety
+  // (feasibility OVER-approximates settability; liveness keys on the AUTHORED write).
+  // Reads descend all_of/any_of/none_of (a disjunction-guarded read still consumes).
+  // Warning, not error — an inert open/unlock is a no-op, never a soft-lock.
+  const objStateReads = collectObjectStateReads(pack);
+  const writtenOpen = new Set<string>();
+  const writtenUnlocked = new Set<string>();
+  for (const e of allEffects(pack)) {
+    if ("open_object" in e) writtenOpen.add(e.open_object);
+    else if ("set_object_locked" in e && e.set_object_locked.locked === false)
+      writtenUnlocked.add(e.set_object_locked.id);
+  }
+  for (const id of writtenOpen) {
+    if (!objStateReads.open.has(id)) {
+      findings.push(
+        warn(
+          "INERT_OBJECT_STATE",
+          `object "${id}" is opened by an effect but no condition ever reads its open ` +
+            `state — a no-op write (dead bookkeeping). Gate something on \`is_open: ${id}\`, ` +
+            `or remove the effect.`,
+          [`object:${id}`],
+        ),
+      );
+    }
+  }
+  for (const id of writtenUnlocked) {
+    if (!objStateReads.unlocked.has(id)) {
+      findings.push(
+        warn(
+          "INERT_OBJECT_STATE",
+          `object "${id}" is unlocked by an effect but no condition ever reads its ` +
+            `unlocked state — a no-op write (dead bookkeeping). Gate something on ` +
+            `\`is_unlocked: ${id}\`, or remove the effect.`,
+          [`object:${id}`],
+        ),
+      );
+    }
+  }
+
   // ── A win condition already met at game start (§8.4.5 fires-at-start) ─────────
   checkWinFiresAtStart(
     pack,
@@ -1378,4 +1427,42 @@ function collectFlagReads(pack: ParserPack): Set<string> {
       for (const t of node.topics) walkAll(t.conditions);
     }
   return reads;
+}
+
+/** Every object id whose `is_open` / `is_unlocked` state a parser/RPG pack READS —
+ *  in any exit, interaction, or win condition, any room/object variant `when`, or any
+ *  dialogue-topic gate, DESCENDING all_of/any_of/none_of (a read inside ANY connective,
+ *  even a disjunction, counts as consumed). The consumer set for the INERT_OBJECT_STATE
+ *  liveness check (the dual of bug_0253's IMPOSSIBLE_OBJECT_STATE feasibility check):
+ *  an AUTHORED `open_object` / `set_object_locked(locked:false)` write whose target id is
+ *  absent from the matching set here is a no-op (dead bookkeeping). Mirrors
+ *  collectFlagReads EXACTLY — NOT objectStateReqs, which descends only all_of for the
+ *  conservative AND-context feasibility check and would under-count disjunction-guarded
+ *  reads, producing false-positive INERT warnings (bug_0262). */
+function collectObjectStateReads(pack: ParserPack): { open: Set<string>; unlocked: Set<string> } {
+  const open = new Set<string>();
+  const unlocked = new Set<string>();
+  const walk = (c: Condition): void => {
+    if ("is_open" in c) open.add(c.is_open);
+    else if ("is_unlocked" in c) unlocked.add(c.is_unlocked);
+    else if ("all_of" in c) c.all_of.forEach(walk);
+    else if ("any_of" in c) c.any_of.forEach(walk);
+    else if ("none_of" in c) c.none_of.forEach(walk);
+  };
+  const walkAll = (conds: Condition[] | undefined): void => (conds ?? []).forEach(walk);
+  for (const room of pack.rooms) {
+    for (const v of room.variants ?? []) walkAll(v.when);
+    for (const exit of room.exits) walkAll(exit.conditions);
+  }
+  for (const o of pack.objects) {
+    for (const v of o.variants ?? []) walkAll(v.when);
+    for (const it of o.interactions) walkAll(it.conditions);
+  }
+  for (const wc of pack.win_conditions) walkAll(wc.conditions);
+  for (const npc of pack.npcs)
+    for (const node of npc.dialogue.nodes) {
+      for (const v of node.variants ?? []) walkAll(v.when);
+      for (const t of node.topics) walkAll(t.conditions);
+    }
+  return { open, unlocked };
 }
