@@ -162,7 +162,15 @@ export class GameSession {
         location: o.scene_id,
         title: o.title,
         text: o.text,
-        choices: o.available_actions.map((a) => ({ id: a.id, label: a.text })),
+        // A skill-checked choice shows the stat it rolls and the difficulty (bug_0269),
+        // so the displayed skill var no longer reads as a vestigial number; a plain
+        // choice keeps its bare label.
+        choices: o.available_actions.map((a) => ({
+          id: a.id,
+          label: a.skill_check
+            ? `${a.text}  ⟨${a.skill_check.skill} check, DC ${a.skill_check.difficulty}⟩`
+            : a.text,
+        })),
         inventory: o.state.inventory,
         facts: o.state.flags,
         journal: o.state.journal,

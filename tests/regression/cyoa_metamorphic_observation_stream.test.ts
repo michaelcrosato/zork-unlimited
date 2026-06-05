@@ -96,7 +96,22 @@ function relabelObservation(o: CyoaObservation, mapId: (id: string) => string): 
       inventory: o.state.inventory.map(mapId),
       journal: [...o.state.journal], // prose — byte-identical
     },
-    available_actions: o.available_actions.map((a) => ({ id: mapId(a.id), text: a.text })),
+    available_actions: o.available_actions.map((a) => ({
+      id: mapId(a.id),
+      text: a.text, // prose — byte-identical
+      // A surfaced skill-check annotation (bug_0269) names the rolled var, an IDENTIFIER:
+      // it must map through the bijection (the relabeler renames `skill_check.skill`, cf.
+      // relabel_cyoa.ts) while the numeric difficulty is label-invariant. Omit-vs-present
+      // is preserved so a plain choice stays plain on the twin.
+      ...(a.skill_check
+        ? {
+            skill_check: {
+              skill: mapId(a.skill_check.skill),
+              difficulty: a.skill_check.difficulty,
+            },
+          }
+        : {}),
+    })),
     ended: o.ended,
     ending_id: o.ending_id === null ? null : mapId(o.ending_id),
     ending_death: o.ending_death, // a boolean failure-marker — label-invariant, like `ended`

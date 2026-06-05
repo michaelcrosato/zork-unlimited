@@ -20,7 +20,20 @@ export type CyoaObservation = {
     inventory: string[];
     journal: string[];
   };
-  available_actions: { id: string; text: string }[];
+  // A skill-checked choice (`choice.skill_check`) carries a `skill_check` annotation:
+  // the var rolled and the difficulty it is rolled against, so a client (and a player)
+  // can SEE that a stat is in play — without it a declared skill var reads as vestigial
+  // (a blind playtester flagged exactly this for `guile`, bug_0269). Only `skill`/
+  // `difficulty` are surfaced — never the check's `on_success`/`on_failure` effects,
+  // which carry the branch's `goto`/`end_game` routing: the destination graph stays
+  // hidden by construction, exactly as a plain choice never exposes `choice.next`. The
+  // field is OMITTED on a plain (non-skill) choice, so the observation is byte-identical
+  // to the legacy shape for every existing pack's non-skill choices.
+  available_actions: {
+    id: string;
+    text: string;
+    skill_check?: { skill: string; difficulty: number };
+  }[];
   ended: boolean;
   ending_id: string | null;
   // null while playing; once ended, whether the reached terminal is a declared
@@ -53,7 +66,18 @@ export function buildObservation(
       ? []
       : scene.choices
           .filter((c) => evalConditions(c.conditions, state))
-          .map((c) => ({ id: c.id, text: c.text }));
+          .map((c) => ({
+            id: c.id,
+            text: c.text,
+            // Surface ONLY the rolled skill + difficulty (never the branch effects, which
+            // would leak the destination scenes — see the type comment). Omit the field
+            // entirely on a plain choice so the legacy shape is preserved exactly.
+            ...(c.skill_check
+              ? {
+                  skill_check: { skill: c.skill_check.skill, difficulty: c.skill_check.difficulty },
+                }
+              : {}),
+          }));
 
   return {
     mode: "cyoa",

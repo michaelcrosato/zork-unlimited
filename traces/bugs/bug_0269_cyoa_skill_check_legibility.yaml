@@ -1,0 +1,57 @@
+bug_id: bug_0269
+pack_id: clockwork_heist_v1
+seed: 23
+initial_state: kitchen
+# Surfaced by the mandated blind playtest this cycle (general-purpose subagent, MCP-only, no
+# content/src/ui/tests access; seed 23; report ai-runs/2026-06-05T02-32-58-653Z/playtest.md).
+# The pack came back STRONG — clarity 5/5, enjoyment 4/5, all 4 reachable endings, score economy
+# exact (45/45 on the full vault path), mechanically flawless — with ONE concrete §4/§5 finding:
+# the `guile` stat is shown in the observation's state.vars the whole game but "never read or
+# changed by anything," so it reads as a vestigial/unused number. (In fact `guile` IS the var
+# rolled by the kitchen's optional `slip_out_quiet` convergent skill check — but the observation
+# exposed only the choice's { id, text }, so NOTHING on screen ever told a player a stat was in
+# play.) This is an ENGINE legibility gap, not a clockwork-specific content flaw: it would read
+# the same for any pack with a skill-checked CYOA choice.
+findings:
+  - id: skill_checked_cyoa_choice_does_not_surface_its_stat
+    where: engine:src/cyoa/observation.ts (buildObservation available_actions)
+    severity: low
+    description: >
+      CYOA skill checks are a first-class mechanic (the shared resolveSkillCheck d20 + skill var
+      vs difficulty), and the rolled skill var is shown in the observation's `state.vars`. But a
+      skill-checked choice was surfaced in `available_actions` as only `{ id, text }`, identical
+      to a plain choice. So a declared skill var whose sole consumer is a skill-checked choice —
+      `guile`, rolled by `slip_out_quiet` — appears purposeless: the player sees the number but
+      no choice ever advertises that a stat is being tested. A blind playtester rated the pack
+      4/5 enjoyment and named this the one thing keeping it from 5/5.
+    fix: >
+      `buildObservation` now attaches a `skill_check: { skill, difficulty }` annotation to a
+      skill-checked choice's `available_actions` entry, surfacing ONLY the rolled var and the
+      difficulty — never the check's `on_success`/`on_failure` effects, which carry the branch's
+      `goto`/`end_game` routing, so the destination graph stays hidden by construction (exactly as
+      a plain choice never exposes `choice.next`). The field is OMITTED on a plain choice, so the
+      observation is byte-identical to the legacy shape for every non-skill choice in every shipped
+      pack. The web UI renders the annotation as a "⟨guile check, DC 12⟩" suffix on the choice
+      label (ui/src/engine.ts). Generic and default-on (legibility is the opposite of the
+      opt-in hide_graph difficulty): every pack's skill-checked choices benefit, no per-pack
+      authoring. No flag/var/score/tick/choice/next/ending/quest/determinism change — the field is
+      observation-only and never enters the state hash.
+failure:
+  type: design_legibility
+  description: >
+    No engine fault or determinism break — a missing player-facing annotation on a first-class
+    mechanic. The skill var was correctly tracked and rolled; only the observation never told the
+    player a stat was in play, so it read as vestigial. Caught by a fresh blind playtest the
+    coverage bot's structural metrics cannot see — exactly the value of the §12.4 blind step. The
+    metamorphic per-step observation oracle (cyoa_metamorphic_observation_stream) was strengthened
+    in lock-step: the newly-surfaced skill name is an IDENTIFIER, so it must (and does) map through
+    the relabeling bijection, keeping the contamination-robustness witness sound and broader.
+regression_test: tests/regression/cyoa_skill_check_legibility.test.ts
+notes: >
+  General lesson: when a mechanic's PARAMETERS live only in state.vars but its INVOCATION is a
+  choice, surface the link on the choice itself — a stat the player can see but can't connect to
+  any action reads as dead weight. The fix is engine-wide (all CYOA skill-checked choices), not a
+  reword of clockwork's one choice, because the gap is structural. Soundness note: surfacing
+  skill+difficulty is appropriate legibility (a printed DC, like a tabletop check), NOT a benchmark
+  leak — it reveals no destination scene or effect, so it does not trivialize the spatial/branch
+  reasoning the eval measures, unlike the room graph that hide_graph (bug_0137) deliberately hides.
