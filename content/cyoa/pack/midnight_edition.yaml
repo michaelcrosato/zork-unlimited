@@ -108,7 +108,29 @@ scenes:
     # Reactive prose (most-specific first, first-match-wins): once the proof is in hand the
     # hub must not still call the safe report a thing that "would make it true or break it"
     # (the bug_0232 stale-prose discipline) — that question is settled.
+    #
+    # door_barred is ORTHOGONAL to the read_letter/knows_proof knowledge axis (you can bar the
+    # door before OR after reading the letter / proving the story), so each knowledge level needs
+    # a barred-door twin placed BEFORE its open-door form — else, having barred the door and THEN
+    # read the letter, the read_letter form below wins and still calls the door one that merely
+    # "stands shut on the boots that keep pacing the cobbles," as though you had never been out,
+    # seen Garrow's men, and dropped the bar. That stale-on-state-change contradiction (door_barred
+    # set but the prose ignores it) is the bug_0232 / bug_0248-0250 class a blind playtest caught
+    # here (bug_0268). Pairing order, most-specific first: {knows_proof∧barred} ▸ {knows_proof} ▸
+    # {read_letter∧barred} ▸ {read_letter} ▸ {barred alone} ▸ base. door_barred is monotonic
+    # (never cleared), so no form ever regresses to an earlier one.
     variants:
+      - when: [{ has_flag: knows_proof }, { has_flag: door_barred }]
+        text: >
+          Gaslight and the smell of hot metal and oil. The morning edition sleeps locked in
+          its formes around you, all but the front page that is yours to close before the
+          press rolls at dawn. The workman's letter lies open on the imposing stone, and you
+          carry now what it only pointed to: the inspector's condemned report, read and
+          proven, Garrow's own initials on it. The question is no longer whether it is true —
+          it is which page you set. The iron stair climbs north to the rifled office; the
+          press floor drops away south to the waiting lever; and out past the inking-room the
+          alley door is barred fast on the men you found there — Garrow's, by the hammers they
+          carried — who have given up the latch but not the cobbles.
       - when: [{ has_flag: knows_proof }]
         text: >
           Gaslight and the smell of hot metal and oil. The morning edition sleeps locked in
@@ -119,6 +141,17 @@ scenes:
           it is which page you set. The iron stair climbs north to the rifled office; the
           press floor drops away south to the waiting lever; and out past the inking-room the
           alley door stands shut on the boots that keep pacing the cobbles beyond it.
+      - when: [{ has_flag: read_letter }, { has_flag: door_barred }]
+        text: >
+          Gaslight and the smell of hot metal and oil. The morning edition sleeps locked in
+          its formes around you, all but the front page that is yours to close before the
+          press rolls at dawn. The workman's letter lies open on the imposing stone where
+          you read it, and it has not got lighter for the reading: somewhere above you, in
+          Garrow's own office safe, is the report that would make it true or break it. The
+          iron stair climbs north to that office; the press floor drops away south; and out
+          past the inking-room the alley door is barred now on the men you found waiting
+          there — Garrow's, by the hammers they carried — who have given up the latch but not
+          the cobbles.
       - when: [{ has_flag: read_letter }]
         text: >
           Gaslight and the smell of hot metal and oil. The morning edition sleeps locked in
@@ -129,11 +162,11 @@ scenes:
           iron stair climbs north to that office; the press floor drops away south; and out
           past the inking-room the alley door stands shut on the boots that keep pacing the
           cobbles beyond it.
-      # Barred-but-letter-unread case (knows_proof / read_letter both win above this when set):
-      # once you have been out to the alley, seen Garrow's men, and barred the door, the hub
-      # must not still call them merely "boots that do not sound like printers going home" as
-      # though their nature were unknown and the door open (the bug_0232 stale-prose discipline,
-      # same class as bug_0248/0249/0250). Fires only with door_barred and neither flag set.
+      # Barred-but-letter-unread case (the knowledge∧barred twins above win when either flag is
+      # also set): once you have been out to the alley, seen Garrow's men, and barred the door,
+      # the hub must not still call them merely "boots that do not sound like printers going home"
+      # as though their nature were unknown and the door open (the bug_0232 stale-prose discipline,
+      # same class as bug_0248/0249/0250). Fires with door_barred and neither knowledge flag set.
       - when: [{ has_flag: door_barred }]
         text: >
           Gaslight and the smell of hot metal and oil. The town's one newspaper sleeps around
