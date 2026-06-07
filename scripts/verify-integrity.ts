@@ -439,25 +439,52 @@ export function detectGuardWeakening(before: GuardConstants, now: GuardConstants
 }
 
 /** Count test cases AND expect() assertions as they were at a git ref, in a single
- *  pass over the ref's test files (null if the ref can't be read). */
+ *  pass over the ref's test files (null if the ref can't be read). Reads every test
+ *  blob through ONE `git cat-file --batch` pass instead of spawning one `git show`
+ *  per file: the per-file subprocess cost dominated runDrift (~280 spawns/call, two
+ *  minutes on a slow/network filesystem) and the loop runs this every cycle. The bytes
+ *  fed to the counters are byte-for-byte the blob content, so the counts are identical. */
 function countTestArtifactsAtRef(root: string, ref: string): TestArtifactCounts | null {
   try {
-    const listed = execFileSync("git", ["ls-tree", "-r", "--name-only", ref], {
+    // `ls-tree -r` (no --name-only) yields "<mode> blob <oid>\t<path>" so we can batch
+    // the reads by object id without re-resolving each <ref>:<path> spec.
+    const listed = execFileSync("git", ["ls-tree", "-r", ref], {
       cwd: root,
       encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
     });
-    const files = listed
-      .split("\n")
-      .map((s) => s.trim())
-      .filter((p) => /^tests\/.*\.test\.ts$/.test(p));
+    const blobs: { oid: string; path: string }[] = [];
+    for (const line of listed.split("\n")) {
+      const tab = line.indexOf("\t");
+      if (tab < 0) continue;
+      const meta = line.slice(0, tab).split(/\s+/); // [mode, type, oid]
+      const path = line.slice(tab + 1);
+      if (meta[1] === "blob" && /^tests\/.*\.test\.ts$/.test(path))
+        blobs.push({ oid: meta[2]!, path });
+    }
+    if (blobs.length === 0) return { cases: 0, assertions: 0, strong: 0 };
+    // `cat-file --batch` emits, per requested object: "<oid> <type> <size>\n" then
+    // exactly <size> bytes of content then a trailing "\n". Slice by byte offsets (the
+    // size is a byte count) so multi-byte UTF-8 content is reconstructed exactly.
+    const batch = execFileSync("git", ["cat-file", "--batch"], {
+      cwd: root,
+      input: blobs.map((b) => b.oid).join("\n") + "\n",
+      maxBuffer: 512 * 1024 * 1024,
+    });
     let cases = 0;
     let assertions = 0;
     let strong = 0;
-    for (const p of files) {
-      const text = execFileSync("git", ["show", `${ref}:${p}`], { cwd: root, encoding: "utf8" });
+    let pos = 0;
+    while (pos < batch.length) {
+      const nl = batch.indexOf(0x0a, pos);
+      if (nl < 0) break;
+      const size = Number(batch.toString("utf8", pos, nl).split(" ")[2]);
+      const start = nl + 1;
+      const text = batch.toString("utf8", start, start + size);
       cases += text.match(TESTCASE_RE)?.length ?? 0;
       assertions += text.match(ASSERTION_RE)?.length ?? 0;
       strong += text.match(STRONG_ASSERTION_RE)?.length ?? 0;
+      pos = start + size + 1; // content + the trailing LF the batch format appends
     }
     return { cases, assertions, strong };
   } catch {
