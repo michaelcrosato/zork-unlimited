@@ -41,6 +41,9 @@ describe("bug_0031 — ESLint + Prettier are wired as real gates", () => {
     expect(existsSync(join(root, ".prettierignore"))).toBe(true);
   });
 
+  // Instantiating ESLint loads the full type-aware config (typescript-eslint); on a slow
+  // host under full-suite contention this runs well past vitest's 60s default, so give the
+  // ESLint-API tests explicit headroom — they assert behaviour, not speed.
   it("ESLint actually catches an unused variable and passes clean code", async () => {
     const eslint = new ESLint({ cwd: root });
     const probePath = join(root, "src/__lint_probe__.ts");
@@ -48,5 +51,5 @@ describe("bug_0031 — ESLint + Prettier are wired as real gates", () => {
     expect(bad[0]!.errorCount).toBeGreaterThan(0);
     const good = await eslint.lintText("export const x = 1;\n", { filePath: probePath });
     expect(good[0]!.errorCount).toBe(0);
-  });
+  }, 120_000);
 });

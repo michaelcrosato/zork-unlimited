@@ -45,13 +45,16 @@ describe("bug_0038 — ui/ is under the ESLint gate", () => {
     }
   });
 
+  // Each ESLint() instance loads the full type-aware config; on a slow host under full-suite
+  // contention that exceeds vitest's 60s default, so the ESLint-API tests get explicit
+  // headroom — they assert behaviour (rules active, violations caught), not speed.
   it("the react-hooks rules are ACTIVE for a ui .tsx file", async () => {
     const eslint = new ESLint({ cwd: root });
     const cfg = await eslint.calculateConfigForFile(join(root, "ui/src/App.tsx"));
     // severity: 2 = error, 1 = warn.
     expect(cfg.rules?.["react-hooks/rules-of-hooks"]?.[0]).toBe(2);
     expect(cfg.rules?.["react-hooks/exhaustive-deps"]?.[0]).toBe(1);
-  });
+  }, 120_000);
 
   it("ESLint BITES a real conditional-hook violation in a ui .tsx file", async () => {
     const eslint = new ESLint({ cwd: root });
@@ -68,7 +71,7 @@ export function Bad({ cond }: { cond: boolean }): null {
     const res = await eslint.lintText(bad, { filePath: probe });
     expect(res[0]!.errorCount).toBeGreaterThan(0);
     expect(res[0]!.messages.some((m) => m.ruleId === "react-hooks/rules-of-hooks")).toBe(true);
-  });
+  }, 120_000);
 
   it("the shipped ui/ source passes the gate clean (zero errors)", async () => {
     const eslint = new ESLint({ cwd: root });
@@ -76,7 +79,7 @@ export function Bad({ cond }: { cond: boolean }): null {
     expect(results.length).toBeGreaterThan(0); // it really matched the .tsx, not nothing
     const errors = results.reduce((n, r) => n + r.errorCount, 0);
     expect(errors).toBe(0);
-  });
+  }, 120_000);
 });
 
 describe("bug_0038 — the assessor's lint-coverage detector has fully disarmed", () => {
