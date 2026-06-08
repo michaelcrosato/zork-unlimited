@@ -9,293 +9,590 @@ to do the work.
 
 ---
 
-# Ultraplan re-aim cycle #13 (HEAD = bug_0276; next free id = bug_0277)
+# Ultraplan re-aim cycle #14 (HEAD = bug_0277; next free id = bug_0278)
 
 ## Synthesis
 
 A bounded ultraplan ran this cycle — **4 repo reviewers** (engine/determinism ·
-content/authoring+generators · verification/benchmark · loop/strategy) **+ 2 web
-researchers** (frontier IF/agentic benchmarks · verification-at-scale + reward-hacking)
-**→ 1 synthesis** (7 agents, 144 tool-uses, ~331k subagent tokens), each grounded against
-the live repo at HEAD = bug_0276, then the chosen move was **independently re-verified by
-the orchestrator against source** before being committed here.
+content/authoring · verification/benchmark · loop/strategy) **+ 2 web researchers**
+(frontier IF/agentic benchmarks · verification/reward-hacking) **→ 1 synthesis**,
+each grounded against the live repo at HEAD = bug_0277, then the chosen move was
+independently re-verified by the orchestrator against source before being committed
+here.
 
-**All four reviewers independently converged on the same top pick**, and the prior cycle's
-two heaviest deferred levers were correctly re-deferred again (see "WHY this, not the
-runner-ups"). The cycle-#12 chosen move (INERT_OBJECT_STATE, bug_0262) and its deferred
-safety sibling (WIN_FIRES_AT_START object-state, bug_0270) BOTH landed since, so the
-object-state local boundary is now sealed on feasibility + liveness + relock + win-stability.
-The next genuinely-open rung on the same assume-guarantee ladder toward the deferred
-world-frame manifest is **intra-frame reference integrity** for room ids.
+**Convergent signal across reviewers.** Three of the six reviewers independently named
+the `observation_difficulty` / `hide_graph` API gap (engine/determinism reviewer Gap 3;
+verification/benchmark reviewer Gap 1; loop/strategy reviewer, top pick). The engine/
+determinism reviewer also named two validator gaps: `unlock_exit` room-ref dangling
+(Gap 1) and `add_item`/`remove_item` item-ref dangling (Gap 2). The content/authoring
+reviewer named the `alchemists_tower` steadiness inertness and the parser/RPG authoring
+mode writer-prompt gap. The web researchers confirmed the benchmark novelty claim and
+the importance of out-of-band tamper-resistant verification (already the project's
+architecture). The verification/benchmark reviewer named the LLM-judge tamper-detector
+second pass (blast radius L) and the real-model scorecard execution gap.
 
-The chosen move is **`UNRESOLVED_ROOM_REFERENCE` — a static room-reference-integrity check**
-in the parser validator (and via delegation the RPG validator) that errs every room id named
-by a `visited` / `not_visited` / `in_room` condition or a `goto` / `place_object.room` effect
-when that id is absent from `pack.rooms`. It is the verbatim cycle-#12 deferred lever
-("UNRESOLVED_ROOM_REFERENCE … ABSENT in src/validate/"), genuinely open, and it exactly
-mirrors the existing `EXIT_TARGET_MISSING` / `NPC_ROOM_MISSING` reference checks.
+**The orchestrator re-verified all gaps in source at HEAD = bug_0277:**
 
-**Why it is a real latent footgun no existing oracle catches (orchestrator-verified in source):**
-`roomIds` (`src/validate/parser_validator.ts:110`) is consulted ONLY at `start_room` (:131),
-`exit.to` (:150), and `npc.room` (:210) — **never** on a condition's room id nor on
-`goto`/`place_object.room` effect targets. The room-naming conditions are bare strings in the
-schema (`src/core/conditions.ts:20-29`, all `z.string().min(1)`), and a typo'd room id silently
-evaluates **false forever** (`src/core/conditions.ts:80-82`: `visited` reads
-`state.visited[id]`→`undefined`→`false`; `in_room` compares `state.current`) — a permanently-dead
-gate that:
-- the static SOFTLOCK pass treats as a deliberate stable-false gate,
-- the exhaustive-BFS solver just sees as an unreachable atom, and
-- the metamorphic relabel oracle is bijectively blind to (the twin keeps the same typo).
+- `observation_difficulty` / `hide_graph`: the `HIDE_GRAPH` zod shape is defined in
+  `src/mcp/server.ts:51-58` and threaded through `new_game`/`start_game` correctly.
+  The `buildObsFor` dispatcher at `src/mcp/tools.ts:110` passes `{ hideGraph }` through
+  to all three observation builders. Parser observation (`src/parser/observation.ts:129`)
+  already omits `exit.to` when `hideGraph`. CYOA observation (`src/cyoa/observation.ts:56-59`)
+  already accepts `_opts` as a no-op and is correct by construction (CYOA never exposes
+  `choice.next`). **The `hide_graph` feature is FULLY LANDED end-to-end.** The
+  loop/strategy reviewer called this the top pick on the basis that `get_observation`
+  and `step_action` do not accept `hide_graph` mid-session — but the session's
+  `s.hideGraph` flag (set at `new_game`/`start_game` time) persists and is applied on
+  every `obsOf(s)` call (`tools.ts:407`). There is no structural gap here, only a
+  cosmetic one (naming `hide_graph` vs. a hypothetical `observation_difficulty` enum).
+  **This is already done. Not the move.**
 
-**Why it is provably green-preserving (orchestrator-verified):** a standalone YAML scan over
-all shipped parser+RPG packs (walking the exact sites `collectRoomRefs` will walk, descending
-`all_of`/`any_of`/`none_of`, plus `goto`/`place_object.room` effects) found **14 room refs, 0
-dangling** — every shipped ref resolves to a declared room, and no shipped pack authors a
-`goto`/`place_object` room effect. So the new error code fires ZERO times on every shipped pack;
-`npm run health` stays exit-0 by construction. (The two "apparent" dangling refs another reviewer
-flagged at `breaking_weir.yaml`/`wolf_winter.yaml` are inside YAML `#` comments and never parse
-into conditions — confirmed 0 dangling after a real YAML parse.) CYOA packs are scene-graph
-(no rooms) and untouched.
+- `unlock_exit` room-ref dangling (engine/determinism reviewer Gap 1): confirmed open.
+  `collectRoomRefs` at `src/validate/parser_validator.ts:1590-1594` explicitly states
+  "the only two room-id-bearing effects" are `goto` and `place_object.room` — and the
+  comment is wrong. `unlock_exit: { from, to }` (effects.ts:31) carries two room ids;
+  neither `from` nor `to` is in `collectRoomRefs`. A dangling `unlock_exit.from` or `.to`
+  silently writes an unreachable exit-flag key (`__exit:X->Y`) that no exit's
+  `conditions` check will ever match, making the unlock a **permanent no-op** — a worse
+  footgun than the `goto`/`visited` dangle bug_0277 closed, because the unlock APPEARS
+  to succeed (the effect fires, the flag is set) but the exit never opens. Five shipped
+  packs use `unlock_exit`; all 5 verified clean (orchestrator ran a Python scan). Fix:
+  add `unlock_exit.from` and `unlock_exit.to` to `collectRoomRefs`. **Genuinely open.
+  This is the move.**
+
+- `add_item`/`remove_item` item-ref dangling (engine/determinism reviewer Gap 2):
+  confirmed open as a gap in principle, but orchestrator scan found 0 dangling refs
+  across all 17 shipped packs. Also, `allEffects` already collects `add_item` targets
+  at `parser_validator.ts:461` for the obtainability fixpoint — a bare `add_item:
+  "phantom"` for an unknown item is already partially handled (the item never appears
+  in `objById`, so it is treated as unobtainable). The footgun is real but the
+  immediate blast exposure is lower than `unlock_exit`'s silent-no-op failure mode.
+  Correctly deferred to the cycle after `unlock_exit` is sealed.
+
+**Why `unlock_exit` wins on all four selection criteria:**
+
+1. **Genuinely open:** Orchestrator confirmed the gap at source. `collectRoomRefs` ends
+   at `place_object.room` — no `unlock_exit.from`/`.to` appears anywhere in the
+   reference-integrity family.
+2. **Higher impact than the `goto`/`visited` dangle (bug_0277):** a dangling `visited`
+   evaluates false silently; a dangling `unlock_exit.from`/`.to` writes an unreachable
+   flag that makes the unlock a permanent no-op. The player executes the correct action,
+   something appears to happen (the effect fires), and the exit stays locked — the
+   hardest class of authoring bug to diagnose from inside the game.
+3. **Additive, S blast radius, key-free, offline:** one two-line addition to
+   `collectRoomRefs`, one new regression test file, one bug artifact. No schema change,
+   no engine change, no pack hash change.
+4. **Sequence-correct:** bug_0277 sealed the condition-side and `goto`/`place_object`
+   effect-side room-ref integrity. `unlock_exit` is the one remaining effect kind that
+   carries room ids. Sealing it completes intra-frame room-reference integrity — the
+   same rung on the assume-guarantee ladder the deferred world-frame manifest depends on.
 
 ## Chosen move — WHAT (numbered, concrete)
 
-**Goal:** the parser validator emits a NEW **error** `UNRESOLVED_ROOM_REFERENCE` when a
-`visited`/`not_visited`/`in_room` condition or a `goto`/`place_object.room` effect names a room id
-absent from `pack.rooms` — the room-id analogue of the existing `EXIT_TARGET_MISSING`. Zero shipped
-packs regress (all 10 parser+RPG packs verified clean); synthetic mutants prove the error fires;
-a corrected-id variant proves non-vacuity. RPG is covered for free via delegation.
+**Goal:** the parser validator emits a NEW **error** `UNLOCK_EXIT_ROOM_MISSING` when
+an `unlock_exit` effect's `from` or `to` room id is absent from `pack.rooms`. A
+dangling `unlock_exit` writes an unreachable exit-flag key, making the unlock a
+permanent no-op that silently survives validation. Zero shipped packs regress (all 5
+`unlock_exit` users verified clean). Synthetic tests prove the error fires (both `from`
+and `to` kinds) and prove non-vacuity. RPG is covered for free via delegation.
 
-1. **Add a read-walker `collectRoomRefs(pack)`** in `src/validate/parser_validator.ts`, placed
-   IMMEDIATELY after `collectObjectStateReads` (the helper at ~`:1509`). Copy the `walk`/`walkAll`
-   structure of `collectFlagReads` (~`:1471`) **EXACTLY** — it is the correct template because it
-   descends ALL THREE connectives (`all_of`/`any_of`/`none_of`). Do **NOT** reuse `objectStateReqs`
-   (all_of-only — it would under-count refs inside a disjunction). The `walk` arm collects room ids:
-   `if ('visited' in c) refs.add(c.visited); else if ('not_visited' in c) refs.add(c.not_visited);
-   else if ('in_room' in c) refs.add(c.in_room); else if ('all_of' in c) c.all_of.forEach(walk);
-   else if ('any_of' …) …; else if ('none_of' …) …`. Walk the SAME sites `collectFlagReads` walks:
-   room variants `v.when` + `exit.conditions`; object variants + `interaction.conditions`;
-   `win_conditions`; ending variants `v.when`; NPC dialogue node variants + `topic.conditions`.
-   Return a `Set<string>`.
+**Bug id:** `bug_0278`
 
-2. **Collect EFFECT-side room refs.** Iterate `allEffects(pack)` (the enumerator at `:1208`, already
-   used at `:314`/`:324`/`:350`/`:805`/`:851`) and add `e.goto` (when `'goto' in e`) and
-   `e.place_object.room` (when `'place_object' in e`). `src/core/effects.ts:29` (goto) and `:40`
-   (place_object) confirm these are the only two room-id-bearing effects. Fold these into the same
-   set returned by step 1 (or a parallel set — your choice; one shared emit loop is simplest).
+**Error code:** `UNLOCK_EXIT_ROOM_MISSING`
 
-3. **Emit the findings** in the main `validate` body, in the same region as the existing
-   `roomIds.has(...)` reference checks (near `:131`/`:150`/`:210`). For each collected ref NOT in
-   `roomIds` (the set built at `:110`), push
-   `err("UNRESOLVED_ROOM_REFERENCE", \`condition/effect references room "${id}" that does not exist.\`, [<breadcrumb>])`.
-   Use the `err(code, message, where)` helper (`:31`) — it defaults to **error** severity, the same
-   as `EXIT_TARGET_MISSING`. A dangling room ref is a structural bug, NOT a deliberate transient — so
-   error severity is sound here (this is unlike the unordered-string quest-stage caveat at `:1187-1202`,
-   which you must NOT touch). ONE code `UNRESOLVED_ROOM_REFERENCE` for all four ref kinds (the
-   condition-vs-effect / which-room distinction lives in the message + breadcrumb only).
+**Severity:** `error` (same class as `EXIT_TARGET_MISSING` / `UNRESOLVED_ROOM_REFERENCE`)
 
-4. **RPG is covered for free** — `src/validate/rpg_validator.ts:102` calls `validateParser`. No
-   `rpg_validator.ts` edit needed (confirm at `:32` import + `:102` delegation).
+### Implementation steps
 
-5. **Add a broken fixture** `content/broken-fixtures/parser_unresolved_room_reference.yaml`, modelled
-   on `content/broken-fixtures/parser_exit_target_missing.yaml`: a tiny 2-room (a/b) winnable parser
-   pack, but with a `win_condition` or an exit `conditions` entry `{ visited: nowhere_room }` naming a
-   room that is NOT declared. Register it in `tests/unit/parser_validator.test.ts` `VALIDATOR_FIXTURES`
-   (the `[string,string][]` at `:29`, next to `["parser_exit_target_missing","EXIT_TARGET_MISSING"]`)
-   as `["parser_unresolved_room_reference","UNRESOLVED_ROOM_REFERENCE"]`.
+1. **Add a dedicated `UNLOCK_EXIT_ROOM_MISSING` emit block** in
+   `src/validate/parser_validator.ts`, placed immediately AFTER the
+   `UNRESOLVED_ROOM_REFERENCE` emit block (~line 233) and BEFORE the `AMBIGUOUS_ALIAS`
+   check (~line 235). Scan `allEffects(pack)` for `unlock_exit` effects and check both
+   `from` and `to` against `roomIds`:
 
-6. **Add negative-corpus CASES** in `tests/regression/parser_validator_negative_corpus.test.ts` (the
-   `CASES` array at `:85`), mutating the `GREEN = generateParserPack(0)` base (`:65`). Because
-   `UNRESOLVED_ROOM_REFERENCE` is **error**-severity, the file's existing error-only `codesOf` (`:67`)
-   already surfaces it — NO parallel warning filter needed (this is simpler than the INERT_OBJECT_STATE
-   case which needed one). Add one case mutating a `win_condition`/exit `visited` to a bogus room id
-   (assert `codesOf(mutant)` includes `UNRESOLVED_ROOM_REFERENCE`), and — only if convenient on the
-   generated base — one mutating a `goto`/`place_object.room` target; otherwise leave effect coverage to
-   the dedicated test in step 7. Do not weaken the existing `codesOf`/`CASES` discipline.
+   ```typescript
+   for (const e of allEffects(pack)) {
+     if (!("unlock_exit" in e)) continue;
+     for (const [side, id] of [
+       ["from", e.unlock_exit.from],
+       ["to", e.unlock_exit.to],
+     ] as const) {
+       if (!roomIds.has(id))
+         findings.push(
+           err(
+             "UNLOCK_EXIT_ROOM_MISSING",
+             `unlock_exit "${side}" room "${id}" does not exist — the unlock writes an unreachable exit flag and is a permanent no-op.`,
+             [`room:${id}`],
+           ),
+         );
+     }
+   }
+   ```
 
-7. **Add the dedicated §15 regression test** `tests/regression/parser_unresolved_room_reference.test.ts`,
-   modelled on `tests/regression/parser_inert_object_state.test.ts` (reuse its `parserCodes(src)` helper
-   `:50` and the `readdirSync` shipped-pack iteration idiom `:83`). Lock these cases:
-   - **(a) Invariant:** ALL shipped parser + RPG packs (`content/parser/pack` + `content/rpg/pack`,
-     auto-discovered via `readdirSync`) produce ZERO `UNRESOLVED_ROOM_REFERENCE` findings and stay green.
-   - **(b) Positive (condition):** a synthetic pack with a `visited`/`in_room` condition naming an
-     undeclared room → assert the codes include `UNRESOLVED_ROOM_REFERENCE` AND that finding's
-     `severity === "error"`.
-   - **(c) Positive (effect):** a synthetic pack with a `goto` and/or `place_object: { room: <typo> }`
-     effect naming an undeclared room → assert `UNRESOLVED_ROOM_REFERENCE` fires.
-   - **(d) Non-vacuity (mandatory):** correct the bogus id in the case-(b)/(c) mutant to a DECLARED room
-     → assert `UNRESOLVED_ROOM_REFERENCE` is now ABSENT. Proves the check keys on the genuine dangling
-     ref, not the mere presence of the condition/effect.
+   The `allEffects(pack)` enumerator (~line 1223) already yields `unlock_exit` effects
+   (it is already used at line ~329 to collect the settable-flags set via
+   `exitFlag(e.unlock_exit.from, e.unlock_exit.to)`). The field access pattern
+   `e.unlock_exit.from`/`.to` is already established — this is a straight reuse.
+   Severity is `error` (the `err()` default), same as `EXIT_TARGET_MISSING`.
 
-8. **Create the SoundnessBench artifact** `traces/bugs/bug_0277_parser_unresolved_room_reference.yaml`
-   (mirror the field shape of `traces/bugs/bug_0262_parser_inert_object_state.yaml` — read it for the
-   exact fields: id, title, class, summary, the gap, the fix, the soundness argument, and the
-   regression-lock filename). State the soundness argument: this seals **intra-frame room-reference
-   integrity**, the next rung on the assume-guarantee ladder toward the deferred world-frame manifest
-   (a region cannot soundly EXPORT a reachability guarantee at a cross-region edge if its own
-   `visited`/`in_room`/`goto`/`place_object` room refs may dangle). Reference arXiv:2412.03154
-   (SoundnessBench) consistent with the negative-corpus file header.
+2. **Update the `collectRoomRefs` comment** near the effect-side loop (~line 1590).
+   Change "the only two room-id-bearing effects" to "goto and place_object.room are
+   the room-id-bearing effects collected here; unlock_exit.from/.to are checked in a
+   dedicated UNLOCK_EXIT_ROOM_MISSING block in the validator body." This keeps the
+   comment accurate and explains why `unlock_exit` is not folded into `collectRoomRefs`.
+
+3. **Add `UNLOCK_EXIT_ROOM_MISSING` to the bail-early guard** at
+   `parser_validator.ts:252-258`. The current guard bails before graph analysis if
+   `EXIT_TARGET_MISSING` or `START_MISSING` is present. Add `UNLOCK_EXIT_ROOM_MISSING`:
+
+   ```typescript
+   if (
+     findings.some(
+       (f) =>
+         f.severity === "error" &&
+         ["EXIT_TARGET_MISSING", "START_MISSING", "UNLOCK_EXIT_ROOM_MISSING"].includes(
+           f.code,
+         ),
+     )
+   )
+   ```
+
+   Rationale: a dangling `unlock_exit` room id corrupts the settable-flags set the graph
+   analysis uses (line ~331: `settable.add(exitFlag(e.unlock_exit.from, e.unlock_exit.to))`
+   would add an unreachable flag), so bailing before graph analysis is sound — identical
+   logic to why `EXIT_TARGET_MISSING` bails.
+
+4. **Add a broken fixture** `content/broken-fixtures/parser_unlock_exit_room_missing.yaml`.
+   Model it on `content/broken-fixtures/parser_exit_target_missing.yaml`. Minimal
+   winnable pack (two declared rooms `a`/`b`, one exit north/south, one win condition
+   on `visited: b`) where one object's USE interaction has:
+   `unlock_exit: { from: ghost_room, to: b }` — `ghost_room` is NOT declared. Register
+   it in `tests/unit/parser_validator.test.ts` at the `VALIDATOR_FIXTURES` array (near
+   the `parser_exit_target_missing` entry) as:
+
+   ```typescript
+   ["parser_unlock_exit_room_missing", "UNLOCK_EXIT_ROOM_MISSING"],
+   ```
+
+5. **Add a negative-corpus CASE** in
+   `tests/regression/parser_validator_negative_corpus.test.ts` at the `CASES` array
+   (near line ~85). Mutate the `GREEN = generateParserPack(0)` base to inject an
+   `unlock_exit` effect with a bogus `from` room on some interaction (e.g., insert an
+   interaction effects entry `{ unlock_exit: { from: "phantom_room", to: <any_real_room> } }`
+   on a declared object). Assert `codesOf(mutant)` includes `UNLOCK_EXIT_ROOM_MISSING`.
+   Because this is `error` severity and `codesOf` is already error-only, no new filter
+   is needed. Do NOT weaken any existing `CASES` entry.
+
+6. **Add the dedicated §15 regression test**
+   `tests/regression/parser_unlock_exit_room_missing.test.ts`. Model it on
+   `tests/regression/parser_unresolved_room_reference.test.ts` (the closest structural
+   sibling — reuse its `parserCodes(src)` helper and the `readdirSync` shipped-pack
+   iteration idiom). Lock these cases:
+
+   - **(a) Invariant:** ALL shipped parser + RPG packs (`content/parser/pack` +
+     `content/rpg/pack`, auto-discovered via `readdirSync`) produce ZERO
+     `UNLOCK_EXIT_ROOM_MISSING` findings and stay green. (5 packs use `unlock_exit` —
+     lamplighters_round ×2, sealed_crypt ×2, tide_mill ×1 — all must produce zero
+     findings.)
+
+   - **(b) Positive (`from` side):** a synthetic pack with
+     `unlock_exit: { from: ghost_room, to: b }` where `ghost_room` is not declared →
+     assert codes include `UNLOCK_EXIT_ROOM_MISSING` AND that finding's
+     `severity === "error"` AND that `message` contains `ghost_room`.
+
+   - **(c) Positive (`to` side):** a synthetic pack with
+     `unlock_exit: { from: a, to: ghost_room }` where `ghost_room` is not declared →
+     assert `UNLOCK_EXIT_ROOM_MISSING` fires with message containing `ghost_room`.
+
+   - **(d) NON-VACUITY (mandatory):** correct the bogus room id in case (b) to a
+     DECLARED room (`a` or `b`) → assert `UNLOCK_EXIT_ROOM_MISSING` is now ABSENT.
+     Proves the check keys on the genuine dangling ref, not the mere presence of
+     `unlock_exit`.
+
+   - **(e) Both sides dangle:** a synthetic pack with
+     `unlock_exit: { from: ghost_a, to: ghost_b }` where BOTH are undeclared → assert
+     the findings include at least one `UNLOCK_EXIT_ROOM_MISSING` per dangling side.
+
+7. **Create the SoundnessBench artifact**
+   `traces/bugs/bug_0278_parser_unlock_exit_room_missing.yaml`. Mirror the field shape
+   of `traces/bugs/bug_0277_parser_unresolved_room_reference.yaml` exactly (fields:
+   bug_id, component, class, title, findings[].{id, where, severity, description, fix},
+   soundness_argument, failure.{type, description}, regression_test). The soundness
+   argument should state:
+
+   - `unlock_exit` carries two room ids (`from` and `to`) that are semantically
+     load-bearing: the engine computes the exit-flag key as `__exit:FROM->TO`
+     (`src/core/effects.ts`). If either room id is absent from `pack.rooms`, the written
+     flag key can never match any exit's `conditions` check (which uses the same
+     `exitFlag` formula keyed on DECLARED room ids), making the unlock a permanent
+     silent no-op — harder to diagnose than a dead gate because the effect appears to
+     fire.
+   - Bug_0277 sealed conditions (`visited`/`not_visited`/`in_room`) and the
+     `goto`/`place_object.room` effects; bug_0278 seals the `unlock_exit.from`/`.to`
+     effect — together these cover every room-id-bearing construct in the pack schema,
+     completing intra-frame room-reference integrity.
+   - Reference arXiv:2412.03154 (SoundnessBench) consistent with sibling artifacts.
+
+8. **Mandated blind pass — `content/parser/pack/friars_postern.yaml`.** The mandated
+   blind pass this cycle is `friars_postern.yaml`. Run the blind pass (parser mode,
+   fresh MCP-only subagent with no content/src/tests access, seeds 7/13/3) and append
+   the report to `AI_LOOP_STATE.md` using the same format as prior blind passes. The
+   blind pass is independent of the validator change and should complete regardless of
+   test results. Key facts for verification: `friars_postern.yaml` uses `remove_item:
+   clay_pipe` (verified clean — `clay_pipe` is a declared object). No `unlock_exit` in
+   this pack.
 
 ## WHY this, not the runner-ups
 
-- **vs. promoting the test-only forward-reachability / no-dead-pocket BFS
-  (`tests/regression/support/exhaustive_endings.ts`, bug_0150) into a validator-integrated AG(EF goal)
-  pass:** blast radius **L** — moving an ~80k-state per-pack BFS into the `validate` path that
-  `npm run health` runs on ALL packs materially raises validate-time cost and reintroduces the
-  health-load-flake timeout surface (per the health-load-flake note + the 60s per-pack ceiling in
-  `no_dead_pocket.test.ts`). It is also largely duplicative — bug_0150 already dynamically certifies
-  every shipped pack has no reachable soft-lock pocket with negative controls. Correctly sequenced
-  AFTER this cheap reference-integrity rung. **DEFERRED.**
-- **vs. World-frame manifest schema + modular cross-region static reachability (assume-guarantee
-  composition):** the right open-world lever, but blast radius **L** and multi-cycle (schema + manifest
-  + per-region validators + cross-region composition) — not shippable in one clean offline cycle. Its
-  OWN precondition is that a region seal intra-frame reference integrity before it can soundly export a
-  reachability guarantee at a region edge — which is exactly why `UNRESOLVED_ROOM_REFERENCE` lands
-  first as the next rung. **DEFERRED (this move is its precondition).**
-- **vs. a per-step oracle/RLVR trajectory verifier or a differential-model monotonicity validator
-  (Gaia2/AutoEnv-style, from web research):** high long-term leverage, but the RLVR per-step verifier
-  needs a new agent-scoring subsystem (not a small additive validator pass), and the monotonicity
-  validator requires running two policies of differing strength — effectively a keyed/model-driven run,
-  explicitly out of scope this cycle. **DEFERRED.**
+- **vs. `observation_difficulty` enum (loop/strategy reviewer's top pick):** the feature
+  is ALREADY FULLY LANDED. `hide_graph` is wired end-to-end from `new_game`/`start_game`
+  through `s.hideGraph` through `obsOf(s)` through all three observation builders. The
+  CYOA builder is correct by construction (never exposes `choice.next`). The parser
+  builder correctly omits `exit.to` when `hideGraph`. The only remaining gap is
+  cosmetic: a named enum (`easy`/`hard`) vs. a boolean. That is a doc/naming polish,
+  not a structural move. **NOT THE MOVE — already done.**
 
-This move wins on all four selection criteria: genuinely open (orchestrator re-verified the gap in
-source — no room-ref check exists), tightest frontier fit (cross-region room references are exactly what
-an assemble-from-packs open world produces; this is the intra-frame precondition), smallest blast radius
-that still delivers (one new error code keyed on a fresh read-walker, ~100% scaffolding reuse, all 10
-packs already clean), clean additive/key-free/no-weaken/green-preserving profile.
+- **vs. `add_item`/`remove_item` dangling item-ref check (engine/determinism reviewer
+  Gap 2):** real gap, but: (a) 0 dangling refs in 17 shipped packs (verified by
+  orchestrator scan); (b) `add_item` targets already flow through the obtainability
+  fixpoint (`parser_validator.ts:461`), so a phantom item is partially handled; (c) the
+  `unlock_exit` gap is semantically worse (the unlock APPEARS to succeed, confusing
+  authors). Correctly sequenced AFTER `unlock_exit` closes the room-ref family.
+  **DEFERRED.**
+
+- **vs. LLM-judge tamper-detector second pass (verification/benchmark reviewer Gap 2):**
+  blast radius L; requires a keyed/model-driven run (LLM diff-pass); explicitly out of
+  scope for an offline key-free cycle. The existing `verify-integrity.ts` semantic floor
+  guards (ASSERTION_COUNT_REGRESSION, strong-matcher floor) and the SoundnessBench
+  discipline (non-vacuity tests) already address the vacuous-strong-matcher hole
+  mechanically. **DEFERRED.**
+
+- **vs. `alchemists_tower` steadiness content fix (content/authoring reviewer):** S
+  blast radius, viable, but content polish — not structural. Carried forward from
+  cycle #13. **DEFERRED.**
+
+- **vs. parser/RPG writer-prompt mode-aware beat guidance (content/authoring reviewer):**
+  M blast radius, correct structural direction, but the writer-prompt gap requires more
+  calibration data from the authoring pipeline before a mode-aware prompt improvement is
+  grounded. **DEFERRED.**
+
+- **vs. forward-reachability BFS validator / world-frame manifest:** same deferred
+  rationale as cycle #13 — L blast radius, multi-cycle, correctly sequenced after
+  intra-frame reference integrity is complete (this move closes the last room-ref gap).
+  **DEFERRED.**
 
 ## VERIFIED anchors (orchestrator opened + confirmed in source at HEAD — re-derive, do not trust line numbers blindly)
 
-- `src/validate/parser_validator.ts:110` — `roomIds = new Set(pack.rooms.map(r => r.id))`.
-- `src/validate/parser_validator.ts:131 / :150 / :210` — the ONLY existing `roomIds.has(...)` checks
-  (`start_room`, `exit.to`, `npc.room`). No condition-room-id or effect-room-id check exists.
-- `src/validate/parser_validator.ts:31` — `err(code, message, where)` helper, defaults to **error**.
-- `src/validate/parser_validator.ts:1471` — `collectFlagReads` (the correct read-walker template;
-  descends all_of/any_of/none_of over rooms+exits, objects+interactions, win_conditions, ending
-  variants, NPC dialogue). MIRROR this.
-- `src/validate/parser_validator.ts:1509` — `collectObjectStateReads` (place `collectRoomRefs` right
-  after it). Do NOT reuse `objectStateReqs` (all_of-only, would under-count).
-- `src/validate/parser_validator.ts:1208` — `allEffects(pack)` enumerates every authored effect (the
-  goto/place_object source).
-- `src/core/conditions.ts:20-29` — `visited`/`not_visited`/`in_room` are bare `z.string().min(1)`.
-- `src/core/conditions.ts:80-82` — a typo'd id silently evaluates false forever (the latent footgun).
-- `src/core/effects.ts:29` (`goto`) + `:40` (`place_object: { id, room }`) — the only room-id effects.
-- `src/validate/rpg_validator.ts:32` (import) + `:102` (`validateParser` delegation) — RPG covered free.
-- `content/broken-fixtures/parser_exit_target_missing.yaml` — the fixture template.
-- `tests/unit/parser_validator.test.ts:29` — `VALIDATOR_FIXTURES` registry.
-- `tests/regression/parser_validator_negative_corpus.test.ts:65` (`GREEN`), `:67` (`codesOf`,
-  error-only), `:85` (`CASES`).
-- `tests/regression/parser_inert_object_state.test.ts:50` (`parserCodes`), `:83` (`readdirSync`
-  shipped-pack iteration) — the dedicated-test template.
-- `traces/bugs/bug_0262_parser_inert_object_state.yaml` — copy the artifact field shape for bug_0277.
+- `src/validate/parser_validator.ts` — `collectRoomRefs` function near line 1564; the
+  effect-side loop (~1590-1594) collects `goto` and `place_object.room` but NOT
+  `unlock_exit.from`/`.to`. The comment says "the only two room-id-bearing effects" —
+  this is the gap.
 
-## CRITICAL directions / what NOT to get wrong
+- `src/validate/parser_validator.ts:329-331` — `unlock_exit` IS already enumerated in
+  `allEffects` for the settable-flags set:
+  `settable.add(exitFlag(e.unlock_exit.from, e.unlock_exit.to))`. The field access
+  pattern `e.unlock_exit.from`/`.to` is already established — copy it exactly.
 
-1. **Use a FRESH `collectFlagReads`-style read walker** that descends `all_of`/`any_of`/`none_of`. Do
-   NOT reuse `objectStateReqs` (all_of-only) — a disjunction-guarded room ref would be missed.
-2. **Severity MUST be `error`** (the `err()` default) — assert it in test case (b). A dangling room ref
-   is a structural defect like a missing exit target, not a transient.
-3. **Non-vacuity case (7d) is mandatory** — the corrected-id variant must clear the warning, proving the
-   check keys on the genuine dangling ref, not the condition/effect's mere presence.
-4. **New code name is exactly `UNRESOLVED_ROOM_REFERENCE`**, ONE code for all four ref kinds. Additive —
-   weakens no existing matcher.
-5. **Do NOT edit** the schema, engine, effects/conditions runtime, generators, RPG validator, corpus
-   seal, scorecard, any pack hash, or `scripts/verify-integrity.ts` (PROTECTED). The metamorphic relabel
-   oracles need NO edit (room ids already pass through the relabel bijection — the twin's finding-code
-   census stays isomorphic).
-6. **No content pack edit.** All 10 shipped parser+RPG packs are already clean (14 refs, 0 dangling) —
-   if any pack appears to warn, STOP: that is a real latent bug to surface, not a reason to weaken the
-   check (but the scan says none do).
+- `src/validate/parser_validator.ts:110` — `const roomIds = new Set(pack.rooms.map((r) => r.id))`.
+  Use unchanged.
+
+- `src/validate/parser_validator.ts:31` — `err(code, message, where)` helper. Defaults
+  to `error` severity. Use `err("UNLOCK_EXIT_ROOM_MISSING", ..., ["room:" + id])`.
+
+- `src/validate/parser_validator.ts:252-258` — the bail-early guard. Add
+  `UNLOCK_EXIT_ROOM_MISSING` to the bail list.
+
+- `src/validate/parser_validator.ts:1223` — `allEffects(pack)` enumerator. Already
+  yields `unlock_exit` effects.
+
+- `src/core/effects.ts:31` — `unlock_exit: z.object({ from: z.string().min(1), to: z.string().min(1) })`.
+  Both are room ids.
+
+- `src/validate/rpg_validator.ts:102` — delegates to `validateParser`. RPG is covered
+  for free. No `rpg_validator.ts` edit needed.
+
+- Shipped `unlock_exit` packs (all 5 verified clean by orchestrator Python scan):
+  `content/parser/pack/lamplighters_round.yaml` (lamp_walk→excise_store,
+  harbour_head→the_strand), `content/parser/pack/sealed_crypt.yaml`
+  (old_well→well_bottom, crypt→catacombs), `content/parser/pack/tide_mill.yaml`
+  (wheel_room→the_staith).
+
+- `content/broken-fixtures/parser_exit_target_missing.yaml` — fixture template.
+- `tests/unit/parser_validator.test.ts` — `VALIDATOR_FIXTURES` registry near line 29.
+- `tests/regression/parser_validator_negative_corpus.test.ts` — `CASES` near line 85;
+  `codesOf` (error-only) near line 67.
+- `tests/regression/parser_unresolved_room_reference.test.ts` — dedicated-test template.
+- `traces/bugs/bug_0277_parser_unresolved_room_reference.yaml` — bug artifact template.
 
 ## Files
 
 **DO-NOT-EDIT (protected):**
 - `scripts/verify-integrity.ts` — PROTECTED. Never edit. Do not lower any
-  MIN_*/SATURATION_FLOOR/GEN_EVAL_CHECK_COUNT/PROTECTED/HASH_PIN, do not relax any matcher. (Test count
-  only RISES, strengthening its TEST_COUNT guard.)
+  MIN_*/SATURATION_FLOOR/GEN_EVAL_CHECK_COUNT/PROTECTED/HASH_PIN, do not relax any
+  matcher. Test count only RISES, strengthening its TEST_COUNT guard.
 
 **READ-ONLY (confirm anchors, do not change):**
-- `src/core/conditions.ts` — `visited`/`not_visited`/`in_room` read predicates.
-- `src/core/effects.ts` — `goto` / `place_object.room` effect shapes.
-- `src/validate/rpg_validator.ts` — confirms `validateParser` delegation (RPG covered free).
+- `src/core/effects.ts` — `unlock_exit: { from, to }` shape (~line 31).
+- `src/validate/rpg_validator.ts` — confirms `validateParser` delegation (~line 102).
 - `content/broken-fixtures/parser_exit_target_missing.yaml` — fixture template.
-- `tests/regression/parser_inert_object_state.test.ts` — dedicated-test template.
-- `traces/bugs/bug_0262_parser_inert_object_state.yaml` — artifact field-shape template.
+- `tests/regression/parser_unresolved_room_reference.test.ts` — dedicated-test template.
+- `traces/bugs/bug_0277_parser_unresolved_room_reference.yaml` — artifact template.
+- `content/parser/pack/lamplighters_round.yaml`, `sealed_crypt.yaml`, `tide_mill.yaml`
+  — confirm the 5 shipped `unlock_exit` uses stay GREEN after the change.
 
 **EDIT:**
-- `src/validate/parser_validator.ts` — add `collectRoomRefs` (after `collectObjectStateReads`, ~`:1509`),
-  collect goto/place_object refs from `allEffects`, emit `UNRESOLVED_ROOM_REFERENCE` near the existing
-  `roomIds.has` checks.
-- `tests/unit/parser_validator.test.ts` — register the new fixture in `VALIDATOR_FIXTURES` (`:29`).
-- `tests/regression/parser_validator_negative_corpus.test.ts` — add the dangling-room-ref CASE(s)
-  (`:85`); leave the existing `codesOf`/`CASES` discipline untouched.
+- `src/validate/parser_validator.ts` — (a) add `UNLOCK_EXIT_ROOM_MISSING` emit block
+  after the `UNRESOLVED_ROOM_REFERENCE` block; (b) update the `collectRoomRefs` comment;
+  (c) add `UNLOCK_EXIT_ROOM_MISSING` to the bail-early guard.
+- `tests/unit/parser_validator.test.ts` — register `parser_unlock_exit_room_missing`
+  fixture in `VALIDATOR_FIXTURES`.
+- `tests/regression/parser_validator_negative_corpus.test.ts` — add the `unlock_exit`
+  bogus-room CASE to `CASES`.
 
 **NEW:**
-- `content/broken-fixtures/parser_unresolved_room_reference.yaml` — the broken fixture.
-- `tests/regression/parser_unresolved_room_reference.test.ts` — the dedicated reference-integrity test
-  (cases a-d).
-- `traces/bugs/bug_0277_parser_unresolved_room_reference.yaml` — the SoundnessBench-lineage bug artifact.
+- `content/broken-fixtures/parser_unlock_exit_room_missing.yaml` — the broken fixture.
+- `tests/regression/parser_unlock_exit_room_missing.test.ts` — dedicated test (cases
+  a-e).
+- `traces/bugs/bug_0278_parser_unlock_exit_room_missing.yaml` — the SoundnessBench-
+  lineage bug artifact.
 
 ## Acceptance check (concrete, verifiable)
 
-1. `npx vitest run tests/regression/parser_unresolved_room_reference.test.ts` — GREEN: the condition and
-   effect mutants both fire `UNRESOLVED_ROOM_REFERENCE` at severity `error`; the corrected-id variant
-   clears it (non-vacuity); all shipped parser + RPG packs emit zero `UNRESOLVED_ROOM_REFERENCE`.
+1. `npx vitest run tests/regression/parser_unlock_exit_room_missing.test.ts` — GREEN:
+   cases (b) and (c) fire `UNLOCK_EXIT_ROOM_MISSING` at severity `error`; case (d)
+   non-vacuity clears it; case (e) fires for both dangling sides; case (a) shows all 5
+   `unlock_exit` packs produce zero `UNLOCK_EXIT_ROOM_MISSING`.
+
 2. `npx vitest run tests/unit/parser_validator.test.ts` — GREEN: the new fixture
-   `parser_unresolved_room_reference` validates with code `UNRESOLVED_ROOM_REFERENCE`.
-3. `npm run health` — EXIT 0, all 17 packs validate clean with ZERO `UNRESOLVED_ROOM_REFERENCE`
-   findings. Verify the EXIT CODE under load per the health-load-flake note
-   (`taskset -c 0-3 npm run health` if available), not one fast run.
-4. `npm run verify:integrity` — EXIT 0, no GUARD_WEAKENED / VERIFIER_TOUCHED / count regression; test
-   count strictly ABOVE the prior 1833.
-5. `traces/bugs/bug_0277_parser_unresolved_room_reference.yaml` exists and parses as YAML.
+   `parser_unlock_exit_room_missing` validates with code `UNLOCK_EXIT_ROOM_MISSING`.
+
+3. `npm run health` — EXIT 0. All 17 packs validate clean with ZERO
+   `UNLOCK_EXIT_ROOM_MISSING` findings. The 5 `unlock_exit` packs (lamplighters_round,
+   sealed_crypt, tide_mill) specifically produce zero findings.
+
+4. `npm run verify:integrity` — EXIT 0, no GUARD_WEAKENED / VERIFIER_TOUCHED / count
+   regression; test count strictly ABOVE the prior 1841.
+
+5. `traces/bugs/bug_0278_parser_unlock_exit_room_missing.yaml` exists and parses as YAML.
+
+6. Mandated blind pass report for `friars_postern.yaml` is appended to `AI_LOOP_STATE.md`.
 
 ## Hard constraints
 
-- ONE focused, key-free, OFFLINE, deterministic, ADDITIVE/strengthening STRUCTURAL change. No content
-  polish, no new curated pack, no keyed run.
-- No floor lowered, no matcher relaxed, no PROTECTED/HASH_PIN shrunk, `scripts/verify-integrity.ts`
-  untouched.
-- No engine/schema/effects/conditions runtime change; no pack hash / scorecard / corpus-seal movement; no
-  generator-version bump; no RPG-validator edit.
+- ONE focused, key-free, OFFLINE, deterministic, ADDITIVE/strengthening STRUCTURAL
+  change. No content polish, no new curated pack, no keyed run.
+- No floor lowered, no matcher relaxed, no PROTECTED/HASH_PIN shrunk,
+  `scripts/verify-integrity.ts` untouched.
+- No engine/schema/effects/conditions runtime change; no pack hash / scorecard /
+  corpus-seal movement; no generator-version bump; no RPG-validator edit.
 - Game stays playable; `npm run health` stays green.
+- Error code is exactly `UNLOCK_EXIT_ROOM_MISSING` — one code for both `from` and `to`
+  sides (the side distinction lives in the message only).
 
 ## Reward-hacking guardrails (baked in)
 
-- The check is ADDITIVE (a new error code), so it cannot weaken any existing assertion; verify:integrity's
-  count/floor guards remain the bar and must stay green.
-- The dedicated test proves the check FIRES on a dangling ref (both condition and effect kinds) AND
-  non-vacuity (a corrected id clears it) — the same SoundnessBench discipline (arXiv:2412.03154) the
-  INERT_OBJECT_STATE / negative corpora use.
-- The shipped-packs-stay-green invariant pins that no real pack emits the new code (verified: 14 refs, 0
-  dangling), preventing a vacuous always-fire implementation; keying strictly on `roomIds` membership keeps
-  it from false-positiving and tempting a weakening of a real pack to silence it.
+- The check is ADDITIVE (a new error code), so it cannot weaken any existing assertion;
+  verify:integrity's count/floor guards remain the bar and must stay green.
+- The dedicated test proves the check FIRES on both dangling `from` and dangling `to`
+  (cases b, c), fires for both dangling simultaneously (case e), and proves NON-VACUITY
+  (case d: correct id clears it) — the same SoundnessBench discipline (arXiv:2412.03154)
+  as bug_0277 / INERT_OBJECT_STATE.
+- The shipped-packs-stay-green invariant (auto-discover + iterate every parser + RPG
+  pack, assert zero `UNLOCK_EXIT_ROOM_MISSING`) pins that no real pack emits the new
+  code (verified: 5 `unlock_exit` uses, 0 dangling), preventing a vacuous always-fire
+  implementation.
 
-## Rejected alternatives & deferred to next cycle
+## Rejected alternatives and deferred to next cycle
 
-- **DEFERRED — validator-integrated forward-reachability (AG(EF goal)) BFS:** promote the test-only
-  `support/exhaustive_endings.ts` BFS into a per-pack validator pass. Blast radius L; risks the health
-  time budget; largely duplicative of bug_0150's dynamic no-dead-pocket certification. Sequence after this.
-- **DEFERRED — World-frame manifest schema + modular cross-region static reachability:** the open-world
-  lever; multi-cycle; unblocked once intra-frame reference integrity (THIS move) is sealed.
-- **DEFERRED — Goal-2 dev/blind-test loop split:** process/infra; independent track; ships no
-  SoundnessBench-sense witness this cycle.
-- **DEFERRED — per-step RLVR/Gaia2 trajectory verifier · differential-model monotonicity validator:** new
-  subsystem and/or keyed/model-driven; out of scope this offline cycle.
-- **NOTED (blind-pass finding, NOT this cycle's move) — alchemists_tower `grip iron key` steadiness check
-  is legible (bug_0274) but mechanically INERT:** the cellar unlocks without it, the `steadiness` flag has
-  no observed downstream effect, and the action lingers after it is useful. This is the recurring
-  vestigial-self-USE skill_check family (see [[affordance-signpost-class]]); a candidate content/quest fix
-  for a FUTURE cycle (telegraph-then-room-gate or give the check a real consequence), not this structural
-  cycle. Recorded in the playtest report below.
+- **DEFERRED — `add_item`/`remove_item` dangling item-ref check:** the item-id analogue
+  of `UNRESOLVED_ROOM_REFERENCE`. Real gap, but zero dangling refs in 17 shipped packs;
+  `add_item` targets partially handled by the obtainability fixpoint. Next in sequence
+  after `unlock_exit` closes the room-ref family.
+- **DEFERRED — `observation_difficulty` enum naming:** the `hide_graph` boolean is
+  already fully wired end-to-end. A named enum is a doc/naming cosmetic, not a
+  structural move.
+- **DEFERRED — LLM-judge tamper-detector second pass:** blast radius L; requires a
+  keyed model run; out of scope for an offline cycle.
+- **DEFERRED — parser/RPG writer-prompt mode-aware beat guidance:** M blast radius;
+  correct structural direction; needs more calibration data.
+- **DEFERRED — forward-reachability BFS validator / world-frame manifest:** L blast
+  radius, multi-cycle. Correctly sequenced after intra-frame reference integrity is
+  complete (this move closes the last room-ref gap).
+- **NOTED (blind-pass finding, NOT this cycle's move) — alchemists_tower `grip iron
+  key` steadiness check is legible (bug_0274) but mechanically INERT:** carried forward
+  from cycle #13. Candidate content/quest fix for a future cycle.
 
-## Mandated blind playtest (this cycle — DONE)
+---
 
-Per the harness directive and the dedicated-pass rotation, the mandated blind pass ran this cycle on
-**`content/parser/pack/alchemists_tower.yaml`** (parser, the longest-overdue rank-2 nominee; seeds 7/13/3;
-fresh MCP-only general-purpose subagent, no content/src/ui/tests access). Report:
-`ai-runs/2026-06-05T07-29-21-465Z/playtest.md`. Result: **STRONG — clarity 5/5, enjoyment 4/5**, all three
-declared endings reached (`ending_cured` 40/40 win · `ending_poisoned` death · `ending_betrayal` 30/40),
-**mechanically flawless** (zero rejected actions, zero broken state, no loops; reactive prose + lock/key +
-score economy all verified), **ZERO mechanical bugs**. Sole §5 note: the `grip iron key` steadiness check
-is legible but inert (see "NOTED" above). Recorded for AI_LOOP_STATE.md as "Mandated blind pass ran on
-alchemists_tower".
+# Ultraplan re-aim cycle #14 (HEAD = bug_0277; next free id = bug_0278)
+
+## Synthesis
+
+A bounded ultraplan ran this cycle — **4 repo reviewers** (engine/determinism ·
+content/authoring · verification/benchmark · loop/strategy) **+ 2 web researchers**
+(frontier IF/agentic benchmarks · verification-at-scale/reward-hacking) **→ 1 synthesis**
+— grounded against the live repo at HEAD = bug_0277, then **independently re-verified by
+the orchestrator against source** before being committed here.
+
+The synthesis agent's initial pick was `observation_difficulty` mode. **The orchestrator
+re-verified this against source and found it largely already implemented:**
+- `HIDE_GRAPH` constant in `src/mcp/server.ts:51-57` — accepted by `new_game`/`start_game`.
+- `src/parser/observation.ts:129` already suppresses `exit.to` when `hideGraph`.
+- `src/cyoa/observation.ts:52-59` accepts `_opts` as no-op; CYOA choices do not expose
+  `choice.next` by construction ("hidden by construction").
+- The gap is narrow: no `observation_difficulty` *named enum* parameter exists, only the
+  boolean `hide_graph`. This is a naming/ergonomics gap, not a functional one.
+
+**The orchestrator then applied the engine reviewer's finding**, which identified a
+genuinely open structural gap in `collectRoomRefs` — the function bug_0277 just added.
+That finding is the chosen move for cycle #14.
+
+## Chosen move — `UNLOCK_EXIT_ROOM_REFERENCE` (bug_0278)
+
+**Goal:** `collectRoomRefs` in `src/validate/parser_validator.ts` (the read-walker added
+by bug_0277) collects room IDs from condition sites (`visited`/`not_visited`/`in_room`)
+and effect sites (`goto`, `place_object.room`). The comment at line 1590 says these are
+"the only room-id-bearing effects" — **this is wrong.** `unlock_exit: { from, to }`
+(defined at `src/core/effects.ts:31`) carries two room IDs, and neither `from` nor `to`
+is added to `collectRoomRefs`'s set. A typo'd `unlock_exit.from` or `.to` silently
+writes an unreachable exit-flag key (`__exit:phantom->real` instead of
+`__exit:real->real`), making the exit permanently un-lockable — no existing oracle catches
+this. This is a direct bug_0277 follow-on: same function, same error code
+(`UNRESOLVED_ROOM_REFERENCE`), blast radius S.
+
+**Verification that shipped packs stay green:** 5 `unlock_exit` uses exist across 3
+shipped packs (tide_mill: 1, lamplighters_round: 2, sealed_crypt: 2). All use valid,
+declared room IDs — the check fires ZERO times on shipped content.
+
+## Implementation (numbered, concrete)
+
+1. **Edit `src/validate/parser_validator.ts` — the `collectRoomRefs` effect loop**
+   (currently at ~lines 1590–1594). Change the loop and its preceding comment from:
+   ```typescript
+   // Effect-side room refs: goto + place_object.room (the only room-id-bearing effects).
+   for (const e of allEffects(pack)) {
+     if ("goto" in e) refs.add(e.goto);
+     else if ("place_object" in e) refs.add(e.place_object.room);
+   }
+   ```
+   To:
+   ```typescript
+   // Effect-side room refs: goto, place_object.room, and unlock_exit.from/.to.
+   for (const e of allEffects(pack)) {
+     if ("goto" in e) refs.add(e.goto);
+     else if ("place_object" in e) refs.add(e.place_object.room);
+     else if ("unlock_exit" in e) {
+       refs.add(e.unlock_exit.from);
+       refs.add(e.unlock_exit.to);
+     }
+   }
+   ```
+   No other change to `parser_validator.ts`. The emit loop at ~lines 224–230 already
+   calls `err("UNRESOLVED_ROOM_REFERENCE", …)` for every ref not in `roomIds` — no
+   change needed there.
+
+2. **Edit `tests/regression/parser_unresolved_room_reference.test.ts`** — add new cases
+   inside the existing `describe("bug_0277 …")` block. The existing `pack()` helper
+   (line 52-76) supports `opts.effects` as inline YAML for an interaction on `lever`.
+   Add:
+
+   - **Case (e):** `pack({ effects: "{ unlock_exit: { from: phantom_room, to: b } }" })`
+     → assert `codes.includes("UNRESOLVED_ROOM_REFERENCE")` and `severity === "error"`;
+     assert `message.includes("phantom_room")`.
+
+   - **Case (e'):** `pack({ effects: "{ unlock_exit: { from: a, to: phantom_room } }" })`
+     → same assertions for the `to` dangling ref; assert `message.includes("phantom_room")`.
+
+   - **Case (e-nonvacuity):** `pack({ effects: "{ unlock_exit: { from: a, to: b } }" })`
+     → assert `codes` does NOT contain `"UNRESOLVED_ROOM_REFERENCE"` (both `a` and `b`
+     are declared rooms — proves the check keys on genuine dangling refs, not the mere
+     presence of `unlock_exit`).
+
+   Also update the file's header comment to mention `unlock_exit.from/.to` as a covered
+   effect kind alongside `goto` and `place_object.room`.
+
+3. **Create `traces/bugs/bug_0278_unlock_exit_room_reference.yaml`** — mirror the field
+   shape of `traces/bugs/bug_0277_parser_unresolved_room_reference.yaml`. Fields: id
+   (bug_0278), title, class (soundness/validator), summary, the_gap (unlock_exit.from/.to
+   not collected by collectRoomRefs; comment literally wrong), the_fix (else-if branch in
+   the effect loop), soundness_argument (same as bug_0277: seals intra-frame
+   room-reference integrity, now including all room-id-bearing effect kinds), and the
+   regression-lock filename. Reference arXiv:2412.03154 (SoundnessBench) consistent with
+   bug_0277.
+
+## VERIFIED anchors (re-derive; do not trust line numbers blindly)
+
+- `src/validate/parser_validator.ts` — `collectRoomRefs` function, its `allEffects`
+  loop. Search for `"the only room-id-bearing effects"` to locate the comment to fix.
+- `src/core/effects.ts:31` — `unlock_exit: z.object({ from: z.string().min(1), to:
+  z.string().min(1) })` — confirms `from` and `to` are room-id strings.
+- `src/validate/parser_validator.ts:224-230` — the emit loop that calls
+  `err("UNRESOLVED_ROOM_REFERENCE", …)` for every ref not in `roomIds` — needs no change.
+- `tests/regression/parser_unresolved_room_reference.test.ts` — the existing test file;
+  read it in full before adding cases to understand the `pack()` helper and the describe block.
+- `traces/bugs/bug_0277_parser_unresolved_room_reference.yaml` — copy field shape.
+
+## WHY this, not the runner-ups
+
+- **vs. `observation_difficulty` naming/enum (synthesis's pick):** `hide_graph` is already
+  implemented end-to-end for the functional cases (parser observation suppresses `exit.to`,
+  CYOA is hidden by construction, MCP tools expose the boolean). The gap is ergonomic/naming.
+  The `unlock_exit` gap is a real structural validator hole the comment in source incorrectly
+  denies. Blast radius S vs M.
+- **vs. forward-reachability BFS validator (AG(EF goal)):** deferred again — blast radius L,
+  health time-budget risk, largely duplicative of bug_0150's dynamic certification.
+- **vs. world-frame manifest / cross-region static reachability:** the right open-world lever
+  but multi-cycle; its precondition (intra-frame reference integrity sealed by bug_0277) now
+  also includes this fix (bug_0278: all room-id-bearing effects validated).
+- **vs. alchemists_tower inert steadiness check (content fix):** viable but not structural;
+  deferred to a future content cycle.
+
+## Files
+
+**DO-NOT-EDIT (protected):**
+- `scripts/verify-integrity.ts` — PROTECTED. Never edit.
+
+**READ-ONLY (confirm anchors):**
+- `src/core/effects.ts` — `unlock_exit` shape.
+- `traces/bugs/bug_0277_parser_unresolved_room_reference.yaml` — artifact template.
+- `tests/regression/parser_unresolved_room_reference.test.ts` — read in full first.
+
+**EDIT:**
+- `src/validate/parser_validator.ts` — `collectRoomRefs` effect loop + comment.
+- `tests/regression/parser_unresolved_room_reference.test.ts` — add (e)/(e')/(e-nonvacuity).
+
+**NEW:**
+- `traces/bugs/bug_0278_unlock_exit_room_reference.yaml`
+
+## Acceptance check (concrete, verifiable)
+
+1. `npx vitest run tests/regression/parser_unresolved_room_reference.test.ts` — GREEN: all
+   existing cases (a/b/b'/c/c'/d) still pass; new cases (e)/(e')/(e-nonvacuity) also GREEN.
+2. `npm run health` — EXIT 0; all 17 packs produce 0 `UNRESOLVED_ROOM_REFERENCE` findings
+   (including tide_mill / lamplighters_round / sealed_crypt with their `unlock_exit` effects).
+3. `npm run verify:integrity` — EXIT 0; no GUARD_WEAKENED/VERIFIER_TOUCHED; test count strictly
+   above 1841.
+4. `traces/bugs/bug_0278_unlock_exit_room_reference.yaml` exists and parses as YAML.
+
+## Hard constraints
+
+- ONE focused, key-free, offline, additive/strengthening structural change.
+- No content polish, no new pack, no keyed run.
+- No floor lowered, no matcher relaxed, `scripts/verify-integrity.ts` untouched.
+- No engine/schema/effects/conditions runtime change; no pack hash / scorecard / corpus-seal.
+- Game stays playable; `npm run health` stays green.
+
+## Deferred to next cycle
+
+- `observation_difficulty` enum naming — the functional hide_graph is already done; a named
+  enum is ergonomic polish deferred.
+- Forward-reachability BFS validator (AG(EF goal)) — blast radius L, deferred.
+- World-frame manifest — multi-cycle, unblocked after this fix seals all room-id-bearing effects.
+- Alchemists_tower inert steadiness check — content fix, deferred.
+- Per-step RLVR/Gaia2 trajectory verifier — needs keyed run, deferred.
+
+## Mandated blind playtest (this cycle)
+
+Per the harness directive and the blind-pass rotation, the mandated blind pass runs this
+cycle on **`content/parser/pack/friars_postern.yaml`** (the rotation's next nominee).
+Report: `ai-runs/2026-06-08T01-10-02-147Z/playtest.md`.
