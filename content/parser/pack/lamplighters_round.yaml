@@ -75,6 +75,22 @@ rooms:
       as well. Your own round-lantern burns low at your belt as it has all the round, throwing
       no more than a yard of light back into the murk — a lighter cannot work a river fog
       without it. The staith runs on north into the dark; the dark water laps somewhere below.
+    variants:
+      - when: [{ has_item: tinderbox }, { has_item: brass_key }, { has_item: horn_windscreen }]
+        text: >
+          Fog stands thick on the river-stair. A pasted night-notice peels from the wall by
+          the handrail; the sill where the lighter's things lay is bare now. Your own
+          round-lantern burns low at your belt as it has all the round, throwing no more than
+          a yard of light back into the murk — a lighter cannot work a river fog without it.
+          The staith runs on north into the dark; the dark water laps somewhere below.
+      - when: [{ has_item: tinderbox }, { has_item: brass_key }]
+        text: >
+          Fog stands thick on the river-stair. A pasted night-notice peels from the wall by
+          the handrail; the sill where the lighter's things lay is clear now — only the loose
+          horn windscreen leans forgotten against it still. Your own round-lantern burns low
+          at your belt as it has all the round, throwing no more than a yard of light back
+          into the murk — a lighter cannot work a river fog without it. The staith runs on
+          north into the dark; the dark water laps somewhere below.
     objects: [night_notice, tinderbox, brass_key, horn_windscreen]
     exits:
       - { direction: north, to: lamp_walk }
@@ -88,6 +104,14 @@ rooms:
       excise store stands shut to the east behind a stout barred door; the watch-box
       leans to the west with a lantern-glow in its window; the river-stair is back to
       the south.
+    variants:
+      - when: [{ has_flag: store_open }]
+        text: >
+          The walk along the head of the staith, where the row of harbour-lamps should
+          stand and burn. Tonight they gutter low in the fog and the greatest of them, north
+          at the staith-head, is wholly out — a black shape against a blacker river. The
+          excise store stands open to the east; the watch-box leans to the west with a
+          lantern-glow in its window; the river-stair is back to the south.
     # Reaching the hub is the first milestone of the round (quest "the_round"): from here
     # the chain opens out east to the store and north to the dark lamp. set_quest_stage
     # TRACKS PROGRESS ONLY — it gates no exit, ending, interaction, or win, touches no
@@ -114,6 +138,12 @@ rooms:
       A cramped plank shelter against the cold, a brazier dead in the corner and a
       watchman hunched over its last warmth. A wall-cupboard hangs by the door, its
       little lock shaped for a tally-key. The lamp-walk is back to the east.
+    variants:
+      - when: [{ has_item: store_key }]
+        text: >
+          A cramped plank shelter against the cold, a brazier dead in the corner and a
+          watchman hunched over its last warmth. The wall-cupboard hangs open and empty
+          by the door. The lamp-walk is back to the east.
     objects: [wall_cupboard]
     exits:
       - { direction: east, to: lamp_walk }
