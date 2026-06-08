@@ -420,9 +420,22 @@ endings:
     # The DEATH pole (death: true), reached only by unlocking the watched night-gate.
     # Recoverable via an earlier save (§8.7). Not a win_condition ending, so WIN_IS_DEATH
     # cannot fire and ending_free remains the sole winnable ending.
+    # bug_0279: reachable with read_clue UNSET — a player who goes straight to the lodge
+    # and tries the gate has never seen the wall-scratches. The base text no longer accuses
+    # them of ignoring advice they never received; the read_clue variant restores the ironic
+    # callback for a player who DID read the warning and trusted the gate anyway. Same class
+    # as bug_0272 (tithe_barn fall) and bug_0276 (barrow woken). Both routes are genuinely
+    # reachable, so the base is no dead fallback and both resolve to the same ending id.
+    variants:
+      - when: [{ has_flag: read_clue }]
+        text: >
+          You trusted the gate the scratches told you not to trust, and the dark beyond the
+          bars was full of waiting men. The lantern found your face, and the long patient
+          watch closed its hands on you. There will be no second debtors' cell for you now —
+          only the deeper kind, and no postern out of that one. *** You have been taken. ***
     text: >
-      You trusted the gate the scratches told you not to trust, and the dark beyond the
-      bars was full of waiting men. The lantern found your face, and the long patient
-      watch closed its hands on you. There will be no second debtors' cell for you now —
-      only the deeper kind, and no postern out of that one. *** You have been taken. ***
+      You trusted the gate — and the dark beyond the bars was full of waiting men. The
+      lantern found your face, and the long patient watch closed its hands on you. There
+      will be no second debtors' cell for you now — only the deeper kind, and no postern
+      out of that one. *** You have been taken. ***
     death: true
