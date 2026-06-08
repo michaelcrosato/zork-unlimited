@@ -325,7 +325,10 @@ objects:
         item: horn_windscreen
         target: horn_windscreen
         command_verb: steady
-        conditions: [{ not_flag: steadied_the_flame }]
+        # Both conditions must hold: not yet steadied (success retires via steadied_the_flame)
+        # AND not yet attempted (failure retires via attempted_windscreen, bug_0303). One-shot
+        # on either outcome — the beat is a single tension moment, not a retryable grind.
+        conditions: [{ not_flag: steadied_the_flame }, { not_flag: attempted_windscreen }]
         skill_check:
           skill: steadiness
           difficulty: 12
@@ -337,13 +340,13 @@ objects:
                 glass again. A lighter learns to carry a light through a fog like this; your hand is
                 steady on it now, and it will not go out on you tonight.
           on_failure:
+            - set_flag: attempted_windscreen
             - narrate: >
                 A gust comes cold off the dark water and gets in past the pane all the same; the
                 flame ducks and streams flat and for a breath you think it gone — but it holds,
                 just, as it has held all the foggy round. Your hand is not as steady as you would
-                like in this murk; you can set your feet and try the screen again if it eases you —
-                but the little flame is not going out tonight, screen or no, and there is still the
-                great lamp up at the staith-head to draw oil for and light.
+                like in this murk; but the little flame is not going out tonight, screen or no,
+                and there is still the great lamp up at the staith-head to draw oil for and light.
 
   - id: wall_cupboard
     name: "wall-cupboard"
