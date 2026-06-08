@@ -80,13 +80,14 @@ const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
 describe("bug_0096 — every shipped pack is inside the verification bar", () => {
   const packs = discoverPacks();
 
-  it("discovers all twenty-three shipped packs (sanity: discovery is finding them)", () => {
+  it("discovers all twenty-four shipped packs (sanity: discovery is finding them)", () => {
     expect(packs).toEqual([
       "content/cyoa/pack/clockwork_heist.yaml",
       "content/cyoa/pack/dead_reckoning.yaml",
       "content/cyoa/pack/ferrymansprice.yaml",
       "content/cyoa/pack/midnight_edition.yaml",
       "content/cyoa/pack/night_dispensary.yaml",
+      "content/cyoa/pack/priors_cellar.yaml",
       "content/cyoa/pack/tithe_barn.yaml",
       "content/cyoa/pack/watchtower_road.yaml",
       "content/cyoa/pack/white_stag.yaml",
