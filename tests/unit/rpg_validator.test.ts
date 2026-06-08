@@ -132,6 +132,7 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // == 50 stays proven exhaustively by cyoa_score_economy_sound (was d3090c6586...).
     // Any *unintended* change to compilation trips this.
     // bug_0283: re-pinned after adding tower_top not_item:lantern variant (was 24aaf2b940ad...).
-    expect(loaded.compiled.contentHash).toBe("9fed38439d61276d16137a35b121c72fadd42b6ae01129ec5bd4c2a85d1c3c82");
+    // bug_0309: re-pinned after adding hermit_camp reactive re-entry variant (was 9fed38439d61...).
+    expect(loaded.compiled.contentHash).toBe("fac92b028320a3044bcd45fc352e8ac10aace3a6f3a722d07f08a6163fcfd3fe");
   });
 });

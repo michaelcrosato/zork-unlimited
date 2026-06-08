@@ -385,6 +385,19 @@ scenes:
 
   - id: hermit_camp
     title: "The Hermit's Camp"
+    # bug_0309: a blind playtester (seed 7, ai-runs/2026-06-08T10-25-38-070Z/playtest.md §4)
+    # returned to hermit_camp after the full conversation (heard_hermit_lore set) and found the
+    # outer scene STILL reading "He watches you with pale, unsurprised eyes" — discovery-framing
+    # as if meeting a stranger. hermit_talk already has a reactive re-entry variant (bug_0134)
+    # and mossy_brook mirrors it (bug_0282); hermit_camp (the outer landing) was missed.
+    # Same reactive-description-blindness class. Guard: any_of[heard_hermit_lore, seal_broken] —
+    # identical to hermit_talk and mossy_brook. Reactive text only — no choice/flag/route/ending
+    # change; the first-time visitor (no flag) still sees the base text verbatim.
+    variants:
+      - when: [ { any_of: [ { has_flag: heard_hermit_lore }, { has_flag: seal_broken } ] } ]
+        text: >
+          The lean-to and the low fire, the old hermit still working his net. He glances
+          up as you come in — no stranger to him now.
     text: >
       A lean-to, a low fire, and an old hermit mending a net. He watches you with
       pale, unsurprised eyes.
