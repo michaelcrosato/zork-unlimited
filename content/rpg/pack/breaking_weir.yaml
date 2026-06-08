@@ -356,6 +356,16 @@ objects:
       # lifts nerve to 8 so the WORST roll still passes (1+8>=9) — heeding him makes the
       # crossing safe, exactly the load-bearing prep the prose promises. No score on the fatal
       # branch (score-economy bracket rule); the +10 rides the safe crossing only.
+      #
+      # bug_0320 (reactive-description-blindness): the original success narrate opened with
+      # "go out low, hands on the wire, feet feeling the slick boards" — Pell's exact taught
+      # technique (bug_0197 removed "the way Pell told you" credit but left the technique
+      # language). A blind playtester noted the character executes a technique they may never
+      # have been shown. Prose-only fix: the opening is now neutral on technique; the key
+      # preservation of the line ("you find yourself lower than you expected to be, hands
+      # tight on the wire, and that is what saves you") works on both the counselled path
+      # (the technique was deliberate) and the gamble path (found under the feet). Journal
+      # likewise drops "and going low and steady" — a known Pell phrase.
       - verb: USE
         item: life_line
         target: walk_span
@@ -373,12 +383,8 @@ objects:
             # touched. The stage name is walk_won so it cannot be confused with the flag.
             - set_quest_stage: { quest: the_weir, stage: walk_won }
             - inc_var: { name: score, by: 10 }
-            # journal stays true on BOTH paths: the crossing is reachable un-counselled
-            # (the gamble path, base nerve 3 needing d20>=6), where "the way Pell told you"
-            # asserted advice never given. The HOW (clipped, low, steady) is the keeper's
-            # craft either way; we just stop crediting a conversation that may not have happened.
-            - add_journal: "Clipped to the run-wire and going low and steady, you cross the awash spillway-walk and reach the far side with the race grasping at your heels."
-            - narrate: "You snap the life-line to the run-wire and go out low, hands on the wire, feet feeling the slick boards under the sheeting water. The race claws at your shins and once your foot skates and the line takes your weight — but you keep your head and your nerve and come off the far end of the walk on solid stone, the spillway behind you."
+            - add_journal: "Clipped to the run-wire, you cross the awash spillway-walk and come off the far side with the race grasping at your heels."
+            - narrate: "You snap the life-line to the run-wire and go out onto the slick boards. The race claws at your shins and tries to hurry you; you find yourself lower than you expected to be, hands tight on the wire, and that is what saves you. Once a foot skates and the line takes your weight — but you keep your head and your nerve and come off the far end of the walk on solid stone, the spillway behind you."
           on_failure:
             - add_journal: "Out on the awash spillway-walk your nerve broke at the wrong instant; a slipped foot, a snatched breath, and the race took you off the boards and was gone with you under the weir."
             - narrate: "You clip the life-line to the run-wire and step out — but your nerve fails you, and you go too high and too quick instead of low and steady. Halfway across a foot skates on the slick planking and the flood takes your legs from under you; you grab for the wire and miss, and as the race wrenches you off the boards the snap is torn loose behind you. The cold black water folds over your head and carries you down under the weir."
