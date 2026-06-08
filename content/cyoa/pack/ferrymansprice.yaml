@@ -1,0 +1,326 @@
+# The Ferryman's Price — a CYOA pack (Stage 1 format).
+#
+# You arrive at a river crossing at dusk — the only ford for a day's walk, swollen
+# by last month's rains, a flat rope-ferry on dark water and a curl of smoke from
+# the hut that says someone is here to run it. The ferryman is civil, unhurried,
+# and charges a copper for the crossing. Nothing prevents you from paying it and
+# being across before full dark. The depth is the player who looks before they board.
+#
+# Unlike the investigation-first packs (watchtower_road, midnight_edition), the goal
+# is legible from the first beat and always legal: pay, board, cross. Darkness is a
+# turn the PLAYER takes — the wreckers_light discipline.
+#
+# Four outcomes, each earned:
+#   * board at once and say nothing                         → ending_crossed   (the look-away)
+#   * find the evidence and report it at the toll-house     → ending_testimony (justice done, max score)
+#   * accuse him on the water without enough proof          → ending_drowned   (informed risk; death)
+#   * trade your silence for a free crossing                → ending_bargain   (compromise)
+#
+# A hidden "truth" reframes the testimony ending: the victim (Aldric, named in the
+# travel receipt) was carrying a lease-termination notice to dispossess the ferryman
+# from this crossing — his livelihood and his father's before him. Reading it (the
+# sealed letter from the willows cache) sets `knows_truth`, which fires a reactive
+# ending_testimony variant: justice reaches him, but so does the story behind the act.
+#
+# Score economy: rewards investigation. Maximum single path = 45.
+#   +5  inspect_marks       — rope-drag in the mud (not_flag: found_marks)
+#   +5  take_receipt        — victim's travel receipt, names and destination (not_item: travel_receipt)
+#   +5  read_lease_notice   — the eviction notice; the full story (not_flag: knows_truth)
+#   +5  mark_bloodstain     — blood in the oak grain of the gunwale (not_flag: saw_bloodstains)
+#   +5  ask_lost_traveler   — ask the ferryman about the man he won't discuss (not_flag: heard_denial)
+#   +20 ending_testimony    — report to the toll-house warden, ferryman arrested (terminal;
+#                             gated on has_item:travel_receipt + has_flag:saw_bloodstains)
+# Best single path: inspect_marks(+5) → upstream → take_receipt(+5) + read_lease_notice(+5) →
+#   hut: ask_lost_traveler(+5) → landing: mark_bloodstain(+5) → ferry → far_bank:
+#   report_to_tollhouse(+20) = 45.
+
+meta:
+  id: ferrymansprice_v1
+  title: "The Ferryman's Price"
+  start: river_approach
+  flags_init: []
+  max_score: 45
+
+scenes:
+  # ── The approach (hub) ───────────────────────────────────────────────────────
+  - id: river_approach
+    title: "The River Crossing"
+    text: >
+      The track ends at a wide, dark river — the only ford for a day's walk either
+      way drowned by last month's rains. A flat rope-ferry rests on the near bank,
+      and a curl of smoke from the ferryman's hut says someone is here to run it.
+      The light is going fast. Upstream, the bank curves out of sight under old willows.
+    choices:
+      - id: go_to_hut
+        text: "Approach the ferryman's hut."
+        next: ferrymans_hut
+      - id: walk_upstream
+        text: "Walk up the bank, under the willows."
+        next: upstream_bank
+      - id: inspect_marks
+        text: "Crouch and examine the mud near the ferry rope."
+        conditions: [ { not_flag: found_marks } ]
+        effects:
+          - set_flag: found_marks
+          - add_journal: "Deep rope-drag marks in the mud, heading from the water into the willows — heavier than a mooring line makes."
+          - inc_var: { name: score, by: 5 }
+        next: river_approach
+      - id: go_to_landing
+        text: "Walk down to the ferry landing."
+        next: the_landing
+
+  # ── The ferryman's hut ───────────────────────────────────────────────────────
+  - id: ferrymans_hut
+    title: "The Ferryman's Hut"
+    # Reactive re-entry: once the player has heard the denial and found the evidence,
+    # re-visiting the hut should reflect a known man, not a neutral stranger.
+    variants:
+      - when: [ { any_of: [ { has_flag: heard_denial }, { has_item: travel_receipt } ] } ]
+        text: >
+          The ferryman is at his table, hands flat, watching the door. He names his
+          price again — a copper — and does not look at you more than he has to.
+    text: >
+      Low and weathered, the smell of tallow and river-rot inside. The ferryman is
+      a thick man with a close-trimmed beard and hands like a grapple — civil,
+      unhurried, not quite meeting your eye. He names his price: a copper for the
+      crossing.
+    choices:
+      - id: pay_and_go
+        text: "Pay the copper and ask to board."
+        effects:
+          - narrate: "He nods and takes up his pole. You follow him down to the landing."
+        next: the_landing
+      - id: ask_about_road
+        text: "Ask how the road runs beyond the crossing."
+        effects:
+          - narrate: "North road, two hours, the town of Corwick. He shrugs — he just runs the rope."
+        next: ferrymans_hut
+      - id: ask_lost_traveler
+        text: "Ask if another traveler came through today — you were to meet someone on this road."
+        conditions: [ { not_flag: heard_denial } ]
+        effects:
+          - set_flag: heard_denial
+          - add_journal: "He said no one else today. His hands moved to the table when I asked, and he did not look up from them until I changed the subject."
+          - inc_var: { name: score, by: 5 }
+        next: ferrymans_hut
+      - id: leave_hut
+        text: "Step back outside."
+        next: river_approach
+
+  # ── The willows cluster ──────────────────────────────────────────────────────
+  - id: upstream_bank
+    title: "The Willows"
+    text: >
+      The willows close overhead, root-tangled and dark. The river bends here and
+      the current pushes a mat of dead reeds against the bank. Something is caught
+      in the roots — a bundle, still dry under its oilcloth wrapping.
+    choices:
+      - id: pull_bundle
+        text: "Pull the bundle free."
+        # Hide once both items in the cache have been collected.
+        conditions: [ { none_of: [ { all_of: [ { has_item: travel_receipt }, { has_flag: knows_truth } ] } ] } ]
+        next: willows_cache
+      - id: leave_upstream
+        text: "Return to the crossing."
+        next: river_approach
+
+  - id: willows_cache
+    title: "The Bundle in the Willows"
+    text: >
+      A traveler's pack — good leather, not old. Inside: a road-cloak, a coin-purse
+      cut from its strap, and a folded travel receipt in a dry inner pocket. A second
+      piece of paper, heavily sealed, addresses itself to "the current holder of the
+      Corwick ferry lease."
+    choices:
+      - id: take_receipt
+        text: "Pocket the travel receipt."
+        conditions: [ { not_item: travel_receipt } ]
+        effects:
+          - add_item: travel_receipt
+          - add_journal: "A travel receipt made out to one Aldric, bound for Corwick — dated three days past. The ferry at Corwick is the only fast crossing this far north."
+          - inc_var: { name: score, by: 5 }
+        next: willows_cache
+      - id: read_lease_notice
+        text: "Break the seal on the second letter."
+        conditions: [ { not_flag: knows_truth } ]
+        effects:
+          - set_flag: knows_truth
+          - add_journal: "A notice of lease termination: the Corwick ferry grant, held by the same family for three generations, revoked by the county court. Aldric was the attorney's messenger — carrying the order that would end the ferryman's livelihood."
+          - inc_var: { name: score, by: 5 }
+        next: willows_cache
+      - id: leave_willows
+        text: "Leave the willows."
+        next: river_approach
+
+  # ── The landing and ferry ─────────────────────────────────────────────────────
+  - id: the_landing
+    title: "The Ferry Landing"
+    # After finding evidence, the ferryman watching from the stern changes the scene's feel.
+    variants:
+      - when: [ { any_of: [ { has_flag: saw_bloodstains }, { has_item: travel_receipt } ] } ]
+        text: >
+          The flat-bottomed ferry rests on its rope. The ferryman is already at the
+          stern, pole in hand, facing the far bank — or facing you; from here it is
+          hard to say.
+    text: >
+      The flat-bottomed ferry rests on its rope against the clay bank, big enough
+      for a cart and horse. A short gangway of planks leads aboard.
+    choices:
+      - id: inspect_boat
+        text: "Step onto the gangway and look over the gunwale before calling for the ferryman."
+        conditions: [ { not_flag: saw_bloodstains } ]
+        next: boat_inspection
+      - id: hail_ferryman
+        text: "Call to the ferryman."
+        effects:
+          - narrate: "He appears from the hut, unhurried, wipes his hands on his coat, and walks down to the pole without a word."
+        next: on_the_ferry
+      - id: return_from_landing
+        text: "Step back from the dock."
+        next: river_approach
+
+  - id: boat_inspection
+    title: "The Flat Ferry"
+    text: >
+      The planking is old but sound. The rope runs through a worn iron block at the
+      bow. Near the stern, someone has scrubbed the gunwale — but the grain of the
+      oak holds a brown stain the scrubbing did not reach.
+    choices:
+      - id: mark_bloodstain
+        text: "Kneel and look more closely at the stain."
+        conditions: [ { not_flag: saw_bloodstains } ]
+        effects:
+          - set_flag: saw_bloodstains
+          - add_journal: "Old blood deep in the grain of the wood — the kind that takes days to soak in like that. The ferry ran a red errand not long ago, and someone tried to clean it after."
+          - inc_var: { name: score, by: 5 }
+        next: boat_inspection
+      - id: board_and_call
+        text: "Stand up and call for the ferryman."
+        effects:
+          - narrate: "He comes from the hut at his own pace and takes up the pole at the stern."
+        next: on_the_ferry
+      - id: leave_boat
+        text: "Step back onto the bank."
+        next: the_landing
+
+  - id: on_the_ferry
+    title: "Midstream"
+    text: >
+      The current pulls sideways at the hull. The ferryman poles in silence, and the
+      near bank recedes behind you — dark water on both sides now, no footing but these
+      planks. He has not said a word since you stepped aboard.
+    choices:
+      - id: say_nothing
+        text: "Ride in silence to the far bank."
+        next: far_bank
+      - id: accuse_midstream
+        text: "Tell him you found what he left in the willows — and what it proves."
+        conditions: [ { all_of: [ { has_item: travel_receipt }, { has_flag: saw_bloodstains } ] } ]
+        effects:
+          - add_journal: "His hands stilled on the pole. He weighed the count for a long moment — then pulled us in to the far bank without a word. He knows it is over."
+        next: far_bank_knowing
+      - id: offer_silence
+        text: "Tell him you found the man's pack — and that you will say nothing, for a price."
+        conditions: [ { has_item: travel_receipt } ]
+        next: ending_bargain
+      - id: accuse_blind
+        text: "Accuse him on the water with what little you have."
+        # Available when the player does NOT hold both key pieces of evidence.
+        # With only partial evidence or none, the accusation is too thin to stop him.
+        conditions: [ { none_of: [ { all_of: [ { has_item: travel_receipt }, { has_flag: saw_bloodstains } ] } ] } ]
+        next: ending_drowned
+
+  # ── Far bank (quiet crossing) ─────────────────────────────────────────────────
+  - id: far_bank
+    title: "The Far Bank"
+    text: >
+      You step off onto firm ground. The ferry rope shivers in the current behind you.
+      Corwick is an hour north — a toll-house stands at the track's edge, a candle
+      behind glass, a road-warden inside who tallies the night's crossings.
+    choices:
+      - id: report_to_tollhouse
+        text: "Go to the toll-house and report what you found."
+        # Requires documentary evidence (naming the victim) and physical evidence
+        # (blood on the boat) — both needed to make the report stand.
+        conditions: [ { all_of: [ { has_item: travel_receipt }, { has_flag: saw_bloodstains } ] } ]
+        effects:
+          - inc_var: { name: score, by: 20 }
+        next: ending_testimony
+      - id: walk_to_corwick
+        text: "Put the crossing behind you and walk on."
+        next: ending_crossed
+
+  # ── Far bank (confrontation resolved) ────────────────────────────────────────
+  - id: far_bank_knowing
+    title: "The Far Bank"
+    text: >
+      He pulled the ferry in and made it fast without speaking. The toll-house lamp
+      burns at the road's edge. The warden inside will hear what you have to say.
+    choices:
+      - id: go_to_warden
+        text: "Go to the toll-house."
+        effects:
+          - inc_var: { name: score, by: 20 }
+        next: ending_testimony
+      - id: walk_past
+        text: "Walk past the toll-house and on to Corwick."
+        next: ending_crossed
+
+endings:
+  - id: ending_testimony
+    title: "Testimony Given"
+    variants:
+      - when: [ { has_flag: knows_truth } ]
+        text: >
+          The warden takes down the receipt, the bloodstain account, your description
+          of the drag marks. He sends for the county men before the hour is out. By
+          morning the ferryman is in irons in Corwick; by week's end the court hears
+          what Aldric was carrying and why. The lease notice is read aloud at the
+          inquest. Justice reaches the ferryman, and so does the story behind the act:
+          not a robber's calculation but the last move of a man who saw three
+          generations ended in a sealed letter and had nowhere left to turn. The
+          ferry runs again by summer, under a new leaseholder. The blood comes out of
+          the gunwale at last.
+    text: >
+      The warden takes down the receipt, the bloodstain, your account of the rope
+      marks in the mud. He is not surprised — a traveler missing on the Corwick road
+      is not the first report this season. By morning the ferryman is in irons, the
+      pack recovered from the willows, Aldric's family sent word. You gave what you
+      found to the people whose job it is to act on it, and they did. The river runs
+      on, and the ferry runs again under a new hand.
+  - id: ending_crossed
+    title: "The Far Side"
+    variants:
+      - when: [ { has_flag: knows_truth } ]
+        text: >
+          Corwick's lights grow ahead. You know everything now — the receipt, the
+          lease notice, the blood in the wood, the denial in the hut. You could still
+          turn back to the toll-house. You do not. The ferryman's reason and his crime
+          travel north with you as long as you carry them, and you carry them a long
+          way before the road gives you something else to think about.
+      - when: [ { has_flag: found_marks } ]
+        text: >
+          Corwick's lights are ahead. You saw what you saw at the bank, and you chose
+          to leave it at the bank. The ferryman is still at his rope in the dark
+          behind you. Somewhere in the willows, the pack is still there.
+    text: >
+      Corwick's lights are an hour ahead. Behind you the crossing has gone dark,
+      the ferryman's hut a smudge against the water. Whatever you saw and thought,
+      it stays on the far side with the mud and the willows. The road runs on.
+  - id: ending_drowned
+    death: true
+    title: "The Dark Water"
+    text: >
+      He does not argue. The pole swings in one flat arc and the river takes you —
+      cold and fast, no bottom in reach, no bank you can find in the dark. You had
+      less than you needed on that water, and he had every advantage. The crossing
+      keeps its secret a little longer.
+  - id: ending_bargain
+    title: "The Trade"
+    text: >
+      He does not speak, but when the far bank comes up under the hull he pockets
+      your coin and hands it back. You step off, and neither of you looks at the
+      other. You have a free crossing, a receipt you could produce if the conscience
+      ever pressed you, and his knowledge that you could. The leverage rides with
+      you all the way to Corwick, growing lighter with every step, until by the
+      time the lights are close it is barely a weight at all.
