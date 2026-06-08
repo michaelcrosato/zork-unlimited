@@ -91,6 +91,14 @@ rooms:
     # the prose; it gates no exit, flag, score, ending, or dialogue (bug_0052 leaks nothing
     # the base text didn't already: the lodge to the east and its snoring turnkey).
     variants:
+      - when: [{ quest_stage: { quest: the_postern, stage: told_of_way } }, { has_item: clay_pipe }]
+        text: >
+          The long vaulted gallery, once a cloister-walk and now a run of barred cells.
+          The old woman's postern is somewhere overhead past the chapel stair — and her
+          pipe is already in your hands; nothing left now but to bring it to the commons
+          and coax the latch's trick from her. The debtors' commons opens west, a stair
+          climbs up to the old chapel, and steps drop down to the night-gate. Your own
+          cell is back to the south.
       - when: [{ quest_stage: { quest: the_postern, stage: told_of_way } }]
         text: >
           The long vaulted gallery, once a cloister-walk and now a run of barred cells.
