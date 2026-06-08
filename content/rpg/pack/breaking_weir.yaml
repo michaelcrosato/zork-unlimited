@@ -102,6 +102,33 @@ rooms:
           listening to the night turn; he hears the difference, and he does not need to be told.
           His flood-book lies open on the table. The weir is still out through the door to the
           north, the last of the work up there in the dark.
+      # bug_0314 (reactive-description-blindness): base description names both the weir-iron
+      # and the life-line even after they are in the player's hands, making the lodge look
+      # untouched on any return visit between taking the tools and opening the relief-race.
+      # Three variants cover the three reachable taken-states; race_open (above) already omits
+      # both tools for the post-race return, so these variants only fire pre-race.
+      - when: [{ has_item: weir_iron }, { has_item: life_line }]
+        text: >
+          The weir-keeper's lodge, a stone hut wedged against the weir-bank in the roar of the
+          flood. Old Pell is laid out on the cot by the cold hearth, his leg splinted and useless,
+          and the river is loud and wrong outside — too high, too fast. His flood-book lies open
+          on the table where he was reading the marks, the tools already in your hands. The weir
+          itself is out through the door to the north.
+      - when: [{ has_item: weir_iron }]
+        text: >
+          The weir-keeper's lodge, a stone hut wedged against the weir-bank in the roar of the
+          flood. Old Pell is laid out on the cot by the cold hearth, his leg splinted and useless,
+          and the river is loud and wrong outside — too high, too fast. His flood-book lies open
+          on the table where he was reading the marks; his life-line, a coil of tarred rope with
+          a snap at one end, hangs on its peg beside the door. The weir itself is out through the
+          door to the north.
+      - when: [{ has_item: life_line }]
+        text: >
+          The weir-keeper's lodge, a stone hut wedged against the weir-bank in the roar of the
+          flood. Old Pell is laid out on the cot by the cold hearth, his leg splinted and useless,
+          and the river is loud and wrong outside — too high, too fast. His flood-book lies open
+          on the table where he was reading the marks; his weir-iron, the long pry-bar he works
+          the gates with, leans by the door. The weir itself is out through the door to the north.
     objects: [flood_book, weir_iron, life_line]
     exits:
       - { direction: north, to: weir_head }
