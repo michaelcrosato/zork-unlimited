@@ -438,6 +438,7 @@ endings:
       cup nobody will fill.
 
   - id: ending_adrift
+    death: true
     title: "The Last Cup"
     # knows_course reframes greed into something worse: you hoarded over a landfall you KNEW
     # was two days off and reachable — the most damning epilogue in the pack.
