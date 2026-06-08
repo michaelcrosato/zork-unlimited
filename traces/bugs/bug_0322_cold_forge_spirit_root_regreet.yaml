@@ -1,0 +1,33 @@
+id: bug_0322
+title: "cold_forge: lantern-spirit re-shows full greeting on every return to spirit_root"
+pack: content/rpg/pack/cold_forge.yaml
+class: dialogue-regreet (mechanical dialogue loop)
+severity: minor
+found_by: blind_playtest (seed 7, 2026-06-08T13-34-50-175Z)
+
+symptom: >
+  After asking the lantern-spirit any topic and selecting "Nod, and ask something
+  else." (sentinel_back / heart_back / forge_back / founder_back), the game
+  transitions back to spirit_root and re-emits the full first-meeting greeting:
+  "A warm thing, come down into the cold. Few do. Ask, if you would — I have
+  watched this forge die by inches, and I remember everything." This text fires
+  identically on every return visit, with no acknowledgment that a conversation
+  is already underway. A player who asks all four topics sees the full greeting
+  five times total, which breaks the conversational illusion and adds four
+  mechanical repetitions with no content.
+
+root_cause: >
+  spirit_root had no `variants` block. The base npc_text (the full greeting) fired
+  unconditionally on every visit to the node, whether it was the first meeting or
+  a return mid-conversation. The topic flags (heard_sentinel, heard_heart,
+  heard_forge, heard_founder) were set by their respective nodes but no reader
+  existed on spirit_root to produce a different greeting on re-entry.
+
+fix: >
+  Added a `variants` block to spirit_root with one variant: `when: any_of
+  [heard_sentinel, heard_heart, heard_forge, heard_founder]`, text "What else
+  would you know?" First visit (no flags set) still shows the full greeting.
+  Subsequent returns (any topic flag set) show the short acknowledgment.
+  No new flag, no score/route/stat/ending change; prose only.
+
+regression_test: tests/regression/cold_forge_spirit_root_short_greeting.test.ts

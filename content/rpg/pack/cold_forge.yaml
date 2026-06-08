@@ -390,6 +390,20 @@ npcs:
           npc_text: >
             A warm thing, come down into the cold. Few do. Ask, if you would —
             I have watched this forge die by inches, and I remember everything.
+          # bug_0322: on every return from a topic the full first-meeting greeting
+          # re-fired ("A warm thing, come down into the cold..."), making the
+          # dialogue menu feel mechanical after the first exchange. This variant
+          # fires when any topic flag is already set (first-match-wins), showing
+          # a short acknowledgment instead. First visit is unchanged (no flags yet).
+          # No new flag, no score/route/ending/stat change; prose only.
+          variants:
+            - when:
+                - any_of:
+                    - { has_flag: heard_sentinel }
+                    - { has_flag: heard_heart }
+                    - { has_flag: heard_forge }
+                    - { has_flag: heard_founder }
+              text: "What else would you know?"
           topics:
             # Each info topic retires once told (gated on its own rumor flag), so
             # the spirit never re-offers the same counsel and the +2 blessing can be
