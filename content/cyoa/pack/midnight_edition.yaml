@@ -174,7 +174,7 @@ scenes:
           workman's letter still lies unread on the imposing stone where it came up the back
           stairs an hour ago. The iron stair climbs north to the editor's dark office; the press
           floor drops away south; and out past the inking-room the alley door is barred now on
-          the men you found waiting there — Garrow's, by the hammers they carried — who have
+          the men you found waiting there — hired, by the hammers they carried — who have
           given up the latch but not the cobbles.
     choices:
       - id: read_letter
