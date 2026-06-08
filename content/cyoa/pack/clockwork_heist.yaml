@@ -422,6 +422,13 @@ scenes:
     # vague "your time in the manor is running short" for a threat pointed at the real
     # mechanic: this gallery is the floor the watchman will walk at the hour, so standing
     # here when it chimes is the actual danger (blind-playtest finding, bug_0061).
+    # The ticks>=2 case is now also split on `read_ledger` (blind-playtest finding,
+    # bug_0292). "No place to be caught standing when it chimes" implies the chime
+    # triggers the guard's patrol — knowledge a player who skipped the study never
+    # earned. The ledger-reader variant keeps that phrasing (it's earned); the
+    # no-ledger variant replaces it with the foyer's neutral register ("a sleeping
+    # house keeps its peace only until the chime") — same urgency, no imputed knowledge.
+    # Prose-only; no choice/flag/tick/route/gating/ending change.
     #
     # The ticks>=4 case is split on `read_ledger` (blind-playtest finding, bug_0066,
     # continuing the bug_0058 plate-leak lesson). The patrol-at-the-hour text once
@@ -498,12 +505,18 @@ scenes:
           watchman's lantern now sweeps the gallery on his slow rounds. The long
           crossing to the vault runs right under his beam. The study still stands
           ajar to one side, and the stair drops safely back to the foyer.
-      - when: [{ var_gte: { name: ticks, value: 2 } }]
+      - when: [{ var_gte: { name: ticks, value: 2 } }, { has_flag: read_ledger }]
         text: >
           A long gallery lined with frozen automata, their glass eyes following you.
           The vault door broods at the far end. Somewhere a great mechanism grinds
           toward the hour, and you sense this long gallery will be no place to be caught
           standing when it chimes. A study stands ajar to one side.
+      - when: [{ var_gte: { name: ticks, value: 2 } }]
+        text: >
+          A long gallery lined with frozen automata, their glass eyes following you.
+          The vault door broods at the far end. Somewhere a great mechanism grinds
+          toward the hour — and a sleeping house keeps its peace only until the chime.
+          A study stands ajar to one side.
     choices:
       - id: enter_study
         text: "Step into the study."

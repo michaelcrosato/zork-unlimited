@@ -65,14 +65,19 @@ describe("bug_0061 — the clockwork deadline text names the real consequence, n
   });
 
   it("gallery ticks>=2: drops 'time running short', names the gallery's at-the-hour danger", () => {
-    // kitchens (tick1) -> dumbwaiter->landing (tick2): the gallery ticks>=2 variant.
+    // kitchens (tick1) -> dumbwaiter->landing (tick2): the gallery ticks>=2 no-ledger variant.
+    // (bug_0292 split on read_ledger; this path has no ledger — gets the neutral framing.)
     const s = run(["kitchens", "dumbwaiter"]);
     expect(s.current).toBe("landing");
     expect(s.vars.ticks).toBe(2);
+    expect((s.flags as Record<string, unknown>).read_ledger).toBeFalsy();
     const text = sceneText(s);
     expect(/time in the manor is running short/i.test(text)).toBe(false);
-    expect(/chimes/i.test(text)).toBe(true);
-    expect(/no place to be caught standing/i.test(text)).toBe(true);
+    // Clock urgency still surfaced via the shared "grinds toward the hour" line.
+    expect(/grinds toward the hour/i.test(text)).toBe(true);
+    // No-ledger variant uses the neutral "sleeping house" register, not the "caught" phrasing.
+    expect(/sleeping house keeps its peace/i.test(text)).toBe(true);
+    expect(/no place to be caught standing/i.test(text)).toBe(false);
     // Not the ticks>=4 patrol variant (the lantern actively sweeping the gallery).
     expect(/watchman's lantern now sweeps/i.test(text)).toBe(false);
   });

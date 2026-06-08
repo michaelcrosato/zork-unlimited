@@ -54,7 +54,10 @@ const sceneText = (s: GameState): string => {
   return o.scene?.text ?? o.text ?? "";
 };
 
-const CHIME_WARNING = /no place to be caught standing when it chimes/i;
+// Clock-urgency text shared by both the ledger and no-ledger ticks>=2 variants
+// (bug_0292 split the old single variant on read_ledger; the "grinds toward the hour"
+// phrase is present in both, making it the right anchor for the entry-invariant check).
+const CLOCK_WARNING = /grinds toward the hour/i;
 
 describe("bug_0144 — the gallery's reactive text is entry-path-invariant (a pure function of ticks)", () => {
   it("landing scene text is byte-identical via the grand stairs vs the dumbwaiter at the same ticks (2)", () => {
@@ -71,24 +74,23 @@ describe("bug_0144 — the gallery's reactive text is entry-path-invariant (a pu
 
     // The scene text is identical regardless of how you got here...
     expect(sceneText(viaDumbwaiter)).toBe(sceneText(viaStairs));
-    // ...and both carry the ticks>=2 chime warning the tester saw.
-    expect(CHIME_WARNING.test(sceneText(viaStairs))).toBe(true);
-    expect(CHIME_WARNING.test(sceneText(viaDumbwaiter))).toBe(true);
+    // ...and both carry the ticks>=2 clock-urgency text the tester saw.
+    expect(CLOCK_WARNING.test(sceneText(viaStairs))).toBe(true);
+    expect(CLOCK_WARNING.test(sceneText(viaDumbwaiter))).toBe(true);
   });
 
   it("the gallery variant is tick-gated, not path-gated: bare base text at ticks 1, the warning at ticks 2", () => {
-    // Straight up the stairs: gallery at ticks 1 -> bare base text, no chime warning.
+    // Straight up the stairs: gallery at ticks 1 -> bare base text, no clock urgency.
     const tick1 = run(["climb_stairs"]).state;
     expect(tick1.current).toBe("landing");
     expect(tick1.vars.ticks).toBe(1);
-    expect(CHIME_WARNING.test(sceneText(tick1))).toBe(false);
-    expect(/grinds toward the hour/i.test(sceneText(tick1))).toBe(false);
+    expect(CLOCK_WARNING.test(sceneText(tick1))).toBe(false);
 
-    // Same scene, one tick later -> the warning appears. The clock advancing is what
-    // flips the text, NOT the door the player came through.
+    // Same scene, one tick later -> the clock urgency appears. The clock advancing is
+    // what flips the text, NOT the door the player came through.
     const tick2 = run(["kitchens", "back_foyer", "climb_stairs"]).state;
     expect(tick2.vars.ticks).toBe(2);
-    expect(CHIME_WARNING.test(sceneText(tick2))).toBe(true);
+    expect(CLOCK_WARNING.test(sceneText(tick2))).toBe(true);
     expect(sceneText(tick2)).not.toBe(sceneText(tick1));
   });
 
