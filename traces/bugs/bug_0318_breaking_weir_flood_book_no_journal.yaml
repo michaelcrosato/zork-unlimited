@@ -1,0 +1,28 @@
+id: bug_0318
+title: "breaking_weir flood-book READ awards +5 silently — no journal entry"
+severity: content
+pack: content/rpg/pack/breaking_weir.yaml
+scene: keeper_lodge / flood_book (READ interaction)
+class: silent-score-no-journal
+
+description: >
+  Reading the flood-book in The Breaking Weir awards +5 score (the §17 prep clue) but
+  previously added no journal entry. Every other key preparatory milestone in the pack
+  (rack_freed, walk_crossed, race_open, valley_held, pell_walk/pell_weir dialogue) fires
+  add_journal; the flood-book read was the lone exception. The +5 score had no diegetic
+  justification visible to the player — score ticked up with no acknowledgment of what
+  the player had learned.
+
+discovered_by: blind playtest (ai-runs/2026-06-08T12-28-27-726Z/playtest.md, Confusion
+  Point 3 — "flood-book reward is the only one without diegetic justification")
+
+fix:
+  type: content
+  scope: flood_book READ interaction effects
+  change: >
+    Added add_journal to the flood_book READ interaction's effects list (alongside the
+    existing set_flag:read_marks and inc_var:score:5). Journal entry summarises the three
+    obstacles (head-rack, storm-walk, relief-race), two tools (weir-iron, life-line), and
+    the walk warning. No flag, score value, condition, gate, route, or ending changed.
+
+regression_test: tests/regression/breaking_weir_flood_book_journal.test.ts

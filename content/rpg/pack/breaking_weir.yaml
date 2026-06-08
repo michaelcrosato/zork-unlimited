@@ -269,6 +269,12 @@ objects:
         effects:
           - set_flag: read_marks
           - inc_var: { name: score, by: 5 }
+          # Journal gives the player a lasting reference for what the marks said and explains
+          # the +5 score diegetically — the only key preparatory action in the pack that
+          # previously awarded score with no accompanying journal record (all other milestone
+          # actions — rack_freed, walk_crossed, race_open, valley_held, pell_walk, pell_weir —
+          # each add a journal entry). bug_0317_class: silent score with no journal.
+          - add_journal: "Pell's flood-marks in plain hard letters: three obstacles — head-rack choked, storm-walk awash, relief-race seized — two tools — weir-iron for rack and winch, life-line for the walk — and a warning not to set foot on the walk until Pell has told you how a man crosses it and lives. The shape of the night is clear."
 
   - id: weir_iron
     name: "weir-iron"
