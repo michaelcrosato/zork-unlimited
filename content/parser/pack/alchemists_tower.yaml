@@ -417,7 +417,14 @@ objects:
         # holding the key. Still optional, still CONVERGENT — it gates no exit, ending,
         # score, or variant on either roll outcome, so every structural proof and the
         # 40-point economy stay byte-identical; it only narrows WHERE the beat appears.
-        conditions: [{ not_flag: steadied_at_the_iron }, { in_room: great_hall }]
+        # bug_0301: gated `none_of: [{ is_unlocked: cellar_door }]` — a fresh blind
+        # playtester (seed 7, 2026-06-08) reached the great_hall AFTER unlocking the
+        # cellar hatch and still saw "grip iron key" in the action list. The "before you
+        # set this key to anything down here" fiction is false once the hatch is already
+        # open; the beat's moment is past. Uses `none_of` (the condition DSL's universal
+        # negation) to express "cellar_door is NOT yet unlocked" without a new flag or
+        # predicate. Still convergent — gates nothing structural.
+        conditions: [{ not_flag: steadied_at_the_iron }, { in_room: great_hall }, { none_of: [{ is_unlocked: cellar_door }] }]
         skill_check:
           skill: steadiness
           difficulty: 12
