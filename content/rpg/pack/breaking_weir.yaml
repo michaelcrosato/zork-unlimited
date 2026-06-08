@@ -467,7 +467,7 @@ npcs:
               conditions: [{ not_flag: heard_plan }]
               goto: pell_weir
             - id: leave_pell
-              prompt: "Take up the tools and go to the weir."
+              prompt: "Leave old Pell and hold the weir."
               end: true
         - id: pell_walk
           # The load-bearing counsel — and TRUE: with +5 nerve the DC-9 crossing passes on the
