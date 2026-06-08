@@ -79,22 +79,58 @@ scenes:
     # neither of which touches the quest — the deck is taken up as the deliberation it now
     # is. It is a TRANSIENT window (tide_mill's `begun` discipline): entering the cask
     # advances the quest to `at_the_cask`, so coming back to the deck from there (back_deck)
-    # drops past these variants to the base text below — which is therefore live both BEFORE
-    # the first move (quest unset) AND after the cask (quest `at_the_cask`).
+    # triggers the at_the_cask variants below (bug_0327); the base text fires only BEFORE
+    # the first move (quest unset).
     #
     # Within that window the hub now REFRAMES by knowledge exactly as the chest, hold and
     # cask do (the blind-pass finding of 2026-06-05: every side-room reacted to what you had
     # learned but the hub you returned to between them did not — a missed beat of reactivity).
-    # Most-specific FIRST (first-match-wins; cyoa_variant_shadowing): both truths, then
-    # knows_course alone, then knows_pilot alone, then the bare "gone looking, learned
-    # nothing yet" adrift base. The pistol is NOT read here — like the cask's own variants it
-    # turns only on the two TRUTHS (has_pistol is acknowledged in the chest prose and the
-    # irons ending); keeping the hub and the cask to the same two-axis device. Each variant's
-    # `when` is reachable at stage EXACTLY adrift (leave a side-room with that subset of flags
-    # before touching the cask), so every one is live (bug_0145) and none shadows the next.
-    # Gates nothing — no choice/next/ending keys off any quest_stage or these flags here; the
+    # Most-specific FIRST (first-match-wins; cyoa_variant_shadowing): at_the_cask variants
+    # (bug_0327, four — both/course/pilot/bare) come first, then adrift variants in the same
+    # order. Stages are mutually exclusive so no shadowing between the two windows. The pistol
+    # is NOT read here — acknowledged in chest prose and the irons ending. Gates nothing —
     # quest is progress-tracking only and every ending stays reachable in every order.
     variants:
+      - when:
+          - quest_stage: { quest: the_reckoning, stage: at_the_cask }
+          - has_flag: knows_course
+          - has_flag: knows_pilot
+        text: >
+          You stepped back from the cask, from Tarrant's argument and the watching
+          eyes, but the reckoning does not step back with you. You carry two things
+          the men in the waist do not have: Hale's last numbers say land lies two days
+          east on the set of the current, and the girl they call the Jonah is the one
+          soul aboard who could read the boat onto it. Forward the hands watch you with
+          cracked lips; below, the girl waits. Nothing of it is decided yet — but you
+          have looked at the whole of it, and the key is still round your neck.
+      - when:
+          - quest_stage: { quest: the_reckoning, stage: at_the_cask }
+          - has_flag: knows_course
+        text: >
+          You stepped back from the cask — from Tarrant and the men drawn in around it
+          — with Hale's reckoning still in your head: land two days east on the set of
+          the current, if only the course is held and the water made to reach it. The
+          arithmetic the bosun is not making. Forward the hands watch you from the
+          boat's thin shade with cracked lips; below, the girl waits. Nothing of it is
+          decided yet. The key is still round your neck, and you will have to go back.
+      - when:
+          - quest_stage: { quest: the_reckoning, stage: at_the_cask }
+          - has_flag: knows_pilot
+        text: >
+          You stepped back from the cask, from Tarrant's argument and the watching
+          stillness of the men behind him. You have been below, and what you heard
+          there will not leave you: the girl they want over the side can read the
+          inshore current, the one soul aboard who might find the land. Forward the
+          hands watch you with cracked lips; below, the girl waits to learn what you
+          will do. The key is warm at your neck. You will have to go back.
+      - when: [{ quest_stage: { quest: the_reckoning, stage: at_the_cask } }]
+        text: >
+          You stepped back — one step, then another, until you had the deck between
+          you and Tarrant's eyes and the weight of the decision. The three hands watch
+          you from the waist without speaking, because they have already said what they
+          want. Below in the hold the girl waits. The key is round your neck and the
+          cask is amidships in the glare, and you have looked at what is being asked
+          and stepped back from it once. You cannot step back from it again.
       - when:
           - quest_stage: { quest: the_reckoning, stage: adrift }
           - has_flag: knows_course
