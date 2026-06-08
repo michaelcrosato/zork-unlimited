@@ -1,0 +1,31 @@
+id: bug_0317
+title: "parser_validator: ITEM_UNPLACED — objects not placed in any room or container and not held"
+pack: null
+class: validator-structural
+severity: structural
+found_by: ultraplan_cycle_19
+playtest_report: null
+
+symptom: >
+  A parser pack could define an object in pack.objects without listing it in any
+  room.objects array, any container.contents array, or marking it held:true. The object
+  had no spawn location — it was permanently inaccessible to the player — but the
+  validator produced no warning or error. The homeRoom and containerOf maps were already
+  built inside computeObtainable() but were scoped to the obtainability fixpoint only;
+  no top-level validation loop checked orphan placement.
+
+root_cause: >
+  The parser validator checked ROOM_OBJECT_MISSING (room references an undefined object),
+  HELD_ALSO_PLACED (held object also listed in a room/container), and
+  CONTAINER_CONTENT_MISSING (container references an undefined object) — but had no
+  inverse check: an object defined in pack.objects but absent from every room.objects
+  and container.contents list (and not held) was silently accepted.
+
+fix: >
+  Added ITEM_UNPLACED warn() after the HELD_ALSO_PLACED loop in the top-level validation
+  function (around line 208). Builds two local sets (placedInRoom, placedInContainer)
+  from room.objects and container.contents, then iterates pack.objects: any non-held
+  object absent from both sets emits ITEM_UNPLACED. All 10 shipped parser+rpg packs
+  produce zero ITEM_UNPLACED findings (confirming the floor is non-vacuous).
+
+regression_test: tests/regression/parser_validator_item_unplaced.test.ts

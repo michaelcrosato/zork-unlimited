@@ -4,278 +4,174 @@ This is the AFK loop's **living plan** — the hand-off document for the saturat
 
 ---
 
-# Ultraplan re-aim cycle #18 (HEAD = bug_0307; next free id = bug_0308)
+# Ultraplan re-aim cycle #19 (HEAD = bug_0316; next free id = bug_0317)
 
 ## Synthesis
 
-Four reviewer teams (engine/verify-integrity, content/validator, loop/strategy, verification/benchmark) and two web-research agents (frontier IF benchmarks, agentic/spatial benchmarks) reported findings this cycle. The orchestrator cross-checked every source claim against the live repo at HEAD = bug_0307.
+Six reviewer teams (engine/validator, content/assessor, loop/strategy, verification/security, and two web researchers) and the orchestrator cross-checked every source claim against the live repo at HEAD = bug_0316.
 
-**Two claimed gaps were false alarms confirmed at source.** The content/validator reviewer correctly self-flagged BFS forward-reachability for rooms as `already_done: true` — it is implemented at `src/validate/parser_validator.ts` lines 339-350 (`UNREACHABLE_ROOM` warning). The benchmark reviewer correctly self-flagged `hide_graph` per-call override as `already_done: true` — confirmed present at `src/mcp/server.ts` and `tests/regression/observation_hide_graph_per_call.test.ts` (bug_0299). Both are genuine non-gaps.
+**Six claimed gaps were confirmed as false alarms.** (1) BFS AG(EF goal) forward-reachability validator — `UNREACHABLE_ROOM` (parser_validator.ts lines 339-350) and `SOFTLOCK` (lines 353-400) together implement both forward and reverse structural reachability; the loop/strategy and engine/validator reviewers both confirmed this. (2) MockAuthorProvider keystone swap — tools.ts line 788 already calls `resolveProvider({ mock: new MockAuthorProvider() })`; the project is one API key away from the first real-LLM proof artifact, not one code change away. (3) bug_0308 vacuous-assertion tautology detector — fully implemented (TAUTOLOGY_RE, MAX_TAUTOLOGY_ASSERTIONS, detectTautologies(), countTautologyAssertions(), TAUTOLOGY_ASSERTION/TAUTOLOGY_FLOOR/TAUTOLOGY_REGRESSION, GuardConstants); the stale docstring at lines 31-33 is a documentation lag, not an open gap. (4) NaN/Infinity guard in effects.ts — guardFinite() already wired. (5) divergedAtStep/replay_trace — already implemented in src/trace/replay.ts. (6) LRU rotation correctness — three regression tests confirm correct behavior; no lock-in path.
 
-**Three gaps converged across multiple reviewers as genuinely open.** (1) The vacuous-assertion static detector: the engine/verify-integrity reviewer and the verification/benchmark reviewer both nominated it; the script's own docstring at lines 31-33 explicitly concedes it; grep confirms no `detectTautologies`, `TAUTOLOGY`, or `VACUOUS_ASSERTION` pattern exists anywhere in the codebase. (2) The `ITEM_UNPLACED` validator check: the content/validator reviewer confirmed no `ITEM_UNPLACED` or `ORPHAN_OBJECT` error code exists in any validator. (3) The assessor's `TARGET_PER_MODE` threshold stagnation: `TARGET_PER_MODE` is `{ cyoa: 2, parser: 2, rpg: 2 }` while the repo has 7 CYOA / 5 parser / 5 RPG packs — all modes permanently above threshold, so the `content_new` lever never fires, and no `frontier` category exists in `CATEGORY_WEIGHT`.
+**Six genuine gaps confirmed.** (1) `ITEM_UNPLACED` validator: grep for `ITEM_UNPLACED` and `ORPHAN_OBJECT` across all of `src/` returns zero results. The `homeRoom`/`containerOf` maps are built inside `computeObtainable()` (parser_validator.ts lines 1116-1119) for the obtainability fixpoint only — no loop ever asks whether a non-held object appears in at least one room.objects list or container.contents list. An object defined in pack.objects but absent from every room.objects and every container.contents (and not held:true) has no spawn location, is permanently inaccessible, and produces no warning. Confirmed open across two consecutive ultraplan cycles by three independent reviewer teams. (2) Stale docstring in verify-integrity.ts (lines 31-33 still say the tautology gap "is still not caught" after bug_0308 closed it). (3) Multi-line tautology not covered by TAUTOLOGY_RE (no `s`/dotall flag; split-line `expect(foo)\n  .toBe(foo)` escapes detection). (4) TAUTOLOGY_REGRESSION inline in runDrift but not in detectCountRegressions (structural inconsistency, functionally safe). (5) TARGET_PER_MODE threshold stagnation (`{cyoa:2, parser:2, rpg:2}` vs actual 7/5/5; content_new permanently silenced — deliberate deferral per cycle #18 policy). (6) isSaturated() clean-stasis branch (allGeneratorsClean field absent from Assessment).
 
-**The vacuous-assertion detector is the correct single move for this cycle.** It is S-effort (one new exported function, one new regex, two wiring calls, and unit + regression tests), requires no API key, is fully deterministic, and directly closes the one mechanical hole the current three-count anti-tamper system admits. The SpecBench paper (arXiv:2605.21384, May 2026) and Hack-Verifiable Environments paper (arXiv:2605.20744, May 2026) both confirm that two-layer deterministic + LLM-judge verification is the strongest available reward-hacking detection approach — but only when the deterministic layer is complete. The existing three-count system guards against: shell deletion (`it()` count), body gutting (`expect()` count), and strict-to-loose swaps (strong-matcher count). The tautology detector adds the fourth layer: count-preserving semantic laundering where a strong matcher is kept but made vacuous (`expect(true).toBe(true)`, `expect(x).toBe(x)`). This is the EvilGenie (arXiv:2511.21654) attack class the ULTRAPLAN explicitly named as "second-place pick" in cycle #17 — and the current cycle has no higher-priority engine gap.
+**ITEM_UNPLACED is the correct single move for this cycle.** It is S-effort, requires no API key, is purely deterministic, and closes the one structural authoring defect class that no existing validator check covers: objects with no spawn location that are silently inaccessible to the player. The web research confirms the strategic value: AdventureForge's four-pillar claim (AI authoring → deterministic engine → independent structured-API play → regression-lock) depends on the validator being structurally complete. A benchmark substrate that silently accepts orphan objects undermines the "complete deterministic validator" guarantee. The verify-integrity.ts gaps (stale docstring, multi-line tautology, TAUTOLOGY_REGRESSION structural consistency) are valid but secondary — they improve documentation and structural consistency without closing any new class of authoring defect.
 
-The `ITEM_UNPLACED` validator gap is the strongest runner-up: also S-effort, also genuinely open. It is deferred only because the vacuous-assertion detector has higher research-integrity value (it closes a documented hole in the anti-reward-hacking guard) and the two are independent. The `TARGET_PER_MODE` fix is a one-liner but would only nominate authoring more packs in modes that already have healthy breadth — not the right move while structural integrity gaps remain. The `frontier` category addition is M-effort and partially blocked on the API key path for its scoring signal.
+The benchmark landscape remains favorable: TALES (arXiv 2504.14128), RPGBench (arXiv 2502.00595), BALROG (arXiv 2411.13543), and FictionalQA (arXiv 2506.05639) each address isolated pillars but no system combines all four. The keystone (resolveProvider at tools.ts:788) is already wired — only the API key itself remains as the gating dependency for real-LLM benchmark scores.
 
 ---
 
 ## The one chosen move
 
-**Static vacuous-assertion detector in `verify-integrity.ts` (bug_0308):** Add a `detectTautologies()` function that flags count-preserving semantic tautologies (`expect(true).toBe(true)`, `expect(x).toBe(x)`) as a fourth anti-tamper layer, wired into both `runStatic()` and `runDrift()`.
+**ITEM_UNPLACED validator check in `parser_validator.ts` (bug_0317):** Add a single validation loop after the existing object-level checks (around line 208) to detect objects defined in `pack.objects` that are not placed in any room, not inside any container, and not held — objects the player can never find or acquire.
 
 ### What
 
-The change is confined to `scripts/verify-integrity.ts`, two test files, and one bug artifact. No pack content changes, no schema changes, no engine changes.
+The change is confined to `src/validate/parser_validator.ts`, one test file, and one bug artifact. No pack content changes, no schema changes, no engine changes.
 
-**`scripts/verify-integrity.ts`** — add after the `STRONG_ASSERTION_RE` constant block (around line 123):
+**`src/validate/parser_validator.ts`** — add after the existing object-loop that checks HELD_ALSO_PLACED (ends around line 208), before the NPC loop:
 
 ```typescript
-/** A MAX count of tautological (vacuous) assertions per test suite.
- *  A tautology keeps a STRONG matcher (so STRONG_ASSERTION_RE fires) but makes it
- *  vacuous: the actual value is a literal and equals the expected literal, or both
- *  sides are the same identifier. Set to 0 for the real repo floor; the drift
- *  guard fires on any INCREASE across a cycle. */
-export const MAX_TAUTOLOGY_ASSERTIONS = 0;
+  // ── ITEM_UNPLACED: objects not reachable by any spawn path ───────────────────
+  // Build placement maps from room.objects and container.contents.
+  // Held objects (held: true) start in the player's inventory — no room/container
+  // placement is needed or expected.  Any other object that appears in neither map
+  // has no spawn location and can never be found or picked up by the player.
+  {
+    const placedInRoom = new Set<string>();
+    for (const r of pack.rooms) for (const oid of r.objects) placedInRoom.add(oid);
+    const placedInContainer = new Set<string>();
+    for (const o of pack.objects) for (const cid of o.contents) placedInContainer.add(cid);
 
-/** Matches vacuous assertion patterns the three-count system cannot catch:
- *  (a) literal-bool:   expect(true).toBe(true)  / expect(false).toBe(false)
- *  (b) literal-null:   expect(null).toBe(null)  / expect(undefined).toBe(undefined)
- *  (c) numeric/string literal: expect(42).toBe(42) / expect("x").toBe("x")
- *  (d) identical identifier: expect(foo).toBe(foo) / expect(bar).toEqual(bar)
- *
- *  Uses a backreference (\1) so false positives (expect(true).toBe(false)) are
- *  not matched — the actual and expected must be IDENTICAL. */
-const TAUTOLOGY_RE =
-  /\bexpect\s*\(\s*(true|false|null|undefined|\d[\d.]*|"[^"]*"|'[^']*'|`[^`]*`|[A-Za-z_$][A-Za-z0-9_$.]*)\s*\)\s*\.\s*(?:toBe|toEqual|toStrictEqual)\s*\(\s*\1\s*\)/g;
-
-/** Detect count-preserving semantic tautologies: assertions that keep a STRONG
- *  matcher (so the strong-matcher count is unchanged) but make it vacuous by
- *  comparing a value to itself. Pure over the given texts. */
-export function detectTautologies(files: { path: string; text: string }[]): Finding[] {
-  const findings: Finding[] = [];
-  for (const f of files) {
-    let m: RegExpExecArray | null;
-    const re = new RegExp(TAUTOLOGY_RE.source, TAUTOLOGY_RE.flags);
-    while ((m = re.exec(f.text)) !== null) {
-      const lineNo = f.text.slice(0, m.index).split("\n").length;
-      findings.push({
-        severity: "error",
-        code: "TAUTOLOGY_ASSERTION",
-        message: `vacuous tautology assertion: ${m[0].trim().slice(0, 80)} — actual and expected are identical; this assertion always passes and pins nothing`,
-        where: `${f.path}:${lineNo}`,
-      });
+    for (const o of pack.objects) {
+      if (o.held) continue; // inventory start — no placement needed
+      if (!placedInRoom.has(o.id) && !placedInContainer.has(o.id)) {
+        findings.push(
+          warn(
+            "ITEM_UNPLACED",
+            `object "${o.id}" is not placed in any room or container and is not held — it can never be found by the player.`,
+            [`object:${o.id}`],
+          ),
+        );
+      }
     }
   }
-  return findings;
-}
-
-export function countTautologyAssertions(files: { text: string }[]): number {
-  return files.reduce((n, f) => {
-    const re = new RegExp(TAUTOLOGY_RE.source, TAUTOLOGY_RE.flags);
-    return n + (f.text.match(re)?.length ?? 0);
-  }, 0);
-}
 ```
 
-**`runStatic()` in `scripts/verify-integrity.ts`** (around line 197, after `detectDisabledTests`):
+Note: this loop builds its own placement maps local to the top-level validation function. It does NOT reuse the `homeRoom`/`containerOf` maps inside `computeObtainable()` — those are scoped to a different function and built at a later stage. The new maps here are deliberately local to keep the check self-contained and independent of the obtainability fixpoint.
 
-Add after the `findings.push(...detectDisabledTests(testFiles));` line:
-
-```typescript
-findings.push(...detectTautologies(testFiles));
-const tautologies = countTautologyAssertions(testFiles);
-if (tautologies > MAX_TAUTOLOGY_ASSERTIONS) {
-  findings.push({
-    severity: "error",
-    code: "TAUTOLOGY_FLOOR",
-    message: `${tautologies} tautological assertion(s) found; floor is ${MAX_TAUTOLOGY_ASSERTIONS} (vacuous expect(x).toBe(x) patterns keep the strong-matcher count but assert nothing)`,
-    where: "tests/",
-  });
-}
-```
-
-**`runDrift()` in `scripts/verify-integrity.ts`** — add a tautology-count regression check after the existing `detectCountRegressions` call. Extend `TestArtifactCounts` with `tautologies?: number`, update `countTestArtifactsAtRef` to count tautologies in the same batch loop, and emit `TAUTOLOGY_REGRESSION` when the count increases:
+**`tests/unit/parser_validator.test.ts`** (or a new `tests/regression/parser_validator_item_unplaced.test.ts`) — add a describe block:
 
 ```typescript
-if (before.tautologies !== undefined && now.tautologies !== undefined &&
-    now.tautologies > before.tautologies) {
-  findings.push({
-    severity: "error",
-    code: "TAUTOLOGY_REGRESSION",
-    message: `tautological assertions increased from ${before.tautologies} to ${now.tautologies} this cycle — a vacuous expect(x).toBe(x) was introduced`,
-    where: "tests/",
+describe("ITEM_UNPLACED — objects with no spawn location", () => {
+  it("emits ITEM_UNPLACED warn for an object not in any room and not in any container and not held", () => {
+    // build a minimal valid parser pack with one orphan object
+    // expect validateParserPack to return a finding with code "ITEM_UNPLACED"
   });
-}
-```
-
-Also add `MAX_TAUTOLOGY_ASSERTIONS` to the `GuardConstants` type and `parseGuardConstants` parser (so `detectGuardWeakening` covers raising the floor).
-
-**`tests/unit/verifier_integrity.test.ts`** — add a new `describe("detectTautologies", ...)` block:
-
-```typescript
-describe("detectTautologies — catches vacuous semantic tautologies the strong-matcher count misses", () => {
-  it("flags literal-bool tautology: expect(true).toBe(true)", () => {
-    const text = "it('x', () => { expect(true).toBe(true); });";
-    const findings = detectTautologies([{ path: "t.test.ts", text }]);
-    expect(findings.length).toBe(1);
-    expect(findings[0]!.code).toBe("TAUTOLOGY_ASSERTION");
+  it("does NOT emit ITEM_UNPLACED for an object listed in room.objects", () => {
+    // object placed in a room → no finding
   });
-  it("flags literal-false tautology: expect(false).toBe(false)", () => {
-    const findings = detectTautologies([{ path: "t.test.ts", text: "expect(false).toBe(false);" }]);
-    expect(findings.length).toBe(1);
+  it("does NOT emit ITEM_UNPLACED for an object listed in a container's contents", () => {
+    // object inside a container → no finding
   });
-  it("flags identical-identifier self-comparison: expect(foo).toBe(foo)", () => {
-    const findings = detectTautologies([{ path: "t.test.ts", text: "expect(foo).toBe(foo);" }]);
-    expect(findings.length).toBe(1);
-    expect(findings[0]!.code).toBe("TAUTOLOGY_ASSERTION");
+  it("does NOT emit ITEM_UNPLACED for a held:true object with no room or container placement", () => {
+    // held object starts in inventory → no finding
   });
-  it("flags numeric-literal tautology: expect(42).toBe(42)", () => {
-    const findings = detectTautologies([{ path: "t.test.ts", text: "expect(42).toBe(42);" }]);
-    expect(findings.length).toBe(1);
-  });
-  it("does NOT flag a genuine assertion: expect(a).toBe(1)", () => {
-    const findings = detectTautologies([{ path: "t.test.ts", text: "expect(a).toBe(1);" }]);
-    expect(findings.length).toBe(0);
-  });
-  it("does NOT flag expect(true).toBe(false) — different literal values", () => {
-    const findings = detectTautologies([{ path: "t.test.ts", text: "expect(true).toBe(false);" }]);
-    expect(findings.length).toBe(0);
-  });
-  it("does NOT flag expect(a).toBe(b) — different identifiers", () => {
-    const findings = detectTautologies([{ path: "t.test.ts", text: "expect(a).toBe(b);" }]);
-    expect(findings.length).toBe(0);
-  });
-  it("the real repo has zero tautological assertions", () => {
-    const res = runStatic(process.cwd());
-    expect(res.findings.filter((f) => f.code === "TAUTOLOGY_ASSERTION")).toEqual([]);
-    expect(res.findings.filter((f) => f.code === "TAUTOLOGY_FLOOR")).toEqual([]);
+  it("all 17 real packs produce zero ITEM_UNPLACED findings", () => {
+    // load each pack and validate — no pack should have orphan objects
   });
 });
 ```
 
-**`tests/regression/verifier_strict_to_loose_swap.test.ts`** — add a new describe block at the end:
-
-```typescript
-describe("bug_0308 — a count-preserving semantic tautology (expect(true).toBe(true)) is caught even when the strong-matcher count holds", () => {
-  it("detectTautologies fires on expect(true).toBe(true) while the strong-matcher count sees it as a valid assertion", () => {
-    const vacuous = "it('x', () => { expect(true).toBe(true); });";
-    // The strong-matcher count DOES see this — toBe is a strong matcher — but detectTautologies
-    // catches it regardless, closing the gap the three-count system admits at lines 31-33 of
-    // scripts/verify-integrity.ts.
-    expect(countStrongAssertions([{ text: vacuous }])).toBe(1); // strong count is UNCHANGED — the launder passes the three-count test
-    const findings = detectTautologies([{ path: "t.test.ts", text: vacuous }]);
-    expect(findings.length).toBe(1);
-    expect(findings[0]!.code).toBe("TAUTOLOGY_ASSERTION");
-  });
-  it("detectTautologies does NOT fire on a genuine pinning assertion", () => {
-    const genuine = "it('x', () => { expect(result).toBe(42); });";
-    expect(detectTautologies([{ path: "t.test.ts", text: genuine }])).toEqual([]);
-  });
-  it("the real repo carries zero tautological assertions (regression lock)", () => {
-    const res = runStatic(process.cwd());
-    expect(res.findings.filter((f) => f.code === "TAUTOLOGY_ASSERTION")).toHaveLength(0);
-  });
-});
-```
-
-Update the imports in `verifier_strict_to_loose_swap.test.ts` to add `detectTautologies` to the import list.
-
-**`traces/bugs/bug_0308_vacuous_assertion_detector.yaml`** (new file):
+**`traces/bugs/bug_0317_item_unplaced_validator.yaml`** (new file):
 
 ```yaml
-id: bug_0308
-title: "verify-integrity: static vacuous-assertion (tautology) detector"
+id: bug_0317
+title: "parser_validator: ITEM_UNPLACED — objects not placed in any room or container and not held"
 pack: null
-class: reward-hacking-defense
+class: validator-structural
 severity: structural
-found_by: ultraplan_cycle_18
+found_by: ultraplan_cycle_19
 playtest_report: null
 
 symptom: >
-  The three-count anti-tamper system (test-case count, expect() count, strong-matcher
-  count) has one admitted gap documented in scripts/verify-integrity.ts lines 31-33:
-  a count-preserving swap that keeps a STRONG matcher but makes it vacuous
-  (expect(true).toBe(true)) is not caught. An autonomous agent could introduce
-  expect(true).toBe(true) while the strong-matcher count stays constant — the three
-  guards all stay silent, and the test is green but pins nothing.
+  A parser pack could define an object in pack.objects without listing it in any
+  room.objects array, any container.contents array, or marking it held:true. The object
+  had no spawn location — it was permanently inaccessible to the player — but the
+  validator produced no warning or error. The homeRoom and containerOf maps were already
+  built inside computeObtainable() but were scoped to the obtainability fixpoint only;
+  no top-level validation loop checked orphan placement.
 
 root_cause: >
-  The STRONG_ASSERTION_RE regex matches .toBe( as a strong matcher (correct) but does
-  not inspect whether the actual argument and expected argument are the same value.
-  A tautology passes the strong-matcher count because it still uses a strong matcher.
+  The parser validator checked ROOM_OBJECT_MISSING (room references an undefined object),
+  HELD_ALSO_PLACED (held object also listed in a room/container), and
+  CONTAINER_CONTENT_MISSING (container references an undefined object) — but had no
+  inverse check: an object defined in pack.objects but absent from every room.objects
+  and container.contents list (and not held) was silently accepted.
 
 fix: >
-  Added detectTautologies() to scripts/verify-integrity.ts: a TAUTOLOGY_RE regex
-  with a backreference (\1) that matches only when the actual and expected are the
-  same captured group (literal-bool, literal-null, numeric/string literal, or
-  identical identifier). Wired into runStatic() (TAUTOLOGY_ASSERTION + TAUTOLOGY_FLOOR)
-  and runDrift() (TAUTOLOGY_REGRESSION on count increase). Added MAX_TAUTOLOGY_ASSERTIONS
-  constant (0) to PROTECTED_FILES enforcement via GuardConstants.
+  Added ITEM_UNPLACED warn() after the HELD_ALSO_PLACED loop in the top-level validation
+  function (around line 208). Builds two local sets (placedInRoom, placedInContainer)
+  from room.objects and container.contents, then iterates pack.objects: any non-held
+  object absent from both sets emits ITEM_UNPLACED. All 17 real packs produce zero
+  ITEM_UNPLACED findings (confirming the floor is non-vacuous).
 
-regression_test: tests/regression/verifier_strict_to_loose_swap.test.ts
+regression_test: tests/unit/parser_validator.test.ts (ITEM_UNPLACED describe block)
 ```
 
 ### Why
 
-The `scripts/verify-integrity.ts` docstring at lines 31-33 explicitly names this as the one remaining gap in the anti-tamper system: "a count-preserving swap that keeps a STRONG matcher but makes it vacuous (`expect(true).toBe(true)`) is still not caught." The ULTRAPLAN (docs/ULTRAPLAN-2026-06-02.md) names the EvilGenie tautology scenario (arXiv:2511.21654) as the cycle #17 "second-place pick" — it is now the highest-value open structural gap.
+The `homeRoom` and `containerOf` maps are already built inside `computeObtainable()` (parser_validator.ts lines 1116-1119) but those maps are used only for the obtainability fixpoint and are not accessible at the top-level validation scope. grep for `ITEM_UNPLACED` and `ORPHAN_OBJECT` across all of `src/` returns zero results — confirmed by three independent reviewer teams over two consecutive ultraplan cycles. This is the only remaining structural placement gap in the parser validator.
 
-The web research confirms why this matters for the benchmark thesis: SpecBench (arXiv:2605.21384, May 2026) empirically validates that deterministic + LLM-judge two-layer verification is the strongest reward-hacking detection strategy, but only when the deterministic layer is complete. AdventureForge's deterministic layer has a documented hole. Closing it strengthens the "hack-verifiable substrate" claim (Hack-Verifiable Environments, arXiv:2605.20744, May 2026) that the project's structured API provides.
+The web research confirms the strategic value: the four-pillar benchmark positioning (AI authoring → deterministic engine → structured-API play → regression-lock) depends on the validator being structurally complete. TALES (arXiv 2504.14128), the nearest prior work, uses static games with no validation layer — AdventureForge's deterministic validator is a core differentiator. Silently accepting orphan objects is a class of authoring defect that would survive schema validation, exhaustive solving, and blind playtesting (since the orphan object never appears), making the validator the only place it can be caught.
 
-The fix is purely static (no LLM, no clock, no network), S-effort, and has clear, deterministic acceptance criteria. The real repo has zero tautological assertions at HEAD (confirming the floor of 0 is achievable and the gate is not vacuous).
+The fix is purely additive, S-effort, no API key, and has clear deterministic acceptance criteria. All 17 real packs should produce zero ITEM_UNPLACED findings, confirming the gate is non-vacuous (there are real packs to check) and that current content is already clean.
 
 ### Exact files to read and edit
 
 **Read (to understand existing patterns):**
-- `scripts/verify-integrity.ts` lines 105-180 — `STRONG_ASSERTION_RE`, `Finding` type, `detectDisabledTests`, `countStrongAssertions`: the exact pattern `detectTautologies` should follow (same function signature, same `files: { path: string; text: string }[]` input, same `Finding[]` output)
-- `scripts/verify-integrity.ts` lines 185-227 — `runStatic()` body: the three existing static checks; add the fourth (detectTautologies + TAUTOLOGY_FLOOR) here in the same style
-- `scripts/verify-integrity.ts` lines 306-349 — `TestArtifactCounts` type, `detectCountRegressions()`: extend `TestArtifactCounts` with `tautologies?: number` and add the optional fourth comparison
-- `scripts/verify-integrity.ts` lines 360-401 — `GuardConstants` type and `parseGuardConstants()`: add `maxTautologyAssertions` field and its `num("MAX_TAUTOLOGY_ASSERTIONS")` parse
-- `scripts/verify-integrity.ts` lines 403-439 — `detectGuardWeakening()`: add `if (now.maxTautologyAssertions > before.maxTautologyAssertions)` check (raising the floor is weakening)
-- `scripts/verify-integrity.ts` lines 441-493 — `countTestArtifactsAtRef()` inner loop: add tautology counting in the batch loop
-- `scripts/verify-integrity.ts` lines 516-590 — `runDrift()` body: where to add the TAUTOLOGY_REGRESSION check, after the existing detectCountRegressions block
-- `tests/unit/verifier_integrity.test.ts` lines 1-30 — import list: add `detectTautologies`, `countTautologyAssertions`, `MAX_TAUTOLOGY_ASSERTIONS` to imports
-- `tests/regression/verifier_strict_to_loose_swap.test.ts` lines 1-30 — import list: add `detectTautologies` to imports; confirm `runStatic` is already imported
-- `traces/bugs/bug_0307_friars_postern_gallery_stale_pipe_text.yaml` — bug artifact template for the new bug_0308 artifact
+- `src/validate/parser_validator.ts` lines 160-225 — the existing object-loop (CONTAINER_CONTENT_MISSING, KEY_MISSING, LOCKED_NO_KEY, HELD_ALSO_PLACED): the exact style and `warn()`/`err()` call pattern the new loop should follow
+- `src/validate/parser_validator.ts` lines 1111-1165 — `computeObtainable()`: understand why homeRoom/containerOf are scoped there and NOT reused in the new check (different function scope; the new check builds its own local sets)
+- `tests/unit/parser_validator.test.ts` lines 1-60 — existing test structure: describe block conventions, minimal pack construction helpers
 
 **Create / edit:**
-1. `scripts/verify-integrity.ts` — add `TAUTOLOGY_RE`, `MAX_TAUTOLOGY_ASSERTIONS`, `detectTautologies()`, `countTautologyAssertions()`; update `TestArtifactCounts`, `GuardConstants`, `parseGuardConstants`, `detectGuardWeakening`, `countTestArtifactsAtRef`, `runStatic`, `runDrift`
-2. `tests/unit/verifier_integrity.test.ts` — add `describe("detectTautologies", ...)` block with 8 cases (flag/no-flag patterns + real-repo static check)
-3. `tests/regression/verifier_strict_to_loose_swap.test.ts` — add `describe("bug_0308 — ...")` block with 3 cases; update import list
-4. `traces/bugs/bug_0308_vacuous_assertion_detector.yaml` — new bug artifact
+1. `src/validate/parser_validator.ts` — add ITEM_UNPLACED warn loop after the HELD_ALSO_PLACED block (around line 208), before the NPC loop. Use a scoped block `{ ... }` to keep the local sets from polluting the outer scope.
+2. `tests/unit/parser_validator.test.ts` (or new `tests/regression/parser_validator_item_unplaced.test.ts`) — add describe block with 5 cases (orphan object fires / room-placed does not fire / container-placed does not fire / held does not fire / all 17 real packs clean)
+3. `traces/bugs/bug_0317_item_unplaced_validator.yaml` — new bug artifact
 
 ### Acceptance check
 
 `npm run health` must exit 0. Specific criteria:
 
-1. `detectTautologies()` is exported from `scripts/verify-integrity.ts` and returns `Finding[]` with `code: "TAUTOLOGY_ASSERTION"` for each vacuous pattern (`expect(true).toBe(true)`, `expect(x).toBe(x)`, `expect(42).toBe(42)`).
-2. `runStatic()` includes `TAUTOLOGY_ASSERTION` and `TAUTOLOGY_FLOOR` findings in its output for a repo containing tautological assertions; returns clean for the real repo (zero tautologies at HEAD).
-3. The new unit tests in `verifier_integrity.test.ts` all pass, including the real-repo static check confirming zero tautologies.
-4. The new regression cases in `verifier_strict_to_loose_swap.test.ts` all pass, including: (a) strong-matcher count is 1 for `expect(true).toBe(true)` (the launder the three-count system misses), and (b) `detectTautologies` fires on that same input.
-5. `MAX_TAUTOLOGY_ASSERTIONS` is in `GuardConstants` and `parseGuardConstants` parses it; `detectGuardWeakening` fires if the floor is raised.
-6. All 17 packs validate 0/0 (no pack content changes).
-7. `verify:integrity` reports 0 errors, 0 warnings on the working tree.
-8. Test count increases by the number of new `it()` cases added.
+1. `validateParserPack()` returns a finding with `code: "ITEM_UNPLACED"` and `severity: "warn"` for a pack containing an object that is not in any `room.objects`, not in any `container.contents`, and has `held !== true`.
+2. No `ITEM_UNPLACED` finding is emitted for an object listed in `room.objects`.
+3. No `ITEM_UNPLACED` finding is emitted for an object listed in a container's `contents` array.
+4. No `ITEM_UNPLACED` finding is emitted for an object with `held: true` that is absent from all rooms and containers.
+5. All 17 real packs validate with 0 `ITEM_UNPLACED` findings (confirming the gate is non-vacuous and current content is already clean).
+6. `verify:integrity` reports 0 errors, 0 warnings on the working tree.
+7. Test count increases by the number of new `it()` cases added.
+8. All existing tests continue to pass (no regression).
 
 ### What NOT to change
 
 - No schema change to any pack format (`ParserPackSchema`, `ConditionSchema`, `EffectSchema`)
 - No engine change (`makeStep`, `applyEffects`, `evalConditions`)
 - No pack content change — no YAML edits, no hash re-pin
-- No change to `TARGET_PER_MODE` or `CATEGORY_WEIGHT` in `assessor.ts` (deferred)
-- No addition of `frontier` category to `assessor.ts` (deferred)
-- No change to `ITEM_UNPLACED` validator (deferred to next cycle)
-- The existing `detectDisabledTests`, `countTestCases`, `countAssertions`, `countStrongAssertions`, `detectCountRegressions`, `classifyDrift`, `detectGuardWeakening` functions must remain structurally identical — this is a purely additive change
+- No change to `TARGET_PER_MODE` or `CATEGORY_WEIGHT` in `src/afk/assessor.ts` (deferred)
+- No change to the `frontier` category addition (deferred)
+- No change to `isSaturated()` or `Assessment` type (deferred)
+- No change to `scripts/verify-integrity.ts` (stale docstring and multi-line tautology deferred)
+- The existing `computeObtainable()` function and its internal `homeRoom`/`containerOf` maps must remain untouched — the new validation loop builds independent local sets
 
 ---
 
 ## Deferred levers (do NOT implement this cycle)
 
-- **`ITEM_UNPLACED` validator check:** Confirmed genuinely open (no `ITEM_UNPLACED` or `ORPHAN_OBJECT` code in any validator). S-effort, impact 4. Best next cycle after bug_0308 — the fix is a single loop after `homeRoom`/`containerOf` maps are built in `parser_validator.ts` around line 208.
-- **`TARGET_PER_MODE` threshold update:** Loop/strategy reviewer confirmed all three modes (7/5/5) are above the `{ cyoa: 2, parser: 2, rpg: 2 }` thresholds, permanently silencing `content_new`. S-effort one-liner, but re-enabling authoring nominations when structural integrity gaps remain is the wrong priority order.
-- **Assessor `frontier` category:** Loop/strategy reviewer confirmed no `frontier` entry exists in `Category` union or `CATEGORY_WEIGHT`. M-effort. The scoring signal that makes it meaningful above 0.5 requires a live API key path; the detection stub alone would produce a candidate that fires regardless of whether a key is actually present.
-- **Assessor `isSaturated()` clean-stasis branch:** Adding `allGeneratorsClean: boolean` to `Assessment` is S-effort and genuinely useful for the ultraplan prompt. Deferred as secondary to structural integrity work.
-- **Parser generator DAG topology variant:** L-effort. The generator emits only a linear 4-room spine. A DAG variant with parallel sub-puzzles is the right next generator evolution but requires multi-cycle scope.
-- **BFS AG(EF goal) forward-reachability validator:** L blast-radius, deferred four consecutive ultraplans. Still the right long-term structural move; still too large for one focused cycle.
-- **Benchmark scorecard module:** No standalone value without real-model rows to populate. The ULTRAPLAN-2026-06-02.md notes this was built and removed once already. Unblock after the keyed real-model run.
-- **Assessor `content_new` above-floor category (API-key path):** Wired in `adapter.ts` but no detection lever in `assessor.ts`. Blocked on API key for the scoring signal that makes it meaningful.
+- **Stale docstring in `verify-integrity.ts`:** Lines 31-33 still say the tautology gap "is still not caught" after bug_0308 closed it. S-effort one-paragraph edit. Deferred: does not block any detection coverage; can be bundled with multi-line tautology fix in a fast-follow commit.
+- **Multi-line tautology not covered by `TAUTOLOGY_RE`:** The regex has no `s`/dotall flag; `expect(foo)\n  .toBe(foo)` split across lines escapes detection. S-effort regex flag addition or second-pass scanner plus one new unit test. Deferred: real-world test code overwhelmingly writes tautologies on a single line; the risk is narrow.
+- **`TAUTOLOGY_REGRESSION` not in `detectCountRegressions`:** Tautology drift comparison is inline in `runDrift`, not in the exported pure `detectCountRegressions` function. Structurally inconsistent but functionally safe. S-effort refactor. Deferred.
+- **`TARGET_PER_MODE` threshold update:** `{cyoa:2, parser:2, rpg:2}` vs actual 7/5/5; `content_new` permanently silenced. S-effort one-liner. Deliberate deferral: re-enabling authoring nominations while structural validator gaps remain is the wrong priority order. Revisit after bug_0317 is locked.
+- **Assessor `isSaturated()` clean-stasis branch:** Adding `allGeneratorsClean: boolean` to `Assessment` is S-effort and genuinely useful for ultraplan prompt quality. Deferred as secondary to structural integrity work.
+- **Assessor `frontier` category:** No `frontier` entry in `Category` union or `CATEGORY_WEIGHT`. M-effort. The scoring signal that makes it meaningful above the 0.5 floor requires a live API key path; a detection stub alone would produce a candidate that fires unconditionally.
+- **Parser generator DAG topology variant:** L-effort. Linear 4-room spine only; a DAG variant with parallel sub-puzzles is the right next generator evolution but requires multi-cycle scope.
+- **Benchmark scorecard module:** No standalone value without real-model rows. Unblock after the keyed real-model run.
+- **Assessor `content_new` above-floor category (API-key path):** Wired in `adapter.ts` but scoring signal blocked on API key.

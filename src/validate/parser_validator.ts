@@ -206,6 +206,34 @@ export function validateParser(
         );
     }
   }
+  // ── ITEM_UNPLACED: objects not reachable by any spawn path ───────────────────
+  // Build placement maps from room.objects and container.contents.
+  // Held objects (held: true) start in the player's inventory — no room/container
+  // placement is needed or expected.  Objects granted via add_item effects are
+  // crafted/created during gameplay — they also need no initial room placement.
+  // Any other object that appears in none of these maps is a true orphan.
+  {
+    const placedInRoom = new Set<string>();
+    for (const r of pack.rooms) for (const oid of r.objects) placedInRoom.add(oid);
+    const placedInContainer = new Set<string>();
+    for (const o of pack.objects) for (const cid of o.contents) placedInContainer.add(cid);
+    const grantedByEffect = new Set<string>();
+    for (const e of allEffects(pack)) if ("add_item" in e) grantedByEffect.add(e.add_item);
+
+    for (const o of pack.objects) {
+      if (o.held) continue; // inventory start — no placement needed
+      if (grantedByEffect.has(o.id)) continue; // crafted/created during play
+      if (!placedInRoom.has(o.id) && !placedInContainer.has(o.id)) {
+        findings.push(
+          warn(
+            "ITEM_UNPLACED",
+            `object "${o.id}" is not placed in any room or container and is not held — it can never be found by the player.`,
+            [`object:${o.id}`],
+          ),
+        );
+      }
+    }
+  }
   for (const npc of pack.npcs) {
     if (!roomIds.has(npc.room))
       findings.push(
