@@ -200,17 +200,38 @@ rooms:
     # stays accurate for the common route that leaves the trap on the bench. First
     # match wins, so the finished (antidote_brewed) state is listed before the
     # mid-steep (herb_added) state. Text-only: no flag/item/score/exit/gating change.
+    # bug_0300: the phial clause did not react to the player TAKING it — all three
+    # room states (base, herb_added, antidote_brewed) still read "a black phial sits
+    # apart on the bench" even after pickup. Same reactive-description-blindness class
+    # as bug_0012/0282/0283/0287/0288/0289/0292/0298. Fix: each brew state gains a
+    # has_item:black_phial companion (listed ABOVE its plain counterpart, first-match-
+    # wins) that omits the phial line; the base gains a standalone has_item:black_phial
+    # variant above the description fallback. No flag/score/exit/gating/ending change.
     variants:
+      - when: [{ has_flag: antidote_brewed }, { has_item: black_phial }]
+        text: >
+          The alchemist's laboratory. The great cauldron has gone still over its
+          guttering flame, drained of the antidote you decanted. A stair climbs
+          to the spire; the hall is south.
       - when: [{ has_flag: antidote_brewed }]
         text: >
           The alchemist's laboratory. The great cauldron has gone still over its
           guttering flame, drained of the antidote you decanted; a black phial sits
           apart on the bench. A stair climbs to the spire; the hall is south.
+      - when: [{ has_flag: herb_added }, { has_item: black_phial }]
+        text: >
+          The alchemist's laboratory. A great cauldron simmers over a low flame, its
+          brew steeped a deep herbal green and waiting for clear water. A stair climbs
+          to the spire; the hall is south.
       - when: [{ has_flag: herb_added }]
         text: >
           The alchemist's laboratory. A great cauldron simmers over a low flame, its
           brew steeped a deep herbal green and waiting for clear water; a black phial
           sits apart on the bench. A stair climbs to the spire; the hall is south.
+      - when: [{ has_item: black_phial }]
+        text: >
+          The alchemist's laboratory. A great cauldron simmers over a low flame. A
+          stair climbs to the spire; the hall is south.
     objects: [cauldron, black_phial]
     exits:
       - { direction: south, to: great_hall }
