@@ -70,11 +70,11 @@ describe("assess()", () => {
   });
 
   it("raises content_new candidates for modes that have not yet met their breadth target", () => {
-    // TARGET_PER_MODE was raised to {cyoa:10, parser:8, rpg:8} (bug_0332) to unblock
-    // net-new pack authoring after 50 cycles of saturation. Current counts are well
-    // below the new targets, so the assessor correctly RE-ARMS content_new for every
-    // thin mode. When a mode eventually reaches its target the candidate for that mode
-    // will disappear; raising TARGET_PER_MODE further re-arms it again.
+    // TARGET_PER_MODE was raised to {cyoa:12, parser:10, rpg:10} (bug_0335) after
+    // all three modes reached the prior {cyoa:10, parser:8, rpg:8} targets (bug_0332)
+    // in the same cycle. Current counts are below the new targets, so the assessor
+    // correctly RE-ARMS content_new for every thin mode. When a mode reaches its target
+    // the candidate for that mode disappears; raising TARGET_PER_MODE re-arms it again.
     for (const mode of ["cyoa", "parser", "rpg"]) {
       expect(a.packsByMode[mode]).toBeGreaterThanOrEqual(2);
     }
