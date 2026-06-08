@@ -1,0 +1,421 @@
+# The Gauger's Register — a Zork-style parser pack (Stage 3).
+#
+# The NINTH parser pack and the FIRST to use NPC ROUTE-GATE VIA EVIDENCE PRESENTATION.
+# Every prior parser pack locks a route with a KEY (a physical object whose possession
+# satisfies a door condition) or with a NOISE/LIGHT flag (a binary state set by a prior
+# action). Here the inner door is guarded by a PERSON — a human obstacle — and the lock
+# is PERSUASION: the watchman steps aside only if the player shows him physical proof of
+# the corruption. The showing requires TWO preconditions that the prior parser corpus has
+# never combined: you must (1) READ the duty ledger to understand what the stave proves
+# (read_ledger flag) AND (2) CARRY the marked stave to show. Neither alone suffices;
+# together they let you unlock the NPC gate with `show stave to watchman` (a USE
+# interaction with `command_verb: show`). The mechanics novel in this pack:
+#
+#   • NPC as a route-gate unlocked by EVIDENCE PRESENTATION, not a key/flag.
+#   • SHOW command (command_verb: show) as a natural-language parser verb — the first
+#     pack to use "show X to Y" as the unlock idiom rather than "use X on Y."
+#   • TWO-PRECONDITION NPC gate: both a READ (epistemic: you know what you're showing)
+#     and a TAKE (physical: you have it) must be satisfied before the show fires.
+#
+# There is also a FORCEFUL path through the inner door (USE crowbar ON inner door), a
+# noisier and less-rewarded route that yields 40/45 — the quiet/forceful duality of
+# collectors_warrant but in a social rather than physical register.
+#
+# Setting: a port town excise office, 1700. Solomon Hayman, King's Gauger, measures
+# barrels and certifies their content for duty — in principle. In practice he shaves a
+# quart off every read of a favoured merchant's casks, pockets the difference in duty,
+# and forges the certificates. Your master, an honest rival merchant, has been undercut
+# for six months. The gauger's private register — his true record against the certified
+# record — sits in his assay room. The board of excise meets tomorrow at nine. You have
+# until first bell.
+#
+# Map:
+#
+#   approach_lane (start, S) — approach only; no items
+#        │ N
+#   weighing_room (hub: duty_ledger, bribe_purse, marked_stave, crowbar, watchman NPC-obj,
+#                       inner_door object, weighing_beam object)
+#        │ N** (** any_of: watchman_convinced, door_forced)
+#   assay_room (hayman_seal, gauge_register — the GOAL item)
+#        │ W
+#   back_lane (WIN destination — walk out with the register)
+#
+# Score (max 45):
+#   +5   READ duty_ledger   — the ledger shows the systematic under-reads (sets read_ledger)
+#   +10  TAKE marked_stave — the stave with deepened notch-marks: physical proof
+#   +5   SHOW stave to watchman — the watchman is convinced (sets watchman_convinced)
+#   +5   READ hayman_seal  — the matching seal batches confirm the fraud (read_seal)
+#   +20  TAKE gauge_register — the private record naming every false certificate
+#        (Forcing the inner door skips +5 for watchman_convinced → 40/45 on forceful path)
+#
+# Quiet path (45):  read_ledger → take_stave → show_watchman → read_seal → take_register
+# Forceful path (40): read_ledger → take_stave → force_inner_door → read_seal → take_register
+#
+# Endings (3):
+#   ending_exposed  — WIN (non-death): register + back_lane — presented to the board
+#   ending_bribed   — BAD (non-death): pocketed the gauger's bribe money; master ruined
+#   ending_arrested — BAD (non-death): attacked the watchman; constables came in
+#
+# Both bad endings telegraphed before they can be triggered (bug_0123 discipline):
+#   • ending_bribed:   bribe_purse examine says "names and amounts in a loose leaf tucked
+#     inside" — the player knows what it is before they take it; take_effects fires end_game.
+#   • ending_arrested: USE crowbar ON watchman — the assault is a deliberate verb on a
+#     visible person, not a trap; the watchman's description says he's the gauger's cousin.
+#
+# There is no DEATH ending in this pack: the social setting has no lethal hazard credible
+# enough for the fiction. Both bad endings are capture/shame forks — the sealed_crypt
+# plunder-and-doom taxonomy applied to a civic rather than a supernatural setting.
+
+meta:
+  id: gaugers_register_v1
+  title: "The Gauger's Register"
+  start_room: approach_lane
+  flags_init: []
+  # `steadiness` (3) — the OPTIONAL TENSION BEAT: a CHECK on the crowbar before you
+  # decide whether to force the inner door or show the stave instead. Convergent and
+  # off-critical-path — gates no exit, score, ending, or variant; retire flag
+  # `grip_checked` read only here. The same sealed_crypt / collectors_warrant shape.
+  vars_init: { steadiness: 3 }
+  max_score: 45
+
+rooms:
+  - id: approach_lane
+    name: "Approach Lane"
+    description: >
+      A narrow lane off the quay, the air thick with salt and pitch. The gauger's
+      office sits at the north end, its shutters closed. No light shows from within.
+      The door stands ajar — whoever was last out was in a hurry.
+    exits:
+      - { direction: north, to: weighing_room }
+
+  - id: weighing_room
+    name: "The Weighing Room"
+    description: >
+      The main office: a long room smelling of chalk-dust and old ledger-leather.
+      A weighing beam hangs still on its pivot above the central table. A tall
+      cupboard stands against the east wall beside the inner door; the duty
+      ledger and the night's papers are spread on the table. A crowbar leans
+      against the south wall — the gaugers use them to shift heavy casks. A
+      marked stave hangs on a peg beside the beam, between the scale-weights.
+      The lane is south; the inner door is north.
+    objects: [duty_ledger, bribe_purse, marked_stave, crowbar, weighing_beam, watchman, inner_door]
+    exits:
+      - { direction: south, to: approach_lane }
+      - direction: north
+        to: assay_room
+        conditions: [{ any_of: [{ has_flag: watchman_convinced }, { has_flag: door_forced }] }]
+        locked_msg: >
+          The watchman stands in the inner door, arms folded. He gives you a
+          flat look that says: nobody through here without Mr. Hayman's word.
+
+  - id: assay_room
+    name: "The Assay Room"
+    description: >
+      A smaller room: a stone bench along the north wall, an assay cupboard, and
+      a heavy oak table in the centre. On the table sits Hayman's private gauge-book —
+      the one the certificates never match. A wax seal-stamp rests on its stand
+      above the fireplace. The back lane runs west through a low door.
+    variants:
+      - when: [{ has_item: gauge_register }]
+        text: >
+          A smaller room: a stone bench along the north wall, an assay cupboard, and
+          a heavy oak table in the centre. The gauge-book is under your coat now — the
+          table clear. A wax seal-stamp rests on its stand above the fireplace. The
+          back lane runs west through a low door.
+    objects: [hayman_seal, gauge_register]
+    exits:
+      - { direction: south, to: weighing_room }
+      - { direction: west, to: back_lane }
+
+  - id: back_lane
+    name: "Back Lane"
+    description: >
+      A wider lane behind the excise row, empty at this hour. You step out of the
+      shadow of the gauger's office and into the open dark. The road north runs
+      toward the clock-tower; the assay room lies back east if you have unfinished
+      business.
+    exits:
+      - { direction: east, to: assay_room }
+
+objects:
+  # ── Weighing room ────────────────────────────────────────────────────────────
+  - id: duty_ledger
+    name: "duty ledger"
+    aliases: [ledger, papers, duty, night papers, duty register, table papers, duty book]
+    description: >
+      Hayman's working ledger, the columns of barrel measurements and certified
+      duties laid out in his neat, precise hand. A week's worth of entries, each
+      signed off with his personal seal.
+    # The §17 two-source first clue: READ gives the data (systematic under-reads on
+    # Aldrich-factor barrels) that contextualises the marked stave as proof, not just
+    # a tool. Without reading the ledger first, the show_stave interaction is locked
+    # (condition: read_ledger). The ledger also names the watchman ("Hayman's cousin
+    # Edmund on nights") — not a gate, but context that makes the encounter make sense.
+    # Two sources: (1) the ledger's read_text here, (2) the weighing_beam examine
+    # notes the discrepancies from the beam's side. Bug_0123 discipline.
+    read_text: >
+      The columns run neatly. You match them against the scale: Aldrich-factor
+      barrels, every one of them measured a quart short of their actual fill —
+      certified at nine-tenths their real content, duties paid accordingly. Seven
+      weeks of this. The shortfall in duty is substantial; the shortfall in
+      Hayman's purse is the difference. A note at the foot in a looser hand:
+      "E. Hayman — nights from second bell." Edmund — the cousin.
+    interactions:
+      - verb: READ
+        target: duty_ledger
+        conditions: [{ not_flag: read_ledger }]
+        effects:
+          - set_flag: read_ledger
+          - inc_var: { name: score, by: 5 }
+
+  - id: bribe_purse
+    name: "cloth purse"
+    aliases: [purse, coins, money, payment, bribe, loose leaf, pouch, bribe purse]
+    description: >
+      A heavy cloth purse on the corner of the table, tied shut. A loose leaf is
+      tucked into the knot: names, dates, and amounts — six months of side-payments,
+      each in Hayman's hand. A record of what was given and to whom, kept for mutual
+      security. Not safe to leave behind; not safe to take.
+    # Bug_0123: the examine makes clear what this is before TAKE fires end_game.
+    # The player knows it is bribery money before they pocket it. No ambush.
+    takeable: true
+    take_effects:
+      - narrate: >
+          You pocket the purse. A mistake you understand the moment the weight
+          of it settles in your coat. Hayman's cousin came in at the back as
+          you slipped out the lane, and the rest of it sorted itself the way
+          these things always do when the wrong party has the only record.
+          Your master's case went the way the gauger always planned.
+      - end_game: ending_bribed
+
+  - id: marked_stave
+    name: "gauging stave"
+    aliases: [stave, rod, gauge, gauge rod, gauge stave, measuring rod, stick, notched stave, marked stave]
+    description: >
+      A gauging rod — the graduated measuring stick dipped into a barrel to read
+      its volume from the waterline. The notch-marks have been deliberately deepened
+      on one side, shaving a consistent quart off every reading. Hold it next to
+      an honest stave and the difference is plain. This is the instrument Hayman
+      has been using on the Aldrich-factor casks: a modified tool for a modified
+      result.
+    takeable: true
+    # +10 on take: the physical proof recovered. The SHOW interaction that awards +5
+    # for watchman_convinced is defined on the WATCHMAN object (the target), per the
+    # engine's useInteraction lookup discipline (resolves via target's interactions).
+    take_effects:
+      - inc_var: { name: score, by: 10 }
+
+  - id: crowbar
+    name: "crowbar"
+    aliases: [bar, iron bar, lever, crow, pry-bar, pry bar]
+    description: >
+      A short iron crowbar of the kind used to shift heavy casks and pry open
+      their lids for inspection. Useful, but noisy.
+    takeable: true
+    # TENSION BEAT — CHECK grip (optional, convergent, off-critical-path).
+    # Gated on in_room: weighing_room so the beat fires where the decision belongs —
+    # at the moment before committing to force or persuasion — not as the player
+    # wanders elsewhere with the crowbar in hand (bug_0258 / in_room condition).
+    interactions:
+      - verb: USE
+        item: crowbar
+        target: crowbar
+        command_verb: check
+        conditions: [{ not_flag: grip_checked }, { in_room: weighing_room }]
+        skill_check:
+          skill: steadiness
+          difficulty: 11
+          on_success:
+            - set_flag: grip_checked
+            - narrate: >
+                You close both hands around the iron and hold it still. Your grip
+                does not move. If it comes to the door, you are steady enough.
+          on_failure:
+            - narrate: >
+                You close your hands on the iron and feel the slight tremble — not
+                fear, just the cold. It will not matter; iron does not ask for steadiness.
+
+  - id: weighing_beam
+    name: "weighing beam"
+    aliases: [beam, scales, scale, weights, balance, pivot, weighing scales]
+    description: >
+      The wooden balance-beam on its iron pivot, the scale-pans hanging still.
+      Chalk-marks on the table below each pan show where the balance should sit
+      for an honest nine-gallon barrel: the left chalk-mark is a full hand's width
+      from where Hayman's calibration actually rests it. A second discrepancy to
+      match the ledger.
+    # Second source for the §17 two-source clue. No score (the ledger is the primary
+    # read; this is corroborating detail). No flag set (read_ledger serves both).
+
+  - id: watchman
+    name: "night watchman"
+    aliases: [watchman, guard, man, cousin, edmund, night watchman, hayman's cousin, hayman cousin]
+    description: >
+      Edmund Hayman, the gauger's cousin: a heavy man in a worn coat, standing
+      squarely in the inner door with his arms folded. He does not look hostile —
+      just immovable. His brief is simple: nobody in the back room without Mr.
+      Hayman's word.
+    # Post-convinced reactive variant: the watchman has stepped aside and is playing
+    # the night out. Same any_of[watchman_convinced] shape as other after-action variants.
+    variants:
+      - when: [{ has_flag: watchman_convinced }]
+        text: >
+          Edmund stands near the back window with his back to you, intent on the
+          lane outside. "I told you — I was asleep from second bell," he says
+          quietly, without turning. "Whatever you found, I did not see it."
+    interactions:
+      # SHOW stave to watchman — the core novel mechanic of this pack. `command_verb: show`
+      # produces the natural command "show gauging stave to night watchman" rather than the
+      # generic "use stave on watchman." The TWO-PRECONDITION gate (has_item AND read_ledger)
+      # is what makes this distinct from all prior key-use gates: you must understand what
+      # the stave proves (read_ledger = epistemic precondition) before showing it (has_item =
+      # physical precondition). Either alone is not enough.
+      # Engine discipline: USE interactions are resolved by looking up the TARGET object's
+      # interactions list (useInteraction(index, target, item)), so this interaction belongs
+      # on the watchman (target), not on the marked_stave (item).
+      - verb: USE
+        item: marked_stave
+        target: watchman
+        command_verb: show
+        command_template: "show {item} to {target}"
+        conditions:
+          - has_item: marked_stave
+          - has_flag: read_ledger
+          - not_flag: watchman_convinced
+        effects:
+          - set_flag: watchman_convinced
+          - inc_var: { name: score, by: 5 }
+          - narrate: >
+              You hold out the stave so the notch-marks face the lamplight. Edmund
+              takes it, turns it slowly in both hands, and reads the graduated marks
+              for a long moment without speaking. Then he sets it back in your hand.
+              "I did not know it was this bad," he says quietly. "Go through. I will
+              find I was asleep from second bell if anyone asks."
+      # ASSAULT — USE crowbar ON watchman. A deliberate act on a visible, named person.
+      # The watchman's description names him; the crowbar's description warns it's noisy.
+      # Two sources before the consequence: watchman description (he's the gauger's cousin,
+      # will be believed over you) + the room description (the lane is close outside).
+      # Not an ambush; not a trap. A conscious choice.
+      - verb: USE
+        item: crowbar
+        target: watchman
+        conditions: [{ has_item: crowbar }, { not_flag: watchman_convinced }]
+        effects:
+          - narrate: >
+              You raise the crowbar. Edmund's shout carries clean through the shutters
+              and out into the lane — "CONSTABLE! IN HERE!" — and before you can
+              think of the door there are boots on the cobbles and the latch going.
+              Two men of the watch step in. "Put it down," one of them says, very
+              calmly. You do.
+          - end_game: ending_arrested
+
+  - id: inner_door
+    name: "inner door"
+    aliases: [door, north door, inner, back, passage, inner passage]
+    description: >
+      A solid oak door set into the north wall, hung on heavy iron pintles.
+      The gap at the frame is tight — this door was not fitted in a hurry.
+    variants:
+      - when: [{ has_flag: door_forced }]
+        text: >
+          The inner door stands open, its frame splintered at the lock.
+    interactions:
+      # FORCE — USE crowbar ON inner_door. The noisy alternative to persuasion.
+      # Telegraphed by the room description ("crowbar leans against the south wall —
+      # the gaugers use them to shift heavy casks") and the door description (tight fit
+      # but forceable). No death — the noise wakes no one with lethal consequence in
+      # this setting — but the forceful path costs the +5 watchman_convinced award
+      # (40/45 vs 45/45). The watchman does not intervene: he knows he is implicated
+      # and will deny the whole night.
+      - verb: USE
+        item: crowbar
+        target: inner_door
+        conditions: [{ has_item: crowbar }, { not_flag: door_forced }, { not_flag: watchman_convinced }]
+        effects:
+          - set_flag: door_forced
+          - narrate: >
+              The crowbar goes into the gap at the frame and you put your weight behind it.
+              The lock gives with a crack like a split plank — loud enough to hear in the
+              lane. Edmund does not move from the window. He has decided, it seems, that
+              he was asleep. The inner room is open.
+
+  # ── Assay room ────────────────────────────────────────────────────────────────
+  - id: hayman_seal
+    name: "wax seal-stamp"
+    aliases: [seal, stamp, wax seal, seal stamp, impression, gauge seal, certificate seal]
+    description: >
+      The brass seal-stamp Hayman uses to certify his gauges. Two impressions on the
+      blotter below it are the same batch-mark — meaning the same seal was used on
+      two different gauging sessions from two different weeks, certificates that should
+      carry different dates and different issue-stamps. A single stamp used for
+      everything is how you certify a result you did not measure.
+    read_text: >
+      The stamp reads: KING'S GAUGER — PORT OF CARNMOUTH — S. HAYMAN, and below it
+      a batch identifier. Two entries in the ledger carry the same batch mark, six
+      weeks apart. One seal, two falsifications. The register on the table will say
+      the same thing in its own way.
+    interactions:
+      - verb: READ
+        target: hayman_seal
+        conditions: [{ not_flag: read_seal }]
+        effects:
+          - set_flag: read_seal
+          - inc_var: { name: score, by: 5 }
+
+  - id: gauge_register
+    name: "gauge register"
+    aliases: [register, private register, book, gauge book, private book, hayman register, record, gauge record]
+    description: >
+      Hayman's private gauge-book: two columns on every page, the actual measurement
+      and the certified measurement, for every barrel gauged in the past year. Every
+      Aldrich-factor entry shows a quart short. Every other merchant's entry is
+      honest. It is a ledger of a man who kept his own confession in a locked room
+      and trusted the lock.
+    takeable: true
+    quest_critical: true
+    take_effects:
+      - inc_var: { name: score, by: 20 }
+
+npcs: []
+
+win_conditions:
+  - id: register_home
+    # Visiting back_lane requires has_item: gauge_register AND the assay_room N exit
+    # was traversed (route through assay_room to back_lane). The gauger_register must
+    # be in inventory; back_lane must be visited.
+    conditions: [{ visited: back_lane }, { has_item: gauge_register }]
+    ending: ending_exposed
+
+endings:
+  - id: ending_exposed
+    title: "The Register"
+    text: >
+      You step out into the back lane and do not look back at the gauger's office.
+      The register is under your coat. Hayman has his certifying lamp still burning
+      in the assay room; he will not know it is gone until he reaches for it in the
+      morning, which will be too late. The board of excise meets at nine o'clock.
+      Your master's case — seven weeks of false duty, a year of undercut prices —
+      is answered in Hayman's own hand, on every page. You walk north toward the
+      clock-tower and wait for first bell.
+      *** The register is recovered. ***
+
+  - id: ending_bribed
+    title: "The Purse"
+    text: >
+      Hayman's bribery money does not feel like much by the time the hearing is
+      over. Your master's petition was dismissed — the gauger's records held, his
+      cousin corroborated, and the loose leaf you might have produced as evidence
+      of payment was in your coat instead of the board's hands. You know what the
+      purse cost; you knew when you took it.
+      *** You are bought. ***
+
+  - id: ending_arrested
+    title: "The Watch"
+    text: >
+      The two constables took your name and your crowbar and walked you up to the
+      justice room at the guild-hall. Edmund Hayman gave his account first and gave
+      it well: his cousin's factor, breaking in by night, threatening the watchman.
+      Whatever you had found in the weighing room was on the wrong side of the law
+      now, and you with it. Your master's case was left to the morning hearing
+      without you. It did not go well.
+      *** You are taken. ***
