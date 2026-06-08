@@ -335,13 +335,15 @@ scenes:
 
   - id: alley_door
     title: "The Alley Door"
+    # Base text fires when no quest stage is set (letter unread) — name Garrow's men only in
+    # the quest_stage variants below, which fire only after read_letter sets the stage (bug_0284).
     text: >
       The inking-room door, and beyond its frosted pane the alley — and four shapes in it
-      now, close in under the gas-bracket, and the dull gleam of what they carry. Garrow's
-      yard-men, and not a printer's tool among the hammers and the wrecking-bar: they have
-      come for the press, to pi the type into the gutter and break the bed before a word of
-      it can run, and they will not be gentle with whoever opens to them. One of them tries
-      the latch as you watch. The composing room is back behind you.
+      now, close in under the gas-bracket, and the dull gleam of what they carry. Hired men,
+      and not a printer's tool among the hammers and the wrecking-bar: they have come for the
+      press, to pi the type into the gutter and break the bed before a word of it can run,
+      and they will not be gentle with whoever opens to them. One of them tries the latch as
+      you watch. The composing room is back behind you.
     # Reactive prose keyed off the `the_edition` quest stage (read-only; gates nothing). The
     # alley scene narrates what the night has already cost you — the further you carried the
     # diligence before the hammers came, the more the men at the door are there to bury. Set
