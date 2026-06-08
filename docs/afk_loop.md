@@ -79,6 +79,18 @@ The fresh-context-per-phase shape is free here: each cycle's agent is already a 
 `claude -p`, and Step 3's implementer is a fresh `Agent`-tool subagent — so the plan
 is handed off as a _document_, not a context window.
 
+### The decision log (durable memory of settled questions)
+
+`docs/CURRENT_PLAN.md` is **overwritten** each ultraplan, so it cannot remember what was
+already ruled out — which is why successive re-aims kept re-confirming the same
+already-implemented features as "gaps" (re-aim #19 alone re-confirmed six false alarms).
+`docs/DECISION_LOG.md` fixes this: it is an **append-only** ledger of settled questions.
+Each ultraplan reads it first and treats its "Confirmed CLOSED" list as a hard boundary for
+every reviewer subagent (do not re-nominate or re-investigate a closed gap — the file:line
+proof is recorded), then appends the gaps it confirmed closed this cycle. This is the missing
+fourth piece of the reviewer subagent contract — _objective · output format · tool guidance ·
+**boundaries**_ — and the cure for redundant fan-out across re-aims.
+
 ## Why this shape (grounded in 2025–26 practice)
 
 - **Hard, machine-readable verification gate + "don't route around the verifier"**

@@ -3,6 +3,7 @@ dist/
 *.log
 .DS_Store
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 
 # Ad-hoc recorded playthroughs (curated bug artifacts live in traces/bugs/)
 /traces/*.json
