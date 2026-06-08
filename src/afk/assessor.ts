@@ -213,14 +213,21 @@ function docStalenessDocs(root: string): string[] {
 }
 
 /**
- * Normalize a pack reference — a full path OR a bare id — to its stem, so an
- * attendance line that names a pack either way maps to the same key. E.g.
- * "content/cyoa/pack/clockwork_heist.yaml" → "clockwork_heist", and a bare
- * "clockwork_heist" is returned unchanged.
+ * Normalize a pack reference — a full path, a bare file stem, OR a pack id — to its
+ * stem, so an attendance line that names a pack any of those ways maps to the same key.
+ * E.g. "content/cyoa/pack/clockwork_heist.yaml" → "clockwork_heist", a bare
+ * "clockwork_heist" is unchanged, and the pack ID "clockwork_heist_v1" also → it.
+ *
+ * The trailing `_v\d+` strip matters for attendance keying (bug_0293): the candidate's
+ * target is a PATH (file stem, no version), but the code-written recommendation line the
+ * log records every cycle names the pack by its ID — `Blind-playtest "clockwork_heist_v1"`
+ * — which carries the `_v1` suffix. Without this strip the id-form and the path-form key
+ * to different stems and the recency lookup misses, re-freezing the rotation. No shipped
+ * pack FILE name ends in `_v\d+`, so the strip never collides two real packs.
  */
 export function packStem(ref: string): string {
   const base = ref.split("/").pop() ?? ref;
-  return base.replace(/\.ya?ml$/i, "");
+  return base.replace(/\.ya?ml$/i, "").replace(/_v\d+$/i, "");
 }
 
 /**
@@ -254,8 +261,13 @@ export function packStem(ref: string): string {
  */
 export function parseAttendanceOffsets(loopStateText: string): Map<string, number> {
   const map = new Map<string, number>();
+  // bug_0293: ALSO match the model-INDEPENDENT code-written recommendation line
+  // `Blind-playtest "<id>"` (emitted by the assessor every cycle, see the playtest
+  // candidate title below) and the looser Sonnet-era agent phrasing "blind pass on
+  // `<pack>`". The wrapper class gains `"` so the quoted id is skipped; `i` tolerates
+  // sentence-start caps; the `_v\d+` on a captured pack id is normalized by packStem.
   const re =
-    /(?:Mandatory LLM playtest target this cycle:|Mandated blind pass ran on)\s+[`*]*([A-Za-z0-9_./-]+)/g;
+    /(?:Mandatory LLM playtest target this cycle:|Mandated blind pass ran on|blind pass on|Blind-playtest)\s+["`*]*([A-Za-z0-9_./-]+)/gi;
   for (const m of loopStateText.matchAll(re)) {
     const captured = m[1];
     if (captured === undefined) continue;

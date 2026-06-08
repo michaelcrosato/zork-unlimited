@@ -146,3 +146,68 @@ describe("bug_0235 — recency rotation sees BACKTICK/BOLD-wrapped attendance en
     }
   });
 });
+
+describe("bug_0293 — recency rotation survives the SONNET phrasing + uses the code-written line", () => {
+  // Third recurrence of the clockwork_heist lock-in. After the cycle agent defaulted to
+  // Sonnet, its entries wrote "blind pass on `clockwork_heist`" (no "Mandated …ran"), so
+  // the canonical-only parser saw nothing → 7 straight clockwork cycles. The durable cure
+  // parses the MODEL-INDEPENDENT recommendation line the assessor emits every cycle —
+  // `Blind-playtest "<id>"` — and tolerates the looser agent phrasing too.
+  it("recognizes the Sonnet-era prose 'blind pass on `X`' form", () => {
+    const offsets = parseAttendanceOffsets(
+      "…(bug_0292): blind pass on `clockwork_heist` (seed 7).",
+    );
+    expect(offsets.has("clockwork_heist")).toBe(true);
+  });
+
+  it('recognizes the code-written `Blind-playtest "<id>"` line and normalizes the _v1 id', () => {
+    // The exact shape ai-loop.ts prepends every cycle (the assessor's recommendation).
+    const line =
+      '- Next best improvement (recommended): [content_fix] Blind-playtest "clockwork_heist_v1" — structurally clean.';
+    const offsets = parseAttendanceOffsets(line);
+    // Keyed by the path-stem (no _v1) so it matches packStem(candidate.target).
+    expect(offsets.has("clockwork_heist")).toBe(true);
+    expect(offsets.has("clockwork_heist_v1")).toBe(false);
+  });
+
+  it("a freshly-attended pack (new forms) sorts LAST in the rotation, never first", () => {
+    // Realistic newest-first entry: code line + Sonnet prose both name clockwork on top.
+    const log = [
+      '- Next best improvement (recommended): [content_fix] Blind-playtest "clockwork_heist_v1" — clean.',
+      "### Cycle result — (bug_0292): blind pass on `clockwork_heist` (seed 7).",
+      '- Next best improvement (recommended): [content_fix] Blind-playtest "midnight_edition_v1" — clean.',
+    ].join("\n");
+    const offsets = parseAttendanceOffsets(log);
+    const rank = (stem: string): number => {
+      const off = offsets.get(stem);
+      return off === undefined ? Number.MIN_SAFE_INTEGER : -off;
+    };
+    // dead_reckoning is never mentioned (genuinely never-attended).
+    const order = ["clockwork_heist", "midnight_edition", "dead_reckoning"].sort(
+      (x, y) => rank(x) - rank(y) || x.localeCompare(y),
+    );
+    expect(order[0]).toBe("dead_reckoning"); // never attended → first
+    expect(order[order.length - 1]).toBe("clockwork_heist"); // most recent → last
+  });
+
+  it("on the real repo, the live most-recent pack (via the code line) is parsed and NOT re-nominated", () => {
+    const loopState = join(process.cwd(), "AI_LOOP_STATE.md");
+    if (!existsSync(loopState)) return;
+    const raw = readFileSync(loopState, "utf8");
+    // Locate the single most-recent attendance the way the log ACTUALLY writes it today —
+    // the code-written recommendation line (model-independent) OR the Sonnet prose form.
+    // (The bug_0235 guard greps only "Mandated …ran on `X`", which the live Sonnet log no
+    // longer contains, so it vacuously skips — exactly how bug_0293 slipped past.)
+    const m =
+      raw.match(/Blind-playtest "([a-z0-9_]+)"/i) ?? raw.match(/blind pass on\s+`([a-z0-9_]+)`/i);
+    if (!m) return;
+    const mostRecent = packStem(m[1]!);
+    const offsets = parseAttendanceOffsets(raw);
+    expect(offsets.has(mostRecent)).toBe(true); // pre-fix: false (phrasing-blind)
+    const a = assess(process.cwd());
+    const reviews = a.candidates.filter((c) => c.id.startsWith("playtest-"));
+    if (reviews.length >= 2) {
+      expect(packStem(reviews[0]!.target)).not.toBe(mostRecent);
+    }
+  });
+});

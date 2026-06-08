@@ -118,6 +118,11 @@ describe("blind-pass rotation (bug_0128)", () => {
     expect(packStem("content/cyoa/pack/clockwork_heist.yaml")).toBe("clockwork_heist");
     expect(packStem("content/rpg/pack/cold_forge.yml")).toBe("cold_forge");
     expect(packStem("clockwork_heist")).toBe("clockwork_heist");
+    // bug_0293: a pack ID carries a _vN suffix the file stem does not; both must converge
+    // so the code-written `Blind-playtest "<id>"` attendance line keys to the candidate's
+    // path-derived stem.
+    expect(packStem("clockwork_heist_v1")).toBe("clockwork_heist");
+    expect(packStem("content/cyoa/pack/clockwork_heist.yaml")).toBe(packStem("clockwork_heist_v1"));
   });
 
   it("parseAttendanceOffsets keeps the MOST RECENT (topmost) mention in the newest-first log (bug_0128)", () => {
