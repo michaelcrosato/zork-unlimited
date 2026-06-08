@@ -341,6 +341,20 @@ scenes:
   # ── Brook + hermit cluster (the NPC conversation) ─────────────────────────
   - id: mossy_brook
     title: "The Mossy Brook"
+    # bug_0282: a blind playtester (seed 7, ai-runs/2026-06-08T03-49-19-615Z/playtest.md §4)
+    # visited the hermit's camp, heard the full tale (heard_hermit_lore), had the letter read
+    # (seal_broken), and then found the brook scene STILL reading "a thread of smoke marks a
+    # small camp downstream" — discovery-framing that presupposes an unexplored mystery.
+    # Same reactive-description-blindness class as bug_0134 (hermit_talk re-greeting) and
+    # bug_0120 (tower_top brazier). The hermit_talk fix (bug_0134) uses the same two-flag guard
+    # any_of[heard_hermit_lore, seal_broken] — mossy_brook now mirrors it: a player who has
+    # meaningfully engaged with the hermit (heard the tale OR had the letter read) sees the
+    # camp as a known entity rather than an undiscovered mystery.
+    variants:
+      - when: [ { any_of: [ { has_flag: heard_hermit_lore }, { has_flag: seal_broken } ] } ]
+        text: >
+          The brook chuckles over stones. Smoke still rises from the hermit's camp
+          downstream; the ford runs ahead toward the north road.
     text: >
       The brook chuckles over stones. A thread of smoke marks a small camp
       downstream, and a shallow ford lies just ahead.

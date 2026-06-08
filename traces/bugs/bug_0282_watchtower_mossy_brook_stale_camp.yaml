@@ -1,0 +1,41 @@
+bug_id: bug_0282
+pack_id: watchtower_road_v1
+seed: 7
+initial_state: start
+# Surfaced by a blind LLM playtest (seed 7, ai-runs/2026-06-08T03-49-19-615Z/playtest.md §4).
+# Playthrough 1 reached ending_truth (50/50) after visiting the hermit, hearing the smuggler
+# tale, and having the letter read — then returned to mossy_brook and found the discovery-
+# framing still live: "a thread of smoke marks a small camp downstream."
+findings:
+  - id: mossy_brook_stale_camp_framing
+    where: scene:mossy_brook
+    severity: low
+    description: >
+      After a player visits the hermit's camp and either hears the tale (heard_hermit_lore)
+      or has the letter read (seal_broken), returning to mossy_brook still shows the original
+      discovery-framing: "A thread of smoke marks a small camp downstream, and a shallow ford
+      lies just ahead." The "marks a small camp" line treats the camp as an unexplored mystery
+      even though the player has met the hermit and received his lore. Same reactive-
+      description-blindness class as bug_0134 (hermit_talk re-greeting the returning player as
+      a stranger) and bug_0120 (tower_top brazier showing "a cold brazier waits" after lighting).
+    fix: >
+      Add a scene variant gated on any_of[heard_hermit_lore, seal_broken] — the same two-flag
+      guard used by hermit_talk's bug_0134 fix. The variant replaces the discovery-framing with
+      text that acknowledges the known entity ("the hermit's camp") and retains the ford cue.
+      The base text is unchanged for a first-time player who has not yet interacted with the
+      hermit. Content-only — no flag/choice/route/ending change.
+failure:
+  type: design_polish
+  description: >
+    Stale-on-re-entry scene text (the reactive-description-blindness class: bug_0120, bug_0134,
+    bug_0248). The validator proves the pack is structurally sound; only a blind playtest
+    reveals that the brook's discovery-framing persists after the discovery is made. No engine
+    fault or determinism break — every state_hash on the repro route is byte-identical pre/
+    post-fix; the variant alters only displayed text, never state.
+fix:
+  layer: content
+  summary: >
+    mossy_brook gains a variant gated on any_of[heard_hermit_lore, seal_broken]: after the
+    player has meaningfully engaged with the hermit the scene reads "the hermit's camp" instead
+    of "a small camp," matching the player's actual knowledge state.
+regression_test: tests/regression/watchtower_mossy_brook_stale_camp.test.ts
