@@ -500,16 +500,35 @@ npcs:
               prompt: "Nod, and ask something else."
               goto: pell_root
         - id: pell_weir
+          # bug_0319 (reactive-description-blindness): when the player asks ask_weir BEFORE
+          # ask_walk, the phrase "which I've told you of" was factually false — heard_walk was not
+          # set, so Pell had told the player nothing yet about the walk. Added a heard_walk variant
+          # that preserves the accurate back-reference; the base npc_text now reads "ask me about
+          # that next" for the un-counselled player, directing them to the one topic that matters.
           npc_text: >
             Three things hold this weir and all three are against you tonight. The head-rack at the
             top is choked with drift — clear it with the iron or the water's nowhere to go but over.
-            Then the storm-walk, which I've told you of. Then the relief-race, shut behind its winch
-            down in the race-house — get that open and the flood runs off safe around the valley and
-            you've won. Take my weir-iron for the rack and the winch, and the life-line for the walk,
-            and work it in order: rack, walk, race. The rack and the winch are only seized — stubborn,
-            not deadly; keep at them and they'll come. It's the walk that wants your care. I had it
-            all written in the flood-book on the table there — the last entries, the same steps in my
+            Then the storm-walk — ask me about that before you set foot on it, for it is the one
+            place out there that kills. Then the relief-race, shut behind its winch down in the
+            race-house — get that open and the flood runs off safe around the valley and you've won.
+            Take my weir-iron for the rack and the winch, and the life-line for the walk, and work
+            it in order: rack, walk, race. The rack and the winch are only seized — stubborn, not
+            deadly; keep at them and they'll come. It's the walk that wants your care. I had it all
+            written in the flood-book on the table there — the last entries, the same steps in my
             own hand — if you want it to go by.
+          variants:
+            - when: [{ has_flag: heard_walk }]
+              text: >
+                Three things hold this weir and all three are against you tonight. The head-rack at
+                the top is choked with drift — clear it with the iron or the water's nowhere to go
+                but over. Then the storm-walk, which I've told you of. Then the relief-race, shut
+                behind its winch down in the race-house — get that open and the flood runs off safe
+                around the valley and you've won. Take my weir-iron for the rack and the winch, and
+                the life-line for the walk, and work it in order: rack, walk, race. The rack and
+                the winch are only seized — stubborn, not deadly; keep at them and they'll come.
+                It's the walk that wants your care. I had it all written in the flood-book on the
+                table there — the last entries, the same steps in my own hand — if you want it to
+                go by.
           effects:
             - set_flag: heard_plan
             - add_journal: "Pell lays out the night: clear the choked head-rack, cross the storm-walk, open the seized relief-race — rack, walk, race, in that order — the iron for the rack and winch, the line for the walk."
