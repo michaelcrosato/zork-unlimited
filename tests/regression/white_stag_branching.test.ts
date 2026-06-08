@@ -127,3 +127,28 @@ describe("white_stag — the truth reframes the bluff scene in the moment, not o
     expect(text(play(TO_BLUFF))).toContain("easy mark for a steady hand");
   });
 });
+
+const LOST_TRUTH = ["go_on", "read_stone", "decipher", "leave_stone", "cross_ice"];
+
+describe("white_stag — knows_truth fires reactive epilogue on ending_lost (bug_0293)", () => {
+  it("ending_lost: informed death names the knowing, uninformed death does not", () => {
+    expect(text(play(LOST_TRUTH))).toContain("you knew");
+    expect(text(play(LOST))).not.toContain("you knew");
+    expect(text(play(LOST))).toContain("the foolish");
+  });
+
+  it("ending_lost: informed text anchors 'wood keeps its keeper', base does not", () => {
+    expect(text(play(LOST_TRUTH))).toContain("wood keeps its keeper");
+    expect(text(play(LOST))).not.toContain("wood keeps its keeper");
+    expect(text(play(LOST))).toContain("wood keeps its heart");
+  });
+
+  it("both informed and uninformed crossings reach ending_lost (same endingId)", () => {
+    expect(endId(play(LOST_TRUTH))).toBe("ending_lost");
+    expect(endId(play(LOST))).toBe("ending_lost");
+  });
+
+  it("the informed crossing route really did set knows_truth", () => {
+    expect(text(play(["go_on", "read_stone", "decipher"]))).toContain("the wood's bound heart");
+  });
+});
