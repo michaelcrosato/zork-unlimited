@@ -70,6 +70,20 @@ scenes:
     # Once the stone is read, the tarn reads differently — you cross this place knowing
     # what stands on the spit (reactive prose, first-match-wins). No flag/route change.
     variants:
+      # Combined: knows_truth AND at_bay — the player has read the stone AND been within
+      # bowshot and come back. The knows_truth-only variant below doesn't acknowledge the
+      # bluff hesitation; the at_bay-only variant (after) says "unread" which is wrong once
+      # the stone is read. This compound variant handles the intersection cleanly.
+      - when: [{ has_flag: knows_truth }, { quest_stage: { quest: the_hunt, stage: at_bay } }]
+        text: >
+          You have stood within bowshot of it and come back to the tarn's edge, and the
+          black ice reads no kinder for the second look. The white stag waits on its spit
+          where you left it — the winter's keeper, the wood's bound heart — breath smoking,
+          those steady ancient eyes counting your retreat, content to wait. The stone told
+          you what those eyes mean, and you cannot unknow it. The rotten ice still ticks and
+          groans between you, fit to drop a man through to the freezing dark; the firm shore
+          still runs round to the bluff; and the leaning stone at the bank keeps its old vow.
+          All that is left is the choosing.
       - when: [{ has_flag: knows_truth }]
         text: >
           The tarn lies flat and black underfoot, and across it, on the low spit of firm
