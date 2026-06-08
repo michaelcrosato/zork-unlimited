@@ -501,7 +501,9 @@ npcs:
             down in the race-house — get that open and the flood runs off safe around the valley and
             you've won. Take my weir-iron for the rack and the winch, and the life-line for the walk,
             and work it in order: rack, walk, race. The rack and the winch are only seized — stubborn,
-            not deadly; keep at them and they'll come. It's the walk that wants your care.
+            not deadly; keep at them and they'll come. It's the walk that wants your care. I had it
+            all written in the flood-book on the table there — the last entries, the same steps in my
+            own hand — if you want it to go by.
           effects:
             - set_flag: heard_plan
             - add_journal: "Pell lays out the night: clear the choked head-rack, cross the storm-walk, open the seized relief-race — rack, walk, race, in that order — the iron for the rack and winch, the line for the walk."
