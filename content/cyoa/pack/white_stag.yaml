@@ -102,6 +102,7 @@ scenes:
     choices:
       - id: read_stone
         text: "Read the leaning, carved stone at the bank."
+        conditions: [{ not_flag: knows_truth }]
         next: shrine
       - id: take_shore
         text: "Pick your way round the firm shore to the bluff within bowshot."
@@ -134,7 +135,10 @@ scenes:
       antlers spread like bare branches, and below it a worn legend you must kneel to
       read.
     # Reading sets knows_truth (the pack's only "truth" flag, the wreckers_light device).
-    # A second visit, already-read, simply re-shows the carved face without re-revealing.
+    # decipher sets knows_truth and next: shrine, so shrine re-renders with knows_truth set
+    # immediately after reading. The knows_truth variant fires on that re-render (not a
+    # separate visit — read_stone is gated on not_flag: knows_truth so shrine is unreachable
+    # after reading without the decipher→re-render path). Variant is live, not dead.
     variants:
       - when: [{ has_flag: knows_truth }]
         text: >
