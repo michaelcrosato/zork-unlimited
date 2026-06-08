@@ -217,6 +217,15 @@ rooms:
     # actively proves it (35 reachable without the light act < 50). Reaching the crown still
     # requires the cresset righted (the up-exit gate); the `down` exit keeps the crown from
     # being a soft-lock if the player climbs up before striking the spark.
+    variants:
+      # Reactive: once the player picks up the flint the bed no longer holds it.
+      # Same reactive-description-blindness class as bugs 0282–0322.
+      - when: [{ has_item: flint }]
+        text: >
+          The crown of the beacon-tower, the whole black valley spread below and the first
+          grey of dawn coming up over the river. The righted cresset's deep fire-bed stands
+          at your hand, heaped with the dry pitch-pine the watch laid ready. The flint is in
+          your hand — one struck spark to wake the valley.
     objects: [beacon_fire, flint]
     exits:
       - { direction: down, to: beacon_stage }
