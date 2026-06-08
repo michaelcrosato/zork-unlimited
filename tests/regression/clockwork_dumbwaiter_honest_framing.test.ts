@@ -77,8 +77,10 @@ describe("bug_0046 — the dumbwaiter is honestly framed (a quieter way up, not 
     expect(state.current).toBe("landing");
     const text = narration(events).toLowerCase();
     expect(text).toContain("servants' lift");
-    // The over-promise is gone: the prose explicitly tells you it is no shortcut.
-    expect(text).toContain("no closer to the vault");
+    // The over-promise is gone: "the very floor the staircase serves" makes clear it
+    // lands you on the same floor as the grand stair — no stealth bypass (bug_0046),
+    // and no apologetic qualifier that deflates the option (bug_0289).
+    expect(text).toContain("very floor the staircase serves");
     // ...and the old "Ride the dumbwaiter up" stealth-bypass framing is retired.
     const dumbwaiter = index.pack.scenes
       .find((sc) => sc.id === "kitchen")!

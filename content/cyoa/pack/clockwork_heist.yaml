@@ -369,7 +369,7 @@ scenes:
         # tuning (bug_0019/0040/0042/0043) is untouched (bug_0046).
         text: "Take the servants' dumbwaiter straight up to the gallery."
         effects:
-          - narrate: "Rather than doubling back to the foyer's grand stair, you fold yourself into the cramped servants' lift and haul on its complaining rope. The box grinds up the shaft and you climb out onto the gallery — the very floor the staircase serves. A quieter way up, and a more direct one from the kitchens, but it leaves you no closer to the vault than the open steps would."
+          - narrate: "Rather than doubling back to the foyer's grand stair, you fold yourself into the cramped servants' lift and haul on its complaining rope. The box grinds up the shaft and you climb out onto the gallery — the very floor the staircase serves. A quieter way up from the kitchens, and a more direct one."
         next: landing
       # A d20 tension beat (CYOA skill checks are first-class): the cold kitchen hangs
       # thick with copper pots and a banked hearth's iron, and slipping back out of it
