@@ -301,12 +301,12 @@ objects:
     #     35-point economy, and every reactive variant stay reachable byte-for-byte.
     #   • difficulty 12 vs d20 + nerve 3 (range 4–23) is passable on a mid roll (≥ 9, ~60%)
     #     and well under the 23 ceiling — mirrors the proven sunken_barrow DC-12 check.
-    #   • One-shot via `not_flag: steeled_at_the_iron`: on SUCCESS the flag retires the beat
-    #     (it is read ONLY by this condition — no other reader anywhere, so it cannot
-    #     re-fire and re-roll a contradictory line). on FAILURE the flag stays unset, so the
-    #     beat is simply RETRYABLE and the player proceeds to the locks regardless. Because
-    #     the iron key is never consumed (the locks UNLOCK, they do not remove it), no
-    #     softlock can arise from the beat — the key remains in hand for the real choice.
+    #   • One-shot on EITHER outcome (bug_0304): on SUCCESS `steeled_at_the_iron` retires
+    #     the beat; on FAILURE `attempted_the_iron` retires it (same class as bug_0303 —
+    #     windscreen failure path). Both flags are read ONLY by this condition — no other
+    #     reader anywhere. Because the iron key is never consumed (the locks UNLOCK, they do
+    #     not remove it), no softlock can arise from the beat — the key remains in hand for
+    #     the real choice.
     #   • Gated `{ in_room: crypt }` (bug_0258): a self-USE on a CARRIED item otherwise
     #     surfaces in EVERY room from the moment you pocket the key at the well — a blind
     #     playtester (seed 43) flagged the action trailing them into the graveyard, the
@@ -322,7 +322,7 @@ objects:
         item: iron_key
         target: iron_key
         command_verb: grip
-        conditions: [{ not_flag: steeled_at_the_iron }, { in_room: crypt }]
+        conditions: [{ not_flag: steeled_at_the_iron }, { not_flag: attempted_the_iron }, { in_room: crypt }]
         skill_check:
           skill: nerve
           difficulty: 12
@@ -330,7 +330,8 @@ objects:
             - set_flag: steeled_at_the_iron
             - narrate: "You close your fist on the cold iron and make yourself breathe. The crypt yields only to iron, the stone said — and the iron is in your hand now. Whatever you turn it on, you will turn it steady."
           on_failure:
-            - narrate: "The iron is colder than it has any right to be, and your hand will not quite stop shaking around it. Better to gather yourself before you set this key to anything down here."
+            - set_flag: attempted_the_iron
+            - narrate: "The iron is colder than it has any right to be, and your hand will not quite stop shaking around it. The three iron locks will have what nerve you carry."
 
   - id: headstone
     name: "worn headstone"
