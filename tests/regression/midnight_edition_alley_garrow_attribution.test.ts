@@ -49,7 +49,7 @@ const ALLEY_NO_LETTER = ["go_alley"];
 const ALLEY_AFTER_LETTER = ["read_letter", "go_alley"];
 
 // Bar the door then re-enter the alley (door_barred variant fires).
-const ALLEY_AFTER_BAR = ["go_alley", "bar_door", "go_alley"];
+const ALLEY_AFTER_BAR = ["go_alley", "bar_door", "go_alley_barred"];
 
 const GARROW = "garrow's"; // attribution that must be absent from base
 const HIRED = "hired men"; // neutral attribution in fixed base

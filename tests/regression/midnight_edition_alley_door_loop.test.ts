@@ -69,7 +69,7 @@ describe("bug_0251 — the alley_door no-progress loop + stale hub menace text",
     const firstEntry = playFrom(53, ["go_alley"]);
     const firstText = text(firstEntry);
     // bar the door, then come back to the alley from the hub.
-    const reentry = playFrom(53, ["go_alley", "bar_door", "go_alley"]);
+    const reentry = playFrom(53, ["go_alley", "bar_door", "go_alley_barred"]);
     expect(reentry.current).toBe("alley_door");
     expect(reentry.flags["door_barred"]).toBe(true);
     // The scene text changed — the loop is gone.

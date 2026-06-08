@@ -209,6 +209,15 @@ scenes:
         next: press_floor
       - id: go_alley
         text: "Go to the alley door and the boots on the cobbles."
+        conditions: [{ not_flag: door_barred }]
+        next: alley_door
+      # Once the door is barred the "boots on the cobbles" label is stale — the door
+      # is barred fast and the player knows it. A separate choice with a state-accurate
+      # label is offered instead (same destination; bar choices are gated off at the
+      # alley scene, so the player can still confront_men or return via back_inside).
+      - id: go_alley_barred
+        text: "Return to the barred alley door."
+        conditions: [{ has_flag: door_barred }]
         next: alley_door
 
   - id: editors_office
