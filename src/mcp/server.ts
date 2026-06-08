@@ -163,26 +163,30 @@ tool(
 tool(
   "get_observation",
   "Get the current AI-facing observation for a session (§9.1). The `mode` field discriminates cyoa | parser | rpg.",
-  SESSION,
+  { ...SESSION, ...HIDE_GRAPH },
   (a) => api.get_observation(a),
 );
 tool(
   "get_scene",
   "AFK alias for get_observation; returns current scene/room text, state, and visible options.",
-  SESSION,
+  { ...SESSION, ...HIDE_GRAPH },
   (a) => api.get_scene(a),
 );
 tool(
   "list_legal_actions",
   "List the legal actions available right now in a session, any mode (§9).",
-  SESSION,
+  { ...SESSION, ...HIDE_GRAPH },
   (a) => api.list_legal_actions(a),
 );
 
 tool(
   "step_action",
   "Apply one chosen action by its id from available_actions (any mode — CYOA choice or parser/RPG command); returns events + the new observation.",
-  { ...SESSION, action_id: z.string().describe("An action id from the current legal-action set.") },
+  {
+    ...SESSION,
+    action_id: z.string().describe("An action id from the current legal-action set."),
+    ...HIDE_GRAPH,
+  },
   (a) => api.step_action(a),
 );
 tool(
@@ -193,6 +197,7 @@ tool(
     option_id: z
       .string()
       .describe("An option/action id from get_scene().observation.available_actions."),
+    ...HIDE_GRAPH,
   },
   (a) => api.choose_option(a),
 );

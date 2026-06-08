@@ -643,23 +643,31 @@ export function createToolApi(opts: { root: string }) {
       });
     },
 
-    get_observation(args: { session_id: string }) {
+    get_observation(args: { session_id: string; hide_graph?: boolean }) {
       const s = sessions.get(args.session_id);
-      return { observation: obsOf(s), state_hash: hashState(s.state) };
+      const obs = buildObsFor(s.mode, s.index, s.state, {
+        hideGraph: args.hide_graph ?? s.hideGraph ?? false,
+      });
+      return { observation: obs, state_hash: hashState(s.state) };
     },
 
-    get_scene(args: { session_id: string }) {
+    get_scene(args: { session_id: string; hide_graph?: boolean }) {
       return this.get_observation(args);
     },
 
-    list_legal_actions(args: { session_id: string }) {
+    list_legal_actions(args: { session_id: string; hide_graph?: boolean }) {
       const s = sessions.get(args.session_id);
-      return { actions: obsOf(s).available_actions };
+      const obs = buildObsFor(s.mode, s.index, s.state, {
+        hideGraph: args.hide_graph ?? s.hideGraph ?? false,
+      });
+      return { actions: obs.available_actions };
     },
 
-    step_action(args: { session_id: string; action_id: string }) {
+    step_action(args: { session_id: string; action_id: string; hide_graph?: boolean }) {
       const s = sessions.get(args.session_id);
-      const before = obsOf(s);
+      const before = buildObsFor(s.mode, s.index, s.state, {
+        hideGraph: args.hide_graph ?? s.hideGraph ?? false,
+      });
       const beforeStep = s.state.step;
       const actionText = obsActionText(before, args.action_id);
       const action = actionForId(before, args.action_id);
@@ -677,7 +685,9 @@ export function createToolApi(opts: { root: string }) {
       }
       const result = makeStep(s.rules)(s.state, action);
       sessions.update(s.id, result.state);
-      const after = obsOf(s);
+      const after = buildObsFor(s.mode, s.index, s.state, {
+        hideGraph: args.hide_graph ?? s.hideGraph ?? false,
+      });
       s.transcript.push({
         step: beforeStep,
         scene_id: obsLocation(before),
@@ -698,8 +708,12 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    choose_option(args: { session_id: string; option_id: string }) {
-      return this.step_action({ session_id: args.session_id, action_id: args.option_id });
+    choose_option(args: { session_id: string; option_id: string; hide_graph?: boolean }) {
+      return this.step_action({
+        session_id: args.session_id,
+        action_id: args.option_id,
+        ...(args.hide_graph !== undefined && { hide_graph: args.hide_graph }),
+      });
     },
 
     get_state(args: { session_id: string }) {

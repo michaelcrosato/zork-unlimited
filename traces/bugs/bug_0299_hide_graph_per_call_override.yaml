@@ -1,0 +1,54 @@
+id: bug_0299
+title: hide_graph per-call override missing on get_observation / get_scene / list_legal_actions / step_action / choose_option
+class: engine_fix
+severity: api_surface
+category: engine
+subcategory: api-surface
+discovered_by: ultraplan_review
+cycle: 2026-06-08
+
+symptom: >
+  hide_graph was a session-creation-time-only flag. Once a session was started
+  with new_game or start_game, the observation rendering mode was fixed for the
+  life of the session. The five observation-returning tools (get_observation,
+  get_scene, list_legal_actions, step_action, choose_option) all used SESSION
+  shape only in server.ts — no ...HIDE_GRAPH spread — and their handlers
+  accepted only { session_id: string } with no per-call override parameter.
+  A benchmark runner needing to compare hidden-graph vs. full-graph on the same
+  session trajectory had to create two separate sessions, doubling session
+  overhead and losing the ability to share state.
+
+root_cause: >
+  server.ts tool registrations for get_observation (lines 163-168), get_scene
+  (lines 169-173), list_legal_actions (lines 175-180), step_action (lines
+  182-187), and choose_option (lines 188-198) used bare SESSION as the
+  inputSchema with no ...HIDE_GRAPH spread. The corresponding handler signatures
+  in tools.ts (lines 646-703) only accepted { session_id } (plus action_id /
+  option_id where applicable) and called the obsOf(s) closure which always used
+  the session-level s.hideGraph. The three observation builders
+  (cyoa/observation.ts, parser/observation.ts, rpg/observation.ts) already
+  accepted { hideGraph?: boolean } via buildObsFor — the fix was purely at the
+  tool handler layer.
+
+fix: >
+  1. src/mcp/server.ts: spread ...HIDE_GRAPH into the inputSchema for
+     get_observation, get_scene, list_legal_actions, step_action, and
+     choose_option (5 tool registrations, ~5 lines changed).
+  2. src/mcp/tools.ts: updated the 5 handler signatures to accept
+     hide_graph?: boolean. Replaced obsOf(s) calls with explicit
+     buildObsFor(s.mode, s.index, s.state, { hideGraph: args.hide_graph ??
+     s.hideGraph ?? false }) calls. Resolution order: per-call arg overrides
+     session default overrides false. The existing obsOf closure at tools.ts:407
+     was left as-is (used by new_game and load_game which do not need per-call
+     override).
+  3. tests/regression/observation_hide_graph_per_call.test.ts: new file with 6
+     locked regression cases (override-on-session-off, override-off-session-on,
+     absent-override-session-on, step_action per-call no-mutation, list_legal_
+     actions per-call, non-vacuity guard).
+
+test: tests/regression/observation_hide_graph_per_call.test.ts
+
+verification:
+  method: npm run health
+  result: EXIT 0
+  note: test count increased by exactly 6 (1944 → 1950)
