@@ -584,6 +584,20 @@ scenes:
     # the ticks>=4 tier, first-match-wins, higher threshold first. The load-bearing read_ledger
     # clue and saw_plate flag are untouched. No choice/effect/flag/item/exit/tick/gating/ending change.
     variants:
+      # read_ledger variant: player has already read the ledger; drop the "read a stolen
+      # page" framing that presupposes the page is unread (reactive-description-blindness
+      # class, bug_0287). Keeps the urgency escalation and clock motifs; replaces the
+      # unread-presupposing close. Placed ABOVE the plain ticks>=7 tier (first-match-wins).
+      - when: [{ var_gte: { name: ticks, value: 7 } }, { has_flag: read_ledger }]
+        text: >
+          Shelved ledgers, a cold lamp, and a brass wall-plate engraved: "The vault
+          yields only to a steady hand — never to force." One ledger lies open on the
+          desk — the steward's daily reckoning, its last page already turned; you have
+          what the schedule could give you. The hour it named came round a while ago,
+          and the house is waking in earnest now: through the wall the great clock's
+          gears carry the whole manor rousing — lamps on the landings, more feet than
+          the watch's own answering room to room. There is nothing left in this still
+          room for you; only a few beats before there are no still rooms left.
       - when: [{ var_gte: { name: ticks, value: 7 } }]
         text: >
           Shelved ledgers, a cold lamp, and a brass wall-plate engraved: "The vault
@@ -603,6 +617,18 @@ scenes:
           that page names has come round at last: the great clock's chime rolls up through
           the manor's gears even into this still room, and beyond the door the watch has
           begun to walk the gallery.
+      # read_ledger variant: player has already read the ledger; drop the "take what this
+      # page can tell you" framing that presupposes the page is unread (reactive-description-
+      # blindness class, bug_0287). Keeps the clock motif; replaces the unread-presupposing
+      # prompt with acknowledgment that the schedule is already known. Placed ABOVE the plain
+      # ticks>=2 tier (first-match-wins).
+      - when: [{ var_gte: { name: ticks, value: 2 } }, { has_flag: read_ledger }]
+        text: >
+          Shelved ledgers, a cold lamp, and a brass wall-plate engraved: "The vault
+          yields only to a steady hand — never to force." One ledger lies open on the
+          desk — its last page already turned; the schedule it kept is yours now. Through
+          the wall the great clock grinds toward the hour — you know what the chime wakes,
+          so be gone before it rings.
       - when: [{ var_gte: { name: ticks, value: 2 } }]
         text: >
           Shelved ledgers, a cold lamp, and a brass wall-plate engraved: "The vault
