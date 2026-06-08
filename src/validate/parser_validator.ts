@@ -271,6 +271,30 @@ export function validateParser(
       );
   }
 
+  // An `open_object`, `set_object_locked`, or `place_object` effect targeting an object
+  // id absent from pack.objects is a dangling object-state reference — a typo'd
+  // `open_object: "chst"` silently populates openableObjects with the phantom string,
+  // writes into objectState["chst"] at runtime (a key with no corresponding declared
+  // object), and can cause false IMPOSSIBLE_OBJECT_STATE negatives downstream.
+  // A typo'd `set_object_locked: { id: "chst", ... }` silently no-ops the lock state,
+  // defeating puzzle guards with no error. A typo'd `place_object: { id: "chst", ... }`
+  // places a nonexistent object, defeating puzzle-design intent silently.
+  // Error severity — the object-id analogue of ITEM_REF_MISSING (bug_0291).
+  for (const e of allEffects(pack)) {
+    let objId: string | undefined;
+    if ("open_object" in e) objId = e.open_object;
+    else if ("set_object_locked" in e) objId = e.set_object_locked.id;
+    else if ("place_object" in e) objId = e.place_object.id;
+    if (objId !== undefined && !objById.has(objId))
+      findings.push(
+        err(
+          "OBJECT_STATE_REF_MISSING",
+          `effect references object "${objId}" that does not exist as a declared object.`,
+          [`object:${objId}`],
+        ),
+      );
+  }
+
   // ── Ambiguous aliases: a name/alias must not resolve to two objects (§10.4) ──
   const aliasOwner = new Map<string, string>();
   for (const o of pack.objects) {
@@ -292,6 +316,10 @@ export function validateParser(
   // the settable-flags set the graph analysis uses (exitFlag writes an unreachable key).
   // ITEM_REF_MISSING is included because a dangling item id could corrupt the
   // obtainability fixpoint that uses objById.
+  // OBJECT_STATE_REF_MISSING is included because a dangling open_object id silently
+  // populates openableObjects with a phantom string, which could produce false
+  // IMPOSSIBLE_OBJECT_STATE findings downstream when the phantom id accidentally
+  // matches a condition-side id.
   if (
     findings.some(
       (f) =>
@@ -301,6 +329,7 @@ export function validateParser(
           "START_MISSING",
           "UNLOCK_EXIT_ROOM_MISSING",
           "ITEM_REF_MISSING",
+          "OBJECT_STATE_REF_MISSING",
         ].includes(f.code),
     )
   ) {

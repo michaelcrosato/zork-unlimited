@@ -261,6 +261,25 @@ const CASES: NegativeCase[] = [
       });
     },
   },
+  {
+    // bug_0291: an `open_object` effect targeting an object id absent from pack.objects
+    // silently populates openableObjects with a phantom string — no declared object,
+    // no description, no interaction entries — and writes into objectState[phantom] at
+    // runtime, a key with no corresponding declared object. A typo'd object id passes
+    // schema validation but the validator must catch it ⇒ OBJECT_STATE_REF_MISSING.
+    // Injected on a fresh interaction on the coffer (the entrance container), which has
+    // no interactions in gen(0) — a single defect.
+    code: "OBJECT_STATE_REF_MISSING",
+    why: "an open_object effect targets an object id that does not exist",
+    mutate: (p) => {
+      const coffer = objById(p, "coffer");
+      coffer.interactions.push({
+        verb: "USE",
+        conditions: [],
+        effects: [{ open_object: "phantom_coffer" }],
+      });
+    },
+  },
 ];
 
 describe("validateParser negative corpus — rejection-direction witnesses (bug_0218)", () => {
