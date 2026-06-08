@@ -253,6 +253,24 @@ export function validateParser(
     }
   }
 
+  // An `add_item` or `remove_item` effect targeting an object id absent from pack.objects
+  // is a dangling item reference — a typo'd `add_item: "lantren"` silently inserts a
+  // phantom string into inventory (no description, no interactions, nonsense label) that
+  // no existing check catches; a typo'd `remove_item: "lantren"` silently no-ops, leaving
+  // puzzle state wrong. Error severity — the item-id analogue of EXIT_TARGET_MISSING
+  // (bug_0281). Checked in a dedicated block (not via collectRoomRefs) against objById.
+  for (const e of allEffects(pack)) {
+    const itemId = "add_item" in e ? e.add_item : "remove_item" in e ? e.remove_item : undefined;
+    if (itemId !== undefined && !objById.has(itemId))
+      findings.push(
+        err(
+          "ITEM_REF_MISSING",
+          `effect references item "${itemId}" that does not exist as a declared object.`,
+          [`object:${itemId}`],
+        ),
+      );
+  }
+
   // ── Ambiguous aliases: a name/alias must not resolve to two objects (§10.4) ──
   const aliasOwner = new Map<string, string>();
   for (const o of pack.objects) {
@@ -272,11 +290,18 @@ export function validateParser(
   // Bail before graph analysis if references are broken (would crash traversal).
   // UNLOCK_EXIT_ROOM_MISSING is included because a dangling unlock_exit room id corrupts
   // the settable-flags set the graph analysis uses (exitFlag writes an unreachable key).
+  // ITEM_REF_MISSING is included because a dangling item id could corrupt the
+  // obtainability fixpoint that uses objById.
   if (
     findings.some(
       (f) =>
         f.severity === "error" &&
-        ["EXIT_TARGET_MISSING", "START_MISSING", "UNLOCK_EXIT_ROOM_MISSING"].includes(f.code),
+        [
+          "EXIT_TARGET_MISSING",
+          "START_MISSING",
+          "UNLOCK_EXIT_ROOM_MISSING",
+          "ITEM_REF_MISSING",
+        ].includes(f.code),
     )
   ) {
     return makeReport(pack.meta.id, findings);

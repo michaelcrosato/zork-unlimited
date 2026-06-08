@@ -1,0 +1,22 @@
+# MUST FAIL: an add_item effect targets an object id that does not exist →
+# ITEM_REF_MISSING (the item inserted into inventory is a phantom string with no
+# declared object, no description, and no interaction entries).
+meta: { id: bad_item_ref, title: "Bad Item Ref", start_room: a }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    objects: [chest]
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+objects:
+  - id: chest
+    name: chest
+    description: "An old chest."
+    interactions:
+      - { verb: OPEN, effects: [ { add_item: phantom_key } ] }
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

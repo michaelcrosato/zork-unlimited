@@ -391,6 +391,10 @@ objects:
           - set_flag: pulled
           - add_item: relic
           - inc_var: { name: score, by: 5 }
+  - id: relic
+    name: relic
+    description: "a relic"
+    takeable: true
 win_conditions: [{ id: w, conditions: [{ has_item: relic }], ending: e }]
 endings: [{ id: e, title: E, text: "done" }]
 `;
@@ -429,6 +433,10 @@ objects:
         effects:
           - set_flag: pulled
           - add_item: relic
+  - id: relic
+    name: relic
+    description: "a relic"
+    takeable: true
 win_conditions: [{ id: w, conditions: [{ has_item: relic }], ending: e }]
 endings: [{ id: e, title: E, text: "done" }]
 `;

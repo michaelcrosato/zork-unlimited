@@ -243,6 +243,24 @@ const CASES: NegativeCase[] = [
       });
     },
   },
+  {
+    // bug_0281: an `add_item` effect targeting an object id absent from pack.objects
+    // silently inserts a phantom string into inventory — no description, no interactions,
+    // nonsense label — that no existing check catches. A typo'd object id passes schema
+    // validation but the validator must catch it ⇒ ITEM_REF_MISSING. Injected on a fresh
+    // interaction on the coffer (the entrance container), which has no interactions in
+    // gen(0) — a single defect.
+    code: "ITEM_REF_MISSING",
+    why: "an add_item effect targets an object id that does not exist",
+    mutate: (p) => {
+      const coffer = objById(p, "coffer");
+      coffer.interactions.push({
+        verb: "OPEN",
+        conditions: [],
+        effects: [{ add_item: "phantom_lantern" }],
+      });
+    },
+  },
 ];
 
 describe("validateParser negative corpus — rejection-direction witnesses (bug_0218)", () => {
