@@ -197,7 +197,7 @@ scenes:
           stone's warning is in you now, and you cannot look at it as quarry: this is the
           winter's keeper, the wood's bound heart, the thread the spring climbs back along.
           It turns its head and looks at you across the bowshot, calm as a thing that has
-          already made its peace, and waits to see whether you have understood.
+          already made its peace, and waits to see what you will do with knowing it.
     choices:
       - id: loose_arrow
         text: "Loose your one good arrow and take the stag."
