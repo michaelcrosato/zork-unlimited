@@ -58,9 +58,10 @@ instead of spending another pass on polish:
 ```
 ASSESS → isSaturated?  ── no ──▶ standard cycle (as above)
                        └─ yes, and off cooldown ──▶ ULTRAPLAN cycle:
-   1. Workflow ultraplan (≈6-9 agents: repo reviewers + web researchers + synthesis)
-      picks the single highest-value STRUCTURAL move, grounded in docs/ULTRAPLAN-*.md
-      and docs/ROADMAP.md (advance them, don't restart).
+   1. Workflow ultraplan (≈4-6 agents: LOCAL repo reviewers + synthesis — NO web
+      researchers; web tools force an interactive approval prompt that stalls the
+      unattended loop) picks the single highest-value STRUCTURAL move, grounded in
+      docs/ULTRAPLAN-*.md and docs/ROADMAP.md (advance them, don't restart).
    2. Writes the plan to docs/CURRENT_PLAN.md  ← the rolling plan + hand-off doc.
    3. A FRESH implementation subagent reads ONLY docs/CURRENT_PLAN.md + the files it
       names (clean context, not the whole repo) and makes the one change.
