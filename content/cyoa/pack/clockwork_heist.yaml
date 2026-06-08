@@ -752,6 +752,22 @@ scenes:
     # here at/after the hour — see `landing`) feels the watchman patrolling the only
     # way out. Higher threshold first (first match wins), as elsewhere. Reactive text
     # only: the gold/letter framing and every choice/ending are unchanged (bug_0043).
+    #
+    # The ticks>=2 tier originally said "you know what the hour wakes: fill your hands
+    # and be gone before the chime sets the watchman walking" — presupposing the player
+    # read the steward's ledger and therefore knows the watchman walks on the hour
+    # (reactive-description-blindness class, bug_0288). A no-ledger player CAN reach
+    # the vault at ticks 2-3 via kitchen→dumbwaiter→approach_vault (which requires
+    # only ticks<=3 OR read_ledger), so the "you know" claim was unearned on that path.
+    # The ticks>=4 variant is already implicitly ledger-gated — no-ledger players past
+    # the hour are routed to ending_patrol on the gallery via cross_to_vault_blind,
+    # never arriving here — so its "ledger swears you can go back out" is always correct
+    # and needs no companion. A ticks>=2 AND read_ledger companion would also be dead:
+    # earning the ledger requires visiting study (+1 tick) and returning through landing
+    # (+1 tick), giving a minimum of 4 ticks at vault entry for any ledger-reading path.
+    # Fix: plain ticks>=2 text drops "you know" and "the watchman" (knowledge the
+    # no-ledger player never earned), replacing with state-neutral urgency. No
+    # choice/flag/effect/item/exit/gating/ending change — prose only.
     variants:
       - when: [{ var_gte: { name: ticks, value: 4 } }]
         text: >
@@ -767,9 +783,8 @@ scenes:
           Stacked gold gleams on iron shelves. Apart from it all, on a velvet cushion,
           lies a single sealed letter addressed to no one — laid out in plain sight, as
           though its writer meant whoever cracked the vault to find it here among the
-          gold. Past the gallery the great clock grinds toward the hour, and you know
-          what the hour wakes: fill your hands and be gone before the chime sets the
-          watchman walking.
+          gold. Past the gallery the great clock grinds toward the hour — fill your
+          hands and be gone before the chime sets the manor stirring.
     choices:
       - id: grab_gold
         text: "Fill your pockets with gold and run."
