@@ -367,6 +367,16 @@ objects:
       moment and steady your hand first.
     takeable: true
     quest_critical: true
+    # bug_0331: surfaces the cold/grip context at TAKE time so the optional steadiness
+    # beat (grip iron key, below) is primed regardless of whether the player examines the
+    # key. Two consecutive blind playtesters (seed 47 → bug_0261; seed 7 → bug_0331)
+    # flagged the action as unexplained noise in the Great Hall because its context lives
+    # only in the EXAMINE description; this narrate fires on the first-class TAKE and
+    # makes the cold feel immediate at the natural pickup moment. Pure prose — no flag,
+    # score, route, or ending change; the steadiness beat and all structural proofs stay
+    # byte-identical.
+    take_effects:
+      - narrate: "The iron is old and heavy in your hand, colder than it should be — the cold of it climbing straight up your wrist."
     # An OPTIONAL `steadiness` TENSION beat — the Stage-4 d20 skill_check standardized into
     # this parser pack, resolved exactly as the RPG runner does: the runner applies
     # on_success/on_failure INSTEAD of this interaction's `effects`, then PREPENDS the roll
