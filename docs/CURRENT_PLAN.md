@@ -4,174 +4,150 @@ This is the AFK loop's **living plan** — the hand-off document for the saturat
 
 ---
 
-# Ultraplan re-aim cycle #19 (HEAD = bug_0316; next free id = bug_0317)
+# Ultraplan re-aim cycle #20 (HEAD = bug_0331; next free id = bug_0332)
 
 ## Synthesis
 
-Six reviewer teams (engine/validator, content/assessor, loop/strategy, verification/security, and two web researchers) and the orchestrator cross-checked every source claim against the live repo at HEAD = bug_0316.
-
-**Six claimed gaps were confirmed as false alarms.** (1) BFS AG(EF goal) forward-reachability validator — `UNREACHABLE_ROOM` (parser_validator.ts lines 339-350) and `SOFTLOCK` (lines 353-400) together implement both forward and reverse structural reachability; the loop/strategy and engine/validator reviewers both confirmed this. (2) MockAuthorProvider keystone swap — tools.ts line 788 already calls `resolveProvider({ mock: new MockAuthorProvider() })`; the project is one API key away from the first real-LLM proof artifact, not one code change away. (3) bug_0308 vacuous-assertion tautology detector — fully implemented (TAUTOLOGY_RE, MAX_TAUTOLOGY_ASSERTIONS, detectTautologies(), countTautologyAssertions(), TAUTOLOGY_ASSERTION/TAUTOLOGY_FLOOR/TAUTOLOGY_REGRESSION, GuardConstants); the stale docstring at lines 31-33 is a documentation lag, not an open gap. (4) NaN/Infinity guard in effects.ts — guardFinite() already wired. (5) divergedAtStep/replay_trace — already implemented in src/trace/replay.ts. (6) LRU rotation correctness — three regression tests confirm correct behavior; no lock-in path.
-
-**Six genuine gaps confirmed.** (1) `ITEM_UNPLACED` validator: grep for `ITEM_UNPLACED` and `ORPHAN_OBJECT` across all of `src/` returns zero results. The `homeRoom`/`containerOf` maps are built inside `computeObtainable()` (parser_validator.ts lines 1116-1119) for the obtainability fixpoint only — no loop ever asks whether a non-held object appears in at least one room.objects list or container.contents list. An object defined in pack.objects but absent from every room.objects and every container.contents (and not held:true) has no spawn location, is permanently inaccessible, and produces no warning. Confirmed open across two consecutive ultraplan cycles by three independent reviewer teams. (2) Stale docstring in verify-integrity.ts (lines 31-33 still say the tautology gap "is still not caught" after bug_0308 closed it). (3) Multi-line tautology not covered by TAUTOLOGY_RE (no `s`/dotall flag; split-line `expect(foo)\n  .toBe(foo)` escapes detection). (4) TAUTOLOGY_REGRESSION inline in runDrift but not in detectCountRegressions (structural inconsistency, functionally safe). (5) TARGET_PER_MODE threshold stagnation (`{cyoa:2, parser:2, rpg:2}` vs actual 7/5/5; content_new permanently silenced — deliberate deferral per cycle #18 policy). (6) isSaturated() clean-stasis branch (allGeneratorsClean field absent from Assessment).
-
-**ITEM_UNPLACED is the correct single move for this cycle.** It is S-effort, requires no API key, is purely deterministic, and closes the one structural authoring defect class that no existing validator check covers: objects with no spawn location that are silently inaccessible to the player. The web research confirms the strategic value: AdventureForge's four-pillar claim (AI authoring → deterministic engine → independent structured-API play → regression-lock) depends on the validator being structurally complete. A benchmark substrate that silently accepts orphan objects undermines the "complete deterministic validator" guarantee. The verify-integrity.ts gaps (stale docstring, multi-line tautology, TAUTOLOGY_REGRESSION structural consistency) are valid but secondary — they improve documentation and structural consistency without closing any new class of authoring defect.
-
-The benchmark landscape remains favorable: TALES (arXiv 2504.14128), RPGBench (arXiv 2502.00595), BALROG (arXiv 2411.13543), and FictionalQA (arXiv 2506.05639) each address isolated pillars but no system combines all four. The keystone (resolveProvider at tools.ts:788) is already wired — only the API key itself remains as the gating dependency for real-LLM benchmark scores.
+Four parallel repo reviewers completed independent analyses. Cross-checking was performed against the confirmed-closed list and the live repo at HEAD = bug_0331.
 
 ---
 
-## The one chosen move
+## FALSE ALARMS this cycle
 
-**ITEM_UNPLACED validator check in `parser_validator.ts` (bug_0317):** Add a single validation loop after the existing object-level checks (around line 208) to detect objects defined in `pack.objects` that are not placed in any room, not inside any container, and not held — objects the player can never find or acquire.
+**None of the reviewer findings duplicate a confirmed-closed gap.** All four reviewers correctly scoped to open gaps only. However, two findings require reclassification from their original framing:
+
+**Reviewer 3 — "class-level stale reactive description validator":** This is a genuine open gap but correctly categorized by the reviewer as high false-positive risk (30-50% FP rate without tuning). The reviewer's own conclusion ("implement as WARN, every finding still needs human sign-off") accurately describes why it scores below the chosen move. Not a false alarm, but lower value than claimed.
+
+**Reviewer 4 — "stale docstring (Gap 1)":** Confirmed open. The docstring at `scripts/verify-integrity.ts` lines 31-33 still reads "a count-preserving swap that keeps a STRONG matcher but makes it vacuous (`expect(true).toBe(true)`) is still not caught." Bug_0308 closed this. This IS a live false statement in a security-adjacent comment. However, it was already confirmed open in cycle #19 and deliberately deferred then. Reclassification: genuine, open, lowest-cost fix — but it was already the lowest-priority deferred item. Valid to carry forward, not a cycle-choice candidate.
+
+---
+
+## GENUINE GAPS confirmed (with evidence)
+
+### Gap A — NPC dialogue topic conditions excluded from `checkConds` feasibility scan
+**File:** `src/validate/parser_validator.ts`
+**Evidence:** `checkConds` is defined at line 484 and called at exactly three sites: line 539 (room exit conditions), line 552 (object interaction conditions), line 564 (win_conditions). It is never called for `DialogueTopic.conditions`. The NPC dialogue block (lines 631-697) validates GOTO integrity (DIALOGUE_GOTO_MISSING), termination (DIALOGUE_NONTERMINATING), and node variant shadowing/unsatisfiability — but not topic gate feasibility. A topic gated on `has_flag: "never_set_flag"` or `has_item: "phantom_item"` is silently permanently hidden; no finding is emitted. The `neededWhileHeld` walk at lines 600-603 already iterates `t.conditions` — the infrastructure is fully present, the call is simply absent.
+**Effort:** S. Three lines in the topic iteration inside the existing NPC loop.
+**API key required:** No.
+**False-positive risk:** Low-to-none. `flags_init` is already seeded into `settable` (line 435), so a flag pre-set only via `flags_init` consumed only as a topic gate stays green correctly.
+
+### Gap B — NPC dialogue topic conditions excluded from `checkUnsatisfiable`
+**File:** `src/validate/parser_validator.ts`
+**Evidence:** `checkUnsatisfiable` is called for room variants (lines 856-869), object variants and interactions (lines 871-886), ending variants (lines 892-900), and win_condition conditions (line 910). It is NOT called for `DialogueTopic.conditions`. An internally contradictory topic gate (e.g., `all_of: [{has_flag: X}, {not_flag: X}]`) is permanently hidden with no warning. Node `variants` shadowing IS checked (line 654-661), but topic condition unsatisfiability is not.
+**Effort:** S. One `checkUnsatisfiable` call per topic inside the existing loop — same pattern as Gap A.
+**API key required:** No.
+**False-positive risk:** None. `checkUnsatisfiable` is already conservative (opaque disjunctions bail).
+
+### Gap C — TARGET_PER_MODE threshold: content_new permanently silenced
+**File:** `src/afk/assessor.ts` line 68
+**Evidence:** `TARGET_PER_MODE = { cyoa: 2, parser: 2, rpg: 2 }`. Actual pack counts: cyoa=7 (clockwork_heist, dead_reckoning, midnight_edition, tithe_barn, watchtower_road, white_stag, wreckers_light), parser=5 (alchemists_tower, friars_postern, lamplighters_round, sealed_crypt, tide_mill), rpg=5 (breaking_weir, cold_forge, dawn_beacon, sunken_barrow, wolf_winter). Gate at line 566: `if (have < target)` — 7>=2, 5>=2, 5>=2 — never fires. Zero content_new candidates are generated. Every cycle at the 0.5 floor is a blind-pass content_fix stub. Deferral reason from cycle #19 DECISION_LOG: "re-enabling authoring nominations while structural validator gaps remain is the wrong priority order. Revisit after bug_0317 is locked." Bug_0317 (ITEM_UNPLACED) is now locked. Deferral condition is satisfied.
+**Effort:** S. Single constant edit at assessor.ts line 68. No tests pin the exact numbers.
+**API key required:** No.
+**Saturation impact:** Raising to `{cyoa:10, parser:8, rpg:8}` would score content_new candidates at `score(5, "L", "content_new")` = `(5/3)*0.85` ≈ 1.417 — well above the 0.5 saturation floor, immediately redirecting the loop to net-new authoring.
+
+### Gap D — Stale docstring in verify-integrity.ts
+**File:** `scripts/verify-integrity.ts` lines 31-33
+**Evidence:** Text still says the tautology case "is still not caught." Bug_0308 implemented `detectTautologies()`, `TAUTOLOGY_RE`, `MAX_TAUTOLOGY_ASSERTIONS`. Confirmed by reading line 147-148 (TAUTOLOGY_RE present) and lines 153-169 (detectTautologies implemented). Open since cycle #19.
+**Effort:** S. 4-line edit. No behavior change, no tests needed.
+
+### Gap E — TAUTOLOGY_REGRESSION inline in runDrift, not in detectCountRegressions
+**File:** `scripts/verify-integrity.ts` lines 656-667
+**Evidence:** `detectCountRegressions` (not read in full but described by Reviewer 4 as handling TEST_COUNT_REGRESSION, ASSERTION_COUNT_REGRESSION, STRONG_ASSERTION_REGRESSION only). TAUTOLOGY_REGRESSION lives as an inline if-block in `runDrift` (lines 656-667), confirmed by direct read. Structurally inconsistent — the tautology branch cannot be unit-tested against `detectCountRegressions` in isolation.
+**Effort:** S. Move block into `detectCountRegressions`, add 1-2 unit tests.
+
+### Gap F — allGeneratorsClean absent from Assessment type
+**File:** `src/afk/assessor.ts` lines 52-57
+**Evidence:** `Assessment` type confirmed as `{ packsByMode, packs, candidates, top }` — no `allGeneratorsClean` field. `isSaturated()` (line 487-488) uses only `a.top === null || a.top.score <= SATURATION_FLOOR`. A loop saturated because all generators are clean is indistinguishable from one saturated because scoring collapsed.
+**Effort:** S-M. Thread a boolean through `assess()`, update `isSaturated` or add helper, 2-3 unit tests.
+
+---
+
+## CHOSEN MOVE
+
+**Gap C: Raise TARGET_PER_MODE to break the saturation cycle**
+
+**Bug id:** bug_0332
 
 ### What
 
-The change is confined to `src/validate/parser_validator.ts`, one test file, and one bug artifact. No pack content changes, no schema changes, no engine changes.
-
-**`src/validate/parser_validator.ts`** — add after the existing object-loop that checks HELD_ALSO_PLACED (ends around line 208), before the NPC loop:
+Single-line change in `src/afk/assessor.ts` line 68:
 
 ```typescript
-  // ── ITEM_UNPLACED: objects not reachable by any spawn path ───────────────────
-  // Build placement maps from room.objects and container.contents.
-  // Held objects (held: true) start in the player's inventory — no room/container
-  // placement is needed or expected.  Any other object that appears in neither map
-  // has no spawn location and can never be found or picked up by the player.
-  {
-    const placedInRoom = new Set<string>();
-    for (const r of pack.rooms) for (const oid of r.objects) placedInRoom.add(oid);
-    const placedInContainer = new Set<string>();
-    for (const o of pack.objects) for (const cid of o.contents) placedInContainer.add(cid);
+// Before:
+const TARGET_PER_MODE: Record<string, number> = { cyoa: 2, parser: 2, rpg: 2 };
 
-    for (const o of pack.objects) {
-      if (o.held) continue; // inventory start — no placement needed
-      if (!placedInRoom.has(o.id) && !placedInContainer.has(o.id)) {
-        findings.push(
-          warn(
-            "ITEM_UNPLACED",
-            `object "${o.id}" is not placed in any room or container and is not held — it can never be found by the player.`,
-            [`object:${o.id}`],
-          ),
-        );
-      }
-    }
-  }
+// After:
+const TARGET_PER_MODE: Record<string, number> = { cyoa: 10, parser: 8, rpg: 8 };
 ```
 
-Note: this loop builds its own placement maps local to the top-level validation function. It does NOT reuse the `homeRoom`/`containerOf` maps inside `computeObtainable()` — those are scoped to a different function and built at a later stage. The new maps here are deliberately local to keep the check self-contained and independent of the obtainability fixpoint.
+No other files need changing for the threshold. However, the deferral condition in `docs/DECISION_LOG.md` must be updated to note this gap is now closed.
 
-**`tests/unit/parser_validator.test.ts`** (or a new `tests/regression/parser_validator_item_unplaced.test.ts`) — add a describe block:
+### Why this move and not Gap A (NPC topic checkConds)
 
-```typescript
-describe("ITEM_UNPLACED — objects with no spawn location", () => {
-  it("emits ITEM_UNPLACED warn for an object not in any room and not in any container and not held", () => {
-    // build a minimal valid parser pack with one orphan object
-    // expect validateParserPack to return a finding with code "ITEM_UNPLACED"
-  });
-  it("does NOT emit ITEM_UNPLACED for an object listed in room.objects", () => {
-    // object placed in a room → no finding
-  });
-  it("does NOT emit ITEM_UNPLACED for an object listed in a container's contents", () => {
-    // object inside a container → no finding
-  });
-  it("does NOT emit ITEM_UNPLACED for a held:true object with no room or container placement", () => {
-    // held object starts in inventory → no finding
-  });
-  it("all 17 real packs produce zero ITEM_UNPLACED findings", () => {
-    // load each pack and validate — no pack should have orphan objects
-  });
-});
-```
+Scoring:
 
-**`traces/bugs/bug_0317_item_unplaced_validator.yaml`** (new file):
+| Gap | Breaks saturation cycle | No API key | S effort | Deterministic AC | Pillar advance |
+|-----|------------------------|-----------|----------|-----------------|---------------|
+| A (NPC checkConds) | No | Yes | Yes | Yes | Yes |
+| B (NPC checkUnsatisfiable) | No | Yes | Yes | Yes | Yes |
+| C (TARGET_PER_MODE) | **Yes** | Yes | Yes | Yes | Yes |
+| D (stale docstring) | No | Yes | Yes | Yes | No |
+| E (TAUTOLOGY_REGRESSION) | No | Yes | Yes | Yes | No |
+| F (allGeneratorsClean) | No | Yes | S-M | Yes | Marginal |
 
-```yaml
-id: bug_0317
-title: "parser_validator: ITEM_UNPLACED — objects not placed in any room or container and not held"
-pack: null
-class: validator-structural
-severity: structural
-found_by: ultraplan_cycle_19
-playtest_report: null
+Gap C is the **only gap that breaks the saturation cycle**. The loop has been stuck at the 0.5 floor for 50 consecutive cycles (bugs 0282-0331) producing reactive-description-blindness content_fix findings. Every structural validator gap that justified deferring TARGET_PER_MODE is now closed (ITEM_UNPLACED landed as bug_0317). The deferral condition is gone.
 
-symptom: >
-  A parser pack could define an object in pack.objects without listing it in any
-  room.objects array, any container.contents array, or marking it held:true. The object
-  had no spawn location — it was permanently inaccessible to the player — but the
-  validator produced no warning or error. The homeRoom and containerOf maps were already
-  built inside computeObtainable() but were scoped to the obtainability fixpoint only;
-  no top-level validation loop checked orphan placement.
+Gap A (NPC topic `checkConds`) is the highest-value structural validator gap — it closes a real silent authoring hole, it is S-effort, it has no false-positive risk, and it should be the next move AFTER the saturation cycle is broken. But it does not move the 0.5 needle: it adds a new class of validator warning to parser packs, and only packs that actually have impossible topic gates would generate a new finding. All 17 shipped packs are structurally clean (that is why they are at 0.5). Gap A produces no new content_fix candidates above 0.5 for currently-clean packs; it only prevents future authoring defects from slipping through silently.
 
-root_cause: >
-  The parser validator checked ROOM_OBJECT_MISSING (room references an undefined object),
-  HELD_ALSO_PLACED (held object also listed in a room/container), and
-  CONTAINER_CONTENT_MISSING (container references an undefined object) — but had no
-  inverse check: an object defined in pack.objects but absent from every room.objects
-  and container.contents list (and not held) was silently accepted.
+Gap C produces three `content_new` candidates scored at ~1.417, immediately above the 0.5 floor, redirecting every subsequent cycle to net-new pack authoring. This is the structural re-aim the loop needs.
 
-fix: >
-  Added ITEM_UNPLACED warn() after the HELD_ALSO_PLACED loop in the top-level validation
-  function (around line 208). Builds two local sets (placedInRoom, placedInContainer)
-  from room.objects and container.contents, then iterates pack.objects: any non-held
-  object absent from both sets emits ITEM_UNPLACED. All 17 real packs produce zero
-  ITEM_UNPLACED findings (confirming the floor is non-vacuous).
+### Acceptance criteria
 
-regression_test: tests/unit/parser_validator.test.ts (ITEM_UNPLACED describe block)
-```
-
-### Why
-
-The `homeRoom` and `containerOf` maps are already built inside `computeObtainable()` (parser_validator.ts lines 1116-1119) but those maps are used only for the obtainability fixpoint and are not accessible at the top-level validation scope. grep for `ITEM_UNPLACED` and `ORPHAN_OBJECT` across all of `src/` returns zero results — confirmed by three independent reviewer teams over two consecutive ultraplan cycles. This is the only remaining structural placement gap in the parser validator.
-
-The web research confirms the strategic value: the four-pillar benchmark positioning (AI authoring → deterministic engine → structured-API play → regression-lock) depends on the validator being structurally complete. TALES (arXiv 2504.14128), the nearest prior work, uses static games with no validation layer — AdventureForge's deterministic validator is a core differentiator. Silently accepting orphan objects is a class of authoring defect that would survive schema validation, exhaustive solving, and blind playtesting (since the orphan object never appears), making the validator the only place it can be caught.
-
-The fix is purely additive, S-effort, no API key, and has clear deterministic acceptance criteria. All 17 real packs should produce zero ITEM_UNPLACED findings, confirming the gate is non-vacuous (there are real packs to check) and that current content is already clean.
+1. `src/afk/assessor.ts` line 68 reads `{ cyoa: 10, parser: 8, rpg: 8 }` (or any values strictly above current counts: cyoa > 7, parser > 5, rpg > 5).
+2. Running `assess(root)` on the current repo returns at least one candidate with `category: "content_new"` and `score > 0.5`.
+3. All three content_new candidates (`new-cyoa`, `new-parser`, `new-rpg`) appear in `candidates`.
+4. `isSaturated(assess(root))` returns `false` — the loop is no longer at the 0.5 floor.
+5. `npm run health` exits 0.
+6. All existing tests continue to pass (no regression).
+7. A new bug artifact `traces/bugs/bug_0332_target_per_mode_threshold.yaml` is created.
 
 ### Exact files to read and edit
 
-**Read (to understand existing patterns):**
-- `src/validate/parser_validator.ts` lines 160-225 — the existing object-loop (CONTAINER_CONTENT_MISSING, KEY_MISSING, LOCKED_NO_KEY, HELD_ALSO_PLACED): the exact style and `warn()`/`err()` call pattern the new loop should follow
-- `src/validate/parser_validator.ts` lines 1111-1165 — `computeObtainable()`: understand why homeRoom/containerOf are scoped there and NOT reused in the new check (different function scope; the new check builds its own local sets)
-- `tests/unit/parser_validator.test.ts` lines 1-60 — existing test structure: describe block conventions, minimal pack construction helpers
+**Read (to understand context):**
+- `src/afk/assessor.ts` lines 59-80 — the constant block, `score()` function, `EFFORT_COST`, `CATEGORY_WEIGHT`
+- `src/afk/assessor.ts` lines 563-579 — the content_new candidate generation block (the `if (have < target)` gate)
+- `src/afk/assessor.ts` lines 487-489 — `isSaturated()` to confirm it reads `top.score`
+- `docs/DECISION_LOG.md` — to find and update the TARGET_PER_MODE deferral entry
 
-**Create / edit:**
-1. `src/validate/parser_validator.ts` — add ITEM_UNPLACED warn loop after the HELD_ALSO_PLACED block (around line 208), before the NPC loop. Use a scoped block `{ ... }` to keep the local sets from polluting the outer scope.
-2. `tests/unit/parser_validator.test.ts` (or new `tests/regression/parser_validator_item_unplaced.test.ts`) — add describe block with 5 cases (orphan object fires / room-placed does not fire / container-placed does not fire / held does not fire / all 17 real packs clean)
-3. `traces/bugs/bug_0317_item_unplaced_validator.yaml` — new bug artifact
+**Edit:**
+1. `src/afk/assessor.ts` line 68 — raise TARGET_PER_MODE constants
+2. `docs/DECISION_LOG.md` — mark TARGET_PER_MODE deferral as resolved (bug_0317 is now closed; the deferral condition is satisfied)
 
-### Acceptance check
-
-`npm run health` must exit 0. Specific criteria:
-
-1. `validateParserPack()` returns a finding with `code: "ITEM_UNPLACED"` and `severity: "warn"` for a pack containing an object that is not in any `room.objects`, not in any `container.contents`, and has `held !== true`.
-2. No `ITEM_UNPLACED` finding is emitted for an object listed in `room.objects`.
-3. No `ITEM_UNPLACED` finding is emitted for an object listed in a container's `contents` array.
-4. No `ITEM_UNPLACED` finding is emitted for an object with `held: true` that is absent from all rooms and containers.
-5. All 17 real packs validate with 0 `ITEM_UNPLACED` findings (confirming the gate is non-vacuous and current content is already clean).
-6. `verify:integrity` reports 0 errors, 0 warnings on the working tree.
-7. Test count increases by the number of new `it()` cases added.
-8. All existing tests continue to pass (no regression).
+**Create:**
+3. `traces/bugs/bug_0332_target_per_mode_threshold.yaml` — new bug artifact
 
 ### What NOT to change
 
-- No schema change to any pack format (`ParserPackSchema`, `ConditionSchema`, `EffectSchema`)
-- No engine change (`makeStep`, `applyEffects`, `evalConditions`)
-- No pack content change — no YAML edits, no hash re-pin
-- No change to `TARGET_PER_MODE` or `CATEGORY_WEIGHT` in `src/afk/assessor.ts` (deferred)
-- No change to the `frontier` category addition (deferred)
-- No change to `isSaturated()` or `Assessment` type (deferred)
-- No change to `scripts/verify-integrity.ts` (stale docstring and multi-line tautology deferred)
-- The existing `computeObtainable()` function and its internal `homeRoom`/`containerOf` maps must remain untouched — the new validation loop builds independent local sets
+- No schema changes to any pack format
+- No engine changes
+- No pack content changes — no YAML edits, no hash re-pins
+- Do NOT change `CATEGORY_WEIGHT` values
+- Do NOT change `SATURATION_FLOOR`
+- Do NOT change `isSaturated()` logic (Gap F — deferred)
+- Do NOT add `allGeneratorsClean` to `Assessment` (Gap F — deferred)
+- Do NOT implement NPC topic `checkConds` or `checkUnsatisfiable` (Gaps A/B — next after this)
+- Do NOT fix the stale docstring in verify-integrity.ts (Gap D — can batch with Gap E)
 
 ---
 
 ## Deferred levers (do NOT implement this cycle)
 
-- **Stale docstring in `verify-integrity.ts`:** Lines 31-33 still say the tautology gap "is still not caught" after bug_0308 closed it. S-effort one-paragraph edit. Deferred: does not block any detection coverage; can be bundled with multi-line tautology fix in a fast-follow commit.
-- **Multi-line tautology not covered by `TAUTOLOGY_RE`:** The regex has no `s`/dotall flag; `expect(foo)\n  .toBe(foo)` split across lines escapes detection. S-effort regex flag addition or second-pass scanner plus one new unit test. Deferred: real-world test code overwhelmingly writes tautologies on a single line; the risk is narrow.
-- **`TAUTOLOGY_REGRESSION` not in `detectCountRegressions`:** Tautology drift comparison is inline in `runDrift`, not in the exported pure `detectCountRegressions` function. Structurally inconsistent but functionally safe. S-effort refactor. Deferred.
-- **`TARGET_PER_MODE` threshold update:** `{cyoa:2, parser:2, rpg:2}` vs actual 7/5/5; `content_new` permanently silenced. S-effort one-liner. Deliberate deferral: re-enabling authoring nominations while structural validator gaps remain is the wrong priority order. Revisit after bug_0317 is locked.
-- **Assessor `isSaturated()` clean-stasis branch:** Adding `allGeneratorsClean: boolean` to `Assessment` is S-effort and genuinely useful for ultraplan prompt quality. Deferred as secondary to structural integrity work.
-- **Assessor `frontier` category:** No `frontier` entry in `Category` union or `CATEGORY_WEIGHT`. M-effort. The scoring signal that makes it meaningful above the 0.5 floor requires a live API key path; a detection stub alone would produce a candidate that fires unconditionally.
-- **Parser generator DAG topology variant:** L-effort. Linear 4-room spine only; a DAG variant with parallel sub-puzzles is the right next generator evolution but requires multi-cycle scope.
-- **Benchmark scorecard module:** No standalone value without real-model rows. Unblock after the keyed real-model run.
-- **Assessor `content_new` above-floor category (API-key path):** Wired in `adapter.ts` but scoring signal blocked on API key.
+- **Gap A — NPC dialogue topic conditions excluded from `checkConds`:** S-effort, no false-positive risk, closes the dialogue-side twin of the object/exit feasibility check. Highest-value structural validator gap remaining. Implement next after bug_0332.
+- **Gap B — NPC dialogue topic conditions excluded from `checkUnsatisfiable`:** S-effort, zero false-positive risk. Batch with Gap A in the same commit (same loop, adjacent calls).
+- **Gap D — Stale docstring in verify-integrity.ts (lines 31-33):** S-effort 4-line edit. Deferred again: zero detection coverage change, safe to batch with Gap E.
+- **Gap E — TAUTOLOGY_REGRESSION not in detectCountRegressions:** S-effort refactor. Structurally inconsistent but functionally safe. Batch with Gap D.
+- **Gap F — allGeneratorsClean absent from Assessment:** S-M effort. Genuinely useful for isSaturated disambiguation. Deferred: low urgency while saturation cycle is the primary problem.
+- **Class-level stale reactive description validator (Reviewer 3):** Viable as WARN-only advisory, estimated 30-50% FP rate without tuning. Requires suppression list maintenance across 17 packs. Deferred: design the suppression strategy first.
+- **Dialogue root re-greet validator (Reviewer 3 "next most common bug class"):** Confirmed in 3 packs. Low FP risk (pattern is structurally tight: heard_* flag set by child, not read by parent). S-effort. Deferred until Gaps A/B are landed (they are the closer structural analogue and come first).
+- **Parser generator DAG topology variant:** L-effort, multi-cycle scope.
+- **Benchmark scorecard / frontier category:** Blocked on API key.

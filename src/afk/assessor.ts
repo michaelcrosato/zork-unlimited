@@ -65,7 +65,7 @@ const CATEGORY_WEIGHT: Record<Category, number> = {
   repo: 0.6,
 };
 // How many packs per mode is "healthy" before net-new content is deprioritized.
-const TARGET_PER_MODE: Record<string, number> = { cyoa: 2, parser: 2, rpg: 2 };
+const TARGET_PER_MODE: Record<string, number> = { cyoa: 10, parser: 8, rpg: 8 };
 
 function score(impact: number, effort: ImprovementCandidate["effort"], category: Category): number {
   // Deterministic: (impact / effort) * weight, rounded to 3 dp.

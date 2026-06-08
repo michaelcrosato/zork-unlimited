@@ -69,19 +69,16 @@ describe("assess()", () => {
     for (const r of reviews) expect(r.score).toBeLessThan(1); // ranked below real fixes + new content
   });
 
-  it("raises no content_new candidate once every mode meets its breadth target", () => {
-    // This cycle authored the game's 2nd RPG pack (The Cold Forge, bug_0021),
-    // bringing every mode to TARGET_PER_MODE (cyoa/parser/rpg = 2/2/2). With the
-    // game no longer thin in any mode, the assessor correctly STOPS recommending new
-    // packs — the success condition of the broadening work. (Previously this test
-    // asserted "flags the thin rpg mode as a content_new candidate"; that premise —
-    // rpg 1<2 — is now false. If an operator wants deeper breadth, raising
-    // TARGET_PER_MODE re-arms content_new; meeting the existing target legitimately
-    // disarms it.)
+  it("raises content_new candidates for modes that have not yet met their breadth target", () => {
+    // TARGET_PER_MODE was raised to {cyoa:10, parser:8, rpg:8} (bug_0332) to unblock
+    // net-new pack authoring after 50 cycles of saturation. Current counts are well
+    // below the new targets, so the assessor correctly RE-ARMS content_new for every
+    // thin mode. When a mode eventually reaches its target the candidate for that mode
+    // will disappear; raising TARGET_PER_MODE further re-arms it again.
     for (const mode of ["cyoa", "parser", "rpg"]) {
       expect(a.packsByMode[mode]).toBeGreaterThanOrEqual(2);
     }
-    expect(a.candidates.find((c) => c.category === "content_new")).toBeUndefined();
+    expect(a.candidates.find((c) => c.category === "content_new")).toBeDefined();
   });
 
   it("every candidate is well-formed (evidence + score + effort)", () => {
