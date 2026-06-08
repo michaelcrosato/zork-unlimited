@@ -181,12 +181,12 @@ scenes:
     variants:
       - when: [{ has_flag: knows_truth }]
         text: >
-          The thief straightens against the sacks, past running, and meets your eye — a woman
-          with a winter-sharp face, a week of rye in the sack at her feet, no more. "Go on,
-          then," she says, low and even. "Do what he pays you for." But you have read the book
-          now, and you know the dark behind her is full of bread that was never meant to feed
-          anyone, held back to rot for the price of it. She did not steal from a hungry lord.
-          She took a week of rye from a year of waste.
+          She has not moved; she straightens against the sacks to meet your eye, past running
+          — a woman with a winter-sharp face, a week of rye in the sack at her feet, no more.
+          "Go on, then," she says, low and even. "Do what he pays you for." But you have read
+          the book now, and you know the dark behind her is full of bread that was never meant
+          to feed anyone, held back to rot for the price of it. She did not steal from a hungry
+          lord. She took a week of rye from a year of waste.
     choices:
       - id: take_her
         text: "Seize her and call the lord's men for the bounty."
