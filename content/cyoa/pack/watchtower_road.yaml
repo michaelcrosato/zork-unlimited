@@ -222,6 +222,16 @@ scenes:
     # Reactive text + one-shot gate only — no new flag/route/ending: raised_alarm is still
     # set exactly once on the same first lighting, and the un-alarmed player sees the
     # original base text and the light_beacon choice verbatim (first-match-wins).
+    #
+    # bug_0283: a blind playtester (seed 42, ai-runs/2026-06-08T04-04-29-865Z/playtest.md
+    # §4) climbed the tower before finding the lantern and saw "A cold brazier waits,
+    # begging for a flame" — but light_beacon was invisible (gated on has_item: lantern),
+    # so the scene described an affordance the player had no way to use. False affordance —
+    # same reactive-description-blindness class as bug_0120/bug_0134/bug_0282. Fix: add a
+    # not_item: lantern variant (placed BEFORE the base, AFTER the raised_alarm variant)
+    # that describes the brazier neutrally when the player has no lantern. The base text
+    # ("begging for a flame") only shows when the player carries the lantern but has not yet
+    # lit the beacon — exactly the right moment for that invitation.
     variants:
       - when: [ { has_flag: raised_alarm } ]
         text: >
@@ -229,6 +239,10 @@ scenes:
           toward the town. In the brazier the beacon you kindled still blazes,
           flinging its light far down the dark — and below, the horn that answered
           it has not yet fallen silent.
+      - when: [ { not_item: lantern } ]
+        text: >
+          The ruined parapet opens onto the whole valley. The road runs north toward
+          the town. A cold iron brazier stands at the parapet's edge, dark and empty.
     text: >
       The ruined parapet opens onto the whole valley. The road runs north toward
       the town. A cold brazier waits, begging for a flame.

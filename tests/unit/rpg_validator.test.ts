@@ -131,7 +131,7 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // the new award rides the seal_broken flag dimension (so no new states), and reachable max
     // == 50 stays proven exhaustively by cyoa_score_economy_sound (was d3090c6586...).
     // Any *unintended* change to compilation trips this.
-    // bug_0282: re-pinned after adding mossy_brook reactive variant (was 89a0c84a3570...).
-    expect(loaded.compiled.contentHash).toBe("24aaf2b940adfe251e5bb1ce9a77f1a9b6c9402713d6fdf3ea87f2ea5489ddd5");
+    // bug_0283: re-pinned after adding tower_top not_item:lantern variant (was 24aaf2b940ad...).
+    expect(loaded.compiled.contentHash).toBe("9fed38439d61276d16137a35b121c72fadd42b6ae01129ec5bd4c2a85d1c3c82");
   });
 });
