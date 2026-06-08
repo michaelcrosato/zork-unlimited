@@ -188,7 +188,7 @@ scenes:
         conditions: [ { not_item: sealed_letter } ]
         # +5 score: recovering the sealed papers — a clue in hand. One-shot — the not_item
         # sealed_letter guard above retires this choice once the letter is taken.
-        effects: [ { add_item: sealed_letter }, { add_journal: "A wax-sealed letter, addressed to no one — but it reads like the kind of papers a checkpoint guard would demand to see, or that the right pair of eyes — not your own; the seal is set too hard for that — could break open and read." }, { inc_var: { name: score, by: 5 } } ]
+        effects: [ { add_item: sealed_letter }, { add_journal: "A wax-sealed letter, addressed to no one — quality correspondence paper and a hard-pressed seal, not a traveler's permit but the kind of private record that moves between men with something to arrange and someone to pay. The seal is too hard for you to break cleanly, though the right pair of eyes — not your own — could read what is inside; and a checkpoint man who knew what he was looking at would want very much to do so." }, { inc_var: { name: score, by: 5 } } ]
         next: abandoned_cart
       - id: carry_lantern_to_cellar
         text: "Carry the lantern out to the cellar stair."

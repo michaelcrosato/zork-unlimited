@@ -1,0 +1,51 @@
+bug_id: bug_0280
+title: Watchtower Road — sealed letter framing misleads player as a travel pass
+class: hint_text / signposting
+severity: content (prose mismatch — misleads player about item's role at its most dramatic use)
+pack: watchtower_road_v1
+scene: abandoned_cart
+action: take_letter (add_journal effect)
+discovered_by: blind MCP playtest (seed 7, general-purpose subagent, 2026-06-08)
+report: ai-runs/2026-06-08T02-03-27-776Z/playtest.md §4
+fixed_in_commit: TBD
+
+symptom: >
+  The take_letter journal entry said "reads like the kind of papers a checkpoint guard
+  would demand to see" — framing the sealed letter as a travel permit the player presents
+  to be waved through. In reality the letter is incriminating evidence naming the checkpoint
+  sergeant as a co-conspirator; the sergeant reads it and finds his OWN name. The
+  travel-pass framing set up a false mental model that undercut the game's best dramatic
+  moment (the sergeant's face going white as he reads his name).
+
+root_cause: >
+  bug_0108 (the earlier signposting fix) correctly added hints about both uses of the
+  letter (checkpoint + hermit seal), but the checkpoint hint used "papers a guard would
+  demand to see" — which unambiguously reads as a travel-pass framing. The letter IS
+  useful at the checkpoint, but as damning evidence, not as a pass. The framing was
+  accurate about WHICH scene to go to, but wrong about WHY the letter would matter there.
+
+fix: >
+  Rewrote the take_letter journal entry to drop "demand to see" and frame the letter
+  as "not a traveler's permit but the kind of private record that moves between men with
+  something to arrange and someone to pay." The checkpoint hint is reframed as "a
+  checkpoint man who knew what he was looking at would want very much to read it" —
+  signalling the guard will INVESTIGATE it, not accept it as a pass. Both signpost targets
+  (checkpoint + hermit's breaking the seal) are preserved; only the travel-pass implication
+  is removed.
+
+content_hash_old: f1d127c8ce0966696fbbc223eb01e60bb9d10acc996e0f5e8f07461a5adb7da7
+content_hash_new: 89a0c84a3570d58e708ff1bbc7710ef97be42c58503de7eca533ab97b75164f0
+repinned: tests/unit/rpg_validator.test.ts line 134 — deliberate surfaced re-pin
+         (HASH_PIN_REPINNED, accompanied by this content change)
+
+regression_test: tests/regression/watchtower_letter_framing.test.ts
+  cases:
+    - journal entry no longer contains "demand to see"
+    - journal entry distinguishes letter from a travel permit ("traveler")
+    - checkpoint hint frames guard as wanting to read/investigate (not accept as pass)
+    - show_papers at checkpoint still routes to confront_smuggler (prose-only fix)
+
+existing_tests_preserved:
+  - watchtower_letter_signposting.test.ts: still passes (keywords "checkpoint" + "read/break/seal" retained)
+  - watchtower_blind_fixes.test.ts: unaffected
+  - cyoa_score_economy_sound: unaffected (no score/flag/route change)

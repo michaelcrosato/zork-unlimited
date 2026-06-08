@@ -131,6 +131,6 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // the new award rides the seal_broken flag dimension (so no new states), and reachable max
     // == 50 stays proven exhaustively by cyoa_score_economy_sound (was d3090c6586...).
     // Any *unintended* change to compilation trips this.
-    expect(loaded.compiled.contentHash).toBe("f1d127c8ce0966696fbbc223eb01e60bb9d10acc996e0f5e8f07461a5adb7da7");
+    expect(loaded.compiled.contentHash).toBe("89a0c84a3570d58e708ff1bbc7710ef97be42c58503de7eca533ab97b75164f0");
   });
 });
