@@ -804,6 +804,21 @@ scenes:
     # at low ticks and reads the still base text — the quiet is earned by taking the route
     # that slips past the gallery entirely (bug_0064).
     variants:
+      # Pick-aware variants: when the player returns with lockpicks the strongbox is
+      # no longer "locked fast" — they now have the means to open it. Each tick tier
+      # gets a pick-present form above its no-pick counterpart (first-match-wins,
+      # higher threshold first), mirroring the kitchen's pick-taken × tick pairing.
+      # Reactive-description-blindness class, bug_0286.
+      - when: [{ var_gte: { name: ticks, value: 4 } }, { has_item: lockpick }]
+        text: >
+          Dust and cobweb and the smell of old brass. The passage runs behind the vault
+          to a forgotten iron strongbox — its lock rusted, but no match for the picks in
+          your pocket now. Folded inside, a sealed letter in the steward's own hand,
+          hidden away here in the dark where he meant no eye ever to fall on it. The
+          hour has come round at last: the great clock's chime rolls down through the
+          manor's thousand gears and reaches you even here behind the wall, and through
+          the brick a slow tread answers it, passing along the vault's far side and away.
+          Crack the box and crawl clear.
       - when: [{ var_gte: { name: ticks, value: 4 } }]
         text: >
           Dust and cobweb and the smell of old brass. The passage runs behind the vault
@@ -813,6 +828,15 @@ scenes:
           the great clock's chime rolls down through the manor's thousand gears and reaches
           you even here behind the wall, and through the brick a slow tread answers it,
           passing along the vault's far side and away. Crack the box and crawl clear.
+      - when: [{ var_gte: { name: ticks, value: 2 } }, { has_item: lockpick }]
+        text: >
+          Dust and cobweb and the smell of old brass. The passage runs behind the vault
+          to a forgotten iron strongbox — its lock rusted, but no match for the picks in
+          your pocket now. Folded inside, a sealed letter in the steward's own hand,
+          hidden away here in the dark where he meant no eye ever to fall on it. Somewhere
+          above, the great clock grinds toward the hour, its working carried down through
+          the manor's gears into even this forgotten passage — best crack the box and be
+          gone before the chime wakes the sleeping house.
       - when: [{ var_gte: { name: ticks, value: 2 } }]
         text: >
           Dust and cobweb and the smell of old brass. The passage runs behind the vault
@@ -822,6 +846,13 @@ scenes:
           grinds toward the hour, its working carried down through the manor's gears into
           even this forgotten passage — best crack the box and be gone before the chime
           wakes the sleeping house.
+      - when: [{ has_item: lockpick }]
+        text: >
+          Dust and cobweb and the smell of old brass. The passage runs behind the vault
+          to a forgotten iron strongbox — the lock rusted but yielding, the picks in your
+          pocket exactly what this wants. Folded inside, you are certain, a sealed letter
+          in the steward's own hand: not laid out for show like a thing meant to be found,
+          but hidden away here in the dark, where he meant no eye ever to fall on it.
     choices:
       - id: open_strongbox
         text: "Pick the strongbox's lock with the lockpicks."
