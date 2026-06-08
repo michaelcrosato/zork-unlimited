@@ -140,6 +140,12 @@ scenes:
           - add_item: lamp_oil
           - add_journal: "A flask of lamp-oil, enough to wake the great lamp — or any lamp."
         next: oil_store
+      - id: try_lock
+        text: "Try the lock on the sea-chest."
+        conditions: [{ not_item: keeper_key }, { not_flag: chest_open }]
+        effects:
+          - narrate: "The hasp holds fast — iron through and through, and not your hand that will force it. A keeper would keep such a key close; the old man at the stove had something white-knuckled in his fist when he fell."
+        next: oil_store
       - id: unlock_chest
         text: "Unlock the sea-chest with the iron key."
         conditions: [{ has_item: keeper_key }, { not_flag: chest_open }]
