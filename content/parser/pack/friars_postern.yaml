@@ -143,10 +143,10 @@ rooms:
       - when: [{ has_flag: knows_postern }]
         text: >
           The friars' old chapel, kept now only by the dust. The dry stone font
-          stands against the north wall — and the third stone above its base, pressed
-          slow as the old woman said, has swung the friars' postern inward on a breath
-          of night air. The debtors' alms-box is bolted to the floor beside it. The way
-          out runs north into the dark; the gallery stair drops away to the south.
+          stands against the north wall — and beside it, just as the old woman said,
+          the third stone above its base stands a little proud of its fellows, waiting
+          for a slow hand. The debtors' alms-box is bolted to the floor beside it. The
+          way out runs north; the gallery stair drops away to the south.
     objects: [font, alms_box]
     exits:
       - { direction: south, to: gallery }
@@ -271,7 +271,7 @@ objects:
         text: >
           A dry stone font against the rear wall — and just as the old woman said, the
           third stone up from its base stands a little proud of its fellows. Pressed
-          slow, it has worked the friars' postern open into the dark beyond.
+          slow, as she promised, it will swing the postern open into the dark beyond.
 
   - id: alms_box
     name: "alms-box"
