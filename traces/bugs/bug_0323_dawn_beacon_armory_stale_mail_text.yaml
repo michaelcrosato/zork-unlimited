@@ -1,0 +1,29 @@
+id: bug_0323
+title: "dawn_beacon: armory still says 'hanging on its peg' after garrison mail taken"
+pack: content/rpg/pack/dawn_beacon.yaml
+class: reactive-description-blindness
+severity: minor
+found_by: blind_playtest (seed 7, 2026-06-08T13-46-38-837Z)
+
+symptom: >
+  After taking (and donning) the garrison_mail from the armory and then returning
+  to the armory room, the room description still read "all but one suit of the old
+  garrison mail, too heavy for a running man to bother with, left hanging on its
+  peg" — even though the mail was in the player's inventory and the peg was empty.
+  The object list correctly showed no garrison_mail in the room's visible objects,
+  making the prose contradict the actual game state. Equivalent to bug_0023's
+  lower_ward winch-bar treatment, which the armory missed.
+
+root_cause: >
+  The armory room had no `variants` block. The base description ("left hanging on
+  its peg") fired unconditionally on every visit regardless of inventory state.
+  The lower_ward room correctly handles the analagous winch_bar case with a
+  `has_item: winch_bar` variant; the armory lacked the equivalent for garrison_mail.
+
+fix: >
+  Added `variants` to `armory` with `when: [{ has_item: garrison_mail }]`: when
+  the mail is in the player's inventory the armory description changes to note the
+  peg is now bare. First visit (mail not yet taken) still shows the full "left
+  hanging on its peg" text. No flag / score / route / ending change; prose only.
+
+regression_test: tests/regression/dawn_beacon_armory_mail_reactive.test.ts

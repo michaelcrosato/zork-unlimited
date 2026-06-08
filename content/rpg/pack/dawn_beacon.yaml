@@ -121,6 +121,14 @@ rooms:
       A cramped stone armory, its racks stripped bare by the fled watch — all but one
       suit of the old garrison mail, too heavy for a running man to bother with, left
       hanging on its peg. The lower ward is back to the east.
+    # Reactive room text (bug_0323): once the garrison mail is taken the peg is bare;
+    # the static "left hanging on its peg" phrase must not contradict the empty peg
+    # and the mail in the player's own hands (the lower_ward winch-bar treatment).
+    variants:
+      - when: [{ has_item: garrison_mail }]
+        text: >
+          A cramped stone armory, its racks stripped bare by the fled watch, the peg
+          where the garrison mail hung now bare. The lower ward is back to the east.
     objects: [garrison_mail]
     exits:
       - { direction: east, to: lower_ward }
