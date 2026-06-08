@@ -1,0 +1,31 @@
+id: bug_0321
+title: "breaking_weir: storm-walk room shows 'clip on' hint when life-line not held"
+pack: content/rpg/pack/breaking_weir.yaml
+class: reactive-description-blindness
+severity: moderate
+found_by: blind_playtest (seed 7, 2026-06-08T13-20-49-598Z)
+
+symptom: >
+  The weir_walk room description said "The life-line's snap will catch the run-wire —
+  clip on and go steady and you cross" (base text) and "clip on and you may yet make it"
+  (not_flag:heard_walk variant) regardless of whether the life-line was in the player's
+  inventory. A player who arrived at the storm-walk without the rope saw strong "clip on"
+  hints but no corresponding action in available_actions, creating the impression the
+  action had been hidden or that the game was broken.
+
+root_cause: >
+  Neither the base room description nor the not_flag:heard_walk variant had a condition
+  guarding against the not_has_item:life_line state. The rope's presence was checked only
+  by the USE interaction (item: life_line) — so the action never appeared without the rope —
+  but the room prose had no matching reactive variant to suppress the "clip on" language.
+
+fix: >
+  Added a `not_item: life_line` variant to weir_walk, ordered after the walk_crossed
+  variant and before the not_flag:heard_walk gamble-cue variant (first-match-wins). The
+  new variant replaces the "clip on" language with text noting the rope is absent and
+  pointing back to the lodge: "you have no life-line to clip on… The rope hangs on its
+  peg back in the lodge." No flag, score, exit, or ending change; prose only.
+  Updated breaking_weir_gamble_legible.test.ts to pass life_line in inventory when
+  testing the gamble-cue path (so the not_item variant does not preempt those assertions).
+
+regression_test: tests/regression/breaking_weir_walk_no_rope_reactive.test.ts

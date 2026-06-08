@@ -171,6 +171,20 @@ rooms:
           The plank-walk across the spillway, crossed now, your line still snapped to the
           run-wire and trailing back the way you came. The race-house is just north; the
           weir-head is back to the south.
+      # bug_0321 (reactive-description-blindness): both the base and the not_flag:heard_walk
+      # variants said "clip on" even when the life-line was still on its peg in the lodge —
+      # implying the crossing action was available when the item was not held. Ordered before
+      # not_flag:heard_walk so it always wins when the rope is absent; walk_crossed is first
+      # so a crossed walk never shows this.
+      - when: [{ not_item: life_line }]
+        text: >
+          A single plank-walk runs out across the spillway, no rail to it and the flood sheeting
+          over the boards inches deep, hammering at your shins and trying to take your feet from
+          under you. One slip here and the race has you, and the race does not give a man back.
+          The run-wire is strung taut down the length of it, but you have no life-line — without
+          the rope snapped to the wire the crossing cannot be made. The rope hangs on its peg back
+          in the lodge. The far side and the race-house lie north; the weir-head is back to the
+          south.
       # The un-counselled crossing made VISIBLE as the gamble it is (bug_0204): a player who
       # never asked Pell how a man crosses (not_flag heard_walk) goes out on raw nerve (base
       # nerve 3, DC 9, ~25% death), but at base the room read identically to the steadied

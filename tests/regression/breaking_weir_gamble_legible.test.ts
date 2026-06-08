@@ -42,17 +42,18 @@ const index = indexRpgPack(pack);
 const room = pack.rooms.find((r) => r.id === "weir_walk")!;
 const span = pack.objects.find((o) => o.id === "walk_span")!;
 
-/** Stand on the storm-walk with the given flags — the only inputs the cue keys on. */
-function onWalk(flags: Record<string, boolean>): GameState {
+/** Stand on the storm-walk with the given flags and optional inventory. */
+function onWalk(flags: Record<string, boolean>, inv: string[] = []): GameState {
   const s = initStateForRpgPack(index, 1);
-  return { ...s, current: "weir_walk", flags: { ...s.flags, ...flags } };
+  return { ...s, current: "weir_walk", flags: { ...s.flags, ...flags }, inventory: inv };
 }
 
 const GAMBLE_CUE = /raw nerve/i;
 
 describe("bug_0204 — The Breaking Weir: the storm-walk gamble is legible at the crossing", () => {
   it("UN-COUNSELLED (no heard_walk): room AND object name the gamble plainly", () => {
-    const s = onWalk({});
+    // life_line in inventory so the not_item:life_line variant (bug_0321) doesn't preempt
+    const s = onWalk({}, ["life_line"]);
     expect(roomDescription(room, s)).toMatch(GAMBLE_CUE);
     expect(objectDescription(span, s)).toMatch(GAMBLE_CUE);
     // It is a CUE, not a wall: the room still points the player onward across the walk.
@@ -60,7 +61,8 @@ describe("bug_0204 — The Breaking Weir: the storm-walk gamble is legible at th
   });
 
   it("COUNSELLED (heard_walk): the gamble cue is gone — Pell's telling defused it", () => {
-    const s = onWalk({ heard_walk: true });
+    // life_line in inventory so we test the counselled+rope path, not the no-rope path
+    const s = onWalk({ heard_walk: true }, ["life_line"]);
     expect(roomDescription(room, s)).not.toMatch(GAMBLE_CUE);
     expect(objectDescription(span, s)).not.toMatch(GAMBLE_CUE);
   });
@@ -75,7 +77,9 @@ describe("bug_0204 — The Breaking Weir: the storm-walk gamble is legible at th
   it("the gamble warning never over-promises CERTAIN death (honesty discipline)", () => {
     // The water MAY have you, not WILL — the un-counselled crossing is still a ~75% pass,
     // so the cue must read as a real gamble, not a guaranteed-death wall.
-    const text = `${roomDescription(room, onWalk({}))} ${objectDescription(span, onWalk({}))}`;
+    // life_line in inventory so the no-rope variant (bug_0321) doesn't preempt the gamble cue.
+    const s = onWalk({}, ["life_line"]);
+    const text = `${roomDescription(room, s)} ${objectDescription(span, s)}`;
     expect(text.toLowerCase()).toMatch(/may|whether|to say/);
   });
 
