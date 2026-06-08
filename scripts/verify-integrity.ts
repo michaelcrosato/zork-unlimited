@@ -129,6 +129,52 @@ export type Finding = {
   where: string;
 };
 
+/** A MAX count of tautological (vacuous) assertions per test suite.
+ *  A tautology keeps a STRONG matcher (so STRONG_ASSERTION_RE fires) but makes it
+ *  vacuous: the actual value is a literal and equals the expected literal, or both
+ *  sides are the same identifier. Set to 0 for the real repo floor; the drift
+ *  guard fires on any INCREASE across a cycle. */
+export const MAX_TAUTOLOGY_ASSERTIONS = 0;
+
+/** Matches vacuous assertion patterns the three-count system cannot catch:
+ *  (a) literal-bool:   expect(true).toBe(true)  / expect(false).toBe(false)
+ *  (b) literal-null:   expect(null).toBe(null)  / expect(undefined).toBe(undefined)
+ *  (c) numeric/string literal: expect(42).toBe(42) / expect("x").toBe("x")
+ *  (d) identical identifier: expect(foo).toBe(foo) / expect(bar).toEqual(bar)
+ *
+ *  Uses a backreference (\1) so false positives (expect(true).toBe(false)) are
+ *  not matched — the actual and expected must be IDENTICAL. */
+const TAUTOLOGY_RE =
+  /\bexpect\s*\(\s*(true|false|null|undefined|\d[\d.]*|"[^"]*"|'[^']*'|`[^`]*`|[A-Za-z_$][A-Za-z0-9_$.]*)\s*\)\s*\.\s*(?:toBe|toEqual|toStrictEqual)\s*\(\s*\1\s*\)/g;
+
+/** Detect count-preserving semantic tautologies: assertions that keep a STRONG
+ *  matcher (so the strong-matcher count is unchanged) but make it vacuous by
+ *  comparing a value to itself. Pure over the given texts. */
+export function detectTautologies(files: { path: string; text: string }[]): Finding[] {
+  const findings: Finding[] = [];
+  for (const f of files) {
+    let m: RegExpExecArray | null;
+    const re = new RegExp(TAUTOLOGY_RE.source, TAUTOLOGY_RE.flags);
+    while ((m = re.exec(f.text)) !== null) {
+      const lineNo = f.text.slice(0, m.index).split("\n").length;
+      findings.push({
+        severity: "error",
+        code: "TAUTOLOGY_ASSERTION",
+        message: `vacuous tautology assertion: ${m[0].trim().slice(0, 80)} — actual and expected are identical; this assertion always passes and pins nothing`,
+        where: `${f.path}:${lineNo}`,
+      });
+    }
+  }
+  return findings;
+}
+
+export function countTautologyAssertions(files: { text: string }[]): number {
+  return files.reduce((n, f) => {
+    const re = new RegExp(TAUTOLOGY_RE.source, TAUTOLOGY_RE.flags);
+    return n + (f.text.match(re)?.length ?? 0);
+  }, 0);
+}
+
 function listFiles(root: string, dir: string, match: (p: string) => boolean): string[] {
   const abs = join(root, dir);
   if (!existsSync(abs)) return [];
@@ -223,6 +269,16 @@ export function runStatic(root: string): { ok: boolean; findings: Finding[] } {
       where: "tests/",
     });
   }
+  findings.push(...detectTautologies(testFiles));
+  const tautologies = countTautologyAssertions(testFiles);
+  if (tautologies > MAX_TAUTOLOGY_ASSERTIONS) {
+    findings.push({
+      severity: "error",
+      code: "TAUTOLOGY_FLOOR",
+      message: `${tautologies} tautological assertion(s) found; floor is ${MAX_TAUTOLOGY_ASSERTIONS} (vacuous expect(x).toBe(x) patterns keep the strong-matcher count but assert nothing)`,
+      where: "tests/",
+    });
+  }
   return { ok: !findings.some((f) => f.severity === "error"), findings };
 }
 
@@ -303,7 +359,12 @@ export function classifyDrift(changed: string[], existsFn: (rel: string) => bool
   return findings;
 }
 
-export type TestArtifactCounts = { cases: number; assertions: number; strong?: number };
+export type TestArtifactCounts = {
+  cases: number;
+  assertions: number;
+  strong?: number;
+  tautologies?: number;
+};
 
 /**
  * Pure regression detector: a cycle must not REDUCE the test-case count, the assertion
@@ -361,6 +422,7 @@ export type GuardConstants = {
   minTestCases: number;
   minAssertions: number;
   minStrongAssertions: number;
+  maxTautologyAssertions?: number;
   protectedFiles: string[];
   hashPinFiles: string[];
 };
@@ -387,6 +449,7 @@ export function parseGuardConstants(text: string): GuardConstants | null {
   const minTestCases = num("MIN_TEST_CASES");
   const minAssertions = num("MIN_ASSERTIONS");
   const minStrongAssertions = num("MIN_STRONG_ASSERTIONS");
+  const maxTautologyAssertions = num("MAX_TAUTOLOGY_ASSERTIONS");
   const protectedFiles = arr("PROTECTED_FILES");
   const hashPinFiles = arr("HASH_PIN_FILES");
   if (
@@ -397,7 +460,15 @@ export function parseGuardConstants(text: string): GuardConstants | null {
     hashPinFiles === null
   )
     return null;
-  return { minTestCases, minAssertions, minStrongAssertions, protectedFiles, hashPinFiles };
+  const result: GuardConstants = {
+    minTestCases,
+    minAssertions,
+    minStrongAssertions,
+    protectedFiles,
+    hashPinFiles,
+  };
+  if (maxTautologyAssertions !== null) result.maxTautologyAssertions = maxTautologyAssertions;
+  return result;
 }
 
 /**
@@ -419,6 +490,14 @@ export function detectGuardWeakening(before: GuardConstants, now: GuardConstants
   if (now.minStrongAssertions < before.minStrongAssertions)
     weakened.push(
       `MIN_STRONG_ASSERTIONS lowered ${before.minStrongAssertions} → ${now.minStrongAssertions}`,
+    );
+  if (
+    before.maxTautologyAssertions !== undefined &&
+    now.maxTautologyAssertions !== undefined &&
+    now.maxTautologyAssertions > before.maxTautologyAssertions
+  )
+    weakened.push(
+      `MAX_TAUTOLOGY_ASSERTIONS raised ${before.maxTautologyAssertions} → ${now.maxTautologyAssertions}`,
     );
   const removedFrom = (name: string, was: string[], is: string[]): void => {
     const nowSet = new Set(is);
@@ -462,7 +541,7 @@ function countTestArtifactsAtRef(root: string, ref: string): TestArtifactCounts 
       if (meta[1] === "blob" && /^tests\/.*\.test\.ts$/.test(path))
         blobs.push({ oid: meta[2]!, path });
     }
-    if (blobs.length === 0) return { cases: 0, assertions: 0, strong: 0 };
+    if (blobs.length === 0) return { cases: 0, assertions: 0, strong: 0, tautologies: 0 };
     // `cat-file --batch` emits, per requested object: "<oid> <type> <size>\n" then
     // exactly <size> bytes of content then a trailing "\n". Slice by byte offsets (the
     // size is a byte count) so multi-byte UTF-8 content is reconstructed exactly.
@@ -474,6 +553,7 @@ function countTestArtifactsAtRef(root: string, ref: string): TestArtifactCounts 
     let cases = 0;
     let assertions = 0;
     let strong = 0;
+    let tautologies = 0;
     let pos = 0;
     while (pos < batch.length) {
       const nl = batch.indexOf(0x0a, pos);
@@ -484,9 +564,10 @@ function countTestArtifactsAtRef(root: string, ref: string): TestArtifactCounts 
       cases += text.match(TESTCASE_RE)?.length ?? 0;
       assertions += text.match(ASSERTION_RE)?.length ?? 0;
       strong += text.match(STRONG_ASSERTION_RE)?.length ?? 0;
+      tautologies += text.match(new RegExp(TAUTOLOGY_RE.source, TAUTOLOGY_RE.flags))?.length ?? 0;
       pos = start + size + 1; // content + the trailing LF the batch format appends
     }
-    return { cases, assertions, strong };
+    return { cases, assertions, strong, tautologies };
   } catch {
     return null;
   }
@@ -569,8 +650,21 @@ export function runDrift(
       cases: countTestCases(nowFiles),
       assertions: countAssertions(nowFiles),
       strong: countStrongAssertions(nowFiles),
+      tautologies: countTautologyAssertions(nowFiles),
     };
     findings.push(...detectCountRegressions(before, now));
+    if (
+      before.tautologies !== undefined &&
+      now.tautologies !== undefined &&
+      now.tautologies > before.tautologies
+    ) {
+      findings.push({
+        severity: "error",
+        code: "TAUTOLOGY_REGRESSION",
+        message: `tautological assertions increased from ${before.tautologies} to ${now.tautologies} this cycle — a vacuous expect(x).toBe(x) was introduced`,
+        where: "tests/",
+      });
+    }
   }
   return { ok: !findings.some((f) => f.severity === "error"), findings };
 }

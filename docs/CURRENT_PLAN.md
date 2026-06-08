@@ -1,246 +1,281 @@
 # Current plan (rolling)
 
-This is the AFK loop's **living plan** — the hand-off document for the
-saturation-triggered ultraplan (see [`docs/afk_loop.md`](./afk_loop.md)). When the
-deterministic assessor runs dry (`isSaturated`), an ultraplan cycle re-aims the
-project, **overwrites this file** with the synthesis + the single chosen next move,
-and a fresh implementation subagent reads _only_ this file (plus the files it names)
-to do the work.
+This is the AFK loop's **living plan** — the hand-off document for the saturation-triggered ultraplan (see [`docs/afk_loop.md`](./afk_loop.md)). When the deterministic assessor runs dry (`isSaturated`), an ultraplan cycle re-aims the project, **overwrites this file** with the synthesis + the single chosen next move, and a fresh implementation subagent reads _only_ this file (plus the files it names) to do the work.
 
 ---
 
-# Ultraplan re-aim cycle #17 (HEAD = bug_0298; next free id = bug_0299)
+# Ultraplan re-aim cycle #18 (HEAD = bug_0307; next free id = bug_0308)
 
 ## Synthesis
 
-Six reviewers reported findings this cycle: engine/API, validator, content/assessor,
-loop/strategy, benchmark landscape (web), and reward-hacking research (web). The
-orchestrator cross-checked every source claim against the live repo at HEAD = bug_0298.
+Four reviewer teams (engine/verify-integrity, content/validator, loop/strategy, verification/benchmark) and two web-research agents (frontier IF benchmarks, agentic/spatial benchmarks) reported findings this cycle. The orchestrator cross-checked every source claim against the live repo at HEAD = bug_0307.
 
-**Two claimed gaps were already handled or structurally overclaimed.** The validator
-reviewer nominated `is_open` / `is_unlocked` condition-side references as a missing
-`OBJECT_STATE_COND_REF_MISSING` check. Source review confirms this is already covered
-by `IMPOSSIBLE_OBJECT_STATE` (parser_validator.ts lines 485-507): a phantom
-`is_open: "phantom"` fires `IMPOSSIBLE_OBJECT_STATE` because `"phantom"` is absent
-from `openableObjects` — the inline comment at lines 485-489 explicitly documents this
-"(An undefined id is in neither set, so the same miss carries the 'object not defined'
-case — no objById pre-check needed.)". The only true escape requires an `open_object:
-"phantom"` effect (which now emits `OBJECT_STATE_REF_MISSING` from bug_0291) that
-inadvertently adds the phantom to `openableObjects`, masking a paired `is_open:
-"phantom"` condition — a compound two-typo scenario with negligible real-world
-probability. The content/assessor reviewer's `recency-weight impact bump` for the
-blind-playtest rotation is a genuine idea but blocked until the loop reliably
-exhausts the existing rotation more than once; the assessor already uses
-`Number.MIN_SAFE_INTEGER` sentinel for never-attended packs so they sort first, giving
-effective recency priority without a score-bump.
+**Two claimed gaps were false alarms confirmed at source.** The content/validator reviewer correctly self-flagged BFS forward-reachability for rooms as `already_done: true` — it is implemented at `src/validate/parser_validator.ts` lines 339-350 (`UNREACHABLE_ROOM` warning). The benchmark reviewer correctly self-flagged `hide_graph` per-call override as `already_done: true` — confirmed present at `src/mcp/server.ts` and `tests/regression/observation_hide_graph_per_call.test.ts` (bug_0299). Both are genuine non-gaps.
 
-**The one genuinely open structural gap is confirmed by both the engine/API reviewer
-and the loop/strategy reviewer, and is verified in source.** `hide_graph` is wired at
-session-creation time only: `new_game` (tools.ts:601) and `start_game` (tools.ts:638)
-accept `hide_graph?: boolean`, store it on the `Session` object (sessions.ts:40), and
-it is consumed via the `obsOf` closure at tools.ts:407. All three observation builders
-already accept `{ hideGraph?: boolean }` — cyoa/observation.ts:59, parser/observation.ts:90,
-rpg/observation.ts:39. The gap is that `get_observation`, `get_scene`,
-`list_legal_actions`, `step_action`, and `choose_option` all use only `SESSION` shape
-in server.ts (lines 163-198) with no `...HIDE_GRAPH` spread, and their handlers take
-only `{ session_id: string }` with no per-call override. An existing regression test
-(`tests/regression/observation_hide_graph.test.ts`) covers session-level `hide_graph`
-on `new_game` / `start_game` and the session-persistence behavior of `step_action` —
-but there is no test for a per-call override that differs from the session default.
+**Three gaps converged across multiple reviewers as genuinely open.** (1) The vacuous-assertion static detector: the engine/verify-integrity reviewer and the verification/benchmark reviewer both nominated it; the script's own docstring at lines 31-33 explicitly concedes it; grep confirms no `detectTautologies`, `TAUTOLOGY`, or `VACUOUS_ASSERTION` pattern exists anywhere in the codebase. (2) The `ITEM_UNPLACED` validator check: the content/validator reviewer confirmed no `ITEM_UNPLACED` or `ORPHAN_OBJECT` error code exists in any validator. (3) The assessor's `TARGET_PER_MODE` threshold stagnation: `TARGET_PER_MODE` is `{ cyoa: 2, parser: 2, rpg: 2 }` while the repo has 7 CYOA / 5 parser / 5 RPG packs — all modes permanently above threshold, so the `content_new` lever never fires, and no `frontier` category exists in `CATEGORY_WEIGHT`.
 
-**The benchmark landscape and reward-hacking research confirm this move's value.**
-TALES (arXiv:2504.14128) documents that the structured MCP API hands the agent the
-full adjacency list, trivializing spatial reasoning. A per-call `hide_graph` override
-enables benchmark runners to compare hidden-graph vs. full-graph on the same trajectory
-without session proliferation. The reward-hacking research identifies the existing
-`verify-integrity.ts` semantic-judge gap (count-preserving vacuous matchers) as the
-correct follow-on cycle; that is a defensive move whereas the per-call `hide_graph` is
-a forward structural improvement to benchmark validity.
+**The vacuous-assertion detector is the correct single move for this cycle.** It is S-effort (one new exported function, one new regex, two wiring calls, and unit + regression tests), requires no API key, is fully deterministic, and directly closes the one mechanical hole the current three-count anti-tamper system admits. The SpecBench paper (arXiv:2605.21384, May 2026) and Hack-Verifiable Environments paper (arXiv:2605.20744, May 2026) both confirm that two-layer deterministic + LLM-judge verification is the strongest available reward-hacking detection approach — but only when the deterministic layer is complete. The existing three-count system guards against: shell deletion (`it()` count), body gutting (`expect()` count), and strict-to-loose swaps (strong-matcher count). The tautology detector adds the fourth layer: count-preserving semantic laundering where a strong matcher is kept but made vacuous (`expect(true).toBe(true)`, `expect(x).toBe(x)`). This is the EvilGenie (arXiv:2511.21654) attack class the ULTRAPLAN explicitly named as "second-place pick" in cycle #17 — and the current cycle has no higher-priority engine gap.
+
+The `ITEM_UNPLACED` validator gap is the strongest runner-up: also S-effort, also genuinely open. It is deferred only because the vacuous-assertion detector has higher research-integrity value (it closes a documented hole in the anti-reward-hacking guard) and the two are independent. The `TARGET_PER_MODE` fix is a one-liner but would only nominate authoring more packs in modes that already have healthy breadth — not the right move while structural integrity gaps remain. The `frontier` category addition is M-effort and partially blocked on the API key path for its scoring signal.
 
 ---
 
 ## The one chosen move
 
-**`hide_graph` per-call override on `get_observation`, `get_scene`, `list_legal_actions`, `step_action`, and `choose_option` (bug_0299):** Propagate `hide_graph?: boolean` as an optional per-call parameter on all five observation-returning tools so callers can override the session default per-call without creating a new session.
+**Static vacuous-assertion detector in `verify-integrity.ts` (bug_0308):** Add a `detectTautologies()` function that flags count-preserving semantic tautologies (`expect(true).toBe(true)`, `expect(x).toBe(x)`) as a fourth anti-tamper layer, wired into both `runStatic()` and `runDrift()`.
 
 ### What
 
-The change is two files, approximately 20 lines of production code, and one new test
-file.
+The change is confined to `scripts/verify-integrity.ts`, two test files, and one bug artifact. No pack content changes, no schema changes, no engine changes.
 
-**`src/mcp/server.ts`** (5 tool registrations, lines 163-198):
+**`scripts/verify-integrity.ts`** — add after the `STRONG_ASSERTION_RE` constant block (around line 123):
 
-Add `...HIDE_GRAPH` to the `inputSchema` for `get_observation`, `get_scene`,
-`list_legal_actions`, `step_action`, and `choose_option`. The `HIDE_GRAPH` const is
-already defined at server.ts:51-58. Example for `get_observation` (lines 163-168):
+```typescript
+/** A MAX count of tautological (vacuous) assertions per test suite.
+ *  A tautology keeps a STRONG matcher (so STRONG_ASSERTION_RE fires) but makes it
+ *  vacuous: the actual value is a literal and equals the expected literal, or both
+ *  sides are the same identifier. Set to 0 for the real repo floor; the drift
+ *  guard fires on any INCREASE across a cycle. */
+export const MAX_TAUTOLOGY_ASSERTIONS = 0;
 
+/** Matches vacuous assertion patterns the three-count system cannot catch:
+ *  (a) literal-bool:   expect(true).toBe(true)  / expect(false).toBe(false)
+ *  (b) literal-null:   expect(null).toBe(null)  / expect(undefined).toBe(undefined)
+ *  (c) numeric/string literal: expect(42).toBe(42) / expect("x").toBe("x")
+ *  (d) identical identifier: expect(foo).toBe(foo) / expect(bar).toEqual(bar)
+ *
+ *  Uses a backreference (\1) so false positives (expect(true).toBe(false)) are
+ *  not matched — the actual and expected must be IDENTICAL. */
+const TAUTOLOGY_RE =
+  /\bexpect\s*\(\s*(true|false|null|undefined|\d[\d.]*|"[^"]*"|'[^']*'|`[^`]*`|[A-Za-z_$][A-Za-z0-9_$.]*)\s*\)\s*\.\s*(?:toBe|toEqual|toStrictEqual)\s*\(\s*\1\s*\)/g;
+
+/** Detect count-preserving semantic tautologies: assertions that keep a STRONG
+ *  matcher (so the strong-matcher count is unchanged) but make it vacuous by
+ *  comparing a value to itself. Pure over the given texts. */
+export function detectTautologies(files: { path: string; text: string }[]): Finding[] {
+  const findings: Finding[] = [];
+  for (const f of files) {
+    let m: RegExpExecArray | null;
+    const re = new RegExp(TAUTOLOGY_RE.source, TAUTOLOGY_RE.flags);
+    while ((m = re.exec(f.text)) !== null) {
+      const lineNo = f.text.slice(0, m.index).split("\n").length;
+      findings.push({
+        severity: "error",
+        code: "TAUTOLOGY_ASSERTION",
+        message: `vacuous tautology assertion: ${m[0].trim().slice(0, 80)} — actual and expected are identical; this assertion always passes and pins nothing`,
+        where: `${f.path}:${lineNo}`,
+      });
+    }
+  }
+  return findings;
+}
+
+export function countTautologyAssertions(files: { text: string }[]): number {
+  return files.reduce((n, f) => {
+    const re = new RegExp(TAUTOLOGY_RE.source, TAUTOLOGY_RE.flags);
+    return n + (f.text.match(re)?.length ?? 0);
+  }, 0);
+}
 ```
-tool(
-  "get_observation",
-  "...",
-  { ...SESSION, ...HIDE_GRAPH },
-  (a) => api.get_observation(a),
-);
+
+**`runStatic()` in `scripts/verify-integrity.ts`** (around line 197, after `detectDisabledTests`):
+
+Add after the `findings.push(...detectDisabledTests(testFiles));` line:
+
+```typescript
+findings.push(...detectTautologies(testFiles));
+const tautologies = countTautologyAssertions(testFiles);
+if (tautologies > MAX_TAUTOLOGY_ASSERTIONS) {
+  findings.push({
+    severity: "error",
+    code: "TAUTOLOGY_FLOOR",
+    message: `${tautologies} tautological assertion(s) found; floor is ${MAX_TAUTOLOGY_ASSERTIONS} (vacuous expect(x).toBe(x) patterns keep the strong-matcher count but assert nothing)`,
+    where: "tests/",
+  });
+}
 ```
 
-Apply the same `{ ...SESSION, ...HIDE_GRAPH }` pattern to `get_scene` (lines 169-173),
-`list_legal_actions` (lines 175-180), `step_action` (lines 182-187), and
-`choose_option` (lines 188-198). For `step_action` the shape becomes
-`{ ...SESSION, action_id: z.string()..., ...HIDE_GRAPH }`. For `choose_option` it
-becomes `{ ...SESSION, option_id: z.string()..., ...HIDE_GRAPH }`.
+**`runDrift()` in `scripts/verify-integrity.ts`** — add a tautology-count regression check after the existing `detectCountRegressions` call. Extend `TestArtifactCounts` with `tautologies?: number`, update `countTestArtifactsAtRef` to count tautologies in the same batch loop, and emit `TAUTOLOGY_REGRESSION` when the count increases:
 
-**`src/mcp/tools.ts`** (5 handler signatures + 5 `buildObsFor` call sites):
+```typescript
+if (before.tautologies !== undefined && now.tautologies !== undefined &&
+    now.tautologies > before.tautologies) {
+  findings.push({
+    severity: "error",
+    code: "TAUTOLOGY_REGRESSION",
+    message: `tautological assertions increased from ${before.tautologies} to ${now.tautologies} this cycle — a vacuous expect(x).toBe(x) was introduced`,
+    where: "tests/",
+  });
+}
+```
 
-Change each of the five handler signatures to accept `hide_graph?: boolean` alongside
-`session_id` (and `action_id` / `option_id` where present). In each handler, replace
-the bare `obsOf(s)` call with
-`buildObsFor(s.mode, s.index, s.state, { hideGraph: args.hide_graph ?? s.hideGraph ?? false })`.
+Also add `MAX_TAUTOLOGY_ASSERTIONS` to the `GuardConstants` type and `parseGuardConstants` parser (so `detectGuardWeakening` covers raising the floor).
 
-The resolution order is: **per-call arg overrides session default overrides false.**
+**`tests/unit/verifier_integrity.test.ts`** — add a new `describe("detectTautologies", ...)` block:
 
-- `get_observation` (lines 646-649): signature becomes
-  `args: { session_id: string; hide_graph?: boolean }`.
-- `get_scene` (lines 651-653): delegates to `get_observation` — pass `hide_graph`
-  through, or inline the same `buildObsFor` call directly.
-- `list_legal_actions` (lines 655-658): signature becomes
-  `args: { session_id: string; hide_graph?: boolean }`. Return
-  `buildObsFor(..., { hideGraph: ... }).available_actions`.
-- `step_action` (lines 660-699): signature gains `hide_graph?: boolean`. The `before`
-  local (line 662) and `after` local (line 680) both call `obsOf(s)` — replace both
-  with the explicit `buildObsFor(s.mode, s.index, s.state, { hideGraph: args.hide_graph ?? s.hideGraph ?? false })`.
-  The `before` call uses the state at entry; the `after` call reads `s.state` after
-  `sessions.update(s.id, result.state)` — that line (679) must remain between the two.
-- `choose_option` (lines 701-703): delegates to `step_action` — pass `hide_graph`
-  through via `this.step_action({ ..., hide_graph: args.hide_graph })`.
+```typescript
+describe("detectTautologies — catches vacuous semantic tautologies the strong-matcher count misses", () => {
+  it("flags literal-bool tautology: expect(true).toBe(true)", () => {
+    const text = "it('x', () => { expect(true).toBe(true); });";
+    const findings = detectTautologies([{ path: "t.test.ts", text }]);
+    expect(findings.length).toBe(1);
+    expect(findings[0]!.code).toBe("TAUTOLOGY_ASSERTION");
+  });
+  it("flags literal-false tautology: expect(false).toBe(false)", () => {
+    const findings = detectTautologies([{ path: "t.test.ts", text: "expect(false).toBe(false);" }]);
+    expect(findings.length).toBe(1);
+  });
+  it("flags identical-identifier self-comparison: expect(foo).toBe(foo)", () => {
+    const findings = detectTautologies([{ path: "t.test.ts", text: "expect(foo).toBe(foo);" }]);
+    expect(findings.length).toBe(1);
+    expect(findings[0]!.code).toBe("TAUTOLOGY_ASSERTION");
+  });
+  it("flags numeric-literal tautology: expect(42).toBe(42)", () => {
+    const findings = detectTautologies([{ path: "t.test.ts", text: "expect(42).toBe(42);" }]);
+    expect(findings.length).toBe(1);
+  });
+  it("does NOT flag a genuine assertion: expect(a).toBe(1)", () => {
+    const findings = detectTautologies([{ path: "t.test.ts", text: "expect(a).toBe(1);" }]);
+    expect(findings.length).toBe(0);
+  });
+  it("does NOT flag expect(true).toBe(false) — different literal values", () => {
+    const findings = detectTautologies([{ path: "t.test.ts", text: "expect(true).toBe(false);" }]);
+    expect(findings.length).toBe(0);
+  });
+  it("does NOT flag expect(a).toBe(b) — different identifiers", () => {
+    const findings = detectTautologies([{ path: "t.test.ts", text: "expect(a).toBe(b);" }]);
+    expect(findings.length).toBe(0);
+  });
+  it("the real repo has zero tautological assertions", () => {
+    const res = runStatic(process.cwd());
+    expect(res.findings.filter((f) => f.code === "TAUTOLOGY_ASSERTION")).toEqual([]);
+    expect(res.findings.filter((f) => f.code === "TAUTOLOGY_FLOOR")).toEqual([]);
+  });
+});
+```
 
-**`tests/regression/observation_hide_graph_per_call.test.ts`** (new file, ~6 cases):
+**`tests/regression/verifier_strict_to_loose_swap.test.ts`** — add a new describe block at the end:
 
-Create this file. Use `createToolApi({ root: process.cwd() })` to test the handlers
-directly (same pattern as the existing `observation_hide_graph.test.ts`). Cases:
+```typescript
+describe("bug_0308 — a count-preserving semantic tautology (expect(true).toBe(true)) is caught even when the strong-matcher count holds", () => {
+  it("detectTautologies fires on expect(true).toBe(true) while the strong-matcher count sees it as a valid assertion", () => {
+    const vacuous = "it('x', () => { expect(true).toBe(true); });";
+    // The strong-matcher count DOES see this — toBe is a strong matcher — but detectTautologies
+    // catches it regardless, closing the gap the three-count system admits at lines 31-33 of
+    // scripts/verify-integrity.ts.
+    expect(countStrongAssertions([{ text: vacuous }])).toBe(1); // strong count is UNCHANGED — the launder passes the three-count test
+    const findings = detectTautologies([{ path: "t.test.ts", text: vacuous }]);
+    expect(findings.length).toBe(1);
+    expect(findings[0]!.code).toBe("TAUTOLOGY_ASSERTION");
+  });
+  it("detectTautologies does NOT fire on a genuine pinning assertion", () => {
+    const genuine = "it('x', () => { expect(result).toBe(42); });";
+    expect(detectTautologies([{ path: "t.test.ts", text: genuine }])).toEqual([]);
+  });
+  it("the real repo carries zero tautological assertions (regression lock)", () => {
+    const res = runStatic(process.cwd());
+    expect(res.findings.filter((f) => f.code === "TAUTOLOGY_ASSERTION")).toHaveLength(0);
+  });
+});
+```
 
-1. **Override on, session off:** Create a session with `hide_graph: false` (or omitted).
-   Call `get_observation({ session_id, hide_graph: true })`. Assert every exit's `to`
-   is `undefined`.
-2. **Override off, session on:** Create a session with `hide_graph: true`. Call
-   `get_observation({ session_id, hide_graph: false })`. Assert every exit has a string
-   `to`.
-3. **Override absent, session on:** Create a session with `hide_graph: true`. Call
-   `get_observation({ session_id })` (no override). Assert every exit's `to` is
-   `undefined` (session default preserved).
-4. **`step_action` per-call:** Create a session with `hide_graph: false`. Call
-   `step_action` with `hide_graph: true`. Assert the returned `observation`'s exits
-   have no `to`. Then call `get_observation` without override — assert exits have `to`
-   (the session default is unchanged; per-call does not mutate the session).
-5. **`list_legal_actions` per-call:** Create a session with `hide_graph: false`. Call
-   `list_legal_actions({ session_id, hide_graph: true })`. Assert the returned
-   `actions` list has the same directions as the default view but every MOVE action's
-   destination annotation (if any) is absent. (This is a no-op on the action list
-   itself since `available_actions` items do not carry a `to` field — the important
-   invariant is that the call succeeds and returns the same action ids as without the
-   flag.)
-6. **Non-vacuity guard:** In case 2 (override off, session on), the exits must carry a
-   string `to`. This prevents a vacuous pass where all exits are empty.
+Update the imports in `verifier_strict_to_loose_swap.test.ts` to add `detectTautologies` to the import list.
 
-Use `content/parser/pack/sealed_crypt.yaml` as the test pack (it has multiple
-traversable exits from the start room, same as the existing test file).
+**`traces/bugs/bug_0308_vacuous_assertion_detector.yaml`** (new file):
+
+```yaml
+id: bug_0308
+title: "verify-integrity: static vacuous-assertion (tautology) detector"
+pack: null
+class: reward-hacking-defense
+severity: structural
+found_by: ultraplan_cycle_18
+playtest_report: null
+
+symptom: >
+  The three-count anti-tamper system (test-case count, expect() count, strong-matcher
+  count) has one admitted gap documented in scripts/verify-integrity.ts lines 31-33:
+  a count-preserving swap that keeps a STRONG matcher but makes it vacuous
+  (expect(true).toBe(true)) is not caught. An autonomous agent could introduce
+  expect(true).toBe(true) while the strong-matcher count stays constant — the three
+  guards all stay silent, and the test is green but pins nothing.
+
+root_cause: >
+  The STRONG_ASSERTION_RE regex matches .toBe( as a strong matcher (correct) but does
+  not inspect whether the actual argument and expected argument are the same value.
+  A tautology passes the strong-matcher count because it still uses a strong matcher.
+
+fix: >
+  Added detectTautologies() to scripts/verify-integrity.ts: a TAUTOLOGY_RE regex
+  with a backreference (\1) that matches only when the actual and expected are the
+  same captured group (literal-bool, literal-null, numeric/string literal, or
+  identical identifier). Wired into runStatic() (TAUTOLOGY_ASSERTION + TAUTOLOGY_FLOOR)
+  and runDrift() (TAUTOLOGY_REGRESSION on count increase). Added MAX_TAUTOLOGY_ASSERTIONS
+  constant (0) to PROTECTED_FILES enforcement via GuardConstants.
+
+regression_test: tests/regression/verifier_strict_to_loose_swap.test.ts
+```
 
 ### Why
 
-The MCP API today leaks the full room graph unconditionally once a session is started.
-A benchmark runner that needs to compare hidden-graph vs. full-graph trajectories on
-the same session must either create two sessions (doubling session overhead and losing
-the ability to share state) or accept that the comparison is between sessions with
-different initial seeds. Per-call override removes this limitation. More concretely:
-the TALES/Jericho benchmark literature (arXiv:2504.14128) documents that spatial
-reasoning is trivialized when exits carry destinations — the agent reads the adjacency
-list rather than exploring. AdventureForge is the only structured-API IF platform with
-a formal `hide_graph` mode; making it per-call rather than session-only completes the
-API surface that benchmark harnesses need. This is the minimum viable API change to
-make the benchmark claim credible: "our structured API enables controlled ablation of
-spatial-reasoning difficulty."
+The `scripts/verify-integrity.ts` docstring at lines 31-33 explicitly names this as the one remaining gap in the anti-tamper system: "a count-preserving swap that keeps a STRONG matcher but makes it vacuous (`expect(true).toBe(true)`) is still not caught." The ULTRAPLAN (docs/ULTRAPLAN-2026-06-02.md) names the EvilGenie tautology scenario (arXiv:2511.21654) as the cycle #17 "second-place pick" — it is now the highest-value open structural gap.
+
+The web research confirms why this matters for the benchmark thesis: SpecBench (arXiv:2605.21384, May 2026) empirically validates that deterministic + LLM-judge two-layer verification is the strongest reward-hacking detection strategy, but only when the deterministic layer is complete. AdventureForge's deterministic layer has a documented hole. Closing it strengthens the "hack-verifiable substrate" claim (Hack-Verifiable Environments, arXiv:2605.20744, May 2026) that the project's structured API provides.
+
+The fix is purely static (no LLM, no clock, no network), S-effort, and has clear, deterministic acceptance criteria. The real repo has zero tautological assertions at HEAD (confirming the floor of 0 is achievable and the gate is not vacuous).
 
 ### Exact files to read and edit
 
 **Read (to understand existing patterns):**
-
-- `src/mcp/server.ts` lines 43-58 — `PACK`, `SESSION`, `HIDE_GRAPH` const definitions;
-  the exact shape to spread
-- `src/mcp/server.ts` lines 130-210 — all tool registrations; confirms which 5 tools
-  need `...HIDE_GRAPH` added
-- `src/mcp/tools.ts` lines 106-121 — `buildObsFor` signature; the function to call
-  directly instead of `obsOf`
-- `src/mcp/tools.ts` lines 406-408 — the `obsOf` closure; shows the exact
-  `s.hideGraph ?? false` fallback pattern to replicate per-call
-- `src/mcp/tools.ts` lines 646-703 — all five handler implementations; exact lines to
-  edit
-- `src/mcp/sessions.ts` lines 30-41 — `Session` type; confirms `hideGraph?: boolean`
-  field name
-- `tests/regression/observation_hide_graph.test.ts` lines 1-120 — existing session-level
-  test; the pattern to extend for per-call cases
-- `src/parser/observation.ts` lines 87-130 — confirms `opts.hideGraph` is already
-  consumed at line 129 (`opts.hideGraph ? { direction } : { direction, to }`)
+- `scripts/verify-integrity.ts` lines 105-180 — `STRONG_ASSERTION_RE`, `Finding` type, `detectDisabledTests`, `countStrongAssertions`: the exact pattern `detectTautologies` should follow (same function signature, same `files: { path: string; text: string }[]` input, same `Finding[]` output)
+- `scripts/verify-integrity.ts` lines 185-227 — `runStatic()` body: the three existing static checks; add the fourth (detectTautologies + TAUTOLOGY_FLOOR) here in the same style
+- `scripts/verify-integrity.ts` lines 306-349 — `TestArtifactCounts` type, `detectCountRegressions()`: extend `TestArtifactCounts` with `tautologies?: number` and add the optional fourth comparison
+- `scripts/verify-integrity.ts` lines 360-401 — `GuardConstants` type and `parseGuardConstants()`: add `maxTautologyAssertions` field and its `num("MAX_TAUTOLOGY_ASSERTIONS")` parse
+- `scripts/verify-integrity.ts` lines 403-439 — `detectGuardWeakening()`: add `if (now.maxTautologyAssertions > before.maxTautologyAssertions)` check (raising the floor is weakening)
+- `scripts/verify-integrity.ts` lines 441-493 — `countTestArtifactsAtRef()` inner loop: add tautology counting in the batch loop
+- `scripts/verify-integrity.ts` lines 516-590 — `runDrift()` body: where to add the TAUTOLOGY_REGRESSION check, after the existing detectCountRegressions block
+- `tests/unit/verifier_integrity.test.ts` lines 1-30 — import list: add `detectTautologies`, `countTautologyAssertions`, `MAX_TAUTOLOGY_ASSERTIONS` to imports
+- `tests/regression/verifier_strict_to_loose_swap.test.ts` lines 1-30 — import list: add `detectTautologies` to imports; confirm `runStatic` is already imported
+- `traces/bugs/bug_0307_friars_postern_gallery_stale_pipe_text.yaml` — bug artifact template for the new bug_0308 artifact
 
 **Create / edit:**
-
-1. `src/mcp/server.ts` — spread `...HIDE_GRAPH` into the input schemas for
-   `get_observation`, `get_scene`, `list_legal_actions`, `step_action`, and
-   `choose_option` (5 tool registrations, ~5 lines changed)
-2. `src/mcp/tools.ts` — update the 5 handler signatures and replace `obsOf(s)` calls
-   with explicit `buildObsFor(...)` calls that thread `args.hide_graph ?? s.hideGraph ?? false`
-   (~15 lines changed across handlers at lines 646-703)
-3. `tests/regression/observation_hide_graph_per_call.test.ts` — new file, 6 locked
-   regression cases for override-on-session-off, override-off-session-on,
-   absent-override-session-on, step_action per-call, list_legal_actions per-call,
-   and non-vacuity guard
-4. `traces/bugs/bug_0299_hide_graph_per_call_override.yaml` — bug artifact (use the
-   same structure as `traces/bugs/bug_0294_dead_reckoning_adrift_death_flag.yaml` as a
-   template; category `engine`, subcategory `api-surface`)
+1. `scripts/verify-integrity.ts` — add `TAUTOLOGY_RE`, `MAX_TAUTOLOGY_ASSERTIONS`, `detectTautologies()`, `countTautologyAssertions()`; update `TestArtifactCounts`, `GuardConstants`, `parseGuardConstants`, `detectGuardWeakening`, `countTestArtifactsAtRef`, `runStatic`, `runDrift`
+2. `tests/unit/verifier_integrity.test.ts` — add `describe("detectTautologies", ...)` block with 8 cases (flag/no-flag patterns + real-repo static check)
+3. `tests/regression/verifier_strict_to_loose_swap.test.ts` — add `describe("bug_0308 — ...")` block with 3 cases; update import list
+4. `traces/bugs/bug_0308_vacuous_assertion_detector.yaml` — new bug artifact
 
 ### Acceptance check
 
 `npm run health` must exit 0. Specific criteria:
 
-1. **All 6 new regression cases pass.** The test file
-   `tests/regression/observation_hide_graph_per_call.test.ts` runs green.
-2. **Existing `observation_hide_graph.test.ts` still passes.** The 6 session-level
-   cases in bug_0137's file are unaffected — this change is purely additive.
-3. **Non-vacuity (mandatory):** In the "override off, session on" case, at least one
-   exit must carry a string `to` — the test must not pass vacuously because exits are
-   empty.
-4. **Per-call override does NOT mutate the session.** After calling `step_action` with
-   `hide_graph: true`, a subsequent `get_observation` call with no override returns the
-   session default (full graph if the session was created with `hide_graph: false`).
-   This is the key semantic guarantee: per-call is a rendering hint, not a state
-   mutation.
-5. **All 17 packs validate 0/0.** No pack content changes, so this must be automatic.
-6. **verify:integrity 0/0.** No guard constants change; no test files are weakened.
-7. **Test count increases by exactly 6** (from 1944 to 1950) — the 6 new cases in the
-   per-call test file.
+1. `detectTautologies()` is exported from `scripts/verify-integrity.ts` and returns `Finding[]` with `code: "TAUTOLOGY_ASSERTION"` for each vacuous pattern (`expect(true).toBe(true)`, `expect(x).toBe(x)`, `expect(42).toBe(42)`).
+2. `runStatic()` includes `TAUTOLOGY_ASSERTION` and `TAUTOLOGY_FLOOR` findings in its output for a repo containing tautological assertions; returns clean for the real repo (zero tautologies at HEAD).
+3. The new unit tests in `verifier_integrity.test.ts` all pass, including the real-repo static check confirming zero tautologies.
+4. The new regression cases in `verifier_strict_to_loose_swap.test.ts` all pass, including: (a) strong-matcher count is 1 for `expect(true).toBe(true)` (the launder the three-count system misses), and (b) `detectTautologies` fires on that same input.
+5. `MAX_TAUTOLOGY_ASSERTIONS` is in `GuardConstants` and `parseGuardConstants` parses it; `detectGuardWeakening` fires if the floor is raised.
+6. All 17 packs validate 0/0 (no pack content changes).
+7. `verify:integrity` reports 0 errors, 0 warnings on the working tree.
+8. Test count increases by the number of new `it()` cases added.
 
 ### What NOT to change
 
-- No schema change to any pack format (`ParserPackSchema`, `ConditionSchema`,
-  `EffectSchema` — untouched)
-- No engine change (`makeStep`, `applyEffects`, `evalConditions` — untouched)
-- No change to the `Session` type in `sessions.ts` — `hideGraph` field already exists;
-  per-call override does not add a new field
-- No change to observation builder internals (`cyoa/observation.ts`,
-  `parser/observation.ts`, `rpg/observation.ts`) — they already accept `hideGraph`;
-  the fix is purely at the tool handler layer
+- No schema change to any pack format (`ParserPackSchema`, `ConditionSchema`, `EffectSchema`)
+- No engine change (`makeStep`, `applyEffects`, `evalConditions`)
 - No pack content change — no YAML edits, no hash re-pin
-- The existing `obsOf` closure at tools.ts:407 may be left as-is (it is still used by
-  `new_game` and `load_game` which do not need a per-call override); only the five
-  listed handlers switch to direct `buildObsFor` calls
-- Do NOT change `get_state` or `get_transcript` — they do not return observations
+- No change to `TARGET_PER_MODE` or `CATEGORY_WEIGHT` in `assessor.ts` (deferred)
+- No addition of `frontier` category to `assessor.ts` (deferred)
+- No change to `ITEM_UNPLACED` validator (deferred to next cycle)
+- The existing `detectDisabledTests`, `countTestCases`, `countAssertions`, `countStrongAssertions`, `detectCountRegressions`, `classifyDrift`, `detectGuardWeakening` functions must remain structurally identical — this is a purely additive change
 
 ---
 
 ## Deferred levers (do NOT implement this cycle)
 
-- **`OBJECT_STATE_COND_REF_MISSING` validator check (condition-side is_open/is_unlocked refs):** The reviewer's gap is real in principle but largely covered by `IMPOSSIBLE_OBJECT_STATE` already (lines 485-507; inline comment confirms). The true escape is a compound two-typo scenario (phantom `open_object` effect + paired `is_open` condition with the same phantom id). Deferred as low-probability, and the partial coverage is documented in source.
-- **Assessor recency-weight impact bump:** Content/assessor reviewer's idea to bump impact to 2 for packs not attended in K cycles, crossing the saturation floor. Genuine idea; deferred until the loop has run enough cycles for the LRU rotation to demonstrate the floor problem in practice (current rotation has 17 packs; sentinel for never-attended already works).
-- **verify-integrity hardening / EvilGenie probe scaffold:** The reward-hacking research (arXiv:2511.21654) confirms the count-preserving semantic swap (expect(true).toBe(true)) is the genuine uncovered gap. An LLM semantic-diff judge would add ~15-35 pp detection coverage on this attack class. Correct follow-on cycle after this one; the loop/strategy reviewer calls it "second-place pick."
-- **World-frame manifest schema:** Multi-cycle. Formally unblocked after the three reference-integrity rungs (bug_0277 room refs + bug_0278 unlock_exit refs + bug_0281 item refs + bug_0291 object-state effect refs). Too large for one focused cycle — correctly deferred.
-- **Benchmark scorecard module:** No standalone value without a real-model API key to populate benchmark rows. Scaffolding alone produces a dead module.
-- **Assessor above-floor category for `content_new`:** Blocked on API key; wired in adapter.ts but no detection lever in assessor.ts yet.
-- **BFS AG(EF goal) forward-reachability validator:** L blast-radius, health time-budget risk, explicitly deferred across three consecutive ultraplans.
+- **`ITEM_UNPLACED` validator check:** Confirmed genuinely open (no `ITEM_UNPLACED` or `ORPHAN_OBJECT` code in any validator). S-effort, impact 4. Best next cycle after bug_0308 — the fix is a single loop after `homeRoom`/`containerOf` maps are built in `parser_validator.ts` around line 208.
+- **`TARGET_PER_MODE` threshold update:** Loop/strategy reviewer confirmed all three modes (7/5/5) are above the `{ cyoa: 2, parser: 2, rpg: 2 }` thresholds, permanently silencing `content_new`. S-effort one-liner, but re-enabling authoring nominations when structural integrity gaps remain is the wrong priority order.
+- **Assessor `frontier` category:** Loop/strategy reviewer confirmed no `frontier` entry exists in `Category` union or `CATEGORY_WEIGHT`. M-effort. The scoring signal that makes it meaningful above 0.5 requires a live API key path; the detection stub alone would produce a candidate that fires regardless of whether a key is actually present.
+- **Assessor `isSaturated()` clean-stasis branch:** Adding `allGeneratorsClean: boolean` to `Assessment` is S-effort and genuinely useful for the ultraplan prompt. Deferred as secondary to structural integrity work.
+- **Parser generator DAG topology variant:** L-effort. The generator emits only a linear 4-room spine. A DAG variant with parallel sub-puzzles is the right next generator evolution but requires multi-cycle scope.
+- **BFS AG(EF goal) forward-reachability validator:** L blast-radius, deferred four consecutive ultraplans. Still the right long-term structural move; still too large for one focused cycle.
+- **Benchmark scorecard module:** No standalone value without real-model rows to populate. The ULTRAPLAN-2026-06-02.md notes this was built and removed once already. Unblock after the keyed real-model run.
+- **Assessor `content_new` above-floor category (API-key path):** Wired in `adapter.ts` but no detection lever in `assessor.ts`. Blocked on API key for the scoring signal that makes it meaningful.

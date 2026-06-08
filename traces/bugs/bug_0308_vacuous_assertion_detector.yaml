@@ -1,0 +1,30 @@
+id: bug_0308
+title: "verify-integrity: static vacuous-assertion (tautology) detector"
+pack: null
+class: reward-hacking-defense
+severity: structural
+found_by: ultraplan_cycle_18
+playtest_report: null
+
+symptom: >
+  The three-count anti-tamper system (test-case count, expect() count, strong-matcher
+  count) has one admitted gap documented in scripts/verify-integrity.ts lines 31-33:
+  a count-preserving swap that keeps a STRONG matcher but makes it vacuous
+  (expect(true).toBe(true)) is not caught. An autonomous agent could introduce
+  expect(true).toBe(true) while the strong-matcher count stays constant — the three
+  guards all stay silent, and the test is green but pins nothing.
+
+root_cause: >
+  The STRONG_ASSERTION_RE regex matches .toBe( as a strong matcher (correct) but does
+  not inspect whether the actual argument and expected argument are the same value.
+  A tautology passes the strong-matcher count because it still uses a strong matcher.
+
+fix: >
+  Added detectTautologies() to scripts/verify-integrity.ts: a TAUTOLOGY_RE regex
+  with a backreference (\1) that matches only when the actual and expected are the
+  same captured group (literal-bool, literal-null, numeric/string literal, or
+  identical identifier). Wired into runStatic() (TAUTOLOGY_ASSERTION + TAUTOLOGY_FLOOR)
+  and runDrift() (TAUTOLOGY_REGRESSION on count increase). Added MAX_TAUTOLOGY_ASSERTIONS
+  constant (0) to PROTECTED_FILES enforcement via GuardConstants.
+
+regression_test: tests/regression/verifier_strict_to_loose_swap.test.ts

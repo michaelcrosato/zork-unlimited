@@ -23,6 +23,7 @@ import {
   countStrongAssertions,
   countAssertions,
   detectCountRegressions,
+  detectTautologies,
   runStatic,
   MIN_STRONG_ASSERTIONS,
 } from "../../scripts/verify-integrity.js";
@@ -78,5 +79,29 @@ describe("bug_0133 — a strict→loose matcher swap is caught even when the exp
     const res = runStatic(process.cwd());
     expect(res.findings.filter((f) => f.code === "STRONG_ASSERTION_FLOOR")).toEqual([]);
     expect(MIN_STRONG_ASSERTIONS).toBeGreaterThan(0);
+  });
+});
+
+describe("bug_0308 — a count-preserving semantic tautology is caught even when the strong-matcher count holds", () => {
+  // Tautological patterns assembled at runtime (not written verbatim in source) so this test file
+  // does not itself trip the guard's scan of tests/ — same technique as detectDisabledTests.
+  const tBe = "toBe";
+  it("detectTautologies fires on a vacuous literal-bool assertion while the strong-matcher count sees it as a valid assertion", () => {
+    const vacuous = "it('x', () => { expect(true)." + tBe + "(true); });";
+    // The strong-matcher count DOES see this — toBe is a strong matcher — but detectTautologies
+    // catches it regardless, closing the gap the three-count system admits at lines 31-33 of
+    // scripts/verify-integrity.ts.
+    expect(countStrongAssertions([{ text: vacuous }])).toBe(1); // strong count is UNCHANGED — the launder passes the three-count test
+    const findings = detectTautologies([{ path: "t.test.ts", text: vacuous }]);
+    expect(findings.length).toBe(1);
+    expect(findings[0]!.code).toBe("TAUTOLOGY_ASSERTION");
+  });
+  it("detectTautologies does NOT fire on a genuine pinning assertion", () => {
+    const genuine = "it('x', () => { expect(result)." + tBe + "(42); });";
+    expect(detectTautologies([{ path: "t.test.ts", text: genuine }])).toEqual([]);
+  });
+  it("the real repo carries zero tautological assertions (regression lock)", () => {
+    const res = runStatic(process.cwd());
+    expect(res.findings.filter((f) => f.code === "TAUTOLOGY_ASSERTION")).toHaveLength(0);
   });
 });

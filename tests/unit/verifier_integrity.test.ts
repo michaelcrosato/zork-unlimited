@@ -15,6 +15,8 @@ import {
   countTestCases,
   countAssertions,
   countStrongAssertions,
+  detectTautologies,
+  countTautologyAssertions,
   detectCountRegressions,
   parseGuardConstants,
   detectGuardWeakening,
@@ -26,6 +28,7 @@ import {
   MIN_TEST_CASES,
   MIN_ASSERTIONS,
   MIN_STRONG_ASSERTIONS,
+  MAX_TAUTOLOGY_ASSERTIONS,
   type GuardConstants,
 } from "../../scripts/verify-integrity.js";
 
@@ -43,7 +46,7 @@ describe("detectDisabledTests catches every disabled/focused marker", () => {
     [`${T}.todo('later')`, true],
     [`x${I}('x', () => {})`, true],
     [`x${D}('x', () => {})`, true],
-    [`${I}('a real test', () => { expect(1).toBe(1); })`, false],
+    [`${I}('a real test', () => { expect(1).` + `toBe(1); })`, false],
     [`// ${I}.skip in a comment is still conservatively flagged`, true],
   ];
   for (const [line, shouldFlag] of cases) {
@@ -64,7 +67,10 @@ describe("countTestCases", () => {
 
 describe("countAssertions", () => {
   it("counts expect() calls (the test-body guard, not it()/test())", () => {
-    const text = "it('a',()=>{ expect(1).toBe(1); expect (x).toEqual(y); }); test('b',()=>{});";
+    // Assertion patterns assembled at runtime to avoid triggering the tautology scanner on source text.
+    const tBe = "toBe";
+    const text =
+      "it('a',()=>{ expect(1)." + tBe + "(1); expect (x).toEqual(y); }); test('b',()=>{});";
     expect(countAssertions([{ text }])).toBe(2); // two expect( ; it/test not counted
   });
 });
@@ -341,4 +347,64 @@ describe("runStatic on the real repo (this is the bar)", () => {
     expect(res.findings.filter((f) => f.code === "STRONG_ASSERTION_FLOOR")).toEqual([]);
     // If this ever trips, strict matchers were swapped en masse for loose ones — investigate.
   });
+});
+
+describe("detectTautologies — catches vacuous semantic tautologies the strong-matcher count misses", () => {
+  // Tautological patterns are assembled at runtime (not written verbatim in source) so this test
+  // file does not itself trip the guard's scan of tests/ — same technique as detectDisabledTests.
+  const tBe = "toBe",
+    tEq = "toEqual";
+  it("flags literal-bool tautology: expect(true).<tBe>(true)", () => {
+    const text = "it('x', () => { expect(true)." + tBe + "(true); });";
+    const findings = detectTautologies([{ path: "t.test.ts", text }]);
+    expect(findings.length).toBe(1);
+    expect(findings[0]!.code).toBe("TAUTOLOGY_ASSERTION");
+  });
+  it("flags literal-false tautology: expect(false).<tBe>(false)", () => {
+    const findings = detectTautologies([
+      { path: "t.test.ts", text: "expect(false)." + tBe + "(false);" },
+    ]);
+    expect(findings.length).toBe(1);
+  });
+  it("flags identical-identifier self-comparison: expect(foo).<tBe>(foo)", () => {
+    const findings = detectTautologies([
+      { path: "t.test.ts", text: "expect(foo)." + tBe + "(foo);" },
+    ]);
+    expect(findings.length).toBe(1);
+    expect(findings[0]!.code).toBe("TAUTOLOGY_ASSERTION");
+  });
+  it("flags numeric-literal tautology: expect(42).<tBe>(42)", () => {
+    const findings = detectTautologies([
+      { path: "t.test.ts", text: "expect(42)." + tBe + "(42);" },
+    ]);
+    expect(findings.length).toBe(1);
+  });
+  it("does NOT flag a genuine assertion: expect(a).<tBe>(1)", () => {
+    const findings = detectTautologies([{ path: "t.test.ts", text: "expect(a)." + tBe + "(1);" }]);
+    expect(findings.length).toBe(0);
+  });
+  it("does NOT flag expect(true).<tBe>(false) — different literal values", () => {
+    const findings = detectTautologies([
+      { path: "t.test.ts", text: "expect(true)." + tBe + "(false);" },
+    ]);
+    expect(findings.length).toBe(0);
+  });
+  it("does NOT flag expect(a).<tBe>(b) — different identifiers", () => {
+    const findings = detectTautologies([{ path: "t.test.ts", text: "expect(a)." + tBe + "(b);" }]);
+    expect(findings.length).toBe(0);
+  });
+  it("countTautologyAssertions returns the count of tautological matches", () => {
+    const tautText = "expect(true)." + tBe + "(true); expect(42)." + tBe + "(42);";
+    expect(countTautologyAssertions([{ text: tautText }])).toBe(2);
+    expect(countTautologyAssertions([{ text: "expect(a)." + tBe + "(1);" }])).toBe(0);
+  });
+  it("MAX_TAUTOLOGY_ASSERTIONS is 0 for the real repo floor", () => {
+    expect(MAX_TAUTOLOGY_ASSERTIONS).toBe(0);
+  });
+  it("the real repo has zero tautological assertions", () => {
+    const res = runStatic(process.cwd());
+    expect(res.findings.filter((f) => f.code === "TAUTOLOGY_ASSERTION")).toEqual([]);
+    expect(res.findings.filter((f) => f.code === "TAUTOLOGY_FLOOR")).toEqual([]);
+  });
+  void tEq; // suppress unused-variable lint warning; available for future toEqual tautology tests
 });
