@@ -406,6 +406,18 @@ npcs:
             Another one, come down for the cold crown. I came for it too, once, and
             got no farther than the wight's hall. Ask, if you will — I have had long
             years down here with nothing to do but remember.
+          # bug_0325: on every return from a topic the full first-meeting greeting
+          # re-fired ("Another one, come down for the cold crown..."), making the
+          # shade feel mechanical after the first exchange. This variant fires when
+          # any topic flag is set (first-match-wins), showing a short acknowledgment
+          # instead. First visit is unchanged (no flags yet). No new flag, no
+          # score/route/stat/ending change; prose only.
+          variants:
+            - when:
+                - any_of:
+                    - { has_flag: heard_warding }
+                    - { has_flag: heard_lord_lore }
+              text: "What else would you ask of me?"
           topics:
             - id: ask_wight
               prompt: "Ask how the barrow-wight bested him."
