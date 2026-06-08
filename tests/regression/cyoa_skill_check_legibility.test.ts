@@ -11,19 +11,23 @@
  * player a stat was ever in play. CYOA skill checks are a first-class mechanic; a declared
  * skill var that never visibly does anything is a real legibility gap.
  *
- * THE FIX. `buildObservation` now attaches a `skill_check: { skill, difficulty }`
+ * THE FIX. `buildObservation` now attaches a `skill_check: { skill, difficulty, die }`
  * annotation to a skill-checked choice's `available_actions` entry. It surfaces ONLY the
- * rolled var and the difficulty — never the check's `on_success`/`on_failure` effects,
- * which carry the branch's `goto`/`end_game` routing — so the destination graph stays
- * hidden by construction, exactly as a plain choice never exposes `choice.next`. The field
- * is OMITTED on a plain choice, so the observation is byte-identical to the legacy shape
- * for every non-skill choice in every existing pack.
+ * rolled var, the difficulty, and the die type — never the check's `on_success`/
+ * `on_failure` effects, which carry the branch's `goto`/`end_game` routing — so the
+ * destination graph stays hidden by construction, exactly as a plain choice never exposes
+ * `choice.next`. `die: "d20"` was added (bug_0311) so that a player reading the
+ * annotation understands the roll as "d20 + stat vs difficulty" rather than a flat
+ * "stat vs difficulty" comparison that makes checks with low stats look impossible
+ * (the same playtester-confusion class as sunken_barrow bug_0141). The field is OMITTED
+ * on a plain choice, so the observation is byte-identical to the legacy shape for every
+ * non-skill choice in every existing pack.
  *
  * Locked here:
  *   (1) the skill-checked `slip_out_quiet` choice carries `skill_check: { skill: "guile",
- *       difficulty: 12 }`, and ONLY those two keys (no effects/branch leak);
+ *       difficulty: 12, die: "d20" }`, and ONLY those three keys (no effects/branch leak);
  *   (2) plain choices on the same scene carry NO `skill_check` field (legacy shape);
- *   (3) the annotation mirrors the pack's authored skill/difficulty exactly;
+ *   (3) the annotation mirrors the pack's authored skill/difficulty exactly (die is engine-added);
  *   (4) observation-only: surfacing the field does not change the state hash.
  */
 import { describe, it, expect } from "vitest";
@@ -57,9 +61,9 @@ describe("bug_0269 — a skill-checked CYOA choice surfaces its stat + difficult
     const { obs } = kitchenObs();
     const slip = obs.available_actions.find((a) => a.id === "slip_out_quiet");
     expect(slip, "the kitchen must offer slip_out_quiet").toBeDefined();
-    expect(slip!.skill_check).toEqual({ skill: "guile", difficulty: 12 });
-    // No branch/effect leak: the surfaced object has ONLY skill + difficulty.
-    expect(Object.keys(slip!.skill_check!).sort()).toEqual(["difficulty", "skill"]);
+    expect(slip!.skill_check).toEqual({ skill: "guile", difficulty: 12, die: "d20" });
+    // No branch/effect leak: the surfaced object has ONLY skill + difficulty + die.
+    expect(Object.keys(slip!.skill_check!).sort()).toEqual(["die", "difficulty", "skill"]);
   });
 
   it("leaves plain choices without a skill_check field (legacy shape)", () => {
@@ -71,7 +75,7 @@ describe("bug_0269 — a skill-checked CYOA choice surfaces its stat + difficult
     }
   });
 
-  it("mirrors the pack's authored skill_check exactly", () => {
+  it("mirrors the pack's authored skill_check exactly (die is engine-added, always d20)", () => {
     const kitchen = index.scenes.get("kitchen");
     const authored = kitchen?.choices.find((c) => c.id === "slip_out_quiet")?.skill_check;
     expect(authored).toBeDefined();
@@ -80,6 +84,7 @@ describe("bug_0269 — a skill-checked CYOA choice surfaces its stat + difficult
     expect(slip!.skill_check).toEqual({
       skill: authored!.skill,
       difficulty: authored!.difficulty,
+      die: "d20",
     });
   });
 

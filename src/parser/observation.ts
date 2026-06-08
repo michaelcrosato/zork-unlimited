@@ -67,7 +67,7 @@ export type ParserObservation = {
     id: string;
     command: string;
     action: Action;
-    skill_check?: { skill: string; difficulty: number };
+    skill_check?: { skill: string; difficulty: number; die: string };
   }[];
   score: number;
   max_score: number;

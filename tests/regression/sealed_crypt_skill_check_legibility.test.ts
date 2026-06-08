@@ -16,20 +16,21 @@
  * checks are a first-class mechanic; a declared skill var that never visibly does
  * anything is a real legibility gap.
  *
- * THE FIX. `enumerateActions` now attaches `skill_check: { skill, difficulty }` to a
+ * THE FIX. `enumerateActions` now attaches `skill_check: { skill, difficulty, die }` to a
  * skill-checked USE option, and both `buildParserObservation` and (via the shared
  * enumeration) `buildRpgObservation` surface it on the action. It carries ONLY the
- * rolled var and the difficulty — never the check's `on_success`/`on_failure` effects,
- * which carry score/flag/end_game routing — so the destination graph stays hidden by
- * construction, exactly as a plain command never exposes its effects. The field is
- * OMITTED on every non-skill action, so the observation is byte-identical to the legacy
- * shape for every existing pack's plain commands. The web UI renders it as a
- * "⟨nerve check, DC 12⟩" label suffix.
+ * rolled var, the difficulty, and the die type — never the check's `on_success`/
+ * `on_failure` effects, which carry score/flag/end_game routing — so the destination
+ * graph stays hidden by construction, exactly as a plain command never exposes its
+ * effects. `die: "d20"` was added (bug_0311) so the annotation reads as "d20 + stat vs
+ * difficulty" rather than a flat comparison that makes low-stat checks look impossible.
+ * The field is OMITTED on every non-skill action, so the observation is byte-identical
+ * to the legacy shape for every existing pack's plain commands.
  *
  * Locked here:
  *   (1) in the crypt, key in hand, the `grip iron key` USE carries
- *       skill_check: { skill: "nerve", difficulty: 12 }, and ONLY those two keys
- *       (no effects/branch leak);
+ *       skill_check: { skill: "nerve", difficulty: 12, die: "d20" }, and ONLY those
+ *       three keys (no effects/branch leak);
  *   (2) every plain command on the same observation carries NO skill_check field
  *       (legacy shape);
  *   (3) the annotation mirrors the pack's authored skill_check exactly;
@@ -110,9 +111,9 @@ describe("bug_0274 — a skill-checked parser USE surfaces its stat + difficulty
     const obs = buildParserObservation(index, s);
     const g = grip(obs);
     expect(g, "the crypt must offer the grip iron key beat").toBeDefined();
-    expect(g!.skill_check).toEqual({ skill: "nerve", difficulty: 12 });
-    // No branch/effect leak: the surfaced object has ONLY skill + difficulty.
-    expect(Object.keys(g!.skill_check!).sort()).toEqual(["difficulty", "skill"]);
+    expect(g!.skill_check).toEqual({ skill: "nerve", difficulty: 12, die: "d20" });
+    // No branch/effect leak: the surfaced object has ONLY skill + difficulty + die.
+    expect(Object.keys(g!.skill_check!).sort()).toEqual(["die", "difficulty", "skill"]);
   });
 
   it("leaves every plain command without a skill_check field (legacy shape)", () => {
@@ -137,7 +138,11 @@ describe("bug_0274 — a skill-checked parser USE surfaces its stat + difficulty
     expect(authored, "iron_key must carry the authored nerve check").toBeDefined();
     const s = play(initStateForParserPack(index, 13), TO_CRYPT_WITH_KEY);
     const g = grip(buildParserObservation(index, s));
-    expect(g!.skill_check).toEqual({ skill: authored!.skill, difficulty: authored!.difficulty });
+    expect(g!.skill_check).toEqual({
+      skill: authored!.skill,
+      difficulty: authored!.difficulty,
+      die: "d20",
+    });
   });
 
   it("is observation-only — surfacing it does not touch the state hash", () => {
@@ -170,7 +175,7 @@ describe("bug_0274 — a skill-checked parser USE surfaces its stat + difficulty
       if (!spent) {
         // failure leaves the beat retryable — it must still be offered with its annotation
         const again = grip(buildParserObservation(index, s));
-        expect(again?.skill_check).toEqual({ skill: "nerve", difficulty: 12 });
+        expect(again?.skill_check).toEqual({ skill: "nerve", difficulty: 12, die: "d20" });
       }
     }
     expect(spent, "the nerve beat must eventually succeed and set its one-shot flag").toBe(true);

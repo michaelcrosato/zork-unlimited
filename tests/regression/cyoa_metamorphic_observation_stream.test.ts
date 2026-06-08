@@ -108,6 +108,7 @@ function relabelObservation(o: CyoaObservation, mapId: (id: string) => string): 
             skill_check: {
               skill: mapId(a.skill_check.skill),
               difficulty: a.skill_check.difficulty,
+              die: a.skill_check.die, // die is label-invariant ("d20")
             },
           }
         : {}),

@@ -28,18 +28,19 @@ import {
 } from "./model.js";
 
 // A USE action that carries a `skill_check` (resolved by the runner as a d20 + skill
-// roll, parser/RPG alike) is annotated with the rolled stat + difficulty, so a player
-// (and a client) can SEE a stat is in play before committing — without it a declared
-// skill var reads as vestigial (a blind playtester flagged exactly this for sealed_crypt's
-// `nerve`, bug_0274; the CYOA sibling was bug_0269). Only `skill`/`difficulty` surface —
-// never the check's `on_success`/`on_failure` effects, which carry score/flag/end_game
-// routing — so the destination graph stays hidden, exactly as a plain command never leaks
-// its effects. Omitted on every non-skill action, so the legacy option shape is unchanged.
+// roll, parser/RPG alike) is annotated with the rolled stat + difficulty + die type, so a
+// player (and a client) can SEE a stat is in play before committing — without it a
+// declared skill var reads as vestigial (bug_0274; CYOA sibling bug_0269). `die: "d20"`
+// surfaces the ceiling so "nerve(3) vs 12" reads as "d20+3 vs 12" not a flat impossible
+// comparison (bug_0311; mirrors the post-roll d20 label in bug_0141). Only
+// `skill`/`difficulty`/`die` surface — never the check's `on_success`/`on_failure`
+// effects, which carry score/flag/end_game routing — so the destination graph stays
+// hidden. Omitted on every non-skill action, so the legacy option shape is unchanged.
 export type ParserActionOption = {
   id: string;
   command: string;
   action: Action;
-  skill_check?: { skill: string; difficulty: number };
+  skill_check?: { skill: string; difficulty: number; die: string };
 };
 
 // State-aware so an enumerated command shows the object's REACTIVE name (bug_0188):
@@ -358,11 +359,16 @@ export function enumerateActions(index: ParserIndex, state: GameState): ParserAc
         item: it.item,
         target: it.target,
       });
-      // Surface ONLY the rolled skill + difficulty when this USE is a skill check, so the
-      // listed command reads as the intentional roll it is (bug_0274). Never the branch
+      // Surface the rolled skill + difficulty + die type when this USE is a skill check,
+      // so the listed command reads as the intentional d20 roll it is (bug_0274). `die`
+      // surfaces the ceiling so the check never looks impossible (bug_0311). Never branch
       // effects, which would leak score/flag/end_game routing.
       if (opt && it.skill_check) {
-        opt.skill_check = { skill: it.skill_check.skill, difficulty: it.skill_check.difficulty };
+        opt.skill_check = {
+          skill: it.skill_check.skill,
+          difficulty: it.skill_check.difficulty,
+          die: "d20",
+        };
       }
       push(opt);
     }

@@ -23,16 +23,19 @@ export type CyoaObservation = {
   // A skill-checked choice (`choice.skill_check`) carries a `skill_check` annotation:
   // the var rolled and the difficulty it is rolled against, so a client (and a player)
   // can SEE that a stat is in play — without it a declared skill var reads as vestigial
-  // (a blind playtester flagged exactly this for `guile`, bug_0269). Only `skill`/
-  // `difficulty` are surfaced — never the check's `on_success`/`on_failure` effects,
-  // which carry the branch's `goto`/`end_game` routing: the destination graph stays
-  // hidden by construction, exactly as a plain choice never exposes `choice.next`. The
-  // field is OMITTED on a plain (non-skill) choice, so the observation is byte-identical
-  // to the legacy shape for every existing pack's non-skill choices.
+  // (a blind playtester flagged exactly this for `guile`, bug_0269). `die` names the
+  // die type ("d20") so that stat+difficulty reads as "d20 + nerve(3) vs 12" rather
+  // than a flat "3 vs 12" comparison that looks impossible (bug_0311; mirrors the
+  // post-roll d20 label added for sunken_barrow in bug_0141). Only `skill`/`difficulty`/
+  // `die` are surfaced — never the check's `on_success`/`on_failure` effects, which
+  // carry the branch's `goto`/`end_game` routing: the destination graph stays hidden by
+  // construction, exactly as a plain choice never exposes `choice.next`. The field is
+  // OMITTED on a plain (non-skill) choice, so the observation is byte-identical to the
+  // legacy shape for every existing pack's non-skill choices.
   available_actions: {
     id: string;
     text: string;
-    skill_check?: { skill: string; difficulty: number };
+    skill_check?: { skill: string; difficulty: number; die: string };
   }[];
   ended: boolean;
   ending_id: string | null;
@@ -69,12 +72,18 @@ export function buildObservation(
           .map((c) => ({
             id: c.id,
             text: c.text,
-            // Surface ONLY the rolled skill + difficulty (never the branch effects, which
-            // would leak the destination scenes — see the type comment). Omit the field
-            // entirely on a plain choice so the legacy shape is preserved exactly.
+            // Surface the rolled skill, difficulty, and die type (never branch effects,
+            // which would leak destination scenes — see the type comment). `die: "d20"`
+            // surfaces the ceiling so a player reading "nerve(3) vs 12" knows it is
+            // "d20+3 vs 12" (passable on a 9+), not an impossible flat comparison
+            // (bug_0311). Omit entirely on a plain choice so the legacy shape is exact.
             ...(c.skill_check
               ? {
-                  skill_check: { skill: c.skill_check.skill, difficulty: c.skill_check.difficulty },
+                  skill_check: {
+                    skill: c.skill_check.skill,
+                    difficulty: c.skill_check.difficulty,
+                    die: "d20",
+                  },
                 }
               : {}),
           }));
