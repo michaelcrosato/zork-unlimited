@@ -92,7 +92,7 @@ scenes:
           come with those steady, ancient eyes, and you cannot now unsee what the carved
           stone named. The ice between is rotten, ticking and groaning, fit to drop a man
           through to the freezing dark. A firmer way runs round the shore to a bluff within
-          bowshot, and the leaning stone keeps its old vow at the bank.
+          bowshot. You have read the stone; its vow is in you now.
       # Reactive read for quest "the_hunt" at stage `at_bay`, set on the take_shore edge
       # (above) that carries you round to the bluff. Placed AFTER the knows_truth variant
       # so that reframe keeps first-match priority; this one therefore fires only when you
