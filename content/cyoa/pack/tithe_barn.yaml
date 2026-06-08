@@ -166,6 +166,9 @@ scenes:
         next: ledger
       - id: leave_book
         text: "Set the book down and turn back to the barn."
+        effects:
+          - set_flag: knows_truth
+          - set_quest_stage: { quest: the_barn, stage: truth_read }
         next: granary_floor
 
   - id: reckoning
