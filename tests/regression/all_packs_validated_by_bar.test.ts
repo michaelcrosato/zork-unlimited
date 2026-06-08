@@ -80,7 +80,7 @@ const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
 describe("bug_0096 — every shipped pack is inside the verification bar", () => {
   const packs = discoverPacks();
 
-  it("discovers all twenty-seven shipped packs (sanity: discovery is finding them)", () => {
+  it("discovers all twenty-nine shipped packs (sanity: discovery is finding them)", () => {
     expect(packs).toEqual([
       "content/cyoa/pack/bellmans_round.yaml",
       "content/cyoa/pack/clockwork_heist.yaml",
@@ -98,6 +98,7 @@ describe("bug_0096 — every shipped pack is inside the verification bar", () =>
       "content/parser/pack/collectors_warrant.yaml",
       "content/parser/pack/coroners_errand.yaml",
       "content/parser/pack/friars_postern.yaml",
+      "content/parser/pack/gaugers_register.yaml",
       "content/parser/pack/lamplighters_round.yaml",
       "content/parser/pack/sealed_crypt.yaml",
       "content/parser/pack/tide_mill.yaml",
@@ -108,6 +109,7 @@ describe("bug_0096 — every shipped pack is inside the verification bar", () =>
       "content/rpg/pack/falconers_ransom.yaml",
       "content/rpg/pack/gallowmere.yaml",
       "content/rpg/pack/sunken_barrow.yaml",
+      "content/rpg/pack/tanners_fever.yaml",
       "content/rpg/pack/wolf_winter.yaml",
     ]);
   });

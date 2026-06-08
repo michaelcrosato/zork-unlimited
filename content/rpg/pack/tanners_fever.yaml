@@ -1,0 +1,539 @@
+# The Tanner's Fever — a Stage 4 (Hero's-Quest) pack (spec §13).
+#
+# The game's NINTH RPG pack — and the FIRST to introduce `physick`, a medical/
+# diagnostic stat measuring systematic clinical observation, knowledge of remedies,
+# and the ability to identify a misdiagnosis and correct it under professional
+# pressure. No prior RPG pack uses a medical stat: the eight predecessors use
+# physical or craft vars (might, craft, nerve, tracking, lore) or social command
+# (authority, cunning). Physick is different: it represents accumulated clinical
+# knowledge applied at the moment of treatment — the ability to name what is wrong,
+# demonstrate why the current treatment is harmful, and administer the correct remedy
+# with enough precision and confidence to override an established practitioner's
+# objection.
+#
+# Setting: a wool merchant's house in a river town in winter. An itinerant surgeon
+# is called to see Edric (14), the merchant's son, who has been ill for five days
+# under the care of Godwin, the resident apothecary. Edric is not improving.
+#
+# True diagnosis: Godwin correctly identified an autumn fever but prescribed a
+# wormwood tonic at three times the standard dose to 'accelerate resolution.' The
+# overdose is suppressing appetite and stripping fluids faster than the fever alone
+# would — the treatment is sustaining the crisis it was meant to end. The correct
+# remedy is meadowsweet (stomach-settling, anti-inflammatory) to allow the gut to
+# rest while the fever clears on its own. Godwin's notes contain the overdose
+# evidence; the herb store holds the meadowsweet.
+#
+# TWO RESOLUTION PATHS (third in the RPG corpus after factors_mark and falconers_ransom):
+#   PHYSICK (primary, full score): read Edric (+5, +3 physick: overdose symptoms
+#   identified), read Godwin's case notes (+10, +3 physick: overdose formula confirmed),
+#   take and read meadowsweet from herb_store (+10: corrective ingredient ready).
+#   Then USE meadowsweet ON sick_edric in the sickroom — physick DC 12. Success:
+#   Godwin concedes; Holt stands aside; corridor N exit opens.
+#   COMBAT (fallback, partial score): skip the physick evidence or fail the check —
+#   Holt must be fought in the corridor. Combat path caps at 40/50.
+#
+#   sickroom (start; Godwin NPC; sick_edric read +5 physick+3)
+#   │  W → apothecary_store (godwin_notes: +10 read, +3 physick)
+#   │  E → herb_store (meadowsweet: +10 read when held, takeable)
+#   │  N → corridor (Holt enemy; N gated on treatment_given OR holt_defeated)
+#   └─────── corridor: N → market_lane (WIN +15)
+#
+# Score (max 50, the 5+10+10+10+15 shape):
+#   +5  READ sick_edric     — overdose symptoms identified (physick+3; one-shot)
+#   +10 READ godwin_notes   — overdose formula confirmed (physick+3; one-shot, must hold)
+#   +10 READ meadowsweet    — corrective ingredient ready (one-shot, must hold)
+#   +10 physick check success — USE meadowsweet ON sick_edric, DC 12 (one-shot)
+#   +15 market_lane on_enter — WIN (locomotion win)
+#
+# Physick stat calibration (skill checks use d20, combat uses d6):
+#   Base physick 3: d20+3 >= 12 → d20 >= 9 → 12/20 = 60% (significant gamble).
+#   After reading Edric (+3): physick 6, d20 >= 6 → 15/20 = 75%.
+#   After reading notes (+3): physick 9, d20 >= 3 → 18/20 = 90% (near-certain).
+#   The pack's honest answer: gather the evidence first.
+#
+# Combat death check (no combat_guaranteed):
+#   Player base hp 20 / atk 4 / def 2. Holt: hp 12 / atk 5 / def 2.
+#   Worst player dmg per round (d6 min=1): 1+4-2 = 3. Rounds to kill Holt: ceil(12/3) = 4.
+#   Worst Holt dmg per round (d6 max=6): 6+5-2 = 9. Over 3 rounds (before kill): 27.
+#   27 > 20 HP — Holt CAN kill on worst dice. ending_expelled (death) is reachable.
+#   No combat_guaranteed. The pack's answer to the combat threat is the physick path.
+
+meta:
+  id: tanners_fever_v1
+  title: "The Tanner's Fever"
+  start_room: sickroom
+  # `physick` (3 base): systematic clinical observation, knowledge of remedies,
+  # and the ability to identify a misdiagnosis in front of the practitioner who
+  # made it. New to the corpus — no prior RPG pack uses a medical stat. Used in
+  # the treatment skill_check (USE meadowsweet ON sick_edric, DC 12): base 3 →
+  # 60% gamble; with edric read (+3) → physick 6, 75%; with both preps →
+  # physick 9, 90% near-certain. Physick does not boost combat stats.
+  vars_init: { hp: 20, attack: 4, defense: 2, physick: 3 }
+  flags_init: []
+  max_score: 50
+
+rooms:
+  - id: sickroom
+    name: "The Sickroom"
+    description: >
+      A small chamber above the counting house: one window facing the yard, a clay
+      stove banked from the night before, and Edric in the bed against the north
+      wall. He is fourteen and has been ill for five days. The fever has ebbed
+      somewhat this morning but the boy is sallow and very thin, the cup at his
+      bedside still half-full of Godwin's tonic. Godwin himself stands near the
+      stove — a compact man of sixty, steady in his movements, certain of his
+      treatment. The apothecary's store lies to the west; the herb store is to
+      the east; the corridor leads north.
+    variants:
+      - when: [{ has_flag: treatment_given }]
+        text: >
+          The sickroom. Edric's colour is already better — the meadowsweet has
+          settled his stomach and he has kept water down for the first time in
+          three days. Godwin stands by the stove with the careful stillness of
+          a man revising a calculation he had been certain of. The corridor leads
+          north; the herb store is to the east; the apothecary's store is to
+          the west.
+    objects: [sick_edric]
+    exits:
+      - { direction: west, to: apothecary_store }
+      - { direction: east, to: herb_store }
+      - { direction: north, to: corridor }
+
+  - id: apothecary_store
+    name: "The Apothecary's Store"
+    description: >
+      A narrow storeroom: shelves of brown-glass bottles, wrapped-paper packets,
+      a pair of scales, and Godwin's workbench. A ledger lies open at the current
+      month — his case notes, dosage records, and preparation instructions set
+      out in a close, confident hand. The sickroom is back to the east.
+    variants:
+      - when: [{ has_flag: notes_read }]
+        text: >
+          The apothecary's store. The case notes are already in your hands and
+          the overdose formula is in your head. The sickroom is back to the east.
+    objects: [godwin_notes]
+    exits:
+      - { direction: east, to: sickroom }
+
+  - id: herb_store
+    name: "The Herb Store"
+    description: >
+      A cool lean-to off the east side of the house, the walls hung with drying
+      bundles — yarrow, shepherd's purse, dried betony. Among them, still green,
+      a bundle of meadowsweet: the white-flowering plant from the river meadow
+      below the town, well-known to any practising surgeon for settling an
+      overtaxed stomach. The sickroom is back to the west.
+    objects: [meadowsweet]
+    exits:
+      - { direction: west, to: sickroom }
+
+  - id: corridor
+    name: "The Corridor"
+    description: >
+      A short passage from the sickroom to the stair landing, and from there to
+      the market lane below. Holt — Godwin's journeyman, a stocky young man who
+      has been deferring to his master's judgment all week — stands in the
+      doorway. He is not certain you should be allowed out while the question of
+      treatment is still open.
+    variants:
+      - when: [{ has_flag: treatment_given }]
+        text: >
+          The corridor. Holt has stepped back from the doorway — Godwin gave no
+          order to detain you once the tonic was set aside and the meadowsweet
+          administered. The stair and the market lane are north.
+      - when: [{ has_flag: holt_defeated }]
+        text: >
+          The corridor, Holt down across the passage. The stair and the market
+          lane are north.
+    exits:
+      - { direction: south, to: sickroom }
+      - direction: north
+        to: market_lane
+        conditions: [{ any_of: [{ has_flag: treatment_given }, { has_flag: holt_defeated }] }]
+        locked_msg: >
+          Holt stands in the doorway. He is here on Godwin's word and he will
+          not step aside while the question of treatment is still open — get
+          Godwin to concede or get past Holt.
+
+  - id: market_lane
+    name: "The Market Lane"
+    description: >
+      The lane outside the merchant's house opens onto the market square. The
+      river is audible from here — the same river damp that set Edric ill all
+      autumn. The house door closes behind you. Edric has the meadowsweet in him
+      now; the rest is time.
+    on_enter:
+      - set_quest_stage: { quest: tanners_fever, stage: treatment_complete }
+      - add_journal: >
+          Edric has the correct treatment. Godwin will revise his notes or he
+          will not — that is his business. The lane back to the road is clear.
+      - inc_var: { name: score, by: 15 }
+    exits:
+      - { direction: south, to: corridor }
+
+objects:
+  - id: sick_edric
+    name: "Edric"
+    aliases: [edric, boy, patient, sick boy, sick patient, sick child, child, bed,
+              bedside, patient edric, young edric, tonic cup, cup, cup of tonic,
+              tonic, half-full cup]
+    description: >
+      Edric lies in the bed: fourteen years old, the yellow-tinged pallor of a
+      stomach complaint more than a chest fever, the cup of tonic at his bedside
+      barely touched. His skin is dry but not feverish to the hand. He has been
+      losing fluid faster than the fever alone can account for — the look of a
+      body fighting something additional.
+    # Reactive variants: treatment_given (priority) then edric_examined intermediate.
+    variants:
+      - when: [{ has_flag: treatment_given }]
+        text: >
+          Edric. His colour is better. He has kept water down for the first time
+          in three days. The meadowsweet is working; Godwin's tonic stands
+          untouched on the sill.
+      - when: [{ has_flag: edric_examined }]
+        text: >
+          Edric, already examined — the overdose symptoms noted: dry skin, rapid
+          fluid loss, the bitterness of the cup he cannot finish. The fever is
+          real; the treatment is making it worse.
+    takeable: false
+    read_text: >
+      The fever is real — that much Godwin has right — but the pallor is wrong
+      for a fever alone. The skin is dry past what the temperature explains, the
+      cup of tonic barely touched after a full morning. Wormwood at high dose does
+      this: suppresses appetite, draws fluid from the gut, gives the stomach a
+      second assault to manage while the first is still running. Correct diagnosis,
+      incorrect preparation. The dosage formula will be in the case notes.
+    interactions:
+      # Clinical examination: +5 score, +3 physick. One-shot (not_flag edric_examined).
+      # READ is the engine verb that generates a player-visible action for non-takeable objects.
+      - verb: READ
+        target: sick_edric
+        conditions: [{ not_flag: edric_examined }]
+        effects:
+          - set_flag: edric_examined
+          - inc_var: { name: physick, by: 3 }
+          - inc_var: { name: score, by: 5 }
+          - set_quest_stage: { quest: tanners_fever, stage: symptoms_read }
+          - add_journal: >
+              The symptoms do not match an uncomplicated fever: rapid fluid loss,
+              dry mucous membranes, the cup of tonic barely touched over twelve
+              hours. Wormwood at high dose — suppresses appetite, strips fluid,
+              gives the gut a second assault. Correct diagnosis, wrong preparation.
+              The dosage formula will be in the case notes. (+3 physick, +5)
+          - narrate: >
+              The fever is real — that much Godwin has right — but the pallor is
+              wrong for a fever alone. The skin is dry past what the temperature
+              explains, the cup barely touched after a full morning. You have seen
+              this pattern before: wormwood at high dose suppresses appetite, strips
+              the gut of fluid, gives the body a second problem while it is still
+              fighting the first. The patient looks less like someone with a fever
+              than someone whose treatment is making a fever worse. The dosage
+              formula will be in the case notes.
+      # The treatment: USE meadowsweet ON sick_edric — physick skill check, DC 12.
+      # One-shot: confrontation_attempted set on BOTH branches.
+      # Requires meadowsweet in inventory (implicit via item field).
+      - verb: USE
+        item: meadowsweet
+        target: sick_edric
+        command_verb: treat
+        command_template: "treat {target} with {item}"
+        conditions: [{ not_flag: confrontation_attempted }]
+        skill_check:
+          skill: physick
+          difficulty: 12
+          on_success:
+            - set_flag: confrontation_attempted
+            - set_flag: treatment_given
+            - inc_var: { name: score, by: 10 }
+            - set_quest_stage: { quest: tanners_fever, stage: treatment_given }
+            - add_journal: >
+                The argument landed — the fluid loss, the overdose formula from
+                the notes, the meadowsweet as corrective — and Godwin heard it.
+                He stepped back from the bed. Edric has the correct treatment. (+10)
+            - narrate: >
+                You say it steadily, with the evidence in order: the wormwood
+                formula in his notes is three times the standard preparation,
+                the fluid loss has run five days past what the fever alone would
+                cause, and the meadowsweet will settle the stomach while the dose
+                is corrected. You say it to Godwin and not past him, which is the
+                difference between an accusation and a consultation. He is quiet
+                for a long moment — sixty years of practice weighing against a
+                stranger with a bundle of herbs and a case-book he was not meant
+                to read. Then he nods. A short nod, the kind that costs something.
+                He steps aside. You administer the meadowsweet; Edric swallows it.
+          on_failure:
+            - set_flag: confrontation_attempted
+            - add_journal: >
+                The argument broke apart — the sequence wrong, the formula not
+                yet named when the remedy was already in hand. Godwin found the
+                gap between the observations and the conclusion. Holt is watching
+                from the corridor doorway.
+            - narrate: >
+                The reasoning comes out in the wrong order — the remedy proposed
+                before the mechanism of harm is fully named, the dose figures cited
+                before the reference standard is in hand. Godwin finds the gap
+                between the observation and the conclusion and holds it, calmly,
+                with sixty years of practice behind him. He takes a step toward the
+                bed. Holt has appeared in the corridor doorway.
+
+  - id: godwin_notes
+    name: "Godwin's case notes"
+    aliases: [notes, case notes, ledger, book, log, godwin ledger, apothecary notes,
+              apothecary ledger, case book, dosage record, godwin book, preparation
+              notes, treatment notes, wormwood notes, case ledger, month ledger]
+    description: >
+      Godwin's case book for the month: each patient, each diagnosis, the
+      preparation instructions in precise notation. Edric's entry runs for five
+      days — the fever correctly identified at the outset, the wormwood tonic
+      prescribed the morning of the second day. The formula column gives the
+      preparation strength as three parts wormwood extract to one part water:
+      three times the standard dose listed in the reference table on the facing
+      page.
+    variants:
+      - when: [{ has_flag: notes_read }]
+        text: >
+          Godwin's case notes, already read — the overdose formula in your head:
+          three to one against the reference standard of one to one. He had
+          reasons for the strength he chose; the reasons do not make the dose safe.
+    takeable: true
+    read_text: >
+      Edric's entry, five days running: autumn fever, correctly identified.
+      Preparation entry for the wormwood tonic: three parts extract to one part
+      water. The reference table on the facing page sets the standard dose for a
+      patient of Edric's age and weight at one part to one. Godwin's margin note
+      reads 'fever persistent — increased preparation to accelerate resolution.'
+      He increased the dose to fight a fever that the dose is now sustaining. The
+      margin shows his reasoning; the reference table shows why it is wrong.
+    interactions:
+      # Reading the case notes: +10 score, +3 physick. One-shot (has_item + not notes_read).
+      - verb: READ
+        target: godwin_notes
+        conditions: [{ all_of: [{ has_item: godwin_notes }, { not_flag: notes_read }] }]
+        effects:
+          - set_flag: notes_read
+          - inc_var: { name: physick, by: 3 }
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: tanners_fever, stage: overdose_confirmed }
+          - add_journal: >
+              The formula: three parts wormwood extract to one part water. Reference
+              standard for Edric's age: one to one. Godwin increased the preparation
+              to 'accelerate resolution.' The accelerated dose is preventing it, not
+              achieving it. (+3 physick, +10)
+          - narrate: >
+              Three to one against the reference standard of one to one. Godwin's
+              margin note explains the decision — the fever was holding, he wanted
+              to push it — but a wormwood preparation at triple dose does not push
+              a fever out; it gives the stomach a second assault and strips the
+              body of the fluid it needs to fight the first. He has been right about
+              the diagnosis and wrong about the cure for five days, and he has not
+              reconsidered because in sixty years of practice a high-dose approach
+              has usually worked. The formula is in your head now — specific,
+              numbered, referenced to the standard on the facing page.
+
+  - id: meadowsweet
+    name: "meadowsweet"
+    aliases: [herbs, herb, herb bundle, bundle, meadowsweet bundle, meadow sweet,
+              white flowers, flowering herbs, stomach herbs, river herbs, plant,
+              plants, dried herbs, fresh herbs, green bundle, white herb, herbs bundle]
+    description: >
+      A bundle of meadowsweet: white-flowered, river-meadow plant, cut fresh
+      this season and hung before the first frost. Well-known to any practising
+      surgeon: settles an overtaxed stomach, reduces inflammation, allows the
+      gut to resume normal absorption. The opposite of wormwood at high dose.
+    takeable: true
+    read_text: >
+      Meadowsweet — white-flowered, from the river meadow, cut this autumn and
+      well-hung. Anti-inflammatory, stomach-settling: it counteracts exactly the
+      kind of gut irritation that a triple-dose wormwood preparation produces. A
+      standard meadowsweet preparation will settle the stomach in half a day and
+      allow the boy to keep water down. If the fever is real (and it is), the
+      body will clear it once the secondary assault is removed. This is
+      straightforward medicine. The difficulty is not medical.
+    interactions:
+      # Identifying the remedy: +10 score. One-shot (has_item + not herbs_examined).
+      - verb: READ
+        target: meadowsweet
+        conditions: [{ all_of: [{ has_item: meadowsweet }, { not_flag: herbs_examined }] }]
+        effects:
+          - set_flag: herbs_examined
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: tanners_fever, stage: remedy_identified }
+          - add_journal: >
+              Meadowsweet: anti-inflammatory, stomach-settling, counteracts the gut
+              irritation of a triple-dose wormwood preparation. A meadowsweet
+              preparation will let Edric hold water while the fever clears on its own.
+              The difficulty is not medical. (+10)
+          - narrate: >
+              The meadowsweet is fresh-cut and well-hung — anti-inflammatory,
+              stomach-settling, the counterpart to wormwood's astringent action at
+              high dose. A preparation will settle the stomach in half a day and allow
+              the boy to keep water down; the fever is real, but the body will clear
+              it once the secondary assault is removed. This is straightforward. What
+              is not straightforward is saying so to the man who has been this
+              family's apothecary for twenty years.
+
+npcs:
+  - id: godwin
+    name: "Godwin"
+    description: >
+      Godwin the apothecary: a compact man of sixty, grey-bearded, careful in his
+      movements, with the quiet certainty of someone who has treated three-quarters
+      of this town for thirty years. He does not doubt his diagnosis. He is watching
+      you with the expression of a man who has seen second opinions before and found
+      them, on balance, less useful than advertised.
+    room: sickroom
+    dialogue:
+      root: godwin_root
+      nodes:
+        - id: godwin_root
+          npc_text: >
+            An autumn fever — the river damp will do it every year. I have him
+            on a strong wormwood preparation, accelerated dose, which should bring
+            the fever down within the next day or two. The boy simply needs time
+            and the tonic to work through.
+          variants:
+            - when: [{ has_flag: treatment_given }]
+              text: >
+                Godwin does not look up from his case notes, where he is recording
+                something in a hand that is more deliberate than usual. There is
+                nothing further he wishes to say to you.
+            - when: [{ has_flag: confrontation_attempted }]
+              text: >
+                I have heard your assessment. My clinical judgment stands.
+            - when: [{ any_of: [{ has_flag: asked_diagnosis }, { has_flag: asked_dose }] }]
+              text: >
+                I believe I have answered your questions.
+          topics:
+            - id: ask_diagnosis
+              prompt: "Ask Godwin about the diagnosis."
+              conditions: [{ not_flag: asked_diagnosis }]
+              goto: godwin_diagnosis
+            - id: ask_dose
+              prompt: "Ask about the dose strength."
+              conditions: [{ not_flag: asked_dose }]
+              goto: godwin_dose
+            - id: ask_recovery
+              prompt: "Ask when he expects Edric to recover."
+              conditions: [{ not_flag: asked_recovery }]
+              goto: godwin_recovery
+            - id: leave_godwin
+              prompt: "Step away."
+              end: true
+        - id: godwin_dose
+          npc_text: >
+            A stronger preparation accelerates resolution — I have used this
+            approach many times with good results. The standard dose is a
+            starting point, not a ceiling. The boy's constitution is sound and
+            the increased preparation will not harm him.
+          effects:
+            - set_flag: asked_dose
+            - add_journal: >
+                Godwin holds that increased wormwood dose accelerates recovery.
+                He has not consulted the reference table on the facing page.
+          topics:
+            - id: dose_back
+              prompt: "Walk away."
+              goto: godwin_root
+        - id: godwin_diagnosis
+          npc_text: >
+            An autumn fever, as I said — the same river damp that comes every
+            year to children who have been working the yard in all weathers.
+            I have seen it a hundred times. The wormwood preparation is the
+            correct treatment; the strength of preparation is my clinical
+            judgment based on the persistence of the fever.
+          effects:
+            - set_flag: asked_diagnosis
+            - add_journal: >
+                Godwin: autumn fever, wormwood at increased dose by clinical
+                judgment. He is confident. He has not considered that the dose
+                may be the problem.
+          topics:
+            - id: diagnosis_back
+              prompt: "Nod and step away."
+              goto: godwin_root
+        - id: godwin_recovery
+          npc_text: >
+            Tomorrow, or the day after. The fever must break before the recovery
+            can begin, and the preparation is designed to bring it there quickly.
+            I have been treating this family for twenty years; this is not a
+            difficult case.
+          effects:
+            - set_flag: asked_recovery
+            - add_journal: >
+                Tomorrow or the day after, by Godwin's estimate. He has twenty
+                years with this family and no reason to doubt his preparation.
+          topics:
+            - id: recovery_back
+              prompt: "Step away."
+              goto: godwin_root
+
+enemies:
+  # Holt — Godwin's journeyman, the corridor obstacle. Combat is the fallback when
+  # the physick path is skipped or the skill check fails. He is not malicious —
+  # he is doing his job, which is to enforce his master's authority in this house.
+  # No preparation buffs combat stats; physick is the relevant lever, not fighting.
+  #
+  # Death check (no combat_guaranteed): Holt hp 12 / atk 5 / def 2.
+  #   Worst player dmg: 1+4-2 = 3/round. Rounds to kill Holt: ceil(12/3) = 4.
+  #   Worst Holt dmg: 6+5-2 = 9/round. Over 3 rounds (before kill): 27. 27 > 20 HP.
+  #   Holt CAN kill on worst dice. ending_expelled (death) is reachable.
+  #   No combat_guaranteed: the pack's answer to the combat threat is physick, not prep.
+  - id: holt
+    name: "Holt"
+    description: >
+      Godwin's journeyman — a stocky young man of twenty-five who has been
+      apprenticed to the apothecary for three years and has not yet learned to
+      question what his master tells him to do. He is not cruel, and he is not
+      fast, but he is solid and he will not stand aside on argument alone.
+    room: corridor
+    hp: 12
+    attack: 5
+    defense: 2
+    defeat_flag: holt_defeated
+    death_ending: ending_expelled
+    on_defeat:
+      - set_quest_stage: { quest: tanners_fever, stage: corridor_forced }
+      - add_journal: >
+          Holt is down in the passage. The stair and the lane are open. The
+          treatment was not won the right way, but it was won.
+
+win_conditions:
+  # Locomotion win: reaching market_lane — accessible via physick path (treatment_given
+  # unlocks corridor N exit) OR combat path (holt_defeated unlocks it).
+  # The +15 capstone fires on market_lane's on_enter in the same step as the win.
+  - id: lane_reached
+    conditions: [{ visited: market_lane }]
+    ending: ending_recovered
+
+endings:
+  - id: ending_expelled
+    title: "The Corridor"
+    text: >
+      Holt gets his weight into you before you clear the passage, and the struggle
+      that follows ends badly — a landing, a set of stairs, and an outcome that
+      leaves you unable to stand. By the time you can move again the house door
+      is shut and Godwin's face at the window above says the treatment will
+      continue exactly as prescribed. Edric is still in the bed. The tonic is
+      still at three-to-one. *** You have fallen. ***
+    death: true
+
+  - id: ending_recovered
+    title: "The Meadowsweet"
+    # Reactive: physick-path epilogue names Godwin's quiet revision.
+    # Base text covers the combat path (holt_defeated, treatment_given not set).
+    variants:
+      - when: [{ has_flag: treatment_given }]
+        text: >
+          The market lane opens onto the square, the smell of the river strong
+          after the close air of the sickroom. Edric has the meadowsweet in him
+          and Godwin has the revised formula somewhere in his case book, though
+          you expect it will appear there as his own considered revision rather
+          than yours. Sixty years of practice is not easily amended in front of
+          a stranger. But the boy will be on his feet by the end of the week,
+          and the lane back to the road is clear. *** You have won. ***
+    text: >
+      The market lane. The corridor is behind you and Holt is still on the floor
+      of it. You left the meadowsweet with the factor's boy and directions on
+      preparation — someone in that house will follow them, and Edric will recover.
+      You did not win this the right way. But the lane is open and the remedy is
+      in the house, and the outcome is the same. *** You have won. ***
