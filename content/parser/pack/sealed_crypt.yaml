@@ -184,6 +184,29 @@ rooms:
           the iron catacombs gate stands unlocked and swung inward on darkness — and
           through it, north, run the catacombs you came so far to find. The stair
           climbs back up.
+      # Reactive text after the optional grip/nerve beat — the same reactive-description
+      # class as bug_0282/0283. Before the beat fires the room gives no feedback that
+      # the player's grip on the iron key changed anything; both flags need a `when`
+      # reader so the outcome is observable (bug_0305). catacombs_open wins above these
+      # (it is the more specific terminal state). Both variants are reachable: a player
+      # can grip the key and succeed/fail before choosing a lock, so neither flag implies
+      # catacombs_open. Neither variant gates any exit, score, or ending.
+      - when: [{ has_flag: steeled_at_the_iron }]
+        text: >
+          Stone sarcophagi crowd a low chamber; one, set apart and greater than the
+          rest, is the founder's, its lid bound shut by a heavy iron clasp. Against the
+          far wall a smaller tomb stands alone, banded in iron and run round with lead,
+          a ring of wardmarks bitten deep into its lid. To the north, an iron catacombs
+          gate bars the way, its lock shaped for a heavy key — and the iron key is
+          steady in your hand now. The stair climbs back up.
+      - when: [{ has_flag: attempted_the_iron }]
+        text: >
+          Stone sarcophagi crowd a low chamber; one, set apart and greater than the
+          rest, is the founder's, its lid bound shut by a heavy iron clasp. Against the
+          far wall a smaller tomb stands alone, banded in iron and run round with lead,
+          a ring of wardmarks bitten deep into its lid. To the north, an iron catacombs
+          gate bars the way, its lock shaped for a heavy key. The iron key is cold in
+          your grip, and your hand is not quite steady. The stair climbs back up.
     objects: [crypt_gate, founders_coffin, bound_tomb]
     exits:
       - { direction: up, to: chapel_nave }
