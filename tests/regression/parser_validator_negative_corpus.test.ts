@@ -226,6 +226,23 @@ const CASES: NegativeCase[] = [
       wc.conditions.push({ is_unlocked: "phantom_vault" });
     },
   },
+  {
+    // bug_0278: an `unlock_exit` effect whose `from` is absent from pack.rooms silently
+    // writes an unreachable exit-flag key (__exit:phantom_room->hub), making the unlock a
+    // permanent no-op. A typo'd room id passes schema validation but the validator must
+    // catch it ⇒ UNLOCK_EXIT_ROOM_MISSING. Injected on a fresh interaction on the coffer
+    // (the entrance container), which has no interactions in gen(0) — a single defect.
+    code: "UNLOCK_EXIT_ROOM_MISSING",
+    why: "an unlock_exit effect's `from` names a room that does not exist",
+    mutate: (p) => {
+      const coffer = objById(p, "coffer");
+      coffer.interactions.push({
+        verb: "USE",
+        conditions: [],
+        effects: [{ unlock_exit: { from: "phantom_room", to: "hub" } }],
+      });
+    },
+  },
 ];
 
 describe("validateParser negative corpus — rejection-direction witnesses (bug_0218)", () => {

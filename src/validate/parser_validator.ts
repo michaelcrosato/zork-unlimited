@@ -231,6 +231,27 @@ export function validateParser(
         ),
       );
   }
+  // An `unlock_exit` effect whose `from` or `to` is absent from pack.rooms silently
+  // writes an unreachable exit-flag key (__exit:phantom->real), making the unlock a
+  // permanent no-op — harder to diagnose than a dead gate because the effect APPEARS
+  // to fire. Error severity (bug_0278). Checked in a dedicated block (not via
+  // collectRoomRefs) because the two sides need individual messages (bug_0278).
+  for (const e of allEffects(pack)) {
+    if (!("unlock_exit" in e)) continue;
+    for (const [side, id] of [
+      ["from", e.unlock_exit.from],
+      ["to", e.unlock_exit.to],
+    ] as const) {
+      if (!roomIds.has(id))
+        findings.push(
+          err(
+            "UNLOCK_EXIT_ROOM_MISSING",
+            `unlock_exit "${side}" room "${id}" does not exist — the unlock writes an unreachable exit flag and is a permanent no-op.`,
+            [`room:${id}`],
+          ),
+        );
+    }
+  }
 
   // ── Ambiguous aliases: a name/alias must not resolve to two objects (§10.4) ──
   const aliasOwner = new Map<string, string>();
@@ -249,9 +270,13 @@ export function validateParser(
   }
 
   // Bail before graph analysis if references are broken (would crash traversal).
+  // UNLOCK_EXIT_ROOM_MISSING is included because a dangling unlock_exit room id corrupts
+  // the settable-flags set the graph analysis uses (exitFlag writes an unreachable key).
   if (
     findings.some(
-      (f) => f.severity === "error" && ["EXIT_TARGET_MISSING", "START_MISSING"].includes(f.code),
+      (f) =>
+        f.severity === "error" &&
+        ["EXIT_TARGET_MISSING", "START_MISSING", "UNLOCK_EXIT_ROOM_MISSING"].includes(f.code),
     )
   ) {
     return makeReport(pack.meta.id, findings);
@@ -1554,8 +1579,9 @@ function collectObjectStateReads(pack: ParserPack): { open: Set<string>; unlocke
  *  `in_room` condition in any exit, interaction, or win condition, any room/object
  *  variant `when`, any ending variant `when`, or any dialogue-node-variant/topic gate
  *  (DESCENDING all_of/any_of/none_of, so a disjunction-guarded room ref still counts),
- *  PLUS by a `goto` / `place_object.room` effect target (the only two room-id-bearing
- *  effects, src/core/effects.ts). A referenced id absent from pack.rooms is a dangling
+ *  PLUS by a `goto` / `place_object.room` effect target (the room-id-bearing effects
+ *  collected here; unlock_exit.from/.to are checked in a dedicated UNLOCK_EXIT_ROOM_MISSING
+ *  block in the validator body). A referenced id absent from pack.rooms is a dangling
  *  reference — a permanently-dead gate (visited/in_room evaluate false forever) or a
  *  goto/place_object into nowhere — the room-id analogue of EXIT_TARGET_MISSING.
  *  Mirrors collectFlagReads EXACTLY — NOT objectStateReqs, which descends only all_of
@@ -1587,7 +1613,9 @@ function collectRoomRefs(pack: ParserPack): Set<string> {
       for (const v of node.variants ?? []) walkAll(v.when);
       for (const t of node.topics) walkAll(t.conditions);
     }
-  // Effect-side room refs: goto + place_object.room (the only room-id-bearing effects).
+  // Effect-side room refs: goto + place_object.room (the room-id-bearing effects
+  // collected here; unlock_exit.from/.to are checked in a dedicated
+  // UNLOCK_EXIT_ROOM_MISSING block in the validator body).
   for (const e of allEffects(pack)) {
     if ("goto" in e) refs.add(e.goto);
     else if ("place_object" in e) refs.add(e.place_object.room);

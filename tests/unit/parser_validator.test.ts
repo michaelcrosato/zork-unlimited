@@ -29,6 +29,7 @@ describe("parser validator — negative fixtures must fail (§10.4)", () => {
   const VALIDATOR_FIXTURES: [string, string][] = [
     ["parser_exit_target_missing", "EXIT_TARGET_MISSING"],
     ["parser_unresolved_room_reference", "UNRESOLVED_ROOM_REFERENCE"],
+    ["parser_unlock_exit_room_missing", "UNLOCK_EXIT_ROOM_MISSING"],
     ["parser_key_missing", "KEY_MISSING"],
     ["parser_impossible_gate", "IMPOSSIBLE_GATE"],
     ["parser_win_unreachable", "WIN_UNREACHABLE"],
