@@ -180,6 +180,42 @@ function buildPrompt(ctx: {
   const health = targetHealth
     ? `${targetHealth.warnings} validator warning(s)`
     : "(not a pack — engine/repo work; the target pack is the regression baseline)";
+  // For content_new the pack to playtest does NOT exist at assess time (the agent
+  // authors it this cycle), so `target` is just the regression baseline. The quality
+  // oracle is far more valuable spent on the NEW pack than re-playing the baseline a
+  // 20th time — otherwise a freshly-authored pack ships structurally-valid but never
+  // experience-tested until a later rotation cycle. So content_new flips the order:
+  // author first, then blind-playtest the pack you just authored.
+  const isContentNew = top?.category === "content_new";
+  const playtestStep = isContentNew
+    ? [
+        "## STEP 1 — Author the new pack, THEN blind-playtest IT (quality feedback)",
+        "",
+        `You are authoring a new ${top?.target ?? "pack"} this cycle. Order for content_new:`,
+        "1. Author the new pack and get it validating green (validate_story / npm run validate).",
+        "2. THEN spawn a FRESH subagent with NO design context (Agent tool general-purpose, or a",
+        "   clean `claude -p`). Hand it ONLY the locked-down prompt in docs/blind_playtest_protocol.md,",
+        "   pointed at the PACK YOU JUST AUTHORED (its pack_path) + a seed. It must play purely through",
+        "   the mcp__adventureforge__* tools and must NOT read content/, src/, ui/, tests/.",
+        `- WRITE its structured report (route, mechanics, clarity 1-5, enjoyment 1-5, confusion,`,
+        `  concrete findings, verdict) to: ${playtestRecord}  (REQUIRED — no record ⇒ no commit).`,
+        "- Let the blind read of YOUR new pack drive a final polish pass before you commit it, so the",
+        `  pack ships experience-tested, not just structurally valid. (Baseline ${target} need not be replayed.)`,
+      ]
+    : [
+        "## STEP 1 — MANDATORY LLM playtest (quality feedback, every cycle)",
+        "",
+        `Playtest target this cycle: ${target}  (${health})`,
+        "",
+        "- Spawn a FRESH subagent with NO design context (Agent tool general-purpose, or a",
+        "  clean `claude -p` / `codex exec`). Hand it ONLY the locked-down prompt in",
+        "  docs/blind_playtest_protocol.md, with this pack and a seed. It must play purely",
+        "  through the mcp__adventureforge__* tools and must NOT read content/, src/, ui/, tests/.",
+        `- WRITE its structured report (route, mechanics, clarity 1-5, enjoyment 1-5,`,
+        `  confusion, concrete findings, verdict) to: ${playtestRecord}`,
+        "  This file is REQUIRED — loop.sh refuses to commit a cycle with no playtest record.",
+        "- Let the playtest's findings inform the improvement you choose.",
+      ];
 
   return [
     "# AdventureForge AFK improvement cycle (trust, but verify)",
@@ -199,18 +235,7 @@ function buildPrompt(ctx: {
     "You MAY pick a different candidate (or something off-list) if your judgement and",
     "the playtest below say it's higher value — but justify it in AI_LOOP_STATE.md.",
     "",
-    "## STEP 1 — MANDATORY LLM playtest (quality feedback, every cycle)",
-    "",
-    `Playtest target this cycle: ${target}  (${health})`,
-    "",
-    "- Spawn a FRESH subagent with NO design context (Agent tool general-purpose, or a",
-    "  clean `claude -p` / `codex exec`). Hand it ONLY the locked-down prompt in",
-    "  docs/blind_playtest_protocol.md, with this pack and a seed. It must play purely",
-    "  through the mcp__adventureforge__* tools and must NOT read content/, src/, ui/, tests/.",
-    `- WRITE its structured report (route, mechanics, clarity 1-5, enjoyment 1-5,`,
-    `  confusion, concrete findings, verdict) to: ${playtestRecord}`,
-    "  This file is REQUIRED — loop.sh refuses to commit a cycle with no playtest record.",
-    "- Let the playtest's findings inform the improvement you choose.",
+    ...playtestStep,
     "",
     "## STEP 2 — Make ONE improvement",
     "",
