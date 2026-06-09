@@ -1,0 +1,365 @@
+# The Examiner's Commission — a CYOA pack (Stage 1 format).
+#
+# London, October 1694. Mrs Eleanor Alderton, widow of a prosperous mercer
+# in Cheapside, died in September. Her established will (proved 1691, drawn
+# by her solicitor Francis Holt) left her estate — house, plate, and bond
+# securities — to her three long-serving servants who nursed her through
+# seven years of illness. Her son Henry Alderton has produced a second will
+# dated April 1694, purporting to revoke all prior bequests and leave
+# everything to himself. The Prerogative Court of Canterbury has appointed
+# you examiner: examine the papers, take depositions, and return a finding.
+#
+# Novel contributions vs existing CYOA corpus:
+#   (1) COURT EXAMINER ROLE — first ecclesiastical court role in CYOA corpus;
+#       a court examiner of the Prerogative Court of Canterbury is appointed
+#       to take depositions and examine disputed documents in contested probate
+#       matters; authority is evidentiary only — certify, refer, or recommend
+#       rejection — the examiner cannot adjudicate; distinct from every prior
+#       role: coroner (death investigation), magistrate's clerk (civil/criminal
+#       inquiry), tidewaiter (revenue inspection), alnager (measurement law),
+#       excise surveyor (fiscal assessment), fire examiner (commercial
+#       insurance), bellman (voluntary civic watch); operates under
+#       ecclesiastical law and the civil law tradition of Doctors' Commons,
+#       not common law.
+#   (2) WILL FORGERY — first CYOA pack where the subject is authenticity of a
+#       legal instrument rather than a criminal act, revenue fraud, or trade
+#       violation; the forensic question is whether the document itself is
+#       genuine; forgery of a testamentary document is both a criminal offence
+#       (at common law) and a probate matter (in ecclesiastical court); the
+#       guilty party is not a trade offender or revenue evader but a son
+#       seeking to disinherit servants who cared for his mother.
+#   (3) MULTI-MODAL FORGERY EVIDENCE — four distinct detection categories never
+#       previously assembled in this corpus:
+#       (a) MATERIAL ANACHRONISM — the paper bears a duty stamp watermark
+#           introduced by the Stamp Act registrar in September 1694; a will
+#           dated April 1694 cannot have been written on post-September paper;
+#       (b) PHYSICAL CHEMISTRY — the ink's surface oxidation is inconsistent
+#           with eight-month-old writing; the attestation clause shows a sheen
+#           consistent with ink no more than two or three weeks old;
+#       (c) DOCUMENTARY IMPOSSIBILITY — one named witness, Thomas Garrett of
+#           Aldgate, died in January 1694 and cannot have signed anything in
+#           April; the parish burial register is the proof;
+#       (d) PALEOGRAPHIC COMPARISON — letterforms in the attestation clause
+#           diverge from established exemplars of the same claimed hand;
+#           prior packs use burns, measurements, documentary cross-reference,
+#           or anatomical evidence; no pack has previously required the player
+#           to compare handwriting as primary evidence.
+#   (4) DUAL PATH TO MAXIMUM FINDING — reject_on_material (gate:
+#       found_paper_anachronism + found_dead_witness; two-category material
+#       finding, faster route) and refer_to_trial (gate: all six flags;
+#       complete criminal referral) both award +20 and reach max score 50;
+#       each represents a different prosecutorial strategy: material rejection
+#       (the document cannot be genuine on its face) vs complete referral
+#       (proving the full circumstances of fabrication for criminal trial).
+#
+# Score economy (all awards one-shot, guarded with not_flag):
+#   +5  examine_paper     — duty stamp watermark anachronism
+#                           (not_flag: found_paper_anachronism)
+#   +5  examine_ink       — ink oxidation inconsistent with stated age
+#                           (not_flag: found_ink_aging)
+#   +5  check_witnesses   — Thomas Garrett dead Jan 1694, three months before
+#                           the will's stated date (not_flag: found_dead_witness)
+#   +5  compare_letters   — letterform divergence in the attestation clause
+#                           (not_flag: found_letterform_mismatch)
+#   +5  speak_solicitor   — Holt confirms the testatrix's wishes and her
+#                           physical confinement from February onwards
+#                           (not_flag: heard_solicitor)
+#   +5  examine_henry     — Henry's account places the signing at a location
+#                           Mrs Alderton could not have reached; composure
+#                           DC 11 tension beat — both branches award the same
+#                           flag and score (not_flag: heard_henry_discrepancy)
+#   +20 reject_on_material — forgery finding on material grounds
+#                           (gate: found_paper_anachronism + found_dead_witness)
+#   OR
+#   +20 refer_to_trial    — complete criminal referral
+#                           (gate: all six flags)
+#   +10 refer_for_further — provisional referral on chronological grounds
+#                           (gate: found_paper_anachronism + heard_solicitor)
+#   +5  return_undecided  — no specific finding (ungated)
+#   +0  certify_genuine   — certifies the forgery as authentic
+# Best single path:
+#   registry_room: examine_paper (+5) → examine_ink (+5) →
+#   witness_records: check_witnesses (+5) → compare_letters (+5) →
+#   solicitor_chambers: speak_solicitor (+5) →
+#   deposition_room: examine_henry (+5) →
+#   commission_finding: reject_on_material (+20) OR refer_to_trial (+20) = 50.
+#   max_score == reachable maximum (score-economy sound).
+#
+
+meta:
+  id: examiners_commission_v1
+  title: "The Examiner's Commission"
+  start: registry_room
+  # `composure` (value 3) — stat for the examine_henry TENSION beat
+  # (d20 + composure vs DC 11). Both branches award heard_henry_discrepancy
+  # and +5 score — stateKey-convergent. Roll 8 + 3 = 11 beats DC 11.
+  vars_init: { composure: 3 }
+  flags_init: []
+  max_score: 50
+
+scenes:
+  # ── Registry room (hub) ──────────────────────────────────────────────────
+  - id: registry_room
+    title: "The Registry, Doctors' Commons"
+    variants:
+      - when:
+          - all_of:
+              - has_flag: found_paper_anachronism
+              - has_flag: found_ink_aging
+              - has_flag: found_dead_witness
+              - has_flag: found_letterform_mismatch
+              - has_flag: heard_solicitor
+              - has_flag: heard_henry_discrepancy
+        text: >
+          The commission papers are spread across the registry table. Every
+          line of inquiry has been followed: the paper, the ink, the witness
+          names, the correspondence, the solicitor's account, Henry Alderton's
+          own deposition. The picture is complete. The finding you return now
+          will stand in the court record.
+    text: >
+      A small room off the main registry of the Prerogative Court of
+      Canterbury, Doctors' Commons, London. October 1694. The registrar has
+      laid out what you require: Mrs Alderton's established will of 1691 (drawn
+      by Francis Holt, solicitor, proved in this court two years past), the
+      disputed will of April 1694 produced by Henry Alderton, a bundle of
+      Mrs Alderton's correspondence with her son, and Henry Alderton's written
+      deposition. The commission appointing you examiner rests on top. A
+      duty-stamp press stands on the shelf by the door — the Stamp Act took
+      effect in September, and the court has used stamped paper for all
+      instruments since.
+    choices:
+      - id: examine_paper
+        text: "Examine the paper of the disputed will."
+        conditions: [ { not_flag: found_paper_anachronism } ]
+        effects:
+          - set_flag: found_paper_anachronism
+          - add_journal: "The disputed will is written on a single sheet of laid paper. Held to the window, the watermark resolves clearly: an embossed duty stamp, the crown-and-anchor mark introduced by the Stamp Act registrar in September 1694. The will is dated April 1694. No sheet bearing this stamp existed in April. This paper was not available when Henry Alderton claims it was signed."
+          - inc_var: { name: score, by: 5 }
+        next: registry_room
+      - id: examine_ink
+        text: "Examine the ink of the disputed will."
+        conditions: [ { not_flag: found_ink_aging } ]
+        effects:
+          - set_flag: found_ink_aging
+          - add_journal: "Iron gall ink from April 1694 should show six months of surface oxidation by now: the strokes faded from blue-black to a uniform grey-brown, the sheen long gone. The ink on the body of the disputed will has aged as expected. But the attestation clause and witness signatures at the foot show a surface sheen consistent with ink no more than two or three weeks old. The attestation was not written in April."
+          - inc_var: { name: score, by: 5 }
+        next: registry_room
+      - id: go_witness_records
+        text: "Examine the witness names against the parish burial registers."
+        next: witness_records
+      - id: go_solicitor
+        text: "Speak with Francis Holt, Mrs Alderton's solicitor."
+        next: solicitor_chambers
+      - id: go_deposition
+        text: "Take Henry Alderton's examination in the deposition room."
+        next: deposition_room
+      - id: go_finding
+        text: "Issue your commission finding."
+        next: commission_finding
+
+  # ── Sub-scene: witness records ───────────────────────────────────────────
+  - id: witness_records
+    title: "The Witness Records"
+    text: >
+      The disputed will names two witnesses to its execution: Thomas Garrett
+      of Aldgate and William Sykes of Southwark. The registry holds the city
+      parish burial registers, submitted annually. Mrs Alderton's established
+      correspondence — letters to her solicitor between 1691 and 1694, written
+      in her own hand — is also set out here.
+    choices:
+      - id: check_witnesses
+        text: "Search the burial registers for the named witnesses."
+        conditions: [ { not_flag: found_dead_witness } ]
+        effects:
+          - set_flag: found_dead_witness
+          - add_journal: "St Botolph Aldgate, burial register, January 1694: 'Thomas Garrett, chandler, aged fifty-eight, of Aldgate Ward, buried the eleventh.' Thomas Garrett was in the ground three months before the April date on the disputed will. He cannot have signed it. The second named witness, William Sykes of Southwark, is alive and has submitted a deposition to this court denying any knowledge of the instrument."
+          - inc_var: { name: score, by: 5 }
+        next: witness_records
+      - id: compare_letters
+        text: "Compare the signature on the disputed will with Mrs Alderton's letters."
+        conditions: [ { not_flag: found_letterform_mismatch } ]
+        effects:
+          - set_flag: found_letterform_mismatch
+          - add_journal: "The correspondence bundle spans three years; Mrs Alderton's hand is consistent throughout — ascenders with open loops, e's firmly closed, the capital A formed in a single unbroken stroke. The disputed will's signature shows closed ascender loops, open e's, and a capital A made in two strokes. The imitation is competent, but not hers."
+          - inc_var: { name: score, by: 5 }
+        next: witness_records
+      - id: return_from_records
+        text: "Return to the registry."
+        next: registry_room
+
+  # ── Sub-scene: solicitor interview ───────────────────────────────────────
+  - id: solicitor_chambers
+    title: "Francis Holt, Solicitor"
+    text: >
+      Francis Holt has practised in Cheapside for thirty years. He drew
+      Mrs Alderton's will in 1691 and attended her each year until her death
+      in September. He is a careful man and has brought his attendance book.
+    choices:
+      - id: speak_solicitor
+        text: "Take his account of Mrs Alderton's wishes and final months."
+        conditions: [ { not_flag: heard_solicitor } ]
+        effects:
+          - set_flag: heard_solicitor
+          - add_journal: "Holt is methodical. Mrs Alderton's instructions in 1691 were firm: the three servants who had kept the house since her husband's death were to be provided for; Henry, who had not visited in four years, was to receive only a small legacy already paid out. She reconfirmed this in a letter to Holt dated August 1694, a month before her death. She was also, Holt says, entirely confined to her house from February onwards — too ill to travel, receiving no visitors but the physician and the servants. She could not have attended any signing at Henry's lodgings in Southwark, as the disputed will purports."
+          - inc_var: { name: score, by: 5 }
+        next: solicitor_chambers
+      - id: leave_solicitor
+        text: "Thank Mr Holt and return to the registry."
+        next: registry_room
+
+  # ── Sub-scene: Henry Alderton deposition ─────────────────────────────────
+  - id: deposition_room
+    title: "The Deposition Room"
+    # Tension beat — both branches award heard_henry_discrepancy and +5.
+    # On success: the examiner holds composure; the discrepancy is elicited
+    # directly and Henry's pause is visible. On failure: Henry is combative
+    # and the session pressured, but the discrepancy emerges from the written
+    # record regardless. Same flag, same score, same routes forward (class
+    # of bug_0334 fix — effects at choice level, not inside skill_check).
+    text: >
+      Henry Alderton is a man of forty with his mother's dark brows and none
+      of her patience. He sits across the table with a lawyer's clerk beside
+      him and a prepared account of the will-signing that he has plainly
+      rehearsed. He is confident that you are an obstacle to be worn down.
+    choices:
+      - id: examine_henry
+        text: "Examine him on the circumstances of the will's execution."
+        conditions: [ { not_flag: heard_henry_discrepancy } ]
+        effects:
+          - set_flag: heard_henry_discrepancy
+          - inc_var: { name: score, by: 5 }
+        skill_check:
+          skill: composure
+          difficulty: 11
+          on_success:
+            - add_journal: "Henry's account runs smoothly: the will was signed at his lodgings in Southwark on the fourteenth of April, with Thomas Garrett and William Sykes present. You note, without inflection, that Thomas Garrett of Aldgate is entered in the St Botolph burial register for January of this year. A pause runs through Henry before he continues. He says he may have misremembered the witness name. He mentions a third witness. There is no third witness in the instrument."
+            - goto: deposition_room
+          on_failure:
+            - add_journal: "Henry talks over your questions — his clerk interrupts twice — but the prepared account stands until you read back the witness name: Thomas Garrett of Aldgate, signed as present at the April execution. The burial register for St Botolph Aldgate records Thomas Garrett as buried in January. Henry does not address this directly. The deposition record is taken as given; the discrepancy speaks for itself."
+            - goto: deposition_room
+      - id: leave_deposition
+        text: "End the examination and return to the registry."
+        next: registry_room
+
+  # ── Terminal: commission finding ─────────────────────────────────────────
+  - id: commission_finding
+    title: "The Commission Finding"
+    text: >
+      The registry table holds everything gathered under this commission. The
+      court requires a finding: certify the disputed will as authentic, refer
+      the matter further, or recommend rejection. Whatever is written today
+      will stand as the official record.
+    choices:
+      - id: certify_genuine
+        text: "Certify the disputed will as genuine — grant probate to Henry Alderton."
+        next: ending_certified
+      - id: return_undecided
+        text: "Return the matter undecided — insufficient ground for a specific finding."
+        effects:
+          - inc_var: { name: score, by: 5 }
+        next: ending_undecided
+      - id: refer_for_further
+        text: "Refer for further examination — note the paper anachronism and solicitor's account."
+        conditions:
+          - all_of:
+              - has_flag: found_paper_anachronism
+              - has_flag: heard_solicitor
+        effects:
+          - inc_var: { name: score, by: 10 }
+        next: ending_referred
+      - id: reject_on_material
+        text: "Recommend rejection on material grounds — the paper postdates the will and a named witness was dead before it was signed."
+        conditions:
+          - all_of:
+              - has_flag: found_paper_anachronism
+              - has_flag: found_dead_witness
+        effects:
+          - inc_var: { name: score, by: 20 }
+        next: ending_rejected
+      - id: refer_to_trial
+        text: "Refer to criminal trial — complete chain: paper, ink, witness, correspondence, solicitor, deposition."
+        conditions:
+          - all_of:
+              - has_flag: found_paper_anachronism
+              - has_flag: found_ink_aging
+              - has_flag: found_dead_witness
+              - has_flag: found_letterform_mismatch
+              - has_flag: heard_solicitor
+              - has_flag: heard_henry_discrepancy
+        effects:
+          - inc_var: { name: score, by: 20 }
+        next: ending_trial
+      - id: reconsider_finding
+        text: "Return to the papers — there is more to establish."
+        next: registry_room
+
+endings:
+  - id: ending_certified
+    title: "Certified as Genuine"
+    text: >
+      The probate clerk enters the disputed will in the court record. Henry
+      Alderton collects the grant of probate before the week is out. The three
+      servants who nursed Mrs Alderton through her final years receive nothing.
+      Francis Holt writes a letter of protest to the registrar; it is filed and
+      never answered. The duty stamp watermark on the will — paper that did not
+      exist in April — is never remarked upon. Thomas Garrett, whose name was
+      placed on a document he never saw, three months after he died, rests in
+      St Botolph's churchyard with no knowledge of the use his name was put to.
+
+  - id: ending_undecided
+    title: "Undecided"
+    text: >
+      Your finding: the commission cannot certify the instrument, but no
+      specific ground for rejection has been established on the record. The
+      matter returns to the court in an inconclusive posture. The registrar
+      appoints a second examiner. Three months pass. The second examiner finds
+      the paper anachronism within the first hour and the will is refused
+      probate. You delayed justice without preventing it — a better result than
+      certifying fraud, and less than your commission required.
+
+  - id: ending_referred
+    title: "Referred for Further Examination"
+    text: >
+      Your finding notes two grounds for concern: the paper stock postdates
+      the will's stated execution, and the solicitor's account places
+      Mrs Alderton physically confined to her house from February — unable to
+      attend any signing at her son's Southwark lodgings. The court pauses
+      probate and appoints a second examiner to pursue the witness records and
+      correspondence. Within a fortnight, Thomas Garrett's burial entry is
+      found and the letterform comparison completed. The will is refused
+      probate on material forgery grounds. Henry Alderton is referred to the
+      grand jury for forgery and uttering. You built the foundation; another
+      examiner raised the structure on top of it.
+
+  - id: ending_rejected
+    title: "Rejected on Material Grounds"
+    text: >
+      Your finding is precise and short: the disputed will cannot be genuine.
+      The paper bears a duty stamp that did not exist until September 1694;
+      the will is dated April 1694. One of the named witnesses, Thomas Garrett
+      of Aldgate, died in January 1694 and could not have executed anything in
+      April. Either ground alone would be sufficient for rejection; both
+      together make the finding incontestable. The court refuses probate that
+      afternoon. Henry Alderton's lawyers protest on every procedural ground
+      available to them. None holds. The forgery is referred to the common-law
+      courts. The three servants who cared for Mrs Alderton until her last day
+      take possession of the house on Cheapside before Christmas. It is the
+      kind of finding that requires only the right evidence, read without
+      flinching.
+
+  - id: ending_trial
+    title: "Referred for Criminal Trial"
+    text: >
+      Your finding runs to four pages and names every ground: the paper
+      postdating its own stated execution date, the artificial oxidation of
+      the attestation clause, the burial record of Thomas Garrett dead three
+      months before he purportedly signed, the letterform divergence in the
+      signature, Francis Holt's confirmation of the testatrix's settled wishes
+      and her physical confinement from February, and Henry Alderton's own
+      deposition placing the signing at a location she could not have reached.
+      The court refers the matter to the King's Bench. At trial, the paper
+      expert and the parish clerk give evidence alongside Holt and Sykes.
+      Henry Alderton is convicted of forgery and uttering. It is the kind of
+      verdict that closes every door he tried to open — and it holds because
+      the chain of evidence was built completely before the commission was
+      returned.
