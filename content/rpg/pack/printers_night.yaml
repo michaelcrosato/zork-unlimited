@@ -1,0 +1,485 @@
+# The Printer's Night — a Stage 4 (Hero's-Quest) pack (spec §13).
+#
+# The game's ELEVENTH RPG pack — and the FIRST to introduce `stealth`, a
+# physical-concealment stat measuring the ability to move through a closed space
+# at night without sound, manage a dark lantern's light to avoid casting shadows
+# into the wrong corners, and time actions to the gaps in ambient noise.
+#
+# Stealth is not social: cunning (falconers_ransom) works by manipulating another
+# person's mental model — stealth works by becoming absent from that model entirely.
+# The distinction: misdirecting attention vs. removing yourself from its field.
+# No prior RPG pack uses a physical-concealment stat; the ten predecessors use
+# physical force (might, craft, nerve), social command (authority, cunning),
+# clinical observation (physick), formal argumentation (rhetoric), or wilderness
+# reading (tracking, lore). Stealth is purely kinetic/spatial — the ability to
+# occupy a space without claiming it.
+#
+# London, 3 August 1696. A Privy Council warrant has tasked you — an agent of the
+# Sergeant-at-Arms' department — with entering a back-street print shop off
+# Aldersgate Street and seizing the type-block for a pamphlet called "The Barfleur
+# Memorandum." The pamphlet names naval officers who withheld wages from pressed
+# seamen aboard HMS Barfleur in the 1694 campaign. The Admiralty's position: the
+# document is seditious and the block must be taken before sunrise.
+#
+# Master Fen (the printer) is asleep upstairs. His journeyman Birch sleeps in the
+# gate-house across the lane. The shop was entered through a picked side-lock. Your
+# contact left a dark lantern on the counter. You have until first light.
+#
+# NEW STAT: STEALTH (3 base). Physical concealment and silent movement.
+# Distinct from all prior RPG stats:
+#   might (raw force) — the opposite axis; stealth is the minimum of force
+#   craft (artisan precision) — fine skill at making; stealth is fine skill at
+#     un-making your presence
+#   nerve (composure under pressure) — related but distinct: nerve is internal
+#     steadiness; stealth is external silence — both can differ independently
+#   cunning (psychological misdirection) — social, not physical: cunning changes
+#     what the watcher SEES; stealth changes what there IS to see
+#   authority (formal institutional command) — the opposite mode; authority claims
+#     presence; stealth refuses it
+#   physick/rhetoric/tracking/lore — epistemic/technical; stealth is purely kinetic
+# Stealth is the ability to become absent in an occupied space: controlling sound,
+# light, and timing so that what you do leaves no trace in anyone's awareness.
+#
+# Used in the exit skill_check: USE dark_lantern ON back_door (stealth DC 12).
+# Base 3 → d20+3 >= 12 → d20 >= 9 → 12/20 = 60% (significant gamble).
+# After proof_schedule (+3): stealth 6 → d20 >= 6 → 15/20 = 75%.
+# After pamphlet_proof (+3): stealth 9 → d20 >= 3 → 18/20 = 90% near-certain.
+# Both preparations: 90%. The pack's answer: read both before the door.
+#
+# TWO RESOLUTION PATHS (eleventh in RPG corpus; pattern from falconers_ransom):
+#   STEALTH (primary, full score 50): take dark_lantern (shop_floor, start);
+#   read proof_schedule (+5, +3 stealth: Birch confirmed in gate-house, Fen at 5am);
+#   read pamphlet_proof (+10, +3 stealth: block location and approach angle mapped);
+#   TAKE type_block (take_effects +10: objective secured); USE dark_lantern ON
+#   back_door (stealth DC 12, +10: silent exit); WIN night_lane on_enter +15.
+#   COMBAT (fallback, partial 40): fail or skip stealth check — must defeat
+#   Edgar Tew (night watchman, back_court) before the east exit opens.
+#
+# Map:
+#   shop_floor (start; dark_lantern)
+#   │  E → composing_room (proof_schedule: +5, +3 stealth)
+#   │       E → press_room (pamphlet_proof: +10, +3 stealth;
+#   │                        type_block: TAKE +10;
+#   │                        back_door: stealth skill_check +10)
+#   │                N → back_court (Edgar Tew; E gated: block_taken + [slip_past OR edgar_defeated])
+#   │                     E → night_lane (WIN +15)
+#
+# Score (max 50, the 5+10+10+10+15 shape):
+#   +5  READ proof_schedule    — Birch absent inside, Fen's morning pattern (+3 stealth)
+#   +10 READ pamphlet_proof    — block location and approach angle (+3 stealth)
+#   +10 TAKE type_block        — objective secured (take_effects, one-shot)
+#   +10 stealth check success  — USE dark_lantern ON back_door (stealth DC 12)
+#   +15 night_lane on_enter    — WIN (locomotion win, same step as end_game)
+#
+# Stealth calibration (d20):
+#   Base stealth 3: d20+3 >= 12 → 60% gamble.
+#   +proof_schedule: stealth 6, d20 >= 6 → 75%.
+#   +pamphlet_proof: stealth 9, d20 >= 3 → 90% near-certain.
+#   Both: 90%. The pack's honest answer: gather both reads before the door.
+#
+# Combat death check (no combat_guaranteed):
+#   Player hp 20 / atk 4 / def 2. Edgar Tew hp 12 / atk 5 / def 2.
+#   Worst player dmg: 1+4-2 = 3. Rounds to kill Edgar: ceil(12/3) = 4.
+#   Worst Edgar dmg: 6+5-2 = 9. Over 3 rounds: 27 > 20 HP.
+#   Edgar CAN kill on worst dice. ending_stopped (death) is reachable.
+#   No combat_guaranteed — the pack's answer is the stealth path.
+
+meta:
+  id: printers_night_v1
+  title: "The Printer's Night"
+  start_room: shop_floor
+  # `stealth` (3 base): physical concealment and silent movement — the ability to
+  # occupy a space without claiming it. First in the RPG corpus to use a physical-
+  # concealment stat. Used in the exit skill_check (USE dark_lantern ON back_door,
+  # DC 12): base 3 (60% gamble); +proof_schedule (+3) = 75%; +pamphlet_proof (+3)
+  # = 90% near-certain; both preps = 90%. Does not boost combat stats.
+  vars_init: { hp: 20, attack: 4, defense: 2, stealth: 3 }
+  flags_init: []
+  max_score: 50
+
+rooms:
+  - id: shop_floor
+    name: "The Print Shop"
+    description: >
+      The front room of a narrow back-street print shop, entered by a picked side-lock.
+      The shuttered windows admit no street light. A dark lantern sits on the counter
+      near the door — left here by your contact, the wick already trimmed and the
+      shutter closed. The smell of damp paper and old ink is pervasive. A doorway to
+      the east opens onto the composing room. Above a narrow stair at the back, Master
+      Fen is asleep. He wakes at five.
+    variants:
+      - when: [{ has_flag: slip_past }]
+        text: >
+          The print shop, the mission done. The counter is as you found it. Fen will be
+          down at five and will find the chase empty. The composing room is east; the
+          side-lock door is behind you.
+    objects: [dark_lantern]
+    exits:
+      - { direction: east, to: composing_room }
+
+  - id: composing_room
+    name: "The Composing Room"
+    description: >
+      Type cases line the north wall in their racks — shallow drawers of moveable type,
+      each labelled in a fine careful hand. A composing stick and galley tray sit on the
+      bench. Pinned to the board above the bench is a hand-written schedule in Fen's own
+      writing: this week's print jobs and the household's morning routine. The print shop
+      is back west; the press room opens to the east.
+    variants:
+      - when: [{ has_flag: schedule_read }]
+        text: >
+          The composing room, the schedule already in your head: Birch is in the gate-house
+          outside tonight, not inside; Fen comes down for water at five. You have the shop
+          to yourself until then. The print shop is west; the press room is east.
+    objects: [proof_schedule]
+    exits:
+      - { direction: west, to: shop_floor }
+      - { direction: east, to: press_room }
+
+  - id: press_room
+    name: "The Press Room"
+    description: >
+      The press dominates the back room — a full wooden common press, its platen raised
+      and the tympan folded back. The type-block for the current job is locked in the
+      press chase at the left side, held by three iron type-bolts. On the press bench,
+      a proof sheet from last night's work lies face-up under a rag. At the rear of the
+      room, behind the press, a low back door leads to the court behind the building.
+      The composing room is back west.
+    # Three variants: block taken; clean exit confirmed; else default (all objects visible).
+    variants:
+      - when: [{ has_flag: slip_past }]
+        text: >
+          The press room, the chase empty and the door closed behind you. The composing
+          room is back west.
+      - when: [{ has_flag: block_taken }]
+        text: >
+          The press room. The chase is empty — the type-block is in your satchel. The
+          proof sheet is still on the bench. The back door leads north to the court.
+          The composing room is west.
+    objects: [pamphlet_proof, type_block, back_door]
+    exits:
+      - { direction: west, to: composing_room }
+      - { direction: north, to: back_court }
+
+  - id: back_court
+    name: "The Back Court"
+    description: >
+      A narrow cobbled court behind the print shop, walled on three sides, open east
+      into the lane. Edgar Tew — the ward's night watchman — stands in the lane entrance
+      with his lantern, making his regular check of the buildings. He has not yet turned
+      toward the court. The press room is back south.
+    # Two variants: stealth (slip_past); combat (edgar_defeated).
+    variants:
+      - when: [{ has_flag: slip_past }]
+        text: >
+          The back court, clear. Edgar Tew's lantern moves away down the lane — he
+          completed his check and found nothing. The lane east is open. The press room
+          is back south.
+      - when: [{ has_flag: edgar_defeated }]
+        text: >
+          The back court, Edgar Tew down across the lane entrance. The lane is open
+          to the east. The press room is back south.
+    exits:
+      - { direction: south, to: press_room }
+      - direction: east
+        to: night_lane
+        conditions:
+          - { has_flag: block_taken }
+          - { any_of: [{ has_flag: slip_past }, { has_flag: edgar_defeated }] }
+        locked_msg: >
+          The way east is blocked — either the type-block is still in the press room
+          and your orders are unfinished, or Edgar Tew stands in the lane entrance
+          and has not been dealt with.
+
+  - id: night_lane
+    name: "The Night Lane"
+    description: >
+      The lane behind Aldersgate runs north into the pre-dawn dark, the city quiet
+      around it. Behind you the print shop's back court is empty; above it, Fen's
+      window shows no light. The type-block is in your satchel and the warrant is
+      served. The Barfleur Memorandum will not be printed from this shop.
+    # Locomotion win (+15 capstone): fires on first entry, same step as end_game.
+    # SCORE_PEAKS_BEFORE_WIN does not fire on a navigation win (bug_0116).
+    on_enter:
+      - set_quest_stage: { quest: pamphlet_retrieval, stage: mission_complete }
+      - add_journal: >
+          Out of the court and into the lane. The block is secured; Fen will find the
+          chase empty at five. The Memorandum stays unprinted. (+15)
+      - inc_var: { name: score, by: 15 }
+    exits:
+      - { direction: south, to: back_court }
+
+objects:
+  - id: dark_lantern
+    name: "dark lantern"
+    aliases: [lantern, lamp, dark lamp, shuttered lantern, oil lantern, light, hand lantern, pocket lantern, small lantern, shutter, lantern shutter, bull's eye, bullseye lantern, bull-eye, iron lantern]
+    description: >
+      A small bull's-eye lantern with an iron shutter — when opened, it throws a
+      concentrated beam; shuttered, it shows nothing from outside. Your contact left
+      it here with the wick already trimmed and the oil full. It is the only light
+      you have.
+    takeable: true
+
+  - id: proof_schedule
+    name: "Fen's schedule"
+    aliases: [schedule, work schedule, schedule sheet, fen's schedule, weekly schedule, work sheet, timetable, posted schedule, pinned schedule, board note, pinned paper, note, household schedule, bench note, routine, morning routine]
+    description: >
+      A sheet of paper pinned to the board above the composing bench — written in Fen's
+      close, economical hand. It lists this week's print jobs and the household's
+      morning routine.
+    variants:
+      - when: [{ has_flag: schedule_read }]
+        text: >
+          The schedule, already read. Birch in the gate-house tonight; Fen down for
+          water at five. You have the shop until then.
+    takeable: true
+    read_text: >
+      The schedule covers this week's jobs: two broadsheet runs and the current pamphlet
+      commission. At the bottom, in the same hand: 'Household: Birch night-watch,
+      gate-house. Morning: F. downstairs 5 o'clock, composing room water, press check;
+      B. in at 7.' You read it twice. Birch is in the gate-house outside — not in the
+      building. Fen comes down at five; it is currently past three. You have the shop
+      to yourself for the next ninety minutes.
+    interactions:
+      # First read (lantern required): +5 score, +3 stealth (Birch absent, Fen's timing known).
+      # One-shot: gated on has_item dark_lantern (dark room, need light) + not_flag schedule_read.
+      - verb: READ
+        target: proof_schedule
+        conditions:
+          - { has_item: dark_lantern }
+          - { not_flag: schedule_read }
+        effects:
+          - set_flag: schedule_read
+          - inc_var: { name: stealth, by: 3 }
+          - inc_var: { name: score, by: 5 }
+          - set_quest_stage: { quest: pamphlet_retrieval, stage: intel_gathered }
+          - add_journal: >
+              Fen's schedule: Birch is in the gate-house (not inside tonight); Fen
+              comes down at five for composing room water. Shop is clear until then.
+              (+3 stealth, +5)
+          - narrate: >
+              You hold the lantern's beam close to the paper. The last lines tell you
+              what you needed: 'Birch night-watch, gate-house.' Birch is outside in
+              the separate building across the lane — not in the shop. Master Fen
+              comes down at five, ninety minutes from now. The building's pattern is
+              written in Fen's own hand and none of it touches your window. You fold
+              the knowledge into the part of your mind that converts timing into
+              movement.
+
+  - id: pamphlet_proof
+    name: "proof sheet"
+    aliases: [proof, proof sheet, pamphlet, memorandum, barfleur memorandum, the memorandum, printed proof, proof copy, press proof, draft, printed sheet, text, document, sheet, barfleur, broadsheet draft, pamphlet text, pamphlet sheet]
+    description: >
+      A single printed sheet lying face-up on the press bench beneath a rag — a proof
+      impression from last night's work, the ink barely dry. The title is legible across
+      the top: 'The Barfleur Memorandum.' Below it, dense text in a small roman face.
+    variants:
+      - when: [{ has_flag: proof_read }]
+        text: >
+          The proof sheet on the bench. You have read it. The type-block that set
+          this is in your satchel.
+    takeable: false
+    read_text: >
+      'The Barfleur Memorandum. To the Reader: the following men were pressed into His
+      Majesty's service aboard HMS Barfleur between April and September 1694. At the close
+      of the summer commission, wages for the period 22–31 August 1694 — nine days' service —
+      were withheld without notice, accounting, or appeal. The sums range from fourteen
+      shillings to one pound four.' Fifteen names follow in a close column, each with an
+      amount in shillings. The last line: 'The officer commanding this commission held
+      the paybook. The amounts are attested on oath.'
+      In pencil below the printed text, a note in Fen's hand: 'Block in chase, left side,
+      three bolts. Approach from bench side — press frame doesn't creak from that angle.'
+      The printer made a note for himself. You read it as a map.
+    interactions:
+      # First read (lantern required): +10 score, +3 stealth (block location and approach angle).
+      # One-shot: gated on has_item dark_lantern + not_flag proof_read.
+      - verb: READ
+        target: pamphlet_proof
+        conditions:
+          - { has_item: dark_lantern }
+          - { not_flag: proof_read }
+        effects:
+          - set_flag: proof_read
+          - inc_var: { name: stealth, by: 3 }
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: pamphlet_retrieval, stage: pamphlet_known }
+          - add_journal: >
+              The Barfleur Memorandum: fifteen pressed men, nine days' wages withheld,
+              names and amounts. Fen's pencil note: 'Block in chase, left side, three
+              bolts. Approach from bench side — press frame doesn't creak from that angle.'
+              The printer's own note gives you the approach. (+3 stealth, +10)
+          - narrate: >
+              Fifteen names run down the column — Jonas Creel, Henry Sparr, Thomas Mote,
+              and twelve others — with their shillings tallied beside each. The officer
+              commanding held the paybook. You are in this room in this dark to ensure
+              that account stays private. Then you read the pencil note. Fen wrote it as
+              a reminder to himself: block on the left, three bolts, bench-side approach,
+              no creak. You are reading it as a map of the only path through the room that
+              won't carry sound. The route from the bench to the door is already in your
+              hands.
+
+  - id: type_block
+    name: "type-block"
+    aliases: [block, type block, type, type set, press block, letter block, set type, pamphlet block, moveable type, forme, type forme, chase block, galley, barfleur block, memorandum block, the block, wooden block, forme block]
+    description: >
+      The wooden forme in the press chase at the left side — two thousand pieces of
+      moveable type locked in a frame by three iron type-bolts. The title, set in a
+      larger face at the top, reads 'The Barfleur Memorandum.' Below it, column after
+      column of small roman type: fifteen names, fifteen figures, one officer's name
+      at the foot.
+    variants:
+      - when: [{ has_flag: block_taken }]
+        text: >
+          The press chase is empty. The three type-bolts lie on the bench where you
+          set them down.
+    takeable: true
+    # take_effects: award +10 on the deliberate CLAIM of the mission objective (bug_0107
+    # pattern: "took the type-block" is a distinct act from "reached the press room").
+    # One-shot intrinsic: once in inventory, TAKE can no longer resolve.
+    take_effects:
+      - set_flag: block_taken
+      - inc_var: { name: score, by: 10 }
+      - set_quest_stage: { quest: pamphlet_retrieval, stage: block_secured }
+      - add_journal: >
+          The type-block is out of the chase and in your satchel — three bolts set
+          down on the bench without a sound. The Memorandum will not be printed from
+          this block. (+10)
+      - narrate: >
+          You work the three type-bolts out with steady fingers — no jerk, no dropped
+          iron — and lift the forme clear of the chase. It is heavier than it looks:
+          two thousand pieces of lead type, set in a frame, spelling out the names of
+          fifteen men who were pressed and not paid nine days' wages. You wrap it in
+          the cloth from your satchel and secure the buckle. The chase is empty. The
+          bench is as it was.
+
+  - id: back_door
+    name: "back door"
+    aliases: [door, back door, rear door, exit, latch, iron latch, back exit, shop door, press door, court door, wooden door, door latch, night door, rear exit, back wall door]
+    description: >
+      A low-framed door in the back wall of the press room, hung on iron hinges. The
+      latch is a plain iron bar lift — quiet enough if you ease it with even pressure,
+      loud enough to carry up the stair if you don't. Beyond the door is the back court;
+      Edgar Tew's lantern is visible through the gap at the frame.
+    variants:
+      - when: [{ has_flag: slip_past }]
+        text: >
+          The back door, already closed behind you. The court is clear.
+      - when: [{ has_flag: door_attempted }]
+        text: >
+          The back door, standing slightly ajar from your attempt. The court is north.
+    takeable: false
+    interactions:
+      # The exit skill_check — USE dark_lantern ON back_door (stealth DC 12).
+      # Success: slip_past set → east exit from back_court opens (no fight required).
+      # Failure: door_attempted set, no slip_past → must defeat Edgar in back_court.
+      # One-shot: gated on not_flag door_attempted; both branches set door_attempted.
+      - verb: USE
+        item: dark_lantern
+        target: back_door
+        command_verb: ease
+        command_template: "ease {target} using {item}"
+        conditions: [{ not_flag: door_attempted }]
+        skill_check:
+          skill: stealth
+          difficulty: 12
+          on_success:
+            - set_flag: door_attempted
+            - set_flag: slip_past
+            - inc_var: { name: score, by: 10 }
+            - set_quest_stage: { quest: pamphlet_retrieval, stage: door_cleared }
+            - add_journal: >
+                The latch lifted without a sound. You eased through, closed it behind
+                you, and were in the court before Edgar Tew's lantern moved. (+10)
+            - narrate: >
+                You shutter the lantern to a thread of light, curl two fingers under
+                the latch bar, and apply pressure the way you would to a watch-spring:
+                continuous, unbroken, nothing that snaps or hesitates. The bar rises.
+                The hinge breathes out. The door opens two inches, four, eight — and
+                you are through, the door pulled closed behind you with the same even
+                care. Edgar Tew's lantern floats at the far end of the lane. It has not
+                moved. You are outside, the block in your satchel, and nobody has heard
+                it.
+          on_failure:
+            - set_flag: door_attempted
+            - add_journal: >
+                The latch caught — a short, hard sound in the silence. From above the
+                stairwell a floorboard shifted. Edgar Tew's lantern is still at the lane
+                entrance. The door stands ajar. You will have to go through and settle
+                the court the direct way.
+            - narrate: >
+                Your finger slips on the latch bar at the halfway point and the iron
+                drops with a sound like a struck nail — short, hard, and clear. From
+                above the stairwell you hear a single floorboard shift: Fen awake
+                enough to have heard it, or turning in his sleep — it does not matter
+                which. Edgar Tew's lantern at the lane entrance has not moved, but you
+                have made a noise and the clean way out is no longer available. The door
+                stands ajar. The court is north and the direct path is what is left.
+
+enemies:
+  - id: edgar_tew
+    name: "Edgar Tew"
+    description: >
+      The ward's night watchman — a compact, deliberate man in a heavy coat, carrying
+      a lantern and a short staff. He is neither looking for trouble nor unprepared for
+      it. He has made this check a hundred nights and knows which sounds belong here.
+    room: back_court
+    hp: 12
+    attack: 5
+    defense: 2
+    defeat_flag: edgar_defeated
+    death_ending: ending_stopped
+    on_defeat:
+      - set_quest_stage: { quest: pamphlet_retrieval, stage: court_cleared }
+      - add_journal: >
+          Edgar Tew is down in the court. The lane east is open.
+
+win_conditions:
+  # Locomotion win: reaching night_lane — accessible from back_court east exit only
+  # when block_taken AND (slip_past OR edgar_defeated). The +15 capstone fires on
+  # night_lane's on_enter in the same step as the win. SCORE_PEAKS_BEFORE_WIN does
+  # not fire on a navigation win (bug_0116).
+  - id: block_retrieved
+    conditions: [{ visited: night_lane }]
+    ending: ending_retrieved
+
+endings:
+  - id: ending_retrieved
+    title: "The Memorandum Suppressed"
+    # Reactive: stealth-path epilogue (slip_past) names the clean exit.
+    # Base text covers the combat path. Test reaches this via Edgar combat;
+    # base text must be variant-free on that route (slip_past not set).
+    variants:
+      - when: [{ has_flag: slip_past }]
+        text: >
+          The lane behind Aldersgate is quiet. Edgar Tew's lantern has moved on — he
+          made his check, found nothing, and is already a street away. You walk north
+          with the type-block wrapped in your satchel cloth. Five hundred copies of the
+          Barfleur Memorandum that will not be printed. Fifteen names — Jonas Creel,
+          Henry Sparr, Thomas Mote, and twelve others — will carry their nine days unpaid
+          for however long it takes until someone sets the type again. The Admiralty will
+          not see a broadsheet this week. Whether what was in it deserved to reach
+          Parliament is a question you are not paid to have. You did your work and left
+          no trace of it. *** You have won. ***
+    text: >
+      The lane behind Aldersgate at three in the morning, Edgar Tew down in the court
+      behind you. The type-block is in your satchel. You did not leave as quietly as
+      your orders implied, but you left, and the block comes with you. The ward constable
+      will find Edgar by dawn; he will have a bruise and a story about an intruder, and
+      the investigation will go nowhere because the Privy Council will see to that. The
+      Barfleur Memorandum will not be printed from this block. Fifteen names — Jonas Creel,
+      Henry Sparr, and thirteen others — will stay where they are, in a proof sheet on
+      a press bench and in Fen's memory, for now. You have your warrant and the lane
+      is open ahead of you. *** You have won. ***
+
+  - id: ending_stopped
+    title: "Taken in the Court"
+    text: >
+      Edgar Tew is faster with the short staff than you were ready for, and when you
+      go down in the back court the type-block spills onto the cobbles. Edgar stands
+      over it for a moment, reading the title in his lantern light — 'The Barfleur
+      Memorandum' — then looks at you with the expression of someone who is not paid
+      to understand what this means but knows that someone else is. He calls for the
+      constable. You will explain the Privy Council warrant from a cell in Newgate
+      while the necessary letters are written, and Fen will have his block back by
+      morning. *** You have fallen. ***
+    death: true
