@@ -1,0 +1,423 @@
+# The Assayer's Mark — a Zork-style parser pack (Stage 3).
+#
+# The THIRTEENTH parser pack, the FIRST to use a TOUCH verb (physical contact deposit),
+# and the FIRST to use a two-step CHEMICAL TEST topology in the parser corpus.
+#
+# Prior parser packs prove their crime by: documentary cross-reference
+# (gaugers_register, scriveners_proof), exit-map transformation via noise flag
+# (collectors_warrant), NPC persuasion via presented evidence (gaugers_register — SHOW
+# stave), dual-scale number comparison (weighmasters_round), or lens-based epistemic
+# revelation (scriveners_proof — USE magnifier). Here the proof is physical-chemical:
+#   (1) TOUCH silver_plate ON touchstone deposits a metallic streak on the stone;
+#   (2) USE aqua_fortis ON touchstone reacts with that streak, its colour proving
+#       debasement before any document is needed.
+# Documents corroborate; the assay proves.
+#
+# The TOUCH verb (command_verb: touch) is novel because it names a "contact deposit"
+# act — the player draws the metal across the stone and leaves a reactive trace. Prior
+# USE verbs move, unlock, reveal, or present; TOUCH leaves a physical mark that the
+# NEXT step acts on. This creates a two-step physical-to-chemical chain not present in
+# any prior pack:
+#   step 1 — TOUCH plate ON touchstone -> streak_made (deposit exists, colourless)
+#   step 2 — USE aqua_fortis ON touchstone -> proved_debased (acid reacts with streak)
+# Neither step alone proves debasement: the streak is colourless without acid; the
+# acid reacts with nothing if there is no streak. Sequence matters. The proof emerges
+# from chemistry, not from a document or from physical force.
+#
+# Setting: Goldsmiths' Hall, Foster Lane, London, 1695. The Great Recoinage is
+# underway -- Parliament has called in clipped and debased coinage, and the Goldsmiths'
+# Company is busier than ever hallmarking plate submitted for certification. Robert
+# Fitch, a Cheapside mercer, has submitted twelve pieces of silver plate for the lion
+# passant mark. A clerk separated one piece -- a broad silver porringer -- on suspicion
+# of substandard alloy. The Company's journeyman assayer is alone in the assay room
+# after hours.
+#
+# Map:
+#
+#   guild_court (WIN -- commission_paper + proved_debased exits north)
+#        | N* (* gated: has_item commission_paper AND has_flag proved_debased)
+#   assay_hall (start)
+#   (silver_plate; touchstone; aqua_fortis; standard_ingot)
+#        | E                | W              | S
+#   weighing_room       record_room       back_lane (PARTIAL ending)
+#   (coin_balance;      (commission_paper;
+#    trial_ledger)       mark_register;
+#                        master_seal)
+#
+# Score (max 45):
+#   +5   READ trial_ledger         (weighing_room -- confirms Fitch's submission)
+#   +5   TOUCH silver_plate ON touchstone  (assay_hall -- deposits the streak)
+#   +10  USE aqua_fortis ON touchstone     (assay_hall -- streak colour proves debasement)
+#   +5   READ commission_paper     (record_room -- Crabtree's history closes the chain)
+#   +20  TAKE commission_paper     (the document secured as evidence for the Warden)
+#   Total max: 45 (each on a distinct one-shot guard, no double-counting)
+#
+# Endings (3):
+#   ending_reported   -- WIN (non-death): commission_paper + proved_debased -> guild_court
+#   ending_retreated  -- PARTIAL (non-death): walked south to back_lane
+#   ending_suppressed -- BAD (non-death, instant end_game): TAKE master_seal
+#
+# Tension beat: USE silver_plate ON coin_balance (weighing_room). d20 + precision (3)
+# vs DC 11. CONVERGENT -- both outcomes set weighed_plate; narration only differs.
+# One-shot (not_flag weighed_plate guard). Same shape as scriveners_proof copy_press.
+#
+# ending_suppressed telegraphed twice before TAKE master_seal fires end_game:
+#   source 1: master_seal description names what pressing it means (the Company's
+#             lion passant mark on copper-heavy plate sold as sterling to London buyers).
+#   source 2: mark_register description names Fitch's blank entry and the stakes
+#             of approving it without a completed assay.
+
+meta:
+  id: assayers_mark_v1
+  title: "The Assayer's Mark"
+  start_room: assay_hall
+  flags_init: []
+  vars_init: { precision: 3 }
+  max_score: 45
+
+rooms:
+  - id: assay_hall
+    name: "The Assay Hall"
+    description: >
+      Goldsmiths' Hall, Foster Lane, an hour past compline. A long bench under
+      shuttered windows, lit by tallow candles: a flat black touchstone in its
+      brass frame, a glass vial of aqua fortis in its wooden stand, and -- at the
+      centre of the bench -- a broad silver porringer separated from the rest of
+      Fitch's batch, awaiting judgment. The Company's standard ingot sits at the
+      bench's far end for comparison. The weighing room lies east; the record
+      room west; the back lane runs south.
+    variants:
+      - when: [{ has_flag: proved_debased }]
+        text: >
+          The assay bench. The touchstone carries Fitch's streak alongside the
+          standard: where sterling holds cream-white, the porringer's line has gone
+          a faint but unmistakable greenish-grey. The aqua fortis has spoken, and
+          the touchstone will not change its answer. The weighing room is east;
+          the record room west; the court gate north is now clear.
+    objects: [silver_plate, touchstone, aqua_fortis, standard_ingot]
+    exits:
+      - direction: north
+        to: guild_court
+        conditions: [{ has_item: commission_paper }, { has_flag: proved_debased }]
+        locked_msg: >
+          The court gate stands shut. You need both: the touchstone's verdict and
+          the commission paper that names the man and the founder who cast the
+          plate. Bring them both before the Warden.
+      - { direction: east, to: weighing_room }
+      - { direction: west, to: record_room }
+      - { direction: south, to: back_lane }
+
+  - id: weighing_room
+    name: "The Weighing Room"
+    description: >
+      A smaller room off the hall: a precision coin balance on a levelled table,
+      its brass beam delicate at rest. The trial ledger lies open beside it -- the
+      Company's record of every submission this quarter. A smell of chalk dust and
+      cold metal.
+    objects: [coin_balance, trial_ledger]
+    exits:
+      - { direction: west, to: assay_hall }
+
+  - id: record_room
+    name: "The Record Room"
+    description: >
+      Shelves of mark registers and commission files. The current quarter's
+      commission papers are in the open box on the shelf -- provenance declarations
+      submitted with each batch. The mark register lies on the table, Fitch's entry
+      line blank; the master's seal rests beside it, ready to set the lion passant
+      on any approved batch.
+    objects: [commission_paper, mark_register, master_seal]
+    exits:
+      - { direction: east, to: assay_hall }
+
+  - id: guild_court
+    name: "The Guild Court"
+    description: >
+      The Warden's court at the head of Foster Lane, a lamp above the door. You
+      have the commission paper under your arm and the touchstone's verdict in your
+      notes: Fitch's plate is below the sterling standard, the founder is Miles
+      Crabtree, and the batch will not receive the lion passant mark.
+
+  - id: back_lane
+    name: "The Back Lane"
+    description: >
+      A narrow lane behind Foster Lane, the cobbles wet from yesterday's rain.
+      You stepped out of the assay room and the door has swung to. Whatever you
+      found tonight travels with you into the morning -- or does not.
+
+objects:
+  # -- Assay hall ----------------------------------------------------------------
+  - id: silver_plate
+    name: "silver plate"
+    aliases: [plate, porringer, fitch plate, silver porringer, suspected plate,
+              silver piece, fitch porringer, broad porringer, silver dish, the plate,
+              batch piece, the porringer]
+    description: >
+      A broad silver porringer from Fitch's batch, separated from the rest on a
+      clerk's suspicion of substandard alloy. The surface is burnished fine -- good
+      work, and finish tells you nothing. The way to know is the touchstone: draw the
+      plate firmly across the stone, let the streak sit, then touch a drop of aqua
+      fortis to it. The streak's colour is the verdict.
+    takeable: true
+
+  - id: touchstone
+    name: "touchstone"
+    aliases: [stone, black stone, assay stone, basanite, touch stone, the touchstone,
+              test stone, lydian stone, flat stone, touch, the stone]
+    description: >
+      A flat piece of Lydian basanite in a brass-handled frame -- the standard assay
+      instrument of the Goldsmiths' Company. Draw a piece of metal across it firmly
+      and the streak it leaves is chemically reactive: apply aqua fortis and sterling
+      silver (925 parts in a thousand) holds cream-white, while copper-heavy alloy
+      colours greenish. The acid vial is in its stand on the bench.
+    interactions:
+      # TOUCH silver_plate ON touchstone -- FIRST TOUCH verb in the parser corpus.
+      # Defined on the TARGET (touchstone) following useInteraction(index, target, item)
+      # engine discipline. command_verb: touch makes the display read "touch silver
+      # plate on touchstone." The act deposits a metallic streak on the stone --
+      # a physical trace the acid will react with in step 2. Neither step alone
+      # proves debasement; sequence matters.
+      - verb: USE
+        item: silver_plate
+        target: touchstone
+        command_verb: touch
+        command_template: "touch {item} on {target}"
+        conditions:
+          - has_item: silver_plate
+          - not_flag: streak_made
+        effects:
+          - set_flag: streak_made
+          - inc_var: { name: score, by: 5 }
+          - narrate: >
+              You take the porringer in both hands and draw one face firmly across
+              the touchstone in a slow, deliberate stroke. A grey-cream line forms
+              on the black surface -- the streak, the plate's own metal deposited in
+              the stone. By itself it names nothing; what the acid does to it is
+              the question. The aqua fortis vial is in its stand.
+      # USE aqua_fortis ON touchstone -- second step of the chemical assay.
+      # Requires streak_made (from TOUCH silver_plate ON touchstone above).
+      # Sterling silver holds cream-white; copper-heavy alloy colours greenish.
+      # First TWO-STEP CHEMICAL TEST in the parser corpus: step 1 deposits a
+      # trace, step 2 reacts with that trace. The proof emerges from chemistry.
+      - verb: USE
+        item: aqua_fortis
+        target: touchstone
+        conditions:
+          - has_item: aqua_fortis
+          - has_flag: streak_made
+          - not_flag: proved_debased
+        effects:
+          - set_flag: proved_debased
+          - inc_var: { name: score, by: 10 }
+          - narrate: >
+              You uncork the aqua fortis and touch a single drop to the streak on
+              the touchstone. The reaction is immediate: where sterling holds
+              cream-white, Fitch's plate goes a faint but clear greenish-grey --
+              copper in solution, not fine silver. The plate is below the sterling
+              standard of 925 parts in a thousand. The acid has it, and the
+              touchstone will not change its answer.
+
+  - id: aqua_fortis
+    name: "aqua fortis"
+    aliases: [acid, vial, nitric acid, aqua, acid vial, assay acid, the acid,
+              the vial, reagent, chemical, the aqua fortis, test acid, fortis]
+    description: >
+      A small glass vial of aqua fortis -- nitric acid, the assayer's standard
+      reagent -- in its wooden rack on the bench. One drop on a metallic streak:
+      sterling silver (925/1000) holds cream-white; copper alloy colours green.
+      The Company has used this test at every touch trial for a hundred years.
+    takeable: true
+
+  - id: standard_ingot
+    name: "standard ingot"
+    aliases: [ingot, standard, test ingot, reference ingot, sterling ingot,
+              control ingot, comparison ingot, the ingot, the standard, known good]
+    description: >
+      A small certified sterling bar -- 925 parts silver in a thousand -- kept in
+      the assay room as the reference standard. Touch it to the stone alongside
+      Fitch's plate and the two streaks sit side by side: cream-white for the
+      certified sterling, whatever colour the porringer gives for itself. The
+      comparison is the baseline every journeyman assayer learns on his first day.
+
+  # -- Weighing room -------------------------------------------------------------
+  - id: coin_balance
+    name: "coin balance"
+    aliases: [balance, scale, scales, weighing scale, precision balance, the balance,
+              the scale, trial balance, assay scale, beam balance, brass balance,
+              brass pan, the pan balance]
+    description: >
+      A precision coin balance: a brass beam with gilded pans, sensitive to a
+      grain's difference. A piece submitted at eight troy ounces of sterling must
+      weigh accordingly. Copper is lighter than silver at the same volume; a
+      copper-heavy alloy plate of the correct dimensions will sit underweight.
+      Evidence -- not proof, but evidence.
+    interactions:
+      # TENSION BEAT -- weigh the silver plate on the coin balance.
+      # d20 + precision (3) vs DC 11. CONVERGENT -- both outcomes set weighed_plate,
+      # differing only in narration (clean read vs a fussy beam). One-shot on
+      # not_flag weighed_plate. The scriveners_proof copy_press shape.
+      - verb: USE
+        item: silver_plate
+        target: coin_balance
+        conditions: [{ has_item: silver_plate }, { not_flag: weighed_plate }]
+        skill_check:
+          skill: precision
+          difficulty: 11
+          on_success:
+            - set_flag: weighed_plate
+            - narrate: >
+                You set the porringer on the left pan and load the test weights
+                to its nominal eight-ounce mark. The beam swings left and holds --
+                the plate is lighter than a sterling piece of its dimensions should
+                be. Copper is lighter than silver; a copper-heavy alloy sits
+                exactly like this. You note it down.
+          on_failure:
+            - set_flag: weighed_plate
+            - narrate: >
+                The balance is fussier than you expect -- the pans swing twice
+                before settling. But they settle short of the nominal mark: a grain
+                under eight troy ounces. Not conclusive on its own, but outside the
+                tolerance for sterling. You note it and step back.
+
+  - id: trial_ledger
+    name: "trial ledger"
+    aliases: [ledger, trial log, submission ledger, company ledger, submission record,
+              the ledger, hallmark ledger, quarter ledger, fitch submission, quarterly log]
+    description: >
+      The Company's trial ledger for this quarter: every submission recorded by
+      date, submitter's name, weight declared, and standard claimed. Fitch's entry
+      is on the last page. Below it, in a clerk's hand: "Batch separated for assay
+      on suspicion of substandard alloy."
+    read_text: >
+      Fitch's entry: "Robert Fitch, mercer, Cheapside. Twelve pieces silver plate.
+      Eight troy ounces each. Sterling standard claimed. Submitted for lion passant
+      mark, 14th October 1695." Signed in a mercer's careful hand. The clerk's note
+      names the suspicion -- substandard alloy -- without saying who raised it or why.
+      The ledger records the submission; the touchstone will settle the rest.
+    interactions:
+      - verb: READ
+        target: trial_ledger
+        conditions: [{ not_flag: read_ledger }]
+        effects:
+          - set_flag: read_ledger
+          - inc_var: { name: score, by: 5 }
+
+  # -- Record room ---------------------------------------------------------------
+  - id: commission_paper
+    name: "commission paper"
+    aliases: [commission, paper, fitch commission, commission record, submission paper,
+              fitch paper, the commission, provenance paper, fitch record, mercer paper]
+    description: >
+      Fitch's declaration of provenance from the submission file: where the silver
+      came from, who refined it, the name of the founder who cast the plate. The
+      founder is Miles Crabtree, furnace off Aldersgate. The Company's suspension
+      list from last October names Crabtree: found smelting base-metal sweepings
+      into plate offered as sterling, suspended six months, reinstated March 1695.
+      Fitch sourced this batch from a man the Company had already caught once.
+    read_text: >
+      The commission paper gives Crabtree as the founder, the smelter, the man who
+      turned whatever went into the furnace into the plate on the bench. The
+      Company's suspension record is on the shelf one row over: October 1694,
+      six months off the roll, reinstated March 1695. Fitch either did not know
+      Crabtree's history or judged the risk acceptable. Either way, the chain closes:
+      Crabtree cast the plate, Crabtree has form for debasement, and the aqua fortis
+      found the copper. Provenance, chemistry, and the man's own record in one document.
+    takeable: true
+    take_effects:
+      - inc_var: { name: score, by: 20 }
+    interactions:
+      - verb: READ
+        target: commission_paper
+        conditions: [{ not_flag: read_commission }]
+        effects:
+          - set_flag: read_commission
+          - inc_var: { name: score, by: 5 }
+
+  - id: mark_register
+    name: "mark register"
+    aliases: [register, hallmark register, mark book, company register, session register,
+              the register, mark record, approval book, lion passant register, session book]
+    description: >
+      The current session's mark register: the list of pieces approved to receive
+      the lion passant hallmark. Fitch's entry line is blank. An entry here means
+      the Company's mark goes onto his plate -- twelve pieces of copper-heavy alloy
+      certified as fine sterling and sent to London's buyers at sterling prices. The
+      master's seal lies ready beside it. Fitch's line should stay blank until the
+      assay is complete.
+
+  - id: master_seal
+    name: "master's seal"
+    aliases: [seal, master seal, wax seal, company seal, hallmark seal, approval seal,
+              the seal, warden seal, press seal, sealing stamp, company stamp]
+    description: >
+      The Warden's seal -- the instrument that sets the lion passant mark. Press it
+      to Fitch's entry in the register and the Company guarantees his plate as sterling:
+      twelve pieces of copper-heavy alloy certified as fine silver, sold to London's
+      buyers at sterling prices. Every buyer will pay for something they did not receive.
+      The seal lies ready. It should not be touched until the assay is done.
+    takeable: true
+    take_effects:
+      - narrate: >
+          You press the master's seal to Fitch's entry line: the lion passant
+          impression sets cleanly, and the mark register records the batch as
+          passed. Twelve pieces of below-sterling silver plate now carry the
+          Company's certification. Fitch's man will collect them in the morning.
+          London's buyers will pay the sterling price and find, in months or
+          years, that the metal tarnishes faster than their other plate and wears
+          sooner than it should.
+          You step out of the record room. The door swings to behind you. What you
+          approved in there is done, and so, in a different sense, are you.
+      - end_game: ending_suppressed
+
+npcs: []
+
+win_conditions:
+  - id: case_reported
+    conditions: [{ visited: guild_court }]
+    ending: ending_reported
+  - id: case_abandoned
+    conditions: [{ visited: back_lane }]
+    ending: ending_retreated
+
+endings:
+  - id: ending_reported
+    title: "The Assay Stands"
+    text: >
+      You laid the case before the Warden at the Guild Court: the touchstone's
+      verdict -- greenish-grey where sterling holds cream -- and the commission paper
+      naming Miles Crabtree as the founder. The Company's own suspension record was
+      on the shelf beside the commission file. The batch was refused the lion passant
+      mark, and a summons went to Fitch before morning prayers.
+      Crabtree's furnace off Aldersgate was sealed the following week. Three other
+      batches submitted under different names went back for re-assay; two of them
+      failed. Fitch settled with the Company rather than face proceedings, and his
+      name stayed off the mark register until he could show clean provenance.
+      *** The assay stands. ***
+
+  - id: ending_retreated
+    title: "The Back Lane"
+    text: >
+      You stepped out of the assay room into the back lane and turned toward Foster
+      Lane. Whatever you had established -- the ledger entry, perhaps the streak on
+      the touchstone, perhaps the acid's answer -- was not assembled into a case you
+      could take before the Warden. The commission paper was still in the record room.
+      Fitch's batch went to the mark register without a completed assay. The lion
+      passant went onto twelve pieces of below-sterling silver plate and out to
+      London's buyers, and the assay room would see the next batch in the morning.
+      *** The batch was not stopped. ***
+
+  - id: ending_suppressed
+    title: "For Quietness"
+    text: >
+      The lion passant went onto Fitch's register entry; the seal made it official.
+      Twelve pieces of copper-heavy plate now carry the Company's certification as
+      sterling. The buyers will pay the sterling price and discover, in six months
+      or two years, that the metal tarnishes faster than their other silver and wears
+      sooner than it should.
+      Crabtree's furnace stayed open. A portion of what Fitch paid for the batch
+      found its way back to you, as these things tend to arrange themselves. The
+      Goldsmiths' Company has a reputation for fine work stretching back three
+      hundred years. One assayer's decision, on one quiet night at Foster Lane,
+      is not enough to ruin it.
+      It is enough to ruin you.
+      *** You approved it. ***
