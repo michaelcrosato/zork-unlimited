@@ -36,7 +36,9 @@
     "ui:dev": "npm --prefix ui run dev",
     "ui:build": "npm --prefix ui run build",
     "mcp": "tsx src/mcp/server.ts",
-    "ai:loop": "tsx src/ai-loop.ts"
+    "ai:loop": "tsx src/ai-loop.ts",
+    "loop:status": "bash scripts/loop-status.sh",
+    "loop:stop": "bash scripts/loop-stop.sh"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
