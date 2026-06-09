@@ -45,9 +45,18 @@ Seeded 2026-06-08 from `docs/CURRENT_PLAN.md` re-aim #19 (and #17/#18) "false al
   not caught" after bug_0308 closed it) — S-effort doc fix; deferred, blocks no detection.
 - **Multi-line tautology** — `TAUTOLOGY_RE` has no dotall flag; split-line `expect(foo)\n.toBe(foo)`
   escapes. S-effort; deferred (real test code writes tautologies single-line; narrow risk).
-- **`TARGET_PER_MODE` re-enablement** — `{cyoa:2,parser:2,rpg:2}` vs actual 7/5/5 silences
-  `content_new`. **Deliberately deferred**: re-enabling authoring nominations while structural gaps
-  remain is the wrong priority order. Revisit only with a clear authoring goal.
+- **🚫 ANTI-PATTERN — do NOT keep raising `TARGET_PER_MODE` (orchestrator ruling 2026-06-09).**
+  Re-aims #19→bug_0332, mid-cycle→bug_0335, #21→bug_0336 each raised `TARGET_PER_MODE`
+  (`src/afk/assessor.ts:68`) to *current counts + a little headroom*. Each raise is consumed by a
+  burst of `content_new` authoring, which re-saturates, which makes the NEXT ultraplan raise it
+  again — a self-perpetuating loop the re-aims themselves flagged as a "structural trap" yet kept
+  feeding. **The ceiling is now intentionally FIXED at `{cyoa:20, parser:16, rpg:16}` (the bug_0336
+  value). Future ultraplans MUST NOT choose "raise TARGET_PER_MODE" as their move.** Pack COUNT is
+  not the objective — depth, quality, and the blind-playtest oracle are. When `content_new` disarms
+  at this ceiling (have ≥ target ⇒ assessor returns to the 0.5 floor ⇒ saturation), pick a REAL
+  structural lever instead — Gaps A/B (NPC topic `checkConds`/`checkUnsatisfiable`), Gap F
+  (`allGeneratorsClean`), or Gap G (SKILL_CHECK_PHANTOM_STAT) below are all open, S-effort, zero-FP.
+  Revisit the ceiling only on an explicit human authoring goal, never as an automatic saturation cure.
 - **Class-level "stale reactive description" check** — the bug_0282–0325 family (a room/dialogue
   names an item/state after the player changed it). High value, but a naive heuristic risks
   false-positive churn across 17 clean packs; **measure FP rate before adding to `health`.** Until

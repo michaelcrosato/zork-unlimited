@@ -42,6 +42,13 @@ import { rotateLoopState } from "./afk/loop_state.js";
 // ignored ai-runs marker; the ultraplan cycle also gets a larger agent budget.
 const ULTRAPLAN_COOLDOWN = Number(process.env.AI_LOOP_ULTRAPLAN_COOLDOWN ?? 8);
 const ULTRAPLAN_TIMEOUT_SECONDS = Number(process.env.AI_LOOP_ULTRAPLAN_TIMEOUT_SECONDS ?? 3600);
+// Authoring a brand-new pack (content_new) is L-effort: it writes a whole pack +
+// validates + blind-playtests + locks tests, and was observed to hit loop.sh's
+// default 2400s routine budget (twice) and get terminated mid-author, wasting the
+// cycle. Give content_new cycles the SAME larger budget as ultraplan cycles via the
+// existing per-cycle agentTimeoutSeconds override loop.sh already reads. Routine
+// content_fix cycles keep the lean default (a one-spot prose fix never needs more).
+const AUTHORING_TIMEOUT_SECONDS = Number(process.env.AI_LOOP_AUTHORING_TIMEOUT_SECONDS ?? 3600);
 const SATURATION_STATE_FILE = join("ai-runs", "saturation-state.json");
 const CURRENT_PLAN_DOC = "docs/CURRENT_PLAN.md";
 // Append-only memory of settled questions. CURRENT_PLAN_DOC is OVERWRITTEN each
@@ -113,6 +120,15 @@ function main(): void {
     ? buildUltraplanPrompt({ a, target, targetHealth, playtestRecord })
     : buildPrompt({ a, top, target, targetHealth, playtestRecord });
 
+  // Per-cycle agent budget: ultraplan (multi-agent re-aim) and content_new (L-effort
+  // pack authoring) both need more than the lean routine default; loop.sh reads this
+  // agentTimeoutSeconds override and falls back to its own default when absent.
+  const agentTimeoutSeconds = ultraplan
+    ? ULTRAPLAN_TIMEOUT_SECONDS
+    : top?.category === "content_new"
+      ? AUTHORING_TIMEOUT_SECONDS
+      : null;
+
   // Artifacts (all under the ignored ai-runs/).
   writeFileSync(join(runDir, "assessment.md"), formatAssessment(a));
   writeFileSync(join(runDir, "assessment.json"), JSON.stringify(a, null, 2));
@@ -129,7 +145,7 @@ function main(): void {
         playtestRecord,
         recommendation: top?.title ?? null,
         mode: ultraplan ? "ultraplan" : "standard",
-        ...(ultraplan ? { agentTimeoutSeconds: ULTRAPLAN_TIMEOUT_SECONDS } : {}),
+        ...(agentTimeoutSeconds !== null ? { agentTimeoutSeconds } : {}),
       },
       null,
       2,
