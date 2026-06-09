@@ -95,17 +95,9 @@
 - Why: Only 8 playable cyoa pack(s) exist; more breadth exercises the engine and gives players more to do.
 - Mandatory LLM playtest target this cycle: content/cyoa/pack/watchtower_road.yaml.
 - Process: assessor ranks → blind LLM playtest for quality → one improvement → health + verify:integrity green → commit (trust-but-verify).
-
-### Cycle result — content_new / GALLOWMERE_V1 — 6TH RPG PACK, TRACKING+LORE SKILLS, LETHAL SKILL GATE + GUARANTEED COMBAT: **Blind pass on `watchtower_road`** (seed 42; fresh MCP-only subagent; report `ai-runs/2026-06-08T18-11-39-798Z/playtest.md`): **STRONG — clarity 4/5, enjoyment 4/5** (-1 clarity: hub traversal overhead; -1 enjoyment: checkpoint/sergeant scene easily missed). Mechanical health clean; zero rejected actions. Concrete actionable bugs: (1) quest stage regression at forest_crossroads hub — `return_crossroads`/`return_from_brook` reset `the_road` to `setting_out`, silently overwriting `truth_known`; (2) `take_ledger` redundantly sets already-set flags. Design flaw: `force_door` skill check has no failure consequence — player enters tower_base either way. Both deferred (content_fix rotation). **IMPROVEMENT: authored new RPG pack `gallowmere_v1`.** First pack to combine `combat_guaranteed: true` WITH a lethal one-shot skill check in the same pack — previously orthogonal (dawn_beacon/wolf_winter: guaranteed combat, non-lethal checks; breaking_weir: lethal check, no combat). Two new skill vars: `tracking` (reading spoor) + `lore` (animal behaviour/wind-reading). Structure: retryable tracking check at kill_site (DC 10, +2 atk, not lethal) + lethal one-shot lore check at moor_gully (DC 9, +2 def; Hedrick +5 lore makes it guaranteed on worst roll) + single combat (Gallowmere sow, hp15/atk5/def2). Sow hp=15 calibrated so atk6/def4/hp24 worst-case=14<24 (guaranteed) and atk4/def4/hp24 worst-case=28>24 (gamble/death reachable). Score: 5+10+10+10+15=50. Three endings: ending_hunt_won (WIN), ending_gored (lethal lore death), ending_taken (combat death). **Self-critique: real high-value addition — assessor 1.417; first RPG with tracking+lore stats (neither appeared in any prior RPG pack); first with both lethal-check + combat_guaranteed; sow-hunter fiction earns both mechanics honestly. Sow hp calibration required iteration (hp=12 left 3 HP on worst-dice atk4/def4 — ending_taken unreachable; hp=15 resolves). Not busywork.** **VERIFY: `npm run health` EXIT 0 — 2138 tests (all 2138), all 20 packs validate 0/0; verify:integrity 0/0; lint/format clean.** Next: blind-playtest `gallowmere_v1`; fix watchtower_road quest-stage regression (deferred content_fix).
-## AFK Cycle 2026-06-08T18-11-39-798Z
-- Assessment: packs cyoa=8 parser=6 rpg=5; 18 candidate(s) ranked.
-- Next best improvement (recommended): [content_new] Author a new rpg pack (5/8) to broaden the game.
-- Why: Only 5 playable rpg pack(s) exist; more breadth exercises the engine and gives players more to do.
-- Mandatory LLM playtest target this cycle: content/cyoa/pack/watchtower_road.yaml.
-- Process: assessor ranks → blind LLM playtest for quality → one improvement → health + verify:integrity green → commit (trust-but-verify).
-## AFK Cycle 2026-06-09T03-13-39-685Z
-- Assessment: packs cyoa=18 parser=10 rpg=10; 41 candidate(s) ranked.
-- Next best improvement (recommended): [content_new] Author a new parser pack (10/16) to broaden the game.
-- Why: Only 10 playable parser pack(s) exist; more breadth exercises the engine and gives players more to do.
+## AFK Cycle 2026-06-09T03-44-45-552Z
+- Assessment: packs cyoa=18 parser=11 rpg=10; 42 candidate(s) ranked.
+- Next best improvement (recommended): [content_new] Author a new parser pack (11/16) to broaden the game.
+- Why: Only 11 playable parser pack(s) exist; more breadth exercises the engine and gives players more to do.
 - Mandatory LLM playtest target this cycle: content/cyoa/pack/watchtower_road.yaml.
 - Process: assessor ranks → blind LLM playtest for quality → one improvement → health + verify:integrity green → commit (trust-but-verify).
