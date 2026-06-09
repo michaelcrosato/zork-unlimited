@@ -131,22 +131,34 @@ run_cycle() {
   local baseline start_ref
   baseline="$(git status --porcelain -- "${status_filter[@]}")"
   start_ref="$(git rev-parse HEAD)"
-  npm run ai:loop || { echo "ai:loop failed"; return 1; }
+  # Self-recovery: revert a FAILED cycle's uncommitted scratch back to the pre-cycle
+  # state. Without this, a single bad authored artifact (observed: an over-complex RPG
+  # pack that blows the global RPG tests' 200k-state cap) stays UNTRACKED in the tree
+  # and fails `npm run health` on EVERY subsequent cycle — wedging the loop to the
+  # circuit breaker with no progress. Reverting after a pre-commit gate fails lets the
+  # next cycle start clean (it can retry or the rotation picks a different target).
+  # Only the pre-commit gates revert; a post-commit push failure must NOT (the commit
+  # is real). ai-runs/ is gitignored so `git clean` leaves the evidence + pidfiles.
+  _revert_failed_cycle() {
+    git reset --hard "$start_ref" >/dev/null 2>&1 || true
+    git clean -fdq content traces tests >/dev/null 2>&1 || true
+  }
+  npm run ai:loop || { echo "ai:loop failed"; _revert_failed_cycle; return 1; }
   # The agent (claude -p by default) does the actual work + the mandatory blind LLM
   # playtest. If it is unavailable the cycle simply makes no changes and the gates
   # below skip the commit.
   run_agent || echo "(agent step reported an error — continuing to verify)"
   # Trust, but verify: health is a BLOCKING gate (runs the static verifier-integrity
   # check too). A red check ⇒ no commit this cycle.
-  npm run health || { echo "health failed — skipping commit this cycle"; return 1; }
+  npm run health || { echo "health failed — reverting cycle scratch, skipping commit"; _revert_failed_cycle; return 1; }
   # Don't route around the verifier. A content cycle that re-pins a hash ALONGSIDE a
   # real content change is the legitimate snapshot-update workflow → surfaced, allowed.
   # This blocks only actual weakening: deleted/disabled tests, a dropped test count,
   # a deleted protected asset, or a re-pin with NO content change (the launder pattern).
   # AI_LOOP_ALLOW_VERIFIER_EDITS=1 overrides only the unaccompanied-re-pin case.
-  npm run verify:integrity -- --against "$start_ref" || { echo "verifier weakened/laundered — skipping commit this cycle"; return 1; }
+  npm run verify:integrity -- --against "$start_ref" || { echo "verifier weakened/laundered — reverting, skipping commit"; _revert_failed_cycle; return 1; }
   # Quality feedback is mandatory: no blind-playtest record ⇒ no commit.
-  require_playtest_record || return 1
+  require_playtest_record || { _revert_failed_cycle; return 1; }
   safe_commit_if_enabled "$baseline" || { echo "commit failed"; return 1; }
   if [[ "${AI_LOOP_PUSH:-0}" == "1" ]]; then
     git push || { echo "push failed"; return 1; }
