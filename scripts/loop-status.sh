@@ -62,6 +62,24 @@ if [ -n "$newest_pt" ]; then
   grep -ioE "clarity:? [0-9]/5|enjoyment:? [0-9]/5|verdict" "$newest_pt" | head -3 | sed 's/^/  /'
 fi
 
+# ── Velocity / technical-debt telemetry (evolutionary-engine view, not just liveness) ──
+# Surfaces execution velocity, timeout pressure, spin/breaker proximity, and the
+# fix-class trend so each tick can spot a 1% improvement (logic drift, slowing cadence,
+# treadmill re-emergence), per the decaying-cadence rationale.
+if [ -f ai-runs/wrapper.log ]; then
+  echo "--- telemetry (velocity / debt) ---"
+  done_n=$(grep -cE "cycle .* complete" ai-runs/wrapper.log 2>/dev/null); done_n=${done_n:-0}
+  to_n=$(grep -cE "Agent exceeded" ai-runs/wrapper.log 2>/dev/null); to_n=${to_n:-0}
+  np_n=$(grep -cE "no committed progress" ai-runs/wrapper.log 2>/dev/null); np_n=${np_n:-0}
+  np_consec=$(grep -oE "no committed progress \([0-9]+/[0-9]+" ai-runs/wrapper.log 2>/dev/null | tail -1 | grep -oE "[0-9]+/[0-9]+" || echo "0/5")
+  echo "  cycles completed: ${done_n}   timeouts(Agent exceeded): ${to_n}   no-progress: ${np_n} (consec ${np_consec} vs breaker 5)"
+  [ "${to_n:-0}" -ge 2 ] && { echo "  ⚠ repeated timeouts — authoring may need decomposition, not just budget"; rc=3; }
+  case "$np_consec" in 3/*|4/*|5/*) echo "  ⚠ nearing circuit breaker"; rc=3;; esac
+  # Fix-class trend over recent commits (treadmill / drift detector).
+  echo "  recent fix-class (last 8 commits):"
+  git log -8 --pretty='%s' 2>/dev/null | sed -E 's/:.*//' | sort | uniq -c | sort -rn | sed 's/^/    /'
+fi
+
 echo "--- summary ---"
 if [ "$worker" -gt 0 ] && [ "$loopsh" -eq 0 ]; then echo "ORPHAN-WORKER — stop required";
 elif [ "$loopsh" -gt 0 ]; then echo "RUNNING (loop.sh alive)";
