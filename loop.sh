@@ -9,6 +9,17 @@ fi
 
 status_filter=(. ':(exclude)ai-runs' ':(exclude)node_modules' ':(exclude)dist' ':(exclude)coverage' ':(exclude)traces/*.json')
 
+# ── Project-scoped PID files (so orchestrator tooling tracks THIS loop only) ──────
+# With several projects running identical-looking `./loop.sh` / `claude -p` processes,
+# pattern-matching across all of them is unsafe (mis-reads + risks killing another
+# project's loop). loop.sh records its OWN pid here; run_agent records the actual
+# worker pid. scripts/loop-status.sh and scripts/loop-stop.sh act ONLY on these pids.
+LOOP_PID_FILE="ai-runs/loop.pid"
+AGENT_PID_FILE="ai-runs/agent.pid"
+mkdir -p ai-runs
+echo "$$" > "$LOOP_PID_FILE"
+trap 'rm -f "$LOOP_PID_FILE" "$AGENT_PID_FILE" 2>/dev/null || true' EXIT
+
 if [[ ! -d node_modules ]]; then
   npm install
 fi
@@ -69,7 +80,11 @@ run_agent() {
   # proceeds to the verify gates, which decide whether anything is committable (a
   # timed-out turn that left nothing simply becomes a no-progress cycle).
   local rc=0
-  timeout --kill-after=30 "$budget" bash -c "$cmd" < "$prompt" || rc=$?
+  # Record the ACTUAL worker pid: the bash -c writes its own $$ then `exec`s the agent,
+  # so the recorded pid IS the claude/codex process (exec preserves the pid). This lets
+  # loop-stop.sh kill the exact worker by pid — project-scoped — even if it orphans.
+  timeout --kill-after=30 "$budget" bash -c 'echo $$ > "'"$AGENT_PID_FILE"'"; exec '"$cmd" < "$prompt" || rc=$?
+  rm -f "$AGENT_PID_FILE" 2>/dev/null || true
   if [[ "$rc" -eq 124 || "$rc" -eq 137 ]]; then
     echo "⏱ Agent exceeded ${budget}s and was terminated — continuing to verify."
   fi
