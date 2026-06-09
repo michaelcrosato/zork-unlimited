@@ -4,69 +4,76 @@ This is the AFK loop's **living plan** — the hand-off document for the saturat
 
 ---
 
-# Ultraplan re-aim cycle #20 (HEAD = bug_0331; next free id = bug_0332)
+# Ultraplan re-aim cycle #21 (HEAD = bug_0335; next free id = bug_0336)
 
 ## Synthesis
 
-Four parallel repo reviewers completed independent analyses. Cross-checking was performed against the confirmed-closed list and the live repo at HEAD = bug_0331.
+Four parallel repo reviewers completed independent analyses. Cross-checking was performed against the confirmed-closed list and the live repo at HEAD = bug_0335.
 
 ---
 
 ## FALSE ALARMS this cycle
 
-**None of the reviewer findings duplicate a confirmed-closed gap.** All four reviewers correctly scoped to open gaps only. However, two findings require reclassification from their original framing:
+**None.** All four reviewers correctly scoped to open gaps only and did not re-nominate any confirmed-closed item.
 
-**Reviewer 3 — "class-level stale reactive description validator":** This is a genuine open gap but correctly categorized by the reviewer as high false-positive risk (30-50% FP rate without tuning). The reviewer's own conclusion ("implement as WARN, every finding still needs human sign-off") accurately describes why it scores below the chosen move. Not a false alarm, but lower value than claimed.
+Two reviewer findings require framing clarification:
 
-**Reviewer 4 — "stale docstring (Gap 1)":** Confirmed open. The docstring at `scripts/verify-integrity.ts` lines 31-33 still reads "a count-preserving swap that keeps a STRONG matcher but makes it vacuous (`expect(true).toBe(true)`) is still not caught." Bug_0308 closed this. This IS a live false statement in a security-adjacent comment. However, it was already confirmed open in cycle #19 and deliberately deferred then. Reclassification: genuine, open, lowest-cost fix — but it was already the lowest-priority deferred item. Valid to carry forward, not a cycle-choice candidate.
+**Reviewer 1 — SKILL_CHECK_PHANTOM_STAT:** Genuine new gap (skill_check.stat not validated against declared vars). S-effort. Noted as new open Gap G — lower priority than Gap A/B, deferred.
+
+**Reviewer 4 — Parser solver blind to skill_check branches:** Already documented in traces/bugs/bug_0334 as a class-level deferred engine gap. L-effort. Not a cycle-choice candidate.
 
 ---
 
 ## GENUINE GAPS confirmed (with evidence)
 
-### Gap A — NPC dialogue topic conditions excluded from `checkConds` feasibility scan
+### Gap A — NPC dialogue topic conditions excluded from `checkConds`
 **File:** `src/validate/parser_validator.ts`
-**Evidence:** `checkConds` is defined at line 484 and called at exactly three sites: line 539 (room exit conditions), line 552 (object interaction conditions), line 564 (win_conditions). It is never called for `DialogueTopic.conditions`. The NPC dialogue block (lines 631-697) validates GOTO integrity (DIALOGUE_GOTO_MISSING), termination (DIALOGUE_NONTERMINATING), and node variant shadowing/unsatisfiability — but not topic gate feasibility. A topic gated on `has_flag: "never_set_flag"` or `has_item: "phantom_item"` is silently permanently hidden; no finding is emitted. The `neededWhileHeld` walk at lines 600-603 already iterates `t.conditions` — the infrastructure is fully present, the call is simply absent.
+**Evidence:** `checkConds` defined at line 484; called at line 539 (room exit conditions), line 552 (object interaction conditions), line 564 (win_conditions). Never called for `DialogueTopic.conditions` in the NPC/dialogue block (lines 631-697). The `neededWhileHeld` walk at lines 600-603 already iterates `t.conditions` — the infrastructure is fully present, the call is simply absent. A topic gated on `has_flag: "never_set_flag"` or `has_item: "phantom_item"` is silently permanently hidden; no finding is emitted.
 **Effort:** S. Three lines in the topic iteration inside the existing NPC loop.
 **API key required:** No.
-**False-positive risk:** Low-to-none. `flags_init` is already seeded into `settable` (line 435), so a flag pre-set only via `flags_init` consumed only as a topic gate stays green correctly.
+**False-positive risk:** None. `flags_init` already seeded into `settable` (line 435). All 32 current packs are clean.
 
 ### Gap B — NPC dialogue topic conditions excluded from `checkUnsatisfiable`
 **File:** `src/validate/parser_validator.ts`
-**Evidence:** `checkUnsatisfiable` is called for room variants (lines 856-869), object variants and interactions (lines 871-886), ending variants (lines 892-900), and win_condition conditions (line 910). It is NOT called for `DialogueTopic.conditions`. An internally contradictory topic gate (e.g., `all_of: [{has_flag: X}, {not_flag: X}]`) is permanently hidden with no warning. Node `variants` shadowing IS checked (line 654-661), but topic condition unsatisfiability is not.
+**Evidence:** `checkUnsatisfiable` called at lines 856-869 (room variants), 871-886 (object variants/interactions), 892-900 (ending variants), 910 (win_conditions). NOT called for `DialogueTopic.conditions`. Node `variants` shadowing IS checked (line 654-661), but topic condition unsatisfiability is not. An internally contradictory topic gate is permanently hidden with no warning.
 **Effort:** S. One `checkUnsatisfiable` call per topic inside the existing loop — same pattern as Gap A.
 **API key required:** No.
-**False-positive risk:** None. `checkUnsatisfiable` is already conservative (opaque disjunctions bail).
+**False-positive risk:** None.
 
-### Gap C — TARGET_PER_MODE threshold: content_new permanently silenced
+### Gap C — TARGET_PER_MODE ceiling: content_new re-silenced (structural trap)
 **File:** `src/afk/assessor.ts` line 68
-**Evidence:** `TARGET_PER_MODE = { cyoa: 2, parser: 2, rpg: 2 }`. Actual pack counts: cyoa=7 (clockwork_heist, dead_reckoning, midnight_edition, tithe_barn, watchtower_road, white_stag, wreckers_light), parser=5 (alchemists_tower, friars_postern, lamplighters_round, sealed_crypt, tide_mill), rpg=5 (breaking_weir, cold_forge, dawn_beacon, sunken_barrow, wolf_winter). Gate at line 566: `if (have < target)` — 7>=2, 5>=2, 5>=2 — never fires. Zero content_new candidates are generated. Every cycle at the 0.5 floor is a blind-pass content_fix stub. Deferral reason from cycle #19 DECISION_LOG: "re-enabling authoring nominations while structural validator gaps remain is the wrong priority order. Revisit after bug_0317 is locked." Bug_0317 (ITEM_UNPLACED) is now locked. Deferral condition is satisfied.
-**Effort:** S. Single constant edit at assessor.ts line 68. No tests pin the exact numbers.
+**Evidence:** `TARGET_PER_MODE = { cyoa: 12, parser: 10, rpg: 10 }`. Actual pack counts: cyoa=12, parser=10, rpg=10. Gate at line 566: `if (have < target)` — 12>=12, 10>=10, 10>=10 — never fires. Zero content_new candidates generated. Root cause: bug_0335 raised the ceiling to match the exact pack count after falconers_ransom, leaving zero headroom. This is the third occurrence of the same trap (re-aim #19 → bug_0332 first fix; mid-cycle → bug_0335 second fix; now re-aim #21 → bug_0336 third fix). **(CHOSEN MOVE)**
+**Effort:** S. Single constant edit.
 **API key required:** No.
-**Saturation impact:** Raising to `{cyoa:10, parser:8, rpg:8}` would score content_new candidates at `score(5, "L", "content_new")` = `(5/3)*0.85` ≈ 1.417 — well above the 0.5 saturation floor, immediately redirecting the loop to net-new authoring.
 
 ### Gap D — Stale docstring in verify-integrity.ts
 **File:** `scripts/verify-integrity.ts` lines 31-33
-**Evidence:** Text still says the tautology case "is still not caught." Bug_0308 implemented `detectTautologies()`, `TAUTOLOGY_RE`, `MAX_TAUTOLOGY_ASSERTIONS`. Confirmed by reading line 147-148 (TAUTOLOGY_RE present) and lines 153-169 (detectTautologies implemented). Open since cycle #19.
-**Effort:** S. 4-line edit. No behavior change, no tests needed.
+**Evidence:** Lines 31-33 still say "a count-preserving swap that keeps a STRONG matcher but makes it vacuous (`expect(true).toBe(true)`) is still not caught." Bug_0308 implemented `detectTautologies()`. Comment is factually wrong.
+**Effort:** S. 3-4 line edit. No behavior change.
 
-### Gap E — TAUTOLOGY_REGRESSION inline in runDrift, not in detectCountRegressions
+### Gap E — TAUTOLOGY_REGRESSION inline in runDrift
 **File:** `scripts/verify-integrity.ts` lines 656-667
-**Evidence:** `detectCountRegressions` (not read in full but described by Reviewer 4 as handling TEST_COUNT_REGRESSION, ASSERTION_COUNT_REGRESSION, STRONG_ASSERTION_REGRESSION only). TAUTOLOGY_REGRESSION lives as an inline if-block in `runDrift` (lines 656-667), confirmed by direct read. Structurally inconsistent — the tautology branch cannot be unit-tested against `detectCountRegressions` in isolation.
-**Effort:** S. Move block into `detectCountRegressions`, add 1-2 unit tests.
+**Evidence:** 12-line TAUTOLOGY_REGRESSION if-block inline in `runDrift`; `detectCountRegressions` handles all other regression codes as a proper standalone function. Cannot be unit-tested in isolation.
+**Effort:** S. Move block + 1-2 unit tests.
 
-### Gap F — allGeneratorsClean absent from Assessment type
+### Gap F — allGeneratorsClean absent from Assessment
 **File:** `src/afk/assessor.ts` lines 52-57
-**Evidence:** `Assessment` type confirmed as `{ packsByMode, packs, candidates, top }` — no `allGeneratorsClean` field. `isSaturated()` (line 487-488) uses only `a.top === null || a.top.score <= SATURATION_FLOOR`. A loop saturated because all generators are clean is indistinguishable from one saturated because scoring collapsed.
-**Effort:** S-M. Thread a boolean through `assess()`, update `isSaturated` or add helper, 2-3 unit tests.
+**Evidence:** `Assessment` interface has `{packsByMode, packs, candidates, top}` — no `allGeneratorsClean`. `isSaturated()` (lines 487-489) checks only `a.top === null || a.top.score <= SATURATION_FLOOR`. Cannot distinguish "nothing left to improve" from "scoring collapsed artificially".
+**Effort:** S-M.
+
+### New Gap G — SKILL_CHECK_PHANTOM_STAT
+**File:** `src/validate/parser_validator.ts`
+**Evidence:** `skill_check.stat` references a stat variable (e.g., `tracking`, `physick`, `cunning`) but the validator does not confirm it is declared in `vars`. A stat name typo produces a permanently-impossible skill check with no warning. 8 RPG packs use skill_check stats; all are currently correct, so this is future authoring protection only.
+**Effort:** S.
+**False-positive risk:** Low.
 
 ---
 
 ## CHOSEN MOVE
 
-**Gap C: Raise TARGET_PER_MODE to break the saturation cycle**
+**Gap C: Raise TARGET_PER_MODE ceiling to prevent re-saturation**
 
-**Bug id:** bug_0332
+**Bug id:** bug_0336
 
 ### What
 
@@ -74,13 +81,13 @@ Single-line change in `src/afk/assessor.ts` line 68:
 
 ```typescript
 // Before:
-const TARGET_PER_MODE: Record<string, number> = { cyoa: 2, parser: 2, rpg: 2 };
+const TARGET_PER_MODE: Record<string, number> = { cyoa: 12, parser: 10, rpg: 10 };
 
 // After:
-const TARGET_PER_MODE: Record<string, number> = { cyoa: 10, parser: 8, rpg: 8 };
+const TARGET_PER_MODE: Record<string, number> = { cyoa: 20, parser: 16, rpg: 16 };
 ```
 
-No other files need changing for the threshold. However, the deferral condition in `docs/DECISION_LOG.md` must be updated to note this gap is now closed.
+No other files need changing for the threshold.
 
 ### Why this move and not Gap A (NPC topic checkConds)
 
@@ -88,43 +95,42 @@ Scoring:
 
 | Gap | Breaks saturation cycle | No API key | S effort | Deterministic AC | Pillar advance |
 |-----|------------------------|-----------|----------|-----------------|---------------|
-| A (NPC checkConds) | No | Yes | Yes | Yes | Yes |
-| B (NPC checkUnsatisfiable) | No | Yes | Yes | Yes | Yes |
+| A (NPC checkConds) | **No** | Yes | Yes | Yes | Yes |
+| B (NPC checkUnsatisfiable) | **No** | Yes | Yes | Yes | Yes |
 | C (TARGET_PER_MODE) | **Yes** | Yes | Yes | Yes | Yes |
 | D (stale docstring) | No | Yes | Yes | Yes | No |
 | E (TAUTOLOGY_REGRESSION) | No | Yes | Yes | Yes | No |
 | F (allGeneratorsClean) | No | Yes | S-M | Yes | Marginal |
 
-Gap C is the **only gap that breaks the saturation cycle**. The loop has been stuck at the 0.5 floor for 50 consecutive cycles (bugs 0282-0331) producing reactive-description-blindness content_fix findings. Every structural validator gap that justified deferring TARGET_PER_MODE is now closed (ITEM_UNPLACED landed as bug_0317). The deferral condition is gone.
+Gap C is the **only gap that breaks the saturation cycle**. The loop has been at the 0.5 floor again since all three mode targets were met. Without this fix, the loop remains at the 0.5 floor regardless of what else is implemented.
 
-Gap A (NPC topic `checkConds`) is the highest-value structural validator gap — it closes a real silent authoring hole, it is S-effort, it has no false-positive risk, and it should be the next move AFTER the saturation cycle is broken. But it does not move the 0.5 needle: it adds a new class of validator warning to parser packs, and only packs that actually have impossible topic gates would generate a new finding. All 17 shipped packs are structurally clean (that is why they are at 0.5). Gap A produces no new content_fix candidates above 0.5 for currently-clean packs; it only prevents future authoring defects from slipping through silently.
+**Why raise to 20/16/16 and not 13/11/11:** The root structural trap is that each re-aim has raised the ceiling to just above the current count (bug_0332 → 10/8/8, bug_0335 → 12/10/10), causing re-saturation after one more authoring run. A ceiling of 20/16/16 provides approximately 8 packs of content_new headroom per mode (based on ~10 packs authored per full content_new cycle). This prevents the fourth occurrence of this same fix.
 
-Gap C produces three `content_new` candidates scored at ~1.417, immediately above the 0.5 floor, redirecting every subsequent cycle to net-new pack authoring. This is the structural re-aim the loop needs.
+**Gap A (NPC topic `checkConds`) is the highest-value structural validator gap remaining** — it closes a real silent authoring hole, S-effort, no false-positive risk — and is explicitly "next after bug_0336." But it produces no new content_fix candidates for the current 32 clean packs, so it cannot break saturation alone.
 
 ### Acceptance criteria
 
-1. `src/afk/assessor.ts` line 68 reads `{ cyoa: 10, parser: 8, rpg: 8 }` (or any values strictly above current counts: cyoa > 7, parser > 5, rpg > 5).
+1. `src/afk/assessor.ts` line 68 reads `{ cyoa: 20, parser: 16, rpg: 16 }` (values strictly above current counts: cyoa > 12, parser > 10, rpg > 10).
 2. Running `assess(root)` on the current repo returns at least one candidate with `category: "content_new"` and `score > 0.5`.
 3. All three content_new candidates (`new-cyoa`, `new-parser`, `new-rpg`) appear in `candidates`.
 4. `isSaturated(assess(root))` returns `false` — the loop is no longer at the 0.5 floor.
 5. `npm run health` exits 0.
 6. All existing tests continue to pass (no regression).
-7. A new bug artifact `traces/bugs/bug_0332_target_per_mode_threshold.yaml` is created.
+7. A new bug artifact `traces/bugs/bug_0336_target_per_mode_ceiling.yaml` is created.
 
 ### Exact files to read and edit
 
 **Read (to understand context):**
-- `src/afk/assessor.ts` lines 59-80 — the constant block, `score()` function, `EFFORT_COST`, `CATEGORY_WEIGHT`
-- `src/afk/assessor.ts` lines 563-579 — the content_new candidate generation block (the `if (have < target)` gate)
-- `src/afk/assessor.ts` lines 487-489 — `isSaturated()` to confirm it reads `top.score`
-- `docs/DECISION_LOG.md` — to find and update the TARGET_PER_MODE deferral entry
+- `src/afk/assessor.ts` lines 59-80 — the constant block
+- `src/afk/assessor.ts` lines 560-580 — the content_new candidate generation gate (`if (have < target)`)
+- `src/afk/assessor.ts` lines 485-492 — `isSaturated()` to confirm it reads `top.score`
+- `docs/DECISION_LOG.md` — to confirm the re-aim #21 entry is appended
 
 **Edit:**
-1. `src/afk/assessor.ts` line 68 — raise TARGET_PER_MODE constants
-2. `docs/DECISION_LOG.md` — mark TARGET_PER_MODE deferral as resolved (bug_0317 is now closed; the deferral condition is satisfied)
+1. `src/afk/assessor.ts` line 68 — raise TARGET_PER_MODE to `{ cyoa: 20, parser: 16, rpg: 16 }`
 
 **Create:**
-3. `traces/bugs/bug_0332_target_per_mode_threshold.yaml` — new bug artifact
+2. `traces/bugs/bug_0336_target_per_mode_ceiling.yaml` — new bug artifact
 
 ### What NOT to change
 
@@ -136,18 +142,21 @@ Gap C produces three `content_new` candidates scored at ~1.417, immediately abov
 - Do NOT change `isSaturated()` logic (Gap F — deferred)
 - Do NOT add `allGeneratorsClean` to `Assessment` (Gap F — deferred)
 - Do NOT implement NPC topic `checkConds` or `checkUnsatisfiable` (Gaps A/B — next after this)
-- Do NOT fix the stale docstring in verify-integrity.ts (Gap D — can batch with Gap E)
+- Do NOT fix the stale docstring in verify-integrity.ts (Gap D — batch with Gap E)
+- Do NOT implement SKILL_CHECK_PHANTOM_STAT (Gap G — after Gaps A/B)
 
 ---
 
 ## Deferred levers (do NOT implement this cycle)
 
-- **Gap A — NPC dialogue topic conditions excluded from `checkConds`:** S-effort, no false-positive risk, closes the dialogue-side twin of the object/exit feasibility check. Highest-value structural validator gap remaining. Implement next after bug_0332.
-- **Gap B — NPC dialogue topic conditions excluded from `checkUnsatisfiable`:** S-effort, zero false-positive risk. Batch with Gap A in the same commit (same loop, adjacent calls).
-- **Gap D — Stale docstring in verify-integrity.ts (lines 31-33):** S-effort 4-line edit. Deferred again: zero detection coverage change, safe to batch with Gap E.
-- **Gap E — TAUTOLOGY_REGRESSION not in detectCountRegressions:** S-effort refactor. Structurally inconsistent but functionally safe. Batch with Gap D.
+- **Gap A — NPC dialogue topic conditions excluded from `checkConds`:** S-effort, no FP risk, closes the dialogue-side twin of the object/exit feasibility check. Highest-value structural validator gap remaining. **Implement next after bug_0336.**
+- **Gap B — NPC dialogue topic conditions excluded from `checkUnsatisfiable`:** S-effort, zero FP risk. Batch with Gap A in the same commit (same loop, adjacent calls).
+- **Gap D — Stale docstring in verify-integrity.ts (lines 31-33):** S-effort 4-line edit. Safe to batch with Gap E.
+- **Gap E — TAUTOLOGY_REGRESSION not in detectCountRegressions:** S-effort refactor. Batch with Gap D.
 - **Gap F — allGeneratorsClean absent from Assessment:** S-M effort. Genuinely useful for isSaturated disambiguation. Deferred: low urgency while saturation cycle is the primary problem.
-- **Class-level stale reactive description validator (Reviewer 3):** Viable as WARN-only advisory, estimated 30-50% FP rate without tuning. Requires suppression list maintenance across 17 packs. Deferred: design the suppression strategy first.
-- **Dialogue root re-greet validator (Reviewer 3 "next most common bug class"):** Confirmed in 3 packs. Low FP risk (pattern is structurally tight: heard_* flag set by child, not read by parent). S-effort. Deferred until Gaps A/B are landed (they are the closer structural analogue and come first).
-- **Parser generator DAG topology variant:** L-effort, multi-cycle scope.
+- **Gap G — SKILL_CHECK_PHANTOM_STAT:** S-effort. After Gaps A/B. All 32 current packs clean.
+- **Dialogue root re-greet validator:** Confirmed in 3 packs, S-effort. Deferred until Gaps A/B land (shares NPC iteration loop — implement as third pass in same block).
+- **Class-level stale reactive description validator:** Viable as WARN-only, 30-50% FP rate without tuning. Design the suppression strategy first.
+- **Parser solver blind to skill_check branches (bug_0334 class):** L-effort engine change. Deferred.
 - **Benchmark scorecard / frontier category:** Blocked on API key.
+- **Parser generator DAG topology variant:** L-effort, multi-cycle scope.

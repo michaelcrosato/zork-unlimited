@@ -69,16 +69,18 @@ describe("assess()", () => {
     for (const r of reviews) expect(r.score).toBeLessThan(1); // ranked below real fixes + new content
   });
 
-  it("does NOT raise content_new candidates once all modes have met their breadth target", () => {
-    // TARGET_PER_MODE = {cyoa:12, parser:10, rpg:10} (bug_0335). All three modes have
-    // now reached their targets (cyoa=12, parser=10, rpg=10 with advocates_case_v1), so
-    // the assessor correctly DISARMS content_new for all modes. Raising TARGET_PER_MODE
-    // re-arms it; this assertion catches any unintended regression that re-adds the lever
-    // when all modes are satisfied.
+  it("raises content_new candidates for all modes below the breadth target", () => {
+    // TARGET_PER_MODE = {cyoa:20, parser:16, rpg:16} (bug_0336). Current counts
+    // (cyoa=12, parser=10, rpg=10) are all below the new targets, so the assessor
+    // correctly ARMS content_new for all three modes. This asserts the headroom is
+    // real and that isSaturated() returns false.
     for (const mode of ["cyoa", "parser", "rpg"]) {
       expect(a.packsByMode[mode]).toBeGreaterThanOrEqual(2);
+      expect(
+        a.candidates.find((c) => c.category === "content_new" && c.target === mode),
+      ).toBeDefined();
     }
-    expect(a.candidates.find((c) => c.category === "content_new")).toBeUndefined();
+    expect(a.candidates.find((c) => c.category === "content_new")).toBeDefined();
   });
 
   it("every candidate is well-formed (evidence + score + effort)", () => {

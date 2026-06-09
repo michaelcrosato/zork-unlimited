@@ -80,3 +80,23 @@ Seeded 2026-06-08 from `docs/CURRENT_PLAN.md` re-aim #19 (and #17/#18) "false al
 The single deferral condition from cycle #19 ("revisit after bug_0317 is locked") is now satisfied — ITEM_UNPLACED landed as bug_0317. Raising `TARGET_PER_MODE` from `{cyoa:2,parser:2,rpg:2}` to `{cyoa:10,parser:8,rpg:8}` at `src/afk/assessor.ts:68` produces `content_new` candidates scored at ~1.417, immediately above the 0.5 floor, redirecting the loop to net-new pack authoring. Regression artifact: `traces/bugs/bug_0332_target_per_mode_threshold.yaml`.
 
 **Next after bug_0332:** Gaps A+B (NPC topic `checkConds` + `checkUnsatisfiable`) — S-effort, zero false-positive risk, batch in one commit. Then Gap F (`allGeneratorsClean` in Assessment).
+
+### Re-aim #21 — 2026-06-09 (HEAD = bug_0335; next free id = bug_0336)
+
+**False alarms this cycle:** None. All four reviewers correctly scoped to open gaps only and did not re-nominate any confirmed-closed item.
+
+**Gaps confirmed OPEN (with proof):**
+
+- **Gap A — NPC topic conditions excluded from `checkConds`:** `src/validate/parser_validator.ts` — `checkConds` called at lines 539, 552, 564; never for `DialogueTopic.conditions` in NPC block (lines 631-697). Infrastructure present (`neededWhileHeld` at lines 600-603 iterates `t.conditions`) — call simply absent. All 32 current packs clean (no retroactive error; future authoring protection only).
+- **Gap B — NPC topic conditions excluded from `checkUnsatisfiable`:** Same NPC block; node variant shadowing checked (line 654); topic condition unsatisfiability not checked. `checkUnsatisfiable` called at lines 856-869, 871-886, 892-900, 910 — never in NPC block.
+- **Gap C — TARGET_PER_MODE ceiling re-saturation (structural trap):** `src/afk/assessor.ts:68` = `{cyoa:12,parser:10,rpg:10}` (raised to exact current counts by bug_0335); gate at line 566 (`if (have < target)`) never fires; zero content_new candidates. Third occurrence of same root cause (re-aim #19 → bug_0332, mid-cycle → bug_0335, now re-aim #21 → bug_0336). **(CHOSEN MOVE)**
+- **Gap D — Stale docstring in verify-integrity.ts lines 31-33:** Still says tautology "is still not caught" after bug_0308. Deferred again.
+- **Gap E — TAUTOLOGY_REGRESSION inline in runDrift (lines 656-667):** Structurally inconsistent, functionally safe. Deferred.
+- **Gap F — allGeneratorsClean absent from Assessment type (lines 52-57):** Deferred.
+- **NEW Gap G — SKILL_CHECK_PHANTOM_STAT:** `skill_check.stat` references a stat variable not validated against declared `vars` in `src/validate/parser_validator.ts`. S-effort. Deferred until Gaps A/B land.
+
+**Chosen move — bug_0336: raise TARGET_PER_MODE ceiling to {cyoa:20, parser:16, rpg:16}**
+
+Root cause confirmed: ceiling was raised to match exact pack count (bug_0335 set {cyoa:12,parser:10,rpg:10} = actual counts), leaving zero headroom. Raising to {cyoa:20,parser:16,rpg:16} provides ~8 packs of content_new headroom per mode (based on ~10 packs authored per full content_new run in re-aim #20), preventing re-saturation for multiple cycles. Regression artifact: `traces/bugs/bug_0336_target_per_mode_ceiling.yaml`.
+
+**Next after bug_0336:** Gaps A+B (NPC topic `checkConds` + `checkUnsatisfiable`) — S-effort, zero FP risk, batch in one commit. Then Gap E+D batch. Then Gap F. Then Gap G (SKILL_CHECK_PHANTOM_STAT). Then dialogue root re-greet validator (shares NPC loop with A/B).
