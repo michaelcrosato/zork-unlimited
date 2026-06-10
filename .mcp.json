@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "adventureforge": {
-      "command": "npm",
-      "args": ["--silent", "run", "mcp"],
-      "env": {}
-    }
-  }
-}
