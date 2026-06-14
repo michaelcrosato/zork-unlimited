@@ -40,3 +40,7 @@ playwright-report/
 # groomed feature, never as a side-effect of an unrelated branch
 .agents/
 .codex/
+
+# Transient agent git worktrees (session-local checkouts; may be foreign-repo
+# worktrees nested under this path). Never commit them into this repo.
+.claude/worktrees/
