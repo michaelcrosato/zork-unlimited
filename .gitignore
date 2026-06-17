@@ -24,3 +24,8 @@ AI_LOOP_STATE_ARCHIVE.md
 # Blind-tester run outputs (regenerable; not source)
 blind-tester/reports/*
 !blind-tester/reports/.gitkeep
+
+# Agent metadata and requests
+.agents/
+ORIGINAL_REQUEST.md
+
