@@ -27,6 +27,14 @@ OUT=""
 SMOKE=0
 TIMEOUT="${BLIND_TIMEOUT:-900}"
 
+# `npm run blind` invokes this script with a non-login Bash, so per-user CLI install
+# dirs such as ~/.local/bin may be missing even when an interactive shell can see them.
+for dir in "$HOME/.local/bin" "$HOME/bin"; do
+  if [[ -d "$dir" ]]; then
+    PATH="$dir:$PATH"
+  fi
+done
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --pack)  PACK="$2"; shift 2 ;;
@@ -55,7 +63,19 @@ esac
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 MCP_CONFIG="$WORK/mcp.json"
-cat > "$MCP_CONFIG" <<JSON
+if command -v wsl.exe >/dev/null 2>&1 && [[ "$GAME_DIR" == /mnt/* ]]; then
+  cat > "$MCP_CONFIG" <<JSON
+{
+  "mcpServers": {
+    "adventureforge": {
+      "command": "wsl.exe",
+      "args": ["-e", "bash", "-lc", "cd '$GAME_DIR' && exec npm --silent run mcp"]
+    }
+  }
+}
+JSON
+else
+  cat > "$MCP_CONFIG" <<JSON
 {
   "mcpServers": {
     "adventureforge": {
@@ -65,6 +85,7 @@ cat > "$MCP_CONFIG" <<JSON
   }
 }
 JSON
+fi
 
 # Fill the locked blind prompt.
 PROMPT="$(sed -e "s#__PACK__#${PACK}#g" -e "s#__SEED__#${SEED}#g" "$SCRIPT_DIR/prompt.md")"
@@ -126,6 +147,12 @@ if command -v jq >/dev/null 2>&1; then
 else
   cp "$OUT.json" "$OUT.md"
 fi
+
+REPORT_MD="$OUT.md"
+if command -v wslpath >/dev/null 2>&1 && [[ "$REPORT_MD" == /mnt/* ]]; then
+  REPORT_MD="$(wslpath -w "$REPORT_MD")"
+fi
+( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" )
 
 echo "✓ Blind report saved: $OUT.md"
 grep -iE 'clarity .*[0-9]|enjoyment .*[0-9]' "$OUT.md" | head -2 || true
