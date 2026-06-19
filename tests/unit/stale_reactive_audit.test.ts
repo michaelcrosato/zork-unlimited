@@ -102,6 +102,28 @@ describe("stale reactive room-item audit", () => {
     expect(auditParserPackForStaleRoomItems(pack, "fixture.yaml", "parser")).toEqual([]);
   });
 
+  it("suppresses non-start rooms that become terminal as soon as the player enters", () => {
+    const pack = basePack();
+    pack.meta.start_room = "start";
+    pack.rooms.unshift({
+      id: "start",
+      name: "Start",
+      description: "A plain starting room.",
+      objects: [],
+      exits: [{ direction: "north", to: "room", conditions: [] }],
+      on_enter: [],
+    });
+    pack.win_conditions = [{ id: "win", conditions: [{ visited: "room" }], ending: "ending_win" }];
+
+    expect(auditParserPackForStaleRoomItems(pack, "fixture.yaml", "parser")).toEqual([]);
+  });
+
+  it("still reports start-room prose even if a visited-start win condition would be malformed content", () => {
+    const sites = auditParserPackForStaleRoomItems(basePack(), "fixture.yaml", "parser");
+
+    expect(sites).toHaveLength(1);
+  });
+
   it("suppresses the site when the item's take effects immediately end the game", () => {
     const pack = basePack();
     pack.objects[0]!.take_effects = [{ end_game: "ending_win" }];

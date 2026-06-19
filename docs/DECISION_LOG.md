@@ -549,3 +549,26 @@ bug artifact. `npm run assess` now reports 9 remaining room/item triage sites, w
 
 **Next after this:** continue down the remaining high-confidence room/item sites, starting with
 `cold_forge`, or promote the low-FP subset once the first audited packs are clean.
+
+### Standard cycle — 2026-06-19 (HEAD = e1eedff; next move = stale audit terminal-room suppression)
+
+**Confirmed CLOSED since bellfounder stale hammer:**
+
+- **`bellfounders_alarm` casting-floor taken-hammer contradiction:** closed by `e1eedff`.
+  The casting floor now reacts after the tuning hammer has been taken, including after
+  later drops. The stale room/item audit dropped to 9 sites.
+
+**Chosen move — tune the stale room/item audit**
+
+The next audit entry, `cold_forge`'s `ember_chamber` / `ember_heart`, was a false
+positive: entering the Ember Chamber immediately satisfies the pack's `visited:
+ember_chamber` win condition, so the player never gets a live room observation where
+taking the Ember-Heart can make the room prose stale. This cycle teaches the audit to
+suppress non-start rooms whose entry state already guarantees a declared terminal,
+while keeping start-room cases reportable. It also adds unit coverage for the
+terminal-on-entry suppression. `npm run assess` now reports 8 remaining room/item
+triage sites, with the `cold_forge` terminal pickup gone.
+
+**Next after this:** continue down the remaining high-confidence room/item sites, starting with
+`falconers_ransom`, or promote the low-FP subset once the remaining false positives are
+tuned out.

@@ -64,6 +64,7 @@ export function auditParserPackForStaleRoomItems(
       const object = objects.get(objectId);
       if (!object?.takeable) continue;
       if (roomVariantsCoverItemRemoval(room, object)) continue;
+      if (roomEntryGuaranteesImmediateTerminal(pack, room)) continue;
       if (takeGuaranteesImmediateTerminal(pack, room, object)) continue;
       const matchedTerm = firstMentionedObjectTerm(room.description, object);
       if (!matchedTerm) continue;
@@ -135,6 +136,17 @@ function takeGuaranteesImmediateTerminal(
   return pack.win_conditions.some((win) => winConditionsHoldAfterTake(pack, win, room, object));
 }
 
+function roomEntryGuaranteesImmediateTerminal(pack: ParserPack, room: Room): boolean {
+  if (room.id === pack.meta.start_room) return false;
+  if (room.on_enter.some((effect) => "end_game" in effect)) return true;
+  return pack.win_conditions.some((win) => winConditionsHoldOnRoomEntry(pack, win, room));
+}
+
+function winConditionsHoldOnRoomEntry(pack: ParserPack, win: WinCondition, room: Room): boolean {
+  const facts = factsAfterEnteringRoom(pack, room);
+  return win.conditions.every((condition) => guaranteedByFacts(condition, facts));
+}
+
 function winConditionsHoldAfterTake(
   pack: ParserPack,
   win: WinCondition,
@@ -165,6 +177,19 @@ function factsAfterTaking(pack: ParserPack, room: Room, object: GameObject): Gua
   return {
     flags,
     items: new Set([object.id]),
+    rooms: new Set([room.id]),
+  };
+}
+
+function factsAfterEnteringRoom(pack: ParserPack, room: Room): GuaranteedFacts {
+  const flags = new Set(pack.meta.flags_init);
+  for (const effect of room.on_enter) {
+    if ("set_flag" in effect) flags.add(effect.set_flag);
+    if ("clear_flag" in effect) flags.delete(effect.clear_flag);
+  }
+  return {
+    flags,
+    items: new Set(),
     rooms: new Set([room.id]),
   };
 }
