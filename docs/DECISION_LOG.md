@@ -621,3 +621,25 @@ room/item triage sites, with the `printers_night` entries gone.
 **Next after this:** continue down the remaining high-confidence room/item sites, starting with
 `quarrymens_fault`, or promote the low-FP subset once the remaining false positives are
 tuned out.
+
+### Standard cycle — 2026-06-19 (HEAD = bc063ad; next move = quarry survey-chain prose)
+
+**Confirmed CLOSED since printer stale lantern and schedule:**
+
+- **`printers_night` taken lantern/schedule contradictions:** closed by `bc063ad`.
+  The shop floor and composing room now react after those items are first picked up,
+  including after later drops, and the audit dropped to 5 remaining room/item sites.
+
+**Chosen move — fix the next real stale room prose site**
+
+The next audit entry was a concrete contradiction in `quarrymens_fault`: the quarry
+yard kept saying the survey chain lay coiled on a stone block after it was taken.
+This cycle gives the TAKE action a durable `survey_chain_taken` flag and adds a
+quarry-yard variant that keeps the stone block empty after first pickup, including
+after a later drop. It also adds a regression and bug artifact. `npm run assess`
+now reports 4 remaining room/item triage sites, with the `quarrymens_fault` entry
+gone and the remaining audit work in `tanners_fever` and `wolf_winter`.
+
+**Next after this:** continue down the remaining high-confidence room/item sites, starting with
+`tanners_fever`, or promote the low-FP subset once the remaining false positives are
+tuned out.

@@ -52,6 +52,13 @@ rooms:
           The quarry yard. Your failed measure has left the chain kinked and
           the fault face less forgiving. The drill line runs east, the map shed
           west, and the foreman's ramp climbs north.
+      - when: [{ has_flag: survey_chain_taken }]
+        text: >
+          A chalk-white yard below the north road cutting. The contractor's
+          blast order is nailed to a wagon board, and the stone block is bare
+          where the survey chain was coiled before you took it up. Above the
+          yard, the chapel bank leans over the quarry face. The drill line runs
+          east, the map shed stands west, and the foreman's ramp climbs north.
     objects: [blast_order, survey_chain, fault_face]
     exits:
       - { direction: east, to: drill_line }
@@ -170,6 +177,8 @@ objects:
       A brass-linked survey chain, each link worn smooth by years of field
       work. Long enough to run from the first drill hole to the road bank.
     takeable: true
+    take_effects:
+      - set_flag: survey_chain_taken
 
   - id: fault_face
     name: "fault face"
