@@ -334,3 +334,23 @@ triage sites, with the `chandlers_lot` entries gone.
 
 **Next after this:** continue down the remaining high-confidence room/item sites, starting with
 `coroners_errand`, or promote the low-FP subset once the first audited packs are clean.
+
+### Standard cycle — 2026-06-19 (HEAD = 90ebe15; next move = coroner stale legal evidence)
+
+**Confirmed CLOSED since chandler stale inspection tools:**
+
+- **`chandlers_lot` counting-room / dipping-floor / wax-loft taken-item contradictions:** closed
+  by `90ebe15`. The pack now reacts when the inspector's lantern, wick gauge, snuffing shears,
+  and adulteration book are held. The stale room/item audit dropped to 30 sites.
+
+**Chosen move — fix the next real stale room prose cluster**
+
+The next audit entries were concrete contradictions in `coroners_errand`: the front hall kept
+saying the coroner's letter of commission was on the side table after the commission was taken, and
+the study kept placing Rendell's sealed letter beside Calloway's hand after the player held it. This
+cycle adds ordered room variants for the held commission, held sealed letter, and examined-body with
+held-letter states, plus a regression and bug artifact. `npm run assess` now reports 28 remaining
+room/item triage sites, with the `coroners_errand` entries gone.
+
+**Next after this:** continue down the remaining high-confidence room/item sites, starting with
+`dyers_weight`, or promote the low-FP subset once the first audited packs are clean.

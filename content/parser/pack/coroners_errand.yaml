@@ -90,6 +90,15 @@ rooms:
       side table by the door. The study opens to the east; the parlour to the west;
       a service passage runs north toward the back of the house. The lane to the
       coroner's office runs south — the jury waits there at noon.
+    variants:
+      - when: [{ has_item: commission }]
+        text: >
+          A merchant's entrance hall — marble floor, walls hung with prints of
+          foreign harbours. The side table by the door is bare now, the
+          coroner's letter of commission safely with you. The study opens to
+          the east; the parlour to the west; a service passage runs north
+          toward the back of the house. The lane to the coroner's office runs
+          south — the jury waits there at noon.
     objects: [commission]
     exits:
       - { direction: east, to: study }
@@ -111,12 +120,31 @@ rooms:
       the dead man's hand lies a sealed letter. A small silver-clasped purse sits
       at the edge of the desk. The library door is north; the hall is west.
     variants:
+      - when:
+          - has_flag: manner_known
+          - has_item: sealed_letter
+        text: >
+          Calloway behind his desk, his lips the pale blue of a narcotic death.
+          You know what you are looking at. The physician's bag is still by the
+          door, and Rendell's sealed letter is with you now rather than beside
+          the dead man's hand. The purse is at the desk edge. The library is
+          north; the hall is west.
       - when: [{ has_flag: manner_known }]
         text: >
           Calloway behind his desk, his lips the pale blue of a narcotic death. You
           know what you are looking at. The physician's bag is still by the door; the
-          sealed letter lies where you found it, or is in your possession. The purse
-          is at the desk edge. The library is north; the hall is west.
+          sealed letter lies where you found it beside the dead man's hand. The
+          purse is at the desk edge. The library is north; the hall is west.
+      - when:
+          - has_item: sealed_letter
+        text: >
+          George Calloway sits slumped in his chair behind the writing desk,
+          his head lolled to the right, ink still wet on the page he was
+          writing. A physician's black bag stands by the door — left in haste,
+          or left deliberately. The place beside the dead man's hand is bare
+          where Rendell's sealed letter lay before you took it. A small
+          silver-clasped purse sits at the edge of the desk. The library door
+          is north; the hall is west.
     objects: [body, sealed_letter, merchants_purse, writing_desk]
     exits:
       - { direction: north, to: library }
