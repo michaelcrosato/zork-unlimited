@@ -354,3 +354,24 @@ room/item triage sites, with the `coroners_errand` entries gone.
 
 **Next after this:** continue down the remaining high-confidence room/item sites, starting with
 `dyers_weight`, or promote the low-FP subset once the first audited packs are clean.
+
+### Standard cycle — 2026-06-19 (HEAD = 953323e; next move = dyer stale dye-house tools)
+
+**Confirmed CLOSED since coroner stale legal evidence:**
+
+- **`coroners_errand` front-hall / study taken-evidence contradictions:** closed by `953323e`.
+  The front hall now reacts when the commission is held, and the study reacts when Rendell's
+  sealed letter is held. The stale room/item audit dropped to 28 sites.
+
+**Chosen move — fix the next real stale room prose cluster**
+
+The next audit entries were concrete contradictions in `dyers_weight`: the dye house kept saying the
+finished indigo cakes sat on the curing rack after they were taken, and kept saying the long copper
+tongs hung by the vat after they were held. The old proved-adulteration variant also placed the
+indigo cakes on the rack even when the player could be holding the seized evidence. This cycle adds
+ordered room variants for held cakes, held tongs, both-held, and the corresponding
+proved-adulteration states, plus a regression and bug artifact. `npm run assess` now reports 26
+remaining room/item triage sites, with the `dyers_weight` entries gone.
+
+**Next after this:** continue down the remaining high-confidence room/item sites, starting with
+`friars_postern`, or promote the low-FP subset once the first audited packs are clean.

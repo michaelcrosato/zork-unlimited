@@ -104,12 +104,73 @@ rooms:
       above the door. Long copper tongs hang by the vat. The store room lies
       east; the door to the north is shut; the back passage runs south.
     variants:
+      - when:
+          - has_flag: proved_adulteration
+          - has_item: indigo_cakes
+          - has_item: copper_tongs
+        text: >
+          The dye house, the second acid test done. The vat foamed along the
+          copper rim where you poured — chalk in the finished product, the same
+          reaction as the casks. The curing rack and the hook by the vat are
+          bare now; the indigo cakes and copper tongs are with you. The north
+          door is clear; the store room lies east.
+      - when:
+          - has_flag: proved_adulteration
+          - has_item: indigo_cakes
+        text: >
+          The dye house, the second acid test done. The vat foamed along the
+          copper rim where you poured — chalk in the finished product, the same
+          reaction as the casks. The curing rack is bare where the indigo cakes
+          were before you took them; long copper tongs still hang by the vat.
+          The north door is clear; the store room lies east.
+      - when:
+          - has_flag: proved_adulteration
+          - has_item: copper_tongs
+        text: >
+          The dye house, the second acid test done. The vat foamed along the
+          copper rim where you poured — chalk in the finished product, the same
+          reaction as the casks. The indigo cakes on the rack are the product
+          of that vat, and the hook by the vat is bare where the copper tongs
+          hung before you took them. The north door is clear; the store room
+          lies east.
       - when: [{ has_flag: proved_adulteration }]
         text: >
           The dye house, the second acid test done. The vat foamed along the
           copper rim where you poured — chalk in the finished product, the same
           reaction as the casks. The indigo cakes on the rack are the product
           of that vat. The north door is clear; the store room lies east.
+      - when:
+          - has_item: indigo_cakes
+          - has_item: copper_tongs
+        text: >
+          Meredith's dye house: low-ceilinged, the walls stained blue-black to
+          the height of a man's shoulder. A wide copper vat dominates the far
+          wall, its contents a dull indigo-dark. The curing rack and the hook
+          by the vat are bare now; the finished indigo cakes and long copper
+          tongs are with you. An order ledger sits open on the counting shelf
+          above the door. The store room lies east; the door to the north is
+          shut; the back passage runs south.
+      - when:
+          - has_item: indigo_cakes
+        text: >
+          Meredith's dye house: low-ceilinged, the walls stained blue-black to
+          the height of a man's shoulder. A wide copper vat dominates the far
+          wall, its contents a dull indigo-dark. The curing rack is bare where
+          the finished indigo cakes sat before you took them. An order ledger
+          sits open on the counting shelf above the door. Long copper tongs
+          hang by the vat. The store room lies east; the door to the north is
+          shut; the back passage runs south.
+      - when:
+          - has_item: copper_tongs
+        text: >
+          Meredith's dye house: low-ceilinged, the walls stained blue-black to
+          the height of a man's shoulder. A wide copper vat dominates the far
+          wall, its contents a dull indigo-dark. Beside it, a curing rack holds
+          a dozen finished indigo cakes, each stamped with Meredith's mark —
+          round, the size of a wheel-cheese. An order ledger sits open on the
+          counting shelf above the door. The hook by the vat is bare where the
+          long copper tongs hung before you took them. The store room lies east;
+          the door to the north is shut; the back passage runs south.
     objects: [order_ledger, dye_vat, indigo_cakes, copper_tongs]
     exits:
       - direction: north
