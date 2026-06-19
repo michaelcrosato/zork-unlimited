@@ -79,7 +79,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.world.id).toBe("charter_marches");
     expect(r.hub).toBe("Charterhaven");
     expect(r.graph.hub).toBe("charterhaven");
-    expect(r.quest_count).toBe(51);
+    expect(r.quest_count).toBe(52);
     expect(r.quests.find((q) => q.path === PACK)).toMatchObject({
       district: "North Road Watch",
       quest: "expose the watchtower smuggling road",

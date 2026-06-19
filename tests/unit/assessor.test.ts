@@ -71,8 +71,8 @@ describe("assess()", () => {
 
   it("raises content_new candidates only for modes below the breadth target", () => {
     // TARGET_PER_MODE = {cyoa:20, parser:16, rpg:16} (bug_0336). The current corpus
-    // has reached the CYOA and parser targets while RPG still has headroom, so the
-    // assessor should disarm CYOA/parser content_new and keep RPG content_new armed.
+    // has reached all three mode targets, so the assessor should disarm every
+    // content_new candidate and leave routine blind-playtest review as the live lever.
     expect(a.packsByMode["cyoa"]).toBeGreaterThanOrEqual(20);
     expect(
       a.candidates.find((c) => c.category === "content_new" && c.target === "cyoa"),
@@ -81,11 +81,11 @@ describe("assess()", () => {
     expect(
       a.candidates.find((c) => c.category === "content_new" && c.target === "parser"),
     ).toBeUndefined();
-    expect(a.packsByMode["rpg"]).toBeGreaterThanOrEqual(2);
+    expect(a.packsByMode["rpg"]).toBeGreaterThanOrEqual(16);
     expect(
       a.candidates.find((c) => c.category === "content_new" && c.target === "rpg"),
-    ).toBeDefined();
-    expect(a.candidates.find((c) => c.category === "content_new")).toBeDefined();
+    ).toBeUndefined();
+    expect(a.candidates.find((c) => c.category === "content_new")).toBeUndefined();
   });
 
   it("every candidate is well-formed (evidence + score + effort)", () => {

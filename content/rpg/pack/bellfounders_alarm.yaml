@@ -1,0 +1,344 @@
+# The Bellfounder's Alarm -- a Stage 4 (Hero's-Quest) pack.
+#
+# Sixteenth RPG pack. Introduces `bellcraft`: reading metal tone, clapper
+# seating, and muster law under emergency pressure. The clean route tunes the
+# cracked alarm bell so Charterhaven can muster the wall before a smuggler raid;
+# the fallback forces the gate past a wardman who would rather keep the false
+# silence than admit the bell lot was badly cast.
+#
+# Score economy:
+#   +5  READ muster_warrant  -- legal standing and urgency (+3 bellcraft)
+#   +10 READ cracked_bell    -- flaw in the alarm bell's mouth (+3 bellcraft)
+#   +10 READ tone_table      -- strike sequence and clapper seat (+3 bellcraft)
+#   +10 USE tuning_hammer ON alarm_clapper, command_verb: tune, DC 12
+#   +15 wall_walk on_enter   -- the warning reaches the city wall
+# Prepared route: base bellcraft 3 + three readings 9 = 12, so DC 12 succeeds
+# on any d20 roll. Combat fallback via Rusk caps below full score.
+
+meta:
+  id: bellfounders_alarm_v1
+  title: "The Bellfounder's Alarm"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Bellfounders' Yard"
+    quest: "raise the wall alarm before the false-silent bell hides a raid"
+    role: "bell founder"
+    connection: "Charterhaven's walls answer the foundry bell; a cracked alarm lets river smugglers cross before the watch can muster."
+  start_room: foundry_yard
+  vars_init: { hp: 20, attack: 4, defense: 2, bellcraft: 3 }
+  flags_init: []
+  max_score: 50
+
+rooms:
+  - id: foundry_yard
+    name: "The Foundry Yard"
+    description: >
+      The bellfounders' yard lies below Charterhaven's east wall, hot with
+      banked coal and cold with bad news. A muster warrant is nailed to the
+      weigh post. The casting floor opens east, the pattern loft stands west,
+      and the ward gate rises north toward the wall walk.
+    variants:
+      - when: [{ has_flag: bell_tuned }]
+        text: >
+          The foundry yard. The alarm bell has found its voice again; every
+          chain and mould in the yard seems to wait for the wall watch to answer
+          it. The casting floor opens east, the pattern loft stands west, and
+          the ward gate rises north.
+      - when: [{ has_flag: tune_attempted }]
+        text: >
+          The foundry yard. Your failed tuning has left the alarm bell sulking
+          in its cracked throat. The casting floor opens east, the pattern loft
+          stands west, and the ward gate rises north.
+    objects: [muster_warrant]
+    exits:
+      - { direction: east, to: casting_floor }
+      - { direction: west, to: pattern_loft }
+      - { direction: north, to: ward_gate }
+
+  - id: casting_floor
+    name: "The Casting Floor"
+    description: >
+      Bronze heat hangs over the casting floor. The cracked alarm bell rests on
+      trestles beside its exposed clapper, and a tuning hammer lies on a sanded
+      bench. The foundry yard is west.
+    variants:
+      - when: [{ has_flag: bell_tuned }]
+        text: >
+          The casting floor. The alarm bell still shows its hairline flaw, but
+          the clapper now sits where it can strike a clean warning note. The
+          foundry yard is west.
+      - when: [{ has_flag: tune_attempted }]
+        text: >
+          The casting floor. The alarm bell has shifted under the bad strike,
+          and the clapper hangs stubbornly off seat. The foundry yard is west.
+    objects: [cracked_bell, alarm_clapper, tuning_hammer]
+    exits:
+      - { direction: west, to: foundry_yard }
+
+  - id: pattern_loft
+    name: "The Pattern Loft"
+    description: >
+      A loft of wooden ribs, chalk circles, and old strike notes above the
+      foundry. The tone table for wall bells is pinned under a wedge of scrap
+      bronze. The foundry yard is east.
+    variants:
+      - when: [{ has_flag: table_read }]
+        text: >
+          The pattern loft. The tone table has already given up the strike
+          order: mouth flaw first, clapper seat second, warning note last. The
+          foundry yard is east.
+    objects: [tone_table]
+    exits:
+      - { direction: east, to: foundry_yard }
+
+  - id: ward_gate
+    name: "The Ward Gate"
+    description: >
+      The stair gate to the east wall is barred by Rusk, a wardman with a short
+      iron staff and a longer fear of admitting he let the alarm bell pass
+      inspection. The foundry yard is south; the wall walk is north.
+    variants:
+      - when: [{ has_flag: rusk_defeated }]
+        text: >
+          The ward gate. Rusk is down against the stair rail, his staff out of
+          reach. The foundry yard is south; the wall walk is north.
+      - when: [{ has_flag: bell_tuned }]
+        text: >
+          The ward gate. Rusk still grips his staff, but the tuned bell is
+          sounding behind you; he can no longer pretend the silence was safe.
+          The foundry yard is south; the wall walk is north.
+    exits:
+      - { direction: south, to: foundry_yard }
+      - direction: north
+        to: wall_walk
+        conditions: [{ any_of: [{ has_flag: bell_tuned }, { has_flag: rusk_defeated }] }]
+        locked_msg: >
+          Rusk bars the stair. Tune the alarm bell into proof, or get past him.
+
+  - id: wall_walk
+    name: "The East Wall Walk"
+    description: >
+      Charterhaven's east wall looks over the river marsh and the black line of
+      boats sliding where no licensed ferry should be. The city lamps wait
+      below, still unaware.
+    on_enter:
+      - set_quest_stage: { quest: bellfounders_alarm, stage: wall_reached }
+      - add_journal: >
+          The warning reaches the wall. The watch can muster before the marsh
+          boats make the landing. (+15)
+      - inc_var: { name: score, by: 15 }
+    exits:
+      - { direction: south, to: ward_gate }
+
+objects:
+  - id: muster_warrant
+    name: "muster warrant"
+    aliases: [warrant, order, muster, watch order, wall warrant, muster warrant, notice]
+    description: >
+      A city warrant under the east-wall seal, nailed where every founder and
+      wardman must pass it.
+    variants:
+      - when: [{ has_flag: warrant_read }]
+        text: >
+          The muster warrant, already read: east-wall alarm by second bell, with
+          penalties for any officer who delays the watch.
+    read_text: >
+      East-wall alarm by second bell. Any silent or false-struck bell is to be
+      corrected before the ward can stand down. Delay is named dereliction, not
+      discretion.
+    interactions:
+      - verb: READ
+        target: muster_warrant
+        conditions: [{ not_flag: warrant_read }]
+        effects:
+          - set_flag: warrant_read
+          - inc_var: { name: bellcraft, by: 3 }
+          - inc_var: { name: score, by: 5 }
+          - set_quest_stage: { quest: bellfounders_alarm, stage: warrant_read }
+          - add_journal: >
+              The warrant gives you standing: a false-silent alarm must be
+              corrected before the ward can stand down. (+3 bellcraft, +5)
+          - narrate: >
+              The warrant does not ask whether Rusk is embarrassed. It names the
+              alarm bell as city safety and gives you authority to set it right.
+
+  - id: cracked_bell
+    name: "cracked alarm bell"
+    aliases: [bell, alarm, alarm bell, cracked bell, cracked alarm bell, bronze bell, mouth]
+    description: >
+      The east-wall alarm bell, newly cast and already wrong. A hairline flaw
+      runs along the mouth where the strike should ring cleanest.
+    variants:
+      - when: [{ has_flag: bell_read }]
+        text: >
+          The cracked alarm bell, already read: the flaw is at the mouth, but
+          the bell can still carry a warning if the clapper is seated away from
+          the dead metal.
+      - when: [{ has_flag: bell_tuned }]
+        text: >
+          The cracked alarm bell, tuned despite its flaw. It will never sing
+          fair, but it can shout loud enough for the wall.
+    read_text: >
+      The flaw lies at the bell's mouth, not through the crown. That is bad
+      casting, but not a dead bell. Seat the clapper off the flaw and the alarm
+      can carry one hard warning before the bell must be recast.
+    interactions:
+      - verb: READ
+        target: cracked_bell
+        conditions: [{ not_flag: bell_read }]
+        effects:
+          - set_flag: bell_read
+          - inc_var: { name: bellcraft, by: 3 }
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: bellfounders_alarm, stage: bell_read }
+          - add_journal: >
+              The crack sits in the mouth, not the crown. Seat the clapper away
+              from the dead metal and the alarm can still carry. (+3 bellcraft,
+              +10)
+          - narrate: >
+              The crack is ugly, but not final. The crown is sound; the mouth is
+              dead on one side. A clean clapper seat can still put warning into
+              the living bronze.
+
+  - id: alarm_clapper
+    name: "alarm clapper"
+    aliases: [clapper, tongue, alarm clapper, bell clapper, strike, seat]
+    description: >
+      The bell's iron tongue hangs exposed from its crown strap, just off the
+      seat where a clean warning note should begin.
+    variants:
+      - when: [{ has_flag: bell_tuned }]
+        text: >
+          The alarm clapper now sits true, turned away from the flawed mouth so
+          the bell can carry its warning.
+      - when: [{ has_flag: tune_attempted }]
+        text: >
+          The alarm clapper is jammed off seat after the failed strike. Moving
+          it again without recasting the strap would tear the crown.
+    interactions:
+      - verb: USE
+        item: tuning_hammer
+        target: alarm_clapper
+        command_verb: tune
+        command_template: "tune {target} with {item}"
+        conditions: [{ not_flag: bell_tuned }, { not_flag: tune_attempted }]
+        skill_check:
+          skill: bellcraft
+          difficulty: 12
+          on_success:
+            - set_flag: bell_tuned
+            - inc_var: { name: score, by: 10 }
+            - set_quest_stage: { quest: bellfounders_alarm, stage: bell_tuned }
+            - add_journal: >
+                You seated the clapper away from the flaw. The alarm bell
+                carries a hard warning note to the ward gate. (+10)
+            - narrate: >
+                You set the clapper by the table's order: feel the dead mouth,
+                turn the tongue off the flaw, then give the strap one flat
+                hammer blow. The bell answers harshly but clearly. It is not a
+                fair note. It is an alarm, and it carries.
+          on_failure:
+            - set_flag: tune_attempted
+            - set_quest_stage: { quest: bellfounders_alarm, stage: tune_failed }
+            - add_journal: >
+                The clapper struck wrong and jammed off seat. The bell will not
+                be tuned before the raid; the ward gate is the only route left.
+            - narrate: >
+                The hammer blow lands too close to the dead mouth. The clapper
+                jumps, bites into its strap, and stops there. Another blow would
+                tear the crown out of a bell already fighting its own metal.
+
+  - id: tuning_hammer
+    name: "tuning hammer"
+    aliases: [hammer, tuning hammer, founder hammer, tool, mallet]
+    description: >
+      A short-faced founder's hammer, heavy enough to seat iron and broad
+      enough not to scar bronze when used correctly.
+    takeable: true
+
+  - id: tone_table
+    name: "tone table"
+    aliases: [table, tone, notes, strike notes, tone table, chalk table, wall bell table]
+    description: >
+      A chalked table of wall-bell strikes, mouth flaws, clapper seats, and the
+      ugly compromises that still make an alarm carry.
+    variants:
+      - when: [{ has_flag: table_read }]
+        text: >
+          The tone table, already read: find the dead mouth, turn the clapper
+          off it, and strike the strap flat rather than high.
+    read_text: >
+      Wall bells tolerate no sweet lie. If the mouth is dead on one side, turn
+      the clapper off the flaw and strike the crown strap flat. The note will be
+      harsh, but a harsh alarm is still an alarm.
+    interactions:
+      - verb: READ
+        target: tone_table
+        conditions: [{ not_flag: table_read }]
+        effects:
+          - set_flag: table_read
+          - inc_var: { name: bellcraft, by: 3 }
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: bellfounders_alarm, stage: table_read }
+          - add_journal: >
+              The tone table gives the correction: dead mouth, turned clapper,
+              flat strap strike. Harsh is acceptable if it carries. (+3
+              bellcraft, +10)
+          - narrate: >
+              The table gives you the order of work. Do not chase sweetness.
+              Find the dead metal, turn the clapper off it, and make the bell
+              shout.
+
+npcs: []
+
+enemies:
+  - id: rusk
+    name: "Rusk"
+    description: >
+      Rusk, east-wall wardman, stands at the stair with an iron staff and a face
+      set against the foundry. A tuned bell will prove he passed bad metal; an
+      untuned one lets him call the danger rumor.
+    room: ward_gate
+    hp: 12
+    attack: 5
+    defense: 2
+    defeat_flag: rusk_defeated
+    death_ending: ending_silent_wall
+    on_defeat:
+      - set_quest_stage: { quest: bellfounders_alarm, stage: gate_forced }
+      - add_journal: >
+          Rusk is down at the ward gate. The wall can be warned, though a tuned
+          bell would have carried farther than a fight.
+
+win_conditions:
+  - id: warning_reaches_wall
+    conditions: [{ visited: wall_walk }]
+    ending: ending_alarm_raised
+
+endings:
+  - id: ending_alarm_raised
+    title: "The Bell Carries"
+    variants:
+      - when: [{ has_flag: bell_tuned }]
+        text: >
+          The east wall answers the foundry bell before the marsh boats touch
+          the landing. The note is harsh, but every wardman knows what it means:
+          muster now, argue later. Rusk can explain his false inspection under a
+          city warrant, and the smugglers lose the silence they counted on. ***
+          You have won. ***
+    text: >
+      The east wall gets its warning by the rougher road: Rusk is down, the gate
+      is open, and the watch sees the marsh boats before they make the landing.
+      The alarm bell remains a flawed piece of bronze, but the city has time to
+      muster and the false silence is broken. *** You have won. ***
+
+  - id: ending_silent_wall
+    title: "The Silent Wall"
+    text: >
+      Rusk drives the iron staff under your guard and the stair rushes sideways.
+      Behind you the cracked bell hangs mute in the foundry yard. Beyond the
+      wall, the marsh boats keep sliding toward a city that will not hear them
+      coming. *** You have fallen. ***
+    death: true

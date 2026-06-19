@@ -218,6 +218,10 @@ graph:
       name: "The Advocate's Case"
       kind: quest
       pack: "content/rpg/pack/advocates_case.yaml"
+    - id: bellfounders_alarm
+      name: "The Bellfounder's Alarm"
+      kind: quest
+      pack: "content/rpg/pack/bellfounders_alarm.yaml"
     - id: breaking_weir
       name: "The Breaking Weir"
       kind: quest
@@ -398,6 +402,9 @@ graph:
     - from: industrial_cut
       to: tide_mill
       route: "mill race"
+    - from: industrial_cut
+      to: bellfounders_alarm
+      route: "bellfounders' yard"
     - from: industrial_cut
       to: breaking_weir
       route: "flood works"
