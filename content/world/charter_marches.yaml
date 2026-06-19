@@ -70,6 +70,10 @@ graph:
       name: "Winter Steadings"
       kind: route
       district: "Outlying steads under Charterhaven writ"
+    - id: aleconners_seal
+      name: "The Ale-Conner's Seal"
+      kind: quest
+      pack: "content/cyoa/pack/aleconners_seal.yaml"
     - id: alnagers_fault
       name: "The Alnager's Fault"
       kind: quest
@@ -390,6 +394,9 @@ graph:
     - from: industrial_cut
       to: powder_mill_surety
       route: "powder mill race"
+    - from: market_parishes
+      to: aleconners_seal
+      route: "brewers' row"
     - from: market_parishes
       to: excise_surveyors_round
       route: "maltsters' ward"
