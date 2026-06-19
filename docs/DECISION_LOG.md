@@ -291,3 +291,25 @@ remaining room/item triage sites, with the `assayers_mark` entries gone.
 
 **Next after this:** continue down the remaining high-confidence room/item sites, starting with
 `cellarmans_dark`, or promote the low-FP subset once the first audited packs are clean.
+
+### Standard cycle — 2026-06-19 (HEAD = d538f1d; next move = cellarman stale cellar tools)
+
+**Confirmed CLOSED since assayers mark stale evidence:**
+
+- **`assayers_mark` assay-hall / record-room taken-evidence contradictions:** closed by `d538f1d`.
+  The assay hall now reacts when the silver plate and/or aqua fortis are held, and the record room
+  reacts when the commission paper is held. The stale room/item audit dropped to 37 sites.
+
+**Chosen move — fix the next real stale room prose cluster**
+
+The next audit entries were concrete contradictions in `cellarmans_dark`: the ale cellar base text
+kept saying the oil-lamp hung from the pillar bracket and the tinderbox sat on the ledge after those
+tools were taken; the old lit-cellar variant also kept saying the tinderbox was on its ledge after
+the player had to hold it to light the lamp. In the wine vault, the base text kept saying the
+deed-box stood beside the cash-box after the deed-box had been taken, during the live pre-win return
+state. This cycle adds ordered, reachable variants for the held-tool and lit-tool states, plus a
+deed-box-held wine-vault variant, regression, and bug artifact. `npm run assess` now reports 34
+remaining room/item triage sites, with the `cellarmans_dark` entries gone.
+
+**Next after this:** continue down the remaining high-confidence room/item sites, starting with
+`chandlers_lot`, or promote the low-FP subset once the first audited packs are clean.

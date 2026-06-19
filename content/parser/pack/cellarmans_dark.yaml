@@ -137,16 +137,58 @@ rooms:
       bracket. A piece of paper is tacked below it on the post.
       The coal-hole stair runs back up to the yard. An arch to the east opens into
       the oil-store; a heavy door to the west leads to the wine vault.
-    # Lamp-lit variant: the lamp is no longer described as bone-dry.
-    # Live only after lamp_lit — base text valid before; no dead variant (bug_0146).
+    # Reactive room text: once lamp/tinderbox are taken, the cellar no longer
+    # places them on the bracket/ledge; once lit, it distinguishes the held-light
+    # route from the lamp-left-in-bracket route.
     variants:
-      - when: [{ has_flag: lamp_lit }]
+      - when:
+          - has_flag: lamp_lit
+          - has_item: lamp
+          - has_item: tinderbox
         text: >
-          The inn's main cellar, properly lit now by the old lamp, its yellow light
-          throwing shadows up the barrel-vaulted ceiling. Tuns of ale line the walls.
-          The tinderbox is on its ledge. The coal-hole stair runs back up to the yard.
-          An arch to the east opens into the oil-store; the heavy door to the west
-          leads to the wine vault.
+          The inn's main cellar, properly lit now by the old lamp in your hand, its
+          yellow light throwing shadows up the barrel-vaulted ceiling. Tuns of ale
+          line the walls. The bracket on the pillar and the ledge beside it are bare
+          now, with the tinderbox also in your kit. The coal-hole stair runs back up
+          to the yard. An arch to the east opens into the oil-store; the heavy door
+          to the west leads to the wine vault.
+      - when:
+          - has_flag: lamp_lit
+          - has_item: tinderbox
+        text: >
+          The inn's main cellar, properly lit now by the old lamp on its bracket, its
+          yellow light throwing shadows up the barrel-vaulted ceiling. Tuns of ale
+          line the walls. The tinderbox is with you now rather than on the ledge. The
+          coal-hole stair runs back up to the yard. An arch to the east opens into
+          the oil-store; the heavy door to the west leads to the wine vault.
+      - when:
+          - has_item: lamp
+          - has_item: tinderbox
+        text: >
+          The inn's main cellar, low and barrel-vaulted. Tuns of ale crowd the walls
+          on their racks. The lamp-bracket on the pillar and the ledge beside it are
+          bare now: the oil-lamp and tinderbox are with you. A piece of paper is
+          tacked below the bracket on the post. The coal-hole stair runs back up to
+          the yard. An arch to the east opens into the oil-store; a heavy door to the
+          west leads to the wine vault.
+      - when:
+          - has_item: lamp
+        text: >
+          The inn's main cellar, low and barrel-vaulted. Tuns of ale crowd the walls
+          on their racks. The lamp-bracket on the pillar is empty now, the oil-lamp
+          with you; the tinderbox still sits on the ledge beside the bracket. A piece
+          of paper is tacked below it on the post. The coal-hole stair runs back up
+          to the yard. An arch to the east opens into the oil-store; a heavy door to
+          the west leads to the wine vault.
+      - when:
+          - has_item: tinderbox
+        text: >
+          The inn's main cellar, low and barrel-vaulted. Tuns of ale crowd the walls
+          on their racks. A lamp-bracket is bolted to the pillar by the stair; from
+          it hangs an oil-lamp, its reservoir bone-dry. The ledge beside the bracket
+          is bare where the tinderbox sat. A piece of paper is tacked below it on the
+          post. The coal-hole stair runs back up to the yard. An arch to the east
+          opens into the oil-store; a heavy door to the west leads to the wine vault.
     objects: [cellarman_note, lamp, tinderbox]
     exits:
       - { direction: up, to: coal_yard }
@@ -186,6 +228,14 @@ rooms:
       A long barrel-vaulted vault, the wine-racks full on either side, the air cool
       and close. At the far end, set on the stone floor, a deed-box of black iron
       stands beside a small cash-box of polished brass.
+    variants:
+      - when:
+          - has_item: deed_box
+        text: >
+          A long barrel-vaulted vault, the wine-racks full on either side, the air
+          cool and close. At the far end, a bare mark on the stone floor shows where
+          the deed-box stood before you took it. The small cash-box of polished brass
+          remains beside the empty space.
     objects: [deed_box, cash_box]
     exits:
       - { direction: east, to: ale_cellar }
