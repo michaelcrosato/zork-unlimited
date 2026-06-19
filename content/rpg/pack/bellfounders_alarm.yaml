@@ -73,6 +73,11 @@ rooms:
         text: >
           The casting floor. The alarm bell has shifted under the bad strike,
           and the clapper hangs stubbornly off seat. The foundry yard is west.
+      - when: [{ has_flag: tuning_hammer_taken }]
+        text: >
+          Bronze heat hangs over the casting floor. The cracked alarm bell rests
+          on trestles beside its exposed clapper, and the sanded bench is bare
+          where the tuning hammer lay. The foundry yard is west.
     objects: [cracked_bell, alarm_clapper, tuning_hammer]
     exits:
       - { direction: west, to: foundry_yard }
@@ -257,6 +262,8 @@ objects:
       A short-faced founder's hammer, heavy enough to seat iron and broad
       enough not to scar bronze when used correctly.
     takeable: true
+    take_effects:
+      - set_flag: tuning_hammer_taken
 
   - id: tone_table
     name: "tone table"

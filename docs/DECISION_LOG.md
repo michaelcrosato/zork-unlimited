@@ -528,3 +528,24 @@ gone.
 
 **Next after this:** continue down the remaining high-confidence room/item sites, starting with
 `bellfounders_alarm`, or promote the low-FP subset once the first audited packs are clean.
+
+### Standard cycle — 2026-06-19 (HEAD = 026e6e9; next move = bellfounder stale hammer)
+
+**Confirmed CLOSED since advocate stale documents:**
+
+- **`advocates_case` stall / charter-office taken-document contradictions:** closed by
+  `026e6e9`. Marta's stall and the charter office now react after the charter roll and/or
+  town register have been taken, including after later drops. The stale room/item audit
+  dropped to 10 sites.
+
+**Chosen move — fix the next real stale room prose cluster**
+
+The next audit entry was a concrete contradiction in `bellfounders_alarm`: the casting floor
+kept saying a tuning hammer lay on the sanded bench after the player could take it. This
+cycle gives the TAKE action a durable pickup flag and adds a casting-floor variant that keeps
+the bench bare after first pickup, including after later drops. It also adds a regression and
+bug artifact. `npm run assess` now reports 9 remaining room/item triage sites, with the
+`bellfounders_alarm` entry gone.
+
+**Next after this:** continue down the remaining high-confidence room/item sites, starting with
+`cold_forge`, or promote the low-FP subset once the first audited packs are clean.

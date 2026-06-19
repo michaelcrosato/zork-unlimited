@@ -1,0 +1,25 @@
+id: bug_0350
+pack: bellfounders_alarm_v1
+title: "casting floor still placed taken tuning hammer on the bench"
+severity: minor
+scene: casting_floor
+reported_by: afk_stale_reactive_room_item_audit_2026-06-19
+
+symptom: >
+  After taking the tuning hammer from the casting floor, LOOK still said a
+  tuning hammer lay on the sanded bench. Dropping the hammer after first pickup
+  could also let the room fall back to its starting-position prose.
+
+root_cause: >
+  The tuning hammer did not leave durable pickup state that room prose could
+  read. Inventory alone was not enough because the player can drop the hammer
+  after taking it.
+
+fix: >
+  Taking the tuning hammer now sets `tuning_hammer_taken`, and the casting floor
+  has a hammer-taken variant that keeps the sanded bench bare after first
+  pickup. The existing tuned and failed-tuning variants already avoid placing the
+  hammer on the bench. Score, exits, enemies, endings, and win conditions are
+  unchanged.
+
+tests: tests/regression/bellfounders_alarm_reactive_taken_items.test.ts
