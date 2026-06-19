@@ -136,6 +136,12 @@ rooms:
       the door hangs the steading's padded byre-jerkin — layered hide and stuffed wool,
       the thing the herders pull on to work the horns and hooves of frightened cattle. The
       byre-yard is back to the east.
+    variants:
+      - when: [{ has_flag: byre_jerkin_taken }]
+        text: >
+          A low store-shed off the byre-yard, hung with harness and winter gear. The peg
+          by the door is bare where the steading's padded byre-jerkin hung before you took
+          it down. The byre-yard is back to the east.
     objects: [byre_jerkin]
     exits:
       - { direction: east, to: byre_yard }
@@ -177,6 +183,13 @@ rooms:
           breach half-shut. The young wolf still holds what is left of the gap, hackled and
           snarling, but it can only come at you singly and slow through the narrowed throat,
           the way old Cade swore the byre would funnel them. The byre-yard is back to the south.
+      - when: [{ has_flag: paling_rail_taken }]
+        text: >
+          The gap where the wolves have broken the paling-fence to come at the byre. A young
+          wolf stands in the breach, all hunger and no caution, hackles up and head low — the
+          first of the pack through, and between you and it there is nothing but a spear's
+          length of trampled snow. The snow at your feet is bare where the fallen rail lay
+          before you took it up. The byre-yard is back to the south.
     exits:
       - { direction: south, to: byre_yard }
       - direction: north
@@ -271,6 +284,8 @@ objects:
       - when: [{ has_flag: jerkin_donned }]
         text: "The padded byre-jerkin, pulled on now over your own coat; its layered hide sits stiff and heavy between you and the next set of teeth."
     takeable: true
+    take_effects:
+      - set_flag: byre_jerkin_taken
     interactions:
       # Self-USE = "wear this thing" (cold_forge plate / dawn_beacon mail, bug_0074).
       # command_verb: don makes the offered and typed verb match the prose. One-shot
@@ -329,6 +344,8 @@ objects:
       - when: [{ has_flag: breach_braced }]
         text: "The fallen paling-rail, wedged hard across the breach now and stamped home — the gap half-shut, so what comes through the paling must come singly and slow."
     takeable: true
+    take_effects:
+      - set_flag: paling_rail_taken
     interactions:
       # Self-USE = "wedge this rail into the breach" (the byre-jerkin's self-USE shape,
       # command_verb so the offered and typed verb match the prose). The RPG runner

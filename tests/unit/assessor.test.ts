@@ -4,7 +4,8 @@
  * ranking), and reads real pack/mode health.
  */
 import { describe, it, expect } from "vitest";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   assess,
@@ -20,6 +21,56 @@ import {
 } from "../../src/afk/assessor.js";
 
 const a = assess(process.cwd());
+
+function withStaleAuditFixtureRoot(run: (root: string) => void): void {
+  const root = mkdtempSync(join(tmpdir(), "af-assessor-"));
+  try {
+    mkdirSync(join(root, "content", "parser", "pack"), { recursive: true });
+    mkdirSync(join(root, "content", "rpg", "pack"), { recursive: true });
+    writeFileSync(
+      join(root, "content", "parser", "pack", "stale_fixture.yaml"),
+      [
+        "meta:",
+        "  id: stale_audit_fixture_v1",
+        "  title: Stale Audit Fixture",
+        "  start_room: start",
+        "rooms:",
+        "  - id: start",
+        "    name: Start",
+        "    description: A plain starting room.",
+        "    exits:",
+        "      - direction: east",
+        "        to: room",
+        "  - id: room",
+        "    name: Store",
+        "    description: A brass lamp waits on the table.",
+        "    objects: [lamp]",
+        "    exits:",
+        "      - direction: west",
+        "        to: start",
+        "objects:",
+        "  - id: lamp",
+        "    name: brass lamp",
+        "    aliases: [lamp]",
+        "    description: A useful lamp.",
+        "    takeable: true",
+        "win_conditions:",
+        "  - id: win",
+        "    conditions:",
+        "      - has_flag: impossible",
+        "    ending: ending_win",
+        "endings:",
+        "  - id: ending_win",
+        "    title: Done",
+        "    text: Done.",
+        "",
+      ].join("\n"),
+    );
+    run(root);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
 
 describe("assess()", () => {
   it("counts packs by mode from the real content dirs", () => {
@@ -77,12 +128,18 @@ describe("assess()", () => {
     for (const r of reviews) expect(r.score).toBeLessThan(1); // ranked below real fixes + new content
   });
 
-  it("surfaces the stale reactive-description audit as an above-floor structural candidate", () => {
-    const candidate = a.candidates.find((c) => c.id === "stale-reactive-room-item-audit");
-    expect(candidate).toBeDefined();
-    expect(candidate?.category).toBe("engine");
-    expect(candidate?.score).toBeGreaterThan(SATURATION_FLOOR);
-    expect(candidate?.evidence[0]).toContain("item/take-effect state");
+  it("surfaces the stale reactive-description audit as an above-floor structural candidate when the class exists", () => {
+    withStaleAuditFixtureRoot((root) => {
+      const fixtureAssessment = assess(root);
+      const candidate = fixtureAssessment.candidates.find(
+        (c) => c.id === "stale-reactive-room-item-audit",
+      );
+
+      expect(candidate).toBeDefined();
+      expect(candidate?.category).toBe("engine");
+      expect(candidate?.score).toBeGreaterThan(SATURATION_FLOOR);
+      expect(candidate?.evidence[0]).toContain("item/take-effect state");
+    });
   });
 
   it("raises content_new candidates only for modes below the breadth target", () => {

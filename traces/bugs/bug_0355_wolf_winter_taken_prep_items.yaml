@@ -1,0 +1,27 @@
+id: bug_0355
+pack: wolf_winter_v1
+title: "store and paling still placed taken preparation items at their starts"
+severity: minor
+scene: store, paling_gap
+reported_by: afk_stale_reactive_room_item_audit_2026-06-19
+
+symptom: >
+  After taking the padded byre-jerkin from the store, LOOK still said it hung on
+  the peg by the door. After taking the fallen paling-rail from the broken
+  paling, LOOK still said the rail lay in the snow at the player's feet.
+  Dropping either item after first pickup could also let the rooms fall back to
+  their starting-position prose.
+
+root_cause: >
+  The byre-jerkin and paling rail did not leave durable pickup state that room
+  prose could read. Inventory alone was not enough because both items can be
+  dropped after first pickup.
+
+fix: >
+  Taking the byre-jerkin now sets `byre_jerkin_taken`, and taking the paling rail
+  now sets `paling_rail_taken`. The store and broken-paling rooms have
+  corresponding variants that keep the peg and trampled snow empty after first
+  pickup, including after later drops. Score, exits, enemies, endings, and win
+  conditions are unchanged.
+
+tests: tests/regression/wolf_winter_reactive_taken_items.test.ts

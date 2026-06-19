@@ -668,3 +668,26 @@ audit work in `wolf_winter`.
 **Next after this:** continue down the remaining high-confidence room/item sites, starting with
 `wolf_winter`, or promote the low-FP subset once the remaining false positives are
 tuned out.
+
+### Standard cycle — 2026-06-19 (HEAD = 6aef3d6; next move = wolf winter prep-item prose)
+
+**Confirmed CLOSED since tanner notes and meadowsweet prose:**
+
+- **`tanners_fever` taken notes/meadowsweet contradictions:** closed by `6aef3d6`.
+  The apothecary's store and herb store now react after those items are first picked
+  up, including after later drops, and the audit dropped to 2 remaining room/item sites.
+
+**Chosen move — fix the last visible stale room prose cluster**
+
+The next audit entries were concrete contradictions in `wolf_winter`: the store kept
+saying the padded byre-jerkin hung on its peg after it was taken, and the broken paling
+kept saying the fallen rail lay in the snow at the player's feet after it was taken.
+This cycle gives both TAKE actions durable pickup flags and adds store / broken-paling
+variants that keep the peg and trampled snow empty after first pickup, including after
+later drops. It also adds a regression and bug artifact. `npm run assess` no longer
+reports the stale room/item audit; the next ranked item is a blind playtest.
+The assessor unit now proves stale-audit candidate surfacing with a temporary fixture
+instead of requiring the live content corpus to keep a known stale site around.
+
+**Next after this:** if the stale room/item audit is empty, promote the low-FP subset
+into validation or move to the next ranked assessment item.
