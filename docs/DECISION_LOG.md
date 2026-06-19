@@ -232,3 +232,22 @@ without promoting the noisy remainder into validator warnings.
 
 **Next after this:** triage the remaining 50 sites into an even lower-FP validator subset, or fix the
 highest-confidence content sites directly.
+
+### Standard cycle — 2026-06-19 (HEAD = 7d7c6ff; next move = direct terminal take suppression)
+
+**Confirmed CLOSED since the first stale reactive audit tuning:**
+
+- **Take-effect / win-condition covered item-removal states:** closed by `7d7c6ff`.
+  The audit now suppresses rooms that already react to state written by an item's `take_effects`
+  and goal items whose take action immediately satisfies a terminal win condition.
+
+**Chosen move — suppress direct `end_game` take effects**
+
+The remaining audit examples still included items such as `apothecaries_standard`'s bribe purse:
+their room base text names a takeable object, but the object's own `take_effects` immediately
+`end_game`. A post-take room variant would never be observed in normal play, so counting those sites
+keeps the audit noisier without improving player-facing coverage. This cycle treats direct terminal
+take effects as the same non-actionable terminal-on-take class as terminal win conditions.
+
+**Next after this:** triage the remaining direct room prose sites, starting with multi-item rooms such
+as `apothecaries_standard`'s shop counter where post-take looks remain observable.

@@ -131,6 +131,7 @@ function takeGuaranteesImmediateTerminal(
   room: Room,
   object: GameObject,
 ): boolean {
+  if ((object.take_effects ?? []).some((effect) => "end_game" in effect)) return true;
   return pack.win_conditions.some((win) => winConditionsHoldAfterTake(pack, win, room, object));
 }
 

@@ -102,6 +102,13 @@ describe("stale reactive room-item audit", () => {
     expect(auditParserPackForStaleRoomItems(pack, "fixture.yaml", "parser")).toEqual([]);
   });
 
+  it("suppresses the site when the item's take effects immediately end the game", () => {
+    const pack = basePack();
+    pack.objects[0]!.take_effects = [{ end_game: "ending_win" }];
+
+    expect(auditParserPackForStaleRoomItems(pack, "fixture.yaml", "parser")).toEqual([]);
+  });
+
   it("does not treat a terminal requiring extra state as guaranteed by taking the item", () => {
     const pack = basePack();
     pack.win_conditions = [
