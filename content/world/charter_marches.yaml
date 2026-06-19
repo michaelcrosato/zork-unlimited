@@ -206,6 +206,10 @@ graph:
       name: "The Breaking Weir"
       kind: quest
       pack: "content/rpg/pack/breaking_weir.yaml"
+    - id: bridgewrights_proof
+      name: "The Bridgewright's Proof"
+      kind: quest
+      pack: "content/rpg/pack/bridgewrights_proof.yaml"
     - id: cold_forge
       name: "The Cold Forge"
       kind: quest
@@ -371,6 +375,9 @@ graph:
     - from: industrial_cut
       to: breaking_weir
       route: "flood works"
+    - from: industrial_cut
+      to: bridgewrights_proof
+      route: "old bridge works"
     - from: industrial_cut
       to: cold_forge
       route: "forge road"
