@@ -106,6 +106,39 @@ rooms:
       against the south wall — the gaugers use them to shift heavy casks. A
       marked stave hangs on a peg beside the beam, between the scale-weights.
       The lane is south; the inner door is north.
+    variants:
+      - when:
+          - has_flag: marked_stave_taken
+          - has_flag: crowbar_taken
+        text: >
+          The main office: a long room smelling of chalk-dust and old
+          ledger-leather. A weighing beam hangs still on its pivot above the
+          central table. A tall cupboard stands against the east wall beside the
+          inner door; the duty ledger and the night's papers are spread on the
+          table. The south wall and the peg beside the beam are bare where the
+          crowbar and marked stave started the night. The lane is south; the
+          inner door is north.
+      - when:
+          - has_flag: marked_stave_taken
+        text: >
+          The main office: a long room smelling of chalk-dust and old
+          ledger-leather. A weighing beam hangs still on its pivot above the
+          central table. A tall cupboard stands against the east wall beside the
+          inner door; the duty ledger and the night's papers are spread on the
+          table. A crowbar leans against the south wall — the gaugers use them
+          to shift heavy casks. The peg beside the beam is bare where the marked
+          stave hung between the scale-weights. The lane is south; the inner
+          door is north.
+      - when:
+          - has_flag: crowbar_taken
+        text: >
+          The main office: a long room smelling of chalk-dust and old
+          ledger-leather. A weighing beam hangs still on its pivot above the
+          central table. A tall cupboard stands against the east wall beside the
+          inner door; the duty ledger and the night's papers are spread on the
+          table. The south wall is bare where the crowbar leaned. A marked stave
+          hangs on a peg beside the beam, between the scale-weights. The lane is
+          south; the inner door is north.
     objects: [duty_ledger, bribe_purse, marked_stave, crowbar, weighing_beam, watchman, inner_door]
     exits:
       - { direction: south, to: approach_lane }
@@ -212,6 +245,7 @@ objects:
     # engine's useInteraction lookup discipline (resolves via target's interactions).
     take_effects:
       - inc_var: { name: score, by: 10 }
+      - set_flag: marked_stave_taken
 
   - id: crowbar
     name: "crowbar"
@@ -220,6 +254,8 @@ objects:
       A short iron crowbar of the kind used to shift heavy casks and pry open
       their lids for inspection. Useful, but noisy.
     takeable: true
+    take_effects:
+      - set_flag: crowbar_taken
     # TENSION BEAT — CHECK grip (optional, convergent, off-critical-path).
     # Gated on in_room: weighing_room so the beat fires where the decision belongs —
     # at the moment before committing to force or persuasion — not as the player

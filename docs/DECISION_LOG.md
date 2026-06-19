@@ -395,3 +395,23 @@ triage sites, with the `friars_postern` entry gone.
 
 **Next after this:** continue down the remaining high-confidence room/item sites, starting with
 `gaugers_register`, or promote the low-FP subset once the first audited packs are clean.
+
+### Standard cycle — 2026-06-19 (HEAD = 61c9fd7; next move = gauger stale weighing-room tools)
+
+**Confirmed CLOSED since friar stale key-ring:**
+
+- **`friars_postern` lodge taken-key-ring contradiction:** closed by `61c9fd7`.
+  The lodge now reacts after the turnkey's key-ring has been taken, including after a later
+  drop. The stale room/item audit dropped to 25 sites.
+
+**Chosen move — fix the next real stale room prose cluster**
+
+The next audit entries were concrete contradictions in `gaugers_register`: the weighing room
+kept saying the crowbar leaned against the south wall and the marked stave hung on its peg
+after the player could take either tool. This cycle gives both TAKE actions durable pickup
+flags and adds ordered weighing-room variants for stave-only, crowbar-only, and both-taken
+states, plus a regression and bug artifact. `npm run assess` now reports 23 remaining
+room/item triage sites, with the `gaugers_register` entries gone.
+
+**Next after this:** continue down the remaining high-confidence room/item sites, starting with
+`ropewalkers_twist`, or promote the low-FP subset once the first audited packs are clean.
