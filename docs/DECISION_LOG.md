@@ -504,3 +504,27 @@ entries gone.
 
 **Next after this:** continue down the remaining high-confidence room/item sites, starting with
 `advocates_case`, or promote the low-FP subset once the first audited packs are clean.
+
+### Standard cycle — 2026-06-19 (HEAD = 7960343; next move = advocate stale documents)
+
+**Confirmed CLOSED since weighmaster stale evidence:**
+
+- **`weighmasters_round` counting-house / warehouse-floor taken-evidence contradictions:**
+  closed by `7960343`. The counting-house and warehouse floor now react after the deputy's
+  receipt and/or grain sample have been taken, including after later drops. The stale
+  room/item audit dropped to 12 sites.
+
+**Chosen move — fix the next real stale room prose cluster**
+
+The next audit entries were concrete contradictions in `advocates_case`: Marta's stall kept
+saying the charter roll lay on the near table after it was taken, and the charter office
+could still place the town register on the counter after it was taken but before it was read.
+Its read-state variant also assumed the register remained in hand after a later drop. This
+cycle gives both TAKE actions durable pickup flags, adds stall / charter-office variants for
+the taken-document states, and rewrites the register-read room variant so it records the
+consulted entry rather than inventory. It also adds a regression and bug artifact. `npm run
+assess` now reports 10 remaining room/item triage sites, with the `advocates_case` entries
+gone.
+
+**Next after this:** continue down the remaining high-confidence room/item sites, starting with
+`bellfounders_alarm`, or promote the low-FP subset once the first audited packs are clean.
