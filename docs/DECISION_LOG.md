@@ -109,3 +109,27 @@ The single deferral condition from cycle #19 ("revisit after bug_0317 is locked"
 Root cause confirmed: ceiling was raised to match exact pack count (bug_0335 set {cyoa:12,parser:10,rpg:10} = actual counts), leaving zero headroom. Raising to {cyoa:20,parser:16,rpg:16} provides ~8 packs of content_new headroom per mode (based on ~10 packs authored per full content_new run in re-aim #20), preventing re-saturation for multiple cycles. Regression artifact: `traces/bugs/bug_0336_target_per_mode_ceiling.yaml`.
 
 **Next after bug_0336:** Gaps A+B (NPC topic `checkConds` + `checkUnsatisfiable`) — S-effort, zero FP risk, batch in one commit. Then Gap E+D batch. Then Gap F. Then Gap G (SKILL_CHECK_PHANTOM_STAT). Then dialogue root re-greet validator (shares NPC loop with A/B).
+
+### Standard cycle — 2026-06-19 (HEAD = a9585f2; next move = Gap E+D)
+
+**Confirmed CLOSED since re-aim #21:**
+
+- **Gap A — NPC topic conditions excluded from `checkConds`:** closed by `a9585f2`.
+  `src/validate/parser_validator.ts:568` now calls `checkConds(t.conditions ?? [], ...)` for every
+  NPC dialogue topic, and
+  `tests/regression/parser_dialogue_topic_gate_validation.test.ts` rejects a topic gate requiring an
+  unsettable flag.
+- **Gap B — NPC topic conditions excluded from `checkUnsatisfiable`:** closed by `a9585f2`.
+  `src/validate/parser_validator.ts:672` now passes every topic guard to `checkUnsatisfiable(...)`,
+  and the same regression test warns on an internally contradictory topic guard.
+
+**Chosen move — Gap E+D: verify-integrity tautology cleanup**
+
+The verifier already counted tautologies in `TestArtifactCounts`, but `TAUTOLOGY_REGRESSION` lived as
+an inline `runDrift` special case while `detectCountRegressions()` handled all other count regressions.
+This cycle moves that comparison into `detectCountRegressions()` and adds synthetic unit coverage, while
+also updating the stale top-level comment that still said count-preserving tautologies were not caught
+after bug_0308.
+
+**Next after Gap E+D:** Gap F (`allGeneratorsClean` in `Assessment` / saturation disambiguation), then
+Gap G (`SKILL_CHECK_PHANTOM_STAT`). Keep the `TARGET_PER_MODE` anti-pattern ruling in force.
