@@ -10,10 +10,13 @@ import { join } from "node:path";
 import {
   assess,
   allGeneratedChecksClean,
+  blindReportAttendanceOffsets,
   formatAssessment,
   isSaturated,
+  mergeAttendanceOffsets,
   packStem,
   parseAttendanceOffsets,
+  parseBlindReportAttendanceOffsets,
   SATURATION_FLOOR,
   type Assessment,
   type Category,
@@ -21,6 +24,14 @@ import {
 } from "../../src/afk/assessor.js";
 
 const a = assess(process.cwd());
+
+function realRepoAttendanceOffsets(): Map<string, number> {
+  const loopState = join(process.cwd(), "AI_LOOP_STATE.md");
+  const loopOffsets = existsSync(loopState)
+    ? parseAttendanceOffsets(readFileSync(loopState, "utf8"))
+    : new Map<string, number>();
+  return mergeAttendanceOffsets(loopOffsets, blindReportAttendanceOffsets(process.cwd()));
+}
 
 function withStaleAuditFixtureRoot(run: (root: string) => void): void {
   const root = mkdtempSync(join(tmpdir(), "af-assessor-"));
@@ -256,10 +267,67 @@ describe("blind-pass rotation (bug_0128)", () => {
     expect(offsets.has("wreckers_light")).toBe(true);
   });
 
+  it("parseBlindReportAttendanceOffsets recognizes timestamped accepted markdown reports", () => {
+    const offsets = parseBlindReportAttendanceOffsets([
+      "20260619T191648Z_aleconners_seal_seed7.md",
+      "20260619T190607Z_aleconners_seal_seed7.md",
+      "20260619T192000Z_alnagers_fault_seed42.md",
+      "20260619T192000Z_alnagers_fault_seed42.json",
+      "not_a_report.md",
+    ]);
+
+    expect(offsets.has("aleconners_seal")).toBe(true);
+    expect(offsets.has("alnagers_fault")).toBe(true);
+    expect(offsets.has("not_a_report")).toBe(false);
+    expect(offsets.get("alnagers_fault")!).toBeLessThan(offsets.get("aleconners_seal")!);
+  });
+
+  it("mergeAttendanceOffsets treats local report offsets as newer than tracked log offsets", () => {
+    const tracked = new Map([
+      ["aleconners_seal", 0],
+      ["clockwork_heist", 100],
+    ]);
+    const reports = parseBlindReportAttendanceOffsets([
+      "20260619T191648Z_aleconners_seal_seed7.md",
+    ]);
+    const merged = mergeAttendanceOffsets(tracked, reports);
+
+    expect(merged.get("aleconners_seal")).toBeLessThan(0);
+    expect(merged.get("clockwork_heist")).toBe(100);
+  });
+
+  it("blindReportAttendanceOffsets ignores rejected markdown artifacts left by failed blind runs", () => {
+    const root = mkdtempSync(join(tmpdir(), "af-blind-reports-"));
+    try {
+      const reportsDir = join(root, "blind-tester", "reports");
+      mkdirSync(reportsDir, { recursive: true });
+      writeFileSync(
+        join(reportsDir, "20260619T191648Z_aleconners_seal_seed7.md"),
+        `
+1. Playthrough log: I started the game, followed the evidence, and reached a finding.
+2. Did it work mechanically? No rejected actions or loops.
+3. Understandable & fun? clarity 4/5 + enjoyment 4/5.
+4. Confusion / friction points. None.
+5. Bugs or design flaws. None.
+6. Verdict: A real player would finish satisfied.
+`,
+      );
+      writeFileSync(
+        join(reportsDir, "20260619T192000Z_alnagers_fault_seed7.md"),
+        "The adventureforge MCP server has failed to connect, so I cannot play the game.",
+      );
+
+      const offsets = blindReportAttendanceOffsets(root);
+      expect(offsets.has("aleconners_seal")).toBe(true);
+      expect(offsets.has("alnagers_fault")).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("rotates the blind pass onto the LEAST-recently-attended pack, never-attended first (bug_0128)", () => {
-    const loopState = join(process.cwd(), "AI_LOOP_STATE.md");
-    if (!existsSync(loopState)) return; // rotation is a no-op without the log
-    const offsets = parseAttendanceOffsets(readFileSync(loopState, "utf8"));
+    const offsets = realRepoAttendanceOffsets();
+    if (offsets.size === 0) return; // rotation is a no-op without attendance evidence
     const reviews = a.candidates.filter((c) => c.id.startsWith("playtest-"));
     if (reviews.length < 2) return;
     const actual = reviews.map((c) => c.target);

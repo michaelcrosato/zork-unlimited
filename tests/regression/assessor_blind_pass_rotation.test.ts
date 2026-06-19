@@ -14,7 +14,22 @@
 import { describe, it, expect } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { assess, packStem, parseAttendanceOffsets } from "../../src/afk/assessor.js";
+import {
+  assess,
+  blindReportAttendanceOffsets,
+  mergeAttendanceOffsets,
+  packStem,
+  parseAttendanceOffsets,
+  parseBlindReportAttendanceOffsets,
+} from "../../src/afk/assessor.js";
+
+function realRepoAttendanceOffsets(): Map<string, number> {
+  const loopState = join(process.cwd(), "AI_LOOP_STATE.md");
+  const loopOffsets = existsSync(loopState)
+    ? parseAttendanceOffsets(readFileSync(loopState, "utf8"))
+    : new Map<string, number>();
+  return mergeAttendanceOffsets(loopOffsets, blindReportAttendanceOffsets(process.cwd()));
+}
 
 describe("bug_0128 — blind-pass rotation tracks true recency", () => {
   it("recognizes the CURRENT prose format the log actually uses (the stale-marker bug)", () => {
@@ -209,5 +224,50 @@ describe("bug_0293 — recency rotation survives the SONNET phrasing + uses the 
     if (reviews.length >= 2) {
       expect(packStem(reviews[0]!.target)).not.toBe(mostRecent);
     }
+  });
+});
+
+describe("local blind reports — rotation sees accepted report artifacts before the log is prepended", () => {
+  it("parses accepted blind report filenames and ignores sidecar/log files", () => {
+    const offsets = parseBlindReportAttendanceOffsets([
+      "20260619T191648Z_aleconners_seal_seed7.md",
+      "20260619T191648Z_aleconners_seal_seed7.json",
+      "20260619T191648Z_aleconners_seal_seed7.log",
+      "20260619T190607Z_aleconners_seal_seed7.md",
+      "20260619T192222Z_alnagers_fault_seed11.md",
+    ]);
+
+    expect(offsets.has("aleconners_seal")).toBe(true);
+    expect(offsets.has("alnagers_fault")).toBe(true);
+    expect(offsets.get("alnagers_fault")!).toBeLessThan(offsets.get("aleconners_seal")!);
+  });
+
+  it("merged attendance treats local accepted reports as newer than AI_LOOP_STATE.md", () => {
+    const logOffsets = parseAttendanceOffsets(
+      '- Next best improvement (recommended): [content_fix] Blind-playtest "aleconners_seal_v1" — clean.',
+    );
+    const reportOffsets = parseBlindReportAttendanceOffsets([
+      "20260619T191648Z_aleconners_seal_seed7.md",
+    ]);
+    const merged = mergeAttendanceOffsets(logOffsets, reportOffsets);
+
+    expect(logOffsets.get("aleconners_seal")).toBeGreaterThanOrEqual(0);
+    expect(reportOffsets.get("aleconners_seal")).toBeLessThan(0);
+    expect(merged.get("aleconners_seal")).toBe(reportOffsets.get("aleconners_seal"));
+  });
+
+  it("on this worktree, an accepted local report can move its pack out of the first slot", () => {
+    const reportsDir = join(process.cwd(), "blind-tester", "reports");
+    if (!existsSync(reportsDir)) return;
+    const reportOffsets = blindReportAttendanceOffsets(process.cwd());
+    if (reportOffsets.size === 0) return;
+    const attendance = realRepoAttendanceOffsets();
+    const a = assess(process.cwd());
+    const reviews = a.candidates.filter((c) => c.id.startsWith("playtest-"));
+    if (reviews.length < 2) return;
+
+    const newestLocalStem = [...reportOffsets.entries()].sort((x, y) => x[1] - y[1])[0]![0];
+    expect(attendance.get(newestLocalStem)).toBeLessThan(0);
+    expect(packStem(reviews[0]!.target)).not.toBe(newestLocalStem);
   });
 });

@@ -19,6 +19,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { createToolApi } from "../mcp/tools.js";
 import type { PackMode } from "../mcp/types.js";
+import { verifyBlindReportText } from "../blind/report_verifier.js";
 import { totalCycleCount } from "./loop_state.js";
 import { generateCyoaPack } from "../gen/cyoa_generator.js";
 import { generateRpgPack } from "../gen/rpg_generator.js";
@@ -284,11 +285,77 @@ export function parseAttendanceOffsets(loopStateText: string): Map<string, numbe
   return map;
 }
 
-/** Disk wrapper for {@link parseAttendanceOffsets}; empty map when the log is absent. */
+const BLIND_REPORT_FILE_RE = /^(\d{8}T\d{6}Z)_(.+)_seed\d+\.md$/;
+
+/**
+ * Parse local blind-tester report filenames into attendance offsets. The report runner
+ * writes accepted markdown reports as:
+ *
+ *   YYYYMMDDTHHMMSSZ_<pack-stem>_seed<N>.md
+ *
+ * Those files are gitignored scratch evidence, but they are authoritative for the
+ * current worktree's AFK loop: if a blind pass just ran successfully, the assessor
+ * must not immediately nominate the same pack again merely because AI_LOOP_STATE.md
+ * has not been prepended yet. Filenames carry UTC timestamps, so ordering is stable
+ * without consulting file mtimes. Returned offsets are NEGATIVE, making these local
+ * reports newer than any tracked log offset (which is always >= 0) while preserving
+ * the same "smaller offset = more recent" convention as {@link parseAttendanceOffsets}.
+ */
+export function parseBlindReportAttendanceOffsets(
+  reportFileNames: Iterable<string>,
+): Map<string, number> {
+  const reports = [...reportFileNames]
+    .map((name) => {
+      const m = name.match(BLIND_REPORT_FILE_RE);
+      if (!m) return null;
+      return { stamp: m[1]!, stem: packStem(m[2]!), name };
+    })
+    .filter((r): r is { stamp: string; stem: string; name: string } => r !== null && !!r.stem)
+    .sort((a, b) => b.stamp.localeCompare(a.stamp) || a.name.localeCompare(b.name));
+
+  const map = new Map<string, number>();
+  reports.forEach((report, i) => {
+    if (!map.has(report.stem)) {
+      map.set(report.stem, -(reports.length - i));
+    }
+  });
+  return map;
+}
+
+export function blindReportAttendanceOffsets(root: string): Map<string, number> {
+  const reportsDir = join(root, "blind-tester", "reports");
+  if (!existsSync(reportsDir)) return new Map();
+  const acceptedReports = readdirSync(reportsDir).filter((name) => {
+    if (!BLIND_REPORT_FILE_RE.test(name)) return false;
+    try {
+      return verifyBlindReportText(readFileSync(join(reportsDir, name), "utf8")).ok;
+    } catch {
+      return false;
+    }
+  });
+  return parseBlindReportAttendanceOffsets(acceptedReports);
+}
+
+export function mergeAttendanceOffsets(
+  ...sources: ReadonlyArray<ReadonlyMap<string, number>>
+): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const source of sources) {
+    for (const [stem, offset] of source) {
+      const previous = map.get(stem);
+      if (previous === undefined || offset < previous) map.set(stem, offset);
+    }
+  }
+  return map;
+}
+
+/** Disk wrapper for attendance evidence; empty map when both evidence sources are absent. */
 function lastAttendanceOffsets(root: string): Map<string, number> {
   const p = join(root, "AI_LOOP_STATE.md");
-  if (!existsSync(p)) return new Map();
-  return parseAttendanceOffsets(readFileSync(p, "utf8"));
+  const loopStateOffsets = existsSync(p)
+    ? parseAttendanceOffsets(readFileSync(p, "utf8"))
+    : new Map();
+  return mergeAttendanceOffsets(loopStateOffsets, blindReportAttendanceOffsets(root));
 }
 
 // ── Generator mint-and-check lever (bug_0158) ─────────────────────────────────
