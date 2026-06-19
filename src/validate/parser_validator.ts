@@ -25,7 +25,7 @@
 import { exitFlag, type Effect } from "../core/effects.js";
 import { evalConditions, type Condition } from "../core/conditions.js";
 import { indexParserPack, initStateForParserPack } from "../parser/model.js";
-import { type ParserPack, type GameObject, SCORE_VAR } from "../parser/schema.js";
+import { type ParserPack, type GameObject, type Interaction, SCORE_VAR } from "../parser/schema.js";
 import { type Finding, type ValidationReport, makeReport } from "./report.js";
 
 const err = (code: string, message: string, where: string[]): Finding => ({
@@ -59,20 +59,18 @@ export type ValidateParserOptions = {
   extraSettableFlags?: string[];
   extraObtainable?: string[];
   /**
-   * Extra `score` points the RPG layer (§13 Stage 4) can award through branches the
-   * parser validator does not scan — enemy `on_defeat` and skill-check
-   * `on_success`/`on_failure`. Folded into the SCORE_UNREACHABLE upper bound so a
-   * score legitimately earned by winning a fight or passing a check is not
-   * mis-flagged unreachable. These award sites are genuinely reachable (combat
-   * winnability and skill-check passability are guarded by the RPG validator), so
-   * counting them sharpens the conservative bound rather than weakening it. Default 0.
+   * Extra `score` points a higher layer (§13 Stage 4) can award through branches
+   * this parser pass does not own, such as enemy `on_defeat`. Authored parser
+   * skill-check branches are scanned natively. Folded into the SCORE_UNREACHABLE
+   * upper bound so score legitimately earned by winning a fight is not mis-flagged
+   * unreachable. Default 0.
    */
   extraScoreAwards?: number;
   /**
-   * Declared effects the RPG layer (§13 Stage 4) fires through branches the parser
-   * scan never walks — enemy `on_defeat`, skill-check `on_success`/`on_failure`.
-   * Folded into the WIN_FIRES_AT_START falsifier set so a win that one of those
-   * branches can falsify is correctly judged escapable (not flagged). Default empty.
+   * Declared effects a higher layer (§13 Stage 4) fires through branches this
+   * parser pass does not own, such as enemy `on_defeat`. Folded into the
+   * WIN_FIRES_AT_START falsifier set so a win that one of those branches can
+   * falsify is correctly judged escapable (not flagged). Default empty.
    */
   extraFalsifierEffects?: Effect[];
   /**
@@ -84,22 +82,19 @@ export type ValidateParserOptions = {
    */
   extraVolatileVars?: string[];
   /**
-   * Effect lists the RPG layer fires through branches the parser scan never groups —
-   * each enemy `on_defeat` and each skill-check `on_success`/`on_failure`. Handed to
-   * the SCORE_PEAKS_BEFORE_WIN check (below) as whole lists (not a flattened scalar
-   * like `extraScoreAwards`) so it can tell whether a score award is CO-LOCATED with
-   * the act that sets a win-trigger flag. Default empty; no current RPG pack wins on a
-   * `has_flag`, so this is coverage for future packs, never a behaviour change today.
+   * Effect lists a higher layer fires through branches this parser pass does not
+   * own, such as enemy `on_defeat`. Handed to the SCORE_PEAKS_BEFORE_WIN check
+   * (below) as whole lists (not a flattened scalar like `extraScoreAwards`) so it
+   * can tell whether a score award is CO-LOCATED with the act that sets a
+   * win-trigger flag. Default empty.
    */
   extraEffectLists?: Effect[][];
   /**
-   * Quest stages that runtime mechanics set through branches the parser scan never
-   * walks — enemy `on_defeat`, skill-check `on_success`/`on_failure`. Each entry is a
+   * Quest stages that higher-layer mechanics set through branches this parser pass
+   * does not own, such as enemy `on_defeat`. Each entry is a
    * `questStageKey(quest, stage)` composite key. Folded into the settable-stages set
-   * for the IMPOSSIBLE_QUEST_STAGE feasibility check so a quest_stage gate legitimately
-   * satisfied by a combat/skill-check `set_quest_stage` (e.g. an RPG pack that levers a
-   * seal open on a skill check) is not mis-flagged impossible. Mirrors
-   * `extraSettableFlags`. Default empty, so pure parser packs are byte-identical.
+   * for the IMPOSSIBLE_QUEST_STAGE feasibility check. Mirrors `extraSettableFlags`.
+   * Default empty, so pure parser packs are byte-identical.
    */
   extraSettableQuestStages?: string[];
 };
@@ -590,7 +585,7 @@ export function validateParser(
   const removed = new Map<string, string>(); // item → where
   for (const o of pack.objects) {
     for (const it of o.interactions) {
-      for (const e of it.effects)
+      for (const e of interactionEffects(it))
         if ("remove_item" in e) removed.set(e.remove_item, `object:${o.id}`);
     }
   }
@@ -609,7 +604,7 @@ export function validateParser(
   for (const o of pack.objects) {
     for (const it of o.interactions) {
       const consumes = (id: string): boolean =>
-        it.effects.some((e) => "remove_item" in e && e.remove_item === id);
+        interactionEffects(it).some((e) => "remove_item" in e && e.remove_item === id);
       if (it.item !== undefined) noteHeld(it.item, consumes(it.item));
       for (const id of itemReqs(it.conditions)) noteHeld(id, consumes(id));
     }
@@ -1209,7 +1204,7 @@ function computeObtainable(
         const itemOk = it.item === undefined || obtainable.has(it.item);
         const condItemsOk = itemReqs(it.conditions).every((i) => obtainable.has(i));
         if (!itemOk || !condItemsOk) continue;
-        for (const e of it.effects) {
+        for (const e of interactionEffects(it)) {
           if ("add_item" in e && !obtainable.has(e.add_item)) {
             obtainable.add(e.add_item);
             changed = true;
@@ -1358,7 +1353,7 @@ function allEffects(pack: ParserPack): Effect[] {
   const out: Effect[] = [];
   for (const r of pack.rooms) out.push(...r.on_enter);
   for (const o of pack.objects) {
-    for (const it of o.interactions) out.push(...it.effects);
+    for (const it of o.interactions) out.push(...interactionEffects(it));
     if (o.unlock_effects) out.push(...o.unlock_effects); // first-class UNLOCK content (bug_0077)
     if (o.take_effects) out.push(...o.take_effects); // first-class TAKE content (bug_0107)
   }
@@ -1373,12 +1368,24 @@ function effectLists(pack: ParserPack): Effect[][] {
   const out: Effect[][] = [];
   for (const r of pack.rooms) out.push(r.on_enter);
   for (const o of pack.objects) {
-    for (const it of o.interactions) out.push(it.effects);
+    for (const it of o.interactions) out.push(...interactionEffectLists(it));
     if (o.unlock_effects) out.push(o.unlock_effects);
     if (o.take_effects) out.push(o.take_effects);
   }
   for (const n of pack.npcs) for (const node of n.dialogue.nodes) out.push(node.effects);
   return out;
+}
+
+function interactionEffects(it: Interaction): Effect[] {
+  return it.skill_check
+    ? [...it.effects, ...it.skill_check.on_success, ...it.skill_check.on_failure]
+    : it.effects;
+}
+
+function interactionEffectLists(it: Interaction): Effect[][] {
+  return it.skill_check
+    ? [it.effects, it.skill_check.on_success, it.skill_check.on_failure]
+    : [it.effects];
 }
 
 // Flags a conjunctive condition array GUARANTEES are true: top-level literals and

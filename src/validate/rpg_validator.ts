@@ -26,7 +26,8 @@
  *    is fair" a DECLARED, AUDITED property instead of an unverifiable hope.
  *  - every skill check is PASSABLE — d20 + the best reachable skill can meet the
  *    difficulty;
- *  - every end_game inside on_defeat / on_success / on_failure is declared.
+ *  - every enemy on_defeat end_game is declared (parser validation now owns
+ *    skill-check branch references for every parser-derived mode).
  */
 import type { Effect } from "../core/effects.js";
 import { validateParser } from "./parser_validator.js";
@@ -41,58 +42,62 @@ const err = (code: string, message: string, where: string[]): Finding => ({
   where,
 });
 
-function rpgRuntimeEffects(pack: RpgPack): Effect[] {
+function enemyRuntimeEffects(pack: RpgPack): Effect[] {
   const out: Effect[] = [];
   for (const e of pack.enemies) out.push(...e.on_defeat);
+  return out;
+}
+
+function skillCheckEffects(pack: RpgPack): Effect[] {
+  const out: Effect[] = [];
   for (const o of pack.objects)
     for (const it of o.interactions)
       if (it.skill_check) out.push(...it.skill_check.on_success, ...it.skill_check.on_failure);
   return out;
 }
 
+function rpgRuntimeEffects(pack: RpgPack): Effect[] {
+  return [...enemyRuntimeEffects(pack), ...skillCheckEffects(pack)];
+}
+
 export function validateRpg(pack: RpgPack): ValidationReport {
-  // Flags/items that combat + skill checks provide — handed to the parser validator.
+  // Flags/items that combat provides — handed to the parser validator. Authored
+  // skill-check branch effects are parser-owned now, so do not inject them here
+  // again (score/list extras would double-count them).
+  const enemyEffects = enemyRuntimeEffects(pack);
   const extraSettableFlags: string[] = [];
   const extraObtainable: string[] = [];
   for (const enemy of pack.enemies) {
     if (enemy.defeat_flag) extraSettableFlags.push(enemy.defeat_flag);
   }
-  // Quest stages set through RPG-only branches (combat on_defeat, skill-check
-  // on_success/on_failure) — the parser scan never walks these, so without folding
-  // them in a quest_stage gate satisfied by a skill check (e.g. levering a seal open)
-  // would be mis-flagged IMPOSSIBLE_QUEST_STAGE. Keyed with the SAME NUL separator the
-  // parser validator's questStageKey uses, so the keys match. Mirrors extraSettableFlags.
+  // Quest stages set through RPG-only combat branches. Keyed with the SAME NUL
+  // separator the parser validator's questStageKey uses, so the keys match.
+  // Mirrors extraSettableFlags.
   const extraSettableQuestStages: string[] = [];
-  for (const e of rpgRuntimeEffects(pack)) {
+  for (const e of enemyEffects) {
     if ("set_flag" in e) extraSettableFlags.push(e.set_flag);
     if ("add_item" in e) extraObtainable.push(e.add_item);
     if ("set_quest_stage" in e)
       extraSettableQuestStages.push(`${e.set_quest_stage.quest}\0${e.set_quest_stage.stage}`);
   }
 
-  // Score awarded through RPG-only branches (combat / skill checks), which the
+  // Score awarded through RPG-only combat branches, which the
   // parser validator's SCORE_UNREACHABLE bound does not scan — fold it in so a
-  // score earned by winning a fight or passing a check counts as reachable.
+  // score earned by winning a fight counts as reachable.
   let extraScoreAwards = 0;
-  for (const e of rpgRuntimeEffects(pack))
+  for (const e of enemyEffects)
     if ("inc_var" in e && e.inc_var.name === SCORE_VAR) extraScoreAwards += e.inc_var.by;
 
-  // The grouped RPG-only effect lists (each enemy on_defeat, each skill-check
-  // on_success/on_failure), handed to the parser validator's SCORE_PEAKS_BEFORE_WIN
-  // check so a score award co-located with a combat/skill act that sets a win-trigger
-  // flag is seen as such. No current RPG pack wins on a has_flag, so this changes no
-  // result today; it is coverage for a future RPG pack whose win turns on a defeat flag.
+  // The grouped RPG-only combat effect lists, handed to the parser validator's
+  // SCORE_PEAKS_BEFORE_WIN check so a score award co-located with a combat act that
+  // sets a win-trigger flag is seen as such.
   const extraEffectLists: Effect[][] = [];
   for (const enemy of pack.enemies) extraEffectLists.push(enemy.on_defeat);
-  for (const o of pack.objects)
-    for (const it of o.interactions)
-      if (it.skill_check)
-        extraEffectLists.push(it.skill_check.on_success, it.skill_check.on_failure);
 
   // The WIN_FIRES_AT_START stability proof must also see RPG-only falsifiers:
-  // combat / skill branches can falsify a start-true win (extraFalsifierEffects),
-  // and combat mutates HP via dynamic set_var the parser scan never sees, so the
-  // player + enemy HP vars are volatile (a win condition on them is escapable).
+  // combat branches can falsify a start-true win (extraFalsifierEffects), and
+  // combat mutates HP via dynamic set_var the parser scan never sees, so the player
+  // + enemy HP vars are volatile (a win condition on them is escapable).
   const extraVolatileVars = [
     HP_VAR,
     ATTACK_VAR,
@@ -103,7 +108,7 @@ export function validateRpg(pack: RpgPack): ValidationReport {
     extraSettableFlags,
     extraObtainable,
     extraScoreAwards,
-    extraFalsifierEffects: rpgRuntimeEffects(pack),
+    extraFalsifierEffects: enemyEffects,
     extraVolatileVars,
     extraEffectLists,
     extraSettableQuestStages,
@@ -283,8 +288,8 @@ export function validateRpg(pack: RpgPack): ValidationReport {
     }
   }
 
-  // ── end_game targets inside RPG-only effect branches must be declared ─────────
-  for (const e of rpgRuntimeEffects(pack)) {
+  // ── end_game targets inside RPG-only combat branches must be declared ─────────
+  for (const e of enemyEffects) {
     if ("end_game" in e && !endings.has(e.end_game)) {
       findings.push(
         err(

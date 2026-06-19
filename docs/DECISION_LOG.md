@@ -174,3 +174,21 @@ validation pass. Regression coverage plants the same phantom stat in parser, CYO
 
 **Next after Gap G:** audit skill-check branch-effect scanning in parser/CYOA validators, then dialogue
 root re-greet validation and the stale reactive-description strategy.
+
+### Standard cycle — 2026-06-19 (HEAD = fc35e89; next move = skill-check branch effects)
+
+**Confirmed CLOSED since re-aim #21:**
+
+- **Gap G — `SKILL_CHECK_PHANTOM_STAT`:** closed by `fc35e89`.
+  Parser and CYOA validators now reject skill checks whose rolled skill is absent from
+  `meta.vars_init`, and the RPG wrapper inherits the guard through parser validation.
+
+**Chosen move — skill-check branch-effect validation**
+
+Parser and CYOA skill checks can set flags, grant state, award score, route, and end the game from
+`on_success` / `on_failure`, but several validator helper scans still looked only at direct
+interaction/choice effects. This cycle makes branch effects first-class inputs to parser `allEffects`
+/ `effectLists` / obtainability / quest-item scans and to CYOA write/falsifier/deadline scans. RPG now
+passes only enemy combat branches as parser extras so skill-check effects are not double-counted.
+
+**Next after this:** dialogue root re-greet validation, then stale reactive-description strategy.
