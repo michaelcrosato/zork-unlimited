@@ -1,0 +1,321 @@
+# The Lock-Keeper's Toll -- a Stage 4 (Hero's-Quest) pack.
+#
+# Twelfth RPG pack, and the first to introduce `seamanship`: practical river
+# handling under pressure. It is not strength, craft, stealth, or authority. It is
+# the ability to read water, chain load, wind, and lock timing well enough to move
+# a vessel through a dangerous cut without breaking it or drowning anyone.
+#
+# Primary path: read the current marks, read the flood gauge, read the chain table,
+# take the windlass handle, then crank the sluice chain with the handle. A prepared
+# pilot has seamanship 12 against DC 12, making the river handling reliable on any
+# d20 roll. Combat fallback: fight Marrick at the gate walk. It opens the road, but
+# leaves the lock problem unresolved and caps the score at 40/50.
+
+meta:
+  id: lockkeepers_toll_v1
+  title: "The Lock-Keeper's Toll"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Lower Lock Cut"
+    quest: "free the flood-bound grain barge"
+    role: "river pilot"
+    connection: "Charterhaven's bread barges pass through the lower cut, so a crooked lock toll can starve the city before court notices."
+  start_room: lock_basin
+  vars_init: { hp: 20, attack: 4, defense: 2, seamanship: 3 }
+  flags_init: []
+  max_score: 50
+
+rooms:
+  - id: lock_basin
+    name: "The Lock Basin"
+    description: >
+      The lower lock basin is full of hard brown water, its walls sweating with
+      the night flood. A grain barge lies trapped against the downstream gate,
+      her master shouting from the deck while the lock-keeper's toll chain holds
+      the sluice shut. Current marks are cut into the coping stones. The gauge
+      house stands west, the windlass shed east, and the gate walk rises north.
+    objects: [current_marks, sluice_chain]
+    exits:
+      - { direction: west, to: gauge_house }
+      - { direction: east, to: windlass_shed }
+      - { direction: north, to: gate_walk }
+
+  - id: gauge_house
+    name: "The Gauge House"
+    description: >
+      A narrow brick house over the side channel. The flood gauge is painted on
+      the wall in black inches, and the float arm knocks against its stop each
+      time the surge lifts. The basin is back east.
+    variants:
+      - when: [{ has_flag: gauge_read }]
+        text: >
+          The gauge house. The flood gauge has already told you the useful fact:
+          the surge is high but falling, and there is a short safe window before
+          the ebb begins to drag the barge sideways. The basin is east.
+    objects: [flood_gauge]
+    exits:
+      - { direction: east, to: lock_basin }
+
+  - id: windlass_shed
+    name: "The Windlass Shed"
+    description: >
+      A lean shed smelling of tarred rope and river mud. The spare windlass
+      handle rests in its rack, and a chalked chain table on the back wall lists
+      the load each chain can bear before it snaps under a flood pull. The basin
+      is back west.
+    variants:
+      - when: [{ has_item: windlass_handle }]
+        text: >
+          The windlass shed. The rack is empty where the handle lay until you
+          took it, and the chain table remains chalked on the back wall. The
+          basin is west.
+    objects: [windlass_handle, chain_table]
+    exits:
+      - { direction: west, to: lock_basin }
+
+  - id: gate_walk
+    name: "The Gate Walk"
+    description: >
+      A wet plank walk crosses above the downstream gate. Marrick, the
+      lock-keeper's hired man, stands in the way with a belaying pin and the
+      patient look of someone paid to make delay seem official. The open river
+      lies north beyond him; the basin is south.
+    variants:
+      - when: [{ has_flag: marrick_gone }]
+        text: >
+          The gate walk, Marrick down against the rail. The open river lies
+          north; the basin is south.
+    exits:
+      - { direction: south, to: lock_basin }
+      - direction: north
+        to: river_cut
+        conditions: [{ has_flag: marrick_gone }]
+        locked_msg: >
+          Marrick blocks the gate walk while the toll chain still holds. Work the
+          lock cleanly or get past him.
+
+  - id: river_cut
+    name: "The Lower River Cut"
+    description: >
+      The river opens below the lock, wide enough for the grain barge to gather
+      steerage and leave the crooked toll behind. Charterhaven's mill lights
+      burn downstream. The gate walk is back south, already smaller in the rain.
+    on_enter:
+      - set_quest_stage: { quest: lockkeepers_toll, stage: river_reached }
+      - add_journal: >
+          The lower cut is open. The grain barge has water under her and
+          Charterhaven will see its flour before the morning market. (+15)
+      - inc_var: { name: score, by: 15 }
+    exits:
+      - { direction: south, to: gate_walk }
+
+objects:
+  - id: current_marks
+    name: "current marks"
+    aliases: [marks, current, coping, stones, coping stones, water marks, current marks]
+    description: >
+      Scored lines cut into the coping stones by pilots who learned the lock
+      before Marrick learned to charge for it.
+    variants:
+      - when: [{ has_flag: marks_read }]
+        text: >
+          The current marks, already read: the flood is pressing from above, not
+          boiling from below. Open the sluice too sharply and the barge will
+          swing broadside; open it steadily and she will ride through.
+    takeable: false
+    read_text: >
+      The current marks show a high press from the upper basin and no back-boil
+      from below. That means the barge can be freed, but only if the sluice is
+      wound open steadily rather than thrown loose.
+    interactions:
+      - verb: READ
+        target: current_marks
+        conditions: [{ not_flag: marks_read }]
+        effects:
+          - set_flag: marks_read
+          - inc_var: { name: seamanship, by: 3 }
+          - inc_var: { name: score, by: 5 }
+          - set_quest_stage: { quest: lockkeepers_toll, stage: current_read }
+          - add_journal: >
+              The current marks show high upper pressure but no lower back-boil:
+              the barge can be freed if the sluice is wound steadily. (+3
+              seamanship, +5)
+          - narrate: >
+              The marks give you the lock's answer before Marrick does. The water
+              is high, but honest: open the sluice by steady turns and the barge
+              will ride through instead of slewing broadside.
+
+  - id: flood_gauge
+    name: "flood gauge"
+    aliases: [gauge, float, float arm, flood gauge, water gauge, painted gauge]
+    description: >
+      A black-painted gauge on the brick wall, its float arm ticking with each
+      lift of the flood.
+    variants:
+      - when: [{ has_flag: gauge_read }]
+        text: >
+          The flood gauge, already checked: the water is still high enough to
+          float the grain barge but falling toward an ebb that will make the gate
+          dangerous.
+    takeable: false
+    read_text: >
+      The gauge reads nine inches above safe working depth and falling. There is
+      time to move the barge now; wait much longer and the ebb will pull her
+      stern first into the gate.
+    interactions:
+      - verb: READ
+        target: flood_gauge
+        conditions: [{ not_flag: gauge_read }]
+        effects:
+          - set_flag: gauge_read
+          - inc_var: { name: seamanship, by: 3 }
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: lockkeepers_toll, stage: gauge_read }
+          - add_journal: >
+              The flood gauge is nine inches over safe working depth and falling:
+              there is a narrow window before the ebb turns dangerous. (+3
+              seamanship, +10)
+          - narrate: >
+              The float arm gives the timing. There is enough water to free the
+              barge, but the safe window is short. You know when to turn the chain
+              now, not just that it can be turned.
+
+  - id: chain_table
+    name: "chain table"
+    aliases: [table, chalk table, chain table, chalk marks, load table, wall]
+    description: >
+      A chalked list of chain lengths, gate weights, and flood loads. It is the
+      sort of record a careful lock-keeper keeps and a crooked one hopes no pilot
+      reads.
+    variants:
+      - when: [{ has_flag: table_read }]
+        text: >
+          The chain table, already read: three slow turns, pause for the barge to
+          settle, then two more. Any harder and the old toll chain may part.
+    takeable: false
+    read_text: >
+      The table is plain enough: the downstream toll chain will bear three slow
+      turns under flood load, then needs a pause before two final turns. More
+      than that in one pull risks snapping the chain and throwing the gate open.
+    interactions:
+      - verb: READ
+        target: chain_table
+        conditions: [{ not_flag: table_read }]
+        effects:
+          - set_flag: table_read
+          - inc_var: { name: seamanship, by: 3 }
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: lockkeepers_toll, stage: chain_read }
+          - add_journal: >
+              The chain table gives the handling sequence: three slow turns,
+              pause, then two more. The gate can open without breaking. (+3
+              seamanship, +10)
+          - narrate: >
+              The chalk marks turn a dangerous guess into a sequence: three slow
+              turns, hold while the barge settles, then two more. The chain will
+              bear that. It will not bear panic.
+
+  - id: windlass_handle
+    name: "windlass handle"
+    aliases: [handle, windlass, crank, bar, windlass handle]
+    description: >
+      A removable oak-and-iron handle for the sluice windlass, polished by a
+      hundred wet hands.
+    takeable: true
+
+  - id: sluice_chain
+    name: "sluice chain"
+    aliases: [chain, sluice, gate, toll chain, sluice chain, downstream gate, lock gate]
+    description: >
+      The toll chain runs from the gate capstan down into the lock mechanism,
+      taut with flood pressure. It can be worked, but not by bare hands.
+    variants:
+      - when: [{ has_flag: sluice_attempted }]
+        text: >
+          The sluice chain is still taut after the failed turn. It will not take
+          a second clumsy pull; the gate walk is the only route left.
+    takeable: false
+    interactions:
+      - verb: USE
+        item: windlass_handle
+        target: sluice_chain
+        command_verb: crank
+        command_template: "crank {target} with {item}"
+        conditions: [{ not_flag: sluice_attempted }]
+        skill_check:
+          skill: seamanship
+          difficulty: 12
+          on_success:
+            - set_flag: sluice_attempted
+            - inc_var: { name: score, by: 10 }
+            - set_quest_stage: { quest: lockkeepers_toll, stage: sluice_open }
+            - add_journal: >
+                You worked the sluice by the marks, gauge, and chain table. The
+                toll chain slackened and the grain barge moved cleanly into the
+                lower cut. (+10)
+            - narrate: >
+                You fit the handle and give the chain three slow turns, stop
+                while the barge's stern settles, then put two more turns into the
+                capstan. The sluice opens without a snap. Brown water shoulders
+                under the grain barge and carries her cleanly toward the lower
+                cut.
+            - goto: river_cut
+          on_failure:
+            - set_flag: sluice_attempted
+            - set_quest_stage: { quest: lockkeepers_toll, stage: sluice_failed }
+            - add_journal: >
+                The handle bit, but the chain shuddered and locked under flood
+                load. A second try would snap it. Marrick still blocks the gate
+                walk.
+            - narrate: >
+                The handle bites and the first turn comes hard. Then the chain
+                shudders under the flood load and locks with a sound like teeth
+                grinding in iron. A second pull would snap it and throw the gate
+                wide. The clean pilot's answer is gone; only the gate walk is
+                left.
+
+npcs: []
+
+enemies:
+  - id: marrick
+    name: "Marrick"
+    description: >
+      The lock-keeper's hired man: big in the shoulders, planted on wet planks,
+      and carrying a belaying pin as if it were part of the office furniture.
+    room: gate_walk
+    hp: 12
+    attack: 5
+    defense: 2
+    defeat_flag: marrick_gone
+    death_ending: ending_under_gate
+    on_defeat:
+      - set_quest_stage: { quest: lockkeepers_toll, stage: forced_passage }
+      - add_journal: >
+          Marrick is down on the gate walk. It opens the road, though not the
+          lock, and the report will be uglier for it.
+
+win_conditions:
+  - id: river_cleared
+    conditions: [{ visited: river_cut }]
+    ending: ending_river_clear
+
+endings:
+  - id: ending_river_clear
+    title: "The Lower Cut"
+    text: >
+      The lower river cut opens beyond the lock, and the grain barge has water
+      enough under her to reach Charterhaven before the morning market. Marrick's
+      toll has lost its teeth for tonight: by careful chain work or by the rougher
+      gate-walk answer, the city gets its flour and the lock-keeper gets a report
+      he cannot price away. *** You have won. ***
+
+  - id: ending_under_gate
+    title: "Under the Lock Wall"
+    text: >
+      Marrick catches you low on the wet planks and drives you against the rail.
+      The flood roars under the gate, the grain barge groans in its chains, and
+      Charterhaven's morning bread waits on a toll you could not break. *** You
+      have fallen. ***
+    death: true

@@ -226,6 +226,10 @@ graph:
       name: "The Gallowmere"
       kind: quest
       pack: "content/rpg/pack/gallowmere.yaml"
+    - id: lockkeepers_toll
+      name: "The Lock-Keeper's Toll"
+      kind: quest
+      pack: "content/rpg/pack/lockkeepers_toll.yaml"
     - id: printers_night
       name: "The Printer's Night"
       kind: quest
@@ -369,6 +373,9 @@ graph:
     - from: industrial_cut
       to: factors_mark
       route: "waystation yard"
+    - from: industrial_cut
+      to: lockkeepers_toll
+      route: "lower lock cut"
     - from: market_parishes
       to: excise_surveyors_round
       route: "maltsters' ward"
