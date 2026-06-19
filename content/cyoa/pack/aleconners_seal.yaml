@@ -56,7 +56,7 @@ scenes:
       the market bell. Sabel Mott, a brewster from Brewsters' Row, has already
       hung a green wax seal on her front cask. Three neighbours have laid
       complaints before the clerk. Her brew-house lies east; the finding table
-      waits behind the stall.
+      waits behind the stall once your notes can support a finding.
     choices:
       - id: read_complaints
         text: "Read the neighbours' complaints before touching the cask."
@@ -79,10 +79,37 @@ scenes:
         next: brew_house
       - id: go_finding
         text: "Step back to the finding table."
+        conditions:
+          - any_of:
+              - has_flag: read_complaints
+              - has_flag: found_false_seal
+              - has_flag: heard_brewster
+              - has_flag: tasted_cut_ale
+              - has_flag: found_short_tun
+              - has_flag: found_well_buckets
         next: finding_table
 
   - id: brew_house
     title: "Sabel Mott's Brew-House"
+    variants:
+      - when:
+          - all_of:
+              - has_flag: heard_brewster
+              - has_flag: found_well_buckets
+        text: >
+          The brew-house is warm with malt steam and clean smoke. Mash tubs line
+          one wall; on the other, the altered delivery tally hangs beside a rack
+          of cask bungs now matched to the wet buckets in the yard. Sabel Mott
+          keeps her arms folded, but her answer has gone shorter since you tied
+          her tale to the well water.
+      - when:
+          - has_flag: heard_brewster
+        text: >
+          The brew-house is warm with malt steam and clean smoke. Mash tubs line
+          one wall; on the other, the delivery tally hangs beside a rack of cask
+          bungs, its squeezed sixth mark now written into your notes. Sabel Mott
+          still stands with folded arms, but the tally has made her certainty
+          less steady.
     text: >
       The brew-house is warm with malt steam and clean smoke. Mash tubs line
       one wall; on the other, a delivery tally hangs beside a rack of cask
@@ -117,6 +144,14 @@ scenes:
 
   - id: cellar
     title: "The Cellar Tun"
+    variants:
+      - when:
+          - has_flag: found_short_tun
+        text: >
+          Below the brew-house, the air cools around stacked hoops, spare bungs,
+          and the marked tun used to fill sale casks. The market gallon rod hangs
+          back on its nail, and your chalk mark now shows the line sitting a full
+          market gallon short of honest measure.
     text: >
       Below the brew-house, the air cools around stacked hoops, spare bungs,
       and the marked tun used to fill sale casks. A market gallon rod hangs on
@@ -136,6 +171,14 @@ scenes:
 
   - id: well_yard
     title: "The Well Yard"
+    variants:
+      - when:
+          - has_flag: found_well_buckets
+        text: >
+          Behind the brew-house, the paved yard slopes toward the narrow well.
+          The wet path between well and cask rack now reads plainly: the buckets
+          smell of malt and sweet water, and the drops run from bung height where
+          the sale casks were opened.
     text: >
       Behind the brew-house, a paved yard slopes toward a narrow well. Fresh
       splashes mark the stones between the well and the cask rack. Two buckets
@@ -155,6 +198,51 @@ scenes:
 
   - id: finding_table
     title: "The Finding Table"
+    variants:
+      - when:
+          - all_of:
+              - has_flag: read_complaints
+              - has_flag: found_false_seal
+              - has_flag: heard_brewster
+              - has_flag: tasted_cut_ale
+              - has_flag: found_short_tun
+              - has_flag: found_well_buckets
+        text: >
+          The market clerk sharpens his quill. Behind him, buyers grumble and
+          sellers watch to see whether the parish seal still means anything.
+          Your notes now carry the full chain: complaints, false seal, altered
+          tally, thin taste, short measure, and back-yard water. The finding can
+          stand even if Sabel appeals it at guildhall.
+      - when:
+          - all_of:
+              - has_flag: found_false_seal
+              - has_flag: tasted_cut_ale
+              - none_of:
+                  - all_of:
+                      - has_flag: read_complaints
+                      - has_flag: found_false_seal
+                      - has_flag: heard_brewster
+                      - has_flag: tasted_cut_ale
+                      - has_flag: found_short_tun
+                      - has_flag: found_well_buckets
+        text: >
+          The market clerk sharpens his quill. You have enough to stop the sale
+          for caution: a false-looking seal and ale that tastes stretched after
+          assay. Retesting would protect the buyers while another officer
+          finishes the cellar inquiry. A full condemnation will need the rest of
+          the chain: complaints, testimony, measure, and water.
+      - when:
+          - any_of:
+              - has_flag: read_complaints
+              - has_flag: found_false_seal
+              - has_flag: heard_brewster
+              - has_flag: tasted_cut_ale
+              - has_flag: found_short_tun
+              - has_flag: found_well_buckets
+        text: >
+          The market clerk sharpens his quill, but your notes still hold only
+          fragments. You can pass the seal on what you have, or return to the
+          market and build a finding strong enough to survive Sabel's appeal.
     text: >
       The market clerk sharpens his quill. Behind him, buyers grumble and
       sellers watch to see whether the parish seal still means anything. Your
@@ -187,7 +275,7 @@ scenes:
           - inc_var: { name: score, by: 20 }
         next: ending_condemned
       - id: back_to_market
-        text: "Return to the market and keep checking."
+        text: "Return to the assay stall and keep checking the market evidence."
         next: assay_stall
 
 endings:
