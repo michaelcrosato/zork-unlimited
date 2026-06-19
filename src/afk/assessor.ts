@@ -52,6 +52,8 @@ export type PackHealth = {
 export type Assessment = {
   packsByMode: Record<string, number>;
   packs: PackHealth[];
+  /** True iff this cycle's fresh generated CYOA/RPG/parser windows all validated clean. */
+  allGeneratorsClean: boolean;
   candidates: ImprovementCandidate[];
   top: ImprovementCandidate | null;
 };
@@ -333,6 +335,10 @@ export const GEN_EVAL_CHECK_COUNT = 4;
 /** One minted-and-validated generated pack: the seed, its id, and the production report. */
 export type GeneratedPackCheck = { seed: number; pack_id: string; report: ValidationReport };
 
+export function allGeneratedChecksClean(checks: GeneratedPackCheck[]): boolean {
+  return checks.every((c) => c.report.findings.length === 0);
+}
+
 /**
  * The generator mint-and-check verdict. Given this cycle's freshly minted-and-validated
  * generated packs, return an improvement candidate IFF the production verifier did NOT hold
@@ -480,15 +486,18 @@ export function generatorParserDriftCandidate(
 export const SATURATION_FLOOR = 0.5;
 
 /**
- * Has the deterministic assessor run dry of STRATEGIC direction? True when the
- * top candidate is at/below {@link SATURATION_FLOOR} (only routine rotation work
- * left) or there is no candidate at all. This is the exact diminishing-returns
- * signal — the state that once pinned the loop to clockwork-polish — and the
- * moment a multi-agent ultraplan re-aim earns its cost (see docs/afk_loop.md,
- * the saturation-triggered ultraplan mode).
+ * Has the deterministic assessor run dry of STRATEGIC direction? True when this
+ * cycle's fresh generator windows are clean AND the top candidate is at/below
+ * {@link SATURATION_FLOOR} (only routine rotation work left) or there is no
+ * candidate at all. This is the exact diminishing-returns signal — the state that
+ * once pinned the loop to clockwork-polish — and the moment a multi-agent ultraplan
+ * re-aim earns its cost (see docs/afk_loop.md, the saturation-triggered ultraplan
+ * mode). If a generator window is unclean, the loop is not saturated: there is a
+ * verifier/generator divergence to handle, even if a caller's candidate scoring has
+ * collapsed to the floor.
  */
 export function isSaturated(a: Assessment): boolean {
-  return a.top === null || a.top.score <= SATURATION_FLOOR;
+  return a.allGeneratorsClean && (a.top === null || a.top.score <= SATURATION_FLOOR);
 }
 
 /** Deterministically assess the repo and rank the next-best improvements. */
@@ -755,6 +764,11 @@ export function assess(root: string): Assessment {
   );
   const parserGenDrift = generatorParserDriftCandidate(parserGenChecks);
   if (parserGenDrift) candidates.push(parserGenDrift);
+  const allGeneratorsClean = allGeneratedChecksClean([
+    ...genChecks,
+    ...rpgGenChecks,
+    ...parserGenChecks,
+  ]);
 
   // Deterministic ordering: score desc, then — among equal scores — rotate the
   // blind-playtest pass onto the LEAST-recently-attended pack (never-attended first,
@@ -776,7 +790,7 @@ export function assess(root: string): Assessment {
   candidates.sort(
     (a, b) => b.score - a.score || recencyOf(a) - recencyOf(b) || a.id.localeCompare(b.id),
   );
-  return { packsByMode, packs, candidates, top: candidates[0] ?? null };
+  return { packsByMode, packs, allGeneratorsClean, candidates, top: candidates[0] ?? null };
 }
 
 export function formatAssessment(a: Assessment): string {
@@ -788,6 +802,7 @@ export function formatAssessment(a: Assessment): string {
       .map(([m, n]) => `${m}=${n}`)
       .join("  ")}`,
   );
+  lines.push(`Generator mint-and-check: ${a.allGeneratorsClean ? "clean" : "findings present"}`);
   lines.push("");
   lines.push("## Pack health");
   for (const p of a.packs) {

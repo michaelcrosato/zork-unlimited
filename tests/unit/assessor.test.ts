@@ -8,6 +8,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   assess,
+  allGeneratedChecksClean,
   formatAssessment,
   isSaturated,
   packStem,
@@ -31,6 +32,13 @@ describe("assess()", () => {
     expect(a.candidates.length).toBeGreaterThan(0);
     expect(a.top).not.toBeNull();
     expect(a.top!.score).toBe(a.candidates[0]!.score); // top is the highest-scored
+  });
+
+  it("surfaces whether all fresh generator windows validated clean", () => {
+    expect(a.allGeneratorsClean).toBe(true);
+    expect(a.candidates.find((c) => c.id === "generator-drift")).toBeUndefined();
+    expect(a.candidates.find((c) => c.id === "generator-rpg-drift")).toBeUndefined();
+    expect(a.candidates.find((c) => c.id === "generator-parser-drift")).toBeUndefined();
   });
 
   it("disarms the repo ESLint+Prettier lever once the tooling is in place (bug_0031)", () => {
@@ -113,7 +121,35 @@ describe("assess()", () => {
   it("formatAssessment renders the recommendation", () => {
     const out = formatAssessment(a);
     expect(out).toContain("next best improvement");
+    expect(out).toContain("Generator mint-and-check: clean");
     expect(out).toContain("Recommended next");
+  });
+});
+
+describe("allGeneratedChecksClean", () => {
+  it("is true only when every generated pack report has zero findings", () => {
+    expect(
+      allGeneratedChecksClean([
+        { seed: 1, pack_id: "a", report: { pack_id: "a", ok: true, findings: [] } },
+        { seed: 2, pack_id: "b", report: { pack_id: "b", ok: true, findings: [] } },
+      ]),
+    ).toBe(true);
+    expect(
+      allGeneratedChecksClean([
+        { seed: 1, pack_id: "a", report: { pack_id: "a", ok: true, findings: [] } },
+        {
+          seed: 2,
+          pack_id: "b",
+          report: {
+            pack_id: "b",
+            ok: true,
+            findings: [
+              { severity: "warning", code: "X", message: "unclean generated pack", where: [] },
+            ],
+          },
+        },
+      ]),
+    ).toBe(false);
   });
 });
 
@@ -200,8 +236,13 @@ describe("isSaturated — the saturation-triggered ultraplan signal", () => {
   const withTop = (top: ImprovementCandidate | null): Assessment => ({
     packsByMode: {},
     packs: [],
+    allGeneratorsClean: true,
     candidates: top ? [top] : [],
     top,
+  });
+  const withTopAndDirtyGenerators = (top: ImprovementCandidate | null): Assessment => ({
+    ...withTop(top),
+    allGeneratorsClean: false,
   });
 
   it("is saturated when the top candidate sits at/below the 0.5 floor", () => {
@@ -211,6 +252,11 @@ describe("isSaturated — the saturation-triggered ultraplan signal", () => {
 
   it("is saturated when there is no candidate at all", () => {
     expect(isSaturated(withTop(null))).toBe(true);
+  });
+
+  it("is NOT saturated when a generator window is unclean, even at the floor", () => {
+    expect(isSaturated(withTopAndDirtyGenerators(candidate(SATURATION_FLOOR)))).toBe(false);
+    expect(isSaturated(withTopAndDirtyGenerators(null))).toBe(false);
   });
 
   it("is NOT saturated when a higher-value lever is present", () => {

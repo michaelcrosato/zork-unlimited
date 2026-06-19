@@ -133,3 +133,25 @@ after bug_0308.
 
 **Next after Gap E+D:** Gap F (`allGeneratorsClean` in `Assessment` / saturation disambiguation), then
 Gap G (`SKILL_CHECK_PHANTOM_STAT`). Keep the `TARGET_PER_MODE` anti-pattern ruling in force.
+
+### Standard cycle — 2026-06-19 (HEAD = 7382a58; next move = Gap F)
+
+**Confirmed CLOSED since re-aim #21:**
+
+- **Gap D — stale tautology docstring in `scripts/verify-integrity.ts`:** closed by `7382a58`.
+  The top-level verifier comment now correctly names the deterministic tautology scanner and
+  tautology-regression guard instead of saying count-preserving tautologies are not caught.
+- **Gap E — `TAUTOLOGY_REGRESSION` inline in `runDrift`:** closed by `7382a58`.
+  `scripts/verify-integrity.ts` now emits `TAUTOLOGY_REGRESSION` from `detectCountRegressions()`,
+  and `tests/unit/verifier_integrity.test.ts` pins that pure-detector branch directly.
+
+**Chosen move — Gap F: assessor generator-clean saturation signal**
+
+`Assessment` now carries `allGeneratorsClean`, computed from the fresh generated CYOA/RPG/parser
+mint-and-check windows. `formatAssessment()` renders the generator status, and `isSaturated()` now
+requires `allGeneratorsClean === true` before treating a floor-level top candidate as true saturation.
+This preserves the current healthy output (`Generator mint-and-check: clean`) while making generator
+drift distinguishable from routine blind-playtest saturation.
+
+**Next after Gap F:** Gap G (`SKILL_CHECK_PHANTOM_STAT`) — validate that every `skill_check.stat`
+references a declared variable/stat before future RPG/CYOA authoring can typo an impossible check.
