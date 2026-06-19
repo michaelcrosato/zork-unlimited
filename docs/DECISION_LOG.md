@@ -643,3 +643,28 @@ gone and the remaining audit work in `tanners_fever` and `wolf_winter`.
 **Next after this:** continue down the remaining high-confidence room/item sites, starting with
 `tanners_fever`, or promote the low-FP subset once the remaining false positives are
 tuned out.
+
+### Standard cycle — 2026-06-19 (HEAD = f5bf06a; next move = tanner notes and meadowsweet prose)
+
+**Confirmed CLOSED since quarry survey-chain prose:**
+
+- **`quarrymens_fault` taken survey-chain contradiction:** closed by `f5bf06a`.
+  The quarry yard now reacts after the survey chain is first picked up, including
+  after a later drop, and the audit dropped to 4 remaining room/item sites.
+
+**Chosen move — fix the next real stale room prose cluster**
+
+The next audit entries were concrete contradictions in `tanners_fever`: the
+apothecary's store kept saying Godwin's open ledger lay on the workbench after the
+case notes were taken, and the herb store kept saying the meadowsweet bundle hung
+among the drying herbs after it was taken. This cycle gives both TAKE actions
+durable pickup flags, adds apothecary-store / herb-store variants that keep the
+workbench and herb hook empty after first pickup, and rewrites the notes-read store
+variant so it no longer claims the notes remain in hand after a later drop. It also
+adds a regression and bug artifact. `npm run assess` now reports 2 remaining
+room/item triage sites, with both `tanners_fever` entries gone and the remaining
+audit work in `wolf_winter`.
+
+**Next after this:** continue down the remaining high-confidence room/item sites, starting with
+`wolf_winter`, or promote the low-FP subset once the remaining false positives are
+tuned out.

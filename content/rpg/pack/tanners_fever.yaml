@@ -117,8 +117,15 @@ rooms:
     variants:
       - when: [{ has_flag: notes_read }]
         text: >
-          The apothecary's store. The case notes are already in your hands and
-          the overdose formula is in your head. The sickroom is back to the east.
+          The apothecary's store. Godwin's overdose formula is fixed in your
+          head, and the workbench is bare where the open case notes lay before
+          you took them up. The sickroom is back to the east.
+      - when: [{ has_flag: godwin_notes_taken }]
+        text: >
+          A narrow storeroom: shelves of brown-glass bottles, wrapped-paper
+          packets, a pair of scales, and Godwin's workbench. The bench is bare
+          where his open case notes lay before you took them up. The sickroom is
+          back to the east.
     objects: [godwin_notes]
     exits:
       - { direction: east, to: sickroom }
@@ -131,6 +138,13 @@ rooms:
       a bundle of meadowsweet: the white-flowering plant from the river meadow
       below the town, well-known to any practising surgeon for settling an
       overtaxed stomach. The sickroom is back to the west.
+    variants:
+      - when: [{ has_flag: meadowsweet_taken }]
+        text: >
+          A cool lean-to off the east side of the house, the walls hung with
+          drying bundles — yarrow, shepherd's purse, dried betony. The green hook
+          is empty where the meadowsweet bundle hung before you took it down.
+          The sickroom is back to the west.
     objects: [meadowsweet]
     exits:
       - { direction: west, to: sickroom }
@@ -304,6 +318,8 @@ objects:
           three to one against the reference standard of one to one. He had
           reasons for the strength he chose; the reasons do not make the dose safe.
     takeable: true
+    take_effects:
+      - set_flag: godwin_notes_taken
     read_text: >
       Edric's entry, five days running: autumn fever, correctly identified.
       Preparation entry for the wormwood tonic: three parts extract to one part
@@ -349,6 +365,8 @@ objects:
       surgeon: settles an overtaxed stomach, reduces inflammation, allows the
       gut to resume normal absorption. The opposite of wormwood at high dose.
     takeable: true
+    take_effects:
+      - set_flag: meadowsweet_taken
     read_text: >
       Meadowsweet — white-flowered, from the river meadow, cut this autumn and
       well-hung. Anti-inflammatory, stomach-settling: it counteracts exactly the

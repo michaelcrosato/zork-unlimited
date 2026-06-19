@@ -1,0 +1,32 @@
+id: bug_0354
+pack: tanners_fever_v1
+title: "store rooms still placed taken notes and meadowsweet at their starts"
+severity: minor
+scene: apothecary_store, herb_store
+reported_by: afk_stale_reactive_room_item_audit_2026-06-19
+
+symptom: >
+  After taking Godwin's case notes from the apothecary's store, LOOK still said
+  the ledger lay open at the current month. After taking the meadowsweet from
+  the herb store, LOOK still said the green bundle hung among the drying herbs.
+  Dropping either item after first pickup could also let the rooms fall back to
+  their starting-position prose. The existing notes-read room variant also said
+  the case notes were in the player's hands, which became false after a later
+  drop.
+
+root_cause: >
+  Godwin's case notes and the meadowsweet bundle did not leave durable pickup
+  state that room prose could read. Inventory alone was not enough because both
+  items can be dropped after first pickup. The notes-read variant also assumed
+  inventory possession instead of the durable fact that the overdose formula had
+  been learned.
+
+fix: >
+  Taking Godwin's case notes now sets `godwin_notes_taken`, and taking the
+  meadowsweet now sets `meadowsweet_taken`. The apothecary's store and herb
+  store have corresponding variants that keep the workbench and herb hook empty
+  after first pickup, including after later drops. The notes-read store variant
+  now records that the formula is known without claiming the notes remain in
+  hand. Score, exits, enemies, endings, and win conditions are unchanged.
+
+tests: tests/regression/tanners_fever_reactive_taken_items.test.ts
