@@ -105,12 +105,56 @@ rooms:
       uses for sampling. The dispensary lies east; the shop door north is shut;
       the back passage runs south.
     variants:
-      - when: [{ has_flag: proved_substitution }]
+      - when:
+          - has_flag: proved_substitution
+          - has_item: suspect_vial
+          - has_item: glass_drawstick
         text: >
-          The shop counter, the comparison complete. The suspect vial and the
-          dispensatory lie open side by side; the pharmacopoeia's taste criteria
-          and the vial's result are irreconcilable. The dispensary is east; the
+          The shop counter, the comparison complete. The open pharmacopoeia
+          anchors the standard, while the suspect vial and glass drawstick are
+          with you as evidence rather than lying at their starting places. The
+          dispensary is east; the door north stands clear; the back passage runs
+          south.
+      - when:
+          - has_flag: proved_substitution
+          - has_item: glass_drawstick
+        text: >
+          The shop counter, the comparison complete. The open pharmacopoeia
+          anchors the standard, and the glass drawstick is with you, carrying the
+          taste result that proved the substitution. The dispensary is east; the
           door north stands clear; the back passage runs south.
+      - when:
+          - has_item: suspect_vial
+          - has_item: glass_drawstick
+        text: >
+          Thomas Crace's apothecary shop, shuttered for the evening. The long
+          counter still holds the day's remaining stock — rows of earthenware
+          jars, rolled plasters, and a weighing box — but the suspect vial and
+          glass drawstick are now in your evidence kit. The Pharmacopoeia
+          Londinensis lies open on the reading stand at the counter's end. The
+          dispensary lies east; the shop door north is shut; the back passage
+          runs south.
+      - when:
+          - has_item: suspect_vial
+        text: >
+          Thomas Crace's apothecary shop, shuttered for the evening. The long
+          counter still holds the day's remaining stock — rows of earthenware
+          jars, rolled plasters, and a weighing box — but the suspect vial is
+          with you now. The Pharmacopoeia Londinensis lies open on the reading
+          stand at the counter's end; the testing drawer below still holds the
+          glass drawstick Crace uses for sampling. The dispensary lies east; the
+          shop door north is shut; the back passage runs south.
+      - when:
+          - has_item: glass_drawstick
+        text: >
+          Thomas Crace's apothecary shop, shuttered for the evening. The long
+          counter holds the day's remaining stock — rows of earthenware jars,
+          rolled plasters, and a weighing box. Near the till drawer the suspect
+          laudanum vial remains set apart, left by the physician who raised the
+          complaint. The Pharmacopoeia Londinensis lies open on the reading stand
+          at the counter's end; the testing drawer below is empty where the glass
+          drawstick had been kept. The dispensary lies east; the shop door north
+          is shut; the back passage runs south.
     objects: [dispensatory, suspect_vial, glass_drawstick, counter_stock]
     exits:
       - direction: north

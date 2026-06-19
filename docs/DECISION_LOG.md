@@ -251,3 +251,22 @@ take effects as the same non-actionable terminal-on-take class as terminal win c
 
 **Next after this:** triage the remaining direct room prose sites, starting with multi-item rooms such
 as `apothecaries_standard`'s shop counter where post-take looks remain observable.
+
+### Standard cycle — 2026-06-19 (HEAD = 15c7a27; next move = apothecaries counter stale items)
+
+**Confirmed CLOSED since direct terminal take suppression:**
+
+- **Direct `end_game` take-effect false positives:** closed by `15c7a27`.
+  The stale room-item audit no longer asks for unreachable room variants after an item's own
+  `take_effects` immediately end the game, dropping the triage count from 50 to 42.
+
+**Chosen move — fix the first real remaining stale room prose site**
+
+The leading remaining audit entries were real player-facing contradictions in
+`apothecaries_standard`: the shop counter base text kept saying the suspect vial was set apart near
+the till and that the testing drawer held the glass drawstick after the player had taken either or
+both objects. This cycle adds ordered room variants for the vial-held, drawstick-held, both-held, and
+comparison-complete-with-held-evidence states, plus a regression and bug artifact.
+
+**Next after this:** continue down the remaining 40 high-confidence room/item sites, or promote a
+low-FP validator subset once the first audited packs are clean.
