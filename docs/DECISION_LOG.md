@@ -415,3 +415,24 @@ room/item triage sites, with the `gaugers_register` entries gone.
 
 **Next after this:** continue down the remaining high-confidence room/item sites, starting with
 `ropewalkers_twist`, or promote the low-FP subset once the first audited packs are clean.
+
+### Standard cycle — 2026-06-19 (HEAD = cfa2b3b; next move = ropewalker stale inspection items)
+
+**Confirmed CLOSED since gauger stale weighing-room tools:**
+
+- **`gaugers_register` weighing-room taken-tool contradictions:** closed by `cfa2b3b`.
+  The weighing room now reacts after the marked stave and/or crowbar have been taken,
+  including after later drops. The stale room/item audit dropped to 23 sites.
+
+**Chosen move — fix the next real stale room prose cluster**
+
+The next audit entries were concrete contradictions in `ropewalkers_twist`: the rope office
+kept saying the inspector's token lay beside the quay contract after it was taken, and the
+covered ropewalk kept placing the twist gauge on its nail and the marking knife on its block
+after the player could take either tool. This cycle gives those TAKE actions durable pickup
+flags and adds ordered room variants for token-taken, gauge-only, knife-only, and both-tool
+states, plus a regression and bug artifact. `npm run assess` now reports 20 remaining
+room/item triage sites, with the `ropewalkers_twist` entries gone.
+
+**Next after this:** continue down the remaining high-confidence room/item sites, starting with
+`scriveners_proof`, or promote the low-FP subset once the first audited packs are clean.

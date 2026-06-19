@@ -45,6 +45,13 @@ rooms:
           The rope office, with the foreman's tally in your keeping. The long
           walk runs east; the north door leads toward guildhall. The south
           passage is no longer the road for this case.
+      - when: [{ has_flag: inspector_token_taken }]
+        text: >
+          A narrow office at the head of the East Quay ropewalk. Tarred air
+          presses through the shutters. The quay contract still lies open on the
+          desk, but the place beside it is bare where the inspector's token lay.
+          The long walk runs east under the covered shed. The north door leads
+          toward guildhall; a back passage south opens onto the quay lane.
     objects: [quay_contract, inspector_token]
     exits:
       - { direction: east, to: rope_shed }
@@ -76,6 +83,31 @@ rooms:
           The covered ropewalk. A notch on the laid cable marks the place where
           twist count and length no longer agree. The office is west; the tally
           loft is above.
+      - when: [{ has_flag: twist_gauge_taken }, { has_flag: marking_knife_taken }]
+        text: >
+          The covered walk runs the length of the quay wall, hooks and posts set
+          in a straight line under the rafters. Bales of green hemp are stacked
+          beside the path. The nail near the first post and the block beside it
+          are both bare now; the twist gauge and marking knife are already in
+          hand or wherever you last set them. The newly laid cable stretches
+          north along the walk. The office is west; a stair climbs to the tally
+          loft.
+      - when: [{ has_flag: twist_gauge_taken }]
+        text: >
+          The covered walk runs the length of the quay wall, hooks and posts set
+          in a straight line under the rafters. Bales of green hemp are stacked
+          beside the path. The nail near the first post is bare where the twist
+          gauge hung, and a marking knife still lies on a block. The newly laid
+          cable stretches north along the walk. The office is west; a stair
+          climbs to the tally loft.
+      - when: [{ has_flag: marking_knife_taken }]
+        text: >
+          The covered walk runs the length of the quay wall, hooks and posts set
+          in a straight line under the rafters. Bales of green hemp are stacked
+          beside the path. A twist gauge hangs on a nail near the first post, but
+          the block is bare where the marking knife lay. The newly laid cable
+          stretches north along the walk. The office is west; a stair climbs to
+          the tally loft.
     objects: [green_hemp, twist_gauge, marking_knife, laid_cable]
     exits:
       - { direction: west, to: rope_office }
@@ -141,6 +173,8 @@ objects:
       from the ropewalk to guildhall as an official inspection rather than a
       dockside accusation.
     takeable: true
+    take_effects:
+      - set_flag: inspector_token_taken
 
   - id: green_hemp
     name: "green hemp bales"
@@ -172,6 +206,8 @@ objects:
       A brass span gauge with twelve notches and a sliding pin. It counts rope
       turns over a fixed length, exactly the tool named in the contract.
     takeable: true
+    take_effects:
+      - set_flag: twist_gauge_taken
 
   - id: marking_knife
     name: "marking knife"
@@ -180,6 +216,8 @@ objects:
       A short ropewalk knife, used to notch a strand without cutting through the
       cable. The mark lets a second inspector find the same measured place.
     takeable: true
+    take_effects:
+      - set_flag: marking_knife_taken
 
   - id: laid_cable
     name: "laid cable"
