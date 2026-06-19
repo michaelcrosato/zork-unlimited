@@ -40,6 +40,8 @@ const warn = (code: string, message: string, where: string[]): Finding => ({
   message,
   where,
 });
+const hasDeclaredVar = (vars: Record<string, number>, name: string): boolean =>
+  Object.prototype.hasOwnProperty.call(vars, name);
 
 /**
  * Extra facts a higher layer (the RPG validator, §13 Stage 4) can inject: flags
@@ -167,6 +169,18 @@ export function validateParser(
             [`object:${o.id}`],
           ),
         );
+    }
+    for (const it of o.interactions) {
+      const sc = it.skill_check;
+      if (sc && !hasDeclaredVar(pack.meta.vars_init, sc.skill)) {
+        findings.push(
+          err(
+            "SKILL_CHECK_PHANTOM_STAT",
+            `skill check on object "${o.id}" uses skill "${sc.skill}", which is not declared in meta.vars_init.`,
+            [`object:${o.id}`],
+          ),
+        );
+      }
     }
     if (o.locked && o.key_id !== undefined && !objById.has(o.key_id)) {
       findings.push(

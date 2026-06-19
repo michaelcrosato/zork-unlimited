@@ -132,6 +132,15 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
     if (scene.is_ending) continue;
     const outs = new Set<string>();
     for (const choice of scene.choices) {
+      if (choice.skill_check && !hasDeclaredVar(pack.meta.vars_init, choice.skill_check.skill)) {
+        findings.push(
+          err(
+            "SKILL_CHECK_PHANTOM_STAT",
+            `skill check on choice "${choice.id}" uses skill "${choice.skill_check.skill}", which is not declared in meta.vars_init.`,
+            [`scene:${scene.id}`, `choice:${choice.id}`],
+          ),
+        );
+      }
       if (choice.next !== undefined) {
         registerTarget(choice.next, outs, allNodeIds, findings, [
           `scene:${scene.id}`,
@@ -450,6 +459,9 @@ function err(code: string, message: string, where: string[]): Finding {
 }
 function warn(code: string, message: string, where: string[]): Finding {
   return { severity: "warning", code, message, where };
+}
+function hasDeclaredVar(vars: Record<string, number>, name: string): boolean {
+  return Object.prototype.hasOwnProperty.call(vars, name);
 }
 
 function dupCheck(ids: string[], label: string, findings: Finding[], where?: string): void {

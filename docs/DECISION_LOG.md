@@ -155,3 +155,22 @@ drift distinguishable from routine blind-playtest saturation.
 
 **Next after Gap F:** Gap G (`SKILL_CHECK_PHANTOM_STAT`) — validate that every `skill_check.stat`
 references a declared variable/stat before future RPG/CYOA authoring can typo an impossible check.
+
+### Standard cycle — 2026-06-19 (HEAD = 9b83c7d; next move = Gap G)
+
+**Confirmed CLOSED since re-aim #21:**
+
+- **Gap F — `allGeneratorsClean` absent from `Assessment`:** closed by `9b83c7d`.
+  `Assessment` now carries generator clean/dirty state, the formatted assessment prints it, and
+  saturation detection only treats floor-level candidates as routine saturation when generated packs
+  are clean.
+
+**Chosen move — Gap G: `SKILL_CHECK_PHANTOM_STAT`**
+
+Parser and CYOA skill checks rolled `skill_check.skill` as a plain var lookup; an undeclared typo fell
+through as d20 + 0. This cycle makes `validateParser()` and `validateCyoa()` reject a skill check whose
+skill is absent from `meta.vars_init`, and the RPG wrapper gets the same protection through its parser
+validation pass. Regression coverage plants the same phantom stat in parser, CYOA, and RPG packs.
+
+**Next after Gap G:** audit skill-check branch-effect scanning in parser/CYOA validators, then dialogue
+root re-greet validation and the stale reactive-description strategy.
