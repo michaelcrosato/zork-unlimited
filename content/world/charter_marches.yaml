@@ -186,6 +186,10 @@ graph:
       name: "The Lamplighter's Round"
       kind: quest
       pack: "content/parser/pack/lamplighters_round.yaml"
+    - id: ropewalkers_twist
+      name: "The Ropewalker's Twist"
+      kind: quest
+      pack: "content/parser/pack/ropewalkers_twist.yaml"
     - id: scriveners_proof
       name: "The Scrivener's Proof"
       kind: quest
@@ -373,6 +377,9 @@ graph:
     - from: east_quay
       to: gaugers_register
       route: "gauger's yard"
+    - from: east_quay
+      to: ropewalkers_twist
+      route: "ropewalk quay"
     - from: industrial_cut
       to: tide_mill
       route: "mill race"

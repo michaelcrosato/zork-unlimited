@@ -1,0 +1,308 @@
+# The Ropewalker's Twist -- a Zork-style parser pack (Stage 3).
+#
+# Charterhaven buys rope for ships, ferries, cranes, and market hoists. A rope
+# that looks full length but is laid short and stretched with green hemp will
+# fail under load after the contract is paid. This parser pack adds a ropewalk
+# inspection role: the proof is built from contract text, material inspection,
+# a twist gauge, a knife-marked sample, and the foreman's private tally.
+#
+# Score economy:
+#   +5  READ quay_contract
+#   +5  USE marking_knife ON green_hemp (natural verb: part)
+#   +5  USE twist_gauge ON laid_cable
+#   +5  USE marking_knife ON laid_cable (natural verb: notch)
+#   +20 TAKE foremans_tally
+# Best route: gather all four findings, take the tally, leave north = 40/40.
+
+meta:
+  id: ropewalkers_twist_v1
+  title: "The Ropewalker's Twist"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "East Quay Ropewalk"
+    quest: "prove the naval rope contract was laid short"
+    role: "ropewalk inspector"
+    connection: "Charterhaven's harbor depends on honest rope: ferries, cranes, ship lines, and market hoists all fail when a contract cable is stretched thin."
+  start_room: rope_office
+  flags_init: []
+  vars_init: {}
+  max_score: 40
+
+rooms:
+  - id: rope_office
+    name: "The Rope Office"
+    description: >
+      A narrow office at the head of the East Quay ropewalk. Tarred air presses
+      through the shutters. A quay contract lies open on the desk beside the
+      inspector's token. The long walk runs east under the covered shed. The
+      north door leads toward guildhall; a back passage south opens onto the
+      quay lane.
+    variants:
+      - when: [{ has_flag: fraud_proved }]
+        text: >
+          The rope office, with the foreman's tally in your keeping. The long
+          walk runs east; the north door leads toward guildhall. The south
+          passage is no longer the road for this case.
+    objects: [quay_contract, inspector_token]
+    exits:
+      - { direction: east, to: rope_shed }
+      - direction: north
+        to: guildhall_lobby
+        conditions: [{ has_item: inspector_token }, { has_item: foremans_tally }, { has_flag: fraud_proved }]
+        locked_msg: >
+          Guildhall will need both your inspector's token and the foreman's own
+          tally before the rope contract can be stopped. The proof is still in
+          the ropewalk.
+      - direction: south
+        to: quay_lane
+        conditions: [{ not_flag: fraud_proved }]
+        locked_msg: >
+          With the tally in hand, do not walk out by the quay lane. The record
+          belongs at guildhall.
+
+  - id: rope_shed
+    name: "The Covered Ropewalk"
+    description: >
+      The covered walk runs the length of the quay wall, hooks and posts set in
+      a straight line under the rafters. Bales of green hemp are stacked beside
+      the path. A twist gauge hangs on a nail near the first post, and a marking
+      knife lies on a block. The newly laid cable stretches north along the
+      walk. The office is west; a stair climbs to the tally loft.
+    variants:
+      - when: [{ has_flag: cable_notched }]
+        text: >
+          The covered ropewalk. A notch on the laid cable marks the place where
+          twist count and length no longer agree. The office is west; the tally
+          loft is above.
+    objects: [green_hemp, twist_gauge, marking_knife, laid_cable]
+    exits:
+      - { direction: west, to: rope_office }
+      - { direction: up, to: tally_loft }
+
+  - id: tally_loft
+    name: "The Tally Loft"
+    description: >
+      A low loft above the ropewalk, warm with trapped tar smell. Pegs on the
+      wall hold old order tags. A plain foreman's tally book sits on a slanted
+      shelf, and a sealed purse has been tucked behind a coil of packing twine.
+      The ropewalk is down.
+    variants:
+      - when: [{ has_flag: fraud_proved }]
+        text: >
+          The tally loft, the slanted shelf bare where the foreman's tally lay.
+          The sealed purse still waits behind the packing twine. The ropewalk
+          is down.
+    objects: [foremans_tally, quiet_purse, order_tags]
+    exits:
+      - { direction: down, to: rope_shed }
+
+  - id: guildhall_lobby
+    name: "The Guildhall Lobby"
+    description: >
+      The lobby outside the harbor contracts room, already busy with clerks and
+      porters. You have the inspector's token and the foreman's tally. The rope
+      order can be stopped before it reaches the ferry cranes.
+
+  - id: quay_lane
+    name: "The Quay Lane"
+    description: >
+      A wet lane behind the ropewalk, smelling of tar, bilge, and coal smoke.
+      You left by the back passage with whatever suspicions you had. The office
+      door has swung shut behind you.
+
+objects:
+  - id: quay_contract
+    name: "quay contract"
+    aliases: [contract, order, parchment, desk paper, rope contract, quay contract, harbor order]
+    description: >
+      The harbor board's contract for four ship lengths of hoist cable, laid to
+      full measure, tarred after inspection, and paid only after the ropewalk
+      inspector marks the twist count.
+    read_text: >
+      The terms are precise: full-length cable, dry hemp, twelve turns to the
+      inspector's span, and no tar before the twist is counted. The delivery
+      note claims all four conditions were met yesterday. If that is true, the
+      cable should hold its count and length under the gauge.
+    interactions:
+      - verb: READ
+        target: quay_contract
+        conditions: [{ not_flag: read_contract }]
+        effects:
+          - set_flag: read_contract
+          - inc_var: { name: score, by: 5 }
+
+  - id: inspector_token
+    name: "inspector's token"
+    aliases: [token, seal, badge, inspector token, quay token, brass token]
+    description: >
+      A brass token stamped with the harbor board mark. It lets a finding pass
+      from the ropewalk to guildhall as an official inspection rather than a
+      dockside accusation.
+    takeable: true
+
+  - id: green_hemp
+    name: "green hemp bales"
+    aliases: [hemp, bales, fiber, green hemp, damp hemp, hemp bales, rope fiber]
+    description: >
+      Fresh hemp stacked in close bales, still carrying field damp in the inner
+      fibers. It will stretch after laying unless it is dried before twisting.
+    interactions:
+      - verb: USE
+        item: marking_knife
+        target: green_hemp
+        command_verb: part
+        command_template: "part {target} with {item}"
+        conditions: [{ has_item: marking_knife }, { not_flag: found_green_hemp }]
+        effects:
+          - set_flag: found_green_hemp
+          - inc_var: { name: score, by: 5 }
+          - narrate: >
+              You part the outer fibers with the knife point. The surface has
+              been dusted dry, but the inner bundles are still cool and green.
+              This rope will stretch in service. If the cable also shows a
+              short twist count, the defect is deliberate, not a drying
+              accident.
+
+  - id: twist_gauge
+    name: "twist gauge"
+    aliases: [gauge, counter, span gauge, twist gauge, brass gauge, inspector gauge]
+    description: >
+      A brass span gauge with twelve notches and a sliding pin. It counts rope
+      turns over a fixed length, exactly the tool named in the contract.
+    takeable: true
+
+  - id: marking_knife
+    name: "marking knife"
+    aliases: [knife, blade, marker, marking knife, rope knife, small knife]
+    description: >
+      A short ropewalk knife, used to notch a strand without cutting through the
+      cable. The mark lets a second inspector find the same measured place.
+    takeable: true
+
+  - id: laid_cable
+    name: "laid cable"
+    aliases: [cable, rope, ship cable, laid rope, contract cable, hoist cable]
+    description: >
+      The newly laid cable runs along the posts, dark with fresh dressing and
+      smooth enough to look honest from the office door.
+    variants:
+      - when: [{ has_flag: cable_notched }]
+        text: >
+          The laid cable, now notched at the measured span where the twist count
+          failed. The mark is small, but another inspector can find it.
+      - when: [{ has_flag: twist_measured }]
+        text: >
+          The laid cable. Your gauge showed nine turns where the contract calls
+          for twelve, the classic sign of a cable stretched long after laying.
+    interactions:
+      - verb: USE
+        item: twist_gauge
+        target: laid_cable
+        conditions: [{ has_item: twist_gauge }, { not_flag: twist_measured }]
+        effects:
+          - set_flag: twist_measured
+          - inc_var: { name: score, by: 5 }
+          - narrate: >
+              You set the gauge to one span and count the turns. Nine. The
+              contract calls for twelve. The cable has been laid short and then
+              stretched to length, a fraud that hides in a straight line until
+              the first heavy load brings it out.
+      - verb: USE
+        item: marking_knife
+        target: laid_cable
+        command_verb: notch
+        command_template: "notch {target} with {item}"
+        conditions: [{ has_item: marking_knife }, { has_flag: twist_measured }, { not_flag: cable_notched }]
+        effects:
+          - set_flag: cable_notched
+          - inc_var: { name: score, by: 5 }
+          - narrate: >
+              You nick one strand at the measured span, shallow enough not to
+              weaken the cable and clear enough for the guild inspector to find.
+              The proof is no longer only in your count; it is marked on the
+              rope itself.
+
+  - id: foremans_tally
+    name: "foreman's tally"
+    aliases: [tally, book, tally book, foreman tally, foreman's tally, private tally, slanted book]
+    description: >
+      A plain tally book in the foreman's hand. The public page records full
+      turns and dry hemp. The private facing page records the truth: green hemp,
+      nine-turn lay, stretched to contract length before dressing.
+    read_text: >
+      The private page lists the order by harbor board number and names the
+      saving: three turns of hemp per span across four ship lengths. Beneath it
+      is the foreman's own note: "Dress dark before M. sees count." M. is the
+      master ropewalker. The fraud has a hand and a number.
+    takeable: true
+    take_effects:
+      - inc_var: { name: score, by: 20 }
+      - set_flag: fraud_proved
+
+  - id: quiet_purse
+    name: "sealed purse"
+    aliases: [purse, money, bribe, sealed purse, coin purse, hush money]
+    description: >
+      A sealed purse tucked behind the packing twine, labelled "for quiet
+      passage." It is not evidence you can carry safely. It is bait for making
+      the inspection look bought.
+    takeable: true
+    take_effects:
+      - narrate: >
+          The purse goes into your coat and makes the whole case smaller at
+          once. By noon the master ropewalker has witnesses who saw you carrying
+          coin from his loft. The cable remains in contract, the tally is called
+          planted, and your inspection is remembered only as a purchased quarrel.
+      - end_game: ending_bought
+
+  - id: order_tags
+    name: "old order tags"
+    aliases: [tags, labels, old tags, order tags, wall pegs]
+    description: >
+      Old harbor-board order tags, pierced and hung by month. The pattern is
+      ordinary until this week's tag, where the order number matches the
+      foreman's tally book exactly.
+
+npcs: []
+
+win_conditions:
+  - id: proof_registered
+    conditions: [{ visited: guildhall_lobby }]
+    ending: ending_registered
+  - id: proof_abandoned
+    conditions: [{ visited: quay_lane }]
+    ending: ending_unproved
+
+endings:
+  - id: ending_registered
+    title: "The Twist Count"
+    text: >
+      You lay the inspector's token, the notched cable span, and the foreman's
+      tally before the harbor contracts clerk. The numbers agree against the
+      ropewalker: green hemp, nine turns where twelve were bought, and the
+      private saving written in his own book. The order is stopped before the
+      cable reaches the ferry cranes. The master ropewalker will answer at
+      guildhall, but the quay will not hang its loads from a stretched fraud.
+      *** The twist is proved. ***
+
+  - id: ending_unproved
+    title: "The Quay Accusation"
+    text: >
+      You leave by the quay lane with suspicion and no record. Perhaps you read
+      the contract; perhaps you saw the hemp; perhaps you even measured the
+      cable. Without the foreman's tally and your token on the guildhall desk,
+      the ropewalk calls it an inspector's quarrel. The contract cable goes out
+      with the next tide. The first failure will be explained as weather.
+      *** The proof was not registered. ***
+
+  - id: ending_bought
+    title: "For Quiet Passage"
+    text: >
+      The purse was labelled well enough. By taking it, you made the inspection
+      look like every bad dockside bargain the harbor board fears. The foreman
+      denies the tally, the master ropewalker names you bought, and the cable is
+      dressed darker before anyone else measures it. The rope holds until it
+      does not. Your mark is nowhere useful.
+      *** You are bought. ***
