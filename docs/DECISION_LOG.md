@@ -436,3 +436,25 @@ room/item triage sites, with the `ropewalkers_twist` entries gone.
 
 **Next after this:** continue down the remaining high-confidence room/item sites, starting with
 `scriveners_proof`, or promote the low-FP subset once the first audited packs are clean.
+
+### Standard cycle — 2026-06-19 (HEAD = dc4ef44; next move = scrivener stale evidence tools)
+
+**Confirmed CLOSED since ropewalker stale inspection items:**
+
+- **`ropewalkers_twist` office / rope-shed taken-item contradictions:** closed by `dc4ef44`.
+  The rope office and covered ropewalk now react after the inspector's token, twist gauge,
+  and/or marking knife have been taken, including after later drops. The stale room/item
+  audit dropped to 20 sites.
+
+**Chosen move — fix the next real stale room prose cluster**
+
+The next audit entries were concrete contradictions in `scriveners_proof`: the front office
+kept saying the disputed deed lay in the deed box and the penknife rested at the inkwell after
+the player could take them, and the private study kept saying the writing case held the
+magnifier after it was taken. This cycle gives those TAKE actions durable pickup flags and
+adds ordered room variants for deed-only, penknife-only, both-front-office, and magnifier
+states, plus a regression and bug artifact. `npm run assess` now reports 17 remaining
+room/item triage sites, with the `scriveners_proof` entries gone.
+
+**Next after this:** continue down the remaining high-confidence room/item sites, starting with
+`tide_mill`, or promote the low-FP subset once the first audited packs are clean.

@@ -96,6 +96,31 @@ rooms:
           its enrolled copy: six words not in the original, in a fresher charge
           of the same ink. The deed room is east; the street door north is clear.
           The alley runs south.
+      - when: [{ has_flag: disputed_deed_taken }, { has_flag: penknife_taken }]
+        text: >
+          Henry Bassett's front office: a plain room smelling of wax and old
+          paper. A writing desk holds the day's correspondence and a candle lamp
+          gone cold. The deed box on the corner of the desk stands open and
+          empty now, and the inkwell tray is bare where the penknife rested. The
+          deed room lies east; the street door to the north stands shut; the
+          night alley runs south.
+      - when: [{ has_flag: disputed_deed_taken }]
+        text: >
+          Henry Bassett's front office: a plain room smelling of wax and old
+          paper. A writing desk holds the day's correspondence and a candle lamp
+          gone cold. The deed box on the corner of the desk stands open and
+          empty now, the disputed deed already in hand or wherever you last set
+          it. A penknife rests against the inkwell. The deed room lies east; the
+          street door to the north stands shut; the night alley runs south.
+      - when: [{ has_flag: penknife_taken }]
+        text: >
+          Henry Bassett's front office: a plain room smelling of wax and old
+          paper. A writing desk holds the day's correspondence and a candle lamp
+          gone cold. The deed box on the corner of the desk stands open — the
+          disputed deed lies folded inside it, the thing you came for. The
+          inkwell tray is bare where the penknife rested. The deed room lies
+          east; the street door to the north stands shut; the night alley runs
+          south.
     objects: [client_complaint, disputed_deed, candle_lamp, penknife]
     exits:
       - direction: north
@@ -136,6 +161,14 @@ rooms:
       sticks, a short rule, and a fitted recess holding a small magnifying glass.
       A shelf of bound memoranda runs above. A sealed cloth purse sits behind
       the inkwell, heavy for its size. The deed room lies south.
+    variants:
+      - when: [{ has_flag: magnifier_taken }]
+        text: >
+          Bassett's private room: a writing table under the shuttered window, a
+          glazed writing case open on its surface — compartments for nibs, ink
+          sticks, a short rule, and an empty fitted recess where the magnifying
+          glass lay. A shelf of bound memoranda runs above. A sealed cloth purse
+          sits behind the inkwell, heavy for its size. The deed room lies south.
     objects: [magnifier, bribe_purse, private_memoranda]
     exits:
       - { direction: south, to: deed_room }
@@ -204,6 +237,7 @@ objects:
     takeable: true
     take_effects:
       - inc_var: { name: score, by: 20 }
+      - set_flag: disputed_deed_taken
     interactions:
       # USE magnifier ON disputed_deed — the lens as evidence instrument.
       # The interaction is defined on the TARGET (disputed_deed) with ITEM (magnifier),
@@ -247,6 +281,8 @@ objects:
       trimming quill nibs, cutting ribbon, and similar close work. Sharp at
       the tip, thin enough for detail. The horn handle is scored with use.
     takeable: true
+    take_effects:
+      - set_flag: penknife_taken
 
   # ── Deed room ──────────────────────────────────────────────────────────────────
   - id: enrolled_register
@@ -363,6 +399,8 @@ objects:
       Fine enough to show letter-form detail invisible to the naked eye: pen
       charge, loop-closure width, ink surface texture.
     takeable: true
+    take_effects:
+      - set_flag: magnifier_taken
 
   - id: bribe_purse
     name: "sealed purse"
