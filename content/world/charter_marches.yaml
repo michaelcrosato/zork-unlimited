@@ -166,6 +166,10 @@ graph:
       name: "The Cellarman's Dark"
       kind: quest
       pack: "content/parser/pack/cellarmans_dark.yaml"
+    - id: chandlers_lot
+      name: "The Chandler's Lot"
+      kind: quest
+      pack: "content/parser/pack/chandlers_lot.yaml"
     - id: collectors_warrant
       name: "The Collector's Warrant"
       kind: quest
@@ -367,6 +371,9 @@ graph:
     - from: river_stairs
       to: lamplighters_round
       route: "lamp round"
+    - from: river_stairs
+      to: chandlers_lot
+      route: "chandler's stair"
     - from: river_stairs
       to: tidewaiters_watch
       route: "tide office quay"
