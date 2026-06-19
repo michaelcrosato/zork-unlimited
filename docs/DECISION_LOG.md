@@ -572,3 +572,28 @@ triage sites, with the `cold_forge` terminal pickup gone.
 **Next after this:** continue down the remaining high-confidence room/item sites, starting with
 `falconers_ransom`, or promote the low-FP subset once the remaining false positives are
 tuned out.
+
+### Standard cycle — 2026-06-19 (HEAD = 888d9ee; next move = falconer stale bill)
+
+**Confirmed CLOSED since stale audit terminal-room suppression:**
+
+- **`cold_forge` terminal Ember-Heart false positive:** closed by `888d9ee`.
+  The stale room/item audit now suppresses non-start rooms whose entry state already
+  guarantees a declared terminal, so the Ember Chamber no longer distracts from live
+  stale-prose states. The audit dropped to 8 sites.
+
+**Chosen move — fix the next real stale room prose site**
+
+The next audit entry was a concrete contradiction in `falconers_ransom`: the guest
+chambers kept saying a folded document lay half-under the riding gloves at the
+satchel's lip after the hidden bill could be taken. The existing `bill_read` variant
+also said the needed document was in the player's hands, which became false after a
+later drop. This cycle gives the TAKE action a durable `hidden_bill_taken` flag, adds
+a taken-bill guest-chambers variant, and rewrites the read-state variant to record
+that the forged seal's tell is known without claiming inventory possession. It also
+adds a regression and bug artifact. `npm run assess` now reports 7 remaining
+room/item triage sites, with the `falconers_ransom` entry gone.
+
+**Next after this:** continue down the remaining high-confidence room/item sites, starting with
+`printers_night`, or promote the low-FP subset once the remaining false positives are
+tuned out.

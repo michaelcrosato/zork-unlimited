@@ -111,8 +111,14 @@ rooms:
     variants:
       - when: [{ has_flag: bill_read }]
         text: >
-          The guest chambers, the satchel still open on the chest. What you needed is
-          in your hands. The hawk-yard is back to the west.
+          The guest chambers, the satchel still open on the chest. The forged seal's
+          tell is fixed in your head now, and the folded document is no longer hidden
+          under the riding gloves at the satchel's lip. The hawk-yard is back to the west.
+      - when: [{ has_flag: hidden_bill_taken }]
+        text: >
+          The guest chambers, the satchel still open on the chest and its riding gloves
+          disturbed. The folded document is no longer tucked at the satchel's lip. The
+          hawk-yard is back to the west.
     objects: [hidden_bill]
     exits:
       - { direction: west, to: hawk_yard }
@@ -292,6 +298,8 @@ objects:
           a guild impression looks like when it was applied fresh versus after the fact.
           Aldric paid well for this; not well enough.
     takeable: true
+    take_effects:
+      - set_flag: hidden_bill_taken
     read_text: >
       The tiercel described is grey, hooded, trained — a match to your bird in every
       particular. But the guild seal is wrong: the wax is too thick, the impression
