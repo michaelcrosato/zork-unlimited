@@ -133,6 +133,7 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // Any *unintended* change to compilation trips this.
     // bug_0283: re-pinned after adding tower_top not_item:lantern variant (was 24aaf2b940ad...).
     // bug_0309: re-pinned after adding hermit_camp reactive re-entry variant (was 9fed38439d61...).
-    expect(loaded.compiled.contentHash).toBe("fac92b028320a3044bcd45fc352e8ac10aace3a6f3a722d07f08a6163fcfd3fe");
+    // single-world migration: meta.world now binds every shipped pack to the Charter Marches.
+    expect(loaded.compiled.contentHash).toBe("5300d2a500b52f7501059e46a50a17d4e2d6e88e66feeff385417593c68b0baa");
   });
 });

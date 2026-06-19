@@ -50,6 +50,14 @@
 meta:
   id: dead_reckoning_v1
   title: "Dead Reckoning"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Charterhaven East Quay"
+    quest: "bring a becalmed merchantman home"
+    role: "ship's mate"
+    connection: "The missing merchantman is registered out of Charterhaven, and its water key decides whether East Quay sees survivors."
   start: deck
   flags_init: []
 

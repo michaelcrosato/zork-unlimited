@@ -63,6 +63,14 @@
 meta:
   id: advocates_case_v1
   title: "The Advocate's Case"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Market Pleas Yard"
+    quest: "argue the charter exemption"
+    role: "travelling advocate"
+    connection: "Charterhaven market law follows its advocates into the Marches, where one precedent can save a livelihood."
   start_room: market_stall
   # `rhetoric` (3 base): formal argumentative ability — constructing a legal position
   # from documentary evidence, citing precedent in order, and speaking before a tribunal

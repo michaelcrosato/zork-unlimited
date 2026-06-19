@@ -72,6 +72,14 @@
 meta:
   id: cellarmans_dark_v1
   title: "The Cellarman's Dark"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Coal Yard Cellar"
+    quest: "carry light through the locked cellar"
+    role: "cellarman"
+    connection: "Charterhaven's cellars bind fuel, drink, and debt under the same streets the courts walk above."
   start_room: coal_yard
   flags_init: []
   # `steadiness` (value 3) — the potman's sure hand, rolled by the OPTIONAL d20

@@ -27,6 +27,8 @@
 import type { GameState } from "../core/state.js";
 import type { Action } from "../api/types.js";
 import { evalConditions } from "../core/conditions.js";
+import { openingWorldText } from "../world/observation.js";
+import type { WorldBinding } from "../world/schema.js";
 import {
   type ParserIndex,
   activeDialogue,
@@ -41,13 +43,14 @@ import { SCORE_VAR } from "./schema.js";
 
 /** Agent-facing observation options shared across modes. `hideGraph` omits each
  *  exit's destination (`to`) — see the file header. */
-export type ObservationOptions = { hideGraph?: boolean };
+export type ObservationOptions = { hideGraph?: boolean; includeWorldIntro?: boolean };
 
 export type ParserObservation = {
   mode: "parser";
   room: string;
   title: string;
   description: string;
+  world?: WorldBinding | null;
   visible_objects: { id: string; name: string }[];
   npcs_present: { id: string; name: string }[];
   // `to` is omitted under `hideGraph` (the destination is hidden until traversed).
@@ -116,6 +119,8 @@ export function buildParserObservation(
         ? `${resolvedEnding.trimEnd()}\n\nFinal score: ${score} of ${maxScore}.`
         : resolvedEnding
       : undefined;
+  const baseDescription = room ? roomDescription(room, state) : "";
+  const world = index.pack.meta.world;
 
   const visObjs = visibleObjectIds(index, state, state.current).map((id) => {
     const o = index.objects.get(id);
@@ -144,7 +149,10 @@ export function buildParserObservation(
     mode: "parser",
     room: state.current,
     title: endingDef ? endingDef.title : (room?.name ?? state.current),
-    description: endingText ?? (room ? roomDescription(room, state) : ""),
+    description:
+      endingText ??
+      (opts.includeWorldIntro ? openingWorldText(world, state, baseDescription) : baseDescription),
+    ...(opts.includeWorldIntro ? { world: world ?? null } : {}),
     visible_objects: visObjs,
     npcs_present: npcs,
     exits,

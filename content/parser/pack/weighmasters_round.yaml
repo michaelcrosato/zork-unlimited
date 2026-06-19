@@ -60,6 +60,14 @@
 meta:
   id: weighmasters_round_v1
   title: "The Weighmaster's Round"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Weighmaster's Counting House"
+    quest: "settle the warehouse weight fraud"
+    role: "weighmaster"
+    connection: "Every warehouse scale in Charterhaven points back to the counting house, where false weight becomes false law."
   start_room: counting_house
   flags_init: []
   vars_init: { steadiness: 3 }

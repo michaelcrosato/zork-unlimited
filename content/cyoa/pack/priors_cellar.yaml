@@ -1,6 +1,14 @@
 meta:
   id: priors_cellar_v1
   title: "The Prior's Cellar"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Prior's Cellar"
+    quest: "recover the truth under the dissolved house"
+    role: "cellar investigator"
+    connection: "The old priory cellar sits beneath Charterhaven leases, and its hidden stores still distort city power."
   start: priory_gate
   flags_init: []
   max_score: 50

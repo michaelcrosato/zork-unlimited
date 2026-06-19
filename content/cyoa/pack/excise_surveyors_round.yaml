@@ -56,6 +56,14 @@
 meta:
   id: excise_surveyors_round_v1
   title: "The Surveyor's Round"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Maltsters' Ward"
+    quest: "prove the hidden excise fraud"
+    role: "excise surveyor"
+    connection: "Charterhaven's revenue office sends surveyors into the malt houses that feed the hub city taverns."
   start: maltsters_office
   flags_init: []
   # `steadiness` (init 3) — stat for the file_concealment_report TENSION beat

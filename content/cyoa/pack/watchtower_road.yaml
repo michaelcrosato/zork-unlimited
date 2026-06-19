@@ -1,6 +1,14 @@
 meta:
   id: watchtower_road_v1
   title: "The Watchtower Road"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "North Road Watch"
+    quest: "expose the watchtower smuggling road"
+    role: "road warden"
+    connection: "The north road is Charterhaven's first artery; the ruined watchtower decides what reaches the hub city unseen."
   start: forest_crossroads
   # `nerve` (value 3) is the d20 skill rolled by the single skill-checked choice in this
   # pack — force_door on ruined_watchtower (below), where the door hanging from one hinge

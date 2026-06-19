@@ -50,6 +50,14 @@
 meta:
   id: falconers_ransom_v1
   title: "The Falconer's Ransom"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Hawk Yard"
+    quest: "recover the stolen falcon without losing the manor"
+    role: "falconer's agent"
+    connection: "The hawk yard supplies Charterhaven nobles, turning a forged bill of sale into a public ransom."
   start_room: hawk_yard
   # `cunning` (3 base): quick thinking, misdirection, reading deception, and the
   # ability to spring a trap on a trickster before he can adjust. New to the corpus —

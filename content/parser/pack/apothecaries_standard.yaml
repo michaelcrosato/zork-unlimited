@@ -79,6 +79,14 @@
 meta:
   id: apothecaries_standard_v1
   title: "The Apothecary's Standard"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Apothecaries' Hall"
+    quest: "test the adulterated standard"
+    role: "apothecary examiner"
+    connection: "Charterhaven's physic trade depends on the hall standard, so a false measure poisons more than one shop."
   start_room: shop_counter
   flags_init: []
   vars_init: { steadiness: 3 }

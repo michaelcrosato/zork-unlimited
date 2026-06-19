@@ -92,7 +92,7 @@ async function main(): Promise<void> {
 
   try {
     while (true) {
-      const obs = buildObservation(index, state);
+      const obs = buildObservation(index, state, { includeWorldIntro: true });
       console.log(renderObservation(obs));
       if (obs.ended || obs.available_actions.length === 0) break;
 

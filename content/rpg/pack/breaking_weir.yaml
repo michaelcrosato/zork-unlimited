@@ -47,6 +47,14 @@
 meta:
   id: breaking_weir_v1
   title: "The Breaking Weir"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Breaking Weir"
+    quest: "restore the flood works before the village breaks"
+    role: "weir keeper"
+    connection: "The weir controls water feeding Charterhaven mills, so a village flood is also a hub-city failure."
   start_room: keeper_lodge
   # hp is required by the RPG validator (> 0) and present for the core, but nothing in
   # this combatless pack damages it — there is no fight. attack/defense are 0 (no combat).

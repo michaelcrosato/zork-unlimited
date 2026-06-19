@@ -26,6 +26,14 @@
 meta:
   id: sealed_crypt_v1
   title: "The Sealed Crypt"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Crypt Road Chapel"
+    quest: "recover the sealed crypt relic"
+    role: "chapel explorer"
+    connection: "The road chapel guards Charterhaven's dead and old claims, making the crypt a border between law and legend."
   start_room: forest_path
   flags_init: []
   # `nerve` (value 3) is the player's steadiness, rolled by the OPTIONAL nerve check on

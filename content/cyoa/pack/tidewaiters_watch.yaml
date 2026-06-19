@@ -55,6 +55,14 @@
 meta:
   id: tidewaiters_watch_v1
   title: "The Tidewaiter's Watch"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Tide Office Quay"
+    quest: "inspect the suspect cargo before it clears"
+    role: "Crown tidewaiter"
+    connection: "Charterhaven's tide office is the customs mouth of the Marches, and every false manifest feeds the hub."
   start: ship_side
   flags_init: []
   # `steadiness` (init 3) — the stat for the confront_captain TENSION beat

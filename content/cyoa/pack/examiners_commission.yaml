@@ -89,6 +89,14 @@
 meta:
   id: examiners_commission_v1
   title: "The Examiner's Commission"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Doctors' Commons Registry"
+    quest: "test the Alderton will"
+    role: "court examiner"
+    connection: "Charterhaven's probate registry answers to Doctors' Commons, making the disputed will a hub-city succession case."
   start: registry_room
   # `composure` (value 3) — stat for the examine_henry TENSION beat
   # (d20 + composure vs DC 11). Both branches award heard_henry_discrepancy

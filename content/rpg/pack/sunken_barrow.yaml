@@ -11,6 +11,14 @@
 meta:
   id: sunken_barrow_v1
   title: "The Sunken Barrow"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Sunken Barrow"
+    quest: "claim the relic without waking the barrow lord"
+    role: "barrow delver"
+    connection: "The sunken barrow anchors Charterhaven's oldest boundary claim, so its relic is law as much as treasure."
   start_room: barrow_mouth
   vars_init: { hp: 20, attack: 4, defense: 2, might: 3 }
   flags_init: []

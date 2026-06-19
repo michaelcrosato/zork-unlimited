@@ -53,6 +53,14 @@
 meta:
   id: lamplighters_round_v1
   title: "The Lamplighter's Round"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Lamplighter's River Stair"
+    quest: "keep the lamps and the witness alive"
+    role: "lamplighter"
+    connection: "The river stair is part of Charterhaven's nightly circuit, where public light is the first defense of the hub."
   start_room: river_stair
   flags_init: []
   # `steadiness` (value 3) is the lighter's steady hand, rolled by the OPTIONAL steadiness

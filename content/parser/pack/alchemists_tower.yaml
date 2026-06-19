@@ -41,6 +41,14 @@
 meta:
   id: alchemists_tower_v1
   title: "The Alchemist's Tower"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Old Alchemist's Tower"
+    quest: "brew the antidote and expose the tower"
+    role: "tower intruder"
+    connection: "The tower stands under Charterhaven license, and its poisons leak from private experiment into public danger."
   start_room: courtyard
   # `steadiness` is the skill rolled by the OPTIONAL d20 TENSION beat on the iron key
   # (its USE interaction below) — the Stage-4 skill_check mechanic standardized into this

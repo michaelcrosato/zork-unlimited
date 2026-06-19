@@ -59,6 +59,14 @@
 meta:
   id: wolf_winter_v1
   title: "The Wolf-Winter"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Wolf-Winter Steading"
+    quest: "hold the winter breach against the pack"
+    role: "winter defender"
+    connection: "The wolf-winter steading guards Charterhaven's northern food road, where hunger and teeth meet the same gate."
   start_room: steading_yard
   vars_init: { hp: 30, attack: 5, defense: 3 }
   flags_init: []

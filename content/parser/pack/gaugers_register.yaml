@@ -69,6 +69,14 @@
 meta:
   id: gaugers_register_v1
   title: "The Gauger's Register"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Gauger's Yard"
+    quest: "match the cask to the register"
+    role: "excise gauger"
+    connection: "Charterhaven's drink trade runs through the gauger's marks, so one altered register cheats the city."
   start_room: approach_lane
   flags_init: []
   # `steadiness` (3) — the OPTIONAL TENSION BEAT: a CHECK on the crowbar before you

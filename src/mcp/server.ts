@@ -44,30 +44,290 @@ const PACK = {
   pack_path: z
     .string()
     .describe(
-      "Path to a content pack (.yaml) — CYOA, parser, or RPG; mode is auto-detected — relative to the project root.",
+      "Path to a quest content pack (.yaml) - CYOA, parser, or RPG; mode is auto-detected - relative to the project root.",
     ),
 };
-const SESSION = { session_id: z.string().describe("A session id from new_game/load_game.") };
+const SESSION = {
+  session_id: z.string().describe("A session id from new_game/start_quest/load_game."),
+};
 const HIDE_GRAPH = {
   hide_graph: z
     .boolean()
     .optional()
     .describe(
-      "Difficulty: when true, exits report only their direction, not their destination — the spatial map must be reasoned out, not read off (parser/RPG; no-op for CYOA). Default false.",
+      "Difficulty: when true, exits report only their direction, not their destination - the spatial map must be reasoned out, not read off (parser/RPG; no-op for CYOA). Default false.",
     ),
 };
 
 tool(
   "validate_pack",
-  "Validate a content pack (CYOA, parser, or RPG — auto-detected); returns the validation report (§10).",
+  "Validate a quest content pack (CYOA, parser, or RPG - auto-detected); returns the validation report.",
   PACK,
   (a) => api.validate_pack(a),
 );
 tool(
   "list_stories",
-  "List playable packs across content/{cyoa,parser,rpg}/pack with each pack's mode, and identify the default story for AFK playtesting.",
+  "Legacy AFK discovery alias. Prefer list_world for the canonical Charter Marches hub and quest list.",
   {},
   () => api.list_stories(),
+);
+tool(
+  "list_world",
+  "List the single canonical world graph, its hub city, and every shipped pack as a reachable quest/area in that world.",
+  {},
+  () => api.list_world(),
+);
+tool(
+  "world_path",
+  "Return the route through the Charter Marches graph from Charterhaven to one quest pack.",
+  {
+    quest_path: z
+      .string()
+      .describe("Path to a quest content pack (any mode), relative to the project root."),
+  },
+  (a) => api.world_path(a),
+);
+tool(
+  "list_overworld",
+  "List the New York State overworld summary: start town, town/road/region/regional-arc counts, character/event/quest counts, sources, and design rules.",
+  {},
+  () => api.list_overworld(),
+);
+tool(
+  "start_overworld",
+  "Start a stateful New York overworld run at Albany and return the current location, local actions, discovered quest leads, regional arcs, journal, discovered towns, and roads.",
+  {},
+  () => api.start_overworld(),
+);
+tool(
+  "get_overworld_session",
+  "Read the current observation for a stateful New York overworld session.",
+  {
+    session_id: z.string().describe("Session id returned by start_overworld."),
+  },
+  (a) => api.get_overworld_session(a),
+);
+tool(
+  "export_overworld_session",
+  "Export a content-bound snapshot for a stateful New York overworld session so a long run can be restored later.",
+  {
+    session_id: z.string().describe("Session id returned by start_overworld."),
+  },
+  (a) => api.export_overworld_session(a),
+);
+tool(
+  "restore_overworld_session",
+  "Restore a new stateful New York overworld session from a snapshot previously returned by export_overworld_session.",
+  {
+    snapshot: z
+      .record(z.unknown())
+      .describe("Snapshot object previously returned as export_overworld_session.snapshot."),
+  },
+  (a) => api.restore_overworld_session(a),
+);
+tool(
+  "travel_overworld_session",
+  "Travel in a stateful New York overworld session along an adjacent road id from the current town. Travel consumes supplies, adds fatigue, and can add elapsed delay when fatigue or supply shortage catches up.",
+  {
+    session_id: z.string().describe("Session id returned by start_overworld."),
+    road_id: z.string().describe("Road id from the session observation's exits list."),
+  },
+  (a) => api.travel_overworld_session(a),
+);
+tool(
+  "resolve_overworld_session_road_encounter",
+  "Resolve the pending road encounter after travel with a strategy: scout it, help resolve it, or press on. Clears the encounter before the next road leg.",
+  {
+    session_id: z.string().describe("Session id returned by start_overworld."),
+    strategy: z
+      .enum(["cautious_scout", "assist_travelers", "press_on"])
+      .describe("Road encounter response from observation.pendingRoadEncounter.options."),
+  },
+  (a) => api.resolve_overworld_session_road_encounter(a),
+);
+tool(
+  "resupply_overworld_session",
+  "Resupply at the current town if it has a market, inn, or stable. Returns updated supplies, fatigue, time, and observation.",
+  {
+    session_id: z.string().describe("Session id returned by start_overworld."),
+  },
+  (a) => api.resupply_overworld_session(a),
+);
+tool(
+  "rest_overworld_session",
+  "Rest at the current town if it has an inn or healer. Returns updated fatigue, supplies, time, and observation.",
+  {
+    session_id: z.string().describe("Session id returned by start_overworld."),
+  },
+  (a) => api.rest_overworld_session(a),
+);
+tool(
+  "plan_overworld_session_route",
+  "Plan the shortest known route in a stateful New York overworld session to a discovered town. Returns ordered road legs without moving the session.",
+  {
+    session_id: z.string().describe("Session id returned by start_overworld."),
+    destination_town_id: z
+      .string()
+      .describe(
+        "Discovered town id from the session observation's discovered or routeOptions list.",
+      ),
+  },
+  (a) => api.plan_overworld_session_route(a),
+);
+tool(
+  "scout_overworld_session_poi",
+  "Scout a local point of interest in a stateful New York overworld session, revealing nearby sites and local quest leads while updating journal/time.",
+  {
+    session_id: z.string().describe("Session id returned by start_overworld."),
+    poi_id: z.string().describe("Point-of-interest id from the session observation."),
+  },
+  (a) => api.scout_overworld_session_poi(a),
+);
+tool(
+  "talk_overworld_session_contact",
+  "Talk to a local contact in a stateful New York overworld session, revealing local quest leads while updating journal/time.",
+  {
+    session_id: z.string().describe("Session id returned by start_overworld."),
+    character_id: z.string().describe("Character id from the session observation."),
+  },
+  (a) => api.talk_overworld_session_contact(a),
+);
+tool(
+  "investigate_overworld_session_event",
+  "Investigate a local event in a stateful New York overworld session, revealing local quest leads while updating journal/time.",
+  {
+    session_id: z.string().describe("Session id returned by start_overworld."),
+    event_id: z.string().describe("Event id from the session observation."),
+  },
+  (a) => api.investigate_overworld_session_event(a),
+);
+tool(
+  "resolve_overworld_session_event",
+  "Resolve a local event in a stateful New York overworld session after scouting a local POI, talking to a local contact, and investigating the event.",
+  {
+    session_id: z.string().describe("Session id returned by start_overworld."),
+    event_id: z.string().describe("Event id from the session observation."),
+  },
+  (a) => api.resolve_overworld_session_event(a),
+);
+tool(
+  "explore_overworld_session_site",
+  "Explore a discovered regional site in a stateful New York overworld session. Scout a local point of interest first to reveal nearby sites.",
+  {
+    session_id: z.string().describe("Session id returned by start_overworld."),
+    site_id: z.string().describe("Exploration site id from the session observation's sites list."),
+  },
+  (a) => api.explore_overworld_session_site(a),
+);
+tool(
+  "explore_overworld_session_area",
+  "Explore a discovered local area or district in a stateful New York overworld session. Larger towns expose more areas over time.",
+  {
+    session_id: z.string().describe("Session id returned by start_overworld."),
+    area_id: z.string().describe("Area id from the session observation's areas list."),
+  },
+  (a) => api.explore_overworld_session_area(a),
+);
+tool(
+  "move_overworld_session_area",
+  "Move inside the current town along a discovered local-area route. This changes the current area and consumes local walking time.",
+  {
+    session_id: z.string().describe("Session id returned by start_overworld."),
+    area_route_id: z.string().describe("Area route id from observation.areaExits."),
+  },
+  (a) => api.move_overworld_session_area(a),
+);
+tool(
+  "work_overworld_session_job",
+  "Work a discovered local job in a stateful New York overworld session. Jobs are tied to mapped town areas and award regional renown.",
+  {
+    session_id: z.string().describe("Session id returned by start_overworld."),
+    job_id: z.string().describe("Job id from the session observation's jobs list."),
+  },
+  (a) => api.work_overworld_session_job(a),
+);
+tool(
+  "start_overworld_session_quest",
+  "Start a discovered local quest lead in a stateful New York overworld session. The lead must belong to the current town and current local area.",
+  {
+    session_id: z.string().describe("Session id returned by start_overworld."),
+    quest_id: z.string().describe("Quest id from the session observation's quests list."),
+  },
+  (a) => api.start_overworld_session_quest(a),
+);
+tool(
+  "look_overworld",
+  "Inspect one New York overworld town as static map data. Returns adjacent roads, local areas, points of interest, contacts, events, local jobs, and the authored local quest catalog; use start_overworld for discovery-gated play.",
+  {
+    town_id: z
+      .string()
+      .optional()
+      .describe("Overworld town id to inspect. Defaults to the starting town."),
+  },
+  (a) => api.look_overworld(a),
+);
+tool(
+  "travel_overworld",
+  "Travel from one New York overworld town along an adjacent road id and return the route event plus arrival town. Rejects non-adjacent roads.",
+  {
+    from_town: z.string().describe("Current overworld town id."),
+    road_id: z.string().describe("Road id from look_overworld(current town)."),
+  },
+  (a) => api.travel_overworld(a),
+);
+tool(
+  "explore_overworld_area",
+  "Explore one static local area from look_overworld and return its time cost and journal text. Use explore_overworld_session_area for discovery-gated play.",
+  {
+    town_id: z.string().optional().describe("Overworld town id. Defaults to the starting town."),
+    area_id: z.string().describe("Area id from look_overworld(current town)."),
+  },
+  (a) => api.explore_overworld_area(a),
+);
+tool(
+  "work_overworld_job",
+  "Inspect one static local job from look_overworld and return its time cost, renown, and journal text. Use work_overworld_session_job for discovery-gated play.",
+  {
+    town_id: z.string().optional().describe("Overworld town id. Defaults to the starting town."),
+    job_id: z.string().describe("Job id from look_overworld(current town)."),
+  },
+  (a) => api.work_overworld_job(a),
+);
+tool(
+  "scout_overworld_poi",
+  "Scout a local point of interest in one New York overworld town and return a journal entry. The poi_id must come from look_overworld for that town.",
+  {
+    town_id: z.string().optional().describe("Overworld town id. Defaults to the starting town."),
+    poi_id: z.string().describe("Point-of-interest id from look_overworld(current town)."),
+  },
+  (a) => api.scout_overworld_poi(a),
+);
+tool(
+  "talk_overworld_contact",
+  "Talk to a local overworld contact and return a journal entry. The character_id must come from look_overworld for that town.",
+  {
+    town_id: z.string().optional().describe("Overworld town id. Defaults to the starting town."),
+    character_id: z.string().describe("Character id from look_overworld(current town)."),
+  },
+  (a) => api.talk_overworld_contact(a),
+);
+tool(
+  "investigate_overworld_event",
+  "Investigate a local overworld event and return a journal entry. The event_id must come from look_overworld for that town.",
+  {
+    town_id: z.string().optional().describe("Overworld town id. Defaults to the starting town."),
+    event_id: z.string().describe("Event id from look_overworld(current town)."),
+  },
+  (a) => api.investigate_overworld_event(a),
+);
+tool(
+  "explore_overworld_site",
+  "Explore a local regional site and return the time cost, reward, and journal entry. The site_id must come from look_overworld for that town.",
+  {
+    town_id: z.string().optional().describe("Overworld town id. Defaults to the starting town."),
+    site_id: z.string().describe("Exploration site id from look_overworld(current town)."),
+  },
+  (a) => api.explore_overworld_site(a),
 );
 tool(
   "validate_story",
@@ -80,8 +340,18 @@ tool(
   (a) => api.validate_story(a),
 );
 tool(
+  "validate_quest",
+  "Validate one Charter Marches quest pack (any mode) and return hard errors/warnings.",
+  {
+    quest_path: z
+      .string()
+      .describe("Path to a quest content pack (any mode), relative to the project root."),
+  },
+  (a) => api.validate_quest(a),
+);
+tool(
   "load_pack",
-  "Compile a pack (any mode) and return its mode, metadata, content hash, and validation report.",
+  "Compile a quest pack (any mode) and return its mode, metadata, content hash, and validation report.",
   PACK,
   (a) => api.load_pack(a),
 );
@@ -115,13 +385,13 @@ tool(
 
 tool(
   "new_game",
-  "Start a new game on a (playable) pack of any mode; returns a session id, the detected mode, and the first observation. Provide pack_path to load from disk, OR generate_seed to mint+play a fresh procedural CYOA pack, OR generate_rpg_seed for a fresh procedural RPG pack, OR generate_parser_seed for a fresh procedural parser pack — all in-memory.",
+  "Start a new session on a playable quest pack of any mode; returns a session id, the detected mode, and the first observation. Provide pack_path to load from disk, OR generate_seed to mint+play a fresh procedural CYOA pack, OR generate_rpg_seed for a fresh procedural RPG pack, OR generate_parser_seed for a fresh procedural parser pack - all in-memory.",
   {
     pack_path: z
       .string()
       .optional()
       .describe(
-        "Path to a content pack (.yaml) — CYOA, parser, or RPG; mode is auto-detected — relative to the project root. Omit when using generate_seed/generate_rpg_seed/generate_parser_seed.",
+        "Path to a quest content pack (.yaml) - CYOA, parser, or RPG; mode is auto-detected - relative to the project root. Omit when using generate_seed/generate_rpg_seed/generate_parser_seed.",
       ),
     generate_seed: z
       .number()
@@ -151,13 +421,23 @@ tool(
 );
 tool(
   "start_game",
-  "AFK alias for new_game; start a session on a pack of any mode for MCP-driven playtesting.",
+  "Legacy AFK alias for new_game; start a session on a quest pack of any mode for MCP-driven playtesting.",
   {
     story_path: z.string().describe("Path to a content pack (any mode)."),
     seed: z.number().int().optional(),
     ...HIDE_GRAPH,
   },
   (a) => api.start_game(a),
+);
+tool(
+  "start_quest",
+  "Start a session on a Charter Marches quest pack of any mode for MCP-driven playtesting.",
+  {
+    quest_path: z.string().describe("Path to a quest content pack (any mode)."),
+    seed: z.number().int().optional(),
+    ...HIDE_GRAPH,
+  },
+  (a) => api.start_quest(a),
 );
 
 tool(

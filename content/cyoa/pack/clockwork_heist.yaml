@@ -14,6 +14,14 @@
 meta:
   id: clockwork_heist_v1
   title: "The Clockwork Heist"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Clockmaker's Ward"
+    quest: "steal or expose the clockwork manor secret"
+    role: "city thief"
+    connection: "Charterhaven's underworld uses the manor as a proving ground for thieves who can move through court machinery."
   start: foyer
   flags_init: []
   # `ticks` is the clock creeping toward the hour. Moving through the manor's

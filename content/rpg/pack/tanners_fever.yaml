@@ -61,6 +61,14 @@
 meta:
   id: tanners_fever_v1
   title: "The Tanner's Fever"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Tanner's Sickroom"
+    quest: "correct the fever cure before it kills"
+    role: "medical advocate"
+    connection: "Charterhaven's leather quarter carries sickness fast, and one wrong cure can become a ward-wide death."
   start_room: sickroom
   # `physick` (3 base): systematic clinical observation, knowledge of remedies,
   # and the ability to identify a misdiagnosis in front of the practitioner who

@@ -30,6 +30,14 @@
 meta:
   id: white_stag_v1
   title: "The White Stag"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "White Stag Forest"
+    quest: "choose how the forest claim is resolved"
+    role: "forest petitioner"
+    connection: "The white stag forest is Charterhaven's hunting fringe, where old rights and city warrants collide."
   start: trail_end
   flags_init: []
 

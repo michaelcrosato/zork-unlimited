@@ -61,6 +61,14 @@
 meta:
   id: midnight_edition_v1
   title: "The Midnight Edition"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Printers' Ward"
+    quest: "decide what truth reaches the street"
+    role: "printer's hand"
+    connection: "The city's printers carry Charterhaven politics faster than constables can ride, so a midnight sheet can move the world."
   start: composing_room
   flags_init: []
   # A `nerve` skill var (init 3) — the single stat the alley_door TENSION beat below rolls

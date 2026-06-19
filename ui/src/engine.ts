@@ -156,7 +156,7 @@ export class GameSession {
   /** The current UI view (the only thing a player sees). */
   view(): View {
     if (this.mode === "cyoa") {
-      const o = buildObservation(this.index, this.state);
+      const o = buildObservation(this.index, this.state, { includeWorldIntro: true });
       return {
         mode: "cyoa",
         location: o.scene_id,
@@ -180,7 +180,7 @@ export class GameSession {
       };
     }
     if (this.mode === "parser") {
-      const o = buildParserObservation(this.index, this.state);
+      const o = buildParserObservation(this.index, this.state, { includeWorldIntro: true });
       return {
         mode: "parser",
         location: o.room,
@@ -210,7 +210,7 @@ export class GameSession {
         stateHash: hashState(this.state),
       };
     }
-    const o = buildRpgObservation(this.index, this.state);
+    const o = buildRpgObservation(this.index, this.state, { includeWorldIntro: true });
     return {
       mode: "rpg",
       location: o.room,

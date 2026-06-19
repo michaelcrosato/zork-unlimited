@@ -52,6 +52,14 @@
 meta:
   id: alnagers_fault_v1
   title: "The Alnager's Fault"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Fordham Cloth Hall"
+    quest: "settle the disputed alnage seal"
+    role: "deputy alnager"
+    connection: "Charterhaven Guildhall sends its cloth officers through Fordham to keep the Marches trade seal honest."
   start: alnage_hall
   flags_init: []
   # `composure` (init 3) — stat for the condemn_bassett TENSION beat

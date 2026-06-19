@@ -56,6 +56,14 @@
 meta:
   id: collectors_warrant_v1
   title: "The Collector's Warrant"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Customs Duty Room"
+    quest: "recover the salt warrant without waking the house"
+    role: "customs collector"
+    connection: "The salt warrant protects Charterhaven revenue, and losing it turns a customs house into a trap."
   start_room: duty_room
   flags_init: []
   # `steadiness` (3) — the OPTIONAL TENSION BEAT standardized into parser mode:

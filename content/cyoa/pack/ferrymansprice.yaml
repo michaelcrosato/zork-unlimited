@@ -37,6 +37,14 @@
 meta:
   id: ferrymansprice_v1
   title: "The Ferryman's Price"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "South Ferry Stairs"
+    quest: "judge the ferryman's fatal bargain"
+    role: "river witness"
+    connection: "Every south-bank crossing owes toll to Charterhaven, so the ferry stairs are a moral border of the same city."
   start: river_approach
   flags_init: []
   max_score: 45

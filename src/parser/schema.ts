@@ -10,6 +10,7 @@
 import { z } from "zod";
 import { ConditionSchema } from "../core/conditions.js";
 import { EffectSchema } from "../core/effects.js";
+import { WorldBindingSchema } from "../world/schema.js";
 
 /** A directional exit. A locked exit lists `conditions`; until they hold it is
  *  hidden from the legal-action set, and an attempt surfaces `locked_msg`. */
@@ -434,6 +435,7 @@ export const ParserMetaSchema = z
   .object({
     id: z.string().min(1),
     title: z.string().min(1),
+    world: WorldBindingSchema.optional(),
     start_room: z.string().min(1),
     vars_init: z.record(z.string(), z.number()).default({}),
     flags_init: z.array(z.string()).default([]),

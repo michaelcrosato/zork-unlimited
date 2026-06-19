@@ -25,6 +25,14 @@
 meta:
   id: wreckers_light_v1
   title: "The Wrecker's Light"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Wrecker's Light"
+    quest: "decide whether the coast saves or harvests ships"
+    role: "coastal witness"
+    connection: "Charterhaven depends on the coast lights for trade; one false beacon can starve the hub or enrich its edge."
   start: cliff_path
   flags_init: []
 

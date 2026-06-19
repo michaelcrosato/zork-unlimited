@@ -72,6 +72,14 @@
 meta:
   id: fire_office_examiner_v1
   title: "The Fire Office Examiner"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Sun Fire Office"
+    quest: "decide whether the warehouse claim is fraud"
+    role: "fire office examiner"
+    connection: "Charterhaven's insured warehouses make the fire office a civic power even when its authority is private."
   start: claim_office
   vars_init: { composure: 3 }
   flags_init: []

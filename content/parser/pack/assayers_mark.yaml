@@ -70,6 +70,14 @@
 meta:
   id: assayers_mark_v1
   title: "The Assayer's Mark"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Goldsmiths' Hall"
+    quest: "prove the debased silver plate"
+    role: "journeyman assayer"
+    connection: "The Goldsmiths' Hall is Charterhaven's metal conscience, and its assay mark must mean the same across the Marches."
   start_room: assay_hall
   flags_init: []
   vars_init: { precision: 3 }

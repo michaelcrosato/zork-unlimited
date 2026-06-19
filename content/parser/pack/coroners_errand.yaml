@@ -69,6 +69,14 @@
 meta:
   id: coroners_errand_v1
   title: "The Coroner's Errand"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Coroner's Front Hall"
+    quest: "secure the proof before the verdict"
+    role: "coroner's officer"
+    connection: "Charterhaven assizes rely on coroner errands to turn a death scene into evidence the court can hold."
   start_room: front_hall
   flags_init: []
   max_score: 45

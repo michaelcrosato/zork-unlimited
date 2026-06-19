@@ -56,6 +56,14 @@
 meta:
   id: fishermans_privilege_v1
   title: "The Fisherman's Privilege"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Harbour Magistracy"
+    quest: "resolve the fishing privilege dispute"
+    role: "magistrate's clerk"
+    connection: "Charterhaven's harbour court controls the fishing rights that keep the river market from tearing itself apart."
   start: magistrate_office
   flags_init: []
   # `steadiness` (init 3) — stat for the rule_illegal TENSION beat

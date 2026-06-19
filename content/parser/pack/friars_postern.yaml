@@ -42,6 +42,14 @@
 meta:
   id: friars_postern_v1
   title: "The Friars' Postern"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Friars' Postern"
+    quest: "escape with the postern proof"
+    role: "confined witness"
+    connection: "The friars' postern is an old Charterhaven passage where monastic stone now hides civic crime."
   start_room: cell
   flags_init: []
   # `nerve` (value 3) is the debtor's steadiness, rolled by the OPTIONAL nerve check on

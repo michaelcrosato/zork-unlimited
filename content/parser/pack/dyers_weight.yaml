@@ -79,6 +79,14 @@
 meta:
   id: dyers_weight_v1
   title: "The Dyer's Weight"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Dye House Quarter"
+    quest: "catch the false dye weight"
+    role: "guild investigator"
+    connection: "The dye houses color Charterhaven cloth; a corrupt weight stains the whole guild chain."
   start_room: dye_house
   flags_init: []
   vars_init: { steadiness: 3 }

@@ -45,6 +45,14 @@
 meta:
   id: night_dispensary_v1
   title: "The Night Dispensary"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Apothecary Row"
+    quest: "choose what remedy and testimony survive the night"
+    role: "night dispensary keeper"
+    connection: "Charterhaven's poor come to Apothecary Row after curfew, where one counter can preserve or bury a scandal."
   start: apothecary_counter
   flags_init: []
   # `composure` (init 3) — the stat for the speak_the_name TENSION beat

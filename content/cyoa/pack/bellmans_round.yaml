@@ -49,6 +49,14 @@
 meta:
   id: bellmans_round_v1
   title: "The Bellman's Round"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Wool Lane Watch"
+    quest: "name the assailant before dawn"
+    role: "town bellman"
+    connection: "Charterhaven pays the night bells on the wool road, and Wool Lane is the hub city watch at its poorest edge."
   start: wool_lane
   flags_init: []
   # `steadiness` (init 3) — the stat for the confront_gant TENSION beat

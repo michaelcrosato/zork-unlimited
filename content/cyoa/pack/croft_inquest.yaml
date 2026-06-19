@@ -70,6 +70,14 @@
 meta:
   id: croft_inquest_v1
   title: "The Croft Inquest"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Stoke Wentworth Croft"
+    quest: "return a lawful inquest verdict"
+    role: "parish coroner"
+    connection: "The coroner rides from Charterhaven assizes to Marches parishes when a death threatens the peace of the road."
   start: croft_house
   vars_init: { composure: 3 }
   flags_init: []
