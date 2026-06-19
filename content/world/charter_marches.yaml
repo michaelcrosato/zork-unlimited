@@ -246,6 +246,10 @@ graph:
       name: "The Printer's Night"
       kind: quest
       pack: "content/rpg/pack/printers_night.yaml"
+    - id: quarrymens_fault
+      name: "The Quarrymen's Fault"
+      kind: quest
+      pack: "content/rpg/pack/quarrymens_fault.yaml"
     - id: powder_mill_surety
       name: "The Powder Mill Surety"
       kind: quest
@@ -422,6 +426,9 @@ graph:
     - from: north_road
       to: sealed_crypt
       route: "crypt chapel road"
+    - from: north_road
+      to: quarrymens_fault
+      route: "quarry cutting"
     - from: forest_manors
       to: white_stag
       route: "stag forest ride"
