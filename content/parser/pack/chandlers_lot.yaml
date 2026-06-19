@@ -47,6 +47,13 @@ rooms:
           The counting room, the contract fraud now proved in the chandler's
           own book. The guildhall door north is the road that matters; the
           dipping floor remains east, and the back lane runs south.
+      - when: [{ has_item: inspector_lantern }]
+        text: >
+          A cramped counting room above the river stairs. A lamp contract lies
+          open beneath a sand shaker, and the peg by the door is bare where your
+          inspector's lantern hung before you took it. The dipping floor lies
+          east. The guildhall door north is locked until you have proof fit for
+          the contract clerk; the back lane runs south.
     objects: [lamp_contract, inspector_lantern]
     exits:
       - { direction: east, to: dipping_floor }
@@ -77,6 +84,31 @@ rooms:
           The dipping floor, its clean appearance spoiled by two measurements:
           short wicks in the rack and a dark dreg core inside the proof candle.
           The counting room is west; the wax loft is above.
+      - when:
+          - has_item: wick_gauge
+          - has_item: snuffing_shears
+        text: >
+          The chandler's dipping floor is warm with fat and smoke. Ranks of
+          false candles cool on a rack beside a proof candle set apart for
+          inspection. The nail and trough edge are bare now; the wick gauge and
+          snuffing shears are with you. The counting room is west; a narrow
+          stair climbs to the wax loft.
+      - when:
+          - has_item: wick_gauge
+        text: >
+          The chandler's dipping floor is warm with fat and smoke. Ranks of
+          false candles cool on a rack beside a proof candle set apart for
+          inspection. The nail where the wick gauge hung is bare now, while
+          snuffing shears rest near the trough. The counting room is west; a
+          narrow stair climbs to the wax loft.
+      - when:
+          - has_item: snuffing_shears
+        text: >
+          The chandler's dipping floor is warm with fat and smoke. Ranks of
+          false candles cool on a rack beside a proof candle set apart for
+          inspection. A wick gauge hangs from a nail, and the spot near the
+          trough is bare where the snuffing shears rested before you took them.
+          The counting room is west; a narrow stair climbs to the wax loft.
     objects: [false_candles, proof_candle, wick_gauge, snuffing_shears, rendered_tallow]
     exits:
       - { direction: west, to: counting_room }
@@ -92,9 +124,17 @@ rooms:
     variants:
       - when: [{ has_flag: fraud_proved }]
         text: >
-          The wax loft, the adulteration book no longer harmless on the chest.
+          The wax loft, the false account no longer harmless after your stamp.
           The tallow ledger remains open beside the sealed purse. The stair
           descends to the dipping floor.
+      - when:
+          - has_item: adulteration_book
+        text: >
+          A low loft over the dipping floor, rafters sticky with old smoke. A
+          tallow ledger sits on a packing chest beside the bare place where the
+          adulteration book lay before you took it. A sealed purse has been
+          tucked behind the ledger where an honest visitor would not reach
+          first. The stair descends to the dipping floor.
     objects: [tallow_ledger, adulteration_book, sealed_purse]
     exits:
       - { direction: down, to: dipping_floor }

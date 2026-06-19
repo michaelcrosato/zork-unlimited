@@ -313,3 +313,24 @@ remaining room/item triage sites, with the `cellarmans_dark` entries gone.
 
 **Next after this:** continue down the remaining high-confidence room/item sites, starting with
 `chandlers_lot`, or promote the low-FP subset once the first audited packs are clean.
+
+### Standard cycle — 2026-06-19 (HEAD = 503426e; next move = chandler stale inspection tools)
+
+**Confirmed CLOSED since cellarman stale cellar tools:**
+
+- **`cellarmans_dark` ale-cellar / wine-vault taken-item contradictions:** closed by `503426e`.
+  The cellar now reacts when the lamp and/or tinderbox are held or lit, and the wine vault reacts
+  when the deed-box is held. The stale room/item audit dropped to 34 sites.
+
+**Chosen move — fix the next real stale room prose cluster**
+
+The next audit entries were concrete contradictions in `chandlers_lot`: the counting room kept
+saying the inspector's lantern hung from its peg after it was taken; the dipping floor kept saying
+the wick gauge hung from its nail and the snuffing shears rested by the trough after either tool was
+held; and the wax loft kept placing the adulteration book on the chest after the player had taken
+it, including the proof-stamped state. This cycle adds ordered room variants for those held-tool
+states, plus a regression and bug artifact. `npm run assess` now reports 30 remaining room/item
+triage sites, with the `chandlers_lot` entries gone.
+
+**Next after this:** continue down the remaining high-confidence room/item sites, starting with
+`coroners_errand`, or promote the low-FP subset once the first audited packs are clean.
