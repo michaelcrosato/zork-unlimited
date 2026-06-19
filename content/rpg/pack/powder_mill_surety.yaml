@@ -1,0 +1,320 @@
+# The Powder Mill Surety -- a Stage 4 (Hero's-Quest) pack.
+#
+# Thirteenth RPG pack, and the first to introduce `ordnance`: practical powder,
+# fuse, charge, and blast-safety knowledge under time pressure. It is distinct
+# from craft, seamanship, physick, and authority: the player is not making an
+# object, piloting water, treating a body, or arguing law. They are reading a
+# volatile system and making it safe before a bad procedure turns into an
+# explosion.
+#
+# Primary path: read the surety notice, read the charge formula, read the fuse
+# chart, take the sand scoop, then smother the priming tray. Prepared ordnance is
+# 12 against DC 12, making the safety path reliable on any d20 roll. Combat
+# fallback: fight Rafe on the gate walk. It gets the player out, but it leaves a
+# rougher report and caps the score at 40/50.
+
+meta:
+  id: powder_mill_surety_v1
+  title: "The Powder Mill Surety"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Powder Mill Race"
+    quest: "make the powder mill safe before the charge catches"
+    role: "ordnance surveyor"
+    connection: "Charterhaven's militia powder passes through the mill race, so one false charge can turn public defense into a city fire."
+  start_room: powder_yard
+  vars_init: { hp: 20, attack: 4, defense: 2, ordnance: 3 }
+  flags_init: []
+  max_score: 50
+
+rooms:
+  - id: powder_yard
+    name: "The Powder Yard"
+    description: >
+      A fenced mill yard beside the race, all wet planks, charcoal dust, and
+      warning boards. The millstones are stopped, but a priming tray has been
+      left charged under the shed roof, its powder dark against the brass. A
+      surety notice is nailed beside it. The mixing room is west, the magazine is
+      east, and the gate walk runs north over the race.
+    variants:
+      - when: [{ has_flag: smother_attempted }]
+        text: >
+          The powder yard beside the race. The priming tray is scorched and
+          stubborn after the failed smothering; a second clumsy try would only
+          throw sparks. The mixing room is west, the magazine east, and the gate
+          walk runs north.
+    objects: [surety_notice, priming_tray]
+    exits:
+      - { direction: west, to: mixing_room }
+      - { direction: east, to: magazine }
+      - { direction: north, to: gate_walk }
+
+  - id: mixing_room
+    name: "The Mixing Room"
+    description: >
+      The mixing room is swept but not clean: black dust clings to the trough
+      seams, and the balance pan still smells sharply of sulphur. A charge
+      formula lies pinned beneath a lead weight on the counting bench. The yard
+      is east.
+    variants:
+      - when: [{ has_flag: formula_read }]
+        text: >
+          The mixing room. The charge formula is already in your head: too fine
+          a grain for the fuse now laid in the yard. The powder yard is east.
+    objects: [charge_formula]
+    exits:
+      - { direction: east, to: powder_yard }
+
+  - id: magazine
+    name: "The Magazine"
+    description: >
+      A low brick magazine with a slate roof and a sanded floor. A fuse chart is
+      hung inside the door, and a brass sand scoop rests in a dry barrel. The
+      powder yard is west.
+    variants:
+      - when: [{ has_item: sand_scoop }]
+        text: >
+          The magazine. The dry barrel is open and empty of its brass scoop; you
+          have it now. The fuse chart still hangs inside the door. The powder
+          yard is west.
+    objects: [fuse_chart, sand_scoop]
+    exits:
+      - { direction: west, to: powder_yard }
+
+  - id: gate_walk
+    name: "The Gate Walk"
+    description: >
+      A plank walk crosses the mill race north of the yard. Rafe, the miller's
+      hired watcher, stands in the passage with a hooked staff across his hands.
+      He is not trained in powder, but he is trained in keeping people from
+      leaving before the miller says they may. The powder yard is south; the road
+      is north beyond him.
+    variants:
+      - when: [{ has_flag: rafe_defeated }]
+        text: >
+          The gate walk. Rafe is down against the rail, his hooked staff under
+          one arm. The road lies north; the powder yard is south.
+    exits:
+      - { direction: south, to: powder_yard }
+      - direction: north
+        to: mill_road
+        conditions: [{ has_flag: rafe_defeated }]
+        locked_msg: >
+          Rafe blocks the gate walk. Make the charge safe from the yard, or get
+          past him.
+
+  - id: mill_road
+    name: "The Mill Road"
+    description: >
+      The road drops away from the powder mill toward Charterhaven's lower
+      barracks. Behind you the mill race keeps turning under the rain, carrying
+      the smell of charcoal and damp stone away from the yard.
+    on_enter:
+      - set_quest_stage: { quest: powder_mill_surety, stage: road_reached }
+      - add_journal: >
+          The mill road is open. The powder is either safely smothered or at
+          least reported before the next wagon rolls in. (+15)
+      - inc_var: { name: score, by: 15 }
+    exits:
+      - { direction: south, to: gate_walk }
+
+objects:
+  - id: surety_notice
+    name: "surety notice"
+    aliases: [notice, surety, board, warning, warning board, surety notice, mill notice]
+    description: >
+      A posted surety notice carrying the miller's seal and the city powder
+      office's counter-mark.
+    variants:
+      - when: [{ has_flag: notice_read }]
+        text: >
+          The surety notice, already read: the mill is bonded for slow match and
+          coarse grain, not the fast priming that has been left in the tray.
+    takeable: false
+    read_text: >
+      The notice certifies the mill only for slow match and coarse-grained
+      powder. It does not cover exposed fast priming in an open yard, and the
+      counter-mark makes that difference a city matter.
+    interactions:
+      - verb: READ
+        target: surety_notice
+        conditions: [{ not_flag: notice_read }]
+        effects:
+          - set_flag: notice_read
+          - inc_var: { name: ordnance, by: 3 }
+          - inc_var: { name: score, by: 5 }
+          - set_quest_stage: { quest: powder_mill_surety, stage: surety_read }
+          - add_journal: >
+              The surety notice covers slow match and coarse grain, not exposed
+              fast priming in the open yard. (+3 ordnance, +5)
+          - narrate: >
+              The notice is not decoration. It tells you what the mill is
+              permitted to handle, and the charged tray in front of you falls
+              outside that surety.
+
+  - id: charge_formula
+    name: "charge formula"
+    aliases: [formula, charge, charge formula, recipe, powder formula, bench, lead weight]
+    description: >
+      A charge formula pinned on the counting bench, written in a clean mill
+      hand with the grain size circled twice.
+    variants:
+      - when: [{ has_flag: formula_read }]
+        text: >
+          The charge formula, already checked: the grain is too fine for the
+          laid fuse, so any spark will travel faster than the miller admits.
+    takeable: false
+    read_text: >
+      The powder grain is fine enough for priming, not safe yard storage. Matched
+      to the laid fuse, it will flash faster than a worker can step clear.
+    interactions:
+      - verb: READ
+        target: charge_formula
+        conditions: [{ not_flag: formula_read }]
+        effects:
+          - set_flag: formula_read
+          - inc_var: { name: ordnance, by: 3 }
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: powder_mill_surety, stage: formula_read }
+          - add_journal: >
+              The charge formula shows fine priming grain matched to the laid
+              fuse, a flash hazard in an open yard. (+3 ordnance, +10)
+          - narrate: >
+              The formula names the danger plainly if you know how to read it:
+              fine grain, quick fire, and no safe distance for anyone still in
+              the yard.
+
+  - id: fuse_chart
+    name: "fuse chart"
+    aliases: [chart, fuse, fuses, fuse chart, burn chart, magazine chart]
+    description: >
+      A waxed chart of fuse lengths, burn rates, and damp-weather corrections.
+    variants:
+      - when: [{ has_flag: fuse_read }]
+        text: >
+          The fuse chart, already read: in this damp weather the visible fuse
+          will sputter, then catch all at once if the priming stays exposed.
+    takeable: false
+    read_text: >
+      The damp-weather correction is the dangerous part: a fuse can hesitate
+      under rain and then catch all at once when the priming tray dries near the
+      shed roof.
+    interactions:
+      - verb: READ
+        target: fuse_chart
+        conditions: [{ not_flag: fuse_read }]
+        effects:
+          - set_flag: fuse_read
+          - inc_var: { name: ordnance, by: 3 }
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: powder_mill_surety, stage: fuse_read }
+          - add_journal: >
+              The fuse chart shows the damp-weather trap: sputter first, sudden
+              catch after. The priming tray must be smothered, not lifted. (+3
+              ordnance, +10)
+          - narrate: >
+              The chart changes the job. Pulling the fuse is the theatrical
+              answer; smothering the priming is the safe one.
+
+  - id: sand_scoop
+    name: "sand scoop"
+    aliases: [scoop, sand, brass scoop, sand scoop, dry sand]
+    description: >
+      A brass scoop for dry magazine sand, small enough to handle without
+      scraping sparks from the tray.
+    takeable: true
+
+  - id: priming_tray
+    name: "priming tray"
+    aliases: [tray, priming, powder, brass tray, priming tray, exposed powder]
+    description: >
+      A shallow brass tray of exposed priming powder under the shed roof. It is
+      not burning yet, which is the only reason there is still a choice.
+    variants:
+      - when: [{ has_flag: smother_attempted }]
+        text: >
+          The priming tray, scorched where the first bad smother dragged powder
+          against brass. Touching it again without control would be worse than
+          leaving it alone.
+    takeable: false
+    interactions:
+      - verb: USE
+        item: sand_scoop
+        target: priming_tray
+        command_verb: smother
+        command_template: "smother {target} with {item}"
+        conditions: [{ not_flag: smother_attempted }]
+        skill_check:
+          skill: ordnance
+          difficulty: 12
+          on_success:
+            - inc_var: { name: score, by: 10 }
+            - set_quest_stage: { quest: powder_mill_surety, stage: charge_safe }
+            - add_journal: >
+                You smothered the priming tray with dry magazine sand, keeping
+                the scoop low and the brass from scraping. The charge is safe.
+                (+10)
+            - narrate: >
+                You hold the scoop low, let the sand roll instead of fall, and
+                cover the priming from the far edge inward. No scrape, no spark,
+                no flash. The tray goes dull under clean sand.
+            - goto: mill_road
+          on_failure:
+            - set_flag: smother_attempted
+            - set_quest_stage: { quest: powder_mill_surety, stage: smother_failed }
+            - add_journal: >
+                The scoop caught the tray lip and the priming spat once under
+                the sand. A second attempt would be reckless. Rafe still blocks
+                the gate walk.
+            - narrate: >
+                The scoop catches the tray lip. Powder skitters against brass
+                and spits once before the sand settles. You have not set it off,
+                but you have lost the clean answer. A second attempt would be
+                worse.
+
+npcs: []
+
+enemies:
+  - id: rafe
+    name: "Rafe"
+    description: >
+      The miller's watcher, all wet sleeves and hooked staff. He knows enough
+      about powder to be afraid of it, and enough about wages to stand where he
+      has been told.
+    room: gate_walk
+    hp: 12
+    attack: 5
+    defense: 2
+    defeat_flag: rafe_defeated
+    death_ending: ending_gate_broken
+    on_defeat:
+      - set_quest_stage: { quest: powder_mill_surety, stage: forced_gate }
+      - add_journal: >
+          Rafe is down on the gate walk. The road is open, though the mill report
+          will read uglier than it needed to.
+
+win_conditions:
+  - id: road_clear
+    conditions: [{ visited: mill_road }]
+    ending: ending_mill_report
+
+endings:
+  - id: ending_mill_report
+    title: "The Mill Report"
+    text: >
+      The mill road opens toward Charterhaven's barracks. Behind you, the powder
+      mill will be inspected by daylight: either with the priming safely buried
+      under dry sand or with Rafe's broken gate walk proving how hard the miller
+      tried to keep the surety hidden. The next powder wagon will not roll in
+      blind. *** You have won. ***
+
+  - id: ending_gate_broken
+    title: "Powder Smoke"
+    text: >
+      Rafe catches you on the slick planks and drives the hooked staff into your
+      ribs. The yard behind him still holds its exposed priming, and the rain is
+      not enough to make bad powder safe. Charterhaven will hear the report as a
+      blast. *** You have fallen. ***
+    death: true

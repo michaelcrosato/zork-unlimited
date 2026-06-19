@@ -234,6 +234,10 @@ graph:
       name: "The Printer's Night"
       kind: quest
       pack: "content/rpg/pack/printers_night.yaml"
+    - id: powder_mill_surety
+      name: "The Powder Mill Surety"
+      kind: quest
+      pack: "content/rpg/pack/powder_mill_surety.yaml"
     - id: sunken_barrow
       name: "The Sunken Barrow"
       kind: quest
@@ -376,6 +380,9 @@ graph:
     - from: industrial_cut
       to: lockkeepers_toll
       route: "lower lock cut"
+    - from: industrial_cut
+      to: powder_mill_surety
+      route: "powder mill race"
     - from: market_parishes
       to: excise_surveyors_round
       route: "maltsters' ward"
