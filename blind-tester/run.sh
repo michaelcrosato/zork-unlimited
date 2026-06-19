@@ -63,13 +63,22 @@ esac
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 MCP_CONFIG="$WORK/mcp.json"
-if command -v wsl.exe >/dev/null 2>&1 && [[ "$GAME_DIR" == /mnt/* ]]; then
+GAME_DIR_WIN=""
+if command -v wslpath >/dev/null 2>&1 && [[ "$GAME_DIR" == /mnt/* ]]; then
+  GAME_DIR_WIN="$(wslpath -w "$GAME_DIR")"
+fi
+
+if [[ -n "$GAME_DIR_WIN" ]]; then
+  case "$GAME_DIR_WIN" in
+    *" "*) echo "Refusing: WSL blind runner path contains a space, which breaks cmd.exe MCP launch quoting." >&2; exit 4 ;;
+  esac
+  GAME_DIR_WIN_JSON="${GAME_DIR_WIN//\\/\\\\}"
   cat > "$MCP_CONFIG" <<JSON
 {
   "mcpServers": {
     "adventureforge": {
-      "command": "wsl.exe",
-      "args": ["-e", "bash", "-lc", "cd '$GAME_DIR' && exec npm --silent run mcp"]
+      "command": "cmd.exe",
+      "args": ["/c", "cd /d $GAME_DIR_WIN_JSON && npm --silent run mcp"]
     }
   }
 }
@@ -79,8 +88,9 @@ else
 {
   "mcpServers": {
     "adventureforge": {
-      "command": "bash",
-      "args": ["-c", "cd '$GAME_DIR' && exec npm --silent run mcp"]
+      "command": "npm",
+      "args": ["--silent", "run", "mcp"],
+      "cwd": "$GAME_DIR"
     }
   }
 }

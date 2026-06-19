@@ -7,10 +7,18 @@ export type BlindReportVerification = { ok: true } | { ok: false; reason: string
 const MCP_FAILURE_PATTERNS: ReadonlyArray<RegExp> = [
   /\badventureforge\b[\s\S]{0,80}\bMCP server has failed to connect\b/i,
   /\bMCP server has failed to connect\b/i,
+  /\bMCP server (?:hasn'?t|has not) finished connecting\b/i,
+  /\b(?:adventureforge|MCP server|ToolSearch|tools)\b[\s\S]{0,120}\bstill connecting\b/i,
+  /\bstill connecting\b[\s\S]{0,120}\b(?:adventureforge|MCP server|ToolSearch|tools)\b/i,
   /\btools never became available\b/i,
+  /\btools (?:are|were) not (?:yet )?available\b/i,
   /\bRequired AdventureForge MCP tools are unavailable\b/i,
   /\bToolSearch returned 0 tools\b/i,
+  /\bToolSearch\b[\s\S]{0,80}\bzero results\b/i,
+  /\bToolSearch\b[\s\S]{0,120}\bevery query returns nothing\b/i,
+  /\bevery query returns nothing\b[\s\S]{0,120}\bToolSearch\b/i,
   /\bcannot play through the adventure\b/i,
+  /\bcannot play the game\b/i,
   /\bcannot .*produce .*playtest(?:ing)? report\b/i,
   /\bwithout (?:the|those|these) tools\b/i,
 ];
