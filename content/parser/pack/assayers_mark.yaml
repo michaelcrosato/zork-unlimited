@@ -95,13 +95,47 @@ rooms:
       bench's far end for comparison. The weighing room lies east; the record
       room west; the back lane runs south.
     variants:
-      - when: [{ has_flag: proved_debased }]
+      - when:
+          - has_flag: proved_debased
+          - has_item: silver_plate
+          - has_item: aqua_fortis
         text: >
           The assay bench. The touchstone carries Fitch's streak alongside the
           standard: where sterling holds cream-white, the porringer's line has gone
-          a faint but unmistakable greenish-grey. The aqua fortis has spoken, and
-          the touchstone will not change its answer. The weighing room is east;
-          the record room west; the court gate north is now clear.
+          a faint but unmistakable greenish-grey. The porringer and acid vial are
+          with you now, the assay complete; the touchstone will not change its
+          answer. The weighing room is east; the record room west; the court gate
+          north is now clear.
+      - when:
+          - has_item: silver_plate
+          - has_item: aqua_fortis
+        text: >
+          Goldsmiths' Hall, Foster Lane, an hour past compline. A long bench under
+          shuttered windows, lit by tallow candles: the flat black touchstone rests
+          in its brass frame, but the porringer and the aqua fortis vial are with
+          you now rather than sitting on the bench. The Company's standard ingot
+          remains at the far end for comparison. The weighing room lies east; the
+          record room west; the back lane runs south.
+      - when:
+          - has_item: silver_plate
+        text: >
+          Goldsmiths' Hall, Foster Lane, an hour past compline. A long bench under
+          shuttered windows, lit by tallow candles: a flat black touchstone in its
+          brass frame and a glass vial of aqua fortis in its wooden stand. The
+          broad silver porringer is with you now, removed from the centre of the
+          bench for testing. The Company's standard ingot sits at the far end for
+          comparison. The weighing room lies east; the record room west; the back
+          lane runs south.
+      - when:
+          - has_item: aqua_fortis
+        text: >
+          Goldsmiths' Hall, Foster Lane, an hour past compline. A long bench under
+          shuttered windows, lit by tallow candles: a flat black touchstone in its
+          brass frame, and at the centre of the bench a broad silver porringer
+          separated from Fitch's batch, awaiting judgment. The aqua fortis vial is
+          with you now, lifted from its wooden stand. The Company's standard ingot
+          sits at the bench's far end for comparison. The weighing room lies east;
+          the record room west; the back lane runs south.
     objects: [silver_plate, touchstone, aqua_fortis, standard_ingot]
     exits:
       - direction: north
@@ -134,6 +168,15 @@ rooms:
       submitted with each batch. The mark register lies on the table, Fitch's entry
       line blank; the master's seal rests beside it, ready to set the lion passant
       on any approved batch.
+    variants:
+      - when:
+          - has_item: commission_paper
+        text: >
+          Shelves of mark registers and commission files. The open box on the shelf
+          still holds the quarter's remaining provenance declarations, but Fitch's
+          commission paper is with you now. The mark register lies on the table,
+          Fitch's entry line blank; the master's seal rests beside it, ready to set
+          the lion passant on any approved batch.
     objects: [commission_paper, mark_register, master_seal]
     exits:
       - { direction: east, to: assay_hall }

@@ -270,3 +270,24 @@ comparison-complete-with-held-evidence states, plus a regression and bug artifac
 
 **Next after this:** continue down the remaining 40 high-confidence room/item sites, or promote a
 low-FP validator subset once the first audited packs are clean.
+
+### Standard cycle — 2026-06-19 (HEAD = 538171e; next move = assayers mark stale evidence)
+
+**Confirmed CLOSED since apothecaries counter stale items:**
+
+- **`apothecaries_standard` shop-counter taken-item contradictions:** closed by `538171e`.
+  The counter now reacts when the suspect vial and/or glass drawstick are held, including the
+  comparison-complete state, and the audit dropped those two leading sites.
+
+**Chosen move — fix the next real stale room prose cluster**
+
+The next audit entries were again concrete player-facing contradictions in `assayers_mark`: the
+assay hall base text kept placing the silver porringer at the centre of the bench and the aqua fortis
+in its wooden stand after either item was taken, and the record room kept saying Fitch's commission
+papers were in the open box after the commission paper was held. This cycle adds ordered room
+variants for the assay-item held states, the completed-assay-with-held-evidence state, and the
+commission-paper held state, plus a regression and bug artifact. `npm run assess` now reports 37
+remaining room/item triage sites, with the `assayers_mark` entries gone.
+
+**Next after this:** continue down the remaining high-confidence room/item sites, starting with
+`cellarmans_dark`, or promote the low-FP subset once the first audited packs are clean.
