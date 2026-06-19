@@ -192,3 +192,24 @@ interaction/choice effects. This cycle makes branch effects first-class inputs t
 passes only enemy combat branches as parser extras so skill-check effects are not double-counted.
 
 **Next after this:** dialogue root re-greet validation, then stale reactive-description strategy.
+
+### Standard cycle — 2026-06-19 (HEAD = a7069ca; next move = stale reactive-description audit signal)
+
+**Confirmed CLOSED since the skill-check branch-effect audit:**
+
+- **Dialogue root re-greet validation:** closed by `a7069ca`.
+  `validateParser()` now emits `DIALOGUE_ROOT_REGREET_MISSING` when a one-shot root topic retires on
+  a flag set by its target node but the root has no `has_flag` re-greet variant. Affected shipped
+  parser/RPG packs and the RPG generator were updated and validate clean.
+
+**Chosen move — stale reactive-description audit signal**
+
+The class-level stale-prose validator is still too noisy to promote directly: a first-pass room/item
+heuristic finds dozens of triage sites. This cycle adds an audit-only suppression-aware signal for
+the narrowest structural slice: parser/RPG room base prose naming a takeable object placed in that
+room, with no room variant reading that item's `has_item` / `not_item` state. The assessor now ranks
+that above blind-playtest floor work, creating a concrete next step to tune suppressions or promote a
+proven subset into validation without turning every shipped pack warning-red at once.
+
+**Next after this:** tune the stale reactive-description audit into a low-FP validator subset, or fix
+the highest-confidence audited content sites if the subset is already clear.

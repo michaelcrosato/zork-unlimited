@@ -77,6 +77,14 @@ describe("assess()", () => {
     for (const r of reviews) expect(r.score).toBeLessThan(1); // ranked below real fixes + new content
   });
 
+  it("surfaces the stale reactive-description audit as an above-floor structural candidate", () => {
+    const candidate = a.candidates.find((c) => c.id === "stale-reactive-room-item-audit");
+    expect(candidate).toBeDefined();
+    expect(candidate?.category).toBe("engine");
+    expect(candidate?.score).toBeGreaterThan(SATURATION_FLOOR);
+    expect(candidate?.evidence[0]).toContain("has_item/not_item");
+  });
+
   it("raises content_new candidates only for modes below the breadth target", () => {
     // TARGET_PER_MODE = {cyoa:20, parser:16, rpg:16} (bug_0336). The current corpus
     // has reached all three mode targets, so the assessor should disarm every

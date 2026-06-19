@@ -27,6 +27,7 @@ import { validateCyoa } from "../validate/cyoa_validator.js";
 import { validateRpg } from "../validate/rpg_validator.js";
 import { validateParser } from "../validate/parser_validator.js";
 import type { ValidationReport } from "../validate/report.js";
+import { auditStaleReactiveRoomItems } from "./stale_reactive_audit.js";
 
 export type Category = "content_fix" | "content_new" | "engine" | "repo";
 
@@ -615,6 +616,35 @@ export function assess(root: string): Assessment {
       impact,
       effort: "M",
       score: score(impact, "M", "engine"),
+    });
+  }
+
+  // ── engine/content strategy: measure the stale reactive-description class ─────
+  // The repeated bug_0282–0325 class is real, but a naive validator warning would be
+  // noisy across the current corpus. Keep it as a deterministic audit signal first:
+  // static room prose that names a takeable object in that room, with no room variant
+  // reading that object's inventory state. The suppression rule is concrete enough to
+  // tune before promoting any subset into validateParser.
+  const staleReactive = auditStaleReactiveRoomItems(root);
+  if (staleReactive.sites.length > 0) {
+    const examples = staleReactive.sites
+      .slice(0, 6)
+      .map(
+        (site) =>
+          `${site.packPath} room:${site.roomId} names object:${site.objectId} (` +
+          `"${site.matchedTerm}") with no room variant reading has_item/not_item`,
+      );
+    candidates.push({
+      id: "stale-reactive-room-item-audit",
+      category: "engine",
+      target: "src/validate/parser_validator.ts",
+      title: `Tune a class-level stale reactive-description check (${staleReactive.sites.length} room/item site(s) need triage)`,
+      rationale:
+        "Recent cycles repeatedly fixed stale prose one instance at a time. This audit measures the narrow structural slice most responsible for that class — room base text naming takeable objects after they may be removed — without turning the noisy first pass into shipped-pack warnings. The next move is to tune suppressions or promote the proven subset into validation.",
+      evidence: examples,
+      impact: 3,
+      effort: "M",
+      score: score(3, "M", "engine"),
     });
   }
 
