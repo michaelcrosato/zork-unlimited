@@ -143,8 +143,9 @@ rooms:
     # contradicts the world the player just changed (blind-pass finding, bug_0232). First
     # match wins in declared order (roomDescription), so the variants run MOST-specific
     # first: gate_up (climax, both faults + wound) → both-faults-fixed (wheel ready, gate
-    # not yet wound) → pawl-only → sluice-only. Each names exactly what is now true and
-    # what still remains, so the room reads consistently after every sub-puzzle.
+    # not yet wound) → single-fault + taken handle → single-fault → taken handle. Each
+    # names exactly what is now true and what still remains, so the room reads consistently
+    # after every sub-puzzle and after the crank-handle has left its peg.
     variants:
       - when: [{ has_flag: gate_up }]
         text: >
@@ -161,6 +162,22 @@ rooms:
           with it. The iron sea-gate winch stands ready by the wheel with its crank-handle
           socket, only waiting to be wound. The head-race opens west; the tool-shed is
           east; the mill-floor is back to the south.
+      - when: [{ has_flag: pawl_free }, { has_flag: crank_handle_taken }]
+        text: >
+          The great undershot wheel stands over the head-race, its brake-pawl levered up
+          clear of the gear so the wheel is free to turn at last — but the race that should
+          drive it still runs choked and slack, and gives it no water to bite, so the wheel
+          hangs idle. The iron sea-gate winch stands by the wheel with an empty peg beside
+          it where the crank-handle hung. The head-race opens west; the tool-shed is east;
+          the mill-floor is back to the south.
+      - when: [{ has_flag: sluice_clear }, { has_flag: crank_handle_taken }]
+        text: >
+          The great undershot wheel stands over the head-race, the freed race running fast
+          and full below it at last — but the wheel will not stir for it: its brake-pawl is
+          still dropped and locked hard into the drive-gear and holds it fast against the
+          water. The iron sea-gate winch stands by the wheel with an empty peg beside it
+          where the crank-handle hung. The head-race opens west; the tool-shed is east; the
+          mill-floor is back to the south.
       - when: [{ has_flag: pawl_free }]
         text: >
           The great undershot wheel stands over the head-race, its brake-pawl levered up
@@ -177,6 +194,14 @@ rooms:
           water. The iron sea-gate winch stands by the wheel with a socket for its
           crank-handle, and the handle hangs on its peg beside it. The head-race opens west;
           the tool-shed is east; the mill-floor is back to the south.
+      - when: [{ has_flag: crank_handle_taken }]
+        text: >
+          The great undershot wheel stands black and still over the head-race, where it
+          should be turning the gear that drives the sea-gate. It will not stir: its
+          brake-pawl is dropped and locked into the gear, and the race that should drive it
+          runs choked and slack. The iron sea-gate winch stands by the wheel, its
+          crank-handle peg bare now. The head-race opens west; the tool-shed is east; the
+          mill-floor is back to the south.
     objects: [brake_pawl, sea_winch, crank_handle]
     exits:
       - { direction: south, to: mill_house }
@@ -213,6 +238,24 @@ rooms:
       miller's trade. A long-hafted billhook leans in the corner for cutting weed off the
       race, and a heavy crow-bar hangs on two nails — the bar for shifting a locked pawl
       or a jammed gate. The wheel-room is back to the west.
+    variants:
+      - when: [{ has_flag: billhook_taken }, { has_flag: crow_bar_taken }]
+        text: >
+          A lean-to of tarred board against the mill's flank, hung with the gear of the
+          miller's trade. The corner where the billhook leaned is empty now, and the two
+          nails that held the crow-bar are bare. The wheel-room is back to the west.
+      - when: [{ has_flag: billhook_taken }]
+        text: >
+          A lean-to of tarred board against the mill's flank, hung with the gear of the
+          miller's trade. The corner where the billhook leaned is empty now, but a heavy
+          crow-bar still hangs on two nails — the bar for shifting a locked pawl or a
+          jammed gate. The wheel-room is back to the west.
+      - when: [{ has_flag: crow_bar_taken }]
+        text: >
+          A lean-to of tarred board against the mill's flank, hung with the gear of the
+          miller's trade. A long-hafted billhook leans in the corner for cutting weed off
+          the race, but the two nails that held the crow-bar are bare. The wheel-room is
+          back to the west.
     objects: [billhook, crow_bar]
     exits:
       - { direction: west, to: wheel_room }
@@ -344,6 +387,8 @@ objects:
     description: "A long-hafted billhook off the tool-shed wall, the curved blade kept keen for cutting weed and wrack off the race."
     takeable: true
     quest_critical: true
+    take_effects:
+      - set_flag: billhook_taken
 
   - id: crow_bar
     name: "crow-bar"
@@ -355,6 +400,8 @@ objects:
       not to do.
     takeable: true
     quest_critical: true
+    take_effects:
+      - set_flag: crow_bar_taken
 
   - id: crank_handle
     name: "crank-handle"
@@ -362,6 +409,8 @@ objects:
     description: "The sea-gate's crank-handle off its peg by the winch — a forged iron crank that drops into the winch-socket to wind the gate, once the wheel is driving the gear."
     takeable: true
     quest_critical: true
+    take_effects:
+      - set_flag: crank_handle_taken
 
   - id: choked_sluice
     name: "choked head-race"

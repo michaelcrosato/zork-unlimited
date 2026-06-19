@@ -458,3 +458,26 @@ room/item triage sites, with the `scriveners_proof` entries gone.
 
 **Next after this:** continue down the remaining high-confidence room/item sites, starting with
 `tide_mill`, or promote the low-FP subset once the first audited packs are clean.
+
+### Standard cycle — 2026-06-19 (HEAD = ba1b0c1; next move = tide-mill stale tools)
+
+**Confirmed CLOSED since scrivener stale evidence tools:**
+
+- **`scriveners_proof` front-office / study taken-item contradictions:** closed by `ba1b0c1`.
+  The front office and private study now react after the disputed deed, penknife, and/or
+  magnifier have been taken, including after later drops. The stale room/item audit dropped
+  to 17 sites.
+
+**Chosen move — fix the next real stale room prose cluster**
+
+The next audit entries were concrete contradictions in `tide_mill`: the wheel-room kept saying
+the crank-handle hung on its peg after it was taken, including in single-fault puzzle states,
+and the tool-shed kept placing the billhook in its corner and the crow-bar on its nails after
+the player could take either tool. This cycle gives those TAKE actions durable pickup flags and
+adds ordered wheel-room variants for handle-taken base/single-fault states plus tool-shed
+variants for billhook-only, crow-bar-only, and both-tool states. It also adds a regression and
+bug artifact. `npm run assess` now reports 14 remaining room/item triage sites, with the
+`tide_mill` entries gone.
+
+**Next after this:** continue down the remaining high-confidence room/item sites, starting with
+`weighmasters_round`, or promote the low-FP subset once the first audited packs are clean.
