@@ -375,3 +375,23 @@ remaining room/item triage sites, with the `dyers_weight` entries gone.
 
 **Next after this:** continue down the remaining high-confidence room/item sites, starting with
 `friars_postern`, or promote the low-FP subset once the first audited packs are clean.
+
+### Standard cycle — 2026-06-19 (HEAD = f67db73; next move = friar stale key-ring)
+
+**Confirmed CLOSED since dyer stale dye-house tools:**
+
+- **`dyers_weight` dye-house taken-evidence/tool contradictions:** closed by `f67db73`.
+  The dye house now reacts when the indigo cakes and/or copper tongs are held, including
+  the proved-adulteration state. The stale room/item audit dropped to 26 sites.
+
+**Chosen move — fix the next real stale room prose cluster**
+
+The next audit entry was a concrete contradiction in `friars_postern`: the turnkey's lodge
+kept saying a peg behind the turnkey held his key-ring after the player had taken it. This
+cycle gives the key-ring TAKE a durable `key_ring_taken` flag and adds a lodge variant keyed
+to that flag, so the peg stays bare even if the player later drops the ring elsewhere. It
+also adds a regression and bug artifact. `npm run assess` now reports 25 remaining room/item
+triage sites, with the `friars_postern` entry gone.
+
+**Next after this:** continue down the remaining high-confidence room/item sites, starting with
+`gaugers_register`, or promote the low-FP subset once the first audited packs are clean.

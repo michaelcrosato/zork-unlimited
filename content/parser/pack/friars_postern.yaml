@@ -139,6 +139,13 @@ rooms:
       table, an empty jug at his elbow. A peg behind him holds his key-ring; his
       shelf of confiscated oddments has been picked over by no one but him. The
       gallery is back to the west.
+    variants:
+      - when: [{ has_flag: key_ring_taken }]
+        text: >
+          The turnkey's nook, and the turnkey himself face-down and snoring across
+          the table, an empty jug at his elbow. The peg behind him is bare where his
+          key-ring hung before you lifted it. His shelf of confiscated oddments has
+          been picked over by no one but him. The gallery is back to the west.
     objects: [clay_pipe, gate_key]
     exits:
       - { direction: west, to: gallery }
@@ -232,6 +239,8 @@ objects:
       might heft the ring a moment and steady yourself before you trust it with anything
       down here.
     takeable: true
+    take_effects:
+      - set_flag: key_ring_taken
     # The genre-reflex red herring: the obvious "way out" is iron, and the iron opens
     # only the death (the watched gate) and the greed (the alms-box). Not quest_critical
     # (the win never needs it), so taking, dropping, or never touching it is all safe.
