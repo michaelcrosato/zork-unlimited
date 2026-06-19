@@ -82,7 +82,7 @@ describe("assess()", () => {
     expect(candidate).toBeDefined();
     expect(candidate?.category).toBe("engine");
     expect(candidate?.score).toBeGreaterThan(SATURATION_FLOOR);
-    expect(candidate?.evidence[0]).toContain("has_item/not_item");
+    expect(candidate?.evidence[0]).toContain("item/take-effect state");
   });
 
   it("raises content_new candidates only for modes below the breadth target", () => {

@@ -632,7 +632,7 @@ export function assess(root: string): Assessment {
       .map(
         (site) =>
           `${site.packPath} room:${site.roomId} names object:${site.objectId} (` +
-          `"${site.matchedTerm}") with no room variant reading has_item/not_item`,
+          `"${site.matchedTerm}") with no room variant reading item/take-effect state`,
       );
     candidates.push({
       id: "stale-reactive-room-item-audit",

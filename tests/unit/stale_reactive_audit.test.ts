@@ -67,6 +67,54 @@ describe("stale reactive room-item audit", () => {
     expect(auditParserPackForStaleRoomItems(pack, "fixture.yaml", "parser")).toEqual([]);
   });
 
+  it("suppresses the site when a room variant reads state written by the item's take effects", () => {
+    const pack = basePack();
+    pack.objects[0]!.take_effects = [{ set_flag: "lamp_taken" }];
+    pack.rooms[0]!.variants = [
+      {
+        when: [{ has_flag: "lamp_taken" }],
+        text: "A bare ring on the table marks where the brass lamp waited.",
+      },
+    ];
+
+    expect(auditParserPackForStaleRoomItems(pack, "fixture.yaml", "parser")).toEqual([]);
+  });
+
+  it("still reports a site when room variants read unrelated state", () => {
+    const pack = basePack();
+    pack.objects[0]!.take_effects = [{ set_flag: "lamp_taken" }];
+    pack.rooms[0]!.variants = [
+      {
+        when: [{ has_flag: "storm_started" }],
+        text: "Rain lashes the table where a brass lamp waits.",
+      },
+    ];
+
+    expect(auditParserPackForStaleRoomItems(pack, "fixture.yaml", "parser")).toHaveLength(1);
+  });
+
+  it("suppresses the site when taking the item immediately satisfies a terminal condition", () => {
+    const pack = basePack();
+    pack.win_conditions = [
+      { id: "win", conditions: [{ visited: "room" }, { has_item: "lamp" }], ending: "ending_win" },
+    ];
+
+    expect(auditParserPackForStaleRoomItems(pack, "fixture.yaml", "parser")).toEqual([]);
+  });
+
+  it("does not treat a terminal requiring extra state as guaranteed by taking the item", () => {
+    const pack = basePack();
+    pack.win_conditions = [
+      {
+        id: "win",
+        conditions: [{ visited: "room" }, { has_item: "lamp" }, { has_flag: "blessed" }],
+        ending: "ending_win",
+      },
+    ];
+
+    expect(auditParserPackForStaleRoomItems(pack, "fixture.yaml", "parser")).toHaveLength(1);
+  });
+
   it("matches whole phrases only, not substrings inside other words", () => {
     const pack = basePack();
     pack.objects[0]!.name = "coin";

@@ -213,3 +213,22 @@ proven subset into validation without turning every shipped pack warning-red at 
 
 **Next after this:** tune the stale reactive-description audit into a low-FP validator subset, or fix
 the highest-confidence audited content sites if the subset is already clear.
+
+### Standard cycle — 2026-06-19 (HEAD = 78298d1; next move = stale reactive audit suppression tuning)
+
+**Confirmed CLOSED since the first stale reactive audit signal:**
+
+- **Audit-only stale reactive-description signal:** closed by `78298d1`.
+  The assessor now ranks parser/RPG room prose that names takeable room objects without an
+  inventory-state room variant as the top structural candidate.
+
+**Chosen move — suppress already-covered item-removal states**
+
+The first audit pass deliberately used a narrow suppression (`has_item` / `not_item`) and counted
+55 sites. Reviewing the current corpus showed five high-confidence non-actionable sites: four rooms
+already react to state written by the item's own `take_effects`, and one goal item immediately
+satisfies a terminal win condition when taken. This cycle teaches the audit to treat those as covered
+without promoting the noisy remainder into validator warnings.
+
+**Next after this:** triage the remaining 50 sites into an even lower-FP validator subset, or fix the
+highest-confidence content sites directly.
