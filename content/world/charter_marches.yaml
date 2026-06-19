@@ -82,6 +82,10 @@ graph:
       name: "The Bellman's Round"
       kind: quest
       pack: "content/cyoa/pack/bellmans_round.yaml"
+    - id: bread_assize
+      name: "The Bread Assize"
+      kind: quest
+      pack: "content/cyoa/pack/bread_assize.yaml"
     - id: clockwork_heist
       name: "The Clockwork Heist"
       kind: quest
@@ -408,6 +412,9 @@ graph:
     - from: market_parishes
       to: aleconners_seal
       route: "brewers' row"
+    - from: market_parishes
+      to: bread_assize
+      route: "bread market"
     - from: market_parishes
       to: excise_surveyors_round
       route: "maltsters' ward"
