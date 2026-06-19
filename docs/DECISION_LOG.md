@@ -597,3 +597,27 @@ room/item triage sites, with the `falconers_ransom` entry gone.
 **Next after this:** continue down the remaining high-confidence room/item sites, starting with
 `printers_night`, or promote the low-FP subset once the remaining false positives are
 tuned out.
+
+### Standard cycle — 2026-06-19 (HEAD = 03d3508; next move = printer stale lantern and schedule)
+
+**Confirmed CLOSED since falconer stale bill:**
+
+- **`falconers_ransom` guest-chambers taken-bill contradiction:** closed by `03d3508`.
+  The guest chambers now react after the hidden bill has been taken, including after
+  later drops, and the read-state prose no longer claims the bill remains in hand.
+  The stale room/item audit dropped to 7 sites.
+
+**Chosen move — fix the next real stale room prose cluster**
+
+The next audit entries were concrete contradictions in `printers_night`: the shop floor
+kept saying the dark lantern sat on the counter after it was taken, and the composing
+room kept saying Fen's schedule was pinned above the bench after it was taken. This
+cycle gives both TAKE actions durable pickup flags, adds shop-floor / composing-room
+variants that keep the counter and schedule board empty after first pickup, and trims
+the mission-done shop-floor prose so it no longer says the counter is exactly as found.
+It also adds a regression and bug artifact. `npm run assess` now reports 5 remaining
+room/item triage sites, with the `printers_night` entries gone.
+
+**Next after this:** continue down the remaining high-confidence room/item sites, starting with
+`quarrymens_fault`, or promote the low-FP subset once the remaining false positives are
+tuned out.

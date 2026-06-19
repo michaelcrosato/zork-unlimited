@@ -118,9 +118,16 @@ rooms:
     variants:
       - when: [{ has_flag: slip_past }]
         text: >
-          The print shop, the mission done. The counter is as you found it. Fen will be
-          down at five and will find the chase empty. The composing room is east; the
-          side-lock door is behind you.
+          The print shop, the mission done. Fen will be down at five and will find
+          the chase empty. The composing room is east; the side-lock door is behind you.
+      - when: [{ has_flag: dark_lantern_taken }]
+        text: >
+          The front room of the narrow back-street print shop, entered by a picked
+          side-lock. The shuttered windows admit no street light, and the counter near
+          the door is bare where the dark lantern sat before you took it up. The smell
+          of damp paper and old ink is pervasive. A doorway to the east opens onto the
+          composing room. Above a narrow stair at the back, Master Fen is asleep. He
+          wakes at five.
     objects: [dark_lantern]
     exits:
       - { direction: east, to: composing_room }
@@ -139,6 +146,12 @@ rooms:
           The composing room, the schedule already in your head: Birch is in the gate-house
           outside tonight, not inside; Fen comes down for water at five. You have the shop
           to yourself until then. The print shop is west; the press room is east.
+      - when: [{ has_flag: proof_schedule_taken }]
+        text: >
+          Type cases line the north wall in their racks. A composing stick and galley
+          tray sit on the bench, and the board above it is bare where Fen's schedule was
+          pinned before you took it down. The print shop is back west; the press room
+          opens to the east.
     objects: [proof_schedule]
     exits:
       - { direction: west, to: shop_floor }
@@ -227,6 +240,8 @@ objects:
       it here with the wick already trimmed and the oil full. It is the only light
       you have.
     takeable: true
+    take_effects:
+      - set_flag: dark_lantern_taken
 
   - id: proof_schedule
     name: "Fen's schedule"
@@ -241,6 +256,8 @@ objects:
           The schedule, already read. Birch in the gate-house tonight; Fen down for
           water at five. You have the shop until then.
     takeable: true
+    take_effects:
+      - set_flag: proof_schedule_taken
     read_text: >
       The schedule covers this week's jobs: two broadsheet runs and the current pamphlet
       commission. At the bottom, in the same hand: 'Household: Birch night-watch,
