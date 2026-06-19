@@ -480,7 +480,7 @@ export function validateParser(
       unlockableObjects.add(o.id);
   }
 
-  // ── Feasibility of every gate (locked exits, interactions, win conditions) ───
+  // ── Feasibility of every gate (exits, interactions, topics, win conditions) ──
   const checkConds = (conds: Condition[], where: string[]): void => {
     for (const f of flagReqs(conds)) {
       if (!settable.has(f))
@@ -562,6 +562,13 @@ export function validateParser(
     }
   }
   for (const wc of pack.win_conditions) checkConds(wc.conditions, [`win:${wc.id}`]);
+  for (const npc of pack.npcs) {
+    for (const node of npc.dialogue.nodes) {
+      for (const t of node.topics) {
+        checkConds(t.conditions ?? [], [`npc:${npc.id}`, `node:${node.id}`, `topic:${t.id}`]);
+      }
+    }
+  }
 
   // ── quest_critical: never permanently lost ───────────────────────────────────
   const granted = new Set<string>();
@@ -661,6 +668,12 @@ export function validateParser(
         );
       const outs = new Set<string>();
       for (const t of node.topics) {
+        checkUnsatisfiable(
+          t.conditions,
+          [`npc:${npc.id}`, `node:${node.id}`, `topic:${t.id}`],
+          `npc "${npc.id}" node "${node.id}" topic "${t.id}"`,
+          findings,
+        );
         if (t.goto !== undefined) {
           if (!nodeIds.has(t.goto))
             findings.push(
@@ -1507,9 +1520,10 @@ function checkVariantShadowing(
   }
 }
 
-/** Flag any guard (variant `when` or exit/interaction `conditions`) that can never
- *  hold: its conjunction is internally contradictory, so the variant never displays /
- *  the gate is never offered — silently-dead content the blind playtest can't see. */
+/** Flag any guard (variant `when` or exit/interaction/topic `conditions`) that can
+ *  never hold: its conjunction is internally contradictory, so the variant never
+ *  displays / the gate is never offered — silently-dead content the blind playtest
+ *  can't see. */
 function checkUnsatisfiable(
   conditions: Condition[] | undefined,
   where: string[],
