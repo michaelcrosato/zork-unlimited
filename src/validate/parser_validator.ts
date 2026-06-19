@@ -647,6 +647,7 @@ export function validateParser(
   // ── NPC dialogue integrity + termination ─────────────────────────────────────
   for (const npc of pack.npcs) {
     const nodeIds = new Set(npc.dialogue.nodes.map((n) => n.id));
+    const nodeById = new Map(npc.dialogue.nodes.map((n) => [n.id, n]));
     if (!nodeIds.has(npc.dialogue.root))
       findings.push(
         err(
@@ -697,6 +698,8 @@ export function validateParser(
       }
       gotoEdges.set(node.id, outs);
     }
+    const root = nodeById.get(npc.dialogue.root);
+    if (root) checkDialogueRootRegreet(npc.id, root, nodeById, findings);
     // Every node must reach (via unconditional edges) a node offering an
     // unconditional `end` topic — only then is an exit guaranteed in every state.
     const endNodes = new Set(
@@ -1563,6 +1566,62 @@ function checkUnsatisfiable(
       ),
     );
   }
+}
+
+function checkDialogueRootRegreet(
+  npcId: string,
+  root: ParserPack["npcs"][number]["dialogue"]["nodes"][number],
+  nodes: Map<string, ParserPack["npcs"][number]["dialogue"]["nodes"][number]>,
+  findings: Finding[],
+): void {
+  const rootRegreetFlags = hasFlagReads(root.variants?.flatMap((variant) => variant.when) ?? []);
+  for (const topic of root.topics) {
+    if (topic.goto === undefined) continue;
+    const target = nodes.get(topic.goto);
+    if (!target) continue;
+    const targetSets = setFlags(target.effects);
+    for (const flag of notFlagReqs(topic.conditions ?? [])) {
+      if (!targetSets.has(flag) || rootRegreetFlags.has(flag)) continue;
+      findings.push(
+        warn(
+          "DIALOGUE_ROOT_REGREET_MISSING",
+          `npc "${npcId}" root topic "${topic.id}" retires on flag "${flag}" and target node ` +
+            `"${target.id}" sets it, but the root has no variant reading \`has_flag: ${flag}\`. ` +
+            "Later TALK can reopen the conversation with stale first-contact root text after " +
+            "that topic is gone; add a root variant for the re-greet state or make the root " +
+            "line timeless.",
+          [`npc:${npcId}`, `node:${root.id}`, `topic:${topic.id}`, `flag:${flag}`],
+        ),
+      );
+    }
+  }
+}
+
+function setFlags(effects: Effect[]): Set<string> {
+  const out = new Set<string>();
+  for (const e of effects) if ("set_flag" in e) out.add(e.set_flag);
+  return out;
+}
+
+function notFlagReqs(conds: Condition[]): Set<string> {
+  const out = new Set<string>();
+  const walk = (c: Condition): void => {
+    if ("not_flag" in c) out.add(c.not_flag);
+    else if ("all_of" in c) c.all_of.forEach(walk);
+  };
+  conds.forEach(walk);
+  return out;
+}
+
+function hasFlagReads(conds: Condition[]): Set<string> {
+  const out = new Set<string>();
+  const walk = (c: Condition): void => {
+    if ("has_flag" in c) out.add(c.has_flag);
+    else if ("all_of" in c) c.all_of.forEach(walk);
+    else if ("any_of" in c) c.any_of.forEach(walk);
+  };
+  conds.forEach(walk);
+  return out;
 }
 
 function flagReqs(conds: Condition[]): string[] {

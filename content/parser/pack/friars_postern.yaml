@@ -360,6 +360,17 @@ npcs:
         # and those not_flag reads are why neither flag is INERT.
         - id: greet
           npc_text: "Another soul the magistrates couldn't squeeze. Sit if you like — dawn's a long way off, and the watch is patient."
+          variants:
+            - when: [{ has_flag: knows_postern }]
+              text: >
+                The old debtor watches you with the pipe-smoke thinning between you.
+                "You've got the trick now. Third stone behind the font, slow and even.
+                Don't spend dawn asking me to say it twice."
+            - when: [{ has_flag: heard_postern }]
+              text: >
+                The old debtor tilts her chin toward the chapel wall. "You know
+                there's a friars' way out. Bring me my pipe if you want the latch
+                remembered plain."
           topics:
             - { id: escape, prompt: "Ask if there's any way out of here", goto: about_postern, conditions: [{ not_flag: heard_postern }] }
             - { id: give_pipe, prompt: "Offer her the clay pipe", goto: take_pipe, conditions: [{ has_flag: heard_postern }, { has_item: clay_pipe }, { not_flag: knows_postern }] }

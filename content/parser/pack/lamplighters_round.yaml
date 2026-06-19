@@ -543,6 +543,12 @@ npcs:
         # plain, twice-told warning off the red-stencilled rock-spirit cask.
         - id: greet
           npc_text: "Cold work, lighter, and the great lamp out — there's a young one lost down on the strand, I'm told, and the tide making. Best you light it quick. Ask me what you need."
+          variants:
+            - when: [{ any_of: [{ has_flag: heard_oil }, { has_flag: heard_store }] }]
+              text: >
+                The watchman rubs his hands above the dead brazier. "You've the shape
+                of it now: oil under lock, red cask left sealed, great lamp waiting.
+                Ask what's still dark to you, then get a flame on that wick."
           topics:
             - { id: oil, prompt: "Ask where the lamp's oil is to be had", goto: about_oil, conditions: [{ not_flag: heard_oil }] }
             - { id: store, prompt: "Ask about the red-stencilled cask in the store", goto: about_store, conditions: [{ not_flag: heard_store }] }

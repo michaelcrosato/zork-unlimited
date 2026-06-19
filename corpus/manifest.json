@@ -58,29 +58,29 @@
       "seed": 3
     },
     {
-      "content_hash": "aaeb230b5edf5776a23fcb39dc61a78101e76431e44594b8ba6f0514811a94a4",
-      "generator_version": 3,
+      "content_hash": "cf012fbd6f52dc18f6a53e7dfdfdacec88956a45070876a320a4aee4e54b5804",
+      "generator_version": 4,
       "mode": "rpg",
       "pack_id": "genrpg_0_v1",
       "seed": 0
     },
     {
-      "content_hash": "9d2e7d20f97a666b86a428c58f289701298d723a10880dff3206672ef81930ca",
-      "generator_version": 3,
+      "content_hash": "d4ae550e98e920753cedb8de1e1d56234bda9026c7c5d9a4a7667723cfa6dded",
+      "generator_version": 4,
       "mode": "rpg",
       "pack_id": "genrpg_1_v1",
       "seed": 1
     },
     {
-      "content_hash": "5bf3c7333091732768e8f2ffaedb2d172bb1778ac5edce853fbf4be12fa2bc6e",
-      "generator_version": 3,
+      "content_hash": "f48ccd3d106ace3504591b4ceb2c1d641595cf3905b101e4b03806c832ad4cf8",
+      "generator_version": 4,
       "mode": "rpg",
       "pack_id": "genrpg_2_v1",
       "seed": 2
     },
     {
-      "content_hash": "bb896098b7d0162180b385aa87083643922d79eb70e35b2f2500923524dc42e4",
-      "generator_version": 3,
+      "content_hash": "6c77b08b23e7adc7ce15ddf6610a377d7c97b1a7f875fb4fc89dc01bbc82183d",
+      "generator_version": 4,
       "mode": "rpg",
       "pack_id": "genrpg_3_v1",
       "seed": 3

@@ -308,6 +308,13 @@ npcs:
         - id: spirit_root
           npc_text: A warm thing, come down into the cold. Few do. Ask, if you would — I
             have watched this place a long age and remember everything.
+          variants:
+            - when:
+                - any_of:
+                    - has_flag: heard_foe
+                    - has_flag: heard_ward
+              text: The damp-light gutters and steadies. Ask what else you need before you go
+                deeper.
           effects: []
           topics:
             - id: ask_foe

@@ -400,7 +400,11 @@ npcs:
             - when: [{ has_flag: confrontation_attempted }]
               text: >
                 I believe I have said everything I have to say on this matter.
-            - when: [{ any_of: [{ has_flag: asked_bill }, { has_flag: asked_jesses }] }]
+            - when:
+                - any_of:
+                    - { has_flag: asked_bill }
+                    - { has_flag: asked_jesses }
+                    - { has_flag: asked_mews }
               text: >
                 I have told you what I know. I suggest you consider the arrangements
                 I described.

@@ -401,6 +401,10 @@ npcs:
               text: >
                 I told you what I know. Call it out loud in that yard and I will back
                 the numbers. That is all a witness needs to do.
+            - when: [{ has_flag: heard_bribe_detail }]
+              text: >
+                Silas glances toward the gatehouse steps. "You know what I saw there.
+                Ask what else you need before you put Harwick's ledger in daylight."
           topics:
             - id: ask_testimony
               prompt: "Ask Silas to stand as witness when you confront Harwick."

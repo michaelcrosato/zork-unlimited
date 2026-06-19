@@ -383,6 +383,11 @@ npcs:
             paling already and the old grey bitch leads them. Ask, if you would — I have
             run wolves off this steading forty winters and there's little about them I
             don't know.
+          variants:
+            - when: [{ any_of: [{ has_flag: heard_counsel }, { has_flag: heard_plan }] }]
+              text: >
+                Old Cade shifts his ruined hands under the blanket. "Ask what else
+                you need, lad. The wolves won't wait on either of us."
           topics:
             - id: ask_wolves
               prompt: "Ask how to fight the wolves and live."

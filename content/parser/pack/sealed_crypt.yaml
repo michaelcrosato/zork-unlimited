@@ -513,6 +513,12 @@ npcs:
         # terminating in all states; when both rumours are heard only `bye` remains.
         - id: greet
           npc_text: "Few come willingly to the sealed crypt, traveler."
+          variants:
+            - when: [{ any_of: [{ has_flag: heard_crypt_rumor }, { has_flag: heard_well_rumor }] }]
+              text: >
+                The sexton lifts his lantern again. "You've the bones of it now:
+                iron for the crypt, rope for the well. Ask what else you need, or
+                go prove whether the old words still hold."
           topics:
             - { id: crypt, prompt: "Ask about the sealed crypt", goto: about_crypt, conditions: [{ not_flag: heard_crypt_rumor }] }
             - { id: well, prompt: "Ask about the old well", goto: about_well, conditions: [{ not_flag: heard_well_rumor }] }

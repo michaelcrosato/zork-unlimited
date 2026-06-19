@@ -408,7 +408,11 @@ npcs:
             - when: [{ has_flag: confrontation_attempted }]
               text: >
                 I have heard your assessment. My clinical judgment stands.
-            - when: [{ any_of: [{ has_flag: asked_diagnosis }, { has_flag: asked_dose }] }]
+            - when:
+                - any_of:
+                    - { has_flag: asked_diagnosis }
+                    - { has_flag: asked_dose }
+                    - { has_flag: asked_recovery }
               text: >
                 I believe I have answered your questions.
           topics:
