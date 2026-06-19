@@ -86,9 +86,17 @@ rooms:
     variants:
       - when: [{ has_flag: fraud_proved }]
         text: >
-          The counting-house, the hidden ledger in your keeping. The desk holds
+          The counting-house, the hidden ledger's proof secured. The desk holds
           the day's accounts. The north door leads to the market square; the
           warehouse floor lies east.
+      - when: [{ has_flag: deputy_receipt_taken }]
+        text: >
+          Aldis Cope's counting-house at the back of the warehouse, still
+          smelling of grain dust and tallow. A sloping desk holds the day's
+          accounts, open to a recent page. The corner where the deputy's receipt
+          form lay is bare now. The north door leads to the market square; the
+          warehouse floor lies east. A service passage behind the desk runs
+          south to the alley.
     objects: [merchant_accounts, deputy_receipt, north_door]
     exits:
       - { direction: east, to: warehouse_floor }
@@ -118,8 +126,18 @@ rooms:
     description: >
       A long room of stone flags and timber baulks, grain sacks stacked in rows
       from floor to beam. A tally board and pallet rack line the east wall beside
-      the door to the weighing-room. A low stair in the north wall leads up to
-      the grain loft where Cope keeps private stock. The counting-house lies west.
+      the door to the weighing-room; a measured grain sample waits near the
+      marked sacks. A low stair in the north wall leads up to the grain loft
+      where Cope keeps private stock. The counting-house lies west.
+    variants:
+      - when: [{ has_flag: grain_sample_taken }]
+        text: >
+          A long room of stone flags and timber baulks, grain sacks stacked in
+          rows from floor to beam. A tally board and pallet rack line the east
+          wall beside the door to the weighing-room; the marked-sack spot where
+          the measured grain sample waited is empty now. A low stair in the
+          north wall leads up to the grain loft where Cope keeps private stock.
+          The counting-house lies west.
     objects: [grain_sacks, grain_sample, warehouse_crowbar]
     exits:
       - { direction: west, to: counting_house }
@@ -201,6 +219,8 @@ objects:
       countersignature, it becomes legal evidence. Without it you are only a man
       who has been in a merchant's counting-house at night.
     takeable: true
+    take_effects:
+      - set_flag: deputy_receipt_taken
 
   - id: north_door
     name: "north door"
@@ -242,6 +262,8 @@ objects:
       pound weighed out in your cupped hands by a deputy weighmaster's trained
       instinct. The raw material of the case.
     takeable: true
+    take_effects:
+      - set_flag: grain_sample_taken
 
   - id: warehouse_crowbar
     name: "crowbar"

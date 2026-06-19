@@ -481,3 +481,26 @@ bug artifact. `npm run assess` now reports 14 remaining room/item triage sites, 
 
 **Next after this:** continue down the remaining high-confidence room/item sites, starting with
 `weighmasters_round`, or promote the low-FP subset once the first audited packs are clean.
+
+### Standard cycle — 2026-06-19 (HEAD = a9e0b69; next move = weighmaster stale evidence)
+
+**Confirmed CLOSED since tide-mill stale tools:**
+
+- **`tide_mill` wheel-room / tool-shed taken-tool contradictions:** closed by `a9e0b69`.
+  The wheel-room and tool-shed now react after the crank-handle, billhook, and/or crow-bar
+  have been taken, including after later drops. The stale room/item audit dropped to 14
+  sites.
+
+**Chosen move — fix the next real stale room prose cluster**
+
+The next audit entries were concrete contradictions in `weighmasters_round`: the
+counting-house kept saying the deputy's receipt form lay on the desk after it was taken,
+and the warehouse floor had no durable reactive state for the measured grain sample's
+starting spot. This cycle gives both TAKE actions durable pickup flags and adds
+counting-house / warehouse-floor variants that keep those starting spots empty after first
+pickup, including after later drops. It also adds a regression and bug artifact. `npm run
+assess` now reports 12 remaining room/item triage sites, with the `weighmasters_round`
+entries gone.
+
+**Next after this:** continue down the remaining high-confidence room/item sites, starting with
+`advocates_case`, or promote the low-FP subset once the first audited packs are clean.
