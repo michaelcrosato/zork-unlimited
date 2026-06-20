@@ -107,6 +107,7 @@ rooms:
     variants:
       - when:
           - has_flag: proved_substitution
+          - has_item: sample_vials
           - has_item: suspect_vial
           - has_item: glass_drawstick
         text: >
@@ -117,12 +118,34 @@ rooms:
           south.
       - when:
           - has_flag: proved_substitution
+          - has_item: sample_vials
           - has_item: glass_drawstick
         text: >
           The shop counter, the comparison complete. The open pharmacopoeia
           anchors the standard, and the glass drawstick is with you, carrying the
           taste result that proved the substitution. The dispensary is east; the
           door north stands clear; the back passage runs south.
+      - when:
+          - has_flag: proved_substitution
+          - has_item: suspect_vial
+          - has_item: glass_drawstick
+        text: >
+          The shop counter, the comparison complete. The open pharmacopoeia
+          anchors the standard, while the suspect vial and glass drawstick are
+          with you as evidence rather than lying at their starting places. The
+          sealed sample vials still need to be taken from the dispensary before
+          the Society's case can leave by the shop door north. The dispensary is
+          east; the back passage runs south.
+      - when:
+          - has_flag: proved_substitution
+          - has_item: glass_drawstick
+        text: >
+          The shop counter, the comparison complete. The open pharmacopoeia
+          anchors the standard, and the glass drawstick is with you, carrying the
+          taste result that proved the substitution. The sealed sample vials still
+          need to be taken from the dispensary before the Society's case can leave
+          by the shop door north. The dispensary is east; the back passage runs
+          south.
       - when:
           - has_item: suspect_vial
           - has_item: glass_drawstick
@@ -162,9 +185,9 @@ rooms:
         conditions: [{ has_item: sample_vials }, { has_flag: proved_substitution }]
         locked_msg: >
           The shop door stands shut. The Society's case is not yet assembled:
-          both the comparison result and the sealed sample vials are needed.
-          The dispensatory and the suspect vial are here to be compared; the
-          sample vials are in the dispensary east.
+          the comparison result and the sealed sample vials both have to leave
+          with you. Finish the work at the counter and in the dispensary before
+          presenting it.
       - { direction: east, to: dispensary }
       - { direction: south, to: back_passage }
 
