@@ -259,7 +259,9 @@ objects:
             - narrate: >
                 You hold the scoop low, let the sand roll instead of fall, and
                 cover the priming from the far edge inward. No scrape, no spark,
-                no flash. The tray goes dull under clean sand.
+                no flash. The tray goes dull under clean sand. When Rafe sees
+                the charge is dead, he lowers the hooked staff and lets the
+                report go north with you.
             - goto: mill_road
           on_failure:
             - set_flag: smother_attempted
@@ -305,10 +307,17 @@ endings:
     title: "The Mill Report"
     text: >
       The mill road opens toward Charterhaven's barracks. Behind you, the powder
-      mill will be inspected by daylight: either with the priming safely buried
-      under dry sand or with Rafe's broken gate walk proving how hard the miller
-      tried to keep the surety hidden. The next powder wagon will not roll in
-      blind. *** You have won. ***
+      mill will be inspected by daylight with the priming safely buried under
+      dry sand and Rafe left standing on the gate walk with no blast to hide
+      behind. The next powder wagon will not roll in blind. *** You have won. ***
+    variants:
+      - when: [{ has_flag: rafe_defeated }]
+        text: >
+          The mill road opens toward Charterhaven's barracks. Behind you, Rafe's
+          broken gate walk proves how hard the miller tried to keep the surety
+          hidden, even if the exposed priming still makes the report uglier than
+          it needed to be. The next powder wagon will not roll in blind. *** You
+          have won. ***
 
   - id: ending_gate_broken
     title: "Powder Smoke"
