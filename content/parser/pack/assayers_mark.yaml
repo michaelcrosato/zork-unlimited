@@ -97,6 +97,18 @@ rooms:
     variants:
       - when:
           - has_flag: proved_debased
+          - has_item: commission_paper
+          - has_item: silver_plate
+          - has_item: aqua_fortis
+        text: >
+          The assay bench. The touchstone carries Fitch's streak alongside the
+          standard: where sterling holds cream-white, the porringer's line has gone
+          a faint but unmistakable greenish-grey. The porringer and acid vial are
+          with you now, and the commission paper closes the chain from Fitch to
+          Crabtree. The weighing room is east; the record room west; the court gate
+          north is now clear.
+      - when:
+          - has_flag: proved_debased
           - has_item: silver_plate
           - has_item: aqua_fortis
         text: >
@@ -104,8 +116,9 @@ rooms:
           standard: where sterling holds cream-white, the porringer's line has gone
           a faint but unmistakable greenish-grey. The porringer and acid vial are
           with you now, the assay complete; the touchstone will not change its
-          answer. The weighing room is east; the record room west; the court gate
-          north is now clear.
+          answer. The commission paper in the record room still has to name the
+          chain before the Warden will hear it. The weighing room is east; the
+          record room west; the back lane runs south.
       - when:
           - has_item: silver_plate
           - has_item: aqua_fortis
