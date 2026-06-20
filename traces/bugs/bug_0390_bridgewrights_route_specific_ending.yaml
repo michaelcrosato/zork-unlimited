@@ -1,0 +1,25 @@
+id: bug_0390
+pack: bridgewrights_proof_v1
+title: "combined Bridgewrights ending contradicted the route just played"
+severity: moderate
+scene: market_road
+reported_by: blind_playtest_20260620T153058Z_bridgewrights_proof_seed7
+
+symptom: >
+  The blind playtester solved the clean engineering route by bracing the cracked
+  kingpost without fighting Carden. The final journal and epilogue still said the
+  bridge was "either" braced or forced into inquiry by Carden's fall, even though
+  Carden had not fallen.
+
+root_cause: >
+  The converged market-road win used one unconditional journal entry and one base
+  ending text for both the engineering route and combat fallback. The pack already
+  tracked `carden_defeated`, but the terminal prose did not use a reactive ending
+  variant to distinguish the routes.
+
+fix: >
+  The market-road journal is now route-neutral, the base ending is the proper
+  braced-kingpost engineering resolution, and a `carden_defeated` ending variant
+  covers the combat route where the toll man's fall forces inquiry.
+
+tests: tests/regression/bridgewrights_proof_route_specific_ending.test.ts

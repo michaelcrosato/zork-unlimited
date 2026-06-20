@@ -111,9 +111,8 @@ rooms:
     on_enter:
       - set_quest_stage: { quest: bridgewrights_proof, stage: road_reached }
       - add_journal: >
-          The market road is clear enough for the report to reach Charterhaven:
-          the bridge is either braced and closed cleanly, or forced into inquiry
-          by Carden's fall. (+15)
+          The market road is clear enough for the report to reach Charterhaven,
+          and the old span will not carry loaded carts blindly today. (+15)
       - inc_var: { name: score, by: 15 }
     exits:
       - { direction: south, to: toll_walk }
@@ -295,12 +294,22 @@ win_conditions:
 endings:
   - id: ending_bridge_closed
     title: "The Closed Span"
+    variants:
+      - when: [{ has_flag: carden_defeated }]
+        text: >
+          The market road opens toward Charterhaven, but the old bridge behind
+          you will not carry loaded carts blindly today. Carden's fall has forced
+          the inquiry the toll men tried to avoid, and the cudgel on the planks
+          will speak loudly enough to bring the bridge office down before the
+          market wagons cross. The city gets its warning before the span gets its
+          victims. *** You have won. ***
     text: >
       The market road opens toward Charterhaven, but the old bridge behind you
-      will not carry loaded carts blindly today. Either the kingpost sits under
-      a proper brace, or Carden's fall has forced the inquiry the toll men tried
-      to avoid. The city gets its warning before the span gets its victims. ***
-      You have won. ***
+      will not carry loaded carts blindly today. The kingpost sits under a
+      proper brace, the span stilled long enough for the closure order to do its
+      work, and the toll men have lost the argument without getting their
+      market-day wreck. The city gets its warning before the span gets its
+      victims. *** You have won. ***
 
   - id: ending_under_span
     title: "Under the First Span"
