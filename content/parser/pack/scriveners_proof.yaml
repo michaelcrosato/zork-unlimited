@@ -54,8 +54,8 @@
 #   ending_bought    — BAD (non-death, instant end_game): took the bribe purse
 #
 # Tension beat: USE penknife ON copy_press (deed_room). d20 + steadiness (3) vs DC 11.
-# CONVERGENT — gates no exit, score, ending, or variant. One-shot on success (press_checked);
-# failure is re-tryable. The sealed_crypt / collectors_warrant / gaugers_register shape.
+# CONVERGENT — gates no exit, score, ending, or variant. One-shot on either branch
+# (press_checked); failure points back to the deed/glass/register evidence path.
 #
 # ending_bought telegraphed twice before TAKE fires end_game (bug_0123 discipline):
 #   source 1: bribe_purse description names "For quietness" and lists court officers —
@@ -363,8 +363,8 @@ objects:
     interactions:
       # TENSION BEAT — CHECK the copy-press screw with the penknife.
       # d20 + steadiness (3) vs DC 11. CONVERGENT — gates no exit, score, ending,
-      # or variant beyond retire flag press_checked. One-shot on success; failure
-      # is re-tryable. The sealed_crypt / collectors_warrant shape.
+      # or variant beyond retire flag press_checked. One-shot on either branch: a
+      # failed probe spoils the wax clue, then points back to the document proof.
       - verb: USE
         item: penknife
         target: copy_press
@@ -382,11 +382,13 @@ objects:
                 impression taken before the ink in the disputed deed could age.
                 You set the fragment aside and steady your hand.
           on_failure:
+            - set_flag: press_checked
             - narrate: >
                 The penknife tip catches in the wax and flicks a small fragment
                 loose — it clatters off the press-bed and skitters across the
                 floor. You stand still for a count of five. Nothing moves above.
-                You breathe out.
+                You breathe out. That wax will not serve now; the deed, the glass,
+                and the enrolled copy will have to carry the proof.
 
   # ── Private study ──────────────────────────────────────────────────────────────
   - id: magnifier
