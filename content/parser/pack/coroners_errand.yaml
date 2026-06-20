@@ -145,7 +145,7 @@ rooms:
           where Rendell's sealed letter lay before you took it. A small
           silver-clasped purse sits at the edge of the desk. The library door
           is north; the hall is west.
-    objects: [body, sealed_letter, merchants_purse, writing_desk]
+    objects: [body, physician_bag, sealed_letter, merchants_purse, writing_desk]
     exits:
       - { direction: north, to: library }
       - { direction: west, to: front_hall }
@@ -234,6 +234,16 @@ objects:
               one. The ink on the page under his hand is still fresh; he was alive and
               writing less than three hours ago. This is not a natural death.
 
+  - id: physician_bag
+    name: "physician's black bag"
+    aliases:
+      [bag, black bag, physician bag, physicians bag, doctor bag, doctor's bag, rendell bag]
+    description: >
+      Dr. Rendell's visiting bag: buckled shut, wiped clean, and too neatly left by
+      the study door. It holds ordinary instruments and folded linen, but no bottle
+      loose enough to explain Calloway's death. If Rendell carried poison here, he
+      wanted the household medicine chest to take the blame.
+
   - id: sealed_letter
     name: "sealed letter"
     aliases: [letter, seal, wax, correspondence, envelope, rendell, physician]
@@ -263,7 +273,7 @@ objects:
 
   - id: merchants_purse
     name: "silver-clasped purse"
-    aliases: [purse, silver, money, coin, coins, clasp, pouch, bag]
+    aliases: [purse, silver, money, coin, coins, clasp, pouch]
     description: >
       A small purse with a silver clasp, heavy with coin — Calloway's daily purse.
       It belongs to a dead man's estate. To take it is to choose a different errand
