@@ -126,7 +126,7 @@ export function makeParserRelabeler(
 // engine-keyword `score` survives relabeling. The `never` exhaustiveness guards make a
 // future DSL addition a COMPILE error here, so this can never silently miss a new kind.
 
-function relabelCondition(
+export function relabelCondition(
   c: Condition,
   r: (id: string) => string,
   rv: (n: string) => string,

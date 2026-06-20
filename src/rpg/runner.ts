@@ -51,9 +51,14 @@ export function indexRpgPack(pack: RpgPack): RpgIndex {
   return { ...base, rpgPack: pack, enemies, enemyByRoom };
 }
 
-/** Living enemies standing in the player's current room. */
+/** A foe that is alive and whose authored state gate, if any, currently holds. */
+export function enemyActive(state: GameState, enemy: Enemy): boolean {
+  return enemyAlive(state, enemy) && evalConditions(enemy.conditions ?? [], state);
+}
+
+/** Active enemies standing in the player's current room. */
 function enemiesHere(index: RpgIndex, state: GameState): Enemy[] {
-  return (index.enemyByRoom.get(state.current) ?? []).filter((e) => enemyAlive(state, e));
+  return (index.enemyByRoom.get(state.current) ?? []).filter((e) => enemyActive(state, e));
 }
 
 /**
@@ -95,7 +100,7 @@ export function buildRpgRules(
     resolve(state: GameState, action: Action): Resolution | null {
       if (action.type === "ATTACK") {
         const enemy = index.enemies.get(action.enemy);
-        if (!enemy || enemy.room !== state.current || !enemyAlive(state, enemy)) return null;
+        if (!enemy || enemy.room !== state.current || !enemyActive(state, enemy)) return null;
         return resolveAttack(state, enemy, rngFor(state));
       }
       if (action.type === "USE") {

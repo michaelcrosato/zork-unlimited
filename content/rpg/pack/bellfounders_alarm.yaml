@@ -111,9 +111,9 @@ rooms:
           reach. The foundry yard is south; the wall walk is north.
       - when: [{ has_flag: bell_tuned }]
         text: >
-          The ward gate. Rusk still grips his staff, but the tuned bell is
-          sounding behind you; he can no longer pretend the silence was safe.
-          The foundry yard is south; the wall walk is north.
+          The ward gate. Rusk lowers his staff as the tuned bell sounds behind
+          you; he can no longer pretend the silence was safe. The foundry yard
+          is south; the wall walk is north.
     exits:
       - { direction: south, to: foundry_yard }
       - direction: north
@@ -308,6 +308,7 @@ enemies:
       set against the foundry. A tuned bell will prove he passed bad metal; an
       untuned one lets him call the danger rumor.
     room: ward_gate
+    conditions: [{ not_flag: bell_tuned }]
     hp: 12
     attack: 5
     defense: 2

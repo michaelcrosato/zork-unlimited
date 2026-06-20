@@ -1,0 +1,26 @@
+id: bug_0388
+pack: bellfounders_alarm_v1
+title: "Rusk remained attackable after yielding to the tuned alarm bell"
+severity: high
+scene: ward_gate
+reported_by: blind_playtest_20260620T145506Z_bellfounders_alarm_seed7
+
+symptom: >
+  A blind playtester completed the clean bellcraft route and reached the ward
+  gate after tuning the alarm bell. The room prose said Rusk could no longer
+  pretend the silence was safe, yet `attack_rusk` was still offered and Rusk
+  still appeared in `enemies_present` with full HP.
+
+root_cause: >
+  RPG enemies only retired when their HP reached zero. The schema had no authored
+  state gate equivalent to exits, interactions, or dialogue topics, so content
+  could open a non-combat route past an enemy but could not make that enemy stop
+  being confrontable.
+
+fix: >
+  RPG enemies now accept optional `conditions`. An enemy is observable and
+  attackable only while it is alive and those conditions hold. Rusk is gated on
+  `not_flag: bell_tuned`, and the ward-gate prose now says he lowers his staff
+  once the tuned bell proves the alarm.
+
+tests: tests/regression/bellfounders_alarm_rusk_yields.test.ts
