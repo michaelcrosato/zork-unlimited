@@ -63,13 +63,6 @@ meta:
     connection: "The river stair is part of Charterhaven's nightly circuit, where public light is the first defense of the hub."
   start_room: river_stair
   flags_init: []
-  # `steadiness` (value 3) is the lighter's steady hand, rolled by the OPTIONAL steadiness
-  # check on the takeable horn windscreen below (a d20 + steadiness TENSION beat the player
-  # sees — set your back to the river and break a fog-gust off the flame you carry). It is the
-  # Stage-4 skill_check mechanic standardized into PARSER mode (the same shape sealed_crypt
-  # ships its `nerve` check on), resolved exactly as the RPG runner does. It gates NOTHING the
-  # exhaustive proofs turn on — see the horn_windscreen interaction's note for why it is convergent.
-  vars_init: { steadiness: 3 }
   max_score: 35
 
 rooms:
@@ -175,8 +168,8 @@ rooms:
       The very head of the staith, where the great harbour-lamp stands on its iron post
       above the drop to the water — the one light that reaches right down onto the strand
       below, and it is dark. The wick is dry: it wants oil poured into the font and a flame
-      set to it. Below, in the lightless dark, the tide is making over the strand. The
-      lamp-walk is back to the south.
+      shielded with the horn windscreen and set to it. Below, in the lightless dark, the
+      tide is making over the strand. The lamp-walk is back to the south.
     # First variant (lamp_lit) wins once the lamp burns; the second reacts to the beat AFTER
     # the oil is poured but BEFORE the flame is struck. Both are reactive prose only; neither
     # gates anything. BOTH variants key off the MONOTONIC FLAGS lamp_lit / font_filled — set
@@ -205,9 +198,10 @@ rooms:
         text: >
           The very head of the staith, the great harbour-lamp on its iron post above the
           drop — its deep font brimming with the oil you have just drawn and poured, the
-          broad wick standing soaked and dark and wanting only a flame. Below, in the
-          lightless dark still, the tide is making over the strand. Strike the light and
-          it will reach right down onto it. The lamp-walk is back to the south.
+          broad wick standing soaked and dark and wanting only a flame sheltered by the
+          horn windscreen. Below, in the lightless dark still, the tide is making over the
+          strand. Strike the light and it will reach right down onto it. The lamp-walk is
+          back to the south.
     objects: [harbour_lamp]
     exits:
       - { direction: south, to: lamp_walk }
@@ -289,72 +283,17 @@ objects:
   - id: horn_windscreen
     name: "horn windscreen"
     aliases: [windscreen, screen, shield, horn screen, horn pane, pane, lantern-shield, lantern shield, windshield]
-    # The prop the OPTIONAL steadiness TENSION beat hangs on — a loose curved pane of horn the
-    # last lighter clipped off some old lantern and left on the river-stair sill. It is purely
-    # OPTIONAL scenery: takeable, NOT quest_critical, never consumed, and the win/score never
-    # touch it (the great lamp is lit with the tinderbox + whale-oil, not this). A red-herring
-    # comfort the player may pick up to steel the flame against the fog, nothing more.
+    # Bug_0382: this used to be an optional self-USE steadiness beat, which looked important
+    # but had no route, score, or ending consequence. The prop now pays off at the climax:
+    # lighting the great harbour-lamp requires the screen in hand to shelter the belt-lantern's
+    # little flame while the broad wick catches. No roll, no orphaned action, no red herring.
     description: >
       A curved pane of scraped horn on a little wire clip — a windscreen struck off some old
       lantern, gone amber and crazed with age. Held up to leeward it will break a gust off your
       flame; the last lighter must have carried it for the worst of the river fog and then left
-      it behind.
+      it behind. You will need it when you strike the great lamp out in the weather.
     takeable: true
-    # An OPTIONAL steadiness TENSION beat — the Stage-4 d20 skill_check standardized into this
-    # parser pack (the very shape sealed_crypt's `nerve` check ships on its iron key), resolved
-    # exactly as the RPG runner does: the runner applies on_success/on_failure INSTEAD of this
-    # interaction's `effects`, then PREPENDS the roll narration the player sees ("steadiness
-    # check: d20 <roll> + 3 = <total> vs 12 — success/failure."). It is a self-USE on this horn
-    # screen once you have taken it up — a private "set your back to the river and break the gust
-    # off the flame you carry" moment, fitting for the open flame the lighter must keep alight all
-    # the foggy round and the whole death fork turns on.
-    #
-    # It is a real roll, NOT a luck-gate, and is deliberately CONVERGENT — it gates NOTHING the
-    # structural proofs (exhaustive solver, liveness BFS, exact score economy) turn on:
-    #   • It sits OFF the critical path entirely, on an optional prop. The five-step chain — read
-    #     notice → cupboard (brass-key) → store-key → unlock store-door → oil-cask → pour → light
-    #     the great lamp → down to the strand — runs through SEPARATE acts (first-class UNLOCKs and
-    #     the lamp's pour/light USEs), none of which this beat touches. It sets no win flag, no
-    #     quest_stage, opens no exit, awards no score, and no `when:` variant or other condition
-    #     reads its flag — so on EITHER outcome every ending (guided / thief / caught), the win,
-    #     the exact 35-point economy, and every reactive variant stay reachable byte-for-byte. The
-    #     screen is never required and never consumed, so skipping it (or failing the roll) changes
-    #     nothing the player can reach.
-    #   • difficulty 12 vs d20 + steadiness 3 (range 4–23) is passable on a mid roll (≥ 9, ~60%)
-    #     and well under the 23 ceiling — mirrors the proven sealed_crypt / sunken_barrow DC-12.
-    #   • One-shot via `not_flag: steadied_the_flame`: on SUCCESS the flag retires the beat (it is
-    #     read ONLY by this condition — no other reader anywhere, so it cannot re-fire and re-roll
-    #     a contradictory line). on FAILURE the flag stays unset, so the beat is simply RETRYABLE
-    #     and the player proceeds with the round regardless. The screen is NOT quest_critical and is
-    #     never removed, so it opens no soft-lock surface even on the map's one-way bits. No `score`
-    #     rides the check (economy proven exact).
-    interactions:
-      - verb: USE
-        item: horn_windscreen
-        target: horn_windscreen
-        command_verb: steady
-        # Both conditions must hold: not yet steadied (success retires via steadied_the_flame)
-        # AND not yet attempted (failure retires via attempted_windscreen, bug_0303). One-shot
-        # on either outcome — the beat is a single tension moment, not a retryable grind.
-        conditions: [{ not_flag: steadied_the_flame }, { not_flag: attempted_windscreen }]
-        skill_check:
-          skill: steadiness
-          difficulty: 12
-          on_success:
-            - set_flag: steadied_the_flame
-            - narrate: >
-                You set your back to the river and hold the horn pane up to leeward, and the little
-                flame on your belt stops its guttering and stands up straight and honest behind the
-                glass again. A lighter learns to carry a light through a fog like this; your hand is
-                steady on it now, and it will not go out on you tonight.
-          on_failure:
-            - set_flag: attempted_windscreen
-            - narrate: >
-                A gust comes cold off the dark water and gets in past the pane all the same; the
-                flame ducks and streams flat and for a breath you think it gone — but it holds,
-                just, as it has held all the foggy round. Your hand is not as steady as you would
-                like in this murk; but the little flame is not going out tonight, screen or no,
-                and there is still the great lamp up at the staith-head to draw oil for and light.
+    quest_critical: true
 
   - id: wall_cupboard
     name: "wall-cupboard"
@@ -478,22 +417,25 @@ objects:
     #     sets font_filled. No score; one-shot (gated not_flag font_filled, and the oil is
     #     spent so it cannot re-fire).
     #   • `light great harbour-lamp with tinderbox` — now gated on has_flag font_filled (a dry
-    #     font cannot be lit), awards the +20, opens the way DOWN to the strand, one-shot
-    #     (not_flag lamp_lit). command_verb `light` so the natural phrasing parses (bug_0078).
+    #     font cannot be lit) AND the carried horn windscreen, awards the +20, opens the way DOWN
+    #     to the strand, one-shot (not_flag lamp_lit). command_verb `light` so the natural phrasing
+    #     parses (bug_0078). The extra horn-screen precondition pays off the prop that the opening
+    #     scene puts in the player's hand as the obvious river-fog tool (bug_0382).
     # The oil stays the hard precondition for the whole climax (no oil → no pour → no light →
     # strand barred); the +20 still rides a single one-time gated step; max_score stays 35.
     description: >
       The great staith-head lamp on its iron post — a deep brass font and a broad wick, the
       one lamp on the round that throws its light right down onto the strand below. Its font
-      is dry: pour in lamp-oil and strike a flame to the wick and it will burn till dawn.
+      is dry: pour in lamp-oil, shield your flame with the horn windscreen, and strike the
+      wick and it will burn till dawn.
     variants:
       - when: [{ has_flag: lamp_lit }]
         text: "The great harbour-lamp burning gold and steady, its light lying right down the drop and out across the strand below."
       - when: [{ has_flag: font_filled }, { not_flag: lamp_lit }]
         text: >
           The great staith-head lamp on its iron post, its deep brass font brimming with
-          whale-oil now and the broad wick standing soaked and ready — it wants only a flame
-          struck to it.
+          whale-oil now and the broad wick standing soaked and ready — it wants only your
+          flame, shielded from the fog by the horn windscreen, struck to it.
     takeable: false
     interactions:
       - verb: USE
@@ -516,18 +458,19 @@ objects:
         target: harbour_lamp
         command_verb: light
         command_template: "light {target} with {item}"
-        conditions: [{ has_flag: font_filled }, { not_flag: lamp_lit }]
+        conditions: [{ has_flag: font_filled }, { has_item: horn_windscreen }, { not_flag: lamp_lit }]
         effects:
           - set_flag: lamp_lit
           - set_quest_stage: { quest: the_round, stage: lamp_lit }
           - inc_var: { name: score, by: 20 }
           - unlock_exit: { from: harbour_head, to: the_strand }
-          - add_journal: "You struck the light to the filled font, and the great harbour-lamp took and burned, throwing its gold right down onto the dark strand below."
+          - add_journal: "You shielded your belt-lantern with the horn windscreen, struck the light to the filled font, and the great harbour-lamp took and burned, throwing its gold right down onto the dark strand below."
           - narrate: >
-              You set the char-cloth smouldering in the tinderbox and lay it to the soaked
-              wick. The wick draws, catches, and steadies — and the great lamp swells gold on
-              its post and pours its light straight down the drop and out across the strand,
-              and the lightless dark below is dark no longer.
+              You clip the horn windscreen before the little flame on your belt, set the
+              char-cloth smouldering in the tinderbox, and lay it to the soaked wick. The
+              wick draws, catches, and steadies behind the screen — and the great lamp swells
+              gold on its post and pours its light straight down the drop and out across the
+              strand, and the lightless dark below is dark no longer.
 
 npcs:
   - id: watchman

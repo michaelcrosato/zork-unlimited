@@ -79,6 +79,7 @@ const WIN_ROUTE = [
   "read_night_notice",
   "take_tinderbox",
   "take_brass_key",
+  "take_horn_windscreen",
   "go_north",
   "go_west",
   "unlock_wall_cupboard",
