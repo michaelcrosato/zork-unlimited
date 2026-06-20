@@ -410,6 +410,16 @@ npcs:
           # (a single `when` is all_of); only the SPOKEN text varies, so the node's
           # effects/topics — and dialogue termination/reachability — are unchanged.
           variants:
+            - when: [{ has_flag: heard_counsel }, { not_flag: read_orders }]
+              text: >
+                Aye, lad — what else? Ask quick; the dark won't hold past dawn. And
+                read Hale's board before you climb; my tongue has the drill, but his
+                chalk has the whole order.
+            - when: [{ has_flag: heard_beacon }, { not_flag: read_orders }]
+              text: >
+                Aye, lad — what else? Ask quick; the dark won't hold past dawn. And
+                read Hale's board before you climb; my tongue has the drill, but his
+                chalk has the whole order.
             - when: [{ has_flag: heard_counsel }]
               text: >
                 Aye, lad — what else? Ask quick; the dark won't hold past dawn, and there
