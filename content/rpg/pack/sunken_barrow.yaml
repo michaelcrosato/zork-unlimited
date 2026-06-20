@@ -53,9 +53,11 @@ rooms:
     name: "Entry Hall"
     description: >
       A hall of fitted slabs. A rusted iron bar lies among fallen rubble, and a
-      passage runs north into deeper dark. A low breach gapes west into a cramped
-      side cell, and from its dark a cold breath drifts, prickling the neck —
-      something lingers in there, watchful. Steps climb back up to the light.
+      passage runs north into a deeper cold, the kind an unwarned blade should
+      not meet naked. A low breach gapes west into a cramped side cell, and from
+      its dark a cold breath drifts, prickling the neck. The presence there waits
+      rather than lunges; old counsel, not an ambush, seems to breathe from the
+      cell. Steps climb back up to the light.
     # bug_0170: the west breach now telegraphs the shade IN SCENE ("a cold breath
     # ... something lingers in there, watchful"). This is the Entry Hall fork — west
     # to the optional shade, north into the lethal wight — and a fresh blind
@@ -69,11 +71,13 @@ rooms:
     # The cue makes the PREPARED path discoverable, so skipping the shade is now an
     # INFORMED gamble, not a blind one — bug_0102's intended lethal gamble for whoever
     # chooses it is untouched (the shade stays optional; no flag/var/exit/score/ending
-    # change). The cue reads true throughout: the shade never leaves the cell, so it
-    # holds after the ward is taken too. Mirrored into the has_item: iron_bar variant
-    # below so both renderings agree. Examine/room-text only; the canonical victory
-    # trace's STATE-based expected_final_hash is unchanged, only the pack content_hash
-    # shifts (re-pinned in traces/rpg/barrow_victory.json).
+    # change). bug_0398 sharpens that cue after another blind pass found the shade
+    # still felt optional though the ward is the intended preparation before the
+    # wight. The west cell now reads as waiting counsel rather than an ambush, and
+    # post-shade variants stop calling the already-known shade "something lingers,
+    # watchful." Examine/room-text only; no route/stat/score/enemy change, so the
+    # canonical victory trace's STATE-based expected_final_hash is unchanged, only
+    # the pack content_hash shifts.
     # Reactive room text (bug_0011 shape): once the bar is in hand the rubble is
     # bare, so the room must stop narrating the bar as still lying there. Gated on
     # `has_item: iron_bar` — the closed condition DSL has no object-in-room
@@ -83,13 +87,35 @@ rooms:
     # solve the slab; if it is dropped back in this room has_item flips false and
     # the base text — bar in the rubble — reads true again, matching visible_objects.
     variants:
+      - when:
+          - has_item: iron_bar
+          - any_of:
+              - { has_flag: heard_warding }
+              - { has_flag: heard_lord_lore }
+        text: >
+          A hall of fitted slabs. The rubble is scuffed bare where the rusted iron
+          bar lay until you took it up. The northern passage waits with the
+          grave-cold the shade named for you. The west breach is no longer a
+          nameless threat: the reaver's shade keeps its bone-cold vigil there,
+          counsel given and no malice in it. Steps climb back up to the light.
+      - when:
+          - any_of:
+              - { has_flag: heard_warding }
+              - { has_flag: heard_lord_lore }
+        text: >
+          A hall of fitted slabs. A rusted iron bar lies among fallen rubble, and
+          the northern passage waits with the grave-cold the shade named for you.
+          The west breach is no longer a nameless threat: the reaver's shade keeps
+          its bone-cold vigil there, counsel given and no malice in it. Steps
+          climb back up to the light.
       - when: [ { has_item: iron_bar } ]
         text: >
           A hall of fitted slabs. The rubble is scuffed bare where the rusted iron
-          bar lay until you took it up. A passage runs north into deeper dark, and a
-          low breach gapes west into a cramped side cell from which a cold breath
-          drifts, prickling the neck — something lingers in there, watchful. Steps
-          climb back up to the light.
+          bar lay until you took it up. A passage runs north into a deeper cold,
+          the kind an unwarned blade should not meet naked. A low breach gapes west
+          into a cramped side cell from which a cold breath drifts, prickling the
+          neck. The presence there waits rather than lunges; old counsel, not an
+          ambush, seems to breathe from the cell. Steps climb back up to the light.
     objects: [iron_bar]
     exits:
       - { direction: up, to: barrow_mouth }
@@ -122,7 +148,9 @@ rooms:
     description: >
       Niches line the walls, each holding the dust of a forgotten guard. One
       niche is empty — and something has climbed out of it. An archway east is
-      choked with the cold the thing gives off.
+      choked with the cold the thing gives off. That cold feels like more than an
+      unwarned blade should meet; if you came straight here, the watchful side
+      cell off the entry still promises counsel before blood.
     variants:
       - when: [ { has_flag: wight_slain } ]
         text: >
@@ -130,6 +158,13 @@ rooms:
           niche stands empty, its risen tenant crumbled to grave-dust across the
           floor. The cold has lifted from the archway east, and the dark beyond
           it lies open.
+      - when: [ { has_flag: heard_warding } ]
+        text: >
+          Niches line the walls, each holding the dust of a forgotten guard. One
+          niche is empty — and something has climbed out of it. An archway east is
+          choked with the cold the thing gives off. The warding trick the shade
+          taught you settles into your guard; this is still a true fight, but not
+          an unwarned one.
     exits:
       - { direction: south, to: entry_hall }
       - direction: east
@@ -196,7 +231,7 @@ objects:
   - id: iron_bar
     name: "iron bar"
     aliases: [bar, lever, iron]
-    description: "A rusted but sound iron bar, the length of your arm. A lever, if you have the strength."
+    description: "A rusted but sound iron bar, the length of your arm. A patient lever for old stone, not a verdict on heroic strength."
     takeable: true
 
   - id: stone_slab

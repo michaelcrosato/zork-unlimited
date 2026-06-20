@@ -9,12 +9,11 @@
  * winnable game for want of a telegraph), here on the wight (blind seed 42/7,
  * ai-runs/2026-06-03T11-37-52-305Z/playtest.md §5).
  *
- * The fix is pure CONTENT — the west-breach prose now telegraphs the shade IN SCENE
- * ("a cold breath drifts, prickling the neck — something lingers in there, watchful"),
- * mirrored into the has_item:iron_bar variant so both renderings agree, reading true
- * throughout (the shade never leaves the cell). It only signposts the choice; the shade
- * stays optional and bug_0102's lethal under-armed gamble is untouched — no
- * flags/vars/items/exits/gating/scoring/reachable endings change.
+ * The fix is pure CONTENT — the west-breach prose telegraphs the shade IN SCENE. bug_0398
+ * sharpened the original "something lingers" cue into explicit counsel/not-an-ambush
+ * wording because the shade is load-bearing preparation, not merely atmosphere. It only
+ * signposts the choice; the shade stays optional and bug_0102's lethal under-armed gamble
+ * is untouched — no flags/vars/items/exits/gating/scoring/reachable endings change.
  *
  * Locked here:
  *   (1) the base Entry Hall (bar not yet taken) carries the watchful side-cell cue;
@@ -46,9 +45,9 @@ function act(state: GameState, action: Action): GameState {
 
 const desc = (s: GameState): string => buildRpgObservation(index, s).description;
 
-// The cue must draw a player to the side cell (something present + worth heeding) and
-// must not collapse into a bare "empty side cell" reading.
-const CUE = /something lingers in there, watchful/;
+// The cue must draw a player to the side cell (safe/helpful counsel before the
+// north fight) and must not collapse into a bare "empty side cell" reading.
+const CUE = /old counsel, not an ambush|counsel before blood/;
 
 describe("bug_0170 — Entry Hall signposts the optional shade in the side cell", () => {
   it("the base description (bar not yet taken) telegraphs the watchful side cell", () => {
@@ -57,6 +56,8 @@ describe("bug_0170 — Entry Hall signposts the optional shade in the side cell"
     expect(s.current).toBe("entry_hall");
     expect(s.inventory).not.toContain("iron_bar");
     expect(desc(s)).toMatch(CUE);
+    expect(desc(s)).toContain("unwarned blade");
+    expect(desc(s)).not.toContain("something lingers");
   });
 
   it("the has_item:iron_bar variant ALSO telegraphs it (both renderings agree)", () => {
@@ -68,6 +69,8 @@ describe("bug_0170 — Entry Hall signposts the optional shade in the side cell"
     // The bar-variant still drops the stale-bar clause (bug_0028) AND keeps the cue.
     expect(desc(s)).toContain("scuffed bare");
     expect(desc(s)).toMatch(CUE);
+    expect(desc(s)).toContain("unwarned blade");
+    expect(desc(s)).not.toContain("something lingers");
   });
 
   it("the cue is text-only — taking the bar changes no game state", () => {
