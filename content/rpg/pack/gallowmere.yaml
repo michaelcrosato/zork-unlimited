@@ -284,7 +284,9 @@ objects:
     aliases: [sign, peat, trod, passage, hoofmarks, hoof marks, peat marks]
     description: >
       Large hoofprints in the wet peat, still dimpling fresh — the sow's passage north
-      into the gully, probably this morning. Broad-spaced hinds. She was moving fast.
+      into the gully, probably this morning. Broad-spaced hinds. She was moving fast,
+      but the useful reading is not on this trod; the charge angle will be clearer at
+      the churned kill-site to the east, before you commit yourself to the gully.
     takeable: false
 
   - id: spoor_ground
