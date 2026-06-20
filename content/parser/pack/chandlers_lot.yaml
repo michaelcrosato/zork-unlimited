@@ -45,8 +45,8 @@ rooms:
       - when: [{ has_flag: fraud_proved }]
         text: >
           The counting room, the contract fraud now proved in the chandler's
-          own book. The guildhall door north is the road that matters; the
-          dipping floor remains east, and the back lane runs south.
+          private adulteration book. The guildhall door north is the road that
+          matters; the dipping floor remains east, and the back lane runs south.
       - when: [{ has_item: inspector_lantern }]
         text: >
           A cramped counting room above the river stairs. A lamp contract lies
@@ -64,7 +64,7 @@ rooms:
           - has_item: adulteration_book
           - has_flag: fraud_proved
         locked_msg: >
-          Guildhall needs your inspector's lantern, the chandler's own book,
+          Guildhall needs your inspector's lantern, the private adulteration book,
           and a completed proof before the lamp lot can be stopped.
       - { direction: south, to: back_lane }
 
@@ -143,8 +143,8 @@ rooms:
     name: "The Guildhall Lobby"
     description: >
       The lobby outside the lamp contract clerk's room. River porters and
-      night-watch beadles argue over orders while you carry the chandler's own
-      book and the lantern that makes your inspection official.
+      night-watch beadles argue over orders while you carry the private
+      adulteration book and the lantern that makes your inspection official.
 
   - id: back_lane
     name: "The Back Lane"
