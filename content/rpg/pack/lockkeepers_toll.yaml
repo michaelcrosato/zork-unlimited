@@ -80,13 +80,15 @@ rooms:
     description: >
       A wet plank walk crosses above the downstream gate. Marrick, the
       lock-keeper's hired man, stands in the way with a belaying pin and the
-      patient look of someone paid to make delay seem official. The open river
-      lies north beyond him; the basin is south.
+      patient look of someone paid to make delay seem official. He taps a
+      tariff notice nailed to the rail before lifting the pin. The open river lies
+      north beyond him; the basin is south.
     variants:
       - when: [{ has_flag: marrick_gone }]
         text: >
           The gate walk, Marrick down against the rail. The open river lies
           north; the basin is south.
+    objects: [toll_notice]
     exits:
       - { direction: south, to: lock_basin }
       - direction: north
@@ -224,6 +226,20 @@ objects:
       A removable oak-and-iron handle for the sluice windlass, polished by a
       hundred wet hands.
     takeable: true
+
+  - id: toll_notice
+    name: "tariff notice"
+    aliases: [notice, tariff, toll notice, tariff notice, placard, rail notice]
+    description: >
+      A rain-blistered tariff notice nailed to the gate-walk rail. Marrick has
+      underlined the fee schedule so hard the paper has split.
+    takeable: false
+    read_text: >
+      The notice claims no barge may pass the lower cut under flood load except
+      by order of the lock-keeper. A smaller working note below it warns that
+      the toll chain must be opened by staged turns under high water; a rushed
+      pull can lock the chain or snap it outright. Marrick has circled only the
+      fee.
 
   - id: sluice_chain
     name: "sluice chain"
