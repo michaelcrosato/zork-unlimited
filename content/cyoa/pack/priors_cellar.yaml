@@ -53,8 +53,9 @@ scenes:
   # ── Priory gate (hub) ─────────────────────────────────────────────────────
   - id: priory_gate
     title: "The Priory Gate"
-    on_enter:
-      - set_quest_stage: { quest: the_priory, stage: arrived }
+    # No on_enter quest-stage write here: this is the hub, revisited after the
+    # ledger/cellar truth is known. Re-setting `arrived` here would clobber
+    # `truth_known` every time the player returns to decide what to do next.
     text: >
       Rain-dark walls and a lantern guttering above the arch. The road behind
       you is mud to the knee; the priory of Saint Maren is the only shelter for
