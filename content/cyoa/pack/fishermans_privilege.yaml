@@ -24,9 +24,12 @@
 #       witness; steadiness DC 11 tension beat) and report_contested
 #       (all six clues; jurisdictional referral) both award +20 and
 #       reach max score 50; each is a valid professional response
-#       given the evidence gathered; rule_legal (Pryce accepted,
-#       licence unverified) awards only +10 and reflects insufficient
-#       inquiry; dismiss_complaint awards 0.
+#       given the evidence gathered. The office prose distinguishes the
+#       direct-finding threshold from the fuller referral record so the
+#       player can see why Pryce's account and the Ardent muster still
+#       matter. rule_legal (Pryce accepted, licence unverified) awards
+#       only +10 and reflects insufficient inquiry; dismiss_complaint
+#       awards 0 and is available only before any inquiry step.
 #   (4) WARTIME NAVAL FICTION — Nine Years' War impressment dispute,
 #       coastal English market town, licensed fisherman's exemption,
 #       press gang muster notation anomaly; first CYOA set in a
@@ -82,23 +85,60 @@ scenes:
     variants:
       - when:
           - all_of:
+              - { has_flag: read_complaint }
+              - { has_flag: checked_license }
+              - { has_flag: heard_pryce }
+              - { has_flag: found_witness }
+              - { has_flag: read_act }
+              - { has_flag: checked_roster }
+        text: >
+          The full record is on your desk now: Agnes's complaint and the
+          missing countersignature, Gent's ledger, the Admiralty proclamation,
+          Tom Vear's witness account, Pryce's denial, and the Ardent muster
+          with its late-looking notation. You can write the direct finding
+          yourself, or send the whole jurisdictional conflict upward.
+      - when:
+          - all_of:
               - { has_flag: checked_license }
               - { has_flag: read_act }
               - { has_flag: found_witness }
+              - { not_flag: checked_roster }
         text: >
-          You have what you need. The harbour master's ledger, the Admiralty
-          proclamation, the chandler's man — each says the same thing in its
-          own voice: Robert Tyrell's licence was current when he was taken,
-          and the press was not made under lawful authority. What you do with
-          that finding is the question that remains.
+          You have enough for a direct finding. The harbour master's ledger,
+          the Admiralty proclamation, and the chandler's man each say Robert
+          Tyrell's licence was current and he was at lawful work when taken.
+          If you mean to refer the jurisdictional question instead, Pryce's
+          account and the Ardent muster entry still belong in the record.
       - when:
           - all_of:
               - { has_flag: checked_license }
               - { has_flag: heard_pryce }
+              - { has_flag: checked_roster }
+        text: >
+          Gent's ledger, Pryce's denial, and the Ardent muster are now in
+          conflict. The late-looking notation makes Pryce's record look less
+          certain than his voice. A direct finding still rests on the harbour
+          licence, the exemption rule, and a witness to Tyrell's lawful work;
+          a full referral also needs Agnes's formal complaint in the record.
+      - when:
+          - all_of:
+              - { has_flag: checked_license }
+              - { has_flag: heard_pryce }
+              - { not_flag: checked_roster }
         text: >
           The ledger says the licence was renewed in February. Pryce says it
           lapsed in March. Someone has the wrong date, and the difference
-          between them is a man in irons aboard HMS Ardent.
+          between them is a man in irons aboard HMS Ardent. The muster roll
+          he relied on is the next record to put beside his denial.
+      - when:
+          - all_of:
+              - { has_flag: heard_pryce }
+              - { not_flag: checked_roster }
+        text: >
+          Pryce's account is on the table: he says the licence lapsed and the
+          press was regular. If this is to become a contested record rather
+          than one officer's word against one complaint, the Ardent muster
+          entry still needs to be seen.
       - when: [ { has_flag: read_complaint } ]
         text: >
           Agnes Tyrell's complaint lies on your desk — her words through a
@@ -133,7 +173,7 @@ scenes:
         text: "Go to Chandler's Wharf, where the pressing took place."
         next: chandlers_wharf
       - id: rule_illegal
-        text: "Write a finding: the pressing was not lawful. File it with the fleet's agent."
+        text: "Steady your hand and write a finding: the pressing was not lawful. File it with the fleet's agent."
         conditions:
           - all_of:
               - { has_flag: checked_license }
@@ -156,7 +196,7 @@ scenes:
             - goto: ending_illegal
             - end_game: ending_illegal
       - id: report_contested
-        text: "Write a full inquiry report and refer the jurisdictional question to the Admiralty."
+        text: "Write a full inquiry report, including the warrant and muster defects, and refer the jurisdictional question to the Admiralty."
         conditions:
           - all_of:
               - { has_flag: read_complaint }
@@ -179,6 +219,14 @@ scenes:
         next: ending_legal
       - id: dismiss_complaint
         text: "Dismiss the complaint without investigation."
+        conditions:
+          - none_of:
+              - { has_flag: read_complaint }
+              - { has_flag: checked_license }
+              - { has_flag: read_act }
+              - { has_flag: heard_pryce }
+              - { has_flag: checked_roster }
+              - { has_flag: found_witness }
         next: ending_dismissed
 
   # ── The Harbour Master's Office ──────────────────────────────────────────
@@ -240,19 +288,19 @@ scenes:
       when you enter.
     choices:
       - id: question_pryce
-        text: "Ask Pryce his account of the pressing and on what basis he acted."
+        text: "Ask Pryce his account of the pressing, his warrant, and on what basis he acted."
         conditions: [ { not_flag: heard_pryce } ]
         effects:
           - set_flag: heard_pryce
-          - add_journal: "Pryce says Tyrell's licence lapsed in March of last year and was not renewed — that the man was an unlicensed fisherman, not exempt from impressment under any standing order. He says he checked the harbour master's roll himself before the tender went out and the roll he saw showed no renewal. When you tell him that Gent's ledger shows a February renewal, Pryce says harbour office records are not always timely and that the licence number Agnes gives is not the number in his copy of the roll. He says this without embarrassment."
+          - add_journal: "Pryce says Tyrell's licence lapsed in March of last year and was not renewed — that the man was an unlicensed fisherman, not exempt from impressment under any standing order. He says he checked the harbour master's roll himself before the tender went out and the roll he saw showed no renewal. When you tell him that Gent's ledger shows a February renewal, Pryce says harbour office records are not always timely and that the licence number Agnes gives is not the number in his copy of the roll. On the warrant's missing magistrate's countersignature, he says a naval press warrant needs no clerk's ink to make it Crown authority. He says this without embarrassment."
           - inc_var: { name: score, by: 5 }
         next: pressing_room
       - id: check_roster
-        text: "Ask to see the muster roll entry for Robert Tyrell."
+        text: "Ask to see the muster roll entry and warrant copy for Robert Tyrell."
         conditions: [ { not_flag: checked_roster } ]
         effects:
           - set_flag: checked_roster
-          - add_journal: "Pryce produces the Ardent's press muster without argument. The entry reads: 'Robert Tyrell, able seaman, not exempt, pressed 14th inst., licence lapsed.' The entry date is correct. 'Not exempt' and 'licence lapsed' are written in ink that is a slightly different shade from the surrounding entries and at a marginally different angle, as if added after the main entry was made rather than at the time of pressing."
+          - add_journal: "Pryce produces the Ardent's press muster without argument, with the warrant copy folded behind it. The entry reads: 'Robert Tyrell, able seaman, not exempt, pressed 14th inst., licence lapsed.' The entry date is correct. 'Not exempt' and 'licence lapsed' are written in ink that is a slightly different shade from the surrounding entries and at a marginally different angle, as if added after the main entry was made rather than at the time of pressing. The warrant copy is still bare of any magistrate's countersignature."
           - inc_var: { name: score, by: 5 }
         next: pressing_room
       - id: leave_anchor
@@ -297,8 +345,9 @@ endings:
       February last, current at the date of seizure; the 1696 Admiralty
       proclamation exempts current licence-holders taken while at their
       lawful work; a named witness places Tyrell fishing on licensed
-      grounds on the morning in question. The press was not made under
-      lawful authority.
+      grounds on the morning in question; and Pryce's warrant carries
+      no magistrate's countersignature to cure the local defect. The
+      press was not made under lawful authority.
 
       Whether the prize agent acts on it is beyond your authority to
       compel. You are the clerk. The clerk's job was to write what the
@@ -310,10 +359,11 @@ endings:
     text: >
       The inquiry report runs to four pages: the complaint, the harbour
       master's ledger, Pryce's account, the discrepancy in the muster
-      notation, the chandler's man's testimony, the Admiralty proclamation,
-      and the central question — whether a magistrate's clerk can compel
-      a naval officer to release a pressed man on the basis of a harbour
-      master's ledger and the word of a chandler's apprentice.
+      notation, the warrant copy without a magistrate's countersignature,
+      the chandler's man's testimony, the Admiralty proclamation, and the
+      central question — whether a magistrate's clerk can compel a naval
+      officer to release a pressed man on the basis of a harbour master's
+      ledger and the word of a chandler's apprentice.
 
       You reach no verdict. You set out the conflict of evidence and
       the jurisdictional question and refer both to the Admiralty Court
