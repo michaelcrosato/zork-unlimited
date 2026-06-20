@@ -104,6 +104,7 @@ const WIN_ROUTE = [
   "ask_bye",
   "go_east", // gallery
   "go_up", // chapel
+  "use_font", // press the third stone
   "go_north", // postern → night_street (win)
 ];
 

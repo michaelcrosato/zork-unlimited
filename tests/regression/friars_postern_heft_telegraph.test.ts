@@ -109,6 +109,7 @@ describe("bug_0245 — the key-ring's examine text telegraphs the optional heft/
       "ask_bye",
       "go_east", // gallery
       "go_up", // chapel
+      "use_font", // press the third stone
       "go_north", // through the postern -> win
     ]);
     expect(s.ended).toBe(true);

@@ -21,7 +21,7 @@
  *   (1) chapel base text (no knows_postern) contains "close and blind", not "proud";
  *   (2) chapel knows_postern variant shows "waiting for a slow hand", never "has swung";
  *   (3) font knows_postern variant shows "will swing", never "has worked";
- *   (4) win route intact: ending_free at 35/35 after learning the postern.
+ *   (4) win route intact: ending_free at 35/35 after learning and pressing the postern.
  */
 import { describe, it, expect } from "vitest";
 import { loadParserPackFile } from "../../src/parser/pack.js";
@@ -121,7 +121,7 @@ describe("bug_0306 — chapel and font describe the stone as ready, not already 
   });
 
   it("(4) win route intact: ending_free at 35/35 after the postern is known", () => {
-    const s = play(start(), [...TO_CHAPEL_KNOWING, "go_north"]);
+    const s = play(start(), [...TO_CHAPEL_KNOWING, "use_font", "go_north"]);
     expect(s.ended).toBe(true);
     expect(s.endingId).toBe("ending_free");
     expect(s.vars.score ?? 0).toBe(35);

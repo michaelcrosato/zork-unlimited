@@ -167,7 +167,11 @@ function optionId(a: Action): string {
     case "DROP":
       return `drop_${a.item}`;
     case "USE":
-      return a.item === a.target ? `use_${a.item}` : `use_${a.item}_on_${a.target}`;
+      return a.item === undefined
+        ? `use_${a.target}`
+        : a.item === a.target
+          ? `use_${a.item}`
+          : `use_${a.item}_on_${a.target}`;
     case "MOVE":
       return `go_${a.direction}`;
     case "TALK":
@@ -206,7 +210,9 @@ function relabelAction(a: Action, mapId: (id: string) => string): Action {
     case "UNLOCK":
       return { type: "UNLOCK", target: mapId(a.target), with: mapId(a.with) };
     case "USE":
-      return { type: "USE", item: mapId(a.item), target: mapId(a.target) };
+      return a.item === undefined
+        ? { type: "USE", target: mapId(a.target) }
+        : { type: "USE", item: mapId(a.item), target: mapId(a.target) };
     case "MOVE":
       return { type: "MOVE", direction: a.direction }; // vocabulary — untouched
     case "TALK":

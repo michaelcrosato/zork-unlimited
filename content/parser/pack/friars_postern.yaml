@@ -6,11 +6,13 @@
 # hints at puzzles you can also solve by poking the world). Here the talk is
 # LOAD-BEARING: the one way out of the gaol — the friars' walled-up postern — can
 # be learned ONLY from the old debtor, and the flag her telling sets (`knows_postern`)
-# is the sole key to the escape exit. No combination of items opens it. This is the
-# new breadth axis a blind playtest of the saturated content set kept pointing at
-# (alchemists_tower seed 47, this cycle: clarity 5/5, only ceiling "too short / wants
-# a fresh mechanic"); the dialogue engine + DIALOGUE_NONTERMINATING / settable-flag
-# soundness surfaces now face a pack where conversation is the spine, not a flourish.
+# is the sole key to finding the latch. Once she tells you, the last step is a
+# deliberate target-only `press stone font` action that opens the escape exit. No
+# combination of items opens it. This is the new breadth axis a blind playtest of the
+# saturated content set kept pointing at (alchemists_tower seed 47, this cycle:
+# clarity 5/5, only ceiling "too short / wants a fresh mechanic"); the dialogue engine
+# + DIALOGUE_NONTERMINATING / settable-flag soundness surfaces now face a pack where
+# conversation is the spine, not a flourish.
 #
 # The pack inverts the genre's reflex. A debtors' gaol the night before the watch
 # comes for you; the turnkey is drunk and his key-ring hangs free in his nook. That
@@ -25,9 +27,9 @@
 #
 #   cell ─N─ gallery ─W─ commons (old debtor; learn the postern)
 #   (start)    │ E: lodge (turnkey's pipe + key-ring)
-#   (clue)     │ up: chapel (font, alms-box; postern ─N*─ night_street = WIN)
+#   (clue)     │ up: chapel (font → press stone; alms-box; postern ─N*─ night_street = WIN)
 #              │ down: gatehouse (barred night-gate)
-#   (* postern exit gated on knows_postern — learned, never unlocked)
+#   (* postern exit gated on postern_opened, which requires knows_postern + pressing the font)
 #
 # Score (max 35, mirroring sealed_crypt's milestone economy so the curve reads
 # familiar): read the previous prisoner's wall-scratches (+5, the §17 clue that names
@@ -158,29 +160,37 @@ rooms:
       floor. The stones of the rear wall fit close and blind. The gallery stair
       drops away to the south.
     # Reactive prose (bug_0012 shape). Once the old woman has told you the latch's
-    # trick (`knows_postern`), the blind rear wall reads as the open postern and the
-    # north exit it gates appears. The base text deliberately gives NOTHING away — a
-    # player who has not had the telling sees only close-fit stone (the bug_0052 leak
-    # discipline: the way out is knowledge the world does not otherwise hand you).
+    # trick (`knows_postern`), the blind rear wall reveals the one stone worth pressing.
+    # Pressing it sets `postern_opened`, after which the north exit appears. The base
+    # text deliberately gives NOTHING away — a player who has not had the telling sees
+    # only close-fit stone (the bug_0052 leak discipline: the way out is knowledge the
+    # world does not otherwise hand you).
     variants:
+      - when: [{ has_flag: postern_opened }]
+        text: >
+          The friars' old chapel, kept now only by the dust. The dry stone font stands
+          against the north wall, and behind it the third stone has sunk inward on its
+          hidden latch, leaving the old postern ajar into the dark. The debtors' alms-box
+          is bolted to the floor beside it. The way out runs north; the gallery stair
+          drops away to the south.
       - when: [{ has_flag: knows_postern }]
         text: >
           The friars' old chapel, kept now only by the dust. The dry stone font
           stands against the north wall — and beside it, just as the old woman said,
           the third stone above its base stands a little proud of its fellows, waiting
           for a slow hand. The debtors' alms-box is bolted to the floor beside it. The
-          way out runs north; the gallery stair drops away to the south.
+          gallery stair drops away to the south.
     objects: [font, alms_box]
     exits:
       - { direction: south, to: gallery }
       - direction: north
         to: night_street
-        # Gated on KNOWLEDGE, not a key: the postern opens only once the old woman has
-        # told you its trick (the new dialogue-as-key axis). Hidden from the legal set
-        # until then (enumerateActions filters on exit.conditions), so the secret stays
-        # secret; the reactive room text above reveals it at the moment it becomes real.
-        conditions: [{ has_flag: knows_postern }]
-        locked_msg: "The rear wall is close-fit blind stone — if there's a way through here, you don't know it."
+        # Gated on the deliberate stone-press, not a key: the postern opens only once
+        # the old woman has told you its trick AND you act on it at the font. Hidden
+        # from the legal set until then (enumerateActions filters on exit.conditions),
+        # so the secret stays secret and the old woman's tactile instruction is a real
+        # puzzle step rather than decorative prose.
+        conditions: [{ has_flag: postern_opened }]
 
   - id: gatehouse
     name: "The Night-Gate"
@@ -286,17 +296,34 @@ objects:
 
   - id: font
     name: "stone font"
-    aliases: [font, basin, stones, stone]
+    aliases: [font, basin, stones, stone, third stone, rear wall, postern]
     description: "A dry baptismal font of grey stone against the chapel's rear wall; the wall-stones behind it fit close and even."
     # Reactive examine (bug_0033 shape), the object twin of the chapel room variant:
     # once the old woman's telling lands (`knows_postern`), examining the font names the
-    # proud third stone and the postern it works. The base text leaks nothing (bug_0052).
+    # proud third stone and the postern it works. Once pressed, it acknowledges the open
+    # latch. The base text leaks nothing (bug_0052).
     variants:
+      - when: [{ has_flag: postern_opened }]
+        text: >
+          A dry stone font against the rear wall. Behind it, the third stone is pushed
+          inward on its hidden latch, and the postern stands open into the dark beyond.
       - when: [{ has_flag: knows_postern }]
         text: >
           A dry stone font against the rear wall — and just as the old woman said, the
           third stone up from its base stands a little proud of its fellows. Pressed
           slow, as she promised, it will swing the postern open into the dark beyond.
+    interactions:
+      - verb: USE
+        target: font
+        command_verb: press
+        conditions: [{ has_flag: knows_postern }, { not_flag: postern_opened }]
+        effects:
+          - set_flag: postern_opened
+          - narrate: >
+              You set your palm to the third stone above the font and press slow and
+              even, exactly as the old woman said. For a long breath nothing answers;
+              then the stone sinks under your hand and a narrow postern gives inward
+              on black rain and open air.
 
   - id: alms_box
     name: "alms-box"
@@ -422,8 +449,9 @@ win_conditions:
   - id: through_postern
     # `visited: night_street` (locomotion win, like sealed_crypt's catacombs): the win
     # fires on stepping through the postern via the engine's post-action checkWin. The
-    # postern exit is itself gated on `knows_postern`, so the only way to satisfy this is
-    # to have had the telling — the conversation is genuinely on the win path.
+    # postern exit is itself gated on `postern_opened`, and that action is gated on
+    # `knows_postern`, so the only way to satisfy this is to have had the telling and
+    # then pressed the stone — the conversation is genuinely on the win path.
     conditions: [{ visited: night_street }]
     ending: ending_free
 

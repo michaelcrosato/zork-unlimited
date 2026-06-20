@@ -19,7 +19,7 @@ export type Action =
   | { type: "OPEN"; target: string }
   | { type: "CLOSE"; target: string }
   | { type: "UNLOCK"; target: string; with: string }
-  | { type: "USE"; item: string; target: string }
+  | { type: "USE"; item?: string; target: string }
   | { type: "TALK"; npc: string }
   | { type: "ASK"; npc: string; topic: string }
   | { type: "GIVE"; item: string; npc: string }

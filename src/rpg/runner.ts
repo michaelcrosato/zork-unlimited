@@ -21,6 +21,7 @@ import {
 } from "../parser/model.js";
 import {
   enumerateActions,
+  present,
   resolveParserAction,
   useInteraction,
   type ParserActionOption,
@@ -106,7 +107,8 @@ export function buildRpgRules(
           // retires the check after success (e.g. a one-shot lever) cannot be
           // re-fired by a forced/stale step, so it can never re-roll and
           // narrate a contradictory failure on an already-resolved puzzle.
-          if (!state.inventory.includes(action.item)) return null;
+          if (!present(index, state, action.target)) return null;
+          if (action.item !== undefined && !state.inventory.includes(action.item)) return null;
           if (!evalConditions(it.conditions, state)) return null;
           return resolveSkillCheck(state, it.skill_check, rngFor(state));
         }

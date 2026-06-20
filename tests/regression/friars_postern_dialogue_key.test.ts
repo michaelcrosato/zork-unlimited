@@ -8,7 +8,8 @@
  * OPTIONAL clue source (sealed_crypt's sexton only hints at puzzles you can also solve by
  * poking the world). This pack makes the talk LOAD-BEARING: the one way out of the gaol —
  * the friars' walled-up postern — can be learned ONLY from the old debtor, and the flag
- * her telling sets (`knows_postern`) is the SOLE key to the escape exit. No item opens it.
+ * her telling sets (`knows_postern`) is the SOLE key to finding the latch. The player must
+ * then press the font stone; no item opens it.
  *
  * The pack inverts the genre reflex: the OBVIOUS physical key (the drunk turnkey's ring)
  * opens only ruin — the barred night-gate, where the watch waits (a DEATH, ending_taken),
@@ -17,12 +18,12 @@
  * two BAD locks). Freedom costs no key: fetch the old woman's confiscated pipe, and be TOLD
  * the trick of the latch. Score (max 35) rides the milestones, the climactic +20 on the
  * LEARNING (the take_pipe dialogue node), so the perfect score coincides with knowing the
- * way out — one act before the visited win, the accepted sealed_crypt denouement shape.
+ * way out; the final physical stone-press is score-neutral.
  *
  * Locked here:
  *   (1) the honest WIN is reachable purely through the conversation, ending_free at 35/35;
- *   (2) the postern exit is dialogue-GATED — absent from the chapel's legal actions until
- *       `knows_postern` is set, present after (the conversation is genuinely on the win path);
+ *   (2) the postern is dialogue-GATED — absent until `knows_postern`; after the telling,
+ *       `press stone font` appears and only then opens the north exit;
  *   (3) the conversation is the ONLY key — standing in the chapel holding the turnkey's ring
  *       but WITHOUT the telling, the postern still will not open (no item substitutes for it);
  *   (4) the turnkey's ring opens only the two BAD ends: unlocking the alms-box ends at
@@ -96,7 +97,7 @@ describe("bug_0185 — The Friars' Postern: dialogue is the key", () => {
     let s = play(start(), LEARN_THE_POSTERN);
     expect(s.flags.knows_postern).toBe(true);
     expect(score(s)).toBe(35);
-    s = play(s, ["go_east", "go_up", "go_north"]); // gallery -> chapel -> postern
+    s = play(s, ["go_east", "go_up", "use_font", "go_north"]); // gallery -> chapel -> postern
     expect(s.ended).toBe(true);
     expect(s.endingId).toBe("ending_free");
     expect(score(s)).toBe(35);
@@ -116,11 +117,16 @@ describe("bug_0185 — The Friars' Postern: dialogue is the key", () => {
     // The postern is hidden: no go_north out of the chapel, even holding the key.
     expect(legalIds(armed)).not.toContain("go_north");
 
-    // Now learn it and return to the same chapel: the postern appears.
+    // Now learn it and return to the same chapel: the stone press appears, but the
+    // north exit still waits for that physical act.
     const informed = play(start(), [...LEARN_THE_POSTERN, "go_east", "go_up"]);
     expect(informed.current).toBe("chapel");
     expect(informed.flags.knows_postern).toBe(true);
-    expect(legalIds(informed)).toContain("go_north");
+    expect(legalIds(informed)).toContain("use_font");
+    expect(legalIds(informed)).not.toContain("go_north");
+    const opened = play(informed, ["use_font"]);
+    expect(opened.flags.postern_opened).toBe(true);
+    expect(legalIds(opened)).toContain("go_north");
   });
 
   it("(4) the turnkey's ring opens only ruin: the alms-box (greed) and the night-gate (death)", () => {

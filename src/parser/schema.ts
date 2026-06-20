@@ -128,7 +128,9 @@ export const InteractionSchema = z
     effects: z.array(EffectSchema).default([]),
     skill_check: SkillCheckSchema.optional(),
     // Optional natural verb for a USE puzzle, so the offered + typed command matches
-    // the verb the prose primes. It covers two shapes:
+    // the verb the prose primes. It covers three shapes:
+    //   - a target-only USE (the "touch/press/turn this fixture" pattern): the command
+    //     reads "<command_verb> <target>" ("press third stone");
     //   - a self-targeted USE (the "consume this thing" pattern — drink the phial,
     //     eat the bread): the command reads "<command_verb> <obj>" ("drink phial");
     //   - an item-on-target USE (the tool-on-thing pattern — tie the rope to the
@@ -161,13 +163,13 @@ export const InteractionSchema = z
   .strict()
   .superRefine((it, ctx) => {
     if (it.command_verb !== undefined) {
-      // command_verb names the natural verb for a USE puzzle — self-USE or
-      // item-on-target — so it requires a USE with both an item and a target.
-      if (it.verb !== "USE" || it.item === undefined || it.target === undefined) {
+      // command_verb names the natural verb for a USE puzzle — target-only,
+      // self-USE, or item-on-target — so it requires a USE with a target.
+      if (it.verb !== "USE" || it.target === undefined) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["command_verb"],
-          message: "command_verb is only valid on a USE interaction with an item and a target",
+          message: "command_verb is only valid on a USE interaction with a target",
         });
       } else if (BUILTIN_VERBS.has(it.command_verb)) {
         ctx.addIssue({
@@ -200,7 +202,16 @@ export const InteractionSchema = z
             'command_template is only for an item-on-target USE (item !== target); a self-USE shows a single noun (e.g. "drink phial")',
         });
       }
-      if (!it.command_template.includes("{item}") || !it.command_template.includes("{target}")) {
+      if (it.item === undefined || it.target === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["command_template"],
+          message: "command_template requires both an item and a target",
+        });
+      } else if (
+        !it.command_template.includes("{item}") ||
+        !it.command_template.includes("{target}")
+      ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["command_template"],

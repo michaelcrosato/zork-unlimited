@@ -52,7 +52,7 @@ const objName = (index: ParserIndex, state: GameState, id: string): string => {
 };
 
 /** True if `id` is reachable for the player right now (held or visible in the room). */
-function present(index: ParserIndex, state: GameState, id: string): boolean {
+export function present(index: ParserIndex, state: GameState, id: string): boolean {
   if (state.inventory.includes(id)) return true;
   return visibleObjectIds(index, state, state.current).includes(id);
 }
@@ -62,7 +62,7 @@ function present(index: ParserIndex, state: GameState, id: string): boolean {
 export function useInteraction(
   index: ParserIndex,
   target: string,
-  item: string,
+  item?: string,
 ): Interaction | undefined {
   return index.objects
     .get(target)
@@ -180,9 +180,11 @@ export function resolveParserAction(
     }
     case "USE": {
       const it = useInteraction(index, action.target, action.item);
-      if (!it || !state.inventory.includes(action.item) || !present(index, state, action.target))
-        return null;
-      return { conditions: [{ has_item: action.item }, ...it.conditions], effects: it.effects };
+      if (!it || !present(index, state, action.target)) return null;
+      if (action.item !== undefined && !state.inventory.includes(action.item)) return null;
+      const itemConditions: Condition[] =
+        action.item === undefined ? [] : [{ has_item: action.item }];
+      return { conditions: [...itemConditions, ...it.conditions], effects: it.effects };
     }
     case "MOVE": {
       const room = index.rooms.get(here);
@@ -329,15 +331,20 @@ export function enumerateActions(index: ParserIndex, state: GameState): ParserAc
     push(option(index, state, `drop_${item}`, `drop ${oName}`, { type: "DROP", item }));
   }
 
-  // USE interactions across the pack whose item is held and target is present.
+  // USE interactions across the pack whose target is present and whose optional item is held.
   // A self-targeted USE (item === target) is the "consume this thing" pattern —
   // drink the phial, eat the bread — and reads as `use <obj>`, not the nonsensical
   // `use <obj> on <obj>`.
   for (const o of index.pack.objects) {
     for (const it of o.interactions) {
-      if (it.verb !== "USE" || it.item === undefined || it.target === undefined) continue;
-      const selfUse = it.item === it.target;
-      const id = selfUse ? `use_${it.item}` : `use_${it.item}_on_${it.target}`;
+      if (it.verb !== "USE" || it.target === undefined) continue;
+      const selfUse = it.item !== undefined && it.item === it.target;
+      const id =
+        it.item === undefined
+          ? `use_${it.target}`
+          : selfUse
+            ? `use_${it.item}`
+            : `use_${it.item}_on_${it.target}`;
       // A USE may declare a natural verb (command_verb) so the listed command matches
       // the prose that primes it; the id stays verb-agnostic and stable. A self-USE
       // reads "<verb> <obj>" ("drink black phial"). An item-on-target USE reads via
@@ -345,20 +352,23 @@ export function enumerateActions(index: ParserIndex, state: GameState): ParserAc
       // the word order/preposition match too, falling back to "<verb> <item> on
       // <target>" when no template is given, or the generic "use ... on ..." with no
       // command_verb at all.
-      const itemName = objName(index, state, it.item);
+      const itemName = it.item === undefined ? "" : objName(index, state, it.item);
       const targetName = objName(index, state, it.target);
-      const command = selfUse
-        ? `${it.command_verb ?? "use"} ${itemName}`
-        : it.command_verb !== undefined
-          ? (it.command_template ?? `${it.command_verb} {item} on {target}`)
-              .replace("{item}", itemName)
-              .replace("{target}", targetName)
-          : `use ${itemName} on ${targetName}`;
-      const opt = option(index, state, id, command, {
-        type: "USE",
-        item: it.item,
-        target: it.target,
-      });
+      const command =
+        it.item === undefined
+          ? `${it.command_verb ?? "use"} ${targetName}`
+          : selfUse
+            ? `${it.command_verb ?? "use"} ${itemName}`
+            : it.command_verb !== undefined
+              ? (it.command_template ?? `${it.command_verb} {item} on {target}`)
+                  .replace("{item}", itemName)
+                  .replace("{target}", targetName)
+              : `use ${itemName} on ${targetName}`;
+      const action: Action =
+        it.item === undefined
+          ? { type: "USE", target: it.target }
+          : { type: "USE", item: it.item, target: it.target };
+      const opt = option(index, state, id, command, action);
       // Surface the rolled skill + difficulty + die type when this USE is a skill check,
       // so the listed command reads as the intentional d20 roll it is (bug_0274). `die`
       // surfaces the ceiling so the check never looks impossible (bug_0311). Never branch
