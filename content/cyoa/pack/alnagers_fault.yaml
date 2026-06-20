@@ -78,6 +78,17 @@ scenes:
     variants:
       - when:
           - all_of:
+              - { has_flag: checked_register }
+              - { has_flag: heard_ned }
+              - { has_flag: found_seal_anomaly }
+        text: >
+          Bassett stands to the side of your table, hat in hand, while the
+          register, Ned's account, and the too-pale seal now make a second
+          case beside the short cloth: the prior alnage itself may have failed.
+          You have enough to refer the matter to the Guild court if you will not
+          condemn him on the cloth's evidence alone.
+      - when:
+          - all_of:
               - { has_flag: found_short }
               - { has_flag: confirmed_measure }
               - { has_flag: found_seal_anomaly }
@@ -310,6 +321,19 @@ endings:
       prior session should have left you. The queue moves forward.
   - id: ending_corrupted
     title: "A Consideration Accepted"
+    variants:
+      - when:
+          - not_flag: confirmed_measure
+        text: >
+          The coin is small — not enough to notice in a week's reckoning — and
+          Bassett's hand is quick. You pass the cloth without laying the ell-rod
+          against it. The stamp goes down on a bolt whose seal is not what it
+          claims to be, and whose breadth you have chosen not to know.
+
+          The queue moves forward. The cloth will sell at standard price. If it
+          measures short in the buyer's hands, someone down the chain will know
+          they were cheated, and they will not know by whom. You will ring no
+          bell over this. You have not measured it, and now you will not.
     text: >
       The coin is small — not enough to notice in a week's reckoning — and
       Bassett's hand is quick. You pass the cloth. The stamp goes down on a
@@ -322,6 +346,21 @@ endings:
       bell over this. But you know what the rod said.
   - id: ending_dismissed
     title: "The Queue Moving"
+    variants:
+      - when:
+          - all_of:
+              - { has_flag: confirmed_measure }
+              - { has_flag: found_seal_anomaly }
+        text: >
+          You return the seal and tell Ned the complaint is noted for the ordinary
+          review. Bassett walks out with his cloth. The session proceeds.
+
+          But this is no longer a doubtful complaint you have waved away to keep
+          the queue moving. You have measured the cloth yourself; the rod said
+          twenty-eight and a half inches, and the wax did not match its date.
+          The register will show that you saw enough to know better. The
+          measurement you chose not to enter will not trouble the record today,
+          but it will trouble your office.
     text: >
       You return the seal and tell Ned the complaint is noted for the ordinary
       review. Bassett walks out with his cloth. The session proceeds.
