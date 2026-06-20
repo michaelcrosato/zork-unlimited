@@ -216,9 +216,14 @@ objects:
       A heavy cloth purse on the corner of the table, tied shut. A loose leaf is
       tucked into the knot: names, dates, and amounts — six months of side-payments,
       each in Hayman's hand. A record of what was given and to whom, kept for mutual
-      security. Not safe to leave behind; not safe to take.
-    # Bug_0123: the examine makes clear what this is before TAKE fires end_game.
-    # The player knows it is bribery money before they pocket it. No ambush.
+      security. The leaf is evidence; the purse is bait. Leave the money where it lies.
+      Pocket it, and Hayman's side can name you as bought before you ever reach the board.
+    read_text: >
+      The loose leaf names six months of side-payments, all in Hayman's hand. It is the
+      record you need to cite; the coin is the trap. Leave the purse untouched and carry
+      the case forward another way.
+    # Bug_0381: the player can read the loose-leaf evidence without pocketing the bribe,
+    # and TAKE is clearly framed as taking money, not collecting evidence.
     takeable: true
     take_effects:
       - narrate: >
