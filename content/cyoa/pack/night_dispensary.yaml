@@ -284,8 +284,13 @@ endings:
     text: >
       You measure out the two drams, seal the paper, and name your price.
       He pays without a word and pockets the packet. The door closes behind
-      him. The street outside is dark. You record the sale in the ledger and
-      return to the stool by the lamp.
+      him, and the carriage takes him back toward Wick Lane with enough white
+      powder in his coat to quiet anything he cares to quiet.
+
+      You record the sale in the ledger beneath older lines you did not turn
+      back to read. In the morning, if a cup is sweetened or a witness fails to
+      wake, there will be a lawful entry in your hand and nothing else: Cole,
+      V. — white arsenic, two drams, pest control.
   - id: ending_refused
     title: "Declined"
     variants:
