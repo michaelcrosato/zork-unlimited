@@ -36,7 +36,8 @@
 #
 # Score (max 35):
 #   +5  read the cellarman's note    (two-source §17 clue: oil in east store, deed-box
-#                                     in vault, no naked flame near the old spirit-cask)
+#                                     in vault, do not open the cracked spirit-cask
+#                                     under flame)
 #   +10 light the lamp               (enabling step — wine_vault opens, spirit_cask visible)
 #   +20 take the deed-box            (climax)
 #
@@ -48,9 +49,9 @@
 # Both bad forks are telegraphed in place before they can be triggered (bug_0123):
 #   • ending_absconded: cash-box examine names the innkeeper's coin and says to
 #     take it is to make a different choice than the one you came for.
-#   • ending_ignited: note AND oil_store warning board both say "no naked flame
-#     near the spirit-cask"; the spirit_cask examine repeats the smell-warning in
-#     the dark AND shows the board explicitly once lit.
+#   • ending_ignited: note AND oil_store warning board both say not to open the
+#     cracked spirit-cask under flame; the spirit_cask examine repeats the
+#     smell-warning in the dark AND shows the board explicitly once lit.
 #
 # The score tops out at 35 on TAKE deed-box, one step before the win — the player
 # walks back to coal_yard and north to inn_passage still holding 35/35. This is
@@ -216,7 +217,7 @@ rooms:
           A low-ceilinged store, shelves stacked with lamp oil and wicking. At the
           back, pushed against the wall, a cask lists on its side, its bung half-out
           and a sweetish smell seeping out around it. The cellarman's board is nailed
-          above it: "OLD SPIRIT — SEAL CRACKED — NO NAKED FLAME WHILE CASK STANDS."
+          above it: "OLD SPIRIT — SEAL CRACKED — DO NOT DRAW THE BUNG UNDER FLAME."
           An oil-jar sits on the low shelf just inside the door.
     objects: [oil_jar, spirit_cask]
     exits:
@@ -249,7 +250,8 @@ objects:
     read_text: >
       The cellarman's block hand: "LAMP OIL IN THE OIL-STORE (EAST). DEED-BOX AND
       CASH IN THE VAULT (WEST). OLD SPIRIT-CASK AT THE BACK OF THE OIL-STORE —
-      SEAL IS CRACKED — NO NAKED FLAME, DO NOT OPEN UNDER ANY CIRCUMSTANCES."
+      SEAL IS CRACKED — DO NOT DRAW THE BUNG UNDER FLAME. DO NOT OPEN UNDER ANY
+      CIRCUMSTANCES."
     interactions:
       - verb: READ
         target: cellarman_note
@@ -364,8 +366,8 @@ objects:
         text: >
           A cask pushed against the back wall, its bung cracked and listing to one side.
           The cellarman's board is nailed above it: "OLD SPIRIT — SEAL CRACKED —
-          NO NAKED FLAME WHILE CASK STANDS." The sweet fumes seep out around the bung
-          and sit in the close air of the store.
+          DO NOT DRAW THE BUNG UNDER FLAME." The sweet fumes seep out around the
+          bung and sit in the close air of the store.
     # OPEN the cask → DEATH. Only available when lamp_lit — the player can read the
     # warning board and has the cellarman's note; to open it is a deliberate informed
     # choice (bug_0123 never-an-ambush: telegraphed twice before available, once by
