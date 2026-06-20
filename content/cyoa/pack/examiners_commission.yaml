@@ -124,6 +124,21 @@ scenes:
           names, the correspondence, the solicitor's account, Henry Alderton's
           own deposition. The picture is complete. The finding you return now
           will stand in the court record.
+      - when:
+          - any_of:
+              - has_flag: found_paper_anachronism
+              - has_flag: found_ink_aging
+              - has_flag: found_dead_witness
+              - has_flag: found_letterform_mismatch
+              - has_flag: heard_solicitor
+              - has_flag: heard_henry_discrepancy
+        text: >
+          The disputed will no longer lies before you as an untested paper.
+          Your notes have begun to separate material proof, witness records,
+          correspondence, solicitor evidence, and Henry Alderton's own account.
+          The commission table is ready for any finding your present record can
+          honestly support, though an incomplete record will leave narrower
+          remedies than a complete chain.
     text: >
       A small room off the main registry of the Prerogative Court of
       Canterbury, Doctors' Commons, London. October 1694. The registrar has
@@ -134,7 +149,8 @@ scenes:
       deposition. The commission appointing you examiner rests on top. A
       duty-stamp press stands on the shelf by the door — the Stamp Act took
       effect in September, and the court has used stamped paper for all
-      instruments since.
+      instruments since. Once your notes can support a finding, the commission
+      table waits.
     choices:
       - id: examine_paper
         text: "Examine the paper of the disputed will."
@@ -153,7 +169,7 @@ scenes:
           - inc_var: { name: score, by: 5 }
         next: registry_room
       - id: go_witness_records
-        text: "Examine the witness names against the parish burial registers."
+        text: "Check the witnesses and compare Mrs Alderton's correspondence."
         next: witness_records
       - id: go_solicitor
         text: "Speak with Francis Holt, Mrs Alderton's solicitor."
@@ -162,7 +178,15 @@ scenes:
         text: "Take Henry Alderton's examination in the deposition room."
         next: deposition_room
       - id: go_finding
-        text: "Issue your commission finding."
+        text: "Issue your commission finding once your notes can support it."
+        conditions:
+          - any_of:
+              - has_flag: found_paper_anachronism
+              - has_flag: found_ink_aging
+              - has_flag: found_dead_witness
+              - has_flag: found_letterform_mismatch
+              - has_flag: heard_solicitor
+              - has_flag: heard_henry_discrepancy
         next: commission_finding
 
   # ── Sub-scene: witness records ───────────────────────────────────────────
@@ -252,6 +276,56 @@ scenes:
   # ── Terminal: commission finding ─────────────────────────────────────────
   - id: commission_finding
     title: "The Commission Finding"
+    variants:
+      - when:
+          - all_of:
+              - has_flag: found_paper_anachronism
+              - has_flag: found_ink_aging
+              - has_flag: found_dead_witness
+              - has_flag: found_letterform_mismatch
+              - has_flag: heard_solicitor
+              - has_flag: heard_henry_discrepancy
+        text: >
+          The registry table holds a complete chain: the paper postdates the
+          will, the attestation ink is fresh, one witness was already dead, the
+          signature diverges from Mrs Alderton's letters, Holt confirms her
+          settled wishes and confinement, and Henry's deposition contradicts
+          the instrument. A criminal referral can rest on the full record.
+      - when:
+          - all_of:
+              - has_flag: found_paper_anachronism
+              - has_flag: found_dead_witness
+        text: >
+          The registry table already holds enough for a material rejection: the
+          paper did not exist when the will claims to have been signed, and one
+          named witness was dead before the stated execution date. That finding
+          can refuse probate. A criminal referral will be stronger if the ink,
+          correspondence, solicitor account, and deposition complete the
+          circumstances of the forgery.
+      - when:
+          - all_of:
+              - has_flag: found_paper_anachronism
+              - has_flag: heard_solicitor
+        text: >
+          The registry table holds a chronological case: the paper postdates
+          the will, and Holt's account makes Henry's signing story doubtful.
+          That can justify further examination, but a rejection or criminal
+          referral still needs harder witness, handwriting, ink, or deposition
+          proof.
+      - when:
+          - any_of:
+              - has_flag: found_paper_anachronism
+              - has_flag: found_ink_aging
+              - has_flag: found_dead_witness
+              - has_flag: found_letterform_mismatch
+              - has_flag: heard_solicitor
+              - has_flag: heard_henry_discrepancy
+        text: >
+          The registry table holds only fragments of the case. Your notes show
+          reason for suspicion, but not yet a record that can carry a serious
+          finding against the disputed will. Returning to the registry to
+          complete the record is the honest course unless you mean to leave the
+          matter undecided.
     text: >
       The registry table holds everything gathered under this commission. The
       court requires a finding: certify the disputed will as authentic, refer
@@ -285,7 +359,7 @@ scenes:
           - inc_var: { name: score, by: 20 }
         next: ending_rejected
       - id: refer_to_trial
-        text: "Refer to criminal trial — complete chain: paper, ink, witness, correspondence, solicitor, deposition."
+        text: "Refer the forgery for criminal trial."
         conditions:
           - all_of:
               - has_flag: found_paper_anachronism
@@ -298,7 +372,7 @@ scenes:
           - inc_var: { name: score, by: 20 }
         next: ending_trial
       - id: reconsider_finding
-        text: "Return to the papers — there is more to establish."
+        text: "Return to the registry and complete the record."
         next: registry_room
 
 endings:
