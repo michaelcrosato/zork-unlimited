@@ -395,7 +395,7 @@ objects:
     takeable: false
     interactions:
       # The exit skill_check — USE dark_lantern ON back_door (stealth DC 12).
-      # Success: slip_past set → east exit from back_court opens (no fight required).
+      # Success: slip_past set and move into back_court; east exit opens with no fight.
       # Failure: door_attempted set, no slip_past → must defeat Edgar in back_court.
       # One-shot: gated on not_flag door_attempted; both branches set door_attempted.
       - verb: USE
@@ -412,6 +412,7 @@ objects:
             - set_flag: slip_past
             - inc_var: { name: score, by: 10 }
             - set_quest_stage: { quest: pamphlet_retrieval, stage: door_cleared }
+            - goto: back_court
             - add_journal: >
                 The latch lifted without a sound. You eased through, closed it behind
                 you, and were in the court before Edgar Tew's lantern moved. (+10)
@@ -448,6 +449,7 @@ enemies:
       a lantern and a short staff. He is neither looking for trouble nor unprepared for
       it. He has made this check a hundred nights and knows which sounds belong here.
     room: back_court
+    conditions: [{ not_flag: slip_past }]
     hp: 12
     attack: 5
     defense: 2

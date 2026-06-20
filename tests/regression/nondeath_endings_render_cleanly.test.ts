@@ -52,7 +52,8 @@ import { join } from "node:path";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
 import { loadParserPackFile } from "../../src/parser/pack.js";
-import { indexParserPack, initStateForParserPack } from "../../src/parser/model.js";
+import { endingText, indexParserPack, initStateForParserPack } from "../../src/parser/model.js";
+import type { ParserEnding } from "../../src/parser/schema.js";
 import { buildParserRules } from "../../src/parser/runner.js";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
@@ -87,15 +88,11 @@ function fixedSeqRng(fracs: number[]): Rng {
 const bestRng = (): Rng => fixedSeqRng([HIGH, LOW]);
 const worstRng = (): Rng => fixedSeqRng([LOW, HIGH]);
 
-type NonDeathEnding = { id: string; title: string; text: string };
+type NonDeathEnding = ParserEnding;
 
 /** The non-death endings a pack declares (parser/RPG carry `death`, defaulted false). */
-function nonDeathEndingsOf(
-  endings: { id: string; title: string; text: string; death?: boolean }[],
-) {
-  return endings
-    .filter((e) => e.death !== true)
-    .map((e) => ({ id: e.id, title: e.title, text: e.text }));
+function nonDeathEndingsOf(endings: ParserEnding[]) {
+  return endings.filter((e) => e.death !== true);
 }
 
 /** Run the solver and return the first terminal witness state for each non-death ending id. */
@@ -123,22 +120,26 @@ function nonDeathWitnesses(
 function assertCleanNonDeathRender(
   obs: ReturnType<typeof buildParserObservation>,
   def: NonDeathEnding,
+  state: GameState,
   maxScore: number,
 ): void {
   expect(obs.ended).toBe(true);
   expect(obs.ending_id).toBe(def.id);
 
-  // The structured ending block every renderer reads carries the non-death ending faithfully.
+  const resolvedText = endingText(def, state);
+
+  // The structured ending block every renderer reads carries the resolved non-death
+  // epilogue faithfully, including route-specific reactive variants.
   expect(obs.ending).not.toBeNull();
   expect(obs.ending!.id).toBe(def.id);
   expect(obs.ending!.death).toBe(false);
   expect(obs.ending!.title).toBe(def.title);
-  expect(obs.ending!.text).toBe(def.text);
+  expect(obs.ending!.text).toBe(resolvedText);
 
   // Player-visible fields: at the ending the player is shown the ending's TITLE (not the
   // room name) and the epilogue prose leads the description (not the room's static text).
   expect(obs.title).toBe(def.title);
-  expect(obs.description.startsWith(def.text.trimEnd())).toBe(true);
+  expect(obs.description.startsWith(resolvedText.trimEnd())).toBe(true);
 
   // Score closure rides the description only; the canonical ending text stays pure.
   expect(obs.ending!.text).not.toContain("Final score");
@@ -193,7 +194,12 @@ describe("every non-death ending of every parser/RPG pack renders cleanly when r
         const s = witness.get(def.id);
         expect(s, `non-death ending ${def.id} never reached by concrete play`).toBeDefined();
         if (!s) continue;
-        assertCleanNonDeathRender(buildParserObservation(index, s), def, pack.meta.max_score ?? 0);
+        assertCleanNonDeathRender(
+          buildParserObservation(index, s),
+          def,
+          s,
+          pack.meta.max_score ?? 0,
+        );
       }
     });
   }
@@ -219,7 +225,12 @@ describe("every non-death ending of every parser/RPG pack renders cleanly when r
         expect(s, `non-death ending ${def.id} never reached by concrete play`).toBeDefined();
         if (!s) continue;
         // RPG reuses the parser observation builder (cf. bug_0221).
-        assertCleanNonDeathRender(buildParserObservation(index, s), def, pack.meta.max_score ?? 0);
+        assertCleanNonDeathRender(
+          buildParserObservation(index, s),
+          def,
+          s,
+          pack.meta.max_score ?? 0,
+        );
       }
     });
   }

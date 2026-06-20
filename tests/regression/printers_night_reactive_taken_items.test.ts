@@ -95,4 +95,29 @@ describe("printers_night rooms react to taken tools and papers", () => {
     expect(desc(s)).not.toContain("Pinned to the board above the bench");
     expect(lookNarration(s)).toBe(desc(s));
   });
+
+  it("moves through the back door on a stealth success and retires Edgar", () => {
+    const s = play(initStateForRpgPack(index, 7), [
+      "take_dark_lantern",
+      "go_east",
+      "read_proof_schedule",
+      "go_east",
+      "read_pamphlet_proof",
+      "take_type_block",
+      "use_dark_lantern_on_back_door",
+    ]);
+    const obs = buildRpgObservation(index, s);
+
+    expect(s.current).toBe("back_court");
+    expect(s.flags["slip_past"]).toBe(true);
+    expect(obs.description).toContain("Edgar Tew's lantern moves away");
+    expect(obs.enemies_present).toEqual([]);
+    expect(obs.available_actions.map((a) => a.id)).not.toContain("attack_edgar_tew");
+    expect(obs.available_actions.map((a) => a.id)).toContain("go_east");
+
+    const escaped = play(s, ["go_east"]);
+    expect(escaped.ended).toBe(true);
+    expect(escaped.endingId).toBe("ending_retrieved");
+    expect(escaped.vars.score).toBe(50);
+  });
 });
