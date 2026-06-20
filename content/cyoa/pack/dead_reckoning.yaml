@@ -119,7 +119,8 @@ scenes:
           — with Hale's reckoning still in your head: land two days east on the set of
           the current, if only the course is held and the water made to reach it. The
           arithmetic the bosun is not making. Forward the hands watch you from the
-          boat's thin shade with cracked lips; below, the girl waits. Nothing of it is
+          boat's thin shade with cracked lips; below, the girl remains only a name the
+          men have put to their fear, not a voice you have heard. Nothing of it is
           decided yet. The key is still round your neck, and you will have to go back.
       - when:
           - quest_stage: { quest: the_reckoning, stage: at_the_cask }
@@ -164,10 +165,10 @@ scenes:
           deck is a different place to stand for it: land two days east on the set of the
           current, near enough for a boat that holds her course and stretches what water is
           left to reach it. Forward the three hands sit in the boat's thin shade and watch
-          you with cracked lips; below, the girl they call the Jonah waits to learn what you
-          mean to do. The water will not last another two days shared five ways. Nothing of
-          it is decided yet — but you know now that the sea is not asking for a life, only
-          for nerve, and a fair hand with the cask.
+          you with cracked lips; below, the girl they call the Jonah is still unheard by
+          you, only the shape the men have given their fear. The water will not last another
+          two days shared five ways. Nothing of it is decided yet — but you know now that the
+          sea is not asking for a life, only for nerve, and a fair hand with the cask.
       - when:
           - quest_stage: { quest: the_reckoning, stage: adrift }
           - has_flag: knows_pilot
