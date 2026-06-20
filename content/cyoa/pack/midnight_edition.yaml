@@ -17,9 +17,10 @@
 # page to press, or pull it), but WHAT YOU KNOW WHEN YOU PULL THE LEVER is what the night
 # turns on:
 #   * verify FIRST — read the letter (→ read_letter), take the spare key from the desk,
-#     unlock the editor's safe (→ safe_open), and read the suppressed inspector's report
-#     inside (→ knows_proof) — THEN print  → ending_vindicated (the considered win: the
-#     truth holds because it is PROVEN, and Garrow cannot sue a signed government report)
+#     unlock the editor's safe (→ safe_open), read the suppressed inspector's report
+#     inside (→ knows_proof), and bar the alley door against Garrow's wreckers
+#     (→ door_barred) — THEN print  → ending_vindicated (the considered win: the
+#     truth holds because it is PROVEN, and the press survives long enough to run it)
 #   * print on the source's word ALONE, unverified                → ending_libel (a careless
 #     ruin: one charge in the letter is wrong, Garrow sues for libel, the paper is broken
 #     and an innocent clerk wrongly named — courage without diligence does harm)
@@ -41,8 +42,10 @@
 # before they fire. The letter itself warns one of its charges is unproven and that the
 # proof is in Garrow's own suppressed report; the press-floor prose names plainly, when you
 # hold only the source's word, that printing now is a gamble on a man's name; and the alley
-# scene shows the men and their hammers before the door is opened. No route is a curiosity
-# trap; each terminal is a turn the PLAYER elects with the cost in front of them.
+# scene shows the men and their hammers before the door is opened. Once proof is in hand,
+# the press floor also names the remaining physical risk if the door is not barred: the
+# story is true, but the men can still break the press before it runs. No route is a
+# curiosity trap; each terminal is a turn the PLAYER elects with the cost in front of them.
 #
 # Structure mirrors wreckers_light's proven, bot-completable skeleton (hub + sub-scenes +
 # direct ending links + a read-chain knowledge flag that reframes the climax), reskinned to
@@ -96,7 +99,8 @@ meta:
   # surpassed. Best path, traced explicitly (= max_score):
   #   read_letter (+5, story in hand)  → go_office → search_desk (+5, proof sought: key found)
   #   → open_safe (+5, safe open)      → read_report (+10, suppressed proof read, knows_proof)
-  #   → leave_office → go_press → print_verified (+10, the VERIFIED edition runs — the win)
+  #   → leave_office → go_alley → bar_door (door_barred, +0) → go_press
+  #   → print_verified (+10, the VERIFIED and secured edition runs — the win)
   #   total 5 + 5 + 5 + 10 + 10 = 35
   max_score: 35
 
@@ -307,18 +311,31 @@ scenes:
       cost a sleeping town its benefactor. One column, one pull of the bed-lever, decides
       which of the two the morning carries. The stairs climb back up to the composing room.
     variants:
-      # Most-specific first: holding the proof reframes the lever as a sure thing, not a
-      # gamble; holding only the source's word names plainly that printing now risks a man's
-      # name on one unproven charge (the bug_0123 "never an ambush" telegraph in the moment).
+      # Most-specific first: holding the proof AND barring the door reframes the lever as a
+      # sure thing, not a gamble; holding proof without the barred door now names the remaining
+      # physical risk from Garrow's men, so the alley threat pays off structurally instead of
+      # evaporating once the report is read. Holding only the source's word names plainly that
+      # printing now risks a man's name on one unproven charge (the bug_0123 "never an ambush"
+      # telegraph in the moment).
+      - when: [{ has_flag: knows_proof }, { has_flag: door_barred }]
+        text: >
+          The flat-bed press fills the floor, the front-page forme locked but for the lead
+          column. You carry the inspector's signed report now, and with it the story is not
+          an accusation but a proven fact — Garrow cannot sue what a Crown seal already
+          condemned. The alley door is barred above you, the men with hammers held out long
+          enough for the bed to roll. Set THIS column and pull the lever, and the truth runs
+          ten thousand times before he is out of bed, and stands. The safe set-matter — the
+          gentle, forgetful notice — waits in the galley beside it for the coward's hand.
+          The stairs climb back up to the composing room.
       - when: [{ has_flag: knows_proof }]
         text: >
           The flat-bed press fills the floor, the front-page forme locked but for the lead
           column. You carry the inspector's signed report now, and with it the story is not
           an accusation but a proven fact — Garrow cannot sue what a Crown seal already
-          condemned. Set THIS column and pull the lever, and the truth runs ten thousand
-          times before he is out of bed, and stands. The safe set-matter — the gentle,
-          forgetful notice — waits in the galley beside it for the coward's hand. The stairs
-          climb back up to the composing room.
+          condemned. But the boots above have not been answered; if the alley door is left
+          to them, four men with hammers can still stop a true story by breaking the machine
+          that must carry it. The stairs climb back up to the composing room, and past it to
+          the inking-room door.
       - when: [{ has_flag: read_letter }]
         text: >
           The flat-bed press fills the floor, the front-page forme locked but for the lead
@@ -330,8 +347,8 @@ scenes:
           waits in the galley beside it. The stairs climb back up to the composing room.
     choices:
       - id: print_verified
-        text: "Set the proven story and pull the bed-lever — run the front page."
-        conditions: [{ has_flag: knows_proof }]
+        text: "Set the proven story behind the barred door and pull the bed-lever — run the front page."
+        conditions: [{ has_flag: knows_proof }, { has_flag: door_barred }]
         effects:
           # Score +10: the considered win — the VERIFIED edition runs, the truth unbreakable.
           # One-shot — `next` ends the game at ending_vindicated, so the press can't roll
@@ -497,12 +514,14 @@ endings:
       You set the column with the inspector's seal in it and throw your weight on the
       bed-lever, and the press takes the page and begins to breathe — once, twice, then the
       long sure roar of ten thousand impressions, the truth multiplying faster than any man
-      can buy it back. By the time Garrow's lawyers are awake the edition is on every step
-      and in every hand, and there is nothing in it he can sue, because every word stands on
-      a Crown inspector's signature he himself acknowledged and could not bring himself to
-      burn. The three drowned men get their names said true at last, and the town that loved
-      its benefactor learns what the loving cost. You did not just have the courage to print
-      it. You did the work to make it unbreakable first — and that is why, this morning, it
+      can buy it back. Above you the barred alley door jumps once under a shoulder and holds,
+      and the men outside learn that a wrecking-bar is useless against a story already in
+      the street. By the time Garrow's lawyers are awake the edition is on every step and in
+      every hand, and there is nothing in it he can sue, because every word stands on a Crown
+      inspector's signature he himself acknowledged and could not bring himself to burn. The
+      three drowned men get their names said true at last, and the town that loved its
+      benefactor learns what the loving cost. You did not just have the courage to print it.
+      You did the work to make it unbreakable first — and that is why, this morning, it
       cannot be unsaid.
 
   - id: ending_libel

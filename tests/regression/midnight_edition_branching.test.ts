@@ -13,7 +13,8 @@
  * the winning and the losing print route (set the column, pull the bed-lever); what
  * decides the night is WHAT YOU KNOW WHEN YOU PULL IT:
  *   - verify first (read_letter → search_desk → open_safe → read_report ⇒ knows_proof),
- *     THEN print  → ending_vindicated (the considered win: the story is PROVEN, unsuable);
+ *     secure the alley door (door_barred), THEN print  → ending_vindicated
+ *     (the considered win: the story is PROVEN and the press survives to run it);
  *   - print on the source's word alone (no knows_proof)  → ending_libel (courage without
  *     diligence ruins an innocent and the paper);
  *   - pull the story  → ending_spiked (the complicit pole);
@@ -22,9 +23,10 @@
  * This test locks that thesis:
  *   (1) all four endings (vindicated / libel / spiked / silenced) are reachable & distinct;
  *   (2) the diligence fork is real and hinges on KNOWLEDGE, not a different lever — the
- *       press floor offers print_verified ONLY when knows_proof holds and print_unverified
- *       ONLY when it does not (mutually exclusive in the legal-action set), so a player who
- *       skipped the verify chain literally cannot reach ending_vindicated;
+ *       press floor offers print_verified ONLY when knows_proof AND door_barred hold, and
+ *       print_unverified ONLY when knows_proof does not (mutually exclusive in the legal-action
+ *       set), so a player who skipped the verify chain or left the alley unsecured cannot
+ *       reach ending_vindicated;
  *   (3) the proof is gated behind the read chain — search_desk is not offered until the
  *       letter is read (no reason to prise the desk otherwise), keeping vindicated behind
  *       genuine diligence rather than a lucky click;
@@ -66,7 +68,8 @@ const VERIFY = [
   "leave_office",
 ];
 
-const VINDICATED = [...VERIFY, "go_press", "print_verified"];
+const SECURE = ["go_alley", "bar_door"];
+const VINDICATED = [...VERIFY, ...SECURE, "go_press", "print_verified"];
 const LIBEL = ["go_press", "print_unverified"];
 const SPIKED = ["go_press", "spike_story"];
 const SILENCED = ["go_alley", "confront_men"];
@@ -79,25 +82,33 @@ describe("midnight_edition — four distinct endings are all reachable", () => {
   });
 });
 
-describe("midnight_edition — the diligence fork hinges on knowledge, not a different lever", () => {
-  it("the press floor offers print_verified XOR print_unverified, keyed on knows_proof", () => {
+describe("midnight_edition — the diligence fork hinges on knowledge and securing the press", () => {
+  it("the press floor offers print_verified only after proof and a barred alley door", () => {
     // Reached the press floor WITHOUT verifying: only the unverified print is on offer.
     const unverifiedFloor = play(["go_press"]);
     expect(actionIds(unverifiedFloor)).toContain("print_unverified");
     expect(actionIds(unverifiedFloor)).not.toContain("print_verified");
 
-    // Reached it AFTER the full verify chain: only the verified print is on offer.
-    const verifiedFloor = play([...VERIFY, "go_press"]);
-    expect(actionIds(verifiedFloor)).toContain("print_verified");
-    expect(actionIds(verifiedFloor)).not.toContain("print_unverified");
+    // Reached it after proof but before barring the door: the story is true, but the press
+    // is still physically exposed to the men with hammers.
+    const verifiedUnsecuredFloor = play([...VERIFY, "go_press"]);
+    expect(actionIds(verifiedUnsecuredFloor)).not.toContain("print_verified");
+    expect(actionIds(verifiedUnsecuredFloor)).not.toContain("print_unverified");
+
+    // Reached it AFTER the full verify chain and barring the door: only verified print is live.
+    const verifiedSecuredFloor = play([...VERIFY, ...SECURE, "go_press"]);
+    expect(actionIds(verifiedSecuredFloor)).toContain("print_verified");
+    expect(actionIds(verifiedSecuredFloor)).not.toContain("print_unverified");
 
     // Both states can still spike — the complicit pole needs no knowledge.
     expect(actionIds(unverifiedFloor)).toContain("spike_story");
-    expect(actionIds(verifiedFloor)).toContain("spike_story");
+    expect(actionIds(verifiedSecuredFloor)).toContain("spike_story");
   });
 
   it("the same intent (print) yields the win only with the proof, ruin without it", () => {
-    expect(endId(play([...VERIFY, "go_press", "print_verified"]))).toBe("ending_vindicated");
+    expect(endId(play([...VERIFY, ...SECURE, "go_press", "print_verified"]))).toBe(
+      "ending_vindicated",
+    );
     expect(endId(play(["go_press", "print_unverified"]))).toBe("ending_libel");
   });
 });

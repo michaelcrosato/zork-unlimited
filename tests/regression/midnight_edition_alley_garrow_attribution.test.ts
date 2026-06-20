@@ -90,7 +90,7 @@ describe("bug_0284 — alley_door base text must not name Garrow before letter i
     expect(ids).toContain("steady_and_bar");
     expect(ids).toContain("bar_door");
 
-    // Full vindicated route unaffected.
+    // Full vindicated route remains reachable after the press is secured.
     const final = play([
       "read_letter",
       "go_office",
@@ -98,6 +98,8 @@ describe("bug_0284 — alley_door base text must not name Garrow before letter i
       "open_safe",
       "read_report",
       "leave_office",
+      "go_alley",
+      "bar_door",
       "go_press",
       "print_verified",
     ]);
