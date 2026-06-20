@@ -1,0 +1,26 @@
+id: bug_0391
+pack: cold_forge_v1
+title: "underprepared sentinel death did not point back to missed preparation"
+severity: moderate
+scene: bellows_walk
+reported_by: blind_playtest_20260620T154326Z_cold_forge_seed7
+
+symptom: >
+  The blind playtester noted that an impatient player can walk straight into the
+  slag sentinel without the spirit's attack counsel or the founder's plate, die,
+  and receive a generic death epilogue. The fight is intentionally dangerous, but
+  the recovery hint did not tell the player which preparation mattered.
+
+root_cause: >
+  Cold Forge already tracked both preparation levers (`heard_sentinel` for the
+  spirit's +2 attack counsel and `plate_donned` for the founder's +2 defense), but
+  the death ending only reacted to founder lore. It did not have a variant for
+  deaths while missing combat preparation.
+
+fix: >
+  `ending_fallen` now carries the preparation hint in its base death epilogue,
+  while preserving the existing founder-specific reactive variant for players who
+  found that lore. The failed route still teaches the player to seek the spirit's
+  warmth and the dead master's cold-iron plate before trying again.
+
+tests: tests/regression/cold_forge_underprepared_death_hint.test.ts
