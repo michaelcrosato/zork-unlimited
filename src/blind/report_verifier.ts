@@ -21,11 +21,21 @@ const MCP_FAILURE_PATTERNS: ReadonlyArray<RegExp> = [
   /\bwithout (?:the|those|these) tools\b/i,
 ];
 
+function ratingPattern(label: string): RegExp {
+  return new RegExp(
+    [
+      `\\b${label}\\b[\\s\\S]{0,80}\\b[1-5]\\s*(?:\\/\\s*5)?\\b`,
+      `\\b[1-5]\\s*\\/\\s*5\\b[\\s\\S]{0,40}\\b${label}\\b`,
+    ].join("|"),
+    "i",
+  );
+}
+
 const REQUIRED_REPORT_PATTERNS: ReadonlyArray<[RegExp, string]> = [
   [/\bPlaythrough log\b/i, "missing Playthrough log section"],
   [/\bVerdict\b/i, "missing Verdict section"],
-  [/\bclarity\b[\s\S]{0,80}\b[1-5]\s*(?:\/\s*5)?\b/i, "missing clarity rating"],
-  [/\benjoyment\b[\s\S]{0,80}\b[1-5]\s*(?:\/\s*5)?\b/i, "missing enjoyment rating"],
+  [ratingPattern("clarity"), "missing clarity rating"],
+  [ratingPattern("enjoyment"), "missing enjoyment rating"],
 ];
 
 export function verifyBlindReportText(text: string): BlindReportVerification {

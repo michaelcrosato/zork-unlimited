@@ -37,6 +37,20 @@ ToolSearch was called multiple times and every query returns nothing. The tools 
     expect(result).toEqual({ ok: true });
   });
 
+  it("accepts natural reverse rating prose from a completed blind playtest", () => {
+    const result = verifyBlindReportText(`
+1. Playthrough log: I started at the mill, followed the board, and reached ending_saved.
+2. Did it work mechanically? Zero rejected actions. The MCP route worked cleanly.
+3. Understandable & fun? Goal clarity was immediate and complete. **5/5 clarity.**
+   The puzzle was compact and satisfying. **4/5 enjoyment**.
+4. Confusion / friction points. One optional action felt noisy.
+5. Bugs or design flaws. The optional action needed a clearer purpose.
+6. Verdict: A real player would finish satisfied.
+`);
+
+    expect(result).toEqual({ ok: true });
+  });
+
   it("does not reject ordinary playtest prose that says the story is still connecting", () => {
     const result = verifyBlindReportText(`
 1. Playthrough log: I started the game and kept playing while the clues were still connecting.
