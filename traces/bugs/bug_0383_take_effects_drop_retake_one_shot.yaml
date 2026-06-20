@@ -1,0 +1,26 @@
+id: bug_0383
+pack: engine_parser_take_effects
+title: "dropping and re-taking a claim item could farm take_effects"
+severity: moderate
+scene: parser_take_resolution
+reported_by: senior_repo_review_20260620
+
+symptom: >
+  First-class TAKE hooks were documented and tested as one-shot only while the
+  object stayed in inventory. If the player dropped a take_effects item and
+  picked it up again, the resolver treated the second pickup as fresh and replayed
+  the scripted effects. Score-bearing claim items could therefore award their
+  points more than once.
+
+root_cause: >
+  The one-shot invariant relied only on the object being held. DROP made the item
+  visible again but recorded no durable "already claimed" state, so TAKE had no
+  way to distinguish a first claim from a re-take.
+
+fix: >
+  DROP now records objectState[id].takenBy = "player" while preserving normal
+  room placement. TAKE still picks the object up again, but suppresses take_effects
+  when that marker is already present. The item remains movable; only its scripted
+  claim effects are one-shot.
+
+tests: tests/regression/rpg_take_effects.test.ts
