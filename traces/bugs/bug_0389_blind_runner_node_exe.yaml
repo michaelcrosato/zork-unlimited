@@ -1,0 +1,24 @@
+id: bug_0389
+component: blind_runner
+title: "blind smoke runner could not find Node when Bash exposed only node.exe"
+severity: high
+reported_by: afk_cycle_20260620_breaking_weir
+
+symptom: >
+  The AFK loop's required Breaking Weir blind playtest first failed without a
+  usable report, and the no-LLM smoke check then failed immediately with
+  `blind-tester/run.sh: line 54: exec: node: not found`. PowerShell could run
+  Node, but the Bash wrapper only saw the Windows installer's `node.exe`.
+
+root_cause: >
+  `blind-tester/run.sh --smoke` hard-coded `exec node ...`. The Windows Node
+  installer puts `node.exe` beside the Bash-compatible `npm` shim, and Bash does
+  not resolve `.exe` extensions when a script asks for `node`.
+
+fix: >
+  The blind runner now resolves a Node command once, preferring `node`, then
+  `node.exe`, then the standard WSL-visible Windows install path. When the chosen
+  command is a Windows executable, smoke-mode script paths are converted with
+  `wslpath` before execution.
+
+tests: tests/regression/blind_runner_smoke_entrypoint.test.ts

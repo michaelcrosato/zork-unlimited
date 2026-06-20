@@ -35,6 +35,35 @@ for dir in "$HOME/.local/bin" "$HOME/bin"; do
   fi
 done
 
+NODE_CMD="${BLIND_NODE_CMD:-}"
+if [[ -z "$NODE_CMD" ]]; then
+  if command -v node >/dev/null 2>&1; then
+    NODE_CMD="$(command -v node)"
+  elif command -v node.exe >/dev/null 2>&1; then
+    NODE_CMD="$(command -v node.exe)"
+  elif [[ -x "/mnt/c/Program Files/nodejs/node.exe" ]]; then
+    NODE_CMD="/mnt/c/Program Files/nodejs/node.exe"
+  else
+    NODE_CMD="node"
+  fi
+fi
+
+node_path_arg() {
+  local path="$1"
+  case "$NODE_CMD" in
+    *.exe|*/node.exe)
+      if command -v wslpath >/dev/null 2>&1 && [[ "$path" == /mnt/* ]]; then
+        wslpath -w "$path"
+      else
+        printf '%s\n' "$path"
+      fi
+      ;;
+    *)
+      printf '%s\n' "$path"
+      ;;
+  esac
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --pack)  PACK="$2"; shift 2 ;;
@@ -51,7 +80,8 @@ done
 
 # Smoke mode: prove the MCP path with no LLM and no token spend.
 if [[ "$SMOKE" == "1" ]]; then
-  exec node "$SCRIPT_DIR/smoke.mjs" --pack "$PACK" --seed "$SEED"
+  SMOKE_SCRIPT="$(node_path_arg "$SCRIPT_DIR/smoke.mjs")"
+  exec "$NODE_CMD" "$SMOKE_SCRIPT" --pack "$PACK" --seed "$SEED"
 fi
 
 case "$GAME_DIR" in
