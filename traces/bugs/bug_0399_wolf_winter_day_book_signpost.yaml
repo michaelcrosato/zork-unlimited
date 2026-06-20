@@ -1,0 +1,38 @@
+id: bug_0399
+pack: wolf_winter_v1
+title: "score-bearing day-book was too easy to miss on the urgent route"
+severity: medium
+scene: byre_yard
+reported_by: blind_playtest_20260620T191822Z_wolf_winter_seed7
+
+symptom: >
+  A blind playtester followed the natural prepared route through The Wolf-Winter,
+  won cleanly, and ended at 55/60 with no idea where the missing 5 points lived.
+  The skipped score source was the byre-yard day-book, but the first yard scene
+  framed the immediate northward wolf threat and Cade's combat plan more strongly
+  than the optional book, so a reasonable player could leave the yard without
+  reading the pack's intended prep clue.
+
+root_cause: >
+  The day-book is an intentional one-shot +5 clue/preparation beat, and the score
+  economy already expects it. The room text only said the weathered day-book hung
+  on its nail, which made it read like set dressing beside the urgent wolf breach
+  and store-shed preparation route. After reading, there was also no reactive room
+  text acknowledging that the tally had been checked.
+
+fix: >
+  Byre-Yard now has Cade's lantern turned toward the day-book and explicitly says
+  the last wolf-count is worth reading before the player leaves the yard. A
+  `read_tally` variant then acknowledges the checked wolf-count and removes the
+  active prompt, keeping the signpost from repeating after the score-bearing read.
+  No score, stat, enemy, route, item, encounter, or ending mechanics changed.
+
+tests: tests/regression/wolf_winter_day_book_signpost.test.ts
+
+verification:
+  - npm test -- --run tests/regression/wolf_winter_day_book_signpost.test.ts tests/regression/wolf_winter_prep_carries_score.test.ts
+  - npm run validate -- content/rpg/pack/wolf_winter.yaml
+
+trace_repin: >
+  None. The change updates pack prose and adds a regression test; no committed
+  Wolf-Winter replay trace hash is repinned.

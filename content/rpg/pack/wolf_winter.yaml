@@ -113,10 +113,11 @@ rooms:
     description: >
       The trampled yard before the cattle-byre. An old houndsman stands propped in the
       byre door with a lantern and a stick, too stiff in the hands to hold a spear but
-      square in the doorway all the same. A weathered day-book hangs on its nail by the
-      jamb, and the store-shed stands open to the west. North, past the broken paling,
-      the byre runs back to where the cattle are penned — and the first of the wolves is
-      already through the gap. The yard gate is back to the south.
+      square in the doorway all the same. He has turned the lantern toward the weathered
+      day-book on its nail by the jamb, as if the last wolf-count written there is worth
+      reading before you leave the yard. The store-shed stands open to the west. North,
+      past the broken paling, the byre runs back to where the cattle are penned — and the
+      first of the wolves is already through the gap. The yard gate is back to the south.
     objects: [day_book]
     # Reaching the byre is where the night's work begins — the watch is taken up here
     # (quest the_watch, stage watch_set). Pure progress-tracking: no exit, enemy, win or
@@ -124,6 +125,15 @@ rooms:
     # steading_yard variants). The flag economy that gates the gauntlet is untouched.
     on_enter:
       - set_quest_stage: { quest: the_watch, stage: watch_set }
+    variants:
+      - when: [{ has_flag: read_tally }]
+        text: >
+          The trampled yard before the cattle-byre. Old Cade stands propped in the byre
+          door with his lantern and stick, the weathered day-book open on the nail where
+          you checked its last wolf-count. The store-shed stands open to the west. North,
+          past the broken paling, the byre runs back to where the cattle are penned —
+          and the first of the wolves is already through the gap. The yard gate is back
+          to the south.
     exits:
       - { direction: south, to: steading_yard }
       - { direction: west, to: store }
