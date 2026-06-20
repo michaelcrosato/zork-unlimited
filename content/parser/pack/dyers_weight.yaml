@@ -532,6 +532,21 @@ endings:
       in good standing. The searcher's relief payment continued into the
       following quarter.
       *** The proof was not completed. ***
+    variants:
+      - when: [{ has_flag: proved_adulteration }]
+        text: >
+          You stepped out of Meredith's back door into the passage behind the
+          row. The second acid test was complete: the raw chalk fizzed, the
+          vat contents fizzed, and the finished cakes carried the same fraud.
+          But proof left in a searcher's pocket is not proof before the Deputy
+          Warden. You chose the back passage instead of the Company Hall, and
+          no seizure was entered on the record.
+          By afternoon the vat was washed, the casks were shifted, and Meredith
+          had a clean story ready for anyone who asked late. The merchant's
+          complaint was noted and deferred. Meredith's mark remained in good
+          standing. The searcher's relief payment continued into the following
+          quarter.
+          *** The proof was completed, then abandoned. ***
 
   - id: ending_bought
     title: "For Patience"
