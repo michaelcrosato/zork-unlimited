@@ -25,7 +25,7 @@
 # Score economy: rewards investigation. Maximum single path = 45.
 #   +5  inspect_marks       — rope-drag in the mud (not_flag: found_marks)
 #   +5  take_receipt        — victim's travel receipt, names and destination (not_item: travel_receipt)
-#   +5  read_lease_notice   — the eviction notice; the full story (not_flag: knows_truth)
+#   +5  read_lease_notice   — the eviction notice; the full story (not_item: lease_notice)
 #   +5  mark_bloodstain     — blood in the oak grain of the gunwale (not_flag: saw_bloodstains)
 #   +5  ask_lost_traveler   — ask the ferryman about the man he won't discuss (not_flag: heard_denial)
 #   +20 ending_testimony    — report to the toll-house warden, ferryman arrested (terminal;
@@ -57,7 +57,8 @@ scenes:
       The track ends at a wide, dark river — the only ford for a day's walk either
       way drowned by last month's rains. A flat rope-ferry rests on the near bank,
       and a curl of smoke from the ferryman's hut says someone is here to run it.
-      The light is going fast. Upstream, the bank curves out of sight under old willows.
+      The light is going fast. Upstream, the bank curves out of sight under old
+      willows; down at the landing, the ferry can be inspected before you board.
     choices:
       - id: go_to_hut
         text: "Approach the ferryman's hut."
@@ -74,7 +75,7 @@ scenes:
           - inc_var: { name: score, by: 5 }
         next: river_approach
       - id: go_to_landing
-        text: "Walk down to the ferry landing."
+        text: "Walk down to the ferry landing and look over the boat."
         next: the_landing
 
   # ── The ferryman's hut ───────────────────────────────────────────────────────
@@ -83,10 +84,16 @@ scenes:
     # Reactive re-entry: once the player has heard the denial and found the evidence,
     # re-visiting the hut should reflect a known man, not a neutral stranger.
     variants:
-      - when: [ { any_of: [ { has_flag: heard_denial }, { has_item: travel_receipt } ] } ]
+      - when: [ { has_flag: heard_denial } ]
         text: >
-          The ferryman is at his table, hands flat, watching the door. He names his
-          price again — a copper — and does not look at you more than he has to.
+          The ferryman is at his table, hands flat, watching the door. After the
+          lie about the missing traveler, the courtesy has gone thin; he says
+          nothing about roads or prices unless you make him.
+      - when: [ { has_item: travel_receipt } ]
+        text: >
+          The ferryman is at his table, hands flat, watching the door. The man's
+          pack from the willows is no longer merely lost property, and he seems
+          to know you have found something he meant the river to keep.
     text: >
       Low and weathered, the smell of tallow and river-rot inside. The ferryman is
       a thick man with a close-trimmed beard and hands like a grapple — civil,
@@ -126,7 +133,7 @@ scenes:
       - id: pull_bundle
         text: "Pull the bundle free."
         # Hide once both items in the cache have been collected.
-        conditions: [ { none_of: [ { all_of: [ { has_item: travel_receipt }, { has_flag: knows_truth } ] } ] } ]
+        conditions: [ { none_of: [ { all_of: [ { has_item: travel_receipt }, { has_item: lease_notice } ] } ] } ]
         next: willows_cache
       - id: leave_upstream
         text: "Return to the crossing."
@@ -149,10 +156,11 @@ scenes:
           - inc_var: { name: score, by: 5 }
         next: willows_cache
       - id: read_lease_notice
-        text: "Break the seal on the second letter."
-        conditions: [ { not_flag: knows_truth } ]
+        text: "Break the seal on the second letter and keep it with the receipt."
+        conditions: [ { not_item: lease_notice } ]
         effects:
           - set_flag: knows_truth
+          - add_item: lease_notice
           - add_journal: "A notice of lease termination: the Corwick ferry grant, held by the same family for three generations, revoked by the county court. Aldric was the attorney's messenger — carrying the order that would end the ferryman's livelihood."
           - inc_var: { name: score, by: 5 }
         next: willows_cache
@@ -189,6 +197,13 @@ scenes:
 
   - id: boat_inspection
     title: "The Flat Ferry"
+    variants:
+      - when: [ { has_flag: saw_bloodstains } ]
+        text: >
+          The planking is old but sound, the rope runs through its worn iron block,
+          and the gunwale near the stern has already given up what the scrubbing
+          could not reach. The brown stain is in your notes now: old blood deep in
+          the oak grain.
     text: >
       The planking is old but sound. The rope runs through a worn iron block at the
       bow. Near the stern, someone has scrubbed the gunwale — but the grain of the
@@ -222,7 +237,7 @@ scenes:
         text: "Ride in silence to the far bank."
         next: far_bank
       - id: accuse_midstream
-        text: "Tell him you found what he left in the willows — and what it proves."
+        text: "Tell him you found Aldric's receipt in the willows and blood in the ferry."
         conditions: [ { all_of: [ { has_item: travel_receipt }, { has_flag: saw_bloodstains } ] } ]
         effects:
           - add_journal: "His hands stilled on the pole. He weighed the count for a long moment — then pulled us in to the far bank without a word. He knows it is over."
@@ -278,24 +293,46 @@ endings:
   - id: ending_testimony
     title: "Testimony Given"
     variants:
-      - when: [ { has_flag: knows_truth } ]
+      - when:
+          - all_of:
+              - has_flag: knows_truth
+              - has_flag: found_marks
         text: >
           The warden takes down the receipt, the bloodstain account, your description
-          of the drag marks. He sends for the county men before the hour is out. By
-          morning the ferryman is in irons in Corwick; by week's end the court hears
-          what Aldric was carrying and why. The lease notice is read aloud at the
-          inquest. Justice reaches the ferryman, and so does the story behind the act:
-          not a robber's calculation but the last move of a man who saw three
-          generations ended in a sealed letter and had nowhere left to turn. The
-          ferry runs again by summer, under a new leaseholder. The blood comes out of
-          the gunwale at last.
+          of the drag marks, and the lease notice from the willows. He sends for the
+          county men before the hour is out. By morning the ferryman is in irons in
+          Corwick; by week's end the court hears what Aldric was carrying and why.
+          The lease notice is read aloud at the inquest. Justice reaches the
+          ferryman, and so does the story behind the act: not a robber's calculation
+          but the last move of a man who saw three generations ended in a sealed
+          letter and had nowhere left to turn. The ferry runs again by summer, under
+          a new leaseholder. The blood comes out of the gunwale at last.
+      - when: [ { has_flag: knows_truth } ]
+        text: >
+          The warden takes down the receipt, the bloodstain account, and the lease
+          notice from the willows. He sends for the county men before the hour is
+          out. By morning the ferryman is in irons in Corwick; by week's end the
+          court hears what Aldric was carrying and why. The lease notice is read
+          aloud at the inquest. Justice reaches the ferryman, and so does the story
+          behind the act: not a robber's calculation but the last move of a man who
+          saw three generations ended in a sealed letter and had nowhere left to
+          turn. The ferry runs again by summer, under a new leaseholder. The blood
+          comes out of the gunwale at last.
+      - when: [ { has_flag: found_marks } ]
+        text: >
+          The warden takes down the receipt, the bloodstain, your account of the
+          rope marks in the mud. He is not surprised — a traveler missing on the
+          Corwick road is not the first report this season. By morning the ferryman
+          is in irons, the pack recovered from the willows, Aldric's family sent
+          word. You gave what you found to the people whose job it is to act on it,
+          and they did. The river runs on, and the ferry runs again under a new hand.
     text: >
-      The warden takes down the receipt, the bloodstain, your account of the rope
-      marks in the mud. He is not surprised — a traveler missing on the Corwick road
-      is not the first report this season. By morning the ferryman is in irons, the
-      pack recovered from the willows, Aldric's family sent word. You gave what you
-      found to the people whose job it is to act on it, and they did. The river runs
-      on, and the ferry runs again under a new hand.
+      The warden takes down the receipt and the bloodstain account. He is not
+      surprised — a traveler missing on the Corwick road is not the first report
+      this season. By morning the ferryman is in irons, the pack recovered from
+      the willows, Aldric's family sent word. You gave what you found to the people
+      whose job it is to act on it, and they did. The river runs on, and the ferry
+      runs again under a new hand.
   - id: ending_crossed
     title: "The Far Side"
     variants:
