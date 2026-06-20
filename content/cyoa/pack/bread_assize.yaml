@@ -50,6 +50,40 @@ scenes:
           the scale, the bakehouse marks, the baker's own account, the factor's
           tally, and the parish token list now point in one direction. The
           report table is ready.
+      - when:
+          - all_of:
+              - has_flag: assize_read
+              - has_flag: short_weight
+              - any_of:
+                  - not_flag: reheated_loaves
+                  - not_flag: baker_admitted
+                  - not_flag: flour_tally_clear
+                  - not_flag: parish_tokens_traced
+        text: >
+          The assize table and hall scale have turned rumor into a fineable short
+          weight: sixteen ounces required, fourteen ounces found. The report
+          table can carry that much now, though a seal suspension still needs the
+          rest of the chain from bakehouse, factor, and parish queue.
+      - when:
+          - all_of:
+              - has_flag: short_weight
+              - not_flag: assize_read
+        text: >
+          The hall scale has moved and the sealed loaves sit light in their row,
+          but the assize schedule still lies unread beside them. Until the lawful
+          penny-loaf weight is on your record, the scale has no legal comparison.
+      - when:
+          - any_of:
+              - has_flag: assize_read
+              - has_flag: short_weight
+              - has_flag: reheated_loaves
+              - has_flag: baker_admitted
+              - has_flag: flour_tally_clear
+              - has_flag: parish_tokens_traced
+        text: >
+          The market hall is no longer still. Your notes have begun to gather:
+          law, weight, bakehouse practice, account book, and parish queue all wait
+          to be made into one finding or sent back for what is missing.
     text: >
       The market hall stands open to the morning: stalls shuttered, scales
       hanging still, the alderman's bread seal locked in its little iron box.
@@ -103,6 +137,12 @@ scenes:
           The bakehouse has yielded what it can: damp troughs where old loaves
           were softened for reheating, and the baker's admission that the seal
           touched bread before the weighing was done.
+      - when:
+          - has_flag: baker_admitted
+        text: >
+          Heat still hangs under the bakehouse rafters. Abel Crowe no longer
+          crowds the sealed baskets; after admitting the seal was struck before
+          weighing, he watches the seal-box and chooses each answer with care.
     text: >
       Heat still hangs under the bakehouse rafters. The oven mouth is black
       with last night's firing, the cooling boards are dusted with flour, and
@@ -198,6 +238,56 @@ scenes:
 
   - id: report_table
     title: "The Report Table"
+    variants:
+      - when:
+          - all_of:
+              - has_flag: assize_read
+              - has_flag: short_weight
+              - has_flag: reheated_loaves
+              - has_flag: baker_admitted
+              - has_flag: flour_tally_clear
+              - has_flag: parish_tokens_traced
+        text: >
+          The alderman waits at the report table with the seal key beside his
+          hand. Your notes carry the full chain: lawful weight, short batch, old
+          bread reheated, false seal sequence, clear flour delivery, and parish
+          tokens diverted. A suspension finding can stand on that record.
+      - when:
+          - all_of:
+              - has_flag: assize_read
+              - has_flag: short_weight
+              - any_of:
+                  - not_flag: reheated_loaves
+                  - not_flag: baker_admitted
+                  - not_flag: flour_tally_clear
+                  - not_flag: parish_tokens_traced
+        text: >
+          The alderman waits at the report table with the seal key beside his
+          hand. The assize table and scale are enough for a short-weight fine,
+          but not enough to suspend the seal. For that, the record still needs
+          whatever is missing from the bakehouse proof, Crowe's seal sequence,
+          the factor ledger, and the parish token trail.
+      - when:
+          - all_of:
+              - has_flag: short_weight
+              - not_flag: assize_read
+        text: >
+          The alderman waits at the report table with the seal key beside his
+          hand. The loaves are light on the scale, but the record lacks the
+          week's lawful weight from the assize table; without that schedule, the
+          ward has no legal comparison for a fine.
+      - when:
+          - any_of:
+              - has_flag: assize_read
+              - has_flag: short_weight
+              - has_flag: reheated_loaves
+              - has_flag: baker_admitted
+              - has_flag: flour_tally_clear
+              - has_flag: parish_tokens_traced
+        text: >
+          The alderman waits at the report table with the seal key beside his
+          hand. Your notes are still fragments, not a finding. Return to the
+          hall and complete the record before choosing more than certification.
     text: >
       The alderman waits at the report table with the seal key beside his
       hand. If you certify the batch, the bell opens the market. If you find
@@ -229,7 +319,7 @@ scenes:
           - inc_var: { name: score, by: 20 }
         next: ending_suspended
       - id: return_to_hall
-        text: "Return to the hall; the evidence is not complete."
+        text: "Return to the hall and complete the record."
         next: market_hall
 
 endings:
