@@ -46,7 +46,10 @@ meta:
     name: "The Charter Marches"
     hub: "Charterhaven"
     district: "Old Alchemist's Tower"
-    quest: "brew the antidote and expose the tower"
+    # bug_0373: the tower's climax is deliberately binary (cure the master OR open
+    # the casket for the Great Work). The old quest copy promised "brew the antidote
+    # and expose the tower", implying a both-path the pack does not provide.
+    quest: "choose between curing the alchemist and exposing her Great Work"
     role: "tower intruder"
     connection: "The tower stands under Charterhaven license, and its poisons leak from private experiment into public danger."
   start_room: courtyard
@@ -797,7 +800,8 @@ endings:
     text: >
       For a long moment nothing — then colour creeps back into the master's face,
       breath by breath, and the long sickness breaks at last. The old alchemist will
-      live, and the light of the tower with her. *** You have won. ***
+      live; whatever reckoning Charterhaven brings to this tower, it will face a
+      living master. You chose the maker over the Work. *** You have won. ***
   - id: ending_poisoned
     title: "Poisoned"
     text: >
