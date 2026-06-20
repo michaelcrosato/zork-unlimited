@@ -16,7 +16,7 @@
  * milestone awards mirroring alchemists' 5/10/20 shape:
  *   +5  read the headstone clue   (READ headstone, gated not_flag read_headstone)
  *   +10 solve the well            (USE rope on old_well, gated not_flag rope_attached_to_well)
- *   +20 unlock the catacombs gate (USE iron_key on crypt_gate, gated not_flag catacombs_open)
+ *   +20 recover the sealed relic  (TAKE sealed_relic, the win-triggering claim)
  * No flags' meaning, items, exits, gating, or reachable endings change — only the
  * score var now accrues.
  *
@@ -92,8 +92,9 @@ const TO_GATE = [
   "go_north",
   "go_down",
 ];
-const OPEN_GATE = ["unlock_crypt_gate"]; // +20
-const WIN = ["go_north"];
+const OPEN_GATE = ["unlock_crypt_gate"];
+const TO_RELIC = ["go_north"];
+const CLAIM_RELIC = ["take_sealed_relic"]; // +20 + WIN
 
 describe("bug_0013 — Sealed Crypt scoring accrues 0→5→15→35 across the three milestones", () => {
   it("score climbs at each milestone and is full (35/35) at the victory ending", () => {
@@ -113,12 +114,18 @@ describe("bug_0013 — Sealed Crypt scoring accrues 0→5→15→35 across the t
     s = play(s, TO_GATE);
     expect(score(s)).toBe(15);
     s = play(s, OPEN_GATE);
-    expect(score(s)).toBe(35);
+    expect(score(s)).toBe(15);
+    expect(s.ended).toBe(false);
 
-    s = play(s, WIN);
+    s = play(s, TO_RELIC);
+    expect(score(s)).toBe(15);
+    expect(s.ended).toBe(false);
+    expect(actionIds(s)).toContain("take_sealed_relic");
+
+    s = play(s, CLAIM_RELIC);
+    expect(score(s)).toBe(35);
     expect(s.ended).toBe(true);
     expect(s.endingId).toBe("ending_victory");
-    expect(score(s)).toBe(35);
     expect(score(s)).toBe(pack.meta.max_score);
   });
 

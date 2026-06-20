@@ -1,23 +1,23 @@
 /**
- * Regression (§15) for bug_0054 — the final step into the catacombs must be legible.
+ * Regression (§15) for bug_0054/bug_0385 — the final step beyond the gate must be legible.
  *
  * Blind MCP playtest of The Sealed Crypt (ai-runs/2026-06-01T15-18-32-296Z, seed 29)
- * flagged that USING the iron key on the catacombs gate awards the last +20 — the score
- * reads "35 of 35" (= max_score) — yet the WIN only fires on ENTERING the catacombs
- * (win_conditions: visited catacombs). With the old open-gate text ("…swung inward on
+ * flagged that USING the iron key on the catacombs gate awarded the last +20 — the
+ * score read "35 of 35" (= max_score) — yet the WIN only fired on ENTERING the
+ * catacombs (`visited: catacombs`). With the old open-gate text ("…swung inward on
  * darkness. The stair climbs back up.") and the old unlock narration ("…the catacombs
  * gate swings inward."), a first-timer at max score could read the puzzle as solved and
  * climb back UP, stopping one step short of ending_victory. The climactic award and the
  * ending trigger are decoupled, and nothing pointed the player north through the gate.
  *
- * Fix (content/hint, prose only): crypt's catacombs_open `variant` and crypt_gate's USE
- * `narrate` now both name the remaining north step through the open gate. No flag/item/
- * score/exit/gating/reachable-ending change — the route still wins ending_victory 35/35.
+ * bug_0385 later made that remaining beat explicit: entering the catacombs reveals the
+ * sealed relic, and TAKING it is now the scored win. The gate text must still point north,
+ * but the score cap and ending now land on the promised relic recovery, not the unlock.
  *
  * This test pins the legibility invariant: before the unlock the gate "bars the way" and
- * there is no north exit; at the unlock the +20 lands (score 35), BOTH the narration and
- * the open-gate room text name the north move, and the north exit is present; and the
- * full route still wins ending_victory at 35/35 on `go_north`.
+ * there is no north exit; at the unlock BOTH the narration and the open-gate room text
+ * name the north move/relic, and the north exit is present without ending the game; in
+ * the catacombs the relic is visible and taking it wins at 35/35.
  */
 import { describe, it, expect } from "vitest";
 import { loadParserPackFile } from "../../src/parser/pack.js";
@@ -95,35 +95,43 @@ describe("bug_0054 — the Sealed Crypt's final step into the catacombs is signp
     expect(hasNorthExit(state)).toBe(false);
   });
 
-  it("at the unlock: the +20 lands (35/35) and both the narration and the open-gate room text name the north step", () => {
+  it("at the unlock: the gate opens and both the narration and open-gate room text name the north relic recovery", () => {
     const { state, narration } = play(initStateForParserPack(index, 29), [
       ...ROUTE_TO_GATE,
       "unlock_crypt_gate",
     ]);
     expect(state.current).toBe("crypt");
     expect(state.flags["catacombs_open"]).toBe(true);
-    // The climactic award has landed and the score sits at the cap...
-    expect(state.vars.score).toBe(35);
-    // ...so the remaining move must be unmistakable. The unlock narration names it:
+    expect(state.vars.score).toBe(15);
+    expect(state.ended).toBe(false);
+    // The remaining move and goal must be unmistakable. The unlock narration names it:
     expect(narration.toLowerCase()).toContain("north");
-    expect(narration).toContain("through the open gate");
+    expect(narration.toLowerCase()).toContain("relic");
     // ...and the persistent open-gate room text names it too (a player who looks again still sees it):
     const desc = obs(state).description;
     expect(desc.toLowerCase()).toContain("north");
-    expect(desc).toContain("catacombs you came so far to find");
+    expect(desc.toLowerCase()).toContain("sealed relic");
     // The way out is now genuinely open.
     expect(hasNorthExit(state)).toBe(true);
   });
 
-  it("the legibility edit is purely cosmetic — the full route still wins ending_victory 35/35", () => {
-    const { state } = play(initStateForParserPack(index, 29), [
+  it("entering the catacombs reveals the relic, and taking it wins ending_victory 35/35", () => {
+    let result = play(initStateForParserPack(index, 29), [
       ...ROUTE_TO_GATE,
       "unlock_crypt_gate",
       "go_north",
     ]);
+    expect(result.state.current).toBe("catacombs");
+    expect(result.state.ended).toBe(false);
+    expect(obs(result.state).visible_objects.map((o) => o.id)).toContain("sealed_relic");
+    expect(obs(result.state).description.toLowerCase()).toContain("relic");
+
+    result = play(result.state, ["take_sealed_relic"]);
+    const { state } = result;
     expect(state.ended).toBe(true);
     expect(state.endingId).toBe("ending_victory");
     expect(state.visited.catacombs).toBe(true);
+    expect(state.inventory).toContain("sealed_relic");
     expect(state.vars.score).toBe(35);
   });
 });

@@ -84,7 +84,7 @@ const TO_CRYPT = [
 ];
 
 // Full win route (without grip attempt)
-const WIN_ROUTE = [...TO_CRYPT, "unlock_crypt_gate", "go_north"];
+const WIN_ROUTE = [...TO_CRYPT, "unlock_crypt_gate", "go_north", "take_sealed_relic"];
 
 describe("bug_0304 — grip iron key one-shot on failure", () => {
   it("(1) in the crypt with iron key — grip action is present before any attempt", () => {
@@ -118,6 +118,7 @@ describe("bug_0304 — grip iron key one-shot on failure", () => {
     const s = play(initStateForParserPack(index, 7), WIN_ROUTE);
     expect(s.ended).toBe(true);
     expect(s.endingId).toBe("ending_victory");
+    expect(s.inventory).toContain("sealed_relic");
     expect(buildParserObservation(index, s).score).toBe(35);
   });
 

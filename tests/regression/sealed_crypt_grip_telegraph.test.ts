@@ -128,10 +128,12 @@ describe("bug_0241 — the iron key's examine text telegraphs the optional grip/
       "use_iron_key", // the optional nerve beat — must not consume the key or block the route
       "unlock_crypt_gate",
       "go_north",
+      "take_sealed_relic",
     ]);
     // The key was never consumed by the beat — it opened the gate.
     expect(s.ended).toBe(true);
     expect(s.endingId).toBe("ending_victory");
+    expect(s.inventory).toContain("sealed_relic");
     expect(s.vars["score"]).toBe(35);
   });
 });

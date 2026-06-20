@@ -131,10 +131,12 @@ describe("bug_0044 — Bell Tower text reacts to the rope being taken", () => {
       "go_down",
       "unlock_crypt_gate",
       "go_north",
+      "take_sealed_relic",
     ];
     const s = play(initStateForParserPack(index, 47), WIN_ROUTE);
     expect(s.ended).toBe(true);
     expect(s.visited.catacombs).toBe(true);
+    expect(s.inventory).toContain("sealed_relic");
     expect(s.vars.score).toBe(35);
   });
 });

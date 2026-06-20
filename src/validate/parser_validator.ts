@@ -793,14 +793,13 @@ export function validateParser(
   // so its perfect score is reachable only WITH the claim and it is NOT flagged.)
   //
   // `visited` is deliberately NOT treated as a climactic act: a navigation win's final
-  // step is mere LOCOMOTION (walk through the open gate), a denouement that rightly
-  // awards nothing — a blind playtester confirmed sealed_crypt's "35/35 one step before
-  // the win" reads as intentional, not a trap (seed 29). Setting a flag or claiming an
-  // item is a chosen ACT; arriving in a room is not.
+  // step can be mere LOCOMOTION (walk through the open gate), a denouement that rightly
+  // awards nothing. Setting a flag or claiming an item is a chosen ACT; arriving in a
+  // room is not.
   //
   // Sound & conservative — it fires only when ALL of these hold, so no current pack is
-  // flagged (verified: sealed_crypt/cold_forge win on `visited`; sunken_barrow's
-  // `has_item` claim carries +25; alchemists' cure act carries +5):
+  // flagged (verified: cold_forge wins on `visited`; sealed_crypt and sunken_barrow's
+  // `has_item` claims carry their capstones; alchemists' cure act carries +5):
   //   • exactly ONE win_condition — a second, flagless win could be the real climax,
   //     so multi-win packs are left alone (no false positive);
   //   • the win REQUIRES a `has_flag` F or a `has_item` I (a guaranteed conjunctive

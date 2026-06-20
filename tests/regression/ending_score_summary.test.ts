@@ -105,8 +105,8 @@ const TO_GATE = [
   "go_north",
   "go_down",
 ];
-const OPEN_GATE = ["unlock_crypt_gate"]; // +20
-const WIN = ["go_north"];
+const OPEN_GATE = ["unlock_crypt_gate"];
+const WIN = ["go_north", "take_sealed_relic"]; // +20 on relic claim
 
 describe("bug_0026 — endings surface a final-score tally in scoring packs", () => {
   it("sealed_crypt full route: description appends 'Final score: 35 of 35.' and ending.text stays pure", () => {

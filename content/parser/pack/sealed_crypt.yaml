@@ -1,9 +1,10 @@
 # The Sealed Crypt — a Zork-style parser pack (Stage 2).
 #
-# Goal: reach the catacombs beneath the ruined chapel. The route is a multi-step
-# chain — get the rope, open the well, recover two keys from two containers, and
-# unlock the catacombs gate. Two in-world clue sources point the way (§17 rule 1):
-# the graveyard headstone and the sexton's rumor.
+# Goal: recover the sealed relic from the catacombs beneath the ruined chapel.
+# The route is a multi-step chain — get the rope, open the well, recover two keys
+# from two containers, unlock the catacombs gate, then deliberately take the relic.
+# Two in-world clue sources point the way (§17 rule 1): the graveyard headstone and
+# the sexton's rumor.
 #
 # The climax is a THREE-WAY iron-key fork in the crypt — "THE CRYPT YIELDS ONLY TO
 # IRON" reads three ways, because everything down here is iron-locked:
@@ -16,7 +17,7 @@
 # one-way hubris choice (the founders_coffin discipline, bug_0123/§8.7) and gives the
 # pack the failure pole — genuine stakes — every blind pass said it lacked.
 #
-#   forest_path ─N─ chapel_yard ─N─ chapel_nave ─down─ crypt ─N*─ catacombs (WIN)
+#   forest_path ─N─ chapel_yard ─N─ chapel_nave ─down─ crypt ─N*─ catacombs (sealed_relic → WIN)
 #                    │ U: bell_tower (rope)                  ├ founders_coffin → ending_plunder (iron key)
 #                    │ E: old_well ─down*─ well_bottom        └ bound_tomb     → ending_doom    (iron key)
 #                    │      (oak_chest → iron_key)
@@ -46,9 +47,10 @@ meta:
   vars_init: { nerve: 3 }
   # Stage-3 scoring: points are awarded once at each of the three milestones that
   # mark real progress — reading the headstone clue (+5), solving the well to raise
-  # the keys from the deep (+10), and unlocking the catacombs gate (+20). Each award
-  # rides a one-time gated interaction, so the score cannot be farmed by repeating an
-  # action, and the intended solution path reaches the full 35.
+  # the keys from the deep (+10), and recovering the sealed relic (+20). The capstone
+  # award rides the deliberate TAKE that also satisfies the win condition, so the
+  # score no longer peaks at 35/35 one step before the stated "recover the relic"
+  # quest is fulfilled (bug_0385).
   max_score: 35
 
 rooms:
@@ -174,15 +176,10 @@ rooms:
       far wall a smaller tomb stands alone, banded in iron and run round with lead,
       a ring of wardmarks bitten deep into its lid. To the north, an iron catacombs
       gate bars the way, its lock shaped for a heavy key. The stair climbs back up.
-    # Once the gate is open the reactive text names the final step explicitly. A
-    # fresh blind playtester (seed 29) noted that unlocking the gate awards the last
-    # points and the score reads "35 of 35" — yet the win only fires on ENTERING the
-    # catacombs (win_conditions: visited catacombs). With the old text ("swung inward
-    # on darkness / the stair climbs back up") a first-timer at max score could read
-    # the puzzle as solved and climb back out, stopping one step short of the ending.
-    # The fix is legibility only: the open-gate text (and the unlock narration below)
-    # now point north through the gate as the journey's last move. No flag/score/exit
-    # change — the route still wins 35/35 on `go_north` (bug_0054).
+    # Once the gate is open the reactive text names the final recovery explicitly.
+    # bug_0054 first made the open-gate text point north through the gate; bug_0385
+    # made the final action the relic recovery itself, so the open-gate text also names
+    # the sealed relic waiting beyond.
     variants:
       - when: [{ has_flag: catacombs_open }]
         text: >
@@ -190,7 +187,7 @@ rooms:
           lies sealed under its iron clasp, and against the far wall the iron-bound,
           lead-sealed tomb stands shut as it has these hundred years. To the north,
           the iron catacombs gate stands unlocked and swung inward on darkness — and
-          through it, north, run the catacombs you came so far to find. The stair
+          through it, north, lies the sealed relic you came to recover. The stair
           climbs back up.
       # Reactive text after the optional grip/nerve beat — the same reactive-description
       # class as bug_0282/0283. Before the beat fires the room gives no feedback that
@@ -226,8 +223,10 @@ rooms:
   - id: catacombs
     name: "The Catacombs"
     description: >
-      Beyond the gate, the catacombs run on into the dark — the resting place you
-      came to find. The crypt is behind you to the south.
+      Beyond the gate, the catacombs run on into the dark. On a low stone bier rests
+      a lead-sealed reliquary, the relic you came to recover. The crypt is behind
+      you to the south.
+    objects: [sealed_relic]
     exits:
       - { direction: south, to: crypt }
 
@@ -398,27 +397,44 @@ objects:
     # for a heavy key") primes UNLOCK, not USE. This is the same defect bug_0073 fixed in
     # alchemists_tower; sealed_crypt was left inconsistent. The reason the gate couldn't
     # already use first-class UNLOCK is that the engine's UNLOCK awarded no score and
-    # narrated only "You unlock the X." — so a climactic, +20-point, richly-narrated
-    # unlock had to fall back to a bespoke USE. bug_0077 teaches the engine's first-class
+    # narrated only "You unlock the X." — so a richly narrated unlock had to fall back
+    # to a bespoke USE. bug_0077 teaches the engine's first-class
     # UNLOCK to carry `unlock_narrate` + `unlock_effects`, so the gate now reads through the
-    # SAME `unlock iron catacombs gate with iron key` grammar as the chest while keeping its
-    # dramatic line, its +20 score, and the opened-exit. One-shot is intrinsic (once the
+    # SAME `unlock iron catacombs gate with iron key` grammar as the chest while keeping
+    # its dramatic line and the opened-exit. One-shot is intrinsic (once the
     # lock is sprung it is no longer `isLocked`, so UNLOCK can't re-fire) — exactly what the
-    # old `not_flag: catacombs_open` guard did. No route/score/reachable-ending change.
+    # old `not_flag: catacombs_open` guard did.
     description: "A heavy iron gate. Its great lock is shaped for an iron key."
     locked: true
     key_id: iron_key
-    unlock_narrate: "The iron key turns with a groan, and the catacombs gate swings inward on darkness. Beyond it, north, the catacombs you came so far to find — one step through the open gate and your journey is done."
+    unlock_narrate: "The iron key turns with a groan, and the catacombs gate swings inward on darkness. Beyond it, north, waits the sealed relic you came so far to recover."
     unlock_effects:
       - set_flag: catacombs_open
       - unlock_exit: { from: crypt, to: catacombs }
-      - inc_var: { name: score, by: 20 }
       # Final milestone of the descent: the iron gate is sprung and the way on is open.
       # Pure progress marker for quest "the_crypt" — no gating, no score, no change to
       # the effects above. Deliberately NOT read by any variant (it is a LATE stage set
       # right before the win, which a variant could not re-view from — bug_0146 pitfall);
       # the reactive prose reads the early `clue_read` stage in the graveyard instead.
       - set_quest_stage: { quest: the_crypt, stage: gate_open }
+
+  # bug_0385 — the stated quest is "recover the sealed crypt relic", but a blind
+  # playtest (2026-06-20, seed 7) won by merely walking into the catacombs. The player
+  # never saw or took a relic, so the ending felt hollow. The catacombs now contain the
+  # sealed relic as a deliberate takeable goal item; taking it awards the old +20
+  # capstone and satisfies the win condition. Unlocking the gate is still meaningful
+  # progress, but the score and victory now coincide with the promised recovery.
+  - id: sealed_relic
+    name: "sealed crypt relic"
+    aliases: [relic, sealed relic, crypt relic, reliquary, sealed reliquary]
+    description: >
+      A small lead-sealed reliquary, dark with age and marked with the chapel's old
+      sign. It is the sealed relic the roadwardens sent you below to recover.
+    takeable: true
+    quest_critical: true
+    take_effects:
+      - inc_var: { name: score, by: 20 }
+      - narrate: "You lift the lead-sealed reliquary from the stone bier. The sealed crypt has yielded what you came to recover."
 
   # bug_0105 — the climactic MORAL FORK (the standing "retrofit a branch onto a
   # linear pack" next-focus; the blind report's only enjoyment knock was a single
@@ -537,16 +553,17 @@ npcs:
             - { id: bye, prompt: "Say goodbye", end: true }
 
 win_conditions:
-  - id: reach_catacombs
-    conditions: [{ visited: catacombs }]
+  - id: recover_relic
+    conditions: [{ has_item: sealed_relic }]
     ending: ending_victory
 
 endings:
   - id: ending_victory
     title: "Into the Catacombs"
     text: >
-      The gate yields, and the cold breath of the catacombs rolls over you. You
-      step through into the dark you came so far to find. *** You have won. ***
+      The gate has yielded, and from the cold dark beyond it you carry the
+      lead-sealed relic back into the chapel's broken light. The sealed crypt has
+      given up what you came to recover. *** You have won. ***
   # bug_0105 — the dark mirror of ending_victory, reached by turning the iron key on
   # the founder's coffin instead of the catacombs gate. Non-death: the player is not
   # killed, only damned to a meaner ending of their own choosing. It is NOT a

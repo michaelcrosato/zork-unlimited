@@ -89,8 +89,8 @@ describe("bug_0010 — reactive room text replaces stale descriptions after stat
 
   it("Crypt flips from gate-barred to gate-open text once the gate is unlocked", () => {
     // Full solve up to (but not through) the open gate: brass key → iron key →
-    // tie rope → unlock the catacombs gate. The win fires only on entering the
-    // catacombs, so in the crypt with the gate open the game is not yet ended.
+    // tie rope → unlock the catacombs gate. The win now fires only when the relic
+    // is taken, so in the crypt with the gate open the game is not yet ended.
     const SOLVE = [
       "go_north", // forest → chapel_yard
       "go_up",

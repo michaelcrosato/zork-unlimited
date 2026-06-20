@@ -6,7 +6,7 @@
  * Its single concrete actionable finding (report §4/§5) was SCORE LEGIBILITY: "the HUD
  * shows score/35 but never tells the player *why* numbers jumped … a win at 35 vs. 30
  * is invisible to a first-timer mid-game." Milestone awards (read headstone +5, solve
- * the well +10, unlock the gate +20) incremented the `score` var silently — surfaced
+ * the well +10, recover the relic +20) incremented the `score` var silently — surfaced
  * only as a structured `state_change` inc_var event, never as prose the player reads.
  *
  * bug_0060 had already added a signed `delta` to score inc_var/dec_var events "so a
@@ -167,15 +167,17 @@ describe("bug_0112 — end-to-end: each Sealed Crypt milestone narrates its awar
     expect(scoreLine(events)).toBe("[Your score has gone up by 10 points; it is now 15 of 35.]");
   });
 
-  it("unlocking the gate (+20) emits the score line at the cap, 35 of 35", () => {
+  it("recovering the relic (+20) emits the score line at the cap, 35 of 35", () => {
     const s = play(initStateForParserPack(index, 7), [
       ...TO_HEADSTONE,
       "read_headstone",
       ...TO_WELL,
       "use_rope_on_old_well",
       ...TO_GATE,
+      "unlock_crypt_gate",
+      "go_north",
     ]).state;
-    const { events } = play(s, ["unlock_crypt_gate"]);
+    const { events } = play(s, ["take_sealed_relic"]);
     expect(scoreLine(events)).toBe("[Your score has gone up by 20 points; it is now 35 of 35.]");
   });
 
