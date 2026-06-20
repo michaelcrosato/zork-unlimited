@@ -131,9 +131,9 @@ describe("white_stag — the truth reframes the bluff scene in the moment, not o
 const LOST_TRUTH = ["go_on", "read_stone", "decipher", "leave_stone", "cross_ice"];
 
 describe("white_stag — knows_truth fires reactive epilogue on ending_lost (bug_0293)", () => {
-  it("ending_lost: informed death names the knowing, uninformed death does not", () => {
-    expect(text(play(LOST_TRUTH))).toContain("you knew");
-    expect(text(play(LOST))).not.toContain("you knew");
+  it("ending_lost: informed death names the stone's warning, uninformed death does not", () => {
+    expect(text(play(LOST_TRUTH))).toContain("stone's warning still fresh");
+    expect(text(play(LOST))).not.toContain("stone's warning still fresh");
     expect(text(play(LOST))).toContain("the foolish");
   });
 
