@@ -53,6 +53,7 @@ describe("quarrymens_fault quarry yard reacts to the taken survey chain", () => 
     expect(s.inventory).toContain("survey_chain");
     expect(s.flags["survey_chain_taken"]).toBe(true);
     expect(desc(s)).toContain("stone block is bare where the survey chain was coiled");
+    expect(desc(s)).toContain("before he sees your one clean run");
     expect(desc(s)).not.toContain("survey chain lies coiled on a stone block");
     expect(lookNarration(s)).toBe(desc(s));
   });
@@ -63,7 +64,52 @@ describe("quarrymens_fault quarry yard reacts to the taken survey chain", () => 
     expect(s.inventory).not.toContain("survey_chain");
     expect(s.flags["survey_chain_taken"]).toBe(true);
     expect(desc(s)).toContain("stone block is bare where the survey chain was coiled");
+    expect(desc(s)).toContain("before he sees your one clean run");
     expect(desc(s)).not.toContain("survey chain lies coiled on a stone block");
     expect(lookNarration(s)).toBe(desc(s));
+  });
+
+  it("surfaces a prepared-measure yard cue after both evidence sources are read", () => {
+    const s = play(initStateForRpgPack(index, 73), [
+      "take_survey_chain",
+      "go_west",
+      "read_seam_map",
+      "go_east",
+      "go_east",
+      "read_drill_marks",
+      "go_west",
+    ]);
+
+    expect(desc(s)).toContain("One clean measure now can turn all three into proof");
+    expect(desc(s)).not.toContain("before he sees your one clean run");
+    expect(lookNarration(s)).toBe(desc(s));
+  });
+
+  it("retires Cale as an enemy once the clean fault proof is measured", () => {
+    const s = play(initStateForRpgPack(index, 7), [
+      "read_blast_order",
+      "take_survey_chain",
+      "go_west",
+      "read_seam_map",
+      "go_east",
+      "go_east",
+      "read_drill_marks",
+      "go_west",
+      "use_survey_chain_on_fault_face",
+      "go_north",
+    ]);
+    const obs = buildRpgObservation(index, s);
+
+    expect(s.current).toBe("foremans_ramp");
+    expect(s.flags["fault_measured"]).toBe(true);
+    expect(obs.description).toContain("He lowers the handle");
+    expect(obs.enemies_present).toEqual([]);
+    expect(obs.available_actions.map((a) => a.id)).not.toContain("attack_cale");
+    expect(obs.available_actions.map((a) => a.id)).toContain("go_north");
+
+    const escaped = play(s, ["go_north"]);
+    expect(escaped.ended).toBe(true);
+    expect(escaped.endingId).toBe("ending_blast_stopped");
+    expect(escaped.vars.score).toBe(50);
   });
 });

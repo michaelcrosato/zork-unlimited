@@ -47,18 +47,40 @@ rooms:
           face, and the blast order is no longer merely a schedule; it is
           evidence. The drill line runs east, the map shed west, and the
           foreman's ramp climbs north.
+      - when:
+          - { has_flag: measure_attempted }
+          - { any_of: [{ has_flag: marks_read }, { has_flag: map_read }] }
+        text: >
+          The quarry yard. Your slipped chain run cannot be made clean again,
+          but the ground is no longer only suspicion: the old map and drill
+          marks are building the proof the first measure failed to give you.
+          The drill line runs east, the map shed west, and the foreman's ramp
+          climbs north.
       - when: [{ has_flag: measure_attempted }]
         text: >
           The quarry yard. Your failed measure has left the chain kinked and
           the fault face less forgiving. The drill line runs east, the map shed
           west, and the foreman's ramp climbs north.
+      - when:
+          - { has_flag: survey_chain_taken }
+          - { has_flag: marks_read }
+          - { has_flag: map_read }
+        text: >
+          The quarry yard. The chain is in your hands, the drill marks have
+          shown where the holes lean, and the old map has named the fault under
+          the chapel bank. One clean measure now can turn all three into proof.
+          The foreman's ramp climbs north; the drill line is east and the map
+          shed west.
       - when: [{ has_flag: survey_chain_taken }]
         text: >
           A chalk-white yard below the north road cutting. The contractor's
           blast order is nailed to a wagon board, and the stone block is bare
           where the survey chain was coiled before you took it up. Above the
-          yard, the chapel bank leans over the quarry face. The drill line runs
-          east, the map shed stands west, and the foreman's ramp climbs north.
+          yard, the chapel bank leans over the quarry face. The chain can mark
+          a line, but a bare line will not stop Cale by itself; the drill marks
+          east and the old map west can tell you what the measure needs to
+          prove before he sees your one clean run. The foreman's ramp climbs
+          north.
     objects: [blast_order, survey_chain, fault_face]
     exits:
       - { direction: east, to: drill_line }
@@ -111,10 +133,11 @@ rooms:
           handle split under him. The safe road is north; the yard is south.
       - when: [{ has_flag: fault_measured }]
         text: >
-          The foreman's ramp. Cale still grips his pick handle, but the chain
-          measure has changed the ground under the argument: you have repeatable
-          proof, and he has only a penalty clause. The safe road is north; the
-          yard is south.
+          The foreman's ramp. Cale still grips his pick handle for a moment,
+          but the chain measure has changed the ground under the argument: you
+          have repeatable proof, and he has only a penalty clause. He lowers the
+          handle instead of giving Charterhaven a beaten surveyor to question.
+          The safe road is north; the yard is south.
     exits:
       - { direction: south, to: quarry_yard }
       - direction: north
@@ -308,6 +331,7 @@ enemies:
       the noon penalty in the blast order. He is not defending a secret so much
       as a schedule, which can be worse.
     room: foremans_ramp
+    conditions: [{ not_flag: fault_measured }]
     hp: 12
     attack: 5
     defense: 2
