@@ -134,6 +134,8 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // bug_0283: re-pinned after adding tower_top not_item:lantern variant (was 24aaf2b940ad...).
     // bug_0309: re-pinned after adding hermit_camp reactive re-entry variant (was 9fed38439d61...).
     // single-world migration: meta.world now binds every shipped pack to the Charter Marches.
-    expect(loaded.compiled.contentHash).toBe("5300d2a500b52f7501059e46a50a17d4e2d6e88e66feeff385417593c68b0baa");
+    // bug_0408: re-pinned after removing transient early quest-stage writes from the
+    // Watchtower hub/go_east loop so `the_road=truth_known` stays monotonic.
+    expect(loaded.compiled.contentHash).toBe("a9c1fc1038d8d8d0bd45725dacdc14b275fbedc06b8d7ded3991f2024e224adf");
   });
 });
