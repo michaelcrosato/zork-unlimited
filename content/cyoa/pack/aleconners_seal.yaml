@@ -56,7 +56,8 @@ scenes:
       the market bell. Sabel Mott, a brewster from Brewsters' Row, has already
       hung a green wax seal on her front cask. Three neighbours have laid
       complaints before the clerk. Her brew-house lies east; the finding table
-      waits behind the stall once your notes can support a finding.
+      waits behind the stall when you are ready to test what your notes can
+      support.
     choices:
       - id: read_complaints
         text: "Read the neighbours' complaints before touching the cask."
@@ -78,7 +79,7 @@ scenes:
         text: "Walk east to Sabel Mott's brew-house."
         next: brew_house
       - id: go_finding
-        text: "Step back to the finding table."
+        text: "Review your notes at the finding table."
         conditions:
           - any_of:
               - has_flag: read_complaints

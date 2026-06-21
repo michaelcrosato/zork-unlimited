@@ -32,11 +32,15 @@ const actionIds = (ids: string[]) => obs(ids).available_actions.map((a) => a.id)
 describe("bug_0357 -- Ale-Conner's Seal blind polish", () => {
   it("does not offer the finding table before the player has any evidence", () => {
     expect(actionIds([])).not.toContain("go_finding");
-    expect(obs([]).text).toMatch(/once your notes can support a finding/i);
+    expect(obs([]).text).toMatch(/test what your notes can support/i);
   });
 
   it("unlocks the finding table after the first evidence note and signposts an underprepared case", () => {
-    expect(actionIds(["read_complaints"])).toContain("go_finding");
+    const stall = obs(["read_complaints"]);
+    expect(stall.available_actions.map((a) => a.id)).toContain("go_finding");
+    expect(stall.available_actions.find((a) => a.id === "go_finding")?.text).toMatch(
+      /review your notes/i,
+    );
 
     const table = obs(["read_complaints", "go_finding"]);
     expect(table.text).toMatch(/only fragments/i);
