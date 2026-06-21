@@ -74,7 +74,7 @@ describe("bug_0128 — blind-pass rotation tracks true recency", () => {
   it("on the real repo, the rotation no longer re-nominates the MOST-recently-attended pack", () => {
     const loopState = join(process.cwd(), "AI_LOOP_STATE.md");
     if (!existsSync(loopState)) return;
-    const offsets = parseAttendanceOffsets(readFileSync(loopState, "utf8"));
+    const offsets = realRepoAttendanceOffsets();
     const a = assess(process.cwd());
     const reviews = a.candidates.filter((c) => c.id.startsWith("playtest-"));
     if (reviews.length < 2) return;
@@ -89,9 +89,8 @@ describe("bug_0128 — blind-pass rotation tracks true recency", () => {
       const mostRecentOff = Math.min(...attendedOffs);
       expect(topOff).toBeGreaterThanOrEqual(mostRecentOff);
       // The rotation must not put the single MOST-recently-attended pack first. Compute
-      // that pack dynamically from the live log rather than hardcoding a name — the
-      // rotation advances every cycle (it was watchtower_road at bug_0128, alchemists_tower
-      // by bug_0133), and a hardcoded stem goes stale the moment the rotation reaches it.
+      // that pack dynamically from the same merged evidence the assessor uses: the
+      // tracked log plus accepted local blind reports created before the log is prepended.
       const mostRecentStem = reviews
         .map((c) => ({ stem: packStem(c.target), off: offsets.get(packStem(c.target)) }))
         .filter((x): x is { stem: string; off: number } => x.off !== undefined)
@@ -205,7 +204,7 @@ describe("bug_0293 — recency rotation survives the SONNET phrasing + uses the 
     expect(order[order.length - 1]).toBe("clockwork_heist"); // most recent → last
   });
 
-  it("on the real repo, the live most-recent pack (via the code line) is parsed and NOT re-nominated", () => {
+  it("on the real repo, the live code line is parsed and the newest attendance is NOT re-nominated", () => {
     const loopState = join(process.cwd(), "AI_LOOP_STATE.md");
     if (!existsSync(loopState)) return;
     const raw = readFileSync(loopState, "utf8");
@@ -216,13 +215,20 @@ describe("bug_0293 — recency rotation survives the SONNET phrasing + uses the 
     const m =
       raw.match(/Blind-playtest "([a-z0-9_]+)"/i) ?? raw.match(/blind pass on\s+`([a-z0-9_]+)`/i);
     if (!m) return;
-    const mostRecent = packStem(m[1]!);
-    const offsets = parseAttendanceOffsets(raw);
-    expect(offsets.has(mostRecent)).toBe(true); // pre-fix: false (phrasing-blind)
+    const loggedMostRecent = packStem(m[1]!);
+    const logOffsets = parseAttendanceOffsets(raw);
+    expect(logOffsets.has(loggedMostRecent)).toBe(true); // pre-fix: false (phrasing-blind)
     const a = assess(process.cwd());
     const reviews = a.candidates.filter((c) => c.id.startsWith("playtest-"));
     if (reviews.length >= 2) {
-      expect(packStem(reviews[0]!.target)).not.toBe(mostRecent);
+      const attendance = realRepoAttendanceOffsets();
+      const mostRecent = reviews
+        .map((c) => ({ stem: packStem(c.target), off: attendance.get(packStem(c.target)) }))
+        .filter((x): x is { stem: string; off: number } => x.off !== undefined)
+        .sort((x, y) => x.off - y.off)[0];
+      if (mostRecent) {
+        expect(packStem(reviews[0]!.target)).not.toBe(mostRecent.stem);
+      }
     }
   });
 });

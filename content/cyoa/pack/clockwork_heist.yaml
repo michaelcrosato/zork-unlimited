@@ -939,7 +939,7 @@ scenes:
         text: "Try the rusted strongbox."
         conditions: [{ not_item: lockpick }]
         effects:
-          - narrate: "The lid will not give. The lock is rusted but solid — no hinge to lever, no gap to force, and forcing would only ring through the still house. This wants the same slender tool the vault does: a pick, a probe, something to coax the lock. Better search the manor for it: the kitchens are off the foyer below, and the steward's study waits up the stair."
+          - narrate: "The lid will not give. The lock is rusted but solid — no hinge to lever, no gap to force, and forcing would only ring through the still house. This wants the same slender tool the vault does: a pick, a probe, something to coax the lock. You back out through the panel to the foyer to search the manor: the kitchens are off the hall below, and the steward's study waits up the stair."
         next: foyer
       - id: back_crawl
         text: "Crawl back out to the foyer."
