@@ -4,8 +4,9 @@
  * report-table discoverability: weighing before reading the assize table hit an
  * invisible wall, partial evidence states did not say what was missing, and the
  * full suspension threshold was only explained after taking the lesser ending.
- * The fix keeps verdict gates unchanged and makes the current proof state
- * visible before the player commits.
+ * Later blind review caught the market-hall hub still listing completed
+ * investigation branches as missing. The fix keeps verdict gates unchanged and
+ * makes the current proof state visible before the player commits.
  */
 import { describe, expect, it } from "vitest";
 import { loadPackFile } from "../../src/cyoa/pack.js";
@@ -56,6 +57,37 @@ describe("bug_0359 -- Bread Assize blind polish", () => {
     expect(table.text).toMatch(/parish token trail/i);
     expect(table.available_actions.map((a) => a.id)).toContain("fine_on_weight");
     expect(table.available_actions.map((a) => a.id)).not.toContain("suspend_bread_seal");
+  });
+
+  it("drops completed investigation branches from the market-hall missing-proof text", () => {
+    const afterBakehouse = obs([
+      "read_assize_table",
+      "weigh_market_loaves",
+      "go_bakehouse",
+      "inspect_oven_marks",
+      "question_baker",
+      "return_from_bakehouse",
+    ]);
+
+    expect(afterBakehouse.text).toMatch(/factor ledger and parish queue/i);
+    expect(afterBakehouse.text).not.toMatch(/rest of the chain from bakehouse/i);
+    expect(afterBakehouse.text).not.toMatch(/still needs the.*bakehouse/i);
+
+    const afterBakehouseAndFactor = obs([
+      "read_assize_table",
+      "weigh_market_loaves",
+      "go_bakehouse",
+      "inspect_oven_marks",
+      "question_baker",
+      "return_from_bakehouse",
+      "go_factor_book",
+      "compare_flour_tally",
+      "return_from_factor",
+    ]);
+
+    expect(afterBakehouseAndFactor.text).toMatch(/still needs\s+the parish queue/i);
+    expect(afterBakehouseAndFactor.text).not.toMatch(/still needs.*factor/i);
+    expect(afterBakehouseAndFactor.text).not.toMatch(/still needs.*bakehouse/i);
   });
 
   it("keeps near-complete evidence from looking complete until the parish token trail is found", () => {

@@ -54,6 +54,86 @@ scenes:
           - all_of:
               - has_flag: assize_read
               - has_flag: short_weight
+              - has_flag: reheated_loaves
+              - has_flag: baker_admitted
+              - has_flag: flour_tally_clear
+              - not_flag: parish_tokens_traced
+        text: >
+          The assize table, hall scale, bakehouse proof, and factor ledger have
+          narrowed the fraud to its civic shape. A seal suspension still needs
+          the parish queue: who was promised poor loaves, and who was left
+          hungry while sealed bread reached the paying stalls.
+      - when:
+          - all_of:
+              - has_flag: assize_read
+              - has_flag: short_weight
+              - has_flag: reheated_loaves
+              - has_flag: baker_admitted
+              - not_flag: flour_tally_clear
+              - has_flag: parish_tokens_traced
+        text: >
+          The assize table, hall scale, bakehouse proof, and parish token list
+          now stand together. A seal suspension still needs the factor ledger
+          to answer Crowe's flour-shortage defense before the record is whole.
+      - when:
+          - all_of:
+              - has_flag: assize_read
+              - has_flag: short_weight
+              - any_of:
+                  - not_flag: reheated_loaves
+                  - not_flag: baker_admitted
+              - has_flag: flour_tally_clear
+              - has_flag: parish_tokens_traced
+        text: >
+          The assize table, hall scale, factor ledger, and parish token list
+          are in your notes. A seal suspension still needs the remaining
+          bakehouse proof: the reheated-loaf practice and Crowe's seal sequence
+          must be nailed to this batch.
+      - when:
+          - all_of:
+              - has_flag: assize_read
+              - has_flag: short_weight
+              - has_flag: reheated_loaves
+              - has_flag: baker_admitted
+              - not_flag: flour_tally_clear
+              - not_flag: parish_tokens_traced
+        text: >
+          The assize table, hall scale, and bakehouse proof are written down.
+          A seal suspension still needs the factor ledger and parish queue
+          before the record can prove both the false defense and the diverted
+          poor loaves.
+      - when:
+          - all_of:
+              - has_flag: assize_read
+              - has_flag: short_weight
+              - any_of:
+                  - not_flag: reheated_loaves
+                  - not_flag: baker_admitted
+              - has_flag: flour_tally_clear
+              - not_flag: parish_tokens_traced
+        text: >
+          The assize table, hall scale, and factor ledger are on the record.
+          A seal suspension still needs the remaining bakehouse proof and the
+          parish queue before it can show both the false seal sequence and who
+          went without bread.
+      - when:
+          - all_of:
+              - has_flag: assize_read
+              - has_flag: short_weight
+              - any_of:
+                  - not_flag: reheated_loaves
+                  - not_flag: baker_admitted
+              - not_flag: flour_tally_clear
+              - has_flag: parish_tokens_traced
+        text: >
+          The assize table, hall scale, and parish token list are on the
+          record. A seal suspension still needs the remaining bakehouse proof
+          and the factor ledger before it can show both the false seal sequence
+          and the absence of any flour-shortage defense.
+      - when:
+          - all_of:
+              - has_flag: assize_read
+              - has_flag: short_weight
               - any_of:
                   - not_flag: reheated_loaves
                   - not_flag: baker_admitted
