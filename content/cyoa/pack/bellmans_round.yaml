@@ -157,6 +157,12 @@ scenes:
             - end_game: ending_confronted
       - id: report_what_you_saw
         text: "Go to the constable and report what you saw."
+        conditions:
+          - none_of:
+              - all_of:
+                  - { has_flag: found_cloak_pin }
+                  - { has_flag: heard_witness }
+                  - { has_flag: found_debt }
         effects:
           - inc_var: { name: score, by: 10 }
         next: ending_reported
@@ -317,11 +323,26 @@ endings:
       you looked.
   - id: ending_reported
     title: "Word Left"
+    variants:
+      - when:
+          - any_of:
+              - { has_flag: read_dispute }
+              - { has_flag: found_debt }
+        text: >
+          You knock the constable up and give him what you have: a man beaten in
+          Wool Lane, a quarrel near the Exchange earlier in the evening, and a
+          drover named Gant who had cause to carry a grudge. You name what you
+          saw and what you did not look for.
+
+          He takes your name and says he will look into it at first light. You do
+          not know how thoroughly. You ring the three o'clock bell and the four
+          o'clock bell over a quiet town and tell yourself that is what you are
+          paid to do.
     text: >
       You knock the constable up and give him what you have: a man beaten in
-      Wool Lane, a possible quarrel near the Exchange earlier in the evening,
-      a drover named Gant who had cause to carry a grudge. You name what you
-      saw and what you did not look for.
+      Wool Lane, his purse-string cut, no named assailant, and the fact that
+      the lane was empty when your lantern found him. You name what you saw
+      and what you did not look for.
 
       He takes your name and says he will look into it at first light. You do
       not know how thoroughly. You ring the three o'clock bell and the four
