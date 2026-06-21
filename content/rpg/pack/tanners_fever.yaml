@@ -307,19 +307,32 @@ objects:
       Godwin's case book for the month: each patient, each diagnosis, the
       preparation instructions in precise notation. Edric's entry runs for five
       days — the fever correctly identified at the outset, the wormwood tonic
-      prescribed the morning of the second day. The formula column gives the
-      preparation strength as three parts wormwood extract to one part water:
-      three times the standard dose listed in the reference table on the facing
-      page.
+      prescribed the morning of the second day. The formula column is dense with
+      ratios and reference marks, enough to show that Godwin increased the
+      preparation strength but not enough to make the case without a close read
+      against the facing table.
     variants:
       - when: [{ has_flag: notes_read }]
         text: >
           Godwin's case notes, already read — the overdose formula in your head:
           three to one against the reference standard of one to one. He had
           reasons for the strength he chose; the reasons do not make the dose safe.
+      - when:
+          - all_of:
+              - { has_flag: godwin_notes_taken }
+              - { not_flag: notes_read }
+        text: >
+          Godwin's case notes are in your hand: a close, confident case book with
+          Edric's fever entry open among dense ratios, dose marks, and a facing
+          reference table. The numbers are there, but only reading them carefully
+          will turn them into evidence you can use at the bedside.
     takeable: true
     take_effects:
       - set_flag: godwin_notes_taken
+      - narrate: >
+          The dose columns are too dense to carry by memory from a glance. You will
+          need to read the notes closely against the reference table before the
+          formula is useful.
     read_text: >
       Edric's entry, five days running: autumn fever, correctly identified.
       Preparation entry for the wormwood tonic: three parts extract to one part
