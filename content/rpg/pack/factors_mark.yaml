@@ -477,6 +477,7 @@ enemies:
       surprises him, and he will not move unless Factor Harwick tells him to or the
       alternative is worse.
     room: gate_arch
+    conditions: [{ not_flag: factor_shamed }]
     hp: 14
     attack: 5
     defense: 1

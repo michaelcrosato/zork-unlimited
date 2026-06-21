@@ -1,0 +1,33 @@
+id: bug_0401
+pack: factors_mark_v1
+title: "Breckel remained attackable after the social confrontation opened the gate"
+severity: medium
+scene: gate_arch
+reported_by: blind_playtest_20260621T055844Z_factors_mark_seed7
+
+symptom: >
+  A blind playtester completed the full social route, shamed Harwick, and saw Gate
+  Arch prose correctly say Breckel stepped back and the road opened. The structured
+  observation still listed Breckel in `enemies_present` with 14 HP, and
+  `attack_breckel` remained legal despite the now-neutral scene state.
+
+root_cause: >
+  Breckel's room prose and the north exit were already keyed to `factor_shamed`,
+  but the enemy definition had no matching condition. The RPG enemy layer therefore
+  treated him as alive and confrontable after Harwick had called him off.
+
+fix: >
+  Breckel now has `conditions: [{ not_flag: factor_shamed }]`. The combat fallback
+  remains available before the social resolution and after a failed confrontation,
+  but it retires once Harwick folds. The social route's score, exit, and ending are
+  unchanged.
+
+tests: tests/regression/factors_mark_breckel_retires.test.ts
+
+verification:
+  - npm test -- --run tests/regression/factors_mark_breckel_retires.test.ts
+  - npm run validate -- content/rpg/pack/factors_mark.yaml
+
+trace_repin: >
+  None. The change updates pack content and adds a regression test; there is no
+  committed Factor's Mark replay trace hash to repin.
