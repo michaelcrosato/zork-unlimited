@@ -24,8 +24,8 @@
 #        │ N* (* gated on has_item: salt_warrant AND not_flag: clerk_woken)
 #   duty_room (start; ledger clue; crowbar; coal_hatch; strong_room_door; passage_door)
 #        │ E                       │ [OPEN coal_hatch when clerk_woken]
-#   salt_store (salt_measure;       River escape path:
-#    strong_key; +15 on take)         OPEN coal_hatch + has warrant → ending_recovered
+#   salt_store (salt_measure          River escape path:
+#    contains strong_key; +15)         OPEN coal_hatch + has warrant → ending_recovered
 #   (* W from duty_room gated on strong_door_open)               + no warrant  → ending_drowned
 #   strong_room (salt_warrant; +20 on take)  │ [OPEN passage_door when clerk_woken]
 #                                             → ending_caught
@@ -123,7 +123,7 @@ rooms:
       brine. A row of copper measures hangs on pegs along the wall by size — pint,
       quart, gallon. The heavy gallon copper on the lowest peg looks heavier than it
       should for an empty vessel. The duty-room lies west.
-    objects: [salt_measure, strong_key]
+    objects: [salt_measure]
     exits:
       - { direction: west, to: duty_room }
 
@@ -350,16 +350,30 @@ objects:
     aliases: [measure, copper, gallon, copper measure, gallon copper, vessel]
     description: >
       The heavy gallon copper measure on the lowest peg — tarnished with use, and
-      unmistakably heavier than an empty measure should be. Something is in the bottom.
+      unmistakably heavier than an empty measure should be. Something is in the bottom;
+      opening the measure would turn out whatever the Collector hid there.
+    variants:
+      - when: [{ has_item: strong_key }]
+        text: >
+          The gallon copper hangs open and empty on its peg, old salt dust scuffed in
+          the bottom where the hidden key lay until you took it.
+      - when: [{ is_open: salt_measure }]
+        text: >
+          The gallon copper hangs open on its peg, old salt dust scuffed aside around
+          the small iron key in the bottom.
+    container: true
+    openable: true
+    contents: [strong_key]
     interactions:
       - verb: INSPECT
         target: salt_measure
         effects:
           - narrate: >
-              You tip the copper measure and the bottom reveals itself: a small iron
-              key, old and light, sitting under a crust of old salt dust. The Collector
-              hid it here himself and recorded the address in his own ledger — as safe
-              a place as any, provided no one read his private notes.
+              You lift the heavy gallon copper enough to feel the weight shift: a
+              small iron key is sitting under the crust of salt dust in the bottom.
+              Open the measure and it will be yours. The Collector hid it here himself
+              and recorded the address in his own ledger — as safe a place as any,
+              provided no one read his private notes.
 
   - id: strong_key
     name: "strong-room key"
