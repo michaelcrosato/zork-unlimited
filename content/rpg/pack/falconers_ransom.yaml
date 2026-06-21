@@ -501,6 +501,7 @@ enemies:
       of someone who used to work for his living in a harder trade. He will not move
       without a word from Aldric and he will not be moved by argument.
     room: stable_yard
+    conditions: [{ not_flag: aldric_shamed }]
     hp: 12
     attack: 5
     defense: 2

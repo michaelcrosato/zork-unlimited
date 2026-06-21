@@ -1,0 +1,34 @@
+id: bug_0402
+pack: falconers_ransom_v1
+title: "Thorn remained attackable after Aldric folded"
+severity: medium
+scene: stable_yard
+reported_by: blind_playtest_20260621T061304Z_falconers_ransom_seed7
+
+symptom: >
+  A blind playtester completed the social route, shamed Aldric, and saw Stable
+  Yard prose correctly say Thorn had stepped back from the passage. The structured
+  observation still listed Thorn in `enemies_present` with 12 HP, and
+  `attack_thorn` remained legal despite the peaceful scene state.
+
+root_cause: >
+  Thorn's room prose and the north exit were keyed to `aldric_shamed`, but the
+  enemy definition had no matching condition. The RPG enemy layer therefore
+  treated Thorn as alive and confrontable after Aldric had nothing left for him to
+  enforce.
+
+fix: >
+  Thorn now has `conditions: [{ not_flag: aldric_shamed }]`. The combat fallback
+  remains available before the social resolution and after a failed confrontation,
+  but it retires once Aldric folds. The social route's score, exit, and ending are
+  unchanged.
+
+tests: tests/regression/falconers_ransom_thorn_retires.test.ts
+
+verification:
+  - npm test -- --run tests/regression/falconers_ransom_thorn_retires.test.ts
+  - npm run validate -- content/rpg/pack/falconers_ransom.yaml
+
+trace_repin: >
+  None. The change updates pack content and adds a regression test; there is no
+  committed Falconer's Ransom replay trace hash to repin.
