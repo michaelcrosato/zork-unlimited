@@ -301,11 +301,11 @@ scenes:
           to say why her story cannot govern it.
     text: >
       Twelve jurors sit in the downstairs hall. Constable Elmswood stands at
-      the door. The clerk has his pen ready. You have examined the body, seen
-      the scene, read the evidence, and heard the witnesses. The finding you
-      return today will determine whether Edward Croft's death ends here as a
-      household accident — or whether Daniel Merton's name goes before a
-      grand jury.
+      the door. The clerk has his pen ready. The finding you return today must
+      rest on the record you have actually made. If the record is still thin,
+      you may ask for more time before deciding whether Edward Croft's death
+      ends here as a household accident — or whether another name belongs before
+      a grand jury.
     choices:
       - id: return_natural_causes
         text: "Return a finding of natural causes — death by misfortune."

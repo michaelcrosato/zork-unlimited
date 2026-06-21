@@ -5,7 +5,9 @@
  * acknowledged by the inquest, and Jack Finch's composure failure branch needed
  * explicit proof that it did not block the correct felony verdict. The fix adds
  * an optional, unscored Alice contradiction beat and pins Finch's failure branch
- * as non-blocking.
+ * as non-blocking. Later blind review caught the rushed inquest base text
+ * claiming the player had already examined and heard everything; that base text
+ * is now neutral and evidence-honest.
  */
 import { describe, expect, it } from "vitest";
 import { loadPackFile } from "../../src/cyoa/pack.js";
@@ -41,6 +43,19 @@ const WIDOW_AND_STAIRS = [
 ];
 
 describe("bug_0360 -- Croft Inquest blind polish", () => {
+  it("keeps a rushed inquest from claiming unearned investigation", () => {
+    const table = obs(["convene_inquest"]);
+
+    expect(table.text).toMatch(/record you have actually made/i);
+    expect(table.text).toMatch(/record is still thin/i);
+    expect(table.text).not.toMatch(/examined the body/i);
+    expect(table.text).not.toMatch(/heard the witnesses/i);
+    expect(table.available_actions.map((a) => a.id)).toEqual([
+      "return_natural_causes",
+      "return_to_examine",
+    ]);
+  });
+
   it("lets the player press Alice once her stairs account is contradicted by scene evidence", () => {
     expect(actionIds(["speak_widow", "hear_widow"])).not.toContain("press_widow_on_stairs");
 
