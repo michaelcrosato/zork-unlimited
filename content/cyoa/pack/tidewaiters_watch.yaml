@@ -50,7 +50,7 @@
 # Best path: all six clues (+30) → seal_the_cargo (+20) = 50.
 # Confrontation path: examine_manifest (+5) + sound_cargo (+5) + confront_captain (+20)
 #   + any remaining clues = same ceiling 50.
-# Reporting path: any clues + file_report (+10) = up to 40.
+# Reporting path: discrepancy + any clues + file_report (+10) = up to 40.
 
 meta:
   id: tidewaiters_watch_v1
@@ -155,6 +155,7 @@ scenes:
             - end_game: ending_extracted
       - id: file_report
         text: "File an irregularity report and let the alderman's office investigate."
+        conditions: [ { has_flag: found_discrepancy } ]
         effects:
           - inc_var: { name: score, by: 10 }
         next: ending_reported
@@ -331,15 +332,30 @@ endings:
       it always does. You keep your round.
   - id: ending_reported
     title: "Filed and Referred"
+    variants:
+      - when: [ { has_flag: found_priors } ]
+        text: >
+          You write the irregularity notice in a careful hand — seventy-two
+          declared, eighty billed, query for review — and lodge it with the
+          harbour clerk before the manifests can be stamped. It will go to
+          the alderman's office. You have done your duty as the forms define it.
+
+          Whether anything follows, you cannot say. The alderman's name was
+          in the register once before, beside a query that went nowhere. You
+          know that. You filed anyway.
+
+          The Sister Moon is certified by midday by the next tidewaiter on
+          the rota. You call it a morning's work and walk back to the weighing
+          house.
     text: >
       You write the irregularity notice in a careful hand — seventy-two
       declared, eighty billed, query for review — and lodge it with the
       harbour clerk before the manifests can be stamped. It will go to
       the alderman's office. You have done your duty as the forms define it.
 
-      Whether anything follows, you cannot say. The alderman's name was
-      in the register once before, beside a query that went nowhere. You
-      know that. You filed anyway.
+      Whether anything follows, you cannot say. The harbour has a way of
+      passing paper from hand to hand until no hand is responsible. You
+      filed anyway.
 
       The Sister Moon is certified by midday by the next tidewaiter on
       the rota. You call it a morning's work and walk back to the weighing
