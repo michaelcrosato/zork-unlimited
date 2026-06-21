@@ -30,6 +30,8 @@
 #   +3 rhetoric: the guild lost three similar cases in this district, two signed by
 #   Oswin himself). Then USE prior_convictions ON case_record at aldermans_antechamber
 #   — rhetoric DC 12. Success: case dismissed, Oswin overruled; Craf steps aside.
+#   If a fully prepared player fails the roll, the failure text teaches the sequence
+#   and unlocks a deterministic recovery presentation using the town register.
 #   COMBAT (fallback, partial score): skip the evidence or fail the check — Craf must
 #   be fought in the antechamber to force passage. Combat path caps at 40/50.
 #
@@ -44,7 +46,9 @@
 #   +5  READ charter_roll        — exemption confirmed (one-shot: not_flag charter_read)
 #   +10 READ town_register       — official registration (+3 rhetoric; one-shot: has_item + not_flag register_read)
 #   +10 READ prior_convictions   — guild precedent (+3 rhetoric; one-shot: has_item + not_flag priors_read)
-#   +10 rhetoric check success   — USE prior_convictions ON case_record, DC 12 (one-shot: not_flag appeal_attempted)
+#   +10 rhetoric check success   — USE prior_convictions ON case_record, DC 12
+#                                  OR post-failure recovery presentation
+#                                  (one-shot: not_flag oswin_overruled)
 #   +15 market_square on_enter   — WIN (locomotion win)
 #
 # Rhetoric stat calibration (skill checks use d20, combat uses d6):
@@ -445,6 +449,40 @@ objects:
                 for a living knows the difference between an argument and a list of
                 documents. He closes the slate. 'Come back when you have the sequence.'
                 Craf has not moved from the door.
+      # Recovery after a failed rhetoric roll: the failure text explicitly teaches
+      # the required sequence, so a prepared player can now present the same three
+      # documents in order instead of being forced into combat by a bad die.
+      - verb: USE
+        item: town_register
+        target: case_record
+        command_verb: present
+        command_template: "present {item} with the charter and guild conviction records on {target}"
+        conditions:
+          - all_of:
+              - { has_flag: appeal_attempted }
+              - { not_flag: oswin_overruled }
+              - { has_flag: charter_read }
+              - { has_flag: register_read }
+              - { has_flag: priors_read }
+              - { has_item: prior_convictions }
+        effects:
+          - set_flag: oswin_overruled
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: weavers_appeal, stage: case_dismissed }
+          - add_journal: >
+              Appeal recovered and accepted: charter text first, registered copy
+              second, Oswin's prior losses third. The deputy struck the case
+              through after the corrected presentation. Craf stepped aside. (+10)
+          - narrate: >
+              You do exactly what the deputy asked for. This time the charter comes
+              first: Walter Holm's Crown exemption, heritable in perpetuity. The
+              town register follows: the official copy, the same language, no guild
+              license required. Only then do you open the conviction ledger to the
+              prior discharges — Oswin's own signatures on two losses under the same
+              rule. The sequence gives each document its weight. The deputy reads
+              the three entries in silence, picks up the stylus, and strikes the
+              slate through: 'discharged, charter exemption confirmed.' Craf looks
+              at the line, then at Oswin, and steps back from the door.
 
 npcs:
   - id: oswin
@@ -531,6 +569,7 @@ enemies:
       is not from the guild; he will not be moved by argument. He has been given
       one instruction and is waiting for a second one.
     room: aldermans_antechamber
+    conditions: [{ not_flag: oswin_overruled }]
     hp: 12
     attack: 5
     defense: 2
