@@ -4,8 +4,10 @@
  * state-honesty and signposting problems: the bribe ending could claim the player
  * knew the rod reading without ever measuring, an informed dismissal did not
  * acknowledge that the officer knew better, and the Guild referral route appeared
- * without a clear "you have enough evidence" cue. The composure check is also
- * pinned as a non-blocking tension beat: both roll branches still condemn.
+ * without a clear "you have enough evidence" cue. Later blind review also flagged
+ * the condemnation's visible wording as too silent about its composure check. The
+ * composure check is pinned as a non-blocking tension beat: both roll branches
+ * still condemn.
  */
 import { describe, expect, it } from "vitest";
 import { loadPackFile } from "../../src/cyoa/pack.js";
@@ -68,7 +70,13 @@ describe("bug_0358 -- Alnager's Fault blind polish", () => {
   });
 
   it("keeps the composure roll as a non-blocking condemnation tension beat across seeds", () => {
-    const route = ["inspect_cloth", "measure_with_rod", "examine_seal", "condemn_bassett"];
+    const setup = ["inspect_cloth", "measure_with_rod", "examine_seal"];
+    const ready = obs(setup);
+    const action = ready.available_actions.find((a) => a.id === "condemn_bassett");
+    expect(action?.text).toMatch(/composure/i);
+    expect(action?.skill_check).toEqual({ skill: "composure", difficulty: 11, die: "d20" });
+
+    const route = [...setup, "condemn_bassett"];
 
     for (let seed = 1; seed <= 20; seed++) {
       const state = play(route, seed);

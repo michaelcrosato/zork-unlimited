@@ -167,7 +167,7 @@ scenes:
         text: "Step outside to where the other clothiers are waiting."
         next: drapers_row
       - id: condemn_bassett
-        text: "Formally condemn the cloth and record the condemnation."
+        text: "Keep your composure, formally condemn the cloth, and record the condemnation."
         conditions:
           - all_of:
               - { has_flag: found_short }
