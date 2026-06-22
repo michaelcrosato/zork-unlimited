@@ -172,6 +172,15 @@ rooms:
         text: >
           The press room, the chase empty and the door closed behind you. The composing
           room is back west.
+      - when: [{ has_flag: block_taken }, { has_flag: proof_sheet_taken }]
+        text: >
+          The press room. The chase is empty and the proof sheet is folded in your
+          satchel. The back door leads north to the court. The composing room is west.
+      - when: [{ has_flag: proof_sheet_taken }]
+        text: >
+          The press room. The proof sheet is gone from the bench; the type-block that
+          can print it again is still locked in the chase. The back door leads north to
+          the court. The composing room is west.
       - when: [{ has_flag: block_taken }]
         text: >
           The press room. The chase is empty — the type-block is in your satchel. The
@@ -299,11 +308,36 @@ objects:
       impression from last night's work, the ink barely dry. The title is legible across
       the top: 'The Barfleur Memorandum.' Below it, dense text in a small roman face.
     variants:
+      - when: [{ has_flag: proof_sheet_taken }, { has_flag: block_taken }]
+        text: >
+          The proof sheet is folded in your satchel, and the type-block that set it is
+          wrapped there too. Paper proves the text existed; the block keeps it from
+          being printed again here.
+      - when: [{ has_flag: proof_sheet_taken }]
+        text: >
+          The proof sheet is folded in your satchel. It proves the text existed, but
+          paper alone will not stop Fen setting another run while the type-block remains
+          locked in the chase.
+      - when: [{ has_flag: block_taken }]
+        text: >
+          The proof sheet on the bench. You have read it. The type-block that set this
+          is in your satchel.
       - when: [{ has_flag: proof_read }]
         text: >
-          The proof sheet on the bench. You have read it. The type-block that set
-          this is in your satchel.
-    takeable: false
+          The proof sheet on the bench. You have read it. The type-block that set this
+          is still in the chase until you lift it.
+    takeable: true
+    take_effects:
+      - set_flag: proof_sheet_taken
+      - add_journal: >
+          You fold the proof sheet into your satchel. It is evidence of what Fen meant
+          to print, but paper is not the warrant's target: the type-block in the chase
+          can still print the Memorandum again.
+      - narrate: >
+          You slide the proof sheet out from under the rag and fold it twice. It will
+          prove what was set here tonight, but it will not stop the run by itself. The
+          forme in the chase is the thing that can print five hundred more before
+          morning.
     read_text: >
       'The Barfleur Memorandum. To the Reader: the following men were pressed into His
       Majesty's service aboard HMS Barfleur between April and September 1694. At the close
