@@ -99,7 +99,9 @@ rooms:
           "Who's there? I'll have the watch on you!" The front passage north is shut
           to you now. The coal-barrel stands in the corner; the rope on its hoop is
           the ford-marker. The coal-hatch in the floor behind the barrel opens above
-          the tidal channel. The passage door to the north is your only other way out.
+          the tidal channel. If the warrant is under your coat, the rope and hatch are
+          your way out; without it, the channel is only panic and water. The passage
+          door to the north is your only other way out.
     objects: [collector_ledger, crowbar, coal_hatch, strong_room_door, passage_door]
     exits:
       - { direction: east, to: salt_store }
@@ -108,7 +110,7 @@ rooms:
         conditions: [{ has_flag: strong_door_open }]
         locked_msg: >
           The strong-room door is iron-banded and locked fast. You will need the key
-          — or something heavier and louder.
+          — or the crowbar, heavier and louder.
       - direction: north
         to: market_lane
         conditions: [{ has_item: salt_warrant }, { not_flag: clerk_woken }]
@@ -183,6 +185,11 @@ objects:
       A short iron crowbar, the kind used for coal-hole covers and stubborn barrel
       hoops. Useful, if you are not concerned about the sound it makes.
     takeable: true
+    take_effects:
+      - narrate: >
+          The crowbar is weight enough for the iron door, if you accept waking the
+          clerk. Use it on the iron door only if quiet has already failed or you mean
+          to run for the hatch.
     interactions:
       # TENSION BEAT — CHECK grip on the crowbar (OPTIONAL, convergent). Hold it in
       # both hands in the dark and feel whether your steadiness is with you. The
@@ -398,6 +405,10 @@ objects:
     take_effects:
       - inc_var: { name: score, by: 20 }
       - set_flag: warrant_taken
+      - narrate: >
+          The warrant is yours. If the house is still quiet, get back east and out
+          through the passage; if the clerk is awake, keep it under your coat and use
+          the coal-hatch rope for the ford.
 
 npcs: []
 
