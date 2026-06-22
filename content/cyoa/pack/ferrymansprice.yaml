@@ -356,13 +356,37 @@ endings:
   - id: ending_crossed
     title: "The Far Side"
     variants:
+      - when:
+          - all_of:
+              - has_item: travel_receipt
+              - has_item: lease_notice
+              - has_flag: saw_bloodstains
+              - has_flag: heard_denial
+        text: >
+          Corwick's lights grow ahead. You know enough now to make a true account:
+          Aldric's receipt, the lease notice, the blood in the wood, and the denial
+          in the hut. You could still turn back to the toll-house. You do not. The
+          ferryman's reason and his crime travel north with you as long as you carry
+          them, and you carry them a long way before the road gives you something
+          else to think about.
+      - when:
+          - all_of:
+              - has_item: travel_receipt
+              - has_item: lease_notice
+        text: >
+          Corwick's lights grow ahead. You carry Aldric's receipt and the lease
+          notice that explains why this crossing had a price beyond copper. You
+          could still turn back to the toll-house. You do not. The ferryman's reason
+          and his crime travel north with you as long as you carry them, and you
+          carry them a long way before the road gives you something else to think
+          about.
       - when: [ { has_flag: knows_truth } ]
         text: >
-          Corwick's lights grow ahead. You know everything now — the receipt, the
-          lease notice, the blood in the wood, the denial in the hut. You could still
-          turn back to the toll-house. You do not. The ferryman's reason and his crime
-          travel north with you as long as you carry them, and you carry them a long
-          way before the road gives you something else to think about.
+          Corwick's lights grow ahead. The lease notice has told you what Aldric
+          carried and what the ferryman stood to lose, but you do not have the whole
+          record that would make a charge stand at the toll-house. The ferryman's
+          reason travels north with you anyway, and you carry it a long way before
+          the road gives you something else to think about.
       - when: [ { has_flag: found_marks } ]
         text: >
           Corwick's lights are ahead. You saw what you saw at the bank, and you chose

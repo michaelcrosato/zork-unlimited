@@ -4,6 +4,10 @@
  * stale hut/boat prose and an evidence inconsistency: the receipt could be
  * carried, but the murder's motive document could not. The fix makes the lease
  * notice a carried item and keeps testimony text route-honest.
+ *
+ * Regression for bug_0470 -- a later blind pass found the walk-away ending could
+ * claim the player knew the receipt, blood, and hut denial after reading only the
+ * lease notice. The ending must name only the evidence actually found.
  */
 import { describe, expect, it } from "vitest";
 import { loadPackFile } from "../../src/cyoa/pack.js";
@@ -86,6 +90,49 @@ describe("bug_0364 -- Ferryman's Price blind polish", () => {
     expect(end.text).toMatch(/lease notice/i);
     expect(end.text).not.toMatch(/drag marks|rope marks/i);
     expect(end.state.vars.score).toBe(35);
+  });
+
+  it("keeps the walk-away ending honest when the player only read the lease notice", () => {
+    const end = obs([
+      "walk_upstream",
+      "pull_bundle",
+      "read_lease_notice",
+      "leave_willows",
+      "go_to_landing",
+      "hail_ferryman",
+      "say_nothing",
+      "walk_to_corwick",
+    ]);
+
+    expect(end.ending_id).toBe("ending_crossed");
+    expect(end.text).toMatch(/lease notice/i);
+    expect(end.text).toMatch(/ferryman stood to lose/i);
+    expect(end.text).not.toMatch(/receipt/i);
+    expect(end.text).not.toMatch(/blood/i);
+    expect(end.text).not.toMatch(/denial/i);
+  });
+
+  it("keeps the stronger walk-away ending for a fully informed player", () => {
+    const end = obs([
+      "inspect_marks",
+      ...CACHE_WITHOUT_MARKS,
+      "leave_willows",
+      "go_to_hut",
+      "ask_lost_traveler",
+      "leave_hut",
+      "go_to_landing",
+      "inspect_boat",
+      "mark_bloodstain",
+      "board_and_call",
+      "accuse_midstream",
+      "walk_past",
+    ]);
+
+    expect(end.ending_id).toBe("ending_crossed");
+    expect(end.text).toMatch(/receipt/i);
+    expect(end.text).toMatch(/lease notice/i);
+    expect(end.text).toMatch(/blood/i);
+    expect(end.text).toMatch(/denial/i);
   });
 
   it("leaves the full blind-playtest route and maximum score intact", () => {
