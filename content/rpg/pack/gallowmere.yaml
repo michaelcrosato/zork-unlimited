@@ -18,13 +18,14 @@
 # has killed a shepherd on the high moor. You are the huntsman hired to take her
 # before nightfall. Hedrick Cradoc, the dead shepherd's son, keeps his father's
 # tracking-log and knows the moor better than anyone living; he can tell you how the
-# sow charges (opens the attack angle, +2 attack once applied at the kill-site) and,
-# more critically, how to read the wind-stone at the Gallowmere Gully before entering
-# — because a sow this old always charges from upwind, and a hunter who misreads the
-# gully entrance is gored before she sees the blade (+5 lore so the DC-9 wind check
-# passes on worst roll). The combat_guaranteed flag is spoken aloud by Hedrick and
-# proved by the validator; the lethal check is telegraphed by the log, Hedrick, and
-# the room prose, never an ambush (bug_0123).
+# sow charges (opens the attack angle, +2 attack once applied at the kill-site, and
+# unlocks a one-shot blind-side strike in the hollow) and, more critically, how to
+# read the wind-stone at the Gallowmere Gully before entering — because a sow this old
+# always charges from upwind, and a hunter who misreads the gully entrance is gored
+# before she sees the blade (+5 lore so the DC-9 wind check passes on worst roll). The
+# combat_guaranteed flag is spoken aloud by Hedrick and proved by the validator; the
+# lethal check is telegraphed by the log, Hedrick, and the room prose, never an ambush
+# (bug_0123).
 #
 #   moor_edge ─ W ─ shepherd_bothy (Hedrick NPC; shepherd_log +5)
 #   (start; hunting_knife)
@@ -48,9 +49,9 @@
 # the ridge, never before; SCORE_PEAKS_BEFORE_WIN does not fire on a navigation win
 # (bug_0116).
 #
-# Combat-guaranteed proof (best reachable: atk6/def4/hp24 — tracking +2 atk AND lore
-# check +2 def AND base hp):
-#   - sow (hp15/atk5/def2): worst player dmg 1+6-2 = 5, so 3 rounds to kill;
+# Combat-guaranteed proof (best reachable: atk8/def4/hp24 — tracking +2 atk, the
+# blind-side strike +2 atk, the lore check +2 def, and base hp):
+#   - sow (hp15/atk5/def2): worst player dmg 1+8-2 = 7, so 3 rounds to kill;
 #     worst incoming 6+5-4 = 7, over the 2 rounds the sow survives = 14.
 #   - 14 < 24 HP, margin 10 — clears COMBAT_NOT_GUARANTEED.
 # Without tracking (atk4/def4/hp24): worst dmg 1+4-2 = 3, 5 rounds to kill;
@@ -81,8 +82,9 @@ meta:
   # hp 24 is tuned for the combat_guaranteed margin (14 worst-case < 24).
   vars_init: { hp: 24, attack: 4, defense: 2, tracking: 3, lore: 3 }
   flags_init: []
-  # With both preps (tracking +2 atk at kill_site, lore +2 def at wind_stone) best
-  # reachable = atk6/def4/hp24; sow worst-case damage = 14 < 24 HP. Proved above.
+  # With both preps (tracking +2 atk at kill_site, the one-shot blind-side strike
+  # +2 atk in the hollow, lore +2 def at wind_stone) best reachable = atk8/def4/hp24;
+  # sow worst-case damage = 14 < 24 HP. Proved above.
   combat_guaranteed: true
   max_score: 50
 
@@ -212,6 +214,21 @@ rooms:
           The Gallowmere hollow, the great sow down in the reed-bed, her flanks
           gone still. The moor lifts north to the ridge; the gully is back to
           the south.
+      - when: [{ has_flag: blind_side_struck }]
+        text: >
+          The Gallowmere hollow, black peat and broken reed underfoot. The sow is
+          still on you, but your first cut found the blind side Cradoc's ground
+          taught you: her left tusk is late now, her shoulder checked. The gully
+          is back to the south.
+      - when: [{ has_flag: found_kill }]
+        text: >
+          A shallow bowl of black peat and broken reed, ringed by taller hags.
+          It smells of old musk and blood. The Gallowmere sow is here — a great
+          grey animal, heavy across the shoulders, her tusks yellowed and her eyes
+          small and still. The charge angle you read at the kill-site shows you
+          the blind-side opening before the first tusk-swing. The gully is back
+          to the south.
+    objects: [sow_blind_side]
     exits:
       - { direction: south, to: moor_gully }
       - direction: north
@@ -247,6 +264,56 @@ objects:
       it long enough that the grip has worn to your hand's shape. It will serve for
       reading stone and reading ground, and for worse business at close quarters.
     takeable: true
+
+  - id: sow_blind_side
+    name: "the blind side"
+    aliases: [blind side, sow's blind side, opening, angle, charge angle, tusk line, left tusk, shoulder]
+    description: >
+      The fighting angle Cradoc's ground described: the sow rolls right as she charges,
+      lifting her left tusk late and showing a narrow blind-side opening to a hunter who
+      has read both ground and wind.
+    variants:
+      - when: [{ has_flag: sow_slain }]
+        text: "The blind-side opening has done its work; the great sow lies still in the reed-bed."
+      - when: [{ has_flag: blind_side_struck }]
+        text: >
+          The blind side is marked now by your first cut: her shoulder checks whenever
+          she turns, and the left tusk comes late.
+      - when: [{ none_of: [{ has_flag: found_kill }] }]
+        text: >
+          The sow must have a blind side, but without the kill-site's charge angle you
+          cannot read it under the rush of tusk and shoulder.
+    takeable: false
+    interactions:
+      # The blind pass (20260622T164710Z, seed 7) called out the climax: all the
+      # tactical prep (charge angle, tusk side, wind quarter) collapsed into plain
+      # repeated ATTACK. This one-shot knife-on-opening use turns the learned kill-site
+      # angle into a visible choice in the fight without changing the score economy. It is gated
+      # on BOTH earned knowledge beats, so an untracked hunter still gets the riskier
+      # simple fight the comments above tune as the live gamble.
+      - verb: USE
+        item: hunting_knife
+        target: sow_blind_side
+        command_verb: strike
+        command_template: "strike {target} with {item}"
+        conditions:
+          - { in_room: moor_hollow }
+          - { has_flag: found_kill }
+          - { has_flag: read_wind }
+          - { not_flag: blind_side_struck }
+          - { not_flag: sow_slain }
+        effects:
+          - set_flag: blind_side_struck
+          - inc_var: { name: attack, by: 2 }
+          - add_journal: >
+              You turned Cradoc's charge-angle into a first cut along the sow's blind
+              side; her tusk-line is broken and your follow-up strikes will land truer.
+              (+2 attack)
+          - narrate: >
+              You wait until the sow's shoulder rolls the way the kill-site promised,
+              then cut in low along the blind side before the left tusk can lift. She
+              checks hard in the reed-bed, and the whole fight changes shape: not just
+              a brute exchange now, but the angle Cradoc died leaving for you.
 
   - id: shepherd_log
     name: "shepherd's log"
@@ -487,9 +554,10 @@ enemies:
   # and the enemy, if it survives, deals d6+enemy.attack-playerDef (min 1). Player
   # strikes first each round.
   #
-  # Tuned so the fully-prepared hunter (best reachable: atk6/def4/hp24 — tracking
-  # check +2 atk, lore-check +2 def, base hp) survives on the WORST rolls:
-  #   - sow (hp15/atk5/def2): worst player dmg 1+6-2=5, so 3 rounds to kill;
+  # Tuned so the fully-prepared hunter (best reachable: atk8/def4/hp24 — tracking
+  # check +2 atk, blind-side strike +2 atk, lore-check +2 def, base hp) survives on
+  # the WORST rolls:
+  #   - sow (hp15/atk5/def2): worst player dmg 1+8-2=7, so 3 rounds to kill;
   #     worst incoming 6+5-4=7, over the 2 rounds the sow survives = 14.
   #   - 14 < 24 HP — clears COMBAT_NOT_GUARANTEED with margin 10.
   # Without tracking (atk4/def4/hp24): worst dmg 1+4-2=3, 5 rounds to kill;

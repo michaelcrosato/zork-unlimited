@@ -1,0 +1,24 @@
+id: bug_0447_gallowmere_blind_side_tactic
+title: "Gallowmere prep now creates a visible blind-side fight tactic"
+pack: content/rpg/pack/gallowmere.yaml
+reported_by: blind-playtest
+report: blind-tester/reports/20260622T164710Z_gallowmere_seed7.md
+severity: S2
+symptom: >
+  The pack taught the player wind quarter, charge angle, tusk side, and blind-side
+  approach, but the climactic sow fight still offered only repeated attack actions.
+  The careful preparation felt like silent stat math instead of a tactical choice.
+root_cause: >
+  Gallowmere's kill-site preparation awarded attack and score, but no in-fight
+  action consumed or surfaced that learned angle once the player reached the sow.
+fix: >
+  Added a one-shot hunting-knife command in moor_hollow, gated on both the kill-site
+  and wind-stone knowledge. The action strikes the sow's blind side, narrates the
+  learned tactic, grants a small attack boost, retires after use, and leaves the
+  score economy unchanged.
+tests:
+  - tests/regression/gallowmere_blind_side_tactic.test.ts
+verification:
+  - npm test -- --run tests/regression/gallowmere_blind_side_tactic.test.ts tests/regression/gallowmere_peat_sign_kill_site_hint.test.ts tests/regression/rpg_combat_guaranteed_optin.test.ts
+  - npm run validate -- content/rpg/pack/gallowmere.yaml
+  - npm run health
