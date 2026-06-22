@@ -8,6 +8,9 @@
  * the condemnation's visible wording as too silent about its composure check. The
  * composure check is pinned as a non-blocking tension beat: both roll branches
  * still condemn.
+ *
+ * bug_0464 keeps the hub from freezing on a mid-case variant after the wax
+ * comparison and makes Drapers' Row visible as evidence, not just scenery.
  */
 import { describe, expect, it } from "vitest";
 import { loadPackFile } from "../../src/cyoa/pack.js";
@@ -66,7 +69,38 @@ describe("bug_0358 -- Alnager's Fault blind polish", () => {
 
     expect(hall.text).toMatch(/register, Ned's account, and the too-pale seal/i);
     expect(hall.text).toMatch(/enough to refer the matter to the Guild court/i);
+    expect(hall.text).toMatch(/wax comparison/i);
     expect(hall.available_actions.map((a) => a.id)).toContain("refer_to_guild");
+  });
+
+  it("labels Drapers' Row as wax evidence and lets the fully built case read as complete", () => {
+    const partial = obs(["examine_seal"]);
+    const rowAction = partial.available_actions.find((a) => a.id === "go_to_drapers_row");
+    expect(rowAction?.text).toMatch(/compare Bassett's seal/i);
+    expect(rowAction?.text).toMatch(/wax/i);
+
+    const complete = obs([
+      "examine_seal",
+      "go_to_records",
+      "consult_register",
+      "leave_records",
+      "go_to_anteroom",
+      "question_ned",
+      "leave_anteroom",
+      "inspect_cloth",
+      "measure_with_rod",
+      "go_to_drapers_row",
+      "check_comparison",
+      "leave_yard",
+    ]);
+
+    expect(complete.text).toMatch(/no longer fragmentary/i);
+    expect(complete.text).toMatch(/short cloth and brass rod/i);
+    expect(complete.text).toMatch(/wax comparison/i);
+    expect(complete.text).toMatch(/either judgement will now stand/i);
+    expect(complete.available_actions.map((a) => a.id)).toEqual(
+      expect.arrayContaining(["condemn_bassett", "refer_to_guild"]),
+    );
   });
 
   it("keeps the composure roll as a non-blocking condemnation tension beat across seeds", () => {

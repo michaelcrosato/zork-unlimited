@@ -78,6 +78,20 @@ scenes:
     variants:
       - when:
           - all_of:
+              - { has_flag: found_short }
+              - { has_flag: confirmed_measure }
+              - { has_flag: found_seal_anomaly }
+              - { has_flag: checked_register }
+              - { has_flag: heard_ned }
+              - { has_flag: confirmed_wax }
+        text: >
+          Bassett stands to the side of your table, hat in hand. The evidence is
+          no longer fragmentary: the short cloth and brass rod support a
+          condemnation, while the register gap, Ned's account, and the wax
+          comparison show how the prior alnage may have failed. The hall is
+          quiet because either judgement will now stand in the record.
+      - when:
+          - all_of:
               - { has_flag: checked_register }
               - { has_flag: heard_ned }
               - { has_flag: found_seal_anomaly }
@@ -86,7 +100,9 @@ scenes:
           register, Ned's account, and the too-pale seal now make a second
           case beside the short cloth: the prior alnage itself may have failed.
           You have enough to refer the matter to the Guild court if you will not
-          condemn him on the cloth's evidence alone.
+          condemn him on the cloth's evidence alone. If you mean to prove when
+          the seal was pressed, the clothiers waiting outside still offer a wax
+          comparison.
       - when:
           - all_of:
               - { has_flag: found_short }
@@ -164,7 +180,7 @@ scenes:
         text: "Speak with Ned in the anteroom."
         next: anteroom
       - id: go_to_drapers_row
-        text: "Step outside to where the other clothiers are waiting."
+        text: "Step outside and compare Bassett's seal against the other clothiers' wax."
         next: drapers_row
       - id: condemn_bassett
         text: "Keep your composure, formally condemn the cloth, and record the condemnation."
