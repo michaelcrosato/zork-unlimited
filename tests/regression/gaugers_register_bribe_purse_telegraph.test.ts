@@ -73,7 +73,7 @@ describe("bug_0381 — gaugers_register bribe purse is readable evidence, not an
     const inOffice = play(initStateForParserPack(index, 7), ["go_north"]).state;
     const examine = narrationFor(inOffice, { type: "LOOK", target: "bribe_purse" });
 
-    expect(examine).toMatch(/leaf is evidence/i);
+    expect(examine).toMatch(/paper can be slipped free as evidence/i);
     expect(examine).toMatch(/purse is bait/i);
     expect(examine).toMatch(/Pocket it/i);
     expect(examine).not.toMatch(/Not safe to leave behind; not safe to take/i);
