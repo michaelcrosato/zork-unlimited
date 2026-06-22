@@ -4,6 +4,12 @@
  * the finding table as reachable before any evidence, the full-trial label as
  * a checklist spoiler, and partial evidence states as under-explained. The fix
  * keeps verdict gates intact while making the current record state visible.
+ *
+ * bug_0468: a later blind pass singled out the Henry deposition failure branch
+ * as the only serious risk: if a bad composure roll withheld
+ * heard_henry_discrepancy, the best finding would become random-loss gated.
+ * The pack intends that roll as tension only, so a forced failed roll must still
+ * award the same evidence flag, score, and criminal-trial route.
  */
 import { describe, expect, it } from "vitest";
 import { loadPackFile } from "../../src/cyoa/pack.js";
@@ -11,15 +17,17 @@ import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.j
 import { buildObservation } from "../../src/cyoa/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { Action } from "../../src/api/types.js";
+import type { Rng } from "../../src/core/rng.js";
 
 const loaded = loadPackFile("content/cyoa/pack/examiners_commission.yaml");
 if (!loaded.ok) throw new Error("examiners_commission pack must compile");
 const index = indexPack(loaded.compiled.pack);
 const rules = buildRules(index);
 const choose = (id: string): Action => ({ type: "CHOOSE", choiceId: id });
+const forcedRng = (roll: number): Rng => ({ int: () => roll }) as unknown as Rng;
 
-function play(ids: string[], seed = 7) {
-  const step = makeStep(rules);
+function play(ids: string[], seed = 7, activeRules = rules) {
+  const step = makeStep(activeRules);
   let state = initStateForPack(index, seed);
   for (const id of ids) state = step(state, choose(id)).state;
   return state;
@@ -27,6 +35,21 @@ function play(ids: string[], seed = 7) {
 
 const obs = (ids: string[], seed = 7) => buildObservation(index, play(ids, seed));
 const actionIds = (ids: string[]) => obs(ids).available_actions.map((a) => a.id);
+
+const FULL_RECORD_TO_DEPOSITION = [
+  "examine_paper",
+  "examine_ink",
+  "go_witness_records",
+  "check_witnesses",
+  "compare_letters",
+  "return_from_records",
+  "go_solicitor",
+  "speak_solicitor",
+  "leave_solicitor",
+  "go_deposition",
+];
+
+const TRIAL_ROUTE_AFTER_DEPOSITION = ["leave_deposition", "go_finding", "refer_to_trial"];
 
 describe("bug_0362 -- Examiner's Commission blind polish", () => {
   it("does not offer the finding table before the player has any evidence", () => {
@@ -100,24 +123,43 @@ describe("bug_0362 -- Examiner's Commission blind polish", () => {
 
   it("leaves the existing full criminal-trial route and maximum score intact", () => {
     const end = obs([
-      "examine_paper",
-      "examine_ink",
-      "go_witness_records",
-      "check_witnesses",
-      "compare_letters",
-      "return_from_records",
-      "go_solicitor",
-      "speak_solicitor",
-      "leave_solicitor",
-      "go_deposition",
+      ...FULL_RECORD_TO_DEPOSITION,
       "examine_henry",
-      "leave_deposition",
-      "go_finding",
-      "refer_to_trial",
+      ...TRIAL_ROUTE_AFTER_DEPOSITION,
     ]);
 
     expect(end.ending_id).toBe("ending_trial");
     expect(end.state.vars.score).toBe(50);
     expect(index.pack.meta.max_score).toBe(50);
+  });
+
+  it("bug_0468: a failed Henry composure roll still supports the criminal-trial route", () => {
+    const failureRules = buildRules(index, () => forcedRng(1));
+    const afterFailure = play([...FULL_RECORD_TO_DEPOSITION, "examine_henry"], 7, failureRules);
+
+    expect(afterFailure.flags.heard_henry_discrepancy).toBe(true);
+    expect(afterFailure.vars.score).toBe(30);
+    expect(afterFailure.journal.at(-1)).toMatch(/discrepancy speaks for itself/i);
+
+    const table = buildObservation(
+      index,
+      play(
+        [...FULL_RECORD_TO_DEPOSITION, "examine_henry", "leave_deposition", "go_finding"],
+        7,
+        failureRules,
+      ),
+    );
+    expect(table.available_actions.map((a) => a.id)).toContain("refer_to_trial");
+
+    const end = buildObservation(
+      index,
+      play(
+        [...FULL_RECORD_TO_DEPOSITION, "examine_henry", ...TRIAL_ROUTE_AFTER_DEPOSITION],
+        7,
+        failureRules,
+      ),
+    );
+    expect(end.ending_id).toBe("ending_trial");
+    expect(end.state.vars.score).toBe(50);
   });
 });
