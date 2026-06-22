@@ -189,7 +189,8 @@ rooms:
       cresset that should hold the warning-fire has been heaved off its pivot and lies
       toppled on its side — the raiders' work, to keep the beacon dark. Its worn socket
       and the long lip of its frame are plainly made to be levered upright by a bar and
-      a strong back. The stair drops back down to the south.
+      a strong back; if it rocks back once, set your feet and heave again until the
+      pivot catches. The stair drops back down to the south.
     variants:
       - when: [{ quest_stage: { quest: beacon, stage: cresset_raised } }]
         text: >
@@ -323,14 +324,14 @@ objects:
         conditions: [{ none_of: [{ quest_stage: { quest: beacon, stage: cresset_raised } }] }]
         skill_check:
           skill: might
-          difficulty: 12
+          difficulty: 10
           on_success:
             - set_quest_stage: { quest: beacon, stage: cresset_raised }
             - add_journal: "You lever the great cresset back upright on its pivot; the way up to the crown stands clear."
             - inc_var: { name: score, by: 10 }
             - narrate: "You wedge the bar beneath the frame's lip and throw your weight on it — the iron grinds, swings, and the cresset heaves up onto its pivot and settles. The way to the crown is clear."
           on_failure:
-            - narrate: "The bar bites under the lip and your shoulders strain, but the heavy iron only rocks and grinds back down. Set your feet and try again."
+            - narrate: "The bar bites under the lip and your shoulders strain; the heavy iron rocks a handspan toward its socket, then grinds back down. Nothing is lost — set your feet, keep the bar under the lip, and heave again until the pivot catches."
 
   - id: beacon_fire
     name: "beacon"
