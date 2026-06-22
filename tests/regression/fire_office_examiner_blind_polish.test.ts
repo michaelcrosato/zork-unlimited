@@ -82,6 +82,18 @@ describe("bug_0365 -- Fire Office Examiner blind polish", () => {
     expect(referral?.text).toMatch(/documentary, physical, and testimonial chain/i);
   });
 
+  it("does not call payment evidence-inconclusive after the full fraud chain is complete", () => {
+    const desk = obs([...FULL_CHAIN, "submit_report"]);
+
+    expect(desk.available_actions.map((a) => a.id)).not.toContain("approve_claim");
+    const badPayment = desk.available_actions.find((a) => a.id === "approve_claim_against_file");
+    expect(badPayment?.text).toMatch(/despite the completed fraud evidence/i);
+
+    const end = obs([...FULL_CHAIN, "submit_report", "approve_claim_against_file"]);
+    expect(end.ending_id).toBe("ending_approved");
+    expect(end.text).toMatch(/your own file had already proved false/i);
+  });
+
   it("leaves the full prosecution ending reachable with the new maximum score", () => {
     const end = obs([...FULL_CHAIN, "submit_report", "refer_to_law"]);
 

@@ -317,6 +317,28 @@ scenes:
     choices:
       - id: approve_claim
         text: "Recommend payment — the evidence is inconclusive."
+        conditions:
+          - none_of:
+              - all_of:
+                  - has_flag: read_claim
+                  - has_flag: checked_debt
+                  - has_flag: found_burn_origin
+                  - has_flag: found_wheel_marks
+                  - has_flag: heard_thomas
+                  - has_flag: heard_hannah
+                  - has_flag: heard_varley
+        next: ending_approved
+      - id: approve_claim_against_file
+        text: "Recommend payment despite the completed fraud evidence."
+        conditions:
+          - all_of:
+              - has_flag: read_claim
+              - has_flag: checked_debt
+              - has_flag: found_burn_origin
+              - has_flag: found_wheel_marks
+              - has_flag: heard_thomas
+              - has_flag: heard_hannah
+              - has_flag: heard_varley
         next: ending_approved
       - id: dispute_claim
         text: "Recommend rejection — the physical evidence warrants denial."
@@ -345,6 +367,27 @@ scenes:
 endings:
   - id: ending_approved
     title: "The Claim Paid"
+    variants:
+      - when:
+          - all_of:
+              - has_flag: read_claim
+              - has_flag: checked_debt
+              - has_flag: found_burn_origin
+              - has_flag: found_wheel_marks
+              - has_flag: heard_thomas
+              - has_flag: heard_hannah
+              - has_flag: heard_varley
+        text: >
+          The board accepts your recommendation because you make it, but the
+          clerk looks twice at the file before sealing the order: the anomalous
+          goods list, the overdue bond, the middle-room burn origin, the loaded
+          cart ruts, both witness statements, and Varley's own swelling oral
+          claim all point the other way. Varley collects £180 within the week
+          and discharges his debt to Creed. Six months later a customs man
+          following a different thread turns a receipt at a Southwark factor's
+          house into a chain that leads all the way back to Thames Street — and
+          to the Fire Office's register, where your name sits next to a paid
+          claim your own file had already proved false.
     text: >
       The board accepts your recommendation and authorises payment. Varley
       collects £180 within the week and discharges his debt to Creed. Six
