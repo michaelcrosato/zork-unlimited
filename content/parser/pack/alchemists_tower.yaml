@@ -359,7 +359,7 @@ objects:
     name: "iron key"
     aliases: [iron]
     # The examine text telegraphs the OPTIONAL steadiness beat below (the self-USE
-    # `grip iron key`). bug_0261: a fresh blind MCP playtester (seed 47,
+    # `steady iron key`). bug_0261: a fresh blind MCP playtester (seed 47,
     # ai-runs/2026-06-05T00-03-26-064Z/playtest.md §4-5) rated the pack clarity 5/5 /
     # enjoyment 4/5, won all three endings, found ZERO bugs — but flagged the bare
     # `grip iron key` action as an unfired Chekhov's gun: "a mysterious self-targeting
@@ -367,19 +367,19 @@ objects:
     # then "trails" the player through every room with no payoff (the iron key is a
     # CARRIED item, so the self-USE surfaced everywhere it was held). The same finding-
     # family as sealed_crypt's bug_0241/bug_0258. The controlled parser only accepts
-    # `<verb> <noun>`, so the offered command must stay typeable as "grip iron key" —
-    # the legibility fix is CONTEXT, not the label: naming the impulse to steady your
-    # hand here makes the beat read as an intentional, clued tension moment. Pure prose
-    # — gates nothing, changes no flag/score/exit, so every structural proof and the
-    # 40-point economy stay byte-identical.
+    # `<verb> <noun>`. bug_0425 changes the offered verb from "grip" to "steady" after
+    # another blind player still read "grip iron key" as unexplained; the stable action
+    # id remains `use_iron_key`, and the beat remains convergent. Pure wording — gates
+    # nothing, changes no flag/score/exit, so every structural proof and the 40-point
+    # economy stay byte-identical.
     description: >
       A heavy iron key, black with age — fit for a great iron lock. The cold of it
       climbs your wrist; before you set it to anything down here, you might grip it a
       moment and steady your hand first.
     takeable: true
     quest_critical: true
-    # bug_0331: surfaces the cold/grip context at TAKE time so the optional steadiness
-    # beat (grip iron key, below) is primed regardless of whether the player examines the
+    # bug_0331: surfaces the cold/steadying context at TAKE time so the optional steadiness
+    # beat (steady iron key, below) is primed regardless of whether the player examines the
     # key. Two consecutive blind playtesters (seed 47 → bug_0261; seed 7 → bug_0331)
     # flagged the action as unexplained noise in the Great Hall because its context lives
     # only in the EXAMINE description; this narrate fires on the first-class TAKE and
@@ -392,7 +392,7 @@ objects:
     # this parser pack, resolved exactly as the RPG runner does: the runner applies
     # on_success/on_failure INSTEAD of this interaction's `effects`, then PREPENDS the roll
     # narration the player sees ("steadiness check: d20 <roll> + 3 = <total> vs 12 —
-    # success/failure."). It is a self-USE on the iron key you carry — a private "grip the
+    # success/failure."). It is a self-USE on the iron key you carry — a private "steady the
     # cold iron and steady your hand" moment before you set this key to anything: fittingly
     # the very key that decides the whole tower (it throws the cellar hatch on the cure
     # route, and it is the casket's clasp on the betrayal route).
@@ -427,7 +427,7 @@ objects:
       - verb: USE
         item: iron_key
         target: iron_key
-        command_verb: grip
+        command_verb: steady
         # bug_0261: gated `{ in_room: great_hall }` as well — the blind playtester (seed
         # 47) flagged the self-USE on this CARRIED key trailing them through every room
         # (study, cellar, lab, spire), places its "before you set this key to any lock
