@@ -141,8 +141,9 @@ scenes:
         # A CHOSEN, plainly-lethal shortcut, not a curiosity trap — the base text already
         # names the ice "rotten, ticking and groaning ... fit to drop a man through," and
         # the label names the gamble outright (wreckers_light climb_to_wreck discipline:
-        # the death foreshadows itself in the choice text). No flag/route change.
-        text: "Chance the rotten ice straight across toward the stag."
+        # the death foreshadows itself in the choice text). bug_0477 keeps the mystical
+        # stag framing from making this read like a safe communion path. No flag/route change.
+        text: "Risk the rotten ice itself and cross straight toward the stag."
         # The choice IS made — to gamble the crossing — so the quest reaches `choice_made`
         # as you commit. The ending is reached by `next` exactly as before; the stage is
         # pure tracking and gates nothing (ending_lost stays freely reachable).
