@@ -136,6 +136,9 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // single-world migration: meta.world now binds every shipped pack to the Charter Marches.
     // bug_0408: re-pinned after removing transient early quest-stage writes from the
     // Watchtower hub/go_east loop so `the_road=truth_known` stays monotonic.
-    expect(loaded.compiled.contentHash).toBe("a9c1fc1038d8d8d0bd45725dacdc14b275fbedc06b8d7ded3991f2024e224adf");
+    // bug_0462: re-pinned after adding a no-paper checkpoint `identify_as_warden`
+    // redirect so west-first wardens get an in-character evidence hint instead of
+    // only death/backtrack options.
+    expect(loaded.compiled.contentHash).toBe("8189a1e66863da7be5e3e7cd28ee3d14895b842cfbff28bd48551ad32f26f145");
   });
 });

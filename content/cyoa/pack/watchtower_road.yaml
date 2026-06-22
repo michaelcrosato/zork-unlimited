@@ -516,6 +516,17 @@ scenes:
         text: "Present the sealed letter."
         conditions: [ { has_item: sealed_letter } ]
         next: confront_smuggler
+      - id: identify_as_warden
+        text: "Identify yourself as a road warden and ask what papers he means."
+        conditions: [ { not_item: sealed_letter } ]
+        effects:
+          - narrate: >
+              The sergeant's eyes flick to your warden's badge, then back to the
+              empty road behind you. "Then you know better than most: after a tower
+              burns, nobody passes this gate on a title alone. Bring papers, proof,
+              something from the watchtower worth putting before a magistrate — or
+              step aside."
+        next: road_north
       - id: force_through
         text: "Bluster and shove your way through."
         next: ending_captured
