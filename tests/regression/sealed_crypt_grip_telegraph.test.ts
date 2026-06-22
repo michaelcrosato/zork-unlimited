@@ -1,24 +1,16 @@
 /**
- * Regression (§15) for bug_0241 — the `grip iron key` beat read as vestigial.
+ * Regression (§15) for bug_0241 — the iron-key nerve beat read as vestigial.
  *
  * A blind MCP playtest of The Sealed Crypt (ai-runs/2026-06-04T16-53-45-442Z,
  * seed 11) re-flagged a friction point seen across several prior blind passes: once
- * the player holds the iron key, the self-targeted USE action surfaces as the bare
+ * the player holds the iron key, the self-targeted USE action surfaced as the bare
  * command "grip iron key" (id `use_iron_key`, USE iron_key on iron_key). It is in
- * fact the deliberate, off-critical-path nerve skill-check beat, but nothing told
- * the player that BEFORE they triggered it — "gripping a key" accomplished nothing
- * obvious, so it "looked like it might do something" / read as an authoring leftover.
- *
- * The controlled parser only accepts `<verb> <noun>` (or `<verb> <noun> <prep>
- * <noun>`), so the offered self-USE command must stay typeable as "grip iron key" —
- * a sentence-like label can be legible OR typeable, not both. The root cause is
- * therefore MISSING PRE-COMMITMENT CONTEXT, not the label. Fix (content only): the
- * iron key's examine description now names the impulse to steady your hand before
- * you turn the key on anything, so `grip iron key` reads as an intentional, clued
- * tension moment that the prose already primed.
+ * fact the deliberate, off-critical-path nerve skill-check beat, but several blind
+ * passes read "gripping a key" as a vestigial no-op. The content now frames and labels
+ * the beat as steadying your hand before choosing an iron lock.
  *
  * This pins: (1) examining the held iron key telegraphs the steady-your-hand beat;
- * (2) the telegraph matches a real offered action — `grip iron key` is still there;
+ * (2) the telegraph matches a real offered action — `steady iron key`;
  * (3) the change is purely cosmetic — the grip beat still gates nothing, and the
  * full intended route still wins ending_victory at 35/35.
  */
@@ -63,7 +55,7 @@ function examine(s: GameState, target: string): string {
 }
 
 // Reach the Bottom of the Well and pocket the iron key (the first state in which
-// the player holds it and the `grip iron key` action becomes available).
+// the player holds it and the `steady iron key` action can become available in the crypt).
 const TO_IRON_KEY = [
   "go_north",
   "go_up",
@@ -84,22 +76,22 @@ const TO_IRON_KEY = [
   "take_iron_key",
 ];
 
-describe("bug_0241 — the iron key's examine text telegraphs the optional grip/nerve beat", () => {
-  it("examining the held iron key names the steady-your-hand impulse the `grip` action acts on", () => {
+describe("bug_0241 — the iron key's examine text telegraphs the optional steady-key beat", () => {
+  it("examining the held iron key names the steady-your-hand impulse the action acts on", () => {
     const s = play(initStateForParserPack(index, 11), TO_IRON_KEY);
     expect(s.inventory).toContain("iron_key");
     const text = examine(s, "iron_key");
     // The telegraph: it primes the optional steadying beat in plain prose.
-    expect(text).toContain("steady your hand");
-    expect(text).toContain("grip it");
+    expect(text).toContain("steady it");
+    expect(text).toContain("make your hand obey");
     // It is still the same iron key — the lock-fitting line is intact.
     expect(text).toContain("great iron lock");
   });
 
-  it("the telegraph matches a real action: `grip iron key` (the self-USE) is offered in the crypt", () => {
+  it("the telegraph matches a real action: `steady iron key` (the self-USE) is offered in the crypt", () => {
     // bug_0258 relocates the beat: it is now offered only where the three iron locks
     // stand (the crypt), not the moment the key is pocketed at the well. Walk down to
-    // the crypt, then assert the self-USE surfaces with its `grip iron key` command.
+    // the crypt, then assert the self-USE surfaces with its `steady iron key` command.
     const s = play(initStateForParserPack(index, 11), [
       ...TO_IRON_KEY,
       "go_up",
@@ -114,11 +106,11 @@ describe("bug_0241 — the iron key's examine text telegraphs the optional grip/
     );
     expect(grip).toBeDefined();
     expect(grip!.id).toBe("use_iron_key");
-    expect(grip!.command).toBe("grip iron key");
+    expect(grip!.command).toBe("steady iron key");
   });
 
-  it("the change is cosmetic — the grip beat gates nothing and the intended route still wins 35/35", () => {
-    // Deliberately exercise the grip beat in the crypt (bug_0258), then finish the win.
+  it("the change is cosmetic — the steady beat gates nothing and the intended route still wins 35/35", () => {
+    // Deliberately exercise the steady beat in the crypt (bug_0258), then finish the win.
     const s = play(initStateForParserPack(index, 11), [
       ...TO_IRON_KEY,
       "go_up",

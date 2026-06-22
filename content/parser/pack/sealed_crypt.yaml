@@ -189,12 +189,12 @@ rooms:
           the iron catacombs gate stands unlocked and swung inward on darkness — and
           through it, north, lies the sealed relic you came to recover. The stair
           climbs back up.
-      # Reactive text after the optional grip/nerve beat — the same reactive-description
+      # Reactive text after the optional steady-key nerve beat — the same reactive-description
       # class as bug_0282/0283. Before the beat fires the room gives no feedback that
-      # the player's grip on the iron key changed anything; both flags need a `when`
+      # the player's steadiness with the iron key changed anything; both flags need a `when`
       # reader so the outcome is observable (bug_0305). catacombs_open wins above these
       # (it is the more specific terminal state). Both variants are reachable: a player
-      # can grip the key and succeed/fail before choosing a lock, so neither flag implies
+      # can steady the key and succeed/fail before choosing a lock, so neither flag implies
       # catacombs_open. Neither variant gates any exit, score, or ending.
       - when: [{ has_flag: steeled_at_the_iron }]
         text: >
@@ -299,25 +299,25 @@ objects:
   - id: iron_key
     name: "iron key"
     aliases: [iron]
-    # The examine text telegraphs the OPTIONAL nerve beat below (the self-USE `grip
+    # The examine text telegraphs the OPTIONAL nerve beat below (the self-USE `steady
     # iron key`). Repeated blind passes flagged that bare action as vestigial — a
-    # player can't tell what "gripping a key" does before committing. The controlled
-    # parser only accepts `<verb> <noun>`, so the offered command must stay typeable as
-    # "grip iron key"; the legibility fix is therefore CONTEXT, not the label. Naming
-    # the impulse to steady your hand here makes the beat read as an intentional,
-    # clued tension moment. Pure prose — gates nothing, changes no flag/score/exit, so
-    # every structural proof and the 35-point economy stay byte-identical (bug_0241).
+    # player couldn't tell what the old "grip iron key" command did before committing.
+    # A later blind pass still read that label as vestigial, so the command now uses
+    # the clearer verb `steady` while the stable action id remains `use_iron_key`.
+    # Naming the impulse to steady your hand here makes the beat read as an intentional,
+    # clued tension moment. Pure command/prose polish — gates nothing, changes no
+    # flag/score/exit, so every structural proof and the 35-point economy stay intact.
     description: >
       A heavy iron key, black with age — fit for a great iron lock. The cold of it
-      climbs your wrist; whatever you mean to turn it on down here, you might grip it
-      a moment first and steady your hand before you do.
+      climbs your wrist; whatever you mean to turn it on down here, you might steady
+      it a moment first and make your hand obey before you do.
     takeable: true
     quest_critical: true
     # An OPTIONAL nerve TENSION beat — the Stage-4 d20 skill_check standardized into this
     # parser pack, resolved exactly as the RPG runner does: the runner applies on_success/
     # on_failure INSTEAD of this interaction's `effects`, then PREPENDS the roll narration
     # the player sees ("nerve check: d20 <roll> + 3 = <total> vs 12 — success/failure.").
-    # This is a self-USE on the iron key you carry — a private "grip the cold iron and
+    # This is a self-USE on the iron key you carry — a private "steady the cold iron and
     # steel yourself" moment, fittingly the very key the headstone warns the crypt yields
     # to, taken in hand before the three iron locks (gate / founder's coffin / lead tomb).
     #
@@ -351,7 +351,7 @@ objects:
       - verb: USE
         item: iron_key
         target: iron_key
-        command_verb: grip
+        command_verb: steady
         conditions: [{ not_flag: steeled_at_the_iron }, { not_flag: attempted_the_iron }, { in_room: crypt }]
         skill_check:
           skill: nerve
