@@ -21,7 +21,7 @@
 #     (gated: ledger entry + mourning badge confirmed)
 #   * name the accusation to his face                         → ending_confronted
 #     (gated: he lied about the warehouse + parish record confirmed;
-#      composure TENSION beat — gates nothing, both routes reach the same end)
+#      evidence-gated accusation, no final chance roll)
 #
 # The moral axis is epistemic, not investigative: the evidence you collect does
 # not change what he did, only what you knew when you chose. Selling with full
@@ -55,15 +55,7 @@ meta:
     connection: "Charterhaven's poor come to Apothecary Row after curfew, where one counter can preserve or bury a scandal."
   start: apothecary_counter
   flags_init: []
-  # `composure` (init 3) — the stat for the speak_the_name TENSION beat
-  # (d20 + composure vs DC 11). Both branches award +20 to score and goto
-  # ending_confronted with end_game — stateKey-convergent (same current, vars,
-  # ended/endingId in both outcomes). Only the add_journal narration differs.
-  # NO `next` on speak_the_name — skill-checked choices self-route via their
-  # on_success/on_failure goto/end_game effects (schema: exactly one of next /
-  # skill_check). Difficulty 11 vs d20 + composure(3): beat it on a roll of 8
-  # (8 + 3 = 11), well under the 20 + 3 = 23 ceiling — a true swing.
-  vars_init: { composure: 3 }
+  vars_init: {}
   max_score: 50
 
 scenes:
@@ -178,25 +170,10 @@ scenes:
           - all_of:
               - { has_flag: heard_lie }
               - { has_flag: confirmed_death }
-        # Tension beat: composure (init 3) vs DC 11. Both branches award +20 to
-        # score and goto ending_confronted with end_game — stateKey-convergent
-        # (same current/vars/ended/endingId in both outcomes; only add_journal
-        # differs). Convergent-skill-check test (bug_0252) will verify this.
-        # The effect ordering (add_journal → inc_var → goto → end_game) matches
-        # the test's expectation: narrative, then state change, then routing.
-        skill_check:
-          skill: composure
-          difficulty: 11
-          on_success:
-            - add_journal: "Your voice does not shake. He reads that. The coin on the counter stops."
-            - inc_var: { name: score, by: 20 }
-            - goto: ending_confronted
-            - end_game: ending_confronted
-          on_failure:
-            - add_journal: "Your voice catches once, and you steady it. He hears the catch and the steadying both."
-            - inc_var: { name: score, by: 20 }
-            - goto: ending_confronted
-            - end_game: ending_confronted
+        effects:
+          - add_journal: "You open the ledger, name Cecilia Cole, name the date she died, and name the street that does not exist. Your voice does not shake. He reads that. The coin on the counter stops."
+          - inc_var: { name: score, by: 20 }
+        next: ending_confronted
 
   # ── The ledger shelf ───────────────────────────────────────────────────────
   - id: ledger_shelf

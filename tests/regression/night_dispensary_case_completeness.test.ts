@@ -3,6 +3,10 @@
  * report before exhausting the investigation, but the counter did not explain
  * that the report was sufficient-yet-partial or point toward the remaining
  * record that unlocks the richer confrontation and 50/50 route.
+ *
+ * Regression for bug_0474 -- a later blind pass flagged the final confrontation
+ * as a perceived d20 lottery after the evidence was already sufficient. The
+ * accusation is now evidence-gated, not a capstone composure roll.
  */
 import { describe, expect, it } from "vitest";
 import { loadPackFile } from "../../src/cyoa/pack.js";
@@ -64,8 +68,10 @@ describe("bug_0420 -- Night Dispensary case-completeness signposting", () => {
 
   it("when confrontation is unlocked, says the accusation is speakable and extra clues add weight", () => {
     const counter = play(CONFRONTATION_READY);
+    const action = counter.available_actions.find((a) => a.id === "speak_the_name");
 
     expect(counter.available_actions.map((a) => a.id)).toContain("speak_the_name");
+    expect(action && "skill_check" in action).toBe(false);
     expect(counter.text).toMatch(/enough to speak the accusation aloud/i);
     expect(counter.text).toMatch(/unchecked shelf, window, or stock-room clue/i);
     expect(counter.text).toMatch(/add weight/i);
@@ -86,5 +92,7 @@ describe("bug_0420 -- Night Dispensary case-completeness signposting", () => {
     expect(named.ended).toBe(true);
     expect(named.ending_id).toBe("ending_confronted");
     expect(named.state.vars.score).toBe(50);
+    expect(named.state.vars).not.toHaveProperty("composure");
+    expect(named.state.journal.at(-1)).toMatch(/name Cecilia Cole/i);
   });
 });
