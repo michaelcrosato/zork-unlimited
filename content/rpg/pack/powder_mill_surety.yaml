@@ -102,8 +102,8 @@ rooms:
         to: mill_road
         conditions: [{ has_flag: rafe_defeated }]
         locked_msg: >
-          Rafe blocks the gate walk. Make the charge safe from the yard, or get
-          past him.
+          Rafe blocks the gate walk. Make the charge safe so he has no excuse,
+          or force your way past him.
 
   - id: mill_road
     name: "The Mill Road"
@@ -276,7 +276,76 @@ objects:
                 but you have lost the clean answer. A second attempt would be
                 worse.
 
-npcs: []
+npcs:
+  - id: rafe_watcher
+    name: "Rafe"
+    description: >
+      The miller's watcher, all wet sleeves and hooked staff. He is afraid of the
+      powder and of the miller's temper, and he has made those two fears into a
+      gate.
+    room: gate_walk
+    dialogue:
+      root: rafe_root
+      nodes:
+        - id: rafe_root
+          npc_text: >
+            City mark or not, I was told no one leaves this yard while that tray
+            sits live. Put it safe where I can see it, or stop asking me to pick
+            which master ruins me.
+          variants:
+            - when: [{ has_flag: warned_rafe }]
+              text: >
+                Then do it the way you said: dry sand, low hand, no scrape on
+                brass. I am not moving this staff for words while the tray can
+                still flash.
+            - when: [{ has_flag: showed_commission }]
+              text: >
+                I saw the counter-mark. It proves whose report this is, not that
+                the tray behind you is dead.
+          topics:
+            - id: show_commission
+              prompt: "Show Rafe the powder office counter-mark."
+              conditions: [{ not_flag: showed_commission }]
+              goto: rafe_commission
+            - id: explain_tray
+              prompt: "Explain why the priming tray must be smothered."
+              conditions: [{ has_flag: fuse_read }, { not_flag: warned_rafe }]
+              goto: rafe_hazard
+            - id: leave_rafe
+              prompt: "Step back from Rafe."
+              end: true
+        - id: rafe_commission
+          npc_text: >
+            I know the city stamp. I also know a live tray when I smell one, and
+            I know the miller will say I let his surety walk out before anyone
+            made the yard safe. Kill the charge where it lies, and I have nothing
+            left to guard.
+          effects:
+            - set_flag: showed_commission
+            - add_journal: >
+                Rafe recognizes the city counter-mark, but he will not leave the
+                gate while the priming tray is live. Making the charge safe is
+                the professional answer.
+          topics:
+            - id: commission_back
+              prompt: "Press him on the powder itself."
+              goto: rafe_root
+        - id: rafe_hazard
+          npc_text: >
+            Then you know enough to do it. Dry magazine sand, not a lifted fuse;
+            low hand, not a scrape on brass. Make that tray dull and I will let
+            the report go north, because then I can swear I watched the danger
+            die.
+          effects:
+            - set_flag: warned_rafe
+            - add_journal: >
+                Rafe accepts the powder-office hazard if you make it concrete:
+                the priming tray must be smothered with dry magazine sand, low
+                and clean, before he will stand aside.
+          topics:
+            - id: hazard_back
+              prompt: "Nod and return to the yard."
+              goto: rafe_root
 
 enemies:
   - id: rafe
