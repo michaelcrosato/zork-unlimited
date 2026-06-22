@@ -9,7 +9,7 @@
 # take the windlass handle, then crank the sluice chain with the handle. A prepared
 # pilot has seamanship 12 against DC 12, making the river handling reliable on any
 # d20 roll. Combat fallback: fight Marrick at the gate walk. It opens the road, but
-# leaves the lock problem unresolved and caps the score at 40/50.
+# leaves the lock problem unresolved and reaches a distinct partial ending.
 
 meta:
   id: lockkeepers_toll_v1
@@ -41,6 +41,9 @@ rooms:
       - { direction: west, to: gauge_house }
       - { direction: east, to: windlass_shed }
       - { direction: north, to: gate_walk }
+      - direction: downstream
+        to: river_cut
+        conditions: [{ quest_stage: { quest: lockkeepers_toll, stage: sluice_open } }]
 
   - id: gauge_house
     name: "The Gauge House"
@@ -81,8 +84,8 @@ rooms:
       A wet plank walk crosses above the downstream gate. Marrick, the
       lock-keeper's hired man, stands in the way with a belaying pin and the
       patient look of someone paid to make delay seem official. He taps a
-      tariff notice nailed to the rail before lifting the pin. The open river lies
-      north beyond him; the basin is south.
+      tariff notice nailed to the rail, then raises the belaying pin like an
+      answer. The open river lies north beyond him; the basin is south.
     variants:
       - when: [{ has_flag: marrick_gone }]
         text: >
@@ -92,11 +95,11 @@ rooms:
     exits:
       - { direction: south, to: lock_basin }
       - direction: north
-        to: river_cut
+        to: forced_river_cut
         conditions: [{ has_flag: marrick_gone }]
         locked_msg: >
-          Marrick blocks the gate walk while the toll chain still holds. Work the
-          lock cleanly or get past him.
+          Marrick blocks the gate walk, belaying pin raised. Work the lock
+          cleanly or get past him.
 
   - id: river_cut
     name: "The Lower River Cut"
@@ -104,14 +107,21 @@ rooms:
       The river opens below the lock, wide enough for the grain barge to gather
       steerage and leave the crooked toll behind. Charterhaven's mill lights
       burn downstream. The gate walk is back south, already smaller in the rain.
-    on_enter:
-      - set_quest_stage: { quest: lockkeepers_toll, stage: river_reached }
-      - add_journal: >
-          The lower cut is open. The grain barge has water under her and
-          Charterhaven will see its flour before the morning market. (+15)
-      - inc_var: { name: score, by: 15 }
     exits:
       - { direction: south, to: gate_walk }
+
+  - id: forced_river_cut
+    name: "The Lower River Cut"
+    description: >
+      The lower river cut opens beyond the gate walk, rain-pocked and empty of
+      help. Behind you, the grain barge still strains in the basin: Marrick is
+      down, but the toll chain still has its teeth.
+    on_enter:
+      - set_quest_stage: { quest: lockkeepers_toll, stage: forced_passage }
+      - add_journal: >
+          Marrick is down and the road north is open, but the grain barge still
+          rides trapped behind the toll chain. (+15)
+      - inc_var: { name: score, by: 15 }
 
 objects:
   - id: current_marks
@@ -265,12 +275,12 @@ objects:
           difficulty: 12
           on_success:
             - set_flag: sluice_attempted
-            - inc_var: { name: score, by: 10 }
+            - inc_var: { name: score, by: 25 }
             - set_quest_stage: { quest: lockkeepers_toll, stage: sluice_open }
             - add_journal: >
                 You worked the sluice by the marks, gauge, and chain table. The
                 toll chain slackened and the grain barge moved cleanly into the
-                lower cut. (+10)
+                lower cut. (+25)
             - narrate: >
                 You fit the handle and give the chain three slow turns, stop
                 while the barge's stern settles, then put two more turns into the
@@ -313,8 +323,13 @@ enemies:
           lock, and the report will be uglier for it.
 
 win_conditions:
+  - id: forced_passage
+    conditions: [{ visited: forced_river_cut }]
+    ending: ending_forced_passage
   - id: river_cleared
-    conditions: [{ visited: river_cut }]
+    conditions:
+      - { visited: river_cut }
+      - { quest_stage: { quest: lockkeepers_toll, stage: sluice_open } }
     ending: ending_river_clear
 
 endings:
@@ -323,9 +338,17 @@ endings:
     text: >
       The lower river cut opens beyond the lock, and the grain barge has water
       enough under her to reach Charterhaven before the morning market. Marrick's
-      toll has lost its teeth for tonight: by careful chain work or by the rougher
-      gate-walk answer, the city gets its flour and the lock-keeper gets a report
-      he cannot price away. *** You have won. ***
+      toll has lost its teeth for tonight: by careful chain work, the city gets
+      its flour and the lock-keeper gets a report he cannot price away. *** You
+      have won. ***
+
+  - id: ending_forced_passage
+    title: "The Road, Not the Lock"
+    text: >
+      Marrick is down and the lower river cut lies open to you, but the grain
+      barge still rides trapped behind the toll chain. You can carry the report
+      downstream and bring authority back to the basin; you have not freed
+      Charterhaven's flour tonight. *** You have forced a passage. ***
 
   - id: ending_under_gate
     title: "Under the Lock Wall"
