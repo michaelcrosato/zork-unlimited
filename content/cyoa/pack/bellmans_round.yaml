@@ -73,10 +73,21 @@ scenes:
     title: "Wool Lane"
     on_enter:
       - set_quest_stage: { quest: the_round, stage: found_hale }
-    # Higher-specificity variant first (all_of before any_of):
-    # Variant 1 (three key flags) is the strictest; a player satisfying it
-    # also satisfies variant 2, so variant 1 must come first.
+    # Higher-specificity variants first (all_of before any_of): a player
+    # satisfying either proof-state variant also satisfies the broad clue
+    # variant, so the proof-state variants must come first.
     variants:
+      - when:
+          - all_of:
+              - { has_flag: found_cloak_pin }
+              - { has_flag: found_debt }
+              - { has_flag: seen_torn_coat }
+        text: >
+          Hale is where you left him, breathing with less effort now. The
+          silver pin sits in your belt-pouch beside the ledger note, and
+          south in Gant's lit room you have seen the torn sleeve, the blood
+          at his cuff, and the fat purse at his hand. Whatever proof daylight
+          will ask for, the night has a name.
       - when:
           - all_of:
               - { has_flag: found_cloak_pin }
