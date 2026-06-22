@@ -473,8 +473,10 @@ scenes:
       # barred door (the loop fix). NO `next` — skill-checked choices route via their branches'
       # goto effects (schema: exactly one of next / skill_check). Difficulty 12 vs d20 + nerve(3)
       # is a true mid-roll swing (beat it on a 9), well under the 20 + 3 ceiling.
+      # bug_0419: the action label itself now says "cleanly or shakily" and "fall back
+      # inside" so the player can tell the roll changes the manner, not the outcome.
       - id: steady_and_bar
-        text: "Steady your nerve, heave the bar up, and slam it across before the latch gives."
+        text: "Steady your nerve and get the bar across, cleanly or shakily, before you fall back inside."
         conditions: [{ not_flag: door_barred }]
         skill_check:
           skill: nerve
