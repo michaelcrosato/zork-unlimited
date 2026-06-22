@@ -4,6 +4,11 @@
  * stale office prose after partial measurements, quest-stage resets on every
  * office return, and an under-signposted final steadiness check. The fix keeps
  * the evidence gates and score economy intact while making survey state honest.
+ *
+ * bug_0469: a later blind pass noted that exhausted evidence rooms stayed in
+ * the office action list even when they only contained a return action. The
+ * navigation now retires fully searched side rooms while leaving partially
+ * searched rooms reachable.
  */
 import { describe, expect, it } from "vitest";
 import { loadPackFile } from "../../src/cyoa/pack.js";
@@ -113,5 +118,23 @@ describe("bug_0363 -- Surveyor's Round blind polish", () => {
     expect(
       play([...fullEvidenceRoute, "file_concealment_report"], failRules).questStage.the_survey,
     ).toBe("concealment_report_filed");
+  });
+
+  it("retires fully searched evidence rooms without hiding unfinished rooms", () => {
+    expect(actionIds(["go_to_malting_floor", "survey_grain", "leave_malting"])).not.toContain(
+      "go_to_malting_floor",
+    );
+
+    expect(actionIds(["go_to_cellar", "measure_tun", "leave_cellar"])).toContain("go_to_cellar");
+    expect(actionIds(["go_to_cellar", "measure_tun", "test_wort", "leave_cellar"])).not.toContain(
+      "go_to_cellar",
+    );
+
+    expect(actionIds(["go_to_yard_gate", "invoke_right", "count_tubs", "leave_yard"])).toContain(
+      "go_to_yard_outbuildings",
+    );
+    expect(
+      actionIds(["go_to_yard_gate", "invoke_right", "count_tubs", "find_tally", "leave_yard"]),
+    ).not.toContain("go_to_yard_outbuildings");
   });
 });

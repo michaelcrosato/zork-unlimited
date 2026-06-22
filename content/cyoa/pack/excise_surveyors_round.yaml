@@ -156,9 +156,14 @@ scenes:
         next: maltsters_office
       - id: go_to_malting_floor
         text: "Go to the malting floor to examine the steeping cistern."
+        conditions: [ { not_flag: measured_grain } ]
         next: malting_floor
       - id: go_to_cellar
         text: "Go to the cellar to examine the fermenting tuns."
+        conditions:
+          - any_of:
+              - { not_flag: measured_tun }
+              - { not_flag: tested_gravity }
         next: brew_cellar
       - id: go_to_yard_gate
         text: "Go to the yard and outbuildings at the rear of the premises."
@@ -166,7 +171,12 @@ scenes:
         next: yard_gate
       - id: go_to_yard_outbuildings
         text: "Return to the yard outbuildings."
-        conditions: [ { has_flag: entered_yard } ]
+        conditions:
+          - all_of:
+              - { has_flag: entered_yard }
+              - any_of:
+                  - { not_flag: found_vessels }
+                  - { not_flag: found_tally }
         next: yard_outbuildings
       - id: file_concealment_report
         text: "Steady yourself and write the deliberate-concealment report for the Commissioners."
