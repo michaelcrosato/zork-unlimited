@@ -190,6 +190,14 @@ rooms:
         text: >
           The alderman's antechamber, Craf down across the doorway. The hearing
           hall is north; the market stall is south.
+      - when: [{ not_flag: priors_read }]
+        text: >
+          The alderman's antechamber. Craf fills the north doorway, and the case
+          slate waits on the clerk's table, but the legal sequence is not complete
+          yet. The charter can state Marta's right and the town register can prove
+          it is recorded; what will move Oswin is the guild's own precedent. The
+          guild records room is west from Marta's stall, if you mean to make this
+          an argument rather than a struggle.
     objects: [case_record]
     exits:
       - { direction: south, to: market_stall }
