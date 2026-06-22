@@ -94,18 +94,20 @@ scenes:
     # she has spoken, and the ledger has named the lie. (2) If only knows_truth is set, this
     # is the pre-confrontation informed view. (3) If only faced_thief is set, this is the
     # back_to_floor return after the reckoning, so the prose must not reset to "waiting to
-    # see" as if she never spoke (bug_0370). (4) Quest "the_barn" at `watch_begun` remains
-    # the first-look window after entering but before truth/confrontation.
+    # see" as if she never spoke (bug_0370); bug_0476 also keeps the mid-confrontation
+    # read route from feeling frozen while the thief waits. (4) Quest "the_barn" at
+    # `watch_begun` remains the first-look window after entering but before truth/confrontation.
     variants:
       - when: [{ has_flag: knows_truth }, { has_flag: faced_thief }]
         text: >
           Moonlight falls in bars onto the mountains of sacked grain, and the woman is no longer
           an unknown shape frozen against the far sacks. She has looked you in the eye and told
-          you to do what he pays you for. You have read the steward's book too; you know this
-          barn has stood full since autumn and fuller, that good grain was carted off to rot in
-          the low field to keep the price climbing while the town goes under. The half-filled
-          sack waits at her feet. The book lies open on the table where you left it. The rotten
-          loft-ladder climbs grey and soft into the dark.
+          you to do what he pays you for; stepping back to the steward's table has not put that
+          moment back in the dark. You have read the steward's book too; you know this barn has
+          stood full since autumn and fuller, that good grain was carted off to rot in the low
+          field to keep the price climbing while the town goes under. The half-filled sack waits
+          at her feet. The book lies open on the table where you left it. The rotten loft-ladder
+          climbs grey and soft into the dark.
       - when: [{ has_flag: knows_truth }]
         text: >
           Moonlight falls in bars onto the mountains of sacked grain, and you cannot look at
