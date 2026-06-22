@@ -177,10 +177,10 @@ rooms:
         to: guild_hall
         conditions: [{ has_item: indigo_cakes }, { has_flag: proved_adulteration }]
         locked_msg: >
-          The north door stands shut. You have a cake from the rack — but
-          without the second acid test on the vat, one cake proves nothing
-          before the Company. Take the vial from the store room east and test
-          the vat contents directly.
+          The north door stands shut. The Company will not enter a seizure
+          without both a cake from the rack and the second acid test on the
+          vat: secure the cakes, take the vial from the store room east, and
+          test the vat contents directly.
       - { direction: east, to: store_room }
       - { direction: south, to: back_passage }
 
