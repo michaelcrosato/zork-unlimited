@@ -36,8 +36,9 @@ rooms:
     description: >
       A narrow office at the head of the East Quay ropewalk. Tarred air presses
       through the shutters. A quay contract lies open on the desk beside the
-      inspector's token. The long walk runs east under the covered shed. The
-      north door leads toward guildhall; a back passage south opens onto the
+      inspector's token. The long walk runs east under the covered shed, where
+      the gauge and marking knife should let you test the rope, fiber and span.
+      The north door leads toward guildhall; a back passage south opens onto the
       quay lane.
     variants:
       - when: [{ has_flag: fraud_proved }]
@@ -50,8 +51,9 @@ rooms:
           A narrow office at the head of the East Quay ropewalk. Tarred air
           presses through the shutters. The quay contract still lies open on the
           desk, but the place beside it is bare where the inspector's token lay.
-          The long walk runs east under the covered shed. The north door leads
-          toward guildhall; a back passage south opens onto the quay lane.
+          The long walk runs east under the covered shed, where the gauge and
+          marking knife should let you test the rope, fiber and span. The north
+          door leads toward guildhall; a back passage south opens onto the quay lane.
     objects: [quay_contract, inspector_token]
     exits:
       - { direction: east, to: rope_shed }
@@ -74,9 +76,10 @@ rooms:
     description: >
       The covered walk runs the length of the quay wall, hooks and posts set in
       a straight line under the rafters. Bales of green hemp are stacked beside
-      the path. A twist gauge hangs on a nail near the first post, and a marking
-      knife lies on a block. The newly laid cable stretches north along the
-      walk. The office is west; a stair climbs to the tally loft.
+      the path, waiting to be parted if the fiber is suspect. A twist gauge hangs
+      on a nail near the first post, and a marking knife lies on a block for
+      parting hemp and notching a measured span. The newly laid cable stretches
+      north along the walk. The office is west; a stair climbs to the tally loft.
     variants:
       - when: [{ has_flag: cable_notched }]
         text: >
@@ -87,27 +90,28 @@ rooms:
         text: >
           The covered walk runs the length of the quay wall, hooks and posts set
           in a straight line under the rafters. Bales of green hemp are stacked
-          beside the path. The nail near the first post and the block beside it
-          are both bare now; the twist gauge and marking knife are already in
-          hand or wherever you last set them. The newly laid cable stretches
-          north along the walk. The office is west; a stair climbs to the tally
-          loft.
+          beside the path, waiting to be parted if the fiber is suspect. The nail
+          near the first post and the block beside it are both bare now; the twist
+          gauge and marking knife are already in hand or wherever you last set
+          them. The newly laid cable stretches north along the walk. The office
+          is west; a stair climbs to the tally loft.
       - when: [{ has_flag: twist_gauge_taken }]
         text: >
           The covered walk runs the length of the quay wall, hooks and posts set
           in a straight line under the rafters. Bales of green hemp are stacked
-          beside the path. The nail near the first post is bare where the twist
-          gauge hung, and a marking knife still lies on a block. The newly laid
-          cable stretches north along the walk. The office is west; a stair
-          climbs to the tally loft.
+          beside the path, waiting to be parted if the fiber is suspect. The nail
+          near the first post is bare where the twist gauge hung, and a marking
+          knife still lies on a block for parting hemp and notching the measured
+          span. The newly laid cable stretches north along the walk. The office
+          is west; a stair climbs to the tally loft.
       - when: [{ has_flag: marking_knife_taken }]
         text: >
           The covered walk runs the length of the quay wall, hooks and posts set
           in a straight line under the rafters. Bales of green hemp are stacked
-          beside the path. A twist gauge hangs on a nail near the first post, but
-          the block is bare where the marking knife lay. The newly laid cable
-          stretches north along the walk. The office is west; a stair climbs to
-          the tally loft.
+          beside the path, waiting to be parted if the fiber is suspect. A twist
+          gauge hangs on a nail near the first post, but the block is bare where
+          the marking knife lay. The newly laid cable stretches north along the
+          walk. The office is west; a stair climbs to the tally loft.
     objects: [green_hemp, twist_gauge, marking_knife, laid_cable]
     exits:
       - { direction: west, to: rope_office }
@@ -156,7 +160,9 @@ objects:
       The terms are precise: full-length cable, dry hemp, twelve turns to the
       inspector's span, and no tar before the twist is counted. The delivery
       note claims all four conditions were met yesterday. If that is true, the
-      cable should hold its count and length under the gauge.
+      cable should hold its count and length under the gauge; if not, part the
+      hemp with the marking knife and notch the measured span so guildhall can
+      find the same fraud twice.
     interactions:
       - verb: READ
         target: quay_contract
@@ -181,7 +187,9 @@ objects:
     aliases: [hemp, bales, fiber, green hemp, damp hemp, hemp bales, rope fiber]
     description: >
       Fresh hemp stacked in close bales, still carrying field damp in the inner
-      fibers. It will stretch after laying unless it is dried before twisting.
+      fibers. It will stretch after laying unless it is dried before twisting;
+      a knife point would part the outer fiber and show whether the dryness is
+      only on the surface.
     interactions:
       - verb: USE
         item: marking_knife
@@ -213,8 +221,9 @@ objects:
     name: "marking knife"
     aliases: [knife, blade, marker, marking knife, rope knife, small knife]
     description: >
-      A short ropewalk knife, used to notch a strand without cutting through the
-      cable. The mark lets a second inspector find the same measured place.
+      A short ropewalk knife, used to part suspect hemp and to notch a strand
+      without cutting through the cable. The mark lets a second inspector find
+      the same measured place.
     takeable: true
     take_effects:
       - set_flag: marking_knife_taken
@@ -234,6 +243,8 @@ objects:
         text: >
           The laid cable. Your gauge showed nine turns where the contract calls
           for twelve, the classic sign of a cable stretched long after laying.
+          The marking knife can notch this span so guildhall need not trust your
+          count alone.
     interactions:
       - verb: USE
         item: twist_gauge
@@ -316,6 +327,32 @@ win_conditions:
 endings:
   - id: ending_registered
     title: "The Twist Count"
+    variants:
+      - when: [{ not_flag: found_green_hemp }, { not_flag: cable_notched }]
+        text: >
+          You lay the inspector's token and the foreman's tally before the harbor
+          contracts clerk, with your nine-turn gauge count against the public
+          contract. It is enough to halt the delivery, but the file is thinner
+          than it should be: you left the hemp unparted and the measured span
+          unnotched, so the next inspector must find those two marks again. The
+          master ropewalker will answer at guildhall, but the quay will not hang
+          its loads from a stretched fraud. *** The twist is proved. ***
+      - when: [{ has_flag: found_green_hemp }, { not_flag: cable_notched }]
+        text: >
+          You lay the inspector's token, the parted green hemp, and the foreman's
+          tally before the harbor contracts clerk. The damp fiber and private
+          numbers agree against the ropewalker, though you left the measured
+          span unnotched and another inspector must find the nine-turn place
+          again. The order is stopped before the cable reaches the ferry cranes.
+          *** The twist is proved. ***
+      - when: [{ not_flag: found_green_hemp }, { has_flag: cable_notched }]
+        text: >
+          You lay the inspector's token, the notched cable span, and the foreman's
+          tally before the harbor contracts clerk. The measured mark and private
+          numbers agree against the ropewalker, though you left the green hemp
+          unparted and the material proof thinner than it could be. The order is
+          stopped before the cable reaches the ferry cranes. *** The twist is
+          proved. ***
     text: >
       You lay the inspector's token, the notched cable span, and the foreman's
       tally before the harbor contracts clerk. The numbers agree against the
