@@ -16,6 +16,11 @@
  * (4) back_deck with both flags → full-knowledge variant present; opening text absent.
  * (5) first turn (no quest) → opening base text still fires; at_the_cask text absent.
  * (6) ending_landfall still reachable after back_deck detour.
+ *
+ * bug_0467: A later blind playtest found that the deck text said "You cannot step back
+ * from it again" but the cask still offered `back_deck` on every revisit. The retreat is
+ * now a one-shot hesitation beat: present on first cask entry, absent after one retreat,
+ * while the real ending choices remain available.
  */
 import { describe, it, expect } from "vitest";
 import { loadPackFile } from "../../src/cyoa/pack.js";
@@ -39,6 +44,7 @@ function play(ids: string[]) {
 const obs = (s: ReturnType<typeof play>) => buildObservation(index, s);
 const obsText = (s: ReturnType<typeof play>) => obs(s).text.toLowerCase();
 const endId = (s: ReturnType<typeof play>) => obs(s).ending_id;
+const actionIds = (s: ReturnType<typeof play>) => obs(s).available_actions.map((a) => a.id);
 
 // Opening text anchor — first-turn base text.
 const OPENING_ANCHOR = "nine days without a breath of wind";
@@ -113,5 +119,35 @@ describe("bug_0327 — back_deck triggers at_the_cask deck variants, not opening
       "trust_pilot",
     ]);
     expect(endId(s)).toBe("ending_landfall");
+  });
+
+  it("bug_0467: back_deck is available once, then retires after the cask retreat", () => {
+    expect(actionIds(play(["to_cask"]))).toContain("back_deck");
+
+    const afterRetreat = actionIds(play(["to_cask", "back_deck", "to_cask"]));
+    expect(afterRetreat).not.toContain("back_deck");
+    expect(afterRetreat).toEqual(expect.arrayContaining(["ration", "give_jonah", "seize"]));
+  });
+
+  it("bug_0467: the one-shot retreat does not block learned finale choices", () => {
+    const afterFullPrepRetreat = actionIds(
+      play([
+        "to_chest",
+        "read_log",
+        "take_pistol",
+        "leave_chest",
+        "to_hold",
+        "speak_girl",
+        "leave_hold",
+        "to_cask",
+        "back_deck",
+        "to_cask",
+      ]),
+    );
+
+    expect(afterFullPrepRetreat).not.toContain("back_deck");
+    expect(afterFullPrepRetreat).toEqual(
+      expect.arrayContaining(["ration", "trust_pilot", "give_jonah", "seize", "draw_pistol"]),
+    );
   });
 });
