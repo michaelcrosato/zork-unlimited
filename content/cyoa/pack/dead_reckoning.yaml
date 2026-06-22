@@ -23,7 +23,7 @@
 # the wreckers_light / white_stag discipline):
 #   * ration the water evenly and hold on        → ending_holdfast (discipline)
 #   * give the helm to the stowaway               → ending_landfall (gated on knows_pilot)
-#   * give the stowaway to the crew's superstition→ ending_jonah    (the dark choice)
+#   * give the stowaway to the crew's superstition→ ending_jonah    (failure)
 #   * seize the cask and the key for yourself     → ending_adrift   (greed)
 #   * draw the captain's pistol and rule by force → ending_irons    (gated on has_pistol)
 # The pistol is the captain's authority made lethal: a THIRD optional thing to learn/take
@@ -455,6 +455,7 @@ endings:
       would have thrown away. It is the surest landfall a becalmed boat ever made.
 
   - id: ending_jonah
+    death: true
     title: "The Jonah"
     # knows_pilot reframes the SAME act: ignorant superstition (tragedy) vs knowing the
     # one navigator aboard was the one they drowned (damnation) — the white_stag device.
