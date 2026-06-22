@@ -56,6 +56,22 @@ scenes:
     # No on_enter quest-stage write here: this is the hub, revisited after the
     # ledger/cellar truth is known. Re-setting `arrived` here would clobber
     # `truth_known` every time the player returns to decide what to do next.
+    # bug_0421: first-entry prose lives in the base text only. Any return from
+    # the surrounding rooms shows the gate as an already-entered hub, not another
+    # arrival where the lay-brother waves you in from the cold.
+    variants:
+      - when:
+          - any_of:
+              - { visited: guest_hall }
+              - { visited: chapel }
+              - { visited: cloister_walk }
+              - { visited: priors_study }
+              - { visited: south_road }
+        text: >
+          Rain needles the arch and runs in black threads down Saint Maren's
+          stones. The lay-brother who waved you in has gone back to his duties;
+          the guest hall, chapel, cloister, study, and south road all wait from
+          this same dripping threshold.
     text: >
       Rain-dark walls and a lantern guttering above the arch. The road behind
       you is mud to the knee; the priory of Saint Maren is the only shelter for
@@ -156,6 +172,12 @@ scenes:
   # ── Cloister cluster ──────────────────────────────────────────────────────
   - id: cloister_walk
     title: "The Cloister Walk"
+    variants:
+      - when: [ { has_flag: prior_at_vespers } ]
+        text: >
+          Stone arches frame a square of dead grass. Vespers has emptied the
+          walk; Emric's broom leans in the corner where he left it, and the
+          north-wall cellar door sits unwatched in the rain-dark quiet.
     text: >
       Stone arches frame a square of dead grass. A young monk sweeps the far
       corner with more force than the task needs — the kind of sweeping that has
@@ -245,6 +267,11 @@ scenes:
     # First-match-wins: variant fires when prior IS present (not_flag: prior_at_vespers);
     # base text shows when prior IS at Vespers (flag set) — the empty room.
     variants:
+      - when: [ { has_flag: prior_at_vespers }, { has_flag: has_cellar_key } ]
+        text: >
+          The study is empty. A fire, a writing table, a shelf of ledgers. The
+          door to the scriptorium stands open. Behind the desk, the hook where
+          the cellar key hung is bare.
       - when: [ { not_flag: prior_at_vespers } ]
         text: >
           Prior Aldwulf sits at his writing table. He looks up without warmth.
@@ -325,6 +352,12 @@ scenes:
   # ── Scriptorium (requires prior_at_vespers) ───────────────────────────────
   - id: scriptorium
     title: "The Scriptorium"
+    variants:
+      - when: [ { has_flag: has_ledger } ]
+        text: >
+          A copying desk and shelves of rolled parchment. On the separate shelf
+          where the prior's accounts sat, dust marks the rectangular gap your
+          borrowed ledger left behind.
     text: >
       A copying desk and shelves of rolled parchment — and on a separate shelf,
       bound in plain calfskin but fat with pages: the prior's accounts. Three
