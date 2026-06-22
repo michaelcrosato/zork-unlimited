@@ -141,6 +141,26 @@ scenes:
 
   - id: willows_cache
     title: "The Bundle in the Willows"
+    variants:
+      - when: [ { all_of: [ { has_item: travel_receipt }, { has_item: lease_notice } ] } ]
+        text: >
+          The traveler's pack lies open in the willow roots. The road-cloak is
+          still folded inside it, and the coin-purse still hangs cut from its
+          strap, but the receipt and the sealed lease notice are gone from their
+          pockets. Whatever the ferryman meant the river to keep, you have taken
+          the papers that name it.
+      - when: [ { has_item: travel_receipt } ]
+        text: >
+          The traveler's pack lies open in the willow roots. The folded receipt is
+          no longer in its dry pocket, but the road-cloak remains, the coin-purse
+          hangs cut from its strap, and a second piece of paper, heavily sealed,
+          addresses itself to "the current holder of the Corwick ferry lease."
+      - when: [ { has_item: lease_notice } ]
+        text: >
+          The traveler's pack lies open in the willow roots. The broken-sealed
+          lease notice is no longer tucked inside, but a folded travel receipt
+          remains in a dry inner pocket beside the road-cloak and the purse cut
+          from its strap.
     text: >
       A traveler's pack — good leather, not old. Inside: a road-cloak, a coin-purse
       cut from its strap, and a folded travel receipt in a dry inner pocket. A second

@@ -55,6 +55,21 @@ describe("bug_0364 -- Ferryman's Price blind polish", () => {
     expect(boat.text).not.toMatch(/someone has scrubbed the gunwale/i);
   });
 
+  it("updates the willow cache as documents are removed from the pack", () => {
+    const receiptOnly = obs(["walk_upstream", "pull_bundle", "take_receipt"]);
+    expect(receiptOnly.text).toMatch(/folded receipt is no longer in its dry pocket/i);
+    expect(receiptOnly.text).toMatch(/second piece of paper, heavily sealed/i);
+
+    const leaseOnly = obs(["walk_upstream", "pull_bundle", "read_lease_notice"]);
+    expect(leaseOnly.text).toMatch(/lease notice is no longer tucked inside/i);
+    expect(leaseOnly.text).toMatch(/folded travel receipt remains/i);
+
+    const emptied = obs(CACHE_WITHOUT_MARKS);
+    expect(emptied.text).toMatch(/receipt and the sealed lease notice are gone/i);
+    expect(emptied.text).not.toMatch(/folded travel receipt in a dry inner pocket/i);
+    expect(emptied.text).not.toMatch(/second piece of paper, heavily sealed/i);
+  });
+
   it("keeps testimony text honest when the player never inspected the drag marks", () => {
     const end = obs([
       ...CACHE_WITHOUT_MARKS,
