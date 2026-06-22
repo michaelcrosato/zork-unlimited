@@ -42,7 +42,8 @@
 #   +5  READ sick_edric     — overdose symptoms identified (physick+3; one-shot)
 #   +10 READ godwin_notes   — overdose formula confirmed (physick+3; one-shot, must hold)
 #   +10 READ meadowsweet    — corrective ingredient ready (one-shot, must hold)
-#   +10 physick check success — USE meadowsweet ON sick_edric, DC 12 (one-shot)
+#   +10 physick check success — USE meadowsweet ON sick_edric, DC 12 (retires
+#       on success; a failed presentation can be tried again)
 #   +15 market_lane on_enter — WIN (locomotion win)
 #
 # Physick stat calibration (skill checks use d20, combat uses d6):
@@ -252,7 +253,7 @@ objects:
               than someone whose treatment is making a fever worse. The dosage
               formula will be in the case notes.
       # The treatment: USE meadowsweet ON sick_edric — physick skill check, DC 12.
-      # One-shot: confrontation_attempted set on BOTH branches.
+      # Retires only on success. A failed presentation leaves the evidence and remedy live.
       # Requires meadowsweet in inventory (implicit via item field).
       - verb: USE
         item: meadowsweet
@@ -284,19 +285,18 @@ objects:
                 to read. Then he nods. A short nod, the kind that costs something.
                 He steps aside. You administer the meadowsweet; Edric swallows it.
           on_failure:
-            - set_flag: confrontation_attempted
             - add_journal: >
-                The argument broke apart — the sequence wrong, the formula not
-                yet named when the remedy was already in hand. Godwin found the
-                gap between the observations and the conclusion. Holt is watching
-                from the corridor doorway.
+                The argument faltered under Godwin's practiced certainty, but
+                the case notes and meadowsweet remain in your hands. The
+                overdose formula is still named, the remedy is still correct,
+                and the treatment question is not closed.
             - narrate: >
-                The reasoning comes out in the wrong order — the remedy proposed
-                before the mechanism of harm is fully named, the dose figures cited
-                before the reference standard is in hand. Godwin finds the gap
-                between the observation and the conclusion and holds it, calmly,
-                with sixty years of practice behind him. He takes a step toward the
-                bed. Holt has appeared in the corridor doorway.
+                Your first presentation falters. Godwin leans on sixty years of
+                practice and holds the room for a moment, but he has not taken the
+                notes from you and he has not disproved the numbers: three parts
+                wormwood extract to one part water against the one-to-one standard.
+                The meadowsweet is still in your hand, Edric is still losing fluid,
+                and you can put the evidence to Godwin again.
 
   - id: godwin_notes
     name: "Godwin's case notes"
