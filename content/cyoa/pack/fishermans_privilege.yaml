@@ -79,8 +79,6 @@ scenes:
   # ── The Magistrate's Office (hub / start) ────────────────────────────────
   - id: magistrate_office
     title: "The Magistrate's Office"
-    on_enter:
-      - set_quest_stage: { quest: the_inquiry, stage: complaint_received }
     # Higher-specificity variants first.
     variants:
       - when:
@@ -160,6 +158,7 @@ scenes:
         conditions: [ { not_flag: read_complaint } ]
         effects:
           - set_flag: read_complaint
+          - set_quest_stage: { quest: the_inquiry, stage: complaint_received }
           - add_journal: "The complaint names Lieutenant Pryce of HMS Ardent as the officer who ordered the press. Her husband, Robert Tyrell, licensed herring fisherman of this port, was taken from his boat on the morning of the fourteenth — sixty yards from the wharf, running in with a morning's catch. She says he held out his licence papers and the press men took him anyway. She gives the licence number and says it was renewed in February last. There is no magistrate's countersignature on the Admiralty warrant Pryce presented."
           - inc_var: { name: score, by: 5 }
         next: magistrate_office
@@ -187,11 +186,13 @@ scenes:
           difficulty: 11
           on_success:
             - add_journal: "You write it without hesitation. The harbour master's ledger, the Admiralty's own proclamation, and a named witness: Tyrell's licence was current, and the press was not made under lawful authority."
+            - set_quest_stage: { quest: the_inquiry, stage: direct_finding_filed }
             - inc_var: { name: score, by: 20 }
             - goto: ending_illegal
             - end_game: ending_illegal
           on_failure:
             - add_journal: "Your hand is not entirely steady on the first line. Pryce is a lieutenant of the Crown and he will not thank you for this. But the evidence is what it is, and the clerk's job is to write what the evidence says."
+            - set_quest_stage: { quest: the_inquiry, stage: direct_finding_filed }
             - inc_var: { name: score, by: 20 }
             - goto: ending_illegal
             - end_game: ending_illegal
@@ -206,6 +207,7 @@ scenes:
               - { has_flag: read_act }
               - { has_flag: checked_roster }
         effects:
+          - set_quest_stage: { quest: the_inquiry, stage: admiralty_referral_filed }
           - inc_var: { name: score, by: 20 }
         next: ending_contested
       - id: rule_legal
@@ -215,6 +217,7 @@ scenes:
               - { has_flag: heard_pryce }
               - { not_flag: checked_license }
         effects:
+          - set_quest_stage: { quest: the_inquiry, stage: closed_on_pryce }
           - inc_var: { name: score, by: 10 }
         next: ending_legal
       - id: dismiss_complaint
@@ -227,6 +230,8 @@ scenes:
               - { has_flag: heard_pryce }
               - { has_flag: checked_roster }
               - { has_flag: found_witness }
+        effects:
+          - set_quest_stage: { quest: the_inquiry, stage: dismissed_unexamined }
         next: ending_dismissed
 
   # ── The Harbour Master's Office ──────────────────────────────────────────
@@ -249,6 +254,7 @@ scenes:
         conditions: [ { not_flag: checked_license } ]
         effects:
           - set_flag: checked_license
+          - set_quest_stage: { quest: the_inquiry, stage: license_confirmed }
           - add_journal: "Gent finds the entry without pausing to look. Robert Tyrell, herring fisherman, licence number 147, renewed the third of February last for a fee of four shillings. Valid for the calendar year. Gent says he took the renewal himself and Tyrell paid on the day. The licence was current when he was taken. The ledger is not in dispute — Gent will swear to it."
           - inc_var: { name: score, by: 5 }
         next: harbour_office
@@ -257,6 +263,7 @@ scenes:
         conditions: [ { not_flag: read_act } ]
         effects:
           - set_flag: read_act
+          - set_quest_stage: { quest: the_inquiry, stage: exemption_read }
           - add_journal: "He has the 1696 Admiralty proclamation pinned behind his door. The relevant passage: licensed fishermen, watermen, and harbour-craft operators are not to be pressed so long as their licence is current and they are engaged in their licensed work at the time of seizure. Both conditions applied to Tyrell on the morning of the fourteenth, according to the ledger and Agnes's account. Gent says the proclamation is not an Act of Parliament — Pryce's people know that — but it is the standing instruction from the Admiralty itself."
           - inc_var: { name: score, by: 5 }
         next: harbour_office
@@ -292,6 +299,7 @@ scenes:
         conditions: [ { not_flag: heard_pryce } ]
         effects:
           - set_flag: heard_pryce
+          - set_quest_stage: { quest: the_inquiry, stage: pryce_heard }
           - add_journal: "Pryce says Tyrell's licence lapsed in March of last year and was not renewed — that the man was an unlicensed fisherman, not exempt from impressment under any standing order. He says he checked the harbour master's roll himself before the tender went out and the roll he saw showed no renewal. When you tell him that Gent's ledger shows a February renewal, Pryce says harbour office records are not always timely and that the licence number Agnes gives is not the number in his copy of the roll. On the warrant's missing magistrate's countersignature, he says a naval press warrant needs no clerk's ink to make it Crown authority. He says this without embarrassment."
           - inc_var: { name: score, by: 5 }
         next: pressing_room
@@ -300,6 +308,7 @@ scenes:
         conditions: [ { not_flag: checked_roster } ]
         effects:
           - set_flag: checked_roster
+          - set_quest_stage: { quest: the_inquiry, stage: roster_checked }
           - add_journal: "Pryce produces the Ardent's press muster without argument, with the warrant copy folded behind it. The entry reads: 'Robert Tyrell, able seaman, not exempt, pressed 14th inst., licence lapsed.' The entry date is correct. 'Not exempt' and 'licence lapsed' are written in ink that is a slightly different shade from the surrounding entries and at a marginally different angle, as if added after the main entry was made rather than at the time of pressing. The warrant copy is still bare of any magistrate's countersignature."
           - inc_var: { name: score, by: 5 }
         next: pressing_room
@@ -327,6 +336,7 @@ scenes:
         conditions: [ { not_flag: found_witness } ]
         effects:
           - set_flag: found_witness
+          - set_quest_stage: { quest: the_inquiry, stage: witness_recorded }
           - add_journal: "Vear gives a clear account: Tyrell's boat was sixty yards off the wharf, running in with a morning's catch, when the press tender came alongside. He saw Tyrell hold up papers — something from his coat, held out flat. The press men did not look at them. Three men went aboard and brought Tyrell off, and the boat was brought in crewless and moored below the wharf. Vear says Tyrell called out that his licence was current and he was at his lawful work. Vear says this quietly, as if he has been waiting for someone to ask."
           - inc_var: { name: score, by: 5 }
         next: chandlers_wharf

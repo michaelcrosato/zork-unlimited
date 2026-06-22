@@ -117,11 +117,32 @@ describe("bug_0366 -- Fisherman's Privilege blind polish", () => {
 
   it("keeps the direct-finding steadiness failure branch convergent and max-scoring", () => {
     const failRules = buildRules(index, forcedRoll(1));
-    const failed = obs([...FULL_RECORD_ROUTE, "rule_illegal"], failRules);
+    const failedState = play([...FULL_RECORD_ROUTE, "rule_illegal"], failRules);
+    const failed = buildObservation(index, failedState);
 
     expect(failed.ending_id).toBe("ending_illegal");
     expect(failed.state.vars.score).toBe(50);
+    expect(failedState.questStage.the_inquiry).toBe("direct_finding_filed");
     expect(failed.state.journal.at(-1)).toMatch(/hand is not entirely steady/i);
+  });
+
+  it("advances inquiry quest stages instead of resetting the hub to complaint received", () => {
+    expect(play(["read_complaint"]).questStage.the_inquiry).toBe("complaint_received");
+
+    const harbourReturn = play([
+      "read_complaint",
+      "go_to_harbour",
+      "check_license",
+      "read_exemption_act",
+      "leave_harbour",
+    ]);
+    expect(harbourReturn.questStage.the_inquiry).toBe("exemption_read");
+
+    const fullRecord = play(FULL_RECORD_ROUTE);
+    expect(fullRecord.questStage.the_inquiry).toBe("roster_checked");
+
+    const contested = play([...FULL_RECORD_ROUTE, "report_contested"]);
+    expect(contested.questStage.the_inquiry).toBe("admiralty_referral_filed");
   });
 
   it("only offers dismissal before any investigation has begun", () => {
