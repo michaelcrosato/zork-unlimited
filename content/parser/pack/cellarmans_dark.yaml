@@ -31,7 +31,7 @@
 # Lighting chain:
 #   TAKE lamp (ale_cellar) + TAKE tinderbox (ale_cellar) +
 #   TAKE oil_jar (oil_store — accessible in the dark by feel) →
-#   USE oil_jar ON lamp → lamp_oiled →
+#   USE oil_jar ON lamp → lamp_oiled (jar remains with you, now empty) →
 #   USE tinderbox ON lamp → lamp_lit (+10) → wine_vault unlocks
 #
 # Score (max 35):
@@ -212,13 +212,26 @@ rooms:
     # is live ONLY after lamp_lit (base dark description valid before; no dead window).
     # The board text echoes the cellarman's note (two-source §17 clue discipline).
     variants:
-      - when: [{ has_flag: lamp_lit }]
+      - when: [{ has_flag: lamp_lit }, { has_flag: lamp_oiled }]
         text: >
           A low-ceilinged store, shelves stacked with lamp oil and wicking. At the
           back, pushed against the wall, a cask lists on its side, its bung half-out
           and a sweetish smell seeping out around it. The cellarman's board is nailed
           above it: "OLD SPIRIT — SEAL CRACKED — DO NOT DRAW THE BUNG UNDER FLAME."
-          An oil-jar sits on the low shelf just inside the door.
+          The low shelf just inside the door is bare now; the oil from its jar is in
+          the lamp.
+      - when: [{ has_flag: lamp_oiled }]
+        text: >
+          Pitch dark. You move by feel; the shelves are to your left and right, and the
+          air is thick with the smell of oil and something sweeter beneath it — something
+          you know and do not entirely trust. The low shelf just inside the door is bare
+          now; the oil from its jar is in the lamp.
+      - when: [{ has_item: oil_jar }]
+        text: >
+          Pitch dark. You move by feel; the shelves are to your left and right, and the
+          air is thick with the smell of oil and something sweeter beneath it — something
+          you know and do not entirely trust. The low shelf just inside the door is bare
+          now; the oil-jar is with you.
     objects: [oil_jar, spirit_cask]
     exits:
       - { direction: west, to: ale_cellar }
@@ -303,7 +316,8 @@ objects:
                 You try to gauge the wick by feel in the dark, but your hands won't quite
                 stay still. It doesn't matter — when the oil is in, a spark is a spark.
                 You'll just have to try it.
-      # FILL the lamp: USE oil_jar ON lamp → removes oil_jar from inventory, sets lamp_oiled.
+      # FILL the lamp: USE oil_jar ON lamp → sets lamp_oiled. The jar remains in
+      # inventory as an empty prop so it cannot snap back to the oil-store shelf.
       # Requires the player to be carrying the oil_jar (fetched from oil_store in the dark).
       - verb: USE
         item: oil_jar
@@ -311,10 +325,10 @@ objects:
         conditions: [{ has_item: oil_jar }, { not_flag: lamp_oiled }]
         effects:
           - set_flag: lamp_oiled
-          - remove_item: oil_jar
           - narrate: >
               You fill the reservoir from the oil-jar, a slow clean pour. The wick
-              drinks it up; the lamp is full. Tinderbox next.
+              drinks it up; the lamp is full. The jar is empty now, but still in
+              your hand. Tinderbox next.
       # LIGHT the lamp: USE tinderbox ON lamp → sets lamp_lit, awards +10.
       # Gated on lamp_oiled (must fill before lighting) and not_flag lamp_lit (one-shot).
       - verb: USE
@@ -344,6 +358,11 @@ objects:
     description: >
       A clay oil-jar, heavy and full. Good lamp-oil by the clean smell of it — the kind
       the cellarman always kept on the low shelf where you could find it in the dark.
+    variants:
+      - when: [{ has_flag: lamp_oiled }]
+        text: >
+          The clay oil-jar is empty now, its clean lamp-oil poured into the old lamp.
+          It is only a jar, but at least it is not pretending to be anything else.
     takeable: true
 
   - id: spirit_cask
