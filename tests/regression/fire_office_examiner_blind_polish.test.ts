@@ -5,6 +5,10 @@
  * was still uninterviewed, and that Varley's own contradictory claim earned no
  * score or final-report weight. The fix makes Varley's account part of the
  * full criminal referral chain.
+ *
+ * Regression for bug_0471 -- a later blind pass found submission affordances
+ * could invite a zero-evidence report, pointless returns to exhausted evidence
+ * rooms, and editorially loaded full-file payment wording.
  */
 import { describe, expect, it } from "vitest";
 import { loadPackFile } from "../../src/cyoa/pack.js";
@@ -47,6 +51,28 @@ const COMPLETE_EXCEPT_VARLEY = [
 const FULL_CHAIN = [...COMPLETE_EXCEPT_VARLEY, "speak_varley"];
 
 describe("bug_0365 -- Fire Office Examiner blind polish", () => {
+  it("does not offer a zero-evidence report on first arrival at the ruins", () => {
+    const warehouse = obs(["proceed_to_site"]);
+    const actions = warehouse.available_actions.map((a) => a.id);
+
+    expect(actions).not.toContain("submit_report");
+    expect(actions).toEqual(
+      expect.arrayContaining([
+        "speak_varley",
+        "enter_ruins",
+        "check_yard",
+        "question_thomas",
+        "find_cook",
+      ]),
+    );
+  });
+
+  it("offers report filing once the examiner has at least one finding", () => {
+    const warehouse = obs(["read_claim_documents", "proceed_to_site"]);
+
+    expect(warehouse.available_actions.map((a) => a.id)).toContain("submit_report");
+  });
+
   it("does not call the warehouse investigation complete while Varley is still pending", () => {
     const warehouse = obs(COMPLETE_EXCEPT_VARLEY);
 
@@ -54,6 +80,16 @@ describe("bug_0365 -- Fire Office Examiner blind polish", () => {
     expect(warehouse.text).toMatch(/claimant's own story/i);
     expect(warehouse.text).not.toMatch(/last stop/i);
     expect(warehouse.available_actions.map((a) => a.id)).toContain("speak_varley");
+  });
+
+  it("retires exhausted evidence side rooms once their findings are collected", () => {
+    const warehouse = obs(FULL_CHAIN);
+    const actions = warehouse.available_actions.map((a) => a.id);
+
+    expect(actions).not.toContain("enter_ruins");
+    expect(actions).not.toContain("check_yard");
+    expect(actions).not.toContain("find_cook");
+    expect(actions).toContain("submit_report");
   });
 
   it("scores Varley's oral claim mismatch as real evidence", () => {
@@ -86,8 +122,10 @@ describe("bug_0365 -- Fire Office Examiner blind polish", () => {
     const desk = obs([...FULL_CHAIN, "submit_report"]);
 
     expect(desk.available_actions.map((a) => a.id)).not.toContain("approve_claim");
+    expect(desk.available_actions.map((a) => a.id)).not.toContain("back_to_investigate");
     const badPayment = desk.available_actions.find((a) => a.id === "approve_claim_against_file");
-    expect(badPayment?.text).toMatch(/despite the completed fraud evidence/i);
+    expect(badPayment?.text).toMatch(/treat the file as insufficient/i);
+    expect(badPayment?.text).not.toMatch(/completed fraud evidence/i);
 
     const end = obs([...FULL_CHAIN, "submit_report", "approve_claim_against_file"]);
     expect(end.ending_id).toBe("ending_approved");

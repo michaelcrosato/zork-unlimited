@@ -168,9 +168,11 @@ scenes:
         next: warehouse_ruins
       - id: enter_ruins
         text: "Enter the ruins to examine the burn."
+        conditions: [ { not_flag: found_burn_origin } ]
         next: burn_interior
       - id: check_yard
         text: "Circle round to the yard at the rear."
+        conditions: [ { not_flag: found_wheel_marks } ]
         next: warehouse_yard
       - id: question_thomas
         text: "Speak with the yard man, Thomas Rawling."
@@ -182,9 +184,19 @@ scenes:
         next: warehouse_ruins
       - id: find_cook
         text: "Find Hannah Finch at her lodgings."
+        conditions: [ { not_flag: heard_hannah } ]
         next: cook_interview
       - id: submit_report
         text: "Return to the Fire Office to file your report."
+        conditions:
+          - any_of:
+              - has_flag: read_claim
+              - has_flag: checked_debt
+              - has_flag: found_burn_origin
+              - has_flag: found_wheel_marks
+              - has_flag: heard_thomas
+              - has_flag: heard_hannah
+              - has_flag: heard_varley
         next: submission_desk
 
   # ── Evidence scene: burn interior ────────────────────────────────────────
@@ -329,7 +341,7 @@ scenes:
                   - has_flag: heard_varley
         next: ending_approved
       - id: approve_claim_against_file
-        text: "Recommend payment despite the completed fraud evidence."
+        text: "Recommend payment and treat the file as insufficient for fraud."
         conditions:
           - all_of:
               - has_flag: read_claim
@@ -362,6 +374,16 @@ scenes:
         next: ending_referred
       - id: back_to_investigate
         text: "Return to the site — there may be more to find."
+        conditions:
+          - none_of:
+              - all_of:
+                  - has_flag: read_claim
+                  - has_flag: checked_debt
+                  - has_flag: found_burn_origin
+                  - has_flag: found_wheel_marks
+                  - has_flag: heard_thomas
+                  - has_flag: heard_hannah
+                  - has_flag: heard_varley
         next: warehouse_ruins
 
 endings:
