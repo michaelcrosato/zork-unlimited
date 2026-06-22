@@ -12,7 +12,7 @@
 #
 # Three resolution paths:
 #   1. Full chain: accounts (+5) → weigh false (+5) → weigh true (+10) → ledger (+20) →
-#      market_yard (WIN 40/40, ending_documented)
+#      market_yard (WIN 40/40, ending_documented; requires the receipt's two figures)
 #   2. Partial: leave via back_alley (south exit, gated on not fraud_proved) with or
 #      without the receipt — testimony not backed by documentary proof (ending_denounced)
 #   3. Destruction: smash the rigged public scales with the crowbar instead of documenting
@@ -26,8 +26,8 @@
 #
 # Map:
 #
-#   market_yard (WIN — walk out with deputy_receipt AND fraud_proved)
-#        │ N* (* gated: has_item deputy_receipt AND has_flag fraud_proved)
+#   market_yard (WIN — walk out with receipt, ledger proof, and both recorded figures)
+#        │ N* (* gated: has_item deputy_receipt AND has_flag fraud_proved/weighed_false/weighed_true)
 #   counting_house (start; merchant_accounts; deputy_receipt; north_door)
 #        │ S** (** gated: not_flag fraud_proved) │ E
 #   back_alley (PARTIAL)    warehouse_floor (grain_sacks; grain_sample; warehouse_crowbar)
@@ -104,11 +104,16 @@ rooms:
       - { direction: east, to: warehouse_floor }
       - direction: north
         to: market_yard
-        conditions: [{ has_item: deputy_receipt }, { has_flag: fraud_proved }]
+        conditions:
+          - { has_item: deputy_receipt }
+          - { has_flag: fraud_proved }
+          - { has_flag: weighed_false }
+          - { has_flag: weighed_true }
         locked_msg: >
           The market square waits beyond the north door — but the weighmaster's
-          hall needs documentary proof as well as your word. Find the ledger in
-          the grain loft, or leave by the south passage with what you have.
+          hall needs documentary proof as well as your word. Carry the receipt,
+          secure Cope's ledger, and record both figures on the receipt: the
+          public beam below and the true balance in the loft.
       - direction: south
         to: back_alley
         conditions: [{ not_flag: fraud_proved }]
@@ -461,7 +466,8 @@ npcs: []
 win_conditions:
   - id: fraud_documented
     # market_yard is only reachable via the N exit from counting_house, gated on
-    # has_item: deputy_receipt AND has_flag: fraud_proved (the locomotion win shape).
+    # has_item: deputy_receipt plus fraud_proved/weighed_false/weighed_true, so the
+    # ending's "two figures on the receipt" claim is state-truthful (bug_0441).
     conditions: [{ visited: market_yard }]
     ending: ending_documented
   - id: word_given
