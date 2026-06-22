@@ -147,6 +147,13 @@ rooms:
       the thing the herders pull on to work the horns and hooves of frightened cattle. The
       byre-yard is back to the east.
     variants:
+      - when: [{ has_item: byre_jerkin }, { none_of: [{ has_flag: jerkin_donned }] }]
+        text: >
+          A low store-shed off the byre-yard, hung with harness and winter gear. The peg
+          by the door is bare where the steading's padded byre-jerkin hung before you took
+          it down. It is in your hands, not yet on your back; drag it on before you go
+          north, because carried hide will not turn teeth. The byre-yard is back to the
+          east.
       - when: [{ has_flag: byre_jerkin_taken }]
         text: >
           A low store-shed off the byre-yard, hung with harness and winter gear. The peg
@@ -293,9 +300,14 @@ objects:
     variants:
       - when: [{ has_flag: jerkin_donned }]
         text: "The padded byre-jerkin, pulled on now over your own coat; its layered hide sits stiff and heavy between you and the next set of teeth."
+      - when: [{ has_item: byre_jerkin }, { none_of: [{ has_flag: jerkin_donned }] }]
+        text: "The padded byre-jerkin is bunched in your hands, layered hide still useless until you drag it on over your coat."
     takeable: true
     take_effects:
       - set_flag: byre_jerkin_taken
+      - narrate: >
+          You have the padded byre-jerkin in your hands, but not yet on your back.
+          Drag it on before you go north; carried hide will not turn teeth.
     interactions:
       # Self-USE = "wear this thing" (cold_forge plate / dawn_beacon mail, bug_0074).
       # command_verb: don makes the offered and typed verb match the prose. One-shot
