@@ -16,7 +16,7 @@
  * everything impounded in the excise store answers to the one store-key, which reads three
  * ways —
  *   • the oil-cask         → draw the oil, light the lamp, guide the child → ending_guided (the win)
- *   • the excise strongbox → take the Crown's seized silver and slip away → ending_thief (greed; terminal)
+ *   • the excise strongbox → open it, then take the Crown's seized silver → ending_thief (greed; terminal)
  *   • the sealed spirit-cask → force the impounded naphtha by your lit lantern → ending_caught (a DEATH)
  * ending_caught is the failure pole, reached by end_game in unlock_effects (the sealed_crypt
  * bound_tomb path), telegraphed by the notice, the watchman, AND the cask's own warning
@@ -27,7 +27,8 @@
  *       oil-cask, the strongbox AND the spirit-cask can all be unlocked in the SAME state;
  *   (2) the win route reaches ending_guided at the full 35/35 (read notice +5, store door
  *       +10, light lamp +20), and lighting the lamp opens the way down to the strand;
- *   (3) taking the silver fires ending_thief (NON-death), the lamp left dark (no lamp_lit);
+ *   (3) unlocking/opening the strongbox is not terminal; only taking the silver fires
+ *       ending_thief (NON-death), the lamp left dark (no lamp_lit);
  *   (4) forcing the spirit-cask fires ending_caught (a DEATH), distinct from guided/thief,
  *       the strand never reached, and its narration names the rock-spirit and the flame;
  *   (5) ending_caught is the pack's ONLY death ending, reached ONLY by end_game; ending_guided
@@ -138,10 +139,16 @@ describe("bug_0205 — The Lamplighter's Round: the three-way excise-key fork (o
   });
 
   it("taking the silver fires ending_thief (a NON-death greed end) — the lamp left dark, no win", () => {
-    const { state } = play(initStateForParserPack(index, 3), [
+    const opened = play(initStateForParserPack(index, 3), [
       ...ROUTE_TO_STORE_WITH_KEY,
       "unlock_excise_box",
+      "open_excise_box",
     ]);
+    expect(opened.state.ended).toBe(false);
+    expect(opened.state.objectState["excise_box"]?.open).toBe(true);
+    expect(actionIds(opened.state)).toContain("take_seized_silver");
+
+    const { state } = play(opened.state, ["take_seized_silver"]);
     expect(state.ended).toBe(true);
     expect(state.endingId).toBe("ending_thief");
     expect(state.flags["lamp_lit"]).toBeFalsy(); // the great lamp never lit
@@ -360,6 +367,8 @@ describe("bug_0216 → bug_0220 — the round-lantern: a HELD (always-carried, n
     const thief = play(initStateForParserPack(index, 3), [
       ...ROUTE_TO_STORE_WITH_KEY,
       "unlock_excise_box",
+      "open_excise_box",
+      "take_seized_silver",
     ]);
     expect(thief.state.endingId).toBe("ending_thief");
   });

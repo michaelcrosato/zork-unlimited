@@ -17,7 +17,7 @@
 # EXCISE-KEEPER'S KEY: everything impounded in the excise store answers to the one
 # store-key, and "the store-key opens all of it" reads three ways —
 #   • the oil-cask     (draw the lamp-oil, light the lamp, guide the child → ending_guided)
-#   • the excise strongbox (take the Crown's seized silver and slip away → ending_thief, greed)
+#   • the excise strongbox (open it, then take the Crown's seized silver → ending_thief, greed)
 #   • the sealed spirit-cask (force the impounded naphtha by your lit round-lantern → ending_caught, a DEATH)
 # The third fork is a deliberate, telegraphed one-way hubris choice (the founders_coffin /
 # bound_tomb discipline, bug_0123/0130, §8.7): the notice, the watchman, and the cask's own
@@ -29,7 +29,7 @@
 #     (start;         (hub)         (the great lamp;       (the lost child,
 #      tinderbox,       │E*  excise_store              out of the dark once
 #      brass key,       │     ├ oil_cask    → whale-oil   the lamp is lit)
-#      night-notice;    │     ├ excise_box  → ending_thief
+#      night-notice;    │     ├ excise_box → seized_silver → ending_thief
 #      round-lantern    │W    └ spirit_cask → ending_caught (DEATH)
 #      HELD from t=0)  watch_box
 #                     (watchman;
@@ -156,8 +156,9 @@ rooms:
       smuggling boats — kegs and bales and bundles, all of it under the Crown's lock. A
       squat oil-cask stands by the door, a banded strongbox on a shelf above it, and apart
       against the far wall, set well off from the rest, a single cask run round with wax and
-      lead and stencilled in red. Every lock in the place is shaped for the one store-key.
-      The lamp-walk is back to the west.
+      lead and stencilled in red. The oil-cask is the business of your round; the strongbox
+      is only the Crown's silver, temptation under seal. Every lock in the place is shaped
+      for the one store-key. The lamp-walk is back to the west.
     objects: [oil_cask, excise_box, spirit_cask]
     exits:
       - { direction: west, to: lamp_walk }
@@ -351,26 +352,48 @@ objects:
 
   - id: excise_box
     name: "excise strongbox"
-    aliases: [strongbox, box, strong box, chest, silver]
+    aliases: [strongbox, box, strong box, chest]
     # The GREED fork (sealed_crypt founders_coffin, bug_0105): the seized Crown silver,
-    # behind the same store-key. Forcing it is terminal — you take the money and slip off
-    # the round, the great lamp left dark and the child left lost — so it is a real mutually
-    # exclusive CHOICE, not a detour. Non-death (you are not killed; you choose the silver).
-    # No score, no flag, no exit change to the win route (max_score stays 35).
+    # behind the same store-key. Unlocking/opening the box is warning, not commitment:
+    # only deliberately TAKING the exposed silver ends the round. That keeps the moral fork
+    # a real mutually exclusive CHOICE without punishing a curious player for merely trying
+    # the key on the same-looking lock (bug_0436). Non-death (you are not killed; you choose
+    # the silver). No score, no flag, no exit change to the win route (max_score stays 35).
     description: >
       A banded iron strongbox on the shelf, the excise seal still bright on its hasp and
       the dull clink of coin within — the Crown's silver, seized off the boats and bound
       for the customs-house. Its lock is the store-key's like all the rest. To open it is
-      to walk off your round a thief, with the silver and a dark lamp behind you.
+      not yet theft; to put the silver in your coat would be.
+    variants:
+      - when: [{ is_open: excise_box }]
+        text: >
+          The excise strongbox stands open on the shelf, its seal cracked and its seized
+          silver bare in the lantern-light. It is not lamp-oil, not your wage, and not your
+          errand; taking it would mean leaving the great lamp dark behind you.
     locked: true
+    container: true
+    openable: true
     key_id: store_key
+    contents: [seized_silver]
     unlock_narrate: >
-      The store-key bites and the excise seal cracks; the strongbox lid lifts on more
-      seized silver than a lighter sees in ten years of nights. You fill your coat with the
-      cold weight of it and go quiet down the back stair, off your round and out of the
-      fog — and behind you the great lamp stands dark over a strand you will not think
-      about, and a child you will not think about, ever again, if you can help it.
-    unlock_effects:
+      The store-key bites and the excise seal cracks. The strongbox is unlocked now, but
+      the silver is still the Crown's, the great lamp is still dark, and your hand is still
+      empty. Opening it further would make the choice plain.
+
+  - id: seized_silver
+    name: "seized silver"
+    aliases: [silver, coin, coins, crown silver, seized coin, seized coins, money]
+    description: >
+      A cold heap of seized Crown silver in the opened strongbox — more money than a
+      lighter sees in ten years of nights, and every shilling of it a way off your round
+      while the great lamp stays dark.
+    takeable: true
+    take_effects:
+      - narrate: >
+          You fill your coat with the cold weight of the Crown's silver and go quiet down
+          the back stair, off your round and out of the fog — and behind you the great lamp
+          stands dark over a strand you will not think about, and a child you will not
+          think about, ever again, if you can help it.
       - end_game: ending_thief
 
   - id: spirit_cask
