@@ -5,14 +5,18 @@
  * gate hid the muster-roll requirement, and "dismiss without investigation" stayed
  * available after the clerk had gathered evidence. The fix makes those evidence
  * thresholds visible without changing the 50-point score economy.
+ *
+ * Regression for bug_0472 -- a later blind pass found the final direct ruling
+ * looked like a 35% failure risk even after a complete investigation. The fix
+ * removes the capstone skill check: a supported finding now rests on evidence,
+ * not an unmodifiable steadiness roll.
  */
 import { describe, expect, it } from "vitest";
 import { loadPackFile } from "../../src/cyoa/pack.js";
 import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
 import { buildObservation } from "../../src/cyoa/observation.js";
-import { makeStep, type Rules } from "../../src/core/engine.js";
+import { makeStep } from "../../src/core/engine.js";
 import type { Action } from "../../src/api/types.js";
-import type { Rng } from "../../src/core/rng.js";
 
 const loaded = loadPackFile("content/cyoa/pack/fishermans_privilege.yaml");
 if (!loaded.ok) throw new Error("fishermans_privilege pack must compile");
@@ -20,21 +24,15 @@ const index = indexPack(loaded.compiled.pack);
 const rules = buildRules(index);
 const choose = (id: string): Action => ({ type: "CHOOSE", choiceId: id });
 
-function play(ids: string[], activeRules: Rules = rules, seed = 7) {
-  const step = makeStep(activeRules);
+function play(ids: string[], seed = 7) {
+  const step = makeStep(rules);
   let state = initStateForPack(index, seed);
   for (const id of ids) state = step(state, choose(id)).state;
   return state;
 }
 
-const obs = (ids: string[], activeRules: Rules = rules) =>
-  buildObservation(index, play(ids, activeRules));
+const obs = (ids: string[]) => buildObservation(index, play(ids));
 const actionIds = (ids: string[]) => obs(ids).available_actions.map((a) => a.id);
-
-const forcedRoll = (roll: number) => (): Rng => ({
-  next: () => 0,
-  int: () => roll,
-});
 
 const DIRECT_FINDING_ROUTE = [
   "go_to_harbour",
@@ -115,15 +113,23 @@ describe("bug_0366 -- Fisherman's Privilege blind polish", () => {
     expect(illegal.text).toMatch(/no magistrate's countersignature/i);
   });
 
-  it("keeps the direct-finding steadiness failure branch convergent and max-scoring", () => {
-    const failRules = buildRules(index, forcedRoll(1));
-    const failedState = play([...FULL_RECORD_ROUTE, "rule_illegal"], failRules);
-    const failed = buildObservation(index, failedState);
+  it("makes the direct finding evidence-based instead of a capstone skill check", () => {
+    const office = obs(FULL_RECORD_ROUTE);
+    const action = office.available_actions.find((a) => a.id === "rule_illegal");
 
-    expect(failed.ending_id).toBe("ending_illegal");
-    expect(failed.state.vars.score).toBe(50);
-    expect(failedState.questStage.the_inquiry).toBe("direct_finding_filed");
-    expect(failed.state.journal.at(-1)).toMatch(/hand is not entirely steady/i);
+    expect(action).toBeTruthy();
+    expect(action?.text).toMatch(/from the evidence/i);
+    expect(action?.text).not.toMatch(/steady your hand/i);
+    expect(action && "skill_check" in action).toBe(false);
+
+    const endState = play([...FULL_RECORD_ROUTE, "rule_illegal"]);
+    const end = buildObservation(index, endState);
+
+    expect(end.ending_id).toBe("ending_illegal");
+    expect(end.state.vars.score).toBe(50);
+    expect(endState.questStage.the_inquiry).toBe("direct_finding_filed");
+    expect(end.state.journal.at(-1)).toMatch(/write it from the evidence/i);
+    expect(end.state.journal.at(-1)).not.toMatch(/steadiness|d20|hand is not entirely steady/i);
   });
 
   it("advances inquiry quest stages instead of resetting the hub to complaint received", () => {

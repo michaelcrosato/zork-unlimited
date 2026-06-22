@@ -21,13 +21,14 @@
 #       vs common law exemption (licensed fishermen at lawful work).
 #       Both claims have legal grounding; neither is obviously wrong.
 #   (3) CONVERGENT INQUIRY PATHS — rule_illegal (licence + statute +
-#       witness; steadiness DC 11 tension beat) and report_contested
+#       witness; direct legal finding) and report_contested
 #       (all six clues; jurisdictional referral) both award +20 and
 #       reach max score 50; each is a valid professional response
 #       given the evidence gathered. The office prose distinguishes the
 #       direct-finding threshold from the fuller referral record so the
 #       player can see why Pryce's account and the Ardent muster still
-#       matter. rule_legal (Pryce accepted, licence unverified) awards
+#       matter. The direct finding is evidence-based, not a final dice
+#       gate. rule_legal (Pryce accepted, licence unverified) awards
 #       only +10 and reflects insufficient inquiry; dismiss_complaint
 #       awards 0 and is available only before any inquiry step.
 #   (4) WARTIME NAVAL FICTION — Nine Years' War impressment dispute,
@@ -44,8 +45,7 @@
 #   +5  check_roster        — muster notation examined (+not_flag checked_roster)
 #   +5  find_witness        — chandler's man found (+not_flag found_witness)
 #   +20 rule_illegal        — finding: press unlawful (gate: checked_license +
-#                             read_act + found_witness; steadiness DC 11 tension
-#                             beat — both branches +20 → ending_illegal, convergent)
+#                             read_act + found_witness)
 #   OR
 #   +20 report_contested    — full report referred to Admiralty (gate: all six flags)
 #   +10 rule_legal          — Pryce accepted without verification (gate: heard_pryce
@@ -69,10 +69,7 @@ meta:
     connection: "Charterhaven's harbour court controls the fishing rights that keep the river market from tearing itself apart."
   start: magistrate_office
   flags_init: []
-  # `steadiness` (init 3) — stat for the rule_illegal TENSION beat
-  # (d20 + steadiness vs DC 11). Both branches award +20 and route to
-  # ending_illegal — stateKey-convergent. Roll 8 + 3 = 11 beats DC 11.
-  vars_init: { steadiness: 3 }
+  vars_init: {}
   max_score: 50
 
 scenes:
@@ -172,30 +169,17 @@ scenes:
         text: "Go to Chandler's Wharf, where the pressing took place."
         next: chandlers_wharf
       - id: rule_illegal
-        text: "Steady your hand and write a finding: the pressing was not lawful. File it with the fleet's agent."
+        text: "Write the finding from the evidence: the pressing was not lawful. File it with the fleet's agent."
         conditions:
           - all_of:
               - { has_flag: checked_license }
               - { has_flag: read_act }
               - { has_flag: found_witness }
-        # Tension beat: steadiness (init 3) vs DC 11. Both branches award
-        # +20 and route to ending_illegal via goto + end_game —
-        # stateKey-convergent. Only the add_journal narration differs.
-        skill_check:
-          skill: steadiness
-          difficulty: 11
-          on_success:
-            - add_journal: "You write it without hesitation. The harbour master's ledger, the Admiralty's own proclamation, and a named witness: Tyrell's licence was current, and the press was not made under lawful authority."
-            - set_quest_stage: { quest: the_inquiry, stage: direct_finding_filed }
-            - inc_var: { name: score, by: 20 }
-            - goto: ending_illegal
-            - end_game: ending_illegal
-          on_failure:
-            - add_journal: "Your hand is not entirely steady on the first line. Pryce is a lieutenant of the Crown and he will not thank you for this. But the evidence is what it is, and the clerk's job is to write what the evidence says."
-            - set_quest_stage: { quest: the_inquiry, stage: direct_finding_filed }
-            - inc_var: { name: score, by: 20 }
-            - goto: ending_illegal
-            - end_game: ending_illegal
+        effects:
+          - add_journal: "You write it from the evidence. The harbour master's ledger, the Admiralty's own proclamation, and a named witness all point the same way: Tyrell's licence was current, and the press was not made under lawful authority."
+          - set_quest_stage: { quest: the_inquiry, stage: direct_finding_filed }
+          - inc_var: { name: score, by: 20 }
+        next: ending_illegal
       - id: report_contested
         text: "Write a full inquiry report, including the warrant and muster defects, and refer the jurisdictional question to the Admiralty."
         conditions:
