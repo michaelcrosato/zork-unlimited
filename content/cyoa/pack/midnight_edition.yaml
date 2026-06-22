@@ -363,6 +363,10 @@ scenes:
       - id: spike_story
         text: "Pull the story and set the safe notice in its place."
         next: ending_spiked
+      - id: secure_alley_first
+        text: "Go back through the composing room and bar the alley door first."
+        conditions: [{ has_flag: knows_proof }, { not_flag: door_barred }]
+        next: alley_door
       - id: leave_press
         text: "Go back up to the composing room."
         next: composing_room

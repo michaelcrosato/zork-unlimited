@@ -33,6 +33,10 @@
  *   (4) the two trivially-reachable poles (spiked, silenced) need no knowledge at all, so
  *       the coverage bot completes — the benchmark discrimination is "did the agent do the
  *       diligence before the irreversible act", not "can it reach an ending".
+ *
+ * Regression for bug_0473 — a later blind pass found that the proof-but-unbarred press
+ * floor hid print_verified without an explicit recovery route. The gate is intentional,
+ * but the live action list must point the player back to securing the alley.
  */
 import { describe, it, expect } from "vitest";
 import { loadPackFile } from "../../src/cyoa/pack.js";
@@ -94,15 +98,35 @@ describe("midnight_edition — the diligence fork hinges on knowledge and securi
     const verifiedUnsecuredFloor = play([...VERIFY, "go_press"]);
     expect(actionIds(verifiedUnsecuredFloor)).not.toContain("print_verified");
     expect(actionIds(verifiedUnsecuredFloor)).not.toContain("print_unverified");
+    expect(actionIds(verifiedUnsecuredFloor)).toContain("secure_alley_first");
+    expect(
+      obs(verifiedUnsecuredFloor).available_actions.find((a) => a.id === "secure_alley_first")
+        ?.text,
+    ).toMatch(/bar the alley door first/i);
 
     // Reached it AFTER the full verify chain and barring the door: only verified print is live.
     const verifiedSecuredFloor = play([...VERIFY, ...SECURE, "go_press"]);
     expect(actionIds(verifiedSecuredFloor)).toContain("print_verified");
     expect(actionIds(verifiedSecuredFloor)).not.toContain("print_unverified");
+    expect(actionIds(verifiedSecuredFloor)).not.toContain("secure_alley_first");
 
     // Both states can still spike — the complicit pole needs no knowledge.
     expect(actionIds(unverifiedFloor)).toContain("spike_story");
     expect(actionIds(verifiedSecuredFloor)).toContain("spike_story");
+  });
+
+  it("lets a proof-holding player recover from the unbarred press floor and still print", () => {
+    const recovered = play([
+      ...VERIFY,
+      "go_press",
+      "secure_alley_first",
+      "bar_door",
+      "go_press",
+      "print_verified",
+    ]);
+
+    expect(endId(recovered)).toBe("ending_vindicated");
+    expect(obs(recovered).state.vars.score).toBe(35);
   });
 
   it("the same intent (print) yields the win only with the proof, ruin without it", () => {
