@@ -21,7 +21,8 @@
  *   (1) chapel base text (no knows_postern) contains "close and blind", not "proud";
  *   (2) chapel knows_postern variant shows "waiting for a slow hand", never "has swung";
  *   (3) font knows_postern variant shows "will swing", never "has worked";
- *   (4) win route intact: ending_free at 35/35 after learning and pressing the postern.
+ *   (4) win route intact: ending_free at 35/35 after learning, pressing, and leaving
+ *       through the postern.
  */
 import { describe, it, expect } from "vitest";
 import { loadParserPackFile } from "../../src/parser/pack.js";
@@ -82,7 +83,7 @@ const TO_CHAPEL_KNOWING = [
   "go_west", // commons
   "talk_old_debtor",
   "ask_escape", // heard_postern +10
-  "ask_give_pipe", // knows_postern +20
+  "ask_give_pipe", // knows_postern
   "ask_bye",
   "go_east", // gallery
   "go_up", // chapel

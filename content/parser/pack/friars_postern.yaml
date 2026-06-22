@@ -21,9 +21,10 @@
 # (rob your fellow wretches and bolt: a non-death greed ending, ending_thief — the
 # sealed_crypt bug_0105 "one key, two locks" device, here a key with two BAD locks).
 # Freedom costs no key at all: you must trust the old woman, fetch her confiscated
-# pipe, and be TOLD the trick of the friars' latch. The win route turns on knowledge,
-# not iron — so the climactic +20 rides the act of LEARNING (the take_pipe node),
-# exactly as sealed_crypt's +20 rides the gate-unlock one step before its visited win.
+# pipe, be TOLD the trick of the friars' latch, and then actually choose the honest
+# way out. The win route turns on knowledge, not iron, but the climactic +20 now
+# rides the act of escaping through the postern so the poor-fund theft cannot falsely
+# read as a perfect-score route.
 #
 #   cell ─N─ gallery ─W─ commons (old debtor; learn the postern)
 #   (start)    │ E: lodge (turnkey's pipe + key-ring)
@@ -34,12 +35,10 @@
 # Score (max 35, mirroring sealed_crypt's milestone economy so the curve reads
 # familiar): read the previous prisoner's wall-scratches (+5, the §17 clue that names
 # the old woman and where her pipe was taken), learn a postern even exists (+10), and
-# learn the latch's trick (+20 — the literal key to escape). The perfect 35 lands one
-# act before stepping into the street, the intentional denouement a blind playtester
-# confirmed reads right for a `visited` win (sealed_crypt seed 29); SCORE_PEAKS does
-# not fire on a locomotion win. Both BAD endings are heavily telegraphed in place
-# (the gate's examine shows the watch's torches; the box's, your fellow inmates' alms)
-# per the bug_0123 "never an ambush" discipline, and both are recoverable via load.
+# prove the friars' way by walking through it (+20). Both BAD endings are heavily
+# telegraphed in place (the gate's examine shows the watch's torches; the box's, your
+# fellow inmates' alms) per the bug_0123 "never an ambush" discipline, and both are
+# recoverable via load; neither can present a perfect score.
 
 meta:
   id: friars_postern_v1
@@ -209,6 +208,11 @@ rooms:
       and the wall of the debtors' house falls away behind you into the dark. No bar,
       no bolt, no watch — only the road, and the rest of your life to walk it down.
       *** You are free. ***
+    # The final +20 belongs to the honest escape itself, not merely to learning the
+    # latch. A player who learns the secret and then robs the poor-fund can still reach
+    # the greed ending, but cannot leave with a perfect-score lie.
+    on_enter:
+      - inc_var: { name: score, by: 20 }
 
 objects:
   - id: wall_scratches
@@ -333,8 +337,8 @@ objects:
     # deliberate, telegraphed, one-way choice: it fires end_game (you snatch the coin and
     # bolt), mutually exclusive with the honest escape. Per bug_0123 the examine is no
     # ambush — it names plainly WHOSE pennies these are and that taking them is the act
-    # itself, not a step toward freedom. Awards no score (max_score stays 35, so the
-    # perfect score still coincides with the honest route), adds no exit/flag to any win.
+    # itself, not a step toward freedom. Awards no score, caps below the honest route's
+    # 35/35, and adds no exit/flag to any win.
     description: >
       A small iron alms-box bolted to the chapel floor, its slot worn smooth. This is
       the debtors' own poor-fund — the pennies the inmates pool to buy bread for the
@@ -392,8 +396,9 @@ npcs:
         # Termination: every node offers an UNCONDITIONAL `bye` end-topic, so the player
         # can always leave in every state (DIALOGUE_NONTERMINATING satisfied trivially).
         # The two progress topics are each gated `not_flag <told>` so the telling cannot
-        # repeat — the +10 and +20 fire exactly once (the sealed_crypt one-shot idiom),
-        # and those not_flag reads are why neither flag is INERT.
+        # repeat — the +10 fires exactly once and the latch telling cannot be farmed
+        # (the sealed_crypt one-shot idiom), and those not_flag reads are why neither
+        # flag is INERT.
         - id: greet
           npc_text: "Another soul the magistrates couldn't squeeze. Sit if you like — dawn's a long way off, and the watch is patient."
           variants:
@@ -427,14 +432,14 @@ npcs:
             - { id: bye, prompt: "Say nothing more for now", end: true }
         - id: take_pipe
           npc_text: "(She packs the bowl with a stub of tallow and draws on it long and slow, eyes closing.) ... Aye. Behind the font, the third stone up from the floor — press it slow and even and the postern gives inward. Go on with you, and don't wait on me; I've debts in here a postern won't clear, and I'm too old now for night air."
-          # Final quest beat: the latch's trick is now known (the literal key to the win).
-          # Set ALONGSIDE the existing knows_postern flag, +20, and pipe-removal — a pure
-          # additive marker that changes none of them and gates nothing. No prose reads
-          # `latch_known`: the reactive read stays on the EARLY `told_of_way` stage, so
-          # this terminal stage is never depended on right before the win (pitfall (b)).
+          # Final quest beat before the escape: the latch's trick is now known (the
+          # literal key to the win). Set ALONGSIDE the existing knows_postern flag and
+          # pipe-removal — a pure additive marker that changes neither and gates nothing.
+          # No prose reads `latch_known`: the reactive read stays on the EARLY
+          # `told_of_way` stage, so this terminal stage is never depended on right before
+          # the win (pitfall (b)).
           effects:
             - set_flag: knows_postern
-            - inc_var: { name: score, by: 20 }
             - remove_item: clay_pipe
             - set_quest_stage: { quest: the_postern, stage: latch_known }
           topics:

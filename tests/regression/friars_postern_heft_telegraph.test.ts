@@ -22,7 +22,7 @@
  * (and keeps the "let a debtor out" lock-fitting line); (2) the telegraph matches a real
  * offered action — `heft turnkey's key-ring` is still there; (3) the change is purely
  * cosmetic — the heft beat still gates nothing, and the full intended route still wins
- * ending_free at 35/35 even after the beat is exercised mid-run.
+ * ending_free at 35/35 after the honest exit, even after the beat is exercised mid-run.
  */
 import { describe, it, expect } from "vitest";
 import { loadParserPackFile } from "../../src/parser/pack.js";
@@ -105,7 +105,7 @@ describe("bug_0245 — the key-ring's examine text telegraphs the optional heft/
       "go_west", // commons
       "talk_old_debtor",
       "ask_escape", // +10, heard_postern
-      "ask_give_pipe", // +20, knows_postern
+      "ask_give_pipe", // knows_postern
       "ask_bye",
       "go_east", // gallery
       "go_up", // chapel
