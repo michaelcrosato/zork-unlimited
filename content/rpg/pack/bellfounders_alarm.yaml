@@ -8,7 +8,7 @@
 #
 # Score economy:
 #   +5  READ muster_warrant  -- legal standing and urgency (+3 bellcraft)
-#   +10 READ cracked_bell    -- flaw in the alarm bell's mouth (+3 bellcraft)
+#   +10 READ cracked_bell    -- close-read the flaw in the bell's mouth (+3 bellcraft)
 #   +10 READ tone_table      -- strike sequence and clapper seat (+3 bellcraft)
 #   +10 USE tuning_hammer ON alarm_clapper, command_verb: tune, DC 12
 #   +15 wall_walk on_enter   -- the warning reaches the city wall
@@ -173,8 +173,9 @@ objects:
     name: "cracked alarm bell"
     aliases: [bell, alarm, alarm bell, cracked bell, cracked alarm bell, bronze bell, mouth]
     description: >
-      The east-wall alarm bell, newly cast and already wrong. A hairline flaw
-      runs along the mouth where the strike should ring cleanest.
+      The east-wall alarm bell, newly cast and already wrong. A hairline marks
+      the mouth, but a glance will not tell you whether the crown is dying too.
+      Read the bell's metal before you trust any strike.
     variants:
       - when: [{ has_flag: bell_read }]
         text: >
@@ -186,9 +187,10 @@ objects:
           The cracked alarm bell, tuned despite its flaw. It will never sing
           fair, but it can shout loud enough for the wall.
     read_text: >
-      The flaw lies at the bell's mouth, not through the crown. That is bad
-      casting, but not a dead bell. Seat the clapper off the flaw and the alarm
-      can carry one hard warning before the bell must be recast.
+      Your close reading finds the flaw at the bell's mouth, not through the
+      crown. That is bad casting, but not a dead bell. Seat the clapper off the
+      flaw and the alarm can carry one hard warning before the bell must be
+      recast.
     interactions:
       - verb: READ
         target: cracked_bell

@@ -1,0 +1,24 @@
+id: bug_0442_bellfounders_examine_read_score
+title: "Bellfounders examine-first route signposts the scored close-read"
+pack: content/rpg/pack/bellfounders_alarm.yaml
+reported_by: blind-playtest
+report: blind-tester/reports/20260622T155247Z_bellfounders_alarm_seed7.md
+severity: S1
+symptom: >
+  A blind playtester examined the cracked bell, learned the flaw diagnosis, then
+  finished the clean bellcraft route at 40/50 because the separate scored READ
+  action had no remaining in-world signal.
+root_cause: >
+  The cracked bell's examine description revealed the same actionable diagnosis
+  as the close-read interaction, but LOOK is intentionally side-effect-free and
+  did not set bell_read, increase bellcraft, or award the ten reading points.
+fix: >
+  Reworded the cracked bell examine text to say that a glance is insufficient and
+  explicitly point at reading the bell's metal; kept the full diagnosis and score
+  on the READ action.
+tests:
+  - tests/regression/bellfounders_alarm_examine_read_score.test.ts
+verification:
+  - npm test -- --run tests/regression/bellfounders_alarm_examine_read_score.test.ts tests/regression/bellfounders_alarm_rusk_yields.test.ts tests/regression/bellfounders_alarm_reactive_taken_items.test.ts
+  - npm run validate -- content/rpg/pack/bellfounders_alarm.yaml
+  - npm run health
