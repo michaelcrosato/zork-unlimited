@@ -55,13 +55,13 @@
 # Endings (3):
 #   ending_reported   -- WIN (non-death): commission_paper + proved_debased -> guild_court
 #   ending_retreated  -- PARTIAL (non-death): walked south to back_lane
-#   ending_suppressed -- BAD (non-death, instant end_game): TAKE master_seal
+#   ending_suppressed -- BAD (non-death, instant end_game): PRESS master_seal
 #
 # Tension beat: USE silver_plate ON coin_balance (weighing_room). d20 + precision (3)
 # vs DC 11. CONVERGENT -- both outcomes set weighed_plate; narration only differs.
 # One-shot (not_flag weighed_plate guard). Same shape as scriveners_proof copy_press.
 #
-# ending_suppressed telegraphed twice before TAKE master_seal fires end_game:
+# ending_suppressed telegraphed twice before PRESS master_seal fires end_game:
 #   source 1: master_seal description names what pressing it means (the Company's
 #             lion passant mark on copper-heavy plate sold as sterling to London buyers).
 #   source 2: mark_register description names Fitch's blank entry and the stakes
@@ -418,20 +418,23 @@ objects:
       to Fitch's entry in the register and the Company guarantees his plate as sterling:
       twelve pieces of copper-heavy alloy certified as fine silver, sold to London's
       buyers at sterling prices. Every buyer will pay for something they did not receive.
-      The seal lies ready. It should not be touched until the assay is done.
-    takeable: true
-    take_effects:
-      - narrate: >
-          You press the master's seal to Fitch's entry line: the lion passant
-          impression sets cleanly, and the mark register records the batch as
-          passed. Twelve pieces of below-sterling silver plate now carry the
-          Company's certification. Fitch's man will collect them in the morning.
-          London's buyers will pay the sterling price and find, in months or
-          years, that the metal tarnishes faster than their other plate and wears
-          sooner than it should.
-          You step out of the record room. The door swings to behind you. What you
-          approved in there is done, and so, in a different sense, are you.
-      - end_game: ending_suppressed
+      The seal lies ready. It should not be pressed until the assay is done.
+    interactions:
+      - verb: USE
+        target: master_seal
+        command_verb: press
+        effects:
+          - narrate: >
+              You press the master's seal to Fitch's entry line: the lion passant
+              impression sets cleanly, and the mark register records the batch as
+              passed. Twelve pieces of below-sterling silver plate now carry the
+              Company's certification. Fitch's man will collect them in the morning.
+              London's buyers will pay the sterling price and find, in months or
+              years, that the metal tarnishes faster than their other plate and wears
+              sooner than it should.
+              You step out of the record room. The door swings to behind you. What you
+              approved in there is done, and so, in a different sense, are you.
+          - end_game: ending_suppressed
 
 npcs: []
 
