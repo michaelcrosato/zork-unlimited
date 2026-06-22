@@ -50,7 +50,8 @@
 # Best path: all six clues (+30) → seal_the_cargo (+20) = 50.
 # Confrontation path: examine_manifest (+5) + sound_cargo (+5) + confront_captain (+20)
 #   + any remaining clues = same ceiling 50.
-# Reporting path: discrepancy + any clues + file_report (+10) = up to 40.
+# Reporting path: discrepancy + prior alderman query + any clues + file_report
+#   (+10) = up to 40, but only after the player knows the route is compromised.
 
 meta:
   id: tidewaiters_watch_v1
@@ -154,8 +155,11 @@ scenes:
             - goto: ending_extracted
             - end_game: ending_extracted
       - id: file_report
-        text: "File an irregularity report and let the alderman's office investigate."
-        conditions: [ { has_flag: found_discrepancy } ]
+        text: "File an irregularity report despite the buried alderman query."
+        conditions:
+          - all_of:
+              - { has_flag: found_discrepancy }
+              - { has_flag: found_priors }
         effects:
           - inc_var: { name: score, by: 10 }
         next: ending_reported
