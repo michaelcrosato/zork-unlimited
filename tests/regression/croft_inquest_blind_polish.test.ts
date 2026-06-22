@@ -8,6 +8,9 @@
  * as non-blocking. Later blind review caught the rushed inquest base text
  * claiming the player had already examined and heard everything; that base text
  * is now neutral and evidence-honest.
+ *
+ * bug_0466 keeps the stronger inquest and felony-ending prose from naming
+ * evidence the player has not actually collected.
  */
 import { describe, expect, it } from "vitest";
 import { loadPackFile } from "../../src/cyoa/pack.js";
@@ -103,6 +106,20 @@ describe("bug_0360 -- Croft Inquest blind polish", () => {
     expect(table.text).toMatch(/need not accuse the widow/i);
   });
 
+  it("does not name Jack Finch in the pressed-widow inquest text before he has been heard", () => {
+    const table = obs([
+      ...WIDOW_AND_STAIRS,
+      "press_widow_on_stairs",
+      "leave_widow",
+      "convene_inquest",
+    ]);
+
+    expect(table.text).toMatch(/account has been pressed/i);
+    expect(table.text).toMatch(/blood beneath the counting-room desk/i);
+    expect(table.text).not.toMatch(/Jack Finch placing Daniel Merton/i);
+    expect(table.available_actions.map((a) => a.id)).not.toContain("commit_to_grand_jury");
+  });
+
   it("keeps Jack Finch's failed composure branch non-blocking for the felony verdict", () => {
     const state = play(
       [
@@ -125,6 +142,29 @@ describe("bug_0360 -- Croft Inquest blind polish", () => {
     expect(state.journal.join("\n")).toMatch(/Merton came after supper/i);
     expect(state.journal.join("\n")).toMatch(/body on the counting-room floor/i);
     expect(state.endingId).toBe("ending_committed");
+  });
+
+  it("keeps the felony ending from naming uncollected physician or debt evidence", () => {
+    const end = obs([
+      "view_body",
+      "examine_body",
+      "leave_parlour",
+      "examine_stairs",
+      "check_scene",
+      "return_to_hall",
+      "speak_apprentice",
+      "hear_apprentice",
+      "leave_apprentice",
+      "convene_inquest",
+      "commit_to_grand_jury",
+    ]);
+
+    expect(end.ending_id).toBe("ending_committed");
+    expect(end.text).toMatch(/record you actually made/i);
+    expect(end.text).toMatch(/wound pattern/i);
+    expect(end.text).toMatch(/Jack Finch's account/i);
+    expect(end.text).not.toMatch(/Dr\. Stott's note form the spine/i);
+    expect(end.text).not.toMatch(/ledger entry proving the unpaid bond/i);
   });
 
   it("preserves the maximum-score route when the optional Alice beat is taken", () => {
@@ -151,6 +191,8 @@ describe("bug_0360 -- Croft Inquest blind polish", () => {
     ]);
 
     expect(end.ending_id).toBe("ending_committed");
+    expect(end.text).toMatch(/Dr\. Stott's note form the spine/i);
+    expect(end.text).toMatch(/ledger entry proving the unpaid bond/i);
     expect(end.state.vars.score).toBe(50);
     expect(index.pack.meta.max_score).toBe(50);
   });

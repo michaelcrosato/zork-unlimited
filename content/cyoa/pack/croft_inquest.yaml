@@ -281,7 +281,9 @@ scenes:
     title: "The Inquest"
     variants:
       - when:
-          - has_flag: pressed_widow
+          - all_of:
+              - has_flag: pressed_widow
+              - has_flag: heard_apprentice
         text: >
           Twelve jurors sit in the downstairs hall. Constable Elmswood stands at
           the door. The clerk has his pen ready. Alice Croft's account has been
@@ -289,6 +291,14 @@ scenes:
           beneath the counting-room desk, and Jack Finch placing Daniel Merton
           in that room after supper. The finding need not accuse the widow, but
           it cannot rest on her story of a fall.
+      - when:
+          - has_flag: pressed_widow
+        text: >
+          Twelve jurors sit in the downstairs hall. Constable Elmswood stands at
+          the door. The clerk has his pen ready. Alice Croft's account has been
+          pressed and cannot bear the evidence: no blood on the stairs, and
+          blood beneath the counting-room desk. The finding need not accuse the
+          widow, but it cannot rest on her story of a fall.
       - when:
           - all_of:
               - has_flag: heard_widow
@@ -374,6 +384,24 @@ endings:
       later, the foundation is there to build from.
   - id: ending_committed
     title: "Committed for Felony"
+    variants:
+      - when:
+          - any_of:
+              - not_flag: heard_physician
+              - not_flag: found_debt_note
+        text: >
+          The clerk writes Daniel Merton's name in the inquest record. The
+          finding goes to the county assizes within the week: that Edward Croft
+          came to his death by a felonious blow delivered by person known, and
+          that Daniel Merton of Bridge Street is named to answer for it before
+          the grand jury. The constable serves the warrant that same afternoon.
+          At the trial, the case rests on the record you actually made: the
+          wound pattern, the blood beneath the counting-room desk, and Jack
+          Finch's account of Merton's visit. Without every supporting paper in
+          the file, the Crown's case is narrower than it might have been, but
+          the verdict does not pretend to evidence you did not collect. The
+          chain held as far as you forged it before you called for the clerk's
+          pen.
     text: >
       The clerk writes Daniel Merton's name in the inquest record. The finding
       goes to the county assizes within the week: that Edward Croft came to
