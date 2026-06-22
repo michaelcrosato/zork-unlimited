@@ -156,6 +156,13 @@ rooms:
           A vaulted hall. The cellar hatch stands thrown open in the floor, a dark
           stair dropping away below; another stair winds up to a study, and an
           archway opens north into the laboratory. The courtyard is south.
+      - when: [{ has_item: iron_key }, { none_of: [{ is_unlocked: cellar_door }] }]
+        text: >
+          A vaulted hall. A bolted cellar hatch is set in the floor, its iron lock
+          answering the cold key in your hand; you could steady yourself around that
+          old iron before turning it, or simply unlock the hatch and be done with the
+          hesitation. A stair winds up to a study, an archway opens north into the
+          laboratory, and the courtyard is south.
     objects: [cellar_door]
     exits:
       - { direction: south, to: courtyard }
