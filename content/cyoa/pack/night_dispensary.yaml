@@ -70,17 +70,41 @@ scenes:
   # ── The counter (hub) ──────────────────────────────────────────────────────
   - id: apothecary_counter
     title: "The Night Dispensary"
-    # Three-tier reactivity: (confirmed_death ∧ heard_lie) is strictly more
-    # specific than any single-flag condition, so variant 1 never shadows
-    # variant 2 (the shadowing check is sound over conjunctions; any_of in
-    # variant 2 marks its profile opaque and prevents spurious shadowing).
+    # Reactivity is ordered most-specific first. bug_0420 adds case-completeness
+    # signposts: once the watch report or direct confrontation is available, the
+    # counter tells the player whether they have a sufficient-but-partial record or
+    # enough to speak the accusation, without changing any gates or score awards.
     variants:
       - when: [ { all_of: [ { has_flag: confirmed_death }, { has_flag: heard_lie } ] } ]
         text: >
           Cole is still at the counter. He has run out of small movements — the
           adjustment of his cuffs, the turning of his coin — and stands quite
           still now, watching you the way a man watches a door he is not sure
-          he can reach.
+          he can reach. The ledger, the parish notice, and the street that does
+          not exist are enough to speak the accusation aloud; any unchecked
+          shelf, window, or stock-room clue can only add weight now.
+      - when:
+          - all_of:
+              - { has_flag: checked_register }
+              - { has_flag: noted_mourning }
+              - { has_flag: confirmed_death }
+              - { not_flag: heard_lie }
+        text: >
+          Cole is still at the counter. The mourning badge and the April ledger
+          are no longer only suggestive: the parish notice has put Cecilia
+          Cole's death beside his old arsenic entry. It is enough to send word
+          to the watch, but the warehouse question can still make him account
+          for the street before you close the record.
+      - when:
+          - all_of:
+              - { has_flag: checked_register }
+              - { has_flag: noted_mourning }
+              - { not_flag: confirmed_death }
+        text: >
+          Cole is still at the counter. The mourning badge and the April ledger
+          are enough to justify sending word to the watch, but the parish-deaths
+          notice above the shelf can still turn suspicion into a named record
+          before you choose how far to carry it.
       - when:
           - any_of:
               - { has_flag: noted_mourning }
@@ -140,7 +164,7 @@ scenes:
         text: "Tell him you cannot fill this order tonight."
         next: ending_refused
       - id: send_boy_to_watch
-        text: "Excuse yourself to the back room and send your boy to the nightwatch."
+        text: "Excuse yourself to the back room and send your boy to the nightwatch with the evidence gathered so far."
         conditions:
           - all_of:
               - { has_flag: checked_register }
