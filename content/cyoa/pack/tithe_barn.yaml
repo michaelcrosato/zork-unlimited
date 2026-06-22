@@ -45,7 +45,7 @@ meta:
     name: "The Charter Marches"
     hub: "Charterhaven"
     district: "North Tithe Barn"
-    quest: "decide the fate of the concealed tithe record"
+    quest: "decide whether the lord's hoarded grain stays locked"
     role: "tithe watcher"
     connection: "The tithe barn stores grain and grudges for Charterhaven's parishes, making one ledger a city-wide pressure point."
   start: watch_post
