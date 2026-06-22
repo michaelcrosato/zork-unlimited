@@ -208,7 +208,7 @@ objects:
 
   - id: body
     name: "Calloway's body"
-    aliases: [body, calloway, corpse, dead man, man, victim, face, lips, hands, ink, page]
+    aliases: [body, calloway, corpse, dead man, man, victim, face, lips, hands, ink]
     description: >
       George Calloway, cloth factor, forty-eight years old. His face has the settled
       look of hours rather than minutes; his lips are pale blue at the margin.
@@ -285,11 +285,30 @@ objects:
 
   - id: writing_desk
     name: "writing desk"
-    aliases: [desk, table, writing table, surface, inkwell, quill, pen]
+    aliases: [desk, table, writing table, surface, inkwell, quill, pen, page, wet ink]
     description: >
       Calloway's writing desk — the page he was working on still under his hand,
-      the ink not quite dry. When you have gathered your evidence, go south from
-      the front hall to file your deposition at the coroner's office.
+      the ink not quite dry. READ the page if you want the last unfinished line;
+      when you have gathered your evidence, go south from the front hall to file
+      your deposition at the coroner's office.
+    read_text: >
+      The page under Calloway's hand is a memorandum to his solicitor. The last
+      full line reads: "Rendell must sign the lease by noon or I inform the College
+      of the whole debt." Below it, the wet ink breaks off halfway through the word
+      "remedy." He was not idly writing; he was putting Rendell's ruin into legal
+      form when the dose took him.
+    variants:
+      - when: [{ has_flag: wet_page_read }]
+        text: >
+          Calloway's writing desk — the unfinished memorandum still pinned under
+          his hand. You read it: Rendell had until noon to sign the lease or face
+          Calloway's complaint to the College.
+    interactions:
+      - verb: READ
+        target: writing_desk
+        conditions: [{ not_flag: wet_page_read }]
+        effects:
+          - set_flag: wet_page_read
 
   # ── library ─────────────────────────────────────────────────────────────────
 
