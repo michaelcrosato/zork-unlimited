@@ -357,6 +357,9 @@ objects:
       - when: [ { has_flag: plate_donned } ]
         text: "The dead master's cold-iron plate, buckled on now over your own gear; its dead weight sits between you and the next blow."
     takeable: true
+    take_effects:
+      - add_journal: "The cold-iron plate is only weight in your hands until it is buckled on; don it before you face the sentinel."
+      - narrate: "The plate is in your hands, but not yet on your body. Don it before the sentinel's anvil-blows find you."
     interactions:
       # Self-USE = "wear this thing". command_verb: don (bug_0074) makes the offered
       # and typed verb match the prose that primes it — you "don" plate, you do not
