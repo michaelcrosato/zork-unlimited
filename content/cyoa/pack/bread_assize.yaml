@@ -195,12 +195,18 @@ scenes:
         next: market_hall
       - id: go_bakehouse
         text: "Inspect the bakehouse before the ovens cool."
+        conditions:
+          - any_of:
+              - not_flag: reheated_loaves
+              - not_flag: baker_admitted
         next: bakehouse
       - id: go_factor_book
         text: "Compare the baker's flour account with the factor's book."
+        conditions: [{ not_flag: flour_tally_clear }]
         next: factor_book
       - id: go_parish_queue
         text: "Hear the parish queue waiting for poor loaves."
+        conditions: [{ not_flag: parish_tokens_traced }]
         next: parish_queue
       - id: go_report_table
         text: "Return a finding to the alderman."
@@ -270,6 +276,14 @@ scenes:
 
   - id: factor_book
     title: "The Flour Factor's Book"
+    variants:
+      - when:
+          - has_flag: flour_tally_clear
+        text: >
+          The factor's narrow booth has given its answer. Crowe's delivery
+          chit and the factor's ledger match: six sacks, full weight, no
+          dockage, no damp loss. His flour-shortage defense is gone from the
+          record.
     text: >
       The flour factor keeps his account in a narrow booth behind the meal
       sacks. Crowe's defense is simple: his flour was short, his dough suffered,
@@ -294,6 +308,13 @@ scenes:
 
   - id: parish_queue
     title: "The Parish Queue"
+    variants:
+      - when:
+          - has_flag: parish_tokens_traced
+        text: >
+          The parish queue has named the harm plainly. Sixteen tokens were
+          marked served, nine poor-loaf holders received bread, and the seven
+          missing loaves went to the paying market under seal.
     text: >
       Outside the side door, parish beadles hold a list of poor-loaf tokens:
       widows, apprentices, day laborers, and children sent with tin tallies

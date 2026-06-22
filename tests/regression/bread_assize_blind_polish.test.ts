@@ -7,6 +7,9 @@
  * Later blind review caught the market-hall hub still listing completed
  * investigation branches as missing. The fix keeps verdict gates unchanged and
  * makes the current proof state visible before the player commits.
+ *
+ * bug_0465 covers the remaining stale side-branch states: completed factor and
+ * parish inquiries now read as resolved, and exhausted hub actions retire.
  */
 import { describe, expect, it } from "vitest";
 import { loadPackFile } from "../../src/cyoa/pack.js";
@@ -140,6 +143,52 @@ describe("bug_0359 -- Bread Assize blind polish", () => {
     expect(bakehouse.text).toMatch(/no longer crowds the sealed baskets/i);
     expect(bakehouse.text).toMatch(/admitting the seal was struck before weighing/i);
     expect(bakehouse.text).not.toMatch(/stands too close/i);
+  });
+
+  it("updates factor and parish side rooms after their evidence is gathered", () => {
+    const factor = obs(["go_factor_book", "compare_flour_tally"]);
+    expect(factor.text).toMatch(/ledger match/i);
+    expect(factor.text).toMatch(/flour-shortage defense is gone/i);
+    expect(factor.text).not.toMatch(/will either support/i);
+
+    const parish = obs(["go_parish_queue", "hear_parish_queue"]);
+    expect(parish.text).toMatch(/queue has named the harm plainly/i);
+    expect(parish.text).toMatch(/seven missing loaves/i);
+    expect(parish.text).not.toMatch(/what the market scale does not show/i);
+  });
+
+  it("retires exhausted side-investigation actions from the market hall", () => {
+    const afterBakehouse = actionIds([
+      "go_bakehouse",
+      "inspect_oven_marks",
+      "question_baker",
+      "return_from_bakehouse",
+    ]);
+    expect(afterBakehouse).not.toContain("go_bakehouse");
+    expect(afterBakehouse).toContain("go_factor_book");
+    expect(afterBakehouse).toContain("go_parish_queue");
+
+    const afterFactor = actionIds(["go_factor_book", "compare_flour_tally", "return_from_factor"]);
+    expect(afterFactor).not.toContain("go_factor_book");
+    expect(afterFactor).toContain("go_bakehouse");
+    expect(afterFactor).toContain("go_parish_queue");
+
+    const allSideBranches = actionIds([
+      "go_bakehouse",
+      "inspect_oven_marks",
+      "question_baker",
+      "return_from_bakehouse",
+      "go_factor_book",
+      "compare_flour_tally",
+      "return_from_factor",
+      "go_parish_queue",
+      "hear_parish_queue",
+      "return_from_queue",
+    ]);
+    expect(allSideBranches).not.toContain("go_bakehouse");
+    expect(allSideBranches).not.toContain("go_factor_book");
+    expect(allSideBranches).not.toContain("go_parish_queue");
+    expect(allSideBranches).toContain("go_report_table");
   });
 
   it("leaves the existing full-win route and maximum score intact", () => {
