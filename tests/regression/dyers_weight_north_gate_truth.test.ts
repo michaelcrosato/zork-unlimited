@@ -56,7 +56,7 @@ describe("bug_0431 - dyers_weight north gate hint stays state-truthful", () => {
   it("does not say the player has a cake at the opening", () => {
     const msg = northGateMessage(initStateForParserPack(index, 7));
 
-    expect(msg).toMatch(/both a cake from the rack and the second acid test/i);
+    expect(msg).toMatch(/both a cake from the rack and the two-stage acid proof/i);
     expect(msg).toMatch(/secure the cakes/i);
     expect(msg).not.toMatch(/you have a cake/i);
   });
@@ -67,7 +67,7 @@ describe("bug_0431 - dyers_weight north gate hint stays state-truthful", () => {
 
     expect(s.flags["proved_adulteration"]).toBe(true);
     expect(s.inventory).not.toContain("indigo_cakes");
-    expect(msg).toMatch(/both a cake from the rack and the second acid test/i);
+    expect(msg).toMatch(/both a cake from the rack and the two-stage acid proof/i);
     expect(msg).toMatch(/secure the cakes/i);
     expect(msg).not.toMatch(/you have a cake/i);
   });

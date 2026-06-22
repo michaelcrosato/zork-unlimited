@@ -131,14 +131,17 @@ rooms:
           copper rim where you poured — chalk in the finished product, the same
           reaction as the casks. The indigo cakes on the rack are the product
           of that vat, and the hook by the vat is bare where the copper tongs
-          hung before you took them. The north door is clear; the store room
-          lies east.
+          hung before you took them. The north door still waits on the physical
+          evidence: take the cakes from the rack before you report to the
+          Company. The store room lies east.
       - when: [{ has_flag: proved_adulteration }]
         text: >
           The dye house, the second acid test done. The vat foamed along the
           copper rim where you poured — chalk in the finished product, the same
           reaction as the casks. The indigo cakes on the rack are the product
-          of that vat. The north door is clear; the store room lies east.
+          of that vat. The north door still waits on the physical evidence:
+          take the cakes from the rack before you report to the Company. The
+          store room lies east.
       - when:
           - has_item: indigo_cakes
           - has_item: copper_tongs
@@ -178,9 +181,9 @@ rooms:
         conditions: [{ has_item: indigo_cakes }, { has_flag: proved_adulteration }]
         locked_msg: >
           The north door stands shut. The Company will not enter a seizure
-          without both a cake from the rack and the second acid test on the
-          vat: secure the cakes, take the vial from the store room east, and
-          test the vat contents directly.
+          without both a cake from the rack and the two-stage acid proof:
+          secure the cakes, take the vial from the store room east, test the
+          white casks there first, then pour the vial on the vat.
       - { direction: east, to: store_room }
       - { direction: south, to: back_passage }
 
@@ -261,6 +264,14 @@ objects:
           rim: a pale dried line where the foaming chalk settled against the
           metal. The chalk in the vat matches the chalk in the casks. The
           finished product is adulterated.
+      - when:
+          - has_item: acid_vial
+          - not_flag: found_chalk_stock
+        text: >
+          The wide copper vat, its contents a dark indigo-blue. You have the
+          Company vial in hand, but a vat reaction will mean little until you
+          know how the suspicious white casks behave under the acid. Test the
+          casks in the store room east first; then pour the vial on the vat.
     interactions:
       # STAGE 2 — POUR. USE acid_vial ON dye_vat. command_verb: pour produces
       # "pour acid vial on dye vat." Second stage of the two-stage acid test.
