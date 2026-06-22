@@ -43,7 +43,7 @@ rooms:
           failed bracing attempt; striking at it again without control would
           make the failure worse. The pier stair descends west, the plan hut
           stands east, and the toll walk runs north.
-    objects: [closure_order, cracked_kingpost]
+    objects: [closure_order, cracked_kingpost, visible_crack]
     exits:
       - { direction: west, to: pier_stair }
       - { direction: east, to: plan_hut }
@@ -265,6 +265,39 @@ objects:
                 The mallet blow lands where the crack looks worst, not where the
                 load travels. The kingpost shifts with a long wooden complaint.
                 A second try would be vandalism, not repair.
+
+  - id: visible_crack
+    name: "visible crack"
+    aliases: [visible crack, fresh crack, crack line, split, wound]
+    description: >
+      The fresh split in the kingpost catches the eye and invites the worst
+      sort of simple answer: hit the damage where it looks loudest.
+    variants:
+      - when: [{ has_flag: brace_attempted }]
+        text: >
+          The visible crack has opened wider after the bad strike. The timber
+          still stands, but a second blow here would finish what the flood
+          began.
+    takeable: false
+    interactions:
+      - verb: USE
+        item: brace_mallet
+        target: visible_crack
+        command_verb: strike
+        command_template: "strike {target} with {item}"
+        conditions: [{ not_flag: brace_attempted }]
+        effects:
+          - set_flag: brace_attempted
+          - set_quest_stage: { quest: bridgewrights_proof, stage: brace_failed }
+          - add_journal: >
+              You struck the visible crack instead of the compression side. The
+              kingpost shifted, and the engineering proof must now come by
+              forcing the toll walk past Carden.
+          - narrate: >
+              You strike the crack where the damage shows. The rawhide blow does
+              not seat a brace; it drives the split open with a long wooden
+              complaint. The plan's warning was right: a second blow here would
+              be vandalism, not repair.
 
 npcs: []
 
