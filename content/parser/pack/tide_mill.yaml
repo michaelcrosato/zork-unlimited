@@ -589,8 +589,11 @@ endings:
       channel, and slides past the staith with her crew safe aboard — and the man at her
       tiller lifts a hand to you out of the dark before the night takes her downriver. You
       put the faults right and ran the wheel the way the mill was built to be run, and the
-      gate held the water for you when it had to. The miller will find his takings where he
-      left them, and a hand worth keeping on the night shift. *** You have won. ***
+      gate held the water for you when it had to. In the morning your report to
+      Charterhaven will name the fraud plainly: a wheel made to fail by a dropped pawl and
+      a choked race, so toll and blame could be shifted with the tide. The miller will find
+      his takings where he left them, and a hand worth keeping on the night shift. *** You
+      have won. ***
   - id: ending_thief
     title: "The Week's Takings"
     # Non-death greed fork. The player lives and walks free, the week's toll-money in their
