@@ -376,7 +376,8 @@ objects:
     description: >
       A glazed ceramic jar, cloth-tied at the cap. The cloth has darkened
       where a trace of the contents has worked through over time. It is
-      lighter than it looks — nearly empty.
+      lighter than it looks — nearly empty. Do not handle the cap barehanded:
+      the copper tongs from the vat would lift it safely.
     interactions:
       # OLFACTORY DETECTION via USE. USE copper_tongs ON vitriol_jar.
       # The tongs lift the cloth cap safely — copperas (iron vitriol) is
