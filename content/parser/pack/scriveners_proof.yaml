@@ -129,7 +129,9 @@ rooms:
         locked_msg: >
           The street door stands shut. You have what you came for — but without
           the comparison made, it is one parchment against the scrivener's word.
-          The enrolled copy is in the deed room east. Compare the two, then walk.
+          The enrolled copy is in the deed room east. It tells you where the
+          wording differs; the disputed deed still needs the magnifier before
+          the comparison can prove when the six words were inserted.
       - { direction: east, to: deed_room }
       - { direction: south, to: night_alley }
 
@@ -148,6 +150,13 @@ rooms:
           The deed room, the enrolled copy still open on the table. The
           comparison is done: the enrolled copy has no added words. The front
           office lies west; the private study is north.
+      - when: [{ has_flag: read_register }, { not_flag: found_interlineation }]
+        text: >
+          The deed room, the enrolled copy still open on the table at the
+          boundary clause. It proves the court roll lacks the six extra words,
+          but not when they entered the disputed deed. The deed itself needs the
+          magnifier before a side-by-side comparison will stand. The front office
+          lies west; the private study is north.
     objects: [enrolled_register, rolled_deeds, copy_press]
     exits:
       - { direction: west, to: front_office }
@@ -301,7 +310,9 @@ objects:
       continues immediately with the habendum clause — no gap, no space where
       six additional words could have sat when the copy was taken. The enrolled
       copy does not have them. The disputed deed does. One of them was altered
-      after the other was made.
+      after the other was made. To make the comparison hold, inspect the
+      disputed deed through the magnifier, then lay the two documents side by
+      side.
     interactions:
       - verb: READ
         target: enrolled_register
