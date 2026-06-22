@@ -331,15 +331,19 @@ objects:
     description: >
       A sealed purse tucked behind the ledger. The paper under the wax reads
       "for the lantern to pass unlit." It is not evidence you can safely carry;
-      it is an invitation to make the inspection look bought.
-    takeable: true
-    take_effects:
-      - narrate: >
-          The purse settles into your coat with a weight too easy to explain
-          badly. By the time you reach the stair, the chandler's apprentice has
-          seen enough to swear you took quiet money from the loft. The false lot
-          stays sealed, and your inspection is dismissed as a quarrel over coin.
-      - end_game: ending_bought
+      it is an invitation to pocket quiet money and make the inspection look
+      bought.
+    interactions:
+      - verb: USE
+        target: sealed_purse
+        command_verb: pocket
+        effects:
+          - narrate: >
+              The purse settles into your coat with a weight too easy to explain
+              badly. By the time you reach the stair, the chandler's apprentice has
+              seen enough to swear you took quiet money from the loft. The false lot
+              stays sealed, and your inspection is dismissed as a quarrel over coin.
+          - end_game: ending_bought
 
 npcs: []
 
