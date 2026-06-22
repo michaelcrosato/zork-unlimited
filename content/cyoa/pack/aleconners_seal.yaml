@@ -78,6 +78,19 @@ scenes:
       - id: go_brewhouse
         text: "Walk east to Sabel Mott's brew-house."
         next: brew_house
+      - id: check_empty_finding
+        text: "Ask the clerk what the blank finding table still needs."
+        conditions:
+          - none_of:
+              - has_flag: read_complaints
+              - has_flag: found_false_seal
+              - has_flag: heard_brewster
+              - has_flag: tasted_cut_ale
+              - has_flag: found_short_tun
+              - has_flag: found_well_buckets
+        effects:
+          - narrate: "The clerk opens the market book, then waits with his quill dry. A finding needs at least one note to stand on: the neighbours' complaints, the green seal, or something from Sabel's brew-house. Bring evidence to the table before you test a verdict."
+        next: assay_stall
       - id: go_finding
         text: "Review your notes at the finding table."
         conditions:

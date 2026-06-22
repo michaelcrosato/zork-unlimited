@@ -5,6 +5,10 @@
  * evidence states. The fix gates the table until the player has at least one note,
  * signposts partial/retest/full-finding states, and lets Sabel react after the
  * tally/well evidence starts cornering her.
+ *
+ * bug_0463 keeps the hidden gate explicit: before any note exists, the stall now
+ * offers a clerk hint that names the missing evidence instead of leaving the
+ * finding table as an invisible affordance.
  */
 import { describe, expect, it } from "vitest";
 import { loadPackFile } from "../../src/cyoa/pack.js";
@@ -17,10 +21,10 @@ const loaded = loadPackFile("content/cyoa/pack/aleconners_seal.yaml");
 if (!loaded.ok) throw new Error("aleconners_seal pack must compile");
 const index = indexPack(loaded.compiled.pack);
 const rules = buildRules(index);
+const step = makeStep(rules);
 const choose = (id: string): Action => ({ type: "CHOOSE", choiceId: id });
 
 function play(ids: string[]) {
-  const step = makeStep(rules);
   let state = initStateForPack(index, 7);
   for (const id of ids) state = step(state, choose(id)).state;
   return state;
@@ -32,7 +36,28 @@ const actionIds = (ids: string[]) => obs(ids).available_actions.map((a) => a.id)
 describe("bug_0357 -- Ale-Conner's Seal blind polish", () => {
   it("does not offer the finding table before the player has any evidence", () => {
     expect(actionIds([])).not.toContain("go_finding");
+    expect(actionIds([])).toContain("check_empty_finding");
     expect(obs([]).text).toMatch(/test what your notes can support/i);
+  });
+
+  it("explains the blank finding table without changing route, score, or evidence state", () => {
+    const before = play([]);
+    const result = step(before, choose("check_empty_finding"));
+
+    expect(result.ok).toBe(true);
+    expect(result.state.current).toBe("assay_stall");
+    expect(result.state.ended).toBe(false);
+    expect(result.state.vars.score).toBe(before.vars.score);
+    expect(Object.keys(result.state.flags)).toEqual(Object.keys(before.flags));
+
+    const narration = result.events
+      .filter((event) => event.type === "narration")
+      .map((event) => event.text)
+      .join(" ");
+    expect(narration).toMatch(/finding needs at least one note/i);
+    expect(narration).toMatch(/neighbours' complaints/i);
+    expect(narration).toMatch(/green seal/i);
+    expect(narration).toMatch(/brew-house/i);
   });
 
   it("unlocks the finding table after the first evidence note and signposts an underprepared case", () => {
