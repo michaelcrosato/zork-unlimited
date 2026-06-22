@@ -96,8 +96,9 @@ scenes:
         next: watch_room
       - id: tend_keeper
         # The mercy commit: spend the night on the man, not the lamp. Deliberate and
-        # terminal (like the manor's force-the-door beat), never an accidental dead end.
-        text: "Stay at his side and tend him through the night."
+        # terminal (like the manor's force-the-door beat), with the lamp cost named in
+        # the label so it cannot read as a reversible first-aid check.
+        text: "Stay at his side through the night and let the lamp stay dark."
         conditions: [{ has_flag: met_keeper }]
         next: ending_mercy
       - id: take_striker
