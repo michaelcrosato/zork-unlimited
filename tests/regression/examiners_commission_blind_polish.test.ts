@@ -51,6 +51,14 @@ describe("bug_0362 -- Examiner's Commission blind polish", () => {
     expect(table.available_actions[2]?.text).toMatch(/complete the record/i);
   });
 
+  it("keeps the registry hub honest after only one clue", () => {
+    const hub = obs(["examine_paper"]);
+    expect(hub.text).toMatch(/at least one ground of suspicion/i);
+    expect(hub.text).toMatch(/inquiries you have actually completed/i);
+    expect(hub.text).not.toMatch(/witness records, correspondence, solicitor evidence/i);
+    expect(hub.text).not.toMatch(/Henry Alderton's own account/i);
+  });
+
   it("signposts material rejection before the full criminal-trial chain is complete", () => {
     const table = obs([
       "examine_paper",
