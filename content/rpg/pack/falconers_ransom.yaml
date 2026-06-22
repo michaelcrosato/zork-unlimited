@@ -35,7 +35,7 @@
 #   +5  READ falcon_jesses     — your mark on both cuffs (one-shot: not_flag jesses_read)
 #   +10 READ gate_log          — no mews equipment entered (+3 cunning; one-shot: not_flag log_read)
 #   +10 READ hidden_bill       — forged guild seal (+3 cunning; one-shot: not_flag bill_read)
-#   +10 cunning check success  — USE hidden_bill ON falcon_jesses, DC 12 (one-shot: not_flag confrontation_attempted)
+#   +10 cunning check success  — USE hidden_bill ON falcon_jesses, DC 12 (retires only on success)
 #   +15 manor_road on_enter    — WIN (locomotion win, coincides with game end)
 #   Thorn on_defeat: +0        — combat path is valid but sub-optimal; brute-force is its own cost.
 #
@@ -232,9 +232,10 @@ objects:
               see the fold of a document there — is the answer he is preparing for it.
       # The confrontation: USE hidden_bill ON falcon_jesses — spring the trap by presenting
       # the forged bill against the jesses in front of Aldric. Cunning DC 12.
-      # One-shot (confrontation_attempted set on BOTH branches).
-      # Requires the player to have read the bill (and ideally the gate log) first,
-      # which raises cunning from base 3 toward the near-certain 9.
+      # Retires only on SUCCESS (bug_0456): a bad roll is a public falter, not Aldric
+      # deleting the pack's primary social route. Requires the player to have read the
+      # bill (and ideally the gate log) first, which raises cunning from base 3 toward
+      # the near-certain 9.
       - verb: USE
         item: hidden_bill
         target: falcon_jesses
@@ -267,19 +268,15 @@ objects:
                 who is already watching from the lodge window. The scene is not worth the
                 bill. He steps away from the block.
           on_failure:
-            - set_flag: confrontation_attempted
-            - add_journal: >
-                The confrontation did not land — Aldric found the gaps in the argument
-                before you could close them. He took the bill back. Thorn is watching
-                from the stable yard arch.
             - narrate: >
-                The words come out in the wrong order — the forged seal before you have
-                named the gate record, the gate record before the jesses are clearly in
-                view, and Aldric finds the seam between them and drives through it calmly.
-                He takes the bill back from your hand with the reflex of a man who has
-                prepared for exactly this move, tucks it into his coat, and gives you a
-                small nod that says he respects the attempt and the conversation is over.
-                Thorn has appeared at the stable yard arch.
+                The words do not close around him quickly enough. Aldric smiles as if
+                the bill's seal, the gate record, and the jesses are three separate
+                inconveniences instead of one trap, and he starts to turn the talk back
+                toward recovery fees. But the forged bill is still in your hand, the gate
+                log is still yours to name, and the bird's jesses are still on the block
+                between you. Thorn watches from the stable yard arch, but the evidence has
+                not left the yard. Press the bill against the jesses again before Aldric
+                settles the order of the story for you.
 
   - id: hidden_bill
     name: "bill of sale"
