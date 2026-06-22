@@ -335,6 +335,9 @@ function relabelNpc(npc: Npc, r: (id: string) => string, rv: (n: string) => stri
     name: npc.name, // prose
     description: npc.description, // prose
     room: r(npc.room),
+    ...(npc.conditions !== undefined
+      ? { conditions: npc.conditions.map((c) => relabelCondition(c, r, rv)) }
+      : {}),
     dialogue: {
       root: r(npc.dialogue.root),
       nodes: npc.dialogue.nodes.map((n) => relabelNode(n, r, rv)),

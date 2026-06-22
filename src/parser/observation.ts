@@ -126,7 +126,9 @@ export function buildParserObservation(
     const o = index.objects.get(id);
     return { id, name: o ? objectName(o, state) : id };
   });
-  const npcs = (index.npcByRoom.get(state.current) ?? []).map((n) => ({ id: n.id, name: n.name }));
+  const npcs = (index.npcByRoom.get(state.current) ?? [])
+    .filter((n) => evalConditions(n.conditions ?? [], state))
+    .map((n) => ({ id: n.id, name: n.name }));
   const exits = room
     ? room.exits
         .filter((e) => evalConditions(e.conditions, state))

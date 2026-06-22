@@ -201,7 +201,7 @@ export function resolveParserAction(
       const root = npc.dialogue.nodes[ord - 1];
       if (!root) return null;
       return {
-        conditions: [],
+        conditions: npc.conditions ?? [],
         effects: [
           { set_var: { name: dlgVar(npc.id), value: ord } },
           ...root.effects,
@@ -388,6 +388,7 @@ export function enumerateActions(index: ParserIndex, state: GameState): ParserAc
 
   // NPCs present.
   for (const npc of index.npcByRoom.get(here) ?? []) {
+    if (!evalConditions(npc.conditions ?? [], state)) continue;
     push(
       option(index, state, `talk_${npc.id}`, `talk to ${npc.name}`, { type: "TALK", npc: npc.id }),
     );

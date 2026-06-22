@@ -14,10 +14,12 @@ import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { resolveParserAction } from "../../src/parser/legal_actions.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
+import { validateRpg } from "../../src/validate/rpg_validator.js";
 
 const loaded = loadRpgPackFile("content/rpg/pack/quarrymens_fault.yaml");
 if (!loaded.ok) throw new Error("quarrymens_fault must compile");
-const index = indexRpgPack(loaded.compiled.pack);
+const pack = loaded.compiled.pack;
+const index = indexRpgPack(pack);
 const step = makeStep(buildRpgRules(index));
 
 function play(s: GameState, ids: string[]): GameState {
@@ -102,14 +104,60 @@ describe("quarrymens_fault quarry yard reacts to the taken survey chain", () => 
 
     expect(s.current).toBe("foremans_ramp");
     expect(s.flags["fault_measured"]).toBe(true);
-    expect(obs.description).toContain("He lowers the handle");
+    expect(obs.description).toContain("He wants the figures said to his face");
     expect(obs.enemies_present).toEqual([]);
+    expect(obs.npcs_present).toEqual([{ id: "cale_foreman", name: "Cale" }]);
     expect(obs.available_actions.map((a) => a.id)).not.toContain("attack_cale");
-    expect(obs.available_actions.map((a) => a.id)).toContain("go_north");
+    expect(obs.available_actions.map((a) => a.id)).toContain("talk_cale_foreman");
+    expect(obs.available_actions.map((a) => a.id)).not.toContain("go_north");
+    expect(obs.blocked_exits.find((e) => e.direction === "north")?.message).toContain(
+      "Show him the measured fault",
+    );
 
-    const escaped = play(s, ["go_north"]);
+    const confronted = play(s, ["talk_cale_foreman", "ask_show_measure", "ask_measure_back"]);
+    const afterTalk = buildRpgObservation(index, confronted);
+    expect(confronted.flags["cale_confronted"]).toBe(true);
+    expect(confronted.vars.score).toBe(35);
+    expect(afterTalk.description).toContain("Cale stands aside");
+    expect(afterTalk.available_actions.map((a) => a.id)).toContain("go_north");
+
+    const escaped = play(confronted, ["go_north"]);
     expect(escaped.ended).toBe(true);
     expect(escaped.endingId).toBe("ending_blast_stopped");
     expect(escaped.vars.score).toBe(50);
+  });
+
+  it("offers a spoken proof demand before the player has measured the fault", () => {
+    const s = play(initStateForRpgPack(index, 7), ["go_north"]);
+    let obs = buildRpgObservation(index, s);
+
+    expect(obs.npcs_present).toEqual([{ id: "cale_foreman", name: "Cale" }]);
+    expect(obs.enemies_present.map((e) => e.id)).toEqual(["cale"]);
+    expect(obs.available_actions.map((a) => a.id)).toContain("talk_cale_foreman");
+
+    const warned = play(s, ["talk_cale_foreman", "ask_argue_suspicion"]);
+    expect(warned.flags["cale_warned"]).toBe(true);
+    obs = buildRpgObservation(index, warned);
+    expect(obs.dialogue?.npc_text).toContain("Measure it, map it, read the drill line");
+    expect(obs.available_actions.map((a) => a.id)).toContain("ask_proof_back");
+  });
+
+  it("hides Cale as an NPC after the combat fallback defeats him", () => {
+    const s = {
+      ...initStateForRpgPack(index, 7),
+      current: "foremans_ramp",
+      flags: { cale_defeated: true },
+    };
+    const obs = buildRpgObservation(index, s);
+
+    expect(obs.description).toContain("Cale is down");
+    expect(obs.npcs_present).toEqual([]);
+    expect(obs.available_actions.map((a) => a.id)).not.toContain("talk_cale_foreman");
+  });
+
+  it("the pack remains valid under the RPG validator", () => {
+    const report = validateRpg(pack);
+    expect(report.findings.filter((f) => f.severity === "error")).toEqual([]);
+    expect(report.ok).toBe(true);
   });
 });

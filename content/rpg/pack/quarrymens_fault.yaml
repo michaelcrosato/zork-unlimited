@@ -11,6 +11,7 @@
 #   +10 READ drill_marks      -- holes angled into a hidden seam (+3 surveying)
 #   +10 READ seam_map         -- old fault line under the road (+3 surveying)
 #   +10 USE survey_chain ON fault_face, command_verb: measure, DC 12
+#   +0  ASK Cale to accept the measured proof -- opens the road
 #   +15 safe_road on_enter    -- report reaches Charterhaven
 # Prepared route: base surveying 6 + drill marks 3 + seam map 3 = 12, so DC 12
 # succeeds on any d20 roll. Combat fallback via Cale caps below full score.
@@ -131,20 +132,27 @@ rooms:
         text: >
           The foreman's ramp. Cale is down beside the chalk wall, his pick
           handle split under him. The safe road is north; the yard is south.
+      - when: [{ has_flag: cale_confronted }]
+        text: >
+          The foreman's ramp. Cale stands aside from the north road cutting,
+          pale with anger and chalk. The chain figures have beaten the noon
+          penalty for now, and the crew is already looking from him to the fault
+          face instead of to the waiting carts. The safe road is north; the yard
+          is south.
       - when: [{ has_flag: fault_measured }]
         text: >
-          The foreman's ramp. Cale still grips his pick handle for a moment,
-          but the chain measure has changed the ground under the argument: you
-          have repeatable proof, and he has only a penalty clause. He lowers the
-          handle instead of giving Charterhaven a beaten surveyor to question.
-          The safe road is north; the yard is south.
+          The foreman's ramp. Cale still grips his pick handle across the north
+          road cutting, but the chain measure has changed the ground under the
+          argument: you have repeatable proof, and he has only a penalty clause.
+          He wants the figures said to his face before the crew hears him yield.
+          The yard is south; the safe road is north behind him.
     exits:
       - { direction: south, to: quarry_yard }
       - direction: north
         to: safe_road
-        conditions: [{ any_of: [{ has_flag: fault_measured }, { has_flag: cale_defeated }] }]
+        conditions: [{ any_of: [{ has_flag: cale_confronted }, { has_flag: cale_defeated }] }]
         locked_msg: >
-          Cale blocks the ramp. Prove the fault from the yard, or get past him.
+          Cale blocks the ramp. Show him the measured fault, or get past him.
 
   - id: safe_road
     name: "The Safe Road"
@@ -321,7 +329,80 @@ objects:
               not weather; it is a closed seam from a prior fall, buried in old
               paperwork until the new blast found it again.
 
-npcs: []
+npcs:
+  - id: cale_foreman
+    name: "Cale"
+    description: >
+      The quarry foreman: broad, chalk-white to the elbows, jaw set hard around
+      the noon penalty in the blast order. He is not defending a secret so much
+      as a schedule, which can be worse.
+    room: foremans_ramp
+    conditions: [{ not_flag: cale_defeated }]
+    dialogue:
+      root: cale_root
+      nodes:
+        - id: cale_root
+          npc_text: >
+            I have carts waiting, a penalty running, and stone cut to a line.
+            Bring me numbers that would shame the contract clerk, or step clear
+            of my ramp.
+          variants:
+            - when: [{ has_flag: cale_confronted }]
+              text: >
+                You have your road, surveyor. I will not set a charge across a
+                measured fault with half my crew hearing the figures.
+            - when: [{ has_flag: fault_measured }]
+              text: >
+                You have the chain in your hand and chalk on every link. Say the
+                line cleanly, if you mean to stop a noon blast with brass.
+            - when: [{ has_flag: cale_warned }]
+              text: >
+                I heard the seam looks wrong. Looks do not beat a contract. Map
+                it, read the drill line, measure it, and then speak to me in
+                figures.
+          topics:
+            - id: show_measure
+              prompt: "Show Cale the measured fault line."
+              conditions: [{ has_flag: fault_measured }, { not_flag: cale_confronted }]
+              goto: cale_accepts_measure
+            - id: argue_suspicion
+              prompt: "Argue that the seam looks unsafe."
+              conditions: [{ not_flag: fault_measured }, { not_flag: cale_warned }]
+              goto: cale_wants_proof
+            - id: leave_cale
+              prompt: "Step back from Cale."
+              end: true
+        - id: cale_accepts_measure
+          npc_text: >
+            Drill line to old seam, seam to chapel bank, and the same figures
+            twice. Twelve shillings an hour is cheaper than burying the road.
+            Get your warning north before my contractor teaches himself a worse
+            sum.
+          effects:
+            - set_flag: cale_confronted
+            - set_quest_stage: { quest: quarrymens_fault, stage: blast_stopped }
+            - add_journal: >
+                Cale accepts the measured chain run: the drill line crosses the
+                old seam under the chapel bank, and the blast is stopped before
+                the road can shear.
+          topics:
+            - id: measure_back
+              prompt: "Take the open road north."
+              end: true
+        - id: cale_wants_proof
+          npc_text: >
+            Looks unsafe is how every delay starts. Measure it, map it, read the
+            drill line, and then maybe I will spend the contractor's money on
+            your word.
+          effects:
+            - set_flag: cale_warned
+            - add_journal: >
+                Cale will not halt the blast for suspicion. He wants a measured
+                line backed by the old seam map and the drill marks.
+          topics:
+            - id: proof_back
+              prompt: "Return to the yard for proof."
+              goto: cale_root
 
 enemies:
   - id: cale

@@ -572,6 +572,7 @@ export function validateParser(
   }
   for (const wc of pack.win_conditions) checkConds(wc.conditions, [`win:${wc.id}`]);
   for (const npc of pack.npcs) {
+    checkConds(npc.conditions ?? [], [`npc:${npc.id}`]);
     for (const node of npc.dialogue.nodes) {
       for (const t of node.topics) {
         checkConds(t.conditions ?? [], [`npc:${npc.id}`, `node:${node.id}`, `topic:${t.id}`]);
@@ -613,10 +614,12 @@ export function validateParser(
     for (const exit of room.exits) for (const id of itemReqs(exit.conditions)) noteHeld(id, false);
   for (const wc of pack.win_conditions)
     for (const id of itemReqs(wc.conditions)) noteHeld(id, false);
-  for (const npc of pack.npcs)
+  for (const npc of pack.npcs) {
+    for (const id of itemReqs(npc.conditions ?? [])) noteHeld(id, false);
     for (const node of npc.dialogue.nodes)
       for (const t of node.topics)
         for (const id of itemReqs(t.conditions ?? [])) noteHeld(id, false);
+  }
   // Strong connectivity over reachable, non-terminal rooms: a droppable item can
   // always be retrieved iff you can return to any room you can leave.
   const safeRooms = [...reachable].filter((r) => !winRooms.has(r));
@@ -648,6 +651,7 @@ export function validateParser(
   for (const npc of pack.npcs) {
     const nodeIds = new Set(npc.dialogue.nodes.map((n) => n.id));
     const nodeById = new Map(npc.dialogue.nodes.map((n) => [n.id, n]));
+    checkUnsatisfiable(npc.conditions, [`npc:${npc.id}`], `npc "${npc.id}" presence`, findings);
     if (!nodeIds.has(npc.dialogue.root))
       findings.push(
         err(
@@ -1678,11 +1682,11 @@ function objectStateReqs(conds: Condition[]): { kind: "open" | "unlocked"; id: s
 }
 
 /** Every flag name a parser/RPG pack READS — has_flag/not_flag in any exit,
- *  interaction, or win condition, any room/object variant `when`, or any dialogue-
- *  topic gate, descending all_of/any_of/none_of. The set of consumers for the
- *  INERT_FLAG check: a written flag (set_flag / flags_init / a combat-or-skill
- *  mechanic) absent here is inert. Mirrors the CYOA validator's collectFlagReads
- *  (bug_0104), widened to the parser's condition-bearing sites. */
+ *  interaction, or win condition, any room/object variant `when`, NPC presence
+ *  gate, or dialogue-topic gate, descending all_of/any_of/none_of. The set of
+ *  consumers for the INERT_FLAG check: a written flag (set_flag / flags_init / a
+ *  combat-or-skill mechanic) absent here is inert. Mirrors the CYOA validator's
+ *  collectFlagReads (bug_0104), widened to the parser's condition-bearing sites. */
 function collectFlagReads(pack: ParserPack): Set<string> {
   const reads = new Set<string>();
   const walk = (c: Condition): void => {
@@ -1703,11 +1707,13 @@ function collectFlagReads(pack: ParserPack): Set<string> {
   }
   for (const wc of pack.win_conditions) walkAll(wc.conditions);
   for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when); // reactive epilogue guards
-  for (const npc of pack.npcs)
+  for (const npc of pack.npcs) {
+    walkAll(npc.conditions);
     for (const node of npc.dialogue.nodes) {
       for (const v of node.variants ?? []) walkAll(v.when); // reactive NPC-line guards (bug_0246)
       for (const t of node.topics) walkAll(t.conditions);
     }
+  }
   return reads;
 }
 
@@ -1742,19 +1748,22 @@ function collectObjectStateReads(pack: ParserPack): { open: Set<string>; unlocke
   }
   for (const wc of pack.win_conditions) walkAll(wc.conditions);
   for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when);
-  for (const npc of pack.npcs)
+  for (const npc of pack.npcs) {
+    walkAll(npc.conditions);
     for (const node of npc.dialogue.nodes) {
       for (const v of node.variants ?? []) walkAll(v.when);
       for (const t of node.topics) walkAll(t.conditions);
     }
+  }
   return { open, unlocked };
 }
 
 /** Every room id a parser/RPG pack REFERENCES — by a `visited` / `not_visited` /
  *  `in_room` condition in any exit, interaction, or win condition, any room/object
- *  variant `when`, any ending variant `when`, or any dialogue-node-variant/topic gate
- *  (DESCENDING all_of/any_of/none_of, so a disjunction-guarded room ref still counts),
- *  PLUS by a `goto` / `place_object.room` effect target (the room-id-bearing effects
+ *  variant `when`, any ending variant `when`, NPC presence gate, or any dialogue-
+ *  node-variant/topic gate (DESCENDING all_of/any_of/none_of, so a disjunction-
+ *  guarded room ref still counts), PLUS by a `goto` / `place_object.room` effect target
+ *  (the room-id-bearing effects
  *  collected here; unlock_exit.from/.to are checked in a dedicated UNLOCK_EXIT_ROOM_MISSING
  *  block in the validator body). A referenced id absent from pack.rooms is a dangling
  *  reference — a permanently-dead gate (visited/in_room evaluate false forever) or a
@@ -1783,11 +1792,13 @@ function collectRoomRefs(pack: ParserPack): Set<string> {
   }
   for (const wc of pack.win_conditions) walkAll(wc.conditions);
   for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when);
-  for (const npc of pack.npcs)
+  for (const npc of pack.npcs) {
+    walkAll(npc.conditions);
     for (const node of npc.dialogue.nodes) {
       for (const v of node.variants ?? []) walkAll(v.when);
       for (const t of node.topics) walkAll(t.conditions);
     }
+  }
   // Effect-side room refs: goto + place_object.room (the room-id-bearing effects
   // collected here; unlock_exit.from/.to are checked in a dedicated
   // UNLOCK_EXIT_ROOM_MISSING block in the validator body).

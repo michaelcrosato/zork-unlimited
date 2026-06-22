@@ -395,6 +395,9 @@ export const NpcSchema = z
     name: z.string().min(1),
     description: z.string().min(1),
     room: z.string().min(1), // which room the NPC stands in
+    // Optional state gate for NPC presence. Mirrors enemy/exit/topic conditions:
+    // absent means always present, preserving existing pack hashes.
+    conditions: z.array(ConditionSchema).optional(),
     dialogue: z
       .object({
         root: z.string().min(1),
