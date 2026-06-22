@@ -65,8 +65,9 @@ scenes:
       A round stone room at the tower's foot. The old keeper lies crumpled by the
       cold stove, breathing shallow and slow. An iron ladder climbs into the dark
       toward the lantern room above; a narrow stair drops to the oil store below; and
-      a low door lets out onto the storm gallery and the rocks. On the mantel, where a
-      keeper keeps it close, rests a flint-and-steel striker.
+      a low door shudders against the storm, opening straight onto the exposed gallery
+      and the rocks below. On the mantel, where a keeper keeps it close, rests a
+      flint-and-steel striker.
     # Reactive prose: once the striker is pocketed the mantel reads bare. (The keeper's
     # state is carried by his own choices, not a variant, to keep the ordering simple.)
     variants:
@@ -75,7 +76,8 @@ scenes:
           A round stone room at the tower's foot. The old keeper lies crumpled by the
           cold stove, breathing shallow and slow. An iron ladder climbs into the dark
           toward the lantern room above; a narrow stair drops to the oil store below;
-          and a low door lets out onto the storm gallery and the rocks. The mantel
+          and a low door shudders against the storm, opening straight onto the exposed
+          gallery and the rocks below. The mantel
           where the striker lay is bare — the flint-and-steel is in your pocket now.
     choices:
       - id: hear_keeper
