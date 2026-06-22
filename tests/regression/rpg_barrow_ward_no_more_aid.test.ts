@@ -87,6 +87,11 @@ describe("bug_0119 — the shade's ward counsel says it's the only aid; press on
     const ask = options(s).find((o) => askTopic("ask_wight")(o.action));
     expect(ask, "ask_wight must be offered at the root").toBeTruthy();
     const spoken = narrations(rules.resolve(s, ask!.action)!.effects).join(" ").toLowerCase();
+    const words = spoken.split(/\s+/).filter(Boolean);
+
+    // Fresh blind playtest 20260622T181122Z found the old ward speech redundant
+    // and too long for a mid-play counsel beat. Keep the same promises, tighter.
+    expect(words.length).toBeLessThanOrEqual(160);
 
     // Positive: it must say the ward is the whole of the aid, that the scare is the
     // wight's wearing-down (not the true odds), and to keep striking.

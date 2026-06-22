@@ -494,24 +494,17 @@ npcs:
         # expected_final_hash is unchanged because no STATE changed, only spoken text.
         - id: shade_wight
           npc_text: >
-            The wight? It is slow, and you are quick — you can best it where I could
-            not. But mind its hands: where they touch, the grave-cold bites deep and
-            wears you down, blow on blow, and that is how it bested me in the end.
-            Here — take the trick I learned too late: keep your guard close and let the
-            chill slide off the iron, not into you. It will not swing your blade for
-            you, but the cold will bite the less. And do not break off to hunt for more
-            than this: there is no balm in the barrow, no second blade, no charm laid
-            by for the next fool — this ward is the whole of the help you will find, and
-            it tips the long odds your way. I will not gild it as the songs would: warded
-            and willing, you have the better of the fight — but the better of it is not the
-            sure of it. It is a true fight still, and the dead have their lucky nights; it
-            can yet go hard against you, even done right. There will come a moment in the
-            cold of it when the fight looks lost; that is the wight's way of wearing a man
-            down, and most times the dread is the trick of it and not the truth. But not
-            every time, and I will not swear you safe. Even so, your one best chance is
-            here, feet set and guard up: keep striking. Step back to seek aid that is not
-            here and you only come again to the same fight, no fresher than you left it,
-            and no likelier to live.
+            The wight is slow, and you are quick; you can best it where I could
+            not. Mind its hands: the grave-cold bites deep, blow on blow, and
+            that is the wight's way of wearing a man down. Keep your guard close
+            and let the chill slide off the iron, not into you. It will not
+            swing your blade, but the cold will bite the less. Do not break off
+            to hunt for more: there is no balm in the barrow, no second blade,
+            no charm laid by. This ward is the whole of the help. Warded and
+            willing, you have the better chance, not a sure one; the dead have
+            lucky nights, and I will not swear you safe. Even so, your best
+            chance is here, feet set and guard up: keep striking. Seek aid that
+            is not here and you only come again to the same fight, no fresher.
           effects:
             - set_flag: heard_warding
             - inc_var: { name: defense, by: 3 }
