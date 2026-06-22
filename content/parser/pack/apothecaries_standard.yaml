@@ -611,6 +611,19 @@ endings:
 
   - id: ending_withdrawn
     title: "The Back Passage"
+    variants:
+      - when: [{ has_item: sample_vials }, { has_flag: proved_substitution }]
+        text: >
+          You stepped out of Crace's shop into the back passage with the sealed
+          sample vials in your coat and the comparison complete. The Society's
+          case was assembled, but you took it away from the formal door and the
+          nine o'clock court all the same. By morning the record had no
+          presented finding: Crace had the warning that a search had reached his
+          counter, and time enough to move the carboys, the dispensing ledger,
+          and the private accounts before another officer came by the front.
+          The evidence in your hands was true; unpresented, it did not close the
+          shop.
+          *** The case withdrawn. ***
     text: >
       You stepped out of Crace's shop into the back passage and turned toward
       the street. Whatever you had found — the taste result, perhaps, or the
