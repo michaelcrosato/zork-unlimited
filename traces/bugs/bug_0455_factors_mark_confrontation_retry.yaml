@@ -1,0 +1,25 @@
+id: bug_0455_factors_mark_confrontation_retry
+title: "Factor's Mark social confrontation survives a failed roll"
+pack: content/rpg/pack/factors_mark.yaml
+reported_by: blind-playtest
+report: blind-tester/reports/20260622T184929Z_factors_mark_seed7.md
+severity: S3
+symptom: >
+  A blind playtest gathered the ledger and Silas' testimony, then rolled a natural
+  1 on the authority check. The only diplomatic action disappeared permanently,
+  leaving the player wandering until they fought Breckel for a partial-score ending.
+root_cause: >
+  The social confrontation set confrontation_attempted on both success and failure.
+  That made a failed roll retire the pack's primary social route even when all
+  evidence was still in hand and the failure narration did not tell the player how
+  to recover.
+fix: >
+  The confrontation now retires only on success. Failure remains a narrated public
+  falter, keeps the ledger and witness pressure alive, and explicitly tells the
+  player to press the register against the notice again.
+tests:
+  - tests/regression/factors_mark_confrontation_retry.test.ts
+verification:
+  - npm test -- --run tests/regression/factors_mark_confrontation_retry.test.ts tests/regression/factors_mark_breckel_retires.test.ts
+  - npm run validate -- content/rpg/pack/factors_mark.yaml
+  - npm run health

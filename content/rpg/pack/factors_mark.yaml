@@ -33,7 +33,7 @@
 #   +5  READ seal_notice   — impound notice in waystation_yard (one-shot: not_flag notice_read)
 #   +10 READ factor_ledger — close reading of the toll register (+3 authority; one-shot: not_flag ledger_studied)
 #   +10 Silas testimony    — witnessed account (+3 authority; one-shot: not_flag heard_silas)
-#   +10 authority check success — USE ledger ON seal_notice, DC 11 (one-shot: not_flag confrontation_attempted)
+#   +10 authority check success — USE ledger ON seal_notice, DC 11 (retires only on success)
 #   +15 toll_road on_enter — WIN (locomotion win, coincides with game end)
 #   Breckel on_defeat: +0  — combat path is valid but sub-optimal; brute-force is its own cost.
 #
@@ -224,8 +224,10 @@ objects:
               Proving it is something else.
       # The confrontation: USE factor_ledger ON seal_notice presents the evidence
       # against the charge — a formal public challenge in Harwick's own yard.
-      # Skill check: authority DC 11. One-shot (confrontation_attempted on BOTH branches).
-      # On success: factor_shamed set; on failure: Breckel must be dealt with instead.
+      # Skill check: authority DC 11. Retires only on SUCCESS (bug_0455): a bad roll
+      # after complete evidence is a faltering public argument, not a permanent loss of
+      # the pack's primary social route. Combat remains the fallback if the player skips
+      # or abandons the confrontation, but the evidence path can be pressed again.
       # command_verb: present (not in BUILTIN_VERBS); command_template passes both placeholders.
       - verb: USE
         item: factor_ledger
@@ -254,18 +256,14 @@ objects:
                 He holds out the passage-seal without speaking. It is over before Breckel
                 has time to make up his mind about anything.
           on_failure:
-            - set_flag: confrontation_attempted
-            - add_journal: >
-                The confrontation failed: Harwick conceded a 'clerical error' and moved
-                the register before Silas could read it. He is better at this than you.
-                The seal stays in his coat. Breckel has not moved.
             - narrate: >
-                The argument does not land. Harwick takes the register, turns it to the
-                correction column, and concedes a 'clerical error' with the polished calm
-                of a man who has done this before — moving it before Silas can lean in
-                close enough to read the numbers. He is better at this than you are.
-                The seal stays in his coat and Breckel has not been stood down. The north
-                gate stays closed.
+                The argument falters. Harwick reaches for the register, trying to turn it
+                to the correction column and make the overcharge sound like a clerical
+                error. Silas has not stepped away, though, and the ledger is still in your
+                hands. The seal stays in Harwick's coat for the moment, Breckel has not
+                been stood down, and the north gate stays closed — but the evidence has
+                not left the yard. Press the register against the notice again before
+                Harwick settles the point for himself.
 
   - id: factor_ledger
     name: "factor's ledger"
