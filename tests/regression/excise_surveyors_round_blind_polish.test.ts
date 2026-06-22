@@ -84,6 +84,15 @@ describe("bug_0363 -- Surveyor's Round blind polish", () => {
     expect(cellar.text).not.toMatch(/gravity of the wort still wants testing/i);
   });
 
+  it("keeps yard prose honest if the tally is found before the tubs are measured", () => {
+    const yard = obs(["go_to_yard_gate", "invoke_right", "find_tally"]);
+
+    expect(yard.text).toMatch(/XIIII is cut into the beam/i);
+    expect(yard.text).toMatch(/fourteen batches/i);
+    expect(yard.text).toMatch(/tubs beneath still need measuring/i);
+    expect(yard.text).not.toMatch(/No excise licence plates are mounted anywhere/i);
+  });
+
   it("signposts the final steadiness check and keeps failure convergent", () => {
     const office = obs(fullEvidenceRoute);
     const concealment = office.available_actions.find((a) => a.id === "file_concealment_report");

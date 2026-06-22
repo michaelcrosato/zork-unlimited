@@ -347,6 +347,11 @@ scenes:
         text: >
           Three unlicensed fermenting tubs behind the hay, dry at present.
           The beam above them has not yet been checked.
+      - when: [ { has_flag: found_tally } ]
+        text: >
+          XIIII is cut into the beam above the hidden tubs: fourteen batches,
+          against six declared. The tubs beneath still need measuring before
+          their capacity can be put into the record.
     text: >
       The first outbuilding is a hay store. Behind the front stack, arranged
       against the back wall, are three large fermenting tubs — the same
