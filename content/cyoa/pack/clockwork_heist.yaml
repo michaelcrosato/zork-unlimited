@@ -55,26 +55,23 @@ meta:
   # The heist's SCORE ceiling — a thief's scorecard, in the conventional `score` var
   # (tracked by `inc_var` awards on the beats below; CYOA scoring is first-class —
   # `meta.max_score` + the runner's Zork-style "[Your score has gone up…]" feedback,
-  # same chrome as parser/RPG). A heist scores the JOB: intel, the signature feat, and
-  # the haul you carry out the door. Four one-shot awards, each on a flag-/terminal-
-  # guarded beat so it can never re-fire as the clock loops (CRITICAL here — the foyer/
-  # gallery/study form a re-enterable circuit and `ticks` advances on every upstairs
-  # loop, so a score award on a re-firing beat would FARM points and break the
-  # exact-max invariant). The awards:
-  #   • read the ledger (intel)            +10  — `read_ledger` choice, `not_flag: read_ledger`
-  #   • crack the clockwork vault (feat)   +15  — `pick_lock` choice (the picked route only)
-  #   • carry off the gold (the haul)      +20  — `grab_gold` choice → ending_rich (terminal)
-  #   • carry off the confession (the haul)+20  — `take_letter`/`open_strongbox` → ending_truth (terminal)
-  # The gold and the letter are the vault's two MUTUALLY-EXCLUSIVE prizes (each choice
-  # terminates the game), so no single playthrough can bank both hauls. The max-scoring
-  # single path is the full vault job — read the ledger, crack the vault, take a haul:
-  # 10 + 15 + 20 = 45, reached by BOTH the rich (grab_gold) and truth-via-vault
-  # (take_letter) escapes. No phantom points (max_score == that best path) and no farm
-  # (every award one-shot), so the reachable max equals max_score EXACTLY. The stealth
-  # crawlspace route to the truth (intel + confession, skipping the vault feat) tops out
-  # lower at 30 — earned texture: slipping past the vault costs you its points. Sits
-  # alongside `ticks`/`deadline`; nothing is gated on `score`, and no condition/next/
-  # ending/quest_stage/deadline/tick is touched.
+  # same chrome as parser/RPG). A fresh blind playtester (seed 7, report
+  # blind-tester/reports/20260622T200812Z_clockwork_heist_seed7.md §5 B1) reached
+  # ending_truth through the crawlspace at 20/45 and called out the contradiction:
+  # the ending says truth is worth more than escaping rich, while the scoreboard said
+  # the moral route was a poor solve. The score now values satisfying completions, not
+  # only the vault job. The awards:
+  #   • read the ledger (intel)              +10 — `read_ledger`, one-shot
+  #   • crack the clockwork vault (feat)     +15 — `pick_lock`, one-shot terminal path
+  #   • carry off the gold (rich ending)     +20 — `grab_gold` -> 45 with ledger+vault
+  #   • carry the displayed confession       +20 — `take_letter` -> 45 with ledger+vault
+  #   • carry the hidden confession          +45 if no ledger, +35 if ledger already scored
+  # The hidden-confession split keeps both crawlspace truth routes at the declared cap
+  # without overflowing: no-ledger crawlspace truth is 45/45; ledger+crawlspace truth is
+  # 10+35=45/45; vault truth and rich remain 10+15+20=45/45. Every score award remains
+  # one-shot and terminal-guarded, so the reachable max equals max_score EXACTLY and no
+  # path farms or exceeds the cap. Sits alongside `ticks`/`deadline`; no route, ending,
+  # quest stage, deadline, or tick gate turns on `score`.
   max_score: 45
   # The clock's teeth — the namesake mechanic, finally made real. A fresh blind
   # playtester (seed 7, ai-runs/2026-06-01T21-00-24-111Z/playtest.md §4/§5/§6) reached
@@ -918,19 +915,28 @@ scenes:
     choices:
       - id: open_strongbox
         text: "Pick the strongbox's lock with the lockpicks."
-        conditions: [{ has_item: lockpick }]
+        conditions: [{ has_item: lockpick }, { not_flag: read_ledger }]
         # The crawlspace copy is the one "hidden away in the dark": its own flag, so
         # the truth ending's hidden-copy epilogue fires for this route (bug_0051).
         effects:
           - add_item: letter
           - set_flag: letter_hidden
-          # SCORE: the confession haul (+20) — the SAME prize as the vault's take_letter
-          # (one letter, two routes to it), so the haul scores the same however found.
-          # One-shot: routes straight to ending_truth (a terminal). This stealth route
-          # skips the vault feat, so its best total is intel(10) + this(20) = 30 — below
-          # the vault job's 45, the deliberate texture scoring adds. Additive only; the
-          # letter_hidden flag/route are untouched.
-          - inc_var: { name: score, by: 20 }
+          # SCORE: hidden confession capstone (+45). Blind seed 7 showed that ending
+          # truth at 20/45 contradicted the epilogue's moral; the no-ledger crawlspace
+          # route now lands at the cap instead of reading as a failed solve. One-shot:
+          # routes straight to ending_truth (a terminal). The ledger-read companion
+          # below awards only the remaining +35 to avoid a 55/45 overflow.
+          - inc_var: { name: score, by: 45 }
+        next: ending_truth
+      - id: open_strongbox_after_ledger
+        text: "Pick the strongbox's lock with the lockpicks."
+        conditions: [{ has_item: lockpick }, { has_flag: read_ledger }]
+        # Same hidden confession route as open_strongbox, but the ledger's +10 is
+        # already banked. Award exactly the remaining points to the 45-point cap.
+        effects:
+          - add_item: letter
+          - set_flag: letter_hidden
+          - inc_var: { name: score, by: 35 }
         next: ending_truth
       - id: study_strongbox
         # No-pick nudge: the manor's "never to force" rule holds even here — the
