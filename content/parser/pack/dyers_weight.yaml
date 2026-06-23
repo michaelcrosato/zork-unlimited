@@ -64,7 +64,7 @@
 # Endings (3):
 #   ending_seized    — WIN (non-death): guild_hall visited
 #   ending_abandoned — PARTIAL (non-death): back_passage visited
-#   ending_bought    — BAD (non-death, instant end_game): TAKE payment_fold
+#   ending_bought    — BAD (non-death, instant end_game): POCKET payment_fold
 #
 # Tension beat: USE copper_tongs ON drain_hole (store_room). d20 + steadiness (3)
 # vs DC 11. CONVERGENT — gates no score, exit, or ending. One-shot on success;
@@ -481,25 +481,28 @@ objects:
       subtle; Meredith has done this before. The ledger confirmed twelve
       shillings across two prior quarters. He leaves the payment in a
       standard place and trusts the searcher to understand. Safe to leave.
-      Dangerous to take.
+      Ruinous to pocket.
     # §17 two-telegraph discipline: the description names the heading, the
     # amount, and the implication (prior quarters, standard place) before
-    # TAKE fires end_game. READ order_ledger is the second source: "searcher's
+    # POCKET fires end_game. READ order_ledger is the second source: "searcher's
     # relief — 6s per quarter, two quarters, 12s total." Both are visible
     # before the player acts.
-    takeable: true
-    take_effects:
-      - narrate: >
-          You pocket the five shillings. The fold goes into your coat and the
-          understanding between you and Meredith closes before you cross the
-          store room. He was at the dyehouse front the whole time; you had not
-          noticed the side door. He gave a nod when you passed the dye vat
-          and you found you had nothing to say about the chalk casks. The
-          Company warden received your report the following morning: the
-          dyehouse was found in good order. The cakes were true weight. The
-          searcher's relief payment for the quarter was entered in the
-          accounts and the file was closed.
-      - end_game: ending_bought
+    interactions:
+      - verb: USE
+        target: payment_fold
+        command_verb: pocket
+        effects:
+          - narrate: >
+              You pocket the five shillings. The fold goes into your coat and
+              the understanding between you and Meredith closes before you cross
+              the store room. He was at the dyehouse front the whole time; you
+              had not noticed the side door. He gave a nod when you passed the
+              dye vat and you found you had nothing to say about the chalk
+              casks. The Company warden received your report the following
+              morning: the dyehouse was found in good order. The cakes were
+              true weight. The searcher's relief payment for the quarter was
+              entered in the accounts and the file was closed.
+          - end_game: ending_bought
 
 npcs: []
 
