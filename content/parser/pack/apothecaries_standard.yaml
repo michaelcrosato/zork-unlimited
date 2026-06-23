@@ -203,11 +203,26 @@ rooms:
       nearest carboy. The dispensing ledger lies open on the bench. The shop
       counter is west; the store loft is north.
     variants:
+      - when: [{ has_item: sample_vials }, { has_item: glass_drawstick }, { not_flag: drain_checked }]
+        text: >
+          The dispensary, the sample vials secured. The poppy-syrup carboys still
+          stand against the south wall, and the drain-cock at the nearest bung
+          could still be checked with the glass drawstick to date the batch's last
+          decanting; at worst, a slip would spill only a few sweet drops. The shop
+          counter is west; the store loft is north.
       - when: [{ has_item: sample_vials }]
         text: >
           The dispensary, the sample vials secured. The poppy-syrup carboys still
           stand against the south wall. The shop counter is west; the store loft
           is north.
+      - when: [{ has_item: glass_drawstick }, { not_flag: drain_checked }]
+        text: >
+          The working dispensary behind the counter: a mortar and pestle on the
+          stone bench, balance-weights on a hook, and carboys of pale poppy syrup
+          against the south wall. The drain-cock at the nearest bung can be checked
+          with the glass drawstick to date the batch's last decanting; at worst, a
+          slip would spill only a few sweet drops. The dispensing ledger lies open
+          on the bench. The shop counter is west; the store loft is north.
     objects: [poppy_carboy, dispensing_ledger, drain_cock, sample_vials, mortar_pestle]
     exits:
       - { direction: west, to: shop_counter }
@@ -461,6 +476,7 @@ objects:
         item: glass_drawstick
         target: drain_cock
         command_verb: check
+        command_template: "check {target} with {item}"
         conditions: [{ has_item: glass_drawstick }, { not_flag: drain_checked }]
         skill_check:
           skill: steadiness
