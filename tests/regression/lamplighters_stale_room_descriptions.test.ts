@@ -26,7 +26,8 @@
  *   (5) watch_box shows open-and-empty variant after store_key taken
  *   (6) lamp_walk base shows "shut" text before store_open flag is set
  *   (7) lamp_walk shows "open" variant after store door is unlocked
- *   (8) critical path still wins ending_guided at 35/35 after the fix
+ *   (8) lamp_walk shows the lit great lamp after lamp_lit, not "wholly out"
+ *   (9) critical path still wins ending_guided at 35/35 after the fix
  */
 import { describe, it, expect } from "vitest";
 import { loadParserPackFile } from "../../src/parser/pack.js";
@@ -96,6 +97,29 @@ const WIN_ROUTE = [
   "use_whale_oil_on_harbour_lamp",
   "use_tinderbox_on_harbour_lamp",
   "go_down",
+];
+
+const ROUTE_TO_LIT_WALK = [
+  "read_night_notice",
+  "take_tinderbox",
+  "take_brass_key",
+  "take_horn_windscreen",
+  "go_north",
+  "go_west",
+  "unlock_wall_cupboard",
+  "open_wall_cupboard",
+  "take_store_key",
+  "go_east",
+  "unlock_store_door",
+  "go_east",
+  "unlock_oil_cask",
+  "open_oil_cask",
+  "take_whale_oil",
+  "go_west",
+  "go_north",
+  "use_whale_oil_on_harbour_lamp",
+  "use_tinderbox_on_harbour_lamp",
+  "go_south",
 ];
 
 describe("bug_0302 — lamplighters_round stale room descriptions", () => {
@@ -174,8 +198,22 @@ describe("bug_0302 — lamplighters_round stale room descriptions", () => {
     expect(desc(s)).not.toContain("excise store stands shut");
   });
 
+  it("(8) lamp_walk: after lighting the great lamp, the hub no longer says it is wholly out", () => {
+    const s = play(initStateForParserPack(index, 7), ROUTE_TO_LIT_WALK);
+    expect(s.current).toBe("lamp_walk");
+    expect(s.flags["lamp_lit"]).toBe(true);
+    expect(s.flags["store_open"]).toBe(true);
+
+    const d = desc(s).toLowerCase();
+    expect(d).toContain("greatest of them");
+    expect(d).toContain("now burns gold");
+    expect(d).toContain("excise store stands open to the east");
+    expect(d).not.toContain("wholly out");
+    expect(d).not.toContain("black shape against a blacker river");
+  });
+
   // critical-path regression
-  it("(8) critical path still wins ending_guided at 35/35 after the fix", () => {
+  it("(9) critical path still wins ending_guided at 35/35 after the fix", () => {
     const s = play(initStateForParserPack(index, 7), WIN_ROUTE);
     expect(s.ended).toBe(true);
     expect(s.endingId).toBe("ending_guided");

@@ -106,6 +106,14 @@ rooms:
       leans to the west with a lantern-glow in its window; the river-stair is back to
       the south.
     variants:
+      - when: [{ has_flag: lamp_lit }, { has_flag: store_open }]
+        text: >
+          The walk along the head of the staith, where the row of harbour-lamps should
+          stand and burn. Tonight the lesser lamps still gutter low in the fog, but the
+          greatest of them, north at the staith-head, now burns gold through the murk,
+          laying its light down toward the strand below. The excise store stands open to
+          the east; the watch-box leans to the west with a lantern-glow in its window;
+          the river-stair is back to the south.
       - when: [{ has_flag: store_open }]
         text: >
           The walk along the head of the staith, where the row of harbour-lamps should
