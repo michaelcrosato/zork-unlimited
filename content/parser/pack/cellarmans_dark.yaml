@@ -24,7 +24,7 @@
 #        │ E                   │ W*
 #   oil_store (always        wine_vault (blocked without lamp;
 #    accessible; DARK w/o      deed_box → +20 → WIN;
-#    lamp; oil_jar; spirit_cask → death)     cash_box → ending_absconded GREED)
+#    lamp; oil_jar; spirit_cask → death)     cash_box → -10 + ending_absconded GREED)
 #
 #   (* W exit from ale_cellar gated on has_flag: lamp_lit)
 #
@@ -40,6 +40,7 @@
 #                                     under flame)
 #   +10 light the lamp               (enabling step — wine_vault opens, spirit_cask visible)
 #   +20 take the deed-box            (climax)
+#   -10 take the cash-box            (greed fork; no theft route reports a perfect score)
 #
 # Endings (3, per the sealed_crypt three-way discipline):
 #   ending_recovered  — WIN (non-death): walk back into the inn with the deed-box
@@ -47,8 +48,9 @@
 #   ending_ignited    — DEATH: open the cracked spirit-cask with the lamp burning
 #
 # Both bad forks are telegraphed in place before they can be triggered (bug_0123):
-#   • ending_absconded: cash-box examine names the innkeeper's coin and says to
-#     take it is to make a different choice than the one you came for.
+#   • ending_absconded: the note says the cash is not your errand, the cash-box
+#     examine names the innkeeper's coin, and taking it costs score so the ending
+#     cannot masquerade as a perfect completion (bug_0482).
 #   • ending_ignited: note AND oil_store warning board both say not to open the
 #     cracked spirit-cask under flame; the spirit_cask examine repeats the
 #     smell-warning in the dark AND shows the board explicitly once lit.
@@ -56,7 +58,9 @@
 # The score tops out at 35 on TAKE deed-box, one step before the win — the player
 # walks back to coal_yard and north to inn_passage still holding 35/35. This is
 # the sealed_crypt / friars_postern shape (SCORE_PEAKS does not fire on a locomotion
-# win; the walk home is the denouement).
+# win; the walk home is the denouement). If the player takes the cash-box after
+# peaking, the -10 theft penalty immediately pulls the absconding branch below
+# the perfect score.
 #
 # DARKNESS MECHANICS — note for the engine reader:
 #   • oil_store is always accessible (the dark is manageable; the oil_jar is "on the
@@ -261,10 +265,10 @@ objects:
     description: >
       A grubby piece of paper tacked to the post below the lamp bracket.
     read_text: >
-      The cellarman's block hand: "LAMP OIL IN THE OIL-STORE (EAST). DEED-BOX AND
-      CASH IN THE VAULT (WEST). OLD SPIRIT-CASK AT THE BACK OF THE OIL-STORE —
-      SEAL IS CRACKED — DO NOT DRAW THE BUNG UNDER FLAME. DO NOT OPEN UNDER ANY
-      CIRCUMSTANCES."
+      The cellarman's block hand: "LAMP OIL IN THE OIL-STORE (EAST). DEED-BOX IN
+      THE VAULT (WEST). CASH-BOX BESIDE IT IS THE MASTER'S TILL-FLOAT — NOT YOUR
+      ERRAND. OLD SPIRIT-CASK AT THE BACK OF THE OIL-STORE — SEAL IS CRACKED —
+      DO NOT DRAW THE BUNG UNDER FLAME. DO NOT OPEN UNDER ANY CIRCUMSTANCES."
     interactions:
       - verb: READ
         target: cellarman_note
@@ -434,6 +438,7 @@ objects:
       putting it back, and no honest reason you would.
     takeable: true
     take_effects:
+      - dec_var: { name: score, by: 10 }
       - end_game: ending_absconded
 
 npcs: []
