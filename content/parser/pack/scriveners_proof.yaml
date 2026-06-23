@@ -46,7 +46,8 @@
 #   +5   READ enrolled_register         (deed_room — the court copy without the added words)
 #   +5   USE magnifier ON disputed_deed (found_interlineation — the physical fraud visible)
 #   +10  USE disputed_deed ON enrolled_register  (proved_fraud — comparison proves alteration)
-#   +20  TAKE disputed_deed             (the document secured as evidence)
+#   +10  TAKE disputed_deed             (the document secured as evidence)
+#   +10  READ private_memoranda         (Bassett's timeline and motive)
 #
 # Endings (3):
 #   ending_filed     — WIN (non-death): deed + proved_fraud → strand_court
@@ -245,7 +246,7 @@ objects:
           The interlineation is real.
     takeable: true
     take_effects:
-      - inc_var: { name: score, by: 20 }
+      - inc_var: { name: score, by: 10 }
       - set_flag: disputed_deed_taken
     interactions:
       # USE magnifier ON disputed_deed — the lens as evidence instrument.
@@ -458,9 +459,16 @@ objects:
       Pryor made his mark. The note reads "P illiterate; mark only; will not
       read back the text." Bassett trusted Pryor's illiteracy to hide the
       interlineation. He trusted wrong.
+    interactions:
+      - verb: READ
+        target: private_memoranda
+        conditions: [{ not_flag: read_private_memoranda }]
+        effects:
+          - set_flag: read_private_memoranda
+          - inc_var: { name: score, by: 10 }
     # Second source for the §17 two-source clue: first source is the enrolled copy
-    # comparison; this confirms motive and timeline. No score — corroborating context
-    # only, not required for any gate.
+    # comparison; this confirms motive and timeline. It is still not required for any
+    # gate, but it is now scored because it names Bassett's intent in his own hand.
 
 npcs: []
 

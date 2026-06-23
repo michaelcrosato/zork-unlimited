@@ -51,7 +51,7 @@ describe("scriveners_proof rooms react to taken evidence and tools", () => {
 
     expect(s.inventory).toContain("disputed_deed");
     expect(s.flags["disputed_deed_taken"]).toBe(true);
-    expect(s.vars.score).toBe(20);
+    expect(s.vars.score).toBe(10);
     expect(desc(s)).toContain("deed box on the corner of the desk stands open and empty now");
     expect(desc(s)).not.toContain("disputed deed lies folded inside it");
     expect(lookNarration(s)).toBe(desc(s));

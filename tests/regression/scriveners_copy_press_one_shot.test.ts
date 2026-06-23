@@ -74,6 +74,7 @@ describe("bug_0384 — scriveners copy-press check retires after failure", () =>
       "use_penknife_on_copy_press",
       "go_north",
       "take_magnifier",
+      "read_private_memoranda",
       "go_south",
       "use_magnifier_on_disputed_deed",
       "use_disputed_deed_on_enrolled_register",

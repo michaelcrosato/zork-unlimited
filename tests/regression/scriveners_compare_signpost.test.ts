@@ -86,6 +86,7 @@ describe("bug_0438 — Scrivener's Proof signposts the magnifier before comparis
       ...READ_REGISTER_ROUTE,
       "go_north",
       "take_magnifier",
+      "read_private_memoranda",
       "use_magnifier_on_disputed_deed",
       "go_south",
     ]).state;
