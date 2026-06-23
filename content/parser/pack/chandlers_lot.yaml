@@ -15,6 +15,9 @@
 #   +20 USE inspector_lantern ON adulteration_book after the three findings
 #       (natural verb: stamp)
 # Best route: collect all four findings, stamp and take the book, go north = 40/40.
+# The south/back-lane branch is an informed abandonment path, not exploratory
+# scenery: before proof it leads to ending_unproved, and after fraud_proved it is
+# blocked so a full-score proof cannot be turned into an unregistered bad ending.
 
 meta:
   id: chandlers_lot_v1
@@ -40,20 +43,22 @@ rooms:
       open beneath a sand shaker, and your inspector's lantern hangs from a
       peg by the door. The dipping floor lies east. The guildhall door north
       is locked until you have proof fit for the contract clerk; the back lane
-      runs south.
+      south is no shortcut, only a way to abandon the inspection unregistered.
     variants:
       - when: [{ has_flag: fraud_proved }]
         text: >
           The counting room, the contract fraud now proved in the chandler's
           private adulteration book. The guildhall door north is the road that
-          matters; the dipping floor remains east, and the back lane runs south.
+          matters; the dipping floor remains east, and the back-lane door is
+          only the way to squander stamped proof before the clerk sees it.
       - when: [{ has_item: inspector_lantern }]
         text: >
           A cramped counting room above the river stairs. A lamp contract lies
           open beneath a sand shaker, and the peg by the door is bare where your
           inspector's lantern hung before you took it. The dipping floor lies
           east. The guildhall door north is locked until you have proof fit for
-          the contract clerk; the back lane runs south.
+          the contract clerk; the back lane south is only the way to leave the
+          inspection unregistered.
     objects: [lamp_contract, inspector_lantern]
     exits:
       - { direction: east, to: dipping_floor }
@@ -66,7 +71,12 @@ rooms:
         locked_msg: >
           Guildhall needs your inspector's lantern, the private adulteration book,
           and a completed proof before the lamp lot can be stopped.
-      - { direction: south, to: back_lane }
+      - direction: south
+        to: back_lane
+        conditions: [{ not_flag: fraud_proved }]
+        locked_msg: >
+          You have the fraud stamped in the private book now. The back lane would
+          only take the case out of the clerk's hands; register it at guildhall.
 
   - id: dipping_floor
     name: "The Dipping Floor"
@@ -150,8 +160,8 @@ rooms:
     name: "The Back Lane"
     description: >
       The lane behind the chandlehouse slopes toward the river stairs. You
-      left by the wrong door, with whatever suspicion you had, before the
-      guildhall clerk saw a registered proof.
+      left by the wrong door, choosing weather and river noise over the clerk's
+      table. Whatever suspicion you had, it is not registered proof.
 
 objects:
   - id: lamp_contract
@@ -371,8 +381,10 @@ endings:
     title: "The Lane Behind the Stairs"
     text: >
       You leave by the back lane with suspicion, perhaps even a few good
-      measurements, but no registered proof. The chandler opens the front
-      shutters before noon and sends the lot to the river stairs under seal.
+      measurements, but no registered proof. That was the choice the lane
+      offered: out of the chandlehouse, and out of the clerk's hands. The
+      chandler opens the front shutters before noon and sends the lot to the
+      river stairs under seal.
       When the first candles gutter out in the rain, the failure will be called
       weather. *** The lot was not stopped. ***
 
