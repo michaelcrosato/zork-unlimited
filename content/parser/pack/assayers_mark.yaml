@@ -169,6 +169,20 @@ rooms:
       its brass beam delicate at rest. The trial ledger lies open beside it -- the
       Company's record of every submission this quarter. A smell of chalk dust and
       cold metal.
+    variants:
+      - when: [{ has_flag: weighed_plate }]
+        text: >
+          The weighing room. The coin balance has settled again after your trial,
+          and your weight note is made: useful corroboration, though the touchstone
+          and commission paper still carry the case. The trial ledger lies open
+          beside the balance. The assay hall is west.
+      - when: [{ has_item: silver_plate }, { not_flag: weighed_plate }]
+        text: >
+          The weighing room. The precision coin balance stands ready on its
+          levelled table. You can weigh Fitch's porringer here for corroboration:
+          an underweight reading would support suspicion, but only the touchstone
+          can settle the assay. The trial ledger lies open beside the balance. The
+          assay hall is west.
     objects: [coin_balance, trial_ledger]
     exits:
       - { direction: west, to: assay_hall }
@@ -323,6 +337,8 @@ objects:
       - verb: USE
         item: silver_plate
         target: coin_balance
+        command_verb: weigh
+        command_template: "weigh {item} on {target}"
         conditions: [{ has_item: silver_plate }, { not_flag: weighed_plate }]
         skill_check:
           skill: precision
