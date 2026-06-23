@@ -65,6 +65,10 @@
 # branches for flag effects (bug_0334), so the flag and score were invisible and
 # ending_justice unreachable. Simplified to unconditional effects with a single
 # narration; the dramatic discovery is unchanged, just deterministic.
+#
+# The medicine chest is order-neutral: examining the bottle before the chest is
+# legal, so the chest text must describe what the displaced bottle means without
+# pointing the player at an action they may already have completed (bug_0484).
 
 meta:
   id: coroners_errand_v1
@@ -418,6 +422,13 @@ objects:
           The medicine chest — the bottles in their usual rows, except for the dark
           one near the end of the second row, slightly out of place. You have seen
           it now. You know what it means.
+      - when: [{ has_flag: poison_identified }]
+        text: >
+          The medicine chest stands open on the passage shelf, its ordinary household
+          bottles arranged by size and use. The dark bottle you documented as forged
+          nightshade still sits a finger's width out of alignment; the chest is no
+          longer a mystery, only the place where Rendell meant the household dose to
+          look routine.
     interactions:
       - verb: USE
         item: commission
@@ -429,8 +440,8 @@ objects:
           - narrate: >
               The rows are tidy but not quite right. One bottle near the end of the
               second row is a finger's width out of place, its stopper barely seated,
-              its label turned away from you. USE your commission ON it — it is not
-              the same as the rest.
+              its label turned away from you. That displaced bottle is the chest's
+              answer: not part of the ordinary stock, and not the same as the rest.
 
   - id: nightshade_bottle
     name: "dark bottle"
