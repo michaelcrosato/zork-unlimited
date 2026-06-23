@@ -44,12 +44,12 @@
 #   +5   READ duty_ledger   — the ledger shows the systematic under-reads (sets read_ledger)
 #   +10  TAKE marked_stave — the stave with deepened notch-marks: physical proof
 #   +5   SHOW stave to watchman — the watchman is convinced (sets watchman_convinced)
-#   +5   READ hayman_seal  — the matching seal batches confirm the fraud (read_seal)
-#   +20  TAKE gauge_register — the private record naming every false certificate
+#   +0   READ hayman_seal  — corroborating seal detail, not required for max score
+#   +25  TAKE gauge_register — the private record naming every false certificate
 #        (Forcing the inner door skips +5 for watchman_convinced → 40/45 on forceful path)
 #
-# Quiet path (45):  read_ledger → take_stave → show_watchman → read_seal → take_register
-# Forceful path (40): read_ledger → take_stave → force_inner_door → read_seal → take_register
+# Quiet path (45):  read_ledger → take_stave → show_watchman → take_register
+# Forceful path (40): read_ledger → take_stave → force_inner_door → take_register
 #
 # Endings (3):
 #   ending_exposed  — WIN (non-death): register + back_lane — presented to the board
@@ -436,7 +436,6 @@ objects:
         conditions: [{ not_flag: read_seal }]
         effects:
           - set_flag: read_seal
-          - inc_var: { name: score, by: 5 }
 
   - id: gauge_register
     name: "gauge register"
@@ -450,7 +449,7 @@ objects:
     takeable: true
     quest_critical: true
     take_effects:
-      - inc_var: { name: score, by: 20 }
+      - inc_var: { name: score, by: 25 }
 
 npcs: []
 
