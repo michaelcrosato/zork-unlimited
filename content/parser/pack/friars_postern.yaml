@@ -218,7 +218,11 @@ objects:
   - id: wall_scratches
     name: "scratched message"
     aliases: [scratches, message, wall, scratching, scratch]
-    description: "Lines gouged deep into the cell wall by some hand long gone before yours."
+    description: >
+      Lines gouged deep into the cell wall by some hand long gone before yours.
+      The message is rough but legible: 'NO KEY FREES A DEBTOR. THE OLD WOMAN
+      IN THE COMMONS KNOWS THE FRIARS' WAY — BUT SHE'LL WANT HER PIPE BACK
+      FIRST. THEY KEEP IT IN THE TURNKEY'S NOOK. DO NOT TRUST THE GATE.'
     read_text: >
       The scratches read: 'NO KEY FREES A DEBTOR. THE OLD WOMAN IN THE COMMONS KNOWS
       THE FRIARS' WAY — BUT SHE'LL WANT HER PIPE BACK FIRST. THEY KEEP IT IN THE
