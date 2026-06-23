@@ -78,6 +78,7 @@ const FULL_ROUTE = [
   "use_twist_gauge_on_laid_cable",
   "use_marking_knife_on_laid_cable",
   "go_up",
+  "read_foremans_tally",
   "take_foremans_tally",
   "go_down",
   "go_west",
@@ -157,6 +158,7 @@ describe("bug_0437 — ropewalkers_twist signposts and truthfully reports the ma
       "take_marking_knife",
       "use_marking_knife_on_green_hemp",
       "go_up",
+      "read_foremans_tally",
       "take_foremans_tally",
       "go_down",
       "go_west",
@@ -174,6 +176,7 @@ describe("bug_0437 — ropewalkers_twist signposts and truthfully reports the ma
       "use_twist_gauge_on_laid_cable",
       "use_marking_knife_on_laid_cable",
       "go_up",
+      "read_foremans_tally",
       "take_foremans_tally",
       "go_down",
       "go_west",
@@ -181,5 +184,45 @@ describe("bug_0437 — ropewalkers_twist signposts and truthfully reports the ma
     ]);
     expect(obs(notchOnly).score).toBe(35);
     expect(desc(notchOnly)).toMatch(/left the green hemp\s+unparted/i);
+  });
+});
+
+describe("bug_0489 — ropewalkers_twist scores the foreman's tally on READ, not TAKE", () => {
+  const TO_TALLY_LOFT = ["read_quay_contract", "take_inspector_token", "go_east", "go_up"];
+
+  it("reading the tally is the 20-point proof moment, but the physical tally is still required at guildhall", () => {
+    const read = play(initStateForParserPack(index, 7), [...TO_TALLY_LOFT, "read_foremans_tally"]);
+    expect(read.current).toBe("tally_loft");
+    expect(read.flags["read_foremans_tally"]).toBe(true);
+    expect(read.flags["fraud_proved"]).toBe(true);
+    expect(read.inventory).not.toContain("foremans_tally");
+    expect(obs(read).score).toBe(25);
+    expect(actionIds(read)).toContain("take_foremans_tally");
+
+    const officeWithoutBook = play(read, ["go_down", "go_west"]);
+    expect(officeWithoutBook.current).toBe("rope_office");
+    expect(actionIds(officeWithoutBook)).not.toContain("go_north");
+    expect(desc(officeWithoutBook)).toMatch(/tally read and damning but not yet in your keeping/i);
+
+    const withBook = play(read, ["take_foremans_tally"]);
+    expect(withBook.inventory).toContain("foremans_tally");
+    expect(withBook.flags["foremans_tally_taken"]).toBe(true);
+    expect(obs(withBook).score).toBe(25);
+
+    const ready = play(withBook, ["go_down", "go_west"]);
+    expect(actionIds(ready)).toContain("go_north");
+  });
+
+  it("taking the tally before reading it can register the case, but does not award the proof score", () => {
+    const taken = play(initStateForParserPack(index, 7), [...TO_TALLY_LOFT, "take_foremans_tally"]);
+    expect(taken.inventory).toContain("foremans_tally");
+    expect(taken.flags["foremans_tally_taken"]).toBe(true);
+    expect(taken.flags["fraud_proved"]).toBe(true);
+    expect(obs(taken).score).toBe(5);
+    expect(actionIds(taken)).toContain("read_foremans_tally");
+
+    const readInHand = play(taken, ["read_foremans_tally"]);
+    expect(readInHand.flags["fraud_proved"]).toBe(true);
+    expect(obs(readInHand).score).toBe(25);
   });
 });

@@ -11,8 +11,8 @@
 #   +5  USE marking_knife ON green_hemp (natural verb: part)
 #   +5  USE twist_gauge ON laid_cable
 #   +5  USE marking_knife ON laid_cable (natural verb: notch)
-#   +20 TAKE foremans_tally
-# Best route: gather all four findings, take the tally, leave north = 40/40.
+#   +20 READ foremans_tally
+# Best route: gather all four findings, read and take the tally, leave north = 40/40.
 
 meta:
   id: ropewalkers_twist_v1
@@ -41,11 +41,17 @@ rooms:
       The north door leads toward guildhall; a back passage south opens onto the
       quay lane.
     variants:
-      - when: [{ has_flag: fraud_proved }]
+      - when: [{ has_flag: fraud_proved }, { has_item: foremans_tally }]
         text: >
           The rope office, with the foreman's tally in your keeping. The long
           walk runs east; the north door leads toward guildhall. The south
           passage is no longer the road for this case.
+      - when: [{ has_flag: fraud_proved }]
+        text: >
+          The rope office, the foreman's tally read and damning but not yet in
+          your keeping. The long walk runs east; the north door leads toward
+          guildhall, once you carry the tally there. The south passage is no
+          longer the road for this case.
       - when: [{ has_flag: inspector_token_taken }]
         text: >
           A narrow office at the head of the East Quay ropewalk. Tarred air
@@ -68,8 +74,8 @@ rooms:
         to: quay_lane
         conditions: [{ not_flag: fraud_proved }]
         locked_msg: >
-          With the tally in hand, do not walk out by the quay lane. The record
-          belongs at guildhall.
+          With the foreman's proof found, do not walk out by the quay lane. The
+          record belongs at guildhall.
 
   - id: rope_shed
     name: "The Covered Ropewalk"
@@ -125,7 +131,7 @@ rooms:
       shelf, and a sealed purse has been tucked behind a coil of packing twine.
       The ropewalk is down.
     variants:
-      - when: [{ has_flag: fraud_proved }]
+      - when: [{ has_flag: foremans_tally_taken }]
         text: >
           The tally loft, the slanted shelf bare where the foreman's tally lay.
           The sealed purse still waits behind the packing twine. The ropewalk
@@ -285,9 +291,17 @@ objects:
       saving: three turns of hemp per span across four ship lengths. Beneath it
       is the foreman's own note: "Dress dark before M. sees count." M. is the
       master ropewalker. The fraud has a hand and a number.
+    interactions:
+      - verb: READ
+        target: foremans_tally
+        conditions: [{ not_flag: read_foremans_tally }]
+        effects:
+          - set_flag: read_foremans_tally
+          - inc_var: { name: score, by: 20 }
+          - set_flag: fraud_proved
     takeable: true
     take_effects:
-      - inc_var: { name: score, by: 20 }
+      - set_flag: foremans_tally_taken
       - set_flag: fraud_proved
 
   - id: quiet_purse
