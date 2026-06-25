@@ -52,6 +52,16 @@ describe("bug_0158 — generatedEvalSeedBase (pure, advancing, deterministic)", 
     expect(generatedEvalSeedBase(next)).toBe(4);
   });
 
+  it("adds the compact historical count marker to recent cycle entries", () => {
+    const log = [
+      "# AI Loop State",
+      "<!-- historical_cycle_count: 16 -->",
+      "### Cycle result — token efficiency: ...",
+      "### Cycle result — content fix: ...",
+    ].join("\n");
+    expect(generatedEvalSeedBase(log)).toBe(18);
+  });
+
   it("is 0 for an empty/markerless log (no cycles recorded yet)", () => {
     expect(generatedEvalSeedBase("")).toBe(0);
     expect(generatedEvalSeedBase("no markers here\n## Some heading")).toBe(0);
@@ -126,9 +136,9 @@ describe("bug_0158 — the lever is LIVE on the real repo, and inert because the
     // Prove the assess() above genuinely exercised the verifier on a non-trivial window,
     // so its green is real (not "the check never ran"). Recompute the exact window assess()
     // checked and assert every pack in it is clean — the reason no candidate was raised.
-    const cycles =
-      readFileSync(join(process.cwd(), "AI_LOOP_STATE.md"), "utf8").match(/^### Cycle result/gm)
-        ?.length ?? 0;
+    const cycles = generatedEvalSeedBase(
+      readFileSync(join(process.cwd(), "AI_LOOP_STATE.md"), "utf8"),
+    );
     expect(cycles).toBeGreaterThan(0); // the loop HAS run; the window is past seed 0
     const base = cycles * GEN_EVAL_CHECK_COUNT;
     let checked = 0;

@@ -20,7 +20,7 @@ import { join, relative } from "node:path";
 import { createToolApi } from "../mcp/tools.js";
 import type { PackMode } from "../mcp/types.js";
 import { verifyBlindReportText } from "../blind/report_verifier.js";
-import { totalCycleCount } from "./loop_state.js";
+import { completedCycleCount, totalCycleCount } from "./loop_state.js";
 import { generateCyoaPack } from "../gen/cyoa_generator.js";
 import { generateRpgPack } from "../gen/rpg_generator.js";
 import { generateParserPack } from "../gen/parser_generator.js";
@@ -370,16 +370,13 @@ function lastAttendanceOffsets(root: string): Map<string, number> {
 // just the curated ten.
 
 /**
- * How many completed improvement cycles AI_LOOP_STATE.md records — each cycle PREPENDS
- * one "### Cycle result" entry, so this count grows by one per cycle. It is the per-cycle
- * base for the generator mint-and-check below: a PURE function of repo state (same log ⇒
- * same count, so `assess()` stays deterministic) that nonetheless ADVANCES every cycle, so
- * successive cycles confront DISJOINT windows of the generated seed space rather than
- * re-checking one frozen pack. That advancing-yet-deterministic seed is exactly the
- * "moving target" property the frozen-verifier literature prescribes.
+ * How many completed improvement cycles AI_LOOP_STATE.md records. Recent cycles are
+ * "### Cycle result" entries; older token-heavy entries may be folded into the tiny
+ * historical_cycle_count marker. This stays a PURE function of repo state while letting
+ * the live loop memory remain small.
  */
 export function generatedEvalSeedBase(loopStateText: string): number {
-  return (loopStateText.match(/^### Cycle result/gm) ?? []).length;
+  return completedCycleCount(loopStateText);
 }
 
 /**
