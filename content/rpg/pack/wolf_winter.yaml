@@ -59,6 +59,14 @@
 meta:
   id: wolf_winter_v1
   title: "The Wolf-Winter"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Wolf-Winter Steading"
+    quest: "hold the winter breach against the pack"
+    role: "winter defender"
+    connection: "The wolf-winter steading guards Charterhaven's northern food road, where hunger and teeth meet the same gate."
   start_room: steading_yard
   vars_init: { hp: 30, attack: 5, defense: 3 }
   flags_init: []
@@ -105,10 +113,11 @@ rooms:
     description: >
       The trampled yard before the cattle-byre. An old houndsman stands propped in the
       byre door with a lantern and a stick, too stiff in the hands to hold a spear but
-      square in the doorway all the same. A weathered day-book hangs on its nail by the
-      jamb, and the store-shed stands open to the west. North, past the broken paling,
-      the byre runs back to where the cattle are penned — and the first of the wolves is
-      already through the gap. The yard gate is back to the south.
+      square in the doorway all the same. He has turned the lantern toward the weathered
+      day-book on its nail by the jamb, as if the last wolf-count written there is worth
+      reading before you leave the yard. The store-shed stands open to the west. North,
+      past the broken paling, the byre runs back to where the cattle are penned — and the
+      first of the wolves is already through the gap. The yard gate is back to the south.
     objects: [day_book]
     # Reaching the byre is where the night's work begins — the watch is taken up here
     # (quest the_watch, stage watch_set). Pure progress-tracking: no exit, enemy, win or
@@ -116,6 +125,15 @@ rooms:
     # steading_yard variants). The flag economy that gates the gauntlet is untouched.
     on_enter:
       - set_quest_stage: { quest: the_watch, stage: watch_set }
+    variants:
+      - when: [{ has_flag: read_tally }]
+        text: >
+          The trampled yard before the cattle-byre. Old Cade stands propped in the byre
+          door with his lantern and stick, the weathered day-book open on the nail where
+          you checked its last wolf-count. The store-shed stands open to the west. North,
+          past the broken paling, the byre runs back to where the cattle are penned —
+          and the first of the wolves is already through the gap. The yard gate is back
+          to the south.
     exits:
       - { direction: south, to: steading_yard }
       - { direction: west, to: store }
@@ -128,6 +146,19 @@ rooms:
       the door hangs the steading's padded byre-jerkin — layered hide and stuffed wool,
       the thing the herders pull on to work the horns and hooves of frightened cattle. The
       byre-yard is back to the east.
+    variants:
+      - when: [{ has_item: byre_jerkin }, { none_of: [{ has_flag: jerkin_donned }] }]
+        text: >
+          A low store-shed off the byre-yard, hung with harness and winter gear. The peg
+          by the door is bare where the steading's padded byre-jerkin hung before you took
+          it down. It is in your hands, not yet on your back; drag it on before you go
+          north, because carried hide will not turn teeth. The byre-yard is back to the
+          east.
+      - when: [{ has_flag: byre_jerkin_taken }]
+        text: >
+          A low store-shed off the byre-yard, hung with harness and winter gear. The peg
+          by the door is bare where the steading's padded byre-jerkin hung before you took
+          it down. The byre-yard is back to the east.
     objects: [byre_jerkin]
     exits:
       - { direction: east, to: byre_yard }
@@ -169,6 +200,13 @@ rooms:
           breach half-shut. The young wolf still holds what is left of the gap, hackled and
           snarling, but it can only come at you singly and slow through the narrowed throat,
           the way old Cade swore the byre would funnel them. The byre-yard is back to the south.
+      - when: [{ has_flag: paling_rail_taken }]
+        text: >
+          The gap where the wolves have broken the paling-fence to come at the byre. A young
+          wolf stands in the breach, all hunger and no caution, hackles up and head low — the
+          first of the pack through, and between you and it there is nothing but a spear's
+          length of trampled snow. The snow at your feet is bare where the fallen rail lay
+          before you took it up. The byre-yard is back to the south.
     exits:
       - { direction: south, to: byre_yard }
       - direction: north
@@ -262,7 +300,14 @@ objects:
     variants:
       - when: [{ has_flag: jerkin_donned }]
         text: "The padded byre-jerkin, pulled on now over your own coat; its layered hide sits stiff and heavy between you and the next set of teeth."
+      - when: [{ has_item: byre_jerkin }, { none_of: [{ has_flag: jerkin_donned }] }]
+        text: "The padded byre-jerkin is bunched in your hands, layered hide still useless until you drag it on over your coat."
     takeable: true
+    take_effects:
+      - set_flag: byre_jerkin_taken
+      - narrate: >
+          You have the padded byre-jerkin in your hands, but not yet on your back.
+          Drag it on before you go north; carried hide will not turn teeth.
     interactions:
       # Self-USE = "wear this thing" (cold_forge plate / dawn_beacon mail, bug_0074).
       # command_verb: don makes the offered and typed verb match the prose. One-shot
@@ -321,6 +366,8 @@ objects:
       - when: [{ has_flag: breach_braced }]
         text: "The fallen paling-rail, wedged hard across the breach now and stamped home — the gap half-shut, so what comes through the paling must come singly and slow."
     takeable: true
+    take_effects:
+      - set_flag: paling_rail_taken
     interactions:
       # Self-USE = "wedge this rail into the breach" (the byre-jerkin's self-USE shape,
       # command_verb so the offered and typed verb match the prose). The RPG runner
@@ -375,6 +422,11 @@ npcs:
             paling already and the old grey bitch leads them. Ask, if you would — I have
             run wolves off this steading forty winters and there's little about them I
             don't know.
+          variants:
+            - when: [{ any_of: [{ has_flag: heard_counsel }, { has_flag: heard_plan }] }]
+              text: >
+                Old Cade shifts his ruined hands under the blanket. "Ask what else
+                you need, lad. The wolves won't wait on either of us."
           topics:
             - id: ask_wolves
               prompt: "Ask how to fight the wolves and live."

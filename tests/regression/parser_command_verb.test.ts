@@ -14,8 +14,8 @@
  *     phial"), while the action id stays verb-agnostic (`use_<obj>`);
  *   - the controlled command parser ALSO accepts "<verb> <obj>" ("drink phial");
  *   - the bare "use <obj>" path still works (backward compatible).
- * The schema confines `command_verb` to self-USE interactions (item === target) and
- * forbids it from shadowing a builtin parser verb.
+ * The schema confines `command_verb` to USE interactions with a target and forbids it
+ * from shadowing a builtin parser verb.
  *
  * Locked here:
  *   (1) the held black phial is listed as id `use_black_phial`, command "drink black
@@ -23,7 +23,7 @@
  *   (2) the parser maps "drink black phial" AND "drink phial" → USE(black_phial,
  *       black_phial), which still fires ending_poisoned;
  *   (3) backward compat: "use black phial" still parses to the same self-USE;
- *   (4) schema guards: command_verb only on self-USE, never shadows a builtin verb,
+ *   (4) schema guards: command_verb only on USE targets, never shadows a builtin verb,
  *       must be a single lowercase word; and an interaction without it round-trips with
  *       command_verb === undefined (absent ⇒ byte-identical compile, content hash safe);
  *   (5) the full win route still reaches ending_cured at 35/35 (feature is additive).
@@ -192,6 +192,16 @@ describe("bug_0074 — a self-USE consume action carries its natural verb (comma
         target: "well",
         command_verb: "tie",
         command_template: "tie {item} to {target}",
+      });
+      expect(r.success).toBe(true);
+    });
+
+    it("accepts command_verb on a target-only USE (tool-less fixture interaction)", () => {
+      const r = InteractionSchema.safeParse({
+        verb: "USE",
+        target: "font",
+        command_verb: "press",
+        effects: [{ set_flag: "postern_opened" }],
       });
       expect(r.success).toBe(true);
     });

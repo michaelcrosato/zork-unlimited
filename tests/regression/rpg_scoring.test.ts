@@ -129,17 +129,19 @@ describe("bug_0016 — Sunken Barrow scoring accrues 0→10→25→50 across the
     expect(score(s)).toBe(50);
   });
 
-  it("the validator fold-in is real: parser-only bound under-counts (25), RPG bound reaches 50", () => {
+  it("the validator fold-in is real: parser-only bound still misses combat awards", () => {
     expect(pack.meta.max_score).toBe(50);
 
-    // Without the RPG runtime awards, only the circlet's take_effects +25 is in a
-    // parser-scanned location (allEffects now folds in take_effects, bug_0107), so the
-    // parser-only bound is 25 < 50 → SCORE_UNREACHABLE must fire.
+    // Without the RPG combat award, the parser-scanned locations cover the circlet's
+    // take_effects +25 and the slab skill-check's on_success +15, but still miss the
+    // wight's on_defeat +10. The parser-only bound is therefore below 50, so
+    // SCORE_UNREACHABLE must fire.
     const parserOnly = validateParser(pack);
     expect(parserOnly.findings.find((f) => f.code === "SCORE_UNREACHABLE")).toBeDefined();
 
-    // validateRpg folds in the +10 (on_defeat) and +15 (on_success), so 50 is
-    // genuinely awardable and the pack validates clean.
+    // validateRpg folds in the +10 combat on_defeat award, while parser validation
+    // now owns the +15 skill-check on_success award, so 50 is genuinely awardable
+    // and the pack validates clean.
     const rpg = validateRpg(pack);
     expect(rpg.ok).toBe(true);
     expect(rpg.findings.find((f) => f.code === "SCORE_UNREACHABLE")).toBeUndefined();

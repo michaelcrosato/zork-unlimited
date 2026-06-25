@@ -83,7 +83,7 @@ describe("countStrongAssertions", () => {
   });
 });
 
-describe("detectCountRegressions — neither test cases, assertions, NOR strong matchers may drop", () => {
+describe("detectCountRegressions — counts cannot drop and tautologies cannot rise", () => {
   const codes = (fs: { code: string }[]) => fs.map((f) => f.code);
 
   it("passes when both counts grow (a normal +tests cycle)", () => {
@@ -104,6 +104,24 @@ describe("detectCountRegressions — neither test cases, assertions, NOR strong 
   it("the strong guard is silent when the strong counts are absent (legacy two-count call sites)", () => {
     expect(
       detectCountRegressions({ cases: 100, assertions: 300 }, { cases: 100, assertions: 300 }),
+    ).toEqual([]);
+  });
+
+  it("BLOCKS a new tautology even when cases, assertions, and strong matchers hold", () => {
+    const fs = detectCountRegressions(
+      { cases: 100, assertions: 300, strong: 290, tautologies: 0 },
+      { cases: 100, assertions: 300, strong: 290, tautologies: 1 },
+    );
+    expect(codes(fs)).toEqual(["TAUTOLOGY_REGRESSION"]);
+    expect(fs[0]!.severity).toBe("error");
+  });
+
+  it("the tautology guard is silent when tautology counts are absent (legacy call sites)", () => {
+    expect(
+      detectCountRegressions(
+        { cases: 100, assertions: 300, strong: 290 },
+        { cases: 100, assertions: 300, strong: 290 },
+      ),
     ).toEqual([]);
   });
 

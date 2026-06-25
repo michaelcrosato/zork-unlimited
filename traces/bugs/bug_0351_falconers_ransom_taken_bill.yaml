@@ -1,0 +1,27 @@
+id: bug_0351
+pack: falconers_ransom_v1
+title: "guest chambers still placed taken folded bill at the satchel"
+severity: minor
+scene: guest_chambers
+reported_by: afk_stale_reactive_room_item_audit_2026-06-19
+
+symptom: >
+  After taking the hidden bill from the guest chambers, LOOK still said a folded
+  document lay half-under the riding gloves at the satchel's lip. The existing
+  read-state room variant also said the needed document was in the player's hands,
+  which became false after the bill was read and then dropped.
+
+root_cause: >
+  The hidden bill did not leave durable pickup state that room prose could read.
+  The only room variant was keyed on `bill_read`, so the take-before-read state fell
+  back to base prose, and the read variant assumed inventory possession rather than
+  the durable fact that the forgery had been identified.
+
+fix: >
+  Taking the hidden bill now sets `hidden_bill_taken`. The guest chambers have a
+  hidden-bill-taken variant that keeps the satchel's lip empty after first pickup,
+  and the bill-read variant now records that the forged seal's tell is known without
+  claiming the bill remains in hand. Score, exits, enemies, endings, and win
+  conditions are unchanged.
+
+tests: tests/regression/falconers_ransom_reactive_taken_items.test.ts

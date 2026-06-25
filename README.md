@@ -291,7 +291,7 @@ OpenAI/Anthropic/Google backends sit behind env vars and fall back to a determin
 keyless mock, so authoring/adapting runs in CI with no API keys.
 
 ```bash
-npm run playtest:parser -- content/parser/pack/sealed_crypt.yaml [--out traces/playtests]
+npm run blind -- --pack content/parser/pack/sealed_crypt.yaml --seed 7
 ```
 
 ## Status: all stages complete ✅

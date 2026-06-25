@@ -1,0 +1,25 @@
+id: bug_0448_lockkeepers_forced_passage
+title: "Lockkeeper forced passage no longer borrows the clean river-cleared ending"
+pack: content/rpg/pack/lockkeepers_toll.yaml
+reported_by: blind-playtest
+report: blind-tester/reports/20260622T170223Z_lockkeepers_toll_seed7.md
+severity: S2
+symptom: >
+  The combat route beat Marrick and walked north to the same river-cleared ending
+  as the clean sluice route. That ending claimed the grain barge had water under
+  her, even though the toll chain had never been opened.
+root_cause: >
+  river_cut carried unconditional on_enter score and journal effects, and the sole
+  win condition was only "visited river_cut". Both the clean sluice route and the
+  forced combat route therefore shared the same payoff text.
+fix: >
+  Moved the clean completion award onto the successful sluice-chain action, routed
+  Marrick's opened gate walk to a separate forced-passage terminal room with its
+  own partial score, and split the win conditions so the forced route no longer
+  borrows the clean river-cleared ending.
+tests:
+  - tests/regression/lockkeepers_toll_forced_passage.test.ts
+verification:
+  - npm test -- --run tests/regression/lockkeepers_toll_forced_passage.test.ts tests/regression/lockkeepers_toll_gate_walk_notice.test.ts
+  - npm run validate -- content/rpg/pack/lockkeepers_toll.yaml
+  - npm run health

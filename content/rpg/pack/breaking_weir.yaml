@@ -47,6 +47,14 @@
 meta:
   id: breaking_weir_v1
   title: "The Breaking Weir"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Breaking Weir"
+    quest: "restore the flood works before the village breaks"
+    role: "weir keeper"
+    connection: "The weir controls water feeding Charterhaven mills, so a village flood is also a hub-city failure."
   start_room: keeper_lodge
   # hp is required by the RPG validator (> 0) and present for the core, but nothing in
   # this combatless pack damages it — there is no fight. attack/defense are 0 (no combat).
@@ -577,6 +585,17 @@ win_conditions:
 endings:
   - id: ending_held
     title: "The Weir Holds"
+    variants:
+      - when: [{ not_flag: read_marks }]
+        text: >
+          The dawn comes up grey and cold over a valley still asleep, and below you the weir holds:
+          the head-rack combing the drift, the relief-race running full and white around the
+          valley's rim, the killing water going off harmless down the second channel. The farms
+          will wake to a high brown river and never know how near a thing it was in the dark. Down
+          in the lodge old Pell is listening to the change in the water's voice, and he does not
+          need to be told. Only the flood-book still lies open on his table, its last marks unread:
+          the one piece of keeper's order you saved the valley without taking into your own hand.
+          *** You have won. ***
     text: >
       The dawn comes up grey and cold over a valley still asleep, and below you the weir holds:
       the head-rack combing the drift, the relief-race running full and white around the valley's

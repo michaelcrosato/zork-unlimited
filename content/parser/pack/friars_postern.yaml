@@ -6,11 +6,13 @@
 # hints at puzzles you can also solve by poking the world). Here the talk is
 # LOAD-BEARING: the one way out of the gaol — the friars' walled-up postern — can
 # be learned ONLY from the old debtor, and the flag her telling sets (`knows_postern`)
-# is the sole key to the escape exit. No combination of items opens it. This is the
-# new breadth axis a blind playtest of the saturated content set kept pointing at
-# (alchemists_tower seed 47, this cycle: clarity 5/5, only ceiling "too short / wants
-# a fresh mechanic"); the dialogue engine + DIALOGUE_NONTERMINATING / settable-flag
-# soundness surfaces now face a pack where conversation is the spine, not a flourish.
+# is the sole key to finding the latch. Once she tells you, the last step is a
+# deliberate target-only `press stone font` action that opens the escape exit. No
+# combination of items opens it. This is the new breadth axis a blind playtest of the
+# saturated content set kept pointing at (alchemists_tower seed 47, this cycle:
+# clarity 5/5, only ceiling "too short / wants a fresh mechanic"); the dialogue engine
+# + DIALOGUE_NONTERMINATING / settable-flag soundness surfaces now face a pack where
+# conversation is the spine, not a flourish.
 #
 # The pack inverts the genre's reflex. A debtors' gaol the night before the watch
 # comes for you; the turnkey is drunk and his key-ring hangs free in his nook. That
@@ -19,29 +21,36 @@
 # (rob your fellow wretches and bolt: a non-death greed ending, ending_thief — the
 # sealed_crypt bug_0105 "one key, two locks" device, here a key with two BAD locks).
 # Freedom costs no key at all: you must trust the old woman, fetch her confiscated
-# pipe, and be TOLD the trick of the friars' latch. The win route turns on knowledge,
-# not iron — so the climactic +20 rides the act of LEARNING (the take_pipe node),
-# exactly as sealed_crypt's +20 rides the gate-unlock one step before its visited win.
+# pipe, be TOLD the trick of the friars' latch, and then actually choose the honest
+# way out. The win route turns on knowledge, not iron, but the climactic +20 now
+# rides the act of escaping through the postern so the poor-fund theft cannot falsely
+# read as a perfect-score route.
 #
 #   cell ─N─ gallery ─W─ commons (old debtor; learn the postern)
 #   (start)    │ E: lodge (turnkey's pipe + key-ring)
-#   (clue)     │ up: chapel (font, alms-box; postern ─N*─ night_street = WIN)
+#   (clue)     │ up: chapel (font → press stone; alms-box; postern ─N*─ night_street = WIN)
 #              │ down: gatehouse (barred night-gate)
-#   (* postern exit gated on knows_postern — learned, never unlocked)
+#   (* postern exit gated on postern_opened, which requires knows_postern + pressing the font)
 #
 # Score (max 35, mirroring sealed_crypt's milestone economy so the curve reads
 # familiar): read the previous prisoner's wall-scratches (+5, the §17 clue that names
 # the old woman and where her pipe was taken), learn a postern even exists (+10), and
-# learn the latch's trick (+20 — the literal key to escape). The perfect 35 lands one
-# act before stepping into the street, the intentional denouement a blind playtester
-# confirmed reads right for a `visited` win (sealed_crypt seed 29); SCORE_PEAKS does
-# not fire on a locomotion win. Both BAD endings are heavily telegraphed in place
-# (the gate's examine shows the watch's torches; the box's, your fellow inmates' alms)
-# per the bug_0123 "never an ambush" discipline, and both are recoverable via load.
+# prove the friars' way by walking through it (+20). Both BAD endings are heavily
+# telegraphed in place (the gate's examine shows the watch's torches; the box's, your
+# fellow inmates' alms) per the bug_0123 "never an ambush" discipline, and both are
+# recoverable via load; neither can present a perfect score.
 
 meta:
   id: friars_postern_v1
   title: "The Friars' Postern"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Friars' Postern"
+    quest: "escape with the postern proof"
+    role: "confined witness"
+    connection: "The friars' postern is an old Charterhaven passage where monastic stone now hides civic crime."
   start_room: cell
   flags_init: []
   # `nerve` (value 3) is the debtor's steadiness, rolled by the OPTIONAL nerve check on
@@ -131,6 +140,13 @@ rooms:
       table, an empty jug at his elbow. A peg behind him holds his key-ring; his
       shelf of confiscated oddments has been picked over by no one but him. The
       gallery is back to the west.
+    variants:
+      - when: [{ has_flag: key_ring_taken }]
+        text: >
+          The turnkey's nook, and the turnkey himself face-down and snoring across
+          the table, an empty jug at his elbow. The peg behind him is bare where his
+          key-ring hung before you lifted it. His shelf of confiscated oddments has
+          been picked over by no one but him. The gallery is back to the west.
     objects: [clay_pipe, gate_key]
     exits:
       - { direction: west, to: gallery }
@@ -143,29 +159,37 @@ rooms:
       floor. The stones of the rear wall fit close and blind. The gallery stair
       drops away to the south.
     # Reactive prose (bug_0012 shape). Once the old woman has told you the latch's
-    # trick (`knows_postern`), the blind rear wall reads as the open postern and the
-    # north exit it gates appears. The base text deliberately gives NOTHING away — a
-    # player who has not had the telling sees only close-fit stone (the bug_0052 leak
-    # discipline: the way out is knowledge the world does not otherwise hand you).
+    # trick (`knows_postern`), the blind rear wall reveals the one stone worth pressing.
+    # Pressing it sets `postern_opened`, after which the north exit appears. The base
+    # text deliberately gives NOTHING away — a player who has not had the telling sees
+    # only close-fit stone (the bug_0052 leak discipline: the way out is knowledge the
+    # world does not otherwise hand you).
     variants:
+      - when: [{ has_flag: postern_opened }]
+        text: >
+          The friars' old chapel, kept now only by the dust. The dry stone font stands
+          against the north wall, and behind it the third stone has sunk inward on its
+          hidden latch, leaving the old postern ajar into the dark. The debtors' alms-box
+          is bolted to the floor beside it. The way out runs north; the gallery stair
+          drops away to the south.
       - when: [{ has_flag: knows_postern }]
         text: >
           The friars' old chapel, kept now only by the dust. The dry stone font
           stands against the north wall — and beside it, just as the old woman said,
           the third stone above its base stands a little proud of its fellows, waiting
           for a slow hand. The debtors' alms-box is bolted to the floor beside it. The
-          way out runs north; the gallery stair drops away to the south.
+          gallery stair drops away to the south.
     objects: [font, alms_box]
     exits:
       - { direction: south, to: gallery }
       - direction: north
         to: night_street
-        # Gated on KNOWLEDGE, not a key: the postern opens only once the old woman has
-        # told you its trick (the new dialogue-as-key axis). Hidden from the legal set
-        # until then (enumerateActions filters on exit.conditions), so the secret stays
-        # secret; the reactive room text above reveals it at the moment it becomes real.
-        conditions: [{ has_flag: knows_postern }]
-        locked_msg: "The rear wall is close-fit blind stone — if there's a way through here, you don't know it."
+        # Gated on the deliberate stone-press, not a key: the postern opens only once
+        # the old woman has told you its trick AND you act on it at the font. Hidden
+        # from the legal set until then (enumerateActions filters on exit.conditions),
+        # so the secret stays secret and the old woman's tactile instruction is a real
+        # puzzle step rather than decorative prose.
+        conditions: [{ has_flag: postern_opened }]
 
   - id: gatehouse
     name: "The Night-Gate"
@@ -184,12 +208,21 @@ rooms:
       and the wall of the debtors' house falls away behind you into the dark. No bar,
       no bolt, no watch — only the road, and the rest of your life to walk it down.
       *** You are free. ***
+    # The final +20 belongs to the honest escape itself, not merely to learning the
+    # latch. A player who learns the secret and then robs the poor-fund can still reach
+    # the greed ending, but cannot leave with a perfect-score lie.
+    on_enter:
+      - inc_var: { name: score, by: 20 }
 
 objects:
   - id: wall_scratches
     name: "scratched message"
     aliases: [scratches, message, wall, scratching, scratch]
-    description: "Lines gouged deep into the cell wall by some hand long gone before yours."
+    description: >
+      Lines gouged deep into the cell wall by some hand long gone before yours.
+      The message is rough but legible: 'NO KEY FREES A DEBTOR. THE OLD WOMAN
+      IN THE COMMONS KNOWS THE FRIARS' WAY — BUT SHE'LL WANT HER PIPE BACK
+      FIRST. THEY KEEP IT IN THE TURNKEY'S NOOK. DO NOT TRUST THE GATE.'
     read_text: >
       The scratches read: 'NO KEY FREES A DEBTOR. THE OLD WOMAN IN THE COMMONS KNOWS
       THE FRIARS' WAY — BUT SHE'LL WANT HER PIPE BACK FIRST. THEY KEEP IT IN THE
@@ -224,6 +257,8 @@ objects:
       might heft the ring a moment and steady yourself before you trust it with anything
       down here.
     takeable: true
+    take_effects:
+      - set_flag: key_ring_taken
     # The genre-reflex red herring: the obvious "way out" is iron, and the iron opens
     # only the death (the watched gate) and the greed (the alms-box). Not quest_critical
     # (the win never needs it), so taking, dropping, or never touching it is all safe.
@@ -269,17 +304,34 @@ objects:
 
   - id: font
     name: "stone font"
-    aliases: [font, basin, stones, stone]
+    aliases: [font, basin, stones, stone, third stone, rear wall, postern]
     description: "A dry baptismal font of grey stone against the chapel's rear wall; the wall-stones behind it fit close and even."
     # Reactive examine (bug_0033 shape), the object twin of the chapel room variant:
     # once the old woman's telling lands (`knows_postern`), examining the font names the
-    # proud third stone and the postern it works. The base text leaks nothing (bug_0052).
+    # proud third stone and the postern it works. Once pressed, it acknowledges the open
+    # latch. The base text leaks nothing (bug_0052).
     variants:
+      - when: [{ has_flag: postern_opened }]
+        text: >
+          A dry stone font against the rear wall. Behind it, the third stone is pushed
+          inward on its hidden latch, and the postern stands open into the dark beyond.
       - when: [{ has_flag: knows_postern }]
         text: >
           A dry stone font against the rear wall — and just as the old woman said, the
           third stone up from its base stands a little proud of its fellows. Pressed
           slow, as she promised, it will swing the postern open into the dark beyond.
+    interactions:
+      - verb: USE
+        target: font
+        command_verb: press
+        conditions: [{ has_flag: knows_postern }, { not_flag: postern_opened }]
+        effects:
+          - set_flag: postern_opened
+          - narrate: >
+              You set your palm to the third stone above the font and press slow and
+              even, exactly as the old woman said. For a long breath nothing answers;
+              then the stone sinks under your hand and a narrow postern gives inward
+              on black rain and open air.
 
   - id: alms_box
     name: "alms-box"
@@ -289,8 +341,8 @@ objects:
     # deliberate, telegraphed, one-way choice: it fires end_game (you snatch the coin and
     # bolt), mutually exclusive with the honest escape. Per bug_0123 the examine is no
     # ambush — it names plainly WHOSE pennies these are and that taking them is the act
-    # itself, not a step toward freedom. Awards no score (max_score stays 35, so the
-    # perfect score still coincides with the honest route), adds no exit/flag to any win.
+    # itself, not a step toward freedom. Awards no score, caps below the honest route's
+    # 35/35, and adds no exit/flag to any win.
     description: >
       A small iron alms-box bolted to the chapel floor, its slot worn smooth. This is
       the debtors' own poor-fund — the pennies the inmates pool to buy bread for the
@@ -348,10 +400,22 @@ npcs:
         # Termination: every node offers an UNCONDITIONAL `bye` end-topic, so the player
         # can always leave in every state (DIALOGUE_NONTERMINATING satisfied trivially).
         # The two progress topics are each gated `not_flag <told>` so the telling cannot
-        # repeat — the +10 and +20 fire exactly once (the sealed_crypt one-shot idiom),
-        # and those not_flag reads are why neither flag is INERT.
+        # repeat — the +10 fires exactly once and the latch telling cannot be farmed
+        # (the sealed_crypt one-shot idiom), and those not_flag reads are why neither
+        # flag is INERT.
         - id: greet
           npc_text: "Another soul the magistrates couldn't squeeze. Sit if you like — dawn's a long way off, and the watch is patient."
+          variants:
+            - when: [{ has_flag: knows_postern }]
+              text: >
+                The old debtor watches you with the pipe-smoke thinning between you.
+                "You've got the trick now. Third stone behind the font, slow and even.
+                Don't spend dawn asking me to say it twice."
+            - when: [{ has_flag: heard_postern }]
+              text: >
+                The old debtor tilts her chin toward the chapel wall. "You know
+                there's a friars' way out. Bring me my pipe if you want the latch
+                remembered plain."
           topics:
             - { id: escape, prompt: "Ask if there's any way out of here", goto: about_postern, conditions: [{ not_flag: heard_postern }] }
             - { id: give_pipe, prompt: "Offer her the clay pipe", goto: take_pipe, conditions: [{ has_flag: heard_postern }, { has_item: clay_pipe }, { not_flag: knows_postern }] }
@@ -372,14 +436,14 @@ npcs:
             - { id: bye, prompt: "Say nothing more for now", end: true }
         - id: take_pipe
           npc_text: "(She packs the bowl with a stub of tallow and draws on it long and slow, eyes closing.) ... Aye. Behind the font, the third stone up from the floor — press it slow and even and the postern gives inward. Go on with you, and don't wait on me; I've debts in here a postern won't clear, and I'm too old now for night air."
-          # Final quest beat: the latch's trick is now known (the literal key to the win).
-          # Set ALONGSIDE the existing knows_postern flag, +20, and pipe-removal — a pure
-          # additive marker that changes none of them and gates nothing. No prose reads
-          # `latch_known`: the reactive read stays on the EARLY `told_of_way` stage, so
-          # this terminal stage is never depended on right before the win (pitfall (b)).
+          # Final quest beat before the escape: the latch's trick is now known (the
+          # literal key to the win). Set ALONGSIDE the existing knows_postern flag and
+          # pipe-removal — a pure additive marker that changes neither and gates nothing.
+          # No prose reads `latch_known`: the reactive read stays on the EARLY
+          # `told_of_way` stage, so this terminal stage is never depended on right before
+          # the win (pitfall (b)).
           effects:
             - set_flag: knows_postern
-            - inc_var: { name: score, by: 20 }
             - remove_item: clay_pipe
             - set_quest_stage: { quest: the_postern, stage: latch_known }
           topics:
@@ -394,8 +458,9 @@ win_conditions:
   - id: through_postern
     # `visited: night_street` (locomotion win, like sealed_crypt's catacombs): the win
     # fires on stepping through the postern via the engine's post-action checkWin. The
-    # postern exit is itself gated on `knows_postern`, so the only way to satisfy this is
-    # to have had the telling — the conversation is genuinely on the win path.
+    # postern exit is itself gated on `postern_opened`, and that action is gated on
+    # `knows_postern`, so the only way to satisfy this is to have had the telling and
+    # then pressed the stone — the conversation is genuinely on the win path.
     conditions: [{ visited: night_street }]
     ending: ending_free
 

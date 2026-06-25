@@ -1,0 +1,24 @@
+id: bug_0443_breaking_weir_unread_book_ending_hint
+title: "Breaking Weir 45/50 ending names the unread flood-book"
+pack: content/rpg/pack/breaking_weir.yaml
+reported_by: blind-playtest
+report: blind-tester/reports/20260622T160421Z_breaking_weir_seed7.md
+severity: S2
+symptom: >
+  A blind playtester won Breaking Weir at 45/50 after skipping the flood-book, but
+  the ending gave no in-world clue that the optional scored preparation was the
+  unread book on Pell's table.
+root_cause: >
+  The flood-book already awarded +5 and logged a journal entry when read, but the
+  shared victory ending did not react to read_marks being absent, so the final
+  score closure identified a missing 5 points without naming the missed action.
+fix: >
+  Added an ending_held variant for not_flag: read_marks that preserves the win
+  while naming the flood-book's last marks as unread; the full-score route keeps
+  the original ending text.
+tests:
+  - tests/regression/breaking_weir_unread_book_ending_hint.test.ts
+verification:
+  - npm test -- --run tests/regression/breaking_weir_unread_book_ending_hint.test.ts tests/regression/breaking_weir_flood_book_journal.test.ts tests/regression/breaking_weir_skill_chain.test.ts
+  - npm run validate -- content/rpg/pack/breaking_weir.yaml
+  - npm run health

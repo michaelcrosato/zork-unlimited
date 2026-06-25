@@ -54,14 +54,17 @@ describe("bug_0294 — dead_reckoning ending_adrift carries death: true", () => 
     expect(obs.ending_death).toBe(true);
   });
 
-  it("non-death endings still report ending_death: false (no regression)", () => {
+  it("successful survival endings still report ending_death: false (no regression)", () => {
     const holdfast = buildObservation(index, play(["to_cask", "ration"]));
     expect(holdfast.ending_id).toBe("ending_holdfast");
     expect(holdfast.ending_death).toBe(false);
 
-    const jonah = buildObservation(index, play(["to_cask", "give_jonah"]));
-    expect(jonah.ending_id).toBe("ending_jonah");
-    expect(jonah.ending_death).toBe(false);
+    const landfall = buildObservation(
+      index,
+      play(["to_hold", "speak_girl", "leave_hold", "to_cask", "trust_pilot"]),
+    );
+    expect(landfall.ending_id).toBe("ending_landfall");
+    expect(landfall.ending_death).toBe(false);
   });
 
   it("the pack schema still declares ending_adrift in the endings list with death: true", () => {

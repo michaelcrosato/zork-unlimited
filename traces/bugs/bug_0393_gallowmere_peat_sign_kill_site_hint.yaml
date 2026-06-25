@@ -1,0 +1,25 @@
+id: bug_0393
+pack: gallowmere_v1
+title: "peat sign did not point direct players toward the kill-site prep"
+severity: minor
+scene: moor_trail
+reported_by: blind_playtest_20260620T161409Z_gallowmere_seed7
+
+symptom: >
+  The blind playtester noted that the kill-site is optional but mechanically
+  meaningful: reading it gives the +2 attack / +10 score preparation before the
+  sow fight. A player who follows the northward spoor from the moor trail can miss
+  the east branch and silently enter the hunt under-prepared.
+
+root_cause: >
+  The moor trail named the kill-site, but the examinable peat sign only confirmed
+  that the sow went north into the gully. It did not explain that the northward
+  trail is not where the charge angle is best read, so a curious direct player got
+  atmosphere rather than a useful preparation cue.
+
+fix: >
+  The peat sign's examine text now says the useful reading is at the churned
+  kill-site to the east before committing to the gully. This is prose-only: no
+  score, flags, exits, checks, or combat tuning changed.
+
+tests: tests/regression/gallowmere_peat_sign_kill_site_hint.test.ts

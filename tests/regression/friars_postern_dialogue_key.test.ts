@@ -8,27 +8,29 @@
  * OPTIONAL clue source (sealed_crypt's sexton only hints at puzzles you can also solve by
  * poking the world). This pack makes the talk LOAD-BEARING: the one way out of the gaol —
  * the friars' walled-up postern — can be learned ONLY from the old debtor, and the flag
- * her telling sets (`knows_postern`) is the SOLE key to the escape exit. No item opens it.
+ * her telling sets (`knows_postern`) is the SOLE key to finding the latch. The player must
+ * then press the font stone; no item opens it.
  *
  * The pack inverts the genre reflex: the OBVIOUS physical key (the drunk turnkey's ring)
  * opens only ruin — the barred night-gate, where the watch waits (a DEATH, ending_taken),
  * and the inmates' alms-box (rob your fellow wretches and bolt, a non-death greed ending,
  * ending_thief — the sealed_crypt bug_0105 "one key, two locks" device, here a key with
  * two BAD locks). Freedom costs no key: fetch the old woman's confiscated pipe, and be TOLD
- * the trick of the latch. Score (max 35) rides the milestones, the climactic +20 on the
- * LEARNING (the take_pipe dialogue node), so the perfect score coincides with knowing the
- * way out — one act before the visited win, the accepted sealed_crypt denouement shape.
+ * the trick of the latch. Score (max 35) rides the milestones, but the climactic +20 is
+ * awarded only when the player actually escapes through the postern, so the perfect score
+ * coincides with the honest route rather than merely knowing the way out.
  *
  * Locked here:
- *   (1) the honest WIN is reachable purely through the conversation, ending_free at 35/35;
- *   (2) the postern exit is dialogue-GATED — absent from the chapel's legal actions until
- *       `knows_postern` is set, present after (the conversation is genuinely on the win path);
+ *   (1) the honest WIN is reachable through the conversation, ending_free at 35/35;
+ *   (2) the postern is dialogue-GATED — absent until `knows_postern`; after the telling,
+ *       `press stone font` appears and only then opens the north exit;
  *   (3) the conversation is the ONLY key — standing in the chapel holding the turnkey's ring
  *       but WITHOUT the telling, the postern still will not open (no item substitutes for it);
  *   (4) the turnkey's ring opens only the two BAD ends: unlocking the alms-box ends at
- *       ending_thief (greed, non-death, score 0), the night-gate at ending_taken (death, 0);
- *   (5) the score awards are one-shot — after the telling the dialogue offers neither the
- *       escape nor the give-pipe topic again, so +10/+20 cannot be farmed;
+ *       ending_thief (greed, non-death, score 0 before clues), the night-gate at
+ *       ending_taken (death, 0);
+ *   (5) the dialogue score award is one-shot — after the telling the dialogue offers
+ *       neither the escape nor the give-pipe topic again, so +10 cannot be farmed;
  *   (6) the pack validates 0/0 and ending_free is the SOLE non-death win (the two BAD ends
  *       are not win_conditions, so NO_WINNABLE_ENDING / WIN_IS_DEATH stay intact).
  */
@@ -80,7 +82,7 @@ const LEARN_THE_POSTERN = [
   "go_west", // commons
   "talk_old_debtor",
   "ask_escape", // about_postern: +10, heard_postern
-  "ask_give_pipe", // take_pipe: +20, knows_postern
+  "ask_give_pipe", // take_pipe: knows_postern
   "ask_bye",
 ];
 
@@ -92,11 +94,11 @@ describe("bug_0185 — The Friars' Postern: dialogue is the key", () => {
     expect(report.findings).toEqual([]);
   });
 
-  it("(1) the honest escape is won purely through the conversation, 35/35", () => {
+  it("(1) the honest escape is won through the conversation, but max score waits for escape", () => {
     let s = play(start(), LEARN_THE_POSTERN);
     expect(s.flags.knows_postern).toBe(true);
-    expect(score(s)).toBe(35);
-    s = play(s, ["go_east", "go_up", "go_north"]); // gallery -> chapel -> postern
+    expect(score(s)).toBe(15);
+    s = play(s, ["go_east", "go_up", "use_font", "go_north"]); // gallery -> chapel -> postern
     expect(s.ended).toBe(true);
     expect(s.endingId).toBe("ending_free");
     expect(score(s)).toBe(35);
@@ -116,11 +118,16 @@ describe("bug_0185 — The Friars' Postern: dialogue is the key", () => {
     // The postern is hidden: no go_north out of the chapel, even holding the key.
     expect(legalIds(armed)).not.toContain("go_north");
 
-    // Now learn it and return to the same chapel: the postern appears.
+    // Now learn it and return to the same chapel: the stone press appears, but the
+    // north exit still waits for that physical act.
     const informed = play(start(), [...LEARN_THE_POSTERN, "go_east", "go_up"]);
     expect(informed.current).toBe("chapel");
     expect(informed.flags.knows_postern).toBe(true);
-    expect(legalIds(informed)).toContain("go_north");
+    expect(legalIds(informed)).toContain("use_font");
+    expect(legalIds(informed)).not.toContain("go_north");
+    const opened = play(informed, ["use_font"]);
+    expect(opened.flags.postern_opened).toBe(true);
+    expect(legalIds(opened)).toContain("go_north");
   });
 
   it("(4) the turnkey's ring opens only ruin: the alms-box (greed) and the night-gate (death)", () => {
@@ -137,9 +144,9 @@ describe("bug_0185 — The Friars' Postern: dialogue is the key", () => {
     expect(score(death)).toBe(0);
   });
 
-  it("(5) the dialogue score awards are one-shot (no farming the +10/+20)", () => {
+  it("(5) the dialogue score award is one-shot (no farming the +10)", () => {
     const learned = play(start(), LEARN_THE_POSTERN);
-    expect(score(learned)).toBe(35);
+    expect(score(learned)).toBe(15);
     // Re-open the conversation: with both flags set, neither progress topic is offered.
     const reopened = play(learned, ["talk_old_debtor"]);
     const ids = legalIds(reopened);
@@ -147,7 +154,7 @@ describe("bug_0185 — The Friars' Postern: dialogue is the key", () => {
     expect(ids).not.toContain("ask_give_pipe");
     // Only the flavour topic and the exit remain — leaving cannot move the score.
     const after = play(reopened, ["ask_bye"]);
-    expect(score(after)).toBe(35);
+    expect(score(after)).toBe(15);
   });
 
   it("(6) ending_free is the sole non-death win; the two bad ends are not wins", () => {

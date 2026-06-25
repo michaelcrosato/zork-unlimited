@@ -1,0 +1,458 @@
+# The Quarrymen's Fault -- a Stage 4 (Hero's-Quest) pack.
+#
+# Fifteenth RPG pack. Introduces `surveying`: reading drill marks, maps, grade,
+# and fracture lines before a blast or load turns bad ground into a public
+# collapse. The clean route proves the seam unsafe and halts the blast; the
+# fallback forces the north road through a foreman who would rather finish the
+# contract than admit the fault.
+#
+# Score economy:
+#   +5  READ blast_order      -- contract pressure and blast timing
+#   +10 READ drill_marks      -- holes angled into a hidden seam (+3 surveying)
+#   +10 READ seam_map         -- old fault line under the road (+3 surveying)
+#   +10 USE survey_chain ON fault_face, command_verb: measure, DC 12
+#   +0  ASK Cale to accept the measured proof -- opens the road
+#   +15 safe_road on_enter    -- report reaches Charterhaven
+# Prepared route: base surveying 6 + drill marks 3 + seam map 3 = 12, so DC 12
+# succeeds on any d20 roll. Combat fallback via Cale caps below full score.
+
+meta:
+  id: quarrymens_fault_v1
+  title: "The Quarrymen's Fault"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "North Road Quarry"
+    quest: "prove the road quarry blast will shear the chapel bank"
+    role: "quarry surveyor"
+    connection: "Charterhaven's north road rides above old quarry seams; one false blast can close the grain road and bury the chapel bank."
+  start_room: quarry_yard
+  vars_init: { hp: 20, attack: 4, defense: 2, surveying: 6 }
+  flags_init: []
+  max_score: 50
+
+rooms:
+  - id: quarry_yard
+    name: "The Quarry Yard"
+    description: >
+      A chalk-white yard below the north road cutting. The contractor's blast
+      order is nailed to a wagon board, and a survey chain lies coiled on a
+      stone block. Above the yard, the chapel bank leans over the quarry face.
+      The drill line runs east, the map shed stands west, and the foreman's
+      ramp climbs north.
+    variants:
+      - when: [{ has_flag: fault_measured }]
+        text: >
+          The quarry yard. The survey chain is still dusted white from the fault
+          face, and the blast order is no longer merely a schedule; it is
+          evidence. The drill line runs east, the map shed west, and the
+          foreman's ramp climbs north.
+      - when:
+          - { has_flag: measure_attempted }
+          - { any_of: [{ has_flag: marks_read }, { has_flag: map_read }] }
+        text: >
+          The quarry yard. Your slipped chain run cannot be made clean again,
+          but the ground is no longer only suspicion: the old map and drill
+          marks are building the proof the first measure failed to give you.
+          The drill line runs east, the map shed west, and the foreman's ramp
+          climbs north.
+      - when: [{ has_flag: measure_attempted }]
+        text: >
+          The quarry yard. Your failed measure has left the chain kinked and
+          the fault face less forgiving. The drill line runs east, the map shed
+          west, and the foreman's ramp climbs north.
+      - when:
+          - { has_flag: survey_chain_taken }
+          - { has_flag: marks_read }
+          - { has_flag: map_read }
+        text: >
+          The quarry yard. The chain is in your hands, the drill marks have
+          shown where the holes lean, and the old map has named the fault under
+          the chapel bank. One clean measure now can turn all three into proof.
+          The foreman's ramp climbs north; the drill line is east and the map
+          shed west.
+      - when: [{ has_flag: survey_chain_taken }]
+        text: >
+          A chalk-white yard below the north road cutting. The contractor's
+          blast order is nailed to a wagon board, and the stone block is bare
+          where the survey chain was coiled before you took it up. Above the
+          yard, the chapel bank leans over the quarry face. The chain can mark
+          a line, but a bare line will not stop Cale by itself; the drill marks
+          east and the old map west can tell you what the measure needs to
+          prove before he sees your one clean run. The foreman's ramp climbs
+          north.
+    objects: [blast_order, survey_chain, fault_face]
+    exits:
+      - { direction: east, to: drill_line }
+      - { direction: west, to: map_shed }
+      - { direction: north, to: foremans_ramp }
+
+  - id: drill_line
+    name: "The Drill Line"
+    description: >
+      Fresh blast holes march along the quarry face under the chapel bank. The
+      chalk dust is new, but old water stains cross it in diagonal bands. The
+      yard lies west.
+    variants:
+      - when: [{ has_flag: marks_read }]
+        text: >
+          The drill line. The angled holes have already told their story: the
+          contractor is chasing saleable stone through a seam that runs under
+          the road bank. The yard lies west.
+    objects: [drill_marks]
+    exits:
+      - { direction: west, to: quarry_yard }
+
+  - id: map_shed
+    name: "The Map Shed"
+    description: >
+      A tarred-board shed with survey pegs in the rafters and old quarry maps
+      pinned under a cracked slate weight. Rain ticks on the roof. The yard is
+      east.
+    variants:
+      - when: [{ has_flag: map_read }]
+        text: >
+          The map shed. The old seam map is already read: the abandoned fault
+          line passes below the chapel bank exactly where the new blast is set.
+          The yard is east.
+    objects: [seam_map]
+    exits:
+      - { direction: east, to: quarry_yard }
+
+  - id: foremans_ramp
+    name: "The Foreman's Ramp"
+    description: >
+      The ramp up to the north road cutting. Cale, the quarry foreman, stands
+      across it with his pick handle in both hands. He has carts waiting, a
+      contract penalty at noon, and no patience for a surveyor calling his
+      blast unsafe. The yard is south; the safe road is north.
+    variants:
+      - when: [{ has_flag: cale_defeated }]
+        text: >
+          The foreman's ramp. Cale is down beside the chalk wall, his pick
+          handle split under him. The safe road is north; the yard is south.
+      - when: [{ has_flag: cale_confronted }]
+        text: >
+          The foreman's ramp. Cale stands aside from the north road cutting,
+          pale with anger and chalk. The chain figures have beaten the noon
+          penalty for now, and the crew is already looking from him to the fault
+          face instead of to the waiting carts. The safe road is north; the yard
+          is south.
+      - when: [{ has_flag: fault_measured }]
+        text: >
+          The foreman's ramp. Cale still grips his pick handle across the north
+          road cutting, but the chain measure has changed the ground under the
+          argument: you have repeatable proof, and he has only a penalty clause.
+          He wants the figures said to his face before the crew hears him yield.
+          The yard is south; the safe road is north behind him.
+    exits:
+      - { direction: south, to: quarry_yard }
+      - direction: north
+        to: safe_road
+        conditions: [{ any_of: [{ has_flag: cale_confronted }, { has_flag: cale_defeated }] }]
+        locked_msg: >
+          Cale blocks the ramp. Show him the measured fault, or get past him.
+
+  - id: safe_road
+    name: "The Safe Road"
+    description: >
+      The north road above the quarry bends toward Charterhaven's grain gate.
+      From here the chapel bank shows its full weakness: old seam below, fresh
+      blast line beside it, carts already waiting to cross.
+    on_enter:
+      - set_quest_stage: { quest: quarrymens_fault, stage: road_reached }
+      - add_journal: >
+          The warning reaches the road before the blast fires. The quarry must
+          answer to Charterhaven before another charge is set. (+15)
+      - inc_var: { name: score, by: 15 }
+    exits:
+      - { direction: south, to: foremans_ramp }
+
+objects:
+  - id: blast_order
+    name: "blast order"
+    aliases: [order, blast, notice, schedule, blast order, wagon board, contractor order]
+    description: >
+      The contractor's order for a noon blast: three charges under the chapel
+      bank, carts to load by second bell, penalty for delay.
+    variants:
+      - when: [{ has_flag: order_read }]
+        text: >
+          The blast order, already read: noon charges under the chapel bank,
+          with a delay penalty large enough to explain Cale's stubbornness.
+    read_text: >
+      Noon blast, three charges, road bank side. Delay penalty: twelve shillings
+      per hour. The order names speed, not safety, and it gives Cale a reason
+      to ignore anything that slows the work.
+    interactions:
+      - verb: READ
+        target: blast_order
+        conditions: [{ not_flag: order_read }]
+        effects:
+          - set_flag: order_read
+          - inc_var: { name: score, by: 5 }
+          - set_quest_stage: { quest: quarrymens_fault, stage: order_read }
+          - add_journal: >
+              The blast order sets three noon charges under the chapel bank and
+              penalizes delay. It explains Cale's pressure, not the ground. (+5)
+          - narrate: >
+              The order is written like all bad instructions: clear on schedule,
+              silent on consequence. Three charges under the chapel bank at
+              noon, with a delay penalty large enough to make caution expensive.
+
+  - id: survey_chain
+    name: "survey chain"
+    aliases: [chain, measuring chain, survey chain, surveyor chain, measure, links]
+    description: >
+      A brass-linked survey chain, each link worn smooth by years of field
+      work. Long enough to run from the first drill hole to the road bank.
+    takeable: true
+    take_effects:
+      - set_flag: survey_chain_taken
+
+  - id: fault_face
+    name: "fault face"
+    aliases: [fault, face, quarry face, seam, chalk face, bank, chapel bank, fault face]
+    description: >
+      The exposed quarry face below the chapel bank. A pale seam runs through
+      the chalk at an angle too regular to be weather alone.
+    variants:
+      - when: [{ has_flag: fault_measured }]
+        text: >
+          The fault face, measured and marked. The line from drill hole to seam
+          to chapel bank is exact enough for a guildhall surveyor to repeat.
+      - when: [{ has_flag: measure_attempted }]
+        text: >
+          The fault face, scuffed where the chain slipped. The seam still shows,
+          but the first clean measurement is gone.
+    interactions:
+      - verb: USE
+        item: survey_chain
+        target: fault_face
+        command_verb: measure
+        command_template: "measure {target} with {item}"
+        conditions: [{ not_flag: measure_attempted }, { not_flag: fault_measured }]
+        skill_check:
+          skill: surveying
+          difficulty: 12
+          on_success:
+            - set_flag: fault_measured
+            - inc_var: { name: score, by: 10 }
+            - set_quest_stage: { quest: quarrymens_fault, stage: fault_measured }
+            - add_journal: >
+                The chain measure proves the drill line crosses the old seam
+                beneath the chapel bank. The blast must be stopped. (+10)
+            - narrate: >
+                You run the chain from the first drill hole to the seam and up
+                to the road bank. The numbers close cleanly: the charge line
+                crosses the old fault exactly under the chapel slope. One blast
+                will not merely loosen stone; it will shear the bank into the
+                road. The proof is repeatable, and that is what makes it proof.
+          on_failure:
+            - set_flag: measure_attempted
+            - set_quest_stage: { quest: quarrymens_fault, stage: measure_failed }
+            - add_journal: >
+                The chain slipped on the chalk face. You have suspicion, but
+                not a clean measurement. Cale still blocks the ramp.
+            - narrate: >
+                The chain catches on a chalk tooth and jumps a link just as you
+                close the line. The seam is there, the danger is real, but the
+                measurement is not clean enough to stand in a contract hearing.
+                Cale has seen the slip; he will not let you try twice.
+
+  - id: drill_marks
+    name: "drill marks"
+    aliases: [marks, holes, drill holes, drill marks, chalk dust, water stains, blast holes]
+    description: >
+      Fresh drill holes in the chalk face, angled slightly toward the old water
+      stains instead of square to the quarry wall.
+    variants:
+      - when: [{ has_flag: marks_read }]
+        text: >
+          The drill marks, already read: angled into the seam, not set square
+          for ordinary face work.
+    read_text: >
+      The holes are not square to the face. They lean into the diagonal water
+      stains, following the softer seam for a cleaner break and more saleable
+      stone. It is efficient work if the bank above is empty. It is dangerous
+      work under a road.
+    interactions:
+      - verb: READ
+        target: drill_marks
+        conditions: [{ not_flag: marks_read }]
+        effects:
+          - set_flag: marks_read
+          - inc_var: { name: surveying, by: 3 }
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: quarrymens_fault, stage: drill_line_read }
+          - add_journal: >
+              The drill holes chase the diagonal seam instead of cutting square
+              into the face. Efficient for stone, unsafe under the road. (+3
+              surveying, +10)
+          - narrate: >
+              The holes lean into the seam. A quarryman would call it efficient:
+              cleaner break, less waste, faster carts. A surveyor calls it a
+              load path under a road bank.
+
+  - id: seam_map
+    name: "old seam map"
+    aliases: [map, seam map, old map, quarry map, slate map, survey map, fault map]
+    description: >
+      A faded quarry map pinned under slate, showing abandoned seams, old chalk
+      falls, and the chapel bank as it stood before the road was widened.
+    variants:
+      - when: [{ has_flag: map_read }]
+        text: >
+          The old seam map, already read: the abandoned fault line under the
+          chapel bank matches the diagonal water stain in the face.
+    read_text: >
+      The abandoned fault line is inked faintly, but it is there: a diagonal
+      seam under the chapel bank, marked "worked soft, closed after fall." The
+      new blast line lies across it. Someone should have copied this map into
+      the contract book. Someone did not.
+    interactions:
+      - verb: READ
+        target: seam_map
+        conditions: [{ not_flag: map_read }]
+        effects:
+          - set_flag: map_read
+          - inc_var: { name: surveying, by: 3 }
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: quarrymens_fault, stage: map_read }
+          - add_journal: >
+              The old map marks the seam as worked soft and closed after a
+              fall. The new blast line crosses it under the chapel bank. (+3
+              surveying, +10)
+          - narrate: >
+              The old map supplies the missing history. That diagonal line is
+              not weather; it is a closed seam from a prior fall, buried in old
+              paperwork until the new blast found it again.
+
+npcs:
+  - id: cale_foreman
+    name: "Cale"
+    description: >
+      The quarry foreman: broad, chalk-white to the elbows, jaw set hard around
+      the noon penalty in the blast order. He is not defending a secret so much
+      as a schedule, which can be worse.
+    room: foremans_ramp
+    conditions: [{ not_flag: cale_defeated }]
+    dialogue:
+      root: cale_root
+      nodes:
+        - id: cale_root
+          npc_text: >
+            I have carts waiting, a penalty running, and stone cut to a line.
+            Bring me numbers that would shame the contract clerk, or step clear
+            of my ramp.
+          variants:
+            - when: [{ has_flag: cale_confronted }]
+              text: >
+                You have your road, surveyor. I will not set a charge across a
+                measured fault with half my crew hearing the figures.
+            - when: [{ has_flag: fault_measured }]
+              text: >
+                You have the chain in your hand and chalk on every link. Say the
+                line cleanly, if you mean to stop a noon blast with brass.
+            - when: [{ has_flag: cale_warned }]
+              text: >
+                I heard the seam looks wrong. Looks do not beat a contract. Map
+                it, read the drill line, measure it, and then speak to me in
+                figures.
+          topics:
+            - id: show_measure
+              prompt: "Show Cale the measured fault line."
+              conditions: [{ has_flag: fault_measured }, { not_flag: cale_confronted }]
+              goto: cale_accepts_measure
+            - id: argue_suspicion
+              prompt: "Argue that the seam looks unsafe."
+              conditions: [{ not_flag: fault_measured }, { not_flag: cale_warned }]
+              goto: cale_wants_proof
+            - id: leave_cale
+              prompt: "Step back from Cale."
+              end: true
+        - id: cale_accepts_measure
+          npc_text: >
+            Drill line to old seam, seam to chapel bank, and the same figures
+            twice. Twelve shillings an hour is cheaper than burying the road.
+            Get your warning north before my contractor teaches himself a worse
+            sum.
+          effects:
+            - set_flag: cale_confronted
+            - set_quest_stage: { quest: quarrymens_fault, stage: blast_stopped }
+            - add_journal: >
+                Cale accepts the measured chain run: the drill line crosses the
+                old seam under the chapel bank, and the blast is stopped before
+                the road can shear.
+          topics:
+            - id: measure_back
+              prompt: "Take the open road north."
+              end: true
+        - id: cale_wants_proof
+          npc_text: >
+            Looks unsafe is how every delay starts. Measure it, map it, read the
+            drill line, and then maybe I will spend the contractor's money on
+            your word.
+          effects:
+            - set_flag: cale_warned
+            - add_journal: >
+                Cale will not halt the blast for suspicion. He wants a measured
+                line backed by the old seam map and the drill marks.
+          topics:
+            - id: proof_back
+              prompt: "Return to the yard for proof."
+              goto: cale_root
+
+enemies:
+  - id: cale
+    name: "Cale"
+    description: >
+      The quarry foreman: broad, chalk-white to the elbows, jaw set hard around
+      the noon penalty in the blast order. He is not defending a secret so much
+      as a schedule, which can be worse.
+    room: foremans_ramp
+    conditions: [{ not_flag: fault_measured }]
+    hp: 12
+    attack: 5
+    defense: 2
+    defeat_flag: cale_defeated
+    death_ending: ending_buried
+    on_defeat:
+      - set_quest_stage: { quest: quarrymens_fault, stage: ramp_forced }
+      - add_journal: >
+          Cale is down on the ramp. The road is open, though the clean survey
+          proof would have been better than a fight.
+
+win_conditions:
+  - id: warning_reaches_road
+    conditions: [{ visited: safe_road }]
+    ending: ending_blast_stopped
+
+endings:
+  - id: ending_blast_stopped
+    title: "The Bank Holds"
+    variants:
+      - when: [{ has_flag: fault_measured }]
+        text: >
+          The north road carries your warning toward Charterhaven before the
+          noon charge is set. Behind you, the quarrymen have the chain measure:
+          drill line, old seam, chapel bank, all repeatable in brass links. The
+          contractor can curse delay and count penalties, but he cannot call the
+          bank safe. The blast is stopped because the fault was measured. ***
+          You have won. ***
+    text: >
+      The north road carries your warning toward Charterhaven, though it was won
+      by force on the ramp rather than a clean measure on the face. Cale is down,
+      the carts are delayed, and the blast will draw inquiry before another
+      charge is set. The road gets its warning before the bank gets its fall.
+      *** You have won. ***
+
+  - id: ending_buried
+    title: "Under the Chapel Bank"
+    text: >
+      Cale drives you back against the chalk wall and the pick handle catches
+      under your guard. The yard tilts, white dust filling your mouth. Above,
+      the chapel bank waits for noon, and the drill line waits for fire. ***
+      You have fallen. ***
+    death: true

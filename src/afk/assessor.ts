@@ -19,6 +19,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { createToolApi } from "../mcp/tools.js";
 import type { PackMode } from "../mcp/types.js";
+import { verifyBlindReportText } from "../blind/report_verifier.js";
 import { totalCycleCount } from "./loop_state.js";
 import { generateCyoaPack } from "../gen/cyoa_generator.js";
 import { generateRpgPack } from "../gen/rpg_generator.js";
@@ -27,6 +28,7 @@ import { validateCyoa } from "../validate/cyoa_validator.js";
 import { validateRpg } from "../validate/rpg_validator.js";
 import { validateParser } from "../validate/parser_validator.js";
 import type { ValidationReport } from "../validate/report.js";
+import { auditStaleReactiveRoomItems } from "./stale_reactive_audit.js";
 
 export type Category = "content_fix" | "content_new" | "engine" | "repo";
 
@@ -52,6 +54,8 @@ export type PackHealth = {
 export type Assessment = {
   packsByMode: Record<string, number>;
   packs: PackHealth[];
+  /** True iff this cycle's fresh generated CYOA/RPG/parser windows all validated clean. */
+  allGeneratorsClean: boolean;
   candidates: ImprovementCandidate[];
   top: ImprovementCandidate | null;
 };
@@ -281,11 +285,77 @@ export function parseAttendanceOffsets(loopStateText: string): Map<string, numbe
   return map;
 }
 
-/** Disk wrapper for {@link parseAttendanceOffsets}; empty map when the log is absent. */
+const BLIND_REPORT_FILE_RE = /^(\d{8}T\d{6}Z)_(.+)_seed\d+\.md$/;
+
+/**
+ * Parse local blind-tester report filenames into attendance offsets. The report runner
+ * writes accepted markdown reports as:
+ *
+ *   YYYYMMDDTHHMMSSZ_<pack-stem>_seed<N>.md
+ *
+ * Those files are gitignored scratch evidence, but they are authoritative for the
+ * current worktree's AFK loop: if a blind pass just ran successfully, the assessor
+ * must not immediately nominate the same pack again merely because AI_LOOP_STATE.md
+ * has not been prepended yet. Filenames carry UTC timestamps, so ordering is stable
+ * without consulting file mtimes. Returned offsets are NEGATIVE, making these local
+ * reports newer than any tracked log offset (which is always >= 0) while preserving
+ * the same "smaller offset = more recent" convention as {@link parseAttendanceOffsets}.
+ */
+export function parseBlindReportAttendanceOffsets(
+  reportFileNames: Iterable<string>,
+): Map<string, number> {
+  const reports = [...reportFileNames]
+    .map((name) => {
+      const m = name.match(BLIND_REPORT_FILE_RE);
+      if (!m) return null;
+      return { stamp: m[1]!, stem: packStem(m[2]!), name };
+    })
+    .filter((r): r is { stamp: string; stem: string; name: string } => r !== null && !!r.stem)
+    .sort((a, b) => b.stamp.localeCompare(a.stamp) || a.name.localeCompare(b.name));
+
+  const map = new Map<string, number>();
+  reports.forEach((report, i) => {
+    if (!map.has(report.stem)) {
+      map.set(report.stem, -(reports.length - i));
+    }
+  });
+  return map;
+}
+
+export function blindReportAttendanceOffsets(root: string): Map<string, number> {
+  const reportsDir = join(root, "blind-tester", "reports");
+  if (!existsSync(reportsDir)) return new Map();
+  const acceptedReports = readdirSync(reportsDir).filter((name) => {
+    if (!BLIND_REPORT_FILE_RE.test(name)) return false;
+    try {
+      return verifyBlindReportText(readFileSync(join(reportsDir, name), "utf8")).ok;
+    } catch {
+      return false;
+    }
+  });
+  return parseBlindReportAttendanceOffsets(acceptedReports);
+}
+
+export function mergeAttendanceOffsets(
+  ...sources: ReadonlyArray<ReadonlyMap<string, number>>
+): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const source of sources) {
+    for (const [stem, offset] of source) {
+      const previous = map.get(stem);
+      if (previous === undefined || offset < previous) map.set(stem, offset);
+    }
+  }
+  return map;
+}
+
+/** Disk wrapper for attendance evidence; empty map when both evidence sources are absent. */
 function lastAttendanceOffsets(root: string): Map<string, number> {
   const p = join(root, "AI_LOOP_STATE.md");
-  if (!existsSync(p)) return new Map();
-  return parseAttendanceOffsets(readFileSync(p, "utf8"));
+  const loopStateOffsets = existsSync(p)
+    ? parseAttendanceOffsets(readFileSync(p, "utf8"))
+    : new Map();
+  return mergeAttendanceOffsets(loopStateOffsets, blindReportAttendanceOffsets(root));
 }
 
 // ── Generator mint-and-check lever (bug_0158) ─────────────────────────────────
@@ -332,6 +402,10 @@ export const GEN_EVAL_CHECK_COUNT = 4;
 
 /** One minted-and-validated generated pack: the seed, its id, and the production report. */
 export type GeneratedPackCheck = { seed: number; pack_id: string; report: ValidationReport };
+
+export function allGeneratedChecksClean(checks: GeneratedPackCheck[]): boolean {
+  return checks.every((c) => c.report.findings.length === 0);
+}
 
 /**
  * The generator mint-and-check verdict. Given this cycle's freshly minted-and-validated
@@ -480,15 +554,18 @@ export function generatorParserDriftCandidate(
 export const SATURATION_FLOOR = 0.5;
 
 /**
- * Has the deterministic assessor run dry of STRATEGIC direction? True when the
- * top candidate is at/below {@link SATURATION_FLOOR} (only routine rotation work
- * left) or there is no candidate at all. This is the exact diminishing-returns
- * signal — the state that once pinned the loop to clockwork-polish — and the
- * moment a multi-agent ultraplan re-aim earns its cost (see docs/afk_loop.md,
- * the saturation-triggered ultraplan mode).
+ * Has the deterministic assessor run dry of STRATEGIC direction? True when this
+ * cycle's fresh generator windows are clean AND the top candidate is at/below
+ * {@link SATURATION_FLOOR} (only routine rotation work left) or there is no
+ * candidate at all. This is the exact diminishing-returns signal — the state that
+ * once pinned the loop to clockwork-polish — and the moment a multi-agent ultraplan
+ * re-aim earns its cost (see docs/afk_loop.md, the saturation-triggered ultraplan
+ * mode). If a generator window is unclean, the loop is not saturated: there is a
+ * verifier/generator divergence to handle, even if a caller's candidate scoring has
+ * collapsed to the floor.
  */
 export function isSaturated(a: Assessment): boolean {
-  return a.top === null || a.top.score <= SATURATION_FLOOR;
+  return a.allGeneratorsClean && (a.top === null || a.top.score <= SATURATION_FLOOR);
 }
 
 /** Deterministically assess the repo and rank the next-best improvements. */
@@ -606,6 +683,35 @@ export function assess(root: string): Assessment {
       impact,
       effort: "M",
       score: score(impact, "M", "engine"),
+    });
+  }
+
+  // ── engine/content strategy: measure the stale reactive-description class ─────
+  // The repeated bug_0282–0325 class is real, but a naive validator warning would be
+  // noisy across the current corpus. Keep it as a deterministic audit signal first:
+  // static room prose that names a takeable object in that room, with no room variant
+  // reading that object's inventory state. The suppression rule is concrete enough to
+  // tune before promoting any subset into validateParser.
+  const staleReactive = auditStaleReactiveRoomItems(root);
+  if (staleReactive.sites.length > 0) {
+    const examples = staleReactive.sites
+      .slice(0, 6)
+      .map(
+        (site) =>
+          `${site.packPath} room:${site.roomId} names object:${site.objectId} (` +
+          `"${site.matchedTerm}") with no room variant reading item/take-effect state`,
+      );
+    candidates.push({
+      id: "stale-reactive-room-item-audit",
+      category: "engine",
+      target: "src/validate/parser_validator.ts",
+      title: `Tune a class-level stale reactive-description check (${staleReactive.sites.length} room/item site(s) need triage)`,
+      rationale:
+        "Recent cycles repeatedly fixed stale prose one instance at a time. This audit measures the narrow structural slice most responsible for that class — room base text naming takeable objects after they may be removed — without turning the noisy first pass into shipped-pack warnings. The next move is to tune suppressions or promote the proven subset into validation.",
+      evidence: examples,
+      impact: 3,
+      effort: "M",
+      score: score(3, "M", "engine"),
     });
   }
 
@@ -755,6 +861,11 @@ export function assess(root: string): Assessment {
   );
   const parserGenDrift = generatorParserDriftCandidate(parserGenChecks);
   if (parserGenDrift) candidates.push(parserGenDrift);
+  const allGeneratorsClean = allGeneratedChecksClean([
+    ...genChecks,
+    ...rpgGenChecks,
+    ...parserGenChecks,
+  ]);
 
   // Deterministic ordering: score desc, then — among equal scores — rotate the
   // blind-playtest pass onto the LEAST-recently-attended pack (never-attended first,
@@ -776,7 +887,7 @@ export function assess(root: string): Assessment {
   candidates.sort(
     (a, b) => b.score - a.score || recencyOf(a) - recencyOf(b) || a.id.localeCompare(b.id),
   );
-  return { packsByMode, packs, candidates, top: candidates[0] ?? null };
+  return { packsByMode, packs, allGeneratorsClean, candidates, top: candidates[0] ?? null };
 }
 
 export function formatAssessment(a: Assessment): string {
@@ -788,6 +899,7 @@ export function formatAssessment(a: Assessment): string {
       .map(([m, n]) => `${m}=${n}`)
       .join("  ")}`,
   );
+  lines.push(`Generator mint-and-check: ${a.allGeneratorsClean ? "clean" : "findings present"}`);
   lines.push("");
   lines.push("## Pack health");
   for (const p of a.packs) {

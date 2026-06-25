@@ -37,7 +37,15 @@ export const EffectSchema = z.union([
     })
     .strict(),
   z
-    .object({ place_object: z.object({ id: z.string().min(1), room: z.string().min(1) }).strict() })
+    .object({
+      place_object: z
+        .object({
+          id: z.string().min(1),
+          room: z.string().min(1),
+          takenBy: z.enum(["player", "world"]).optional(),
+        })
+        .strict(),
+    })
     .strict(),
   // Stage 4 (§13, §14 gate): advance a quest to a named stage. Reuses the
   // questStage field already in GameState (§6); deterministic, no randomness.
@@ -228,7 +236,10 @@ export function applyEffect(
     return {
       state: {
         ...state,
-        objectState: patchObject(state, effect.place_object.id, { room: effect.place_object.room }),
+        objectState: patchObject(state, effect.place_object.id, {
+          room: effect.place_object.room,
+          ...(effect.place_object.takenBy ? { takenBy: effect.place_object.takenBy } : {}),
+        }),
       },
       event: {
         type: "state_change",

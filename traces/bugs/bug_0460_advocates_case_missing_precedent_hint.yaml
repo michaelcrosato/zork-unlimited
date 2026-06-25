@@ -1,0 +1,27 @@
+id: bug_0460_advocates_case_missing_precedent_hint
+title: "Advocate's Case antechamber signposts missing guild precedent"
+pack: content/rpg/pack/advocates_case.yaml
+reported_by: blind-playtest
+report: blind-tester/reports/20260622T195456Z_advocates_case_seed7.md
+severity: S3
+symptom: >
+  A blind playtest identified a latent route problem: a player who reached the
+  alderman's antechamber after reading only the charter and town register saw
+  Craf blocking the door, no legal USE action, and no explicit pointer back to
+  the guild conviction ledger. Combat could look like the only remaining path
+  even though the legal route was still available elsewhere.
+root_cause: >
+  The antechamber's base description was static until the appeal was overruled
+  or Craf was defeated. It did not distinguish an incomplete legal sequence from
+  a fully prepared appeal state, so the missing prior-convictions evidence was
+  not surfaced at the point where the player most needed the hint.
+fix: >
+  Add a reactive antechamber variant for states where priors_read is still unset.
+  It explains that the charter and register are not enough by themselves and
+  points the player back to the guild records room west of Marta's stall.
+tests:
+  - tests/regression/advocates_case_missing_precedent_hint.test.ts
+verification:
+  - npm test -- --run tests/regression/advocates_case_missing_precedent_hint.test.ts
+  - npm run validate -- content/rpg/pack/advocates_case.yaml
+  - npm run health

@@ -79,6 +79,14 @@
 meta:
   id: apothecaries_standard_v1
   title: "The Apothecary's Standard"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Apothecaries' Hall"
+    quest: "test the adulterated standard"
+    role: "apothecary examiner"
+    connection: "Charterhaven's physic trade depends on the hall standard, so a false measure poisons more than one shop."
   start_room: shop_counter
   flags_init: []
   vars_init: { steadiness: 3 }
@@ -97,12 +105,79 @@ rooms:
       uses for sampling. The dispensary lies east; the shop door north is shut;
       the back passage runs south.
     variants:
-      - when: [{ has_flag: proved_substitution }]
+      - when:
+          - has_flag: proved_substitution
+          - has_item: sample_vials
+          - has_item: suspect_vial
+          - has_item: glass_drawstick
         text: >
-          The shop counter, the comparison complete. The suspect vial and the
-          dispensatory lie open side by side; the pharmacopoeia's taste criteria
-          and the vial's result are irreconcilable. The dispensary is east; the
+          The shop counter, the comparison complete. The open pharmacopoeia
+          anchors the standard, while the suspect vial and glass drawstick are
+          with you as evidence rather than lying at their starting places. The
+          dispensary is east; the door north stands clear; the back passage runs
+          south.
+      - when:
+          - has_flag: proved_substitution
+          - has_item: sample_vials
+          - has_item: glass_drawstick
+        text: >
+          The shop counter, the comparison complete. The open pharmacopoeia
+          anchors the standard, and the glass drawstick is with you, carrying the
+          taste result that proved the substitution. The dispensary is east; the
           door north stands clear; the back passage runs south.
+      - when:
+          - has_flag: proved_substitution
+          - has_item: suspect_vial
+          - has_item: glass_drawstick
+        text: >
+          The shop counter, the comparison complete. The open pharmacopoeia
+          anchors the standard, while the suspect vial and glass drawstick are
+          with you as evidence rather than lying at their starting places. The
+          sealed sample vials still need to be taken from the dispensary before
+          the Society's case can leave by the shop door north. The dispensary is
+          east; the back passage runs south.
+      - when:
+          - has_flag: proved_substitution
+          - has_item: glass_drawstick
+        text: >
+          The shop counter, the comparison complete. The open pharmacopoeia
+          anchors the standard, and the glass drawstick is with you, carrying the
+          taste result that proved the substitution. The sealed sample vials still
+          need to be taken from the dispensary before the Society's case can leave
+          by the shop door north. The dispensary is east; the back passage runs
+          south.
+      - when:
+          - has_item: suspect_vial
+          - has_item: glass_drawstick
+        text: >
+          Thomas Crace's apothecary shop, shuttered for the evening. The long
+          counter still holds the day's remaining stock — rows of earthenware
+          jars, rolled plasters, and a weighing box — but the suspect vial and
+          glass drawstick are now in your evidence kit. The Pharmacopoeia
+          Londinensis lies open on the reading stand at the counter's end. The
+          dispensary lies east; the shop door north is shut; the back passage
+          runs south.
+      - when:
+          - has_item: suspect_vial
+        text: >
+          Thomas Crace's apothecary shop, shuttered for the evening. The long
+          counter still holds the day's remaining stock — rows of earthenware
+          jars, rolled plasters, and a weighing box — but the suspect vial is
+          with you now. The Pharmacopoeia Londinensis lies open on the reading
+          stand at the counter's end; the testing drawer below still holds the
+          glass drawstick Crace uses for sampling. The dispensary lies east; the
+          shop door north is shut; the back passage runs south.
+      - when:
+          - has_item: glass_drawstick
+        text: >
+          Thomas Crace's apothecary shop, shuttered for the evening. The long
+          counter holds the day's remaining stock — rows of earthenware jars,
+          rolled plasters, and a weighing box. Near the till drawer the suspect
+          laudanum vial remains set apart, left by the physician who raised the
+          complaint. The Pharmacopoeia Londinensis lies open on the reading stand
+          at the counter's end; the testing drawer below is empty where the glass
+          drawstick had been kept. The dispensary lies east; the shop door north
+          is shut; the back passage runs south.
     objects: [dispensatory, suspect_vial, glass_drawstick, counter_stock]
     exits:
       - direction: north
@@ -110,9 +185,9 @@ rooms:
         conditions: [{ has_item: sample_vials }, { has_flag: proved_substitution }]
         locked_msg: >
           The shop door stands shut. The Society's case is not yet assembled:
-          both the comparison result and the sealed sample vials are needed.
-          The dispensatory and the suspect vial are here to be compared; the
-          sample vials are in the dispensary east.
+          the comparison result and the sealed sample vials both have to leave
+          with you. Finish the work at the counter and in the dispensary before
+          presenting it.
       - { direction: east, to: dispensary }
       - { direction: south, to: back_passage }
 
@@ -128,11 +203,26 @@ rooms:
       nearest carboy. The dispensing ledger lies open on the bench. The shop
       counter is west; the store loft is north.
     variants:
+      - when: [{ has_item: sample_vials }, { has_item: glass_drawstick }, { not_flag: drain_checked }]
+        text: >
+          The dispensary, the sample vials secured. The poppy-syrup carboys still
+          stand against the south wall, and the drain-cock at the nearest bung
+          could still be checked with the glass drawstick to date the batch's last
+          decanting; at worst, a slip would spill only a few sweet drops. The shop
+          counter is west; the store loft is north.
       - when: [{ has_item: sample_vials }]
         text: >
           The dispensary, the sample vials secured. The poppy-syrup carboys still
           stand against the south wall. The shop counter is west; the store loft
           is north.
+      - when: [{ has_item: glass_drawstick }, { not_flag: drain_checked }]
+        text: >
+          The working dispensary behind the counter: a mortar and pestle on the
+          stone bench, balance-weights on a hook, and carboys of pale poppy syrup
+          against the south wall. The drain-cock at the nearest bung can be checked
+          with the glass drawstick to date the batch's last decanting; at worst, a
+          slip would spill only a few sweet drops. The dispensing ledger lies open
+          on the bench. The shop counter is west; the store loft is north.
     objects: [poppy_carboy, dispensing_ledger, drain_cock, sample_vials, mortar_pestle]
     exits:
       - { direction: west, to: shop_counter }
@@ -386,6 +476,7 @@ objects:
         item: glass_drawstick
         target: drain_cock
         command_verb: check
+        command_template: "check {target} with {item}"
         conditions: [{ has_item: glass_drawstick }, { not_flag: drain_checked }]
         skill_check:
           skill: steadiness
@@ -536,6 +627,19 @@ endings:
 
   - id: ending_withdrawn
     title: "The Back Passage"
+    variants:
+      - when: [{ has_item: sample_vials }, { has_flag: proved_substitution }]
+        text: >
+          You stepped out of Crace's shop into the back passage with the sealed
+          sample vials in your coat and the comparison complete. The Society's
+          case was assembled, but you took it away from the formal door and the
+          nine o'clock court all the same. By morning the record had no
+          presented finding: Crace had the warning that a search had reached his
+          counter, and time enough to move the carboys, the dispensing ledger,
+          and the private accounts before another officer came by the front.
+          The evidence in your hands was true; unpresented, it did not close the
+          shop.
+          *** The case withdrawn. ***
     text: >
       You stepped out of Crace's shop into the back passage and turned toward
       the street. Whatever you had found — the taste result, perhaps, or the

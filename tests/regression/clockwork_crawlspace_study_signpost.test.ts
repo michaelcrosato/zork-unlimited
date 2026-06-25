@@ -5,20 +5,20 @@
  * A blind MCP playtester (seed 7, report
  * ai-runs/2026-06-08T15-44-14-673Z/playtest.md §5 Bug 1) took the natural
  * crawlspace-first route (inspect clock → kitchen for picks → crack strongbox)
- * and reached ending_truth at 20/45. The design intends the crawlspace truth
- * route to max at 30 (ledger +10 + confession +20), but the bounce-back narrated
- * only "Better search the manor for it before you crawl back here" — a generic
- * prompt that sent players straight to the kitchen, bypassing the study.
+ * and originally reached ending_truth at 20/45. The bounce-back narrated only
+ * "Better search the manor for it before you crawl back here" — a generic prompt
+ * that sent players straight to the kitchen, bypassing the study.
  *
  * Fix (content, pure prose): the study_strongbox narrate now names both
  * destinations — "the kitchens are off the foyer below, and the steward's study
  * waits up the stair" — so a crawlspace-first player sees a clear prompt to visit
- * the study before returning. No flag/score/choice/route/ending change.
+ * the study before returning. bug_0461 later changed the route's score outcome,
+ * but this test still locks the study signpost.
  *
  * Locked here:
  *   (1) study_strongbox narrate references "study" and "kitchen";
- *   (2) crawlspace route without ledger scores 20/45 (baseline unchanged);
- *   (3) crawlspace route with ledger scores 30/45 (intended max, now reachable);
+ *   (2) crawlspace route without ledger now scores 45/45 after bug_0461;
+ *   (3) crawlspace route with ledger also scores 45/45 via the ledger-aware capstone;
  *   (4) both routes still reach ending_truth.
  */
 import { describe, it, expect } from "vitest";
@@ -26,6 +26,8 @@ import { loadPackFile } from "../../src/cyoa/pack.js";
 import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { Action } from "../../src/api/types.js";
+import { buildObservation } from "../../src/cyoa/observation.js";
+import type { GameState } from "../../src/core/state.js";
 
 const loaded = loadPackFile("content/cyoa/pack/clockwork_heist.yaml");
 if (!loaded.ok) throw new Error("clockwork_heist pack must compile");
@@ -33,10 +35,18 @@ const index = indexPack(loaded.compiled.pack);
 const rules = buildRules(index);
 const choose = (id: string): Action => ({ type: "CHOOSE", choiceId: id });
 
+function actionIds(state: GameState): string[] {
+  return buildObservation(index, state).available_actions.map((a) => a.id);
+}
+
 function play(ids: string[], seed = 7) {
   const step = makeStep(rules);
   let s = initStateForPack(index, seed);
-  for (const id of ids) s = step(s, choose(id)).state;
+  for (const id of ids) {
+    const result = step(s, choose(id));
+    expect(result.ok, `"${id}" legal from ${s.current}; legal=[${actionIds(s)}]`).toBe(true);
+    s = result.state;
+  }
   return s;
 }
 
@@ -50,7 +60,7 @@ const WITHOUT_LEDGER = [
   "open_strongbox",
 ];
 
-// Crawlspace route that ALSO reads the ledger — the intended 30-point path.
+// Crawlspace route that ALSO reads the ledger.
 const WITH_LEDGER = [
   "inspect_clock",
   "climb_stairs",
@@ -62,7 +72,7 @@ const WITH_LEDGER = [
   "take_pick",
   "back_foyer",
   "pry_panel",
-  "open_strongbox",
+  "open_strongbox_after_ledger",
 ];
 
 describe("bug_0326 — crawlspace bounce-back now names the study as a destination", () => {
@@ -80,18 +90,18 @@ describe("bug_0326 — crawlspace bounce-back now names the study as a destinati
     expect(narrate).toContain("kitchen");
   });
 
-  it("crawlspace route without ledger scores 20/45 (baseline)", () => {
+  it("crawlspace route without ledger scores 45/45", () => {
     const s = play(WITHOUT_LEDGER);
     expect(s.ended).toBe(true);
     expect(s.endingId).toBe("ending_truth");
-    expect(s.vars.score).toBe(20);
+    expect(s.vars.score).toBe(45);
   });
 
-  it("crawlspace route with ledger scores 30/45 (intended max)", () => {
+  it("crawlspace route with ledger also scores 45/45", () => {
     const s = play(WITH_LEDGER);
     expect(s.ended).toBe(true);
     expect(s.endingId).toBe("ending_truth");
-    expect(s.vars.score).toBe(30);
+    expect(s.vars.score).toBe(45);
   });
 
   it("both routes reach ending_truth", () => {

@@ -1,0 +1,23 @@
+id: bug_0444_bridgewrights_visible_crack_trap
+title: "Bridgewrights plan warning maps to a real visible-crack trap"
+pack: content/rpg/pack/bridgewrights_proof.yaml
+reported_by: blind-playtest
+report: blind-tester/reports/20260622T161435Z_bridgewrights_proof_seed7.md
+severity: S2
+symptom: >
+  The truss plan warned that striking the visible crack would split the kingpost,
+  but the game offered no action that actually struck the crack, making the key
+  engineering warning inert.
+root_cause: >
+  The pack had one mallet interaction on cracked_kingpost for the correct brace
+  action; the visible crack was only prose and not an addressable target.
+fix: >
+  Added a visible_crack object in the bridge yard and a distinct "strike visible
+  crack with brace mallet" interaction that enters the existing failed-brace
+  state, while preserving the proper brace action as the full-score route.
+tests:
+  - tests/regression/bridgewrights_proof_visible_crack_trap.test.ts
+verification:
+  - npm test -- --run tests/regression/bridgewrights_proof_visible_crack_trap.test.ts tests/regression/bridgewrights_proof_route_specific_ending.test.ts
+  - npm run validate -- content/rpg/pack/bridgewrights_proof.yaml
+  - npm run health

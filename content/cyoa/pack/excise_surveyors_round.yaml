@@ -49,13 +49,21 @@
 #                             tested_gravity + measured_grain + checked_declarations)
 #   +10 accept_declared_figures — Carrick's declared figures taken without
 #                             independent measurement (gate: checked_declarations
-#                             + not_flag measured_tun)
+#                             + no contrary survey evidence)
 #    +0 leave_without_filing
 # Best path: all six clues (+30) + either +20 terminal = 50.
 
 meta:
   id: excise_surveyors_round_v1
   title: "The Surveyor's Round"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Maltsters' Ward"
+    quest: "prove the hidden excise fraud"
+    role: "excise surveyor"
+    connection: "Charterhaven's revenue office sends surveyors into the malt houses that feed the hub city taverns."
   start: maltsters_office
   flags_init: []
   # `steadiness` (init 3) — stat for the file_concealment_report TENSION beat
@@ -68,8 +76,6 @@ scenes:
   # ── The Maltster's Office (hub / start) ──────────────────────────────────
   - id: maltsters_office
     title: "The Maltster's Office"
-    on_enter:
-      - set_quest_stage: { quest: the_survey, stage: survey_begun }
     variants:
       - when:
           - all_of:
@@ -84,7 +90,8 @@ scenes:
           independent measurements, three unlicensed tubs behind the hay,
           and XIIII scored into a beam: each item alone could be argued
           away; together they cannot. Carrick is in the doorway. He does
-          not speak.
+          not speak. Filing the concealment report now means keeping a
+          steady hand while he watches you write it.
       - when:
           - all_of:
               - { has_flag: measured_tun }
@@ -97,6 +104,33 @@ scenes:
           inconsistent with twelve quarters per batch. You could file that
           assessment today and it would stand. Whether to go further into
           the yard is your choice.
+      - when:
+          - all_of:
+              - { has_flag: checked_declarations }
+              - any_of:
+                  - { has_flag: measured_tun }
+                  - { has_flag: tested_gravity }
+                  - { has_flag: measured_grain }
+                  - { has_flag: found_vessels }
+                  - { has_flag: found_tally }
+        text: >
+          Carrick's declaration is no longer merely untested ink in his own
+          hand. Your notes have begun to check it against the premises
+          themselves, and the early figures already make a clean acceptance
+          impossible. Complete the measurements for a civil assessment, or
+          decide whether the warrant should be pressed into the yard.
+      - when:
+          - any_of:
+              - { has_flag: measured_tun }
+              - { has_flag: tested_gravity }
+              - { has_flag: measured_grain }
+              - { has_flag: found_vessels }
+              - { has_flag: found_tally }
+        text: >
+          The survey is no longer only a warrant and a quiet office. Your
+          notebook holds physical facts from Carrick's premises, but the
+          declaration book still needs to be set beside them before a proper
+          assessment can be filed.
       - when: [ { has_flag: checked_declarations } ]
         text: >
           Carrick has declared twelve quarters per batch, six batches this
@@ -116,14 +150,20 @@ scenes:
         conditions: [ { not_flag: checked_declarations } ]
         effects:
           - set_flag: checked_declarations
+          - set_quest_stage: { quest: the_survey, stage: declarations_checked }
           - add_journal: "Carrick's declaration for the quarter: six batches of twelve quarters each, total seventy-two quarters. Duty declared and paid on that figure. His equipment — two tuns, a steeping cistern, a kiln — is licensed for up to eighteen quarters per batch. A maltster running at two-thirds of rated capacity in exact half-dozens is either unusually tidy or unusually cautious about what the books show."
           - inc_var: { name: score, by: 5 }
         next: maltsters_office
       - id: go_to_malting_floor
         text: "Go to the malting floor to examine the steeping cistern."
+        conditions: [ { not_flag: measured_grain } ]
         next: malting_floor
       - id: go_to_cellar
         text: "Go to the cellar to examine the fermenting tuns."
+        conditions:
+          - any_of:
+              - { not_flag: measured_tun }
+              - { not_flag: tested_gravity }
         next: brew_cellar
       - id: go_to_yard_gate
         text: "Go to the yard and outbuildings at the rear of the premises."
@@ -131,10 +171,15 @@ scenes:
         next: yard_gate
       - id: go_to_yard_outbuildings
         text: "Return to the yard outbuildings."
-        conditions: [ { has_flag: entered_yard } ]
+        conditions:
+          - all_of:
+              - { has_flag: entered_yard }
+              - any_of:
+                  - { not_flag: found_vessels }
+                  - { not_flag: found_tally }
         next: yard_outbuildings
       - id: file_concealment_report
-        text: "Write a report of deliberate concealment and refer the case to the Commissioners."
+        text: "Steady yourself and write the deliberate-concealment report for the Commissioners."
         conditions:
           - all_of:
               - { has_flag: measured_tun }
@@ -150,11 +195,13 @@ scenes:
           difficulty: 11
           on_success:
             - add_journal: "You write the finding without hesitation. Three measurements, three unlicensed tubs, fourteen batches scratched in Roman figures on a beam. The Commissioners will decide whether this is criminal concealment or an accounting error they happen to believe. Your report gives them no room to call it the latter."
+            - set_quest_stage: { quest: the_survey, stage: concealment_report_filed }
             - inc_var: { name: score, by: 20 }
             - goto: ending_concealment
             - end_game: ending_concealment
           on_failure:
             - add_journal: "Your first line is not entirely smooth — Carrick is a substantial man in this town and the Commissioners are in London, and a riding surveyor's word against a maltster's is not always the heavier side of the scale. But the figures do not lie, and a surveyor's job is to write what the figures say."
+            - set_quest_stage: { quest: the_survey, stage: concealment_report_filed }
             - inc_var: { name: score, by: 20 }
             - goto: ending_concealment
             - end_game: ending_concealment
@@ -167,6 +214,7 @@ scenes:
               - { has_flag: measured_grain }
               - { has_flag: checked_declarations }
         effects:
+          - set_quest_stage: { quest: the_survey, stage: measurement_report_filed }
           - inc_var: { name: score, by: 20 }
         next: ending_measured
       - id: accept_declared_figures
@@ -174,12 +222,20 @@ scenes:
         conditions:
           - all_of:
               - { has_flag: checked_declarations }
-              - { not_flag: measured_tun }
+              - none_of:
+                  - { has_flag: measured_tun }
+                  - { has_flag: tested_gravity }
+                  - { has_flag: measured_grain }
+                  - { has_flag: found_vessels }
+                  - { has_flag: found_tally }
         effects:
+          - set_quest_stage: { quest: the_survey, stage: closed_on_declarations }
           - inc_var: { name: score, by: 10 }
         next: ending_accepted
       - id: leave_without_filing
         text: "Leave Carrick's malthouse without making an assessment."
+        effects:
+          - set_quest_stage: { quest: the_survey, stage: warrant_unexercised }
         next: ending_departed
 
   # ── The Malting Floor ────────────────────────────────────────────────────
@@ -203,6 +259,7 @@ scenes:
         conditions: [ { not_flag: measured_grain } ]
         effects:
           - set_flag: measured_grain
+          - set_quest_stage: { quest: the_survey, stage: measurements_underway }
           - add_journal: "The rod reads eighteen quarters in the cistern by volume — a full working batch for equipment of this size. Carrick's declaration says twelve quarters per batch. Either he is making a generous cistern run and under-declaring by a third, or the declaration is simply wrong. The foreman watches you rod the cistern and does not offer a number of his own."
           - inc_var: { name: score, by: 5 }
         next: malting_floor
@@ -226,6 +283,10 @@ scenes:
         text: >
           The tun measurements are in your notebook. The gravity of the
           wort still wants testing.
+      - when: [ { has_flag: tested_gravity } ]
+        text: >
+          The gravity reading is in your notebook. The tuns themselves still
+          want measuring before the cellar can be made part of the assessment.
     text: >
       The cellar is low-ceilinged and smells of fresh wort. Two fermenting
       tuns stand against the far wall, both in active use — foam on the
@@ -236,6 +297,7 @@ scenes:
         conditions: [ { not_flag: measured_tun } ]
         effects:
           - set_flag: measured_tun
+          - set_quest_stage: { quest: the_survey, stage: measurements_underway }
           - add_journal: "Each tun measures forty-eight inches across and thirty-two inches deep: a working volume of approximately four hundred gallons per tun, enough to ferment sixteen quarters of malt per run. Two tuns in active use at that capacity hold thirty-two quarters together — against Carrick's declared twelve. The tuns are not fully loaded, but they are working."
           - inc_var: { name: score, by: 5 }
         next: brew_cellar
@@ -244,6 +306,7 @@ scenes:
         conditions: [ { not_flag: tested_gravity } ]
         effects:
           - set_flag: tested_gravity
+          - set_quest_stage: { quest: the_survey, stage: measurements_underway }
           - add_journal: "The saccharometer reads 1.068 at the sample temperature — a full-working-strength wort, consistent with eighteen to twenty quarters of grain per batch. Weak or short-measure malt yields under 1.050. Carrick is not skimping on the grain; he is running honest batches and declaring dishonest quantities."
           - inc_var: { name: score, by: 5 }
         next: brew_cellar
@@ -268,10 +331,13 @@ scenes:
         conditions: [ { not_flag: entered_yard } ]
         effects:
           - set_flag: entered_yard
+          - set_quest_stage: { quest: the_survey, stage: yard_entered }
           - add_journal: "You read him the relevant clause. He does not move immediately. You step to the latch. He steps aside — not quickly, and not all the way — and you are through. Whatever is in the yard, Carrick did not want you to see it."
         next: yard_outbuildings
       - id: withdraw_from_yard
         text: "Withdraw — three measurements are enough for a civil assessment."
+        effects:
+          - set_quest_stage: { quest: the_survey, stage: civil_scope_chosen }
         next: maltsters_office
 
   # ── The Yard Outbuildings ────────────────────────────────────────────────
@@ -291,6 +357,11 @@ scenes:
         text: >
           Three unlicensed fermenting tubs behind the hay, dry at present.
           The beam above them has not yet been checked.
+      - when: [ { has_flag: found_tally } ]
+        text: >
+          XIIII is cut into the beam above the hidden tubs: fourteen batches,
+          against six declared. The tubs beneath still need measuring before
+          their capacity can be put into the record.
     text: >
       The first outbuilding is a hay store. Behind the front stack, arranged
       against the back wall, are three large fermenting tubs — the same
@@ -302,6 +373,7 @@ scenes:
         conditions: [ { not_flag: found_vessels } ]
         effects:
           - set_flag: found_vessels
+          - set_quest_stage: { quest: the_survey, stage: concealment_evidence_found }
           - add_journal: "Three tubs, each approximately thirty inches across and twenty-four inches deep: working volume around one hundred and fifty gallons each, sufficient to ferment six quarters per tub. None are licensed; none appear in any declaration. The stave joints are still stained at the working level — they have been used recently."
           - inc_var: { name: score, by: 5 }
         next: yard_outbuildings
@@ -310,6 +382,7 @@ scenes:
         conditions: [ { not_flag: found_tally } ]
         effects:
           - set_flag: found_tally
+          - set_quest_stage: { quest: the_survey, stage: concealment_case_built }
           - add_journal: "Cut into the underside of the main beam with the close grain of a blade: Roman figures. You count them twice. XIIII — fourteen batches. Carrick declared six. The difference is eight batches of eighteen-or-more quarters: at least one hundred and forty-four quarters undeclared, at a shilling the quarter. The marks are not recent. They go back at least a season."
           - inc_var: { name: score, by: 5 }
         next: yard_outbuildings

@@ -1,0 +1,25 @@
+id: bug_0451_quarrymens_cale_confrontation
+title: "Quarrymen's Fault makes Cale's proof-route concession playable"
+pack: content/rpg/pack/quarrymens_fault.yaml
+reported_by: blind-playtest
+report: blind-tester/reports/20260622T174413Z_quarrymens_fault_seed7.md
+severity: S2
+symptom: >
+  The clean proof route reached the Foreman's Ramp and immediately narrated Cale
+  lowering his pick handle in room text. The named antagonist was absent from
+  npcs_present, so the climactic proof could not actually be shown to him.
+root_cause: >
+  Cale was modeled only as a combat enemy, and that enemy was gated off after the
+  fault was measured. The proof route then used a room variant plus an unlocked
+  north exit to skip the social confrontation entirely.
+fix: >
+  Added state-gated NPC presence to the shared parser model and authored Cale as
+  a normal dialogue NPC while preserving the unmeasured combat fallback. The road
+  now opens only after the player shows Cale the measured chain run or defeats him,
+  so the perfect-score route must actively present the proof.
+tests:
+  - tests/regression/quarrymens_fault_reactive_taken_items.test.ts
+verification:
+  - npm test -- --run tests/regression/quarrymens_fault_reactive_taken_items.test.ts
+  - npm run validate -- content/rpg/pack/quarrymens_fault.yaml
+  - npm run health

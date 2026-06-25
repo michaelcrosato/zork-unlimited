@@ -47,7 +47,7 @@ function run(pack: ParserPack, ids: string[]) {
   return { index, state };
 }
 
-/** The canonical full-score solution route, ending in the catacombs (the win). */
+/** The canonical full-score solution route, ending with the recovered relic. */
 const WIN_ROUTE = [
   "go_north", // forest_path → chapel_yard
   "go_up", // → bell_tower
@@ -70,8 +70,9 @@ const WIN_ROUTE = [
   "go_west", // → chapel_yard
   "go_north", // → chapel_nave
   "go_down", // → crypt
-  "unlock_crypt_gate", // +20
-  "go_north", // → catacombs (WIN)
+  "unlock_crypt_gate", // opens the gate
+  "go_north", // → catacombs
+  "take_sealed_relic", // +20, WIN
 ];
 
 describe("bug_0034: the well rope is spent, not carried", () => {
@@ -87,6 +88,7 @@ describe("bug_0034: the well rope is spent, not carried", () => {
     const { state } = run(goodPack, WIN_ROUTE);
     expect(state.ended).toBe(true);
     expect(state.visited.catacombs).toBe(true);
+    expect(state.inventory).toContain("sealed_relic");
     expect(state.vars.score).toBe(35);
   });
 

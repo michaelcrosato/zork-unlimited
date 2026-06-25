@@ -1,0 +1,24 @@
+id: bug_0386
+component: blind_report_verifier
+title: "blind report verifier rejected completed reports that wrote the rating before the label"
+severity: moderate
+reported_by: blind_playtest_20260620T142733Z_tide_mill_seed7
+
+symptom: >
+  A completed MCP-only blind playtest of The Tide-Mill produced the required report
+  sections and explicit ratings, but `scripts/verify-blind-report.ts` rejected it with
+  "missing clarity rating." The report used natural prose such as "**5/5 clarity**"
+  and "**4/5 enjoyment**" instead of putting the label before the number.
+
+root_cause: >
+  The report verifier only matched the `clarity ... 5/5` and `enjoyment ... 4/5`
+  order. The AFK loop's mandatory blind-playtest gate therefore had a false negative
+  on a valid report, blocking the quality signal even though the subagent had played
+  through the MCP server successfully.
+
+fix: >
+  The verifier now accepts both label-first ratings and denominator-qualified
+  number-first ratings such as `5/5 clarity`, while leaving the MCP-unavailable
+  rejection patterns unchanged.
+
+tests: tests/regression/blind_report_verifier.test.ts

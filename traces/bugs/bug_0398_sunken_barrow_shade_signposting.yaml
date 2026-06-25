@@ -1,0 +1,49 @@
+id: bug_0398
+pack: sunken_barrow_v1
+title: "shade preparation read optional despite being load-bearing for the wight"
+severity: medium
+scene: entry_hall
+reported_by: blind_playtest_20260620T185635Z_sunken_barrow_seed7
+
+symptom: >
+  The intended safe route is to visit the west cell, speak with the reaver's
+  shade, and take the +3 defense ward before fighting the barrow-wight. A blind
+  playtester did that route and won, but flagged that a direct north-first player
+  would reasonably skip the eerie side cell: the Entry Hall framed west as
+  "something lingers, watchful" rather than safe/helpful counsel, while the
+  unwarded wight fight is very likely fatal. The same pass also found stale
+  return prose ("something lingers" after the shade is known) and an iron-bar
+  examine line that implied a hard strength gate for an actually retryable lever
+  check.
+
+root_cause: >
+  The pack had already made the shade mechanically decisive, but the first-contact
+  prose still treated the west cell as optional atmosphere. Entry Hall's only
+  reactive variant was keyed to `has_item: iron_bar`, so topic flags set by the
+  shade never changed the room description on return. The iron bar's base examine
+  was older than the slab's anti-strength-threshold wording and no longer matched
+  the retryable d20+might mechanic.
+
+fix: >
+  Entry Hall now describes the north passage as a cold an unwarned blade should
+  not meet and the west cell as waiting counsel, not an ambush. New post-shade
+  variants, ordered before the existing `has_item: iron_bar` variant, acknowledge
+  the known reaver's shade and remove the stale "something lingers" mystery. Guard
+  Crypt gives a north-first player one last fair cue that counsel remains behind
+  before attacking, while a warded player sees their preparation acknowledged. The
+  iron bar examine now frames the bar as a patient lever, not a verdict on heroic
+  strength. No route, stat, score, enemy, item, or ending mechanics changed.
+
+tests: tests/regression/sunken_barrow_shade_signposting.test.ts
+
+verification:
+  - npm test -- --run tests/regression/sunken_barrow_shade_signposting.test.ts tests/regression/sunken_barrow_shade_root_short_greeting.test.ts
+  - npm run validate -- content/rpg/pack/sunken_barrow.yaml
+
+trace_repin: >
+  Deliberate, surfaced re-pin of traces/rpg/barrow_victory.json content_hash
+  68bd9e953c33ca5c63eb2fb60d22994148a4c922febd807e2f218529750a1d16 ->
+  c9aee1ee1bd3a8d2c54870199138b777572ab22526513b62099c5bb8ba9e50e5 because
+  the pack YAML changed. The trace actions and expected_final_hash are unchanged;
+  this is the accompanied-by-content-change pattern, not an unaccompanied hash
+  laundering.

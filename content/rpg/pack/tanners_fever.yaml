@@ -42,7 +42,8 @@
 #   +5  READ sick_edric     — overdose symptoms identified (physick+3; one-shot)
 #   +10 READ godwin_notes   — overdose formula confirmed (physick+3; one-shot, must hold)
 #   +10 READ meadowsweet    — corrective ingredient ready (one-shot, must hold)
-#   +10 physick check success — USE meadowsweet ON sick_edric, DC 12 (one-shot)
+#   +10 physick check success — USE meadowsweet ON sick_edric, DC 12 (retires
+#       on success; a failed presentation can be tried again)
 #   +15 market_lane on_enter — WIN (locomotion win)
 #
 # Physick stat calibration (skill checks use d20, combat uses d6):
@@ -61,6 +62,14 @@
 meta:
   id: tanners_fever_v1
   title: "The Tanner's Fever"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Tanner's Sickroom"
+    quest: "correct the fever cure before it kills"
+    role: "medical advocate"
+    connection: "Charterhaven's leather quarter carries sickness fast, and one wrong cure can become a ward-wide death."
   start_room: sickroom
   # `physick` (3 base): systematic clinical observation, knowledge of remedies,
   # and the ability to identify a misdiagnosis in front of the practitioner who
@@ -109,8 +118,15 @@ rooms:
     variants:
       - when: [{ has_flag: notes_read }]
         text: >
-          The apothecary's store. The case notes are already in your hands and
-          the overdose formula is in your head. The sickroom is back to the east.
+          The apothecary's store. Godwin's overdose formula is fixed in your
+          head, and the workbench is bare where the open case notes lay before
+          you took them up. The sickroom is back to the east.
+      - when: [{ has_flag: godwin_notes_taken }]
+        text: >
+          A narrow storeroom: shelves of brown-glass bottles, wrapped-paper
+          packets, a pair of scales, and Godwin's workbench. The bench is bare
+          where his open case notes lay before you took them up. The sickroom is
+          back to the east.
     objects: [godwin_notes]
     exits:
       - { direction: east, to: sickroom }
@@ -123,6 +139,13 @@ rooms:
       a bundle of meadowsweet: the white-flowering plant from the river meadow
       below the town, well-known to any practising surgeon for settling an
       overtaxed stomach. The sickroom is back to the west.
+    variants:
+      - when: [{ has_flag: meadowsweet_taken }]
+        text: >
+          A cool lean-to off the east side of the house, the walls hung with
+          drying bundles — yarrow, shepherd's purse, dried betony. The green hook
+          is empty where the meadowsweet bundle hung before you took it down.
+          The sickroom is back to the west.
     objects: [meadowsweet]
     exits:
       - { direction: west, to: sickroom }
@@ -230,7 +253,7 @@ objects:
               than someone whose treatment is making a fever worse. The dosage
               formula will be in the case notes.
       # The treatment: USE meadowsweet ON sick_edric — physick skill check, DC 12.
-      # One-shot: confrontation_attempted set on BOTH branches.
+      # Retires only on success. A failed presentation leaves the evidence and remedy live.
       # Requires meadowsweet in inventory (implicit via item field).
       - verb: USE
         item: meadowsweet
@@ -262,19 +285,18 @@ objects:
                 to read. Then he nods. A short nod, the kind that costs something.
                 He steps aside. You administer the meadowsweet; Edric swallows it.
           on_failure:
-            - set_flag: confrontation_attempted
             - add_journal: >
-                The argument broke apart — the sequence wrong, the formula not
-                yet named when the remedy was already in hand. Godwin found the
-                gap between the observations and the conclusion. Holt is watching
-                from the corridor doorway.
+                The argument faltered under Godwin's practiced certainty, but
+                the case notes and meadowsweet remain in your hands. The
+                overdose formula is still named, the remedy is still correct,
+                and the treatment question is not closed.
             - narrate: >
-                The reasoning comes out in the wrong order — the remedy proposed
-                before the mechanism of harm is fully named, the dose figures cited
-                before the reference standard is in hand. Godwin finds the gap
-                between the observation and the conclusion and holds it, calmly,
-                with sixty years of practice behind him. He takes a step toward the
-                bed. Holt has appeared in the corridor doorway.
+                Your first presentation falters. Godwin leans on sixty years of
+                practice and holds the room for a moment, but he has not taken the
+                notes from you and he has not disproved the numbers: three parts
+                wormwood extract to one part water against the one-to-one standard.
+                The meadowsweet is still in your hand, Edric is still losing fluid,
+                and you can put the evidence to Godwin again.
 
   - id: godwin_notes
     name: "Godwin's case notes"
@@ -285,17 +307,32 @@ objects:
       Godwin's case book for the month: each patient, each diagnosis, the
       preparation instructions in precise notation. Edric's entry runs for five
       days — the fever correctly identified at the outset, the wormwood tonic
-      prescribed the morning of the second day. The formula column gives the
-      preparation strength as three parts wormwood extract to one part water:
-      three times the standard dose listed in the reference table on the facing
-      page.
+      prescribed the morning of the second day. The formula column is dense with
+      ratios and reference marks, enough to show that Godwin increased the
+      preparation strength but not enough to make the case without a close read
+      against the facing table.
     variants:
       - when: [{ has_flag: notes_read }]
         text: >
           Godwin's case notes, already read — the overdose formula in your head:
           three to one against the reference standard of one to one. He had
           reasons for the strength he chose; the reasons do not make the dose safe.
+      - when:
+          - all_of:
+              - { has_flag: godwin_notes_taken }
+              - { not_flag: notes_read }
+        text: >
+          Godwin's case notes are in your hand: a close, confident case book with
+          Edric's fever entry open among dense ratios, dose marks, and a facing
+          reference table. The numbers are there, but only reading them carefully
+          will turn them into evidence you can use at the bedside.
     takeable: true
+    take_effects:
+      - set_flag: godwin_notes_taken
+      - narrate: >
+          The dose columns are too dense to carry by memory from a glance. You will
+          need to read the notes closely against the reference table before the
+          formula is useful.
     read_text: >
       Edric's entry, five days running: autumn fever, correctly identified.
       Preparation entry for the wormwood tonic: three parts extract to one part
@@ -341,6 +378,8 @@ objects:
       surgeon: settles an overtaxed stomach, reduces inflammation, allows the
       gut to resume normal absorption. The opposite of wormwood at high dose.
     takeable: true
+    take_effects:
+      - set_flag: meadowsweet_taken
     read_text: >
       Meadowsweet — white-flowered, from the river meadow, cut this autumn and
       well-hung. Anti-inflammatory, stomach-settling: it counteracts exactly the
@@ -400,7 +439,11 @@ npcs:
             - when: [{ has_flag: confrontation_attempted }]
               text: >
                 I have heard your assessment. My clinical judgment stands.
-            - when: [{ any_of: [{ has_flag: asked_diagnosis }, { has_flag: asked_dose }] }]
+            - when:
+                - any_of:
+                    - { has_flag: asked_diagnosis }
+                    - { has_flag: asked_dose }
+                    - { has_flag: asked_recovery }
               text: >
                 I believe I have answered your questions.
           topics:

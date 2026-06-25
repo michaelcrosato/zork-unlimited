@@ -24,7 +24,7 @@ import type { GameEvent } from "../core/events.js";
 import type { Resolution, Rules } from "../core/engine.js";
 import { rngForStep, type Rng } from "../core/rng.js";
 import { type ParserIndex } from "./model.js";
-import { enumerateActions, resolveParserAction, useInteraction } from "./legal_actions.js";
+import { enumerateActions, present, resolveParserAction, useInteraction } from "./legal_actions.js";
 import { resolveSkillCheck } from "../rpg/combat.js";
 import { SCORE_VAR } from "./schema.js";
 
@@ -98,7 +98,8 @@ export function buildParserRules(
       if (action.type === "USE") {
         const it = useInteraction(index, action.target, action.item);
         if (it?.skill_check) {
-          if (!state.inventory.includes(action.item)) return null;
+          if (!present(index, state, action.target)) return null;
+          if (action.item !== undefined && !state.inventory.includes(action.item)) return null;
           if (!evalConditions(it.conditions, state)) return null;
           return resolveSkillCheck(state, it.skill_check, rngFor(state));
         }

@@ -52,7 +52,7 @@ const objName = (index: ParserIndex, state: GameState, id: string): string => {
 };
 
 /** True if `id` is reachable for the player right now (held or visible in the room). */
-function present(index: ParserIndex, state: GameState, id: string): boolean {
+export function present(index: ParserIndex, state: GameState, id: string): boolean {
   if (state.inventory.includes(id)) return true;
   return visibleObjectIds(index, state, state.current).includes(id);
 }
@@ -62,7 +62,7 @@ function present(index: ParserIndex, state: GameState, id: string): boolean {
 export function useInteraction(
   index: ParserIndex,
   target: string,
-  item: string,
+  item?: string,
 ): Interaction | undefined {
   return index.objects
     .get(target)
@@ -118,15 +118,17 @@ export function resolveParserAction(
       const o = index.objects.get(action.item);
       if (!o || !o.takeable || state.inventory.includes(action.item)) return null;
       if (!visibleObjectIds(index, state, here).includes(action.item)) return null;
-      // take_effects (bug_0107) fire after the pickup, so a goal item can award its
-      // climactic points on the deliberate CLAIM. One-shot: once held the object isn't
-      // takeable-visible, so TAKE can't re-resolve and the effects can't re-fire.
+      const takeEffects =
+        state.objectState[action.item]?.takenBy === "player" ? [] : (o.take_effects ?? []);
+      // take_effects (bug_0107) fire after the first pickup, so a goal item can award
+      // climactic points on the deliberate CLAIM. If the item is dropped and re-taken,
+      // objectState.takenBy records that the claim already happened (bug_0383).
       return {
         conditions: [],
         effects: [
           { add_item: action.item },
           { narrate: `You take the ${o.name}.` },
-          ...(o.take_effects ?? []),
+          ...takeEffects,
         ],
       };
     }
@@ -141,7 +143,7 @@ export function resolveParserAction(
         conditions: [],
         effects: [
           { remove_item: action.item },
-          { place_object: { id: action.item, room: here } },
+          { place_object: { id: action.item, room: here, takenBy: "player" } },
           { narrate: `You drop the ${o.name}.` },
         ],
       };
@@ -180,9 +182,11 @@ export function resolveParserAction(
     }
     case "USE": {
       const it = useInteraction(index, action.target, action.item);
-      if (!it || !state.inventory.includes(action.item) || !present(index, state, action.target))
-        return null;
-      return { conditions: [{ has_item: action.item }, ...it.conditions], effects: it.effects };
+      if (!it || !present(index, state, action.target)) return null;
+      if (action.item !== undefined && !state.inventory.includes(action.item)) return null;
+      const itemConditions: Condition[] =
+        action.item === undefined ? [] : [{ has_item: action.item }];
+      return { conditions: [...itemConditions, ...it.conditions], effects: it.effects };
     }
     case "MOVE": {
       const room = index.rooms.get(here);
@@ -197,7 +201,7 @@ export function resolveParserAction(
       const root = npc.dialogue.nodes[ord - 1];
       if (!root) return null;
       return {
-        conditions: [],
+        conditions: npc.conditions ?? [],
         effects: [
           { set_var: { name: dlgVar(npc.id), value: ord } },
           ...root.effects,
@@ -329,15 +333,20 @@ export function enumerateActions(index: ParserIndex, state: GameState): ParserAc
     push(option(index, state, `drop_${item}`, `drop ${oName}`, { type: "DROP", item }));
   }
 
-  // USE interactions across the pack whose item is held and target is present.
+  // USE interactions across the pack whose target is present and whose optional item is held.
   // A self-targeted USE (item === target) is the "consume this thing" pattern —
   // drink the phial, eat the bread — and reads as `use <obj>`, not the nonsensical
   // `use <obj> on <obj>`.
   for (const o of index.pack.objects) {
     for (const it of o.interactions) {
-      if (it.verb !== "USE" || it.item === undefined || it.target === undefined) continue;
-      const selfUse = it.item === it.target;
-      const id = selfUse ? `use_${it.item}` : `use_${it.item}_on_${it.target}`;
+      if (it.verb !== "USE" || it.target === undefined) continue;
+      const selfUse = it.item !== undefined && it.item === it.target;
+      const id =
+        it.item === undefined
+          ? `use_${it.target}`
+          : selfUse
+            ? `use_${it.item}`
+            : `use_${it.item}_on_${it.target}`;
       // A USE may declare a natural verb (command_verb) so the listed command matches
       // the prose that primes it; the id stays verb-agnostic and stable. A self-USE
       // reads "<verb> <obj>" ("drink black phial"). An item-on-target USE reads via
@@ -345,20 +354,23 @@ export function enumerateActions(index: ParserIndex, state: GameState): ParserAc
       // the word order/preposition match too, falling back to "<verb> <item> on
       // <target>" when no template is given, or the generic "use ... on ..." with no
       // command_verb at all.
-      const itemName = objName(index, state, it.item);
+      const itemName = it.item === undefined ? "" : objName(index, state, it.item);
       const targetName = objName(index, state, it.target);
-      const command = selfUse
-        ? `${it.command_verb ?? "use"} ${itemName}`
-        : it.command_verb !== undefined
-          ? (it.command_template ?? `${it.command_verb} {item} on {target}`)
-              .replace("{item}", itemName)
-              .replace("{target}", targetName)
-          : `use ${itemName} on ${targetName}`;
-      const opt = option(index, state, id, command, {
-        type: "USE",
-        item: it.item,
-        target: it.target,
-      });
+      const command =
+        it.item === undefined
+          ? `${it.command_verb ?? "use"} ${targetName}`
+          : selfUse
+            ? `${it.command_verb ?? "use"} ${itemName}`
+            : it.command_verb !== undefined
+              ? (it.command_template ?? `${it.command_verb} {item} on {target}`)
+                  .replace("{item}", itemName)
+                  .replace("{target}", targetName)
+              : `use ${itemName} on ${targetName}`;
+      const action: Action =
+        it.item === undefined
+          ? { type: "USE", target: it.target }
+          : { type: "USE", item: it.item, target: it.target };
+      const opt = option(index, state, id, command, action);
       // Surface the rolled skill + difficulty + die type when this USE is a skill check,
       // so the listed command reads as the intentional d20 roll it is (bug_0274). `die`
       // surfaces the ceiling so the check never looks impossible (bug_0311). Never branch
@@ -376,6 +388,7 @@ export function enumerateActions(index: ParserIndex, state: GameState): ParserAc
 
   // NPCs present.
   for (const npc of index.npcByRoom.get(here) ?? []) {
+    if (!evalConditions(npc.conditions ?? [], state)) continue;
     push(
       option(index, state, `talk_${npc.id}`, `talk to ${npc.name}`, { type: "TALK", npc: npc.id }),
     );

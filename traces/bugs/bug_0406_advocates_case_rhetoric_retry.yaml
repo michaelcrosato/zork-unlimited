@@ -1,0 +1,35 @@
+id: bug_0406
+pack: advocates_case_v1
+title: "Failed rhetoric check permanently closed the legal argument path"
+severity: high
+scene: aldermans_antechamber
+reported_by: blind_playtest_20260621T070358Z_advocates_case_seed7
+
+symptom: >
+  A blind playtester gathered every document, then rolled a natural 1 on the
+  rhetoric check. The failure text said to come back with the sequence, but the
+  use_prior_convictions_on_case_record action disappeared permanently and no
+  corrected argument action replaced it. The only remaining progress was combat.
+
+root_cause: >
+  The failed skill-check branch set appeal_attempted, and that same flag was the
+  one-shot guard retiring the only legal USE interaction. The failure narration
+  taught the correct charter-register-precedent sequence, but content did not
+  expose any post-failure interaction that used that new knowledge.
+
+fix: >
+  Add a post-failure recovery USE interaction on the case record. Once the player
+  has read the charter, register, and prior convictions, a failed first attempt
+  unlocks a corrected register-led presentation that overrules Oswin and awards
+  the same legal-path score. Craf is also gated off after oswin_overruled so the
+  action list matches the prose that he steps aside.
+
+tests: tests/regression/advocates_case_rhetoric_retry.test.ts
+
+verification:
+  - npm test -- --run tests/regression/advocates_case_rhetoric_retry.test.ts
+  - npm run validate -- content/rpg/pack/advocates_case.yaml
+
+trace_repin: >
+  None. The change updates pack content and adds a regression test; there is no
+  committed Advocate's Case replay trace hash to repin.

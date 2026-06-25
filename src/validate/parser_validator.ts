@@ -25,7 +25,7 @@
 import { exitFlag, type Effect } from "../core/effects.js";
 import { evalConditions, type Condition } from "../core/conditions.js";
 import { indexParserPack, initStateForParserPack } from "../parser/model.js";
-import { type ParserPack, type GameObject, SCORE_VAR } from "../parser/schema.js";
+import { type ParserPack, type GameObject, type Interaction, SCORE_VAR } from "../parser/schema.js";
 import { type Finding, type ValidationReport, makeReport } from "./report.js";
 
 const err = (code: string, message: string, where: string[]): Finding => ({
@@ -40,6 +40,8 @@ const warn = (code: string, message: string, where: string[]): Finding => ({
   message,
   where,
 });
+const hasDeclaredVar = (vars: Record<string, number>, name: string): boolean =>
+  Object.prototype.hasOwnProperty.call(vars, name);
 
 /**
  * Extra facts a higher layer (the RPG validator, §13 Stage 4) can inject: flags
@@ -57,20 +59,18 @@ export type ValidateParserOptions = {
   extraSettableFlags?: string[];
   extraObtainable?: string[];
   /**
-   * Extra `score` points the RPG layer (§13 Stage 4) can award through branches the
-   * parser validator does not scan — enemy `on_defeat` and skill-check
-   * `on_success`/`on_failure`. Folded into the SCORE_UNREACHABLE upper bound so a
-   * score legitimately earned by winning a fight or passing a check is not
-   * mis-flagged unreachable. These award sites are genuinely reachable (combat
-   * winnability and skill-check passability are guarded by the RPG validator), so
-   * counting them sharpens the conservative bound rather than weakening it. Default 0.
+   * Extra `score` points a higher layer (§13 Stage 4) can award through branches
+   * this parser pass does not own, such as enemy `on_defeat`. Authored parser
+   * skill-check branches are scanned natively. Folded into the SCORE_UNREACHABLE
+   * upper bound so score legitimately earned by winning a fight is not mis-flagged
+   * unreachable. Default 0.
    */
   extraScoreAwards?: number;
   /**
-   * Declared effects the RPG layer (§13 Stage 4) fires through branches the parser
-   * scan never walks — enemy `on_defeat`, skill-check `on_success`/`on_failure`.
-   * Folded into the WIN_FIRES_AT_START falsifier set so a win that one of those
-   * branches can falsify is correctly judged escapable (not flagged). Default empty.
+   * Declared effects a higher layer (§13 Stage 4) fires through branches this
+   * parser pass does not own, such as enemy `on_defeat`. Folded into the
+   * WIN_FIRES_AT_START falsifier set so a win that one of those branches can
+   * falsify is correctly judged escapable (not flagged). Default empty.
    */
   extraFalsifierEffects?: Effect[];
   /**
@@ -82,22 +82,19 @@ export type ValidateParserOptions = {
    */
   extraVolatileVars?: string[];
   /**
-   * Effect lists the RPG layer fires through branches the parser scan never groups —
-   * each enemy `on_defeat` and each skill-check `on_success`/`on_failure`. Handed to
-   * the SCORE_PEAKS_BEFORE_WIN check (below) as whole lists (not a flattened scalar
-   * like `extraScoreAwards`) so it can tell whether a score award is CO-LOCATED with
-   * the act that sets a win-trigger flag. Default empty; no current RPG pack wins on a
-   * `has_flag`, so this is coverage for future packs, never a behaviour change today.
+   * Effect lists a higher layer fires through branches this parser pass does not
+   * own, such as enemy `on_defeat`. Handed to the SCORE_PEAKS_BEFORE_WIN check
+   * (below) as whole lists (not a flattened scalar like `extraScoreAwards`) so it
+   * can tell whether a score award is CO-LOCATED with the act that sets a
+   * win-trigger flag. Default empty.
    */
   extraEffectLists?: Effect[][];
   /**
-   * Quest stages that runtime mechanics set through branches the parser scan never
-   * walks — enemy `on_defeat`, skill-check `on_success`/`on_failure`. Each entry is a
+   * Quest stages that higher-layer mechanics set through branches this parser pass
+   * does not own, such as enemy `on_defeat`. Each entry is a
    * `questStageKey(quest, stage)` composite key. Folded into the settable-stages set
-   * for the IMPOSSIBLE_QUEST_STAGE feasibility check so a quest_stage gate legitimately
-   * satisfied by a combat/skill-check `set_quest_stage` (e.g. an RPG pack that levers a
-   * seal open on a skill check) is not mis-flagged impossible. Mirrors
-   * `extraSettableFlags`. Default empty, so pure parser packs are byte-identical.
+   * for the IMPOSSIBLE_QUEST_STAGE feasibility check. Mirrors `extraSettableFlags`.
+   * Default empty, so pure parser packs are byte-identical.
    */
   extraSettableQuestStages?: string[];
 };
@@ -167,6 +164,18 @@ export function validateParser(
             [`object:${o.id}`],
           ),
         );
+    }
+    for (const it of o.interactions) {
+      const sc = it.skill_check;
+      if (sc && !hasDeclaredVar(pack.meta.vars_init, sc.skill)) {
+        findings.push(
+          err(
+            "SKILL_CHECK_PHANTOM_STAT",
+            `skill check on object "${o.id}" uses skill "${sc.skill}", which is not declared in meta.vars_init.`,
+            [`object:${o.id}`],
+          ),
+        );
+      }
     }
     if (o.locked && o.key_id !== undefined && !objById.has(o.key_id)) {
       findings.push(
@@ -480,7 +489,7 @@ export function validateParser(
       unlockableObjects.add(o.id);
   }
 
-  // ── Feasibility of every gate (locked exits, interactions, win conditions) ───
+  // ── Feasibility of every gate (exits, interactions, topics, win conditions) ──
   const checkConds = (conds: Condition[], where: string[]): void => {
     for (const f of flagReqs(conds)) {
       if (!settable.has(f))
@@ -562,6 +571,14 @@ export function validateParser(
     }
   }
   for (const wc of pack.win_conditions) checkConds(wc.conditions, [`win:${wc.id}`]);
+  for (const npc of pack.npcs) {
+    checkConds(npc.conditions ?? [], [`npc:${npc.id}`]);
+    for (const node of npc.dialogue.nodes) {
+      for (const t of node.topics) {
+        checkConds(t.conditions ?? [], [`npc:${npc.id}`, `node:${node.id}`, `topic:${t.id}`]);
+      }
+    }
+  }
 
   // ── quest_critical: never permanently lost ───────────────────────────────────
   const granted = new Set<string>();
@@ -569,7 +586,7 @@ export function validateParser(
   const removed = new Map<string, string>(); // item → where
   for (const o of pack.objects) {
     for (const it of o.interactions) {
-      for (const e of it.effects)
+      for (const e of interactionEffects(it))
         if ("remove_item" in e) removed.set(e.remove_item, `object:${o.id}`);
     }
   }
@@ -588,7 +605,7 @@ export function validateParser(
   for (const o of pack.objects) {
     for (const it of o.interactions) {
       const consumes = (id: string): boolean =>
-        it.effects.some((e) => "remove_item" in e && e.remove_item === id);
+        interactionEffects(it).some((e) => "remove_item" in e && e.remove_item === id);
       if (it.item !== undefined) noteHeld(it.item, consumes(it.item));
       for (const id of itemReqs(it.conditions)) noteHeld(id, consumes(id));
     }
@@ -597,10 +614,12 @@ export function validateParser(
     for (const exit of room.exits) for (const id of itemReqs(exit.conditions)) noteHeld(id, false);
   for (const wc of pack.win_conditions)
     for (const id of itemReqs(wc.conditions)) noteHeld(id, false);
-  for (const npc of pack.npcs)
+  for (const npc of pack.npcs) {
+    for (const id of itemReqs(npc.conditions ?? [])) noteHeld(id, false);
     for (const node of npc.dialogue.nodes)
       for (const t of node.topics)
         for (const id of itemReqs(t.conditions ?? [])) noteHeld(id, false);
+  }
   // Strong connectivity over reachable, non-terminal rooms: a droppable item can
   // always be retrieved iff you can return to any room you can leave.
   const safeRooms = [...reachable].filter((r) => !winRooms.has(r));
@@ -631,6 +650,8 @@ export function validateParser(
   // ── NPC dialogue integrity + termination ─────────────────────────────────────
   for (const npc of pack.npcs) {
     const nodeIds = new Set(npc.dialogue.nodes.map((n) => n.id));
+    const nodeById = new Map(npc.dialogue.nodes.map((n) => [n.id, n]));
+    checkUnsatisfiable(npc.conditions, [`npc:${npc.id}`], `npc "${npc.id}" presence`, findings);
     if (!nodeIds.has(npc.dialogue.root))
       findings.push(
         err(
@@ -661,6 +682,12 @@ export function validateParser(
         );
       const outs = new Set<string>();
       for (const t of node.topics) {
+        checkUnsatisfiable(
+          t.conditions,
+          [`npc:${npc.id}`, `node:${node.id}`, `topic:${t.id}`],
+          `npc "${npc.id}" node "${node.id}" topic "${t.id}"`,
+          findings,
+        );
         if (t.goto !== undefined) {
           if (!nodeIds.has(t.goto))
             findings.push(
@@ -675,6 +702,8 @@ export function validateParser(
       }
       gotoEdges.set(node.id, outs);
     }
+    const root = nodeById.get(npc.dialogue.root);
+    if (root) checkDialogueRootRegreet(npc.id, root, nodeById, findings);
     // Every node must reach (via unconditional edges) a node offering an
     // unconditional `end` topic — only then is an exit guaranteed in every state.
     const endNodes = new Set(
@@ -768,14 +797,13 @@ export function validateParser(
   // so its perfect score is reachable only WITH the claim and it is NOT flagged.)
   //
   // `visited` is deliberately NOT treated as a climactic act: a navigation win's final
-  // step is mere LOCOMOTION (walk through the open gate), a denouement that rightly
-  // awards nothing — a blind playtester confirmed sealed_crypt's "35/35 one step before
-  // the win" reads as intentional, not a trap (seed 29). Setting a flag or claiming an
-  // item is a chosen ACT; arriving in a room is not.
+  // step can be mere LOCOMOTION (walk through the open gate), a denouement that rightly
+  // awards nothing. Setting a flag or claiming an item is a chosen ACT; arriving in a
+  // room is not.
   //
   // Sound & conservative — it fires only when ALL of these hold, so no current pack is
-  // flagged (verified: sealed_crypt/cold_forge win on `visited`; sunken_barrow's
-  // `has_item` claim carries +25; alchemists' cure act carries +5):
+  // flagged (verified: cold_forge wins on `visited`; sealed_crypt and sunken_barrow's
+  // `has_item` claims carry their capstones; alchemists' cure act carries +5):
   //   • exactly ONE win_condition — a second, flagless win could be the real climax,
   //     so multi-win packs are left alone (no false positive);
   //   • the win REQUIRES a `has_flag` F or a `has_item` I (a guaranteed conjunctive
@@ -1182,7 +1210,7 @@ function computeObtainable(
         const itemOk = it.item === undefined || obtainable.has(it.item);
         const condItemsOk = itemReqs(it.conditions).every((i) => obtainable.has(i));
         if (!itemOk || !condItemsOk) continue;
-        for (const e of it.effects) {
+        for (const e of interactionEffects(it)) {
           if ("add_item" in e && !obtainable.has(e.add_item)) {
             obtainable.add(e.add_item);
             changed = true;
@@ -1331,7 +1359,7 @@ function allEffects(pack: ParserPack): Effect[] {
   const out: Effect[] = [];
   for (const r of pack.rooms) out.push(...r.on_enter);
   for (const o of pack.objects) {
-    for (const it of o.interactions) out.push(...it.effects);
+    for (const it of o.interactions) out.push(...interactionEffects(it));
     if (o.unlock_effects) out.push(...o.unlock_effects); // first-class UNLOCK content (bug_0077)
     if (o.take_effects) out.push(...o.take_effects); // first-class TAKE content (bug_0107)
   }
@@ -1346,12 +1374,24 @@ function effectLists(pack: ParserPack): Effect[][] {
   const out: Effect[][] = [];
   for (const r of pack.rooms) out.push(r.on_enter);
   for (const o of pack.objects) {
-    for (const it of o.interactions) out.push(it.effects);
+    for (const it of o.interactions) out.push(...interactionEffectLists(it));
     if (o.unlock_effects) out.push(o.unlock_effects);
     if (o.take_effects) out.push(o.take_effects);
   }
   for (const n of pack.npcs) for (const node of n.dialogue.nodes) out.push(node.effects);
   return out;
+}
+
+function interactionEffects(it: Interaction): Effect[] {
+  return it.skill_check
+    ? [...it.effects, ...it.skill_check.on_success, ...it.skill_check.on_failure]
+    : it.effects;
+}
+
+function interactionEffectLists(it: Interaction): Effect[][] {
+  return it.skill_check
+    ? [it.effects, it.skill_check.on_success, it.skill_check.on_failure]
+    : [it.effects];
 }
 
 // Flags a conjunctive condition array GUARANTEES are true: top-level literals and
@@ -1507,9 +1547,10 @@ function checkVariantShadowing(
   }
 }
 
-/** Flag any guard (variant `when` or exit/interaction `conditions`) that can never
- *  hold: its conjunction is internally contradictory, so the variant never displays /
- *  the gate is never offered — silently-dead content the blind playtest can't see. */
+/** Flag any guard (variant `when` or exit/interaction/topic `conditions`) that can
+ *  never hold: its conjunction is internally contradictory, so the variant never
+ *  displays / the gate is never offered — silently-dead content the blind playtest
+ *  can't see. */
 function checkUnsatisfiable(
   conditions: Condition[] | undefined,
   where: string[],
@@ -1528,6 +1569,62 @@ function checkUnsatisfiable(
       ),
     );
   }
+}
+
+function checkDialogueRootRegreet(
+  npcId: string,
+  root: ParserPack["npcs"][number]["dialogue"]["nodes"][number],
+  nodes: Map<string, ParserPack["npcs"][number]["dialogue"]["nodes"][number]>,
+  findings: Finding[],
+): void {
+  const rootRegreetFlags = hasFlagReads(root.variants?.flatMap((variant) => variant.when) ?? []);
+  for (const topic of root.topics) {
+    if (topic.goto === undefined) continue;
+    const target = nodes.get(topic.goto);
+    if (!target) continue;
+    const targetSets = setFlags(target.effects);
+    for (const flag of notFlagReqs(topic.conditions ?? [])) {
+      if (!targetSets.has(flag) || rootRegreetFlags.has(flag)) continue;
+      findings.push(
+        warn(
+          "DIALOGUE_ROOT_REGREET_MISSING",
+          `npc "${npcId}" root topic "${topic.id}" retires on flag "${flag}" and target node ` +
+            `"${target.id}" sets it, but the root has no variant reading \`has_flag: ${flag}\`. ` +
+            "Later TALK can reopen the conversation with stale first-contact root text after " +
+            "that topic is gone; add a root variant for the re-greet state or make the root " +
+            "line timeless.",
+          [`npc:${npcId}`, `node:${root.id}`, `topic:${topic.id}`, `flag:${flag}`],
+        ),
+      );
+    }
+  }
+}
+
+function setFlags(effects: Effect[]): Set<string> {
+  const out = new Set<string>();
+  for (const e of effects) if ("set_flag" in e) out.add(e.set_flag);
+  return out;
+}
+
+function notFlagReqs(conds: Condition[]): Set<string> {
+  const out = new Set<string>();
+  const walk = (c: Condition): void => {
+    if ("not_flag" in c) out.add(c.not_flag);
+    else if ("all_of" in c) c.all_of.forEach(walk);
+  };
+  conds.forEach(walk);
+  return out;
+}
+
+function hasFlagReads(conds: Condition[]): Set<string> {
+  const out = new Set<string>();
+  const walk = (c: Condition): void => {
+    if ("has_flag" in c) out.add(c.has_flag);
+    else if ("all_of" in c) c.all_of.forEach(walk);
+    else if ("any_of" in c) c.any_of.forEach(walk);
+  };
+  conds.forEach(walk);
+  return out;
 }
 
 function flagReqs(conds: Condition[]): string[] {
@@ -1585,11 +1682,11 @@ function objectStateReqs(conds: Condition[]): { kind: "open" | "unlocked"; id: s
 }
 
 /** Every flag name a parser/RPG pack READS — has_flag/not_flag in any exit,
- *  interaction, or win condition, any room/object variant `when`, or any dialogue-
- *  topic gate, descending all_of/any_of/none_of. The set of consumers for the
- *  INERT_FLAG check: a written flag (set_flag / flags_init / a combat-or-skill
- *  mechanic) absent here is inert. Mirrors the CYOA validator's collectFlagReads
- *  (bug_0104), widened to the parser's condition-bearing sites. */
+ *  interaction, or win condition, any room/object variant `when`, NPC presence
+ *  gate, or dialogue-topic gate, descending all_of/any_of/none_of. The set of
+ *  consumers for the INERT_FLAG check: a written flag (set_flag / flags_init / a
+ *  combat-or-skill mechanic) absent here is inert. Mirrors the CYOA validator's
+ *  collectFlagReads (bug_0104), widened to the parser's condition-bearing sites. */
 function collectFlagReads(pack: ParserPack): Set<string> {
   const reads = new Set<string>();
   const walk = (c: Condition): void => {
@@ -1610,11 +1707,13 @@ function collectFlagReads(pack: ParserPack): Set<string> {
   }
   for (const wc of pack.win_conditions) walkAll(wc.conditions);
   for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when); // reactive epilogue guards
-  for (const npc of pack.npcs)
+  for (const npc of pack.npcs) {
+    walkAll(npc.conditions);
     for (const node of npc.dialogue.nodes) {
       for (const v of node.variants ?? []) walkAll(v.when); // reactive NPC-line guards (bug_0246)
       for (const t of node.topics) walkAll(t.conditions);
     }
+  }
   return reads;
 }
 
@@ -1649,19 +1748,22 @@ function collectObjectStateReads(pack: ParserPack): { open: Set<string>; unlocke
   }
   for (const wc of pack.win_conditions) walkAll(wc.conditions);
   for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when);
-  for (const npc of pack.npcs)
+  for (const npc of pack.npcs) {
+    walkAll(npc.conditions);
     for (const node of npc.dialogue.nodes) {
       for (const v of node.variants ?? []) walkAll(v.when);
       for (const t of node.topics) walkAll(t.conditions);
     }
+  }
   return { open, unlocked };
 }
 
 /** Every room id a parser/RPG pack REFERENCES — by a `visited` / `not_visited` /
  *  `in_room` condition in any exit, interaction, or win condition, any room/object
- *  variant `when`, any ending variant `when`, or any dialogue-node-variant/topic gate
- *  (DESCENDING all_of/any_of/none_of, so a disjunction-guarded room ref still counts),
- *  PLUS by a `goto` / `place_object.room` effect target (the room-id-bearing effects
+ *  variant `when`, any ending variant `when`, NPC presence gate, or any dialogue-
+ *  node-variant/topic gate (DESCENDING all_of/any_of/none_of, so a disjunction-
+ *  guarded room ref still counts), PLUS by a `goto` / `place_object.room` effect target
+ *  (the room-id-bearing effects
  *  collected here; unlock_exit.from/.to are checked in a dedicated UNLOCK_EXIT_ROOM_MISSING
  *  block in the validator body). A referenced id absent from pack.rooms is a dangling
  *  reference — a permanently-dead gate (visited/in_room evaluate false forever) or a
@@ -1690,11 +1792,13 @@ function collectRoomRefs(pack: ParserPack): Set<string> {
   }
   for (const wc of pack.win_conditions) walkAll(wc.conditions);
   for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when);
-  for (const npc of pack.npcs)
+  for (const npc of pack.npcs) {
+    walkAll(npc.conditions);
     for (const node of npc.dialogue.nodes) {
       for (const v of node.variants ?? []) walkAll(v.when);
       for (const t of node.topics) walkAll(t.conditions);
     }
+  }
   // Effect-side room refs: goto + place_object.room (the room-id-bearing effects
   // collected here; unlock_exit.from/.to are checked in a dedicated
   // UNLOCK_EXIT_ROOM_MISSING block in the validator body).

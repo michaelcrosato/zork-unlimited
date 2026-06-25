@@ -1,0 +1,27 @@
+id: bug_0458_tanners_fever_treatment_retry
+title: "Tanner's Fever treatment survives a failed physick roll"
+pack: content/rpg/pack/tanners_fever.yaml
+reported_by: blind-playtest
+report: blind-tester/reports/20260622T193113Z_tanners_fever_seed7.md
+severity: S3
+symptom: >
+  A blind playtest gathered the medical evidence, read Godwin's notes, and then
+  rolled a natural 1 on the physick treatment check. The meadowsweet treatment
+  action disappeared permanently, Godwin's dialogue closed down, and the only
+  remaining winning route was to fight Holt. The failure prose also claimed the
+  formula was not yet named even though the player had already read the notes.
+root_cause: >
+  The treatment skill check set confrontation_attempted on failure as well as
+  success. That flag retired the only medical treatment action and pushed Godwin
+  into his locked post-confrontation dialogue even when the failed outcome was
+  just a bad die roll.
+fix: >
+  The treatment now retires only after success. Failure keeps the notes,
+  meadowsweet, and treatment action live, and the failure narration states that
+  the evidence remains in hand and can be put to Godwin again.
+tests:
+  - tests/regression/tanners_fever_treatment_retry.test.ts
+verification:
+  - npm test -- --run tests/regression/tanners_fever_treatment_retry.test.ts
+  - npm run validate -- content/rpg/pack/tanners_fever.yaml
+  - npm run health

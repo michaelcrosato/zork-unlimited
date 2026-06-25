@@ -1,0 +1,398 @@
+# The Chandler's Lot -- a Zork-style parser pack (Stage 3).
+#
+# Charterhaven's river stairs and winter markets run on contract candles:
+# night watch, ferry chains, sickrooms, and guildhall passages all depend on
+# honest tallow. This parser pack adds a chandler-contract inspection. The
+# proof is built by reading the contract, gauging short wicks, splitting a
+# proof candle, checking the tallow ledger, and reading the adulteration book
+# before carrying it to guildhall.
+#
+# Score economy:
+#   +5  READ lamp_contract
+#   +5  USE wick_gauge ON false_candles (natural verb: gauge)
+#   +5  USE snuffing_shears ON proof_candle (natural verb: split)
+#   +5  USE adulteration_book ON tallow_ledger (natural verb: compare)
+#   +20 USE inspector_lantern ON adulteration_book after the three findings
+#       (natural verb: stamp)
+# Best route: collect all four findings, stamp and take the book, go north = 40/40.
+# The south/back-lane branch is an informed abandonment path, not exploratory
+# scenery: before proof it leads to ending_unproved, and after fraud_proved it is
+# blocked so a full-score proof cannot be turned into an unregistered bad ending.
+
+meta:
+  id: chandlers_lot_v1
+  title: "The Chandler's Lot"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "River Stairs Chandlehouse"
+    quest: "prove the lamp-candle contract was cut with tallow dregs"
+    role: "lamp contract inspector"
+    connection: "Charterhaven's river stairs are safe only while their contract candles burn clean; one false lot darkens ferries, sickrooms, and watch posts."
+  start_room: counting_room
+  flags_init: []
+  vars_init: {}
+  max_score: 40
+
+rooms:
+  - id: counting_room
+    name: "The Counting Room"
+    description: >
+      A cramped counting room above the river stairs. A lamp contract lies
+      open beneath a sand shaker, and your inspector's lantern hangs from a
+      peg by the door. The dipping floor lies east. The guildhall door north
+      is locked until you have proof fit for the contract clerk; the back lane
+      south is no shortcut, only a way to abandon the inspection unregistered.
+    variants:
+      - when: [{ has_flag: fraud_proved }]
+        text: >
+          The counting room, the contract fraud now proved in the chandler's
+          private adulteration book. The guildhall door north is the road that
+          matters; the dipping floor remains east, and the back-lane door is
+          only the way to squander stamped proof before the clerk sees it.
+      - when: [{ has_item: inspector_lantern }]
+        text: >
+          A cramped counting room above the river stairs. A lamp contract lies
+          open beneath a sand shaker, and the peg by the door is bare where your
+          inspector's lantern hung before you took it. The dipping floor lies
+          east. The guildhall door north is locked until you have proof fit for
+          the contract clerk; the back lane south is only the way to leave the
+          inspection unregistered.
+    objects: [lamp_contract, inspector_lantern]
+    exits:
+      - { direction: east, to: dipping_floor }
+      - direction: north
+        to: guildhall_lobby
+        conditions:
+          - has_item: inspector_lantern
+          - has_item: adulteration_book
+          - has_flag: fraud_proved
+        locked_msg: >
+          Guildhall needs your inspector's lantern, the private adulteration book,
+          and a completed proof before the lamp lot can be stopped.
+      - direction: south
+        to: back_lane
+        conditions: [{ not_flag: fraud_proved }]
+        locked_msg: >
+          You have the fraud stamped in the private book now. The back lane would
+          only take the case out of the clerk's hands; register it at guildhall.
+
+  - id: dipping_floor
+    name: "The Dipping Floor"
+    description: >
+      The chandler's dipping floor is warm with fat and smoke. Ranks of false
+      candles cool on a rack beside a proof candle set apart for inspection. A
+      wick gauge hangs from a nail, and snuffing shears rest near the trough.
+      The counting room is west; a narrow stair climbs to the wax loft.
+    variants:
+      - when:
+          - all_of:
+              - has_flag: short_wicks
+              - has_flag: dreg_core
+        text: >
+          The dipping floor, its clean appearance spoiled by two measurements:
+          short wicks in the rack and a dark dreg core inside the proof candle.
+          The counting room is west; the wax loft is above.
+      - when:
+          - has_item: wick_gauge
+          - has_item: snuffing_shears
+        text: >
+          The chandler's dipping floor is warm with fat and smoke. Ranks of
+          false candles cool on a rack beside a proof candle set apart for
+          inspection. The nail and trough edge are bare now; the wick gauge and
+          snuffing shears are with you. The counting room is west; a narrow
+          stair climbs to the wax loft.
+      - when:
+          - has_item: wick_gauge
+        text: >
+          The chandler's dipping floor is warm with fat and smoke. Ranks of
+          false candles cool on a rack beside a proof candle set apart for
+          inspection. The nail where the wick gauge hung is bare now, while
+          snuffing shears rest near the trough. The counting room is west; a
+          narrow stair climbs to the wax loft.
+      - when:
+          - has_item: snuffing_shears
+        text: >
+          The chandler's dipping floor is warm with fat and smoke. Ranks of
+          false candles cool on a rack beside a proof candle set apart for
+          inspection. A wick gauge hangs from a nail, and the spot near the
+          trough is bare where the snuffing shears rested before you took them.
+          The counting room is west; a narrow stair climbs to the wax loft.
+    objects: [false_candles, proof_candle, wick_gauge, snuffing_shears, rendered_tallow]
+    exits:
+      - { direction: west, to: counting_room }
+      - { direction: up, to: wax_loft }
+
+  - id: wax_loft
+    name: "The Wax Loft"
+    description: >
+      A low loft over the dipping floor, rafters sticky with old smoke. A
+      tallow ledger sits on a packing chest beside a plain adulteration book.
+      A sealed purse has been tucked behind the ledger where an honest visitor
+      would not reach first. The stair descends to the dipping floor.
+    variants:
+      - when: [{ has_flag: fraud_proved }]
+        text: >
+          The wax loft, the false account no longer harmless after your stamp.
+          The tallow ledger remains open beside the sealed purse. The stair
+          descends to the dipping floor.
+      - when:
+          - has_item: adulteration_book
+        text: >
+          A low loft over the dipping floor, rafters sticky with old smoke. A
+          tallow ledger sits on a packing chest beside the bare place where the
+          adulteration book lay before you took it. A sealed purse has been
+          tucked behind the ledger where an honest visitor would not reach
+          first. The stair descends to the dipping floor.
+    objects: [tallow_ledger, adulteration_book, sealed_purse]
+    exits:
+      - { direction: down, to: dipping_floor }
+
+  - id: guildhall_lobby
+    name: "The Guildhall Lobby"
+    description: >
+      The lobby outside the lamp contract clerk's room. River porters and
+      night-watch beadles argue over orders while you carry the private
+      adulteration book and the lantern that makes your inspection official.
+
+  - id: back_lane
+    name: "The Back Lane"
+    description: >
+      The lane behind the chandlehouse slopes toward the river stairs. You
+      left by the wrong door, choosing weather and river noise over the clerk's
+      table. Whatever suspicion you had, it is not registered proof.
+
+objects:
+  - id: lamp_contract
+    name: "lamp contract"
+    aliases: [contract, order, lamp order, candle contract, parchment, contract paper]
+    description: >
+      The city contract for river-stair and watch-post candles: clean tallow,
+      full-length wicks, no dregs from old renderings, and a proof candle kept
+      apart for the inspector's knife.
+    read_text: >
+      The contract is exact: every candle in the lot must carry a full wick
+      and clean tallow, and the proof candle may be split in inspection. The
+      chandler has signed that the lot is fit for ferries, sickrooms, and the
+      night watch. If the rack and proof candle disagree, his seal is false.
+    interactions:
+      - verb: READ
+        target: lamp_contract
+        conditions: [{ not_flag: read_contract }]
+        effects:
+          - set_flag: read_contract
+          - inc_var: { name: score, by: 5 }
+
+  - id: inspector_lantern
+    name: "inspector's lantern"
+    aliases: [lantern, lamp, inspector lantern, contract lantern, brass lantern]
+    description: >
+      A small brass inspection lantern stamped with the guildhall lamp office
+      mark. It turns a complaint into an official inspection when you carry it
+      back to the clerk.
+    takeable: true
+
+  - id: false_candles
+    name: "false candle rack"
+    aliases: [candles, rack, false candles, candle rack, lamp candles, contract candles]
+    description: >
+      Rows of pale candles from the current lot. They look even from arm's
+      length, but the wick ends sit suspiciously low below the trimmed tops.
+    variants:
+      - when: [{ has_flag: short_wicks }]
+        text: >
+          The false candle rack. Your gauge showed the wicks stop short inside
+          the tallow, saving thread across the whole lot and guaranteeing weak
+          burn on the river stairs.
+    interactions:
+      - verb: USE
+        item: wick_gauge
+        target: false_candles
+        command_verb: gauge
+        command_template: "gauge {target} with {item}"
+        conditions: [{ has_item: wick_gauge }, { not_flag: short_wicks }]
+        effects:
+          - set_flag: short_wicks
+          - inc_var: { name: score, by: 5 }
+          - narrate: >
+              You set the wick gauge against six candles from the rack. Each
+              wick stops a thumb's breadth short of the contracted length. The
+              saving is small per candle and large over the whole lot.
+
+  - id: proof_candle
+    name: "proof candle"
+    aliases: [proof, sample, sample candle, proof candle, test candle, inspection candle]
+    description: >
+      A single candle kept apart for inspection, as the contract requires. Its
+      outer surface is clean enough, but a darker seam shows near the base.
+    variants:
+      - when: [{ has_flag: dreg_core }]
+        text: >
+          The proof candle, split cleanly down one side. Inside the pale shell
+          is a dark core of dreg tallow that would gutter and smoke before the
+          night watch had crossed half its round.
+    interactions:
+      - verb: USE
+        item: snuffing_shears
+        target: proof_candle
+        command_verb: split
+        command_template: "split {target} with {item}"
+        conditions: [{ has_item: snuffing_shears }, { not_flag: dreg_core }]
+        effects:
+          - set_flag: dreg_core
+          - inc_var: { name: score, by: 5 }
+          - narrate: >
+              You split the proof candle lengthwise. The outer dip is clean,
+              but the core is dark with dreg tallow from old renderings. It
+              would burn low, smoke hard, and fail fastest where the stairs are
+              already most dangerous.
+
+  - id: wick_gauge
+    name: "wick gauge"
+    aliases: [gauge, wick gauge, brass gauge, measuring gauge, candle gauge]
+    description: >
+      A narrow brass gauge marked for the full wick depth required by the lamp
+      contract. It was made for proving exactly this kind of saving.
+    takeable: true
+
+  - id: snuffing_shears
+    name: "snuffing shears"
+    aliases: [shears, snuffers, snuffer, scissors, snuffing shears, candle shears]
+    description: >
+      A pair of snuffing shears sharp enough to split a proof candle without
+      crushing its core.
+    takeable: true
+
+  - id: rendered_tallow
+    name: "rendered tallow"
+    aliases: [tallow, fat, vat, trough, rendered fat, tallow trough]
+    description: >
+      The rendered tallow in the trough looks pale on top, but darker scrapings
+      cling to the ladle. A clean lot should not need old dregs hidden under a
+      clean surface.
+
+  - id: tallow_ledger
+    name: "tallow ledger"
+    aliases: [ledger, book, account, tallow book, delivery ledger, packing ledger]
+    description: >
+      The public tallow ledger for the week, open to the page recording clean
+      rendered fat received from the market slaughterhouses.
+    read_text: >
+      The public page claims twelve firkins of clean tallow and no dreg return.
+      The weights do not match the rack: a full clean lot would leave two
+      firkins unused. Instead the entry is balanced by a private mark, a small
+      black cross that appears again on the adulteration book beside it.
+    interactions:
+      - verb: USE
+        item: adulteration_book
+        target: tallow_ledger
+        command_verb: compare
+        command_template: "compare {item} with {target}"
+        conditions: [{ has_item: adulteration_book }, { not_flag: ledger_mismatch }]
+        effects:
+          - set_flag: ledger_mismatch
+          - inc_var: { name: score, by: 5 }
+          - narrate: >
+              You lay the private book beside the public ledger. The same black
+              cross marks both pages: public clean tallow in one, short wick
+              and dreg core in the other. The books are a matched pair, and the
+              matched mark makes the false account deliberate.
+
+  - id: adulteration_book
+    name: "adulteration book"
+    aliases: [adulteration, private book, chandler book, hidden book, plain book, lot book]
+    description: >
+      A plain private book with no title on the cover. The current lot number
+      is written on the first visible page, next to a black cross matching the
+      one in the public ledger.
+    read_text: >
+      The private book is blunt: "river-stair lot, short wick, dreg core,
+      public clean." It names the saving in wick thread and clean tallow, then
+      lists the buyer who will take the good stock elsewhere. The black cross
+      in the public ledger was not a clerk's flourish; it was the mark for the
+      adulterated lot.
+    takeable: true
+    interactions:
+      - verb: USE
+        item: inspector_lantern
+        target: adulteration_book
+        command_verb: stamp
+        command_template: "stamp {target} with {item}"
+        conditions:
+          - has_item: inspector_lantern
+          - has_item: adulteration_book
+          - has_flag: short_wicks
+          - has_flag: dreg_core
+          - has_flag: ledger_mismatch
+          - not_flag: fraud_proved
+        effects:
+          - set_flag: fraud_proved
+          - inc_var: { name: score, by: 20 }
+          - narrate: >
+              The private book joins the physical proof to the account. Short
+              wicks, dreg cores, public clean tallow, good stock sold elsewhere:
+              every part of the false lot is written in the chandler's own
+              hand. This is no bad batch. It is a made fraud.
+
+  - id: sealed_purse
+    name: "sealed purse"
+    aliases: [purse, money, bribe, sealed purse, coin purse, quiet money]
+    description: >
+      A sealed purse tucked behind the ledger. The paper under the wax reads
+      "for the lantern to pass unlit." It is not evidence you can safely carry;
+      it is an invitation to pocket quiet money and make the inspection look
+      bought.
+    interactions:
+      - verb: USE
+        target: sealed_purse
+        command_verb: pocket
+        effects:
+          - narrate: >
+              The purse settles into your coat with a weight too easy to explain
+              badly. By the time you reach the stair, the chandler's apprentice has
+              seen enough to swear you took quiet money from the loft. The false lot
+              stays sealed, and your inspection is dismissed as a quarrel over coin.
+          - end_game: ending_bought
+
+npcs: []
+
+win_conditions:
+  - id: proof_registered
+    conditions: [{ visited: guildhall_lobby }]
+    ending: ending_registered
+  - id: proof_abandoned
+    conditions: [{ visited: back_lane }]
+    ending: ending_unproved
+
+endings:
+  - id: ending_registered
+    title: "The Lot Stopped"
+    text: >
+      You set the inspector's lantern and the adulteration book on the
+      guildhall clerk's table. The proof is complete: the contract required
+      full wicks and clean tallow; the rack held short wicks; the proof candle
+      hid dreg tallow; the public ledger's clean account is tied to the private
+      black-cross book. The lamp lot is stopped before the river stairs go dark.
+      The chandler will answer for fraud, but the ferrymen will not cross by
+      his candles tonight. *** The lot is stopped. ***
+
+  - id: ending_unproved
+    title: "The Lane Behind the Stairs"
+    text: >
+      You leave by the back lane with suspicion, perhaps even a few good
+      measurements, but no registered proof. That was the choice the lane
+      offered: out of the chandlehouse, and out of the clerk's hands. The
+      chandler opens the front shutters before noon and sends the lot to the
+      river stairs under seal.
+      When the first candles gutter out in the rain, the failure will be called
+      weather. *** The lot was not stopped. ***
+
+  - id: ending_bought
+    title: "For the Lantern to Pass"
+    text: >
+      The purse was a trap shaped like an answer. The apprentice's testimony is
+      quick, the chandler's outrage quicker, and the lamp office wants no
+      inspector whose coat carries quiet money from a contract loft. The false
+      lot goes out under seal while you answer for the wrong evidence. *** You
+      are bought. ***

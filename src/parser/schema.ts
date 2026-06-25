@@ -10,6 +10,7 @@
 import { z } from "zod";
 import { ConditionSchema } from "../core/conditions.js";
 import { EffectSchema } from "../core/effects.js";
+import { WorldBindingSchema } from "../world/schema.js";
 
 /** A directional exit. A locked exit lists `conditions`; until they hold it is
  *  hidden from the legal-action set, and an attempt surfaces `locked_msg`. */
@@ -127,7 +128,9 @@ export const InteractionSchema = z
     effects: z.array(EffectSchema).default([]),
     skill_check: SkillCheckSchema.optional(),
     // Optional natural verb for a USE puzzle, so the offered + typed command matches
-    // the verb the prose primes. It covers two shapes:
+    // the verb the prose primes. It covers three shapes:
+    //   - a target-only USE (the "touch/press/turn this fixture" pattern): the command
+    //     reads "<command_verb> <target>" ("press third stone");
     //   - a self-targeted USE (the "consume this thing" pattern — drink the phial,
     //     eat the bread): the command reads "<command_verb> <obj>" ("drink phial");
     //   - an item-on-target USE (the tool-on-thing pattern — tie the rope to the
@@ -160,13 +163,13 @@ export const InteractionSchema = z
   .strict()
   .superRefine((it, ctx) => {
     if (it.command_verb !== undefined) {
-      // command_verb names the natural verb for a USE puzzle — self-USE or
-      // item-on-target — so it requires a USE with both an item and a target.
-      if (it.verb !== "USE" || it.item === undefined || it.target === undefined) {
+      // command_verb names the natural verb for a USE puzzle — target-only,
+      // self-USE, or item-on-target — so it requires a USE with a target.
+      if (it.verb !== "USE" || it.target === undefined) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["command_verb"],
-          message: "command_verb is only valid on a USE interaction with an item and a target",
+          message: "command_verb is only valid on a USE interaction with a target",
         });
       } else if (BUILTIN_VERBS.has(it.command_verb)) {
         ctx.addIssue({
@@ -199,7 +202,16 @@ export const InteractionSchema = z
             'command_template is only for an item-on-target USE (item !== target); a self-USE shows a single noun (e.g. "drink phial")',
         });
       }
-      if (!it.command_template.includes("{item}") || !it.command_template.includes("{target}")) {
+      if (it.item === undefined || it.target === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["command_template"],
+          message: "command_template requires both an item and a target",
+        });
+      } else if (
+        !it.command_template.includes("{item}") ||
+        !it.command_template.includes("{target}")
+      ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["command_template"],
@@ -383,6 +395,9 @@ export const NpcSchema = z
     name: z.string().min(1),
     description: z.string().min(1),
     room: z.string().min(1), // which room the NPC stands in
+    // Optional state gate for NPC presence. Mirrors enemy/exit/topic conditions:
+    // absent means always present, preserving existing pack hashes.
+    conditions: z.array(ConditionSchema).optional(),
     dialogue: z
       .object({
         root: z.string().min(1),
@@ -434,6 +449,7 @@ export const ParserMetaSchema = z
   .object({
     id: z.string().min(1),
     title: z.string().min(1),
+    world: WorldBindingSchema.optional(),
     start_room: z.string().min(1),
     vars_init: z.record(z.string(), z.number()).default({}),
     flags_init: z.array(z.string()).default([]),

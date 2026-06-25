@@ -14,8 +14,8 @@
  *
  * Locked here (the general engine feature, then the barrow content fix that uses it):
  *   (1) take_effects fire on pickup (after add_item), mutating state (score + flag);
- *   (2) the award is one-shot — once held, the object isn't takeable-visible, so TAKE
- *       can't re-resolve and the effects can't re-fire;
+ *   (2) the award is one-shot — once held, the object isn't takeable-visible, and if
+ *       dropped/re-taken later its scripted take_effects still cannot re-fire;
  *   (3) the schema REJECTS take_effects without `takeable: true`;
  *   (4) the validator folds take_effects into the SCORE_UNREACHABLE upper bound (a pack
  *       whose only award is in take_effects validates; one that under-counts still fires);
@@ -90,15 +90,18 @@ describe("bug_0107 — take_effects: the first-class TAKE content hook", () => {
     expect(s.flags["got_gem"]).toBe(true);
   });
 
-  it("(2) the award is one-shot: a held gem is no longer takeable, so it can't re-fire", () => {
+  it("(2) the award is one-shot: drop/re-take cannot re-fire take_effects", () => {
     const r = compileParserPack(gemPack("      - inc_var: { name: score, by: 5 }"));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const index = indexParserPack(r.compiled.pack);
     const step = makeStep(buildParserRules(index));
     let s = initStateForParserPack(index, 1);
+    const take = () => enumerateActions(index, s).find((o) => o.id === "take_gem")!.action;
+    const drop = () => enumerateActions(index, s).find((o) => o.id === "drop_gem")!.action;
+
     s = (
-      step(s, enumerateActions(index, s).find((o) => o.action.type === "TAKE")!.action) as {
+      step(s, take()) as {
         ok: true;
         state: GameState;
       }
@@ -106,6 +109,25 @@ describe("bug_0107 — take_effects: the first-class TAKE content hook", () => {
     expect(s.vars["score"]).toBe(5);
     // No TAKE for the gem remains in the legal set (it's in inventory), so +5 is unfarmable.
     expect(enumerateActions(index, s).some((o) => o.action.type === "TAKE")).toBe(false);
+
+    s = (
+      step(s, drop()) as {
+        ok: true;
+        state: GameState;
+      }
+    ).state;
+    expect(s.objectState["gem"]?.takenBy).toBe("player");
+    expect(enumerateActions(index, s).map((o) => o.id)).toContain("take_gem");
+
+    s = (
+      step(s, take()) as {
+        ok: true;
+        state: GameState;
+      }
+    ).state;
+    expect(s.inventory).toContain("gem");
+    expect(s.vars["score"]).toBe(5);
+    expect(s.objectState["gem"]?.takenBy).toBe("player");
   });
 
   it("(3) the schema rejects take_effects without takeable: true", () => {

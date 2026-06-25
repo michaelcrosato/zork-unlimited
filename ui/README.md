@@ -1,12 +1,12 @@
-# AdventureForge Web UI (Stage 5)
+# The Charter Marches Web UI (Stage 5)
 
 A React + Vite **view** over the headless, deterministic engine (§13 Stage 5). The
-UI talks only to the structured engine API: it compiles a content pack in the
-browser and drives the same `step` reducer the CLI and MCP server use. It renders
-the structured observation and turns clicks into `GameSession.choose(id)` calls —
-it never decides what is legal or what an action does. One code path plays CYOA,
-parser, and RPG packs, because `ui/src/engine.ts` normalizes every mode's
-observation into a single `View`.
+UI talks only to the structured engine API: it compiles a Charter Marches quest
+pack in the browser and drives the same `step` reducer the CLI and MCP server use.
+It renders the structured observation and turns clicks into
+`GameSession.choose(id)` calls; it never decides what is legal or what an action
+does. One code path plays CYOA, parser, and RPG quests, because `ui/src/engine.ts`
+normalizes every mode's observation into a single `View`.
 
 ## Run
 
@@ -29,6 +29,6 @@ From the repo root you can also use `npm run ui:dev` / `npm run ui:build`.
 - **Tested without a browser.** `tests/unit/ui_engine.test.ts` drives
   `GameSession` for all three modes in Node, proving the UI uses only the
   structured API and stays deterministic.
-- **Packs are data.** Vite bundles the shipped `content/**/pack/*.yaml` as raw
-  text; the browser never touches the filesystem and content never runs as code
-  (§16).
+- **Quests are data.** Vite bundles the shipped `content/**/pack/*.yaml` and
+  `content/world/charter_marches.yaml` as raw text; the browser never touches the
+  filesystem and content never runs as code (§16).

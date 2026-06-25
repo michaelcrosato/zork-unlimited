@@ -19,7 +19,8 @@
  * (bug_0077) teaches the engine's first-class UNLOCK to carry optional `unlock_narrate`
  * + `unlock_effects` on a keyed object, then re-models the gate onto it — so both locks
  * now read through the SAME `unlock <obj> with <key>` grammar while the gate keeps its
- * +20 score, its dramatic narration, and its opened exit. The feature is opt-in: an
+ * dramatic narration and opened exit. bug_0385 later moved the +20 capstone from the
+ * gate unlock onto the sealed relic claim. The unlock-effect feature is opt-in: an
  * object that declares neither field resolves byte-identically to before.
  *
  * Locked here:
@@ -29,8 +30,8 @@
  *   (2) BOTH locks (oak chest + catacombs gate) expose the same "unlock … with …"
  *       grammar and UNLOCK action type — the consistency guarantee;
  *   (3) the typed natural command the prose primes parses to the same UNLOCK action;
- *   (4) unlocking the gate fires its unlock_effects: +20 score, set_flag catacombs_open,
- *       opens the north exit, AND narrates the custom dramatic line (not the default);
+ *   (4) unlocking the gate fires its unlock_effects: set_flag catacombs_open, opens the
+ *       north exit, AND narrates the custom dramatic line (not the default);
  *   (5) one-shot: after unlocking, the unlock action leaves the legal set (the lock is
  *       sprung, so it can't re-fire and can't be farmed for points);
  *   (6) the game still wins (ending_victory) at 35/35 through the new unlock path;
@@ -156,7 +157,7 @@ describe("bug_0077 — the catacombs gate and the oak chest share one unlock gra
     expect(pr.ok && pr.action).toEqual({ type: "UNLOCK", target: "crypt_gate", with: "iron_key" });
   });
 
-  it("unlocking the gate awards +20, sets the flag, opens north, and narrates the custom line", () => {
+  it("unlocking the gate sets the flag, opens north, and narrates the custom line without awarding the relic capstone", () => {
     const s = play(initStateForParserPack(index, 61), TO_CRYPT_WITH_IRON_KEY);
     expect(score(s)).toBe(15); // headstone +5, rope +10
 
@@ -171,14 +172,12 @@ describe("bug_0077 — the catacombs gate and the oak chest share one unlock gra
     expect(narr.narrate).toContain("The iron key turns with a groan");
     expect(narr.narrate).not.toBe("You unlock the iron catacombs gate."); // NOT the default
     expect(res!.effects.some((e) => "set_flag" in e && e.set_flag === "catacombs_open")).toBe(true);
-    expect(
-      res!.effects.some((e) => "inc_var" in e && e.inc_var.name === "score" && e.inc_var.by === 20),
-    ).toBe(true);
+    expect(res!.effects.some((e) => "inc_var" in e && e.inc_var.name === "score")).toBe(false);
 
     // Pre-unlock the north exit is closed; post-unlock it opens.
     expect(enumerateActions(index, s).find((a) => a.id === "go_north")).toBeUndefined();
     const after = play(s, ["unlock_crypt_gate"]);
-    expect(score(after)).toBe(35);
+    expect(score(after)).toBe(15);
     expect(after.flags["catacombs_open"]).toBe(true);
     expect(after.objectState["crypt_gate"]?.locked).toBe(false);
     expect(enumerateActions(index, after).find((a) => a.id === "go_north")).toBeDefined();
@@ -199,6 +198,7 @@ describe("bug_0077 — the catacombs gate and the oak chest share one unlock gra
       ...TO_CRYPT_WITH_IRON_KEY,
       "unlock_crypt_gate",
       "go_north",
+      "take_sealed_relic",
     ]);
     expect(s.ended).toBe(true);
     expect(s.endingId).toBe("ending_victory");

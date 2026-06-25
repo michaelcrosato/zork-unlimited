@@ -10,7 +10,7 @@
  * The fix (content only): a new lead-sealed tomb (bound_tomb) sits among the lesser
  * dead in the crypt, keyed — like the gate and the founder's coffin — to the iron key
  * the player already carries. The iron key is now a THREE-way fork:
- *   • UNLOCK the catacombs gate  → press on → ending_victory  (the unchanged win)
+ *   • UNLOCK the catacombs gate  → press on → recover the relic → ending_victory
  *   • UNLOCK the founder's coffin → take its silver → ending_plunder  (greed; terminal)
  *   • UNLOCK the lead-sealed tomb → break the plague-seal → ending_doom  (hubris; DEATH)
  * ending_doom is the pack's first death ending (death: true), reached by an end_game in
@@ -18,10 +18,8 @@
  * also answers what the fiction never did — WHY the crypt is "sealed" and the chapel a
  * "burnt shell": the parish plague was leaded shut down here and the chapel burned.
  *
- * Crucially the VICTORY and PLUNDER routes are byte-identical: the tomb adds no inc_var
- * (max_score stays 35), no flag, and no exit/gating, so every prior route/score test
- * (sealed_crypt_scoring, ending_score_summary, parser_acceptance,
- * sealed_crypt_final_step_legibility, sealed_crypt_plunder_fork) is unaffected.
+ * Crucially the VICTORY and PLUNDER forks at the crypt are unchanged: the tomb adds no
+ * inc_var (max_score stays 35), no flag, and no exit/gating.
  *
  * Locked here:
  *   (1) the fork is now THREE-way — at the crypt, holding the iron key, the gate, the
@@ -32,8 +30,8 @@
  *       win_condition resolves to it); ending_victory stays the sole winnable win;
  *   (4) the tomb needs the iron key — without it the crypt offers it to examine but
  *       NOT to unlock;
- *   (5) the victory route still wins 35/35 and the plunder route still ends in
- *       ending_plunder (no regression); max_score stays 35;
+ *   (5) the victory route still wins 35/35 after claiming the relic and the plunder
+ *       route still ends in ending_plunder; max_score stays 35;
  *   (6) the pack validates clean (no SOFTLOCK / END_GAME_UNDECLARED / WIN_IS_DEATH /
  *       NO_WINNABLE_ENDING).
  */
@@ -163,10 +161,12 @@ describe("bug_0130 — The Sealed Crypt's third iron-key fork (the lead-sealed p
       ...ROUTE_TO_CRYPT_WITH_KEY,
       "unlock_crypt_gate",
       "go_north",
+      "take_sealed_relic",
     ]);
     expect(victory.state.ended).toBe(true);
     expect(victory.state.endingId).toBe("ending_victory");
     expect(victory.state.visited.catacombs).toBe(true);
+    expect(victory.state.inventory).toContain("sealed_relic");
     expect(buildParserObservation(index, victory.state).score).toBe(35);
 
     const plunder = play(initStateForParserPack(index, 47), [

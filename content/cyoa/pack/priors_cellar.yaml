@@ -1,6 +1,14 @@
 meta:
   id: priors_cellar_v1
   title: "The Prior's Cellar"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Prior's Cellar"
+    quest: "recover the truth under the dissolved house"
+    role: "cellar investigator"
+    connection: "The old priory cellar sits beneath Charterhaven leases, and its hidden stores still distort city power."
   start: priory_gate
   flags_init: []
   max_score: 50
@@ -12,6 +20,10 @@ meta:
   #   +10 read_ledger        — the prior's accounts in the scriptorium (not_flag ledger_read)
   #   +15 go_to_bishop       — carry the truth to the chapter house (terminal)
   #   Total: 50
+  #
+  # bug_0475: Aldric's "moved to the infirmary" clue now pays off in the cellar
+  # cache. The pack does not add an infirmary room; the dead pilgrim's effects
+  # identify where he was taken and why the clue mattered.
   #
   # Safe path (all six, maximum score):
   #   listen_to_aldric (+5) → examine_altar (+5) → hear_emric_out (+5) →
@@ -45,8 +57,25 @@ scenes:
   # ── Priory gate (hub) ─────────────────────────────────────────────────────
   - id: priory_gate
     title: "The Priory Gate"
-    on_enter:
-      - set_quest_stage: { quest: the_priory, stage: arrived }
+    # No on_enter quest-stage write here: this is the hub, revisited after the
+    # ledger/cellar truth is known. Re-setting `arrived` here would clobber
+    # `truth_known` every time the player returns to decide what to do next.
+    # bug_0421: first-entry prose lives in the base text only. Any return from
+    # the surrounding rooms shows the gate as an already-entered hub, not another
+    # arrival where the lay-brother waves you in from the cold.
+    variants:
+      - when:
+          - any_of:
+              - { visited: guest_hall }
+              - { visited: chapel }
+              - { visited: cloister_walk }
+              - { visited: priors_study }
+              - { visited: south_road }
+        text: >
+          Rain needles the arch and runs in black threads down Saint Maren's
+          stones. The lay-brother who waved you in has gone back to his duties;
+          the guest hall, chapel, cloister, study, and south road all wait from
+          this same dripping threshold.
     text: >
       Rain-dark walls and a lantern guttering above the arch. The road behind
       you is mud to the knee; the priory of Saint Maren is the only shelter for
@@ -112,8 +141,8 @@ scenes:
         text: "Ask if it happened to others here."
         conditions: [ { has_flag: heard_pilgrim } ]
         effects:
-          - narrate: "He turns his head toward the sleeping figures. 'Ask them. If they'll answer. The one before me who complained was moved to the infirmary. He did not come back.'"
-          - add_journal: "Aldric implies a prior victim — moved to the infirmary and gone."
+          - narrate: "He turns his head toward the sleeping figures. 'Ask them. If they'll answer. The one before me who complained was moved to the infirmary. He did not come back. He kept touching a silver ring and saying Arden would know where he stopped.'"
+          - add_journal: "Aldric implies a prior victim — moved to the infirmary and gone. He remembered a silver ring and Arden kin."
         next: sick_pilgrim
       - id: leave_aldric
         text: "Leave him to rest."
@@ -147,6 +176,12 @@ scenes:
   # ── Cloister cluster ──────────────────────────────────────────────────────
   - id: cloister_walk
     title: "The Cloister Walk"
+    variants:
+      - when: [ { has_flag: prior_at_vespers } ]
+        text: >
+          Stone arches frame a square of dead grass. Vespers has emptied the
+          walk; Emric's broom leans in the corner where he left it, and the
+          north-wall cellar door sits unwatched in the rain-dark quiet.
     text: >
       Stone arches frame a square of dead grass. A young monk sweeps the far
       corner with more force than the task needs — the kind of sweeping that has
@@ -236,6 +271,11 @@ scenes:
     # First-match-wins: variant fires when prior IS present (not_flag: prior_at_vespers);
     # base text shows when prior IS at Vespers (flag set) — the empty room.
     variants:
+      - when: [ { has_flag: prior_at_vespers }, { has_flag: has_cellar_key } ]
+        text: >
+          The study is empty. A fire, a writing table, a shelf of ledgers. The
+          door to the scriptorium stands open. Behind the desk, the hook where
+          the cellar key hung is bare.
       - when: [ { not_flag: prior_at_vespers } ]
         text: >
           Prior Aldwulf sits at his writing table. He looks up without warmth.
@@ -316,6 +356,12 @@ scenes:
   # ── Scriptorium (requires prior_at_vespers) ───────────────────────────────
   - id: scriptorium
     title: "The Scriptorium"
+    variants:
+      - when: [ { has_flag: has_ledger } ]
+        text: >
+          A copying desk and shelves of rolled parchment. On the separate shelf
+          where the prior's accounts sat, dust marks the rectangular gap your
+          borrowed ledger left behind.
     text: >
       A copying desk and shelves of rolled parchment — and on a separate shelf,
       bound in plain calfskin but fat with pages: the prior's accounts. Three
@@ -353,16 +399,17 @@ scenes:
       - set_quest_stage: { quest: the_priory, stage: truth_known }
       - add_journal: "The cellar holds pilgrim effects — a sealed satchel, bolts of cloth, a broken chest. Stripped from travelers who died here and stored below. Proof without any ledger."
     text: >
-      Not provisions. A leather satchel still marked with a pilgrim's seal. Two
-      bolts of good cloth. A small ironbound chest with a broken lock, empty.
-      This is where things come when their owners stop needing them.
+      Not provisions. A leather satchel still marked with a pilgrim's seal, and
+      tied shut with a strip of linen from the infirmary. Two bolts of good
+      cloth. A small ironbound chest with a broken lock, empty. This is where
+      things come when their owners stop needing them.
     choices:
       - id: examine_cache
         text: "Look through what is here."
         conditions: [ { not_flag: seen_cache } ]
         effects:
           - set_flag: seen_cache
-          - add_journal: "Inside the satchel: a letter addressed to a family in Arden, a silver ring, a tally stick — the kind of things you send home when you are done traveling. These were never sent."
+          - add_journal: "Inside the infirmary-tied satchel: a letter addressed to a family in Arden, a silver ring, a tally stick — the effects Aldric's missing pilgrim kept trying to name. These were never sent."
           - inc_var: { name: score, by: 10 }
         next: cellar
       - id: go_back_up

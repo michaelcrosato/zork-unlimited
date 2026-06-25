@@ -1,0 +1,26 @@
+id: bug_0396
+pack: printers_night_v1
+title: "stealth exit narrated outside while state stayed in press room"
+severity: high
+scene: press_room
+reported_by: blind_playtest_20260620T180716Z_printers_night_seed7
+
+symptom: >
+  A successful `use_dark_lantern_on_back_door` narrated that the player was
+  through the back door and outside with the type-block, but the next observation
+  still showed `press_room`. After manually moving north, the back court described
+  Edgar Tew's lantern moving away while still offering `attack_edgar_tew`.
+
+root_cause: >
+  The stealth success branch set `slip_past` and opened the back-court escape
+  route, but did not move the player into `back_court`. Edgar Tew also had no
+  state gate, so he remained an active enemy even when the stealth route's prose
+  said he had completed his check and moved off.
+
+fix: >
+  The successful back-door skill check now `goto`s `back_court`, matching the
+  "you are through" narration. Edgar Tew is gated behind `not_flag: slip_past`,
+  so the stealth route leaves the lane open without a contradictory combat
+  option.
+
+tests: tests/regression/printers_night_reactive_taken_items.test.ts

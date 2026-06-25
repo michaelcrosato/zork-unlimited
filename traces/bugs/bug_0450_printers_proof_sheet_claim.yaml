@@ -1,0 +1,27 @@
+id: bug_0450_printers_proof_sheet_claim
+title: "Printer's Night proof sheet can be claimed without replacing the block objective"
+pack: content/rpg/pack/printers_night.yaml
+reported_by: blind-playtest
+report: blind-tester/reports/20260622T173319Z_printers_night_seed7.md
+severity: S2
+symptom: >
+  The world quest said to retrieve the dangerous pamphlet proof, and the press room
+  displayed a proof sheet, but no take_pamphlet_proof action existed. The actual
+  objective was the type-block, with that reframing arriving only after the player
+  took it.
+root_cause: >
+  The proof sheet was authored as a readable, non-takeable clue while the quest
+  wording used "proof" in the ordinary player-facing sense. A first-time player
+  could reasonably try to take the visible proof sheet and get no affordance.
+fix: >
+  Made the proof sheet takeable as evidence, with a one-shot journal/narration that
+  states paper alone will not stop Fen's run and the type-block remains the warrant's
+  target. Added reactive room/object prose so taking the sheet no longer leaves it
+  described on the bench, and corrected the proof-read variant so it no longer
+  claims the block is already in the satchel before the player takes it.
+tests:
+  - tests/regression/printers_night_proof_sheet_claim.test.ts
+verification:
+  - npm test -- --run tests/regression/printers_night_proof_sheet_claim.test.ts tests/regression/printers_night_reactive_taken_items.test.ts
+  - npm run validate -- content/rpg/pack/printers_night.yaml
+  - npm run health

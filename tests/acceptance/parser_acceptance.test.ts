@@ -5,7 +5,7 @@
  *   #3 the AI completes the game using ONLY the structured legal-action API.
  *   #5 determinism holds: the recorded walkthrough trace replays to an identical hash.
  *
- * The canonical solution (the rope → well → two keys → catacombs-gate chain).
+ * The canonical solution (the rope → well → two keys → catacombs-gate → relic chain).
  */
 import { describe, it, expect } from "vitest";
 import { loadParserPackFile } from "../../src/parser/pack.js";
@@ -51,6 +51,7 @@ const WALKTHROUGH_IDS = [
   "go_down",
   "unlock_crypt_gate",
   "go_north",
+  "take_sealed_relic",
 ];
 // ... and the same route as controlled human commands.
 const WALKTHROUGH_COMMANDS = [
@@ -76,6 +77,7 @@ const WALKTHROUGH_COMMANDS = [
   "down",
   "unlock gate with iron key",
   "north",
+  "take relic",
 ];
 
 describe("Stage 2 acceptance — The Sealed Crypt", () => {

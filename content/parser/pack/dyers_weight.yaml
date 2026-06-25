@@ -64,7 +64,7 @@
 # Endings (3):
 #   ending_seized    — WIN (non-death): guild_hall visited
 #   ending_abandoned — PARTIAL (non-death): back_passage visited
-#   ending_bought    — BAD (non-death, instant end_game): TAKE payment_fold
+#   ending_bought    — BAD (non-death, instant end_game): POCKET payment_fold
 #
 # Tension beat: USE copper_tongs ON drain_hole (store_room). d20 + steadiness (3)
 # vs DC 11. CONVERGENT — gates no score, exit, or ending. One-shot on success;
@@ -79,6 +79,14 @@
 meta:
   id: dyers_weight_v1
   title: "The Dyer's Weight"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Dye House Quarter"
+    quest: "catch the false dye weight"
+    role: "guild investigator"
+    connection: "The dye houses color Charterhaven cloth; a corrupt weight stains the whole guild chain."
   start_room: dye_house
   flags_init: []
   vars_init: { steadiness: 3 }
@@ -96,22 +104,86 @@ rooms:
       above the door. Long copper tongs hang by the vat. The store room lies
       east; the door to the north is shut; the back passage runs south.
     variants:
+      - when:
+          - has_flag: proved_adulteration
+          - has_item: indigo_cakes
+          - has_item: copper_tongs
+        text: >
+          The dye house, the second acid test done. The vat foamed along the
+          copper rim where you poured — chalk in the finished product, the same
+          reaction as the casks. The curing rack and the hook by the vat are
+          bare now; the indigo cakes and copper tongs are with you. The north
+          door is clear; the store room lies east.
+      - when:
+          - has_flag: proved_adulteration
+          - has_item: indigo_cakes
+        text: >
+          The dye house, the second acid test done. The vat foamed along the
+          copper rim where you poured — chalk in the finished product, the same
+          reaction as the casks. The curing rack is bare where the indigo cakes
+          were before you took them; long copper tongs still hang by the vat.
+          The north door is clear; the store room lies east.
+      - when:
+          - has_flag: proved_adulteration
+          - has_item: copper_tongs
+        text: >
+          The dye house, the second acid test done. The vat foamed along the
+          copper rim where you poured — chalk in the finished product, the same
+          reaction as the casks. The indigo cakes on the rack are the product
+          of that vat, and the hook by the vat is bare where the copper tongs
+          hung before you took them. The north door still waits on the physical
+          evidence: take the cakes from the rack before you report to the
+          Company. The store room lies east.
       - when: [{ has_flag: proved_adulteration }]
         text: >
           The dye house, the second acid test done. The vat foamed along the
           copper rim where you poured — chalk in the finished product, the same
           reaction as the casks. The indigo cakes on the rack are the product
-          of that vat. The north door is clear; the store room lies east.
+          of that vat. The north door still waits on the physical evidence:
+          take the cakes from the rack before you report to the Company. The
+          store room lies east.
+      - when:
+          - has_item: indigo_cakes
+          - has_item: copper_tongs
+        text: >
+          Meredith's dye house: low-ceilinged, the walls stained blue-black to
+          the height of a man's shoulder. A wide copper vat dominates the far
+          wall, its contents a dull indigo-dark. The curing rack and the hook
+          by the vat are bare now; the finished indigo cakes and long copper
+          tongs are with you. An order ledger sits open on the counting shelf
+          above the door. The store room lies east; the door to the north is
+          shut; the back passage runs south.
+      - when:
+          - has_item: indigo_cakes
+        text: >
+          Meredith's dye house: low-ceilinged, the walls stained blue-black to
+          the height of a man's shoulder. A wide copper vat dominates the far
+          wall, its contents a dull indigo-dark. The curing rack is bare where
+          the finished indigo cakes sat before you took them. An order ledger
+          sits open on the counting shelf above the door. Long copper tongs
+          hang by the vat. The store room lies east; the door to the north is
+          shut; the back passage runs south.
+      - when:
+          - has_item: copper_tongs
+        text: >
+          Meredith's dye house: low-ceilinged, the walls stained blue-black to
+          the height of a man's shoulder. A wide copper vat dominates the far
+          wall, its contents a dull indigo-dark. Beside it, a curing rack holds
+          a dozen finished indigo cakes, each stamped with Meredith's mark —
+          round, the size of a wheel-cheese. An order ledger sits open on the
+          counting shelf above the door. The hook by the vat is bare where the
+          long copper tongs hung before you took them. The store room lies east;
+          the door to the north is shut; the back passage runs south.
     objects: [order_ledger, dye_vat, indigo_cakes, copper_tongs]
     exits:
       - direction: north
         to: guild_hall
         conditions: [{ has_item: indigo_cakes }, { has_flag: proved_adulteration }]
         locked_msg: >
-          The north door stands shut. You have a cake from the rack — but
-          without the second acid test on the vat, one cake proves nothing
-          before the Company. Take the vial from the store room east and test
-          the vat contents directly.
+          The north door stands shut. The Company will not enter a seizure
+          without both a cake from the rack and the two-stage acid proof:
+          secure the cakes, take the vial from the store room east, test the
+          white casks there first, then pour the vial on the vat.
       - { direction: east, to: store_room }
       - { direction: south, to: back_passage }
 
@@ -192,6 +264,14 @@ objects:
           rim: a pale dried line where the foaming chalk settled against the
           metal. The chalk in the vat matches the chalk in the casks. The
           finished product is adulterated.
+      - when:
+          - has_item: acid_vial
+          - not_flag: found_chalk_stock
+        text: >
+          The wide copper vat, its contents a dark indigo-blue. You have the
+          Company vial in hand, but a vat reaction will mean little until you
+          know how the suspicious white casks behave under the acid. Test the
+          casks in the store room east first; then pour the vial on the vat.
     interactions:
       # STAGE 2 — POUR. USE acid_vial ON dye_vat. command_verb: pour produces
       # "pour acid vial on dye vat." Second stage of the two-stage acid test.
@@ -307,7 +387,8 @@ objects:
     description: >
       A glazed ceramic jar, cloth-tied at the cap. The cloth has darkened
       where a trace of the contents has worked through over time. It is
-      lighter than it looks — nearly empty.
+      lighter than it looks — nearly empty. Do not handle the cap barehanded:
+      the copper tongs from the vat would lift it safely.
     interactions:
       # OLFACTORY DETECTION via USE. USE copper_tongs ON vitriol_jar.
       # The tongs lift the cloth cap safely — copperas (iron vitriol) is
@@ -400,25 +481,28 @@ objects:
       subtle; Meredith has done this before. The ledger confirmed twelve
       shillings across two prior quarters. He leaves the payment in a
       standard place and trusts the searcher to understand. Safe to leave.
-      Dangerous to take.
+      Ruinous to pocket.
     # §17 two-telegraph discipline: the description names the heading, the
     # amount, and the implication (prior quarters, standard place) before
-    # TAKE fires end_game. READ order_ledger is the second source: "searcher's
+    # POCKET fires end_game. READ order_ledger is the second source: "searcher's
     # relief — 6s per quarter, two quarters, 12s total." Both are visible
     # before the player acts.
-    takeable: true
-    take_effects:
-      - narrate: >
-          You pocket the five shillings. The fold goes into your coat and the
-          understanding between you and Meredith closes before you cross the
-          store room. He was at the dyehouse front the whole time; you had not
-          noticed the side door. He gave a nod when you passed the dye vat
-          and you found you had nothing to say about the chalk casks. The
-          Company warden received your report the following morning: the
-          dyehouse was found in good order. The cakes were true weight. The
-          searcher's relief payment for the quarter was entered in the
-          accounts and the file was closed.
-      - end_game: ending_bought
+    interactions:
+      - verb: USE
+        target: payment_fold
+        command_verb: pocket
+        effects:
+          - narrate: >
+              You pocket the five shillings. The fold goes into your coat and
+              the understanding between you and Meredith closes before you cross
+              the store room. He was at the dyehouse front the whole time; you
+              had not noticed the side door. He gave a nod when you passed the
+              dye vat and you found you had nothing to say about the chalk
+              casks. The Company warden received your report the following
+              morning: the dyehouse was found in good order. The cakes were
+              true weight. The searcher's relief payment for the quarter was
+              entered in the accounts and the file was closed.
+          - end_game: ending_bought
 
 npcs: []
 
@@ -463,6 +547,21 @@ endings:
       in good standing. The searcher's relief payment continued into the
       following quarter.
       *** The proof was not completed. ***
+    variants:
+      - when: [{ has_flag: proved_adulteration }]
+        text: >
+          You stepped out of Meredith's back door into the passage behind the
+          row. The second acid test was complete: the raw chalk fizzed, the
+          vat contents fizzed, and the finished cakes carried the same fraud.
+          But proof left in a searcher's pocket is not proof before the Deputy
+          Warden. You chose the back passage instead of the Company Hall, and
+          no seizure was entered on the record.
+          By afternoon the vat was washed, the casks were shifted, and Meredith
+          had a clean story ready for anyone who asked late. The merchant's
+          complaint was noted and deferred. Meredith's mark remained in good
+          standing. The searcher's relief payment continued into the following
+          quarter.
+          *** The proof was completed, then abandoned. ***
 
   - id: ending_bought
     title: "For Patience"

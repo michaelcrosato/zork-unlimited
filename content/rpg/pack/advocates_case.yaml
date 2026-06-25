@@ -30,6 +30,8 @@
 #   +3 rhetoric: the guild lost three similar cases in this district, two signed by
 #   Oswin himself). Then USE prior_convictions ON case_record at aldermans_antechamber
 #   — rhetoric DC 12. Success: case dismissed, Oswin overruled; Craf steps aside.
+#   If a fully prepared player fails the roll, the failure text teaches the sequence
+#   and unlocks a deterministic recovery presentation using the town register.
 #   COMBAT (fallback, partial score): skip the evidence or fail the check — Craf must
 #   be fought in the antechamber to force passage. Combat path caps at 40/50.
 #
@@ -44,7 +46,9 @@
 #   +5  READ charter_roll        — exemption confirmed (one-shot: not_flag charter_read)
 #   +10 READ town_register       — official registration (+3 rhetoric; one-shot: has_item + not_flag register_read)
 #   +10 READ prior_convictions   — guild precedent (+3 rhetoric; one-shot: has_item + not_flag priors_read)
-#   +10 rhetoric check success   — USE prior_convictions ON case_record, DC 12 (one-shot: not_flag appeal_attempted)
+#   +10 rhetoric check success   — USE prior_convictions ON case_record, DC 12
+#                                  OR post-failure recovery presentation
+#                                  (one-shot: not_flag oswin_overruled)
 #   +15 market_square on_enter   — WIN (locomotion win)
 #
 # Rhetoric stat calibration (skill checks use d20, combat uses d6):
@@ -63,6 +67,14 @@
 meta:
   id: advocates_case_v1
   title: "The Advocate's Case"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Market Pleas Yard"
+    quest: "argue the charter exemption"
+    role: "travelling advocate"
+    connection: "Charterhaven market law follows its advocates into the Marches, where one precedent can save a livelihood."
   start_room: market_stall
   # `rhetoric` (3 base): formal argumentative ability — constructing a legal position
   # from documentary evidence, citing precedent in order, and speaking before a tribunal
@@ -98,6 +110,13 @@ rooms:
           who is not yet ready to believe the morning has turned out this way. Oswin
           has not returned to the stall. The charter office is east; the guild
           records hall is west; the alderman's building is north.
+      - when: [{ has_flag: charter_roll_taken }]
+        text: >
+          Marta's stall, the impounded broadcloth still roped on the trestle
+          tables. The near table is bare where Marta's charter roll lay. Marta
+          stands behind the table, Oswin on the street-side of the stall. The
+          charter office is east; the guild records hall is west; the alderman's
+          building is north.
     objects: [charter_roll]
     exits:
       - { direction: east, to: charter_office }
@@ -116,9 +135,14 @@ rooms:
     variants:
       - when: [{ has_flag: register_read }]
         text: >
-          The charter office. The register is in your hands — the relevant entry
-          already read, the clerk already satisfied that you are not going to damage
-          the binding. The market stall is back west.
+          The charter office. The relevant entry has been read, the clerk already
+          satisfied that you are not going to damage the binding. The counter is
+          clear where the town register lay open. The market stall is back west.
+      - when: [{ has_flag: town_register_taken }]
+        text: >
+          The charter office. The clerk's counter is clear where the town
+          register lay open, and the wall of bound registers waits behind him.
+          The market stall is back west.
     objects: [town_register]
     exits:
       - { direction: west, to: market_stall }
@@ -166,6 +190,14 @@ rooms:
         text: >
           The alderman's antechamber, Craf down across the doorway. The hearing
           hall is north; the market stall is south.
+      - when: [{ not_flag: priors_read }]
+        text: >
+          The alderman's antechamber. Craf fills the north doorway, and the case
+          slate waits on the clerk's table, but the legal sequence is not complete
+          yet. The charter can state Marta's right and the town register can prove
+          it is recorded; what will move Oswin is the guild's own precedent. The
+          guild records room is west from Marta's stall, if you mean to make this
+          an argument rather than a struggle.
     objects: [case_record]
     exits:
       - { direction: south, to: market_stall }
@@ -213,6 +245,8 @@ objects:
           exemption granted to his heirs in perpetuity. The wax seal is genuine.
           What you need now is the registered copy.
     takeable: true
+    take_effects:
+      - set_flag: charter_roll_taken
     read_text: >
       'By the authority of the Crown, to Walter Holm of this town, in recognition
       of service rendered: exemption from guild licensing requirements for lawful
@@ -262,6 +296,8 @@ objects:
           made a note of your name. What the charter says and what the register
           confirms are the same thing.
     takeable: true
+    take_effects:
+      - set_flag: town_register_taken
     read_text: >
       The entry is on the third page of the 1671 register: 'Walter Holm, licensed
       cloth-trader, exemption from Weavers' Guild membership requirement. Authority:
@@ -421,6 +457,40 @@ objects:
                 for a living knows the difference between an argument and a list of
                 documents. He closes the slate. 'Come back when you have the sequence.'
                 Craf has not moved from the door.
+      # Recovery after a failed rhetoric roll: the failure text explicitly teaches
+      # the required sequence, so a prepared player can now present the same three
+      # documents in order instead of being forced into combat by a bad die.
+      - verb: USE
+        item: town_register
+        target: case_record
+        command_verb: present
+        command_template: "present {item} with the charter and guild conviction records on {target}"
+        conditions:
+          - all_of:
+              - { has_flag: appeal_attempted }
+              - { not_flag: oswin_overruled }
+              - { has_flag: charter_read }
+              - { has_flag: register_read }
+              - { has_flag: priors_read }
+              - { has_item: prior_convictions }
+        effects:
+          - set_flag: oswin_overruled
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: weavers_appeal, stage: case_dismissed }
+          - add_journal: >
+              Appeal recovered and accepted: charter text first, registered copy
+              second, Oswin's prior losses third. The deputy struck the case
+              through after the corrected presentation. Craf stepped aside. (+10)
+          - narrate: >
+              You do exactly what the deputy asked for. This time the charter comes
+              first: Walter Holm's Crown exemption, heritable in perpetuity. The
+              town register follows: the official copy, the same language, no guild
+              license required. Only then do you open the conviction ledger to the
+              prior discharges — Oswin's own signatures on two losses under the same
+              rule. The sequence gives each document its weight. The deputy reads
+              the three entries in silence, picks up the stylus, and strikes the
+              slate through: 'discharged, charter exemption confirmed.' Craf looks
+              at the line, then at Oswin, and steps back from the door.
 
 npcs:
   - id: oswin
@@ -507,6 +577,7 @@ enemies:
       is not from the guild; he will not be moved by argument. He has been given
       one instruction and is waiting for a second one.
     room: aldermans_antechamber
+    conditions: [{ not_flag: oswin_overruled }]
     hp: 12
     attack: 5
     defense: 2

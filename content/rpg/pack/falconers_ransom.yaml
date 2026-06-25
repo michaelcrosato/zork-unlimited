@@ -35,7 +35,7 @@
 #   +5  READ falcon_jesses     — your mark on both cuffs (one-shot: not_flag jesses_read)
 #   +10 READ gate_log          — no mews equipment entered (+3 cunning; one-shot: not_flag log_read)
 #   +10 READ hidden_bill       — forged guild seal (+3 cunning; one-shot: not_flag bill_read)
-#   +10 cunning check success  — USE hidden_bill ON falcon_jesses, DC 12 (one-shot: not_flag confrontation_attempted)
+#   +10 cunning check success  — USE hidden_bill ON falcon_jesses, DC 12 (retires only on success)
 #   +15 manor_road on_enter    — WIN (locomotion win, coincides with game end)
 #   Thorn on_defeat: +0        — combat path is valid but sub-optimal; brute-force is its own cost.
 #
@@ -50,6 +50,14 @@
 meta:
   id: falconers_ransom_v1
   title: "The Falconer's Ransom"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Hawk Yard"
+    quest: "recover the stolen falcon without losing the manor"
+    role: "falconer's agent"
+    connection: "The hawk yard supplies Charterhaven nobles, turning a forged bill of sale into a public ransom."
   start_room: hawk_yard
   # `cunning` (3 base): quick thinking, misdirection, reading deception, and the
   # ability to spring a trap on a trickster before he can adjust. New to the corpus —
@@ -103,8 +111,14 @@ rooms:
     variants:
       - when: [{ has_flag: bill_read }]
         text: >
-          The guest chambers, the satchel still open on the chest. What you needed is
-          in your hands. The hawk-yard is back to the west.
+          The guest chambers, the satchel still open on the chest. The forged seal's
+          tell is fixed in your head now, and the folded document is no longer hidden
+          under the riding gloves at the satchel's lip. The hawk-yard is back to the west.
+      - when: [{ has_flag: hidden_bill_taken }]
+        text: >
+          The guest chambers, the satchel still open on the chest and its riding gloves
+          disturbed. The folded document is no longer tucked at the satchel's lip. The
+          hawk-yard is back to the west.
     objects: [hidden_bill]
     exits:
       - { direction: west, to: hawk_yard }
@@ -218,9 +232,10 @@ objects:
               see the fold of a document there — is the answer he is preparing for it.
       # The confrontation: USE hidden_bill ON falcon_jesses — spring the trap by presenting
       # the forged bill against the jesses in front of Aldric. Cunning DC 12.
-      # One-shot (confrontation_attempted set on BOTH branches).
-      # Requires the player to have read the bill (and ideally the gate log) first,
-      # which raises cunning from base 3 toward the near-certain 9.
+      # Retires only on SUCCESS (bug_0456): a bad roll is a public falter, not Aldric
+      # deleting the pack's primary social route. Requires the player to have read the
+      # bill (and ideally the gate log) first, which raises cunning from base 3 toward
+      # the near-certain 9.
       - verb: USE
         item: hidden_bill
         target: falcon_jesses
@@ -253,19 +268,15 @@ objects:
                 who is already watching from the lodge window. The scene is not worth the
                 bill. He steps away from the block.
           on_failure:
-            - set_flag: confrontation_attempted
-            - add_journal: >
-                The confrontation did not land — Aldric found the gaps in the argument
-                before you could close them. He took the bill back. Thorn is watching
-                from the stable yard arch.
             - narrate: >
-                The words come out in the wrong order — the forged seal before you have
-                named the gate record, the gate record before the jesses are clearly in
-                view, and Aldric finds the seam between them and drives through it calmly.
-                He takes the bill back from your hand with the reflex of a man who has
-                prepared for exactly this move, tucks it into his coat, and gives you a
-                small nod that says he respects the attempt and the conversation is over.
-                Thorn has appeared at the stable yard arch.
+                The words do not close around him quickly enough. Aldric smiles as if
+                the bill's seal, the gate record, and the jesses are three separate
+                inconveniences instead of one trap, and he starts to turn the talk back
+                toward recovery fees. But the forged bill is still in your hand, the gate
+                log is still yours to name, and the bird's jesses are still on the block
+                between you. Thorn watches from the stable yard arch, but the evidence has
+                not left the yard. Press the bill against the jesses again before Aldric
+                settles the order of the story for you.
 
   - id: hidden_bill
     name: "bill of sale"
@@ -284,6 +295,8 @@ objects:
           a guild impression looks like when it was applied fresh versus after the fact.
           Aldric paid well for this; not well enough.
     takeable: true
+    take_effects:
+      - set_flag: hidden_bill_taken
     read_text: >
       The tiercel described is grey, hooded, trained — a match to your bird in every
       particular. But the guild seal is wrong: the wax is too thick, the impression
@@ -392,7 +405,11 @@ npcs:
             - when: [{ has_flag: confrontation_attempted }]
               text: >
                 I believe I have said everything I have to say on this matter.
-            - when: [{ any_of: [{ has_flag: asked_bill }, { has_flag: asked_jesses }] }]
+            - when:
+                - any_of:
+                    - { has_flag: asked_bill }
+                    - { has_flag: asked_jesses }
+                    - { has_flag: asked_mews }
               text: >
                 I have told you what I know. I suggest you consider the arrangements
                 I described.
@@ -481,6 +498,7 @@ enemies:
       of someone who used to work for his living in a harder trade. He will not move
       without a word from Aldric and he will not be moved by argument.
     room: stable_yard
+    conditions: [{ not_flag: aldric_shamed }]
     hp: 12
     attack: 5
     defense: 2

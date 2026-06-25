@@ -1,0 +1,24 @@
+id: bug_0452_sunken_barrow_ward_pacing
+title: "Sunken Barrow trims the shade's warding counsel without losing its promises"
+pack: content/rpg/pack/sunken_barrow.yaml
+reported_by: blind-playtest
+report: blind-tester/reports/20260622T181122Z_sunken_barrow_seed7.md
+severity: S0
+symptom: >
+  The reaver shade's warding speech delivered the right information, but it ran as
+  a long mid-play text dump and repeated the core "keep striking, do not retreat"
+  message several times.
+root_cause: >
+  Prior fixes layered honesty clauses onto the same dialogue node: the ward helps,
+  no other aid exists, and warded play can still lose. Each clause was correct, but
+  together they made the answer bloated and redundant.
+fix: >
+  Rewrote the warding answer as one tighter 150-word counsel beat while preserving
+  the same +3 defense effect, the no-hidden-aid warning, the honest residual-risk
+  hedge, and the anti-retreat instruction to keep striking.
+tests:
+  - tests/regression/rpg_barrow_ward_no_more_aid.test.ts
+verification:
+  - npm test -- --run tests/regression/rpg_barrow_ward_no_more_aid.test.ts tests/regression/rpg_barrow_ward_honest_odds.test.ts tests/regression/rpg_barrow_reaver_shade.test.ts tests/regression/sunken_barrow_shade_signposting.test.ts
+  - npm run validate -- content/rpg/pack/sunken_barrow.yaml
+  - npm run health

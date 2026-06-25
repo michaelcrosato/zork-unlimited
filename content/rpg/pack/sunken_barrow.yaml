@@ -11,6 +11,14 @@
 meta:
   id: sunken_barrow_v1
   title: "The Sunken Barrow"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Sunken Barrow"
+    quest: "claim the relic without waking the barrow lord"
+    role: "barrow delver"
+    connection: "The sunken barrow anchors Charterhaven's oldest boundary claim, so its relic is law as much as treasure."
   start_room: barrow_mouth
   vars_init: { hp: 20, attack: 4, defense: 2, might: 3 }
   flags_init: []
@@ -45,9 +53,11 @@ rooms:
     name: "Entry Hall"
     description: >
       A hall of fitted slabs. A rusted iron bar lies among fallen rubble, and a
-      passage runs north into deeper dark. A low breach gapes west into a cramped
-      side cell, and from its dark a cold breath drifts, prickling the neck —
-      something lingers in there, watchful. Steps climb back up to the light.
+      passage runs north into a deeper cold, the kind an unwarned blade should
+      not meet naked. A low breach gapes west into a cramped side cell, and from
+      its dark a cold breath drifts, prickling the neck. The presence there waits
+      rather than lunges; old counsel, not an ambush, seems to breathe from the
+      cell. Steps climb back up to the light.
     # bug_0170: the west breach now telegraphs the shade IN SCENE ("a cold breath
     # ... something lingers in there, watchful"). This is the Entry Hall fork — west
     # to the optional shade, north into the lethal wight — and a fresh blind
@@ -61,11 +71,13 @@ rooms:
     # The cue makes the PREPARED path discoverable, so skipping the shade is now an
     # INFORMED gamble, not a blind one — bug_0102's intended lethal gamble for whoever
     # chooses it is untouched (the shade stays optional; no flag/var/exit/score/ending
-    # change). The cue reads true throughout: the shade never leaves the cell, so it
-    # holds after the ward is taken too. Mirrored into the has_item: iron_bar variant
-    # below so both renderings agree. Examine/room-text only; the canonical victory
-    # trace's STATE-based expected_final_hash is unchanged, only the pack content_hash
-    # shifts (re-pinned in traces/rpg/barrow_victory.json).
+    # change). bug_0398 sharpens that cue after another blind pass found the shade
+    # still felt optional though the ward is the intended preparation before the
+    # wight. The west cell now reads as waiting counsel rather than an ambush, and
+    # post-shade variants stop calling the already-known shade "something lingers,
+    # watchful." Examine/room-text only; no route/stat/score/enemy change, so the
+    # canonical victory trace's STATE-based expected_final_hash is unchanged, only
+    # the pack content_hash shifts.
     # Reactive room text (bug_0011 shape): once the bar is in hand the rubble is
     # bare, so the room must stop narrating the bar as still lying there. Gated on
     # `has_item: iron_bar` — the closed condition DSL has no object-in-room
@@ -75,13 +87,35 @@ rooms:
     # solve the slab; if it is dropped back in this room has_item flips false and
     # the base text — bar in the rubble — reads true again, matching visible_objects.
     variants:
+      - when:
+          - has_item: iron_bar
+          - any_of:
+              - { has_flag: heard_warding }
+              - { has_flag: heard_lord_lore }
+        text: >
+          A hall of fitted slabs. The rubble is scuffed bare where the rusted iron
+          bar lay until you took it up. The northern passage waits with the
+          grave-cold the shade named for you. The west breach is no longer a
+          nameless threat: the reaver's shade keeps its bone-cold vigil there,
+          counsel given and no malice in it. Steps climb back up to the light.
+      - when:
+          - any_of:
+              - { has_flag: heard_warding }
+              - { has_flag: heard_lord_lore }
+        text: >
+          A hall of fitted slabs. A rusted iron bar lies among fallen rubble, and
+          the northern passage waits with the grave-cold the shade named for you.
+          The west breach is no longer a nameless threat: the reaver's shade keeps
+          its bone-cold vigil there, counsel given and no malice in it. Steps
+          climb back up to the light.
       - when: [ { has_item: iron_bar } ]
         text: >
           A hall of fitted slabs. The rubble is scuffed bare where the rusted iron
-          bar lay until you took it up. A passage runs north into deeper dark, and a
-          low breach gapes west into a cramped side cell from which a cold breath
-          drifts, prickling the neck — something lingers in there, watchful. Steps
-          climb back up to the light.
+          bar lay until you took it up. A passage runs north into a deeper cold,
+          the kind an unwarned blade should not meet naked. A low breach gapes west
+          into a cramped side cell from which a cold breath drifts, prickling the
+          neck. The presence there waits rather than lunges; old counsel, not an
+          ambush, seems to breathe from the cell. Steps climb back up to the light.
     objects: [iron_bar]
     exits:
       - { direction: up, to: barrow_mouth }
@@ -114,7 +148,9 @@ rooms:
     description: >
       Niches line the walls, each holding the dust of a forgotten guard. One
       niche is empty — and something has climbed out of it. An archway east is
-      choked with the cold the thing gives off.
+      choked with the cold the thing gives off. That cold feels like more than an
+      unwarned blade should meet; if you came straight here, the watchful side
+      cell off the entry still promises counsel before blood.
     variants:
       - when: [ { has_flag: wight_slain } ]
         text: >
@@ -122,6 +158,13 @@ rooms:
           niche stands empty, its risen tenant crumbled to grave-dust across the
           floor. The cold has lifted from the archway east, and the dark beyond
           it lies open.
+      - when: [ { has_flag: heard_warding } ]
+        text: >
+          Niches line the walls, each holding the dust of a forgotten guard. One
+          niche is empty — and something has climbed out of it. An archway east is
+          choked with the cold the thing gives off. The warding trick the shade
+          taught you settles into your guard; this is still a true fight, but not
+          an unwarned one.
     exits:
       - { direction: south, to: entry_hall }
       - direction: east
@@ -188,7 +231,7 @@ objects:
   - id: iron_bar
     name: "iron bar"
     aliases: [bar, lever, iron]
-    description: "A rusted but sound iron bar, the length of your arm. A lever, if you have the strength."
+    description: "A rusted but sound iron bar, the length of your arm. A patient lever for old stone, not a verdict on heroic strength."
     takeable: true
 
   - id: stone_slab
@@ -451,24 +494,17 @@ npcs:
         # expected_final_hash is unchanged because no STATE changed, only spoken text.
         - id: shade_wight
           npc_text: >
-            The wight? It is slow, and you are quick — you can best it where I could
-            not. But mind its hands: where they touch, the grave-cold bites deep and
-            wears you down, blow on blow, and that is how it bested me in the end.
-            Here — take the trick I learned too late: keep your guard close and let the
-            chill slide off the iron, not into you. It will not swing your blade for
-            you, but the cold will bite the less. And do not break off to hunt for more
-            than this: there is no balm in the barrow, no second blade, no charm laid
-            by for the next fool — this ward is the whole of the help you will find, and
-            it tips the long odds your way. I will not gild it as the songs would: warded
-            and willing, you have the better of the fight — but the better of it is not the
-            sure of it. It is a true fight still, and the dead have their lucky nights; it
-            can yet go hard against you, even done right. There will come a moment in the
-            cold of it when the fight looks lost; that is the wight's way of wearing a man
-            down, and most times the dread is the trick of it and not the truth. But not
-            every time, and I will not swear you safe. Even so, your one best chance is
-            here, feet set and guard up: keep striking. Step back to seek aid that is not
-            here and you only come again to the same fight, no fresher than you left it,
-            and no likelier to live.
+            The wight is slow, and you are quick; you can best it where I could
+            not. Mind its hands: the grave-cold bites deep, blow on blow, and
+            that is the wight's way of wearing a man down. Keep your guard close
+            and let the chill slide off the iron, not into you. It will not
+            swing your blade, but the cold will bite the less. Do not break off
+            to hunt for more: there is no balm in the barrow, no second blade,
+            no charm laid by. This ward is the whole of the help. Warded and
+            willing, you have the better chance, not a sure one; the dead have
+            lucky nights, and I will not swear you safe. Even so, your best
+            chance is here, feet set and guard up: keep striking. Seek aid that
+            is not here and you only come again to the same fight, no fresher.
           effects:
             - set_flag: heard_warding
             - inc_var: { name: defense, by: 3 }
