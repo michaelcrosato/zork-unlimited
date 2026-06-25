@@ -53,9 +53,9 @@ import { join } from "node:path";
 import { loadParserPackFile } from "../../src/parser/pack.js";
 import { ParserPackSchema } from "../../src/parser/schema.js";
 import { indexParserPack, initStateForParserPack } from "../../src/parser/model.js";
-import { buildParserRules } from "../../src/parser/runner.js";
 import { validateParser } from "../../src/validate/parser_validator.js";
-import { exhaustiveEndings, type ExhaustiveResult } from "./support/exhaustive_endings.js";
+import { exhaustiveEndingsMulti, type ExhaustiveResult } from "./support/exhaustive_endings.js";
+import { parserRollRuleSets } from "./support/parser_rolls.js";
 import { relabelParserPack } from "./support/relabel_parser.js";
 import type { ParserPack } from "../../src/parser/schema.js";
 
@@ -72,8 +72,11 @@ const TEST_TIMEOUT_MS = 90_000;
 
 function census(pack: ParserPack): ExhaustiveResult {
   const index = indexParserPack(pack);
-  const rules = buildParserRules(index);
-  return exhaustiveEndings(rules, initStateForParserPack(index, 7), MAX_STATES);
+  return exhaustiveEndingsMulti(
+    parserRollRuleSets(index),
+    initStateForParserPack(index, 7),
+    MAX_STATES,
+  );
 }
 
 const sortedCodes = (pack: ParserPack): string[] =>

@@ -34,9 +34,9 @@ import { generateParserPack } from "../../src/gen/parser_generator.js";
 import { ParserPackSchema } from "../../src/parser/schema.js";
 import { validateParser } from "../../src/validate/parser_validator.js";
 import { indexParserPack, initStateForParserPack } from "../../src/parser/model.js";
-import { buildParserRules } from "../../src/parser/runner.js";
 import type { Action } from "../../src/api/types.js";
-import { exhaustiveEndings } from "../regression/support/exhaustive_endings.js";
+import { exhaustiveEndingsMulti } from "../regression/support/exhaustive_endings.js";
+import { parserRollRuleSets } from "../regression/support/parser_rolls.js";
 
 // A spread of seeds covering every theme (and then some, wrapping past the theme count).
 const SEEDS = Array.from({ length: 24 }, (_, i) => i);
@@ -85,10 +85,9 @@ describe("procedural PARSER generator emits packs that clear the shipped bar", (
 
       // (4) exhaustively solvable — every declared ending reached, none undeclared, no cap-out.
       const index = indexParserPack(pack);
-      const rules = buildParserRules(index);
       const declared = new Set(pack.endings.map((e) => e.id));
-      const { reached, states, cappedOut } = exhaustiveEndings(
-        rules,
+      const { reached, states, cappedOut } = exhaustiveEndingsMulti(
+        parserRollRuleSets(index),
         initStateForParserPack(index, seed),
         MAX_STATES,
       );
@@ -111,8 +110,8 @@ describe("procedural PARSER generator emits packs that clear the shipped bar", (
       // (5) score economy exact — the reachable max equals the declared max_score (no overflow,
       //     no phantom points). Liveness policy so the READ-borne +5 clue award is counted.
       let maxScore = 0;
-      const econ = exhaustiveEndings(
-        rules,
+      const econ = exhaustiveEndingsMulti(
+        parserRollRuleSets(index),
         initStateForParserPack(index, seed),
         MAX_STATES,
         (s) => {
@@ -137,15 +136,14 @@ describe("procedural PARSER generator emits packs that clear the shipped bar", (
     // the v2 depth-2 chain means the great key is cased in the locked strongbox, not the coffer.
     const pack = generateParserPack(0);
     const index = indexParserPack(pack);
-    const rules = buildParserRules(index);
     const noKeyChain = (a: Action): boolean =>
       !(
         (a.type === "OPEN" && a.target === "strongbox") ||
         (a.type === "TAKE" && a.item === "key") ||
         (a.type === "UNLOCK" && a.target === "gate")
       );
-    const { reached, cappedOut } = exhaustiveEndings(
-      rules,
+    const { reached, cappedOut } = exhaustiveEndingsMulti(
+      parserRollRuleSets(index),
       initStateForParserPack(index, 0),
       MAX_STATES,
       undefined,

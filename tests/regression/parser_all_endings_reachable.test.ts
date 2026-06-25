@@ -17,22 +17,30 @@
  * any end_game effects) and asserts the set of endings ACTUALLY reached equals the set
  * declared in `pack.endings`.
  *
- * Soundness: the parser stage is fully DETERMINISTIC (no RNG — only RPG adds seeded
- * rolls) and its only var is the bounded `score`, so the concrete state space is finite
- * and the BFS exhausts it. A declared-but-unreachable ending (dead content) fails here;
- * a reached-but-undeclared ending (dangling end target) fails; a regression that severs
- * a route fails; and a cap-out (an unproven, truncated search) fails — sound by
- * construction, matching the CYOA suite. Packs are auto-discovered from
+ * Soundness: parser play is deterministic except optional skill-check USE interactions.
+ * Those checks draw a d20, and their success/failure branches can be routing-relevant, so
+ * the proof brackets them by running the BFS under TWO parser rule sets: forced best roll
+ * and forced worst roll. Because the branch predicate is monotonic in the d20, those two
+ * extremes cover every reachable success/failure transition without inventing spurious
+ * states. The rest of the parser state space is finite (bounded `score`, finite flags/
+ * inventory/object state), so a completed BFS is the concrete reachable region. A
+ * declared-but-unreachable ending (dead content) fails here; a reached-but-undeclared
+ * ending (dangling end target) fails; a regression that severs a route fails; and a
+ * cap-out (an unproven, truncated search) fails. Packs are auto-discovered from
  * content/parser/pack, so a new parser pack is covered the moment it ships (the
  * health-covers-all-packs bar, bug_0096).
  */
 import { describe, it, expect } from "vitest";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { loadParserPackFile } from "../../src/parser/pack.js";
+import { compileParserPack, loadParserPackFile } from "../../src/parser/pack.js";
 import { indexParserPack, initStateForParserPack } from "../../src/parser/model.js";
-import { buildParserRules } from "../../src/parser/runner.js";
-import { exhaustiveEndings } from "./support/exhaustive_endings.js";
+import { exhaustiveEndings, exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
+import {
+  parserBestRollRules,
+  parserRollRuleSets,
+  parserWorstRollRules,
+} from "./support/parser_rolls.js";
 
 const PACK_DIR = "content/parser/pack";
 const packFiles = readdirSync(PACK_DIR)
@@ -52,8 +60,11 @@ function reachableEndings(packPath: string): {
   const loaded = loadParserPackFile(packPath);
   if (!loaded.ok) throw new Error(`pack must compile: ${packPath}`);
   const index = indexParserPack(loaded.compiled.pack);
-  const rules = buildParserRules(index);
-  return exhaustiveEndings(rules, initStateForParserPack(index, 7), MAX_STATES);
+  return exhaustiveEndingsMulti(
+    parserRollRuleSets(index),
+    initStateForParserPack(index, 7),
+    MAX_STATES,
+  );
 }
 
 describe("every declared ending of every PARSER pack is reachable by concrete play", () => {
@@ -95,4 +106,49 @@ describe("every declared ending of every PARSER pack is reachable by concrete pl
       ).toEqual([]);
     });
   }
+
+  it("unions parser skill-check success and failure branches when they route to different endings", () => {
+    const src = `
+meta: { id: t, title: T, start_room: a, vars_init: { nerve: 0 } }
+rooms:
+  - id: a
+    name: A
+    description: "A lever waits."
+    objects: [lever]
+objects:
+  - id: lever
+    name: lever
+    description: "a lever"
+    takeable: true
+    interactions:
+      - verb: USE
+        item: lever
+        target: lever
+        skill_check:
+          skill: nerve
+          difficulty: 10
+          on_success: [{ end_game: ending_success }]
+          on_failure: [{ end_game: ending_failure }]
+win_conditions:
+  - { id: inert, conditions: [{ has_flag: never_set }], ending: ending_success }
+endings:
+  - { id: ending_success, title: Success, text: "You force the lever over." }
+  - { id: ending_failure, title: Failure, text: "The lever throws you back." }
+`;
+    const r = compileParserPack(src);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const index = indexParserPack(r.compiled.pack);
+    const start = initStateForParserPack(index, 7);
+
+    const successOnly = exhaustiveEndings(parserBestRollRules(index), start, MAX_STATES);
+    expect([...successOnly.reached].sort()).toEqual(["ending_success"]);
+
+    const failureOnly = exhaustiveEndings(parserWorstRollRules(index), start, MAX_STATES);
+    expect([...failureOnly.reached].sort()).toEqual(["ending_failure"]);
+
+    const bracketed = exhaustiveEndingsMulti(parserRollRuleSets(index), start, MAX_STATES);
+    expect([...bracketed.reached].sort()).toEqual(["ending_failure", "ending_success"]);
+    expect(bracketed.cappedOut).toBe(false);
+  });
 });

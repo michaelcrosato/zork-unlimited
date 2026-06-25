@@ -46,11 +46,11 @@ import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
 import { loadParserPackFile } from "../../src/parser/pack.js";
 import { indexParserPack, initStateForParserPack } from "../../src/parser/model.js";
-import { buildParserRules } from "../../src/parser/runner.js";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildParserObservation } from "../../src/parser/observation.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
+import { parserRollRuleSets } from "./support/parser_rolls.js";
 import type { Rules } from "../../src/core/engine.js";
 
 // Same backstop the reachability suites use; every shipped pack settles well under it.
@@ -60,7 +60,7 @@ const MAX_STATES = 200_000;
 // fixed-sequence PRNG whose draws bracket the player's outcomes. resolveAttack draws the
 // player's strike first, the enemy reply second; resolveSkillCheck draws once. The WORST
 // regime (own strike min, damage taken max) is what drives a death — exactly the path we
-// need a witness for. Parser packs are deterministic, so they need only one rule set.
+// need a witness for. Parser skill checks use their own best/worst d20 bracket.
 const HIGH = 0.999999;
 const LOW = 0;
 function fixedSeqRng(fracs: number[]): Rng {
@@ -176,7 +176,7 @@ describe("every death ending of every parser/RPG pack renders cleanly to the dyi
       const index = indexParserPack(pack);
       const start = initStateForParserPack(index, 7);
       const { witness, cappedOut } = deathWitnesses(
-        [buildParserRules(index)],
+        parserRollRuleSets(index),
         start,
         new Set(deaths.map((d) => d.id)),
       );

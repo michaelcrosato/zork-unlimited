@@ -36,3 +36,21 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Mandatory LLM playtest target this cycle: content/rpg/pack/falconers_ransom.yaml
 - Mandatory LLM playtest target this cycle: content/rpg/pack/factors_mark.yaml
 - Mandatory LLM playtest target this cycle: content/parser/pack/collectors_warrant.yaml
+
+## AFK Cycle 2026-06-25T05-03-36-260Z — ULTRAPLAN (saturation re-aim)
+
+- Assessment: packs cyoa=20 parser=16 rpg=16; 52 candidate(s) ranked.
+- Next best improvement (recommended): [content_fix] Blind-playtest "aleconners_seal_v1" — structurally clean; only a fresh blind LLM player can judge its quality.
+- Why: The validator and exhaustive solver prove this pack is winnable and sound; only a fresh blind LLM playtest reveals signposting/clarity/pacing issues a static check can't see.
+- ⟳ SATURATED: top candidate at the 0.5 floor → this cycle runs a multi-agent ultraplan to re-aim (plan → docs/CURRENT_PLAN.md), then implements in a fresh context.
+- Mandatory LLM playtest target this cycle: content/cyoa/pack/aleconners_seal.yaml.
+- Process: assessor ranks → blind LLM playtest for quality → one improvement → health + verify:integrity green → commit (trust-but-verify).
+
+### Cycle result — bug_0491 / parser skill-check roll-complete proofs
+
+- Blind playtest: `aleconners_seal` passed mechanically; polish deferred.
+- Implemented parser best/worst d20 rule helper for structural proofs.
+- Updated parser reachability, score, variant, menu, relabel, generator, render, and soft-lock proofs.
+- Added synthetic success-only/failure-only parser skill-check regression.
+- VERIFY: 275 focused tests passed; full `npm run health` EXIT 0.
+- Operator direction: pause after this cycle; do not start another AFK cycle.

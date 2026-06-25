@@ -78,12 +78,12 @@ import {
   visibleObjectIds,
   type ParserIndex,
 } from "../../src/parser/model.js";
-import { buildParserRules } from "../../src/parser/runner.js";
 import { evalConditions } from "../../src/core/conditions.js";
 import type { GameState } from "../../src/core/state.js";
 import type { RoomVariant, ObjectVariant, ParserEndingVariant } from "../../src/parser/schema.js";
 import type { Action } from "../../src/api/types.js";
-import { exhaustiveEndings } from "./support/exhaustive_endings.js";
+import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
+import { parserRollRuleSets } from "./support/parser_rolls.js";
 
 const PACK_DIR = "content/parser/pack";
 const packFiles = readdirSync(PACK_DIR)
@@ -137,9 +137,8 @@ function analyze(index: ParserIndex): Liveness {
     if (idx >= 0) displayed.add(`${kind}:${id}#${idx}`);
   };
 
-  const rules = buildParserRules(index);
-  const result = exhaustiveEndings(
-    rules,
+  const result = exhaustiveEndingsMulti(
+    parserRollRuleSets(index),
     initStateForParserPack(index, 7),
     MAX_STATES,
     (s) => {
@@ -279,8 +278,8 @@ endings: [{ id: e, title: E, text: "done" }]
     // Control: exclude READ from the policy — the same variant is now (wrongly) dead,
     // proving the read-flag state is reachable ONLY by stepping READ.
     const displayedNoRead = new Set<string>();
-    exhaustiveEndings(
-      buildParserRules(index),
+    exhaustiveEndingsMulti(
+      parserRollRuleSets(index),
       initStateForParserPack(index, 7),
       MAX_STATES,
       (s) => {

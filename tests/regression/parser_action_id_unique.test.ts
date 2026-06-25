@@ -64,10 +64,10 @@ import {
   initStateForParserPack,
   type ParserIndex,
 } from "../../src/parser/model.js";
-import { buildParserRules } from "../../src/parser/runner.js";
 import { enumerateActions } from "../../src/parser/legal_actions.js";
 import type { Action } from "../../src/api/types.js";
-import { exhaustiveEndings } from "./support/exhaustive_endings.js";
+import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
+import { parserRollRuleSets } from "./support/parser_rolls.js";
 
 const PACK_DIR = "content/parser/pack";
 const packFiles = readdirSync(PACK_DIR)
@@ -109,9 +109,8 @@ function analyze(index: ParserIndex): MenuReport {
   let statesChecked = 0;
   let actionsSeen = 0;
 
-  const rules = buildParserRules(index);
-  const result = exhaustiveEndings(
-    rules,
+  const result = exhaustiveEndingsMulti(
+    parserRollRuleSets(index),
     initStateForParserPack(index, 7),
     MAX_STATES,
     (s) => {

@@ -33,9 +33,9 @@ import { generateParserPack, PARSER_GENERATOR_VERSION } from "../../src/gen/pars
 import type { ParserPack } from "../../src/parser/schema.js";
 import { ParserPackSchema } from "../../src/parser/schema.js";
 import { indexParserPack, initStateForParserPack } from "../../src/parser/model.js";
-import { buildParserRules } from "../../src/parser/runner.js";
 import type { Action } from "../../src/api/types.js";
-import { exhaustiveEndings } from "./support/exhaustive_endings.js";
+import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
+import { parserRollRuleSets } from "./support/parser_rolls.js";
 
 const SEEDS = Array.from({ length: 12 }, (_, i) => i);
 const MAX_STATES = 200_000;
@@ -64,7 +64,6 @@ function winReachableWithoutTakes(
 } {
   const removed = new Set(removedTakeItems);
   const index = indexParserPack(pack);
-  const rules = buildParserRules(index);
   const explore = (a: Action): boolean =>
     !(a.type === "TAKE" && a.item !== undefined && removed.has(a.item)) &&
     // keep the default reachability restriction (skip reversible/observation moves) so the search
@@ -75,8 +74,8 @@ function winReachableWithoutTakes(
     a.type !== "INVENTORY" &&
     a.type !== "READ" &&
     a.type !== "INSPECT";
-  const { reached, cappedOut } = exhaustiveEndings(
-    rules,
+  const { reached, cappedOut } = exhaustiveEndingsMulti(
+    parserRollRuleSets(index),
     initStateForParserPack(index, 0),
     MAX_STATES,
     undefined,
@@ -114,10 +113,13 @@ describe("bug_0199 — the parser generator emits a validator-independent depth-
     it(`seed ${seed}: depth-3 (3 load-bearing tiers), both endings reachable, fully solvable`, () => {
       const pack = generateParserPack(seed);
       const index = indexParserPack(pack);
-      const rules = buildParserRules(index);
 
       // ── POSITIVE / liveness: BOTH endings reachable, no cap-out (the bug_0121/0122 solver). ──
-      const live = exhaustiveEndings(rules, initStateForParserPack(index, seed), MAX_STATES);
+      const live = exhaustiveEndingsMulti(
+        parserRollRuleSets(index),
+        initStateForParserPack(index, seed),
+        MAX_STATES,
+      );
       expect(live.cappedOut, `seed ${seed}: liveness search hit the state cap`).toBe(false);
       expect(live.reached.has(WIN), `seed ${seed}: win unreachable`).toBe(true);
       expect(live.reached.has(DOOM), `seed ${seed}: death fork unreachable`).toBe(true);

@@ -25,9 +25,9 @@
 import { describe, it, expect } from "vitest";
 import { generateParserPack, PARSER_GENERATOR_VERSION } from "../../src/gen/parser_generator.js";
 import { indexParserPack, initStateForParserPack } from "../../src/parser/model.js";
-import { buildParserRules } from "../../src/parser/runner.js";
 import type { Action } from "../../src/api/types.js";
-import { exhaustiveEndings } from "./support/exhaustive_endings.js";
+import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
+import { parserRollRuleSets } from "./support/parser_rolls.js";
 
 const SEEDS = Array.from({ length: 12 }, (_, i) => i);
 const MAX_STATES = 200_000;
@@ -123,10 +123,9 @@ describe("bug_0168 / bug_0199 — the parser generator emits a three-tier (depth
     // key) can fire.
     const pack = generateParserPack(0);
     const index = indexParserPack(pack);
-    const rules = buildParserRules(index);
     const noLesserKey = (a: Action): boolean => !(a.type === "TAKE" && a.item === "lesser_key");
-    const { reached, cappedOut } = exhaustiveEndings(
-      rules,
+    const { reached, cappedOut } = exhaustiveEndingsMulti(
+      parserRollRuleSets(index),
       initStateForParserPack(index, 0),
       MAX_STATES,
       undefined,
@@ -148,10 +147,9 @@ describe("bug_0168 / bug_0199 — the parser generator emits a three-tier (depth
     // key can never open the inner chest, so the great key is never obtained and NEITHER ending fires.
     const pack = generateParserPack(0);
     const index = indexParserPack(pack);
-    const rules = buildParserRules(index);
     const noMiddleKey = (a: Action): boolean => !(a.type === "TAKE" && a.item === "middle_key");
-    const { reached, cappedOut } = exhaustiveEndings(
-      rules,
+    const { reached, cappedOut } = exhaustiveEndingsMulti(
+      parserRollRuleSets(index),
       initStateForParserPack(index, 0),
       MAX_STATES,
       undefined,

@@ -54,11 +54,11 @@ import type { Rng } from "../../src/core/rng.js";
 import { loadParserPackFile } from "../../src/parser/pack.js";
 import { endingText, indexParserPack, initStateForParserPack } from "../../src/parser/model.js";
 import type { ParserEnding } from "../../src/parser/schema.js";
-import { buildParserRules } from "../../src/parser/runner.js";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildParserObservation } from "../../src/parser/observation.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
+import { parserRollRuleSets } from "./support/parser_rolls.js";
 import type { Rules } from "../../src/core/engine.js";
 
 // Same backstop the reachability suites use; every shipped pack settles well under it.
@@ -66,7 +66,7 @@ const MAX_STATES = 200_000;
 
 // Best/worst-roll rule sets for RPG, identical to rpg_all_endings_reachable.test.ts. The
 // BEST regime (own strike max, damage taken min) is what carries a WIN — the path we need a
-// non-death witness for. Parser packs are deterministic, so they need only one rule set.
+// non-death witness for. Parser skill checks use their own best/worst d20 bracket.
 const HIGH = 0.999999;
 const LOW = 0;
 function fixedSeqRng(fracs: number[]): Rng {
@@ -185,7 +185,7 @@ describe("every non-death ending of every parser/RPG pack renders cleanly when r
       const index = indexParserPack(pack);
       const start = initStateForParserPack(index, 7);
       const { witness, cappedOut } = nonDeathWitnesses(
-        [buildParserRules(index)],
+        parserRollRuleSets(index),
         start,
         new Set(ends.map((d) => d.id)),
       );

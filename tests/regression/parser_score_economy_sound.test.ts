@@ -54,9 +54,9 @@ import {
   initStateForParserPack,
   type ParserIndex,
 } from "../../src/parser/model.js";
-import { buildParserRules } from "../../src/parser/runner.js";
 import type { Action } from "../../src/api/types.js";
-import { exhaustiveEndings } from "./support/exhaustive_endings.js";
+import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
+import { parserRollRuleSets } from "./support/parser_rolls.js";
 
 const PACK_DIR = "content/parser/pack";
 const packFiles = readdirSync(PACK_DIR)
@@ -87,8 +87,8 @@ const livenessExplore = (a: Action): boolean => !LIVENESS_SKIP.has(a.type);
  *  reachable maximum), plus whether the search exhausted that region. */
 function maxReachableScore(index: ParserIndex): { max: number; cappedOut: boolean } {
   let max = 0;
-  const result = exhaustiveEndings(
-    buildParserRules(index),
+  const result = exhaustiveEndingsMulti(
+    parserRollRuleSets(index),
     initStateForParserPack(index, 7),
     MAX_STATES,
     (s) => {

@@ -13,14 +13,16 @@
  * (see cyoa_all_endings_reachable.test.ts for the full rationale).
  *
  * Soundness rests on three properties of the modes this serves:
- *   1. DETERMINISM — `resolve` is pure (same state + action ⇒ same result). CYOA and the
- *      parser stage have NO randomness, so one step per (state, action) explores every
- *      transition. RPG's seeded combat/skill rolls would defeat a single-rules BFS (one
- *      fingerprint can transition many ways), so the RPG caller uses `exhaustiveEndingsMulti`
- *      with two rule sets that bracket the player's best/worst rolls — see that function's
- *      doc and rpg_all_endings_reachable.test.ts. (RPG winnability under WORST rolls stays
- *      proven separately by the combat-bound checks, src/validate/rpg_validator.ts; this
- *      proves ROUTE EXISTENCE — every declared ending is reachable under SOME play.)
+ *   1. DETERMINISM / ROLL BRACKETING — `resolve` is pure for a given rules object
+ *      (same state + action + roll stream ⇒ same result). CYOA's shipped skill checks are
+ *      convergent and guarded by their own oracle, so one seeded step remains enough there.
+ *      Parser and RPG can carry routing-relevant skill checks, and RPG also has combat; their
+ *      structural callers use `exhaustiveEndingsMulti` with rule sets that force the player's
+ *      best/worst rolls, so one fingerprint can expose both success and failure transitions.
+ *      See parser_rolls.ts and rpg_all_endings_reachable.test.ts. (RPG winnability under
+ *      WORST rolls stays proven separately by the combat-bound checks, src/validate/
+ *      rpg_validator.ts; this proves ROUTE EXISTENCE — every declared ending is reachable
+ *      under SOME play.)
  *   2. FINITENESS — the fingerprint collapses interchangeable states, and every shipped
  *      pack's vars are bounded (CYOA's deadline counters, the parser `score`, both capped
  *      by gating), so the visited set is finite and the BFS terminates. The MAX_STATES
@@ -181,26 +183,22 @@ export function exhaustiveEndings(
 /**
  * The generalization that backs `exhaustiveEndings` and lifts the search into the RPG mode.
  *
- * CYOA and the parser stage are fully DETERMINISTIC, so one `Rules` whose `resolve` is pure
- * suffices: stepping each legal action explores every transition. RPG breaks that — its
- * ATTACK rounds and skill checks draw a seeded die, so a single (state, action) can resolve
- * many ways and one `Rules` can't enumerate the outcomes. The fix is to step each action
- * under SEVERAL rule sets that differ ONLY in the rolls their combat/skill resolver draws.
- * The RPG caller passes two: one forcing the player's BEST rolls (max strike, min damage
- * taken, max skill roll), one their WORST. Because the only routing-relevant consequence of
- * a round is monotonic in the roll — did the enemy reach 0 HP, did the player reach 0 HP,
- * did the d20 meet the difficulty — those two extremes bracket every outcome a middle roll
- * could produce, so any ending reachable under SOME rolls is reached here (and conversely
- * every state visited is a real, legal playthrough on real die values, so nothing spurious
- * is reached). See rpg_all_endings_reachable.test.ts for the full soundness argument and the
- * load-bearing assumption it guards (no ending gates on a raw HP value).
+ * Deterministic callers can pass one `Rules` whose `resolve` is pure and get the original
+ * single-transition BFS. Roll-bearing callers pass SEVERAL rule sets that differ ONLY in
+ * the rolls their combat/skill resolver draws. Parser callers pass best/worst d20 skill
+ * checks; RPG callers pass best/worst combat+skill regimes. Because the routing-relevant
+ * consequence is monotonic in those rolls — did the d20 meet the difficulty, did the enemy
+ * reach 0 HP, did the player reach 0 HP — the two extremes bracket every outcome a middle
+ * roll could produce, so any ending reachable under SOME rolls is reached here (and
+ * conversely every state visited is a real, legal playthrough on real die values, so
+ * nothing spurious is reached). See parser_all_endings_reachable.test.ts and
+ * rpg_all_endings_reachable.test.ts for the mode-specific soundness arguments.
  *
  * `legalActions` does NOT depend on the roll (legality is rng-independent in every mode), so
  * the legal set is taken from the first rule set and each action is stepped under all of
  * them; a rejected step (e.g. an action a regime makes unavailable) is simply skipped. For a
  * single deterministic rule set this is identical to the original single-rules BFS — the
- * second-and-later steps just reproduce the first and dedupe away — so CYOA/parser behaviour
- * is unchanged.
+ * second-and-later steps just reproduce the first and dedupe away.
  */
 export function exhaustiveEndingsMulti(
   ruleSets: Rules[],

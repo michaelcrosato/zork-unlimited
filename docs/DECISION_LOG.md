@@ -8,7 +8,7 @@ cannot remember what was already ruled out; this file is **append-only** and nev
 
 - **Reviewers read this file FIRST.** Do **not** re-nominate any gap listed under "Confirmed closed"
   below — it is already implemented, with the file:line proof recorded. Re-investigating it is the
-  exact redundant fan-out this log exists to stop (re-aim #19 alone confirmed *six* such false alarms).
+  exact redundant fan-out this log exists to stop (re-aim #19 alone confirmed _six_ such false alarms).
 - **The synthesis APPENDS** a dated entry recording the gaps it confirmed closed this cycle (with
   proof) and the one move it chose. Append only; never edit or delete prior entries.
 - If a "confirmed closed" entry is genuinely wrong (the feature regressed or never existed), say so
@@ -47,7 +47,7 @@ Seeded 2026-06-08 from `docs/CURRENT_PLAN.md` re-aim #19 (and #17/#18) "false al
   escapes. S-effort; deferred (real test code writes tautologies single-line; narrow risk).
 - **🚫 ANTI-PATTERN — do NOT keep raising `TARGET_PER_MODE` (orchestrator ruling 2026-06-09).**
   Re-aims #19→bug_0332, mid-cycle→bug_0335, #21→bug_0336 each raised `TARGET_PER_MODE`
-  (`src/afk/assessor.ts:68`) to *current counts + a little headroom*. Each raise is consumed by a
+  (`src/afk/assessor.ts:68`) to _current counts + a little headroom_. Each raise is consumed by a
   burst of `content_new` authoring, which re-saturates, which makes the NEXT ultraplan raise it
   again — a self-perpetuating loop the re-aims themselves flagged as a "structural trap" yet kept
   feeding. **The ceiling is now intentionally FIXED at `{cyoa:20, parser:16, rpg:16}` (the bug_0336
@@ -668,6 +668,28 @@ audit work in `wolf_winter`.
 **Next after this:** continue down the remaining high-confidence room/item sites, starting with
 `wolf_winter`, or promote the low-FP subset once the remaining false positives are
 tuned out.
+
+### Ultraplan cycle — 2026-06-25 (HEAD = token-efficiency branch; next move = parser skill-check roll-complete proofs)
+
+**Confirmed this cycle:**
+
+- `aleconners_seal` blind playtest passed mechanically and found polish, not a blocker:
+  `check_empty_finding` reads as a no-op, partial finding feedback is generic, and the
+  retest ending can contradict a full-evidence journal.
+- Parser skill checks are live in shipped packs, while several parser structural proofs
+  still used one deterministic rule set. That could miss success-only or failure-only
+  branches in reachability, score, variant, menu, render, relabel, and soft-lock proofs.
+
+**Chosen move — make parser structural proofs roll-complete**
+
+Added `tests/regression/support/parser_rolls.ts` with forced best/worst parser d20
+rule sets and moved parser structural exhaustive callers to `exhaustiveEndingsMulti`
+where branch coverage matters. The parser all-endings suite now includes a synthetic
+pack where success and failure route to different endings, proving the bracket is
+load-bearing.
+
+**Next after this:** fix the Aleconner playtest polish or add per-cycle token/cost
+telemetry so future token-efficiency work is measured directly.
 
 ### Standard cycle — 2026-06-19 (HEAD = 6aef3d6; next move = wolf winter prep-item prose)
 
