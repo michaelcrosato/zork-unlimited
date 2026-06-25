@@ -3,15 +3,16 @@
  * ending gave no hint that the vault above was never explored.
  *
  * A blind playtester (seed 42, report ai-runs/2026-06-08T04-28-37-948Z/playtest.md)
- * noted that the letter_hidden variant of ending_truth (the 20/45 shortcut path)
- * landed with no signal that the vault above exists or that a fuller route awaits.
- * A player who takes the crawlspace first may close the game at 20/45 thinking
- * they have seen everything.
+ * noted that the letter_hidden variant of ending_truth (then the 20/45 shortcut
+ * path; bug_0461 later made it full-score) landed with no signal that the vault
+ * above exists or that a fuller route awaits. A player who took the crawlspace
+ * first could close the game thinking they had seen everything.
  *
  * Fix (content, pure prose — bug_0285): the letter_hidden variant in ending_truth
  * gains one sentence: "The vault above stays cold and locked; his other copy still
  * waits inside it, where he left it for whoever cracked the front door." Plants
- * curiosity without penalizing the crawlspace player. No flag/route/score change.
+ * curiosity without penalizing the crawlspace player. This fix itself made no
+ * flag/route/score change; bug_0461 later changed the score outcome.
  *
  * Locked here:
  *   (1) the crawlspace epilogue contains the vault-nudge sentence;

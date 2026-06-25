@@ -4,14 +4,19 @@
  * ranking), and reads real pack/mode health.
  */
 import { describe, it, expect } from "vitest";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   assess,
+  allGeneratedChecksClean,
+  blindReportAttendanceOffsets,
   formatAssessment,
   isSaturated,
+  mergeAttendanceOffsets,
   packStem,
   parseAttendanceOffsets,
+  parseBlindReportAttendanceOffsets,
   SATURATION_FLOOR,
   type Assessment,
   type Category,
@@ -19,6 +24,64 @@ import {
 } from "../../src/afk/assessor.js";
 
 const a = assess(process.cwd());
+
+function realRepoAttendanceOffsets(): Map<string, number> {
+  const loopState = join(process.cwd(), "AI_LOOP_STATE.md");
+  const loopOffsets = existsSync(loopState)
+    ? parseAttendanceOffsets(readFileSync(loopState, "utf8"))
+    : new Map<string, number>();
+  return mergeAttendanceOffsets(loopOffsets, blindReportAttendanceOffsets(process.cwd()));
+}
+
+function withStaleAuditFixtureRoot(run: (root: string) => void): void {
+  const root = mkdtempSync(join(tmpdir(), "af-assessor-"));
+  try {
+    mkdirSync(join(root, "content", "parser", "pack"), { recursive: true });
+    mkdirSync(join(root, "content", "rpg", "pack"), { recursive: true });
+    writeFileSync(
+      join(root, "content", "parser", "pack", "stale_fixture.yaml"),
+      [
+        "meta:",
+        "  id: stale_audit_fixture_v1",
+        "  title: Stale Audit Fixture",
+        "  start_room: start",
+        "rooms:",
+        "  - id: start",
+        "    name: Start",
+        "    description: A plain starting room.",
+        "    exits:",
+        "      - direction: east",
+        "        to: room",
+        "  - id: room",
+        "    name: Store",
+        "    description: A brass lamp waits on the table.",
+        "    objects: [lamp]",
+        "    exits:",
+        "      - direction: west",
+        "        to: start",
+        "objects:",
+        "  - id: lamp",
+        "    name: brass lamp",
+        "    aliases: [lamp]",
+        "    description: A useful lamp.",
+        "    takeable: true",
+        "win_conditions:",
+        "  - id: win",
+        "    conditions:",
+        "      - has_flag: impossible",
+        "    ending: ending_win",
+        "endings:",
+        "  - id: ending_win",
+        "    title: Done",
+        "    text: Done.",
+        "",
+      ].join("\n"),
+    );
+    run(root);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
 
 describe("assess()", () => {
   it("counts packs by mode from the real content dirs", () => {
@@ -31,6 +94,13 @@ describe("assess()", () => {
     expect(a.candidates.length).toBeGreaterThan(0);
     expect(a.top).not.toBeNull();
     expect(a.top!.score).toBe(a.candidates[0]!.score); // top is the highest-scored
+  });
+
+  it("surfaces whether all fresh generator windows validated clean", () => {
+    expect(a.allGeneratorsClean).toBe(true);
+    expect(a.candidates.find((c) => c.id === "generator-drift")).toBeUndefined();
+    expect(a.candidates.find((c) => c.id === "generator-rpg-drift")).toBeUndefined();
+    expect(a.candidates.find((c) => c.id === "generator-parser-drift")).toBeUndefined();
   });
 
   it("disarms the repo ESLint+Prettier lever once the tooling is in place (bug_0031)", () => {
@@ -69,18 +139,37 @@ describe("assess()", () => {
     for (const r of reviews) expect(r.score).toBeLessThan(1); // ranked below real fixes + new content
   });
 
-  it("raises content_new candidates for all modes below the breadth target", () => {
-    // TARGET_PER_MODE = {cyoa:20, parser:16, rpg:16} (bug_0336). Current counts
-    // (cyoa=12, parser=10, rpg=10) are all below the new targets, so the assessor
-    // correctly ARMS content_new for all three modes. This asserts the headroom is
-    // real and that isSaturated() returns false.
-    for (const mode of ["cyoa", "parser", "rpg"]) {
-      expect(a.packsByMode[mode]).toBeGreaterThanOrEqual(2);
-      expect(
-        a.candidates.find((c) => c.category === "content_new" && c.target === mode),
-      ).toBeDefined();
-    }
-    expect(a.candidates.find((c) => c.category === "content_new")).toBeDefined();
+  it("surfaces the stale reactive-description audit as an above-floor structural candidate when the class exists", () => {
+    withStaleAuditFixtureRoot((root) => {
+      const fixtureAssessment = assess(root);
+      const candidate = fixtureAssessment.candidates.find(
+        (c) => c.id === "stale-reactive-room-item-audit",
+      );
+
+      expect(candidate).toBeDefined();
+      expect(candidate?.category).toBe("engine");
+      expect(candidate?.score).toBeGreaterThan(SATURATION_FLOOR);
+      expect(candidate?.evidence[0]).toContain("item/take-effect state");
+    });
+  });
+
+  it("raises content_new candidates only for modes below the breadth target", () => {
+    // TARGET_PER_MODE = {cyoa:20, parser:16, rpg:16} (bug_0336). The current corpus
+    // has reached all three mode targets, so the assessor should disarm every
+    // content_new candidate and leave routine blind-playtest review as the live lever.
+    expect(a.packsByMode["cyoa"]).toBeGreaterThanOrEqual(20);
+    expect(
+      a.candidates.find((c) => c.category === "content_new" && c.target === "cyoa"),
+    ).toBeUndefined();
+    expect(a.packsByMode["parser"]).toBeGreaterThanOrEqual(16);
+    expect(
+      a.candidates.find((c) => c.category === "content_new" && c.target === "parser"),
+    ).toBeUndefined();
+    expect(a.packsByMode["rpg"]).toBeGreaterThanOrEqual(16);
+    expect(
+      a.candidates.find((c) => c.category === "content_new" && c.target === "rpg"),
+    ).toBeUndefined();
+    expect(a.candidates.find((c) => c.category === "content_new")).toBeUndefined();
   });
 
   it("every candidate is well-formed (evidence + score + effort)", () => {
@@ -108,7 +197,35 @@ describe("assess()", () => {
   it("formatAssessment renders the recommendation", () => {
     const out = formatAssessment(a);
     expect(out).toContain("next best improvement");
+    expect(out).toContain("Generator mint-and-check: clean");
     expect(out).toContain("Recommended next");
+  });
+});
+
+describe("allGeneratedChecksClean", () => {
+  it("is true only when every generated pack report has zero findings", () => {
+    expect(
+      allGeneratedChecksClean([
+        { seed: 1, pack_id: "a", report: { pack_id: "a", ok: true, findings: [] } },
+        { seed: 2, pack_id: "b", report: { pack_id: "b", ok: true, findings: [] } },
+      ]),
+    ).toBe(true);
+    expect(
+      allGeneratedChecksClean([
+        { seed: 1, pack_id: "a", report: { pack_id: "a", ok: true, findings: [] } },
+        {
+          seed: 2,
+          pack_id: "b",
+          report: {
+            pack_id: "b",
+            ok: true,
+            findings: [
+              { severity: "warning", code: "X", message: "unclean generated pack", where: [] },
+            ],
+          },
+        },
+      ]),
+    ).toBe(false);
   });
 });
 
@@ -150,10 +267,67 @@ describe("blind-pass rotation (bug_0128)", () => {
     expect(offsets.has("wreckers_light")).toBe(true);
   });
 
+  it("parseBlindReportAttendanceOffsets recognizes timestamped accepted markdown reports", () => {
+    const offsets = parseBlindReportAttendanceOffsets([
+      "20260619T191648Z_aleconners_seal_seed7.md",
+      "20260619T190607Z_aleconners_seal_seed7.md",
+      "20260619T192000Z_alnagers_fault_seed42.md",
+      "20260619T192000Z_alnagers_fault_seed42.json",
+      "not_a_report.md",
+    ]);
+
+    expect(offsets.has("aleconners_seal")).toBe(true);
+    expect(offsets.has("alnagers_fault")).toBe(true);
+    expect(offsets.has("not_a_report")).toBe(false);
+    expect(offsets.get("alnagers_fault")!).toBeLessThan(offsets.get("aleconners_seal")!);
+  });
+
+  it("mergeAttendanceOffsets treats local report offsets as newer than tracked log offsets", () => {
+    const tracked = new Map([
+      ["aleconners_seal", 0],
+      ["clockwork_heist", 100],
+    ]);
+    const reports = parseBlindReportAttendanceOffsets([
+      "20260619T191648Z_aleconners_seal_seed7.md",
+    ]);
+    const merged = mergeAttendanceOffsets(tracked, reports);
+
+    expect(merged.get("aleconners_seal")).toBeLessThan(0);
+    expect(merged.get("clockwork_heist")).toBe(100);
+  });
+
+  it("blindReportAttendanceOffsets ignores rejected markdown artifacts left by failed blind runs", () => {
+    const root = mkdtempSync(join(tmpdir(), "af-blind-reports-"));
+    try {
+      const reportsDir = join(root, "blind-tester", "reports");
+      mkdirSync(reportsDir, { recursive: true });
+      writeFileSync(
+        join(reportsDir, "20260619T191648Z_aleconners_seal_seed7.md"),
+        `
+1. Playthrough log: I started the game, followed the evidence, and reached a finding.
+2. Did it work mechanically? No rejected actions or loops.
+3. Understandable & fun? clarity 4/5 + enjoyment 4/5.
+4. Confusion / friction points. None.
+5. Bugs or design flaws. None.
+6. Verdict: A real player would finish satisfied.
+`,
+      );
+      writeFileSync(
+        join(reportsDir, "20260619T192000Z_alnagers_fault_seed7.md"),
+        "The adventureforge MCP server has failed to connect, so I cannot play the game.",
+      );
+
+      const offsets = blindReportAttendanceOffsets(root);
+      expect(offsets.has("aleconners_seal")).toBe(true);
+      expect(offsets.has("alnagers_fault")).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("rotates the blind pass onto the LEAST-recently-attended pack, never-attended first (bug_0128)", () => {
-    const loopState = join(process.cwd(), "AI_LOOP_STATE.md");
-    if (!existsSync(loopState)) return; // rotation is a no-op without the log
-    const offsets = parseAttendanceOffsets(readFileSync(loopState, "utf8"));
+    const offsets = realRepoAttendanceOffsets();
+    if (offsets.size === 0) return; // rotation is a no-op without attendance evidence
     const reviews = a.candidates.filter((c) => c.id.startsWith("playtest-"));
     if (reviews.length < 2) return;
     const actual = reviews.map((c) => c.target);
@@ -195,8 +369,13 @@ describe("isSaturated — the saturation-triggered ultraplan signal", () => {
   const withTop = (top: ImprovementCandidate | null): Assessment => ({
     packsByMode: {},
     packs: [],
+    allGeneratorsClean: true,
     candidates: top ? [top] : [],
     top,
+  });
+  const withTopAndDirtyGenerators = (top: ImprovementCandidate | null): Assessment => ({
+    ...withTop(top),
+    allGeneratorsClean: false,
   });
 
   it("is saturated when the top candidate sits at/below the 0.5 floor", () => {
@@ -206,6 +385,11 @@ describe("isSaturated — the saturation-triggered ultraplan signal", () => {
 
   it("is saturated when there is no candidate at all", () => {
     expect(isSaturated(withTop(null))).toBe(true);
+  });
+
+  it("is NOT saturated when a generator window is unclean, even at the floor", () => {
+    expect(isSaturated(withTopAndDirtyGenerators(candidate(SATURATION_FLOOR)))).toBe(false);
+    expect(isSaturated(withTopAndDirtyGenerators(null))).toBe(false);
   });
 
   it("is NOT saturated when a higher-value lever is present", () => {

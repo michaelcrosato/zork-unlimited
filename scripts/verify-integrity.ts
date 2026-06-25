@@ -27,12 +27,12 @@
  * assertions still PIN A VALUE — closing the launder where a cycle keeps every shell
  * and every `expect()` but swaps a strict matcher for a loose existence check
  * (`toBe(x)` → `toBeDefined()`), leaving a green test that no longer checks anything
- * specific. A net drop in ANY of the three across a cycle is a hard regression. Honest
- * limitation that remains: a count-preserving swap that keeps a STRONG matcher but
- * makes it vacuous (`expect(true).toBe(true)`) is still not caught — that needs a
- * semantic judge, which would forfeit this script's pure-determinism. An agent with
- * write access to this script could also edit the guard itself — the point is to make
- * tampering visible, effortful, and against the rules, not impossible.
+ * specific. The tautology scanner adds a deterministic semantic backstop for the
+ * count-preserving launder where a STRONG matcher is kept but made vacuous
+ * (`expect(true).toBe(true)`). A net drop in any count, or an increase in tautologies,
+ * is a hard regression. An agent with write access to this script could also edit the
+ * guard itself — the point is to make tampering visible, effortful, and against the
+ * rules, not impossible.
  * Pure + deterministic: no clock, no RNG, no network.
  */
 import { execFileSync } from "node:child_process";
@@ -376,9 +376,14 @@ export type TestArtifactCounts = {
  *   - holding both but dropping `strong` = swapping a strict matcher for a loose
  *     existence check (toBe(x) → toBeDefined()) — the body still asserts, but no longer
  *     pins a value (STRONG_ASSERTION_REGRESSION).
+ *   - holding all three but adding `tautologies` = preserving a strong matcher while
+ *     making it vacuous (expect(x).toBe(x)), which asserts nothing
+ *     (TAUTOLOGY_REGRESSION).
  * `strong` is optional so legacy {cases, assertions} call sites stay valid; the strong
- * guard only fires when both before/now supply it (runDrift always does). Pure (counts
- * in, findings out) so it unit-tests on synthetic numbers, mirroring classifyDrift.
+ * guard only fires when both before/now supply it (runDrift always does). `tautologies`
+ * is likewise optional for legacy callers and only fires when both sides supply it.
+ * Pure (counts in, findings out) so it unit-tests on synthetic numbers, mirroring
+ * classifyDrift.
  */
 export function detectCountRegressions(
   before: TestArtifactCounts,
@@ -404,6 +409,17 @@ export function detectCountRegressions(
       severity: "error",
       code: "STRONG_ASSERTION_REGRESSION",
       message: `strong (value-pinning) matchers dropped from ${before.strong} to ${now.strong} this cycle — a strict assertion was swapped for a loose existence check (toBe(x) → toBeDefined()); weakening the verifier is not allowed`,
+      where: "tests/",
+    });
+  if (
+    before.tautologies !== undefined &&
+    now.tautologies !== undefined &&
+    now.tautologies > before.tautologies
+  )
+    findings.push({
+      severity: "error",
+      code: "TAUTOLOGY_REGRESSION",
+      message: `tautological assertions increased from ${before.tautologies} to ${now.tautologies} this cycle — a vacuous expect(x).toBe(x) was introduced`,
       where: "tests/",
     });
   return findings;
@@ -653,18 +669,6 @@ export function runDrift(
       tautologies: countTautologyAssertions(nowFiles),
     };
     findings.push(...detectCountRegressions(before, now));
-    if (
-      before.tautologies !== undefined &&
-      now.tautologies !== undefined &&
-      now.tautologies > before.tautologies
-    ) {
-      findings.push({
-        severity: "error",
-        code: "TAUTOLOGY_REGRESSION",
-        message: `tautological assertions increased from ${before.tautologies} to ${now.tautologies} this cycle — a vacuous expect(x).toBe(x) was introduced`,
-        where: "tests/",
-      });
-    }
   }
   return { ok: !findings.some((f) => f.severity === "error"), findings };
 }

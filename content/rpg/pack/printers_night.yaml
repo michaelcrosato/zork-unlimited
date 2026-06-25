@@ -87,6 +87,14 @@
 meta:
   id: printers_night_v1
   title: "The Printer's Night"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Printers' Night Court"
+    quest: "retrieve the dangerous pamphlet proof"
+    role: "printer's runner"
+    connection: "Charterhaven's presses can topple offices overnight, and the Barfleur proof is a city weapon."
   start_room: shop_floor
   # `stealth` (3 base): physical concealment and silent movement — the ability to
   # occupy a space without claiming it. First in the RPG corpus to use a physical-
@@ -110,9 +118,16 @@ rooms:
     variants:
       - when: [{ has_flag: slip_past }]
         text: >
-          The print shop, the mission done. The counter is as you found it. Fen will be
-          down at five and will find the chase empty. The composing room is east; the
-          side-lock door is behind you.
+          The print shop, the mission done. Fen will be down at five and will find
+          the chase empty. The composing room is east; the side-lock door is behind you.
+      - when: [{ has_flag: dark_lantern_taken }]
+        text: >
+          The front room of the narrow back-street print shop, entered by a picked
+          side-lock. The shuttered windows admit no street light, and the counter near
+          the door is bare where the dark lantern sat before you took it up. The smell
+          of damp paper and old ink is pervasive. A doorway to the east opens onto the
+          composing room. Above a narrow stair at the back, Master Fen is asleep. He
+          wakes at five.
     objects: [dark_lantern]
     exits:
       - { direction: east, to: composing_room }
@@ -131,6 +146,12 @@ rooms:
           The composing room, the schedule already in your head: Birch is in the gate-house
           outside tonight, not inside; Fen comes down for water at five. You have the shop
           to yourself until then. The print shop is west; the press room is east.
+      - when: [{ has_flag: proof_schedule_taken }]
+        text: >
+          Type cases line the north wall in their racks. A composing stick and galley
+          tray sit on the bench, and the board above it is bare where Fen's schedule was
+          pinned before you took it down. The print shop is back west; the press room
+          opens to the east.
     objects: [proof_schedule]
     exits:
       - { direction: west, to: shop_floor }
@@ -151,6 +172,15 @@ rooms:
         text: >
           The press room, the chase empty and the door closed behind you. The composing
           room is back west.
+      - when: [{ has_flag: block_taken }, { has_flag: proof_sheet_taken }]
+        text: >
+          The press room. The chase is empty and the proof sheet is folded in your
+          satchel. The back door leads north to the court. The composing room is west.
+      - when: [{ has_flag: proof_sheet_taken }]
+        text: >
+          The press room. The proof sheet is gone from the bench; the type-block that
+          can print it again is still locked in the chase. The back door leads north to
+          the court. The composing room is west.
       - when: [{ has_flag: block_taken }]
         text: >
           The press room. The chase is empty — the type-block is in your satchel. The
@@ -219,6 +249,8 @@ objects:
       it here with the wick already trimmed and the oil full. It is the only light
       you have.
     takeable: true
+    take_effects:
+      - set_flag: dark_lantern_taken
 
   - id: proof_schedule
     name: "Fen's schedule"
@@ -233,6 +265,8 @@ objects:
           The schedule, already read. Birch in the gate-house tonight; Fen down for
           water at five. You have the shop until then.
     takeable: true
+    take_effects:
+      - set_flag: proof_schedule_taken
     read_text: >
       The schedule covers this week's jobs: two broadsheet runs and the current pamphlet
       commission. At the bottom, in the same hand: 'Household: Birch night-watch,
@@ -274,11 +308,36 @@ objects:
       impression from last night's work, the ink barely dry. The title is legible across
       the top: 'The Barfleur Memorandum.' Below it, dense text in a small roman face.
     variants:
+      - when: [{ has_flag: proof_sheet_taken }, { has_flag: block_taken }]
+        text: >
+          The proof sheet is folded in your satchel, and the type-block that set it is
+          wrapped there too. Paper proves the text existed; the block keeps it from
+          being printed again here.
+      - when: [{ has_flag: proof_sheet_taken }]
+        text: >
+          The proof sheet is folded in your satchel. It proves the text existed, but
+          paper alone will not stop Fen setting another run while the type-block remains
+          locked in the chase.
+      - when: [{ has_flag: block_taken }]
+        text: >
+          The proof sheet on the bench. You have read it. The type-block that set this
+          is in your satchel.
       - when: [{ has_flag: proof_read }]
         text: >
-          The proof sheet on the bench. You have read it. The type-block that set
-          this is in your satchel.
-    takeable: false
+          The proof sheet on the bench. You have read it. The type-block that set this
+          is still in the chase until you lift it.
+    takeable: true
+    take_effects:
+      - set_flag: proof_sheet_taken
+      - add_journal: >
+          You fold the proof sheet into your satchel. It is evidence of what Fen meant
+          to print, but paper is not the warrant's target: the type-block in the chase
+          can still print the Memorandum again.
+      - narrate: >
+          You slide the proof sheet out from under the rag and fold it twice. It will
+          prove what was set here tonight, but it will not stop the run by itself. The
+          forme in the chase is the thing that can print five hundred more before
+          morning.
     read_text: >
       'The Barfleur Memorandum. To the Reader: the following men were pressed into His
       Majesty's service aboard HMS Barfleur between April and September 1694. At the close
@@ -370,7 +429,7 @@ objects:
     takeable: false
     interactions:
       # The exit skill_check — USE dark_lantern ON back_door (stealth DC 12).
-      # Success: slip_past set → east exit from back_court opens (no fight required).
+      # Success: slip_past set and move into back_court; east exit opens with no fight.
       # Failure: door_attempted set, no slip_past → must defeat Edgar in back_court.
       # One-shot: gated on not_flag door_attempted; both branches set door_attempted.
       - verb: USE
@@ -387,6 +446,7 @@ objects:
             - set_flag: slip_past
             - inc_var: { name: score, by: 10 }
             - set_quest_stage: { quest: pamphlet_retrieval, stage: door_cleared }
+            - goto: back_court
             - add_journal: >
                 The latch lifted without a sound. You eased through, closed it behind
                 you, and were in the court before Edgar Tew's lantern moved. (+10)
@@ -423,6 +483,7 @@ enemies:
       a lantern and a short staff. He is neither looking for trouble nor unprepared for
       it. He has made this check a hundred nights and knows which sounds belong here.
     room: back_court
+    conditions: [{ not_flag: slip_past }]
     hp: 12
     attack: 5
     defense: 2

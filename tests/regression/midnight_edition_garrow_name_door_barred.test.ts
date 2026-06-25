@@ -66,6 +66,8 @@ const WINNING_ROUTE = [
   "open_safe",
   "read_report",
   "leave_office",
+  "go_alley",
+  "bar_door",
   "go_press",
   "print_verified",
 ];

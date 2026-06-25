@@ -21,7 +21,7 @@
 #     (gated: ledger entry + mourning badge confirmed)
 #   * name the accusation to his face                         → ending_confronted
 #     (gated: he lied about the warehouse + parish record confirmed;
-#      composure TENSION beat — gates nothing, both routes reach the same end)
+#      evidence-gated accusation, no final chance roll)
 #
 # The moral axis is epistemic, not investigative: the evidence you collect does
 # not change what he did, only what you knew when you chose. Selling with full
@@ -45,34 +45,58 @@
 meta:
   id: night_dispensary_v1
   title: "The Night Dispensary"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Apothecary Row"
+    quest: "choose what remedy and testimony survive the night"
+    role: "night dispensary keeper"
+    connection: "Charterhaven's poor come to Apothecary Row after curfew, where one counter can preserve or bury a scandal."
   start: apothecary_counter
   flags_init: []
-  # `composure` (init 3) — the stat for the speak_the_name TENSION beat
-  # (d20 + composure vs DC 11). Both branches award +20 to score and goto
-  # ending_confronted with end_game — stateKey-convergent (same current, vars,
-  # ended/endingId in both outcomes). Only the add_journal narration differs.
-  # NO `next` on speak_the_name — skill-checked choices self-route via their
-  # on_success/on_failure goto/end_game effects (schema: exactly one of next /
-  # skill_check). Difficulty 11 vs d20 + composure(3): beat it on a roll of 8
-  # (8 + 3 = 11), well under the 20 + 3 = 23 ceiling — a true swing.
-  vars_init: { composure: 3 }
+  vars_init: {}
   max_score: 50
 
 scenes:
   # ── The counter (hub) ──────────────────────────────────────────────────────
   - id: apothecary_counter
     title: "The Night Dispensary"
-    # Three-tier reactivity: (confirmed_death ∧ heard_lie) is strictly more
-    # specific than any single-flag condition, so variant 1 never shadows
-    # variant 2 (the shadowing check is sound over conjunctions; any_of in
-    # variant 2 marks its profile opaque and prevents spurious shadowing).
+    # Reactivity is ordered most-specific first. bug_0420 adds case-completeness
+    # signposts: once the watch report or direct confrontation is available, the
+    # counter tells the player whether they have a sufficient-but-partial record or
+    # enough to speak the accusation, without changing any gates or score awards.
     variants:
       - when: [ { all_of: [ { has_flag: confirmed_death }, { has_flag: heard_lie } ] } ]
         text: >
           Cole is still at the counter. He has run out of small movements — the
           adjustment of his cuffs, the turning of his coin — and stands quite
           still now, watching you the way a man watches a door he is not sure
-          he can reach.
+          he can reach. The ledger, the parish notice, and the street that does
+          not exist are enough to speak the accusation aloud; any unchecked
+          shelf, window, or stock-room clue can only add weight now.
+      - when:
+          - all_of:
+              - { has_flag: checked_register }
+              - { has_flag: noted_mourning }
+              - { has_flag: confirmed_death }
+              - { not_flag: heard_lie }
+        text: >
+          Cole is still at the counter. The mourning badge and the April ledger
+          are no longer only suggestive: the parish notice has put Cecilia
+          Cole's death beside his old arsenic entry. It is enough to send word
+          to the watch, but the warehouse question can still make him account
+          for the street before you close the record.
+      - when:
+          - all_of:
+              - { has_flag: checked_register }
+              - { has_flag: noted_mourning }
+              - { not_flag: confirmed_death }
+        text: >
+          Cole is still at the counter. The mourning badge and the April ledger
+          are enough to justify sending word to the watch, but the parish-deaths
+          notice above the shelf can still turn suspicion into a named record
+          before you choose how far to carry it.
       - when:
           - any_of:
               - { has_flag: noted_mourning }
@@ -132,7 +156,7 @@ scenes:
         text: "Tell him you cannot fill this order tonight."
         next: ending_refused
       - id: send_boy_to_watch
-        text: "Excuse yourself to the back room and send your boy to the nightwatch."
+        text: "Excuse yourself to the back room and send your boy to the nightwatch with the evidence gathered so far."
         conditions:
           - all_of:
               - { has_flag: checked_register }
@@ -146,25 +170,10 @@ scenes:
           - all_of:
               - { has_flag: heard_lie }
               - { has_flag: confirmed_death }
-        # Tension beat: composure (init 3) vs DC 11. Both branches award +20 to
-        # score and goto ending_confronted with end_game — stateKey-convergent
-        # (same current/vars/ended/endingId in both outcomes; only add_journal
-        # differs). Convergent-skill-check test (bug_0252) will verify this.
-        # The effect ordering (add_journal → inc_var → goto → end_game) matches
-        # the test's expectation: narrative, then state change, then routing.
-        skill_check:
-          skill: composure
-          difficulty: 11
-          on_success:
-            - add_journal: "Your voice does not shake. He reads that. The coin on the counter stops."
-            - inc_var: { name: score, by: 20 }
-            - goto: ending_confronted
-            - end_game: ending_confronted
-          on_failure:
-            - add_journal: "Your voice catches once, and you steady it. He hears the catch and the steadying both."
-            - inc_var: { name: score, by: 20 }
-            - goto: ending_confronted
-            - end_game: ending_confronted
+        effects:
+          - add_journal: "You open the ledger, name Cecilia Cole, name the date she died, and name the street that does not exist. Your voice does not shake. He reads that. The coin on the counter stops."
+          - inc_var: { name: score, by: 20 }
+        next: ending_confronted
 
   # ── The ledger shelf ───────────────────────────────────────────────────────
   - id: ledger_shelf
@@ -276,8 +285,13 @@ endings:
     text: >
       You measure out the two drams, seal the paper, and name your price.
       He pays without a word and pockets the packet. The door closes behind
-      him. The street outside is dark. You record the sale in the ledger and
-      return to the stool by the lamp.
+      him, and the carriage takes him back toward Wick Lane with enough white
+      powder in his coat to quiet anything he cares to quiet.
+
+      You record the sale in the ledger beneath older lines you did not turn
+      back to read. In the morning, if a cup is sweetened or a witness fails to
+      wake, there will be a lawful entry in your hand and nothing else: Cole,
+      V. — white arsenic, two drams, pest control.
   - id: ending_refused
     title: "Declined"
     variants:

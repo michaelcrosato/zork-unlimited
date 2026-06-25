@@ -190,8 +190,8 @@ curation; let the held-out set accrete from real runs.
    sentence. Claim *mechanically hard to game*, **not** *un-gameable*.
 4. **Author a deliberately larger, branchier flagship pack** (20+ scenes, 6+ endings,
    deadline + variants) via the live pipeline as a capstone that AI authoring scales past
-   the small graphs all 7 current packs occupy — plus a multi-pack campaign exercising
-   cross-pack save/load.
+   the small graphs all 7 current packs occupy — plus a multi-quest Charter Marches arc
+   exercising cross-quest save/load within the single world.
 
 ### 🗓 Year — the adopted public benchmark
 1. **Establish AdventureForge as a public benchmark**: a held-out, rolling set of sealed

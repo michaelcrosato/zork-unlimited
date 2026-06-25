@@ -10,8 +10,9 @@
  * walk verbatim — `relabelParserBody`, the typed traversal over the closed
  * Condition/Effect DSLs and the parser schema (relabel_parser.ts) — driven by one shared
  * bijection, then relabels the RPG-only surface on top:
- *   - every ENEMY's id, its `room` (a room-id ref), its `defeat_flag` (a flag), its
- *     `death_ending` (an ending id), and its `on_defeat` effects (via `relabelEffect`);
+ *   - every ENEMY's id, its `room` (a room-id ref), optional `conditions`
+ *     (closed-DSL ids), its `defeat_flag` (a flag), its `death_ending` (an ending id),
+ *     and its `on_defeat` effects (via `relabelEffect`);
  *   - `meta.combat_guaranteed` is a boolean fairness opt-in, not an id — carried through
  *     byte-identical (and absent-vs-present preserved so a pack that omits it stays
  *     byte-identical, matching its content hash).
@@ -54,6 +55,7 @@ import { HP_VAR, ATTACK_VAR, DEFENSE_VAR } from "../../../src/rpg/schema.js";
 import {
   makeParserRelabeler,
   relabelParserBody,
+  relabelCondition,
   relabelEffect,
   PARSER_RESERVED_VARS,
   type ParserRelabeler,
@@ -80,6 +82,9 @@ function relabelEnemy(e: Enemy, r: (id: string) => string, rv: (n: string) => st
     hp: e.hp, // number
     attack: e.attack, // number
     defense: e.defense, // number
+    ...(e.conditions !== undefined
+      ? { conditions: e.conditions.map((c) => relabelCondition(c, r, rv)) }
+      : {}),
     // Preserve absent-vs-present so an unused field stays absent (schema/hash parity).
     ...(e.defeat_flag !== undefined ? { defeat_flag: r(e.defeat_flag) } : {}),
     death_ending: r(e.death_ending),

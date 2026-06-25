@@ -132,6 +132,15 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
     if (scene.is_ending) continue;
     const outs = new Set<string>();
     for (const choice of scene.choices) {
+      if (choice.skill_check && !hasDeclaredVar(pack.meta.vars_init, choice.skill_check.skill)) {
+        findings.push(
+          err(
+            "SKILL_CHECK_PHANTOM_STAT",
+            `skill check on choice "${choice.id}" uses skill "${choice.skill_check.skill}", which is not declared in meta.vars_init.`,
+            [`scene:${scene.id}`, `choice:${choice.id}`],
+          ),
+        );
+      }
       if (choice.next !== undefined) {
         registerTarget(choice.next, outs, allNodeIds, findings, [
           `scene:${scene.id}`,
@@ -160,7 +169,10 @@ export function validateCyoa(pack: CyoaPack): ValidationReport {
     if (deadline && terminalIds.has(deadline.ending) && !deadlineUnfireable) {
       const writesWatched = (effects: Effect[]): boolean =>
         [...varsWrittenByEffects(effects)].some((v) => deadlineVars.has(v));
-      if (writesWatched(scene.on_enter) || scene.choices.some((c) => writesWatched(c.effects))) {
+      if (
+        writesWatched(scene.on_enter) ||
+        scene.choices.some((c) => writesWatched(choiceEffects(c)))
+      ) {
         outs.add(deadline.ending);
       }
     }
@@ -451,6 +463,9 @@ function err(code: string, message: string, where: string[]): Finding {
 function warn(code: string, message: string, where: string[]): Finding {
   return { severity: "warning", code, message, where };
 }
+function hasDeclaredVar(vars: Record<string, number>, name: string): boolean {
+  return Object.prototype.hasOwnProperty.call(vars, name);
+}
 
 function dupCheck(ids: string[], label: string, findings: Finding[], where?: string): void {
   const seen = new Set<string>();
@@ -739,7 +754,7 @@ function collectFalsifiers(pack: CyoaPack): Falsifiers {
   };
   for (const scene of pack.scenes) {
     scan(scene.on_enter);
-    for (const choice of scene.choices) scan(choice.effects);
+    for (const choice of scene.choices) scan(choiceEffects(choice));
   }
   return { clearedFlags, setFlags, addedItems, removedItems, varWrites };
 }
@@ -951,9 +966,19 @@ function collectWrites(pack: CyoaPack): Writes {
   };
   for (const scene of pack.scenes) {
     scan(scene.on_enter);
-    for (const choice of scene.choices) scan(choice.effects);
+    for (const choice of scene.choices) scan(choiceEffects(choice));
   }
   return { setFlags, addedItems, writtenVars, setQuestStages };
+}
+
+function choiceEffects(sceneChoice: CyoaPack["scenes"][number]["choices"][number]): Effect[] {
+  return sceneChoice.skill_check
+    ? [
+        ...sceneChoice.effects,
+        ...sceneChoice.skill_check.on_success,
+        ...sceneChoice.skill_check.on_failure,
+      ]
+    : sceneChoice.effects;
 }
 
 type VarReq = { name: string; op: "gte" | "eq"; value: number };

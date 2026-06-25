@@ -65,10 +65,22 @@
 # branches for flag effects (bug_0334), so the flag and score were invisible and
 # ending_justice unreachable. Simplified to unconditional effects with a single
 # narration; the dramatic discovery is unchanged, just deterministic.
+#
+# The medicine chest is order-neutral: examining the bottle before the chest is
+# legal, so the chest text must describe what the displaced bottle means without
+# pointing the player at an action they may already have completed (bug_0484).
 
 meta:
   id: coroners_errand_v1
   title: "The Coroner's Errand"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Coroner's Front Hall"
+    quest: "secure the proof before the verdict"
+    role: "coroner's officer"
+    connection: "Charterhaven assizes rely on coroner errands to turn a death scene into evidence the court can hold."
   start_room: front_hall
   flags_init: []
   max_score: 45
@@ -82,6 +94,15 @@ rooms:
       side table by the door. The study opens to the east; the parlour to the west;
       a service passage runs north toward the back of the house. The lane to the
       coroner's office runs south — the jury waits there at noon.
+    variants:
+      - when: [{ has_item: commission }]
+        text: >
+          A merchant's entrance hall — marble floor, walls hung with prints of
+          foreign harbours. The side table by the door is bare now, the
+          coroner's letter of commission safely with you. The study opens to
+          the east; the parlour to the west; a service passage runs north
+          toward the back of the house. The lane to the coroner's office runs
+          south — the jury waits there at noon.
     objects: [commission]
     exits:
       - { direction: east, to: study }
@@ -103,13 +124,32 @@ rooms:
       the dead man's hand lies a sealed letter. A small silver-clasped purse sits
       at the edge of the desk. The library door is north; the hall is west.
     variants:
+      - when:
+          - has_flag: manner_known
+          - has_item: sealed_letter
+        text: >
+          Calloway behind his desk, his lips the pale blue of a narcotic death.
+          You know what you are looking at. The physician's bag is still by the
+          door, and Rendell's sealed letter is with you now rather than beside
+          the dead man's hand. The purse is at the desk edge. The library is
+          north; the hall is west.
       - when: [{ has_flag: manner_known }]
         text: >
           Calloway behind his desk, his lips the pale blue of a narcotic death. You
           know what you are looking at. The physician's bag is still by the door; the
-          sealed letter lies where you found it, or is in your possession. The purse
-          is at the desk edge. The library is north; the hall is west.
-    objects: [body, sealed_letter, merchants_purse, writing_desk]
+          sealed letter lies where you found it beside the dead man's hand. The
+          purse is at the desk edge. The library is north; the hall is west.
+      - when:
+          - has_item: sealed_letter
+        text: >
+          George Calloway sits slumped in his chair behind the writing desk,
+          his head lolled to the right, ink still wet on the page he was
+          writing. A physician's black bag stands by the door — left in haste,
+          or left deliberately. The place beside the dead man's hand is bare
+          where Rendell's sealed letter lay before you took it. A small
+          silver-clasped purse sits at the edge of the desk. The library door
+          is north; the hall is west.
+    objects: [body, physician_bag, sealed_letter, merchants_purse, writing_desk]
     exits:
       - { direction: north, to: library }
       - { direction: west, to: front_hall }
@@ -172,7 +212,7 @@ objects:
 
   - id: body
     name: "Calloway's body"
-    aliases: [body, calloway, corpse, dead man, man, victim, face, lips, hands, ink, page]
+    aliases: [body, calloway, corpse, dead man, man, victim, face, lips, hands, ink]
     description: >
       George Calloway, cloth factor, forty-eight years old. His face has the settled
       look of hours rather than minutes; his lips are pale blue at the margin.
@@ -197,6 +237,16 @@ objects:
               at the margin and the pupils are pinpoint-small — a narcotic, and a powerful
               one. The ink on the page under his hand is still fresh; he was alive and
               writing less than three hours ago. This is not a natural death.
+
+  - id: physician_bag
+    name: "physician's black bag"
+    aliases:
+      [bag, black bag, physician bag, physicians bag, doctor bag, doctor's bag, rendell bag]
+    description: >
+      Dr. Rendell's visiting bag: buckled shut, wiped clean, and too neatly left by
+      the study door. It holds ordinary instruments and folded linen, but no bottle
+      loose enough to explain Calloway's death. If Rendell carried poison here, he
+      wanted the household medicine chest to take the blame.
 
   - id: sealed_letter
     name: "sealed letter"
@@ -227,7 +277,7 @@ objects:
 
   - id: merchants_purse
     name: "silver-clasped purse"
-    aliases: [purse, silver, money, coin, coins, clasp, pouch, bag]
+    aliases: [purse, silver, money, coin, coins, clasp, pouch]
     description: >
       A small purse with a silver clasp, heavy with coin — Calloway's daily purse.
       It belongs to a dead man's estate. To take it is to choose a different errand
@@ -239,11 +289,30 @@ objects:
 
   - id: writing_desk
     name: "writing desk"
-    aliases: [desk, table, writing table, surface, inkwell, quill, pen]
+    aliases: [desk, table, writing table, surface, inkwell, quill, pen, page, wet ink]
     description: >
       Calloway's writing desk — the page he was working on still under his hand,
-      the ink not quite dry. When you have gathered your evidence, go south from
-      the front hall to file your deposition at the coroner's office.
+      the ink not quite dry. READ the page if you want the last unfinished line;
+      when you have gathered your evidence, go south from the front hall to file
+      your deposition at the coroner's office.
+    read_text: >
+      The page under Calloway's hand is a memorandum to his solicitor. The last
+      full line reads: "Rendell must sign the lease by noon or I inform the College
+      of the whole debt." Below it, the wet ink breaks off halfway through the word
+      "remedy." He was not idly writing; he was putting Rendell's ruin into legal
+      form when the dose took him.
+    variants:
+      - when: [{ has_flag: wet_page_read }]
+        text: >
+          Calloway's writing desk — the unfinished memorandum still pinned under
+          his hand. You read it: Rendell had until noon to sign the lease or face
+          Calloway's complaint to the College.
+    interactions:
+      - verb: READ
+        target: writing_desk
+        conditions: [{ not_flag: wet_page_read }]
+        effects:
+          - set_flag: wet_page_read
 
   # ── library ─────────────────────────────────────────────────────────────────
 
@@ -353,6 +422,13 @@ objects:
           The medicine chest — the bottles in their usual rows, except for the dark
           one near the end of the second row, slightly out of place. You have seen
           it now. You know what it means.
+      - when: [{ has_flag: poison_identified }]
+        text: >
+          The medicine chest stands open on the passage shelf, its ordinary household
+          bottles arranged by size and use. The dark bottle you documented as forged
+          nightshade still sits a finger's width out of alignment; the chest is no
+          longer a mystery, only the place where Rendell meant the household dose to
+          look routine.
     interactions:
       - verb: USE
         item: commission
@@ -364,8 +440,8 @@ objects:
           - narrate: >
               The rows are tidy but not quite right. One bottle near the end of the
               second row is a finger's width out of place, its stopper barely seated,
-              its label turned away from you. USE your commission ON it — it is not
-              the same as the rest.
+              its label turned away from you. That displaced bottle is the chest's
+              answer: not part of the ordinary stock, and not the same as the rest.
 
   - id: nightshade_bottle
     name: "dark bottle"

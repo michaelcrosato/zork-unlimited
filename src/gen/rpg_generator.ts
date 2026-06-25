@@ -78,9 +78,10 @@ import { RpgPackSchema, type RpgPack } from "../rpg/schema.js";
  * version bump) rather than silent corpus rot vs a tampered content hash. Bump it whenever the
  * emitted pack shape changes; the re-seal then re-stamps every entry. v1 → v2: the two-fight
  * gauntlet deepening (bug_0171). v2 → v3: the gauntlet becomes a declared, cumulative-survivable
- * `combat_guaranteed` promise (bug_0173) — the enemy stats and the meta flag change.
+ * `combat_guaranteed` promise (bug_0173) — the enemy stats and the meta flag change. v3 → v4:
+ * root dialogue gains a re-greet variant after one-shot counsel topics retire.
  */
-export const RPG_GENERATOR_VERSION = 3;
+export const RPG_GENERATOR_VERSION = 4;
 
 /**
  * The same tiny deterministic PRNG (mulberry32) the CYOA generator uses. Pure and
@@ -578,6 +579,12 @@ export function generateRpgPack(seed: number): RpgPack {
             {
               id: "spirit_root",
               npc_text: `A warm thing, come down into the cold. Few do. Ask, if you would — I have watched this place a long age and remember everything.`,
+              variants: [
+                {
+                  when: [{ any_of: [{ has_flag: HEARD_FOE }, { has_flag: HEARD_WARD }] }],
+                  text: `The ${theme.spiritName} gutters and steadies. Ask what else you need before you go deeper.`,
+                },
+              ],
               topics: [
                 // Each info topic retires once told (gated on its own flag), so the +2 attack is
                 // claimable only once. The ungated leave keeps the node terminating.

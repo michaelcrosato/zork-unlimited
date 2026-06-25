@@ -19,7 +19,7 @@
  *   (4) After barring: `go_alley_barred` present, label does NOT contain "boots".
  *   (5) After barring via `go_alley_barred`, the alley scene is still reachable
  *       (confront_men and back_inside are the live choices there).
- *   (6) Winning route (ending_vindicated 35/35) unaffected.
+ *   (6) Winning route (ending_vindicated 35/35) still reachable with the secured press.
  */
 import { describe, it, expect } from "vitest";
 import { loadPackFile } from "../../src/cyoa/pack.js";
@@ -81,7 +81,7 @@ describe("bug_0312 — composing_room go_alley action label is not stale after d
     expect(alleyActions).not.toContain("steady_and_bar");
   });
 
-  it("(6) winning route ending_vindicated 35/35 still reachable", () => {
+  it("(6) winning route ending_vindicated 35/35 still reachable after securing the press", () => {
     const s = play([
       "read_letter",
       "go_office",
@@ -89,6 +89,8 @@ describe("bug_0312 — composing_room go_alley action label is not stale after d
       "open_safe",
       "read_report",
       "leave_office",
+      "go_alley",
+      "bar_door",
       "go_press",
       "print_verified",
     ]);

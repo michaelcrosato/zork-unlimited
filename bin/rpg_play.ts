@@ -129,7 +129,7 @@ async function main(): Promise<void> {
 
   try {
     while (true) {
-      const obs = buildRpgObservation(index, state);
+      const obs = buildRpgObservation(index, state, { includeWorldIntro: true });
       console.log(render(obs));
       if (obs.ended || obs.available_actions.length === 0) break;
 

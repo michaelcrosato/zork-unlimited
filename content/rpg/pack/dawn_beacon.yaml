@@ -59,6 +59,14 @@
 meta:
   id: dawn_beacon_v1
   title: "The Dawn Beacon"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Dawn Beacon Muster"
+    quest: "light the beacon through the gauntlet"
+    role: "beacon runner"
+    connection: "Charterhaven's warning chain begins at the dawn beacon, and one dark tower blinds the Marches."
   start_room: muster_yard
   vars_init: { hp: 26, attack: 4, defense: 2, might: 3 }
   flags_init: []
@@ -181,7 +189,8 @@ rooms:
       cresset that should hold the warning-fire has been heaved off its pivot and lies
       toppled on its side — the raiders' work, to keep the beacon dark. Its worn socket
       and the long lip of its frame are plainly made to be levered upright by a bar and
-      a strong back. The stair drops back down to the south.
+      a strong back; if it rocks back once, set your feet and heave again until the
+      pivot catches. The stair drops back down to the south.
     variants:
       - when: [{ quest_stage: { quest: beacon, stage: cresset_raised } }]
         text: >
@@ -315,14 +324,14 @@ objects:
         conditions: [{ none_of: [{ quest_stage: { quest: beacon, stage: cresset_raised } }] }]
         skill_check:
           skill: might
-          difficulty: 12
+          difficulty: 10
           on_success:
             - set_quest_stage: { quest: beacon, stage: cresset_raised }
             - add_journal: "You lever the great cresset back upright on its pivot; the way up to the crown stands clear."
             - inc_var: { name: score, by: 10 }
             - narrate: "You wedge the bar beneath the frame's lip and throw your weight on it — the iron grinds, swings, and the cresset heaves up onto its pivot and settles. The way to the crown is clear."
           on_failure:
-            - narrate: "The bar bites under the lip and your shoulders strain, but the heavy iron only rocks and grinds back down. Set your feet and try again."
+            - narrate: "The bar bites under the lip and your shoulders strain; the heavy iron rocks a handspan toward its socket, then grinds back down. Nothing is lost — set your feet, keep the bar under the lip, and heave again until the pivot catches."
 
   - id: beacon_fire
     name: "beacon"
@@ -402,6 +411,16 @@ npcs:
           # (a single `when` is all_of); only the SPOKEN text varies, so the node's
           # effects/topics — and dialogue termination/reachability — are unchanged.
           variants:
+            - when: [{ has_flag: heard_counsel }, { not_flag: read_orders }]
+              text: >
+                Aye, lad — what else? Ask quick; the dark won't hold past dawn. And
+                read Hale's board before you climb; my tongue has the drill, but his
+                chalk has the whole order.
+            - when: [{ has_flag: heard_beacon }, { not_flag: read_orders }]
+              text: >
+                Aye, lad — what else? Ask quick; the dark won't hold past dawn. And
+                read Hale's board before you climb; my tongue has the drill, but his
+                chalk has the whole order.
             - when: [{ has_flag: heard_counsel }]
               text: >
                 Aye, lad — what else? Ask quick; the dark won't hold past dawn, and there

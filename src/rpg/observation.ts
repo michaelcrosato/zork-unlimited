@@ -12,8 +12,8 @@ import {
   type ObservationOptions,
 } from "../parser/observation.js";
 import { HP_VAR, ATTACK_VAR, DEFENSE_VAR } from "./schema.js";
-import { type RpgIndex, enumerateRpgActions } from "./runner.js";
-import { enemyHp, enemyAlive } from "./combat.js";
+import { type RpgIndex, enumerateRpgActions, enemyActive } from "./runner.js";
+import { enemyHp } from "./combat.js";
 
 // RPG observation reuses the parser shape but MUST carry its own `mode` so it is
 // a real discriminator: an RPG pack is a parser pack + enemies, so without this
@@ -40,7 +40,7 @@ export function buildRpgObservation(
 ): RpgObservation {
   const base = buildParserObservation(index, state, opts);
   const enemies = (index.enemyByRoom.get(state.current) ?? [])
-    .filter((e) => enemyAlive(state, e))
+    .filter((e) => enemyActive(state, e))
     .map((e) => ({ id: e.id, name: e.name, hp: enemyHp(state, e) }));
   return {
     ...base,

@@ -1,0 +1,23 @@
+id: bug_0445_cold_forge_plate_pickup_don_hint
+title: "Cold Forge plate pickup hints that armor must be donned"
+pack: content/rpg/pack/cold_forge.yaml
+reported_by: blind-playtest
+report: blind-tester/reports/20260622T162422Z_cold_forge_seed7.md
+severity: S0
+symptom: >
+  Taking the cold-iron plate produced only generic pickup text, so a player could
+  carry it into the sentinel fight without realizing the separate don action was
+  required for the defense bonus.
+root_cause: >
+  The pack already had a Bellows Walk nudge for carried-but-unworn armor, but the
+  cold_iron_plate object had no take_effects, leaving the acquisition moment silent
+  about the required equip step.
+fix: >
+  Added first-pickup narration and journal feedback to the cold-iron plate telling
+  the player it is only weight until buckled on and to don it before the sentinel.
+tests:
+  - tests/regression/cold_forge_plate_pickup_don_hint.test.ts
+verification:
+  - npm test -- --run tests/regression/cold_forge_plate_pickup_don_hint.test.ts tests/regression/cold_forge_founder_plate.test.ts tests/regression/cold_forge_unworn_plate_nudge.test.ts tests/regression/cold_forge_grate_failure_recoverable.test.ts
+  - npm run validate -- content/rpg/pack/cold_forge.yaml
+  - npm run health

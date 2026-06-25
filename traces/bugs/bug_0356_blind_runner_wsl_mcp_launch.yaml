@@ -1,0 +1,20 @@
+id: bug_0356
+title: Blind runner WSL MCP launch hides unavailable game tools
+severity: tooling
+status: fixed
+root_cause: >
+  The subscription blind-test runner generated an MCP config that worked from some
+  shells but failed when the Linux Claude CLI tried to launch the AdventureForge
+  server under WSL. Claude could then return a successful JSON envelope whose
+  "report" only explained that the adventureforge tools never became available,
+  which allowed a failed blind playtest to look complete.
+fix: >
+  Generate a Claude-compatible WSL MCP launch through cmd.exe with the repository
+  as the server working directory, use a direct npm cwd launch outside WSL, and
+  reject reports that describe MCP/tool discovery failure instead of gameplay.
+files_changed:
+  - blind-tester/run.sh
+  - scripts/verify-blind-report.ts
+regression_test:
+  - tests/regression/blind_runner_config_contract.test.ts
+  - tests/regression/blind_report_verifier.test.ts

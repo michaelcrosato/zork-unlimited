@@ -12,7 +12,7 @@
 #
 # Three resolution paths:
 #   1. Full chain: accounts (+5) → weigh false (+5) → weigh true (+10) → ledger (+20) →
-#      market_yard (WIN 40/40, ending_documented)
+#      market_yard (WIN 40/40, ending_documented; requires the receipt's two figures)
 #   2. Partial: leave via back_alley (south exit, gated on not fraud_proved) with or
 #      without the receipt — testimony not backed by documentary proof (ending_denounced)
 #   3. Destruction: smash the rigged public scales with the crowbar instead of documenting
@@ -26,8 +26,8 @@
 #
 # Map:
 #
-#   market_yard (WIN — walk out with deputy_receipt AND fraud_proved)
-#        │ N* (* gated: has_item deputy_receipt AND has_flag fraud_proved)
+#   market_yard (WIN — walk out with receipt, ledger proof, and both recorded figures)
+#        │ N* (* gated: has_item deputy_receipt AND has_flag fraud_proved/weighed_false/weighed_true)
 #   counting_house (start; merchant_accounts; deputy_receipt; north_door)
 #        │ S** (** gated: not_flag fraud_proved) │ E
 #   back_alley (PARTIAL)    warehouse_floor (grain_sacks; grain_sample; warehouse_crowbar)
@@ -52,14 +52,24 @@
 #   source 2: warehouse_crowbar description — "breaking things that should not be broken"
 #     names the consequence before the player can act
 #
-# Tension beat: USE warehouse_crowbar ON loose_board (command_verb: check) in grain_loft.
-# d20 + steadiness (3) vs DC 11. CONVERGENT — gates no exit, score, ending, or variant.
-# One-shot on success (board_checked); failure is re-tryable. The sealed_crypt /
-# collectors_warrant / gaugers_register steadiness-check shape.
+# Supporting-evidence tension beat: USE warehouse_crowbar ON loose_board
+# (command_verb: check) in grain_loft. d20 + steadiness (3) vs DC 11. On success
+# it reveals Cope's hidden calibration cache under the badly re-nailed board: lead
+# shavings and a spare off-centre fulcrum casting, useful corroboration but not part
+# of the required score chain. It gates no exit, score, or ending identity; it only
+# gives visible room/object/ending-text payoff. Failure is re-tryable.
 
 meta:
   id: weighmasters_round_v1
   title: "The Weighmaster's Round"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Weighmaster's Counting House"
+    quest: "settle the warehouse weight fraud"
+    role: "weighmaster"
+    connection: "Every warehouse scale in Charterhaven points back to the counting house, where false weight becomes false law."
   start_room: counting_house
   flags_init: []
   vars_init: { steadiness: 3 }
@@ -78,19 +88,32 @@ rooms:
     variants:
       - when: [{ has_flag: fraud_proved }]
         text: >
-          The counting-house, the hidden ledger in your keeping. The desk holds
+          The counting-house, the hidden ledger's proof secured. The desk holds
           the day's accounts. The north door leads to the market square; the
           warehouse floor lies east.
+      - when: [{ has_flag: deputy_receipt_taken }]
+        text: >
+          Aldis Cope's counting-house at the back of the warehouse, still
+          smelling of grain dust and tallow. A sloping desk holds the day's
+          accounts, open to a recent page. The corner where the deputy's receipt
+          form lay is bare now. The north door leads to the market square; the
+          warehouse floor lies east. A service passage behind the desk runs
+          south to the alley.
     objects: [merchant_accounts, deputy_receipt, north_door]
     exits:
       - { direction: east, to: warehouse_floor }
       - direction: north
         to: market_yard
-        conditions: [{ has_item: deputy_receipt }, { has_flag: fraud_proved }]
+        conditions:
+          - { has_item: deputy_receipt }
+          - { has_flag: fraud_proved }
+          - { has_flag: weighed_false }
+          - { has_flag: weighed_true }
         locked_msg: >
           The market square waits beyond the north door — but the weighmaster's
-          hall needs documentary proof as well as your word. Find the ledger in
-          the grain loft, or leave by the south passage with what you have.
+          hall needs documentary proof as well as your word. Carry the receipt,
+          secure Cope's ledger, and record both figures on the receipt: the
+          public beam below and the true balance in the loft.
       - direction: south
         to: back_alley
         conditions: [{ not_flag: fraud_proved }]
@@ -110,8 +133,18 @@ rooms:
     description: >
       A long room of stone flags and timber baulks, grain sacks stacked in rows
       from floor to beam. A tally board and pallet rack line the east wall beside
-      the door to the weighing-room. A low stair in the north wall leads up to
-      the grain loft where Cope keeps private stock. The counting-house lies west.
+      the door to the weighing-room; a measured grain sample waits near the
+      marked sacks. A low stair in the north wall leads up to the grain loft
+      where Cope keeps private stock. The counting-house lies west.
+    variants:
+      - when: [{ has_flag: grain_sample_taken }]
+        text: >
+          A long room of stone flags and timber baulks, grain sacks stacked in
+          rows from floor to beam. A tally board and pallet rack line the east
+          wall beside the door to the weighing-room; the marked-sack spot where
+          the measured grain sample waited is empty now. A low stair in the
+          north wall leads up to the grain loft where Cope keeps private stock.
+          The counting-house lies west.
     objects: [grain_sacks, grain_sample, warehouse_crowbar]
     exits:
       - { direction: west, to: counting_house }
@@ -143,6 +176,20 @@ rooms:
       floorboard near the table springs slightly underfoot: badly re-nailed.
       The warehouse lies south.
     variants:
+      - when: [{ has_flag: fraud_proved }, { has_flag: board_checked }]
+        text: >
+          The grain loft, the hidden ledger in your keeping. The brass-pan
+          balance remains on the table, and the loose board near it lies eased
+          up now, showing the shallow hiding place beneath: lead shavings, file
+          marks, and a spare off-centre fulcrum casting that matches the public
+          beam's trick. The warehouse lies south.
+      - when: [{ has_flag: board_checked }]
+        text: >
+          A low-ceilinged room above the main floor, private sacks ranked against
+          the east wall. A brass-pan balance sits on a counting table beside a
+          plain brown ledger, and the loose board near it lies eased up now,
+          showing the shallow hiding place beneath: lead shavings, file marks,
+          and a spare off-centre fulcrum casting. The warehouse lies south.
       - when: [{ has_flag: fraud_proved }]
         text: >
           The grain loft, the hidden ledger in your keeping. The brass-pan
@@ -193,6 +240,8 @@ objects:
       countersignature, it becomes legal evidence. Without it you are only a man
       who has been in a merchant's counting-house at night.
     takeable: true
+    take_effects:
+      - set_flag: deputy_receipt_taken
 
   - id: north_door
     name: "north door"
@@ -234,6 +283,8 @@ objects:
       pound weighed out in your cupped hands by a deputy weighmaster's trained
       instinct. The raw material of the case.
     takeable: true
+    take_effects:
+      - set_flag: grain_sample_taken
 
   - id: warehouse_crowbar
     name: "crowbar"
@@ -370,11 +421,20 @@ objects:
     description: >
       A floorboard near the counting table, the nail driven home badly — the board
       springs slightly underfoot when you step on it. Someone replaced it in a hurry.
+    variants:
+      - when: [{ has_flag: board_checked }]
+        name: "opened floorboard"
+        text: >
+          The board lies eased up from the floor now. Under it is a shallow
+          hiding place dusted with lead shavings and black file marks, and at
+          the back a spare off-centre fulcrum casting: the small, cold duplicate
+          of the fraud built into the public beam below.
     interactions:
-      # TENSION BEAT — CHECK the loose board before crossing (OPTIONAL, convergent).
+      # SUPPORTING-EVIDENCE BEAT — CHECK the loose board (OPTIONAL, convergent).
       # USE crowbar to probe the board. d20 + steadiness (3) vs DC 11.
-      # CONVERGENT: gates no exit, score, ending, or variant beyond retire flag board_checked.
-      # One-shot on SUCCESS; FAILURE is re-tryable.
+      # Success reveals a calibration cache and makes board_checked a visible
+      # evidence flag. It gates no score, exit, or ending identity; FAILURE is
+      # re-tryable.
       - verb: USE
         item: warehouse_crowbar
         target: loose_board
@@ -385,23 +445,29 @@ objects:
           difficulty: 11
           on_success:
             - set_flag: board_checked
+            - add_journal: "Under the loose board you found Cope's calibration cache: lead shavings, file marks, and a spare off-centre fulcrum casting for the public beam."
             - narrate: >
-                You ease the crowbar under the board's edge and feel it settle —
-                the nail is loose but the plank will lie flat if you step heel-first.
-                You cross it without a sound and stand still for a count of five.
-                Nothing moves below.
+                You ease the crowbar under the board's edge and lift without
+                splitting the plank. Beneath it is not a trap but a shallow
+                hiding place: lead shavings, black file marks, and a spare
+                off-centre fulcrum casting wrapped in rag. It is the public
+                beam's trick in miniature — the workshop leavings of the fraud,
+                hidden under Cope's own table.
           on_failure:
             - narrate: >
                 The board shifts under the crowbar's weight and cracks once — a
                 sharp sound in the still dark. You stand still for a count of five.
-                Nothing moves below. You breathe out and continue.
+                Nothing moves below, but the edge has not lifted cleanly enough
+                to see what is under it. You breathe out; a steadier hand with
+                the crowbar could still work the board loose.
 
 npcs: []
 
 win_conditions:
   - id: fraud_documented
     # market_yard is only reachable via the N exit from counting_house, gated on
-    # has_item: deputy_receipt AND has_flag: fraud_proved (the locomotion win shape).
+    # has_item: deputy_receipt plus fraud_proved/weighed_false/weighed_true, so the
+    # ending's "two figures on the receipt" claim is state-truthful (bug_0441).
     conditions: [{ visited: market_yard }]
     ending: ending_documented
   - id: word_given
@@ -426,6 +492,24 @@ endings:
       calculated at dusk, but the ledger made them incontestable. Your deputy's
       mark is on the opening page of the case record.
       *** The fraud is documented. ***
+    variants:
+      - when: [{ has_flag: board_checked }]
+        text: >
+          You walked out of Aldis Cope's counting-house with the deputy's receipt
+          in one coat pocket and the hidden ledger in the other: two figures on
+          the receipt — the rigged and the true — and four years of yield in the
+          ledger, all of it in Cope's own hand. From the loft you also brought
+          the story of the loose board: lead shavings, file marks, and a spare
+          off-centre fulcrum casting hidden under Cope's table.
+          The weighmaster's hall opened at six. By seven the guild clerk had the
+          relevant pages copied and the city assayer had the beam balance's
+          fulcrum on his bench. Cope was summoned at eight. His market licence
+          was suspended by noon. The damages from four years of short-weight
+          were still being calculated at dusk, but the ledger made them
+          incontestable — and the cache under the board told the committee the
+          false beam was no accident of casting. Your deputy's mark is on the
+          opening page of the case record.
+          *** The fraud is documented. ***
 
   - id: ending_denounced
     title: "The Deputy's Word"

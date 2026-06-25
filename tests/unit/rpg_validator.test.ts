@@ -133,6 +133,12 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
     // Any *unintended* change to compilation trips this.
     // bug_0283: re-pinned after adding tower_top not_item:lantern variant (was 24aaf2b940ad...).
     // bug_0309: re-pinned after adding hermit_camp reactive re-entry variant (was 9fed38439d61...).
-    expect(loaded.compiled.contentHash).toBe("fac92b028320a3044bcd45fc352e8ac10aace3a6f3a722d07f08a6163fcfd3fe");
+    // single-world migration: meta.world now binds every shipped pack to the Charter Marches.
+    // bug_0408: re-pinned after removing transient early quest-stage writes from the
+    // Watchtower hub/go_east loop so `the_road=truth_known` stays monotonic.
+    // bug_0462: re-pinned after adding a no-paper checkpoint `identify_as_warden`
+    // redirect so west-first wardens get an in-character evidence hint instead of
+    // only death/backtrack options.
+    expect(loaded.compiled.contentHash).toBe("8189a1e66863da7be5e3e7cd28ee3d14895b842cfbff28bd48551ad32f26f145");
   });
 });

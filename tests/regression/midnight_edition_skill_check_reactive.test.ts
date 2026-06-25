@@ -25,7 +25,7 @@
  *   (3) nerve_check_attempted is set after both skill check outcomes (convergence check);
  *   (4) nerve_check_attempted is NOT set after bar_door;
  *   (5) nerve_check_attempted gates no choices — all alley actions still present;
- *   (6) full win route (read + verify + print) still reaches ending_vindicated 35/35.
+ *   (6) full win route (read + verify + secure + print) still reaches ending_vindicated 35/35.
  */
 import { describe, it, expect } from "vitest";
 import { loadPackFile } from "../../src/cyoa/pack.js";
@@ -100,7 +100,7 @@ describe("bug_0313 — alley_door barred+skill-check variant vs plain bar_door v
     expect(ids).not.toContain("steady_and_bar");
   });
 
-  it("full win route (read letter → verify → print) still reaches ending_vindicated 35/35", () => {
+  it("full win route (read letter → verify → secure → print) still reaches ending_vindicated 35/35", () => {
     const s = playFrom(7, [
       "read_letter",
       "go_office",
@@ -108,6 +108,8 @@ describe("bug_0313 — alley_door barred+skill-check variant vs plain bar_door v
       "open_safe",
       "read_report",
       "leave_office",
+      "go_alley",
+      "bar_door",
       "go_press",
       "print_verified",
     ]);

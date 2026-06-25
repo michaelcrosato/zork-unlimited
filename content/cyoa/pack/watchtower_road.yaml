@@ -1,6 +1,14 @@
 meta:
   id: watchtower_road_v1
   title: "The Watchtower Road"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "North Road Watch"
+    quest: "expose the watchtower smuggling road"
+    role: "road warden"
+    connection: "The north road is Charterhaven's first artery; the ruined watchtower decides what reaches the hub city unseen."
   start: forest_crossroads
   # `nerve` (value 3) is the d20 skill rolled by the single skill-checked choice in this
   # pack — force_door on ruined_watchtower (below), where the door hanging from one hinge
@@ -49,26 +57,17 @@ scenes:
   # ── The crossroads (start) ──────────────────────────────────────────────
   - id: forest_crossroads
     title: "The Forest Crossroads"
-    # Quest "the_road" (the investigation): this START scene's on_enter fires at game
-    # start, opening the quest at `setting_out`. It re-fires on every return to the
-    # crossroads, harmlessly re-seating that opening stage — no later stage is ever read
-    # HERE (the reactive read lives on ruined_watchtower, below), so the revisit reset
-    # touches no displayed variant. Tracking only; gates nothing.
-    on_enter:
-      - set_quest_stage: { quest: the_road, stage: setting_out }
+    # No on_enter quest-stage write here. The crossroads is the pack's hub and is
+    # revisited after the investigation reaches `truth_known`; re-setting an opening
+    # stage here would clobber real progress (bug_0408, matching the Prior's Cellar
+    # hub fix). The only durable quest milestone this pack needs is `truth_known`,
+    # written by the evidence-discovery beats below.
     text: >
       The road splits beneath the black pines. To the east, smoke rises from a
       ruined watchtower. To the west, a brook cuts through the moss.
     choices:
       - id: go_east
         text: "Go east, toward the ruined watchtower."
-        # Committing east puts the quest at `on_the_trail` as you LEAVE the crossroads.
-        # ruined_watchtower (next) has no on_enter touching the quest, so on arrival the
-        # stage is `on_the_trail` and its variant is the first match — provably live
-        # (bug_0145): the very first go_east reaches that scene at that stage. Tracking
-        # only; the route/next is unchanged.
-        effects:
-          - set_quest_stage: { quest: the_road, stage: on_the_trail }
         next: ruined_watchtower
       - id: go_west
         text: "Go west, following the brook."
@@ -87,29 +86,15 @@ scenes:
   # ── Watchtower cluster ───────────────────────────────────────────────────
   - id: ruined_watchtower
     title: "The Ruined Watchtower"
-    # Reactive read for quest "the_road" at stage `on_the_trail`, set on the go_east
-    # choice that brings you here (forest_crossroads, above). This scene has no on_enter,
-    # so on arrival from the crossroads the stage is still `on_the_trail` and this variant
-    # is the first match — the safe set-on-the-edge / read-on-the-destination pattern, so
-    # it is never dead prose (bug_0145). It colours the prose the first time you turn off
-    # the road toward the smoke.
-    #
-    # bug_0248: the second `not_flag: learned_truth` guard is the staleness fix. An EARLIER
-    # comment here claimed a later return "no longer matches" because the quest would by
-    # then sit at `truth_known` — but that was WRONG: forest_crossroads' on_enter UNCON-
-    # ditionally re-seats the quest to `setting_out` on every revisit, and a subsequent
-    # go_east re-advances it to `on_the_trail`, so a player who had already pried the barrels
-    # (learned_truth, score on the board) and looped back through the crossroads saw this
-    # "the trail you came to follow runs in there" line a SECOND time, as if arriving fresh
-    # — the same stale-on-re-entry class as bug_0120 (tower_top brazier) and bug_0134
-    # (hermit greeting). Reproduced live via the MCP tools (seed 23): barrels → return_cross-
-    # roads → go_east re-showed the variant at learned_truth. Gating the variant on
-    # `not_flag: learned_truth` (the pack's established "I already know what's going on"
-    # signal — cf. confront_smuggler, decision_point, the ending variants) suppresses it
-    # once the truth is out; the un-informed first-timer (no flag) still sees it verbatim.
-    # Reactive text only — first-match-wins, no choice/route/ending/gating change.
+    # First-arrival flavor for an uninformed player turning toward the smoke. This
+    # originally keyed off a transient `on_the_trail` quest stage, but a blind
+    # playtest found the crossroads/go_east loop could regress `the_road` after the
+    # player already knew the truth. The durable state is the pack's established
+    # `learned_truth` flag: before it, the trail framing is fair; after it, base prose
+    # keeps the hub from pretending the investigation is still beginning (bug_0408).
+    # Reactive text only — first-match-wins, no choice/route/ending change.
     variants:
-      - when: [ { quest_stage: { quest: the_road, stage: on_the_trail } }, { not_flag: learned_truth } ]
+      - when: [ { not_flag: learned_truth } ]
         text: >
           Fire-blackened stone leans against the sky. You've left the crossroads
           behind for the smoke, and up close the ruin tells its own tale: the door
@@ -531,6 +516,17 @@ scenes:
         text: "Present the sealed letter."
         conditions: [ { has_item: sealed_letter } ]
         next: confront_smuggler
+      - id: identify_as_warden
+        text: "Identify yourself as a road warden and ask what papers he means."
+        conditions: [ { not_item: sealed_letter } ]
+        effects:
+          - narrate: >
+              The sergeant's eyes flick to your warden's badge, then back to the
+              empty road behind you. "Then you know better than most: after a tower
+              burns, nobody passes this gate on a title alone. Bring papers, proof,
+              something from the watchtower worth putting before a magistrate — or
+              step aside."
+        next: road_north
       - id: force_through
         text: "Bluster and shove your way through."
         next: ending_captured

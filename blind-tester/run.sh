@@ -27,6 +27,43 @@ OUT=""
 SMOKE=0
 TIMEOUT="${BLIND_TIMEOUT:-900}"
 
+# `npm run blind` invokes this script with a non-login Bash, so per-user CLI install
+# dirs such as ~/.local/bin may be missing even when an interactive shell can see them.
+for dir in "$HOME/.local/bin" "$HOME/bin"; do
+  if [[ -d "$dir" ]]; then
+    PATH="$dir:$PATH"
+  fi
+done
+
+NODE_CMD="${BLIND_NODE_CMD:-}"
+if [[ -z "$NODE_CMD" ]]; then
+  if command -v node >/dev/null 2>&1; then
+    NODE_CMD="$(command -v node)"
+  elif command -v node.exe >/dev/null 2>&1; then
+    NODE_CMD="$(command -v node.exe)"
+  elif [[ -x "/mnt/c/Program Files/nodejs/node.exe" ]]; then
+    NODE_CMD="/mnt/c/Program Files/nodejs/node.exe"
+  else
+    NODE_CMD="node"
+  fi
+fi
+
+node_path_arg() {
+  local path="$1"
+  case "$NODE_CMD" in
+    *.exe|*/node.exe)
+      if command -v wslpath >/dev/null 2>&1 && [[ "$path" == /mnt/* ]]; then
+        wslpath -w "$path"
+      else
+        printf '%s\n' "$path"
+      fi
+      ;;
+    *)
+      printf '%s\n' "$path"
+      ;;
+  esac
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --pack)  PACK="$2"; shift 2 ;;
@@ -43,7 +80,8 @@ done
 
 # Smoke mode: prove the MCP path with no LLM and no token spend.
 if [[ "$SMOKE" == "1" ]]; then
-  exec node "$SCRIPT_DIR/smoke.mjs" --pack "$PACK" --seed "$SEED"
+  SMOKE_SCRIPT="$(node_path_arg "$SCRIPT_DIR/smoke.mjs")"
+  exec "$NODE_CMD" "$SMOKE_SCRIPT" --pack "$PACK" --seed "$SEED"
 fi
 
 case "$GAME_DIR" in
@@ -55,16 +93,39 @@ esac
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 MCP_CONFIG="$WORK/mcp.json"
-cat > "$MCP_CONFIG" <<JSON
+GAME_DIR_WIN=""
+if command -v wslpath >/dev/null 2>&1 && [[ "$GAME_DIR" == /mnt/* ]]; then
+  GAME_DIR_WIN="$(wslpath -w "$GAME_DIR")"
+fi
+
+if [[ -n "$GAME_DIR_WIN" ]]; then
+  case "$GAME_DIR_WIN" in
+    *" "*) echo "Refusing: WSL blind runner path contains a space, which breaks cmd.exe MCP launch quoting." >&2; exit 4 ;;
+  esac
+  GAME_DIR_WIN_JSON="${GAME_DIR_WIN//\\/\\\\}"
+  cat > "$MCP_CONFIG" <<JSON
 {
   "mcpServers": {
     "adventureforge": {
-      "command": "bash",
-      "args": ["-c", "cd '$GAME_DIR' && exec npm --silent run mcp"]
+      "command": "cmd.exe",
+      "args": ["/c", "cd /d $GAME_DIR_WIN_JSON && npm --silent run mcp"]
     }
   }
 }
 JSON
+else
+  cat > "$MCP_CONFIG" <<JSON
+{
+  "mcpServers": {
+    "adventureforge": {
+      "command": "npm",
+      "args": ["--silent", "run", "mcp"],
+      "cwd": "$GAME_DIR"
+    }
+  }
+}
+JSON
+fi
 
 # Fill the locked blind prompt.
 PROMPT="$(sed -e "s#__PACK__#${PACK}#g" -e "s#__SEED__#${SEED}#g" "$SCRIPT_DIR/prompt.md")"
@@ -126,6 +187,12 @@ if command -v jq >/dev/null 2>&1; then
 else
   cp "$OUT.json" "$OUT.md"
 fi
+
+REPORT_MD="$OUT.md"
+if command -v wslpath >/dev/null 2>&1 && [[ "$REPORT_MD" == /mnt/* ]]; then
+  REPORT_MD="$(wslpath -w "$REPORT_MD")"
+fi
+( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" )
 
 echo "✓ Blind report saved: $OUT.md"
 grep -iE 'clarity .*[0-9]|enjoyment .*[0-9]' "$OUT.md" | head -2 || true

@@ -1,0 +1,27 @@
+id: bug_0456_falconers_ransom_confrontation_retry
+title: "Falconer's Ransom evidence confrontation survives a failed roll"
+pack: content/rpg/pack/falconers_ransom.yaml
+reported_by: blind-playtest
+report: blind-tester/reports/20260622T190305Z_falconers_ransom_seed7.md
+severity: S2
+symptom: >
+  A blind playtest gathered the gate log and forged bill, then rolled a natural 1
+  on the cunning confrontation. The only social action disappeared, Aldric's
+  dialogue closed down, and the player was silently funneled into fighting Thorn.
+  The failure narration also said Aldric took the bill back even though the item
+  remained in inventory.
+root_cause: >
+  The hidden_bill-on-jesses skill check set confrontation_attempted on failure as
+  well as success, so a bad roll retired the pack's primary evidence route. The
+  failure prose blamed presentation order, which the player never controlled, and
+  contradicted the actual inventory state.
+fix: >
+  The confrontation now retires only on success. Failure is narrated as a falter
+  with the bill, gate log, and jesses still live in the yard, explicitly telling
+  the player to press the bill against the jesses again.
+tests:
+  - tests/regression/falconers_ransom_confrontation_retry.test.ts
+verification:
+  - npm test -- --run tests/regression/falconers_ransom_confrontation_retry.test.ts
+  - npm run validate -- content/rpg/pack/falconers_ransom.yaml
+  - npm run health

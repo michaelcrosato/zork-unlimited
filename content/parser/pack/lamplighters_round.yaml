@@ -17,7 +17,7 @@
 # EXCISE-KEEPER'S KEY: everything impounded in the excise store answers to the one
 # store-key, and "the store-key opens all of it" reads three ways —
 #   • the oil-cask     (draw the lamp-oil, light the lamp, guide the child → ending_guided)
-#   • the excise strongbox (take the Crown's seized silver and slip away → ending_thief, greed)
+#   • the excise strongbox (open it, then take the Crown's seized silver → ending_thief, greed)
 #   • the sealed spirit-cask (force the impounded naphtha by your lit round-lantern → ending_caught, a DEATH)
 # The third fork is a deliberate, telegraphed one-way hubris choice (the founders_coffin /
 # bound_tomb discipline, bug_0123/0130, §8.7): the notice, the watchman, and the cask's own
@@ -29,7 +29,7 @@
 #     (start;         (hub)         (the great lamp;       (the lost child,
 #      tinderbox,       │E*  excise_store              out of the dark once
 #      brass key,       │     ├ oil_cask    → whale-oil   the lamp is lit)
-#      night-notice;    │     ├ excise_box  → ending_thief
+#      night-notice;    │     ├ excise_box → seized_silver → ending_thief
 #      round-lantern    │W    └ spirit_cask → ending_caught (DEATH)
 #      HELD from t=0)  watch_box
 #                     (watchman;
@@ -53,15 +53,16 @@
 meta:
   id: lamplighters_round_v1
   title: "The Lamplighter's Round"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Lamplighter's River Stair"
+    quest: "keep the lamps and the witness alive"
+    role: "lamplighter"
+    connection: "The river stair is part of Charterhaven's nightly circuit, where public light is the first defense of the hub."
   start_room: river_stair
   flags_init: []
-  # `steadiness` (value 3) is the lighter's steady hand, rolled by the OPTIONAL steadiness
-  # check on the takeable horn windscreen below (a d20 + steadiness TENSION beat the player
-  # sees — set your back to the river and break a fog-gust off the flame you carry). It is the
-  # Stage-4 skill_check mechanic standardized into PARSER mode (the same shape sealed_crypt
-  # ships its `nerve` check on), resolved exactly as the RPG runner does. It gates NOTHING the
-  # exhaustive proofs turn on — see the horn_windscreen interaction's note for why it is convergent.
-  vars_init: { steadiness: 3 }
   max_score: 35
 
 rooms:
@@ -105,6 +106,14 @@ rooms:
       leans to the west with a lantern-glow in its window; the river-stair is back to
       the south.
     variants:
+      - when: [{ has_flag: lamp_lit }, { has_flag: store_open }]
+        text: >
+          The walk along the head of the staith, where the row of harbour-lamps should
+          stand and burn. Tonight the lesser lamps still gutter low in the fog, but the
+          greatest of them, north at the staith-head, now burns gold through the murk,
+          laying its light down toward the strand below. The excise store stands open to
+          the east; the watch-box leans to the west with a lantern-glow in its window;
+          the river-stair is back to the south.
       - when: [{ has_flag: store_open }]
         text: >
           The walk along the head of the staith, where the row of harbour-lamps should
@@ -155,8 +164,9 @@ rooms:
       smuggling boats — kegs and bales and bundles, all of it under the Crown's lock. A
       squat oil-cask stands by the door, a banded strongbox on a shelf above it, and apart
       against the far wall, set well off from the rest, a single cask run round with wax and
-      lead and stencilled in red. Every lock in the place is shaped for the one store-key.
-      The lamp-walk is back to the west.
+      lead and stencilled in red. The oil-cask is the business of your round; the strongbox
+      is only the Crown's silver, temptation under seal. Every lock in the place is shaped
+      for the one store-key. The lamp-walk is back to the west.
     objects: [oil_cask, excise_box, spirit_cask]
     exits:
       - { direction: west, to: lamp_walk }
@@ -167,8 +177,8 @@ rooms:
       The very head of the staith, where the great harbour-lamp stands on its iron post
       above the drop to the water — the one light that reaches right down onto the strand
       below, and it is dark. The wick is dry: it wants oil poured into the font and a flame
-      set to it. Below, in the lightless dark, the tide is making over the strand. The
-      lamp-walk is back to the south.
+      shielded with the horn windscreen and set to it. Below, in the lightless dark, the
+      tide is making over the strand. The lamp-walk is back to the south.
     # First variant (lamp_lit) wins once the lamp burns; the second reacts to the beat AFTER
     # the oil is poured but BEFORE the flame is struck. Both are reactive prose only; neither
     # gates anything. BOTH variants key off the MONOTONIC FLAGS lamp_lit / font_filled — set
@@ -197,9 +207,10 @@ rooms:
         text: >
           The very head of the staith, the great harbour-lamp on its iron post above the
           drop — its deep font brimming with the oil you have just drawn and poured, the
-          broad wick standing soaked and dark and wanting only a flame. Below, in the
-          lightless dark still, the tide is making over the strand. Strike the light and
-          it will reach right down onto it. The lamp-walk is back to the south.
+          broad wick standing soaked and dark and wanting only a flame sheltered by the
+          horn windscreen. Below, in the lightless dark still, the tide is making over the
+          strand. Strike the light and it will reach right down onto it. The lamp-walk is
+          back to the south.
     objects: [harbour_lamp]
     exits:
       - { direction: south, to: lamp_walk }
@@ -281,72 +292,17 @@ objects:
   - id: horn_windscreen
     name: "horn windscreen"
     aliases: [windscreen, screen, shield, horn screen, horn pane, pane, lantern-shield, lantern shield, windshield]
-    # The prop the OPTIONAL steadiness TENSION beat hangs on — a loose curved pane of horn the
-    # last lighter clipped off some old lantern and left on the river-stair sill. It is purely
-    # OPTIONAL scenery: takeable, NOT quest_critical, never consumed, and the win/score never
-    # touch it (the great lamp is lit with the tinderbox + whale-oil, not this). A red-herring
-    # comfort the player may pick up to steel the flame against the fog, nothing more.
+    # Bug_0382: this used to be an optional self-USE steadiness beat, which looked important
+    # but had no route, score, or ending consequence. The prop now pays off at the climax:
+    # lighting the great harbour-lamp requires the screen in hand to shelter the belt-lantern's
+    # little flame while the broad wick catches. No roll, no orphaned action, no red herring.
     description: >
       A curved pane of scraped horn on a little wire clip — a windscreen struck off some old
       lantern, gone amber and crazed with age. Held up to leeward it will break a gust off your
       flame; the last lighter must have carried it for the worst of the river fog and then left
-      it behind.
+      it behind. You will need it when you strike the great lamp out in the weather.
     takeable: true
-    # An OPTIONAL steadiness TENSION beat — the Stage-4 d20 skill_check standardized into this
-    # parser pack (the very shape sealed_crypt's `nerve` check ships on its iron key), resolved
-    # exactly as the RPG runner does: the runner applies on_success/on_failure INSTEAD of this
-    # interaction's `effects`, then PREPENDS the roll narration the player sees ("steadiness
-    # check: d20 <roll> + 3 = <total> vs 12 — success/failure."). It is a self-USE on this horn
-    # screen once you have taken it up — a private "set your back to the river and break the gust
-    # off the flame you carry" moment, fitting for the open flame the lighter must keep alight all
-    # the foggy round and the whole death fork turns on.
-    #
-    # It is a real roll, NOT a luck-gate, and is deliberately CONVERGENT — it gates NOTHING the
-    # structural proofs (exhaustive solver, liveness BFS, exact score economy) turn on:
-    #   • It sits OFF the critical path entirely, on an optional prop. The five-step chain — read
-    #     notice → cupboard (brass-key) → store-key → unlock store-door → oil-cask → pour → light
-    #     the great lamp → down to the strand — runs through SEPARATE acts (first-class UNLOCKs and
-    #     the lamp's pour/light USEs), none of which this beat touches. It sets no win flag, no
-    #     quest_stage, opens no exit, awards no score, and no `when:` variant or other condition
-    #     reads its flag — so on EITHER outcome every ending (guided / thief / caught), the win,
-    #     the exact 35-point economy, and every reactive variant stay reachable byte-for-byte. The
-    #     screen is never required and never consumed, so skipping it (or failing the roll) changes
-    #     nothing the player can reach.
-    #   • difficulty 12 vs d20 + steadiness 3 (range 4–23) is passable on a mid roll (≥ 9, ~60%)
-    #     and well under the 23 ceiling — mirrors the proven sealed_crypt / sunken_barrow DC-12.
-    #   • One-shot via `not_flag: steadied_the_flame`: on SUCCESS the flag retires the beat (it is
-    #     read ONLY by this condition — no other reader anywhere, so it cannot re-fire and re-roll
-    #     a contradictory line). on FAILURE the flag stays unset, so the beat is simply RETRYABLE
-    #     and the player proceeds with the round regardless. The screen is NOT quest_critical and is
-    #     never removed, so it opens no soft-lock surface even on the map's one-way bits. No `score`
-    #     rides the check (economy proven exact).
-    interactions:
-      - verb: USE
-        item: horn_windscreen
-        target: horn_windscreen
-        command_verb: steady
-        # Both conditions must hold: not yet steadied (success retires via steadied_the_flame)
-        # AND not yet attempted (failure retires via attempted_windscreen, bug_0303). One-shot
-        # on either outcome — the beat is a single tension moment, not a retryable grind.
-        conditions: [{ not_flag: steadied_the_flame }, { not_flag: attempted_windscreen }]
-        skill_check:
-          skill: steadiness
-          difficulty: 12
-          on_success:
-            - set_flag: steadied_the_flame
-            - narrate: >
-                You set your back to the river and hold the horn pane up to leeward, and the little
-                flame on your belt stops its guttering and stands up straight and honest behind the
-                glass again. A lighter learns to carry a light through a fog like this; your hand is
-                steady on it now, and it will not go out on you tonight.
-          on_failure:
-            - set_flag: attempted_windscreen
-            - narrate: >
-                A gust comes cold off the dark water and gets in past the pane all the same; the
-                flame ducks and streams flat and for a breath you think it gone — but it holds,
-                just, as it has held all the foggy round. Your hand is not as steady as you would
-                like in this murk; but the little flame is not going out tonight, screen or no,
-                and there is still the great lamp up at the staith-head to draw oil for and light.
+    quest_critical: true
 
   - id: wall_cupboard
     name: "wall-cupboard"
@@ -404,26 +360,48 @@ objects:
 
   - id: excise_box
     name: "excise strongbox"
-    aliases: [strongbox, box, strong box, chest, silver]
+    aliases: [strongbox, box, strong box, chest]
     # The GREED fork (sealed_crypt founders_coffin, bug_0105): the seized Crown silver,
-    # behind the same store-key. Forcing it is terminal — you take the money and slip off
-    # the round, the great lamp left dark and the child left lost — so it is a real mutually
-    # exclusive CHOICE, not a detour. Non-death (you are not killed; you choose the silver).
-    # No score, no flag, no exit change to the win route (max_score stays 35).
+    # behind the same store-key. Unlocking/opening the box is warning, not commitment:
+    # only deliberately TAKING the exposed silver ends the round. That keeps the moral fork
+    # a real mutually exclusive CHOICE without punishing a curious player for merely trying
+    # the key on the same-looking lock (bug_0436). Non-death (you are not killed; you choose
+    # the silver). No score, no flag, no exit change to the win route (max_score stays 35).
     description: >
       A banded iron strongbox on the shelf, the excise seal still bright on its hasp and
       the dull clink of coin within — the Crown's silver, seized off the boats and bound
       for the customs-house. Its lock is the store-key's like all the rest. To open it is
-      to walk off your round a thief, with the silver and a dark lamp behind you.
+      not yet theft; to put the silver in your coat would be.
+    variants:
+      - when: [{ is_open: excise_box }]
+        text: >
+          The excise strongbox stands open on the shelf, its seal cracked and its seized
+          silver bare in the lantern-light. It is not lamp-oil, not your wage, and not your
+          errand; taking it would mean leaving the great lamp dark behind you.
     locked: true
+    container: true
+    openable: true
     key_id: store_key
+    contents: [seized_silver]
     unlock_narrate: >
-      The store-key bites and the excise seal cracks; the strongbox lid lifts on more
-      seized silver than a lighter sees in ten years of nights. You fill your coat with the
-      cold weight of it and go quiet down the back stair, off your round and out of the
-      fog — and behind you the great lamp stands dark over a strand you will not think
-      about, and a child you will not think about, ever again, if you can help it.
-    unlock_effects:
+      The store-key bites and the excise seal cracks. The strongbox is unlocked now, but
+      the silver is still the Crown's, the great lamp is still dark, and your hand is still
+      empty. Opening it further would make the choice plain.
+
+  - id: seized_silver
+    name: "seized silver"
+    aliases: [silver, coin, coins, crown silver, seized coin, seized coins, money]
+    description: >
+      A cold heap of seized Crown silver in the opened strongbox — more money than a
+      lighter sees in ten years of nights, and every shilling of it a way off your round
+      while the great lamp stays dark.
+    takeable: true
+    take_effects:
+      - narrate: >
+          You fill your coat with the cold weight of the Crown's silver and go quiet down
+          the back stair, off your round and out of the fog — and behind you the great lamp
+          stands dark over a strand you will not think about, and a child you will not
+          think about, ever again, if you can help it.
       - end_game: ending_thief
 
   - id: spirit_cask
@@ -470,22 +448,25 @@ objects:
     #     sets font_filled. No score; one-shot (gated not_flag font_filled, and the oil is
     #     spent so it cannot re-fire).
     #   • `light great harbour-lamp with tinderbox` — now gated on has_flag font_filled (a dry
-    #     font cannot be lit), awards the +20, opens the way DOWN to the strand, one-shot
-    #     (not_flag lamp_lit). command_verb `light` so the natural phrasing parses (bug_0078).
+    #     font cannot be lit) AND the carried horn windscreen, awards the +20, opens the way DOWN
+    #     to the strand, one-shot (not_flag lamp_lit). command_verb `light` so the natural phrasing
+    #     parses (bug_0078). The extra horn-screen precondition pays off the prop that the opening
+    #     scene puts in the player's hand as the obvious river-fog tool (bug_0382).
     # The oil stays the hard precondition for the whole climax (no oil → no pour → no light →
     # strand barred); the +20 still rides a single one-time gated step; max_score stays 35.
     description: >
       The great staith-head lamp on its iron post — a deep brass font and a broad wick, the
       one lamp on the round that throws its light right down onto the strand below. Its font
-      is dry: pour in lamp-oil and strike a flame to the wick and it will burn till dawn.
+      is dry: pour in lamp-oil, shield your flame with the horn windscreen, and strike the
+      wick and it will burn till dawn.
     variants:
       - when: [{ has_flag: lamp_lit }]
         text: "The great harbour-lamp burning gold and steady, its light lying right down the drop and out across the strand below."
       - when: [{ has_flag: font_filled }, { not_flag: lamp_lit }]
         text: >
           The great staith-head lamp on its iron post, its deep brass font brimming with
-          whale-oil now and the broad wick standing soaked and ready — it wants only a flame
-          struck to it.
+          whale-oil now and the broad wick standing soaked and ready — it wants only your
+          flame, shielded from the fog by the horn windscreen, struck to it.
     takeable: false
     interactions:
       - verb: USE
@@ -508,18 +489,19 @@ objects:
         target: harbour_lamp
         command_verb: light
         command_template: "light {target} with {item}"
-        conditions: [{ has_flag: font_filled }, { not_flag: lamp_lit }]
+        conditions: [{ has_flag: font_filled }, { has_item: horn_windscreen }, { not_flag: lamp_lit }]
         effects:
           - set_flag: lamp_lit
           - set_quest_stage: { quest: the_round, stage: lamp_lit }
           - inc_var: { name: score, by: 20 }
           - unlock_exit: { from: harbour_head, to: the_strand }
-          - add_journal: "You struck the light to the filled font, and the great harbour-lamp took and burned, throwing its gold right down onto the dark strand below."
+          - add_journal: "You shielded your belt-lantern with the horn windscreen, struck the light to the filled font, and the great harbour-lamp took and burned, throwing its gold right down onto the dark strand below."
           - narrate: >
-              You set the char-cloth smouldering in the tinderbox and lay it to the soaked
-              wick. The wick draws, catches, and steadies — and the great lamp swells gold on
-              its post and pours its light straight down the drop and out across the strand,
-              and the lightless dark below is dark no longer.
+              You clip the horn windscreen before the little flame on your belt, set the
+              char-cloth smouldering in the tinderbox, and lay it to the soaked wick. The
+              wick draws, catches, and steadies behind the screen — and the great lamp swells
+              gold on its post and pours its light straight down the drop and out across the
+              strand, and the lightless dark below is dark no longer.
 
 npcs:
   - id: watchman
@@ -535,6 +517,12 @@ npcs:
         # plain, twice-told warning off the red-stencilled rock-spirit cask.
         - id: greet
           npc_text: "Cold work, lighter, and the great lamp out — there's a young one lost down on the strand, I'm told, and the tide making. Best you light it quick. Ask me what you need."
+          variants:
+            - when: [{ any_of: [{ has_flag: heard_oil }, { has_flag: heard_store }] }]
+              text: >
+                The watchman rubs his hands above the dead brazier. "You've the shape
+                of it now: oil under lock, red cask left sealed, great lamp waiting.
+                Ask what's still dark to you, then get a flame on that wick."
           topics:
             - { id: oil, prompt: "Ask where the lamp's oil is to be had", goto: about_oil, conditions: [{ not_flag: heard_oil }] }
             - { id: store, prompt: "Ask about the red-stencilled cask in the store", goto: about_store, conditions: [{ not_flag: heard_store }] }

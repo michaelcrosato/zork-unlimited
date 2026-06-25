@@ -6,7 +6,7 @@
  * stale-text flaw: the ending_thief ("The Poor-Fund") epilogue unconditionally asserted "The old
  * woman never told you the postern's trick, and now she never will." But the alms-box that fires
  * ending_thief is reachable from BOTH states — robbed WITHOUT ever learning the postern, OR robbed
- * AFTER the old woman has already told you (knows_postern set, postern open). On the rob-after-
+ * AFTER the old woman has already told you (knows_postern set). On the rob-after-
  * learning route the tester took, that line is false. The fix rewrote the epilogue to be true in
  * both states (it now names the honest way out only as the thing the thief turned FROM).
  *
@@ -78,7 +78,7 @@ describe("bug_0186 — friars_postern ending_thief epilogue is true in both reac
     const robbed = play(start(), [...LEARN, "go_up", "unlock_alms_box"]);
     expect(robbed.ended).toBe(true);
     expect(robbed.endingId).toBe("ending_thief");
-    // the state the old epilogue contradicted: she HAD told you, the postern was open.
+    // the state the old epilogue contradicted: she HAD told you the trick.
     expect(robbed.flags.knows_postern).toBe(true);
   });
 

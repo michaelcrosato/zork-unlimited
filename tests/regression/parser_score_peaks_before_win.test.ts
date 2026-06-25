@@ -13,8 +13,7 @@
  * from `has_flag` (SET the win flag) to also cover `has_item` (CLAIM the relic the win
  * turns on — taking it is a chosen act, structurally the alchemists cure / the sunken
  * barrow circlet's +25 take_effects). `visited` stays excluded: a navigation win's final
- * step is mere LOCOMOTION, a denouement that rightly awards nothing — a blind playtester
- * confirmed sealed_crypt's "35/35 one step before the win" reads as intentional (seed 29).
+ * step can still be mere LOCOMOTION, a denouement that rightly awards nothing.
  *
  * Sound & conservative — it fires ONLY when all hold (so it detects fewer cases, never
  * wrong ones): exactly one win_condition; the win requires a guaranteed `has_flag` F or
@@ -30,8 +29,8 @@
  *       max_score is fully reachable before it) IS flagged — bug-first;
  *   (3) moving the capstone award ONTO that flag-setting act clears the finding;
  *   (4) a navigation-only win (`visited`, no required has_flag) is NEVER flagged, even
- *       when the full score is reachable before the final step (the sealed_crypt /
- *       cold_forge / sunken_barrow denouement-step shape — not the smell);
+ *       when the full score is reachable before the final step (the cold_forge-style
+ *       denouement-step shape — not the smell);
  *   (5) a pack with MORE THAN ONE win_condition is left alone (a second, flagless win
  *       could be the real climax — the multi-win soundness guard);
  *   (6) an RPG pack reaches the check through validateRpg (the delegation path);

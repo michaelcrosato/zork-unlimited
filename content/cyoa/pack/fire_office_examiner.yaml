@@ -58,24 +58,35 @@
 #   +5  question_hannah — Hannah's kitchen-hearth account collected (one-shot
 #       via skill_check condition not_flag: heard_hannah; composure DC 11
 #       tension beat — both branches set the flag and award the score)
-#   +20 refer_to_law — criminal referral (gate: all six flags)
+#   +5  speak_varley — Varley's oral loss list contradicts the written claim
+#       (not_flag: heard_varley)
+#   +20 refer_to_law — criminal referral (gate: all seven evidence flags)
 #   +10 dispute_claim — civil rejection (gate: found_burn_origin + checked_debt)
 #   +0  approve_claim — ungated; fraud succeeds
 # Best single path:
 #   claim_office: read_claim (+5), check_debt (+5) → warehouse_ruins:
-#   question_thomas (+5) → burn_interior: examine_burn_origin (+5) →
-#   warehouse_yard: check_yard_tracks (+5) → cook_interview:
-#   question_hannah (+5) → warehouse_ruins → submission_desk:
-#   refer_to_law (+20) = 50. All six awards on one traversable run.
+#   question_thomas (+5), speak_varley (+5) → burn_interior:
+#   examine_burn_origin (+5) → warehouse_yard: check_yard_tracks (+5) →
+#   cook_interview: question_hannah (+5) → warehouse_ruins →
+#   submission_desk: refer_to_law (+20) = 55. All seven evidence awards on
+#   one traversable run.
 #   max_score == reachable maximum (score-economy sound).
 #
 meta:
   id: fire_office_examiner_v1
   title: "The Fire Office Examiner"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Sun Fire Office"
+    quest: "decide whether the warehouse claim is fraud"
+    role: "fire office examiner"
+    connection: "Charterhaven's insured warehouses make the fire office a civic power even when its authority is private."
   start: claim_office
   vars_init: { composure: 3 }
   flags_init: []
-  max_score: 50
+  max_score: 55
 
 scenes:
   # ── Starting location: the Fire Office ──────────────────────────────────
@@ -111,17 +122,35 @@ scenes:
   # ── Hub: the burned warehouse on Thames Street ───────────────────────────
   - id: warehouse_ruins
     title: "The Thames Street Ruins"
-    # Variant suppresses the discovery framing once both witnesses have been
-    # heard — the two contradictory accounts are in hand and the physical
-    # site is examined; the hub now reads as a staging point for submission,
-    # not a scene of fresh discovery. Mirrors the mossy_brook / hermit_camp
-    # reactive-description pattern in watchtower_road (bug_0282/bug_0309).
+    # Reactive hub prose keeps the investigation state honest: the cook and
+    # yard man are witnesses, while Varley is the claimant. A blind playtester
+    # caught the old "both witnesses attended to" line while Varley's own
+    # interview was still live, which made the file look complete too early.
     variants:
-      - when: [ { all_of: [ { has_flag: heard_hannah }, { has_flag: heard_thomas } ] } ]
+      - when:
+          - all_of:
+              - has_flag: heard_hannah
+              - has_flag: heard_thomas
+              - has_flag: heard_varley
+              - has_flag: found_burn_origin
+              - has_flag: found_wheel_marks
+              - has_flag: read_claim
+              - has_flag: checked_debt
         text: >
           The blackened shell of Varley's warehouse. The yard, the interior,
-          and both witnesses have been attended to. The submission office on
-          Cornhill is the last stop.
+          the written claim, the debt file, both witnesses, and Varley's own
+          account have all been attended to. The submission office on Cornhill
+          is the last stop.
+      - when:
+          - all_of:
+              - has_flag: heard_hannah
+              - has_flag: heard_thomas
+              - not_flag: heard_varley
+        text: >
+          The blackened shell of Varley's warehouse. The cook and the yard man
+          have both been heard, but Varley himself still waits at the gate with
+          the claim in his name. If the file is to carry a criminal referral,
+          the claimant's own story should be put beside the written one.
     text: >
       Varley's warehouse is a blackened shell: scorched beams, fallen plaster,
       the smell of wet ash and old pitch. Neighbours say the fire burned hot
@@ -134,13 +163,16 @@ scenes:
         conditions: [ { not_flag: heard_varley } ]
         effects:
           - set_flag: heard_varley
-          - add_journal: "Varley meets you at the gate and recites his losses without prompting — forty yards of broadcloth, twelve bolts of serge, the imported goods on the claim, all gone. He blames a kitchen fire, a moment's carelessness by his cook. His words come a little too smoothly and his eyes stay on yours a little too long."
+          - add_journal: "Varley meets you at the gate and recites his losses without prompting — forty yards of broadcloth, twelve bolts of serge, and then the imported goods named in the written claim, all gone. The oral list does not match the paper: a Thames Street cloth merchant has suddenly remembered domestic stock the claim never declared. He blames a kitchen fire, a moment's carelessness by his cook. His words come too smoothly and his eyes stay on yours too long."
+          - inc_var: { name: score, by: 5 }
         next: warehouse_ruins
       - id: enter_ruins
         text: "Enter the ruins to examine the burn."
+        conditions: [ { not_flag: found_burn_origin } ]
         next: burn_interior
       - id: check_yard
         text: "Circle round to the yard at the rear."
+        conditions: [ { not_flag: found_wheel_marks } ]
         next: warehouse_yard
       - id: question_thomas
         text: "Speak with the yard man, Thomas Rawling."
@@ -152,9 +184,19 @@ scenes:
         next: warehouse_ruins
       - id: find_cook
         text: "Find Hannah Finch at her lodgings."
+        conditions: [ { not_flag: heard_hannah } ]
         next: cook_interview
       - id: submit_report
         text: "Return to the Fire Office to file your report."
+        conditions:
+          - any_of:
+              - has_flag: read_claim
+              - has_flag: checked_debt
+              - has_flag: found_burn_origin
+              - has_flag: found_wheel_marks
+              - has_flag: heard_thomas
+              - has_flag: heard_hannah
+              - has_flag: heard_varley
         next: submission_desk
 
   # ── Evidence scene: burn interior ────────────────────────────────────────
@@ -239,6 +281,46 @@ scenes:
   # ── Terminal: submission desk ────────────────────────────────────────────
   - id: submission_desk
     title: "The Submission Desk"
+    variants:
+      - when:
+          - all_of:
+              - has_flag: read_claim
+              - has_flag: checked_debt
+              - has_flag: found_burn_origin
+              - has_flag: found_wheel_marks
+              - has_flag: heard_thomas
+              - has_flag: heard_hannah
+              - has_flag: heard_varley
+        text: >
+          The board clerk waits with a clean sheet and a quill. Your file is
+          complete: the written claim, the debt, the burn origin, the yard
+          tracks, Thomas Rawling's sighting, Hannah Finch's contradicted account,
+          and Varley's own overfull oral loss list. A criminal referral can stand
+          on the whole chain.
+      - when:
+          - all_of:
+              - has_flag: found_burn_origin
+              - has_flag: checked_debt
+        text: >
+          The board clerk waits with a clean sheet and a quill. You have enough
+          to reject the claim on civil grounds: motive in the overdue bond and a
+          burn pattern that contradicts the kitchen-hearth story. A criminal
+          referral needs the fuller chain — the yard, the witnesses, and Varley's
+          own account — before it should leave this desk.
+      - when:
+          - any_of:
+              - has_flag: read_claim
+              - has_flag: checked_debt
+              - has_flag: found_burn_origin
+              - has_flag: found_wheel_marks
+              - has_flag: heard_thomas
+              - has_flag: heard_hannah
+              - has_flag: heard_varley
+        text: >
+          The board clerk waits with a clean sheet and a quill. You can file a
+          recommendation now, but the record is still thin. The Fire Office can
+          pay, reject, or refer only on the evidence you have actually brought
+          back.
     text: >
       The board clerk waits with a clean sheet and a quill. Your
       recommendation goes to the board this afternoon; it is binding on
@@ -247,15 +329,19 @@ scenes:
     choices:
       - id: approve_claim
         text: "Recommend payment — the evidence is inconclusive."
+        conditions:
+          - none_of:
+              - all_of:
+                  - has_flag: read_claim
+                  - has_flag: checked_debt
+                  - has_flag: found_burn_origin
+                  - has_flag: found_wheel_marks
+                  - has_flag: heard_thomas
+                  - has_flag: heard_hannah
+                  - has_flag: heard_varley
         next: ending_approved
-      - id: dispute_claim
-        text: "Recommend rejection — the physical evidence warrants denial."
-        conditions: [ { all_of: [ { has_flag: found_burn_origin }, { has_flag: checked_debt } ] } ]
-        effects:
-          - inc_var: { name: score, by: 10 }
-        next: ending_disputed
-      - id: refer_to_law
-        text: "Recommend criminal referral — the full chain warrants prosecution."
+      - id: approve_claim_against_file
+        text: "Recommend payment and treat the file as insufficient for fraud."
         conditions:
           - all_of:
               - has_flag: read_claim
@@ -264,16 +350,66 @@ scenes:
               - has_flag: found_wheel_marks
               - has_flag: heard_thomas
               - has_flag: heard_hannah
+              - has_flag: heard_varley
+        next: ending_approved
+      - id: dispute_claim
+        text: "Recommend rejection — the physical evidence warrants denial."
+        conditions: [ { all_of: [ { has_flag: found_burn_origin }, { has_flag: checked_debt } ] } ]
+        effects:
+          - inc_var: { name: score, by: 10 }
+        next: ending_disputed
+      - id: refer_to_law
+        text: "Recommend criminal referral — the full documentary, physical, and testimonial chain warrants prosecution."
+        conditions:
+          - all_of:
+              - has_flag: read_claim
+              - has_flag: checked_debt
+              - has_flag: found_burn_origin
+              - has_flag: found_wheel_marks
+              - has_flag: heard_thomas
+              - has_flag: heard_hannah
+              - has_flag: heard_varley
         effects:
           - inc_var: { name: score, by: 20 }
         next: ending_referred
       - id: back_to_investigate
         text: "Return to the site — there may be more to find."
+        conditions:
+          - none_of:
+              - all_of:
+                  - has_flag: read_claim
+                  - has_flag: checked_debt
+                  - has_flag: found_burn_origin
+                  - has_flag: found_wheel_marks
+                  - has_flag: heard_thomas
+                  - has_flag: heard_hannah
+                  - has_flag: heard_varley
         next: warehouse_ruins
 
 endings:
   - id: ending_approved
     title: "The Claim Paid"
+    variants:
+      - when:
+          - all_of:
+              - has_flag: read_claim
+              - has_flag: checked_debt
+              - has_flag: found_burn_origin
+              - has_flag: found_wheel_marks
+              - has_flag: heard_thomas
+              - has_flag: heard_hannah
+              - has_flag: heard_varley
+        text: >
+          The board accepts your recommendation because you make it, but the
+          clerk looks twice at the file before sealing the order: the anomalous
+          goods list, the overdue bond, the middle-room burn origin, the loaded
+          cart ruts, both witness statements, and Varley's own swelling oral
+          claim all point the other way. Varley collects £180 within the week
+          and discharges his debt to Creed. Six months later a customs man
+          following a different thread turns a receipt at a Southwark factor's
+          house into a chain that leads all the way back to Thames Street — and
+          to the Fire Office's register, where your name sits next to a paid
+          claim your own file had already proved false.
     text: >
       The board accepts your recommendation and authorises payment. Varley
       collects £180 within the week and discharges his debt to Creed. Six
@@ -298,10 +434,10 @@ endings:
       bond, the burn origin in the middle room that contradicts the kitchen-
       hearth account, the wheel-ruts that prove the goods were moved before
       the fire, the yard man's testimony placing Varley himself there with a
-      lamp the night before, and the cook's contradicted account that
-      completes the picture of a prepared story. The magistrate's men find
-      the cart at a Southwark factor's yard within three days — the goods on
-      the claim list, undamaged, stacked behind a locked door. Varley is
+      lamp the night before, the cook's contradicted account, and Varley's own
+      oral loss list swelling beyond the written claim. The magistrate's men
+      find the cart at a Southwark factor's yard within three days — the goods
+      on the claim list, undamaged, stacked behind a locked door. Varley is
       bound over for trial. It is an ugly business — a man in extremis making
       a bad calculation — but the chain of evidence is clean, and you put
       it there.

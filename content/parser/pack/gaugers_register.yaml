@@ -44,12 +44,12 @@
 #   +5   READ duty_ledger   — the ledger shows the systematic under-reads (sets read_ledger)
 #   +10  TAKE marked_stave — the stave with deepened notch-marks: physical proof
 #   +5   SHOW stave to watchman — the watchman is convinced (sets watchman_convinced)
-#   +5   READ hayman_seal  — the matching seal batches confirm the fraud (read_seal)
-#   +20  TAKE gauge_register — the private record naming every false certificate
+#   +0   READ hayman_seal  — corroborating seal detail, not required for max score
+#   +25  TAKE gauge_register — the private record naming every false certificate
 #        (Forcing the inner door skips +5 for watchman_convinced → 40/45 on forceful path)
 #
-# Quiet path (45):  read_ledger → take_stave → show_watchman → read_seal → take_register
-# Forceful path (40): read_ledger → take_stave → force_inner_door → read_seal → take_register
+# Quiet path (45):  read_ledger → take_stave → show_watchman → take_register
+# Forceful path (40): read_ledger → take_stave → force_inner_door → take_register
 #
 # Endings (3):
 #   ending_exposed  — WIN (non-death): register + back_lane — presented to the board
@@ -69,6 +69,14 @@
 meta:
   id: gaugers_register_v1
   title: "The Gauger's Register"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Gauger's Yard"
+    quest: "match the cask to the register"
+    role: "excise gauger"
+    connection: "Charterhaven's drink trade runs through the gauger's marks, so one altered register cheats the city."
   start_room: approach_lane
   flags_init: []
   # `steadiness` (3) — the OPTIONAL TENSION BEAT: a CHECK on the crowbar before you
@@ -98,7 +106,41 @@ rooms:
       against the south wall — the gaugers use them to shift heavy casks. A
       marked stave hangs on a peg beside the beam, between the scale-weights.
       The lane is south; the inner door is north.
-    objects: [duty_ledger, bribe_purse, marked_stave, crowbar, weighing_beam, watchman, inner_door]
+    variants:
+      - when:
+          - has_flag: marked_stave_taken
+          - has_flag: crowbar_taken
+        text: >
+          The main office: a long room smelling of chalk-dust and old
+          ledger-leather. A weighing beam hangs still on its pivot above the
+          central table. A tall cupboard stands against the east wall beside the
+          inner door; the duty ledger and the night's papers are spread on the
+          table. The south wall and the peg beside the beam are bare where the
+          crowbar and marked stave started the night. The lane is south; the
+          inner door is north.
+      - when:
+          - has_flag: marked_stave_taken
+        text: >
+          The main office: a long room smelling of chalk-dust and old
+          ledger-leather. A weighing beam hangs still on its pivot above the
+          central table. A tall cupboard stands against the east wall beside the
+          inner door; the duty ledger and the night's papers are spread on the
+          table. A crowbar leans against the south wall — the gaugers use them
+          to shift heavy casks. The peg beside the beam is bare where the marked
+          stave hung between the scale-weights. The lane is south; the inner
+          door is north.
+      - when:
+          - has_flag: crowbar_taken
+        text: >
+          The main office: a long room smelling of chalk-dust and old
+          ledger-leather. A weighing beam hangs still on its pivot above the
+          central table. A tall cupboard stands against the east wall beside the
+          inner door; the duty ledger and the night's papers are spread on the
+          table. The south wall is bare where the crowbar leaned. A marked stave
+          hangs on a peg beside the beam, between the scale-weights. The lane is
+          south; the inner door is north.
+    objects:
+      [duty_ledger, bribe_purse, loose_leaf, marked_stave, crowbar, weighing_beam, watchman, inner_door]
     exits:
       - { direction: south, to: approach_lane }
       - direction: north
@@ -170,14 +212,19 @@ objects:
 
   - id: bribe_purse
     name: "cloth purse"
-    aliases: [purse, coins, money, payment, bribe, loose leaf, pouch, bribe purse]
+    aliases: [purse, coins, money, payment, bribe, pouch, bribe purse]
     description: >
       A heavy cloth purse on the corner of the table, tied shut. A loose leaf is
-      tucked into the knot: names, dates, and amounts — six months of side-payments,
-      each in Hayman's hand. A record of what was given and to whom, kept for mutual
-      security. Not safe to leave behind; not safe to take.
-    # Bug_0123: the examine makes clear what this is before TAKE fires end_game.
-    # The player knows it is bribery money before they pocket it. No ambush.
+      tucked through the knot, not sealed inside it: names, dates, and amounts —
+      six months of side-payments, each in Hayman's hand. The paper can be slipped
+      free as evidence. The purse is bait. Leave the money where it lies. Pocket
+      it, and Hayman's side can name you as bought before you ever reach the board.
+    read_text: >
+      The loose leaf names six months of side-payments, all in Hayman's hand. It is the
+      record you need to cite; the coin is the trap. Take the loose leaf if you want
+      the paper. Leave the purse untouched and carry the case forward another way.
+    # Bug_0381: the player can read the loose-leaf evidence without pocketing the bribe,
+    # and TAKE is clearly framed as taking money, not collecting evidence.
     takeable: true
     take_effects:
       - narrate: >
@@ -187,6 +234,32 @@ objects:
           these things always do when the wrong party has the only record.
           Your master's case went the way the gauger always planned.
       - end_game: ending_bribed
+
+  - id: loose_leaf
+    name: "loose bribe leaf"
+    aliases:
+      [
+        leaf,
+        loose leaf,
+        paper,
+        bribe leaf,
+        payment leaf,
+        side-payment leaf,
+        side payment leaf,
+      ]
+    description: >
+      A narrow leaf of paper threaded through the purse-knot. Hayman's hand lists
+      six months of side-payments by date and amount. It is loose enough to take
+      without touching the coin.
+    read_text: >
+      The leaf names six months of side-payments, all in Hayman's hand. It is
+      corroborating evidence for the board; the purse it was tied to remains the
+      trap.
+    takeable: true
+    take_effects:
+      - narrate: >
+          You slip the loose leaf out from the purse-knot and fold the payment
+          record into your coat. The coin stays on the table, where bait belongs.
 
   - id: marked_stave
     name: "gauging stave"
@@ -204,6 +277,7 @@ objects:
     # engine's useInteraction lookup discipline (resolves via target's interactions).
     take_effects:
       - inc_var: { name: score, by: 10 }
+      - set_flag: marked_stave_taken
 
   - id: crowbar
     name: "crowbar"
@@ -212,6 +286,8 @@ objects:
       A short iron crowbar of the kind used to shift heavy casks and pry open
       their lids for inspection. Useful, but noisy.
     takeable: true
+    take_effects:
+      - set_flag: crowbar_taken
     # TENSION BEAT — CHECK grip (optional, convergent, off-critical-path).
     # Gated on in_room: weighing_room so the beat fires where the decision belongs —
     # at the moment before committing to force or persuasion — not as the player
@@ -360,7 +436,6 @@ objects:
         conditions: [{ not_flag: read_seal }]
         effects:
           - set_flag: read_seal
-          - inc_var: { name: score, by: 5 }
 
   - id: gauge_register
     name: "gauge register"
@@ -374,7 +449,7 @@ objects:
     takeable: true
     quest_critical: true
     take_effects:
-      - inc_var: { name: score, by: 20 }
+      - inc_var: { name: score, by: 25 }
 
 npcs: []
 
@@ -389,6 +464,18 @@ win_conditions:
 endings:
   - id: ending_exposed
     title: "The Register"
+    variants:
+      - when: [{ has_item: loose_leaf }]
+        text: >
+          You step out into the back lane and do not look back at the gauger's office.
+          The register is under your coat, and the loose leaf of side-payments is folded
+          beside it. Hayman has his certifying lamp still burning in the assay room; he
+          will not know the book is gone until he reaches for it in the morning, which
+          will be too late. The board of excise meets at nine o'clock. Your master's
+          case — seven weeks of false duty, a year of undercut prices, and Hayman's own
+          list of payments — is answered in his own hand. You walk north toward the
+          clock-tower and wait for first bell.
+          *** The register is recovered. ***
     text: >
       You step out into the back lane and do not look back at the gauger's office.
       The register is under your coat. Hayman has his certifying lamp still burning
@@ -401,12 +488,21 @@ endings:
 
   - id: ending_bribed
     title: "The Purse"
+    variants:
+      - when: [{ has_item: loose_leaf }]
+        text: >
+          Hayman's bribery money does not feel like much by the time the hearing is
+          over. The loose leaf was in your coat, but so was the purse, and the gauger's
+          side needed no better story than that: your master's factor caught leaving
+          by night with the bribe money on him. The record became another thing you
+          stole, not proof you preserved. You know what the purse cost; you knew when
+          you took it.
+          *** You are bought. ***
     text: >
       Hayman's bribery money does not feel like much by the time the hearing is
       over. Your master's petition was dismissed — the gauger's records held, his
-      cousin corroborated, and the loose leaf you might have produced as evidence
-      of payment was in your coat instead of the board's hands. You know what the
-      purse cost; you knew when you took it.
+      cousin corroborated, and the loose leaf of payments still lying where you left
+      it on the table. You know what the purse cost; you knew when you took it.
       *** You are bought. ***
 
   - id: ending_arrested

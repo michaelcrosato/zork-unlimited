@@ -10,6 +10,7 @@ import { z } from "zod";
 import { ConditionSchema } from "../core/conditions.js";
 import { EffectSchema } from "../core/effects.js";
 import { SkillCheckSchema } from "../parser/schema.js";
+import { WorldBindingSchema } from "../world/schema.js";
 
 export const ChoiceSchema = z
   .object({
@@ -106,6 +107,7 @@ export const MetaSchema = z
   .object({
     id: z.string().min(1),
     title: z.string().min(1),
+    world: WorldBindingSchema.optional(),
     start: z.string().min(1),
     vars_init: z.record(z.string(), z.number()).default({}),
     flags_init: z.array(z.string()).default([]),

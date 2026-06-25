@@ -1,0 +1,27 @@
+id: bug_0392
+pack: dawn_beacon_v1
+title: "watchman briefing hid the orders-board score beat"
+severity: minor
+scene: lower_ward
+reported_by: blind_playtest_20260620T160236Z_dawn_beacon_seed7
+
+symptom: >
+  The blind playtester finished a clean prepared route at 45/50 after sensibly
+  talking to the old watchman but skipping Hale's orders-board. The watchman gives
+  richer tactical and beacon instructions than the board, so a goal-oriented player
+  had no in-world reason to read the board and silently missed its score-bearing
+  order.
+
+root_cause: >
+  Dawn Beacon intentionally awards five points for reading the orders-board, but
+  the watchman's post-topic hub line did not distinguish players who had not read
+  the board yet. Once the expert NPC had explained the same route-critical steps,
+  the board looked redundant.
+
+fix: >
+  The watchman's reactive return line now checks for `not_flag: read_orders` after
+  either briefing and tells the player to read Hale's board before climbing. Once
+  the board is read, the existing terse return line is used again. Mechanics,
+  score values, and route structure are unchanged.
+
+tests: tests/regression/dawn_beacon_orders_board_signpost.test.ts

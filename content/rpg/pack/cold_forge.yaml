@@ -23,6 +23,14 @@
 meta:
   id: cold_forge_v1
   title: "The Cold Forge"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Cold Forge"
+    quest: "rekindle the forge and face its sentinel"
+    role: "forge delver"
+    connection: "The cold forge once armed Charterhaven; its silence leaves the hub dependent on weaker hands."
   start_room: forge_steps
   vars_init: { hp: 20, attack: 4, defense: 2, might: 3 }
   flags_init: []
@@ -349,6 +357,9 @@ objects:
       - when: [ { has_flag: plate_donned } ]
         text: "The dead master's cold-iron plate, buckled on now over your own gear; its dead weight sits between you and the next blow."
     takeable: true
+    take_effects:
+      - add_journal: "The cold-iron plate is only weight in your hands until it is buckled on; don it before you face the sentinel."
+      - narrate: "The plate is in your hands, but not yet on your body. Don it before the sentinel's anvil-blows find you."
     interactions:
       # Self-USE = "wear this thing". command_verb: don (bug_0074) makes the offered
       # and typed verb match the prose that primes it — you "don" plate, you do not
@@ -617,6 +628,9 @@ endings:
           one more set of bones the deep chill will hold whole, a while longer.
     text: >
       The sentinel's last blow drops you among the dead anvils, and the grave
-      chill closes over you. The forge keeps its cold, and its Heart, a while
-      longer.
+      chill closes over you. Only as the cold takes hold do the forge's warnings
+      finish their work: the spirit's borrowed warmth and the dead master's
+      cold-iron plate were not ornaments to the tale, but the edges that might
+      have kept you standing. The forge keeps its Heart, and waits for a warmer
+      hand that comes down armed with every lesson it can find.
     death: true

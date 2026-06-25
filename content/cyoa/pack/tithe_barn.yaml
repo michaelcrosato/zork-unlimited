@@ -40,6 +40,14 @@
 meta:
   id: tithe_barn_v1
   title: "The Tithe-Barn"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "North Tithe Barn"
+    quest: "decide whether the lord's hoarded grain stays locked"
+    role: "tithe watcher"
+    connection: "The tithe barn stores grain and grudges for Charterhaven's parishes, making one ledger a city-wide pressure point."
   start: watch_post
   flags_init: []
 
@@ -81,26 +89,25 @@ scenes:
       has set on them. On the steward's table by the door his account-book lies open where
       he left it. And against the wall a ladder climbs to a loft of older stores, its rungs
       grey and soft with rot.
-    # Two reactive layers on the same hub, first-match-wins, and TEMPORALLY MUTUALLY EXCLUSIVE
-    # so neither suppresses the other. (1) Quest "the_barn" at `watch_begun`: the window after
-    # you have gone in but before you have read the book — set on the go-in choice (above), read
-    # HERE, and this hub has no on_enter to reset it, so it shows on the very first look inside
-    # the barn (provably reachable as displayed text — bug_0145/0146). Reading the book advances
-    # the quest to `truth_read`, which clobbers `watch_begun`, so the `when` below goes false the
-    # instant the next layer becomes true. (2) Once the book is read (knows_truth), the barn reads
-    # differently — you stand in a storehouse you know the lie of. The stage moves past
-    # `watch_begun` exactly when knows_truth fires, so the two never compete. No flag/route change;
-    # quest_stage gates nothing.
+    # Reactive layers on the same hub, first-match-wins, ordered by specificity. (1) If you
+    # know the truth AND have already faced the thief, the room must remember both facts:
+    # she has spoken, and the ledger has named the lie. (2) If only knows_truth is set, this
+    # is the pre-confrontation informed view. (3) If only faced_thief is set, this is the
+    # back_to_floor return after the reckoning, so the prose must not reset to "waiting to
+    # see" as if she never spoke (bug_0370); bug_0476 also keeps the mid-confrontation
+    # read route from feeling frozen while the thief waits. (4) Quest "the_barn" at
+    # `watch_begun` remains the first-look window after entering but before truth/confrontation.
     variants:
-      - when: [{ quest_stage: { quest: the_barn, stage: watch_begun } }]
+      - when: [{ has_flag: knows_truth }, { has_flag: faced_thief }]
         text: >
-          Moonlight falls in bars onto the mountains of sacked grain, and you are in it now —
-          past the door, the only door, with the thief frozen against the far sacks and the
-          half-filled sack at their feet. They do not run. They wait to see what kind of man the
-          lord has set on them, and the law the steward read you sits in your head like a stone:
-          a thief at the grain is a hanging matter, and the silver goes to the man who brings one
-          in. On the table by the door the steward's account-book lies open where he left it. The
-          loft-ladder climbs grey and soft with rot into the dark. Whatever you do here, you do.
+          Moonlight falls in bars onto the mountains of sacked grain, and the woman is no longer
+          an unknown shape frozen against the far sacks. She has looked you in the eye and told
+          you to do what he pays you for; stepping back to the steward's table has not put that
+          moment back in the dark. You have read the steward's book too; you know this barn has
+          stood full since autumn and fuller, that good grain was carted off to rot in the low
+          field to keep the price climbing while the town goes under. The half-filled sack waits
+          at her feet. The book lies open on the table where you left it. The rotten loft-ladder
+          climbs grey and soft into the dark.
       - when: [{ has_flag: knows_truth }]
         text: >
           Moonlight falls in bars onto the mountains of sacked grain, and you cannot look at
@@ -110,12 +117,33 @@ scenes:
           is still frozen against the far sacks, the half-filled sack at their feet, watching
           you between them and the only door. The book lies open on the table where you left
           it. The rotten loft-ladder climbs grey and soft into the dark.
+      - when: [{ has_flag: faced_thief }]
+        text: >
+          Moonlight falls in bars onto the mountains of sacked grain, and the woman by the far
+          sacks is no longer only a cornered shape in the dark. She has spoken now, low and even:
+          do what he pays you for. The half-filled sack waits at her feet, and you still stand
+          between her and the only door, with the steward's law in your head and the steward's
+          open account-book on the table by your hand. The loft-ladder climbs grey and soft
+          with rot into the dark.
+      - when: [{ quest_stage: { quest: the_barn, stage: watch_begun } }]
+        text: >
+          Moonlight falls in bars onto the mountains of sacked grain, and you are in it now —
+          past the door, the only door, with the thief frozen against the far sacks and the
+          half-filled sack at their feet. They do not run. They wait to see what kind of man the
+          lord has set on them, and the law the steward read you sits in your head like a stone:
+          a thief at the grain is a hanging matter, and the silver goes to the man who brings one
+          in. On the table by the door the steward's account-book lies open where he left it. The
+          loft-ladder climbs grey and soft with rot into the dark. Whatever you do here, you do.
     choices:
       - id: read_book
         text: "Read the steward's open account-book on the table."
         next: ledger
       - id: face_thief
         text: "Face the cornered thief."
+        # Pure reactive-prose state: once she has spoken, returning via back_to_floor must
+        # not show the pre-confrontation "waiting to see" barn text again (bug_0370).
+        effects:
+          - set_flag: faced_thief
         next: reckoning
       - id: climb_loft
         # A CHOSEN, plainly-lethal gamble, not a curiosity trap — the base text already names

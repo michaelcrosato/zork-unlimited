@@ -126,7 +126,7 @@ export function makeParserRelabeler(
 // engine-keyword `score` survives relabeling. The `never` exhaustiveness guards make a
 // future DSL addition a COMPILE error here, so this can never silently miss a new kind.
 
-function relabelCondition(
+export function relabelCondition(
   c: Condition,
   r: (id: string) => string,
   rv: (n: string) => string,
@@ -335,6 +335,9 @@ function relabelNpc(npc: Npc, r: (id: string) => string, rv: (n: string) => stri
     name: npc.name, // prose
     description: npc.description, // prose
     room: r(npc.room),
+    ...(npc.conditions !== undefined
+      ? { conditions: npc.conditions.map((c) => relabelCondition(c, r, rv)) }
+      : {}),
     dialogue: {
       root: r(npc.dialogue.root),
       nodes: npc.dialogue.nodes.map((n) => relabelNode(n, r, rv)),

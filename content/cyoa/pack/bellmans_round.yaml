@@ -49,6 +49,14 @@
 meta:
   id: bellmans_round_v1
   title: "The Bellman's Round"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Wool Lane Watch"
+    quest: "name the assailant before dawn"
+    role: "town bellman"
+    connection: "Charterhaven pays the night bells on the wool road, and Wool Lane is the hub city watch at its poorest edge."
   start: wool_lane
   flags_init: []
   # `steadiness` (init 3) — the stat for the confront_gant TENSION beat
@@ -65,10 +73,21 @@ scenes:
     title: "Wool Lane"
     on_enter:
       - set_quest_stage: { quest: the_round, stage: found_hale }
-    # Higher-specificity variant first (all_of before any_of):
-    # Variant 1 (three key flags) is the strictest; a player satisfying it
-    # also satisfies variant 2, so variant 1 must come first.
+    # Higher-specificity variants first (all_of before any_of): a player
+    # satisfying either proof-state variant also satisfies the broad clue
+    # variant, so the proof-state variants must come first.
     variants:
+      - when:
+          - all_of:
+              - { has_flag: found_cloak_pin }
+              - { has_flag: found_debt }
+              - { has_flag: seen_torn_coat }
+        text: >
+          Hale is where you left him, breathing with less effort now. The
+          silver pin sits in your belt-pouch beside the ledger note, and
+          south in Gant's lit room you have seen the torn sleeve, the blood
+          at his cuff, and the fat purse at his hand. Whatever proof daylight
+          will ask for, the night has a name.
       - when:
           - all_of:
               - { has_flag: found_cloak_pin }
@@ -149,6 +168,12 @@ scenes:
             - end_game: ending_confronted
       - id: report_what_you_saw
         text: "Go to the constable and report what you saw."
+        conditions:
+          - none_of:
+              - all_of:
+                  - { has_flag: found_cloak_pin }
+                  - { has_flag: heard_witness }
+                  - { has_flag: found_debt }
         effects:
           - inc_var: { name: score, by: 10 }
         next: ending_reported
@@ -309,11 +334,26 @@ endings:
       you looked.
   - id: ending_reported
     title: "Word Left"
+    variants:
+      - when:
+          - any_of:
+              - { has_flag: read_dispute }
+              - { has_flag: found_debt }
+        text: >
+          You knock the constable up and give him what you have: a man beaten in
+          Wool Lane, a quarrel near the Exchange earlier in the evening, and a
+          drover named Gant who had cause to carry a grudge. You name what you
+          saw and what you did not look for.
+
+          He takes your name and says he will look into it at first light. You do
+          not know how thoroughly. You ring the three o'clock bell and the four
+          o'clock bell over a quiet town and tell yourself that is what you are
+          paid to do.
     text: >
       You knock the constable up and give him what you have: a man beaten in
-      Wool Lane, a possible quarrel near the Exchange earlier in the evening,
-      a drover named Gant who had cause to carry a grudge. You name what you
-      saw and what you did not look for.
+      Wool Lane, his purse-string cut, no named assailant, and the fact that
+      the lane was empty when your lantern found him. You name what you saw
+      and what you did not look for.
 
       He takes your name and says he will look into it at first light. You do
       not know how thoroughly. You ring the three o'clock bell and the four

@@ -90,7 +90,7 @@ const TO_GALLERY_WITH_PIPE = [
   "go_east", // gallery — told_of_way, HAS pipe
 ];
 
-// Full win route (pipe-first then give): ends at ending_free 35/35.
+// Full win route (pipe-first then give): the honest postern exit ends at ending_free 35/35.
 const WIN_ROUTE = [
   "read_wall_scratches", // cell: +5
   "go_north", // gallery
@@ -100,10 +100,11 @@ const WIN_ROUTE = [
   "go_west", // commons
   "talk_old_debtor",
   "ask_escape", // +10
-  "ask_give_pipe", // +20, knows_postern
+  "ask_give_pipe", // knows_postern
   "ask_bye",
   "go_east", // gallery
   "go_up", // chapel
+  "use_font", // press the third stone
   "go_north", // postern → night_street (win)
 ];
 

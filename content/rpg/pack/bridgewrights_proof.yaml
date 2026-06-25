@@ -1,0 +1,353 @@
+# The Bridgewright's Proof -- a Stage 4 (Hero's-Quest) pack.
+#
+# Fourteenth RPG pack, and the first to introduce `engineering`: practical load,
+# span, brace, and failure-path reasoning under pressure. It is not craft alone:
+# craft makes a thing well, while engineering reads the forces already moving
+# through a structure and chooses the one intervention that keeps it standing.
+#
+# Primary path: read the closure order, read the pier marks, read the truss plan,
+# take the brace mallet, then brace the cracked kingpost. Prepared engineering is
+# 12 against DC 12, making the bridge-safe route reliable on any d20 roll. Combat
+# fallback: fight Carden on the toll walk. It clears the road but leaves the
+# bridge problem settled by force and caps the score at 40/50.
+
+meta:
+  id: bridgewrights_proof_v1
+  title: "The Bridgewright's Proof"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Old Bridge Works"
+    quest: "prove the bridge unsafe before the market carts cross"
+    role: "bridgewright"
+    connection: "Charterhaven's market road depends on the old bridge, and one cracked span can turn toll fraud into a city-wide stoppage."
+  start_room: bridge_yard
+  vars_init: { hp: 20, attack: 4, defense: 2, engineering: 3 }
+  flags_init: []
+  max_score: 50
+
+rooms:
+  - id: bridge_yard
+    name: "The Bridge Yard"
+    description: >
+      A muddy yard at the south end of the old market bridge. Flood water still
+      drips from the stonework, and wagons are already gathering beyond the toll
+      rail. A closure order is nailed to a post, ignored but not removed. The
+      pier stair descends west, the plan hut stands east, and the toll walk runs
+      north across the first span.
+    variants:
+      - when: [{ has_flag: brace_attempted }]
+        text: >
+          The bridge yard. The cracked kingpost has already shifted under your
+          failed bracing attempt; striking at it again without control would
+          make the failure worse. The pier stair descends west, the plan hut
+          stands east, and the toll walk runs north.
+    objects: [closure_order, cracked_kingpost, visible_crack]
+    exits:
+      - { direction: west, to: pier_stair }
+      - { direction: east, to: plan_hut }
+      - { direction: north, to: toll_walk }
+
+  - id: pier_stair
+    name: "The Pier Stair"
+    description: >
+      A narrow stair drops beside the bridge pier, slick with river weed. Fresh
+      scours show where the flood bit under the ashlar, and chalk marks from the
+      last inspection cling to the wet stone. The bridge yard is east.
+    variants:
+      - when: [{ has_flag: pier_read }]
+        text: >
+          The pier stair. The scour marks are already read: the upstream pier is
+          carrying sideways force the kingpost was never meant to take. The
+          bridge yard is east.
+    objects: [pier_marks]
+    exits:
+      - { direction: east, to: bridge_yard }
+
+  - id: plan_hut
+    name: "The Plan Hut"
+    description: >
+      A timber hut beside the yard, roof patched with tarred canvas. The old
+      truss plan is pinned to a table under a survey chain, and a brace mallet
+      hangs from two pegs by the door. The bridge yard is west.
+    variants:
+      - when: [{ has_item: brace_mallet }]
+        text: >
+          The plan hut. The pegs are empty where the brace mallet hung until you
+          took it, and the old truss plan still lies pinned on the table. The
+          bridge yard is west.
+    objects: [truss_plan, brace_mallet]
+    exits:
+      - { direction: west, to: bridge_yard }
+
+  - id: toll_walk
+    name: "The Toll Walk"
+    description: >
+      The plank walk over the first span trembles each time a cart shifts beyond
+      the rail. Carden, the toll lessee's man, stands in the way with a cudgel,
+      hired to keep bridgewrights from stopping traffic on market day. The
+      bridge yard is south; the market road is north.
+    variants:
+      - when: [{ has_flag: carden_defeated }]
+        text: >
+          The toll walk. Carden is down beside the rail, his cudgel under the
+          planks. The market road lies north; the bridge yard is south.
+    exits:
+      - { direction: south, to: bridge_yard }
+      - direction: north
+        to: market_road
+        conditions: [{ has_flag: carden_defeated }]
+        locked_msg: >
+          Carden blocks the toll walk. Prove the bridge unsafe from the yard, or
+          get past him.
+
+  - id: market_road
+    name: "The Market Road"
+    description: >
+      The road beyond the bridge bends toward Charterhaven's morning market.
+      Wagons wait in the rain, drivers muttering, while the river keeps worrying
+      at the old span behind you.
+    on_enter:
+      - set_quest_stage: { quest: bridgewrights_proof, stage: road_reached }
+      - add_journal: >
+          The market road is clear enough for the report to reach Charterhaven,
+          and the old span will not carry loaded carts blindly today. (+15)
+      - inc_var: { name: score, by: 15 }
+    exits:
+      - { direction: south, to: toll_walk }
+
+objects:
+  - id: closure_order
+    name: "closure order"
+    aliases: [order, closure, notice, post, bridge order, closure order, warning notice]
+    description: >
+      A rain-spotted order bearing the bridge office seal, posted high enough to
+      be seen and low enough for the toll men to pretend it is only paperwork.
+    variants:
+      - when: [{ has_flag: order_read }]
+        text: >
+          The closure order, already read: loaded carts are barred until the
+          bridgewright certifies the span, which no one here has done.
+    takeable: false
+    read_text: >
+      The bridge office order bars loaded carts until the span is certified by a
+      bridgewright after flood damage. No certificate is attached. The toll rail
+      is already gathering carts anyway.
+    interactions:
+      - verb: READ
+        target: closure_order
+        conditions: [{ not_flag: order_read }]
+        effects:
+          - set_flag: order_read
+          - inc_var: { name: engineering, by: 3 }
+          - inc_var: { name: score, by: 5 }
+          - set_quest_stage: { quest: bridgewrights_proof, stage: order_read }
+          - add_journal: >
+              The closure order bars loaded carts until a bridgewright certifies
+              the flood-damaged span. No certificate exists. (+3 engineering, +5)
+          - narrate: >
+              The order gives you standing. The bridge is not open by law until
+              someone with your trade has named it safe.
+
+  - id: pier_marks
+    name: "pier marks"
+    aliases: [marks, pier, chalk, scours, scour marks, pier marks, ashlar, stonework]
+    description: >
+      Flood scours and chalk marks on the upstream pier, close enough together
+      to tell a story to someone who reads stone under water pressure.
+    variants:
+      - when: [{ has_flag: pier_read }]
+        text: >
+          The pier marks, already read: the flood undercut the upstream side,
+          pushing the span into a sideways load the kingpost is now taking badly.
+    takeable: false
+    read_text: >
+      The upstream pier has been undercut just enough to twist the span. The
+      bridge will not drop straight down; it will rack sideways through the
+      kingpost first.
+    interactions:
+      - verb: READ
+        target: pier_marks
+        conditions: [{ not_flag: pier_read }]
+        effects:
+          - set_flag: pier_read
+          - inc_var: { name: engineering, by: 3 }
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: bridgewrights_proof, stage: pier_read }
+          - add_journal: >
+              The pier marks show sideways flood load, not simple settling. The
+              kingpost is taking the wrong force. (+3 engineering, +10)
+          - narrate: >
+              The scours settle the question. The span is not merely old; the
+              flood has turned its load sideways.
+
+  - id: truss_plan
+    name: "truss plan"
+    aliases: [plan, truss, drawing, table, survey chain, old plan, truss plan]
+    description: >
+      The old truss plan, inked before three patch jobs and one greedy toll lease
+      made everyone pretend the bridge was simpler than it is.
+    variants:
+      - when: [{ has_flag: plan_read }]
+        text: >
+          The truss plan, already read: the kingpost can be braced from the yard
+          if the blow lands against the compression side, not the visible crack.
+    takeable: false
+    read_text: >
+      The plan shows the original compression path through the kingpost. Brace
+      the compression side and the span can be made safe long enough to close it;
+      strike the visible crack and you will help it split.
+    interactions:
+      - verb: READ
+        target: truss_plan
+        conditions: [{ not_flag: plan_read }]
+        effects:
+          - set_flag: plan_read
+          - inc_var: { name: engineering, by: 3 }
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: bridgewrights_proof, stage: plan_read }
+          - add_journal: >
+              The truss plan shows the brace point: compression side of the
+              kingpost, not the visible crack. (+3 engineering, +10)
+          - narrate: >
+              The plan turns a dangerous guess into a brace point. You need to
+              strike where the load travels, not where the damage looks loudest.
+
+  - id: brace_mallet
+    name: "brace mallet"
+    aliases: [mallet, hammer, brace mallet, wooden mallet, tool]
+    description: >
+      A heavy wooden mallet faced with rawhide, made to seat braces without
+      ringing iron against strained timber.
+    takeable: true
+
+  - id: cracked_kingpost
+    name: "cracked kingpost"
+    aliases: [kingpost, crack, cracked post, cracked kingpost, brace point, span]
+    description: >
+      The kingpost rises under the first span, its crack narrow but fresh. It
+      looks like the bridge's wound, though not necessarily where the cure belongs.
+    variants:
+      - when: [{ has_flag: brace_attempted }]
+        text: >
+          The cracked kingpost, shifted by the failed brace. It still stands, but
+          the timber now complains under every cart movement.
+    takeable: false
+    interactions:
+      - verb: USE
+        item: brace_mallet
+        target: cracked_kingpost
+        command_verb: brace
+        command_template: "brace {target} with {item}"
+        conditions: [{ not_flag: brace_attempted }]
+        skill_check:
+          skill: engineering
+          difficulty: 12
+          on_success:
+            - inc_var: { name: score, by: 10 }
+            - set_quest_stage: { quest: bridgewrights_proof, stage: span_braced }
+            - add_journal: >
+                You seated the brace against the compression side of the
+                kingpost. The span is safe enough to close properly. (+10)
+            - narrate: >
+                You set the brace where the load travels, not where the crack
+                shows. Three rawhide blows seat it tight. The span stops its
+                sideways shudder, and the toll men lose the argument.
+            - goto: market_road
+          on_failure:
+            - set_flag: brace_attempted
+            - set_quest_stage: { quest: bridgewrights_proof, stage: brace_failed }
+            - add_journal: >
+                The brace struck wrong and shifted the kingpost. A second try
+                would split the timber. Carden still blocks the toll walk.
+            - narrate: >
+                The mallet blow lands where the crack looks worst, not where the
+                load travels. The kingpost shifts with a long wooden complaint.
+                A second try would be vandalism, not repair.
+
+  - id: visible_crack
+    name: "visible crack"
+    aliases: [visible crack, fresh crack, crack line, split, wound]
+    description: >
+      The fresh split in the kingpost catches the eye and invites the worst
+      sort of simple answer: hit the damage where it looks loudest.
+    variants:
+      - when: [{ has_flag: brace_attempted }]
+        text: >
+          The visible crack has opened wider after the bad strike. The timber
+          still stands, but a second blow here would finish what the flood
+          began.
+    takeable: false
+    interactions:
+      - verb: USE
+        item: brace_mallet
+        target: visible_crack
+        command_verb: strike
+        command_template: "strike {target} with {item}"
+        conditions: [{ not_flag: brace_attempted }]
+        effects:
+          - set_flag: brace_attempted
+          - set_quest_stage: { quest: bridgewrights_proof, stage: brace_failed }
+          - add_journal: >
+              You struck the visible crack instead of the compression side. The
+              kingpost shifted, and the engineering proof must now come by
+              forcing the toll walk past Carden.
+          - narrate: >
+              You strike the crack where the damage shows. The rawhide blow does
+              not seat a brace; it drives the split open with a long wooden
+              complaint. The plan's warning was right: a second blow here would
+              be vandalism, not repair.
+
+npcs: []
+
+enemies:
+  - id: carden
+    name: "Carden"
+    description: >
+      The toll lessee's man, broad in a soaked leather jerkin, cudgel low in his
+      hand. He has no opinion on trusses; he has orders about carts.
+    room: toll_walk
+    hp: 12
+    attack: 5
+    defense: 2
+    defeat_flag: carden_defeated
+    death_ending: ending_under_span
+    on_defeat:
+      - set_quest_stage: { quest: bridgewrights_proof, stage: forced_walk }
+      - add_journal: >
+          Carden is down on the toll walk. The road is open, though the bridge
+          office will hear about the cudgel before it hears about the kingpost.
+
+win_conditions:
+  - id: report_reaches_road
+    conditions: [{ visited: market_road }]
+    ending: ending_bridge_closed
+
+endings:
+  - id: ending_bridge_closed
+    title: "The Closed Span"
+    variants:
+      - when: [{ has_flag: carden_defeated }]
+        text: >
+          The market road opens toward Charterhaven, but the old bridge behind
+          you will not carry loaded carts blindly today. Carden's fall has forced
+          the inquiry the toll men tried to avoid, and the cudgel on the planks
+          will speak loudly enough to bring the bridge office down before the
+          market wagons cross. The city gets its warning before the span gets its
+          victims. *** You have won. ***
+    text: >
+      The market road opens toward Charterhaven, but the old bridge behind you
+      will not carry loaded carts blindly today. The kingpost sits under a
+      proper brace, the span stilled long enough for the closure order to do its
+      work, and the toll men have lost the argument without getting their
+      market-day wreck. The city gets its warning before the span gets its
+      victims. *** You have won. ***
+
+  - id: ending_under_span
+    title: "Under the First Span"
+    text: >
+      Carden catches your foot on the wet plank and drives you hard against the
+      rail. Behind him the loaded carts keep gathering, and the cracked kingpost
+      waits under a force no toll man can bargain with. *** You have fallen. ***
+    death: true

@@ -1,0 +1,30 @@
+id: bug_0349
+pack: advocates_case_v1
+title: "stall and charter office still placed taken documents at starting positions"
+severity: minor
+scene: market_stall / charter_office
+reported_by: afk_stale_reactive_room_item_audit_2026-06-19
+
+symptom: >
+  After taking Marta's charter roll, LOOK at the market stall still said the
+  roll lay on the near table. After taking the town register, the charter office
+  could still fall back to prose that put the register open on the counter,
+  especially if the player dropped it before reading. The register-read room
+  variant also claimed the register was in hand, which became false after a
+  later drop.
+
+root_cause: >
+  The portable documents did not leave durable pickup flags that room prose
+  could read. The charter office only reacted to `register_read`, not the earlier
+  pickup state, and its read-state prose assumed inventory rather than the
+  durable fact that the entry had already been consulted.
+
+fix: >
+  Taking the charter roll now sets `charter_roll_taken`, and taking the town
+  register sets `town_register_taken`. Marta's stall has a charter-roll-taken
+  variant, the charter office has a town-register-taken variant, and the
+  register-read variant now says the relevant entry has been read without
+  claiming the book remains in hand. Score, exits, enemies, endings, and win
+  conditions are unchanged.
+
+tests: tests/regression/advocates_case_reactive_taken_items.test.ts

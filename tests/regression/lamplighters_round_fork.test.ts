@@ -16,7 +16,7 @@
  * everything impounded in the excise store answers to the one store-key, which reads three
  * ways —
  *   • the oil-cask         → draw the oil, light the lamp, guide the child → ending_guided (the win)
- *   • the excise strongbox → take the Crown's seized silver and slip away → ending_thief (greed; terminal)
+ *   • the excise strongbox → open it, then take the Crown's seized silver → ending_thief (greed; terminal)
  *   • the sealed spirit-cask → force the impounded naphtha by your lit lantern → ending_caught (a DEATH)
  * ending_caught is the failure pole, reached by end_game in unlock_effects (the sealed_crypt
  * bound_tomb path), telegraphed by the notice, the watchman, AND the cask's own warning
@@ -27,7 +27,8 @@
  *       oil-cask, the strongbox AND the spirit-cask can all be unlocked in the SAME state;
  *   (2) the win route reaches ending_guided at the full 35/35 (read notice +5, store door
  *       +10, light lamp +20), and lighting the lamp opens the way down to the strand;
- *   (3) taking the silver fires ending_thief (NON-death), the lamp left dark (no lamp_lit);
+ *   (3) unlocking/opening the strongbox is not terminal; only taking the silver fires
+ *       ending_thief (NON-death), the lamp left dark (no lamp_lit);
  *   (4) forcing the spirit-cask fires ending_caught (a DEATH), distinct from guided/thief,
  *       the strand never reached, and its narration names the rock-spirit and the flame;
  *   (5) ending_caught is the pack's ONLY death ending, reached ONLY by end_game; ending_guided
@@ -88,6 +89,7 @@ const ROUTE_TO_STORE_WITH_KEY = [
   "read_night_notice",
   "take_brass_key",
   "take_tinderbox",
+  "take_horn_windscreen",
   "go_north",
   "go_west",
   "unlock_wall_cupboard",
@@ -137,10 +139,16 @@ describe("bug_0205 — The Lamplighter's Round: the three-way excise-key fork (o
   });
 
   it("taking the silver fires ending_thief (a NON-death greed end) — the lamp left dark, no win", () => {
-    const { state } = play(initStateForParserPack(index, 3), [
+    const opened = play(initStateForParserPack(index, 3), [
       ...ROUTE_TO_STORE_WITH_KEY,
       "unlock_excise_box",
+      "open_excise_box",
     ]);
+    expect(opened.state.ended).toBe(false);
+    expect(opened.state.objectState["excise_box"]?.open).toBe(true);
+    expect(actionIds(opened.state)).toContain("take_seized_silver");
+
+    const { state } = play(opened.state, ["take_seized_silver"]);
     expect(state.ended).toBe(true);
     expect(state.endingId).toBe("ending_thief");
     expect(state.flags["lamp_lit"]).toBeFalsy(); // the great lamp never lit
@@ -359,6 +367,8 @@ describe("bug_0216 → bug_0220 — the round-lantern: a HELD (always-carried, n
     const thief = play(initStateForParserPack(index, 3), [
       ...ROUTE_TO_STORE_WITH_KEY,
       "unlock_excise_box",
+      "open_excise_box",
+      "take_seized_silver",
     ]);
     expect(thief.state.endingId).toBe("ending_thief");
   });
@@ -517,77 +527,38 @@ describe("bug_0249 — the Staith-Head does not revert to 'the wick is dry' afte
 });
 
 /**
- * Regression (§15) for bug_0266 — The Lamplighter's Round: the OPTIONAL steadiness beat's
- * FAILURE prose no longer implies it is a prerequisite for the climax.
- *
- * The seed-11 blind pass (clarity 5/5, enjoyment 4/5, all three endings, zero hard bugs) flagged
- * one real friction (§4): "it wasn't obvious whether steadying the flame was mandatory before
- * striking the lamp." The horn-windscreen steadiness check is in fact 100% CONVERGENT — its only
- * flag `steadied_the_flame` is read by nothing but its own one-shot `not_flag` guard, so it gates
- * no exit, win, score, or variant (the exhaustive solver / liveness BFS / score-economy proofs
- * all hold without it). But its `on_failure` narration ended "...try the screen to it again before
- * you trust it to anything," which actively told a FAILING player to keep retrying before doing
- * anything else — falsely implying the steadied flame was a gate on the rest of the round. A player
- * who kept rolling under 12 (range 4–23, ~40% miss) could believe they were blocked from lighting
- * the great lamp and burn turns on a beat that gates nothing.
- *
- * Fix (hint_text / content only): rewrite the on_failure prose to drop the false-gate clause and
- * explicitly state the round goes on regardless — the carried flame "is not going out tonight,
- * screen or no, and there is still the great lamp ... to light." No mechanic, flag, score, exit, or
- * ending change; the beat stays optional, retryable-on-failure, one-shot-on-success. This locks:
- *   (1) convergence: steadied_the_flame is read by NO condition other than the beat's own one-shot
- *       guard, and the check awards no score / sets no other flag / opens no exit;
- *   (2) the failure prose no longer implies a prerequisite, and signals the round continues;
- *   (3) behaviour: performing the steady beat does not end the game, and the win is still
- *       completable afterward — the beat is genuinely off the critical path.
+ * Regression for bug_0382 — the horn windscreen is no longer an optional, orphaned
+ * steadiness beat. It is now the required shelter for the final act of striking the
+ * great lamp in river fog.
  */
-describe("bug_0266 — the optional steadiness beat's failure prose no longer implies a gate", () => {
+describe("bug_0382 — the horn windscreen is a real final-lighting precondition", () => {
   const horn = pack.objects.find((o) => o.id === "horn_windscreen")!;
-  const steadyInteraction = horn.interactions.find((it) => it.skill_check)!;
+  const lamp = pack.objects.find((o) => o.id === "harbour_lamp")!;
+  const lightInteraction = lamp.interactions.find(
+    (it) => it.verb === "USE" && it.item === "tinderbox" && it.target === "harbour_lamp",
+  )!;
 
-  it("(1) convergence: steadied_the_flame is read only by the beat's own one-shot guard; the check gates nothing structural", () => {
-    expect(steadyInteraction).toBeDefined();
-    expect(steadyInteraction.skill_check!.skill).toBe("steadiness");
-    // The ONLY reader of steadied_the_flame anywhere in the pack is this interaction's not_flag guard.
-    const blob = JSON.stringify(pack);
-    const readers = blob.split("steadied_the_flame").length - 1;
-    // 2 occurrences: the guard condition + the set_flag effect; nothing else references it.
-    expect(readers).toBe(2);
-    expect(JSON.stringify(steadyInteraction.conditions)).toContain("steadied_the_flame");
-    // The check awards no score and sets no other flag (on either branch) and opens no exit.
-    const outcomes = JSON.stringify(steadyInteraction.skill_check);
-    expect(outcomes).not.toContain("score");
-    expect(outcomes).not.toContain("unlock_exit");
-    expect(outcomes).not.toContain("end_game");
-    // No exit / win condition reads the flag — the beat is off every gated path.
-    const inExit = pack.rooms.some((r) =>
-      r.exits.some((e) => JSON.stringify(e.conditions ?? []).includes("steadied_the_flame")),
-    );
-    const inWin = pack.win_conditions.some((w) =>
-      JSON.stringify(w.conditions).includes("steadied_the_flame"),
-    );
-    expect(inExit || inWin).toBe(false);
+  it("(1) the windscreen is quest-critical and carries no standalone skill-check action", () => {
+    expect(horn.quest_critical).toBe(true);
+    expect(horn.interactions).toHaveLength(0);
+    expect(horn.description).toMatch(/need it when you strike the great lamp/i);
+    expect(pack.meta.vars_init).not.toHaveProperty("steadiness");
+    expect(JSON.stringify(pack)).not.toContain("steadied_the_flame");
+    expect(JSON.stringify(pack)).not.toContain("attempted_windscreen");
   });
 
-  it("(2) the failure prose drops the false-gate clause and signals the round continues regardless", () => {
-    const onFailure = JSON.stringify(steadyInteraction.skill_check!.on_failure).toLowerCase();
-    expect(onFailure).not.toContain("before you trust it to anything"); // the removed false-gate clause
-    expect(onFailure).toContain("screen or no"); // explicitly optional
-    expect(onFailure).toContain("great lamp"); // names the real remaining goal — the beat is not it
+  it("(2) the light interaction requires the filled font and the horn windscreen", () => {
+    expect(lightInteraction).toBeDefined();
+    expect(JSON.stringify(lightInteraction.conditions)).toContain('"has_flag":"font_filled"');
+    expect(JSON.stringify(lightInteraction.conditions)).toContain('"has_item":"horn_windscreen"');
+    expect(JSON.stringify(lightInteraction.effects)).toContain("horn windscreen");
   });
 
-  it("(3) performing the steady beat does not end the game, and the win is still completable afterward", () => {
-    // Take the windscreen, perform the steady beat once (pass OR fail), then run the full win.
-    let s = initStateForParserPack(index, 3);
-    s = play(s, ["take_brass_key", "take_tinderbox", "take_horn_windscreen"]).state;
-    const steadyId = actionIds(s).find(
-      (id) => id.includes("horn_windscreen") && !/^(take|examine|drop)_/.test(id),
-    );
-    expect(steadyId).toBeDefined(); // the optional beat is offered once the screen is in hand
-    const afterSteady = play(s, [steadyId!]);
-    expect(afterSteady.state.ended).toBeFalsy(); // the beat never ends the game, pass or fail
-    // The full win is still reachable after the detour through the optional beat.
-    const done = play(afterSteady.state, [
+  it("(3) a filled font without the windscreen still cannot be lit", () => {
+    const noScreen = play(initStateForParserPack(index, 3), [
+      "read_night_notice",
+      "take_brass_key",
+      "take_tinderbox",
       "go_north",
       "go_west",
       "unlock_wall_cupboard",
@@ -602,10 +573,9 @@ describe("bug_0266 — the optional steadiness beat's failure prose no longer im
       "go_west",
       "go_north",
       "use_whale_oil_on_harbour_lamp",
-      "use_tinderbox_on_harbour_lamp",
-      "go_down",
     ]);
-    expect(done.state.ended).toBe(true);
-    expect(done.state.endingId).toBe("ending_guided");
+    expect(noScreen.state.flags["font_filled"]).toBe(true);
+    expect(noScreen.state.inventory).not.toContain("horn_windscreen");
+    expect(actionIds(noScreen.state)).not.toContain("use_tinderbox_on_harbour_lamp");
   });
 });

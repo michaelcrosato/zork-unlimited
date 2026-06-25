@@ -113,7 +113,7 @@ describe("parser dialogue", () => {
 });
 
 describe("parser win condition", () => {
-  it("entering the catacombs ends the game with ending_victory", () => {
+  it("recovering the catacombs relic ends the game with ending_victory", () => {
     const walkthrough = [
       "go_north",
       "go_up",
@@ -137,10 +137,12 @@ describe("parser win condition", () => {
       "go_down",
       "unlock_crypt_gate",
       "go_north",
+      "take_sealed_relic",
     ];
     const s = go(initStateForParserPack(index, 1), walkthrough);
     expect(s.ended).toBe(true);
     expect(s.endingId).toBe("ending_victory");
     expect(s.current).toBe("catacombs");
+    expect(s.inventory).toContain("sealed_relic");
   });
 });

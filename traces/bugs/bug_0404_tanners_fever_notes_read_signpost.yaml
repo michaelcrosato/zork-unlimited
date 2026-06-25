@@ -1,0 +1,35 @@
+id: bug_0404
+pack: tanners_fever_v1
+title: "Godwin notes examine revealed the load-bearing formula without evidence state"
+severity: medium
+scene: apothecary_store
+reported_by: blind_playtest_20260621T063554Z_tanners_fever_seed7
+
+symptom: >
+  A blind playtester examined Godwin's case notes and saw the exact three-to-one
+  overdose formula, then took the notes and moved on. Only the separate READ
+  action awards the overdose evidence, +3 physick, and score, so the player had
+  no clear reason to repeat the same object with another verb before treating
+  Edric.
+
+root_cause: >
+  The notes' base examine description disclosed the decisive formula while the
+  meaningful state transition lived behind the READ interaction. EXAMINE and READ
+  therefore looked narratively equivalent but had dramatically different odds for
+  the later physick check.
+
+fix: >
+  Inspecting Godwin's notes now shows dense dosage columns and explicitly says a
+  close read is needed. Taking the notes also prompts the player to read them
+  against the reference table. The exact three-to-one evidence, score award, and
+  physick bonus remain on READ, where the state changes occur.
+
+tests: tests/regression/tanners_fever_notes_read_signpost.test.ts
+
+verification:
+  - npm test -- --run tests/regression/tanners_fever_notes_read_signpost.test.ts
+  - npm run validate -- content/rpg/pack/tanners_fever.yaml
+
+trace_repin: >
+  None. The change updates pack content and adds a regression test; there is no
+  committed Tanner's Fever replay trace hash to repin.

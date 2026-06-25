@@ -1,344 +1,707 @@
-@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap");
 
 :root {
-  --bg: #090c15;
-  --panel: rgba(22, 28, 45, 0.65);
-  --panel-solid: #141b2e;
-  --ink: #f1f5f9;
-  --dim: #94a3b8;
-  --accent: #f59e0b;
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
-  --line: #242f4c;
-  --success: #10b981;
-  --error: #ef4444;
-  --shadow: rgba(2, 6, 12, 0.5);
+  --bg: #10120f;
+  --panel: #171a14;
+  --panel-2: #201d18;
+  --panel-3: #11201d;
+  --ink: #f2f1e8;
+  --muted: #a9aa9a;
+  --line: #34382d;
+  --road: #d6a84f;
+  --water: #4da7a0;
+  --forest: #67a567;
+  --danger: #e15f5f;
+  --button: #28361f;
+  --button-hover: #354829;
+  --shadow: rgba(0, 0, 0, 0.35);
   color-scheme: dark;
 }
 
 * {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
 
 body {
-  background: var(--bg);
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.1) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(245, 158, 11, 0.05) 0px, transparent 50%);
+  background:
+    linear-gradient(180deg, rgba(16, 18, 15, 0.92), rgba(16, 18, 15, 1)),
+    radial-gradient(circle at 78% 12%, rgba(77, 167, 160, 0.15), transparent 30%),
+    var(--bg);
   color: var(--ink);
-  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 16px;
-  line-height: 1.6;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.55;
+  margin: 0;
   min-height: 100vh;
 }
 
-.af {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 2.5rem 1.5rem 5rem;
-}
-
-header {
-  margin-bottom: 2.5rem;
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 1.5rem;
-}
-
-header h1 {
-  font-family: "Outfit", sans-serif;
-  font-weight: 700;
-  font-size: 2.5rem;
-  color: var(--ink);
-  letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #f1f5f9 30%, #6366f1 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  display: inline-block;
-  margin-bottom: 0.25rem;
-}
-
-.sub {
-  color: var(--dim);
-  font-size: 1rem;
-  font-weight: 400;
-}
-
-.controls {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  align-items: center;
-  margin-top: 1.25rem;
-}
-
-select, button {
-  font-family: inherit;
-  font-size: 0.95rem;
-  font-weight: 500;
-  background: var(--panel-solid);
-  color: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 0.6rem 1rem;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 4px var(--shadow);
-}
-
+button,
 select {
-  padding-right: 2rem;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  background-size: 1rem;
-}
-
-select:hover, select:focus {
-  border-color: var(--primary);
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  font: inherit;
 }
 
 button {
-  background: var(--primary);
-  border-color: var(--primary);
-  font-weight: 600;
+  background: var(--button);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  cursor: pointer;
+  min-height: 2.75rem;
+  padding: 0.75rem 1rem;
 }
 
 button:hover {
-  background: var(--primary-hover);
-  border-color: var(--primary-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  background: var(--button-hover);
+  border-color: var(--road);
 }
 
-button:active {
-  transform: translateY(0);
+.af {
+  margin: 0 auto;
+  max-width: 1220px;
+  padding: 2rem 1.25rem 4rem;
 }
 
-header button:not(:first-of-type),
-.controls button:not(:first-of-type) {
-  background: var(--panel-solid);
-  border-color: var(--line);
+.world-header {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
 }
 
-header button:not(:first-of-type):hover,
-.controls button:not(:first-of-type):hover {
-  background: var(--line);
-  border-color: var(--dim);
-  box-shadow: 0 4px 12px var(--shadow);
+.kicker,
+.mode,
+.settlement,
+.location-topline span:last-child {
+  color: var(--road);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3 {
+  font-family: "Outfit", sans-serif;
+  letter-spacing: 0;
+  line-height: 1.15;
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(2rem, 6vw, 3.35rem);
+  margin: 0.2rem 0 0.45rem;
+}
+
+h2 {
+  font-size: 1.35rem;
+}
+
+h3 {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin-top: 1.25rem;
+  text-transform: uppercase;
+}
+
+.sub {
+  color: var(--muted);
+  margin: 0;
+  max-width: 84ch;
+}
+
+.overworld,
+.world-grid,
+.game {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.9fr);
+}
+
+.world-grid,
+.game {
+  margin-top: 1rem;
+}
+
+.location-panel,
+.atlas-panel,
+.roads-panel,
+.local-panel,
+.scene,
+.state,
+.log {
+  background: color-mix(in srgb, var(--panel) 92%, black);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 12px 28px var(--shadow);
+  padding: 1.25rem;
+}
+
+.atlas-panel,
+.local-panel,
+.state {
+  background: var(--panel-2);
+}
+
+.location-topline {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  margin-bottom: 0.65rem;
+}
+
+.settlement.metropolis {
+  color: var(--water);
+}
+
+.settlement.great_city,
+.settlement.major_city {
+  color: var(--road);
+}
+
+.settlement.city,
+.settlement.large_town {
+  color: var(--forest);
+}
+
+.location-panel p {
+  color: #d8d8cc;
+  margin: 0.85rem 0 0;
+}
+
+.location-facts {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 1rem 0 0;
+}
+
+.location-facts div {
+  border-top: 1px solid var(--line);
+  min-width: 0;
+  padding-top: 0.55rem;
+}
+
+.service-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.service-actions button {
+  min-height: 2.4rem;
+  padding: 0.55rem 0.9rem;
+}
+
+dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+dd {
+  margin: 0.15rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.atlas-panel p {
+  color: var(--muted);
+  margin: 0.5rem 0 0.8rem;
+}
+
+.discovered-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.discovered-list span {
+  background: #262a20;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: #dcdaca;
+  font-size: 0.78rem;
+  padding: 0.25rem 0.55rem;
+}
+
+.route-planner {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1rem;
+  padding-top: 0.25rem;
+}
+
+.route-planner button {
+  align-items: flex-start;
+  background: #222717;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-height: 0;
+  padding: 0.65rem;
+  text-align: left;
+}
+
+.route-planner span {
+  color: var(--muted);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.world-journal {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1rem;
+  padding-top: 0.25rem;
+}
+
+.world-journal div {
+  background: #26231d;
+  border-radius: 6px;
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.55rem 0.65rem;
+}
+
+.world-journal span {
+  color: var(--muted);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+}
+
+.renown-list {
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 1rem;
+  padding-top: 0.25rem;
+}
+
+.renown-list h3 {
+  flex: 0 0 100%;
+}
+
+.renown-list span {
+  background: #2b2a1f;
+  border: 1px solid color-mix(in srgb, var(--road) 42%, var(--line));
+  border-radius: 999px;
+  color: #e2d6b7;
+  font-size: 0.76rem;
+  padding: 0.25rem 0.55rem;
+}
+
+.regional-thread-list {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1rem;
+  padding-top: 0.25rem;
+}
+
+.thread {
+  background: #20251f;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.65rem;
+}
+
+.thread.complete {
+  border-color: color-mix(in srgb, var(--forest) 62%, var(--line));
+}
+
+.thread span {
+  color: var(--road);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.thread p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.road-list,
+.quest-list,
+.choices,
+.facts,
+.journal ul {
+  display: grid;
+  gap: 0.65rem;
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+
+.road-list button,
+.quest-list button,
+.choices button {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-align: left;
+  width: 100%;
+}
+
+.road-list button {
+  background: #222717;
+}
+
+.road-list small,
+.quest-list small {
+  color: var(--muted);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.road-list em {
+  color: #c8d9bf;
+  font-size: 0.78rem;
+  font-style: normal;
+  overflow-wrap: anywhere;
+}
+
+.road-list button:disabled,
+.quest-list button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.road-encounter {
+  background: #23251d;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--road);
+  border-radius: 6px;
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.75rem 0 1rem;
+  padding: 0.85rem;
+}
+
+.road-encounter.high {
+  border-left-color: var(--danger);
+}
+
+.road-encounter.medium {
+  border-left-color: var(--road);
+}
+
+.road-encounter.low {
+  border-left-color: var(--forest);
+}
+
+.road-encounter span,
+.road-encounter small {
+  color: var(--road);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+}
+
+.road-encounter p {
+  color: #d8d8cc;
+  margin: 0;
+}
+
+.encounter-actions {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.encounter-actions button {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  text-align: left;
+}
+
+.area-list,
+.area-route-list,
+.job-list,
+.poi-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.area-route-list {
+  background: #23251d;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.area-route-list h3 {
+  margin: 0;
+}
+
+.area-route-list button {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  text-align: left;
+}
+
+.current-area {
+  background: #222717;
+  border: 1px solid color-mix(in srgb, var(--forest) 36%, var(--line));
+  border-left: 3px solid var(--forest);
+  border-radius: 6px;
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.75rem;
+  padding: 0.85rem;
+}
+
+.current-area span {
+  color: var(--forest);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+}
+
+.current-area p {
+  color: #d8d8cc;
+  margin: 0;
+}
+
+.site-list {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.contact-list,
+.event-list {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.area,
+.job,
+.poi {
+  background: var(--panel-3);
+  border-left: 3px solid var(--water);
+  border-radius: 6px;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem;
+}
+
+.area {
+  border-left-color: var(--road);
+}
+
+.job {
+  border-left-color: var(--forest);
+}
+
+.contact,
+.event,
+.site {
+  background: #23251d;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.75rem;
+}
+
+.area span,
+.contact span,
+.event span,
+.job span,
+.site span {
+  color: var(--road);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+}
+
+.area p,
+.contact p,
+.event p,
+.job p,
+.site p {
+  color: #d8d8cc;
+  margin: 0.2rem 0 0;
+}
+
+.mini-command {
+  align-self: start;
+  background: transparent;
+  border-color: color-mix(in srgb, var(--road) 52%, var(--line));
+  color: var(--road);
+  min-height: 2rem;
+  padding: 0.35rem 0.7rem;
+}
+
+.inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.resolved-label {
+  color: var(--forest);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.event.hazard {
+  border-left: 3px solid var(--danger);
+}
+
+.event.opportunity {
+  border-left: 3px solid var(--forest);
+}
+
+.event.conflict {
+  border-left: 3px solid var(--road);
+}
+
+.event.rumor {
+  border-left: 3px solid var(--water);
+}
+
+.site.waterway {
+  border-left: 3px solid var(--water);
+}
+
+.site.wildland {
+  border-left: 3px solid var(--forest);
+}
+
+.site.ruin {
+  border-left: 3px solid var(--road);
+}
+
+.site.industrial {
+  border-left: 3px solid #9c8f7a;
+}
+
+.site.civic {
+  border-left: 3px solid #c6c2ad;
+}
+
+.poi span,
+.empty,
+.quest-origin {
+  color: var(--muted);
+}
+
+.empty {
+  margin-bottom: 0;
 }
 
 .error {
-  color: var(--error);
-  margin-top: 0.75rem;
-  font-weight: 500;
-  font-size: 0.95rem;
-  background: rgba(239, 68, 68, 0.1);
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  display: inline-block;
+  border: 1px solid rgba(225, 95, 95, 0.4);
+  border-radius: 8px;
+  color: var(--danger);
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
 }
 
-.game {
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 1.5rem;
-  margin-top: 2rem;
+.scene-heading {
+  align-items: start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
 }
 
-@media (max-width: 850px) {
-  .game {
-    grid-template-columns: 1fr;
-  }
-}
-
-.scene {
-  background: var(--panel);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 2rem;
-  box-shadow: 0 8px 32px var(--shadow);
-}
-
-.scene h2 {
-  font-family: "Outfit", sans-serif;
-  margin-bottom: 1rem;
-  color: var(--ink);
-  font-size: 1.5rem;
-  font-weight: 600;
-  border-left: 4px solid var(--accent);
-  padding-left: 0.75rem;
+.secondary {
+  background: transparent;
+  color: var(--muted);
+  flex: 0 0 auto;
 }
 
 .text {
+  color: #d8d8cc;
+  font-size: 1rem;
   white-space: pre-wrap;
-  color: #cbd5e1;
-  font-size: 1.05rem;
-  line-height: 1.7;
-}
-
-.choices {
-  list-style: none;
-  padding: 0;
-  margin: 2rem 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
 }
 
 .choices button {
-  width: 100%;
-  text-align: left;
-  background: rgba(30, 41, 59, 0.5);
-  border: 1px solid var(--line);
-  padding: 1rem 1.25rem;
-  font-weight: 500;
-  color: var(--ink);
-  border-radius: 8px;
-  transition: all 0.2s ease;
-}
-
-.choices button:hover {
-  background: rgba(99, 102, 241, 0.15);
-  border-color: var(--primary);
-  transform: translateX(4px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
-}
-
-.choices button:active {
-  transform: translateX(2px);
+  background: #20281b;
 }
 
 .ending {
-  margin-top: 1.5rem;
-  color: var(--accent);
-  font-size: 1.25rem;
-  font-weight: 700;
-  font-family: "Outfit", sans-serif;
-  padding: 1rem;
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(214, 168, 79, 0.4);
   border-radius: 8px;
+  color: var(--road);
+  font-family: "Outfit", sans-serif;
+  font-weight: 700;
+  padding: 0.85rem;
   text-align: center;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
 }
 
 .state {
-  background: var(--panel);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 8px 32px var(--shadow);
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  height: fit-content;
+  align-self: start;
 }
 
-.state h3 {
-  font-family: "Outfit", sans-serif;
-  color: var(--dim);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-size: 0.8rem;
-  font-weight: 700;
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 0.5rem;
-}
-
-.facts {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.facts li {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 0.85rem;
-  background: rgba(30, 41, 59, 0.4);
-  padding: 0.4rem 0.75rem;
+.facts li,
+.journal li {
+  background: #26231d;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  color: #cbd5e1;
-}
-
-.state p {
-  font-size: 0.95rem;
+  color: #d8d8cc;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.82rem;
+  padding: 0.45rem 0.65rem;
 }
 
 .state strong {
-  color: var(--accent);
-}
-
-.journal ul {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  margin-top: 0.5rem;
-}
-
-.journal li {
-  font-size: 0.88rem;
-  color: #94a3b8;
-  position: relative;
-  padding-left: 1rem;
-}
-
-.journal li::before {
-  content: "•";
-  color: var(--primary);
-  position: absolute;
-  left: 0;
-  font-weight: bold;
+  color: var(--road);
 }
 
 .hash {
-  color: var(--dim);
+  border-top: 1px dashed var(--line);
+  color: var(--muted);
   font-family: "JetBrains Mono", monospace;
   font-size: 0.8rem;
-  margin-top: auto;
-  padding-top: 0.5rem;
-  border-top: 1px dashed var(--line);
-  opacity: 0.8;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
 }
 
 .log {
-  margin-top: 2.5rem;
-}
-
-.log h3 {
-  font-family: "Outfit", sans-serif;
-  color: var(--dim);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-size: 0.8rem;
-  font-weight: 700;
-  margin-bottom: 0.75rem;
+  margin-top: 1rem;
 }
 
 .log pre {
+  color: #d8d8cc;
   font-family: "JetBrains Mono", monospace;
-  font-size: 0.9rem;
-  background: var(--panel-solid);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 1.25rem;
+  font-size: 0.85rem;
+  margin: 1rem 0 0;
+  max-height: 280px;
+  overflow: auto;
   white-space: pre-wrap;
-  color: #cbd5e1;
-  max-height: 400px;
-  overflow-y: auto;
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8);
 }
 
+@media (max-width: 880px) {
+  .overworld,
+  .world-grid,
+  .game,
+  .location-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .scene-heading,
+  .location-topline {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

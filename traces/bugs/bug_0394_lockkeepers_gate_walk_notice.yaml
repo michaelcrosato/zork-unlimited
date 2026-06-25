@@ -1,0 +1,29 @@
+id: bug_0394
+pack: lockkeepers_toll_v1
+title: "gate walk had no non-combat prop or sluice risk cue"
+severity: minor
+scene: gate_walk
+reported_by: blind_playtest_20260620T163127Z_lockkeepers_toll_seed7
+
+symptom: >
+  The blind playtester found the clean chain-work route satisfying, but the gate
+  walk felt vestigial on that path: Marrick implied an official delay while
+  offering only combat, and the room had no readable or examinable prop. The same
+  report noted that the main sluice-chain skill check was transparent once
+  offered, but the consequences of skipping preparation were not visible in the
+  world before the roll.
+
+root_cause: >
+  The gate walk's prose introduced Marrick as a procedural blocker, but the room
+  had no objects. A curious peaceful player could visit, see only an attack
+  affordance, and leave without learning anything about Marrick's pretext or why
+  hurried chain work is dangerous.
+
+fix: >
+  The gate walk now includes a readable tariff notice. The room prose says
+  Marrick taps the notice before lifting his pin, and the notice warns that under
+  flood load the toll chain must be opened by staged turns or a rushed pull can
+  lock or snap it. This is prose-only: no route, score, combat, or skill-check
+  tuning changed.
+
+tests: tests/regression/lockkeepers_toll_gate_walk_notice.test.ts

@@ -76,11 +76,11 @@ const USE_PREPS = ["on", "with", "to", "into", "onto", "under", "against", "in",
  *  the engine, exactly as for the generic "use <obj>" / "use <item> on <obj>" paths. */
 function customUseByVerb(index: ParserIndex, verb: string, rest: string): Action | null {
   // Every USE interaction in the pack whose natural verb is `verb`.
-  const matches: { item: string; target: string }[] = [];
+  const matches: { item?: string; target: string }[] = [];
   for (const o of index.objects.values()) {
     for (const it of o.interactions) {
-      if (it.verb === "USE" && it.command_verb === verb && it.item && it.target) {
-        matches.push({ item: it.item, target: it.target });
+      if (it.verb === "USE" && it.command_verb === verb && it.target) {
+        matches.push({ target: it.target, ...(it.item !== undefined ? { item: it.item } : {}) });
       }
     }
   }
@@ -96,9 +96,11 @@ function customUseByVerb(index: ParserIndex, verb: string, rest: string): Action
     const b = resolveObject(index, m[2]!);
     if (!a || !b) return null;
     const hit = matches.find(
-      (i) => (i.item === a && i.target === b) || (i.item === b && i.target === a),
+      (i) =>
+        i.item !== undefined &&
+        ((i.item === a && i.target === b) || (i.item === b && i.target === a)),
     );
-    return hit ? { type: "USE", item: hit.item, target: hit.target } : null;
+    return hit ? { type: "USE", item: hit.item as string, target: hit.target } : null;
   }
 
   // Single-noun form: "<verb> <noun>" — the noun names one side of exactly one such
@@ -106,7 +108,11 @@ function customUseByVerb(index: ParserIndex, verb: string, rest: string): Action
   const solo = resolveObject(index, rest);
   if (!solo) return null;
   const hits = matches.filter((i) => i.item === solo || i.target === solo);
-  return hits.length === 1 ? { type: "USE", item: hits[0]!.item, target: hits[0]!.target } : null;
+  if (hits.length !== 1) return null;
+  const hit = hits[0]!;
+  return hit.item === undefined
+    ? { type: "USE", target: hit.target }
+    : { type: "USE", item: hit.item, target: hit.target };
 }
 
 function resolveNpc(index: ParserIndex, phrase: string): string | null {
@@ -234,6 +240,8 @@ export function parseCommand(index: ParserIndex, state: GameState, raw: string):
       // phial, eat the bread). Only accept it when the object actually carries a
       // self-interaction; otherwise the verb still needs a target, so keep the hint.
       const solo = resolveObject(index, rest);
+      if (solo && useInteraction(index, solo, undefined))
+        return { ok: true, action: { type: "USE", target: solo } };
       if (solo && useInteraction(index, solo, solo))
         return { ok: true, action: { type: "USE", item: solo, target: solo } };
       return { ok: false, reason: `Use what on what? (e.g. "use rope on old well")` };

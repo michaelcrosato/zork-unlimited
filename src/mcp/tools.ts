@@ -61,6 +61,51 @@ import {
   type AnyIndex,
   type AnyObservation,
 } from "./types.js";
+import type { WorldBinding, WorldManifest } from "../world/schema.js";
+import {
+  CANONICAL_HUB_CITY,
+  CANONICAL_WORLD_ID,
+  CANONICAL_WORLD_NAME,
+  WorldManifestSchema,
+} from "../world/schema.js";
+import { worldQuestNodeForPack, worldRouteForPack, type WorldRouteStep } from "../world/graph.js";
+import {
+  assertOverworldIntegrity,
+  overworldAreasAt,
+  overworldCharactersAt,
+  overworldEdgesFrom,
+  overworldEventsAt,
+  overworldExplorationSitesNear,
+  overworldJobsAt,
+  overworldPoisAt,
+  overworldQuestsAt,
+  overworldRoadEventFor,
+  parseOverworldManifest,
+  type OverworldArea,
+  type OverworldAreaEdge,
+  type OverworldEdge,
+  type OverworldCharacter,
+  type OverworldExplorationSite,
+  type OverworldLocalJob,
+  type OverworldLocalEvent,
+  type OverworldManifest,
+  type OverworldNode,
+  type OverworldPoi,
+  type OverworldQuest,
+  type OverworldRoadEvent,
+} from "../world/overworld.js";
+import {
+  OverworldSession,
+  type OverworldActionResult,
+  type OverworldAreaTravelResult,
+  type OverworldRoadEncounterResult,
+  type OverworldRoadEncounterStrategy,
+  type OverworldSessionSnapshot,
+  type OverworldSessionRoutePlan,
+  type OverworldServiceResult,
+  type OverworldView,
+  type TravelLogEntry,
+} from "../world/session.js";
 import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
 import { resolveProvider } from "../../agents/llm/providers.js";
 import { loadEngineContract, runWriter } from "../../agents/authoring/writer.js";
@@ -77,6 +122,15 @@ export type ToolApi = ReturnType<typeof createToolApi>;
 type LoadResult =
   | { ok: true; mode: PackMode; compiled: AnyCompiledPack; report: ValidationReport }
   | { ok: false; report: ValidationReport };
+
+type StoryEntry = {
+  path: string;
+  id: string;
+  title: string;
+  mode: PackMode | null;
+  playable: boolean;
+  world: WorldBinding | null;
+};
 
 // ── Mode-aware dispatch (the §3 Layer-2/3 boundary stays per-mode) ──────────────
 // `mode` and `index` are always created together (startSession), so narrowing the
@@ -107,17 +161,18 @@ function buildObsFor(
   mode: PackMode,
   index: AnyIndex,
   state: GameState,
-  opts: { hideGraph?: boolean } = {},
+  opts: { hideGraph?: boolean; includeWorldIntro?: boolean } = {},
 ): AnyObservation {
+  const obsOpts = { includeWorldIntro: true, ...opts };
   if (mode === "cyoa")
-    return buildObservation(index as Parameters<typeof buildObservation>[0], state, opts);
+    return buildObservation(index as Parameters<typeof buildObservation>[0], state, obsOpts);
   if (mode === "parser")
     return buildParserObservation(
       index as Parameters<typeof buildParserObservation>[0],
       state,
-      opts,
+      obsOpts,
     );
-  return buildRpgObservation(index as Parameters<typeof buildRpgObservation>[0], state, opts);
+  return buildRpgObservation(index as Parameters<typeof buildRpgObservation>[0], state, obsOpts);
 }
 
 /**
@@ -255,6 +310,8 @@ function schemaFindings(
 export function createToolApi(opts: { root: string }) {
   const root = opts.root;
   const sessions = new SessionStore();
+  let overworldCounter = 0;
+  const overworldSessions = new Map<string, OverworldSession>();
 
   /** Read a pack, detect its mode, compile + validate with the right loader. */
   function loadAndReport(packPath: string): LoadResult {
@@ -417,6 +474,85 @@ export function createToolApi(opts: { root: string }) {
     }
   }
 
+  function discoverStoryEntries(): StoryEntry[] {
+    const dirs: [string, PackMode][] = [
+      [join(root, "content", "cyoa", "pack"), "cyoa"],
+      [join(root, "content", "parser", "pack"), "parser"],
+      [join(root, "content", "rpg", "pack"), "rpg"],
+    ];
+    return dirs
+      .flatMap(([dir]) => listYamlFiles(dir))
+      .map((path) => {
+        const lr = loadAndReport(path);
+        return {
+          path,
+          id: lr.ok ? lr.compiled.pack.meta.id : path,
+          title: lr.ok ? lr.compiled.pack.meta.title : path,
+          mode: lr.ok ? lr.mode : null,
+          playable: lr.ok && lr.report.ok,
+          world: lr.ok ? (lr.compiled.pack.meta.world ?? null) : null,
+        };
+      });
+  }
+
+  function loadWorldManifest(): WorldManifest {
+    try {
+      const raw = parseYaml(
+        readFileSync(join(root, "content", "world", "charter_marches.yaml"), "utf8"),
+      );
+      return WorldManifestSchema.parse(raw);
+    } catch {
+      return {
+        id: CANONICAL_WORLD_ID,
+        name: CANONICAL_WORLD_NAME,
+        hub: CANONICAL_HUB_CITY,
+        graph: {
+          hub: "charterhaven",
+          nodes: [
+            {
+              id: "charterhaven",
+              name: CANONICAL_HUB_CITY,
+              kind: "hub",
+            },
+          ],
+          edges: [],
+        },
+      };
+    }
+  }
+
+  function loadOverworldManifest(): OverworldManifest {
+    const raw = JSON.parse(
+      readFileSync(join(root, "content", "world", "new_york_overworld.json"), "utf8"),
+    );
+    const world = parseOverworldManifest(raw);
+    assertOverworldIntegrity(world);
+    return world;
+  }
+
+  function createOverworldSession(): { session_id: string; session: OverworldSession } {
+    const session = new OverworldSession(loadOverworldManifest());
+    const sessionId = `oworld_${++overworldCounter}`;
+    overworldSessions.set(sessionId, session);
+    return { session_id: sessionId, session };
+  }
+
+  function restoreOverworldSession(snapshot: unknown): {
+    session_id: string;
+    session: OverworldSession;
+  } {
+    const session = OverworldSession.restore(loadOverworldManifest(), snapshot);
+    const sessionId = `oworld_${++overworldCounter}`;
+    overworldSessions.set(sessionId, session);
+    return { session_id: sessionId, session };
+  }
+
+  function getOverworldSession(sessionId: string): OverworldSession {
+    const session = overworldSessions.get(sessionId);
+    if (!session) throw new Error(`Unknown overworld session "${sessionId}".`);
+    return session;
+  }
+
   return {
     sessions,
 
@@ -426,40 +562,629 @@ export function createToolApi(opts: { root: string }) {
     },
 
     list_stories(): {
-      stories: {
-        path: string;
-        id: string;
-        title: string;
-        mode: PackMode | null;
-        playable: boolean;
-      }[];
+      stories: StoryEntry[];
       main_story: string | null;
     } {
-      const dirs: [string, PackMode][] = [
-        [join(root, "content", "cyoa", "pack"), "cyoa"],
-        [join(root, "content", "parser", "pack"), "parser"],
-        [join(root, "content", "rpg", "pack"), "rpg"],
-      ];
-      const stories = dirs
-        .flatMap(([dir]) => listYamlFiles(dir))
-        .map((path) => {
-          const lr = loadAndReport(path);
-          return {
-            path,
-            id: lr.ok ? lr.compiled.pack.meta.id : path,
-            title: lr.ok ? lr.compiled.pack.meta.title : path,
-            mode: lr.ok ? lr.mode : null,
-            playable: lr.ok && lr.report.ok,
-          };
-        });
+      const stories = discoverStoryEntries();
       // Keep watchtower the default main story for the existing AFK loop.
       const main =
         stories.find((s) => s.path.endsWith("watchtower_road.yaml")) ?? stories[0] ?? null;
       return { stories, main_story: main?.path ?? null };
     },
 
+    list_world(): {
+      world: WorldManifest;
+      hub: string;
+      graph: WorldManifest["graph"];
+      quest_count: number;
+      quests: {
+        path: string;
+        id: string;
+        title: string;
+        mode: PackMode | null;
+        playable: boolean;
+        district: string;
+        quest: string;
+        role: string;
+        connection: string;
+        graph_node: string | null;
+        path_from_hub: WorldRouteStep[];
+      }[];
+    } {
+      const world = loadWorldManifest();
+      const quests = discoverStoryEntries()
+        .filter((s) => s.world?.id === world.id)
+        .map((s) => {
+          const node = worldQuestNodeForPack(world, s.path);
+          return {
+            path: s.path,
+            id: s.id,
+            title: s.title,
+            mode: s.mode,
+            playable: s.playable,
+            district: s.world?.district ?? "",
+            quest: s.world?.quest ?? "",
+            role: s.world?.role ?? "",
+            connection: s.world?.connection ?? "",
+            graph_node: node?.id ?? null,
+            path_from_hub: node ? (worldRouteForPack(world, s.path) ?? []) : [],
+          };
+        });
+      return { world, hub: world.hub, graph: world.graph, quest_count: quests.length, quests };
+    },
+
+    world_path(args: { quest_path: string }): {
+      world: Pick<WorldManifest, "id" | "name" | "hub">;
+      quest_path: string;
+      graph_node: string | null;
+      path_from_hub: WorldRouteStep[];
+    } {
+      const world = loadWorldManifest();
+      const node = worldQuestNodeForPack(world, args.quest_path);
+      return {
+        world: { id: world.id, name: world.name, hub: world.hub },
+        quest_path: args.quest_path,
+        graph_node: node?.id ?? null,
+        path_from_hub: node ? (worldRouteForPack(world, args.quest_path) ?? []) : [],
+      };
+    },
+
+    list_overworld(): {
+      world: Pick<OverworldManifest, "id" | "name" | "start" | "premise">;
+      town_count: number;
+      road_count: number;
+      region_count: number;
+      regional_arc_count: number;
+      area_count: number;
+      area_route_count: number;
+      character_count: number;
+      local_event_count: number;
+      local_job_count: number;
+      road_event_count: number;
+      exploration_site_count: number;
+      quest_count: number;
+      start: OverworldNode;
+      sources: OverworldManifest["sources"];
+      design_rules: string[];
+    } {
+      const world = loadOverworldManifest();
+      const start = world.nodes.find((node) => node.id === world.start);
+      if (!start) throw new Error(`Overworld start node "${world.start}" is missing.`);
+      return {
+        world: {
+          id: world.id,
+          name: world.name,
+          start: world.start,
+          premise: world.premise,
+        },
+        town_count: world.nodes.length,
+        road_count: world.edges.length,
+        region_count: world.regions.length,
+        regional_arc_count: world.regional_arcs.length,
+        area_count: world.areas.length,
+        area_route_count: world.area_edges.length,
+        character_count: world.characters.length,
+        local_event_count: world.local_events.length,
+        local_job_count: world.local_jobs.length,
+        road_event_count: world.road_events.length,
+        exploration_site_count: world.exploration_sites.length,
+        quest_count: world.quests.length,
+        start,
+        sources: world.sources,
+        design_rules: world.design_rules,
+      };
+    },
+
+    start_overworld(): {
+      session_id: string;
+      observation: OverworldView;
+    } {
+      const created = createOverworldSession();
+      return {
+        session_id: created.session_id,
+        observation: created.session.view(),
+      };
+    },
+
+    get_overworld_session(args: { session_id: string }): {
+      session_id: string;
+      observation: OverworldView;
+    } {
+      const session = getOverworldSession(args.session_id);
+      return {
+        session_id: args.session_id,
+        observation: session.view(),
+      };
+    },
+
+    export_overworld_session(args: { session_id: string }): {
+      ok: true;
+      session_id: string;
+      snapshot: OverworldSessionSnapshot;
+    } {
+      const session = getOverworldSession(args.session_id);
+      return {
+        ok: true,
+        session_id: args.session_id,
+        snapshot: session.snapshot(),
+      };
+    },
+
+    restore_overworld_session(args: { snapshot: unknown }): {
+      ok: true;
+      session_id: string;
+      observation: OverworldView;
+    } {
+      const restored = restoreOverworldSession(args.snapshot);
+      return {
+        ok: true,
+        session_id: restored.session_id,
+        observation: restored.session.view(),
+      };
+    },
+
+    plan_overworld_session_route(args: { session_id: string; destination_town_id: string }): {
+      ok: true;
+      session_id: string;
+      route: OverworldSessionRoutePlan;
+      observation: OverworldView;
+    } {
+      const session = getOverworldSession(args.session_id);
+      return {
+        ok: true,
+        session_id: args.session_id,
+        route: session.planRoute(args.destination_town_id),
+        observation: session.view(),
+      };
+    },
+
+    travel_overworld_session(args: { session_id: string; road_id: string }): {
+      ok: true;
+      session_id: string;
+      travel: TravelLogEntry;
+      observation: OverworldView;
+    } {
+      const session = getOverworldSession(args.session_id);
+      const travel = session.travel(args.road_id);
+      return {
+        ok: true,
+        session_id: args.session_id,
+        travel,
+        observation: session.view(),
+      };
+    },
+
+    resolve_overworld_session_road_encounter(args: {
+      session_id: string;
+      strategy: OverworldRoadEncounterStrategy;
+    }): {
+      ok: true;
+      session_id: string;
+      result: OverworldRoadEncounterResult;
+      observation: OverworldView;
+    } {
+      const session = getOverworldSession(args.session_id);
+      const result = session.resolveRoadEncounter(args.strategy);
+      return {
+        ok: true,
+        session_id: args.session_id,
+        result,
+        observation: session.view(),
+      };
+    },
+
+    resupply_overworld_session(args: { session_id: string }): {
+      ok: true;
+      session_id: string;
+      result: OverworldServiceResult;
+      observation: OverworldView;
+    } {
+      const session = getOverworldSession(args.session_id);
+      const result = session.resupplyAtTown();
+      return {
+        ok: true,
+        session_id: args.session_id,
+        result,
+        observation: session.view(),
+      };
+    },
+
+    rest_overworld_session(args: { session_id: string }): {
+      ok: true;
+      session_id: string;
+      result: OverworldServiceResult;
+      observation: OverworldView;
+    } {
+      const session = getOverworldSession(args.session_id);
+      const result = session.restAtTown();
+      return {
+        ok: true,
+        session_id: args.session_id,
+        result,
+        observation: session.view(),
+      };
+    },
+
+    scout_overworld_session_poi(args: { session_id: string; poi_id: string }): {
+      ok: true;
+      session_id: string;
+      result: OverworldActionResult;
+      observation: OverworldView;
+    } {
+      const session = getOverworldSession(args.session_id);
+      const result = session.scoutPoi(args.poi_id);
+      return {
+        ok: true,
+        session_id: args.session_id,
+        result,
+        observation: session.view(),
+      };
+    },
+
+    talk_overworld_session_contact(args: { session_id: string; character_id: string }): {
+      ok: true;
+      session_id: string;
+      result: OverworldActionResult;
+      observation: OverworldView;
+    } {
+      const session = getOverworldSession(args.session_id);
+      const result = session.talkToCharacter(args.character_id);
+      return {
+        ok: true,
+        session_id: args.session_id,
+        result,
+        observation: session.view(),
+      };
+    },
+
+    investigate_overworld_session_event(args: { session_id: string; event_id: string }): {
+      ok: true;
+      session_id: string;
+      result: OverworldActionResult;
+      observation: OverworldView;
+    } {
+      const session = getOverworldSession(args.session_id);
+      const result = session.investigateEvent(args.event_id);
+      return {
+        ok: true,
+        session_id: args.session_id,
+        result,
+        observation: session.view(),
+      };
+    },
+
+    resolve_overworld_session_event(args: { session_id: string; event_id: string }): {
+      ok: true;
+      session_id: string;
+      result: OverworldActionResult;
+      observation: OverworldView;
+    } {
+      const session = getOverworldSession(args.session_id);
+      const result = session.resolveEvent(args.event_id);
+      return {
+        ok: true,
+        session_id: args.session_id,
+        result,
+        observation: session.view(),
+      };
+    },
+
+    explore_overworld_session_site(args: { session_id: string; site_id: string }): {
+      ok: true;
+      session_id: string;
+      result: OverworldActionResult;
+      observation: OverworldView;
+    } {
+      const session = getOverworldSession(args.session_id);
+      const result = session.exploreSite(args.site_id);
+      return {
+        ok: true,
+        session_id: args.session_id,
+        result,
+        observation: session.view(),
+      };
+    },
+
+    explore_overworld_session_area(args: { session_id: string; area_id: string }): {
+      ok: true;
+      session_id: string;
+      result: OverworldActionResult;
+      observation: OverworldView;
+    } {
+      const session = getOverworldSession(args.session_id);
+      const result = session.exploreArea(args.area_id);
+      return {
+        ok: true,
+        session_id: args.session_id,
+        result,
+        observation: session.view(),
+      };
+    },
+
+    work_overworld_session_job(args: { session_id: string; job_id: string }): {
+      ok: true;
+      session_id: string;
+      result: OverworldActionResult;
+      observation: OverworldView;
+    } {
+      const session = getOverworldSession(args.session_id);
+      const result = session.workLocalJob(args.job_id);
+      return {
+        ok: true,
+        session_id: args.session_id,
+        result,
+        observation: session.view(),
+      };
+    },
+
+    start_overworld_session_quest(args: { session_id: string; quest_id: string }): {
+      ok: true;
+      session_id: string;
+      quest: OverworldQuest;
+      observation: OverworldView;
+    } {
+      const session = getOverworldSession(args.session_id);
+      const quest = session.startQuest(args.quest_id);
+      return {
+        ok: true,
+        session_id: args.session_id,
+        quest,
+        observation: session.view(),
+      };
+    },
+
+    move_overworld_session_area(args: { session_id: string; area_route_id: string }): {
+      ok: true;
+      session_id: string;
+      result: OverworldAreaTravelResult;
+      observation: OverworldView;
+    } {
+      const session = getOverworldSession(args.session_id);
+      const result = session.moveArea(args.area_route_id);
+      return {
+        ok: true,
+        session_id: args.session_id,
+        result,
+        observation: session.view(),
+      };
+    },
+
+    look_overworld(args: { town_id?: string }): {
+      world: Pick<OverworldManifest, "id" | "name">;
+      current: OverworldNode;
+      exits: (OverworldEdge & { destination: OverworldNode })[];
+      areas: OverworldArea[];
+      local_area_routes: OverworldAreaEdge[];
+      points_of_interest: OverworldPoi[];
+      characters: OverworldCharacter[];
+      local_events: OverworldLocalEvent[];
+      local_jobs: OverworldLocalJob[];
+      nearby_sites: OverworldExplorationSite[];
+      local_quests: OverworldQuest[];
+    } {
+      const world = loadOverworldManifest();
+      const townId = args.town_id ?? world.start;
+      const current = world.nodes.find((node) => node.id === townId);
+      if (!current) throw new Error(`Unknown overworld town "${townId}".`);
+      return {
+        world: { id: world.id, name: world.name },
+        current,
+        exits: overworldEdgesFrom(world, townId),
+        areas: overworldAreasAt(world, townId),
+        local_area_routes: world.area_edges
+          .filter((edge) => edge.home === townId)
+          .sort((a, b) => a.travel_minutes - b.travel_minutes || a.route.localeCompare(b.route)),
+        points_of_interest: overworldPoisAt(world, townId),
+        characters: overworldCharactersAt(world, townId),
+        local_events: overworldEventsAt(world, townId),
+        local_jobs: overworldJobsAt(world, townId),
+        nearby_sites: overworldExplorationSitesNear(world, townId),
+        local_quests: overworldQuestsAt(world, townId),
+      };
+    },
+
+    travel_overworld(args: { from_town: string; road_id: string }): {
+      ok: true;
+      from: OverworldNode;
+      to: OverworldNode;
+      road: OverworldEdge;
+      road_event: OverworldRoadEvent | null;
+      arrival: {
+        world: Pick<OverworldManifest, "id" | "name">;
+        current: OverworldNode;
+        exits: (OverworldEdge & { destination: OverworldNode })[];
+        areas: OverworldArea[];
+        local_area_routes: OverworldAreaEdge[];
+        points_of_interest: OverworldPoi[];
+        characters: OverworldCharacter[];
+        local_events: OverworldLocalEvent[];
+        local_jobs: OverworldLocalJob[];
+        nearby_sites: OverworldExplorationSite[];
+        local_quests: OverworldQuest[];
+      };
+    } {
+      const world = loadOverworldManifest();
+      const current = world.nodes.find((node) => node.id === args.from_town);
+      if (!current) throw new Error(`Unknown overworld town "${args.from_town}".`);
+      const road = overworldEdgesFrom(world, args.from_town).find(
+        (edge) => edge.id === args.road_id,
+      );
+      if (!road)
+        throw new Error(`Road "${args.road_id}" is not reachable from "${args.from_town}".`);
+      return {
+        ok: true,
+        from: current,
+        to: road.destination,
+        road,
+        road_event: overworldRoadEventFor(world, road.id),
+        arrival: this.look_overworld({ town_id: road.destination.id }),
+      };
+    },
+
+    explore_overworld_area(args: { town_id?: string; area_id: string }): {
+      ok: true;
+      current: OverworldNode;
+      area: OverworldArea;
+      minutes: number;
+      journal_entry: {
+        kind: "area";
+        title: string;
+        text: string;
+      };
+    } {
+      const world = loadOverworldManifest();
+      const townId = args.town_id ?? world.start;
+      const current = world.nodes.find((node) => node.id === townId);
+      if (!current) throw new Error(`Unknown overworld town "${townId}".`);
+      const area = overworldAreasAt(world, townId).find(
+        (candidate) => candidate.id === args.area_id,
+      );
+      if (!area) throw new Error(`Area "${args.area_id}" is not in "${townId}".`);
+      return {
+        ok: true,
+        current,
+        area,
+        minutes: area.travel_minutes,
+        journal_entry: {
+          kind: "area",
+          title: `Explored ${area.name}`,
+          text: `${area.summary} ${area.discovery}`,
+        },
+      };
+    },
+
+    work_overworld_job(args: { town_id?: string; job_id: string }): {
+      ok: true;
+      current: OverworldNode;
+      job: OverworldLocalJob;
+      minutes: number;
+      regional_renown: number;
+      journal_entry: {
+        kind: "job";
+        title: string;
+        text: string;
+      };
+    } {
+      const world = loadOverworldManifest();
+      const townId = args.town_id ?? world.start;
+      const current = world.nodes.find((node) => node.id === townId);
+      if (!current) throw new Error(`Unknown overworld town "${townId}".`);
+      const job = overworldJobsAt(world, townId).find((candidate) => candidate.id === args.job_id);
+      if (!job) throw new Error(`Local job "${args.job_id}" is not in "${townId}".`);
+      return {
+        ok: true,
+        current,
+        job,
+        minutes: job.minutes,
+        regional_renown: job.difficulty,
+        journal_entry: {
+          kind: "job",
+          title: `Completed ${job.title}`,
+          text: `${job.objective} ${job.reward}`,
+        },
+      };
+    },
+
+    scout_overworld_poi(args: { town_id?: string; poi_id: string }): {
+      ok: true;
+      current: OverworldNode;
+      point_of_interest: OverworldPoi;
+      minutes: number;
+      journal_entry: {
+        kind: "poi";
+        title: string;
+        text: string;
+      };
+    } {
+      const world = loadOverworldManifest();
+      const townId = args.town_id ?? world.start;
+      const current = world.nodes.find((node) => node.id === townId);
+      if (!current) throw new Error(`Unknown overworld town "${townId}".`);
+      const poi = overworldPoisAt(world, townId).find((candidate) => candidate.id === args.poi_id);
+      if (!poi) throw new Error(`Point of interest "${args.poi_id}" is not in "${townId}".`);
+      return {
+        ok: true,
+        current,
+        point_of_interest: poi,
+        minutes: 20,
+        journal_entry: {
+          kind: "poi",
+          title: `Scouted ${poi.title}`,
+          text: `${poi.summary} You mark the site as a local lead for ${current.name}.`,
+        },
+      };
+    },
+
+    talk_overworld_contact(args: { town_id?: string; character_id: string }): {
+      ok: true;
+      current: OverworldNode;
+      character: OverworldCharacter;
+      minutes: number;
+      journal_entry: {
+        kind: "contact";
+        title: string;
+        text: string;
+      };
+    } {
+      const world = loadOverworldManifest();
+      const townId = args.town_id ?? world.start;
+      const current = world.nodes.find((node) => node.id === townId);
+      if (!current) throw new Error(`Unknown overworld town "${townId}".`);
+      const character = overworldCharactersAt(world, townId).find(
+        (candidate) => candidate.id === args.character_id,
+      );
+      if (!character) throw new Error(`Contact "${args.character_id}" is not in "${townId}".`);
+      return {
+        ok: true,
+        current,
+        character,
+        minutes: 15,
+        journal_entry: {
+          kind: "contact",
+          title: `Talked to ${character.name}`,
+          text: `${character.summary} ${character.agenda}`,
+        },
+      };
+    },
+
+    investigate_overworld_event(args: { town_id?: string; event_id: string }): {
+      ok: true;
+      current: OverworldNode;
+      event: OverworldLocalEvent;
+      minutes: number;
+      journal_entry: {
+        kind: "event";
+        title: string;
+        text: string;
+      };
+    } {
+      const world = loadOverworldManifest();
+      const townId = args.town_id ?? world.start;
+      const current = world.nodes.find((node) => node.id === townId);
+      if (!current) throw new Error(`Unknown overworld town "${townId}".`);
+      const event = overworldEventsAt(world, townId).find(
+        (candidate) => candidate.id === args.event_id,
+      );
+      if (!event) throw new Error(`Event "${args.event_id}" is not active in "${townId}".`);
+      return {
+        ok: true,
+        current,
+        event,
+        minutes: 20 + event.intensity * 5,
+        journal_entry: {
+          kind: "event",
+          title: `Investigated ${event.title}`,
+          text: `${event.summary} The pressure is ${event.pressure}, intensity ${event.intensity}.`,
+        },
+      };
+    },
+
     validate_story(args: { story_path: string }): { ok: boolean; report: ValidationReport } {
       return this.validate_pack({ pack_path: args.story_path });
+    },
+
+    validate_quest(args: { quest_path: string }): { ok: boolean; report: ValidationReport } {
+      return this.validate_pack({ pack_path: args.quest_path });
     },
 
     load_pack(args: { pack_path: string }): {
@@ -477,6 +1202,40 @@ export function createToolApi(opts: { root: string }) {
         meta: lr.compiled.pack.meta,
         content_hash: lr.compiled.contentHash,
         report: lr.report,
+      };
+    },
+
+    explore_overworld_site(args: { town_id?: string; site_id: string }): {
+      ok: true;
+      current: OverworldNode;
+      site: OverworldExplorationSite;
+      minutes: number;
+      regional_renown: number;
+      journal_entry: {
+        kind: "site";
+        title: string;
+        text: string;
+      };
+    } {
+      const world = loadOverworldManifest();
+      const townId = args.town_id ?? world.start;
+      const current = world.nodes.find((node) => node.id === townId);
+      if (!current) throw new Error(`Unknown overworld town "${townId}".`);
+      const site = overworldExplorationSitesNear(world, townId).find(
+        (candidate) => candidate.id === args.site_id,
+      );
+      if (!site) throw new Error(`Exploration site "${args.site_id}" is not near "${townId}".`);
+      return {
+        ok: true,
+        current,
+        site,
+        minutes: 45 + site.danger * 15,
+        regional_renown: site.danger,
+        journal_entry: {
+          kind: "site",
+          title: `Explored ${site.title}`,
+          text: `${site.summary} ${site.reward}`,
+        },
       };
     },
 
@@ -638,6 +1397,14 @@ export function createToolApi(opts: { root: string }) {
     start_game(args: { story_path: string; seed?: number; hide_graph?: boolean }) {
       return this.new_game({
         pack_path: args.story_path,
+        ...(args.seed !== undefined ? { seed: args.seed } : {}),
+        ...(args.hide_graph ? { hide_graph: true } : {}),
+      });
+    },
+
+    start_quest(args: { quest_path: string; seed?: number; hide_graph?: boolean }) {
+      return this.new_game({
+        pack_path: args.quest_path,
         ...(args.seed !== undefined ? { seed: args.seed } : {}),
         ...(args.hide_graph ? { hide_graph: true } : {}),
       });

@@ -10,6 +10,7 @@
  * for free, and existing parser packs are untouched (their hashes are stable).
  */
 import { z } from "zod";
+import { ConditionSchema } from "../core/conditions.js";
 import { EffectSchema } from "../core/effects.js";
 import { ParserMetaSchema, ParserPackSchema } from "../parser/schema.js";
 
@@ -30,6 +31,12 @@ export const EnemySchema = z
     name: z.string().min(1),
     description: z.string().min(1),
     room: z.string().min(1),
+    /**
+     * Optional state gate for whether the enemy is presently confrontable. While
+     * any condition fails, the enemy is absent from observations and ATTACK is
+     * illegal. `.optional()` preserves byte-identical packs that do not use it.
+     */
+    conditions: z.array(ConditionSchema).optional(),
     hp: z.number().int().positive(),
     attack: z.number().int().nonnegative(),
     defense: z.number().int().nonnegative(),

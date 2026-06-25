@@ -7,6 +7,8 @@
  */
 import { evalConditions } from "../core/conditions.js";
 import type { GameState } from "../core/state.js";
+import { openingWorldText } from "../world/observation.js";
+import type { WorldBinding } from "../world/schema.js";
 import { type CyoaIndex, endingText, sceneText } from "./runner.js";
 
 export type CyoaObservation = {
@@ -14,6 +16,7 @@ export type CyoaObservation = {
   scene_id: string;
   title: string;
   text: string;
+  world?: WorldBinding | null;
   state: {
     flags: string[];
     vars: Record<string, number>;
@@ -46,23 +49,27 @@ export type CyoaObservation = {
   ending_death: boolean | null;
 };
 
+export type ObservationOptions = { hideGraph?: boolean; includeWorldIntro?: boolean };
+
 function visibleFlags(state: GameState): string[] {
   return Object.keys(state.flags)
     .filter((f) => state.flags[f] === true && !f.startsWith("__"))
     .sort();
 }
 
-// `_opts` (e.g. hideGraph) is accepted for a uniform cross-mode dispatcher
-// signature but is a no-op here: a CYOA observation already surfaces only choice
-// `text`/`id`, never the destination scene (`choice.next`), so the branch graph
-// is hidden by construction.
+// `hideGraph` is accepted for a uniform cross-mode dispatcher signature but is a
+// no-op here: a CYOA observation already surfaces only choice `text`/`id`, never
+// the destination scene (`choice.next`), so the branch graph is hidden by
+// construction. `includeWorldIntro` is opt-in for player-facing renderers; the
+// pure room/scene observation remains unchanged by default for engine tests.
 export function buildObservation(
   index: CyoaIndex,
   state: GameState,
-  _opts: { hideGraph?: boolean } = {},
+  opts: ObservationOptions = {},
 ): CyoaObservation {
   const nodeText = textFor(index, state.current, state);
   const scene = index.scenes.get(state.current);
+  const world = index.pack.meta.world;
 
   const available =
     state.ended || !scene || scene.is_ending
@@ -92,7 +99,8 @@ export function buildObservation(
     mode: "cyoa",
     scene_id: state.current,
     title: nodeText.title,
-    text: nodeText.text,
+    text: opts.includeWorldIntro ? openingWorldText(world, state, nodeText.text) : nodeText.text,
+    ...(opts.includeWorldIntro ? { world: world ?? null } : {}),
     state: {
       flags: visibleFlags(state),
       vars: { ...state.vars },

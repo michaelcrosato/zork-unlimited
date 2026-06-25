@@ -11,16 +11,14 @@
  * The fix (content only): the founder's own coffin now sits in the crypt under an
  * iron clasp keyed — like the catacombs gate — to the iron key the player already
  * carries. The iron key is therefore a FORK, not just a key:
- *   • UNLOCK the catacombs gate → press on → ending_victory  (the unchanged win)
+ *   • UNLOCK the catacombs gate → press on → recover the relic → ending_victory
  *   • UNLOCK the founder's coffin → take its silver → ending_plunder  (greed; terminal)
  * Both fire through the engine's first-class UNLOCK (the bug_0077 path the gate
  * already uses). ending_plunder is reached by an end_game in unlock_effects, so the
  * two endings are mutually exclusive — a genuine choice, not a detour.
  *
- * Crucially the VICTORY route is byte-identical: the coffin adds no inc_var
- * (max_score stays 35) and no exit/flag/gating to the win path, so every prior
- * route/score test (sealed_crypt_scoring, ending_score_summary, parser_acceptance,
- * sealed_crypt_final_step_legibility) is unaffected.
+ * Crucially the VICTORY fork is structurally unchanged at the crypt: the coffin adds no
+ * inc_var (max_score stays 35) and no exit/flag/gating to the win path.
  *
  * Locked here:
  *   (1) the fork is REAL — at the crypt, holding the iron key, BOTH the gate-unlock
@@ -31,7 +29,7 @@
  *       win_condition resolves to it); ending_victory stays the sole winnable win;
  *   (4) the coffin needs the iron key — reaching the crypt without it offers the
  *       coffin to examine but NOT to unlock;
- *   (5) the canonical victory route still wins ending_victory 35/35 (no regression);
+ *   (5) the canonical victory route still wins ending_victory 35/35 after claiming the relic;
  *   (6) the pack validates clean (no SOFTLOCK / END_GAME_UNDECLARED / WIN_IS_DEATH).
  */
 import { describe, it, expect } from "vitest";
@@ -153,10 +151,12 @@ describe("bug_0105 — The Sealed Crypt's climactic moral fork (gate vs. founder
       ...ROUTE_TO_CRYPT_WITH_KEY,
       "unlock_crypt_gate",
       "go_north",
+      "take_sealed_relic",
     ]);
     expect(state.ended).toBe(true);
     expect(state.endingId).toBe("ending_victory");
     expect(state.visited.catacombs).toBe(true);
+    expect(state.inventory).toContain("sealed_relic");
     expect(buildParserObservation(index, state).score).toBe(35);
   });
 
