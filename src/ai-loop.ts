@@ -82,7 +82,7 @@ function cycleStamp(): string {
 }
 
 /** Which pack the mandatory playtest targets this cycle. */
-function playtestTarget(
+export function playtestTarget(
   a: Assessment,
   top: ImprovementCandidate | null,
   mainStory: string,
@@ -166,7 +166,7 @@ function main(): void {
   console.log(`  ▶ next best improvement: ${top?.title ?? "(none — game is healthy)"}`);
 }
 
-function buildPrompt(ctx: {
+export function buildPrompt(ctx: {
   a: Assessment;
   top: ImprovementCandidate | null;
   target: string;
