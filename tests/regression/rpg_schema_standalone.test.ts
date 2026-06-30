@@ -42,6 +42,14 @@ describe("RPG schema owns the RPG contract", () => {
     expect(observation).not.toContain("ParserObservation");
   });
 
+  it("does not import the legacy parser command mapper for RPG play", () => {
+    const commandMap = readFileSync("src/rpg/command_map.ts", "utf8");
+    const playBin = readFileSync("bin/rpg_play.ts", "utf8");
+    expect(commandMap).not.toContain("../parser/");
+    expect(commandMap).not.toContain("ParserIndex");
+    expect(playBin).not.toContain("../src/parser/command_map");
+  });
+
   it("does not import the legacy parser validator for RPG validation", () => {
     const foundation = readFileSync("src/validate/rpg_foundation_validator.ts", "utf8");
     const validator = readFileSync("src/validate/rpg_validator.ts", "utf8");
