@@ -4,8 +4,9 @@ import type { GameState } from "../../src/core/state.js";
 import { initState } from "../../src/core/state.js";
 import { SessionStore, type Session } from "../../src/mcp/sessions.js";
 import type { AnyIndex } from "../../src/mcp/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 
-const rules: Rules = {
+const rules: Rules<RpgAction> = {
   legalActions: () => [],
   resolve: () => null,
 };

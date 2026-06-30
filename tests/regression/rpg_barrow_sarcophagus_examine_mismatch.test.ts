@@ -39,7 +39,7 @@ import {
 } from "../../src/rpg/runner.js";
 import { buildParserObservation } from "../../src/parser/observation.js";
 import { makeStep } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
+import type { Action, RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Effect } from "../../src/core/effects.js";
 
@@ -53,7 +53,7 @@ const step = makeStep(rules);
 const options = (s: GameState) => enumerateRpgActions(index, s);
 const score = (s: GameState): number => buildParserObservation(index, s).score;
 
-const EXAMINE_SARC: Action = { type: "LOOK", target: "sarcophagus" };
+const EXAMINE_SARC: RpgAction = { type: "LOOK", target: "sarcophagus" };
 
 const narrations = (effects: readonly Effect[]): string[] =>
   effects

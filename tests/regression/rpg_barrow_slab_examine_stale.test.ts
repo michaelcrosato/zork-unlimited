@@ -32,7 +32,7 @@ import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
+import type { Action, RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Effect } from "../../src/core/effects.js";
 
@@ -44,7 +44,7 @@ const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
 const LEVER: Action = { type: "USE", item: "iron_bar", target: "stone_slab" };
-const EXAMINE_SLAB: Action = { type: "LOOK", target: "stone_slab" };
+const EXAMINE_SLAB: RpgAction = { type: "LOOK", target: "stone_slab" };
 
 const narrations = (effects: readonly Effect[]): string[] =>
   effects

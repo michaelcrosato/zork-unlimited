@@ -15,7 +15,7 @@ import { join, relative } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { hashState } from "../core/hash.js";
 import { makeStep, type Rules } from "../core/engine.js";
-import type { Action } from "../api/types.js";
+import type { Action, RpgAction } from "../api/types.js";
 import type { GameState } from "../core/state.js";
 import type { GameEvent } from "../core/events.js";
 
@@ -123,7 +123,7 @@ function indexFor(pack: AnyCompiledPack["pack"]): AnyIndex {
   return indexRpgPack(pack);
 }
 
-function rulesFor(index: AnyIndex): Rules {
+function rulesFor(index: AnyIndex): Rules<RpgAction> {
   return buildRpgRules(index);
 }
 
@@ -238,7 +238,7 @@ function obsActionText(obs: AnyObservation, id: string): string | null {
  * Unknown ids are rejected before they reach the reducer, preserving the illegal
  * action / no state-change path.
  */
-function actionForId(obs: AnyObservation, id: string): Action | null {
+function actionForId(obs: AnyObservation, id: string): RpgAction | null {
   return obs.available_actions.find((a) => a.id === id)?.action ?? null;
 }
 

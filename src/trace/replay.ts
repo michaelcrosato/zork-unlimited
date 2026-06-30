@@ -11,6 +11,7 @@
 import { hashState } from "../core/hash.js";
 import type { Rules } from "../core/engine.js";
 import { runActions, type Trace } from "./record.js";
+import type { Action } from "../api/types.js";
 
 export type ReplayResult = {
   ok: boolean;
@@ -41,7 +42,7 @@ function firstDivergentStep(actual: string[], baseline: string[]): number {
  * carries `per_step_hashes` (Trace v2), `divergedAtStep` localizes the first
  * action whose post-state diverged — the actual debugging value (§15).
  */
-export function replayTrace(trace: Trace, rules: Rules): ReplayResult {
+export function replayTrace<A extends Action>(trace: Trace, rules: Rules<A>): ReplayResult {
   const run = runActions(rules, trace.initial_state, trace.actions);
   const finalHash = hashState(run.finalState);
 

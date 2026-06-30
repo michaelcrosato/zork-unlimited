@@ -8,6 +8,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { applyEffect } from "../../src/core/effects.js";
+import { makeStep } from "../../src/core/engine.js";
 import { evalCondition } from "../../src/core/conditions.js";
 import { initState, type GameState } from "../../src/core/state.js";
 import { resolveAttack, resolveSkillCheck, enemyHp, enemyAlive } from "../../src/rpg/combat.js";
@@ -123,6 +124,8 @@ describe("RPG action boundary", () => {
     const index = indexRpgPack(loaded.compiled.pack);
     const rules = buildRpgRules(index);
     const state = initStateForRpgPack(index, 1);
-    expect(rules.resolve(state, { type: "CHOOSE", choiceId: "legacy_choice" })).toBeNull();
+    const result = makeStep(rules)(state, { type: "CHOOSE", choiceId: "legacy_choice" });
+    expect(result.ok).toBe(false);
+    expect(result.state).toBe(state);
   });
 });

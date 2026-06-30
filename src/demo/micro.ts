@@ -75,7 +75,7 @@ export const MICRO_CONTENT_HASH = hashState(SCENES);
 export const MICRO_START = "start";
 export const MICRO_SEED = 1234;
 
-export const microRules: Rules = {
+export const microRules: Rules<RpgAction> = {
   legalActions(state: GameState): RpgAction[] {
     const scene = SCENE_BY_ID.get(state.current);
     if (!scene) return [];

@@ -6,9 +6,8 @@
  * flows through the seeded PRNG (core/rng.ts) derived from state.seed/state.step.
  *
  * Content lives OUTSIDE the engine. The engine asks a `Rules` resolver what an
- * action means in the current state — Stage 1 (CYOA) and Stage 2 (parser) each
- * supply their own resolver over the same core. This is the Layer-2/Layer-3
- * boundary (§3): the single most important invariant in the system.
+ * action means in the current state. Each runtime can narrow the action surface
+ * it accepts while sharing the same pure reducer.
  */
 import type { GameState } from "./state.js";
 import type { GameEvent } from "./events.js";
@@ -29,11 +28,11 @@ export type Resolution = {
  * The content layer's contract with the engine. A resolver is pure: same state
  * + same action ⇒ same resolution. It never touches I/O or randomness.
  */
-export type Rules = {
+export type Rules<A extends Action = Action> = {
   /** The legal-action set for this state (Jericho-style, §9). Ground truth for legality. */
-  legalActions(state: GameState): Action[];
+  legalActions(state: GameState): A[];
   /** Conditions + effects for an action, or null if the action has no rule here. */
-  resolve(state: GameState, action: Action): Resolution | null;
+  resolve(state: GameState, action: A): Resolution | null;
   /** Effects fired when a location is entered (scene/room `on_enter`, §8.4 step 4). */
   onEnter?(state: GameState, locationId: string): Effect[];
   /**
@@ -73,7 +72,7 @@ function reject(state: GameState, reason: string): StepResult {
  * Build the pure `step(state, action)` for a given rule set. The returned
  * function matches the §8.1 signature exactly.
  */
-export function makeStep(rules: Rules) {
+export function makeStep<A extends Action = Action>(rules: Rules<A>) {
   return function step(state: GameState, action: Action): StepResult {
     // A finished game accepts no further actions. No state change.
     if (state.ended) return reject(state, "The game has already ended.");
@@ -82,7 +81,7 @@ export function makeStep(rules: Rules) {
     const legal = rules.legalActions(state).some((a) => actionEquals(a, action));
     if (!legal) return reject(state, "That action is not available right now.");
 
-    const resolution = rules.resolve(state, action);
+    const resolution = rules.resolve(state, action as A);
     if (resolution === null) return reject(state, "That action has no effect here.");
 
     // §8.4.2 — conditions. No state change on failure.

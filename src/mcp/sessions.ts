@@ -9,6 +9,7 @@
 import type { GameState } from "../core/state.js";
 import type { Rules } from "../core/engine.js";
 import type { GameEvent } from "../core/events.js";
+import type { RpgAction } from "../api/types.js";
 import type { AnyIndex, PackMode } from "./types.js";
 
 export type TranscriptTurn = {
@@ -31,7 +32,7 @@ export type Session = {
   mode: PackMode;
   /** The compiled RPG index for this session. */
   index: AnyIndex;
-  rules: Rules;
+  rules: Rules<RpgAction>;
   state: GameState;
   transcript: TranscriptTurn[];
   /** Difficulty: when true, the agent-facing observation hides each exit's

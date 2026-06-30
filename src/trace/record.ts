@@ -38,7 +38,11 @@ export type RunResult = {
 };
 
 /** Apply a sequence of actions through the engine. Pure end to end. */
-export function runActions(rules: Rules, initialState: GameState, actions: Action[]): RunResult {
+export function runActions<A extends Action>(
+  rules: Rules<A>,
+  initialState: GameState,
+  actions: Action[],
+): RunResult {
   const step = makeStep(rules);
   let state = initialState;
   const steps: StepResult[] = [];
@@ -59,8 +63,8 @@ export type RecordOptions = {
 };
 
 /** Run the actions and produce a Trace stamped with the final-state hash. */
-export function recordTrace(
-  rules: Rules,
+export function recordTrace<A extends Action>(
+  rules: Rules<A>,
   initialState: GameState,
   actions: Action[],
   opts: RecordOptions,
