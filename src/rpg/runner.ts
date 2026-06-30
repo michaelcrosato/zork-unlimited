@@ -5,7 +5,7 @@
  * RPG owns its pack schema, indexing, fresh-state setup, command mapping, combat,
  * and skill-check resolution while preserving deterministic seeded randomness.
  */
-import { isRpgAction, type RpgAction } from "../api/types.js";
+import type { RpgAction } from "../api/types.js";
 import type { Effect } from "../core/effects.js";
 import type { GameState } from "../core/state.js";
 import type { Resolution, Rules } from "../core/engine.js";
@@ -121,7 +121,6 @@ export function buildRpgRules(
     },
 
     resolve(state: GameState, action: RpgAction): Resolution | null {
-      if (!isRpgAction(action)) return null;
       if (action.type === "ATTACK") {
         const enemy = index.enemies.get(action.enemy);
         if (!enemy || enemy.room !== state.current || !enemyActive(state, enemy)) return null;

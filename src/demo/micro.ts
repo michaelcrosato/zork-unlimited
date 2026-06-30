@@ -9,7 +9,7 @@ import { initState, type GameState } from "../core/state.js";
 import type { Condition } from "../core/conditions.js";
 import type { Effect } from "../core/effects.js";
 import { hashState } from "../core/hash.js";
-import { isRpgAction, type RpgAction } from "../api/types.js";
+import type { RpgAction } from "../api/types.js";
 import { actionEquals, type Resolution, type Rules } from "../core/engine.js";
 
 type MicroOption = { id: string; action: RpgAction; conditions?: Condition[]; effects: Effect[] };
@@ -84,7 +84,6 @@ export const microRules: Rules<RpgAction> = {
     return scene.options.map((option) => option.action);
   },
   resolve(state: GameState, action): Resolution | null {
-    if (!isRpgAction(action)) return null;
     const scene = SCENE_BY_ID.get(state.current);
     const option = scene?.options.find((candidate) => actionEquals(candidate.action, action));
     if (!option) return null;

@@ -117,7 +117,7 @@ import type { Rng } from "../../src/core/rng.js";
 import { stateKey } from "./support/exhaustive_endings.js";
 import { relabelRpgPack } from "./support/relabel_rpg.js";
 import type { ParserRelabeler } from "./support/relabel_parser.js";
-import { isRpgAction, type RpgAction } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 
 const PACK_DIR = "content/rpg/pack";
@@ -357,10 +357,10 @@ type WalkResult = { compared: number; cappedOut: boolean };
 function walkInLockStep(
   origIndex: RpgIndex,
   twinIndex: RpgIndex,
-  origRulesBest: Rules,
-  origRulesWorst: Rules,
-  twinRulesBest: Rules,
-  twinRulesWorst: Rules,
+  origRulesBest: Rules<RpgAction>,
+  origRulesWorst: Rules<RpgAction>,
+  twinRulesBest: Rules<RpgAction>,
+  twinRulesWorst: Rules<RpgAction>,
   origStart: GameState,
   twinStart: GameState,
   mapId: (id: string) => string,
@@ -417,7 +417,7 @@ function walkInLockStep(
     if (o.ended) continue;
     // Legality is rng-independent; take the action set from one regime and step it under
     // both. (Mirrors exhaustiveEndingsMulti, which reads legalActions from ruleSets[0].)
-    for (const a of origRulesBest.legalActions(o).filter(isRpgAction)) {
+    for (const a of origRulesBest.legalActions(o)) {
       if (!explore(a)) continue; // discovered via the full available_actions check, not stepped
       const ra = relabelAction(a, mapId);
       for (const [origStep, twinStep] of regimes) {

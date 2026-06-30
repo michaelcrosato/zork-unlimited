@@ -64,7 +64,7 @@ describe("RPG schema owns the RPG contract", () => {
     expect(commandMap).toContain("RpgAction");
     expect(observation).toContain("RpgAction");
     expect(runner).toContain("Rules<RpgAction>");
-    expect(runner).toContain("isRpgAction(action)");
+    expect(runner).not.toContain("isRpgAction");
     expect(sessions).toContain("Rules<RpgAction>");
   });
 
