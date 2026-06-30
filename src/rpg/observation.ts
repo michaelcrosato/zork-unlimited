@@ -6,7 +6,7 @@
  * score, enemies, stats, and legal actions. It owns the RPG shape directly and
  * does not delegate through the legacy parser observation layer.
  */
-import type { Action } from "../api/types.js";
+import type { RpgAction } from "../api/types.js";
 import { evalConditions } from "../core/conditions.js";
 import type { GameState } from "../core/state.js";
 import { openingWorldText } from "../world/observation.js";
@@ -43,7 +43,7 @@ export type RpgObservation = {
   available_actions: {
     id: string;
     command: string;
-    action: Action;
+    action: RpgAction;
     skill_check?: { skill: string; difficulty: number; die: string };
   }[];
   score: number;

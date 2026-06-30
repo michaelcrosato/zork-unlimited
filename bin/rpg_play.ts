@@ -17,7 +17,7 @@ import { stdin, stdout } from "node:process";
 import { pathToFileURL } from "node:url";
 import { makeStep, actionEquals } from "../src/core/engine.js";
 import { evalConditions } from "../src/core/conditions.js";
-import type { Action } from "../src/api/types.js";
+import type { RpgAction } from "../src/api/types.js";
 import { loadRpgPackFile } from "../src/rpg/pack.js";
 import { validateRpg } from "../src/validate/rpg_validator.js";
 import { formatReport } from "../src/validate/report.js";
@@ -52,7 +52,7 @@ export function render(obs: RpgObservation): string {
 export function illegalReason(
   index: ReturnType<typeof indexRpgPack>,
   state: import("../src/core/state.js").GameState,
-  action: Action,
+  action: RpgAction,
 ): string {
   if (action.type === "MOVE") {
     const exit = index.rooms
@@ -69,7 +69,7 @@ function resolve(
   index: ReturnType<typeof indexRpgPack>,
   state: import("../src/core/state.js").GameState,
   raw: string,
-): { ok: true; action: Action } | { ok: false; reason: string } {
+): { ok: true; action: RpgAction } | { ok: false; reason: string } {
   const text = raw.trim().toLowerCase();
   const m = text.match(/^(attack|fight|kill|hit)\s+(.*)$/);
   if (m) {
@@ -120,7 +120,7 @@ async function main(): Promise<void> {
   const rules = buildRpgRules(index);
   const step = makeStep(rules);
   let state = initStateForRpgPack(index, seed);
-  const taken: Action[] = [];
+  const taken: RpgAction[] = [];
 
   const interactive = commands === null;
   const rl = interactive ? createInterface({ input: stdin, output: stdout }) : null;

@@ -8,12 +8,12 @@
  * The legal-action set is the ground truth either way — an unrecognized or
  * illegal command yields a friendly message, never a state change.
  */
-import type { Action } from "../api/types.js";
+import type { RpgAction } from "../api/types.js";
 import type { GameState } from "../core/state.js";
 import { type RpgModelIndex, activeDialogue } from "./model.js";
 import { useInteraction } from "./legal_actions.js";
 
-export type ParseResult = { ok: true; action: Action } | { ok: false; reason: string };
+export type ParseResult = { ok: true; action: RpgAction } | { ok: false; reason: string };
 
 const DIRECTIONS: Record<string, string> = {
   north: "north",
@@ -74,7 +74,7 @@ const USE_PREPS = ["on", "with", "to", "into", "onto", "under", "against", "in",
  *  The schema guarantees `command_verb` never shadows a builtin verb, so this is only
  *  consulted for otherwise-unknown verbs. Legality (held / present) is re-checked by
  *  the engine, exactly as for the generic "use <obj>" / "use <item> on <obj>" paths. */
-function customUseByVerb(index: RpgModelIndex, verb: string, rest: string): Action | null {
+function customUseByVerb(index: RpgModelIndex, verb: string, rest: string): RpgAction | null {
   // Every USE interaction in the pack whose natural verb is `verb`.
   const matches: { item?: string; target: string }[] = [];
   for (const o of index.objects.values()) {

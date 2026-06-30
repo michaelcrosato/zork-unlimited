@@ -12,6 +12,8 @@ import { evalCondition } from "../../src/core/conditions.js";
 import { initState, type GameState } from "../../src/core/state.js";
 import { resolveAttack, resolveSkillCheck, enemyHp, enemyAlive } from "../../src/rpg/combat.js";
 import { enemyHpVar, type Enemy } from "../../src/rpg/schema.js";
+import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { buildRpgRules, indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
 
 const baseState = () => ({
   ...initState({ seed: 1, start: "room" }),
@@ -111,5 +113,16 @@ describe("seeded skill checks (§8.5)", () => {
       if (res.effects.some((e) => "set_flag" in e && e.set_flag === "moved")) succeeded = true;
     }
     expect(succeeded).toBe(true);
+  });
+});
+
+describe("RPG action boundary", () => {
+  it("rejects retired CYOA CHOOSE actions before RPG resolution", () => {
+    const loaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
+    if (!loaded.ok) throw new Error("sunken_barrow must compile");
+    const index = indexRpgPack(loaded.compiled.pack);
+    const rules = buildRpgRules(index);
+    const state = initStateForRpgPack(index, 1);
+    expect(rules.resolve(state, { type: "CHOOSE", choiceId: "legacy_choice" })).toBeNull();
   });
 });

@@ -2,12 +2,10 @@
  * RPG runner (spec §13 Stage 4, §14) — adapts an RPG pack into the engine's pure
  * `Rules`.
  *
- * RPG owns its pack schema, indexing, and fresh-state setup. The remaining shared
- * legacy surface is the command resolver for object/dialogue verbs; this runner
- * layers ATTACK and skill-check resolution on top while preserving deterministic
- * seeded randomness.
+ * RPG owns its pack schema, indexing, fresh-state setup, command mapping, combat,
+ * and skill-check resolution while preserving deterministic seeded randomness.
  */
-import type { Action } from "../api/types.js";
+import { isRpgAction, type Action } from "../api/types.js";
 import type { Effect } from "../core/effects.js";
 import type { GameState } from "../core/state.js";
 import type { Resolution, Rules } from "../core/engine.js";
@@ -123,6 +121,7 @@ export function buildRpgRules(
     },
 
     resolve(state: GameState, action: Action): Resolution | null {
+      if (!isRpgAction(action)) return null;
       if (action.type === "ATTACK") {
         const enemy = index.enemies.get(action.enemy);
         if (!enemy || enemy.room !== state.current || !enemyActive(state, enemy)) return null;

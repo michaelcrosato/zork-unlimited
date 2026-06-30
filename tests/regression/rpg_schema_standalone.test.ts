@@ -50,6 +50,20 @@ describe("RPG schema owns the RPG contract", () => {
     expect(playBin).not.toContain("../src/parser/command_map");
   });
 
+  it("uses an RPG-only action type at RPG runtime boundaries", () => {
+    const apiTypes = readFileSync("src/api/types.ts", "utf8");
+    const legalActions = readFileSync("src/rpg/legal_actions.ts", "utf8");
+    const commandMap = readFileSync("src/rpg/command_map.ts", "utf8");
+    const observation = readFileSync("src/rpg/observation.ts", "utf8");
+    const runner = readFileSync("src/rpg/runner.ts", "utf8");
+    expect(apiTypes).toContain("export type RpgAction");
+    expect(apiTypes).toContain("isRpgAction");
+    expect(legalActions).toContain("RpgAction");
+    expect(commandMap).toContain("RpgAction");
+    expect(observation).toContain("RpgAction");
+    expect(runner).toContain("isRpgAction(action)");
+  });
+
   it("does not import the legacy parser validator for RPG validation", () => {
     const foundation = readFileSync("src/validate/rpg_foundation_validator.ts", "utf8");
     const validator = readFileSync("src/validate/rpg_validator.ts", "utf8");

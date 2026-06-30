@@ -9,7 +9,7 @@
  */
 import { evalConditions, type Condition } from "../core/conditions.js";
 import type { Effect } from "../core/effects.js";
-import type { Action } from "../api/types.js";
+import type { RpgAction } from "../api/types.js";
 import type { Resolution } from "../core/engine.js";
 import type { GameState } from "../core/state.js";
 import type { Interaction } from "./schema.js";
@@ -39,7 +39,7 @@ import {
 export type RpgActionOption = {
   id: string;
   command: string;
-  action: Action;
+  action: RpgAction;
   skill_check?: { skill: string; difficulty: number; die: string };
 };
 
@@ -81,7 +81,7 @@ function readInteractions(index: RpgModelIndex, target: string): Interaction[] {
 export function resolveRpgAction(
   index: RpgModelIndex,
   state: GameState,
-  action: Action,
+  action: RpgAction,
 ): Resolution | null {
   const here = state.current;
   switch (action.type) {
@@ -248,7 +248,7 @@ function option(
   state: GameState,
   id: string,
   command: string,
-  action: Action,
+  action: RpgAction,
 ): RpgActionOption | null {
   const res = resolveRpgAction(index, state, action);
   if (!res || !evalConditions(res.conditions, state)) return null;
@@ -366,7 +366,7 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
                   .replace("{item}", itemName)
                   .replace("{target}", targetName)
               : `use ${itemName} on ${targetName}`;
-      const action: Action =
+      const action: RpgAction =
         it.item === undefined
           ? { type: "USE", target: it.target }
           : { type: "USE", item: it.item, target: it.target };
