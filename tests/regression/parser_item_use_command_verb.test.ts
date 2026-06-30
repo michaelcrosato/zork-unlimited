@@ -43,7 +43,7 @@ import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { enumerateActions } from "../../src/parser/legal_actions.js";
 import { parseCommand } from "../../src/parser/command_map.js";
 import { makeStep } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 
 // ── The Sealed Crypt (parser): the well primes "tie". ────────────────────────────
@@ -136,7 +136,7 @@ describe("bug_0078 — sunken_barrow: 'lever stone slab with iron bar'", () => {
       { type: "MOVE", direction: "down" },
       { type: "TAKE", item: "iron_bar" },
       { type: "MOVE", direction: "north" },
-    ] as Action[]) {
+    ] as RpgAction[]) {
       s = step(s, a).state;
     }
     for (let i = 0; i < 40 && !s.ended && !s.flags["wight_slain"]; i++) {

@@ -14,7 +14,7 @@
  * The fix has two coherent layers, both locked here:
  *   (1) CONTENT — the stone_slab USE interaction is gated
  *       `none_of: [ quest_stage barrow/slab_moved ]`, so once the slab is moved the
- *       action drops out of the legal set (enumeration already honours an
+ *       RpgAction drops out of the legal set (enumeration already honours an
  *       interaction's `conditions` via resolveParserAction). The lever retires.
  *   (2) ENGINE — the RPG runner's skill-check resolve branch (src/rpg/runner.ts)
  *       now also calls evalConditions(it.conditions, state) before resolving, as its
@@ -41,7 +41,7 @@ import {
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
 import { makeStep, actionEquals } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 
 const loaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
@@ -50,12 +50,14 @@ const index = indexRpgPack(loaded.compiled.pack);
 const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
-const LEVER: Action = { type: "USE", item: "iron_bar", target: "stone_slab" };
+const LEVER: RpgAction = { type: "USE", item: "iron_bar", target: "stone_slab" };
 
-function act(state: GameState, action: Action): GameState {
-  const legal = rules.legalActions(state).some((a) => actionEquals(a, action));
-  expect(legal, `action ${JSON.stringify(action)} must be legal in ${state.current}`).toBe(true);
-  const r = step(state, action);
+function act(state: GameState, RpgAction: RpgAction): GameState {
+  const legal = rules.legalActions(state).some((a) => actionEquals(a, RpgAction));
+  expect(legal, `RpgAction ${JSON.stringify(RpgAction)} must be legal in ${state.current}`).toBe(
+    true,
+  );
+  const r = step(state, RpgAction);
   expect(r.ok).toBe(true);
   return r.state;
 }

@@ -59,6 +59,7 @@ describe("RPG schema owns the RPG contract", () => {
     const sessions = readFileSync("src/mcp/sessions.ts", "utf8");
     const traceRecord = readFileSync("src/trace/record.ts", "utf8");
     const traceReplay = readFileSync("src/trace/replay.ts", "utf8");
+    const engine = readFileSync("src/core/engine.ts", "utf8");
     const replayBin = readFileSync("bin/replay.ts", "utf8");
     const inspectBin = readFileSync("bin/inspect.ts", "utf8");
     const mcpTools = readFileSync("src/mcp/tools.ts", "utf8");
@@ -74,6 +75,8 @@ describe("RPG schema owns the RPG contract", () => {
     expect(traceRecord).toContain("export type Trace<A extends Action = Action>");
     expect(traceRecord).toContain("actions: A[];");
     expect(traceRecord).toContain("actions: A[],");
+    expect(engine).toContain("action: A): StepResult");
+    expect(engine).not.toContain("action as A");
     expect(traceReplay).toContain("trace: Trace<A>");
     expect(replayBin).toContain("Trace<RpgAction>");
     expect(inspectBin).toContain("Trace<RpgAction>");

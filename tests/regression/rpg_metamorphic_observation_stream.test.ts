@@ -114,6 +114,7 @@ import {
 import { buildRpgObservation, type RpgObservation } from "../../src/rpg/observation.js";
 import { makeStep, type Rules } from "../../src/core/engine.js";
 import type { Rng } from "../../src/core/rng.js";
+import type { StepResult } from "../../src/api/types.js";
 import { stateKey } from "./support/exhaustive_endings.js";
 import { relabelRpgPack } from "./support/relabel_rpg.js";
 import type { ParserRelabeler } from "./support/relabel_parser.js";
@@ -347,6 +348,7 @@ function canonical(o: RpgObservation): RpgObservation {
 }
 
 type WalkResult = { compared: number; cappedOut: boolean };
+type RpgStep = (state: GameState, action: RpgAction) => StepResult;
 
 /**
  * BFS over state PAIRS, stepping every explored action under BOTH roll regimes (best /
@@ -365,7 +367,7 @@ function walkInLockStep(
   twinStart: GameState,
   mapId: (id: string) => string,
 ): WalkResult {
-  const regimes: [ReturnType<typeof makeStep>, ReturnType<typeof makeStep>][] = [
+  const regimes: [RpgStep, RpgStep][] = [
     [makeStep(origRulesBest), makeStep(twinRulesBest)],
     [makeStep(origRulesWorst), makeStep(twinRulesWorst)],
   ];

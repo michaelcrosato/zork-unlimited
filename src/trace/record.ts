@@ -41,7 +41,7 @@ export type RunResult = {
 export function runActions<A extends Action>(
   rules: Rules<A>,
   initialState: GameState,
-  actions: Action[],
+  actions: A[],
 ): RunResult {
   const step = makeStep(rules);
   let state = initialState;

@@ -12,7 +12,7 @@ import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
 import { loadEngineContract, runWriter } from "../../agents/authoring/writer.js";
 import { runRpgAdapter } from "../../agents/authoring/adapter.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import { actionEquals, makeStep } from "../../src/core/engine.js";
 import type { Rng } from "../../src/core/rng.js";
 import {
@@ -33,9 +33,9 @@ const bestRng = (): Rng => ({
   int: (_min: number, max: number) => max,
 });
 
-function legalAction(index: RpgIndex, state: GameState, action: Action): Action {
+function legalAction(index: RpgIndex, state: GameState, action: RpgAction): RpgAction {
   const option = enumerateRpgActions(index, state).find((o) => actionEquals(o.action, action));
-  if (!option) throw new Error(`Expected legal action ${JSON.stringify(action)}`);
+  if (!option) throw new Error(`Expected legal RPG action ${JSON.stringify(action)}`);
   return option.action;
 }
 
@@ -94,7 +94,7 @@ describe("rpg adapter (§12.2–3, §13 Stage 4, bug_0140)", () => {
       { type: "ATTACK", enemy: "storm_wight" },
       { type: "MOVE", direction: "up" },
       { type: "USE", item: "iron_spike", target: "lamp" },
-    ] satisfies Action[]) {
+    ] satisfies RpgAction[]) {
       const result = step(state, legalAction(index, state, action));
       expect(result.ok, JSON.stringify(action)).toBe(true);
       state = result.state;

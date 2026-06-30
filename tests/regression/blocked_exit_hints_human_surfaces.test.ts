@@ -29,7 +29,7 @@ import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import { GameSession } from "../../ui/src/engine.js";
 import type { GameState } from "../../src/core/state.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 
 // --- RPG pack: Sunken Barrow. guard_crypt's east is barred while the wight stands. ---
 const rloaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
@@ -38,9 +38,9 @@ const rindex = indexRpgPack(rloaded.compiled.pack);
 const rstep = makeStep(buildRpgRules(rindex));
 const WIGHT_MSG = "The barrow-wight bars the way; you cannot pass while it stands.";
 
-function rmove(s: GameState, action: Action): GameState {
-  const r = rstep(s, action);
-  expect(r.ok, `action ${JSON.stringify(action)} in ${s.current}`).toBe(true);
+function rmove(s: GameState, RpgAction: RpgAction): GameState {
+  const r = rstep(s, RpgAction);
+  expect(r.ok, `RpgAction ${JSON.stringify(RpgAction)} in ${s.current}`).toBe(true);
   return r.state;
 }
 

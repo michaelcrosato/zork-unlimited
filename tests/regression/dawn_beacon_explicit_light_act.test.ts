@@ -7,7 +7,7 @@
  * recency-blind rank-1 lamplighters_round) returned clarity 5/5, enjoyment 4/5, mechanics
  * flawless across a prepared 50/50 win and an unprepared 45/50 win. Its one concrete
  * friction finding: at the Crown of the Tower there was no explicit "light the beacon"
- * action — simply moving `up` auto-lit the beacon (+15 on the room's on_enter) and ended
+ * RpgAction — simply moving `up` auto-lit the beacon (+15 on the room's on_enter) and ended
  * the game, though the orders-board and the watchman both say plainly "LIGHT THE BEACON".
  * This is the SAME smell sunken_barrow's seed-71 pass surfaced (the climax narrated AT the
  * player on entry, no act to perform), fixed there by bug_0107 with the visited+has_item
@@ -20,12 +20,12 @@
  *  - The win turns on BOTH `{ visited: beacon_crown }` AND `{ has_flag: beacon_lit }`:
  *    entering no longer wins (the beacon is still dark), yet the `visited` term is KEPT so
  *    the parser validator still derives its soft-lock guard from a real win-room. The
- *    engine's post-action checkWin (bug_0056) fires the win the same frame the spark lands.
+ *    engine's post-RpgAction checkWin (bug_0056) fires the win the same frame the spark lands.
  *
  * Locked here:
  *   (a) the win condition retains BOTH terms (visited beacon_crown + has_flag beacon_lit);
  *   (b) climbing to the crown does NOT end the game — score is 35 (< 50), the beacon is
- *       unlit, and no "light" action is offered until the flint is in hand;
+ *       unlit, and no "light" RpgAction is offered until the flint is in hand;
  *   (c) once the flint is held the crown offers the explicit "light beacon with flint"
  *       command, and performing it sets beacon_lit, awards the final +15, and ends with
  *       ending_lit at the full 50 — the deliberate climactic act the prose calls for;
@@ -34,7 +34,7 @@
 import { describe, it, expect } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import {
@@ -66,9 +66,9 @@ describe("bug_0226 — The Dawn Beacon wins on the deliberate light act, not on 
    *  combat_guaranteed bound hold on EVERY roll, so the drive is seed-robust. */
   function toCrown(seed: number): GameState {
     let s = initStateForRpgPack(index, seed);
-    const drive = (a: Action): void => {
+    const drive = (a: RpgAction): void => {
       const r = step(s, a);
-      expect(r.ok, `action ${JSON.stringify(a)} in ${s.current}`).toBe(true);
+      expect(r.ok, `RpgAction ${JSON.stringify(a)} in ${s.current}`).toBe(true);
       s = r.state;
     };
     drive({ type: "MOVE", direction: "north" }); // lower_ward

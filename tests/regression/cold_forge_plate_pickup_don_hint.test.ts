@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { makeStep, actionEquals } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import type { GameEvent } from "../../src/core/events.js";
 import type { GameState } from "../../src/core/state.js";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
@@ -22,12 +22,12 @@ const index = indexRpgPack(loaded.compiled.pack);
 const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
-function act(state: GameState, action: Action): { state: GameState; events: GameEvent[] } {
+function act(state: GameState, RpgAction: RpgAction): { state: GameState; events: GameEvent[] } {
   expect(
-    rules.legalActions(state).some((legal) => actionEquals(legal, action)),
-    `action ${JSON.stringify(action)} must be legal in ${state.current}`,
+    rules.legalActions(state).some((legal) => actionEquals(legal, RpgAction)),
+    `RpgAction ${JSON.stringify(RpgAction)} must be legal in ${state.current}`,
   ).toBe(true);
-  const result = step(state, action);
+  const result = step(state, RpgAction);
   expect(result.ok, result.rejectionReason).toBe(true);
   return { state: result.state, events: result.events };
 }
@@ -66,7 +66,7 @@ describe("bug_0445 - Cold Forge plate pickup points at donning", () => {
     expect(commands(taken.state)).toContain("don cold-iron plate");
   });
 
-  it("keeps the don action as the actual one-shot defense buff", () => {
+  it("keeps the don RpgAction as the actual one-shot defense buff", () => {
     let state = enterFounderCell();
     state = act(state, { type: "TAKE", item: "cold_iron_plate" }).state;
     state = act(state, {

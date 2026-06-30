@@ -15,6 +15,7 @@ import { resolveAttack, resolveSkillCheck, enemyHp, enemyAlive } from "../../src
 import { enemyHpVar, type Enemy } from "../../src/rpg/schema.js";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { buildRpgRules, indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
+import type { RpgAction } from "../../src/api/types.js";
 
 const baseState = () => ({
   ...initState({ seed: 1, start: "room" }),
@@ -124,7 +125,8 @@ describe("RPG action boundary", () => {
     const index = indexRpgPack(loaded.compiled.pack);
     const rules = buildRpgRules(index);
     const state = initStateForRpgPack(index, 1);
-    const result = makeStep(rules)(state, { type: "CHOOSE", choiceId: "legacy_choice" });
+    const legacyAction = { type: "CHOOSE", choiceId: "legacy_choice" } as unknown as RpgAction;
+    const result = makeStep(rules)(state, legacyAction);
     expect(result.ok).toBe(false);
     expect(result.state).toBe(state);
   });

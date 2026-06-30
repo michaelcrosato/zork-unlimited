@@ -50,7 +50,7 @@ export type DiagnoseOptions = {
 export function diagnose<A extends Action>(
   rules: Rules<A>,
   initialState: GameState,
-  actions: Action[],
+  actions: A[],
   opts: DiagnoseOptions = {},
 ): Diagnosis {
   const step = makeStep(rules);

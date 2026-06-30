@@ -73,7 +73,7 @@ function reject(state: GameState, reason: string): StepResult {
  * function matches the §8.1 signature exactly.
  */
 export function makeStep<A extends Action = Action>(rules: Rules<A>) {
-  return function step(state: GameState, action: Action): StepResult {
+  return function step(state: GameState, action: A): StepResult {
     // A finished game accepts no further actions. No state change.
     if (state.ended) return reject(state, "The game has already ended.");
 
@@ -81,7 +81,7 @@ export function makeStep<A extends Action = Action>(rules: Rules<A>) {
     const legal = rules.legalActions(state).some((a) => actionEquals(a, action));
     if (!legal) return reject(state, "That action is not available right now.");
 
-    const resolution = rules.resolve(state, action as A);
+    const resolution = rules.resolve(state, action);
     if (resolution === null) return reject(state, "That action has no effect here.");
 
     // §8.4.2 — conditions. No state change on failure.

@@ -13,10 +13,10 @@
  * filtered locked exits out entirely (observation.ts), so the
  * `locked_msg` strings authored across ~10 packs were DEAD in the structured surface.
  *
- * The fix is strictly ADDITIVE and preserves the deliberate "the action set never
+ * The fix is strictly ADDITIVE and preserves the deliberate "the RpgAction set never
  * spoils HOW to open a locked exit" design: `blocked_exits` is a hint list, NOT a
- * selectable action and NOT in `exits` — it tells the player a way exists here and
- * WHY it's blocked, never how to clear it (that action stays hidden until legal).
+ * selectable RpgAction and NOT in `exits` — it tells the player a way exists here and
+ * WHY it's blocked, never how to clear it (that RpgAction stays hidden until legal).
  * Opt-in per exit: only a locked exit whose author gave it a `locked_msg` appears.
  *
  * Locked here (real packs + a synthetic opt-in fixture, no combat-seed dependence on
@@ -47,7 +47,7 @@ import { indexParserPack, initStateForParserPack } from "../../src/parser/runner
 import { buildParserObservation } from "../../src/parser/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 
 const compiled = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
 if (!compiled.ok) throw new Error("sunken_barrow must compile");
@@ -56,9 +56,9 @@ const rstep = makeStep(buildRpgRules(rindex));
 
 const WIGHT_MSG = "The barrow-wight bars the way; you cannot pass while it stands.";
 
-function ract(s: GameState, action: Action): GameState {
-  const r = rstep(s, action);
-  expect(r.ok, `action ${JSON.stringify(action)} should resolve in ${s.current}`).toBe(true);
+function ract(s: GameState, RpgAction: RpgAction): GameState {
+  const r = rstep(s, RpgAction);
+  expect(r.ok, `RpgAction ${JSON.stringify(RpgAction)} should resolve in ${s.current}`).toBe(true);
   return r.state;
 }
 

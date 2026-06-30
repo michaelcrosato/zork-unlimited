@@ -14,7 +14,7 @@
  * This is the same class fixed for the parser pack in bug_0010, and the engine
  * already carries the generic feature: rooms may declare reactive `variants`
  * ({ when, text }); the first whose conditions hold replaces the base description,
- * read identically by the observation builder and the LOOK action. The fix here is
+ * read identically by the observation builder and the LOOK RpgAction. The fix here is
  * pure CONTENT — one variant on each of the two rooms — so it changes only narrated
  * text, never flags/items/exits/gating/reachable endings.
  *
@@ -32,7 +32,7 @@ import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { roomDescription } from "../../src/parser/model.js";
 import { makeStep, actionEquals } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 
 const loaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
@@ -41,11 +41,13 @@ const index = indexRpgPack(loaded.compiled.pack);
 const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
-/** Issue an action, asserting it was legal first (legal ⊇ executable). */
-function act(state: GameState, action: Action): GameState {
-  const legal = rules.legalActions(state).some((a) => actionEquals(a, action));
-  expect(legal, `action ${JSON.stringify(action)} must be legal in ${state.current}`).toBe(true);
-  const r = step(state, action);
+/** Issue an RpgAction, asserting it was legal first (legal ⊇ executable). */
+function act(state: GameState, RpgAction: RpgAction): GameState {
+  const legal = rules.legalActions(state).some((a) => actionEquals(a, RpgAction));
+  expect(legal, `RpgAction ${JSON.stringify(RpgAction)} must be legal in ${state.current}`).toBe(
+    true,
+  );
+  const r = step(state, RpgAction);
   expect(r.ok).toBe(true);
   return r.state;
 }

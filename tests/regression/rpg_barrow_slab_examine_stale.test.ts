@@ -32,7 +32,7 @@ import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep } from "../../src/core/engine.js";
-import type { Action, RpgAction } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Effect } from "../../src/core/effects.js";
 
@@ -43,7 +43,7 @@ const pack = loaded.compiled.pack;
 const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
-const LEVER: Action = { type: "USE", item: "iron_bar", target: "stone_slab" };
+const LEVER: RpgAction = { type: "USE", item: "iron_bar", target: "stone_slab" };
 const EXAMINE_SLAB: RpgAction = { type: "LOOK", target: "stone_slab" };
 
 const narrations = (effects: readonly Effect[]): string[] =>
@@ -65,7 +65,7 @@ const roomDesc = (s: GameState): string => buildRpgObservation(index, s).descrip
 /** Reach the slab passage (bar in hand, wight slain, slab not yet moved) at `seed`. */
 function atSlab(seed: number): GameState {
   let s = initStateForRpgPack(index, seed);
-  const path: Action[] = [
+  const path: RpgAction[] = [
     { type: "MOVE", direction: "down" },
     { type: "TAKE", item: "iron_bar" },
     { type: "MOVE", direction: "north" },

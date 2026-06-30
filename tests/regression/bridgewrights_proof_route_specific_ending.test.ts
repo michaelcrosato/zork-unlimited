@@ -7,7 +7,7 @@ import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep, actionEquals } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 
 const loaded = loadRpgPackFile("content/rpg/pack/bridgewrights_proof.yaml");
@@ -16,12 +16,12 @@ const index = indexRpgPack(loaded.compiled.pack);
 const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
-function act(state: GameState, action: Action): GameState {
+function act(state: GameState, RpgAction: RpgAction): GameState {
   expect(
-    rules.legalActions(state).some((a) => actionEquals(a, action)),
-    `action ${JSON.stringify(action)} must be legal in ${state.current}`,
+    rules.legalActions(state).some((a) => actionEquals(a, RpgAction)),
+    `RpgAction ${JSON.stringify(RpgAction)} must be legal in ${state.current}`,
   ).toBe(true);
-  const result = step(state, action);
+  const result = step(state, RpgAction);
   expect(result.ok, result.rejectionReason).toBe(true);
   return result.state;
 }

@@ -32,7 +32,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
@@ -86,16 +86,19 @@ function rushNorthUnprepared(rng: () => Rng): GameState {
   let state = initStateForRpgPack(index, SEED);
   for (let guard = 0; guard < 200 && !state.ended; guard += 1) {
     const legal = rules.legalActions(state);
-    const attack = legal.find((a): a is Extract<Action, { type: "ATTACK" }> => a.type === "ATTACK");
-    const north = legal.find(
-      (a): a is Extract<Action, { type: "MOVE" }> => a.type === "MOVE" && a.direction === "north",
+    const attack = legal.find(
+      (a): a is Extract<RpgAction, { type: "ATTACK" }> => a.type === "ATTACK",
     );
-    const action = attack ?? north;
+    const north = legal.find(
+      (a): a is Extract<RpgAction, { type: "MOVE" }> =>
+        a.type === "MOVE" && a.direction === "north",
+    );
+    const RpgAction = attack ?? north;
     expect(
-      action,
+      RpgAction,
       `rush got stuck with no fight and no way north: ${JSON.stringify(legal)}`,
     ).toBeTruthy();
-    const res = step(state, action as Action);
+    const res = step(state, RpgAction as RpgAction);
     expect(res.ok, `engine rejected the rush step: ${res.rejectionReason}`).toBe(true);
     state = res.state;
   }

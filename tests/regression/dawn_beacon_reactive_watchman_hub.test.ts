@@ -39,7 +39,7 @@ import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import type { GameEvent } from "../../src/core/events.js";
 import type { RpgPack } from "../../src/rpg/schema.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 
 const PACK_PATH = "content/rpg/pack/dawn_beacon.yaml";
 const loaded = loadRpgPackFile(PACK_PATH);
@@ -60,8 +60,8 @@ function narration(events: GameEvent[]): string {
     .join(" ");
 }
 
-function run(state: GameState, action: Action): { state: GameState; text: string } {
-  const res = step(state, action);
+function run(state: GameState, RpgAction: RpgAction): { state: GameState; text: string } {
+  const res = step(state, RpgAction);
   expect(res.ok).toBe(true);
   return { state: res.state, text: narration(res.events) };
 }

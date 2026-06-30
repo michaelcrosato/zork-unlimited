@@ -24,7 +24,7 @@ import { describe, it, expect } from "vitest";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { makeStep } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Effect } from "../../src/core/effects.js";
 
@@ -35,7 +35,7 @@ const pack = loaded.compiled.pack;
 const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
-const LEVER: Action = { type: "USE", item: "iron_bar", target: "stone_slab" };
+const LEVER: RpgAction = { type: "USE", item: "iron_bar", target: "stone_slab" };
 
 const narrations = (effects: readonly Effect[]): string[] =>
   effects
@@ -47,7 +47,7 @@ const slabDescription = pack.objects.find((o) => o.id === "stone_slab")!.descrip
 /** Reach the slab passage (bar in hand, wight slain, slab not yet moved) at `seed`. */
 function atSlab(seed: number): GameState {
   let s = initStateForRpgPack(index, seed);
-  const path: Action[] = [
+  const path: RpgAction[] = [
     { type: "MOVE", direction: "down" },
     { type: "TAKE", item: "iron_bar" },
     { type: "MOVE", direction: "north" },

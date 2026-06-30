@@ -22,7 +22,7 @@ import { describe, it, expect } from "vitest";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { makeStep } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 
 const loaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
 if (!loaded.ok) throw new Error("sunken_barrow must compile");
@@ -47,7 +47,7 @@ describe("bug_0037 — the Barrow Mouth opens with a clear objective", () => {
 
   it("reachability/balance intact — the canonical seed-1 route still wins at full score", () => {
     let s = initStateForRpgPack(index, 1);
-    const toSlab: Action[] = [
+    const toSlab: RpgAction[] = [
       { type: "MOVE", direction: "down" },
       { type: "TAKE", item: "iron_bar" },
       { type: "MOVE", direction: "north" },
