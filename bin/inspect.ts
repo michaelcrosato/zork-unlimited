@@ -1,23 +1,18 @@
 #!/usr/bin/env -S npx tsx
 /**
- * bin/inspect — summarize a content pack or a trace (spec §5).
+ * bin/inspect — summarize an RPG content pack or RPG trace (spec §5).
  *
  * Usage:
- *   npm run inspect -- <pack.yaml>     # stats, reachability, validator findings
- *   npm run inspect -- <trace.json> --pack <pack.yaml>   # replay summary + suspected bugs
+ *   npm run inspect -- <rpg-pack.yaml>     # stats, validator findings
+ *   npm run inspect -- <trace.json> <rpg-pack.yaml>   # replay summary + suspected bugs
  *
  * Auto-detects: a `.json` argument (or one carrying `trace_id`) is treated as a
- * trace; otherwise it is a content pack. Read-only; never writes files (§16).
+ * trace; otherwise it is an RPG content pack. Read-only; never writes files (§16).
  */
 import { readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
-import { loadPackFile } from "../src/cyoa/pack.js";
-import { indexPack, buildRules, initStateForPack } from "../src/cyoa/runner.js";
-import { buildObservation } from "../src/cyoa/observation.js";
-import { validateCyoa } from "../src/validate/cyoa_validator.js";
-import { loadParserPackFile } from "../src/parser/pack.js";
-import { validateParser } from "../src/validate/parser_validator.js";
 import { loadRpgPackFile } from "../src/rpg/pack.js";
+import { indexRpgPack, buildRpgRules } from "../src/rpg/runner.js";
 import { validateRpg } from "../src/validate/rpg_validator.js";
 import { makeStep } from "../src/core/engine.js";
 import { diagnose } from "../agents/debugger.js";
@@ -30,14 +25,22 @@ function arg(name: string): string | undefined {
   return i >= 0 ? process.argv[i + 1] : undefined;
 }
 
+function packArg(): string | undefined {
+  return (
+    arg("--pack") ??
+    process.argv.slice(3).find((value) => value !== "--" && !value.startsWith("--"))
+  );
+}
+
 function inspectTrace(tracePath: string, packPath: string): void {
   const trace = JSON.parse(readFileSync(tracePath, "utf8")) as Trace;
-  const loaded = loadPackFile(packPath);
+  assertRpgPackShape(packPath);
+  const loaded = loadRpgPackFile(packPath);
   if (!loaded.ok) {
-    console.error(`Pack ${packPath} failed to compile (inspect-trace expects a CYOA pack).`);
+    console.error(`Pack ${packPath} failed to compile as an RPG pack.`);
     process.exit(1);
   }
-  const rules = buildRules(indexPack(loaded.compiled.pack));
+  const rules = buildRpgRules(indexRpgPack(loaded.compiled.pack));
   console.log(
     `Trace: ${trace.trace_id}  pack: ${trace.pack_id}  seed: ${trace.seed}  steps: ${trace.actions.length}`,
   );
@@ -62,94 +65,25 @@ function inspectTrace(tracePath: string, packPath: string): void {
   console.log(`Suspected bug: ${d.type} (${d.severity}) — ${d.description}`);
 }
 
-function inspectCyoaPack(path: string): void {
-  const result = loadPackFile(path);
-  if (!result.ok) {
-    console.error(`Schema error in ${path}.`);
-    process.exit(1);
-  }
-  const { pack, contentHash } = result.compiled;
-  const index = indexPack(pack);
-  // Structural coverage: BFS over choice.next from start.
-  const reachable = new Set<string>([pack.meta.start]);
-  const queue = [pack.meta.start];
-  while (queue.length) {
-    const id = queue.shift()!;
-    for (const c of index.scenes.get(id)?.choices ?? []) {
-      // A plain choice routes via `next`; a skill-checked one via the goto/end_game in its
-      // on_success / on_failure branches. Collect either as the choice's transition targets.
-      const targets: string[] = c.next !== undefined ? [c.next] : [];
-      for (const e of c.skill_check
-        ? [...c.skill_check.on_success, ...c.skill_check.on_failure]
-        : [])
-        if ("goto" in e) targets.push(e.goto);
-        else if ("end_game" in e) targets.push(e.end_game);
-      for (const t of targets) {
-        if (!reachable.has(t)) {
-          reachable.add(t);
-          queue.push(t);
-        }
-      }
-    }
-  }
-  const sceneIds = pack.scenes.map((s) => s.id);
-  const unreachable = sceneIds.filter((s) => !reachable.has(s));
-  const obs = buildObservation(index, initStateForPack(index, 1));
-  console.log(`Pack: ${pack.meta.id} "${pack.meta.title}"  mode: cyoa  hash: ${contentHash}`);
-  console.log(
-    `  scenes: ${pack.scenes.length}  endings: ${pack.endings.length}  start: ${pack.meta.start}`,
-  );
-  console.log(
-    `  ending scenes: ${index.endingSceneIds.size}  reachable scenes: ${reachable.size - index.endingIds.size}/${sceneIds.length}`,
-  );
-  if (unreachable.length) console.log(`  unreachable (by static next): ${unreachable.join(", ")}`);
-  console.log(`  opening actions: ${obs.available_actions.map((a) => a.id).join(", ")}`);
-  console.log("\n" + formatReport(validateCyoa(pack)));
-}
-
-function inspectParserPack(path: string): void {
-  const result = loadParserPackFile(path);
-  if (!result.ok) {
-    console.error(`Schema error in ${path}.`);
-    process.exit(1);
-  }
-  const { pack, contentHash } = result.compiled;
-  console.log(`Pack: ${pack.meta.id} "${pack.meta.title}"  mode: parser  hash: ${contentHash}`);
-  console.log(
-    `  rooms: ${pack.rooms.length}  objects: ${pack.objects.length}  npcs: ${pack.npcs.length}  win_conditions: ${pack.win_conditions.length}`,
-  );
-  console.log(`  start_room: ${pack.meta.start_room}  max_score: ${pack.meta.max_score}`);
-  const containers = pack.objects.filter((o) => o.container).length;
-  const lockedExits = pack.rooms
-    .flatMap((r) => r.exits)
-    .filter((e) => e.conditions.length > 0).length;
-  console.log(
-    `  containers: ${containers}  quest_critical: ${pack.objects.filter((o) => o.quest_critical).length}  locked exits: ${lockedExits}`,
-  );
-  console.log("\n" + formatReport(validateParser(pack)));
-}
-
 function main(): void {
   const path = process.argv[2];
   if (!path || path.startsWith("--")) {
-    console.error("Usage: npm run inspect -- <pack.yaml> | <trace.json> --pack <pack.yaml>");
+    console.error("Usage: npm run inspect -- <rpg-pack.yaml> | <trace.json> <rpg-pack.yaml>");
     process.exit(2);
   }
   const raw = parseYaml(readFileSync(path, "utf8")) as Record<string, unknown> | null;
   const isTrace = !!raw && typeof raw === "object" && "trace_id" in raw;
   if (isTrace) {
-    const pack = arg("--pack");
+    const pack = packArg();
     if (!pack) {
-      console.error("Inspecting a trace needs --pack <pack.yaml>.");
+      console.error("Inspecting a trace needs an RPG pack path.");
       process.exit(2);
     }
     inspectTrace(path, pack);
     return;
   }
-  const isObj = !!raw && typeof raw === "object";
-  if (isObj && "enemies" in raw) inspectRpgPack(path);
-  else if (isObj && "rooms" in raw) inspectParserPack(path);
-  else inspectCyoaPack(path);
+  assertRpgPackShape(path, raw);
+  inspectRpgPack(path);
 }
 
 function inspectRpgPack(path: string): void {
@@ -173,6 +107,17 @@ function inspectRpgPack(path: string): void {
     `  enemies: ${pack.enemies.map((e) => `${e.id}(hp${e.hp})`).join(", ") || "none"}  skill checks: ${skillChecks}`,
   );
   console.log("\n" + formatReport(validateRpg(pack)));
+}
+
+function assertRpgPackShape(path: string, rawPack?: Record<string, unknown> | null): void {
+  const raw = rawPack ?? (parseYaml(readFileSync(path, "utf8")) as Record<string, unknown> | null);
+  const isObj = !!raw && typeof raw === "object";
+  if (isObj && "enemies" in raw) return;
+  const mode = isObj && "rooms" in raw ? "parser" : "cyoa";
+  console.error(
+    `Inspect is RPG-only; ${mode} packs are legacy migration data, not playable agent targets.`,
+  );
+  process.exit(1);
 }
 
 main();
