@@ -31,8 +31,8 @@ import { writeFileSync, mkdirSync } from "node:fs";
 import { replayTrace } from "../../src/trace/replay.js";
 import { recordTrace, type Trace } from "../../src/trace/record.js";
 import { createToolApi } from "../../src/mcp/tools.js";
-import { loadPackFile } from "../../src/cyoa/pack.js";
-import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
+import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import {
   microRules,
   microInitState,
@@ -72,12 +72,16 @@ function corruptAt(trace: Trace, ...indices: number[]): Trace {
 // MCP fixture support (case 4) — write a trace to disk for inspect_trace.
 // ------------------------------------------------------------------
 const ROOT = process.cwd();
-const PACK = "content/cyoa/pack/watchtower_road.yaml";
+const PACK = "content/rpg/pack/sunken_barrow.yaml";
 const FIXTURE = (name: string) => `traces/bug_0290_${name}.json`;
 
-const ACTIONS_WT = ["go_west", "ford_brook", "cross_north", "slip_into_woods", "slip_away"].map(
-  (id) => ({ type: "CHOOSE" as const, choiceId: id }),
-);
+const ACTIONS_RPG: Action[] = [
+  { type: "MOVE", direction: "down" },
+  { type: "TAKE", item: "iron_bar" },
+  { type: "MOVE", direction: "west" },
+  { type: "TALK", npc: "reaver_shade" },
+  { type: "ASK", npc: "reaver_shade", topic: "ask_wight" },
+];
 
 let cleanTraceMcp: Trace;
 let divergedTraceMcp: Trace;
@@ -88,11 +92,11 @@ function write(path: string, trace: Trace): void {
 }
 
 beforeAll(() => {
-  const compiled = loadPackFile(PACK);
+  const compiled = loadRpgPackFile(PACK);
   if (!compiled.ok) throw new Error("pack must compile for MCP fixture");
-  const index = indexPack(compiled.compiled.pack);
-  const rules = buildRules(index);
-  cleanTraceMcp = recordTrace(rules, initStateForPack(index, 1), ACTIONS_WT, {
+  const index = indexRpgPack(compiled.compiled.pack);
+  const rules = buildRpgRules(index);
+  cleanTraceMcp = recordTrace(rules, initStateForRpgPack(index, 1), ACTIONS_RPG, {
     trace_id: "tr_0290_mcp",
     pack_id: compiled.compiled.pack.meta.id,
     content_hash: compiled.compiled.contentHash,

@@ -2,8 +2,10 @@
  * The shipped library is one world, not a shelf of unrelated campaigns.
  *
  * Schemas keep `meta.world` optional so tiny validator fixtures and generated eval
- * packs stay minimal. Shipped packs are different: every playable YAML under
+ * packs stay minimal. Shipped packs are different: every YAML under
  * content/{cyoa,parser,rpg}/pack must bind to the same canonical world and hub.
+ * MCP play is narrower: only RPG packs are playable; CYOA/parser packs remain
+ * world-bound migration data until their content is retired or converted.
  */
 import { describe, expect, it } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
@@ -19,7 +21,8 @@ import { normalizePackPath, worldRouteForPack } from "../../src/world/graph.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 
 const root = process.cwd();
-const PACK_DIRS = ["content/cyoa/pack", "content/parser/pack", "content/rpg/pack"];
+const ALL_PACK_DIRS = ["content/cyoa/pack", "content/parser/pack", "content/rpg/pack"];
+const RPG_PACK_DIRS = ["content/rpg/pack"];
 
 type RawPack = {
   meta?: {
@@ -37,12 +40,14 @@ type RawPack = {
   };
 };
 
-function discoverPacks(): string[] {
-  return PACK_DIRS.flatMap((dir) =>
-    readdirSync(join(root, dir))
-      .filter((file) => file.endsWith(".yaml"))
-      .map((file) => `${dir}/${file}`),
-  ).sort();
+function discoverPacks(dirs: string[] = ALL_PACK_DIRS): string[] {
+  return dirs
+    .flatMap((dir) =>
+      readdirSync(join(root, dir))
+        .filter((file) => file.endsWith(".yaml"))
+        .map((file) => `${dir}/${file}`),
+    )
+    .sort();
 }
 
 function loadYaml(path: string): unknown {
@@ -55,6 +60,8 @@ function loadWorldManifest() {
 
 describe("single-world library contract", () => {
   const packs = discoverPacks();
+  const rpgPacks = discoverPacks(RPG_PACK_DIRS);
+  const legacyPacks = packs.filter((path) => !path.startsWith("content/rpg/pack/"));
   const api = createToolApi({ root });
 
   it("declares the canonical hub world once", () => {
@@ -133,18 +140,28 @@ describe("single-world library contract", () => {
     ).toBeGreaterThan(24);
   });
 
-  it.each(packs)("%s opens as a Charterhaven quest in play", (path) => {
+  it.each(rpgPacks)("%s opens as a Charterhaven RPG quest in play", (path) => {
     const pack = loadYaml(path) as RawPack;
     const world = pack.meta?.world;
     const game = api.new_game({ pack_path: path });
-    const opening =
-      game.observation.mode === "cyoa" ? game.observation.text : game.observation.description;
+    if (game.observation.mode !== "rpg") throw new Error("expected RPG observation");
+    const opening = game.observation.description;
 
     expect(game.observation.world?.id).toBe(CANONICAL_WORLD_ID);
     expect(opening).toContain(CANONICAL_HUB_CITY);
     expect(opening).toContain(world?.district);
     expect(opening).toContain(world?.role);
     expect(opening).toContain(world?.quest);
+  });
+
+  it.each(legacyPacks)("%s is world-bound but rejected by MCP play as legacy data", (path) => {
+    const validation = api.validate_pack({ pack_path: path });
+
+    expect(validation.ok).toBe(false);
+    expect(
+      validation.report.findings.some((finding) => finding.code === "UNSUPPORTED_LEGACY_PACK"),
+    ).toBe(true);
+    expect(() => api.new_game({ pack_path: path })).toThrow(/UNSUPPORTED_LEGACY_PACK/);
   });
 
   it("exposes graph routes through the MCP world listing", () => {

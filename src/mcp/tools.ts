@@ -5,10 +5,11 @@
  * built — the engine stays the source of truth. These are unit-tested directly,
  * without a live MCP client (a §9.4 rule); server.ts only adapts them to stdio.
  *
- * The public story catalog is RPG-only. Explicit legacy pack loading still routes
- * through the older shape dispatch while CYOA/parser content is being migrated,
- * but blind/AFK discovery now steers agents to RPG packs. Content and traces are
- * data only — no handler runs shell or code (§16).
+ * The public story catalog and explicit pack-loading path are RPG-only. Some
+ * internal CYOA/parser dispatch remains while old migration tests and patch
+ * scaffolding are retired, but blind/AFK agents can no longer start or validate
+ * legacy packs through MCP. Content and traces are data only — no handler runs
+ * shell or code (§16).
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -19,16 +20,14 @@ import type { Action } from "../api/types.js";
 import type { GameState } from "../core/state.js";
 import type { GameEvent } from "../core/events.js";
 
-import { compilePack, loadPackFile } from "../cyoa/pack.js";
+import { loadPackFile } from "../cyoa/pack.js";
 import { indexPack, buildRules, initStateForPack, type CyoaIndex } from "../cyoa/runner.js";
 import type { ParserIndex } from "../parser/model.js";
 import { buildObservation } from "../cyoa/observation.js";
-import { validateCyoa } from "../validate/cyoa_validator.js";
 
-import { compileParserPack, loadParserPackFile } from "../parser/pack.js";
+import { loadParserPackFile } from "../parser/pack.js";
 import { indexParserPack, buildParserRules, initStateForParserPack } from "../parser/runner.js";
 import { buildParserObservation } from "../parser/observation.js";
-import { validateParser } from "../validate/parser_validator.js";
 
 import { compileRpgPack } from "../rpg/pack.js";
 import { generateRpgPack } from "../gen/rpg_generator.js";
@@ -314,24 +313,27 @@ export function createToolApi(opts: { root: string }) {
     const abs = safeResolve(root, packPath);
     const source = readFileSync(abs, "utf8");
     const mode = detectMode(parseYaml(source) as unknown);
-    const compileRes =
-      mode === "cyoa"
-        ? compilePack(source)
-        : mode === "parser"
-          ? compileParserPack(source)
-          : compileRpgPack(source);
+    if (mode !== "rpg") {
+      return {
+        ok: false,
+        report: makeReport(packPath, [
+          {
+            severity: "error",
+            code: "UNSUPPORTED_LEGACY_PACK",
+            message: `MCP pack loading is RPG-only; ${mode} packs are legacy migration data.`,
+            where: [packPath],
+          },
+        ]),
+      };
+    }
+    const compileRes = compileRpgPack(source);
     if (!compileRes.ok)
       return {
         ok: false,
         report: makeReport(packPath, schemaFindings(packPath, compileRes.error)),
       };
     const pack = compileRes.compiled.pack;
-    const report =
-      mode === "cyoa"
-        ? validateCyoa(pack as never)
-        : mode === "parser"
-          ? validateParser(pack as never)
-          : validateRpg(pack as never);
+    const report = validateRpg(pack);
     return { ok: true, mode, compiled: compileRes.compiled, report };
   }
 

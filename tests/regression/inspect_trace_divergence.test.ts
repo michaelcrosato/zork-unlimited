@@ -22,12 +22,13 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { createToolApi } from "../../src/mcp/tools.js";
-import { loadPackFile } from "../../src/cyoa/pack.js";
-import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
+import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { recordTrace, type Trace } from "../../src/trace/record.js";
+import type { Action } from "../../src/api/types.js";
 
 const ROOT = process.cwd();
-const PACK = "content/cyoa/pack/watchtower_road.yaml";
+const PACK = "content/rpg/pack/sunken_barrow.yaml";
 const api = () => createToolApi({ root: ROOT });
 
 type InspectResult = {
@@ -37,11 +38,15 @@ type InspectResult = {
   diverged_at_step: number | null;
 };
 
-// A real 5-action route through watchtower_road (the ending_escape branch), so the
+// A real 5-action route through sunken_barrow's opening and shade dialogue, so the
 // recorded trace carries a genuine per_step_hashes baseline of length 5.
-const ACTIONS = ["go_west", "ford_brook", "cross_north", "slip_into_woods", "slip_away"].map(
-  (id) => ({ type: "CHOOSE" as const, choiceId: id }),
-);
+const ACTIONS: Action[] = [
+  { type: "MOVE", direction: "down" },
+  { type: "TAKE", item: "iron_bar" },
+  { type: "MOVE", direction: "west" },
+  { type: "TALK", npc: "reaver_shade" },
+  { type: "ASK", npc: "reaver_shade", topic: "ask_wight" },
+];
 
 let cleanTrace: Trace;
 
@@ -53,10 +58,11 @@ function write(path: string, trace: Trace) {
 }
 
 beforeAll(() => {
-  const compiled = loadPackFile(PACK);
+  const compiled = loadRpgPackFile(PACK);
   if (!compiled.ok) throw new Error("pack must compile");
-  const rules = buildRules(indexPack(compiled.compiled.pack));
-  cleanTrace = recordTrace(rules, initStateForPack(indexPack(compiled.compiled.pack), 1), ACTIONS, {
+  const index = indexRpgPack(compiled.compiled.pack);
+  const rules = buildRpgRules(index);
+  cleanTrace = recordTrace(rules, initStateForRpgPack(index, 1), ACTIONS, {
     trace_id: "tr_0143",
     pack_id: compiled.compiled.pack.meta.id,
     content_hash: compiled.compiled.contentHash,

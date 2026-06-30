@@ -1,7 +1,7 @@
 /**
  * Regression (§15) for bug_0137 — engine/benchmark: the agent-facing observation
  * gains an opt-in `hide_graph` difficulty (ULTRAPLAN 2026-06-02 §Week.4). Today the
- * structured API hands the agent the full room adjacency — every parser/RPG exit
+ * structured API hands the agent the full room adjacency — every RPG exit
  * carries its destination (`exit.to`) — so the spatial-reasoning task that
  * TALES/Jericho measure is trivialized: the map is read off, not reasoned out. With
  * `hide_graph: true` each exit reports only its `direction`; the destination is
@@ -16,7 +16,7 @@
  * internal coverage bot").
  *
  * Locked here:
- *   (1) DEFAULT: parser/RPG exits carry a string `to` (legacy full-graph view);
+ *   (1) DEFAULT: RPG exits carry a string `to` (legacy full-graph view);
  *   (2) HIDDEN: with hide_graph every exit's `to` is absent while the SAME set of
  *       directions remains — only the destination is hidden, never the exit's
  *       existence;
@@ -25,8 +25,8 @@
  *   (4) STATE UNTOUCHED: hide_graph changes only the rendered observation, never the
  *       state — the state_hash is identical with and without it (determinism/replay
  *       safe, as narration/observation are not part of the state hash);
- *   (5) CYOA NO-OP: a CYOA observation never exposed `choice.next`, so hide_graph is
- *       a documented no-op there — the observation is unchanged and still playable;
+ *   (5) LEGACY REJECTION: CYOA/parser packs are migration data and no longer start
+ *       through MCP play tools;
  *   (6) the `start_game` AFK alias honors the flag too.
  */
 import { describe, it, expect } from "vitest";
@@ -35,19 +35,19 @@ import { createToolApi } from "../../src/mcp/tools.js";
 const ROOT = process.cwd();
 const api = () => createToolApi({ root: ROOT });
 
-const PARSER = "content/parser/pack/sealed_crypt.yaml";
-const RPG = "content/rpg/pack/sunken_barrow.yaml";
-const CYOA = "content/cyoa/pack/watchtower_road.yaml";
+const LEGACY_CYOA = "content/cyoa/pack/watchtower_road.yaml";
+const LEGACY_PARSER = "content/parser/pack/sealed_crypt.yaml";
+const RPG_PACKS = ["content/rpg/pack/sunken_barrow.yaml", "content/rpg/pack/breaking_weir.yaml"];
 
-/** Narrow to the parser/RPG observation shape (both carry `exits`). */
+/** Narrow to the RPG observation shape. */
 function exitsOf(obs: unknown): { direction: string; to?: string }[] {
   const o = obs as { mode: string; exits?: { direction: string; to?: string }[] };
-  if (o.mode === "cyoa") throw new Error("CYOA observation has no exits");
+  if (o.mode !== "rpg") throw new Error("expected RPG observation");
   return o.exits ?? [];
 }
 
 describe("bug_0137 — hide_graph difficulty: exits hide their destination", () => {
-  for (const pack of [PARSER, RPG]) {
+  for (const pack of RPG_PACKS) {
     it(`${pack}: DEFAULT exits carry a string destination (full graph, legacy)`, () => {
       const g = api().new_game({ pack_path: pack });
       const exits = exitsOf(g.observation);
@@ -98,23 +98,22 @@ describe("bug_0137 — hide_graph difficulty: exits hide their destination", () 
     });
   }
 
-  it("CYOA: hide_graph is a no-op — the observation is unchanged and still playable", () => {
+  it("legacy CYOA/parser packs are rejected by MCP play tools", () => {
     const a = api();
-    const open = a.new_game({ pack_path: CYOA, seed: 7 });
-    const hidden = a.new_game({ pack_path: CYOA, seed: 7, hide_graph: true });
-    expect(hidden.observation).toEqual(open.observation);
-    expect(hidden.state_hash).toBe(open.state_hash);
-    // The choice destinations (`choice.next`) were never in the observation anyway.
-    if (hidden.observation.mode === "cyoa")
-      expect(hidden.observation.available_actions.length).toBeGreaterThan(0);
+    expect(() => a.new_game({ pack_path: LEGACY_CYOA, seed: 7 })).toThrow(
+      /UNSUPPORTED_LEGACY_PACK/,
+    );
+    expect(() => a.new_game({ pack_path: LEGACY_PARSER, seed: 7 })).toThrow(
+      /UNSUPPORTED_LEGACY_PACK/,
+    );
   });
 
   it("start_game alias honors hide_graph", () => {
     const a = api();
-    const g = a.start_game({ story_path: PARSER, hide_graph: true });
+    const g = a.start_game({ story_path: RPG_PACKS[0]!, hide_graph: true });
     for (const e of exitsOf(g.observation)) expect(e.to).toBeUndefined();
     // And without the flag the alias keeps the full graph.
-    const plain = a.start_game({ story_path: PARSER });
+    const plain = a.start_game({ story_path: RPG_PACKS[0]! });
     expect(exitsOf(plain.observation).some((e) => typeof e.to === "string")).toBe(true);
   });
 });

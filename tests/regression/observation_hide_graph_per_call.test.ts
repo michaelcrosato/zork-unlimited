@@ -29,19 +29,19 @@ import { createToolApi } from "../../src/mcp/tools.js";
 const ROOT = process.cwd();
 const api = () => createToolApi({ root: ROOT });
 
-const PARSER = "content/parser/pack/sealed_crypt.yaml";
+const RPG = "content/rpg/pack/sunken_barrow.yaml";
 
-/** Narrow to the parser/RPG observation shape (both carry `exits`). */
+/** Narrow to the RPG observation shape. */
 function exitsOf(obs: unknown): { direction: string; to?: string }[] {
   const o = obs as { mode: string; exits?: { direction: string; to?: string }[] };
-  if (o.mode === "cyoa") throw new Error("CYOA observation has no exits");
+  if (o.mode !== "rpg") throw new Error("expected RPG observation");
   return o.exits ?? [];
 }
 
 describe("bug_0299 — hide_graph per-call override on observation tools", () => {
   it("(1) override on, session off: get_observation hides exits", () => {
     const a = api();
-    const g = a.new_game({ pack_path: PARSER }); // session default: hide_graph absent (false)
+    const g = a.new_game({ pack_path: RPG }); // session default: hide_graph absent (false)
     const r = a.get_observation({ session_id: g.session_id, hide_graph: true });
     const exits = exitsOf(r.observation);
     expect(exits.length).toBeGreaterThan(0);
@@ -52,7 +52,7 @@ describe("bug_0299 — hide_graph per-call override on observation tools", () =>
 
   it("(2) override off, session on: get_observation reveals exits", () => {
     const a = api();
-    const g = a.new_game({ pack_path: PARSER, hide_graph: true }); // session default: hidden
+    const g = a.new_game({ pack_path: RPG, hide_graph: true }); // session default: hidden
     const r = a.get_observation({ session_id: g.session_id, hide_graph: false });
     const exits = exitsOf(r.observation);
     expect(exits.length).toBeGreaterThan(0);
@@ -63,7 +63,7 @@ describe("bug_0299 — hide_graph per-call override on observation tools", () =>
 
   it("(3) override absent, session on: session default preserved (exits hidden)", () => {
     const a = api();
-    const g = a.new_game({ pack_path: PARSER, hide_graph: true }); // session default: hidden
+    const g = a.new_game({ pack_path: RPG, hide_graph: true }); // session default: hidden
     const r = a.get_observation({ session_id: g.session_id }); // no override
     const exits = exitsOf(r.observation);
     expect(exits.length).toBeGreaterThan(0);
@@ -74,7 +74,7 @@ describe("bug_0299 — hide_graph per-call override on observation tools", () =>
 
   it("(4) step_action per-call: override affects returned observation but does NOT mutate session", () => {
     const a = api();
-    const g = a.new_game({ pack_path: PARSER }); // session default: show graph
+    const g = a.new_game({ pack_path: RPG }); // session default: show graph
     // step_action with per-call hide_graph: true — returned observation should hide exits
     const moveAction = g.observation.available_actions.find(
       (act) => (act as { action: { type: string } }).action.type === "MOVE",
@@ -99,7 +99,7 @@ describe("bug_0299 — hide_graph per-call override on observation tools", () =>
 
   it("(5) list_legal_actions per-call: call succeeds and returns same action ids", () => {
     const a = api();
-    const g = a.new_game({ pack_path: PARSER }); // session default: show graph
+    const g = a.new_game({ pack_path: RPG }); // session default: show graph
     const withoutFlag = a.list_legal_actions({ session_id: g.session_id });
     const withFlag = a.list_legal_actions({ session_id: g.session_id, hide_graph: true });
     // Both calls should return the same action ids
@@ -111,7 +111,7 @@ describe("bug_0299 — hide_graph per-call override on observation tools", () =>
 
   it("(6) non-vacuity: in override-off / session-on case exits genuinely carry destinations", () => {
     const a = api();
-    const g = a.new_game({ pack_path: PARSER, hide_graph: true }); // session: hidden
+    const g = a.new_game({ pack_path: RPG, hide_graph: true }); // session: hidden
     const r = a.get_observation({ session_id: g.session_id, hide_graph: false }); // override: show
     const exits = exitsOf(r.observation);
     // At least one exit must carry a string `to` — guards against vacuous pass with empty exits

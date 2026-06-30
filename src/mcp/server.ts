@@ -44,7 +44,7 @@ const PACK = {
   pack_path: z
     .string()
     .describe(
-      "Path to a quest content pack (.yaml) - CYOA, parser, or RPG; mode is auto-detected - relative to the project root.",
+      "Path to an RPG quest content pack (.yaml), relative to the project root. Legacy CYOA/parser packs are rejected.",
     ),
 };
 const SESSION = {
@@ -55,13 +55,13 @@ const HIDE_GRAPH = {
     .boolean()
     .optional()
     .describe(
-      "Difficulty: when true, exits report only their direction, not their destination - the spatial map must be reasoned out, not read off (parser/RPG; no-op for CYOA). Default false.",
+      "Difficulty: when true, exits report only their direction, not their destination - the spatial map must be reasoned out, not read off. Default false.",
     ),
 };
 
 tool(
   "validate_pack",
-  "Validate a quest content pack (CYOA, parser, or RPG - auto-detected); returns the validation report.",
+  "Validate an RPG quest content pack; legacy CYOA/parser packs are rejected with an error report.",
   PACK,
   (a) => api.validate_pack(a),
 );
@@ -83,7 +83,7 @@ tool(
   {
     quest_path: z
       .string()
-      .describe("Path to a quest content pack (any mode), relative to the project root."),
+      .describe("Path to an RPG quest content pack, relative to the project root."),
   },
   (a) => api.world_path(a),
 );
@@ -331,27 +331,25 @@ tool(
 );
 tool(
   "validate_story",
-  "AFK alias for validate_pack; validates one pack (any mode) and returns hard errors/warnings.",
+  "AFK alias for validate_pack; validates one RPG pack and returns hard errors/warnings.",
   {
-    story_path: z
-      .string()
-      .describe("Path to a content pack (any mode), relative to the project root."),
+    story_path: z.string().describe("Path to an RPG content pack, relative to the project root."),
   },
   (a) => api.validate_story(a),
 );
 tool(
   "validate_quest",
-  "Validate one Charter Marches quest pack (any mode) and return hard errors/warnings.",
+  "Validate one Charter Marches RPG quest pack and return hard errors/warnings.",
   {
     quest_path: z
       .string()
-      .describe("Path to a quest content pack (any mode), relative to the project root."),
+      .describe("Path to an RPG quest content pack, relative to the project root."),
   },
   (a) => api.validate_quest(a),
 );
 tool(
   "load_pack",
-  "Compile a quest pack (any mode) and return its mode, metadata, content hash, and validation report.",
+  "Compile an RPG quest pack and return its mode, metadata, content hash, and validation report.",
   PACK,
   (a) => api.load_pack(a),
 );
@@ -372,9 +370,7 @@ tool(
     pack_path: z
       .string()
       .optional()
-      .describe(
-        "Path to a quest content pack (.yaml); mode is auto-detected during migration. Omit when using generate_rpg_seed.",
-      ),
+      .describe("Path to an RPG quest content pack (.yaml). Omit when using generate_rpg_seed."),
     generate_rpg_seed: z
       .number()
       .int()
@@ -389,9 +385,9 @@ tool(
 );
 tool(
   "start_game",
-  "Legacy AFK alias for new_game; start a session on a quest pack of any mode for MCP-driven playtesting.",
+  "Legacy AFK alias for new_game; start a session on an RPG quest pack for MCP-driven playtesting.",
   {
-    story_path: z.string().describe("Path to a content pack (any mode)."),
+    story_path: z.string().describe("Path to an RPG content pack."),
     seed: z.number().int().optional(),
     ...HIDE_GRAPH,
   },
@@ -399,9 +395,9 @@ tool(
 );
 tool(
   "start_quest",
-  "Start a session on a Charter Marches quest pack of any mode for MCP-driven playtesting.",
+  "Start a session on a Charter Marches RPG quest pack for MCP-driven playtesting.",
   {
-    quest_path: z.string().describe("Path to a quest content pack (any mode)."),
+    quest_path: z.string().describe("Path to an RPG quest content pack."),
     seed: z.number().int().optional(),
     ...HIDE_GRAPH,
   },
@@ -410,7 +406,7 @@ tool(
 
 tool(
   "get_observation",
-  "Get the current AI-facing observation for a session (§9.1). The `mode` field discriminates cyoa | parser | rpg.",
+  "Get the current AI-facing RPG observation for a session (§9.1).",
   { ...SESSION, ...HIDE_GRAPH },
   (a) => api.get_observation(a),
 );
@@ -422,14 +418,14 @@ tool(
 );
 tool(
   "list_legal_actions",
-  "List the legal actions available right now in a session, any mode (§9).",
+  "List the legal RPG actions available right now in a session (§9).",
   { ...SESSION, ...HIDE_GRAPH },
   (a) => api.list_legal_actions(a),
 );
 
 tool(
   "step_action",
-  "Apply one chosen action by its id from available_actions (any mode — CYOA choice or parser/RPG command); returns events + the new observation.",
+  "Apply one chosen RPG action by its id from available_actions; returns events + the new observation.",
   {
     ...SESSION,
     action_id: z.string().describe("An action id from the current legal-action set."),
@@ -476,7 +472,7 @@ tool(
 
 tool(
   "replay_trace",
-  "Replay a recorded trace against a pack of any mode and assert its final-state hash (§8.8).",
+  "Replay a recorded RPG trace against a pack and assert its final-state hash (§8.8).",
   {
     trace_path: z.string().describe("Path to a trace JSON, relative to the project root."),
     ...PACK,

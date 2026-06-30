@@ -244,16 +244,16 @@ RPG content gate and rejects legacy CYOA/parser packs.
 
 The engine is exposed as an MCP server so any agent harness (Claude Code, Codex,
 Gemini CLI, …) plays via native tool calls over the structured observation/action
-loop — never a raw parser. The MCP catalog is now RPG-first: `list_stories`
+loop — never a raw parser. The MCP catalog is RPG-only: `list_stories`
 discovers shipped packs under `content/rpg/pack`, picks the high-depth RPG pack
 `breaking_weir` as the default, and `list_world` reports the RPG quest subset of
 the Charter Marches. The same structured `new_game` / `step_action` /
 `get_observation` / save·load path drives RPG sessions through stable action ids
-and deterministic state hashes. Explicit legacy pack loading still exists during
-the migration, but blind/AFK discovery no longer steers agents toward CYOA or
-parser packs. All paths are confined to the project root; content and traces are
-data only (§16). The handlers (`src/mcp/tools.ts`) are unit-tested directly
-without a live client.
+and deterministic state hashes. Explicit CYOA/parser pack loading is rejected
+through MCP with an `UNSUPPORTED_LEGACY_PACK` report; those old packs are now
+migration data, not playable agent targets. All paths are confined to the project
+root; content and traces are data only (§16). The handlers (`src/mcp/tools.ts`)
+are unit-tested directly without a live client.
 
 ```bash
 npm run mcp   # start the stdio server
@@ -284,7 +284,7 @@ OpenAI/Anthropic/Google backends sit behind env vars and fall back to a determin
 keyless mock, so authoring/adapting runs in CI with no API keys.
 
 ```bash
-npm run blind -- --pack content/parser/pack/sealed_crypt.yaml --seed 7
+npm run blind -- --pack content/rpg/pack/sunken_barrow.yaml --seed 7
 ```
 
 ## Status: all stages complete ✅

@@ -2,18 +2,62 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { writeFileSync, mkdirSync, readFileSync } from "node:fs";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { PathEscapeError } from "../../src/mcp/paths.js";
-import { loadPackFile } from "../../src/cyoa/pack.js";
-import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
+import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
+import { makeStep } from "../../src/core/engine.js";
 import { recordTrace } from "../../src/trace/record.js";
 import { parseOverworldManifest } from "../../src/world/overworld.js";
+import type { Action } from "../../src/api/types.js";
 
 const ROOT = process.cwd();
-const PACK = "content/cyoa/pack/watchtower_road.yaml";
+const PACK = "content/rpg/pack/sunken_barrow.yaml";
+const LEGACY_PACK = "content/cyoa/pack/watchtower_road.yaml";
 const MAIN_RPG = "content/rpg/pack/breaking_weir.yaml";
 const api = () => createToolApi({ root: ROOT });
 const overworld = parseOverworldManifest(
   JSON.parse(readFileSync("content/world/new_york_overworld.json", "utf8")),
 );
+
+function actionIdByCommand(a: ReturnType<typeof api>, sessionId: string, needle: string): string {
+  const actions = a.list_legal_actions({ session_id: sessionId }).actions as {
+    id: string;
+    command?: string;
+  }[];
+  const found = actions.find((action) => action.command?.includes(needle));
+  if (!found) throw new Error(`No legal action containing "${needle}".`);
+  return found.id;
+}
+
+function stepByCommand(a: ReturnType<typeof api>, sessionId: string, needle: string) {
+  return a.step_action({
+    session_id: sessionId,
+    action_id: actionIdByCommand(a, sessionId, needle),
+  });
+}
+
+function playSunkenBarrowToVictory(a: ReturnType<typeof api>, sessionId: string) {
+  let last = stepByCommand(a, sessionId, "go down");
+  expect(last.ok).toBe(true);
+  last = stepByCommand(a, sessionId, "take iron bar");
+  expect(last.ok).toBe(true);
+  last = stepByCommand(a, sessionId, "go north");
+
+  for (let i = 0; i < 40 && !last.observation.ended; i += 1) {
+    if (last.observation.mode !== "rpg") throw new Error("expected RPG observation");
+    if (!last.observation.enemies_present.some((enemy) => enemy.id === "barrow_wight")) break;
+    last = stepByCommand(a, sessionId, "attack");
+  }
+
+  last = stepByCommand(a, sessionId, "go east");
+  for (let i = 0; i < 40 && !last.observation.ended; i += 1) {
+    const stage = a.get_state({ session_id: sessionId }).state.questStage["barrow"];
+    if (stage === "slab_moved") break;
+    last = stepByCommand(a, sessionId, "lever stone slab");
+  }
+  stepByCommand(a, sessionId, "go down");
+  return stepByCommand(a, sessionId, "take Barrow");
+}
 
 function overworldRoadPath(from: string, to: string): string[] {
   const queue: { town: string; roadIds: string[] }[] = [{ town: from, roadIds: [] }];
@@ -73,7 +117,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.main_story).toBe(MAIN_RPG);
     expect(r.stories).toHaveLength(16);
     expect(r.stories.every((s) => s.mode === "rpg")).toBe(true);
-    expect(r.stories.some((s) => s.path === PACK)).toBe(false);
+    expect(r.stories.some((s) => s.path === LEGACY_PACK)).toBe(false);
+    expect(r.stories.some((s) => s.path === PACK)).toBe(true);
     expect(r.stories.find((s) => s.path === MAIN_RPG)?.world?.hub).toBe("Charterhaven");
   });
 
@@ -98,13 +143,13 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
   it("returns the graph path from Charterhaven to a quest", () => {
     const r = api().world_path({ quest_path: PACK });
-    expect(r.graph_node).toBe("watchtower_road");
+    expect(r.graph_node).toBe("sunken_barrow");
     expect(r.path_from_hub.map((step) => step.name)).toEqual([
       "Charterhaven",
-      "North Road",
-      "The Watchtower Road",
+      "Moor Road",
+      "The Sunken Barrow",
     ]);
-    expect(r.path_from_hub[1]?.route_from_previous).toBe("north road");
+    expect(r.path_from_hub[1]?.route_from_previous).toBe("moor road");
   });
 
   it("lists the New York overworld as a start town plus weighted roads", () => {
@@ -780,7 +825,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
   it("load_pack returns meta + content hash", () => {
     const r = api().load_pack({ pack_path: PACK });
     expect(r.ok).toBe(true);
-    expect(r.meta?.id).toBe("watchtower_road_v1");
+    expect(r.mode).toBe("rpg");
+    expect(r.meta?.id).toBe("sunken_barrow_v1");
     expect(r.content_hash).toMatch(/^[0-9a-f]{64}$/);
   });
 
@@ -793,70 +839,60 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.classifications.length).toBeGreaterThanOrEqual(3);
   });
 
-  it("validate_pack on a broken fixture surfaces an error", () => {
-    const r = api().validate_pack({ pack_path: "content/broken-fixtures/softlock.yaml" });
+  it("validate_pack rejects legacy explicit pack targets", () => {
+    const r = api().validate_pack({ pack_path: LEGACY_PACK });
     expect(r.ok).toBe(false);
-    expect(r.report.findings.map((f) => f.code)).toContain("SOFTLOCK");
+    expect(r.report.findings.map((f) => f.code)).toContain("UNSUPPORTED_LEGACY_PACK");
+  });
+
+  it("validate_pack on a broken RPG fixture surfaces an error", () => {
+    const r = api().validate_pack({ pack_path: "content/broken-fixtures/rpg_unwinnable.yaml" });
+    expect(r.ok).toBe(false);
+    expect(r.report.findings.map((f) => f.code)).toContain("COMBAT_UNWINNABLE");
   });
 });
 
 describe("MCP tools — the play loop (§9.1)", () => {
   it("AFK aliases can play and transcript a route", () => {
     const a = api();
-    const game = a.start_game({ story_path: PACK, seed: 7 });
-    expect(game.mode).toBe("cyoa");
-    if (game.observation.mode === "cyoa")
-      expect(game.observation.scene_id).toBe("forest_crossroads");
+    const game = a.start_game({ story_path: PACK, seed: 1 });
+    expect(game.mode).toBe("rpg");
+    expect(game.observation.mode).toBe("rpg");
     expect(
       a.get_scene({ session_id: game.session_id }).observation.available_actions.length,
     ).toBeGreaterThan(0);
 
-    const route = ["go_west", "ford_brook", "cross_north", "slip_into_woods", "slip_away"];
-    let last;
-    for (const option_id of route) {
-      last = a.choose_option({ session_id: game.session_id, option_id });
-      expect(last.ok).toBe(true);
-    }
-    expect(last!.observation.ending_id).toBe("ending_escape");
+    const last = playSunkenBarrowToVictory(a, game.session_id);
+    expect(last.ok).toBe(true);
+    expect(last.observation.ending_id).toBe("ending_victory");
     const transcript = a.get_transcript({ session_id: game.session_id });
     expect(transcript.summary.ended).toBe(true);
-    expect(transcript.summary.ending_id).toBe("ending_escape");
-    expect(transcript.turns.map((t) => t.action_id)).toContain("slip_away");
+    expect(transcript.summary.ending_id).toBe("ending_victory");
+    expect(transcript.turns.map((t) => t.action_id)).toContain("take_circlet");
     expect(a.get_state({ session_id: game.session_id }).state_hash).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it("quest aliases can play and transcript a route", () => {
     const a = api();
-    const game = a.start_quest({ quest_path: PACK, seed: 7 });
-    expect(game.mode).toBe("cyoa");
-    if (game.observation.mode === "cyoa")
-      expect(game.observation.scene_id).toBe("forest_crossroads");
+    const game = a.start_quest({ quest_path: PACK, seed: 1 });
+    expect(game.mode).toBe("rpg");
+    expect(game.observation.mode).toBe("rpg");
 
-    const route = ["go_west", "ford_brook", "cross_north", "slip_into_woods", "slip_away"];
-    let last;
-    for (const action_id of route) {
-      last = a.step_action({ session_id: game.session_id, action_id });
-      expect(last.ok).toBe(true);
-    }
-    expect(last!.observation.ending_id).toBe("ending_escape");
+    const last = playSunkenBarrowToVictory(a, game.session_id);
+    expect(last.observation.ending_id).toBe("ending_victory");
     expect(a.get_transcript({ session_id: game.session_id }).summary.ended).toBe(true);
   });
 
   it("an agent can play a whole game via observe → choose → step", () => {
     const a = api();
-    const game = a.new_game({ pack_path: PACK, seed: 5 });
+    const game = a.new_game({ pack_path: PACK, seed: 1 });
     expect(game.session_id).toBe("sess_1");
-    expect(game.observation.available_actions.map((x) => x.id)).toContain("go_west");
+    expect(game.mode).toBe("rpg");
+    expect(game.observation.available_actions.map((x) => x.id)).toContain("go_down");
 
-    // Drive the shortest escape route turn by turn.
-    const route = ["go_west", "ford_brook", "cross_north", "slip_into_woods", "slip_away"];
-    let last;
-    for (const action_id of route) {
-      last = a.step_action({ session_id: game.session_id, action_id });
-      expect(last.ok).toBe(true);
-    }
-    expect(last!.observation.ended).toBe(true);
-    expect(last!.observation.ending_id).toBe("ending_escape");
+    const last = playSunkenBarrowToVictory(a, game.session_id);
+    expect(last.observation.ended).toBe(true);
+    expect(last.observation.ending_id).toBe("ending_victory");
     expect(a.list_legal_actions({ session_id: game.session_id }).actions).toEqual([]);
   });
 
@@ -871,17 +907,21 @@ describe("MCP tools — the play loop (§9.1)", () => {
   });
 
   it("refuses to start a game on an unplayable pack", () => {
-    expect(() => api().new_game({ pack_path: "content/broken-fixtures/softlock.yaml" })).toThrow(
-      /not playable/i,
-    );
+    expect(() =>
+      api().new_game({ pack_path: "content/broken-fixtures/rpg_unwinnable.yaml" }),
+    ).toThrow(/not playable/i);
+  });
+
+  it("refuses to start a game on a legacy pack", () => {
+    expect(() => api().new_game({ pack_path: LEGACY_PACK })).toThrow(/RPG-only/i);
   });
 });
 
 describe("MCP tools — save / load round-trip (§8.7)", () => {
   it("a saved game reloads to the identical state hash", () => {
     const a = api();
-    const game = a.new_game({ pack_path: PACK, seed: 3 });
-    a.step_action({ session_id: game.session_id, action_id: "go_east" });
+    const game = a.new_game({ pack_path: PACK, seed: 1 });
+    stepByCommand(a, game.session_id, "go down");
     const after = a.get_observation({ session_id: game.session_id }).state_hash;
 
     const saved = a.save_game({ session_id: game.session_id });
@@ -893,14 +933,37 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
 describe("MCP tools — replay + path confinement", () => {
   beforeAll(() => {
     // Record a trace to disk for replay_trace to read.
-    const compiled = loadPackFile(PACK);
+    const compiled = loadRpgPackFile(PACK);
     if (!compiled.ok) throw new Error("pack must compile");
-    const index = indexPack(compiled.compiled.pack);
-    const rules = buildRules(index);
-    const actions = ["go_west", "ford_brook", "cross_north", "slip_into_woods", "slip_away"].map(
-      (id) => ({ type: "CHOOSE" as const, choiceId: id }),
-    );
-    const trace = recordTrace(rules, initStateForPack(index, 1), actions, {
+    const index = indexRpgPack(compiled.compiled.pack);
+    const rules = buildRpgRules(index);
+    const step = makeStep(rules);
+    const state0 = initStateForRpgPack(index, 1);
+    const actions: Action[] = [];
+    let state = state0;
+    const push = (action: Action): void => {
+      const result = step(state, action);
+      if (!result.ok) throw new Error(`Trace action failed: ${JSON.stringify(action)}`);
+      actions.push(action);
+      state = result.state;
+    };
+
+    push({ type: "MOVE", direction: "down" });
+    push({ type: "TAKE", item: "iron_bar" });
+    push({ type: "MOVE", direction: "north" });
+    for (let i = 0; i < 40 && !state.ended; i += 1) {
+      const obs = buildRpgObservation(index, state);
+      if (!obs.enemies_present.some((enemy) => enemy.id === "barrow_wight")) break;
+      push({ type: "ATTACK", enemy: "barrow_wight" });
+    }
+    push({ type: "MOVE", direction: "east" });
+    for (let i = 0; i < 40 && state.questStage["barrow"] !== "slab_moved"; i += 1) {
+      push({ type: "USE", item: "iron_bar", target: "stone_slab" });
+    }
+    push({ type: "MOVE", direction: "down" });
+    push({ type: "TAKE", item: "circlet" });
+
+    const trace = recordTrace(rules, state0, actions, {
       trace_id: "tr_mcp",
       pack_id: compiled.compiled.pack.meta.id,
       content_hash: compiled.compiled.contentHash,
@@ -925,12 +988,12 @@ describe("MCP tools — replay + path confinement", () => {
     };
     expect(r.ok).toBe(true);
     expect(r.hash_ok).toBe(true);
-    expect(r.steps).toBe(5);
+    expect(r.steps).toBeGreaterThan(5);
     // A faithful Trace-v2 trace (mcp_replay.json carries per_step_hashes) has no
     // divergence to localize.
     expect(r.diverged_at_step).toBeNull();
     expect(r.diagnosis.type).toBe("no_failure");
-    expect(r.step_summary.at(-1)?.ending_id).toBe("ending_escape");
+    expect(r.step_summary.at(-1)?.ending_id).toBe("ending_victory");
   });
 
   it("rejects a path that escapes the project root", () => {
