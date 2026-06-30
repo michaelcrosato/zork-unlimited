@@ -12,7 +12,7 @@
  */
 import { initState, type GameState } from "../core/state.js";
 import { applyEffects } from "../core/effects.js";
-import { evalConditions } from "../core/conditions.js";
+import { reactiveName, reactiveText } from "../core/reactive_text.js";
 import type { ParserPack, Room, GameObject, Npc, DialogueNode, ParserEnding } from "./schema.js";
 
 export type ParserIndex = {
@@ -72,10 +72,7 @@ export function isOpen(state: GameState, id: string): boolean {
  *  gate — instead of contradicting it (§7.3). Pure; same (room, state) ⇒ same
  *  text, so both the observation and the LOOK action read identically. */
 export function roomDescription(room: Room, state: GameState): string {
-  for (const v of room.variants ?? []) {
-    if (evalConditions(v.when, state)) return v.text;
-  }
-  return room.description;
+  return reactiveText(room.description, room.variants, state);
 }
 
 /** The object's effective examine description in the current state: the first
@@ -85,10 +82,7 @@ export function roomDescription(room: Room, state: GameState): string {
  *  instead of repeating its sealed-shut prose (§7.3). Pure; same (object, state)
  *  ⇒ same text. */
 export function objectDescription(object: GameObject, state: GameState): string {
-  for (const v of object.variants ?? []) {
-    if (evalConditions(v.when, state)) return v.text;
-  }
-  return object.description;
+  return reactiveText(object.description, object.variants, state);
 }
 
 /** The object's effective display NAME in the current state: the first reactive
@@ -100,10 +94,7 @@ export function objectDescription(object: GameObject, state: GameState): string 
  *  name (its `text` still drives the description), so this is purely additive. Pure;
  *  same (object, state) ⇒ same name. */
 export function objectName(object: GameObject, state: GameState): string {
-  for (const v of object.variants ?? []) {
-    if (v.name !== undefined && evalConditions(v.when, state)) return v.name;
-  }
-  return object.name;
+  return reactiveName(object.name, object.variants, state);
 }
 
 /** The NPC node's effective spoken line in the current state: the first reactive
@@ -115,10 +106,7 @@ export function objectName(object: GameObject, state: GameState): string {
  *  text, so the TALK/ASK narration and the observation's `dialogue.npc_text` read
  *  identically. */
 export function nodeText(node: DialogueNode, state: GameState): string {
-  for (const v of node.variants ?? []) {
-    if (evalConditions(v.when, state)) return v.text;
-  }
-  return node.npc_text;
+  return reactiveText(node.npc_text, node.variants, state);
 }
 
 /** The ending's effective epilogue in the current state: the first reactive
@@ -129,10 +117,7 @@ export function nodeText(node: DialogueNode, state: GameState): string {
  *  that ignores the route just played (§7.3). Pure; same (ending, state) ⇒ same text,
  *  so the observation's rendered `description` and structured `ending.text` agree. */
 export function endingText(ending: ParserEnding, state: GameState): string {
-  for (const v of ending.variants ?? []) {
-    if (evalConditions(v.when, state)) return v.text;
-  }
-  return ending.text;
+  return reactiveText(ending.text, ending.variants, state);
 }
 
 /** Is the container `id` locked? Falls back to the pack's static `locked` flag. */

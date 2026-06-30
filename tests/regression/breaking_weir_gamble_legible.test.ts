@@ -31,7 +31,7 @@
 import { describe, it, expect } from "vitest";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
-import { roomDescription, objectDescription, objectName } from "../../src/parser/model.js";
+import { roomDescription, objectDescription, objectName } from "../../src/rpg/model.js";
 import type { GameState } from "../../src/core/state.js";
 
 const PACK_PATH = "content/rpg/pack/breaking_weir.yaml";

@@ -12,6 +12,7 @@ import { evalConditions } from "../core/conditions.js";
 import type { Effect } from "../core/effects.js";
 import { applyEffects } from "../core/effects.js";
 import type { GameEvent } from "../core/events.js";
+import { reactiveText } from "../core/reactive_text.js";
 import { rngForStep, type Rng } from "../core/rng.js";
 import type { Resolution, Rules } from "../core/engine.js";
 import { scoreChangeNarrations } from "../core/score_chrome.js";
@@ -50,10 +51,7 @@ export function isTerminal(index: CyoaIndex, id: string): boolean {
  *  it changed — an item already taken, a panel already pried — instead of
  *  contradicting it (mirrors the parser `roomDescription` helper, bug_0010). */
 export function sceneText(scene: Scene, state: GameState): string {
-  for (const v of scene.variants ?? []) {
-    if (evalConditions(v.when, state)) return v.text;
-  }
-  return scene.text;
+  return reactiveText(scene.text, scene.variants, state);
 }
 
 /** An ending's effective epilogue: the first reactive `variant` whose `when`
@@ -62,10 +60,7 @@ export function sceneText(scene: Scene, state: GameState): string {
  *  route the player actually took (the state is frozen at end_game, so this is
  *  pure too). */
 export function endingText(ending: Ending, state: GameState): string {
-  for (const v of ending.variants ?? []) {
-    if (evalConditions(v.when, state)) return v.text;
-  }
-  return ending.text;
+  return reactiveText(ending.text, ending.variants, state);
 }
 
 /**

@@ -58,6 +58,27 @@ describe("RPG schema owns the RPG contract", () => {
     expect(cyoaSchema).not.toContain("../parser/schema");
   });
 
+  it("keeps reactive text selection in core gameplay code", () => {
+    const reactiveText = readFileSync("src/core/reactive_text.ts", "utf8");
+    const parserModel = readFileSync("src/parser/model.ts", "utf8");
+    const rpgModel = readFileSync("src/rpg/model.ts", "utf8");
+    const cyoaRunner = readFileSync("src/cyoa/runner.ts", "utf8");
+    const rpgVariantLiveness = readFileSync(
+      "tests/regression/rpg_variant_liveness.test.ts",
+      "utf8",
+    );
+
+    expect(reactiveText).toContain("export function firstMatchingVariant");
+    expect(reactiveText).toContain("export function reactiveText");
+    expect(reactiveText).toContain("export function reactiveName");
+    expect(parserModel).toContain("../core/reactive_text");
+    expect(rpgModel).toContain("../core/reactive_text");
+    expect(cyoaRunner).toContain("../core/reactive_text");
+    expect(rpgModel).not.toContain("evalConditions(v.when");
+    expect(rpgVariantLiveness).toContain("../../src/rpg/model.js");
+    expect(rpgVariantLiveness).not.toContain("../../src/parser/model.js");
+  });
+
   it("does not import the legacy parser observation builder for RPG observations", () => {
     const observation = readFileSync("src/rpg/observation.ts", "utf8");
     expect(observation).not.toContain("../parser/");

@@ -6,8 +6,8 @@
  * RPG runtime no longer depends on the legacy parser model module for its core
  * world state layout.
  */
-import { evalConditions } from "../core/conditions.js";
 import { applyEffects } from "../core/effects.js";
+import { reactiveName, reactiveText } from "../core/reactive_text.js";
 import { initState, type GameState } from "../core/state.js";
 import type { DialogueNode, Ending, GameObject, Npc, Room, RpgPack } from "./schema.js";
 
@@ -60,38 +60,23 @@ export function isOpen(state: GameState, id: string): boolean {
 }
 
 export function roomDescription(room: Room, state: GameState): string {
-  for (const v of room.variants ?? []) {
-    if (evalConditions(v.when, state)) return v.text;
-  }
-  return room.description;
+  return reactiveText(room.description, room.variants, state);
 }
 
 export function objectDescription(object: GameObject, state: GameState): string {
-  for (const v of object.variants ?? []) {
-    if (evalConditions(v.when, state)) return v.text;
-  }
-  return object.description;
+  return reactiveText(object.description, object.variants, state);
 }
 
 export function objectName(object: GameObject, state: GameState): string {
-  for (const v of object.variants ?? []) {
-    if (v.name !== undefined && evalConditions(v.when, state)) return v.name;
-  }
-  return object.name;
+  return reactiveName(object.name, object.variants, state);
 }
 
 export function nodeText(node: DialogueNode, state: GameState): string {
-  for (const v of node.variants ?? []) {
-    if (evalConditions(v.when, state)) return v.text;
-  }
-  return node.npc_text;
+  return reactiveText(node.npc_text, node.variants, state);
 }
 
 export function endingText(ending: Ending, state: GameState): string {
-  for (const v of ending.variants ?? []) {
-    if (evalConditions(v.when, state)) return v.text;
-  }
-  return ending.text;
+  return reactiveText(ending.text, ending.variants, state);
 }
 
 export function isLocked(index: RpgModelIndex, state: GameState, id: string): boolean {

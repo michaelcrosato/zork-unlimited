@@ -84,7 +84,7 @@ import {
   type RpgIndex,
 } from "../../src/rpg/runner.js";
 import { HP_VAR } from "../../src/rpg/schema.js";
-import { visibleObjectIds } from "../../src/parser/model.js";
+import { visibleObjectIds } from "../../src/rpg/model.js";
 import { evalConditions } from "../../src/core/conditions.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
