@@ -1,10 +1,10 @@
 /**
  * RPG validator (spec §10, §13 Stage 4, §14).
  *
- * An RPG pack is a parser pack plus enemies, so we first run the FULL parser
- * validator (§10.2) — feeding it the flags and items that combat and skill checks
- * provide at runtime, so a gate legitimately opened by a fight or a successful
- * check is not mis-flagged impossible. Then we add Stage-4 invariants:
+ * We first run the RPG foundation validator (§10.2) — feeding it the flags and
+ * items that combat and skill checks provide at runtime, so a gate legitimately
+ * opened by a fight or a successful check is not mis-flagged impossible. Then we
+ * add Stage-4 invariants:
  *  - the player has the conventional stat vars (HP/attack/defense), HP > 0;
  *  - every enemy stands in a real room and names a declared DEATH ending;
  *  - every fight is WINNABLE — on the player's BEST reachable HP/attack/defense and
@@ -26,11 +26,10 @@
  *    is fair" a DECLARED, AUDITED property instead of an unverifiable hope.
  *  - every skill check is PASSABLE — d20 + the best reachable skill can meet the
  *    difficulty;
- *  - every enemy on_defeat end_game is declared (parser validation now owns
- *    skill-check branch references for every parser-derived mode).
+ *  - every enemy on_defeat end_game is declared.
  */
 import type { Effect } from "../core/effects.js";
-import { validateParser } from "./parser_validator.js";
+import { validateRpgFoundation } from "./rpg_foundation_validator.js";
 import { type Finding, type ValidationReport, makeReport } from "./report.js";
 import {
   type RpgPack,
@@ -110,7 +109,7 @@ export function validateRpg(pack: RpgPack): ValidationReport {
     DEFENSE_VAR,
     ...pack.enemies.map((e) => enemyHpVar(e.id)),
   ];
-  const base = validateParser(pack, {
+  const base = validateRpgFoundation(pack, {
     extraSettableFlags,
     extraObtainable,
     extraScoreAwards,
