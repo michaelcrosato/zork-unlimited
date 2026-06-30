@@ -27,6 +27,7 @@ import type { GameEvent } from "../core/events.js";
 import { type RpgPack, type Enemy, SCORE_VAR } from "./schema.js";
 import { resolveAttack, resolveSkillCheck, enemyAlive } from "./combat.js";
 import { rngForStep, type Rng } from "../core/rng.js";
+import { scoreChangeNarrations } from "../core/score_chrome.js";
 
 export type RpgIndex = RpgModelIndex & {
   rpgPack: RpgPack;
@@ -61,27 +62,6 @@ function winningRpgEnding(index: RpgIndex, state: GameState): string | null {
     if (evalConditions(wc.conditions, state)) return wc.ending;
   }
   return null;
-}
-
-function rpgScoreChangeNarrations(events: GameEvent[], maxScore: number): GameEvent[] {
-  if (maxScore <= 0) return [];
-  const out: GameEvent[] = [];
-  for (const e of events) {
-    if (e.type !== "state_change") continue;
-    const ev = e as Record<string, unknown>;
-    if ((ev.effect !== "inc_var" && ev.effect !== "dec_var") || ev.name !== SCORE_VAR) continue;
-    const delta = ev.delta;
-    if (typeof delta !== "number" || delta === 0) continue;
-    const total = typeof ev.value === "number" ? ev.value : 0;
-    const mag = Math.abs(delta);
-    const dir = delta > 0 ? "gone up" : "gone down";
-    const pts = mag === 1 ? "point" : "points";
-    out.push({
-      type: "narration",
-      text: `[Your score has ${dir} by ${mag} ${pts}; it is now ${total} of ${maxScore}.]`,
-    });
-  }
-  return out;
 }
 
 /**
@@ -162,7 +142,7 @@ export function buildRpgRules(
 
     // Zork-style score feedback derived from the RPG `score` var.
     decorateEvents(events: GameEvent[]): GameEvent[] {
-      return rpgScoreChangeNarrations(events, index.pack.meta.max_score ?? 0);
+      return scoreChangeNarrations(events, SCORE_VAR, index.pack.meta.max_score ?? 0);
     },
   };
 }

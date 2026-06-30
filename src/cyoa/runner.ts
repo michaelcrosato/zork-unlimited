@@ -14,9 +14,11 @@ import { applyEffects } from "../core/effects.js";
 import type { GameEvent } from "../core/events.js";
 import { rngForStep, type Rng } from "../core/rng.js";
 import type { Resolution, Rules } from "../core/engine.js";
-import { scoreChangeNarrations } from "../parser/runner.js";
+import { scoreChangeNarrations } from "../core/score_chrome.js";
 import { resolveSkillCheck } from "../rpg/combat.js";
 import type { CyoaPack, Ending, Scene } from "./schema.js";
+
+const SCORE_VAR = "score";
 
 export type CyoaAction = { type: "CHOOSE"; choiceId: string };
 
@@ -147,7 +149,7 @@ export function buildRules(
     // touching `next`), so determinism and every CYOA trace's hash are unchanged; and
     // when `max_score` is absent/0 — every CYOA pack today — it returns [] (a true no-op).
     decorateEvents(events: GameEvent[]): GameEvent[] {
-      return scoreChangeNarrations(events, index.pack.meta.max_score ?? 0);
+      return scoreChangeNarrations(events, SCORE_VAR, index.pack.meta.max_score ?? 0);
     },
   };
 }

@@ -36,11 +36,11 @@ import {
   indexParserPack,
   buildParserRules,
   initStateForParserPack,
-  scoreChangeNarrations,
 } from "../../src/parser/runner.js";
 import { enumerateActions } from "../../src/parser/legal_actions.js";
 import { makeStep } from "../../src/core/engine.js";
 import { hashState } from "../../src/core/hash.js";
+import { scoreChangeNarrations as scoreChangeNarrationsForVar } from "../../src/core/score_chrome.js";
 import type { GameState } from "../../src/core/state.js";
 import type { GameEvent } from "../../src/core/events.js";
 
@@ -72,6 +72,8 @@ const scoreLine = (events: GameEvent[]): string | undefined =>
 
 const ev = (effect: string, name: string, value: number, delta: number): GameEvent =>
   ({ type: "state_change", effect, name, value, delta }) as unknown as GameEvent;
+const scoreChangeNarrations = (events: GameEvent[], maxScore: number): GameEvent[] =>
+  scoreChangeNarrationsForVar(events, "score", maxScore);
 
 describe("bug_0112 — score changes narrate themselves (scoreChangeNarrations helper)", () => {
   it("a positive delta reads 'gone up by N points; it is now M of T'", () => {
