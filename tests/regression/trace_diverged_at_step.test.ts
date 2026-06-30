@@ -40,7 +40,7 @@ import {
   MICRO_PACK_ID,
   MICRO_CONTENT_HASH,
 } from "../../src/demo/micro.js";
-import type { Action, RpgAction } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 
 // Four-action winning route through the micro engine (take torch -> enter cave ->
 // grab gold -> claim treasure). These cover steps 0-3, giving us indices 0-3 for divergence
@@ -76,7 +76,7 @@ const ROOT = process.cwd();
 const PACK = "content/rpg/pack/sunken_barrow.yaml";
 const FIXTURE = (name: string) => `traces/bug_0290_${name}.json`;
 
-const ACTIONS_RPG: Action[] = [
+const ACTIONS_RPG: RpgAction[] = [
   { type: "MOVE", direction: "down" },
   { type: "TAKE", item: "iron_bar" },
   { type: "MOVE", direction: "west" },

@@ -19,7 +19,7 @@ import { hashState } from "../../src/core/hash.js";
 import { recordTrace } from "../../src/trace/record.js";
 import { replayTrace } from "../../src/trace/replay.js";
 import { save, load } from "../../src/persist/save_load.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 
 const PACK = "content/rpg/pack/sunken_barrow.yaml";
@@ -31,7 +31,7 @@ const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
 /** Issue an action, asserting it was legal first (legal ⊇ executable, §14). */
-function act(state: GameState, action: Action, log: Action[]): GameState {
+function act(state: GameState, action: RpgAction, log: RpgAction[]): GameState {
   const legal = rules.legalActions(state).some((a) => actionEquals(a, action));
   expect(legal, `action ${JSON.stringify(action)} must be legal in ${state.current}`).toBe(true);
   const r = step(state, action);
@@ -41,8 +41,8 @@ function act(state: GameState, action: Action, log: Action[]): GameState {
 }
 
 /** A mainline hero: descend, arm, fight the wight, lever the slab, claim the relic. */
-function playToVictory(seed: number): { state: GameState; actions: Action[] } {
-  const actions: Action[] = [];
+function playToVictory(seed: number): { state: GameState; actions: RpgAction[] } {
+  const actions: RpgAction[] = [];
   let state = initStateForRpgPack(index, seed);
   state = act(state, { type: "MOVE", direction: "down" }, actions); // entry_hall
   state = act(state, { type: "TAKE", item: "iron_bar" }, actions);
@@ -103,7 +103,7 @@ describe("Stage 4 — The Sunken Barrow", () => {
 
   it("a fatal fight is recoverable from an earlier save (§8.7, death/restore)", () => {
     // Reach the wight at full strength and save there.
-    const setup: Action[] = [];
+    const setup: RpgAction[] = [];
     let state = initStateForRpgPack(index, 7);
     state = act(state, { type: "MOVE", direction: "down" }, setup);
     state = act(state, { type: "TAKE", item: "iron_bar" }, setup);

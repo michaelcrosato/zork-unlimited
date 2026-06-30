@@ -25,7 +25,7 @@ import { createToolApi } from "../../src/mcp/tools.js";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { recordTrace, type Trace } from "../../src/trace/record.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 
 const ROOT = process.cwd();
 const PACK = "content/rpg/pack/sunken_barrow.yaml";
@@ -40,7 +40,7 @@ type InspectResult = {
 
 // A real 5-action route through sunken_barrow's opening and shade dialogue, so the
 // recorded trace carries a genuine per_step_hashes baseline of length 5.
-const ACTIONS: Action[] = [
+const ACTIONS: RpgAction[] = [
   { type: "MOVE", direction: "down" },
   { type: "TAKE", item: "iron_bar" },
   { type: "MOVE", direction: "west" },

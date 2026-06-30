@@ -8,7 +8,7 @@ import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import { recordTrace } from "../../src/trace/record.js";
 import { parseOverworldManifest } from "../../src/world/overworld.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 
 const ROOT = process.cwd();
 const PACK = "content/rpg/pack/sunken_barrow.yaml";
@@ -965,9 +965,9 @@ describe("MCP tools — replay + path confinement", () => {
     const rules = buildRpgRules(index);
     const step = makeStep(rules);
     const state0 = initStateForRpgPack(index, 1);
-    const actions: Action[] = [];
+    const actions: RpgAction[] = [];
     let state = state0;
-    const push = (action: Action): void => {
+    const push = (action: RpgAction): void => {
       const result = step(state, action);
       if (!result.ok) throw new Error(`Trace action failed: ${JSON.stringify(action)}`);
       actions.push(action);

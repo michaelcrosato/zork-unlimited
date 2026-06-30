@@ -47,8 +47,8 @@ export type DiagnoseOptions = {
  * same diagnosis (§8.5). Detects the classic adventure failure modes a playtester
  * persona surfaces (§12.8) without needing to understand the content.
  */
-export function diagnose(
-  rules: Rules,
+export function diagnose<A extends Action>(
+  rules: Rules<A>,
   initialState: GameState,
   actions: Action[],
   opts: DiagnoseOptions = {},

@@ -35,7 +35,7 @@ import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/
 import { recordTrace, runActions, type Trace } from "../../src/trace/record.js";
 import { SaveIntegrityError } from "../../src/persist/save_load.js";
 import type { GameState } from "../../src/core/state.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 
 const ROOT = process.cwd();
 const PACK = "content/rpg/pack/sunken_barrow.yaml";
@@ -43,7 +43,7 @@ const api = () => createToolApi({ root: ROOT });
 
 // A real 5-action route through sunken_barrow's opening and shade dialogue — the
 // exact recipe reused from tests/regression/inspect_trace_divergence.test.ts.
-const ACTIONS: Action[] = [
+const ACTIONS: RpgAction[] = [
   { type: "MOVE", direction: "down" },
   { type: "TAKE", item: "iron_bar" },
   { type: "MOVE", direction: "west" },

@@ -13,7 +13,7 @@
 import { makeStep, actionEquals, type Rules } from "../../src/core/engine.js";
 import { hashState } from "../../src/core/hash.js";
 import type { GameState } from "../../src/core/state.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import type { GameEvent } from "../../src/core/events.js";
 
 import { RpgPackSchema } from "../../src/rpg/schema.js";
@@ -74,7 +74,7 @@ export class GameSession {
   readonly packId: string;
   readonly title: string;
   readonly contentHash: string;
-  private readonly rules: Rules;
+  private readonly rules: Rules<RpgAction>;
   private readonly index: RpgIndex;
   private readonly fresh: () => GameState;
   private state: GameState;
@@ -83,7 +83,7 @@ export class GameSession {
     packId: string;
     title: string;
     contentHash: string;
-    rules: Rules;
+    rules: Rules<RpgAction>;
     index: RpgIndex;
     fresh: () => GameState;
   }) {
@@ -111,7 +111,7 @@ export class GameSession {
   }
 
   /** Map a choice id from the current view to its structured Action. */
-  private actionFor(id: string): Action | null {
+  private actionFor(id: string): RpgAction | null {
     return enumerateRpgActions(this.index, this.state).find((o) => o.id === id)?.action ?? null;
   }
 

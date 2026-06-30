@@ -60,6 +60,7 @@ import { buildParserObservation } from "../../src/parser/observation.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 import { parserRollRuleSets } from "./support/parser_rolls.js";
 import type { Rules } from "../../src/core/engine.js";
+import type { Action } from "../../src/api/types.js";
 
 // Same backstop the reachability suites use; every shipped pack settles well under it.
 const MAX_STATES = 200_000;
@@ -96,8 +97,8 @@ function nonDeathEndingsOf(endings: ParserEnding[]) {
 }
 
 /** Run the solver and return the first terminal witness state for each non-death ending id. */
-function nonDeathWitnesses(
-  ruleSets: Rules[],
+function nonDeathWitnesses<A extends Action>(
+  ruleSets: Rules<A>[],
   start: GameState,
   ids: Set<string>,
 ): { witness: Map<string, GameState>; cappedOut: boolean } {

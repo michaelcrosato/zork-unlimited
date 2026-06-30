@@ -30,11 +30,11 @@ export type Resolution = {
  */
 export type Rules<A extends Action = Action> = {
   /** The legal-action set for this state (Jericho-style, §9). Ground truth for legality. */
-  legalActions(state: GameState): A[];
+  legalActions: (state: GameState) => A[];
   /** Conditions + effects for an action, or null if the action has no rule here. */
-  resolve(state: GameState, action: A): Resolution | null;
+  resolve: (state: GameState, action: A) => Resolution | null;
   /** Effects fired when a location is entered (scene/room `on_enter`, §8.4 step 4). */
-  onEnter?(state: GameState, locationId: string): Effect[];
+  onEnter?: (state: GameState, locationId: string) => Effect[];
   /**
    * Win conditions evaluated after an action's effects, even when NO location
    * transition occurred (§8.4.5) — for a win that must fire on a deliberate
@@ -44,7 +44,7 @@ export type Rules<A extends Action = Action> = {
    * keeps `onEnter`'s win check (the two are complementary — `onEnter` covers
    * reach-the-room wins, `checkWin` covers act-in-the-room wins).
    */
-  checkWin?(state: GameState): Effect[];
+  checkWin?: (state: GameState) => Effect[];
   /**
    * Optional: append extra events derived from the events a step just produced —
    * engine *chrome*, not content. The canonical use is Zork-style score feedback:
@@ -55,7 +55,7 @@ export type Rules<A extends Action = Action> = {
    * content-free engine never inspects which var is "score" — that knowledge stays
    * in the content layer that supplies this hook. Omitted ⇒ no decoration (CYOA).
    */
-  decorateEvents?(events: GameEvent[]): GameEvent[];
+  decorateEvents?: (events: GameEvent[]) => GameEvent[];
 };
 
 /** Structural equality for actions — used to test membership in the legal set. */

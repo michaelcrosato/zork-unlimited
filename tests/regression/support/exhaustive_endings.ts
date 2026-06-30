@@ -155,8 +155,8 @@ export type ExhaustiveResult = {
  *     no_dead_pocket.test.ts). Default undefined: when omitted NO edge work is done and the
  *     search is byte-for-byte the original BFS, so every existing caller is unchanged.
  */
-export type SearchOpts = {
-  explore?: (a: Action) => boolean;
+export type SearchOpts<A extends Action = Action> = {
+  explore?: (a: A) => boolean;
   key?: (s: GameState) => string;
   onEdge?: (fromKey: string, toKey: string) => void;
 };
@@ -170,12 +170,12 @@ export type SearchOpts = {
  * unreachable (a route is severed), and any ending in it but undeclared is a dangling end
  * target. When `cappedOut` is true the result is unproven and the caller must FAIL.
  */
-export function exhaustiveEndings(
-  rules: Rules,
+export function exhaustiveEndings<A extends Action = Action>(
+  rules: Rules<A>,
   start: GameState,
   maxStates: number,
   onState?: (s: GameState) => void,
-  opts?: SearchOpts,
+  opts?: SearchOpts<A>,
 ): ExhaustiveResult {
   return exhaustiveEndingsMulti([rules], start, maxStates, onState, opts);
 }
@@ -200,16 +200,16 @@ export function exhaustiveEndings(
  * single deterministic rule set this is identical to the original single-rules BFS — the
  * second-and-later steps just reproduce the first and dedupe away.
  */
-export function exhaustiveEndingsMulti(
-  ruleSets: Rules[],
+export function exhaustiveEndingsMulti<A extends Action = Action>(
+  ruleSets: Rules<A>[],
   start: GameState,
   maxStates: number,
   onState?: (s: GameState) => void,
-  opts?: SearchOpts,
+  opts?: SearchOpts<A>,
 ): ExhaustiveResult {
   const primary = ruleSets[0];
   if (!primary) throw new Error("exhaustiveEndingsMulti requires at least one rule set");
-  const explore = opts?.explore ?? isProgressAction;
+  const explore = opts?.explore ?? ((a: A) => isProgressAction(a));
   const key = opts?.key ?? stateKey;
   const onEdge = opts?.onEdge;
   const steps = ruleSets.map((r) => makeStep(r));

@@ -12,13 +12,13 @@ import type { Action, StepResult } from "../api/types.js";
 import type { Rules } from "../core/engine.js";
 import { makeStep } from "../core/engine.js";
 
-export type Trace = {
+export type Trace<A extends Action = Action> = {
   trace_id: string;
   pack_id: string;
   content_hash: string;
   seed: number;
   initial_state: GameState;
-  actions: Action[];
+  actions: A[];
   /** Optional; asserted on replay (§8.8). */
   expected_final_hash?: string;
   /**
@@ -66,9 +66,9 @@ export type RecordOptions = {
 export function recordTrace<A extends Action>(
   rules: Rules<A>,
   initialState: GameState,
-  actions: Action[],
+  actions: A[],
   opts: RecordOptions,
-): Trace {
+): Trace<A> {
   const run = runActions(rules, initialState, actions);
   return {
     trace_id: opts.trace_id,

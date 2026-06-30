@@ -57,6 +57,7 @@ describe("RPG schema owns the RPG contract", () => {
     const observation = readFileSync("src/rpg/observation.ts", "utf8");
     const runner = readFileSync("src/rpg/runner.ts", "utf8");
     const sessions = readFileSync("src/mcp/sessions.ts", "utf8");
+    const traceRecord = readFileSync("src/trace/record.ts", "utf8");
     expect(apiTypes).toContain("export type RpgAction");
     expect(apiTypes).not.toContain("export type RpgAction = Exclude<Action");
     expect(apiTypes).not.toContain("isRpgAction");
@@ -66,6 +67,9 @@ describe("RPG schema owns the RPG contract", () => {
     expect(runner).toContain("Rules<RpgAction>");
     expect(runner).not.toContain("isRpgAction");
     expect(sessions).toContain("Rules<RpgAction>");
+    expect(traceRecord).toContain("export type Trace<A extends Action = Action>");
+    expect(traceRecord).toContain("actions: A[];");
+    expect(traceRecord).toContain("actions: A[],");
   });
 
   it("does not import the legacy parser validator for RPG validation", () => {

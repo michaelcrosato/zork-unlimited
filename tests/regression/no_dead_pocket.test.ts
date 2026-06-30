@@ -53,6 +53,7 @@ import { join } from "node:path";
 import type { Rules } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
+import type { Action } from "../../src/api/types.js";
 import { stateKey, exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 
 // CYOA wiring
@@ -92,7 +93,7 @@ type LivenessResult = {
  * cannot reach any terminal (the soft-lock pockets). Mode-agnostic: the caller supplies the
  * compiled rules + initial state, exactly as the ending suites do.
  */
-function analyzeLiveness(ruleSets: Rules[], start: GameState): LivenessResult {
+function analyzeLiveness<A extends Action>(ruleSets: Rules<A>[], start: GameState): LivenessResult {
   // Intern fingerprints to integer ids so the ~80k-state graphs stay light (number[] reverse
   // adjacency instead of arrays of long strings).
   const id = new Map<string, number>();
