@@ -20,16 +20,12 @@ import type { GameState } from "../core/state.js";
 import type { GameEvent } from "../core/events.js";
 
 import { compilePack, loadPackFile } from "../cyoa/pack.js";
-import { generateCyoaPack } from "../gen/cyoa_generator.js";
-import type { CyoaPack } from "../cyoa/schema.js";
 import { indexPack, buildRules, initStateForPack, type CyoaIndex } from "../cyoa/runner.js";
 import type { ParserIndex } from "../parser/model.js";
 import { buildObservation } from "../cyoa/observation.js";
 import { validateCyoa } from "../validate/cyoa_validator.js";
 
 import { compileParserPack, loadParserPackFile } from "../parser/pack.js";
-import { generateParserPack } from "../gen/parser_generator.js";
-import type { ParserPack } from "../parser/schema.js";
 import { indexParserPack, buildParserRules, initStateForParserPack } from "../parser/runner.js";
 import { buildParserObservation } from "../parser/observation.js";
 import { validateParser } from "../validate/parser_validator.js";
@@ -107,7 +103,7 @@ import {
 import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
 import { resolveProvider } from "../../agents/llm/providers.js";
 import { loadEngineContract, runWriter } from "../../agents/authoring/writer.js";
-import { runAdapter, runParserAdapter, runRpgAdapter } from "../../agents/authoring/adapter.js";
+import { runRpgAdapter } from "../../agents/authoring/adapter.js";
 import { diagnose } from "../../agents/debugger.js";
 import {
   applyContentPatch,
@@ -349,37 +345,10 @@ export function createToolApi(opts: { root: string }) {
   }
 
   /**
-   * Mint a fresh CYOA pack from a seed and refuse to play it unless it clears the SAME
-   * validator the curated packs clear (the generate_pack/new_game seam — the MCP slice of
-   * "evolve the eval distribution", docs/CURRENT_PLAN.md). The pack is compiled IN-MEMORY:
-   * the generator already returns a `CyoaPackSchema.parse`d pack, so `{ pack, contentHash:
-   * hashState(pack) }` is byte-identical to what `compilePack` produces from the same pack's
-   * YAML — no file is written (the server stays read-only/least-privilege, §16), and the
-   * generated pack never lands under content/ to pollute the hand-authored showcase set.
-   */
-  function requireGeneratedPlayable(seed: number): {
-    mode: PackMode;
-    compiled: AnyCompiledPack;
-  } {
-    const pack = generateCyoaPack(seed); // mints + schema self-check (throws on malformed emission)
-    const report = validateCyoa(pack);
-    if (!report.ok) {
-      throw new Error(`Generated pack (seed ${seed}) is not playable:\n${formatReport(report)}`);
-    }
-    return { mode: "cyoa", compiled: { pack, contentHash: hashState(pack) } };
-  }
-
-  /**
-   * The RPG twin of `requireGeneratedPlayable` (the MODE-WIDENING slice of the generator
-   * program — bug_0159 built the RPG minting core, this exposes it through the same seam).
-   * Mints a fresh RPG pack from a seed and refuses to play it unless it clears the SAME
-   * `validateRpg` gate the curated RPG packs clear — so the COMBAT-winnability and
-   * SCORE-economy proofs (the richest verifier surfaces in the suite) face a moving target,
-   * not just the two frozen hand-authored packs. The generator already returns an
-   * `RpgPackSchema.parse`d pack, so `{ pack, contentHash: hashState(pack) }` is byte-identical
-   * to what `compileRpgPack` produces from the same pack's YAML — no file is written (the
-   * server stays read-only/least-privilege, §16), and the minted pack never lands under
-   * content/rpg/pack to pollute the hand-authored showcase set.
+   * Mint a fresh RPG pack from a seed and refuse to play it unless it clears the SAME
+   * `validateRpg` gate the curated RPG packs clear. This is the only public MCP
+   * generation route; legacy CYOA/parser generators remain internal migration
+   * scaffolding until their runtimes are removed.
    */
   function requireGeneratedRpgPlayable(seed: number): {
     mode: PackMode;
@@ -393,33 +362,6 @@ export function createToolApi(opts: { root: string }) {
       );
     }
     return { mode: "rpg", compiled: { pack, contentHash: hashState(pack) } };
-  }
-
-  /**
-   * The PARSER twin of `requireGeneratedPlayable`/`requireGeneratedRpgPlayable` — the third and
-   * final mode of the generator program (the assessor already mints from `generateParserPack`,
-   * src/afk/assessor.ts:843; this closes the MCP authoring asymmetry so all three generators are
-   * reachable through the same agent-facing seam). Mints a fresh parser pack from a seed and
-   * refuses to play it unless it clears the SAME `validateParser` gate the curated parser packs
-   * clear — so the parser verifier surfaces (depth-2 obtainability / soft-lock, the moral
-   * same-key fork) face a moving target, not just the frozen hand-authored parser packs. The
-   * generator already returns a `ParserPackSchema.parse`d pack, so `{ pack, contentHash:
-   * hashState(pack) }` is byte-identical to what `compileParserPack` produces from the same pack's
-   * YAML — no file is written (the server stays read-only/least-privilege, §16), and the minted
-   * pack never lands under content/parser/pack to pollute the hand-authored showcase set.
-   */
-  function requireGeneratedParserPlayable(seed: number): {
-    mode: PackMode;
-    compiled: AnyCompiledPack;
-  } {
-    const pack = generateParserPack(seed); // mints + schema self-check (throws on malformed emission)
-    const report = validateParser(pack);
-    if (!report.ok) {
-      throw new Error(
-        `Generated parser pack (seed ${seed}) is not playable:\n${formatReport(report)}`,
-      );
-    }
-    return { mode: "parser", compiled: { pack, contentHash: hashState(pack) } };
   }
 
   function startSession(
@@ -1236,49 +1178,11 @@ export function createToolApi(opts: { root: string }) {
     },
 
     /**
-     * Mint a fresh CYOA pack from a seed and validate it against the SAME `validateCyoa`
-     * gate the curated packs clear (the first deferred slice of "evolve the eval
-     * distribution", docs/CURRENT_PLAN.md / bug_0156 → bug_0157). This exposes the
-     * generator (src/gen/cyoa_generator.ts) through the MCP surface: a never-authored,
-     * never-seen pack whose structure the verifier must hold on. Pure + deterministic
-     * (same seed ⇒ identical pack) and read-only — nothing is written to disk. To PLAY
-     * the minted pack, pass the same value to `new_game`'s `generate_seed`.
-     */
-    generate_pack(args: { seed: number }): {
-      ok: boolean;
-      mode: PackMode;
-      pack_id: string;
-      content_hash: string;
-      seed: number;
-      meta: CyoaPack["meta"];
-      scene_count: number;
-      ending_count: number;
-      report: ValidationReport;
-    } {
-      const pack = generateCyoaPack(args.seed);
-      const report = validateCyoa(pack);
-      return {
-        ok: report.ok,
-        mode: "cyoa",
-        pack_id: pack.meta.id,
-        content_hash: hashState(pack),
-        seed: args.seed,
-        meta: pack.meta,
-        scene_count: pack.scenes.length,
-        ending_count: pack.endings.length,
-        report,
-      };
-    },
-
-    /**
      * Mint a fresh RPG pack from a seed and validate it against the SAME `validateRpg` gate
-     * the curated RPG packs clear (the MODE-WIDENING slice of "evolve the eval distribution",
-     * docs/CURRENT_PLAN.md / bug_0159 → this). The RPG twin of `generate_pack`: it exposes the
-     * RPG generator (src/gen/rpg_generator.ts) through the MCP surface so a never-authored,
-     * never-seen pack exercises the COMBAT-winnability and SCORE-economy proofs — the verifier
-     * surfaces the CYOA generator never touches. Pure + deterministic (same seed ⇒ identical
-     * pack) and read-only — nothing is written to disk. To PLAY the minted pack, pass the same
-     * value to `new_game`'s `generate_rpg_seed`.
+     * the curated RPG packs clear. This is the single public MCP generation surface.
+     * Pure + deterministic (same seed ⇒ identical pack) and read-only — nothing is
+     * written to disk. To PLAY the minted pack, pass the same value to `new_game`'s
+     * `generate_rpg_seed`.
      */
     generate_rpg_pack(args: { seed: number }): {
       ok: boolean;
@@ -1308,73 +1212,24 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    /**
-     * Mint a fresh PARSER pack from a seed and validate it against the SAME `validateParser` gate
-     * the curated parser packs clear (the THIRD mode of "evolve the eval distribution", closing the
-     * MCP authoring asymmetry — the assessor already mints parser packs from `generateParserPack`,
-     * src/afk/assessor.ts:843, but no MCP tool exposed it). The parser twin of `generate_pack` /
-     * `generate_rpg_pack`: it exposes the parser generator (src/gen/parser_generator.ts) through the
-     * MCP surface so a never-authored, never-seen pack exercises the parser-only verifier surfaces
-     * (depth-2 obtainability / soft-lock, the moral same-key fork) the CYOA and RPG generators never
-     * touch. Pure + deterministic (same seed ⇒ identical pack) and read-only — nothing is written to
-     * disk. To PLAY the minted pack, pass the same value to `new_game`'s `generate_parser_seed`.
-     */
-    generate_parser_pack(args: { seed: number }): {
-      ok: boolean;
-      mode: PackMode;
-      pack_id: string;
-      content_hash: string;
-      seed: number;
-      meta: ParserPack["meta"];
-      room_count: number;
-      object_count: number;
-      ending_count: number;
-      report: ValidationReport;
-    } {
-      const pack = generateParserPack(args.seed);
-      const report = validateParser(pack);
-      return {
-        ok: report.ok,
-        mode: "parser",
-        pack_id: pack.meta.id,
-        content_hash: hashState(pack),
-        seed: args.seed,
-        meta: pack.meta,
-        room_count: pack.rooms.length,
-        object_count: pack.objects.length,
-        ending_count: pack.endings.length,
-        report,
-      };
-    },
-
     new_game(args: {
       pack_path?: string;
-      generate_seed?: number;
       generate_rpg_seed?: number;
-      generate_parser_seed?: number;
       seed?: number;
       hide_graph?: boolean;
     }) {
-      // Either load a pack from disk OR mint a fresh one in-memory from `generate_seed`
-      // (a CYOA pack) / `generate_rpg_seed` (an RPG pack) / `generate_parser_seed` (a parser
-      // pack) — the eval-distribution path, a never-authored pack held to the same playable
-      // bar. The generate_* seed selects the minted pack's THEME/structure; `seed` still seeds
-      // runtime state, so the two are independent.
+      // Either load a pack from disk OR mint a fresh RPG pack in-memory from
+      // `generate_rpg_seed`. The generation seed selects the minted pack's
+      // theme/structure; `seed` still seeds runtime state, so the two are independent.
       const { mode, compiled } =
-        args.generate_seed !== undefined
-          ? requireGeneratedPlayable(args.generate_seed)
-          : args.generate_rpg_seed !== undefined
-            ? requireGeneratedRpgPlayable(args.generate_rpg_seed)
-            : args.generate_parser_seed !== undefined
-              ? requireGeneratedParserPlayable(args.generate_parser_seed)
-              : requirePlayable(
-                  args.pack_path ??
-                    ((): never => {
-                      throw new Error(
-                        "new_game requires pack_path, generate_seed, generate_rpg_seed, or generate_parser_seed.",
-                      );
-                    })(),
-                );
+        args.generate_rpg_seed !== undefined
+          ? requireGeneratedRpgPlayable(args.generate_rpg_seed)
+          : requirePlayable(
+              args.pack_path ??
+                ((): never => {
+                  throw new Error("new_game requires pack_path or generate_rpg_seed.");
+                })(),
+            );
       const session = startSession(mode, compiled, undefined, {
         ...(args.hide_graph ? { hideGraph: true } : {}),
       });
@@ -1540,23 +1395,14 @@ export function createToolApi(opts: { root: string }) {
       // stay green and offline while a keyed run exercises the genuine §1 author.
       // Mirrors bin/author.ts. Returns the story, the green/red pack, the validation
       // report, and the per-beat classification (§11). Never writes files.
-      //
-      // `mode` routes the SAME writer story through the matching adapter so all three
-      // engine modes are authorable from MCP, closing the authoring-side twin of the
-      // generate_* generation symmetry (bug_0192): cyoa (default) → runAdapter behind
-      // validateCyoa; parser → runParserAdapter behind validateParser; rpg →
-      // runRpgAdapter behind the richest validateRpg. The story is mode-agnostic — each
-      // adapter re-adapts the same beats into its own pack type against its own validator.
-      const mode: PackMode = args.mode ?? "cyoa";
+      if (args.mode !== undefined) {
+        throw new Error("adapt_story is RPG-only; mode is no longer supported.");
+      }
+      const mode: PackMode = "rpg";
       const provider = resolveProvider({ mock: new MockAuthorProvider() });
       const contract = loadEngineContract();
       const story = await runWriter(provider, { premise: args.premise, contract });
-      const result =
-        mode === "parser"
-          ? await runParserAdapter(provider, { story, contract })
-          : mode === "rpg"
-            ? await runRpgAdapter(provider, { story, contract })
-            : await runAdapter(provider, { story, contract });
+      const result = await runRpgAdapter(provider, { story, contract });
       return {
         ok: result.ok,
         mode,

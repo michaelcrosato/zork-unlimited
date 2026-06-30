@@ -173,18 +173,18 @@ below. A *frozen* eval set is the condition under which a self-improving loop's 
 stops being a moving target and becomes a memorisable one. The antidote is to **evolve the
 distribution**: mint fresh, never-authored packs the same checks must hold on.
 
-`src/gen/cyoa_generator.ts` (`generateCyoaPack(seed)`) and `src/gen/rpg_generator.ts`
-(`generateRpgPack(seed)`) are **pure, deterministic** minting cores — same seed ⇒
-byte-identical pack (no `Date`/`Math.random`, §8.5). Each emits a schema-valid pack of a
-proven AdventureForge shape (a knowledge-gated moral fork; a winnable hero's-quest with a
-tight score economy) and is held to the **identical bar** as the curated content: the same
-`validateCyoa`/`validateRpg` validator and the same exhaustive best/worst-roll solver that
-prove the shipped packs. Generated packs are deliberately **not** committed under
-`content/` — they are an on-demand eval distribution, not curated showcase content, so they
-carry no blind-playtest obligation and never pollute the hand-authored set.
+`src/gen/rpg_generator.ts` (`generateRpgPack(seed)`) is a **pure, deterministic**
+minting core — same seed ⇒ byte-identical pack (no `Date`/`Math.random`, §8.5).
+It emits a schema-valid, winnable hero's-quest with a tight score economy and is
+held to the **identical bar** as the curated RPG content: the same `validateRpg`
+validator and the same exhaustive best/worst-roll solver that prove the shipped
+packs. Generated packs are deliberately **not** committed under `content/` — they
+are an on-demand eval distribution, not curated showcase content, so they carry
+no blind-playtest obligation and never pollute the hand-authored set.
 
-The CYOA generator is exposed over MCP as `generate_pack` (mint + validate a fresh pack,
-read-only) and is playable in-memory via `new_game`'s `generate_seed`.
+The RPG generator is exposed over MCP as `generate_rpg_pack` (mint + validate a
+fresh pack, read-only) and is playable in-memory via `new_game`'s
+`generate_rpg_seed`.
 
 ## Content library (17 packs)
 

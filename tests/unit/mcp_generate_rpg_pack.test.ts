@@ -1,12 +1,9 @@
 /**
- * The `generate_rpg_pack` MCP tool + `new_game(generate_rpg_seed)` seam (bug_0160) — the
- * MODE-WIDENING slice of "evolve the eval distribution" (docs/CURRENT_PLAN.md; the deferred next
- * slice named by bug_0159's RPG-generator docstring, mirroring the CYOA program bug_0156 → bug_0157).
- * It exposes the procedural RPG generator (src/gen/rpg_generator.ts) through the agent-facing MCP
- * surface so a FRESH, never-authored RPG pack can be minted, validated against the SAME gate the
- * curated RPG packs clear, and PLAYED — extending the moving-target property to the RICHEST verifier
- * surfaces in the suite (COMBAT winnability + SCORE-economy soundness), which the CYOA generator never
- * touches and which until now ran only against the two FROZEN hand-authored RPG packs.
+ * The `generate_rpg_pack` MCP tool + `new_game(generate_rpg_seed)` seam is the
+ * consolidated procedural generation surface. It exposes the procedural RPG
+ * generator (src/gen/rpg_generator.ts) through MCP so a FRESH, never-authored RPG
+ * pack can be minted, validated against the SAME gate the curated RPG packs clear,
+ * and PLAYED.
  *
  * These tests hold the MCP path to the same bar the generator's own unit test (rpg_generator.test.ts)
  * holds the core to, reusing the production handlers (createToolApi), no weaker MCP-specific substitute:
@@ -128,10 +125,7 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
     expect(after.stats.attack).toBe(6); // +2, applied live through the engine
   });
 
-  it("new_game with no pack source (no pack_path / generate_seed / generate_rpg_seed) errors clearly", () => {
-    // The message now names all four sources (generate_parser_seed added in bug_0192).
-    expect(() => api().new_game({})).toThrow(
-      /pack_path, generate_seed, generate_rpg_seed, or generate_parser_seed/,
-    );
+  it("new_game with no pack source (no pack_path / generate_rpg_seed) errors clearly", () => {
+    expect(() => api().new_game({})).toThrow(/pack_path or generate_rpg_seed/);
   });
 });

@@ -357,17 +357,8 @@ tool(
 );
 
 tool(
-  "generate_pack",
-  "Mint a FRESH procedural CYOA pack from a seed and validate it against the same gate the curated packs clear (the eval-distribution lever: a never-authored pack the verifier must hold on). Pure + deterministic; writes nothing. Play it with new_game's generate_seed.",
-  {
-    seed: z.number().int().describe("Generation seed — selects the minted pack's theme/structure."),
-  },
-  (a) => api.generate_pack(a),
-);
-
-tool(
   "generate_rpg_pack",
-  "Mint a FRESH procedural RPG pack from a seed and validate it against the same gate the curated RPG packs clear — exercising the combat-winnability and score-economy proofs (the verifier surfaces generate_pack's CYOA packs never touch) against a moving target. Pure + deterministic; writes nothing. Play it with new_game's generate_rpg_seed.",
+  "Mint a FRESH procedural RPG pack from a seed and validate it against the same gate the curated RPG packs clear — exercising the combat-winnability and score-economy proofs against a moving target. Pure + deterministic; writes nothing. Play it with new_game's generate_rpg_seed.",
   {
     seed: z.number().int().describe("Generation seed — selects the minted pack's theme/structure."),
   },
@@ -375,30 +366,14 @@ tool(
 );
 
 tool(
-  "generate_parser_pack",
-  "Mint a FRESH procedural parser pack from a seed and validate it against the same gate the curated parser packs clear — exercising the parser-only verifier surfaces (depth-2 obtainability / soft-lock, the moral same-key fork) the CYOA and RPG generators never touch, against a moving target. Pure + deterministic; writes nothing. Play it with new_game's generate_parser_seed.",
-  {
-    seed: z.number().int().describe("Generation seed — selects the minted pack's theme/structure."),
-  },
-  (a) => api.generate_parser_pack(a),
-);
-
-tool(
   "new_game",
-  "Start a new session on a playable quest pack of any mode; returns a session id, the detected mode, and the first observation. Provide pack_path to load from disk, OR generate_seed to mint+play a fresh procedural CYOA pack, OR generate_rpg_seed for a fresh procedural RPG pack, OR generate_parser_seed for a fresh procedural parser pack - all in-memory.",
+  "Start a new session on a playable quest pack; returns a session id, the detected mode, and the first observation. Provide pack_path to load from disk, OR generate_rpg_seed to mint+play a fresh procedural RPG pack in-memory.",
   {
     pack_path: z
       .string()
       .optional()
       .describe(
-        "Path to a quest content pack (.yaml) - CYOA, parser, or RPG; mode is auto-detected - relative to the project root. Omit when using generate_seed/generate_rpg_seed/generate_parser_seed.",
-      ),
-    generate_seed: z
-      .number()
-      .int()
-      .optional()
-      .describe(
-        "Instead of pack_path: mint and play a fresh procedural CYOA pack from this seed (see generate_pack). Independent of `seed` (which seeds runtime state).",
+        "Path to a quest content pack (.yaml); mode is auto-detected during migration. Omit when using generate_rpg_seed.",
       ),
     generate_rpg_seed: z
       .number()
@@ -406,13 +381,6 @@ tool(
       .optional()
       .describe(
         "Instead of pack_path: mint and play a fresh procedural RPG pack from this seed (see generate_rpg_pack). Independent of `seed` (which seeds runtime state).",
-      ),
-    generate_parser_seed: z
-      .number()
-      .int()
-      .optional()
-      .describe(
-        "Instead of pack_path: mint and play a fresh procedural parser pack from this seed (see generate_parser_pack). Independent of `seed` (which seeds runtime state).",
       ),
     seed: z.number().int().optional().describe("Deterministic runtime seed (default 1)."),
     ...HIDE_GRAPH,
@@ -518,13 +486,9 @@ tool(
 
 tool(
   "adapt_story",
-  "Author a pack from a premise via the writer→adapter→validator loop (§12.1–3); returns the pack, validation report, and per-beat classification. `mode` selects the engine mode (cyoa default, parser, or rpg) — the same story is adapted behind that mode's validator.",
+  "Author an RPG pack from a premise via the writer→adapter→validator loop (§12.1–3); returns the pack, validation report, and per-beat classification.",
   {
     premise: z.string().describe("A one-sentence story premise to author from."),
-    mode: z
-      .enum(["cyoa", "parser", "rpg"])
-      .optional()
-      .describe("Engine mode to author for (default cyoa)."),
   },
   (a) => api.adapt_story(a),
 );

@@ -784,11 +784,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.content_hash).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it("adapt_story authors a green CYOA pack from a premise (§12.1–3)", async () => {
+  it("adapt_story authors a green RPG pack from a premise (§12.1–3)", async () => {
     const r = await api().adapt_story({ premise: "A keeper relights a dead lighthouse." });
     expect(r.ok).toBe(true);
+    expect(r.mode).toBe("rpg");
     expect(r.report.ok).toBe(true);
-    expect(r.pack?.meta.id).toBe("lighthouse_v1");
+    expect(r.pack?.meta.id).toBe("lighthouse_rpg_v1");
     expect(r.classifications.length).toBeGreaterThanOrEqual(3);
   });
 
