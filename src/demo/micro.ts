@@ -1,5 +1,5 @@
 /**
- * A tiny hand-written CYOA-style rule set used by bin/replay and the test suite.
+ * A tiny hand-written CYOA-style rule set used by the low-level engine test suite.
  *
  * This is NOT the engine and NOT a real content pack — it is the smallest thing
  * that exercises the core: choices, conditions, effects (add_item / set_flag /

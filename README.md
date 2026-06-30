@@ -226,7 +226,7 @@ npm run typecheck                                        # tsc --noEmit
 npm run lint                                             # ESLint
 npm run format:check                                     # Prettier (use `npm run format` to fix)
 npm test                                                  # unit + property tests
-npm run replay                                            # Stage 0: round-trip a trace
+npm run replay                                            # replay the committed RPG smoke trace
 npm run validate                                           # validate all shipped RPG packs
 npm run validate -- content/rpg/pack/sunken_barrow.yaml    # validate one RPG pack
 npm run play -- content/rpg/pack/sunken_barrow.yaml        # play it (combat + skill check)
