@@ -3,8 +3,8 @@
  * bin/rpg_play — play a Stage-4 (Hero's-Quest) RPG pack from the terminal.
  *
  * Usage:
- *   npm run play:rpg -- <pack.yaml> [--seed N]
- *   npm run play:rpg -- <pack.yaml> --commands "down; take iron bar; north; attack wight; ..."
+ *   npm run play -- <pack.yaml> [--seed N]
+ *   npm run play -- <pack.yaml> --commands "down; take iron bar; north; attack wight; ..."
  *
  * Reuses the Stage-2 controlled command parser and adds an `attack <enemy>` verb.
  * A pack must pass the RPG validator before it is playable (§0, §10). The
@@ -88,7 +88,7 @@ async function main(): Promise<void> {
   const path = process.argv[2];
   if (!path || path.startsWith("--")) {
     console.error(
-      'Usage: npm run play:rpg -- <pack.yaml> [--seed N] [--commands "a; b"] [--record file]',
+      'Usage: npm run play -- <pack.yaml> [--seed N] [--commands "a; b"] [--record file]',
     );
     process.exit(2);
   }

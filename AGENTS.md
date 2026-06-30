@@ -36,7 +36,7 @@ pack validation. Do not commit or merge red.
 - Install root deps with `npm install`.
 - Install UI deps with `npm --prefix ui install`.
 - Optional UI server: `npm run ui:dev` at `http://localhost:5173`.
-- CLI play requires no server: `npm run play`, `play:parser`, `play:rpg`.
+- CLI RPG play requires no server: `npm run play`.
 - MCP and live LLM playtests are optional; CI uses deterministic mocks.
 
 ## Token Economy
