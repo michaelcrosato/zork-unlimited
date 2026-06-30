@@ -29,10 +29,6 @@ export type LegacyChooseAction = { type: "CHOOSE"; choiceId: string };
 
 export type Action = RpgAction | LegacyChooseAction;
 
-export function isRpgAction(action: Action): action is RpgAction {
-  return action.type !== "CHOOSE";
-}
-
 export type StepResult = {
   state: GameState; // NEW state (engine is pure; input state unmutated)
   events: GameEvent[]; // ordered list of what happened
