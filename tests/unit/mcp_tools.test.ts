@@ -1006,16 +1006,16 @@ describe("MCP tools — replay + path confinement", () => {
 describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
   it("applies a whitelisted hint patch and re-validates green", () => {
     const r = api().apply_content_patch({
-      pack_path: "content/parser/pack/sealed_crypt.yaml",
+      pack_path: "content/rpg/pack/cold_forge.yaml",
       proposal: {
         layer: "hint_text",
-        mode: "parser",
+        mode: "rpg",
         summary: "signpost the start room",
         ops: [
           {
             op: "add_room_journal_hint",
-            room: "forest_path",
-            text: "Fresh bootprints lead toward the chapel.",
+            room: "forge_steps",
+            text: "The forge below answers only to a delver who reads the room carefully.",
           },
         ],
       } as never,
@@ -1026,10 +1026,10 @@ describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
 
   it("refuses a patch whose target is missing (no file written)", () => {
     const r = api().apply_content_patch({
-      pack_path: "content/parser/pack/sealed_crypt.yaml",
+      pack_path: "content/rpg/pack/cold_forge.yaml",
       proposal: {
         layer: "content",
-        mode: "parser",
+        mode: "rpg",
         summary: "x",
         ops: [{ op: "set_object_field", id: "ghost", field: "takeable", value: true }],
       } as never,

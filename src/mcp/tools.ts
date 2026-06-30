@@ -20,16 +20,14 @@ import type { Action } from "../api/types.js";
 import type { GameState } from "../core/state.js";
 import type { GameEvent } from "../core/events.js";
 
-import { loadPackFile } from "../cyoa/pack.js";
 import { indexPack, buildRules, initStateForPack, type CyoaIndex } from "../cyoa/runner.js";
 import type { ParserIndex } from "../parser/model.js";
 import { buildObservation } from "../cyoa/observation.js";
 
-import { loadParserPackFile } from "../parser/pack.js";
 import { indexParserPack, buildParserRules, initStateForParserPack } from "../parser/runner.js";
 import { buildParserObservation } from "../parser/observation.js";
 
-import { compileRpgPack } from "../rpg/pack.js";
+import { compileRpgPack, loadRpgPackFile } from "../rpg/pack.js";
 import { generateRpgPack } from "../gen/rpg_generator.js";
 import type { RpgPack } from "../rpg/schema.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../rpg/runner.js";
@@ -1507,12 +1505,11 @@ export function createToolApi(opts: { root: string }) {
     apply_content_patch(args: { pack_path: string; proposal: ContentPatchProposal }) {
       // Apply a structured patch with deterministic code and return the modified
       // pack + validation report (§9.4, §12.5). The model never writes files: a
-      // patch is data, validated before it can be played (§16). The fixer supports
-      // cyoa | parser only — RPG packs are intentionally out of the auto-fix path
-      // until the fixer is extended (roadmap), so a proposal.mode is never 'rpg'.
+      // patch is data, validated before it can be played (§16). The fixer is RPG-only,
+      // matching the public catalog and runtime.
       const proposal = ContentPatchProposalSchema.parse(args.proposal);
       const abs = safeResolve(root, args.pack_path);
-      const loaded = proposal.mode === "cyoa" ? loadPackFile(abs) : loadParserPackFile(abs);
+      const loaded = loadRpgPackFile(abs);
       if (!loaded.ok) {
         return {
           ok: false,

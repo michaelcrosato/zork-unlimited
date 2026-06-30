@@ -20,10 +20,8 @@
  * human-approval gate.
  */
 import { z } from "zod";
-import { CyoaPackSchema } from "../src/cyoa/schema.js";
-import { ParserPackSchema } from "../src/parser/schema.js";
-import { validateCyoa } from "../src/validate/cyoa_validator.js";
-import { validateParser } from "../src/validate/parser_validator.js";
+import { RpgPackSchema } from "../src/rpg/schema.js";
+import { validateRpg } from "../src/validate/rpg_validator.js";
 import { makeReport, type ValidationReport } from "../src/validate/report.js";
 import type { Diagnosis, FixLayer } from "./debugger.js";
 
@@ -45,26 +43,7 @@ export const PatchOpSchema = z.discriminatedUnion("op", [
       value: z.union([z.string(), z.number(), z.boolean()]),
     })
     .strict(),
-  // CYOA narrative/hint edits.
-  z
-    .object({ op: z.literal("set_scene_text"), id: z.string().min(1), text: z.string().min(1) })
-    .strict(),
-  z
-    .object({
-      op: z.literal("set_choice_text"),
-      scene: z.string().min(1),
-      choice: z.string().min(1),
-      text: z.string().min(1),
-    })
-    .strict(),
-  z
-    .object({
-      op: z.literal("add_scene_journal_hint"),
-      scene: z.string().min(1),
-      text: z.string().min(1),
-    })
-    .strict(),
-  // Parser content/hint/quest edits.
+  // RPG room/object content, hint, and quest edits.
   z
     .object({
       op: z.literal("set_object_field"),
@@ -86,7 +65,7 @@ export type PatchOp = z.infer<typeof PatchOpSchema>;
 export const ContentPatchProposalSchema = z
   .object({
     layer: FixLayerSchema,
-    mode: z.enum(["cyoa", "parser"]),
+    mode: z.literal("rpg"),
     summary: z.string().min(1),
     ops: z.array(PatchOpSchema).default([]),
   })
@@ -104,12 +83,6 @@ function clone<T>(v: T): T {
 
 type AnyPack = {
   meta: Record<string, unknown>;
-  scenes?: {
-    id: string;
-    text?: string;
-    on_enter?: unknown[];
-    choices?: { id: string; text?: string }[];
-  }[];
   objects?: Record<string, unknown>[];
   rooms?: { id: string; on_enter?: unknown[] }[];
 };
@@ -148,30 +121,6 @@ export function applyContentPatch(rawPack: unknown, proposal: ContentPatchPropos
         pack.meta[op.field] = op.value;
         break;
       }
-      case "set_scene_text": {
-        const scene = pack.scenes?.find((s) => s.id === op.id);
-        if (!scene) return fail("PATCH_TARGET_MISSING", `no scene "${op.id}".`, [`scene:${op.id}`]);
-        scene.text = op.text;
-        break;
-      }
-      case "set_choice_text": {
-        const choice = pack.scenes
-          ?.find((s) => s.id === op.scene)
-          ?.choices?.find((c) => c.id === op.choice);
-        if (!choice)
-          return fail("PATCH_TARGET_MISSING", `no choice "${op.choice}" in scene "${op.scene}".`, [
-            `scene:${op.scene}`,
-          ]);
-        choice.text = op.text;
-        break;
-      }
-      case "add_scene_journal_hint": {
-        const scene = pack.scenes?.find((s) => s.id === op.scene);
-        if (!scene)
-          return fail("PATCH_TARGET_MISSING", `no scene "${op.scene}".`, [`scene:${op.scene}`]);
-        (scene.on_enter ??= []).push({ add_journal: op.text });
-        break;
-      }
       case "set_object_field": {
         const obj = pack.objects?.find((o) => o["id"] === op.id);
         if (!obj) return fail("PATCH_TARGET_MISSING", `no object "${op.id}".`, [`object:${op.id}`]);
@@ -189,8 +138,7 @@ export function applyContentPatch(rawPack: unknown, proposal: ContentPatchPropos
   }
 
   // Re-parse through the contract: a patch that breaks the schema is refused (§16).
-  const schema = parsedProposal.data.mode === "cyoa" ? CyoaPackSchema : ParserPackSchema;
-  const reparsed = schema.safeParse(pack);
+  const reparsed = RpgPackSchema.safeParse(pack);
   if (!reparsed.success) {
     const findings = reparsed.error.issues.map((i) => ({
       severity: "error" as const,
@@ -200,10 +148,7 @@ export function applyContentPatch(rawPack: unknown, proposal: ContentPatchPropos
     }));
     return { ok: false, report: makeReport(String(pack.meta?.["id"] ?? "patch"), findings) };
   }
-  const report =
-    parsedProposal.data.mode === "cyoa"
-      ? validateCyoa(reparsed.data as never)
-      : validateParser(reparsed.data as never);
+  const report = validateRpg(reparsed.data);
   return { ok: report.ok, applied: parsedProposal.data.ops.length, pack: reparsed.data, report };
 }
 
@@ -214,12 +159,12 @@ export function applyContentPatch(rawPack: unknown, proposal: ContentPatchPropos
  */
 export function proposeFix(
   diagnosis: Diagnosis,
-  ctx: { mode: "cyoa" | "parser"; location?: string },
+  ctx: { mode: "rpg"; location?: string },
 ): ContentPatchProposal {
-  if (diagnosis.type === "soft_lock" && ctx.mode === "parser" && ctx.location) {
+  if (diagnosis.type === "soft_lock" && ctx.location) {
     return {
       layer: "hint_text",
-      mode: "parser",
+      mode: "rpg",
       summary: `Add an in-world hint at "${ctx.location}" so the player is never left without a signposted next step (§17.1, §17.7).`,
       ops: [
         {
@@ -230,27 +175,13 @@ export function proposeFix(
       ],
     };
   }
-  if (diagnosis.type === "soft_lock" && ctx.mode === "cyoa" && ctx.location) {
-    return {
-      layer: "hint_text",
-      mode: "cyoa",
-      summary: `Add a journal hint on entering "${ctx.location}" so the route forward is discoverable (§17.7).`,
-      ops: [
-        {
-          op: "add_scene_journal_hint",
-          scene: ctx.location,
-          text: "There must be another way on from here.",
-        },
-      ],
-    };
-  }
   // Loops, rejected actions, and engine-touching fixes have no content-patch op:
   // the fixer surfaces them as a diagnosis (empty ops) for the agent to fix in code
   // directly under trust, but verify — not a human-approval gate.
   const layer: FixLayer = diagnosis.type === "loop" ? "quest_structure" : "content";
   return {
     layer,
-    mode: ctx.mode,
+    mode: "rpg",
     summary: `Direct code fix required (no content-patch op) for "${diagnosis.type}" at ${ctx.location ?? "unknown"}: ${diagnosis.description}`,
     ops: [],
   };
@@ -260,8 +191,8 @@ export function proposeFix(
 export function regressionTestStub(bugId: string, replayPath: string, packPath: string): string {
   return `import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { loadPackFile } from "../../src/cyoa/pack.js";
-import { indexPack, buildRules } from "../../src/cyoa/runner.js";
+import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { indexRpgPack, buildRpgRules } from "../../src/rpg/runner.js";
 import { replayTrace } from "../../src/trace/replay.js";
 import type { Trace } from "../../src/trace/record.js";
 
@@ -270,9 +201,9 @@ import type { Trace } from "../../src/trace/record.js";
 describe("${bugId}", () => {
   it("replays the fixed trace to its expected final hash", () => {
     const trace = JSON.parse(readFileSync("${replayPath}", "utf8")) as Trace;
-    const loaded = loadPackFile("${packPath}");
+    const loaded = loadRpgPackFile("${packPath}");
     if (!loaded.ok) throw new Error("pack failed to compile");
-    const rules = buildRules(indexPack(loaded.compiled.pack));
+    const rules = buildRpgRules(indexRpgPack(loaded.compiled.pack));
     expect(replayTrace(trace, rules).ok).toBe(true);
   });
 });
