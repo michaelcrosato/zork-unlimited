@@ -3,7 +3,7 @@ import type { Rules } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import { initState } from "../../src/core/state.js";
 import { SessionStore, type Session } from "../../src/mcp/sessions.js";
-import type { AnyIndex } from "../../src/mcp/types.js";
+import type { RpgIndex } from "../../src/rpg/runner.js";
 import type { RpgAction } from "../../src/api/types.js";
 
 const rules: Rules<RpgAction> = {
@@ -19,7 +19,7 @@ function sessionInit(overrides: Partial<Omit<Session, "id">> = {}): Omit<Session
   return {
     packId: "test-pack",
     contentHash: "0".repeat(64),
-    index: {} as AnyIndex,
+    index: {} as RpgIndex,
     rules,
     state: state(),
     transcript: [],

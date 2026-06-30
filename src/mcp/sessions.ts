@@ -10,7 +10,7 @@ import type { GameState } from "../core/state.js";
 import type { Rules } from "../core/engine.js";
 import type { GameEvent } from "../core/events.js";
 import type { RpgAction } from "../api/types.js";
-import type { AnyIndex } from "./types.js";
+import type { RpgIndex } from "../rpg/runner.js";
 
 export type TranscriptTurn = {
   step: number;
@@ -29,7 +29,7 @@ export type Session = {
   packId: string;
   contentHash: string;
   /** The compiled RPG index for this session. */
-  index: AnyIndex;
+  index: RpgIndex;
   rules: Rules<RpgAction>;
   state: GameState;
   transcript: TranscriptTurn[];

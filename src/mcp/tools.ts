@@ -19,11 +19,11 @@ import type { Action, RpgAction } from "../api/types.js";
 import type { GameState } from "../core/state.js";
 import type { GameEvent } from "../core/events.js";
 
-import { compileRpgPack, loadRpgPackFile } from "../rpg/pack.js";
+import { compileRpgPack, loadRpgPackFile, type CompiledRpgPack } from "../rpg/pack.js";
 import { generateRpgPack } from "../gen/rpg_generator.js";
 import type { RpgPack } from "../rpg/schema.js";
-import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../rpg/runner.js";
-import { buildRpgObservation } from "../rpg/observation.js";
+import { indexRpgPack, buildRpgRules, initStateForRpgPack, type RpgIndex } from "../rpg/runner.js";
+import { buildRpgObservation, type RpgObservation } from "../rpg/observation.js";
 import { validateRpg } from "../validate/rpg_validator.js";
 
 import {
@@ -46,9 +46,6 @@ import { SessionStore, type Session } from "./sessions.js";
 import {
   isRpgPackShape,
   type PackMode,
-  type AnyCompiledPack,
-  type AnyIndex,
-  type AnyObservation,
   type McpActionOption,
   type McpObservation,
 } from "./types.js";
@@ -111,7 +108,7 @@ import {
 export type ToolApi = ReturnType<typeof createToolApi>;
 
 type LoadResult =
-  | { ok: true; compiled: AnyCompiledPack; report: ValidationReport }
+  | { ok: true; compiled: CompiledRpgPack; report: ValidationReport }
   | { ok: false; report: ValidationReport };
 
 type StoryEntry = {
@@ -125,25 +122,25 @@ type StoryEntry = {
 
 const MAIN_RPG_STORY = "content/rpg/pack/breaking_weir.yaml";
 
-function indexFor(pack: AnyCompiledPack["pack"]): AnyIndex {
+function indexFor(pack: CompiledRpgPack["pack"]): RpgIndex {
   return indexRpgPack(pack);
 }
 
-function rulesFor(index: AnyIndex): Rules<RpgAction> {
+function rulesFor(index: RpgIndex): Rules<RpgAction> {
   return buildRpgRules(index);
 }
 
-function initStateFor(index: AnyIndex, seed: number): GameState {
+function initStateFor(index: RpgIndex, seed: number): GameState {
   return initStateForRpgPack(index, seed);
 }
 
 function buildObsFor(
-  index: AnyIndex,
+  index: RpgIndex,
   state: GameState,
   opts: { hideGraph?: boolean; includeWorldIntro?: boolean } = {},
-): AnyObservation {
+): RpgObservation {
   const obsOpts = { includeWorldIntro: true, ...opts };
-  return buildRpgObservation(index as Parameters<typeof buildRpgObservation>[0], state, obsOpts);
+  return buildRpgObservation(index, state, obsOpts);
 }
 
 /**
@@ -184,7 +181,7 @@ function collectAddItemTargets(node: unknown, acc: Set<string>): Set<string> {
   return acc;
 }
 
-function assertLoadedStateRefs(index: AnyIndex, state: GameState): void {
+function assertLoadedStateRefs(index: RpgIndex, state: GameState): void {
   const items = collectAddItemTargets(index.pack, new Set<string>());
   const locations = new Set<string>(index.rooms.keys());
   const endings = new Set<string>(index.pack.endings.map((e) => e.id));
@@ -203,7 +200,7 @@ function assertLoadedStateRefs(index: AnyIndex, state: GameState): void {
 }
 
 /** The current RPG room id. */
-function obsLocation(obs: AnyObservation): string {
+function obsLocation(obs: RpgObservation): string {
   return obs.room;
 }
 
@@ -235,7 +232,7 @@ function playerVisibleEvents(events: GameEvent[]): GameEvent[] {
 }
 
 /** The human command label for an action id in this observation. */
-function obsActionText(obs: AnyObservation, id: string): string | null {
+function obsActionText(obs: RpgObservation, id: string): string | null {
   return obs.available_actions.find((a) => a.id === id)?.command ?? null;
 }
 
@@ -244,11 +241,11 @@ function obsActionText(obs: AnyObservation, id: string): string | null {
  * Unknown ids are rejected before they reach the reducer, preserving the illegal
  * action / no state-change path.
  */
-function actionForId(obs: AnyObservation, id: string): RpgAction | null {
+function actionForId(obs: RpgObservation, id: string): RpgAction | null {
   return obs.available_actions.find((a) => a.id === id)?.action ?? null;
 }
 
-function publicActions(obs: AnyObservation): McpActionOption[] {
+function publicActions(obs: RpgObservation): McpActionOption[] {
   return obs.available_actions.map((option) => ({
     id: option.id,
     command: option.command,
@@ -256,7 +253,7 @@ function publicActions(obs: AnyObservation): McpActionOption[] {
   }));
 }
 
-function publicObservation(obs: AnyObservation): McpObservation {
+function publicObservation(obs: RpgObservation): McpObservation {
   return {
     ...obs,
     available_actions: publicActions(obs),
@@ -310,7 +307,7 @@ export function createToolApi(opts: { root: string }) {
   }
 
   /** Compile + validate, refusing to play an invalid pack (§0, §10). */
-  function requirePlayable(packPath: string): AnyCompiledPack {
+  function requirePlayable(packPath: string): CompiledRpgPack {
     const lr = loadAndReport(packPath);
     if (!lr.ok || !lr.report.ok) {
       throw new Error(`Pack is not playable:\n${formatReport(lr.ok ? lr.report : lr.report)}`);
@@ -323,7 +320,7 @@ export function createToolApi(opts: { root: string }) {
    * `validateRpg` gate the curated RPG packs clear. This is the only public MCP
    * generation route.
    */
-  function requireGeneratedRpgPlayable(seed: number): AnyCompiledPack {
+  function requireGeneratedRpgPlayable(seed: number): CompiledRpgPack {
     const pack = generateRpgPack(seed); // mints + schema self-check (throws on malformed emission)
     const report = validateRpg(pack);
     if (!report.ok) {
@@ -335,7 +332,7 @@ export function createToolApi(opts: { root: string }) {
   }
 
   function startSession(
-    compiled: AnyCompiledPack,
+    compiled: CompiledRpgPack,
     state?: GameState,
     opts: { hideGraph?: boolean } = {},
   ): Session {
@@ -370,7 +367,7 @@ export function createToolApi(opts: { root: string }) {
     return session;
   }
 
-  const obsOf = (s: Session): AnyObservation =>
+  const obsOf = (s: Session): RpgObservation =>
     buildObsFor(s.index, s.state, { hideGraph: s.hideGraph ?? false });
 
   function listYamlFiles(dir: string): string[] {
@@ -1096,7 +1093,7 @@ export function createToolApi(opts: { root: string }) {
     load_pack(args: { pack_path: string }): {
       ok: boolean;
       mode?: PackMode;
-      meta?: AnyCompiledPack["pack"]["meta"];
+      meta?: CompiledRpgPack["pack"]["meta"];
       content_hash?: string;
       report: ValidationReport;
     } {
