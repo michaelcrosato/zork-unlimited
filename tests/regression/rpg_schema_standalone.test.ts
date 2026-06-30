@@ -94,6 +94,21 @@ describe("RPG schema owns the RPG contract", () => {
     expect(rpgModel).not.toContain("for (const id of index.objects.keys())");
   });
 
+  it("keeps dialogue session state in core gameplay code", () => {
+    const dialogueState = readFileSync("src/core/dialogue_state.ts", "utf8");
+    const parserModel = readFileSync("src/parser/model.ts", "utf8");
+    const rpgModel = readFileSync("src/rpg/model.ts", "utf8");
+
+    expect(dialogueState).toContain("export function dlgVar");
+    expect(dialogueState).toContain("export function nodeOrdinal");
+    expect(dialogueState).toContain("export function activeDialogue");
+    expect(parserModel).toContain("../core/dialogue_state");
+    expect(rpgModel).toContain("../core/dialogue_state");
+    expect(rpgModel).not.toContain("`__dlg_${npcId}`");
+    expect(rpgModel).not.toContain("state.vars[dlgVar(npc.id)]");
+    expect(parserModel).not.toContain("state.vars[dlgVar(npc.id)]");
+  });
+
   it("does not import the legacy parser observation builder for RPG observations", () => {
     const observation = readFileSync("src/rpg/observation.ts", "utf8");
     expect(observation).not.toContain("../parser/");

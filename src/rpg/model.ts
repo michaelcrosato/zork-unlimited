@@ -8,6 +8,12 @@
  */
 import { applyEffects } from "../core/effects.js";
 import {
+  activeDialogue as coreActiveDialogue,
+  dlgVar,
+  nodeByOrdinal,
+  nodeOrdinal,
+} from "../core/dialogue_state.js";
+import {
   indexObjectHomes,
   isLocked as coreIsLocked,
   isOpen,
@@ -75,31 +81,13 @@ export function visibleObjectIds(index: RpgModelIndex, state: GameState, room: s
   return coreVisibleObjectIds(index, state, room);
 }
 
-export function dlgVar(npcId: string): string {
-  return `__dlg_${npcId}`;
-}
-
-export function nodeOrdinal(npc: Npc, nodeId: string): number {
-  const index = npc.dialogue.nodes.findIndex((n) => n.id === nodeId);
-  return index < 0 ? 0 : index + 1;
-}
-
-export function nodeByOrdinal(npc: Npc, ordinal: number): DialogueNode | undefined {
-  return npc.dialogue.nodes[ordinal - 1];
-}
+export { dlgVar, nodeByOrdinal, nodeOrdinal };
 
 export function activeDialogue(
   index: RpgModelIndex,
   state: GameState,
 ): { npc: Npc; node: DialogueNode } | null {
-  for (const npc of index.npcs.values()) {
-    const ordinal = state.vars[dlgVar(npc.id)] ?? 0;
-    if (ordinal > 0) {
-      const node = nodeByOrdinal(npc, ordinal);
-      if (node) return { npc, node };
-    }
-  }
-  return null;
+  return coreActiveDialogue(index, state);
 }
 
 export function initStateForRpgModel(index: RpgModelIndex, seed: number): GameState {

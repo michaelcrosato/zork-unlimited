@@ -13,6 +13,12 @@
 import { initState, type GameState } from "../core/state.js";
 import { applyEffects } from "../core/effects.js";
 import {
+  activeDialogue as coreActiveDialogue,
+  dlgVar,
+  nodeByOrdinal,
+  nodeOrdinal,
+} from "../core/dialogue_state.js";
+import {
   indexObjectHomes,
   isLocked as coreIsLocked,
   isOpen,
@@ -119,36 +125,14 @@ export function visibleObjectIds(index: ParserIndex, state: GameState, room: str
   return coreVisibleObjectIds(index, state, room);
 }
 
-// ── Dialogue state (carried in vars, so it flows through the core DSLs) ────────
-
-/** Var name holding the active dialogue node ordinal for an NPC (0 ⇒ not talking). */
-export function dlgVar(npcId: string): string {
-  return `__dlg_${npcId}`;
-}
-
-/** 1-based ordinal of a node within its NPC's node list (0 if not found). */
-export function nodeOrdinal(npc: Npc, nodeId: string): number {
-  const i = npc.dialogue.nodes.findIndex((n) => n.id === nodeId);
-  return i < 0 ? 0 : i + 1;
-}
-
-export function nodeByOrdinal(npc: Npc, ord: number): DialogueNode | undefined {
-  return npc.dialogue.nodes[ord - 1];
-}
+export { dlgVar, nodeByOrdinal, nodeOrdinal };
 
 /** The NPC the player is currently in conversation with, and the active node. */
 export function activeDialogue(
   index: ParserIndex,
   state: GameState,
 ): { npc: Npc; node: DialogueNode } | null {
-  for (const npc of index.npcs.values()) {
-    const ord = state.vars[dlgVar(npc.id)] ?? 0;
-    if (ord > 0) {
-      const node = nodeByOrdinal(npc, ord);
-      if (node) return { npc, node };
-    }
-  }
-  return null;
+  return coreActiveDialogue(index, state);
 }
 
 /** Fresh state for a parser pack, with the start room's on_enter applied (mirrors
