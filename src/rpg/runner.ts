@@ -1,24 +1,22 @@
 /**
  * RPG runner (spec §13 Stage 4, §14) — adapts an RPG pack into the engine's pure
- * `Rules`, layered on the Stage-2 parser runner.
+ * `Rules`.
  *
- * It reuses the parser's legal-action generator and resolver for everything the
- * parser already does (move/look/take/open/use/talk…), and adds exactly two
- * mechanics: ATTACK (a seeded combat round, combat.ts) and skill-check USE
- * interactions (a seeded d20 check). The engine stays content-free; all RPG
- * randomness is confined to the resolver and derived from (seed, step), so the
- * determinism contract is preserved (§8.5).
+ * RPG owns its pack schema, indexing, and fresh-state setup. The remaining shared
+ * legacy surface is the command resolver for object/dialogue verbs; this runner
+ * layers ATTACK and skill-check resolution on top while preserving deterministic
+ * seeded randomness.
  */
 import type { Action } from "../api/types.js";
 import type { Effect } from "../core/effects.js";
 import type { GameState } from "../core/state.js";
 import type { Resolution, Rules } from "../core/engine.js";
 import {
-  type ParserIndex,
-  indexParserPack,
-  initStateForParserPack,
+  type RpgModelIndex,
+  indexRpgModel,
+  initStateForRpgModel,
   activeDialogue,
-} from "../parser/model.js";
+} from "./model.js";
 import {
   enumerateActions,
   present,
@@ -33,14 +31,14 @@ import { type RpgPack, type Enemy } from "./schema.js";
 import { resolveAttack, resolveSkillCheck, enemyAlive } from "./combat.js";
 import { rngForStep, type Rng } from "../core/rng.js";
 
-export type RpgIndex = ParserIndex & {
+export type RpgIndex = RpgModelIndex & {
   rpgPack: RpgPack;
   enemies: Map<string, Enemy>;
   enemyByRoom: Map<string, Enemy[]>;
 };
 
 export function indexRpgPack(pack: RpgPack): RpgIndex {
-  const base = indexParserPack(pack);
+  const base = indexRpgModel(pack);
   const enemies = new Map(pack.enemies.map((e) => [e.id, e]));
   const enemyByRoom = new Map<string, Enemy[]>();
   for (const e of pack.enemies) {
@@ -148,5 +146,5 @@ export function buildRpgRules(
 
 /** Fresh state for an RPG pack (player stats come from meta.vars_init). */
 export function initStateForRpgPack(index: RpgIndex, seed: number): GameState {
-  return initStateForParserPack(index, seed);
+  return initStateForRpgModel(index, seed);
 }

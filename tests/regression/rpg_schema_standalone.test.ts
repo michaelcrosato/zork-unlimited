@@ -8,4 +8,14 @@ describe("RPG schema owns the RPG contract", () => {
     expect(source).not.toContain("ParserPackSchema");
     expect(source).not.toContain("ParserMetaSchema");
   });
+
+  it("does not import the legacy parser model for RPG indexing or initial state", () => {
+    const model = readFileSync("src/rpg/model.ts", "utf8");
+    const runner = readFileSync("src/rpg/runner.ts", "utf8");
+    expect(model).not.toContain("../parser/");
+    expect(runner).not.toContain("../parser/model");
+    expect(runner).not.toContain("ParserIndex");
+    expect(runner).not.toContain("indexParserPack");
+    expect(runner).not.toContain("initStateForParserPack");
+  });
 });
