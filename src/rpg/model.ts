@@ -7,6 +7,14 @@
  * world state layout.
  */
 import { applyEffects } from "../core/effects.js";
+import {
+  indexObjectHomes,
+  isLocked as coreIsLocked,
+  isOpen,
+  locateObject,
+  visibleObjectIds as coreVisibleObjectIds,
+  type ObjectLocation,
+} from "../core/object_locations.js";
 import { reactiveName, reactiveText } from "../core/reactive_text.js";
 import { initState, type GameState } from "../core/state.js";
 import type { DialogueNode, Ending, GameObject, Npc, Room, RpgPack } from "./schema.js";
@@ -31,33 +39,13 @@ export function indexRpgModel(pack: RpgPack): RpgModelIndex {
     list.push(n);
     npcByRoom.set(n.room, list);
   }
-  const homeRoom = new Map<string, string>();
-  for (const r of pack.rooms) for (const oid of r.objects) homeRoom.set(oid, r.id);
-  const containerOf = new Map<string, string>();
-  for (const o of pack.objects) for (const cid of o.contents) containerOf.set(cid, o.id);
+  const { homeRoom, containerOf } = indexObjectHomes(pack.rooms, pack.objects);
   return { pack, rooms, objects, npcs, npcByRoom, homeRoom, containerOf };
 }
 
-export type Location =
-  | { kind: "inventory" }
-  | { kind: "room"; room: string }
-  | { kind: "container"; container: string }
-  | { kind: "nowhere" };
+export type Location = ObjectLocation;
 
-export function locateObject(index: RpgModelIndex, state: GameState, id: string): Location {
-  if (state.inventory.includes(id)) return { kind: "inventory" };
-  const moved = state.objectState[id]?.room;
-  if (moved) return { kind: "room", room: moved };
-  const home = index.homeRoom.get(id);
-  if (home) return { kind: "room", room: home };
-  const container = index.containerOf.get(id);
-  if (container) return { kind: "container", container };
-  return { kind: "nowhere" };
-}
-
-export function isOpen(state: GameState, id: string): boolean {
-  return state.objectState[id]?.open === true;
-}
+export { isOpen, locateObject };
 
 export function roomDescription(room: Room, state: GameState): string {
   return reactiveText(room.description, room.variants, state);
@@ -80,29 +68,11 @@ export function endingText(ending: Ending, state: GameState): string {
 }
 
 export function isLocked(index: RpgModelIndex, state: GameState, id: string): boolean {
-  const runtimeLocked = state.objectState[id]?.locked;
-  if (runtimeLocked !== undefined) return runtimeLocked;
-  return index.objects.get(id)?.locked ?? false;
+  return coreIsLocked(index, state, id);
 }
 
 export function visibleObjectIds(index: RpgModelIndex, state: GameState, room: string): string[] {
-  const out: string[] = [];
-  for (const id of index.objects.keys()) {
-    const loc = locateObject(index, state, id);
-    if (loc.kind === "room" && loc.room === room) {
-      out.push(id);
-    } else if (loc.kind === "container") {
-      const containerLoc = locateObject(index, state, loc.container);
-      if (
-        containerLoc.kind === "room" &&
-        containerLoc.room === room &&
-        isOpen(state, loc.container)
-      ) {
-        out.push(id);
-      }
-    }
-  }
-  return out.sort();
+  return coreVisibleObjectIds(index, state, room);
 }
 
 export function dlgVar(npcId: string): string {

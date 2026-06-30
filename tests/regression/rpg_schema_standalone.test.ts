@@ -79,6 +79,21 @@ describe("RPG schema owns the RPG contract", () => {
     expect(rpgVariantLiveness).not.toContain("../../src/parser/model.js");
   });
 
+  it("keeps object location and visibility in core gameplay code", () => {
+    const objectLocations = readFileSync("src/core/object_locations.ts", "utf8");
+    const parserModel = readFileSync("src/parser/model.ts", "utf8");
+    const rpgModel = readFileSync("src/rpg/model.ts", "utf8");
+
+    expect(objectLocations).toContain("export function indexObjectHomes");
+    expect(objectLocations).toContain("export function locateObject");
+    expect(objectLocations).toContain("export function visibleObjectIds");
+    expect(parserModel).toContain("../core/object_locations");
+    expect(rpgModel).toContain("../core/object_locations");
+    expect(rpgModel).not.toContain("state.objectState[id]?.room");
+    expect(rpgModel).not.toContain("state.objectState[id]?.locked");
+    expect(rpgModel).not.toContain("for (const id of index.objects.keys())");
+  });
+
   it("does not import the legacy parser observation builder for RPG observations", () => {
     const observation = readFileSync("src/rpg/observation.ts", "utf8");
     expect(observation).not.toContain("../parser/");
