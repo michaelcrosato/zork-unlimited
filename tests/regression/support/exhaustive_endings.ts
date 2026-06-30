@@ -44,7 +44,7 @@
  *      prose `when:` variants, never on a route — so no ending needs a drop.) The filter
  *      is a no-op for CYOA, whose only action is CHOOSE, so the CYOA census stays complete.
  */
-import { makeStep, type Rules } from "../../../src/core/engine.js";
+import { makeStep, type EngineAction, type Rules } from "../../../src/core/engine.js";
 import type { GameState } from "../../../src/core/state.js";
 import type { Action } from "../../../src/api/types.js";
 
@@ -54,10 +54,10 @@ import type { Action } from "../../../src/api/types.js";
  * game state — they only emit narration, so stepping them yields an identical fingerprint
  * anyway). Excluding them keeps the parser verb×object search tractable without affecting
  * which endings are reachable (see the MONOTONE ACTION RESTRICTION note above). Every
- * other Action type — MOVE, TAKE, OPEN, UNLOCK, USE, TALK, ASK, GIVE, ATTACK, CHOOSE — is
+ * other action type — MOVE, TAKE, OPEN, UNLOCK, USE, TALK, ASK, GIVE, ATTACK, CHOOSE — is
  * a potential route step and is always explored.
  */
-const SKIPPED_ACTIONS: ReadonlySet<Action["type"]> = new Set([
+const SKIPPED_ACTIONS: ReadonlySet<string> = new Set([
   "DROP",
   "CLOSE",
   "LOOK",
@@ -66,7 +66,7 @@ const SKIPPED_ACTIONS: ReadonlySet<Action["type"]> = new Set([
   "INSPECT",
 ]);
 
-function isProgressAction(a: Action): boolean {
+function isProgressAction(a: EngineAction): boolean {
   return !SKIPPED_ACTIONS.has(a.type);
 }
 
@@ -155,7 +155,7 @@ export type ExhaustiveResult = {
  *     no_dead_pocket.test.ts). Default undefined: when omitted NO edge work is done and the
  *     search is byte-for-byte the original BFS, so every existing caller is unchanged.
  */
-export type SearchOpts<A extends Action = Action> = {
+export type SearchOpts<A extends EngineAction = Action> = {
   explore?: (a: A) => boolean;
   key?: (s: GameState) => string;
   onEdge?: (fromKey: string, toKey: string) => void;
@@ -170,7 +170,7 @@ export type SearchOpts<A extends Action = Action> = {
  * unreachable (a route is severed), and any ending in it but undeclared is a dangling end
  * target. When `cappedOut` is true the result is unproven and the caller must FAIL.
  */
-export function exhaustiveEndings<A extends Action = Action>(
+export function exhaustiveEndings<A extends EngineAction = Action>(
   rules: Rules<A>,
   start: GameState,
   maxStates: number,
@@ -200,7 +200,7 @@ export function exhaustiveEndings<A extends Action = Action>(
  * single deterministic rule set this is identical to the original single-rules BFS — the
  * second-and-later steps just reproduce the first and dedupe away.
  */
-export function exhaustiveEndingsMulti<A extends Action = Action>(
+export function exhaustiveEndingsMulti<A extends EngineAction = Action>(
   ruleSets: Rules<A>[],
   start: GameState,
   maxStates: number,

@@ -29,8 +29,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { generateCyoaPack, CYOA_GENERATOR_VERSION } from "../../src/gen/cyoa_generator.js";
-import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
-import type { Action } from "../../src/api/types.js";
+import { indexPack, buildRules, initStateForPack, type CyoaAction } from "../../src/cyoa/runner.js";
 import { exhaustiveEndings } from "./support/exhaustive_endings.js";
 
 const SEEDS = Array.from({ length: 12 }, (_, i) => i);
@@ -141,7 +140,7 @@ describe("bug_0169 — the CYOA generator emits a two-axis (2x2-knowledge) moral
     const pack = generateCyoaPack(0);
     const index = indexPack(pack);
     const rules = buildRules(index);
-    const noAlly = (a: Action): boolean => !(a.type === "CHOOSE" && a.choiceId === "learn_ally");
+    const noAlly = (a: CyoaAction): boolean => a.choiceId !== "learn_ally";
     const { reached, cappedOut } = exhaustiveEndings(
       rules,
       initStateForPack(index, 0),
@@ -166,7 +165,7 @@ describe("bug_0169 — the CYOA generator emits a two-axis (2x2-knowledge) moral
     const pack = generateCyoaPack(0);
     const index = indexPack(pack);
     const rules = buildRules(index);
-    const noWay = (a: Action): boolean => !(a.type === "CHOOSE" && a.choiceId === "learn_way");
+    const noWay = (a: CyoaAction): boolean => a.choiceId !== "learn_way";
     const { reached, cappedOut } = exhaustiveEndings(
       rules,
       initStateForPack(index, 0),

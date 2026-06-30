@@ -24,8 +24,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { generateCyoaPack } from "../../src/gen/cyoa_generator.js";
-import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
-import type { Action } from "../../src/api/types.js";
+import { indexPack, buildRules, initStateForPack, type CyoaAction } from "../../src/cyoa/runner.js";
 import { exhaustiveEndings } from "./support/exhaustive_endings.js";
 
 const SEEDS = Array.from({ length: 12 }, (_, i) => i);
@@ -42,7 +41,7 @@ const withoutChoice = (seed: number, removeId: string) => {
   const pack = generateCyoaPack(seed);
   const index = indexPack(pack);
   const rules = buildRules(index);
-  const explore = (a: Action): boolean => !(a.type === "CHOOSE" && a.choiceId === removeId);
+  const explore = (a: CyoaAction): boolean => a.choiceId !== removeId;
   return exhaustiveEndings(rules, initStateForPack(index, seed), MAX_STATES, undefined, {
     explore,
   });

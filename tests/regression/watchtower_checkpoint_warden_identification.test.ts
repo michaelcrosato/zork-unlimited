@@ -5,7 +5,6 @@
  * the tower evidence is required before the gate scene becomes productive.
  */
 import { describe, expect, it } from "vitest";
-import type { Action } from "../../src/api/types.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import { buildObservation } from "../../src/cyoa/observation.js";
@@ -17,7 +16,7 @@ if (!loaded.ok) throw new Error("watchtower pack must compile");
 const index = indexPack(loaded.compiled.pack);
 const rules = buildRules(index);
 const step = makeStep(rules);
-const choose = (id: string): Action => ({ type: "CHOOSE", choiceId: id });
+const choose = (id: string) => ({ type: "CHOOSE", choiceId: id }) as const;
 
 function actionIds(state: GameState): string[] {
   return buildObservation(index, state).available_actions.map((a) => a.id);

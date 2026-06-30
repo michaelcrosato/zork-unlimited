@@ -64,6 +64,8 @@ describe("RPG schema owns the RPG contract", () => {
     const inspectBin = readFileSync("bin/inspect.ts", "utf8");
     const mcpTools = readFileSync("src/mcp/tools.ts", "utf8");
     expect(apiTypes).toContain("export type RpgAction");
+    expect(apiTypes).toContain("export type Action = RpgAction");
+    expect(apiTypes).not.toContain("LegacyChooseAction");
     expect(apiTypes).not.toContain("export type RpgAction = Exclude<Action");
     expect(apiTypes).not.toContain("isRpgAction");
     expect(legalActions).toContain("RpgAction");
@@ -72,10 +74,11 @@ describe("RPG schema owns the RPG contract", () => {
     expect(runner).toContain("Rules<RpgAction>");
     expect(runner).not.toContain("isRpgAction");
     expect(sessions).toContain("Rules<RpgAction>");
-    expect(traceRecord).toContain("export type Trace<A extends Action = Action>");
+    expect(traceRecord).toContain("export type Trace<A extends EngineAction = Action>");
     expect(traceRecord).toContain("actions: A[];");
     expect(traceRecord).toContain("actions: A[],");
     expect(engine).toContain("action: A): StepResult");
+    expect(engine).toContain("export type EngineAction");
     expect(engine).not.toContain("action as A");
     expect(traceReplay).toContain("trace: Trace<A>");
     expect(replayBin).toContain("Trace<RpgAction>");

@@ -8,7 +8,6 @@ import { loadPackFile } from "../../src/cyoa/pack.js";
 import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
 import { buildObservation } from "../../src/cyoa/observation.js";
 import { makeStep } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
 import { validateCyoa } from "../../src/validate/cyoa_validator.js";
 
 const loaded = loadPackFile("content/cyoa/pack/wreckers_light.yaml");
@@ -16,7 +15,7 @@ if (!loaded.ok) throw new Error("wreckers_light pack must compile");
 const pack = loaded.compiled.pack;
 const index = indexPack(pack);
 const rules = buildRules(index);
-const choose = (id: string): Action => ({ type: "CHOOSE", choiceId: id });
+const choose = (id: string) => ({ type: "CHOOSE", choiceId: id }) as const;
 
 function play(ids: string[]) {
   const step = makeStep(rules);

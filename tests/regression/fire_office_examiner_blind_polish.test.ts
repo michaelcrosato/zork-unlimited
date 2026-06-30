@@ -15,13 +15,12 @@ import { loadPackFile } from "../../src/cyoa/pack.js";
 import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
 import { buildObservation } from "../../src/cyoa/observation.js";
 import { makeStep } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
 
 const loaded = loadPackFile("content/cyoa/pack/fire_office_examiner.yaml");
 if (!loaded.ok) throw new Error("fire_office_examiner pack must compile");
 const index = indexPack(loaded.compiled.pack);
 const rules = buildRules(index);
-const choose = (id: string): Action => ({ type: "CHOOSE", choiceId: id });
+const choose = (id: string) => ({ type: "CHOOSE", choiceId: id }) as const;
 
 function play(ids: string[], seed = 7) {
   const step = makeStep(rules);

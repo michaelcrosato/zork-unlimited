@@ -23,13 +23,12 @@ import { loadPackFile } from "../../src/cyoa/pack.js";
 import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
 import { buildObservation } from "../../src/cyoa/observation.js";
 import { makeStep } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
 
 const loaded = loadPackFile("content/cyoa/pack/clockwork_heist.yaml");
 if (!loaded.ok) throw new Error("clockwork_heist pack must compile");
 const index = indexPack(loaded.compiled.pack);
 const rules = buildRules(index);
-const choose = (id: string): Action => ({ type: "CHOOSE", choiceId: id });
+const choose = (id: string) => ({ type: "CHOOSE", choiceId: id }) as const;
 
 function run(ids: string[], seed = 73) {
   const step = makeStep(rules);

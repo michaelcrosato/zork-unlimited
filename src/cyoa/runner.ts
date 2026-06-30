@@ -11,13 +11,14 @@ import { initState, type GameState } from "../core/state.js";
 import { evalConditions } from "../core/conditions.js";
 import type { Effect } from "../core/effects.js";
 import { applyEffects } from "../core/effects.js";
-import type { Action } from "../api/types.js";
 import type { GameEvent } from "../core/events.js";
 import { rngForStep, type Rng } from "../core/rng.js";
 import type { Resolution, Rules } from "../core/engine.js";
 import { scoreChangeNarrations } from "../parser/runner.js";
 import { resolveSkillCheck } from "../rpg/combat.js";
 import type { CyoaPack, Ending, Scene } from "./schema.js";
+
+export type CyoaAction = { type: "CHOOSE"; choiceId: string };
 
 export type CyoaIndex = {
   pack: CyoaPack;
@@ -77,9 +78,9 @@ export function endingText(ending: Ending, state: GameState): string {
 export function buildRules(
   index: CyoaIndex,
   rngFor: (state: GameState) => Rng = (s) => rngForStep(s.seed, s.step),
-): Rules {
+): Rules<CyoaAction> {
   return {
-    legalActions(state: GameState): Action[] {
+    legalActions(state: GameState): CyoaAction[] {
       if (state.ended) return [];
       const scene = index.scenes.get(state.current);
       if (!scene || scene.is_ending) return [];
@@ -90,7 +91,7 @@ export function buildRules(
         .map((c) => ({ type: "CHOOSE", choiceId: c.id }));
     },
 
-    resolve(state: GameState, action: Action): Resolution | null {
+    resolve(state: GameState, action: CyoaAction): Resolution | null {
       if (action.type !== "CHOOSE") return null;
       const scene = index.scenes.get(state.current);
       const choice = scene?.choices.find((c) => c.id === action.choiceId);

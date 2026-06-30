@@ -180,7 +180,6 @@ function optionId(a: Action): string {
       return `ask_${a.topic}`;
     case "INVENTORY":
       return "inventory";
-    case "CHOOSE":
     case "CLOSE":
     case "GIVE":
     case "INSPECT":
@@ -225,7 +224,6 @@ function relabelAction(a: Action, mapId: (id: string) => string): Action {
       return { type: "INSPECT", target: mapId(a.target) };
     case "INVENTORY":
       return { type: "INVENTORY" };
-    case "CHOOSE":
     case "ATTACK":
       throw new Error(`unexpected parser action type "${a.type}" — extend relabelAction`);
   }

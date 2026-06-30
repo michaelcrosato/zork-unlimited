@@ -12,26 +12,25 @@
  */
 import { describe, expect, it } from "vitest";
 import { loadPackFile } from "../../src/cyoa/pack.js";
-import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
+import { indexPack, buildRules, initStateForPack, type CyoaAction } from "../../src/cyoa/runner.js";
 import { buildObservation } from "../../src/cyoa/observation.js";
 import { makeStep, type Rules } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
 import type { Rng } from "../../src/core/rng.js";
 
 const loaded = loadPackFile("content/cyoa/pack/excise_surveyors_round.yaml");
 if (!loaded.ok) throw new Error("excise_surveyors_round pack must compile");
 const index = indexPack(loaded.compiled.pack);
 const rules = buildRules(index);
-const choose = (id: string): Action => ({ type: "CHOOSE", choiceId: id });
+const choose = (id: string) => ({ type: "CHOOSE", choiceId: id }) as const;
 
-function play(ids: string[], activeRules: Rules = rules, seed = 7) {
+function play(ids: string[], activeRules: Rules<CyoaAction> = rules, seed = 7) {
   const step = makeStep(activeRules);
   let state = initStateForPack(index, seed);
   for (const id of ids) state = step(state, choose(id)).state;
   return state;
 }
 
-const obs = (ids: string[], activeRules: Rules = rules) =>
+const obs = (ids: string[], activeRules: Rules<CyoaAction> = rules) =>
   buildObservation(index, play(ids, activeRules));
 const actionIds = (ids: string[]) => obs(ids).available_actions.map((a) => a.id);
 

@@ -2,11 +2,10 @@ import { describe, it, expect } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
 import { hashState } from "../../src/core/hash.js";
 import { compilePack, loadPackFile } from "../../src/cyoa/pack.js";
-import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
+import { indexPack, buildRules, initStateForPack, type CyoaAction } from "../../src/cyoa/runner.js";
 import { buildObservation } from "../../src/cyoa/observation.js";
 import { runActions, type Trace } from "../../src/trace/record.js";
 import { replayTrace } from "../../src/trace/replay.js";
-import type { Action } from "../../src/api/types.js";
 
 const result = loadPackFile("content/cyoa/pack/watchtower_road.yaml");
 if (!result.ok) throw new Error("fixture pack must compile");
@@ -14,7 +13,7 @@ const compiled = result.compiled;
 const index = indexPack(compiled.pack);
 const rules = buildRules(index);
 
-const choose = (id: string): Action => ({ type: "CHOOSE", choiceId: id });
+const choose = (id: string): CyoaAction => ({ type: "CHOOSE", choiceId: id });
 
 describe("CYOA runner", () => {
   it("offers only condition-satisfied choices", () => {
@@ -136,7 +135,7 @@ describe("CYOA determinism + replay (Stage 1 acceptance §13.9)", () => {
   it("a recorded trace replays to the identical final hash", () => {
     const initial = initStateForPack(index, 7);
     const run = runActions(rules, initial, TRUTH_ROUTE);
-    const trace: Trace = {
+    const trace: Trace<CyoaAction> = {
       trace_id: "tr_truth",
       pack_id: compiled.pack.meta.id,
       content_hash: compiled.contentHash,

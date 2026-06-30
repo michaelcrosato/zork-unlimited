@@ -18,6 +18,9 @@ import { applyEffects } from "./effects.js";
 import { canonicalize } from "./hash.js";
 import type { Action, StepResult } from "../api/types.js";
 
+/** Minimal shape the generic reducer needs from any temporary runtime action. */
+export type EngineAction = { type: string; [key: string]: unknown };
+
 /** What an action resolves to in a given state. `null` ⇒ no such rule. */
 export type Resolution = {
   conditions: Condition[];
@@ -28,7 +31,7 @@ export type Resolution = {
  * The content layer's contract with the engine. A resolver is pure: same state
  * + same action ⇒ same resolution. It never touches I/O or randomness.
  */
-export type Rules<A extends Action = Action> = {
+export type Rules<A extends EngineAction = Action> = {
   /** The legal-action set for this state (Jericho-style, §9). Ground truth for legality. */
   legalActions: (state: GameState) => A[];
   /** Conditions + effects for an action, or null if the action has no rule here. */
@@ -59,7 +62,7 @@ export type Rules<A extends Action = Action> = {
 };
 
 /** Structural equality for actions — used to test membership in the legal set. */
-export function actionEquals(a: Action, b: Action): boolean {
+export function actionEquals(a: EngineAction, b: EngineAction): boolean {
   return canonicalize(a) === canonicalize(b);
 }
 
@@ -72,7 +75,7 @@ function reject(state: GameState, reason: string): StepResult {
  * Build the pure `step(state, action)` for a given rule set. The returned
  * function matches the §8.1 signature exactly.
  */
-export function makeStep<A extends Action = Action>(rules: Rules<A>) {
+export function makeStep<A extends EngineAction = Action>(rules: Rules<A>) {
   return function step(state: GameState, action: A): StepResult {
     // A finished game accepts no further actions. No state change.
     if (state.ended) return reject(state, "The game has already ended.");

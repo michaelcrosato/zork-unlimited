@@ -12,9 +12,8 @@ import { makeStep } from "../../src/core/engine.js";
 import { CyoaPackSchema } from "../../src/cyoa/schema.js";
 import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
 import { buildObservation } from "../../src/cyoa/observation.js";
-import type { Action } from "../../src/api/types.js";
 
-const choose = (id: string): Action => ({ type: "CHOOSE", choiceId: id });
+const choose = (id: string) => ({ type: "CHOOSE", choiceId: id }) as const;
 
 const pack = CyoaPackSchema.parse({
   meta: { id: "death_cap_v1", title: "Death Capability", start: "fork" },

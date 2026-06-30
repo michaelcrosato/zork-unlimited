@@ -9,10 +9,10 @@
 import type { GameState } from "../core/state.js";
 import { hashState } from "../core/hash.js";
 import type { Action, StepResult } from "../api/types.js";
-import type { Rules } from "../core/engine.js";
+import type { EngineAction, Rules } from "../core/engine.js";
 import { makeStep } from "../core/engine.js";
 
-export type Trace<A extends Action = Action> = {
+export type Trace<A extends EngineAction = Action> = {
   trace_id: string;
   pack_id: string;
   content_hash: string;
@@ -38,7 +38,7 @@ export type RunResult = {
 };
 
 /** Apply a sequence of actions through the engine. Pure end to end. */
-export function runActions<A extends Action>(
+export function runActions<A extends EngineAction>(
   rules: Rules<A>,
   initialState: GameState,
   actions: A[],
@@ -63,7 +63,7 @@ export type RecordOptions = {
 };
 
 /** Run the actions and produce a Trace stamped with the final-state hash. */
-export function recordTrace<A extends Action>(
+export function recordTrace<A extends EngineAction>(
   rules: Rules<A>,
   initialState: GameState,
   actions: A[],

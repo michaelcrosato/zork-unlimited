@@ -28,7 +28,6 @@ import { compilePack, loadPackFile } from "../../src/cyoa/pack.js";
 import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
 import { validateCyoa } from "../../src/validate/cyoa_validator.js";
 import { makeStep } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
 
 // A deadline whose watched var `t` is advanced ONLY by the `wait` choice's effect —
 // nothing in any on_enter touches it. At runtime, one `wait` pushes t to 3 and the
@@ -52,7 +51,7 @@ endings:
   - { id: over, title: O, text: "out of time" }
 `;
 
-const choose = (id: string): Action => ({ type: "CHOOSE", choiceId: id });
+const choose = (id: string) => ({ type: "CHOOSE", choiceId: id }) as const;
 
 describe("bug_0080 — a choice-effect-driven deadline is reachable to the validator and fires in the engine", () => {
   it("validates clean — no ENDING_UNREACHABLE / SOFTLOCK / errors", () => {

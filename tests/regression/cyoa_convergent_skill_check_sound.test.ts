@@ -45,7 +45,6 @@ import { indexPack, initStateForPack, buildRules, type CyoaIndex } from "../../s
 import { exhaustiveEndings, stateKey } from "./support/exhaustive_endings.js";
 import type { Rng } from "../../src/core/rng.js";
 import type { GameState } from "../../src/core/state.js";
-import type { Action } from "../../src/api/types.js";
 
 const PACK_DIR = "content/cyoa/pack";
 const packFiles = readdirSync(PACK_DIR)
@@ -56,7 +55,7 @@ const packFiles = readdirSync(PACK_DIR)
 // skill-check capability test uses. 20 clears any shipped difficulty (+ skill ≥ 12); 1 fails it.
 const forcedRng = (roll: number): Rng => ({ int: () => roll }) as unknown as Rng;
 const MAX_STATES = 200_000;
-const choose = (id: string): Action => ({ type: "CHOOSE", choiceId: id });
+const choose = (id: string) => ({ type: "CHOOSE", choiceId: id }) as const;
 
 /** Every (sceneId, choiceId) in a pack whose choice carries a skill_check. */
 function skillCheckedChoices(index: CyoaIndex): { sceneId: string; choiceId: string }[] {

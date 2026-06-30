@@ -9,9 +9,8 @@
  * (`divergedAtStep`); a v1 trace (final hash only) replays exactly as before.
  */
 import { hashState } from "../core/hash.js";
-import type { Rules } from "../core/engine.js";
+import type { EngineAction, Rules } from "../core/engine.js";
 import { runActions, type Trace } from "./record.js";
-import type { Action } from "../api/types.js";
 
 export type ReplayResult = {
   ok: boolean;
@@ -42,7 +41,10 @@ function firstDivergentStep(actual: string[], baseline: string[]): number {
  * carries `per_step_hashes` (Trace v2), `divergedAtStep` localizes the first
  * action whose post-state diverged — the actual debugging value (§15).
  */
-export function replayTrace<A extends Action>(trace: Trace<A>, rules: Rules<A>): ReplayResult {
+export function replayTrace<A extends EngineAction>(
+  trace: Trace<A>,
+  rules: Rules<A>,
+): ReplayResult {
   const run = runActions(rules, trace.initial_state, trace.actions);
   const finalHash = hashState(run.finalState);
 
@@ -84,7 +86,7 @@ export function replayTrace<A extends Action>(trace: Trace<A>, rules: Rules<A>):
 }
 
 /** Best-effort, side-effect-free label for the action at a divergent step. */
-function describeAction<A extends Action>(trace: Trace<A>, step: number): string {
+function describeAction<A extends EngineAction>(trace: Trace<A>, step: number): string {
   const action = trace.actions[step];
   if (action === undefined) return "out of range";
   const id = (action as { id?: unknown }).id;

@@ -13,9 +13,8 @@ import { describe, it, expect } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
 import { CyoaPackSchema } from "../../src/cyoa/schema.js";
 import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
-import type { Action } from "../../src/api/types.js";
 
-const choose = (id: string): Action => ({ type: "CHOOSE", choiceId: id });
+const choose = (id: string) => ({ type: "CHOOSE", choiceId: id }) as const;
 
 /** A 1-choice pack that awards `score` on the way to its ending. `max_score` is a param
  *  so the same content can be tested with scoring on (10) and off (undefined). */

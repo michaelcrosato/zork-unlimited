@@ -6,32 +6,31 @@
  */
 import { describe, expect, it } from "vitest";
 import { loadPackFile } from "../../src/cyoa/pack.js";
-import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
+import { indexPack, buildRules, initStateForPack, type CyoaAction } from "../../src/cyoa/runner.js";
 import { buildObservation } from "../../src/cyoa/observation.js";
 import { makeStep, type Rules } from "../../src/core/engine.js";
 import { stateKey } from "./support/exhaustive_endings.js";
-import type { Action } from "../../src/api/types.js";
 import type { Rng } from "../../src/core/rng.js";
 
 const loaded = loadPackFile("content/cyoa/pack/midnight_edition.yaml");
 if (!loaded.ok) throw new Error("midnight_edition pack must compile");
 const index = indexPack(loaded.compiled.pack);
 const rules = buildRules(index);
-const choose = (id: string): Action => ({ type: "CHOOSE", choiceId: id });
+const choose = (id: string) => ({ type: "CHOOSE", choiceId: id }) as const;
 
 const forcedRoll = (roll: number) => (): Rng => ({
   next: () => 0,
   int: () => roll,
 });
 
-function play(ids: string[], activeRules: Rules = rules, seed = 7) {
+function play(ids: string[], activeRules: Rules<CyoaAction> = rules, seed = 7) {
   const step = makeStep(activeRules);
   let state = initStateForPack(index, seed);
   for (const id of ids) state = step(state, choose(id)).state;
   return state;
 }
 
-const obs = (ids: string[], activeRules: Rules = rules) =>
+const obs = (ids: string[], activeRules: Rules<CyoaAction> = rules) =>
   buildObservation(index, play(ids, activeRules));
 
 describe("bug_0419 -- Midnight Edition steady_and_bar is visibly manner-only", () => {

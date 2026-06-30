@@ -13,13 +13,12 @@ import { runActions } from "../../src/trace/record.js";
 import { buildObservation } from "../../src/cyoa/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import { hashState } from "../../src/core/hash.js";
-import type { Action } from "../../src/api/types.js";
 
 const loaded = loadPackFile("content/cyoa/pack/watchtower_road.yaml");
 if (!loaded.ok) throw new Error("watchtower pack must compile");
 const index = indexPack(loaded.compiled.pack);
 const rules = buildRules(index);
-const choose = (id: string): Action => ({ type: "CHOOSE", choiceId: id });
+const choose = (id: string) => ({ type: "CHOOSE", choiceId: id }) as const;
 
 /** Play a sequence of choice ids and return the resulting state. */
 function play(ids: string[]) {

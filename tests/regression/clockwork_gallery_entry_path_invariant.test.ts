@@ -27,7 +27,6 @@ import { loadPackFile } from "../../src/cyoa/pack.js";
 import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
 import { buildObservation } from "../../src/cyoa/observation.js";
 import { makeStep } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 import type { GameEvent } from "../../src/core/events.js";
 
@@ -35,7 +34,7 @@ const loaded = loadPackFile("content/cyoa/pack/clockwork_heist.yaml");
 if (!loaded.ok) throw new Error("clockwork_heist pack must compile");
 const index = indexPack(loaded.compiled.pack);
 const rules = buildRules(index);
-const choose = (id: string): Action => ({ type: "CHOOSE", choiceId: id });
+const choose = (id: string) => ({ type: "CHOOSE", choiceId: id }) as const;
 
 /** Run a list of choice ids from a fresh seed; return the final state AND the events of the LAST step. */
 function run(ids: string[], seed = 23): { state: GameState; lastEvents: GameEvent[] } {

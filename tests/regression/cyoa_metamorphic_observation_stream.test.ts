@@ -49,12 +49,17 @@ import { describe, it, expect } from "vitest";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { loadPackFile } from "../../src/cyoa/pack.js";
-import { indexPack, buildRules, initStateForPack, type CyoaIndex } from "../../src/cyoa/runner.js";
+import {
+  indexPack,
+  buildRules,
+  initStateForPack,
+  type CyoaAction,
+  type CyoaIndex,
+} from "../../src/cyoa/runner.js";
 import { buildObservation, type CyoaObservation } from "../../src/cyoa/observation.js";
 import { makeStep, type Rules } from "../../src/core/engine.js";
 import { stateKey } from "./support/exhaustive_endings.js";
 import { relabelCyoaPack, type Relabeler } from "./support/relabel_cyoa.js";
-import type { Action } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 
 const PACK_DIR = "content/cyoa/pack";
@@ -120,11 +125,11 @@ function relabelObservation(o: CyoaObservation, mapId: (id: string) => string): 
 }
 
 /**
- * CYOA's only Action is CHOOSE; map its `choiceId` through the bijection. Throwing on any
+ * CYOA's only action is CHOOSE; map its `choiceId` through the bijection. Throwing on any
  * other type keeps the oracle honest if the CYOA action surface ever widens (a new action
  * kind would otherwise be relabeled as a silent no-op).
  */
-function relabelAction(a: Action, mapId: (id: string) => string): Action {
+function relabelAction(a: CyoaAction, mapId: (id: string) => string): CyoaAction {
   if (a.type === "CHOOSE") return { type: "CHOOSE", choiceId: mapId(a.choiceId) };
   throw new Error(`unexpected CYOA action type "${a.type}" — extend relabelAction`);
 }
@@ -134,8 +139,8 @@ type WalkResult = { compared: number; cappedOut: boolean };
 function walkInLockStep(
   origIndex: CyoaIndex,
   twinIndex: CyoaIndex,
-  origRules: Rules,
-  twinRules: Rules,
+  origRules: Rules<CyoaAction>,
+  twinRules: Rules<CyoaAction>,
   origStart: GameState,
   twinStart: GameState,
   mapId: (id: string) => string,

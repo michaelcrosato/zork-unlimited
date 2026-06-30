@@ -14,9 +14,8 @@ import { CyoaPackSchema } from "../../src/cyoa/schema.js";
 import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
 import { buildObservation } from "../../src/cyoa/observation.js";
 import type { Rng } from "../../src/core/rng.js";
-import type { Action } from "../../src/api/types.js";
 
-const choose = (id: string): Action => ({ type: "CHOOSE", choiceId: id });
+const choose = (id: string) => ({ type: "CHOOSE", choiceId: id }) as const;
 /** A rng that always returns `roll` for any int() — the best/worst-roll verification seam. */
 const forcedRng = (roll: number): Rng => ({ int: () => roll }) as unknown as Rng;
 
