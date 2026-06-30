@@ -32,8 +32,14 @@
 import type { Effect } from "../core/effects.js";
 import { validateParser } from "./parser_validator.js";
 import { type Finding, type ValidationReport, makeReport } from "./report.js";
-import { type RpgPack, HP_VAR, ATTACK_VAR, DEFENSE_VAR, enemyHpVar } from "../rpg/schema.js";
-import { SCORE_VAR } from "../parser/schema.js";
+import {
+  type RpgPack,
+  HP_VAR,
+  ATTACK_VAR,
+  DEFENSE_VAR,
+  SCORE_VAR,
+  enemyHpVar,
+} from "../rpg/schema.js";
 
 const err = (code: string, message: string, where: string[]): Finding => ({
   severity: "error",
