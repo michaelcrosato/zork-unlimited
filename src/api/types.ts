@@ -1,18 +1,14 @@
 /**
  * Action + StepResult types (spec §8.1, §8.2).
  *
- * The Action union remains the legacy-compatible superset accepted by the core
- * reducer. The unified RPG runtime narrows that to `RpgAction`, which excludes
- * retired CYOA `CHOOSE` input at the RPG boundary. New action types arrive only
- * through the §14 engine-extension gate.
+ * `RpgAction` is the canonical live reducer surface. The broader `Action` type
+ * exists only for legacy trace/test compatibility while retired CYOA `CHOOSE`
+ * actions are still being stripped from the repository.
  */
 import type { GameState } from "../core/state.js";
 import type { GameEvent } from "../core/events.js";
 
-export type Action =
-  // CYOA
-  | { type: "CHOOSE"; choiceId: string }
-  // Parser (Stage 2+)
+export type RpgAction =
   | { type: "LOOK"; target?: string }
   | { type: "MOVE"; direction: string }
   | { type: "TAKE"; item: string }
@@ -27,11 +23,11 @@ export type Action =
   | { type: "READ"; target: string }
   | { type: "INSPECT"; target: string }
   | { type: "INVENTORY" }
-  // RPG (Stage 4, §13) — arrives through the §14 engine-extension gate. One ATTACK
-  // is one deterministic, seeded combat round resolved entirely in code.
   | { type: "ATTACK"; enemy: string };
 
-export type RpgAction = Exclude<Action, { type: "CHOOSE" }>;
+export type LegacyChooseAction = { type: "CHOOSE"; choiceId: string };
+
+export type Action = RpgAction | LegacyChooseAction;
 
 export function isRpgAction(action: Action): action is RpgAction {
   return action.type !== "CHOOSE";

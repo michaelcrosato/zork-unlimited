@@ -58,6 +58,7 @@ describe("RPG schema owns the RPG contract", () => {
     const runner = readFileSync("src/rpg/runner.ts", "utf8");
     const sessions = readFileSync("src/mcp/sessions.ts", "utf8");
     expect(apiTypes).toContain("export type RpgAction");
+    expect(apiTypes).not.toContain("export type RpgAction = Exclude<Action");
     expect(apiTypes).toContain("isRpgAction");
     expect(legalActions).toContain("RpgAction");
     expect(commandMap).toContain("RpgAction");
