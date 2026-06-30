@@ -17,6 +17,18 @@ export type AnyIndex = RpgIndex;
 /** The AI-facing observation returned by MCP game-session tools. */
 export type AnyObservation = RpgObservation;
 
+/** Public MCP action menu entries omit reducer-only structured actions. */
+export type McpActionOption = Omit<RpgObservation["available_actions"][number], "action">;
+
+/**
+ * Public MCP observations keep the RPG player view but strip the internal action
+ * object. MCP clients step by `action_id`, so returning reducer payloads only
+ * spends tokens and leaks engine internals.
+ */
+export type McpObservation = Omit<RpgObservation, "available_actions"> & {
+  available_actions: McpActionOption[];
+};
+
 /** A compiled RPG pack (pack + content hash). */
 export type AnyCompiledPack = CompiledRpgPack;
 

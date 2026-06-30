@@ -896,6 +896,32 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(a.list_legal_actions({ session_id: game.session_id }).actions).toEqual([]);
   });
 
+  it("keeps reducer action payloads out of MCP-facing action menus", () => {
+    const a = api();
+    const game = a.new_game({ pack_path: PACK, seed: 1 });
+    const assertPublicAction = (action: unknown): void => {
+      expect(action).toMatchObject({ id: expect.any(String), command: expect.any(String) });
+      expect(action).not.toHaveProperty("action");
+    };
+
+    assertPublicAction(game.observation.available_actions[0]);
+    assertPublicAction(
+      a.get_observation({ session_id: game.session_id }).observation.available_actions[0],
+    );
+    assertPublicAction(a.list_legal_actions({ session_id: game.session_id }).actions[0]);
+
+    const rejected = a.step_action({ session_id: game.session_id, action_id: "missing" });
+    expect(rejected.ok).toBe(false);
+    assertPublicAction(rejected.observation.available_actions[0]);
+
+    const moved = stepByCommand(a, game.session_id, "go down");
+    assertPublicAction(moved.observation.available_actions[0]);
+
+    const saved = a.save_game({ session_id: game.session_id });
+    const loaded = a.load_game({ pack_path: PACK, save: saved.save });
+    assertPublicAction(loaded.observation.available_actions[0]);
+  });
+
   it("step_action rejects an illegal action without changing state", () => {
     const a = api();
     const game = a.new_game({ pack_path: PACK });

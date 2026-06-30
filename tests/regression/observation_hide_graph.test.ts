@@ -84,7 +84,7 @@ describe("bug_0137 — hide_graph difficulty: exits hide their destination", () 
       const startRoom = (g.observation as { room: string }).room;
       // Take the first available MOVE action (its destination is hidden from us).
       const moveAction = g.observation.available_actions.find(
-        (act) => (act as { action: { type: string } }).action.type === "MOVE",
+        (act) => act.id.startsWith("go_") || act.command.startsWith("go "),
       );
       expect(moveAction).toBeDefined();
       const r = a.step_action({ session_id: g.session_id, action_id: moveAction!.id });

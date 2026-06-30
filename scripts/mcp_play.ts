@@ -1,25 +1,34 @@
 #!/usr/bin/env -S npx tsx
 /**
- * Dev harness: play a CYOA pack by driving the AdventureForge MCP server over
+ * Dev harness: play an RPG pack by driving the AdventureForge MCP server over
  * stdio with the MCP *client* SDK. Demonstrates an external agent playing the
  * game purely through the §9.4 tools (new_game / step_action / get_observation).
  *
- * Because each invocation spawns a fresh server (in-memory sessions), the action
- * prefix is replayed each turn — deterministic, so the reached state is exact.
+ * Each invocation spawns a fresh server and applies the optional `--do` action
+ * ids in order to one deterministic in-memory session.
  *
- * Usage: tsx scripts/mcp_play.ts <pack.yaml> [--seed N] [--do a,b,c]
+ * Usage: tsx scripts/mcp_play.ts <rpg-pack.yaml> [--seed N] [--do a,b,c]
  */
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 type Obs = {
-  scene_id: string;
+  mode: "rpg";
+  room: string;
   title: string;
-  text: string;
-  state: { flags: string[]; inventory: string[]; journal: string[] };
-  available_actions: { id: string; text: string }[];
+  description: string;
+  inventory: string[];
+  state: { flags: string[]; vars: Record<string, number>; journal: string[] };
+  enemies_present: { id: string; name: string; hp: number }[];
+  stats: { hp: number; attack: number; defense: number };
+  available_actions: {
+    id: string;
+    command: string;
+    skill_check?: { skill: string; difficulty: number; die: string };
+  }[];
   ended: boolean;
   ending_id: string | null;
+  ending: { title: string; text: string; death: boolean } | null;
 };
 
 function parseResult(res: unknown): {
@@ -66,19 +75,31 @@ async function main(): Promise<void> {
     current = r.observation;
   }
 
-  console.log(`\n=== ${current.title} (${current.scene_id}) ===`);
-  console.log(current.text.trim());
-  if (current.state.inventory.length)
-    console.log(`\n[inventory: ${current.state.inventory.join(", ")}]`);
+  console.log(`\n=== ${current.title} (${current.room}) ===`);
+  console.log(current.description.trim());
+  console.log(
+    `\n[hp ${current.stats.hp} | attack ${current.stats.attack} | defense ${current.stats.defense}]`,
+  );
+  if (current.enemies_present.length)
+    console.log(
+      `[enemies: ${current.enemies_present.map((e) => `${e.name} hp${e.hp}`).join(", ")}]`,
+    );
+  if (current.inventory.length) console.log(`[inventory: ${current.inventory.join(", ")}]`);
   if (current.state.journal.length)
     console.log(
       `[journal: ${current.state.journal.length} entries — latest: "${current.state.journal.at(-1)}"]`,
     );
   if (current.ended) {
-    console.log(`\n*** THE END — ${current.ending_id} ***`);
+    const endingTitle = current.ending?.title ?? current.ending_id;
+    console.log(`\n*** THE END — ${endingTitle} ***`);
   } else {
     console.log("\nAvailable actions:");
-    for (const a of current.available_actions) console.log(`  - ${a.id}: ${a.text}`);
+    for (const a of current.available_actions) {
+      const roll = a.skill_check
+        ? ` [${a.skill_check.die} ${a.skill_check.skill} vs ${a.skill_check.difficulty}]`
+        : "";
+      console.log(`  - ${a.id}: ${a.command}${roll}`);
+    }
   }
 
   await client.close();

@@ -43,6 +43,8 @@ import {
   type AnyCompiledPack,
   type AnyIndex,
   type AnyObservation,
+  type McpActionOption,
+  type McpObservation,
 } from "./types.js";
 import type { WorldBinding, WorldManifest } from "../world/schema.js";
 import {
@@ -238,6 +240,21 @@ function obsActionText(obs: AnyObservation, id: string): string | null {
  */
 function actionForId(obs: AnyObservation, id: string): Action | null {
   return obs.available_actions.find((a) => a.id === id)?.action ?? null;
+}
+
+function publicActions(obs: AnyObservation): McpActionOption[] {
+  return obs.available_actions.map((option) => ({
+    id: option.id,
+    command: option.command,
+    ...(option.skill_check ? { skill_check: option.skill_check } : {}),
+  }));
+}
+
+function publicObservation(obs: AnyObservation): McpObservation {
+  return {
+    ...obs,
+    available_actions: publicActions(obs),
+  };
 }
 
 function schemaFindings(
@@ -1190,7 +1207,7 @@ export function createToolApi(opts: { root: string }) {
       return {
         session_id: session.id,
         mode,
-        observation: obsOf(session),
+        observation: publicObservation(obsOf(session)),
         state_hash: hashState(session.state),
       };
     },
@@ -1216,7 +1233,7 @@ export function createToolApi(opts: { root: string }) {
       const obs = buildObsFor(s.index, s.state, {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
       });
-      return { observation: obs, state_hash: hashState(s.state) };
+      return { observation: publicObservation(obs), state_hash: hashState(s.state) };
     },
 
     get_scene(args: { session_id: string; hide_graph?: boolean }) {
@@ -1228,7 +1245,7 @@ export function createToolApi(opts: { root: string }) {
       const obs = buildObsFor(s.index, s.state, {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
       });
-      return { actions: obs.available_actions };
+      return { actions: publicActions(obs) };
     },
 
     step_action(args: { session_id: string; action_id: string; hide_graph?: boolean }) {
@@ -1247,7 +1264,7 @@ export function createToolApi(opts: { root: string }) {
           events: [
             { type: "rejected" as const, reason: "That action is not available right now." },
           ],
-          observation: before,
+          observation: publicObservation(before),
           state_hash: hashState(s.state),
         };
       }
@@ -1271,7 +1288,7 @@ export function createToolApi(opts: { root: string }) {
         ok: result.ok,
         rejection_reason: result.rejectionReason ?? null,
         events: playerVisibleEvents(result.events),
-        observation: after,
+        observation: publicObservation(after),
         state_hash: hashState(result.state),
       };
     },
@@ -1332,7 +1349,7 @@ export function createToolApi(opts: { root: string }) {
       return {
         session_id: session.id,
         mode,
-        observation: obsOf(session),
+        observation: publicObservation(obsOf(session)),
         state_hash: hashState(session.state),
       };
     },

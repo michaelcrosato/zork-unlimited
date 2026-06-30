@@ -77,7 +77,7 @@ describe("bug_0299 — hide_graph per-call override on observation tools", () =>
     const g = a.new_game({ pack_path: RPG }); // session default: show graph
     // step_action with per-call hide_graph: true — returned observation should hide exits
     const moveAction = g.observation.available_actions.find(
-      (act) => (act as { action: { type: string } }).action.type === "MOVE",
+      (act) => act.id.startsWith("go_") || act.command.startsWith("go "),
     );
     expect(moveAction).toBeDefined();
     const stepped = a.step_action({
