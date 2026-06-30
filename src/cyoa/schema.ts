@@ -9,7 +9,7 @@
 import { z } from "zod";
 import { ConditionSchema } from "../core/conditions.js";
 import { EffectSchema } from "../core/effects.js";
-import { SkillCheckSchema } from "../parser/schema.js";
+import { SkillCheckSchema } from "../core/skill_check.js";
 import { WorldBindingSchema } from "../world/schema.js";
 
 export const ChoiceSchema = z
@@ -21,8 +21,8 @@ export const ChoiceSchema = z
     // A plain choice routes via `next` (a scene or ending id; reference checked by validator).
     // A SKILL-CHECKED choice omits `next` and carries a `skill_check` instead: the CYOA runner
     // rolls d20 + the named skill var vs `difficulty` and applies the on_success / on_failure
-    // effects, which carry their OWN routing (`goto`/`end_game`) — the same d20 resolver the
-    // parser/RPG modes use (resolveSkillCheck), bringing skill checks to CYOA (mechanic-palette
+    // effects, which carry their OWN routing (`goto`/`end_game`) — the same core d20 resolver
+    // the parser/RPG modes use (resolveSkillCheck), bringing skill checks to CYOA (mechanic-palette
     // standardization). Exactly one of `next` / `skill_check` is present (superRefine). Both are
     // .optional() so every existing choice (which has `next`, no skill_check) compiles
     // byte-identically and keeps its pack's content hash (the project-wide additive-field rule).

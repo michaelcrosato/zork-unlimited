@@ -9,6 +9,7 @@
 import { z } from "zod";
 import { ConditionSchema } from "../core/conditions.js";
 import { EffectSchema } from "../core/effects.js";
+import { SkillCheckSchema } from "../core/skill_check.js";
 import { WorldBindingSchema } from "../world/schema.js";
 
 export const SCORE_VAR = "score";
@@ -41,15 +42,6 @@ export const RoomSchema = z
     objects: z.array(z.string().min(1)).default([]),
     exits: z.array(ExitSchema).default([]),
     on_enter: z.array(EffectSchema).default([]),
-  })
-  .strict();
-
-export const SkillCheckSchema = z
-  .object({
-    skill: z.string().min(1),
-    difficulty: z.number().int(),
-    on_success: z.array(EffectSchema).default([]),
-    on_failure: z.array(EffectSchema).default([]),
   })
   .strict();
 
@@ -351,6 +343,8 @@ export type EndingVariant = z.infer<typeof EndingVariantSchema>;
 export type Ending = z.infer<typeof EndingSchema>;
 export type Enemy = z.infer<typeof EnemySchema>;
 export type RpgPack = z.infer<typeof RpgPackSchema>;
+
+export { SkillCheckSchema };
 
 /** Internal var holding an enemy's remaining HP. */
 export function enemyHpVar(enemyId: string): string {

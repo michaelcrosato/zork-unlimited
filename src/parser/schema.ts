@@ -10,6 +10,7 @@
 import { z } from "zod";
 import { ConditionSchema } from "../core/conditions.js";
 import { EffectSchema } from "../core/effects.js";
+import { SkillCheckSchema } from "../core/skill_check.js";
 import { WorldBindingSchema } from "../world/schema.js";
 
 /** A directional exit. A locked exit lists `conditions`; until they hold it is
@@ -47,21 +48,6 @@ export const RoomSchema = z
     objects: z.array(z.string().min(1)).default([]),
     exits: z.array(ExitSchema).default([]),
     on_enter: z.array(EffectSchema).default([]),
-  })
-  .strict();
-
-/**
- * A seeded skill check (Stage 4, §13, §14 gate). When an interaction carries one,
- * the RPG runner rolls d20 + the named skill var against `difficulty` using the
- * step's deterministic PRNG, then applies `on_success` or `on_failure`. Optional
- * and absent on every Stage-2/3 pack, so those packs' content hashes are unchanged.
- */
-export const SkillCheckSchema = z
-  .object({
-    skill: z.string().min(1), // the var rolled (e.g. "lockpicking", "might")
-    difficulty: z.number().int(),
-    on_success: z.array(EffectSchema).default([]),
-    on_failure: z.array(EffectSchema).default([]),
   })
   .strict();
 
@@ -489,3 +475,5 @@ export type WinCondition = z.infer<typeof WinConditionSchema>;
 export type ParserEndingVariant = z.infer<typeof ParserEndingVariantSchema>;
 export type ParserEnding = z.infer<typeof ParserEndingSchema>;
 export type ParserPack = z.infer<typeof ParserPackSchema>;
+
+export { SkillCheckSchema };

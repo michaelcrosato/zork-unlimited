@@ -36,6 +36,28 @@ describe("RPG schema owns the RPG contract", () => {
     expect(runner).not.toContain("winningEnding");
   });
 
+  it("keeps skill-check schema and resolution in core gameplay code", () => {
+    const skillCheck = readFileSync("src/core/skill_check.ts", "utf8");
+    const combat = readFileSync("src/rpg/combat.ts", "utf8");
+    const parserRunner = readFileSync("src/parser/runner.ts", "utf8");
+    const cyoaRunner = readFileSync("src/cyoa/runner.ts", "utf8");
+    const parserSchema = readFileSync("src/parser/schema.ts", "utf8");
+    const rpgSchema = readFileSync("src/rpg/schema.ts", "utf8");
+    const cyoaSchema = readFileSync("src/cyoa/schema.ts", "utf8");
+
+    expect(skillCheck).toContain("export const SkillCheckSchema");
+    expect(skillCheck).toContain("export function resolveSkillCheck");
+    expect(combat).not.toContain("resolveSkillCheck");
+    expect(parserRunner).toContain("../core/skill_check");
+    expect(cyoaRunner).toContain("../core/skill_check");
+    expect(parserRunner).not.toContain("../rpg/combat");
+    expect(cyoaRunner).not.toContain("../rpg/combat");
+    expect(parserSchema).toContain("../core/skill_check");
+    expect(rpgSchema).toContain("../core/skill_check");
+    expect(cyoaSchema).toContain("../core/skill_check");
+    expect(cyoaSchema).not.toContain("../parser/schema");
+  });
+
   it("does not import the legacy parser observation builder for RPG observations", () => {
     const observation = readFileSync("src/rpg/observation.ts", "utf8");
     expect(observation).not.toContain("../parser/");

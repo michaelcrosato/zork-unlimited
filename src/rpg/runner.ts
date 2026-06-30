@@ -25,9 +25,10 @@ import {
 import { evalConditions } from "../core/conditions.js";
 import type { GameEvent } from "../core/events.js";
 import { type RpgPack, type Enemy, SCORE_VAR } from "./schema.js";
-import { resolveAttack, resolveSkillCheck, enemyAlive } from "./combat.js";
+import { resolveAttack, enemyAlive } from "./combat.js";
 import { rngForStep, type Rng } from "../core/rng.js";
 import { scoreChangeNarrations } from "../core/score_chrome.js";
+import { resolveSkillCheck } from "../core/skill_check.js";
 
 export type RpgIndex = RpgModelIndex & {
   rpgPack: RpgPack;

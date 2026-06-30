@@ -1,5 +1,5 @@
 /**
- * Deterministic combat + skill-check resolution (spec §13 Stage 4, §14).
+ * Deterministic RPG combat resolution (spec §13 Stage 4, §14).
  *
  * These produce ordinary core effects from SEEDED rolls, so the engine's pure
  * reducer applies them unchanged and the determinism contract (§8.5) holds: the
@@ -104,30 +104,4 @@ export function resolveAttack(
     );
   }
   return { conditions: [], effects };
-}
-
-/**
- * Resolve a skill check: roll d20 + the named skill var against `difficulty`.
- * Deterministic per (seed, step). Returns the success or failure effects, with a
- * narration of the roll so the player understands the outcome (§17.4, §17.8).
- */
-export function resolveSkillCheck(
-  state: GameState,
-  check: { skill: string; difficulty: number; on_success: Effect[]; on_failure: Effect[] },
-  rng: Rng = rngForStep(state.seed, state.step),
-): Resolution {
-  const roll = rng.int(1, 20);
-  const total = roll + (state.vars[check.skill] ?? 0);
-  const success = total >= check.difficulty;
-  const lead: Effect = {
-    // Name the die (d20), mirroring combat's `d6 <roll> + <atk> atk - <def> def`
-    // breakdown. A failed check showed only "rolled 7 + 3 = 10 vs 12", which a
-    // blind playtester (sunken_barrow, seed 29, ai-runs/2026-06-02T16-59-57-928Z/
-    // playtest.md §4/§5) read against the visible d6 combat die and briefly feared
-    // the slab might be impossible (3 + max-6 = 9 < 12). Showing the d20 surfaces
-    // the ceiling — max 20 + might 3 = 23 ≥ 12 — so the check reads as passable on
-    // a better roll, the symmetric follow-on to bug_0131's combat legibility fix.
-    narrate: `${check.skill} check: d20 ${roll} + ${state.vars[check.skill] ?? 0} = ${total} vs ${check.difficulty} — ${success ? "success" : "failure"}.`,
-  };
-  return { conditions: [], effects: [lead, ...(success ? check.on_success : check.on_failure)] };
 }

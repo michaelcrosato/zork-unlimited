@@ -24,9 +24,9 @@ import type { GameEvent } from "../core/events.js";
 import type { Resolution, Rules } from "../core/engine.js";
 import { rngForStep, type Rng } from "../core/rng.js";
 import { scoreChangeNarrations } from "../core/score_chrome.js";
+import { resolveSkillCheck } from "../core/skill_check.js";
 import { type ParserIndex } from "./model.js";
 import { enumerateActions, present, resolveParserAction, useInteraction } from "./legal_actions.js";
-import { resolveSkillCheck } from "../rpg/combat.js";
 import { SCORE_VAR } from "./schema.js";
 
 export { indexParserPack, initStateForParserPack, type ParserIndex } from "./model.js";
