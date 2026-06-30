@@ -6,11 +6,10 @@
  *   npm run author -- "a premise sentence" [--out content/rpg/pack/foo.yaml]
  *
  * Runs the writer → adapter → validator loop with the deterministic
- * MockAuthorProvider (no API keys). The CLI is deliberately RPG-only; legacy
- * CYOA/parser authoring loops remain internal migration scaffolding, not public
- * command modes. Prints the per-beat classification and validation report; with
- * --out, writes the green RPG pack as YAML. A real provider slots in behind an
- * env var (§12.7).
+ * MockAuthorProvider (no API keys). The CLI is deliberately RPG-only: no legacy
+ * authoring mode is exposed. Prints the per-beat classification and validation
+ * report; with --out, writes the green RPG pack as YAML. A real provider slots in
+ * behind an env var (§12.7).
  */
 import { writeFileSync } from "node:fs";
 import { stringify as toYaml } from "yaml";

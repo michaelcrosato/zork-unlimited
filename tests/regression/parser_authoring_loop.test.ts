@@ -1,95 +1,107 @@
 /**
- * Regression (§15) for bug_0139 — the author → validate → revise loop now covers
- * PARSER packs, not just CYOA (ULTRAPLAN §Week.4: the richest validators behind a
- * real authoring loop). Until this, `agents/authoring` only ever produced CYOA packs
- * (validateCyoa); the Zork-style parser validator — the project's richest, with
- * reference integrity, reachability, soft-lock, and win-reachability analysis — was
- * never exercised by the authoring pipeline.
+ * Regression (§15) for the RPG-only author → validate → revise loop.
  *
- * `runParserAdapter` reuses the same deterministic mock author + revise machinery as
- * `runAdapter`, routed through `validateParser`. Mirroring the CYOA mock, the parser
- * mock's first attempt ships a dangling exit target (EXIT_TARGET_MISSING); once the
- * validator's errors are fed back, it returns the corrected, green pack.
- *
- * This pins: (a) the first attempt is genuinely rejected by the parser validator with
- * EXIT_TARGET_MISSING — so the loop is decided by the validator, not the model (§16);
- * (b) the loop converges to a GREEN parser pack in a corrective round; (c) the
- * produced pack independently re-validates green; (d) it is actually playable to its
- * ending through the parser engine; (e) the CYOA path is unaffected by the shared-loop
- * refactor.
+ * This file used to pin the temporary parser authoring adapter. The project now has
+ * one public authoring target: RPG packs validated by `validateRpg`. Keep the valuable
+ * regression shape from the old file — first-round validator rejection, convergence,
+ * beat classification, and engine playability — but route it through the single
+ * adapter that remains.
  */
 import { describe, it, expect } from "vitest";
+import * as adapterModule from "../../agents/authoring/adapter.js";
 import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
 import { loadEngineContract, runWriter } from "../../agents/authoring/writer.js";
-import { runAdapter, runParserAdapter } from "../../agents/authoring/adapter.js";
-import { validateParser } from "../../src/validate/parser_validator.js";
+import { runRpgAdapter } from "../../agents/authoring/adapter.js";
+import type { Action } from "../../src/api/types.js";
+import { actionEquals, makeStep } from "../../src/core/engine.js";
+import type { Rng } from "../../src/core/rng.js";
+import type { GameState } from "../../src/core/state.js";
 import {
-  indexParserPack,
-  buildParserRules,
-  initStateForParserPack,
-} from "../../src/parser/runner.js";
-import { enumerateActions } from "../../src/parser/legal_actions.js";
-import { makeStep } from "../../src/core/engine.js";
+  buildRpgRules,
+  enumerateRpgActions,
+  indexRpgPack,
+  initStateForRpgPack,
+  type RpgIndex,
+} from "../../src/rpg/runner.js";
+import { ATTACK_VAR, DEFENSE_VAR, HP_VAR } from "../../src/rpg/schema.js";
+import { validateRpg } from "../../src/validate/rpg_validator.js";
 
 const provider = new MockAuthorProvider();
 const contract = loadEngineContract();
 const PREMISE = "A keeper must relight a dead lighthouse before a ship wrecks.";
 
-describe("parser authoring loop (bug_0139, §12.2–3)", () => {
-  it("the parser validator REJECTS the first attempt with a dangling exit (EXIT_TARGET_MISSING)", async () => {
+const bestRng = (): Rng => ({
+  next: () => 0.999999,
+  int: (_min: number, max: number) => max,
+});
+
+function legalAction(index: RpgIndex, state: GameState, action: Action): Action {
+  const option = enumerateRpgActions(index, state).find((o) => actionEquals(o.action, action));
+  if (!option) throw new Error(`Expected legal action ${JSON.stringify(action)}`);
+  return option.action;
+}
+
+describe("RPG-only authoring loop (§12.2–3, §13 Stage 4)", () => {
+  it("the RPG validator rejects the first attempt with ENEMY_DEATH_ENDING_UNDECLARED", async () => {
     const story = await runWriter(provider, { premise: PREMISE, contract });
-    // Cap at one round: no corrective round runs, so we see the raw first attempt.
-    const first = await runParserAdapter(provider, { story, contract, maxRounds: 1 });
+    const first = await runRpgAdapter(provider, { story, contract, maxRounds: 1 });
     expect(first.ok).toBe(false);
     expect(first.rounds).toBe(1);
-    const codes = first.report.findings.filter((f) => f.severity === "error").map((f) => f.code);
-    expect(codes).toContain("EXIT_TARGET_MISSING");
+    expect(
+      first.report.findings.filter((f) => f.severity === "error").map((f) => f.code),
+    ).toContain("ENEMY_DEATH_ENDING_UNDECLARED");
   });
 
-  it("loops against the PARSER validator and converges to a GREEN pack", async () => {
+  it("loops against validateRpg and converges to a GREEN pack", async () => {
     const story = await runWriter(provider, { premise: PREMISE, contract });
-    const result = await runParserAdapter(provider, { story, contract });
+    const result = await runRpgAdapter(provider, { story, contract });
     expect(result.ok).toBe(true);
     expect(result.report.ok).toBe(true);
-    // The mock's first attempt is broken, so convergence takes a correcting round.
     expect(result.rounds).toBeGreaterThanOrEqual(2);
-    // The produced pack independently re-validates green through the parser validator.
-    expect(validateParser(result.pack).ok).toBe(true);
-    // It is a genuine parser pack: rooms + exits + a win condition, not a CYOA shape.
-    expect(result.pack.rooms.length).toBeGreaterThanOrEqual(2);
-    expect(result.pack.win_conditions.length).toBeGreaterThanOrEqual(1);
+    expect(validateRpg(result.pack).ok).toBe(true);
+    expect(result.pack.enemies.length).toBeGreaterThanOrEqual(1);
+    for (const stat of [HP_VAR, ATTACK_VAR, DEFENSE_VAR]) {
+      expect(result.pack.meta.vars_init[stat]).toBeGreaterThan(0);
+    }
   });
 
   it("classifies every beat against the §11 adaptation labels", async () => {
     const story = await runWriter(provider, { premise: PREMISE, contract });
-    const result = await runParserAdapter(provider, { story, contract });
+    const result = await runRpgAdapter(provider, { story, contract });
     const beatIds = story.beats.map((b) => b.id).sort();
     expect(result.classifications.map((c) => c.beat_id).sort()).toEqual(beatIds);
   });
 
-  it("the authored parser pack is actually playable to an ending through the engine", async () => {
+  it("the authored RPG pack is playable to its win through the engine", async () => {
     const story = await runWriter(provider, { premise: PREMISE, contract });
-    const { pack } = await runParserAdapter(provider, { story, contract });
-    const index = indexParserPack(pack);
-    const step = makeStep(buildParserRules(index));
-    let state = initStateForParserPack(index, 1);
-    // Drive the route the adapter wired: climb north to the door, up to the lamp room.
-    for (const id of ["go_north", "go_up"]) {
-      const opt = enumerateActions(index, state).find((o) => o.id === id);
-      expect(opt, `action ${id} should be legal in ${state.current}`).toBeTruthy();
-      const r = step(state, opt!.action);
-      expect(r.ok).toBe(true);
-      state = r.state;
+    const { pack } = await runRpgAdapter(provider, { story, contract });
+    const index = indexRpgPack(pack);
+    const step = makeStep(buildRpgRules(index, () => bestRng()));
+    let state = initStateForRpgPack(index, 1);
+
+    for (const action of [
+      { type: "TAKE", item: "iron_spike" },
+      { type: "MOVE", direction: "north" },
+      { type: "ATTACK", enemy: "storm_wight" },
+      { type: "ATTACK", enemy: "storm_wight" },
+      { type: "MOVE", direction: "up" },
+      { type: "USE", item: "iron_spike", target: "lamp" },
+    ] satisfies Action[]) {
+      const result = step(state, legalAction(index, state, action));
+      expect(result.ok, JSON.stringify(action)).toBe(true);
+      state = result.state;
     }
+
+    expect(state.flags["wight_banished"]).toBe(true);
+    expect(state.flags["lamp_freed"]).toBe(true);
     expect(state.ended).toBe(true);
     expect(state.endingId).toBe("ending_saved");
   });
 
-  it("the shared-loop refactor leaves the CYOA path green (runAdapter unchanged)", async () => {
-    const story = await runWriter(provider, { premise: PREMISE, contract });
-    const result = await runAdapter(provider, { story, contract });
-    expect(result.ok).toBe(true);
-    expect(result.rounds).toBeGreaterThanOrEqual(2);
-    expect("scenes" in result.pack).toBe(true); // a CYOA pack, not a parser pack
+  it("does not re-export legacy CYOA or parser adapter entry points", () => {
+    const exports = adapterModule as Record<string, unknown>;
+    expect(exports.runRpgAdapter).toBeTypeOf("function");
+    expect(exports.runAdapter).toBeUndefined();
+    expect(exports.runParserAdapter).toBeUndefined();
   });
 });
