@@ -3,19 +3,20 @@ import { save, load, SaveIntegrityError, SAVE_MODE } from "../../src/persist/sav
 import { hashState } from "../../src/core/hash.js";
 import { recordTrace } from "../../src/trace/record.js";
 import { replayTrace } from "../../src/trace/replay.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import {
+  MICRO_ACTIONS,
   microRules,
   microInitState,
   MICRO_PACK_ID,
   MICRO_CONTENT_HASH,
 } from "../../src/demo/micro.js";
 
-const WIN: Action[] = [
-  { type: "CHOOSE", choiceId: "take_torch" },
-  { type: "CHOOSE", choiceId: "enter_cave" },
-  { type: "CHOOSE", choiceId: "grab_gold" },
-  { type: "CHOOSE", choiceId: "win" },
+const WIN: RpgAction[] = [
+  MICRO_ACTIONS.takeTorch,
+  MICRO_ACTIONS.enterCave,
+  MICRO_ACTIONS.grabGold,
+  MICRO_ACTIONS.claimTreasure,
 ];
 
 describe("save / load (§8.7)", () => {

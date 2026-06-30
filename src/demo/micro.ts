@@ -1,35 +1,48 @@
 /**
- * A tiny hand-written CYOA-style rule set used by the low-level engine test suite.
+ * A tiny hand-written RPG-style rule set used by the low-level engine test suite.
  *
  * This is NOT the engine and NOT a real content pack — it is the smallest thing
- * that exercises the core: choices, conditions, effects (add_item / set_flag /
- * set_var / goto / end_game) and an on_enter hook. Stage 1 replaces this with the
- * real CYOA schema + validator; the engine and traces stay identical.
+ * that exercises the core: structured actions, conditions, effects (add_item /
+ * set_flag / set_var / goto / end_game), and an on_enter hook.
  */
 import { initState, type GameState } from "../core/state.js";
 import type { Condition } from "../core/conditions.js";
 import type { Effect } from "../core/effects.js";
 import { hashState } from "../core/hash.js";
-import type { Action } from "../api/types.js";
-import type { Resolution, Rules } from "../core/engine.js";
+import { isRpgAction, type RpgAction } from "../api/types.js";
+import { actionEquals, type Resolution, type Rules } from "../core/engine.js";
 
-type Choice = { id: string; conditions?: Condition[]; effects: Effect[] };
-type Scene = { id: string; onEnter?: Effect[]; choices: Choice[] };
+type MicroOption = { id: string; action: RpgAction; conditions?: Condition[]; effects: Effect[] };
+type Scene = { id: string; onEnter?: Effect[]; options: MicroOption[] };
+
+export const MICRO_ACTIONS = {
+  takeTorch: { type: "TAKE", item: "torch" },
+  enterCave: { type: "MOVE", direction: "east" },
+  grabGold: { type: "TAKE", item: "gold" },
+  leaveCave: { type: "MOVE", direction: "west" },
+  claimTreasure: { type: "USE", target: "treasure" },
+  leaveWorld: { type: "USE", target: "exit" },
+} satisfies Record<string, RpgAction>;
 
 const SCENES: Scene[] = [
   {
     id: "start",
-    choices: [
-      { id: "take_torch", effects: [{ add_item: "torch" }, { set_flag: "has_torch" }] },
-      { id: "enter_cave", effects: [{ goto: "cave" }] },
+    options: [
+      {
+        id: "take_torch",
+        action: MICRO_ACTIONS.takeTorch,
+        effects: [{ add_item: "torch" }, { set_flag: "has_torch" }],
+      },
+      { id: "enter_cave", action: MICRO_ACTIONS.enterCave, effects: [{ goto: "cave" }] },
     ],
   },
   {
     id: "cave",
     onEnter: [{ add_journal: "The cave breathes cold air." }],
-    choices: [
+    options: [
       {
         id: "grab_gold",
+        action: MICRO_ACTIONS.grabGold,
         conditions: [{ has_flag: "has_torch" }],
         effects: [
           { add_item: "gold" },
@@ -37,11 +50,21 @@ const SCENES: Scene[] = [
           { goto: "treasure" },
         ],
       },
-      { id: "leave", effects: [{ goto: "exit" }] },
+      { id: "leave", action: MICRO_ACTIONS.leaveCave, effects: [{ goto: "exit" }] },
     ],
   },
-  { id: "treasure", choices: [{ id: "win", effects: [{ end_game: "ending_rich" }] }] },
-  { id: "exit", choices: [{ id: "go", effects: [{ end_game: "ending_safe" }] }] },
+  {
+    id: "treasure",
+    options: [
+      { id: "win", action: MICRO_ACTIONS.claimTreasure, effects: [{ end_game: "ending_rich" }] },
+    ],
+  },
+  {
+    id: "exit",
+    options: [
+      { id: "go", action: MICRO_ACTIONS.leaveWorld, effects: [{ end_game: "ending_safe" }] },
+    ],
+  },
 ];
 
 const SCENE_BY_ID = new Map(SCENES.map((s) => [s.id, s]));
@@ -53,19 +76,19 @@ export const MICRO_START = "start";
 export const MICRO_SEED = 1234;
 
 export const microRules: Rules = {
-  legalActions(state: GameState): Action[] {
+  legalActions(state: GameState): RpgAction[] {
     const scene = SCENE_BY_ID.get(state.current);
     if (!scene) return [];
-    // Legality = the choice exists in this scene. Conditions are checked by the
+    // Legality = the action exists in this scene. Conditions are checked by the
     // engine afterward (§8.4), satisfying the "legal ⊇ executable" property (§14).
-    return scene.choices.map((c) => ({ type: "CHOOSE", choiceId: c.id }));
+    return scene.options.map((option) => option.action);
   },
-  resolve(state: GameState, action: Action): Resolution | null {
-    if (action.type !== "CHOOSE") return null;
+  resolve(state: GameState, action): Resolution | null {
+    if (!isRpgAction(action)) return null;
     const scene = SCENE_BY_ID.get(state.current);
-    const choice = scene?.choices.find((c) => c.id === action.choiceId);
-    if (!choice) return null;
-    return { conditions: choice.conditions ?? [], effects: choice.effects };
+    const option = scene?.options.find((candidate) => actionEquals(candidate.action, action));
+    if (!option) return null;
+    return { conditions: option.conditions ?? [], effects: option.effects };
   },
   onEnter(_state: GameState, locationId: string): Effect[] {
     return SCENE_BY_ID.get(locationId)?.onEnter ?? [];

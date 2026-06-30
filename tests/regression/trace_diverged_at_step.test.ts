@@ -34,21 +34,22 @@ import { createToolApi } from "../../src/mcp/tools.js";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import {
+  MICRO_ACTIONS,
   microRules,
   microInitState,
   MICRO_PACK_ID,
   MICRO_CONTENT_HASH,
 } from "../../src/demo/micro.js";
-import type { Action } from "../../src/api/types.js";
+import type { Action, RpgAction } from "../../src/api/types.js";
 
-// Four-action winning route through the micro engine (take_torch → enter_cave →
-// grab_gold → win). These cover steps 0–3, giving us indices 0–3 for divergence
+// Four-action winning route through the micro engine (take torch -> enter cave ->
+// grab gold -> claim treasure). These cover steps 0-3, giving us indices 0-3 for divergence
 // injection testing.
-const WIN: Action[] = [
-  { type: "CHOOSE", choiceId: "take_torch" },
-  { type: "CHOOSE", choiceId: "enter_cave" },
-  { type: "CHOOSE", choiceId: "grab_gold" },
-  { type: "CHOOSE", choiceId: "win" },
+const WIN: RpgAction[] = [
+  MICRO_ACTIONS.takeTorch,
+  MICRO_ACTIONS.enterCave,
+  MICRO_ACTIONS.grabGold,
+  MICRO_ACTIONS.claimTreasure,
 ];
 
 function newTrace(): Trace {
