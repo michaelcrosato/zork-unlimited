@@ -29,7 +29,7 @@ export type Session = {
   contentHash: string;
   /** The pack's mode — the discriminator used to route observation/playtest. */
   mode: PackMode;
-  /** Exactly one of CyoaIndex | ParserIndex | RpgIndex, matching `mode`. */
+  /** The compiled RPG index for this session. */
   index: AnyIndex;
   rules: Rules;
   state: GameState;

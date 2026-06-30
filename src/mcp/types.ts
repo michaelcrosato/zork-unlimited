@@ -1,42 +1,29 @@
 /**
- * MCP pack-shape dispatch types.
+ * MCP RPG session types.
  *
- * The public MCP catalog is RPG-only, but explicit legacy pack loading still uses
- * these shape checks during migration. Mode is detected from the pack's STRUCTURE
- * — never a field added to content. Detection keys off property PRESENCE, not
- * array contents: an RPG pack is a parser-shaped pack plus `enemies` (which
- * defaults to `[]`), so we must check `"enemies" in pack`, not `enemies.length`
- * — otherwise an enemy-less RPG pack would run as parser.
+ * MCP is now a single runtime surface: RPG. The response `mode` discriminator is
+ * preserved for client stability, but it has exactly one value. Legacy CYOA/parser
+ * pack shapes are rejected before session creation.
  */
-import type { CyoaIndex } from "../cyoa/runner.js";
-import type { ParserIndex } from "../parser/model.js";
 import type { RpgIndex } from "../rpg/runner.js";
-import type { CyoaObservation } from "../cyoa/observation.js";
-import type { ParserObservation } from "../parser/observation.js";
 import type { RpgObservation } from "../rpg/observation.js";
-import type { CompiledPack } from "../cyoa/pack.js";
-import type { CompiledParserPack } from "../parser/pack.js";
 import type { CompiledRpgPack } from "../rpg/pack.js";
 
-export type PackMode = "cyoa" | "parser" | "rpg";
+export type PackMode = "rpg";
 
-/** Any mode's compiled-pack index. Sessions carry exactly one. */
-export type AnyIndex = CyoaIndex | ParserIndex | RpgIndex;
+/** The compiled-pack index held by an MCP game session. */
+export type AnyIndex = RpgIndex;
 
-/** Any mode's AI-facing observation. The `mode` field is the discriminator. */
-export type AnyObservation = CyoaObservation | ParserObservation | RpgObservation;
+/** The AI-facing observation returned by MCP game-session tools. */
+export type AnyObservation = RpgObservation;
 
-/** Any mode's compiled pack (pack + content hash). */
-export type AnyCompiledPack = CompiledPack | CompiledParserPack | CompiledRpgPack;
+/** A compiled RPG pack (pack + content hash). */
+export type AnyCompiledPack = CompiledRpgPack;
 
 /**
- * Detect a pack's mode from the parsed YAML/JSON object. Order matters: an RPG
- * pack also has `rooms`, so test `enemies` first. Pure, total.
+ * Detect the only accepted MCP pack shape from parsed YAML/JSON. Use property
+ * presence, not `enemies.length`: an enemy-less RPG pack is still RPG.
  */
-export function detectMode(raw: unknown): PackMode {
-  if (raw !== null && typeof raw === "object") {
-    if ("enemies" in raw) return "rpg";
-    if ("rooms" in raw) return "parser";
-  }
-  return "cyoa";
+export function isRpgPackShape(raw: unknown): raw is Record<string, unknown> {
+  return raw !== null && typeof raw === "object" && "enemies" in raw;
 }

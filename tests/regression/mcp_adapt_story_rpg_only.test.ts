@@ -30,7 +30,7 @@ describe("adapt_story RPG-only MCP authoring surface", () => {
   });
 
   it("rejects legacy mode selection", async () => {
-    await expect(api().adapt_story({ premise: PREMISE, mode: "cyoa" })).rejects.toThrow(
+    await expect(api().adapt_story({ premise: PREMISE, mode: "cyoa" as never })).rejects.toThrow(
       "adapt_story is RPG-only",
     );
   });

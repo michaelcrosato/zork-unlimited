@@ -18,7 +18,7 @@ function sessionInit(overrides: Partial<Omit<Session, "id">> = {}): Omit<Session
   return {
     packId: "test-pack",
     contentHash: "0".repeat(64),
-    mode: "cyoa",
+    mode: "rpg",
     index: {} as AnyIndex,
     rules,
     state: state(),

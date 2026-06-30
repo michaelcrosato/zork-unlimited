@@ -1,21 +1,22 @@
 /**
  * MCP RPG catalog contract.
  *
- * The tool API can still load older pack shapes while they are being migrated,
- * but blind/AFK discovery must steer agents only to the consolidated RPG surface.
+ * The tool API rejects older pack shapes and steers blind/AFK discovery only to
+ * the consolidated RPG surface.
  */
 import { describe, it, expect } from "vitest";
 import { createToolApi } from "../../src/mcp/tools.js";
-import { detectMode } from "../../src/mcp/types.js";
+import { isRpgPackShape } from "../../src/mcp/types.js";
 
 const ROOT = process.cwd();
 const api = () => createToolApi({ root: ROOT });
 const MAIN_RPG = "content/rpg/pack/breaking_weir.yaml";
 const RPG = "content/rpg/pack/sunken_barrow.yaml";
 
-describe("detectMode keeps RPG structural priority", () => {
+describe("isRpgPackShape keeps RPG structural priority", () => {
   it("rpg has enemies even when enemies is empty", () => {
-    expect(detectMode({ enemies: [], rooms: [] })).toBe("rpg");
+    expect(isRpgPackShape({ enemies: [], rooms: [] })).toBe(true);
+    expect(isRpgPackShape({ rooms: [] })).toBe(false);
   });
 });
 

@@ -5,11 +5,10 @@
  * built — the engine stays the source of truth. These are unit-tested directly,
  * without a live MCP client (a §9.4 rule); server.ts only adapts them to stdio.
  *
- * The public story catalog and explicit pack-loading path are RPG-only. Some
- * internal CYOA/parser dispatch remains while old migration tests and patch
- * scaffolding are retired, but blind/AFK agents can no longer start or validate
- * legacy packs through MCP. Content and traces are data only — no handler runs
- * shell or code (§16).
+ * The public story catalog, pack-loading path, and live session dispatch are all
+ * RPG-only. Legacy content files may still exist as data during migration, but MCP
+ * never indexes, observes, starts, or validates them as playable sessions. Content
+ * and traces are data only — no handler runs shell or code (§16).
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -19,13 +18,6 @@ import { makeStep, type Rules } from "../core/engine.js";
 import type { Action } from "../api/types.js";
 import type { GameState } from "../core/state.js";
 import type { GameEvent } from "../core/events.js";
-
-import { indexPack, buildRules, initStateForPack, type CyoaIndex } from "../cyoa/runner.js";
-import type { ParserIndex } from "../parser/model.js";
-import { buildObservation } from "../cyoa/observation.js";
-
-import { indexParserPack, buildParserRules, initStateForParserPack } from "../parser/runner.js";
-import { buildParserObservation } from "../parser/observation.js";
 
 import { compileRpgPack, loadRpgPackFile } from "../rpg/pack.js";
 import { generateRpgPack } from "../gen/rpg_generator.js";
@@ -46,7 +38,7 @@ import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
 import { SessionStore, type Session } from "./sessions.js";
 import {
-  detectMode,
+  isRpgPackShape,
   type PackMode,
   type AnyCompiledPack,
   type AnyIndex,
@@ -125,46 +117,24 @@ type StoryEntry = {
 
 const MAIN_RPG_STORY = "content/rpg/pack/breaking_weir.yaml";
 
-// ── Mode-aware dispatch (the §3 Layer-2/3 boundary stays per-mode) ──────────────
-// `mode` and `index` are always created together (startSession), so narrowing the
-// AnyIndex union by `mode` in these switches is sound — a localized, documented
-// cast rather than a structural guess.
-
-function indexFor(mode: PackMode, pack: AnyCompiledPack["pack"]): AnyIndex {
-  if (mode === "cyoa") return indexPack(pack as Parameters<typeof indexPack>[0]);
-  if (mode === "parser") return indexParserPack(pack as Parameters<typeof indexParserPack>[0]);
-  return indexRpgPack(pack as Parameters<typeof indexRpgPack>[0]);
+function indexFor(pack: AnyCompiledPack["pack"]): AnyIndex {
+  return indexRpgPack(pack);
 }
 
-function rulesFor(mode: PackMode, index: AnyIndex): Rules {
-  if (mode === "cyoa") return buildRules(index as Parameters<typeof buildRules>[0]);
-  if (mode === "parser") return buildParserRules(index as Parameters<typeof buildParserRules>[0]);
-  return buildRpgRules(index as Parameters<typeof buildRpgRules>[0]);
+function rulesFor(index: AnyIndex): Rules {
+  return buildRpgRules(index);
 }
 
-function initStateFor(mode: PackMode, index: AnyIndex, seed: number): GameState {
-  if (mode === "cyoa")
-    return initStateForPack(index as Parameters<typeof initStateForPack>[0], seed);
-  if (mode === "parser")
-    return initStateForParserPack(index as Parameters<typeof initStateForParserPack>[0], seed);
-  return initStateForRpgPack(index as Parameters<typeof initStateForRpgPack>[0], seed);
+function initStateFor(index: AnyIndex, seed: number): GameState {
+  return initStateForRpgPack(index, seed);
 }
 
 function buildObsFor(
-  mode: PackMode,
   index: AnyIndex,
   state: GameState,
   opts: { hideGraph?: boolean; includeWorldIntro?: boolean } = {},
 ): AnyObservation {
   const obsOpts = { includeWorldIntro: true, ...opts };
-  if (mode === "cyoa")
-    return buildObservation(index as Parameters<typeof buildObservation>[0], state, obsOpts);
-  if (mode === "parser")
-    return buildParserObservation(
-      index as Parameters<typeof buildParserObservation>[0],
-      state,
-      obsOpts,
-    );
   return buildRpgObservation(index as Parameters<typeof buildRpgObservation>[0], state, obsOpts);
 }
 
@@ -181,22 +151,18 @@ function buildObsFor(
  * `SaveIntegrityError`); it never coerces. It is the SoundnessBench
  * REJECTION-DIRECTION oracle (cf. bug_0181) carried from finiteness to reference.
  *
- * CYOA terminals are reached by goto+end_game (cyoa/runner.ts), so a legitimately
- * ENDED CYOA save carries `current`/`endingId` = a terminal id that is NOT a
- * scene; the valid sets fold in `terminalIds` so those real saves still load.
- * Parser/RPG keep the player in a room at end_game, so their `current` is always
- * a room id and their `endingId` a declared ending.
+ * RPG keeps the player in a room at end_game, so `current` is always a room id
+ * and `endingId` is always a declared ending.
  *
  * `inventory` is the third rendered referential field (bug_0184): a phantom item
  * id surfaces verbatim in the observation and in the `INVENTORY` narration ("You
  * are carrying: <phantom>"), so an un-gated forged save shows the player a symbol
  * the pack never declares — the same "render a nonexistent symbol" hole bug_0183
  * closed for `current`. The valid item set is PROVABLY COMPLETE, so gating it can
- * never false-reject a legitimate save: an item can only enter inventory via a
- * parser/RPG `TAKE` (which only succeeds for a DECLARED object, legal_actions.ts)
- * or an `add_item` effect — so `declared objects ∪ every add_item target in the
- * pack` is exactly the set a real playthrough could ever hold. CYOA has no object
- * namespace, so its legitimate items are the add_item targets alone.
+ * never false-reject a legitimate save: an item can only enter inventory via an
+ * RPG `TAKE` (which only succeeds for a declared object) or an `add_item` effect,
+ * so `declared objects ∪ every add_item target in the pack` is exactly the set a
+ * real playthrough could ever hold.
  */
 function collectAddItemTargets(node: unknown, acc: Set<string>): Set<string> {
   if (Array.isArray(node)) {
@@ -210,24 +176,13 @@ function collectAddItemTargets(node: unknown, acc: Set<string>): Set<string> {
   return acc;
 }
 
-function assertLoadedStateRefs(mode: PackMode, index: AnyIndex, state: GameState): void {
-  let locations: Set<string>;
-  let endings: Set<string>;
+function assertLoadedStateRefs(index: AnyIndex, state: GameState): void {
   const items = collectAddItemTargets(index.pack, new Set<string>());
-  if (mode === "cyoa") {
-    const ix = index as CyoaIndex;
-    locations = new Set<string>([...ix.scenes.keys(), ...ix.terminalIds]);
-    endings = ix.terminalIds;
-  } else {
-    const ix = index as ParserIndex;
-    locations = new Set<string>(ix.rooms.keys());
-    endings = new Set<string>(ix.pack.endings.map((e) => e.id));
-    for (const id of ix.objects.keys()) items.add(id);
-  }
+  const locations = new Set<string>(index.rooms.keys());
+  const endings = new Set<string>(index.pack.endings.map((e) => e.id));
+  for (const id of index.objects.keys()) items.add(id);
   if (!locations.has(state.current)) {
-    throw new SaveIntegrityError(
-      `Save references unknown ${mode === "cyoa" ? "scene" : "room"} "${state.current}".`,
-    );
+    throw new SaveIntegrityError(`Save references unknown room "${state.current}".`);
   }
   if (state.endingId !== null && !endings.has(state.endingId)) {
     throw new SaveIntegrityError(`Save references unknown ending "${state.endingId}".`);
@@ -239,9 +194,9 @@ function assertLoadedStateRefs(mode: PackMode, index: AnyIndex, state: GameState
   }
 }
 
-/** The current location id, normalized across modes (scene id ⟷ room id). */
+/** The current RPG room id. */
 function obsLocation(obs: AnyObservation): string {
-  return obs.mode === "cyoa" ? obs.scene_id : obs.room;
+  return obs.room;
 }
 
 /**
@@ -249,7 +204,7 @@ function obsLocation(obs: AnyObservation): string {
  * stream (bug_0260, a blind-playtest finding). Some engine effects write `__`-
  * prefixed vars/flags that exist only to drive mechanics, never to be read by the
  * player: the per-enemy HP tracker `__enemy_hp_<id>` (rpg/schema enemyHpVar, set
- * each combat round) and the dialogue-progress flag `__dlg_<npc>` (parser/model).
+ * each combat round) and the dialogue-progress flag `__dlg_<npc>`.
  * observation.ts ALREADY hides these from `state.flags`/`state.vars` (and
  * get_transcript's summary.flags filters them too), but the raw `events` array
  * returned by step_action — and recorded in the transcript get_transcript shows —
@@ -271,20 +226,17 @@ function playerVisibleEvents(events: GameEvent[]): GameEvent[] {
   });
 }
 
-/** The human label for an action id in this observation (choice text ⟷ command). */
+/** The human command label for an action id in this observation. */
 function obsActionText(obs: AnyObservation, id: string): string | null {
-  if (obs.mode === "cyoa") return obs.available_actions.find((a) => a.id === id)?.text ?? null;
   return obs.available_actions.find((a) => a.id === id)?.command ?? null;
 }
 
 /**
- * Map an action id (from the observation's legal set) to a structured Action.
- * CYOA always yields a CHOOSE (an unknown id is rejected by the engine, preserving
- * the "illegal action, no state change" path); parser/RPG look up the action
- * object the legal-action generator already attached.
+ * Map an action id from the RPG observation's legal set to a structured Action.
+ * Unknown ids are rejected before they reach the reducer, preserving the illegal
+ * action / no state-change path.
  */
 function actionForId(obs: AnyObservation, id: string): Action | null {
-  if (obs.mode === "cyoa") return { type: "CHOOSE", choiceId: id };
   return obs.available_actions.find((a) => a.id === id)?.action ?? null;
 }
 
@@ -306,19 +258,18 @@ export function createToolApi(opts: { root: string }) {
   let overworldCounter = 0;
   const overworldSessions = new Map<string, OverworldSession>();
 
-  /** Read a pack, detect its mode, compile + validate with the right loader. */
+  /** Read an RPG pack, compile, and validate it with the single runtime loader. */
   function loadAndReport(packPath: string): LoadResult {
     const abs = safeResolve(root, packPath);
     const source = readFileSync(abs, "utf8");
-    const mode = detectMode(parseYaml(source) as unknown);
-    if (mode !== "rpg") {
+    if (!isRpgPackShape(parseYaml(source) as unknown)) {
       return {
         ok: false,
         report: makeReport(packPath, [
           {
             severity: "error",
             code: "UNSUPPORTED_LEGACY_PACK",
-            message: `MCP pack loading is RPG-only; ${mode} packs are legacy migration data.`,
+            message: "MCP pack loading is RPG-only; legacy pack shapes are migration data.",
             where: [packPath],
           },
         ]),
@@ -332,7 +283,7 @@ export function createToolApi(opts: { root: string }) {
       };
     const pack = compileRes.compiled.pack;
     const report = validateRpg(pack);
-    return { ok: true, mode, compiled: compileRes.compiled, report };
+    return { ok: true, mode: "rpg", compiled: compileRes.compiled, report };
   }
 
   /** Compile + validate, refusing to play an invalid pack (§0, §10). */
@@ -347,8 +298,7 @@ export function createToolApi(opts: { root: string }) {
   /**
    * Mint a fresh RPG pack from a seed and refuse to play it unless it clears the SAME
    * `validateRpg` gate the curated RPG packs clear. This is the only public MCP
-   * generation route; legacy CYOA/parser generators remain internal migration
-   * scaffolding until their runtimes are removed.
+   * generation route.
    */
   function requireGeneratedRpgPlayable(seed: number): {
     mode: PackMode;
@@ -370,24 +320,24 @@ export function createToolApi(opts: { root: string }) {
     state?: GameState,
     opts: { hideGraph?: boolean } = {},
   ): Session {
-    const index = indexFor(mode, compiled.pack);
-    const st = state ?? initStateFor(mode, index, 1);
+    const index = indexFor(compiled.pack);
+    const st = state ?? initStateFor(index, 1);
     // §16 integrity at load: a PROVIDED state is untrusted (it came off a save
     // file via load_game), so its `current`/`endingId` must name symbols that
     // exist in THIS pack before it is handed to the engine. A freshly-built init
     // state (state === undefined) is trusted and skipped. Rejects, never coerces.
-    if (state !== undefined) assertLoadedStateRefs(mode, index, st);
+    if (state !== undefined) assertLoadedStateRefs(index, st);
     const session = sessions.create({
       packId: compiled.pack.meta.id,
       contentHash: compiled.contentHash,
       mode,
       index,
-      rules: rulesFor(mode, index),
+      rules: rulesFor(index),
       state: st,
       transcript: [],
       ...(opts.hideGraph ? { hideGraph: true } : {}),
     });
-    const obs = buildObsFor(mode, index, st);
+    const obs = buildObsFor(index, st);
     session.transcript.push({
       step: st.step,
       scene_id: obsLocation(obs),
@@ -403,7 +353,7 @@ export function createToolApi(opts: { root: string }) {
   }
 
   const obsOf = (s: Session): AnyObservation =>
-    buildObsFor(s.mode, s.index, s.state, { hideGraph: s.hideGraph ?? false });
+    buildObsFor(s.index, s.state, { hideGraph: s.hideGraph ?? false });
 
   function listYamlFiles(dir: string): string[] {
     try {
@@ -1235,7 +1185,7 @@ export function createToolApi(opts: { root: string }) {
       });
       if (args.seed !== undefined && args.seed !== 1) {
         // Re-seed: rebuild the initial state at the requested seed.
-        session.state = initStateFor(mode, session.index, args.seed);
+        session.state = initStateFor(session.index, args.seed);
       }
       return {
         session_id: session.id,
@@ -1263,7 +1213,7 @@ export function createToolApi(opts: { root: string }) {
 
     get_observation(args: { session_id: string; hide_graph?: boolean }) {
       const s = sessions.get(args.session_id);
-      const obs = buildObsFor(s.mode, s.index, s.state, {
+      const obs = buildObsFor(s.index, s.state, {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
       });
       return { observation: obs, state_hash: hashState(s.state) };
@@ -1275,7 +1225,7 @@ export function createToolApi(opts: { root: string }) {
 
     list_legal_actions(args: { session_id: string; hide_graph?: boolean }) {
       const s = sessions.get(args.session_id);
-      const obs = buildObsFor(s.mode, s.index, s.state, {
+      const obs = buildObsFor(s.index, s.state, {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
       });
       return { actions: obs.available_actions };
@@ -1283,14 +1233,14 @@ export function createToolApi(opts: { root: string }) {
 
     step_action(args: { session_id: string; action_id: string; hide_graph?: boolean }) {
       const s = sessions.get(args.session_id);
-      const before = buildObsFor(s.mode, s.index, s.state, {
+      const before = buildObsFor(s.index, s.state, {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
       });
       const beforeStep = s.state.step;
       const actionText = obsActionText(before, args.action_id);
       const action = actionForId(before, args.action_id);
       if (action === null) {
-        // Parser/RPG: an id not in the legal set never reaches the engine.
+        // Unknown action ids never reach the engine.
         return {
           ok: false,
           rejection_reason: "That action is not available right now.",
@@ -1303,7 +1253,7 @@ export function createToolApi(opts: { root: string }) {
       }
       const result = makeStep(s.rules)(s.state, action);
       sessions.update(s.id, result.state);
-      const after = buildObsFor(s.mode, s.index, s.state, {
+      const after = buildObsFor(s.index, s.state, {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
       });
       s.transcript.push({
@@ -1417,7 +1367,7 @@ export function createToolApi(opts: { root: string }) {
     replay_trace(args: { trace_path: string; pack_path: string }) {
       const traceAbs = safeResolve(root, args.trace_path);
       const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace;
-      const { mode, compiled } = requirePlayable(args.pack_path);
+      const { compiled } = requirePlayable(args.pack_path);
       if (trace.content_hash !== compiled.contentHash) {
         return {
           ok: false,
@@ -1428,8 +1378,9 @@ export function createToolApi(opts: { root: string }) {
       // content-hash check above guards WHICH pack, not WHETHER the state is well-
       // formed). Gate it the same way a loaded save is gated, BEFORE any engine call.
       assertWellFormedState(trace.initial_state);
-      assertLoadedStateRefs(mode, indexFor(mode, compiled.pack), trace.initial_state);
-      const rules = rulesFor(mode, indexFor(mode, compiled.pack));
+      const index = indexFor(compiled.pack);
+      assertLoadedStateRefs(index, trace.initial_state);
+      const rules = rulesFor(index);
       // Replay asserts the recorded final hash, and — for a Trace-v2 trace that
       // also carries `per_step_hashes` — localizes the FIRST divergent action via
       // `divergedAtStep` (returned straight through). A v1 trace (final hash only)
@@ -1456,8 +1407,9 @@ export function createToolApi(opts: { root: string }) {
       // is fed RAW into the per-step loop (let state = trace.initial_state) and into
       // diagnose() below, so it must be well-formed + referentially sound first.
       assertWellFormedState(trace.initial_state);
-      assertLoadedStateRefs(mode, indexFor(mode, compiled.pack), trace.initial_state);
-      const rules = rulesFor(mode, indexFor(mode, compiled.pack));
+      const index = indexFor(compiled.pack);
+      assertLoadedStateRefs(index, trace.initial_state);
+      const rules = rulesFor(index);
       const step = makeStep(rules);
       let state = trace.initial_state;
       const steps: {
