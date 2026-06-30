@@ -1,23 +1,23 @@
 #!/usr/bin/env -S npx tsx
 /**
- * bin/author — author a content pack from a premise (spec §12.1–3).
+ * bin/author — author an RPG content pack from a premise (spec §12.1–3).
  *
  * Usage:
- *   npm run author -- "a premise sentence" [--mode cyoa|parser|rpg] [--out content/.../foo.yaml]
+ *   npm run author -- "a premise sentence" [--out content/rpg/pack/foo.yaml]
  *
  * Runs the writer → adapter → validator loop with the deterministic
- * MockAuthorProvider (no API keys). `--mode parser` routes through the richer
- * Zork-style parser validator; `--mode rpg` through the richest, `validateRpg` (parser
- * checks PLUS the Stage-4 combat/skill-check layer); default: cyoa. Prints the per-beat
- * classification and the validation report; with --out, writes the green pack as YAML. A
- * real provider would slot in behind an env var (§12.7).
+ * MockAuthorProvider (no API keys). The CLI is deliberately RPG-only; legacy
+ * CYOA/parser authoring loops remain internal migration scaffolding, not public
+ * command modes. Prints the per-beat classification and validation report; with
+ * --out, writes the green RPG pack as YAML. A real provider slots in behind an
+ * env var (§12.7).
  */
 import { writeFileSync } from "node:fs";
 import { stringify as toYaml } from "yaml";
 import { MockAuthorProvider } from "../agents/authoring/mock_author.js";
 import { resolveProvider } from "../agents/llm/providers.js";
 import { loadEngineContract, runWriter } from "../agents/authoring/writer.js";
-import { runAdapter, runParserAdapter, runRpgAdapter } from "../agents/authoring/adapter.js";
+import { runRpgAdapter } from "../agents/authoring/adapter.js";
 import { formatReport } from "../src/validate/report.js";
 
 async function main(): Promise<void> {
@@ -27,16 +27,14 @@ async function main(): Promise<void> {
     process.exit(2);
   }
   let out: string | null = null;
-  let mode: "cyoa" | "parser" | "rpg" = "cyoa";
   for (let i = 3; i < process.argv.length; i++) {
     if (process.argv[i] === "--out") out = process.argv[++i] ?? null;
     else if (process.argv[i] === "--mode") {
-      const m = process.argv[++i];
-      if (m !== "cyoa" && m !== "parser" && m !== "rpg") {
-        console.error(`--mode must be cyoa, parser, or rpg, got "${m}"`);
-        process.exit(2);
-      }
-      mode = m;
+      console.error("author is RPG-only; --mode is no longer supported.");
+      process.exit(2);
+    } else {
+      console.error(`Unknown option: ${process.argv[i]}`);
+      process.exit(2);
     }
   }
 
@@ -51,14 +49,9 @@ async function main(): Promise<void> {
     `Writer drafted "${story.title}" — ${story.chapters.length} chapters, ${story.beats.length} beats.`,
   );
 
-  const result =
-    mode === "rpg"
-      ? await runRpgAdapter(provider, { story, contract })
-      : mode === "parser"
-        ? await runParserAdapter(provider, { story, contract })
-        : await runAdapter(provider, { story, contract });
+  const result = await runRpgAdapter(provider, { story, contract });
   console.log(
-    `\nAdapter reached a ${result.ok ? "GREEN" : "RED"} ${mode} pack in ${result.rounds} round(s).`,
+    `\nAdapter reached a ${result.ok ? "GREEN" : "RED"} rpg pack in ${result.rounds} round(s).`,
   );
   console.log("\nBeat classifications (§11):");
   for (const c of result.classifications)

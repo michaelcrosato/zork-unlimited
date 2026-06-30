@@ -149,20 +149,21 @@ the schema or fails validation is refused. Exposed over MCP as `apply_content_pa
 
 ### AI authoring — packs from prose (§11, §12.1–3)
 
-A pack can be **authored from a one-line premise** by the writer → adapter →
-validator loop. The writer drafts prose + beats; the adapter emits a CYOA pack and
-classifies each beat against the engine contract (`content/engine_contract.yaml`,
-§11); it loops against the validator until the report is green — the validator, not
-the model, decides correctness (§16). The default `MockAuthorProvider` is
-deterministic (no API keys); its first attempt ships a dangling reference and
-self-corrects once the validator's errors are fed back. A real provider slots in
-behind an env var (§12.7).
+The public author CLI can **author an RPG pack from a one-line premise** by the
+writer → adapter → validator loop. The writer drafts prose + beats; the adapter
+emits an RPG pack and classifies each beat against the engine contract
+(`content/engine_contract.yaml`, §11); it loops against the validator until the
+report is green — the validator, not the model, decides correctness (§16). The
+default `MockAuthorProvider` is deterministic (no API keys); its first attempt
+ships a dangling reference and self-corrects once the validator's errors are fed
+back. A real provider slots in behind an env var (§12.7).
 
 ```bash
 npm run author -- "A keeper must relight a dead lighthouse before a ship wrecks."
 ```
 
-The same pipeline is exposed over MCP as the `adapt_story` tool.
+MCP authoring/generation tools still exist as migration scaffolding while the
+runtime consolidates around the RPG engine.
 
 ### Procedural pack generation — evolving the eval distribution
 
@@ -230,7 +231,7 @@ npm run validate                                           # validate all shippe
 npm run validate -- content/rpg/pack/sunken_barrow.yaml    # validate one RPG pack
 npm run play -- content/rpg/pack/sunken_barrow.yaml        # play it (combat + skill check)
 npm run inspect -- content/rpg/pack/sunken_barrow.yaml      # summarize a pack (or a trace)
-npm run author -- "your one-line premise here"             # author a pack from prose (§12.1-3)
+npm run author -- "your one-line premise here"             # author an RPG pack from prose (§12.1-3)
 npm run ui:dev                                             # Stage 5: web UI (after npm --prefix ui install)
 ```
 
