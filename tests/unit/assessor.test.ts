@@ -84,10 +84,10 @@ function withStaleAuditFixtureRoot(run: (root: string) => void): void {
 }
 
 describe("assess()", () => {
-  it("counts packs by mode from the real content dirs", () => {
-    expect(a.packsByMode["cyoa"]).toBeGreaterThanOrEqual(2);
-    expect(a.packsByMode["parser"]).toBeGreaterThanOrEqual(2);
-    expect(a.packsByMode["rpg"]).toBeGreaterThanOrEqual(1);
+  it("counts the RPG catalog and keeps legacy modes out of discovery", () => {
+    expect(a.packsByMode["cyoa"]).toBe(0);
+    expect(a.packsByMode["parser"]).toBe(0);
+    expect(a.packsByMode["rpg"]).toBeGreaterThanOrEqual(16);
   });
 
   it("produces candidates and a top recommendation", () => {
@@ -110,8 +110,8 @@ describe("assess()", () => {
     // `npm run lint` / `format:check` now run ESLint / Prettier. So, exactly as
     // content_new disarms once every mode meets its breadth target (see "raises no
     // content_new candidate …" below), the repo-eslint candidate is correctly no
-    // longer raised; content_fix (CYOA coverage gaps + the low-priority parser/rpg
-    // blind-playtest reviews — a distinct kind of content work, guarded below) is the
+    // longer raised; content_fix (low-priority RPG blind-playtest reviews — a distinct
+    // kind of content work, guarded below) is the
     // live lever. If the tooling were removed the assessor RE-ARMS repo-eslint, so
     // this assertion also catches that regression.
     expect(existsSync(join(process.cwd(), "eslint.config.js"))).toBe(true);
@@ -120,20 +120,18 @@ describe("assess()", () => {
     expect(a.candidates.length).toBeGreaterThan(0);
   });
 
-  it("does NOT raise bot-coverage content_fix for parser/rpg puzzle packs", () => {
+  it("does NOT raise bot-coverage content_fix for RPG puzzle packs", () => {
     // The planning-free coverage bot can't solve multi-step puzzles, so its failure
-    // to reach a parser/rpg ending is expected — not a content flaw. Those packs
+    // to reach an RPG ending is expected — not a content flaw. Those packs
     // must not produce a high-impact `fix-` candidate from bot coverage alone.
     // (bug_0032 generalized this to PLANNING-GATED CYOA too — see
     // tests/regression/assessor_gated_cyoa_coverage.test.ts.)
-    for (const p of a.packs.filter(
-      (p) => (p.mode === "parser" || p.mode === "rpg") && p.warnings === 0,
-    )) {
+    for (const p of a.packs.filter((p) => p.mode === "rpg" && p.warnings === 0)) {
       expect(a.candidates.find((c) => c.id === `fix-${p.path}`)).toBeUndefined();
     }
   });
 
-  it("keeps parser/rpg packs on the radar as low-priority blind-playtest reviews", () => {
+  it("keeps RPG packs on the radar as low-priority blind-playtest reviews", () => {
     const reviews = a.candidates.filter((c) => c.id.startsWith("playtest-"));
     expect(reviews.length).toBeGreaterThan(0);
     for (const r of reviews) expect(r.score).toBeLessThan(1); // ranked below real fixes + new content
@@ -153,21 +151,18 @@ describe("assess()", () => {
     });
   });
 
-  it("raises content_new candidates only for modes below the breadth target", () => {
-    // TARGET_PER_MODE = {cyoa:20, parser:16, rpg:16} (bug_0336). The current corpus
-    // has reached all three mode targets, so the assessor should disarm every
-    // content_new candidate and leave routine blind-playtest review as the live lever.
-    expect(a.packsByMode["cyoa"]).toBeGreaterThanOrEqual(20);
-    expect(
-      a.candidates.find((c) => c.category === "content_new" && c.target === "cyoa"),
-    ).toBeUndefined();
-    expect(a.packsByMode["parser"]).toBeGreaterThanOrEqual(16);
-    expect(
-      a.candidates.find((c) => c.category === "content_new" && c.target === "parser"),
-    ).toBeUndefined();
+  it("raises content_new candidates only for the RPG breadth target", () => {
+    // TARGET_PER_MODE = {rpg:16}. Legacy CYOA/parser content is no longer a breadth
+    // target, so the assessor must not reintroduce those modes as new authoring work.
     expect(a.packsByMode["rpg"]).toBeGreaterThanOrEqual(16);
     expect(
       a.candidates.find((c) => c.category === "content_new" && c.target === "rpg"),
+    ).toBeUndefined();
+    expect(
+      a.candidates.find((c) => c.category === "content_new" && c.target === "cyoa"),
+    ).toBeUndefined();
+    expect(
+      a.candidates.find((c) => c.category === "content_new" && c.target === "parser"),
     ).toBeUndefined();
     expect(a.candidates.find((c) => c.category === "content_new")).toBeUndefined();
   });

@@ -5,12 +5,10 @@
  * built — the engine stays the source of truth. These are unit-tested directly,
  * without a live MCP client (a §9.4 rule); server.ts only adapts them to stdio.
  *
- * The tools are MULTI-MODE (roadmap Milestone 1): one session abstraction plays
- * CYOA, parser, and RPG packs. Mode is detected from the pack structure
- * (`detectMode`, never a field in content, §16) and every play/validate/playtest
- * tool dispatches on it. CYOA behavior is kept byte-identical (its playtest path
- * is unchanged). Content and traces are data only — no handler runs shell or
- * code (§16).
+ * The public story catalog is RPG-only. Explicit legacy pack loading still routes
+ * through the older shape dispatch while CYOA/parser content is being migrated,
+ * but blind/AFK discovery now steers agents to RPG packs. Content and traces are
+ * data only — no handler runs shell or code (§16).
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -131,6 +129,8 @@ type StoryEntry = {
   playable: boolean;
   world: WorldBinding | null;
 };
+
+const MAIN_RPG_STORY = "content/rpg/pack/breaking_weir.yaml";
 
 // ── Mode-aware dispatch (the §3 Layer-2/3 boundary stays per-mode) ──────────────
 // `mode` and `index` are always created together (startSession), so narrowing the
@@ -475,24 +475,17 @@ export function createToolApi(opts: { root: string }) {
   }
 
   function discoverStoryEntries(): StoryEntry[] {
-    const dirs: [string, PackMode][] = [
-      [join(root, "content", "cyoa", "pack"), "cyoa"],
-      [join(root, "content", "parser", "pack"), "parser"],
-      [join(root, "content", "rpg", "pack"), "rpg"],
-    ];
-    return dirs
-      .flatMap(([dir]) => listYamlFiles(dir))
-      .map((path) => {
-        const lr = loadAndReport(path);
-        return {
-          path,
-          id: lr.ok ? lr.compiled.pack.meta.id : path,
-          title: lr.ok ? lr.compiled.pack.meta.title : path,
-          mode: lr.ok ? lr.mode : null,
-          playable: lr.ok && lr.report.ok,
-          world: lr.ok ? (lr.compiled.pack.meta.world ?? null) : null,
-        };
-      });
+    return listYamlFiles(join(root, "content", "rpg", "pack")).map((path) => {
+      const lr = loadAndReport(path);
+      return {
+        path,
+        id: lr.ok ? lr.compiled.pack.meta.id : path,
+        title: lr.ok ? lr.compiled.pack.meta.title : path,
+        mode: lr.ok ? lr.mode : null,
+        playable: lr.ok && lr.report.ok,
+        world: lr.ok ? (lr.compiled.pack.meta.world ?? null) : null,
+      };
+    });
   }
 
   function loadWorldManifest(): WorldManifest {
@@ -566,9 +559,12 @@ export function createToolApi(opts: { root: string }) {
       main_story: string | null;
     } {
       const stories = discoverStoryEntries();
-      // Keep watchtower the default main story for the existing AFK loop.
+      // Keep blind/AFK agents on the richest currently shipped RPG pack by default.
       const main =
-        stories.find((s) => s.path.endsWith("watchtower_road.yaml")) ?? stories[0] ?? null;
+        stories.find((s) => s.path === MAIN_RPG_STORY && s.playable) ??
+        stories.find((s) => s.playable) ??
+        stories[0] ??
+        null;
       return { stories, main_story: main?.path ?? null };
     },
 

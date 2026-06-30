@@ -243,20 +243,16 @@ RPG content gate and rejects legacy CYOA/parser packs.
 
 The engine is exposed as an MCP server so any agent harness (Claude Code, Codex,
 Gemini CLI, …) plays via native tool calls over the structured observation/action
-loop — never a raw parser. **The tools are multi-mode**: the same `new_game` /
-`step_action` / `get_observation` / `validate_pack` / save·load /
-replay path plays CYOA, parser, and RPG packs — mode is auto-detected from the
-pack's structure (never a field in content, §16) and carried on every observation
-as `mode`. Tools: `validate_pack`, `load_pack`, `new_game`, `get_observation`,
-`list_legal_actions`, `step_action`, `save_game`, `load_game`,
-`replay_trace`, `inspect_trace` (per-step summary + suspected bugs),
-`apply_content_patch` (deterministic, whitelisted patch — cyoa/parser),
-`adapt_story` (author a pack from a premise),
-`generate_pack` (mint + validate a fresh procedural CYOA pack from a seed — read-only;
-play it in-memory via `new_game`'s `generate_seed`). `list_stories` discovers packs
-across `content/{cyoa,parser,rpg}/pack` with each pack's mode. All paths are
-confined to the project root; content and traces are data only (§16). The handlers
-(`src/mcp/tools.ts`) are unit-tested directly without a live client.
+loop — never a raw parser. The MCP catalog is now RPG-first: `list_stories`
+discovers shipped packs under `content/rpg/pack`, picks the high-depth RPG pack
+`breaking_weir` as the default, and `list_world` reports the RPG quest subset of
+the Charter Marches. The same structured `new_game` / `step_action` /
+`get_observation` / save·load path drives RPG sessions through stable action ids
+and deterministic state hashes. Explicit legacy pack loading still exists during
+the migration, but blind/AFK discovery no longer steers agents toward CYOA or
+parser packs. All paths are confined to the project root; content and traces are
+data only (§16). The handlers (`src/mcp/tools.ts`) are unit-tested directly
+without a live client.
 
 ```bash
 npm run mcp   # start the stdio server

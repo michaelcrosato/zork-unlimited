@@ -7,7 +7,7 @@ import { describe, it, expect } from "vitest";
 import { buildPrompt, playtestTarget, shouldRunUltraplan } from "../../src/ai-loop.js";
 import type { Assessment, ImprovementCandidate, PackHealth } from "../../src/afk/assessor.js";
 
-const mainStory = "content/cyoa/pack/watchtower_road.yaml";
+const mainStory = "content/rpg/pack/breaking_weir.yaml";
 const playtestRecord = "ai-runs/2026-06-25T00-00-00-000Z/playtest.md";
 
 function candidate(
@@ -38,7 +38,7 @@ function assessment(top: ImprovementCandidate | null): Assessment {
 }
 
 function packHealth(path: string, warnings = 0): PackHealth {
-  return { path, mode: "cyoa", playable: true, warnings };
+  return { path, mode: "rpg", playable: true, warnings };
 }
 
 describe("shouldRunUltraplan", () => {

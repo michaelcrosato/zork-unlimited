@@ -1,12 +1,12 @@
 /**
- * MCP multi-mode dispatch types (roadmap Milestone 1, item 1a-1).
+ * MCP pack-shape dispatch types.
  *
- * The MCP tools play CYOA, parser, and RPG packs through one session abstraction.
- * Mode is detected from the pack's STRUCTURE — never a field added to content, so
- * content stays unchanged (§16) and existing packs keep their hashes. Detection
- * keys off property PRESENCE, not array contents: an RPG pack is a parser pack
- * plus `enemies` (which defaults to `[]`), so we must check `"enemies" in pack`,
- * not `enemies.length` — otherwise an enemy-less RPG pack would run as parser.
+ * The public MCP catalog is RPG-only, but explicit legacy pack loading still uses
+ * these shape checks during migration. Mode is detected from the pack's STRUCTURE
+ * — never a field added to content. Detection keys off property PRESENCE, not
+ * array contents: an RPG pack is a parser-shaped pack plus `enemies` (which
+ * defaults to `[]`), so we must check `"enemies" in pack`, not `enemies.length`
+ * — otherwise an enemy-less RPG pack would run as parser.
  */
 import type { CyoaIndex } from "../cyoa/runner.js";
 import type { ParserIndex } from "../parser/model.js";

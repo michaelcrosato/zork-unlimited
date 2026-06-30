@@ -67,13 +67,13 @@ tool(
 );
 tool(
   "list_stories",
-  "Legacy AFK discovery alias. Prefer list_world for the canonical Charter Marches hub and quest list.",
+  "List shipped RPG quest packs for blind/AFK play. Prefer list_world for the canonical Charter Marches hub and route graph.",
   {},
   () => api.list_stories(),
 );
 tool(
   "list_world",
-  "List the single canonical world graph, its hub city, and every shipped pack as a reachable quest/area in that world.",
+  "List the single canonical world graph, its hub city, and shipped RPG quest packs as reachable quest/area entries.",
   {},
   () => api.list_world(),
 );

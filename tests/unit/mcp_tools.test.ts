@@ -9,6 +9,7 @@ import { parseOverworldManifest } from "../../src/world/overworld.js";
 
 const ROOT = process.cwd();
 const PACK = "content/cyoa/pack/watchtower_road.yaml";
+const MAIN_RPG = "content/rpg/pack/breaking_weir.yaml";
 const api = () => createToolApi({ root: ROOT });
 const overworld = parseOverworldManifest(
   JSON.parse(readFileSync("content/world/new_york_overworld.json", "utf8")),
@@ -67,11 +68,13 @@ function resolveCurrentOverworldSessionEvent(
 }
 
 describe("MCP tools — validate / load (§9.4)", () => {
-  it("keeps legacy story discovery world-bound for AFK", () => {
+  it("keeps story discovery RPG-only and world-bound for AFK", () => {
     const r = api().list_stories();
-    expect(r.main_story).toBe(PACK);
-    expect(r.stories.some((s) => s.path === PACK && s.playable)).toBe(true);
-    expect(r.stories.find((s) => s.path === PACK)?.world?.hub).toBe("Charterhaven");
+    expect(r.main_story).toBe(MAIN_RPG);
+    expect(r.stories).toHaveLength(16);
+    expect(r.stories.every((s) => s.mode === "rpg")).toBe(true);
+    expect(r.stories.some((s) => s.path === PACK)).toBe(false);
+    expect(r.stories.find((s) => s.path === MAIN_RPG)?.world?.hub).toBe("Charterhaven");
   });
 
   it("lists the unified world as a hub plus quest areas", () => {
@@ -79,19 +82,18 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.world.id).toBe("charter_marches");
     expect(r.hub).toBe("Charterhaven");
     expect(r.graph.hub).toBe("charterhaven");
-    expect(r.quest_count).toBe(52);
-    expect(r.quests.find((q) => q.path === PACK)).toMatchObject({
-      district: "North Road Watch",
-      quest: "expose the watchtower smuggling road",
-      role: "road warden",
+    expect(r.quest_count).toBe(16);
+    expect(r.quests.every((q) => q.mode === "rpg")).toBe(true);
+    expect(r.quests.find((q) => q.path === MAIN_RPG)).toMatchObject({
+      district: "Breaking Weir",
+      quest: "restore the flood works before the village breaks",
+      role: "weir keeper",
       playable: true,
-      graph_node: "watchtower_road",
+      graph_node: "breaking_weir",
     });
-    expect(r.quests.find((q) => q.path === PACK)?.path_from_hub.map((step) => step.name)).toEqual([
-      "Charterhaven",
-      "North Road",
-      "The Watchtower Road",
-    ]);
+    expect(
+      r.quests.find((q) => q.path === MAIN_RPG)?.path_from_hub.map((step) => step.name),
+    ).toEqual(["Charterhaven", "Industrial Cut", "The Breaking Weir"]);
   });
 
   it("returns the graph path from Charterhaven to a quest", () => {

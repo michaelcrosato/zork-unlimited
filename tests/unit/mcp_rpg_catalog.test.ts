@@ -1,0 +1,77 @@
+/**
+ * MCP RPG catalog contract.
+ *
+ * The tool API can still load older pack shapes while they are being migrated,
+ * but blind/AFK discovery must steer agents only to the consolidated RPG surface.
+ */
+import { describe, it, expect } from "vitest";
+import { createToolApi } from "../../src/mcp/tools.js";
+import { detectMode } from "../../src/mcp/types.js";
+
+const ROOT = process.cwd();
+const api = () => createToolApi({ root: ROOT });
+const MAIN_RPG = "content/rpg/pack/breaking_weir.yaml";
+const RPG = "content/rpg/pack/sunken_barrow.yaml";
+
+describe("detectMode keeps RPG structural priority", () => {
+  it("rpg has enemies even when enemies is empty", () => {
+    expect(detectMode({ enemies: [], rooms: [] })).toBe("rpg");
+  });
+});
+
+describe("list_stories exposes only shipped RPG packs", () => {
+  it("discovers RPG packs and chooses the high-depth RPG default", () => {
+    const { stories, main_story } = api().list_stories();
+    expect(main_story).toBe(MAIN_RPG);
+    expect(stories).toHaveLength(16);
+    expect(stories.every((s) => s.mode === "rpg")).toBe(true);
+    expect(stories.every((s) => s.path.startsWith("content/rpg/pack/"))).toBe(true);
+    expect(stories.some((s) => s.path.includes("/cyoa/"))).toBe(false);
+    expect(stories.some((s) => s.path.includes("/parser/"))).toBe(false);
+  });
+});
+
+describe("load_pack / validate_pack report RPG mode for catalog packs", () => {
+  it("the default RPG pack loads and validates green", () => {
+    const r = api().load_pack({ pack_path: MAIN_RPG });
+    expect(r.ok).toBe(true);
+    expect(r.mode).toBe("rpg");
+    expect(r.content_hash).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
+describe("RPG pack plays through the structured tool API", () => {
+  it("can reach the wight and ATTACK via the legal-action set", () => {
+    const a = api();
+    const game = a.new_game({ pack_path: RPG });
+    expect(game.mode).toBe("rpg");
+    expect(game.observation.mode).toBe("rpg");
+    if (game.observation.mode !== "rpg") return;
+    expect(game.observation.stats.hp).toBeGreaterThan(0);
+
+    const byCmd = (sid: string, needle: string): string | undefined =>
+      (a.list_legal_actions({ session_id: sid }).actions as { id: string; command: string }[]).find(
+        (x) => x.command.includes(needle),
+      )?.id;
+
+    expect(
+      a.step_action({ session_id: game.session_id, action_id: byCmd(game.session_id, "go down")! })
+        .ok,
+    ).toBe(true);
+    expect(
+      a.step_action({
+        session_id: game.session_id,
+        action_id: byCmd(game.session_id, "take iron bar")!,
+      }).ok,
+    ).toBe(true);
+    expect(
+      a.step_action({ session_id: game.session_id, action_id: byCmd(game.session_id, "go north")! })
+        .ok,
+    ).toBe(true);
+    const attackId = byCmd(game.session_id, "attack");
+    expect(attackId).toBeTruthy();
+    const r = a.step_action({ session_id: game.session_id, action_id: attackId! });
+    expect(r.ok).toBe(true);
+    expect(r.events.some((e) => e.type === "narration" && /strike/i.test(e.text))).toBe(true);
+  });
+});

@@ -104,7 +104,7 @@ function main(): void {
   const a = assess(root);
   const top = a.top;
   const mainStory =
-    createToolApi({ root }).list_stories().main_story ?? "content/cyoa/pack/watchtower_road.yaml";
+    createToolApi({ root }).list_stories().main_story ?? "content/rpg/pack/breaking_weir.yaml";
   const target = playtestTarget(a, top, mainStory);
   const playtestRecord = join(runDir, "playtest.md").replaceAll("\\", "/");
 

@@ -149,16 +149,15 @@ describe("single-world library contract", () => {
 
   it("exposes graph routes through the MCP world listing", () => {
     const world = api.list_world();
-    const watchtower = world.quests.find(
-      (q) => q.path === "content/cyoa/pack/watchtower_road.yaml",
-    );
+    const breakingWeir = world.quests.find((q) => q.path === "content/rpg/pack/breaking_weir.yaml");
 
     expect(world.graph.hub).toBe("charterhaven");
-    expect(watchtower?.graph_node).toBe("watchtower_road");
-    expect(watchtower?.path_from_hub.map((step) => step.name)).toEqual([
+    expect(world.quests.every((q) => q.mode === "rpg")).toBe(true);
+    expect(breakingWeir?.graph_node).toBe("breaking_weir");
+    expect(breakingWeir?.path_from_hub.map((step) => step.name)).toEqual([
       CANONICAL_HUB_CITY,
-      "North Road",
-      "The Watchtower Road",
+      "Industrial Cut",
+      "The Breaking Weir",
     ]);
     for (const quest of world.quests) {
       expect(quest.path_from_hub[0]?.name, `${quest.path} route must start at the hub`).toBe(
