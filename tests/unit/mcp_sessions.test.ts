@@ -19,7 +19,6 @@ function sessionInit(overrides: Partial<Omit<Session, "id">> = {}): Omit<Session
   return {
     packId: "test-pack",
     contentHash: "0".repeat(64),
-    mode: "rpg",
     index: {} as AnyIndex,
     rules,
     state: state(),
@@ -37,6 +36,7 @@ describe("SessionStore", () => {
 
     expect(first.id).toBe("sess_1");
     expect(second.id).toBe("sess_2");
+    expect("mode" in first).toBe(false);
     expect(store.get("sess_1").packId).toBe("first");
     expect(store.get("sess_2").packId).toBe("second");
   });

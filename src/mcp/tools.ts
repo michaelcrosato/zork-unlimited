@@ -32,7 +32,13 @@ import {
   type Finding,
   type ValidationReport,
 } from "../validate/report.js";
-import { save, load, SaveIntegrityError, assertWellFormedState } from "../persist/save_load.js";
+import {
+  SAVE_MODE,
+  save,
+  load,
+  SaveIntegrityError,
+  assertWellFormedState,
+} from "../persist/save_load.js";
 import { replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
@@ -105,7 +111,7 @@ import {
 export type ToolApi = ReturnType<typeof createToolApi>;
 
 type LoadResult =
-  | { ok: true; mode: PackMode; compiled: AnyCompiledPack; report: ValidationReport }
+  | { ok: true; compiled: AnyCompiledPack; report: ValidationReport }
   | { ok: false; report: ValidationReport };
 
 type StoryEntry = {
@@ -300,16 +306,16 @@ export function createToolApi(opts: { root: string }) {
       };
     const pack = compileRes.compiled.pack;
     const report = validateRpg(pack);
-    return { ok: true, mode: "rpg", compiled: compileRes.compiled, report };
+    return { ok: true, compiled: compileRes.compiled, report };
   }
 
   /** Compile + validate, refusing to play an invalid pack (§0, §10). */
-  function requirePlayable(packPath: string): { mode: PackMode; compiled: AnyCompiledPack } {
+  function requirePlayable(packPath: string): AnyCompiledPack {
     const lr = loadAndReport(packPath);
     if (!lr.ok || !lr.report.ok) {
       throw new Error(`Pack is not playable:\n${formatReport(lr.ok ? lr.report : lr.report)}`);
     }
-    return { mode: lr.mode, compiled: lr.compiled };
+    return lr.compiled;
   }
 
   /**
@@ -317,10 +323,7 @@ export function createToolApi(opts: { root: string }) {
    * `validateRpg` gate the curated RPG packs clear. This is the only public MCP
    * generation route.
    */
-  function requireGeneratedRpgPlayable(seed: number): {
-    mode: PackMode;
-    compiled: AnyCompiledPack;
-  } {
+  function requireGeneratedRpgPlayable(seed: number): AnyCompiledPack {
     const pack = generateRpgPack(seed); // mints + schema self-check (throws on malformed emission)
     const report = validateRpg(pack);
     if (!report.ok) {
@@ -328,11 +331,10 @@ export function createToolApi(opts: { root: string }) {
         `Generated RPG pack (seed ${seed}) is not playable:\n${formatReport(report)}`,
       );
     }
-    return { mode: "rpg", compiled: { pack, contentHash: hashState(pack) } };
+    return { pack, contentHash: hashState(pack) };
   }
 
   function startSession(
-    mode: PackMode,
     compiled: AnyCompiledPack,
     state?: GameState,
     opts: { hideGraph?: boolean } = {},
@@ -347,7 +349,6 @@ export function createToolApi(opts: { root: string }) {
     const session = sessions.create({
       packId: compiled.pack.meta.id,
       contentHash: compiled.contentHash,
-      mode,
       index,
       rules: rulesFor(index),
       state: st,
@@ -390,7 +391,7 @@ export function createToolApi(opts: { root: string }) {
         path,
         id: lr.ok ? lr.compiled.pack.meta.id : path,
         title: lr.ok ? lr.compiled.pack.meta.title : path,
-        mode: lr.ok ? lr.mode : null,
+        mode: lr.ok ? SAVE_MODE : null,
         playable: lr.ok && lr.report.ok,
         world: lr.ok ? (lr.compiled.pack.meta.world ?? null) : null,
       };
@@ -1103,7 +1104,7 @@ export function createToolApi(opts: { root: string }) {
       if (!lr.ok) return { ok: false, report: lr.report };
       return {
         ok: lr.report.ok,
-        mode: lr.mode,
+        mode: SAVE_MODE,
         meta: lr.compiled.pack.meta,
         content_hash: lr.compiled.contentHash,
         report: lr.report,
@@ -1167,7 +1168,7 @@ export function createToolApi(opts: { root: string }) {
       const report = validateRpg(pack);
       return {
         ok: report.ok,
-        mode: "rpg",
+        mode: SAVE_MODE,
         pack_id: pack.meta.id,
         content_hash: hashState(pack),
         seed: args.seed,
@@ -1188,7 +1189,7 @@ export function createToolApi(opts: { root: string }) {
       // Either load a pack from disk OR mint a fresh RPG pack in-memory from
       // `generate_rpg_seed`. The generation seed selects the minted pack's
       // theme/structure; `seed` still seeds runtime state, so the two are independent.
-      const { mode, compiled } =
+      const compiled =
         args.generate_rpg_seed !== undefined
           ? requireGeneratedRpgPlayable(args.generate_rpg_seed)
           : requirePlayable(
@@ -1197,7 +1198,7 @@ export function createToolApi(opts: { root: string }) {
                   throw new Error("new_game requires pack_path or generate_rpg_seed.");
                 })(),
             );
-      const session = startSession(mode, compiled, undefined, {
+      const session = startSession(compiled, undefined, {
         ...(args.hide_graph ? { hideGraph: true } : {}),
       });
       if (args.seed !== undefined && args.seed !== 1) {
@@ -1206,7 +1207,7 @@ export function createToolApi(opts: { root: string }) {
       }
       return {
         session_id: session.id,
-        mode,
+        mode: SAVE_MODE,
         observation: publicObservation(obsOf(session)),
         state_hash: hashState(session.state),
       };
@@ -1311,7 +1312,7 @@ export function createToolApi(opts: { root: string }) {
       return {
         session_id: s.id,
         pack_id: s.packId,
-        mode: s.mode,
+        mode: SAVE_MODE,
         // Filter internal-bookkeeping events the same way step_action does, so the
         // transcript a player reads never surfaces `__`-prefixed vars/flags (bug_0260).
         turns: s.transcript.map((t) => ({ ...t, events: playerVisibleEvents(t.events) })),
@@ -1333,22 +1334,22 @@ export function createToolApi(opts: { root: string }) {
       const s = sessions.get(args.session_id);
       // The save records the pack mode so load can refuse a mode mismatch (§8.7).
       return {
-        save: save(s.state, s.packId, s.contentHash, s.mode),
+        save: save(s.state, s.packId, s.contentHash, SAVE_MODE),
         pack_id: s.packId,
         content_hash: s.contentHash,
-        mode: s.mode,
+        mode: SAVE_MODE,
       };
     },
 
     load_game(args: { pack_path: string; save: string }) {
-      const { mode, compiled } = requirePlayable(args.pack_path);
+      const compiled = requirePlayable(args.pack_path);
       // Content-hash check is enforced by load() against the loaded pack (§8.7);
       // mode is verified too, so a save can't be loaded against a different mode.
-      const bundle = load(args.save, compiled.contentHash, mode);
-      const session = startSession(mode, compiled, bundle.state);
+      const bundle = load(args.save, compiled.contentHash, SAVE_MODE);
+      const session = startSession(compiled, bundle.state);
       return {
         session_id: session.id,
-        mode,
+        mode: SAVE_MODE,
         observation: publicObservation(obsOf(session)),
         state_hash: hashState(session.state),
       };
@@ -1365,14 +1366,13 @@ export function createToolApi(opts: { root: string }) {
       if (args.mode !== undefined) {
         throw new Error("adapt_story is RPG-only; mode is no longer supported.");
       }
-      const mode: PackMode = "rpg";
       const provider = resolveProvider({ mock: new MockAuthorProvider() });
       const contract = loadEngineContract();
       const story = await runWriter(provider, { premise: args.premise, contract });
       const result = await runRpgAdapter(provider, { story, contract });
       return {
         ok: result.ok,
-        mode,
+        mode: SAVE_MODE,
         rounds: result.rounds,
         story: { title: story.title, beats: story.beats.map((b) => b.id) },
         classifications: result.classifications,
@@ -1384,7 +1384,7 @@ export function createToolApi(opts: { root: string }) {
     replay_trace(args: { trace_path: string; pack_path: string }) {
       const traceAbs = safeResolve(root, args.trace_path);
       const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace;
-      const { compiled } = requirePlayable(args.pack_path);
+      const compiled = requirePlayable(args.pack_path);
       if (trace.content_hash !== compiled.contentHash) {
         return {
           ok: false,
@@ -1413,7 +1413,7 @@ export function createToolApi(opts: { root: string }) {
       // classifier (§12.5).
       const traceAbs = safeResolve(root, args.trace_path);
       const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace;
-      const { mode, compiled } = requirePlayable(args.pack_path);
+      const compiled = requirePlayable(args.pack_path);
       if (trace.content_hash !== compiled.contentHash) {
         return {
           ok: false,
@@ -1453,7 +1453,7 @@ export function createToolApi(opts: { root: string }) {
       const d = diagnose(rules, trace.initial_state, trace.actions);
       return {
         ok: true,
-        mode,
+        mode: SAVE_MODE,
         pack_id: trace.pack_id,
         content_hash: trace.content_hash,
         seed: trace.seed,
