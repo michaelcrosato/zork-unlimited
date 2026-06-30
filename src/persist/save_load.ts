@@ -11,6 +11,8 @@ import type { GameState } from "../core/state.js";
 import { canonicalize } from "../core/hash.js";
 
 export const SAVE_VERSION = 1 as const;
+export const SAVE_MODE = "rpg" as const;
+export type SaveMode = typeof SAVE_MODE;
 
 /**
  * Structural + finiteness validator for a loaded GameState (§16 "integrity at
@@ -94,36 +96,48 @@ export type SaveBundle = {
   version: typeof SAVE_VERSION;
   packId: string;
   contentHash: string;
-  /** Pack mode (cyoa|parser|rpg). Optional for backward-compat with v1 saves
-   *  written before multi-mode; when present, load can refuse a mode mismatch. */
-  mode?: string;
+  /** Pack mode. Optional only for backward-compat with v1 saves written before
+   *  the repository locked persistence to the unified RPG engine. */
+  mode?: SaveMode;
   state: GameState;
 };
 
 /** Serialize a save to canonical bytes (stable across machines/runs). */
-export function save(state: GameState, packId: string, contentHash: string, mode?: string): string {
+export function save(
+  state: GameState,
+  packId: string,
+  contentHash: string,
+  mode: SaveMode = SAVE_MODE,
+): string {
+  assertRpgMode(mode, "Save mode");
   const bundle: SaveBundle = {
     version: SAVE_VERSION,
     packId,
     contentHash,
     state,
-    ...(mode !== undefined ? { mode } : {}),
+    mode,
   };
   return canonicalize(bundle);
 }
 
 export class SaveIntegrityError extends Error {}
 
+function assertRpgMode(mode: unknown, label: string): asserts mode is SaveMode | undefined {
+  if (mode !== undefined && mode !== SAVE_MODE) {
+    throw new SaveIntegrityError(`${label} must be "${SAVE_MODE}", got ${JSON.stringify(mode)}.`);
+  }
+}
+
 /**
  * Deserialize a save. If `expectedContentHash` is given, the save's contentHash
- * must match it exactly (§8.7). If `expectedMode` is given AND the save records a
- * mode, the modes must match too — a save can't be loaded against a different
- * mode. A pre-mode (v1) save carries no mode and skips that check (backward-compat).
+ * must match it exactly (§8.7). Saves are RPG-only when a mode is present. A
+ * pre-mode (v1) save carries no mode and skips that check for migration
+ * compatibility.
  */
 export function load(
   bytes: string,
   expectedContentHash?: string,
-  expectedMode?: string,
+  expectedMode?: SaveMode,
 ): SaveBundle {
   let parsed: unknown;
   try {
@@ -135,15 +149,12 @@ export function load(
   if (bundle.version !== SAVE_VERSION) {
     throw new SaveIntegrityError(`Unsupported save version: ${String(bundle.version)}`);
   }
+  assertRpgMode((bundle as { mode?: unknown }).mode, "Save mode");
+  assertRpgMode(expectedMode, "Expected mode");
   if (expectedContentHash !== undefined && bundle.contentHash !== expectedContentHash) {
     throw new SaveIntegrityError(
       `Content hash mismatch: save was made against ${bundle.contentHash}, ` +
         `but the loaded pack is ${expectedContentHash}.`,
-    );
-  }
-  if (expectedMode !== undefined && bundle.mode !== undefined && bundle.mode !== expectedMode) {
-    throw new SaveIntegrityError(
-      `Mode mismatch: save is a "${bundle.mode}" game, but the loaded pack is "${expectedMode}".`,
     );
   }
   // §16 integrity at load: the state must be a well-formed, FINITE GameState

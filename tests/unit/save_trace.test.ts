@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { save, load, SaveIntegrityError } from "../../src/persist/save_load.js";
+import { save, load, SaveIntegrityError, SAVE_MODE } from "../../src/persist/save_load.js";
 import { hashState } from "../../src/core/hash.js";
 import { recordTrace } from "../../src/trace/record.js";
 import { replayTrace } from "../../src/trace/replay.js";
@@ -25,6 +25,7 @@ describe("save / load (§8.7)", () => {
     const loaded = load(bytes, MICRO_CONTENT_HASH);
     expect(hashState(loaded.state)).toBe(hashState(s));
     expect(loaded.packId).toBe(MICRO_PACK_ID);
+    expect(loaded.mode).toBe(SAVE_MODE);
   });
 
   it("rejects a content-hash mismatch as a hard error", () => {
@@ -35,6 +36,36 @@ describe("save / load (§8.7)", () => {
   it("loads without verification when no expected hash is supplied", () => {
     const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH);
     expect(load(bytes).contentHash).toBe(MICRO_CONTENT_HASH);
+  });
+
+  it("accepts old no-mode saves for migration compatibility", () => {
+    const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH);
+    const bundle = JSON.parse(bytes) as Record<string, unknown>;
+    delete bundle.mode;
+    const loaded = load(JSON.stringify(bundle), MICRO_CONTENT_HASH);
+    expect(loaded.mode).toBeUndefined();
+    expect(loaded.contentHash).toBe(MICRO_CONTENT_HASH);
+  });
+
+  it("rejects explicit legacy save modes", () => {
+    const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH);
+    for (const mode of ["parser", "cyoa"]) {
+      const bundle = JSON.parse(bytes) as Record<string, unknown>;
+      bundle.mode = mode;
+      expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
+      expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(/Save mode/);
+    }
+  });
+
+  it("rejects attempts to write a non-RPG mode", () => {
+    expect(() =>
+      save(
+        microInitState(),
+        MICRO_PACK_ID,
+        MICRO_CONTENT_HASH,
+        "parser" as unknown as typeof SAVE_MODE,
+      ),
+    ).toThrow(SaveIntegrityError);
   });
 });
 
