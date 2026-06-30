@@ -19,6 +19,7 @@ import { diagnose } from "../agents/debugger.js";
 import { replayTrace } from "../src/trace/replay.js";
 import type { Trace } from "../src/trace/record.js";
 import { formatReport } from "../src/validate/report.js";
+import type { RpgAction } from "../src/api/types.js";
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(name);
@@ -33,7 +34,7 @@ function packArg(): string | undefined {
 }
 
 function inspectTrace(tracePath: string, packPath: string): void {
-  const trace = JSON.parse(readFileSync(tracePath, "utf8")) as Trace;
+  const trace = JSON.parse(readFileSync(tracePath, "utf8")) as Trace<RpgAction>;
   assertRpgPackShape(packPath);
   const loaded = loadRpgPackFile(packPath);
   if (!loaded.ok) {
@@ -113,9 +114,8 @@ function assertRpgPackShape(path: string, rawPack?: Record<string, unknown> | nu
   const raw = rawPack ?? (parseYaml(readFileSync(path, "utf8")) as Record<string, unknown> | null);
   const isObj = !!raw && typeof raw === "object";
   if (isObj && "enemies" in raw) return;
-  const mode = isObj && "rooms" in raw ? "parser" : "cyoa";
   console.error(
-    `Inspect is RPG-only; ${mode} packs are legacy migration data, not playable agent targets.`,
+    "Inspect is RPG-only; unsupported legacy/non-RPG packs are migration data, not playable agent targets.",
   );
   process.exit(1);
 }

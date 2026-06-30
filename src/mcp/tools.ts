@@ -15,7 +15,7 @@ import { join, relative } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { hashState } from "../core/hash.js";
 import { makeStep, type Rules } from "../core/engine.js";
-import type { Action, RpgAction } from "../api/types.js";
+import type { RpgAction } from "../api/types.js";
 import type { GameState } from "../core/state.js";
 import type { GameEvent } from "../core/events.js";
 
@@ -1380,7 +1380,7 @@ export function createToolApi(opts: { root: string }) {
 
     replay_trace(args: { trace_path: string; pack_path: string }) {
       const traceAbs = safeResolve(root, args.trace_path);
-      const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace;
+      const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace<RpgAction>;
       const compiled = requirePlayable(args.pack_path);
       if (trace.content_hash !== compiled.contentHash) {
         return {
@@ -1409,7 +1409,7 @@ export function createToolApi(opts: { root: string }) {
       // carries a Trace-v2 per-step baseline (§8.8), and runs the debugger's
       // classifier (§12.5).
       const traceAbs = safeResolve(root, args.trace_path);
-      const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace;
+      const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace<RpgAction>;
       const compiled = requirePlayable(args.pack_path);
       if (trace.content_hash !== compiled.contentHash) {
         return {
@@ -1428,7 +1428,7 @@ export function createToolApi(opts: { root: string }) {
       let state = trace.initial_state;
       const steps: {
         i: number;
-        action: Action;
+        action: RpgAction;
         ok: boolean;
         location: string;
         ended: boolean;

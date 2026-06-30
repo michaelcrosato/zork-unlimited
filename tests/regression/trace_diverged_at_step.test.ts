@@ -52,7 +52,9 @@ const WIN: RpgAction[] = [
   MICRO_ACTIONS.claimTreasure,
 ];
 
-function newTrace(): Trace {
+type RpgTrace = Trace<RpgAction>;
+
+function newTrace(): RpgTrace {
   return recordTrace(microRules, microInitState(), WIN, {
     trace_id: "tr_0290_regression",
     pack_id: MICRO_PACK_ID,
@@ -61,7 +63,7 @@ function newTrace(): Trace {
 }
 
 /** Return a trace whose per_step_hashes baseline is corrupted at the given indices. */
-function corruptAt(trace: Trace, ...indices: number[]): Trace {
+function corruptAt(trace: RpgTrace, ...indices: number[]): RpgTrace {
   const hashes = [...trace.per_step_hashes!];
   for (const i of indices) {
     hashes[i] = "0".repeat(64); // a known-bad 64-char hash string
@@ -84,10 +86,10 @@ const ACTIONS_RPG: RpgAction[] = [
   { type: "ASK", npc: "reaver_shade", topic: "ask_wight" },
 ];
 
-let cleanTraceMcp: Trace;
-let divergedTraceMcp: Trace;
+let cleanTraceMcp: RpgTrace;
+let divergedTraceMcp: RpgTrace;
 
-function write(path: string, trace: Trace): void {
+function write(path: string, trace: RpgTrace): void {
   mkdirSync("traces", { recursive: true });
   writeFileSync(path, JSON.stringify(trace));
 }
@@ -171,7 +173,7 @@ describe("bug_0290 — divergedAtStep is populated in replayTrace and inspect_tr
 
     // And a v1 trace (no per_step_hashes) must replay without error, divergedAtStep undefined.
     const { per_step_hashes: _omit, ...v1 } = newTrace();
-    const v1Result = replayTrace(v1 as Trace, microRules);
+    const v1Result = replayTrace(v1 as RpgTrace, microRules);
     expect(v1Result.ok).toBe(true);
     expect(v1Result.divergedAtStep).toBeUndefined();
   });

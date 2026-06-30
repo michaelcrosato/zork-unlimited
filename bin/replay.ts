@@ -11,6 +11,7 @@ import { type Trace } from "../src/trace/record.js";
 import { replayTrace } from "../src/trace/replay.js";
 import { loadRpgPackFile } from "../src/rpg/pack.js";
 import { buildRpgRules, indexRpgPack } from "../src/rpg/runner.js";
+import type { RpgAction } from "../src/api/types.js";
 
 const DEFAULT_TRACE = "traces/rpg/barrow_victory.json";
 const DEFAULT_PACK = "content/rpg/pack/sunken_barrow.yaml";
@@ -18,7 +19,7 @@ const DEFAULT_PACK = "content/rpg/pack/sunken_barrow.yaml";
 function main(): void {
   const tracePath = process.argv[2] ?? DEFAULT_TRACE;
   const packPath = process.argv[3] ?? DEFAULT_PACK;
-  const trace = JSON.parse(readFileSync(tracePath, "utf8")) as Trace;
+  const trace = JSON.parse(readFileSync(tracePath, "utf8")) as Trace<RpgAction>;
   const loaded = loadRpgPackFile(packPath);
   if (!loaded.ok) {
     console.error(`Pack ${packPath} failed to compile as an RPG pack.`);
