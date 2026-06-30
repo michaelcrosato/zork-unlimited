@@ -27,4 +27,11 @@ describe("RPG schema owns the RPG contract", () => {
     expect(runner).not.toContain("resolveParserAction");
     expect(runner).not.toContain("ParserActionOption");
   });
+
+  it("does not import the legacy parser runner for RPG win or score events", () => {
+    const runner = readFileSync("src/rpg/runner.ts", "utf8");
+    expect(runner).not.toContain("../parser/runner");
+    expect(runner).not.toContain("scoreChangeNarrations");
+    expect(runner).not.toContain("winningEnding");
+  });
 });

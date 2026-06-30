@@ -26,8 +26,7 @@ import {
 } from "./legal_actions.js";
 import { evalConditions } from "../core/conditions.js";
 import type { GameEvent } from "../core/events.js";
-import { winningEnding, scoreChangeNarrations } from "../parser/runner.js";
-import { type RpgPack, type Enemy } from "./schema.js";
+import { type RpgPack, type Enemy, SCORE_VAR } from "./schema.js";
 import { resolveAttack, resolveSkillCheck, enemyAlive } from "./combat.js";
 import { rngForStep, type Rng } from "../core/rng.js";
 
@@ -57,6 +56,34 @@ export function enemyActive(state: GameState, enemy: Enemy): boolean {
 /** Active enemies standing in the player's current room. */
 function enemiesHere(index: RpgIndex, state: GameState): Enemy[] {
   return (index.enemyByRoom.get(state.current) ?? []).filter((e) => enemyActive(state, e));
+}
+
+function winningRpgEnding(index: RpgIndex, state: GameState): string | null {
+  for (const wc of index.pack.win_conditions) {
+    if (evalConditions(wc.conditions, state)) return wc.ending;
+  }
+  return null;
+}
+
+function rpgScoreChangeNarrations(events: GameEvent[], maxScore: number): GameEvent[] {
+  if (maxScore <= 0) return [];
+  const out: GameEvent[] = [];
+  for (const e of events) {
+    if (e.type !== "state_change") continue;
+    const ev = e as Record<string, unknown>;
+    if ((ev.effect !== "inc_var" && ev.effect !== "dec_var") || ev.name !== SCORE_VAR) continue;
+    const delta = ev.delta;
+    if (typeof delta !== "number" || delta === 0) continue;
+    const total = typeof ev.value === "number" ? ev.value : 0;
+    const mag = Math.abs(delta);
+    const dir = delta > 0 ? "gone up" : "gone down";
+    const pts = mag === 1 ? "point" : "points";
+    out.push({
+      type: "narration",
+      text: `[Your score has ${dir} by ${mag} ${pts}; it is now ${total} of ${maxScore}.]`,
+    });
+  }
+  return out;
 }
 
 /**
@@ -122,24 +149,22 @@ export function buildRpgRules(
     onEnter(state: GameState, locationId: string): Effect[] {
       const room = index.rooms.get(locationId);
       const effects: Effect[] = room ? [...room.on_enter] : [];
-      const ending = winningEnding(index, state);
+      const ending = winningRpgEnding(index, state);
       if (ending) effects.push({ end_game: ending });
       return effects;
     },
 
-    // Mirrors the parser runner: a win that turns on a deliberate non-move action
-    // (claiming the Barrow-Lord's circlet) fires here, against the post-effects
-    // state, rather than on bare room entry. Skipped once the game has ended.
+    // A win that turns on a deliberate non-move action (claiming the Barrow-Lord's
+    // circlet) fires here, against the post-effects state, rather than on bare room
+    // entry. Skipped once the game has ended.
     checkWin(state: GameState): Effect[] {
-      const ending = winningEnding(index, state);
+      const ending = winningRpgEnding(index, state);
       return ending ? [{ end_game: ending }] : [];
     },
 
-    // Same Zork-style score feedback the parser runner emits — RPG packs track score
-    // through the conventional `score` var too (§13 Stage 4 awards), so a +N here
-    // (e.g. claiming the relic) gets the player-facing "[Your score has gone up…]" line.
+    // Zork-style score feedback derived from the RPG `score` var.
     decorateEvents(events: GameEvent[]): GameEvent[] {
-      return scoreChangeNarrations(events, index.pack.meta.max_score ?? 0);
+      return rpgScoreChangeNarrations(events, index.pack.meta.max_score ?? 0);
     },
   };
 }
