@@ -6,7 +6,7 @@
  *   npm run play -- <pack.yaml> [--seed N]
  *   npm run play -- <pack.yaml> --commands "down; take iron bar; north; attack wight; ..."
  *
- * Reuses the Stage-2 controlled command parser and adds an `attack <enemy>` verb.
+ * Uses the controlled command grammar and adds an `attack <enemy>` verb.
  * A pack must pass the RPG validator before it is playable (§0, §10). The
  * legal-action set (parser actions + ATTACK) is ground truth; combat and skill
  * checks are seeded, so a recorded run replays exactly (§8.5).
@@ -34,8 +34,8 @@ export function render(obs: RpgObservation): string {
   if (obs.visible_objects.length)
     lines.push(`You see: ${obs.visible_objects.map((o) => o.name).join(", ")}.`);
   if (obs.exits.length) lines.push(`Exits: ${obs.exits.map((e) => e.direction).join(", ")}.`);
-  // Blocked-exit hints (bug_0201) — see bin/parser_play.ts; RpgObservation inherits the
-  // field, so the human RPG surface gets the same "a barred way exists here, because X" cue.
+  // Blocked-exit hints keep the human RPG surface aligned with structured observations:
+  // "a barred way exists here, because X" without revealing the hidden unlock action.
   for (const b of obs.blocked_exits) lines.push(`Blocked (${b.direction}): ${b.message}`);
   if (obs.inventory.length) lines.push(`[carrying: ${obs.inventory.join(", ")}]`);
   if (obs.ended) lines.push(`\n*** ${obs.ending_id} *** — THE END`);
@@ -43,8 +43,8 @@ export function render(obs: RpgObservation): string {
 }
 
 /**
- * A friendly reason a parsed-but-illegal action failed — parity with bin/parser_play.ts
- * (bug_0206 follow-on): an attempted MOVE onto a barred-but-present exit surfaces the
+ * A friendly reason a parsed-but-illegal action failed. An attempted MOVE onto a barred
+ * but present exit surfaces the
  * author's `locked_msg` (the same string the structured `blocked_exits` hint carries),
  * not a flat "You can't do that right now." It never reveals HOW to clear the exit (that
  * stays a hidden, not-yet-legal command). RpgIndex extends ParserIndex, so `.rooms` and

@@ -1,12 +1,11 @@
 /**
- * Regression (§15) for bug_0207 — the RPG CLI's ON-ATTEMPT message reaches parity
- * with the parser CLI's. bug_0201 surfaced a barred exit's authored `locked_msg` in
+ * Regression (§15) for bug_0207 — the RPG CLI's ON-ATTEMPT message surfaces the
+ * authored blocked-exit reason. bug_0201 surfaced a barred exit's `locked_msg` in
  * the structured `blocked_exits` hint (agent surface); bug_0206 rendered that hint on
- * the human surfaces (CLI bins + UI). But one human path stayed generic: when a player
- * actually TYPED a move onto a barred exit, `bin/parser_play.ts` answered with the
- * exit's `locked_msg` (via illegalReason), while `bin/rpg_play.ts` printed a flat
+ * the human surfaces (CLI + UI). But one human path stayed generic: when a player
+ * actually TYPED a move onto a barred exit, `bin/rpg_play.ts` printed a flat
  * "You can't do that right now." — dropping the very string the author wrote to explain
- * the wall. This pins the RPG bin's `illegalReason` to the parser bin's behaviour.
+ * the wall. This pins the RPG bin's `illegalReason` to authored locked messages.
  *
  * WITNESS: drives the REAL sunken_barrow pack through the REAL engine to guard_crypt
  * with the wight alive (its east exit barred), then asserts illegalReason() for a MOVE

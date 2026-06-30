@@ -8,9 +8,9 @@
  * a room's prose mentions a way out ("an archway east, choked with the cold") but no
  * such exit appears in `available_actions`/`exits`, leaving a blind player hunting
  * for an option that isn't there — unable to tell a gated-but-present way from a
- * non-existent one. The free-text parser already answered this: attempting the
- * blocked move prints the exit's `locked_msg` (bin/parser_play.ts). But the
- * structured observation filtered locked exits out entirely (observation.ts), so the
+ * non-existent one. Free-text command handling already answered this by printing the
+ * exit's `locked_msg` after an attempted blocked move. But the structured observation
+ * filtered locked exits out entirely (observation.ts), so the
  * `locked_msg` strings authored across ~10 packs were DEAD in the structured surface.
  *
  * The fix is strictly ADDITIVE and preserves the deliberate "the action set never

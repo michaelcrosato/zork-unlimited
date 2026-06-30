@@ -10,11 +10,11 @@
  * A locked exit whose author gave it a `locked_msg`, however, is surfaced as a
  * `blocked_exits` HINT — its direction and that message — WITHOUT being a
  * selectable action. This brings the structured observation to parity with the
- * free-text parser (where attempting a blocked move prints `locked_msg`, see
- * bin/parser_play.ts): a blind player who reads room prose mentioning a way that
- * isn't in `exits` ("an archway east, choked with cold") now learns the way exists
- * and WHY it's blocked, without learning how to clear it (that action stays hidden).
- * Opt-in per exit: an exit with no `locked_msg` is silent, exactly as before.
+ * free-text command surfaces: a blind player who reads room prose mentioning a
+ * way that isn't in `exits` ("an archway east, choked with cold") now learns the
+ * way exists and WHY it's blocked, without learning how to clear it (that action
+ * stays hidden). Opt-in per exit: an exit with no `locked_msg` is silent, exactly
+ * as before.
  *
  * Difficulty (ULTRAPLAN 2026-06-02 §Week.4): with `hideGraph`, each exit reports
  * only its `direction` and NOT its destination (`to`) — the agent still knows it

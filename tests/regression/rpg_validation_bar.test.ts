@@ -8,7 +8,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { describe, it, expect } from "vitest";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
@@ -76,6 +76,19 @@ describe("single-engine RPG validation bar", () => {
     expect(health).toContain("npm run validate");
     expect(health).not.toContain("content/cyoa/");
     expect(health).not.toContain("content/parser/");
+  });
+
+  it("package scripts expose one public RPG play surface and no legacy play modes", () => {
+    expect(pkg.scripts.play).toBe("tsx bin/rpg_play.ts");
+    expect(pkg.scripts.cyoa).toBeUndefined();
+    expect(pkg.scripts["play:parser"]).toBeUndefined();
+    expect(pkg.scripts["play:rpg"]).toBeUndefined();
+  });
+
+  it("legacy CYOA/parser CLI binaries have been stripped from the public bin surface", () => {
+    expect(existsSync(join(root, "bin", "cyoa.ts"))).toBe(false);
+    expect(existsSync(join(root, "bin", "play.ts"))).toBe(false);
+    expect(existsSync(join(root, "bin", "parser_play.ts"))).toBe(false);
   });
 
   it("npm run validate defaults to every shipped RPG pack", () => {

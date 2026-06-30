@@ -226,22 +226,18 @@ npm run lint                                             # ESLint
 npm run format:check                                     # Prettier (use `npm run format` to fix)
 npm test                                                  # unit + property tests
 npm run replay                                            # Stage 0: round-trip a trace
-npm run validate -- content/cyoa/pack/watchtower_road.yaml # Stage 1: validate a pack
-npm run play -- content/cyoa/pack/watchtower_road.yaml     # Stage 1: play it (interactive)
-npm run validate -- content/parser/pack/sealed_crypt.yaml  # Stage 2: validate the parser pack
-npm run play:parser -- content/parser/pack/sealed_crypt.yaml # Stage 2: play it (interactive)
-npm run play:parser -- content/parser/pack/alchemists_tower.yaml  # Stage 3: score + death/restore
-npm run validate -- content/rpg/pack/sunken_barrow.yaml    # Stage 4: validate the RPG pack
-npm run play:rpg -- content/rpg/pack/sunken_barrow.yaml     # Stage 4: play it (combat + skill check)
+npm run validate                                           # validate all shipped RPG packs
+npm run validate -- content/rpg/pack/sunken_barrow.yaml    # validate one RPG pack
+npm run play -- content/rpg/pack/sunken_barrow.yaml        # play it (combat + skill check)
 npm run inspect -- content/rpg/pack/sunken_barrow.yaml      # summarize a pack (or a trace)
 npm run author -- "your one-line premise here"             # author a pack from prose (§12.1-3)
 npm run ui:dev                                             # Stage 5: web UI (after npm --prefix ui install)
 ```
 
-Non-interactive play (scriptable / CI): for CYOA add `--choices id1,id2,...`; for the
-parser/RPG add `--commands "go north; take rope; attack wight; ..."`. Both accept
-`--record traces/run.json` to save a replayable trace. `npm run validate` and
-`npm run inspect` auto-detect CYOA vs parser vs RPG packs.
+Non-interactive play (scriptable / CI): add
+`--commands "go north; take rope; attack wight; ..."`. Use
+`--record traces/run.json` to save a replayable trace. `npm run validate` is the
+RPG content gate and rejects legacy CYOA/parser packs.
 
 ### MCP server — how an agent plays the game (§9.4)
 
