@@ -21,12 +21,8 @@ import { createToolApi } from "../mcp/tools.js";
 import type { PackMode } from "../mcp/types.js";
 import { verifyBlindReportText } from "../blind/report_verifier.js";
 import { completedCycleCount, totalCycleCount } from "./loop_state.js";
-import { generateCyoaPack } from "../gen/cyoa_generator.js";
 import { generateRpgPack } from "../gen/rpg_generator.js";
-import { generateParserPack } from "../gen/parser_generator.js";
-import { validateCyoa } from "../validate/cyoa_validator.js";
 import { validateRpg } from "../validate/rpg_validator.js";
-import { validateParser } from "../validate/parser_validator.js";
 import type { ValidationReport } from "../validate/report.js";
 import { auditStaleReactiveRoomItems } from "./stale_reactive_audit.js";
 
@@ -54,7 +50,7 @@ export type PackHealth = {
 export type Assessment = {
   packsByMode: Record<string, number>;
   packs: PackHealth[];
-  /** True iff this cycle's fresh generated CYOA/RPG/parser windows all validated clean. */
+  /** True iff this cycle's fresh generated RPG window validated clean. */
   allGeneratorsClean: boolean;
   candidates: ImprovementCandidate[];
   top: ImprovementCandidate | null;
@@ -69,7 +65,7 @@ const CATEGORY_WEIGHT: Record<Category, number> = {
   repo: 0.6,
 };
 // How many consolidated RPG packs is "healthy" before net-new content is deprioritized.
-// The public catalog is RPG-only, so this lever must not re-raise legacy CYOA/parser
+// The public catalog is RPG-only, so this lever must not re-raise legacy mode
 // authoring work after those modes have been removed from discovery.
 const TARGET_PER_MODE: Record<string, number> = { rpg: 16 };
 
@@ -161,7 +157,7 @@ const DOC_REF_PREFIXES = [
 const DOC_REF_RE = new RegExp(`(?:${DOC_REF_PREFIXES.join("|")})/[A-Za-z0-9_./-]+`, "g");
 const DOC_REF_EXT = /\.(?:ts|tsx|js|mjs|cjs|json|yaml|yml|md|sh)$/;
 // A path token is NOT a liveness claim when it is a glob/brace/placeholder pattern
-// (content/cyoa/pack/*.yaml, traces/bugs/bug_0001_*.yaml, ai-runs/<id>/playtest.md)…
+// (content/rpg/pack/*.yaml, traces/bugs/bug_0001_*.yaml, ai-runs/<id>/playtest.md)…
 const DOC_REF_PATTERN_CHARS = /[*{}?[\]<>]|\.\.\./;
 // …or a command-line OUTPUT DESTINATION (`--record traces/run.json`, `--out …`,
 // `-o file`, `> file`): the doc tells you to CREATE it, not that it already exists.
@@ -221,7 +217,7 @@ function docStalenessDocs(root: string): string[] {
 /**
  * Normalize a pack reference — a full path, a bare file stem, OR a pack id — to its
  * stem, so an attendance line that names a pack any of those ways maps to the same key.
- * E.g. "content/cyoa/pack/clockwork_heist.yaml" → "clockwork_heist", a bare
+ * E.g. "content/rpg/pack/cold_forge.yaml" → "cold_forge", a bare
  * "clockwork_heist" is unchanged, and the pack ID "clockwork_heist_v1" also → it.
  *
  * The trailing `_v\d+` strip matters for attendance keying (bug_0293): the candidate's
@@ -248,7 +244,7 @@ export function packStem(ref: string): string {
  * Recognizes BOTH the cycle-result phrasing the log actually uses today ("Mandated
  * blind pass ran on <pack>") AND the older structured-header marker ("Mandatory LLM
  * playtest target this cycle: <path>"); a token in either form may be a path or a
- * bare id. This is the bug_0128 fix: the parser previously matched ONLY the old
+ * bare id. This is the bug_0128 fix: the attendance matcher previously matched ONLY the old
  * header — abandoned ~15 cycles ago for the prose format — so the recency signal had
  * frozen and the rotation silently fell back to alphabetical, re-nominating
  * clockwork_heist (the very lock-in the rotation was meant to cure). The caller
@@ -357,16 +353,12 @@ function lastAttendanceOffsets(root: string): Map<string, number> {
   return mergeAttendanceOffsets(loopStateOffsets, blindReportAttendanceOffsets(root));
 }
 
-// ── Generator mint-and-check lever (bug_0158) ─────────────────────────────────
-// The fresh-pack generator (src/gen/cyoa_generator.ts, bug_0156) exists to EVOLVE
-// the eval distribution so the verifier faces a MOVING target rather than a
-// memorisable frozen set — the published cure for the frozen-verifier stall the
-// assessor itself collapsed into (arXiv 2510.14253; [[fresh-pack-generator]],
-// [[verifier-assertion-guard]]). bug_0156 built the minting core, bug_0157 exposed
-// it through MCP; this is the next documented slice (docs/CURRENT_PLAN.md): make
-// the assessor mint-and-check a fresh slice of the distribution EVERY cycle, so the
-// production verifier is provably exercised against never-seen packs each pass, not
-// just the curated ten.
+// ── RPG generator mint-and-check lever ─────────────────────────────────────────
+// The consolidated public runtime is RPG-only, so the assessor's moving eval target
+// must be RPG-only too. Keeping retired generator windows here would spend every
+// loop on retired modes and could re-raise work that the consolidation goal explicitly
+// strips. The remaining window still advances with cycle count, keeping the RPG verifier
+// on fresh generated packs instead of a frozen hand-authored set.
 
 /**
  * How many completed improvement cycles AI_LOOP_STATE.md records. Recent cycles are
@@ -404,54 +396,6 @@ export function allGeneratedChecksClean(checks: GeneratedPackCheck[]): boolean {
 }
 
 /**
- * The generator mint-and-check verdict. Given this cycle's freshly minted-and-validated
- * generated packs, return an improvement candidate IFF the production verifier did NOT hold
- * on one of them — i.e. a minted pack carries ANY finding (error OR warning), the same
- * zero-findings bar the curated packs and the generator's own test (cyoa_generator.test.ts)
- * clear. A clean sweep returns null: the verifier held on this cycle's moving target, the
- * healthy state (so the lever correctly does NOT mask the 0.5 saturation floor — it only
- * lifts above it when there is a real defect). When it fires it is a genuine, fixable
- * problem — the generator emitted an unclean/unsolvable shape, OR the fresh distribution
- * surfaced a verifier gap — scored high (a minted pack the verifier rejects is nearly as
- * urgent as an unplayable curated pack), so the loop spends the cycle closing the
- * generator/verifier divergence rather than re-polishing clean prose. Pure (validated
- * checks in, candidate out) so the negative path unit-tests against the REAL validateCyoa
- * with no disk and no clock.
- */
-export function generatorDriftCandidate(checks: GeneratedPackCheck[]): ImprovementCandidate | null {
-  const bad = checks.filter((c) => c.report.findings.length > 0);
-  if (bad.length === 0) return null;
-  return {
-    id: "generator-drift",
-    category: "engine",
-    target: "src/gen/cyoa_generator.ts",
-    title: `The pack generator minted ${bad.length} pack(s) the verifier rejects — the evolving eval distribution has drifted from the shipped bar`,
-    rationale:
-      "Evolving the eval distribution only works if every minted pack clears the SAME zero-findings bar the curated packs do (docs/CURRENT_PLAN.md). A generated pack the production validateCyoa flags is a real defect: either the generator emits an unclean/unsolvable shape, or the fresh distribution has surfaced a verifier gap. Fixing it keeps the generator a trustworthy moving target instead of a source of false signal.",
-    evidence: bad.map(
-      (c) =>
-        `seed ${c.seed} (${c.pack_id}): ${c.report.findings.map((f) => `${f.severity}:${f.code}`).join(", ")}`,
-    ),
-    impact: 5,
-    effort: "M",
-    score: score(5, "M", "engine"),
-  };
-}
-
-// ── RPG generator mint-and-check lever (bug_0162) ─────────────────────────────
-// The RPG twin of {@link generatorDriftCandidate} — the bug_0158 analogue one mode over.
-// The CYOA generator went core (bug_0156) → MCP (bug_0157) → assessor mint-and-check
-// (bug_0158); the RPG generator (src/gen/rpg_generator.ts) went core (bug_0159) → MCP
-// (bug_0160), and this lands its mint-and-check slice (docs/CURRENT_PLAN.md /
-// [[fresh-pack-generator]]; named as the open next-slice by bug_0160 and bug_0161). It is the
-// HIGHER-value half: it extends the per-cycle moving target to the RICHEST verifier surfaces in
-// the suite — COMBAT winnability (the bug_0097/0113/0114 best/worst-roll bound) and
-// SCORE-ECONOMY soundness (declared max_score == reachable award sum) — the RPG-only checks the
-// CYOA generator never touches, which until now ran ONLY against the two FROZEN hand-authored
-// RPG packs (sunken_barrow, cold_forge), the memorisable-target condition the frozen-verifier
-// literature warns against (arXiv 2510.14253; [[verifier-assertion-guard]]).
-
-/**
  * The RPG generator mint-and-check verdict. Given this cycle's freshly minted-and-validated
  * generated RPG packs, return an improvement candidate IFF the production `validateRpg` did NOT
  * hold on one of them — i.e. a minted pack carries ANY finding (error OR warning), the same
@@ -463,7 +407,7 @@ export function generatorDriftCandidate(checks: GeneratedPackCheck[]): Improveme
  * unclean/unwinnable/score-unreachable shape, OR the fresh distribution surfaced a verifier gap
  * — scored high so the loop closes the divergence rather than re-polishing clean prose. Pure
  * (validated checks in, candidate out) so the negative path unit-tests against the REAL
- * validateRpg with no disk and no clock, exactly like {@link generatorDriftCandidate}.
+ * validateRpg with no disk and no clock.
  */
 export function generatorRpgDriftCandidate(
   checks: GeneratedPackCheck[],
@@ -487,62 +431,10 @@ export function generatorRpgDriftCandidate(
   };
 }
 
-// ── Parser generator mint-and-check lever (bug_0166) ──────────────────────────
-// The THIRD twin of {@link generatorDriftCandidate} — the lever that completes the
-// generator trilogy on the assessor side. The CYOA generator went core (bug_0156) →
-// MCP (bug_0157) → assessor mint-and-check (bug_0158); the RPG generator went core
-// (bug_0159) → MCP (bug_0160) → assessor mint-and-check (bug_0162); the PARSER generator
-// (src/gen/parser_generator.ts) went core+MCP (bug_0164) and was sealed into the held-out
-// corpus (bug_0163) and scored (bug_0165) — but it never got its per-cycle mint-and-check
-// half. This lands it. Parser owns the STRICTEST validator in the suite (the obtainability
-// fixpoint, soft-lock detection, the WIN_FIRES_AT_START stability proof, and the
-// SCORE_UNREACHABLE economy check ~1200 lines), so until now those checks ran against fresh
-// generated content ONLY via the static 24-seed unit test and the 4-seed sealed corpus —
-// never against the per-cycle MOVING window the CYOA and RPG levers already give. Completing
-// the trilogy makes the per-cycle never-frozen-target property hold for all THREE modes, not
-// two — the memorisable-target condition the frozen-verifier literature warns against
-// (arXiv 2510.14253; [[verifier-assertion-guard]]) closed on the strictest verifier.
-
-/**
- * The parser generator mint-and-check verdict. Given this cycle's freshly minted-and-validated
- * generated parser packs, return an improvement candidate IFF the production `validateParser` did
- * NOT hold on one of them — i.e. a minted pack carries ANY finding (error OR warning), the same
- * zero-findings bar the curated parser packs and the generator's own test (parser_generator.test.ts)
- * clear, which INCLUDES the parser-only obtainability / soft-lock / SCORE_UNREACHABLE checks. A
- * clean sweep returns null (the verifier held on this cycle's parser moving target — the healthy
- * state, so the lever does NOT mask the 0.5 saturation floor). When it fires it is a genuine,
- * fixable problem — the parser generator emitted an unclean/unsolvable/score-unreachable shape, OR
- * the fresh distribution surfaced a verifier gap — scored high so the loop closes the divergence
- * rather than re-polishing clean prose. Pure (validated checks in, candidate out) so the negative
- * path unit-tests against the REAL validateParser with no disk and no clock, exactly like
- * {@link generatorDriftCandidate} and {@link generatorRpgDriftCandidate}.
- */
-export function generatorParserDriftCandidate(
-  checks: GeneratedPackCheck[],
-): ImprovementCandidate | null {
-  const bad = checks.filter((c) => c.report.findings.length > 0);
-  if (bad.length === 0) return null;
-  return {
-    id: "generator-parser-drift",
-    category: "engine",
-    target: "src/gen/parser_generator.ts",
-    title: `The parser pack generator minted ${bad.length} pack(s) the verifier rejects — the evolving parser eval distribution has drifted from the shipped bar`,
-    rationale:
-      "Evolving the parser eval distribution only works if every minted pack clears the SAME zero-findings bar the curated parser packs do — which for parser includes the strictest checks in the suite: obtainability fixpoint, soft-lock detection, and SCORE-economy soundness (docs/CURRENT_PLAN.md). A generated parser pack the production validateParser flags is a real defect: either the generator emits an unclean/unsolvable/score-unreachable shape, or the fresh distribution has surfaced a verifier gap. Fixing it keeps the parser generator a trustworthy moving target instead of a source of false signal.",
-    evidence: bad.map(
-      (c) =>
-        `seed ${c.seed} (${c.pack_id}): ${c.report.findings.map((f) => `${f.severity}:${f.code}`).join(", ")}`,
-    ),
-    impact: 5,
-    effort: "M",
-    score: score(5, "M", "engine"),
-  };
-}
-
 /**
  * The score at/below which only ROUTINE work remains. The blind-playtest review
  * stubs (the rotation candidates raised for gated/puzzle packs) all land on this
- * 0.5 floor — `score(1, "M", "content_fix")` — and a tiny ungated-CYOA coverage
+ * 0.5 floor — `score(1, "M", "content_fix")` — and tiny legacy coverage
  * gap also bottoms out here. So a top candidate at this floor means every
  * higher-value lever (real content gaps, net-new content, engine/repo, the
  * frontier benchmark lever) has disarmed.
@@ -569,7 +461,7 @@ export function assess(root: string): Assessment {
   const api = createToolApi({ root });
   const { stories } = api.list_stories();
 
-  const packsByMode: Record<string, number> = { cyoa: 0, parser: 0, rpg: 0 };
+  const packsByMode: Record<string, number> = { rpg: 0 };
   const packs: PackHealth[] = [];
   const candidates: ImprovementCandidate[] = [];
 
@@ -687,7 +579,7 @@ export function assess(root: string): Assessment {
   // noisy across the current corpus. Keep it as a deterministic audit signal first:
   // static room prose that names a takeable object in that room, with no room variant
   // reading that object's inventory state. The suppression rule is concrete enough to
-  // tune before promoting any subset into validateParser.
+  // tune before promoting any subset into validateRpg.
   const staleReactive = auditStaleReactiveRoomItems(root);
   if (staleReactive.sites.length > 0) {
     const examples = staleReactive.sites
@@ -700,7 +592,7 @@ export function assess(root: string): Assessment {
     candidates.push({
       id: "stale-reactive-room-item-audit",
       category: "engine",
-      target: "src/validate/parser_validator.ts",
+      target: "src/validate/rpg_validator.ts",
       title: `Tune a class-level stale reactive-description check (${staleReactive.sites.length} room/item site(s) need triage)`,
       rationale:
         "Recent cycles repeatedly fixed stale prose one instance at a time. This audit measures the narrow structural slice most responsible for that class — room base text naming takeable objects after they may be removed — without turning the noisy first pass into shipped-pack warnings. The next move is to tune suppressions or promote the proven subset into validation.",
@@ -800,33 +692,11 @@ export function assess(root: string): Assessment {
     });
   }
 
-  // ── eval-distribution: mint-and-check a fresh slice of the generated distribution ──
-  // Make the generator a LIVE, self-renewing eval signal (bug_0158, the slice after the
-  // MCP generate_pack tool of bug_0157; docs/CURRENT_PLAN.md / [[fresh-pack-generator]]).
-  // Every cycle the assessor mints a fresh WINDOW of never-seen packs — the seed base
-  // advances with the cycle count, so the windows are DISJOINT cycle-to-cycle — and asserts
-  // the SAME zero-findings validateCyoa bar the curated packs clear holds on them. A clean
-  // sweep adds no candidate (the verifier held on this cycle's moving target); a miss
-  // surfaces a high-priority engine fix. `assess()` stays deterministic because the seed
-  // base is a pure function of the tracked AI_LOOP_STATE.md, not a clock or RNG.
+  // ── eval-distribution: mint-and-check a fresh RPG generator window ────────────
+  // The public runtime is now RPG-only. Each assessor cycle still confronts the RPG
+  // verifier with a fresh, deterministic seed window, but retired legacy windows
+  // no longer consume loop time or reintroduce legacy work.
   const genBase = generatedEvalSeedBaseFromDisk(root) * GEN_EVAL_CHECK_COUNT;
-  const genChecks: GeneratedPackCheck[] = Array.from({ length: GEN_EVAL_CHECK_COUNT }, (_, i) => {
-    const seed = genBase + i;
-    const pack = generateCyoaPack(seed);
-    return { seed, pack_id: pack.meta.id, report: validateCyoa(pack) };
-  });
-  const genDrift = generatorDriftCandidate(genChecks);
-  if (genDrift) candidates.push(genDrift);
-
-  // ── eval-distribution: the SAME lever one mode over — mint-and-check a fresh RPG window ──
-  // The RPG twin (bug_0162) of the CYOA mint-and-check above. The two levers SHARE the advancing
-  // seed base (so both stay deterministic for a snapshot yet sweep a fresh window each cycle) but
-  // draw from INDEPENDENT generators — `generateCyoaPack` vs `generateRpgPack` — so each confronts
-  // its own never-frozen distribution; within each generator the per-cycle windows are disjoint
-  // (base advances by GEN_EVAL_CHECK_COUNT each cycle). This window exercises the production
-  // `validateRpg` — the full parser bar PLUS the RPG-only COMBAT_UNWINNABLE / SCORE_UNREACHABLE /
-  // SKILL_CHECK_IMPOSSIBLE checks, the richest verifier surfaces in the suite — against fresh,
-  // never-seen RPG packs, so those checks stop being exercised only by the two frozen hand packs.
   const rpgGenChecks: GeneratedPackCheck[] = Array.from(
     { length: GEN_EVAL_CHECK_COUNT },
     (_, i) => {
@@ -837,31 +707,7 @@ export function assess(root: string): Assessment {
   );
   const rpgGenDrift = generatorRpgDriftCandidate(rpgGenChecks);
   if (rpgGenDrift) candidates.push(rpgGenDrift);
-
-  // ── eval-distribution: the SAME lever a THIRD mode over — mint-and-check a fresh parser window ──
-  // The parser twin (bug_0166) that completes the generator trilogy on the assessor side. It shares
-  // the SAME advancing `genBase` as the CYOA and RPG levers (so all three stay deterministic for a
-  // snapshot yet sweep a fresh, disjoint window each cycle) but draws from the INDEPENDENT
-  // `generateParserPack`, so it confronts its own never-frozen distribution. This window exercises
-  // the production `validateParser` — the STRICTEST verifier in the suite (obtainability fixpoint,
-  // soft-lock detection, WIN_FIRES_AT_START stability, SCORE_UNREACHABLE economy) — against fresh,
-  // never-seen parser packs, so those checks stop being exercised against generated content only by
-  // the static 24-seed unit test and the 4-seed sealed corpus.
-  const parserGenChecks: GeneratedPackCheck[] = Array.from(
-    { length: GEN_EVAL_CHECK_COUNT },
-    (_, i) => {
-      const seed = genBase + i;
-      const pack = generateParserPack(seed);
-      return { seed, pack_id: pack.meta.id, report: validateParser(pack) };
-    },
-  );
-  const parserGenDrift = generatorParserDriftCandidate(parserGenChecks);
-  if (parserGenDrift) candidates.push(parserGenDrift);
-  const allGeneratorsClean = allGeneratedChecksClean([
-    ...genChecks,
-    ...rpgGenChecks,
-    ...parserGenChecks,
-  ]);
+  const allGeneratorsClean = allGeneratedChecksClean(rpgGenChecks);
 
   // Deterministic ordering: score desc, then — among equal scores — rotate the
   // blind-playtest pass onto the LEAST-recently-attended pack (never-attended first,
@@ -895,7 +741,9 @@ export function formatAssessment(a: Assessment): string {
       .map(([m, n]) => `${m}=${n}`)
       .join("  ")}`,
   );
-  lines.push(`Generator mint-and-check: ${a.allGeneratorsClean ? "clean" : "findings present"}`);
+  lines.push(
+    `RPG generator mint-and-check: ${a.allGeneratorsClean ? "clean" : "findings present"}`,
+  );
   lines.push("");
   lines.push("## Pack health");
   for (const p of a.packs) {

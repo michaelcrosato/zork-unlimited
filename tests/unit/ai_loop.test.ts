@@ -29,7 +29,7 @@ function candidate(
 
 function assessment(top: ImprovementCandidate | null): Assessment {
   return {
-    packsByMode: { cyoa: 20, parser: 16, rpg: 16 },
+    packsByMode: { rpg: 16 },
     packs: [],
     allGeneratorsClean: true,
     candidates: top ? [top] : [],
@@ -65,10 +65,10 @@ describe("shouldRunUltraplan", () => {
 
 describe("playtestTarget", () => {
   it("targets the pack being fixed for content_fix work", () => {
-    const top = candidate("content_fix", "content/parser/pack/sealed_crypt.yaml");
+    const top = candidate("content_fix", "content/rpg/pack/cold_forge.yaml");
 
     expect(playtestTarget(assessment(top), top, mainStory)).toBe(
-      "content/parser/pack/sealed_crypt.yaml",
+      "content/rpg/pack/cold_forge.yaml",
     );
   });
 
@@ -86,7 +86,7 @@ describe("playtestTarget", () => {
 
 describe("buildPrompt blind-playtest contract", () => {
   it("content_fix cycles require a blind playtest of the target pack and named report file", () => {
-    const top = candidate("content_fix", "content/cyoa/pack/wreckers_light.yaml");
+    const top = candidate("content_fix", "content/rpg/pack/cold_forge.yaml");
     const prompt = buildPrompt({
       a: assessment(top),
       top,
@@ -96,7 +96,7 @@ describe("buildPrompt blind-playtest contract", () => {
     });
 
     expect(prompt).toContain("## STEP 1 — MANDATORY LLM playtest");
-    expect(prompt).toContain("Playtest target this cycle: content/cyoa/pack/wreckers_light.yaml");
+    expect(prompt).toContain("Playtest target this cycle: content/rpg/pack/cold_forge.yaml");
     expect(prompt).toContain("2 validator warning(s)");
     expect(prompt).toContain(`to: ${playtestRecord}`);
     expect(prompt).toContain("This file is REQUIRED");

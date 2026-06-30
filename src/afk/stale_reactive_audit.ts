@@ -6,19 +6,22 @@
  * audit gives the loop a deterministic, suppression-aware signal it can tune before
  * converting any subset into a hard content bar.
  */
-import { readdirSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { Condition } from "../core/conditions.js";
 import type { Effect } from "../core/effects.js";
-import type { ParserPack, Room, GameObject, WinCondition } from "../parser/schema.js";
-import { loadParserPackFile } from "../parser/pack.js";
 import { loadRpgPackFile } from "../rpg/pack.js";
+import type { RpgPack } from "../rpg/schema.js";
 import type { PackMode } from "../mcp/types.js";
+
+type Room = RpgPack["rooms"][number];
+type GameObject = RpgPack["objects"][number];
+type WinCondition = RpgPack["win_conditions"][number];
 
 export type StaleReactiveRoomItemSite = {
   packPath: string;
   packId: string;
-  mode: Extract<PackMode, "parser" | "rpg">;
+  mode: Extract<PackMode, "rpg">;
   roomId: string;
   objectId: string;
   objectName: string;
@@ -29,10 +32,7 @@ export type StaleReactiveAudit = {
   sites: StaleReactiveRoomItemSite[];
 };
 
-const PACK_DIRS = [
-  ["content/parser/pack", "parser"],
-  ["content/rpg/pack", "rpg"],
-] as const;
+const PACK_DIRS = [["content/rpg/pack", "rpg"]] as const;
 
 const MIN_TERM_LENGTH = 4;
 
@@ -40,22 +40,22 @@ export function auditStaleReactiveRoomItems(root: string): StaleReactiveAudit {
   const sites: StaleReactiveRoomItemSite[] = [];
   for (const [dir, mode] of PACK_DIRS) {
     const abs = join(root, dir);
+    if (!existsSync(abs)) continue;
     for (const file of readdirSync(abs).sort()) {
       if (!file.endsWith(".yaml")) continue;
       const path = `${dir}/${file}`;
-      const loaded =
-        mode === "rpg" ? loadRpgPackFile(join(root, path)) : loadParserPackFile(join(root, path));
+      const loaded = loadRpgPackFile(join(root, path));
       if (!loaded.ok) continue;
-      sites.push(...auditParserPackForStaleRoomItems(loaded.compiled.pack, path, mode));
+      sites.push(...auditRpgPackForStaleRoomItems(loaded.compiled.pack, path, mode));
     }
   }
   return { sites };
 }
 
-export function auditParserPackForStaleRoomItems(
-  pack: ParserPack,
+export function auditRpgPackForStaleRoomItems(
+  pack: RpgPack,
   packPath: string,
-  mode: Extract<PackMode, "parser" | "rpg">,
+  mode: Extract<PackMode, "rpg">,
 ): StaleReactiveRoomItemSite[] {
   const objects = new Map(pack.objects.map((object) => [object.id, object]));
   const sites: StaleReactiveRoomItemSite[] = [];
@@ -127,28 +127,24 @@ function stateRef(kind: string, id: string): string {
   return `${kind}:${id}`;
 }
 
-function takeGuaranteesImmediateTerminal(
-  pack: ParserPack,
-  room: Room,
-  object: GameObject,
-): boolean {
+function takeGuaranteesImmediateTerminal(pack: RpgPack, room: Room, object: GameObject): boolean {
   if ((object.take_effects ?? []).some((effect) => "end_game" in effect)) return true;
   return pack.win_conditions.some((win) => winConditionsHoldAfterTake(pack, win, room, object));
 }
 
-function roomEntryGuaranteesImmediateTerminal(pack: ParserPack, room: Room): boolean {
+function roomEntryGuaranteesImmediateTerminal(pack: RpgPack, room: Room): boolean {
   if (room.id === pack.meta.start_room) return false;
   if (room.on_enter.some((effect) => "end_game" in effect)) return true;
   return pack.win_conditions.some((win) => winConditionsHoldOnRoomEntry(pack, win, room));
 }
 
-function winConditionsHoldOnRoomEntry(pack: ParserPack, win: WinCondition, room: Room): boolean {
+function winConditionsHoldOnRoomEntry(pack: RpgPack, win: WinCondition, room: Room): boolean {
   const facts = factsAfterEnteringRoom(pack, room);
   return win.conditions.every((condition) => guaranteedByFacts(condition, facts));
 }
 
 function winConditionsHoldAfterTake(
-  pack: ParserPack,
+  pack: RpgPack,
   win: WinCondition,
   room: Room,
   object: GameObject,
@@ -168,7 +164,7 @@ type GuaranteedFacts = {
   rooms: ReadonlySet<string>;
 };
 
-function factsAfterTaking(pack: ParserPack, room: Room, object: GameObject): GuaranteedFacts {
+function factsAfterTaking(pack: RpgPack, room: Room, object: GameObject): GuaranteedFacts {
   const flags = new Set(pack.meta.flags_init);
   for (const effect of object.take_effects ?? []) {
     if ("set_flag" in effect) flags.add(effect.set_flag);
@@ -181,7 +177,7 @@ function factsAfterTaking(pack: ParserPack, room: Room, object: GameObject): Gua
   };
 }
 
-function factsAfterEnteringRoom(pack: ParserPack, room: Room): GuaranteedFacts {
+function factsAfterEnteringRoom(pack: RpgPack, room: Room): GuaranteedFacts {
   const flags = new Set(pack.meta.flags_init);
   for (const effect of room.on_enter) {
     if ("set_flag" in effect) flags.add(effect.set_flag);

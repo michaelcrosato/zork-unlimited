@@ -36,15 +36,17 @@ function realRepoAttendanceOffsets(): Map<string, number> {
 function withStaleAuditFixtureRoot(run: (root: string) => void): void {
   const root = mkdtempSync(join(tmpdir(), "af-assessor-"));
   try {
-    mkdirSync(join(root, "content", "parser", "pack"), { recursive: true });
     mkdirSync(join(root, "content", "rpg", "pack"), { recursive: true });
     writeFileSync(
-      join(root, "content", "parser", "pack", "stale_fixture.yaml"),
+      join(root, "content", "rpg", "pack", "stale_fixture.yaml"),
       [
         "meta:",
         "  id: stale_audit_fixture_v1",
         "  title: Stale Audit Fixture",
         "  start_room: start",
+        "  vars_init: { hp: 10, attack: 2, defense: 1 }",
+        "  flags_init: []",
+        "  max_score: 0",
         "rooms:",
         "  - id: start",
         "    name: Start",
@@ -74,6 +76,7 @@ function withStaleAuditFixtureRoot(run: (root: string) => void): void {
         "  - id: ending_win",
         "    title: Done",
         "    text: Done.",
+        "enemies: []",
         "",
       ].join("\n"),
     );
@@ -84,9 +87,9 @@ function withStaleAuditFixtureRoot(run: (root: string) => void): void {
 }
 
 describe("assess()", () => {
-  it("counts the RPG catalog and keeps legacy modes out of discovery", () => {
-    expect(a.packsByMode["cyoa"]).toBe(0);
-    expect(a.packsByMode["parser"]).toBe(0);
+  it("counts the RPG catalog and does not track retired legacy modes", () => {
+    expect(a.packsByMode["cyoa"]).toBeUndefined();
+    expect(a.packsByMode["parser"]).toBeUndefined();
     expect(a.packsByMode["rpg"]).toBeGreaterThanOrEqual(16);
   });
 
@@ -98,9 +101,7 @@ describe("assess()", () => {
 
   it("surfaces whether all fresh generator windows validated clean", () => {
     expect(a.allGeneratorsClean).toBe(true);
-    expect(a.candidates.find((c) => c.id === "generator-drift")).toBeUndefined();
     expect(a.candidates.find((c) => c.id === "generator-rpg-drift")).toBeUndefined();
-    expect(a.candidates.find((c) => c.id === "generator-parser-drift")).toBeUndefined();
   });
 
   it("disarms the repo ESLint+Prettier lever once the tooling is in place (bug_0031)", () => {
@@ -124,7 +125,7 @@ describe("assess()", () => {
     // The planning-free coverage bot can't solve multi-step puzzles, so its failure
     // to reach an RPG ending is expected — not a content flaw. Those packs
     // must not produce a high-impact `fix-` candidate from bot coverage alone.
-    // (bug_0032 generalized this to PLANNING-GATED CYOA too — see
+    // (bug_0032 generalized this to planning-gated legacy content too — see
     // tests/regression/assessor_gated_cyoa_coverage.test.ts.)
     for (const p of a.packs.filter((p) => p.mode === "rpg" && p.warnings === 0)) {
       expect(a.candidates.find((c) => c.id === `fix-${p.path}`)).toBeUndefined();
@@ -152,7 +153,7 @@ describe("assess()", () => {
   });
 
   it("raises content_new candidates only for the RPG breadth target", () => {
-    // TARGET_PER_MODE = {rpg:16}. Legacy CYOA/parser content is no longer a breadth
+    // TARGET_PER_MODE = {rpg:16}. Legacy content is no longer a breadth
     // target, so the assessor must not reintroduce those modes as new authoring work.
     expect(a.packsByMode["rpg"]).toBeGreaterThanOrEqual(16);
     expect(
@@ -192,7 +193,7 @@ describe("assess()", () => {
   it("formatAssessment renders the recommendation", () => {
     const out = formatAssessment(a);
     expect(out).toContain("next best improvement");
-    expect(out).toContain("Generator mint-and-check: clean");
+    expect(out).toContain("RPG generator mint-and-check: clean");
     expect(out).toContain("Recommended next");
   });
 });
@@ -226,14 +227,13 @@ describe("allGeneratedChecksClean", () => {
 
 describe("blind-pass rotation (bug_0128)", () => {
   it("packStem normalizes a pack path OR a bare id to the same stem", () => {
-    expect(packStem("content/cyoa/pack/clockwork_heist.yaml")).toBe("clockwork_heist");
     expect(packStem("content/rpg/pack/cold_forge.yml")).toBe("cold_forge");
-    expect(packStem("clockwork_heist")).toBe("clockwork_heist");
+    expect(packStem("cold_forge")).toBe("cold_forge");
     // bug_0293: a pack ID carries a _vN suffix the file stem does not; both must converge
     // so the code-written `Blind-playtest "<id>"` attendance line keys to the candidate's
     // path-derived stem.
-    expect(packStem("clockwork_heist_v1")).toBe("clockwork_heist");
-    expect(packStem("content/cyoa/pack/clockwork_heist.yaml")).toBe(packStem("clockwork_heist_v1"));
+    expect(packStem("cold_forge_v1")).toBe("cold_forge");
+    expect(packStem("content/rpg/pack/cold_forge.yaml")).toBe(packStem("cold_forge_v1"));
   });
 
   it("parseAttendanceOffsets keeps the MOST RECENT (topmost) mention in the newest-first log (bug_0128)", () => {
@@ -241,25 +241,24 @@ describe("blind-pass rotation (bug_0128)", () => {
     // FIRST (smallest-offset) mention is its most recent. Here clockwork appears at the
     // very top (most recent) and again at the bottom (older); cold_forge sits between.
     const text = [
-      "- Mandated blind pass ran on clockwork_heist (CYOA, seed 3).", // most recent
+      "- Mandated blind pass ran on cold_forge (rpg, seed 3).", // most recent
       "noise noise noise",
-      "- Mandated blind pass ran on cold_forge (rpg, seed 7).",
-      "- Mandated blind pass ran on clockwork_heist (CYOA, seed 99).", // older repeat
+      "- Mandated blind pass ran on sunken_barrow (rpg, seed 7).",
+      "- Mandated blind pass ran on cold_forge (rpg, seed 99).", // older repeat
     ].join("\n");
     const offsets = parseAttendanceOffsets(text);
     // Keyed by stem, recognizing the CURRENT prose phrasing + a bare id token.
-    expect(offsets.has("clockwork_heist")).toBe(true);
     expect(offsets.has("cold_forge")).toBe(true);
-    // clockwork's kept offset is its FIRST (topmost = most recent) mention, BEFORE
-    // cold_forge's — the opposite of the pre-bug_0128 last-write-wins behaviour.
-    expect(offsets.get("clockwork_heist")!).toBeLessThan(offsets.get("cold_forge")!);
+    expect(offsets.has("sunken_barrow")).toBe(true);
+    // cold_forge's kept offset is its FIRST (topmost = most recent) mention, BEFORE
+    // sunken_barrow's — the opposite of the pre-bug_0128 last-write-wins behaviour.
+    expect(offsets.get("cold_forge")!).toBeLessThan(offsets.get("sunken_barrow")!);
   });
 
   it("parseAttendanceOffsets still recognizes the legacy structured-header marker", () => {
-    const text =
-      "- Mandatory LLM playtest target this cycle: content/cyoa/pack/wreckers_light.yaml.";
+    const text = "- Mandatory LLM playtest target this cycle: content/rpg/pack/sunken_barrow.yaml.";
     const offsets = parseAttendanceOffsets(text);
-    expect(offsets.has("wreckers_light")).toBe(true);
+    expect(offsets.has("sunken_barrow")).toBe(true);
   });
 
   it("parseBlindReportAttendanceOffsets recognizes timestamped accepted markdown reports", () => {
@@ -280,7 +279,7 @@ describe("blind-pass rotation (bug_0128)", () => {
   it("mergeAttendanceOffsets treats local report offsets as newer than tracked log offsets", () => {
     const tracked = new Map([
       ["aleconners_seal", 0],
-      ["clockwork_heist", 100],
+      ["cold_forge", 100],
     ]);
     const reports = parseBlindReportAttendanceOffsets([
       "20260619T191648Z_aleconners_seal_seed7.md",
@@ -288,7 +287,7 @@ describe("blind-pass rotation (bug_0128)", () => {
     const merged = mergeAttendanceOffsets(tracked, reports);
 
     expect(merged.get("aleconners_seal")).toBeLessThan(0);
-    expect(merged.get("clockwork_heist")).toBe(100);
+    expect(merged.get("cold_forge")).toBe(100);
   });
 
   it("blindReportAttendanceOffsets ignores rejected markdown artifacts left by failed blind runs", () => {
@@ -353,7 +352,7 @@ describe("isSaturated — the saturation-triggered ultraplan signal", () => {
   const candidate = (score: number): ImprovementCandidate => ({
     id: "c",
     category: "content_fix",
-    target: "content/cyoa/pack/x.yaml",
+    target: "content/rpg/pack/x.yaml",
     title: "t",
     rationale: "r",
     evidence: ["e"],
