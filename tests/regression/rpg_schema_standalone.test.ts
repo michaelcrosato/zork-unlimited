@@ -18,4 +18,13 @@ describe("RPG schema owns the RPG contract", () => {
     expect(runner).not.toContain("indexParserPack");
     expect(runner).not.toContain("initStateForParserPack");
   });
+
+  it("does not import the legacy parser legal-action resolver for RPG commands", () => {
+    const legalActions = readFileSync("src/rpg/legal_actions.ts", "utf8");
+    const runner = readFileSync("src/rpg/runner.ts", "utf8");
+    expect(legalActions).not.toContain("../parser/");
+    expect(runner).not.toContain("../parser/legal_actions");
+    expect(runner).not.toContain("resolveParserAction");
+    expect(runner).not.toContain("ParserActionOption");
+  });
 });

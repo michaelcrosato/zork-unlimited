@@ -18,12 +18,12 @@ import {
   activeDialogue,
 } from "./model.js";
 import {
-  enumerateActions,
+  enumerateRpgBaseActions,
   present,
-  resolveParserAction,
+  resolveRpgAction,
   useInteraction,
-  type ParserActionOption,
-} from "../parser/legal_actions.js";
+  type RpgActionOption,
+} from "./legal_actions.js";
 import { evalConditions } from "../core/conditions.js";
 import type { GameEvent } from "../core/events.js";
 import { winningEnding, scoreChangeNarrations } from "../parser/runner.js";
@@ -60,12 +60,12 @@ function enemiesHere(index: RpgIndex, state: GameState): Enemy[] {
 }
 
 /**
- * Every legal action: the parser set plus an ATTACK per living enemy in the room
+ * Every legal action: the base command set plus an ATTACK per living enemy in the room
  * (offered only outside conversation). Each carries the stable id/command/action
- * shape the observation and human parser consume.
+ * shape the observation and human clients consume.
  */
-export function enumerateRpgActions(index: RpgIndex, state: GameState): ParserActionOption[] {
-  const out = enumerateActions(index, state);
+export function enumerateRpgActions(index: RpgIndex, state: GameState): RpgActionOption[] {
+  const out = enumerateRpgBaseActions(index, state);
   if (state.ended || activeDialogue(index, state)) return out;
   for (const enemy of enemiesHere(index, state)) {
     out.push({
@@ -116,7 +116,7 @@ export function buildRpgRules(
           return resolveSkillCheck(state, it.skill_check, rngFor(state));
         }
       }
-      return resolveParserAction(index, state, action);
+      return resolveRpgAction(index, state, action);
     },
 
     onEnter(state: GameState, locationId: string): Effect[] {
