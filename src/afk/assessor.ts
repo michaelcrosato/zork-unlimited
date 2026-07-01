@@ -32,7 +32,7 @@ export type Category = "content_fix" | "content_new" | "engine" | "repo";
 export type ImprovementCandidate = {
   id: string;
   category: Category;
-  target: string; // a pack path, a mode, or a repo area
+  target: string; // a world quest id, a mode, or a repo area; paths are metadata only.
   title: string;
   rationale: string;
   evidence: string[];
@@ -43,6 +43,7 @@ export type ImprovementCandidate = {
 
 export type PackHealth = {
   path: string;
+  world_quest_id: string | null;
   mode: PackMode | null;
   playable: boolean;
   warnings: number;
@@ -503,12 +504,19 @@ export function assess(root: string): Assessment {
 
   // ── Per-pack health: validator findings (the deterministic dev-test signal) ───
   for (const s of stories) {
+    const targetRef = s.world_quest_id ?? s.path;
     if (!s.playable) {
-      packs.push({ path: s.path, mode: s.mode, playable: false, warnings: 0 });
+      packs.push({
+        path: s.path,
+        world_quest_id: s.world_quest_id,
+        mode: s.mode,
+        playable: false,
+        warnings: 0,
+      });
       candidates.push({
-        id: `fix-unplayable-${s.path}`,
+        id: `fix-unplayable-${targetRef}`,
         category: "content_fix",
-        target: s.path,
+        target: targetRef,
         title: `Fix "${s.id}" — it does not validate (unplayable)`,
         rationale:
           "An unplayable pack is the highest-impact thing to fix: nobody can experience it.",
@@ -520,7 +528,13 @@ export function assess(root: string): Assessment {
       continue;
     }
     if (s.world_quest_id === null) {
-      packs.push({ path: s.path, mode: s.mode, playable: true, warnings: 0 });
+      packs.push({
+        path: s.path,
+        world_quest_id: null,
+        mode: s.mode,
+        playable: true,
+        warnings: 0,
+      });
       candidates.push({
         id: `fix-unbound-${s.path}`,
         category: "content_fix",
@@ -537,7 +551,13 @@ export function assess(root: string): Assessment {
     }
     const report = api.validate_pack({ world_quest_id: s.world_quest_id });
     const warnings = report.report.findings.filter((f) => f.severity === "warning").length;
-    packs.push({ path: s.path, mode: s.mode, playable: true, warnings });
+    packs.push({
+      path: s.path,
+      world_quest_id: s.world_quest_id,
+      mode: s.mode,
+      playable: true,
+      warnings,
+    });
 
     // content_fix is driven by VALIDATOR findings — the deterministic, code-checkable
     // signal (the "specific dev tests"). Player-facing QUALITY (signposting, clarity,
@@ -547,9 +567,9 @@ export function assess(root: string): Assessment {
     if (warnings > 0) {
       const impact = Math.min(5, 1 + Math.ceil(warnings / 3));
       candidates.push({
-        id: `fix-${s.path}`,
+        id: `fix-${s.world_quest_id}`,
         category: "content_fix",
-        target: s.path,
+        target: s.world_quest_id,
         title: `Fix "${s.id}" — ${warnings} validator warning(s)`,
         rationale:
           "Validator warnings are concrete, code-checkable content defects; clearing them keeps the pack sound and raises player-facing quality.",
@@ -563,9 +583,9 @@ export function assess(root: string): Assessment {
       // sound): keep it on the radar as a LOW-priority blind-playtest review, rotated by
       // recency. The blind LLM playtest is the only judge of its signposting/clarity/pacing.
       candidates.push({
-        id: `playtest-${s.path}`,
+        id: `playtest-${s.world_quest_id}`,
         category: "content_fix",
-        target: s.path,
+        target: s.world_quest_id,
         title: `Blind-playtest "${s.id}" — structurally clean; only a fresh blind LLM player can judge its quality`,
         rationale:
           "The validator and exhaustive solver prove this pack is winnable and sound; only a fresh blind LLM playtest reveals signposting/clarity/pacing issues a static check can't see.",
@@ -766,7 +786,8 @@ export function assess(root: string): Assessment {
   // order is unchanged. attendance offsets come from the NEWEST-FIRST log, so a
   // SMALLER offset is MORE recent — we negate it so a less-recent (larger-offset) pack
   // sorts EARLIER, and a never-attended pack (MIN_SAFE_INTEGER) sorts earliest of all.
-  // c.target is a path; the attendance map is stem-keyed, so resolve via packStem.
+  // c.target is a world quest id for shipped content; legacy/path fallbacks still
+  // normalize through packStem so old loop-state attendance remains usable.
   // Reading the tracked AI_LOOP_STATE.md keeps this a pure function of repo state
   // (same repo ⇒ same ranking), curing the clockwork_heist lock-in (bug_0128).
   const attendance = lastAttendanceOffsets(root);
@@ -815,8 +836,9 @@ export function formatAssessment(a: Assessment, opts: AssessmentFormatOptions = 
   if (full || unhealthy.length > 0) {
     const listedPacks = full ? a.packs : unhealthy.slice(0, 8);
     for (const p of listedPacks) {
+      const label = p.world_quest_id ?? p.path;
       lines.push(
-        `- ${p.path} [${p.mode ?? "?"}] ${p.playable ? `${p.warnings} warning(s)` : "UNPLAYABLE"}`,
+        `- ${label} [${p.mode ?? "?"}] ${p.playable ? `${p.warnings} warning(s)` : "UNPLAYABLE"}`,
       );
     }
     if (!full && unhealthy.length > listedPacks.length) {

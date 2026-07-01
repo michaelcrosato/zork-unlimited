@@ -13,6 +13,7 @@ import {
 } from "../../src/ai-loop.js";
 import type { Assessment, ImprovementCandidate, PackHealth } from "../../src/afk/assessor.js";
 
+const mainWorldQuestId = "breaking_weir";
 const mainStory = "content/rpg/pack/breaking_weir.yaml";
 const playtestRecord = "ai-runs/2026-06-25T00-00-00-000Z/playtest.md";
 
@@ -45,7 +46,13 @@ function assessment(top: ImprovementCandidate | null): Assessment {
 }
 
 function packHealth(path: string, warnings = 0): PackHealth {
-  return { path, mode: "rpg", playable: true, warnings };
+  return {
+    path,
+    world_quest_id: path.replace(/^content\/rpg\/pack\//, "").replace(/\.ya?ml$/, ""),
+    mode: "rpg",
+    playable: true,
+    warnings,
+  };
 }
 
 describe("shouldRunUltraplan", () => {
@@ -72,11 +79,9 @@ describe("shouldRunUltraplan", () => {
 
 describe("playtestTarget", () => {
   it("targets the pack being fixed for content_fix work", () => {
-    const top = candidate("content_fix", "content/rpg/pack/cold_forge.yaml");
+    const top = candidate("content_fix", "cold_forge");
 
-    expect(playtestTarget(assessment(top), top, mainStory)).toBe(
-      "content/rpg/pack/cold_forge.yaml",
-    );
+    expect(playtestTarget(assessment(top), top, mainWorldQuestId)).toBe("cold_forge");
   });
 
   it("uses the main story as the pre-authoring baseline for non-content-fix work", () => {
@@ -86,7 +91,7 @@ describe("playtestTarget", () => {
       candidate("repo", "tooling"),
       null,
     ]) {
-      expect(playtestTarget(assessment(top), top, mainStory)).toBe(mainStory);
+      expect(playtestTarget(assessment(top), top, mainWorldQuestId)).toBe(mainWorldQuestId);
     }
   });
 });
@@ -110,11 +115,21 @@ describe("playtestTargetWorldQuestId", () => {
     expect(
       playtestTargetWorldQuestId(candidate("content_new", "world"), "breaking_weir", null),
     ).toBeNull();
+    expect(
+      playtestTargetWorldQuestId(
+        candidate("content_fix", "content/rpg/pack/unbound.yaml"),
+        "breaking_weir",
+        "content/rpg/pack/unbound.yaml",
+      ),
+    ).toBeNull();
   });
 });
 
 describe("playtestTargetSummary", () => {
   it("keeps quest ids primary while retaining edit paths for content fixes", () => {
+    expect(
+      playtestTargetSummary(candidate("content_fix", "cold_forge"), "cold_forge", "cold_forge"),
+    ).toBe("cold_forge");
     expect(
       playtestTargetSummary(
         candidate("content_fix", "content/rpg/pack/cold_forge.yaml"),
@@ -123,20 +138,24 @@ describe("playtestTargetSummary", () => {
       ),
     ).toBe("cold_forge (content/rpg/pack/cold_forge.yaml)");
     expect(
-      playtestTargetSummary(candidate("engine", "src/core/engine.ts"), mainStory, "breaking_weir"),
+      playtestTargetSummary(
+        candidate("engine", "src/core/engine.ts"),
+        mainWorldQuestId,
+        "breaking_weir",
+      ),
     ).toBe("breaking_weir");
   });
 });
 
 describe("buildPrompt blind-playtest contract", () => {
   it("content_fix cycles require a blind playtest of the target quest id and named report file", () => {
-    const top = candidate("content_fix", "content/rpg/pack/cold_forge.yaml");
+    const top = candidate("content_fix", "cold_forge");
     const prompt = buildPrompt({
       a: assessment(top),
       top,
       target: top.target,
       targetWorldQuestId: "cold_forge",
-      targetHealth: packHealth(top.target, 2),
+      targetHealth: packHealth("content/rpg/pack/cold_forge.yaml", 2),
       playtestRecord,
     });
 
@@ -157,7 +176,7 @@ describe("buildPrompt blind-playtest contract", () => {
     const prompt = buildPrompt({
       a: assessment(top),
       top,
-      target: mainStory,
+      target: mainWorldQuestId,
       targetWorldQuestId: "breaking_weir",
       targetHealth: packHealth(mainStory),
       playtestRecord,
@@ -169,7 +188,7 @@ describe("buildPrompt blind-playtest contract", () => {
   });
 
   it("refuses shipped blind-playtest prompts without a quest id", () => {
-    const top = candidate("content_fix", "content/rpg/pack/cold_forge.yaml");
+    const top = candidate("content_fix", "cold_forge");
 
     expect(() =>
       buildPrompt({
@@ -187,7 +206,7 @@ describe("buildPrompt blind-playtest contract", () => {
     const prompt = buildPrompt({
       a: assessment(top),
       top,
-      target: mainStory,
+      target: mainWorldQuestId,
       targetHealth: packHealth(mainStory),
       playtestRecord,
     });
@@ -200,7 +219,7 @@ describe("buildPrompt blind-playtest contract", () => {
     );
     expect(prompt).toContain("playtest by quest_id");
     expect(prompt).toContain(`to: ${playtestRecord}`);
-    expect(prompt).toContain(`Baseline ${mainStory} need not be replayed`);
+    expect(prompt).toContain(`Baseline ${mainWorldQuestId} need not be replayed`);
     expect(prompt).not.toContain(`Playtest target this cycle: ${mainStory}`);
   });
 });

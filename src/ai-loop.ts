@@ -33,7 +33,6 @@ import {
 } from "./afk/assessor.js";
 import { createToolApi } from "./mcp/tools.js";
 import { rotateLoopState } from "./afk/loop_state.js";
-import { resolveWorldQuestPackPath, worldQuestIdForPackPath } from "./world/source.js";
 
 type WorldCatalog = ReturnType<ReturnType<typeof createToolApi>["list_world"]>;
 
@@ -99,11 +98,11 @@ function requireMainWorldQuestId(catalog: WorldCatalog): string {
 export function playtestTarget(
   a: Assessment,
   top: ImprovementCandidate | null,
-  mainStory: string,
+  mainWorldQuestId: string,
 ): string {
-  if (top && top.category === "content_fix") return top.target; // the pack to improve
-  // content_new (a mode) / engine / repo: playtest the main story as a regression baseline.
-  return mainStory;
+  if (top && top.category === "content_fix") return top.target;
+  // content_new / engine / repo: playtest the main quest as a regression baseline.
+  return mainWorldQuestId;
 }
 
 export function playtestTargetWorldQuestId(
@@ -111,7 +110,9 @@ export function playtestTargetWorldQuestId(
   mainWorldQuestId: string | null,
   targetWorldQuestId: string | null = null,
 ): string | null {
-  if (top?.category === "content_fix") return targetWorldQuestId;
+  if (top?.category === "content_fix") {
+    return targetWorldQuestId && !targetWorldQuestId.includes("/") ? targetWorldQuestId : null;
+  }
   if (top && top.category !== "engine" && top.category !== "repo") return null;
   return mainWorldQuestId;
 }
@@ -119,13 +120,15 @@ export function playtestTargetWorldQuestId(
 function playtestTargetMetadata(
   target: string,
   targetWorldQuestId: string | null | undefined,
+  targetPackPath?: string | null,
 ): { target: string; targetWorldQuestId?: string; targetPackPath?: string } {
   if (!targetWorldQuestId) return { target };
-  return {
+  const metadata: { target: string; targetWorldQuestId?: string; targetPackPath?: string } = {
     target: targetWorldQuestId,
     targetWorldQuestId,
-    targetPackPath: target,
   };
+  if (targetPackPath) metadata.targetPackPath = targetPackPath;
+  return metadata;
 }
 
 export function playtestTargetSummary(
@@ -134,7 +137,9 @@ export function playtestTargetSummary(
   targetWorldQuestId: string | null | undefined,
 ): string {
   if (!targetWorldQuestId) return target;
-  return top?.category === "content_fix" ? `${targetWorldQuestId} (${target})` : targetWorldQuestId;
+  return top?.category === "content_fix" && target !== targetWorldQuestId
+    ? `${targetWorldQuestId} (${target})`
+    : targetWorldQuestId;
 }
 
 function main(): void {
@@ -150,16 +155,18 @@ function main(): void {
   const top = a.top;
   const catalog = createToolApi({ root }).list_world();
   const mainWorldQuestId = requireMainWorldQuestId(catalog);
-  const mainStory = resolveWorldQuestPackPath(root, mainWorldQuestId).packPath;
-  const target = playtestTarget(a, top, mainStory);
+  const target = playtestTarget(a, top, mainWorldQuestId);
   const targetWorldQuestId = playtestTargetWorldQuestId(
     top,
     mainWorldQuestId,
-    top?.category === "content_fix" ? worldQuestIdForPackPath(root, target) : null,
+    top?.category === "content_fix" ? target : null,
   );
   const playtestRecord = join(runDir, "playtest.md").replaceAll("\\", "/");
 
-  const targetHealth = a.packs.find((p) => p.path === target) ?? null;
+  const targetHealth =
+    a.packs.find((p) => p.world_quest_id !== null && p.world_quest_id === targetWorldQuestId) ??
+    null;
+  const targetPackPath = targetHealth?.path ?? null;
 
   // Saturation-triggered ultraplan: re-aim with a multi-agent ultraplan only when
   // the cheap assessor has run dry AND we're off the cooldown.
@@ -192,7 +199,7 @@ function main(): void {
       {
         runId: stamp,
         runDir,
-        ...playtestTargetMetadata(target, targetWorldQuestId),
+        ...playtestTargetMetadata(target, targetWorldQuestId, targetPackPath),
         playtestRecord,
         recommendation: top?.title ?? null,
         mode: ultraplan ? "ultraplan" : "standard",
@@ -245,9 +252,10 @@ export function buildPrompt(ctx: {
       )}.`,
     );
   }
+  const editRef = targetHealth?.path ?? target;
   const targetLabel =
     targetWorldQuestId && top?.category === "content_fix"
-      ? `${targetWorldQuestId} (${target}; ${health})`
+      ? `${targetWorldQuestId} (${editRef}; ${health})`
       : targetWorldQuestId
         ? `${targetWorldQuestId} (${health})`
         : `${target}  (${health})`;

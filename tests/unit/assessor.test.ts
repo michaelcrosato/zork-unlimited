@@ -91,6 +91,7 @@ describe("assess()", () => {
     expect("packsByMode" in a).toBe(false);
     expect(a.rpgPackCount).toBeGreaterThanOrEqual(16);
     expect(a.worldQuestCount).toBeGreaterThanOrEqual(16);
+    expect(a.packs.filter((p) => p.playable).every((p) => p.world_quest_id !== null)).toBe(true);
   });
 
   it("produces candidates and a top recommendation", () => {
@@ -128,14 +129,19 @@ describe("assess()", () => {
     // (bug_0032 generalized this to planning-gated legacy content too — see
     // tests/regression/assessor_gated_cyoa_coverage.test.ts.)
     for (const p of a.packs.filter((p) => p.mode === "rpg" && p.warnings === 0)) {
-      expect(a.candidates.find((c) => c.id === `fix-${p.path}`)).toBeUndefined();
+      expect(
+        a.candidates.find((c) => c.id === `fix-${p.world_quest_id ?? p.path}`),
+      ).toBeUndefined();
     }
   });
 
   it("keeps RPG packs on the radar as low-priority blind-playtest reviews", () => {
     const reviews = a.candidates.filter((c) => c.id.startsWith("playtest-"));
     expect(reviews.length).toBeGreaterThan(0);
-    for (const r of reviews) expect(r.score).toBeLessThan(1); // ranked below real fixes + new content
+    for (const r of reviews) {
+      expect(r.score).toBeLessThan(1); // ranked below real fixes + new content
+      expect(r.target).not.toMatch(/^content\/rpg\/pack\//);
+    }
   });
 
   it("surfaces the stale reactive-description audit as an above-floor structural candidate when the class exists", () => {

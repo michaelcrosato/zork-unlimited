@@ -105,6 +105,15 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: targets an engine/loop surface blind agents will not report directly; closes a token/confusion leak in route discovery.
 - Operator direction: pause after this cycle; do not start another AFK cycle.
 
+### Cycle result — afk_loop_quest_id_targets
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; same broad helper drift outside canonical repo scripts.
+- Loop/assessor: world-bound content-fix candidates and `latest-cycle.json` targets are now quest ids; pack paths are edit metadata only.
+- Token economy: assessment health output prints quest ids where available, reducing path churn in loop handoffs.
+- VERIFY: focused AFK/loop tests, typecheck, lint, format:check, validate, npm test, `npm run health` EXIT 0.
+- Self-critique: closes an engine-loop coordination leak blind agents would not report; still leaves offline trace compatibility raw-path capable.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
+
 ## Current Snapshot
 
 - Verification bar: `npm run health` remains the required end gate.
@@ -129,6 +138,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   `pack`/`path`; `list_stories` is now id-only compatibility.
 - AFK loop internals resolve pack paths through `world/source`, not public
   catalog responses.
+- AFK candidate targets and latest-cycle primary target are quest ids for
+  world-bound content fixes; pack paths are edit metadata only.
 - Blind harness default: shipped playtests use `--quest` / `start_world_quest`;
   raw `--pack` starts are rejected.
 - MCP dev harness: `scripts/mcp_play.ts` starts shipped quests through
