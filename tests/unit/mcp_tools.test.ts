@@ -188,6 +188,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
       "The Sunken Barrow",
     ]);
     expect(started.mode).toBe("rpg");
+    expect(started.pack_path).toBe(PACK);
+    expect(started.world_quest_id).toBe("sunken_barrow");
     expect(started.observation.world?.id).toBe("charter_marches");
     expect(a.get_observation({ session_id: started.session_id }).observation.title).toBe(
       started.observation.title,
@@ -196,6 +198,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const viaNewGame = a.new_game({ world_quest_id: "breaking_weir", seed: 1 });
     const viaPackPath = a.new_game({ pack_path: MAIN_RPG, seed: 1 });
     expect(viaNewGame.mode).toBe("rpg");
+    expect(viaNewGame.pack_path).toBe(MAIN_RPG);
+    expect(viaNewGame.world_quest_id).toBe("breaking_weir");
+    expect(viaPackPath.pack_path).toBe(MAIN_RPG);
+    expect(viaPackPath.world_quest_id).toBe("breaking_weir");
     expect(viaNewGame.observation.title).toBe(viaPackPath.observation.title);
     expect(viaNewGame.state_hash).toBe(viaPackPath.state_hash);
     expect(() => a.start_world_quest({ quest_id: "missing_quest" })).toThrow(
@@ -933,6 +939,8 @@ describe("MCP tools — the play loop (§9.1)", () => {
     const a = api();
     const game = a.start_game({ story_path: PACK, seed: 1 });
     expect(game.mode).toBe("rpg");
+    expect(game.pack_path).toBe(PACK);
+    expect(game.world_quest_id).toBe("sunken_barrow");
     expect(game.observation.mode).toBe("rpg");
     expect(
       a.get_scene({ session_id: game.session_id }).observation.available_actions.length,
@@ -942,6 +950,8 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(last.ok).toBe(true);
     expect(last.observation.ending_id).toBe("ending_victory");
     const transcript = a.get_transcript({ session_id: game.session_id });
+    expect(transcript.pack_path).toBe(PACK);
+    expect(transcript.world_quest_id).toBe("sunken_barrow");
     expect(transcript.summary.ended).toBe(true);
     expect(transcript.summary.ending_id).toBe("ending_victory");
     expect(transcript.turns.map((t) => t.action_id)).toContain("take_circlet");
@@ -994,7 +1004,11 @@ describe("MCP tools — the play loop (§9.1)", () => {
     assertPublicAction(moved.observation.available_actions[0]);
 
     const saved = a.save_game({ session_id: game.session_id });
+    expect(saved.pack_path).toBe(PACK);
+    expect(saved.world_quest_id).toBe("sunken_barrow");
     const loaded = a.load_game({ pack_path: PACK, save: saved.save });
+    expect(loaded.pack_path).toBe(PACK);
+    expect(loaded.world_quest_id).toBe("sunken_barrow");
     assertPublicAction(loaded.observation.available_actions[0]);
   });
 
@@ -1028,6 +1042,10 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
 
     const saved = a.save_game({ session_id: game.session_id });
     const reloaded = a.load_game({ pack_path: PACK, save: saved.save });
+    expect(saved.pack_path).toBe(PACK);
+    expect(saved.world_quest_id).toBe("sunken_barrow");
+    expect(reloaded.pack_path).toBe(PACK);
+    expect(reloaded.world_quest_id).toBe("sunken_barrow");
     expect(reloaded.state_hash).toBe(after);
   });
 
@@ -1040,6 +1058,10 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     const saved = a.save_game({ session_id: game.session_id });
     const reloaded = a.load_game({ world_quest_id: "sunken_barrow", save: saved.save });
     expect(reloaded.mode).toBe("rpg");
+    expect(saved.pack_path).toBe(PACK);
+    expect(saved.world_quest_id).toBe("sunken_barrow");
+    expect(reloaded.pack_path).toBe(PACK);
+    expect(reloaded.world_quest_id).toBe("sunken_barrow");
     expect(reloaded.state_hash).toBe(after);
     expect(reloaded.observation.world?.id).toBe("charter_marches");
   });

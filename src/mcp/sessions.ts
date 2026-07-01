@@ -28,6 +28,10 @@ export type Session = {
   id: string;
   packId: string;
   contentHash: string;
+  /** Compatibility source path for disk-backed sessions. Generated sessions omit it. */
+  packPath?: string;
+  /** Canonical Charter Marches quest graph node id for shipped quest sessions. */
+  worldQuestId?: string;
   /** The compiled RPG index for this session. */
   index: RpgIndex;
   rules: Rules<RpgAction>;

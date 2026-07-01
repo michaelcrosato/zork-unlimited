@@ -342,7 +342,7 @@ export function createToolApi(opts: { root: string }) {
   function startSession(
     compiled: CompiledRpgPack,
     state?: GameState,
-    opts: { hideGraph?: boolean } = {},
+    opts: { hideGraph?: boolean; packPath?: string; worldQuestId?: string | null } = {},
   ): Session {
     const index = indexFor(compiled.pack);
     const st = state ?? initStateFor(index, 1);
@@ -354,6 +354,8 @@ export function createToolApi(opts: { root: string }) {
     const session = sessions.create({
       packId: compiled.pack.meta.id,
       contentHash: compiled.contentHash,
+      ...(opts.packPath ? { packPath: opts.packPath } : {}),
+      ...(opts.worldQuestId ? { worldQuestId: opts.worldQuestId } : {}),
       index,
       rules: rulesFor(index),
       state: st,
@@ -411,6 +413,10 @@ export function createToolApi(opts: { root: string }) {
       throw new Error(`Unknown Charter Marches quest "${worldQuestId}".`);
     }
     return { world, node, packPath: normalizePackPath(node.pack) };
+  }
+
+  function worldQuestIdForPackPath(packPath: string): string | null {
+    return worldQuestNodeForPack(loadWorldManifest(), packPath)?.id ?? null;
   }
 
   function resolvePackPathSource(
@@ -1265,12 +1271,16 @@ export function createToolApi(opts: { root: string }) {
         args.world_quest_id !== undefined
           ? resolveWorldQuestPackPath(args.world_quest_id).packPath
           : args.pack_path;
+      const worldQuestId =
+        args.world_quest_id ?? (packPath ? worldQuestIdForPackPath(packPath) : null);
       const compiled =
         args.generate_rpg_seed !== undefined
           ? requireGeneratedRpgPlayable(args.generate_rpg_seed)
           : requirePlayable(packPath!);
       const session = startSession(compiled, undefined, {
         ...(args.hide_graph ? { hideGraph: true } : {}),
+        ...(packPath ? { packPath } : {}),
+        ...(worldQuestId ? { worldQuestId } : {}),
       });
       if (args.seed !== undefined && args.seed !== 1) {
         // Re-seed: rebuild the initial state at the requested seed.
@@ -1280,6 +1290,8 @@ export function createToolApi(opts: { root: string }) {
         session_id: session.id,
         mode: SAVE_MODE,
         observation: publicObservation(obsOf(session)),
+        pack_path: session.packPath ?? null,
+        world_quest_id: session.worldQuestId ?? null,
         state_hash: hashState(session.state),
       };
     },
@@ -1402,6 +1414,8 @@ export function createToolApi(opts: { root: string }) {
       return {
         session_id: s.id,
         pack_id: s.packId,
+        pack_path: s.packPath ?? null,
+        world_quest_id: s.worldQuestId ?? null,
         mode: SAVE_MODE,
         // Filter internal-bookkeeping events the same way step_action does, so the
         // transcript a player reads never surfaces `__`-prefixed vars/flags (bug_0260).
@@ -1426,6 +1440,8 @@ export function createToolApi(opts: { root: string }) {
       return {
         save: save(s.state, s.packId, s.contentHash, SAVE_MODE),
         pack_id: s.packId,
+        pack_path: s.packPath ?? null,
+        world_quest_id: s.worldQuestId ?? null,
         content_hash: s.contentHash,
         mode: SAVE_MODE,
       };
@@ -1433,15 +1449,18 @@ export function createToolApi(opts: { root: string }) {
 
     load_game(args: { pack_path?: string; world_quest_id?: string; save: string }) {
       const packPath = resolvePackPathSource(args, "load_game");
+      const worldQuestId = args.world_quest_id ?? worldQuestIdForPackPath(packPath);
       const compiled = requirePlayable(packPath);
       // Content-hash check is enforced by load() against the loaded pack (§8.7);
       // mode is verified too, so a save can't be loaded against a different mode.
       const bundle = load(args.save, compiled.contentHash, SAVE_MODE);
-      const session = startSession(compiled, bundle.state);
+      const session = startSession(compiled, bundle.state, { packPath, worldQuestId });
       return {
         session_id: session.id,
         mode: SAVE_MODE,
         observation: publicObservation(obsOf(session)),
+        pack_path: session.packPath ?? null,
+        world_quest_id: session.worldQuestId ?? null,
         state_hash: hashState(session.state),
       };
     },

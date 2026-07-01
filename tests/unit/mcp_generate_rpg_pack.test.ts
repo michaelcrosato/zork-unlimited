@@ -75,6 +75,8 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
   it("starts a session on a generated RPG pack with no file on disk", () => {
     const g = api().new_game({ generate_rpg_seed: 3 });
     expect(g.mode).toBe("rpg");
+    expect(g.pack_path).toBeNull();
+    expect(g.world_quest_id).toBeNull();
     expect(g.observation.ended).toBe(false);
     expect(g.state_hash).toMatch(/^[0-9a-f]{64}$/);
     // Init stats from the generated meta.vars_init, surfaced live in the RPG observation.
