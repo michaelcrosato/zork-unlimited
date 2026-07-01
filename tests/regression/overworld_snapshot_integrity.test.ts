@@ -17,8 +17,24 @@ function townName(nodeId: string): string {
   return town.name;
 }
 
+function townRegion(nodeId: string): string {
+  const town = overworld.nodes.find((node) => node.id === nodeId);
+  if (!town) throw new Error(`unknown test town ${nodeId}`);
+  return town.region;
+}
+
 function appendUnique(values: readonly string[], value: string): string[] {
   return values.includes(value) ? [...values] : [...values, value];
+}
+
+function addRenown(
+  values: readonly (readonly [string, number])[],
+  region: string,
+  amount: number,
+): [string, number][] {
+  const totals = new Map(values);
+  totals.set(region, (totals.get(region) ?? 0) + amount);
+  return [...totals.entries()];
 }
 
 function exportedSnapshotAfterTwoRoads() {
@@ -278,6 +294,64 @@ describe("overworld snapshot restore integrity", () => {
 
     expect(() => a.restore_overworld_session({ snapshot: forgedQuestDiscovery })).toThrow(
       /discovered quest.*undiscovered area/,
+    );
+  });
+
+  it("rejects resolved events attached to unvisited towns", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const event = overworld.local_events.find(
+      (candidate) => !snapshot.visitedIds.includes(candidate.home),
+    );
+    if (!event) throw new Error("expected an event in an unvisited town");
+    const forgedEventResolution = {
+      ...snapshot,
+      resolvedEventIds: appendUnique(snapshot.resolvedEventIds, event.id),
+      regionRenown: addRenown(snapshot.regionRenown, townRegion(event.home), event.intensity),
+      journalEntries: [
+        {
+          id: `resolve:${event.id}`,
+          kind: "resolution" as const,
+          town: townName(event.home),
+          title: "Forged resolution",
+          text: "Forged resolution journal proof.",
+          recordedAt: snapshot.journalEntries[0]!.recordedAt,
+        },
+        ...snapshot.journalEntries,
+      ],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedEventResolution })).toThrow(
+      /resolved event.*unvisited town/,
+    );
+  });
+
+  it("rejects resolved events in undiscovered areas", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const event = overworld.local_events.find(
+      (candidate) =>
+        snapshot.visitedIds.includes(candidate.home) &&
+        !snapshot.discoveredAreaIds.includes(candidate.area),
+    );
+    if (!event) throw new Error("expected an event in an undiscovered visited-town area");
+    const forgedEventResolution = {
+      ...snapshot,
+      resolvedEventIds: appendUnique(snapshot.resolvedEventIds, event.id),
+      regionRenown: addRenown(snapshot.regionRenown, townRegion(event.home), event.intensity),
+      journalEntries: [
+        {
+          id: `resolve:${event.id}`,
+          kind: "resolution" as const,
+          town: townName(event.home),
+          title: "Forged resolution",
+          text: "Forged resolution journal proof.",
+          recordedAt: snapshot.journalEntries[0]!.recordedAt,
+        },
+        ...snapshot.journalEntries,
+      ],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedEventResolution })).toThrow(
+      /resolved event.*undiscovered area/,
     );
   });
 

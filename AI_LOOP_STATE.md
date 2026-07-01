@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 23 -->
+<!-- historical_cycle_count: 24 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_snapshot_resolved_event_locality
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; helper still fails broad root formatting/ESLint outside canonical package scripts.
+- Engine/persistence: overworld restore now rejects resolved local events that point into unvisited towns or undiscovered areas even when journal/renown proof is forged.
+- Token economy: compact resolved-event ids are now map-reachable state, not arbitrary manifest ids with matching totals.
+- VERIFY: focused overworld snapshot/MCP/UI tests, typecheck, lint, format:check, validate, npm test (192/1293), `npm run health` EXIT 0.
+- Self-critique: closes resolved-event map locality; prerequisite-action replay remains a future invariant.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
 
 ### Cycle result — overworld_snapshot_discovery_locality
 
@@ -244,8 +253,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   unknown journal towns or source ids, mismatched journal kind/id prefixes,
   malformed/future/non-newest-first journal timelines, unmatched road journal
   arrivals, progress/journal state drift, region-renown mismatches, discovery
-  locality drift, future/non-newest-first travel logs, or impossible travel
-  vitals.
+  locality drift, resolved-event locality drift, future/non-newest-first travel
+  logs, or impossible travel vitals.
 - Live session metadata: start/transcript/save/load return shipped
   `world_quest_id` or generated `generated_rpg_seed` without raw pack paths.
 - Overworld quest view metadata: observations, action results, compact context,

@@ -472,6 +472,7 @@ type OverworldRenownSourceIndex = {
 type OverworldDiscoveryLocalityIndex = {
   areaHomes: ReadonlyMap<string, string>;
   discoveredAreaIds: ReadonlySet<string>;
+  eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   jobsById: ReadonlyMap<string, OverworldLocalJob>;
   questsById: ReadonlyMap<string, OverworldQuest>;
   sitesById: ReadonlyMap<string, OverworldExplorationSite>;
@@ -905,6 +906,17 @@ function assertSnapshotDiscoveryLocality(
       sources.discoveredAreaIds,
     );
   }
+  for (const eventId of snapshot.resolvedEventIds) {
+    const event = sources.eventsById.get(eventId);
+    if (!event) continue;
+    assertVisitedTownForDiscovery("resolved event", eventId, event.home, sources.visitedTownIds);
+    assertDiscoveredAreaForDiscovery(
+      "resolved event",
+      eventId,
+      event.area,
+      sources.discoveredAreaIds,
+    );
+  }
 }
 
 function replaceStringSet(target: Set<string>, values: readonly string[]): void {
@@ -1130,6 +1142,7 @@ export class OverworldSession {
     assertSnapshotDiscoveryLocality(snapshot, {
       areaHomes,
       discoveredAreaIds,
+      eventsById,
       jobsById,
       questsById,
       sitesById,
