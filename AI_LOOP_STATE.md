@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 31 -->
+<!-- historical_cycle_count: 32 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_snapshot_local_source_prefix
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; helper still fails broad root formatting/ESLint outside canonical package scripts.
+- Engine/persistence: overworld restore now rejects discovered jobs or quest leads that skip earlier visible sources in a visited town's deterministic reveal order.
+- Token economy: compact local source arrays can no longer smuggle later job/quest ids while omitting earlier visible ids.
+- VERIFY: focused overworld snapshot/MCP/UI tests, typecheck, lint, format:check, validate, npm test, `npm run health` EXIT 0.
+- Self-critique: closes local source prefix exactness for town-level reveals; full local action sequencing and same-area site-prefix replay remain larger future invariants.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
 
 ### Cycle result — overworld_snapshot_area_discovery_prefix
 

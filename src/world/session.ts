@@ -923,6 +923,50 @@ function assertSnapshotDiscoveredAreaPrefix(
   }
 }
 
+function assertSnapshotDiscoveredSourcePrefix(
+  sourceLabel: string,
+  discoveredIds: ReadonlySet<string>,
+  orderedSources: readonly { id: string }[],
+  contextId: string,
+): void {
+  let hiddenSourceSeen = false;
+  for (const source of orderedSources) {
+    if (discoveredIds.has(source.id)) {
+      if (hiddenSourceSeen) {
+        throw new Error(
+          `Overworld session snapshot discovered ${sourceLabel} "${source.id}" skips an earlier ${sourceLabel} in "${contextId}".`,
+        );
+      }
+    } else {
+      hiddenSourceSeen = true;
+    }
+  }
+}
+
+function assertSnapshotDiscoveredLocalSourcePrefixes(
+  snapshot: OverworldSessionSnapshot,
+  world: OverworldManifest,
+  visitedTownIds: ReadonlySet<string>,
+): void {
+  const discoveredAreaIds = new Set(snapshot.discoveredAreaIds);
+  const discoveredJobIds = new Set(snapshot.discoveredJobIds);
+  const discoveredQuestIds = new Set(snapshot.discoveredQuestIds);
+  for (const townId of visitedTownIds) {
+    assertSnapshotDiscoveredSourcePrefix(
+      "job",
+      discoveredJobIds,
+      overworldJobsAt(world, townId).filter((job) => discoveredAreaIds.has(job.area)),
+      townId,
+    );
+    assertSnapshotDiscoveredSourcePrefix(
+      "quest",
+      discoveredQuestIds,
+      overworldQuestsAt(world, townId).filter((quest) => discoveredAreaIds.has(quest.area)),
+      townId,
+    );
+  }
+}
+
 function addRegionRenown(target: Map<string, number>, region: string, amount: number): void {
   if (amount <= 0) return;
   target.set(region, (target.get(region) ?? 0) + amount);
@@ -1510,6 +1554,7 @@ export class OverworldSession {
       throw new Error("Overworld session snapshot current area is not discovered.");
     }
     assertSnapshotDiscoveredAreaPrefix(snapshot, this.world, visitedTownIds);
+    assertSnapshotDiscoveredLocalSourcePrefixes(snapshot, this.world, visitedTownIds);
     for (const [townId, areaId] of snapshot.currentAreaByTown) {
       if (!nodeIds.has(townId)) {
         throw new Error(`Overworld session snapshot has unknown area-map town "${townId}".`);

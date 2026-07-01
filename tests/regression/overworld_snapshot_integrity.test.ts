@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { createToolApi } from "../../src/mcp/tools.js";
-import { overworldAreasAt, parseOverworldManifest } from "../../src/world/overworld.js";
+import {
+  overworldAreasAt,
+  overworldJobsAt,
+  parseOverworldManifest,
+} from "../../src/world/overworld.js";
 
 const api = () => createToolApi({ root: process.cwd() });
 const overworld = parseOverworldManifest(
@@ -65,8 +69,23 @@ function visitedTownAreas(
   throw new Error(`expected a visited town with at least ${minimumCount} areas`);
 }
 
+function visitedTownJobs(snapshot: Snapshot, minimumCount: number) {
+  for (const townId of snapshot.visitedIds) {
+    const areas = overworldAreasAt(overworld, townId);
+    const jobs = overworldJobsAt(overworld, townId);
+    if (jobs.length >= minimumCount) return { areaIds: areas.map((area) => area.id), jobs };
+  }
+  throw new Error(`expected a visited town with at least ${minimumCount} jobs`);
+}
+
 function appendUnique(values: readonly string[], value: string): string[] {
   return values.includes(value) ? [...values] : [...values, value];
+}
+
+function appendUniques(values: readonly string[], additions: readonly string[]): string[] {
+  let next = [...values];
+  for (const addition of additions) next = appendUnique(next, addition);
+  return next;
 }
 
 function addRenown(
@@ -610,6 +629,25 @@ describe("overworld snapshot restore integrity", () => {
 
     expect(() => a.restore_overworld_session({ snapshot: skippedAreaDiscovery })).toThrow(
       /discovered area.*skips an earlier area/,
+    );
+  });
+
+  it("rejects discovered jobs that skip earlier visible jobs", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const { areaIds, jobs } = visitedTownJobs(snapshot, 2);
+    const firstJob = jobs[0]!;
+    const secondJob = jobs[1]!;
+    const skippedJobDiscovery = {
+      ...snapshot,
+      discoveredAreaIds: appendUniques(snapshot.discoveredAreaIds, areaIds),
+      discoveredJobIds: appendUnique(
+        snapshot.discoveredJobIds.filter((id) => id !== firstJob.id),
+        secondJob.id,
+      ),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: skippedJobDiscovery })).toThrow(
+      /discovered job.*skips an earlier job/,
     );
   });
 
