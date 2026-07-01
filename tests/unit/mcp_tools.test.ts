@@ -1033,6 +1033,15 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(transcript.summary.ended).toBe(true);
     expect(transcript.summary.ending_id).toBe("ending_victory");
     expect(transcript.turns.map((t) => t.action_id)).toContain("take_circlet");
+    const summaryOnlyTranscript = a.get_transcript({
+      session_id: game.session_id,
+      summary_only: true,
+    });
+    expect(summaryOnlyTranscript.summary).toEqual(transcript.summary);
+    expect(summaryOnlyTranscript.turns).toEqual([]);
+    expect(JSON.stringify(summaryOnlyTranscript).length).toBeLessThan(
+      JSON.stringify(transcript).length,
+    );
     expect(a.get_state({ session_id: game.session_id }).state_hash).toMatch(/^[0-9a-f]{64}$/);
 
     const byPackPath = a.start_game({ pack_path: PACK, seed: 1 });

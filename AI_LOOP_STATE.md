@@ -50,6 +50,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   observations omit the repeated world binding.
 - Token economy: `compact_actions` lets repeated observe/step calls carry
   action ids without command labels; request full actions only when needed.
+- Token economy: `get_transcript({ summary_only: true })` keeps end-state
+  metadata while dropping detailed turn/event payload.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,

@@ -1573,7 +1573,7 @@ export function createToolApi(opts: { root: string }) {
       return { state: s.state, state_hash: hashState(s.state) };
     },
 
-    get_transcript(args: { session_id: string }) {
+    get_transcript(args: { session_id: string; summary_only?: boolean }) {
       const s = sessions.get(args.session_id);
       return {
         session_id: s.id,
@@ -1583,7 +1583,9 @@ export function createToolApi(opts: { root: string }) {
         mode: SAVE_MODE,
         // Filter internal-bookkeeping events the same way step_action does, so the
         // transcript a player reads never surfaces `__`-prefixed vars/flags (bug_0260).
-        turns: s.transcript.map((t) => ({ ...t, events: playerVisibleEvents(t.events) })),
+        turns: args.summary_only
+          ? []
+          : s.transcript.map((t) => ({ ...t, events: playerVisibleEvents(t.events) })),
         summary: {
           steps: s.transcript.filter((t) => t.action_id !== null).length,
           scenes: [...new Set(s.transcript.flatMap((t) => [t.scene_id, t.result_scene_id]))].sort(),
