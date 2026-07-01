@@ -222,7 +222,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
   });
 
   it("lists the New York overworld as a start town plus weighted roads", () => {
-    const r = api().list_overworld();
+    const a = api();
+    const r = a.list_overworld();
+    const canonicalQuestIds = new Set(a.list_world().quests.map((quest) => quest.graph_node));
     expect(r.world.id).toBe("new_york_overworld");
     expect(r.start.id).toBe("albany_city");
     expect(r.town_count).toBeGreaterThanOrEqual(240);
@@ -237,6 +239,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.road_event_count).toBe(r.road_count);
     expect(r.exploration_site_count).toBeGreaterThanOrEqual(r.region_count * 3);
     expect(r.quest_count).toBe(11);
+    expect(overworld.quests.every((quest) => canonicalQuestIds.has(quest.id))).toBe(true);
   });
 
   it("looks and travels through the New York overworld without global quest selection", () => {
@@ -484,6 +487,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(startedQuest.rpg_session_id).toBe(startedQuest.rpg_session.session_id);
     expect(startedQuest.rpg_session.mode).toBe("rpg");
+    expect(startedQuest.rpg_session.world_quest_id).toBe(discoveredQuest.id);
+    expect(startedQuest.rpg_session.pack_path).toBe(discoveredQuest.pack);
     expect(startedQuest.rpg_session.observation.mode).toBe("rpg");
     expect(startedQuest.rpg_session.observation.ended).toBe(false);
     expect(startedQuest.rpg_session.observation.available_actions.length).toBeGreaterThan(0);

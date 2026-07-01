@@ -814,13 +814,15 @@ export function createToolApi(opts: { root: string }) {
         session_id: string;
         mode: PackMode;
         observation: McpObservation;
+        pack_path: string | null;
+        world_quest_id: string | null;
         state_hash: string;
       };
     } {
       const session = getOverworldSession(args.session_id);
       const quest = session.startQuest(args.quest_id);
       const rpgSession = this.new_game({
-        pack_path: quest.pack,
+        world_quest_id: quest.id,
         ...(args.seed !== undefined ? { seed: args.seed } : {}),
         ...(args.hide_graph ? { hide_graph: true } : {}),
       });

@@ -85,6 +85,8 @@ Make discovered overworld quest leads start real RPG sessions.
   keeping MCP as an adapter instead of a second graph-query implementation.
 - Stateful overworld MCP action wrappers now share one session response envelope
   helper.
+- Discovered overworld quest starts now create RPG sessions through
+  `world_quest_id`, not the compatibility raw pack path.
 
 ## Acceptance
 
