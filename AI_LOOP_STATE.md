@@ -25,6 +25,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   static-vs-stateful MCP duplication.
 - Catalog source of truth: `list_stories` is a compatibility view over the Charter
   Marches quest graph, not a raw RPG pack directory scan.
+- Preferred shipped-quest start: use `start_world_quest` / `world_quest_id`;
+  raw pack-path starts remain compatibility only.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,

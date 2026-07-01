@@ -214,7 +214,9 @@ Gemini CLI, …) plays via native tool calls over the structured observation/act
 loop — never a raw parser. The MCP catalog is RPG-only: `list_stories`
 reads the Charter Marches quest graph, picks the high-depth RPG pack
 `breaking_weir` as the default, and `list_world` reports the same RPG quest set
-with hub routes. The same structured `new_game` / `step_action` /
+with hub routes. Shipped quests should start through `start_world_quest` or
+`new_game` with `world_quest_id`; raw `pack_path` starts remain compatibility
+aliases. The same structured `new_game` / `step_action` /
 `get_observation` / save·load path drives RPG sessions through stable action ids
 and deterministic state hashes. Explicit non-RPG pack loading is rejected through
 MCP with an `UNSUPPORTED_LEGACY_PACK` report; old pack shapes are now migration

@@ -173,6 +173,34 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.path_from_hub[1]?.route_from_previous).toBe("moor road");
   });
 
+  it("starts shipped quests by world graph id instead of raw pack path", () => {
+    const a = api();
+    const started = a.start_world_quest({ quest_id: "sunken_barrow", seed: 1 });
+    expect(started.quest).toMatchObject({
+      id: "sunken_barrow",
+      pack: PACK,
+    });
+    expect(started.quest.path_from_hub.map((step) => step.name)).toEqual([
+      "Charterhaven",
+      "Moor Road",
+      "The Sunken Barrow",
+    ]);
+    expect(started.mode).toBe("rpg");
+    expect(started.observation.world?.id).toBe("charter_marches");
+    expect(a.get_observation({ session_id: started.session_id }).observation.title).toBe(
+      started.observation.title,
+    );
+
+    const viaNewGame = a.new_game({ world_quest_id: "breaking_weir", seed: 1 });
+    const viaPackPath = a.new_game({ pack_path: MAIN_RPG, seed: 1 });
+    expect(viaNewGame.mode).toBe("rpg");
+    expect(viaNewGame.observation.title).toBe(viaPackPath.observation.title);
+    expect(viaNewGame.state_hash).toBe(viaPackPath.state_hash);
+    expect(() => a.start_world_quest({ quest_id: "missing_quest" })).toThrow(
+      /Unknown Charter Marches quest/,
+    );
+  });
+
   it("lists the New York overworld as a start town plus weighted roads", () => {
     const r = api().list_overworld();
     expect(r.world.id).toBe("new_york_overworld");

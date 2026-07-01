@@ -370,12 +370,18 @@ tool(
 
 tool(
   "new_game",
-  "Start a new session on a playable quest pack; returns a session id, the detected mode, and the first observation. Provide pack_path to load from disk, OR generate_rpg_seed to mint+play a fresh procedural RPG pack in-memory.",
+  "Start a new session on a playable RPG quest; returns a session id, mode, and first observation. Prefer world_quest_id for shipped Charter Marches quests; pack_path remains for compatibility, and generate_rpg_seed mints a procedural pack.",
   {
     pack_path: z
       .string()
       .optional()
-      .describe("Path to an RPG quest content pack (.yaml). Omit when using generate_rpg_seed."),
+      .describe(
+        "Compatibility path to an RPG quest content pack (.yaml). Prefer world_quest_id for shipped quests.",
+      ),
+    world_quest_id: z
+      .string()
+      .optional()
+      .describe("Charter Marches quest graph node id from list_world().quests[].graph_node."),
     generate_rpg_seed: z
       .number()
       .int()
@@ -387,6 +393,16 @@ tool(
     ...HIDE_GRAPH,
   },
   (a) => api.new_game(a),
+);
+tool(
+  "start_world_quest",
+  "Start a playable RPG session by Charter Marches quest graph node id and return the world route context plus the first RPG observation.",
+  {
+    quest_id: z.string().describe("Quest graph node id from list_world().quests[].graph_node."),
+    seed: z.number().int().optional(),
+    ...HIDE_GRAPH,
+  },
+  (a) => api.start_world_quest(a),
 );
 tool(
   "start_game",

@@ -32,6 +32,9 @@ Make discovered overworld quest leads start real RPG sessions.
   bridge.
 - `list_stories` is now a compatibility catalog over the Charter Marches quest graph,
   not an independent `content/rpg/pack` directory shelf.
+- Shipped quests can now start by Charter Marches graph id through
+  `start_world_quest` or `new_game({ world_quest_id })`; raw pack paths remain
+  compatibility surfaces.
 
 ## Acceptance
 
@@ -45,6 +48,6 @@ Make discovered overworld quest leads start real RPG sessions.
 - Continue simplifying parser-era wording in historical docs when it affects current
   orientation.
 - Reduce the duplicate static-vs-stateful overworld tool surface.
-- Push more pack-start paths through world quest ids instead of raw pack paths.
+- Move remaining docs/AFK defaults from `main_story` raw paths toward world quest ids.
 - Add lightweight token/cost telemetry under ignored run output when the loop needs
   measured efficiency data.

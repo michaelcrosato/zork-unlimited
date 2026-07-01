@@ -58,7 +58,9 @@ import {
 } from "../world/schema.js";
 import {
   normalizePackPath,
+  worldQuestNodeById,
   worldQuestNodeForPack,
+  worldRouteFromHub,
   worldRouteForPack,
   type WorldRouteStep,
 } from "../world/graph.js";
@@ -393,6 +395,19 @@ export function createToolApi(opts: { root: string }) {
         world: lr.ok ? (lr.compiled.pack.meta.world ?? null) : null,
       };
     });
+  }
+
+  function resolveWorldQuestPackPath(worldQuestId: string): {
+    world: WorldManifest;
+    node: NonNullable<ReturnType<typeof worldQuestNodeById>>;
+    packPath: string;
+  } {
+    const world = loadWorldManifest();
+    const node = worldQuestNodeById(world, worldQuestId);
+    if (!node?.pack) {
+      throw new Error(`Unknown Charter Marches quest "${worldQuestId}".`);
+    }
+    return { world, node, packPath: normalizePackPath(node.pack) };
   }
 
   function loadWorldManifest(): WorldManifest {
@@ -1198,22 +1213,36 @@ export function createToolApi(opts: { root: string }) {
 
     new_game(args: {
       pack_path?: string;
+      world_quest_id?: string;
       generate_rpg_seed?: number;
       seed?: number;
       hide_graph?: boolean;
     }) {
-      // Either load a pack from disk OR mint a fresh RPG pack in-memory from
-      // `generate_rpg_seed`. The generation seed selects the minted pack's
-      // theme/structure; `seed` still seeds runtime state, so the two are independent.
+      // Either load a world-graph quest, load a pack from disk, OR mint a fresh RPG
+      // pack in-memory from `generate_rpg_seed`. The generation seed selects the
+      // minted pack's theme/structure; `seed` still seeds runtime state, so the two
+      // are independent.
+      const sourceCount = [
+        args.world_quest_id !== undefined,
+        args.pack_path !== undefined,
+        args.generate_rpg_seed !== undefined,
+      ].filter(Boolean).length;
+      if (sourceCount === 0) {
+        throw new Error("new_game requires world_quest_id, pack_path, or generate_rpg_seed.");
+      }
+      if (sourceCount > 1) {
+        throw new Error(
+          "new_game accepts exactly one of world_quest_id, pack_path, or generate_rpg_seed.",
+        );
+      }
+      const packPath =
+        args.world_quest_id !== undefined
+          ? resolveWorldQuestPackPath(args.world_quest_id).packPath
+          : args.pack_path;
       const compiled =
         args.generate_rpg_seed !== undefined
           ? requireGeneratedRpgPlayable(args.generate_rpg_seed)
-          : requirePlayable(
-              args.pack_path ??
-                ((): never => {
-                  throw new Error("new_game requires pack_path or generate_rpg_seed.");
-                })(),
-            );
+          : requirePlayable(packPath!);
       const session = startSession(compiled, undefined, {
         ...(args.hide_graph ? { hideGraph: true } : {}),
       });
@@ -1226,6 +1255,25 @@ export function createToolApi(opts: { root: string }) {
         mode: SAVE_MODE,
         observation: publicObservation(obsOf(session)),
         state_hash: hashState(session.state),
+      };
+    },
+
+    start_world_quest(args: { quest_id: string; seed?: number; hide_graph?: boolean }) {
+      const resolved = resolveWorldQuestPackPath(args.quest_id);
+      const started = this.new_game({
+        world_quest_id: args.quest_id,
+        ...(args.seed !== undefined ? { seed: args.seed } : {}),
+        ...(args.hide_graph ? { hide_graph: true } : {}),
+      });
+      return {
+        world: { id: resolved.world.id, name: resolved.world.name, hub: resolved.world.hub },
+        quest: {
+          id: resolved.node.id,
+          name: resolved.node.name,
+          pack: resolved.packPath,
+          path_from_hub: worldRouteFromHub(resolved.world, resolved.node.id) ?? [],
+        },
+        ...started,
       };
     },
 

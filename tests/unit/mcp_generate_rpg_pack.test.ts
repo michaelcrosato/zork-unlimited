@@ -125,7 +125,16 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
     expect(after.stats.attack).toBe(6); // +2, applied live through the engine
   });
 
-  it("new_game with no pack source (no pack_path / generate_rpg_seed) errors clearly", () => {
-    expect(() => api().new_game({})).toThrow(/pack_path or generate_rpg_seed/);
+  it("new_game with no pack source errors clearly", () => {
+    expect(() => api().new_game({})).toThrow(/world_quest_id, pack_path, or generate_rpg_seed/);
+  });
+
+  it("new_game rejects ambiguous pack sources", () => {
+    expect(() =>
+      api().new_game({
+        world_quest_id: "breaking_weir",
+        generate_rpg_seed: 3,
+      }),
+    ).toThrow(/exactly one/);
   });
 });
