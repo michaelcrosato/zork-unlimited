@@ -115,6 +115,8 @@ Make discovered overworld quest leads start real RPG sessions.
   outcomes and rebuild route text/event payloads from the world manifest.
 - Compact overworld context now carries capped id-only recent travel tuples so
   agents do not need full observations to recover route history.
+- Compact overworld context now caps global progress id arrays and exposes
+  counts/truncation flags for long-running sessions.
 
 ## Acceptance
 

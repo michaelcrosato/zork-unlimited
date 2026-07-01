@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { parseOverworldManifest } from "../../src/world/overworld.js";
+import { compactOverworldView } from "../../src/world/compact_view.js";
 import { OverworldSession } from "../../ui/src/overworld.js";
 
 const world = parseOverworldManifest(
@@ -377,6 +378,31 @@ describe("OverworldSession", () => {
     expect(() => OverworldSession.restore(world, tamperedTravelLogSnapshot)).toThrow(
       /unknown travel road/i,
     );
+  });
+
+  it("caps compact context id lists while keeping counts and truncation flags", () => {
+    const session = new OverworldSession(world);
+    for (let i = 0; i < 120 && session.view().discovered.length <= 24; i += 1) {
+      let view = session.view();
+      if (view.pendingRoadEncounter) session.resolveRoadEncounter("press_on");
+      view = session.view();
+      const next =
+        view.exits.find(
+          (exit) => !view.discovered.some((town) => town.id === exit.destination.id),
+        ) ?? view.exits[i % view.exits.length];
+      if (!next) break;
+      session.travel(next.id);
+    }
+    if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
+
+    const view = session.view();
+    expect(view.discovered.length).toBeGreaterThan(24);
+    const compact = compactOverworldView(view);
+    expect(compact.ids.discovered_towns).toHaveLength(16);
+    expect(compact.id_counts[0]).toBe(view.discovered.length);
+    expect(compact.ids_truncated).toContain("discovered_towns");
+    expect(compact.id_counts[8]).toBe(view.resolvedEventIds.length);
+    expect(compact.ids_truncated).not.toContain("resolved_events");
   });
 
   it("adds deterministic travel delay when fatigue or supply shortage catches up", () => {
