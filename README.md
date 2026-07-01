@@ -212,9 +212,9 @@ RPG content gate and rejects non-RPG pack shapes.
 The engine is exposed as an MCP server so any agent harness (Claude Code, Codex,
 Gemini CLI, …) plays via native tool calls over the structured observation/action
 loop — never a raw parser. The MCP catalog is RPG-only: `list_stories`
-discovers shipped packs under `content/rpg/pack`, picks the high-depth RPG pack
-`breaking_weir` as the default, and `list_world` reports the RPG quest subset of
-the Charter Marches. The same structured `new_game` / `step_action` /
+reads the Charter Marches quest graph, picks the high-depth RPG pack
+`breaking_weir` as the default, and `list_world` reports the same RPG quest set
+with hub routes. The same structured `new_game` / `step_action` /
 `get_observation` / save·load path drives RPG sessions through stable action ids
 and deterministic state hashes. Explicit non-RPG pack loading is rejected through
 MCP with an `UNSUPPORTED_LEGACY_PACK` report; old pack shapes are now migration

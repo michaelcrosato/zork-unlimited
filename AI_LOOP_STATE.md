@@ -23,6 +23,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Current engine seam: `start_overworld_session_quest` now bridges a discovered
   overworld quest lead into a real RPG session; future work should reduce remaining
   static-vs-stateful MCP duplication.
+- Catalog source of truth: `list_stories` is a compatibility view over the Charter
+  Marches quest graph, not a raw RPG pack directory scan.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,

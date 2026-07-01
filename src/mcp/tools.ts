@@ -10,8 +10,8 @@
  * never indexes, observes, starts, or validates them as playable sessions. Content
  * and traces are data only — no handler runs shell or code (§16).
  */
-import { readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { hashState } from "../core/hash.js";
 import { makeStep, type Rules } from "../core/engine.js";
@@ -56,7 +56,12 @@ import {
   CANONICAL_WORLD_NAME,
   WorldManifestSchema,
 } from "../world/schema.js";
-import { worldQuestNodeForPack, worldRouteForPack, type WorldRouteStep } from "../world/graph.js";
+import {
+  normalizePackPath,
+  worldQuestNodeForPack,
+  worldRouteForPack,
+  type WorldRouteStep,
+} from "../world/graph.js";
 import {
   assertOverworldIntegrity,
   overworldAreasAt,
@@ -370,19 +375,14 @@ export function createToolApi(opts: { root: string }) {
   const obsOf = (s: Session): RpgObservation =>
     buildObsFor(s.index, s.state, { hideGraph: s.hideGraph ?? false });
 
-  function listYamlFiles(dir: string): string[] {
-    try {
-      return readdirSync(dir, { withFileTypes: true })
-        .filter((entry) => entry.isFile() && /\.(ya?ml)$/i.test(entry.name))
-        .map((entry) => relative(root, join(dir, entry.name)).replaceAll("\\", "/"))
-        .sort();
-    } catch {
-      return [];
-    }
+  function worldQuestPackPaths(world: WorldManifest): string[] {
+    return world.graph.nodes
+      .filter((node) => node.kind === "quest" && node.pack)
+      .map((node) => normalizePackPath(node.pack ?? ""));
   }
 
-  function discoverStoryEntries(): StoryEntry[] {
-    return listYamlFiles(join(root, "content", "rpg", "pack")).map((path) => {
+  function discoverStoryEntries(world = loadWorldManifest()): StoryEntry[] {
+    return worldQuestPackPaths(world).map((path) => {
       const lr = loadAndReport(path);
       return {
         path,
@@ -495,7 +495,7 @@ export function createToolApi(opts: { root: string }) {
       }[];
     } {
       const world = loadWorldManifest();
-      const quests = discoverStoryEntries()
+      const quests = discoverStoryEntries(world)
         .filter((s) => s.world?.id === world.id)
         .map((s) => {
           const node = worldQuestNodeForPack(world, s.path);

@@ -131,9 +131,12 @@ function resolveCurrentOverworldSessionEvent(
 
 describe("MCP tools — validate / load (§9.4)", () => {
   it("keeps story discovery RPG-only and world-bound for AFK", () => {
-    const r = api().list_stories();
+    const a = api();
+    const r = a.list_stories();
+    const world = a.list_world();
     expect(r.main_story).toBe(MAIN_RPG);
     expect(r.stories).toHaveLength(16);
+    expect(r.stories.map((s) => s.path)).toEqual(world.quests.map((q) => q.path));
     expect(r.stories.every((s) => s.mode === "rpg")).toBe(true);
     expect(r.stories.some((s) => s.path.startsWith("content/parser/"))).toBe(false);
     expect(r.stories.some((s) => s.path === PACK)).toBe(true);

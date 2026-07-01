@@ -30,6 +30,8 @@ Make discovered overworld quest leads start real RPG sessions.
   RPG session payload.
 - The MCP schema now exposes optional RPG `seed` and `hide_graph` controls on that
   bridge.
+- `list_stories` is now a compatibility catalog over the Charter Marches quest graph,
+  not an independent `content/rpg/pack` directory shelf.
 
 ## Acceptance
 
@@ -43,7 +45,6 @@ Make discovered overworld quest leads start real RPG sessions.
 - Continue simplifying parser-era wording in historical docs when it affects current
   orientation.
 - Reduce the duplicate static-vs-stateful overworld tool surface.
-- Decide whether `list_stories` should become a compatibility alias over a world
-  quest index rather than a raw pack directory shelf.
+- Push more pack-start paths through world quest ids instead of raw pack paths.
 - Add lightweight token/cost telemetry under ignored run output when the loop needs
   measured efficiency data.

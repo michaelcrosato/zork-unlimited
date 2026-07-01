@@ -20,11 +20,14 @@ describe("isRpgPackShape keeps RPG structural priority", () => {
   });
 });
 
-describe("list_stories exposes only shipped RPG packs", () => {
-  it("discovers RPG packs and chooses the high-depth RPG default", () => {
-    const { stories, main_story } = api().list_stories();
+describe("list_stories exposes only world-graph RPG quests", () => {
+  it("discovers RPG packs from the world graph and chooses the high-depth RPG default", () => {
+    const a = api();
+    const { stories, main_story } = a.list_stories();
+    const world = a.list_world();
     expect(main_story).toBe(MAIN_RPG);
     expect(stories).toHaveLength(16);
+    expect(stories.map((s) => s.path)).toEqual(world.quests.map((q) => q.path));
     expect(stories.every((s) => s.mode === "rpg")).toBe(true);
     expect(stories.every((s) => s.path.startsWith("content/rpg/pack/"))).toBe(true);
     expect(stories.some((s) => s.path.includes("/cyoa/"))).toBe(false);

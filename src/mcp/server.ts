@@ -67,7 +67,7 @@ tool(
 );
 tool(
   "list_stories",
-  "List shipped RPG quest packs for blind/AFK play. Prefer list_world for the canonical Charter Marches hub and route graph.",
+  "Compatibility catalog for blind/AFK play. Returns the RPG quest packs declared by the canonical Charter Marches world graph.",
   {},
   () => api.list_stories(),
 );
