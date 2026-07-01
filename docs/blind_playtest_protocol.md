@@ -19,10 +19,10 @@ are a primary input to the fix.
 
 ## Procedure (5 steps)
 
-1. **Pick the target.** A playable world quest id + a fixed seed. Default: the
-   `main_world_quest_id` from `list_stories` (currently `breaking_weir`), seed
-   `7`. For variety across cycles, rotate the seed and, when more than one quest
-   is playable, rotate the quest id.
+1. **Pick the target.** A playable world quest id + a fixed seed. Discover quest
+   ids from `list_world().quests[].world_quest_id`; default to `breaking_weir`,
+   seed `7`. For variety across cycles, rotate the seed and, when more than one
+   quest is playable, rotate the quest id.
 
 2. **Spawn a blind subagent with a FRESH context.** Use whatever isolation your
    harness provides — the `Agent` tool (`subagent_type: general-purpose`), a new

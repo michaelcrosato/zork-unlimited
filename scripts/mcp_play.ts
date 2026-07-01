@@ -1,13 +1,13 @@
 #!/usr/bin/env -S npx tsx
 /**
- * Dev harness: play an RPG pack by driving the AdventureForge MCP server over
+ * Dev harness: play a shipped RPG world quest by driving the AdventureForge MCP server over
  * stdio with the MCP *client* SDK. Demonstrates an external agent playing the
- * game purely through the §9.4 tools (new_game / step_action / get_observation).
+ * game purely through the §9.4 tools (start_world_quest / step_action / get_observation).
  *
  * Each invocation spawns a fresh server and applies the optional `--do` action
  * ids in order to one deterministic in-memory session.
  *
- * Usage: tsx scripts/mcp_play.ts <rpg-pack.yaml> [--seed N] [--do a,b,c]
+ * Usage: tsx scripts/mcp_play.ts <world_quest_id> [--seed N] [--do a,b,c]
  */
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -43,7 +43,7 @@ function parseResult(res: unknown): {
 }
 
 async function main(): Promise<void> {
-  const pack = process.argv[2]!;
+  const questId = process.argv[2]!;
   let seed = 1;
   let actions: string[] = [];
   for (let i = 3; i < process.argv.length; i++) {
@@ -57,7 +57,7 @@ async function main(): Promise<void> {
   await client.connect(transport);
 
   const game = parseResult(
-    await client.callTool({ name: "new_game", arguments: { pack_path: pack, seed } }),
+    await client.callTool({ name: "start_world_quest", arguments: { quest_id: questId, seed } }),
   );
   const sessionId = game.session_id!;
   let current = game.observation;

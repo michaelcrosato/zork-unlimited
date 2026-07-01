@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 20 -->
+<!-- historical_cycle_count: 21 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
@@ -78,6 +78,15 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: closes the public world-catalog path leak; remaining raw path surfaces are compatibility/offline debug.
 - Operator direction: pause after this cycle; do not start another AFK cycle.
 
+### Cycle result — mcp_play_world_id_entry
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; same broad helper drift outside canonical repo scripts.
+- Loop/tooling: `scripts/mcp_play.ts` now starts MCP play with `start_world_quest` and `world_quest_id`, not `new_game`/`pack_path`.
+- Protocol: blind playtest docs point target discovery at `list_world().quests[].world_quest_id`.
+- VERIFY: focused blind harness regression, typecheck, lint, format:check, validate, npm test, `npm run health` EXIT 0.
+- Self-critique: small but important loop repair; prevents stale MCP harnesses from testing a retired start surface.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
+
 ## Current Snapshot
 
 - Verification bar: `npm run health` remains the required end gate.
@@ -102,6 +111,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   `pack`/`path`; `list_stories` remains the internal compatibility catalog.
 - Blind harness default: shipped playtests use `--quest` / `start_world_quest`;
   raw `--pack` starts are rejected.
+- MCP dev harness: `scripts/mcp_play.ts` starts shipped quests through
+  `start_world_quest` / `world_quest_id`.
 - World routes: ToolApi and public MCP `world_path` accept only
   `world_quest_id`; raw `quest_path` is rejected.
 - Pack validation/loading/patching: shipped quests use `world_quest_id` and

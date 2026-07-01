@@ -19,6 +19,7 @@ describe("blind runner MCP config contract", () => {
     const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
     const prompt = readFileSync(join(process.cwd(), "blind-tester", "prompt.md"), "utf8");
     const smoke = readFileSync(join(process.cwd(), "blind-tester", "smoke.mjs"), "utf8");
+    const mcpHarness = readFileSync(join(process.cwd(), "scripts", "mcp_play.ts"), "utf8");
 
     expect(runner).toContain('QUEST_ID="breaking_weir"');
     expect(runner).toContain("--quest|--quest-id");
@@ -46,5 +47,10 @@ describe("blind runner MCP config contract", () => {
     expect(smoke).not.toContain('"new_game"');
     expect(smoke).not.toContain("pack_path");
     expect(smoke).not.toContain('"start_game"');
+    expect(mcpHarness).toContain("<world_quest_id>");
+    expect(mcpHarness).toContain('"start_world_quest"');
+    expect(mcpHarness).toContain("quest_id: questId");
+    expect(mcpHarness).not.toContain('"new_game"');
+    expect(mcpHarness).not.toContain("pack_path");
   });
 });
