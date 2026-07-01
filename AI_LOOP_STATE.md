@@ -38,6 +38,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   `start_world_quest`; `--pack` is compatibility/new-pack fallback.
 - World routes: `world_path` should prefer `world_quest_id`; `quest_path` remains
   compatibility.
+- Pack validation/loading: shipped quests can use `world_quest_id` and preserve
+  source identity in responses.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,

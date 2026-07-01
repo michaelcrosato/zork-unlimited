@@ -498,9 +498,20 @@ export function createToolApi(opts: { root: string }) {
   return {
     sessions,
 
-    validate_pack(args: { pack_path: string }): { ok: boolean; report: ValidationReport } {
-      const lr = loadAndReport(args.pack_path);
-      return { ok: lr.report.ok, report: lr.report };
+    validate_pack(args: { pack_path?: string; world_quest_id?: string }): {
+      ok: boolean;
+      pack_path: string;
+      world_quest_id: string | null;
+      report: ValidationReport;
+    } {
+      const packPath = resolvePackPathSource(args, "validate_pack");
+      const lr = loadAndReport(packPath);
+      return {
+        ok: lr.report.ok,
+        pack_path: packPath,
+        world_quest_id: args.world_quest_id ?? worldQuestIdForPackPath(packPath),
+        report: lr.report,
+      };
     },
 
     list_stories(): {
@@ -1182,17 +1193,25 @@ export function createToolApi(opts: { root: string }) {
       return this.validate_pack({ pack_path: args.quest_path });
     },
 
-    load_pack(args: { pack_path: string }): {
+    load_pack(args: { pack_path?: string; world_quest_id?: string }): {
       ok: boolean;
+      pack_path: string;
+      world_quest_id: string | null;
       mode?: PackMode;
       meta?: CompiledRpgPack["pack"]["meta"];
       content_hash?: string;
       report: ValidationReport;
     } {
-      const lr = loadAndReport(args.pack_path);
-      if (!lr.ok) return { ok: false, report: lr.report };
+      const packPath = resolvePackPathSource(args, "load_pack");
+      const worldQuestId = args.world_quest_id ?? worldQuestIdForPackPath(packPath);
+      const lr = loadAndReport(packPath);
+      if (!lr.ok) {
+        return { ok: false, pack_path: packPath, world_quest_id: worldQuestId, report: lr.report };
+      }
       return {
         ok: lr.report.ok,
+        pack_path: packPath,
+        world_quest_id: worldQuestId,
         mode: SAVE_MODE,
         meta: lr.compiled.pack.meta,
         content_hash: lr.compiled.contentHash,

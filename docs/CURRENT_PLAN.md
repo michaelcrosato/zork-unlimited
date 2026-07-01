@@ -47,6 +47,8 @@ Make discovered overworld quest leads start real RPG sessions.
   pack paths only for compatibility/new authored packs.
 - `world_path` now follows the same rule: prefer `world_quest_id`; `quest_path` is
   compatibility.
+- `validate_pack` and `load_pack` now accept `world_quest_id` for shipped quests
+  and return source identity metadata.
 
 ## Acceptance
 

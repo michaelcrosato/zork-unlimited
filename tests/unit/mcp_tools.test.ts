@@ -903,7 +903,15 @@ describe("MCP tools — validate / load (§9.4)", () => {
   it("validate_pack reports the shipped pack as green", () => {
     const r = api().validate_pack({ pack_path: PACK });
     expect(r.ok).toBe(true);
+    expect(r.pack_path).toBe(PACK);
+    expect(r.world_quest_id).toBe("sunken_barrow");
     expect(r.report.findings.filter((f) => f.severity === "error")).toEqual([]);
+
+    const viaQuestId = api().validate_pack({ world_quest_id: "sunken_barrow" });
+    expect(viaQuestId.ok).toBe(true);
+    expect(viaQuestId.pack_path).toBe(PACK);
+    expect(viaQuestId.world_quest_id).toBe("sunken_barrow");
+    expect(viaQuestId.report.findings.filter((f) => f.severity === "error")).toEqual([]);
   });
 
   it("validate_story is an AFK-compatible alias", () => {
@@ -919,9 +927,29 @@ describe("MCP tools — validate / load (§9.4)", () => {
   it("load_pack returns meta + content hash", () => {
     const r = api().load_pack({ pack_path: PACK });
     expect(r.ok).toBe(true);
+    expect(r.pack_path).toBe(PACK);
+    expect(r.world_quest_id).toBe("sunken_barrow");
     expect(r.mode).toBe("rpg");
     expect(r.meta?.id).toBe("sunken_barrow_v1");
     expect(r.content_hash).toMatch(/^[0-9a-f]{64}$/);
+
+    const viaQuestId = api().load_pack({ world_quest_id: "sunken_barrow" });
+    expect(viaQuestId.ok).toBe(true);
+    expect(viaQuestId.pack_path).toBe(PACK);
+    expect(viaQuestId.world_quest_id).toBe("sunken_barrow");
+    expect(viaQuestId.meta?.id).toBe("sunken_barrow_v1");
+    expect(viaQuestId.content_hash).toBe(r.content_hash);
+  });
+
+  it("validate/load pack reject missing or ambiguous source identity", () => {
+    expect(() => api().validate_pack({})).toThrow(/requires world_quest_id or pack_path/);
+    expect(() => api().load_pack({})).toThrow(/requires world_quest_id or pack_path/);
+    expect(() => api().validate_pack({ world_quest_id: "sunken_barrow", pack_path: PACK })).toThrow(
+      /exactly one/,
+    );
+    expect(() => api().load_pack({ world_quest_id: "sunken_barrow", pack_path: PACK })).toThrow(
+      /exactly one/,
+    );
   });
 
   it("adapt_story authors a green RPG pack from a premise (§12.1–3)", async () => {

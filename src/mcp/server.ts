@@ -47,6 +47,18 @@ const PACK = {
       "Path to an RPG quest content pack (.yaml), relative to the project root. Legacy CYOA/parser packs are rejected.",
     ),
 };
+const PACK_SOURCE = {
+  pack_path: z
+    .string()
+    .optional()
+    .describe("Compatibility path to an RPG quest content pack. Prefer world_quest_id."),
+  world_quest_id: z
+    .string()
+    .optional()
+    .describe(
+      "Preferred Charter Marches quest graph node id from list_world().quests[].graph_node.",
+    ),
+};
 const SESSION = {
   session_id: z.string().describe("A session id from new_game/start_quest/load_game."),
 };
@@ -61,8 +73,8 @@ const HIDE_GRAPH = {
 
 tool(
   "validate_pack",
-  "Validate an RPG quest content pack; legacy CYOA/parser packs are rejected with an error report.",
-  PACK,
+  "Validate a shipped world quest or compatibility RPG quest pack; legacy CYOA/parser packs are rejected with an error report.",
+  PACK_SOURCE,
   (a) => api.validate_pack(a),
 );
 tool(
@@ -361,8 +373,8 @@ tool(
 );
 tool(
   "load_pack",
-  "Compile an RPG quest pack and return its mode, metadata, content hash, and validation report.",
-  PACK,
+  "Compile a shipped world quest or compatibility RPG quest pack and return its mode, metadata, content hash, source identity, and validation report.",
+  PACK_SOURCE,
   (a) => api.load_pack(a),
 );
 
