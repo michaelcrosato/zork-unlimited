@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 33 -->
+<!-- historical_cycle_count: 34 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_snapshot_pending_road_binding
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; helper still fails broad root formatting/ESLint outside canonical package scripts.
+- Engine/persistence: overworld restore now requires a pending road encounter to match the newest travel-log road, after preserving existing unknown-road diagnostics.
+- Token economy: compact pending-road snapshots can keep only `edgeId` without allowing unrelated road events to be attached at restore.
+- VERIFY: focused overworld snapshot/MCP/UI tests, typecheck, lint, format:check, validate, npm test, `npm run health` EXIT 0.
+- Self-critique: closes pending-road/travel binding; full local action sequencing remains a larger future invariant.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
 
 ### Cycle result — overworld_snapshot_area_map_exactness
 

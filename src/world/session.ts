@@ -854,6 +854,23 @@ function assertSnapshotTravelPathContinuity(
   }
 }
 
+function assertSnapshotPendingRoadEncounterBinding(
+  snapshot: OverworldSessionSnapshot,
+  edgeIds: ReadonlySet<string>,
+): void {
+  if (!snapshot.pendingRoadEncounter) return;
+  const latestTravel = snapshot.travelLog[0];
+  if (!latestTravel) {
+    throw new Error("Overworld session snapshot pending road encounter has no travel log.");
+  }
+  if (!edgeIds.has(latestTravel.edgeId)) return;
+  if (latestTravel.edgeId !== snapshot.pendingRoadEncounter.edgeId) {
+    throw new Error(
+      `Overworld session snapshot pending road encounter "${snapshot.pendingRoadEncounter.edgeId}" does not match latest travel log road "${latestTravel.edgeId}".`,
+    );
+  }
+}
+
 function expectedDiscoveredTownIds(
   world: OverworldManifest,
   visitedTownIds: ReadonlySet<string>,
@@ -1652,6 +1669,7 @@ export class OverworldSession {
           `Overworld session snapshot has no road event for "${snapshot.pendingRoadEncounter.edgeId}".`,
         );
       }
+      assertSnapshotPendingRoadEncounterBinding(snapshot, new Set(edgesById.keys()));
       const fromId = pendingEdge.from === snapshot.currentId ? pendingEdge.to : pendingEdge.from;
       const from = this.nodes.get(fromId);
       const to = this.nodes.get(snapshot.currentId);
