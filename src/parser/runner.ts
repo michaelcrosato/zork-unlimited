@@ -10,7 +10,7 @@ import type { Action } from "../api/types.js";
 import type { Rules } from "../core/engine.js";
 import type { GameState } from "../core/state.js";
 import { buildRpgRules, winningRpgEnding } from "../rpg/runner.js";
-import type { Rng } from "../core/rng.js";
+import type { RuntimeRngFor } from "../rpg/runtime_rng.js";
 import type { ParserIndex } from "./model.js";
 import { asRpgIndex } from "./rpg_compat.js";
 
@@ -21,9 +21,6 @@ export function winningEnding(index: ParserIndex, state: GameState): string | nu
   return winningRpgEnding(asRpgIndex(index), state);
 }
 
-export function buildParserRules(
-  index: ParserIndex,
-  rngFor?: (state: GameState) => Rng,
-): Rules<Action> {
+export function buildParserRules(index: ParserIndex, rngFor?: RuntimeRngFor): Rules<Action> {
   return buildRpgRules(asRpgIndex(index), rngFor);
 }

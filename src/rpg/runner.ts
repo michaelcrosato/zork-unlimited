@@ -26,8 +26,8 @@ import { evalConditions } from "../core/conditions.js";
 import type { GameEvent } from "../core/events.js";
 import { type RpgPack, type Enemy } from "./schema.js";
 import { resolveAttack, enemyAlive } from "./combat.js";
-import { rngForStep, type Rng } from "../core/rng.js";
 import { resolveSkillCheck } from "../core/skill_check.js";
+import { rngForRuntimeState, type RuntimeRngFor } from "./runtime_rng.js";
 import { decorateRpgScoreEvents } from "./score_events.js";
 import { endGameEffects } from "./terminal_effects.js";
 
@@ -86,7 +86,7 @@ export function enumerateRpgActions(index: RpgIndex, state: GameState): RpgActio
 
 /**
  * `rngFor` supplies the PRNG a combat round / skill check draws from. It defaults to
- * the step-keyed stream (core/rng.ts), so production callers pass nothing and play is
+ * the shared step-keyed runtime stream, so production callers pass nothing and play is
  * byte-identical. The parameter is a verification seam ONLY: the exhaustive RPG
  * ending-reachability proof builds two rule sets — one whose rng forces the player's
  * BEST rolls, one their WORST — and steps every action under both, so combat and
@@ -95,7 +95,7 @@ export function enumerateRpgActions(index: RpgIndex, state: GameState): RpgActio
  */
 export function buildRpgRules(
   index: RpgIndex,
-  rngFor: (state: GameState) => Rng = (s) => rngForStep(s.seed, s.step),
+  rngFor: RuntimeRngFor = rngForRuntimeState,
 ): Rules<RpgAction> {
   return {
     legalActions(state: GameState): RpgAction[] {

@@ -121,6 +121,23 @@ describe("RPG schema owns the RPG contract", () => {
     expect(cyoaRunner).not.toContain("SCORE_VAR");
   });
 
+  it("keeps the runtime RNG stream on the RPG-owned path", () => {
+    const runtimeRng = readFileSync("src/rpg/runtime_rng.ts", "utf8");
+    const rpgRunner = readFileSync("src/rpg/runner.ts", "utf8");
+    const cyoaRunner = readFileSync("src/cyoa/runner.ts", "utf8");
+    const parserRunner = readFileSync("src/parser/runner.ts", "utf8");
+
+    expect(runtimeRng).toContain("export type RuntimeRngFor");
+    expect(runtimeRng).toContain("export const rngForRuntimeState");
+    expect(runtimeRng).toContain("rngForStep(state.seed, state.step)");
+    expect(rpgRunner).toContain("./runtime_rng");
+    expect(cyoaRunner).toContain("../rpg/runtime_rng");
+    expect(parserRunner).toContain("../rpg/runtime_rng");
+    expect(rpgRunner).not.toContain("rngForStep");
+    expect(cyoaRunner).not.toContain("rngForStep");
+    expect(parserRunner).not.toContain("../core/rng");
+  });
+
   it("keeps skill-check schema and resolution in core gameplay code", () => {
     const skillCheck = readFileSync("src/core/skill_check.ts", "utf8");
     const combat = readFileSync("src/rpg/combat.ts", "utf8");

@@ -12,9 +12,9 @@ import { evalConditions } from "../core/conditions.js";
 import type { Effect } from "../core/effects.js";
 import type { GameEvent } from "../core/events.js";
 import { reactiveText } from "../core/reactive_text.js";
-import { rngForStep, type Rng } from "../core/rng.js";
 import type { Resolution, Rules } from "../core/engine.js";
 import { resolveSkillCheck } from "../core/skill_check.js";
+import { rngForRuntimeState, type RuntimeRngFor } from "../rpg/runtime_rng.js";
 import { decorateRpgScoreEvents } from "../rpg/score_events.js";
 import { initRuntimeState } from "../rpg/state_init.js";
 import { endGameEffects, transitionEffects } from "../rpg/terminal_effects.js";
@@ -66,14 +66,14 @@ export function endingText(ending: Ending, state: GameState): string {
  * Build the engine rule set for a compiled pack.
  *
  * `rngFor` supplies the PRNG a skill-checked choice draws its d20 from. It defaults to the
- * step-keyed stream (core/rng.ts), so production callers pass nothing and play is
+ * shared step-keyed runtime stream, so production callers pass nothing and play is
  * byte-identical and replayable (§8.5). The parameter is a verification seam ONLY — the
  * exhaustive ending/score proofs drive a skill-checked choice under the player's best and
  * worst rolls by passing a forced rng, exactly as the parser/RPG runners do (buildRpgRules).
  */
 export function buildRules(
   index: CyoaIndex,
-  rngFor: (state: GameState) => Rng = (s) => rngForStep(s.seed, s.step),
+  rngFor: RuntimeRngFor = rngForRuntimeState,
 ): Rules<CyoaAction> {
   return {
     legalActions(state: GameState): CyoaAction[] {
