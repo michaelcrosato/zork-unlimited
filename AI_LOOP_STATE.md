@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 27 -->
+<!-- historical_cycle_count: 28 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_snapshot_visit_chronology
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; helper still fails broad root formatting/ESLint outside canonical package scripts.
+- Engine/persistence: overworld restore now requires visited towns to be start or travel-log arrivals, and scout/contact/investigate journals cannot predate first arrival at their source town.
+- Token economy: compact map history no longer has to trust forged visited-town ids or impossible local-action timestamps.
+- VERIFY: focused overworld snapshot/MCP/UI tests, typecheck, lint, format:check, validate, npm test (192/1316), `npm run health` EXIT 0.
+- Self-critique: closes town-level chronology; full road-by-road replay and area-discovery timing remain larger future invariants.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
 
 ### Cycle result — overworld_snapshot_local_action_reachability
 

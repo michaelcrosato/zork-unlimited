@@ -22,6 +22,7 @@ type LocalActionJournalCase = {
   kind: LocalActionJournalKind;
   prefix: "investigate" | "scout" | "talk";
   sources: readonly LocalActionJournalSource[];
+  chronologyPattern: RegExp;
   unvisitedPattern: RegExp;
   undiscoveredPattern: RegExp;
 };
@@ -199,6 +200,7 @@ const localActionJournalCases: readonly LocalActionJournalCase[] = [
     kind: "poi",
     prefix: "scout",
     sources: overworld.points_of_interest,
+    chronologyPattern: /journal point of interest.*before visiting town/,
     unvisitedPattern: /journal point of interest.*unvisited town/,
     undiscoveredPattern: /journal point of interest.*undiscovered area/,
   },
@@ -207,6 +209,7 @@ const localActionJournalCases: readonly LocalActionJournalCase[] = [
     kind: "contact",
     prefix: "talk",
     sources: overworld.characters,
+    chronologyPattern: /journal contact.*before visiting town/,
     unvisitedPattern: /journal contact.*unvisited town/,
     undiscoveredPattern: /journal contact.*undiscovered area/,
   },
@@ -215,6 +218,7 @@ const localActionJournalCases: readonly LocalActionJournalCase[] = [
     kind: "event",
     prefix: "investigate",
     sources: overworld.local_events,
+    chronologyPattern: /journal event.*before visiting town/,
     unvisitedPattern: /journal event.*unvisited town/,
     undiscoveredPattern: /journal event.*undiscovered area/,
   },
@@ -224,6 +228,7 @@ function localActionJournalEntry(
   snapshot: Snapshot,
   source: LocalActionJournalSource,
   journalCase: LocalActionJournalCase,
+  recordedAt = snapshot.journalEntries[0]!.recordedAt,
 ): JournalEntry {
   return {
     id: `${journalCase.prefix}:${source.id}`,
@@ -231,7 +236,7 @@ function localActionJournalEntry(
     town: townName(source.home),
     title: `Forged ${journalCase.label}`,
     text: "Forged local action journal proof.",
-    recordedAt: snapshot.journalEntries[0]!.recordedAt,
+    recordedAt,
   };
 }
 
@@ -579,6 +584,49 @@ describe("overworld snapshot restore integrity", () => {
       /saved area town.*not visited/,
     );
   });
+
+  it("rejects visited towns with no travel proof", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const town = overworld.nodes.find(
+      (candidate) =>
+        candidate.id !== overworld.start && !snapshot.visitedIds.includes(candidate.id),
+    );
+    if (!town) throw new Error("expected an unvisited non-start town");
+    const forgedVisit = {
+      ...snapshot,
+      discoveredIds: appendUnique(snapshot.discoveredIds, town.id),
+      visitedIds: appendUnique(snapshot.visitedIds, town.id),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedVisit })).toThrow(
+      /visited town.*no travel arrival/,
+    );
+  });
+
+  it.each(localActionJournalCases)(
+    "rejects $label journal entries recorded before reaching their town",
+    (journalCase) => {
+      const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+      const source = journalCase.sources.find(
+        (candidate) =>
+          candidate.home !== overworld.start &&
+          snapshot.visitedIds.includes(candidate.home) &&
+          snapshot.discoveredAreaIds.includes(candidate.area),
+      );
+      if (!source) throw new Error(`expected a ${journalCase.label} in a visited non-start town`);
+      const forgedJournal = {
+        ...snapshot,
+        journalEntries: [
+          ...snapshot.journalEntries,
+          localActionJournalEntry(snapshot, source, journalCase, "Day 1, 08:00"),
+        ],
+      };
+
+      expect(() => a.restore_overworld_session({ snapshot: forgedJournal })).toThrow(
+        journalCase.chronologyPattern,
+      );
+    },
+  );
 
   it("rejects discovered jobs in undiscovered areas", () => {
     const { a, snapshot } = exportedSnapshotAfterTwoRoads();

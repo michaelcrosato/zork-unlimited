@@ -48,6 +48,7 @@ export const OVERWORLD_SESSION_SAVE_VERSION = 3 as const;
 const MAX_SUPPLIES = 8;
 const STARTING_SUPPLIES = 6;
 const MAX_FATIGUE = 100;
+const STARTING_MINUTES = 8 * 60;
 
 export type TravelLogEntry = {
   edgeId: string;
@@ -498,6 +499,7 @@ type OverworldLocalActionJournalReachabilityIndex = {
   discoveredAreaIds: ReadonlySet<string>;
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   poisById: ReadonlyMap<string, OverworldPoi>;
+  townVisitMinutes: ReadonlyMap<string, number>;
   visitedTownIds: ReadonlySet<string>;
 };
 
@@ -799,6 +801,41 @@ function assertSnapshotProgressJournalBindings(snapshot: OverworldSessionSnapsho
   );
 }
 
+function snapshotTownVisitMinutes(
+  snapshot: OverworldSessionSnapshot,
+  startTownId: string,
+): Map<string, number> {
+  const visitedAt = new Map<string, number>([[startTownId, STARTING_MINUTES]]);
+  for (const entry of snapshot.travelLog) {
+    const previous = visitedAt.get(entry.toId);
+    if (previous === undefined || entry.arrivedAt < previous) {
+      visitedAt.set(entry.toId, entry.arrivedAt);
+    }
+  }
+  return visitedAt;
+}
+
+function assertSnapshotVisitedTownTravelProof(
+  snapshot: OverworldSessionSnapshot,
+  startTownId: string,
+): Map<string, number> {
+  const visitedAt = snapshotTownVisitMinutes(snapshot, startTownId);
+  const visitedTownIds = new Set(snapshot.visitedIds);
+  for (const townId of snapshot.visitedIds) {
+    if (!visitedAt.has(townId)) {
+      throw new Error(`Overworld session snapshot visited town "${townId}" has no travel arrival.`);
+    }
+  }
+  for (const entry of snapshot.travelLog) {
+    if (!visitedTownIds.has(entry.toId)) {
+      throw new Error(
+        `Overworld session snapshot travel arrival town "${entry.toId}" is missing from visited towns.`,
+      );
+    }
+  }
+  return visitedAt;
+}
+
 function addRegionRenown(target: Map<string, number>, region: string, amount: number): void {
   if (amount <= 0) return;
   target.set(region, (target.get(region) ?? 0) + amount);
@@ -994,6 +1031,21 @@ function journalSourceId(entry: OverworldJournalEntry, prefix: string): string |
   return entry.id.startsWith(prefix) ? entry.id.slice(prefix.length) : null;
 }
 
+function assertJournalAfterTownVisit(
+  sourceLabel: string,
+  sourceId: string,
+  entry: OverworldJournalEntry,
+  townId: string,
+  townVisitMinutes: ReadonlyMap<string, number>,
+): void {
+  const visitedAt = townVisitMinutes.get(townId);
+  if (visitedAt !== undefined && journalEntryRecordedAt(entry) < visitedAt) {
+    throw new Error(
+      `Overworld session snapshot ${sourceLabel} "${sourceId}" was recorded before visiting town "${townId}".`,
+    );
+  }
+}
+
 function assertSnapshotLocalActionJournalReachability(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldLocalActionJournalReachabilityIndex,
@@ -1017,6 +1069,13 @@ function assertSnapshotLocalActionJournalReachability(
           character.area,
           sources.discoveredAreaIds,
         );
+        assertJournalAfterTownVisit(
+          "journal contact",
+          sourceId,
+          entry,
+          character.home,
+          sources.townVisitMinutes,
+        );
         break;
       }
       case "event": {
@@ -1036,6 +1095,13 @@ function assertSnapshotLocalActionJournalReachability(
           event.area,
           sources.discoveredAreaIds,
         );
+        assertJournalAfterTownVisit(
+          "journal event",
+          sourceId,
+          entry,
+          event.home,
+          sources.townVisitMinutes,
+        );
         break;
       }
       case "poi": {
@@ -1054,6 +1120,13 @@ function assertSnapshotLocalActionJournalReachability(
           sourceId,
           poi.area,
           sources.discoveredAreaIds,
+        );
+        assertJournalAfterTownVisit(
+          "journal point of interest",
+          sourceId,
+          entry,
+          poi.home,
+          sources.townVisitMinutes,
         );
         break;
       }
@@ -1116,7 +1189,7 @@ export class OverworldSession {
   private readonly worldHash: string;
   private currentId: string;
   private currentAreaId: string | null = null;
-  private minutes = 8 * 60;
+  private minutes = STARTING_MINUTES;
   private supplies = STARTING_SUPPLIES;
   private fatigue = 0;
   private readonly discoveredIds = new Set<string>();
@@ -1307,6 +1380,7 @@ export class OverworldSession {
     }
     const discoveredTownIds = new Set(snapshot.discoveredIds);
     const visitedTownIds = new Set(snapshot.visitedIds);
+    const townVisitMinutes = assertSnapshotVisitedTownTravelProof(snapshot, this.world.start);
     const discoveredAreaIds = new Set(snapshot.discoveredAreaIds);
     const discoveredJobIds = new Set(snapshot.discoveredJobIds);
     const discoveredSiteIds = new Set(snapshot.discoveredSiteIds);
@@ -1379,6 +1453,7 @@ export class OverworldSession {
       discoveredAreaIds,
       eventsById,
       poisById,
+      townVisitMinutes,
       visitedTownIds,
     });
     assertSnapshotEventResolutionProofs(snapshot, {
