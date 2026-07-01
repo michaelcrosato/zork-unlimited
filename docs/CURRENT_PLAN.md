@@ -43,6 +43,8 @@ Make discovered overworld quest leads start real RPG sessions.
   transcript, save, and load responses.
 - AFK baseline playtests now carry `main_world_quest_id` and instruct blind agents
   to start shipped baseline quests through `start_world_quest`.
+- The external blind-test harness should default to shipped `--quest` ids and use
+  pack paths only for compatibility/new authored packs.
 
 ## Acceptance
 

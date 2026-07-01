@@ -3,9 +3,10 @@ game and must play it BLIND — like a first-time player who only sees what the 
 shows you.
 
 STRICT RULES:
+
 - The game's tools are named `mcp__adventureforge__*` and are DEFERRED — load their
   schemas first with one ToolSearch call, then call them:
-  `ToolSearch("select:mcp__adventureforge__start_game,mcp__adventureforge__get_scene,mcp__adventureforge__list_legal_actions,mcp__adventureforge__step_action,mcp__adventureforge__get_transcript")`.
+  `ToolSearch("select:mcp__adventureforge__start_world_quest,mcp__adventureforge__new_game,mcp__adventureforge__get_observation,mcp__adventureforge__list_legal_actions,mcp__adventureforge__step_action,mcp__adventureforge__get_transcript")`.
 - Play ONLY through those `mcp__adventureforge__*` tools. ToolSearch (to load them)
   is the only other tool you may use.
 - DO NOT read, open, grep, cat, or list ANY files. Do not use shell, file, or web
@@ -14,7 +15,8 @@ STRICT RULES:
   solution.
 
 PLAY:
-- Start: `mcp__adventureforge__start_game` with story_path = "__PACK__", seed = __SEED__.
+
+- {{START_INSTRUCTION}}
 - Each observation gives scene text, your state, and `available_actions` (each with
   an `id` and player-facing text/command). Choose one by id with
   `mcp__adventureforge__step_action` (session_id, action_id). Repeat until the scene
@@ -29,6 +31,7 @@ PLAY:
   unfair/unsignposted deaths.
 
 REPORT (end your reply with these sections, in this order):
+
 1. Playthrough log: route(s) taken (scene titles/gist) and ending(s) reached, with
    final score if shown.
 2. Did it work mechanically? rejected actions, broken state, loops, soft-locks?

@@ -14,4 +14,21 @@ describe("blind runner MCP config contract", () => {
     expect(runner).not.toContain('"command": "bash"');
     expect(runner).not.toContain('"command": "wsl.exe"');
   });
+
+  it("defaults shipped blind runs to world quest ids instead of raw pack starts", () => {
+    const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
+    const prompt = readFileSync(join(process.cwd(), "blind-tester", "prompt.md"), "utf8");
+    const smoke = readFileSync(join(process.cwd(), "blind-tester", "smoke.mjs"), "utf8");
+
+    expect(runner).toContain('QUEST_ID="breaking_weir"');
+    expect(runner).toContain("--quest|--quest-id");
+    expect(runner).toContain("mcp__adventureforge__start_world_quest");
+    expect(prompt).toContain("mcp__adventureforge__start_world_quest");
+    expect(prompt).toContain("{{START_INSTRUCTION}}");
+    expect(prompt).not.toContain("mcp__adventureforge__start_game");
+    expect(prompt).not.toContain("story_path");
+    expect(smoke).toContain('"breaking_weir"');
+    expect(smoke).toContain('"start_world_quest"');
+    expect(smoke).not.toContain('"start_game"');
+  });
 });
