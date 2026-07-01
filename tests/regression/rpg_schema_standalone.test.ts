@@ -206,6 +206,21 @@ describe("RPG schema owns the RPG contract", () => {
     expect(observation).not.toContain("ParserObservation");
   });
 
+  it("keeps public observation state projection on the RPG-owned path", () => {
+    const observationState = readFileSync("src/rpg/observation_state.ts", "utf8");
+    const rpgObservation = readFileSync("src/rpg/observation.ts", "utf8");
+    const cyoaObservation = readFileSync("src/cyoa/observation.ts", "utf8");
+
+    expect(observationState).toContain("export function publicFlags");
+    expect(observationState).toContain("export function publicVars");
+    expect(observationState).toContain("export function publicInventory");
+    expect(observationState).toContain("export function publicJournal");
+    expect(rpgObservation).toContain("./observation_state");
+    expect(cyoaObservation).toContain("../rpg/observation_state");
+    expect(rpgObservation).not.toContain("function visible<T>");
+    expect(cyoaObservation).not.toContain("function visibleFlags");
+  });
+
   it("does not import the legacy parser command mapper for RPG play", () => {
     const commandMap = readFileSync("src/rpg/command_map.ts", "utf8");
     const playBin = readFileSync("bin/rpg_play.ts", "utf8");

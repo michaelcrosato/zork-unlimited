@@ -7,6 +7,12 @@
  */
 import { evalConditions } from "../core/conditions.js";
 import type { GameState } from "../core/state.js";
+import {
+  publicFlags,
+  publicInventory,
+  publicJournal,
+  publicVars,
+} from "../rpg/observation_state.js";
 import { openingWorldText } from "../world/observation.js";
 import type { WorldBinding } from "../world/schema.js";
 import { type CyoaIndex, endingText, sceneText } from "./runner.js";
@@ -50,12 +56,6 @@ export type CyoaObservation = {
 };
 
 export type ObservationOptions = { hideGraph?: boolean; includeWorldIntro?: boolean };
-
-function visibleFlags(state: GameState): string[] {
-  return Object.keys(state.flags)
-    .filter((f) => state.flags[f] === true && !f.startsWith("__"))
-    .sort();
-}
 
 // `hideGraph` is accepted for a uniform cross-mode dispatcher signature but is a
 // no-op here: a CYOA observation already surfaces only choice `text`/`id`, never
@@ -102,10 +102,10 @@ export function buildObservation(
     text: opts.includeWorldIntro ? openingWorldText(world, state, nodeText.text) : nodeText.text,
     ...(opts.includeWorldIntro ? { world: world ?? null } : {}),
     state: {
-      flags: visibleFlags(state),
-      vars: { ...state.vars },
-      inventory: [...state.inventory],
-      journal: [...state.journal],
+      flags: publicFlags(state),
+      vars: publicVars(state, { hideInternal: false }),
+      inventory: publicInventory(state),
+      journal: publicJournal(state),
     },
     available_actions: available,
     ended: state.ended,

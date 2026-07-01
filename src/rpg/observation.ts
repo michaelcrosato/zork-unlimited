@@ -20,6 +20,7 @@ import {
   visibleObjectIds,
 } from "./model.js";
 import { enemyHp } from "./combat.js";
+import { publicFlags, publicInventory, publicJournal, publicVars } from "./observation_state.js";
 import { ATTACK_VAR, DEFENSE_VAR, HP_VAR, SCORE_VAR } from "./schema.js";
 import { enemyActive, enumerateRpgActions, type RpgIndex } from "./runner.js";
 
@@ -52,15 +53,6 @@ export type RpgObservation = {
   ending_id: string | null;
   ending: { id: string; title: string; text: string; death: boolean } | null;
 };
-
-function visible<T>(record: Record<string, T>, keep: (value: T) => boolean): Record<string, T> {
-  const out: Record<string, T> = {};
-  for (const key of Object.keys(record).sort()) {
-    const value = record[key] as T;
-    if (!key.startsWith("__") && keep(value)) out[key] = value;
-  }
-  return out;
-}
 
 export function buildRpgObservation(
   index: RpgIndex,
@@ -129,13 +121,11 @@ export function buildRpgObservation(
     npcs_present: npcs,
     exits,
     blocked_exits: blockedExits,
-    inventory: [...state.inventory].sort(),
+    inventory: publicInventory(state, { sort: true }),
     state: {
-      flags: Object.keys(state.flags)
-        .filter((flag) => state.flags[flag] === true && !flag.startsWith("__"))
-        .sort(),
-      vars: visible(state.vars, () => true),
-      journal: [...state.journal],
+      flags: publicFlags(state),
+      vars: publicVars(state),
+      journal: publicJournal(state),
     },
     dialogue: active ? { npc: active.npc.id, npc_text: nodeText(active.node, state) } : null,
     enemies_present: enemies,
