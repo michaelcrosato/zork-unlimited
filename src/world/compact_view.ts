@@ -3,10 +3,12 @@ import type {
   OverworldRoadEncounterOption,
   OverworldSessionRoutePlan,
   OverworldView,
+  TravelLogEntry,
 } from "./session.js";
 
 const COMPACT_JOURNAL_LIMIT = 5;
 const COMPACT_ROUTE_LIMIT = 8;
+const COMPACT_TRAVEL_LOG_LIMIT = 5;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactQuestRef = readonly [id: string, title: string, pack: string];
@@ -64,6 +66,15 @@ export type OverworldCompactJournalEntry = readonly [
   title: string,
   recordedAt: string,
 ];
+export type OverworldCompactTravelLogEntry = readonly [
+  edgeId: string,
+  fromId: string,
+  toId: string,
+  minutes: number,
+  suppliesUsed: number,
+  fatigueGained: number,
+  roadEventId: string | null,
+];
 
 export type OverworldCompactView = {
   v: 1;
@@ -90,6 +101,8 @@ export type OverworldCompactView = {
   quests: OverworldCompactQuestRef[];
   pending_road: OverworldCompactRoadEncounter | null;
   journal: OverworldCompactJournalEntry[];
+  travel_log: OverworldCompactTravelLogEntry[];
+  travel_log_truncated: boolean;
   progress: {
     towns: readonly [visited: number, total: number];
     renown: readonly (readonly [region: string, value: number])[];
@@ -146,8 +159,21 @@ function compactPendingRoad(
   };
 }
 
+function compactTravelLogEntry(entry: TravelLogEntry): OverworldCompactTravelLogEntry {
+  return [
+    entry.edgeId,
+    entry.fromId,
+    entry.toId,
+    entry.minutes,
+    entry.suppliesUsed,
+    entry.fatigueGained,
+    entry.roadEvent?.id ?? null,
+  ];
+}
+
 export function compactOverworldView(view: OverworldView): OverworldCompactView {
   const routeOptions = view.routeOptions.slice(0, COMPACT_ROUTE_LIMIT).map(compactRouteOption);
+  const travelLog = view.log.slice(0, COMPACT_TRAVEL_LOG_LIMIT).map(compactTravelLogEntry);
   const routeByDestination = new Map(
     view.routeOptions.map((plan) => [plan.destination.id, plan] as const),
   );
@@ -199,6 +225,8 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     journal: view.journal
       .slice(0, COMPACT_JOURNAL_LIMIT)
       .map((entry) => [entry.kind, entry.title, entry.recordedAt]),
+    travel_log: travelLog,
+    travel_log_truncated: view.log.length > travelLog.length,
     progress: {
       towns: [view.visitedCount, view.totalTowns],
       renown: Object.entries(view.regionRenown).sort(([left], [right]) =>

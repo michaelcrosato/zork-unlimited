@@ -722,6 +722,16 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(compactTravel.travel.baseMinutes).toBe(road!.travel_minutes);
     expect(compactTravel.context.here[0]).toBe("colonie_town");
+    expect(compactTravel.context.travel_log[0]).toEqual([
+      road!.id,
+      full.current.id,
+      road!.destination.id,
+      compactTravel.travel.minutes,
+      compactTravel.travel.suppliesUsed,
+      compactTravel.travel.fatigueGained,
+      compactTravel.travel.roadEvent?.id ?? null,
+    ]);
+    expect(compactTravel.context.travel_log_truncated).toBe(false);
     expect("observation" in compactTravel).toBe(false);
 
     const traveledFull = a.get_overworld_session({ session_id: started.session_id }).observation;
@@ -743,6 +753,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       "assist_travelers",
       "press_on",
     ]);
+    expect(traveledCompact.travel_log).toEqual(compactTravel.context.travel_log);
     expect(JSON.stringify(traveledCompact).length).toBeLessThan(
       JSON.stringify(traveledFull).length,
     );

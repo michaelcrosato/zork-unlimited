@@ -113,6 +113,8 @@ Make discovered overworld quest leads start real RPG sessions.
   reconstruct road event/options from the content-bound world manifest.
 - Overworld travel-log session snapshots now persist road ids plus dynamic
   outcomes and rebuild route text/event payloads from the world manifest.
+- Compact overworld context now carries capped id-only recent travel tuples so
+  agents do not need full observations to recover route history.
 
 ## Acceptance
 

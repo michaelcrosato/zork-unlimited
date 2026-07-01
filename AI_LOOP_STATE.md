@@ -92,6 +92,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - MCP pack loading caches unchanged RPG compile/validate reports per API instance.
 - Overworld pending-road snapshots now save edge ids and rebuild manifest text.
 - Overworld travel-log snapshots now save road ids and dynamic outcomes only.
+- Compact overworld context now includes capped id-only recent travel tuples.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,
