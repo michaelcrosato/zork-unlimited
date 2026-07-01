@@ -99,7 +99,7 @@ type PackLoadCacheEntry = {
   result: LoadResult;
 };
 
-type StoryEntry = {
+type StorySourceEntry = {
   path: string;
   id: string;
   title: string;
@@ -108,6 +108,8 @@ type StoryEntry = {
   world: WorldBinding | null;
   world_quest_id: string | null;
 };
+
+type StoryEntry = Omit<StorySourceEntry, "path">;
 
 type PublicWorldGraphNode = Omit<WorldManifest["graph"]["nodes"][number], "pack">;
 
@@ -543,7 +545,7 @@ export function createToolApi(opts: { root: string }) {
       .map((node) => normalizePackPath(node.pack ?? ""));
   }
 
-  function discoverStoryEntries(world = loadWorldManifest()): StoryEntry[] {
+  function discoverStorySources(world = loadWorldManifest()): StorySourceEntry[] {
     return worldQuestPackPaths(world).map((path) => {
       const lr = loadAndReport(path);
       const node = worldQuestNodeForPack(world, path);
@@ -557,6 +559,17 @@ export function createToolApi(opts: { root: string }) {
         world_quest_id: node?.id ?? null,
       };
     });
+  }
+
+  function publicStoryEntry(source: StorySourceEntry): StoryEntry {
+    return {
+      id: source.id,
+      title: source.title,
+      mode: source.mode,
+      playable: source.playable,
+      world: source.world,
+      world_quest_id: source.world_quest_id,
+    };
   }
 
   function publicWorldGraph(world: WorldManifest): PublicWorldGraph {
@@ -704,19 +717,17 @@ export function createToolApi(opts: { root: string }) {
 
     list_stories(): {
       stories: StoryEntry[];
-      main_story: string | null;
       main_world_quest_id: string | null;
     } {
-      const stories = discoverStoryEntries();
+      const sources = discoverStorySources();
       // Keep blind/AFK agents on the richest currently shipped RPG pack by default.
       const main =
-        stories.find((s) => s.path === MAIN_RPG_STORY && s.playable) ??
-        stories.find((s) => s.playable) ??
-        stories[0] ??
+        sources.find((s) => s.path === MAIN_RPG_STORY && s.playable) ??
+        sources.find((s) => s.playable) ??
+        sources[0] ??
         null;
       return {
-        stories,
-        main_story: main?.path ?? null,
+        stories: sources.map(publicStoryEntry),
         main_world_quest_id: main?.world_quest_id ?? null,
       };
     },
@@ -741,7 +752,7 @@ export function createToolApi(opts: { root: string }) {
       }[];
     } {
       const world = loadWorldManifest();
-      const quests = discoverStoryEntries(world)
+      const quests = discoverStorySources(world)
         .filter((s) => s.world?.id === world.id)
         .map((s) => {
           const node = s.world_quest_id ? worldQuestNodeById(world, s.world_quest_id) : null;

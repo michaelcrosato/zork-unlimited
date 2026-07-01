@@ -30,8 +30,8 @@ Make discovered overworld quest leads start real RPG sessions.
   RPG session payload.
 - The MCP schema now exposes optional RPG `seed` and `hide_graph` controls on that
   bridge.
-- `list_stories` is now a compatibility catalog over the Charter Marches quest graph,
-  not an independent `content/rpg/pack` directory shelf.
+- `list_stories` is now an id-only compatibility catalog over the Charter Marches
+  quest graph, not an independent `content/rpg/pack` directory shelf.
 - Shipped quests can now start by Charter Marches graph id through
   `start_world_quest` or `new_game({ world_quest_id })`; `new_game` rejects raw
   `pack_path` starts.
@@ -43,8 +43,10 @@ Make discovered overworld quest leads start real RPG sessions.
   transcript, save, and load responses without echoing raw pack paths.
 - Overworld quest observations, action discoveries, compact context, and
   quest-start metadata expose quest ids/titles/areas without raw pack paths.
-- `list_world` now exposes sanitized world graph/quest-id entries without raw
-  `pack` or `path` fields; `list_stories` remains the compatibility catalog.
+- `list_world` and `list_stories` now expose sanitized world graph/quest-id
+  entries without raw `pack` or `path` fields.
+- AFK loop internals resolve any needed maintenance paths through `world/source`,
+  not public catalog responses.
 - AFK baseline playtests now carry `main_world_quest_id` and instruct blind agents
   to start shipped baseline quests through `start_world_quest`.
 - The external blind-test harness now starts shipped playtests only through

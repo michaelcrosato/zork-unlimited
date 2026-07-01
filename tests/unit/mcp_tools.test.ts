@@ -13,7 +13,6 @@ import type { RpgAction } from "../../src/api/types.js";
 const ROOT = process.cwd();
 const PACK = "content/rpg/pack/sunken_barrow.yaml";
 const NON_RPG_PACK = "content/broken-fixtures/duplicate_id.yaml";
-const MAIN_RPG = "content/rpg/pack/breaking_weir.yaml";
 const api = () => createToolApi({ root: ROOT });
 const overworld = parseOverworldManifest(
   JSON.parse(readFileSync("content/world/new_york_overworld.json", "utf8")),
@@ -134,9 +133,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const a = api();
     const r = a.list_stories();
     const world = a.list_world();
-    expect(r.main_story).toBe(MAIN_RPG);
+    expect("main_story" in r).toBe(false);
     expect(r.main_world_quest_id).toBe("breaking_weir");
     expect(r.stories).toHaveLength(16);
+    expect(r.stories.every((s) => !("path" in s))).toBe(true);
     expect(world.quests.every((q) => !("path" in q))).toBe(true);
     expect(world.graph.nodes.every((node) => !("pack" in node))).toBe(true);
     expect(world.world.graph.nodes.every((node) => !("pack" in node))).toBe(true);
@@ -144,9 +144,11 @@ describe("MCP tools — validate / load (§9.4)", () => {
       world.quests.map((q) => q.world_quest_id),
     );
     expect(r.stories.every((s) => s.mode === "rpg")).toBe(true);
-    expect(r.stories.some((s) => s.path.startsWith("content/parser/"))).toBe(false);
-    expect(r.stories.some((s) => s.path === PACK)).toBe(true);
-    expect(r.stories.find((s) => s.path === MAIN_RPG)?.world?.hub).toBe("Charterhaven");
+    expect(r.stories.some((s) => s.world_quest_id === "sunken_barrow")).toBe(true);
+    expect(r.stories.some((s) => s.world_quest_id === "breaking_weir")).toBe(true);
+    expect(r.stories.find((s) => s.world_quest_id === "breaking_weir")?.world?.hub).toBe(
+      "Charterhaven",
+    );
   });
 
   it("lists the unified world as a hub plus quest areas", () => {

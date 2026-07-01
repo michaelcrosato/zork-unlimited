@@ -33,8 +33,9 @@ import {
 } from "./afk/assessor.js";
 import { createToolApi } from "./mcp/tools.js";
 import { rotateLoopState } from "./afk/loop_state.js";
+import { resolveWorldQuestPackPath, worldQuestIdForPackPath } from "./world/source.js";
 
-type StoryCatalog = ReturnType<ReturnType<typeof createToolApi>["list_stories"]>;
+type WorldCatalog = ReturnType<ReturnType<typeof createToolApi>["list_world"]>;
 
 // ── Saturation-triggered ultraplan (docs/afk_loop.md) ──────────────────────────
 // When the deterministic assessor runs dry (isSaturated), a cycle re-aims the
@@ -58,6 +59,7 @@ const CURRENT_PLAN_DOC = "docs/CURRENT_PLAN.md";
 // reviewers' missing "already closed" boundary (re-aim #19 alone re-confirmed six
 // false alarms). See docs/DECISION_LOG.md and docs/afk_loop.md.
 const DECISION_LOG_DOC = "docs/DECISION_LOG.md";
+const MAIN_WORLD_QUEST_ID = "breaking_weir";
 
 /** Pure decision: should THIS cycle run an ultraplan? Saturated AND off cooldown. */
 export function shouldRunUltraplan(
@@ -83,13 +85,14 @@ function cycleStamp(): string {
   return new Date().toISOString().replace(/[:.]/g, "-");
 }
 
-function requireMainStory(catalog: StoryCatalog): string {
-  if (catalog.main_story !== null) return catalog.main_story;
+function requireMainWorldQuestId(catalog: WorldCatalog): string {
+  const preferred = catalog.quests.find(
+    (quest) => quest.world_quest_id === MAIN_WORLD_QUEST_ID && quest.playable,
+  );
+  if (preferred?.world_quest_id) return preferred.world_quest_id;
+  const fallback = catalog.quests.find((quest) => quest.playable && quest.world_quest_id !== null);
+  if (fallback?.world_quest_id) return fallback.world_quest_id;
   throw new Error("AFK loop requires at least one shipped RPG quest to blind-playtest.");
-}
-
-function catalogWorldQuestIdForPack(catalog: StoryCatalog, packPath: string): string | null {
-  return catalog.stories.find((s) => s.path === packPath)?.world_quest_id ?? null;
 }
 
 /** Which source the mandatory playtest targets this cycle. */
@@ -145,14 +148,14 @@ function main(): void {
 
   const a = assess(root);
   const top = a.top;
-  const catalog = createToolApi({ root }).list_stories();
-  const mainStory = requireMainStory(catalog);
-  const mainWorldQuestId = catalog.main_world_quest_id;
+  const catalog = createToolApi({ root }).list_world();
+  const mainWorldQuestId = requireMainWorldQuestId(catalog);
+  const mainStory = resolveWorldQuestPackPath(root, mainWorldQuestId).packPath;
   const target = playtestTarget(a, top, mainStory);
   const targetWorldQuestId = playtestTargetWorldQuestId(
     top,
     mainWorldQuestId,
-    catalogWorldQuestIdForPack(catalog, target),
+    top?.category === "content_fix" ? worldQuestIdForPackPath(root, target) : null,
   );
   const playtestRecord = join(runDir, "playtest.md").replaceAll("\\", "/");
 

@@ -9,7 +9,7 @@
  *   - repo         : project hygiene (missing tooling, docs, etc.)
  *
  * The assessor gathers evidence DETERMINISTICALLY through the same tool API the MCP
- * server exposes (list_stories / validate) — no clock, no RNG, no network — scores
+ * server exposes (list_world / validate) — no clock, no RNG, no network — scores
  * candidates, and recommends the single highest-value next action.
  * It is the deterministic *evaluator*; the actual quality judgement each cycle comes
  * from a mandatory LLM playtest (see docs/afk_loop.md). Pure enough to unit-test:
@@ -25,6 +25,7 @@ import { generateRpgPack } from "../gen/rpg_generator.js";
 import { validateRpg } from "../validate/rpg_validator.js";
 import type { ValidationReport } from "../validate/report.js";
 import { auditStaleReactiveRoomItems } from "./stale_reactive_audit.js";
+import { resolveWorldQuestPackPath } from "../world/source.js";
 
 export type Category = "content_fix" | "content_new" | "engine" | "repo";
 
@@ -45,6 +46,14 @@ export type PackHealth = {
   mode: PackMode | null;
   playable: boolean;
   warnings: number;
+};
+
+type AssessedStory = {
+  path: string;
+  id: string;
+  mode: PackMode | null;
+  playable: boolean;
+  world_quest_id: string | null;
 };
 
 export type Assessment = {
@@ -476,7 +485,16 @@ export function isSaturated(a: Assessment): boolean {
 /** Deterministically assess the repo and rank the next-best improvements. */
 export function assess(root: string): Assessment {
   const api = createToolApi({ root });
-  const { stories } = api.list_stories();
+  const stories: AssessedStory[] = api.list_world().quests.map((quest) => ({
+    path:
+      quest.world_quest_id === null
+        ? quest.id
+        : resolveWorldQuestPackPath(root, quest.world_quest_id).packPath,
+    id: quest.id,
+    mode: quest.mode,
+    playable: quest.playable,
+    world_quest_id: quest.world_quest_id,
+  }));
 
   const packs: PackHealth[] = [];
   const candidates: ImprovementCandidate[] = [];

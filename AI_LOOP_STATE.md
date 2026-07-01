@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 21 -->
+<!-- historical_cycle_count: 22 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
@@ -87,6 +87,15 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: small but important loop repair; prevents stale MCP harnesses from testing a retired start surface.
 - Operator direction: pause after this cycle; do not start another AFK cycle.
 
+### Cycle result — list_stories_world_id_catalog
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; same broad helper drift outside canonical repo scripts.
+- Public MCP: `list_stories` now returns quest ids/world metadata without `path` or `main_story`.
+- Loop internals: AFK path metadata now resolves through `world/source`, not the public story catalog.
+- VERIFY: focused catalog/loop/assessor tests, typecheck, lint, format:check, validate, npm test, `npm run health` EXIT 0.
+- Self-critique: closes another live path leak; remaining path usage is internal maintenance and offline trace/debug.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
+
 ## Current Snapshot
 
 - Verification bar: `npm run health` remains the required end gate.
@@ -108,7 +117,9 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Overworld quest view metadata: observations, action results, compact context,
   and quest-start responses expose quest ids/titles/areas without raw pack paths.
 - World catalog: `list_world` returns sanitized graph/quest ids without raw
-  `pack`/`path`; `list_stories` remains the internal compatibility catalog.
+  `pack`/`path`; `list_stories` is now id-only compatibility.
+- AFK loop internals resolve pack paths through `world/source`, not public
+  catalog responses.
 - Blind harness default: shipped playtests use `--quest` / `start_world_quest`;
   raw `--pack` starts are rejected.
 - MCP dev harness: `scripts/mcp_play.ts` starts shipped quests through

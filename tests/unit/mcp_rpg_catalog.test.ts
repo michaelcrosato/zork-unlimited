@@ -10,7 +10,6 @@ import { isRpgPackShape } from "../../src/mcp/types.js";
 
 const ROOT = process.cwd();
 const api = () => createToolApi({ root: ROOT });
-const MAIN_RPG = "content/rpg/pack/breaking_weir.yaml";
 const RPG_WORLD_QUEST_ID = "sunken_barrow";
 
 describe("isRpgPackShape keeps RPG structural priority", () => {
@@ -23,18 +22,17 @@ describe("isRpgPackShape keeps RPG structural priority", () => {
 describe("list_stories exposes only world-graph RPG quests", () => {
   it("discovers RPG packs from the world graph and chooses the high-depth RPG default", () => {
     const a = api();
-    const { stories, main_story, main_world_quest_id } = a.list_stories();
+    const { stories, main_world_quest_id } = a.list_stories();
     const world = a.list_world();
-    expect(main_story).toBe(MAIN_RPG);
     expect(main_world_quest_id).toBe("breaking_weir");
     expect(stories).toHaveLength(16);
+    expect(stories.every((s) => !("path" in s))).toBe(true);
     expect(world.quests.every((q) => !("path" in q))).toBe(true);
     expect(world.graph.nodes.every((node) => !("pack" in node))).toBe(true);
     expect(stories.map((s) => s.world_quest_id)).toEqual(world.quests.map((q) => q.world_quest_id));
     expect(stories.every((s) => s.mode === "rpg")).toBe(true);
-    expect(stories.every((s) => s.path.startsWith("content/rpg/pack/"))).toBe(true);
-    expect(stories.some((s) => s.path.includes("/cyoa/"))).toBe(false);
-    expect(stories.some((s) => s.path.includes("/parser/"))).toBe(false);
+    expect(stories.some((s) => s.world_quest_id === "sunken_barrow")).toBe(true);
+    expect(stories.some((s) => s.world_quest_id === "breaking_weir")).toBe(true);
   });
 });
 
