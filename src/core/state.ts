@@ -1,9 +1,8 @@
 /**
  * UNIFIED STATE MODEL (spec §6).
  *
- * One state shape carries the game from CYOA all the way to RPG. Later stages
- * ADD fields; they never replace this model. The engine treats GameState as
- * immutable — every transition returns a fresh value (see core/engine.ts).
+ * One state shape carries the RPG world runtime. The engine treats GameState
+ * as immutable — every transition returns a fresh value (see core/engine.ts).
  */
 
 export type ObjectRuntime = {
@@ -20,14 +19,14 @@ export type GameState = {
   step: number; // monotonically increasing action counter
 
   // location
-  current: string; // scene_id (CYOA) or room_id (parser)
+  current: string; // room/site id in the active RPG world graph
   visited: Record<string, boolean>;
 
   // world state
   flags: Record<string, boolean>; // boolean switches
   vars: Record<string, number>; // numeric variables / stats (HP, gold, skills…)
   inventory: string[]; // object ids carried by the player
-  objectState: Record<string, ObjectRuntime>; // open/locked/contents per object (parser+)
+  objectState: Record<string, ObjectRuntime>; // open/locked/contents per world object
 
   // narrative
   journal: string[]; // append-only player-visible log

@@ -39,13 +39,12 @@ describe("save / load (§8.7)", () => {
     expect(load(bytes).contentHash).toBe(MICRO_CONTENT_HASH);
   });
 
-  it("accepts old no-mode saves for migration compatibility", () => {
+  it("rejects saves that omit the RPG mode", () => {
     const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH);
     const bundle = JSON.parse(bytes) as Record<string, unknown>;
     delete bundle.mode;
-    const loaded = load(JSON.stringify(bundle), MICRO_CONTENT_HASH);
-    expect(loaded.mode).toBeUndefined();
-    expect(loaded.contentHash).toBe(MICRO_CONTENT_HASH);
+    expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
+    expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(/Save mode/);
   });
 
   it("rejects explicit legacy save modes", () => {

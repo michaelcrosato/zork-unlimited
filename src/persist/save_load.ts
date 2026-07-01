@@ -96,9 +96,8 @@ export type SaveBundle = {
   version: typeof SAVE_VERSION;
   packId: string;
   contentHash: string;
-  /** Pack mode. Optional only for backward-compat with v1 saves written before
-   *  the repository locked persistence to the unified RPG engine. */
-  mode?: SaveMode;
+  /** Pack mode. Required so persisted state is bound to the unified RPG engine. */
+  mode: SaveMode;
   state: GameState;
 };
 
@@ -122,17 +121,20 @@ export function save(
 
 export class SaveIntegrityError extends Error {}
 
-function assertRpgMode(mode: unknown, label: string): asserts mode is SaveMode | undefined {
-  if (mode !== undefined && mode !== SAVE_MODE) {
+function assertRpgMode(mode: unknown, label: string): asserts mode is SaveMode {
+  if (mode !== SAVE_MODE) {
     throw new SaveIntegrityError(`${label} must be "${SAVE_MODE}", got ${JSON.stringify(mode)}.`);
   }
 }
 
+function assertOptionalRpgMode(mode: unknown, label: string): asserts mode is SaveMode | undefined {
+  if (mode !== undefined) assertRpgMode(mode, label);
+}
+
 /**
  * Deserialize a save. If `expectedContentHash` is given, the save's contentHash
- * must match it exactly (§8.7). Saves are RPG-only when a mode is present. A
- * pre-mode (v1) save carries no mode and skips that check for migration
- * compatibility.
+ * must match it exactly (§8.7). Saves must carry the RPG mode; missing or
+ * legacy modes are integrity failures, not migration inputs.
  */
 export function load(
   bytes: string,
@@ -150,7 +152,7 @@ export function load(
     throw new SaveIntegrityError(`Unsupported save version: ${String(bundle.version)}`);
   }
   assertRpgMode((bundle as { mode?: unknown }).mode, "Save mode");
-  assertRpgMode(expectedMode, "Expected mode");
+  assertOptionalRpgMode(expectedMode, "Expected mode");
   if (expectedContentHash !== undefined && bundle.contentHash !== expectedContentHash) {
     throw new SaveIntegrityError(
       `Content hash mismatch: save was made against ${bundle.contentHash}, ` +

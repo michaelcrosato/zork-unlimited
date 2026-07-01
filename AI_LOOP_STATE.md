@@ -52,6 +52,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   action ids without command labels; request full actions only when needed.
 - Token economy: `get_transcript({ summary_only: true })` keeps end-state
   metadata while dropping detailed turn/event payload.
+- Persistence: saves must carry `mode: "rpg"`; missing or legacy modes are
+  integrity failures, not migration inputs.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,
