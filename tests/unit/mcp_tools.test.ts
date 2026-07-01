@@ -1030,6 +1030,29 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     const reloaded = a.load_game({ pack_path: PACK, save: saved.save });
     expect(reloaded.state_hash).toBe(after);
   });
+
+  it("a shipped world quest save reloads by world graph id", () => {
+    const a = api();
+    const game = a.start_world_quest({ quest_id: "sunken_barrow", seed: 1 });
+    stepByCommand(a, game.session_id, "go down");
+    const after = a.get_observation({ session_id: game.session_id }).state_hash;
+
+    const saved = a.save_game({ session_id: game.session_id });
+    const reloaded = a.load_game({ world_quest_id: "sunken_barrow", save: saved.save });
+    expect(reloaded.mode).toBe("rpg");
+    expect(reloaded.state_hash).toBe(after);
+    expect(reloaded.observation.world?.id).toBe("charter_marches");
+  });
+
+  it("load_game rejects ambiguous restore sources", () => {
+    const a = api();
+    const game = a.start_world_quest({ quest_id: "sunken_barrow", seed: 1 });
+    const saved = a.save_game({ session_id: game.session_id });
+
+    expect(() =>
+      a.load_game({ world_quest_id: "sunken_barrow", pack_path: PACK, save: saved.save }),
+    ).toThrow(/exactly one/);
+  });
 });
 
 describe("MCP tools — replay + path confinement", () => {

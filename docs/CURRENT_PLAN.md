@@ -35,6 +35,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - Shipped quests can now start by Charter Marches graph id through
   `start_world_quest` or `new_game({ world_quest_id })`; raw pack paths remain
   compatibility surfaces.
+- Shipped quest saves can now restore through `load_game({ world_quest_id })`, so
+  start and persistence both share graph identity.
 - AFK baseline playtests now carry `main_world_quest_id` and instruct blind agents
   to start shipped baseline quests through `start_world_quest`.
 
@@ -50,6 +52,6 @@ Make discovered overworld quest leads start real RPG sessions.
 - Continue simplifying parser-era wording in historical docs when it affects current
   orientation.
 - Reduce the duplicate static-vs-stateful overworld tool surface.
-- Keep raw pack paths for generated packs, saves, traces, and compatibility only.
+- Keep raw pack paths for generated packs, traces, and compatibility only.
 - Add lightweight token/cost telemetry under ignored run output when the loop needs
   measured efficiency data.

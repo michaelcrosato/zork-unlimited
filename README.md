@@ -216,13 +216,13 @@ reads the Charter Marches quest graph, picks the high-depth RPG pack
 `breaking_weir` as the default, and `list_world` reports the same RPG quest set
 with hub routes. Shipped quests should start through `start_world_quest` or
 `new_game` with `world_quest_id`; raw `pack_path` starts remain compatibility
-aliases. The same structured `new_game` / `step_action` /
-`get_observation` / save·load path drives RPG sessions through stable action ids
-and deterministic state hashes. Explicit non-RPG pack loading is rejected through
-MCP with an `UNSUPPORTED_LEGACY_PACK` report; old pack shapes are now migration
-data, not playable agent targets. The CYOA tree has been retired. All paths are
-confined to the project root; content and traces are data only (§16). The handlers
-(`src/mcp/tools.ts`)
+aliases. Saves for shipped quests can also restore with `world_quest_id`. The same
+structured `new_game` / `step_action` / `get_observation` / save·load path drives
+RPG sessions through stable action ids and deterministic state hashes. Explicit
+non-RPG pack loading is rejected through MCP with an `UNSUPPORTED_LEGACY_PACK`
+report; old pack shapes are now migration data, not playable agent targets. The
+CYOA tree has been retired. All paths are confined to the project root; content and
+traces are data only (§16). The handlers (`src/mcp/tools.ts`)
 are unit-tested directly without a live client.
 
 ```bash

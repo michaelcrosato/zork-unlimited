@@ -486,8 +486,18 @@ tool(
 );
 tool(
   "load_game",
-  "Load a save against a pack (content-hash + mode verified) and return a fresh session.",
-  { ...PACK, save: z.string().describe("A save string produced by save_game.") },
+  "Load a save against a shipped world quest or compatibility pack path (content-hash + mode verified) and return a fresh session.",
+  {
+    pack_path: z
+      .string()
+      .optional()
+      .describe("Compatibility path to an RPG quest content pack. Prefer world_quest_id."),
+    world_quest_id: z
+      .string()
+      .optional()
+      .describe("Charter Marches quest graph node id from list_world().quests[].graph_node."),
+    save: z.string().describe("A save string produced by save_game."),
+  },
   (a) => api.load_game(a),
 );
 

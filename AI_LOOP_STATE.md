@@ -29,6 +29,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   raw pack-path starts remain compatibility only.
 - AFK baseline prompt now carries `main_world_quest_id`; blind baseline playtests
   should use `start_world_quest`.
+- Persistence: shipped quest saves can reload with `world_quest_id`; raw save
+  `pack_path` is compatibility.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,

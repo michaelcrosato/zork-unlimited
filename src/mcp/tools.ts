@@ -413,6 +413,24 @@ export function createToolApi(opts: { root: string }) {
     return { world, node, packPath: normalizePackPath(node.pack) };
   }
 
+  function resolvePackPathSource(
+    args: { pack_path?: string; world_quest_id?: string },
+    operation: string,
+  ): string {
+    const sourceCount = [args.world_quest_id !== undefined, args.pack_path !== undefined].filter(
+      Boolean,
+    ).length;
+    if (sourceCount === 0) {
+      throw new Error(`${operation} requires world_quest_id or pack_path.`);
+    }
+    if (sourceCount > 1) {
+      throw new Error(`${operation} accepts exactly one of world_quest_id or pack_path.`);
+    }
+    return args.world_quest_id !== undefined
+      ? resolveWorldQuestPackPath(args.world_quest_id).packPath
+      : args.pack_path!;
+  }
+
   function loadWorldManifest(): WorldManifest {
     try {
       const raw = parseYaml(
@@ -1413,8 +1431,9 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    load_game(args: { pack_path: string; save: string }) {
-      const compiled = requirePlayable(args.pack_path);
+    load_game(args: { pack_path?: string; world_quest_id?: string; save: string }) {
+      const packPath = resolvePackPathSource(args, "load_game");
+      const compiled = requirePlayable(packPath);
       // Content-hash check is enforced by load() against the loaded pack (§8.7);
       // mode is verified too, so a save can't be loaded against a different mode.
       const bundle = load(args.save, compiled.contentHash, SAVE_MODE);
