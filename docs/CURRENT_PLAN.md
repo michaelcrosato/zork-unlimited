@@ -67,6 +67,8 @@ Make discovered overworld quest leads start real RPG sessions.
   steps untrusted trace state.
 - CLI replay/inspect now use the same RPG state reference gate as MCP trace
   tools before stepping trace state.
+- Shipped saves now embed `worldQuestId`, letting `load_game({ save })` restore
+  through the world graph without a separate raw pack-path argument.
 
 ## Acceptance
 

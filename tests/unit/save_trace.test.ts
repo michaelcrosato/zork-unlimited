@@ -39,6 +39,13 @@ describe("save / load (§8.7)", () => {
     expect(load(bytes).contentHash).toBe(MICRO_CONTENT_HASH);
   });
 
+  it("round-trips optional world quest identity", () => {
+    const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH, SAVE_MODE, {
+      worldQuestId: "sunken_barrow",
+    });
+    expect(load(bytes, MICRO_CONTENT_HASH).worldQuestId).toBe("sunken_barrow");
+  });
+
   it("rejects saves that omit the RPG mode", () => {
     const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH);
     const bundle = JSON.parse(bytes) as Record<string, unknown>;
@@ -55,6 +62,14 @@ describe("save / load (§8.7)", () => {
       expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
       expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(/Save mode/);
     }
+  });
+
+  it("rejects malformed world quest identity", () => {
+    const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH);
+    const bundle = JSON.parse(bytes) as Record<string, unknown>;
+    bundle.worldQuestId = null;
+    expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
+    expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(/worldQuestId/);
   });
 
   it("rejects attempts to write a non-RPG mode", () => {

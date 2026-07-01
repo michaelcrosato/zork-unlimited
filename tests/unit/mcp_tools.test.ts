@@ -1177,8 +1177,10 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
 
     const saved = a.save_game({ session_id: game.session_id });
     const reloaded = a.load_game({ pack_path: PACK, save: saved.save });
+    const saveBundle = JSON.parse(saved.save) as { worldQuestId?: string };
     expect(saved.pack_path).toBe(PACK);
     expect(saved.world_quest_id).toBe("sunken_barrow");
+    expect(saveBundle.worldQuestId).toBe("sunken_barrow");
     expect(reloaded.pack_path).toBe(PACK);
     expect(reloaded.world_quest_id).toBe("sunken_barrow");
     expect(reloaded.state_hash).toBe(after);
@@ -1192,6 +1194,7 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
 
     const saved = a.save_game({ session_id: game.session_id });
     const reloaded = a.load_game({ world_quest_id: "sunken_barrow", save: saved.save });
+    const inferred = a.load_game({ save: saved.save });
     expect(reloaded.mode).toBe("rpg");
     expect(saved.pack_path).toBe(PACK);
     expect(saved.world_quest_id).toBe("sunken_barrow");
@@ -1199,6 +1202,9 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     expect(reloaded.world_quest_id).toBe("sunken_barrow");
     expect(reloaded.state_hash).toBe(after);
     expect(reloaded.observation.world?.id).toBe("charter_marches");
+    expect(inferred.pack_path).toBe(PACK);
+    expect(inferred.world_quest_id).toBe("sunken_barrow");
+    expect(inferred.state_hash).toBe(after);
   });
 
   it("load_game rejects ambiguous restore sources", () => {
@@ -1209,6 +1215,16 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     expect(() =>
       a.load_game({ world_quest_id: "sunken_barrow", pack_path: PACK, save: saved.save }),
     ).toThrow(/exactly one/);
+  });
+
+  it("load_game rejects a source that conflicts with the save world quest id", () => {
+    const a = api();
+    const game = a.start_world_quest({ quest_id: "sunken_barrow", seed: 1 });
+    const saved = a.save_game({ session_id: game.session_id });
+
+    expect(() => a.load_game({ world_quest_id: "cold_forge", save: saved.save })).toThrow(
+      /worldQuestId/,
+    );
   });
 });
 

@@ -98,7 +98,13 @@ export type SaveBundle = {
   contentHash: string;
   /** Pack mode. Required so persisted state is bound to the unified RPG engine. */
   mode: SaveMode;
+  /** Shipped world quest id, when the save belongs to the open-world graph. */
+  worldQuestId?: string;
   state: GameState;
+};
+
+export type SaveMetadata = {
+  worldQuestId?: string | null;
 };
 
 /** Serialize a save to canonical bytes (stable across machines/runs). */
@@ -107,6 +113,7 @@ export function save(
   packId: string,
   contentHash: string,
   mode: SaveMode = SAVE_MODE,
+  metadata: SaveMetadata = {},
 ): string {
   assertRpgMode(mode, "Save mode");
   const bundle: SaveBundle = {
@@ -115,6 +122,7 @@ export function save(
     contentHash,
     state,
     mode,
+    ...(metadata.worldQuestId ? { worldQuestId: metadata.worldQuestId } : {}),
   };
   return canonicalize(bundle);
 }
@@ -153,6 +161,16 @@ export function load(
   }
   assertRpgMode((bundle as { mode?: unknown }).mode, "Save mode");
   assertOptionalRpgMode(expectedMode, "Expected mode");
+  if (
+    "worldQuestId" in (bundle as Record<string, unknown>) &&
+    typeof (bundle as { worldQuestId?: unknown }).worldQuestId !== "string"
+  ) {
+    throw new SaveIntegrityError(
+      `Save worldQuestId must be a string when present, got ${JSON.stringify(
+        (bundle as { worldQuestId?: unknown }).worldQuestId,
+      )}.`,
+    );
+  }
   if (expectedContentHash !== undefined && bundle.contentHash !== expectedContentHash) {
     throw new SaveIntegrityError(
       `Content hash mismatch: save was made against ${bundle.contentHash}, ` +

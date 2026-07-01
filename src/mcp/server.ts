@@ -510,16 +510,20 @@ tool(
 );
 tool(
   "load_game",
-  "Load a save against a shipped world quest or compatibility pack path (content-hash + mode verified) and return a fresh session.",
+  "Load a save against its embedded shipped world quest id, an explicit world_quest_id, or a compatibility pack path (content-hash + mode verified) and return a fresh session.",
   {
     pack_path: z
       .string()
       .optional()
-      .describe("Compatibility path to an RPG quest content pack. Prefer world_quest_id."),
+      .describe(
+        "Compatibility path to an RPG quest content pack. Omit for shipped saves with embedded worldQuestId.",
+      ),
     world_quest_id: z
       .string()
       .optional()
-      .describe("Charter Marches quest graph node id from list_world().quests[].graph_node."),
+      .describe(
+        "Charter Marches quest graph node id from list_world().quests[].graph_node. Optional when the save embeds worldQuestId.",
+      ),
     save: z.string().describe("A save string produced by save_game."),
   },
   (a) => api.load_game(a),

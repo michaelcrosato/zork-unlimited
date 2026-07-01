@@ -33,7 +33,13 @@ import {
   type Finding,
   type ValidationReport,
 } from "../validate/report.js";
-import { SAVE_MODE, save, load, assertWellFormedState } from "../persist/save_load.js";
+import {
+  SAVE_MODE,
+  save,
+  load,
+  SaveIntegrityError,
+  assertWellFormedState,
+} from "../persist/save_load.js";
 import { assertTraceMode, replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
@@ -1487,8 +1493,9 @@ export function createToolApi(opts: { root: string }) {
     save_game(args: { session_id: string }) {
       const s = sessions.get(args.session_id);
       // The save records the pack mode so load can refuse a mode mismatch (§8.7).
+      const saveMetadata = s.worldQuestId ? { worldQuestId: s.worldQuestId } : {};
       return {
-        save: save(s.state, s.packId, s.contentHash, SAVE_MODE),
+        save: save(s.state, s.packId, s.contentHash, SAVE_MODE, saveMetadata),
         pack_id: s.packId,
         pack_path: s.packPath ?? null,
         world_quest_id: s.worldQuestId ?? null,
@@ -1498,13 +1505,43 @@ export function createToolApi(opts: { root: string }) {
     },
 
     load_game(args: { pack_path?: string; world_quest_id?: string; save: string }) {
-      const packPath = resolvePackPathSource(args, "load_game");
-      const worldQuestId = args.world_quest_id ?? worldQuestIdForPackPath(packPath);
+      const bundle = load(args.save, undefined, SAVE_MODE);
+      const sourceCount = [args.world_quest_id !== undefined, args.pack_path !== undefined].filter(
+        Boolean,
+      ).length;
+      if (sourceCount > 1) {
+        throw new Error("load_game accepts exactly one of world_quest_id or pack_path.");
+      }
+      let packPath: string;
+      let worldQuestId: string | null;
+      if (args.world_quest_id !== undefined) {
+        const resolved = resolveWorldQuestPackPath(args.world_quest_id);
+        packPath = resolved.packPath;
+        worldQuestId = resolved.node.id;
+      } else if (args.pack_path !== undefined) {
+        packPath = args.pack_path;
+        worldQuestId = worldQuestIdForPackPath(packPath);
+      } else if (bundle.worldQuestId !== undefined) {
+        const resolved = resolveWorldQuestPackPath(bundle.worldQuestId);
+        packPath = resolved.packPath;
+        worldQuestId = resolved.node.id;
+      } else {
+        throw new Error(
+          "load_game requires world_quest_id, pack_path, or a save with worldQuestId.",
+        );
+      }
+      if (bundle.worldQuestId !== undefined && bundle.worldQuestId !== worldQuestId) {
+        throw new SaveIntegrityError(
+          `Save worldQuestId ${JSON.stringify(
+            bundle.worldQuestId,
+          )} does not match requested source ${JSON.stringify(worldQuestId)}.`,
+        );
+      }
       const compiled = requirePlayable(packPath);
       // Content-hash check is enforced by load() against the loaded pack (§8.7);
       // mode is verified too, so a save can't be loaded against a different mode.
-      const bundle = load(args.save, compiled.contentHash, SAVE_MODE);
-      const session = startSession(compiled, bundle.state, { packPath, worldQuestId });
+      const verified = load(args.save, compiled.contentHash, SAVE_MODE);
+      const session = startSession(compiled, verified.state, { packPath, worldQuestId });
       return {
         session_id: session.id,
         mode: SAVE_MODE,
