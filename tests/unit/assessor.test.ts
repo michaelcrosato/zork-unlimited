@@ -193,8 +193,20 @@ describe("assess()", () => {
   it("formatAssessment renders the recommendation", () => {
     const out = formatAssessment(a);
     expect(out).toContain("next best improvement");
+    expect(out).toContain("RPG catalog:");
     expect(out).toContain("RPG generator mint-and-check: clean");
     expect(out).toContain("Recommended next");
+    expect(out).not.toContain("Packs by mode");
+  });
+
+  it("formatAssessment compacts routine playtest rows but keeps full output available", () => {
+    const compact = formatAssessment(a);
+    const full = formatAssessment(a, { full: true });
+
+    expect(compact.length).toBeLessThan(full.length);
+    expect(compact).toContain("routine blind-playtest rotation candidate(s) omitted");
+    expect(compact).toContain("full list is in assessment.json");
+    expect(full).toContain("why: The validator and exhaustive solver prove");
   });
 });
 

@@ -56,6 +56,13 @@ export type Assessment = {
   top: ImprovementCandidate | null;
 };
 
+export type AssessmentFormatOptions = {
+  /** Print every pack/candidate with full rationale. Default output is compact for loop handoff. */
+  full?: boolean;
+  /** Maximum ranked candidates to show in compact mode before summarizing routine rows. */
+  maxCandidates?: number;
+};
+
 const EFFORT_COST: Record<ImprovementCandidate["effort"], number> = { S: 1, M: 2, L: 3 };
 // Quality-first weighting: improving what players actually touch beats net-new bulk.
 const CATEGORY_WEIGHT: Record<Category, number> = {
@@ -741,32 +748,73 @@ export function assess(root: string): Assessment {
   return { packsByMode, packs, allGeneratorsClean, candidates, top: candidates[0] ?? null };
 }
 
-export function formatAssessment(a: Assessment): string {
+function isRoutinePlaytestCandidate(c: ImprovementCandidate): boolean {
+  return (
+    c.category === "content_fix" && c.id.startsWith("playtest-") && c.score <= SATURATION_FLOOR
+  );
+}
+
+export function formatAssessment(a: Assessment, opts: AssessmentFormatOptions = {}): string {
+  const full = opts.full === true;
+  const maxCandidates = opts.maxCandidates ?? 8;
+  const playable = a.packs.filter((p) => p.playable).length;
+  const warningCount = a.packs.reduce((sum, p) => sum + p.warnings, 0);
+  const unhealthy = a.packs.filter((p) => !p.playable || p.warnings > 0);
   const lines: string[] = [];
   lines.push("# AFK assessment — next best improvement");
   lines.push("");
-  lines.push(
-    `Packs by mode: ${Object.entries(a.packsByMode)
-      .map(([m, n]) => `${m}=${n}`)
-      .join("  ")}`,
-  );
+  lines.push(`RPG catalog: ${a.packsByMode["rpg"] ?? 0} pack(s)`);
   lines.push(
     `RPG generator mint-and-check: ${a.allGeneratorsClean ? "clean" : "findings present"}`,
   );
   lines.push("");
   lines.push("## Pack health");
-  for (const p of a.packs) {
-    lines.push(
-      `- ${p.path} [${p.mode ?? "?"}] ${p.playable ? `${p.warnings} warning(s)` : "UNPLAYABLE"}`,
-    );
+  lines.push(
+    `- ${playable}/${a.packs.length} playable; ${warningCount} validator warning(s); ${unhealthy.length} pack(s) need deterministic attention.`,
+  );
+  if (full || unhealthy.length > 0) {
+    const listedPacks = full ? a.packs : unhealthy.slice(0, 8);
+    for (const p of listedPacks) {
+      lines.push(
+        `- ${p.path} [${p.mode ?? "?"}] ${p.playable ? `${p.warnings} warning(s)` : "UNPLAYABLE"}`,
+      );
+    }
+    if (!full && unhealthy.length > listedPacks.length) {
+      lines.push(`- ... ${unhealthy.length - listedPacks.length} more unhealthy pack(s) in JSON.`);
+    }
   }
   lines.push("");
   lines.push("## Ranked candidates");
+  let shown = 0;
+  let omittedRoutine = 0;
+  let omittedOther = 0;
   a.candidates.forEach((c, i) => {
+    if (!full && shown >= maxCandidates) {
+      if (isRoutinePlaytestCandidate(c)) omittedRoutine++;
+      else omittedOther++;
+      return;
+    }
+    if (!full && isRoutinePlaytestCandidate(c) && shown >= 3) {
+      omittedRoutine++;
+      return;
+    }
     lines.push(`${i + 1}. [${c.score}] (${c.category}/${c.effort}) ${c.title}`);
-    lines.push(`     why: ${c.rationale}`);
-    for (const e of c.evidence) lines.push(`     · ${e}`);
+    if (full || !isRoutinePlaytestCandidate(c)) {
+      lines.push(`     why: ${c.rationale}`);
+      for (const e of c.evidence) lines.push(`     · ${e}`);
+    }
+    shown++;
   });
+  if (!full && omittedRoutine > 0) {
+    lines.push(
+      `... ${omittedRoutine} routine blind-playtest rotation candidate(s) omitted; full list is in assessment.json.`,
+    );
+  }
+  if (!full && omittedOther > 0) {
+    lines.push(
+      `... ${omittedOther} additional candidate(s) omitted; full list is in assessment.json.`,
+    );
+  }
   lines.push("");
   lines.push(
     a.top
