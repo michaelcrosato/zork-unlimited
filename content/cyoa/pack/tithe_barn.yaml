@@ -65,8 +65,8 @@ scenes:
     choices:
       - id: go_in
         text: "Go in after the sound."
-        # First milestone of the night's watch (quest "the_barn", the lamplighters_round /
-        # tide_mill progress-tracking shape — bug_0162 in CYOA). Going in BEGINS the watch in
+        # First milestone of the night's watch (quest "the_barn", the parser
+        # progress-tracking shape — bug_0162 in CYOA). Going in BEGINS the watch in
         # earnest: set HERE, on the go-in CHOICE (not on any on_enter), so it fires exactly once
         # as the player commits and never re-sets. set_quest_stage TRACKS PROGRESS ONLY — it
         # gates no choice, next, ending, or flag, and changes no existing effect. The reactive

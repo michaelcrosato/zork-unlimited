@@ -4,7 +4,7 @@
  *
  * The mandated blind pass this cycle (The Dawn Beacon, rpg, seeds 7/23 — the most-overdue
  * dedicated-blind target per [[assessor-blind-pass-rotation]], rotated off the assessor's
- * recency-blind rank-1 lamplighters_round) returned clarity 5/5, enjoyment 4/5, mechanics
+ * recency-blind rank-1 parser pack) returned clarity 5/5, enjoyment 4/5, mechanics
  * flawless across a prepared 50/50 win and an unprepared 45/50 win. Its one concrete
  * friction finding: at the Crown of the Tower there was no explicit "light the beacon"
  * RpgAction — simply moving `up` auto-lit the beacon (+15 on the room's on_enter) and ended

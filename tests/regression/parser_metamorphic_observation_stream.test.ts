@@ -56,7 +56,7 @@
  * `{DROP, CLOSE, LOOK, INVENTORY, INSPECT}` skipped, everything else (incl. READ) stepped —
  * the exact policy the parser variant-liveness oracle uses (parser_variant_liveness.test.ts).
  * This is WIDER than the reachability census's `isProgressAction` (which also skips READ): a
- * read with sticky interaction effects (e.g. lamplighters' notice sets `read_notice` + score,
+ * read with sticky interaction effects (for example, a notice sets `read_notice` + score,
  * driving reactive lamp/scene variants) DOES open new observation states, and those reactive
  * intermediate states are exactly what a per-step observation oracle most wants to check. It
  * stays NARROWER than "step every action": stepping DROP into every room is the combinatorial

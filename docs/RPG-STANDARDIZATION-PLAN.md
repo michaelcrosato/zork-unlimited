@@ -75,7 +75,7 @@ has no skill_check; `breaking_weir` has no combat).
   ✅ stats (e.g. a `suspicion`/`resolve` var that gates choices), ✅ skill_check (lockpick, investigate,
   verify), ✅ quest_stage, ✅ death-flag, ◻️ deadline (clockwork has it; fits others), ❌ literal combat
   (enrich in place; do not rewrite into a dungeon).
-- **Parser puzzle** (sealed_crypt, alchemists_tower, friars_postern, lamplighters_round, tide_mill):
+- **Parser puzzle** (sealed_crypt, alchemists_tower, friars_postern, tide_mill):
   ✅ stats + skill_check + quest_stage → which **promotes to RPG mode** (combatless, the breaking_weir
   template; see §3). ◻️ combat only where a guardian/antagonist genuinely fits the fiction
   (e.g. a crypt warden) — otherwise stay combatless.
@@ -94,7 +94,6 @@ has no skill_check; `breaking_weir` has no combat).
 | sealed_crypt | parser | stats + skill_check(might/pick) + quest_stage [+ ◻️crypt-warden combat] | **→ rpg** |
 | alchemists_tower | parser | stats + skill_check(brew/steady) + quest_stage | **→ rpg** |
 | friars_postern | parser | stats + skill_check(stealth/persuade) + quest_stage | **→ rpg** |
-| lamplighters_round | parser | stats + skill_check(climb/steady) + quest_stage | **→ rpg** |
 | tide_mill | parser | stats + skill_check(might/craft) + quest_stage | **→ rpg** |
 | breaking_weir | rpg | quest_stage (3 checks → 3 stages) | no |
 | cold_forge | rpg | quest_stage | no |

@@ -372,8 +372,8 @@ objects:
   - id: flint
     name: "flint"
     aliases: [flint, steel, flint and steel, striker, fire-steel, firesteel]
-    # The held striker the light act needs (a USE is only offered when its item is in hand),
-    # the lamplighters_round tinderbox analogue. Laid ready in the fire-bed at the crown, so
+    # The held striker the light act needs (a USE is only offered when its item is in hand).
+    # Laid ready in the fire-bed at the crown, so
     # it is taken and used in the same room as the beacon — no carry-distance, no soft-lock
     # surface (and the map is strongly connected besides). Not quest_critical: the winch_bar
     # rationale (a connected map cannot lose it); it gates nothing but the one light act.

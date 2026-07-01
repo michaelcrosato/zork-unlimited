@@ -45,7 +45,7 @@
  *     string (the textFor fallback), or some other node's text yields text OUTSIDE the
  *     ending's declared candidate set and FAILS.
  * CYOA has no `death` flag and no "Final score" closure (no CYOA score economy — cf.
- * lamplighters_round's score-economy note), so those parser/RPG checks are correctly absent.
+ * parser/RPG score-economy notes), so those parser/RPG checks are correctly absent.
  *
  * How a witness is obtained, and why it is sound
  * ----------------------------------------------

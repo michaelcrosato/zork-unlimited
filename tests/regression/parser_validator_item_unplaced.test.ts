@@ -119,7 +119,6 @@ describe("ITEM_UNPLACED — objects with no spawn location (bug_0317)", () => {
   it("the shipped parser+rpg packs produce zero ITEM_UNPLACED findings", () => {
     const parserPacks = [
       "content/parser/pack/friars_postern.yaml",
-      "content/parser/pack/lamplighters_round.yaml",
       "content/parser/pack/sealed_crypt.yaml",
     ];
     const rpgPacks = [

@@ -69,8 +69,8 @@ rooms:
       A cold stone cell, its door left carelessly off the latch — the turnkey was
       well in his cups at lock-up. Someone before you scratched a message deep into
       the wall by the cot. The gallery lies north through the open door.
-    # Opening beat of the quest "the_postern" (a pure progress spine, mirroring
-    # lamplighters_round's "the_round"): set_quest_stage TRACKS PROGRESS ONLY — it
+    # Opening beat of the quest "the_postern" (a pure progress spine):
+    # set_quest_stage TRACKS PROGRESS ONLY — it
     # gates no exit, ending, interaction, win, or dialogue, touches no score, and
     # changes no existing flag or effect. The reactive prose that READS the quest
     # lives at the gallery (on the `told_of_way` stage), never here; re-entering this

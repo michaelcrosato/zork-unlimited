@@ -186,7 +186,7 @@ The RPG generator is exposed over MCP as `generate_rpg_pack` (mint + validate a
 fresh pack, read-only) and is playable in-memory via `new_game`'s
 `generate_rpg_seed`.
 
-## Content library (12 listed packs)
+## Content library (11 listed packs)
 
 The shipped, validated content — every pack passes the validator and is wired into
 `npm run health`:
@@ -199,7 +199,6 @@ The shipped, validated content — every pack passes the validator and is wired 
 | CYOA | The Tithe-Barn | `content/cyoa/pack/tithe_barn.yaml` |
 | Parser | The Sealed Crypt | `content/parser/pack/sealed_crypt.yaml` |
 | Parser | The Friars' Postern | `content/parser/pack/friars_postern.yaml` |
-| Parser | The Lamplighter's Round | `content/parser/pack/lamplighters_round.yaml` |
 | RPG | The Sunken Barrow | `content/rpg/pack/sunken_barrow.yaml` |
 | RPG | The Cold Forge | `content/rpg/pack/cold_forge.yaml` |
 | RPG | The Dawn Beacon | `content/rpg/pack/dawn_beacon.yaml` |

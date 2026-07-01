@@ -20,8 +20,8 @@
  *
  * Locked here:
  *   (a) ALL shipped parser + RPG packs produce ZERO UNLOCK_EXIT_ROOM_MISSING findings
- *       and stay green. The 5 packs that use unlock_exit — lamplighters_round ×2,
- *       sealed_crypt ×2, tide_mill ×1 — specifically must produce zero findings.
+ *       and stay green. The remaining pack that uses unlock_exit — sealed_crypt ×2 —
+ *       specifically must produce zero findings.
  *   (b) Positive (`from` side): a `unlock_exit: { from: ghost_room, to: b }` where
  *       `ghost_room` is not declared IS flagged at severity `error`, message contains
  *       `ghost_room`.

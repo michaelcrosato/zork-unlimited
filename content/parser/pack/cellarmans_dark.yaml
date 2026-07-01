@@ -89,8 +89,8 @@ meta:
   flags_init: []
   # `steadiness` (value 3) — the potman's sure hand, rolled by the OPTIONAL d20
   # TENSION beat: USE lamp CHECK (hold the lamp in the dark and check the wick before
-  # filling it). Stage-4 skill_check mechanic standardized into parser mode, exactly
-  # the sealed_crypt / friars_postern / lamplighters_round shape. CONVERGENT — gates
+  # filling it). Stage-4 skill_check mechanic standardized into parser mode, matching
+  # the sealed_crypt / friars_postern shape. CONVERGENT — gates
   # NOTHING the exhaustive proofs turn on: the wick_checked beat and the FILL + LIGHT
   # beats are separate interactions on the lamp; lamp_lit (the enable flag) is set by
   # LIGHT, not CHECK; the +10 rides lamp_lit; no exit/ending/variant reads wick_checked.

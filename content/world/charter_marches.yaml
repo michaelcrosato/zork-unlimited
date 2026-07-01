@@ -170,10 +170,6 @@ graph:
       name: "The Gauger's Register"
       kind: quest
       pack: "content/parser/pack/gaugers_register.yaml"
-    - id: lamplighters_round
-      name: "The Lamplighter's Round"
-      kind: quest
-      pack: "content/parser/pack/lamplighters_round.yaml"
     - id: ropewalkers_twist
       name: "The Ropewalker's Twist"
       kind: quest
@@ -336,9 +332,6 @@ graph:
     - from: river_stairs
       to: ferrymansprice
       route: "south ferry chain"
-    - from: river_stairs
-      to: lamplighters_round
-      route: "lamp round"
     - from: river_stairs
       to: chandlers_lot
       route: "chandler's stair"
