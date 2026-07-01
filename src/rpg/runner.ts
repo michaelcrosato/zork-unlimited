@@ -58,7 +58,7 @@ function enemiesHere(index: RpgIndex, state: GameState): Enemy[] {
   return (index.enemyByRoom.get(state.current) ?? []).filter((e) => enemyActive(state, e));
 }
 
-function winningRpgEnding(index: RpgIndex, state: GameState): string | null {
+export function winningRpgEnding(index: RpgIndex, state: GameState): string | null {
   for (const wc of index.pack.win_conditions) {
     if (evalConditions(wc.conditions, state)) return wc.ending;
   }

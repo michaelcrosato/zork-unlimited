@@ -37,6 +37,16 @@ describe("RPG schema owns the RPG contract", () => {
     expect(parserLegalActions).not.toContain("function option(");
   });
 
+  it("keeps legacy parser rules as a shim over the RPG rules engine", () => {
+    const parserRunner = readFileSync("src/parser/runner.ts", "utf8");
+    expect(parserRunner).toContain("../rpg/runner");
+    expect(parserRunner).toContain("buildRpgRules");
+    expect(parserRunner).toContain("winningRpgEnding");
+    expect(parserRunner).not.toContain("resolveSkillCheck");
+    expect(parserRunner).not.toContain("scoreChangeNarrations");
+    expect(parserRunner).not.toContain("decorateEvents");
+  });
+
   it("does not import the legacy parser runner for RPG win or score events", () => {
     const runner = readFileSync("src/rpg/runner.ts", "utf8");
     expect(runner).not.toContain("../parser/runner");
@@ -49,6 +59,7 @@ describe("RPG schema owns the RPG contract", () => {
     const skillCheck = readFileSync("src/core/skill_check.ts", "utf8");
     const combat = readFileSync("src/rpg/combat.ts", "utf8");
     const parserRunner = readFileSync("src/parser/runner.ts", "utf8");
+    const rpgRunner = readFileSync("src/rpg/runner.ts", "utf8");
     const cyoaRunner = readFileSync("src/cyoa/runner.ts", "utf8");
     const parserSchema = readFileSync("src/parser/schema.ts", "utf8");
     const rpgSchema = readFileSync("src/rpg/schema.ts", "utf8");
@@ -57,7 +68,9 @@ describe("RPG schema owns the RPG contract", () => {
     expect(skillCheck).toContain("export const SkillCheckSchema");
     expect(skillCheck).toContain("export function resolveSkillCheck");
     expect(combat).not.toContain("resolveSkillCheck");
-    expect(parserRunner).toContain("../core/skill_check");
+    expect(rpgRunner).toContain("../core/skill_check");
+    expect(parserRunner).toContain("../rpg/runner");
+    expect(parserRunner).not.toContain("resolveSkillCheck");
     expect(cyoaRunner).toContain("../core/skill_check");
     expect(parserRunner).not.toContain("../rpg/combat");
     expect(cyoaRunner).not.toContain("../rpg/combat");
