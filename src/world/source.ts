@@ -24,6 +24,8 @@ export type TraceSourceArgs = {
   world_quest_id?: string;
 };
 
+export type PackSourceArgs = TraceSourceArgs;
+
 export type TracePackSource = {
   packPath: string;
   worldQuestId: string | null;
@@ -73,6 +75,28 @@ export function resolveWorldQuestPackPath(
 
 export function worldQuestIdForPackPath(root: string, packPath: string): string | null {
   return worldQuestNodeForPack(loadWorldManifest(root), packPath)?.id ?? null;
+}
+
+export function resolvePackSource(
+  root: string,
+  args: PackSourceArgs,
+  operation: string,
+): TracePackSource {
+  const sourceCount = [args.world_quest_id !== undefined, args.pack_path !== undefined].filter(
+    Boolean,
+  ).length;
+  if (sourceCount === 0) {
+    throw new Error(`${operation} requires world_quest_id or pack_path.`);
+  }
+  if (sourceCount > 1) {
+    throw new Error(`${operation} accepts exactly one of world_quest_id or pack_path.`);
+  }
+  if (args.world_quest_id !== undefined) {
+    const resolved = resolveWorldQuestPackPath(root, args.world_quest_id);
+    return { packPath: resolved.packPath, worldQuestId: resolved.node.id };
+  }
+  const packPath = args.pack_path!;
+  return { packPath, worldQuestId: worldQuestIdForPackPath(root, packPath) };
 }
 
 export function traceWorldQuestId(trace: Trace, operation: string): string | undefined {

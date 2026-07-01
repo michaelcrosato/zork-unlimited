@@ -61,6 +61,7 @@ import {
 } from "../world/graph.js";
 import {
   loadWorldManifest as loadWorldManifestFromRoot,
+  resolvePackSource,
   resolveTracePackSource,
   resolveWorldQuestPackPath as resolveWorldQuestPackPathFromRoot,
   worldQuestIdForPackPath as worldQuestIdForPackPathFromRoot,
@@ -377,18 +378,7 @@ export function createToolApi(opts: { root: string }) {
     args: { pack_path?: string; world_quest_id?: string },
     operation: string,
   ): string {
-    const sourceCount = [args.world_quest_id !== undefined, args.pack_path !== undefined].filter(
-      Boolean,
-    ).length;
-    if (sourceCount === 0) {
-      throw new Error(`${operation} requires world_quest_id or pack_path.`);
-    }
-    if (sourceCount > 1) {
-      throw new Error(`${operation} accepts exactly one of world_quest_id or pack_path.`);
-    }
-    return args.world_quest_id !== undefined
-      ? resolveWorldQuestPackPath(args.world_quest_id).packPath
-      : args.pack_path!;
+    return resolvePackSource(root, args, operation).packPath;
   }
 
   function resolveTraceSource(

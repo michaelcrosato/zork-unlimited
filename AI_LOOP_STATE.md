@@ -64,6 +64,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   can resolve through the world graph without a raw pack path.
 - CLI trace verification now shares the same `worldQuestId` source resolver as
   MCP replay/inspect instead of assuming a raw pack path.
+- CLI play now accepts/defaults to shipped `world_quest_id` sources and records
+  `worldQuestId` into traces.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,

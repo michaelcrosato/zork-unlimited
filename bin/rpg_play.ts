@@ -3,8 +3,9 @@
  * bin/rpg_play — play a Stage-4 (Hero's-Quest) RPG pack from the terminal.
  *
  * Usage:
- *   npm run play -- <pack.yaml> [--seed N]
- *   npm run play -- <pack.yaml> --commands "down; take iron bar; north; attack wight; ..."
+ *   npm run play                                      # play the default world quest
+ *   npm run play -- <world_quest_id|pack.yaml> [--seed N]
+ *   npm run play -- <world_quest_id|pack.yaml> --commands "down; take iron bar; ..."
  *
  * Uses the controlled command grammar and adds an `attack <enemy>` verb.
  * A pack must pass the RPG validator before it is playable (§0, §10). The
@@ -25,6 +26,11 @@ import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../src/rpg/run
 import { buildRpgObservation, type RpgObservation } from "../src/rpg/observation.js";
 import { parseCommand } from "../src/rpg/command_map.js";
 import { recordTrace } from "../src/trace/record.js";
+import { resolvePackSource, type PackSourceArgs } from "../src/world/source.js";
+
+const DEFAULT_WORLD_QUEST_ID = "breaking_weir";
+const SOURCE_FLAGS = new Set(["--pack", "--world-quest-id", "--world_quest_id"]);
+const VALUE_FLAGS = new Set([...SOURCE_FLAGS, "--seed", "--commands", "--record"]);
 
 export function render(obs: RpgObservation): string {
   const lines = [`\n=== ${obs.title} ===`, obs.description.trim()];
@@ -84,28 +90,19 @@ function resolve(
 }
 
 async function main(): Promise<void> {
-  const path = process.argv[2];
-  if (!path || path.startsWith("--")) {
-    console.error(
-      'Usage: npm run play -- <pack.yaml> [--seed N] [--commands "a; b"] [--record file]',
-    );
-    process.exit(2);
-  }
-  let seed = 1;
-  let commands: string[] | null = null;
-  let record: string | null = null;
-  for (let i = 3; i < process.argv.length; i++) {
-    const a = process.argv[i];
-    if (a === "--seed") seed = Number(process.argv[++i]);
-    else if (a === "--commands")
-      commands = (process.argv[++i] ?? "")
-        .split(/[;,]/)
-        .map((s) => s.trim())
-        .filter(Boolean);
-    else if (a === "--record") record = process.argv[++i] ?? null;
-  }
+  const source = resolvePackSource(process.cwd(), playSourceArgs(), "play");
+  const seed = Number(arg("--seed") ?? 1);
+  const rawCommands = arg("--commands");
+  const commands =
+    rawCommands === undefined
+      ? null
+      : rawCommands
+          .split(/[;,]/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+  const record = arg("--record") ?? null;
 
-  const loaded = loadRpgPackFile(path);
+  const loaded = loadRpgPackFile(source.packPath);
   if (!loaded.ok) {
     console.error("Pack failed schema validation. Run `npm run validate` for details.");
     process.exit(1);
@@ -180,10 +177,53 @@ async function main(): Promise<void> {
       trace_id: "tr_rpg_play",
       pack_id: loaded.compiled.pack.meta.id,
       content_hash: loaded.compiled.contentHash,
+      worldQuestId: source.worldQuestId,
     });
     writeFileSync(record, JSON.stringify(trace, null, 2));
     console.log(`\nTrace written to ${record}`);
   }
+}
+
+function arg(name: string): string | undefined {
+  const i = process.argv.indexOf(name);
+  return i >= 0 ? process.argv[i + 1] : undefined;
+}
+
+function looksLikePackPath(value: string): boolean {
+  return /\.ya?ml$/i.test(value) || value.includes("/") || value.includes("\\");
+}
+
+function positionalSourceArg(): string | undefined {
+  for (let i = 2; i < process.argv.length; i += 1) {
+    const value = process.argv[i]!;
+    if (VALUE_FLAGS.has(value)) {
+      i += 1;
+      continue;
+    }
+    if (value === "--" || value.startsWith("--")) continue;
+    return value;
+  }
+  return undefined;
+}
+
+function playSourceArgs(): PackSourceArgs {
+  const pack = arg("--pack");
+  const worldQuestId = arg("--world-quest-id") ?? arg("--world_quest_id");
+  const positional = positionalSourceArg();
+  const sourceCount = [
+    pack !== undefined,
+    worldQuestId !== undefined,
+    positional !== undefined,
+  ].filter(Boolean).length;
+  if (sourceCount > 1) {
+    throw new Error(
+      "play accepts exactly one quest source: --pack, --world-quest-id, or positional source.",
+    );
+  }
+  if (pack !== undefined) return { pack_path: pack };
+  if (worldQuestId !== undefined) return { world_quest_id: worldQuestId };
+  if (positional === undefined) return { world_quest_id: DEFAULT_WORLD_QUEST_ID };
+  return looksLikePackPath(positional) ? { pack_path: positional } : { world_quest_id: positional };
 }
 
 // Run only when invoked directly (not when imported for testing the pure render()),
