@@ -52,6 +52,22 @@ const PACK_SOURCE = {
       "Preferred Charter Marches quest graph node id from list_world().quests[].graph_node.",
     ),
 };
+const QUEST_ALIAS_SOURCE = {
+  quest_id: z
+    .string()
+    .optional()
+    .describe(
+      "Preferred Charter Marches quest graph node id from list_world().quests[].graph_node.",
+    ),
+  world_quest_id: z
+    .string()
+    .optional()
+    .describe("Alias for quest_id, accepted for consistency with new_game/load_game."),
+  quest_path: z
+    .string()
+    .optional()
+    .describe("Compatibility path to an RPG quest content pack, relative to the project root."),
+};
 const SESSION = {
   session_id: z.string().describe("A session id from new_game/start_quest/load_game."),
 };
@@ -356,12 +372,8 @@ tool(
 );
 tool(
   "validate_quest",
-  "Validate one Charter Marches RPG quest pack and return hard errors/warnings.",
-  {
-    quest_path: z
-      .string()
-      .describe("Path to an RPG quest content pack, relative to the project root."),
-  },
+  "Validate one Charter Marches RPG quest by graph id; quest_path remains a compatibility fallback.",
+  QUEST_ALIAS_SOURCE,
   (a) => api.validate_quest(a),
 );
 tool(
@@ -428,9 +440,9 @@ tool(
 );
 tool(
   "start_quest",
-  "Start a session on a Charter Marches RPG quest pack for MCP-driven playtesting.",
+  "Start a Charter Marches RPG quest by graph id for MCP-driven playtesting; quest_path remains a compatibility fallback.",
   {
-    quest_path: z.string().describe("Path to an RPG quest content pack."),
+    ...QUEST_ALIAS_SOURCE,
     seed: z.number().int().optional(),
     ...HIDE_GRAPH,
   },

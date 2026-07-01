@@ -437,6 +437,28 @@ export function createToolApi(opts: { root: string }) {
       : args.pack_path!;
   }
 
+  function resolveQuestAliasSource(
+    args: { quest_path?: string; quest_id?: string; world_quest_id?: string },
+    operation: string,
+  ): { questPath?: string; worldQuestId?: string } {
+    const sourceCount = [
+      args.quest_id !== undefined,
+      args.world_quest_id !== undefined,
+      args.quest_path !== undefined,
+    ].filter(Boolean).length;
+    if (sourceCount === 0) {
+      throw new Error(`${operation} requires quest_id, world_quest_id, or quest_path.`);
+    }
+    if (sourceCount > 1) {
+      throw new Error(
+        `${operation} accepts exactly one of quest_id, world_quest_id, or quest_path.`,
+      );
+    }
+    return args.quest_path !== undefined
+      ? { questPath: args.quest_path }
+      : { worldQuestId: args.quest_id ?? args.world_quest_id! };
+  }
+
   function loadWorldManifest(): WorldManifest {
     try {
       const raw = parseYaml(
@@ -1189,8 +1211,16 @@ export function createToolApi(opts: { root: string }) {
       return this.validate_pack({ pack_path: args.story_path });
     },
 
-    validate_quest(args: { quest_path: string }): { ok: boolean; report: ValidationReport } {
-      return this.validate_pack({ pack_path: args.quest_path });
+    validate_quest(args: { quest_path?: string; quest_id?: string; world_quest_id?: string }): {
+      ok: boolean;
+      pack_path: string;
+      world_quest_id: string | null;
+      report: ValidationReport;
+    } {
+      const source = resolveQuestAliasSource(args, "validate_quest");
+      return source.worldQuestId
+        ? this.validate_pack({ world_quest_id: source.worldQuestId })
+        : this.validate_pack({ pack_path: source.questPath! });
     },
 
     load_pack(args: { pack_path?: string; world_quest_id?: string }): {
@@ -1368,9 +1398,23 @@ export function createToolApi(opts: { root: string }) {
       });
     },
 
-    start_quest(args: { quest_path: string; seed?: number; hide_graph?: boolean }) {
+    start_quest(args: {
+      quest_path?: string;
+      quest_id?: string;
+      world_quest_id?: string;
+      seed?: number;
+      hide_graph?: boolean;
+    }) {
+      const source = resolveQuestAliasSource(args, "start_quest");
+      if (source.worldQuestId) {
+        return this.start_world_quest({
+          quest_id: source.worldQuestId,
+          ...(args.seed !== undefined ? { seed: args.seed } : {}),
+          ...(args.hide_graph ? { hide_graph: true } : {}),
+        });
+      }
       return this.new_game({
-        pack_path: args.quest_path,
+        pack_path: source.questPath!,
         ...(args.seed !== undefined ? { seed: args.seed } : {}),
         ...(args.hide_graph ? { hide_graph: true } : {}),
       });

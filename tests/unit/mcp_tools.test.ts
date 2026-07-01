@@ -922,6 +922,25 @@ describe("MCP tools — validate / load (§9.4)", () => {
   it("validate_quest is the world-first validation alias", () => {
     const r = api().validate_quest({ quest_path: PACK });
     expect(r.ok).toBe(true);
+    expect(r.pack_path).toBe(PACK);
+    expect(r.world_quest_id).toBe("sunken_barrow");
+
+    const viaQuestId = api().validate_quest({ quest_id: "sunken_barrow" });
+    expect(viaQuestId.ok).toBe(true);
+    expect(viaQuestId.pack_path).toBe(PACK);
+    expect(viaQuestId.world_quest_id).toBe("sunken_barrow");
+
+    const viaWorldQuestId = api().validate_quest({ world_quest_id: "sunken_barrow" });
+    expect(viaWorldQuestId.ok).toBe(true);
+    expect(viaWorldQuestId.pack_path).toBe(PACK);
+    expect(viaWorldQuestId.world_quest_id).toBe("sunken_barrow");
+
+    expect(() => api().validate_quest({})).toThrow(
+      /requires quest_id, world_quest_id, or quest_path/,
+    );
+    expect(() => api().validate_quest({ quest_id: "sunken_barrow", quest_path: PACK })).toThrow(
+      /exactly one/,
+    );
   });
 
   it("load_pack returns meta + content hash", () => {
@@ -1007,6 +1026,27 @@ describe("MCP tools — the play loop (§9.1)", () => {
     const last = playSunkenBarrowToVictory(a, game.session_id);
     expect(last.observation.ending_id).toBe("ending_victory");
     expect(a.get_transcript({ session_id: game.session_id }).summary.ended).toBe(true);
+
+    const byQuestId = a.start_quest({ quest_id: "sunken_barrow", seed: 1 }) as unknown as {
+      mode: string;
+      pack_path: string | null;
+      world_quest_id: string | null;
+      quest: { id: string; path_from_hub: { name: string }[] };
+    };
+    expect(byQuestId.mode).toBe("rpg");
+    expect(byQuestId.pack_path).toBe(PACK);
+    expect(byQuestId.world_quest_id).toBe("sunken_barrow");
+    expect(byQuestId.quest.id).toBe("sunken_barrow");
+    expect(byQuestId.quest.path_from_hub.map((step) => step.name)).toEqual([
+      "Charterhaven",
+      "Moor Road",
+      "The Sunken Barrow",
+    ]);
+
+    expect(() => a.start_quest({})).toThrow(/requires quest_id, world_quest_id, or quest_path/);
+    expect(() => a.start_quest({ quest_id: "sunken_barrow", quest_path: PACK })).toThrow(
+      /exactly one/,
+    );
   });
 
   it("an agent can play a whole game via observe → choose → step", () => {

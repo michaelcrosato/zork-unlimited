@@ -42,6 +42,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   source identity in responses.
 - Content patching: shipped patch targets can use `world_quest_id`; raw
   `pack_path` remains compatibility/new-pack fallback.
+- Quest aliases: `validate_quest`/`start_quest` prefer graph ids; `quest_path`
+  remains compatibility.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,
