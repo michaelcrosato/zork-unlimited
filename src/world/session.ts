@@ -469,6 +469,15 @@ type OverworldRenownSourceIndex = {
   travelLogByArrival: ReadonlyMap<string, TravelLogEntrySnapshot>;
 };
 
+type OverworldDiscoveryLocalityIndex = {
+  areaHomes: ReadonlyMap<string, string>;
+  discoveredAreaIds: ReadonlySet<string>;
+  jobsById: ReadonlyMap<string, OverworldLocalJob>;
+  questsById: ReadonlyMap<string, OverworldQuest>;
+  sitesById: ReadonlyMap<string, OverworldExplorationSite>;
+  visitedTownIds: ReadonlySet<string>;
+};
+
 function assertKnownJournalSource(
   entry: OverworldJournalEntry,
   prefix: string,
@@ -821,6 +830,83 @@ function assertSnapshotRegionRenown(
   }
 }
 
+function assertVisitedTownForDiscovery(
+  sourceLabel: string,
+  sourceId: string,
+  townId: string,
+  visitedTownIds: ReadonlySet<string>,
+): void {
+  if (!visitedTownIds.has(townId)) {
+    throw new Error(
+      `Overworld session snapshot ${sourceLabel} "${sourceId}" belongs to unvisited town "${townId}".`,
+    );
+  }
+}
+
+function assertDiscoveredAreaForDiscovery(
+  sourceLabel: string,
+  sourceId: string,
+  areaId: string,
+  discoveredAreaIds: ReadonlySet<string>,
+): void {
+  if (!discoveredAreaIds.has(areaId)) {
+    throw new Error(
+      `Overworld session snapshot ${sourceLabel} "${sourceId}" is in undiscovered area "${areaId}".`,
+    );
+  }
+}
+
+function assertSnapshotDiscoveryLocality(
+  snapshot: OverworldSessionSnapshot,
+  sources: OverworldDiscoveryLocalityIndex,
+): void {
+  for (const areaId of snapshot.discoveredAreaIds) {
+    const home = sources.areaHomes.get(areaId);
+    if (home) {
+      assertVisitedTownForDiscovery("discovered area", areaId, home, sources.visitedTownIds);
+    }
+  }
+  for (const areaId of snapshot.visitedAreaIds) {
+    const home = sources.areaHomes.get(areaId);
+    if (home) {
+      assertVisitedTownForDiscovery("visited area", areaId, home, sources.visitedTownIds);
+    }
+  }
+  for (const jobId of snapshot.discoveredJobIds) {
+    const job = sources.jobsById.get(jobId);
+    if (!job) continue;
+    assertVisitedTownForDiscovery("discovered job", jobId, job.home, sources.visitedTownIds);
+    assertDiscoveredAreaForDiscovery("discovered job", jobId, job.area, sources.discoveredAreaIds);
+  }
+  for (const siteId of snapshot.discoveredSiteIds) {
+    const site = sources.sitesById.get(siteId);
+    if (!site) continue;
+    assertVisitedTownForDiscovery(
+      "discovered site",
+      siteId,
+      site.nearest_town,
+      sources.visitedTownIds,
+    );
+    assertDiscoveredAreaForDiscovery(
+      "discovered site",
+      siteId,
+      site.area,
+      sources.discoveredAreaIds,
+    );
+  }
+  for (const questId of snapshot.discoveredQuestIds) {
+    const quest = sources.questsById.get(questId);
+    if (!quest) continue;
+    assertVisitedTownForDiscovery("discovered quest", questId, quest.home, sources.visitedTownIds);
+    assertDiscoveredAreaForDiscovery(
+      "discovered quest",
+      questId,
+      quest.area,
+      sources.discoveredAreaIds,
+    );
+  }
+}
+
 function replaceStringSet(target: Set<string>, values: readonly string[]): void {
   target.clear();
   for (const value of values) target.add(value);
@@ -917,6 +1003,7 @@ export class OverworldSession {
     const characterIds = new Set(this.world.characters.map((character) => character.id));
     const jobsById = new Map(this.world.local_jobs.map((job) => [job.id, job]));
     const sitesById = new Map(this.world.exploration_sites.map((site) => [site.id, site]));
+    const questsById = new Map(this.world.quests.map((quest) => [quest.id, quest]));
     const eventsById = new Map(this.world.local_events.map((event) => [event.id, event]));
     const edgesById = new Map(this.world.edges.map((edge) => [edge.id, edge]));
     const roadEventsByEdgeId = new Map(this.world.road_events.map((event) => [event.edge, event]));
@@ -981,6 +1068,7 @@ export class OverworldSession {
       throw new Error("Overworld session snapshot current town is not visited.");
     }
     const discoveredTownIds = new Set(snapshot.discoveredIds);
+    const visitedTownIds = new Set(snapshot.visitedIds);
     const discoveredAreaIds = new Set(snapshot.discoveredAreaIds);
     const discoveredJobIds = new Set(snapshot.discoveredJobIds);
     const discoveredSiteIds = new Set(snapshot.discoveredSiteIds);
@@ -1032,10 +1120,21 @@ export class OverworldSession {
           `Overworld session snapshot saved area "${areaId}" is outside "${townId}".`,
         );
       }
+      if (!visitedTownIds.has(townId)) {
+        throw new Error(`Overworld session snapshot saved area town "${townId}" is not visited.`);
+      }
       if (!discoveredAreaIds.has(areaId)) {
         throw new Error(`Overworld session snapshot saved area "${areaId}" is not discovered.`);
       }
     }
+    assertSnapshotDiscoveryLocality(snapshot, {
+      areaHomes,
+      discoveredAreaIds,
+      jobsById,
+      questsById,
+      sitesById,
+      visitedTownIds,
+    });
     for (const [region] of snapshot.regionRenown) {
       if (!regions.has(region)) {
         throw new Error(`Overworld session snapshot has unknown renown region "${region}".`);

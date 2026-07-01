@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 22 -->
+<!-- historical_cycle_count: 23 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_snapshot_discovery_locality
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measurement helper; gate helper timed out here, so canonical package scripts remain authoritative.
+- Engine/persistence: overworld restore rejects discovered areas, saved area maps, jobs, sites, and quests that point into unvisited towns or undiscovered areas.
+- Token economy: compact discovery arrays can be trusted as reachable map state instead of accepting forged off-route content ids.
+- VERIFY: focused overworld snapshot/MCP/UI tests, typecheck, lint, format:check, validate, npm test (192/1291), `npm run health` EXIT 0.
+- Self-critique: closes map-locality drift; resolved-event spatial replay remains a future invariant.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
 
 ### Cycle result — repo_token_efficiency / CONTEXT_BUDGET_CLEANUP
 
@@ -234,8 +243,9 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Overworld session restore rejects forged history with duplicate journal ids,
   unknown journal towns or source ids, mismatched journal kind/id prefixes,
   malformed/future/non-newest-first journal timelines, unmatched road journal
-  arrivals, progress/journal state drift, region-renown mismatches,
-  future/non-newest-first travel logs, or impossible travel vitals.
+  arrivals, progress/journal state drift, region-renown mismatches, discovery
+  locality drift, future/non-newest-first travel logs, or impossible travel
+  vitals.
 - Live session metadata: start/transcript/save/load return shipped
   `world_quest_id` or generated `generated_rpg_seed` without raw pack paths.
 - Overworld quest view metadata: observations, action results, compact context,

@@ -17,6 +17,10 @@ function townName(nodeId: string): string {
   return town.name;
 }
 
+function appendUnique(values: readonly string[], value: string): string[] {
+  return values.includes(value) ? [...values] : [...values, value];
+}
+
 function exportedSnapshotAfterTwoRoads() {
   const a = api();
   const started = a.start_overworld();
@@ -188,6 +192,92 @@ describe("overworld snapshot restore integrity", () => {
 
     expect(() => a.restore_overworld_session({ snapshot: missingRoadRenown })).toThrow(
       /region renown.*expected 1/,
+    );
+  });
+
+  it("rejects discovered areas attached to unvisited towns", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const area = overworld.areas.find((candidate) => !snapshot.visitedIds.includes(candidate.home));
+    if (!area) throw new Error("expected an area in an unvisited town");
+    const forgedAreaDiscovery = {
+      ...snapshot,
+      discoveredAreaIds: appendUnique(snapshot.discoveredAreaIds, area.id),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedAreaDiscovery })).toThrow(
+      /discovered area.*unvisited town/,
+    );
+  });
+
+  it("rejects saved area positions for unvisited towns", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const area = overworld.areas.find((candidate) => !snapshot.visitedIds.includes(candidate.home));
+    if (!area) throw new Error("expected an area in an unvisited town");
+    const forgedSavedArea = {
+      ...snapshot,
+      discoveredAreaIds: appendUnique(snapshot.discoveredAreaIds, area.id),
+      currentAreaByTown: [
+        ...snapshot.currentAreaByTown,
+        [area.home, area.id] satisfies [string, string],
+      ],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedSavedArea })).toThrow(
+      /saved area town.*not visited/,
+    );
+  });
+
+  it("rejects discovered jobs in undiscovered areas", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const job = overworld.local_jobs.find(
+      (candidate) =>
+        snapshot.visitedIds.includes(candidate.home) &&
+        !snapshot.discoveredAreaIds.includes(candidate.area),
+    );
+    if (!job) throw new Error("expected a job in an undiscovered visited-town area");
+    const forgedJobDiscovery = {
+      ...snapshot,
+      discoveredJobIds: appendUnique(snapshot.discoveredJobIds, job.id),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedJobDiscovery })).toThrow(
+      /discovered job.*undiscovered area/,
+    );
+  });
+
+  it("rejects discovered sites in undiscovered areas", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const site = overworld.exploration_sites.find(
+      (candidate) =>
+        snapshot.visitedIds.includes(candidate.nearest_town) &&
+        !snapshot.discoveredAreaIds.includes(candidate.area),
+    );
+    if (!site) throw new Error("expected a site in an undiscovered visited-town area");
+    const forgedSiteDiscovery = {
+      ...snapshot,
+      discoveredSiteIds: appendUnique(snapshot.discoveredSiteIds, site.id),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedSiteDiscovery })).toThrow(
+      /discovered site.*undiscovered area/,
+    );
+  });
+
+  it("rejects discovered quests in undiscovered areas", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const quest = overworld.quests.find(
+      (candidate) =>
+        snapshot.visitedIds.includes(candidate.home) &&
+        !snapshot.discoveredAreaIds.includes(candidate.area),
+    );
+    if (!quest) throw new Error("expected a quest in an undiscovered visited-town area");
+    const forgedQuestDiscovery = {
+      ...snapshot,
+      discoveredQuestIds: appendUnique(snapshot.discoveredQuestIds, quest.id),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedQuestDiscovery })).toThrow(
+      /discovered quest.*undiscovered area/,
     );
   });
 
