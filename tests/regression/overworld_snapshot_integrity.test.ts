@@ -669,6 +669,54 @@ describe("overworld snapshot restore integrity", () => {
     );
   });
 
+  it("rejects missing saved area positions for visited towns", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const townId = snapshot.visitedIds.find(
+      (id) => id !== snapshot.currentId && snapshot.currentAreaByTown.some(([town]) => town === id),
+    );
+    if (!townId) throw new Error("expected a non-current visited town with a saved area");
+    const missingSavedArea = {
+      ...snapshot,
+      currentAreaByTown: snapshot.currentAreaByTown.filter(([town]) => town !== townId),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: missingSavedArea })).toThrow(
+      /saved area map.*missing visited town/,
+    );
+  });
+
+  it("rejects missing current areas for local towns", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const missingCurrentArea = {
+      ...snapshot,
+      currentAreaId: null,
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: missingCurrentArea })).toThrow(
+      /current area is missing/,
+    );
+  });
+
+  it("rejects current areas that disagree with saved area positions", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const currentAreas = overworldAreasAt(overworld, snapshot.currentId);
+    const alternateArea = currentAreas.find((area) => area.id !== snapshot.currentAreaId);
+    if (!alternateArea) throw new Error("expected another current-town area");
+    const mismatchedSavedArea = {
+      ...snapshot,
+      discoveredAreaIds: appendUnique(snapshot.discoveredAreaIds, alternateArea.id),
+      currentAreaByTown: snapshot.currentAreaByTown.map(([town, area]) =>
+        town === snapshot.currentId
+          ? ([town, alternateArea.id] satisfies [string, string])
+          : ([town, area] satisfies [string, string]),
+      ),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: mismatchedSavedArea })).toThrow(
+      /current area.*saved area map/,
+    );
+  });
+
   it("rejects visited towns with no travel proof", () => {
     const { a, snapshot } = exportedSnapshotAfterTwoRoads();
     const town = overworld.nodes.find(

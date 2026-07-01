@@ -967,6 +967,40 @@ function assertSnapshotDiscoveredLocalSourcePrefixes(
   }
 }
 
+function assertSnapshotCurrentAreaMapExact(
+  snapshot: OverworldSessionSnapshot,
+  world: OverworldManifest,
+  visitedTownIds: ReadonlySet<string>,
+): void {
+  const currentAreaByTown = new Map(snapshot.currentAreaByTown);
+  for (const townId of visitedTownIds) {
+    const localAreas = overworldAreasAt(world, townId);
+    if (localAreas.length > 0 && !currentAreaByTown.has(townId)) {
+      throw new Error(
+        `Overworld session snapshot saved area map is missing visited town "${townId}".`,
+      );
+    }
+  }
+  for (const [townId] of currentAreaByTown) {
+    if (!visitedTownIds.has(townId)) continue;
+    if (overworldAreasAt(world, townId).length === 0) {
+      throw new Error(
+        `Overworld session snapshot has saved area for town "${townId}" with no local areas.`,
+      );
+    }
+  }
+
+  if (overworldAreasAt(world, snapshot.currentId).length === 0) return;
+  const savedCurrentArea = currentAreaByTown.get(snapshot.currentId);
+  if (!savedCurrentArea) return;
+  if (snapshot.currentAreaId === null) {
+    throw new Error("Overworld session snapshot current area is missing for a local town.");
+  }
+  if (savedCurrentArea !== snapshot.currentAreaId) {
+    throw new Error("Overworld session snapshot current area does not match saved area map.");
+  }
+}
+
 function addRegionRenown(target: Map<string, number>, region: string, amount: number): void {
   if (amount <= 0) return;
   target.set(region, (target.get(region) ?? 0) + amount);
@@ -1555,6 +1589,7 @@ export class OverworldSession {
     }
     assertSnapshotDiscoveredAreaPrefix(snapshot, this.world, visitedTownIds);
     assertSnapshotDiscoveredLocalSourcePrefixes(snapshot, this.world, visitedTownIds);
+    assertSnapshotCurrentAreaMapExact(snapshot, this.world, visitedTownIds);
     for (const [townId, areaId] of snapshot.currentAreaByTown) {
       if (!nodeIds.has(townId)) {
         throw new Error(`Overworld session snapshot has unknown area-map town "${townId}".`);

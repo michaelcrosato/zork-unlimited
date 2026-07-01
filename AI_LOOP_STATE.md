@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 32 -->
+<!-- historical_cycle_count: 33 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_snapshot_area_map_exactness
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; helper still fails broad root formatting/ESLint outside canonical package scripts.
+- Engine/persistence: overworld restore now requires saved local area positions for every visited town with local areas, and requires the current town's saved area to match `currentAreaId`.
+- Token economy: compact local position maps can no longer omit visited towns or carry contradictory current-area state that live play cannot emit.
+- VERIFY: focused overworld snapshot/MCP/UI tests, typecheck, lint, format:check, validate, npm test, `npm run health` EXIT 0.
+- Self-critique: closes saved area-map exactness; full local action sequencing and same-area site-prefix replay remain larger future invariants.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
 
 ### Cycle result — overworld_snapshot_local_source_prefix
 
