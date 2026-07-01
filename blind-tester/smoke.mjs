@@ -22,7 +22,7 @@ function arg(flag, fallback) {
   return i >= 0 && process.argv[i + 1] !== undefined ? process.argv[i + 1] : fallback;
 }
 
-const PACK = arg("--pack", "content/cyoa/pack/watchtower_road.yaml");
+const PACK = arg("--pack", "content/rpg/pack/breaking_weir.yaml");
 const SEED = Number(arg("--seed", "7"));
 const STEPS = Number(arg("--steps", "3"));
 

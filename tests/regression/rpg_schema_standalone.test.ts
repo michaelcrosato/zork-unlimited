@@ -70,7 +70,6 @@ describe("RPG schema owns the RPG contract", () => {
   it("keeps legacy pack loaders on the RPG-owned compile path", () => {
     const rpgPack = readFileSync("src/rpg/pack.ts", "utf8");
     const parserPack = readFileSync("src/parser/pack.ts", "utf8");
-    const cyoaPack = readFileSync("src/cyoa/pack.ts", "utf8");
 
     expect(rpgPack).toContain("export function compileContentPack");
     expect(rpgPack).toContain("hashState(parsed.data)");
@@ -81,20 +80,6 @@ describe("RPG schema owns the RPG contract", () => {
     expect(parserPack).toContain("loadContentPackFile");
     expect(parserPack).not.toContain("parseYaml");
     expect(parserPack).not.toContain("hashState");
-    expect(cyoaPack).toContain("../rpg/pack");
-    expect(cyoaPack).toContain("compileContentPack");
-    expect(cyoaPack).toContain("loadContentPackFile");
-    expect(cyoaPack).not.toContain("parseYaml");
-    expect(cyoaPack).not.toContain("hashState");
-  });
-
-  it("keeps legacy CYOA terminal fragments on the RPG schema contract", () => {
-    const cyoaSchema = readFileSync("src/cyoa/schema.ts", "utf8");
-    expect(cyoaSchema).toContain("../rpg/schema");
-    expect(cyoaSchema).toContain("EndingSchema as RpgEndingSchema");
-    expect(cyoaSchema).toContain("EndingVariantSchema");
-    expect(cyoaSchema).toContain("RpgEndingSchema.omit({ death: true })");
-    expect(cyoaSchema).toContain("death: z.boolean().optional()");
   });
 
   it("does not import the legacy parser runner for RPG win or score events", () => {
@@ -108,33 +93,25 @@ describe("RPG schema owns the RPG contract", () => {
   it("keeps score event decoration on the RPG-owned path", () => {
     const scoreEvents = readFileSync("src/rpg/score_events.ts", "utf8");
     const rpgRunner = readFileSync("src/rpg/runner.ts", "utf8");
-    const cyoaRunner = readFileSync("src/cyoa/runner.ts", "utf8");
 
     expect(scoreEvents).toContain("export function decorateRpgScoreEvents");
     expect(scoreEvents).toContain("scoreChangeNarrations");
     expect(scoreEvents).toContain("SCORE_VAR");
     expect(rpgRunner).toContain("./score_events");
-    expect(cyoaRunner).toContain("../rpg/score_events");
     expect(rpgRunner).not.toContain("scoreChangeNarrations");
-    expect(cyoaRunner).not.toContain("scoreChangeNarrations");
-    expect(cyoaRunner).not.toContain("../rpg/schema");
-    expect(cyoaRunner).not.toContain("SCORE_VAR");
   });
 
   it("keeps the runtime RNG stream on the RPG-owned path", () => {
     const runtimeRng = readFileSync("src/rpg/runtime_rng.ts", "utf8");
     const rpgRunner = readFileSync("src/rpg/runner.ts", "utf8");
-    const cyoaRunner = readFileSync("src/cyoa/runner.ts", "utf8");
     const parserRunner = readFileSync("src/parser/runner.ts", "utf8");
 
     expect(runtimeRng).toContain("export type RuntimeRngFor");
     expect(runtimeRng).toContain("export const rngForRuntimeState");
     expect(runtimeRng).toContain("rngForStep(state.seed, state.step)");
     expect(rpgRunner).toContain("./runtime_rng");
-    expect(cyoaRunner).toContain("../rpg/runtime_rng");
     expect(parserRunner).toContain("../rpg/runtime_rng");
     expect(rpgRunner).not.toContain("rngForStep");
-    expect(cyoaRunner).not.toContain("rngForStep");
     expect(parserRunner).not.toContain("../core/rng");
   });
 
@@ -143,10 +120,8 @@ describe("RPG schema owns the RPG contract", () => {
     const combat = readFileSync("src/rpg/combat.ts", "utf8");
     const parserRunner = readFileSync("src/parser/runner.ts", "utf8");
     const rpgRunner = readFileSync("src/rpg/runner.ts", "utf8");
-    const cyoaRunner = readFileSync("src/cyoa/runner.ts", "utf8");
     const parserSchema = readFileSync("src/parser/schema.ts", "utf8");
     const rpgSchema = readFileSync("src/rpg/schema.ts", "utf8");
-    const cyoaSchema = readFileSync("src/cyoa/schema.ts", "utf8");
 
     expect(skillCheck).toContain("export const SkillCheckSchema");
     expect(skillCheck).toContain("export function resolveSkillCheck");
@@ -154,21 +129,16 @@ describe("RPG schema owns the RPG contract", () => {
     expect(rpgRunner).toContain("../core/skill_check");
     expect(parserRunner).toContain("../rpg/runner");
     expect(parserRunner).not.toContain("resolveSkillCheck");
-    expect(cyoaRunner).toContain("../core/skill_check");
     expect(parserRunner).not.toContain("../rpg/combat");
-    expect(cyoaRunner).not.toContain("../rpg/combat");
     expect(parserSchema).toContain("../rpg/schema");
     expect(parserSchema).not.toContain("../core/skill_check");
     expect(rpgSchema).toContain("../core/skill_check");
-    expect(cyoaSchema).toContain("../core/skill_check");
-    expect(cyoaSchema).not.toContain("../parser/schema");
   });
 
   it("keeps reactive text selection in core gameplay code", () => {
     const reactiveText = readFileSync("src/core/reactive_text.ts", "utf8");
     const parserModel = readFileSync("src/parser/model.ts", "utf8");
     const rpgModel = readFileSync("src/rpg/model.ts", "utf8");
-    const cyoaRunner = readFileSync("src/cyoa/runner.ts", "utf8");
     const rpgVariantLiveness = readFileSync(
       "tests/regression/rpg_variant_liveness.test.ts",
       "utf8",
@@ -180,7 +150,6 @@ describe("RPG schema owns the RPG contract", () => {
     expect(parserModel).toContain("../rpg/model");
     expect(parserModel).not.toContain("../core/reactive_text");
     expect(rpgModel).toContain("../core/reactive_text");
-    expect(cyoaRunner).toContain("../core/reactive_text");
     expect(rpgModel).not.toContain("evalConditions(v.when");
     expect(rpgVariantLiveness).toContain("../../src/rpg/model.js");
     expect(rpgVariantLiveness).not.toContain("../../src/parser/model.js");
@@ -238,45 +207,34 @@ describe("RPG schema owns the RPG contract", () => {
   it("keeps public observation state projection on the RPG-owned path", () => {
     const observationState = readFileSync("src/rpg/observation_state.ts", "utf8");
     const rpgObservation = readFileSync("src/rpg/observation.ts", "utf8");
-    const cyoaObservation = readFileSync("src/cyoa/observation.ts", "utf8");
 
     expect(observationState).toContain("export function publicFlags");
     expect(observationState).toContain("export function publicVars");
     expect(observationState).toContain("export function publicInventory");
     expect(observationState).toContain("export function publicJournal");
     expect(rpgObservation).toContain("./observation_state");
-    expect(cyoaObservation).toContain("../rpg/observation_state");
     expect(rpgObservation).not.toContain("function visible<T>");
-    expect(cyoaObservation).not.toContain("function visibleFlags");
   });
 
   it("keeps runtime initial-state construction on the RPG-owned path", () => {
     const stateInit = readFileSync("src/rpg/state_init.ts", "utf8");
     const rpgModel = readFileSync("src/rpg/model.ts", "utf8");
-    const cyoaRunner = readFileSync("src/cyoa/runner.ts", "utf8");
 
     expect(stateInit).toContain("export function initRuntimeState");
     expect(stateInit).toContain("initState({");
     expect(stateInit).toContain("applyEffects(opts.onEnter");
     expect(rpgModel).toContain("./state_init");
-    expect(cyoaRunner).toContain("../rpg/state_init");
     expect(rpgModel).not.toContain("initState({");
     expect(rpgModel).not.toContain("applyEffects");
-    expect(cyoaRunner).not.toContain("initState,");
-    expect(cyoaRunner).not.toContain("applyEffects");
   });
 
   it("keeps terminal transition effects on the RPG-owned path", () => {
     const terminalEffects = readFileSync("src/rpg/terminal_effects.ts", "utf8");
     const rpgRunner = readFileSync("src/rpg/runner.ts", "utf8");
-    const cyoaRunner = readFileSync("src/cyoa/runner.ts", "utf8");
 
     expect(terminalEffects).toContain("export function endGameEffects");
     expect(terminalEffects).toContain("export function transitionEffects");
     expect(rpgRunner).toContain("./terminal_effects");
-    expect(cyoaRunner).toContain("../rpg/terminal_effects");
-    expect(cyoaRunner).not.toContain("effects.push({ goto: next }");
-    expect(cyoaRunner).not.toContain("{ end_game: deadline.ending }");
   });
 
   it("does not import the legacy parser command mapper for RPG play", () => {

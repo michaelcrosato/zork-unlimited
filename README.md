@@ -1,7 +1,7 @@
 # AdventureForge
 
-A headless, AI-authored text-adventure engine spanning CYOA, a Zork-style parser,
-a Sierra-Quest scoring game, a Hero's-Quest RPG, and a React UI. See
+A headless, AI-authored text-adventure engine centered on a Hero's-Quest RPG,
+with legacy parser migration shims, procedural authoring, MCP play, and a React UI. See
 [`ADVENTUREFORGE_BUILD_SPEC.md`](./ADVENTUREFORGE_BUILD_SPEC.md) for the original
 design brief.
 
@@ -35,22 +35,11 @@ the AI can later author into but cannot corrupt.
 The Layer-2/Layer-3 boundary (§3) is enforced by the `Rules` resolver: the engine asks
 content what an action means, but contains no content itself.
 
-### Stage 1 — CYOA engine ✅ (schema · validator · play CLI)
+### Stage 1 — retired CYOA prototype
 
-| Piece | File |
-|---|---|
-| CYOA schema (§7.2) | `src/cyoa/schema.ts` |
-| Pack loader (YAML → validated JSON + content hash) | `src/cyoa/pack.ts` |
-| Runner: pack → `Rules` resolver (§8.4) | `src/cyoa/runner.ts` |
-| AI-/human-facing observation (§9.1) | `src/cyoa/observation.ts` |
-| CYOA validator (§10.1) | `src/validate/cyoa_validator.ts` |
-| Sample pack: *The Watchtower Road* (20 scenes, 3 endings) | `content/cyoa/pack/watchtower_road.yaml` |
-| Negative fixtures that MUST fail (§10.4) | `content/broken-fixtures/` |
-
-The validator checks reference integrity, reachability, ending reachability, soft-locks,
-dead ends, flag/item feasibility, contradictions, and duplicate endings. Where flags/items
-make a property undecidable in general it uses a documented conservative approximation
-(see header comments) rather than silently checking something weaker.
+The original CYOA runtime and content tree were retired during RPG-only consolidation.
+Their replacement is the shared RPG-owned schema/runner/validator surface below; old
+CYOA assets are forbidden from reappearing by `scripts/verify-integrity.ts`.
 
 ### Stage 2 — Zork-style parser adventure ✅
 
@@ -73,7 +62,6 @@ doors, an NPC dialogue tree, and USE puzzles — exposed to agents as a Jericho-
 
 Two small **additive** engine extensions went through the §14 gate: an
 `ObjectRuntime.room` field and a `place_object` effect (both needed for DROP).
-Every existing CYOA trace still replays to an identical hash.
 
 The parser validator adds the §10.2 invariants on top of graph reachability:
 locked-exit/locked-container key satisfiability, an item-obtainability fixpoint
@@ -116,15 +104,14 @@ roll flowing through the PRNG so fights replay exactly (§8.5).
 | §14 gate record (all six items) | [`docs/stage4_rpg_gate.md`](./docs/stage4_rpg_gate.md) |
 | Acceptance + unit + regression tests, recorded victory trace | `tests/`, `traces/rpg/barrow_victory.json` |
 
-Stage 4 is **backward-compatible**: the additions are optional or top-level, so
-every Stage 0–3 pack compiles to identical content (the CYOA content hash is
-asserted unchanged) and every prior trace still replays.
+Stage 4 made RPG the canonical runtime surface; legacy parser support remains as a
+compatibility shim while old content is retired or converted.
 
 ### Stage 5 — Web UI (React + Vite) ✅
 
-A **view** over the headless engine: it compiles a pack in-browser and drives the
-same `step` reducer the CLI and MCP server use — one code path for CYOA, parser,
-and RPG packs. The engine stays authoritative; the UI never decides legality.
+A **view** over the headless engine: it compiles an RPG pack in-browser and drives
+the same `step` reducer the CLI and MCP server use. The engine stays authoritative;
+the UI never decides legality.
 
 | Piece | File |
 |---|---|
@@ -186,17 +173,13 @@ The RPG generator is exposed over MCP as `generate_rpg_pack` (mint + validate a
 fresh pack, read-only) and is playable in-memory via `new_game`'s
 `generate_rpg_seed`.
 
-## Content library (11 listed packs)
+## Content library (7 listed packs)
 
 The shipped, validated content — every pack passes the validator and is wired into
 `npm run health`:
 
 | Mode | Pack | File |
 |---|---|---|
-| CYOA | The Watchtower Road | `content/cyoa/pack/watchtower_road.yaml` |
-| CYOA | The Wrecker's Light | `content/cyoa/pack/wreckers_light.yaml` |
-| CYOA | The White Stag | `content/cyoa/pack/white_stag.yaml` |
-| CYOA | The Tithe-Barn | `content/cyoa/pack/tithe_barn.yaml` |
 | Parser | The Sealed Crypt | `content/parser/pack/sealed_crypt.yaml` |
 | Parser | The Friars' Postern | `content/parser/pack/friars_postern.yaml` |
 | RPG | The Sunken Barrow | `content/rpg/pack/sunken_barrow.yaml` |
@@ -232,7 +215,7 @@ npm run ui:dev                                             # Stage 5: web UI (af
 Non-interactive play (scriptable / CI): add
 `--commands "go north; take rope; attack wight; ..."`. Use
 `--record traces/run.json` to save a replayable trace. `npm run validate` is the
-RPG content gate and rejects legacy CYOA/parser packs.
+RPG content gate and rejects legacy parser packs.
 
 ### MCP server — how an agent plays the game (§9.4)
 
@@ -243,10 +226,11 @@ discovers shipped packs under `content/rpg/pack`, picks the high-depth RPG pack
 `breaking_weir` as the default, and `list_world` reports the RPG quest subset of
 the Charter Marches. The same structured `new_game` / `step_action` /
 `get_observation` / save·load path drives RPG sessions through stable action ids
-and deterministic state hashes. Explicit CYOA/parser pack loading is rejected
-through MCP with an `UNSUPPORTED_LEGACY_PACK` report; those old packs are now
-migration data, not playable agent targets. All paths are confined to the project
-root; content and traces are data only (§16). The handlers (`src/mcp/tools.ts`)
+and deterministic state hashes. Explicit parser pack loading is rejected through
+MCP with an `UNSUPPORTED_LEGACY_PACK` report; those old packs are now migration
+data, not playable agent targets. The CYOA tree has been retired. All paths are
+confined to the project root; content and traces are data only (§16). The handlers
+(`src/mcp/tools.ts`)
 are unit-tested directly without a live client.
 
 ```bash
@@ -283,10 +267,9 @@ npm run blind -- --pack content/rpg/pack/sunken_barrow.yaml --seed 7
 
 ## Status: all stages complete ✅
 
-Stages 0–5 are implemented and green — the full proof path from a deterministic
-core, through CYOA, a Zork-style parser, a Sierra-Quest scoring/death game, a
-Hero's-Quest RPG (stats + seeded combat + skill checks via the §14 gate), to a
-React web UI that is a pure view over the same headless engine. The complete loop
+Stages 0–5 are implemented and green — the proof path now runs from a deterministic
+core through the RPG runtime (stats + seeded combat + skill checks via the §14 gate)
+to a React web UI that is a pure view over the same headless engine. The complete loop
 from the thesis — AI writes a story → adapts it to a validated pack → the engine
 validates it → an AI plays every route through the structured legal-action API →
 records its experience → a debugger finds a flaw → a fixer patches it → a

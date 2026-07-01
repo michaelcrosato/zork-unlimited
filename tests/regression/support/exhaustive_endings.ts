@@ -1,22 +1,21 @@
 /**
- * Mode-agnostic exhaustive ending-reachability solver (shared by the CYOA and parser
- * structural-verification suites — bug_0121 and its parser extension).
+ * Mode-agnostic exhaustive ending-reachability solver (shared by parser and RPG
+ * structural-verification suites).
  *
  * The engine (src/core/engine.ts) is content-free: it asks a `Rules` resolver for the
  * legal-action set of a state and for what each action means. `rules.legalActions(state)`
  * is, by the engine's own contract, the GROUND TRUTH legality set — the exact set
  * `makeStep` validates an action against — so a breadth-first search that, from each
  * reachable state, steps the legal actions and dedupes on a total state fingerprint
- * explores the concrete reachable region of a pack, regardless of mode (CYOA choices,
- * parser verb×object commands — both surface here as `Action`s). This is the dynamic
- * ground truth the validators' conservative static reachability check only approximates
- * (see cyoa_all_endings_reachable.test.ts for the full rationale).
+ * explores the concrete reachable region of a pack, regardless of mode (parser
+ * verb-object commands and RPG combat actions both surface here as `Action`s). This is
+ * the dynamic ground truth the validators' conservative static reachability check only
+ * approximates.
  *
  * Soundness rests on three properties of the modes this serves:
  *   1. DETERMINISM / ROLL BRACKETING — `resolve` is pure for a given rules object
- *      (same state + action + roll stream ⇒ same result). CYOA's shipped skill checks are
- *      convergent and guarded by their own oracle, so one seeded step remains enough there.
- *      Parser and RPG can carry routing-relevant skill checks, and RPG also has combat; their
+ *      (same state + action + roll stream ⇒ same result). Parser and RPG can carry
+ *      routing-relevant skill checks, and RPG also has combat; their
  *      structural callers use `exhaustiveEndingsMulti` with rule sets that force the player's
  *      best/worst rolls, so one fingerprint can expose both success and failure transitions.
  *      See parser_rolls.ts and rpg_all_endings_reachable.test.ts. (RPG winnability under
@@ -24,8 +23,8 @@
  *      rpg_validator.ts; this proves ROUTE EXISTENCE — every declared ending is reachable
  *      under SOME play.)
  *   2. FINITENESS — the fingerprint collapses interchangeable states, and every shipped
- *      pack's vars are bounded (CYOA's deadline counters, the parser `score`, both capped
- *      by gating), so the visited set is finite and the BFS terminates. The MAX_STATES
+ *      pack's vars are bounded, so the visited set is finite and the BFS terminates.
+ *      The MAX_STATES
  *      caller-supplied cap is only a backstop: a future unbounded-var pack trips it and
  *      the caller FAILS on `cappedOut`, so the search can never silently pass by
  *      truncating an unexplored region.
@@ -41,8 +40,7 @@
  *      closed item — and that surfaces as a declared ending going unreached, i.e. a LOUD
  *      test failure, never a silent pass. (Shipped packs gate every transition on
  *      has_item / visited / flags / is_unlocked; `not_item`/drop appear only in reactive
- *      prose `when:` variants, never on a route — so no ending needs a drop.) The filter
- *      is a no-op for CYOA, whose only action is CHOOSE, so the CYOA census stays complete.
+ *      prose `when:` variants, never on a route — so no ending needs a drop.)
  */
 import { makeStep, type EngineAction, type Rules } from "../../../src/core/engine.js";
 import type { GameState } from "../../../src/core/state.js";
@@ -54,7 +52,7 @@ import type { Action } from "../../../src/api/types.js";
  * game state — they only emit narration, so stepping them yields an identical fingerprint
  * anyway). Excluding them keeps the parser verb×object search tractable without affecting
  * which endings are reachable (see the MONOTONE ACTION RESTRICTION note above). Every
- * other action type — MOVE, TAKE, OPEN, UNLOCK, USE, TALK, ASK, GIVE, ATTACK, CHOOSE — is
+ * other action type — MOVE, TAKE, OPEN, UNLOCK, USE, TALK, ASK, GIVE, ATTACK — is
  * a potential route step and is always explored.
  */
 const SKIPPED_ACTIONS: ReadonlySet<string> = new Set([

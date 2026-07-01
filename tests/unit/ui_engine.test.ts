@@ -12,9 +12,8 @@ const read = (p: string): string => readFileSync(p, "utf8");
 describe("GameSession — RPG-only structured play", () => {
   it("accepts RPG sources and rejects legacy pack shapes", () => {
     expect(isRpgSource(read("content/rpg/pack/sunken_barrow.yaml"))).toBe(true);
-    expect(isRpgSource(read("content/cyoa/pack/watchtower_road.yaml"))).toBe(false);
     expect(isRpgSource(read("content/parser/pack/sealed_crypt.yaml"))).toBe(false);
-    expect(() => GameSession.start(read("content/cyoa/pack/watchtower_road.yaml"), 1)).toThrow(
+    expect(() => GameSession.start(read("content/parser/pack/sealed_crypt.yaml"), 1)).toThrow(
       /RPG-only/i,
     );
   });

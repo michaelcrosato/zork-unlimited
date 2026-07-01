@@ -23,11 +23,11 @@ subscription allowance, which is the best value — exactly per the project goal
 
 ```bash
 # 0) Prove the MCP path works — NO LLM, NO tokens (the reliability backbone):
-npm run blind:smoke -- --pack content/cyoa/pack/watchtower_road.yaml --seed 7
+npm run blind:smoke -- --pack content/rpg/pack/breaking_weir.yaml --seed 7
 
-# 1) Run a real blind playtest on your subscription (default: watchtower, seed 7):
+# 1) Run a real blind playtest on your subscription (default: breaking_weir, seed 7):
 npm run blind                                  # or:
-npm run blind -- --pack content/parser/pack/sealed_crypt.yaml --seed 11 --model opus
+npm run blind -- --pack content/rpg/pack/sunken_barrow.yaml --seed 11 --model opus
 ```
 
 The report is written to `blind-tester/reports/<stamp>_<pack>_seed<n>.md` (and the
@@ -66,7 +66,7 @@ the prompt in [`prompt.md`](./prompt.md) reuses its report format (clarity/enjoy
 ## Options
 
 ```
---pack <path>    content pack to test (default: content/cyoa/pack/watchtower_road.yaml)
+--pack <path>    RPG content pack to test (default: content/rpg/pack/breaking_weir.yaml)
 --seed <n>       deterministic seed (default: 7)
 --model <alias>  claude model alias: sonnet (default, best value) | opus
 --out <prefix>   report path prefix (default: reports/<stamp>_<pack>_seed<n>)

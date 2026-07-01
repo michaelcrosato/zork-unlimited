@@ -153,7 +153,7 @@ describe("classifyDrift — legitimate re-pin vs launder vs weakening (research-
   it("ALLOWS (warns) a hash re-pin ACCOMPANIED by a content change — the user's loop case", () => {
     // The exact thing that was wrongly blocking the loop: improve a pack, re-pin its hash.
     const fs = classifyDrift(
-      ["content/cyoa/pack/watchtower_road.yaml", "tests/unit/rpg_validator.test.ts"],
+      ["content/rpg/pack/sunken_barrow.yaml", "tests/unit/rpg_validator.test.ts"],
       () => true,
     );
     expect(errs(fs)).toEqual([]); // no hard error → the cycle commits
@@ -377,6 +377,9 @@ describe("runStatic on the real repo (this is the bar)", () => {
   it("forbidden legacy assets are absent from the real repo", () => {
     expect(FORBIDDEN_FILES).toContain("src/gen/cyoa_generator.ts");
     expect(FORBIDDEN_FILES).toContain("src/gen/parser_generator.ts");
+    expect(FORBIDDEN_FILES).toContain("src/cyoa");
+    expect(FORBIDDEN_FILES).toContain("src/validate/cyoa_validator.ts");
+    expect(FORBIDDEN_FILES).toContain("content/cyoa");
     expect(res.findings.filter((f) => f.code === "FORBIDDEN_FILE_PRESENT")).toEqual([]);
   });
 

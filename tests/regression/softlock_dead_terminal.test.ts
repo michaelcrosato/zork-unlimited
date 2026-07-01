@@ -2,47 +2,32 @@
  * Regression (§15) for bug_0092 — the soft-lock graph no longer counts a PROVABLY-DEAD
  * terminal as a real escape edge, so a true SOFTLOCK behind one is no longer masked.
  *
- * Two validators carried the same latent unsoundness (each with an in-code comment
- * admitting it), the symmetric halves of the global-terminal family:
- *   - parser/RPG: every `win_condition`'s `visited` room was added to `winRooms` —
+ * The parser/RPG validator carried a latent unsoundness:
+ *   - every `win_condition`'s `visited` room was added to `winRooms` —
  *     the soft-lock escape set — even when the win's `conditions` are internally
  *     contradictory (UNSATISFIABLE_CONDITION, bug_0091) and can therefore never fire.
- *   - CYOA: a scene that writes a deadline-watched var got a structural escape edge to
- *     `meta.deadline.ending` even when the deadline can PROVABLY never fire
- *     (DEADLINE_UNFIREABLE, bug_0087).
- * In both, a dead terminal acted as a phantom escape: a region whose ONLY way out was
+ * A dead terminal acted as a phantom escape: a region whose ONLY way out was
  * that terminal read as "can still reach a win/ending" when in truth it is soft-locked.
  *
- * The fix excludes the dead terminal from the escape graph in both validators (the
- * separate UNSATISFIABLE_CONDITION / DEADLINE_UNFIREABLE warning still names it), so the
+ * The fix excludes the dead terminal from the escape graph (the separate
+ * UNSATISFIABLE_CONDITION warning still names it), so the
  * masked SOFTLOCK surfaces. Sound & conditional: when the SAME terminal is satisfiable /
  * fireable it stays a real escape edge and no spurious SOFTLOCK appears.
  *
  * Locked here:
  *   (1) parser: a region whose only "win" is an UNSATISFIABLE win_condition is now
  *       flagged SOFTLOCK (was masked); the same region with a SATISFIABLE win is NOT;
- *   (2) CYOA: a scene whose only escape is an UNFIREABLE deadline is now flagged
- *       SOFTLOCK (was masked); with a FIREABLE deadline it is NOT;
- *   (3) the shipped packs gain NO new SOFTLOCK (none has a dead terminal to begin with).
+ *   (2) the shipped parser packs gain NO new SOFTLOCK (none has a dead terminal to begin with).
  */
 import { describe, it, expect } from "vitest";
 import { compileParserPack, loadParserPackFile } from "../../src/parser/pack.js";
-import { compilePack, loadPackFile } from "../../src/cyoa/pack.js";
 import { validateParser } from "../../src/validate/parser_validator.js";
-import { validateCyoa } from "../../src/validate/cyoa_validator.js";
 
 function parserCodes(src: string): string[] {
   const r = compileParserPack(src);
   expect(r.ok).toBe(true);
   if (!r.ok) return [];
   return validateParser(r.compiled.pack).findings.map((f) => f.code);
-}
-
-function cyoaCodes(src: string): string[] {
-  const r = compilePack(src);
-  expect(r.ok).toBe(true);
-  if (!r.ok) return [];
-  return validateCyoa(r.compiled.pack).findings.map((f) => f.code);
 }
 
 // A start `s` branching into a GOOD wing (s → good_path → good_room) and a closed,
@@ -106,72 +91,6 @@ describe("bug_0092 (parser) — an unsatisfiable win no longer masks a SOFTLOCK"
       expect(loaded.ok).toBe(true);
       if (!loaded.ok) return;
       const codes = validateParser(loaded.compiled.pack).findings.map((f) => f.code);
-      expect(codes).not.toContain("SOFTLOCK");
-    }
-  });
-});
-
-// A start `s` branching into a GOOD scene (which can reach both e_good and e_over) and a
-// TRAP scene that writes the deadline-watched var `doom` but can only self-loop. The
-// trap's ONLY structural escape is the deadline edge to e_over — real iff the deadline
-// can fire. `deadlineWhen` toggles fireability.
-const cyoaPack = (deadlineWhen: string): string => `
-meta:
-  id: t
-  title: T
-  start: s
-  flags_init: []
-  vars_init: { doom: 0 }
-  deadline: { when: ${deadlineWhen}, ending: e_over }
-scenes:
-  - id: s
-    title: S
-    text: "Branch."
-    choices:
-      - { id: g, text: good, next: good }
-      - { id: t, text: trap, next: trap }
-  - id: good
-    title: GOOD
-    text: "Safe."
-    choices:
-      - { id: win, text: win, next: e_good }
-      - { id: over, text: over, next: e_over }
-  - id: trap
-    title: TRAP
-    text: "The hour presses."
-    on_enter: [ { inc_var: { name: doom, by: 1 } } ]
-    choices:
-      - { id: stay, text: stay, next: trap }
-endings:
-  - { id: e_good, title: EG, text: "You win." }
-  - { id: e_over, title: EO, text: "The hour turns." }
-`;
-
-describe("bug_0092 (CYOA) — an unfireable deadline no longer masks a SOFTLOCK", () => {
-  it("the trap scene is flagged SOFTLOCK when the deadline can never fire", () => {
-    // doom>=5 AND has_flag alarm, but `alarm` is never set → deadline unfireable → its
-    // escape edge from the trap scene is a phantom → trap can reach no ending.
-    const codes = cyoaCodes(
-      cyoaPack("[ { var_gte: { name: doom, value: 5 } }, { has_flag: alarm } ]"),
-    );
-    expect(codes).toContain("SOFTLOCK");
-    expect(codes).toContain("DEADLINE_UNFIREABLE");
-  });
-
-  it("the SAME trap scene is NOT a SOFTLOCK when the deadline can fire (soundness)", () => {
-    // doom>=1 with doom incremented on entry → the deadline really can fire, so its
-    // escape edge from the trap scene is real → no SOFTLOCK, no DEADLINE_UNFIREABLE.
-    const codes = cyoaCodes(cyoaPack("[ { var_gte: { name: doom, value: 1 } } ]"));
-    expect(codes).not.toContain("SOFTLOCK");
-    expect(codes).not.toContain("DEADLINE_UNFIREABLE");
-  });
-
-  it("the shipped CYOA packs gain NO SOFTLOCK", () => {
-    for (const path of ["content/cyoa/pack/watchtower_road.yaml"]) {
-      const r = loadPackFile(path);
-      expect(r.ok).toBe(true);
-      if (!r.ok) return;
-      const codes = validateCyoa(r.compiled.pack).findings.map((f) => f.code);
       expect(codes).not.toContain("SOFTLOCK");
     }
   });

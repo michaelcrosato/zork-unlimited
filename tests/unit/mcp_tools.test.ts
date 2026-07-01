@@ -12,7 +12,7 @@ import type { RpgAction } from "../../src/api/types.js";
 
 const ROOT = process.cwd();
 const PACK = "content/rpg/pack/sunken_barrow.yaml";
-const LEGACY_PACK = "content/cyoa/pack/watchtower_road.yaml";
+const LEGACY_PACK = "content/parser/pack/sealed_crypt.yaml";
 const MAIN_RPG = "content/rpg/pack/breaking_weir.yaml";
 const api = () => createToolApi({ root: ROOT });
 const overworld = parseOverworldManifest(
@@ -75,6 +75,24 @@ function overworldRoadPath(from: string, to: string): string[] {
     }
   }
   throw new Error(`No road path from ${from} to ${to}.`);
+}
+
+function overworldAreaPath(from: string, to: string): string[] {
+  const queue: { area: string; routeIds: string[] }[] = [{ area: from, routeIds: [] }];
+  const seen = new Set<string>([from]);
+  for (let i = 0; i < queue.length; i += 1) {
+    const cur = queue[i]!;
+    if (cur.area === to) return cur.routeIds;
+    for (const edge of overworld.area_edges.filter(
+      (candidate) => candidate.from_area === cur.area || candidate.to_area === cur.area,
+    )) {
+      const next = edge.from_area === cur.area ? edge.to_area : edge.from_area;
+      if (seen.has(next)) continue;
+      seen.add(next);
+      queue.push({ area: next, routeIds: [...cur.routeIds, edge.id] });
+    }
+  }
+  throw new Error(`No area path from ${from} to ${to}.`);
 }
 
 function travelOverworldSessionTo(
@@ -167,7 +185,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.local_job_count).toBe(r.area_count);
     expect(r.road_event_count).toBe(r.road_count);
     expect(r.exploration_site_count).toBeGreaterThanOrEqual(r.region_count * 3);
-    expect(r.quest_count).toBe(36);
+    expect(r.quest_count).toBe(21);
   });
 
   it("looks and travels through the New York overworld without global quest selection", () => {
@@ -182,7 +200,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(start.local_jobs.length).toBe(start.areas.length);
     expect(start.nearby_sites.length).toBeGreaterThan(0);
     expect(start.local_quests.length).toBeGreaterThan(0);
-    expect(start.local_quests.length).toBeLessThan(36);
+    expect(start.local_quests.length).toBeLessThan(21);
 
     const road = start.exits.find((edge) => edge.destination.id === "colonie_town");
     expect(road).toBeTruthy();
@@ -351,26 +369,44 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(scouted.result.minutes).toBe(20);
     expect(scouted.result.discoveredJobs).toHaveLength(1);
     expect(scouted.result.discoveredSites).toHaveLength(1);
-    expect(scouted.result.discoveredQuests?.map((quest) => quest.id)).toEqual(
-      localQuests.slice(0, 1).map((quest) => quest.id),
-    );
+    expect(scouted.result.discoveredQuests).toEqual([]);
     expect(scouted.observation.sites.map((site) => site.id)).toEqual(
       scouted.result.discoveredSites?.map((site) => site.id),
     );
     expect(scouted.observation.jobs.map((job) => job.id)).toEqual(
       scouted.result.discoveredJobs?.map((job) => job.id),
     );
-    expect(scouted.observation.quests.map((quest) => quest.id)).toEqual(
-      localQuests.slice(0, 1).map((quest) => quest.id),
-    );
-    expect(scouted.observation.hiddenQuestCount).toBe(localQuests.length - 1);
+    expect(scouted.observation.quests).toEqual([]);
+    expect(scouted.observation.hiddenQuestCount).toBe(localQuests.length);
     expect(scouted.observation.journal[0]?.title).toContain(poi.title);
 
-    const discoveredQuests = scouted.result.discoveredQuests ?? [];
+    const questAreaId = localQuests[0]!.area;
+    const stagingRoute = scouted.observation.areaExits[0]!;
+    expect(stagingRoute.destination.id).not.toBe(questAreaId);
+    let areaObservation = a.move_overworld_session_area({
+      session_id: started.session_id,
+      area_route_id: stagingRoute.id,
+    }).observation;
+    expect(areaObservation.currentArea?.id).not.toBe(questAreaId);
+
+    const questLeadPoi = areaObservation.pois[0]!;
+    const scoutedQuestLead = a.scout_overworld_session_poi({
+      session_id: started.session_id,
+      poi_id: questLeadPoi.id,
+    });
+    expect(scoutedQuestLead.result.discoveredQuests?.map((quest) => quest.id)).toEqual(
+      localQuests.slice(0, 1).map((quest) => quest.id),
+    );
+    expect(scoutedQuestLead.observation.quests.map((quest) => quest.id)).toEqual(
+      localQuests.slice(0, 1).map((quest) => quest.id),
+    );
+    expect(scoutedQuestLead.observation.hiddenQuestCount).toBe(localQuests.length - 1);
+
+    const discoveredQuests = scoutedQuestLead.result.discoveredQuests ?? [];
     expect(discoveredQuests).toHaveLength(1);
     const discoveredQuest = discoveredQuests[0]!;
     expect(discoveredQuest.area).toBeDefined();
-    expect(scouted.observation.currentArea?.id).not.toBe(discoveredQuest.area);
+    expect(scoutedQuestLead.observation.currentArea?.id).not.toBe(discoveredQuest.area);
     expect(() =>
       a.start_overworld_session_quest({
         session_id: started.session_id,
@@ -378,15 +414,15 @@ describe("MCP tools — validate / load (§9.4)", () => {
       }),
     ).toThrow(/Move to/i);
 
-    const routeToQuestArea = scouted.observation.areaExits.find(
+    const routeToQuestArea = scoutedQuestLead.observation.areaExits.find(
       (exit) => exit.destination.id === discoveredQuest.area,
     );
     expect(routeToQuestArea).toBeDefined();
-    const movedToQuestArea = a.move_overworld_session_area({
+    areaObservation = a.move_overworld_session_area({
       session_id: started.session_id,
       area_route_id: routeToQuestArea!.id,
-    });
-    expect(movedToQuestArea.result.to.id).toBe(discoveredQuest.area);
+    }).observation;
+    expect(areaObservation.currentArea?.id).toBe(discoveredQuest.area);
     const startedQuest = a.start_overworld_session_quest({
       session_id: started.session_id,
       quest_id: discoveredQuest.id,
@@ -402,14 +438,15 @@ describe("MCP tools — validate / load (§9.4)", () => {
         poi_id: poi.id,
       }),
     ).toThrow(/Move to that local area/i);
-    const routeBackToCivicCore = movedToQuestArea.observation.areaExits.find(
-      (exit) => exit.destination.id === started.observation.currentArea?.id,
-    );
-    expect(routeBackToCivicCore).toBeDefined();
-    a.move_overworld_session_area({
-      session_id: started.session_id,
-      area_route_id: routeBackToCivicCore!.id,
-    });
+    for (const routeId of overworldAreaPath(
+      areaObservation.currentArea!.id,
+      started.observation.currentArea!.id,
+    )) {
+      a.move_overworld_session_area({
+        session_id: started.session_id,
+        area_route_id: routeId,
+      });
+    }
 
     const repeated = a.scout_overworld_session_poi({
       session_id: started.session_id,
@@ -420,26 +457,24 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(repeated.result.discoveredSites).toEqual([]);
     expect(repeated.result.discoveredJobs).toEqual([]);
     expect(repeated.result.discoveredQuests).toEqual([]);
-    expect(repeated.observation.journal).toHaveLength(1);
+    expect(repeated.observation.journal).toHaveLength(2);
 
     const talked = a.talk_overworld_session_contact({
       session_id: started.session_id,
       character_id: contact.id,
     });
-    expect(talked.result.discoveredQuests?.map((quest) => quest.id)).toEqual(
-      localQuests.slice(1, 2).map((quest) => quest.id),
-    );
+    expect(talked.result.discoveredQuests).toEqual([]);
     expect(talked.observation.quests.map((quest) => quest.id)).toEqual(
-      localQuests.slice(0, 2).map((quest) => quest.id),
+      localQuests.slice(0, 1).map((quest) => quest.id),
     );
-    expect(talked.observation.journal).toHaveLength(2);
+    expect(talked.observation.journal).toHaveLength(3);
 
     const investigated = a.investigate_overworld_session_event({
       session_id: started.session_id,
       event_id: event.id,
     });
     expect(investigated.result.discoveredQuests).toEqual([]);
-    expect(investigated.observation.journal).toHaveLength(3);
+    expect(investigated.observation.journal).toHaveLength(4);
     expect(investigated.observation.timeLabel).not.toBe(started.observation.timeLabel);
 
     const resolved = a.resolve_overworld_session_event({
@@ -448,7 +483,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(resolved.result.minutes).toBe(30 + event.intensity * 10);
     expect(resolved.result.entry.kind).toBe("resolution");
-    expect(resolved.observation.journal).toHaveLength(4);
+    expect(resolved.observation.journal).toHaveLength(5);
     expect(resolved.observation.resolvedEventIds).toContain(event.id);
     expect(resolved.observation.regionRenown[started.observation.current.region]).toBe(
       event.intensity,
@@ -486,7 +521,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       traveled.observation.pendingRoadEncounter?.options.map((option) => option.strategy),
     ).toEqual(["cautious_scout", "assist_travelers", "press_on"]);
     expect(traveled.observation.log[0]?.to).toBe("Colonie town");
-    expect(traveled.observation.journal).toHaveLength(4);
+    expect(traveled.observation.journal).toHaveLength(5);
 
     expect(() =>
       a.travel_overworld_session({

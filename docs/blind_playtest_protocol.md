@@ -19,7 +19,7 @@ are a primary input to the fix.
 ## Procedure (5 steps)
 
 1. **Pick the target.** A playable pack + a fixed seed. Default: the main story
-   from `list_stories` (currently `content/cyoa/pack/watchtower_road.yaml`), seed
+   from `list_stories` (currently `content/rpg/pack/breaking_weir.yaml`), seed
    `7`. For variety across cycles, rotate the seed and, when more than one pack is
    playable, rotate the pack.
 
@@ -91,6 +91,5 @@ The first run of this protocol on *The Watchtower Road* (seed 7) reached both
 four content-polish findings (stale cart/cellar-door text, a journal entry that
 stacked on cellar re-entry, and a ledger referenced by an ending but never carried).
 All four were fixed as `content`/`hint_text`, locked by
-`traces/bugs/bug_0002_watchtower_blind_polish.yaml` and
-`tests/regression/watchtower_blind_fixes.test.ts`. That is the loop closing:
+`traces/bugs/bug_0002_watchtower_blind_polish.yaml` and a regression test. That is the loop closing:
 write → play (blind) → find → fix → lock.

@@ -11,7 +11,7 @@ with the current synthesis, the chosen move, and the next safe follow-up.
 
 The assessor saturated at the 0.5 blind-playtest floor with all mode targets above
 their current content counts (`cyoa=20`, `parser=16`, `rpg=16`). The required blind
-playtest for `content/cyoa/pack/aleconners_seal.yaml` was mechanically successful and
+playtest for `content/rpg/pack/advocates_case.yaml` was mechanically successful and
 found only polish issues: `check_empty_finding` feels like a no-op, partial finding
 feedback is generic, and the retest ending can contradict full-evidence journal state.
 

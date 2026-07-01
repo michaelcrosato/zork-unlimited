@@ -20,7 +20,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GAME_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-PACK="content/cyoa/pack/watchtower_road.yaml"
+PACK="content/rpg/pack/breaking_weir.yaml"
 SEED=7
 MODEL="${BLIND_MODEL:-sonnet}"   # sonnet = strong + best subscription value; override per run
 OUT=""

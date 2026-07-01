@@ -108,7 +108,7 @@ describe("OverworldSession", () => {
     expect(explored.discoveredAreas?.map((area) => area.id)).toEqual([localAreas[1]!.id]);
     expect(explored.discoveredJobs).toHaveLength(1);
     expect(explored.discoveredSites).toHaveLength(1);
-    expect(explored.discoveredQuests).toHaveLength(1);
+    expect(explored.discoveredQuests).toEqual([]);
 
     const after = session.view();
     expect(after.visitedAreaIds).toContain(firstArea.id);
@@ -413,23 +413,14 @@ describe("OverworldSession", () => {
     expect(scouted.minutes).toBe(20);
     expect(scouted.entry.kind).toBe("poi");
     expect(scouted.discoveredSites).toHaveLength(1);
-    expect(scouted.discoveredQuests?.map((quest) => quest.id)).toEqual(
-      localQuests.slice(0, 1).map((quest) => quest.id),
-    );
+    expect(scouted.discoveredQuests).toEqual([]);
     expect(session.view().journal[0]?.title).toContain(poi.title);
     expect(session.view().sites.map((site) => site.id)).toEqual(
       scouted.discoveredSites?.map((site) => site.id),
     );
-    expect(session.view().quests.map((quest) => quest.id)).toEqual(
-      localQuests.slice(0, 1).map((quest) => quest.id),
-    );
-    expect(session.view().discoveredQuestIds).toEqual(
-      localQuests
-        .slice(0, 1)
-        .map((quest) => quest.id)
-        .sort(),
-    );
-    expect(session.view().hiddenQuestCount).toBe(localQuests.length - 1);
+    expect(session.view().quests).toEqual([]);
+    expect(session.view().discoveredQuestIds).toEqual([]);
+    expect(session.view().hiddenQuestCount).toBe(localQuests.length);
 
     const repeated = session.scoutPoi(poi.id);
     expect(repeated.alreadyKnown).toBe(true);
@@ -441,10 +432,10 @@ describe("OverworldSession", () => {
     expect(talked.minutes).toBe(15);
     expect(talked.entry.text).toContain(contact.agenda);
     expect(talked.discoveredQuests?.map((quest) => quest.id)).toEqual(
-      localQuests.slice(1, 2).map((quest) => quest.id),
+      localQuests.slice(0, 1).map((quest) => quest.id),
     );
     expect(session.view().quests.map((quest) => quest.id)).toEqual(
-      localQuests.slice(0, 2).map((quest) => quest.id),
+      localQuests.slice(0, 1).map((quest) => quest.id),
     );
 
     const investigated = session.investigateEvent(event.id);
@@ -468,7 +459,9 @@ describe("OverworldSession", () => {
     expect(() => session.startQuest(firstLocalQuest.id)).toThrow(/Discover/i);
 
     const scouted = session.scoutPoi(initial.pois[0]!.id);
-    const discoveredQuests = scouted.discoveredQuests ?? [];
+    expect(scouted.discoveredQuests).toEqual([]);
+    const talked = session.talkToCharacter(initial.characters[0]!.id);
+    const discoveredQuests = talked.discoveredQuests ?? [];
     expect(discoveredQuests).toHaveLength(1);
     const discoveredQuest = discoveredQuests[0]!;
     expect(discoveredQuest.id).toBe(firstLocalQuest.id);

@@ -18,7 +18,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
 ## Current Snapshot
 
 - Verification bar: `npm run health` remains the required end gate.
-- Current corpus: CYOA, parser, RPG, and overworld content are broad enough that
+- Current corpus: parser, RPG, and overworld content are broad enough that
   routine work should prefer targeted fixes or structural checks over more log prose.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
@@ -27,15 +27,12 @@ history only when deep recovery is truly needed. Keep future entries terse.
 
 ## Recent Blind-Playtest Attendance
 
-- Mandatory LLM playtest target this cycle: content/cyoa/pack/watchtower_road.yaml
-- Mandatory LLM playtest target this cycle: content/cyoa/pack/clockwork_heist.yaml
 - Mandatory LLM playtest target this cycle: content/rpg/pack/advocates_case.yaml
-- Mandatory LLM playtest target this cycle: content/cyoa/pack/tidewaiters_watch.yaml
 - Mandatory LLM playtest target this cycle: content/rpg/pack/tanners_fever.yaml
-- Mandatory LLM playtest target this cycle: content/cyoa/pack/bellmans_round.yaml
 - Mandatory LLM playtest target this cycle: content/rpg/pack/falconers_ransom.yaml
 - Mandatory LLM playtest target this cycle: content/rpg/pack/factors_mark.yaml
 - Mandatory LLM playtest target this cycle: content/parser/pack/collectors_warrant.yaml
+- CYOA playtest targets were retired with the old CYOA tree.
 
 ## AFK Cycle 2026-06-25T05-03-36-260Z — ULTRAPLAN (saturation re-aim)
 
@@ -43,7 +40,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Next best improvement (recommended): [content_fix] Blind-playtest "aleconners_seal_v1" — structurally clean; only a fresh blind LLM player can judge its quality.
 - Why: The validator and exhaustive solver prove this pack is winnable and sound; only a fresh blind LLM playtest reveals signposting/clarity/pacing issues a static check can't see.
 - ⟳ SATURATED: top candidate at the 0.5 floor → this cycle runs a multi-agent ultraplan to re-aim (plan → docs/CURRENT_PLAN.md), then implements in a fresh context.
-- Mandatory LLM playtest target this cycle: content/cyoa/pack/aleconners_seal.yaml.
+- Mandatory LLM playtest target this cycle: retired with the old CYOA tree; choose an RPG pack for future blind passes.
 - Process: assessor ranks → blind LLM playtest for quality → one improvement → health + verify:integrity green → commit (trust-but-verify).
 
 ### Cycle result — bug_0491 / parser skill-check roll-complete proofs

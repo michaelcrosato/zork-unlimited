@@ -3,8 +3,8 @@
  *
  * Schemas keep `meta.world` optional so tiny validator fixtures and generated eval
  * packs stay minimal. Shipped packs are different: every YAML under
- * content/{cyoa,parser,rpg}/pack must bind to the same canonical world and hub.
- * MCP play is narrower: only RPG packs are playable; CYOA/parser packs remain
+ * content/{parser,rpg}/pack must bind to the same canonical world and hub.
+ * MCP play is narrower: only RPG packs are playable; parser packs remain
  * world-bound migration data until their content is retired or converted.
  */
 import { describe, expect, it } from "vitest";
@@ -21,7 +21,7 @@ import { normalizePackPath, worldRouteForPack } from "../../src/world/graph.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 
 const root = process.cwd();
-const ALL_PACK_DIRS = ["content/cyoa/pack", "content/parser/pack", "content/rpg/pack"];
+const ALL_PACK_DIRS = ["content/parser/pack", "content/rpg/pack"];
 const RPG_PACK_DIRS = ["content/rpg/pack"];
 
 type RawPack = {

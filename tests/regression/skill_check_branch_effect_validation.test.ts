@@ -8,9 +8,7 @@
  * is misread as impossible.
  */
 import { describe, expect, it } from "vitest";
-import { compilePack } from "../../src/cyoa/pack.js";
 import { compileParserPack } from "../../src/parser/pack.js";
-import { validateCyoa } from "../../src/validate/cyoa_validator.js";
 import { validateParser } from "../../src/validate/parser_validator.js";
 
 const codes = (findings: { code: string }[]): string[] => findings.map((f) => f.code);
@@ -84,40 +82,6 @@ endings:
     if (!compiled.ok) return;
 
     const report = validateParser(compiled.compiled.pack);
-    expect(codes(report.findings)).not.toContain("IMPOSSIBLE_GATE");
-  });
-
-  it("allows a CYOA gate satisfied only by a skill_check branch set_flag", () => {
-    const compiled = compilePack(`
-meta: { id: cyoa_branch_flag, title: CYOA Branch Flag, start: a, vars_init: { nerve: 3 } }
-scenes:
-  - id: a
-    title: A
-    text: Start.
-    choices:
-      - id: force
-        text: Force the door.
-        skill_check:
-          skill: nerve
-          difficulty: 1
-          on_success: [ { set_flag: opened }, { goto: b } ]
-          on_failure: [ { set_flag: opened }, { goto: b } ]
-      - id: pass
-        text: Pass through.
-        conditions: [ { has_flag: opened } ]
-        next: win
-  - id: b
-    title: B
-    text: Open.
-    choices:
-      - { id: finish, text: Finish, next: win }
-endings:
-  - { id: win, title: Win, text: Done. }
-`);
-    expect(compiled.ok).toBe(true);
-    if (!compiled.ok) return;
-
-    const report = validateCyoa(compiled.compiled.pack);
     expect(codes(report.findings)).not.toContain("IMPOSSIBLE_GATE");
   });
 });

@@ -47,7 +47,6 @@ export const PROTECTED_FILES = [
   "src/core/hash.ts",
   "src/core/sha256.ts",
   "src/core/engine.ts",
-  "src/validate/cyoa_validator.ts",
   "src/validate/parser_validator.ts",
   "src/validate/rpg_validator.ts",
   "src/persist/save_load.ts",
@@ -71,8 +70,14 @@ export const PROTECTED_FILES = [
   "scripts/verify-integrity.ts",
 ];
 
-/** Files that must not reappear while the repo normalizes to RPG-only authoring. */
-export const FORBIDDEN_FILES = ["src/gen/cyoa_generator.ts", "src/gen/parser_generator.ts"];
+/** Paths that must not reappear while the repo normalizes to RPG-only authoring. */
+export const FORBIDDEN_FILES = [
+  "src/gen/cyoa_generator.ts",
+  "src/gen/parser_generator.ts",
+  "src/cyoa",
+  "src/validate/cyoa_validator.ts",
+  "content/cyoa",
+];
 
 /** Files holding committed hash pins / known-answer vectors that should not change
  *  silently — a change here in a cycle's diff is surfaced for human review. */

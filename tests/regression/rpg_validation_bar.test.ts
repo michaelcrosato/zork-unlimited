@@ -102,8 +102,8 @@ describe("single-engine RPG validation bar", () => {
     for (const path of packs) expect(output).toContain(`== ${path} ==`);
   });
 
-  it("npm run validate rejects legacy CYOA/parser pack targets", () => {
-    const result = runNpm("npm run validate -- content/cyoa/pack/watchtower_road.yaml", 30_000);
+  it("npm run validate rejects legacy parser pack targets", () => {
+    const result = runNpm("npm run validate -- content/parser/pack/sealed_crypt.yaml", 30_000);
     const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
 
     expect(result.status, output).toBe(1);

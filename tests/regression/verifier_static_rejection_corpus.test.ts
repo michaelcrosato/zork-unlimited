@@ -8,7 +8,7 @@
  * trusts. bug_0182 built the first SoundnessBench-style negative corpus (a checker is
  * only proven sound if its FAILING branches are exercised on input that SHOULD fail —
  * arXiv:2412.03154; the single-checker blind spot arXiv:2510.14253) for `validateRpg`;
- * bug_0218 completed the validator trilogy for `validateCyoa` + `validateParser`. That
+ * bug_0218 completed the validator negative corpus for legacy validators. That
  * discipline was NEVER applied to `scripts/verify-integrity.ts` — the meta-verifier the
  * entire trust-but-verify bar rests on. Its own `error`-emitting branches —
  * PROTECTED_MISSING, TEST_COUNT_FLOOR, ASSERTION_COUNT_FLOOR, STRONG_ASSERTION_FLOOR

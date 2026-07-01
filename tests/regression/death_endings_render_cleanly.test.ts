@@ -35,9 +35,8 @@
  * genuinely reaches, never spurious. If a declared death ending is never witnessed the
  * test FAILS loudly (a severed route), so the render checks can never pass vacuously.
  *
- * Pure test addition — no content/engine/validator/hash change. CYOA is out of scope by
- * construction: its EndingSchema carries no `death` field (src/cyoa/schema.ts), so no
- * CYOA ending is a death ending and its observation has no death render to check.
+ * Pure test addition — no content/engine/validator/hash change. Legacy CYOA content is
+ * retired, so death-ending render coverage is parser/RPG-only.
  */
 import { describe, it, expect } from "vitest";
 import { readdirSync } from "node:fs";

@@ -5,11 +5,9 @@
  * intended stat is never used.
  */
 import { describe, expect, it } from "vitest";
-import { compilePack } from "../../src/cyoa/pack.js";
 import { generateRpgPack } from "../../src/gen/rpg_generator.js";
 import { compileParserPack } from "../../src/parser/pack.js";
 import type { RpgPack } from "../../src/rpg/schema.js";
-import { validateCyoa } from "../../src/validate/cyoa_validator.js";
 import { validateParser } from "../../src/validate/parser_validator.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 
@@ -61,32 +59,6 @@ endings:
     if (!compiled.ok) return;
 
     const report = validateParser(compiled.compiled.pack);
-    expect(report.ok).toBe(false);
-    expect(codes(report.findings)).toContain(CODE);
-  });
-
-  it("rejects a CYOA skill_check whose skill var is undeclared", () => {
-    const compiled = compilePack(`
-meta: { id: cyoa_phantom_skill, title: CYOA Phantom Skill, start: a, vars_init: { nerve: 3 } }
-scenes:
-  - id: a
-    title: A
-    text: Start.
-    choices:
-      - id: try
-        text: Try the lock.
-        skill_check:
-          skill: spectral_poise
-          difficulty: 1
-          on_success: [ { goto: win } ]
-          on_failure: [ { goto: win } ]
-endings:
-  - { id: win, title: Win, text: Done. }
-`);
-    expect(compiled.ok).toBe(true);
-    if (!compiled.ok) return;
-
-    const report = validateCyoa(compiled.compiled.pack);
     expect(report.ok).toBe(false);
     expect(codes(report.findings)).toContain(CODE);
   });
