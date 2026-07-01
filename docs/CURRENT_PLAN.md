@@ -46,8 +46,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - The external blind-test harness now starts shipped playtests only through
   `--quest` ids; raw pack paths are validation/replay inputs, not blind play
   starts.
-- `world_path` now follows the same rule: prefer `world_quest_id`; `quest_path` is
-  compatibility.
+- Public MCP `world_path` now accepts `world_quest_id` only; lower-level
+  compatibility path resolution stays out of the agent-facing route tool.
 - `validate_pack` and `load_pack` now accept `world_quest_id` for shipped quests
   and return source identity metadata.
 - `apply_content_patch` now accepts shipped `world_quest_id`; raw `pack_path`

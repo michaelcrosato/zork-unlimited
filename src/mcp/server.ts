@@ -127,18 +127,11 @@ tool(
 );
 tool(
   "world_path",
-  "Return the route through the Charter Marches graph from Charterhaven to a shipped quest graph node or compatibility quest pack.",
+  "Return the route through the Charter Marches graph from Charterhaven to a shipped quest graph node.",
   {
     world_quest_id: z
       .string()
-      .optional()
-      .describe(
-        "Preferred Charter Marches quest graph node id from list_world().quests[].graph_node.",
-      ),
-    quest_path: z
-      .string()
-      .optional()
-      .describe("Compatibility path to an RPG quest content pack, relative to the project root."),
+      .describe("Charter Marches quest graph node id from list_world().quests[].graph_node."),
   },
   (a) => api.world_path(a),
 );
