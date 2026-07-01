@@ -83,6 +83,8 @@ Make discovered overworld quest leads start real RPG sessions.
   identity directly instead of re-deriving `world_quest_id` from the resolved path.
 - Static overworld compatibility tools now delegate to `world/static_overworld`,
   keeping MCP as an adapter instead of a second graph-query implementation.
+- Stateful overworld MCP action wrappers now share one session response envelope
+  helper.
 
 ## Acceptance
 

@@ -125,6 +125,12 @@ type StoryEntry = {
   world_quest_id: string | null;
 };
 
+type OverworldSessionPayload<Key extends string, Value> = {
+  ok: true;
+  session_id: string;
+  observation: OverworldView;
+} & { [P in Key]: Value };
+
 const MAIN_RPG_STORY = "content/rpg/pack/breaking_weir.yaml";
 
 function indexFor(pack: CompiledRpgPack["pack"]): RpgIndex {
@@ -432,6 +438,21 @@ export function createToolApi(opts: { root: string }) {
     return session;
   }
 
+  function runOverworldSession<Key extends string, Value>(
+    sessionId: string,
+    key: Key,
+    action: (session: OverworldSession) => Value,
+  ): OverworldSessionPayload<Key, Value> {
+    const session = getOverworldSession(sessionId);
+    const value = action(session);
+    return {
+      ok: true,
+      session_id: sessionId,
+      [key]: value,
+      observation: session.view(),
+    } as OverworldSessionPayload<Key, Value>;
+  }
+
   return {
     sessions,
 
@@ -653,13 +674,9 @@ export function createToolApi(opts: { root: string }) {
       route: OverworldSessionRoutePlan;
       observation: OverworldView;
     } {
-      const session = getOverworldSession(args.session_id);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        route: session.planRoute(args.destination_town_id),
-        observation: session.view(),
-      };
+      return runOverworldSession(args.session_id, "route", (session) =>
+        session.planRoute(args.destination_town_id),
+      );
     },
 
     travel_overworld_session(args: { session_id: string; road_id: string }): {
@@ -668,14 +685,9 @@ export function createToolApi(opts: { root: string }) {
       travel: TravelLogEntry;
       observation: OverworldView;
     } {
-      const session = getOverworldSession(args.session_id);
-      const travel = session.travel(args.road_id);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        travel,
-        observation: session.view(),
-      };
+      return runOverworldSession(args.session_id, "travel", (session) =>
+        session.travel(args.road_id),
+      );
     },
 
     resolve_overworld_session_road_encounter(args: {
@@ -687,14 +699,9 @@ export function createToolApi(opts: { root: string }) {
       result: OverworldRoadEncounterResult;
       observation: OverworldView;
     } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.resolveRoadEncounter(args.strategy);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+      return runOverworldSession(args.session_id, "result", (session) =>
+        session.resolveRoadEncounter(args.strategy),
+      );
     },
 
     resupply_overworld_session(args: { session_id: string }): {
@@ -703,14 +710,7 @@ export function createToolApi(opts: { root: string }) {
       result: OverworldServiceResult;
       observation: OverworldView;
     } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.resupplyAtTown();
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+      return runOverworldSession(args.session_id, "result", (session) => session.resupplyAtTown());
     },
 
     rest_overworld_session(args: { session_id: string }): {
@@ -719,14 +719,7 @@ export function createToolApi(opts: { root: string }) {
       result: OverworldServiceResult;
       observation: OverworldView;
     } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.restAtTown();
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+      return runOverworldSession(args.session_id, "result", (session) => session.restAtTown());
     },
 
     scout_overworld_session_poi(args: { session_id: string; poi_id: string }): {
@@ -735,14 +728,9 @@ export function createToolApi(opts: { root: string }) {
       result: OverworldActionResult;
       observation: OverworldView;
     } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.scoutPoi(args.poi_id);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+      return runOverworldSession(args.session_id, "result", (session) =>
+        session.scoutPoi(args.poi_id),
+      );
     },
 
     talk_overworld_session_contact(args: { session_id: string; character_id: string }): {
@@ -751,14 +739,9 @@ export function createToolApi(opts: { root: string }) {
       result: OverworldActionResult;
       observation: OverworldView;
     } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.talkToCharacter(args.character_id);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+      return runOverworldSession(args.session_id, "result", (session) =>
+        session.talkToCharacter(args.character_id),
+      );
     },
 
     investigate_overworld_session_event(args: { session_id: string; event_id: string }): {
@@ -767,14 +750,9 @@ export function createToolApi(opts: { root: string }) {
       result: OverworldActionResult;
       observation: OverworldView;
     } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.investigateEvent(args.event_id);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+      return runOverworldSession(args.session_id, "result", (session) =>
+        session.investigateEvent(args.event_id),
+      );
     },
 
     resolve_overworld_session_event(args: { session_id: string; event_id: string }): {
@@ -783,14 +761,9 @@ export function createToolApi(opts: { root: string }) {
       result: OverworldActionResult;
       observation: OverworldView;
     } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.resolveEvent(args.event_id);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+      return runOverworldSession(args.session_id, "result", (session) =>
+        session.resolveEvent(args.event_id),
+      );
     },
 
     explore_overworld_session_site(args: { session_id: string; site_id: string }): {
@@ -799,14 +772,9 @@ export function createToolApi(opts: { root: string }) {
       result: OverworldActionResult;
       observation: OverworldView;
     } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.exploreSite(args.site_id);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+      return runOverworldSession(args.session_id, "result", (session) =>
+        session.exploreSite(args.site_id),
+      );
     },
 
     explore_overworld_session_area(args: { session_id: string; area_id: string }): {
@@ -815,14 +783,9 @@ export function createToolApi(opts: { root: string }) {
       result: OverworldActionResult;
       observation: OverworldView;
     } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.exploreArea(args.area_id);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+      return runOverworldSession(args.session_id, "result", (session) =>
+        session.exploreArea(args.area_id),
+      );
     },
 
     work_overworld_session_job(args: { session_id: string; job_id: string }): {
@@ -831,14 +794,9 @@ export function createToolApi(opts: { root: string }) {
       result: OverworldActionResult;
       observation: OverworldView;
     } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.workLocalJob(args.job_id);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+      return runOverworldSession(args.session_id, "result", (session) =>
+        session.workLocalJob(args.job_id),
+      );
     },
 
     start_overworld_session_quest(args: {
@@ -882,14 +840,9 @@ export function createToolApi(opts: { root: string }) {
       result: OverworldAreaTravelResult;
       observation: OverworldView;
     } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.moveArea(args.area_route_id);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+      return runOverworldSession(args.session_id, "result", (session) =>
+        session.moveArea(args.area_route_id),
+      );
     },
 
     look_overworld(args: { town_id?: string }): OverworldStaticLook {

@@ -74,6 +74,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   re-deriving `world_quest_id` after path resolution.
 - Static overworld compatibility tools now delegate to `world/static_overworld`
   instead of open-coding graph queries in MCP.
+- Stateful overworld MCP action wrappers now share one session response envelope
+  helper.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,
