@@ -33,6 +33,16 @@ import {
   type OverworldRoutePlan,
   type OverworldRoadEvent,
 } from "./overworld.js";
+import {
+  describeOverworldAreaAction,
+  describeOverworldContactAction,
+  describeOverworldEventAction,
+  describeOverworldJobAction,
+  describeOverworldPoiAction,
+  describeOverworldSiteAction,
+  type OverworldLocalActionDescriptor,
+  type OverworldLocalActionKind,
+} from "./local_actions.js";
 
 export const OVERWORLD_SESSION_SAVE_VERSION = 1 as const;
 const MAX_SUPPLIES = 8;
@@ -589,6 +599,22 @@ export class OverworldSession {
     return { minutes, alreadyKnown: false, entry: recorded };
   }
 
+  private recordLocalAction<Kind extends OverworldLocalActionKind>(
+    action: OverworldLocalActionDescriptor<Kind>,
+    town: string,
+  ): OverworldActionResult {
+    return this.recordAction(
+      {
+        id: action.id,
+        kind: action.kind,
+        town,
+        title: action.title,
+        text: action.text,
+      },
+      action.minutes,
+    );
+  }
+
   private recordRepeatableEntry(
     entry: Omit<OverworldJournalEntry, "recordedAt">,
     minutes: number,
@@ -1021,16 +1047,7 @@ export class OverworldSession {
     if (poi.area !== this.currentAreaIdOrThrow()) {
       throw new Error("Move to that local area before scouting this point of interest.");
     }
-    const result = this.recordAction(
-      {
-        id: `scout:${poi.id}`,
-        kind: "poi",
-        town: current.name,
-        title: `Scouted ${poi.title}`,
-        text: `${poi.summary} You mark the site as a local lead for ${current.name}.`,
-      },
-      20,
-    );
+    const result = this.recordLocalAction(describeOverworldPoiAction(poi, current), current.name);
     return {
       ...result,
       discoveredAreas: result.alreadyKnown ? [] : this.discoverNextAreaForTown(current.id),
@@ -1065,16 +1082,7 @@ export class OverworldSession {
       }
     }
 
-    const result = this.recordAction(
-      {
-        id: `area:${area.id}`,
-        kind: "area",
-        town: current.name,
-        title: `Explored ${area.name}`,
-        text: `${area.summary} ${area.discovery}`,
-      },
-      area.travel_minutes,
-    );
+    const result = this.recordLocalAction(describeOverworldAreaAction(area), current.name);
     if (!result.alreadyKnown) this.visitedAreaIds.add(area.id);
     return {
       ...result,
@@ -1133,21 +1141,13 @@ export class OverworldSession {
     }
 
     const area = this.localAreas(this.currentId).find((candidate) => candidate.id === job.area);
-    const result = this.recordAction(
-      {
-        id: `job:${job.id}`,
-        kind: "job",
-        town: current.name,
-        title: `Completed ${job.title}`,
-        text: `${job.objective} ${job.reward}${area ? ` The work is logged against ${area.name}.` : ""}`,
-      },
-      job.minutes,
-    );
+    const action = describeOverworldJobAction(job, area ?? null);
+    const result = this.recordLocalAction(action, current.name);
     if (!result.alreadyKnown) {
       this.completedJobIds.add(job.id);
       this.regionRenown.set(
         current.region,
-        (this.regionRenown.get(current.region) ?? 0) + job.difficulty,
+        (this.regionRenown.get(current.region) ?? 0) + (action.regionalRenown ?? 0),
       );
     }
     return {
@@ -1168,16 +1168,7 @@ export class OverworldSession {
     if (character.area !== this.currentAreaIdOrThrow()) {
       throw new Error("Move to that local area before talking to that contact.");
     }
-    const result = this.recordAction(
-      {
-        id: `talk:${character.id}`,
-        kind: "contact",
-        town: current.name,
-        title: `Talked to ${character.name}`,
-        text: `${character.summary} ${character.agenda}`,
-      },
-      15,
-    );
+    const result = this.recordLocalAction(describeOverworldContactAction(character), current.name);
     return {
       ...result,
       discoveredAreas: result.alreadyKnown ? [] : this.discoverNextAreaForTown(current.id),
@@ -1196,16 +1187,7 @@ export class OverworldSession {
     if (event.area !== this.currentAreaIdOrThrow()) {
       throw new Error("Move to that local area before investigating that event.");
     }
-    const result = this.recordAction(
-      {
-        id: `investigate:${event.id}`,
-        kind: "event",
-        town: current.name,
-        title: `Investigated ${event.title}`,
-        text: `${event.summary} The pressure is ${event.pressure}, intensity ${event.intensity}.`,
-      },
-      20 + event.intensity * 5,
-    );
+    const result = this.recordLocalAction(describeOverworldEventAction(event), current.name);
     return {
       ...result,
       discoveredAreas: result.alreadyKnown ? [] : this.discoverNextAreaForTown(current.id),
@@ -1287,19 +1269,14 @@ export class OverworldSession {
       if (existing) return { minutes: 0, alreadyKnown: true, entry: existing };
     }
 
-    const result = this.recordAction(
-      {
-        id: `site:${site.id}`,
-        kind: "site",
-        town: current.name,
-        title: `Explored ${site.title}`,
-        text: `${site.summary} ${site.reward}`,
-      },
-      45 + site.danger * 15,
-    );
+    const action = describeOverworldSiteAction(site);
+    const result = this.recordLocalAction(action, current.name);
     if (!result.alreadyKnown) {
       this.exploredSiteIds.add(site.id);
-      this.regionRenown.set(site.region, (this.regionRenown.get(site.region) ?? 0) + site.danger);
+      this.regionRenown.set(
+        site.region,
+        (this.regionRenown.get(site.region) ?? 0) + (action.regionalRenown ?? 0),
+      );
     }
     return {
       ...result,

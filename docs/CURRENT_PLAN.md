@@ -89,6 +89,8 @@ Make discovered overworld quest leads start real RPG sessions.
   `world_quest_id`, not the compatibility raw pack path.
 - MCP overworld loading now verifies local quest ids and packs against the
   canonical world graph before play.
+- Static and stateful local overworld actions now share descriptor text, timing,
+  and renown values.
 
 ## Acceptance
 

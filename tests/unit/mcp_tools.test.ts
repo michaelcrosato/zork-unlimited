@@ -303,6 +303,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       kind: "job",
       title: `Completed ${job.title}`,
     });
+    expect(workJob.journal_entry.text).toContain(`logged against ${area.name}`);
 
     const scout = a.scout_overworld_poi({ poi_id: poi.id });
     expect(scout.current.id).toBe("albany_city");

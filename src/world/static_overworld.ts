@@ -21,14 +21,16 @@ import {
   type OverworldQuest,
   type OverworldRoadEvent,
 } from "./overworld.js";
-
-type StaticJournalEntryKind = "area" | "job" | "poi" | "contact" | "event" | "site";
-
-type StaticJournalEntry<Kind extends StaticJournalEntryKind> = {
-  kind: Kind;
-  title: string;
-  text: string;
-};
+import {
+  describeOverworldAreaAction,
+  describeOverworldContactAction,
+  describeOverworldEventAction,
+  describeOverworldJobAction,
+  describeOverworldPoiAction,
+  describeOverworldSiteAction,
+  localActionJournalEntry,
+  type OverworldLocalJournalEntry,
+} from "./local_actions.js";
 
 export type OverworldStaticLook = {
   world: Pick<OverworldManifest, "id" | "name">;
@@ -58,7 +60,7 @@ export type OverworldStaticAreaResult = {
   current: OverworldNode;
   area: OverworldArea;
   minutes: number;
-  journal_entry: StaticJournalEntry<"area">;
+  journal_entry: OverworldLocalJournalEntry<"area">;
 };
 
 export type OverworldStaticJobResult = {
@@ -67,7 +69,7 @@ export type OverworldStaticJobResult = {
   job: OverworldLocalJob;
   minutes: number;
   regional_renown: number;
-  journal_entry: StaticJournalEntry<"job">;
+  journal_entry: OverworldLocalJournalEntry<"job">;
 };
 
 export type OverworldStaticPoiResult = {
@@ -75,7 +77,7 @@ export type OverworldStaticPoiResult = {
   current: OverworldNode;
   point_of_interest: OverworldPoi;
   minutes: number;
-  journal_entry: StaticJournalEntry<"poi">;
+  journal_entry: OverworldLocalJournalEntry<"poi">;
 };
 
 export type OverworldStaticContactResult = {
@@ -83,7 +85,7 @@ export type OverworldStaticContactResult = {
   current: OverworldNode;
   character: OverworldCharacter;
   minutes: number;
-  journal_entry: StaticJournalEntry<"contact">;
+  journal_entry: OverworldLocalJournalEntry<"contact">;
 };
 
 export type OverworldStaticEventResult = {
@@ -91,7 +93,7 @@ export type OverworldStaticEventResult = {
   current: OverworldNode;
   event: OverworldLocalEvent;
   minutes: number;
-  journal_entry: StaticJournalEntry<"event">;
+  journal_entry: OverworldLocalJournalEntry<"event">;
 };
 
 export type OverworldStaticSiteResult = {
@@ -100,7 +102,7 @@ export type OverworldStaticSiteResult = {
   site: OverworldExplorationSite;
   minutes: number;
   regional_renown: number;
-  journal_entry: StaticJournalEntry<"site">;
+  journal_entry: OverworldLocalJournalEntry<"site">;
 };
 
 function townIdOrStart(world: OverworldManifest, townId?: string): string {
@@ -165,16 +167,13 @@ export function exploreOverworldArea(
   const current = requireTown(world, townId);
   const area = overworldAreasAt(world, townId).find((candidate) => candidate.id === args.area_id);
   if (!area) throw new Error(`Area "${args.area_id}" is not in "${townId}".`);
+  const action = describeOverworldAreaAction(area);
   return {
     ok: true,
     current,
     area,
-    minutes: area.travel_minutes,
-    journal_entry: {
-      kind: "area",
-      title: `Explored ${area.name}`,
-      text: `${area.summary} ${area.discovery}`,
-    },
+    minutes: action.minutes,
+    journal_entry: localActionJournalEntry(action),
   };
 }
 
@@ -186,17 +185,15 @@ export function workOverworldJob(
   const current = requireTown(world, townId);
   const job = overworldJobsAt(world, townId).find((candidate) => candidate.id === args.job_id);
   if (!job) throw new Error(`Local job "${args.job_id}" is not in "${townId}".`);
+  const area = world.areas.find((candidate) => candidate.id === job.area) ?? null;
+  const action = describeOverworldJobAction(job, area);
   return {
     ok: true,
     current,
     job,
-    minutes: job.minutes,
-    regional_renown: job.difficulty,
-    journal_entry: {
-      kind: "job",
-      title: `Completed ${job.title}`,
-      text: `${job.objective} ${job.reward}`,
-    },
+    minutes: action.minutes,
+    regional_renown: action.regionalRenown ?? 0,
+    journal_entry: localActionJournalEntry(action),
   };
 }
 
@@ -208,16 +205,13 @@ export function scoutOverworldPoi(
   const current = requireTown(world, townId);
   const poi = overworldPoisAt(world, townId).find((candidate) => candidate.id === args.poi_id);
   if (!poi) throw new Error(`Point of interest "${args.poi_id}" is not in "${townId}".`);
+  const action = describeOverworldPoiAction(poi, current);
   return {
     ok: true,
     current,
     point_of_interest: poi,
-    minutes: 20,
-    journal_entry: {
-      kind: "poi",
-      title: `Scouted ${poi.title}`,
-      text: `${poi.summary} You mark the site as a local lead for ${current.name}.`,
-    },
+    minutes: action.minutes,
+    journal_entry: localActionJournalEntry(action),
   };
 }
 
@@ -231,16 +225,13 @@ export function talkOverworldContact(
     (candidate) => candidate.id === args.character_id,
   );
   if (!character) throw new Error(`Contact "${args.character_id}" is not in "${townId}".`);
+  const action = describeOverworldContactAction(character);
   return {
     ok: true,
     current,
     character,
-    minutes: 15,
-    journal_entry: {
-      kind: "contact",
-      title: `Talked to ${character.name}`,
-      text: `${character.summary} ${character.agenda}`,
-    },
+    minutes: action.minutes,
+    journal_entry: localActionJournalEntry(action),
   };
 }
 
@@ -254,16 +245,13 @@ export function investigateOverworldEvent(
     (candidate) => candidate.id === args.event_id,
   );
   if (!event) throw new Error(`Event "${args.event_id}" is not active in "${townId}".`);
+  const action = describeOverworldEventAction(event);
   return {
     ok: true,
     current,
     event,
-    minutes: 20 + event.intensity * 5,
-    journal_entry: {
-      kind: "event",
-      title: `Investigated ${event.title}`,
-      text: `${event.summary} The pressure is ${event.pressure}, intensity ${event.intensity}.`,
-    },
+    minutes: action.minutes,
+    journal_entry: localActionJournalEntry(action),
   };
 }
 
@@ -277,16 +265,13 @@ export function exploreOverworldSite(
     (candidate) => candidate.id === args.site_id,
   );
   if (!site) throw new Error(`Exploration site "${args.site_id}" is not near "${townId}".`);
+  const action = describeOverworldSiteAction(site);
   return {
     ok: true,
     current,
     site,
-    minutes: 45 + site.danger * 15,
-    regional_renown: site.danger,
-    journal_entry: {
-      kind: "site",
-      title: `Explored ${site.title}`,
-      text: `${site.summary} ${site.reward}`,
-    },
+    minutes: action.minutes,
+    regional_renown: action.regionalRenown ?? 0,
+    journal_entry: localActionJournalEntry(action),
   };
 }
