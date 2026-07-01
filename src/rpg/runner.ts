@@ -29,6 +29,7 @@ import { resolveAttack, enemyAlive } from "./combat.js";
 import { rngForStep, type Rng } from "../core/rng.js";
 import { scoreChangeNarrations } from "../core/score_chrome.js";
 import { resolveSkillCheck } from "../core/skill_check.js";
+import { endGameEffects } from "./terminal_effects.js";
 
 export type RpgIndex = RpgModelIndex & {
   rpgPack: RpgPack;
@@ -129,7 +130,7 @@ export function buildRpgRules(
       const room = index.rooms.get(locationId);
       const effects: Effect[] = room ? [...room.on_enter] : [];
       const ending = winningRpgEnding(index, state);
-      if (ending) effects.push({ end_game: ending });
+      if (ending) effects.push(...endGameEffects(ending));
       return effects;
     },
 
@@ -138,7 +139,7 @@ export function buildRpgRules(
     // entry. Skipped once the game has ended.
     checkWin(state: GameState): Effect[] {
       const ending = winningRpgEnding(index, state);
-      return ending ? [{ end_game: ending }] : [];
+      return ending ? endGameEffects(ending) : [];
     },
 
     // Zork-style score feedback derived from the RPG `score` var.

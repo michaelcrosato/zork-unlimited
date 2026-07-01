@@ -237,6 +237,19 @@ describe("RPG schema owns the RPG contract", () => {
     expect(cyoaRunner).not.toContain("applyEffects");
   });
 
+  it("keeps terminal transition effects on the RPG-owned path", () => {
+    const terminalEffects = readFileSync("src/rpg/terminal_effects.ts", "utf8");
+    const rpgRunner = readFileSync("src/rpg/runner.ts", "utf8");
+    const cyoaRunner = readFileSync("src/cyoa/runner.ts", "utf8");
+
+    expect(terminalEffects).toContain("export function endGameEffects");
+    expect(terminalEffects).toContain("export function transitionEffects");
+    expect(rpgRunner).toContain("./terminal_effects");
+    expect(cyoaRunner).toContain("../rpg/terminal_effects");
+    expect(cyoaRunner).not.toContain("effects.push({ goto: next }");
+    expect(cyoaRunner).not.toContain("{ end_game: deadline.ending }");
+  });
+
   it("does not import the legacy parser command mapper for RPG play", () => {
     const commandMap = readFileSync("src/rpg/command_map.ts", "utf8");
     const playBin = readFileSync("bin/rpg_play.ts", "utf8");

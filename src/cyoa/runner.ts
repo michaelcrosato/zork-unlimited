@@ -18,6 +18,7 @@ import { scoreChangeNarrations } from "../core/score_chrome.js";
 import { resolveSkillCheck } from "../core/skill_check.js";
 import { SCORE_VAR } from "../rpg/schema.js";
 import { initRuntimeState } from "../rpg/state_init.js";
+import { endGameEffects, transitionEffects } from "../rpg/terminal_effects.js";
 import type { CyoaPack, Ending, Scene } from "./schema.js";
 
 export type CyoaAction = { type: "CHOOSE"; choiceId: string };
@@ -104,11 +105,7 @@ export function buildRules(
       }
       // Plain choice: `next` is guaranteed present by the schema's exactly-one-of rule.
       const next = choice.next as string;
-      if (isTerminal(index, next)) {
-        effects.push({ goto: next }, { end_game: next });
-      } else {
-        effects.push({ goto: next });
-      }
+      effects.push(...transitionEffects(next, isTerminal(index, next)));
       return { conditions: choice.conditions, effects };
     },
 
@@ -132,7 +129,7 @@ export function buildRules(
       // through misconfig from gotoing a non-terminal scene and stranding the player.
       if (!isTerminal(index, deadline.ending)) return [];
       if (!evalConditions(deadline.when, state)) return [];
-      return [{ goto: deadline.ending }, { end_game: deadline.ending }];
+      return endGameEffects(deadline.ending, { gotoEnding: true });
     },
 
     // Engine chrome: the same Zork-style score feedback the parser/RPG runners emit,
