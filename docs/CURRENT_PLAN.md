@@ -93,6 +93,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - CLI validate now defaults through the canonical world graph and accepts
   targeted `world_quest_id` values; positional raw pack files are rejected unless
   explicit offline `--pack` mode is used.
+- CLI authoring now writes draft RPG packs only; direct `content/rpg/pack` output
+  is rejected until the quest is deliberately registered in the canonical world
+  graph.
 - CLI play now accepts/defaults to shipped `world_quest_id` sources and records
   `worldQuestId`, so local traces replay without raw pack paths.
 - Save restore source inference now shares the same world source resolver as

@@ -5,6 +5,9 @@
  * but the CLI should no longer expose mode selection or default to CYOA.
  */
 import { spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 function runAuthor(command: string, timeout = 120_000) {
@@ -18,6 +21,10 @@ function runAuthor(command: string, timeout = 120_000) {
 
 function outputOf(result: ReturnType<typeof runAuthor>): string {
   return `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+}
+
+function shellQuote(value: string): string {
+  return `"${value.replace(/"/g, '\\"')}"`;
 }
 
 describe("author CLI RPG-only public surface", () => {
@@ -43,5 +50,34 @@ describe("author CLI RPG-only public surface", () => {
 
     expect(result.status, output).toBe(2);
     expect(output).toContain("author is RPG-only; --mode is no longer supported.");
+  });
+
+  it("writes authored packs as drafts outside the shipped world graph", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-author-"));
+    const out = join(dir, "draft.yaml");
+    try {
+      const result = runAuthor(
+        `npm run author -- "A keeper must relight a dead lighthouse before a ship wrecks." -- --out ${shellQuote(out)}`,
+      );
+      const output = outputOf(result);
+
+      expect(result.status, output).toBe(0);
+      expect(output).toContain("Wrote draft RPG pack");
+      expect(existsSync(out)).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects direct writes into shipped RPG pack storage", () => {
+    const result = runAuthor(
+      'npm run author -- "A keeper must relight a dead lighthouse before a ship wrecks." -- --out content/rpg/pack/new_lighthouse.yaml',
+      30_000,
+    );
+    const output = outputOf(result);
+
+    expect(result.status, output).toBe(2);
+    expect(output).toContain("author writes draft RPG packs only");
+    expect(output).toContain("canonical world graph");
   });
 });

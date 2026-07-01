@@ -146,6 +146,15 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: closes a package-era debug surface; trace/offline internals still keep pack paths for integrity checks.
 - Operator direction: pause after this cycle; do not start another AFK cycle.
 
+### Cycle result — author_cli_draft_output_only
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; same broad helper drift outside canonical repo scripts.
+- CLI/tooling: `npm run author -- --out` now writes draft RPG packs only and rejects direct writes under `content/rpg/pack`.
+- Architecture: shipped quest content must go through canonical world graph registration instead of standalone pack drops.
+- VERIFY: focused authoring tests, direct shipped-pack rejection smoke, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` all pass.
+- Self-critique: closes an authoring/package shortcut; a full registration workflow remains a later engine task.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
+
 ## Current Snapshot
 
 - Verification bar: `npm run health` remains the required end gate.
@@ -166,6 +175,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   paths are hidden offline compatibility only.
 - Inspect CLI: shipped quest summaries use positional `world_quest_id`; raw pack
   summaries require explicit `--pack` offline mode.
+- Author CLI: generated RPG output is draft-only; direct writes under
+  `content/rpg/pack` are rejected until registered through the world graph.
 - Live session metadata: start/transcript/save/load return shipped
   `world_quest_id` or generated `generated_rpg_seed` without raw pack paths.
 - Overworld quest view metadata: observations, action results, compact context,
