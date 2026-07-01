@@ -46,6 +46,26 @@ function exportedSnapshotAfterTwoRoads() {
   return { a, snapshot };
 }
 
+function exportedSnapshotAfterRoadStrategy(strategy: "assist_travelers" | "cautious_scout") {
+  const a = api();
+  const started = a.start_overworld();
+  const firstRoad =
+    started.observation.exits.find((edge) => edge.destination.id === "colonie_town") ??
+    started.observation.exits[0];
+  if (!firstRoad) throw new Error("expected an overworld road from start");
+
+  a.travel_overworld_session({ session_id: started.session_id, road_id: firstRoad.id });
+  a.resolve_overworld_session_road_encounter({
+    session_id: started.session_id,
+    strategy,
+  });
+
+  const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
+  expect(snapshot.journalEntries.some((entry) => entry.kind === "road")).toBe(true);
+  expect(snapshot.regionRenown.length).toBeGreaterThan(0);
+  return { a, snapshot };
+}
+
 describe("overworld snapshot restore integrity", () => {
   it("rejects duplicate journal ids in forged session snapshots", () => {
     const { a, snapshot } = exportedSnapshotAfterTwoRoads();
@@ -144,6 +164,114 @@ describe("overworld snapshot restore integrity", () => {
     };
 
     expect(() => a.restore_overworld_session({ snapshot: regionalArcSnapshot })).not.toThrow();
+  });
+
+  it("rejects unexpected region renown with no journal source", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const region = overworld.nodes[0]!.region;
+    const forgedRenown = {
+      ...snapshot,
+      regionRenown: [[region, 1] satisfies [string, number]],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedRenown })).toThrow(
+      /unexpected region renown/,
+    );
+  });
+
+  it("rejects missing region renown earned by road encounters", () => {
+    const { a, snapshot } = exportedSnapshotAfterRoadStrategy("cautious_scout");
+    const missingRoadRenown = {
+      ...snapshot,
+      regionRenown: [],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: missingRoadRenown })).toThrow(
+      /region renown.*expected 1/,
+    );
+  });
+
+  it.each([
+    {
+      label: "completed job",
+      forge(snapshot: Snapshot): Snapshot {
+        const job = overworld.local_jobs.find(
+          (candidate) => !snapshot.completedJobIds.includes(candidate.id),
+        );
+        if (!job) throw new Error("expected an incomplete job");
+        return {
+          ...snapshot,
+          discoveredJobIds: [...snapshot.discoveredJobIds, job.id],
+          completedJobIds: [...snapshot.completedJobIds, job.id],
+          journalEntries: [
+            {
+              id: `job:${job.id}`,
+              kind: "job",
+              town: townName(job.home),
+              title: "Forged job",
+              text: "Forged job journal proof.",
+              recordedAt: snapshot.journalEntries[0]!.recordedAt,
+            },
+            ...snapshot.journalEntries,
+          ],
+        };
+      },
+    },
+    {
+      label: "explored site",
+      forge(snapshot: Snapshot): Snapshot {
+        const site = overworld.exploration_sites.find(
+          (candidate) => !snapshot.exploredSiteIds.includes(candidate.id),
+        );
+        if (!site) throw new Error("expected an unexplored site");
+        return {
+          ...snapshot,
+          discoveredSiteIds: [...snapshot.discoveredSiteIds, site.id],
+          exploredSiteIds: [...snapshot.exploredSiteIds, site.id],
+          journalEntries: [
+            {
+              id: `site:${site.id}`,
+              kind: "site",
+              town: townName(site.nearest_town),
+              title: "Forged site",
+              text: "Forged site journal proof.",
+              recordedAt: snapshot.journalEntries[0]!.recordedAt,
+            },
+            ...snapshot.journalEntries,
+          ],
+        };
+      },
+    },
+    {
+      label: "resolved event",
+      forge(snapshot: Snapshot): Snapshot {
+        const event = overworld.local_events.find(
+          (candidate) => !snapshot.resolvedEventIds.includes(candidate.id),
+        );
+        if (!event) throw new Error("expected an unresolved event");
+        return {
+          ...snapshot,
+          resolvedEventIds: [...snapshot.resolvedEventIds, event.id],
+          journalEntries: [
+            {
+              id: `resolve:${event.id}`,
+              kind: "resolution",
+              town: townName(event.home),
+              title: "Forged resolution",
+              text: "Forged resolution journal proof.",
+              recordedAt: snapshot.journalEntries[0]!.recordedAt,
+            },
+            ...snapshot.journalEntries,
+          ],
+        };
+      },
+    },
+  ])("rejects $label journal/progress proof without earned renown", ({ forge }) => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+
+    expect(() => a.restore_overworld_session({ snapshot: forge(snapshot) })).toThrow(
+      /region renown/,
+    );
   });
 
   it.each([

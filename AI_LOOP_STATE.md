@@ -200,6 +200,15 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: closes state/journal drift for restore; deeper semantic checks such as renown recomputation remain later engine work.
 - Operator direction: pause after this cycle; do not start another AFK cycle.
 
+### Cycle result — overworld_snapshot_region_renown_binding
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; same broad helper drift outside canonical repo scripts.
+- Engine/persistence: overworld snapshot restore now recomputes region renown from completed jobs, explored sites, resolved events, and road encounter journal choices.
+- Token economy: compact progress can trust renown totals without accepting forged high-value region scores.
+- VERIFY: focused overworld snapshot/MCP/UI tests, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test` (192/1286), and `npm run health` all pass.
+- Self-critique: closes derived renown drift at restore; full progression replay remains a larger future invariant.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
+
 ## Current Snapshot
 
 - Verification bar: `npm run health` remains the required end gate.
@@ -225,8 +234,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Overworld session restore rejects forged history with duplicate journal ids,
   unknown journal towns or source ids, mismatched journal kind/id prefixes,
   malformed/future/non-newest-first journal timelines, unmatched road journal
-  arrivals, progress/journal state drift, future/non-newest-first travel logs,
-  or impossible travel vitals.
+  arrivals, progress/journal state drift, region-renown mismatches,
+  future/non-newest-first travel logs, or impossible travel vitals.
 - Live session metadata: start/transcript/save/load return shipped
   `world_quest_id` or generated `generated_rpg_seed` without raw pack paths.
 - Overworld quest view metadata: observations, action results, compact context,
