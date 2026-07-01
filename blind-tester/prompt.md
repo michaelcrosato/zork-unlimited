@@ -23,6 +23,10 @@ PLAY:
   until `context.ended` is true. If an action id is unclear, call
   `mcp__adventureforge__list_legal_actions` once without `compact_actions` for
   player-facing command text.
+- For an end-of-run transcript sanity check, call
+  `mcp__adventureforge__get_transcript` with `summary_only: true`. If you need route
+  rows, use `compact_turns: true`; avoid full transcripts unless diagnosing a
+  specific event-history bug.
 - Make decisions a curious, sensible human would: follow clues, pursue the apparent
   goal, investigate what seems important. Do NOT pick randomly. Narrate your
   reasoning each turn in ONE short line. Do ONE thorough playthrough to an ending;

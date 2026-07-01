@@ -105,7 +105,7 @@ async function main() {
     const names = new Set(tools.map((t) => t.name));
     console.log(`• tools/list → ${tools.length} tools`);
     const startTool = QUEST_ID ? "start_world_quest" : "new_game";
-    for (const required of [startTool, "get_observation", "step_action"]) {
+    for (const required of [startTool, "get_observation", "step_action", "get_transcript"]) {
       if (!names.has(required)) fail(`MCP server is missing the "${required}" tool`);
     }
 
@@ -147,6 +147,24 @@ async function main() {
     }
 
     if (stepped === 0) fail("could not step any action from the opening scene");
+    const transcript = parseResult(
+      await client.callTool({
+        name: "get_transcript",
+        arguments: { session_id, summary_only: true },
+      }),
+    );
+    if ((transcript.summary?.steps ?? -1) < stepped) {
+      fail("summary transcript under-counted stepped actions");
+    }
+    if (Array.isArray(transcript.turns) && transcript.turns.length > 0) {
+      fail("summary transcript unexpectedly returned turn rows");
+    }
+    console.log(
+      `  transcript summary: ${transcript.summary?.steps ?? 0} step(s), ${
+        transcript.summary?.scenes?.length ?? 0
+      } scene(s)`,
+    );
+
     if (process.exitCode) console.error("\nSMOKE: FAIL");
     else
       console.log(

@@ -26,6 +26,8 @@ describe("blind runner MCP config contract", () => {
     expect(runner).toContain("compact_observation = true");
     expect(prompt).toContain("mcp__adventureforge__start_world_quest");
     expect(prompt).toContain("compact_observation: true");
+    expect(prompt).toContain("summary_only: true");
+    expect(prompt).toContain("compact_turns: true");
     expect(prompt).toContain("context");
     expect(prompt).toContain("{{START_INSTRUCTION}}");
     expect(prompt).not.toContain("mcp__adventureforge__start_game");
@@ -33,6 +35,8 @@ describe("blind runner MCP config contract", () => {
     expect(smoke).toContain('"breaking_weir"');
     expect(smoke).toContain('"start_world_quest"');
     expect(smoke).toContain("compact_observation: true");
+    expect(smoke).toContain('"get_transcript"');
+    expect(smoke).toContain("summary_only: true");
     expect(smoke).toContain("context");
     expect(smoke).not.toContain('"start_game"');
   });
