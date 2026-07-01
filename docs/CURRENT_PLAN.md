@@ -81,6 +81,8 @@ Make discovered overworld quest leads start real RPG sessions.
   packs as the explicit null-world source.
 - `validate_pack`, `load_pack`, and `apply_content_patch` now use shared source
   identity directly instead of re-deriving `world_quest_id` from the resolved path.
+- Static overworld compatibility tools now delegate to `world/static_overworld`,
+  keeping MCP as an adapter instead of a second graph-query implementation.
 
 ## Acceptance
 

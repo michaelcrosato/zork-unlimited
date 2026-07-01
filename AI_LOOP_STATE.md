@@ -72,6 +72,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   packs as the explicit null-world source.
 - Pack validation/loading/patching now consume shared source identity instead of
   re-deriving `world_quest_id` after path resolution.
+- Static overworld compatibility tools now delegate to `world/static_overworld`
+  instead of open-coding graph queries in MCP.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,

@@ -63,29 +63,29 @@ import {
 } from "../world/source.js";
 import {
   assertOverworldIntegrity,
-  overworldAreasAt,
-  overworldCharactersAt,
-  overworldEdgesFrom,
-  overworldEventsAt,
-  overworldExplorationSitesNear,
-  overworldJobsAt,
-  overworldPoisAt,
-  overworldQuestsAt,
-  overworldRoadEventFor,
   parseOverworldManifest,
-  type OverworldArea,
-  type OverworldAreaEdge,
-  type OverworldEdge,
-  type OverworldCharacter,
-  type OverworldExplorationSite,
-  type OverworldLocalJob,
-  type OverworldLocalEvent,
   type OverworldManifest,
   type OverworldNode,
-  type OverworldPoi,
   type OverworldQuest,
-  type OverworldRoadEvent,
 } from "../world/overworld.js";
+import {
+  exploreOverworldArea,
+  exploreOverworldSite,
+  investigateOverworldEvent,
+  lookOverworld,
+  scoutOverworldPoi,
+  talkOverworldContact,
+  travelOverworld,
+  workOverworldJob,
+  type OverworldStaticAreaResult,
+  type OverworldStaticContactResult,
+  type OverworldStaticEventResult,
+  type OverworldStaticJobResult,
+  type OverworldStaticLook,
+  type OverworldStaticPoiResult,
+  type OverworldStaticSiteResult,
+  type OverworldStaticTravel,
+} from "../world/static_overworld.js";
 import {
   OverworldSession,
   type OverworldActionResult,
@@ -892,234 +892,38 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    look_overworld(args: { town_id?: string }): {
-      world: Pick<OverworldManifest, "id" | "name">;
-      current: OverworldNode;
-      exits: (OverworldEdge & { destination: OverworldNode })[];
-      areas: OverworldArea[];
-      local_area_routes: OverworldAreaEdge[];
-      points_of_interest: OverworldPoi[];
-      characters: OverworldCharacter[];
-      local_events: OverworldLocalEvent[];
-      local_jobs: OverworldLocalJob[];
-      nearby_sites: OverworldExplorationSite[];
-      local_quests: OverworldQuest[];
-    } {
-      const world = loadOverworldManifest();
-      const townId = args.town_id ?? world.start;
-      const current = world.nodes.find((node) => node.id === townId);
-      if (!current) throw new Error(`Unknown overworld town "${townId}".`);
-      return {
-        world: { id: world.id, name: world.name },
-        current,
-        exits: overworldEdgesFrom(world, townId),
-        areas: overworldAreasAt(world, townId),
-        local_area_routes: world.area_edges
-          .filter((edge) => edge.home === townId)
-          .sort((a, b) => a.travel_minutes - b.travel_minutes || a.route.localeCompare(b.route)),
-        points_of_interest: overworldPoisAt(world, townId),
-        characters: overworldCharactersAt(world, townId),
-        local_events: overworldEventsAt(world, townId),
-        local_jobs: overworldJobsAt(world, townId),
-        nearby_sites: overworldExplorationSitesNear(world, townId),
-        local_quests: overworldQuestsAt(world, townId),
-      };
+    look_overworld(args: { town_id?: string }): OverworldStaticLook {
+      return lookOverworld(loadOverworldManifest(), args);
     },
 
-    travel_overworld(args: { from_town: string; road_id: string }): {
-      ok: true;
-      from: OverworldNode;
-      to: OverworldNode;
-      road: OverworldEdge;
-      road_event: OverworldRoadEvent | null;
-      arrival: {
-        world: Pick<OverworldManifest, "id" | "name">;
-        current: OverworldNode;
-        exits: (OverworldEdge & { destination: OverworldNode })[];
-        areas: OverworldArea[];
-        local_area_routes: OverworldAreaEdge[];
-        points_of_interest: OverworldPoi[];
-        characters: OverworldCharacter[];
-        local_events: OverworldLocalEvent[];
-        local_jobs: OverworldLocalJob[];
-        nearby_sites: OverworldExplorationSite[];
-        local_quests: OverworldQuest[];
-      };
-    } {
-      const world = loadOverworldManifest();
-      const current = world.nodes.find((node) => node.id === args.from_town);
-      if (!current) throw new Error(`Unknown overworld town "${args.from_town}".`);
-      const road = overworldEdgesFrom(world, args.from_town).find(
-        (edge) => edge.id === args.road_id,
-      );
-      if (!road)
-        throw new Error(`Road "${args.road_id}" is not reachable from "${args.from_town}".`);
-      return {
-        ok: true,
-        from: current,
-        to: road.destination,
-        road,
-        road_event: overworldRoadEventFor(world, road.id),
-        arrival: this.look_overworld({ town_id: road.destination.id }),
-      };
+    travel_overworld(args: { from_town: string; road_id: string }): OverworldStaticTravel {
+      return travelOverworld(loadOverworldManifest(), args);
     },
 
-    explore_overworld_area(args: { town_id?: string; area_id: string }): {
-      ok: true;
-      current: OverworldNode;
-      area: OverworldArea;
-      minutes: number;
-      journal_entry: {
-        kind: "area";
-        title: string;
-        text: string;
-      };
-    } {
-      const world = loadOverworldManifest();
-      const townId = args.town_id ?? world.start;
-      const current = world.nodes.find((node) => node.id === townId);
-      if (!current) throw new Error(`Unknown overworld town "${townId}".`);
-      const area = overworldAreasAt(world, townId).find(
-        (candidate) => candidate.id === args.area_id,
-      );
-      if (!area) throw new Error(`Area "${args.area_id}" is not in "${townId}".`);
-      return {
-        ok: true,
-        current,
-        area,
-        minutes: area.travel_minutes,
-        journal_entry: {
-          kind: "area",
-          title: `Explored ${area.name}`,
-          text: `${area.summary} ${area.discovery}`,
-        },
-      };
+    explore_overworld_area(args: { town_id?: string; area_id: string }): OverworldStaticAreaResult {
+      return exploreOverworldArea(loadOverworldManifest(), args);
     },
 
-    work_overworld_job(args: { town_id?: string; job_id: string }): {
-      ok: true;
-      current: OverworldNode;
-      job: OverworldLocalJob;
-      minutes: number;
-      regional_renown: number;
-      journal_entry: {
-        kind: "job";
-        title: string;
-        text: string;
-      };
-    } {
-      const world = loadOverworldManifest();
-      const townId = args.town_id ?? world.start;
-      const current = world.nodes.find((node) => node.id === townId);
-      if (!current) throw new Error(`Unknown overworld town "${townId}".`);
-      const job = overworldJobsAt(world, townId).find((candidate) => candidate.id === args.job_id);
-      if (!job) throw new Error(`Local job "${args.job_id}" is not in "${townId}".`);
-      return {
-        ok: true,
-        current,
-        job,
-        minutes: job.minutes,
-        regional_renown: job.difficulty,
-        journal_entry: {
-          kind: "job",
-          title: `Completed ${job.title}`,
-          text: `${job.objective} ${job.reward}`,
-        },
-      };
+    work_overworld_job(args: { town_id?: string; job_id: string }): OverworldStaticJobResult {
+      return workOverworldJob(loadOverworldManifest(), args);
     },
 
-    scout_overworld_poi(args: { town_id?: string; poi_id: string }): {
-      ok: true;
-      current: OverworldNode;
-      point_of_interest: OverworldPoi;
-      minutes: number;
-      journal_entry: {
-        kind: "poi";
-        title: string;
-        text: string;
-      };
-    } {
-      const world = loadOverworldManifest();
-      const townId = args.town_id ?? world.start;
-      const current = world.nodes.find((node) => node.id === townId);
-      if (!current) throw new Error(`Unknown overworld town "${townId}".`);
-      const poi = overworldPoisAt(world, townId).find((candidate) => candidate.id === args.poi_id);
-      if (!poi) throw new Error(`Point of interest "${args.poi_id}" is not in "${townId}".`);
-      return {
-        ok: true,
-        current,
-        point_of_interest: poi,
-        minutes: 20,
-        journal_entry: {
-          kind: "poi",
-          title: `Scouted ${poi.title}`,
-          text: `${poi.summary} You mark the site as a local lead for ${current.name}.`,
-        },
-      };
+    scout_overworld_poi(args: { town_id?: string; poi_id: string }): OverworldStaticPoiResult {
+      return scoutOverworldPoi(loadOverworldManifest(), args);
     },
 
-    talk_overworld_contact(args: { town_id?: string; character_id: string }): {
-      ok: true;
-      current: OverworldNode;
-      character: OverworldCharacter;
-      minutes: number;
-      journal_entry: {
-        kind: "contact";
-        title: string;
-        text: string;
-      };
-    } {
-      const world = loadOverworldManifest();
-      const townId = args.town_id ?? world.start;
-      const current = world.nodes.find((node) => node.id === townId);
-      if (!current) throw new Error(`Unknown overworld town "${townId}".`);
-      const character = overworldCharactersAt(world, townId).find(
-        (candidate) => candidate.id === args.character_id,
-      );
-      if (!character) throw new Error(`Contact "${args.character_id}" is not in "${townId}".`);
-      return {
-        ok: true,
-        current,
-        character,
-        minutes: 15,
-        journal_entry: {
-          kind: "contact",
-          title: `Talked to ${character.name}`,
-          text: `${character.summary} ${character.agenda}`,
-        },
-      };
+    talk_overworld_contact(args: {
+      town_id?: string;
+      character_id: string;
+    }): OverworldStaticContactResult {
+      return talkOverworldContact(loadOverworldManifest(), args);
     },
 
-    investigate_overworld_event(args: { town_id?: string; event_id: string }): {
-      ok: true;
-      current: OverworldNode;
-      event: OverworldLocalEvent;
-      minutes: number;
-      journal_entry: {
-        kind: "event";
-        title: string;
-        text: string;
-      };
-    } {
-      const world = loadOverworldManifest();
-      const townId = args.town_id ?? world.start;
-      const current = world.nodes.find((node) => node.id === townId);
-      if (!current) throw new Error(`Unknown overworld town "${townId}".`);
-      const event = overworldEventsAt(world, townId).find(
-        (candidate) => candidate.id === args.event_id,
-      );
-      if (!event) throw new Error(`Event "${args.event_id}" is not active in "${townId}".`);
-      return {
-        ok: true,
-        current,
-        event,
-        minutes: 20 + event.intensity * 5,
-        journal_entry: {
-          kind: "event",
-          title: `Investigated ${event.title}`,
-          text: `${event.summary} The pressure is ${event.pressure}, intensity ${event.intensity}.`,
-        },
-      };
+    investigate_overworld_event(args: {
+      town_id?: string;
+      event_id: string;
+    }): OverworldStaticEventResult {
+      return investigateOverworldEvent(loadOverworldManifest(), args);
     },
 
     validate_quest(args: { quest_path?: string; quest_id?: string; world_quest_id?: string }): {
@@ -1164,38 +968,8 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    explore_overworld_site(args: { town_id?: string; site_id: string }): {
-      ok: true;
-      current: OverworldNode;
-      site: OverworldExplorationSite;
-      minutes: number;
-      regional_renown: number;
-      journal_entry: {
-        kind: "site";
-        title: string;
-        text: string;
-      };
-    } {
-      const world = loadOverworldManifest();
-      const townId = args.town_id ?? world.start;
-      const current = world.nodes.find((node) => node.id === townId);
-      if (!current) throw new Error(`Unknown overworld town "${townId}".`);
-      const site = overworldExplorationSitesNear(world, townId).find(
-        (candidate) => candidate.id === args.site_id,
-      );
-      if (!site) throw new Error(`Exploration site "${args.site_id}" is not near "${townId}".`);
-      return {
-        ok: true,
-        current,
-        site,
-        minutes: 45 + site.danger * 15,
-        regional_renown: site.danger,
-        journal_entry: {
-          kind: "site",
-          title: `Explored ${site.title}`,
-          text: `${site.summary} ${site.reward}`,
-        },
-      };
+    explore_overworld_site(args: { town_id?: string; site_id: string }): OverworldStaticSiteResult {
+      return exploreOverworldSite(loadOverworldManifest(), args);
     },
 
     /**
