@@ -75,7 +75,7 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
   it("starts a session on a generated RPG pack with no file on disk", () => {
     const g = api().new_game({ generate_rpg_seed: 3 });
     expect(g.mode).toBe("rpg");
-    expect(g.pack_path).toBeNull();
+    expect("pack_path" in g).toBe(false);
     expect(g.world_quest_id).toBeNull();
     expect(g.generated_rpg_seed).toBe(3);
     expect(g.observation.ended).toBe(false);
@@ -151,14 +151,14 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
       generatedRpgSeed?: unknown;
     };
 
-    expect(saved.pack_path).toBeNull();
+    expect("pack_path" in saved).toBe(false);
     expect(saved.world_quest_id).toBeNull();
     expect(saved.generated_rpg_seed).toBe(3);
     expect(raw.worldQuestId).toBeUndefined();
     expect(raw.generatedRpgSeed).toBe(3);
 
     const loaded = a.load_game({ save: saved.save });
-    expect(loaded.pack_path).toBeNull();
+    expect("pack_path" in loaded).toBe(false);
     expect(loaded.world_quest_id).toBeNull();
     expect(loaded.generated_rpg_seed).toBe(3);
     expect(a.get_state({ session_id: loaded.session_id }).state).toEqual(before.state);

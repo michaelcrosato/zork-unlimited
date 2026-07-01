@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 17 -->
+<!-- historical_cycle_count: 18 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
@@ -51,6 +51,15 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: small structural payload cut; useful token/confusion reduction, but session/save envelopes still expose paths for a later cycle.
 - Operator direction: pause after this cycle; do not start another AFK cycle.
 
+### Cycle result — live_session_response_world_identity
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + check helpers; check helper exposed pre-existing broad-gate drift outside canonical repo scripts.
+- Engine/API: RPG start, transcript, save, and load envelopes no longer echo raw `pack_path`; shipped sessions carry `world_quest_id`, generated sessions carry `generated_rpg_seed`.
+- Offline boundary: session internals still keep pack paths for content loading/hash checks; trace replay/inspect remain the raw-path migration/debug surface.
+- VERIFY: focused MCP/generated response tests, typecheck, lint, format:check, validate, npm test, `npm run health` EXIT 0.
+- Self-critique: meaningful live-token cleanup; overworld quest view models still expose `pack` and should be the next path-surface target.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
+
 ## Current Snapshot
 
 - Verification bar: `npm run health` remains the required end gate.
@@ -67,8 +76,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Persistence: shipped quest saves reload with embedded/explicit
   `world_quest_id`; `load_game` rejects raw `pack_path`.
 - Trace verification: shipped quest traces replay/inspect with `world_quest_id`.
-- Live session metadata: start/transcript/save/load preserve shipped
-  `world_quest_id`; generated sessions preserve `generated_rpg_seed`.
+- Live session metadata: start/transcript/save/load return shipped
+  `world_quest_id` or generated `generated_rpg_seed` without raw pack paths.
 - Blind harness default: shipped playtests use `--quest` / `start_world_quest`;
   raw `--pack` starts are rejected.
 - World routes: ToolApi and public MCP `world_path` accept only
@@ -82,8 +91,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   graph ids only; raw `quest_path` is rejected.
 - Retired legacy story aliases: live MCP uses `validate_pack`, `new_game`, and
   `start_world_quest`; the legacy path alias is no longer a public start source.
-- Token economy: RPG start/load responses include world context once; follow-up
-  observations omit the repeated world binding.
+- Token economy: RPG start/load responses include compact source identity once;
+  follow-up observations omit the repeated world binding.
 - Token economy: `compact_actions` lets repeated observe/step calls carry
   action ids without command labels; request full actions only when needed.
 - Token economy: `get_transcript({ summary_only: true })` keeps end-state

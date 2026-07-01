@@ -158,7 +158,6 @@ type RpgViewField<Args extends RpgResponseOptions> = Args extends {
 type RpgSessionPayload<Args extends RpgResponseOptions = RpgResponseOptions> = {
   session_id: string;
   mode: PackMode;
-  pack_path: string | null;
   world_quest_id: string | null;
   generated_rpg_seed: number | null;
   state_hash: string;
@@ -255,7 +254,6 @@ type TranscriptSummary = {
 type TranscriptResponse<Turn> = {
   session_id: string;
   pack_id: string;
-  pack_path: string | null;
   world_quest_id: string | null;
   generated_rpg_seed: number | null;
   mode: typeof SAVE_MODE;
@@ -1085,7 +1083,6 @@ export function createToolApi(opts: { root: string }) {
         session_id: session.id,
         mode: SAVE_MODE,
         ...rpgViewField(openingObsOf(session), args),
-        pack_path: session.packPath ?? null,
         world_quest_id: session.worldQuestId ?? null,
         generated_rpg_seed: session.generatedRpgSeed ?? null,
         state_hash: hashState(session.state),
@@ -1222,7 +1219,6 @@ export function createToolApi(opts: { root: string }) {
       const response = {
         session_id: s.id,
         pack_id: s.packId,
-        pack_path: s.packPath ?? null,
         world_quest_id: s.worldQuestId ?? null,
         generated_rpg_seed: s.generatedRpgSeed ?? null,
         mode: SAVE_MODE,
@@ -1265,7 +1261,6 @@ export function createToolApi(opts: { root: string }) {
       return {
         save: save(s.state, s.packId, s.contentHash, SAVE_MODE, saveMetadata),
         pack_id: s.packId,
-        pack_path: s.packPath ?? null,
         world_quest_id: s.worldQuestId ?? null,
         generated_rpg_seed: s.generatedRpgSeed ?? null,
         content_hash: s.contentHash,
@@ -1293,7 +1288,6 @@ export function createToolApi(opts: { root: string }) {
         session_id: session.id,
         mode: SAVE_MODE,
         ...rpgViewField(openingObsOf(session), args),
-        pack_path: session.packPath ?? null,
         world_quest_id: session.worldQuestId ?? null,
         generated_rpg_seed: session.generatedRpgSeed ?? null,
         state_hash: hashState(session.state),
