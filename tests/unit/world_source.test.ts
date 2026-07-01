@@ -29,6 +29,11 @@ const trace = {
 } as unknown as Trace<RpgAction>;
 
 describe("world source resolution", () => {
+  it("reuses parsed canonical manifests within a process", () => {
+    expect(loadWorldManifest(ROOT)).toBe(loadWorldManifest(ROOT));
+    expect(loadOverworldManifest(ROOT)).toBe(loadOverworldManifest(ROOT));
+  });
+
   it("binds New York overworld quests to canonical world graph quest sources", () => {
     const world = loadWorldManifest(ROOT);
     expect(() => assertOverworldQuestSourceBindings(world, overworld)).not.toThrow();

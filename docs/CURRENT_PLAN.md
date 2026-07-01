@@ -105,6 +105,8 @@ Make discovered overworld quest leads start real RPG sessions.
   menus, avoiding repeated command labels on the opening RPG observation.
 - RPG transcripts now support compact id-only turn rows for route debugging
   without replaying event text.
+- World source loading now caches parsed Charter Marches and New York overworld
+  manifests per process.
 
 ## Acceptance
 

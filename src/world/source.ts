@@ -59,6 +59,9 @@ export type GamePackSource =
       generateRpgSeed: number;
     };
 
+const worldManifestCache = new Map<string, WorldManifest>();
+const overworldManifestCache = new Map<string, OverworldManifest>();
+
 export function fallbackWorldManifest(): WorldManifest {
   return {
     id: CANONICAL_WORLD_ID,
@@ -79,14 +82,20 @@ export function fallbackWorldManifest(): WorldManifest {
 }
 
 export function loadWorldManifest(root: string): WorldManifest {
+  const cached = worldManifestCache.get(root);
+  if (cached) return cached;
+
+  let world: WorldManifest;
   try {
     const raw = parseYaml(
       readFileSync(join(root, "content", "world", "charter_marches.yaml"), "utf8"),
     );
-    return WorldManifestSchema.parse(raw);
+    world = WorldManifestSchema.parse(raw);
   } catch {
-    return fallbackWorldManifest();
+    world = fallbackWorldManifest();
   }
+  worldManifestCache.set(root, world);
+  return world;
 }
 
 export function resolveWorldQuestPackPath(
@@ -127,12 +136,16 @@ export function assertOverworldQuestSourceBindings(
 }
 
 export function loadOverworldManifest(root: string): OverworldManifest {
+  const cached = overworldManifestCache.get(root);
+  if (cached) return cached;
+
   const raw = JSON.parse(
     readFileSync(join(root, "content", "world", "new_york_overworld.json"), "utf8"),
   );
   const overworld = parseOverworldManifest(raw);
   assertOverworldIntegrity(overworld);
   assertOverworldQuestSourceBindings(loadWorldManifest(root), overworld);
+  overworldManifestCache.set(root, overworld);
   return overworld;
 }
 
