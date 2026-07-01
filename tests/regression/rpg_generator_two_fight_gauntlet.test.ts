@@ -1,9 +1,9 @@
 /**
  * bug_0171 — the procedural RPG generator emits a TWO-FIGHT GAUNTLET (the v2 deepening).
  *
- * bug_0168 deepened the parser generator (depth-2 obtainability chain) and bug_0169 the CYOA
- * generator (two-axis 2×2 moral fork); the RPG generator was left the shallowest — a SINGLE fight
- * + one skill check + a three-award economy. The sunken_barrow §6 blind note (carried as the brief
+ * Earlier generator work deepened non-RPG modes before they were retired; the RPG generator was
+ * left the shallowest — a SINGLE fight + one skill check + a three-award economy. The
+ * sunken_barrow §6 blind note (carried as the brief
  * by bug_0170) named the deepening: "a deeper RPG vertical slice — more than one combat + one skill
  * check". v2 grows a SECOND combat tier: a LESSER sentinel in the gallery, then the GREATER guardian
  * in a new span room, each its own load-bearing gate and its own distinct death ending, with a

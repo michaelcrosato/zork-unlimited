@@ -376,6 +376,7 @@ describe("runStatic on the real repo (this is the bar)", () => {
 
   it("forbidden legacy assets are absent from the real repo", () => {
     expect(FORBIDDEN_FILES).toContain("src/gen/cyoa_generator.ts");
+    expect(FORBIDDEN_FILES).toContain("src/gen/parser_generator.ts");
     expect(res.findings.filter((f) => f.code === "FORBIDDEN_FILE_PRESENT")).toEqual([]);
   });
 

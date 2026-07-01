@@ -1,9 +1,9 @@
 /**
  * bug_0167 — active generator programs are under the verifier-integrity guard.
  *
- * The supported procedural generator (src/gen/rpg_generator.ts), the parser generator
- * that remains during migration, and the seal CLI are protected. Retired non-RPG
- * generators move to FORBIDDEN_FILES so they cannot reappear as hidden authoring paths.
+ * The supported procedural generator (src/gen/rpg_generator.ts) and the seal CLI are
+ * protected. Retired non-RPG generators move to FORBIDDEN_FILES so they cannot
+ * reappear as hidden authoring paths.
  *
  * It exercises the REAL pure detectors on the REAL PROTECTED_FILES list (not synthetic
  * stand-ins), so it fails if a future cycle removes a generator from the guard's surface.
@@ -20,12 +20,8 @@ import {
   type GuardConstants,
 } from "../../scripts/verify-integrity.js";
 
-const GENERATOR_PROGRAM = [
-  "src/gen/rpg_generator.ts",
-  "src/gen/parser_generator.ts",
-  "bin/seal-corpus.ts",
-] as const;
-const RETIRED_GENERATORS = ["src/gen/cyoa_generator.ts"] as const;
+const GENERATOR_PROGRAM = ["src/gen/rpg_generator.ts", "bin/seal-corpus.ts"] as const;
+const RETIRED_GENERATORS = ["src/gen/cyoa_generator.ts", "src/gen/parser_generator.ts"] as const;
 
 describe("bug_0167 — active generator programs are guarded", () => {
   it("every generator-program file is in PROTECTED_FILES", () => {

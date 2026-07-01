@@ -51,14 +51,12 @@ export const PROTECTED_FILES = [
   "src/validate/parser_validator.ts",
   "src/validate/rpg_validator.ts",
   "src/persist/save_load.ts",
-  // The generator program is guarded while the repo migrates to one runtime. RPG is
-  // the supported generator; parser remains protected until it is retired; retired
-  // non-RPG generators move to FORBIDDEN_FILES below instead of staying protected.
+  // The RPG generator program is the only supported moving-target content generator.
+  // Retired non-RPG generators move to FORBIDDEN_FILES below instead of staying protected.
   //
   // NOTE: keep this comment free of apostrophes/quotes/brackets — parseGuardConstants
   // pure-parses this array literal and a stray quote would read as a phantom entry.
   "src/gen/rpg_generator.ts",
-  "src/gen/parser_generator.ts",
   "bin/seal-corpus.ts",
   // The sealed held-out corpus manifest is the OUTPUT of the seal CLI above and the
   // committed pin the contamination-free benchmark rests on (bug_0163/bug_0165): each
@@ -74,7 +72,7 @@ export const PROTECTED_FILES = [
 ];
 
 /** Files that must not reappear while the repo normalizes to RPG-only authoring. */
-export const FORBIDDEN_FILES = ["src/gen/cyoa_generator.ts"];
+export const FORBIDDEN_FILES = ["src/gen/cyoa_generator.ts", "src/gen/parser_generator.ts"];
 
 /** Files holding committed hash pins / known-answer vectors that should not change
  *  silently — a change here in a cycle's diff is surfaced for human review. */

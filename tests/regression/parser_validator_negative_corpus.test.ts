@@ -11,7 +11,7 @@
  * closed this for `validateRpg` only; an audit of the suite (this cycle) found a large
  * set of `validateParser`'s `error`-severity branches have ZERO rejection-direction
  * witness anywhere — they are exercised almost entirely in the ACCEPT direction by the
- * curated + generated clean packs. A future regression that drops a `findings.push`,
+ * curated clean packs. A future regression that drops a `findings.push`,
  * inverts a guard, or adds a `??` default swallowing the case would leave every
  * existing test GREEN — the present-but-untested-checker surface.
  *
@@ -37,9 +37,9 @@
  * END_GAME_UNDECLARED, DIALOGUE_NONTERMINATING, WIN_FIRES_AT_START), so they are
  * intentionally NOT re-pinned here.
  *
- * Method (the bug_0182 copy-mutate discipline): the GREEN base is the canonical sound
- * pack `generateParserPack(0)` — it validates clean and carries the four-room spine,
- * the three-tier key chain, an npc with a two-node dialogue, and one win_condition
+ * Method (the bug_0182 copy-mutate discipline): the GREEN base is the compact fixture
+ * pack — it validates clean and carries the room spine, key chain, container,
+ * an npc with a two-node dialogue, and one win_condition
  * that each defect needs. Each case `structuredClone()`s it and introduces EXACTLY ONE
  * defect, so the rejection is attributable to that mutation alone. Where a minimal
  * single defect unavoidably trips a companion code (making a key unobtainable also
@@ -52,17 +52,16 @@
  * own structural branches, exactly as shipped.
  *
  * PURELY ADDITIVE: a new regression test + a bug artifact. No source/validator/engine/
- * schema/generator/corpus/scorecard change, no hash re-pin — the validator is
- * exercised exactly as shipped, and the generator is called in-memory (pure, §8.5,
- * no disk write).
+ * schema/corpus/scorecard change, no hash re-pin — the validator is exercised exactly
+ * as shipped, and the fixture is built in-memory.
  */
 import { describe, it, expect } from "vitest";
-import { generateParserPack } from "../../src/gen/parser_generator.js";
 import { validateParser } from "../../src/validate/parser_validator.js";
 import type { ParserPack } from "../../src/parser/schema.js";
+import { makeParserFixturePack } from "./support/parser_fixture.js";
 
-// The canonical sound pack: validates clean (pinned green by the generator's own test).
-const GREEN: ParserPack = generateParserPack(0);
+// The canonical sound fixture: validates clean and is small enough to audit inline.
+const GREEN: ParserPack = makeParserFixturePack();
 
 const codesOf = (pack: ParserPack): string[] =>
   validateParser(pack)
@@ -168,7 +167,7 @@ const CASES: NegativeCase[] = [
   },
   {
     // bug_0244: the IMPOSSIBLE_GATE reachability family silently skipped the
-    // `quest_stage` condition kind. gen(0) writes NO set_quest_stage effect, so any
+    // `quest_stage` condition kind. The fixture writes NO set_quest_stage effect, so any
     // positively-required quest_stage gate references a (quest, stage) pair that no
     // effect ever sets ⇒ IMPOSSIBLE_QUEST_STAGE. The error severity is pinned by the
     // differential/non-degenerate anchors, which use the error-only `codesOf`.
@@ -183,7 +182,7 @@ const CASES: NegativeCase[] = [
   {
     // bug_0253: the IMPOSSIBLE_GATE reachability family silently skipped the
     // `is_open` object-state condition kind. The `hazard` is a NON-openable object
-    // (openable falsy in gen(0)) and gen(0) writes no `open_object: hazard` effect, so
+    // and the fixture writes no `open_object: hazard` effect, so
     // it is in neither the authored-effect nor the built-in-OPEN settable set — an
     // `is_open: hazard` gate can never become true ⇒ IMPOSSIBLE_OBJECT_STATE.
     code: "IMPOSSIBLE_OBJECT_STATE",
@@ -199,7 +198,7 @@ const CASES: NegativeCase[] = [
   {
     // bug_0277: a `visited` condition naming a room id absent from pack.rooms is a
     // dangling reference (the gate evaluates false forever) ⇒ UNRESOLVED_ROOM_REFERENCE,
-    // the room-id analogue of EXIT_TARGET_MISSING. gen(0)'s sole win_condition gates on
+    // the room-id analogue of EXIT_TARGET_MISSING. The fixture win_condition gates on
     // `{ visited: goal }`; repointing it at a bogus room id is the single defect.
     code: "UNRESOLVED_ROOM_REFERENCE",
     why: "a win condition's `visited` names a room that does not exist",
@@ -231,7 +230,7 @@ const CASES: NegativeCase[] = [
     // writes an unreachable exit-flag key (__exit:phantom_room->hub), making the unlock a
     // permanent no-op. A typo'd room id passes schema validation but the validator must
     // catch it ⇒ UNLOCK_EXIT_ROOM_MISSING. Injected on a fresh interaction on the coffer
-    // (the entrance container), which has no interactions in gen(0) — a single defect.
+    // (the entrance container), which has no interactions in the fixture — a single defect.
     code: "UNLOCK_EXIT_ROOM_MISSING",
     why: "an unlock_exit effect's `from` names a room that does not exist",
     mutate: (p) => {
@@ -249,7 +248,7 @@ const CASES: NegativeCase[] = [
     // nonsense label — that no existing check catches. A typo'd object id passes schema
     // validation but the validator must catch it ⇒ ITEM_REF_MISSING. Injected on a fresh
     // interaction on the coffer (the entrance container), which has no interactions in
-    // gen(0) — a single defect.
+    // the fixture — a single defect.
     code: "ITEM_REF_MISSING",
     why: "an add_item effect targets an object id that does not exist",
     mutate: (p) => {
@@ -268,7 +267,7 @@ const CASES: NegativeCase[] = [
     // runtime, a key with no corresponding declared object. A typo'd object id passes
     // schema validation but the validator must catch it ⇒ OBJECT_STATE_REF_MISSING.
     // Injected on a fresh interaction on the coffer (the entrance container), which has
-    // no interactions in gen(0) — a single defect.
+    // no interactions in the fixture — a single defect.
     code: "OBJECT_STATE_REF_MISSING",
     why: "an open_object effect targets an object id that does not exist",
     mutate: (p) => {

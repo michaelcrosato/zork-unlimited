@@ -7,16 +7,16 @@
  * and talking again can replay the first-contact root line after that topic is gone.
  */
 import { describe, it, expect } from "vitest";
-import { generateParserPack } from "../../src/gen/parser_generator.js";
 import type { ParserPack } from "../../src/parser/schema.js";
 import { validateParser } from "../../src/validate/parser_validator.js";
+import { makeParserFixturePack } from "./support/parser_fixture.js";
 
 const oneShotHintPack = (): ParserPack => {
-  const pack = structuredClone(generateParserPack(0));
+  const pack = structuredClone(makeParserFixturePack());
   const greet = pack.npcs[0]?.dialogue.nodes.find((node) => node.id === "greet");
   const tell = pack.npcs[0]?.dialogue.nodes.find((node) => node.id === "tell");
   const hint = greet?.topics.find((topic) => topic.id === "hint");
-  if (!greet || !tell || !hint) throw new Error("generated parser dialogue shape changed");
+  if (!greet || !tell || !hint) throw new Error("parser fixture dialogue shape changed");
 
   hint.conditions = [{ not_flag: "heard_hint" }];
   tell.effects.push({ set_flag: "heard_hint" });
@@ -37,7 +37,7 @@ describe("parser validator — dialogue root re-greets", () => {
   it("accepts a root variant keyed on the retired topic flag", () => {
     const pack = oneShotHintPack();
     const greet = pack.npcs[0]?.dialogue.nodes.find((node) => node.id === "greet");
-    if (!greet) throw new Error("generated parser dialogue shape changed");
+    if (!greet) throw new Error("parser fixture dialogue shape changed");
 
     greet.variants = [
       {

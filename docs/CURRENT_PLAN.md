@@ -40,7 +40,7 @@ where branch coverage matters:
 - variant liveness
 - runtime action-id uniqueness
 - parser metamorphic relabel census
-- parser generator solvability/depth proofs
+- RPG generator solvability/depth proofs
 - no-dead-pocket graph proof
 - parser death/non-death ending render witnesses
 

@@ -9,15 +9,15 @@
  */
 import { describe, it, expect } from "vitest";
 import type { Condition } from "../../src/core/conditions.js";
-import { generateParserPack } from "../../src/gen/parser_generator.js";
 import type { ParserPack } from "../../src/parser/schema.js";
 import { validateParser } from "../../src/validate/parser_validator.js";
+import { makeParserFixturePack } from "./support/parser_fixture.js";
 
-const GREEN: ParserPack = generateParserPack(0);
+const GREEN: ParserPack = makeParserFixturePack();
 
 const setGuideHintGate = (pack: ParserPack, conditions: Condition[]): void => {
   const topic = guideGreet(pack)?.topics.find((candidate) => candidate.id === "hint");
-  if (!topic) throw new Error("generated parser pack has no guide/greet/hint topic");
+  if (!topic) throw new Error("parser fixture has no guide/greet/hint topic");
   topic.conditions = conditions;
 };
 
@@ -25,7 +25,7 @@ const guideGreet = (pack: ParserPack) =>
   pack.npcs[0]?.dialogue.nodes.find((node) => node.id === "greet");
 
 describe("parser validator — dialogue topic gates", () => {
-  it("the generated base pack remains a clean differential anchor", () => {
+  it("the fixture base pack remains a clean differential anchor", () => {
     const report = validateParser(GREEN);
     expect(report.ok).toBe(true);
     expect(report.findings).toHaveLength(0);
@@ -46,7 +46,7 @@ describe("parser validator — dialogue topic gates", () => {
   it("warns on an internally contradictory topic gate", () => {
     const pack = structuredClone(GREEN);
     const greet = guideGreet(pack);
-    if (!greet) throw new Error("generated parser pack has no guide/greet node");
+    if (!greet) throw new Error("parser fixture has no guide/greet node");
     greet.effects.push({ set_flag: "topic_seen" });
     setGuideHintGate(pack, [{ has_flag: "topic_seen" }, { not_flag: "topic_seen" }]);
 

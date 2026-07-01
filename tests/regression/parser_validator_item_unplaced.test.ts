@@ -11,8 +11,8 @@
  *   5. All 10 shipped parser+rpg packs produce zero ITEM_UNPLACED findings
  *      (confirming the gate is non-vacuous and current content is already clean).
  *
- * Method (the bug_0218 copy-mutate discipline): the GREEN base is
- * generateParserPack(0) — it validates clean with all objects placed.  Each
+ * Method (the bug_0218 copy-mutate discipline): the GREEN base is a compact parser
+ * fixture — it validates clean with all objects placed.  Each
  * case structuredClone()s it and introduces EXACTLY ONE change.
  */
 import { describe, it, expect } from "vitest";
@@ -20,14 +20,14 @@ import { loadParserPackFile } from "../../src/parser/pack.js";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { validateParser } from "../../src/validate/parser_validator.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
-import { generateParserPack } from "../../src/gen/parser_generator.js";
+import { makeParserFixturePack } from "./support/parser_fixture.js";
 
 describe("ITEM_UNPLACED — objects with no spawn location (bug_0317)", () => {
-  // The canonical sound pack (generateParserPack(0)) validates clean and has all
-  // objects placed.  Each case structuredClone()s it and mutates exactly ONE thing.
+  // The canonical sound fixture validates clean and has all objects placed. Each case
+  // structuredClone()s it and mutates exactly ONE thing.
 
   it("emits ITEM_UNPLACED warn for an object not in any room, container, or held", () => {
-    const pack = structuredClone(generateParserPack(0));
+    const pack = structuredClone(makeParserFixturePack());
     // Add an orphan object: defined in pack.objects, not listed anywhere, not held.
     pack.objects.push({
       id: "orphan_coin",
@@ -50,7 +50,7 @@ describe("ITEM_UNPLACED — objects with no spawn location (bug_0317)", () => {
   });
 
   it("does NOT emit ITEM_UNPLACED for an object listed in room.objects", () => {
-    const pack = structuredClone(generateParserPack(0));
+    const pack = structuredClone(makeParserFixturePack());
     // Add an object and place it in the first room.
     pack.objects.push({
       id: "room_placed_gem",
@@ -73,7 +73,7 @@ describe("ITEM_UNPLACED — objects with no spawn location (bug_0317)", () => {
   });
 
   it("does NOT emit ITEM_UNPLACED for an object listed in a container's contents", () => {
-    const pack = structuredClone(generateParserPack(0));
+    const pack = structuredClone(makeParserFixturePack());
     // Add an object and place it inside the existing "coffer" container.
     pack.objects.push({
       id: "container_placed_key",
@@ -96,7 +96,7 @@ describe("ITEM_UNPLACED — objects with no spawn location (bug_0317)", () => {
   });
 
   it("does NOT emit ITEM_UNPLACED for a held:true object with no room or container placement", () => {
-    const pack = structuredClone(generateParserPack(0));
+    const pack = structuredClone(makeParserFixturePack());
     // Add a held object: starts in inventory, no room/container entry needed.
     pack.objects.push({
       id: "held_lantern",
