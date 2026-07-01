@@ -207,7 +207,7 @@ export function buildPrompt(ctx: {
         "## STEP 1 — Author the new pack, THEN blind-playtest IT (quality feedback)",
         "",
         `You are authoring a new ${top?.target ?? "pack"} this cycle. Order for content_new:`,
-        "1. Author the new pack and get it validating green (validate_story / npm run validate).",
+        "1. Author the new pack and get it validating green (validate_pack / npm run validate).",
         "2. THEN spawn a FRESH subagent with NO design context (Agent tool general-purpose, or a",
         "   clean `claude -p`). Hand it ONLY the locked-down prompt in docs/blind_playtest_protocol.md,",
         "   pointed at the PACK YOU JUST AUTHORED (its pack_path) + a seed. It must play purely through",

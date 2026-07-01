@@ -52,22 +52,6 @@ const PACK_SOURCE = {
       "Preferred Charter Marches quest graph node id from list_world().quests[].graph_node.",
     ),
 };
-const STORY_ALIAS_SOURCE = {
-  world_quest_id: z
-    .string()
-    .optional()
-    .describe(
-      "Preferred Charter Marches quest graph node id from list_world().quests[].graph_node.",
-    ),
-  pack_path: z
-    .string()
-    .optional()
-    .describe("Compatibility path to an RPG quest content pack. Prefer world_quest_id."),
-  story_path: z
-    .string()
-    .optional()
-    .describe("Legacy AFK path alias for pack_path. Prefer world_quest_id."),
-};
 const QUEST_ALIAS_SOURCE = {
   quest_id: z
     .string()
@@ -387,12 +371,6 @@ tool(
   (a) => api.explore_overworld_site(a),
 );
 tool(
-  "validate_story",
-  "AFK alias for validate_pack; prefer world_quest_id for shipped Charter Marches quests, with pack_path/story_path retained for compatibility.",
-  STORY_ALIAS_SOURCE,
-  (a) => api.validate_story(a),
-);
-tool(
   "validate_quest",
   "Validate one Charter Marches RPG quest by graph id; quest_path remains a compatibility fallback.",
   QUEST_ALIAS_SOURCE,
@@ -449,16 +427,6 @@ tool(
     ...HIDE_GRAPH,
   },
   (a) => api.start_world_quest(a),
-);
-tool(
-  "start_game",
-  "Legacy AFK alias for new_game; prefer world_quest_id for shipped Charter Marches quests, with pack_path/story_path retained for compatibility.",
-  {
-    ...STORY_ALIAS_SOURCE,
-    seed: z.number().int().optional(),
-    ...HIDE_GRAPH,
-  },
-  (a) => api.start_game(a),
 );
 tool(
   "start_quest",

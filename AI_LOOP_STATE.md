@@ -44,8 +44,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   `pack_path` remains compatibility/new-pack fallback.
 - Quest aliases: `validate_quest`/`start_quest` prefer graph ids; `quest_path`
   remains compatibility.
-- Story aliases: `validate_story`/`start_game` prefer `world_quest_id`;
-  `pack_path`/`story_path` remain compatibility.
+- Retired legacy story aliases: live MCP uses `validate_pack`, `new_game`, and
+  `start_world_quest`; the legacy path alias is no longer a public start source.
 - Token economy: RPG start/load responses include world context once; follow-up
   observations omit the repeated world binding.
 - Token economy: `compact_actions` lets repeated observe/step calls carry

@@ -14,7 +14,7 @@ the solution, the test is worthless.
 ## When to run it
 
 Once per improvement cycle, after the pack validates green. In the AFK loop it is
-the step that follows `validate_story` and precedes "pick one fix" — its findings
+the step that follows `validate_pack` and precedes "pick one fix" — its findings
 are a primary input to the fix.
 
 ## Procedure (5 steps)

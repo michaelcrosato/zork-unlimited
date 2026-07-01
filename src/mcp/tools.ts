@@ -451,28 +451,6 @@ export function createToolApi(opts: { root: string }) {
       : args.pack_path!;
   }
 
-  function resolveStoryAliasSource(
-    args: { story_path?: string; pack_path?: string; world_quest_id?: string },
-    operation: string,
-  ): { packPath?: string; worldQuestId?: string } {
-    const sourceCount = [
-      args.world_quest_id !== undefined,
-      args.pack_path !== undefined,
-      args.story_path !== undefined,
-    ].filter(Boolean).length;
-    if (sourceCount === 0) {
-      throw new Error(`${operation} requires world_quest_id, pack_path, or story_path.`);
-    }
-    if (sourceCount > 1) {
-      throw new Error(
-        `${operation} accepts exactly one of world_quest_id, pack_path, or story_path.`,
-      );
-    }
-    return args.world_quest_id !== undefined
-      ? { worldQuestId: args.world_quest_id }
-      : { packPath: args.pack_path ?? args.story_path! };
-  }
-
   function resolveQuestAliasSource(
     args: { quest_path?: string; quest_id?: string; world_quest_id?: string },
     operation: string,
@@ -1243,18 +1221,6 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    validate_story(args: { story_path?: string; pack_path?: string; world_quest_id?: string }): {
-      ok: boolean;
-      pack_path: string;
-      world_quest_id: string | null;
-      report: ValidationReport;
-    } {
-      const source = resolveStoryAliasSource(args, "validate_story");
-      return source.worldQuestId
-        ? this.validate_pack({ world_quest_id: source.worldQuestId })
-        : this.validate_pack({ pack_path: source.packPath! });
-    },
-
     validate_quest(args: { quest_path?: string; quest_id?: string; world_quest_id?: string }): {
       ok: boolean;
       pack_path: string;
@@ -1432,27 +1398,6 @@ export function createToolApi(opts: { root: string }) {
         },
         ...started,
       };
-    },
-
-    start_game(args: {
-      story_path?: string;
-      pack_path?: string;
-      world_quest_id?: string;
-      seed?: number;
-      hide_graph?: boolean;
-    }) {
-      const source = resolveStoryAliasSource(args, "start_game");
-      return source.worldQuestId
-        ? this.new_game({
-            world_quest_id: source.worldQuestId,
-            ...(args.seed !== undefined ? { seed: args.seed } : {}),
-            ...(args.hide_graph ? { hide_graph: true } : {}),
-          })
-        : this.new_game({
-            pack_path: source.packPath!,
-            ...(args.seed !== undefined ? { seed: args.seed } : {}),
-            ...(args.hide_graph ? { hide_graph: true } : {}),
-          });
     },
 
     start_quest(args: {

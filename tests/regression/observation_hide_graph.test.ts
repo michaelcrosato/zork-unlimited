@@ -27,7 +27,7 @@
  *       safe, as narration/observation are not part of the state hash);
  *   (5) NON-RPG REJECTION: non-RPG pack shapes no longer start
  *       through MCP play tools;
- *   (6) the `start_game` AFK alias honors the flag too.
+ *   (6) the `new_game` world-id start honors the flag too.
  */
 import { describe, it, expect } from "vitest";
 import { createToolApi } from "../../src/mcp/tools.js";
@@ -104,12 +104,12 @@ describe("bug_0137 — hide_graph difficulty: exits hide their destination", () 
     );
   });
 
-  it("start_game alias honors hide_graph", () => {
+  it("new_game world-id starts honor hide_graph", () => {
     const a = api();
-    const g = a.start_game({ story_path: RPG_PACKS[0]!, hide_graph: true });
+    const g = a.new_game({ world_quest_id: "sunken_barrow", hide_graph: true });
     for (const e of exitsOf(g.observation)) expect(e.to).toBeUndefined();
-    // And without the flag the alias keeps the full graph.
-    const plain = a.start_game({ story_path: RPG_PACKS[0]! });
+    // And without the flag the supported start keeps the full graph.
+    const plain = a.new_game({ world_quest_id: "sunken_barrow" });
     expect(exitsOf(plain.observation).some((e) => typeof e.to === "string")).toBe(true);
   });
 });
