@@ -94,6 +94,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Overworld travel-log snapshots now save road ids and dynamic outcomes only.
 - Compact overworld context now includes capped id-only recent travel tuples.
 - Compact overworld context now caps progress id arrays with counts/truncation.
+- Compact overworld route options now omit destination names and carry ids only.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,

@@ -117,6 +117,8 @@ Make discovered overworld quest leads start real RPG sessions.
   agents do not need full observations to recover route history.
 - Compact overworld context now caps global progress id arrays and exposes
   counts/truncation flags for long-running sessions.
+- Compact overworld route options now omit repeated destination names and carry
+  stable destination ids plus route metrics/path ids only.
 
 ## Acceptance
 

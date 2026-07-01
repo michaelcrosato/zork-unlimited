@@ -42,7 +42,6 @@ export type OverworldCompactAreaRoute = readonly [
 ];
 export type OverworldCompactRouteOption = readonly [
   toId: string,
-  toName: string,
   elapsedMinutes: number,
   suppliesNeeded: number,
   fatigueAfter: number,
@@ -148,7 +147,6 @@ function titledRef(value: { id: string; title: string }): OverworldCompactRef {
 function compactRouteOption(plan: OverworldSessionRoutePlan): OverworldCompactRouteOption {
   return [
     plan.destination.id,
-    plan.destination.name,
     plan.estimate.elapsedMinutes,
     plan.estimate.suppliesNeeded,
     plan.estimate.fatigueAfter,
