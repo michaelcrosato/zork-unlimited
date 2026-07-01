@@ -252,18 +252,30 @@ function actionForId(obs: RpgObservation, id: string): RpgAction | null {
   return obs.available_actions.find((a) => a.id === id)?.action ?? null;
 }
 
-function publicActions(obs: RpgObservation): McpActionOption[] {
+type PublicObservationOptions = { compactActions?: boolean };
+
+function publicObservationOptions(args: { compact_actions?: boolean }): PublicObservationOptions {
+  return args.compact_actions ? { compactActions: true } : {};
+}
+
+function publicActions(
+  obs: RpgObservation,
+  opts: PublicObservationOptions = {},
+): McpActionOption[] {
   return obs.available_actions.map((option) => ({
     id: option.id,
-    command: option.command,
+    ...(opts.compactActions ? {} : { command: option.command }),
     ...(option.skill_check ? { skill_check: option.skill_check } : {}),
   }));
 }
 
-function publicObservation(obs: RpgObservation): McpObservation {
+function publicObservation(
+  obs: RpgObservation,
+  opts: PublicObservationOptions = {},
+): McpObservation {
   return {
     ...obs,
-    available_actions: publicActions(obs),
+    available_actions: publicActions(obs, opts),
   };
 }
 
@@ -1465,27 +1477,39 @@ export function createToolApi(opts: { root: string }) {
       });
     },
 
-    get_observation(args: { session_id: string; hide_graph?: boolean }) {
+    get_observation(args: { session_id: string; hide_graph?: boolean; compact_actions?: boolean }) {
       const s = sessions.get(args.session_id);
       const obs = buildObsFor(s.index, s.state, {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
       });
-      return { observation: publicObservation(obs), state_hash: hashState(s.state) };
+      return {
+        observation: publicObservation(obs, publicObservationOptions(args)),
+        state_hash: hashState(s.state),
+      };
     },
 
-    get_scene(args: { session_id: string; hide_graph?: boolean }) {
+    get_scene(args: { session_id: string; hide_graph?: boolean; compact_actions?: boolean }) {
       return this.get_observation(args);
     },
 
-    list_legal_actions(args: { session_id: string; hide_graph?: boolean }) {
+    list_legal_actions(args: {
+      session_id: string;
+      hide_graph?: boolean;
+      compact_actions?: boolean;
+    }) {
       const s = sessions.get(args.session_id);
       const obs = buildObsFor(s.index, s.state, {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
       });
-      return { actions: publicActions(obs) };
+      return { actions: publicActions(obs, publicObservationOptions(args)) };
     },
 
-    step_action(args: { session_id: string; action_id: string; hide_graph?: boolean }) {
+    step_action(args: {
+      session_id: string;
+      action_id: string;
+      hide_graph?: boolean;
+      compact_actions?: boolean;
+    }) {
       const s = sessions.get(args.session_id);
       const before = buildObsFor(s.index, s.state, {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
@@ -1501,7 +1525,7 @@ export function createToolApi(opts: { root: string }) {
           events: [
             { type: "rejected" as const, reason: "That action is not available right now." },
           ],
-          observation: publicObservation(before),
+          observation: publicObservation(before, publicObservationOptions(args)),
           state_hash: hashState(s.state),
         };
       }
@@ -1525,16 +1549,22 @@ export function createToolApi(opts: { root: string }) {
         ok: result.ok,
         rejection_reason: result.rejectionReason ?? null,
         events: playerVisibleEvents(result.events),
-        observation: publicObservation(after),
+        observation: publicObservation(after, publicObservationOptions(args)),
         state_hash: hashState(result.state),
       };
     },
 
-    choose_option(args: { session_id: string; option_id: string; hide_graph?: boolean }) {
+    choose_option(args: {
+      session_id: string;
+      option_id: string;
+      hide_graph?: boolean;
+      compact_actions?: boolean;
+    }) {
       return this.step_action({
         session_id: args.session_id,
         action_id: args.option_id,
         ...(args.hide_graph !== undefined && { hide_graph: args.hide_graph }),
+        ...(args.compact_actions !== undefined && { compact_actions: args.compact_actions }),
       });
     },
 

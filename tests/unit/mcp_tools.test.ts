@@ -1103,6 +1103,11 @@ describe("MCP tools — the play loop (§9.1)", () => {
       expect(action).toMatchObject({ id: expect.any(String), command: expect.any(String) });
       expect(action).not.toHaveProperty("action");
     };
+    const assertCompactAction = (action: unknown): void => {
+      expect(action).toMatchObject({ id: expect.any(String) });
+      expect(action).not.toHaveProperty("command");
+      expect(action).not.toHaveProperty("action");
+    };
 
     assertPublicAction(game.observation.available_actions[0]);
     assertPublicAction(
@@ -1110,12 +1115,38 @@ describe("MCP tools — the play loop (§9.1)", () => {
     );
     assertPublicAction(a.list_legal_actions({ session_id: game.session_id }).actions[0]);
 
+    const compact = a.get_observation({
+      session_id: game.session_id,
+      compact_actions: true,
+    }).observation;
+    assertCompactAction(compact.available_actions[0]);
+    expect(JSON.stringify(compact.available_actions).length).toBeLessThan(
+      JSON.stringify(game.observation.available_actions).length,
+    );
+    assertCompactAction(
+      a.list_legal_actions({ session_id: game.session_id, compact_actions: true }).actions[0],
+    );
+
     const rejected = a.step_action({ session_id: game.session_id, action_id: "missing" });
     expect(rejected.ok).toBe(false);
     assertPublicAction(rejected.observation.available_actions[0]);
 
-    const moved = stepByCommand(a, game.session_id, "go down");
-    assertPublicAction(moved.observation.available_actions[0]);
+    const compactRejected = a.step_action({
+      session_id: game.session_id,
+      action_id: "missing",
+      compact_actions: true,
+    });
+    expect(compactRejected.ok).toBe(false);
+    assertCompactAction(compactRejected.observation.available_actions[0]);
+
+    const moveActionId = compact.available_actions.find((action) => action.id === "go_down")?.id;
+    expect(moveActionId).toBe("go_down");
+    const moved = a.step_action({
+      session_id: game.session_id,
+      action_id: moveActionId!,
+      compact_actions: true,
+    });
+    assertCompactAction(moved.observation.available_actions[0]);
 
     const saved = a.save_game({ session_id: game.session_id });
     expect(saved.pack_path).toBe(PACK);

@@ -95,6 +95,14 @@ const HIDE_GRAPH = {
       "Difficulty: when true, exits report only their direction, not their destination - the spatial map must be reasoned out, not read off. Default false.",
     ),
 };
+const COMPACT_ACTIONS = {
+  compact_actions: z
+    .boolean()
+    .optional()
+    .describe(
+      "Token economy: when true, observation available_actions include stable ids and skill metadata but omit repeated command labels. Use list_legal_actions without this flag when command text is needed.",
+    ),
+};
 
 tool(
   "validate_pack",
@@ -465,20 +473,20 @@ tool(
 
 tool(
   "get_observation",
-  "Get the current AI-facing RPG observation for a session (§9.1).",
-  { ...SESSION, ...HIDE_GRAPH },
+  "Get the current AI-facing RPG observation for a session (§9.1). Set compact_actions for lean repeated loop turns.",
+  { ...SESSION, ...HIDE_GRAPH, ...COMPACT_ACTIONS },
   (a) => api.get_observation(a),
 );
 tool(
   "get_scene",
-  "AFK alias for get_observation; returns current scene/room text, state, and visible options.",
-  { ...SESSION, ...HIDE_GRAPH },
+  "AFK alias for get_observation; returns current scene/room text, state, and visible options. Set compact_actions for id-only action menus.",
+  { ...SESSION, ...HIDE_GRAPH, ...COMPACT_ACTIONS },
   (a) => api.get_scene(a),
 );
 tool(
   "list_legal_actions",
-  "List the legal RPG actions available right now in a session (§9).",
-  { ...SESSION, ...HIDE_GRAPH },
+  "List the legal RPG actions available right now in a session (§9). Defaults to full command labels; compact_actions returns ids only.",
+  { ...SESSION, ...HIDE_GRAPH, ...COMPACT_ACTIONS },
   (a) => api.list_legal_actions(a),
 );
 
@@ -489,6 +497,7 @@ tool(
     ...SESSION,
     action_id: z.string().describe("An action id from the current legal-action set."),
     ...HIDE_GRAPH,
+    ...COMPACT_ACTIONS,
   },
   (a) => api.step_action(a),
 );
@@ -501,6 +510,7 @@ tool(
       .string()
       .describe("An option/action id from get_scene().observation.available_actions."),
     ...HIDE_GRAPH,
+    ...COMPACT_ACTIONS,
   },
   (a) => api.choose_option(a),
 );

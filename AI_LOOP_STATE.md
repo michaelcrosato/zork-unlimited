@@ -48,6 +48,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   `pack_path`/`story_path` remain compatibility.
 - Token economy: RPG start/load responses include world context once; follow-up
   observations omit the repeated world binding.
+- Token economy: `compact_actions` lets repeated observe/step calls carry
+  action ids without command labels; request full actions only when needed.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,

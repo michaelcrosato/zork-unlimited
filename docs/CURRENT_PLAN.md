@@ -57,6 +57,8 @@ Make discovered overworld quest leads start real RPG sessions.
   legacy `story_path` remain compatibility.
 - RPG start/load responses now carry one-time world context; follow-up
   observations omit that repeated binding to lower per-turn MCP payload.
+- Repeated observe/step calls can set `compact_actions` to carry action ids
+  without repeated command labels; full labels remain available on demand.
 
 ## Acceptance
 

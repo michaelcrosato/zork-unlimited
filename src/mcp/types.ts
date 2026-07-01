@@ -9,8 +9,15 @@ import type { RpgObservation } from "../rpg/observation.js";
 
 export type PackMode = "rpg";
 
-/** Public MCP action menu entries omit reducer-only structured actions. */
-export type McpActionOption = Omit<RpgObservation["available_actions"][number], "action">;
+/**
+ * Public MCP action menu entries omit reducer-only structured actions. In compact
+ * observation mode, `command` is also omitted so loops can carry just stable ids.
+ */
+export type McpActionOption = {
+  id: string;
+  command?: string;
+  skill_check?: RpgObservation["available_actions"][number]["skill_check"];
+};
 
 /**
  * Public MCP observations keep the RPG player view but strip the internal action
