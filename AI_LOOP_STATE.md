@@ -68,6 +68,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   `worldQuestId` into traces.
 - Save restore source inference now shares the world source resolver with trace
   replay and CLI play.
+- `new_game` source selection now shares that resolver while keeping generated
+  packs as the explicit null-world source.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,

@@ -55,6 +55,7 @@ import {
 } from "../world/graph.js";
 import {
   loadWorldManifest as loadWorldManifestFromRoot,
+  resolveGameSource,
   resolvePackSource,
   resolveSavePackSource,
   resolveTracePackSource,
@@ -1251,33 +1252,15 @@ export function createToolApi(opts: { root: string }) {
       // pack in-memory from `generate_rpg_seed`. The generation seed selects the
       // minted pack's theme/structure; `seed` still seeds runtime state, so the two
       // are independent.
-      const sourceCount = [
-        args.world_quest_id !== undefined,
-        args.pack_path !== undefined,
-        args.generate_rpg_seed !== undefined,
-      ].filter(Boolean).length;
-      if (sourceCount === 0) {
-        throw new Error("new_game requires world_quest_id, pack_path, or generate_rpg_seed.");
-      }
-      if (sourceCount > 1) {
-        throw new Error(
-          "new_game accepts exactly one of world_quest_id, pack_path, or generate_rpg_seed.",
-        );
-      }
-      const packPath =
-        args.world_quest_id !== undefined
-          ? resolveWorldQuestPackPath(args.world_quest_id).packPath
-          : args.pack_path;
-      const worldQuestId =
-        args.world_quest_id ?? (packPath ? worldQuestIdForPackPath(packPath) : null);
+      const source = resolveGameSource(root, args, "new_game");
       const compiled =
-        args.generate_rpg_seed !== undefined
-          ? requireGeneratedRpgPlayable(args.generate_rpg_seed)
-          : requirePlayable(packPath!);
+        source.kind === "generated"
+          ? requireGeneratedRpgPlayable(source.generateRpgSeed)
+          : requirePlayable(source.packPath);
       const session = startSession(compiled, undefined, {
         ...(args.hide_graph ? { hideGraph: true } : {}),
-        ...(packPath ? { packPath } : {}),
-        ...(worldQuestId ? { worldQuestId } : {}),
+        ...(source.packPath ? { packPath: source.packPath } : {}),
+        ...(source.worldQuestId ? { worldQuestId: source.worldQuestId } : {}),
       });
       if (args.seed !== undefined && args.seed !== 1) {
         // Re-seed: rebuild the initial state at the requested seed.

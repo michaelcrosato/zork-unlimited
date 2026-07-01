@@ -77,6 +77,8 @@ Make discovered overworld quest leads start real RPG sessions.
   `worldQuestId`, so local traces replay without raw pack paths.
 - Save restore source inference now shares the same world source resolver as
   trace replay and CLI play.
+- `new_game` source selection now shares that resolver while keeping generated
+  packs as the explicit null-world source.
 
 ## Acceptance
 

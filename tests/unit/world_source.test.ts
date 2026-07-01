@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SaveIntegrityError } from "../../src/persist/save_load.js";
 import {
+  resolveGameSource,
   resolvePackSource,
   resolveSavePackSource,
   resolveTracePackSource,
@@ -33,6 +34,31 @@ describe("world source resolution", () => {
       packPath: PACK,
       worldQuestId: "sunken_barrow",
     });
+  });
+
+  it("resolves new-game sources, including generated in-memory packs", () => {
+    expect(resolveGameSource(ROOT, { world_quest_id: "sunken_barrow" }, "new_game")).toEqual({
+      kind: "pack",
+      packPath: PACK,
+      worldQuestId: "sunken_barrow",
+      generateRpgSeed: null,
+    });
+    expect(resolveGameSource(ROOT, { generate_rpg_seed: 3 }, "new_game")).toEqual({
+      kind: "generated",
+      packPath: null,
+      worldQuestId: null,
+      generateRpgSeed: 3,
+    });
+    expect(() => resolveGameSource(ROOT, {}, "new_game")).toThrow(
+      /world_quest_id, pack_path, or generate_rpg_seed/,
+    );
+    expect(() =>
+      resolveGameSource(
+        ROOT,
+        { world_quest_id: "sunken_barrow", generate_rpg_seed: 3 },
+        "new_game",
+      ),
+    ).toThrow(/exactly one/);
   });
 
   it("infers trace and save sources from embedded worldQuestId", () => {
