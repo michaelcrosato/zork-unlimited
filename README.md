@@ -90,7 +90,7 @@ longer puzzle chains.
 |---|---|
 | Score (`inc_var` on a `score` var) + `max_score`, `ending.death` flag | `src/parser/schema.ts` |
 | Validator extensions (§13 Stage 3) | `src/validate/parser_validator.ts` |
-| Sample pack: *The Alchemist's Tower* (brew an antidote; a fatal black phial) | `content/parser/pack/alchemists_tower.yaml` |
+| Sample pack | Retired during RPG-only consolidation |
 
 Scoring is a conventional `score` var awarded via `inc_var`; death endings are
 terminal non-win endings reached by an `end_game` effect, and are recoverable by
@@ -186,7 +186,7 @@ The RPG generator is exposed over MCP as `generate_rpg_pack` (mint + validate a
 fresh pack, read-only) and is playable in-memory via `new_game`'s
 `generate_rpg_seed`.
 
-## Content library (16 listed packs)
+## Content library (15 listed packs)
 
 The shipped, validated content — every pack passes the validator and is wired into
 `npm run health`:
@@ -200,7 +200,6 @@ The shipped, validated content — every pack passes the validator and is wired 
 | CYOA | The Tithe-Barn | `content/cyoa/pack/tithe_barn.yaml` |
 | CYOA | The Midnight Edition | `content/cyoa/pack/midnight_edition.yaml` |
 | Parser | The Sealed Crypt | `content/parser/pack/sealed_crypt.yaml` |
-| Parser | The Alchemist's Tower | `content/parser/pack/alchemists_tower.yaml` |
 | Parser | The Friars' Postern | `content/parser/pack/friars_postern.yaml` |
 | Parser | The Lamplighter's Round | `content/parser/pack/lamplighters_round.yaml` |
 | Parser | The Tide-Mill | `content/parser/pack/tide_mill.yaml` |

@@ -66,10 +66,7 @@ describe("bug_0091 — the parser validator flags dead reactive variants/guards"
     // Parser packs validate through validateParser; RPG packs through validateRpg,
     // which delegates to validateParser and so exercises the same new checks.
     const reports: ValidationReport[] = [];
-    for (const path of [
-      "content/parser/pack/sealed_crypt.yaml",
-      "content/parser/pack/alchemists_tower.yaml",
-    ]) {
+    for (const path of ["content/parser/pack/sealed_crypt.yaml"]) {
       const r = loadParserPackFile(path);
       expect(r.ok).toBe(true);
       if (!r.ok) return;

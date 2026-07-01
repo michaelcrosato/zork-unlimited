@@ -228,10 +228,7 @@ endings: [{ id: e, title: E, text: "done" }]
 
 describe("bug_0116 — the parser/RPG validator flags a perfect score reachable before the win", () => {
   it("the four shipped scoring packs produce ZERO SCORE_PEAKS_BEFORE_WIN findings and stay green", () => {
-    for (const path of [
-      "content/parser/pack/sealed_crypt.yaml",
-      "content/parser/pack/alchemists_tower.yaml",
-    ]) {
+    for (const path of ["content/parser/pack/sealed_crypt.yaml"]) {
       const r = loadParserPackFile(path);
       expect(r.ok).toBe(true);
       if (!r.ok) return;

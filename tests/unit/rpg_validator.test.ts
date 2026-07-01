@@ -39,7 +39,7 @@ describe("§14 backward-compatibility — prior packs unchanged", () => {
   // The Stage-4 additions are optional (skill_check) or top-level (enemies), so
   // existing packs compile to identical content and still validate green.
   it("the parser packs still validate green and unchanged", () => {
-    for (const path of ["content/parser/pack/sealed_crypt.yaml", "content/parser/pack/alchemists_tower.yaml"]) {
+    for (const path of ["content/parser/pack/sealed_crypt.yaml"]) {
       const loaded = loadParserPackFile(path);
       expect(loaded.ok).toBe(true);
       if (!loaded.ok) return;

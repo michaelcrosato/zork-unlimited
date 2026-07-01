@@ -70,10 +70,7 @@ endings: [{ id: e, title: End, text: "Done." }]
 
 describe("WIN_FIRES_AT_START — a win already met at game start (parser/RPG analogue of bug_0089)", () => {
   it("the shipped packs are NOT flagged (their wins fire on reaching the goal, not at start)", () => {
-    for (const path of [
-      "content/parser/pack/sealed_crypt.yaml",
-      "content/parser/pack/alchemists_tower.yaml",
-    ]) {
+    for (const path of ["content/parser/pack/sealed_crypt.yaml"]) {
       const loaded = loadParserPackFile(path);
       expect(loaded.ok).toBe(true);
       if (!loaded.ok) return;

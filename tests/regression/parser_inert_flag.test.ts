@@ -67,10 +67,7 @@ endings: [{ id: e, title: E, text: "done" }]
 
 describe("bug_0106 — the parser/RPG validator flags inert (set-but-never-read) flags", () => {
   it("the shipped parser + RPG packs produce ZERO INERT_FLAG findings and stay green", () => {
-    for (const path of [
-      "content/parser/pack/sealed_crypt.yaml",
-      "content/parser/pack/alchemists_tower.yaml",
-    ]) {
+    for (const path of ["content/parser/pack/sealed_crypt.yaml"]) {
       const r = loadParserPackFile(path);
       expect(r.ok).toBe(true);
       if (!r.ok) return;

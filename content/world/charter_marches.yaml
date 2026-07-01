@@ -146,10 +146,6 @@ graph:
       name: "The Wrecker's Light"
       kind: quest
       pack: "content/cyoa/pack/wreckers_light.yaml"
-    - id: alchemists_tower
-      name: "The Alchemist's Tower"
-      kind: quest
-      pack: "content/parser/pack/alchemists_tower.yaml"
     - id: apothecaries_standard
       name: "The Apothecary's Standard"
       kind: quest
@@ -356,9 +352,6 @@ graph:
     - from: printers_ward
       to: priors_cellar
       route: "prior's cellar stair"
-    - from: printers_ward
-      to: alchemists_tower
-      route: "old tower lane"
     - from: printers_ward
       to: cellarmans_dark
       route: "coal-yard descent"

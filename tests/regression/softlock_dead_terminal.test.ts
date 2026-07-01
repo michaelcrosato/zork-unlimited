@@ -101,10 +101,7 @@ describe("bug_0092 (parser) — an unsatisfiable win no longer masks a SOFTLOCK"
   });
 
   it("the shipped parser packs gain NO SOFTLOCK", () => {
-    for (const path of [
-      "content/parser/pack/sealed_crypt.yaml",
-      "content/parser/pack/alchemists_tower.yaml",
-    ]) {
+    for (const path of ["content/parser/pack/sealed_crypt.yaml"]) {
       const loaded = loadParserPackFile(path);
       expect(loaded.ok).toBe(true);
       if (!loaded.ok) return;
