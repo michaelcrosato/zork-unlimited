@@ -24,6 +24,15 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: structural loop handoff fix, not content polish; closes an agent-token waste/error source blind testers would only report late.
 - Operator direction: pause after this cycle; do not start another AFK cycle.
 
+### Cycle result — public_mcp_world_id_sources
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measurement helper; canonical repo gates remain package scripts.
+- Public MCP: validate/load/patch/replay/inspect no longer advertise raw `pack_path`; shipped sources are `world_quest_id`.
+- Compatibility: ToolApi/CLI raw paths remain offline-only for migration validation/replay, not public agent schemas.
+- VERIFY: focused MCP registration test, typecheck, lint, format:check, validate, npm test (191/1253), `npm run health` EXIT 0.
+- Self-critique: aligned structural source-surface cut; small but real reduction of agent path confusion/token waste.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
+
 ## Current Snapshot
 
 - Verification bar: `npm run health` remains the required end gate.
@@ -48,8 +57,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   `world_quest_id`; raw `quest_path` is rejected.
 - Pack validation/loading: shipped quests can use `world_quest_id` and preserve
   source identity in responses.
-- Content patching: shipped patch targets can use `world_quest_id`; raw
-  `pack_path` remains compatibility/new-pack fallback.
+- Public MCP validate/load/patch/replay/inspect schemas are `world_quest_id`
+  first; ToolApi/CLI keep raw pack paths only for offline compatibility.
 - Quest aliases: ToolApi and public MCP `validate_quest`/`start_quest` use
   graph ids only; raw `quest_path` is rejected.
 - Retired legacy story aliases: live MCP uses `validate_pack`, `new_game`, and

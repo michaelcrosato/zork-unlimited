@@ -40,17 +40,10 @@ function tool(
   server.registerTool(name, { description, inputSchema }, wrap(handler) as never);
 }
 
-const PACK_SOURCE = {
-  pack_path: z
-    .string()
-    .optional()
-    .describe("Compatibility path to an RPG quest content pack. Prefer world_quest_id."),
+const WORLD_QUEST_PACK_SOURCE = {
   world_quest_id: z
     .string()
-    .optional()
-    .describe(
-      "Preferred Charter Marches quest graph node id from list_world().quests[].graph_node.",
-    ),
+    .describe("Charter Marches quest graph node id from list_world().quests[].graph_node."),
 };
 const QUEST_ID_SOURCE = {
   quest_id: z
@@ -102,8 +95,8 @@ const COMPACT_OVERWORLD_CONTEXT = {
 
 tool(
   "validate_pack",
-  "Validate a shipped world quest or compatibility RPG quest pack; legacy CYOA/parser packs are rejected with an error report.",
-  PACK_SOURCE,
+  "Validate a shipped world quest by graph id; legacy CYOA/parser packs are rejected by the offline validation gate.",
+  WORLD_QUEST_PACK_SOURCE,
   (a) => api.validate_pack(a),
 );
 tool(
@@ -336,8 +329,8 @@ tool(
 );
 tool(
   "load_pack",
-  "Compile a shipped world quest or compatibility RPG quest pack and return its mode, metadata, content hash, source identity, and validation report.",
-  PACK_SOURCE,
+  "Compile a shipped world quest by graph id and return its mode, metadata, content hash, source identity, and validation report.",
+  WORLD_QUEST_PACK_SOURCE,
   (a) => api.load_pack(a),
 );
 
@@ -501,15 +494,9 @@ tool(
 
 tool(
   "replay_trace",
-  "Replay a recorded RPG trace against its embedded worldQuestId, an explicit world_quest_id, or a compatibility pack path and assert its final-state hash (§8.8).",
+  "Replay a recorded RPG trace against its embedded worldQuestId or an explicit world_quest_id and assert its final-state hash (§8.8).",
   {
     trace_path: z.string().describe("Path to a trace JSON, relative to the project root."),
-    pack_path: z
-      .string()
-      .optional()
-      .describe(
-        "Compatibility path to an RPG quest content pack. Omit for shipped traces with embedded worldQuestId.",
-      ),
     world_quest_id: z
       .string()
       .optional()
@@ -531,15 +518,9 @@ tool(
 
 tool(
   "inspect_trace",
-  "Summarize a recorded trace against its embedded worldQuestId, an explicit world_quest_id, or a compatibility pack path: per-step locations/events, final-hash check, and the debugger's suspected-bug classification (§9.4, §12.5).",
+  "Summarize a recorded trace against its embedded worldQuestId or an explicit world_quest_id: per-step locations/events, final-hash check, and the debugger's suspected-bug classification (§9.4, §12.5).",
   {
     trace_path: z.string().describe("Path to a trace JSON, relative to the project root."),
-    pack_path: z
-      .string()
-      .optional()
-      .describe(
-        "Compatibility path to an RPG quest content pack. Omit for shipped traces with embedded worldQuestId.",
-      ),
     world_quest_id: z
       .string()
       .optional()
@@ -552,9 +533,9 @@ tool(
 
 tool(
   "apply_content_patch",
-  "Apply a structured, whitelisted content patch with deterministic code to a shipped world quest or compatibility pack path and return the modified pack + validation report (§9.4, §16). Never writes files; never runs model-issued code.",
+  "Apply a structured, whitelisted content patch with deterministic code to a shipped world quest id and return the modified pack + validation report (§9.4, §16). Never writes files; never runs model-issued code.",
   {
-    ...PACK_SOURCE,
+    ...WORLD_QUEST_PACK_SOURCE,
     proposal: z
       .object({
         layer: z.enum([

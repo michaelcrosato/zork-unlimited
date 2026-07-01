@@ -35,6 +35,14 @@ function registeredToolBlock(name: string): string {
   return text.slice(start, next < 0 ? text.length : next);
 }
 
+function serverSourceBlock(startMarker: string, endMarker: string): string {
+  const text = readFileSync("src/mcp/server.ts", "utf8");
+  const start = text.indexOf(startMarker);
+  const end = text.indexOf(endMarker, start);
+  if (start < 0 || end < 0) throw new Error(`missing server source block ${startMarker}`);
+  return text.slice(start, end);
+}
+
 describe("MCP server registration", () => {
   it("registers exactly the tested ToolApi handlers", () => {
     const api = createToolApi({ root: process.cwd() }) as Record<string, unknown>;
@@ -64,6 +72,27 @@ describe("MCP server registration", () => {
     expect(validateQuest).not.toContain("quest_path");
     expect(worldPath).toContain("world_quest_id");
     expect(worldPath).not.toContain("quest_path");
+  });
+
+  it("keeps public MCP content and trace tools quest-id first", () => {
+    const sharedSource = serverSourceBlock(
+      "const WORLD_QUEST_PACK_SOURCE",
+      "const QUEST_ID_SOURCE",
+    );
+    expect(sharedSource).toContain("world_quest_id");
+    expect(sharedSource).not.toContain("pack_path");
+
+    for (const toolName of [
+      "validate_pack",
+      "load_pack",
+      "apply_content_patch",
+      "replay_trace",
+      "inspect_trace",
+    ]) {
+      const block = registeredToolBlock(toolName);
+      expect(block).toMatch(/world_quest_id|WORLD_QUEST_PACK_SOURCE/);
+      expect(block).not.toContain("pack_path");
+    }
   });
 
   it("keeps retired static overworld compatibility helpers out of ToolApi and MCP", () => {
