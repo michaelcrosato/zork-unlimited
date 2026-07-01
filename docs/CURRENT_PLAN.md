@@ -52,8 +52,8 @@ Make discovered overworld quest leads start real RPG sessions.
   and return source identity metadata.
 - `apply_content_patch` now accepts shipped `world_quest_id`; raw `pack_path`
   remains compatibility/new-pack fallback.
-- Public MCP `start_quest` now accepts only `quest_id` / `world_quest_id`;
-  `validate_quest` still keeps `quest_path` for validation compatibility.
+- Public MCP `start_quest` and `validate_quest` now accept only `quest_id` /
+  `world_quest_id`; raw `quest_path` remains lower-level tooling compatibility.
 - Retired legacy story aliases from the live MCP surface; use `validate_pack`,
   `new_game`, and `start_world_quest` for current RPG play.
 - RPG start/load responses now carry one-time world context; follow-up
@@ -124,6 +124,8 @@ Make discovered overworld quest leads start real RPG sessions.
   names, keeping stable ids and numeric route metrics.
 - Compact overworld pending-road tuples now omit road-event titles and stable
   option labels while preserving ids, risk, strategy, and numeric outcomes.
+- Public MCP now withholds static overworld compatibility helpers; agent play
+  uses stateful overworld sessions and compact session context.
 
 ## Acceptance
 
@@ -136,7 +138,7 @@ Make discovered overworld quest leads start real RPG sessions.
 
 - Continue simplifying parser-era wording in historical docs when it affects current
   orientation.
-- Reduce the duplicate static-vs-stateful overworld tool surface.
-- Keep raw pack paths for generated packs and compatibility only.
+- Continue shrinking lower-level compatibility helpers that still accept raw
+  pack or quest paths.
 - Add lightweight token/cost telemetry under ignored run output when the loop needs
   measured efficiency data.

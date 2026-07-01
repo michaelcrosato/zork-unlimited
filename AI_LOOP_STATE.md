@@ -20,9 +20,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Verification bar: `npm run health` remains the required end gate.
 - Current corpus: RPG and overworld content are broad enough that
   routine work should prefer targeted fixes or structural checks over more log prose.
-- Current engine seam: `start_overworld_session_quest` now bridges a discovered
-  overworld quest lead into a real RPG session; future work should reduce remaining
-  static-vs-stateful MCP duplication.
+- Current engine seam: public MCP now pushes local overworld play through stateful
+  sessions; lower-level static helpers remain internal compatibility only.
 - Catalog source of truth: `list_stories` is a compatibility view over the Charter
   Marches quest graph, not a raw RPG pack directory scan.
 - Preferred shipped-quest start: use `start_world_quest` / `world_quest_id`;
@@ -36,14 +35,14 @@ history only when deep recovery is truly needed. Keep future entries terse.
   `world_quest_id`; generated sessions report null source identity.
 - Blind harness default: shipped playtests should use `--quest` /
   `start_world_quest`; `--pack` is compatibility/new-pack fallback.
-- World routes: `world_path` should prefer `world_quest_id`; `quest_path` remains
-  compatibility.
+- World routes: public MCP `world_path` accepts only `world_quest_id`; raw
+  `quest_path` resolution remains lower-level compatibility only.
 - Pack validation/loading: shipped quests can use `world_quest_id` and preserve
   source identity in responses.
 - Content patching: shipped patch targets can use `world_quest_id`; raw
   `pack_path` remains compatibility/new-pack fallback.
-- Quest aliases: `validate_quest`/`start_quest` prefer graph ids; `quest_path`
-  remains compatibility.
+- Quest aliases: public MCP `validate_quest`/`start_quest` use graph ids only;
+  raw `quest_path` remains lower-level compatibility.
 - Retired legacy story aliases: live MCP uses `validate_pack`, `new_game`, and
   `start_world_quest`; the legacy path alias is no longer a public start source.
 - Token economy: RPG start/load responses include world context once; follow-up
@@ -72,8 +71,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   packs as the explicit null-world source.
 - Pack validation/loading/patching now consume shared source identity instead of
   re-deriving `world_quest_id` after path resolution.
-- Static overworld compatibility tools now delegate to `world/static_overworld`
-  instead of open-coding graph queries in MCP.
+- Static overworld compatibility helpers are internal-only; public MCP uses
+  stateful overworld sessions for local play.
 - Stateful overworld MCP action wrappers now share one session response envelope
   helper.
 - Discovered overworld quest starts now use canonical `world_quest_id` source

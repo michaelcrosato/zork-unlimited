@@ -64,13 +64,6 @@ const QUEST_ID_SOURCE = {
     .optional()
     .describe("Alias for quest_id, accepted for consistency with new_game/load_game."),
 };
-const QUEST_ALIAS_SOURCE = {
-  ...QUEST_ID_SOURCE,
-  quest_path: z
-    .string()
-    .optional()
-    .describe("Compatibility path to an RPG quest content pack, relative to the project root."),
-};
 const SESSION = {
   session_id: z.string().describe("A session id from new_game/start_quest/load_game."),
 };
@@ -336,83 +329,9 @@ tool(
   (a) => api.start_overworld_session_quest(a),
 );
 tool(
-  "look_overworld",
-  "Inspect one New York overworld town as static map data. Returns adjacent roads, local areas, points of interest, contacts, events, local jobs, and the authored local quest catalog; use start_overworld for discovery-gated play.",
-  {
-    town_id: z
-      .string()
-      .optional()
-      .describe("Overworld town id to inspect. Defaults to the starting town."),
-  },
-  (a) => api.look_overworld(a),
-);
-tool(
-  "travel_overworld",
-  "Travel from one New York overworld town along an adjacent road id and return the route event plus arrival town. Rejects non-adjacent roads.",
-  {
-    from_town: z.string().describe("Current overworld town id."),
-    road_id: z.string().describe("Road id from look_overworld(current town)."),
-  },
-  (a) => api.travel_overworld(a),
-);
-tool(
-  "explore_overworld_area",
-  "Explore one static local area from look_overworld and return its time cost and journal text. Use explore_overworld_session_area for discovery-gated play.",
-  {
-    town_id: z.string().optional().describe("Overworld town id. Defaults to the starting town."),
-    area_id: z.string().describe("Area id from look_overworld(current town)."),
-  },
-  (a) => api.explore_overworld_area(a),
-);
-tool(
-  "work_overworld_job",
-  "Inspect one static local job from look_overworld and return its time cost, renown, and journal text. Use work_overworld_session_job for discovery-gated play.",
-  {
-    town_id: z.string().optional().describe("Overworld town id. Defaults to the starting town."),
-    job_id: z.string().describe("Job id from look_overworld(current town)."),
-  },
-  (a) => api.work_overworld_job(a),
-);
-tool(
-  "scout_overworld_poi",
-  "Scout a local point of interest in one New York overworld town and return a journal entry. The poi_id must come from look_overworld for that town.",
-  {
-    town_id: z.string().optional().describe("Overworld town id. Defaults to the starting town."),
-    poi_id: z.string().describe("Point-of-interest id from look_overworld(current town)."),
-  },
-  (a) => api.scout_overworld_poi(a),
-);
-tool(
-  "talk_overworld_contact",
-  "Talk to a local overworld contact and return a journal entry. The character_id must come from look_overworld for that town.",
-  {
-    town_id: z.string().optional().describe("Overworld town id. Defaults to the starting town."),
-    character_id: z.string().describe("Character id from look_overworld(current town)."),
-  },
-  (a) => api.talk_overworld_contact(a),
-);
-tool(
-  "investigate_overworld_event",
-  "Investigate a local overworld event and return a journal entry. The event_id must come from look_overworld for that town.",
-  {
-    town_id: z.string().optional().describe("Overworld town id. Defaults to the starting town."),
-    event_id: z.string().describe("Event id from look_overworld(current town)."),
-  },
-  (a) => api.investigate_overworld_event(a),
-);
-tool(
-  "explore_overworld_site",
-  "Explore a local regional site and return the time cost, reward, and journal entry. The site_id must come from look_overworld for that town.",
-  {
-    town_id: z.string().optional().describe("Overworld town id. Defaults to the starting town."),
-    site_id: z.string().describe("Exploration site id from look_overworld(current town)."),
-  },
-  (a) => api.explore_overworld_site(a),
-);
-tool(
   "validate_quest",
-  "Validate one Charter Marches RPG quest by graph id; quest_path remains a compatibility fallback.",
-  QUEST_ALIAS_SOURCE,
+  "Validate one Charter Marches RPG quest by graph id.",
+  QUEST_ID_SOURCE,
   (a) => api.validate_quest(a),
 );
 tool(
