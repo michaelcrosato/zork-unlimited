@@ -109,6 +109,8 @@ Make discovered overworld quest leads start real RPG sessions.
   manifests per process.
 - MCP pack loading now caches unchanged RPG compile/validate reports within each
   API instance.
+- Overworld pending-road session snapshots now persist only the edge id and
+  reconstruct road event/options from the content-bound world manifest.
 
 ## Acceptance
 

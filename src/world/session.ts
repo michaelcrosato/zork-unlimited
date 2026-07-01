@@ -21,6 +21,7 @@ import {
   type OverworldArea,
   type OverworldAreaExit,
   type OverworldCharacter,
+  type OverworldEdge,
   type OverworldExit,
   type OverworldExplorationSite,
   type OverworldLocalJob,
@@ -44,7 +45,7 @@ import {
   type OverworldLocalActionKind,
 } from "./local_actions.js";
 
-export const OVERWORLD_SESSION_SAVE_VERSION = 1 as const;
+export const OVERWORLD_SESSION_SAVE_VERSION = 2 as const;
 const MAX_SUPPLIES = 8;
 const STARTING_SUPPLIES = 6;
 const MAX_FATIGUE = 100;
@@ -103,18 +104,6 @@ export type OverworldRoadEncounterOption = {
   outcome: string;
 };
 
-const OverworldRoadEncounterOptionSchema = z
-  .object({
-    strategy: z.enum(["assist_travelers", "cautious_scout", "press_on"]),
-    label: z.string().min(1),
-    minutes: z.number().int().nonnegative(),
-    suppliesCost: z.number().int().nonnegative(),
-    fatigueGained: z.number().int().nonnegative(),
-    renownGained: z.number().int().nonnegative(),
-    outcome: z.string().min(1),
-  })
-  .strict();
-
 export type OverworldPendingRoadEncounter = {
   id: string;
   edgeId: string;
@@ -126,16 +115,13 @@ export type OverworldPendingRoadEncounter = {
   options: OverworldRoadEncounterOption[];
 };
 
-const OverworldPendingRoadEncounterSchema = z
+export type OverworldPendingRoadEncounterSnapshot = {
+  edgeId: string;
+};
+
+const OverworldPendingRoadEncounterSnapshotSchema = z
   .object({
-    id: z.string().min(1),
     edgeId: z.string().min(1),
-    from: z.string().min(1),
-    to: z.string().min(1),
-    route: z.string().min(1),
-    arrivedAt: z.string().min(1),
-    event: OverworldRoadEventSchema,
-    options: z.array(OverworldRoadEncounterOptionSchema).min(1),
   })
   .strict();
 
@@ -205,7 +191,7 @@ export const OverworldSessionSnapshotSchema = z
     exploredSiteIds: z.array(z.string().min(1)),
     regionRenown: z.array(z.tuple([z.string().min(1), z.number().int().nonnegative()])),
     completedRegionalArcIds: z.array(z.string().min(1)),
-    pendingRoadEncounter: OverworldPendingRoadEncounterSchema.nullable(),
+    pendingRoadEncounter: OverworldPendingRoadEncounterSnapshotSchema.nullable(),
   })
   .strict();
 
@@ -472,7 +458,9 @@ export class OverworldSession {
       exploredSiteIds: sortedStringSet(this.exploredSiteIds),
       regionRenown: sortedNumberMap(this.regionRenown),
       completedRegionalArcIds: sortedStringSet(this.completedRegionalArcIds),
-      pendingRoadEncounter: cloneJson(this.pendingRoadEncounter),
+      pendingRoadEncounter: this.pendingRoadEncounter
+        ? { edgeId: this.pendingRoadEncounter.edgeId }
+        : null,
     };
   }
 
@@ -494,9 +482,9 @@ export class OverworldSession {
     const eventIds = new Set(this.world.local_events.map((event) => event.id));
     const arcIds = new Set(this.world.regional_arcs.map((arc) => arc.id));
     const edgesById = new Map(this.world.edges.map((edge) => [edge.id, edge]));
-    const roadEventsById = new Map(this.world.road_events.map((event) => [event.id, event]));
     const regions = new Set(this.world.regions.map((region) => region.name));
     const areaHomes = new Map(this.world.areas.map((area) => [area.id, area.home]));
+    let restoredPendingRoadEncounter: OverworldPendingRoadEncounter | null = null;
 
     if (!nodeIds.has(snapshot.currentId)) {
       throw new Error(
@@ -596,28 +584,25 @@ export class OverworldSession {
       if (pendingEdge.from !== snapshot.currentId && pendingEdge.to !== snapshot.currentId) {
         throw new Error("Overworld session snapshot pending road is not at the current town.");
       }
-      const currentName = this.nodes.get(snapshot.currentId)?.name;
-      if (snapshot.pendingRoadEncounter.to !== currentName) {
-        throw new Error("Overworld session snapshot pending road destination is not current.");
-      }
-      if (snapshot.pendingRoadEncounter.event.edge !== snapshot.pendingRoadEncounter.edgeId) {
-        throw new Error("Overworld session snapshot pending road event does not match its road.");
-      }
-      const manifestEvent = roadEventsById.get(snapshot.pendingRoadEncounter.event.id);
+      const manifestEvent = overworldRoadEventFor(this.world, snapshot.pendingRoadEncounter.edgeId);
       if (!manifestEvent) {
         throw new Error(
-          `Overworld session snapshot has unknown pending road event "${snapshot.pendingRoadEncounter.event.id}".`,
+          `Overworld session snapshot has no road event for "${snapshot.pendingRoadEncounter.edgeId}".`,
         );
       }
-      if (JSON.stringify(snapshot.pendingRoadEncounter.event) !== JSON.stringify(manifestEvent)) {
-        throw new Error("Overworld session snapshot pending road event does not match the world.");
+      const fromId = pendingEdge.from === snapshot.currentId ? pendingEdge.to : pendingEdge.from;
+      const from = this.nodes.get(fromId);
+      const to = this.nodes.get(snapshot.currentId);
+      if (!from || !to) {
+        throw new Error("Overworld session snapshot pending road references an unknown town.");
       }
-      if (
-        JSON.stringify(snapshot.pendingRoadEncounter.options) !==
-        JSON.stringify(this.roadEncounterOptions(manifestEvent))
-      ) {
-        throw new Error("Overworld session snapshot pending road options do not match the event.");
-      }
+      restoredPendingRoadEncounter = this.buildPendingRoadEncounter(
+        from,
+        to,
+        pendingEdge,
+        manifestEvent,
+        snapshot.minutes,
+      );
     }
 
     this.currentId = snapshot.currentId;
@@ -648,7 +633,7 @@ export class OverworldSession {
     this.regionRenown.clear();
     for (const [region, renown] of snapshot.regionRenown) this.regionRenown.set(region, renown);
     replaceStringSet(this.completedRegionalArcIds, snapshot.completedRegionalArcIds);
-    this.pendingRoadEncounter = cloneJson(snapshot.pendingRoadEncounter);
+    this.pendingRoadEncounter = restoredPendingRoadEncounter;
   }
 
   private markSeen(nodeId: string): void {
@@ -1048,13 +1033,29 @@ export class OverworldSession {
       this.pendingRoadEncounter = null;
       return;
     }
-    this.pendingRoadEncounter = {
-      id: `road:${edge.id}:${this.minutes}`,
+    this.pendingRoadEncounter = this.buildPendingRoadEncounter(
+      from,
+      to,
+      edge,
+      roadEvent,
+      this.minutes,
+    );
+  }
+
+  private buildPendingRoadEncounter(
+    from: OverworldNode,
+    to: OverworldNode,
+    edge: OverworldEdge,
+    roadEvent: OverworldRoadEvent,
+    arrivedAtMinutes: number,
+  ): OverworldPendingRoadEncounter {
+    return {
+      id: `road:${edge.id}:${arrivedAtMinutes}`,
       edgeId: edge.id,
       from: from.name,
       to: to.name,
       route: edge.route,
-      arrivedAt: timeLabel(this.minutes),
+      arrivedAt: timeLabel(arrivedAtMinutes),
       event: roadEvent,
       options: this.roadEncounterOptions(roadEvent),
     };

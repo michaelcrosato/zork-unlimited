@@ -281,7 +281,15 @@ describe("OverworldSession", () => {
     const before = session.view();
     expect(before.pendingRoadEncounter).toBeDefined();
 
-    const snapshot = JSON.parse(JSON.stringify(session.snapshot())) as unknown;
+    const snapshot = JSON.parse(JSON.stringify(session.snapshot())) as ReturnType<
+      typeof session.snapshot
+    >;
+    expect(snapshot.pendingRoadEncounter).toEqual({ edgeId: road!.id });
+    expect(snapshot.pendingRoadEncounter).not.toHaveProperty("event");
+    expect(snapshot.pendingRoadEncounter).not.toHaveProperty("options");
+    expect(JSON.stringify(snapshot.pendingRoadEncounter).length).toBeLessThan(
+      JSON.stringify(before.pendingRoadEncounter).length / 4,
+    );
     const restored = OverworldSession.restore(world, snapshot);
     expect(restored.view()).toEqual(before);
     expect(() => restored.travel(restored.view().exits[0]!.id)).toThrow(/pending road encounter/i);
@@ -334,13 +342,13 @@ describe("OverworldSession", () => {
       /current area is not discovered/i,
     );
 
-    const tamperedPendingRoadSnapshot = JSON.parse(
-      JSON.stringify(validSnapshot),
-    ) as typeof validSnapshot;
+    const tamperedPendingRoadSnapshot = JSON.parse(JSON.stringify(validSnapshot)) as ReturnType<
+      typeof session.snapshot
+    >;
     expect(tamperedPendingRoadSnapshot.pendingRoadEncounter).toBeDefined();
-    tamperedPendingRoadSnapshot.pendingRoadEncounter!.options[0]!.renownGained += 99;
+    tamperedPendingRoadSnapshot.pendingRoadEncounter!.edgeId = "missing_road";
     expect(() => OverworldSession.restore(world, tamperedPendingRoadSnapshot)).toThrow(
-      /pending road options do not match/i,
+      /unknown pending road/i,
     );
   });
 
