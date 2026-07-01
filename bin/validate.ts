@@ -4,20 +4,27 @@
  *
  * Usage:
  *   npm run validate
- *   npm run validate -- content/rpg/pack/sunken_barrow.yaml [...more packs]
+ *   npm run validate -- sunken_barrow [...more world_quest_ids]
+ *   npm run validate -- --pack content/rpg/pack/sunken_barrow.yaml [...more packs]
  *
- * With no arguments this validates every shipped RPG pack. Legacy CYOA/parser
- * packs are intentionally not accepted here; they must be migrated into the RPG
- * content surface instead of remaining public validation targets.
+ * With no arguments this validates every shipped RPG quest through the canonical
+ * world graph. Positional raw pack paths are hidden behind explicit --pack
+ * offline mode; legacy CYOA/parser packs are intentionally not accepted here.
  */
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 import { loadRpgPackFile } from "../src/rpg/pack.js";
 import { validateRpg } from "../src/validate/rpg_validator.js";
 import { formatReport, makeReport, type Finding } from "../src/validate/report.js";
+import { loadWorldManifest, resolveWorldQuestPackPath } from "../src/world/source.js";
 
 const RPG_PACK_DIR = "content/rpg/pack";
+const ROOT = process.cwd();
+
+type ValidationTarget = {
+  label: string;
+  path: string;
+};
 
 function schemaFindings(error: {
   issues: { message: string; path: (string | number)[] }[];
@@ -30,11 +37,18 @@ function schemaFindings(error: {
   }));
 }
 
-function discoverRpgPacks(): string[] {
-  return readdirSync(join(process.cwd(), RPG_PACK_DIR))
-    .filter((file) => file.endsWith(".yaml"))
-    .sort()
-    .map((file) => `${RPG_PACK_DIR}/${file}`);
+function looksLikeRawPackSelector(value: string): boolean {
+  return /\.ya?ml$/i.test(value) || value.includes("/") || value.includes("\\");
+}
+
+function discoverWorldQuestTargets(): ValidationTarget[] {
+  return loadWorldManifest(ROOT)
+    .graph.nodes.filter((node) => node.kind === "quest" && node.pack !== undefined)
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .map((node) => ({
+      label: `world_quest_id: ${node.id}`,
+      path: resolveWorldQuestPackPath(ROOT, node.id).packPath,
+    }));
 }
 
 function looksLikeRpgPack(path: string): boolean {
@@ -42,11 +56,12 @@ function looksLikeRpgPack(path: string): boolean {
   return !!raw && typeof raw === "object" && "enemies" in raw;
 }
 
-function validateOne(path: string): boolean {
-  console.log(`== ${path} ==`);
+function validateOne(target: ValidationTarget): boolean {
+  console.log(`== ${target.label} ==`);
+  const path = target.path;
   if (!looksLikeRpgPack(path)) {
     console.error(
-      `${path}: unsupported legacy pack; public validation is RPG-only. Convert it into ${RPG_PACK_DIR}.`,
+      `${target.label}: unsupported legacy pack; validation is RPG-only. Convert it into ${RPG_PACK_DIR}.`,
     );
     return false;
   }
@@ -63,16 +78,42 @@ function validateOne(path: string): boolean {
   return report.ok;
 }
 
-function main(): void {
-  const targets = process.argv.slice(2);
-  const paths = targets.length > 0 ? targets : discoverRpgPacks();
+function parseTargets(args: string[]): ValidationTarget[] {
+  if (args.length === 0) return discoverWorldQuestTargets();
+  if (args[0] === "--pack") {
+    const paths = args.slice(1);
+    if (paths.length === 0) {
+      throw new Error("validate --pack requires at least one raw pack path.");
+    }
+    return paths.map((path) => ({ label: `offline_pack: ${path}`, path }));
+  }
+  const raw = args.find(looksLikeRawPackSelector);
+  if (raw !== undefined) {
+    throw new Error(
+      `validate targets are world quest ids; raw pack paths are offline compatibility via --pack: ${raw}`,
+    );
+  }
+  return args.map((worldQuestId) => {
+    const source = resolveWorldQuestPackPath(ROOT, worldQuestId);
+    return { label: `world_quest_id: ${source.node.id}`, path: source.packPath };
+  });
+}
 
-  if (paths.length === 0) {
-    console.error(`No RPG packs found under ${RPG_PACK_DIR}.`);
+function main(): void {
+  let targets: ValidationTarget[];
+  try {
+    targets = parseTargets(process.argv.slice(2));
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
     process.exit(2);
   }
 
-  const ok = paths.map((path) => validateOne(path)).every(Boolean);
+  if (targets.length === 0) {
+    console.error(`No RPG quests found in the canonical world graph.`);
+    process.exit(2);
+  }
+
+  const ok = targets.map((target) => validateOne(target)).every(Boolean);
   process.exit(ok ? 0 : 1);
 }
 

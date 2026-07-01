@@ -88,6 +88,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - CLI replay/inspect now share that source resolver, so shipped traces can be
   debugged without passing raw pack paths; positional trace sources are quest ids
   only, with raw pack paths hidden behind offline compatibility.
+- CLI validate now defaults through the canonical world graph and accepts
+  targeted `world_quest_id` values; positional raw pack files are rejected unless
+  explicit offline `--pack` mode is used.
 - CLI play now accepts/defaults to shipped `world_quest_id` sources and records
   `worldQuestId`, so local traces replay without raw pack paths.
 - Save restore source inference now shares the same world source resolver as
@@ -97,7 +100,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - Generated RPG saves now embed `generatedRpgSeed`, letting `load_game({ save })`
   reconstruct in-memory generated packs without a raw pack path.
 - `load_game` source selection is save-embedded, `world_quest_id`, or
-  `generate_rpg_seed`; raw pack paths remain offline validation/replay tooling only.
+  `generate_rpg_seed`; raw pack paths remain explicit offline `--pack` or
+  replay/inspect compatibility tooling only.
 - `validate_pack`, `load_pack`, and `apply_content_patch` now use shared source
   identity directly instead of re-deriving `world_quest_id` from the resolved path.
 - Retired the static overworld compatibility helper module; local overworld play

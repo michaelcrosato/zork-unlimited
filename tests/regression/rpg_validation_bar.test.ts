@@ -12,6 +12,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
+import { loadWorldManifest } from "../../src/world/source.js";
 
 const root = process.cwd();
 const RPG_PACK_DIR = "content/rpg/pack";
@@ -38,6 +39,10 @@ function runNpm(command: string, timeout = 120_000) {
 
 describe("single-engine RPG validation bar", () => {
   const packs = discoverRpgPacks();
+  const worldQuestIds = loadWorldManifest(root)
+    .graph.nodes.filter((node) => node.kind === "quest" && node.pack !== undefined)
+    .map((node) => node.id)
+    .sort();
 
   it("discovers the shipped RPG corpus and no legacy content packs", () => {
     expect(packs).toEqual([
@@ -98,16 +103,41 @@ describe("single-engine RPG validation bar", () => {
     expect(result.status, output).toBe(0);
     expect(output).not.toContain("mode: cyoa");
     expect(output).not.toContain("mode: parser");
-    expect(output.match(/mode: rpg/g)?.length ?? 0).toBe(packs.length);
-    for (const path of packs) expect(output).toContain(`== ${path} ==`);
+    expect(output).not.toContain("content/rpg/pack/");
+    expect(output.match(/mode: rpg/g)?.length ?? 0).toBe(worldQuestIds.length);
+    for (const worldQuestId of worldQuestIds) {
+      expect(output).toContain(`== world_quest_id: ${worldQuestId} ==`);
+    }
   });
 
-  it("npm run validate rejects non-RPG pack targets", () => {
-    const result = runNpm("npm run validate -- content/broken-fixtures/duplicate_id.yaml", 30_000);
+  it("npm run validate accepts targeted world quest ids without raw pack paths", () => {
+    const result = runNpm("npm run validate -- sunken_barrow", 30_000);
+    const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+
+    expect(result.status, output).toBe(0);
+    expect(output).toContain("== world_quest_id: sunken_barrow ==");
+    expect(output).not.toContain("content/rpg/pack/sunken_barrow.yaml");
+    expect(output.match(/mode: rpg/g)?.length ?? 0).toBe(1);
+  });
+
+  it("npm run validate rejects positional raw pack path targets", () => {
+    const result = runNpm("npm run validate -- content/rpg/pack/sunken_barrow.yaml", 30_000);
+    const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+
+    expect(result.status, output).toBe(2);
+    expect(output).toContain("validate targets are world quest ids");
+    expect(output).toContain("offline compatibility via --pack");
+  });
+
+  it("npm run validate --pack rejects non-RPG offline pack targets", () => {
+    const result = runNpm(
+      "npm run validate -- --pack content/broken-fixtures/duplicate_id.yaml",
+      30_000,
+    );
     const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
 
     expect(result.status, output).toBe(1);
     expect(output).toContain("unsupported legacy pack");
-    expect(output).toContain("public validation is RPG-only");
+    expect(output).toContain("validation is RPG-only");
   });
 });

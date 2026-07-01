@@ -124,6 +124,17 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: closes a user-facing debug-loop path leak; source resolver internals still keep path data for integrity checks.
 - Operator direction: pause after this cycle; do not start another AFK cycle.
 
+### Cycle result — validate_cli_world_id_targets
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; same broad helper drift outside canonical repo scripts.
+- CLI/tooling: `npm run validate` now defaults through the canonical world graph and targeted validation accepts `world_quest_id`.
+- Token/API hygiene: normal validation output labels quests by id and rejects positional raw pack paths; explicit `--pack` remains offline-only.
+- VERIFY: focused validation/world tests, targeted `npm run validate -- sunken_barrow`,
+  typecheck, lint, format:check, validate, npm test (191/1255), `npm run health`
+  EXIT 0.
+- Self-critique: closes another package-era operator surface; source internals still keep pack paths for loading/hash checks.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
+
 ## Current Snapshot
 
 - Verification bar: `npm run health` remains the required end gate.
@@ -161,6 +172,9 @@ history only when deep recovery is truly needed. Keep future entries terse.
   raw `quest_path` input is rejected.
 - Pack validation/loading/patching: shipped quests use `world_quest_id` and
   return world identity without raw path envelopes.
+- CLI validation: no-arg validation walks the canonical world graph; targeted
+  validation uses `world_quest_id`; raw pack files require explicit `--pack`
+  offline mode.
 - ToolApi/public MCP validate/load/patch schemas and responses are
   `world_quest_id` only; trace replay/inspect keep raw pack paths only for
   offline compatibility.

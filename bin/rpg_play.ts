@@ -225,7 +225,7 @@ function playWorldQuestId(): string {
   if (positional === undefined) return DEFAULT_WORLD_QUEST_ID;
   if (looksLikePackPath(positional)) {
     throw new Error(
-      "play starts shipped quests by world quest id only; run `npm run validate -- <pack.yaml>` to inspect a raw pack.",
+      "play starts shipped quests by world quest id only; run `npm run validate -- --pack <pack.yaml>` to inspect a raw pack.",
     );
   }
   return positional;
