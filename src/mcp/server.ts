@@ -40,13 +40,6 @@ function tool(
   server.registerTool(name, { description, inputSchema }, wrap(handler) as never);
 }
 
-const PACK = {
-  pack_path: z
-    .string()
-    .describe(
-      "Path to an RPG quest content pack (.yaml), relative to the project root. Legacy CYOA/parser packs are rejected.",
-    ),
-};
 const PACK_SOURCE = {
   pack_path: z
     .string()
@@ -565,9 +558,9 @@ tool(
 
 tool(
   "apply_content_patch",
-  "Apply a structured, whitelisted content patch with deterministic code and return the modified pack + validation report (§9.4, §16). Never writes files; never runs model-issued code.",
+  "Apply a structured, whitelisted content patch with deterministic code to a shipped world quest or compatibility pack path and return the modified pack + validation report (§9.4, §16). Never writes files; never runs model-issued code.",
   {
-    ...PACK,
+    ...PACK_SOURCE,
     proposal: z
       .object({
         layer: z.enum([

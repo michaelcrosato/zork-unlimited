@@ -1232,23 +1232,46 @@ describe("MCP tools — replay + path confinement", () => {
 
 describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
   it("applies a whitelisted hint patch and re-validates green", () => {
+    const proposal = {
+      layer: "hint_text",
+      mode: "rpg",
+      summary: "signpost the start room",
+      ops: [
+        {
+          op: "add_room_journal_hint",
+          room: "forge_steps",
+          text: "The forge below answers only to a delver who reads the room carefully.",
+        },
+      ],
+    } as never;
+
     const r = api().apply_content_patch({
       pack_path: "content/rpg/pack/cold_forge.yaml",
-      proposal: {
-        layer: "hint_text",
-        mode: "rpg",
-        summary: "signpost the start room",
-        ops: [
-          {
-            op: "add_room_journal_hint",
-            room: "forge_steps",
-            text: "The forge below answers only to a delver who reads the room carefully.",
-          },
-        ],
-      } as never,
-    }) as { ok: boolean; report: { ok: boolean } };
+      proposal,
+    }) as {
+      ok: boolean;
+      pack_path: string;
+      world_quest_id: string | null;
+      report: { ok: boolean };
+    };
     expect(r.ok).toBe(true);
+    expect(r.pack_path).toBe("content/rpg/pack/cold_forge.yaml");
+    expect(r.world_quest_id).toBe("cold_forge");
     expect(r.report.ok).toBe(true);
+
+    const viaQuestId = api().apply_content_patch({
+      world_quest_id: "cold_forge",
+      proposal,
+    }) as {
+      ok: boolean;
+      pack_path: string;
+      world_quest_id: string | null;
+      report: { ok: boolean };
+    };
+    expect(viaQuestId.ok).toBe(true);
+    expect(viaQuestId.pack_path).toBe("content/rpg/pack/cold_forge.yaml");
+    expect(viaQuestId.world_quest_id).toBe("cold_forge");
+    expect(viaQuestId.report.ok).toBe(true);
   });
 
   it("refuses a patch whose target is missing (no file written)", () => {
@@ -1260,8 +1283,34 @@ describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
         summary: "x",
         ops: [{ op: "set_object_field", id: "ghost", field: "takeable", value: true }],
       } as never,
-    }) as { ok: boolean; report: { findings: { code: string }[] } };
+    }) as {
+      ok: boolean;
+      pack_path: string;
+      world_quest_id: string | null;
+      report: { findings: { code: string }[] };
+    };
     expect(r.ok).toBe(false);
+    expect(r.pack_path).toBe("content/rpg/pack/cold_forge.yaml");
+    expect(r.world_quest_id).toBe("cold_forge");
     expect(r.report.findings[0]?.code).toBe("PATCH_TARGET_MISSING");
+  });
+
+  it("rejects missing or ambiguous patch source identity", () => {
+    const proposal = {
+      layer: "content",
+      mode: "rpg",
+      summary: "x",
+      ops: [{ op: "set_object_field", id: "ghost", field: "takeable", value: true }],
+    } as never;
+    expect(() => api().apply_content_patch({ proposal })).toThrow(
+      /requires world_quest_id or pack_path/,
+    );
+    expect(() =>
+      api().apply_content_patch({
+        world_quest_id: "cold_forge",
+        pack_path: "content/rpg/pack/cold_forge.yaml",
+        proposal,
+      }),
+    ).toThrow(/exactly one/);
   });
 });

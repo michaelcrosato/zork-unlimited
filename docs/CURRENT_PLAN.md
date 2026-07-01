@@ -49,6 +49,8 @@ Make discovered overworld quest leads start real RPG sessions.
   compatibility.
 - `validate_pack` and `load_pack` now accept `world_quest_id` for shipped quests
   and return source identity metadata.
+- `apply_content_patch` now accepts shipped `world_quest_id`; raw `pack_path`
+  remains compatibility/new-pack fallback.
 
 ## Acceptance
 

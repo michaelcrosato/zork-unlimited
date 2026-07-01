@@ -1626,31 +1626,46 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    apply_content_patch(args: { pack_path: string; proposal: ContentPatchProposal }) {
+    apply_content_patch(args: {
+      pack_path?: string;
+      world_quest_id?: string;
+      proposal: ContentPatchProposal;
+    }) {
       // Apply a structured patch with deterministic code and return the modified
       // pack + validation report (§9.4, §12.5). The model never writes files: a
       // patch is data, validated before it can be played (§16). The fixer is RPG-only,
       // matching the public catalog and runtime.
+      const packPath = resolvePackPathSource(args, "apply_content_patch");
+      const worldQuestId = args.world_quest_id ?? worldQuestIdForPackPath(packPath);
       const proposal = ContentPatchProposalSchema.parse(args.proposal);
-      const abs = safeResolve(root, args.pack_path);
+      const abs = safeResolve(root, packPath);
       const loaded = loadRpgPackFile(abs);
       if (!loaded.ok) {
         return {
           ok: false,
-          report: makeReport(args.pack_path, [
+          pack_path: packPath,
+          world_quest_id: worldQuestId,
+          report: makeReport(packPath, [
             {
               severity: "error" as const,
               code: "SCHEMA",
               message: "pack failed to compile",
-              where: [args.pack_path],
+              where: [packPath],
             },
           ]),
         };
       }
       const result = applyContentPatch(loaded.compiled.pack, proposal);
       return result.ok
-        ? { ok: true, applied: result.applied, report: result.report, pack: result.pack }
-        : { ok: false, report: result.report };
+        ? {
+            ok: true,
+            pack_path: packPath,
+            world_quest_id: worldQuestId,
+            applied: result.applied,
+            report: result.report,
+            pack: result.pack,
+          }
+        : { ok: false, pack_path: packPath, world_quest_id: worldQuestId, report: result.report };
     },
   };
 }
