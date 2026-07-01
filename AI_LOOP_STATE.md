@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 26 -->
+<!-- historical_cycle_count: 27 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_snapshot_local_action_reachability
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; helper still fails broad root formatting/ESLint outside canonical package scripts.
+- Engine/persistence: overworld restore now rejects scout/contact/investigate journal entries whose real source is in an unvisited town or undiscovered local area.
+- Token economy: compact local-action history can no longer invent plausible scout/talk/investigate proof from unreachable map state.
+- VERIFY: focused overworld snapshot/MCP/UI tests, typecheck, lint, format:check, validate, npm test (192/1312), `npm run health` EXIT 0.
+- Self-critique: closes local-action reachability; full chronological replay of every local action remains a larger future invariant.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
 
 ### Cycle result — overworld_snapshot_journal_place_binding
 

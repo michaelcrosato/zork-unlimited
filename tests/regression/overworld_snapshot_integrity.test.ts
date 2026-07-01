@@ -11,6 +11,20 @@ const overworld = parseOverworldManifest(
 type Snapshot = ReturnType<typeof exportedSnapshotAfterTwoRoads>["snapshot"];
 type JournalEntry = Snapshot["journalEntries"][number];
 type LocalEvent = (typeof overworld.local_events)[number];
+type LocalActionJournalKind = Extract<JournalEntry["kind"], "contact" | "event" | "poi">;
+type LocalActionJournalSource = {
+  id: string;
+  home: string;
+  area: string;
+};
+type LocalActionJournalCase = {
+  label: string;
+  kind: LocalActionJournalKind;
+  prefix: "investigate" | "scout" | "talk";
+  sources: readonly LocalActionJournalSource[];
+  unvisitedPattern: RegExp;
+  undiscoveredPattern: RegExp;
+};
 
 function townName(nodeId: string): string {
   const town = overworld.nodes.find((node) => node.id === nodeId);
@@ -177,6 +191,48 @@ function exportedSnapshotAfterRoadStrategy(strategy: "assist_travelers" | "cauti
   expect(snapshot.journalEntries.some((entry) => entry.kind === "road")).toBe(true);
   expect(snapshot.regionRenown.length).toBeGreaterThan(0);
   return { a, snapshot };
+}
+
+const localActionJournalCases: readonly LocalActionJournalCase[] = [
+  {
+    label: "point of interest",
+    kind: "poi",
+    prefix: "scout",
+    sources: overworld.points_of_interest,
+    unvisitedPattern: /journal point of interest.*unvisited town/,
+    undiscoveredPattern: /journal point of interest.*undiscovered area/,
+  },
+  {
+    label: "contact",
+    kind: "contact",
+    prefix: "talk",
+    sources: overworld.characters,
+    unvisitedPattern: /journal contact.*unvisited town/,
+    undiscoveredPattern: /journal contact.*undiscovered area/,
+  },
+  {
+    label: "event investigation",
+    kind: "event",
+    prefix: "investigate",
+    sources: overworld.local_events,
+    unvisitedPattern: /journal event.*unvisited town/,
+    undiscoveredPattern: /journal event.*undiscovered area/,
+  },
+];
+
+function localActionJournalEntry(
+  snapshot: Snapshot,
+  source: LocalActionJournalSource,
+  journalCase: LocalActionJournalCase,
+): JournalEntry {
+  return {
+    id: `${journalCase.prefix}:${source.id}`,
+    kind: journalCase.kind,
+    town: townName(source.home),
+    title: `Forged ${journalCase.label}`,
+    text: "Forged local action journal proof.",
+    recordedAt: snapshot.journalEntries[0]!.recordedAt,
+  };
 }
 
 describe("overworld snapshot restore integrity", () => {
@@ -419,6 +475,53 @@ describe("overworld snapshot restore integrity", () => {
 
     expect(() => a.restore_overworld_session({ snapshot: regionalArcSnapshot })).not.toThrow();
   });
+
+  it.each(localActionJournalCases)(
+    "rejects $label journal entries from unvisited towns",
+    (journalCase) => {
+      const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+      const source = journalCase.sources.find(
+        (candidate) => !snapshot.visitedIds.includes(candidate.home),
+      );
+      if (!source) throw new Error(`expected a ${journalCase.label} in an unvisited town`);
+      const forgedJournal = {
+        ...snapshot,
+        journalEntries: [
+          localActionJournalEntry(snapshot, source, journalCase),
+          ...snapshot.journalEntries,
+        ],
+      };
+
+      expect(() => a.restore_overworld_session({ snapshot: forgedJournal })).toThrow(
+        journalCase.unvisitedPattern,
+      );
+    },
+  );
+
+  it.each(localActionJournalCases)(
+    "rejects $label journal entries in undiscovered areas",
+    (journalCase) => {
+      const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+      const source = journalCase.sources.find(
+        (candidate) =>
+          snapshot.visitedIds.includes(candidate.home) &&
+          !snapshot.discoveredAreaIds.includes(candidate.area),
+      );
+      if (!source)
+        throw new Error(`expected a ${journalCase.label} in an undiscovered visited-town area`);
+      const forgedJournal = {
+        ...snapshot,
+        journalEntries: [
+          localActionJournalEntry(snapshot, source, journalCase),
+          ...snapshot.journalEntries,
+        ],
+      };
+
+      expect(() => a.restore_overworld_session({ snapshot: forgedJournal })).toThrow(
+        journalCase.undiscoveredPattern,
+      );
+    },
+  );
 
   it("rejects unexpected region renown with no journal source", () => {
     const { a, snapshot } = exportedSnapshotAfterTwoRoads();

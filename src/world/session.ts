@@ -493,6 +493,14 @@ type OverworldResolutionProofIndex = {
   poisById: ReadonlyMap<string, OverworldPoi>;
 };
 
+type OverworldLocalActionJournalReachabilityIndex = {
+  charactersById: ReadonlyMap<string, OverworldCharacter>;
+  discoveredAreaIds: ReadonlySet<string>;
+  eventsById: ReadonlyMap<string, OverworldLocalEvent>;
+  poisById: ReadonlyMap<string, OverworldPoi>;
+  visitedTownIds: ReadonlySet<string>;
+};
+
 function assertKnownJournalSource(
   entry: OverworldJournalEntry,
   prefix: string,
@@ -982,6 +990,79 @@ function journalEntryRecordedAt(entry: OverworldJournalEntry): number {
   return parseTimeLabel(entry.recordedAt);
 }
 
+function journalSourceId(entry: OverworldJournalEntry, prefix: string): string | null {
+  return entry.id.startsWith(prefix) ? entry.id.slice(prefix.length) : null;
+}
+
+function assertSnapshotLocalActionJournalReachability(
+  snapshot: OverworldSessionSnapshot,
+  sources: OverworldLocalActionJournalReachabilityIndex,
+): void {
+  for (const entry of snapshot.journalEntries) {
+    switch (entry.kind) {
+      case "contact": {
+        const sourceId = journalSourceId(entry, "talk:");
+        if (!sourceId) continue;
+        const character = sources.charactersById.get(sourceId);
+        if (!character) continue;
+        assertVisitedTownForDiscovery(
+          "journal contact",
+          sourceId,
+          character.home,
+          sources.visitedTownIds,
+        );
+        assertDiscoveredAreaForDiscovery(
+          "journal contact",
+          sourceId,
+          character.area,
+          sources.discoveredAreaIds,
+        );
+        break;
+      }
+      case "event": {
+        const sourceId = journalSourceId(entry, "investigate:");
+        if (!sourceId) continue;
+        const event = sources.eventsById.get(sourceId);
+        if (!event) continue;
+        assertVisitedTownForDiscovery(
+          "journal event",
+          sourceId,
+          event.home,
+          sources.visitedTownIds,
+        );
+        assertDiscoveredAreaForDiscovery(
+          "journal event",
+          sourceId,
+          event.area,
+          sources.discoveredAreaIds,
+        );
+        break;
+      }
+      case "poi": {
+        const sourceId = journalSourceId(entry, "scout:");
+        if (!sourceId) continue;
+        const poi = sources.poisById.get(sourceId);
+        if (!poi) continue;
+        assertVisitedTownForDiscovery(
+          "journal point of interest",
+          sourceId,
+          poi.home,
+          sources.visitedTownIds,
+        );
+        assertDiscoveredAreaForDiscovery(
+          "journal point of interest",
+          sourceId,
+          poi.area,
+          sources.discoveredAreaIds,
+        );
+        break;
+      }
+      default:
+        break;
+    }
+  }
+}
+
 function assertSnapshotEventResolutionProofs(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldResolutionProofIndex,
@@ -1291,6 +1372,13 @@ export class OverworldSession {
       jobsById,
       questsById,
       sitesById,
+      visitedTownIds,
+    });
+    assertSnapshotLocalActionJournalReachability(snapshot, {
+      charactersById,
+      discoveredAreaIds,
+      eventsById,
+      poisById,
       visitedTownIds,
     });
     assertSnapshotEventResolutionProofs(snapshot, {
