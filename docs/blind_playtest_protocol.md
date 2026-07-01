@@ -61,18 +61,21 @@ shows you.
 
 STRICT RULES:
 - Play ONLY through the MCP tools named `mcp__adventureforge__*`. Find their schemas
-  with ToolSearch: "select:mcp__adventureforge__new_game,mcp__adventureforge__step_action,mcp__adventureforge__get_observation,mcp__adventureforge__get_transcript".
+  with ToolSearch: "select:mcp__adventureforge__start_world_quest,mcp__adventureforge__new_game,mcp__adventureforge__step_action,mcp__adventureforge__get_observation,mcp__adventureforge__list_legal_actions,mcp__adventureforge__get_transcript".
 - DO NOT read, open, grep, or cat ANY repo files — especially nothing under
   content/, src/, ui/, or tests/. No peeking at the YAML or the solution. Your only
-  window into the game is the observations the MCP tools return.
+  window into the game is the MCP tool responses.
 
 PLAY:
 - Start shipped quests with mcp__adventureforge__start_world_quest,
-  quest_id = "<QUEST_ID>", seed = <SEED>. If the caller gives only a pack path
-  for a generated or compatibility target, use mcp__adventureforge__new_game,
-  pack_path = "<PACK>", seed = <SEED>.
-- Each observation gives scene text, your state, and available_actions (id + text).
-  Choose one with step_action(session_id, action_id). Repeat until ended.
+  quest_id = "<QUEST_ID>", seed = <SEED>, hide_graph = true,
+  compact_observation = true. If the caller gives only a pack path for a generated
+  or compatibility target, use mcp__adventureforge__new_game, pack_path = "<PACK>",
+  seed = <SEED>, hide_graph = true, compact_observation = true.
+- Each compact context gives scene text, state/vitals, and context.actions (stable
+  ids). Choose one with step_action(session_id, action_id, hide_graph = true,
+  compact_observation = true). Repeat until context.ended is true. If an action id
+  is unclear, call list_legal_actions without compact_actions once for command text.
 - Make decisions a curious, sensible human would: follow clues, pursue the apparent
   goal, investigate what seems important. Don't pick randomly. Narrate your reasoning
   each turn. Do at most 2-3 playthroughs (try a different strategy on later runs).

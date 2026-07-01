@@ -78,6 +78,14 @@ describe("bug_0049 — the current-process docs on the REAL repo (charter-cohere
     expect(protocol).toContain("no human-approval gate");
   });
 
+  it("the blind protocol keeps MCP playtests on compact RPG loop responses", () => {
+    const protocol = read("docs/blind_playtest_protocol.md");
+    expect(protocol).toContain("compact_observation = true");
+    expect(protocol).toContain("hide_graph = true");
+    expect(protocol).toContain("context.actions");
+    expect(protocol).toContain("list_legal_actions");
+  });
+
   it("stays coherent with the AGENTS.md charter (no §14 ceremony, no human gate)", () => {
     const agents = read("AGENTS.md");
     expect(agents).toContain("no §14 ceremony");

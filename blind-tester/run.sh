@@ -127,11 +127,11 @@ fi
 if [[ -n "$QUEST_ID" ]]; then
   SOURCE_LABEL="quest=$QUEST_ID"
   SOURCE_SLUG="$QUEST_ID"
-  START_INSTRUCTION="Start: \`mcp__adventureforge__start_world_quest\` with quest_id = \"$QUEST_ID\", seed = $SEED."
+  START_INSTRUCTION="Start: \`mcp__adventureforge__start_world_quest\` with quest_id = \"$QUEST_ID\", seed = $SEED, hide_graph = true, compact_observation = true."
 else
   SOURCE_LABEL="pack=$PACK"
   SOURCE_SLUG="$(basename "$PACK" .yaml)"
-  START_INSTRUCTION="Start: \`mcp__adventureforge__new_game\` with pack_path = \"$PACK\", seed = $SEED."
+  START_INSTRUCTION="Start: \`mcp__adventureforge__new_game\` with pack_path = \"$PACK\", seed = $SEED, hide_graph = true, compact_observation = true."
 fi
 
 # Smoke mode: prove the MCP path with no LLM and no token spend.

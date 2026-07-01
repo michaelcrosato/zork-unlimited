@@ -23,12 +23,17 @@ describe("blind runner MCP config contract", () => {
     expect(runner).toContain('QUEST_ID="breaking_weir"');
     expect(runner).toContain("--quest|--quest-id");
     expect(runner).toContain("mcp__adventureforge__start_world_quest");
+    expect(runner).toContain("compact_observation = true");
     expect(prompt).toContain("mcp__adventureforge__start_world_quest");
+    expect(prompt).toContain("compact_observation: true");
+    expect(prompt).toContain("context");
     expect(prompt).toContain("{{START_INSTRUCTION}}");
     expect(prompt).not.toContain("mcp__adventureforge__start_game");
     expect(prompt).not.toContain("story_path");
     expect(smoke).toContain('"breaking_weir"');
     expect(smoke).toContain('"start_world_quest"');
+    expect(smoke).toContain("compact_observation: true");
+    expect(smoke).toContain("context");
     expect(smoke).not.toContain('"start_game"');
   });
 });

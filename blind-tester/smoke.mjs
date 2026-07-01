@@ -75,6 +75,14 @@ function parseResult(result) {
   }
 }
 
+function viewOf(payload) {
+  return payload?.context ?? payload?.observation ?? payload;
+}
+
+function actionsOf(view) {
+  return view?.actions ?? view?.available_actions ?? [];
+}
+
 function fail(msg) {
   console.error(`✗ ${msg}`);
   process.exitCode = 1;
@@ -104,31 +112,38 @@ async function main() {
     const start = parseResult(
       await client.callTool({
         name: startTool,
-        arguments: QUEST_ID ? { quest_id: QUEST_ID, seed: SEED } : { pack_path: PACK, seed: SEED },
+        arguments: QUEST_ID
+          ? { quest_id: QUEST_ID, seed: SEED, hide_graph: true, compact_observation: true }
+          : { pack_path: PACK, seed: SEED, hide_graph: true, compact_observation: true },
       }),
     );
     if (!start.session_id) throw new Error(`${startTool} returned no session_id (${SOURCE_LABEL})`);
     const session_id = start.session_id;
-    let obs = start.observation;
-    const sceneText = (obs?.scene?.text ?? obs?.text ?? "").slice(0, 90).replace(/\s+/g, " ");
+    let view = viewOf(start);
+    const sceneText = (view?.scene?.text ?? view?.text ?? "").slice(0, 90).replace(/\s+/g, " ");
     console.log(`• ${startTool} ok → session ${session_id} · mode ${start.mode} · ${SOURCE_LABEL}`);
-    console.log(`  scene: "${sceneText}…"  (${obs?.available_actions?.length ?? 0} actions)`);
+    console.log(`  scene: "${sceneText}…"  (${actionsOf(view).length} actions)`);
 
     // Step a few actions (first legal action each turn) to prove stepping works.
     let stepped = 0;
     for (let i = 0; i < STEPS; i++) {
-      const actions = obs?.available_actions ?? [];
-      if (obs?.ended || actions.length === 0) break;
+      const actions = actionsOf(view);
+      if (view?.ended || actions.length === 0) break;
       const actionId = actions[0].id;
       const res = parseResult(
         await client.callTool({
           name: "step_action",
-          arguments: { session_id, action_id: actionId },
+          arguments: {
+            session_id,
+            action_id: actionId,
+            hide_graph: true,
+            compact_observation: true,
+          },
         }),
       );
-      obs = res.observation ?? res;
+      view = viewOf(res);
       stepped++;
-      console.log(`  step ${i + 1}: ${actionId} → ${obs?.ended ? "[ended]" : "ok"}`);
+      console.log(`  step ${i + 1}: ${actionId} → ${view?.ended ? "[ended]" : "ok"}`);
     }
 
     if (stepped === 0) fail("could not step any action from the opening scene");

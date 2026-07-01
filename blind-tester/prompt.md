@@ -11,16 +11,18 @@ STRICT RULES:
   is the only other tool you may use.
 - DO NOT read, open, grep, cat, or list ANY files. Do not use shell, file, or web
   tools — you have none and don't need them. Your ONLY window into the game is the
-  observations the MCP tools return. No peeking at the YAML, the source, or the
-  solution.
+  MCP tool responses. No peeking at the YAML, the source, or the solution.
 
 PLAY:
 
 - {{START_INSTRUCTION}}
-- Each observation gives scene text, your state, and `available_actions` (each with
-  an `id` and player-facing text/command). Choose one by id with
-  `mcp__adventureforge__step_action` (session_id, action_id). Repeat until the scene
-  is an ending.
+- Use `hide_graph: true` and `compact_observation: true` on start, observe, and
+  step calls. Each compact `context` gives scene text, state/vitals, and `actions`
+  (stable ids). Choose one by id with `mcp__adventureforge__step_action`
+  (session_id, action_id, hide_graph: true, compact_observation: true). Repeat
+  until `context.ended` is true. If an action id is unclear, call
+  `mcp__adventureforge__list_legal_actions` once without `compact_actions` for
+  player-facing command text.
 - Make decisions a curious, sensible human would: follow clues, pursue the apparent
   goal, investigate what seems important. Do NOT pick randomly. Narrate your
   reasoning each turn in ONE short line. Do ONE thorough playthrough to an ending;
