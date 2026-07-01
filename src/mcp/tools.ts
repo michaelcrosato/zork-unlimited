@@ -563,19 +563,45 @@ export function createToolApi(opts: { root: string }) {
       return { world, hub: world.hub, graph: world.graph, quest_count: quests.length, quests };
     },
 
-    world_path(args: { quest_path: string }): {
+    world_path(args: { quest_path?: string; world_quest_id?: string }): {
       world: Pick<WorldManifest, "id" | "name" | "hub">;
       quest_path: string;
+      world_quest_id: string | null;
       graph_node: string | null;
       path_from_hub: WorldRouteStep[];
     } {
+      const sourceCount = [args.world_quest_id !== undefined, args.quest_path !== undefined].filter(
+        Boolean,
+      ).length;
+      if (sourceCount === 0) {
+        throw new Error("world_path requires world_quest_id or quest_path.");
+      }
+      if (sourceCount > 1) {
+        throw new Error("world_path accepts exactly one of world_quest_id or quest_path.");
+      }
+      if (args.world_quest_id !== undefined) {
+        const resolved = resolveWorldQuestPackPath(args.world_quest_id);
+        return {
+          world: {
+            id: resolved.world.id,
+            name: resolved.world.name,
+            hub: resolved.world.hub,
+          },
+          quest_path: resolved.packPath,
+          world_quest_id: resolved.node.id,
+          graph_node: resolved.node.id,
+          path_from_hub: worldRouteFromHub(resolved.world, resolved.node.id) ?? [],
+        };
+      }
       const world = loadWorldManifest();
-      const node = worldQuestNodeForPack(world, args.quest_path);
+      const questPath = args.quest_path!;
+      const node = worldQuestNodeForPack(world, questPath);
       return {
         world: { id: world.id, name: world.name, hub: world.hub },
-        quest_path: args.quest_path,
+        quest_path: questPath,
+        world_quest_id: node?.id ?? null,
         graph_node: node?.id ?? null,
-        path_from_hub: node ? (worldRouteForPack(world, args.quest_path) ?? []) : [],
+        path_from_hub: node ? (worldRouteForPack(world, questPath) ?? []) : [],
       };
     },
 

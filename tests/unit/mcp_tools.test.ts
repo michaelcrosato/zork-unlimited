@@ -167,12 +167,24 @@ describe("MCP tools — validate / load (§9.4)", () => {
   it("returns the graph path from Charterhaven to a quest", () => {
     const r = api().world_path({ quest_path: PACK });
     expect(r.graph_node).toBe("sunken_barrow");
+    expect(r.world_quest_id).toBe("sunken_barrow");
     expect(r.path_from_hub.map((step) => step.name)).toEqual([
       "Charterhaven",
       "Moor Road",
       "The Sunken Barrow",
     ]);
     expect(r.path_from_hub[1]?.route_from_previous).toBe("moor road");
+
+    const viaQuestId = api().world_path({ world_quest_id: "sunken_barrow" });
+    expect(viaQuestId.quest_path).toBe(PACK);
+    expect(viaQuestId.graph_node).toBe("sunken_barrow");
+    expect(viaQuestId.world_quest_id).toBe("sunken_barrow");
+    expect(viaQuestId.path_from_hub).toEqual(r.path_from_hub);
+
+    expect(() => api().world_path({})).toThrow(/requires world_quest_id or quest_path/);
+    expect(() => api().world_path({ world_quest_id: "sunken_barrow", quest_path: PACK })).toThrow(
+      /exactly one/,
+    );
   });
 
   it("starts shipped quests by world graph id instead of raw pack path", () => {
