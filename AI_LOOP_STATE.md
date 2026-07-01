@@ -44,6 +44,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   `pack_path` remains compatibility/new-pack fallback.
 - Quest aliases: `validate_quest`/`start_quest` prefer graph ids; `quest_path`
   remains compatibility.
+- Story aliases: `validate_story`/`start_game` prefer `world_quest_id`;
+  `pack_path`/`story_path` remain compatibility.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,

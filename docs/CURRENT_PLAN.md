@@ -53,6 +53,8 @@ Make discovered overworld quest leads start real RPG sessions.
   remains compatibility/new-pack fallback.
 - `validate_quest` and `start_quest` now prefer `quest_id` / `world_quest_id`;
   `quest_path` remains compatibility.
+- `validate_story` and `start_game` now prefer `world_quest_id`; `pack_path` and
+  legacy `story_path` remain compatibility.
 
 ## Acceptance
 

@@ -917,6 +917,25 @@ describe("MCP tools — validate / load (§9.4)", () => {
   it("validate_story is an AFK-compatible alias", () => {
     const r = api().validate_story({ story_path: PACK });
     expect(r.ok).toBe(true);
+    expect(r.pack_path).toBe(PACK);
+    expect(r.world_quest_id).toBe("sunken_barrow");
+
+    const viaPackPath = api().validate_story({ pack_path: PACK });
+    expect(viaPackPath.ok).toBe(true);
+    expect(viaPackPath.pack_path).toBe(PACK);
+    expect(viaPackPath.world_quest_id).toBe("sunken_barrow");
+
+    const viaWorldQuestId = api().validate_story({ world_quest_id: "sunken_barrow" });
+    expect(viaWorldQuestId.ok).toBe(true);
+    expect(viaWorldQuestId.pack_path).toBe(PACK);
+    expect(viaWorldQuestId.world_quest_id).toBe("sunken_barrow");
+
+    expect(() => api().validate_story({})).toThrow(
+      /requires world_quest_id, pack_path, or story_path/,
+    );
+    expect(() =>
+      api().validate_story({ world_quest_id: "sunken_barrow", story_path: PACK }),
+    ).toThrow(/exactly one/);
   });
 
   it("validate_quest is the world-first validation alias", () => {
@@ -1015,6 +1034,21 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(transcript.summary.ending_id).toBe("ending_victory");
     expect(transcript.turns.map((t) => t.action_id)).toContain("take_circlet");
     expect(a.get_state({ session_id: game.session_id }).state_hash).toMatch(/^[0-9a-f]{64}$/);
+
+    const byPackPath = a.start_game({ pack_path: PACK, seed: 1 });
+    expect(byPackPath.mode).toBe("rpg");
+    expect(byPackPath.pack_path).toBe(PACK);
+    expect(byPackPath.world_quest_id).toBe("sunken_barrow");
+
+    const byWorldQuestId = a.start_game({ world_quest_id: "sunken_barrow", seed: 1 });
+    expect(byWorldQuestId.mode).toBe("rpg");
+    expect(byWorldQuestId.pack_path).toBe(PACK);
+    expect(byWorldQuestId.world_quest_id).toBe("sunken_barrow");
+
+    expect(() => a.start_game({})).toThrow(/requires world_quest_id, pack_path, or story_path/);
+    expect(() => a.start_game({ world_quest_id: "sunken_barrow", story_path: PACK })).toThrow(
+      /exactly one/,
+    );
   });
 
   it("quest aliases can play and transcript a route", () => {

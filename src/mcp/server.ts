@@ -52,6 +52,22 @@ const PACK_SOURCE = {
       "Preferred Charter Marches quest graph node id from list_world().quests[].graph_node.",
     ),
 };
+const STORY_ALIAS_SOURCE = {
+  world_quest_id: z
+    .string()
+    .optional()
+    .describe(
+      "Preferred Charter Marches quest graph node id from list_world().quests[].graph_node.",
+    ),
+  pack_path: z
+    .string()
+    .optional()
+    .describe("Compatibility path to an RPG quest content pack. Prefer world_quest_id."),
+  story_path: z
+    .string()
+    .optional()
+    .describe("Legacy AFK path alias for pack_path. Prefer world_quest_id."),
+};
 const QUEST_ALIAS_SOURCE = {
   quest_id: z
     .string()
@@ -364,10 +380,8 @@ tool(
 );
 tool(
   "validate_story",
-  "AFK alias for validate_pack; validates one RPG pack and returns hard errors/warnings.",
-  {
-    story_path: z.string().describe("Path to an RPG content pack, relative to the project root."),
-  },
+  "AFK alias for validate_pack; prefer world_quest_id for shipped Charter Marches quests, with pack_path/story_path retained for compatibility.",
+  STORY_ALIAS_SOURCE,
   (a) => api.validate_story(a),
 );
 tool(
@@ -430,9 +444,9 @@ tool(
 );
 tool(
   "start_game",
-  "Legacy AFK alias for new_game; start a session on an RPG quest pack for MCP-driven playtesting.",
+  "Legacy AFK alias for new_game; prefer world_quest_id for shipped Charter Marches quests, with pack_path/story_path retained for compatibility.",
   {
-    story_path: z.string().describe("Path to an RPG content pack."),
+    ...STORY_ALIAS_SOURCE,
     seed: z.number().int().optional(),
     ...HIDE_GRAPH,
   },
