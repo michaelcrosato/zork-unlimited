@@ -114,10 +114,6 @@ graph:
       name: "The Fisherman's Privilege"
       kind: quest
       pack: "content/cyoa/pack/fishermans_privilege.yaml"
-    - id: midnight_edition
-      name: "The Midnight Edition"
-      kind: quest
-      pack: "content/cyoa/pack/midnight_edition.yaml"
     - id: night_dispensary
       name: "The Night Dispensary"
       kind: quest
@@ -337,9 +333,6 @@ graph:
     - from: doctors_commons
       to: croft_inquest
       route: "inquest road"
-    - from: printers_ward
-      to: midnight_edition
-      route: "midnight press run"
     - from: printers_ward
       to: printers_night
       route: "night court alley"

@@ -22,7 +22,7 @@ describe("New York overworld graph", () => {
     expect(world.start).toBe("albany_city");
     expect(world.scale.population_floor).toBe(10_000);
     expect(world.nodes.length).toBeGreaterThanOrEqual(240);
-    expect(world.quests.length).toBe(41);
+    expect(world.quests.length).toBe(40);
     expect(world.design_rules.join(" ")).toContain("not globally selectable");
     expect(world.design_rules.join(" ")).toContain("notice boards start empty");
     expect(world.design_rules.join(" ")).toContain("one local quest lead");
