@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SaveIntegrityError } from "../../src/persist/save_load.js";
 import {
+  assertWorldQuestPackCoverage,
   assertOverworldQuestSourceBindings,
   loadOverworldManifest,
   loadWorldManifest,
@@ -11,10 +12,32 @@ import {
 } from "../../src/world/source.js";
 import type { Trace } from "../../src/trace/record.js";
 import type { RpgAction } from "../../src/api/types.js";
+import type { WorldManifest } from "../../src/world/schema.js";
 
 const ROOT = process.cwd();
 const PACK = "content/rpg/pack/sunken_barrow.yaml";
 const overworld = loadOverworldManifest(ROOT);
+
+function worldWithQuestPacks(quests: Array<{ id: string; pack: string }>): WorldManifest {
+  return {
+    id: "charter_marches",
+    name: "The Charter Marches",
+    hub: "Charterhaven",
+    graph: {
+      hub: "hub",
+      nodes: [
+        { id: "hub", name: "Hub", kind: "hub" },
+        ...quests.map((quest) => ({
+          id: quest.id,
+          name: quest.id,
+          kind: "quest" as const,
+          pack: quest.pack,
+        })),
+      ],
+      edges: [],
+    },
+  };
+}
 
 const trace = {
   mode: "rpg",
@@ -51,6 +74,41 @@ describe("world source resolution", () => {
         quests: [{ ...overworld.quests[0]!, pack: "content/rpg/pack/cold_forge.yaml" }],
       }),
     ).toThrow(/does not match canonical world graph pack/);
+  });
+
+  it("rejects detached, duplicate, or unshipped RPG pack bindings in the world graph", () => {
+    expect(() =>
+      assertWorldQuestPackCoverage(worldWithQuestPacks([{ id: "sunken_barrow", pack: PACK }]), [
+        PACK,
+      ]),
+    ).not.toThrow();
+
+    expect(() =>
+      assertWorldQuestPackCoverage(worldWithQuestPacks([{ id: "sunken_barrow", pack: PACK }]), [
+        PACK,
+        "content/rpg/pack/cold_forge.yaml",
+      ]),
+    ).toThrow(/missing shipped RPG pack binding/);
+
+    expect(() =>
+      assertWorldQuestPackCoverage(
+        worldWithQuestPacks([
+          { id: "sunken_barrow", pack: PACK },
+          { id: "duplicate_barrow", pack: PACK },
+        ]),
+        [PACK],
+      ),
+    ).toThrow(/more than once/);
+
+    expect(() =>
+      assertWorldQuestPackCoverage(
+        worldWithQuestPacks([
+          { id: "sunken_barrow", pack: PACK },
+          { id: "cold_forge", pack: "content/rpg/pack/cold_forge.yaml" },
+        ]),
+        [PACK],
+      ),
+    ).toThrow(/not shipped in content\/rpg\/pack/);
   });
 
   it("resolves ordinary shipped pack sources by world quest id or compatibility pack path", () => {

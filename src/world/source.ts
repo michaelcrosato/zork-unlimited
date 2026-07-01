@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { SaveIntegrityError } from "../persist/save_load.js";
@@ -81,18 +81,81 @@ export function fallbackWorldManifest(): WorldManifest {
   };
 }
 
+function duplicateValues(values: string[]): string[] {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+  for (const value of values) {
+    if (seen.has(value)) duplicates.add(value);
+    seen.add(value);
+  }
+  return [...duplicates].sort();
+}
+
+function discoverShippedRpgPackPaths(root: string): string[] {
+  try {
+    return readdirSync(join(root, "content", "rpg", "pack"))
+      .filter((file) => file.endsWith(".yaml"))
+      .map((file) => normalizePackPath(`content/rpg/pack/${file}`))
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+export function assertWorldQuestPackCoverage(
+  world: WorldManifest,
+  shippedPackPaths: string[],
+): void {
+  const shipped = [...new Set(shippedPackPaths.map(normalizePackPath))].sort();
+  const questPacks = world.graph.nodes
+    .filter((node) => node.kind === "quest")
+    .map((node) => normalizePackPath(node.pack ?? ""));
+
+  const duplicates = duplicateValues(questPacks);
+  if (duplicates.length > 0) {
+    throw new Error(
+      `Canonical world graph binds the same shipped RPG pack more than once: ${duplicates.join(
+        ", ",
+      )}.`,
+    );
+  }
+
+  const questPackSet = new Set(questPacks);
+  const shippedSet = new Set(shipped);
+  const missing = shipped.filter((path) => !questPackSet.has(path));
+  const extra = questPacks.filter((path) => !shippedSet.has(path)).sort();
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Canonical world graph is missing shipped RPG pack binding(s): ${missing.join(", ")}.`,
+    );
+  }
+  if (extra.length > 0) {
+    throw new Error(
+      `Canonical world graph references RPG pack(s) not shipped in content/rpg/pack: ${extra.join(
+        ", ",
+      )}.`,
+    );
+  }
+}
+
 export function loadWorldManifest(root: string): WorldManifest {
   const cached = worldManifestCache.get(root);
   if (cached) return cached;
 
   let world: WorldManifest;
+  let loadedFromDisk = false;
   try {
     const raw = parseYaml(
       readFileSync(join(root, "content", "world", "charter_marches.yaml"), "utf8"),
     );
     world = WorldManifestSchema.parse(raw);
+    loadedFromDisk = true;
   } catch {
     world = fallbackWorldManifest();
+  }
+  if (loadedFromDisk) {
+    assertWorldQuestPackCoverage(world, discoverShippedRpgPackPaths(root));
   }
   worldManifestCache.set(root, world);
   return world;
