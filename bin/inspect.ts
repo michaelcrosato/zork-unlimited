@@ -1,14 +1,16 @@
 #!/usr/bin/env -S npx tsx
 /**
- * bin/inspect — summarize an RPG content pack or RPG trace (spec §5).
+ * bin/inspect — summarize an RPG world quest or RPG trace (spec §5).
  *
  * Usage:
- *   npm run inspect -- <rpg-pack.yaml>     # stats, validator findings
+ *   npm run inspect -- <world_quest_id>    # stats, validator findings
  *   npm run inspect -- <trace.json>        # infer a shipped trace's worldQuestId
  *   npm run inspect -- <trace.json> <world_quest_id>
+ *   npm run inspect -- --pack <rpg-pack.yaml>
  *
- * Auto-detects: a `.json` argument (or one carrying `trace_id`) is treated as a
- * trace; otherwise it is an RPG content pack. Read-only; never writes files (§16).
+ * Auto-detects: a `.json` argument is treated as a trace; otherwise positional
+ * targets are Charter Marches world quest ids. Raw pack paths are explicit
+ * offline compatibility via --pack. Read-only; never writes files (§16).
  */
 import { readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
@@ -23,7 +25,11 @@ import { formatReport } from "../src/validate/report.js";
 import type { RpgAction } from "../src/api/types.js";
 import { assertWellFormedState } from "../src/persist/save_load.js";
 import { assertRpgStateReferences } from "../src/rpg/state_integrity.js";
-import { resolveTracePackSource, type TraceSourceArgs } from "../src/world/source.js";
+import {
+  resolveTracePackSource,
+  resolveWorldQuestPackPath,
+  type TraceSourceArgs,
+} from "../src/world/source.js";
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(name);
@@ -43,6 +49,10 @@ function positionalSourceArg(): string | undefined {
   return undefined;
 }
 
+function looksLikeRawPackSelector(value: string): boolean {
+  return /\.ya?ml$/i.test(value) || value.includes("/") || value.includes("\\");
+}
+
 function traceSourceArgs(): TraceSourceArgs {
   const pack = arg("--pack");
   const worldQuestId = arg("--world-quest-id") ?? arg("--world_quest_id");
@@ -58,7 +68,7 @@ function traceSourceArgs(): TraceSourceArgs {
   if (pack !== undefined) return { pack_path: pack };
   if (worldQuestId !== undefined) return { world_quest_id: worldQuestId };
   if (positional === undefined) return {};
-  if (/\.ya?ml$/i.test(positional) || positional.includes("/") || positional.includes("\\")) {
+  if (looksLikeRawPackSelector(positional)) {
     throw new Error(
       "inspect trace sources are world quest ids; raw pack paths are hidden offline compatibility via --pack.",
     );
@@ -107,28 +117,57 @@ function inspectTrace(tracePath: string, sourceArgs: TraceSourceArgs): void {
 }
 
 function main(): void {
-  const path = process.argv[2];
-  if (!path || path.startsWith("--")) {
-    console.error("Usage: npm run inspect -- <rpg-pack.yaml> | <trace.json> [world_quest_id]");
+  const target = process.argv[2];
+  if (!target) {
+    console.error(
+      "Usage: npm run inspect -- <world_quest_id> | <trace.json> [world_quest_id] | --pack <rpg-pack.yaml>",
+    );
     process.exit(2);
   }
-  const raw = parseYaml(readFileSync(path, "utf8")) as Record<string, unknown> | null;
-  const isTrace = !!raw && typeof raw === "object" && "trace_id" in raw;
-  if (isTrace) {
-    inspectTrace(path, traceSourceArgs());
+  if (target === "--pack") {
+    const path = process.argv[3];
+    if (!path || path.startsWith("--")) {
+      console.error("Usage: npm run inspect -- --pack <rpg-pack.yaml>");
+      process.exit(2);
+    }
+    assertRpgPackShape(path);
+    inspectRpgPack(path);
     return;
   }
-  assertRpgPackShape(path, raw);
-  inspectRpgPack(path);
+  if (target.startsWith("--")) {
+    console.error(
+      "Usage: npm run inspect -- <world_quest_id> | <trace.json> [world_quest_id] | --pack <rpg-pack.yaml>",
+    );
+    process.exit(2);
+  }
+  if (/\.json$/i.test(target)) {
+    const raw = parseYaml(readFileSync(target, "utf8")) as Record<string, unknown> | null;
+    const isTrace = !!raw && typeof raw === "object" && "trace_id" in raw;
+    if (!isTrace) {
+      console.error("Inspect JSON inputs must be RPG trace files.");
+      process.exit(1);
+    }
+    inspectTrace(target, traceSourceArgs());
+    return;
+  }
+  if (looksLikeRawPackSelector(target)) {
+    console.error(
+      `inspect targets are world quest ids; raw pack paths are offline compatibility via --pack: ${target}`,
+    );
+    process.exit(2);
+  }
+  const source = resolveWorldQuestPackPath(process.cwd(), target);
+  inspectRpgPack(source.packPath, source.node.id);
 }
 
-function inspectRpgPack(path: string): void {
+function inspectRpgPack(path: string, worldQuestId?: string): void {
   const result = loadRpgPackFile(path);
   if (!result.ok) {
     console.error(`Schema error in ${path}.`);
     process.exit(1);
   }
   const { pack, contentHash } = result.compiled;
+  if (worldQuestId !== undefined) console.log(`World quest: ${worldQuestId}`);
   console.log(`Pack: ${pack.meta.id} "${pack.meta.title}"  mode: rpg  hash: ${contentHash}`);
   console.log(
     `  rooms: ${pack.rooms.length}  objects: ${pack.objects.length}  enemies: ${pack.enemies.length}  win_conditions: ${pack.win_conditions.length}`,

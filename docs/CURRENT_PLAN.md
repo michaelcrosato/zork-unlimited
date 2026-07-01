@@ -88,6 +88,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - CLI replay/inspect now share that source resolver, so shipped traces can be
   debugged without passing raw pack paths; positional trace sources are quest ids
   only, with raw pack paths hidden behind offline compatibility.
+- CLI inspect now summarizes shipped quest packs by `world_quest_id`; positional
+  raw pack summaries are rejected unless explicit offline `--pack` mode is used.
 - CLI validate now defaults through the canonical world graph and accepts
   targeted `world_quest_id` values; positional raw pack files are rejected unless
   explicit offline `--pack` mode is used.

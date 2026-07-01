@@ -135,6 +135,17 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: closes another package-era operator surface; source internals still keep pack paths for loading/hash checks.
 - Operator direction: pause after this cycle; do not start another AFK cycle.
 
+### Cycle result — inspect_cli_world_id_targets
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; same broad helper drift outside canonical repo scripts.
+- CLI/tooling: `npm run inspect -- <world_quest_id>` now summarizes shipped quest packs through the canonical world graph.
+- Token/API hygiene: positional raw pack inspection is rejected; explicit `--pack` remains offline-only and trace inspect still uses quest ids.
+- VERIFY: focused trace/world tests, direct `npm run inspect -- sunken_barrow`,
+  typecheck, lint, format:check, validate, npm test (191/1258), `npm run health`
+  EXIT 0.
+- Self-critique: closes a package-era debug surface; trace/offline internals still keep pack paths for integrity checks.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
+
 ## Current Snapshot
 
 - Verification bar: `npm run health` remains the required end gate.
@@ -153,6 +164,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Trace verification: shipped quest traces replay/inspect with `world_quest_id`.
 - Trace CLIs: positional replay/inspect trace sources are quest ids; raw pack
   paths are hidden offline compatibility only.
+- Inspect CLI: shipped quest summaries use positional `world_quest_id`; raw pack
+  summaries require explicit `--pack` offline mode.
 - Live session metadata: start/transcript/save/load return shipped
   `world_quest_id` or generated `generated_rpg_seed` without raw pack paths.
 - Overworld quest view metadata: observations, action results, compact context,

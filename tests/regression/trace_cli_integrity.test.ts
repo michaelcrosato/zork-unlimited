@@ -66,6 +66,34 @@ describe("trace CLI integrity gate", () => {
     expect(output).toContain("Suspected bug:");
   });
 
+  it("npm run inspect summarizes shipped quests by world quest id", () => {
+    const result = run("npm run inspect -- sunken_barrow");
+    const output = outputOf(result);
+
+    expect(result.status, output).toBe(0);
+    expect(output).toContain("World quest: sunken_barrow");
+    expect(output).toContain("Pack: sunken_barrow_v1");
+    expect(output).not.toContain(PACK);
+  });
+
+  it("npm run inspect rejects positional raw pack paths for quest summaries", () => {
+    const result = run(`npm run inspect -- ${PACK}`);
+    const output = outputOf(result);
+
+    expect(result.status, output).toBe(2);
+    expect(output).toContain("inspect targets are world quest ids");
+    expect(output).toContain("offline compatibility via --pack");
+  });
+
+  it("npm run inspect keeps raw pack summaries behind explicit offline mode", () => {
+    const result = run(`npm run inspect -- --pack ${PACK}`);
+    const output = outputOf(result);
+
+    expect(result.status, output).toBe(0);
+    expect(output).toContain("Pack: sunken_barrow_v1");
+    expect(output).not.toContain("World quest:");
+  });
+
   it("trace CLIs reject an explicit source that conflicts with the trace world quest id", () => {
     const replay = run(`npm run replay -- ${SOURCE_TRACE} --world-quest-id cold_forge`);
     const inspect = run(`npm run inspect -- ${SOURCE_TRACE} --world-quest-id cold_forge`);
