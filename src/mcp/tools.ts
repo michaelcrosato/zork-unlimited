@@ -96,6 +96,7 @@ import {
   type OverworldView,
   type TravelLogEntry,
 } from "../world/session.js";
+import { compactOverworldView, type OverworldCompactView } from "../world/compact_view.js";
 import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
 import { resolveProvider } from "../../agents/llm/providers.js";
 import { loadEngineContract, runWriter } from "../../agents/authoring/writer.js";
@@ -128,6 +129,12 @@ type OverworldSessionPayload<Key extends string, Value> = {
   session_id: string;
   observation: OverworldView;
 } & { [P in Key]: Value };
+
+type OverworldContextPayload = {
+  ok: true;
+  session_id: string;
+  context: OverworldCompactView;
+};
 
 const MAIN_RPG_STORY = "content/rpg/pack/breaking_weir.yaml";
 
@@ -632,6 +639,15 @@ export function createToolApi(opts: { root: string }) {
       return {
         session_id: args.session_id,
         observation: session.view(),
+      };
+    },
+
+    get_overworld_session_context(args: { session_id: string }): OverworldContextPayload {
+      const session = getOverworldSession(args.session_id);
+      return {
+        ok: true,
+        session_id: args.session_id,
+        context: compactOverworldView(session.view()),
       };
     },
 

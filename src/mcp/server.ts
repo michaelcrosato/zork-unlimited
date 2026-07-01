@@ -144,6 +144,14 @@ tool(
   (a) => api.get_overworld_session(a),
 );
 tool(
+  "get_overworld_session_context",
+  "Read a compact stateful overworld context for repeated agent loop turns. Returns stable ids, vitals, local actions, nearby roads, capped route options, pending road options, and recent journal entries without the full object graph.",
+  {
+    session_id: z.string().describe("Session id returned by start_overworld."),
+  },
+  (a) => api.get_overworld_session_context(a),
+);
+tool(
   "export_overworld_session",
   "Export a content-bound snapshot for a stateful New York overworld session so a long run can be restored later.",
   {

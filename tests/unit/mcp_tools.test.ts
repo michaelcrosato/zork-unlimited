@@ -646,6 +646,62 @@ describe("MCP tools — validate / load (§9.4)", () => {
     ).toThrow(/not reachable/i);
   });
 
+  it("returns compact stateful overworld context for repeated loop turns", () => {
+    const a = api();
+    const started = a.start_overworld();
+    const full = a.get_overworld_session({ session_id: started.session_id }).observation;
+    const compact = a.get_overworld_session_context({ session_id: started.session_id });
+
+    expect(compact).toMatchObject({ ok: true, session_id: started.session_id });
+    expect(compact.context.v).toBe(1);
+    expect(compact.context.here).toEqual([
+      full.current.id,
+      full.current.name,
+      full.current.region,
+      full.currentArea?.id ?? null,
+      full.currentArea?.name ?? null,
+    ]);
+    expect(compact.context.vitals).toEqual([
+      full.supplies,
+      full.maxSupplies,
+      full.fatigue,
+      full.travelCondition,
+    ]);
+    expect(compact.context.roads.map(([roadId]) => roadId)).toEqual(
+      full.exits.map((edge) => edge.id),
+    );
+    expect(compact.context.poi.map(([id]) => id)).toEqual(full.pois.map((poi) => poi.id));
+    expect(compact.context.route_options.length).toBeLessThanOrEqual(8);
+    expect(compact.context.pending_road).toBeNull();
+    expect(JSON.stringify(compact.context).length).toBeLessThan(JSON.stringify(full).length);
+
+    const road = full.exits.find((edge) => edge.destination.id === "colonie_town");
+    expect(road).toBeDefined();
+    a.travel_overworld_session({ session_id: started.session_id, road_id: road!.id });
+    const traveledFull = a.get_overworld_session({ session_id: started.session_id }).observation;
+    const traveledCompact = a.get_overworld_session_context({
+      session_id: started.session_id,
+    }).context;
+
+    expect(traveledCompact.here[0]).toBe("colonie_town");
+    expect(traveledCompact.pending_road).toMatchObject({
+      edge: road!.id,
+      event: [
+        traveledFull.pendingRoadEncounter!.event.id,
+        traveledFull.pendingRoadEncounter!.event.title,
+        traveledFull.pendingRoadEncounter!.event.risk,
+      ],
+    });
+    expect(traveledCompact.pending_road?.options.map(([strategy]) => strategy)).toEqual([
+      "cautious_scout",
+      "assist_travelers",
+      "press_on",
+    ]);
+    expect(JSON.stringify(traveledCompact).length).toBeLessThan(
+      JSON.stringify(traveledFull).length,
+    );
+  });
+
   it("exports and restores stateful New York overworld sessions through MCP", () => {
     const a = api();
     const started = a.start_overworld();

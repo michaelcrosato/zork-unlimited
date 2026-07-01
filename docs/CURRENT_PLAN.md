@@ -95,6 +95,8 @@ Make discovered overworld quest leads start real RPG sessions.
   asks for the loaded manifest.
 - Overworld session restore now rejects duplicate save maps, invalid discovery
   lifecycles, and tampered pending road encounter options.
+- MCP now exposes compact overworld context for repeated loop turns: stable ids,
+  vitals, local actions, capped route options, pending roads, and recent journal.
 
 ## Acceptance
 
