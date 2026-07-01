@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { createToolApi } from "../../src/mcp/tools.js";
+import { parseOverworldManifest } from "../../src/world/overworld.js";
 
 const api = () => createToolApi({ root: process.cwd() });
+const overworld = parseOverworldManifest(
+  JSON.parse(readFileSync("content/world/new_york_overworld.json", "utf8")),
+);
 
 function exportedSnapshotAfterTwoRoads() {
   const a = api();
@@ -73,6 +78,63 @@ describe("overworld snapshot restore integrity", () => {
     expect(() => a.restore_overworld_session({ snapshot: detachedJournalTown })).toThrow(
       /unknown town/,
     );
+  });
+
+  it("rejects journal entries whose kind does not match their source id", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const mismatchedJournalSource = {
+      ...snapshot,
+      journalEntries: [
+        { ...snapshot.journalEntries[0]!, kind: "job" as const },
+        ...snapshot.journalEntries.slice(1),
+      ],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: mismatchedJournalSource })).toThrow(
+      /journal job entry id/,
+    );
+  });
+
+  it("rejects journal entries bound to unknown overworld source ids", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const roadEntry = snapshot.journalEntries.find((entry) => entry.kind === "road");
+    if (!roadEntry) throw new Error("expected a road journal entry");
+    const roadMatch = /^road:(.+):(\d+):([a-z_]+)$/.exec(roadEntry.id);
+    if (!roadMatch) throw new Error(`unexpected road journal id ${roadEntry.id}`);
+    const detachedJournalSource = {
+      ...snapshot,
+      journalEntries: snapshot.journalEntries.map((entry) =>
+        entry === roadEntry
+          ? { ...entry, id: `road:missing_road:${roadMatch[2]}:${roadMatch[3]}` }
+          : entry,
+      ),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: detachedJournalSource })).toThrow(
+      /unknown road/,
+    );
+  });
+
+  it("restores regional arc journal entries bound to known regions", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const arc = overworld.regional_arcs[0]!;
+    const regionalArcSnapshot = {
+      ...snapshot,
+      completedRegionalArcIds: [arc.id],
+      journalEntries: [
+        {
+          id: `arc:${arc.id}`,
+          kind: "regional_arc" as const,
+          town: arc.region,
+          title: `Completed ${arc.title}`,
+          text: arc.reward,
+          recordedAt: snapshot.journalEntries[0]!.recordedAt,
+        },
+        ...snapshot.journalEntries,
+      ],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: regionalArcSnapshot })).not.toThrow();
   });
 
   it("rejects future journal history in forged session snapshots", () => {

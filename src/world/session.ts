@@ -106,6 +106,12 @@ export type OverworldAreaTravelResult = {
 
 export type OverworldRoadEncounterStrategy = "assist_travelers" | "cautious_scout" | "press_on";
 
+const ROAD_ENCOUNTER_STRATEGIES = new Set<string>([
+  "assist_travelers",
+  "cautious_scout",
+  "press_on",
+]);
+
 export type OverworldRoadEncounterOption = {
   strategy: OverworldRoadEncounterStrategy;
   label: string;
@@ -434,9 +440,148 @@ function assertUniqueTupleKeys(
   );
 }
 
+type OverworldJournalSourceIndex = {
+  arcIds: ReadonlySet<string>;
+  areaIds: ReadonlySet<string>;
+  characterIds: ReadonlySet<string>;
+  edgeIds: ReadonlySet<string>;
+  eventIds: ReadonlySet<string>;
+  jobIds: ReadonlySet<string>;
+  poiIds: ReadonlySet<string>;
+  regionNames: ReadonlySet<string>;
+  siteIds: ReadonlySet<string>;
+  townNames: ReadonlySet<string>;
+  travelLogArrivals: ReadonlySet<string>;
+};
+
+function assertKnownJournalSource(
+  entry: OverworldJournalEntry,
+  prefix: string,
+  known: ReadonlySet<string>,
+  sourceLabel: string,
+): void {
+  if (!entry.id.startsWith(prefix)) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry id "${entry.id}" must start with "${prefix}".`,
+    );
+  }
+  const sourceId = entry.id.slice(prefix.length);
+  if (!sourceId) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry has an empty ${sourceLabel} id.`,
+    );
+  }
+  if (!known.has(sourceId)) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry references unknown ${sourceLabel} "${sourceId}".`,
+    );
+  }
+}
+
+function assertRoadJournalSource(
+  entry: OverworldJournalEntry,
+  recordedAt: number,
+  sources: OverworldJournalSourceIndex,
+): void {
+  const match = /^road:(.+):(\d+):([a-z_]+)$/.exec(entry.id);
+  if (!match) {
+    throw new Error(
+      `Overworld session snapshot journal road entry id "${entry.id}" must match "road:<road_id>:<arrival_minutes>:<strategy>".`,
+    );
+  }
+  const edgeId = match[1]!;
+  const arrivedAt = Number(match[2]!);
+  const strategy = match[3]!;
+  if (!sources.edgeIds.has(edgeId)) {
+    throw new Error(
+      `Overworld session snapshot journal road entry references unknown road "${edgeId}".`,
+    );
+  }
+  if (!Number.isSafeInteger(arrivedAt)) {
+    throw new Error(
+      `Overworld session snapshot journal road entry has malformed arrival minutes "${match[2]}".`,
+    );
+  }
+  if (!ROAD_ENCOUNTER_STRATEGIES.has(strategy)) {
+    throw new Error(
+      `Overworld session snapshot journal road entry references unknown strategy "${strategy}".`,
+    );
+  }
+  if (arrivedAt > recordedAt) {
+    throw new Error("Overworld session snapshot journal road entry predates its road arrival.");
+  }
+  if (!sources.travelLogArrivals.has(`${edgeId}@${arrivedAt}`)) {
+    throw new Error(
+      `Overworld session snapshot journal road entry has no matching travel log for "${edgeId}" at ${arrivedAt}.`,
+    );
+  }
+}
+
+function assertServiceJournalSource(entry: OverworldJournalEntry, recordedAt: number): void {
+  const match = /^service:(rest|resupply):(\d+)$/.exec(entry.id);
+  if (!match) {
+    throw new Error(
+      `Overworld session snapshot journal service entry id "${entry.id}" must match "service:<rest|resupply>:<minutes>".`,
+    );
+  }
+  const serviceAt = Number(match[2]!);
+  if (!Number.isSafeInteger(serviceAt) || serviceAt !== recordedAt) {
+    throw new Error(
+      "Overworld session snapshot journal service entry time does not match its timestamp.",
+    );
+  }
+}
+
+function assertSnapshotJournalSource(
+  entry: OverworldJournalEntry,
+  recordedAt: number,
+  sources: OverworldJournalSourceIndex,
+): void {
+  const placeNames = entry.kind === "regional_arc" ? sources.regionNames : sources.townNames;
+  const placeLabel = entry.kind === "regional_arc" ? "region" : "town";
+  if (!placeNames.has(entry.town)) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} references unknown ${placeLabel} "${entry.town}".`,
+    );
+  }
+
+  switch (entry.kind) {
+    case "area":
+      assertKnownJournalSource(entry, "area:", sources.areaIds, "area");
+      return;
+    case "contact":
+      assertKnownJournalSource(entry, "talk:", sources.characterIds, "contact");
+      return;
+    case "event":
+      assertKnownJournalSource(entry, "investigate:", sources.eventIds, "event");
+      return;
+    case "job":
+      assertKnownJournalSource(entry, "job:", sources.jobIds, "job");
+      return;
+    case "poi":
+      assertKnownJournalSource(entry, "scout:", sources.poiIds, "point of interest");
+      return;
+    case "regional_arc":
+      assertKnownJournalSource(entry, "arc:", sources.arcIds, "regional arc");
+      return;
+    case "resolution":
+      assertKnownJournalSource(entry, "resolve:", sources.eventIds, "event resolution");
+      return;
+    case "road":
+      assertRoadJournalSource(entry, recordedAt, sources);
+      return;
+    case "service":
+      assertServiceJournalSource(entry, recordedAt);
+      return;
+    case "site":
+      assertKnownJournalSource(entry, "site:", sources.siteIds, "site");
+      return;
+  }
+}
+
 function assertSnapshotTimeline(
   snapshot: OverworldSessionSnapshot,
-  knownTownNames: ReadonlySet<string>,
+  sources: OverworldJournalSourceIndex,
 ): void {
   assertUnique(
     "journal entry id",
@@ -447,23 +592,6 @@ function assertSnapshotTimeline(
     snapshot.travelLog.map((entry) => `${entry.edgeId}@${entry.arrivedAt}`),
   );
 
-  let previousRecordedAt = Number.POSITIVE_INFINITY;
-  for (const entry of snapshot.journalEntries) {
-    if (!knownTownNames.has(entry.town)) {
-      throw new Error(
-        `Overworld session snapshot journal references unknown town "${entry.town}".`,
-      );
-    }
-    const recordedAt = parseTimeLabel(entry.recordedAt);
-    if (recordedAt > snapshot.minutes) {
-      throw new Error("Overworld session snapshot journal contains a future entry.");
-    }
-    if (recordedAt > previousRecordedAt) {
-      throw new Error("Overworld session snapshot journal must be newest-first.");
-    }
-    previousRecordedAt = recordedAt;
-  }
-
   let previousArrivedAt = Number.POSITIVE_INFINITY;
   for (const entry of snapshot.travelLog) {
     if (entry.arrivedAt > snapshot.minutes) {
@@ -473,6 +601,19 @@ function assertSnapshotTimeline(
       throw new Error("Overworld session snapshot travel log must be newest-first.");
     }
     previousArrivedAt = entry.arrivedAt;
+  }
+
+  let previousRecordedAt = Number.POSITIVE_INFINITY;
+  for (const entry of snapshot.journalEntries) {
+    const recordedAt = parseTimeLabel(entry.recordedAt);
+    assertSnapshotJournalSource(entry, recordedAt, sources);
+    if (recordedAt > snapshot.minutes) {
+      throw new Error("Overworld session snapshot journal contains a future entry.");
+    }
+    if (recordedAt > previousRecordedAt) {
+      throw new Error("Overworld session snapshot journal must be newest-first.");
+    }
+    previousRecordedAt = recordedAt;
   }
 }
 
@@ -581,10 +722,15 @@ export class OverworldSession {
     const questIds = new Set(this.world.quests.map((quest) => quest.id));
     const eventIds = new Set(this.world.local_events.map((event) => event.id));
     const arcIds = new Set(this.world.regional_arcs.map((arc) => arc.id));
+    const poiIds = new Set(this.world.points_of_interest.map((poi) => poi.id));
+    const characterIds = new Set(this.world.characters.map((character) => character.id));
     const edgesById = new Map(this.world.edges.map((edge) => [edge.id, edge]));
     const regions = new Set(this.world.regions.map((region) => region.name));
     const townNames = new Set(this.world.nodes.map((node) => node.name));
     const areaHomes = new Map(this.world.areas.map((area) => [area.id, area.home]));
+    const travelLogArrivals = new Set(
+      snapshot.travelLog.map((entry) => `${entry.edgeId}@${entry.arrivedAt}`),
+    );
     let restoredPendingRoadEncounter: OverworldPendingRoadEncounter | null = null;
 
     if (!nodeIds.has(snapshot.currentId)) {
@@ -616,7 +762,19 @@ export class OverworldSession {
     assertKnownIds("completed regional arc id", snapshot.completedRegionalArcIds, arcIds);
     assertUniqueTupleKeys("area-map town", snapshot.currentAreaByTown);
     assertUniqueTupleKeys("renown region", snapshot.regionRenown);
-    assertSnapshotTimeline(snapshot, townNames);
+    assertSnapshotTimeline(snapshot, {
+      arcIds,
+      areaIds,
+      characterIds,
+      edgeIds: new Set(edgesById.keys()),
+      eventIds,
+      jobIds,
+      poiIds,
+      regionNames: regions,
+      siteIds,
+      townNames,
+      travelLogArrivals,
+    });
 
     if (!snapshot.discoveredIds.includes(snapshot.currentId)) {
       throw new Error("Overworld session snapshot current town is not discovered.");

@@ -182,6 +182,15 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: narrows another forged checkpoint gap; journal entry ids still encode source type by convention rather than a compact typed schema.
 - Operator direction: pause after this cycle; do not start another AFK cycle.
 
+### Cycle result — overworld_snapshot_journal_source_binding
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; same broad helper drift outside canonical repo scripts.
+- Engine/persistence: overworld snapshot restore now validates journal kind/id prefixes against manifest sources and travel-log road arrivals.
+- Token economy: restored compact context can trust journal provenance instead of accepting forged source ids or mismatched action kinds.
+- VERIFY: focused overworld snapshot/MCP tests, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test` (192/1271), and `npm run health` all pass.
+- Self-critique: source binding is now explicit for restore, but broader progression consistency remains a later engine task.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
+
 ## Current Snapshot
 
 - Verification bar: `npm run health` remains the required end gate.
@@ -205,8 +214,9 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Author CLI: generated RPG output is draft-only; direct writes under
   `content/rpg/pack` are rejected until registered through the world graph.
 - Overworld session restore rejects forged history with duplicate journal ids,
-  unknown journal towns, malformed/future/non-newest-first journal timelines,
-  future/non-newest-first travel logs, or impossible travel vitals.
+  unknown journal towns or source ids, mismatched journal kind/id prefixes,
+  malformed/future/non-newest-first journal timelines, unmatched road journal
+  arrivals, future/non-newest-first travel logs, or impossible travel vitals.
 - Live session metadata: start/transcript/save/load return shipped
   `world_quest_id` or generated `generated_rpg_seed` without raw pack paths.
 - Overworld quest view metadata: observations, action results, compact context,
