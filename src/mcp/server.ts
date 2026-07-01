@@ -113,7 +113,7 @@ tool(
 );
 tool(
   "world_path",
-  "Return the route through the Charter Marches graph from Charterhaven to a shipped quest graph node.",
+  "Return the route through the Charter Marches graph from Charterhaven to a shipped quest graph node, without raw quest file paths.",
   {
     world_quest_id: z
       .string()

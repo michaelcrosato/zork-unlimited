@@ -782,7 +782,6 @@ export function createToolApi(opts: { root: string }) {
 
     world_path(args: { world_quest_id?: string }): {
       world: Pick<WorldManifest, "id" | "name" | "hub">;
-      quest_path: string;
       world_quest_id: string | null;
       graph_node: string | null;
       path_from_hub: WorldRouteStep[];
@@ -800,7 +799,6 @@ export function createToolApi(opts: { root: string }) {
           name: resolved.world.name,
           hub: resolved.world.hub,
         },
-        quest_path: resolved.packPath,
         world_quest_id: resolved.node.id,
         graph_node: resolved.node.id,
         path_from_hub: worldRouteFromHub(resolved.world, resolved.node.id) ?? [],

@@ -54,7 +54,8 @@ Make discovered overworld quest leads start real RPG sessions.
   starts.
 - The dev MCP play harness also starts shipped quests through `start_world_quest`
   and `world_quest_id`, not retired `pack_path` starts.
-- `world_path` now accepts `world_quest_id` only in ToolApi and public MCP.
+- `world_path` now accepts `world_quest_id` only in ToolApi and public MCP, and
+  returns graph-route metadata without raw `quest_path`.
 - `validate_pack` and `load_pack` now accept `world_quest_id` for shipped quests
   and return world identity without echoing raw pack paths.
 - `apply_content_patch` now accepts shipped `world_quest_id` in ToolApi/public

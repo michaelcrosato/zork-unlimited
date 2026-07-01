@@ -96,6 +96,15 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: closes another live path leak; remaining path usage is internal maintenance and offline trace/debug.
 - Operator direction: pause after this cycle; do not start another AFK cycle.
 
+### Cycle result — world_path_graph_only_response
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; same broad helper drift outside canonical repo scripts.
+- Public MCP/API: `world_path` now returns world id/name/hub, quest graph id, and route steps without echoing raw `quest_path`.
+- Scope: internal source resolvers still map graph ids to pack files for loading; public route discovery stays graph-only.
+- VERIFY: focused MCP/server tests, typecheck, lint, format:check, validate, npm test, `npm run health` EXIT 0.
+- Self-critique: targets an engine/loop surface blind agents will not report directly; closes a token/confusion leak in route discovery.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
+
 ## Current Snapshot
 
 - Verification bar: `npm run health` remains the required end gate.
@@ -125,7 +134,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - MCP dev harness: `scripts/mcp_play.ts` starts shipped quests through
   `start_world_quest` / `world_quest_id`.
 - World routes: ToolApi and public MCP `world_path` accept only
-  `world_quest_id`; raw `quest_path` is rejected.
+  `world_quest_id` and return graph-route metadata without raw `quest_path`;
+  raw `quest_path` input is rejected.
 - Pack validation/loading/patching: shipped quests use `world_quest_id` and
   return world identity without raw path envelopes.
 - ToolApi/public MCP validate/load/patch schemas and responses are

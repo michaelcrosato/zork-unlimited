@@ -179,7 +179,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const r = api().world_path({ world_quest_id: "sunken_barrow" });
     expect(r.graph_node).toBe("sunken_barrow");
     expect(r.world_quest_id).toBe("sunken_barrow");
-    expect(r.quest_path).toBe(PACK);
+    expect("quest_path" in r).toBe(false);
     expect(r.path_from_hub.map((step) => step.name)).toEqual([
       "Charterhaven",
       "Moor Road",
