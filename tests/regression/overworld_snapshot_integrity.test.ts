@@ -874,6 +874,47 @@ describe("overworld snapshot restore integrity", () => {
     },
   );
 
+  it("rejects local area journal entries recorded before area discovery", () => {
+    const a = api();
+    const started = a.start_overworld();
+    const firstArea = started.observation.areas[0]!;
+    const exploredFirstArea = a.explore_overworld_session_area({
+      session_id: started.session_id,
+      area_id: firstArea.id,
+    });
+    const route = exploredFirstArea.observation.areaExits[0];
+    if (!route) throw new Error("expected a local route after discovering a second area");
+
+    a.move_overworld_session_area({
+      session_id: started.session_id,
+      area_route_id: route.id,
+    });
+    a.explore_overworld_session_area({
+      session_id: started.session_id,
+      area_id: route.destination.id,
+    });
+    const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
+    const destinationEntryId = `area:${route.destination.id}`;
+    const destinationEntry = snapshot.journalEntries.find(
+      (entry) => entry.id === destinationEntryId,
+    );
+    if (!destinationEntry) throw new Error("expected destination area journal entry");
+    const forgedEarlyAreaEntry = {
+      ...snapshot,
+      journalEntries: [
+        ...snapshot.journalEntries.filter((entry) => entry.id !== destinationEntryId),
+        {
+          ...destinationEntry,
+          recordedAt: timeLabelForMinutes(8 * 60),
+        },
+      ],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedEarlyAreaEntry })).toThrow(
+      /journal area.*before discovering area/,
+    );
+  });
+
   it("rejects discovered jobs in undiscovered areas", () => {
     const { a, snapshot } = exportedSnapshotAfterTwoRoads();
     const job = overworld.local_jobs.find(

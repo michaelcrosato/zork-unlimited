@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 35 -->
+<!-- historical_cycle_count: 36 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_snapshot_local_area_chronology
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner still fails broad root Prettier/ESLint outside canonical package scripts, while its tsc/test portions passed.
+- Engine/persistence: overworld restore now resolves every local journal kind to its real area and rejects local action journals recorded before enough prior town-local actions could discover that area.
+- Token economy: compact snapshots can keep area ids and journal rows without carrying verbose discovery transcripts, because restore now derives the area-unlock proof from ordered journal counts.
+- VERIFY: focused overworld snapshot test (70), typecheck, lint, format:check, validate, npm test (192/1330), `npm run health` EXIT 0.
+- Self-critique: closes local-area unlock chronology; exact replay of job/site/quest reveal order by timestamp remains future work.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
 
 ### Cycle result — overworld_snapshot_pending_road_unresolved
 
