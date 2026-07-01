@@ -51,19 +51,12 @@ export const PROTECTED_FILES = [
   "src/validate/parser_validator.ts",
   "src/validate/rpg_validator.ts",
   "src/persist/save_load.ts",
-  // The generator program is the eval-distribution credibility anchor. These files
-  // mint the never-frozen procedural packs the assessor mint-and-check levers confront
-  // every cycle (CYOA bug_0158 / RPG bug_0162 / parser bug_0166) AND seal the committed
-  // held-out corpus the benchmark thesis rests on (bug_0163/bug_0165). A SILENT
-  // weakening of a generator or the seal CLI would let a degraded eval distribution
-  // through the OUTPUT gates unnoticed, so the SOURCE is guarded too: deleting one is
-  // now a hard error and editing one (a deliberate deepen cycle behind a
-  // generator_version bump) surfaces a VERIFIER_TOUCHED warning for review. bug_0167,
-  // the bug_0164 deferred item c.
+  // The generator program is guarded while the repo migrates to one runtime. RPG is
+  // the supported generator; parser remains protected until it is retired; retired
+  // non-RPG generators move to FORBIDDEN_FILES below instead of staying protected.
   //
   // NOTE: keep this comment free of apostrophes/quotes/brackets — parseGuardConstants
   // pure-parses this array literal and a stray quote would read as a phantom entry.
-  "src/gen/cyoa_generator.ts",
   "src/gen/rpg_generator.ts",
   "src/gen/parser_generator.ts",
   "bin/seal-corpus.ts",
@@ -79,6 +72,9 @@ export const PROTECTED_FILES = [
   "corpus/manifest.json",
   "scripts/verify-integrity.ts",
 ];
+
+/** Files that must not reappear while the repo normalizes to RPG-only authoring. */
+export const FORBIDDEN_FILES = ["src/gen/cyoa_generator.ts"];
 
 /** Files holding committed hash pins / known-answer vectors that should not change
  *  silently — a change here in a cycle's diff is surfaced for human review. */
@@ -237,6 +233,15 @@ export function runStatic(root: string): { ok: boolean; findings: Finding[] } {
         severity: "error",
         code: "PROTECTED_MISSING",
         message: `protected verification asset is missing: ${f}`,
+        where: f,
+      });
+  }
+  for (const f of FORBIDDEN_FILES) {
+    if (existsSync(join(root, f)))
+      findings.push({
+        severity: "error",
+        code: "FORBIDDEN_FILE_PRESENT",
+        message: `legacy file must not reappear in the RPG-only runtime: ${f}`,
         where: f,
       });
   }
@@ -440,6 +445,7 @@ export type GuardConstants = {
   minStrongAssertions: number;
   maxTautologyAssertions?: number;
   protectedFiles: string[];
+  forbiddenFiles: string[];
   hashPinFiles: string[];
 };
 
@@ -467,6 +473,7 @@ export function parseGuardConstants(text: string): GuardConstants | null {
   const minStrongAssertions = num("MIN_STRONG_ASSERTIONS");
   const maxTautologyAssertions = num("MAX_TAUTOLOGY_ASSERTIONS");
   const protectedFiles = arr("PROTECTED_FILES");
+  const forbiddenFiles = arr("FORBIDDEN_FILES") ?? [];
   const hashPinFiles = arr("HASH_PIN_FILES");
   if (
     minTestCases === null ||
@@ -481,6 +488,7 @@ export function parseGuardConstants(text: string): GuardConstants | null {
     minAssertions,
     minStrongAssertions,
     protectedFiles,
+    forbiddenFiles,
     hashPinFiles,
   };
   if (maxTautologyAssertions !== null) result.maxTautologyAssertions = maxTautologyAssertions;
@@ -520,7 +528,12 @@ export function detectGuardWeakening(before: GuardConstants, now: GuardConstants
     for (const entry of was)
       if (!nowSet.has(entry)) weakened.push(`${name} entry removed: ${entry}`);
   };
-  removedFrom("PROTECTED_FILES", before.protectedFiles, now.protectedFiles);
+  const nowProtected = new Set(now.protectedFiles);
+  const nowForbidden = new Set(now.forbiddenFiles);
+  for (const entry of before.protectedFiles)
+    if (!nowProtected.has(entry) && !nowForbidden.has(entry))
+      weakened.push(`PROTECTED_FILES entry removed: ${entry}`);
+  removedFrom("FORBIDDEN_FILES", before.forbiddenFiles, now.forbiddenFiles);
   removedFrom("HASH_PIN_FILES", before.hashPinFiles, now.hashPinFiles);
   if (weakened.length === 0) return [];
   return [

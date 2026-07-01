@@ -69,6 +69,7 @@ describe("bug_0176 — the sealed corpus manifest is guarded", () => {
       minAssertions: 400,
       minStrongAssertions: 400,
       protectedFiles: [...PROTECTED_FILES],
+      forbiddenFiles: [],
       hashPinFiles: [],
     };
     const now: GuardConstants = {

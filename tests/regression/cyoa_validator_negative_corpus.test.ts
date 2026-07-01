@@ -11,7 +11,7 @@
  * closed this for `validateRpg` only; an audit of the suite (this cycle) found a
  * large set of `validateCyoa`'s `error`-severity branches have ZERO rejection-
  * direction witness anywhere — they are exercised almost entirely in the ACCEPT
- * direction by the curated + generated clean packs. A future regression that drops a
+ * direction by the curated clean packs. A future regression that drops a
  * `findings.push`, inverts a guard, or adds a `??` default swallowing the case would
  * leave every existing test GREEN — the present-but-untested-checker surface.
  *
@@ -30,8 +30,8 @@
  * from this base without adding a deadline structure (and they are witnessed anyway).
  *
  * Method (the bug_0182 copy-mutate discipline): the GREEN base is the canonical sound
- * pack `generateCyoaPack(0)` — it validates clean and carries the structure each
- * defect needs (a hub scene with choices, a reachable side-scene, declared endings).
+ * pack below — it validates clean and carries the structure each defect needs
+ * (a hub scene with choices, a reachable side-scene, declared endings).
  * Each case `structuredClone()`s it and introduces EXACTLY ONE defect, so the
  * rejection is attributable to that mutation alone. Where a minimal single defect
  * unavoidably trips a companion code (a choiceless scene is BOTH a DEAD_END and a
@@ -41,17 +41,42 @@
  * from the clean base until the mutation introduces it.
  *
  * PURELY ADDITIVE: a new regression test + a bug artifact. No source/validator/engine/
- * schema/generator/corpus/scorecard change, no hash re-pin — the validator is
- * exercised exactly as shipped, and the generator is called in-memory (pure, §8.5,
- * no disk write).
+ * schema/corpus/scorecard change, no hash re-pin — the validator is exercised exactly
+ * as shipped, and the fixture is a small inline pack.
  */
 import { describe, it, expect } from "vitest";
-import { generateCyoaPack } from "../../src/gen/cyoa_generator.js";
 import { validateCyoa } from "../../src/validate/cyoa_validator.js";
-import type { CyoaPack } from "../../src/cyoa/schema.js";
+import { CyoaPackSchema, type CyoaPack } from "../../src/cyoa/schema.js";
 
-// The canonical sound pack: validates clean (pinned green by the generator's own test).
-const GREEN: CyoaPack = generateCyoaPack(0);
+// A compact sound pack for copy-mutate rejection tests.
+const GREEN: CyoaPack = CyoaPackSchema.parse({
+  meta: { id: "cyoa_negative_base", title: "CYOA Negative Base", start: "hub" },
+  scenes: [
+    {
+      id: "hub",
+      title: "Hub",
+      text: "A small junction with one side clue and one way to finish.",
+      choices: [
+        { id: "learn_way", text: "Study the clue.", next: "clue_way" },
+        { id: "hold", text: "Finish the errand.", next: "ending_hold" },
+      ],
+    },
+    {
+      id: "clue_way",
+      title: "Clue",
+      text: "The clue is clear enough.",
+      choices: [
+        {
+          id: "learn",
+          text: "Return with the clue.",
+          effects: [{ set_flag: "knows_way" }],
+          next: "hub",
+        },
+      ],
+    },
+  ],
+  endings: [{ id: "ending_hold", title: "Done", text: "The errand is complete." }],
+});
 
 const codesOf = (pack: CyoaPack): string[] =>
   validateCyoa(pack)
@@ -95,8 +120,6 @@ const CASES: NegativeCase[] = [
     code: "START_NOT_SCENE",
     why: "meta.start points at a declared ending (the game would end immediately)",
     mutate: (p) => {
-      // ending_hold is always declared by the generator (it is not gated on the seed's
-      // greed knob). Pointing start at it is a terminal start ⇒ START_NOT_SCENE.
       p.meta.start = "ending_hold";
     },
   },
@@ -104,8 +127,6 @@ const CASES: NegativeCase[] = [
     code: "ITEM_UNOBTAINABLE",
     why: "a choice requires an item that no effect anywhere grants",
     mutate: (p) => {
-      // gen(0) has NO items at all, so any positively-required item is unobtainable.
-      // Add the single requirement to the hub's `hold` choice (a reachable choice).
       const hold = sceneById(p, "hub").choices.find((c) => c.id === "hold");
       if (!hold) throw new Error("base pack hub has no `hold` choice to gate");
       hold.conditions.push({ has_item: "phantom_relic" });
@@ -113,7 +134,7 @@ const CASES: NegativeCase[] = [
   },
   {
     // bug_0244: the IMPOSSIBLE_GATE reachability family silently skipped the
-    // `quest_stage` condition kind. gen(0) writes NO set_quest_stage effect, so any
+    // `quest_stage` condition kind. The base writes NO set_quest_stage effect, so any
     // positively-required quest_stage gate references a (quest, stage) pair that no
     // effect ever sets ⇒ IMPOSSIBLE_QUEST_STAGE. The error severity is pinned by the
     // differential/non-degenerate anchors, which use the error-only `codesOf`.
