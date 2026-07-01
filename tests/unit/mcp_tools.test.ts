@@ -216,14 +216,11 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
   it("reuses unchanged RPG pack load reports inside one MCP API instance", () => {
     const a = api();
-    const first = a.validate_pack({ pack_path: PACK });
-    const second = a.validate_pack({ pack_path: PACK });
+    const first = a.validate_pack({ world_quest_id: "sunken_barrow" });
+    const second = a.validate_pack({ world_quest_id: "sunken_barrow" });
     expect(first.ok).toBe(true);
     expect(second.ok).toBe(true);
     expect(second.report).toBe(first.report);
-
-    const byWorldQuest = a.validate_pack({ world_quest_id: "sunken_barrow" });
-    expect(byWorldQuest.report).toBe(first.report);
   });
 
   it("lists the New York overworld as a start town plus weighted roads", () => {
@@ -925,17 +922,11 @@ describe("MCP tools — validate / load (§9.4)", () => {
   });
 
   it("validate_pack reports the shipped pack as green", () => {
-    const r = api().validate_pack({ pack_path: PACK });
+    const r = api().validate_pack({ world_quest_id: "sunken_barrow" });
     expect(r.ok).toBe(true);
     expect(r.pack_path).toBe(PACK);
     expect(r.world_quest_id).toBe("sunken_barrow");
     expect(r.report.findings.filter((f) => f.severity === "error")).toEqual([]);
-
-    const viaQuestId = api().validate_pack({ world_quest_id: "sunken_barrow" });
-    expect(viaQuestId.ok).toBe(true);
-    expect(viaQuestId.pack_path).toBe(PACK);
-    expect(viaQuestId.world_quest_id).toBe("sunken_barrow");
-    expect(viaQuestId.report.findings.filter((f) => f.severity === "error")).toEqual([]);
   });
 
   it("story validation aliases are retired from the live RPG API", () => {
@@ -963,31 +954,26 @@ describe("MCP tools — validate / load (§9.4)", () => {
   });
 
   it("load_pack returns meta + content hash", () => {
-    const r = api().load_pack({ pack_path: PACK });
+    const r = api().load_pack({ world_quest_id: "sunken_barrow" });
     expect(r.ok).toBe(true);
     expect(r.pack_path).toBe(PACK);
     expect(r.world_quest_id).toBe("sunken_barrow");
     expect(r.mode).toBe("rpg");
     expect(r.meta?.id).toBe("sunken_barrow_v1");
     expect(r.content_hash).toMatch(/^[0-9a-f]{64}$/);
-
-    const viaQuestId = api().load_pack({ world_quest_id: "sunken_barrow" });
-    expect(viaQuestId.ok).toBe(true);
-    expect(viaQuestId.pack_path).toBe(PACK);
-    expect(viaQuestId.world_quest_id).toBe("sunken_barrow");
-    expect(viaQuestId.meta?.id).toBe("sunken_barrow_v1");
-    expect(viaQuestId.content_hash).toBe(r.content_hash);
   });
 
-  it("validate/load pack reject missing or ambiguous source identity", () => {
-    expect(() => api().validate_pack({})).toThrow(/requires world_quest_id or pack_path/);
-    expect(() => api().load_pack({})).toThrow(/requires world_quest_id or pack_path/);
-    expect(() => api().validate_pack({ world_quest_id: "sunken_barrow", pack_path: PACK })).toThrow(
-      /exactly one/,
-    );
-    expect(() => api().load_pack({ world_quest_id: "sunken_barrow", pack_path: PACK })).toThrow(
-      /exactly one/,
-    );
+  it("validate/load pack reject missing or raw path source identity", () => {
+    expect(() => api().validate_pack({})).toThrow(/requires world_quest_id/);
+    expect(() => api().load_pack({})).toThrow(/requires world_quest_id/);
+    expect(() => api().validate_pack({ pack_path: PACK } as never)).toThrow(/not pack_path/);
+    expect(() => api().load_pack({ pack_path: PACK } as never)).toThrow(/not pack_path/);
+    expect(() =>
+      api().validate_pack({ world_quest_id: "sunken_barrow", pack_path: PACK } as never),
+    ).toThrow(/not pack_path/);
+    expect(() =>
+      api().load_pack({ world_quest_id: "sunken_barrow", pack_path: PACK } as never),
+    ).toThrow(/not pack_path/);
   });
 
   it("adapt_story authors a green RPG pack from a premise (§12.1–3)", async () => {
@@ -999,16 +985,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.classifications.length).toBeGreaterThanOrEqual(3);
   });
 
-  it("validate_pack rejects legacy explicit pack targets", () => {
-    const r = api().validate_pack({ pack_path: NON_RPG_PACK });
-    expect(r.ok).toBe(false);
-    expect(r.report.findings.map((f) => f.code)).toContain("UNSUPPORTED_LEGACY_PACK");
-  });
-
-  it("validate_pack on a broken RPG fixture surfaces an error", () => {
-    const r = api().validate_pack({ pack_path: "content/broken-fixtures/rpg_unwinnable.yaml" });
-    expect(r.ok).toBe(false);
-    expect(r.report.findings.map((f) => f.code)).toContain("COMBAT_UNWINNABLE");
+  it("validate_pack rejects explicit raw pack targets", () => {
+    expect(() => api().validate_pack({ pack_path: NON_RPG_PACK } as never)).toThrow(
+      /not pack_path/,
+    );
   });
 });
 
@@ -1546,7 +1526,7 @@ describe("MCP tools — replay + path confinement", () => {
   });
 
   it("rejects a path that escapes the project root", () => {
-    expect(() => api().validate_pack({ pack_path: "../../../etc/passwd" })).toThrow(
+    expect(() => api().replay_trace({ trace_path: "../../../etc/passwd" })).toThrow(
       PathEscapeError,
     );
   });
@@ -1568,7 +1548,7 @@ describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
     } as never;
 
     const r = api().apply_content_patch({
-      pack_path: "content/rpg/pack/cold_forge.yaml",
+      world_quest_id: "cold_forge",
       proposal,
     }) as {
       ok: boolean;
@@ -1580,25 +1560,11 @@ describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
     expect(r.pack_path).toBe("content/rpg/pack/cold_forge.yaml");
     expect(r.world_quest_id).toBe("cold_forge");
     expect(r.report.ok).toBe(true);
-
-    const viaQuestId = api().apply_content_patch({
-      world_quest_id: "cold_forge",
-      proposal,
-    }) as {
-      ok: boolean;
-      pack_path: string;
-      world_quest_id: string | null;
-      report: { ok: boolean };
-    };
-    expect(viaQuestId.ok).toBe(true);
-    expect(viaQuestId.pack_path).toBe("content/rpg/pack/cold_forge.yaml");
-    expect(viaQuestId.world_quest_id).toBe("cold_forge");
-    expect(viaQuestId.report.ok).toBe(true);
   });
 
   it("refuses a patch whose target is missing (no file written)", () => {
     const r = api().apply_content_patch({
-      pack_path: "content/rpg/pack/cold_forge.yaml",
+      world_quest_id: "cold_forge",
       proposal: {
         layer: "content",
         mode: "rpg",
@@ -1624,15 +1590,19 @@ describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
       summary: "x",
       ops: [{ op: "set_object_field", id: "ghost", field: "takeable", value: true }],
     } as never;
-    expect(() => api().apply_content_patch({ proposal })).toThrow(
-      /requires world_quest_id or pack_path/,
-    );
+    expect(() => api().apply_content_patch({ proposal })).toThrow(/requires world_quest_id/);
+    expect(() =>
+      api().apply_content_patch({
+        pack_path: "content/rpg/pack/cold_forge.yaml",
+        proposal,
+      } as never),
+    ).toThrow(/not pack_path/);
     expect(() =>
       api().apply_content_patch({
         world_quest_id: "cold_forge",
         pack_path: "content/rpg/pack/cold_forge.yaml",
         proposal,
-      }),
-    ).toThrow(/exactly one/);
+      } as never),
+    ).toThrow(/not pack_path/);
   });
 });

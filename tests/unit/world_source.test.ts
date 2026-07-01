@@ -218,15 +218,15 @@ describe("world source resolution", () => {
     ).toThrow(/not shipped in content\/rpg\/pack/);
   });
 
-  it("resolves ordinary shipped pack sources by world quest id or compatibility pack path", () => {
+  it("resolves live pack sources by world quest id only", () => {
     expect(resolvePackSource(ROOT, { world_quest_id: "sunken_barrow" }, "test")).toEqual({
       packPath: PACK,
       worldQuestId: "sunken_barrow",
     });
-    expect(resolvePackSource(ROOT, { pack_path: PACK }, "test")).toEqual({
-      packPath: PACK,
-      worldQuestId: "sunken_barrow",
-    });
+    expect(() => resolvePackSource(ROOT, { pack_path: PACK } as never, "test")).toThrow(
+      /not pack_path/,
+    );
+    expect(() => resolvePackSource(ROOT, {}, "test")).toThrow(/requires world_quest_id/);
   });
 
   it("resolves new-game sources, including generated in-memory packs", () => {
@@ -262,6 +262,10 @@ describe("world source resolution", () => {
 
   it("infers trace and save sources from embedded worldQuestId", () => {
     expect(resolveTracePackSource(ROOT, {}, trace, "trace_test")).toEqual({
+      packPath: PACK,
+      worldQuestId: "sunken_barrow",
+    });
+    expect(resolveTracePackSource(ROOT, { pack_path: PACK }, trace, "trace_test")).toEqual({
       packPath: PACK,
       worldQuestId: "sunken_barrow",
     });

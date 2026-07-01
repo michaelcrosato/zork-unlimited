@@ -653,7 +653,7 @@ export function createToolApi(opts: { root: string }) {
   return {
     sessions,
 
-    validate_pack(args: { pack_path?: string; world_quest_id?: string }): {
+    validate_pack(args: { world_quest_id?: string; pack_path?: never }): {
       ok: boolean;
       pack_path: string;
       world_quest_id: string | null;
@@ -1006,7 +1006,7 @@ export function createToolApi(opts: { root: string }) {
       return this.validate_pack({ world_quest_id: source.worldQuestId });
     },
 
-    load_pack(args: { pack_path?: string; world_quest_id?: string }): {
+    load_pack(args: { world_quest_id?: string; pack_path?: never }): {
       ok: boolean;
       pack_path: string;
       world_quest_id: string | null;
@@ -1425,8 +1425,8 @@ export function createToolApi(opts: { root: string }) {
     },
 
     apply_content_patch(args: {
-      pack_path?: string;
       world_quest_id?: string;
+      pack_path?: never;
       proposal: ContentPatchProposal;
     }) {
       // Apply a structured patch with deterministic code and return the modified

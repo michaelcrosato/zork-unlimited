@@ -501,7 +501,23 @@ export function assess(root: string): Assessment {
       });
       continue;
     }
-    const report = api.validate_pack({ pack_path: s.path });
+    if (s.world_quest_id === null) {
+      packs.push({ path: s.path, mode: s.mode, playable: true, warnings: 0 });
+      candidates.push({
+        id: `fix-unbound-${s.path}`,
+        category: "content_fix",
+        target: s.path,
+        title: `Fix "${s.id}" — it is not bound to the world graph`,
+        rationale:
+          "A playable pack without a world quest id cannot be reached through the single-world runtime.",
+        evidence: [`${s.path} has no world_quest_id`],
+        impact: 5,
+        effort: "M",
+        score: score(5, "M", "content_fix"),
+      });
+      continue;
+    }
+    const report = api.validate_pack({ world_quest_id: s.world_quest_id });
     const warnings = report.report.findings.filter((f) => f.severity === "warning").length;
     packs.push({ path: s.path, mode: s.mode, playable: true, warnings });
 

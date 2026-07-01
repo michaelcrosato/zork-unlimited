@@ -39,8 +39,9 @@ describe("list_stories exposes only world-graph RPG quests", () => {
 
 describe("load_pack / validate_pack report RPG mode for catalog packs", () => {
   it("the default RPG pack loads and validates green", () => {
-    const r = api().load_pack({ pack_path: MAIN_RPG });
+    const r = api().load_pack({ world_quest_id: "breaking_weir" });
     expect(r.ok).toBe(true);
+    expect(r.pack_path).toBe(MAIN_RPG);
     expect(r.mode).toBe("rpg");
     expect(r.content_hash).toMatch(/^[0-9a-f]{64}$/);
   });

@@ -28,9 +28,18 @@ history only when deep recovery is truly needed. Keep future entries terse.
 
 - Pre-cycle: ran `C:\dev\agent-cleaner` measurement helper; canonical repo gates remain package scripts.
 - Public MCP: validate/load/patch/replay/inspect no longer advertise raw `pack_path`; shipped sources are `world_quest_id`.
-- Compatibility: ToolApi/CLI raw paths remain offline-only for migration validation/replay, not public agent schemas.
+- Compatibility: ToolApi/CLI trace replay/inspect keep raw paths only for offline migration verification, not public agent schemas.
 - VERIFY: focused MCP registration test, typecheck, lint, format:check, validate, npm test (191/1253), `npm run health` EXIT 0.
 - Self-critique: aligned structural source-surface cut; small but real reduction of agent path confusion/token waste.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
+
+### Cycle result — toolapi_world_id_pack_handlers
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measurement helper; clean branch baseline.
+- Engine/API: ToolApi `validate_pack`, `load_pack`, and `apply_content_patch` now reject raw `pack_path`; assessor validates through `world_quest_id`.
+- Offline boundary: trace replay/inspect keep raw paths for migration checks; live content handlers are world-id only.
+- VERIFY: focused world/MCP/assessor tests, typecheck, lint, format:check, validate, npm test (191/1252), `npm run health` EXIT 0.
+- Self-critique: structural source-surface cut, not content polish; moves one more internal layer to single-world addressing.
 - Operator direction: pause after this cycle; do not start another AFK cycle.
 
 ## Current Snapshot
@@ -57,8 +66,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   `world_quest_id`; raw `quest_path` is rejected.
 - Pack validation/loading: shipped quests can use `world_quest_id` and preserve
   source identity in responses.
-- Public MCP validate/load/patch/replay/inspect schemas are `world_quest_id`
-  first; ToolApi/CLI keep raw pack paths only for offline compatibility.
+- ToolApi/public MCP validate/load/patch schemas are `world_quest_id` only;
+  trace replay/inspect keep raw pack paths only for offline compatibility.
 - Quest aliases: ToolApi and public MCP `validate_quest`/`start_quest` use
   graph ids only; raw `quest_path` is rejected.
 - Retired legacy story aliases: live MCP uses `validate_pack`, `new_game`, and
