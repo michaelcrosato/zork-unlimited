@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { SaveIntegrityError } from "../../src/persist/save_load.js";
 import {
+  assertWorldGraphIntegrity,
   assertWorldQuestPackCoverage,
   assertOverworldQuestSourceBindings,
   loadOverworldManifest,
@@ -39,6 +43,27 @@ function worldWithQuestPacks(quests: Array<{ id: string; pack: string }>): World
   };
 }
 
+function connectedWorld(): WorldManifest {
+  return {
+    id: "charter_marches",
+    name: "The Charter Marches",
+    hub: "Charterhaven",
+    graph: {
+      hub: "hub",
+      nodes: [
+        { id: "hub", name: "Hub", kind: "hub" },
+        {
+          id: "sunken_barrow",
+          name: "Sunken Barrow",
+          kind: "quest",
+          pack: PACK,
+        },
+      ],
+      edges: [{ from: "hub", to: "sunken_barrow", route: "barrow road" }],
+    },
+  };
+}
+
 const trace = {
   mode: "rpg",
   worldQuestId: "sunken_barrow",
@@ -51,10 +76,32 @@ const trace = {
   expected_final_hash: "unused",
 } as unknown as Trace<RpgAction>;
 
+function withTempRoot(run: (root: string) => void): void {
+  const root = mkdtempSync(join(tmpdir(), "world-source-"));
+  try {
+    run(root);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
 describe("world source resolution", () => {
   it("reuses parsed canonical manifests within a process", () => {
     expect(loadWorldManifest(ROOT)).toBe(loadWorldManifest(ROOT));
     expect(loadOverworldManifest(ROOT)).toBe(loadOverworldManifest(ROOT));
+  });
+
+  it("falls back only when the canonical world manifest is absent, not malformed", () => {
+    withTempRoot((root) => {
+      expect(loadWorldManifest(root).graph.hub).toBe("charterhaven");
+    });
+
+    withTempRoot((root) => {
+      mkdirSync(join(root, "content", "world"), { recursive: true });
+      writeFileSync(join(root, "content", "world", "charter_marches.yaml"), "graph: [broken]\n");
+
+      expect(() => loadWorldManifest(root)).toThrow();
+    });
   });
 
   it("binds New York overworld quests to canonical world graph quest sources", () => {
@@ -74,6 +121,66 @@ describe("world source resolution", () => {
         quests: [{ ...overworld.quests[0]!, pack: "content/rpg/pack/cold_forge.yaml" }],
       }),
     ).toThrow(/does not match canonical world graph pack/);
+  });
+
+  it("rejects malformed canonical world graph topology before play starts", () => {
+    expect(() => assertWorldGraphIntegrity(connectedWorld())).not.toThrow();
+
+    expect(() =>
+      assertWorldGraphIntegrity({
+        ...connectedWorld(),
+        graph: {
+          ...connectedWorld().graph,
+          nodes: [...connectedWorld().graph.nodes, { id: "hub", name: "Again", kind: "route" }],
+        },
+      }),
+    ).toThrow(/duplicate node id/);
+
+    expect(() =>
+      assertWorldGraphIntegrity({
+        ...connectedWorld(),
+        graph: { ...connectedWorld().graph, hub: "missing_hub" },
+      }),
+    ).toThrow(/hub "missing_hub" is missing/);
+
+    expect(() =>
+      assertWorldGraphIntegrity({
+        ...connectedWorld(),
+        graph: {
+          ...connectedWorld().graph,
+          nodes: connectedWorld().graph.nodes.map((node) =>
+            node.id === "hub" ? { ...node, kind: "route" as const } : node,
+          ),
+        },
+      }),
+    ).toThrow(/must be a hub node/);
+
+    expect(() =>
+      assertWorldGraphIntegrity({
+        ...connectedWorld(),
+        graph: {
+          ...connectedWorld().graph,
+          edges: [{ from: "hub", to: "missing_quest", route: "lost road" }],
+        },
+      }),
+    ).toThrow(/references missing node/);
+
+    expect(() =>
+      assertWorldGraphIntegrity({
+        ...connectedWorld(),
+        graph: {
+          ...connectedWorld().graph,
+          edges: [{ from: "hub", to: "hub", route: "loop road" }],
+        },
+      }),
+    ).toThrow(/cannot loop to itself/);
+
+    expect(() =>
+      assertWorldGraphIntegrity({
+        ...connectedWorld(),
+        graph: { ...connectedWorld().graph, edges: [] },
+      }),
+    ).toThrow(/disconnected from hub/);
   });
 
   it("rejects detached, duplicate, or unshipped RPG pack bindings in the world graph", () => {

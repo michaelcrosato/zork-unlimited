@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { SaveIntegrityError } from "../persist/save_load.js";
@@ -139,21 +139,79 @@ export function assertWorldQuestPackCoverage(
   }
 }
 
+export function assertWorldGraphIntegrity(world: WorldManifest): void {
+  const nodeIds = world.graph.nodes.map((node) => node.id);
+  const duplicateNodeIds = duplicateValues(nodeIds);
+  if (duplicateNodeIds.length > 0) {
+    throw new Error(
+      `Canonical world graph has duplicate node id(s): ${duplicateNodeIds.join(", ")}.`,
+    );
+  }
+
+  const nodes = new Map(world.graph.nodes.map((node) => [node.id, node]));
+  const hub = nodes.get(world.graph.hub);
+  if (!hub) {
+    throw new Error(`Canonical world graph hub "${world.graph.hub}" is missing from nodes.`);
+  }
+  if (hub.kind !== "hub") {
+    throw new Error(`Canonical world graph hub "${world.graph.hub}" must be a hub node.`);
+  }
+
+  const adjacency = new Map(world.graph.nodes.map((node) => [node.id, [] as string[]]));
+  for (const edge of world.graph.edges) {
+    const missing = [edge.from, edge.to].filter((id) => !nodes.has(id));
+    if (missing.length > 0) {
+      throw new Error(
+        `Canonical world graph edge "${edge.route}" references missing node(s): ${missing.join(
+          ", ",
+        )}.`,
+      );
+    }
+    if (edge.from === edge.to) {
+      throw new Error(`Canonical world graph edge "${edge.route}" cannot loop to itself.`);
+    }
+    adjacency.get(edge.from)?.push(edge.to);
+    adjacency.get(edge.to)?.push(edge.from);
+  }
+
+  const queue = [world.graph.hub];
+  const reached = new Set(queue);
+  for (let i = 0; i < queue.length; i += 1) {
+    for (const next of adjacency.get(queue[i]!) ?? []) {
+      if (reached.has(next)) continue;
+      reached.add(next);
+      queue.push(next);
+    }
+  }
+
+  const unreachable = world.graph.nodes
+    .filter((node) => !reached.has(node.id))
+    .map((node) => node.id)
+    .sort();
+  if (unreachable.length > 0) {
+    throw new Error(
+      `Canonical world graph is disconnected from hub "${world.graph.hub}": ${unreachable.join(
+        ", ",
+      )}.`,
+    );
+  }
+}
+
 export function loadWorldManifest(root: string): WorldManifest {
   const cached = worldManifestCache.get(root);
   if (cached) return cached;
 
   let world: WorldManifest;
   let loadedFromDisk = false;
-  try {
-    const raw = parseYaml(
-      readFileSync(join(root, "content", "world", "charter_marches.yaml"), "utf8"),
-    );
+  const manifestPath = join(root, "content", "world", "charter_marches.yaml");
+  if (existsSync(manifestPath)) {
+    const raw = parseYaml(readFileSync(manifestPath, "utf8"));
     world = WorldManifestSchema.parse(raw);
     loadedFromDisk = true;
-  } catch {
+  } else {
     world = fallbackWorldManifest();
   }
+  assertWorldGraphIntegrity(world);
   if (loadedFromDisk) {
     assertWorldQuestPackCoverage(world, discoverShippedRpgPackPaths(root));
   }
