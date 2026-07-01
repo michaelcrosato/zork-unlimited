@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 34 -->
+<!-- historical_cycle_count: 35 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_snapshot_pending_road_unresolved
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measurement helper; gate helper timed out here, so canonical package scripts remain authoritative.
+- Engine/persistence: overworld restore now rejects snapshots with both a pending road encounter and an existing road journal resolution for that same latest arrival.
+- Token economy: compact pending-road saves can stay edge-id-only without trusting contradictory journal proof that live play cannot emit.
+- VERIFY: focused overworld snapshot test (69), typecheck, lint, format:check, npm test (192/1329), `npm run health` EXIT 0.
+- Self-critique: closes pending-road double-resolution drift; broader local action replay invariants remain future work.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
 
 ### Cycle result — overworld_snapshot_pending_road_binding
 

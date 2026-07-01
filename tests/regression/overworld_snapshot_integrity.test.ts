@@ -57,6 +57,14 @@ function townRegion(nodeId: string): string {
   return town.region;
 }
 
+function timeLabelForMinutes(minutes: number): string {
+  const day = Math.floor(minutes / 1440) + 1;
+  const minuteOfDay = minutes % 1440;
+  const hour = Math.floor(minuteOfDay / 60);
+  const minute = minuteOfDay % 60;
+  return `Day ${day}, ${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+}
+
 function visitedTownAreas(
   snapshot: Snapshot,
   minimumCount: number,
@@ -719,6 +727,29 @@ describe("overworld snapshot restore integrity", () => {
 
     expect(() => a.restore_overworld_session({ snapshot: forgedPendingRoad })).toThrow(
       /pending road encounter.*latest travel log/,
+    );
+  });
+
+  it("rejects pending road encounters that already have a road journal resolution", () => {
+    const { a, snapshot } = exportedSnapshotWithPendingRoad();
+    const latestTravel = snapshot.travelLog[0]!;
+    const forgedResolvedPendingRoad = {
+      ...snapshot,
+      journalEntries: [
+        {
+          id: `road:${latestTravel.edgeId}:${latestTravel.arrivedAt}:press_on`,
+          kind: "road" as const,
+          town: townName(latestTravel.toId),
+          title: "Forged road resolution",
+          text: "Forged road resolution proof.",
+          recordedAt: timeLabelForMinutes(latestTravel.arrivedAt),
+        },
+        ...snapshot.journalEntries,
+      ],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedResolvedPendingRoad })).toThrow(
+      /pending road encounter.*already has a road journal/,
     );
   });
 
