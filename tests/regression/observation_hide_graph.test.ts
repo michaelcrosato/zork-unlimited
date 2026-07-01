@@ -36,7 +36,10 @@ const ROOT = process.cwd();
 const api = () => createToolApi({ root: ROOT });
 
 const NON_RPG_PACK = "content/broken-fixtures/duplicate_id.yaml";
-const RPG_PACKS = ["content/rpg/pack/sunken_barrow.yaml", "content/rpg/pack/breaking_weir.yaml"];
+const RPG_QUESTS = [
+  { label: "sunken_barrow", world_quest_id: "sunken_barrow" },
+  { label: "breaking_weir", world_quest_id: "breaking_weir" },
+];
 
 /** Narrow to the RPG observation shape. */
 function exitsOf(obs: unknown): { direction: string; to?: string }[] {
@@ -46,9 +49,9 @@ function exitsOf(obs: unknown): { direction: string; to?: string }[] {
 }
 
 describe("bug_0137 — hide_graph difficulty: exits hide their destination", () => {
-  for (const pack of RPG_PACKS) {
-    it(`${pack}: DEFAULT exits carry a string destination (full graph, legacy)`, () => {
-      const g = api().new_game({ pack_path: pack });
+  for (const quest of RPG_QUESTS) {
+    it(`${quest.label}: DEFAULT exits carry a string destination (full graph, legacy)`, () => {
+      const g = api().new_game({ world_quest_id: quest.world_quest_id });
       const exits = exitsOf(g.observation);
       expect(exits.length).toBeGreaterThan(0);
       for (const e of exits) {
@@ -57,10 +60,12 @@ describe("bug_0137 — hide_graph difficulty: exits hide their destination", () 
       }
     });
 
-    it(`${pack}: HIDDEN drops every exit's destination but keeps the same directions`, () => {
+    it(`${quest.label}: HIDDEN drops every exit's destination but keeps the same directions`, () => {
       const a = api();
-      const open = exitsOf(a.new_game({ pack_path: pack }).observation);
-      const hidden = exitsOf(a.new_game({ pack_path: pack, hide_graph: true }).observation);
+      const open = exitsOf(a.new_game({ world_quest_id: quest.world_quest_id }).observation);
+      const hidden = exitsOf(
+        a.new_game({ world_quest_id: quest.world_quest_id, hide_graph: true }).observation,
+      );
       // Same exits exist (you still see you CAN go each direction)…
       expect(hidden.map((e) => e.direction)).toEqual(open.map((e) => e.direction));
       // …but no destination is leaked.
@@ -69,16 +74,16 @@ describe("bug_0137 — hide_graph difficulty: exits hide their destination", () 
       expect(open.some((e) => typeof e.to === "string")).toBe(true);
     });
 
-    it(`${pack}: hide_graph is observation-only — the state_hash is identical`, () => {
+    it(`${quest.label}: hide_graph is observation-only — the state_hash is identical`, () => {
       const a = api();
-      const open = a.new_game({ pack_path: pack });
-      const hidden = a.new_game({ pack_path: pack, hide_graph: true });
+      const open = a.new_game({ world_quest_id: quest.world_quest_id });
+      const hidden = a.new_game({ world_quest_id: quest.world_quest_id, hide_graph: true });
       expect(hidden.state_hash).toBe(open.state_hash);
     });
 
-    it(`${pack}: still playable under hide_graph — a MOVE relocates the player`, () => {
+    it(`${quest.label}: still playable under hide_graph — a MOVE relocates the player`, () => {
       const a = api();
-      const g = a.new_game({ pack_path: pack, hide_graph: true });
+      const g = a.new_game({ world_quest_id: quest.world_quest_id, hide_graph: true });
       const before = exitsOf(g.observation);
       const startRoom = (g.observation as { room: string }).room;
       // Take the first available MOVE action (its destination is hidden from us).
@@ -97,10 +102,10 @@ describe("bug_0137 — hide_graph difficulty: exits hide their destination", () 
     });
   }
 
-  it("non-RPG pack shapes are rejected by MCP play tools", () => {
+  it("pack-path starts are rejected by MCP play tools", () => {
     const a = api();
-    expect(() => a.new_game({ pack_path: NON_RPG_PACK, seed: 7 })).toThrow(
-      /UNSUPPORTED_LEGACY_PACK/,
+    expect(() => a.new_game({ pack_path: NON_RPG_PACK, seed: 7 } as never)).toThrow(
+      /not pack_path/,
     );
   });
 

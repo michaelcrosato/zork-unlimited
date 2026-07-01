@@ -139,16 +139,17 @@ describe("single-world library contract", () => {
 
   it.each(packs)("%s opens as a Charterhaven RPG quest in play", (path) => {
     const pack = loadYaml(path) as RawPack;
-    const world = pack.meta?.world;
-    const game = api.new_game({ pack_path: path });
+    const packWorld = pack.meta?.world;
+    const quest = api.list_world().quests.find((candidate) => candidate.path === path);
+    const game = api.new_game({ world_quest_id: quest?.graph_node ?? "" });
     if (game.observation.mode !== "rpg") throw new Error("expected RPG observation");
     const opening = game.observation.description;
 
     expect(game.observation.world?.id).toBe(CANONICAL_WORLD_ID);
     expect(opening).toContain(CANONICAL_HUB_CITY);
-    expect(opening).toContain(world?.district);
-    expect(opening).toContain(world?.role);
-    expect(opening).toContain(world?.quest);
+    expect(opening).toContain(packWorld?.district);
+    expect(opening).toContain(packWorld?.role);
+    expect(opening).toContain(packWorld?.quest);
   });
 
   it("exposes graph routes through the MCP world listing", () => {

@@ -32,8 +32,10 @@ export type TraceSourceArgs = {
 export type PackSourceArgs = TraceSourceArgs;
 export type SaveSourceArgs = TraceSourceArgs;
 
-export type GameSourceArgs = PackSourceArgs & {
+export type GameSourceArgs = {
+  world_quest_id?: string;
   generate_rpg_seed?: number;
+  pack_path?: never;
 };
 
 export type SaveWorldSource = {
@@ -297,18 +299,18 @@ export function resolveGameSource(
   args: GameSourceArgs,
   operation: string,
 ): GamePackSource {
+  if ((args as { pack_path?: unknown }).pack_path !== undefined) {
+    throw new Error(`${operation} accepts world_quest_id or generate_rpg_seed, not pack_path.`);
+  }
   const sourceCount = [
     args.world_quest_id !== undefined,
-    args.pack_path !== undefined,
     args.generate_rpg_seed !== undefined,
   ].filter(Boolean).length;
   if (sourceCount === 0) {
-    throw new Error(`${operation} requires world_quest_id, pack_path, or generate_rpg_seed.`);
+    throw new Error(`${operation} requires world_quest_id or generate_rpg_seed.`);
   }
   if (sourceCount > 1) {
-    throw new Error(
-      `${operation} accepts exactly one of world_quest_id, pack_path, or generate_rpg_seed.`,
-    );
+    throw new Error(`${operation} accepts exactly one of world_quest_id or generate_rpg_seed.`);
   }
   if (args.generate_rpg_seed !== undefined) {
     return {
@@ -318,8 +320,13 @@ export function resolveGameSource(
       generateRpgSeed: args.generate_rpg_seed,
     };
   }
-  const source = resolvePackSource(root, args, operation);
-  return { kind: "pack", ...source, generateRpgSeed: null };
+  const resolved = resolveWorldQuestPackPath(root, args.world_quest_id!);
+  return {
+    kind: "pack",
+    packPath: resolved.packPath,
+    worldQuestId: resolved.node.id,
+    generateRpgSeed: null,
+  };
 }
 
 export function traceWorldQuestId(trace: Trace, operation: string): string | undefined {

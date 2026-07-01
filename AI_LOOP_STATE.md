@@ -25,7 +25,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Catalog source of truth: `list_stories` is a compatibility view over the Charter
   Marches quest graph, not a raw RPG pack directory scan.
 - Preferred shipped-quest start: use `start_world_quest` / `world_quest_id`;
-  raw pack-path starts remain compatibility only.
+  `new_game` rejects raw pack-path starts.
 - AFK baseline prompt now carries `main_world_quest_id`; blind baseline playtests
   should use `start_world_quest`.
 - Persistence: shipped quest saves can reload with `world_quest_id`; raw save
@@ -67,8 +67,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   `worldQuestId` into traces.
 - Save restore source inference now shares the world source resolver with trace
   replay and CLI play.
-- `new_game` source selection now shares that resolver while keeping generated
-  packs as the explicit null-world source.
+- `new_game` source selection is world-id or generated-pack only, keeping
+  generated packs as the explicit null-world source.
 - Pack validation/loading/patching now consume shared source identity instead of
   re-deriving `world_quest_id` after path resolution.
 - Static overworld compatibility helpers are retired; ToolApi and public MCP use

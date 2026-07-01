@@ -175,7 +175,6 @@ type RpgStepActionResponse<Args extends RpgResponseOptions> = {
 } & RpgViewField<Args>;
 
 type RpgNewGameArgs = {
-  pack_path?: string;
   world_quest_id?: string;
   generate_rpg_seed?: number;
   seed?: number;

@@ -243,7 +243,10 @@ describe("world source resolution", () => {
       generateRpgSeed: 3,
     });
     expect(() => resolveGameSource(ROOT, {}, "new_game")).toThrow(
-      /world_quest_id, pack_path, or generate_rpg_seed/,
+      /world_quest_id or generate_rpg_seed/,
+    );
+    expect(() => resolveGameSource(ROOT, { pack_path: PACK } as never, "new_game")).toThrow(
+      /not pack_path/,
     );
     expect(() =>
       resolveGameSource(

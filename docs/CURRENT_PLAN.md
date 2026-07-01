@@ -33,8 +33,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - `list_stories` is now a compatibility catalog over the Charter Marches quest graph,
   not an independent `content/rpg/pack` directory shelf.
 - Shipped quests can now start by Charter Marches graph id through
-  `start_world_quest` or `new_game({ world_quest_id })`; raw pack paths remain
-  compatibility surfaces.
+  `start_world_quest` or `new_game({ world_quest_id })`; `new_game` rejects raw
+  `pack_path` starts.
 - Shipped quest saves can now restore through `load_game({ world_quest_id })`, so
   start and persistence both share graph identity.
 - Shipped quest traces can replay/inspect through `world_quest_id`, so verification
@@ -77,8 +77,8 @@ Make discovered overworld quest leads start real RPG sessions.
   `worldQuestId`, so local traces replay without raw pack paths.
 - Save restore source inference now shares the same world source resolver as
   trace replay and CLI play.
-- `new_game` source selection now shares that resolver while keeping generated
-  packs as the explicit null-world source.
+- `new_game` source selection is now world-id or generated-pack only, keeping
+  generated packs as the explicit null-world source.
 - `validate_pack`, `load_pack`, and `apply_content_patch` now use shared source
   identity directly instead of re-deriving `world_quest_id` from the resolved path.
 - Retired the static overworld compatibility helper module; local overworld play

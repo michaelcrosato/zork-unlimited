@@ -29,12 +29,13 @@ import { SaveIntegrityError } from "../../src/persist/save_load.js";
 
 const ROOT = process.cwd();
 const RPG = "content/rpg/pack/sunken_barrow.yaml";
+const WORLD_QUEST_ID = "sunken_barrow";
 const api = () => createToolApi({ root: ROOT });
 
-/** Serialize a fresh valid save for `packPath`, then mutate ONE state field. */
-function forgeSave(packPath: string, poison: (state: Record<string, unknown>) => void): string {
+/** Serialize a fresh valid save, then mutate ONE state field. */
+function forgeSave(poison: (state: Record<string, unknown>) => void): string {
   const a = api();
-  const game = a.new_game({ pack_path: packPath, seed: 1 });
+  const game = a.new_game({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
   const saved = a.save_game({ session_id: game.session_id });
   const bundle = JSON.parse(saved.save) as { state: Record<string, unknown> };
   poison(bundle.state);
@@ -85,7 +86,7 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
   it("RPG: a phantom `current` room is a hard SaveIntegrityError", () => {
     // current is a valid STRING (bug_0181's GameStateSchema passes it), so only a
     // pack-aware gate can know `no_such_room` is not a real location.
-    const forged = forgeSave(RPG, (s) => {
+    const forged = forgeSave((s) => {
       s.current = "no_such_room";
     });
     expect(() => api().load_game({ pack_path: RPG, save: forged })).toThrow(SaveIntegrityError);
@@ -95,7 +96,7 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
   it("RPG: a fabricated `endingId` is a hard SaveIntegrityError", () => {
     // The benchmark-credibility witness: a forged save that CLAIMS an ending the
     // pack never declares. endingId is a valid nullable string to bug_0181's gate.
-    const forged = forgeSave(RPG, (s) => {
+    const forged = forgeSave((s) => {
       s.endingId = "fabricated_win";
     });
     expect(() => api().load_game({ pack_path: RPG, save: forged })).toThrow(SaveIntegrityError);
@@ -107,7 +108,7 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     // narration, so it is the third "render a nonexistent symbol" hole. The valid
     // item set (declared objects ∪ add_item targets) is provably complete, so this
     // id — neither — can never be held legitimately.
-    const forged = forgeSave(RPG, (s) => {
+    const forged = forgeSave((s) => {
       s.inventory = ["no_such_item"];
     });
     expect(() => api().load_game({ pack_path: RPG, save: forged })).toThrow(SaveIntegrityError);
@@ -118,7 +119,7 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
 describe("save/load referential integrity — GREEN false-rejection guards", () => {
   it("a clean mid-game RPG save still round-trips byte-identically", () => {
     const a = api();
-    const game = a.new_game({ pack_path: RPG, seed: 1 });
+    const game = a.new_game({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
     stepByCommand(a, game.session_id, "go down");
     const before = a.get_observation({ session_id: game.session_id }).state_hash;
     const saved = a.save_game({ session_id: game.session_id });
@@ -130,7 +131,7 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
     // The inventory gate must never reject a real declared object the player
     // picked up.
     const a = api();
-    const game = a.new_game({ pack_path: RPG, seed: 1 });
+    const game = a.new_game({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
     const sid = game.session_id;
     stepByCommand(a, sid, "go down");
     stepByCommand(a, sid, "take iron bar");
@@ -147,7 +148,7 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
     // At an RPG ending, current remains a declared room while endingId names a
     // declared ending. Both references must pass the pack-aware gate.
     const a = api();
-    const game = a.new_game({ pack_path: RPG, seed: 1 });
+    const game = a.new_game({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
     playSunkenBarrowToVictory(a, game.session_id);
     const ended = a.get_observation({ session_id: game.session_id });
     const saved = a.save_game({ session_id: game.session_id });

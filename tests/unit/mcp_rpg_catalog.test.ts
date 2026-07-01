@@ -11,7 +11,7 @@ import { isRpgPackShape } from "../../src/mcp/types.js";
 const ROOT = process.cwd();
 const api = () => createToolApi({ root: ROOT });
 const MAIN_RPG = "content/rpg/pack/breaking_weir.yaml";
-const RPG = "content/rpg/pack/sunken_barrow.yaml";
+const RPG_WORLD_QUEST_ID = "sunken_barrow";
 
 describe("isRpgPackShape keeps RPG structural priority", () => {
   it("rpg has enemies even when enemies is empty", () => {
@@ -49,7 +49,7 @@ describe("load_pack / validate_pack report RPG mode for catalog packs", () => {
 describe("RPG pack plays through the structured tool API", () => {
   it("can reach the wight and ATTACK via the legal-action set", () => {
     const a = api();
-    const game = a.new_game({ pack_path: RPG });
+    const game = a.new_game({ world_quest_id: RPG_WORLD_QUEST_ID });
     expect(game.mode).toBe("rpg");
     expect(game.observation.mode).toBe("rpg");
     if (game.observation.mode !== "rpg") return;

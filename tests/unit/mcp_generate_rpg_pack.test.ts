@@ -128,7 +128,7 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
   });
 
   it("new_game with no pack source errors clearly", () => {
-    expect(() => api().new_game({})).toThrow(/world_quest_id, pack_path, or generate_rpg_seed/);
+    expect(() => api().new_game({})).toThrow(/world_quest_id or generate_rpg_seed/);
   });
 
   it("new_game rejects ambiguous pack sources", () => {
