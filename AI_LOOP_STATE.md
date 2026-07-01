@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 19 -->
+<!-- historical_cycle_count: 20 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
@@ -69,6 +69,15 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: strong live-token/path cleanup; remaining raw path surface is mostly catalog/debug (`list_world`, `list_stories`, trace/offline).
 - Operator direction: pause after this cycle; do not start another AFK cycle.
 
+### Cycle result — list_world_graph_identity
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; same broad helper drift outside canonical repo scripts.
+- Engine/API: `list_world` now returns sanitized world/graph quest ids without `pack` or `path` fields.
+- Internal boundary: canonical manifests and `list_stories` compatibility still keep raw pack paths for loading/AFK assessment.
+- VERIFY: focused catalog/world tests, typecheck, lint, format:check, validate, npm test, `npm run health` EXIT 0.
+- Self-critique: closes the public world-catalog path leak; remaining raw path surfaces are compatibility/offline debug.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
+
 ## Current Snapshot
 
 - Verification bar: `npm run health` remains the required end gate.
@@ -89,6 +98,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   `world_quest_id` or generated `generated_rpg_seed` without raw pack paths.
 - Overworld quest view metadata: observations, action results, compact context,
   and quest-start responses expose quest ids/titles/areas without raw pack paths.
+- World catalog: `list_world` returns sanitized graph/quest ids without raw
+  `pack`/`path`; `list_stories` remains the internal compatibility catalog.
 - Blind harness default: shipped playtests use `--quest` / `start_world_quest`;
   raw `--pack` starts are rejected.
 - World routes: ToolApi and public MCP `world_path` accept only

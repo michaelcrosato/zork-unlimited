@@ -107,7 +107,7 @@ tool(
 );
 tool(
   "list_world",
-  "List the single canonical world graph, its hub city, and shipped RPG quest packs as reachable quest/area entries.",
+  "List the single canonical world graph, its hub city, and shipped RPG quests as reachable graph-id entries.",
   {},
   () => api.list_world(),
 );

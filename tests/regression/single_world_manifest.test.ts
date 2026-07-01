@@ -17,7 +17,11 @@ import {
   CANONICAL_WORLD_NAME,
   WorldManifestSchema,
 } from "../../src/world/schema.js";
-import { normalizePackPath, worldRouteForPack } from "../../src/world/graph.js";
+import {
+  normalizePackPath,
+  worldQuestNodeForPack,
+  worldRouteForPack,
+} from "../../src/world/graph.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 
 const root = process.cwd();
@@ -140,8 +144,8 @@ describe("single-world library contract", () => {
   it.each(packs)("%s opens as a Charterhaven RPG quest in play", (path) => {
     const pack = loadYaml(path) as RawPack;
     const packWorld = pack.meta?.world;
-    const quest = api.list_world().quests.find((candidate) => candidate.path === path);
-    const game = api.new_game({ world_quest_id: quest?.graph_node ?? "" });
+    const quest = worldQuestNodeForPack(loadWorldManifest(), path);
+    const game = api.new_game({ world_quest_id: quest?.id ?? "" });
     if (game.observation.mode !== "rpg") throw new Error("expected RPG observation");
     const opening = game.observation.description;
 
@@ -154,9 +158,12 @@ describe("single-world library contract", () => {
 
   it("exposes graph routes through the MCP world listing", () => {
     const world = api.list_world();
-    const breakingWeir = world.quests.find((q) => q.path === "content/rpg/pack/breaking_weir.yaml");
+    const breakingWeir = world.quests.find((q) => q.world_quest_id === "breaking_weir");
 
     expect(world.graph.hub).toBe("charterhaven");
+    expect(world.graph.nodes.every((node) => !("pack" in node))).toBe(true);
+    expect(world.world.graph.nodes.every((node) => !("pack" in node))).toBe(true);
+    expect(world.quests.every((q) => !("path" in q))).toBe(true);
     expect(world.quests.every((q) => q.mode === "rpg")).toBe(true);
     expect(breakingWeir?.graph_node).toBe("breaking_weir");
     expect(breakingWeir?.path_from_hub.map((step) => step.name)).toEqual([
@@ -165,12 +172,14 @@ describe("single-world library contract", () => {
       "The Breaking Weir",
     ]);
     for (const quest of world.quests) {
-      expect(quest.path_from_hub[0]?.name, `${quest.path} route must start at the hub`).toBe(
-        CANONICAL_HUB_CITY,
-      );
-      expect(quest.path_from_hub.at(-1)?.kind, `${quest.path} route must end at the quest`).toBe(
-        "quest",
-      );
+      expect(
+        quest.path_from_hub[0]?.name,
+        `${quest.world_quest_id} route must start at the hub`,
+      ).toBe(CANONICAL_HUB_CITY);
+      expect(
+        quest.path_from_hub.at(-1)?.kind,
+        `${quest.world_quest_id} route must end at the quest`,
+      ).toBe("quest");
     }
   });
 });

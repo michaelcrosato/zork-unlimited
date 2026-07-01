@@ -43,6 +43,8 @@ Make discovered overworld quest leads start real RPG sessions.
   transcript, save, and load responses without echoing raw pack paths.
 - Overworld quest observations, action discoveries, compact context, and
   quest-start metadata expose quest ids/titles/areas without raw pack paths.
+- `list_world` now exposes sanitized world graph/quest-id entries without raw
+  `pack` or `path` fields; `list_stories` remains the compatibility catalog.
 - AFK baseline playtests now carry `main_world_quest_id` and instruct blind agents
   to start shipped baseline quests through `start_world_quest`.
 - The external blind-test harness now starts shipped playtests only through

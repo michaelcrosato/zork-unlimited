@@ -50,7 +50,6 @@ import {
   worldQuestNodeById,
   worldQuestNodeForPack,
   worldRouteFromHub,
-  worldRouteForPack,
   type WorldRouteStep,
 } from "../world/graph.js";
 import {
@@ -108,6 +107,17 @@ type StoryEntry = {
   playable: boolean;
   world: WorldBinding | null;
   world_quest_id: string | null;
+};
+
+type PublicWorldGraphNode = Omit<WorldManifest["graph"]["nodes"][number], "pack">;
+
+type PublicWorldGraph = Omit<WorldManifest["graph"], "nodes" | "edges"> & {
+  nodes: PublicWorldGraphNode[];
+  edges: WorldManifest["graph"]["edges"];
+};
+
+type PublicWorldManifest = Omit<WorldManifest, "graph"> & {
+  graph: PublicWorldGraph;
 };
 
 type OverworldSessionPayload<Key extends string, Value> = {
@@ -549,6 +559,37 @@ export function createToolApi(opts: { root: string }) {
     });
   }
 
+  function publicWorldGraph(world: WorldManifest): PublicWorldGraph {
+    return {
+      hub: world.graph.hub,
+      nodes: world.graph.nodes.map((node) => ({
+        id: node.id,
+        name: node.name,
+        kind: node.kind,
+        ...(node.district === undefined ? {} : { district: node.district }),
+      })),
+      edges: world.graph.edges.map((edge) => ({
+        from: edge.from,
+        to: edge.to,
+        route: edge.route,
+      })),
+    };
+  }
+
+  function publicWorldManifest(world: WorldManifest): PublicWorldManifest {
+    const graph = publicWorldGraph(world);
+    return {
+      id: world.id,
+      name: world.name,
+      hub: world.hub,
+      ...(world.premise === undefined ? {} : { premise: world.premise }),
+      ...(world.rule === undefined ? {} : { rule: world.rule }),
+      ...(world.hub_districts === undefined ? {} : { hub_districts: [...world.hub_districts] }),
+      ...(world.frontiers === undefined ? {} : { frontiers: [...world.frontiers] }),
+      graph,
+    };
+  }
+
   function resolveWorldQuestPackPath(worldQuestId: string): {
     world: WorldManifest;
     node: NonNullable<ReturnType<typeof worldQuestNodeById>>;
@@ -681,16 +722,16 @@ export function createToolApi(opts: { root: string }) {
     },
 
     list_world(): {
-      world: WorldManifest;
+      world: PublicWorldManifest;
       hub: string;
-      graph: WorldManifest["graph"];
+      graph: PublicWorldGraph;
       quest_count: number;
       quests: {
-        path: string;
         id: string;
         title: string;
         mode: PackMode | null;
         playable: boolean;
+        world_quest_id: string | null;
         district: string;
         quest: string;
         role: string;
@@ -705,20 +746,27 @@ export function createToolApi(opts: { root: string }) {
         .map((s) => {
           const node = s.world_quest_id ? worldQuestNodeById(world, s.world_quest_id) : null;
           return {
-            path: s.path,
             id: s.id,
             title: s.title,
             mode: s.mode,
             playable: s.playable,
+            world_quest_id: node?.id ?? null,
             district: s.world?.district ?? "",
             quest: s.world?.quest ?? "",
             role: s.world?.role ?? "",
             connection: s.world?.connection ?? "",
             graph_node: node?.id ?? null,
-            path_from_hub: node ? (worldRouteForPack(world, s.path) ?? []) : [],
+            path_from_hub: node ? (worldRouteFromHub(world, node.id) ?? []) : [],
           };
         });
-      return { world, hub: world.hub, graph: world.graph, quest_count: quests.length, quests };
+      const publicWorld = publicWorldManifest(world);
+      return {
+        world: publicWorld,
+        hub: world.hub,
+        graph: publicWorld.graph,
+        quest_count: quests.length,
+        quests,
+      };
     },
 
     world_path(args: { world_quest_id?: string }): {

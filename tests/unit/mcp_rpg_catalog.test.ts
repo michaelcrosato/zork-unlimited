@@ -28,8 +28,9 @@ describe("list_stories exposes only world-graph RPG quests", () => {
     expect(main_story).toBe(MAIN_RPG);
     expect(main_world_quest_id).toBe("breaking_weir");
     expect(stories).toHaveLength(16);
-    expect(stories.map((s) => s.path)).toEqual(world.quests.map((q) => q.path));
-    expect(stories.map((s) => s.world_quest_id)).toEqual(world.quests.map((q) => q.graph_node));
+    expect(world.quests.every((q) => !("path" in q))).toBe(true);
+    expect(world.graph.nodes.every((node) => !("pack" in node))).toBe(true);
+    expect(stories.map((s) => s.world_quest_id)).toEqual(world.quests.map((q) => q.world_quest_id));
     expect(stories.every((s) => s.mode === "rpg")).toBe(true);
     expect(stories.every((s) => s.path.startsWith("content/rpg/pack/"))).toBe(true);
     expect(stories.some((s) => s.path.includes("/cyoa/"))).toBe(false);

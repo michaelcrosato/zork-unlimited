@@ -137,8 +137,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.main_story).toBe(MAIN_RPG);
     expect(r.main_world_quest_id).toBe("breaking_weir");
     expect(r.stories).toHaveLength(16);
-    expect(r.stories.map((s) => s.path)).toEqual(world.quests.map((q) => q.path));
-    expect(r.stories.map((s) => s.world_quest_id)).toEqual(world.quests.map((q) => q.graph_node));
+    expect(world.quests.every((q) => !("path" in q))).toBe(true);
+    expect(world.graph.nodes.every((node) => !("pack" in node))).toBe(true);
+    expect(world.world.graph.nodes.every((node) => !("pack" in node))).toBe(true);
+    expect(r.stories.map((s) => s.world_quest_id)).toEqual(
+      world.quests.map((q) => q.world_quest_id),
+    );
     expect(r.stories.every((s) => s.mode === "rpg")).toBe(true);
     expect(r.stories.some((s) => s.path.startsWith("content/parser/"))).toBe(false);
     expect(r.stories.some((s) => s.path === PACK)).toBe(true);
@@ -152,16 +156,21 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.graph.hub).toBe("charterhaven");
     expect(r.quest_count).toBe(16);
     expect(r.quests.every((q) => q.mode === "rpg")).toBe(true);
-    expect(r.quests.find((q) => q.path === MAIN_RPG)).toMatchObject({
+    const breakingWeir = r.quests.find((q) => q.world_quest_id === "breaking_weir");
+    expect(breakingWeir).toMatchObject({
       district: "Breaking Weir",
       quest: "restore the flood works before the village breaks",
       role: "weir keeper",
       playable: true,
+      world_quest_id: "breaking_weir",
       graph_node: "breaking_weir",
     });
-    expect(
-      r.quests.find((q) => q.path === MAIN_RPG)?.path_from_hub.map((step) => step.name),
-    ).toEqual(["Charterhaven", "Industrial Cut", "The Breaking Weir"]);
+    expect("path" in (breakingWeir ?? {})).toBe(false);
+    expect(breakingWeir?.path_from_hub.map((step) => step.name)).toEqual([
+      "Charterhaven",
+      "Industrial Cut",
+      "The Breaking Weir",
+    ]);
   });
 
   it("returns the graph path from Charterhaven to a quest", () => {
