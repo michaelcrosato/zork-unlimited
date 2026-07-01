@@ -43,16 +43,17 @@ Make discovered overworld quest leads start real RPG sessions.
   transcript, save, and load responses.
 - AFK baseline playtests now carry `main_world_quest_id` and instruct blind agents
   to start shipped baseline quests through `start_world_quest`.
-- The external blind-test harness should default to shipped `--quest` ids and use
-  pack paths only for compatibility/new authored packs.
+- The external blind-test harness now starts shipped playtests only through
+  `--quest` ids; raw pack paths are validation/replay inputs, not blind play
+  starts.
 - `world_path` now follows the same rule: prefer `world_quest_id`; `quest_path` is
   compatibility.
 - `validate_pack` and `load_pack` now accept `world_quest_id` for shipped quests
   and return source identity metadata.
 - `apply_content_patch` now accepts shipped `world_quest_id`; raw `pack_path`
   remains compatibility/new-pack fallback.
-- `validate_quest` and `start_quest` now prefer `quest_id` / `world_quest_id`;
-  `quest_path` remains compatibility.
+- Public MCP `start_quest` now accepts only `quest_id` / `world_quest_id`;
+  `validate_quest` still keeps `quest_path` for validation compatibility.
 - Retired legacy story aliases from the live MCP surface; use `validate_pack`,
   `new_game`, and `start_world_quest` for current RPG play.
 - RPG start/load responses now carry one-time world context; follow-up

@@ -52,7 +52,7 @@ const PACK_SOURCE = {
       "Preferred Charter Marches quest graph node id from list_world().quests[].graph_node.",
     ),
 };
-const QUEST_ALIAS_SOURCE = {
+const QUEST_ID_SOURCE = {
   quest_id: z
     .string()
     .optional()
@@ -63,6 +63,9 @@ const QUEST_ALIAS_SOURCE = {
     .string()
     .optional()
     .describe("Alias for quest_id, accepted for consistency with new_game/load_game."),
+};
+const QUEST_ALIAS_SOURCE = {
+  ...QUEST_ID_SOURCE,
   quest_path: z
     .string()
     .optional()
@@ -471,9 +474,9 @@ tool(
 );
 tool(
   "start_quest",
-  "Start a Charter Marches RPG quest by graph id for MCP-driven playtesting; quest_path remains a compatibility fallback.",
+  "Start a Charter Marches RPG quest by graph id for MCP-driven playtesting.",
   {
-    ...QUEST_ALIAS_SOURCE,
+    ...QUEST_ID_SOURCE,
     seed: z.number().int().optional(),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,

@@ -36,9 +36,13 @@ describe("MCP server registration", () => {
 
   it("advertises world-bound starts instead of raw pack-path gameplay starts", () => {
     const newGame = registeredToolBlock("new_game");
+    const startQuest = registeredToolBlock("start_quest");
 
     expect(newGame).toContain("world_quest_id");
     expect(newGame).toContain("generate_rpg_seed");
     expect(newGame).not.toContain("pack_path");
+    expect(startQuest).toContain("QUEST_ID_SOURCE");
+    expect(startQuest).not.toContain("QUEST_ALIAS_SOURCE");
+    expect(startQuest).not.toContain("quest_path");
   });
 });
