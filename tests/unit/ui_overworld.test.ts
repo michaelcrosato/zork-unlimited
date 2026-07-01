@@ -303,6 +303,45 @@ describe("OverworldSession", () => {
       currentId: "missing_town",
     };
     expect(() => OverworldSession.restore(world, corruptSnapshot)).toThrow(/unknown current town/i);
+
+    const validSnapshot = session.snapshot();
+    const duplicateAreaMapSnapshot = {
+      ...validSnapshot,
+      currentAreaByTown: [validSnapshot.currentAreaByTown[0]!, validSnapshot.currentAreaByTown[0]!],
+    };
+    expect(() => OverworldSession.restore(world, duplicateAreaMapSnapshot)).toThrow(
+      /duplicate area-map town/i,
+    );
+
+    const duplicateRenownSnapshot = {
+      ...validSnapshot,
+      regionRenown: [
+        [start.current.region, 1],
+        [start.current.region, 2],
+      ],
+    };
+    expect(() => OverworldSession.restore(world, duplicateRenownSnapshot)).toThrow(
+      /duplicate renown region/i,
+    );
+
+    const undiscoveredCurrentAreaSnapshot = {
+      ...validSnapshot,
+      discoveredAreaIds: validSnapshot.discoveredAreaIds.filter(
+        (id) => id !== validSnapshot.currentAreaId,
+      ),
+    };
+    expect(() => OverworldSession.restore(world, undiscoveredCurrentAreaSnapshot)).toThrow(
+      /current area is not discovered/i,
+    );
+
+    const tamperedPendingRoadSnapshot = JSON.parse(
+      JSON.stringify(validSnapshot),
+    ) as typeof validSnapshot;
+    expect(tamperedPendingRoadSnapshot.pendingRoadEncounter).toBeDefined();
+    tamperedPendingRoadSnapshot.pendingRoadEncounter!.options[0]!.renownGained += 99;
+    expect(() => OverworldSession.restore(world, tamperedPendingRoadSnapshot)).toThrow(
+      /pending road options do not match/i,
+    );
   });
 
   it("adds deterministic travel delay when fatigue or supply shortage catches up", () => {

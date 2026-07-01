@@ -380,6 +380,29 @@ function assertKnownIds(label: string, values: readonly string[], known: Set<str
   }
 }
 
+function assertUniqueTupleKeys(
+  label: string,
+  values: readonly (readonly [string, unknown])[],
+): void {
+  assertUnique(
+    label,
+    values.map(([key]) => key),
+  );
+}
+
+function assertStringSetSubset(
+  label: string,
+  values: readonly string[],
+  parentLabel: string,
+  parent: Set<string>,
+): void {
+  for (const value of values) {
+    if (!parent.has(value)) {
+      throw new Error(`Overworld session snapshot ${label} "${value}" is not in ${parentLabel}.`);
+    }
+  }
+}
+
 function replaceStringSet(target: Set<string>, values: readonly string[]): void {
   target.clear();
   for (const value of values) target.add(value);
@@ -470,7 +493,8 @@ export class OverworldSession {
     const questIds = new Set(this.world.quests.map((quest) => quest.id));
     const eventIds = new Set(this.world.local_events.map((event) => event.id));
     const arcIds = new Set(this.world.regional_arcs.map((arc) => arc.id));
-    const edgeIds = new Set(this.world.edges.map((edge) => edge.id));
+    const edgesById = new Map(this.world.edges.map((edge) => [edge.id, edge]));
+    const roadEventsById = new Map(this.world.road_events.map((event) => [event.id, event]));
     const regions = new Set(this.world.regions.map((region) => region.name));
     const areaHomes = new Map(this.world.areas.map((area) => [area.id, area.home]));
 
@@ -501,12 +525,45 @@ export class OverworldSession {
     assertKnownIds("discovered quest id", snapshot.discoveredQuestIds, questIds);
     assertKnownIds("resolved event id", snapshot.resolvedEventIds, eventIds);
     assertKnownIds("completed regional arc id", snapshot.completedRegionalArcIds, arcIds);
+    assertUniqueTupleKeys("area-map town", snapshot.currentAreaByTown);
+    assertUniqueTupleKeys("renown region", snapshot.regionRenown);
 
     if (!snapshot.discoveredIds.includes(snapshot.currentId)) {
       throw new Error("Overworld session snapshot current town is not discovered.");
     }
     if (!snapshot.visitedIds.includes(snapshot.currentId)) {
       throw new Error("Overworld session snapshot current town is not visited.");
+    }
+    const discoveredTownIds = new Set(snapshot.discoveredIds);
+    const discoveredAreaIds = new Set(snapshot.discoveredAreaIds);
+    const discoveredJobIds = new Set(snapshot.discoveredJobIds);
+    const discoveredSiteIds = new Set(snapshot.discoveredSiteIds);
+    assertStringSetSubset(
+      "visited town id",
+      snapshot.visitedIds,
+      "discovered town ids",
+      discoveredTownIds,
+    );
+    assertStringSetSubset(
+      "visited area id",
+      snapshot.visitedAreaIds,
+      "discovered area ids",
+      discoveredAreaIds,
+    );
+    assertStringSetSubset(
+      "completed job id",
+      snapshot.completedJobIds,
+      "discovered job ids",
+      discoveredJobIds,
+    );
+    assertStringSetSubset(
+      "explored site id",
+      snapshot.exploredSiteIds,
+      "discovered site ids",
+      discoveredSiteIds,
+    );
+    if (snapshot.currentAreaId !== null && !discoveredAreaIds.has(snapshot.currentAreaId)) {
+      throw new Error("Overworld session snapshot current area is not discovered.");
     }
     for (const [townId, areaId] of snapshot.currentAreaByTown) {
       if (!nodeIds.has(townId)) {
@@ -520,6 +577,9 @@ export class OverworldSession {
           `Overworld session snapshot saved area "${areaId}" is outside "${townId}".`,
         );
       }
+      if (!discoveredAreaIds.has(areaId)) {
+        throw new Error(`Overworld session snapshot saved area "${areaId}" is not discovered.`);
+      }
     }
     for (const [region] of snapshot.regionRenown) {
       if (!regions.has(region)) {
@@ -527,13 +587,36 @@ export class OverworldSession {
       }
     }
     if (snapshot.pendingRoadEncounter) {
-      if (!edgeIds.has(snapshot.pendingRoadEncounter.edgeId)) {
+      const pendingEdge = edgesById.get(snapshot.pendingRoadEncounter.edgeId);
+      if (!pendingEdge) {
         throw new Error(
           `Overworld session snapshot has unknown pending road "${snapshot.pendingRoadEncounter.edgeId}".`,
         );
       }
+      if (pendingEdge.from !== snapshot.currentId && pendingEdge.to !== snapshot.currentId) {
+        throw new Error("Overworld session snapshot pending road is not at the current town.");
+      }
+      const currentName = this.nodes.get(snapshot.currentId)?.name;
+      if (snapshot.pendingRoadEncounter.to !== currentName) {
+        throw new Error("Overworld session snapshot pending road destination is not current.");
+      }
       if (snapshot.pendingRoadEncounter.event.edge !== snapshot.pendingRoadEncounter.edgeId) {
         throw new Error("Overworld session snapshot pending road event does not match its road.");
+      }
+      const manifestEvent = roadEventsById.get(snapshot.pendingRoadEncounter.event.id);
+      if (!manifestEvent) {
+        throw new Error(
+          `Overworld session snapshot has unknown pending road event "${snapshot.pendingRoadEncounter.event.id}".`,
+        );
+      }
+      if (JSON.stringify(snapshot.pendingRoadEncounter.event) !== JSON.stringify(manifestEvent)) {
+        throw new Error("Overworld session snapshot pending road event does not match the world.");
+      }
+      if (
+        JSON.stringify(snapshot.pendingRoadEncounter.options) !==
+        JSON.stringify(this.roadEncounterOptions(manifestEvent))
+      ) {
+        throw new Error("Overworld session snapshot pending road options do not match the event.");
       }
     }
 

@@ -93,6 +93,8 @@ Make discovered overworld quest leads start real RPG sessions.
   and renown values.
 - New York overworld loading/validation now lives in `world/source`; MCP only
   asks for the loaded manifest.
+- Overworld session restore now rejects duplicate save maps, invalid discovery
+  lifecycles, and tampered pending road encounter options.
 
 ## Acceptance
 

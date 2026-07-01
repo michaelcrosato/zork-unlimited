@@ -82,6 +82,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
   canonical world graph.
 - Static and stateful local overworld actions now share descriptor text/timing.
 - New York overworld loading/validation now lives in `world/source`, not MCP.
+- Overworld session restore now rejects duplicate maps and tampered road options.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,
