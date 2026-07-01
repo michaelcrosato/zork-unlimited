@@ -11,7 +11,6 @@
  * and traces are data only — no handler runs shell or code (§16).
  */
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { hashState } from "../core/hash.js";
 import { makeStep, type Rules } from "../core/engine.js";
@@ -54,7 +53,7 @@ import {
   type WorldRouteStep,
 } from "../world/graph.js";
 import {
-  assertOverworldQuestSourceBindings,
+  loadOverworldManifest as loadOverworldManifestFromRoot,
   loadWorldManifest as loadWorldManifestFromRoot,
   resolveGameSource,
   resolvePackSource,
@@ -63,8 +62,6 @@ import {
   resolveWorldQuestPackPath as resolveWorldQuestPackPathFromRoot,
 } from "../world/source.js";
 import {
-  assertOverworldIntegrity,
-  parseOverworldManifest,
   type OverworldManifest,
   type OverworldNode,
   type OverworldQuest,
@@ -408,13 +405,7 @@ export function createToolApi(opts: { root: string }) {
   }
 
   function loadOverworldManifest(): OverworldManifest {
-    const raw = JSON.parse(
-      readFileSync(join(root, "content", "world", "new_york_overworld.json"), "utf8"),
-    );
-    const world = parseOverworldManifest(raw);
-    assertOverworldIntegrity(world);
-    assertOverworldQuestSourceBindings(loadWorldManifest(), world);
-    return world;
+    return loadOverworldManifestFromRoot(root);
   }
 
   function createOverworldSession(): { session_id: string; session: OverworldSession } {

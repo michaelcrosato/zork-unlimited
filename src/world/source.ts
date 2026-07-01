@@ -3,7 +3,11 @@ import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { SaveIntegrityError } from "../persist/save_load.js";
 import type { Trace } from "../trace/record.js";
-import type { OverworldManifest } from "./overworld.js";
+import {
+  assertOverworldIntegrity,
+  parseOverworldManifest,
+  type OverworldManifest,
+} from "./overworld.js";
 import {
   CANONICAL_HUB_CITY,
   CANONICAL_WORLD_ID,
@@ -120,6 +124,16 @@ export function assertOverworldQuestSourceBindings(
       );
     }
   }
+}
+
+export function loadOverworldManifest(root: string): OverworldManifest {
+  const raw = JSON.parse(
+    readFileSync(join(root, "content", "world", "new_york_overworld.json"), "utf8"),
+  );
+  const overworld = parseOverworldManifest(raw);
+  assertOverworldIntegrity(overworld);
+  assertOverworldQuestSourceBindings(loadWorldManifest(root), overworld);
+  return overworld;
 }
 
 export function resolvePackSource(

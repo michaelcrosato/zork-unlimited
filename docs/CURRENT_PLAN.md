@@ -91,6 +91,8 @@ Make discovered overworld quest leads start real RPG sessions.
   canonical world graph before play.
 - Static and stateful local overworld actions now share descriptor text, timing,
   and renown values.
+- New York overworld loading/validation now lives in `world/source`; MCP only
+  asks for the loaded manifest.
 
 ## Acceptance
 

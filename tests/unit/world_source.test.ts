@@ -1,23 +1,20 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { SaveIntegrityError } from "../../src/persist/save_load.js";
 import {
   assertOverworldQuestSourceBindings,
+  loadOverworldManifest,
   loadWorldManifest,
   resolveGameSource,
   resolvePackSource,
   resolveSavePackSource,
   resolveTracePackSource,
 } from "../../src/world/source.js";
-import { parseOverworldManifest } from "../../src/world/overworld.js";
 import type { Trace } from "../../src/trace/record.js";
 import type { RpgAction } from "../../src/api/types.js";
 
 const ROOT = process.cwd();
 const PACK = "content/rpg/pack/sunken_barrow.yaml";
-const overworld = parseOverworldManifest(
-  JSON.parse(readFileSync("content/world/new_york_overworld.json", "utf8")),
-);
+const overworld = loadOverworldManifest(ROOT);
 
 const trace = {
   mode: "rpg",
