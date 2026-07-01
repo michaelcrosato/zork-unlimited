@@ -44,8 +44,37 @@ beforeAll(() => {
 });
 
 describe("trace CLI integrity gate", () => {
+  it("npm run replay infers a shipped trace source from embedded worldQuestId", () => {
+    const result = run(`npm run replay -- ${SOURCE_TRACE}`);
+    const output = outputOf(result);
+
+    expect(result.status, output).toBe(0);
+    expect(output).toContain("world quest:  sunken_barrow");
+    expect(output).toContain("REPLAY OK");
+  });
+
+  it("npm run inspect infers a shipped trace source from embedded worldQuestId", () => {
+    const result = run(`npm run inspect -- ${SOURCE_TRACE}`);
+    const output = outputOf(result);
+
+    expect(result.status, output).toBe(0);
+    expect(output).toContain("world_quest: sunken_barrow");
+    expect(output).toContain("Replay: OK");
+    expect(output).toContain("Suspected bug:");
+  });
+
+  it("trace CLIs reject an explicit source that conflicts with the trace world quest id", () => {
+    const replay = run(`npm run replay -- ${SOURCE_TRACE} --world-quest-id cold_forge`);
+    const inspect = run(`npm run inspect -- ${SOURCE_TRACE} --world-quest-id cold_forge`);
+
+    expect(replay.status, outputOf(replay)).not.toBe(0);
+    expect(outputOf(replay)).toContain("worldQuestId");
+    expect(inspect.status, outputOf(inspect)).not.toBe(0);
+    expect(outputOf(inspect)).toContain("worldQuestId");
+  });
+
   it("npm run replay rejects a trace whose initial room is not in the RPG pack", () => {
-    const result = run(`npm run replay -- ${PHANTOM_CURRENT} ${PACK}`);
+    const result = run(`npm run replay -- ${PHANTOM_CURRENT}`);
     const output = outputOf(result);
 
     expect(result.status, output).not.toBe(0);

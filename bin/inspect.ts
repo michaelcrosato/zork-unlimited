@@ -4,7 +4,8 @@
  *
  * Usage:
  *   npm run inspect -- <rpg-pack.yaml>     # stats, validator findings
- *   npm run inspect -- <trace.json> <rpg-pack.yaml>   # replay summary + suspected bugs
+ *   npm run inspect -- <trace.json>        # infer a shipped trace's worldQuestId
+ *   npm run inspect -- <trace.json> <rpg-pack.yaml|world_quest_id>
  *
  * Auto-detects: a `.json` argument (or one carrying `trace_id`) is treated as a
  * trace; otherwise it is an RPG content pack. Read-only; never writes files (§16).
@@ -22,22 +23,53 @@ import { formatReport } from "../src/validate/report.js";
 import type { RpgAction } from "../src/api/types.js";
 import { assertWellFormedState } from "../src/persist/save_load.js";
 import { assertRpgStateReferences } from "../src/rpg/state_integrity.js";
+import { resolveTracePackSource, type TraceSourceArgs } from "../src/world/source.js";
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(name);
   return i >= 0 ? process.argv[i + 1] : undefined;
 }
 
-function packArg(): string | undefined {
-  return (
-    arg("--pack") ??
-    process.argv.slice(3).find((value) => value !== "--" && !value.startsWith("--"))
-  );
+function looksLikePackPath(value: string): boolean {
+  return /\.ya?ml$/i.test(value) || value.includes("/") || value.includes("\\");
 }
 
-function inspectTrace(tracePath: string, packPath: string): void {
+function positionalSourceArg(): string | undefined {
+  for (let i = 3; i < process.argv.length; i += 1) {
+    const value = process.argv[i]!;
+    if (value === "--pack" || value === "--world-quest-id" || value === "--world_quest_id") {
+      i += 1;
+      continue;
+    }
+    if (value === "--" || value.startsWith("--")) continue;
+    return value;
+  }
+  return undefined;
+}
+
+function traceSourceArgs(): TraceSourceArgs {
+  const pack = arg("--pack");
+  const worldQuestId = arg("--world-quest-id") ?? arg("--world_quest_id");
+  const positional = positionalSourceArg();
+  const count = [pack !== undefined, worldQuestId !== undefined, positional !== undefined].filter(
+    Boolean,
+  ).length;
+  if (count > 1) {
+    throw new Error(
+      "inspect accepts exactly one trace source: --pack, --world-quest-id, or positional source.",
+    );
+  }
+  if (pack !== undefined) return { pack_path: pack };
+  if (worldQuestId !== undefined) return { world_quest_id: worldQuestId };
+  if (positional === undefined) return {};
+  return looksLikePackPath(positional) ? { pack_path: positional } : { world_quest_id: positional };
+}
+
+function inspectTrace(tracePath: string, sourceArgs: TraceSourceArgs): void {
   const trace = JSON.parse(readFileSync(tracePath, "utf8")) as Trace<RpgAction>;
   assertTraceMode(trace);
+  const source = resolveTracePackSource(process.cwd(), sourceArgs, trace, "inspect");
+  const packPath = source.packPath;
   assertRpgPackShape(packPath);
   const loaded = loadRpgPackFile(packPath);
   if (!loaded.ok) {
@@ -45,7 +77,7 @@ function inspectTrace(tracePath: string, packPath: string): void {
     process.exit(1);
   }
   console.log(
-    `Trace: ${trace.trace_id}  pack: ${trace.pack_id}  seed: ${trace.seed}  steps: ${trace.actions.length}`,
+    `Trace: ${trace.trace_id}  pack: ${trace.pack_id}  world_quest: ${source.worldQuestId ?? "(none)"}  seed: ${trace.seed}  steps: ${trace.actions.length}`,
   );
   if (trace.content_hash !== loaded.compiled.contentHash) {
     console.log(
@@ -76,18 +108,15 @@ function inspectTrace(tracePath: string, packPath: string): void {
 function main(): void {
   const path = process.argv[2];
   if (!path || path.startsWith("--")) {
-    console.error("Usage: npm run inspect -- <rpg-pack.yaml> | <trace.json> <rpg-pack.yaml>");
+    console.error(
+      "Usage: npm run inspect -- <rpg-pack.yaml> | <trace.json> [<rpg-pack.yaml|world_quest_id>]",
+    );
     process.exit(2);
   }
   const raw = parseYaml(readFileSync(path, "utf8")) as Record<string, unknown> | null;
   const isTrace = !!raw && typeof raw === "object" && "trace_id" in raw;
   if (isTrace) {
-    const pack = packArg();
-    if (!pack) {
-      console.error("Inspecting a trace needs an RPG pack path.");
-      process.exit(2);
-    }
-    inspectTrace(path, pack);
+    inspectTrace(path, traceSourceArgs());
     return;
   }
   assertRpgPackShape(path, raw);

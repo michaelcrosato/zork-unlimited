@@ -71,6 +71,8 @@ Make discovered overworld quest leads start real RPG sessions.
   through the world graph without a separate raw pack-path argument.
 - Shipped traces now embed `worldQuestId`, letting replay/inspect resolve
   through the world graph without a separate raw pack-path argument.
+- CLI replay/inspect now share that source resolver, so shipped traces can be
+  debugged without passing raw pack paths.
 
 ## Acceptance
 

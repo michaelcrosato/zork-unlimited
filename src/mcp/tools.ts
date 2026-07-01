@@ -52,12 +52,6 @@ import {
 } from "./types.js";
 import type { WorldBinding, WorldManifest } from "../world/schema.js";
 import {
-  CANONICAL_HUB_CITY,
-  CANONICAL_WORLD_ID,
-  CANONICAL_WORLD_NAME,
-  WorldManifestSchema,
-} from "../world/schema.js";
-import {
   normalizePackPath,
   worldQuestNodeById,
   worldQuestNodeForPack,
@@ -65,6 +59,12 @@ import {
   worldRouteForPack,
   type WorldRouteStep,
 } from "../world/graph.js";
+import {
+  loadWorldManifest as loadWorldManifestFromRoot,
+  resolveTracePackSource,
+  resolveWorldQuestPackPath as resolveWorldQuestPackPathFromRoot,
+  worldQuestIdForPackPath as worldQuestIdForPackPathFromRoot,
+} from "../world/source.js";
 import {
   assertOverworldIntegrity,
   overworldAreasAt,
@@ -366,16 +366,11 @@ export function createToolApi(opts: { root: string }) {
     node: NonNullable<ReturnType<typeof worldQuestNodeById>>;
     packPath: string;
   } {
-    const world = loadWorldManifest();
-    const node = worldQuestNodeById(world, worldQuestId);
-    if (!node?.pack) {
-      throw new Error(`Unknown Charter Marches quest "${worldQuestId}".`);
-    }
-    return { world, node, packPath: normalizePackPath(node.pack) };
+    return resolveWorldQuestPackPathFromRoot(root, worldQuestId);
   }
 
   function worldQuestIdForPackPath(packPath: string): string | null {
-    return worldQuestNodeForPack(loadWorldManifest(), packPath)?.id ?? null;
+    return worldQuestIdForPackPathFromRoot(root, packPath);
   }
 
   function resolvePackPathSource(
@@ -396,57 +391,13 @@ export function createToolApi(opts: { root: string }) {
       : args.pack_path!;
   }
 
-  function traceWorldQuestId(trace: Trace<RpgAction>, operation: string): string | undefined {
-    const raw = (trace as { worldQuestId?: unknown }).worldQuestId;
-    if (raw === undefined) return undefined;
-    if (typeof raw !== "string") {
-      throw new SaveIntegrityError(
-        `${operation} trace worldQuestId must be a string when present, got ${JSON.stringify(
-          raw,
-        )}.`,
-      );
-    }
-    return raw;
-  }
-
   function resolveTraceSource(
     args: { pack_path?: string; world_quest_id?: string },
     trace: Trace<RpgAction>,
     operation: string,
   ): { packPath: string; worldQuestId: string | null; compiled: CompiledRpgPack } {
-    const embeddedWorldQuestId = traceWorldQuestId(trace, operation);
-    const sourceCount = [args.world_quest_id !== undefined, args.pack_path !== undefined].filter(
-      Boolean,
-    ).length;
-    if (sourceCount > 1) {
-      throw new Error(`${operation} accepts exactly one of world_quest_id or pack_path.`);
-    }
-    let packPath: string;
-    let worldQuestId: string | null;
-    if (args.world_quest_id !== undefined) {
-      const resolved = resolveWorldQuestPackPath(args.world_quest_id);
-      packPath = resolved.packPath;
-      worldQuestId = resolved.node.id;
-    } else if (args.pack_path !== undefined) {
-      packPath = args.pack_path;
-      worldQuestId = worldQuestIdForPackPath(packPath);
-    } else if (embeddedWorldQuestId !== undefined) {
-      const resolved = resolveWorldQuestPackPath(embeddedWorldQuestId);
-      packPath = resolved.packPath;
-      worldQuestId = resolved.node.id;
-    } else {
-      throw new Error(
-        `${operation} requires world_quest_id, pack_path, or a trace with worldQuestId.`,
-      );
-    }
-    if (embeddedWorldQuestId !== undefined && embeddedWorldQuestId !== worldQuestId) {
-      throw new SaveIntegrityError(
-        `Trace worldQuestId ${JSON.stringify(
-          embeddedWorldQuestId,
-        )} does not match requested source ${JSON.stringify(worldQuestId)}.`,
-      );
-    }
-    return { packPath, worldQuestId, compiled: requirePlayable(packPath) };
+    const source = resolveTracePackSource(root, args, trace, operation);
+    return { ...source, compiled: requirePlayable(source.packPath) };
   }
 
   function resolveQuestAliasSource(
@@ -472,29 +423,7 @@ export function createToolApi(opts: { root: string }) {
   }
 
   function loadWorldManifest(): WorldManifest {
-    try {
-      const raw = parseYaml(
-        readFileSync(join(root, "content", "world", "charter_marches.yaml"), "utf8"),
-      );
-      return WorldManifestSchema.parse(raw);
-    } catch {
-      return {
-        id: CANONICAL_WORLD_ID,
-        name: CANONICAL_WORLD_NAME,
-        hub: CANONICAL_HUB_CITY,
-        graph: {
-          hub: "charterhaven",
-          nodes: [
-            {
-              id: "charterhaven",
-              name: CANONICAL_HUB_CITY,
-              kind: "hub",
-            },
-          ],
-          edges: [],
-        },
-      };
-    }
+    return loadWorldManifestFromRoot(root);
   }
 
   function loadOverworldManifest(): OverworldManifest {
