@@ -48,7 +48,8 @@ export type PackHealth = {
 };
 
 export type Assessment = {
-  packsByMode: Record<string, number>;
+  rpgPackCount: number;
+  worldQuestCount: number;
   packs: PackHealth[];
   /** True iff this cycle's fresh generated RPG window validated clean. */
   allGeneratorsClean: boolean;
@@ -477,13 +478,13 @@ export function assess(root: string): Assessment {
   const api = createToolApi({ root });
   const { stories } = api.list_stories();
 
-  const packsByMode: Record<string, number> = { rpg: 0 };
   const packs: PackHealth[] = [];
   const candidates: ImprovementCandidate[] = [];
+  const rpgPackCount = stories.filter((s) => s.mode === "rpg").length;
+  const worldQuestCount = stories.filter((s) => s.playable && s.world_quest_id !== null).length;
 
   // ── Per-pack health: validator findings (the deterministic dev-test signal) ───
   for (const s of stories) {
-    if (s.mode) packsByMode[s.mode] = (packsByMode[s.mode] ?? 0) + 1;
     if (!s.playable) {
       packs.push({ path: s.path, mode: s.mode, playable: false, warnings: 0 });
       candidates.push({
@@ -545,7 +546,6 @@ export function assess(root: string): Assessment {
   }
 
   // ── content_new: contiguous world graph breadth ───────────────────────────────
-  const worldQuestCount = stories.filter((s) => s.playable && s.world_quest_id !== null).length;
   if (worldQuestCount < WORLD_QUEST_TARGET) {
     const impact = Math.min(5, 2 + (WORLD_QUEST_TARGET - worldQuestCount));
     candidates.push({
@@ -744,7 +744,14 @@ export function assess(root: string): Assessment {
   candidates.sort(
     (a, b) => b.score - a.score || recencyOf(a) - recencyOf(b) || a.id.localeCompare(b.id),
   );
-  return { packsByMode, packs, allGeneratorsClean, candidates, top: candidates[0] ?? null };
+  return {
+    rpgPackCount,
+    worldQuestCount,
+    packs,
+    allGeneratorsClean,
+    candidates,
+    top: candidates[0] ?? null,
+  };
 }
 
 function isRoutinePlaytestCandidate(c: ImprovementCandidate): boolean {
@@ -762,7 +769,7 @@ export function formatAssessment(a: Assessment, opts: AssessmentFormatOptions = 
   const lines: string[] = [];
   lines.push("# AFK assessment — next best improvement");
   lines.push("");
-  lines.push(`RPG catalog: ${a.packsByMode["rpg"] ?? 0} pack(s)`);
+  lines.push(`RPG catalog: ${a.rpgPackCount} pack(s), ${a.worldQuestCount} world quest node(s)`);
   lines.push(
     `RPG generator mint-and-check: ${a.allGeneratorsClean ? "clean" : "findings present"}`,
   );

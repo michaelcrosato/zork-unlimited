@@ -88,9 +88,9 @@ function withStaleAuditFixtureRoot(run: (root: string) => void): void {
 
 describe("assess()", () => {
   it("counts the RPG catalog and does not track retired legacy modes", () => {
-    expect(a.packsByMode["cyoa"]).toBeUndefined();
-    expect(a.packsByMode["parser"]).toBeUndefined();
-    expect(a.packsByMode["rpg"]).toBeGreaterThanOrEqual(16);
+    expect("packsByMode" in a).toBe(false);
+    expect(a.rpgPackCount).toBeGreaterThanOrEqual(16);
+    expect(a.worldQuestCount).toBeGreaterThanOrEqual(16);
   });
 
   it("produces candidates and a top recommendation", () => {
@@ -156,7 +156,8 @@ describe("assess()", () => {
     // Breadth work is now a world graph target, not a mode/pack target. Legacy
     // content is no longer a breadth target, and raw RPG packs must not be raised
     // as detached authoring work.
-    expect(a.packsByMode["rpg"]).toBeGreaterThanOrEqual(16);
+    expect(a.rpgPackCount).toBeGreaterThanOrEqual(16);
+    expect(a.worldQuestCount).toBeGreaterThanOrEqual(16);
     expect(
       a.candidates.find((c) => c.category === "content_new" && c.target === "rpg"),
     ).toBeUndefined();
@@ -390,7 +391,8 @@ describe("isSaturated — the saturation-triggered ultraplan signal", () => {
     score,
   });
   const withTop = (top: ImprovementCandidate | null): Assessment => ({
-    packsByMode: {},
+    rpgPackCount: 16,
+    worldQuestCount: 16,
     packs: [],
     allGeneratorsClean: true,
     candidates: top ? [top] : [],

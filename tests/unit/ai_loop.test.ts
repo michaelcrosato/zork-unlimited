@@ -34,7 +34,8 @@ function candidate(
 
 function assessment(top: ImprovementCandidate | null): Assessment {
   return {
-    packsByMode: { rpg: 16 },
+    rpgPackCount: 16,
+    worldQuestCount: 16,
     packs: [],
     allGeneratorsClean: true,
     candidates: top ? [top] : [],
