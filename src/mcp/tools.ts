@@ -231,6 +231,13 @@ type RpgChooseOptionArgs = {
   hide_graph?: boolean;
 } & RpgResponseOptions;
 
+type RpgLoadGameArgs = {
+  pack_path?: string;
+  world_quest_id?: string;
+  save: string;
+  hide_graph?: boolean;
+} & RpgResponseOptions;
+
 type RpgWorldQuestStartPayload<Args extends RpgResponseOptions> = {
   world: { id: string; name: string; hub: string };
   quest: {
@@ -1346,22 +1353,26 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    load_game(args: { pack_path?: string; world_quest_id?: string; save: string }) {
+    load_game<Args extends RpgLoadGameArgs>(args: Args): RpgSessionPayload<Args> {
       const bundle = load(args.save, undefined, SAVE_MODE);
       const { packPath, worldQuestId } = resolveSavePackSource(root, args, bundle, "load_game");
       const compiled = requirePlayable(packPath);
       // Content-hash check is enforced by load() against the loaded pack (§8.7);
       // mode is verified too, so a save can't be loaded against a different mode.
       const verified = load(args.save, compiled.contentHash, SAVE_MODE);
-      const session = startSession(compiled, verified.state, { packPath, worldQuestId });
+      const session = startSession(compiled, verified.state, {
+        packPath,
+        worldQuestId,
+        ...(args.hide_graph ? { hideGraph: true } : {}),
+      });
       return {
         session_id: session.id,
         mode: SAVE_MODE,
-        observation: publicObservation(openingObsOf(session)),
+        ...rpgViewField(openingObsOf(session), args),
         pack_path: session.packPath ?? null,
         world_quest_id: session.worldQuestId ?? null,
         state_hash: hashState(session.state),
-      };
+      } as RpgSessionPayload<Args>;
     },
 
     async adapt_story(args: { premise: string; mode?: PackMode }) {

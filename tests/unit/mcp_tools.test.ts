@@ -1452,6 +1452,32 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     expect(reloaded.state_hash).toBe(after);
   });
 
+  it("can reload saves into compact RPG context for resumed MCP loops", () => {
+    const a = api();
+    const game = a.start_world_quest({ quest_id: "sunken_barrow", seed: 1 });
+    stepByCommand(a, game.session_id, "go down");
+    const after = a.get_observation({ session_id: game.session_id }).state_hash;
+    const saved = a.save_game({ session_id: game.session_id });
+    const fullReload = a.load_game({ save: saved.save, hide_graph: true, compact_actions: true });
+    const compactReload = a.load_game({
+      save: saved.save,
+      hide_graph: true,
+      compact_observation: true,
+    });
+
+    expect(compactReload.state_hash).toBe(after);
+    expect(compactReload.pack_path).toBe(PACK);
+    expect(compactReload.world_quest_id).toBe("sunken_barrow");
+    expect("observation" in compactReload).toBe(false);
+    expect(compactReload.context.here).toEqual([
+      fullReload.observation.room,
+      fullReload.observation.title,
+    ]);
+    expect(compactReload.context.exits[0]).toEqual(expect.any(String));
+    expect(compactReload.context.actions[0]).not.toHaveProperty("command");
+    expect(JSON.stringify(compactReload).length).toBeLessThan(JSON.stringify(fullReload).length);
+  });
+
   it("a shipped world quest save reloads by world graph id", () => {
     const a = api();
     const game = a.start_world_quest({ quest_id: "sunken_barrow", seed: 1 });

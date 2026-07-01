@@ -584,6 +584,9 @@ tool(
         "Charter Marches quest graph node id from list_world().quests[].graph_node. Optional when the save embeds worldQuestId.",
       ),
     save: z.string().describe("A save string produced by save_game."),
+    ...HIDE_GRAPH,
+    ...COMPACT_ACTIONS,
+    ...COMPACT_OBSERVATION,
   },
   (a) => api.load_game(a),
 );
