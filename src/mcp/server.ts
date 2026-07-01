@@ -87,6 +87,14 @@ const COMPACT_ACTIONS = {
       "Token economy: when true, observation available_actions include stable ids and skill metadata but omit repeated command labels. Use list_legal_actions without this flag when command text is needed.",
     ),
 };
+const COMPACT_OBSERVATION = {
+  compact_observation: z
+    .boolean()
+    .optional()
+    .describe(
+      "Token economy: when true, RPG tools return a compact `context` instead of the full `observation`; context uses tuple fields and compact action ids for repeated loop turns.",
+    ),
+};
 const COMPACT_OVERWORLD_CONTEXT = {
   compact_context: z
     .boolean()
@@ -326,6 +334,7 @@ tool(
       .optional()
       .describe("When true, hide RPG graph destinations in the returned quest observation."),
     ...COMPACT_ACTIONS,
+    ...COMPACT_OBSERVATION,
     ...COMPACT_OVERWORLD_CONTEXT,
   },
   (a) => api.start_overworld_session_quest(a),
@@ -450,6 +459,7 @@ tool(
     seed: z.number().int().optional().describe("Deterministic runtime seed (default 1)."),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
+    ...COMPACT_OBSERVATION,
   },
   (a) => api.new_game(a),
 );
@@ -461,6 +471,7 @@ tool(
     seed: z.number().int().optional(),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
+    ...COMPACT_OBSERVATION,
   },
   (a) => api.start_world_quest(a),
 );
@@ -472,20 +483,21 @@ tool(
     seed: z.number().int().optional(),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
+    ...COMPACT_OBSERVATION,
   },
   (a) => api.start_quest(a),
 );
 
 tool(
   "get_observation",
-  "Get the current AI-facing RPG observation for a session (§9.1). Set compact_actions for lean repeated loop turns.",
-  { ...SESSION, ...HIDE_GRAPH, ...COMPACT_ACTIONS },
+  "Get the current AI-facing RPG observation for a session (§9.1). Set compact_observation for lean repeated loop turns.",
+  { ...SESSION, ...HIDE_GRAPH, ...COMPACT_ACTIONS, ...COMPACT_OBSERVATION },
   (a) => api.get_observation(a),
 );
 tool(
   "get_scene",
-  "AFK alias for get_observation; returns current scene/room text, state, and visible options. Set compact_actions for id-only action menus.",
-  { ...SESSION, ...HIDE_GRAPH, ...COMPACT_ACTIONS },
+  "AFK alias for get_observation; returns current scene/room text, state, and visible options. Set compact_observation for compact repeated loop turns.",
+  { ...SESSION, ...HIDE_GRAPH, ...COMPACT_ACTIONS, ...COMPACT_OBSERVATION },
   (a) => api.get_scene(a),
 );
 tool(
@@ -503,6 +515,7 @@ tool(
     action_id: z.string().describe("An action id from the current legal-action set."),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
+    ...COMPACT_OBSERVATION,
   },
   (a) => api.step_action(a),
 );
@@ -513,9 +526,12 @@ tool(
     ...SESSION,
     option_id: z
       .string()
-      .describe("An option/action id from get_scene().observation.available_actions."),
+      .describe(
+        "An option/action id from get_scene().observation.available_actions or context.actions.",
+      ),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
+    ...COMPACT_OBSERVATION,
   },
   (a) => api.choose_option(a),
 );

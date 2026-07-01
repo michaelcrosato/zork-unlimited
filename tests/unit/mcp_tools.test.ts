@@ -513,12 +513,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
       quest_id: discoveredQuest.id,
       compact_context: true,
       compact_actions: true,
+      compact_observation: true,
     });
     expect(compactStartedQuest.context.here[0]).toBe(started.observation.current.id);
     expect("observation" in compactStartedQuest).toBe(false);
-    expect(compactStartedQuest.rpg_session.observation.available_actions[0]).not.toHaveProperty(
-      "command",
-    );
+    expect(compactStartedQuest.rpg_session.context.actions[0]).not.toHaveProperty("command");
+    expect("observation" in compactStartedQuest.rpg_session).toBe(false);
     expect(JSON.stringify(compactStartedQuest).length).toBeLessThan(
       JSON.stringify(startedQuest).length,
     );
@@ -1319,6 +1319,98 @@ describe("MCP tools — the play loop (§9.1)", () => {
       "world",
     );
     assertPublicAction(loaded.observation.available_actions[0]);
+  });
+
+  it("returns compact RPG context for repeated MCP loop turns", () => {
+    const a = api();
+    const fullStart = a.new_game({
+      pack_path: PACK,
+      seed: 1,
+      hide_graph: true,
+      compact_actions: true,
+    });
+    const compactStart = a.new_game({
+      pack_path: PACK,
+      seed: 1,
+      hide_graph: true,
+      compact_observation: true,
+    });
+
+    expect("observation" in compactStart).toBe(false);
+    expect(compactStart.context).toMatchObject({
+      v: 1,
+      mode: "rpg",
+      here: [fullStart.observation.room, fullStart.observation.title],
+    });
+    expect(compactStart.context.vitals).toEqual([
+      fullStart.observation.stats.hp,
+      fullStart.observation.stats.attack,
+      fullStart.observation.stats.defense,
+      fullStart.observation.score,
+      fullStart.observation.max_score,
+    ]);
+    expect(compactStart.context.actions[0]).toMatchObject({ id: expect.any(String) });
+    expect(compactStart.context.actions[0]).not.toHaveProperty("command");
+    expect(compactStart.context.vars).toMatchObject({ might: expect.any(Number) });
+    expect(compactStart.context.vars).not.toHaveProperty("hp");
+    expect(JSON.stringify(compactStart.context).length).toBeLessThan(
+      JSON.stringify(fullStart.observation).length,
+    );
+
+    const compactWorldQuest = a.start_world_quest({
+      quest_id: "sunken_barrow",
+      seed: 1,
+      hide_graph: true,
+      compact_observation: true,
+    });
+    expect(compactWorldQuest.context.here[0]).toBe(fullStart.observation.room);
+    expect("observation" in compactWorldQuest).toBe(false);
+
+    const compactStartQuest = a.start_quest({
+      quest_id: "sunken_barrow",
+      seed: 1,
+      hide_graph: true,
+      compact_observation: true,
+    });
+    expect(compactStartQuest.context.here[0]).toBe(fullStart.observation.room);
+
+    const compactObservation = a.get_observation({
+      session_id: fullStart.session_id,
+      hide_graph: true,
+      compact_observation: true,
+    });
+    expect(compactObservation.context.exits[0]).toEqual(expect.any(String));
+    expect(compactObservation.context.actions[0]).not.toHaveProperty("command");
+
+    const rejected = a.step_action({
+      session_id: fullStart.session_id,
+      action_id: "missing",
+      hide_graph: true,
+      compact_observation: true,
+    });
+    expect(rejected.ok).toBe(false);
+    expect("observation" in rejected).toBe(false);
+    expect(rejected.context.here[0]).toBe(fullStart.observation.room);
+
+    const moveActionId = compactObservation.context.actions.find(
+      (action) => action.id === "go_down",
+    )?.id;
+    expect(moveActionId).toBe("go_down");
+    const moved = a.choose_option({
+      session_id: fullStart.session_id,
+      option_id: moveActionId!,
+      hide_graph: true,
+      compact_observation: true,
+    });
+    expect(moved.ok).toBe(true);
+    expect(moved.context.here[0]).not.toBe(fullStart.observation.room);
+
+    const scene = a.get_scene({
+      session_id: fullStart.session_id,
+      hide_graph: true,
+      compact_observation: true,
+    });
+    expect(scene.context.here[0]).toBe(moved.context.here[0]);
   });
 
   it("step_action rejects an illegal action without changing state", () => {

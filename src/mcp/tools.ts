@@ -43,6 +43,7 @@ import {
   type McpActionOption,
   type McpObservation,
 } from "./types.js";
+import { compactRpgObservation, type RpgCompactObservation } from "./compact_rpg_observation.js";
 import type { WorldBinding, WorldManifest } from "../world/schema.js";
 import {
   normalizePackPath,
@@ -146,6 +147,11 @@ type OverworldResponseOptions = {
   compact_context?: boolean;
 };
 
+type RpgResponseOptions = {
+  compact_actions?: boolean;
+  compact_observation?: boolean;
+};
+
 type OverworldViewField<Args extends OverworldResponseOptions> = Args extends {
   compact_context: true;
 }
@@ -161,21 +167,86 @@ type OverworldRestoreResponse<Args extends OverworldResponseOptions> = {
   session_id: string;
 } & OverworldViewField<Args>;
 
-type RpgSessionPayload = {
+type RpgViewField<Args extends RpgResponseOptions> = Args extends {
+  compact_observation: true;
+}
+  ? { context: RpgCompactObservation }
+  : { observation: McpObservation };
+
+type RpgSessionPayload<Args extends RpgResponseOptions = RpgResponseOptions> = {
   session_id: string;
   mode: PackMode;
-  observation: McpObservation;
   pack_path: string | null;
   world_quest_id: string | null;
   state_hash: string;
-};
+} & RpgViewField<Args>;
 
-type OverworldQuestStartResponse<Args extends OverworldResponseOptions> = {
+type RpgObservationResponse<Args extends RpgResponseOptions> = {
+  state_hash: string;
+} & RpgViewField<Args>;
+
+type RpgStepActionResponse<Args extends RpgResponseOptions> = {
+  ok: boolean;
+  rejection_reason: string | null;
+  events: ReturnType<typeof playerVisibleEvents>;
+  state_hash: string;
+} & RpgViewField<Args>;
+
+type RpgNewGameArgs = {
+  pack_path?: string;
+  world_quest_id?: string;
+  generate_rpg_seed?: number;
+  seed?: number;
+  hide_graph?: boolean;
+} & RpgResponseOptions;
+
+type RpgStartWorldQuestArgs = {
+  quest_id: string;
+  seed?: number;
+  hide_graph?: boolean;
+} & RpgResponseOptions;
+
+type RpgStartQuestArgs = {
+  quest_path?: string;
+  quest_id?: string;
+  world_quest_id?: string;
+  seed?: number;
+  hide_graph?: boolean;
+} & RpgResponseOptions;
+
+type RpgGetObservationArgs = {
+  session_id: string;
+  hide_graph?: boolean;
+} & RpgResponseOptions;
+
+type RpgStepActionArgs = {
+  session_id: string;
+  action_id: string;
+  hide_graph?: boolean;
+} & RpgResponseOptions;
+
+type RpgChooseOptionArgs = {
+  session_id: string;
+  option_id: string;
+  hide_graph?: boolean;
+} & RpgResponseOptions;
+
+type RpgWorldQuestStartPayload<Args extends RpgResponseOptions> = {
+  world: { id: string; name: string; hub: string };
+  quest: {
+    id: string;
+    name: string;
+    pack: string;
+    path_from_hub: WorldRouteStep[];
+  };
+} & RpgSessionPayload<Args>;
+
+type OverworldQuestStartResponse<Args extends OverworldResponseOptions & RpgResponseOptions> = {
   ok: true;
   session_id: string;
   quest: OverworldQuest;
   rpg_session_id: string;
-  rpg_session: RpgSessionPayload;
+  rpg_session: RpgSessionPayload<Args>;
 } & OverworldViewField<Args>;
 
 type TranscriptFullTurn = Session["transcript"][number];
@@ -317,6 +388,20 @@ function publicObservation(
     ...obs,
     available_actions: publicActions(obs, opts),
   };
+}
+
+function rpgViewField<Args extends RpgResponseOptions>(
+  obs: RpgObservation,
+  args: Args,
+): RpgViewField<Args> {
+  if (args.compact_observation === true) {
+    return {
+      context: compactRpgObservation(obs, publicActions(obs, { compactActions: true })),
+    } as RpgViewField<Args>;
+  }
+  return {
+    observation: publicObservation(obs, publicObservationOptions(args)),
+  } as RpgViewField<Args>;
 }
 
 function schemaFindings(
@@ -900,6 +985,7 @@ export function createToolApi(opts: { root: string }) {
         seed?: number;
         hide_graph?: boolean;
         compact_actions?: boolean;
+        compact_observation?: boolean;
       } & OverworldResponseOptions,
     >(args: Args): OverworldQuestStartResponse<Args> {
       const session = getOverworldSession(args.session_id);
@@ -909,7 +995,8 @@ export function createToolApi(opts: { root: string }) {
         ...(args.seed !== undefined ? { seed: args.seed } : {}),
         ...(args.hide_graph ? { hide_graph: true } : {}),
         ...(args.compact_actions ? { compact_actions: true } : {}),
-      });
+        ...(args.compact_observation ? { compact_observation: true } : {}),
+      } as RpgNewGameArgs & Args);
       return {
         ok: true,
         session_id: args.session_id,
@@ -1043,14 +1130,7 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    new_game(args: {
-      pack_path?: string;
-      world_quest_id?: string;
-      generate_rpg_seed?: number;
-      seed?: number;
-      hide_graph?: boolean;
-      compact_actions?: boolean;
-    }): RpgSessionPayload {
+    new_game<Args extends RpgNewGameArgs>(args: Args): RpgSessionPayload<Args> {
       // Either load a world-graph quest, load a pack from disk, OR mint a fresh RPG
       // pack in-memory from `generate_rpg_seed`. The generation seed selects the
       // minted pack's theme/structure; `seed` still seeds runtime state, so the two
@@ -1072,26 +1152,24 @@ export function createToolApi(opts: { root: string }) {
       return {
         session_id: session.id,
         mode: SAVE_MODE,
-        observation: publicObservation(openingObsOf(session), publicObservationOptions(args)),
+        ...rpgViewField(openingObsOf(session), args),
         pack_path: session.packPath ?? null,
         world_quest_id: session.worldQuestId ?? null,
         state_hash: hashState(session.state),
-      };
+      } as RpgSessionPayload<Args>;
     },
 
-    start_world_quest(args: {
-      quest_id: string;
-      seed?: number;
-      hide_graph?: boolean;
-      compact_actions?: boolean;
-    }) {
+    start_world_quest<Args extends RpgStartWorldQuestArgs>(
+      args: Args,
+    ): RpgWorldQuestStartPayload<Args> {
       const resolved = resolveWorldQuestPackPath(args.quest_id);
       const started = this.new_game({
         world_quest_id: args.quest_id,
         ...(args.seed !== undefined ? { seed: args.seed } : {}),
         ...(args.hide_graph ? { hide_graph: true } : {}),
         ...(args.compact_actions ? { compact_actions: true } : {}),
-      });
+        ...(args.compact_observation ? { compact_observation: true } : {}),
+      } as RpgNewGameArgs & Args);
       return {
         world: { id: resolved.world.id, name: resolved.world.name, hub: resolved.world.hub },
         quest: {
@@ -1101,17 +1179,12 @@ export function createToolApi(opts: { root: string }) {
           path_from_hub: worldRouteFromHub(resolved.world, resolved.node.id) ?? [],
         },
         ...started,
-      };
+      } as RpgWorldQuestStartPayload<Args>;
     },
 
-    start_quest(args: {
-      quest_path?: string;
-      quest_id?: string;
-      world_quest_id?: string;
-      seed?: number;
-      hide_graph?: boolean;
-      compact_actions?: boolean;
-    }) {
+    start_quest<Args extends RpgStartQuestArgs>(
+      args: Args,
+    ): RpgSessionPayload<Args> | RpgWorldQuestStartPayload<Args> {
       const source = resolveQuestAliasSource(args, "start_quest");
       if (source.worldQuestId) {
         return this.start_world_quest({
@@ -1119,28 +1192,30 @@ export function createToolApi(opts: { root: string }) {
           ...(args.seed !== undefined ? { seed: args.seed } : {}),
           ...(args.hide_graph ? { hide_graph: true } : {}),
           ...(args.compact_actions ? { compact_actions: true } : {}),
-        });
+          ...(args.compact_observation ? { compact_observation: true } : {}),
+        } as RpgStartWorldQuestArgs & Args);
       }
       return this.new_game({
         pack_path: source.questPath!,
         ...(args.seed !== undefined ? { seed: args.seed } : {}),
         ...(args.hide_graph ? { hide_graph: true } : {}),
         ...(args.compact_actions ? { compact_actions: true } : {}),
-      });
+        ...(args.compact_observation ? { compact_observation: true } : {}),
+      } as RpgNewGameArgs & Args);
     },
 
-    get_observation(args: { session_id: string; hide_graph?: boolean; compact_actions?: boolean }) {
+    get_observation<Args extends RpgGetObservationArgs>(args: Args): RpgObservationResponse<Args> {
       const s = sessions.get(args.session_id);
       const obs = buildObsFor(s.index, s.state, {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
       });
       return {
-        observation: publicObservation(obs, publicObservationOptions(args)),
+        ...rpgViewField(obs, args),
         state_hash: hashState(s.state),
-      };
+      } as RpgObservationResponse<Args>;
     },
 
-    get_scene(args: { session_id: string; hide_graph?: boolean; compact_actions?: boolean }) {
+    get_scene<Args extends RpgGetObservationArgs>(args: Args): RpgObservationResponse<Args> {
       return this.get_observation(args);
     },
 
@@ -1156,12 +1231,7 @@ export function createToolApi(opts: { root: string }) {
       return { actions: publicActions(obs, publicObservationOptions(args)) };
     },
 
-    step_action(args: {
-      session_id: string;
-      action_id: string;
-      hide_graph?: boolean;
-      compact_actions?: boolean;
-    }) {
+    step_action<Args extends RpgStepActionArgs>(args: Args): RpgStepActionResponse<Args> {
       const s = sessions.get(args.session_id);
       const before = buildObsFor(s.index, s.state, {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
@@ -1177,9 +1247,9 @@ export function createToolApi(opts: { root: string }) {
           events: [
             { type: "rejected" as const, reason: "That action is not available right now." },
           ],
-          observation: publicObservation(before, publicObservationOptions(args)),
+          ...rpgViewField(before, args),
           state_hash: hashState(s.state),
-        };
+        } as RpgStepActionResponse<Args>;
       }
       const result = makeStep(s.rules)(s.state, action);
       sessions.update(s.id, result.state);
@@ -1201,23 +1271,21 @@ export function createToolApi(opts: { root: string }) {
         ok: result.ok,
         rejection_reason: result.rejectionReason ?? null,
         events: playerVisibleEvents(result.events),
-        observation: publicObservation(after, publicObservationOptions(args)),
+        ...rpgViewField(after, args),
         state_hash: hashState(result.state),
-      };
+      } as RpgStepActionResponse<Args>;
     },
 
-    choose_option(args: {
-      session_id: string;
-      option_id: string;
-      hide_graph?: boolean;
-      compact_actions?: boolean;
-    }) {
+    choose_option<Args extends RpgChooseOptionArgs>(args: Args): RpgStepActionResponse<Args> {
       return this.step_action({
         session_id: args.session_id,
         action_id: args.option_id,
         ...(args.hide_graph !== undefined && { hide_graph: args.hide_graph }),
         ...(args.compact_actions !== undefined && { compact_actions: args.compact_actions }),
-      });
+        ...(args.compact_observation !== undefined && {
+          compact_observation: args.compact_observation,
+        }),
+      } as RpgStepActionArgs & Args);
     },
 
     get_state(args: { session_id: string }) {
