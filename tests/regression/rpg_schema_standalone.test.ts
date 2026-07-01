@@ -102,7 +102,8 @@ describe("RPG schema owns the RPG contract", () => {
     expect(reactiveText).toContain("export function firstMatchingVariant");
     expect(reactiveText).toContain("export function reactiveText");
     expect(reactiveText).toContain("export function reactiveName");
-    expect(parserModel).toContain("../core/reactive_text");
+    expect(parserModel).toContain("../rpg/model");
+    expect(parserModel).not.toContain("../core/reactive_text");
     expect(rpgModel).toContain("../core/reactive_text");
     expect(cyoaRunner).toContain("../core/reactive_text");
     expect(rpgModel).not.toContain("evalConditions(v.when");
@@ -118,7 +119,8 @@ describe("RPG schema owns the RPG contract", () => {
     expect(objectLocations).toContain("export function indexObjectHomes");
     expect(objectLocations).toContain("export function locateObject");
     expect(objectLocations).toContain("export function visibleObjectIds");
-    expect(parserModel).toContain("../core/object_locations");
+    expect(parserModel).toContain("../rpg/model");
+    expect(parserModel).not.toContain("../core/object_locations");
     expect(rpgModel).toContain("../core/object_locations");
     expect(rpgModel).not.toContain("state.objectState[id]?.room");
     expect(rpgModel).not.toContain("state.objectState[id]?.locked");
@@ -133,11 +135,22 @@ describe("RPG schema owns the RPG contract", () => {
     expect(dialogueState).toContain("export function dlgVar");
     expect(dialogueState).toContain("export function nodeOrdinal");
     expect(dialogueState).toContain("export function activeDialogue");
-    expect(parserModel).toContain("../core/dialogue_state");
+    expect(parserModel).toContain("../rpg/model");
+    expect(parserModel).not.toContain("../core/dialogue_state");
     expect(rpgModel).toContain("../core/dialogue_state");
     expect(rpgModel).not.toContain("`__dlg_${npcId}`");
     expect(rpgModel).not.toContain("state.vars[dlgVar(npc.id)]");
     expect(parserModel).not.toContain("state.vars[dlgVar(npc.id)]");
+  });
+
+  it("keeps legacy parser model as a shim over the RPG model", () => {
+    const parserModel = readFileSync("src/parser/model.ts", "utf8");
+    expect(parserModel).toContain("indexRpgModel");
+    expect(parserModel).toContain("initStateForRpgModel");
+    expect(parserModel).toContain("rpgRoomDescription");
+    expect(parserModel).not.toContain("indexObjectHomes");
+    expect(parserModel).not.toContain("initState({");
+    expect(parserModel).not.toContain("applyEffects");
   });
 
   it("does not import the legacy parser observation builder for RPG observations", () => {
