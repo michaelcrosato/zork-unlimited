@@ -448,16 +448,24 @@ function assertUniqueTupleKeys(
 
 type OverworldJournalSourceIndex = {
   arcIds: ReadonlySet<string>;
+  arcRegionNames: ReadonlyMap<string, string>;
   areaIds: ReadonlySet<string>;
+  areaTownNames: ReadonlyMap<string, string>;
   characterIds: ReadonlySet<string>;
+  characterTownNames: ReadonlyMap<string, string>;
   edgeIds: ReadonlySet<string>;
   eventIds: ReadonlySet<string>;
+  eventTownNames: ReadonlyMap<string, string>;
   jobIds: ReadonlySet<string>;
+  jobTownNames: ReadonlyMap<string, string>;
   poiIds: ReadonlySet<string>;
+  poiTownNames: ReadonlyMap<string, string>;
   regionNames: ReadonlySet<string>;
   siteIds: ReadonlySet<string>;
+  siteTownNames: ReadonlyMap<string, string>;
   townNames: ReadonlySet<string>;
   travelLogArrivals: ReadonlySet<string>;
+  travelLogTownByArrival: ReadonlyMap<string, string>;
 };
 
 type OverworldRenownSourceIndex = {
@@ -490,6 +498,8 @@ function assertKnownJournalSource(
   prefix: string,
   known: ReadonlySet<string>,
   sourceLabel: string,
+  sourcePlaces?: ReadonlyMap<string, string>,
+  placeLabel = "town",
 ): void {
   if (!entry.id.startsWith(prefix)) {
     throw new Error(
@@ -505,6 +515,12 @@ function assertKnownJournalSource(
   if (!known.has(sourceId)) {
     throw new Error(
       `Overworld session snapshot journal ${entry.kind} entry references unknown ${sourceLabel} "${sourceId}".`,
+    );
+  }
+  const expectedPlace = sourcePlaces?.get(sourceId);
+  if (expectedPlace && entry.town !== expectedPlace) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry "${entry.id}" is bound to ${placeLabel} "${entry.town}", expected "${expectedPlace}".`,
     );
   }
 }
@@ -555,6 +571,12 @@ function assertRoadJournalSource(
       `Overworld session snapshot journal road entry has no matching travel log for "${parsed.edgeId}" at ${parsed.arrivedAt}.`,
     );
   }
+  const expectedTown = sources.travelLogTownByArrival.get(`${parsed.edgeId}@${parsed.arrivedAt}`);
+  if (expectedTown && entry.town !== expectedTown) {
+    throw new Error(
+      `Overworld session snapshot journal road entry "${entry.id}" is bound to town "${entry.town}", expected "${expectedTown}".`,
+    );
+  }
 }
 
 function assertServiceJournalSource(entry: OverworldJournalEntry, recordedAt: number): void {
@@ -587,25 +609,56 @@ function assertSnapshotJournalSource(
 
   switch (entry.kind) {
     case "area":
-      assertKnownJournalSource(entry, "area:", sources.areaIds, "area");
+      assertKnownJournalSource(entry, "area:", sources.areaIds, "area", sources.areaTownNames);
       return;
     case "contact":
-      assertKnownJournalSource(entry, "talk:", sources.characterIds, "contact");
+      assertKnownJournalSource(
+        entry,
+        "talk:",
+        sources.characterIds,
+        "contact",
+        sources.characterTownNames,
+      );
       return;
     case "event":
-      assertKnownJournalSource(entry, "investigate:", sources.eventIds, "event");
+      assertKnownJournalSource(
+        entry,
+        "investigate:",
+        sources.eventIds,
+        "event",
+        sources.eventTownNames,
+      );
       return;
     case "job":
-      assertKnownJournalSource(entry, "job:", sources.jobIds, "job");
+      assertKnownJournalSource(entry, "job:", sources.jobIds, "job", sources.jobTownNames);
       return;
     case "poi":
-      assertKnownJournalSource(entry, "scout:", sources.poiIds, "point of interest");
+      assertKnownJournalSource(
+        entry,
+        "scout:",
+        sources.poiIds,
+        "point of interest",
+        sources.poiTownNames,
+      );
       return;
     case "regional_arc":
-      assertKnownJournalSource(entry, "arc:", sources.arcIds, "regional arc");
+      assertKnownJournalSource(
+        entry,
+        "arc:",
+        sources.arcIds,
+        "regional arc",
+        sources.arcRegionNames,
+        "region",
+      );
       return;
     case "resolution":
-      assertKnownJournalSource(entry, "resolve:", sources.eventIds, "event resolution");
+      assertKnownJournalSource(
+        entry,
+        "resolve:",
+        sources.eventIds,
+        "event resolution",
+        sources.eventTownNames,
+      );
       return;
     case "road":
       assertRoadJournalSource(entry, recordedAt, sources);
@@ -614,7 +667,7 @@ function assertSnapshotJournalSource(
       assertServiceJournalSource(entry, recordedAt);
       return;
     case "site":
-      assertKnownJournalSource(entry, "site:", sources.siteIds, "site");
+      assertKnownJournalSource(entry, "site:", sources.siteIds, "site", sources.siteTownNames);
       return;
   }
 }
@@ -1066,6 +1119,27 @@ export class OverworldSession {
     const arcIds = new Set(this.world.regional_arcs.map((arc) => arc.id));
     const poiIds = new Set(this.world.points_of_interest.map((poi) => poi.id));
     const characterIds = new Set(this.world.characters.map((character) => character.id));
+    const townNameById = new Map(this.world.nodes.map((node) => [node.id, node.name]));
+    const townNameForSource = (nodeId: string) => townNameById.get(nodeId) ?? nodeId;
+    const arcRegionNames = new Map(this.world.regional_arcs.map((arc) => [arc.id, arc.region]));
+    const areaTownNames = new Map(
+      this.world.areas.map((area) => [area.id, townNameForSource(area.home)]),
+    );
+    const characterTownNames = new Map(
+      this.world.characters.map((character) => [character.id, townNameForSource(character.home)]),
+    );
+    const eventTownNames = new Map(
+      this.world.local_events.map((event) => [event.id, townNameForSource(event.home)]),
+    );
+    const jobTownNames = new Map(
+      this.world.local_jobs.map((job) => [job.id, townNameForSource(job.home)]),
+    );
+    const poiTownNames = new Map(
+      this.world.points_of_interest.map((poi) => [poi.id, townNameForSource(poi.home)]),
+    );
+    const siteTownNames = new Map(
+      this.world.exploration_sites.map((site) => [site.id, townNameForSource(site.nearest_town)]),
+    );
     const charactersById = new Map(
       this.world.characters.map((character) => [character.id, character]),
     );
@@ -1081,6 +1155,12 @@ export class OverworldSession {
     const areaHomes = new Map(this.world.areas.map((area) => [area.id, area.home]));
     const travelLogArrivals = new Set(
       snapshot.travelLog.map((entry) => `${entry.edgeId}@${entry.arrivedAt}`),
+    );
+    const travelLogTownByArrival = new Map(
+      snapshot.travelLog.map((entry) => [
+        `${entry.edgeId}@${entry.arrivedAt}`,
+        townNameForSource(entry.toId),
+      ]),
     );
     const travelLogByArrival = new Map(
       snapshot.travelLog.map((entry) => [`${entry.edgeId}@${entry.arrivedAt}`, entry]),
@@ -1118,16 +1198,24 @@ export class OverworldSession {
     assertUniqueTupleKeys("renown region", snapshot.regionRenown);
     assertSnapshotTimeline(snapshot, {
       arcIds,
+      arcRegionNames,
       areaIds,
+      areaTownNames,
       characterIds,
+      characterTownNames,
       edgeIds: new Set(edgesById.keys()),
       eventIds,
+      eventTownNames,
       jobIds,
+      jobTownNames,
       poiIds,
+      poiTownNames,
       regionNames: regions,
       siteIds,
+      siteTownNames,
       townNames,
       travelLogArrivals,
+      travelLogTownByArrival,
     });
 
     if (!snapshot.discoveredIds.includes(snapshot.currentId)) {

@@ -142,12 +142,12 @@ Make discovered overworld quest leads start real RPG sessions.
 - Overworld travel-log session snapshots now persist road ids plus dynamic
   outcomes and rebuild route text/event payloads from the world manifest.
 - Overworld snapshot restore now rejects duplicate journal history,
-  unknown journal towns/source ids, mismatched journal kind/id prefixes,
-  unmatched road journal arrivals, malformed/future/non-newest-first journal
-  timelines, progress/journal state drift, region-renown mismatches, discovery
-  locality drift, resolved-event locality/prerequisite drift,
-  non-newest-first or future travel logs, and impossible travel vitals before
-  rebuilding live session state.
+  unknown journal towns/source ids, source/place mismatches, mismatched journal
+  kind/id prefixes, unmatched road journal arrivals,
+  malformed/future/non-newest-first journal timelines, progress/journal state
+  drift, region-renown mismatches, discovery locality drift, resolved-event
+  locality/prerequisite drift, non-newest-first or future travel logs, and
+  impossible travel vitals before rebuilding live session state.
 - Compact overworld context now carries capped id-only recent travel tuples so
   agents do not need full observations to recover route history.
 - Compact overworld context now caps global progress id arrays and exposes

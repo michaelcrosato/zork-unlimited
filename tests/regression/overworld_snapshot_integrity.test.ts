@@ -18,6 +18,18 @@ function townName(nodeId: string): string {
   return town.name;
 }
 
+function otherTownName(name: string): string {
+  const town = overworld.nodes.find((node) => node.name !== name);
+  if (!town) throw new Error(`expected another town besides ${name}`);
+  return town.name;
+}
+
+function otherRegionName(name: string): string {
+  const region = overworld.regions.find((candidate) => candidate.name !== name);
+  if (!region) throw new Error(`expected another region besides ${name}`);
+  return region.name;
+}
+
 function townRegion(nodeId: string): string {
   const town = overworld.nodes.find((node) => node.id === nodeId);
   if (!town) throw new Error(`unknown test town ${nodeId}`);
@@ -242,6 +254,147 @@ describe("overworld snapshot restore integrity", () => {
 
     expect(() => a.restore_overworld_session({ snapshot: detachedJournalSource })).toThrow(
       /unknown road/,
+    );
+  });
+
+  it.each([
+    {
+      label: "area",
+      makeEntry(): JournalEntry {
+        const area = overworld.areas[0]!;
+        return {
+          id: `area:${area.id}`,
+          kind: "area",
+          town: otherTownName(townName(area.home)),
+          title: "Forged area",
+          text: "Forged area journal proof.",
+          recordedAt: "Day 1, 08:00",
+        };
+      },
+    },
+    {
+      label: "contact",
+      makeEntry(): JournalEntry {
+        const character = overworld.characters[0]!;
+        return {
+          id: `talk:${character.id}`,
+          kind: "contact",
+          town: otherTownName(townName(character.home)),
+          title: "Forged contact",
+          text: "Forged contact journal proof.",
+          recordedAt: "Day 1, 08:00",
+        };
+      },
+    },
+    {
+      label: "event investigation",
+      makeEntry(): JournalEntry {
+        const event = overworld.local_events[0]!;
+        return {
+          id: `investigate:${event.id}`,
+          kind: "event",
+          town: otherTownName(townName(event.home)),
+          title: "Forged investigation",
+          text: "Forged event journal proof.",
+          recordedAt: "Day 1, 08:00",
+        };
+      },
+    },
+    {
+      label: "job",
+      makeEntry(): JournalEntry {
+        const job = overworld.local_jobs[0]!;
+        return {
+          id: `job:${job.id}`,
+          kind: "job",
+          town: otherTownName(townName(job.home)),
+          title: "Forged job",
+          text: "Forged job journal proof.",
+          recordedAt: "Day 1, 08:00",
+        };
+      },
+    },
+    {
+      label: "point of interest",
+      makeEntry(): JournalEntry {
+        const poi = overworld.points_of_interest[0]!;
+        return {
+          id: `scout:${poi.id}`,
+          kind: "poi",
+          town: otherTownName(townName(poi.home)),
+          title: "Forged scout",
+          text: "Forged point-of-interest journal proof.",
+          recordedAt: "Day 1, 08:00",
+        };
+      },
+    },
+    {
+      label: "site",
+      makeEntry(): JournalEntry {
+        const site = overworld.exploration_sites[0]!;
+        return {
+          id: `site:${site.id}`,
+          kind: "site",
+          town: otherTownName(townName(site.nearest_town)),
+          title: "Forged site",
+          text: "Forged site journal proof.",
+          recordedAt: "Day 1, 08:00",
+        };
+      },
+    },
+    {
+      label: "resolution",
+      makeEntry(): JournalEntry {
+        const event = overworld.local_events[0]!;
+        return {
+          id: `resolve:${event.id}`,
+          kind: "resolution",
+          town: otherTownName(townName(event.home)),
+          title: "Forged resolution",
+          text: "Forged resolution journal proof.",
+          recordedAt: "Day 1, 08:00",
+        };
+      },
+    },
+    {
+      label: "regional arc",
+      makeEntry(): JournalEntry {
+        const arc = overworld.regional_arcs[0]!;
+        return {
+          id: `arc:${arc.id}`,
+          kind: "regional_arc",
+          town: otherRegionName(arc.region),
+          title: "Forged regional arc",
+          text: "Forged regional arc journal proof.",
+          recordedAt: "Day 1, 08:00",
+        };
+      },
+    },
+  ])("rejects $label journal entries bound to the wrong place", ({ makeEntry }) => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const forgedJournal = {
+      ...snapshot,
+      journalEntries: [makeEntry(), ...snapshot.journalEntries],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedJournal })).toThrow(
+      /journal .* entry .*expected/,
+    );
+  });
+
+  it("rejects road journal entries bound to the wrong arrival town", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const roadEntry = snapshot.journalEntries.find((entry) => entry.kind === "road");
+    if (!roadEntry) throw new Error("expected a road journal entry");
+    const forgedRoadTown = {
+      ...snapshot,
+      journalEntries: snapshot.journalEntries.map((entry) =>
+        entry === roadEntry ? { ...entry, town: otherTownName(entry.town) } : entry,
+      ),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedRoadTown })).toThrow(
+      /journal road entry .*expected/,
     );
   });
 
