@@ -147,8 +147,7 @@ function buildObsFor(
   state: GameState,
   opts: { hideGraph?: boolean; includeWorldIntro?: boolean } = {},
 ): RpgObservation {
-  const obsOpts = { includeWorldIntro: true, ...opts };
-  return buildRpgObservation(index, state, obsOpts);
+  return buildRpgObservation(index, state, opts);
 }
 
 /**
@@ -377,8 +376,11 @@ export function createToolApi(opts: { root: string }) {
     return session;
   }
 
-  const obsOf = (s: Session): RpgObservation =>
-    buildObsFor(s.index, s.state, { hideGraph: s.hideGraph ?? false });
+  const openingObsOf = (s: Session): RpgObservation =>
+    buildObsFor(s.index, s.state, {
+      hideGraph: s.hideGraph ?? false,
+      includeWorldIntro: true,
+    });
 
   function worldQuestPackPaths(world: WorldManifest): string[] {
     return world.graph.nodes
@@ -1394,7 +1396,7 @@ export function createToolApi(opts: { root: string }) {
       return {
         session_id: session.id,
         mode: SAVE_MODE,
-        observation: publicObservation(obsOf(session)),
+        observation: publicObservation(openingObsOf(session)),
         pack_path: session.packPath ?? null,
         world_quest_id: session.worldQuestId ?? null,
         state_hash: hashState(session.state),
@@ -1590,7 +1592,7 @@ export function createToolApi(opts: { root: string }) {
       return {
         session_id: session.id,
         mode: SAVE_MODE,
-        observation: publicObservation(obsOf(session)),
+        observation: publicObservation(openingObsOf(session)),
         pack_path: session.packPath ?? null,
         world_quest_id: session.worldQuestId ?? null,
         state_hash: hashState(session.state),

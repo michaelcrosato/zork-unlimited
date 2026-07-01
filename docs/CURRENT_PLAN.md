@@ -55,6 +55,8 @@ Make discovered overworld quest leads start real RPG sessions.
   `quest_path` remains compatibility.
 - `validate_story` and `start_game` now prefer `world_quest_id`; `pack_path` and
   legacy `story_path` remain compatibility.
+- RPG start/load responses now carry one-time world context; follow-up
+  observations omit that repeated binding to lower per-turn MCP payload.
 
 ## Acceptance
 

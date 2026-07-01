@@ -203,9 +203,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(started.pack_path).toBe(PACK);
     expect(started.world_quest_id).toBe("sunken_barrow");
     expect(started.observation.world?.id).toBe("charter_marches");
-    expect(a.get_observation({ session_id: started.session_id }).observation.title).toBe(
-      started.observation.title,
-    );
+    const followUp = a.get_observation({ session_id: started.session_id }).observation;
+    expect(followUp.title).toBe(started.observation.title);
+    expect(followUp).not.toHaveProperty("world");
 
     const viaNewGame = a.new_game({ world_quest_id: "breaking_weir", seed: 1 });
     const viaPackPath = a.new_game({ pack_path: MAIN_RPG, seed: 1 });
@@ -1123,6 +1123,10 @@ describe("MCP tools — the play loop (§9.1)", () => {
     const loaded = a.load_game({ pack_path: PACK, save: saved.save });
     expect(loaded.pack_path).toBe(PACK);
     expect(loaded.world_quest_id).toBe("sunken_barrow");
+    expect(loaded.observation.world?.id).toBe("charter_marches");
+    expect(a.get_observation({ session_id: loaded.session_id }).observation).not.toHaveProperty(
+      "world",
+    );
     assertPublicAction(loaded.observation.available_actions[0]);
   });
 
