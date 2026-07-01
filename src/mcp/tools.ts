@@ -172,6 +172,38 @@ type OverworldQuestStartResponse<Args extends OverworldResponseOptions> = {
   rpg_session: RpgSessionPayload;
 } & OverworldViewField<Args>;
 
+type TranscriptFullTurn = Session["transcript"][number];
+type TranscriptCompactTurn = Pick<
+  TranscriptFullTurn,
+  "step" | "scene_id" | "action_id" | "result_scene_id" | "ended" | "ending_id"
+>;
+type TranscriptSummary = {
+  steps: number;
+  scenes: string[];
+  ended: boolean;
+  ending_id: string | null;
+  inventory: string[];
+  flags: string[];
+  journal: string[];
+};
+type TranscriptResponse<Turn> = {
+  session_id: string;
+  pack_id: string;
+  pack_path: string | null;
+  world_quest_id: string | null;
+  mode: typeof SAVE_MODE;
+  turns: Turn[];
+  summary: TranscriptSummary;
+};
+type TranscriptArgs = {
+  session_id: string;
+  summary_only?: boolean;
+  compact_turns?: boolean;
+};
+type TranscriptTurnFor<Args extends TranscriptArgs> = Args extends { compact_turns: true }
+  ? TranscriptCompactTurn
+  : TranscriptFullTurn;
+
 type OverworldSessionResponse<
   Key extends string,
   Value,
@@ -1172,9 +1204,11 @@ export function createToolApi(opts: { root: string }) {
       return { state: s.state, state_hash: hashState(s.state) };
     },
 
-    get_transcript(args: { session_id: string; summary_only?: boolean }) {
+    get_transcript<Args extends TranscriptArgs>(
+      args: Args,
+    ): TranscriptResponse<TranscriptTurnFor<Args>> {
       const s = sessions.get(args.session_id);
-      return {
+      const response = {
         session_id: s.id,
         pack_id: s.packId,
         pack_path: s.packPath ?? null,
@@ -1184,7 +1218,16 @@ export function createToolApi(opts: { root: string }) {
         // transcript a player reads never surfaces `__`-prefixed vars/flags (bug_0260).
         turns: args.summary_only
           ? []
-          : s.transcript.map((t) => ({ ...t, events: playerVisibleEvents(t.events) })),
+          : args.compact_turns
+            ? s.transcript.map((t) => ({
+                step: t.step,
+                scene_id: t.scene_id,
+                action_id: t.action_id,
+                result_scene_id: t.result_scene_id,
+                ended: t.ended,
+                ending_id: t.ending_id,
+              }))
+            : s.transcript.map((t) => ({ ...t, events: playerVisibleEvents(t.events) })),
         summary: {
           steps: s.transcript.filter((t) => t.action_id !== null).length,
           scenes: [...new Set(s.transcript.flatMap((t) => [t.scene_id, t.result_scene_id]))].sort(),
@@ -1197,6 +1240,7 @@ export function createToolApi(opts: { root: string }) {
           journal: [...s.state.journal],
         },
       };
+      return response as unknown as TranscriptResponse<TranscriptTurnFor<Args>>;
     },
 
     save_game(args: { session_id: string }) {

@@ -527,7 +527,7 @@ tool(
 );
 tool(
   "get_transcript",
-  "Return a compact turn transcript with choices, events, inventory, flags, journal, and ending state. Set summary_only to omit detailed turns.",
+  "Return a turn transcript with choices, events, inventory, flags, journal, and ending state. Set compact_turns for id-only turn rows or summary_only to omit turns.",
   {
     ...SESSION,
     summary_only: z
@@ -535,6 +535,12 @@ tool(
       .optional()
       .describe(
         "Token economy: when true, returns session metadata and summary while replacing detailed turns with an empty array.",
+      ),
+    compact_turns: z
+      .boolean()
+      .optional()
+      .describe(
+        "Token economy: when true, returns id-only turn rows without titles, command labels, or event payloads. Ignored when summary_only is true.",
       ),
   },
   (a) => api.get_transcript(a),

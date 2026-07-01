@@ -103,6 +103,8 @@ Make discovered overworld quest leads start real RPG sessions.
   agents can stay compact from the first session payload.
 - RPG session start tools and overworld quest handoff now accept compact action
   menus, avoiding repeated command labels on the opening RPG observation.
+- RPG transcripts now support compact id-only turn rows for route debugging
+  without replaying event text.
 
 ## Acceptance
 

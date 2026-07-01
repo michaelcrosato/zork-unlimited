@@ -1128,6 +1128,27 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(JSON.stringify(summaryOnlyTranscript).length).toBeLessThan(
       JSON.stringify(transcript).length,
     );
+    const compactTranscript = a.get_transcript({
+      session_id: game.session_id,
+      compact_turns: true,
+    });
+    expect(compactTranscript.summary).toEqual(transcript.summary);
+    expect(compactTranscript.turns.map((t) => t.action_id)).toEqual(
+      transcript.turns.map((t) => t.action_id),
+    );
+    expect(compactTranscript.turns[0]).toEqual({
+      step: transcript.turns[0]!.step,
+      scene_id: transcript.turns[0]!.scene_id,
+      action_id: transcript.turns[0]!.action_id,
+      result_scene_id: transcript.turns[0]!.result_scene_id,
+      ended: transcript.turns[0]!.ended,
+      ending_id: transcript.turns[0]!.ending_id,
+    });
+    expect(compactTranscript.turns[0]).not.toHaveProperty("events");
+    expect(compactTranscript.turns[0]).not.toHaveProperty("action_text");
+    expect(JSON.stringify(compactTranscript).length).toBeLessThan(
+      JSON.stringify(transcript).length,
+    );
     expect(a.get_state({ session_id: game.session_id }).state_hash).toMatch(/^[0-9a-f]{64}$/);
 
     const byPackPath = a.new_game({ pack_path: PACK, seed: 1 });

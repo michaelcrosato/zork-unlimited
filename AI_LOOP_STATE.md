@@ -87,6 +87,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Stateful overworld MCP actions can return compact context directly when requested.
 - Overworld start/restore can now enter compact context mode immediately.
 - RPG start and overworld quest handoff can omit repeated command labels.
+- RPG transcripts can return compact id-only turn rows.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,
