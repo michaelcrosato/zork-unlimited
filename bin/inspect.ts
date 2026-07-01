@@ -16,7 +16,7 @@ import { indexRpgPack, buildRpgRules } from "../src/rpg/runner.js";
 import { validateRpg } from "../src/validate/rpg_validator.js";
 import { makeStep } from "../src/core/engine.js";
 import { diagnose } from "../agents/debugger.js";
-import { replayTrace } from "../src/trace/replay.js";
+import { assertTraceMode, replayTrace } from "../src/trace/replay.js";
 import type { Trace } from "../src/trace/record.js";
 import { formatReport } from "../src/validate/report.js";
 import type { RpgAction } from "../src/api/types.js";
@@ -35,6 +35,7 @@ function packArg(): string | undefined {
 
 function inspectTrace(tracePath: string, packPath: string): void {
   const trace = JSON.parse(readFileSync(tracePath, "utf8")) as Trace<RpgAction>;
+  assertTraceMode(trace);
   assertRpgPackShape(packPath);
   const loaded = loadRpgPackFile(packPath);
   if (!loaded.ok) {

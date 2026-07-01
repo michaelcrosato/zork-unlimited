@@ -76,10 +76,22 @@ describe("trace record / replay (§8.8)", () => {
       pack_id: MICRO_PACK_ID,
       content_hash: MICRO_CONTENT_HASH,
     });
+    expect(trace.mode).toBe(SAVE_MODE);
     expect(trace.expected_final_hash).toBeDefined();
     const result = replayTrace(trace, microRules);
     expect(result.ok).toBe(true);
     expect(result.finalHash).toBe(trace.expected_final_hash);
+  });
+
+  it("rejects traces that omit the RPG mode", () => {
+    const trace = recordTrace(microRules, microInitState(), WIN, {
+      trace_id: "tr_test",
+      pack_id: MICRO_PACK_ID,
+      content_hash: MICRO_CONTENT_HASH,
+    });
+    const { mode: _drop, ...withoutMode } = trace;
+    expect(() => replayTrace(withoutMode as typeof trace, microRules)).toThrow(SaveIntegrityError);
+    expect(() => replayTrace(withoutMode as typeof trace, microRules)).toThrow(/Trace mode/);
   });
 
   it("detects divergence when the expected hash is wrong", () => {

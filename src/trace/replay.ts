@@ -11,6 +11,7 @@
 import { hashState } from "../core/hash.js";
 import type { EngineAction, Rules } from "../core/engine.js";
 import { runActions, type Trace } from "./record.js";
+import { SAVE_MODE, SaveIntegrityError } from "../persist/save_load.js";
 
 export type ReplayResult = {
   ok: boolean;
@@ -35,6 +36,16 @@ function firstDivergentStep(actual: string[], baseline: string[]): number {
   return -1;
 }
 
+export function assertTraceMode(trace: {
+  mode?: unknown;
+}): asserts trace is { mode: typeof SAVE_MODE } {
+  if (trace.mode !== SAVE_MODE) {
+    throw new SaveIntegrityError(
+      `Trace mode must be "${SAVE_MODE}", got ${JSON.stringify(trace.mode)}.`,
+    );
+  }
+}
+
 /**
  * Replay a trace against a rule set. If the trace carries `expected_final_hash`,
  * the result `ok` reflects whether the replayed final hash matches it. If it also
@@ -45,6 +56,7 @@ export function replayTrace<A extends EngineAction>(
   trace: Trace<A>,
   rules: Rules<A>,
 ): ReplayResult {
+  assertTraceMode(trace);
   const run = runActions(rules, trace.initial_state, trace.actions);
   const finalHash = hashState(run.finalState);
 

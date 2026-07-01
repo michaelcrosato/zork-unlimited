@@ -39,7 +39,7 @@ import {
   SaveIntegrityError,
   assertWellFormedState,
 } from "../persist/save_load.js";
-import { replayTrace } from "../trace/replay.js";
+import { assertTraceMode, replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
 import { SessionStore, type Session } from "./sessions.js";
@@ -1605,6 +1605,7 @@ export function createToolApi(opts: { root: string }) {
     replay_trace(args: { trace_path: string; pack_path?: string; world_quest_id?: string }) {
       const traceAbs = safeResolve(root, args.trace_path);
       const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace<RpgAction>;
+      assertTraceMode(trace);
       const compiled = requirePlayable(resolvePackPathSource(args, "replay_trace"));
       if (trace.content_hash !== compiled.contentHash) {
         return {
@@ -1634,6 +1635,7 @@ export function createToolApi(opts: { root: string }) {
       // classifier (§12.5).
       const traceAbs = safeResolve(root, args.trace_path);
       const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace<RpgAction>;
+      assertTraceMode(trace);
       const compiled = requirePlayable(resolvePackPathSource(args, "inspect_trace"));
       if (trace.content_hash !== compiled.contentHash) {
         return {

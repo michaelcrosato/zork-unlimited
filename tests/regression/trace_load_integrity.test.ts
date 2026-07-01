@@ -85,6 +85,20 @@ beforeAll(() => {
 });
 
 describe("bug_0190 — trace-load integrity gate: forged-trace REJECTION (§16 trace twin)", () => {
+  it("WITNESS (mode) omitted trace mode — both handlers throw before stepping", () => {
+    const { mode: _drop, ...withoutMode } = cleanTrace;
+    write(FIXTURE("missing_mode"), withoutMode as Trace);
+    const path = FIXTURE("missing_mode");
+    expect(() => api().replay_trace({ trace_path: path, pack_path: PACK })).toThrow(
+      SaveIntegrityError,
+    );
+    expect(() => api().replay_trace({ trace_path: path, pack_path: PACK })).toThrow(/Trace mode/);
+    expect(() => api().inspect_trace({ trace_path: path, pack_path: PACK })).toThrow(
+      SaveIntegrityError,
+    );
+    expect(() => api().inspect_trace({ trace_path: path, pack_path: PACK })).toThrow(/Trace mode/);
+  });
+
   it("WITNESS (a) finiteness: initial_state.vars -> Infinity (1e999) — both handlers throw", () => {
     // Splice the literal 1e999 token into the serialized trace so it parses back to
     // Infinity (JSON.stringify(Infinity) === "null", so this is unforgeable through a

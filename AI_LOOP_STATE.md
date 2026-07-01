@@ -54,6 +54,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   metadata while dropping detailed turn/event payload.
 - Persistence: saves must carry `mode: "rpg"`; missing or legacy modes are
   integrity failures, not migration inputs.
+- Trace replay: trace artifacts must carry `mode: "rpg"` before any replay or
+  inspect path steps their state.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,

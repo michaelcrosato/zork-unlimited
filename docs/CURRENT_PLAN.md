@@ -63,6 +63,8 @@ Make discovered overworld quest leads start real RPG sessions.
   dropping detailed turn/event payload for token-light checks.
 - Save/load now requires `mode: "rpg"` on disk; missing or legacy modes are
   rejected at the integrity boundary.
+- Trace artifacts now carry and require `mode: "rpg"` before replay or inspect
+  steps untrusted trace state.
 
 ## Acceptance
 

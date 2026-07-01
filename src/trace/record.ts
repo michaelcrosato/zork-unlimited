@@ -11,8 +11,10 @@ import { hashState } from "../core/hash.js";
 import type { Action, StepResult } from "../api/types.js";
 import type { EngineAction, Rules } from "../core/engine.js";
 import { makeStep } from "../core/engine.js";
+import { SAVE_MODE, type SaveMode } from "../persist/save_load.js";
 
 export type Trace<A extends EngineAction = Action> = {
+  mode: SaveMode;
   trace_id: string;
   pack_id: string;
   content_hash: string;
@@ -71,6 +73,7 @@ export function recordTrace<A extends EngineAction>(
 ): Trace<A> {
   const run = runActions(rules, initialState, actions);
   return {
+    mode: SAVE_MODE,
     trace_id: opts.trace_id,
     pack_id: opts.pack_id,
     content_hash: opts.content_hash,
