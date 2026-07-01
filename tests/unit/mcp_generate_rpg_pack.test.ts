@@ -77,6 +77,7 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
     expect(g.mode).toBe("rpg");
     expect(g.pack_path).toBeNull();
     expect(g.world_quest_id).toBeNull();
+    expect(g.generated_rpg_seed).toBe(3);
     expect(g.observation.ended).toBe(false);
     expect(g.state_hash).toMatch(/^[0-9a-f]{64}$/);
     // Init stats from the generated meta.vars_init, surfaced live in the RPG observation.
@@ -138,5 +139,41 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
         generate_rpg_seed: 3,
       }),
     ).toThrow(/exactly one/);
+  });
+
+  it("generated RPG saves embed the generation seed and load without a pack path", () => {
+    const a = api();
+    const g = a.new_game({ generate_rpg_seed: 3, seed: 7 });
+    const before = a.get_state({ session_id: g.session_id });
+    const saved = a.save_game({ session_id: g.session_id });
+    const raw = JSON.parse(saved.save) as {
+      worldQuestId?: unknown;
+      generatedRpgSeed?: unknown;
+    };
+
+    expect(saved.pack_path).toBeNull();
+    expect(saved.world_quest_id).toBeNull();
+    expect(saved.generated_rpg_seed).toBe(3);
+    expect(raw.worldQuestId).toBeUndefined();
+    expect(raw.generatedRpgSeed).toBe(3);
+
+    const loaded = a.load_game({ save: saved.save });
+    expect(loaded.pack_path).toBeNull();
+    expect(loaded.world_quest_id).toBeNull();
+    expect(loaded.generated_rpg_seed).toBe(3);
+    expect(a.get_state({ session_id: loaded.session_id }).state).toEqual(before.state);
+  });
+
+  it("generated RPG save source mismatches are integrity errors", () => {
+    const a = api();
+    const g = a.new_game({ generate_rpg_seed: 3 });
+    const saved = a.save_game({ session_id: g.session_id });
+
+    expect(() => a.load_game({ save: saved.save, generate_rpg_seed: 4 })).toThrow(
+      /generatedRpgSeed/,
+    );
+    expect(() => a.load_game({ save: saved.save, world_quest_id: "breaking_weir" })).toThrow(
+      /generatedRpgSeed/,
+    );
   });
 });

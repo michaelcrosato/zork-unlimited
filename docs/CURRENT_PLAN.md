@@ -79,6 +79,8 @@ Make discovered overworld quest leads start real RPG sessions.
   trace replay and CLI play.
 - `new_game` source selection is now world-id or generated-pack only, keeping
   generated packs as the explicit null-world source.
+- Generated RPG saves now embed `generatedRpgSeed`, letting `load_game({ save })`
+  reconstruct in-memory generated packs without a raw pack path.
 - `validate_pack`, `load_pack`, and `apply_content_patch` now use shared source
   identity directly instead of re-deriving `world_quest_id` from the resolved path.
 - Retired the static overworld compatibility helper module; local overworld play

@@ -11,6 +11,7 @@ import {
   loadWorldManifest,
   resolveGameSource,
   resolvePackSource,
+  resolveSaveGameSource,
   resolveSavePackSource,
   resolveTracePackSource,
 } from "../../src/world/source.js";
@@ -255,6 +256,9 @@ describe("world source resolution", () => {
         "new_game",
       ),
     ).toThrow(/exactly one/);
+    expect(() => resolveGameSource(ROOT, { generate_rpg_seed: 3.5 } as never, "new_game")).toThrow(
+      /must be an integer/,
+    );
   });
 
   it("infers trace and save sources from embedded worldQuestId", () => {
@@ -268,6 +272,26 @@ describe("world source resolution", () => {
         worldQuestId: "sunken_barrow",
       },
     );
+    expect(resolveSaveGameSource(ROOT, {}, { worldQuestId: "sunken_barrow" }, "save_test")).toEqual(
+      {
+        kind: "pack",
+        packPath: PACK,
+        worldQuestId: "sunken_barrow",
+        generateRpgSeed: null,
+      },
+    );
+    expect(resolveSaveGameSource(ROOT, {}, { generatedRpgSeed: 3 }, "save_test")).toEqual({
+      kind: "generated",
+      packPath: null,
+      worldQuestId: null,
+      generateRpgSeed: 3,
+    });
+    expect(resolveSaveGameSource(ROOT, { generate_rpg_seed: 3 }, {}, "save_test")).toEqual({
+      kind: "generated",
+      packPath: null,
+      worldQuestId: null,
+      generateRpgSeed: 3,
+    });
   });
 
   it("rejects ambiguous or conflicting shipped source identities", () => {
@@ -288,6 +312,36 @@ describe("world source resolution", () => {
         "save_test",
       ),
     ).toThrow(SaveIntegrityError);
+
+    expect(() =>
+      resolveSaveGameSource(
+        ROOT,
+        { world_quest_id: "sunken_barrow", generate_rpg_seed: 3 },
+        {},
+        "save_test",
+      ),
+    ).toThrow(/exactly one/);
+
+    expect(() =>
+      resolveSaveGameSource(ROOT, { generate_rpg_seed: 3.5 } as never, {}, "save_test"),
+    ).toThrow(/must be an integer/);
+
+    expect(() =>
+      resolveSaveGameSource(
+        ROOT,
+        {},
+        { worldQuestId: "sunken_barrow", generatedRpgSeed: 3 },
+        "save_test",
+      ),
+    ).toThrow(SaveIntegrityError);
+
+    expect(() =>
+      resolveSaveGameSource(ROOT, { generate_rpg_seed: 4 }, { generatedRpgSeed: 3 }, "save_test"),
+    ).toThrow(SaveIntegrityError);
+
+    expect(() =>
+      resolveSaveGameSource(ROOT, { pack_path: PACK }, { generatedRpgSeed: 3 }, "save_test"),
+    ).toThrow(SaveIntegrityError);
   });
 
   it("requires a source when save and trace metadata carry no world quest id", () => {
@@ -299,6 +353,9 @@ describe("world source resolution", () => {
     );
     expect(() => resolveTracePackSource(ROOT, {}, traceWithoutWorldQuest, "trace_test")).toThrow(
       /trace with worldQuestId/,
+    );
+    expect(() => resolveSaveGameSource(ROOT, {}, {}, "save_test")).toThrow(
+      /worldQuestId\/generatedRpgSeed/,
     );
   });
 });

@@ -478,7 +478,7 @@ tool(
 );
 tool(
   "load_game",
-  "Load a save against its embedded shipped world quest id, an explicit world_quest_id, or a compatibility pack path (content-hash + mode verified) and return a fresh session.",
+  "Load a save against its embedded shipped world quest id/generated RPG seed, an explicit world_quest_id/generate_rpg_seed, or a compatibility pack path (content-hash + mode verified) and return a fresh session.",
   {
     pack_path: z
       .string()
@@ -492,6 +492,11 @@ tool(
       .describe(
         "Charter Marches quest graph node id from list_world().quests[].graph_node. Optional when the save embeds worldQuestId.",
       ),
+    generate_rpg_seed: z
+      .number()
+      .int()
+      .optional()
+      .describe("Procedural RPG generation seed. Optional when the save embeds generatedRpgSeed."),
     save: z.string().describe("A save string produced by save_game."),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,

@@ -32,7 +32,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
   `pack_path` is compatibility.
 - Trace verification: shipped quest traces replay/inspect with `world_quest_id`.
 - Live session metadata: start/transcript/save/load preserve shipped
-  `world_quest_id`; generated sessions report null source identity.
+  `world_quest_id`; generated sessions preserve `generated_rpg_seed`.
 - Blind harness default: shipped playtests should use `--quest` /
   `start_world_quest`; `--pack` is compatibility/new-pack fallback.
 - World routes: ToolApi and public MCP `world_path` accept only
@@ -69,6 +69,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   replay and CLI play.
 - `new_game` source selection is world-id or generated-pack only, keeping
   generated packs as the explicit null-world source.
+- Generated RPG saves now embed `generatedRpgSeed`, so `load_game({ save })`
+  can reconstruct in-memory generated packs without a raw pack path.
 - Pack validation/loading/patching now consume shared source identity instead of
   re-deriving `world_quest_id` after path resolution.
 - Static overworld compatibility helpers are retired; ToolApi and public MCP use

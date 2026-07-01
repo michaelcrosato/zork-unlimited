@@ -58,7 +58,7 @@ import {
   loadWorldManifest as loadWorldManifestFromRoot,
   resolveGameSource,
   resolvePackSource,
-  resolveSavePackSource,
+  resolveSaveGameSource,
   resolveTracePackSource,
   resolveWorldQuestPackPath as resolveWorldQuestPackPathFromRoot,
 } from "../world/source.js";
@@ -160,6 +160,7 @@ type RpgSessionPayload<Args extends RpgResponseOptions = RpgResponseOptions> = {
   mode: PackMode;
   pack_path: string | null;
   world_quest_id: string | null;
+  generated_rpg_seed: number | null;
   state_hash: string;
 } & RpgViewField<Args>;
 
@@ -214,6 +215,7 @@ type RpgChooseOptionArgs = {
 type RpgLoadGameArgs = {
   pack_path?: string;
   world_quest_id?: string;
+  generate_rpg_seed?: number;
   save: string;
   hide_graph?: boolean;
 } & RpgResponseOptions;
@@ -255,6 +257,7 @@ type TranscriptResponse<Turn> = {
   pack_id: string;
   pack_path: string | null;
   world_quest_id: string | null;
+  generated_rpg_seed: number | null;
   mode: typeof SAVE_MODE;
   turns: Turn[];
   summary: TranscriptSummary;
@@ -480,10 +483,16 @@ export function createToolApi(opts: { root: string }) {
   function startSession(
     compiled: CompiledRpgPack,
     state?: GameState,
-    opts: { hideGraph?: boolean; packPath?: string; worldQuestId?: string | null } = {},
+    opts: {
+      hideGraph?: boolean;
+      packPath?: string;
+      worldQuestId?: string | null;
+      generatedRpgSeed?: number | null;
+      seed?: number;
+    } = {},
   ): Session {
     const index = indexFor(compiled.pack);
-    const st = state ?? initStateFor(index, 1);
+    const st = state ?? initStateFor(index, opts.seed ?? 1);
     // §16 integrity at load: a PROVIDED state is untrusted (it came off a save
     // file via load_game), so its `current`/`endingId` must name symbols that
     // exist in THIS pack before it is handed to the engine. A freshly-built init
@@ -494,6 +503,9 @@ export function createToolApi(opts: { root: string }) {
       contentHash: compiled.contentHash,
       ...(opts.packPath ? { packPath: opts.packPath } : {}),
       ...(opts.worldQuestId ? { worldQuestId: opts.worldQuestId } : {}),
+      ...(opts.generatedRpgSeed !== undefined && opts.generatedRpgSeed !== null
+        ? { generatedRpgSeed: opts.generatedRpgSeed }
+        : {}),
       index,
       rules: rulesFor(index),
       state: st,
@@ -1060,30 +1072,28 @@ export function createToolApi(opts: { root: string }) {
     },
 
     new_game<Args extends RpgNewGameArgs>(args: Args): RpgSessionPayload<Args> {
-      // Either load a world-graph quest, load a pack from disk, OR mint a fresh RPG
-      // pack in-memory from `generate_rpg_seed`. The generation seed selects the
-      // minted pack's theme/structure; `seed` still seeds runtime state, so the two
-      // are independent.
+      // Either load a world-graph quest or mint a fresh RPG pack in-memory from
+      // `generate_rpg_seed`. The generation seed selects the minted pack's
+      // theme/structure; `seed` still seeds runtime state, so the two are independent.
       const source = resolveGameSource(root, args, "new_game");
       const compiled =
         source.kind === "generated"
           ? requireGeneratedRpgPlayable(source.generateRpgSeed)
           : requirePlayable(source.packPath);
       const session = startSession(compiled, undefined, {
+        seed: args.seed ?? 1,
         ...(args.hide_graph ? { hideGraph: true } : {}),
         ...(source.packPath ? { packPath: source.packPath } : {}),
         ...(source.worldQuestId ? { worldQuestId: source.worldQuestId } : {}),
+        ...(source.generateRpgSeed !== null ? { generatedRpgSeed: source.generateRpgSeed } : {}),
       });
-      if (args.seed !== undefined && args.seed !== 1) {
-        // Re-seed: rebuild the initial state at the requested seed.
-        session.state = initStateFor(session.index, args.seed);
-      }
       return {
         session_id: session.id,
         mode: SAVE_MODE,
         ...rpgViewField(openingObsOf(session), args),
         pack_path: session.packPath ?? null,
         world_quest_id: session.worldQuestId ?? null,
+        generated_rpg_seed: session.generatedRpgSeed ?? null,
         state_hash: hashState(session.state),
       } as RpgSessionPayload<Args>;
     },
@@ -1220,6 +1230,7 @@ export function createToolApi(opts: { root: string }) {
         pack_id: s.packId,
         pack_path: s.packPath ?? null,
         world_quest_id: s.worldQuestId ?? null,
+        generated_rpg_seed: s.generatedRpgSeed ?? null,
         mode: SAVE_MODE,
         // Filter internal-bookkeeping events the same way step_action does, so the
         // transcript a player reads never surfaces `__`-prefixed vars/flags (bug_0260).
@@ -1253,12 +1264,16 @@ export function createToolApi(opts: { root: string }) {
     save_game(args: { session_id: string }) {
       const s = sessions.get(args.session_id);
       // The save records the pack mode so load can refuse a mode mismatch (§8.7).
-      const saveMetadata = s.worldQuestId ? { worldQuestId: s.worldQuestId } : {};
+      const saveMetadata = {
+        ...(s.worldQuestId ? { worldQuestId: s.worldQuestId } : {}),
+        ...(s.generatedRpgSeed !== undefined ? { generatedRpgSeed: s.generatedRpgSeed } : {}),
+      };
       return {
         save: save(s.state, s.packId, s.contentHash, SAVE_MODE, saveMetadata),
         pack_id: s.packId,
         pack_path: s.packPath ?? null,
         world_quest_id: s.worldQuestId ?? null,
+        generated_rpg_seed: s.generatedRpgSeed ?? null,
         content_hash: s.contentHash,
         mode: SAVE_MODE,
       };
@@ -1266,14 +1281,18 @@ export function createToolApi(opts: { root: string }) {
 
     load_game<Args extends RpgLoadGameArgs>(args: Args): RpgSessionPayload<Args> {
       const bundle = load(args.save, undefined, SAVE_MODE);
-      const { packPath, worldQuestId } = resolveSavePackSource(root, args, bundle, "load_game");
-      const compiled = requirePlayable(packPath);
+      const source = resolveSaveGameSource(root, args, bundle, "load_game");
+      const compiled =
+        source.kind === "generated"
+          ? requireGeneratedRpgPlayable(source.generateRpgSeed)
+          : requirePlayable(source.packPath);
       // Content-hash check is enforced by load() against the loaded pack (§8.7);
       // mode is verified too, so a save can't be loaded against a different mode.
       const verified = load(args.save, compiled.contentHash, SAVE_MODE);
       const session = startSession(compiled, verified.state, {
-        packPath,
-        worldQuestId,
+        ...(source.packPath ? { packPath: source.packPath } : {}),
+        ...(source.worldQuestId ? { worldQuestId: source.worldQuestId } : {}),
+        ...(source.generateRpgSeed !== null ? { generatedRpgSeed: source.generateRpgSeed } : {}),
         ...(args.hide_graph ? { hideGraph: true } : {}),
       });
       return {
@@ -1282,6 +1301,7 @@ export function createToolApi(opts: { root: string }) {
         ...rpgViewField(openingObsOf(session), args),
         pack_path: session.packPath ?? null,
         world_quest_id: session.worldQuestId ?? null,
+        generated_rpg_seed: session.generatedRpgSeed ?? null,
         state_hash: hashState(session.state),
       } as RpgSessionPayload<Args>;
     },

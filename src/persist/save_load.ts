@@ -100,11 +100,14 @@ export type SaveBundle = {
   mode: SaveMode;
   /** Shipped world quest id, when the save belongs to the open-world graph. */
   worldQuestId?: string;
+  /** Procedural RPG generation seed, when the save belongs to an in-memory generated pack. */
+  generatedRpgSeed?: number;
   state: GameState;
 };
 
 export type SaveMetadata = {
   worldQuestId?: string | null;
+  generatedRpgSeed?: number | null;
 };
 
 /** Serialize a save to canonical bytes (stable across machines/runs). */
@@ -116,6 +119,7 @@ export function save(
   metadata: SaveMetadata = {},
 ): string {
   assertRpgMode(mode, "Save mode");
+  assertSaveSourceMetadata(metadata);
   const bundle: SaveBundle = {
     version: SAVE_VERSION,
     packId,
@@ -123,6 +127,9 @@ export function save(
     state,
     mode,
     ...(metadata.worldQuestId ? { worldQuestId: metadata.worldQuestId } : {}),
+    ...(metadata.generatedRpgSeed !== undefined && metadata.generatedRpgSeed !== null
+      ? { generatedRpgSeed: metadata.generatedRpgSeed }
+      : {}),
   };
   return canonicalize(bundle);
 }
@@ -137,6 +144,26 @@ function assertRpgMode(mode: unknown, label: string): asserts mode is SaveMode {
 
 function assertOptionalRpgMode(mode: unknown, label: string): asserts mode is SaveMode | undefined {
   if (mode !== undefined) assertRpgMode(mode, label);
+}
+
+function assertGeneratedRpgSeed(seed: unknown, label: string): asserts seed is number {
+  if (typeof seed !== "number" || !Number.isInteger(seed)) {
+    throw new SaveIntegrityError(`${label} must be an integer, got ${JSON.stringify(seed)}.`);
+  }
+}
+
+function assertSaveSourceMetadata(metadata: SaveMetadata): void {
+  const hasWorldQuest = metadata.worldQuestId !== undefined && metadata.worldQuestId !== null;
+  const hasGeneratedSeed =
+    metadata.generatedRpgSeed !== undefined && metadata.generatedRpgSeed !== null;
+  if (hasWorldQuest && hasGeneratedSeed) {
+    throw new SaveIntegrityError(
+      "Save source cannot carry both worldQuestId and generatedRpgSeed.",
+    );
+  }
+  if (hasGeneratedSeed) {
+    assertGeneratedRpgSeed(metadata.generatedRpgSeed, "Save generatedRpgSeed");
+  }
 }
 
 /**
@@ -169,6 +196,20 @@ export function load(
       `Save worldQuestId must be a string when present, got ${JSON.stringify(
         (bundle as { worldQuestId?: unknown }).worldQuestId,
       )}.`,
+    );
+  }
+  if ("generatedRpgSeed" in (bundle as Record<string, unknown>)) {
+    assertGeneratedRpgSeed(
+      (bundle as { generatedRpgSeed?: unknown }).generatedRpgSeed,
+      "Save generatedRpgSeed",
+    );
+  }
+  if (
+    (bundle as { worldQuestId?: unknown }).worldQuestId !== undefined &&
+    (bundle as { generatedRpgSeed?: unknown }).generatedRpgSeed !== undefined
+  ) {
+    throw new SaveIntegrityError(
+      "Save source cannot carry both worldQuestId and generatedRpgSeed.",
     );
   }
   if (expectedContentHash !== undefined && bundle.contentHash !== expectedContentHash) {

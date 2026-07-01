@@ -32,6 +32,8 @@ export type Session = {
   packPath?: string;
   /** Canonical Charter Marches quest graph node id for shipped quest sessions. */
   worldQuestId?: string;
+  /** Procedural RPG generation seed for in-memory generated sessions. */
+  generatedRpgSeed?: number;
   /** The compiled RPG index for this session. */
   index: RpgIndex;
   rules: Rules<RpgAction>;

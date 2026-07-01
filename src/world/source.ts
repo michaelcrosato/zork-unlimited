@@ -30,7 +30,9 @@ export type TraceSourceArgs = {
 };
 
 export type PackSourceArgs = TraceSourceArgs;
-export type SaveSourceArgs = TraceSourceArgs;
+export type SaveSourceArgs = TraceSourceArgs & {
+  generate_rpg_seed?: number;
+};
 
 export type GameSourceArgs = {
   world_quest_id?: string;
@@ -40,6 +42,7 @@ export type GameSourceArgs = {
 
 export type SaveWorldSource = {
   worldQuestId?: unknown;
+  generatedRpgSeed?: unknown;
 };
 
 export type TracePackSource = {
@@ -63,6 +66,14 @@ export type GamePackSource =
 
 const worldManifestCache = new Map<string, WorldManifest>();
 const overworldManifestCache = new Map<string, OverworldManifest>();
+
+function assertGenerateRpgSeed(seed: unknown, operation: string): asserts seed is number {
+  if (typeof seed !== "number" || !Number.isInteger(seed)) {
+    throw new Error(
+      `${operation} generate_rpg_seed must be an integer, got ${JSON.stringify(seed)}.`,
+    );
+  }
+}
 
 export function fallbackWorldManifest(): WorldManifest {
   return {
@@ -313,6 +324,7 @@ export function resolveGameSource(
     throw new Error(`${operation} accepts exactly one of world_quest_id or generate_rpg_seed.`);
   }
   if (args.generate_rpg_seed !== undefined) {
+    assertGenerateRpgSeed(args.generate_rpg_seed, operation);
     return {
       kind: "generated",
       packPath: null,
@@ -346,6 +358,22 @@ export function saveWorldQuestId(bundle: SaveWorldSource, operation: string): st
   if (typeof raw !== "string") {
     throw new SaveIntegrityError(
       `${operation} save worldQuestId must be a string when present, got ${JSON.stringify(raw)}.`,
+    );
+  }
+  return raw;
+}
+
+export function saveGeneratedRpgSeed(
+  bundle: SaveWorldSource,
+  operation: string,
+): number | undefined {
+  const raw = bundle.generatedRpgSeed;
+  if (raw === undefined) return undefined;
+  if (typeof raw !== "number" || !Number.isInteger(raw)) {
+    throw new SaveIntegrityError(
+      `${operation} save generatedRpgSeed must be an integer when present, got ${JSON.stringify(
+        raw,
+      )}.`,
     );
   }
   return raw;
@@ -393,6 +421,103 @@ function resolveEmbeddedPackSource(
     );
   }
   return { packPath, worldQuestId };
+}
+
+export function resolveSaveGameSource(
+  root: string,
+  args: SaveSourceArgs,
+  bundle: SaveWorldSource,
+  operation: string,
+): GamePackSource {
+  const embeddedWorldQuestId = saveWorldQuestId(bundle, operation);
+  const embeddedGeneratedRpgSeed = saveGeneratedRpgSeed(bundle, operation);
+  if (embeddedWorldQuestId !== undefined && embeddedGeneratedRpgSeed !== undefined) {
+    throw new SaveIntegrityError(
+      "Save source cannot carry both worldQuestId and generatedRpgSeed.",
+    );
+  }
+
+  const explicitCount = [
+    args.world_quest_id !== undefined,
+    args.pack_path !== undefined,
+    args.generate_rpg_seed !== undefined,
+  ].filter(Boolean).length;
+  if (explicitCount > 1) {
+    throw new Error(
+      `${operation} accepts exactly one of world_quest_id, pack_path, or generate_rpg_seed.`,
+    );
+  }
+
+  let source: GamePackSource;
+  if (args.generate_rpg_seed !== undefined) {
+    assertGenerateRpgSeed(args.generate_rpg_seed, operation);
+    source = {
+      kind: "generated",
+      packPath: null,
+      worldQuestId: null,
+      generateRpgSeed: args.generate_rpg_seed,
+    };
+  } else if (args.world_quest_id !== undefined) {
+    const resolved = resolveWorldQuestPackPath(root, args.world_quest_id);
+    source = {
+      kind: "pack",
+      packPath: resolved.packPath,
+      worldQuestId: resolved.node.id,
+      generateRpgSeed: null,
+    };
+  } else if (args.pack_path !== undefined) {
+    source = {
+      kind: "pack",
+      packPath: args.pack_path,
+      worldQuestId: worldQuestIdForPackPath(root, args.pack_path),
+      generateRpgSeed: null,
+    };
+  } else if (embeddedGeneratedRpgSeed !== undefined) {
+    source = {
+      kind: "generated",
+      packPath: null,
+      worldQuestId: null,
+      generateRpgSeed: embeddedGeneratedRpgSeed,
+    };
+  } else if (embeddedWorldQuestId !== undefined) {
+    const resolved = resolveWorldQuestPackPath(root, embeddedWorldQuestId);
+    source = {
+      kind: "pack",
+      packPath: resolved.packPath,
+      worldQuestId: resolved.node.id,
+      generateRpgSeed: null,
+    };
+  } else {
+    throw new Error(
+      `${operation} requires world_quest_id, pack_path, generate_rpg_seed, or a save with worldQuestId/generatedRpgSeed.`,
+    );
+  }
+
+  if (
+    embeddedWorldQuestId !== undefined &&
+    (source.kind !== "pack" || source.worldQuestId !== embeddedWorldQuestId)
+  ) {
+    throw new SaveIntegrityError(
+      `Save worldQuestId ${JSON.stringify(
+        embeddedWorldQuestId,
+      )} does not match requested source ${JSON.stringify(
+        source.kind === "pack" ? source.worldQuestId : source.generateRpgSeed,
+      )}.`,
+    );
+  }
+  if (
+    embeddedGeneratedRpgSeed !== undefined &&
+    (source.kind !== "generated" || source.generateRpgSeed !== embeddedGeneratedRpgSeed)
+  ) {
+    throw new SaveIntegrityError(
+      `Save generatedRpgSeed ${JSON.stringify(
+        embeddedGeneratedRpgSeed,
+      )} does not match requested source ${JSON.stringify(
+        source.kind === "generated" ? source.generateRpgSeed : source.worldQuestId,
+      )}.`,
+    );
+  }
+  return source;
 }
 
 export function resolveSavePackSource(
