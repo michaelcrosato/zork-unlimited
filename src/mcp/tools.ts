@@ -655,7 +655,6 @@ export function createToolApi(opts: { root: string }) {
 
     validate_pack(args: { world_quest_id?: string; pack_path?: never }): {
       ok: boolean;
-      pack_path: string;
       world_quest_id: string | null;
       report: ValidationReport;
     } {
@@ -663,7 +662,6 @@ export function createToolApi(opts: { root: string }) {
       const lr = loadAndReport(source.packPath);
       return {
         ok: lr.report.ok,
-        pack_path: source.packPath,
         world_quest_id: source.worldQuestId,
         report: lr.report,
       };
@@ -998,7 +996,6 @@ export function createToolApi(opts: { root: string }) {
 
     validate_quest(args: { quest_id?: string; world_quest_id?: string }): {
       ok: boolean;
-      pack_path: string;
       world_quest_id: string | null;
       report: ValidationReport;
     } {
@@ -1008,7 +1005,6 @@ export function createToolApi(opts: { root: string }) {
 
     load_pack(args: { world_quest_id?: string; pack_path?: never }): {
       ok: boolean;
-      pack_path: string;
       world_quest_id: string | null;
       mode?: PackMode;
       meta?: CompiledRpgPack["pack"]["meta"];
@@ -1020,14 +1016,12 @@ export function createToolApi(opts: { root: string }) {
       if (!lr.ok) {
         return {
           ok: false,
-          pack_path: source.packPath,
           world_quest_id: source.worldQuestId,
           report: lr.report,
         };
       }
       return {
         ok: lr.report.ok,
-        pack_path: source.packPath,
         world_quest_id: source.worldQuestId,
         mode: SAVE_MODE,
         meta: lr.compiled.pack.meta,
@@ -1440,7 +1434,6 @@ export function createToolApi(opts: { root: string }) {
       if (!loaded.ok) {
         return {
           ok: false,
-          pack_path: source.packPath,
           world_quest_id: source.worldQuestId,
           report: makeReport(source.packPath, [
             {
@@ -1456,7 +1449,6 @@ export function createToolApi(opts: { root: string }) {
       return result.ok
         ? {
             ok: true,
-            pack_path: source.packPath,
             world_quest_id: source.worldQuestId,
             applied: result.applied,
             report: result.report,
@@ -1464,7 +1456,6 @@ export function createToolApi(opts: { root: string }) {
           }
         : {
             ok: false,
-            pack_path: source.packPath,
             world_quest_id: source.worldQuestId,
             report: result.report,
           };

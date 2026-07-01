@@ -924,7 +924,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
   it("validate_pack reports the shipped pack as green", () => {
     const r = api().validate_pack({ world_quest_id: "sunken_barrow" });
     expect(r.ok).toBe(true);
-    expect(r.pack_path).toBe(PACK);
+    expect("pack_path" in r).toBe(false);
     expect(r.world_quest_id).toBe("sunken_barrow");
     expect(r.report.findings.filter((f) => f.severity === "error")).toEqual([]);
   });
@@ -938,12 +938,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
   it("validate_quest is the world-first validation alias", () => {
     const r = api().validate_quest({ quest_id: "sunken_barrow" });
     expect(r.ok).toBe(true);
-    expect(r.pack_path).toBe(PACK);
+    expect("pack_path" in r).toBe(false);
     expect(r.world_quest_id).toBe("sunken_barrow");
 
     const viaWorldQuestId = api().validate_quest({ world_quest_id: "sunken_barrow" });
     expect(viaWorldQuestId.ok).toBe(true);
-    expect(viaWorldQuestId.pack_path).toBe(PACK);
+    expect("pack_path" in viaWorldQuestId).toBe(false);
     expect(viaWorldQuestId.world_quest_id).toBe("sunken_barrow");
 
     expect(() => api().validate_quest({})).toThrow(/requires quest_id or world_quest_id/);
@@ -956,7 +956,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
   it("load_pack returns meta + content hash", () => {
     const r = api().load_pack({ world_quest_id: "sunken_barrow" });
     expect(r.ok).toBe(true);
-    expect(r.pack_path).toBe(PACK);
+    expect("pack_path" in r).toBe(false);
     expect(r.world_quest_id).toBe("sunken_barrow");
     expect(r.mode).toBe("rpg");
     expect(r.meta?.id).toBe("sunken_barrow_v1");
@@ -1552,12 +1552,11 @@ describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
       proposal,
     }) as {
       ok: boolean;
-      pack_path: string;
       world_quest_id: string | null;
       report: { ok: boolean };
     };
     expect(r.ok).toBe(true);
-    expect(r.pack_path).toBe("content/rpg/pack/cold_forge.yaml");
+    expect("pack_path" in r).toBe(false);
     expect(r.world_quest_id).toBe("cold_forge");
     expect(r.report.ok).toBe(true);
   });
@@ -1573,12 +1572,11 @@ describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
       } as never,
     }) as {
       ok: boolean;
-      pack_path: string;
       world_quest_id: string | null;
       report: { findings: { code: string }[] };
     };
     expect(r.ok).toBe(false);
-    expect(r.pack_path).toBe("content/rpg/pack/cold_forge.yaml");
+    expect("pack_path" in r).toBe(false);
     expect(r.world_quest_id).toBe("cold_forge");
     expect(r.report.findings[0]?.code).toBe("PATCH_TARGET_MISSING");
   });

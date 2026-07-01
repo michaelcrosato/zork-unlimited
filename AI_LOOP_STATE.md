@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 16 -->
+<!-- historical_cycle_count: 17 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
@@ -42,6 +42,15 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: structural source-surface cut, not content polish; moves one more internal layer to single-world addressing.
 - Operator direction: pause after this cycle; do not start another AFK cycle.
 
+### Cycle result — live_content_response_world_identity
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measurement helper; clean branch baseline.
+- Engine/API: `validate_pack`, `validate_quest`, `load_pack`, and `apply_content_patch` no longer echo raw `pack_path`; responses carry `world_quest_id`.
+- Offline boundary: trace replay/inspect and validation reports may still reference paths for debugging; live content-handler envelopes are world-id only.
+- VERIFY: focused MCP/world/assessor tests, typecheck, lint, format:check, validate, npm test, `npm run health` EXIT 0.
+- Self-critique: small structural payload cut; useful token/confusion reduction, but session/save envelopes still expose paths for a later cycle.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
+
 ## Current Snapshot
 
 - Verification bar: `npm run health` remains the required end gate.
@@ -64,10 +73,11 @@ history only when deep recovery is truly needed. Keep future entries terse.
   raw `--pack` starts are rejected.
 - World routes: ToolApi and public MCP `world_path` accept only
   `world_quest_id`; raw `quest_path` is rejected.
-- Pack validation/loading: shipped quests can use `world_quest_id` and preserve
-  source identity in responses.
-- ToolApi/public MCP validate/load/patch schemas are `world_quest_id` only;
-  trace replay/inspect keep raw pack paths only for offline compatibility.
+- Pack validation/loading/patching: shipped quests use `world_quest_id` and
+  return world identity without raw path envelopes.
+- ToolApi/public MCP validate/load/patch schemas and responses are
+  `world_quest_id` only; trace replay/inspect keep raw pack paths only for
+  offline compatibility.
 - Quest aliases: ToolApi and public MCP `validate_quest`/`start_quest` use
   graph ids only; raw `quest_path` is rejected.
 - Retired legacy story aliases: live MCP uses `validate_pack`, `new_game`, and
