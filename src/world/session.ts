@@ -1457,6 +1457,35 @@ function incrementCount(counts: Map<string, number>, key: string): void {
   counts.set(key, (counts.get(key) ?? 0) + 1);
 }
 
+function assertSnapshotDiscoveredAreaCountReplay(
+  snapshot: OverworldSessionSnapshot,
+  world: OverworldManifest,
+  sources: OverworldLocalActionJournalReachabilityIndex,
+): void {
+  const localActionCountByTown = new Map<string, number>();
+  for (const entry of snapshot.journalEntries) {
+    const source = localJournalSource(entry, sources);
+    if (!source) continue;
+    incrementCount(localActionCountByTown, source.home);
+  }
+
+  for (const townId of snapshot.visitedIds) {
+    const localAreas = overworldAreasAt(world, townId);
+    const expectedDiscoveredCount =
+      localAreas.length === 0
+        ? 0
+        : Math.min(localAreas.length, 1 + (localActionCountByTown.get(townId) ?? 0));
+    const actualDiscoveredCount = localAreas.filter((area) =>
+      sources.discoveredAreaIds.has(area.id),
+    ).length;
+    if (actualDiscoveredCount !== expectedDiscoveredCount) {
+      throw new Error(
+        `Overworld session snapshot discovered area count in town "${townId}" does not match local action replay.`,
+      );
+    }
+  }
+}
+
 function assertDiscoveredSourceCountProof(
   sourceLabel: string,
   contextLabel: string,
@@ -1861,12 +1890,13 @@ export class OverworldSession {
     };
     assertSnapshotLocalActionJournalReachability(snapshot, localActionJournalSources);
     assertSnapshotLocalActionDiscoveryChronology(snapshot, this.world, localActionJournalSources);
-    assertSnapshotDiscoveredLocalSourceCountProofs(snapshot, localActionJournalSources);
     assertSnapshotEventResolutionProofs(snapshot, {
       charactersById,
       eventsById,
       poisById,
     });
+    assertSnapshotDiscoveredLocalSourceCountProofs(snapshot, localActionJournalSources);
+    assertSnapshotDiscoveredAreaCountReplay(snapshot, this.world, localActionJournalSources);
     for (const [region] of snapshot.regionRenown) {
       if (!regions.has(region)) {
         throw new Error(`Overworld session snapshot has unknown renown region "${region}".`);

@@ -147,7 +147,7 @@ Make discovered overworld quest leads start real RPG sessions.
   malformed/future/non-newest-first journal timelines, progress/journal state
   drift, region-renown mismatches, discovery locality drift, visited-town travel
   proof drift, non-contiguous travel path replay, discovered-town frontier drift,
-  area-discovery prefix drift, local-area chronology drift, local source prefix
+  area-discovery prefix/count drift, local-area chronology drift, local source prefix
   drift, local source chronology/count drift, site-prefix drift, saved-area-map drift,
   pending-road/travel binding drift,
   pending-road unresolved-state drift,

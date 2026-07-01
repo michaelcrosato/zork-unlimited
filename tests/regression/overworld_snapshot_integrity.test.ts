@@ -18,7 +18,6 @@ const overworld = parseOverworldManifest(
 
 type Snapshot = ReturnType<typeof exportedSnapshotAfterTwoRoads>["snapshot"];
 type JournalEntry = Snapshot["journalEntries"][number];
-type LocalEvent = (typeof overworld.local_events)[number];
 type LocalActionJournalKind = Extract<JournalEntry["kind"], "contact" | "event" | "poi">;
 type LocalActionJournalSource = {
   id: string;
@@ -110,86 +109,6 @@ function addRenown(
   return [...totals.entries()];
 }
 
-function unresolvedEventInDiscoveredArea(snapshot: Snapshot): LocalEvent {
-  const event = overworld.local_events.find(
-    (candidate) =>
-      !snapshot.resolvedEventIds.includes(candidate.id) &&
-      snapshot.visitedIds.includes(candidate.home) &&
-      snapshot.discoveredAreaIds.includes(candidate.area),
-  );
-  if (!event) throw new Error("expected an unresolved event in a discovered area");
-  return event;
-}
-
-function prerequisiteEntriesForEvent(
-  snapshot: Snapshot,
-  event: LocalEvent,
-  prerequisites: { scout?: boolean; contact?: boolean; investigate?: boolean },
-): JournalEntry[] {
-  const recordedAt = snapshot.journalEntries[0]!.recordedAt;
-  const entries: JournalEntry[] = [];
-  if (prerequisites.scout) {
-    const poi = overworld.points_of_interest.find((candidate) => candidate.area === event.area);
-    if (!poi) throw new Error(`expected a point of interest in ${event.area}`);
-    entries.push({
-      id: `scout:${poi.id}`,
-      kind: "poi",
-      town: townName(poi.home),
-      title: "Forged scout",
-      text: "Forged local scout prerequisite.",
-      recordedAt,
-    });
-  }
-  if (prerequisites.contact) {
-    const character = overworld.characters.find((candidate) => candidate.area === event.area);
-    if (!character) throw new Error(`expected a contact in ${event.area}`);
-    entries.push({
-      id: `talk:${character.id}`,
-      kind: "contact",
-      town: townName(character.home),
-      title: "Forged contact",
-      text: "Forged local contact prerequisite.",
-      recordedAt,
-    });
-  }
-  if (prerequisites.investigate) {
-    entries.push({
-      id: `investigate:${event.id}`,
-      kind: "event",
-      town: townName(event.home),
-      title: "Forged investigation",
-      text: "Forged event investigation prerequisite.",
-      recordedAt,
-    });
-  }
-  return entries;
-}
-
-function forgeResolvedEventSnapshot(
-  snapshot: Snapshot,
-  event: LocalEvent,
-  prerequisites: { scout?: boolean; contact?: boolean; investigate?: boolean },
-): Snapshot {
-  const recordedAt = snapshot.journalEntries[0]!.recordedAt;
-  return {
-    ...snapshot,
-    resolvedEventIds: appendUnique(snapshot.resolvedEventIds, event.id),
-    regionRenown: addRenown(snapshot.regionRenown, townRegion(event.home), event.intensity),
-    journalEntries: [
-      {
-        id: `resolve:${event.id}`,
-        kind: "resolution",
-        town: townName(event.home),
-        title: "Forged resolution",
-        text: "Forged resolution journal proof.",
-        recordedAt,
-      },
-      ...prerequisiteEntriesForEvent(snapshot, event, prerequisites),
-      ...snapshot.journalEntries,
-    ],
-  };
-}
-
 function exportedSnapshotAfterTwoRoads() {
   const a = api();
   const started = a.start_overworld();
@@ -217,6 +136,33 @@ function exportedSnapshotAfterTwoRoads() {
   expect(snapshot.travelLog.length).toBeGreaterThanOrEqual(2);
   expect(snapshot.journalEntries.length).toBeGreaterThanOrEqual(2);
   return { a, snapshot };
+}
+
+function exportedSnapshotWithResolvedInitialEvent() {
+  const a = api();
+  const started = a.start_overworld();
+  const poi = started.observation.pois[0];
+  const contact = started.observation.characters[0];
+  const event = started.observation.events[0];
+  if (!poi || !contact || !event) throw new Error("expected initial local event prerequisites");
+
+  a.scout_overworld_session_poi({ session_id: started.session_id, poi_id: poi.id });
+  a.talk_overworld_session_contact({
+    session_id: started.session_id,
+    character_id: contact.id,
+  });
+  a.investigate_overworld_session_event({
+    session_id: started.session_id,
+    event_id: event.id,
+  });
+  a.resolve_overworld_session_event({
+    session_id: started.session_id,
+    event_id: event.id,
+  });
+
+  const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
+  expect(snapshot.resolvedEventIds).toContain(event.id);
+  return { a, snapshot, poi, contact, event };
 }
 
 function exportedSnapshotAfterRoadStrategy(strategy: "assist_travelers" | "cautious_scout") {
@@ -917,6 +863,53 @@ describe("overworld snapshot restore integrity", () => {
     );
   });
 
+  it("rejects discovered local areas without local action replay proof", () => {
+    const a = api();
+    const started = a.start_overworld();
+    const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
+    const currentAreas = overworldAreasAt(overworld, snapshot.currentId);
+    const extraArea = currentAreas.find((area) => !snapshot.discoveredAreaIds.includes(area.id));
+    if (!extraArea) throw new Error("expected a hidden current-town area");
+    const forgedAreaDiscovery = {
+      ...snapshot,
+      discoveredAreaIds: appendUnique(snapshot.discoveredAreaIds, extraArea.id),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedAreaDiscovery })).toThrow(
+      /discovered area count.*local action replay/,
+    );
+  });
+
+  it("rejects missing local areas earned by local action replay", () => {
+    const a = api();
+    const started = a.start_overworld();
+    const poi = started.observation.pois[0];
+    if (!poi) throw new Error("expected an initial-area point of interest");
+    const scouted = a.scout_overworld_session_poi({
+      session_id: started.session_id,
+      poi_id: poi.id,
+    });
+    const discoveredArea = scouted.result.discoveredAreas?.[0];
+    if (!discoveredArea) throw new Error("expected scouting to discover another area");
+    const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
+    const forgedMissingArea = {
+      ...snapshot,
+      discoveredAreaIds: snapshot.discoveredAreaIds.filter((id) => id !== discoveredArea.id),
+      discoveredJobIds: snapshot.discoveredJobIds.filter((jobId) => {
+        const job = overworld.local_jobs.find((candidate) => candidate.id === jobId);
+        return job?.area !== discoveredArea.id;
+      }),
+      discoveredQuestIds: snapshot.discoveredQuestIds.filter((questId) => {
+        const quest = overworld.quests.find((candidate) => candidate.id === questId);
+        return quest?.area !== discoveredArea.id;
+      }),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedMissingArea })).toThrow(
+      /discovered area count.*local action replay/,
+    );
+  });
+
   it("rejects local job journal entries recorded before job discovery", () => {
     const a = api();
     const started = a.start_overworld();
@@ -1161,40 +1154,45 @@ describe("overworld snapshot restore integrity", () => {
   it.each([
     {
       label: "local scout",
-      prerequisites: { contact: true, investigate: true },
+      removedEntryId({ poi }: ReturnType<typeof exportedSnapshotWithResolvedInitialEvent>) {
+        return `scout:${poi.id}`;
+      },
       pattern: /resolved event.*scout prerequisite/,
     },
     {
       label: "local contact",
-      prerequisites: { scout: true, investigate: true },
+      removedEntryId({ contact }: ReturnType<typeof exportedSnapshotWithResolvedInitialEvent>) {
+        return `talk:${contact.id}`;
+      },
       pattern: /resolved event.*contact prerequisite/,
     },
     {
       label: "event investigation",
-      prerequisites: { scout: true, contact: true },
+      removedEntryId({ event }: ReturnType<typeof exportedSnapshotWithResolvedInitialEvent>) {
+        return `investigate:${event.id}`;
+      },
       pattern: /resolved event.*investigated event prerequisite/,
     },
-  ])("rejects resolved events missing $label proof", ({ prerequisites, pattern }) => {
-    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
-    const event = unresolvedEventInDiscoveredArea(snapshot);
+  ])("rejects resolved events missing $label proof", ({ removedEntryId, pattern }) => {
+    const resolved = exportedSnapshotWithResolvedInitialEvent();
+    const missingPrerequisite = {
+      ...resolved.snapshot,
+      journalEntries: resolved.snapshot.journalEntries.filter(
+        (entry) => entry.id !== removedEntryId(resolved),
+      ),
+    };
 
     expect(() =>
-      a.restore_overworld_session({
-        snapshot: forgeResolvedEventSnapshot(snapshot, event, prerequisites),
+      resolved.a.restore_overworld_session({
+        snapshot: missingPrerequisite,
       }),
     ).toThrow(pattern);
   });
 
   it("restores resolved events with local prerequisite proof", () => {
-    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
-    const event = unresolvedEventInDiscoveredArea(snapshot);
-    const resolvedWithProof = forgeResolvedEventSnapshot(snapshot, event, {
-      scout: true,
-      contact: true,
-      investigate: true,
-    });
+    const { a, snapshot } = exportedSnapshotWithResolvedInitialEvent();
 
-    expect(() => a.restore_overworld_session({ snapshot: resolvedWithProof })).not.toThrow();
+    expect(() => a.restore_overworld_session({ snapshot })).not.toThrow();
   });
 
   it.each([
