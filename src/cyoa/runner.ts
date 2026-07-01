@@ -7,10 +7,9 @@
  *   - next → a scene   ⇒ goto(scene)            (on_enter fires)
  *   - next → an ending ⇒ goto(ending) + end_game(ending)  (terminal)
  */
-import { initState, type GameState } from "../core/state.js";
+import type { GameState } from "../core/state.js";
 import { evalConditions } from "../core/conditions.js";
 import type { Effect } from "../core/effects.js";
-import { applyEffects } from "../core/effects.js";
 import type { GameEvent } from "../core/events.js";
 import { reactiveText } from "../core/reactive_text.js";
 import { rngForStep, type Rng } from "../core/rng.js";
@@ -18,6 +17,7 @@ import type { Resolution, Rules } from "../core/engine.js";
 import { scoreChangeNarrations } from "../core/score_chrome.js";
 import { resolveSkillCheck } from "../core/skill_check.js";
 import { SCORE_VAR } from "../rpg/schema.js";
+import { initRuntimeState } from "../rpg/state_init.js";
 import type { CyoaPack, Ending, Scene } from "./schema.js";
 
 export type CyoaAction = { type: "CHOOSE"; choiceId: string };
@@ -151,13 +151,12 @@ export function buildRules(
 /** Initial state for a pack, with the start scene's on_enter effects applied. */
 export function initStateForPack(index: CyoaIndex, seed: number): GameState {
   const meta = index.pack.meta;
-  const base = initState({
+  const startScene = index.scenes.get(meta.start);
+  return initRuntimeState({
     seed,
     start: meta.start,
     varsInit: meta.vars_init,
     flagsInit: meta.flags_init,
+    onEnter: startScene?.on_enter,
   });
-  const startScene = index.scenes.get(meta.start);
-  if (!startScene || startScene.on_enter.length === 0) return base;
-  return applyEffects(startScene.on_enter, base).state;
 }

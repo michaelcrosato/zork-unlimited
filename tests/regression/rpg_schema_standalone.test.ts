@@ -221,6 +221,22 @@ describe("RPG schema owns the RPG contract", () => {
     expect(cyoaObservation).not.toContain("function visibleFlags");
   });
 
+  it("keeps runtime initial-state construction on the RPG-owned path", () => {
+    const stateInit = readFileSync("src/rpg/state_init.ts", "utf8");
+    const rpgModel = readFileSync("src/rpg/model.ts", "utf8");
+    const cyoaRunner = readFileSync("src/cyoa/runner.ts", "utf8");
+
+    expect(stateInit).toContain("export function initRuntimeState");
+    expect(stateInit).toContain("initState({");
+    expect(stateInit).toContain("applyEffects(opts.onEnter");
+    expect(rpgModel).toContain("./state_init");
+    expect(cyoaRunner).toContain("../rpg/state_init");
+    expect(rpgModel).not.toContain("initState({");
+    expect(rpgModel).not.toContain("applyEffects");
+    expect(cyoaRunner).not.toContain("initState,");
+    expect(cyoaRunner).not.toContain("applyEffects");
+  });
+
   it("does not import the legacy parser command mapper for RPG play", () => {
     const commandMap = readFileSync("src/rpg/command_map.ts", "utf8");
     const playBin = readFileSync("bin/rpg_play.ts", "utf8");

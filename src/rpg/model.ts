@@ -6,7 +6,6 @@
  * RPG runtime no longer depends on the legacy parser model module for its core
  * world state layout.
  */
-import { applyEffects } from "../core/effects.js";
 import {
   activeDialogue as coreActiveDialogue,
   dlgVar,
@@ -22,8 +21,9 @@ import {
   type ObjectLocation,
 } from "../core/object_locations.js";
 import { reactiveName, reactiveText } from "../core/reactive_text.js";
-import { initState, type GameState } from "../core/state.js";
+import type { GameState } from "../core/state.js";
 import type { DialogueNode, Ending, GameObject, Npc, Room, RpgPack } from "./schema.js";
+import { initRuntimeState } from "./state_init.js";
 
 export type RpgModelIndex = {
   pack: RpgPack;
@@ -92,17 +92,13 @@ export function activeDialogue(
 
 export function initStateForRpgModel(index: RpgModelIndex, seed: number): GameState {
   const meta = index.pack.meta;
-  const seeded = initState({
+  const startRoom = index.rooms.get(meta.start_room);
+  return initRuntimeState({
     seed,
     start: meta.start_room,
     varsInit: meta.vars_init,
     flagsInit: meta.flags_init,
+    heldItems: index.pack.objects.filter((o) => o.held).map((o) => o.id),
+    onEnter: startRoom?.on_enter,
   });
-  const heldIds = index.pack.objects.filter((o) => o.held).map((o) => o.id);
-  const base = heldIds.length
-    ? { ...seeded, inventory: [...seeded.inventory, ...heldIds] }
-    : seeded;
-  const startRoom = index.rooms.get(meta.start_room);
-  if (!startRoom || startRoom.on_enter.length === 0) return base;
-  return applyEffects(startRoom.on_enter, base).state;
 }
