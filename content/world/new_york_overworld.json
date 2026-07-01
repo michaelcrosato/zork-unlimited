@@ -46428,15 +46428,6 @@
       "area": "brookhaven_town__market"
     },
     {
-      "id": "apothecaries_standard",
-      "title": "The Apothecary's Standard",
-      "pack": "content/parser/pack/apothecaries_standard.yaml",
-      "home": "oyster_bay_town",
-      "discovery": "Ask around Oyster Bay town for work tied to The Apothecary's Standard. The lead is posted in Oyster Bay Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "oyster_bay_town__market"
-    },
-    {
       "id": "assayers_mark",
       "title": "The Assayer's Mark",
       "pack": "content/parser/pack/assayers_mark.yaml",
