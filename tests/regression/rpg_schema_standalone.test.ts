@@ -67,6 +67,27 @@ describe("RPG schema owns the RPG contract", () => {
     expect(parserSchema).not.toContain("../core/effects");
   });
 
+  it("keeps legacy pack loaders on the RPG-owned compile path", () => {
+    const rpgPack = readFileSync("src/rpg/pack.ts", "utf8");
+    const parserPack = readFileSync("src/parser/pack.ts", "utf8");
+    const cyoaPack = readFileSync("src/cyoa/pack.ts", "utf8");
+
+    expect(rpgPack).toContain("export function compileContentPack");
+    expect(rpgPack).toContain("hashState(parsed.data)");
+    expect(rpgPack).not.toContain("../parser/");
+    expect(rpgPack).not.toContain("../cyoa/");
+    expect(parserPack).toContain("../rpg/pack");
+    expect(parserPack).toContain("compileContentPack");
+    expect(parserPack).toContain("loadContentPackFile");
+    expect(parserPack).not.toContain("parseYaml");
+    expect(parserPack).not.toContain("hashState");
+    expect(cyoaPack).toContain("../rpg/pack");
+    expect(cyoaPack).toContain("compileContentPack");
+    expect(cyoaPack).toContain("loadContentPackFile");
+    expect(cyoaPack).not.toContain("parseYaml");
+    expect(cyoaPack).not.toContain("hashState");
+  });
+
   it("does not import the legacy parser runner for RPG win or score events", () => {
     const runner = readFileSync("src/rpg/runner.ts", "utf8");
     expect(runner).not.toContain("../parser/runner");
