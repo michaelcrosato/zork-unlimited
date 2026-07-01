@@ -5,7 +5,7 @@
  * Usage:
  *   npm run inspect -- <rpg-pack.yaml>     # stats, validator findings
  *   npm run inspect -- <trace.json>        # infer a shipped trace's worldQuestId
- *   npm run inspect -- <trace.json> <rpg-pack.yaml|world_quest_id>
+ *   npm run inspect -- <trace.json> <world_quest_id>
  *
  * Auto-detects: a `.json` argument (or one carrying `trace_id`) is treated as a
  * trace; otherwise it is an RPG content pack. Read-only; never writes files (§16).
@@ -30,10 +30,6 @@ function arg(name: string): string | undefined {
   return i >= 0 ? process.argv[i + 1] : undefined;
 }
 
-function looksLikePackPath(value: string): boolean {
-  return /\.ya?ml$/i.test(value) || value.includes("/") || value.includes("\\");
-}
-
 function positionalSourceArg(): string | undefined {
   for (let i = 3; i < process.argv.length; i += 1) {
     const value = process.argv[i]!;
@@ -56,13 +52,18 @@ function traceSourceArgs(): TraceSourceArgs {
   ).length;
   if (count > 1) {
     throw new Error(
-      "inspect accepts exactly one trace source: --pack, --world-quest-id, or positional source.",
+      "inspect accepts exactly one trace source: --world-quest-id or a positional world quest id.",
     );
   }
   if (pack !== undefined) return { pack_path: pack };
   if (worldQuestId !== undefined) return { world_quest_id: worldQuestId };
   if (positional === undefined) return {};
-  return looksLikePackPath(positional) ? { pack_path: positional } : { world_quest_id: positional };
+  if (/\.ya?ml$/i.test(positional) || positional.includes("/") || positional.includes("\\")) {
+    throw new Error(
+      "inspect trace sources are world quest ids; raw pack paths are hidden offline compatibility via --pack.",
+    );
+  }
+  return { world_quest_id: positional };
 }
 
 function inspectTrace(tracePath: string, sourceArgs: TraceSourceArgs): void {
@@ -108,9 +109,7 @@ function inspectTrace(tracePath: string, sourceArgs: TraceSourceArgs): void {
 function main(): void {
   const path = process.argv[2];
   if (!path || path.startsWith("--")) {
-    console.error(
-      "Usage: npm run inspect -- <rpg-pack.yaml> | <trace.json> [<rpg-pack.yaml|world_quest_id>]",
-    );
+    console.error("Usage: npm run inspect -- <rpg-pack.yaml> | <trace.json> [world_quest_id]");
     process.exit(2);
   }
   const raw = parseYaml(readFileSync(path, "utf8")) as Record<string, unknown> | null;

@@ -114,6 +114,16 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: closes an engine-loop coordination leak blind agents would not report; still leaves offline trace compatibility raw-path capable.
 - Operator direction: pause after this cycle; do not start another AFK cycle.
 
+### Cycle result — trace_cli_quest_id_sources
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; same broad helper drift outside canonical repo scripts.
+- Trace CLIs: replay/inspect now advertise positional trace sources as `world_quest_id` only and reject positional raw pack paths.
+- Token/API hygiene: normal replay output no longer echoes the resolved pack file; hidden `--pack` remains only for offline compatibility.
+- VERIFY: focused trace/world tests, typecheck, lint, format:check, validate, npm
+  test (191/1253), `npm run health` EXIT 0.
+- Self-critique: closes a user-facing debug-loop path leak; source resolver internals still keep path data for integrity checks.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
+
 ## Current Snapshot
 
 - Verification bar: `npm run health` remains the required end gate.
@@ -130,6 +140,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Persistence: shipped quest saves reload with embedded/explicit
   `world_quest_id`; `load_game` rejects raw `pack_path`.
 - Trace verification: shipped quest traces replay/inspect with `world_quest_id`.
+- Trace CLIs: positional replay/inspect trace sources are quest ids; raw pack
+  paths are hidden offline compatibility only.
 - Live session metadata: start/transcript/save/load return shipped
   `world_quest_id` or generated `generated_rpg_seed` without raw pack paths.
 - Overworld quest view metadata: observations, action results, compact context,

@@ -5,7 +5,7 @@
  * Usage:
  *   npm run replay                              # replay the committed RPG smoke trace
  *   npm run replay -- <trace.json>              # infer a shipped trace's worldQuestId
- *   npm run replay -- <trace.json> <pack.yaml|world_quest_id>
+ *   npm run replay -- <trace.json> <world_quest_id>
  */
 import { readFileSync } from "node:fs";
 import { type Trace } from "../src/trace/record.js";
@@ -22,10 +22,6 @@ const DEFAULT_TRACE = "traces/rpg/barrow_victory.json";
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(name);
   return i >= 0 ? process.argv[i + 1] : undefined;
-}
-
-function looksLikePackPath(value: string): boolean {
-  return /\.ya?ml$/i.test(value) || value.includes("/") || value.includes("\\");
 }
 
 function positionalSourceArg(): string | undefined {
@@ -50,13 +46,18 @@ function traceSourceArgs(): TraceSourceArgs {
   ).length;
   if (count > 1) {
     throw new Error(
-      "replay accepts exactly one trace source: --pack, --world-quest-id, or positional source.",
+      "replay accepts exactly one trace source: --world-quest-id or a positional world quest id.",
     );
   }
   if (pack !== undefined) return { pack_path: pack };
   if (worldQuestId !== undefined) return { world_quest_id: worldQuestId };
   if (positional === undefined) return {};
-  return looksLikePackPath(positional) ? { pack_path: positional } : { world_quest_id: positional };
+  if (/\.ya?ml$/i.test(positional) || positional.includes("/") || positional.includes("\\")) {
+    throw new Error(
+      "replay trace sources are world quest ids; raw pack paths are hidden offline compatibility via --pack.",
+    );
+  }
+  return { world_quest_id: positional };
 }
 
 function main(): void {
@@ -84,7 +85,6 @@ function main(): void {
   const result = replayTrace(trace, rules);
   console.log(`trace_id:     ${trace.trace_id}`);
   console.log(`pack_id:      ${trace.pack_id}`);
-  console.log(`pack file:    ${packPath}`);
   console.log(`world quest:  ${source.worldQuestId ?? "(none)"}`);
   console.log(`actions:      ${trace.actions.length}`);
   console.log(`final hash:   ${result.finalHash}`);

@@ -50,6 +50,8 @@ describe("trace CLI integrity gate", () => {
 
     expect(result.status, output).toBe(0);
     expect(output).toContain("world quest:  sunken_barrow");
+    expect(output).not.toContain("pack file:");
+    expect(output).not.toContain(PACK);
     expect(output).toContain("REPLAY OK");
   });
 
@@ -59,6 +61,7 @@ describe("trace CLI integrity gate", () => {
 
     expect(result.status, output).toBe(0);
     expect(output).toContain("world_quest: sunken_barrow");
+    expect(output).not.toContain(PACK);
     expect(output).toContain("Replay: OK");
     expect(output).toContain("Suspected bug:");
   });
@@ -73,6 +76,16 @@ describe("trace CLI integrity gate", () => {
     expect(outputOf(inspect)).toContain("worldQuestId");
   });
 
+  it("trace CLIs reject positional raw pack paths as source selectors", () => {
+    const replay = run(`npm run replay -- ${SOURCE_TRACE} ${PACK}`);
+    const inspect = run(`npm run inspect -- ${SOURCE_TRACE} ${PACK}`);
+
+    expect(replay.status, outputOf(replay)).not.toBe(0);
+    expect(outputOf(replay)).toContain("world quest ids");
+    expect(inspect.status, outputOf(inspect)).not.toBe(0);
+    expect(outputOf(inspect)).toContain("world quest ids");
+  });
+
   it("npm run replay rejects a trace whose initial room is not in the RPG pack", () => {
     const result = run(`npm run replay -- ${PHANTOM_CURRENT}`);
     const output = outputOf(result);
@@ -82,7 +95,7 @@ describe("trace CLI integrity gate", () => {
   });
 
   it("npm run inspect rejects a trace that omits the RPG mode", () => {
-    const result = run(`npm run inspect -- ${MISSING_MODE} ${PACK}`);
+    const result = run(`npm run inspect -- ${MISSING_MODE}`);
     const output = outputOf(result);
 
     expect(result.status, output).not.toBe(0);

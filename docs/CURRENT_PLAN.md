@@ -86,7 +86,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - Shipped traces now embed `worldQuestId`, letting replay/inspect resolve
   through the world graph without a separate raw pack-path argument.
 - CLI replay/inspect now share that source resolver, so shipped traces can be
-  debugged without passing raw pack paths.
+  debugged without passing raw pack paths; positional trace sources are quest ids
+  only, with raw pack paths hidden behind offline compatibility.
 - CLI play now accepts/defaults to shipped `world_quest_id` sources and records
   `worldQuestId`, so local traces replay without raw pack paths.
 - Save restore source inference now shares the same world source resolver as
