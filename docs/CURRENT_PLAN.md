@@ -82,8 +82,8 @@ Make discovered overworld quest leads start real RPG sessions.
   packs as the explicit null-world source.
 - `validate_pack`, `load_pack`, and `apply_content_patch` now use shared source
   identity directly instead of re-deriving `world_quest_id` from the resolved path.
-- Static overworld compatibility tools now delegate to `world/static_overworld`,
-  keeping MCP as an adapter instead of a second graph-query implementation.
+- Retired the static overworld compatibility helper module; local overworld play
+  now goes through stateful sessions only.
 - Stateful overworld MCP action wrappers now share one session response envelope
   helper.
 - Discovered overworld quest starts now create RPG sessions through
@@ -124,8 +124,8 @@ Make discovered overworld quest leads start real RPG sessions.
   names, keeping stable ids and numeric route metrics.
 - Compact overworld pending-road tuples now omit road-event titles and stable
   option labels while preserving ids, risk, strategy, and numeric outcomes.
-- Public MCP now withholds static overworld compatibility helpers; agent play
-  uses stateful overworld sessions and compact session context.
+- Static overworld compatibility helpers are absent from ToolApi and public MCP;
+  agent play uses stateful overworld sessions and compact session context.
 
 ## Acceptance
 

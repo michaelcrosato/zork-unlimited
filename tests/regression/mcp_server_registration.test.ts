@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { createToolApi } from "../../src/mcp/tools.js";
 
-const INTERNAL_TOOL_API_HELPERS = new Set([
+const RETIRED_STATIC_OVERWORLD_TOOLS = [
   "explore_overworld_area",
   "explore_overworld_site",
   "investigate_overworld_event",
@@ -19,7 +19,7 @@ const INTERNAL_TOOL_API_HELPERS = new Set([
   "talk_overworld_contact",
   "travel_overworld",
   "work_overworld_job",
-]);
+] as const;
 
 function registeredServerTools(): string[] {
   const text = readFileSync("src/mcp/server.ts", "utf8");
@@ -36,11 +36,10 @@ function registeredToolBlock(name: string): string {
 }
 
 describe("MCP server registration", () => {
-  it("registers exactly the tested public ToolApi handlers", () => {
+  it("registers exactly the tested ToolApi handlers", () => {
     const api = createToolApi({ root: process.cwd() }) as Record<string, unknown>;
     const apiHandlers = Object.keys(api)
       .filter((key) => typeof api[key] === "function")
-      .filter((key) => !INTERNAL_TOOL_API_HELPERS.has(key))
       .sort();
 
     expect(registeredServerTools()).toEqual(apiHandlers);
@@ -63,10 +62,12 @@ describe("MCP server registration", () => {
     expect(worldPath).not.toContain("quest_path");
   });
 
-  it("keeps static overworld compatibility helpers off the public MCP surface", () => {
+  it("keeps retired static overworld compatibility helpers out of ToolApi and MCP", () => {
+    const api = createToolApi({ root: process.cwd() }) as Record<string, unknown>;
     const registered = registeredServerTools();
 
-    for (const helper of INTERNAL_TOOL_API_HELPERS) {
+    for (const helper of RETIRED_STATIC_OVERWORLD_TOOLS) {
+      expect(api).not.toHaveProperty(helper);
       expect(registered).not.toContain(helper);
     }
 

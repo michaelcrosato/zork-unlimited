@@ -68,24 +68,6 @@ import {
   type OverworldQuest,
 } from "../world/overworld.js";
 import {
-  exploreOverworldArea,
-  exploreOverworldSite,
-  investigateOverworldEvent,
-  lookOverworld,
-  scoutOverworldPoi,
-  talkOverworldContact,
-  travelOverworld,
-  workOverworldJob,
-  type OverworldStaticAreaResult,
-  type OverworldStaticContactResult,
-  type OverworldStaticEventResult,
-  type OverworldStaticJobResult,
-  type OverworldStaticLook,
-  type OverworldStaticPoiResult,
-  type OverworldStaticSiteResult,
-  type OverworldStaticTravel,
-} from "../world/static_overworld.js";
-import {
   OverworldSession,
   type OverworldActionResult,
   type OverworldAreaTravelResult,
@@ -1022,40 +1004,6 @@ export function createToolApi(opts: { root: string }) {
       );
     },
 
-    look_overworld(args: { town_id?: string }): OverworldStaticLook {
-      return lookOverworld(loadOverworldManifest(), args);
-    },
-
-    travel_overworld(args: { from_town: string; road_id: string }): OverworldStaticTravel {
-      return travelOverworld(loadOverworldManifest(), args);
-    },
-
-    explore_overworld_area(args: { town_id?: string; area_id: string }): OverworldStaticAreaResult {
-      return exploreOverworldArea(loadOverworldManifest(), args);
-    },
-
-    work_overworld_job(args: { town_id?: string; job_id: string }): OverworldStaticJobResult {
-      return workOverworldJob(loadOverworldManifest(), args);
-    },
-
-    scout_overworld_poi(args: { town_id?: string; poi_id: string }): OverworldStaticPoiResult {
-      return scoutOverworldPoi(loadOverworldManifest(), args);
-    },
-
-    talk_overworld_contact(args: {
-      town_id?: string;
-      character_id: string;
-    }): OverworldStaticContactResult {
-      return talkOverworldContact(loadOverworldManifest(), args);
-    },
-
-    investigate_overworld_event(args: {
-      town_id?: string;
-      event_id: string;
-    }): OverworldStaticEventResult {
-      return investigateOverworldEvent(loadOverworldManifest(), args);
-    },
-
     validate_quest(args: { quest_path?: string; quest_id?: string; world_quest_id?: string }): {
       ok: boolean;
       pack_path: string;
@@ -1096,10 +1044,6 @@ export function createToolApi(opts: { root: string }) {
         content_hash: lr.compiled.contentHash,
         report: lr.report,
       };
-    },
-
-    explore_overworld_site(args: { town_id?: string; site_id: string }): OverworldStaticSiteResult {
-      return exploreOverworldSite(loadOverworldManifest(), args);
     },
 
     /**

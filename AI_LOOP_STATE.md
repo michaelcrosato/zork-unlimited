@@ -20,8 +20,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Verification bar: `npm run health` remains the required end gate.
 - Current corpus: RPG and overworld content are broad enough that
   routine work should prefer targeted fixes or structural checks over more log prose.
-- Current engine seam: public MCP now pushes local overworld play through stateful
-  sessions; lower-level static helpers remain internal compatibility only.
+- Current engine seam: public MCP and ToolApi push local overworld play through
+  stateful sessions; the static overworld helper layer is retired.
 - Catalog source of truth: `list_stories` is a compatibility view over the Charter
   Marches quest graph, not a raw RPG pack directory scan.
 - Preferred shipped-quest start: use `start_world_quest` / `world_quest_id`;
@@ -71,7 +71,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
   packs as the explicit null-world source.
 - Pack validation/loading/patching now consume shared source identity instead of
   re-deriving `world_quest_id` after path resolution.
-- Static overworld compatibility helpers are internal-only; public MCP uses
+- Static overworld compatibility helpers are retired; ToolApi and public MCP use
   stateful overworld sessions for local play.
 - Stateful overworld MCP action wrappers now share one session response envelope
   helper.
