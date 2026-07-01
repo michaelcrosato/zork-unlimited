@@ -501,6 +501,7 @@ type OverworldLocalActionJournalReachabilityIndex = {
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   jobsById: ReadonlyMap<string, OverworldLocalJob>;
   poisById: ReadonlyMap<string, OverworldPoi>;
+  questsById: ReadonlyMap<string, OverworldQuest>;
   sitesById: ReadonlyMap<string, OverworldExplorationSite>;
   townVisitMinutes: ReadonlyMap<string, number>;
   visitedTownIds: ReadonlySet<string>;
@@ -995,6 +996,7 @@ function assertSnapshotDiscoveredLocalSourcePrefixes(
 ): void {
   const discoveredAreaIds = new Set(snapshot.discoveredAreaIds);
   const discoveredJobIds = new Set(snapshot.discoveredJobIds);
+  const discoveredSiteIds = new Set(snapshot.discoveredSiteIds);
   const discoveredQuestIds = new Set(snapshot.discoveredQuestIds);
   for (const townId of visitedTownIds) {
     assertSnapshotDiscoveredSourcePrefix(
@@ -1008,6 +1010,14 @@ function assertSnapshotDiscoveredLocalSourcePrefixes(
       discoveredQuestIds,
       overworldQuestsAt(world, townId).filter((quest) => discoveredAreaIds.has(quest.area)),
       townId,
+    );
+  }
+  for (const areaId of discoveredAreaIds) {
+    assertSnapshotDiscoveredSourcePrefix(
+      "site",
+      discoveredSiteIds,
+      overworldExplorationSitesInArea(world, areaId),
+      areaId,
     );
   }
 }
@@ -1443,6 +1453,82 @@ function assertSnapshotLocalActionDiscoveryChronology(
   }
 }
 
+function incrementCount(counts: Map<string, number>, key: string): void {
+  counts.set(key, (counts.get(key) ?? 0) + 1);
+}
+
+function assertDiscoveredSourceCountProof(
+  sourceLabel: string,
+  contextLabel: string,
+  contextId: string,
+  discoveredCount: number,
+  proofCount: number,
+): void {
+  if (discoveredCount > proofCount) {
+    throw new Error(
+      `Overworld session snapshot discovered ${sourceLabel} count in ${contextLabel} "${contextId}" has no matching local action proof.`,
+    );
+  }
+}
+
+function assertSnapshotDiscoveredLocalSourceCountProofs(
+  snapshot: OverworldSessionSnapshot,
+  sources: OverworldLocalActionJournalReachabilityIndex,
+): void {
+  const localActionCountByTown = new Map<string, number>();
+  const localActionCountByArea = new Map<string, number>();
+  const discoveredJobCountByTown = new Map<string, number>();
+  const discoveredQuestCountByTown = new Map<string, number>();
+  const discoveredSiteCountByArea = new Map<string, number>();
+
+  for (const entry of snapshot.journalEntries) {
+    const source = localJournalSource(entry, sources);
+    if (!source) continue;
+    incrementCount(localActionCountByTown, source.home);
+    incrementCount(localActionCountByArea, source.area);
+  }
+  for (const jobId of snapshot.discoveredJobIds) {
+    const job = sources.jobsById.get(jobId);
+    if (job) incrementCount(discoveredJobCountByTown, job.home);
+  }
+  for (const siteId of snapshot.discoveredSiteIds) {
+    const site = sources.sitesById.get(siteId);
+    if (site) incrementCount(discoveredSiteCountByArea, site.area);
+  }
+  for (const questId of snapshot.discoveredQuestIds) {
+    const quest = sources.questsById.get(questId);
+    if (quest) incrementCount(discoveredQuestCountByTown, quest.home);
+  }
+
+  for (const [townId, discoveredCount] of discoveredJobCountByTown) {
+    assertDiscoveredSourceCountProof(
+      "job",
+      "town",
+      townId,
+      discoveredCount,
+      localActionCountByTown.get(townId) ?? 0,
+    );
+  }
+  for (const [areaId, discoveredCount] of discoveredSiteCountByArea) {
+    assertDiscoveredSourceCountProof(
+      "site",
+      "area",
+      areaId,
+      discoveredCount,
+      localActionCountByArea.get(areaId) ?? 0,
+    );
+  }
+  for (const [townId, discoveredCount] of discoveredQuestCountByTown) {
+    assertDiscoveredSourceCountProof(
+      "quest",
+      "town",
+      townId,
+      discoveredCount,
+      localActionCountByTown.get(townId) ?? 0,
+    );
+  }
+}
+
 function assertSnapshotEventResolutionProofs(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldResolutionProofIndex,
@@ -1768,12 +1854,14 @@ export class OverworldSession {
       eventsById,
       jobsById,
       poisById,
+      questsById,
       sitesById,
       townVisitMinutes,
       visitedTownIds,
     };
     assertSnapshotLocalActionJournalReachability(snapshot, localActionJournalSources);
     assertSnapshotLocalActionDiscoveryChronology(snapshot, this.world, localActionJournalSources);
+    assertSnapshotDiscoveredLocalSourceCountProofs(snapshot, localActionJournalSources);
     assertSnapshotEventResolutionProofs(snapshot, {
       charactersById,
       eventsById,

@@ -4,7 +4,9 @@ import { createToolApi } from "../../src/mcp/tools.js";
 import {
   overworldAreasAt,
   overworldEdgesFrom,
+  overworldExplorationSitesInArea,
   overworldJobsAt,
+  overworldQuestsAt,
   overworldRoadEventFor,
   parseOverworldManifest,
 } from "../../src/world/overworld.js";
@@ -983,6 +985,64 @@ describe("overworld snapshot restore integrity", () => {
 
     expect(() => a.restore_overworld_session({ snapshot: forgedEarlySiteEntry })).toThrow(
       /journal site.*before discovering site/,
+    );
+  });
+
+  it("rejects discovered jobs without enough local action proof", () => {
+    const a = api();
+    const started = a.start_overworld();
+    const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
+    const job = overworldJobsAt(overworld, snapshot.currentId).find(
+      (candidate) => candidate.area === snapshot.currentAreaId,
+    );
+    if (!job) throw new Error("expected an initial-area job");
+    const forgedJobDiscovery = {
+      ...snapshot,
+      discoveredJobIds: appendUnique(snapshot.discoveredJobIds, job.id),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedJobDiscovery })).toThrow(
+      /discovered job count.*local action proof/,
+    );
+  });
+
+  it("rejects discovered sites without enough local action proof", () => {
+    const a = api();
+    const started = a.start_overworld();
+    const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
+    if (!snapshot.currentAreaId) throw new Error("expected a current area");
+    const site = overworldExplorationSitesInArea(overworld, snapshot.currentAreaId)[0];
+    if (!site) throw new Error("expected an initial-area exploration site");
+    const forgedSiteDiscovery = {
+      ...snapshot,
+      discoveredSiteIds: appendUnique(snapshot.discoveredSiteIds, site.id),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedSiteDiscovery })).toThrow(
+      /discovered site count.*local action proof/,
+    );
+  });
+
+  it("rejects discovered quests without enough local action proof", () => {
+    const a = api();
+    const started = a.start_overworld();
+    const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
+    const quest = overworldQuestsAt(overworld, snapshot.currentId)[0];
+    if (!quest) throw new Error("expected a local quest lead");
+    const areas = overworldAreasAt(overworld, snapshot.currentId);
+    const questAreaIndex = areas.findIndex((area) => area.id === quest.area);
+    if (questAreaIndex < 0) throw new Error("expected quest area in current town");
+    const forgedQuestDiscovery = {
+      ...snapshot,
+      discoveredAreaIds: appendUniques(
+        snapshot.discoveredAreaIds,
+        areas.slice(0, questAreaIndex + 1).map((area) => area.id),
+      ),
+      discoveredQuestIds: appendUnique(snapshot.discoveredQuestIds, quest.id),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedQuestDiscovery })).toThrow(
+      /discovered quest count.*local action proof/,
     );
   });
 
