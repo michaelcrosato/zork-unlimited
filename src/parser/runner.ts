@@ -9,19 +9,12 @@
 import type { Action } from "../api/types.js";
 import type { Rules } from "../core/engine.js";
 import type { GameState } from "../core/state.js";
-import { buildRpgRules, winningRpgEnding, type RpgIndex } from "../rpg/runner.js";
-import type { Enemy, RpgPack } from "../rpg/schema.js";
+import { buildRpgRules, winningRpgEnding } from "../rpg/runner.js";
 import type { Rng } from "../core/rng.js";
 import type { ParserIndex } from "./model.js";
+import { asRpgIndex } from "./rpg_compat.js";
 
 export { indexParserPack, initStateForParserPack, type ParserIndex } from "./model.js";
-
-const asRpgIndex = (index: ParserIndex): RpgIndex => ({
-  ...(index as unknown as RpgIndex),
-  rpgPack: index.pack as unknown as RpgPack,
-  enemies: new Map<string, Enemy>(),
-  enemyByRoom: new Map<string, Enemy[]>(),
-});
 
 /** First win condition satisfied in `state`, if any (§7.3 win_conditions). */
 export function winningEnding(index: ParserIndex, state: GameState): string | null {

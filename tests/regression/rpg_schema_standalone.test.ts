@@ -47,6 +47,15 @@ describe("RPG schema owns the RPG contract", () => {
     expect(parserRunner).not.toContain("decorateEvents");
   });
 
+  it("keeps legacy parser observations as a shim over the RPG observation builder", () => {
+    const parserObservation = readFileSync("src/parser/observation.ts", "utf8");
+    expect(parserObservation).toContain("../rpg/observation");
+    expect(parserObservation).toContain("buildRpgObservation");
+    expect(parserObservation).not.toContain("evalConditions");
+    expect(parserObservation).not.toContain("visibleObjectIds");
+    expect(parserObservation).not.toContain("openingWorldText");
+  });
+
   it("does not import the legacy parser runner for RPG win or score events", () => {
     const runner = readFileSync("src/rpg/runner.ts", "utf8");
     expect(runner).not.toContain("../parser/runner");

@@ -16,17 +16,15 @@ import {
   useInteraction as rpgUseInteraction,
   type RpgActionOption,
 } from "../rpg/legal_actions.js";
-import type { RpgModelIndex } from "../rpg/model.js";
 import type { ParserIndex } from "./model.js";
+import { asRpgModelIndex } from "./rpg_compat.js";
 import type { Interaction } from "./schema.js";
 
 export type ParserActionOption = RpgActionOption;
 
-const asRpgIndex = (index: ParserIndex): RpgModelIndex => index as unknown as RpgModelIndex;
-
 /** True if `id` is reachable for the player right now (held or visible in the room). */
 export function present(index: ParserIndex, state: GameState, id: string): boolean {
-  return rpgPresent(asRpgIndex(index), state, id);
+  return rpgPresent(asRpgModelIndex(index), state, id);
 }
 
 /** Find the USE interaction, if any, for using `item` on `target`. */
@@ -35,7 +33,9 @@ export function useInteraction(
   target: string,
   item?: string,
 ): Interaction | undefined {
-  return rpgUseInteraction(asRpgIndex(index), target, item) as unknown as Interaction | undefined;
+  return rpgUseInteraction(asRpgModelIndex(index), target, item) as unknown as
+    | Interaction
+    | undefined;
 }
 
 export function resolveParserAction(
@@ -43,9 +43,9 @@ export function resolveParserAction(
   state: GameState,
   action: Action,
 ): Resolution | null {
-  return resolveRpgAction(asRpgIndex(index), state, action);
+  return resolveRpgAction(asRpgModelIndex(index), state, action);
 }
 
 export function enumerateActions(index: ParserIndex, state: GameState): ParserActionOption[] {
-  return enumerateRpgBaseActions(asRpgIndex(index), state);
+  return enumerateRpgBaseActions(asRpgModelIndex(index), state);
 }
