@@ -152,12 +152,16 @@ describe("assess()", () => {
     });
   });
 
-  it("raises content_new candidates only for the RPG breadth target", () => {
-    // TARGET_PER_MODE = {rpg:16}. Legacy content is no longer a breadth
-    // target, so the assessor must not reintroduce those modes as new authoring work.
+  it("raises content_new only for contiguous world-quest breadth", () => {
+    // Breadth work is now a world graph target, not a mode/pack target. Legacy
+    // content is no longer a breadth target, and raw RPG packs must not be raised
+    // as detached authoring work.
     expect(a.packsByMode["rpg"]).toBeGreaterThanOrEqual(16);
     expect(
       a.candidates.find((c) => c.category === "content_new" && c.target === "rpg"),
+    ).toBeUndefined();
+    expect(
+      a.candidates.find((c) => c.category === "content_new" && c.target === "world"),
     ).toBeUndefined();
     expect(
       a.candidates.find((c) => c.category === "content_new" && c.target === "cyoa"),
@@ -166,6 +170,19 @@ describe("assess()", () => {
       a.candidates.find((c) => c.category === "content_new" && c.target === "parser"),
     ).toBeUndefined();
     expect(a.candidates.find((c) => c.category === "content_new")).toBeUndefined();
+  });
+
+  it("under-target breadth work points at the world graph, not a raw mode", () => {
+    withStaleAuditFixtureRoot((root) => {
+      const fixtureAssessment = assess(root);
+      const candidate = fixtureAssessment.candidates.find((c) => c.id === "new-world-quest");
+
+      expect(candidate).toBeDefined();
+      expect(candidate?.category).toBe("content_new");
+      expect(candidate?.target).toBe("world");
+      expect(candidate?.title).toContain("world-graph RPG quest");
+      expect(candidate?.rationale).toContain("contiguous Charter Marches graph");
+    });
   });
 
   it("every candidate is well-formed (evidence + score + effort)", () => {

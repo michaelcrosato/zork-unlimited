@@ -2,7 +2,7 @@
  * The AFK loop's brain — "what is the next best improvement?" (trust-but-verify).
  *
  * Each cycle the loop must decide where to spend its effort across FOUR categories:
- *   - content_new  : the game is thin somewhere (a mode with too few packs)
+ *   - content_new  : the world graph is thin (too few playable RPG quest nodes)
  *   - content_fix  : an existing pack has coverage gaps, unreached endings, or
  *                    validator warnings (the quality signal a real playtest probes)
  *   - engine       : code-level debt (TODO/FIXME markers, pending mechanics)
@@ -71,10 +71,10 @@ const CATEGORY_WEIGHT: Record<Category, number> = {
   engine: 0.8,
   repo: 0.6,
 };
-// How many consolidated RPG packs is "healthy" before net-new content is deprioritized.
-// The public catalog is RPG-only, so this lever must not re-raise legacy mode
-// authoring work after those modes have been removed from discovery.
-const TARGET_PER_MODE: Record<string, number> = { rpg: 16 };
+// How many playable quest nodes in the contiguous world graph is "healthy" before
+// net-new world expansion is deprioritized. Count world_quest_id entries, not raw
+// pack files, so this lever cannot reintroduce standalone package authoring.
+const WORLD_QUEST_TARGET = 16;
 
 function score(impact: number, effort: ImprovementCandidate["effort"], category: Category): number {
   // Deterministic: (impact / effort) * weight, rounded to 3 dp.
@@ -544,23 +544,22 @@ export function assess(root: string): Assessment {
     }
   }
 
-  // ── content_new: modes that are thin relative to TARGET_PER_MODE ──────────────
-  for (const [mode, target] of Object.entries(TARGET_PER_MODE)) {
-    const have = packsByMode[mode] ?? 0;
-    if (have < target) {
-      const impact = Math.min(5, 2 + (target - have));
-      candidates.push({
-        id: `new-${mode}`,
-        category: "content_new",
-        target: mode,
-        title: `Author a new ${mode} pack (${have}/${target}) to broaden the game`,
-        rationale: `Only ${have} playable ${mode} pack(s) exist; more breadth exercises the engine and gives players more to do.`,
-        evidence: [`${have} ${mode} pack(s) present, target ${target}`],
-        impact,
-        effort: "L",
-        score: score(impact, "L", "content_new"),
-      });
-    }
+  // ── content_new: contiguous world graph breadth ───────────────────────────────
+  const worldQuestCount = stories.filter((s) => s.playable && s.world_quest_id !== null).length;
+  if (worldQuestCount < WORLD_QUEST_TARGET) {
+    const impact = Math.min(5, 2 + (WORLD_QUEST_TARGET - worldQuestCount));
+    candidates.push({
+      id: "new-world-quest",
+      category: "content_new",
+      target: "world",
+      title: `Add a new world-graph RPG quest (${worldQuestCount}/${WORLD_QUEST_TARGET})`,
+      rationale:
+        "Breadth work must expand the contiguous Charter Marches graph, not create a detached pack. A registered world quest exercises the overworld handoff, RPG runtime, save metadata, and MCP quest-id path together.",
+      evidence: [`${worldQuestCount} playable world quest node(s), target ${WORLD_QUEST_TARGET}`],
+      impact,
+      effort: "L",
+      score: score(impact, "L", "content_new"),
+    });
   }
 
   // ── engine: TODO/FIXME debt in src/ ───────────────────────────────────────────

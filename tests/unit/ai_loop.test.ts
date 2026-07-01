@@ -79,7 +79,7 @@ describe("playtestTarget", () => {
 
   it("uses the main story as the pre-authoring baseline for non-content-fix work", () => {
     for (const top of [
-      candidate("content_new", "rpg"),
+      candidate("content_new", "world"),
       candidate("engine", "src/core/engine.ts"),
       candidate("repo", "tooling"),
       null,
@@ -104,7 +104,9 @@ describe("playtestTargetWorldQuestId", () => {
         "breaking_weir",
       ),
     ).toBeNull();
-    expect(playtestTargetWorldQuestId(candidate("content_new", "rpg"), "breaking_weir")).toBeNull();
+    expect(
+      playtestTargetWorldQuestId(candidate("content_new", "world"), "breaking_weir"),
+    ).toBeNull();
   });
 });
 
@@ -143,8 +145,8 @@ describe("buildPrompt blind-playtest contract", () => {
     expect(prompt).not.toContain("with this pack and a seed");
   });
 
-  it("content_new cycles author first, then blind-playtest the newly authored pack", () => {
-    const top = candidate("content_new", "rpg");
+  it("content_new cycles register a world quest first, then blind-playtest its quest id", () => {
+    const top = candidate("content_new", "world");
     const prompt = buildPrompt({
       a: assessment(top),
       top,
@@ -153,10 +155,13 @@ describe("buildPrompt blind-playtest contract", () => {
       playtestRecord,
     });
 
-    expect(prompt).toContain("## STEP 1 — Author the new pack, THEN blind-playtest IT");
-    expect(prompt).toContain("You are authoring a new rpg this cycle");
-    expect(prompt).toContain("pointed at the PACK YOU JUST AUTHORED");
-    expect(prompt).toContain("Let the blind read of YOUR new pack drive a final polish pass");
+    expect(prompt).toContain("## STEP 1 — Add the new world quest, THEN blind-playtest IT");
+    expect(prompt).toContain("register it in the world graph/overworld manifest");
+    expect(prompt).toContain("pointed at the QUEST_ID YOU JUST REGISTERED");
+    expect(prompt).toContain(
+      "Let the blind read of YOUR new world quest drive a final polish pass",
+    );
+    expect(prompt).toContain("playtest by quest_id");
     expect(prompt).toContain(`to: ${playtestRecord}`);
     expect(prompt).toContain(`Baseline ${mainStory} need not be replayed`);
     expect(prompt).not.toContain(`Playtest target this cycle: ${mainStory}`);

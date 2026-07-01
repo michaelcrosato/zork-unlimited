@@ -192,30 +192,29 @@ export function buildPrompt(ctx: {
   const health = targetHealth
     ? `${targetHealth.warnings} validator warning(s)`
     : "(not a pack — engine/repo work; the target pack is the regression baseline)";
-  // For content_new the pack to playtest does NOT exist at assess time (the agent
-  // authors it this cycle), so `target` is just the regression baseline. The quality
-  // oracle is far more valuable spent on the NEW pack than re-playing the baseline a
-  // 20th time — otherwise a freshly-authored pack ships structurally-valid but never
-  // experience-tested until a later rotation cycle. So content_new flips the order:
-  // author first, then blind-playtest the pack you just authored.
+  // For content_new the world quest to playtest does NOT exist at assess time (the
+  // agent authors + registers it this cycle), so `target` is just the regression
+  // baseline. The quality oracle is far more valuable spent on the NEW world quest
+  // than re-playing the baseline a 20th time. So content_new flips the order:
+  // author/register first, then blind-playtest the quest id you just added.
   const isContentNew = top?.category === "content_new";
   const targetLabel = targetWorldQuestId
     ? `${targetWorldQuestId} (${target})`
     : `${target}  (${health})`;
   const playtestStep = isContentNew
     ? [
-        "## STEP 1 — Author the new pack, THEN blind-playtest IT (quality feedback)",
+        "## STEP 1 — Add the new world quest, THEN blind-playtest IT (quality feedback)",
         "",
-        `You are authoring a new ${top?.target ?? "pack"} this cycle. Order for content_new:`,
-        "1. Author the new pack and get it validating green (validate_pack / npm run validate).",
+        "You are expanding the single Charter Marches RPG world this cycle. Order for content_new:",
+        "1. Author the RPG quest pack, register it in the world graph/overworld manifest, and get it validating green (validate_quest / npm run validate).",
         "2. THEN spawn a FRESH subagent with NO design context (Agent tool general-purpose, or a",
         "   clean `claude -p`). Hand it ONLY the locked-down prompt in docs/blind_playtest_protocol.md,",
-        "   pointed at the PACK YOU JUST AUTHORED (its pack_path) + a seed. It must play purely through",
+        "   pointed at the QUEST_ID YOU JUST REGISTERED + a seed. It must play purely through",
         "   the mcp__adventureforge__* tools and must NOT read content/, src/, ui/, tests/.",
         `- WRITE its structured report (route, mechanics, clarity 1-5, enjoyment 1-5, confusion,`,
         `  concrete findings, verdict) to: ${playtestRecord}  (REQUIRED — no record ⇒ no commit).`,
-        "- Let the blind read of YOUR new pack drive a final polish pass before you commit it, so the",
-        `  pack ships experience-tested, not just structurally valid. (Baseline ${target} need not be replayed.)`,
+        "- Let the blind read of YOUR new world quest drive a final polish pass before you commit it, so it",
+        `  ships experience-tested through the quest-id MCP path, not just structurally valid. (Baseline ${target} need not be replayed.)`,
       ]
     : [
         "## STEP 1 — MANDATORY LLM playtest (quality feedback, every cycle)",
@@ -256,7 +255,8 @@ export function buildPrompt(ctx: {
     "",
     "## STEP 2 — Make ONE improvement",
     "",
-    "- content_fix / content_new: edit the pack (or apply_content_patch); re-validate.",
+    "- content_fix: edit the pack (or apply_content_patch); re-validate.",
+    "- content_new: add a world-graph RPG quest, not a detached pack; validate and playtest by quest_id.",
     "- engine / repo: change freely under trust-but-verify. New mechanics no longer need",
     "  a §14 ceremony, but keep the verification green and add tests for new behavior.",
     "- If you fix a bug, add a traces/bugs/ artifact + a tests/regression/ test (§15).",
