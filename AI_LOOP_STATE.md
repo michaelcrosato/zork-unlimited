@@ -60,6 +60,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   stepping trace state.
 - Persistence: shipped saves embed `worldQuestId`, so `load_game({ save })`
   can restore through the world graph without a raw pack path.
+- Trace verification: shipped traces can embed `worldQuestId`, so replay/inspect
+  can resolve through the world graph without a raw pack path.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,

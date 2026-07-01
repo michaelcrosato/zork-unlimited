@@ -90,8 +90,10 @@ describe("trace record / replay (§8.8)", () => {
       trace_id: "tr_test",
       pack_id: MICRO_PACK_ID,
       content_hash: MICRO_CONTENT_HASH,
+      worldQuestId: "sunken_barrow",
     });
     expect(trace.mode).toBe(SAVE_MODE);
+    expect(trace.worldQuestId).toBe("sunken_barrow");
     expect(trace.expected_final_hash).toBeDefined();
     const result = replayTrace(trace, microRules);
     expect(result.ok).toBe(true);

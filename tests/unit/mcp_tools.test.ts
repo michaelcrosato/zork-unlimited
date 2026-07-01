@@ -1265,6 +1265,7 @@ describe("MCP tools — replay + path confinement", () => {
       trace_id: "tr_mcp",
       pack_id: compiled.compiled.pack.meta.id,
       content_hash: compiled.compiled.contentHash,
+      worldQuestId: "sunken_barrow",
     });
     mkdirSync("traces", { recursive: true });
     writeFileSync("traces/mcp_replay.json", JSON.stringify(trace));
@@ -1280,6 +1281,11 @@ describe("MCP tools — replay + path confinement", () => {
       trace_path: "traces/mcp_replay.json",
       world_quest_id: "sunken_barrow",
     });
+    expect(r.ok).toBe(true);
+  });
+
+  it("replay_trace can infer a shipped trace source from embedded worldQuestId", () => {
+    const r = api().replay_trace({ trace_path: "traces/mcp_replay.json" });
     expect(r.ok).toBe(true);
   });
 
@@ -1316,6 +1322,17 @@ describe("MCP tools — replay + path confinement", () => {
     expect(r.diagnosis.type).toBe("no_failure");
   });
 
+  it("inspect_trace can infer a shipped trace source from embedded worldQuestId", () => {
+    const r = api().inspect_trace({ trace_path: "traces/mcp_replay.json" }) as {
+      ok: boolean;
+      hash_ok: boolean;
+      diagnosis: { type: string };
+    };
+    expect(r.ok).toBe(true);
+    expect(r.hash_ok).toBe(true);
+    expect(r.diagnosis.type).toBe("no_failure");
+  });
+
   it("trace tools reject ambiguous content sources", () => {
     const a = api();
     expect(() =>
@@ -1332,6 +1349,22 @@ describe("MCP tools — replay + path confinement", () => {
         pack_path: PACK,
       }),
     ).toThrow(/exactly one/);
+  });
+
+  it("trace tools reject a source that conflicts with the trace world quest id", () => {
+    const a = api();
+    expect(() =>
+      a.replay_trace({
+        trace_path: "traces/mcp_replay.json",
+        world_quest_id: "cold_forge",
+      }),
+    ).toThrow(/worldQuestId/);
+    expect(() =>
+      a.inspect_trace({
+        trace_path: "traces/mcp_replay.json",
+        world_quest_id: "cold_forge",
+      }),
+    ).toThrow(/worldQuestId/);
   });
 
   it("rejects a path that escapes the project root", () => {

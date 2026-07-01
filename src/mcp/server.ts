@@ -531,17 +531,21 @@ tool(
 
 tool(
   "replay_trace",
-  "Replay a recorded RPG trace against a shipped world quest or compatibility pack path and assert its final-state hash (§8.8).",
+  "Replay a recorded RPG trace against its embedded worldQuestId, an explicit world_quest_id, or a compatibility pack path and assert its final-state hash (§8.8).",
   {
     trace_path: z.string().describe("Path to a trace JSON, relative to the project root."),
     pack_path: z
       .string()
       .optional()
-      .describe("Compatibility path to an RPG quest content pack. Prefer world_quest_id."),
+      .describe(
+        "Compatibility path to an RPG quest content pack. Omit for shipped traces with embedded worldQuestId.",
+      ),
     world_quest_id: z
       .string()
       .optional()
-      .describe("Charter Marches quest graph node id from list_world().quests[].graph_node."),
+      .describe(
+        "Charter Marches quest graph node id from list_world().quests[].graph_node. Optional when the trace embeds worldQuestId.",
+      ),
   },
   (a) => api.replay_trace(a),
 );
@@ -557,17 +561,21 @@ tool(
 
 tool(
   "inspect_trace",
-  "Summarize a recorded trace against a shipped world quest or compatibility pack path: per-step locations/events, final-hash check, and the debugger's suspected-bug classification (§9.4, §12.5).",
+  "Summarize a recorded trace against its embedded worldQuestId, an explicit world_quest_id, or a compatibility pack path: per-step locations/events, final-hash check, and the debugger's suspected-bug classification (§9.4, §12.5).",
   {
     trace_path: z.string().describe("Path to a trace JSON, relative to the project root."),
     pack_path: z
       .string()
       .optional()
-      .describe("Compatibility path to an RPG quest content pack. Prefer world_quest_id."),
+      .describe(
+        "Compatibility path to an RPG quest content pack. Omit for shipped traces with embedded worldQuestId.",
+      ),
     world_quest_id: z
       .string()
       .optional()
-      .describe("Charter Marches quest graph node id from list_world().quests[].graph_node."),
+      .describe(
+        "Charter Marches quest graph node id from list_world().quests[].graph_node. Optional when the trace embeds worldQuestId.",
+      ),
   },
   (a) => api.inspect_trace(a),
 );

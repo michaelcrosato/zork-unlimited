@@ -69,6 +69,8 @@ Make discovered overworld quest leads start real RPG sessions.
   tools before stepping trace state.
 - Shipped saves now embed `worldQuestId`, letting `load_game({ save })` restore
   through the world graph without a separate raw pack-path argument.
+- Shipped traces now embed `worldQuestId`, letting replay/inspect resolve
+  through the world graph without a separate raw pack-path argument.
 
 ## Acceptance
 

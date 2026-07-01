@@ -15,6 +15,8 @@ import { SAVE_MODE, type SaveMode } from "../persist/save_load.js";
 
 export type Trace<A extends EngineAction = Action> = {
   mode: SaveMode;
+  /** Shipped world quest id, when the trace belongs to the open-world graph. */
+  worldQuestId?: string;
   trace_id: string;
   pack_id: string;
   content_hash: string;
@@ -62,6 +64,7 @@ export type RecordOptions = {
   trace_id: string;
   pack_id: string;
   content_hash: string;
+  worldQuestId?: string | null;
 };
 
 /** Run the actions and produce a Trace stamped with the final-state hash. */
@@ -74,6 +77,7 @@ export function recordTrace<A extends EngineAction>(
   const run = runActions(rules, initialState, actions);
   return {
     mode: SAVE_MODE,
+    ...(opts.worldQuestId ? { worldQuestId: opts.worldQuestId } : {}),
     trace_id: opts.trace_id,
     pack_id: opts.pack_id,
     content_hash: opts.content_hash,

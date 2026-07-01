@@ -396,6 +396,59 @@ export function createToolApi(opts: { root: string }) {
       : args.pack_path!;
   }
 
+  function traceWorldQuestId(trace: Trace<RpgAction>, operation: string): string | undefined {
+    const raw = (trace as { worldQuestId?: unknown }).worldQuestId;
+    if (raw === undefined) return undefined;
+    if (typeof raw !== "string") {
+      throw new SaveIntegrityError(
+        `${operation} trace worldQuestId must be a string when present, got ${JSON.stringify(
+          raw,
+        )}.`,
+      );
+    }
+    return raw;
+  }
+
+  function resolveTraceSource(
+    args: { pack_path?: string; world_quest_id?: string },
+    trace: Trace<RpgAction>,
+    operation: string,
+  ): { packPath: string; worldQuestId: string | null; compiled: CompiledRpgPack } {
+    const embeddedWorldQuestId = traceWorldQuestId(trace, operation);
+    const sourceCount = [args.world_quest_id !== undefined, args.pack_path !== undefined].filter(
+      Boolean,
+    ).length;
+    if (sourceCount > 1) {
+      throw new Error(`${operation} accepts exactly one of world_quest_id or pack_path.`);
+    }
+    let packPath: string;
+    let worldQuestId: string | null;
+    if (args.world_quest_id !== undefined) {
+      const resolved = resolveWorldQuestPackPath(args.world_quest_id);
+      packPath = resolved.packPath;
+      worldQuestId = resolved.node.id;
+    } else if (args.pack_path !== undefined) {
+      packPath = args.pack_path;
+      worldQuestId = worldQuestIdForPackPath(packPath);
+    } else if (embeddedWorldQuestId !== undefined) {
+      const resolved = resolveWorldQuestPackPath(embeddedWorldQuestId);
+      packPath = resolved.packPath;
+      worldQuestId = resolved.node.id;
+    } else {
+      throw new Error(
+        `${operation} requires world_quest_id, pack_path, or a trace with worldQuestId.`,
+      );
+    }
+    if (embeddedWorldQuestId !== undefined && embeddedWorldQuestId !== worldQuestId) {
+      throw new SaveIntegrityError(
+        `Trace worldQuestId ${JSON.stringify(
+          embeddedWorldQuestId,
+        )} does not match requested source ${JSON.stringify(worldQuestId)}.`,
+      );
+    }
+    return { packPath, worldQuestId, compiled: requirePlayable(packPath) };
+  }
+
   function resolveQuestAliasSource(
     args: { quest_path?: string; quest_id?: string; world_quest_id?: string },
     operation: string,
@@ -1582,7 +1635,7 @@ export function createToolApi(opts: { root: string }) {
       const traceAbs = safeResolve(root, args.trace_path);
       const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace<RpgAction>;
       assertTraceMode(trace);
-      const compiled = requirePlayable(resolvePackPathSource(args, "replay_trace"));
+      const { compiled } = resolveTraceSource(args, trace, "replay_trace");
       if (trace.content_hash !== compiled.contentHash) {
         return {
           ok: false,
@@ -1612,7 +1665,7 @@ export function createToolApi(opts: { root: string }) {
       const traceAbs = safeResolve(root, args.trace_path);
       const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace<RpgAction>;
       assertTraceMode(trace);
-      const compiled = requirePlayable(resolvePackPathSource(args, "inspect_trace"));
+      const { compiled } = resolveTraceSource(args, trace, "inspect_trace");
       if (trace.content_hash !== compiled.contentHash) {
         return {
           ok: false,
