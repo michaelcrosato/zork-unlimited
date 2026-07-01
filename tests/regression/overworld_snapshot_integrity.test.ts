@@ -915,6 +915,77 @@ describe("overworld snapshot restore integrity", () => {
     );
   });
 
+  it("rejects local job journal entries recorded before job discovery", () => {
+    const a = api();
+    const started = a.start_overworld();
+    const firstArea = started.observation.areas[0]!;
+    const exploredFirstArea = a.explore_overworld_session_area({
+      session_id: started.session_id,
+      area_id: firstArea.id,
+    });
+    const job = exploredFirstArea.observation.jobs[0];
+    if (!job) throw new Error("expected an initial-area job after local discovery");
+
+    a.work_overworld_session_job({
+      session_id: started.session_id,
+      job_id: job.id,
+    });
+    const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
+    const jobEntryId = `job:${job.id}`;
+    const jobEntry = snapshot.journalEntries.find((entry) => entry.id === jobEntryId);
+    if (!jobEntry) throw new Error("expected job journal entry");
+    const forgedEarlyJobEntry = {
+      ...snapshot,
+      journalEntries: [
+        ...snapshot.journalEntries.filter((entry) => entry.id !== jobEntryId),
+        {
+          ...jobEntry,
+          recordedAt: timeLabelForMinutes(8 * 60),
+        },
+      ],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedEarlyJobEntry })).toThrow(
+      /journal job.*before discovering job/,
+    );
+  });
+
+  it("rejects local site journal entries recorded before site discovery", () => {
+    const a = api();
+    const started = a.start_overworld();
+    const site = overworld.exploration_sites.find(
+      (candidate) => candidate.area === started.observation.currentArea?.id,
+    );
+    if (!site) throw new Error("expected an initial-area exploration site");
+
+    a.scout_overworld_session_poi({
+      session_id: started.session_id,
+      poi_id: started.observation.pois[0]!.id,
+    });
+    a.explore_overworld_session_site({
+      session_id: started.session_id,
+      site_id: site.id,
+    });
+    const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
+    const siteEntryId = `site:${site.id}`;
+    const siteEntry = snapshot.journalEntries.find((entry) => entry.id === siteEntryId);
+    if (!siteEntry) throw new Error("expected site journal entry");
+    const forgedEarlySiteEntry = {
+      ...snapshot,
+      journalEntries: [
+        ...snapshot.journalEntries.filter((entry) => entry.id !== siteEntryId),
+        {
+          ...siteEntry,
+          recordedAt: timeLabelForMinutes(8 * 60),
+        },
+      ],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedEarlySiteEntry })).toThrow(
+      /journal site.*before discovering site/,
+    );
+  });
+
   it("rejects discovered jobs in undiscovered areas", () => {
     const { a, snapshot } = exportedSnapshotAfterTwoRoads();
     const job = overworld.local_jobs.find(

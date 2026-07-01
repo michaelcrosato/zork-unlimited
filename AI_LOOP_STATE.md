@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 36 -->
+<!-- historical_cycle_count: 37 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_snapshot_local_source_chronology
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner still fails broad root Prettier/ESLint outside canonical package scripts, while its tsc/test portions passed.
+- Engine/persistence: overworld restore now rejects completed job and explored site journals recorded before a prior local action could reveal that job/site.
+- Token economy: compact discovered source ids remain timestamp-free, with restore deriving minimum reveal proof from ordered local journals instead of storing verbose reveal transcripts.
+- VERIFY: focused overworld snapshot test (72), typecheck, lint, format:check, validate, npm test (192/1332), `npm run health` EXIT 0.
+- Self-critique: closes first-step job/site reveal chronology; exact multi-source reveal replay and quest-lead timestamp proof remain future work.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
 
 ### Cycle result — overworld_snapshot_local_area_chronology
 

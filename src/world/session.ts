@@ -1379,7 +1379,7 @@ function assertSnapshotLocalActionJournalReachability(
   }
 }
 
-function assertSnapshotLocalActionAreaDiscoveryChronology(
+function assertSnapshotLocalActionDiscoveryChronology(
   snapshot: OverworldSessionSnapshot,
   world: OverworldManifest,
   sources: OverworldLocalActionJournalReachabilityIndex,
@@ -1397,6 +1397,7 @@ function assertSnapshotLocalActionAreaDiscoveryChronology(
     .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
     .sort((left, right) => left.recordedAt - right.recordedAt);
   const priorLocalActionCountByTown = new Map<string, number>();
+  const priorLocalActionCountByArea = new Map<string, number>();
 
   for (let index = 0; index < entries.length; ) {
     const recordedAt = entries[index]!.recordedAt;
@@ -1406,15 +1407,25 @@ function assertSnapshotLocalActionAreaDiscoveryChronology(
       index += 1;
     }
 
-    for (const { source } of group) {
+    for (const { entry, source } of group) {
+      const priorLocalActionCount = priorLocalActionCountByTown.get(source.home) ?? 0;
       const areaIndex = overworldAreasAt(world, source.home).findIndex(
         (area) => area.id === source.area,
       );
-      if (areaIndex <= 0) continue;
-      const priorLocalActionCount = priorLocalActionCountByTown.get(source.home) ?? 0;
-      if (priorLocalActionCount < areaIndex) {
+      if (areaIndex > 0 && priorLocalActionCount < areaIndex) {
         throw new Error(
           `Overworld session snapshot ${source.sourceLabel} "${source.sourceId}" was recorded before discovering area "${source.area}".`,
+        );
+      }
+      if (entry.kind === "job" && priorLocalActionCount < 1) {
+        throw new Error(
+          `Overworld session snapshot ${source.sourceLabel} "${source.sourceId}" was recorded before discovering job "${source.sourceId}".`,
+        );
+      }
+      const priorAreaLocalActionCount = priorLocalActionCountByArea.get(source.area) ?? 0;
+      if (entry.kind === "site" && priorAreaLocalActionCount < 1) {
+        throw new Error(
+          `Overworld session snapshot ${source.sourceLabel} "${source.sourceId}" was recorded before discovering site "${source.sourceId}".`,
         );
       }
     }
@@ -1423,6 +1434,10 @@ function assertSnapshotLocalActionAreaDiscoveryChronology(
       priorLocalActionCountByTown.set(
         source.home,
         (priorLocalActionCountByTown.get(source.home) ?? 0) + 1,
+      );
+      priorLocalActionCountByArea.set(
+        source.area,
+        (priorLocalActionCountByArea.get(source.area) ?? 0) + 1,
       );
     }
   }
@@ -1758,11 +1773,7 @@ export class OverworldSession {
       visitedTownIds,
     };
     assertSnapshotLocalActionJournalReachability(snapshot, localActionJournalSources);
-    assertSnapshotLocalActionAreaDiscoveryChronology(
-      snapshot,
-      this.world,
-      localActionJournalSources,
-    );
+    assertSnapshotLocalActionDiscoveryChronology(snapshot, this.world, localActionJournalSources);
     assertSnapshotEventResolutionProofs(snapshot, {
       charactersById,
       eventsById,
