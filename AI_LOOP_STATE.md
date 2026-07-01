@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 29 -->
+<!-- historical_cycle_count: 30 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_snapshot_discovered_town_frontier
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; helper still fails broad root formatting/ESLint outside canonical package scripts.
+- Engine/persistence: overworld restore now requires discovered towns to equal visited towns plus immediate road neighbors of every visited town.
+- Token economy: compact map state can no longer smuggle arbitrary far towns or omit frontier towns live play would know.
+- VERIFY: focused overworld snapshot/MCP/UI tests, typecheck, lint, format:check, validate, npm test, `npm run health` EXIT 0.
+- Self-critique: closes discovered-town frontier exactness; area-discovery timing remains a larger future invariant.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
 
 ### Cycle result — overworld_snapshot_travel_path_replay
 

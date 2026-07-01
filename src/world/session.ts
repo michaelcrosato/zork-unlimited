@@ -854,6 +854,43 @@ function assertSnapshotTravelPathContinuity(
   }
 }
 
+function expectedDiscoveredTownIds(
+  world: OverworldManifest,
+  visitedTownIds: ReadonlySet<string>,
+): Set<string> {
+  const expected = new Set<string>();
+  for (const townId of visitedTownIds) {
+    expected.add(townId);
+    for (const edge of overworldEdgesFrom(world, townId)) {
+      expected.add(edge.destination.id);
+    }
+  }
+  return expected;
+}
+
+function assertSnapshotDiscoveredTownFrontier(
+  snapshot: OverworldSessionSnapshot,
+  world: OverworldManifest,
+  visitedTownIds: ReadonlySet<string>,
+): void {
+  const expected = expectedDiscoveredTownIds(world, visitedTownIds);
+  const discoveredTownIds = new Set(snapshot.discoveredIds);
+  for (const townId of snapshot.discoveredIds) {
+    if (!expected.has(townId)) {
+      throw new Error(
+        `Overworld session snapshot discovered town "${townId}" is outside the visited frontier.`,
+      );
+    }
+  }
+  for (const townId of expected) {
+    if (!discoveredTownIds.has(townId)) {
+      throw new Error(
+        `Overworld session snapshot discovered town frontier is missing "${townId}".`,
+      );
+    }
+  }
+}
+
 function addRegionRenown(target: Map<string, number>, region: string, amount: number): void {
   if (amount <= 0) return;
   target.set(region, (target.get(region) ?? 0) + amount);
@@ -1400,6 +1437,7 @@ export class OverworldSession {
     const visitedTownIds = new Set(snapshot.visitedIds);
     const townVisitMinutes = assertSnapshotVisitedTownTravelProof(snapshot, this.world.start);
     assertSnapshotTravelPathContinuity(snapshot, this.world.start);
+    assertSnapshotDiscoveredTownFrontier(snapshot, this.world, visitedTownIds);
     const discoveredAreaIds = new Set(snapshot.discoveredAreaIds);
     const discoveredJobIds = new Set(snapshot.discoveredJobIds);
     const discoveredSiteIds = new Set(snapshot.discoveredSiteIds);

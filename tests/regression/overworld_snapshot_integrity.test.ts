@@ -603,6 +603,36 @@ describe("overworld snapshot restore integrity", () => {
     );
   });
 
+  it("rejects discovered towns outside the visited frontier", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const town = overworld.nodes.find(
+      (candidate) => !snapshot.discoveredIds.includes(candidate.id),
+    );
+    if (!town) throw new Error("expected an undiscovered town outside the current frontier");
+    const forgedDiscovery = {
+      ...snapshot,
+      discoveredIds: appendUnique(snapshot.discoveredIds, town.id),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedDiscovery })).toThrow(
+      /discovered town.*outside the visited frontier/,
+    );
+  });
+
+  it("rejects missing discovered towns from the visited frontier", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const townId = snapshot.discoveredIds.find((id) => !snapshot.visitedIds.includes(id));
+    if (!townId) throw new Error("expected an unvisited discovered frontier town");
+    const missingFrontierDiscovery = {
+      ...snapshot,
+      discoveredIds: snapshot.discoveredIds.filter((id) => id !== townId),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: missingFrontierDiscovery })).toThrow(
+      /discovered town frontier is missing/,
+    );
+  });
+
   it.each(localActionJournalCases)(
     "rejects $label journal entries recorded before reaching their town",
     (journalCase) => {

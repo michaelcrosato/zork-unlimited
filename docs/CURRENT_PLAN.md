@@ -146,10 +146,10 @@ Make discovered overworld quest leads start real RPG sessions.
   kind/id prefixes, unmatched road journal arrivals,
   malformed/future/non-newest-first journal timelines, progress/journal state
   drift, region-renown mismatches, discovery locality drift, visited-town travel
-  proof drift, non-contiguous travel path replay, local-action journal
-  reachability/town-chronology drift, resolved-event locality/prerequisite drift,
-  non-newest-first or future travel logs, and impossible travel vitals before
-  rebuilding live session state.
+  proof drift, non-contiguous travel path replay, discovered-town frontier drift,
+  local-action journal reachability/town-chronology drift, resolved-event
+  locality/prerequisite drift, non-newest-first or future travel logs, and
+  impossible travel vitals before rebuilding live session state.
 - Compact overworld context now carries capped id-only recent travel tuples so
   agents do not need full observations to recover route history.
 - Compact overworld context now caps global progress id arrays and exposes
@@ -178,6 +178,6 @@ Make discovered overworld quest leads start real RPG sessions.
   pack paths.
 - Add lightweight token/cost telemetry under ignored run output when the loop needs
   measured efficiency data.
-- Tighten discovered-town frontier exactness and area-discovery timing when a
-  future cycle tackles full restore-time action sequencing; travel path replay,
+- Tighten area-discovery timing when a future cycle tackles full restore-time
+  action sequencing; discovered-town frontier exactness, travel path replay,
   local-action reachability, and town-arrival chronology are now enforced.
