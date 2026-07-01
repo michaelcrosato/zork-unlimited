@@ -677,7 +677,24 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
     const road = full.exits.find((edge) => edge.destination.id === "colonie_town");
     expect(road).toBeDefined();
-    a.travel_overworld_session({ session_id: started.session_id, road_id: road!.id });
+    const compactPlan = a.plan_overworld_session_route({
+      session_id: started.session_id,
+      destination_town_id: "colonie_town",
+      compact_context: true,
+    });
+    expect(compactPlan.route.destination.id).toBe("colonie_town");
+    expect(compactPlan.context.here[0]).toBe(full.current.id);
+    expect("observation" in compactPlan).toBe(false);
+
+    const compactTravel = a.travel_overworld_session({
+      session_id: started.session_id,
+      road_id: road!.id,
+      compact_context: true,
+    });
+    expect(compactTravel.travel.baseMinutes).toBe(road!.travel_minutes);
+    expect(compactTravel.context.here[0]).toBe("colonie_town");
+    expect("observation" in compactTravel).toBe(false);
+
     const traveledFull = a.get_overworld_session({ session_id: started.session_id }).observation;
     const traveledCompact = a.get_overworld_session_context({
       session_id: started.session_id,

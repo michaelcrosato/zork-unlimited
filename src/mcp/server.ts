@@ -87,6 +87,14 @@ const COMPACT_ACTIONS = {
       "Token economy: when true, observation available_actions include stable ids and skill metadata but omit repeated command labels. Use list_legal_actions without this flag when command text is needed.",
     ),
 };
+const COMPACT_OVERWORLD_CONTEXT = {
+  compact_context: z
+    .boolean()
+    .optional()
+    .describe(
+      "Token economy: when true, stateful overworld action tools return compact context instead of the full observation object graph.",
+    ),
+};
 
 tool(
   "validate_pack",
@@ -175,6 +183,7 @@ tool(
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     road_id: z.string().describe("Road id from the session observation's exits list."),
+    ...COMPACT_OVERWORLD_CONTEXT,
   },
   (a) => api.travel_overworld_session(a),
 );
@@ -186,6 +195,7 @@ tool(
     strategy: z
       .enum(["cautious_scout", "assist_travelers", "press_on"])
       .describe("Road encounter response from observation.pendingRoadEncounter.options."),
+    ...COMPACT_OVERWORLD_CONTEXT,
   },
   (a) => api.resolve_overworld_session_road_encounter(a),
 );
@@ -194,6 +204,7 @@ tool(
   "Resupply at the current town if it has a market, inn, or stable. Returns updated supplies, fatigue, time, and observation.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
+    ...COMPACT_OVERWORLD_CONTEXT,
   },
   (a) => api.resupply_overworld_session(a),
 );
@@ -202,6 +213,7 @@ tool(
   "Rest at the current town if it has an inn or healer. Returns updated fatigue, supplies, time, and observation.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
+    ...COMPACT_OVERWORLD_CONTEXT,
   },
   (a) => api.rest_overworld_session(a),
 );
@@ -215,6 +227,7 @@ tool(
       .describe(
         "Discovered town id from the session observation's discovered or routeOptions list.",
       ),
+    ...COMPACT_OVERWORLD_CONTEXT,
   },
   (a) => api.plan_overworld_session_route(a),
 );
@@ -224,6 +237,7 @@ tool(
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     poi_id: z.string().describe("Point-of-interest id from the session observation."),
+    ...COMPACT_OVERWORLD_CONTEXT,
   },
   (a) => api.scout_overworld_session_poi(a),
 );
@@ -233,6 +247,7 @@ tool(
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     character_id: z.string().describe("Character id from the session observation."),
+    ...COMPACT_OVERWORLD_CONTEXT,
   },
   (a) => api.talk_overworld_session_contact(a),
 );
@@ -242,6 +257,7 @@ tool(
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     event_id: z.string().describe("Event id from the session observation."),
+    ...COMPACT_OVERWORLD_CONTEXT,
   },
   (a) => api.investigate_overworld_session_event(a),
 );
@@ -251,6 +267,7 @@ tool(
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     event_id: z.string().describe("Event id from the session observation."),
+    ...COMPACT_OVERWORLD_CONTEXT,
   },
   (a) => api.resolve_overworld_session_event(a),
 );
@@ -260,6 +277,7 @@ tool(
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     site_id: z.string().describe("Exploration site id from the session observation's sites list."),
+    ...COMPACT_OVERWORLD_CONTEXT,
   },
   (a) => api.explore_overworld_session_site(a),
 );
@@ -269,6 +287,7 @@ tool(
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     area_id: z.string().describe("Area id from the session observation's areas list."),
+    ...COMPACT_OVERWORLD_CONTEXT,
   },
   (a) => api.explore_overworld_session_area(a),
 );
@@ -278,6 +297,7 @@ tool(
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     area_route_id: z.string().describe("Area route id from observation.areaExits."),
+    ...COMPACT_OVERWORLD_CONTEXT,
   },
   (a) => api.move_overworld_session_area(a),
 );
@@ -287,6 +307,7 @@ tool(
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     job_id: z.string().describe("Job id from the session observation's jobs list."),
+    ...COMPACT_OVERWORLD_CONTEXT,
   },
   (a) => api.work_overworld_session_job(a),
 );

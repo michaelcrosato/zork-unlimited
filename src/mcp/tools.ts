@@ -130,6 +130,24 @@ type OverworldSessionPayload<Key extends string, Value> = {
   observation: OverworldView;
 } & { [P in Key]: Value };
 
+type OverworldCompactSessionPayload<Key extends string, Value> = {
+  ok: true;
+  session_id: string;
+  context: OverworldCompactView;
+} & { [P in Key]: Value };
+
+type OverworldResponseOptions = {
+  compact_context?: boolean;
+};
+
+type OverworldSessionResponse<
+  Key extends string,
+  Value,
+  Args extends OverworldResponseOptions,
+> = Args extends { compact_context: true }
+  ? OverworldCompactSessionPayload<Key, Value>
+  : OverworldSessionPayload<Key, Value>;
+
 type OverworldContextPayload = {
   ok: true;
   session_id: string;
@@ -438,19 +456,29 @@ export function createToolApi(opts: { root: string }) {
     return session;
   }
 
-  function runOverworldSession<Key extends string, Value>(
+  function runOverworldSession<Key extends string, Value, Args extends OverworldResponseOptions>(
+    args: Args,
     sessionId: string,
     key: Key,
     action: (session: OverworldSession) => Value,
-  ): OverworldSessionPayload<Key, Value> {
+  ): OverworldSessionResponse<Key, Value, Args> {
     const session = getOverworldSession(sessionId);
     const value = action(session);
+    const view = session.view();
+    if (args.compact_context === true) {
+      return {
+        ok: true,
+        session_id: sessionId,
+        [key]: value,
+        context: compactOverworldView(view),
+      } as OverworldSessionResponse<Key, Value, Args>;
+    }
     return {
       ok: true,
       session_id: sessionId,
       [key]: value,
-      observation: session.view(),
-    } as OverworldSessionPayload<Key, Value>;
+      observation: view,
+    } as OverworldSessionResponse<Key, Value, Args>;
   }
 
   return {
@@ -677,133 +705,104 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    plan_overworld_session_route(args: { session_id: string; destination_town_id: string }): {
-      ok: true;
-      session_id: string;
-      route: OverworldSessionRoutePlan;
-      observation: OverworldView;
-    } {
-      return runOverworldSession(args.session_id, "route", (session) =>
+    plan_overworld_session_route<
+      Args extends {
+        session_id: string;
+        destination_town_id: string;
+      } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"route", OverworldSessionRoutePlan, Args> {
+      return runOverworldSession(args, args.session_id, "route", (session) =>
         session.planRoute(args.destination_town_id),
       );
     },
 
-    travel_overworld_session(args: { session_id: string; road_id: string }): {
-      ok: true;
-      session_id: string;
-      travel: TravelLogEntry;
-      observation: OverworldView;
-    } {
-      return runOverworldSession(args.session_id, "travel", (session) =>
+    travel_overworld_session<
+      Args extends { session_id: string; road_id: string } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"travel", TravelLogEntry, Args> {
+      return runOverworldSession(args, args.session_id, "travel", (session) =>
         session.travel(args.road_id),
       );
     },
 
-    resolve_overworld_session_road_encounter(args: {
-      session_id: string;
-      strategy: OverworldRoadEncounterStrategy;
-    }): {
-      ok: true;
-      session_id: string;
-      result: OverworldRoadEncounterResult;
-      observation: OverworldView;
-    } {
-      return runOverworldSession(args.session_id, "result", (session) =>
+    resolve_overworld_session_road_encounter<
+      Args extends {
+        session_id: string;
+        strategy: OverworldRoadEncounterStrategy;
+      } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"result", OverworldRoadEncounterResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
         session.resolveRoadEncounter(args.strategy),
       );
     },
 
-    resupply_overworld_session(args: { session_id: string }): {
-      ok: true;
-      session_id: string;
-      result: OverworldServiceResult;
-      observation: OverworldView;
-    } {
-      return runOverworldSession(args.session_id, "result", (session) => session.resupplyAtTown());
+    resupply_overworld_session<Args extends { session_id: string } & OverworldResponseOptions>(
+      args: Args,
+    ): OverworldSessionResponse<"result", OverworldServiceResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
+        session.resupplyAtTown(),
+      );
     },
 
-    rest_overworld_session(args: { session_id: string }): {
-      ok: true;
-      session_id: string;
-      result: OverworldServiceResult;
-      observation: OverworldView;
-    } {
-      return runOverworldSession(args.session_id, "result", (session) => session.restAtTown());
+    rest_overworld_session<Args extends { session_id: string } & OverworldResponseOptions>(
+      args: Args,
+    ): OverworldSessionResponse<"result", OverworldServiceResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
+        session.restAtTown(),
+      );
     },
 
-    scout_overworld_session_poi(args: { session_id: string; poi_id: string }): {
-      ok: true;
-      session_id: string;
-      result: OverworldActionResult;
-      observation: OverworldView;
-    } {
-      return runOverworldSession(args.session_id, "result", (session) =>
+    scout_overworld_session_poi<
+      Args extends { session_id: string; poi_id: string } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"result", OverworldActionResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
         session.scoutPoi(args.poi_id),
       );
     },
 
-    talk_overworld_session_contact(args: { session_id: string; character_id: string }): {
-      ok: true;
-      session_id: string;
-      result: OverworldActionResult;
-      observation: OverworldView;
-    } {
-      return runOverworldSession(args.session_id, "result", (session) =>
+    talk_overworld_session_contact<
+      Args extends { session_id: string; character_id: string } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"result", OverworldActionResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
         session.talkToCharacter(args.character_id),
       );
     },
 
-    investigate_overworld_session_event(args: { session_id: string; event_id: string }): {
-      ok: true;
-      session_id: string;
-      result: OverworldActionResult;
-      observation: OverworldView;
-    } {
-      return runOverworldSession(args.session_id, "result", (session) =>
+    investigate_overworld_session_event<
+      Args extends { session_id: string; event_id: string } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"result", OverworldActionResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
         session.investigateEvent(args.event_id),
       );
     },
 
-    resolve_overworld_session_event(args: { session_id: string; event_id: string }): {
-      ok: true;
-      session_id: string;
-      result: OverworldActionResult;
-      observation: OverworldView;
-    } {
-      return runOverworldSession(args.session_id, "result", (session) =>
+    resolve_overworld_session_event<
+      Args extends { session_id: string; event_id: string } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"result", OverworldActionResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
         session.resolveEvent(args.event_id),
       );
     },
 
-    explore_overworld_session_site(args: { session_id: string; site_id: string }): {
-      ok: true;
-      session_id: string;
-      result: OverworldActionResult;
-      observation: OverworldView;
-    } {
-      return runOverworldSession(args.session_id, "result", (session) =>
+    explore_overworld_session_site<
+      Args extends { session_id: string; site_id: string } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"result", OverworldActionResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
         session.exploreSite(args.site_id),
       );
     },
 
-    explore_overworld_session_area(args: { session_id: string; area_id: string }): {
-      ok: true;
-      session_id: string;
-      result: OverworldActionResult;
-      observation: OverworldView;
-    } {
-      return runOverworldSession(args.session_id, "result", (session) =>
+    explore_overworld_session_area<
+      Args extends { session_id: string; area_id: string } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"result", OverworldActionResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
         session.exploreArea(args.area_id),
       );
     },
 
-    work_overworld_session_job(args: { session_id: string; job_id: string }): {
-      ok: true;
-      session_id: string;
-      result: OverworldActionResult;
-      observation: OverworldView;
-    } {
-      return runOverworldSession(args.session_id, "result", (session) =>
+    work_overworld_session_job<
+      Args extends { session_id: string; job_id: string } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"result", OverworldActionResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
         session.workLocalJob(args.job_id),
       );
     },
@@ -845,13 +844,10 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    move_overworld_session_area(args: { session_id: string; area_route_id: string }): {
-      ok: true;
-      session_id: string;
-      result: OverworldAreaTravelResult;
-      observation: OverworldView;
-    } {
-      return runOverworldSession(args.session_id, "result", (session) =>
+    move_overworld_session_area<
+      Args extends { session_id: string; area_route_id: string } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"result", OverworldAreaTravelResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
         session.moveArea(args.area_route_id),
       );
     },
