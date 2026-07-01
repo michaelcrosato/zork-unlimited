@@ -140,8 +140,10 @@ tool(
 tool(
   "start_overworld",
   "Start a stateful New York overworld run at Albany and return the current location, local actions, discovered quest leads, regional arcs, journal, discovered towns, and roads.",
-  {},
-  () => api.start_overworld(),
+  {
+    ...COMPACT_OVERWORLD_CONTEXT,
+  },
+  (a) => api.start_overworld(a),
 );
 tool(
   "get_overworld_session",
@@ -174,6 +176,7 @@ tool(
     snapshot: z
       .record(z.unknown())
       .describe("Snapshot object previously returned as export_overworld_session.snapshot."),
+    ...COMPACT_OVERWORLD_CONTEXT,
   },
   (a) => api.restore_overworld_session(a),
 );

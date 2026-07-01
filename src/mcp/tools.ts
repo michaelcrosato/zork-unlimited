@@ -140,6 +140,21 @@ type OverworldResponseOptions = {
   compact_context?: boolean;
 };
 
+type OverworldViewField<Args extends OverworldResponseOptions> = Args extends {
+  compact_context: true;
+}
+  ? { context: OverworldCompactView }
+  : { observation: OverworldView };
+
+type OverworldStartResponse<Args extends OverworldResponseOptions> = {
+  session_id: string;
+} & OverworldViewField<Args>;
+
+type OverworldRestoreResponse<Args extends OverworldResponseOptions> = {
+  ok: true;
+  session_id: string;
+} & OverworldViewField<Args>;
+
 type OverworldSessionResponse<
   Key extends string,
   Value,
@@ -456,6 +471,17 @@ export function createToolApi(opts: { root: string }) {
     return session;
   }
 
+  function overworldViewField<Args extends OverworldResponseOptions>(
+    args: Args,
+    session: OverworldSession,
+  ): OverworldViewField<Args> {
+    const view = session.view();
+    if (args.compact_context === true) {
+      return { context: compactOverworldView(view) } as OverworldViewField<Args>;
+    }
+    return { observation: view } as OverworldViewField<Args>;
+  }
+
   function runOverworldSession<Key extends string, Value, Args extends OverworldResponseOptions>(
     args: Args,
     sessionId: string,
@@ -464,21 +490,13 @@ export function createToolApi(opts: { root: string }) {
   ): OverworldSessionResponse<Key, Value, Args> {
     const session = getOverworldSession(sessionId);
     const value = action(session);
-    const view = session.view();
-    if (args.compact_context === true) {
-      return {
-        ok: true,
-        session_id: sessionId,
-        [key]: value,
-        context: compactOverworldView(view),
-      } as OverworldSessionResponse<Key, Value, Args>;
-    }
-    return {
+    const payload = {
       ok: true,
       session_id: sessionId,
       [key]: value,
-      observation: view,
-    } as OverworldSessionResponse<Key, Value, Args>;
+      ...overworldViewField(args, session),
+    };
+    return payload as unknown as OverworldSessionResponse<Key, Value, Args>;
   }
 
   return {
@@ -648,15 +666,15 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    start_overworld(): {
-      session_id: string;
-      observation: OverworldView;
-    } {
+    start_overworld<Args extends OverworldResponseOptions = Record<string, never>>(
+      args?: Args,
+    ): OverworldStartResponse<Args> {
+      const responseOptions = (args ?? {}) as Args;
       const created = createOverworldSession();
       return {
         session_id: created.session_id,
-        observation: created.session.view(),
-      };
+        ...overworldViewField(responseOptions, created.session),
+      } as OverworldStartResponse<Args>;
     },
 
     get_overworld_session(args: { session_id: string }): {
@@ -692,17 +710,15 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    restore_overworld_session(args: { snapshot: unknown }): {
-      ok: true;
-      session_id: string;
-      observation: OverworldView;
-    } {
+    restore_overworld_session<Args extends { snapshot: unknown } & OverworldResponseOptions>(
+      args: Args,
+    ): OverworldRestoreResponse<Args> {
       const restored = restoreOverworldSession(args.snapshot);
       return {
         ok: true,
         session_id: restored.session_id,
-        observation: restored.session.view(),
-      };
+        ...overworldViewField(args, restored.session),
+      } as OverworldRestoreResponse<Args>;
     },
 
     plan_overworld_session_route<
