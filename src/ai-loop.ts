@@ -5,8 +5,8 @@
  * tooling (not the engine): it
  *   1. ASSESSES the whole project (src/afk/assessor.ts) to rank the next-best
  *      improvement across content_new / content_fix / engine / repo;
- *   2. picks a target pack to playtest (the candidate's pack, or the main story as
- *      a regression baseline for engine/repo work);
+ *   2. picks a target source to playtest (the candidate's quest, or the main
+ *      story quest as a regression baseline for engine/repo work);
  *   3. writes the cycle artifacts to an ignored ai-runs/<id>/ dir, including the
  *      exact path where the operating agent must drop its MANDATORY LLM playtest
  *      report; and
@@ -33,6 +33,8 @@ import {
 } from "./afk/assessor.js";
 import { createToolApi } from "./mcp/tools.js";
 import { rotateLoopState } from "./afk/loop_state.js";
+
+type StoryCatalog = ReturnType<ReturnType<typeof createToolApi>["list_stories"]>;
 
 // ── Saturation-triggered ultraplan (docs/afk_loop.md) ──────────────────────────
 // When the deterministic assessor runs dry (isSaturated), a cycle re-aims the
@@ -81,7 +83,16 @@ function cycleStamp(): string {
   return new Date().toISOString().replace(/[:.]/g, "-");
 }
 
-/** Which pack the mandatory playtest targets this cycle. */
+function requireMainStory(catalog: StoryCatalog): string {
+  if (catalog.main_story !== null) return catalog.main_story;
+  throw new Error("AFK loop requires at least one shipped RPG quest to blind-playtest.");
+}
+
+function catalogWorldQuestIdForPack(catalog: StoryCatalog, packPath: string): string | null {
+  return catalog.stories.find((s) => s.path === packPath)?.world_quest_id ?? null;
+}
+
+/** Which source the mandatory playtest targets this cycle. */
 export function playtestTarget(
   a: Assessment,
   top: ImprovementCandidate | null,
@@ -95,9 +106,32 @@ export function playtestTarget(
 export function playtestTargetWorldQuestId(
   top: ImprovementCandidate | null,
   mainWorldQuestId: string | null,
+  targetWorldQuestId: string | null = null,
 ): string | null {
+  if (top?.category === "content_fix") return targetWorldQuestId;
   if (top && top.category !== "engine" && top.category !== "repo") return null;
   return mainWorldQuestId;
+}
+
+function playtestTargetMetadata(
+  target: string,
+  targetWorldQuestId: string | null | undefined,
+): { target: string; targetWorldQuestId?: string; targetPackPath?: string } {
+  if (!targetWorldQuestId) return { target };
+  return {
+    target: targetWorldQuestId,
+    targetWorldQuestId,
+    targetPackPath: target,
+  };
+}
+
+export function playtestTargetSummary(
+  top: ImprovementCandidate | null,
+  target: string,
+  targetWorldQuestId: string | null | undefined,
+): string {
+  if (!targetWorldQuestId) return target;
+  return top?.category === "content_fix" ? `${targetWorldQuestId} (${target})` : targetWorldQuestId;
 }
 
 function main(): void {
@@ -112,10 +146,14 @@ function main(): void {
   const a = assess(root);
   const top = a.top;
   const catalog = createToolApi({ root }).list_stories();
-  const mainStory = catalog.main_story ?? "content/rpg/pack/breaking_weir.yaml";
+  const mainStory = requireMainStory(catalog);
   const mainWorldQuestId = catalog.main_world_quest_id;
   const target = playtestTarget(a, top, mainStory);
-  const targetWorldQuestId = playtestTargetWorldQuestId(top, mainWorldQuestId);
+  const targetWorldQuestId = playtestTargetWorldQuestId(
+    top,
+    mainWorldQuestId,
+    catalogWorldQuestIdForPack(catalog, target),
+  );
   const playtestRecord = join(runDir, "playtest.md").replaceAll("\\", "/");
 
   const targetHealth = a.packs.find((p) => p.path === target) ?? null;
@@ -127,7 +165,7 @@ function main(): void {
   const ultraplan = shouldRunUltraplan(saturated, cyclesSince, ULTRAPLAN_COOLDOWN);
 
   const prompt = ultraplan
-    ? buildUltraplanPrompt({ a, target, targetHealth, playtestRecord })
+    ? buildUltraplanPrompt({ a, target, targetWorldQuestId, targetHealth, playtestRecord })
     : buildPrompt({ a, top, target, targetWorldQuestId, targetHealth, playtestRecord });
 
   // Per-cycle agent budget: ultraplan (multi-agent re-aim) and content_new (L-effort
@@ -151,8 +189,7 @@ function main(): void {
       {
         runId: stamp,
         runDir,
-        target,
-        ...(targetWorldQuestId ? { targetWorldQuestId } : {}),
+        ...playtestTargetMetadata(target, targetWorldQuestId),
         playtestRecord,
         recommendation: top?.title ?? null,
         mode: ultraplan ? "ultraplan" : "standard",
@@ -167,7 +204,7 @@ function main(): void {
     SATURATION_STATE_FILE,
     JSON.stringify({ saturated, cyclesSinceUltraplan: ultraplan ? 0 : cyclesSince + 1 }, null, 2),
   );
-  appendState(stamp, a, target, ultraplan);
+  appendState(stamp, a, target, targetWorldQuestId, ultraplan);
 
   console.log(`AFK cycle ${stamp}${ultraplan ? "  [ULTRAPLAN MODE — assessor saturated]" : ""}`);
   console.log(`  assessment: ${runDir}/assessment.md`);
@@ -191,16 +228,26 @@ export function buildPrompt(ctx: {
     .map((c, i) => `  ${i + 1}. [${c.score}] (${c.category}/${c.effort}) ${c.title}`);
   const health = targetHealth
     ? `${targetHealth.warnings} validator warning(s)`
-    : "(not a pack — engine/repo work; the target pack is the regression baseline)";
+    : "(engine/repo work; the target quest is the regression baseline)";
   // For content_new the world quest to playtest does NOT exist at assess time (the
   // agent authors + registers it this cycle), so `target` is just the regression
   // baseline. The quality oracle is far more valuable spent on the NEW world quest
   // than re-playing the baseline a 20th time. So content_new flips the order:
   // author/register first, then blind-playtest the quest id you just added.
   const isContentNew = top?.category === "content_new";
-  const targetLabel = targetWorldQuestId
-    ? `${targetWorldQuestId} (${target})`
-    : `${target}  (${health})`;
+  if (!isContentNew && !targetWorldQuestId) {
+    throw new Error(
+      `AFK blind playtests require a world quest id for shipped targets; could not resolve ${JSON.stringify(
+        target,
+      )}.`,
+    );
+  }
+  const targetLabel =
+    targetWorldQuestId && top?.category === "content_fix"
+      ? `${targetWorldQuestId} (${target}; ${health})`
+      : targetWorldQuestId
+        ? `${targetWorldQuestId} (${health})`
+        : `${target}  (${health})`;
   const playtestStep = isContentNew
     ? [
         "## STEP 1 — Add the new world quest, THEN blind-playtest IT (quality feedback)",
@@ -223,9 +270,7 @@ export function buildPrompt(ctx: {
         "",
         "- Spawn a FRESH subagent with NO design context (Agent tool general-purpose, or a",
         "  clean `claude -p` / `codex exec`). Hand it ONLY the locked-down prompt in",
-        targetWorldQuestId
-          ? `  docs/blind_playtest_protocol.md, with quest_id=${targetWorldQuestId} and a seed. It must play purely`
-          : "  docs/blind_playtest_protocol.md, with this pack and a seed. It must play purely",
+        `  docs/blind_playtest_protocol.md, with quest_id=${targetWorldQuestId} and a seed. It must play purely`,
         "  through the mcp__adventureforge__* tools and must NOT read content/, src/, ui/, tests/.",
         `- WRITE its structured report (route, mechanics, clarity 1-5, enjoyment 1-5,`,
         `  confusion, concrete findings, verdict) to: ${playtestRecord}`,
@@ -296,8 +341,15 @@ export function buildPrompt(ctx: {
   ].join("\n");
 }
 
-function appendState(stamp: string, a: Assessment, target: string, ultraplan: boolean): void {
+function appendState(
+  stamp: string,
+  a: Assessment,
+  target: string,
+  targetWorldQuestId: string | null,
+  ultraplan: boolean,
+): void {
   const top = a.top;
+  const targetSummary = playtestTargetSummary(top, target, targetWorldQuestId);
   const text = [
     "",
     `## AFK Cycle ${stamp}${ultraplan ? " — ULTRAPLAN (saturation re-aim)" : ""}`,
@@ -308,7 +360,7 @@ function appendState(stamp: string, a: Assessment, target: string, ultraplan: bo
     ultraplan
       ? "- ⟳ SATURATED: top candidate at the 0.5 floor → this cycle runs a multi-agent ultraplan to re-aim (plan → docs/CURRENT_PLAN.md), then implements in a fresh context."
       : "",
-    `- Mandatory LLM playtest target this cycle: ${target}.`,
+    `- Mandatory LLM playtest target this cycle: ${targetSummary}.`,
     "- Process: assessor ranks → blind LLM playtest for quality → one improvement → health + verify:integrity green → commit (trust-but-verify).",
     "",
   ]
@@ -327,10 +379,18 @@ function appendState(stamp: string, a: Assessment, target: string, ultraplan: bo
 function buildUltraplanPrompt(ctx: {
   a: Assessment;
   target: string;
+  targetWorldQuestId?: string | null;
   targetHealth: PackHealth | null;
   playtestRecord: string;
 }): string {
-  const { target, targetHealth, playtestRecord } = ctx;
+  const { target, targetWorldQuestId, targetHealth, playtestRecord } = ctx;
+  if (!targetWorldQuestId) {
+    throw new Error(
+      `AFK ultraplan blind playtests require a world quest id; could not resolve ${JSON.stringify(
+        target,
+      )}.`,
+    );
+  }
   const health = targetHealth
     ? `${targetHealth.warnings} validator warning(s)`
     : "(regression baseline)";
@@ -377,7 +437,7 @@ function buildUltraplanPrompt(ctx: {
     "  test for a bug; tests for new behaviour).",
     "",
     "## STEP 4 — Mandatory blind playtest + verify (same bar as every cycle)",
-    `- Blind-playtest ${target} (${health}) per docs/blind_playtest_protocol.md → write its`,
+    `- Blind-playtest quest_id=${targetWorldQuestId} (${health}) per docs/blind_playtest_protocol.md → write its`,
     `  structured report to ${playtestRecord} (REQUIRED — loop.sh refuses to commit without it).`,
     "- `npm run health` must pass; verify:integrity must stay green; never weaken a check.",
     "- Update AI_LOOP_STATE.md TERSELY (≤8 lines): that this was an ULTRAPLAN cycle, the",

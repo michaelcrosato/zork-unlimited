@@ -15,6 +15,15 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - VERIFY: `npm run health` EXIT 0 after restoring protected `no §14 ceremony` wording.
 - Operator direction: pause after this cycle; do not start another AFK cycle.
 
+### Cycle result — ai_loop_quest_id_handoff
+
+- Engine/loop: blind playtest targets now resolve to `world_quest_id` for content_fix and baseline cycles; missing ids fail prompt generation.
+- Token economy: `latest-cycle.json` primary `target` is the quest id; `targetPackPath` is metadata only when needed.
+- Docs: blind protocol/README now teach `--quest`/`start_world_quest`, not raw `--pack` starts.
+- VERIFY: focused ai_loop test, typecheck, lint, format:check, validate, npm test (191/1252), `npm run health` EXIT 0.
+- Self-critique: structural loop handoff fix, not content polish; closes an agent-token waste/error source blind testers would only report late.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
+
 ## Current Snapshot
 
 - Verification bar: `npm run health` remains the required end gate.
@@ -33,8 +42,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Trace verification: shipped quest traces replay/inspect with `world_quest_id`.
 - Live session metadata: start/transcript/save/load preserve shipped
   `world_quest_id`; generated sessions preserve `generated_rpg_seed`.
-- Blind harness default: shipped playtests should use `--quest` /
-  `start_world_quest`; `--pack` is compatibility/new-pack fallback.
+- Blind harness default: shipped playtests use `--quest` / `start_world_quest`;
+  raw `--pack` starts are rejected.
 - World routes: ToolApi and public MCP `world_path` accept only
   `world_quest_id`; raw `quest_path` is rejected.
 - Pack validation/loading: shipped quests can use `world_quest_id` and preserve

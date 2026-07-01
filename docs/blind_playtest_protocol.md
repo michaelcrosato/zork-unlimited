@@ -19,10 +19,10 @@ are a primary input to the fix.
 
 ## Procedure (5 steps)
 
-1. **Pick the target.** A playable pack + a fixed seed. Default: the main story
-   from `list_stories` (currently `content/rpg/pack/breaking_weir.yaml`), seed
-   `7`. For variety across cycles, rotate the seed and, when more than one pack is
-   playable, rotate the pack.
+1. **Pick the target.** A playable world quest id + a fixed seed. Default: the
+   `main_world_quest_id` from `list_stories` (currently `breaking_weir`), seed
+   `7`. For variety across cycles, rotate the seed and, when more than one quest
+   is playable, rotate the quest id.
 
 2. **Spawn a blind subagent with a FRESH context.** Use whatever isolation your
    harness provides — the `Agent` tool (`subagent_type: general-purpose`), a new
@@ -52,7 +52,7 @@ are a primary input to the fix.
    `npm run health`. Commit in one small green increment with durable notes in
    `AI_LOOP_STATE.md`.
 
-## The locked-down subagent prompt (copy verbatim; fill in PACK and SEED)
+## The locked-down subagent prompt (copy verbatim; fill in QUEST_ID and SEED)
 
 ```
 You are a playtester for an interactive text adventure. You did NOT design this

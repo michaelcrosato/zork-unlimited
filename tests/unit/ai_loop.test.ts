@@ -6,6 +6,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildPrompt,
+  playtestTargetSummary,
   playtestTarget,
   playtestTargetWorldQuestId,
   shouldRunUltraplan,
@@ -91,39 +92,60 @@ describe("playtestTarget", () => {
 });
 
 describe("playtestTargetWorldQuestId", () => {
-  it("uses world quest ids only for shipped baseline engine/repo playtests", () => {
-    expect(
-      playtestTargetWorldQuestId(candidate("engine", "src/core/engine.ts"), "breaking_weir"),
-    ).toBe("breaking_weir");
-    expect(playtestTargetWorldQuestId(candidate("repo", "tooling"), "breaking_weir")).toBe(
-      "breaking_weir",
-    );
-    expect(playtestTargetWorldQuestId(null, "breaking_weir")).toBe("breaking_weir");
+  it("uses world quest ids for shipped blind playtests", () => {
     expect(
       playtestTargetWorldQuestId(
         candidate("content_fix", "content/rpg/pack/cold_forge.yaml"),
         "breaking_weir",
+        "cold_forge",
       ),
-    ).toBeNull();
+    ).toBe("cold_forge");
     expect(
-      playtestTargetWorldQuestId(candidate("content_new", "world"), "breaking_weir"),
+      playtestTargetWorldQuestId(candidate("engine", "src/core/engine.ts"), "breaking_weir", null),
+    ).toBe("breaking_weir");
+    expect(playtestTargetWorldQuestId(candidate("repo", "tooling"), "breaking_weir", null)).toBe(
+      "breaking_weir",
+    );
+    expect(playtestTargetWorldQuestId(null, "breaking_weir", null)).toBe("breaking_weir");
+    expect(
+      playtestTargetWorldQuestId(candidate("content_new", "world"), "breaking_weir", null),
     ).toBeNull();
   });
 });
 
+describe("playtestTargetSummary", () => {
+  it("keeps quest ids primary while retaining edit paths for content fixes", () => {
+    expect(
+      playtestTargetSummary(
+        candidate("content_fix", "content/rpg/pack/cold_forge.yaml"),
+        "content/rpg/pack/cold_forge.yaml",
+        "cold_forge",
+      ),
+    ).toBe("cold_forge (content/rpg/pack/cold_forge.yaml)");
+    expect(
+      playtestTargetSummary(candidate("engine", "src/core/engine.ts"), mainStory, "breaking_weir"),
+    ).toBe("breaking_weir");
+  });
+});
+
 describe("buildPrompt blind-playtest contract", () => {
-  it("content_fix cycles require a blind playtest of the target pack and named report file", () => {
+  it("content_fix cycles require a blind playtest of the target quest id and named report file", () => {
     const top = candidate("content_fix", "content/rpg/pack/cold_forge.yaml");
     const prompt = buildPrompt({
       a: assessment(top),
       top,
       target: top.target,
+      targetWorldQuestId: "cold_forge",
       targetHealth: packHealth(top.target, 2),
       playtestRecord,
     });
 
     expect(prompt).toContain("## STEP 1 — MANDATORY LLM playtest");
-    expect(prompt).toContain("Playtest target this cycle: content/rpg/pack/cold_forge.yaml");
+    expect(prompt).toContain(
+      "Playtest target this cycle: cold_forge (content/rpg/pack/cold_forge.yaml; 2 validator warning(s))",
+    );
+    expect(prompt).toContain("with quest_id=cold_forge and a seed");
+    expect(prompt).not.toContain("with this pack and a seed");
     expect(prompt).toContain("2 validator warning(s)");
     expect(prompt).toContain(`to: ${playtestRecord}`);
     expect(prompt).toContain("This file is REQUIRED");
@@ -141,9 +163,23 @@ describe("buildPrompt blind-playtest contract", () => {
       playtestRecord,
     });
 
-    expect(prompt).toContain(`Playtest target this cycle: breaking_weir (${mainStory})`);
+    expect(prompt).toContain("Playtest target this cycle: breaking_weir (0 validator warning(s))");
     expect(prompt).toContain("with quest_id=breaking_weir and a seed");
     expect(prompt).not.toContain("with this pack and a seed");
+  });
+
+  it("refuses shipped blind-playtest prompts without a quest id", () => {
+    const top = candidate("content_fix", "content/rpg/pack/cold_forge.yaml");
+
+    expect(() =>
+      buildPrompt({
+        a: assessment(top),
+        top,
+        target: top.target,
+        targetHealth: packHealth(top.target, 2),
+        playtestRecord,
+      }),
+    ).toThrow(/require a world quest id/);
   });
 
   it("content_new cycles register a world quest first, then blind-playtest its quest id", () => {

@@ -207,8 +207,9 @@ Non-interactive play (scriptable / CI): add
 `--commands "go north; take rope; attack wight; ..."`. Use
 `--record traces/run.json` to save a replayable trace; shipped quest traces embed
 their `worldQuestId`, so `npm run replay -- <recorded-trace>` needs no pack path.
-Raw pack paths remain accepted as compatibility input. `npm run validate` is the
-RPG content gate and rejects non-RPG pack shapes.
+Raw pack paths remain accepted only for offline validation/replay/inspection
+compatibility. `npm run validate` is the RPG content gate and rejects non-RPG pack
+shapes.
 
 ### MCP server — how an agent plays the game (§9.4)
 
@@ -218,9 +219,9 @@ loop — never a raw parser. The MCP catalog is RPG-only: `list_stories`
 reads the Charter Marches quest graph, picks the high-depth RPG pack
 `breaking_weir` as the default, and `list_world` reports the same RPG quest set
 with hub routes. Shipped quests should start through `start_world_quest` or
-`new_game` with `world_quest_id`; raw `pack_path` starts remain compatibility
-aliases. Saves for shipped quests can also restore with `world_quest_id`. The same
-world id can replay or inspect shipped traces. The same structured `new_game` /
+`new_game` with `world_quest_id`; raw `pack_path` live starts are rejected. Saves
+for shipped quests can also restore with `world_quest_id`. The same world id can
+replay or inspect shipped traces. The same structured `new_game` /
 `step_action` / `get_observation` / save·load path drives RPG sessions through
 stable action ids and deterministic state hashes. Explicit non-RPG pack loading is
 rejected through MCP with an `UNSUPPORTED_LEGACY_PACK` report; old pack shapes are
@@ -248,9 +249,9 @@ Quality rests on exactly two kinds of testing, nothing in between:
   suite plus the validators (`src/validate/`) and the exhaustive BFS solver, which
   *prove* every declared ending is reachable, no path soft-locks, and the score
   economy is sound. These run in `npm run health`.
-- **Blind LLM playtest**: a fresh subagent with NO repo access plays a pack purely
-  through the MCP tools and reports its route, step count, choices, and a
-  clarity/enjoyment/confusion read — the only judge of player-facing quality
+- **Blind LLM playtest**: a fresh subagent with NO repo access plays a shipped
+  quest id purely through the MCP tools and reports its route, step count, choices,
+  and a clarity/enjoyment/confusion read — the only judge of player-facing quality
   (signposting, pacing, discoverability) a static check can't see. The harness is in
   `blind-tester/` and the protocol in `docs/blind_playtest_protocol.md`; the AFK loop
   runs one every cycle.
@@ -260,7 +261,7 @@ OpenAI/Anthropic/Google backends sit behind env vars and fall back to a determin
 keyless mock, so authoring/adapting runs in CI with no API keys.
 
 ```bash
-npm run blind -- --pack content/rpg/pack/sunken_barrow.yaml --seed 7
+npm run blind -- --quest sunken_barrow --seed 7
 ```
 
 ## Status: all stages complete ✅
