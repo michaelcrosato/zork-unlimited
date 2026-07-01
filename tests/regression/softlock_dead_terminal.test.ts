@@ -170,10 +170,7 @@ describe("bug_0092 (CYOA) — an unfireable deadline no longer masks a SOFTLOCK"
   });
 
   it("the shipped CYOA packs gain NO SOFTLOCK", () => {
-    for (const path of [
-      "content/cyoa/pack/clockwork_heist.yaml",
-      "content/cyoa/pack/watchtower_road.yaml",
-    ]) {
+    for (const path of ["content/cyoa/pack/watchtower_road.yaml"]) {
       const r = loadPackFile(path);
       expect(r.ok).toBe(true);
       if (!r.ok) return;

@@ -14,7 +14,7 @@
  * top-level AND unsatisfiable regardless of any `any_of`/`none_of` sibling (a
  * disjunction can only further constrain). So the check has no false positives on
  * a satisfiable guard; it detects fewer cases, never wrong ones. Locked here:
- *   (1) the shipped reactive packs (clockwork, watchtower) are NOT flagged;
+ *   (1) a shipped reactive pack is NOT flagged;
  *   (2) a flag pinned both ways in a variant `when` is flagged;
  *   (3) crossed var bounds in a variant `when` are flagged;
  *   (4) a contradictory choice `conditions` is flagged;
@@ -46,11 +46,8 @@ endings: [ { id: e, title: E, text: "done" } ]
 `;
 
 describe("bug_0086 — the validator flags vacuous (always-false) guards", () => {
-  it("the shipped reactive packs are NOT flagged", () => {
-    for (const path of [
-      "content/cyoa/pack/clockwork_heist.yaml",
-      "content/cyoa/pack/watchtower_road.yaml",
-    ]) {
+  it("a shipped reactive pack is NOT flagged", () => {
+    for (const path of ["content/cyoa/pack/watchtower_road.yaml"]) {
       const r = loadPackFile(path);
       expect(r.ok).toBe(true);
       if (!r.ok) return;

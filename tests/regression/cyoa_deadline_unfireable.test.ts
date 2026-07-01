@@ -17,8 +17,7 @@
  *   (b) it REQUIRES, in AND-context, a flag/item/var that no effect ever provides.
  *
  * Locked here:
- *   (1) the shipped pack with a deadline (clockwork) is NOT flagged — its
- *       `ticks>=10` is fed by real `inc_var ticks` effects, so it can fire;
+ *   (1) a shipped no-deadline pack is NOT flagged;
  *   (2) a deadline whose watched var is never written IS flagged;
  *   (3) a deadline with crossed var bounds (contradictory `when`) IS flagged;
  *   (4) a deadline requiring a flag that nothing ever sets IS flagged;
@@ -60,11 +59,8 @@ endings:
 `;
 
 describe("bug_0087 — the validator flags a deadline that can never fire", () => {
-  it("the shipped clockwork pack's deadline is NOT flagged (it is fireable)", () => {
-    for (const path of [
-      "content/cyoa/pack/clockwork_heist.yaml",
-      "content/cyoa/pack/watchtower_road.yaml",
-    ]) {
+  it("a shipped no-deadline pack is NOT flagged", () => {
+    for (const path of ["content/cyoa/pack/watchtower_road.yaml"]) {
       const r = loadPackFile(path);
       expect(r.ok).toBe(true);
       if (!r.ok) return;
@@ -107,8 +103,7 @@ describe("bug_0087 — the validator flags a deadline that can never fire", () =
  * but the coarse test let it through. This is the exact "clock with no teeth" class a
  * fresh blind playtester flagged on The Clockwork Heist (seed 5, ai-runs/
  * 2026-06-02T08-47-43-611Z/playtest.md §4): urgency prose promising a deadline that
- * never actually bites. (clockwork itself is sound — `ticks` is incremented by +1, so
- * it still must NOT be flagged; asserted by the bug_0087 suite above.)
+ * never actually bites.
  */
 // A deadline gated on `doom >= 5` from a sub-bound init (0), with `doom` driven only
 // by the supplied effect — so the 'needs raise' branch is always exercised.

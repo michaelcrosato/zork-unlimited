@@ -17,12 +17,11 @@
  *
  * Soundness, same stance as bug_0109: only flag the PROVABLY impossible. The `var_eq`
  * branch is LEFT on the coarse "is it ever written?" test — an inc/dec/set could land
- * on an `==` value, so a written var is not provably dead. The one shipped pack with a
- * var-gated choice (clockwork, `ticks >= 4` fed by `inc_var ticks by:1`) is therefore
- * NOT flagged — asserted below.
+ * on an `==` value, so a written var is not provably dead. A positive synthetic
+ * `var_gte` pack below locks the soundness case where an increment can satisfy the gate.
  */
 import { describe, it, expect } from "vitest";
-import { compilePack, loadPackFile } from "../../src/cyoa/pack.js";
+import { compilePack } from "../../src/cyoa/pack.js";
 import { validateCyoa } from "../../src/validate/cyoa_validator.js";
 
 function codes(src: string): string[] {
@@ -57,14 +56,6 @@ endings:
 `;
 
 describe("bug_0110 — a var-gte choice gate whose var only ever DROPS is flagged impossible", () => {
-  it("the shipped clockwork pack (var-gated choice `ticks>=4`, inc by 1) is NOT flagged", () => {
-    const r = loadPackFile("content/cyoa/pack/clockwork_heist.yaml");
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    const found = validateCyoa(r.compiled.pack).findings.map((f) => f.code);
-    expect(found).not.toContain("IMPOSSIBLE_GATE");
-  });
-
   it("flags a gate whose watched var is only ever DECREMENTED", () => {
     expect(codes(gatePack("{ dec_var: { name: doom, by: 1 } }"))).toContain("IMPOSSIBLE_GATE");
   });

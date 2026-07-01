@@ -16,8 +16,7 @@
  *       atoms (sign-significant var arithmetic; any disjunction/negation bails).
  *
  * Locked here:
- *   (1) the shipped packs are NOT flagged (clockwork's `ticks>=10` is far above its
- *       init 0; watchtower has no deadline);
+ *   (1) a shipped no-deadline pack is NOT flagged;
  *   (2) a deadline already true at init on a monotone-increasing var IS flagged;
  *   (3) a deadline whose threshold is above the init value is NOT flagged (soundness:
  *       the opening scenes are playable before it can fire);
@@ -38,11 +37,8 @@ function codes(src: string): string[] {
 }
 
 describe("bug_0089 — the validator flags a deadline that fires on the first action", () => {
-  it("the shipped packs are NOT flagged (their deadlines are not yet due at start)", () => {
-    for (const path of [
-      "content/cyoa/pack/clockwork_heist.yaml",
-      "content/cyoa/pack/watchtower_road.yaml",
-    ]) {
+  it("a shipped no-deadline pack is NOT flagged", () => {
+    for (const path of ["content/cyoa/pack/watchtower_road.yaml"]) {
       const r = loadPackFile(path);
       expect(r.ok).toBe(true);
       if (!r.ok) return;

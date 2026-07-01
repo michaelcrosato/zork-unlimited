@@ -12,9 +12,7 @@
  * Soundness is the bar: a flag is flagged ONLY when it has provably zero readers across
  * the whole pack, so there are no false positives on a flag that any condition consults
  * (incl. consults only via not_flag, or only inside a disjunction). Locked here:
- *   (1) the shipped reactive packs (clockwork, watchtower, wreckers_light) are NOT flagged
- *       — the four vestigial flags this check first surfaced (clockwork has_letter/vault_open,
- *       watchtower met_hermit/saw_watchtower) were removed in the same change;
+ *   (1) the shipped reactive packs (watchtower, wreckers_light) are NOT flagged;
  *   (2) a flag set by an effect but never read is flagged;
  *   (3) a flag whose ONLY reader is a not_flag is NOT flagged;
  *   (4) a flag read only inside a disjunction (any_of) is NOT flagged;
@@ -36,7 +34,6 @@ const codes = (src: string): string[] => findings(src).map((f) => f.code);
 describe("bug_0104 — the validator flags inert (set-but-never-read) flags", () => {
   it("the shipped reactive packs are NOT flagged (vestigial flags were scrubbed)", () => {
     for (const path of [
-      "content/cyoa/pack/clockwork_heist.yaml",
       "content/cyoa/pack/watchtower_road.yaml",
       "content/cyoa/pack/wreckers_light.yaml",
     ]) {

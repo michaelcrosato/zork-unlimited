@@ -51,10 +51,7 @@ endings: [ { id: e, title: E, text: "done" } ]
 
 describe("bug_0085 — the validator flags unreachable (shadowed) reactive variants", () => {
   it("the shipped reactive packs are NOT flagged (intentional high→low ordering passes)", () => {
-    for (const path of [
-      "content/cyoa/pack/clockwork_heist.yaml",
-      "content/cyoa/pack/watchtower_road.yaml",
-    ]) {
+    for (const path of ["content/cyoa/pack/watchtower_road.yaml"]) {
       const r = loadPackFile(path);
       expect(r.ok).toBe(true);
       if (!r.ok) return;

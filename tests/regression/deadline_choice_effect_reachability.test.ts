@@ -9,19 +9,15 @@
  * action) had its deadline ending wrongly flagged ENDING_UNREACHABLE, failing
  * validation on a pack that ends there perfectly well at runtime.
  *
- * The clockwork pack happens to advance `ticks` only via on_enter, so it never hit
- * this — the gap was latent, surfaced while auditing the new deadline feature during
- * the clockwork_heist blind-playtest cycle (seed 7,
- * ai-runs/2026-06-01T21-21-58-139Z/playtest.md). The fix extends the validator edge
- * to also fire when any of a scene's choices write a watched var.
+ * The fix extends the validator edge to also fire when any of a scene's choices write
+ * a watched var.
  *
  * Locked here, tying the validator's guarantee to real engine behaviour:
  *   (1) a deadline whose var is advanced ONLY by a choice effect validates clean —
  *       no ENDING_UNREACHABLE, no SOFTLOCK, no errors at all;
  *   (2) the engine actually ends the game at that deadline when the choice effect
  *       crosses the threshold (the validator was telling the truth);
- *   (3) the clockwork pack (whose ticks advance via on_enter, not choices) is
- *       unaffected — still validates clean with no new findings.
+ *   (3) an unrelated valid shipped pack remains validator-clean.
  */
 import { describe, it, expect } from "vitest";
 import { compilePack, loadPackFile } from "../../src/cyoa/pack.js";
@@ -77,8 +73,8 @@ describe("bug_0080 — a choice-effect-driven deadline is reachable to the valid
     expect(s.vars.t).toBeGreaterThanOrEqual(3);
   });
 
-  it("clockwork (ticks via on_enter, not choices) is unaffected — still validates clean", () => {
-    const loaded = loadPackFile("content/cyoa/pack/clockwork_heist.yaml");
+  it("an unrelated shipped pack is unaffected — still validates clean", () => {
+    const loaded = loadPackFile("content/cyoa/pack/watchtower_road.yaml");
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
     const report = validateCyoa(loaded.compiled.pack);

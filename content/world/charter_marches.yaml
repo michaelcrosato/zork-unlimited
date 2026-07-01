@@ -86,10 +86,6 @@ graph:
       name: "The Bread Assize"
       kind: quest
       pack: "content/cyoa/pack/bread_assize.yaml"
-    - id: clockwork_heist
-      name: "The Clockwork Heist"
-      kind: quest
-      pack: "content/cyoa/pack/clockwork_heist.yaml"
     - id: croft_inquest
       name: "The Croft Inquest"
       kind: quest
@@ -354,9 +350,6 @@ graph:
     - from: printers_ward
       to: bellmans_round
       route: "bellman's watch"
-    - from: printers_ward
-      to: clockwork_heist
-      route: "clockmaker's ward"
     - from: printers_ward
       to: night_dispensary
       route: "apothecary row"
