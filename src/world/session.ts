@@ -479,6 +479,12 @@ type OverworldDiscoveryLocalityIndex = {
   visitedTownIds: ReadonlySet<string>;
 };
 
+type OverworldResolutionProofIndex = {
+  charactersById: ReadonlyMap<string, OverworldCharacter>;
+  eventsById: ReadonlyMap<string, OverworldLocalEvent>;
+  poisById: ReadonlyMap<string, OverworldPoi>;
+};
+
 function assertKnownJournalSource(
   entry: OverworldJournalEntry,
   prefix: string,
@@ -919,6 +925,53 @@ function assertSnapshotDiscoveryLocality(
   }
 }
 
+function journalEntryRecordedAt(entry: OverworldJournalEntry): number {
+  return parseTimeLabel(entry.recordedAt);
+}
+
+function assertSnapshotEventResolutionProofs(
+  snapshot: OverworldSessionSnapshot,
+  sources: OverworldResolutionProofIndex,
+): void {
+  const journalById = new Map(snapshot.journalEntries.map((entry) => [entry.id, entry]));
+  for (const eventId of snapshot.resolvedEventIds) {
+    const event = sources.eventsById.get(eventId);
+    if (!event) continue;
+    const resolution = journalById.get(`resolve:${eventId}`);
+    if (!resolution) continue;
+    const resolvedAt = journalEntryRecordedAt(resolution);
+
+    const hasLocalScout = snapshot.journalEntries.some((entry) => {
+      if (entry.kind !== "poi" || !entry.id.startsWith("scout:")) return false;
+      const poi = sources.poisById.get(entry.id.slice("scout:".length));
+      return poi?.area === event.area && journalEntryRecordedAt(entry) <= resolvedAt;
+    });
+    if (!hasLocalScout) {
+      throw new Error(
+        `Overworld session snapshot resolved event "${eventId}" is missing a local scout prerequisite.`,
+      );
+    }
+
+    const hasLocalContact = snapshot.journalEntries.some((entry) => {
+      if (entry.kind !== "contact" || !entry.id.startsWith("talk:")) return false;
+      const character = sources.charactersById.get(entry.id.slice("talk:".length));
+      return character?.area === event.area && journalEntryRecordedAt(entry) <= resolvedAt;
+    });
+    if (!hasLocalContact) {
+      throw new Error(
+        `Overworld session snapshot resolved event "${eventId}" is missing a local contact prerequisite.`,
+      );
+    }
+
+    const investigation = journalById.get(`investigate:${eventId}`);
+    if (!investigation || journalEntryRecordedAt(investigation) > resolvedAt) {
+      throw new Error(
+        `Overworld session snapshot resolved event "${eventId}" is missing an investigated event prerequisite.`,
+      );
+    }
+  }
+}
+
 function replaceStringSet(target: Set<string>, values: readonly string[]): void {
   target.clear();
   for (const value of values) target.add(value);
@@ -1013,7 +1066,11 @@ export class OverworldSession {
     const arcIds = new Set(this.world.regional_arcs.map((arc) => arc.id));
     const poiIds = new Set(this.world.points_of_interest.map((poi) => poi.id));
     const characterIds = new Set(this.world.characters.map((character) => character.id));
+    const charactersById = new Map(
+      this.world.characters.map((character) => [character.id, character]),
+    );
     const jobsById = new Map(this.world.local_jobs.map((job) => [job.id, job]));
+    const poisById = new Map(this.world.points_of_interest.map((poi) => [poi.id, poi]));
     const sitesById = new Map(this.world.exploration_sites.map((site) => [site.id, site]));
     const questsById = new Map(this.world.quests.map((quest) => [quest.id, quest]));
     const eventsById = new Map(this.world.local_events.map((event) => [event.id, event]));
@@ -1147,6 +1204,11 @@ export class OverworldSession {
       questsById,
       sitesById,
       visitedTownIds,
+    });
+    assertSnapshotEventResolutionProofs(snapshot, {
+      charactersById,
+      eventsById,
+      poisById,
     });
     for (const [region] of snapshot.regionRenown) {
       if (!regions.has(region)) {
