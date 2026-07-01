@@ -89,10 +89,10 @@ const TravelLogEntrySnapshotSchema = z
     delayMinutes: z.number().int().nonnegative(),
     minutes: z.number().int().nonnegative(),
     arrivedAt: z.number().int().nonnegative(),
-    suppliesUsed: z.number().int().nonnegative(),
-    suppliesAfter: z.number().int().nonnegative(),
+    suppliesUsed: z.number().int().min(0).max(MAX_SUPPLIES),
+    suppliesAfter: z.number().int().min(0).max(MAX_SUPPLIES),
     fatigueGained: z.number().int().nonnegative(),
-    fatigueAfter: z.number().int().nonnegative(),
+    fatigueAfter: z.number().int().min(0).max(MAX_FATIGUE),
   })
   .strict();
 
@@ -423,6 +423,28 @@ function assertUniqueTupleKeys(
   );
 }
 
+function assertSnapshotTimeline(snapshot: OverworldSessionSnapshot): void {
+  assertUnique(
+    "journal entry id",
+    snapshot.journalEntries.map((entry) => entry.id),
+  );
+  assertUnique(
+    "travel log entry",
+    snapshot.travelLog.map((entry) => `${entry.edgeId}@${entry.arrivedAt}`),
+  );
+
+  let previousArrivedAt = Number.POSITIVE_INFINITY;
+  for (const entry of snapshot.travelLog) {
+    if (entry.arrivedAt > snapshot.minutes) {
+      throw new Error("Overworld session snapshot travel log contains a future arrival.");
+    }
+    if (entry.arrivedAt > previousArrivedAt) {
+      throw new Error("Overworld session snapshot travel log must be newest-first.");
+    }
+    previousArrivedAt = entry.arrivedAt;
+  }
+}
+
 function assertStringSetSubset(
   label: string,
   values: readonly string[],
@@ -562,6 +584,7 @@ export class OverworldSession {
     assertKnownIds("completed regional arc id", snapshot.completedRegionalArcIds, arcIds);
     assertUniqueTupleKeys("area-map town", snapshot.currentAreaByTown);
     assertUniqueTupleKeys("renown region", snapshot.regionRenown);
+    assertSnapshotTimeline(snapshot);
 
     if (!snapshot.discoveredIds.includes(snapshot.currentId)) {
       throw new Error("Overworld session snapshot current town is not discovered.");

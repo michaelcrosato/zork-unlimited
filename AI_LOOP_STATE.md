@@ -155,6 +155,15 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: closes an authoring/package shortcut; a full registration workflow remains a later engine task.
 - Operator direction: pause after this cycle; do not start another AFK cycle.
 
+### Cycle result — overworld_snapshot_history_integrity
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; same broad helper drift outside canonical repo scripts.
+- Engine/persistence: overworld snapshot restore now rejects duplicate journal ids, future or non-newest-first travel logs, and impossible travel supplies/fatigue.
+- Token economy: compact context and exported checkpoints can trust restored history order/counts instead of accepting forged bloat.
+- VERIFY: focused overworld snapshot/MCP tests, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test` (192/1264), and `npm run health` all pass.
+- Self-critique: strengthens restore integrity for long-running loops; snapshot payload size itself remains a later compression target.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
+
 ## Current Snapshot
 
 - Verification bar: `npm run health` remains the required end gate.
@@ -177,6 +186,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   summaries require explicit `--pack` offline mode.
 - Author CLI: generated RPG output is draft-only; direct writes under
   `content/rpg/pack` are rejected until registered through the world graph.
+- Overworld session restore rejects forged history with duplicate journal ids,
+  future/non-newest-first travel logs, or impossible travel vitals.
 - Live session metadata: start/transcript/save/load return shipped
   `world_quest_id` or generated `generated_rpg_seed` without raw pack paths.
 - Overworld quest view metadata: observations, action results, compact context,
