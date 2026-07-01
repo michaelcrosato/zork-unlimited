@@ -8,10 +8,12 @@
  */
 import { readFileSync } from "node:fs";
 import { type Trace } from "../src/trace/record.js";
-import { replayTrace } from "../src/trace/replay.js";
+import { assertTraceMode, replayTrace } from "../src/trace/replay.js";
 import { loadRpgPackFile } from "../src/rpg/pack.js";
 import { buildRpgRules, indexRpgPack } from "../src/rpg/runner.js";
 import type { RpgAction } from "../src/api/types.js";
+import { assertWellFormedState } from "../src/persist/save_load.js";
+import { assertRpgStateReferences } from "../src/rpg/state_integrity.js";
 
 const DEFAULT_TRACE = "traces/rpg/barrow_victory.json";
 const DEFAULT_PACK = "content/rpg/pack/sunken_barrow.yaml";
@@ -20,13 +22,23 @@ function main(): void {
   const tracePath = process.argv[2] ?? DEFAULT_TRACE;
   const packPath = process.argv[3] ?? DEFAULT_PACK;
   const trace = JSON.parse(readFileSync(tracePath, "utf8")) as Trace<RpgAction>;
+  assertTraceMode(trace);
   const loaded = loadRpgPackFile(packPath);
   if (!loaded.ok) {
     console.error(`Pack ${packPath} failed to compile as an RPG pack.`);
     process.exit(1);
   }
 
-  const rules = buildRpgRules(indexRpgPack(loaded.compiled.pack));
+  if (trace.content_hash !== loaded.compiled.contentHash) {
+    console.error(
+      `Trace content ${trace.content_hash} does not match pack ${loaded.compiled.contentHash}.`,
+    );
+    process.exit(1);
+  }
+  assertWellFormedState(trace.initial_state);
+  const index = indexRpgPack(loaded.compiled.pack);
+  assertRpgStateReferences(index, trace.initial_state);
+  const rules = buildRpgRules(index);
   const result = replayTrace(trace, rules);
   console.log(`trace_id:     ${trace.trace_id}`);
   console.log(`pack_id:      ${trace.pack_id}`);

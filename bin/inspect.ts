@@ -20,6 +20,8 @@ import { assertTraceMode, replayTrace } from "../src/trace/replay.js";
 import type { Trace } from "../src/trace/record.js";
 import { formatReport } from "../src/validate/report.js";
 import type { RpgAction } from "../src/api/types.js";
+import { assertWellFormedState } from "../src/persist/save_load.js";
+import { assertRpgStateReferences } from "../src/rpg/state_integrity.js";
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(name);
@@ -42,7 +44,6 @@ function inspectTrace(tracePath: string, packPath: string): void {
     console.error(`Pack ${packPath} failed to compile as an RPG pack.`);
     process.exit(1);
   }
-  const rules = buildRpgRules(indexRpgPack(loaded.compiled.pack));
   console.log(
     `Trace: ${trace.trace_id}  pack: ${trace.pack_id}  seed: ${trace.seed}  steps: ${trace.actions.length}`,
   );
@@ -50,7 +51,12 @@ function inspectTrace(tracePath: string, packPath: string): void {
     console.log(
       `  ! content hash mismatch: trace ${trace.content_hash} ≠ pack ${loaded.compiled.contentHash}`,
     );
+    process.exit(1);
   }
+  assertWellFormedState(trace.initial_state);
+  const index = indexRpgPack(loaded.compiled.pack);
+  assertRpgStateReferences(index, trace.initial_state);
+  const rules = buildRpgRules(index);
   const step = makeStep(rules);
   let state = trace.initial_state;
   trace.actions.forEach((action, i) => {

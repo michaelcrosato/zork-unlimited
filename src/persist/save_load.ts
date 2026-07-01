@@ -80,9 +80,9 @@ const GameStateSchema = z
 /**
  * Assert a (possibly untrusted) GameState is well-formed + FINITE per §16
  * "integrity at load". REUSED at every untrusted-state-from-disk boundary: the
- * save load() guard below AND the trace-load gate in src/mcp/tools.ts
- * (replay_trace/inspect_trace). Same safeParse-without-substitution path as
- * load() — a valid state's bytes/hash stay identical. Throws (never coerces).
+ * save load() guard below and the trace/CLI load gates. Same
+ * safeParse-without-substitution path as load() — a valid state's bytes/hash stay
+ * identical. Throws (never coerces).
  */
 export function assertWellFormedState(state: unknown): GameState {
   const parsed = GameStateSchema.safeParse(state);

@@ -25,6 +25,7 @@ import type { RpgPack } from "../rpg/schema.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack, type RpgIndex } from "../rpg/runner.js";
 import { buildRpgObservation, type RpgObservation } from "../rpg/observation.js";
 import { validateRpg } from "../validate/rpg_validator.js";
+import { assertRpgStateReferences } from "../rpg/state_integrity.js";
 
 import {
   makeReport,
@@ -32,13 +33,7 @@ import {
   type Finding,
   type ValidationReport,
 } from "../validate/report.js";
-import {
-  SAVE_MODE,
-  save,
-  load,
-  SaveIntegrityError,
-  assertWellFormedState,
-} from "../persist/save_load.js";
+import { SAVE_MODE, save, load, assertWellFormedState } from "../persist/save_load.js";
 import { assertTraceMode, replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
@@ -148,62 +143,6 @@ function buildObsFor(
   opts: { hideGraph?: boolean; includeWorldIntro?: boolean } = {},
 ): RpgObservation {
   return buildRpgObservation(index, state, opts);
-}
-
-/**
- * Referential-integrity gate for a LOADED state (§16 "integrity at load") — the
- * pack-aware complement to save_load.ts's `GameStateSchema` (bug_0181). That
- * schema guards WHETHER a loaded state is well-formed and finite, but `load()`
- * holds only the content hash, not the pack, so it cannot tell whether the
- * state's symbols actually EXIST. A forged-but-finite save (valid structure,
- * correct hash) can set `current` to a phantom location — the engine would then
- * render the whole game from a room/scene that does not exist — or `endingId` to
- * a fabricated ending. This runs at `startSession`, the one chokepoint that has
- * BOTH the loaded state and the index, and REJECTS such a save (throws
- * `SaveIntegrityError`); it never coerces. It is the SoundnessBench
- * REJECTION-DIRECTION oracle (cf. bug_0181) carried from finiteness to reference.
- *
- * RPG keeps the player in a room at end_game, so `current` is always a room id
- * and `endingId` is always a declared ending.
- *
- * `inventory` is the third rendered referential field (bug_0184): a phantom item
- * id surfaces verbatim in the observation and in the `INVENTORY` narration ("You
- * are carrying: <phantom>"), so an un-gated forged save shows the player a symbol
- * the pack never declares — the same "render a nonexistent symbol" hole bug_0183
- * closed for `current`. The valid item set is PROVABLY COMPLETE, so gating it can
- * never false-reject a legitimate save: an item can only enter inventory via an
- * RPG `TAKE` (which only succeeds for a declared object) or an `add_item` effect,
- * so `declared objects ∪ every add_item target in the pack` is exactly the set a
- * real playthrough could ever hold.
- */
-function collectAddItemTargets(node: unknown, acc: Set<string>): Set<string> {
-  if (Array.isArray(node)) {
-    for (const el of node) collectAddItemTargets(el, acc);
-  } else if (node !== null && typeof node === "object") {
-    for (const [k, v] of Object.entries(node)) {
-      if (k === "add_item" && typeof v === "string") acc.add(v);
-      collectAddItemTargets(v, acc);
-    }
-  }
-  return acc;
-}
-
-function assertLoadedStateRefs(index: RpgIndex, state: GameState): void {
-  const items = collectAddItemTargets(index.pack, new Set<string>());
-  const locations = new Set<string>(index.rooms.keys());
-  const endings = new Set<string>(index.pack.endings.map((e) => e.id));
-  for (const id of index.objects.keys()) items.add(id);
-  if (!locations.has(state.current)) {
-    throw new SaveIntegrityError(`Save references unknown room "${state.current}".`);
-  }
-  if (state.endingId !== null && !endings.has(state.endingId)) {
-    throw new SaveIntegrityError(`Save references unknown ending "${state.endingId}".`);
-  }
-  for (const id of state.inventory) {
-    if (!items.has(id)) {
-      throw new SaveIntegrityError(`Save references unknown item "${id}".`);
-    }
-  }
 }
 
 /** The current RPG room id. */
@@ -361,7 +300,7 @@ export function createToolApi(opts: { root: string }) {
     // file via load_game), so its `current`/`endingId` must name symbols that
     // exist in THIS pack before it is handed to the engine. A freshly-built init
     // state (state === undefined) is trusted and skipped. Rejects, never coerces.
-    if (state !== undefined) assertLoadedStateRefs(index, st);
+    if (state !== undefined) assertRpgStateReferences(index, st);
     const session = sessions.create({
       packId: compiled.pack.meta.id,
       contentHash: compiled.contentHash,
@@ -1618,7 +1557,7 @@ export function createToolApi(opts: { root: string }) {
       // formed). Gate it the same way a loaded save is gated, BEFORE any engine call.
       assertWellFormedState(trace.initial_state);
       const index = indexFor(compiled.pack);
-      assertLoadedStateRefs(index, trace.initial_state);
+      assertRpgStateReferences(index, trace.initial_state);
       const rules = rulesFor(index);
       // Replay asserts the recorded final hash, and — for a Trace-v2 trace that
       // also carries `per_step_hashes` — localizes the FIRST divergent action via
@@ -1648,7 +1587,7 @@ export function createToolApi(opts: { root: string }) {
       // diagnose() below, so it must be well-formed + referentially sound first.
       assertWellFormedState(trace.initial_state);
       const index = indexFor(compiled.pack);
-      assertLoadedStateRefs(index, trace.initial_state);
+      assertRpgStateReferences(index, trace.initial_state);
       const rules = rulesFor(index);
       const step = makeStep(rules);
       let state = trace.initial_state;

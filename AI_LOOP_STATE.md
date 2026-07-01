@@ -56,6 +56,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   integrity failures, not migration inputs.
 - Trace replay: trace artifacts must carry `mode: "rpg"` before any replay or
   inspect path steps their state.
+- Trace CLI: replay/inspect now share RPG state reference checks with MCP before
+  stepping trace state.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,

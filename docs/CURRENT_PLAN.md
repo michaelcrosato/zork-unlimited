@@ -65,6 +65,8 @@ Make discovered overworld quest leads start real RPG sessions.
   rejected at the integrity boundary.
 - Trace artifacts now carry and require `mode: "rpg"` before replay or inspect
   steps untrusted trace state.
+- CLI replay/inspect now use the same RPG state reference gate as MCP trace
+  tools before stepping trace state.
 
 ## Acceptance
 
