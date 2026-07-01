@@ -66,6 +66,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   MCP replay/inspect instead of assuming a raw pack path.
 - CLI play now accepts/defaults to shipped `world_quest_id` sources and records
   `worldQuestId` into traces.
+- Save restore source inference now shares the world source resolver with trace
+  replay and CLI play.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,

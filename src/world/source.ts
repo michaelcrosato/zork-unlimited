@@ -25,6 +25,11 @@ export type TraceSourceArgs = {
 };
 
 export type PackSourceArgs = TraceSourceArgs;
+export type SaveSourceArgs = TraceSourceArgs;
+
+export type SaveWorldSource = {
+  worldQuestId?: unknown;
+};
 
 export type TracePackSource = {
   packPath: string;
@@ -110,13 +115,24 @@ export function traceWorldQuestId(trace: Trace, operation: string): string | und
   return raw;
 }
 
-export function resolveTracePackSource(
+export function saveWorldQuestId(bundle: SaveWorldSource, operation: string): string | undefined {
+  const raw = bundle.worldQuestId;
+  if (raw === undefined) return undefined;
+  if (typeof raw !== "string") {
+    throw new SaveIntegrityError(
+      `${operation} save worldQuestId must be a string when present, got ${JSON.stringify(raw)}.`,
+    );
+  }
+  return raw;
+}
+
+function resolveEmbeddedPackSource(
   root: string,
   args: TraceSourceArgs,
-  trace: Trace,
+  embeddedWorldQuestId: string | undefined,
   operation: string,
+  sourceLabel: "save" | "trace",
 ): TracePackSource {
-  const embeddedWorldQuestId = traceWorldQuestId(trace, operation);
   const sourceCount = [args.world_quest_id !== undefined, args.pack_path !== undefined].filter(
     Boolean,
   ).length;
@@ -139,16 +155,47 @@ export function resolveTracePackSource(
     worldQuestId = resolved.node.id;
   } else {
     throw new Error(
-      `${operation} requires world_quest_id, pack_path, or a trace with worldQuestId.`,
+      `${operation} requires world_quest_id, pack_path, or a ${sourceLabel} with worldQuestId.`,
     );
   }
 
   if (embeddedWorldQuestId !== undefined && embeddedWorldQuestId !== worldQuestId) {
+    const sourceName = sourceLabel === "save" ? "Save" : "Trace";
     throw new SaveIntegrityError(
-      `Trace worldQuestId ${JSON.stringify(
+      `${sourceName} worldQuestId ${JSON.stringify(
         embeddedWorldQuestId,
       )} does not match requested source ${JSON.stringify(worldQuestId)}.`,
     );
   }
   return { packPath, worldQuestId };
+}
+
+export function resolveSavePackSource(
+  root: string,
+  args: SaveSourceArgs,
+  bundle: SaveWorldSource,
+  operation: string,
+): TracePackSource {
+  return resolveEmbeddedPackSource(
+    root,
+    args,
+    saveWorldQuestId(bundle, operation),
+    operation,
+    "save",
+  );
+}
+
+export function resolveTracePackSource(
+  root: string,
+  args: TraceSourceArgs,
+  trace: Trace,
+  operation: string,
+): TracePackSource {
+  return resolveEmbeddedPackSource(
+    root,
+    args,
+    traceWorldQuestId(trace, operation),
+    operation,
+    "trace",
+  );
 }
