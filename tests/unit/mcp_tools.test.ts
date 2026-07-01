@@ -165,9 +165,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
   });
 
   it("returns the graph path from Charterhaven to a quest", () => {
-    const r = api().world_path({ quest_path: PACK });
+    const r = api().world_path({ world_quest_id: "sunken_barrow" });
     expect(r.graph_node).toBe("sunken_barrow");
     expect(r.world_quest_id).toBe("sunken_barrow");
+    expect(r.quest_path).toBe(PACK);
     expect(r.path_from_hub.map((step) => step.name)).toEqual([
       "Charterhaven",
       "Moor Road",
@@ -175,16 +176,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
     ]);
     expect(r.path_from_hub[1]?.route_from_previous).toBe("moor road");
 
-    const viaQuestId = api().world_path({ world_quest_id: "sunken_barrow" });
-    expect(viaQuestId.quest_path).toBe(PACK);
-    expect(viaQuestId.graph_node).toBe("sunken_barrow");
-    expect(viaQuestId.world_quest_id).toBe("sunken_barrow");
-    expect(viaQuestId.path_from_hub).toEqual(r.path_from_hub);
-
-    expect(() => api().world_path({})).toThrow(/requires world_quest_id or quest_path/);
-    expect(() => api().world_path({ world_quest_id: "sunken_barrow", quest_path: PACK })).toThrow(
-      /exactly one/,
-    );
+    expect(() => api().world_path({})).toThrow(/requires world_quest_id/);
+    expect(() => api().world_path({ quest_path: PACK } as never)).toThrow(/not quest_path/);
   });
 
   it("starts shipped quests by world graph id instead of raw pack path", () => {
@@ -952,27 +945,21 @@ describe("MCP tools — validate / load (§9.4)", () => {
   });
 
   it("validate_quest is the world-first validation alias", () => {
-    const r = api().validate_quest({ quest_path: PACK });
+    const r = api().validate_quest({ quest_id: "sunken_barrow" });
     expect(r.ok).toBe(true);
     expect(r.pack_path).toBe(PACK);
     expect(r.world_quest_id).toBe("sunken_barrow");
-
-    const viaQuestId = api().validate_quest({ quest_id: "sunken_barrow" });
-    expect(viaQuestId.ok).toBe(true);
-    expect(viaQuestId.pack_path).toBe(PACK);
-    expect(viaQuestId.world_quest_id).toBe("sunken_barrow");
 
     const viaWorldQuestId = api().validate_quest({ world_quest_id: "sunken_barrow" });
     expect(viaWorldQuestId.ok).toBe(true);
     expect(viaWorldQuestId.pack_path).toBe(PACK);
     expect(viaWorldQuestId.world_quest_id).toBe("sunken_barrow");
 
-    expect(() => api().validate_quest({})).toThrow(
-      /requires quest_id, world_quest_id, or quest_path/,
-    );
-    expect(() => api().validate_quest({ quest_id: "sunken_barrow", quest_path: PACK })).toThrow(
-      /exactly one/,
-    );
+    expect(() => api().validate_quest({})).toThrow(/requires quest_id or world_quest_id/);
+    expect(() =>
+      api().validate_quest({ quest_id: "sunken_barrow", world_quest_id: "sunken_barrow" }),
+    ).toThrow(/exactly one/);
+    expect(() => api().validate_quest({ quest_path: PACK } as never)).toThrow(/not quest_path/);
   });
 
   it("load_pack returns meta + content hash", () => {
@@ -1091,7 +1078,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
 
   it("quest aliases can play and transcript a route", () => {
     const a = api();
-    const game = a.start_quest({ quest_path: PACK, seed: 1 });
+    const game = a.start_quest({ world_quest_id: "sunken_barrow", seed: 1 });
     expect(game.mode).toBe("rpg");
     expect(game.observation.mode).toBe("rpg");
 
@@ -1115,10 +1102,11 @@ describe("MCP tools — the play loop (§9.1)", () => {
       "The Sunken Barrow",
     ]);
 
-    expect(() => a.start_quest({})).toThrow(/requires quest_id, world_quest_id, or quest_path/);
-    expect(() => a.start_quest({ quest_id: "sunken_barrow", quest_path: PACK })).toThrow(
-      /exactly one/,
-    );
+    expect(() => a.start_quest({})).toThrow(/requires quest_id or world_quest_id/);
+    expect(() =>
+      a.start_quest({ quest_id: "sunken_barrow", world_quest_id: "sunken_barrow" }),
+    ).toThrow(/exactly one/);
+    expect(() => a.start_quest({ quest_path: PACK } as never)).toThrow(/not quest_path/);
   });
 
   it("an agent can play a whole game via observe → choose → step", () => {

@@ -46,14 +46,13 @@ Make discovered overworld quest leads start real RPG sessions.
 - The external blind-test harness now starts shipped playtests only through
   `--quest` ids; raw pack paths are validation/replay inputs, not blind play
   starts.
-- Public MCP `world_path` now accepts `world_quest_id` only; lower-level
-  compatibility path resolution stays out of the agent-facing route tool.
+- `world_path` now accepts `world_quest_id` only in ToolApi and public MCP.
 - `validate_pack` and `load_pack` now accept `world_quest_id` for shipped quests
   and return source identity metadata.
 - `apply_content_patch` now accepts shipped `world_quest_id`; raw `pack_path`
   remains compatibility/new-pack fallback.
-- Public MCP `start_quest` and `validate_quest` now accept only `quest_id` /
-  `world_quest_id`; raw `quest_path` remains lower-level tooling compatibility.
+- `start_quest` and `validate_quest` now accept only `quest_id` /
+  `world_quest_id` in ToolApi and public MCP; raw `quest_path` is rejected.
 - Retired legacy story aliases from the live MCP surface; use `validate_pack`,
   `new_game`, and `start_world_quest` for current RPG play.
 - RPG start/load responses now carry one-time world context; follow-up
@@ -139,6 +138,6 @@ Make discovered overworld quest leads start real RPG sessions.
 - Continue simplifying parser-era wording in historical docs when it affects current
   orientation.
 - Continue shrinking lower-level compatibility helpers that still accept raw
-  pack or quest paths.
+  pack paths.
 - Add lightweight token/cost telemetry under ignored run output when the loop needs
   measured efficiency data.

@@ -189,7 +189,6 @@ type RpgStartWorldQuestArgs = {
 } & RpgResponseOptions;
 
 type RpgStartQuestArgs = {
-  quest_path?: string;
   quest_id?: string;
   world_quest_id?: string;
   seed?: number;
@@ -562,26 +561,23 @@ export function createToolApi(opts: { root: string }) {
     return { ...source, compiled: requirePlayable(source.packPath) };
   }
 
-  function resolveQuestAliasSource(
-    args: { quest_path?: string; quest_id?: string; world_quest_id?: string },
+  function resolveQuestIdSource(
+    args: { quest_id?: string; world_quest_id?: string },
     operation: string,
-  ): { questPath?: string; worldQuestId?: string } {
-    const sourceCount = [
-      args.quest_id !== undefined,
-      args.world_quest_id !== undefined,
-      args.quest_path !== undefined,
-    ].filter(Boolean).length;
+  ): { worldQuestId: string } {
+    if ((args as { quest_path?: unknown }).quest_path !== undefined) {
+      throw new Error(`${operation} accepts quest_id or world_quest_id, not quest_path.`);
+    }
+    const sourceCount = [args.quest_id !== undefined, args.world_quest_id !== undefined].filter(
+      Boolean,
+    ).length;
     if (sourceCount === 0) {
-      throw new Error(`${operation} requires quest_id, world_quest_id, or quest_path.`);
+      throw new Error(`${operation} requires quest_id or world_quest_id.`);
     }
     if (sourceCount > 1) {
-      throw new Error(
-        `${operation} accepts exactly one of quest_id, world_quest_id, or quest_path.`,
-      );
+      throw new Error(`${operation} accepts exactly one of quest_id or world_quest_id.`);
     }
-    return args.quest_path !== undefined
-      ? { questPath: args.quest_path }
-      : { worldQuestId: args.quest_id ?? args.world_quest_id! };
+    return { worldQuestId: args.quest_id ?? args.world_quest_id! };
   }
 
   function loadWorldManifest(): WorldManifest {
@@ -722,45 +718,30 @@ export function createToolApi(opts: { root: string }) {
       return { world, hub: world.hub, graph: world.graph, quest_count: quests.length, quests };
     },
 
-    world_path(args: { quest_path?: string; world_quest_id?: string }): {
+    world_path(args: { world_quest_id?: string }): {
       world: Pick<WorldManifest, "id" | "name" | "hub">;
       quest_path: string;
       world_quest_id: string | null;
       graph_node: string | null;
       path_from_hub: WorldRouteStep[];
     } {
-      const sourceCount = [args.world_quest_id !== undefined, args.quest_path !== undefined].filter(
-        Boolean,
-      ).length;
-      if (sourceCount === 0) {
-        throw new Error("world_path requires world_quest_id or quest_path.");
+      if ((args as { quest_path?: unknown }).quest_path !== undefined) {
+        throw new Error("world_path accepts world_quest_id, not quest_path.");
       }
-      if (sourceCount > 1) {
-        throw new Error("world_path accepts exactly one of world_quest_id or quest_path.");
+      if (args.world_quest_id === undefined) {
+        throw new Error("world_path requires world_quest_id.");
       }
-      if (args.world_quest_id !== undefined) {
-        const resolved = resolveWorldQuestPackPath(args.world_quest_id);
-        return {
-          world: {
-            id: resolved.world.id,
-            name: resolved.world.name,
-            hub: resolved.world.hub,
-          },
-          quest_path: resolved.packPath,
-          world_quest_id: resolved.node.id,
-          graph_node: resolved.node.id,
-          path_from_hub: worldRouteFromHub(resolved.world, resolved.node.id) ?? [],
-        };
-      }
-      const world = loadWorldManifest();
-      const questPath = args.quest_path!;
-      const node = worldQuestNodeForPack(world, questPath);
+      const resolved = resolveWorldQuestPackPath(args.world_quest_id);
       return {
-        world: { id: world.id, name: world.name, hub: world.hub },
-        quest_path: questPath,
-        world_quest_id: node?.id ?? null,
-        graph_node: node?.id ?? null,
-        path_from_hub: node ? (worldRouteForPack(world, questPath) ?? []) : [],
+        world: {
+          id: resolved.world.id,
+          name: resolved.world.name,
+          hub: resolved.world.hub,
+        },
+        quest_path: resolved.packPath,
+        world_quest_id: resolved.node.id,
+        graph_node: resolved.node.id,
+        path_from_hub: worldRouteFromHub(resolved.world, resolved.node.id) ?? [],
       };
     },
 
@@ -1004,16 +985,14 @@ export function createToolApi(opts: { root: string }) {
       );
     },
 
-    validate_quest(args: { quest_path?: string; quest_id?: string; world_quest_id?: string }): {
+    validate_quest(args: { quest_id?: string; world_quest_id?: string }): {
       ok: boolean;
       pack_path: string;
       world_quest_id: string | null;
       report: ValidationReport;
     } {
-      const source = resolveQuestAliasSource(args, "validate_quest");
-      return source.worldQuestId
-        ? this.validate_pack({ world_quest_id: source.worldQuestId })
-        : this.validate_pack({ pack_path: source.questPath! });
+      const source = resolveQuestIdSource(args, "validate_quest");
+      return this.validate_pack({ world_quest_id: source.worldQuestId });
     },
 
     load_pack(args: { pack_path?: string; world_quest_id?: string }): {
@@ -1133,26 +1112,15 @@ export function createToolApi(opts: { root: string }) {
       } as RpgWorldQuestStartPayload<Args>;
     },
 
-    start_quest<Args extends RpgStartQuestArgs>(
-      args: Args,
-    ): RpgSessionPayload<Args> | RpgWorldQuestStartPayload<Args> {
-      const source = resolveQuestAliasSource(args, "start_quest");
-      if (source.worldQuestId) {
-        return this.start_world_quest({
-          quest_id: source.worldQuestId,
-          ...(args.seed !== undefined ? { seed: args.seed } : {}),
-          ...(args.hide_graph ? { hide_graph: true } : {}),
-          ...(args.compact_actions ? { compact_actions: true } : {}),
-          ...(args.compact_observation ? { compact_observation: true } : {}),
-        } as RpgStartWorldQuestArgs & Args);
-      }
-      return this.new_game({
-        pack_path: source.questPath!,
+    start_quest<Args extends RpgStartQuestArgs>(args: Args): RpgWorldQuestStartPayload<Args> {
+      const source = resolveQuestIdSource(args, "start_quest");
+      return this.start_world_quest({
+        quest_id: source.worldQuestId,
         ...(args.seed !== undefined ? { seed: args.seed } : {}),
         ...(args.hide_graph ? { hide_graph: true } : {}),
         ...(args.compact_actions ? { compact_actions: true } : {}),
         ...(args.compact_observation ? { compact_observation: true } : {}),
-      } as RpgNewGameArgs & Args);
+      } as RpgStartWorldQuestArgs & Args);
     },
 
     get_observation<Args extends RpgGetObservationArgs>(args: Args): RpgObservationResponse<Args> {

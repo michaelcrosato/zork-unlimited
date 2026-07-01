@@ -35,14 +35,14 @@ history only when deep recovery is truly needed. Keep future entries terse.
   `world_quest_id`; generated sessions report null source identity.
 - Blind harness default: shipped playtests should use `--quest` /
   `start_world_quest`; `--pack` is compatibility/new-pack fallback.
-- World routes: public MCP `world_path` accepts only `world_quest_id`; raw
-  `quest_path` resolution remains lower-level compatibility only.
+- World routes: ToolApi and public MCP `world_path` accept only
+  `world_quest_id`; raw `quest_path` is rejected.
 - Pack validation/loading: shipped quests can use `world_quest_id` and preserve
   source identity in responses.
 - Content patching: shipped patch targets can use `world_quest_id`; raw
   `pack_path` remains compatibility/new-pack fallback.
-- Quest aliases: public MCP `validate_quest`/`start_quest` use graph ids only;
-  raw `quest_path` remains lower-level compatibility.
+- Quest aliases: ToolApi and public MCP `validate_quest`/`start_quest` use
+  graph ids only; raw `quest_path` is rejected.
 - Retired legacy story aliases: live MCP uses `validate_pack`, `new_game`, and
   `start_world_quest`; the legacy path alias is no longer a public start source.
 - Token economy: RPG start/load responses include world context once; follow-up
