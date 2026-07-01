@@ -24,11 +24,11 @@ import {
 } from "./legal_actions.js";
 import { evalConditions } from "../core/conditions.js";
 import type { GameEvent } from "../core/events.js";
-import { type RpgPack, type Enemy, SCORE_VAR } from "./schema.js";
+import { type RpgPack, type Enemy } from "./schema.js";
 import { resolveAttack, enemyAlive } from "./combat.js";
 import { rngForStep, type Rng } from "../core/rng.js";
-import { scoreChangeNarrations } from "../core/score_chrome.js";
 import { resolveSkillCheck } from "../core/skill_check.js";
+import { decorateRpgScoreEvents } from "./score_events.js";
 import { endGameEffects } from "./terminal_effects.js";
 
 export type RpgIndex = RpgModelIndex & {
@@ -144,7 +144,7 @@ export function buildRpgRules(
 
     // Zork-style score feedback derived from the RPG `score` var.
     decorateEvents(events: GameEvent[]): GameEvent[] {
-      return scoreChangeNarrations(events, SCORE_VAR, index.pack.meta.max_score ?? 0);
+      return decorateRpgScoreEvents(events, index.pack.meta.max_score);
     },
   };
 }

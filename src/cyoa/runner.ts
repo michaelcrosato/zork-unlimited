@@ -14,9 +14,8 @@ import type { GameEvent } from "../core/events.js";
 import { reactiveText } from "../core/reactive_text.js";
 import { rngForStep, type Rng } from "../core/rng.js";
 import type { Resolution, Rules } from "../core/engine.js";
-import { scoreChangeNarrations } from "../core/score_chrome.js";
 import { resolveSkillCheck } from "../core/skill_check.js";
-import { SCORE_VAR } from "../rpg/schema.js";
+import { decorateRpgScoreEvents } from "../rpg/score_events.js";
 import { initRuntimeState } from "../rpg/state_init.js";
 import { endGameEffects, transitionEffects } from "../rpg/terminal_effects.js";
 import type { CyoaPack, Ending, Scene } from "./schema.js";
@@ -140,7 +139,7 @@ export function buildRules(
     // touching `next`), so determinism and every CYOA trace's hash are unchanged; and
     // when `max_score` is absent/0 — every CYOA pack today — it returns [] (a true no-op).
     decorateEvents(events: GameEvent[]): GameEvent[] {
-      return scoreChangeNarrations(events, SCORE_VAR, index.pack.meta.max_score ?? 0);
+      return decorateRpgScoreEvents(events, index.pack.meta.max_score);
     },
   };
 }

@@ -90,23 +90,35 @@ describe("RPG schema owns the RPG contract", () => {
 
   it("keeps legacy CYOA terminal fragments on the RPG schema contract", () => {
     const cyoaSchema = readFileSync("src/cyoa/schema.ts", "utf8");
-    const cyoaRunner = readFileSync("src/cyoa/runner.ts", "utf8");
     expect(cyoaSchema).toContain("../rpg/schema");
     expect(cyoaSchema).toContain("EndingSchema as RpgEndingSchema");
     expect(cyoaSchema).toContain("EndingVariantSchema");
     expect(cyoaSchema).toContain("RpgEndingSchema.omit({ death: true })");
     expect(cyoaSchema).toContain("death: z.boolean().optional()");
-    expect(cyoaRunner).toContain("../rpg/schema");
-    expect(cyoaRunner).toContain("SCORE_VAR");
-    expect(cyoaRunner).not.toContain('const SCORE_VAR = "score"');
   });
 
   it("does not import the legacy parser runner for RPG win or score events", () => {
     const runner = readFileSync("src/rpg/runner.ts", "utf8");
     expect(runner).not.toContain("../parser/runner");
-    expect(runner).toContain("../core/score_chrome");
+    expect(runner).toContain("./score_events");
     expect(runner).not.toContain("rpgScoreChangeNarrations");
     expect(runner).not.toContain("winningEnding");
+  });
+
+  it("keeps score event decoration on the RPG-owned path", () => {
+    const scoreEvents = readFileSync("src/rpg/score_events.ts", "utf8");
+    const rpgRunner = readFileSync("src/rpg/runner.ts", "utf8");
+    const cyoaRunner = readFileSync("src/cyoa/runner.ts", "utf8");
+
+    expect(scoreEvents).toContain("export function decorateRpgScoreEvents");
+    expect(scoreEvents).toContain("scoreChangeNarrations");
+    expect(scoreEvents).toContain("SCORE_VAR");
+    expect(rpgRunner).toContain("./score_events");
+    expect(cyoaRunner).toContain("../rpg/score_events");
+    expect(rpgRunner).not.toContain("scoreChangeNarrations");
+    expect(cyoaRunner).not.toContain("scoreChangeNarrations");
+    expect(cyoaRunner).not.toContain("../rpg/schema");
+    expect(cyoaRunner).not.toContain("SCORE_VAR");
   });
 
   it("keeps skill-check schema and resolution in core gameplay code", () => {
