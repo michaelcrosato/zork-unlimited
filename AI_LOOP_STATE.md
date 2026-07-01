@@ -78,6 +78,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   helper.
 - Discovered overworld quest starts now use canonical `world_quest_id` source
   identity.
+- MCP overworld loading now rejects local quest ids/packs that drift from the
+  canonical world graph.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,

@@ -54,6 +54,7 @@ import {
   type WorldRouteStep,
 } from "../world/graph.js";
 import {
+  assertOverworldQuestSourceBindings,
   loadWorldManifest as loadWorldManifestFromRoot,
   resolveGameSource,
   resolvePackSource,
@@ -412,6 +413,7 @@ export function createToolApi(opts: { root: string }) {
     );
     const world = parseOverworldManifest(raw);
     assertOverworldIntegrity(world);
+    assertOverworldQuestSourceBindings(loadWorldManifest(), world);
     return world;
   }
 

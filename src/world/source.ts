@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { SaveIntegrityError } from "../persist/save_load.js";
 import type { Trace } from "../trace/record.js";
+import type { OverworldManifest } from "./overworld.js";
 import {
   CANONICAL_HUB_CITY,
   CANONICAL_WORLD_ID,
@@ -98,6 +99,27 @@ export function resolveWorldQuestPackPath(
 
 export function worldQuestIdForPackPath(root: string, packPath: string): string | null {
   return worldQuestNodeForPack(loadWorldManifest(root), packPath)?.id ?? null;
+}
+
+export function assertOverworldQuestSourceBindings(
+  world: WorldManifest,
+  overworld: OverworldManifest,
+): void {
+  for (const quest of overworld.quests) {
+    const node = worldQuestNodeById(world, quest.id);
+    if (!node?.pack) {
+      throw new Error(`Overworld quest "${quest.id}" is missing from the canonical world graph.`);
+    }
+    const actualPack = normalizePackPath(quest.pack);
+    const expectedPack = normalizePackPath(node.pack);
+    if (actualPack !== expectedPack) {
+      throw new Error(
+        `Overworld quest "${quest.id}" pack ${JSON.stringify(
+          actualPack,
+        )} does not match canonical world graph pack ${JSON.stringify(expectedPack)}.`,
+      );
+    }
+  }
 }
 
 export function resolvePackSource(
