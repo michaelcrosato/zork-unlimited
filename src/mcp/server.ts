@@ -248,10 +248,15 @@ tool(
 );
 tool(
   "start_overworld_session_quest",
-  "Start a discovered local quest lead in a stateful New York overworld session. The lead must belong to the current town and current local area.",
+  "Start a discovered local quest lead in a stateful New York overworld session and return a playable RPG session for its pack. The lead must belong to the current town and current local area.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     quest_id: z.string().describe("Quest id from the session observation's quests list."),
+    seed: z.number().int().optional().describe("Optional runtime seed for the RPG quest session."),
+    hide_graph: z
+      .boolean()
+      .optional()
+      .describe("When true, hide RPG graph destinations in the returned quest observation."),
   },
   (a) => api.start_overworld_session_quest(a),
 );

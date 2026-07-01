@@ -228,9 +228,11 @@ npm run mcp   # start the stdio server
 ```
 
 The project ships `.mcp.json`, so an MCP client opened in this repo can connect
-automatically (approve the `adventureforge` server when prompted). The agent loop is:
-`new_game` → read `observation.available_actions` → `step_action` with a chosen
-`action_id` → repeat until `observation.ended`.
+automatically (approve the `adventureforge` server when prompted). The direct
+quest loop is: `new_game` → read `observation.available_actions` → `step_action`
+with a chosen `action_id` → repeat until `observation.ended`. The open-world loop
+starts with `start_overworld`; after discovering a local lead,
+`start_overworld_session_quest` returns the playable RPG session for that quest.
 
 ### Testing: two modes — dev tests + a blind LLM playtest
 

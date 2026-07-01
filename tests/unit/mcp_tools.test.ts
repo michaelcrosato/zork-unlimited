@@ -431,6 +431,14 @@ describe("MCP tools — validate / load (§9.4)", () => {
       id: discoveredQuest.id,
       area: discoveredQuest.area,
     });
+    expect(startedQuest.rpg_session_id).toBe(startedQuest.rpg_session.session_id);
+    expect(startedQuest.rpg_session.mode).toBe("rpg");
+    expect(startedQuest.rpg_session.observation.mode).toBe("rpg");
+    expect(startedQuest.rpg_session.observation.ended).toBe(false);
+    expect(startedQuest.rpg_session.observation.available_actions.length).toBeGreaterThan(0);
+    expect(a.get_observation({ session_id: startedQuest.rpg_session_id }).observation.title).toBe(
+      startedQuest.rpg_session.observation.title,
+    );
 
     expect(() =>
       a.scout_overworld_session_poi({

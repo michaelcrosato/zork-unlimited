@@ -820,18 +820,37 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    start_overworld_session_quest(args: { session_id: string; quest_id: string }): {
+    start_overworld_session_quest(args: {
+      session_id: string;
+      quest_id: string;
+      seed?: number;
+      hide_graph?: boolean;
+    }): {
       ok: true;
       session_id: string;
       quest: OverworldQuest;
       observation: OverworldView;
+      rpg_session_id: string;
+      rpg_session: {
+        session_id: string;
+        mode: PackMode;
+        observation: McpObservation;
+        state_hash: string;
+      };
     } {
       const session = getOverworldSession(args.session_id);
       const quest = session.startQuest(args.quest_id);
+      const rpgSession = this.new_game({
+        pack_path: quest.pack,
+        ...(args.seed !== undefined ? { seed: args.seed } : {}),
+        ...(args.hide_graph ? { hide_graph: true } : {}),
+      });
       return {
         ok: true,
         session_id: args.session_id,
         quest,
+        rpg_session_id: rpgSession.session_id,
+        rpg_session: rpgSession,
         observation: session.view(),
       };
     },

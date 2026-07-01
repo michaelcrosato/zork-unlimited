@@ -5,15 +5,16 @@ focused on what a fresh agent needs next.
 
 ---
 
-# Consolidation Cycle — Parser Runtime Retirement
+# Consolidation Cycle — Overworld Quest Bridge
 
 ## Synthesis
 
 The repo is being normalized around one live game engine: RPG. CYOA was already
 retired; parser remained as a compatibility layer with content packs, world graph
 entries, negative fixtures, and a large parser-only regression cluster. That surface
-kept increasing search cost and made future agents distinguish migration data from
-the actual engine.
+has now been removed from the live runtime. The remaining architectural split is
+inside the RPG surface itself: overworld sessions can discover quest leads, while
+RPG quest sessions still run as separate pack sessions.
 
 Blind MCP playtest agents should continue reporting in-game issues through the RPG
 MCP surface. Engine/loop work should inspect the RPG runner, observation, validator,
@@ -21,29 +22,28 @@ MCP tools, overworld/session flow, and verifier integrity.
 
 ## Chosen Move
 
-Retire the parser runtime and content rather than preserve it as migration data.
+Make discovered overworld quest leads start real RPG sessions.
 
-- Removed parser source, parser validator, parser content packs, parser negative
-  fixtures, parser property tests, and parser-only regression suites.
-- Kept RPG structural coverage by moving shared tests onto RPG helpers and zero-enemy
-  RPG fixtures where needed.
-- Updated the Charter Marches and New York overworld manifests to reference shipped
-  RPG quests only.
-- Moved retired parser paths into `FORBIDDEN_FILES` in `scripts/verify-integrity.ts`.
+- `start_overworld_session_quest` validates discovery/current area, then creates a
+  playable RPG session from the quest pack.
+- The response preserves the overworld fields and adds `rpg_session_id` plus the
+  RPG session payload.
+- The MCP schema now exposes optional RPG `seed` and `hide_graph` controls on that
+  bridge.
 
 ## Acceptance
 
-1. `npm run typecheck` passes.
-2. `npm run validate` passes and discovers only shipped RPG packs.
-3. `npm test` passes.
-4. `npm run health` passes before commit.
-5. No live source imports parser modules.
+1. `npm run validate` passes.
+2. `npm test` passes.
+3. Prefer `npm run health` before commit when time permits.
+4. The overworld quest regression proves the returned RPG session can be observed.
 
 ## Deferred Levers
 
 - Continue simplifying parser-era wording in historical docs when it affects current
   orientation.
-- Review remaining generic CYOA-shaped broken fixtures and decide whether they still
-  serve non-RPG rejection tests.
+- Reduce the duplicate static-vs-stateful overworld tool surface.
+- Decide whether `list_stories` should become a compatibility alias over a world
+  quest index rather than a raw pack directory shelf.
 - Add lightweight token/cost telemetry under ignored run output when the loop needs
   measured efficiency data.

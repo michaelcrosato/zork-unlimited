@@ -20,6 +20,9 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Verification bar: `npm run health` remains the required end gate.
 - Current corpus: RPG and overworld content are broad enough that
   routine work should prefer targeted fixes or structural checks over more log prose.
+- Current engine seam: `start_overworld_session_quest` now bridges a discovered
+  overworld quest lead into a real RPG session; future work should reduce remaining
+  static-vs-stateful MCP duplication.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,
