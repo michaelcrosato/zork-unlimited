@@ -891,6 +891,38 @@ function assertSnapshotDiscoveredTownFrontier(
   }
 }
 
+function assertSnapshotDiscoveredAreaPrefix(
+  snapshot: OverworldSessionSnapshot,
+  world: OverworldManifest,
+  visitedTownIds: ReadonlySet<string>,
+): void {
+  const discoveredAreaIds = new Set(snapshot.discoveredAreaIds);
+  for (const townId of visitedTownIds) {
+    const areas = overworldAreasAt(world, townId);
+    if (areas.length === 0) continue;
+    let discoveredAny = false;
+    let hiddenAreaSeen = false;
+    for (const area of areas) {
+      const discovered = discoveredAreaIds.has(area.id);
+      if (discovered) {
+        discoveredAny = true;
+        if (hiddenAreaSeen) {
+          throw new Error(
+            `Overworld session snapshot discovered area "${area.id}" skips an earlier area in "${townId}".`,
+          );
+        }
+      } else {
+        hiddenAreaSeen = true;
+      }
+    }
+    if (!discoveredAny) {
+      throw new Error(
+        `Overworld session snapshot visited town "${townId}" is missing its initial discovered area.`,
+      );
+    }
+  }
+}
+
 function addRegionRenown(target: Map<string, number>, region: string, amount: number): void {
   if (amount <= 0) return;
   target.set(region, (target.get(region) ?? 0) + amount);
@@ -1477,6 +1509,7 @@ export class OverworldSession {
     if (snapshot.currentAreaId !== null && !discoveredAreaIds.has(snapshot.currentAreaId)) {
       throw new Error("Overworld session snapshot current area is not discovered.");
     }
+    assertSnapshotDiscoveredAreaPrefix(snapshot, this.world, visitedTownIds);
     for (const [townId, areaId] of snapshot.currentAreaByTown) {
       if (!nodeIds.has(townId)) {
         throw new Error(`Overworld session snapshot has unknown area-map town "${townId}".`);

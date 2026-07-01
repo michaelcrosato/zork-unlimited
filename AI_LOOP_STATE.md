@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 30 -->
+<!-- historical_cycle_count: 31 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_snapshot_area_discovery_prefix
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; helper still fails broad root formatting/ESLint outside canonical package scripts.
+- Engine/persistence: overworld restore now requires discovered local areas in every visited town to match the engine's sorted prefix unlock order.
+- Token economy: compact local discovery arrays can no longer skip hidden area order while looking locally valid.
+- VERIFY: focused overworld snapshot/MCP/UI tests, typecheck, lint, format:check, validate, npm test, `npm run health` EXIT 0.
+- Self-critique: closes area-discovery prefix exactness; full local action sequencing remains a larger future invariant.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
 
 ### Cycle result — overworld_snapshot_discovered_town_frontier
 

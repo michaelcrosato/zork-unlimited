@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { createToolApi } from "../../src/mcp/tools.js";
-import { parseOverworldManifest } from "../../src/world/overworld.js";
+import { overworldAreasAt, parseOverworldManifest } from "../../src/world/overworld.js";
 
 const api = () => createToolApi({ root: process.cwd() });
 const overworld = parseOverworldManifest(
@@ -49,6 +49,20 @@ function townRegion(nodeId: string): string {
   const town = overworld.nodes.find((node) => node.id === nodeId);
   if (!town) throw new Error(`unknown test town ${nodeId}`);
   return town.region;
+}
+
+function visitedTownAreas(
+  snapshot: Snapshot,
+  minimumCount: number,
+  excludedFirstAreaId: string | null = null,
+) {
+  for (const townId of snapshot.visitedIds) {
+    const areas = overworldAreasAt(overworld, townId);
+    if (areas.length >= minimumCount && areas[0]?.id !== excludedFirstAreaId) {
+      return { townId, areas };
+    }
+  }
+  throw new Error(`expected a visited town with at least ${minimumCount} areas`);
 }
 
 function appendUnique(values: readonly string[], value: string): string[] {
@@ -564,6 +578,38 @@ describe("overworld snapshot restore integrity", () => {
 
     expect(() => a.restore_overworld_session({ snapshot: forgedAreaDiscovery })).toThrow(
       /discovered area.*unvisited town/,
+    );
+  });
+
+  it("rejects visited towns missing their initial discovered area", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const { areas } = visitedTownAreas(snapshot, 1, snapshot.currentAreaId);
+    const firstArea = areas[0]!;
+    const missingInitialArea = {
+      ...snapshot,
+      discoveredAreaIds: snapshot.discoveredAreaIds.filter((id) => id !== firstArea.id),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: missingInitialArea })).toThrow(
+      /missing its initial discovered area/,
+    );
+  });
+
+  it("rejects discovered areas that skip earlier town areas", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const { areas } = visitedTownAreas(snapshot, 2, snapshot.currentAreaId);
+    const firstArea = areas[0]!;
+    const secondArea = areas[1]!;
+    const skippedAreaDiscovery = {
+      ...snapshot,
+      discoveredAreaIds: appendUnique(
+        snapshot.discoveredAreaIds.filter((id) => id !== firstArea.id),
+        secondArea.id,
+      ),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: skippedAreaDiscovery })).toThrow(
+      /discovered area.*skips an earlier area/,
     );
   });
 
