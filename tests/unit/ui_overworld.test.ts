@@ -206,6 +206,9 @@ describe("OverworldSession", () => {
     expect(entry.fatigueGained).toBeGreaterThan(0);
     expect(entry.fatigueAfter).toBeGreaterThan(before.fatigue);
     expect(after.log[0]).toMatchObject({
+      edgeId: road!.id,
+      fromId: "albany_city",
+      toId: "colonie_town",
       from: "Albany city",
       to: "Colonie town",
       baseMinutes: road!.travel_minutes,
@@ -290,6 +293,22 @@ describe("OverworldSession", () => {
     expect(JSON.stringify(snapshot.pendingRoadEncounter).length).toBeLessThan(
       JSON.stringify(before.pendingRoadEncounter).length / 4,
     );
+    expect(snapshot.travelLog[0]).toMatchObject({
+      edgeId: road!.id,
+      fromId: start.current.id,
+      toId: road!.destination.id,
+      minutes: before.log[0]!.minutes,
+      arrivedAt: before.log[0]!.arrivedAt,
+    });
+    expect(snapshot.travelLog[0]).not.toHaveProperty("roadEvent");
+    expect(snapshot.travelLog[0]).not.toHaveProperty("from");
+    expect(snapshot.travelLog[0]).not.toHaveProperty("to");
+    expect(snapshot.travelLog[0]).not.toHaveProperty("route");
+    expect(snapshot.travelLog[0]).not.toHaveProperty("distanceMi");
+    expect(snapshot.travelLog[0]).not.toHaveProperty("baseMinutes");
+    expect(JSON.stringify(snapshot.travelLog[0]).length).toBeLessThan(
+      JSON.stringify(before.log[0]).length / 2,
+    );
     const restored = OverworldSession.restore(world, snapshot);
     expect(restored.view()).toEqual(before);
     expect(() => restored.travel(restored.view().exits[0]!.id)).toThrow(/pending road encounter/i);
@@ -349,6 +368,14 @@ describe("OverworldSession", () => {
     tamperedPendingRoadSnapshot.pendingRoadEncounter!.edgeId = "missing_road";
     expect(() => OverworldSession.restore(world, tamperedPendingRoadSnapshot)).toThrow(
       /unknown pending road/i,
+    );
+
+    const tamperedTravelLogSnapshot = JSON.parse(JSON.stringify(validSnapshot)) as ReturnType<
+      typeof session.snapshot
+    >;
+    tamperedTravelLogSnapshot.travelLog[0]!.edgeId = "missing_road";
+    expect(() => OverworldSession.restore(world, tamperedTravelLogSnapshot)).toThrow(
+      /unknown travel road/i,
     );
   });
 

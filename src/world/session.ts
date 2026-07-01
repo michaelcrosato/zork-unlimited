@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { hashState } from "../core/hash.js";
 import {
-  OverworldRoadEventSchema,
   overworldAreasAt,
   overworldAreaEdgesFrom,
   overworldCharactersAt,
@@ -45,12 +44,15 @@ import {
   type OverworldLocalActionKind,
 } from "./local_actions.js";
 
-export const OVERWORLD_SESSION_SAVE_VERSION = 2 as const;
+export const OVERWORLD_SESSION_SAVE_VERSION = 3 as const;
 const MAX_SUPPLIES = 8;
 const STARTING_SUPPLIES = 6;
 const MAX_FATIGUE = 100;
 
 export type TravelLogEntry = {
+  edgeId: string;
+  fromId: string;
+  toId: string;
   from: string;
   to: string;
   route: string;
@@ -66,13 +68,24 @@ export type TravelLogEntry = {
   roadEvent: OverworldRoadEvent | null;
 };
 
-const TravelLogEntrySchema = z
+export type TravelLogEntrySnapshot = {
+  edgeId: string;
+  fromId: string;
+  toId: string;
+  delayMinutes: number;
+  minutes: number;
+  arrivedAt: number;
+  suppliesUsed: number;
+  suppliesAfter: number;
+  fatigueGained: number;
+  fatigueAfter: number;
+};
+
+const TravelLogEntrySnapshotSchema = z
   .object({
-    from: z.string().min(1),
-    to: z.string().min(1),
-    route: z.string().min(1),
-    distanceMi: z.number().finite().nonnegative(),
-    baseMinutes: z.number().int().nonnegative(),
+    edgeId: z.string().min(1),
+    fromId: z.string().min(1),
+    toId: z.string().min(1),
     delayMinutes: z.number().int().nonnegative(),
     minutes: z.number().int().nonnegative(),
     arrivedAt: z.number().int().nonnegative(),
@@ -80,7 +93,6 @@ const TravelLogEntrySchema = z
     suppliesAfter: z.number().int().nonnegative(),
     fatigueGained: z.number().int().nonnegative(),
     fatigueAfter: z.number().int().nonnegative(),
-    roadEvent: OverworldRoadEventSchema.nullable(),
   })
   .strict();
 
@@ -179,7 +191,7 @@ export const OverworldSessionSnapshotSchema = z
     discoveredIds: z.array(z.string().min(1)),
     visitedIds: z.array(z.string().min(1)),
     currentAreaByTown: z.array(z.tuple([z.string().min(1), z.string().min(1)])),
-    travelLog: z.array(TravelLogEntrySchema),
+    travelLog: z.array(TravelLogEntrySnapshotSchema),
     journalEntries: z.array(OverworldJournalEntrySchema),
     resolvedEventIds: z.array(z.string().min(1)),
     discoveredAreaIds: z.array(z.string().min(1)),
@@ -337,6 +349,21 @@ function cloneJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+function snapshotTravelLogEntry(entry: TravelLogEntry): TravelLogEntrySnapshot {
+  return {
+    edgeId: entry.edgeId,
+    fromId: entry.fromId,
+    toId: entry.toId,
+    delayMinutes: entry.delayMinutes,
+    minutes: entry.minutes,
+    arrivedAt: entry.arrivedAt,
+    suppliesUsed: entry.suppliesUsed,
+    suppliesAfter: entry.suppliesAfter,
+    fatigueGained: entry.fatigueGained,
+    fatigueAfter: entry.fatigueAfter,
+  };
+}
+
 function sortedStringSet(values: Set<string>): string[] {
   return [...values].sort();
 }
@@ -446,7 +473,7 @@ export class OverworldSession {
       discoveredIds: sortedStringSet(this.discoveredIds),
       visitedIds: sortedStringSet(this.visitedIds),
       currentAreaByTown: sortedStringMap(this.currentAreaByTown),
-      travelLog: cloneJson(this.travelLog),
+      travelLog: this.travelLog.map(snapshotTravelLogEntry),
       journalEntries: cloneJson(this.journalEntries),
       resolvedEventIds: sortedStringSet(this.resolvedEventIds),
       discoveredAreaIds: sortedStringSet(this.discoveredAreaIds),
@@ -616,7 +643,11 @@ export class OverworldSession {
     for (const [townId, areaId] of snapshot.currentAreaByTown) {
       this.currentAreaByTown.set(townId, areaId);
     }
-    this.travelLog.splice(0, this.travelLog.length, ...cloneJson(snapshot.travelLog));
+    this.travelLog.splice(
+      0,
+      this.travelLog.length,
+      ...snapshot.travelLog.map((entry) => this.restoreTravelLogEntry(entry, edgesById)),
+    );
     this.journalEntries.splice(
       0,
       this.journalEntries.length,
@@ -634,6 +665,48 @@ export class OverworldSession {
     for (const [region, renown] of snapshot.regionRenown) this.regionRenown.set(region, renown);
     replaceStringSet(this.completedRegionalArcIds, snapshot.completedRegionalArcIds);
     this.pendingRoadEncounter = restoredPendingRoadEncounter;
+  }
+
+  private restoreTravelLogEntry(
+    entry: TravelLogEntrySnapshot,
+    edgesById: ReadonlyMap<string, OverworldEdge>,
+  ): TravelLogEntry {
+    const edge = edgesById.get(entry.edgeId);
+    if (!edge) {
+      throw new Error(`Overworld session snapshot has unknown travel road "${entry.edgeId}".`);
+    }
+    const endpointsMatch =
+      (edge.from === entry.fromId && edge.to === entry.toId) ||
+      (edge.from === entry.toId && edge.to === entry.fromId);
+    if (!endpointsMatch) {
+      throw new Error("Overworld session snapshot travel road endpoints do not match the world.");
+    }
+    if (entry.minutes !== edge.travel_minutes + entry.delayMinutes) {
+      throw new Error("Overworld session snapshot travel minutes do not match the road.");
+    }
+    const from = this.nodes.get(entry.fromId);
+    const to = this.nodes.get(entry.toId);
+    if (!from || !to) {
+      throw new Error("Overworld session snapshot travel log references an unknown town.");
+    }
+    return {
+      edgeId: entry.edgeId,
+      fromId: entry.fromId,
+      toId: entry.toId,
+      from: from.name,
+      to: to.name,
+      route: edge.route,
+      distanceMi: edge.distance_mi,
+      baseMinutes: edge.travel_minutes,
+      delayMinutes: entry.delayMinutes,
+      minutes: entry.minutes,
+      arrivedAt: entry.arrivedAt,
+      suppliesUsed: entry.suppliesUsed,
+      suppliesAfter: entry.suppliesAfter,
+      fatigueGained: entry.fatigueGained,
+      fatigueAfter: entry.fatigueAfter,
+      roadEvent: overworldRoadEventFor(this.world, entry.edgeId),
+    };
   }
 
   private markSeen(nodeId: string): void {
@@ -1539,6 +1612,9 @@ export class OverworldSession {
     this.markSeen(this.currentId);
     this.setPendingRoadEncounter(from, edge.destination, edge, roadEvent);
     const entry: TravelLogEntry = {
+      edgeId: edge.id,
+      fromId: from.id,
+      toId: edge.destination.id,
       from: from.name,
       to: edge.destination.name,
       route: edge.route,

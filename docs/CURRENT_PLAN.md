@@ -111,6 +111,8 @@ Make discovered overworld quest leads start real RPG sessions.
   API instance.
 - Overworld pending-road session snapshots now persist only the edge id and
   reconstruct road event/options from the content-bound world manifest.
+- Overworld travel-log session snapshots now persist road ids plus dynamic
+  outcomes and rebuild route text/event payloads from the world manifest.
 
 ## Acceptance
 
