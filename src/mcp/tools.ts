@@ -10,7 +10,7 @@
  * never indexes, observes, starts, or validates them as playable sessions. Content
  * and traces are data only — no handler runs shell or code (§16).
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 import { hashState } from "../core/hash.js";
 import { makeStep, type Rules } from "../core/engine.js";
@@ -113,6 +113,12 @@ export type ToolApi = ReturnType<typeof createToolApi>;
 type LoadResult =
   | { ok: true; compiled: CompiledRpgPack; report: ValidationReport }
   | { ok: false; report: ValidationReport };
+
+type PackLoadCacheEntry = {
+  mtimeMs: number;
+  size: number;
+  result: LoadResult;
+};
 
 type StoryEntry = {
   path: string;
@@ -328,15 +334,23 @@ function schemaFindings(
 export function createToolApi(opts: { root: string }) {
   const root = opts.root;
   const sessions = new SessionStore();
+  const packLoadCache = new Map<string, PackLoadCacheEntry>();
   let overworldCounter = 0;
   const overworldSessions = new Map<string, OverworldSession>();
 
   /** Read an RPG pack, compile, and validate it with the single runtime loader. */
   function loadAndReport(packPath: string): LoadResult {
     const abs = safeResolve(root, packPath);
+    const stat = statSync(abs);
+    const cached = packLoadCache.get(abs);
+    if (cached && cached.mtimeMs === stat.mtimeMs && cached.size === stat.size) {
+      return cached.result;
+    }
+
     const source = readFileSync(abs, "utf8");
+    let result: LoadResult;
     if (!isRpgPackShape(parseYaml(source) as unknown)) {
-      return {
+      result = {
         ok: false,
         report: makeReport(packPath, [
           {
@@ -347,16 +361,23 @@ export function createToolApi(opts: { root: string }) {
           },
         ]),
       };
+      packLoadCache.set(abs, { mtimeMs: stat.mtimeMs, size: stat.size, result });
+      return result;
     }
     const compileRes = compileRpgPack(source);
-    if (!compileRes.ok)
-      return {
+    if (!compileRes.ok) {
+      result = {
         ok: false,
         report: makeReport(packPath, schemaFindings(packPath, compileRes.error)),
       };
+      packLoadCache.set(abs, { mtimeMs: stat.mtimeMs, size: stat.size, result });
+      return result;
+    }
     const pack = compileRes.compiled.pack;
     const report = validateRpg(pack);
-    return { ok: true, compiled: compileRes.compiled, report };
+    result = { ok: true, compiled: compileRes.compiled, report };
+    packLoadCache.set(abs, { mtimeMs: stat.mtimeMs, size: stat.size, result });
+    return result;
   }
 
   /** Compile + validate, refusing to play an invalid pack (§0, §10). */

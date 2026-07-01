@@ -107,6 +107,8 @@ Make discovered overworld quest leads start real RPG sessions.
   without replaying event text.
 - World source loading now caches parsed Charter Marches and New York overworld
   manifests per process.
+- MCP pack loading now caches unchanged RPG compile/validate reports within each
+  API instance.
 
 ## Acceptance
 

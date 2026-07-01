@@ -221,6 +221,18 @@ describe("MCP tools — validate / load (§9.4)", () => {
     );
   });
 
+  it("reuses unchanged RPG pack load reports inside one MCP API instance", () => {
+    const a = api();
+    const first = a.validate_pack({ pack_path: PACK });
+    const second = a.validate_pack({ pack_path: PACK });
+    expect(first.ok).toBe(true);
+    expect(second.ok).toBe(true);
+    expect(second.report).toBe(first.report);
+
+    const byWorldQuest = a.validate_pack({ world_quest_id: "sunken_barrow" });
+    expect(byWorldQuest.report).toBe(first.report);
+  });
+
   it("lists the New York overworld as a start town plus weighted roads", () => {
     const a = api();
     const r = a.list_overworld();

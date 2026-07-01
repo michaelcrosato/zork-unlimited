@@ -89,6 +89,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - RPG start and overworld quest handoff can omit repeated command labels.
 - RPG transcripts can return compact id-only turn rows.
 - World source now caches parsed canonical world manifests per process.
+- MCP pack loading caches unchanged RPG compile/validate reports per API instance.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,
