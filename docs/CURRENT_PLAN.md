@@ -101,6 +101,8 @@ Make discovered overworld quest leads start real RPG sessions.
   turns can avoid full observations after movement or local actions.
 - Overworld MCP start and restore also accept `compact_context`, so long-running
   agents can stay compact from the first session payload.
+- RPG session start tools and overworld quest handoff now accept compact action
+  menus, avoiding repeated command labels on the opening RPG observation.
 
 ## Acceptance
 

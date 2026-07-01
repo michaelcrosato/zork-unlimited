@@ -325,6 +325,8 @@ tool(
       .boolean()
       .optional()
       .describe("When true, hide RPG graph destinations in the returned quest observation."),
+    ...COMPACT_ACTIONS,
+    ...COMPACT_OVERWORLD_CONTEXT,
   },
   (a) => api.start_overworld_session_quest(a),
 );
@@ -447,6 +449,7 @@ tool(
       ),
     seed: z.number().int().optional().describe("Deterministic runtime seed (default 1)."),
     ...HIDE_GRAPH,
+    ...COMPACT_ACTIONS,
   },
   (a) => api.new_game(a),
 );
@@ -457,6 +460,7 @@ tool(
     quest_id: z.string().describe("Quest graph node id from list_world().quests[].graph_node."),
     seed: z.number().int().optional(),
     ...HIDE_GRAPH,
+    ...COMPACT_ACTIONS,
   },
   (a) => api.start_world_quest(a),
 );
@@ -467,6 +471,7 @@ tool(
     ...QUEST_ALIAS_SOURCE,
     seed: z.number().int().optional(),
     ...HIDE_GRAPH,
+    ...COMPACT_ACTIONS,
   },
   (a) => api.start_quest(a),
 );

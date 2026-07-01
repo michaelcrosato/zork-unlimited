@@ -496,6 +496,20 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(a.get_observation({ session_id: startedQuest.rpg_session_id }).observation.title).toBe(
       startedQuest.rpg_session.observation.title,
     );
+    const compactStartedQuest = a.start_overworld_session_quest({
+      session_id: started.session_id,
+      quest_id: discoveredQuest.id,
+      compact_context: true,
+      compact_actions: true,
+    });
+    expect(compactStartedQuest.context.here[0]).toBe(started.observation.current.id);
+    expect("observation" in compactStartedQuest).toBe(false);
+    expect(compactStartedQuest.rpg_session.observation.available_actions[0]).not.toHaveProperty(
+      "command",
+    );
+    expect(JSON.stringify(compactStartedQuest).length).toBeLessThan(
+      JSON.stringify(startedQuest).length,
+    );
 
     expect(() =>
       a.scout_overworld_session_poi({
@@ -1186,6 +1200,24 @@ describe("MCP tools — the play loop (§9.1)", () => {
     };
 
     assertPublicAction(game.observation.available_actions[0]);
+    const compactNewGame = a.new_game({
+      pack_path: PACK,
+      seed: 1,
+      compact_actions: true,
+    });
+    assertCompactAction(compactNewGame.observation.available_actions[0]);
+    const compactWorldQuest = a.start_world_quest({
+      quest_id: "sunken_barrow",
+      seed: 1,
+      compact_actions: true,
+    });
+    assertCompactAction(compactWorldQuest.observation.available_actions[0]);
+    const compactStartQuest = a.start_quest({
+      quest_id: "sunken_barrow",
+      seed: 1,
+      compact_actions: true,
+    });
+    assertCompactAction(compactStartQuest.observation.available_actions[0]);
     assertPublicAction(
       a.get_observation({ session_id: game.session_id }).observation.available_actions[0],
     );

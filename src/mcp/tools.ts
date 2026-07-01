@@ -155,6 +155,23 @@ type OverworldRestoreResponse<Args extends OverworldResponseOptions> = {
   session_id: string;
 } & OverworldViewField<Args>;
 
+type RpgSessionPayload = {
+  session_id: string;
+  mode: PackMode;
+  observation: McpObservation;
+  pack_path: string | null;
+  world_quest_id: string | null;
+  state_hash: string;
+};
+
+type OverworldQuestStartResponse<Args extends OverworldResponseOptions> = {
+  ok: true;
+  session_id: string;
+  quest: OverworldQuest;
+  rpg_session_id: string;
+  rpg_session: RpgSessionPayload;
+} & OverworldViewField<Args>;
+
 type OverworldSessionResponse<
   Key extends string,
   Value,
@@ -823,32 +840,22 @@ export function createToolApi(opts: { root: string }) {
       );
     },
 
-    start_overworld_session_quest(args: {
-      session_id: string;
-      quest_id: string;
-      seed?: number;
-      hide_graph?: boolean;
-    }): {
-      ok: true;
-      session_id: string;
-      quest: OverworldQuest;
-      observation: OverworldView;
-      rpg_session_id: string;
-      rpg_session: {
+    start_overworld_session_quest<
+      Args extends {
         session_id: string;
-        mode: PackMode;
-        observation: McpObservation;
-        pack_path: string | null;
-        world_quest_id: string | null;
-        state_hash: string;
-      };
-    } {
+        quest_id: string;
+        seed?: number;
+        hide_graph?: boolean;
+        compact_actions?: boolean;
+      } & OverworldResponseOptions,
+    >(args: Args): OverworldQuestStartResponse<Args> {
       const session = getOverworldSession(args.session_id);
       const quest = session.startQuest(args.quest_id);
       const rpgSession = this.new_game({
         world_quest_id: quest.id,
         ...(args.seed !== undefined ? { seed: args.seed } : {}),
         ...(args.hide_graph ? { hide_graph: true } : {}),
+        ...(args.compact_actions ? { compact_actions: true } : {}),
       });
       return {
         ok: true,
@@ -856,8 +863,8 @@ export function createToolApi(opts: { root: string }) {
         quest,
         rpg_session_id: rpgSession.session_id,
         rpg_session: rpgSession,
-        observation: session.view(),
-      };
+        ...overworldViewField(args, session),
+      } as OverworldQuestStartResponse<Args>;
     },
 
     move_overworld_session_area<
@@ -989,7 +996,8 @@ export function createToolApi(opts: { root: string }) {
       generate_rpg_seed?: number;
       seed?: number;
       hide_graph?: boolean;
-    }) {
+      compact_actions?: boolean;
+    }): RpgSessionPayload {
       // Either load a world-graph quest, load a pack from disk, OR mint a fresh RPG
       // pack in-memory from `generate_rpg_seed`. The generation seed selects the
       // minted pack's theme/structure; `seed` still seeds runtime state, so the two
@@ -1011,19 +1019,25 @@ export function createToolApi(opts: { root: string }) {
       return {
         session_id: session.id,
         mode: SAVE_MODE,
-        observation: publicObservation(openingObsOf(session)),
+        observation: publicObservation(openingObsOf(session), publicObservationOptions(args)),
         pack_path: session.packPath ?? null,
         world_quest_id: session.worldQuestId ?? null,
         state_hash: hashState(session.state),
       };
     },
 
-    start_world_quest(args: { quest_id: string; seed?: number; hide_graph?: boolean }) {
+    start_world_quest(args: {
+      quest_id: string;
+      seed?: number;
+      hide_graph?: boolean;
+      compact_actions?: boolean;
+    }) {
       const resolved = resolveWorldQuestPackPath(args.quest_id);
       const started = this.new_game({
         world_quest_id: args.quest_id,
         ...(args.seed !== undefined ? { seed: args.seed } : {}),
         ...(args.hide_graph ? { hide_graph: true } : {}),
+        ...(args.compact_actions ? { compact_actions: true } : {}),
       });
       return {
         world: { id: resolved.world.id, name: resolved.world.name, hub: resolved.world.hub },
@@ -1043,6 +1057,7 @@ export function createToolApi(opts: { root: string }) {
       world_quest_id?: string;
       seed?: number;
       hide_graph?: boolean;
+      compact_actions?: boolean;
     }) {
       const source = resolveQuestAliasSource(args, "start_quest");
       if (source.worldQuestId) {
@@ -1050,12 +1065,14 @@ export function createToolApi(opts: { root: string }) {
           quest_id: source.worldQuestId,
           ...(args.seed !== undefined ? { seed: args.seed } : {}),
           ...(args.hide_graph ? { hide_graph: true } : {}),
+          ...(args.compact_actions ? { compact_actions: true } : {}),
         });
       }
       return this.new_game({
         pack_path: source.questPath!,
         ...(args.seed !== undefined ? { seed: args.seed } : {}),
         ...(args.hide_graph ? { hide_graph: true } : {}),
+        ...(args.compact_actions ? { compact_actions: true } : {}),
       });
     },
 
