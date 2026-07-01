@@ -46311,15 +46311,6 @@
       "area": "syracuse_city__market"
     },
     {
-      "id": "dead_reckoning",
-      "title": "Dead Reckoning",
-      "pack": "content/cyoa/pack/dead_reckoning.yaml",
-      "home": "new_york_city",
-      "discovery": "Ask around New York city for work tied to Dead Reckoning. The lead is posted in New York Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "new_york_city__market"
-    },
-    {
       "id": "examiners_commission",
       "title": "The Examiner's Commission",
       "pack": "content/cyoa/pack/examiners_commission.yaml",

@@ -186,7 +186,7 @@ The RPG generator is exposed over MCP as `generate_rpg_pack` (mint + validate a
 fresh pack, read-only) and is playable in-memory via `new_game`'s
 `generate_rpg_seed`.
 
-## Content library (13 listed packs)
+## Content library (12 listed packs)
 
 The shipped, validated content — every pack passes the validator and is wired into
 `npm run health`:
@@ -196,7 +196,6 @@ The shipped, validated content — every pack passes the validator and is wired 
 | CYOA | The Watchtower Road | `content/cyoa/pack/watchtower_road.yaml` |
 | CYOA | The Wrecker's Light | `content/cyoa/pack/wreckers_light.yaml` |
 | CYOA | The White Stag | `content/cyoa/pack/white_stag.yaml` |
-| CYOA | Dead Reckoning | `content/cyoa/pack/dead_reckoning.yaml` |
 | CYOA | The Tithe-Barn | `content/cyoa/pack/tithe_barn.yaml` |
 | Parser | The Sealed Crypt | `content/parser/pack/sealed_crypt.yaml` |
 | Parser | The Friars' Postern | `content/parser/pack/friars_postern.yaml` |

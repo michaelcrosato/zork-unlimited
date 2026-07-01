@@ -90,10 +90,6 @@ graph:
       name: "The Croft Inquest"
       kind: quest
       pack: "content/cyoa/pack/croft_inquest.yaml"
-    - id: dead_reckoning
-      name: "Dead Reckoning"
-      kind: quest
-      pack: "content/cyoa/pack/dead_reckoning.yaml"
     - id: examiners_commission
       name: "The Examiner's Commission"
       kind: quest
@@ -349,9 +345,6 @@ graph:
     - from: river_stairs
       to: tidewaiters_watch
       route: "tide office quay"
-    - from: east_quay
-      to: dead_reckoning
-      route: "pilot's berth"
     - from: east_quay
       to: fishermans_privilege
       route: "harbour magistracy"
