@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 28 -->
+<!-- historical_cycle_count: 29 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_snapshot_travel_path_replay
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; helper still fails broad root formatting/ESLint outside canonical package scripts.
+- Engine/persistence: overworld restore now replays travel logs from the start town, rejects non-contiguous road history, and requires replay to end at the saved current town.
+- Token economy: compact travel history can be trusted as one route chain instead of arbitrary arrival rows that only look individually valid.
+- VERIFY: focused overworld snapshot/MCP/UI tests, typecheck, lint, format:check, validate, npm test, `npm run health` EXIT 0.
+- Self-critique: closes town-level path replay; discovered-town frontier exactness and area-discovery timing remain larger future invariants.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
 
 ### Cycle result — overworld_snapshot_visit_chronology
 

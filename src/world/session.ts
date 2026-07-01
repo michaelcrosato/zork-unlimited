@@ -836,6 +836,24 @@ function assertSnapshotVisitedTownTravelProof(
   return visitedAt;
 }
 
+function assertSnapshotTravelPathContinuity(
+  snapshot: OverworldSessionSnapshot,
+  startTownId: string,
+): void {
+  let currentTownId = startTownId;
+  for (const entry of [...snapshot.travelLog].reverse()) {
+    if (entry.fromId !== currentTownId) {
+      throw new Error(
+        `Overworld session snapshot travel log is not contiguous at road "${entry.edgeId}".`,
+      );
+    }
+    currentTownId = entry.toId;
+  }
+  if (snapshot.currentId !== currentTownId) {
+    throw new Error("Overworld session snapshot current town does not match travel history.");
+  }
+}
+
 function addRegionRenown(target: Map<string, number>, region: string, amount: number): void {
   if (amount <= 0) return;
   target.set(region, (target.get(region) ?? 0) + amount);
@@ -1381,6 +1399,7 @@ export class OverworldSession {
     const discoveredTownIds = new Set(snapshot.discoveredIds);
     const visitedTownIds = new Set(snapshot.visitedIds);
     const townVisitMinutes = assertSnapshotVisitedTownTravelProof(snapshot, this.world.start);
+    assertSnapshotTravelPathContinuity(snapshot, this.world.start);
     const discoveredAreaIds = new Set(snapshot.discoveredAreaIds);
     const discoveredJobIds = new Set(snapshot.discoveredJobIds);
     const discoveredSiteIds = new Set(snapshot.discoveredSiteIds);

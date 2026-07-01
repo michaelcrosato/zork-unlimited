@@ -1095,6 +1095,38 @@ describe("overworld snapshot restore integrity", () => {
     );
   });
 
+  it("rejects travel logs that do not replay from the start town", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const oldestTravel = snapshot.travelLog.at(-1);
+    if (!oldestTravel) throw new Error("expected travel history");
+    const discontinuousTravelLog = {
+      ...snapshot,
+      travelLog: snapshot.travelLog.map((entry) =>
+        entry === oldestTravel ? { ...entry, fromId: entry.toId } : entry,
+      ),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: discontinuousTravelLog })).toThrow(
+      /travel log is not contiguous/,
+    );
+  });
+
+  it("rejects current towns that do not match replayed travel history", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const replayedCurrentId = snapshot.travelLog[0]!.toId;
+    const wrongCurrentId = snapshot.visitedIds.find((id) => id !== replayedCurrentId);
+    if (!wrongCurrentId) throw new Error("expected another visited town");
+    const wrongCurrentTown = {
+      ...snapshot,
+      currentId: wrongCurrentId,
+      currentAreaId: null,
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: wrongCurrentTown })).toThrow(
+      /current town does not match travel history/,
+    );
+  });
+
   it("rejects impossible post-travel supplies and fatigue", () => {
     const { a, snapshot } = exportedSnapshotAfterTwoRoads();
     const impossibleVitals = {
