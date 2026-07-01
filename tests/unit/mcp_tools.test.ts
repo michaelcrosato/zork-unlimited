@@ -185,8 +185,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const started = a.start_world_quest({ quest_id: "sunken_barrow", seed: 1 });
     expect(started.quest).toMatchObject({
       id: "sunken_barrow",
-      pack: PACK,
     });
+    expect("pack" in started.quest).toBe(false);
     expect(started.quest.path_from_hub.map((step) => step.name)).toEqual([
       "Charterhaven",
       "Moor Road",
@@ -350,9 +350,19 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(scoutedQuestLead.result.discoveredQuests?.map((quest) => quest.id)).toEqual(
       localQuests.slice(0, 1).map((quest) => quest.id),
     );
+    expect(scoutedQuestLead.result.discoveredQuests?.every((quest) => !("pack" in quest))).toBe(
+      true,
+    );
     expect(scoutedQuestLead.observation.quests.map((quest) => quest.id)).toEqual(
       localQuests.slice(0, 1).map((quest) => quest.id),
     );
+    expect(scoutedQuestLead.observation.quests.every((quest) => !("pack" in quest))).toBe(true);
+    expect(
+      a.get_overworld_session_context({ session_id: started.session_id }).context.quests[0],
+    ).toEqual([
+      scoutedQuestLead.observation.quests[0]!.id,
+      scoutedQuestLead.observation.quests[0]!.title,
+    ]);
     expect(scoutedQuestLead.observation.hiddenQuestCount).toBe(localQuests.length - 1);
 
     const discoveredQuests = scoutedQuestLead.result.discoveredQuests ?? [];
@@ -384,6 +394,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       id: discoveredQuest.id,
       area: discoveredQuest.area,
     });
+    expect("pack" in startedQuest.quest).toBe(false);
     expect(startedQuest.rpg_session_id).toBe(startedQuest.rpg_session.session_id);
     expect(startedQuest.rpg_session.mode).toBe("rpg");
     expect(startedQuest.rpg_session.world_quest_id).toBe(discoveredQuest.id);

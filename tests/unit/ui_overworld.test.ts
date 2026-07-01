@@ -534,9 +534,11 @@ describe("OverworldSession", () => {
     expect(talked.discoveredQuests?.map((quest) => quest.id)).toEqual(
       localQuests.slice(0, 1).map((quest) => quest.id),
     );
+    expect(talked.discoveredQuests?.every((quest) => !("pack" in quest))).toBe(true);
     expect(session.view().quests.map((quest) => quest.id)).toEqual(
       localQuests.slice(0, 1).map((quest) => quest.id),
     );
+    expect(session.view().quests.every((quest) => !("pack" in quest))).toBe(true);
 
     const investigated = session.investigateEvent(event.id);
     expect(investigated.minutes).toBe(20 + event.intensity * 5);
@@ -565,6 +567,7 @@ describe("OverworldSession", () => {
     expect(discoveredQuests).toHaveLength(1);
     const discoveredQuest = discoveredQuests[0]!;
     expect(discoveredQuest.id).toBe(firstLocalQuest.id);
+    expect("pack" in discoveredQuest).toBe(false);
     expect(session.view().currentArea?.id).not.toBe(discoveredQuest.area);
     expect(() => session.startQuest(discoveredQuest.id)).toThrow(/Move to/i);
 
@@ -579,6 +582,7 @@ describe("OverworldSession", () => {
       id: discoveredQuest.id,
       area: discoveredQuest.area,
     });
+    expect("pack" in session.startQuest(discoveredQuest.id)).toBe(false);
   });
 
   it("reveals exploration leads from the current local area", () => {

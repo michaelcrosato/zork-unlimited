@@ -216,7 +216,7 @@ export type OverworldActionResult = {
   discoveredAreas?: OverworldArea[];
   discoveredJobs?: OverworldLocalJob[];
   discoveredSites?: OverworldExplorationSite[];
-  discoveredQuests?: OverworldQuest[];
+  discoveredQuests?: OverworldQuestView[];
 };
 
 export type OverworldServiceResult = {
@@ -271,6 +271,15 @@ export type OverworldRegionalArcProgress = {
   reward: string;
 };
 
+export type OverworldQuestView = {
+  id: string;
+  title: string;
+  home: string;
+  area: string;
+  discovery: string;
+  visibility: OverworldQuest["visibility"];
+};
+
 export type OverworldView = {
   world: string;
   timeLabel: string;
@@ -287,7 +296,7 @@ export type OverworldView = {
   hiddenJobCount: number;
   sites: OverworldExplorationSite[];
   hiddenSiteCount: number;
-  quests: OverworldQuest[];
+  quests: OverworldQuestView[];
   hiddenQuestCount: number;
   routeOptions: OverworldSessionRoutePlan[];
   discovered: OverworldNode[];
@@ -312,6 +321,17 @@ export type OverworldView = {
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
   log: TravelLogEntry[];
 };
+
+function questView(quest: OverworldQuest): OverworldQuestView {
+  return {
+    id: quest.id,
+    title: quest.title,
+    home: quest.home,
+    area: quest.area,
+    discovery: quest.discovery,
+    visibility: quest.visibility,
+  };
+}
 
 function timeLabel(minutes: number): string {
   const day = Math.floor(minutes / 1440) + 1;
@@ -901,8 +921,10 @@ export class OverworldSession {
     return overworldQuestsAt(this.world, nodeId);
   }
 
-  private discoveredQuestsAt(nodeId: string): OverworldQuest[] {
-    return this.localQuests(nodeId).filter((quest) => this.discoveredQuestIds.has(quest.id));
+  private discoveredQuestsAt(nodeId: string): OverworldQuestView[] {
+    return this.localQuests(nodeId)
+      .filter((quest) => this.discoveredQuestIds.has(quest.id))
+      .map(questView);
   }
 
   private hiddenQuestCountAt(nodeId: string): number {
@@ -920,14 +942,14 @@ export class OverworldSession {
     return [site];
   }
 
-  private discoverNextQuestForTown(nodeId: string): OverworldQuest[] {
+  private discoverNextQuestForTown(nodeId: string): OverworldQuestView[] {
     const quest = this.localQuests(nodeId).find(
       (candidate) =>
         this.discoveredAreaIds.has(candidate.area) && !this.discoveredQuestIds.has(candidate.id),
     );
     if (!quest) return [];
     this.discoveredQuestIds.add(quest.id);
-    return [quest];
+    return [questView(quest)];
   }
 
   private questAreaName(quest: OverworldQuest): string {
@@ -1182,7 +1204,7 @@ export class OverworldSession {
     };
   }
 
-  startQuest(questId: string): OverworldQuest {
+  startQuest(questId: string): OverworldQuestView {
     const quest = this.localQuests(this.currentId).find((candidate) => candidate.id === questId);
     if (!quest) throw new Error("That quest lead is not in this town.");
     if (!this.discoveredQuestIds.has(quest.id)) {
@@ -1192,7 +1214,7 @@ export class OverworldSession {
     if (area?.id !== quest.area) {
       throw new Error(`Move to ${this.questAreaName(quest)} before starting ${quest.title}.`);
     }
-    return quest;
+    return questView(quest);
   }
 
   scoutPoi(poiId: string): OverworldActionResult {

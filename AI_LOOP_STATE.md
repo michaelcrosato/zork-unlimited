@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 18 -->
+<!-- historical_cycle_count: 19 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
@@ -60,6 +60,15 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: meaningful live-token cleanup; overworld quest view models still expose `pack` and should be the next path-surface target.
 - Operator direction: pause after this cycle; do not start another AFK cycle.
 
+### Cycle result — overworld_quest_view_identity
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + check helpers; same pre-existing broad-gate drift outside canonical repo scripts.
+- Engine/API: overworld quest observations, action discoveries, compact context, and quest-start metadata now use `OverworldQuestView` without raw `pack`.
+- Internal boundary: canonical world manifests and source resolvers still keep quest pack paths for loading/hash checks; live view models expose quest ids.
+- VERIFY: focused MCP/overworld/world tests, typecheck, lint, format:check, validate, npm test, `npm run health` EXIT 0.
+- Self-critique: strong live-token/path cleanup; remaining raw path surface is mostly catalog/debug (`list_world`, `list_stories`, trace/offline).
+- Operator direction: pause after this cycle; do not start another AFK cycle.
+
 ## Current Snapshot
 
 - Verification bar: `npm run health` remains the required end gate.
@@ -78,6 +87,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Trace verification: shipped quest traces replay/inspect with `world_quest_id`.
 - Live session metadata: start/transcript/save/load return shipped
   `world_quest_id` or generated `generated_rpg_seed` without raw pack paths.
+- Overworld quest view metadata: observations, action results, compact context,
+  and quest-start responses expose quest ids/titles/areas without raw pack paths.
 - Blind harness default: shipped playtests use `--quest` / `start_world_quest`;
   raw `--pack` starts are rejected.
 - World routes: ToolApi and public MCP `world_path` accept only
@@ -93,6 +104,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   `start_world_quest`; the legacy path alias is no longer a public start source.
 - Token economy: RPG start/load responses include compact source identity once;
   follow-up observations omit the repeated world binding.
+- Token economy: compact overworld quest refs are `[id,title]`; pack paths stay
+  internal to source resolution and offline debug surfaces.
 - Token economy: `compact_actions` lets repeated observe/step calls carry
   action ids without command labels; request full actions only when needed.
 - Token economy: `get_transcript({ summary_only: true })` keeps end-state

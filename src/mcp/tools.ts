@@ -62,11 +62,7 @@ import {
   resolveTracePackSource,
   resolveWorldQuestPackPath as resolveWorldQuestPackPathFromRoot,
 } from "../world/source.js";
-import {
-  type OverworldManifest,
-  type OverworldNode,
-  type OverworldQuest,
-} from "../world/overworld.js";
+import { type OverworldManifest, type OverworldNode } from "../world/overworld.js";
 import {
   OverworldSession,
   type OverworldActionResult,
@@ -76,6 +72,7 @@ import {
   type OverworldSessionSnapshot,
   type OverworldSessionRoutePlan,
   type OverworldServiceResult,
+  type OverworldQuestView,
   type OverworldView,
   type TravelLogEntry,
 } from "../world/session.js";
@@ -224,7 +221,6 @@ type RpgWorldQuestStartPayload<Args extends RpgResponseOptions> = {
   quest: {
     id: string;
     name: string;
-    pack: string;
     path_from_hub: WorldRouteStep[];
   };
 } & RpgSessionPayload<Args>;
@@ -232,7 +228,7 @@ type RpgWorldQuestStartPayload<Args extends RpgResponseOptions> = {
 type OverworldQuestStartResponse<Args extends OverworldResponseOptions & RpgResponseOptions> = {
   ok: true;
   session_id: string;
-  quest: OverworldQuest;
+  quest: OverworldQuestView;
   rpg_session_id: string;
   rpg_session: RpgSessionPayload<Args>;
 } & OverworldViewField<Args>;
@@ -1105,7 +1101,6 @@ export function createToolApi(opts: { root: string }) {
         quest: {
           id: resolved.node.id,
           name: resolved.node.name,
-          pack: resolved.packPath,
           path_from_hub: worldRouteFromHub(resolved.world, resolved.node.id) ?? [],
         },
         ...started,

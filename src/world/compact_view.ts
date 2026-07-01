@@ -12,7 +12,7 @@ const COMPACT_TRAVEL_LOG_LIMIT = 5;
 const COMPACT_ID_LIST_LIMIT = 16;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
-export type OverworldCompactQuestRef = readonly [id: string, title: string, pack: string];
+export type OverworldCompactQuestRef = readonly [id: string, title: string];
 export type OverworldCompactHere = readonly [
   id: string,
   name: string,
@@ -283,7 +283,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     events: view.events.map(titledRef),
     jobs: view.jobs.map(titledRef),
     sites: view.sites.map(titledRef),
-    quests: view.quests.map((quest) => [quest.id, quest.title, quest.pack]),
+    quests: view.quests.map((quest) => [quest.id, quest.title]),
     pending_road: compactPendingRoad(view.pendingRoadEncounter),
     journal: view.journal
       .slice(0, COMPACT_JOURNAL_LIMIT)
