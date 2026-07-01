@@ -79,6 +79,8 @@ Make discovered overworld quest leads start real RPG sessions.
   trace replay and CLI play.
 - `new_game` source selection now shares that resolver while keeping generated
   packs as the explicit null-world source.
+- `validate_pack`, `load_pack`, and `apply_content_patch` now use shared source
+  identity directly instead of re-deriving `world_quest_id` from the resolved path.
 
 ## Acceptance
 

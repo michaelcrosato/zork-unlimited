@@ -70,6 +70,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   replay and CLI play.
 - `new_game` source selection now shares that resolver while keeping generated
   packs as the explicit null-world source.
+- Pack validation/loading/patching now consume shared source identity instead of
+  re-deriving `world_quest_id` after path resolution.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,

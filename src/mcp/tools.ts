@@ -60,7 +60,6 @@ import {
   resolveSavePackSource,
   resolveTracePackSource,
   resolveWorldQuestPackPath as resolveWorldQuestPackPathFromRoot,
-  worldQuestIdForPackPath as worldQuestIdForPackPathFromRoot,
 } from "../world/source.js";
 import {
   assertOverworldIntegrity,
@@ -366,17 +365,6 @@ export function createToolApi(opts: { root: string }) {
     return resolveWorldQuestPackPathFromRoot(root, worldQuestId);
   }
 
-  function worldQuestIdForPackPath(packPath: string): string | null {
-    return worldQuestIdForPackPathFromRoot(root, packPath);
-  }
-
-  function resolvePackPathSource(
-    args: { pack_path?: string; world_quest_id?: string },
-    operation: string,
-  ): string {
-    return resolvePackSource(root, args, operation).packPath;
-  }
-
   function resolveTraceSource(
     args: { pack_path?: string; world_quest_id?: string },
     trace: Trace<RpgAction>,
@@ -453,12 +441,12 @@ export function createToolApi(opts: { root: string }) {
       world_quest_id: string | null;
       report: ValidationReport;
     } {
-      const packPath = resolvePackPathSource(args, "validate_pack");
-      const lr = loadAndReport(packPath);
+      const source = resolvePackSource(root, args, "validate_pack");
+      const lr = loadAndReport(source.packPath);
       return {
         ok: lr.report.ok,
-        pack_path: packPath,
-        world_quest_id: args.world_quest_id ?? worldQuestIdForPackPath(packPath),
+        pack_path: source.packPath,
+        world_quest_id: source.worldQuestId,
         report: lr.report,
       };
     },
@@ -1155,16 +1143,20 @@ export function createToolApi(opts: { root: string }) {
       content_hash?: string;
       report: ValidationReport;
     } {
-      const packPath = resolvePackPathSource(args, "load_pack");
-      const worldQuestId = args.world_quest_id ?? worldQuestIdForPackPath(packPath);
-      const lr = loadAndReport(packPath);
+      const source = resolvePackSource(root, args, "load_pack");
+      const lr = loadAndReport(source.packPath);
       if (!lr.ok) {
-        return { ok: false, pack_path: packPath, world_quest_id: worldQuestId, report: lr.report };
+        return {
+          ok: false,
+          pack_path: source.packPath,
+          world_quest_id: source.worldQuestId,
+          report: lr.report,
+        };
       }
       return {
         ok: lr.report.ok,
-        pack_path: packPath,
-        world_quest_id: worldQuestId,
+        pack_path: source.packPath,
+        world_quest_id: source.worldQuestId,
         mode: SAVE_MODE,
         meta: lr.compiled.pack.meta,
         content_hash: lr.compiled.contentHash,
@@ -1599,22 +1591,21 @@ export function createToolApi(opts: { root: string }) {
       // pack + validation report (§9.4, §12.5). The model never writes files: a
       // patch is data, validated before it can be played (§16). The fixer is RPG-only,
       // matching the public catalog and runtime.
-      const packPath = resolvePackPathSource(args, "apply_content_patch");
-      const worldQuestId = args.world_quest_id ?? worldQuestIdForPackPath(packPath);
+      const source = resolvePackSource(root, args, "apply_content_patch");
       const proposal = ContentPatchProposalSchema.parse(args.proposal);
-      const abs = safeResolve(root, packPath);
+      const abs = safeResolve(root, source.packPath);
       const loaded = loadRpgPackFile(abs);
       if (!loaded.ok) {
         return {
           ok: false,
-          pack_path: packPath,
-          world_quest_id: worldQuestId,
-          report: makeReport(packPath, [
+          pack_path: source.packPath,
+          world_quest_id: source.worldQuestId,
+          report: makeReport(source.packPath, [
             {
               severity: "error" as const,
               code: "SCHEMA",
               message: "pack failed to compile",
-              where: [packPath],
+              where: [source.packPath],
             },
           ]),
         };
@@ -1623,13 +1614,18 @@ export function createToolApi(opts: { root: string }) {
       return result.ok
         ? {
             ok: true,
-            pack_path: packPath,
-            world_quest_id: worldQuestId,
+            pack_path: source.packPath,
+            world_quest_id: source.worldQuestId,
             applied: result.applied,
             report: result.report,
             pack: result.pack,
           }
-        : { ok: false, pack_path: packPath, world_quest_id: worldQuestId, report: result.report };
+        : {
+            ok: false,
+            pack_path: source.packPath,
+            world_quest_id: source.worldQuestId,
+            report: result.report,
+          };
     },
   };
 }
