@@ -28,8 +28,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   `new_game` rejects raw pack-path starts.
 - AFK baseline prompt now carries `main_world_quest_id`; blind baseline playtests
   should use `start_world_quest`.
-- Persistence: shipped quest saves can reload with `world_quest_id`; raw save
-  `pack_path` is compatibility.
+- Persistence: shipped quest saves reload with embedded/explicit
+  `world_quest_id`; `load_game` rejects raw `pack_path`.
 - Trace verification: shipped quest traces replay/inspect with `world_quest_id`.
 - Live session metadata: start/transcript/save/load preserve shipped
   `world_quest_id`; generated sessions preserve `generated_rpg_seed`.
@@ -71,6 +71,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   generated packs as the explicit null-world source.
 - Generated RPG saves now embed `generatedRpgSeed`, so `load_game({ save })`
   can reconstruct in-memory generated packs without a raw pack path.
+- `load_game` source selection is save-embedded, `world_quest_id`, or
+  `generate_rpg_seed`; raw pack paths remain offline validation/replay tooling only.
 - Pack validation/loading/patching now consume shared source identity instead of
   re-deriving `world_quest_id` after path resolution.
 - Static overworld compatibility helpers are retired; ToolApi and public MCP use

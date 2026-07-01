@@ -50,10 +50,14 @@ describe("MCP server registration", () => {
     const startQuest = registeredToolBlock("start_quest");
     const validateQuest = registeredToolBlock("validate_quest");
     const worldPath = registeredToolBlock("world_path");
+    const loadGame = registeredToolBlock("load_game");
 
     expect(newGame).toContain("world_quest_id");
     expect(newGame).toContain("generate_rpg_seed");
     expect(newGame).not.toContain("pack_path");
+    expect(loadGame).toContain("world_quest_id");
+    expect(loadGame).toContain("generate_rpg_seed");
+    expect(loadGame).not.toContain("pack_path");
     expect(startQuest).toContain("QUEST_ID_SOURCE");
     expect(startQuest).not.toContain("quest_path");
     expect(validateQuest).toContain("QUEST_ID_SOURCE");

@@ -12,7 +12,6 @@ import {
   resolveGameSource,
   resolvePackSource,
   resolveSaveGameSource,
-  resolveSavePackSource,
   resolveTracePackSource,
 } from "../../src/world/source.js";
 import type { Trace } from "../../src/trace/record.js";
@@ -266,12 +265,6 @@ describe("world source resolution", () => {
       packPath: PACK,
       worldQuestId: "sunken_barrow",
     });
-    expect(resolveSavePackSource(ROOT, {}, { worldQuestId: "sunken_barrow" }, "save_test")).toEqual(
-      {
-        packPath: PACK,
-        worldQuestId: "sunken_barrow",
-      },
-    );
     expect(resolveSaveGameSource(ROOT, {}, { worldQuestId: "sunken_barrow" }, "save_test")).toEqual(
       {
         kind: "pack",
@@ -295,24 +288,6 @@ describe("world source resolution", () => {
   });
 
   it("rejects ambiguous or conflicting shipped source identities", () => {
-    expect(() =>
-      resolveSavePackSource(
-        ROOT,
-        { world_quest_id: "sunken_barrow", pack_path: PACK },
-        { worldQuestId: "sunken_barrow" },
-        "save_test",
-      ),
-    ).toThrow(/exactly one/);
-
-    expect(() =>
-      resolveSavePackSource(
-        ROOT,
-        { world_quest_id: "cold_forge" },
-        { worldQuestId: "sunken_barrow" },
-        "save_test",
-      ),
-    ).toThrow(SaveIntegrityError);
-
     expect(() =>
       resolveSaveGameSource(
         ROOT,
@@ -340,7 +315,28 @@ describe("world source resolution", () => {
     ).toThrow(SaveIntegrityError);
 
     expect(() =>
-      resolveSaveGameSource(ROOT, { pack_path: PACK }, { generatedRpgSeed: 3 }, "save_test"),
+      resolveSaveGameSource(
+        ROOT,
+        { pack_path: PACK } as never,
+        { generatedRpgSeed: 3 },
+        "save_test",
+      ),
+    ).toThrow(/not pack_path/);
+    expect(() =>
+      resolveSaveGameSource(
+        ROOT,
+        { pack_path: PACK } as never,
+        { worldQuestId: "sunken_barrow" },
+        "save_test",
+      ),
+    ).toThrow(/not pack_path/);
+    expect(() =>
+      resolveSaveGameSource(
+        ROOT,
+        { world_quest_id: "cold_forge" },
+        { worldQuestId: "sunken_barrow" },
+        "save_test",
+      ),
     ).toThrow(SaveIntegrityError);
   });
 
@@ -348,9 +344,6 @@ describe("world source resolution", () => {
     const traceWithoutWorldQuest = { ...trace };
     delete (traceWithoutWorldQuest as { worldQuestId?: string }).worldQuestId;
 
-    expect(() => resolveSavePackSource(ROOT, {}, {}, "save_test")).toThrow(
-      /save with worldQuestId/,
-    );
     expect(() => resolveTracePackSource(ROOT, {}, traceWithoutWorldQuest, "trace_test")).toThrow(
       /trace with worldQuestId/,
     );

@@ -478,14 +478,8 @@ tool(
 );
 tool(
   "load_game",
-  "Load a save against its embedded shipped world quest id/generated RPG seed, an explicit world_quest_id/generate_rpg_seed, or a compatibility pack path (content-hash + mode verified) and return a fresh session.",
+  "Load a save against its embedded shipped world quest id/generated RPG seed, or an explicit world_quest_id/generate_rpg_seed (content-hash + mode verified), and return a fresh session.",
   {
-    pack_path: z
-      .string()
-      .optional()
-      .describe(
-        "Compatibility path to an RPG quest content pack. Omit for shipped saves with embedded worldQuestId.",
-      ),
     world_quest_id: z
       .string()
       .optional()

@@ -35,8 +35,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - Shipped quests can now start by Charter Marches graph id through
   `start_world_quest` or `new_game({ world_quest_id })`; `new_game` rejects raw
   `pack_path` starts.
-- Shipped quest saves can now restore through `load_game({ world_quest_id })`, so
-  start and persistence both share graph identity.
+- Shipped quest saves can now restore through embedded or explicit
+  `world_quest_id`; `load_game` rejects raw `pack_path`.
 - Shipped quest traces can replay/inspect through `world_quest_id`, so verification
   follows the world graph too.
 - Live shipped quest sessions now surface `world_quest_id`/`pack_path` on start,
@@ -81,6 +81,8 @@ Make discovered overworld quest leads start real RPG sessions.
   generated packs as the explicit null-world source.
 - Generated RPG saves now embed `generatedRpgSeed`, letting `load_game({ save })`
   reconstruct in-memory generated packs without a raw pack path.
+- `load_game` source selection is save-embedded, `world_quest_id`, or
+  `generate_rpg_seed`; raw pack paths remain offline validation/replay tooling only.
 - `validate_pack`, `load_pack`, and `apply_content_patch` now use shared source
   identity directly instead of re-deriving `world_quest_id` from the resolved path.
 - Retired the static overworld compatibility helper module; local overworld play

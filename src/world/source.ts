@@ -30,8 +30,10 @@ export type TraceSourceArgs = {
 };
 
 export type PackSourceArgs = TraceSourceArgs;
-export type SaveSourceArgs = TraceSourceArgs & {
+export type SaveSourceArgs = {
+  world_quest_id?: string;
   generate_rpg_seed?: number;
+  pack_path?: never;
 };
 
 export type GameSourceArgs = {
@@ -429,6 +431,9 @@ export function resolveSaveGameSource(
   bundle: SaveWorldSource,
   operation: string,
 ): GamePackSource {
+  if ((args as { pack_path?: unknown }).pack_path !== undefined) {
+    throw new Error(`${operation} accepts world_quest_id or generate_rpg_seed, not pack_path.`);
+  }
   const embeddedWorldQuestId = saveWorldQuestId(bundle, operation);
   const embeddedGeneratedRpgSeed = saveGeneratedRpgSeed(bundle, operation);
   if (embeddedWorldQuestId !== undefined && embeddedGeneratedRpgSeed !== undefined) {
@@ -439,13 +444,10 @@ export function resolveSaveGameSource(
 
   const explicitCount = [
     args.world_quest_id !== undefined,
-    args.pack_path !== undefined,
     args.generate_rpg_seed !== undefined,
   ].filter(Boolean).length;
   if (explicitCount > 1) {
-    throw new Error(
-      `${operation} accepts exactly one of world_quest_id, pack_path, or generate_rpg_seed.`,
-    );
+    throw new Error(`${operation} accepts exactly one of world_quest_id or generate_rpg_seed.`);
   }
 
   let source: GamePackSource;
@@ -465,13 +467,6 @@ export function resolveSaveGameSource(
       worldQuestId: resolved.node.id,
       generateRpgSeed: null,
     };
-  } else if (args.pack_path !== undefined) {
-    source = {
-      kind: "pack",
-      packPath: args.pack_path,
-      worldQuestId: worldQuestIdForPackPath(root, args.pack_path),
-      generateRpgSeed: null,
-    };
   } else if (embeddedGeneratedRpgSeed !== undefined) {
     source = {
       kind: "generated",
@@ -489,7 +484,7 @@ export function resolveSaveGameSource(
     };
   } else {
     throw new Error(
-      `${operation} requires world_quest_id, pack_path, generate_rpg_seed, or a save with worldQuestId/generatedRpgSeed.`,
+      `${operation} requires world_quest_id, generate_rpg_seed, or a save with worldQuestId/generatedRpgSeed.`,
     );
   }
 
@@ -518,21 +513,6 @@ export function resolveSaveGameSource(
     );
   }
   return source;
-}
-
-export function resolveSavePackSource(
-  root: string,
-  args: SaveSourceArgs,
-  bundle: SaveWorldSource,
-  operation: string,
-): TracePackSource {
-  return resolveEmbeddedPackSource(
-    root,
-    args,
-    saveWorldQuestId(bundle, operation),
-    operation,
-    "save",
-  );
 }
 
 export function resolveTracePackSource(

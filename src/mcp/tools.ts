@@ -213,9 +213,9 @@ type RpgChooseOptionArgs = {
 } & RpgResponseOptions;
 
 type RpgLoadGameArgs = {
-  pack_path?: string;
   world_quest_id?: string;
   generate_rpg_seed?: number;
+  pack_path?: never;
   save: string;
   hide_graph?: boolean;
 } & RpgResponseOptions;

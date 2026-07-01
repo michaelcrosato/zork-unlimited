@@ -1190,7 +1190,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     const saved = a.save_game({ session_id: game.session_id });
     expect(saved.pack_path).toBe(PACK);
     expect(saved.world_quest_id).toBe("sunken_barrow");
-    const loaded = a.load_game({ pack_path: PACK, save: saved.save });
+    const loaded = a.load_game({ save: saved.save });
     expect(loaded.pack_path).toBe(PACK);
     expect(loaded.world_quest_id).toBe("sunken_barrow");
     expect(loaded.observation.world?.id).toBe("charter_marches");
@@ -1321,7 +1321,7 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     const after = a.get_observation({ session_id: game.session_id }).state_hash;
 
     const saved = a.save_game({ session_id: game.session_id });
-    const reloaded = a.load_game({ pack_path: PACK, save: saved.save });
+    const reloaded = a.load_game({ save: saved.save });
     const saveBundle = JSON.parse(saved.save) as { worldQuestId?: string };
     expect(saved.pack_path).toBe(PACK);
     expect(saved.world_quest_id).toBe("sunken_barrow");
@@ -1384,8 +1384,15 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     const saved = a.save_game({ session_id: game.session_id });
 
     expect(() =>
-      a.load_game({ world_quest_id: "sunken_barrow", pack_path: PACK, save: saved.save }),
+      a.load_game({
+        world_quest_id: "sunken_barrow",
+        generate_rpg_seed: 3,
+        save: saved.save,
+      }),
     ).toThrow(/exactly one/);
+    expect(() => a.load_game({ pack_path: PACK, save: saved.save } as never)).toThrow(
+      /not pack_path/,
+    );
   });
 
   it("load_game rejects a source that conflicts with the save world quest id", () => {

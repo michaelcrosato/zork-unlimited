@@ -28,7 +28,6 @@ import { createToolApi } from "../../src/mcp/tools.js";
 import { SaveIntegrityError } from "../../src/persist/save_load.js";
 
 const ROOT = process.cwd();
-const RPG = "content/rpg/pack/sunken_barrow.yaml";
 const WORLD_QUEST_ID = "sunken_barrow";
 const api = () => createToolApi({ root: ROOT });
 
@@ -89,8 +88,8 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     const forged = forgeSave((s) => {
       s.current = "no_such_room";
     });
-    expect(() => api().load_game({ pack_path: RPG, save: forged })).toThrow(SaveIntegrityError);
-    expect(() => api().load_game({ pack_path: RPG, save: forged })).toThrow(/unknown room/);
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/unknown room/);
   });
 
   it("RPG: a fabricated `endingId` is a hard SaveIntegrityError", () => {
@@ -99,8 +98,8 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     const forged = forgeSave((s) => {
       s.endingId = "fabricated_win";
     });
-    expect(() => api().load_game({ pack_path: RPG, save: forged })).toThrow(SaveIntegrityError);
-    expect(() => api().load_game({ pack_path: RPG, save: forged })).toThrow(/unknown ending/);
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/unknown ending/);
   });
 
   it("RPG: a phantom inventory item is a hard SaveIntegrityError (bug_0184)", () => {
@@ -111,8 +110,8 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     const forged = forgeSave((s) => {
       s.inventory = ["no_such_item"];
     });
-    expect(() => api().load_game({ pack_path: RPG, save: forged })).toThrow(SaveIntegrityError);
-    expect(() => api().load_game({ pack_path: RPG, save: forged })).toThrow(/unknown item/);
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/unknown item/);
   });
 });
 
@@ -123,7 +122,7 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
     stepByCommand(a, game.session_id, "go down");
     const before = a.get_observation({ session_id: game.session_id }).state_hash;
     const saved = a.save_game({ session_id: game.session_id });
-    const reloaded = a.load_game({ pack_path: RPG, save: saved.save });
+    const reloaded = a.load_game({ save: saved.save });
     expect(reloaded.state_hash).toBe(before);
   });
 
@@ -140,7 +139,7 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
     // Sanity: the save really carries a held item (so the gate is exercised).
     const bundle = JSON.parse(saved.save) as { state: { inventory: string[] } };
     expect(bundle.state.inventory.length).toBeGreaterThan(0);
-    const reloaded = a.load_game({ pack_path: RPG, save: saved.save });
+    const reloaded = a.load_game({ save: saved.save });
     expect(reloaded.state_hash).toBe(before);
   });
 
@@ -156,7 +155,7 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
     const bundle = JSON.parse(saved.save) as { state: { current: string; endingId: string } };
     expect(bundle.state.current).toBe("relic_chamber");
     expect(bundle.state.endingId).toBe("ending_victory");
-    const reloaded = a.load_game({ pack_path: RPG, save: saved.save });
+    const reloaded = a.load_game({ save: saved.save });
     expect(reloaded.state_hash).toBe(ended.state_hash);
   });
 });
