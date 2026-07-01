@@ -121,7 +121,6 @@ describe("ITEM_UNPLACED — objects with no spawn location (bug_0317)", () => {
       "content/parser/pack/friars_postern.yaml",
       "content/parser/pack/lamplighters_round.yaml",
       "content/parser/pack/sealed_crypt.yaml",
-      "content/parser/pack/tide_mill.yaml",
     ];
     const rpgPacks = [
       "content/rpg/pack/breaking_weir.yaml",

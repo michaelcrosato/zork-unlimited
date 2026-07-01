@@ -167,7 +167,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.local_job_count).toBe(r.area_count);
     expect(r.road_event_count).toBe(r.road_count);
     expect(r.exploration_site_count).toBeGreaterThanOrEqual(r.region_count * 3);
-    expect(r.quest_count).toBe(40);
+    expect(r.quest_count).toBe(39);
   });
 
   it("looks and travels through the New York overworld without global quest selection", () => {
@@ -182,7 +182,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(start.local_jobs.length).toBe(start.areas.length);
     expect(start.nearby_sites.length).toBeGreaterThan(0);
     expect(start.local_quests.length).toBeGreaterThan(0);
-    expect(start.local_quests.length).toBeLessThan(40);
+    expect(start.local_quests.length).toBeLessThan(39);
 
     const road = start.exits.find((edge) => edge.destination.id === "colonie_town");
     expect(road).toBeTruthy();

@@ -194,10 +194,6 @@ graph:
       name: "The Sealed Crypt"
       kind: quest
       pack: "content/parser/pack/sealed_crypt.yaml"
-    - id: tide_mill
-      name: "The Tide-Mill"
-      kind: quest
-      pack: "content/parser/pack/tide_mill.yaml"
     - id: weighmasters_round
       name: "The Weighmaster's Round"
       kind: quest
@@ -378,9 +374,6 @@ graph:
     - from: east_quay
       to: ropewalkers_twist
       route: "ropewalk quay"
-    - from: industrial_cut
-      to: tide_mill
-      route: "mill race"
     - from: industrial_cut
       to: bellfounders_alarm
       route: "bellfounders' yard"
