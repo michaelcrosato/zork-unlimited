@@ -503,10 +503,17 @@ tool(
 
 tool(
   "replay_trace",
-  "Replay a recorded RPG trace against a pack and assert its final-state hash (§8.8).",
+  "Replay a recorded RPG trace against a shipped world quest or compatibility pack path and assert its final-state hash (§8.8).",
   {
     trace_path: z.string().describe("Path to a trace JSON, relative to the project root."),
-    ...PACK,
+    pack_path: z
+      .string()
+      .optional()
+      .describe("Compatibility path to an RPG quest content pack. Prefer world_quest_id."),
+    world_quest_id: z
+      .string()
+      .optional()
+      .describe("Charter Marches quest graph node id from list_world().quests[].graph_node."),
   },
   (a) => api.replay_trace(a),
 );
@@ -522,10 +529,17 @@ tool(
 
 tool(
   "inspect_trace",
-  "Summarize a recorded trace: per-step locations/events, final-hash check, and the debugger's suspected-bug classification (§9.4, §12.5).",
+  "Summarize a recorded trace against a shipped world quest or compatibility pack path: per-step locations/events, final-hash check, and the debugger's suspected-bug classification (§9.4, §12.5).",
   {
     trace_path: z.string().describe("Path to a trace JSON, relative to the project root."),
-    ...PACK,
+    pack_path: z
+      .string()
+      .optional()
+      .describe("Compatibility path to an RPG quest content pack. Prefer world_quest_id."),
+    world_quest_id: z
+      .string()
+      .optional()
+      .describe("Charter Marches quest graph node id from list_world().quests[].graph_node."),
   },
   (a) => api.inspect_trace(a),
 );

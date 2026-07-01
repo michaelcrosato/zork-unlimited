@@ -1472,10 +1472,10 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    replay_trace(args: { trace_path: string; pack_path: string }) {
+    replay_trace(args: { trace_path: string; pack_path?: string; world_quest_id?: string }) {
       const traceAbs = safeResolve(root, args.trace_path);
       const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace<RpgAction>;
-      const compiled = requirePlayable(args.pack_path);
+      const compiled = requirePlayable(resolvePackPathSource(args, "replay_trace"));
       if (trace.content_hash !== compiled.contentHash) {
         return {
           ok: false,
@@ -1496,7 +1496,7 @@ export function createToolApi(opts: { root: string }) {
       return replayTrace(trace, rules);
     },
 
-    inspect_trace(args: { trace_path: string; pack_path: string }) {
+    inspect_trace(args: { trace_path: string; pack_path?: string; world_quest_id?: string }) {
       // Summarize a recorded trace and surface suspected bugs (§9.4). Replays the
       // actions through the engine for a per-step location/event summary, asserts
       // the recorded final hash, localizes the first divergent step when the trace
@@ -1504,7 +1504,7 @@ export function createToolApi(opts: { root: string }) {
       // classifier (§12.5).
       const traceAbs = safeResolve(root, args.trace_path);
       const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace<RpgAction>;
-      const compiled = requirePlayable(args.pack_path);
+      const compiled = requirePlayable(resolvePackPathSource(args, "inspect_trace"));
       if (trace.content_hash !== compiled.contentHash) {
         return {
           ok: false,

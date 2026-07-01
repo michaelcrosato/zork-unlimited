@@ -31,6 +31,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
   should use `start_world_quest`.
 - Persistence: shipped quest saves can reload with `world_quest_id`; raw save
   `pack_path` is compatibility.
+- Trace verification: shipped quest traces replay/inspect with `world_quest_id`.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,

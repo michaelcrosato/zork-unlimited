@@ -1102,6 +1102,14 @@ describe("MCP tools — replay + path confinement", () => {
     expect(r.ok).toBe(true);
   });
 
+  it("replay_trace accepts a world graph quest id for shipped traces", () => {
+    const r = api().replay_trace({
+      trace_path: "traces/mcp_replay.json",
+      world_quest_id: "sunken_barrow",
+    });
+    expect(r.ok).toBe(true);
+  });
+
   it("inspect_trace summarizes steps and finds no failure on a winning route (§9.4)", () => {
     const r = api().inspect_trace({ trace_path: "traces/mcp_replay.json", pack_path: PACK }) as {
       ok: boolean;
@@ -1119,6 +1127,38 @@ describe("MCP tools — replay + path confinement", () => {
     expect(r.diverged_at_step).toBeNull();
     expect(r.diagnosis.type).toBe("no_failure");
     expect(r.step_summary.at(-1)?.ending_id).toBe("ending_victory");
+  });
+
+  it("inspect_trace accepts a world graph quest id for shipped traces", () => {
+    const r = api().inspect_trace({
+      trace_path: "traces/mcp_replay.json",
+      world_quest_id: "sunken_barrow",
+    }) as {
+      ok: boolean;
+      hash_ok: boolean;
+      diagnosis: { type: string };
+    };
+    expect(r.ok).toBe(true);
+    expect(r.hash_ok).toBe(true);
+    expect(r.diagnosis.type).toBe("no_failure");
+  });
+
+  it("trace tools reject ambiguous content sources", () => {
+    const a = api();
+    expect(() =>
+      a.replay_trace({
+        trace_path: "traces/mcp_replay.json",
+        world_quest_id: "sunken_barrow",
+        pack_path: PACK,
+      }),
+    ).toThrow(/exactly one/);
+    expect(() =>
+      a.inspect_trace({
+        trace_path: "traces/mcp_replay.json",
+        world_quest_id: "sunken_barrow",
+        pack_path: PACK,
+      }),
+    ).toThrow(/exactly one/);
   });
 
   it("rejects a path that escapes the project root", () => {
