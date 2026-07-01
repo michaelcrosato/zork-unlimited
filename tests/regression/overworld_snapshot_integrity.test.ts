@@ -8,6 +8,15 @@ const overworld = parseOverworldManifest(
   JSON.parse(readFileSync("content/world/new_york_overworld.json", "utf8")),
 );
 
+type Snapshot = ReturnType<typeof exportedSnapshotAfterTwoRoads>["snapshot"];
+type JournalEntry = Snapshot["journalEntries"][number];
+
+function townName(nodeId: string): string {
+  const town = overworld.nodes.find((node) => node.id === nodeId);
+  if (!town) throw new Error(`unknown test town ${nodeId}`);
+  return town.name;
+}
+
 function exportedSnapshotAfterTwoRoads() {
   const a = api();
   const started = a.start_overworld();
@@ -135,6 +144,187 @@ describe("overworld snapshot restore integrity", () => {
     };
 
     expect(() => a.restore_overworld_session({ snapshot: regionalArcSnapshot })).not.toThrow();
+  });
+
+  it.each([
+    {
+      label: "visited area",
+      forge(snapshot: Snapshot): Snapshot {
+        const area = overworld.areas.find(
+          (candidate) => !snapshot.visitedAreaIds.includes(candidate.id),
+        );
+        if (!area) throw new Error("expected an unvisited area");
+        return {
+          ...snapshot,
+          discoveredAreaIds: [...snapshot.discoveredAreaIds, area.id],
+          visitedAreaIds: [...snapshot.visitedAreaIds, area.id],
+        };
+      },
+      pattern: /visited area id.*matching journal/,
+    },
+    {
+      label: "completed job",
+      forge(snapshot: Snapshot): Snapshot {
+        const job = overworld.local_jobs.find(
+          (candidate) => !snapshot.completedJobIds.includes(candidate.id),
+        );
+        if (!job) throw new Error("expected an incomplete job");
+        return {
+          ...snapshot,
+          discoveredJobIds: [...snapshot.discoveredJobIds, job.id],
+          completedJobIds: [...snapshot.completedJobIds, job.id],
+        };
+      },
+      pattern: /completed job id.*matching journal/,
+    },
+    {
+      label: "explored site",
+      forge(snapshot: Snapshot): Snapshot {
+        const site = overworld.exploration_sites.find(
+          (candidate) => !snapshot.exploredSiteIds.includes(candidate.id),
+        );
+        if (!site) throw new Error("expected an unexplored site");
+        return {
+          ...snapshot,
+          discoveredSiteIds: [...snapshot.discoveredSiteIds, site.id],
+          exploredSiteIds: [...snapshot.exploredSiteIds, site.id],
+        };
+      },
+      pattern: /explored site id.*matching journal/,
+    },
+    {
+      label: "resolved event",
+      forge(snapshot: Snapshot): Snapshot {
+        const event = overworld.local_events.find(
+          (candidate) => !snapshot.resolvedEventIds.includes(candidate.id),
+        );
+        if (!event) throw new Error("expected an unresolved event");
+        return {
+          ...snapshot,
+          resolvedEventIds: [...snapshot.resolvedEventIds, event.id],
+        };
+      },
+      pattern: /resolved event id.*matching journal/,
+    },
+    {
+      label: "completed regional arc",
+      forge(snapshot: Snapshot): Snapshot {
+        const arc = overworld.regional_arcs.find(
+          (candidate) => !snapshot.completedRegionalArcIds.includes(candidate.id),
+        );
+        if (!arc) throw new Error("expected an incomplete regional arc");
+        return {
+          ...snapshot,
+          completedRegionalArcIds: [...snapshot.completedRegionalArcIds, arc.id],
+        };
+      },
+      pattern: /completed regional arc id.*matching journal/,
+    },
+  ])("rejects $label state without matching journal proof", ({ forge, pattern }) => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+
+    expect(() => a.restore_overworld_session({ snapshot: forge(snapshot) })).toThrow(pattern);
+  });
+
+  it.each([
+    {
+      label: "visited area",
+      makeEntry(snapshot: Snapshot): JournalEntry {
+        const area = overworld.areas.find(
+          (candidate) => !snapshot.visitedAreaIds.includes(candidate.id),
+        );
+        if (!area) throw new Error("expected an unvisited area");
+        return {
+          id: `area:${area.id}`,
+          kind: "area",
+          town: townName(area.home),
+          title: "Forged area",
+          text: "Forged area journal proof.",
+          recordedAt: snapshot.journalEntries[0]!.recordedAt,
+        };
+      },
+      pattern: /journal visited area id.*missing from saved state/,
+    },
+    {
+      label: "completed job",
+      makeEntry(snapshot: Snapshot): JournalEntry {
+        const job = overworld.local_jobs.find(
+          (candidate) => !snapshot.completedJobIds.includes(candidate.id),
+        );
+        if (!job) throw new Error("expected an incomplete job");
+        return {
+          id: `job:${job.id}`,
+          kind: "job",
+          town: townName(job.home),
+          title: "Forged job",
+          text: "Forged job journal proof.",
+          recordedAt: snapshot.journalEntries[0]!.recordedAt,
+        };
+      },
+      pattern: /journal completed job id.*missing from saved state/,
+    },
+    {
+      label: "explored site",
+      makeEntry(snapshot: Snapshot): JournalEntry {
+        const site = overworld.exploration_sites.find(
+          (candidate) => !snapshot.exploredSiteIds.includes(candidate.id),
+        );
+        if (!site) throw new Error("expected an unexplored site");
+        return {
+          id: `site:${site.id}`,
+          kind: "site",
+          town: townName(site.nearest_town),
+          title: "Forged site",
+          text: "Forged site journal proof.",
+          recordedAt: snapshot.journalEntries[0]!.recordedAt,
+        };
+      },
+      pattern: /journal explored site id.*missing from saved state/,
+    },
+    {
+      label: "resolved event",
+      makeEntry(snapshot: Snapshot): JournalEntry {
+        const event = overworld.local_events.find(
+          (candidate) => !snapshot.resolvedEventIds.includes(candidate.id),
+        );
+        if (!event) throw new Error("expected an unresolved event");
+        return {
+          id: `resolve:${event.id}`,
+          kind: "resolution",
+          town: townName(event.home),
+          title: "Forged resolution",
+          text: "Forged resolution journal proof.",
+          recordedAt: snapshot.journalEntries[0]!.recordedAt,
+        };
+      },
+      pattern: /journal resolved event id.*missing from saved state/,
+    },
+    {
+      label: "completed regional arc",
+      makeEntry(snapshot: Snapshot): JournalEntry {
+        const arc = overworld.regional_arcs.find(
+          (candidate) => !snapshot.completedRegionalArcIds.includes(candidate.id),
+        );
+        if (!arc) throw new Error("expected an incomplete regional arc");
+        return {
+          id: `arc:${arc.id}`,
+          kind: "regional_arc",
+          town: arc.region,
+          title: "Forged regional arc",
+          text: "Forged regional arc journal proof.",
+          recordedAt: snapshot.journalEntries[0]!.recordedAt,
+        };
+      },
+      pattern: /journal completed regional arc id.*missing from saved state/,
+    },
+  ])("rejects $label journal proof missing from progress state", ({ makeEntry, pattern }) => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const forgedJournal = {
+      ...snapshot,
+      journalEntries: [makeEntry(snapshot), ...snapshot.journalEntries],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedJournal })).toThrow(pattern);
   });
 
   it("rejects future journal history in forged session snapshots", () => {

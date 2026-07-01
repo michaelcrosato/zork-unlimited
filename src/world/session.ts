@@ -630,6 +630,74 @@ function assertStringSetSubset(
   }
 }
 
+function journalSourceIdsForKind(
+  snapshot: OverworldSessionSnapshot,
+  kind: OverworldJournalEntry["kind"],
+  prefix: string,
+): Set<string> {
+  const ids = new Set<string>();
+  for (const entry of snapshot.journalEntries) {
+    if (entry.kind === kind) ids.add(entry.id.slice(prefix.length));
+  }
+  return ids;
+}
+
+function assertJournalStateBinding(
+  stateLabel: string,
+  stateIds: readonly string[],
+  journalLabel: string,
+  journalIds: ReadonlySet<string>,
+): void {
+  const state = new Set(stateIds);
+  for (const id of state) {
+    if (!journalIds.has(id)) {
+      throw new Error(
+        `Overworld session snapshot ${stateLabel} "${id}" has no matching journal entry.`,
+      );
+    }
+  }
+  for (const id of journalIds) {
+    if (!state.has(id)) {
+      throw new Error(
+        `Overworld session snapshot journal ${journalLabel} "${id}" is missing from saved state.`,
+      );
+    }
+  }
+}
+
+function assertSnapshotProgressJournalBindings(snapshot: OverworldSessionSnapshot): void {
+  assertJournalStateBinding(
+    "visited area id",
+    snapshot.visitedAreaIds,
+    "visited area id",
+    journalSourceIdsForKind(snapshot, "area", "area:"),
+  );
+  assertJournalStateBinding(
+    "completed job id",
+    snapshot.completedJobIds,
+    "completed job id",
+    journalSourceIdsForKind(snapshot, "job", "job:"),
+  );
+  assertJournalStateBinding(
+    "explored site id",
+    snapshot.exploredSiteIds,
+    "explored site id",
+    journalSourceIdsForKind(snapshot, "site", "site:"),
+  );
+  assertJournalStateBinding(
+    "resolved event id",
+    snapshot.resolvedEventIds,
+    "resolved event id",
+    journalSourceIdsForKind(snapshot, "resolution", "resolve:"),
+  );
+  assertJournalStateBinding(
+    "completed regional arc id",
+    snapshot.completedRegionalArcIds,
+    "completed regional arc id",
+    journalSourceIdsForKind(snapshot, "regional_arc", "arc:"),
+  );
+}
+
 function replaceStringSet(target: Set<string>, values: readonly string[]): void {
   target.clear();
   for (const value of values) target.add(value);
@@ -810,6 +878,7 @@ export class OverworldSession {
       "discovered site ids",
       discoveredSiteIds,
     );
+    assertSnapshotProgressJournalBindings(snapshot);
     if (snapshot.currentAreaId !== null && !discoveredAreaIds.has(snapshot.currentAreaId)) {
       throw new Error("Overworld session snapshot current area is not discovered.");
     }
