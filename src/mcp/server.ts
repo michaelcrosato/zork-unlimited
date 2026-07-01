@@ -437,14 +437,8 @@ tool(
 
 tool(
   "new_game",
-  "Start a new session on a playable RPG quest; returns a session id, mode, and first observation. Prefer world_quest_id for shipped Charter Marches quests; pack_path remains for compatibility, and generate_rpg_seed mints a procedural pack.",
+  "Start a new session on a playable RPG quest; returns a session id, mode, and first observation. Use world_quest_id for shipped Charter Marches quests; generate_rpg_seed mints a procedural pack.",
   {
-    pack_path: z
-      .string()
-      .optional()
-      .describe(
-        "Compatibility path to an RPG quest content pack (.yaml). Prefer world_quest_id for shipped quests.",
-      ),
     world_quest_id: z
       .string()
       .optional()
@@ -454,7 +448,7 @@ tool(
       .int()
       .optional()
       .describe(
-        "Instead of pack_path: mint and play a fresh procedural RPG pack from this seed (see generate_rpg_pack). Independent of `seed` (which seeds runtime state).",
+        "Instead of world_quest_id: mint and play a fresh procedural RPG pack from this seed (see generate_rpg_pack). Independent of `seed` (which seeds runtime state).",
       ),
     seed: z.number().int().optional().describe("Deterministic runtime seed (default 1)."),
     ...HIDE_GRAPH,

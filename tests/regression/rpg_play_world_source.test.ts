@@ -81,4 +81,29 @@ describe("RPG play CLI world quest source", () => {
     expect(replayOutput).toContain("world quest:  sunken_barrow");
     expect(replayOutput).toContain("REPLAY OK");
   });
+
+  it("rejects raw pack-path starts on the public play surface", () => {
+    const viaFlag = runBin("bin/rpg_play.ts", [
+      "--pack",
+      "content/rpg/pack/sunken_barrow.yaml",
+      "--commands",
+      "look",
+    ]);
+    const viaFlagOutput = outputOf(viaFlag);
+
+    expect(viaFlag.status, viaFlagOutput).toBe(1);
+    expect(viaFlagOutput).toContain("world quest id only");
+    expect(viaFlagOutput).toContain("not --pack");
+
+    const viaPositional = runBin("bin/rpg_play.ts", [
+      "content/rpg/pack/sunken_barrow.yaml",
+      "--commands",
+      "look",
+    ]);
+    const viaPositionalOutput = outputOf(viaPositional);
+
+    expect(viaPositional.status, viaPositionalOutput).toBe(1);
+    expect(viaPositionalOutput).toContain("world quest id only");
+    expect(viaPositionalOutput).toContain("npm run validate");
+  });
 });

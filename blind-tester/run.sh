@@ -8,12 +8,12 @@
 # own CLAUDE.md.
 #
 # Usage:
-#   blind-tester/run.sh [--quest <id> | --pack <path>] [--seed <n>] [--model <alias>] [--out <prefix>]
-#   blind-tester/run.sh --smoke [--quest <id> | --pack <path>] [--seed <n>]   # no LLM, no tokens
+#   blind-tester/run.sh [--quest <id>] [--seed <n>] [--model <alias>] [--out <prefix>]
+#   blind-tester/run.sh --smoke [--quest <id>] [--seed <n>]   # no LLM, no tokens
 #
 # Provider-agnostic: set BLIND_AGENT_CMD to use a different MCP-capable agent CLI
 # (e.g. a future local-LLM runner). It receives the prompt on stdin and these env
-# vars: BLIND_MCP_CONFIG, BLIND_QUEST_ID, BLIND_PACK, BLIND_SEED.
+# vars: BLIND_MCP_CONFIG, BLIND_QUEST_ID, BLIND_SEED.
 #
 set -euo pipefail
 
@@ -22,7 +22,11 @@ GAME_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 QUEST_ID="${BLIND_QUEST_ID:-}"
 PACK="${BLIND_PACK:-}"
-if [[ -z "$QUEST_ID" && -z "$PACK" ]]; then
+if [[ -n "$PACK" ]]; then
+  echo "BLIND_PACK is no longer supported; blind runs start shipped quests by --quest id." >&2
+  exit 2
+fi
+if [[ -z "$QUEST_ID" ]]; then
   QUEST_ID="breaking_weir"
 fi
 SEED=7
@@ -31,7 +35,6 @@ OUT=""
 SMOKE=0
 TIMEOUT="${BLIND_TIMEOUT:-900}"
 QUEST_EXPLICIT=0
-PACK_EXPLICIT=0
 POSITIONAL=()
 
 # `npm run blind` invokes this script with a non-login Bash, so per-user CLI install
@@ -74,7 +77,9 @@ node_path_arg() {
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --quest|--quest-id) QUEST_ID="$2"; QUEST_EXPLICIT=1; shift 2 ;;
-    --pack)             PACK="$2"; PACK_EXPLICIT=1; shift 2 ;;
+    --pack)
+      echo "Blind runs start shipped quests by quest id only; use --quest <id>, not --pack." >&2
+      exit 2 ;;
     --seed)             SEED="$2"; shift 2 ;;
     --model)            MODEL="$2"; shift 2 ;;
     --out)              OUT="$2"; shift 2 ;;
@@ -86,16 +91,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ "$PACK_EXPLICIT" == "0" && "$QUEST_EXPLICIT" == "0" && ${#POSITIONAL[@]} -gt 0 ]]; then
+if [[ "$QUEST_EXPLICIT" == "0" && ${#POSITIONAL[@]} -gt 0 ]]; then
   SOURCE="${POSITIONAL[0]}"
   if [[ "$SOURCE" == *.yaml || "$SOURCE" == */* || "$SOURCE" == *\\* ]]; then
-    PACK="$SOURCE"
-    PACK_EXPLICIT=1
-    QUEST_ID=""
+    echo "Blind runs start shipped quests by quest id only; use --quest <id>, not a pack path." >&2
+    exit 2
   else
     QUEST_ID="$SOURCE"
     QUEST_EXPLICIT=1
-    PACK=""
   fi
 fi
 if [[ ${#POSITIONAL[@]} -gt 1 ]]; then
@@ -109,39 +112,19 @@ if [[ ${#POSITIONAL[@]} -gt 3 ]]; then
   exit 2
 fi
 
-if [[ "$PACK_EXPLICIT" == "1" && "$QUEST_EXPLICIT" == "0" ]]; then
-  QUEST_ID=""
-fi
-if [[ "$QUEST_EXPLICIT" == "1" && "$PACK_EXPLICIT" == "0" ]]; then
-  PACK=""
-fi
-if [[ -n "$QUEST_ID" && -n "$PACK" ]]; then
-  echo "Use exactly one source: --quest <id> or --pack <path>." >&2
-  exit 2
-fi
-if [[ -z "$QUEST_ID" && -z "$PACK" ]]; then
-  echo "A blind run needs --quest <id> or --pack <path>." >&2
+if [[ -z "$QUEST_ID" ]]; then
+  echo "A blind run needs --quest <id>." >&2
   exit 2
 fi
 
-if [[ -n "$QUEST_ID" ]]; then
-  SOURCE_LABEL="quest=$QUEST_ID"
-  SOURCE_SLUG="$QUEST_ID"
-  START_INSTRUCTION="Start: \`mcp__adventureforge__start_world_quest\` with quest_id = \"$QUEST_ID\", seed = $SEED, hide_graph = true, compact_observation = true."
-else
-  SOURCE_LABEL="pack=$PACK"
-  SOURCE_SLUG="$(basename "$PACK" .yaml)"
-  START_INSTRUCTION="Start: \`mcp__adventureforge__new_game\` with pack_path = \"$PACK\", seed = $SEED, hide_graph = true, compact_observation = true."
-fi
+SOURCE_LABEL="quest=$QUEST_ID"
+SOURCE_SLUG="$QUEST_ID"
+START_INSTRUCTION="Start: \`mcp__adventureforge__start_world_quest\` with quest_id = \"$QUEST_ID\", seed = $SEED, hide_graph = true, compact_observation = true."
 
 # Smoke mode: prove the MCP path with no LLM and no token spend.
 if [[ "$SMOKE" == "1" ]]; then
   SMOKE_SCRIPT="$(node_path_arg "$SCRIPT_DIR/smoke.mjs")"
-  if [[ -n "$QUEST_ID" ]]; then
-    exec "$NODE_CMD" "$SMOKE_SCRIPT" --quest "$QUEST_ID" --seed "$SEED"
-  else
-    exec "$NODE_CMD" "$SMOKE_SCRIPT" --pack "$PACK" --seed "$SEED"
-  fi
+  exec "$NODE_CMD" "$SMOKE_SCRIPT" --quest "$QUEST_ID" --seed "$SEED"
 fi
 
 case "$GAME_DIR" in
@@ -204,7 +187,7 @@ echo "Report prefix: $OUT"
 # Provider override path: hand the prompt to any MCP-capable agent CLI.
 if [[ -n "${BLIND_AGENT_CMD:-}" ]]; then
   echo "Using BLIND_AGENT_CMD override."
-  BLIND_MCP_CONFIG="$MCP_CONFIG" BLIND_QUEST_ID="$QUEST_ID" BLIND_PACK="$PACK" BLIND_SEED="$SEED" \
+  BLIND_MCP_CONFIG="$MCP_CONFIG" BLIND_QUEST_ID="$QUEST_ID" BLIND_SEED="$SEED" \
     timeout "$TIMEOUT" bash -c "$BLIND_AGENT_CMD" <<<"$PROMPT" | tee "$OUT.md"
   exit "${PIPESTATUS[0]}"
 fi

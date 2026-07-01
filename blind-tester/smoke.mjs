@@ -7,7 +7,7 @@
  * `claude -p` blind run to confirm the harness is wired correctly without spending
  * any subscription/token budget.
  *
- *   node blind-tester/smoke.mjs [--quest <id> | --pack <path>] [--seed <n>] [--steps <n>]
+ *   node blind-tester/smoke.mjs [--quest <id>] [--seed <n>] [--steps <n>]
  */
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -46,23 +46,19 @@ const POSITIONAL_IS_PACK =
   POSITIONAL_SOURCE.endsWith(".yaml") ||
   POSITIONAL_SOURCE.includes("/") ||
   POSITIONAL_SOURCE.includes("\\");
-const PACK_EXPLICIT = hasArg("--pack") || Boolean(POSITIONAL_SOURCE && POSITIONAL_IS_PACK);
-if (PACK_EXPLICIT && QUEST_EXPLICIT) {
-  throw new Error("Use exactly one source: --quest <id> or --pack <path>.");
+if (hasArg("--pack") || POSITIONAL_IS_PACK) {
+  throw new Error("Blind smoke starts shipped quests by quest id only; use --quest <id>.");
 }
 
-const PACK = hasArg("--pack") ? arg("--pack", "") : PACK_EXPLICIT ? POSITIONAL_SOURCE : "";
 const QUEST_ID = QUEST_EXPLICIT
   ? arg("--quest", arg("--quest-id", ""))
-  : PACK_EXPLICIT
-    ? ""
-    : POSITIONAL_SOURCE || "breaking_weir";
+  : POSITIONAL_SOURCE || "breaking_weir";
 const SEED = Number(arg("--seed", POSITIONAL[1] ?? "7"));
 const STEPS = Number(arg("--steps", POSITIONAL[2] ?? "3"));
-if (!QUEST_ID && !PACK) {
-  throw new Error("A smoke run needs --quest <id> or --pack <path>.");
+if (!QUEST_ID) {
+  throw new Error("A smoke run needs --quest <id>.");
 }
-const SOURCE_LABEL = QUEST_ID ? `quest ${QUEST_ID}` : `pack ${PACK}`;
+const SOURCE_LABEL = `quest ${QUEST_ID}`;
 
 /** MCP text-content tool results carry a JSON string; parse it defensively. */
 function parseResult(result) {
@@ -104,7 +100,7 @@ async function main() {
     const { tools } = await client.listTools();
     const names = new Set(tools.map((t) => t.name));
     console.log(`• tools/list → ${tools.length} tools`);
-    const startTool = QUEST_ID ? "start_world_quest" : "new_game";
+    const startTool = "start_world_quest";
     for (const required of [startTool, "get_observation", "step_action", "get_transcript"]) {
       if (!names.has(required)) fail(`MCP server is missing the "${required}" tool`);
     }
@@ -112,9 +108,7 @@ async function main() {
     const start = parseResult(
       await client.callTool({
         name: startTool,
-        arguments: QUEST_ID
-          ? { quest_id: QUEST_ID, seed: SEED, hide_graph: true, compact_observation: true }
-          : { pack_path: PACK, seed: SEED, hide_graph: true, compact_observation: true },
+        arguments: { quest_id: QUEST_ID, seed: SEED, hide_graph: true, compact_observation: true },
       }),
     );
     if (!start.session_id) throw new Error(`${startTool} returned no session_id (${SOURCE_LABEL})`);

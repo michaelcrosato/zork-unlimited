@@ -33,7 +33,7 @@ bash blind-tester/run.sh --smoke --quest sunken_barrow --seed 11
 bash blind-tester/run.sh --quest sunken_barrow --seed 11 --model opus
 ```
 
-The report is written to `blind-tester/reports/<stamp>_<quest-or-pack>_seed<n>.md`
+The report is written to `blind-tester/reports/<stamp>_<quest>_seed<n>.md`
 (and the raw `--output-format json` envelope alongside as `.json`). `reports/` is
 gitignored.
 
@@ -61,7 +61,7 @@ the prompt in [`prompt.md`](./prompt.md) reuses its report format (clarity/enjoy
   prompt, runs `claude -p` from an isolated dir, saves the report. `--smoke` skips
   the LLM.
 - `smoke.mjs` — token-free MCP smoke test via the MCP SDK client: spawn server,
-  `tools/list`, `start_world_quest` or `new_game`, step a few actions, assert. Run
+  `tools/list`, `start_world_quest`, step a few actions, assert. Run
   this anytime to verify the plumbing without spending budget.
 - `prompt.md` — the locked-down blind player prompt (start instruction / seed filled
   by the runner).
@@ -71,22 +71,20 @@ the prompt in [`prompt.md`](./prompt.md) reuses its report format (clarity/enjoy
 
 ```
 --quest <id>     shipped Charter Marches quest id to test (default: breaking_weir)
---pack <path>    compatibility/new RPG content pack to test instead of --quest
 --seed <n>       deterministic seed (default: 7)
 --model <alias>  claude model alias: sonnet (default, best value) | opus
---out <prefix>   report path prefix (default: reports/<stamp>_<quest-or-pack>_seed<n>)
+--out <prefix>   report path prefix (default: reports/<stamp>_<quest>_seed<n>)
 --smoke          run the no-LLM MCP smoke test instead of a real playtest
 ```
 
-Environment: `BLIND_QUEST_ID`, `BLIND_PACK`, `BLIND_MODEL`, `BLIND_TIMEOUT`
-(seconds, default 900).
+Environment: `BLIND_QUEST_ID`, `BLIND_MODEL`, `BLIND_TIMEOUT` (seconds, default 900).
 
 ## Provider-agnostic — bring another agent (e.g. a local LLM)
 
 The default agent is `claude -p`. To use a different MCP-capable agent CLI, set
 `BLIND_AGENT_CMD`: it receives the prompt on **stdin** and these env vars:
 `BLIND_MCP_CONFIG` (path to the generated MCP config), `BLIND_QUEST_ID`,
-`BLIND_PACK`, `BLIND_SEED`.
+`BLIND_SEED`.
 
 ```bash
 BLIND_AGENT_CMD='gemini -p' npm run blind

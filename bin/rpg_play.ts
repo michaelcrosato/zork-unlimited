@@ -1,14 +1,14 @@
 #!/usr/bin/env -S npx tsx
 /**
- * bin/rpg_play — play a Stage-4 (Hero's-Quest) RPG pack from the terminal.
+ * bin/rpg_play — play a Charter Marches RPG world quest from the terminal.
  *
  * Usage:
  *   npm run play                                      # play the default world quest
- *   npm run play -- <world_quest_id|pack.yaml> [--seed N]
- *   npm run play -- <world_quest_id|pack.yaml> --commands "down; take iron bar; ..."
+ *   npm run play -- <world_quest_id> [--seed N]
+ *   npm run play -- <world_quest_id> --commands "down; take iron bar; ..."
  *
  * Uses the controlled command grammar and adds an `attack <enemy>` verb.
- * A pack must pass the RPG validator before it is playable (§0, §10). The
+ * The quest's bound pack must pass the RPG validator before it is playable (§0, §10). The
  * legal-action set (base RPG actions + ATTACK) is ground truth; combat and skill
  * checks are seeded, so a recorded run replays exactly (§8.5).
  */
@@ -26,10 +26,10 @@ import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../src/rpg/run
 import { buildRpgObservation, type RpgObservation } from "../src/rpg/observation.js";
 import { parseCommand } from "../src/rpg/command_map.js";
 import { recordTrace } from "../src/trace/record.js";
-import { resolvePackSource, type PackSourceArgs } from "../src/world/source.js";
+import { resolveWorldQuestPackPath } from "../src/world/source.js";
 
 const DEFAULT_WORLD_QUEST_ID = "breaking_weir";
-const SOURCE_FLAGS = new Set(["--pack", "--world-quest-id", "--world_quest_id"]);
+const SOURCE_FLAGS = new Set(["--world-quest-id", "--world_quest_id"]);
 const VALUE_FLAGS = new Set([...SOURCE_FLAGS, "--seed", "--commands", "--record"]);
 
 export function render(obs: RpgObservation): string {
@@ -90,7 +90,7 @@ function resolve(
 }
 
 async function main(): Promise<void> {
-  const source = resolvePackSource(process.cwd(), playSourceArgs(), "play");
+  const source = resolveWorldQuestPackPath(process.cwd(), playWorldQuestId());
   const seed = Number(arg("--seed") ?? 1);
   const rawCommands = arg("--commands");
   const commands =
@@ -177,7 +177,7 @@ async function main(): Promise<void> {
       trace_id: "tr_rpg_play",
       pack_id: loaded.compiled.pack.meta.id,
       content_hash: loaded.compiled.contentHash,
-      worldQuestId: source.worldQuestId,
+      worldQuestId: source.node.id,
     });
     writeFileSync(record, JSON.stringify(trace, null, 2));
     console.log(`\nTrace written to ${record}`);
@@ -206,24 +206,29 @@ function positionalSourceArg(): string | undefined {
   return undefined;
 }
 
-function playSourceArgs(): PackSourceArgs {
+function playWorldQuestId(): string {
   const pack = arg("--pack");
   const worldQuestId = arg("--world-quest-id") ?? arg("--world_quest_id");
   const positional = positionalSourceArg();
-  const sourceCount = [
-    pack !== undefined,
-    worldQuestId !== undefined,
-    positional !== undefined,
-  ].filter(Boolean).length;
-  if (sourceCount > 1) {
+  if (pack !== undefined) {
     throw new Error(
-      "play accepts exactly one quest source: --pack, --world-quest-id, or positional source.",
+      "play starts shipped quests by world quest id only; use --world-quest-id or a positional quest id, not --pack.",
     );
   }
-  if (pack !== undefined) return { pack_path: pack };
-  if (worldQuestId !== undefined) return { world_quest_id: worldQuestId };
-  if (positional === undefined) return { world_quest_id: DEFAULT_WORLD_QUEST_ID };
-  return looksLikePackPath(positional) ? { pack_path: positional } : { world_quest_id: positional };
+  const sourceCount = [worldQuestId !== undefined, positional !== undefined].filter(Boolean).length;
+  if (sourceCount > 1) {
+    throw new Error(
+      "play accepts exactly one quest source: --world-quest-id or positional quest id.",
+    );
+  }
+  if (worldQuestId !== undefined) return worldQuestId;
+  if (positional === undefined) return DEFAULT_WORLD_QUEST_ID;
+  if (looksLikePackPath(positional)) {
+    throw new Error(
+      "play starts shipped quests by world quest id only; run `npm run validate -- <pack.yaml>` to inspect a raw pack.",
+    );
+  }
+  return positional;
 }
 
 // Run only when invoked directly (not when imported for testing the pure render()),

@@ -24,13 +24,18 @@ describe("blind runner MCP config contract", () => {
     expect(runner).toContain("--quest|--quest-id");
     expect(runner).toContain("mcp__adventureforge__start_world_quest");
     expect(runner).toContain("compact_observation = true");
+    expect(runner).not.toContain("mcp__adventureforge__new_game");
+    expect(runner).not.toContain("BLIND_PACK=");
+    expect(runner).not.toContain("pack_path");
     expect(prompt).toContain("mcp__adventureforge__start_world_quest");
     expect(prompt).toContain("compact_observation: true");
     expect(prompt).toContain("summary_only: true");
     expect(prompt).toContain("compact_turns: true");
     expect(prompt).toContain("context");
     expect(prompt).toContain("{{START_INSTRUCTION}}");
+    expect(prompt).not.toContain("mcp__adventureforge__new_game");
     expect(prompt).not.toContain("mcp__adventureforge__start_game");
+    expect(prompt).not.toContain("pack_path");
     expect(prompt).not.toContain("story_path");
     expect(smoke).toContain('"breaking_weir"');
     expect(smoke).toContain('"start_world_quest"');
@@ -38,6 +43,8 @@ describe("blind runner MCP config contract", () => {
     expect(smoke).toContain('"get_transcript"');
     expect(smoke).toContain("summary_only: true");
     expect(smoke).toContain("context");
+    expect(smoke).not.toContain('"new_game"');
+    expect(smoke).not.toContain("pack_path");
     expect(smoke).not.toContain('"start_game"');
   });
 });
