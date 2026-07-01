@@ -88,6 +88,19 @@ describe("RPG schema owns the RPG contract", () => {
     expect(cyoaPack).not.toContain("hashState");
   });
 
+  it("keeps legacy CYOA terminal fragments on the RPG schema contract", () => {
+    const cyoaSchema = readFileSync("src/cyoa/schema.ts", "utf8");
+    const cyoaRunner = readFileSync("src/cyoa/runner.ts", "utf8");
+    expect(cyoaSchema).toContain("../rpg/schema");
+    expect(cyoaSchema).toContain("EndingSchema as RpgEndingSchema");
+    expect(cyoaSchema).toContain("EndingVariantSchema");
+    expect(cyoaSchema).toContain("RpgEndingSchema.omit({ death: true })");
+    expect(cyoaSchema).toContain("death: z.boolean().optional()");
+    expect(cyoaRunner).toContain("../rpg/schema");
+    expect(cyoaRunner).toContain("SCORE_VAR");
+    expect(cyoaRunner).not.toContain('const SCORE_VAR = "score"');
+  });
+
   it("does not import the legacy parser runner for RPG win or score events", () => {
     const runner = readFileSync("src/rpg/runner.ts", "utf8");
     expect(runner).not.toContain("../parser/runner");

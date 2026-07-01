@@ -10,6 +10,7 @@ import { z } from "zod";
 import { ConditionSchema } from "../core/conditions.js";
 import { EffectSchema } from "../core/effects.js";
 import { SkillCheckSchema } from "../core/skill_check.js";
+import { EndingSchema as RpgEndingSchema, EndingVariantSchema } from "../rpg/schema.js";
 import { WorldBindingSchema } from "../world/schema.js";
 
 export const ChoiceSchema = z
@@ -41,12 +42,7 @@ export const ChoiceSchema = z
     }
   });
 
-export const SceneVariantSchema = z
-  .object({
-    when: z.array(ConditionSchema).min(1),
-    text: z.string().min(1),
-  })
-  .strict();
+export const SceneVariantSchema = EndingVariantSchema;
 
 export const SceneSchema = z
   .object({
@@ -66,26 +62,10 @@ export const SceneSchema = z
   })
   .strict();
 
-export const EndingSchema = z
-  .object({
-    id: z.string().min(1),
-    title: z.string().min(1),
-    text: z.string().min(1),
-    // Optional reactive epilogues — same shape and first-match-wins rule as a
-    // scene's `variants`. An ending two routes converge on can now acknowledge
-    // *how* the player got there (which of two letters they carried out) instead
-    // of printing one text that contradicts the route just played. `.optional()`
-    // (not `.default([])`) so endings that don't use it compile byte-identically
-    // and their content hashes are unchanged (same rule as SceneSchema.variants).
-    variants: z.array(SceneVariantSchema).optional(),
-    // Optional death/failure marker — the CYOA analogue of ParserEndingSchema.death
-    // (§13 Stage 3), part of standardizing the mechanic palette across modes. Marks a
-    // terminal as a non-winning failure outcome (a lethal gamble, a moral capitulation)
-    // so the observation and validators can distinguish a "you lost" terminal from a
-    // win/neutral one uniformly across CYOA/parser/RPG. `.optional()` (NOT `.default(false)`,
-    // unlike the parser's): an absent field stays absent in the compiled pack ⇒ every
-    // existing CYOA pack compiles byte-identically and keeps its content hash (mirrors
-    // `variants`). Absent ⇒ the ending is not flagged a failure.
+// CYOA terminals reuse the RPG ending contract but keep CYOA's legacy hash rule:
+// absent `death` stays absent instead of defaulting to false.
+export const EndingSchema = RpgEndingSchema.omit({ death: true })
+  .extend({
     death: z.boolean().optional(),
   })
   .strict();

@@ -17,9 +17,8 @@ import { rngForStep, type Rng } from "../core/rng.js";
 import type { Resolution, Rules } from "../core/engine.js";
 import { scoreChangeNarrations } from "../core/score_chrome.js";
 import { resolveSkillCheck } from "../core/skill_check.js";
+import { SCORE_VAR } from "../rpg/schema.js";
 import type { CyoaPack, Ending, Scene } from "./schema.js";
-
-const SCORE_VAR = "score";
 
 export type CyoaAction = { type: "CHOOSE"; choiceId: string };
 
