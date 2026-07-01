@@ -434,7 +434,10 @@ function assertUniqueTupleKeys(
   );
 }
 
-function assertSnapshotTimeline(snapshot: OverworldSessionSnapshot): void {
+function assertSnapshotTimeline(
+  snapshot: OverworldSessionSnapshot,
+  knownTownNames: ReadonlySet<string>,
+): void {
   assertUnique(
     "journal entry id",
     snapshot.journalEntries.map((entry) => entry.id),
@@ -446,6 +449,11 @@ function assertSnapshotTimeline(snapshot: OverworldSessionSnapshot): void {
 
   let previousRecordedAt = Number.POSITIVE_INFINITY;
   for (const entry of snapshot.journalEntries) {
+    if (!knownTownNames.has(entry.town)) {
+      throw new Error(
+        `Overworld session snapshot journal references unknown town "${entry.town}".`,
+      );
+    }
     const recordedAt = parseTimeLabel(entry.recordedAt);
     if (recordedAt > snapshot.minutes) {
       throw new Error("Overworld session snapshot journal contains a future entry.");
@@ -575,6 +583,7 @@ export class OverworldSession {
     const arcIds = new Set(this.world.regional_arcs.map((arc) => arc.id));
     const edgesById = new Map(this.world.edges.map((edge) => [edge.id, edge]));
     const regions = new Set(this.world.regions.map((region) => region.name));
+    const townNames = new Set(this.world.nodes.map((node) => node.name));
     const areaHomes = new Map(this.world.areas.map((area) => [area.id, area.home]));
     let restoredPendingRoadEncounter: OverworldPendingRoadEncounter | null = null;
 
@@ -607,7 +616,7 @@ export class OverworldSession {
     assertKnownIds("completed regional arc id", snapshot.completedRegionalArcIds, arcIds);
     assertUniqueTupleKeys("area-map town", snapshot.currentAreaByTown);
     assertUniqueTupleKeys("renown region", snapshot.regionRenown);
-    assertSnapshotTimeline(snapshot);
+    assertSnapshotTimeline(snapshot, townNames);
 
     if (!snapshot.discoveredIds.includes(snapshot.currentId)) {
       throw new Error("Overworld session snapshot current town is not discovered.");

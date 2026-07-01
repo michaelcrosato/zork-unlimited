@@ -60,6 +60,21 @@ describe("overworld snapshot restore integrity", () => {
     );
   });
 
+  it("rejects journal entries bound to unknown overworld towns", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const detachedJournalTown = {
+      ...snapshot,
+      journalEntries: [
+        { ...snapshot.journalEntries[0]!, town: "Atlantis" },
+        ...snapshot.journalEntries.slice(1),
+      ],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: detachedJournalTown })).toThrow(
+      /unknown town/,
+    );
+  });
+
   it("rejects future journal history in forged session snapshots", () => {
     const { a, snapshot } = exportedSnapshotAfterTwoRoads();
     const futureJournal = {
