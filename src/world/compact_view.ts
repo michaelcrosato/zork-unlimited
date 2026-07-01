@@ -47,7 +47,6 @@ export type OverworldCompactRouteOption = readonly [
 ];
 export type OverworldCompactRoadEncounterOption = readonly [
   strategy: OverworldRoadEncounterOption["strategy"],
-  label: string,
   minutes: number,
   suppliesCost: number,
   fatigueGained: number,
@@ -56,7 +55,7 @@ export type OverworldCompactRoadEncounterOption = readonly [
 export type OverworldCompactRoadEncounter = {
   id: string;
   edge: string;
-  event: readonly [id: string, title: string, risk: string];
+  event: readonly [id: string, risk: string];
   options: readonly OverworldCompactRoadEncounterOption[];
 };
 export type OverworldCompactJournalEntry = readonly [
@@ -159,10 +158,9 @@ function compactPendingRoad(
   return {
     id: encounter.id,
     edge: encounter.edgeId,
-    event: [encounter.event.id, encounter.event.title, encounter.event.risk],
+    event: [encounter.event.id, encounter.event.risk],
     options: encounter.options.map((option) => [
       option.strategy,
-      option.label,
       option.minutes,
       option.suppliesCost,
       option.fatigueGained,

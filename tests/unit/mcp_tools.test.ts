@@ -752,7 +752,6 @@ describe("MCP tools — validate / load (§9.4)", () => {
       edge: road!.id,
       event: [
         traveledFull.pendingRoadEncounter!.event.id,
-        traveledFull.pendingRoadEncounter!.event.title,
         traveledFull.pendingRoadEncounter!.event.risk,
       ],
     });
@@ -761,6 +760,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       "assist_travelers",
       "press_on",
     ]);
+    expect(traveledCompact.pending_road?.options[0]?.[1]).toEqual(expect.any(Number));
     expect(traveledCompact.travel_log).toEqual(compactTravel.context.travel_log);
     expect(JSON.stringify(traveledCompact).length).toBeLessThan(
       JSON.stringify(traveledFull).length,

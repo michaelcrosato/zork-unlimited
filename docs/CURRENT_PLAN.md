@@ -121,6 +121,8 @@ Make discovered overworld quest leads start real RPG sessions.
   stable destination ids plus route metrics/path ids only.
 - Compact overworld road and area-route tuples now omit repeated destination
   names, keeping stable ids and numeric route metrics.
+- Compact overworld pending-road tuples now omit road-event titles and stable
+  option labels while preserving ids, risk, strategy, and numeric outcomes.
 
 ## Acceptance
 

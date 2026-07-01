@@ -96,6 +96,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Compact overworld context now caps progress id arrays with counts/truncation.
 - Compact overworld route options now omit destination names and carry ids only.
 - Compact overworld road and area-route tuples now omit repeated destination names.
+- Compact overworld pending-road tuples now omit event titles and option labels.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,
