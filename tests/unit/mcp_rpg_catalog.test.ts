@@ -23,11 +23,13 @@ describe("isRpgPackShape keeps RPG structural priority", () => {
 describe("list_stories exposes only world-graph RPG quests", () => {
   it("discovers RPG packs from the world graph and chooses the high-depth RPG default", () => {
     const a = api();
-    const { stories, main_story } = a.list_stories();
+    const { stories, main_story, main_world_quest_id } = a.list_stories();
     const world = a.list_world();
     expect(main_story).toBe(MAIN_RPG);
+    expect(main_world_quest_id).toBe("breaking_weir");
     expect(stories).toHaveLength(16);
     expect(stories.map((s) => s.path)).toEqual(world.quests.map((q) => q.path));
+    expect(stories.map((s) => s.world_quest_id)).toEqual(world.quests.map((q) => q.graph_node));
     expect(stories.every((s) => s.mode === "rpg")).toBe(true);
     expect(stories.every((s) => s.path.startsWith("content/rpg/pack/"))).toBe(true);
     expect(stories.some((s) => s.path.includes("/cyoa/"))).toBe(false);

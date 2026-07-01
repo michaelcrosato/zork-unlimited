@@ -92,6 +92,14 @@ export function playtestTarget(
   return mainStory;
 }
 
+export function playtestTargetWorldQuestId(
+  top: ImprovementCandidate | null,
+  mainWorldQuestId: string | null,
+): string | null {
+  if (top && top.category !== "engine" && top.category !== "repo") return null;
+  return mainWorldQuestId;
+}
+
 function main(): void {
   const root = process.cwd();
   // Keep the loop log token-small: archive all but the most recent cycles before we
@@ -103,9 +111,11 @@ function main(): void {
 
   const a = assess(root);
   const top = a.top;
-  const mainStory =
-    createToolApi({ root }).list_stories().main_story ?? "content/rpg/pack/breaking_weir.yaml";
+  const catalog = createToolApi({ root }).list_stories();
+  const mainStory = catalog.main_story ?? "content/rpg/pack/breaking_weir.yaml";
+  const mainWorldQuestId = catalog.main_world_quest_id;
   const target = playtestTarget(a, top, mainStory);
+  const targetWorldQuestId = playtestTargetWorldQuestId(top, mainWorldQuestId);
   const playtestRecord = join(runDir, "playtest.md").replaceAll("\\", "/");
 
   const targetHealth = a.packs.find((p) => p.path === target) ?? null;
@@ -118,7 +128,7 @@ function main(): void {
 
   const prompt = ultraplan
     ? buildUltraplanPrompt({ a, target, targetHealth, playtestRecord })
-    : buildPrompt({ a, top, target, targetHealth, playtestRecord });
+    : buildPrompt({ a, top, target, targetWorldQuestId, targetHealth, playtestRecord });
 
   // Per-cycle agent budget: ultraplan (multi-agent re-aim) and content_new (L-effort
   // pack authoring) both need more than the lean routine default; loop.sh reads this
@@ -142,6 +152,7 @@ function main(): void {
         runId: stamp,
         runDir,
         target,
+        ...(targetWorldQuestId ? { targetWorldQuestId } : {}),
         playtestRecord,
         recommendation: top?.title ?? null,
         mode: ultraplan ? "ultraplan" : "standard",
@@ -170,10 +181,11 @@ export function buildPrompt(ctx: {
   a: Assessment;
   top: ImprovementCandidate | null;
   target: string;
+  targetWorldQuestId?: string | null;
   targetHealth: PackHealth | null;
   playtestRecord: string;
 }): string {
-  const { a, top, target, targetHealth, playtestRecord } = ctx;
+  const { a, top, target, targetWorldQuestId, targetHealth, playtestRecord } = ctx;
   const ranked = a.candidates
     .slice(0, 6)
     .map((c, i) => `  ${i + 1}. [${c.score}] (${c.category}/${c.effort}) ${c.title}`);
@@ -187,6 +199,9 @@ export function buildPrompt(ctx: {
   // experience-tested until a later rotation cycle. So content_new flips the order:
   // author first, then blind-playtest the pack you just authored.
   const isContentNew = top?.category === "content_new";
+  const targetLabel = targetWorldQuestId
+    ? `${targetWorldQuestId} (${target})`
+    : `${target}  (${health})`;
   const playtestStep = isContentNew
     ? [
         "## STEP 1 — Author the new pack, THEN blind-playtest IT (quality feedback)",
@@ -205,11 +220,13 @@ export function buildPrompt(ctx: {
     : [
         "## STEP 1 — MANDATORY LLM playtest (quality feedback, every cycle)",
         "",
-        `Playtest target this cycle: ${target}  (${health})`,
+        `Playtest target this cycle: ${targetLabel}`,
         "",
         "- Spawn a FRESH subagent with NO design context (Agent tool general-purpose, or a",
         "  clean `claude -p` / `codex exec`). Hand it ONLY the locked-down prompt in",
-        "  docs/blind_playtest_protocol.md, with this pack and a seed. It must play purely",
+        targetWorldQuestId
+          ? `  docs/blind_playtest_protocol.md, with quest_id=${targetWorldQuestId} and a seed. It must play purely`
+          : "  docs/blind_playtest_protocol.md, with this pack and a seed. It must play purely",
         "  through the mcp__adventureforge__* tools and must NOT read content/, src/, ui/, tests/.",
         `- WRITE its structured report (route, mechanics, clarity 1-5, enjoyment 1-5,`,
         `  confusion, concrete findings, verdict) to: ${playtestRecord}`,

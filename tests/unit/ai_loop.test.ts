@@ -4,7 +4,12 @@
  * so we can unit-test the pure decision in isolation.
  */
 import { describe, it, expect } from "vitest";
-import { buildPrompt, playtestTarget, shouldRunUltraplan } from "../../src/ai-loop.js";
+import {
+  buildPrompt,
+  playtestTarget,
+  playtestTargetWorldQuestId,
+  shouldRunUltraplan,
+} from "../../src/ai-loop.js";
 import type { Assessment, ImprovementCandidate, PackHealth } from "../../src/afk/assessor.js";
 
 const mainStory = "content/rpg/pack/breaking_weir.yaml";
@@ -84,6 +89,25 @@ describe("playtestTarget", () => {
   });
 });
 
+describe("playtestTargetWorldQuestId", () => {
+  it("uses world quest ids only for shipped baseline engine/repo playtests", () => {
+    expect(
+      playtestTargetWorldQuestId(candidate("engine", "src/core/engine.ts"), "breaking_weir"),
+    ).toBe("breaking_weir");
+    expect(playtestTargetWorldQuestId(candidate("repo", "tooling"), "breaking_weir")).toBe(
+      "breaking_weir",
+    );
+    expect(playtestTargetWorldQuestId(null, "breaking_weir")).toBe("breaking_weir");
+    expect(
+      playtestTargetWorldQuestId(
+        candidate("content_fix", "content/rpg/pack/cold_forge.yaml"),
+        "breaking_weir",
+      ),
+    ).toBeNull();
+    expect(playtestTargetWorldQuestId(candidate("content_new", "rpg"), "breaking_weir")).toBeNull();
+  });
+});
+
 describe("buildPrompt blind-playtest contract", () => {
   it("content_fix cycles require a blind playtest of the target pack and named report file", () => {
     const top = candidate("content_fix", "content/rpg/pack/cold_forge.yaml");
@@ -101,6 +125,22 @@ describe("buildPrompt blind-playtest contract", () => {
     expect(prompt).toContain(`to: ${playtestRecord}`);
     expect(prompt).toContain("This file is REQUIRED");
     expect(prompt).toContain("loop.sh refuses to commit");
+  });
+
+  it("engine baseline cycles prefer world quest ids over raw pack paths", () => {
+    const top = candidate("engine", "src/core/engine.ts");
+    const prompt = buildPrompt({
+      a: assessment(top),
+      top,
+      target: mainStory,
+      targetWorldQuestId: "breaking_weir",
+      targetHealth: packHealth(mainStory),
+      playtestRecord,
+    });
+
+    expect(prompt).toContain(`Playtest target this cycle: breaking_weir (${mainStory})`);
+    expect(prompt).toContain("with quest_id=breaking_weir and a seed");
+    expect(prompt).not.toContain("with this pack and a seed");
   });
 
   it("content_new cycles author first, then blind-playtest the newly authored pack", () => {

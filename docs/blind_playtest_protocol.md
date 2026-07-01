@@ -2,9 +2,9 @@
 
 This is the canonical, repeatable procedure for the playtest step of an
 improvement cycle — manual or autonomous (AFK). It is one of the project's two
-testing modes: the dev tests (validators + exhaustive solver) prove *structure*
+testing modes: the dev tests (validators + exhaustive solver) prove _structure_
 (every ending reachable, no soft-locks, sound scoring), while this step measures the
-*experience* a real first-time player has, which only a reasoning agent that **did
+_experience_ a real first-time player has, which only a reasoning agent that **did
 not design the game** can report.
 
 The whole point is **isolation**: the playtester must judge the game from the
@@ -12,6 +12,7 @@ inside, using only what the game shows it. If it reads the YAML, the source, or
 the solution, the test is worthless.
 
 ## When to run it
+
 Once per improvement cycle, after the pack validates green. In the AFK loop it is
 the step that follows `validate_story` and precedes "pick one fix" — its findings
 are a primary input to the fix.
@@ -25,7 +26,7 @@ are a primary input to the fix.
 
 2. **Spawn a blind subagent with a FRESH context.** Use whatever isolation your
    harness provides — the `Agent` tool (`subagent_type: general-purpose`), a new
-   `claude -p`, or `codex exec` in a clean working context. Hand it *only* the
+   `claude -p`, or `codex exec` in a clean working context. Hand it _only_ the
    prompt template below. Never paste in design notes, the YAML, scene ids, or the
    solution. The subagent reaches the game **only** through the
    `mcp__adventureforge__*` MCP tools (discoverable via ToolSearch).
@@ -66,7 +67,10 @@ STRICT RULES:
   window into the game is the observations the MCP tools return.
 
 PLAY:
-- Start: mcp__adventureforge__new_game, pack_path = "<PACK>", seed = <SEED>.
+- Start shipped quests with mcp__adventureforge__start_world_quest,
+  quest_id = "<QUEST_ID>", seed = <SEED>. If the caller gives only a pack path
+  for a generated or compatibility target, use mcp__adventureforge__new_game,
+  pack_path = "<PACK>", seed = <SEED>.
 - Each observation gives scene text, your state, and available_actions (id + text).
   Choose one with step_action(session_id, action_id). Repeat until ended.
 - Make decisions a curious, sensible human would: follow clues, pursue the apparent
@@ -86,7 +90,8 @@ Be honest and specific; a critical, well-observed report is more useful than a f
 ```
 
 ## Worked example
-The first run of this protocol on *The Watchtower Road* (seed 7) reached both
+
+The first run of this protocol on _The Watchtower Road_ (seed 7) reached both
 `ending_truth` and `ending_escape`, confirmed mechanics/save-load, and surfaced
 four content-polish findings (stale cart/cellar-door text, a journal entry that
 stacked on cellar re-entry, and a ledger referenced by an ending but never carried).

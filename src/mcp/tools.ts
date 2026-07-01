@@ -125,6 +125,7 @@ type StoryEntry = {
   mode: PackMode | null;
   playable: boolean;
   world: WorldBinding | null;
+  world_quest_id: string | null;
 };
 
 const MAIN_RPG_STORY = "content/rpg/pack/breaking_weir.yaml";
@@ -386,6 +387,7 @@ export function createToolApi(opts: { root: string }) {
   function discoverStoryEntries(world = loadWorldManifest()): StoryEntry[] {
     return worldQuestPackPaths(world).map((path) => {
       const lr = loadAndReport(path);
+      const node = worldQuestNodeForPack(world, path);
       return {
         path,
         id: lr.ok ? lr.compiled.pack.meta.id : path,
@@ -393,6 +395,7 @@ export function createToolApi(opts: { root: string }) {
         mode: lr.ok ? SAVE_MODE : null,
         playable: lr.ok && lr.report.ok,
         world: lr.ok ? (lr.compiled.pack.meta.world ?? null) : null,
+        world_quest_id: node?.id ?? null,
       };
     });
   }
@@ -479,6 +482,7 @@ export function createToolApi(opts: { root: string }) {
     list_stories(): {
       stories: StoryEntry[];
       main_story: string | null;
+      main_world_quest_id: string | null;
     } {
       const stories = discoverStoryEntries();
       // Keep blind/AFK agents on the richest currently shipped RPG pack by default.
@@ -487,7 +491,11 @@ export function createToolApi(opts: { root: string }) {
         stories.find((s) => s.playable) ??
         stories[0] ??
         null;
-      return { stories, main_story: main?.path ?? null };
+      return {
+        stories,
+        main_story: main?.path ?? null,
+        main_world_quest_id: main?.world_quest_id ?? null,
+      };
     },
 
     list_world(): {
@@ -513,7 +521,7 @@ export function createToolApi(opts: { root: string }) {
       const quests = discoverStoryEntries(world)
         .filter((s) => s.world?.id === world.id)
         .map((s) => {
-          const node = worldQuestNodeForPack(world, s.path);
+          const node = s.world_quest_id ? worldQuestNodeById(world, s.world_quest_id) : null;
           return {
             path: s.path,
             id: s.id,

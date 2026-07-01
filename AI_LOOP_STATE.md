@@ -27,6 +27,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   Marches quest graph, not a raw RPG pack directory scan.
 - Preferred shipped-quest start: use `start_world_quest` / `world_quest_id`;
   raw pack-path starts remain compatibility only.
+- AFK baseline prompt now carries `main_world_quest_id`; blind baseline playtests
+  should use `start_world_quest`.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
 - Append at most 8 lines per cycle. Do not paste tool logs, full playthroughs,
