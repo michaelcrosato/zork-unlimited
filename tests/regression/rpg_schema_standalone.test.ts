@@ -56,6 +56,17 @@ describe("RPG schema owns the RPG contract", () => {
     expect(parserObservation).not.toContain("openingWorldText");
   });
 
+  it("keeps legacy parser schema as a strict shim over the RPG schema", () => {
+    const parserSchema = readFileSync("src/parser/schema.ts", "utf8");
+    expect(parserSchema).toContain("../rpg/schema");
+    expect(parserSchema).toContain("RpgPackSchema");
+    expect(parserSchema).toContain("RpgMetaSchema");
+    expect(parserSchema).toContain("omit({ enemies: true })");
+    expect(parserSchema).toContain("omit({ combat_guaranteed: true })");
+    expect(parserSchema).not.toContain("../core/conditions");
+    expect(parserSchema).not.toContain("../core/effects");
+  });
+
   it("does not import the legacy parser runner for RPG win or score events", () => {
     const runner = readFileSync("src/rpg/runner.ts", "utf8");
     expect(runner).not.toContain("../parser/runner");
@@ -83,7 +94,8 @@ describe("RPG schema owns the RPG contract", () => {
     expect(cyoaRunner).toContain("../core/skill_check");
     expect(parserRunner).not.toContain("../rpg/combat");
     expect(cyoaRunner).not.toContain("../rpg/combat");
-    expect(parserSchema).toContain("../core/skill_check");
+    expect(parserSchema).toContain("../rpg/schema");
+    expect(parserSchema).not.toContain("../core/skill_check");
     expect(rpgSchema).toContain("../core/skill_check");
     expect(cyoaSchema).toContain("../core/skill_check");
     expect(cyoaSchema).not.toContain("../parser/schema");
