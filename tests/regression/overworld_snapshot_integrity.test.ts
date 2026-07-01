@@ -21,10 +21,14 @@ function exportedSnapshotAfterTwoRoads() {
   const secondRoad = afterFirstRoad.exits[0];
   if (!secondRoad) throw new Error("expected a second overworld road");
   a.travel_overworld_session({ session_id: started.session_id, road_id: secondRoad.id });
+  a.resolve_overworld_session_road_encounter({
+    session_id: started.session_id,
+    strategy: "press_on",
+  });
 
   const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
   expect(snapshot.travelLog.length).toBeGreaterThanOrEqual(2);
-  expect(snapshot.journalEntries.length).toBeGreaterThanOrEqual(1);
+  expect(snapshot.journalEntries.length).toBeGreaterThanOrEqual(2);
   return { a, snapshot };
 }
 
@@ -38,6 +42,46 @@ describe("overworld snapshot restore integrity", () => {
 
     expect(() => a.restore_overworld_session({ snapshot: duplicatedJournal })).toThrow(
       /duplicate journal entry id/,
+    );
+  });
+
+  it("rejects malformed journal timestamps in forged session snapshots", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const malformedJournal = {
+      ...snapshot,
+      journalEntries: [
+        { ...snapshot.journalEntries[0]!, recordedAt: "yesterday" },
+        ...snapshot.journalEntries.slice(1),
+      ],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: malformedJournal })).toThrow(
+      /malformed journal timestamp/,
+    );
+  });
+
+  it("rejects future journal history in forged session snapshots", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const futureJournal = {
+      ...snapshot,
+      journalEntries: [
+        { ...snapshot.journalEntries[0]!, recordedAt: "Day 999, 00:00" },
+        ...snapshot.journalEntries.slice(1),
+      ],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: futureJournal })).toThrow(/future entry/);
+  });
+
+  it("rejects journal history that is not newest-first", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const reversedJournal = {
+      ...snapshot,
+      journalEntries: [...snapshot.journalEntries].reverse(),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: reversedJournal })).toThrow(
+      /journal must be newest-first/,
     );
   });
 

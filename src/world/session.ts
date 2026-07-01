@@ -341,6 +341,17 @@ function timeLabel(minutes: number): string {
   return `Day ${day}, ${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
 }
 
+function parseTimeLabel(label: string): number {
+  const match = /^Day ([1-9]\d*), ([01]\d|2[0-3]):([0-5]\d)$/.exec(label);
+  if (!match) {
+    throw new Error(`Overworld session snapshot has malformed journal timestamp "${label}".`);
+  }
+  const day = Number(match[1]);
+  const hour = Number(match[2]);
+  const minute = Number(match[3]);
+  return (day - 1) * 1440 + hour * 60 + minute;
+}
+
 function travelSupplyCost(minutes: number): number {
   return Math.max(1, Math.ceil(minutes / 180));
 }
@@ -432,6 +443,18 @@ function assertSnapshotTimeline(snapshot: OverworldSessionSnapshot): void {
     "travel log entry",
     snapshot.travelLog.map((entry) => `${entry.edgeId}@${entry.arrivedAt}`),
   );
+
+  let previousRecordedAt = Number.POSITIVE_INFINITY;
+  for (const entry of snapshot.journalEntries) {
+    const recordedAt = parseTimeLabel(entry.recordedAt);
+    if (recordedAt > snapshot.minutes) {
+      throw new Error("Overworld session snapshot journal contains a future entry.");
+    }
+    if (recordedAt > previousRecordedAt) {
+      throw new Error("Overworld session snapshot journal must be newest-first.");
+    }
+    previousRecordedAt = recordedAt;
+  }
 
   let previousArrivedAt = Number.POSITIVE_INFINITY;
   for (const entry of snapshot.travelLog) {
