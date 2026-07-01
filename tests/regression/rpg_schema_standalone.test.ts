@@ -28,6 +28,15 @@ describe("RPG schema owns the RPG contract", () => {
     expect(runner).not.toContain("ParserActionOption");
   });
 
+  it("keeps legacy parser legal actions as a shim over the RPG action loop", () => {
+    const parserLegalActions = readFileSync("src/parser/legal_actions.ts", "utf8");
+    expect(parserLegalActions).toContain("../rpg/legal_actions");
+    expect(parserLegalActions).toContain("enumerateRpgBaseActions");
+    expect(parserLegalActions).toContain("resolveRpgAction");
+    expect(parserLegalActions).not.toContain('case "LOOK"');
+    expect(parserLegalActions).not.toContain("function option(");
+  });
+
   it("does not import the legacy parser runner for RPG win or score events", () => {
     const runner = readFileSync("src/rpg/runner.ts", "utf8");
     expect(runner).not.toContain("../parser/runner");
