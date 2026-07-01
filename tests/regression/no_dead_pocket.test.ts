@@ -4,8 +4,8 @@
  * SOFT-LOCK POCKET — a place normal play can wander into and never finish from.
  *
  * Why this is a real gap the existing net does NOT cover:
- *   - The every-ending-reachable proofs (parser/rpg_all_endings_reachable, bug_0122/
- *     0122/0124) certify `declared endings ⊆ reachable-FROM-START`. That is a statement about
+ *   - The every-ending-reachable proofs certify `declared endings ⊆ reachable-FROM-START`.
+ *     That is a statement about
  *     the START state only. It says NOTHING about interior states: a pack can have every
  *     declared ending reachable by some route AND still contain a reachable pocket — a region
  *     you enter by a legal progress move and from which no ending is reachable at all. The
@@ -35,8 +35,8 @@
  *     reach of every ending. It deliberately does NOT claim DROP/CLOSE cannot self-strand — no
  *     shipped route gates on a drop (the helper's MONOTONE-RESTRICTION note), and a player who
  *     drops a needed key in a sealed room is self-inflicting, out of this invariant's scope.
- *   - PASS is sound: parser and RPG use
- *     best/worst-roll brackets (`exhaustiveEndingsMulti`) so skill-check/combat outcomes that
+ *   - PASS is sound: RPG uses best/worst-roll brackets (`exhaustiveEndingsMulti`) so
+ *     skill-check/combat outcomes that
  *     are monotone in the roll are represented in the graph. A state LIVE under the bracketed
  *     edges is LIVE under some real play, and a state dead under BOTH extremes is genuinely
  *     dead — guarded, for RPG, by asserting no condition gates on a raw HP value.
@@ -55,12 +55,7 @@ import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
 import { stateKey, exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 
-// Parser wiring
-import { loadParserPackFile, compileParserPack } from "../../src/parser/pack.js";
-import { indexParserPack, initStateForParserPack } from "../../src/parser/model.js";
-import { parserRollRuleSets } from "./support/parser_rolls.js";
-// RPG wiring
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgPackFile, compileRpgPack } from "../../src/rpg/pack.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { HP_VAR } from "../../src/rpg/schema.js";
 
@@ -210,37 +205,16 @@ function readsHpInCondition(node: unknown): boolean {
   return false;
 }
 
-// ── Positive coverage: every shipped parser/RPG pack ────────────────────────────────────────
+// ── Positive coverage: every shipped RPG pack ───────────────────────────────────────────────
 describe("bug_0150 — every progress-reachable state of every shipped pack is LIVE", () => {
-  const parserPacks = readdirSync("content/parser/pack")
-    .filter((f) => f.endsWith(".yaml"))
-    .sort();
   const rpgPacks = readdirSync("content/rpg/pack")
     .filter((f) => f.endsWith(".yaml"))
     .sort();
 
   it("discovers the shipped packs", () => {
     // Guard: an empty glob would make every per-pack assertion vacuously pass.
-    expect(parserPacks.length).toBeGreaterThanOrEqual(2);
     expect(rpgPacks.length).toBeGreaterThanOrEqual(2);
   });
-
-  for (const file of parserPacks) {
-    it(
-      `PARSER ${file}: no soft-lock pocket`,
-      () => {
-        const loaded = loadParserPackFile(join("content/parser/pack", file));
-        expect(loaded.ok).toBe(true);
-        if (!loaded.ok) return;
-        const index = indexParserPack(loaded.compiled.pack);
-        expectAllLive(
-          file,
-          analyzeLiveness(parserRollRuleSets(index), initStateForParserPack(index, 7)),
-        );
-      },
-      TEST_TIMEOUT_MS,
-    );
-  }
 
   for (const file of rpgPacks) {
     it(
@@ -276,7 +250,7 @@ describe("bug_0150 — every progress-reachable state of every shipped pack is L
 // any one mode proves the algorithm itself. The pair shares a structure that differs ONLY in
 // whether the trap region has a progress-action route onward.
 describe("bug_0150 — the soft-lock-pocket detector bites (and only when it should)", () => {
-  const parserPack = (trapEscapes: boolean): string => `
+  const rpgPack = (trapEscapes: boolean): string => `
 meta: { id: t, title: T, start_room: s }
 rooms:
   - id: s
@@ -295,24 +269,28 @@ win_conditions:
   - { id: w, conditions: [{ visited: good }], ending: e_good }
 endings:
   - { id: e_good, title: EG, text: "You win." }
+enemies: []
 `;
 
-  function parserLiveness(src: string): LivenessResult {
-    const r = compileParserPack(src);
+  function rpgLiveness(src: string): LivenessResult {
+    const r = compileRpgPack(src);
     expect(r.ok).toBe(true);
     if (!r.ok) throw new Error("control pack must compile");
-    const index = indexParserPack(r.compiled.pack);
-    return analyzeLiveness(parserRollRuleSets(index), initStateForParserPack(index, 7));
+    const index = indexRpgPack(r.compiled.pack);
+    return analyzeLiveness(
+      [buildRpgRules(index, bestRng), buildRpgRules(index, worstRng)],
+      initStateForRpgPack(index, 7),
+    );
   }
 
-  it("PARSER: an exit-less trap room is flagged a soft-lock pocket", () => {
-    const r = parserLiveness(parserPack(false));
+  it("RPG: an exit-less trap room is flagged a soft-lock pocket", () => {
+    const r = rpgLiveness(rpgPack(false));
     expect(r.cappedOut).toBe(false);
     expect(r.deadCount).toBeGreaterThan(0);
   });
 
-  it("PARSER: the SAME trap room with a way back is fully live (no false positive)", () => {
-    const r = parserLiveness(parserPack(true));
+  it("RPG: the SAME trap room with a way back is fully live (no false positive)", () => {
+    const r = rpgLiveness(rpgPack(true));
     expect(r.cappedOut).toBe(false);
     expect(r.deadCount).toBe(0);
   });

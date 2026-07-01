@@ -37,7 +37,7 @@ import {
   initStateForRpgPack,
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
-import { buildParserObservation } from "../../src/parser/observation.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { Action, RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
@@ -51,7 +51,7 @@ const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
 const options = (s: GameState) => enumerateRpgActions(index, s);
-const score = (s: GameState): number => buildParserObservation(index, s).score;
+const score = (s: GameState): number => buildRpgObservation(index, s).score;
 
 const EXAMINE_SARC: RpgAction = { type: "LOOK", target: "sarcophagus" };
 

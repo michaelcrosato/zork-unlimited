@@ -1,7 +1,7 @@
 # AdventureForge
 
 A headless, AI-authored text-adventure engine centered on a Hero's-Quest RPG,
-with legacy parser migration shims, procedural authoring, MCP play, and a React UI. See
+with procedural authoring, MCP play, an overworld layer, and a React UI. See
 [`ADVENTUREFORGE_BUILD_SPEC.md`](./ADVENTUREFORGE_BUILD_SPEC.md) for the original
 design brief.
 
@@ -41,33 +41,14 @@ The original CYOA runtime and content tree were retired during RPG-only consolid
 Their replacement is the shared RPG-owned schema/runner/validator surface below; old
 CYOA assets are forbidden from reappearing by `scripts/verify-integrity.ts`.
 
-### Stage 2 — Zork-style parser adventure ✅
+### Stage 2 — retired parser prototype
 
-The same Stage-0 core, now driving a parser game: rooms, objects, containers, locked
-doors, an NPC dialogue tree, and USE puzzles — exposed to agents as a Jericho-style
-**legal-action set**, never a raw parser to guess at.
-
-| Piece | File |
-|---|---|
-| Parser schema (§7.3) | `src/parser/schema.ts` |
-| World model: object location, containers, dialogue state | `src/parser/model.ts` |
-| Legal-action generator + resolver (§9, §9.2) | `src/parser/legal_actions.ts` |
-| Runner: pack → `Rules`, win conditions on room entry (§8.4) | `src/parser/runner.ts` |
-| Parser observation (§9.2) | `src/parser/observation.ts` |
-| Controlled human command parser (§9.3) | `src/parser/command_map.ts` |
-| Parser validator (§10.2) | `src/validate/parser_validator.ts` |
-| Sample pack: *The Sealed Crypt* (10 rooms, 8 objects, 2 containers, 2 locked doors, 1 NPC, 2 puzzles) | `content/parser/pack/sealed_crypt.yaml` |
-| Negative fixtures that MUST fail (§10.4) | `content/broken-fixtures/parser_*.yaml` |
-| Bug artifact + regression (§15) | `traces/bugs/bug_0001_*.yaml`, `tests/regression/parser_crypt_softlock.test.ts` |
-
-Two small **additive** engine extensions went through the §14 gate: an
-`ObjectRuntime.room` field and a `place_object` effect (both needed for DROP).
-
-The parser validator adds the §10.2 invariants on top of graph reachability:
-locked-exit/locked-container key satisfiability, an item-obtainability fixpoint
-(keys that unlock containers that hold keys…), `quest_critical` permanent-loss
-guards (consumption and one-way-map drops), dialogue-tree termination, and
-win reachability — each with a documented conservative approximation.
+The original parser runtime and content packs were retired during RPG-only
+consolidation. Its useful mechanics — rooms, objects, containers, locked doors,
+NPC dialogue, USE puzzles, legal-action menus, reactive prose, and structural
+validation — now live in the RPG-owned schema, model, runner, observation, and
+foundation validator. Parser assets are forbidden from reappearing by
+`scripts/verify-integrity.ts`.
 
 ### Stage 3 — Sierra-Quest style (score · death/restore · puzzle chains) ✅
 
@@ -76,8 +57,8 @@ longer puzzle chains.
 
 | Piece | File |
 |---|---|
-| Score (`inc_var` on a `score` var) + `max_score`, `ending.death` flag | `src/parser/schema.ts` |
-| Validator extensions (§13 Stage 3) | `src/validate/parser_validator.ts` |
+| Score (`inc_var` on a `score` var) + `max_score`, `ending.death` flag | `src/rpg/schema.ts` |
+| Validator extensions (§13 Stage 3) | `src/validate/rpg_foundation_validator.ts` |
 | Sample pack | Retired during RPG-only consolidation |
 
 Scoring is a conventional `score` var awarded via `inc_var`; death endings are
@@ -94,9 +75,9 @@ roll flowing through the PRNG so fights replay exactly (§8.5).
 
 | Piece | File |
 |---|---|
-| RPG schema (parser pack + enemies; `skill_check` on interactions) | `src/rpg/schema.ts` |
+| RPG schema (`skill_check` on interactions, enemies, stats, world binding) | `src/rpg/schema.ts` |
 | Seeded combat + skill-check resolvers (randomness in the pure resolver) | `src/rpg/combat.ts` |
-| RPG runner (parser actions + `ATTACK`) + observation | `src/rpg/runner.ts`, `src/rpg/observation.ts` |
+| RPG runner (legal-action menu + `ATTACK`) + observation | `src/rpg/runner.ts`, `src/rpg/observation.ts` |
 | RPG validator (winnability, skill passability, stat/death-ending checks) | `src/validate/rpg_validator.ts` |
 | Gated core DSL additions: `set_quest_stage` effect, `quest_stage` condition, `ATTACK` action | `src/core/`, `src/api/types.ts` |
 | Sample pack: *The Sunken Barrow* | `content/rpg/pack/sunken_barrow.yaml` |
@@ -104,8 +85,8 @@ roll flowing through the PRNG so fights replay exactly (§8.5).
 | §14 gate record (all six items) | [`docs/stage4_rpg_gate.md`](./docs/stage4_rpg_gate.md) |
 | Acceptance + unit + regression tests, recorded victory trace | `tests/`, `traces/rpg/barrow_victory.json` |
 
-Stage 4 made RPG the canonical runtime surface; legacy parser support remains as a
-compatibility shim while old content is retired or converted.
+Stage 4 made RPG the canonical runtime surface; old CYOA and parser code/content
+have since been retired.
 
 ### Stage 5 — Web UI (React + Vite) ✅
 
@@ -115,7 +96,7 @@ the UI never decides legality.
 
 | Piece | File |
 |---|---|
-| Browser engine client (one `GameSession` for all modes) | `ui/src/engine.ts` |
+| Browser engine client (`GameSession` for RPG play) | `ui/src/engine.ts` |
 | React play view + pack picker | `ui/src/App.tsx`, `ui/src/packs.ts` |
 | Pure-JS SHA-256 (makes the core browser-safe; byte-identical digests) | `src/core/sha256.ts` |
 | Node test proving the UI uses only the structured API | `tests/unit/ui_engine.test.ts` |
@@ -173,20 +154,29 @@ The RPG generator is exposed over MCP as `generate_rpg_pack` (mint + validate a
 fresh pack, read-only) and is playable in-memory via `new_game`'s
 `generate_rpg_seed`.
 
-## Content library (7 listed packs)
+## Content Library
 
 The shipped, validated content — every pack passes the validator and is wired into
 `npm run health`:
 
-| Mode | Pack | File |
-|---|---|---|
-| Parser | The Sealed Crypt | `content/parser/pack/sealed_crypt.yaml` |
-| Parser | The Friars' Postern | `content/parser/pack/friars_postern.yaml` |
-| RPG | The Sunken Barrow | `content/rpg/pack/sunken_barrow.yaml` |
-| RPG | The Cold Forge | `content/rpg/pack/cold_forge.yaml` |
-| RPG | The Dawn Beacon | `content/rpg/pack/dawn_beacon.yaml` |
-| RPG | The Wolf-Winter | `content/rpg/pack/wolf_winter.yaml` |
-| RPG | The Breaking Weir | `content/rpg/pack/breaking_weir.yaml` |
+| Pack | File |
+|---|---|
+| The Advocate's Case | `content/rpg/pack/advocates_case.yaml` |
+| The Bellfounder's Alarm | `content/rpg/pack/bellfounders_alarm.yaml` |
+| The Breaking Weir | `content/rpg/pack/breaking_weir.yaml` |
+| The Bridgewright's Proof | `content/rpg/pack/bridgewrights_proof.yaml` |
+| The Cold Forge | `content/rpg/pack/cold_forge.yaml` |
+| The Dawn Beacon | `content/rpg/pack/dawn_beacon.yaml` |
+| The Factor's Mark | `content/rpg/pack/factors_mark.yaml` |
+| The Falconer's Ransom | `content/rpg/pack/falconers_ransom.yaml` |
+| The Gallowmere | `content/rpg/pack/gallowmere.yaml` |
+| The Lock-Keeper's Toll | `content/rpg/pack/lockkeepers_toll.yaml` |
+| The Powder Mill Surety | `content/rpg/pack/powder_mill_surety.yaml` |
+| The Printer's Night | `content/rpg/pack/printers_night.yaml` |
+| The Quarrymen's Fault | `content/rpg/pack/quarrymens_fault.yaml` |
+| The Sunken Barrow | `content/rpg/pack/sunken_barrow.yaml` |
+| The Tanner's Fever | `content/rpg/pack/tanners_fever.yaml` |
+| The Wolf-Winter | `content/rpg/pack/wolf_winter.yaml` |
 
 Most of this library — plus engine refinements like reactive room/scene descriptions
 (`variants`), an opt-in `meta.deadline` timer, and natural USE-verbs — was produced
@@ -215,7 +205,7 @@ npm run ui:dev                                             # Stage 5: web UI (af
 Non-interactive play (scriptable / CI): add
 `--commands "go north; take rope; attack wight; ..."`. Use
 `--record traces/run.json` to save a replayable trace. `npm run validate` is the
-RPG content gate and rejects legacy parser packs.
+RPG content gate and rejects non-RPG pack shapes.
 
 ### MCP server — how an agent plays the game (§9.4)
 
@@ -226,8 +216,8 @@ discovers shipped packs under `content/rpg/pack`, picks the high-depth RPG pack
 `breaking_weir` as the default, and `list_world` reports the RPG quest subset of
 the Charter Marches. The same structured `new_game` / `step_action` /
 `get_observation` / save·load path drives RPG sessions through stable action ids
-and deterministic state hashes. Explicit parser pack loading is rejected through
-MCP with an `UNSUPPORTED_LEGACY_PACK` report; those old packs are now migration
+and deterministic state hashes. Explicit non-RPG pack loading is rejected through
+MCP with an `UNSUPPORTED_LEGACY_PACK` report; old pack shapes are now migration
 data, not playable agent targets. The CYOA tree has been retired. All paths are
 confined to the project root; content and traces are data only (§16). The handlers
 (`src/mcp/tools.ts`)

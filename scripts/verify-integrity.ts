@@ -42,12 +42,10 @@ import { join, relative } from "node:path";
 /** Verification assets the project's correctness rests on. Must always exist. */
 export const PROTECTED_FILES = [
   "tests/property/determinism.test.ts",
-  "tests/property/parser_determinism.test.ts",
   "src/core/rng.ts",
   "src/core/hash.ts",
   "src/core/sha256.ts",
   "src/core/engine.ts",
-  "src/validate/parser_validator.ts",
   "src/validate/rpg_validator.ts",
   "src/persist/save_load.ts",
   // The RPG generator program is the only supported moving-target content generator.
@@ -77,6 +75,10 @@ export const FORBIDDEN_FILES = [
   "src/cyoa",
   "src/validate/cyoa_validator.ts",
   "content/cyoa",
+  "src/parser",
+  "src/validate/parser_validator.ts",
+  "content/parser",
+  "tests/property/parser_determinism.test.ts",
 ];
 
 /** Files holding committed hash pins / known-answer vectors that should not change

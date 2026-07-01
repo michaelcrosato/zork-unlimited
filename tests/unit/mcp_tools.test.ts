@@ -12,7 +12,7 @@ import type { RpgAction } from "../../src/api/types.js";
 
 const ROOT = process.cwd();
 const PACK = "content/rpg/pack/sunken_barrow.yaml";
-const LEGACY_PACK = "content/parser/pack/sealed_crypt.yaml";
+const NON_RPG_PACK = "content/broken-fixtures/duplicate_id.yaml";
 const MAIN_RPG = "content/rpg/pack/breaking_weir.yaml";
 const api = () => createToolApi({ root: ROOT });
 const overworld = parseOverworldManifest(
@@ -135,7 +135,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.main_story).toBe(MAIN_RPG);
     expect(r.stories).toHaveLength(16);
     expect(r.stories.every((s) => s.mode === "rpg")).toBe(true);
-    expect(r.stories.some((s) => s.path === LEGACY_PACK)).toBe(false);
+    expect(r.stories.some((s) => s.path.startsWith("content/parser/"))).toBe(false);
     expect(r.stories.some((s) => s.path === PACK)).toBe(true);
     expect(r.stories.find((s) => s.path === MAIN_RPG)?.world?.hub).toBe("Charterhaven");
   });
@@ -185,7 +185,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.local_job_count).toBe(r.area_count);
     expect(r.road_event_count).toBe(r.road_count);
     expect(r.exploration_site_count).toBeGreaterThanOrEqual(r.region_count * 3);
-    expect(r.quest_count).toBe(21);
+    expect(r.quest_count).toBe(11);
   });
 
   it("looks and travels through the New York overworld without global quest selection", () => {
@@ -200,7 +200,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(start.local_jobs.length).toBe(start.areas.length);
     expect(start.nearby_sites.length).toBeGreaterThan(0);
     expect(start.local_quests.length).toBeGreaterThan(0);
-    expect(start.local_quests.length).toBeLessThan(21);
+    expect(start.local_quests.length).toBeLessThan(11);
 
     const road = start.exits.find((edge) => edge.destination.id === "colonie_town");
     expect(road).toBeTruthy();
@@ -875,7 +875,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
   });
 
   it("validate_pack rejects legacy explicit pack targets", () => {
-    const r = api().validate_pack({ pack_path: LEGACY_PACK });
+    const r = api().validate_pack({ pack_path: NON_RPG_PACK });
     expect(r.ok).toBe(false);
     expect(r.report.findings.map((f) => f.code)).toContain("UNSUPPORTED_LEGACY_PACK");
   });
@@ -974,7 +974,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
   });
 
   it("refuses to start a game on a legacy pack", () => {
-    expect(() => api().new_game({ pack_path: LEGACY_PACK })).toThrow(/RPG-only/i);
+    expect(() => api().new_game({ pack_path: NON_RPG_PACK })).toThrow(/UNSUPPORTED_LEGACY_PACK/);
   });
 });
 

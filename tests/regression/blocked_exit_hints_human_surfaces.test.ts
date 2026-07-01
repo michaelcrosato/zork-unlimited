@@ -60,9 +60,9 @@ describe("bug_0206 — blocked_exits reaches the active human renderers (RPG CLI
     expect(out).not.toContain("Blocked (");
   });
 
-  it("UI view(): legacy parser packs are rejected rather than routed through a hidden renderer", () => {
+  it("UI view(): non-RPG packs are rejected rather than routed through a hidden renderer", () => {
     expect(() =>
-      GameSession.start(readFileSync("content/parser/pack/sealed_crypt.yaml", "utf8"), 7),
+      GameSession.start(readFileSync("content/broken-fixtures/duplicate_id.yaml", "utf8"), 7),
     ).toThrow(/RPG-only/i);
   });
 

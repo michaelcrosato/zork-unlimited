@@ -1,5 +1,5 @@
 /**
- * Structural verification (§15) — every DEATH ending of every shipped parser/RPG pack
+ * Structural verification (§15) — every DEATH ending of every shipped RPG pack
  * RENDERS cleanly to the dying player. This GENERALIZES the per-pack render oracles
  * cold_forge_death_ending_render.test.ts (bug_0125) and rpg_barrow_death_ending_render
  * .test.ts to all packs at once, and auto-covers any future pack (the bug_0096
@@ -8,7 +8,7 @@
  * Why this is a real gap, not a duplicate
  * ---------------------------------------
  * Two layers already exist, and neither locks the player-facing RENDER across the board:
- *   - {parser,rpg}_all_endings_reachable.test.ts prove every declared ending — death
+ *   - rpg_all_endings_reachable.test.ts proves every declared ending — death
  *     endings included — is route-reachable, but over an ABSTRACT BFS that inspects
  *     GameState and "never renders an observation".
  *   - The combat/skill checks prove a death is dynamically reachable, again on state.
@@ -27,29 +27,24 @@
  * The shared exhaustive solver (support/exhaustive_endings.ts) visits every DISTINCT
  * reachable state exactly once and hands each to `onState` — terminal states included.
  * We capture the first terminal state whose endingId is a declared death ending as a
- * concrete WITNESS, then build the real player-facing observation
- * (src/parser/observation.ts, shared by parser and RPG) on it and assert it renders
- * cleanly. Every witness is produced by a real `makeStep` over the engine's own legal
- * actions — for RPG, under the same best/worst-roll bracket the reachability proof uses
+ * concrete WITNESS, then build the real player-facing RPG observation on it and assert
+ * it renders cleanly. Every witness is produced by a real `makeStep` over the engine's
+ * own legal actions under the same best/worst-roll bracket the reachability proof uses
  * (a death falls out of the worst-roll regime) — so it is a state a concrete seed/play
  * genuinely reaches, never spurious. If a declared death ending is never witnessed the
  * test FAILS loudly (a severed route), so the render checks can never pass vacuously.
  *
- * Pure test addition — no content/engine/validator/hash change. Legacy CYOA content is
- * retired, so death-ending render coverage is parser/RPG-only.
+ * Pure test addition — no content/engine/validator/hash change.
  */
 import { describe, it, expect } from "vitest";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
-import { loadParserPackFile } from "../../src/parser/pack.js";
-import { indexParserPack, initStateForParserPack } from "../../src/parser/model.js";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
-import { buildParserObservation } from "../../src/parser/observation.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
-import { parserRollRuleSets } from "./support/parser_rolls.js";
 import type { Rules } from "../../src/core/engine.js";
 import type { Action } from "../../src/api/types.js";
 
@@ -60,7 +55,7 @@ const MAX_STATES = 200_000;
 // fixed-sequence PRNG whose draws bracket the player's outcomes. resolveAttack draws the
 // player's strike first, the enemy reply second; resolveSkillCheck draws once. The WORST
 // regime (own strike min, damage taken max) is what drives a death — exactly the path we
-// need a witness for. Parser skill checks use their own best/worst d20 bracket.
+// need a witness for.
 const HIGH = 0.999999;
 const LOW = 0;
 function fixedSeqRng(fracs: number[]): Rng {
@@ -84,7 +79,7 @@ const worstRng = (): Rng => fixedSeqRng([LOW, HIGH]);
 
 type DeathEnding = { id: string; title: string; text: string };
 
-/** The death endings a pack declares (parser/RPG only carry the `death` flag). */
+/** The death endings a pack declares. */
 function deathEndingsOf(endings: { id: string; title: string; text: string; death?: boolean }[]) {
   return endings
     .filter((e) => e.death === true)
@@ -108,13 +103,13 @@ function deathWitnesses<A extends Action>(
 }
 
 /**
- * The player-facing render contract for a reached death ending (src/parser/observation.ts):
+ * The player-facing render contract for a reached death ending:
  * the dying player sees the ending's own TITLE (not a stale room name), its epilogue TEXT,
  * the `death:true` flag a UI marks the loss with, and — for a scored pack — a "Final score"
  * closure on the description only (the canonical ending text stays pure).
  */
 function assertCleanDeathRender(
-  obs: ReturnType<typeof buildParserObservation>,
+  obs: ReturnType<typeof buildRpgObservation>,
   def: DeathEnding,
   maxScore: number,
 ): void {
@@ -140,55 +135,20 @@ function assertCleanDeathRender(
   }
 }
 
-const PARSER_DIR = "content/parser/pack";
 const RPG_DIR = "content/rpg/pack";
-const parserFiles = readdirSync(PARSER_DIR)
-  .filter((f) => f.endsWith(".yaml"))
-  .sort();
 const rpgFiles = readdirSync(RPG_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();
 
-describe("every death ending of every parser/RPG pack renders cleanly to the dying player", () => {
+describe("every death ending of every RPG pack renders cleanly to the dying player", () => {
   it("discovers death endings to render-check (guard against a vacuous pass)", () => {
     let total = 0;
-    for (const f of parserFiles) {
-      const l = loadParserPackFile(join(PARSER_DIR, f));
-      if (l.ok) total += deathEndingsOf(l.compiled.pack.endings).length;
-    }
     for (const f of rpgFiles) {
       const l = loadRpgPackFile(join(RPG_DIR, f));
       if (l.ok) total += deathEndingsOf(l.compiled.pack.endings).length;
     }
-    // 13 across the shipped 4 parser + 5 RPG packs; floor leaves headroom for content
-    // churn while still failing loudly if discovery breaks and the suite goes vacuous.
-    expect(total).toBeGreaterThanOrEqual(9);
+    expect(total).toBeGreaterThanOrEqual(5);
   });
-
-  for (const file of parserFiles) {
-    it(`${file} (parser): each declared death ending renders cleanly when reached`, () => {
-      const loaded = loadParserPackFile(join(PARSER_DIR, file));
-      expect(loaded.ok).toBe(true);
-      if (!loaded.ok) return;
-      const pack = loaded.compiled.pack;
-      const deaths = deathEndingsOf(pack.endings);
-      if (deaths.length === 0) return; // nothing to render-check
-      const index = indexParserPack(pack);
-      const start = initStateForParserPack(index, 7);
-      const { witness, cappedOut } = deathWitnesses(
-        parserRollRuleSets(index),
-        start,
-        new Set(deaths.map((d) => d.id)),
-      );
-      expect(cappedOut, "state-space search hit the cap (witnesses unproven)").toBe(false);
-      for (const def of deaths) {
-        const s = witness.get(def.id);
-        expect(s, `death ending ${def.id} never reached by concrete play`).toBeDefined();
-        if (!s) continue;
-        assertCleanDeathRender(buildParserObservation(index, s), def, pack.meta.max_score ?? 0);
-      }
-    });
-  }
 
   for (const file of rpgFiles) {
     it(`${file} (rpg): each declared death ending renders cleanly when reached`, () => {
@@ -210,8 +170,7 @@ describe("every death ending of every parser/RPG pack renders cleanly to the dyi
         const s = witness.get(def.id);
         expect(s, `death ending ${def.id} never reached by concrete play`).toBeDefined();
         if (!s) continue;
-        // RPG reuses the parser observation builder (cf. cold_forge_death_ending_render).
-        assertCleanDeathRender(buildParserObservation(index, s), def, pack.meta.max_score ?? 0);
+        assertCleanDeathRender(buildRpgObservation(index, s), def, pack.meta.max_score ?? 0);
       }
     });
   }

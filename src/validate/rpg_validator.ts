@@ -66,9 +66,9 @@ function rpgRuntimeEffects(pack: RpgPack): Effect[] {
 }
 
 export function validateRpg(pack: RpgPack): ValidationReport {
-  // Flags/items that combat provides — handed to the parser validator. Authored
-  // skill-check branch effects are parser-owned now, so do not inject them here
-  // again (score/list extras would double-count them).
+  // Flags/items that combat provides to the foundation validator. Authored
+  // skill-check branch effects are scanned by the RPG foundation validator, so do
+  // not inject them here again (score/list extras would double-count them).
   const enemyEffects = enemyRuntimeEffects(pack);
   const extraSettableFlags: string[] = [];
   const extraObtainable: string[] = [];
@@ -76,7 +76,7 @@ export function validateRpg(pack: RpgPack): ValidationReport {
     if (enemy.defeat_flag) extraSettableFlags.push(enemy.defeat_flag);
   }
   // Quest stages set through RPG-only combat branches. Keyed with the SAME NUL
-  // separator the parser validator's questStageKey uses, so the keys match.
+  // separator the foundation validator's questStageKey uses, so the keys match.
   // Mirrors extraSettableFlags.
   const extraSettableQuestStages: string[] = [];
   for (const e of enemyEffects) {
@@ -86,14 +86,14 @@ export function validateRpg(pack: RpgPack): ValidationReport {
       extraSettableQuestStages.push(`${e.set_quest_stage.quest}\0${e.set_quest_stage.stage}`);
   }
 
-  // Score awarded through RPG-only combat branches, which the
-  // parser validator's SCORE_UNREACHABLE bound does not scan — fold it in so a
+  // Score awarded through RPG-only combat branches, which the foundation
+  // SCORE_UNREACHABLE bound does not scan — fold it in so a
   // score earned by winning a fight counts as reachable.
   let extraScoreAwards = 0;
   for (const e of enemyEffects)
     if ("inc_var" in e && e.inc_var.name === SCORE_VAR) extraScoreAwards += e.inc_var.by;
 
-  // The grouped RPG-only combat effect lists, handed to the parser validator's
+  // The grouped RPG-only combat effect lists, handed to the foundation validator's
   // SCORE_PEAKS_BEFORE_WIN check so a score award co-located with a combat act that
   // sets a win-trigger flag is seen as such.
   const extraEffectLists: Effect[][] = [];
@@ -101,7 +101,7 @@ export function validateRpg(pack: RpgPack): ValidationReport {
 
   // The WIN_FIRES_AT_START stability proof must also see RPG-only falsifiers:
   // combat branches can falsify a start-true win (extraFalsifierEffects), and
-  // combat mutates HP via dynamic set_var the parser scan never sees, so the player
+  // combat mutates HP via dynamic set_var the authored-effect scan never sees, so the player
   // + enemy HP vars are volatile (a win condition on them is escapable).
   const extraVolatileVars = [
     HP_VAR,
@@ -152,7 +152,7 @@ export function validateRpg(pack: RpgPack): ValidationReport {
   // buff obtained) is the sound direction — it can only REMOVE false positives,
   // never add one. A negative inc_var (a debuff) is ignored (Math.max(0, by)),
   // exactly as the skill ceiling does, so it never over-credits.
-  const buffEffects = [...rpgRuntimeEffects(pack), ...allParserEffects(pack)];
+  const buffEffects = [...rpgRuntimeEffects(pack), ...allAuthoredEffects(pack)];
   const statCeiling = (name: string): number => {
     let v = vi[name] ?? 0;
     for (const e of buffEffects)
@@ -309,7 +309,7 @@ export function validateRpg(pack: RpgPack): ValidationReport {
   return makeReport(pack.meta.id, findings);
 }
 
-function allParserEffects(pack: RpgPack): Effect[] {
+function allAuthoredEffects(pack: RpgPack): Effect[] {
   const out: Effect[] = [];
   for (const r of pack.rooms) out.push(...r.on_enter);
   for (const o of pack.objects) for (const it of o.interactions) out.push(...it.effects);

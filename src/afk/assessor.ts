@@ -195,8 +195,17 @@ export function findStaleDocRefs(docText: string, exists: (relPath: string) => b
  * the same discipline as LINT_DIRS omitting data/forward dirs): AI_LOOP_STATE.md (a
  * historical per-cycle log that records paths/hashes as they were, some since
  * moved), docs/ROADMAP.md and ADVENTUREFORGE_BUILD_SPEC.md (forward-looking — they
- * may name planned files that don't exist yet).
+ * may name planned files that don't exist yet), plus historical planning/gate logs
+ * that intentionally preserve retired parser/CYOA paths.
  */
+const DOC_STALENESS_EXCLUDED_DOCS = new Set([
+  "DECISION_LOG.md",
+  "ROADMAP.md",
+  "RPG-STANDARDIZATION-PLAN.md",
+  "ULTRAPLAN-2026-06-02.md",
+  "stage4_rpg_gate.md",
+]);
+
 function docStalenessDocs(root: string): string[] {
   const out: string[] = [];
   for (const f of ["AGENTS.md", "README.md", "AI_AGENT_PROMPT.md"]) {
@@ -207,7 +216,7 @@ function docStalenessDocs(root: string): string[] {
     for (const e of readdirSync(docsDir, { withFileTypes: true }).sort((a, b) =>
       a.name.localeCompare(b.name),
     )) {
-      if (e.isFile() && e.name.endsWith(".md") && e.name !== "ROADMAP.md")
+      if (e.isFile() && e.name.endsWith(".md") && !DOC_STALENESS_EXCLUDED_DOCS.has(e.name))
         out.push(`docs/${e.name}`);
     }
   }

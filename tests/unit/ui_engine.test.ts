@@ -8,14 +8,25 @@ import { readFileSync } from "node:fs";
 import { GameSession, isRpgSource } from "../../ui/src/engine.js";
 
 const read = (p: string): string => readFileSync(p, "utf8");
+const NON_RPG_SOURCE = `
+meta: { id: non_rpg, title: "Non RPG", start_room: start }
+rooms:
+  - id: start
+    name: "Start"
+    description: "No RPG enemies field."
+    exits: []
+objects: []
+win_conditions:
+  - { id: done, conditions: [{ visited: start }], ending: done }
+endings:
+  - { id: done, title: "Done", text: "Done." }
+`;
 
 describe("GameSession — RPG-only structured play", () => {
   it("accepts RPG sources and rejects legacy pack shapes", () => {
     expect(isRpgSource(read("content/rpg/pack/sunken_barrow.yaml"))).toBe(true);
-    expect(isRpgSource(read("content/parser/pack/sealed_crypt.yaml"))).toBe(false);
-    expect(() => GameSession.start(read("content/parser/pack/sealed_crypt.yaml"), 1)).toThrow(
-      /RPG-only/i,
-    );
+    expect(isRpgSource(NON_RPG_SOURCE)).toBe(false);
+    expect(() => GameSession.start(NON_RPG_SOURCE, 1)).toThrow(/RPG-only/i);
   });
 
   it("rejects an illegal action id without advancing", () => {

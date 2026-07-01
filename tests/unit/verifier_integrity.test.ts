@@ -380,6 +380,10 @@ describe("runStatic on the real repo (this is the bar)", () => {
     expect(FORBIDDEN_FILES).toContain("src/cyoa");
     expect(FORBIDDEN_FILES).toContain("src/validate/cyoa_validator.ts");
     expect(FORBIDDEN_FILES).toContain("content/cyoa");
+    expect(FORBIDDEN_FILES).toContain("src/parser");
+    expect(FORBIDDEN_FILES).toContain("src/validate/parser_validator.ts");
+    expect(FORBIDDEN_FILES).toContain("content/parser");
+    expect(FORBIDDEN_FILES).toContain("tests/property/parser_determinism.test.ts");
     expect(res.findings.filter((f) => f.code === "FORBIDDEN_FILE_PRESENT")).toEqual([]);
   });
 

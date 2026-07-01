@@ -11,12 +11,9 @@
  *
  * The fix is CONTENT (meta.max_score: 50 + three one-time milestone awards — +10 on
  * slaying the wight, +15 on levering the slab, +25 on claiming the relic) PLUS one
- * VALIDATOR-correctness fix the RPG layer needs: the SCORE_UNREACHABLE upper bound is
- * computed inside validateParser from allEffects(pack), which does NOT scan the
- * RPG-only award branches (enemy on_defeat, skill_check on_success/on_failure). So
- * two of the three barrow awards (+10, +15) were invisible to the bound and the pack
- * false-flagged SCORE_UNREACHABLE. ValidateParserOptions now takes extraScoreAwards;
- * validateRpg sums the inc_var-score awards in its runtime branches and folds them in.
+ * VALIDATOR-correctness fix the RPG layer needs: the SCORE_UNREACHABLE upper bound
+ * must include RPG runtime branches (enemy on_defeat, skill_check on_success/on_failure).
+ * validateRpg sums the inc_var-score awards in those branches and folds them in.
  *
  * Locked here:
  *   (1) score is 0 at start, rises 0→10→25→50 across the three milestones, and is
@@ -24,10 +21,8 @@
  *   (2) each award is one-time — the wight cannot be re-attacked (dead), the lever
  *       retires after success (use drops from the legal set, bug_0015), and the relic
  *       chamber ends the game on entry so its on_enter +25 cannot re-fire;
- *   (3) the validator fold-in is real: the parser-only bound counts just the +25 in a
- *       scanned location, so validateParser(pack) WITHOUT the RPG awards fires
- *       SCORE_UNREACHABLE — and validateRpg(pack) passes (so the declared max is
- *       genuinely awardable once the combat/skill-check awards are counted).
+ *   (3) validateRpg(pack) passes with no SCORE_UNREACHABLE, so the declared max is
+ *       genuinely awardable once combat/skill-check awards are counted.
  */
 import { describe, it, expect } from "vitest";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
@@ -37,8 +32,7 @@ import {
   initStateForRpgPack,
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
-import { buildParserObservation } from "../../src/parser/observation.js";
-import { validateParser } from "../../src/validate/parser_validator.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
@@ -50,7 +44,7 @@ const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
 const step = makeStep(buildRpgRules(index));
 
-const score = (s: GameState): number => buildParserObservation(index, s).score;
+const score = (s: GameState): number => buildRpgObservation(index, s).score;
 const options = (s: GameState) => enumerateRpgActions(index, s);
 
 function act(s: GameState, pred: (a: Action) => boolean): GameState {
@@ -129,19 +123,9 @@ describe("bug_0016 — Sunken Barrow scoring accrues 0→10→25→50 across the
     expect(score(s)).toBe(50);
   });
 
-  it("the validator fold-in is real: parser-only bound still misses combat awards", () => {
+  it("the validator fold-in is real: validateRpg accepts the full score economy", () => {
     expect(pack.meta.max_score).toBe(50);
 
-    // Without the RPG combat award, the parser-scanned locations cover the circlet's
-    // take_effects +25 and the slab skill-check's on_success +15, but still miss the
-    // wight's on_defeat +10. The parser-only bound is therefore below 50, so
-    // SCORE_UNREACHABLE must fire.
-    const parserOnly = validateParser(pack);
-    expect(parserOnly.findings.find((f) => f.code === "SCORE_UNREACHABLE")).toBeDefined();
-
-    // validateRpg folds in the +10 combat on_defeat award, while parser validation
-    // now owns the +15 skill-check on_success award, so 50 is genuinely awardable
-    // and the pack validates clean.
     const rpg = validateRpg(pack);
     expect(rpg.ok).toBe(true);
     expect(rpg.findings.find((f) => f.code === "SCORE_UNREACHABLE")).toBeUndefined();

@@ -18,7 +18,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
 ## Current Snapshot
 
 - Verification bar: `npm run health` remains the required end gate.
-- Current corpus: parser, RPG, and overworld content are broad enough that
+- Current corpus: RPG and overworld content are broad enough that
   routine work should prefer targeted fixes or structural checks over more log prose.
 - Raw evidence belongs in ignored paths: `ai-runs/`, `blind-tester/reports/`,
   local logs, and build output.
@@ -31,8 +31,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Mandatory LLM playtest target this cycle: content/rpg/pack/tanners_fever.yaml
 - Mandatory LLM playtest target this cycle: content/rpg/pack/falconers_ransom.yaml
 - Mandatory LLM playtest target this cycle: content/rpg/pack/factors_mark.yaml
-- Mandatory LLM playtest target this cycle: content/parser/pack/collectors_warrant.yaml
-- CYOA playtest targets were retired with the old CYOA tree.
+- Parser and CYOA playtest targets were retired with the old runtime trees.
 
 ## AFK Cycle 2026-06-25T05-03-36-260Z — ULTRAPLAN (saturation re-aim)
 

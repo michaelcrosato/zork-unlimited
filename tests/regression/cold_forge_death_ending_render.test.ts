@@ -29,7 +29,7 @@ import {
   initStateForRpgPack,
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
-import { buildParserObservation } from "../../src/parser/observation.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Action } from "../../src/api/types.js";
@@ -87,7 +87,7 @@ describe("bug_0125 — The Cold Forge death ending renders cleanly to the player
 
   it("the player-facing observation surfaces the death ending's title, text, and death flag", () => {
     const s = dieUnderArmed();
-    const obs = buildParserObservation(index, s);
+    const obs = buildRpgObservation(index, s);
 
     expect(obs.ended).toBe(true);
     expect(obs.ending_id).toBe("ending_fallen");
@@ -107,7 +107,7 @@ describe("bug_0125 — The Cold Forge death ending renders cleanly to the player
 
   it("the dying player still gets honest score closure — 'Final score: 0 of 50.' appended", () => {
     const s = dieUnderArmed();
-    const obs = buildParserObservation(index, s);
+    const obs = buildRpgObservation(index, s);
     // an under-armed death scores nothing, but the renderer still appends a tally so
     // the run closes with a number rather than trailing off (src/parser/observation.ts)
     expect(obs.score).toBe(0);

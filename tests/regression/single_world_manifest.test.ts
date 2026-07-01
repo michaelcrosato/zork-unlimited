@@ -3,9 +3,9 @@
  *
  * Schemas keep `meta.world` optional so tiny validator fixtures and generated eval
  * packs stay minimal. Shipped packs are different: every YAML under
- * content/{parser,rpg}/pack must bind to the same canonical world and hub.
- * MCP play is narrower: only RPG packs are playable; parser packs remain
- * world-bound migration data until their content is retired or converted.
+ * content/rpg/pack must bind to the same canonical world and hub.
+ * MCP play is RPG-only, so the shipped quest graph is now the same set that
+ * play tools can start.
  */
 import { describe, expect, it } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
@@ -21,8 +21,7 @@ import { normalizePackPath, worldRouteForPack } from "../../src/world/graph.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 
 const root = process.cwd();
-const ALL_PACK_DIRS = ["content/parser/pack", "content/rpg/pack"];
-const RPG_PACK_DIRS = ["content/rpg/pack"];
+const PACK_DIRS = ["content/rpg/pack"];
 
 type RawPack = {
   meta?: {
@@ -40,7 +39,7 @@ type RawPack = {
   };
 };
 
-function discoverPacks(dirs: string[] = ALL_PACK_DIRS): string[] {
+function discoverPacks(dirs: string[] = PACK_DIRS): string[] {
   return dirs
     .flatMap((dir) =>
       readdirSync(join(root, dir))
@@ -60,8 +59,6 @@ function loadWorldManifest() {
 
 describe("single-world library contract", () => {
   const packs = discoverPacks();
-  const rpgPacks = discoverPacks(RPG_PACK_DIRS);
-  const legacyPacks = packs.filter((path) => !path.startsWith("content/rpg/pack/"));
   const api = createToolApi({ root });
 
   it("declares the canonical hub world once", () => {
@@ -140,7 +137,7 @@ describe("single-world library contract", () => {
     ).toBeGreaterThan(24);
   });
 
-  it.each(rpgPacks)("%s opens as a Charterhaven RPG quest in play", (path) => {
+  it.each(packs)("%s opens as a Charterhaven RPG quest in play", (path) => {
     const pack = loadYaml(path) as RawPack;
     const world = pack.meta?.world;
     const game = api.new_game({ pack_path: path });
@@ -152,16 +149,6 @@ describe("single-world library contract", () => {
     expect(opening).toContain(world?.district);
     expect(opening).toContain(world?.role);
     expect(opening).toContain(world?.quest);
-  });
-
-  it.each(legacyPacks)("%s is world-bound but rejected by MCP play as legacy data", (path) => {
-    const validation = api.validate_pack({ pack_path: path });
-
-    expect(validation.ok).toBe(false);
-    expect(
-      validation.report.findings.some((finding) => finding.code === "UNSUPPORTED_LEGACY_PACK"),
-    ).toBe(true);
-    expect(() => api.new_game({ pack_path: path })).toThrow(/UNSUPPORTED_LEGACY_PACK/);
   });
 
   it("exposes graph routes through the MCP world listing", () => {

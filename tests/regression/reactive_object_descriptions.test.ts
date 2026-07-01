@@ -20,9 +20,8 @@
  * (the object analogue of RoomVariantSchema), `.optional()` so variant-less packs
  * compile byte-identically and keep their content hashes. model.objectDescription()
  * mirrors roomDescription() (first matching `when` wins, else base). The single LOOK
- * render site (legal_actions.ts resolveParserAction LOOK→target) routes through it,
- * so the feature reaches BOTH parser and RPG packs (the RPG runner reuses
- * resolveParserAction). No validator change: object variants carry no effects, so
+ * render site (legal_actions.ts resolveRpgAction LOOK→target) routes through it,
+ * so the feature reaches RPG packs. No validator change: object variants carry no effects, so
  * allEffects() — and every reachability/score bound built on it — is unchanged.
  *
  * Locked here:
@@ -33,7 +32,7 @@
  *       undefined (so its pack's content hash is unchanged);
  *   (3) live, through the engine render site, on The Cold Forge: examining the slag
  *       grate reads "welded shut" before levering and the open-grate text (no "welded
- *       shut") after grate_open — driven through resolveParserAction's LOOK, the same
+ *       shut") after grate_open — driven through resolveRpgAction's LOOK, the same
  *       path the MCP server uses;
  *   (4) reachability unchanged: the canonical victory route still reaches
  *       ending_victory at 50/50 (the variant is examine-only; no flag/item/score/exit
@@ -41,9 +40,9 @@
  */
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { ObjectSchema } from "../../src/parser/schema.js";
-import { objectDescription } from "../../src/parser/model.js";
-import { resolveParserAction } from "../../src/parser/legal_actions.js";
+import { ObjectSchema } from "../../src/rpg/schema.js";
+import { objectDescription } from "../../src/rpg/model.js";
+import { resolveRpgAction } from "../../src/rpg/legal_actions.js";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import {
   indexRpgPack,
@@ -51,7 +50,7 @@ import {
   initStateForRpgPack,
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
-import { buildParserObservation } from "../../src/parser/observation.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import { initState, type GameState } from "../../src/core/state.js";
 import type { Action } from "../../src/api/types.js";
@@ -120,7 +119,7 @@ describe("bug_0023 — live on The Cold Forge: the slag grate stops reading 'wel
   const move = (dir: string) => (a: Action) => a.type === "MOVE" && a.direction === dir;
   const examineGrate: Action = { type: "LOOK", target: "stone_grate" };
   const narration = (s: GameState): string => {
-    const res = resolveParserAction(index, s, examineGrate);
+    const res = resolveRpgAction(index, s, examineGrate);
     if (!res) throw new Error("grate not examinable here");
     const eff = res.effects.find((e) => "narrate" in e) as { narrate: string } | undefined;
     return eff?.narrate ?? "";
@@ -164,6 +163,6 @@ describe("bug_0023 — live on The Cold Forge: the slag grate stops reading 'wel
     s = act(s, move("down")); // Ember Chamber
     expect(s.ended).toBe(true);
     expect(s.endingId).toBe("ending_victory");
-    expect(buildParserObservation(index, s).score).toBe(50);
+    expect(buildRpgObservation(index, s).score).toBe(50);
   });
 });

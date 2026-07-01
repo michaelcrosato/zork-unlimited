@@ -35,7 +35,7 @@ import {
   initStateForRpgPack,
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
-import { buildParserObservation } from "../../src/parser/observation.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Action } from "../../src/api/types.js";
@@ -120,7 +120,7 @@ describe("bug_0126 — The Sunken Barrow death endings render cleanly to the pla
 
   it("ending_fallen: the player-facing observation surfaces the death title, text, and death flag", () => {
     const s = dieToWight();
-    const obs = buildParserObservation(index, s);
+    const obs = buildRpgObservation(index, s);
 
     expect(obs.ended).toBe(true);
     expect(obs.ending_id).toBe("ending_fallen");
@@ -141,7 +141,7 @@ describe("bug_0126 — The Sunken Barrow death endings render cleanly to the pla
 
   it("ending_fallen: the dying player gets honest score closure — 'Final score: 0 of 50.'", () => {
     const s = dieToWight();
-    const obs = buildParserObservation(index, s);
+    const obs = buildRpgObservation(index, s);
     // a wight death never scores, but the renderer still appends a tally so the run
     // closes with a number rather than trailing off (src/parser/observation.ts)
     expect(obs.score).toBe(0);
@@ -156,7 +156,7 @@ describe("bug_0126 — The Sunken Barrow death endings render cleanly to the pla
     expect(s.ended).toBe(true);
     expect(s.endingId).toBe("ending_woken");
 
-    const obs = buildParserObservation(index, s);
+    const obs = buildRpgObservation(index, s);
     expect(obs.ended).toBe(true);
     expect(obs.ending_id).toBe("ending_woken");
 
@@ -172,7 +172,7 @@ describe("bug_0126 — The Sunken Barrow death endings render cleanly to the pla
 
   it("ending_woken: the doom fork closes at the partial tally — 'Final score: 25 of 50.'", () => {
     const s = priseSarcophagus();
-    const obs = buildParserObservation(index, s);
+    const obs = buildRpgObservation(index, s);
     // the doom never takes the crown, so the circlet's +25 take_effect never fires:
     // the run tops out at 25/50 (bug_0107), and the rendered closure shows it (a
     // partial tally the player reads as "incomplete", distinct from the 50/50 win)

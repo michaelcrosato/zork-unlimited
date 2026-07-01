@@ -70,54 +70,6 @@ graph:
       name: "Winter Steadings"
       kind: route
       district: "Outlying steads under Charterhaven writ"
-    - id: assayers_mark
-      name: "The Assayer's Mark"
-      kind: quest
-      pack: "content/parser/pack/assayers_mark.yaml"
-    - id: cellarmans_dark
-      name: "The Cellarman's Dark"
-      kind: quest
-      pack: "content/parser/pack/cellarmans_dark.yaml"
-    - id: chandlers_lot
-      name: "The Chandler's Lot"
-      kind: quest
-      pack: "content/parser/pack/chandlers_lot.yaml"
-    - id: collectors_warrant
-      name: "The Collector's Warrant"
-      kind: quest
-      pack: "content/parser/pack/collectors_warrant.yaml"
-    - id: coroners_errand
-      name: "The Coroner's Errand"
-      kind: quest
-      pack: "content/parser/pack/coroners_errand.yaml"
-    - id: dyers_weight
-      name: "The Dyer's Weight"
-      kind: quest
-      pack: "content/parser/pack/dyers_weight.yaml"
-    - id: friars_postern
-      name: "The Friars' Postern"
-      kind: quest
-      pack: "content/parser/pack/friars_postern.yaml"
-    - id: gaugers_register
-      name: "The Gauger's Register"
-      kind: quest
-      pack: "content/parser/pack/gaugers_register.yaml"
-    - id: ropewalkers_twist
-      name: "The Ropewalker's Twist"
-      kind: quest
-      pack: "content/parser/pack/ropewalkers_twist.yaml"
-    - id: scriveners_proof
-      name: "The Scrivener's Proof"
-      kind: quest
-      pack: "content/parser/pack/scriveners_proof.yaml"
-    - id: sealed_crypt
-      name: "The Sealed Crypt"
-      kind: quest
-      pack: "content/parser/pack/sealed_crypt.yaml"
-    - id: weighmasters_round
-      name: "The Weighmaster's Round"
-      kind: quest
-      pack: "content/parser/pack/weighmasters_round.yaml"
     - id: advocates_case
       name: "The Advocate's Case"
       kind: quest
@@ -222,39 +174,9 @@ graph:
     - from: guildhall_yard
       to: advocates_case
       route: "pleas-yard summons"
-    - from: guildhall_yard
-      to: assayers_mark
-      route: "goldsmiths' assay lane"
-    - from: guildhall_yard
-      to: dyers_weight
-      route: "dye-house warrant"
-    - from: guildhall_yard
-      to: scriveners_proof
-      route: "scrivener's lane"
-    - from: doctors_commons
-      to: coroners_errand
-      route: "coroner's lane"
     - from: printers_ward
       to: printers_night
       route: "night court alley"
-    - from: printers_ward
-      to: cellarmans_dark
-      route: "coal-yard descent"
-    - from: river_stairs
-      to: chandlers_lot
-      route: "chandler's stair"
-    - from: east_quay
-      to: collectors_warrant
-      route: "customs duty room"
-    - from: east_quay
-      to: weighmasters_round
-      route: "weighmaster's counting house"
-    - from: east_quay
-      to: gaugers_register
-      route: "gauger's yard"
-    - from: east_quay
-      to: ropewalkers_twist
-      route: "ropewalk quay"
     - from: industrial_cut
       to: bellfounders_alarm
       route: "bellfounders' yard"
@@ -279,12 +201,6 @@ graph:
     - from: market_parishes
       to: tanners_fever
       route: "tanner's sickroom"
-    - from: north_road
-      to: friars_postern
-      route: "postern lane"
-    - from: north_road
-      to: sealed_crypt
-      route: "crypt chapel road"
     - from: north_road
       to: quarrymens_fault
       route: "quarry cutting"

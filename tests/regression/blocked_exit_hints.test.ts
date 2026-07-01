@@ -1,7 +1,7 @@
 /**
  * Regression (§15) for bug_0201 — engine/observation: a locked exit's authored
  * `locked_msg` is now surfaced in the structured observation as a `blocked_exits`
- * HINT, bringing the MCP/structured interface to parity with the free-text parser.
+ * HINT, bringing the MCP/structured interface to parity with the free-text command surface.
  *
  * TWO independent blind playtests (bug_0197 on breaking_weir, and the sunken_barrow
  * pass of this cycle, ai-runs/2026-06-03T20-14-24-953Z) reported the SAME friction:
@@ -32,7 +32,8 @@
  *   (4) OPT-IN: a gated exit WITHOUT a `locked_msg` stays silent (absent from BOTH
  *       lists), while a gated exit WITH one is surfaced and an open exit stays in
  *       `exits` — the author controls what is hinted;
- *   (5) RPG inherits the field from the parser observation (the same builder).
+ *   (5) a synthetic zero-enemy RPG fixture proves the opt-in rule independently
+ *       of shipped content.
  *
  * WITNESS: before this change `blocked_exits` does not exist on the observation, so
  * cases (1) and (4)'s `.blocked_exits` reads are `undefined` and every assertion on
@@ -40,11 +41,9 @@
  */
 import { describe, it, expect } from "vitest";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { compileRpgPack } from "../../src/rpg/pack.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
-import { compileParserPack } from "../../src/parser/pack.js";
-import { indexParserPack, initStateForParserPack } from "../../src/parser/runner.js";
-import { buildParserObservation } from "../../src/parser/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import type { RpgAction } from "../../src/api/types.js";
@@ -140,11 +139,12 @@ win_conditions:
   - { id: w, conditions: [{ visited: c }], ending: done }
 endings:
   - { id: done, title: "Done", text: "Done." }
+enemies: []
 `;
-    const c = compileParserPack(FIXTURE);
+    const c = compileRpgPack(FIXTURE);
     if (!c.ok) throw new Error("fixture must compile");
-    const pindex = indexParserPack(c.compiled.pack);
-    const obs = buildParserObservation(pindex, initStateForParserPack(pindex, 0));
+    const pindex = indexRpgPack(c.compiled.pack);
+    const obs = buildRpgObservation(pindex, initStateForRpgPack(pindex, 0));
 
     // Open exit → traversable; gated exits → never traversable.
     expect(obs.exits.map((e) => e.direction)).toEqual(["north"]);

@@ -15,7 +15,7 @@
  *   (1) CONTENT — the stone_slab USE interaction is gated
  *       `none_of: [ quest_stage barrow/slab_moved ]`, so once the slab is moved the
  *       RpgAction drops out of the legal set (enumeration already honours an
- *       interaction's `conditions` via resolveParserAction). The lever retires.
+ *       interaction's `conditions` via resolveRpgAction). The lever retires.
  *   (2) ENGINE — the RPG runner's skill-check resolve branch (src/rpg/runner.ts)
  *       now also calls evalConditions(it.conditions, state) before resolving, as its
  *       own comment always claimed ("meeting conditions") but the code never did. So

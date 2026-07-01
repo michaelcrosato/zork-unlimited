@@ -25,7 +25,7 @@
  *   (4) STATE UNTOUCHED: hide_graph changes only the rendered observation, never the
  *       state — the state_hash is identical with and without it (determinism/replay
  *       safe, as narration/observation are not part of the state hash);
- *   (5) LEGACY REJECTION: parser packs are migration data and no longer start
+ *   (5) NON-RPG REJECTION: non-RPG pack shapes no longer start
  *       through MCP play tools;
  *   (6) the `start_game` AFK alias honors the flag too.
  */
@@ -35,7 +35,7 @@ import { createToolApi } from "../../src/mcp/tools.js";
 const ROOT = process.cwd();
 const api = () => createToolApi({ root: ROOT });
 
-const LEGACY_PARSER = "content/parser/pack/sealed_crypt.yaml";
+const NON_RPG_PACK = "content/broken-fixtures/duplicate_id.yaml";
 const RPG_PACKS = ["content/rpg/pack/sunken_barrow.yaml", "content/rpg/pack/breaking_weir.yaml"];
 
 /** Narrow to the RPG observation shape. */
@@ -97,9 +97,9 @@ describe("bug_0137 — hide_graph difficulty: exits hide their destination", () 
     });
   }
 
-  it("legacy parser packs are rejected by MCP play tools", () => {
+  it("non-RPG pack shapes are rejected by MCP play tools", () => {
     const a = api();
-    expect(() => a.new_game({ pack_path: LEGACY_PARSER, seed: 7 })).toThrow(
+    expect(() => a.new_game({ pack_path: NON_RPG_PACK, seed: 7 })).toThrow(
       /UNSUPPORTED_LEGACY_PACK/,
     );
   });

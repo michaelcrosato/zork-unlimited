@@ -97,7 +97,7 @@
  * A missed relabel site leaves an id that `mapId` keeps as itself, which then mismatches
  * the twin's relabeled id — a loud failure, never a silently-minted token. (Behavioural
  * witness: temporarily appending " [SABOTAGE]" to the room description in
- * buildParserObservation when `!state.current.startsWith("mx_")` — firing only on original,
+ * buildRpgObservation when `!state.current.startsWith("mx_")` — firing only on original,
  * non-relabeled room ids — fails every RPG pack at the first state; reverted → green.)
  */
 import { describe, it, expect } from "vitest";
@@ -117,7 +117,7 @@ import type { Rng } from "../../src/core/rng.js";
 import type { StepResult } from "../../src/api/types.js";
 import { stateKey } from "./support/exhaustive_endings.js";
 import { relabelRpgPack } from "./support/relabel_rpg.js";
-import type { ParserRelabeler } from "./support/relabel_parser.js";
+import type { RpgRelabeler } from "./support/relabel_rpg.js";
 import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 
@@ -181,7 +181,7 @@ const worstRng = (): Rng => fixedSeqRng([LOW, HIGH]);
  * a loud divergence. The reserved vars `score`/`hp`/`attack`/`defense` are never entered
  * into the map, so they are fixed points here exactly as the relabeler holds them fixed.
  */
-function mapIdFn(relabeler: ParserRelabeler): (id: string) => string {
+function mapIdFn(relabeler: RpgRelabeler): (id: string) => string {
   return (id: string) => relabeler.map.get(id) ?? id;
 }
 
