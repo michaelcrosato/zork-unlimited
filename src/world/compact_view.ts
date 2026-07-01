@@ -29,7 +29,6 @@ export type OverworldCompactVitals = readonly [
 export type OverworldCompactRoad = readonly [
   roadId: string,
   toId: string,
-  toName: string,
   minutes: number,
   suppliesNeeded: number,
   fatigueAfter: number,
@@ -37,7 +36,6 @@ export type OverworldCompactRoad = readonly [
 export type OverworldCompactAreaRoute = readonly [
   routeId: string,
   toAreaId: string,
-  toAreaName: string,
   minutes: number,
 ];
 export type OverworldCompactRouteOption = readonly [
@@ -273,18 +271,12 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
       return [
         exit.id,
         exit.destination.id,
-        exit.destination.name,
         plan?.estimate.elapsedMinutes ?? exit.travel_minutes,
         plan?.estimate.suppliesNeeded ?? 0,
         plan?.estimate.fatigueAfter ?? view.fatigue,
       ];
     }),
-    area_routes: view.areaExits.map((exit) => [
-      exit.id,
-      exit.destination.id,
-      exit.destination.name,
-      exit.travel_minutes,
-    ]),
+    area_routes: view.areaExits.map((exit) => [exit.id, exit.destination.id, exit.travel_minutes]),
     route_options: routeOptions,
     route_options_truncated: view.routeOptions.length > routeOptions.length,
     areas: view.areas.map(ref),

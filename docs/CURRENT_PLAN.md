@@ -119,6 +119,8 @@ Make discovered overworld quest leads start real RPG sessions.
   counts/truncation flags for long-running sessions.
 - Compact overworld route options now omit repeated destination names and carry
   stable destination ids plus route metrics/path ids only.
+- Compact overworld road and area-route tuples now omit repeated destination
+  names, keeping stable ids and numeric route metrics.
 
 ## Acceptance
 

@@ -700,6 +700,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compactStarted.context.here[0]).toBe("albany_city");
     expect("observation" in compactStarted).toBe(false);
     expect(compact.context.poi.map(([id]) => id)).toEqual(full.pois.map((poi) => poi.id));
+    expect(compact.context.roads[0]).toHaveLength(5);
+    expect(compact.context.roads[0]?.[2]).toEqual(expect.any(Number));
+    if (compact.context.area_routes[0]) {
+      expect(compact.context.area_routes[0]).toHaveLength(3);
+      expect(compact.context.area_routes[0][2]).toEqual(expect.any(Number));
+    }
     expect(compact.context.route_options.length).toBeLessThanOrEqual(8);
     expect(compact.context.route_options[0]?.[1]).toEqual(expect.any(Number));
     expect(compact.context.pending_road).toBeNull();
