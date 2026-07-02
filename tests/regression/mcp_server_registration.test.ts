@@ -155,13 +155,34 @@ describe("MCP server registration", () => {
       "explore_overworld_session_area",
       "move_overworld_session_area",
       "work_overworld_session_job",
-      "start_overworld_session_quest",
     ]) {
       const block = registeredToolBlock(toolName);
       expect(block).toContain("defaultCompactOverworld(a)");
     }
 
+    expect(registeredToolBlock("start_overworld_session_quest")).toContain(
+      "defaultCompactOverworldAndRpg(a)",
+    );
     expect(registeredToolBlock("get_overworld_session")).not.toContain("defaultCompactOverworld");
+  });
+
+  it("defaults public RPG MCP play tools to compact observation", () => {
+    for (const toolName of [
+      "new_game",
+      "start_world_quest",
+      "start_quest",
+      "get_observation",
+      "get_scene",
+      "step_action",
+      "choose_option",
+      "load_game",
+    ]) {
+      const block = registeredToolBlock(toolName);
+      expect(block).toContain("defaultCompactRpg(a)");
+    }
+
+    expect(registeredToolBlock("list_legal_actions")).not.toContain("defaultCompactRpg");
+    expect(registeredToolBlock("get_state")).not.toContain("defaultCompactRpg");
   });
 
   it("keeps retired static overworld compatibility helpers out of ToolApi and MCP", () => {

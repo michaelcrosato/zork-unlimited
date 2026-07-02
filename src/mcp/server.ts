@@ -60,16 +60,11 @@ const COMPACT_OBSERVATION = {
   compact_observation: z
     .boolean()
     .optional()
-    .describe("Return compact `context` instead of full `observation`."),
+    .describe("Default true; false returns full observation."),
 };
 const COMPACT_OVERWORLD_CONTEXT = {
   compact_context: z.boolean().optional().describe("Default true; false returns full observation."),
 };
-
-function defaultCompactOverworld(args: unknown): never {
-  const input = typeof args === "object" && args !== null ? args : {};
-  return { compact_context: true, ...input } as never;
-}
 
 tool(
   "list_world",
@@ -96,6 +91,22 @@ tool(
   },
   (a) => api.list_overworld(a),
 );
+
+function defaultCompactRpg(args: unknown): never {
+  const input = typeof args === "object" && args !== null ? args : {};
+  return { compact_observation: true, ...input } as never;
+}
+
+function defaultCompactOverworld(args: unknown): never {
+  const input = typeof args === "object" && args !== null ? args : {};
+  return { compact_context: true, ...input } as never;
+}
+
+function defaultCompactOverworldAndRpg(args: unknown): never {
+  const input = typeof args === "object" && args !== null ? args : {};
+  return { compact_context: true, compact_observation: true, ...input } as never;
+}
+
 tool(
   "start_overworld",
   "Start a stateful New York overworld run; returns compact context by default.",
@@ -275,7 +286,7 @@ tool(
 );
 tool(
   "start_overworld_session_quest",
-  "Start a discovered local quest lead; returns compact overworld context by default.",
+  "Start a discovered local quest lead; returns compact overworld/RPG context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     quest_id: z.string().describe("Quest id from the session observation's quests list."),
@@ -288,7 +299,7 @@ tool(
     ...COMPACT_OBSERVATION,
     ...COMPACT_OVERWORLD_CONTEXT,
   },
-  (a) => api.start_overworld_session_quest(defaultCompactOverworld(a)),
+  (a) => api.start_overworld_session_quest(defaultCompactOverworldAndRpg(a)),
 );
 tool("validate_quest", "Validate one shipped RPG quest by id.", QUEST_ID_SOURCE, (a) =>
   api.validate_quest(a),
@@ -311,7 +322,7 @@ tool(
 
 tool(
   "new_game",
-  "Start a new session on a playable RPG quest; returns a session id, mode, and first observation. Use world_quest_id for shipped Charter Marches quests; generate_rpg_seed mints a procedural pack.",
+  "Start a playable RPG quest; returns compact context by default.",
   {
     world_quest_id: z.string().optional().describe("World quest id."),
     generate_rpg_seed: z.number().int().optional().describe("Procedural RPG seed."),
@@ -320,11 +331,11 @@ tool(
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
   },
-  (a) => api.new_game(a),
+  (a) => api.new_game(defaultCompactRpg(a)),
 );
 tool(
   "start_world_quest",
-  "Start a shipped RPG quest by world quest id.",
+  "Start a shipped RPG quest; returns compact context by default.",
   {
     quest_id: z.string().describe("World quest id."),
     seed: z.number().int().optional(),
@@ -332,11 +343,11 @@ tool(
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
   },
-  (a) => api.start_world_quest(a),
+  (a) => api.start_world_quest(defaultCompactRpg(a)),
 );
 tool(
   "start_quest",
-  "Start a shipped RPG quest by id.",
+  "Start a shipped RPG quest; returns compact context by default.",
   {
     ...QUEST_ID_SOURCE,
     seed: z.number().int().optional(),
@@ -344,20 +355,20 @@ tool(
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
   },
-  (a) => api.start_quest(a),
+  (a) => api.start_quest(defaultCompactRpg(a)),
 );
 
 tool(
   "get_observation",
-  "Read current RPG scene; compact_observation returns lean context.",
+  "Read compact RPG context; compact_observation false returns full observation.",
   { ...SESSION, ...HIDE_GRAPH, ...COMPACT_ACTIONS, ...COMPACT_OBSERVATION },
-  (a) => api.get_observation(a),
+  (a) => api.get_observation(defaultCompactRpg(a)),
 );
 tool(
   "get_scene",
   "Alias for get_observation.",
   { ...SESSION, ...HIDE_GRAPH, ...COMPACT_ACTIONS, ...COMPACT_OBSERVATION },
-  (a) => api.get_scene(a),
+  (a) => api.get_scene(defaultCompactRpg(a)),
 );
 tool(
   "list_legal_actions",
@@ -368,7 +379,7 @@ tool(
 
 tool(
   "step_action",
-  "Apply one action id and return events plus next scene.",
+  "Apply one action id; returns events plus compact context by default.",
   {
     ...SESSION,
     action_id: z.string().describe("An action id from the current legal-action set."),
@@ -376,7 +387,7 @@ tool(
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
   },
-  (a) => api.step_action(a),
+  (a) => api.step_action(defaultCompactRpg(a)),
 );
 tool(
   "choose_option",
@@ -392,7 +403,7 @@ tool(
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
   },
-  (a) => api.choose_option(a),
+  (a) => api.choose_option(defaultCompactRpg(a)),
 );
 tool(
   "get_state",
@@ -425,7 +436,7 @@ tool(
 );
 tool(
   "load_game",
-  "Restore a saved RPG session.",
+  "Restore a saved RPG session; returns compact context by default.",
   {
     world_quest_id: z
       .string()
@@ -441,7 +452,7 @@ tool(
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
   },
-  (a) => api.load_game(a),
+  (a) => api.load_game(defaultCompactRpg(a)),
 );
 
 tool(

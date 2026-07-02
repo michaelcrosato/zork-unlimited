@@ -155,6 +155,9 @@ Make discovered overworld quest leads start real RPG sessions.
   agents can stay compact from the first session payload.
 - Public MCP stateful overworld start/action tools now default to compact context;
   callers can pass `compact_context: false` only when they need full observations.
+- Public MCP RPG start/read/step/load tools now default to compact observation
+  context; callers can pass `compact_observation: false` when they need full
+  observations.
 - RPG session start tools and overworld quest handoff now accept compact action
   menus, avoiding repeated command labels on the opening RPG observation.
 - RPG transcripts now support compact id-only turn rows for route debugging

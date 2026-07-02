@@ -6,6 +6,16 @@ This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
 
+### Cycle result — mcp_rpg_compact_default
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests, with optional secret scanner still absent.
+- Engine/loop surface: public MCP RPG start/read/step/load tools now default `compact_observation: true`; explicit `compact_observation: false` keeps full observations.
+- Bridge fix: `start_overworld_session_quest` now defaults both overworld and RPG payloads to compact context.
+- Loop effect: blind/resume MCP clients no longer need perfect prompt discipline to avoid full RPG observations on repeated play turns.
+- Guard: MCP registration regression pins compact defaults while leaving direct ToolApi and `list_legal_actions` full-label escape paths unchanged.
+- Evidence: live MCP start/step without compact flags returned context-only payloads (1781/1353 chars); explicit `compact_observation: false` returned full observation.
+- VERIFY: focused MCP registration regression, `npm run health`, `npm run validate`, and `npm test` passed: integrity, typecheck, lint, format check, 193 test files / 1358 tests, and validate.
+
 ### Cycle result — mcp_overworld_compact_default
 
 - Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent and WSL worktree path noise remains outside the green gate.
