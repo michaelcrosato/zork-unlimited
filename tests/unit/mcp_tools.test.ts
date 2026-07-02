@@ -1392,9 +1392,9 @@ describe("MCP tools — the play loop (§9.1)", () => {
     });
 
     expect("observation" in compactStart).toBe(false);
+    expect("mode" in compactStart.context).toBe(false);
     expect(compactStart.context).toMatchObject({
       v: 1,
-      mode: "rpg",
       here: [fullStart.observation.room, fullStart.observation.title],
     });
     expect(compactStart.context.vitals).toEqual([
@@ -1420,6 +1420,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     });
     expect(compactWorldQuest.context.here[0]).toBe(fullStart.observation.room);
     expect("observation" in compactWorldQuest).toBe(false);
+    expect("mode" in compactWorldQuest.context).toBe(false);
 
     const compactObservation = a.get_observation({
       session_id: fullStart.session_id,
@@ -1428,6 +1429,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     });
     expect(compactObservation.context.exits[0]).toEqual(expect.any(String));
     expect(compactObservation.context.actions[0]).not.toHaveProperty("command");
+    expect("mode" in compactObservation.context).toBe(false);
 
     const unchangedObservation = a.get_observation({
       session_id: fullStart.session_id,

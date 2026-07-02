@@ -21,7 +21,6 @@ export type RpgCompactVitals = readonly [
 
 export type RpgCompactObservation = {
   v: 1;
-  mode: "rpg";
   here: readonly [room: string, title: string];
   text: string;
   exits: RpgCompactExit[];
@@ -87,7 +86,6 @@ export function compactRpgObservation(
   };
   return {
     v: 1,
-    mode: "rpg",
     here: [obs.room, obs.title],
     text: obs.description,
     exits: obs.exits.map((exit) =>

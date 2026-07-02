@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 155 -->
+<!-- historical_cycle_count: 156 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_rpg_context_mode
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact RPG MCP contexts no longer return `mode: "rpg"`.
+- Loop effect: repeated agent-loop observations keep full/client observations stable while dropping a redundant one-value field from compact context payloads.
+- Guard: compact-observation and MCP loop tests assert compact contexts omit `mode`.
+- VERIFY: focused compact/MCP tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_load_quest_mode
 
@@ -124,13 +132,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: polling/resume loops can get a hash-only `unchanged` response instead of repeating compact action menus when reducer state has not changed.
 - Evidence: live MCP unchanged action menu returned hash-only at 120 chars; stale menu read returned compact actions at 232 chars matching the post-step hash.
 - Guard: MCP regression asserts matching hashes return no action payload, while stale hashes still return compact actions.
-- VERIFY: focused MCP and registration tests, typecheck, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.
-
-### Cycle result — overworld_if_snapshot_hash
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: overworld `get_overworld_session` and `get_overworld_session_context` now accept `if_snapshot_hash`.
-- Loop effect: polling/resume loops can get a hash-only `unchanged` response instead of repeating compact/full overworld context when the snapshot has not changed.
-- Evidence: live MCP unchanged compact/full reads returned hash-only at 125 chars; stale reads returned compact/full payloads at 2466/70771 chars matching the post-travel hash.
-- Guard: MCP regression asserts matching hashes return no context/observation payload, while stale hashes still return compact/full context.
 - VERIFY: focused MCP and registration tests, typecheck, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.
