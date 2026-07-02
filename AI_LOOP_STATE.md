@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 212 -->
+<!-- historical_cycle_count: 213 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — cached_overworld_route_options
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: `OverworldSession` now caches derived discovered route options until session mutation invalidates snapshot-derived caches.
+- Loop effect: repeated overworld full/compact reads reuse route plans and resource estimates instead of rerunning route search across discovered towns for unchanged state.
+- Guard: focused MCP read tests prove repeated route values remain stable while full observations do not expose the cached internal route-option array/object wrappers.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — cached_overworld_snapshot_hashes
 

@@ -2249,6 +2249,7 @@ export class OverworldSession {
     snapshot: OverworldSessionSnapshot;
     hash: string;
   };
+  private routeOptionsCache?: OverworldSessionRoutePlan[];
 
   constructor(private readonly world: OverworldManifest) {
     this.nodes = overworldNodesById(world);
@@ -2266,6 +2267,7 @@ export class OverworldSession {
 
   private clearSnapshotCache(): void {
     delete this.snapshotCache;
+    delete this.routeOptionsCache;
   }
 
   private cachedSnapshot(): { snapshot: OverworldSessionSnapshot; hash: string } {
@@ -2969,8 +2971,9 @@ export class OverworldSession {
   }
 
   private discoveredRouteOptions(): OverworldSessionRoutePlan[] {
+    if (this.routeOptionsCache) return this.routeOptionsCache;
     const current = this.currentNode();
-    return [...this.discoveredIds]
+    const options = [...this.discoveredIds]
       .filter((id) => id !== this.currentId)
       .map((id) => planOverworldRoute(this.world, this.currentId, id, this.discoveredIds))
       .filter((plan): plan is OverworldRoutePlan => plan !== null && plan.steps.length > 0)
@@ -2984,6 +2987,16 @@ export class OverworldSession {
           b.destination.population_2025 - a.destination.population_2025 ||
           a.destination.name.localeCompare(b.destination.name),
       );
+    this.routeOptionsCache = options;
+    return options;
+  }
+
+  private routeOptionsForView(): OverworldSessionRoutePlan[] {
+    return this.discoveredRouteOptions().map((plan) => ({
+      ...plan,
+      steps: [...plan.steps],
+      estimate: { ...plan.estimate },
+    }));
   }
 
   private resolvedAnchorTownIdsForArc(arc: OverworldRegionalArc): Set<string> {
@@ -3219,7 +3232,7 @@ export class OverworldSession {
       hiddenSiteCount: this.hiddenSiteCountInCurrentArea(),
       quests: this.discoveredQuestsAt(this.currentId),
       hiddenQuestCount: this.hiddenQuestCountAt(this.currentId),
-      routeOptions: this.discoveredRouteOptions(),
+      routeOptions: this.routeOptionsForView(),
       discovered: [...this.discoveredIds]
         .map((id) => this.nodes.get(id))
         .filter((node): node is OverworldNode => node !== undefined)
