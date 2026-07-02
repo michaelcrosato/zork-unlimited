@@ -5,20 +5,16 @@
  * Usage:
  *   npm run validate
  *   npm run validate -- sunken_barrow [...more world_quest_ids]
- *   npm run validate -- --pack content/rpg/pack/sunken_barrow.yaml [...more packs]
  *
  * With no arguments this validates every shipped RPG quest through the canonical
- * world graph. Positional raw pack paths are hidden behind explicit --pack
- * offline mode; legacy CYOA/parser packs are intentionally not accepted here.
+ * world graph. Raw pack paths and legacy CYOA/parser packs are intentionally not
+ * accepted here.
  */
-import { readFileSync } from "node:fs";
-import { parse as parseYaml } from "yaml";
 import { loadRpgPackFile } from "../src/rpg/pack.js";
 import { validateRpg } from "../src/validate/rpg_validator.js";
 import { formatReport, makeReport, type Finding } from "../src/validate/report.js";
 import { loadWorldManifest, resolveWorldQuestPackPath } from "../src/world/source.js";
 
-const RPG_PACK_DIR = "content/rpg/pack";
 const ROOT = process.cwd();
 
 type ValidationTarget = {
@@ -51,21 +47,9 @@ function discoverWorldQuestTargets(): ValidationTarget[] {
     }));
 }
 
-function looksLikeRpgPack(path: string): boolean {
-  const raw = parseYaml(readFileSync(path, "utf8")) as Record<string, unknown> | null;
-  return !!raw && typeof raw === "object" && "enemies" in raw;
-}
-
 function validateOne(target: ValidationTarget): boolean {
   console.log(`== ${target.label} ==`);
   const path = target.path;
-  if (!looksLikeRpgPack(path)) {
-    console.error(
-      `${target.label}: unsupported legacy pack; validation is RPG-only. Convert it into ${RPG_PACK_DIR}.`,
-    );
-    return false;
-  }
-
   const result = loadRpgPackFile(path);
   if (!result.ok) {
     console.log(formatReport(makeReport(path, schemaFindings(result.error))));
@@ -80,17 +64,13 @@ function validateOne(target: ValidationTarget): boolean {
 
 function parseTargets(args: string[]): ValidationTarget[] {
   if (args.length === 0) return discoverWorldQuestTargets();
-  if (args[0] === "--pack") {
-    const paths = args.slice(1);
-    if (paths.length === 0) {
-      throw new Error("validate --pack requires at least one raw pack path.");
-    }
-    return paths.map((path) => ({ label: `offline_pack: ${path}`, path }));
+  if (args.includes("--pack")) {
+    throw new Error("validate accepts world quest ids, not --pack.");
   }
   const raw = args.find(looksLikeRawPackSelector);
   if (raw !== undefined) {
     throw new Error(
-      `validate targets are world quest ids; raw pack paths are offline compatibility via --pack: ${raw}`,
+      `validate targets are world quest ids; raw pack paths are not accepted: ${raw}`,
     );
   }
   return args.map((worldQuestId) => {

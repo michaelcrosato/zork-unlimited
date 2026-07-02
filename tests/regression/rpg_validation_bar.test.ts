@@ -126,18 +126,19 @@ describe("single-engine RPG validation bar", () => {
 
     expect(result.status, output).toBe(2);
     expect(output).toContain("validate targets are world quest ids");
-    expect(output).toContain("offline compatibility via --pack");
+    expect(output).toContain("raw pack paths are not accepted");
   });
 
-  it("npm run validate --pack rejects non-RPG offline pack targets", () => {
+  it("npm run validate rejects explicit raw pack mode before loading a path", () => {
     const result = runNpm(
       "npm run validate -- --pack content/broken-fixtures/duplicate_id.yaml",
       30_000,
     );
     const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
 
-    expect(result.status, output).toBe(1);
-    expect(output).toContain("unsupported legacy pack");
-    expect(output).toContain("validation is RPG-only");
+    expect(result.status, output).toBe(2);
+    expect(output).toContain("validate accepts world quest ids");
+    expect(output).toContain("not --pack");
+    expect(output).not.toContain("unsupported legacy pack");
   });
 });

@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 46 -->
+<!-- historical_cycle_count: 47 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — validate_cli_world_source_only
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure; gates hit timeout after known broad root Prettier/git-worktree issues, so repo-local verification was used.
+- CLI/API: `npm run validate` now rejects explicit `--pack` and positional raw paths; shipped validation is canonical world graph / `world_quest_id` only.
+- Token economy: loop docs and play CLI no longer teach agents a raw-pack validation path.
+- VERIFY: focused validation/play CLI tests (27) and `npm run health` passed: integrity, typecheck, lint, format check, 192 test files / 1347 tests, and validate.
+- Self-critique: removes the last public CLI raw-pack source; internal compile/edit paths still carry pack paths as source metadata.
 
 ### Cycle result — cli_trace_world_source_only
 
@@ -12,7 +20,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - CLI/API: `npm run replay` and `npm run inspect` now reject raw trace `--pack` sources; trace source resolver no longer infers world ids from pack paths.
 - Token economy: trace debugging uses embedded/explicit world ids only, avoiding repeated raw pack path payloads.
 - VERIFY: focused trace/source/CLI tests (44) and `npm run health` passed: integrity, typecheck, lint, format check, 192 test files / 1347 tests, and validate.
-- Self-critique: trace/debug raw-pack seam is closed; explicit offline `npm run validate -- --pack` remains.
+- Self-critique: trace/debug raw-pack seam is closed; validate `--pack` was removed in the next cycle.
 - Operator direction: pause after this cycle; do not start another AFK cycle.
 
 ### Cycle result — toolapi_trace_world_source_only
@@ -21,7 +29,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Public API: ToolApi `replay_trace`/`inspect_trace` now reject raw `pack_path`; shipped traces use embedded or explicit `world_quest_id`.
 - Token economy: repeated trace debugging no longer needs raw pack-path payload when traces already carry world identity.
 - VERIFY: focused trace/source tests (71) and `npm run health` passed: integrity, typecheck, lint, format check, 192 test files / 1346 tests, and validate.
-- Self-critique: public MCP/ToolApi is cleaner; CLI `--pack` offline compatibility remains for local raw-pack debugging.
+- Self-critique: public MCP/ToolApi is cleaner; CLI `--pack` compatibility was removed in later CLI cycles.
 - Operator direction: pause after this cycle; do not start another AFK cycle.
 
 ### Cycle result — overworld_snapshot_regional_arc_completion_proof
@@ -334,7 +342,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
 
 - Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; same broad helper drift outside canonical repo scripts.
 - Trace CLIs: replay/inspect now advertise positional trace sources as `world_quest_id` only and reject positional raw pack paths.
-- Token/API hygiene: normal replay output no longer echoes the resolved pack file; hidden `--pack` remains only for offline compatibility.
+- Token/API hygiene: normal replay output no longer echoes the resolved pack file; later CLI cycles removed hidden `--pack` compatibility too.
 - VERIFY: focused trace/world tests, typecheck, lint, format:check, validate, npm
   test (191/1253), `npm run health` EXIT 0.
 - Self-critique: closes a user-facing debug-loop path leak; source resolver internals still keep path data for integrity checks.
@@ -442,9 +450,9 @@ history only when deep recovery is truly needed. Keep future entries terse.
   `world_quest_id`; `load_game` rejects raw `pack_path`.
 - Trace verification: shipped quest traces replay/inspect with `world_quest_id`.
 - Trace CLIs: positional replay/inspect trace sources are quest ids; raw pack
-  paths are hidden offline compatibility only.
+  path sources are rejected.
 - Inspect CLI: shipped quest summaries use positional `world_quest_id`; raw pack
-  summaries require explicit `--pack` offline mode.
+  summaries and explicit `--pack` are rejected.
 - Author CLI: generated RPG output is draft-only; direct writes under
   `content/rpg/pack` are rejected until registered through the world graph.
 - Overworld session restore rejects forged history with duplicate journal ids,
@@ -474,11 +482,11 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Pack validation/loading/patching: shipped quests use `world_quest_id` and
   return world identity without raw path envelopes.
 - CLI validation: no-arg validation walks the canonical world graph; targeted
-  validation uses `world_quest_id`; raw pack files require explicit `--pack`
-  offline mode.
+  validation uses `world_quest_id`; raw pack files and explicit `--pack` are
+  rejected.
 - ToolApi/public MCP validate/load/patch schemas and responses are
-  `world_quest_id` only; trace replay/inspect keep raw pack paths only for
-  offline compatibility.
+  `world_quest_id` only; trace replay/inspect resolve shipped sources from
+  embedded or explicit `world_quest_id`.
 - Quest aliases: ToolApi and public MCP `validate_quest`/`start_quest` use
   graph ids only; raw `quest_path` is rejected.
 - Retired legacy story aliases: live MCP uses `validate_pack`, `new_game`, and
@@ -486,7 +494,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Token economy: RPG start/load responses include compact source identity once;
   follow-up observations omit the repeated world binding.
 - Token economy: compact overworld quest refs are `[id,title]`; pack paths stay
-  internal to source resolution and offline debug surfaces.
+  internal to source resolution and edit metadata.
 - Token economy: `compact_actions` lets repeated observe/step calls carry
   action ids without command labels; request full actions only when needed.
 - Token economy: `get_transcript({ summary_only: true })` keeps end-state
@@ -512,7 +520,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Generated RPG saves now embed `generatedRpgSeed`, so `load_game({ save })`
   can reconstruct in-memory generated packs without a raw pack path.
 - `load_game` source selection is save-embedded, `world_quest_id`, or
-  `generate_rpg_seed`; raw pack paths remain offline validation/replay tooling only.
+  `generate_rpg_seed`; raw pack paths are rejected at public restore surfaces.
 - Pack validation/loading/patching now consume shared source identity instead of
   re-deriving `world_quest_id` after path resolution.
 - Static overworld compatibility helpers are retired; ToolApi and public MCP use

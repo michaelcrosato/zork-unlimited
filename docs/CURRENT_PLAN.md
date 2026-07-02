@@ -52,8 +52,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - AFK baseline playtests now carry `main_world_quest_id` and instruct blind agents
   to start shipped baseline quests through `start_world_quest`.
 - The external blind-test harness now starts shipped playtests only through
-  `--quest` ids; raw pack paths are validation/replay inputs, not blind play
-  starts.
+  `--quest` ids; raw pack paths are internal edit metadata, not blind play,
+  validation, or replay inputs.
 - The dev MCP play harness also starts shipped quests through `start_world_quest`
   and `world_quest_id`, not retired `pack_path` starts.
 - `world_path` now accepts `world_quest_id` only in ToolApi and public MCP, and
@@ -93,8 +93,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - CLI inspect now summarizes shipped quest packs by `world_quest_id`; positional
   raw pack summaries and explicit `--pack` are rejected.
 - CLI validate now defaults through the canonical world graph and accepts
-  targeted `world_quest_id` values; positional raw pack files are rejected unless
-  explicit offline `--pack` mode is used.
+  targeted `world_quest_id` values; positional raw pack files and explicit
+  `--pack` mode are rejected.
 - CLI authoring now writes draft RPG packs only; direct `content/rpg/pack` output
   is rejected until the quest is deliberately registered in the canonical world
   graph.
@@ -107,8 +107,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - Generated RPG saves now embed `generatedRpgSeed`, letting `load_game({ save })`
   reconstruct in-memory generated packs without a raw pack path.
 - `load_game` source selection is save-embedded, `world_quest_id`, or
-  `generate_rpg_seed`; raw pack paths remain only in explicit offline validation
-  tooling.
+  `generate_rpg_seed`; raw pack paths are internal source metadata, not public
+  loop inputs.
 - `validate_pack`, `load_pack`, and `apply_content_patch` now use shared source
   identity directly instead of re-deriving `world_quest_id` from the resolved path.
 - Retired the static overworld compatibility helper module; local overworld play
@@ -183,8 +183,8 @@ Make discovered overworld quest leads start real RPG sessions.
 
 - Continue simplifying parser-era wording in historical docs when it affects current
   orientation.
-- Continue shrinking lower-level CLI/offline compatibility helpers that still
-  accept raw pack paths.
+- Continue shrinking lower-level debug helpers that still leak raw pack paths in
+  diagnostics or historical wording.
 - Add lightweight token/cost telemetry under ignored run output when the loop needs
   measured efficiency data.
 - Tighten full restore-time local action sequencing beyond discovery prefixes;

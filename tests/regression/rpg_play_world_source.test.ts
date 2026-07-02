@@ -105,5 +105,7 @@ describe("RPG play CLI world quest source", () => {
     expect(viaPositional.status, viaPositionalOutput).toBe(1);
     expect(viaPositionalOutput).toContain("world quest id only");
     expect(viaPositionalOutput).toContain("npm run validate");
+    expect(viaPositionalOutput).toContain("world_quest_id");
+    expect(viaPositionalOutput).not.toContain("--pack");
   });
 });
