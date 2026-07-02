@@ -849,11 +849,23 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(afterCompactMutationRead.context.here[0]).toBe(full.current.id);
     const repeatedFullRead = a.get_overworld_session({ session_id: started.session_id });
     expect(repeatedFullRead.snapshot_hash).toBe(started.snapshot_hash);
+    expect(repeatedFullRead.observation).toEqual(full);
+    expect(repeatedFullRead.observation).not.toBe(full);
+    expect(full.exits.length).toBeGreaterThan(0);
+    expect(repeatedFullRead.observation.exits).not.toBe(full.exits);
+    expect(repeatedFullRead.observation.exits[0]).not.toBe(full.exits[0]);
+    expect(repeatedFullRead.observation.discoveredAreaIds).not.toBe(full.discoveredAreaIds);
     expect(repeatedFullRead.observation.routeOptions).toEqual(full.routeOptions);
     expect(repeatedFullRead.observation.routeOptions).not.toBe(full.routeOptions);
     expect(repeatedFullRead.observation.routeOptions[0]).not.toBe(full.routeOptions[0]);
+    repeatedFullRead.observation.exits[0]!.travel_minutes = -1;
+    repeatedFullRead.observation.discoveredAreaIds.push("mutated_by_test");
     repeatedFullRead.observation.routeOptions[0]!.estimate.elapsedMinutes = -1;
     const afterRouteMutationRead = a.get_overworld_session({ session_id: started.session_id });
+    expect(afterRouteMutationRead.observation.exits[0]?.travel_minutes).toBe(
+      full.exits[0]?.travel_minutes,
+    );
+    expect(afterRouteMutationRead.observation.discoveredAreaIds).toEqual(full.discoveredAreaIds);
     expect(afterRouteMutationRead.observation.routeOptions[0]?.estimate.elapsedMinutes).toBe(
       full.routeOptions[0]?.estimate.elapsedMinutes,
     );

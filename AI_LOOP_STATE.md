@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 215 -->
+<!-- historical_cycle_count: 216 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — cached_overworld_full_views
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: `OverworldSession` now caches full overworld observations until session mutation invalidates snapshot-derived caches.
+- Loop effect: repeated full overworld reads reuse the derived observation shell instead of rebuilding local lists, id arrays, route rows, regional arcs, and travel state for unchanged state.
+- Guard: focused MCP read tests prove repeated full observations stay value-stable while returned wrappers remain isolated from caller mutation.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — cached_overworld_regional_arcs
 

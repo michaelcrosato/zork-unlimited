@@ -2252,6 +2252,7 @@ export class OverworldSession {
   private routeOptionsCache?: OverworldSessionRoutePlan[];
   private compactViewCache?: OverworldCompactView;
   private regionalArcProgressCache?: OverworldRegionalArcProgress[];
+  private viewCache?: OverworldView;
 
   constructor(private readonly world: OverworldManifest) {
     this.nodes = overworldNodesById(world);
@@ -2272,6 +2273,7 @@ export class OverworldSession {
     delete this.routeOptionsCache;
     delete this.compactViewCache;
     delete this.regionalArcProgressCache;
+    delete this.viewCache;
   }
 
   private cachedSnapshot(): { snapshot: OverworldSessionSnapshot; hash: string } {
@@ -2996,11 +2998,15 @@ export class OverworldSession {
   }
 
   private routeOptionsForView(): OverworldSessionRoutePlan[] {
-    return this.discoveredRouteOptions().map((plan) => ({
+    return this.discoveredRouteOptions().map((plan) => this.cloneRouteOption(plan));
+  }
+
+  private cloneRouteOption(plan: OverworldSessionRoutePlan): OverworldSessionRoutePlan {
+    return {
       ...plan,
       steps: [...plan.steps],
       estimate: { ...plan.estimate },
-    }));
+    };
   }
 
   private resolvedAnchorTownIdsForArc(arc: OverworldRegionalArc): Set<string> {
@@ -3039,11 +3045,17 @@ export class OverworldSession {
   }
 
   private regionalArcProgressForView(): OverworldRegionalArcProgress[] {
-    return this.cachedRegionalArcProgress().map((arc) => ({
+    return this.cachedRegionalArcProgress().map((arc) => this.cloneRegionalArcProgress(arc));
+  }
+
+  private cloneRegionalArcProgress(
+    arc: OverworldRegionalArcProgress,
+  ): OverworldRegionalArcProgress {
+    return {
       ...arc,
       anchorTowns: [...arc.anchorTowns],
       resolvedAnchorTowns: [...arc.resolvedAnchorTowns],
-    }));
+    };
   }
 
   private buildRegionalArcProgress(): OverworldRegionalArcProgress[] {
@@ -3240,7 +3252,55 @@ export class OverworldSession {
     };
   }
 
+  private cachedView(): OverworldView {
+    if (this.viewCache) return this.viewCache;
+    this.viewCache = this.buildView();
+    return this.viewCache;
+  }
+
+  private cloneView(view: OverworldView): OverworldView {
+    return {
+      ...view,
+      areaExits: view.areaExits.map((exit) => ({ ...exit })),
+      exits: view.exits.map((exit) => ({ ...exit })),
+      areas: [...view.areas],
+      pois: [...view.pois],
+      characters: [...view.characters],
+      events: [...view.events],
+      jobs: [...view.jobs],
+      sites: [...view.sites],
+      quests: view.quests.map((quest) => ({ ...quest })),
+      routeOptions: view.routeOptions.map((plan) => this.cloneRouteOption(plan)),
+      discovered: [...view.discovered],
+      journal: view.journal.map((entry) => ({ ...entry })),
+      discoveredAreaIds: [...view.discoveredAreaIds],
+      discoveredJobIds: [...view.discoveredJobIds],
+      visitedAreaIds: [...view.visitedAreaIds],
+      completedJobIds: [...view.completedJobIds],
+      discoveredSiteIds: [...view.discoveredSiteIds],
+      discoveredQuestIds: [...view.discoveredQuestIds],
+      startedQuestIds: [...view.startedQuestIds],
+      completedQuestIds: [...view.completedQuestIds],
+      exploredSiteIds: [...view.exploredSiteIds],
+      resolvedEventIds: [...view.resolvedEventIds],
+      regionRenown: { ...view.regionRenown },
+      regionalArcs: view.regionalArcs.map((arc) => this.cloneRegionalArcProgress(arc)),
+      completedRegionalArcIds: [...view.completedRegionalArcIds],
+      pendingRoadEncounter: view.pendingRoadEncounter
+        ? {
+            ...view.pendingRoadEncounter,
+            options: view.pendingRoadEncounter.options.map((option) => ({ ...option })),
+          }
+        : null,
+      log: view.log.map((entry) => ({ ...entry })),
+    };
+  }
+
   view(): OverworldView {
+    return this.cloneView(this.cachedView());
+  }
+
+  private buildView(): OverworldView {
     const current = this.currentNode();
     return {
       world: this.world.name,
