@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 184 -->
+<!-- historical_cycle_count: 185 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_overworld_sparse_ids
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact overworld `ids` now omits empty progress-id categories while keeping `id_counts`.
+- Loop effect: fresh/idle overworld reads keep category counts and non-empty ids without paying for eight empty arrays.
+- Guard: focused compact-overworld/MCP tests, typecheck, lint, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_overworld_empty_lists
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/token surface: compact `step_action` event tuple replies now include `event_v: 1`.
 - Loop effect: agents can branch on compact event tuple contract without asking for full reducer event objects.
 - Guard: focused MCP compact/full step-event tests, typecheck, and format check passed before full gates.
-- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_rpg_context_v2
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: compact RPG observation context now emits `v: 2` for the mode-free compact-action payload contract.
-- Loop effect: agents can distinguish the current compact RPG shape instead of reading the old `v: 1` discriminator after loop payload fields changed.
-- Guard: focused compact-RPG/MCP tests, typecheck, and format check passed before full gates.
 - VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.

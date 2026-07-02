@@ -85,7 +85,8 @@ export type OverworldCompactIdKey =
   | "started_quests"
   | "completed_quests"
   | "resolved_events";
-export type OverworldCompactIdMap = Record<OverworldCompactIdKey, string[]>;
+type OverworldCompactFullIdMap = Record<OverworldCompactIdKey, string[]>;
+export type OverworldCompactIdMap = Partial<OverworldCompactFullIdMap>;
 export type OverworldCompactIdCounts = readonly [
   discovered_towns: number,
   discovered_areas: number,
@@ -190,24 +191,16 @@ function compactIdList(values: readonly string[]): string[] {
   return values.slice(0, COMPACT_ID_LIST_LIMIT);
 }
 
-function compactIdPayload(values: OverworldCompactIdMap): {
+function compactIdPayload(values: OverworldCompactFullIdMap): {
   ids: OverworldCompactIdMap;
   id_counts: OverworldCompactIdCounts;
   ids_truncated?: OverworldCompactIdTruncation;
 } {
-  const ids: OverworldCompactIdMap = {
-    discovered_towns: compactIdList(values.discovered_towns),
-    discovered_areas: compactIdList(values.discovered_areas),
-    visited_areas: compactIdList(values.visited_areas),
-    discovered_jobs: compactIdList(values.discovered_jobs),
-    completed_jobs: compactIdList(values.completed_jobs),
-    discovered_sites: compactIdList(values.discovered_sites),
-    explored_sites: compactIdList(values.explored_sites),
-    discovered_quests: compactIdList(values.discovered_quests),
-    started_quests: compactIdList(values.started_quests),
-    completed_quests: compactIdList(values.completed_quests),
-    resolved_events: compactIdList(values.resolved_events),
-  };
+  const compactedIds = Object.fromEntries(
+    Object.entries(values)
+      .map(([key, value]) => [key, compactIdList(value)] as const)
+      .filter(([, value]) => value.length > 0),
+  ) as OverworldCompactIdMap;
   const id_counts: OverworldCompactIdCounts = [
     values.discovered_towns.length,
     values.discovered_areas.length,
@@ -239,7 +232,7 @@ function compactIdPayload(values: OverworldCompactIdMap): {
     ids_truncated.push("completed_quests");
   if (values.resolved_events.length > COMPACT_ID_LIST_LIMIT) ids_truncated.push("resolved_events");
   return {
-    ids,
+    ids: compactedIds,
     id_counts,
     ...(ids_truncated.length > 0 ? { ids_truncated } : {}),
   };

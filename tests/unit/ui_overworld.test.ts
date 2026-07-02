@@ -407,6 +407,9 @@ describe("OverworldSession", () => {
     expect(compact.id_counts[9]).toBe(view.completedQuestIds.length);
     expect(compact.id_counts[10]).toBe(view.resolvedEventIds.length);
     expect(compact.ids_truncated).not.toContain("resolved_events");
+    if (view.resolvedEventIds.length === 0) {
+      expect("resolved_events" in compact.ids).toBe(false);
+    }
   });
 
   it("adds deterministic travel delay when fatigue or supply shortage catches up", () => {

@@ -892,6 +892,17 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect("quests" in compact.context).toBe(false);
     expect("journal" in compact.context).toBe(false);
     expect("travel_log" in compact.context).toBe(false);
+    expect(compact.context.ids.discovered_towns).toEqual(full.discovered.map((town) => town.id));
+    expect(compact.context.ids.discovered_areas).toEqual(full.discoveredAreaIds);
+    expect("visited_areas" in compact.context.ids).toBe(false);
+    expect("discovered_jobs" in compact.context.ids).toBe(false);
+    expect("completed_jobs" in compact.context.ids).toBe(false);
+    expect("discovered_sites" in compact.context.ids).toBe(false);
+    expect("explored_sites" in compact.context.ids).toBe(false);
+    expect("discovered_quests" in compact.context.ids).toBe(false);
+    expect("started_quests" in compact.context.ids).toBe(false);
+    expect("completed_quests" in compact.context.ids).toBe(false);
+    expect("resolved_events" in compact.context.ids).toBe(false);
     expect("pending_road" in compact.context).toBe(false);
     expect("route_options_truncated" in compact.context).toBe(false);
     expect("travel_log_truncated" in compact.context).toBe(false);
