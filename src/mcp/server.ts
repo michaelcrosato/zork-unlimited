@@ -442,23 +442,6 @@ tool(
   (a) => api.step_action(defaultCompactRpg(a)),
 );
 tool(
-  "choose_option",
-  "Alias for step_action.",
-  {
-    ...SESSION,
-    option_id: z
-      .string()
-      .describe(
-        "An option/action id from get_scene().observation.available_actions or context.actions.",
-      ),
-    ...EXPECTED_STATE_HASH,
-    ...HIDE_GRAPH,
-    ...COMPACT_ACTIONS,
-    ...COMPACT_OBSERVATION,
-  },
-  (a) => api.choose_option(defaultCompactRpg(a)),
-);
-tool(
   "get_state",
   "Return state hash; include_state true returns raw deterministic state.",
   {

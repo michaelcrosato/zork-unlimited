@@ -354,13 +354,6 @@ type RpgStepActionArgs = {
   hide_graph?: boolean;
 } & RpgResponseOptions;
 
-type RpgChooseOptionArgs = {
-  session_id: string;
-  option_id: string;
-  expected_state_hash?: string;
-  hide_graph?: boolean;
-} & RpgResponseOptions;
-
 type RpgLoadGameArgs = {
   world_quest_id?: string;
   generate_rpg_seed?: number;
@@ -1576,21 +1569,6 @@ export function createToolApi(opts: { root: string }) {
         ...rpgViewField(after, args),
         state_hash: hashState(result.state),
       } as RpgStepActionResponse<Args>;
-    },
-
-    choose_option<Args extends RpgChooseOptionArgs>(args: Args): RpgStepActionResponse<Args> {
-      return this.step_action({
-        session_id: args.session_id,
-        action_id: args.option_id,
-        ...(args.expected_state_hash !== undefined && {
-          expected_state_hash: args.expected_state_hash,
-        }),
-        ...(args.hide_graph !== undefined && { hide_graph: args.hide_graph }),
-        ...(args.compact_actions !== undefined && { compact_actions: args.compact_actions }),
-        ...(args.compact_observation !== undefined && {
-          compact_observation: args.compact_observation,
-        }),
-      } as RpgStepActionArgs & Args);
     },
 
     get_state(args: { session_id: string }) {

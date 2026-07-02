@@ -177,7 +177,6 @@ describe("MCP server registration", () => {
       "get_observation",
       "get_scene",
       "step_action",
-      "choose_option",
       "load_game",
     ]) {
       const block = registeredToolBlock(toolName);

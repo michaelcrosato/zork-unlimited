@@ -86,8 +86,9 @@ Make discovered overworld quest leads start real RPG sessions.
   bound to the reducer state without a follow-up state read.
 - `list_legal_actions({ if_state_hash })` can return a hash-only `unchanged`
   response, avoiding repeated action menu payloads for polling or resume loops.
-- `step_action` / `choose_option` accept `expected_state_hash` and reject stale
-  action menus before mutating reducer state or transcript history.
+- `step_action` accepts `expected_state_hash` and rejects stale action menus
+  before mutating reducer state or transcript history; the old `choose_option`
+  alias is no longer part of the live MCP/ToolApi loop.
 - Compact RPG MCP observations now cap inventory/flags and keep only recent
   journal entries, with `more` counts when state was omitted.
 - `get_observation({ if_state_hash })` / `get_scene({ if_state_hash })` can return

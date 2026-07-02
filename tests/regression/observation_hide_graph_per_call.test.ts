@@ -1,7 +1,7 @@
 /**
  * Regression (§15) for bug_0299 — engine/api-surface: per-call `hide_graph`
- * override on `get_observation`, `get_scene`, `list_legal_actions`,
- * `step_action`, and `choose_option`.
+ * override on `get_observation`, `get_scene`, `list_legal_actions`, and
+ * `step_action`.
  *
  * Prior to this fix, `hide_graph` was a session-creation-time-only flag: once a
  * session was started the observation rendering mode was fixed. Per-call override

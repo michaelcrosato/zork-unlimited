@@ -1055,6 +1055,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const tools = api() as unknown as Record<string, unknown>;
     expect("validate_story" in tools).toBe(false);
     expect("start_game" in tools).toBe(false);
+    expect("choose_option" in tools).toBe(false);
   });
 
   it("validate_quest is the world-first validation alias", () => {
@@ -1481,9 +1482,9 @@ describe("MCP tools — the play loop (§9.1)", () => {
       (action) => action.id === "go_down",
     )?.id;
     expect(moveActionId).toBe("go_down");
-    const moved = a.choose_option({
+    const moved = a.step_action({
       session_id: fullStart.session_id,
-      option_id: moveActionId!,
+      action_id: moveActionId!,
       expected_state_hash: compactObservation.state_hash,
       hide_graph: true,
       compact_observation: true,
