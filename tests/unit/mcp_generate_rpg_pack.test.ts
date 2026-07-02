@@ -8,7 +8,7 @@
  * These tests hold the MCP path to the same bar the generator's own unit test (rpg_generator.test.ts)
  * holds the core to, reusing the production handlers (createToolApi), no weaker MCP-specific substitute:
  *   1. generate_rpg_pack MINTS + VALIDATES — a minted pack is reported playable (validateRpg-clean,
- *      zero findings of ANY severity) with the schema-stamped id/hash, never weaker than a shipped pack.
+ *      zero findings of ANY severity) with schema-stamped meta/hash, never weaker than a shipped pack.
  *   2. DETERMINISM (§8.5) carries through the tool — same seed ⇒ identical content hash + meta.
  *   3. new_game(generate_rpg_seed) genuinely PLAYS the minted pack through the live engine, and the
  *      COMBAT gate is load-bearing on that live surface: the foe is present in the gallery and offers an
@@ -32,7 +32,7 @@ describe("bug_0160 — generate_rpg_pack MCP tool mints + validates a fresh RPG 
     expect(r.report.ok).toBe(true);
     expect(r.report.findings).toEqual([]); // clean of ANY severity, like a shipped RPG pack
     expect("mode" in r).toBe(false);
-    expect(r.pack_id).toBe("genrpg_0_v1");
+    expect("pack_id" in r).toBe(false);
     expect(r.meta.id).toBe("genrpg_0_v1");
     expect(r.content_hash).toMatch(/^[0-9a-f]{64}$/);
     // The deepened hero's-descent shape (bug_0171): seven rooms, a TWO-fight gauntlet, three

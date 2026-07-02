@@ -1535,7 +1535,6 @@ export function createToolApi(opts: { root: string }) {
      */
     generate_rpg_pack(args: { seed: number }): {
       ok: boolean;
-      pack_id: string;
       content_hash: string;
       seed: number;
       meta: RpgPack["meta"];
@@ -1548,7 +1547,6 @@ export function createToolApi(opts: { root: string }) {
       const report = validateRpg(pack);
       return {
         ok: report.ok,
-        pack_id: pack.meta.id,
         content_hash: hashState(pack),
         seed: args.seed,
         meta: pack.meta,

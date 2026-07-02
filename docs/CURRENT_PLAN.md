@@ -165,6 +165,8 @@ Make discovered overworld quest leads start real RPG sessions.
   source.
 - Generated RPG saves now embed `generatedRpgSeed`, letting `load_game({ save })`
   reconstruct in-memory generated packs without a raw pack path.
+- `generate_rpg_pack` now reports `seed`, `meta`, and `content_hash` without a
+  top-level public `pack_id`; play uses `new_game({ generate_rpg_seed })`.
 - `load_game` source selection is save-embedded, `world_quest_id`, or
   `generate_rpg_seed`; raw pack paths are internal source metadata, not public
   loop inputs.

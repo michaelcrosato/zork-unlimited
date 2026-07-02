@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 173 -->
+<!-- historical_cycle_count: 174 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_generate_pack_id
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: public `generate_rpg_pack()` no longer echoes top-level `pack_id`.
+- Loop effect: generated RPG flows use `generate_rpg_seed`, `meta.id`, and `content_hash` without an extra package identity field.
+- Guard: focused MCP generation tests, typecheck, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_save_transcript_pack_id
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: start/reload payloads stay session/hash/source scoped while full observations and persisted save/trace blobs keep mode where compatibility/integrity still needs it.
 - Guard: session-start, generated-session, catalog, and load-game tests assert wrapper payloads omit `mode` while observations still report RPG mode.
 - VERIFY: focused session-wrapper tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_save_response_mode
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: `save_game()` success responses no longer return `mode: "rpg"`.
-- Loop effect: save replies stay state/source/hash scoped while the serialized save blob retains its persisted RPG mode guard.
-- Guard: save/load tests assert wrapper responses omit `mode` and the saved JSON still carries `mode: "rpg"`.
-- VERIFY: focused save/load tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
