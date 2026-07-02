@@ -267,7 +267,6 @@ type RpgViewField<Args extends RpgResponseOptions> = Args extends {
 
 type RpgSessionPayload<Args extends RpgResponseOptions = RpgResponseOptions> = {
   session_id: string;
-  mode: PackMode;
   world_quest_id: string | null;
   generated_rpg_seed: number | null;
   state_hash: string;
@@ -788,7 +787,6 @@ export function createToolApi(opts: { root: string }) {
     });
     return {
       session_id: session.id,
-      mode: SAVE_MODE,
       ...rpgViewField(openingObsOf(session), args),
       world_quest_id: session.worldQuestId ?? null,
       generated_rpg_seed: session.generatedRpgSeed ?? null,
@@ -1635,7 +1633,6 @@ export function createToolApi(opts: { root: string }) {
       });
       return {
         session_id: session.id,
-        mode: SAVE_MODE,
         ...rpgViewField(openingObsOf(session), args),
         world_quest_id: session.worldQuestId ?? null,
         generated_rpg_seed: session.generatedRpgSeed ?? null,

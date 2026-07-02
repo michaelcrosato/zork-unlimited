@@ -74,7 +74,7 @@ describe("bug_0160 — generate_rpg_pack MCP tool mints + validates a fresh RPG 
 describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack in-memory", () => {
   it("starts a session on a generated RPG pack with no file on disk", () => {
     const g = api().new_game({ generate_rpg_seed: 3 });
-    expect(g.mode).toBe("rpg");
+    expect("mode" in g).toBe(false);
     expect("pack_path" in g).toBe(false);
     expect(g.world_quest_id).toBeNull();
     expect(g.generated_rpg_seed).toBe(3);

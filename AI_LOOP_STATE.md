@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 159 -->
+<!-- historical_cycle_count: 160 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_session_wrapper_mode
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: RPG session wrapper responses no longer return top-level `mode: "rpg"`.
+- Loop effect: start/reload payloads stay session/hash/source scoped while full observations and persisted save/trace blobs keep mode where compatibility/integrity still needs it.
+- Guard: session-start, generated-session, catalog, and load-game tests assert wrapper payloads omit `mode` while observations still report RPG mode.
+- VERIFY: focused session-wrapper tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_save_response_mode
 
@@ -121,12 +129,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Evidence: public MCP `new_game` no longer advertises `world_quest_id`; ToolApi rejects `new_game({ world_quest_id })`.
 - Guard: overworld quest bridge, save/load regressions, hide-graph regressions, and catalog play tests now use `start_world_quest`.
 - VERIFY: focused MCP/source/start tests, typecheck, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.
-
-### Cycle result — retire_start_quest_alias
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/API surface: removed the legacy `start_quest` alias from ToolApi and public MCP registration.
-- Loop effect: RPG quest starts now have one world-bound contract: `start_world_quest(world_quest_id, seed?, compact_observation?)`.
-- Evidence: live MCP registration and ToolApi key checks no longer expose `start_quest`; `start_world_quest` still carries compact defaults and world route context.
-- Guard: MCP registration stays exact against ToolApi handlers, and unit coverage asserts the alias is absent.
-- VERIFY: focused MCP registration/tools tests, typecheck, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.

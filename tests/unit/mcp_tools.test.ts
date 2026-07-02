@@ -217,7 +217,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       "Moor Road",
       "The Sunken Barrow",
     ]);
-    expect(started.mode).toBe("rpg");
+    expect("mode" in started).toBe(false);
     expect("pack_path" in started).toBe(false);
     expect(started.world_quest_id).toBe("sunken_barrow");
     expect(started.observation.world?.id).toBe("charter_marches");
@@ -428,7 +428,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect("pack" in startedQuest.quest).toBe(false);
     expect(startedQuest.rpg_session_id).toBe(startedQuest.rpg_session.session_id);
-    expect(startedQuest.rpg_session.mode).toBe("rpg");
+    expect("mode" in startedQuest.rpg_session).toBe(false);
     expect(startedQuest.rpg_session.world_quest_id).toBe(discoveredQuest.id);
     expect("pack_path" in startedQuest.rpg_session).toBe(false);
     expect(startedQuest.rpg_session.observation.mode).toBe("rpg");
@@ -1121,7 +1121,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
   it("start_world_quest can play and transcript a shipped world quest", () => {
     const a = api();
     const game = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 1 });
-    expect(game.mode).toBe("rpg");
+    expect("mode" in game).toBe(false);
     expect("pack_path" in game).toBe(false);
     expect(game.world_quest_id).toBe("sunken_barrow");
     expect(game.observation.mode).toBe("rpg");
@@ -1178,7 +1178,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(currentStateHash).toMatch(/^[0-9a-f]{64}$/);
 
     const byWorldQuestId = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 1 });
-    expect(byWorldQuestId.mode).toBe("rpg");
+    expect("mode" in byWorldQuestId).toBe(false);
     expect("pack_path" in byWorldQuestId).toBe(false);
     expect(byWorldQuestId.world_quest_id).toBe("sunken_barrow");
   });
@@ -1241,7 +1241,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
   it("start_world_quest can play and transcript a route", () => {
     const a = api();
     const game = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 1 });
-    expect(game.mode).toBe("rpg");
+    expect("mode" in game).toBe(false);
     expect(game.observation.mode).toBe("rpg");
 
     const last = playSunkenBarrowToVictory(a, game.session_id);
@@ -1252,11 +1252,10 @@ describe("MCP tools — the play loop (§9.1)", () => {
       world_quest_id: "sunken_barrow",
       seed: 1,
     }) as unknown as {
-      mode: string;
       world_quest_id: string | null;
       quest: { id: string; path_from_hub: { name: string }[] };
     };
-    expect(byWorldQuestId.mode).toBe("rpg");
+    expect("mode" in byWorldQuestId).toBe(false);
     expect("pack_path" in byWorldQuestId).toBe(false);
     expect(byWorldQuestId.world_quest_id).toBe("sunken_barrow");
     expect(byWorldQuestId.quest.id).toBe("sunken_barrow");
@@ -1271,7 +1270,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     const a = api();
     const game = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 1 });
     expect(game.session_id).toBe("sess_1");
-    expect(game.mode).toBe("rpg");
+    expect("mode" in game).toBe(false);
     expect(game.observation.available_actions.map((x) => x.id)).toContain("go_down");
 
     const last = playSunkenBarrowToVictory(a, game.session_id);
@@ -1635,7 +1634,7 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     const saved = a.save_game({ session_id: game.session_id });
     const reloaded = a.load_game({ world_quest_id: "sunken_barrow", save: saved.save });
     const inferred = a.load_game({ save: saved.save });
-    expect(reloaded.mode).toBe("rpg");
+    expect("mode" in reloaded).toBe(false);
     expect("pack_path" in saved).toBe(false);
     expect(saved.world_quest_id).toBe("sunken_barrow");
     expect(saved.state_hash).toBe(after);

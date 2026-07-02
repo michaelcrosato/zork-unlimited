@@ -1,9 +1,10 @@
 /**
  * MCP RPG session types.
  *
- * MCP is now a single runtime surface: RPG. Full observations and session payloads
- * preserve the `mode` discriminator for client stability, but compact loop contexts
- * omit it because the compact surface has exactly one runtime.
+ * MCP is now a single runtime surface: RPG. Full observations still preserve the
+ * `mode` discriminator for client stability, but session wrappers and compact loop
+ * contexts omit it because those public surfaces have exactly one runtime.
+ * Persisted save/trace blobs keep mode for integrity checks.
  * Legacy CYOA/parser pack shapes are rejected before session creation.
  */
 import type { RpgObservation } from "../rpg/observation.js";
