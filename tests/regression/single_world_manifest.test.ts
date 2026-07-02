@@ -157,12 +157,12 @@ describe("single-world library contract", () => {
   });
 
   it("exposes graph routes through the MCP world listing", () => {
-    const world = api.list_world();
+    const world = api.list_world({ include_graph: true, include_routes: true });
     const breakingWeir = world.quests.find((q) => q.world_quest_id === "breaking_weir");
 
     expect(world.graph.hub).toBe("charterhaven");
     expect(world.graph.nodes.every((node) => !("pack" in node))).toBe(true);
-    expect(world.world.graph.nodes.every((node) => !("pack" in node))).toBe(true);
+    expect("graph" in world.world).toBe(false);
     expect(world.quests.every((q) => !("path" in q))).toBe(true);
     expect(world.quests.every((q) => q.mode === "rpg")).toBe(true);
     expect(breakingWeir?.graph_node).toBe("breaking_weir");

@@ -137,31 +137,35 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const a = api();
     expect((a as unknown as Record<string, unknown>).list_stories).toBeUndefined();
     const world = a.list_world();
+    const expanded = a.list_world({ include_graph: true, include_routes: true });
     expect("main_story" in world).toBe(false);
     expect("main_world_quest_id" in world).toBe(false);
+    expect("graph" in world).toBe(false);
+    expect("graph" in world.world).toBe(false);
     expect(world.quests).toHaveLength(16);
     expect(world.quests.every((q) => !("path" in q))).toBe(true);
-    expect(world.graph.nodes.every((node) => !("pack" in node))).toBe(true);
-    expect(world.world.graph.nodes.every((node) => !("pack" in node))).toBe(true);
+    expect(world.quests.every((q) => !("path_from_hub" in q))).toBe(true);
+    expect(expanded.graph.nodes.every((node) => !("pack" in node))).toBe(true);
     expect(world.quests.every((q) => q.mode === "rpg")).toBe(true);
     expect(world.quests.some((s) => s.world_quest_id === "sunken_barrow")).toBe(true);
     expect(world.quests.some((s) => s.world_quest_id === "breaking_weir")).toBe(true);
     expect(
-      world.quests.find((s) => s.world_quest_id === "breaking_weir")?.path_from_hub.at(-1)?.name,
+      expanded.quests.find((s) => s.world_quest_id === "breaking_weir")?.path_from_hub.at(-1)?.name,
     ).toBe("The Breaking Weir");
-    expect(world.world.graph.nodes.find((node) => node.id === "breaking_weir")?.name).toBe(
+    expect(expanded.graph.nodes.find((node) => node.id === "breaking_weir")?.name).toBe(
       "The Breaking Weir",
     );
     expect(world.hub).toBe("Charterhaven");
-    expect(world.graph.hub).toBe("charterhaven");
     expect(world.world.hub).toBe("Charterhaven");
+    expect(expanded.graph.hub).toBe("charterhaven");
     expect(world.quests.map((q) => q.world_quest_id)).toEqual(
-      world.world.graph.nodes.filter((node) => node.kind === "quest").map((node) => node.id),
+      expanded.graph.nodes.filter((node) => node.kind === "quest").map((node) => node.id),
     );
+    expect(JSON.stringify(world).length).toBeLessThan(7000);
   });
 
   it("lists the unified world as a hub plus quest areas", () => {
-    const r = api().list_world();
+    const r = api().list_world({ include_graph: true, include_routes: true });
     expect(r.world.id).toBe("charter_marches");
     expect(r.hub).toBe("Charterhaven");
     expect(r.graph.hub).toBe("charterhaven");

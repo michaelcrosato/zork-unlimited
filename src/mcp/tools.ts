@@ -116,9 +116,39 @@ type PublicWorldGraph = Omit<WorldManifest["graph"], "nodes" | "edges"> & {
   edges: WorldManifest["graph"]["edges"];
 };
 
-type PublicWorldManifest = Omit<WorldManifest, "graph"> & {
-  graph: PublicWorldGraph;
+type PublicWorldSummary = Pick<WorldManifest, "id" | "name" | "hub">;
+
+type WorldListOptions = {
+  include_graph?: boolean;
+  include_routes?: boolean;
 };
+
+type WorldQuestCatalogEntry = {
+  id: string;
+  title: string;
+  mode: PackMode | null;
+  playable: boolean;
+  world_quest_id: string | null;
+  district: string;
+  quest: string;
+  role: string;
+  connection: string;
+  graph_node: string | null;
+};
+
+type WorldQuestRouteDetails = {
+  path_from_hub: WorldRouteStep[];
+};
+
+type WorldListQuest<Args extends WorldListOptions> = WorldQuestCatalogEntry &
+  (Args extends { include_routes: true } ? WorldQuestRouteDetails : Record<string, never>);
+
+type WorldListResponse<Args extends WorldListOptions> = {
+  world: PublicWorldSummary;
+  hub: string;
+  quest_count: number;
+  quests: WorldListQuest<Args>[];
+} & (Args extends { include_graph: true } ? { graph: PublicWorldGraph } : Record<string, never>);
 
 type OverworldSessionPayload<Key extends string, Value> = {
   ok: true;
@@ -653,20 +683,6 @@ export function createToolApi(opts: { root: string }) {
     };
   }
 
-  function publicWorldManifest(world: WorldManifest): PublicWorldManifest {
-    const graph = publicWorldGraph(world);
-    return {
-      id: world.id,
-      name: world.name,
-      hub: world.hub,
-      ...(world.premise === undefined ? {} : { premise: world.premise }),
-      ...(world.rule === undefined ? {} : { rule: world.rule }),
-      ...(world.hub_districts === undefined ? {} : { hub_districts: [...world.hub_districts] }),
-      ...(world.frontiers === undefined ? {} : { frontiers: [...world.frontiers] }),
-      graph,
-    };
-  }
-
   function resolveWorldQuestPackPath(worldQuestId: string): {
     world: WorldManifest;
     node: NonNullable<ReturnType<typeof worldQuestNodeById>>;
@@ -814,31 +830,15 @@ export function createToolApi(opts: { root: string }) {
   return {
     sessions,
 
-    list_world(): {
-      world: PublicWorldManifest;
-      hub: string;
-      graph: PublicWorldGraph;
-      quest_count: number;
-      quests: {
-        id: string;
-        title: string;
-        mode: PackMode | null;
-        playable: boolean;
-        world_quest_id: string | null;
-        district: string;
-        quest: string;
-        role: string;
-        connection: string;
-        graph_node: string | null;
-        path_from_hub: WorldRouteStep[];
-      }[];
-    } {
+    list_world<Args extends WorldListOptions = Record<string, never>>(
+      args?: Args,
+    ): WorldListResponse<Args> {
       const world = loadWorldManifest();
       const quests = discoverWorldQuestSources(world)
         .filter((s) => s.world?.id === world.id)
         .map((s) => {
           const node = s.world_quest_id ? worldQuestNodeById(world, s.world_quest_id) : null;
-          return {
+          const quest: WorldQuestCatalogEntry = {
             id: s.id,
             title: s.title,
             mode: s.mode,
@@ -849,17 +849,32 @@ export function createToolApi(opts: { root: string }) {
             role: s.world?.role ?? "",
             connection: s.world?.connection ?? "",
             graph_node: node?.id ?? null,
-            path_from_hub: node ? (worldRouteFromHub(world, node.id) ?? []) : [],
           };
+          if (args?.include_routes === true) {
+            return {
+              ...quest,
+              path_from_hub: node ? (worldRouteFromHub(world, node.id) ?? []) : [],
+            } as unknown as WorldListQuest<Args>;
+          }
+          return quest as WorldListQuest<Args>;
         });
-      const publicWorld = publicWorldManifest(world);
-      return {
-        world: publicWorld,
+      const catalog = {
+        world: {
+          id: world.id,
+          name: world.name,
+          hub: world.hub,
+        },
         hub: world.hub,
-        graph: publicWorld.graph,
         quest_count: quests.length,
         quests,
       };
+      if (args?.include_graph === true) {
+        return {
+          ...catalog,
+          graph: publicWorldGraph(world),
+        } as unknown as WorldListResponse<Args>;
+      }
+      return catalog as WorldListResponse<Args>;
     },
 
     world_path(args: { world_quest_id?: string }): {

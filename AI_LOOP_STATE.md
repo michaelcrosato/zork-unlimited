@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 59 -->
+<!-- historical_cycle_count: 60 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — world_catalog_graph_routes_opt_in
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent and WSL worktree path noise remains outside the green gate.
+- Token surface: `list_world` now returns a lean RPG quest catalog by default; full graph and all quest routes require `include_graph` / `include_routes`.
+- Loop effect: AFK/blind setup can discover `world_quest_id` values without paying for duplicated graph metadata or every route path; `world_path` remains the single-route expansion tool.
+- Evidence: default `list_world` measured 6208 JSON chars versus 21180 before; expanded graph+routes measured 15591 without duplicating graph under `world`.
+- VERIFY: focused catalog regressions, `npm run health`, `npm run validate`, and `npm test` passed: integrity, typecheck, lint, format check, 193 test files / 1356 tests, and validate.
+- Self-critique: this trims catalog setup payloads; repeated gameplay still depends on compact observation/context usage by callers.
 
 ### Cycle result — overworld_catalog_notes_opt_in
 

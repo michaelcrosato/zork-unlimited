@@ -164,6 +164,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - `list_overworld` now keeps source/design-rule prose behind
   `include_design_notes`, leaving the default catalog response counts-first and
   token-small.
+- `list_world` now keeps full graph and all quest route arrays behind
+  `include_graph` / `include_routes`, leaving the default RPG quest catalog
+  token-small for blind/AFK setup.
 - Overworld pending-road session snapshots now persist only the edge id and
   reconstruct road event/options from the content-bound world manifest.
 - Overworld travel-log session snapshots now persist road ids plus dynamic

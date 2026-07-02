@@ -34,7 +34,12 @@ import {
 import { createToolApi } from "./mcp/tools.js";
 import { rotateLoopState } from "./afk/loop_state.js";
 
-type WorldCatalog = ReturnType<ReturnType<typeof createToolApi>["list_world"]>;
+type WorldCatalog = {
+  quests: {
+    playable: boolean;
+    world_quest_id: string | null;
+  }[];
+};
 
 // ── Saturation-triggered ultraplan (docs/afk_loop.md) ──────────────────────────
 // When the deterministic assessor runs dry (isSaturated), a cycle re-aims the
