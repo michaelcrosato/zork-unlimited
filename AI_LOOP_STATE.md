@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 205 -->
+<!-- historical_cycle_count: 206 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — cached_rpg_observations
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: `SessionStore` now caches MCP RPG observations by `stateHash`, `hideGraph`, and `includeWorldIntro`; `sessions.update` invalidates both observation and legal-action caches.
+- Loop effect: repeated observe/render paths can reuse visible object, exit, enemy, public-state, and action projection work for unchanged reducer state while compact/full payloads remain projection-only.
+- Guard: focused MCP session tests prove observation cache reuse, option-keyed rebuilds, and invalidation on state replacement.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — cached_observation_actions
 

@@ -887,10 +887,12 @@ export function createToolApi(opts: { root: string }) {
   }
 
   function sessionObsOf(s: Session, opts: ObservationOptions = {}): RpgObservation {
-    return buildObsFor(s.index, s.state, {
-      ...opts,
-      availableActions: legalActionsFor(s),
-    });
+    return sessions.observation(s.id, opts, () =>
+      buildObsFor(s.index, s.state, {
+        ...opts,
+        availableActions: legalActionsFor(s),
+      }),
+    );
   }
 
   function startSession(

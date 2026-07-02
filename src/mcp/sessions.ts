@@ -11,6 +11,7 @@ import type { Rules } from "../core/engine.js";
 import type { GameEvent } from "../core/events.js";
 import type { RpgAction } from "../api/types.js";
 import type { RpgActionOption } from "../rpg/legal_actions.js";
+import type { ObservationOptions, RpgObservation } from "../rpg/observation.js";
 import type { RpgIndex } from "../rpg/runner.js";
 import { hashState } from "../core/hash.js";
 
@@ -47,6 +48,12 @@ export type Session = {
     stateHash: string;
     actions: RpgActionOption[];
   };
+  observationCache?: {
+    stateHash: string;
+    hideGraph: boolean;
+    includeWorldIntro: boolean;
+    observation: RpgObservation;
+  };
   transcript: TranscriptTurn[];
   transcriptLogHash: string;
   /** Difficulty: when true, the agent-facing observation hides each exit's
@@ -57,8 +64,10 @@ export type Session = {
 
 export type SessionInit = Omit<
   Session,
-  "id" | "stateHash" | "legalActionsCache" | "transcriptLogHash"
+  "id" | "stateHash" | "legalActionsCache" | "observationCache" | "transcriptLogHash"
 >;
+
+type ObservationCacheOptions = Pick<ObservationOptions, "hideGraph" | "includeWorldIntro">;
 
 export class SessionStore {
   private counter = 0;
@@ -87,6 +96,7 @@ export class SessionStore {
     session.state = state;
     session.stateHash = hashState(state);
     delete session.legalActionsCache;
+    delete session.observationCache;
     return session;
   }
 
@@ -101,6 +111,31 @@ export class SessionStore {
       actions,
     };
     return actions;
+  }
+
+  observation(
+    id: string,
+    opts: ObservationCacheOptions,
+    build: () => RpgObservation,
+  ): RpgObservation {
+    const session = this.get(id);
+    const hideGraph = opts.hideGraph === true;
+    const includeWorldIntro = opts.includeWorldIntro === true;
+    if (
+      session.observationCache?.stateHash === session.stateHash &&
+      session.observationCache.hideGraph === hideGraph &&
+      session.observationCache.includeWorldIntro === includeWorldIntro
+    ) {
+      return session.observationCache.observation;
+    }
+    const observation = build();
+    session.observationCache = {
+      stateHash: session.stateHash,
+      hideGraph,
+      includeWorldIntro,
+      observation,
+    };
+    return observation;
   }
 
   appendTranscript(id: string, turn: TranscriptTurn): Session {

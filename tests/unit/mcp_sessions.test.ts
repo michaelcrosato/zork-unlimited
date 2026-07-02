@@ -5,6 +5,7 @@ import { initState } from "../../src/core/state.js";
 import { hashState } from "../../src/core/hash.js";
 import { SessionStore, type SessionInit } from "../../src/mcp/sessions.js";
 import type { RpgActionOption } from "../../src/rpg/legal_actions.js";
+import type { RpgObservation } from "../../src/rpg/observation.js";
 import type { RpgIndex } from "../../src/rpg/runner.js";
 import type { RpgAction } from "../../src/api/types.js";
 
@@ -26,6 +27,30 @@ function sessionInit(overrides: Partial<SessionInit> = {}): SessionInit {
     state: state(),
     transcript: [],
     ...overrides,
+  };
+}
+
+function observation(room: string): RpgObservation {
+  return {
+    mode: "rpg",
+    room,
+    title: room,
+    description: room,
+    visible_objects: [],
+    npcs_present: [],
+    exits: [],
+    blocked_exits: [],
+    inventory: [],
+    state: { flags: [], vars: {}, journal: [] },
+    dialogue: null,
+    enemies_present: [],
+    stats: { hp: 0, attack: 0, defense: 0 },
+    available_actions: [],
+    score: 0,
+    max_score: 0,
+    ended: false,
+    ending_id: null,
+    ending: null,
   };
 }
 
@@ -144,6 +169,7 @@ describe("SessionStore", () => {
     store.update(session.id, nextState);
 
     expect(session.legalActionsCache).toBeUndefined();
+    expect(session.observationCache).toBeUndefined();
     expect(session.stateHash).toBe(hashState(nextState));
 
     const afterUpdate = store.legalActions(session.id, () => {
@@ -154,5 +180,50 @@ describe("SessionStore", () => {
     expect(afterUpdate).toBe(nextActions);
     expect(enumerations).toBe(2);
     expect(session.legalActionsCache?.stateHash).toBe(session.stateHash);
+  });
+
+  it("caches observations by state hash and graph options", () => {
+    const store = new SessionStore();
+    const session = store.create(sessionInit());
+    const firstObservation = observation("start");
+    const hiddenObservation = observation("hidden");
+    const nextObservation = observation("next");
+    let builds = 0;
+
+    const first = store.observation(session.id, {}, () => {
+      builds += 1;
+      return firstObservation;
+    });
+    const cached = store.observation(session.id, {}, () => {
+      builds += 1;
+      return hiddenObservation;
+    });
+
+    expect(first).toBe(firstObservation);
+    expect(cached).toBe(firstObservation);
+    expect(builds).toBe(1);
+    expect(session.observationCache?.stateHash).toBe(session.stateHash);
+
+    const hidden = store.observation(session.id, { hideGraph: true }, () => {
+      builds += 1;
+      return hiddenObservation;
+    });
+
+    expect(hidden).toBe(hiddenObservation);
+    expect(builds).toBe(2);
+    expect(session.observationCache?.hideGraph).toBe(true);
+
+    const nextState = state("next");
+    store.update(session.id, nextState);
+    expect(session.observationCache).toBeUndefined();
+
+    const afterUpdate = store.observation(session.id, { hideGraph: true }, () => {
+      builds += 1;
+      return nextObservation;
+    });
+
+    expect(afterUpdate).toBe(nextObservation);
+    expect(builds).toBe(3);
+    expect(session.observationCache?.stateHash).toBe(hashState(nextState));
   });
 });

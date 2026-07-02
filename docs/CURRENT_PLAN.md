@@ -144,6 +144,10 @@ Make discovered overworld quest leads start real RPG sessions.
 - MCP RPG observations pass that cached legal-action set into
   `buildRpgObservation`, so start/open/read/reject/step observation payloads do
   not re-enumerate actions behind the session cache.
+- MCP RPG observations are cached per session/state hash plus graph-intro
+  options, so repeated observe/render paths reuse visible object, exit, enemy,
+  public-state, and action projection work until `sessions.update` invalidates
+  the cache.
 - Public MCP `get_transcript` defaults to compact summary-only output; callers can
   pass `summary_only: false` and `compact_summary: false` when they need full
   route/event history.
