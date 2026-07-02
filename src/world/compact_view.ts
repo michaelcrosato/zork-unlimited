@@ -114,19 +114,19 @@ export type OverworldCompactView = {
     quests: number;
   };
   roads: OverworldCompactRoad[];
-  area_routes: OverworldCompactAreaRoute[];
+  area_routes?: OverworldCompactAreaRoute[];
   route_options: OverworldCompactRouteOption[];
   route_options_truncated?: true;
   areas: OverworldCompactRef[];
   poi: OverworldCompactRef[];
   contacts: OverworldCompactRef[];
   events: OverworldCompactRef[];
-  jobs: OverworldCompactRef[];
-  sites: OverworldCompactRef[];
-  quests: OverworldCompactQuestRef[];
+  jobs?: OverworldCompactRef[];
+  sites?: OverworldCompactRef[];
+  quests?: OverworldCompactQuestRef[];
   pending_road?: OverworldCompactRoadEncounter;
-  journal: OverworldCompactJournalEntry[];
-  travel_log: OverworldCompactTravelLogEntry[];
+  journal?: OverworldCompactJournalEntry[];
+  travel_log?: OverworldCompactTravelLogEntry[];
   travel_log_truncated?: true;
   progress: {
     towns: readonly [visited: number, total: number];
@@ -248,6 +248,15 @@ function compactIdPayload(values: OverworldCompactIdMap): {
 export function compactOverworldView(view: OverworldView): OverworldCompactView {
   const routeOptions = view.routeOptions.slice(0, COMPACT_ROUTE_LIMIT).map(compactRouteOption);
   const travelLog = view.log.slice(0, COMPACT_TRAVEL_LOG_LIMIT).map(compactTravelLogEntry);
+  const areaRoutes = view.areaExits.map(
+    (exit) => [exit.id, exit.destination.id, exit.travel_minutes] as const,
+  );
+  const jobs = view.jobs.map(titledRef);
+  const sites = view.sites.map(titledRef);
+  const quests = view.quests.map((quest) => [quest.id, quest.title] as const);
+  const journal = view.journal
+    .slice(0, COMPACT_JOURNAL_LIMIT)
+    .map((entry) => [entry.kind, entry.title, entry.recordedAt] as const);
   const idPayload = compactIdPayload({
     discovered_towns: view.discovered.map((town) => town.id),
     discovered_areas: view.discoveredAreaIds,
@@ -293,7 +302,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
         plan?.estimate.fatigueAfter ?? view.fatigue,
       ];
     }),
-    area_routes: view.areaExits.map((exit) => [exit.id, exit.destination.id, exit.travel_minutes]),
+    ...(areaRoutes.length > 0 ? { area_routes: areaRoutes } : {}),
     route_options: routeOptions,
     ...(view.routeOptions.length > routeOptions.length
       ? { route_options_truncated: true as const }
@@ -302,14 +311,12 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     poi: view.pois.map(titledRef),
     contacts: view.characters.map((character) => [character.id, character.name]),
     events: view.events.map(titledRef),
-    jobs: view.jobs.map(titledRef),
-    sites: view.sites.map(titledRef),
-    quests: view.quests.map((quest) => [quest.id, quest.title]),
+    ...(jobs.length > 0 ? { jobs } : {}),
+    ...(sites.length > 0 ? { sites } : {}),
+    ...(quests.length > 0 ? { quests } : {}),
     ...(pendingRoad ? { pending_road: pendingRoad } : {}),
-    journal: view.journal
-      .slice(0, COMPACT_JOURNAL_LIMIT)
-      .map((entry) => [entry.kind, entry.title, entry.recordedAt]),
-    travel_log: travelLog,
+    ...(journal.length > 0 ? { journal } : {}),
+    ...(travelLog.length > 0 ? { travel_log: travelLog } : {}),
     ...(view.log.length > travelLog.length ? { travel_log_truncated: true as const } : {}),
     progress: {
       towns: [view.visitedCount, view.totalTowns],

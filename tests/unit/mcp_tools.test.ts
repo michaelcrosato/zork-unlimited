@@ -462,7 +462,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     );
     expect(scoutedQuestLead.observation.quests.every((quest) => !("pack" in quest))).toBe(true);
     expect(
-      a.get_overworld_session_context({ session_id: started.session_id }).context.quests[0],
+      a.get_overworld_session_context({ session_id: started.session_id }).context.quests?.[0],
     ).toEqual([
       scoutedQuestLead.observation.quests[0]!.id,
       scoutedQuestLead.observation.quests[0]!.title,
@@ -880,12 +880,18 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compact.context.poi.map(([id]) => id)).toEqual(full.pois.map((poi) => poi.id));
     expect(compact.context.roads[0]).toHaveLength(5);
     expect(compact.context.roads[0]?.[2]).toEqual(expect.any(Number));
-    if (compact.context.area_routes[0]) {
+    if (compact.context.area_routes?.[0]) {
       expect(compact.context.area_routes[0]).toHaveLength(3);
       expect(compact.context.area_routes[0][2]).toEqual(expect.any(Number));
     }
     expect(compact.context.route_options.length).toBeLessThanOrEqual(8);
     expect(compact.context.route_options[0]?.[1]).toEqual(expect.any(Number));
+    expect("area_routes" in compact.context).toBe(false);
+    expect("jobs" in compact.context).toBe(false);
+    expect("sites" in compact.context).toBe(false);
+    expect("quests" in compact.context).toBe(false);
+    expect("journal" in compact.context).toBe(false);
+    expect("travel_log" in compact.context).toBe(false);
     expect("pending_road" in compact.context).toBe(false);
     expect("route_options_truncated" in compact.context).toBe(false);
     expect("travel_log_truncated" in compact.context).toBe(false);
@@ -916,7 +922,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compactTravel.travel.baseMinutes).toBe(road!.travel_minutes);
     expect(compactTravel.snapshot_hash).not.toBe(started.snapshot_hash);
     expect(compactTravel.context.here[0]).toBe("colonie_town");
-    expect(compactTravel.context.travel_log[0]).toEqual([
+    expect(compactTravel.context.travel_log?.[0]).toEqual([
       road!.id,
       full.current.id,
       road!.destination.id,

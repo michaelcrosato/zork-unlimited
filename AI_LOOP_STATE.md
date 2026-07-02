@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 183 -->
+<!-- historical_cycle_count: 184 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_overworld_empty_lists
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact overworld contexts now omit empty area-route, job, site, quest, journal, and travel-log lists.
+- Loop effect: fresh/idle overworld reads keep navigation, visible locals, counts, and hashes without paying for local/recovery arrays that carry no choices.
+- Guard: focused MCP/overworld/docs tests, typecheck, lint, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_transcript_empty_lists
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/token surface: compact RPG observation context now emits `v: 2` for the mode-free compact-action payload contract.
 - Loop effect: agents can distinguish the current compact RPG shape instead of reading the old `v: 1` discriminator after loop payload fields changed.
 - Guard: focused compact-RPG/MCP tests, typecheck, and format check passed before full gates.
-- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_overworld_context_v2
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: compact overworld context now emits `v: 2` for the expanded progress-id tuple contract that includes started/completed quest ids.
-- Loop effect: agents can distinguish the current compact context shape instead of reading the old `v: 1` discriminator after tuple slots changed.
-- Guard: focused compact-overworld/MCP tests, typecheck, and format check passed before full gates.
 - VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
