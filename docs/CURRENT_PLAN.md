@@ -188,6 +188,9 @@ Make discovered overworld quest leads start real RPG sessions.
   exits at construction, so full/compact views and local actions avoid repeated
   scans/sorts over areas, POIs, contacts, events, jobs, sites, quests, and area
   routes.
+- Overworld sessions index sorted town road exits and road events at
+  construction, so compact/full road views, route planning, travel actions, and
+  pending-road restore avoid rescanning world roads.
 - Overworld sessions maintain a journal-entry id index across live mutation and
   snapshot restore, so repeat-action checks and event-resolution prerequisites
   avoid scanning long journal histories.

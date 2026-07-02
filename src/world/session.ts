@@ -7,8 +7,6 @@ import {
   overworldJobsAt,
   overworldNodesById,
   overworldQuestsAt,
-  overworldRoadEventFor,
-  planOverworldRoute,
   type OverworldArea,
   type OverworldAreaExit,
   type OverworldCharacter,
@@ -23,6 +21,7 @@ import {
   type OverworldQuest,
   type OverworldRegionalArc,
   type OverworldRoutePlan,
+  type OverworldRouteStep,
   type OverworldRoadEvent,
 } from "./overworld.js";
 import {
@@ -2233,6 +2232,8 @@ function sortedIndex<T>(
 
 export class OverworldSession {
   private readonly nodes: Map<string, OverworldNode>;
+  private readonly roadExitsByTown: Map<string, OverworldExit[]>;
+  private readonly roadEventsByEdgeId: Map<string, OverworldRoadEvent>;
   private readonly areasById: Map<string, OverworldArea>;
   private readonly areasByTown: Map<string, OverworldArea[]>;
   private readonly areaExitsByArea: Map<string, OverworldAreaExit[]>;
@@ -2284,6 +2285,8 @@ export class OverworldSession {
 
   constructor(private readonly world: OverworldManifest) {
     this.nodes = overworldNodesById(world);
+    this.roadExitsByTown = this.indexRoadExits();
+    this.roadEventsByEdgeId = new Map(world.road_events.map((event) => [event.edge, event]));
     this.areasById = new Map(world.areas.map((area) => [area.id, area]));
     this.areasByTown = sortedIndex(
       world.areas,
@@ -2367,6 +2370,28 @@ export class OverworldSession {
       }
       pushIndexed(index, edge.from_area, { ...edge, destination: fromDestination });
       pushIndexed(index, edge.to_area, { ...edge, destination: toDestination });
+    }
+    for (const exits of index.values()) {
+      exits.sort(
+        (a, b) =>
+          a.travel_minutes - b.travel_minutes ||
+          a.destination.name.localeCompare(b.destination.name),
+      );
+    }
+    return index;
+  }
+
+  private indexRoadExits(): Map<string, OverworldExit[]> {
+    const index = new Map<string, OverworldExit[]>();
+    for (const edge of this.world.edges) {
+      const fromDestination = this.nodes.get(edge.to);
+      const toDestination = this.nodes.get(edge.from);
+      if (!fromDestination || !toDestination) {
+        const missingNodeId = fromDestination ? edge.from : edge.to;
+        throw new Error(`Overworld edge references missing node "${missingNodeId}".`);
+      }
+      pushIndexed(index, edge.from, { ...edge, destination: fromDestination });
+      pushIndexed(index, edge.to, { ...edge, destination: toDestination });
     }
     for (const exits of index.values()) {
       exits.sort(
@@ -2682,7 +2707,7 @@ export class OverworldSession {
       if (pendingEdge.from !== snapshot.currentId && pendingEdge.to !== snapshot.currentId) {
         throw new Error("Overworld session snapshot pending road is not at the current town.");
       }
-      const manifestEvent = overworldRoadEventFor(this.world, snapshot.pendingRoadEncounter.edgeId);
+      const manifestEvent = this.roadEventFor(snapshot.pendingRoadEncounter.edgeId);
       if (!manifestEvent) {
         throw new Error(
           `Overworld session snapshot has no road event for "${snapshot.pendingRoadEncounter.edgeId}".`,
@@ -2785,7 +2810,7 @@ export class OverworldSession {
       suppliesAfter: entry.suppliesAfter,
       fatigueGained: entry.fatigueGained,
       fatigueAfter: entry.fatigueAfter,
-      roadEvent: overworldRoadEventFor(this.world, entry.edgeId),
+      roadEvent: this.roadEventFor(entry.edgeId),
     };
   }
 
@@ -2794,7 +2819,7 @@ export class OverworldSession {
     this.visitedIds.add(nodeId);
     this.discoverInitialAreaForTown(nodeId);
     this.setCurrentAreaForTown(nodeId);
-    for (const edge of overworldEdgesFrom(this.world, nodeId)) {
+    for (const edge of this.roadsFrom(nodeId)) {
       this.discoveredIds.add(edge.destination.id);
     }
     this.clearSnapshotCache();
@@ -2804,6 +2829,14 @@ export class OverworldSession {
     const current = this.nodes.get(this.currentId);
     if (!current) throw new Error(`Current overworld node "${this.currentId}" is missing.`);
     return current;
+  }
+
+  private roadsFrom(nodeId: string): OverworldExit[] {
+    return this.roadExitsByTown.get(nodeId) ?? [];
+  }
+
+  private roadEventFor(edgeId: string): OverworldRoadEvent | null {
+    return this.roadEventsByEdgeId.get(edgeId) ?? null;
   }
 
   private recordAction(
@@ -3097,12 +3130,84 @@ export class OverworldSession {
     };
   }
 
+  private indexedRoute(
+    fromId: string,
+    destinationId: string,
+    allowedNodeIds?: ReadonlySet<string>,
+  ): OverworldRoutePlan | null {
+    const from = this.nodes.get(fromId);
+    if (!from) throw new Error(`Unknown overworld route start "${fromId}".`);
+    const destination = this.nodes.get(destinationId);
+    if (!destination) throw new Error(`Unknown overworld route destination "${destinationId}".`);
+    if (allowedNodeIds && (!allowedNodeIds.has(fromId) || !allowedNodeIds.has(destinationId))) {
+      return null;
+    }
+    if (fromId === destinationId) {
+      return { from, destination, steps: [], totalDistanceMi: 0, totalMinutes: 0 };
+    }
+
+    const distance = new Map<string, number>([[fromId, 0]]);
+    const previous = new Map<string, { from: string; edge: OverworldExit }>();
+    const unsettled = new Set<string>(
+      allowedNodeIds ? [...allowedNodeIds] : [...this.nodes.keys()],
+    );
+
+    while (unsettled.size > 0) {
+      let current: string | null = null;
+      let best = Number.POSITIVE_INFINITY;
+      for (const candidate of unsettled) {
+        const candidateDistance = distance.get(candidate) ?? Number.POSITIVE_INFINITY;
+        if (candidateDistance < best) {
+          current = candidate;
+          best = candidateDistance;
+        }
+      }
+      if (current === null || best === Number.POSITIVE_INFINITY) break;
+      unsettled.delete(current);
+      if (current === destinationId) break;
+
+      for (const edge of this.roadsFrom(current)) {
+        const next = edge.destination.id;
+        if (!unsettled.has(next)) continue;
+        const nextDistance = best + edge.travel_minutes;
+        if (nextDistance >= (distance.get(next) ?? Number.POSITIVE_INFINITY)) continue;
+        distance.set(next, nextDistance);
+        previous.set(next, { from: current, edge });
+      }
+    }
+
+    if (!previous.has(destinationId)) return null;
+    const steps: OverworldRouteStep[] = [];
+    for (let cursor = destinationId; cursor !== fromId; ) {
+      const prev = previous.get(cursor);
+      if (!prev) return null;
+      const stepFrom = this.nodes.get(prev.from);
+      const stepTo = this.nodes.get(cursor);
+      if (!stepFrom || !stepTo) return null;
+      steps.unshift({
+        from: stepFrom,
+        to: stepTo,
+        edge: prev.edge,
+        roadEvent: this.roadEventFor(prev.edge.id),
+      });
+      cursor = prev.from;
+    }
+
+    return {
+      from,
+      destination,
+      steps,
+      totalDistanceMi: steps.reduce((sum, step) => sum + step.edge.distance_mi, 0),
+      totalMinutes: steps.reduce((sum, step) => sum + step.edge.travel_minutes, 0),
+    };
+  }
+
   private discoveredRouteOptions(): OverworldSessionRoutePlan[] {
     if (this.routeOptionsCache) return this.routeOptionsCache;
     const current = this.currentNode();
     const options = [...this.discoveredIds]
       .filter((id) => id !== this.currentId)
-      .map((id) => planOverworldRoute(this.world, this.currentId, id, this.discoveredIds))
+      .map((id) => this.indexedRoute(this.currentId, id, this.discoveredIds))
       .filter((plan): plan is OverworldRoutePlan => plan !== null && plan.steps.length > 0)
       .map((plan) => this.routeWithEstimate(plan))
       .sort(
@@ -3295,7 +3400,7 @@ export class OverworldSession {
       completed_quests: sortedIdList(this.completedQuestIds),
       resolved_events: sortedIdList(this.resolvedEventIds),
     });
-    const exits = overworldEdgesFrom(this.world, this.currentId);
+    const exits = this.roadsFrom(this.currentId);
     const jobs = this.discoveredJobsInCurrentArea().map((job) => [job.id, job.title] as const);
     const sites = this.discoveredSitesInCurrentArea().map((site) => [site.id, site.title] as const);
     const quests = this.discoveredQuestsAt(this.currentId).map(
@@ -3429,7 +3534,7 @@ export class OverworldSession {
       current,
       currentArea: this.currentArea(),
       areaExits: this.visibleAreaExits(),
-      exits: overworldEdgesFrom(this.world, this.currentId),
+      exits: this.roadsFrom(this.currentId),
       areas: this.discoveredAreasAt(this.currentId),
       hiddenAreaCount: this.hiddenAreaCountAt(this.currentId),
       pois: this.currentAreaPois(),
@@ -3889,7 +3994,7 @@ export class OverworldSession {
     if (!this.discoveredIds.has(destinationId)) {
       throw new Error("That destination is not discovered yet.");
     }
-    const plan = planOverworldRoute(this.world, this.currentId, destinationId, this.discoveredIds);
+    const plan = this.indexedRoute(this.currentId, destinationId, this.discoveredIds);
     if (!plan) throw new Error("No discovered route reaches that destination yet.");
     return this.routeWithEstimate(plan);
   }
@@ -3939,12 +4044,10 @@ export class OverworldSession {
     if (this.pendingRoadEncounter) {
       throw new Error("Address the pending road encounter before choosing another road.");
     }
-    const edge = overworldEdgesFrom(this.world, this.currentId).find(
-      (candidate) => candidate.id === edgeId,
-    );
+    const edge = this.roadsFrom(this.currentId).find((candidate) => candidate.id === edgeId);
     if (!edge) throw new Error("That road is not reachable from here.");
     const from = this.currentNode();
-    const roadEvent = overworldRoadEventFor(this.world, edge.id);
+    const roadEvent = this.roadEventFor(edge.id);
     const supplyCost = travelSupplyCost(edge.travel_minutes);
     const suppliesUsed = Math.min(this.supplies, supplyCost);
     const supplyDeficit = supplyCost - suppliesUsed;

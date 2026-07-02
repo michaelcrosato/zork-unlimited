@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 219 -->
+<!-- historical_cycle_count: 220 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — indexed_overworld_road_routes
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: `OverworldSession` now indexes sorted town road exits and road events once per session, and route planning uses that adjacency.
+- Loop effect: route menus, compact/full exits, travel actions, pending-road restore, and repeated discovered-route planning avoid rescanning/sorting all overworld roads and road events.
+- Guard: existing overworld MCP lifecycle and snapshot integrity tests cover the refactored road view, travel, route, and restore paths.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — indexed_overworld_journal_entries
 
