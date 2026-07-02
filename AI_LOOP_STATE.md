@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 152 -->
+<!-- historical_cycle_count: 153 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_patch_proposal_mode
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: structured `apply_content_patch` proposals no longer require `mode: "rpg"`.
+- Loop effect: fixer payloads are world-quest-id scoped and RPG-only by construction, with one less model-facing discriminator.
+- Guard: fixer/MCP tests accept mode-free proposals, reject the retired proposal `mode`, and MCP registration no longer advertises it.
+- VERIFY: focused fixer/MCP tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_world_catalog_mode
 
@@ -128,12 +136,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Evidence: live MCP stale save/export guards returned current hashes and omitted blobs at 315/308 chars; matching guards serialized at 761/1252 chars.
 - Guard: MCP regression asserts stale checkpoint guards return current hashes, omit save/snapshot payloads, and matching hashes still serialize.
 - VERIFY: focused MCP and registration tests, typecheck, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.
-
-### Cycle result — transcript_state_hash
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: RPG `get_transcript` responses now return `state_hash`.
-- Loop effect: compact end-of-run audits can bind transcript summaries/turn rows to reducer state without a follow-up state read.
-- Evidence: live MCP default compact transcript and compact-turn transcript both matched the post-step hash; compact transcript was 346 chars and compact-turn transcript was 584 chars.
-- Guard: transcript regression asserts full, summary-only, and compact transcript responses carry the same current hash.
-- VERIFY: focused MCP transcript test, typecheck, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1361 tests, and validate.

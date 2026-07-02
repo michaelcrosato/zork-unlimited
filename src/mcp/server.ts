@@ -518,7 +518,6 @@ tool(
           "hint_text",
           "quest_structure",
         ]),
-        mode: z.literal("rpg"),
         summary: z.string(),
         ops: z
           .array(z.record(z.string(), z.unknown()))

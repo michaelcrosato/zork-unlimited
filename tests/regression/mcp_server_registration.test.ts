@@ -109,6 +109,7 @@ describe("MCP server registration", () => {
       expect(block).not.toContain("QUEST_ID_SOURCE");
       expect(block).not.toContain("pack_path");
     }
+    expect(registeredToolBlock("apply_content_patch")).not.toContain("mode:");
   });
 
   it("keeps the blind-playtest ToolSearch schema source terse", () => {

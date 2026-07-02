@@ -1815,7 +1815,6 @@ describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
   it("applies a whitelisted hint patch and re-validates green", () => {
     const proposal = {
       layer: "hint_text",
-      mode: "rpg",
       summary: "signpost the start room",
       ops: [
         {
@@ -1845,7 +1844,6 @@ describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
       world_quest_id: "cold_forge",
       proposal: {
         layer: "content",
-        mode: "rpg",
         summary: "x",
         ops: [{ op: "set_object_field", id: "ghost", field: "takeable", value: true }],
       } as never,
@@ -1863,7 +1861,6 @@ describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
   it("rejects missing or ambiguous patch source identity", () => {
     const proposal = {
       layer: "content",
-      mode: "rpg",
       summary: "x",
       ops: [{ op: "set_object_field", id: "ghost", field: "takeable", value: true }],
     } as never;
@@ -1881,5 +1878,19 @@ describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
         proposal,
       } as never),
     ).toThrow(/not pack_path/);
+  });
+
+  it("rejects the retired proposal mode discriminator", () => {
+    expect(() =>
+      api().apply_content_patch({
+        world_quest_id: "cold_forge",
+        proposal: {
+          layer: "content",
+          mode: "rpg",
+          summary: "x",
+          ops: [],
+        } as never,
+      }),
+    ).toThrow(/mode/);
   });
 });

@@ -65,7 +65,6 @@ export type PatchOp = z.infer<typeof PatchOpSchema>;
 export const ContentPatchProposalSchema = z
   .object({
     layer: FixLayerSchema,
-    mode: z.literal("rpg"),
     summary: z.string().min(1),
     ops: z.array(PatchOpSchema).default([]),
   })
@@ -157,14 +156,10 @@ export function applyContentPatch(rawPack: unknown, proposal: ContentPatchPropos
  * proposes; the validator disposes. A model can refine this, but even the
  * code-only default produces a legitimate, safe patch for the common cases.
  */
-export function proposeFix(
-  diagnosis: Diagnosis,
-  ctx: { mode: "rpg"; location?: string },
-): ContentPatchProposal {
+export function proposeFix(diagnosis: Diagnosis, ctx: { location?: string }): ContentPatchProposal {
   if (diagnosis.type === "soft_lock" && ctx.location) {
     return {
       layer: "hint_text",
-      mode: "rpg",
       summary: `Add an in-world hint at "${ctx.location}" so the player is never left without a signposted next step (§17.1, §17.7).`,
       ops: [
         {
@@ -181,7 +176,6 @@ export function proposeFix(
   const layer: FixLayer = diagnosis.type === "loop" ? "quest_structure" : "content";
   return {
     layer,
-    mode: "rpg",
     summary: `Direct code fix required (no content-patch op) for "${diagnosis.type}" at ${ctx.location ?? "unknown"}: ${diagnosis.description}`,
     ops: [],
   };
