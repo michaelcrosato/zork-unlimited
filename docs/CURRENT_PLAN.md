@@ -217,8 +217,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - Public MCP RPG start/read/step/load tools now default to compact observation
   context; callers can pass `compact_observation: false` when they need full
   observations.
-- Compact RPG observation context is now versioned as `v: 2` for the mode-free,
-  compact-action loop payload shape.
+- Compact RPG observation context is now versioned as `v: 3` for the mode-free,
+  compact-action loop payload shape with duplicate score vars filtered out.
 - Compact RPG observation context omits empty exit and action lists when no
   navigation or action ids are available, usually after terminal endings.
 - Public MCP `list_legal_actions` now defaults to compact ids; callers can pass

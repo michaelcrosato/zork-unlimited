@@ -1738,7 +1738,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect("observation" in compactStart).toBe(false);
     expect("mode" in compactStart.context).toBe(false);
     expect(compactStart.context).toMatchObject({
-      v: 2,
+      v: 3,
       here: [fullStart.observation.room, fullStart.observation.title],
     });
     expect(compactStart.context.vitals).toEqual([
@@ -1752,6 +1752,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(compactStart.context.actions?.[0]).not.toHaveProperty("command");
     expect(compactStart.context.vars).toMatchObject({ might: expect.any(Number) });
     expect(compactStart.context.vars).not.toHaveProperty("hp");
+    expect(compactStart.context.vars).not.toHaveProperty("score");
     expect(JSON.stringify(compactStart.context).length).toBeLessThan(
       JSON.stringify(fullStart.observation).length,
     );

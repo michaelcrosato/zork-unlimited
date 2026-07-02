@@ -40,13 +40,14 @@ describe("compactRpgObservation", () => {
     const obs = observationWithLargeState();
     const compact = compactRpgObservation(obs, [{ id: "look" }]);
 
-    expect(compact.v).toBe(2);
+    expect(compact.v).toBe(3);
     expect("mode" in compact).toBe(false);
     expect(compact.inv).toEqual(ids("item", 16));
     expect(compact.flags).toEqual(ids("flag", 16));
     expect(compact.journal).toEqual(ids("journal", 10).slice(-5));
     expect(compact.more).toEqual({ inv: 4, flags: 4, journal: 5 });
-    expect(compact.vars).toEqual({ lore: 3, score: 5 });
+    expect(compact.vitals[3]).toBe(5);
+    expect(compact.vars).toEqual({ lore: 3 });
     expect(JSON.stringify(compact).length).toBeLessThan(JSON.stringify(obs).length);
   });
 

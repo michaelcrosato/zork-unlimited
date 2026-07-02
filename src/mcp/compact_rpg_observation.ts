@@ -1,11 +1,11 @@
 import type { RpgObservation } from "../rpg/observation.js";
 import type { McpActionOption } from "./types.js";
 
-const CORE_STATE_VARS = new Set(["attack", "defense", "hp"]);
+const CORE_STATE_VARS = new Set(["attack", "defense", "hp", "max_score", "score"]);
 const COMPACT_INVENTORY_LIMIT = 16;
 const COMPACT_FLAG_LIMIT = 16;
 const COMPACT_JOURNAL_LIMIT = 5;
-export const RPG_COMPACT_OBSERVATION_VERSION = 2 as const;
+export const RPG_COMPACT_OBSERVATION_VERSION = 3 as const;
 
 export type RpgCompactRef = readonly [id: string, name: string];
 export type RpgCompactExit = string | readonly [direction: string, to: string];

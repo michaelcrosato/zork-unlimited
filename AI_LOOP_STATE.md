@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 188 -->
+<!-- historical_cycle_count: 189 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_rpg_score_vars
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact RPG observations now filter duplicate `score`/`max_score` vars under context `v: 3`.
+- Loop effect: repeated RPG turns keep score in `vitals` without paying for the same value again in `vars`.
+- Guard: focused compact-RPG/MCP tests, typecheck, lint, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_overworld_progress_tuple
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/token surface: public `inspect_trace()` summaries no longer echo `pack_id`.
 - Loop effect: trace audits use `world_quest_id` plus content/hash metadata while raw trace files retain internal pack identity for replay integrity.
 - Guard: focused trace/MCP tests, typecheck, and format check passed before full gates.
-- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_generate_pack_id
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: public `generate_rpg_pack()` no longer echoes top-level `pack_id`.
-- Loop effect: generated RPG flows use `generate_rpg_seed`, `meta.id`, and `content_hash` without an extra package identity field.
-- Guard: focused MCP generation tests, typecheck, and format check passed before full gates.
 - VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
