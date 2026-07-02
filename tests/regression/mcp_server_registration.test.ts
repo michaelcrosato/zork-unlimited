@@ -203,7 +203,7 @@ describe("MCP server registration", () => {
     const block = registeredToolBlock("get_transcript");
     expect(block).toContain("defaultCompactTranscript(a)");
     expect(block).toContain("if_state_hash");
-    expect(block).toContain("Default true; false returns turn rows.");
+    expect(block).toContain("Default true; omits turns.");
     expect(block).toContain("Default true; false returns full summary lists.");
   });
 

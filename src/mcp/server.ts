@@ -446,7 +446,7 @@ tool(
   {
     ...SESSION,
     ...IF_STATE_HASH,
-    summary_only: z.boolean().optional().describe("Default true; false returns turn rows."),
+    summary_only: z.boolean().optional().describe("Default true; omits turns."),
     compact_summary: z
       .boolean()
       .optional()

@@ -104,7 +104,7 @@ Make discovered overworld quest leads start real RPG sessions.
   responses, avoiding repeated context payloads for polling or resume loops; the
   old `get_scene` alias is no longer part of the live MCP/ToolApi loop.
 - `get_transcript({ summary_only: true })` keeps session/end-state metadata while
-  dropping detailed turn/event payload for token-light checks.
+  omitting the `turns` field for token-light checks.
 - `get_transcript({ compact_summary: true })` caps summary scenes, inventory,
   flags, and journal entries for blind end-of-run audits.
 - Transcript responses include `state_hash`, so compact end-of-run audits can

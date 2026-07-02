@@ -423,11 +423,10 @@ type TranscriptSummary = {
     journal?: number;
   };
 };
-type TranscriptPayload<Turn> = {
+type TranscriptPayloadBase = {
   session_id: string;
   pack_id: string;
   state_hash: string;
-  turns: Turn[];
   summary: TranscriptSummary;
 } & RpgSourceFields;
 type TranscriptArgs = {
@@ -440,13 +439,17 @@ type TranscriptArgs = {
 type TranscriptTurnFor<Args extends TranscriptArgs> = Args extends { compact_turns: true }
   ? TranscriptCompactTurn
   : TranscriptFullTurn;
+type TranscriptPayload<Args extends TranscriptArgs> = TranscriptPayloadBase &
+  (Args extends { summary_only: true }
+    ? Record<string, never>
+    : { turns: TranscriptTurnFor<Args>[] });
 type TranscriptUnchanged = {
   state_hash: string;
   unchanged: true;
 };
 type TranscriptResponse<Args extends TranscriptArgs> = Args extends { if_state_hash: string }
-  ? TranscriptPayload<TranscriptTurnFor<Args>> | TranscriptUnchanged
-  : TranscriptPayload<TranscriptTurnFor<Args>>;
+  ? TranscriptPayload<Args> | TranscriptUnchanged
+  : TranscriptPayload<Args>;
 
 type RpgGetStateArgs = {
   session_id: string;
@@ -1741,18 +1744,20 @@ export function createToolApi(opts: { root: string }) {
         state_hash: stateHash,
         // Filter internal-bookkeeping events the same way step_action does, so the
         // transcript a player reads never surfaces `__`-prefixed vars/flags (bug_0260).
-        turns: args.summary_only
-          ? []
-          : args.compact_turns
-            ? s.transcript.map((t) => ({
-                step: t.step,
-                scene_id: t.scene_id,
-                action_id: t.action_id,
-                result_scene_id: t.result_scene_id,
-                ended: t.ended,
-                ending_id: t.ending_id,
-              }))
-            : s.transcript.map((t) => ({ ...t, events: playerVisibleEvents(t.events) })),
+        ...(args.summary_only
+          ? {}
+          : {
+              turns: args.compact_turns
+                ? s.transcript.map((t) => ({
+                    step: t.step,
+                    scene_id: t.scene_id,
+                    action_id: t.action_id,
+                    result_scene_id: t.result_scene_id,
+                    ended: t.ended,
+                    ending_id: t.ending_id,
+                  }))
+                : s.transcript.map((t) => ({ ...t, events: playerVisibleEvents(t.events) })),
+            }),
         summary: args.compact_summary ? compactTranscriptSummary(summary) : summary,
       };
       return response as unknown as TranscriptResponse<Args>;

@@ -1376,7 +1376,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(summaryOnlyTranscript.state_hash).toBe(currentStateHash);
     expect("mode" in summaryOnlyTranscript).toBe(false);
     expect(summaryOnlyTranscript.summary).toEqual(transcript.summary);
-    expect(summaryOnlyTranscript.turns).toEqual([]);
+    expect("turns" in summaryOnlyTranscript).toBe(false);
     expect(JSON.stringify(summaryOnlyTranscript).length).toBeLessThan(
       JSON.stringify(transcript).length,
     );
@@ -1469,7 +1469,8 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(full.summary.flags).not.toContain("__internal_bookkeeping");
     expect(full.summary.journal).toHaveLength(10);
     expect(full.summary).not.toHaveProperty("more");
-    expect(compact.turns).toEqual([]);
+    expect("turns" in full).toBe(false);
+    expect("turns" in compact).toBe(false);
     expect(compact.summary.scenes).toEqual(full.summary.scenes.slice(0, 16));
     expect(compact.summary.inventory).toEqual(numberedIds("item", 16));
     expect(compact.summary.flags).toEqual(numberedIds("flag", 16));

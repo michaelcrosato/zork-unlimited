@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 171 -->
+<!-- historical_cycle_count: 172 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_transcript_summary_turns
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: `get_transcript({ summary_only: true })` now omits the empty `turns` array.
+- Loop effect: default public transcript audits keep session/hash/source/summary metadata without paying for a dead row field.
+- Guard: focused MCP transcript/schema tests, typecheck, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_step_event_version
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: trace audit payloads stay content-hash/source scoped while dropping a redundant one-value response discriminator.
 - Guard: trace inspection tests assert inferred and explicit world-quest summaries omit `mode`, while trace-file mode validation remains covered.
 - VERIFY: focused trace/MCP tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_transcript_mode
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: `get_transcript()` responses no longer return `mode: "rpg"`.
-- Loop effect: end-of-run audit payloads stay session/hash/source scoped while dropping another redundant one-value discriminator.
-- Guard: transcript tests assert full, summary-only, and compact-turn transcript payloads omit `mode`.
-- VERIFY: focused MCP tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
