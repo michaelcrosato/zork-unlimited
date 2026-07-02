@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 196 -->
+<!-- historical_cycle_count: 197 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — hash_only_stale_step
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: stale `step_action({ expected_state_hash })` now short-circuits before observation construction and returns only `ok`, `state_hash`, and `rejection_reason`.
+- Loop effect: stale action retries no longer pay for duplicate context, event tuple/version, or legal-action payloads; callers refresh only when needed.
+- Guard: focused MCP stale-step docs/tests, typecheck, lint, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_list_action_ids
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/token surface: compact RPG transcript summaries now omit empty inventory, flag, and journal lists.
 - Loop effect: early/state-light transcript audits keep route and hash metadata without paying for three empty arrays.
 - Guard: focused MCP/docs tests, typecheck, lint, and format check passed before full gates.
-- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_rpg_empty_exits
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: compact RPG observations now omit `exits` when no exit ids are available.
-- Loop effect: terminal compact observations keep ending state without paying for an empty navigation array.
-- Guard: focused compact-RPG/MCP/docs tests, typecheck, and format check passed before full gates.
 - VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.

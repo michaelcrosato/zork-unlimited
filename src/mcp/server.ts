@@ -62,7 +62,7 @@ const IF_STATE_HASH = {
   if_state_hash: z.string().optional().describe("Hash-only when unchanged."),
 };
 const EXPECTED_STATE_HASH = {
-  expected_state_hash: z.string().optional().describe("Reject stale state_hash."),
+  expected_state_hash: z.string().optional().describe("Hash-only reject when stale."),
 };
 tool(
   "list_world",
@@ -419,7 +419,7 @@ tool(
 
 tool(
   "step_action",
-  "Apply action id; rejects stale menus.",
+  "Apply action id; stale menus return hash plus reason only.",
   {
     ...SESSION,
     action_id: z.string().describe("Current action id."),

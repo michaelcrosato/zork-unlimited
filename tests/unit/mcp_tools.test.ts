@@ -1834,6 +1834,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_observation: true,
     });
     expect(moved.ok).toBe(true);
+    if (!moved.ok) throw new Error("expected state-matched action to move");
     expect("rejection_reason" in moved).toBe(false);
     expect(moved.context.here[0]).not.toBe(fullStart.observation.room);
 
@@ -1896,6 +1897,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_observation: true,
     });
     expect(moved.ok).toBe(true);
+    if (!moved.ok) throw new Error("expected state-matched action to move");
     expect("rejection_reason" in moved).toBe(false);
     expect(moved.state_hash).not.toBe(menu.state_hash);
     const transcriptRowsAfterMove = a.get_transcript({ session_id: game.session_id }).turns.length;
@@ -1911,7 +1913,11 @@ describe("MCP tools — the play loop (§9.1)", () => {
     if (stale.ok) throw new Error("expected stale action rejection");
     expect(stale.rejection_reason).toMatch(/state hash/i);
     expect(stale.state_hash).toBe(moved.state_hash);
-    expect(stale.context.here).toEqual(moved.context.here);
+    expect("events" in stale).toBe(false);
+    expect("event_v" in stale).toBe(false);
+    expect("context" in stale).toBe(false);
+    expect("observation" in stale).toBe(false);
+    expect(JSON.stringify(stale).length).toBeLessThan(JSON.stringify(moved).length);
     expect(a.get_transcript({ session_id: game.session_id }).turns).toHaveLength(
       transcriptRowsAfterMove,
     );

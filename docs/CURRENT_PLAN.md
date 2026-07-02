@@ -98,6 +98,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - `step_action` accepts `expected_state_hash` and rejects stale action menus
   before mutating reducer state or transcript history; the old `choose_option`
   alias is no longer part of the live MCP/ToolApi loop.
+- Stale `step_action({ expected_state_hash })` rejections return only
+  `ok`, `state_hash`, and `rejection_reason`; callers refresh explicitly instead
+  of receiving a duplicate observation/event payload.
 - Public MCP `step_action` defaults to compact event tuples; callers can pass
   `compact_events: false` when they need full reducer event objects.
 - Compact `step_action` event replies are versioned as `event_v: 3` with

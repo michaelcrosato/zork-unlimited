@@ -339,9 +339,18 @@ type RpgStepActionBase<Args extends RpgResponseOptions> = {
 } & RpgStepEventVersion<Args> &
   RpgViewField<Args>;
 
-type RpgStepActionResponse<Args extends RpgResponseOptions> =
+type RpgStepGuardRejection = {
+  ok: false;
+  state_hash: string;
+  rejection_reason: string;
+};
+
+type RpgStepResponseOptions = RpgResponseOptions & { expected_state_hash?: string };
+
+type RpgStepActionResponse<Args extends RpgStepResponseOptions> =
   | ({ ok: true } & RpgStepActionBase<Args>)
-  | ({ ok: false; rejection_reason: string } & RpgStepActionBase<Args>);
+  | ({ ok: false; rejection_reason: string } & RpgStepActionBase<Args>)
+  | (Args extends { expected_state_hash: string } ? RpgStepGuardRejection : never);
 
 type RpgNewGameArgs = {
   generate_rpg_seed?: number;
@@ -1628,28 +1637,17 @@ export function createToolApi(opts: { root: string }) {
 
     step_action<Args extends RpgStepActionArgs>(args: Args): RpgStepActionResponse<Args> {
       const s = sessions.get(args.session_id);
-      const before = buildObsFor(s.index, s.state, {
-        hideGraph: args.hide_graph ?? s.hideGraph ?? false,
-      });
       const currentStateHash = hashState(s.state);
       if (args.expected_state_hash !== undefined && args.expected_state_hash !== currentStateHash) {
         return {
           ok: false,
           rejection_reason: "State hash mismatch; refresh the current observation or action menu.",
-          events: rpgStepEvents(
-            [
-              {
-                type: "rejected" as const,
-                reason: "State hash mismatch; refresh the current observation or action menu.",
-              },
-            ],
-            args,
-          ),
-          ...rpgStepEventVersion(args),
-          ...rpgViewField(before, args),
           state_hash: currentStateHash,
         } as RpgStepActionResponse<Args>;
       }
+      const before = buildObsFor(s.index, s.state, {
+        hideGraph: args.hide_graph ?? s.hideGraph ?? false,
+      });
       const beforeStep = s.state.step;
       const actionText = obsActionText(before, args.action_id);
       const action = actionForId(before, args.action_id);
