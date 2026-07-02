@@ -213,13 +213,12 @@ export function findStaleDocRefs(docText: string, exists: (relPath: string) => b
  * Deliberately EXCLUDED (scanning them for liveness would be wrong, not missing —
  * the same discipline as LINT_DIRS omitting data/forward dirs): AI_LOOP_STATE.md (a
  * historical per-cycle log that records paths/hashes as they were, some since
- * moved), docs/ROADMAP.md and ADVENTUREFORGE_BUILD_SPEC.md (forward-looking — they
- * may name planned files that don't exist yet), plus historical planning/gate logs
- * that intentionally preserve retired parser/CYOA paths.
+ * moved), plus historical planning/gate logs that intentionally preserve retired
+ * variant paths. Active current docs such as docs/ROADMAP.md and
+ * ADVENTUREFORGE_BUILD_SPEC.md stay inside the scan.
  */
 const DOC_STALENESS_EXCLUDED_DOCS = new Set([
   "DECISION_LOG.md",
-  "ROADMAP.md",
   "RPG-STANDARDIZATION-PLAN.md",
   "ULTRAPLAN-2026-06-02.md",
   "stage4_rpg_gate.md",
