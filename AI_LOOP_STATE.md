@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 166 -->
+<!-- historical_cycle_count: 167 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_quest_start_state
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/state surface: overworld quest starts now persist `startedQuestIds` plus `quest:*` journal entries and bump the snapshot version.
+- Loop effect: a discovered quest lead cannot be repeatedly launched from one overworld snapshot, and restored overworld state now proves the RPG handoff occurred.
+- Guard: focused MCP/overworld/save-load tests, typecheck, and format check passed before full gates.
+- VERIFY: focused MCP/overworld/save-load tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_step_events
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: fixer payloads are world-quest-id scoped and RPG-only by construction, with one less model-facing discriminator.
 - Guard: fixer/MCP tests accept mode-free proposals, reject the retired proposal `mode`, and MCP registration no longer advertises it.
 - VERIFY: focused fixer/MCP tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_world_catalog_mode
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: `list_world()` quest rows no longer repeat `mode: "rpg"` for every quest.
-- Loop effect: discovery payloads stay quest-id/world-graph first and spend fewer tokens on a discriminator with one legal value.
-- Guard: catalog/world-manifest tests assert quest rows omit `mode`, and the compact catalog size guard now caps the default JSON payload at 6100 chars.
-- VERIFY: focused catalog/assessor tests, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 195 test files / 1367 tests, and validate.

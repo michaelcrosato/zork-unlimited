@@ -26,6 +26,9 @@ Make discovered overworld quest leads start real RPG sessions.
 
 - `start_overworld_session_quest` validates discovery/current area, then creates a
   playable RPG session from the quest pack.
+- Overworld quest starts are now recorded in serialized session state as
+  `startedQuestIds` plus `quest:*` journal entries, so a quest lead cannot be
+  launched repeatedly from the same overworld snapshot.
 - The response preserves the overworld fields and adds `rpg_session_id` plus the
   RPG session payload.
 - The MCP schema now exposes optional RPG `seed` and `hide_graph` controls on that

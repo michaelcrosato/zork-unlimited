@@ -578,11 +578,18 @@ describe("OverworldSession", () => {
 
     const moved = session.moveArea(routeToQuestArea!.id);
     expect(moved.to.id).toBe(discoveredQuest.area);
-    expect(session.startQuest(discoveredQuest.id)).toMatchObject({
+    const startedQuest = session.startQuest(discoveredQuest.id);
+    expect(startedQuest).toMatchObject({
       id: discoveredQuest.id,
       area: discoveredQuest.area,
     });
-    expect("pack" in session.startQuest(discoveredQuest.id)).toBe(false);
+    expect("pack" in startedQuest).toBe(false);
+    expect(session.view().startedQuestIds).toEqual([discoveredQuest.id]);
+    expect(session.view().journal[0]).toMatchObject({
+      id: `quest:${discoveredQuest.id}`,
+      kind: "quest",
+    });
+    expect(() => session.startQuest(discoveredQuest.id)).toThrow(/already been started/i);
   });
 
   it("reveals exploration leads from the current local area", () => {
