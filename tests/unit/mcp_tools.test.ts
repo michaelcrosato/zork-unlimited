@@ -1340,6 +1340,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
 
     const rejected = a.step_action({ session_id: game.session_id, action_id: "missing" });
     expect(rejected.ok).toBe(false);
+    expect("rejection_reason" in rejected).toBe(true);
     assertPublicAction(rejected.observation.available_actions[0]);
 
     const compactRejected = a.step_action({
@@ -1348,6 +1349,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_actions: true,
     });
     expect(compactRejected.ok).toBe(false);
+    expect("rejection_reason" in compactRejected).toBe(true);
     assertCompactAction(compactRejected.observation.available_actions[0]);
 
     const moveActionId = compact.available_actions.find((action) => action.id === "go_down")?.id;
@@ -1357,6 +1359,8 @@ describe("MCP tools — the play loop (§9.1)", () => {
       action_id: moveActionId!,
       compact_actions: true,
     });
+    expect(moved.ok).toBe(true);
+    expect("rejection_reason" in moved).toBe(false);
     assertCompactAction(moved.observation.available_actions[0]);
     expect(
       a.list_legal_actions({ session_id: game.session_id, compact_actions: true }).state_hash,
@@ -1464,6 +1468,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_observation: true,
     });
     expect(rejected.ok).toBe(false);
+    expect("rejection_reason" in rejected).toBe(true);
     expect("observation" in rejected).toBe(false);
     expect(rejected.context.here[0]).toBe(fullStart.observation.room);
 
@@ -1479,6 +1484,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_observation: true,
     });
     expect(moved.ok).toBe(true);
+    expect("rejection_reason" in moved).toBe(false);
     expect(moved.context.here[0]).not.toBe(fullStart.observation.room);
 
     const changedObservation = a.get_observation({
@@ -1505,6 +1511,8 @@ describe("MCP tools — the play loop (§9.1)", () => {
     const before = a.get_observation({ session_id: game.session_id }).state_hash;
     const r = a.step_action({ session_id: game.session_id, action_id: "not_a_real_choice" });
     expect(r.ok).toBe(false);
+    expect("rejection_reason" in r).toBe(true);
+    if (r.ok) throw new Error("expected illegal action rejection");
     expect(r.rejection_reason).toBeTruthy();
     expect(r.state_hash).toBe(before);
   });
@@ -1527,6 +1535,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_observation: true,
     });
     expect(moved.ok).toBe(true);
+    expect("rejection_reason" in moved).toBe(false);
     expect(moved.state_hash).not.toBe(menu.state_hash);
     const transcriptRowsAfterMove = a.get_transcript({ session_id: game.session_id }).turns.length;
 
@@ -1537,6 +1546,8 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_observation: true,
     });
     expect(stale.ok).toBe(false);
+    expect("rejection_reason" in stale).toBe(true);
+    if (stale.ok) throw new Error("expected stale action rejection");
     expect(stale.rejection_reason).toMatch(/state hash/i);
     expect(stale.state_hash).toBe(moved.state_hash);
     expect(stale.context.here).toEqual(moved.context.here);

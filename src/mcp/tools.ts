@@ -316,12 +316,14 @@ type RpgLegalActionsResponse<Args extends RpgLegalActionsArgs> = Args extends {
   ? RpgLegalActionsPayload | RpgLegalActionsUnchanged
   : RpgLegalActionsPayload;
 
-type RpgStepActionResponse<Args extends RpgResponseOptions> = {
-  ok: boolean;
-  rejection_reason: string | null;
+type RpgStepActionBase<Args extends RpgResponseOptions> = {
   events: ReturnType<typeof playerVisibleEvents>;
   state_hash: string;
 } & RpgViewField<Args>;
+
+type RpgStepActionResponse<Args extends RpgResponseOptions> =
+  | ({ ok: true } & RpgStepActionBase<Args>)
+  | ({ ok: false; rejection_reason: string } & RpgStepActionBase<Args>);
 
 type RpgNewGameArgs = {
   generate_rpg_seed?: number;
@@ -1543,9 +1545,17 @@ export function createToolApi(opts: { root: string }) {
         ended: after.ended,
         ending_id: after.ending_id,
       });
+      if (!result.ok) {
+        return {
+          ok: false,
+          rejection_reason: result.rejectionReason ?? "Action rejected.",
+          events: playerVisibleEvents(result.events),
+          ...rpgViewField(after, args),
+          state_hash: hashState(result.state),
+        } as RpgStepActionResponse<Args>;
+      }
       return {
-        ok: result.ok,
-        rejection_reason: result.rejectionReason ?? null,
+        ok: true,
         events: playerVisibleEvents(result.events),
         ...rpgViewField(after, args),
         state_hash: hashState(result.state),
