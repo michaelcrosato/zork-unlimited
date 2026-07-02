@@ -46,6 +46,8 @@ Make discovered overworld quest leads start real RPG sessions.
   follows the world graph too.
 - Live shipped quest sessions now surface `world_quest_id` on start,
   transcript, save, and load responses without echoing raw pack paths.
+- Transcript and save wrappers now rely on `world_quest_id` or
+  `generated_rpg_seed` plus hashes, without echoing public `pack_id`.
 - Overworld quest observations, action discoveries, compact context, and
   quest-start metadata expose quest ids/titles/areas without raw pack paths.
 - `list_world` exposes sanitized world graph/quest-id entries without raw

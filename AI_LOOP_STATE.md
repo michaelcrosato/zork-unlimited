@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 172 -->
+<!-- historical_cycle_count: 173 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_save_transcript_pack_id
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: public `save_game()` and `get_transcript()` wrappers no longer echo `pack_id`.
+- Loop effect: world-quest and generated loops rely on `world_quest_id` / `generated_rpg_seed` plus hashes, while persisted save blobs keep internal pack identity for integrity.
+- Guard: focused MCP save/transcript tests, typecheck, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_transcript_summary_turns
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: save replies stay state/source/hash scoped while the serialized save blob retains its persisted RPG mode guard.
 - Guard: save/load tests assert wrapper responses omit `mode` and the saved JSON still carries `mode: "rpg"`.
 - VERIFY: focused save/load tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_trace_inspect_mode
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: `inspect_trace()` summaries no longer return `mode: "rpg"`.
-- Loop effect: trace audit payloads stay content-hash/source scoped while dropping a redundant one-value response discriminator.
-- Guard: trace inspection tests assert inferred and explicit world-quest summaries omit `mode`, while trace-file mode validation remains covered.
-- VERIFY: focused trace/MCP tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.

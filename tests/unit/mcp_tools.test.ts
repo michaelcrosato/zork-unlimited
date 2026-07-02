@@ -1354,6 +1354,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(last.ok).toBe(true);
     expect(last.observation.ending_id).toBe("ending_victory");
     const transcript = a.get_transcript({ session_id: game.session_id });
+    expect("pack_id" in transcript).toBe(false);
     expect("pack_path" in transcript).toBe(false);
     expect("mode" in transcript).toBe(false);
     expect(transcript.world_quest_id).toBe("sunken_barrow");
@@ -1651,6 +1652,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     assertCompactAction(changedMenu.actions[0]);
 
     const saved = a.save_game({ session_id: game.session_id });
+    expect("pack_id" in saved).toBe(false);
     expect("pack_path" in saved).toBe(false);
     expect("mode" in saved).toBe(false);
     expect(saved.world_quest_id).toBe("sunken_barrow");
@@ -1853,6 +1855,7 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     const saved = a.save_game({ session_id: game.session_id });
     const reloaded = a.load_game({ save: saved.save });
     const saveBundle = JSON.parse(saved.save) as { mode?: string; worldQuestId?: string };
+    expect("pack_id" in saved).toBe(false);
     expect("pack_path" in saved).toBe(false);
     expect("mode" in saved).toBe(false);
     expect(saved.world_quest_id).toBe("sunken_barrow");
@@ -1889,6 +1892,7 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     });
     expect(saved.ok).toBe(true);
     if (!saved.ok) throw new Error("expected guarded save success");
+    expect("pack_id" in saved).toBe(false);
     expect("mode" in saved).toBe(false);
     expect(saved.state_hash).toBe(after);
     expect(a.load_game({ save: saved.save }).state_hash).toBe(after);
@@ -1933,6 +1937,7 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     const reloaded = a.load_game({ world_quest_id: "sunken_barrow", save: saved.save });
     const inferred = a.load_game({ save: saved.save });
     expect("mode" in reloaded).toBe(false);
+    expect("pack_id" in saved).toBe(false);
     expect("pack_path" in saved).toBe(false);
     expect(saved.world_quest_id).toBe("sunken_barrow");
     expect("generated_rpg_seed" in saved).toBe(false);

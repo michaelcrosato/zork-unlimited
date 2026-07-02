@@ -425,7 +425,6 @@ type TranscriptSummary = {
 };
 type TranscriptPayloadBase = {
   session_id: string;
-  pack_id: string;
   state_hash: string;
   summary: TranscriptSummary;
 } & RpgSourceFields;
@@ -473,7 +472,6 @@ type RpgSaveArgs = {
 type RpgSaveSuccess = {
   ok: true;
   save: string;
-  pack_id: string;
   content_hash: string;
   state_hash: string;
 } & RpgSourceFields;
@@ -1739,7 +1737,6 @@ export function createToolApi(opts: { root: string }) {
       };
       const response = {
         session_id: s.id,
-        pack_id: s.packId,
         ...rpgSourceFields(s),
         state_hash: stateHash,
         // Filter internal-bookkeeping events the same way step_action does, so the
@@ -1784,7 +1781,6 @@ export function createToolApi(opts: { root: string }) {
       return {
         ok: true,
         save: save(s.state, s.packId, s.contentHash, SAVE_MODE, saveMetadata),
-        pack_id: s.packId,
         ...rpgSourceFields(s),
         content_hash: s.contentHash,
         state_hash: stateHash,
