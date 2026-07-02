@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 202 -->
+<!-- historical_cycle_count: 203 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — cached_session_state_hash
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: RPG sessions now cache `stateHash` in `SessionStore`; start/load, observation polling, legal-action polling, stale-action guards, transcript polling, and save guards read the cached hash instead of re-hashing reducer state.
+- Loop effect: repeated MCP loop calls stay O(1) for state hash checks between state replacements, while `sessions.update` refreshes the cache at the mutation boundary.
+- Guard: focused MCP session/tool tests prove cached state hashes initialize/update correctly and synthetic test mutations go through the store.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — cached_transcript_log_hash
 

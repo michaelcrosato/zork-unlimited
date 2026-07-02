@@ -1537,7 +1537,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
         ending_id: null,
       })),
     );
-    session.state = {
+    a.sessions.update(game.session_id, {
       ...session.state,
       inventory: numberedIds("item", 20),
       flags: {
@@ -1545,7 +1545,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
         __internal_bookkeeping: true,
       },
       journal: numberedIds("journal", 10),
-    };
+    });
 
     const full = a.get_transcript({ session_id: game.session_id, summary_only: true });
     const compact = a.get_transcript({

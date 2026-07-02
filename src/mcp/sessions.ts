@@ -41,6 +41,7 @@ export type Session = {
   index: RpgIndex;
   rules: Rules<RpgAction>;
   state: GameState;
+  stateHash: string;
   transcript: TranscriptTurn[];
   transcriptLogHash: string;
   /** Difficulty: when true, the agent-facing observation hides each exit's
@@ -49,7 +50,7 @@ export type Session = {
   hideGraph?: boolean;
 };
 
-export type SessionInit = Omit<Session, "id" | "transcriptLogHash">;
+export type SessionInit = Omit<Session, "id" | "stateHash" | "transcriptLogHash">;
 
 export class SessionStore {
   private counter = 0;
@@ -60,6 +61,7 @@ export class SessionStore {
     const session: Session = {
       id,
       ...init,
+      stateHash: hashState(init.state),
       transcriptLogHash: hashState(init.transcript),
     };
     this.sessions.set(id, session);
@@ -75,6 +77,7 @@ export class SessionStore {
   update(id: string, state: GameState): Session {
     const session = this.get(id);
     session.state = state;
+    session.stateHash = hashState(state);
     return session;
   }
 

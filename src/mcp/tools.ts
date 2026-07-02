@@ -949,7 +949,7 @@ export function createToolApi(opts: { root: string }) {
       session_id: session.id,
       ...rpgViewField(openingObsOf(session), args),
       ...rpgSourceFields(session),
-      state_hash: hashState(session.state),
+      state_hash: session.stateHash,
     } as RpgSessionPayload<Args>;
   }
 
@@ -1613,7 +1613,7 @@ export function createToolApi(opts: { root: string }) {
 
     get_observation<Args extends RpgGetObservationArgs>(args: Args): RpgObservationResponse<Args> {
       const s = sessions.get(args.session_id);
-      const stateHash = hashState(s.state);
+      const stateHash = s.stateHash;
       if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
         return {
           state_hash: stateHash,
@@ -1633,7 +1633,7 @@ export function createToolApi(opts: { root: string }) {
       args: Args,
     ): RpgLegalActionsResponse<Args> {
       const s = sessions.get(args.session_id);
-      const stateHash = hashState(s.state);
+      const stateHash = s.stateHash;
       if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
         return {
           state_hash: stateHash,
@@ -1649,7 +1649,7 @@ export function createToolApi(opts: { root: string }) {
 
     step_action<Args extends RpgStepActionArgs>(args: Args): RpgStepActionResponse<Args> {
       const s = sessions.get(args.session_id);
-      const currentStateHash = hashState(s.state);
+      const currentStateHash = s.stateHash;
       if (args.expected_state_hash !== undefined && args.expected_state_hash !== currentStateHash) {
         return {
           ok: false,
@@ -1702,7 +1702,7 @@ export function createToolApi(opts: { root: string }) {
           events: rpgStepEvents(result.events, args),
           ...rpgStepEventVersion(args),
           ...rpgViewField(after, args),
-          state_hash: hashState(result.state),
+          state_hash: s.stateHash,
         } as RpgStepActionResponse<Args>;
       }
       return {
@@ -1710,13 +1710,13 @@ export function createToolApi(opts: { root: string }) {
         events: rpgStepEvents(result.events, args),
         ...rpgStepEventVersion(args),
         ...rpgViewField(after, args),
-        state_hash: hashState(result.state),
+        state_hash: s.stateHash,
       } as RpgStepActionResponse<Args>;
     },
 
     get_state<Args extends RpgGetStateArgs>(args: Args): RpgStateResponse<Args> {
       const s = sessions.get(args.session_id);
-      const stateHash = hashState(s.state);
+      const stateHash = s.stateHash;
       if (args.include_state === true) {
         return { state: s.state, state_hash: stateHash } as RpgStateResponse<Args>;
       }
@@ -1725,7 +1725,7 @@ export function createToolApi(opts: { root: string }) {
 
     get_transcript<Args extends TranscriptArgs>(args: Args): TranscriptResponse<Args> {
       const s = sessions.get(args.session_id);
-      const stateHash = hashState(s.state);
+      const stateHash = s.stateHash;
       const currentTranscriptHash = hashTranscript(s, stateHash);
       if (
         args.if_transcript_hash !== undefined &&
@@ -1790,7 +1790,7 @@ export function createToolApi(opts: { root: string }) {
 
     save_game<Args extends RpgSaveArgs>(args: Args): RpgSaveResponse<Args> {
       const s = sessions.get(args.session_id);
-      const stateHash = hashState(s.state);
+      const stateHash = s.stateHash;
       if (args.expected_state_hash !== undefined && args.expected_state_hash !== stateHash) {
         const reason = "State hash mismatch; refresh the current observation or action menu.";
         return {
@@ -1833,7 +1833,7 @@ export function createToolApi(opts: { root: string }) {
         session_id: session.id,
         ...rpgViewField(openingObsOf(session), args),
         ...rpgSourceFields(session),
-        state_hash: hashState(session.state),
+        state_hash: session.stateHash,
       } as RpgSessionPayload<Args>;
     },
 

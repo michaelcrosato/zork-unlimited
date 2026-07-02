@@ -37,6 +37,8 @@ describe("SessionStore", () => {
 
     expect(first.id).toBe("sess_1");
     expect(second.id).toBe("sess_2");
+    expect(first.stateHash).toBe(hashState(first.state));
+    expect(second.stateHash).toBe(hashState(second.state));
     expect("mode" in first).toBe(false);
     expect(store.get("sess_1").packId).toBe("first");
     expect(store.get("sess_2").packId).toBe("second");
@@ -74,9 +76,11 @@ describe("SessionStore", () => {
 
     expect(updated).toBe(first);
     expect(store.get(first.id).state).toBe(nextState);
+    expect(store.get(first.id).stateHash).toBe(hashState(nextState));
     expect(store.get(first.id).transcript).toBe(transcript);
     expect(store.get(first.id).hideGraph).toBe(true);
     expect(store.get(second.id).state.current).toBe("other");
+    expect(store.get(second.id).stateHash).toBe(hashState(store.get(second.id).state));
     expect(store.get(second.id).packId).toBe("other");
   });
 
