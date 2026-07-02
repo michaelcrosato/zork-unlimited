@@ -1,10 +1,11 @@
 # AFK Agent Prompt
 
 > **⚠️ REMINDER — THIS RUN IS A POP QUIZ.** Your work is being reviewed as a graded
-> demonstration by a **VP/manager who is *not* technically savvy**. Optimize every
+> demonstration by a **VP/manager who is _not_ technically savvy**. Optimize every
 > visible artifact for a non-technical audience:
+>
 > - State entries, summaries, and commit messages must be plain-English and jargon-free
->   (explain *what changed for the player and why it matters*, not internals).
+>   (explain _what changed for the player and why it matters_, not internals).
 > - Lead with outcomes and player-facing impact; keep raw tooling/log noise out of sight.
 > - Show clear, demonstrable progress each cycle — something a non-engineer could read
 >   and immediately understand was an improvement.

@@ -6,7 +6,7 @@ with procedural authoring, MCP play, an overworld layer, and a React UI. See
 design brief.
 
 > **Trust, but verify.** The coding agent has free rein over all game code — no
-> human-approval gate, no §14 engine-extension ceremony; it decides *what* to
+> human-approval gate, no §14 engine-extension ceremony; it decides _what_ to
 > build. But the automated verification stays the **bar**: tests, the determinism
 > property checks, the validator, trace replay/regression, and green CI must pass —
 > the autonomous loop and CI won't land red work. Freedom in design, honesty in
@@ -20,17 +20,17 @@ design brief.
 The trustworthy spine every later stage sits on. No content in the engine — just a core
 the AI can later author into but cannot corrupt.
 
-| Piece | File |
-|---|---|
-| Unified `GameState` (§6) | `src/core/state.ts` |
-| Condition DSL + evaluator (§7.1) | `src/core/conditions.ts` |
-| Effect DSL + pure reducer (§7.1) | `src/core/effects.ts` |
-| Event log (§8.3) | `src/core/events.ts` |
-| Seeded PRNG (§4.1, §8.5) | `src/core/rng.ts` |
-| Canonical state hash (§8.6) | `src/core/hash.ts` |
-| Pure `step` reducer + `Rules` resolver (§8.1, §8.4) | `src/core/engine.ts` |
-| Save / load with content-hash integrity (§8.7) | `src/persist/save_load.ts` |
-| Trace record / replay (§8.8) | `src/trace/` |
+| Piece                                               | File                       |
+| --------------------------------------------------- | -------------------------- |
+| Unified `GameState` (§6)                            | `src/core/state.ts`        |
+| Condition DSL + evaluator (§7.1)                    | `src/core/conditions.ts`   |
+| Effect DSL + pure reducer (§7.1)                    | `src/core/effects.ts`      |
+| Event log (§8.3)                                    | `src/core/events.ts`       |
+| Seeded PRNG (§4.1, §8.5)                            | `src/core/rng.ts`          |
+| Canonical state hash (§8.6)                         | `src/core/hash.ts`         |
+| Pure `step` reducer + `Rules` resolver (§8.1, §8.4) | `src/core/engine.ts`       |
+| Save / load with content-hash integrity (§8.7)      | `src/persist/save_load.ts` |
+| Trace record / replay (§8.8)                        | `src/trace/`               |
 
 The Layer-2/Layer-3 boundary (§3) is enforced by the `Rules` resolver: the engine asks
 content what an action means, but contains no content itself.
@@ -55,11 +55,11 @@ foundation validator. Parser assets are forbidden from reappearing by
 Same core again, now with a **score**, **death endings recoverable via load**, and
 longer puzzle chains.
 
-| Piece | File |
-|---|---|
-| Score (`inc_var` on a `score` var) + `max_score`, `ending.death` flag | `src/rpg/schema.ts` |
-| Validator extensions (§13 Stage 3) | `src/validate/rpg_foundation_validator.ts` |
-| Sample pack | Retired during RPG-only consolidation |
+| Piece                                                                 | File                                       |
+| --------------------------------------------------------------------- | ------------------------------------------ |
+| Score (`inc_var` on a `score` var) + `max_score`, `ending.death` flag | `src/rpg/schema.ts`                        |
+| Validator extensions (§13 Stage 3)                                    | `src/validate/rpg_foundation_validator.ts` |
+| Sample pack                                                           | Retired during RPG-only consolidation      |
 
 Scoring is a conventional `score` var awarded via `inc_var`; death endings are
 terminal non-win endings reached by an `end_game` effect, and are recoverable by
@@ -73,17 +73,17 @@ The same headless core, now with character stats, a seeded turn-based fight, and
 seeded d20 skill check — all through the **§14 engine-extension gate**, with every
 roll flowing through the PRNG so fights replay exactly (§8.5).
 
-| Piece | File |
-|---|---|
-| RPG schema (`skill_check` on interactions, enemies, stats, world binding) | `src/rpg/schema.ts` |
-| Seeded combat + skill-check resolvers (randomness in the pure resolver) | `src/rpg/combat.ts` |
-| RPG runner (legal-action menu + `ATTACK`) + observation | `src/rpg/runner.ts`, `src/rpg/observation.ts` |
-| RPG validator (winnability, skill passability, stat/death-ending checks) | `src/validate/rpg_validator.ts` |
-| Gated core DSL additions: `set_quest_stage` effect, `quest_stage` condition, `ATTACK` action | `src/core/`, `src/api/types.ts` |
-| Sample pack: *The Sunken Barrow* | `content/rpg/pack/sunken_barrow.yaml` |
-| Negative fixture (`COMBAT_UNWINNABLE`) | `content/broken-fixtures/rpg_unwinnable.yaml` |
-| §14 gate record (all six items) | [`docs/stage4_rpg_gate.md`](./docs/stage4_rpg_gate.md) |
-| Acceptance + unit + regression tests, recorded victory trace | `tests/`, `traces/rpg/barrow_victory.json` |
+| Piece                                                                                        | File                                                   |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| RPG schema (`skill_check` on interactions, enemies, stats, world binding)                    | `src/rpg/schema.ts`                                    |
+| Seeded combat + skill-check resolvers (randomness in the pure resolver)                      | `src/rpg/combat.ts`                                    |
+| RPG runner (legal-action menu + `ATTACK`) + observation                                      | `src/rpg/runner.ts`, `src/rpg/observation.ts`          |
+| RPG validator (winnability, skill passability, stat/death-ending checks)                     | `src/validate/rpg_validator.ts`                        |
+| Gated core DSL additions: `set_quest_stage` effect, `quest_stage` condition, `ATTACK` action | `src/core/`, `src/api/types.ts`                        |
+| Sample pack: _The Sunken Barrow_                                                             | `content/rpg/pack/sunken_barrow.yaml`                  |
+| Negative fixture (`COMBAT_UNWINNABLE`)                                                       | `content/broken-fixtures/rpg_unwinnable.yaml`          |
+| §14 gate record (all six items)                                                              | [`docs/stage4_rpg_gate.md`](./docs/stage4_rpg_gate.md) |
+| Acceptance + unit + regression tests, recorded victory trace                                 | `tests/`, `traces/rpg/barrow_victory.json`             |
 
 Stage 4 made RPG the canonical runtime surface; old CYOA and parser code/content
 have since been retired.
@@ -94,12 +94,12 @@ A **view** over the headless engine: it compiles an RPG pack in-browser and driv
 the same `step` reducer the CLI and MCP server use. The engine stays authoritative;
 the UI never decides legality.
 
-| Piece | File |
-|---|---|
-| Browser engine client (`GameSession` for RPG play) | `ui/src/engine.ts` |
-| React play view + pack picker | `ui/src/App.tsx`, `ui/src/packs.ts` |
-| Pure-JS SHA-256 (makes the core browser-safe; byte-identical digests) | `src/core/sha256.ts` |
-| Node test proving the UI uses only the structured API | `tests/unit/ui_engine.test.ts` |
+| Piece                                                                 | File                                |
+| --------------------------------------------------------------------- | ----------------------------------- |
+| Browser engine client (`GameSession` for RPG play)                    | `ui/src/engine.ts`                  |
+| React play view + pack picker                                         | `ui/src/App.tsx`, `ui/src/packs.ts` |
+| Pure-JS SHA-256 (makes the core browser-safe; byte-identical digests) | `src/core/sha256.ts`                |
+| Node test proving the UI uses only the structured API                 | `tests/unit/ui_engine.test.ts`      |
 
 ```bash
 npm run ui:dev     # http://localhost:5173 (after: npm --prefix ui install)
@@ -137,7 +137,7 @@ runtime consolidates around the RPG engine.
 
 Every structural proof in the suite (endings-reachable, variant-liveness, soft-lock
 liveness, score-economy, menu-integrity) is exercised against the ten curated packs
-below. A *frozen* eval set is the condition under which a self-improving loop's verifier
+below. A _frozen_ eval set is the condition under which a self-improving loop's verifier
 stops being a moving target and becomes a memorisable one. The antidote is to **evolve the
 distribution**: mint fresh, never-authored packs the same checks must hold on.
 
@@ -159,24 +159,24 @@ fresh pack, read-only) and is playable in-memory via `new_game`'s
 The shipped, validated content — every pack passes the validator and is wired into
 `npm run health`:
 
-| Pack | File |
-|---|---|
-| The Advocate's Case | `content/rpg/pack/advocates_case.yaml` |
-| The Bellfounder's Alarm | `content/rpg/pack/bellfounders_alarm.yaml` |
-| The Breaking Weir | `content/rpg/pack/breaking_weir.yaml` |
+| Pack                     | File                                        |
+| ------------------------ | ------------------------------------------- |
+| The Advocate's Case      | `content/rpg/pack/advocates_case.yaml`      |
+| The Bellfounder's Alarm  | `content/rpg/pack/bellfounders_alarm.yaml`  |
+| The Breaking Weir        | `content/rpg/pack/breaking_weir.yaml`       |
 | The Bridgewright's Proof | `content/rpg/pack/bridgewrights_proof.yaml` |
-| The Cold Forge | `content/rpg/pack/cold_forge.yaml` |
-| The Dawn Beacon | `content/rpg/pack/dawn_beacon.yaml` |
-| The Factor's Mark | `content/rpg/pack/factors_mark.yaml` |
-| The Falconer's Ransom | `content/rpg/pack/falconers_ransom.yaml` |
-| The Gallowmere | `content/rpg/pack/gallowmere.yaml` |
-| The Lock-Keeper's Toll | `content/rpg/pack/lockkeepers_toll.yaml` |
-| The Powder Mill Surety | `content/rpg/pack/powder_mill_surety.yaml` |
-| The Printer's Night | `content/rpg/pack/printers_night.yaml` |
-| The Quarrymen's Fault | `content/rpg/pack/quarrymens_fault.yaml` |
-| The Sunken Barrow | `content/rpg/pack/sunken_barrow.yaml` |
-| The Tanner's Fever | `content/rpg/pack/tanners_fever.yaml` |
-| The Wolf-Winter | `content/rpg/pack/wolf_winter.yaml` |
+| The Cold Forge           | `content/rpg/pack/cold_forge.yaml`          |
+| The Dawn Beacon          | `content/rpg/pack/dawn_beacon.yaml`         |
+| The Factor's Mark        | `content/rpg/pack/factors_mark.yaml`        |
+| The Falconer's Ransom    | `content/rpg/pack/falconers_ransom.yaml`    |
+| The Gallowmere           | `content/rpg/pack/gallowmere.yaml`          |
+| The Lock-Keeper's Toll   | `content/rpg/pack/lockkeepers_toll.yaml`    |
+| The Powder Mill Surety   | `content/rpg/pack/powder_mill_surety.yaml`  |
+| The Printer's Night      | `content/rpg/pack/printers_night.yaml`      |
+| The Quarrymen's Fault    | `content/rpg/pack/quarrymens_fault.yaml`    |
+| The Sunken Barrow        | `content/rpg/pack/sunken_barrow.yaml`       |
+| The Tanner's Fever       | `content/rpg/pack/tanners_fever.yaml`       |
+| The Wolf-Winter          | `content/rpg/pack/wolf_winter.yaml`         |
 
 Most of this library — plus engine refinements like reactive room/scene descriptions
 (`variants`), an opt-in `meta.deadline` timer, and natural USE-verbs — was produced
@@ -247,7 +247,7 @@ Quality rests on exactly two kinds of testing, nothing in between:
 
 - **Dev tests** (full knowledge, specific assertions): the vitest unit/regression
   suite plus the validators (`src/validate/`) and the exhaustive BFS solver, which
-  *prove* every declared ending is reachable, no path soft-locks, and the score
+  _prove_ every declared ending is reachable, no path soft-locks, and the score
   economy is sound. These run in `npm run health`.
 - **Blind LLM playtest**: a fresh subagent with NO repo access plays a shipped
   quest id purely through the MCP tools and reports its route, step count, choices,

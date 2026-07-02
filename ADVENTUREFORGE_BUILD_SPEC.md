@@ -1,11 +1,13 @@
 > ## ⚠️ AUTHORITATIVE OVERRIDE — TRUST, BUT VERIFY (supersedes this document)
+>
 > By an explicit, durable decision of the project owner, AdventureForge runs on
 > **trust, but verify**. Read this as the lens over everything below:
+>
 > - **Trust (removed constraints):** the coding agent has **free rein over the
 >   entire game** — engine, schemas, DSLs, mechanics, content. The **§14
 >   engine-extension gate** and the **§0 human-approval gate** are gone: new
 >   mechanics/verbs/effects need no review ceremony or six-item bundle, and the
->   agent decides *what* to build.
+>   agent decides _what_ to build.
 > - **Verify (kept in force):** the **automated verification is the bar**. §0
 >   "tests mandatory," the **§8.5 determinism contract** (enforced by the property
 >   tests), the **validator** (no soft-locks / reachable endings), **trace replay +
@@ -13,8 +15,8 @@
 >   integrity** all still hold and still block red work in CI and the autonomous
 >   loop. §16 content-as-validated-data remains.
 >
-> The governing principle: **don't route around the verifier** — change *what the
-> game does* freely, but never weaken a check just to pass. The governing charter
+> The governing principle: **don't route around the verifier** — change _what the
+> game does_ freely, but never weaken a check just to pass. The governing charter
 > is `AGENTS.md`. Sections below are retained as design context.
 
 ---
@@ -32,7 +34,7 @@
 
 ## 0. HOW TO USE THIS DOCUMENT
 
-You are building a real software project from scratch. Treat this file as the source of truth for *what* to build and *in what order*. You decide the low-level implementation details, but you must honor:
+You are building a real software project from scratch. Treat this file as the source of truth for _what_ to build and _in what order_. You decide the low-level implementation details, but you must honor:
 
 1. **The architecture in §3** (the LLM is never the game engine).
 2. **The data schemas in §7** (single source of truth for content).
@@ -46,12 +48,12 @@ Working rules for the build:
 - **Mechanics live in deterministic code. Content lives in validated, AI-generated data.** Never blur this line.
 - **Every generated content pack must pass the validator before it is playable.** Validation failure is a hard error, not a warning.
 - **Every bug becomes a replayable artifact and a regression test.** (See §15.)
-- **Frontier agents are capable but not flawless.** Do not assume generated content, AI-proposed fixes, or even engine code are correct because a strong model produced them — the validator, property tests, replay, and regression suite are what *establish* correctness. Keep a **human approval gate** on risky changes: engine-rule edits, schema migrations, and anything that could weaken determinism or corrupt saves.
+- **Frontier agents are capable but not flawless.** Do not assume generated content, AI-proposed fixes, or even engine code are correct because a strong model produced them — the validator, property tests, replay, and regression suite are what _establish_ correctness. Keep a **human approval gate** on risky changes: engine-rule edits, schema migrations, and anything that could weaken determinism or corrupt saves.
 - **Mock agents by default.** Tests and CI must run with deterministic mock agents and must never require live LLM calls or committed secrets; real providers sit behind environment variables (see §12.7) and are skipped when keys are absent.
 - **Treat all AI-generated content and AI-proposed patches as untrusted input** (see §16): validate before use; never let content execute code or shell; apply patches with deterministic code, not model-issued commands.
 - Commit in small, reviewable increments. Each commit should leave the repo in a green state.
 
-If a requirement here is ambiguous, prefer the interpretation that makes the engine *stricter* and the content *more validated*.
+If a requirement here is ambiguous, prefer the interpretation that makes the engine _stricter_ and the content _more validated_.
 
 ---
 
@@ -67,7 +69,7 @@ Choose-Your-Own-Adventure (CYOA)
         → graphical / web UI, and later a 3D renderer
 ```
 
-The engine stays **headless and structured the entire time.** UI is the *last* concern, bolted onto a stable structured core. Stages 1 and 2 (CYOA, then Zork-style) are the minimum viable proof and the focus of this spec. Stages 3+ are specified at lower resolution because they reuse the same core.
+The engine stays **headless and structured the entire time.** UI is the _last_ concern, bolted onto a stable structured core. Stages 1 and 2 (CYOA, then Zork-style) are the minimum viable proof and the focus of this spec. Stages 3+ are specified at lower resolution because they reuse the same core.
 
 **The order is deliberate:** story first → mechanics second → schema adaptation third → engine validation fourth → AI playtesting fifth → human UI last.
 
@@ -77,11 +79,11 @@ The engine stays **headless and structured the entire time.** UI is the *last* c
 
 This architecture is not a guess. Two facts settle it.
 
-**(a) The builder is capable.** As of the compile date, frontier coding agents handle exactly this class of work — typed, test-backed, long-horizon, repo-scale engineering. Verified launch/system-card figures bear this out: Claude Opus 4.8 scores **69.2% on SWE-Bench Pro** (the contamination-resistant variant, ~10 pts ahead of GPT-5.5's 58.6%) and GPT-5.5 scores **82.7% on Terminal-Bench 2.0** (state of the art for command-line agentic work). Model IDs, pricing, and the role split are in §12.7. These figures are dated and are *not* something the build depends on.
+**(a) The builder is capable.** As of the compile date, frontier coding agents handle exactly this class of work — typed, test-backed, long-horizon, repo-scale engineering. Verified launch/system-card figures bear this out: Claude Opus 4.8 scores **69.2% on SWE-Bench Pro** (the contamination-resistant variant, ~10 pts ahead of GPT-5.5's 58.6%) and GPT-5.5 scores **82.7% on Terminal-Bench 2.0** (state of the art for command-line agentic work). Model IDs, pricing, and the role split are in §12.7. These figures are dated and are _not_ something the build depends on.
 
-**(b) The model must not be the engine.** Research on LLMs operating *inside* interactive environments converges on one conclusion: **LLMs are excellent content generators and poor rule engines.**
+**(b) The model must not be the engine.** Research on LLMs operating _inside_ interactive environments converges on one conclusion: **LLMs are excellent content generators and poor rule engines.**
 
-- **RPGBench** (arXiv 2502.00595, 2025) evaluated LLMs *as* RPG engines across Game Creation and Game Simulation tasks. Finding: state-of-the-art LLMs produce engaging stories but **struggle to implement consistent, verifiable game mechanics, especially in long or complex scenarios.** Its recommended remedy is a **structured event-state representation** plus **automated validity checking** — exactly the architecture below. It splits evaluation into *objective* mechanical checks (deterministic) and *subjective* quality judgments (LLM-as-judge). We mirror that split.
+- **RPGBench** (arXiv 2502.00595, 2025) evaluated LLMs _as_ RPG engines across Game Creation and Game Simulation tasks. Finding: state-of-the-art LLMs produce engaging stories but **struggle to implement consistent, verifiable game mechanics, especially in long or complex scenarios.** Its recommended remedy is a **structured event-state representation** plus **automated validity checking** — exactly the architecture below. It splits evaluation into _objective_ mechanical checks (deterministic) and _subjective_ quality judgments (LLM-as-judge). We mirror that split.
 
 - **TALES** (Text Adventure Learning Environment Suite, arXiv 2504.14128, 2025; Microsoft Research) unified TextWorld, TextWorld-Express, ALFWorld, ScienceWorld, and Jericho. Finding: even the strongest LLM-driven agents **fail to reach ~15–20% on games designed for human enjoyment**, and **struggle immensely with human-written Zork1** even though they ace synthetic games. Implication: do not expect the LLM to brute-force a raw parser; give it structured state and legal actions.
 
@@ -89,9 +91,9 @@ This architecture is not a guess. Two facts settle it.
 
 - **TextWorld / TextWorld-Express** (Microsoft) generate games parameterized by map size, object count, quest length, and description richness — a model for procedurally scaling difficulty once the core is stable.
 
-- **TextQuests** (arXiv 2507.23701, 2025) reinforces the point and adds a crucial caveat: **Zork is almost certainly in LLM training data**, so playing classic games measures memorization as much as reasoning. A *freshly generated* game — which is exactly what this project produces — is therefore a cleaner test of genuine capability.
+- **TextQuests** (arXiv 2507.23701, 2025) reinforces the point and adds a crucial caveat: **Zork is almost certainly in LLM training data**, so playing classic games measures memorization as much as reasoning. A _freshly generated_ game — which is exactly what this project produces — is therefore a cleaner test of genuine capability.
 
-**Net design rule:** keep mechanics in deterministic code that the AI cannot corrupt; let the AI generate *content* into a validated schema; expose to the AI only **structured state + legal actions + event logs**, never a raw parser it must guess at.
+**Net design rule:** keep mechanics in deterministic code that the AI cannot corrupt; let the AI generate _content_ into a validated schema; expose to the AI only **structured state + legal actions + event logs**, never a raw parser it must guess at.
 
 ---
 
@@ -135,34 +137,34 @@ Pick **one** primary language and commit to it. Recommendation and rationale fol
 
 Rationale: the arc terminates in a web/graphical UI, and a single language across engine + content tooling + UI removes an integration seam. Runtime schema validation (Zod) doubles as the content schema, giving one source of truth for "AI writes content → validator checks it."
 
-| Concern | Choice |
-|---|---|
-| Language / runtime | TypeScript on Node.js 22+ (ESM) |
-| Schema + runtime validation | **Zod** (schemas are the canonical content contract) |
-| Unit tests | **Vitest** |
-| Property-based tests | **fast-check** |
-| Content format on disk | **YAML** (authoring) compiled to validated JSON (runtime) |
-| CLI runner | a thin `bin/` entrypoint (commander or node `util.parseArgs`) |
-| Determinism | seeded PRNG (e.g. a small xorshift/mulberry32), no `Math.random` in engine |
-| Hashing (state hash) | stable canonical-JSON serialize → SHA-256 |
-| LLM access | provider-agnostic adapter (see §12.7) |
-| Web UI (Stage 5+) | React + Vite, talking only to the structured API |
+| Concern                     | Choice                                                                     |
+| --------------------------- | -------------------------------------------------------------------------- |
+| Language / runtime          | TypeScript on Node.js 22+ (ESM)                                            |
+| Schema + runtime validation | **Zod** (schemas are the canonical content contract)                       |
+| Unit tests                  | **Vitest**                                                                 |
+| Property-based tests        | **fast-check**                                                             |
+| Content format on disk      | **YAML** (authoring) compiled to validated JSON (runtime)                  |
+| CLI runner                  | a thin `bin/` entrypoint (commander or node `util.parseArgs`)              |
+| Determinism                 | seeded PRNG (e.g. a small xorshift/mulberry32), no `Math.random` in engine |
+| Hashing (state hash)        | stable canonical-JSON serialize → SHA-256                                  |
+| LLM access                  | provider-agnostic adapter (see §12.7)                                      |
+| Web UI (Stage 5+)           | React + Vite, talking only to the structured API                           |
 
 ### 4.2 Alternative: Python
 
 Equivalently valid; preferable if you intend to benchmark against Jericho/TextWorld directly (mature Python IF tooling).
 
-| Concern | Choice |
-|---|---|
-| Language | Python 3.12+ |
-| Schema + validation | **Pydantic v2** |
-| Unit tests | **pytest** |
-| Property-based tests | **Hypothesis** |
-| Content format | YAML → validated JSON |
-| CLI runner | `argparse` / `typer` |
-| Determinism | seeded `random.Random(seed)` instance; never the global RNG |
-| Optional IF benchmarking | `jericho`, `textworld` (Linux, Python 3.12+, spaCy) |
-| TUI (optional) | Textual |
+| Concern                  | Choice                                                      |
+| ------------------------ | ----------------------------------------------------------- |
+| Language                 | Python 3.12+                                                |
+| Schema + validation      | **Pydantic v2**                                             |
+| Unit tests               | **pytest**                                                  |
+| Property-based tests     | **Hypothesis**                                              |
+| Content format           | YAML → validated JSON                                       |
+| CLI runner               | `argparse` / `typer`                                        |
+| Determinism              | seeded `random.Random(seed)` instance; never the global RNG |
+| Optional IF benchmarking | `jericho`, `textworld` (Linux, Python 3.12+, spaCy)         |
+| TUI (optional)           | Textual                                                     |
 
 **Everything in §5–§15 except this section is language-agnostic.** Schemas, interfaces, validation rules, agent roles, and acceptance criteria apply identically to both stacks.
 
@@ -243,26 +245,26 @@ Target layout (TypeScript naming shown; mirror for Python):
 
 ## 6. UNIFIED STATE MODEL (shared by all stages)
 
-A single state shape carries the game from CYOA all the way to RPG. Stages add *fields*, never replace the model.
+A single state shape carries the game from CYOA all the way to RPG. Stages add _fields_, never replace the model.
 
 ```ts
 type GameState = {
   // identity / determinism
   seed: number;
-  step: number;                    // monotonically increasing action counter
+  step: number; // monotonically increasing action counter
 
   // location
-  current: string;                 // scene_id (CYOA) or room_id (parser)
+  current: string; // scene_id (CYOA) or room_id (parser)
   visited: Record<string, boolean>;
 
   // world state
-  flags: Record<string, boolean>;  // boolean switches
-  vars: Record<string, number>;    // numeric variables / stats (HP, gold, skills…)
-  inventory: string[];             // object ids carried by the player
+  flags: Record<string, boolean>; // boolean switches
+  vars: Record<string, number>; // numeric variables / stats (HP, gold, skills…)
+  inventory: string[]; // object ids carried by the player
   objectState: Record<string, ObjectRuntime>; // open/locked/contents per object (parser+)
 
   // narrative
-  journal: string[];               // append-only player-visible log
+  journal: string[]; // append-only player-visible log
   questStage: Record<string, string>; // questId -> current stage id (Stage 3+)
 
   // termination
@@ -273,8 +275,8 @@ type GameState = {
 type ObjectRuntime = {
   open?: boolean;
   locked?: boolean;
-  contents?: string[];             // object ids inside a container
-  takenBy?: "player" | "world";    // location bookkeeping
+  contents?: string[]; // object ids inside a container
+  takenBy?: "player" | "world"; // location bookkeeping
 };
 ```
 
@@ -300,10 +302,10 @@ All content is authored in YAML and compiled to validated JSON. Define these as 
 - not_visited: <node_id>
 - var_gte: { name: <var>, value: <number> }
 - var_lte: { name: <var>, value: <number> }
-- var_eq:  { name: <var>, value: <number> }
-- all_of: [ <condition>, ... ]   # AND
-- any_of: [ <condition>, ... ]   # OR
-- none_of: [ <condition>, ... ]  # NOR / NOT
+- var_eq: { name: <var>, value: <number> }
+- all_of: [<condition>, ...] # AND
+- any_of: [<condition>, ...] # OR
+- none_of: [<condition>, ...] # NOR / NOT
 ```
 
 **Effects** (all pure; applied by the reducer, each emits an event):
@@ -313,15 +315,15 @@ All content is authored in YAML and compiled to validated JSON. Define these as 
 - clear_flag: <flag>
 - add_item: <object_id>
 - remove_item: <object_id>
-- set_var:  { name: <var>, value: <number> }
-- inc_var:  { name: <var>, by: <number> }
-- dec_var:  { name: <var>, by: <number> }
+- set_var: { name: <var>, value: <number> }
+- inc_var: { name: <var>, by: <number> }
+- dec_var: { name: <var>, by: <number> }
 - add_journal: <string>
-- goto: <scene_id>               # CYOA scene transition
-- unlock_exit: { from: <room_id>, to: <room_id> }   # parser
+- goto: <scene_id> # CYOA scene transition
+- unlock_exit: { from: <room_id>, to: <room_id> } # parser
 - open_object: <object_id>
 - set_object_locked: { id: <object_id>, locked: <bool> }
-- narrate: <string>              # pure flavor text event, no state change
+- narrate: <string> # pure flavor text event, no state change
 - end_game: <ending_id>
 ```
 
@@ -335,8 +337,8 @@ meta:
   id: forest_pack_v1
   title: "The Watchtower Road"
   start: forest_crossroads
-  vars_init: { suspicion: 0 }     # optional initial numeric vars
-  flags_init: []                  # optional initial flags
+  vars_init: { suspicion: 0 } # optional initial numeric vars
+  flags_init: [] # optional initial flags
 
 scenes:
   - id: forest_crossroads
@@ -344,13 +346,13 @@ scenes:
     text: >
       The road splits beneath the black pines. To the east, smoke rises from a
       ruined watchtower. To the west, a brook cuts through the moss.
-    on_enter: []                  # effects fired when scene is entered
+    on_enter: [] # effects fired when scene is entered
     is_ending: false
     choices:
       - id: go_east
         text: "Go toward the ruined watchtower."
         conditions: []
-        effects: [ { set_flag: saw_watchtower } ]
+        effects: [{ set_flag: saw_watchtower }]
         next: ruined_watchtower
       - id: go_west
         text: "Follow the brook."
@@ -359,11 +361,11 @@ scenes:
         next: mossy_brook
       - id: inspect_ground
         text: "Inspect the muddy ground."
-        conditions: [ { not_flag: found_bootprints } ]
+        conditions: [{ not_flag: found_bootprints }]
         effects:
           - set_flag: found_bootprints
           - add_journal: "Someone dragged a heavy object toward the watchtower."
-        next: forest_crossroads     # self-loop: re-presents the scene with new state
+        next: forest_crossroads # self-loop: re-presents the scene with new state
 
 endings:
   - id: ending_escape
@@ -390,51 +392,51 @@ rooms:
     description: >
       A moss-covered well stands behind the ruined chapel. An iron ring is
       bolted to its rim.
-    objects: [ old_well, rusted_bucket ]
+    objects: [old_well, rusted_bucket]
     exits:
       - { direction: north, to: ruined_chapel }
       - { direction: south, to: forest_path }
       - direction: down
         to: well_bottom
-        conditions: [ { has_flag: rope_attached_to_well } ]   # locked until satisfied
+        conditions: [{ has_flag: rope_attached_to_well }] # locked until satisfied
         locked_msg: "It's too far to climb down without a rope."
 
 objects:
   - id: rope
     name: "coil of rope"
-    aliases: [ rope, coil ]
+    aliases: [rope, coil]
     description: "A sturdy coil of hemp rope."
     takeable: true
-    quest_critical: true            # validator guards against permanent loss
+    quest_critical: true # validator guards against permanent loss
   - id: old_well
     name: "old well"
-    aliases: [ well ]
+    aliases: [well]
     description: "Deep, dark, and quiet."
     takeable: false
     interactions:
       - verb: USE
         item: rope
         target: old_well
-        conditions: [ { not_flag: rope_attached_to_well } ]
+        conditions: [{ not_flag: rope_attached_to_well }]
         effects:
           - set_flag: rope_attached_to_well
           - unlock_exit: { from: old_well, to: well_bottom }
           - narrate: "You tie the rope to the iron ring. It drops into the dark."
   - id: brass_key
     name: "brass key"
-    aliases: [ key, brass ]
+    aliases: [key, brass]
     description: "A small brass key, green with age."
     takeable: true
   - id: oak_chest
     name: "oak chest"
-    aliases: [ chest ]
+    aliases: [chest]
     description: "A banded oak chest."
     takeable: false
     container: true
     openable: true
     locked: true
     key_id: brass_key
-    contents: [ silver_coin ]
+    contents: [silver_coin]
 
 npcs:
   - id: innkeeper
@@ -447,16 +449,16 @@ npcs:
           npc_text: "You look lost, traveler."
           topics:
             - { id: crypt, prompt: "Ask about the sealed crypt", goto: about_crypt }
-            - { id: bye,  prompt: "Say goodbye", end: true }
+            - { id: bye, prompt: "Say goodbye", end: true }
         - id: about_crypt
           npc_text: "The crypt? Only the bell rope opens it. Not a key in sight."
-          effects: [ { set_flag: heard_crypt_rumor } ]
+          effects: [{ set_flag: heard_crypt_rumor }]
           topics:
             - { id: bye, prompt: "Say goodbye", end: true }
 
 win_conditions:
   - id: reach_catacombs
-    conditions: [ { visited: catacombs } ]
+    conditions: [{ visited: catacombs }]
     ending: ending_victory
 
 endings:
@@ -477,10 +479,10 @@ endings:
 function step(state: GameState, action: Action): StepResult;
 
 type StepResult = {
-  state: GameState;        // NEW state (engine is pure; input state unmutated)
-  events: GameEvent[];     // ordered list of what happened
-  ok: boolean;             // false if action was illegal/rejected
-  rejectionReason?: string;// human-readable, for illegal actions
+  state: GameState; // NEW state (engine is pure; input state unmutated)
+  events: GameEvent[]; // ordered list of what happened
+  ok: boolean; // false if action was illegal/rejected
+  rejectionReason?: string; // human-readable, for illegal actions
 };
 ```
 
@@ -520,9 +522,9 @@ Every action produces an ordered event list. Events are the system's universal r
   "events": [
     { "type": "state_change", "effect": "set_flag", "flag": "rope_attached_to_well" },
     { "type": "unlock_exit", "from": "old_well", "to": "well_bottom" },
-    { "type": "narration", "text": "You tie the rope to the iron ring. It drops into the dark." }
+    { "type": "narration", "text": "You tie the rope to the iron ring. It drops into the dark." },
   ],
-  "new_state_hash": "8f3a19c4"
+  "new_state_hash": "8f3a19c4",
 }
 ```
 
@@ -561,12 +563,12 @@ A **Trace** is a fully replayable artifact:
   "pack_id": "chapel_pack_v1",
   "content_hash": "ab12...",
   "seed": 88123,
-  "initial_state_ref": "start",          // or an embedded save
+  "initial_state_ref": "start", // or an embedded save
   "actions": [
     { "type": "MOVE", "direction": "north" },
-    { "type": "TAKE", "item": "rope" }
+    { "type": "TAKE", "item": "rope" },
   ],
-  "expected_final_hash": "8f3a19c4"        // optional; asserted on replay
+  "expected_final_hash": "8f3a19c4", // optional; asserted on replay
 }
 ```
 
@@ -589,8 +591,8 @@ The LLM **never** sees raw engine internals and **never** invents parser syntax.
   "available_actions": [
     { "id": "go_east", "text": "Go toward the ruined watchtower." },
     { "id": "go_west", "text": "Follow the brook." },
-    { "id": "inspect_ground", "text": "Inspect the muddy ground." }
-  ]
+    { "id": "inspect_ground", "text": "Inspect the muddy ground." },
+  ],
 }
 ```
 
@@ -607,20 +609,32 @@ The legal-action generator computes every currently-valid command and exposes bo
   "description": "A moss-covered well stands behind the ruined chapel.",
   "visible_objects": [
     { "id": "old_well", "name": "Old Well" },
-    { "id": "rusted_bucket", "name": "Rusted Bucket" }
+    { "id": "rusted_bucket", "name": "Rusted Bucket" },
   ],
   "exits": [
     { "direction": "north", "to": "ruined_chapel" },
-    { "direction": "south", "to": "forest_path" }
+    { "direction": "south", "to": "forest_path" },
   ],
   "inventory": ["rope", "flint"],
   "available_actions": [
-    { "id": "look_old_well",     "command": "look at old well",       "action": { "type": "LOOK", "target": "old_well" } },
-    { "id": "take_bucket",       "command": "take rusted bucket",     "action": { "type": "TAKE", "item": "rusted_bucket" } },
-    { "id": "use_rope_on_well",  "command": "use rope on old well",   "action": { "type": "USE", "item": "rope", "target": "old_well" } },
-    { "id": "go_north",          "command": "go north",               "action": { "type": "MOVE", "direction": "north" } },
-    { "id": "go_south",          "command": "go south",               "action": { "type": "MOVE", "direction": "south" } }
-  ]
+    {
+      "id": "look_old_well",
+      "command": "look at old well",
+      "action": { "type": "LOOK", "target": "old_well" },
+    },
+    {
+      "id": "take_bucket",
+      "command": "take rusted bucket",
+      "action": { "type": "TAKE", "item": "rusted_bucket" },
+    },
+    {
+      "id": "use_rope_on_well",
+      "command": "use rope on old well",
+      "action": { "type": "USE", "item": "rope", "target": "old_well" },
+    },
+    { "id": "go_north", "command": "go north", "action": { "type": "MOVE", "direction": "north" } },
+    { "id": "go_south", "command": "go south", "action": { "type": "MOVE", "direction": "south" } },
+  ],
 }
 ```
 
@@ -636,19 +650,19 @@ Expose the engine as an optional local **MCP server** (`src/mcp/`). MCP (Model C
 
 Tools to expose (JSON-serializable in/out):
 
-| Tool | In → Out |
-|---|---|
-| `load_pack` | pack path → metadata + validation report |
-| `validate_pack` | pack path → validation report |
-| `new_game` | pack path, seed → session id, initial observation, state hash |
-| `get_observation` | session id → current AI-facing observation |
-| `list_legal_actions` | session id → legal actions |
-| `step_action` | session id, action_id → action result, new observation, state hash |
-| `save_game` / `load_game` | session id ↔ serialized save (+ content-hash check, §8.7) |
-| `replay_trace` | trace path → replay result + first divergent step if any |
-| `inspect_trace` | trace path → summary, steps, suspected bugs |
-| `adapt_story` | story text, target mode → draft content pack + adaptation report |
-| `apply_content_patch` | pack path, patch proposal → modified pack + validation report |
+| Tool                      | In → Out                                                           |
+| ------------------------- | ------------------------------------------------------------------ |
+| `load_pack`               | pack path → metadata + validation report                           |
+| `validate_pack`           | pack path → validation report                                      |
+| `new_game`                | pack path, seed → session id, initial observation, state hash      |
+| `get_observation`         | session id → current AI-facing observation                         |
+| `list_legal_actions`      | session id → legal actions                                         |
+| `step_action`             | session id, action_id → action result, new observation, state hash |
+| `save_game` / `load_game` | session id ↔ serialized save (+ content-hash check, §8.7)          |
+| `replay_trace`            | trace path → replay result + first divergent step if any           |
+| `inspect_trace`           | trace path → summary, steps, suspected bugs                        |
+| `adapt_story`             | story text, target mode → draft content pack + adaptation report   |
+| `apply_content_patch`     | pack path, patch proposal → modified pack + validation report      |
 
 MCP rules: explicit input schemas for every tool; never expose the filesystem outside the project root; content and patches never run shell or code (§16); handlers are unit-tested directly, without needing a live MCP client.
 
@@ -699,13 +713,19 @@ Graph traversal is necessary but insufficient (inventory + object interactions m
   "pack_id": "chapel_pack_v1",
   "ok": false,
   "findings": [
-    { "severity": "error",   "code": "SOFTLOCK_QUEST_ITEM",
+    {
+      "severity": "error",
+      "code": "SOFTLOCK_QUEST_ITEM",
       "message": "bell_rope can be dropped into old_well before the crypt puzzle, making ending_victory unreachable.",
-      "where": ["object:bell_rope", "room:old_well"] },
-    { "severity": "warning", "code": "UNCLEAR_PUZZLE",
+      "where": ["object:bell_rope", "room:old_well"],
+    },
+    {
+      "severity": "warning",
+      "code": "UNCLEAR_PUZZLE",
       "message": "crypt requires bell_rope but no in-world clue points to it.",
-      "where": ["object:sealed_crypt"] }
-  ]
+      "where": ["object:sealed_crypt"],
+    },
+  ],
 }
 ```
 
@@ -762,7 +782,7 @@ engine_capabilities:
     - narrative_summary
     - branching_choice
     - scripted_event
-    - future_mechanic_flag      # mark a desired mechanic for a later stage
+    - future_mechanic_flag # mark a desired mechanic for a later stage
 ```
 
 After drafting, the **adapter** agent classifies every scene/beat as exactly one of:
@@ -770,7 +790,7 @@ After drafting, the **adapter** agent classifies every scene/beat as exactly one
 - `fully_supported`
 - `supported_with_minor_rewrite`
 - `requires_cutscene`
-- `requires_engine_extension`   (triggers the gate in §14)
+- `requires_engine_extension` (triggers the gate in §14)
 - `too_expensive_for_prototype` (deferred)
 
 Worked example of the adaptation decision (from the design notes):
@@ -790,24 +810,29 @@ That is exactly how game writing works under production constraints: draft like 
 
 ## 12. AI AGENT ROLES
 
-Each role is a thin, well-prompted LLM driver around the deterministic core. None of them *is* the engine; they read/write data and call engine functions.
+Each role is a thin, well-prompted LLM driver around the deterministic core. None of them _is_ the engine; they read/write data and call engine functions.
 
 ### 12.1 Writer (Layer 1)
+
 Input: premise, tone, target length, the engine contract.
 Output: chaptered prose story + a beat list. Drafts freely; does not need schema fluency.
 
 ### 12.2 Adapter (Layer 1 → Layer 2)
+
 Input: story + beats + engine contract + content schema.
 Output: a schema-valid content pack, plus a per-beat classification (§11). Extracts scenes, locations, characters, props, conflicts, key decisions; maps them to scenes/rooms/objects/flags/puzzles/cutscenes/quests.
 
 ### 12.3 Validator-runner
+
 Pure code (not an LLM). Compiles the pack and produces the `ValidationReport`. The adapter loops against it until green.
 
 ### 12.4 Playtester (blind LLM playtest)
+
 Input each turn: current observation, current objective, inventory, known map, quest log, recent event history — and **nothing else**: the playtester is a fresh subagent with no repo access that touches the game only through the `mcp__adventureforge__*` tools.
 Output each turn (structured): `chosen_action`, `reason`, `expected_result`, plus per-step diagnostics. After the run it emits a **playtest record** (§12.6) — game log, step count, choices made, and qualitative feedback (clarity / pacing / confusion). This blind LLM playtest is the **only** judge of player-facing quality; structural soundness (reachable endings, no soft-locks) is proven separately by the validator + exhaustive solver (the dev tests, §12.8).
 
 ### 12.5 Debugger + Fixer
+
 Debugger: turns a failed/odd playthrough into a **bug artifact** (replayable trace + diagnosis). Fixer: patches exactly one of `{content, engine_rule, validator, test, hint_text, quest_structure}` and adds a regression test (§15). Engine-rule changes are gated (§14).
 
 ### 12.6 Playtest record formats
@@ -818,7 +843,7 @@ Good step (progress):
 step: 42
 location: old_well
 objective: find_entrance_to_catacombs
-available_actions: [ look_old_well, use_rope_on_well, go_north, go_south ]
+available_actions: [look_old_well, use_rope_on_well, go_north, go_south]
 chosen_action: use_rope_on_well
 expected: "unlock access to the lower area"
 actual:
@@ -844,9 +869,10 @@ recommendation:
   - rename 'silver key' so it doesn't imply crypt access
 ```
 
-The point: the AI does not just check *whether* the game works — it records *what it experienced* and pinpoints *where the design is unclear.*
+The point: the AI does not just check _whether_ the game works — it records _what it experienced_ and pinpoints _where the design is unclear._
 
 ### 12.7 LLM client (provider-agnostic)
+
 Implement one interface (e.g. `completeJson<T>({system, user, schemaName, schema})`) with multiple backends. The **default is a deterministic, keyless per-role mock** (e.g. `MockAuthorProvider`) that returns canned/heuristic JSON, so the authoring agent roles — writer, adapter, debugger, fixer — run in tests and CI with **no live calls and no API keys**. Real adapters (OpenAI / Anthropic / Google) sit behind environment variables and are skipped when keys are absent. As of this writing the relevant frontier models are (verify IDs/pricing at provider docs before wiring):
 
 - **Anthropic Claude Opus 4.8** (`claude-opus-4-8`, released 2026-05-28; ~$5/$25 per 1M tokens, 1M context). Leads issue-level coding — **69.2% SWE-Bench Pro** (vs GPT-5.5's 58.6%), 88.6% SWE-Bench Verified — and reports ~4× fewer self-introduced code defects vs 4.7, with configurable Effort Modes. **Dynamic Workflows** (research preview in Claude Code) can fan a task across up to ~1,000 parallel subagents (16 concurrent) with built-in verification. Best fit for the **builder/debugger** role and large content-validation sweeps.
@@ -855,9 +881,10 @@ Implement one interface (e.g. `completeJson<T>({system, user, schemaName, schema
 
 The role split above is a suggestion, not a constraint — keep the client abstraction so any model can be swapped per role.
 
-> Caveat backed by the research in §2: do not over-trust *any* model as the live rule engine. The whole point of the structured API + validator is that the engine, not the model, guarantees correctness.
+> Caveat backed by the research in §2: do not over-trust _any_ model as the live rule engine. The whole point of the structured API + validator is that the engine, not the model, guarantees correctness.
 
 ### 12.8 The two-mode testing model
+
 Testing collapses to exactly **two** complementary modes. (The earlier heuristic
 **playtester persona roster** — eight in-process player bots — and the
 `run_playtest` coverage/random-walk bot have been **removed** in favor of these two;
@@ -866,11 +893,11 @@ heuristic bot was never an honest proxy for either.)
 
 1. **Dev tests (full knowledge, specific assertions).** The Vitest unit/regression
    suite + the validators (`validateCyoa` / `validateParser` / `validateRpg`) + the
-   **exhaustive BFS solver**. Together these *prove* the structural properties a
+   **exhaustive BFS solver**. Together these _prove_ the structural properties a
    persona roster could only ever sample for: every declared ending is reachable, no
    reachable state soft-locks, ordering is order-independent where claimed, and the
    score economy is sound (reachable max == declared max). They run in `npm run
-   health` and are deterministic — the same play orders the dropper / out-of-order
+health` and are deterministic — the same play orders the dropper / out-of-order
    personas used to probe are now covered exhaustively, not heuristically.
 2. **Blind LLM playtest (§12.4).** A fresh subagent with **no repo access** plays a
    pack purely through the `mcp__adventureforge__*` tools and reports its game log,
@@ -880,7 +907,7 @@ heuristic bot was never an honest proxy for either.)
    `docs/blind_playtest_protocol.md`, and is run per-cycle by the autonomous loop,
    rotating across packs.
 
-Net: structural soundness is *proven* by mode 1; player experience is *judged* by
+Net: structural soundness is _proven_ by mode 1; player experience is _judged_ by
 mode 2. Nothing relies on a heuristic bot pretending to be a player.
 
 ---
@@ -888,16 +915,20 @@ mode 2. Nothing relies on a heuristic bot pretending to be a player.
 ## 13. STAGE-BY-STAGE BUILD PLAN + ACCEPTANCE CRITERIA
 
 ### STAGE 0 — Scaffolding
+
 Build: repo (§5), tooling (§4), the unified `GameState` (§6), the condition/effect DSL evaluators (§7.1), `rng`, `hash`, `save_load`, `trace record/replay`, the pure `step` skeleton, CI that runs lint + tests.
 **Done when:** `bin/replay` round-trips a hand-written trace; determinism property test passes; CI is green.
 
 ### STAGE 1 — CYOA engine (the minimum viable proof)
+
 Build the CYOA schema, runner, observation builder, full CYOA validator, human CLI (`bin/play`), and the writer→adapter→validator→playtester→debugger→fixer loop for CYOA.
 
 Target first content pack:
+
 - 20 scenes, 3 endings, 2 inventory items, 5 flags, 1 NPC conversation, 1 condition-locked choice, 1 hidden scene, save/load, trace recording.
 
 **Stage 1 acceptance — the end-to-end proof must demonstrate, in CI or a recorded run:**
+
 1. AI writes a 20-scene branching story.
 2. AI adapts it into a schema-valid pack.
 3. Engine validates the pack (green report).
@@ -911,12 +942,15 @@ Target first content pack:
 This single loop is the whole thesis in miniature. Do not move on until it passes.
 
 ### STAGE 2 — Zork-style parser adventure
+
 Build the parser schema, legal-action generator, controlled command parser (human side), parser validator, and the structured action API for the AI. Reuse the entire Stage-0 core and the agent loop.
 
 Target first content pack:
+
 - 10 rooms, 8 objects, 2 containers, 2 locked doors, 1 NPC with a dialogue tree, 2 puzzles, 1 win condition, controlled parser, legal-action API, trace replay, exhaustive-solver coverage, and a blind LLM playtest (§12.8).
 
 **Stage 2 acceptance:**
+
 1. Pack passes the full parser validator (§10.2), including the `quest_critical` soft-lock guard.
 2. A human can complete the game through the controlled CLI parser.
 3. The AI completes the game using only the structured legal-action API (no raw-parser guessing).
@@ -925,19 +959,22 @@ Target first content pack:
 6. At least one bug becomes a `traces/bugs/` artifact and a regression test (§15).
 
 ### STAGE 3 — Sierra-Quest style (inventory + puzzles + score + death/restore)
+
 Add: a score variable and scoring effects, "death" endings with restore, multi-step puzzle chains, more object interactions. Reuse all prior layers. Extend the validator to check score reachability and that death states are always recoverable via load.
 
 ### STAGE 4 — Hero's-Quest style (RPG/adventure hybrid)
+
 Add via the gate (§14): character stats in `vars` (HP, skills, gold), deterministic skill checks (seeded), simple turn-based combat resolved in code, quest stages. The engine stays deterministic; combat randomness flows through the seeded PRNG so every fight is replayable.
 
 ### STAGE 5 — Human UI, then renderer
+
 Only now add a UI. Web (React + Vite) for Stages 1–4 content, talking exclusively to the structured API and the same `step` function. A 3D renderer, if pursued, is a presentation layer over identical structured state. **The engine remains headless; the UI is a view.**
 
 ---
 
 ## 14. ENGINE-EXTENSION GATE (how the engine grows without rotting)
 
-The AI *may* propose engine extensions (new mechanics/verbs). Every extension MUST ship with all of:
+The AI _may_ propose engine extensions (new mechanics/verbs). Every extension MUST ship with all of:
 
 1. An explicit mechanic spec (states, transitions, edge cases).
 2. A schema update (new condition/effect/object fields).
@@ -946,11 +983,12 @@ The AI *may* propose engine extensions (new mechanics/verbs). Every extension MU
 5. A backward-compatibility check (all existing packs still validate; all existing traces still replay to identical hashes).
 6. A fresh playtest trace using the new mechanic.
 
-Without the gate the engine bloats and loses determinism. With it, the engine becomes *more* robust over time.
+Without the gate the engine bloats and loses determinism. With it, the engine becomes _more_ robust over time.
 
-**Testing strategy across all stages** — coverage is necessary but not sufficient; the determinism and purity *properties* below are what actually guarantee correctness, so do not treat a coverage percentage as the goal:
+**Testing strategy across all stages** — coverage is necessary but not sufficient; the determinism and purity _properties_ below are what actually guarantee correctness, so do not treat a coverage percentage as the goal:
+
 - **Unit tests**: each condition, each effect, each action type.
-- **Property tests** (fast-check / Hypothesis): (a) determinism — random valid action sequences run twice produce identical traces; (b) purity — `step` never mutates input; (c) save/load round-trips to an identical state hash; (d) the legal-action set never contains an action that `step` then rejects as *illegal* (conditions may still fail, but legality must agree).
+- **Property tests** (fast-check / Hypothesis): (a) determinism — random valid action sequences run twice produce identical traces; (b) purity — `step` never mutates input; (c) save/load round-trips to an identical state hash; (d) the legal-action set never contains an action that `step` then rejects as _illegal_ (conditions may still fail, but legality must agree).
 - **Validator + exhaustive BFS solver**: prove, over the whole reachable state space, that every declared ending is reachable, no state soft-locks, and the score economy is sound (the structural net; see §12.8 mode 1).
 - **Regression tests**: one per fixed bug (§15).
 - **Blind LLM playtest** (§12.8 mode 2): a no-repo-access subagent plays over MCP and reports player-facing clarity/pacing; the only judge of subjective quality.
@@ -966,12 +1004,12 @@ bug_id: bug_0147
 pack_id: chapel_pack_v1
 content_hash: ab12cd34
 seed: 88123
-initial_state: save_before_chapel        # or "start"
+initial_state: save_before_chapel # or "start"
 trace:
   - { type: MOVE, direction: north }
   - { type: TAKE, item: bell_rope }
   - { type: MOVE, direction: south }
-  - { type: USE, item: bell_rope, target: old_well }   # dropped into the well
+  - { type: USE, item: bell_rope, target: old_well } # dropped into the well
   - { type: MOVE, direction: north }
   - { type: USE, item: silver_key, target: sealed_crypt }
 failure:
@@ -984,18 +1022,18 @@ expected:
   - provide an alternate rope source, OR
   - make the rope recoverable from the well
 fix:
-  layer: validator        # one of: content | engine_rule | validator | test | hint_text | quest_structure
+  layer: validator # one of: content | engine_rule | validator | test | hint_text | quest_structure
   summary: "Add SOFTLOCK_QUEST_ITEM check; mark bell_rope quest_critical; make well non-destination for it."
 regression_test: tests/regression/bug_0147_quest_item_softlock.test.ts
 ```
 
-The matching regression test asserts, e.g.: *"A player cannot permanently lose a quest-critical item before the crypt puzzle."* Run it forever.
+The matching regression test asserts, e.g.: _"A player cannot permanently lose a quest-critical item before the crypt puzzle."_ Run it forever.
 
 ---
 
 ## 16. SECURITY & UNTRUSTED-CONTENT POSTURE
 
-An AI-content pipeline has a threat model, and it must be designed in, not bolted on. Treat every byte the model produces — content packs *and* proposed fixes — as untrusted input.
+An AI-content pipeline has a threat model, and it must be designed in, not bolted on. Treat every byte the model produces — content packs _and_ proposed fixes — as untrusted input.
 
 - **Content is data, never code.** Packs are YAML/JSON validated by the schema. No `eval`, no embedded scripts, no shell. The engine interprets a closed condition/effect vocabulary (§7.1) and nothing else.
 - **Patches are applied by deterministic code, not by the model.** The fixer proposes a structured `ContentPatchProposal`; your code validates and applies it. A model never runs shell or writes files directly.
@@ -1010,16 +1048,16 @@ Reference frameworks: OWASP Top 10 for LLM Applications (esp. LLM01 Prompt Injec
 
 ## 17. CONTENT DESIGN RULES (guardrails for the writer/adapter agents)
 
-These keep AI-generated content *fun and solvable*, not just schema-valid. Bake them into the writer/adapter prompts and, where checkable, into the validator and the blind LLM playtest (§12.8).
+These keep AI-generated content _fun and solvable_, not just schema-valid. Bake them into the writer/adapter prompts and, where checkable, into the validator and the blind LLM playtest (§12.8).
 
 1. Every puzzle has **at least two clue sources** (e.g. a room description and an NPC line).
 2. Red herrings are signposted **in the narrative**, never by hidden designer intent.
 3. Required items are **always recoverable**; failure endings are allowed, soft-locks are not.
-4. The player should never have to guess parser syntax — legal actions reveal what's *possible* without spoiling *how*.
+4. The player should never have to guess parser syntax — legal actions reveal what's _possible_ without spoiling _how_.
 5. NPC dialogue carries **actionable** hints; `inspect`/`look` reward curiosity.
 6. Loops are intentional and declared; every other path terminates.
 7. A player who follows the main objective can always finish; an explorer finds optional content; an out-of-order player gets coherent feedback.
-8. Structural problems are caught by the validator + exhaustive solver **before** runtime (the dev tests); the blind LLM playtest surfaces *confusion*, not just crashes.
+8. Structural problems are caught by the validator + exhaustive solver **before** runtime (the dev tests); the blind LLM playtest surfaces _confusion_, not just crashes.
 
 ---
 
@@ -1036,25 +1074,29 @@ These keep AI-generated content *fun and solvable*, not just schema-valid. Bake 
 ## 19. REFERENCES (verify before relying on version-specific details)
 
 Research / tooling:
-- RPGBench — *Evaluating LLMs as Role-Playing Game Engines*, arXiv:2502.00595 (2025).
-- TALES — *Text Adventure Learning Environment Suite*, arXiv:2504.14128 (2025); https://microsoft.github.io/tale-suite/ ; https://github.com/microsoft/tale-suite
-- Jericho — Microsoft Research IF agent environment; https://github.com/microsoft/jericho ; Hausknecht et al., *Interactive Fiction Games: A Colossal Adventure* (AAAI 2020), arXiv:1909.05398.
+
+- RPGBench — _Evaluating LLMs as Role-Playing Game Engines_, arXiv:2502.00595 (2025).
+- TALES — _Text Adventure Learning Environment Suite_, arXiv:2504.14128 (2025); https://microsoft.github.io/tale-suite/ ; https://github.com/microsoft/tale-suite
+- Jericho — Microsoft Research IF agent environment; https://github.com/microsoft/jericho ; Hausknecht et al., _Interactive Fiction Games: A Colossal Adventure_ (AAAI 2020), arXiv:1909.05398.
 - TextWorld / TextWorld-Express — Microsoft Research.
-- TextQuests — *How Good are LLMs at Text-Based Video Games?*, arXiv:2507.23701 (2025).
+- TextQuests — _How Good are LLMs at Text-Based Video Games?_, arXiv:2507.23701 (2025).
 - ZorkGPT — community LLM-IF agent using the Jericho interface (illustrative architecture); https://github.com/stickystyle/ZorkGPT
 
 Agent protocol & schemas:
+
 - Model Context Protocol — https://modelcontextprotocol.io (spec 2025-06-18; Linux Foundation–governed; native in Claude Code, Codex, Gemini CLI, GitHub Copilot, Cursor, Windsurf).
 - Zod — https://zod.dev (runtime schema validation = the content contract).
 
 Security / governance:
+
 - OWASP Top 10 for LLM Applications, esp. LLM01 Prompt Injection — https://genai.owasp.org/llm-top-10/
 - NIST AI Risk Management Framework, Generative-AI Profile — https://www.nist.gov/itl/ai-risk-management-framework
 
 Frontier models (figures as of 2026-05; confirm current IDs/pricing/limits at vendor docs):
-- Anthropic — *Claude Opus 4.8* (`claude-opus-4-8`), 2026-05-28; SWE-Bench Pro 69.2%, SWE-Bench Verified 88.6%, Dynamic Workflows research preview. Source: Anthropic Opus 4.8 release + system card.
-- OpenAI — *GPT-5.5* (Codex `gpt-5.5`), 2026-04-23; Terminal-Bench 2.0 82.7%, SWE-Bench Pro 58.6%. Source: OpenAI "Introducing GPT-5.5".
-- Google — *Gemini 3.5 Flash* (`gemini-3.5-flash`), GA 2026-05-19; agentic/coding/tool-use, 1M/65k, no Computer Use. Source: Google AI for Developers.
+
+- Anthropic — _Claude Opus 4.8_ (`claude-opus-4-8`), 2026-05-28; SWE-Bench Pro 69.2%, SWE-Bench Verified 88.6%, Dynamic Workflows research preview. Source: Anthropic Opus 4.8 release + system card.
+- OpenAI — _GPT-5.5_ (Codex `gpt-5.5`), 2026-04-23; Terminal-Bench 2.0 82.7%, SWE-Bench Pro 58.6%. Source: OpenAI "Introducing GPT-5.5".
+- Google — _Gemini 3.5 Flash_ (`gemini-3.5-flash`), GA 2026-05-19; agentic/coding/tool-use, 1M/65k, no Computer Use. Source: Google AI for Developers.
 
 ---
 

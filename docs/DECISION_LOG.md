@@ -46,8 +46,8 @@ Seeded 2026-06-08 from `docs/CURRENT_PLAN.md` re-aim #19 (and #17/#18) "false al
 - **Multi-line tautology** — `TAUTOLOGY_RE` has no dotall flag; split-line `expect(foo)\n.toBe(foo)`
   escapes. S-effort; deferred (real test code writes tautologies single-line; narrow risk).
 - **🚫 ANTI-PATTERN — do NOT keep raising `TARGET_PER_MODE` (orchestrator ruling 2026-06-09).**
-  Re-aims #19→bug_0332, mid-cycle→bug_0335, #21→bug_0336 each raised `TARGET_PER_MODE`
-  (`src/afk/assessor.ts:68`) to _current counts + a little headroom_. Each raise is consumed by a
+  Re-aims #19→bug*0332, mid-cycle→bug_0335, #21→bug_0336 each raised `TARGET_PER_MODE`
+  (`src/afk/assessor.ts:68`) to \_current counts + a little headroom*. Each raise is consumed by a
   burst of `content_new` authoring, which re-saturates, which makes the NEXT ultraplan raise it
   again — a self-perpetuating loop the re-aims themselves flagged as a "structural trap" yet kept
   feeding. **The ceiling is now intentionally FIXED at `{cyoa:20, parser:16, rpg:16}` (the bug_0336

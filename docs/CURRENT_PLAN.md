@@ -93,6 +93,8 @@ Make discovered overworld quest leads start real RPG sessions.
   passing test logs free of fatal-looking synthetic failure noise.
 - The no-LLM blind MCP smoke harness is now inside the repo lint/format gates with
   Node ESM globals, removing root-wide cleaner ESLint noise.
+- Root/historical Markdown files are normalized for root-wide Prettier, removing
+  the remaining repo-local cleaner formatting noise.
 - Save/load now requires `mode: "rpg"` on disk; missing or legacy modes are
   rejected at the integrity boundary.
 - Trace artifacts now carry and require `mode: "rpg"` before replay or inspect

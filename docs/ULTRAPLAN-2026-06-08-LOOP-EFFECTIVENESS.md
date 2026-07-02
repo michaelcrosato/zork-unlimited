@@ -1,7 +1,7 @@
 # Ultra-plan — AFK loop effectiveness on Opus 4.8 (2026-06-08)
 
 **Target model:** Claude **Opus 4.8** (`claude-opus-4-8`) · **Platform:** Claude Code CLI (headless `claude -p`).
-**Scope:** loop *effectiveness* — reliability + throughput of useful work. (Cost/token reduction is
+**Scope:** loop _effectiveness_ — reliability + throughput of useful work. (Cost/token reduction is
 covered separately in `docs/TOKEN-REDUCTION-ULTRAPLAN-2026-06-08.md`; this plan is the complement.)
 
 This synthesizes (a) an end-to-end read of how the loop actually runs in source, (b) the
@@ -60,86 +60,91 @@ The decisive finding is in the loop's own log, not in any single bug:
   TODO/marker scan is at zero; the repo levers (eslint coverage, doc staleness) are disarmed. So
   `isSaturated()` is **true essentially every cycle**.
 - Consequently **every routine cycle is a 0.5-floor blind-playtest rotation**, and the ultraplan
-  (every 8th saturated cycle) is the *only* source of structural direction.
+  (every 8th saturated cycle) is the _only_ source of structural direction.
 - The blind playtest is genuinely productive — it finds **one real bug per cycle** — but it has
   found **the same class ~30+ cycles running**: "stale reactive description" (a room or dialogue
   node names an item/state in its base text after the player has already taken the item or changed
   the state). bugs **0282 → 0325** are nearly all this single family.
 
 This is not a malfunction — each fix is real, verified, and locked with a regression test. It is a
-**throughput ceiling**: the loop fixes *instances* one per cycle and never the *class*. ~30 cycles
+**throughput ceiling**: the loop fixes _instances_ one per cycle and never the _class_. ~30 cycles
 of one-prose-fix-each is the symptom of a planning layer that has no above-floor signal to point at
 anything bigger.
 
 ## 3. Confirmed waste in the multi-agent layer
 
 `docs/CURRENT_PLAN.md` (ultraplan re-aim **#19**) is the smoking gun. Its own synthesis says **"Six
-claimed gaps were confirmed as false alarms"** — features that were *already implemented*
-(BFS forward-reachability, `resolveProvider` keystone, the bug_0308 tautology detector, the
+claimed gaps were confirmed as false alarms"** — features that were _already implemented_
+(BFS forward-reachability, `resolveProvider` keystone, the bug*0308 tautology detector, the
 `guardFinite` NaN guard, `divergedAtStep`, LRU rotation). Re-aim #17 likewise records "three
 nominated candidates already closed"; #18 the same. **Each ultraplan spends ~6–8 agents partly
-re-litigating settled questions**, because `docs/CURRENT_PLAN.md` is *overwritten* every ultraplan —
+re-litigating settled questions**, because `docs/CURRENT_PLAN.md` is \_overwritten* every ultraplan —
 the only durable memory of "what's already been ruled out" is the prose "Deferred levers" tail,
 which reviewers don't treat as authoritative. This is the clearest case in the whole system of
 **genuinely independent fan-out spent on redundant work** — exactly the failure the subagent-contract
-research attributes to a missing *boundary* ("miss any of the four and the subagent drifts").
+research attributes to a missing _boundary_ ("miss any of the four and the subagent drifts").
 
 ## 4. Current (2026-06-08) practice that bears on the design
 
-- **Opus 4.8 is the right loop model and changes the calculus.** It is *~4× less likely to allow
-  flaws in its own code to pass unremarked* and "catches its own mistakes" — which makes an explicit
+- **Opus 4.8 is the right loop model and changes the calculus.** It is _~4× less likely to allow
+  flaws in its own code to pass unremarked_ and "catches its own mistakes" — which makes an explicit
   **evaluator-optimizer self-critique step within a single cycle** cheap and effective (the model can
   reliably grade its own change against clear criteria before committing). Default effort = high;
   `xhigh`/`max` for hard async work; tool-calling is "meaningfully more efficient, fewer steps."
 - **Dynamic Workflows** (Opus 4.8 / Claude Code research preview): plan, then run many parallel
   subagents in one session, **verified against the test suite before reporting**. This is precisely
   the shape of this repo's `Workflow`-based ultraplan — the design is already aligned with where the
-  platform is going; the gap is the *memory* the reviewers lack, not the orchestration shape.
-- **Fan-out vs stay-single (Anthropic agent-teams guidance):** subagents for *focused tasks where
-  only the result matters* (cheap, summarized back); agent teams for *adversarial/collaborative*
+  platform is going; the gap is the _memory_ the reviewers lack, not the orchestration shape.
+- **Fan-out vs stay-single (Anthropic agent-teams guidance):** subagents for _focused tasks where
+  only the result matters_ (cheap, summarized back); agent teams for _adversarial/collaborative_
   work (expensive — every inter-agent message is a round-trip); **single session for sequential,
   same-file, dependency-heavy work.** The loop already places this boundary correctly: tightly-
   coupled content/engine edits run single-agent (correct); the ultraplan fans out only for genuinely
-  independent *review* (correct). **The bias to keep is: do NOT fan out tightly-coupled coding.**
+  independent _review_ (correct). **The bias to keep is: do NOT fan out tightly-coupled coding.**
 
 ## 5. The plan — concrete improvements end to end
 
 ### Planning / orchestration layer
+
 1. **Give the ultraplan a durable decision ledger** (`docs/DECISION_LOG.md`, append-only) so it stops
    re-deriving false alarms. Every ultraplan reviewer reads it FIRST and may not re-nominate a gap
    listed as confirmed-closed (with its file:line proof); every ultraplan appends the gaps it
-   confirmed closed this cycle. This is the missing *boundary* in the reviewer subagent contract.
+   confirmed closed this cycle. This is the missing _boundary_ in the reviewer subagent contract.
 2. **Break the polish treadmill at the prompt layer first (low risk), engine second (deferred).**
    The standard cycle prompt should (a) tell the agent that when the blind playtest keeps surfacing
-   the *same class* of finding, the higher-value move is to propose a **class-level check** (a
+   the _same class_ of finding, the higher-value move is to propose a **class-level check** (a
    validator/lint rule) rather than another one-off instance fix; and (b) add an Opus-4.8
    evaluator-optimizer **self-critique gate** — before committing, the agent grades its own change
    against clear criteria (did this raise player-facing quality, or is it busywork? is there a
    higher-value structural move I am avoiding?) and records the verdict.
 
 ### When to fan out vs stay single
+
 3. Keep the current boundary. Fan out (ultraplan `Workflow`) only for the saturated re-aim, where the
    review dimensions are independent. Never fan out a single tightly-coupled content/engine fix —
    that is correctly single-agent today. (No change needed; documented here so it is not eroded.)
 
 ### Verification gates
-4. The gates are strong; the one *throughput* gap is that the circuit breaker only catches
-   *no-progress*, not *low-value progress* (the treadmill). The self-critique verdict (item 2b) is
+
+4. The gates are strong; the one _throughput_ gap is that the circuit breaker only catches
+   _no-progress_, not _low-value progress_ (the treadmill). The self-critique verdict (item 2b) is
    the lightweight, in-cycle answer; a future heuristic could trend the playtest enjoyment/finding
    class to detect a groove. (Self-critique now; trend detector deferred.)
 
 ### AFK reliability
+
 5. No reliability regressions to fix. The deferred-but-valuable item is a **class-level "stale
-   reactive description" check** so the bug_0282–0325 family is caught structurally and cannot recur.
+   reactive description" check** so the bug*0282–0325 family is caught structurally and cannot recur.
    This is **left to the agent's judgment via item 2a rather than hard-coded now**, because a naive
    heuristic risks false-positive churn across 17 clean packs and would need its FP rate measured
-   before it can join `health`. Opus 4.8's judgment is the right place to decide *when* the class is
+   before it can join `health`. Opus 4.8's judgment is the right place to decide \_when* the class is
    worth a structural check.
 
 ## 6. What is being implemented this pass (vs deferred)
 
 **Implemented now** (pure prompt/doc; `npm run health` stays green; no engine/schema/validator
 change; `verify:integrity` untouched):
+
 - `docs/DECISION_LOG.md` seeded with re-aim #19's confirmed-closed gaps + deferred levers.
 - `src/ai-loop.ts::buildUltraplanPrompt` — require reviewers to read the ledger first and append to it.
 - `src/ai-loop.ts::buildPrompt` — add the catch-the-class nudge + the evaluator-optimizer
@@ -147,6 +152,7 @@ change; `verify:integrity` untouched):
 - `docs/afk_loop.md` — document the decision ledger.
 
 **Deferred (agent-driven or multi-cycle):**
+
 - A deterministic class-level "stale reactive description" validator/lint (FP-rate must be measured
   first; let item 2a surface it when the agent judges the class worth closing structurally).
 - Re-enabling `content_new` by raising `TARGET_PER_MODE` (CURRENT_PLAN.md defers it deliberately
@@ -155,15 +161,15 @@ change; `verify:integrity` untouched):
 
 ## 7. Top 3 improvements to loop effectiveness
 
-1. **Catch the bug *class*, not the instance.** ~30 cycles (bugs 0282–0325) fixed one prose
+1. **Catch the bug _class_, not the instance.** ~30 cycles (bugs 0282–0325) fixed one prose
    instance per cycle. A class-level check (and the prompt nudge that triggers it) collapses that
-   into one structural fix and prevents recurrence. *Impact: largest throughput multiplier; gives
+   into one structural fix and prevents recurrence. _Impact: largest throughput multiplier; gives
    the saturated assessor a real signal. Effort: prompt-nudge S (now) / validator M (deferred).
-   Risk: validator has FP-churn risk — hence agent-judged, not hard-coded.*
+   Risk: validator has FP-churn risk — hence agent-judged, not hard-coded._
 2. **Durable ultraplan decision ledger.** Stops the multi-agent re-aim from re-confirming
-   already-closed gaps (six false alarms in #19 alone). *Impact: removes the clearest redundant
+   already-closed gaps (six false alarms in #19 alone). _Impact: removes the clearest redundant
    multi-agent spend; sharpens every future re-aim. Effort: S (doc + one prompt change). Risk: very
-   low — additive doc + prompt text, health trivially green.*
+   low — additive doc + prompt text, health trivially green._
 3. **In-cycle evaluator-optimizer self-critique (Opus 4.8).** Before committing, the agent grades
    its own change against explicit value criteria — leveraging Opus 4.8's 4× self-correction — so
    the loop notices when it is polishing rather than improving. *Impact: reliability of *useful*

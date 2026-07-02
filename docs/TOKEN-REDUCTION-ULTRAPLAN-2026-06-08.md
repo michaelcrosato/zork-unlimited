@@ -17,7 +17,7 @@ runnable on **Opus 4.8 (the target model)** without the cost becoming the bottle
   git/log/process state, and on anomaly does pause → diagnose → fix → relaunch → restart.
   Durable orchestrator state lives in `ai-runs/orchestration-state.md` (gitignored).
 - **Wrapper** `loop.sh`: `while true`: `npm run ai:loop` (assess) → `run_agent` (`claude -p
-  --model <m> --dangerously-skip-permissions`, timeout 2400s routine / 3600s ultraplan, prompt
+--model <m> --dangerously-skip-permissions`, timeout 2400s routine / 3600s ultraplan, prompt
   piped on stdin) → `npm run health` (BLOCKING) → `verify:integrity --against <pre-ref>` →
   `require_playtest_record` → commit → optional push. Circuit breaker = 5 consecutive
   no-progress cycles; 10s inter-cycle delay.
@@ -38,17 +38,17 @@ runnable on **Opus 4.8 (the target model)** without the cost becoming the bottle
 
 ## 2. Ground-truth token telemetry (this session, last 12h, 48 transcripts)
 
-| Class | Tokens | Notes |
-|---|---|---|
-| cache_read | **241.1M (94%)** | re-read of the cached prefix on every assistant message |
-| cache_create | 11.83M | fresh `claude -p` per cycle ⇒ cold cache (~268k/cycle) |
-| output | 3.42M | the actual generation |
-| input (uncached) | 0.21M | |
-| **total** | **256.6M / 12h (~21M/hr)** | across **3,121 assistant messages** |
+| Class            | Tokens                     | Notes                                                   |
+| ---------------- | -------------------------- | ------------------------------------------------------- |
+| cache_read       | **241.1M (94%)**           | re-read of the cached prefix on every assistant message |
+| cache_create     | 11.83M                     | fresh `claude -p` per cycle ⇒ cold cache (~268k/cycle)  |
+| output           | 3.42M                      | the actual generation                                   |
+| input (uncached) | 0.21M                      |                                                         |
+| **total**        | **256.6M / 12h (~21M/hr)** | across **3,121 assistant messages**                     |
 
 **The decisive ratio: 256.6M ÷ ~44 cycles ≈ 5.8M tokens/cycle; ~71 assistant messages/cycle
-× ~77k cached tokens re-read per message ≈ 5.5M cache-read/cycle.** The cost is *round-trips ×
-prefix size*, not prompt size. The per-cycle `prompt.md` (<1k tokens) is even **below Opus 4.8's
+× ~77k cached tokens re-read per message ≈ 5.5M cache-read/cycle.** The cost is _round-trips ×
+prefix size_, not prompt size. The per-cycle `prompt.md` (<1k tokens) is even **below Opus 4.8's
 4096-token cacheable minimum** — it never caches; the big cached prefix is **system prompt + the
 22 MCP tool schemas**, re-read on all 3,121 messages.
 
@@ -56,16 +56,16 @@ prefix size*, not prompt size. The per-cycle `prompt.md` (<1k tokens) is even **
 
 **Same measured 12h token profile, different model rates:**
 
-| Model | $/12h | $/hr | ~$/day | ~$/week |
-|---|---|---|---|---|
-| Sonnet 4.6 (current default) | $169 | $14 | $337 | $2,361 |
-| **Opus 4.8 (target)** | **$281** | **$23** | **$562** | **$3,935** |
-| Haiku 4.5 | $56 | $5 | $112 | $787 |
+| Model                        | $/12h    | $/hr    | ~$/day   | ~$/week    |
+| ---------------------------- | -------- | ------- | -------- | ---------- |
+| Sonnet 4.6 (current default) | $169     | $14     | $337     | $2,361     |
+| **Opus 4.8 (target)**        | **$281** | **$23** | **$562** | **$3,935** |
+| Haiku 4.5                    | $56      | $5      | $112     | $787       |
 
-- **Opus 4.8 ≈ 1.67× Sonnet 4.6** on the same profile (and likely *more* — Opus 4.8 counts
+- **Opus 4.8 ≈ 1.67× Sonnet 4.6** on the same profile (and likely _more_ — Opus 4.8 counts
   tokens higher and reasons more per step, so output + round-trips rise unless tuned).
-- **Opus 4.8 cost shares:** cache_read **43%**, output **30%**, cache_write **26%**, input ~0%.
-  (Output is ~1% of *tokens* but ~30% of *cost* at $25/M — so output reduction punches above its
+- **Opus 4.8 cost shares:** cache*read **43%**, output **30%**, cache_write **26%**, input ~0%.
+  (Output is ~1% of \_tokens* but ~30% of _cost_ at $25/M — so output reduction punches above its
   token weight.)
 - **June 15, 2026 (7 days out):** headless Claude Code / Agent SDK / Claude Code GitHub Actions
   move OFF subscription limits onto a **separate metered monthly credit at API rates**.
@@ -87,16 +87,17 @@ prefix size*, not prompt size. The per-cycle `prompt.md` (<1k tokens) is even **
 
 **#1 — Cut round-trips per cycle (attacks the 43%-of-cost cache_read line head-on).**
 ~71 RT/cycle is the multiplier on 94% of all tokens. Sub-levers, highest first:
-  - **Programmatic Tool Calling (PTC) for the blind playthrough.** The blind subagent fires
-    15–30 sequential `step_action`/`get_observation` calls per seed — each a round-trip that
-    re-reads the whole prefix. Run the playthrough as ONE script in the code-execution container:
-    intermediate observations stay in the script, only the final structured report returns to
-    context. Collapses ~20–60 RT into ~1. Biggest structural win; needs the play loop expressed
-    as code against the MCP tools.
-  - **`effort: high` (not xhigh/max) on the main agent**, `low`/`medium` on routine content
-    cycles. Lower effort = fewer, consolidated tool calls by construction.
-  - **Fewer blind seeds/probes.** Protocol runs up to 3 seeds; the validator + exhaustive solver
-    already prove structure, so 1–2 seeds suffice for the experience read on clean packs.
+
+- **Programmatic Tool Calling (PTC) for the blind playthrough.** The blind subagent fires
+  15–30 sequential `step_action`/`get_observation` calls per seed — each a round-trip that
+  re-reads the whole prefix. Run the playthrough as ONE script in the code-execution container:
+  intermediate observations stay in the script, only the final structured report returns to
+  context. Collapses ~20–60 RT into ~1. Biggest structural win; needs the play loop expressed
+  as code against the MCP tools.
+- **`effort: high` (not xhigh/max) on the main agent**, `low`/`medium` on routine content
+  cycles. Lower effort = fewer, consolidated tool calls by construction.
+- **Fewer blind seeds/probes.** Protocol runs up to 3 seeds; the validator + exhaustive solver
+  already prove structure, so 1–2 seeds suffice for the experience read on clean packs.
   Rough impact: cutting RT ~40–60% cuts ~40–60% of total tokens.
 
 **#2 — Shrink the per-message cached prefix (Tool Search + trim MCP schemas).**
@@ -107,11 +108,12 @@ verbose tool descriptions. Smaller base × thousands of messages = large multipl
 cache_read line. Structural, low behavioral risk.
 
 **#3 — Right-size model per role + cut output.**
-  - **Blind playtest on Haiku 4.5** (≈5× cheaper than Opus on every class). It's a mechanical
-    play-through, not a reasoning task, and runs EVERY cycle (~40% of RT). Keep the main
-    improvement agent on Opus 4.8. This is the Anthropic-recommended cheaper-subagent pattern.
-  - **Terser output.** Output is ~30% of Opus cost. Add a silence-default to the agent prompt
-    (Opus 4.8 narrates more than 4.7 by default) and keep `effort` at `high`.
+
+- **Blind playtest on Haiku 4.5** (≈5× cheaper than Opus on every class). It's a mechanical
+  play-through, not a reasoning task, and runs EVERY cycle (~40% of RT). Keep the main
+  improvement agent on Opus 4.8. This is the Anthropic-recommended cheaper-subagent pattern.
+- **Terser output.** Output is ~30% of Opus cost. Add a silence-default to the agent prompt
+  (Opus 4.8 narrates more than 4.7 by default) and keep `effort` at `high`.
 
 **#4 — Cache hygiene across cycles.** Each cycle is a cold `claude -p` (11.8M cache_create/12h).
 Ensure the system+tools prefix is byte-identical cycle-to-cycle (no clock/UUID/unsorted-JSON

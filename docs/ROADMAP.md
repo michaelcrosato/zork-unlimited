@@ -4,7 +4,7 @@
 > [`AGENTS.md`](../AGENTS.md): **trust, but verify** — the agent has full authority
 > over all game code and the **§14 engine-extension gate is RETIRED**. Where this
 > roadmap below calls the §14 gate a "non-negotiable invariant," read that as
-> *historical* context: a new effect/condition/verb needs no gate ceremony, only a
+> _historical_ context: a new effect/condition/verb needs no gate ceremony, only a
 > green verification bar (`npm run health` + `verify:integrity`). The **strategic
 > layer is now [`docs/ULTRAPLAN-2026-06-02.md`](./ULTRAPLAN-2026-06-02.md)**; the
 > milestones below are largely delivered and kept for provenance.
@@ -19,25 +19,27 @@ under trust-but-verify — verification is the only bar; see the note above.)
 # Roadmap v2 — post-Milestone-1 (current)
 
 Milestone 1 (multi-mode MCP) is **done and on `main`**. This v2 plan was produced
-by a second 7-agent local workflow that *verified the post-M1 code* first; the
+by a second 7-agent local workflow that _verified the post-M1 code_ first; the
 adversarial critic then caught a false core assumption and a silent determinism
 hole. Corrections are baked in below. (The original pre-M1 plan is preserved
 verbatim further down for provenance.)
 
 ## ✅ Confirmed done by Milestone 1 — do NOT redo
+
 Multi-mode MCP dispatch (`indexFor/rulesFor/initStateFor/buildObsFor`), `list_stories`
 across all three pack dirs, `Session` carrying `mode`+`AnyIndex`,
 `RpgObservation.mode:'rpg'`, mode-bound save/load. Also already present from Stage 4:
 `quest_stage` condition + `set_quest_stage` effect. And `runActions()` already returns
 per-step `hashes[]` and `ReplayResult.divergedAtStep` is already a reserved field — so
-Trace v2 (1c) is mostly *persisting* what already exists. (The mode-aware
+Trace v2 (1c) is mostly _persisting_ what already exists. (The mode-aware
 `run_playtest` coverage bot once listed here has since been **removed** — content
 health now comes from the validator + exhaustive solver, and player-facing quality
 from the blind LLM playtest; see M4 below.)
 
 ## ⚠️ v2 blocking corrections (the critic's verified findings)
+
 1. **SAFE-0 must be a single canonical item, merged first.** The loop.sh §14
-   git-add leak was triplicated across 2b/M3/4b with *conflicting* whitelists. Make
+   git-add leak was triplicated across 2b/M3/4b with _conflicting_ whitelists. Make
    it ONE item that whitelists only `content/**/pack/*.yaml`, `tests/regression/*`,
    `tests/unit/*hashes*`, `traces/bugs/*`, `AI_LOOP_STATE.md` — and **excludes
    `src/`, `bin/`, `scripts/`, `loop.sh` itself, and the deleted `AFKGOAL.md`**, and
@@ -48,7 +50,7 @@ from the blind LLM playtest; see M4 below.)
    `available_actions` ids are enumerated verb-object ids (`go_north`, `take_rope`),
    not the watchtower `TRUE_ROUTE` choice ids. `playRoute` would throw on every
    parser/RPG pack. Correct scope: a **per-pack route registry** + **exits-driven
-   exploration** for parser/RPG. Action *selection* is by `.id` for all modes (the
+   exploration** for parser/RPG. Action _selection_ is by `.id` for all modes (the
    `.text` vs `.command` split only matters for human-readable heuristics). This
    makes the loop-generalize item **L, not M**.
 3. **Re-pin the RIGHT file.** The live watchtower content-hash pin is in
@@ -68,6 +70,7 @@ from the blind LLM playtest; see M4 below.)
    Fix Milestone-5 file paths (the agent emitted a `zork-undefined` templating typo).
 
 ## Critical path (corrected, ordered)
+
 ```
 SAFE-0  loop.sh §14 whitelist (excl src/bin/scripts/loop.sh/AFKGOAL.md, refuse on src change)  ← FIRST, gates all auto-editing
   └─ M3-hashpin   pin all 5 pack hashes in ONE place + fix the real pin (rpg_validator.test.ts)
@@ -81,22 +84,24 @@ SAFE-0  loop.sh §14 whitelist (excl src/bin/scripts/loop.sh/AFKGOAL.md, refuse 
                            └─ 2b-5  hash-drift = refuse-and-surface (NOT auto-repin)
 M3a  fix 5 watchtower findings + re-pin rpg_validator.test.ts + bug_0002      (after SAFE-0+hashpin)
 ```
+
 Independent / parallel after SAFE-0: **1c (Trace v2)** → M5 replay viewer; **1b
 adapter→parser/RPG** → M3 fresh content + M4 fresh-pack benchmark; cross-cutting
 (ESLint/Prettier **must** depend on SAFE-0; coverage; §16 path-fuzz; CONTRIBUTING/LICENSE).
 
 ## Milestones (refreshed)
-- **M2 — autonomous content engine** *(next; needs SAFE-0 first)*: generalize
+
+- **M2 — autonomous content engine** _(next; needs SAFE-0 first)_: generalize
   `ai-loop.ts` to rotate packs across modes (per-pack routes + exits exploration),
   emit the blind-playtest handoff, auto-fix cyoa|parser via `apply_content_patch`
   with refuse-and-surface drift handling, one-PR-per-cycle, budget caps.
 - **M3 — content/mechanics/gate**: 5 watchtower findings (re-pin correctly);
   consumables via §14 (new `consume_item` effect + `has_consumed` condition, full
-  gate bundle incl backward-compat replay over ALL committed traces) — *decoupled
-  from the narrative fixes*; multi-enemy/XP/quest-stage RPG depth; 2nd RPG pack;
-  larger Sierra pack; **1b adapter→parser/RPG**; gate-as-CI pinning *every* pack
+  gate bundle incl backward-compat replay over ALL committed traces) — _decoupled
+  from the narrative fixes_; multi-enemy/XP/quest-stage RPG depth; 2nd RPG pack;
+  larger Sierra pack; **1b adapter→parser/RPG**; gate-as-CI pinning _every_ pack
   incl `clockwork_heist`.
-- **M4 — benchmark** *(future north-star; nothing live)*: the heuristic-bot
+- **M4 — benchmark** _(future north-star; nothing live)_: the heuristic-bot
   scorecard (`run_playtest` + persona-bot scoring) has been **removed** — that was
   never an honest proxy for player quality. The surviving goal is a
   **contamination-free benchmark of real frontier models**, rebuilt fresh on the
@@ -112,6 +117,7 @@ adapter→parser/RPG** → M3 fresh content + M4 fresh-pack benchmark; cross-cut
   of `src/mcp/paths.ts`) — required before any networked deployment.
 
 ## Recommendation
+
 **Do SAFE-0 next** — one small, high-leverage commit that closes the §14 leak and
 unblocks the entire autonomous-content-fix loop safely. Then `M3-hashpin`/`M3-ci`
 to establish drift detection, then the `2a → 2b` chain for Milestone 2.
@@ -130,14 +136,14 @@ the rest still applies as refined by v2 above.
 1. **The `rpg` mode discriminator does not exist yet.** `src/rpg/observation.ts`
    spreads `buildParserObservation` (which hardcodes `mode:'parser'`) and never
    overrides it; `RpgObservation` has no `mode` field. So an RPG observation is
-   *indistinguishable from parser* at runtime and in the type system. Every
+   _indistinguishable from parser_ at runtime and in the type system. Every
    multi-mode dispatch decision depends on this. **This ~3-line fix is the
    highest-leverage first item and blocks everything else in Phase 1a.**
-2. **`detectMode` must key off property *presence*, not a non-empty array.** An RPG
+2. **`detectMode` must key off property _presence_, not a non-empty array.** An RPG
    pack is a parser pack + `enemies`, and `enemies` defaults to `[]`. Detect via
    `'enemies' in pack`, else `'rooms' in pack` → parser, else cyoa — otherwise an
    `enemies: []` RPG pack silently runs as parser.
-3. **The autonomous loop's §14 gate is *already leaky*.** `loop.sh:57` git-adds
+3. **The autonomous loop's §14 gate is _already leaky_.** `loop.sh:57` git-adds
    whole dirs including `src/`, `bin/`, `scripts/`, `tests/`, and the deleted
    `AFKGOAL.md`. The loop can already commit engine code. Phase 2 must **first**
    replace that broad git-add with a file-level content/test whitelist.
@@ -187,9 +193,11 @@ UI (Milestone 5) and most cross-cutting items are independent and can run anytim
 ## Milestones (sequenced, with the corrections applied)
 
 ### Milestone 1 — Multi-mode foundation (Phase 1a) · keystone
-Unblocks the autonomous loop *and* the benchmark to operate on parser/RPG, not
+
+Unblocks the autonomous loop _and_ the benchmark to operate on parser/RPG, not
 just CYOA. Order: **1a-0 → 1a-1 → 1a-6 → 1a-2 → 1a-3(+list_stories) → 1a-4 → 1a-5
 → 1a-7 → 1a-8/1a-9.**
+
 - `1a-0` **(S, blocking)** make `RpgObservation` carry `mode:'rpg'` (override in
   `rpg/observation.ts` + redeclare field in the type).
 - `1a-1` **(S)** `src/mcp/types.ts`: `PackMode`, `Index`/`Observation` unions,
@@ -199,9 +207,9 @@ just CYOA. Order: **1a-0 → 1a-1 → 1a-6 → 1a-2 → 1a-3(+list_stories) → 
 - `1a-3` **(M)** dispatch layer in `tools.ts` (`loadAndCompilePack` /
   `validatePackByMode` / `startSessionByMode` / `buildObservationByMode`) **+
   multi-mode `list_stories`** scanning all three pack dirs.
-- `1a-4` **(L, was M)** *(SUPERSEDED — the `run_playtest` coverage bot this item
+- `1a-4` **(L, was M)** _(SUPERSEDED — the `run_playtest` coverage bot this item
   built has since been removed; content health now comes from the validator +
-  exhaustive solver, player quality from the blind LLM playtest).* As written: make
+  exhaustive solver, player quality from the blind LLM playtest)._ As written: make
   the (now-removed) playtest walker mode-aware — generalize visited-tracking (rooms
   vs scenes), ending detection, and coverage heuristics; enumerate legal actions for
   parser/RPG instead of always `CHOOSE`.
@@ -210,10 +218,11 @@ just CYOA. Order: **1a-0 → 1a-1 → 1a-6 → 1a-2 → 1a-3(+list_stories) → 
 - `1a-7` **(S)** server tool schemas accept any pack mode.
 - `1a-8` **(L)** parser + RPG MCP integration tests; `1a-9` **(M)** assert CYOA
   state hashes are byte-identical to the current baseline.
-**Acceptance:** an external agent plays a CYOA, parser, and RPG pack end-to-end
-over MCP; all existing CYOA tests + hashes unchanged.
+  **Acceptance:** an external agent plays a CYOA, parser, and RPG pack end-to-end
+  over MCP; all existing CYOA tests + hashes unchanged.
 
 ### Milestone 2 — Authoring + trace depth (Phases 1b, 1c) · parallel with M1 tail
+
 - **1b (adapter→parser/RPG):** thread a `target_mode` through writer/adapter;
   deterministic canned parser/RPG packs in `MockAuthorProvider` (with a
   self-correcting first-attempt defect, mirroring CYOA); `bin/author --mode`;
@@ -223,12 +232,13 @@ over MCP; all existing CYOA tests + hashes unchanged.
   `bin/replay`. **Backward-compatible with committed v1 traces** (regression test).
 
 ### Milestone 3 — Autonomous content engine (Phase 2) · depends on M1
+
 - **2-safe (do first):** replace `loop.sh`'s broad dir git-add with a file-level
   content/test whitelist; stop staging `src/`, `bin/`, `scripts/`, `AFKGOAL.md`
   (finding #3).
 - **2a:** generalize pack discovery/rotation across modes; mode-aware evidence
   (depends `1a-3`,`1a-4`); fix `ai-loop.ts`'s hardcoded CYOA `Observation` type.
-- **2b:** blind-playtest handoff — the loop *emits* the locked-down prompt for an
+- **2b:** blind-playtest handoff — the loop _emits_ the locked-down prompt for an
   operating agent to spawn the no-context subagent (the loop can't call the Agent
   tool itself); parse the structured report.
 - **2c:** auto-fix **for cyoa|parser only** (finding #5) → `ContentPatchProposal`
@@ -238,14 +248,15 @@ over MCP; all existing CYOA tests + hashes unchanged.
   no-silent-truncation logging; one PR per cycle; engine/schema stay human-gated.
 
 ### Milestone 4 — Content, mechanics, gate (Phase 3)
+
 - **3a (watchtower 5 findings):** the logged narrative items (reveal-evidence
   payoff, letter/ledger clarity, drop the dangling "broken seal" — **1 occurrence,
   not 2**, finding in critique, hermit hook, stale re-entry options). **Each must
   recompute + re-pin** `bug_0002`, `watchtower_blind_fixes.test.ts`, and the
   `rpg_validator.test.ts` snapshot (finding #4).
 - **3b (richer RPG, §14-gated):** consumables (**a real core change** — new
-  `consume_item` effect + `has_consumed` condition, full gate bundle *including a
-  backward-compat replay over ALL committed traces*), multi-enemy rooms,
+  `consume_item` effect + `has_consumed` condition, full gate bundle _including a
+  backward-compat replay over ALL committed traces_), multi-enemy rooms,
   XP/leveling, multi-room quest stages. Randomness through the seeded PRNG.
 - **3c:** a 2nd RPG pack + a larger Sierra-Quest pack.
 - **3d (gate-as-CI):** pin **every** shipped pack hash — **including
@@ -253,7 +264,8 @@ over MCP; all existing CYOA tests + hashes unchanged.
   ships the §14 six-item bundle.
 
 ### Milestone 5 — Benchmark, UI, DevEx (Phases 4, 5, cross-cutting) · mostly independent
-- **4 benchmark** *(reframed; future north-star)*: the heuristic `run_playtest`
+
+- **4 benchmark** _(reframed; future north-star)_: the heuristic `run_playtest`
   scorecard and persona-bot scoring described here have been **removed**. The
   surviving goal is a contamination-free benchmark of real frontier models, rebuilt
   fresh on the blind LLM playtest (no repo access, plays over MCP) against the sealed
@@ -269,6 +281,7 @@ over MCP; all existing CYOA tests + hashes unchanged.
 ---
 
 ## Recommendation
+
 Execute **Milestone 1**, starting with the blocking `1a-0` discriminator fix, then
 the dispatch chain. It's the keystone, it's a contained refactor of code that
 already exists in all three modes, and it has direct unit tests + a byte-identical
