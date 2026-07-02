@@ -400,10 +400,12 @@ type OverworldQuestStartResponse<Args extends OverworldResponseOptions & RpgResp
   | OverworldGuardedRejection<Args>;
 
 type TranscriptFullTurn = Session["transcript"][number];
-type TranscriptCompactTurn = Pick<
-  TranscriptFullTurn,
-  "step" | "scene_id" | "action_id" | "result_scene_id" | "ended" | "ending_id"
->;
+type TranscriptCompactTurn = readonly [
+  step: number,
+  scene_id: string,
+  action_id: string | null,
+  result_scene_id: string,
+];
 type TranscriptSummary = {
   steps: number;
   scenes: string[];
@@ -1730,14 +1732,9 @@ export function createToolApi(opts: { root: string }) {
           ? {}
           : {
               turns: args.compact_turns
-                ? s.transcript.map((t) => ({
-                    step: t.step,
-                    scene_id: t.scene_id,
-                    action_id: t.action_id,
-                    result_scene_id: t.result_scene_id,
-                    ended: t.ended,
-                    ending_id: t.ending_id,
-                  }))
+                ? s.transcript.map(
+                    (t) => [t.step, t.scene_id, t.action_id, t.result_scene_id] as const,
+                  )
                 : s.transcript.map((t) => ({ ...t, events: playerVisibleEvents(t.events) })),
             }),
         summary: args.compact_summary ? compactTranscriptSummary(summary) : summary,

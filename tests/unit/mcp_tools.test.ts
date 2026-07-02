@@ -1412,19 +1412,19 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(compactTranscript.state_hash).toBe(currentStateHash);
     expect("mode" in compactTranscript).toBe(false);
     expect(compactTranscript.summary).toEqual(transcript.summary);
-    expect(compactTranscript.turns.map((t) => t.action_id)).toEqual(
+    expect(compactTranscript.turns.map(([, , actionId]) => actionId)).toEqual(
       transcript.turns.map((t) => t.action_id),
     );
-    expect(compactTranscript.turns[0]).toEqual({
-      step: transcript.turns[0]!.step,
-      scene_id: transcript.turns[0]!.scene_id,
-      action_id: transcript.turns[0]!.action_id,
-      result_scene_id: transcript.turns[0]!.result_scene_id,
-      ended: transcript.turns[0]!.ended,
-      ending_id: transcript.turns[0]!.ending_id,
-    });
+    expect(compactTranscript.turns[0]).toEqual([
+      transcript.turns[0]!.step,
+      transcript.turns[0]!.scene_id,
+      transcript.turns[0]!.action_id,
+      transcript.turns[0]!.result_scene_id,
+    ]);
     expect(compactTranscript.turns[0]).not.toHaveProperty("events");
     expect(compactTranscript.turns[0]).not.toHaveProperty("action_text");
+    expect(compactTranscript.turns[0]).not.toHaveProperty("ended");
+    expect(compactTranscript.turns[0]).not.toHaveProperty("ending_id");
     expect(JSON.stringify(compactTranscript).length).toBeLessThan(
       JSON.stringify(transcript).length,
     );

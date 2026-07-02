@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 178 -->
+<!-- historical_cycle_count: 179 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_transcript_turn_tuples
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact RPG transcript turns now serialize as `[step, scene_id, action_id, result_scene_id]` tuples.
+- Loop effect: route/debug audits keep turn identity while dropping repeated row keys and per-turn ending scaffolding.
+- Guard: focused MCP transcript/schema tests, typecheck, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_overworld_idle_markers
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: direct ToolApi callers now match public MCP state reads and avoid accidental full-state payloads in repeated loop turns.
 - Guard: raw-state tests now opt in explicitly; focused MCP/state tests, registration guard, typecheck, and format check passed before full gates.
 - VERIFY: focused MCP/state tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_transcript_cache_hit
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: `get_transcript({ if_state_hash })` now returns hash-only `unchanged` instead of rebuilding repeated summary/turn payloads.
-- Loop effect: end-of-run transcript polling joins observation/action cache-hit semantics and omits `session_id` on unchanged replies.
-- Guard: ToolApi, MCP registration, blind-protocol docs, focused MCP/docs tests, and typecheck passed before full gates.
-- VERIFY: focused MCP/docs tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.

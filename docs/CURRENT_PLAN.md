@@ -219,8 +219,8 @@ Make discovered overworld quest leads start real RPG sessions.
   `compact_actions: false` for command labels.
 - RPG session start tools and overworld quest handoff now accept compact action
   menus, avoiding repeated command labels on the opening RPG observation.
-- RPG transcripts now support compact id-only turn rows for route debugging
-  without replaying event text.
+- RPG compact transcript turns are `[step, scene_id, action_id, result_scene_id]`
+  tuples for route debugging without replaying event text or repeated row keys.
 - World source loading now caches parsed Charter Marches and New York overworld
   manifests per process.
 - MCP pack loading now caches unchanged RPG compile/validate reports within each

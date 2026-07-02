@@ -451,7 +451,10 @@ tool(
       .boolean()
       .optional()
       .describe("Default true; false returns full summary lists."),
-    compact_turns: z.boolean().optional().describe("Id-only rows; ignored with summary_only."),
+    compact_turns: z
+      .boolean()
+      .optional()
+      .describe("Rows [step,scene,action,result]; ignored with summary_only."),
   },
   (a) => api.get_transcript(defaultCompactTranscript(a)),
 );
