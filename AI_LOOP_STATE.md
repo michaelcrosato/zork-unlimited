@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 149 -->
+<!-- historical_cycle_count: 150 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — active_build_spec_rpg_only
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Docs/token surface: replaced the 61KB staged build spec with a 7.3KB RPG-only open-world engine spec.
+- Loop effect: root-level active guidance no longer tells agents to build retired CYOA/parser stages or package-mode trees.
+- Guard: new build-spec regression rejects retired stage/path instructions and requires current RPG tool surfaces plus validate/test gates.
+- VERIFY: focused build-spec/RPG-only/verifier tests, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 194 test files / 1364 tests, and validate.
 
 ### Cycle result — compact_live_loop_state
 
@@ -131,12 +139,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Evidence: live MCP accepted a matching menu hash, rejected the stale repeat, returned the current hash, preserved transcript length, and kept the stale response to 1090 chars.
 - Guard: MCP play-loop regression asserts matching hashes step, stale hashes reject, current hash is returned, and transcript length does not grow.
 - VERIFY: focused MCP and registration tests, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, typecheck, lint, format check, 193 test files / 1361 tests, and validate.
-
-### Cycle result — legal_actions_state_hash
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: RPG `list_legal_actions` responses now return `state_hash` beside the action menu.
-- Loop effect: agents can bind compact action ids to the exact reducer state without an extra observation/state read.
-- Evidence: live MCP default action menu returned a matching `state_hash` at 150 chars; after `go_down`, the menu hash matched the step hash and changed at 232 chars.
-- Guard: MCP action-payload regression asserts full and compact action menus carry the current hash and update after a step.
-- VERIFY: focused MCP action test, typecheck, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1360 tests, and validate.
