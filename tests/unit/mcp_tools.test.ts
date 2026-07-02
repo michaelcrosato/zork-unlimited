@@ -857,6 +857,22 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(afterRouteMutationRead.observation.routeOptions[0]?.estimate.elapsedMinutes).toBe(
       full.routeOptions[0]?.estimate.elapsedMinutes,
     );
+    expect(full.regionalArcs.length).toBeGreaterThan(0);
+    expect(repeatedFullRead.observation.regionalArcs).toEqual(full.regionalArcs);
+    expect(repeatedFullRead.observation.regionalArcs).not.toBe(full.regionalArcs);
+    expect(repeatedFullRead.observation.regionalArcs[0]).not.toBe(full.regionalArcs[0]);
+    expect(repeatedFullRead.observation.regionalArcs[0]?.anchorTowns).not.toBe(
+      full.regionalArcs[0]?.anchorTowns,
+    );
+    repeatedFullRead.observation.regionalArcs[0]!.resolvedInRegion = -1;
+    repeatedFullRead.observation.regionalArcs[0]!.anchorTowns.length = 0;
+    const afterArcMutationRead = a.get_overworld_session({ session_id: started.session_id });
+    expect(afterArcMutationRead.observation.regionalArcs[0]?.resolvedInRegion).toBe(
+      full.regionalArcs[0]?.resolvedInRegion,
+    );
+    expect(
+      afterArcMutationRead.observation.regionalArcs[0]?.anchorTowns.map((town) => town.id),
+    ).toEqual(full.regionalArcs[0]?.anchorTowns.map((town) => town.id));
 
     const unchangedFullRead = a.get_overworld_session({
       session_id: started.session_id,

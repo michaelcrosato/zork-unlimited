@@ -176,6 +176,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - Overworld sessions cache discovered route options and resource estimates until
   mutation, so repeated full/compact overworld reads do not rerun route search
   across the discovered town frontier.
+- Overworld sessions cache regional arc progress until mutation, so repeated full
+  overworld reads do not rescan resolved events and rebuild arc progress rows.
 - Overworld sessions cache compact context payloads until mutation, so repeated
   compact overworld reads reuse route tuples, id payloads, local lists, and
   capped journal/travel slices while preserving clone-isolated returns.

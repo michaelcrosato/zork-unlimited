@@ -2251,6 +2251,7 @@ export class OverworldSession {
   };
   private routeOptionsCache?: OverworldSessionRoutePlan[];
   private compactViewCache?: OverworldCompactView;
+  private regionalArcProgressCache?: OverworldRegionalArcProgress[];
 
   constructor(private readonly world: OverworldManifest) {
     this.nodes = overworldNodesById(world);
@@ -2270,6 +2271,7 @@ export class OverworldSession {
     delete this.snapshotCache;
     delete this.routeOptionsCache;
     delete this.compactViewCache;
+    delete this.regionalArcProgressCache;
   }
 
   private cachedSnapshot(): { snapshot: OverworldSessionSnapshot; hash: string } {
@@ -3030,7 +3032,21 @@ export class OverworldSession {
     };
   }
 
-  private regionalArcProgress(): OverworldRegionalArcProgress[] {
+  private cachedRegionalArcProgress(): OverworldRegionalArcProgress[] {
+    if (this.regionalArcProgressCache) return this.regionalArcProgressCache;
+    this.regionalArcProgressCache = this.buildRegionalArcProgress();
+    return this.regionalArcProgressCache;
+  }
+
+  private regionalArcProgressForView(): OverworldRegionalArcProgress[] {
+    return this.cachedRegionalArcProgress().map((arc) => ({
+      ...arc,
+      anchorTowns: [...arc.anchorTowns],
+      resolvedAnchorTowns: [...arc.resolvedAnchorTowns],
+    }));
+  }
+
+  private buildRegionalArcProgress(): OverworldRegionalArcProgress[] {
     const currentRegion = this.currentNode().region;
     return this.world.regional_arcs
       .map((arc) => this.progressForArc(arc))
@@ -3267,7 +3283,7 @@ export class OverworldSession {
       exploredSiteIds: [...this.exploredSiteIds].sort(),
       resolvedEventIds: [...this.resolvedEventIds].sort(),
       regionRenown: Object.fromEntries([...this.regionRenown.entries()].sort()),
-      regionalArcs: this.regionalArcProgress(),
+      regionalArcs: this.regionalArcProgressForView(),
       completedRegionalArcIds: [...this.completedRegionalArcIds].sort(),
       pendingRoadEncounter: this.pendingRoadEncounter,
       log: [...this.travelLog],
