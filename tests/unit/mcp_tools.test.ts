@@ -735,13 +735,30 @@ describe("MCP tools — validate / load (§9.4)", () => {
       .observation.exits.find((exit) => exit.destination.id === "colonie_town");
     expect(road).toBeDefined();
     a.travel_overworld_session({ session_id: started.session_id, road_id: road!.id });
-    const before = a.get_overworld_session({ session_id: started.session_id }).observation;
+    const beforeRead = a.get_overworld_session({ session_id: started.session_id });
+    const before = beforeRead.observation;
     expect(before.pendingRoadEncounter).toBeDefined();
 
-    const exported = a.export_overworld_session({ session_id: started.session_id });
+    const staleExport = a.export_overworld_session({
+      session_id: started.session_id,
+      expected_snapshot_hash: started.snapshot_hash,
+    });
+    expect(staleExport.ok).toBe(false);
+    if (staleExport.ok) throw new Error("expected stale export rejection");
+    expect(staleExport.snapshot_hash).toBe(beforeRead.snapshot_hash);
+    expect(staleExport.rejection_reason).toMatch(/snapshot hash mismatch/i);
+    expect("snapshot" in staleExport).toBe(false);
+
+    const exported = a.export_overworld_session({
+      session_id: started.session_id,
+      expected_snapshot_hash: beforeRead.snapshot_hash,
+    });
+    expect(exported.ok).toBe(true);
+    if (!exported.ok) throw new Error("expected guarded export success");
     expect(exported.snapshot.worldId).toBe("new_york_overworld");
     expect(exported.snapshot.worldHash).toMatch(/^[0-9a-f]{64}$/);
     expect(exported.snapshot_hash).toBe(hashState(exported.snapshot));
+    expect(JSON.stringify(staleExport).length).toBeLessThan(JSON.stringify(exported).length);
 
     const restored = a.restore_overworld_session({ snapshot: exported.snapshot });
     expect(restored.session_id).not.toBe(started.session_id);
@@ -1489,6 +1506,34 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     expect("pack_path" in reloaded).toBe(false);
     expect(reloaded.world_quest_id).toBe("sunken_barrow");
     expect(reloaded.state_hash).toBe(after);
+  });
+
+  it("save_game rejects stale expected_state_hash without serializing a save blob", () => {
+    const a = api();
+    const game = a.start_world_quest({ quest_id: "sunken_barrow", seed: 1 });
+    const before = a.get_observation({ session_id: game.session_id }).state_hash;
+    stepByCommand(a, game.session_id, "go down");
+    const after = a.get_observation({ session_id: game.session_id }).state_hash;
+
+    const stale = a.save_game({
+      session_id: game.session_id,
+      expected_state_hash: before,
+    });
+    expect(stale.ok).toBe(false);
+    if (stale.ok) throw new Error("expected stale save rejection");
+    expect(stale.state_hash).toBe(after);
+    expect(stale.rejection_reason).toMatch(/state hash mismatch/i);
+    expect("save" in stale).toBe(false);
+
+    const saved = a.save_game({
+      session_id: game.session_id,
+      expected_state_hash: after,
+    });
+    expect(saved.ok).toBe(true);
+    if (!saved.ok) throw new Error("expected guarded save success");
+    expect(saved.state_hash).toBe(after);
+    expect(a.load_game({ save: saved.save }).state_hash).toBe(after);
+    expect(JSON.stringify(stale).length).toBeLessThan(JSON.stringify(saved).length);
   });
 
   it("can reload saves into compact RPG context for resumed MCP loops", () => {

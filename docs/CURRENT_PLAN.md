@@ -121,6 +121,9 @@ Make discovered overworld quest leads start real RPG sessions.
   through the world graph without a separate raw pack-path argument.
 - `save_game` now returns the current `state_hash`, letting checkpoint loops bind
   saved state without a follow-up observation/state read.
+- `save_game({ expected_state_hash })` and
+  `export_overworld_session({ expected_snapshot_hash })` reject stale checkpoint
+  requests before serializing save/snapshot blobs.
 - Shipped traces now embed `worldQuestId`, letting replay/inspect resolve
   through the world graph without a separate raw pack-path argument.
 - CLI replay/inspect now share that source resolver, so shipped traces can be

@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 69 -->
+<!-- historical_cycle_count: 70 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — checkpoint_expected_hash
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/persistence surface: RPG `save_game` accepts `expected_state_hash`, and overworld `export_overworld_session` accepts `expected_snapshot_hash`.
+- Loop effect: checkpoint loops can reject stale save/export requests before serializing save or snapshot blobs.
+- Evidence: live MCP stale save/export guards returned current hashes and omitted blobs at 315/308 chars; matching guards serialized at 761/1252 chars.
+- Guard: MCP regression asserts stale checkpoint guards return current hashes, omit save/snapshot payloads, and matching hashes still serialize.
+- VERIFY: focused MCP and registration tests, typecheck, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.
 
 ### Cycle result — transcript_state_hash
 

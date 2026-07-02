@@ -169,9 +169,10 @@ tool(
 );
 tool(
   "export_overworld_session",
-  "Export a content-bound overworld snapshot plus snapshot_hash.",
+  "Export a content-bound overworld snapshot plus snapshot_hash; expected_snapshot_hash rejects stale checkpoints.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
+    ...EXPECTED_SNAPSHOT_HASH,
   },
   (a) => api.export_overworld_session(a),
 );
@@ -472,8 +473,8 @@ tool(
 );
 tool(
   "save_game",
-  "Serialize a session to a save string (content-hash + mode bound, §8.7).",
-  SESSION,
+  "Serialize a session to a save string; expected_state_hash rejects stale checkpoints.",
+  { ...SESSION, ...EXPECTED_STATE_HASH },
   (a) => api.save_game(a),
 );
 tool(

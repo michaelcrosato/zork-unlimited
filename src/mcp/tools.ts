@@ -209,6 +209,32 @@ type OverworldRestoreResponse<Args extends OverworldResponseOptions> = {
   snapshot_hash: string;
 } & OverworldViewField<Args>;
 
+type OverworldExportArgs = {
+  session_id: string;
+  expected_snapshot_hash?: string;
+};
+
+type OverworldExportSuccess = {
+  ok: true;
+  session_id: string;
+  snapshot_hash: string;
+  snapshot: OverworldSessionSnapshot;
+};
+
+type OverworldExportRejection = {
+  ok: false;
+  session_id: string;
+  snapshot_hash: string;
+  rejection_reason: string;
+  events: [{ type: "rejected"; reason: string }];
+};
+
+type OverworldExportResponse<Args extends OverworldExportArgs> = Args extends {
+  expected_snapshot_hash: string;
+}
+  ? OverworldExportSuccess | OverworldExportRejection
+  : OverworldExportSuccess;
+
 type OverworldListSummary = {
   world: Pick<OverworldManifest, "id" | "name" | "start" | "premise">;
   town_count: number;
@@ -365,6 +391,34 @@ type TranscriptArgs = {
 type TranscriptTurnFor<Args extends TranscriptArgs> = Args extends { compact_turns: true }
   ? TranscriptCompactTurn
   : TranscriptFullTurn;
+
+type RpgSaveArgs = {
+  session_id: string;
+  expected_state_hash?: string;
+};
+
+type RpgSaveSuccess = {
+  ok: true;
+  save: string;
+  pack_id: string;
+  world_quest_id: string | null;
+  generated_rpg_seed: number | null;
+  content_hash: string;
+  mode: typeof SAVE_MODE;
+  state_hash: string;
+};
+
+type RpgSaveRejection = {
+  ok: false;
+  session_id: string;
+  state_hash: string;
+  rejection_reason: string;
+  events: [{ type: "rejected"; reason: string }];
+};
+
+type RpgSaveResponse<Args extends RpgSaveArgs> = Args extends { expected_state_hash: string }
+  ? RpgSaveSuccess | RpgSaveRejection
+  : RpgSaveSuccess;
 
 type OverworldSessionResponse<
   Key extends string,
@@ -1034,20 +1088,31 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    export_overworld_session(args: { session_id: string }): {
-      ok: true;
-      session_id: string;
-      snapshot_hash: string;
-      snapshot: OverworldSessionSnapshot;
-    } {
+    export_overworld_session<Args extends OverworldExportArgs>(
+      args: Args,
+    ): OverworldExportResponse<Args> {
       const session = getOverworldSession(args.session_id);
       const snapshot = session.snapshot();
+      const snapshotHash = hashState(snapshot);
+      if (
+        args.expected_snapshot_hash !== undefined &&
+        args.expected_snapshot_hash !== snapshotHash
+      ) {
+        const reason = "Snapshot hash mismatch; refresh the current overworld context.";
+        return {
+          ok: false,
+          session_id: args.session_id,
+          snapshot_hash: snapshotHash,
+          rejection_reason: reason,
+          events: [{ type: "rejected", reason }],
+        } as OverworldExportResponse<Args>;
+      }
       return {
         ok: true,
         session_id: args.session_id,
-        snapshot_hash: hashState(snapshot),
+        snapshot_hash: snapshotHash,
         snapshot,
-      };
+      } as OverworldExportResponse<Args>;
     },
 
     restore_overworld_session<Args extends { snapshot: unknown } & OverworldResponseOptions>(
@@ -1480,22 +1545,34 @@ export function createToolApi(opts: { root: string }) {
       return response as unknown as TranscriptResponse<TranscriptTurnFor<Args>>;
     },
 
-    save_game(args: { session_id: string }) {
+    save_game<Args extends RpgSaveArgs>(args: Args): RpgSaveResponse<Args> {
       const s = sessions.get(args.session_id);
+      const stateHash = hashState(s.state);
+      if (args.expected_state_hash !== undefined && args.expected_state_hash !== stateHash) {
+        const reason = "State hash mismatch; refresh the current observation or action menu.";
+        return {
+          ok: false,
+          session_id: args.session_id,
+          state_hash: stateHash,
+          rejection_reason: reason,
+          events: [{ type: "rejected", reason }],
+        } as RpgSaveResponse<Args>;
+      }
       // The save records the pack mode so load can refuse a mode mismatch (§8.7).
       const saveMetadata = {
         ...(s.worldQuestId ? { worldQuestId: s.worldQuestId } : {}),
         ...(s.generatedRpgSeed !== undefined ? { generatedRpgSeed: s.generatedRpgSeed } : {}),
       };
       return {
+        ok: true,
         save: save(s.state, s.packId, s.contentHash, SAVE_MODE, saveMetadata),
         pack_id: s.packId,
         world_quest_id: s.worldQuestId ?? null,
         generated_rpg_seed: s.generatedRpgSeed ?? null,
         content_hash: s.contentHash,
         mode: SAVE_MODE,
-        state_hash: hashState(s.state),
-      };
+        state_hash: stateHash,
+      } as RpgSaveResponse<Args>;
     },
 
     load_game<Args extends RpgLoadGameArgs>(args: Args): RpgSessionPayload<Args> {
