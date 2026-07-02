@@ -1376,6 +1376,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     const moved = a.choose_option({
       session_id: fullStart.session_id,
       option_id: moveActionId!,
+      expected_state_hash: compactObservation.state_hash,
       hide_graph: true,
       compact_observation: true,
     });
@@ -1398,6 +1399,42 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(r.ok).toBe(false);
     expect(r.rejection_reason).toBeTruthy();
     expect(r.state_hash).toBe(before);
+  });
+
+  it("step_action rejects stale expected_state_hash before mutating state", () => {
+    const a = api();
+    const game = a.new_game({
+      world_quest_id: "sunken_barrow",
+      seed: 1,
+      compact_observation: true,
+    });
+    const menu = a.list_legal_actions({ session_id: game.session_id, compact_actions: true });
+    const moveActionId = menu.actions.find((action) => action.id === "go_down")?.id;
+
+    expect(moveActionId).toBe("go_down");
+    const moved = a.step_action({
+      session_id: game.session_id,
+      action_id: moveActionId!,
+      expected_state_hash: menu.state_hash,
+      compact_observation: true,
+    });
+    expect(moved.ok).toBe(true);
+    expect(moved.state_hash).not.toBe(menu.state_hash);
+    const transcriptRowsAfterMove = a.get_transcript({ session_id: game.session_id }).turns.length;
+
+    const stale = a.step_action({
+      session_id: game.session_id,
+      action_id: "not_a_real_choice",
+      expected_state_hash: menu.state_hash,
+      compact_observation: true,
+    });
+    expect(stale.ok).toBe(false);
+    expect(stale.rejection_reason).toMatch(/state hash/i);
+    expect(stale.state_hash).toBe(moved.state_hash);
+    expect(stale.context.here).toEqual(moved.context.here);
+    expect(a.get_transcript({ session_id: game.session_id }).turns).toHaveLength(
+      transcriptRowsAfterMove,
+    );
   });
 
   it("refuses to start a game from a raw pack path", () => {

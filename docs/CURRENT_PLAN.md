@@ -84,6 +84,8 @@ Make discovered overworld quest leads start real RPG sessions.
   `compact_actions: false` when they need player-facing command labels.
 - `list_legal_actions` also returns `state_hash`, so compact action menus can be
   bound to the reducer state without a follow-up state read.
+- `step_action` / `choose_option` accept `expected_state_hash` and reject stale
+  action menus before mutating reducer state or transcript history.
 - Compact RPG MCP observations now cap inventory/flags and keep only recent
   journal entries, with `more` counts when state was omitted.
 - `get_transcript({ summary_only: true })` keeps session/end-state metadata while

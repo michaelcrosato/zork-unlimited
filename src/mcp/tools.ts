@@ -272,12 +272,14 @@ type RpgGetObservationArgs = {
 type RpgStepActionArgs = {
   session_id: string;
   action_id: string;
+  expected_state_hash?: string;
   hide_graph?: boolean;
 } & RpgResponseOptions;
 
 type RpgChooseOptionArgs = {
   session_id: string;
   option_id: string;
+  expected_state_hash?: string;
   hide_graph?: boolean;
 } & RpgResponseOptions;
 
@@ -1303,6 +1305,21 @@ export function createToolApi(opts: { root: string }) {
       const before = buildObsFor(s.index, s.state, {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
       });
+      const currentStateHash = hashState(s.state);
+      if (args.expected_state_hash !== undefined && args.expected_state_hash !== currentStateHash) {
+        return {
+          ok: false,
+          rejection_reason: "State hash mismatch; refresh the current observation or action menu.",
+          events: [
+            {
+              type: "rejected" as const,
+              reason: "State hash mismatch; refresh the current observation or action menu.",
+            },
+          ],
+          ...rpgViewField(before, args),
+          state_hash: currentStateHash,
+        } as RpgStepActionResponse<Args>;
+      }
       const beforeStep = s.state.step;
       const actionText = obsActionText(before, args.action_id);
       const action = actionForId(before, args.action_id);
@@ -1315,7 +1332,7 @@ export function createToolApi(opts: { root: string }) {
             { type: "rejected" as const, reason: "That action is not available right now." },
           ],
           ...rpgViewField(before, args),
-          state_hash: hashState(s.state),
+          state_hash: currentStateHash,
         } as RpgStepActionResponse<Args>;
       }
       const result = makeStep(s.rules)(s.state, action);
@@ -1347,6 +1364,9 @@ export function createToolApi(opts: { root: string }) {
       return this.step_action({
         session_id: args.session_id,
         action_id: args.option_id,
+        ...(args.expected_state_hash !== undefined && {
+          expected_state_hash: args.expected_state_hash,
+        }),
         ...(args.hide_graph !== undefined && { hide_graph: args.hide_graph }),
         ...(args.compact_actions !== undefined && { compact_actions: args.compact_actions }),
         ...(args.compact_observation !== undefined && {

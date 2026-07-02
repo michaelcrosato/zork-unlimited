@@ -41,29 +41,29 @@ function tool(
 }
 
 const WORLD_QUEST_SOURCE = {
-  world_quest_id: z.string().describe("World quest id."),
+  world_quest_id: z.string().describe("Quest id."),
 };
 const QUEST_ID_SOURCE = {
-  quest_id: z.string().optional().describe("World quest id."),
-  world_quest_id: z.string().optional().describe("Alias for quest_id."),
+  quest_id: z.string().optional().describe("Quest id."),
+  world_quest_id: z.string().optional().describe("Alias."),
 };
 const SESSION = {
-  session_id: z.string().describe("Session id."),
+  session_id: z.string().describe("Session."),
 };
 const HIDE_GRAPH = {
-  hide_graph: z.boolean().optional().describe("Hide exit destinations; keep directions only."),
+  hide_graph: z.boolean().optional().describe("Hide exit targets."),
 };
 const COMPACT_ACTIONS = {
-  compact_actions: z.boolean().optional().describe("Return action ids without command labels."),
+  compact_actions: z.boolean().optional().describe("Ids only."),
 };
 const COMPACT_OBSERVATION = {
-  compact_observation: z
-    .boolean()
-    .optional()
-    .describe("Default true; false returns full observation."),
+  compact_observation: z.boolean().optional().describe("Default true; false full observation."),
+};
+const EXPECTED_STATE_HASH = {
+  expected_state_hash: z.string().optional().describe("Reject stale state_hash."),
 };
 const COMPACT_OVERWORLD_CONTEXT = {
-  compact_context: z.boolean().optional().describe("Default true; false returns full observation."),
+  compact_context: z.boolean().optional().describe("Default true; false full observation."),
 };
 
 tool(
@@ -367,7 +367,7 @@ tool(
 );
 tool(
   "start_world_quest",
-  "Start a shipped RPG quest; returns compact context by default.",
+  "Start RPG quest; compact by default.",
   {
     quest_id: z.string().describe("World quest id."),
     seed: z.number().int().optional(),
@@ -392,7 +392,7 @@ tool(
 
 tool(
   "get_observation",
-  "Read compact RPG context; compact_observation false returns full observation.",
+  "Read compact RPG context; compact_observation false returns full.",
   { ...SESSION, ...HIDE_GRAPH, ...COMPACT_ACTIONS, ...COMPACT_OBSERVATION },
   (a) => api.get_observation(defaultCompactRpg(a)),
 );
@@ -404,7 +404,7 @@ tool(
 );
 tool(
   "list_legal_actions",
-  "List legal RPG action ids plus state_hash; compact_actions false returns labels.",
+  "List action ids plus state_hash; compact_actions false returns labels.",
   {
     ...SESSION,
     ...HIDE_GRAPH,
@@ -415,10 +415,11 @@ tool(
 
 tool(
   "step_action",
-  "Apply one action id; returns events plus compact context by default.",
+  "Apply action id; expected_state_hash rejects stale menus.",
   {
     ...SESSION,
-    action_id: z.string().describe("An action id from the current legal-action set."),
+    action_id: z.string().describe("Current action id."),
+    ...EXPECTED_STATE_HASH,
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
@@ -435,6 +436,7 @@ tool(
       .describe(
         "An option/action id from get_scene().observation.available_actions or context.actions.",
       ),
+    ...EXPECTED_STATE_HASH,
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,

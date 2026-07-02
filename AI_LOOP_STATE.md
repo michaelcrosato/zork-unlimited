@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 66 -->
+<!-- historical_cycle_count: 67 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — step_expected_state_hash
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: RPG `step_action` and `choose_option` now accept `expected_state_hash`.
+- Loop effect: compact agents can reject stale action menus before reducer mutation or transcript writes.
+- Evidence: live MCP accepted a matching menu hash, rejected the stale repeat, returned the current hash, preserved transcript length, and kept the stale response to 1090 chars.
+- Guard: MCP play-loop regression asserts matching hashes step, stale hashes reject, current hash is returned, and transcript length does not grow.
+- VERIFY: focused MCP and registration tests, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, typecheck, lint, format check, 193 test files / 1361 tests, and validate.
 
 ### Cycle result — legal_actions_state_hash
 
