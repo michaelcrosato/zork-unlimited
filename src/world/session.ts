@@ -1486,21 +1486,29 @@ function assertSnapshotDiscoveredAreaCountReplay(
   }
 }
 
-function assertDiscoveredSourceCountProof(
+function countValues<T>(values: Iterable<T>, predicate: (value: T) => boolean): number {
+  let count = 0;
+  for (const value of values) {
+    if (predicate(value)) count += 1;
+  }
+  return count;
+}
+
+function assertDiscoveredSourceCountReplay(
   sourceLabel: string,
   contextLabel: string,
   contextId: string,
   discoveredCount: number,
-  proofCount: number,
+  expectedCount: number,
 ): void {
-  if (discoveredCount > proofCount) {
+  if (discoveredCount !== expectedCount) {
     throw new Error(
-      `Overworld session snapshot discovered ${sourceLabel} count in ${contextLabel} "${contextId}" has no matching local action proof.`,
+      `Overworld session snapshot discovered ${sourceLabel} count in ${contextLabel} "${contextId}" does not match local action proof replay.`,
     );
   }
 }
 
-function assertSnapshotDiscoveredLocalSourceCountProofs(
+function assertSnapshotDiscoveredLocalSourceCountReplay(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldLocalActionJournalReachabilityIndex,
 ): void {
@@ -1529,31 +1537,43 @@ function assertSnapshotDiscoveredLocalSourceCountProofs(
     if (quest) incrementCount(discoveredQuestCountByTown, quest.home);
   }
 
-  for (const [townId, discoveredCount] of discoveredJobCountByTown) {
-    assertDiscoveredSourceCountProof(
+  for (const townId of snapshot.visitedIds) {
+    const localActionCount = localActionCountByTown.get(townId) ?? 0;
+    const availableJobCount = countValues(
+      sources.jobsById.values(),
+      (job) => job.home === townId && sources.discoveredAreaIds.has(job.area),
+    );
+    assertDiscoveredSourceCountReplay(
       "job",
       "town",
       townId,
-      discoveredCount,
-      localActionCountByTown.get(townId) ?? 0,
+      discoveredJobCountByTown.get(townId) ?? 0,
+      Math.min(localActionCount, availableJobCount),
     );
-  }
-  for (const [areaId, discoveredCount] of discoveredSiteCountByArea) {
-    assertDiscoveredSourceCountProof(
-      "site",
-      "area",
-      areaId,
-      discoveredCount,
-      localActionCountByArea.get(areaId) ?? 0,
+    const availableQuestCount = countValues(
+      sources.questsById.values(),
+      (quest) => quest.home === townId && sources.discoveredAreaIds.has(quest.area),
     );
-  }
-  for (const [townId, discoveredCount] of discoveredQuestCountByTown) {
-    assertDiscoveredSourceCountProof(
+    assertDiscoveredSourceCountReplay(
       "quest",
       "town",
       townId,
-      discoveredCount,
-      localActionCountByTown.get(townId) ?? 0,
+      discoveredQuestCountByTown.get(townId) ?? 0,
+      Math.min(localActionCount, availableQuestCount),
+    );
+  }
+  for (const areaId of sources.discoveredAreaIds) {
+    const localActionCount = localActionCountByArea.get(areaId) ?? 0;
+    const availableSiteCount = countValues(
+      sources.sitesById.values(),
+      (site) => site.area === areaId,
+    );
+    assertDiscoveredSourceCountReplay(
+      "site",
+      "area",
+      areaId,
+      discoveredSiteCountByArea.get(areaId) ?? 0,
+      Math.min(localActionCount, availableSiteCount),
     );
   }
 }
@@ -1895,7 +1915,7 @@ export class OverworldSession {
       eventsById,
       poisById,
     });
-    assertSnapshotDiscoveredLocalSourceCountProofs(snapshot, localActionJournalSources);
+    assertSnapshotDiscoveredLocalSourceCountReplay(snapshot, localActionJournalSources);
     assertSnapshotDiscoveredAreaCountReplay(snapshot, this.world, localActionJournalSources);
     for (const [region] of snapshot.regionRenown) {
       if (!regions.has(region)) {

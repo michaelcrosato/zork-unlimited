@@ -999,6 +999,28 @@ describe("overworld snapshot restore integrity", () => {
     );
   });
 
+  it("rejects missing discovered jobs earned by local action replay", () => {
+    const a = api();
+    const started = a.start_overworld();
+    const poi = started.observation.pois[0];
+    if (!poi) throw new Error("expected an initial-area point of interest");
+    const scouted = a.scout_overworld_session_poi({
+      session_id: started.session_id,
+      poi_id: poi.id,
+    });
+    const job = scouted.result.discoveredJobs?.[0];
+    if (!job) throw new Error("expected scouting to discover a job");
+    const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
+    const forgedMissingJob = {
+      ...snapshot,
+      discoveredJobIds: snapshot.discoveredJobIds.filter((id) => id !== job.id),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedMissingJob })).toThrow(
+      /discovered job count.*local action proof/,
+    );
+  });
+
   it("rejects discovered sites without enough local action proof", () => {
     const a = api();
     const started = a.start_overworld();
@@ -1012,6 +1034,28 @@ describe("overworld snapshot restore integrity", () => {
     };
 
     expect(() => a.restore_overworld_session({ snapshot: forgedSiteDiscovery })).toThrow(
+      /discovered site count.*local action proof/,
+    );
+  });
+
+  it("rejects missing discovered sites earned by local action replay", () => {
+    const a = api();
+    const started = a.start_overworld();
+    const poi = started.observation.pois[0];
+    if (!poi) throw new Error("expected an initial-area point of interest");
+    const scouted = a.scout_overworld_session_poi({
+      session_id: started.session_id,
+      poi_id: poi.id,
+    });
+    const site = scouted.result.discoveredSites?.[0];
+    if (!site) throw new Error("expected scouting to discover a site");
+    const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
+    const forgedMissingSite = {
+      ...snapshot,
+      discoveredSiteIds: snapshot.discoveredSiteIds.filter((id) => id !== site.id),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedMissingSite })).toThrow(
       /discovered site count.*local action proof/,
     );
   });
@@ -1035,6 +1079,52 @@ describe("overworld snapshot restore integrity", () => {
     };
 
     expect(() => a.restore_overworld_session({ snapshot: forgedQuestDiscovery })).toThrow(
+      /discovered quest count.*local action proof/,
+    );
+  });
+
+  it("rejects missing discovered quests earned by local action replay", () => {
+    const a = api();
+    const started = a.start_overworld();
+    const localActions = [
+      () => {
+        const poi = started.observation.pois[0];
+        if (!poi) throw new Error("expected an initial-area point of interest");
+        return a.scout_overworld_session_poi({
+          session_id: started.session_id,
+          poi_id: poi.id,
+        }).result;
+      },
+      () => {
+        const contact = started.observation.characters[0];
+        if (!contact) throw new Error("expected an initial-area contact");
+        return a.talk_overworld_session_contact({
+          session_id: started.session_id,
+          character_id: contact.id,
+        }).result;
+      },
+      () => {
+        const event = started.observation.events[0];
+        if (!event) throw new Error("expected an initial-area event");
+        return a.investigate_overworld_session_event({
+          session_id: started.session_id,
+          event_id: event.id,
+        }).result;
+      },
+    ];
+    let quest: { id: string } | undefined;
+    for (const action of localActions) {
+      quest = action().discoveredQuests?.[0];
+      if (quest) break;
+    }
+    if (!quest) throw new Error("expected initial local actions to discover a quest");
+    const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
+    const forgedMissingQuest = {
+      ...snapshot,
+      discoveredQuestIds: snapshot.discoveredQuestIds.filter((id) => id !== quest.id),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedMissingQuest })).toThrow(
       /discovered quest count.*local action proof/,
     );
   });

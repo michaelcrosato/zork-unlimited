@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 39 -->
+<!-- historical_cycle_count: 40 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_snapshot_local_source_count_replay
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner still fails broad root Prettier/ESLint outside canonical package scripts, while its tsc/test portions passed.
+- Engine/persistence: overworld restore now requires discovered job/site/quest counts to exactly match live local-action reveal replay, rejecting missing earned source ids as well as extras.
+- Token economy: compact source id sets remain transcript-free while restore derives exact reveal cardinality from local journal source ids and final discovered-area prefixes.
+- VERIFY: focused overworld snapshot test (80), typecheck, lint, format:check, validate, npm test (192/1340), `npm run health` EXIT 0.
+- Self-critique: closes source count drift; exact per-timestamp source identity replay beyond prefix/order remains future work.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
 
 ### Cycle result — overworld_snapshot_area_count_replay
 
