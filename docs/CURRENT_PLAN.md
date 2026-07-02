@@ -181,6 +181,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Overworld sessions cache full observation shells until mutation, so repeated
   full overworld reads reuse local lists, id arrays, route rows, regional arcs,
   and travel state while preserving clone-isolated returns.
+- Overworld sessions index areas, local events, and quests at construction, so
+  area resolution, regional-arc proofing, and quest completion avoid repeated
+  scans across large manifest arrays.
 - Overworld sessions cache compact context payloads until mutation, so repeated
   compact overworld reads reuse route tuples, id payloads, local lists, and
   capped journal/travel slices while preserving clone-isolated returns.

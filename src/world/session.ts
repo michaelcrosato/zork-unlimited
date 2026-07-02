@@ -2221,6 +2221,9 @@ function replaceStringSet(target: Set<string>, values: readonly string[]): void 
 
 export class OverworldSession {
   private readonly nodes: Map<string, OverworldNode>;
+  private readonly areasById: Map<string, OverworldArea>;
+  private readonly localEventsById: Map<string, OverworldLocalEvent>;
+  private readonly questsById: Map<string, OverworldQuest>;
   private readonly worldHash: string;
   private currentId: string;
   private currentAreaId: string | null = null;
@@ -2256,6 +2259,9 @@ export class OverworldSession {
 
   constructor(private readonly world: OverworldManifest) {
     this.nodes = overworldNodesById(world);
+    this.areasById = new Map(world.areas.map((area) => [area.id, area]));
+    this.localEventsById = new Map(world.local_events.map((event) => [event.id, event]));
+    this.questsById = new Map(world.quests.map((quest) => [quest.id, quest]));
     this.worldHash = hashState(world);
     this.currentId = world.start;
     this.markSeen(world.start);
@@ -2756,7 +2762,7 @@ export class OverworldSession {
   }
 
   private areaById(areaId: string): OverworldArea | null {
-    return this.world.areas.find((area) => area.id === areaId) ?? null;
+    return this.areasById.get(areaId) ?? null;
   }
 
   private setCurrentAreaForTown(nodeId: string): void {
@@ -3013,7 +3019,7 @@ export class OverworldSession {
     const anchorIds = new Set(arc.anchor_towns);
     const resolved = new Set<string>();
     for (const eventId of this.resolvedEventIds) {
-      const event = this.world.local_events.find((candidate) => candidate.id === eventId);
+      const event = this.localEventsById.get(eventId);
       if (event && anchorIds.has(event.home)) resolved.add(event.home);
     }
     return resolved;
@@ -3384,7 +3390,7 @@ export class OverworldSession {
     questId: string,
     outcome: { endingId: string; endingTitle: string; death: boolean },
   ): OverworldQuestCompletionResult {
-    const quest = this.world.quests.find((candidate) => candidate.id === questId);
+    const quest = this.questsById.get(questId);
     if (!quest) throw new Error(`Unknown overworld quest "${questId}".`);
     if (!this.startedQuestIds.has(quest.id)) {
       throw new Error("Start that local quest lead before completing it.");

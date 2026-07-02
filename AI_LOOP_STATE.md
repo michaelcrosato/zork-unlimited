@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 216 -->
+<!-- historical_cycle_count: 217 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — indexed_overworld_manifest_lookups
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: `OverworldSession` now indexes areas, local events, and quests once per manifest-backed session.
+- Loop effect: area resolution, regional-arc proofing, and overworld quest completion avoid repeated linear scans across large world arrays.
+- Guard: existing overworld MCP lifecycle and snapshot integrity tests cover the refactored lookup paths.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — cached_overworld_full_views
 
