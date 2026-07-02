@@ -184,6 +184,10 @@ Make discovered overworld quest leads start real RPG sessions.
 - Overworld sessions index areas, local events, and quests at construction, so
   area resolution, regional-arc proofing, and quest completion avoid repeated
   scans across large manifest arrays.
+- Overworld sessions index sorted town/area local lists and bidirectional area
+  exits at construction, so full/compact views and local actions avoid repeated
+  scans/sorts over areas, POIs, contacts, events, jobs, sites, quests, and area
+  routes.
 - Overworld sessions cache compact context payloads until mutation, so repeated
   compact overworld reads reuse route tuples, id payloads, local lists, and
   capped journal/travel slices while preserving clone-isolated returns.

@@ -2,18 +2,10 @@ import { z } from "zod";
 import { hashState } from "../core/hash.js";
 import {
   overworldAreasAt,
-  overworldAreaEdgesFrom,
-  overworldCharactersAt,
-  overworldCharactersInArea,
   overworldEdgesFrom,
-  overworldEventsAt,
-  overworldEventsInArea,
-  overworldExplorationSitesNear,
   overworldExplorationSitesInArea,
   overworldJobsAt,
   overworldNodesById,
-  overworldPoisAt,
-  overworldPoisInArea,
   overworldQuestsAt,
   overworldRoadEventFor,
   planOverworldRoute,
@@ -2219,11 +2211,43 @@ function replaceStringSet(target: Set<string>, values: readonly string[]): void 
   for (const value of values) target.add(value);
 }
 
+function pushIndexed<T>(index: Map<string, T[]>, key: string, value: T): void {
+  const values = index.get(key);
+  if (values) {
+    values.push(value);
+    return;
+  }
+  index.set(key, [value]);
+}
+
+function sortedIndex<T>(
+  values: readonly T[],
+  keyFor: (value: T) => string,
+  compare: (a: T, b: T) => number,
+): Map<string, T[]> {
+  const index = new Map<string, T[]>();
+  for (const value of values) pushIndexed(index, keyFor(value), value);
+  for (const indexed of index.values()) indexed.sort(compare);
+  return index;
+}
+
 export class OverworldSession {
   private readonly nodes: Map<string, OverworldNode>;
   private readonly areasById: Map<string, OverworldArea>;
+  private readonly areasByTown: Map<string, OverworldArea[]>;
+  private readonly areaExitsByArea: Map<string, OverworldAreaExit[]>;
+  private readonly poisByTown: Map<string, OverworldPoi[]>;
+  private readonly poisByArea: Map<string, OverworldPoi[]>;
+  private readonly charactersByTown: Map<string, OverworldCharacter[]>;
+  private readonly charactersByArea: Map<string, OverworldCharacter[]>;
+  private readonly eventsByTown: Map<string, OverworldLocalEvent[]>;
+  private readonly eventsByArea: Map<string, OverworldLocalEvent[]>;
   private readonly localEventsById: Map<string, OverworldLocalEvent>;
+  private readonly jobsByTown: Map<string, OverworldLocalJob[]>;
+  private readonly sitesByTown: Map<string, OverworldExplorationSite[]>;
+  private readonly sitesByArea: Map<string, OverworldExplorationSite[]>;
   private readonly questsById: Map<string, OverworldQuest>;
+  private readonly questsByTown: Map<string, OverworldQuest[]>;
   private readonly worldHash: string;
   private currentId: string;
   private currentAreaId: string | null = null;
@@ -2260,8 +2284,65 @@ export class OverworldSession {
   constructor(private readonly world: OverworldManifest) {
     this.nodes = overworldNodesById(world);
     this.areasById = new Map(world.areas.map((area) => [area.id, area]));
+    this.areasByTown = sortedIndex(
+      world.areas,
+      (area) => area.home,
+      (a, b) => a.travel_minutes - b.travel_minutes || a.name.localeCompare(b.name),
+    );
+    this.areaExitsByArea = this.indexAreaExits();
+    this.poisByTown = sortedIndex(
+      world.points_of_interest,
+      (poi) => poi.home,
+      (a, b) => a.title.localeCompare(b.title),
+    );
+    this.poisByArea = sortedIndex(
+      world.points_of_interest,
+      (poi) => poi.area,
+      (a, b) => a.title.localeCompare(b.title),
+    );
+    this.charactersByTown = sortedIndex(
+      world.characters,
+      (character) => character.home,
+      (a, b) => a.name.localeCompare(b.name),
+    );
+    this.charactersByArea = sortedIndex(
+      world.characters,
+      (character) => character.area,
+      (a, b) => a.name.localeCompare(b.name),
+    );
+    this.eventsByTown = sortedIndex(
+      world.local_events,
+      (event) => event.home,
+      (a, b) => b.intensity - a.intensity || a.title.localeCompare(b.title),
+    );
+    this.eventsByArea = sortedIndex(
+      world.local_events,
+      (event) => event.area,
+      (a, b) => b.intensity - a.intensity || a.title.localeCompare(b.title),
+    );
     this.localEventsById = new Map(world.local_events.map((event) => [event.id, event]));
+    this.jobsByTown = sortedIndex(
+      world.local_jobs,
+      (job) => job.home,
+      (a, b) =>
+        a.difficulty - b.difficulty || a.minutes - b.minutes || a.title.localeCompare(b.title),
+    );
+    this.sitesByTown = sortedIndex(
+      world.exploration_sites,
+      (site) => site.nearest_town,
+      (a, b) => b.danger - a.danger || a.title.localeCompare(b.title),
+    );
+    this.sitesByArea = sortedIndex(
+      world.exploration_sites,
+      (site) => site.area,
+      (a, b) => b.danger - a.danger || a.title.localeCompare(b.title),
+    );
     this.questsById = new Map(world.quests.map((quest) => [quest.id, quest]));
+    this.questsByTown = sortedIndex(
+      world.quests,
+      (quest) => quest.home,
+      (a, b) => a.title.localeCompare(b.title),
+    );
     this.worldHash = hashState(world);
     this.currentId = world.start;
     this.markSeen(world.start);
@@ -2272,6 +2353,28 @@ export class OverworldSession {
     const session = new OverworldSession(world);
     session.applySnapshot(snapshot);
     return session;
+  }
+
+  private indexAreaExits(): Map<string, OverworldAreaExit[]> {
+    const index = new Map<string, OverworldAreaExit[]>();
+    for (const edge of this.world.area_edges) {
+      const fromDestination = this.areasById.get(edge.to_area);
+      const toDestination = this.areasById.get(edge.from_area);
+      if (!fromDestination || !toDestination) {
+        const missingAreaId = fromDestination ? edge.from_area : edge.to_area;
+        throw new Error(`Overworld area edge references missing area "${missingAreaId}".`);
+      }
+      pushIndexed(index, edge.from_area, { ...edge, destination: fromDestination });
+      pushIndexed(index, edge.to_area, { ...edge, destination: toDestination });
+    }
+    for (const exits of index.values()) {
+      exits.sort(
+        (a, b) =>
+          a.travel_minutes - b.travel_minutes ||
+          a.destination.name.localeCompare(b.destination.name),
+      );
+    }
+    return index;
   }
 
   private clearSnapshotCache(): void {
@@ -2758,7 +2861,7 @@ export class OverworldSession {
   }
 
   private localAreas(nodeId: string): OverworldArea[] {
-    return overworldAreasAt(this.world, nodeId);
+    return this.areasByTown.get(nodeId) ?? [];
   }
 
   private areaById(areaId: string): OverworldArea | null {
@@ -2794,7 +2897,7 @@ export class OverworldSession {
   private visibleAreaExits(): OverworldAreaExit[] {
     const area = this.currentArea();
     if (!area) return [];
-    return overworldAreaEdgesFrom(this.world, area.id).filter((exit) =>
+    return (this.areaExitsByArea.get(area.id) ?? []).filter((exit) =>
       this.discoveredAreaIds.has(exit.destination.id),
     );
   }
@@ -2814,15 +2917,15 @@ export class OverworldSession {
   }
 
   private currentAreaPois(): OverworldPoi[] {
-    return overworldPoisInArea(this.world, this.currentAreaIdOrThrow());
+    return this.poisByArea.get(this.currentAreaIdOrThrow()) ?? [];
   }
 
   private currentAreaCharacters(): OverworldCharacter[] {
-    return overworldCharactersInArea(this.world, this.currentAreaIdOrThrow());
+    return this.charactersByArea.get(this.currentAreaIdOrThrow()) ?? [];
   }
 
   private currentAreaEvents(): OverworldLocalEvent[] {
-    return overworldEventsInArea(this.world, this.currentAreaIdOrThrow());
+    return this.eventsByArea.get(this.currentAreaIdOrThrow()) ?? [];
   }
 
   private discoverInitialAreaForTown(nodeId: string): void {
@@ -2844,7 +2947,7 @@ export class OverworldSession {
   }
 
   private localJobs(nodeId: string): OverworldLocalJob[] {
-    return overworldJobsAt(this.world, nodeId);
+    return this.jobsByTown.get(nodeId) ?? [];
   }
 
   private discoveredJobsAt(nodeId: string): OverworldLocalJob[] {
@@ -2872,7 +2975,7 @@ export class OverworldSession {
   }
 
   private localSites(nodeId: string): OverworldExplorationSite[] {
-    return overworldExplorationSitesNear(this.world, nodeId);
+    return this.sitesByTown.get(nodeId) ?? [];
   }
 
   private discoveredSitesAt(nodeId: string): OverworldExplorationSite[] {
@@ -2880,7 +2983,7 @@ export class OverworldSession {
   }
 
   private currentAreaSites(): OverworldExplorationSite[] {
-    return overworldExplorationSitesInArea(this.world, this.currentAreaIdOrThrow());
+    return this.sitesByArea.get(this.currentAreaIdOrThrow()) ?? [];
   }
 
   private discoveredSitesInCurrentArea(): OverworldExplorationSite[] {
@@ -2892,7 +2995,7 @@ export class OverworldSession {
   }
 
   private localQuests(nodeId: string): OverworldQuest[] {
-    return overworldQuestsAt(this.world, nodeId);
+    return this.questsByTown.get(nodeId) ?? [];
   }
 
   private discoveredQuestsAt(nodeId: string): OverworldQuestView[] {
@@ -3424,7 +3527,7 @@ export class OverworldSession {
 
   scoutPoi(poiId: string): OverworldActionResult {
     const current = this.currentNode();
-    const poi = overworldPoisAt(this.world, this.currentId).find(
+    const poi = (this.poisByTown.get(this.currentId) ?? []).find(
       (candidate) => candidate.id === poiId,
     );
     if (!poi) throw new Error("That point of interest is not in this town.");
@@ -3480,7 +3583,7 @@ export class OverworldSession {
   moveArea(areaRouteId: string): OverworldAreaTravelResult {
     const currentArea = this.currentArea();
     if (!currentArea) throw new Error("There is no current local area in this town.");
-    const edge = overworldAreaEdgesFrom(this.world, currentArea.id).find(
+    const edge = (this.areaExitsByArea.get(currentArea.id) ?? []).find(
       (candidate) => candidate.id === areaRouteId,
     );
     if (!edge) throw new Error("That local route is not reachable from here.");
@@ -3547,7 +3650,7 @@ export class OverworldSession {
 
   talkToCharacter(characterId: string): OverworldActionResult {
     const current = this.currentNode();
-    const character = overworldCharactersAt(this.world, this.currentId).find(
+    const character = (this.charactersByTown.get(this.currentId) ?? []).find(
       (candidate) => candidate.id === characterId,
     );
     if (!character) throw new Error("That contact is not in this town.");
@@ -3566,7 +3669,7 @@ export class OverworldSession {
 
   investigateEvent(eventId: string): OverworldActionResult {
     const current = this.currentNode();
-    const event = overworldEventsAt(this.world, this.currentId).find(
+    const event = (this.eventsByTown.get(this.currentId) ?? []).find(
       (candidate) => candidate.id === eventId,
     );
     if (!event) throw new Error("That event is not active in this town.");
@@ -3585,7 +3688,7 @@ export class OverworldSession {
 
   resolveEvent(eventId: string): OverworldActionResult {
     const current = this.currentNode();
-    const event = overworldEventsAt(this.world, this.currentId).find(
+    const event = (this.eventsByTown.get(this.currentId) ?? []).find(
       (candidate) => candidate.id === eventId,
     );
     if (!event) throw new Error("That event is not active in this town.");
@@ -3597,10 +3700,10 @@ export class OverworldSession {
       if (existing) return { minutes: 0, alreadyKnown: true, entry: existing };
     }
 
-    const scoutedPoi = overworldPoisInArea(this.world, event.area).some((poi) =>
+    const scoutedPoi = (this.poisByArea.get(event.area) ?? []).some((poi) =>
       this.hasJournalEntry(`scout:${poi.id}`),
     );
-    const talkedContact = overworldCharactersInArea(this.world, event.area).some((character) =>
+    const talkedContact = (this.charactersByArea.get(event.area) ?? []).some((character) =>
       this.hasJournalEntry(`talk:${character.id}`),
     );
     const investigatedEvent = this.hasJournalEntry(`investigate:${event.id}`);
