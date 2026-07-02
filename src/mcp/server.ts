@@ -63,8 +63,13 @@ const COMPACT_OBSERVATION = {
     .describe("Return compact `context` instead of full `observation`."),
 };
 const COMPACT_OVERWORLD_CONTEXT = {
-  compact_context: z.boolean().optional().describe("Return compact overworld context."),
+  compact_context: z.boolean().optional().describe("Default true; false returns full observation."),
 };
+
+function defaultCompactOverworld(args: unknown): never {
+  const input = typeof args === "object" && args !== null ? args : {};
+  return { compact_context: true, ...input } as never;
+}
 
 tool(
   "list_world",
@@ -93,11 +98,11 @@ tool(
 );
 tool(
   "start_overworld",
-  "Start a stateful New York overworld run at Albany and return the current location, local actions, discovered quest leads, regional arcs, journal, discovered towns, and roads.",
+  "Start a stateful New York overworld run; returns compact context by default.",
   {
     ...COMPACT_OVERWORLD_CONTEXT,
   },
-  (a) => api.start_overworld(a),
+  (a) => api.start_overworld(defaultCompactOverworld(a)),
 );
 tool(
   "get_overworld_session",
@@ -125,28 +130,28 @@ tool(
 );
 tool(
   "restore_overworld_session",
-  "Restore a new stateful New York overworld session from a snapshot previously returned by export_overworld_session.",
+  "Restore a stateful New York overworld session; returns compact context by default.",
   {
     snapshot: z
       .record(z.unknown())
       .describe("Snapshot object previously returned as export_overworld_session.snapshot."),
     ...COMPACT_OVERWORLD_CONTEXT,
   },
-  (a) => api.restore_overworld_session(a),
+  (a) => api.restore_overworld_session(defaultCompactOverworld(a)),
 );
 tool(
   "travel_overworld_session",
-  "Travel in a stateful New York overworld session along an adjacent road id from the current town. Travel consumes supplies, adds fatigue, and can add elapsed delay when fatigue or supply shortage catches up.",
+  "Travel along an adjacent road id; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     road_id: z.string().describe("Road id from the session observation's exits list."),
     ...COMPACT_OVERWORLD_CONTEXT,
   },
-  (a) => api.travel_overworld_session(a),
+  (a) => api.travel_overworld_session(defaultCompactOverworld(a)),
 );
 tool(
   "resolve_overworld_session_road_encounter",
-  "Resolve the pending road encounter after travel with a strategy: scout it, help resolve it, or press on. Clears the encounter before the next road leg.",
+  "Resolve the pending road encounter; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     strategy: z
@@ -154,29 +159,29 @@ tool(
       .describe("Road encounter response from observation.pendingRoadEncounter.options."),
     ...COMPACT_OVERWORLD_CONTEXT,
   },
-  (a) => api.resolve_overworld_session_road_encounter(a),
+  (a) => api.resolve_overworld_session_road_encounter(defaultCompactOverworld(a)),
 );
 tool(
   "resupply_overworld_session",
-  "Resupply at the current town if it has a market, inn, or stable. Returns updated supplies, fatigue, time, and observation.",
+  "Resupply at the current town; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     ...COMPACT_OVERWORLD_CONTEXT,
   },
-  (a) => api.resupply_overworld_session(a),
+  (a) => api.resupply_overworld_session(defaultCompactOverworld(a)),
 );
 tool(
   "rest_overworld_session",
-  "Rest at the current town if it has an inn or healer. Returns updated fatigue, supplies, time, and observation.",
+  "Rest at the current town; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     ...COMPACT_OVERWORLD_CONTEXT,
   },
-  (a) => api.rest_overworld_session(a),
+  (a) => api.rest_overworld_session(defaultCompactOverworld(a)),
 );
 tool(
   "plan_overworld_session_route",
-  "Plan the shortest known route in a stateful New York overworld session to a discovered town. Returns ordered road legs without moving the session.",
+  "Plan the shortest known route to a discovered town; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     destination_town_id: z
@@ -186,91 +191,91 @@ tool(
       ),
     ...COMPACT_OVERWORLD_CONTEXT,
   },
-  (a) => api.plan_overworld_session_route(a),
+  (a) => api.plan_overworld_session_route(defaultCompactOverworld(a)),
 );
 tool(
   "scout_overworld_session_poi",
-  "Scout a local point of interest in a stateful New York overworld session, revealing nearby sites and local quest leads while updating journal/time.",
+  "Scout a local point of interest; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     poi_id: z.string().describe("Point-of-interest id from the session observation."),
     ...COMPACT_OVERWORLD_CONTEXT,
   },
-  (a) => api.scout_overworld_session_poi(a),
+  (a) => api.scout_overworld_session_poi(defaultCompactOverworld(a)),
 );
 tool(
   "talk_overworld_session_contact",
-  "Talk to a local contact in a stateful New York overworld session, revealing local quest leads while updating journal/time.",
+  "Talk to a local contact; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     character_id: z.string().describe("Character id from the session observation."),
     ...COMPACT_OVERWORLD_CONTEXT,
   },
-  (a) => api.talk_overworld_session_contact(a),
+  (a) => api.talk_overworld_session_contact(defaultCompactOverworld(a)),
 );
 tool(
   "investigate_overworld_session_event",
-  "Investigate a local event in a stateful New York overworld session, revealing local quest leads while updating journal/time.",
+  "Investigate a local event; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     event_id: z.string().describe("Event id from the session observation."),
     ...COMPACT_OVERWORLD_CONTEXT,
   },
-  (a) => api.investigate_overworld_session_event(a),
+  (a) => api.investigate_overworld_session_event(defaultCompactOverworld(a)),
 );
 tool(
   "resolve_overworld_session_event",
-  "Resolve a local event in a stateful New York overworld session after scouting a local POI, talking to a local contact, and investigating the event.",
+  "Resolve a local event; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     event_id: z.string().describe("Event id from the session observation."),
     ...COMPACT_OVERWORLD_CONTEXT,
   },
-  (a) => api.resolve_overworld_session_event(a),
+  (a) => api.resolve_overworld_session_event(defaultCompactOverworld(a)),
 );
 tool(
   "explore_overworld_session_site",
-  "Explore a discovered regional site in a stateful New York overworld session. Scout a local point of interest first to reveal nearby sites.",
+  "Explore a discovered regional site; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     site_id: z.string().describe("Exploration site id from the session observation's sites list."),
     ...COMPACT_OVERWORLD_CONTEXT,
   },
-  (a) => api.explore_overworld_session_site(a),
+  (a) => api.explore_overworld_session_site(defaultCompactOverworld(a)),
 );
 tool(
   "explore_overworld_session_area",
-  "Explore a discovered local area or district in a stateful New York overworld session. Larger towns expose more areas over time.",
+  "Explore a discovered local area; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     area_id: z.string().describe("Area id from the session observation's areas list."),
     ...COMPACT_OVERWORLD_CONTEXT,
   },
-  (a) => api.explore_overworld_session_area(a),
+  (a) => api.explore_overworld_session_area(defaultCompactOverworld(a)),
 );
 tool(
   "move_overworld_session_area",
-  "Move inside the current town along a discovered local-area route. This changes the current area and consumes local walking time.",
+  "Move inside the current town along a local-area route; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     area_route_id: z.string().describe("Area route id from observation.areaExits."),
     ...COMPACT_OVERWORLD_CONTEXT,
   },
-  (a) => api.move_overworld_session_area(a),
+  (a) => api.move_overworld_session_area(defaultCompactOverworld(a)),
 );
 tool(
   "work_overworld_session_job",
-  "Work a discovered local job in a stateful New York overworld session. Jobs are tied to mapped town areas and award regional renown.",
+  "Work a discovered local job; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     job_id: z.string().describe("Job id from the session observation's jobs list."),
     ...COMPACT_OVERWORLD_CONTEXT,
   },
-  (a) => api.work_overworld_session_job(a),
+  (a) => api.work_overworld_session_job(defaultCompactOverworld(a)),
 );
 tool(
   "start_overworld_session_quest",
-  "Start a discovered local quest lead in a stateful New York overworld session and return a playable RPG session through its canonical world quest id. The lead must belong to the current town and current local area.",
+  "Start a discovered local quest lead; returns compact overworld context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     quest_id: z.string().describe("Quest id from the session observation's quests list."),
@@ -283,7 +288,7 @@ tool(
     ...COMPACT_OBSERVATION,
     ...COMPACT_OVERWORLD_CONTEXT,
   },
-  (a) => api.start_overworld_session_quest(a),
+  (a) => api.start_overworld_session_quest(defaultCompactOverworld(a)),
 );
 tool("validate_quest", "Validate one shipped RPG quest by id.", QUEST_ID_SOURCE, (a) =>
   api.validate_quest(a),

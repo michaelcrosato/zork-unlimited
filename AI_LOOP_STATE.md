@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 60 -->
+<!-- historical_cycle_count: 61 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — mcp_overworld_compact_default
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent and WSL worktree path noise remains outside the green gate.
+- Token surface: public MCP stateful overworld start/action tools now default `compact_context: true`, while `compact_context: false` still requests full observations.
+- Loop effect: MCP agents no longer pay the ~61k JSON full overworld start/action payload by default; direct ToolApi remains full by default for tests/debugging.
+- Evidence: measured ToolApi full/compact overworld start at 61233 versus 2010 chars; MCP registration regression guards all stateful overworld action handlers through `defaultCompactOverworld`.
+- VERIFY: focused MCP registration regression, `npm run health`, `npm run validate`, and `npm test` passed: integrity, typecheck, lint, format check, 193 test files / 1357 tests, and validate.
+- Self-critique: this is an adapter-level default; callers that deliberately request full observations can still spend the larger payload.
 
 ### Cycle result — world_catalog_graph_routes_opt_in
 

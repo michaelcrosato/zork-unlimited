@@ -138,6 +138,32 @@ describe("MCP server registration", () => {
     expect(restoreTraceSchemaSource).not.toContain("content-hash + mode");
   });
 
+  it("defaults stateful overworld MCP actions to compact context", () => {
+    for (const toolName of [
+      "start_overworld",
+      "restore_overworld_session",
+      "travel_overworld_session",
+      "resolve_overworld_session_road_encounter",
+      "resupply_overworld_session",
+      "rest_overworld_session",
+      "plan_overworld_session_route",
+      "scout_overworld_session_poi",
+      "talk_overworld_session_contact",
+      "investigate_overworld_session_event",
+      "resolve_overworld_session_event",
+      "explore_overworld_session_site",
+      "explore_overworld_session_area",
+      "move_overworld_session_area",
+      "work_overworld_session_job",
+      "start_overworld_session_quest",
+    ]) {
+      const block = registeredToolBlock(toolName);
+      expect(block).toContain("defaultCompactOverworld(a)");
+    }
+
+    expect(registeredToolBlock("get_overworld_session")).not.toContain("defaultCompactOverworld");
+  });
+
   it("keeps retired static overworld compatibility helpers out of ToolApi and MCP", () => {
     const api = createToolApi({ root: process.cwd() }) as Record<string, unknown>;
     const registered = registeredServerTools();
