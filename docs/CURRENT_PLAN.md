@@ -176,6 +176,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Overworld sessions cache discovered route options and resource estimates until
   mutation, so repeated full/compact overworld reads do not rerun route search
   across the discovered town frontier.
+- Overworld sessions cache compact context payloads until mutation, so repeated
+  compact overworld reads reuse route tuples, id payloads, local lists, and
+  capped journal/travel slices while preserving clone-isolated returns.
 - Blind-playtest MCP ToolSearch schema prose for the selected
   start/observe/action/transcript tools is trimmed and guarded by a source-size
   regression.

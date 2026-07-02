@@ -835,6 +835,18 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(fullRead.snapshot_hash).toBe(started.snapshot_hash);
     expect(compact.snapshot_hash).toBe(started.snapshot_hash);
     expect(compactStarted.snapshot_hash).toMatch(/^[0-9a-f]{64}$/);
+    const repeatedCompactRead = a.get_overworld_session_context({
+      session_id: started.session_id,
+    });
+    expect(repeatedCompactRead.snapshot_hash).toBe(started.snapshot_hash);
+    expect(repeatedCompactRead.context).toEqual(compact.context);
+    expect(repeatedCompactRead.context).not.toBe(compact.context);
+    expect(repeatedCompactRead.context.roads).not.toBe(compact.context.roads);
+    (repeatedCompactRead.context.here as unknown as string[])[0] = "mutated_by_test";
+    const afterCompactMutationRead = a.get_overworld_session_context({
+      session_id: started.session_id,
+    });
+    expect(afterCompactMutationRead.context.here[0]).toBe(full.current.id);
     const repeatedFullRead = a.get_overworld_session({ session_id: started.session_id });
     expect(repeatedFullRead.snapshot_hash).toBe(started.snapshot_hash);
     expect(repeatedFullRead.observation.routeOptions).toEqual(full.routeOptions);

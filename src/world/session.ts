@@ -2250,6 +2250,7 @@ export class OverworldSession {
     hash: string;
   };
   private routeOptionsCache?: OverworldSessionRoutePlan[];
+  private compactViewCache?: OverworldCompactView;
 
   constructor(private readonly world: OverworldManifest) {
     this.nodes = overworldNodesById(world);
@@ -2268,6 +2269,7 @@ export class OverworldSession {
   private clearSnapshotCache(): void {
     delete this.snapshotCache;
     delete this.routeOptionsCache;
+    delete this.compactViewCache;
   }
 
   private cachedSnapshot(): { snapshot: OverworldSessionSnapshot; hash: string } {
@@ -3102,7 +3104,17 @@ export class OverworldSession {
     };
   }
 
+  private cachedCompactView(): OverworldCompactView {
+    if (this.compactViewCache) return this.compactViewCache;
+    this.compactViewCache = this.buildCompactView();
+    return this.compactViewCache;
+  }
+
   compactView(): OverworldCompactView {
+    return cloneJson(this.cachedCompactView());
+  }
+
+  private buildCompactView(): OverworldCompactView {
     const current = this.currentNode();
     const currentArea = this.currentArea();
     const areaRoutes = this.visibleAreaExits().map(
