@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 177 -->
+<!-- historical_cycle_count: 178 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_overworld_idle_markers
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact overworld contexts now omit absent `pending_road` and false/empty truncation markers.
+- Loop effect: ordinary overworld turns keep route/log/id counts without paying for idle null/false scaffolding.
+- Guard: focused compact-overworld/MCP tests, typecheck, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_mcp_json_envelope
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: end-of-run transcript polling joins observation/action cache-hit semantics and omits `session_id` on unchanged replies.
 - Guard: ToolApi, MCP registration, blind-protocol docs, focused MCP/docs tests, and typecheck passed before full gates.
 - VERIFY: focused MCP/docs tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_unchanged_session_echo
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: guarded unchanged RPG observation/action replies and overworld read/context replies no longer echo `session_id`.
-- Loop effect: cache-hit polling replies are now hash scoped only; callers already supplied the session id.
-- Guard: MCP tests assert unchanged replies omit `session_id` while changed/full responses still carry session identity.
-- VERIFY: focused MCP unchanged tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.

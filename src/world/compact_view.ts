@@ -116,7 +116,7 @@ export type OverworldCompactView = {
   roads: OverworldCompactRoad[];
   area_routes: OverworldCompactAreaRoute[];
   route_options: OverworldCompactRouteOption[];
-  route_options_truncated: boolean;
+  route_options_truncated?: true;
   areas: OverworldCompactRef[];
   poi: OverworldCompactRef[];
   contacts: OverworldCompactRef[];
@@ -124,17 +124,17 @@ export type OverworldCompactView = {
   jobs: OverworldCompactRef[];
   sites: OverworldCompactRef[];
   quests: OverworldCompactQuestRef[];
-  pending_road: OverworldCompactRoadEncounter | null;
+  pending_road?: OverworldCompactRoadEncounter;
   journal: OverworldCompactJournalEntry[];
   travel_log: OverworldCompactTravelLogEntry[];
-  travel_log_truncated: boolean;
+  travel_log_truncated?: true;
   progress: {
     towns: readonly [visited: number, total: number];
     renown: readonly (readonly [region: string, value: number])[];
     completed_arcs: string[];
   };
   id_counts: OverworldCompactIdCounts;
-  ids_truncated: OverworldCompactIdTruncation;
+  ids_truncated?: OverworldCompactIdTruncation;
   ids: OverworldCompactIdMap;
 };
 
@@ -158,8 +158,8 @@ function compactRouteOption(plan: OverworldSessionRoutePlan): OverworldCompactRo
 
 function compactPendingRoad(
   encounter: OverworldPendingRoadEncounter | null,
-): OverworldCompactRoadEncounter | null {
-  if (!encounter) return null;
+): OverworldCompactRoadEncounter | undefined {
+  if (!encounter) return undefined;
   return {
     id: encounter.id,
     edge: encounter.edgeId,
@@ -193,7 +193,7 @@ function compactIdList(values: readonly string[]): string[] {
 function compactIdPayload(values: OverworldCompactIdMap): {
   ids: OverworldCompactIdMap;
   id_counts: OverworldCompactIdCounts;
-  ids_truncated: OverworldCompactIdTruncation;
+  ids_truncated?: OverworldCompactIdTruncation;
 } {
   const ids: OverworldCompactIdMap = {
     discovered_towns: compactIdList(values.discovered_towns),
@@ -238,7 +238,11 @@ function compactIdPayload(values: OverworldCompactIdMap): {
   if (values.completed_quests.length > COMPACT_ID_LIST_LIMIT)
     ids_truncated.push("completed_quests");
   if (values.resolved_events.length > COMPACT_ID_LIST_LIMIT) ids_truncated.push("resolved_events");
-  return { ids, id_counts, ids_truncated };
+  return {
+    ids,
+    id_counts,
+    ...(ids_truncated.length > 0 ? { ids_truncated } : {}),
+  };
 }
 
 export function compactOverworldView(view: OverworldView): OverworldCompactView {
@@ -257,6 +261,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     completed_quests: view.completedQuestIds,
     resolved_events: view.resolvedEventIds,
   });
+  const pendingRoad = compactPendingRoad(view.pendingRoadEncounter);
   const routeByDestination = new Map(
     view.routeOptions.map((plan) => [plan.destination.id, plan] as const),
   );
@@ -290,7 +295,9 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     }),
     area_routes: view.areaExits.map((exit) => [exit.id, exit.destination.id, exit.travel_minutes]),
     route_options: routeOptions,
-    route_options_truncated: view.routeOptions.length > routeOptions.length,
+    ...(view.routeOptions.length > routeOptions.length
+      ? { route_options_truncated: true as const }
+      : {}),
     areas: view.areas.map(ref),
     poi: view.pois.map(titledRef),
     contacts: view.characters.map((character) => [character.id, character.name]),
@@ -298,12 +305,12 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     jobs: view.jobs.map(titledRef),
     sites: view.sites.map(titledRef),
     quests: view.quests.map((quest) => [quest.id, quest.title]),
-    pending_road: compactPendingRoad(view.pendingRoadEncounter),
+    ...(pendingRoad ? { pending_road: pendingRoad } : {}),
     journal: view.journal
       .slice(0, COMPACT_JOURNAL_LIMIT)
       .map((entry) => [entry.kind, entry.title, entry.recordedAt]),
     travel_log: travelLog,
-    travel_log_truncated: view.log.length > travelLog.length,
+    ...(view.log.length > travelLog.length ? { travel_log_truncated: true as const } : {}),
     progress: {
       towns: [view.visitedCount, view.totalTowns],
       renown: Object.entries(view.regionRenown).sort(([left], [right]) =>
@@ -312,7 +319,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
       completed_arcs: view.completedRegionalArcIds,
     },
     id_counts: idPayload.id_counts,
-    ids_truncated: idPayload.ids_truncated,
+    ...(idPayload.ids_truncated ? { ids_truncated: idPayload.ids_truncated } : {}),
     ids: idPayload.ids,
   };
 }

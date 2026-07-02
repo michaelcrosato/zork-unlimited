@@ -886,7 +886,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
     }
     expect(compact.context.route_options.length).toBeLessThanOrEqual(8);
     expect(compact.context.route_options[0]?.[1]).toEqual(expect.any(Number));
-    expect(compact.context.pending_road).toBeNull();
+    expect("pending_road" in compact.context).toBe(false);
+    expect("route_options_truncated" in compact.context).toBe(false);
+    expect("travel_log_truncated" in compact.context).toBe(false);
+    expect("ids_truncated" in compact.context).toBe(false);
     expect(JSON.stringify(compact.context).length).toBeLessThan(JSON.stringify(full).length);
 
     const road = full.exits.find((edge) => edge.destination.id === "colonie_town");
@@ -922,7 +925,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       compactTravel.travel.fatigueGained,
       compactTravel.travel.roadEvent?.id ?? null,
     ]);
-    expect(compactTravel.context.travel_log_truncated).toBe(false);
+    expect("travel_log_truncated" in compactTravel.context).toBe(false);
     expect("observation" in compactTravel).toBe(false);
 
     const staleTravel = a.travel_overworld_session({
@@ -959,6 +962,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(traveledFullRead.snapshot_hash).toBe(compactTravel.snapshot_hash);
     expect(traveledCompactRead.snapshot_hash).toBe(compactTravel.snapshot_hash);
     expect(traveledCompact.here[0]).toBe("colonie_town");
+    expect("pending_road" in traveledCompact).toBe(true);
     expect(traveledCompact.pending_road).toMatchObject({
       edge: road!.id,
       event: [
