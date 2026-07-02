@@ -227,6 +227,62 @@ describe("SessionStore", () => {
     expect(session.observationCache?.stateHash).toBe(hashState(nextState));
   });
 
+  it("caches observation projections until state changes", () => {
+    const store = new SessionStore();
+    const session = store.create(sessionInit());
+    const firstProjection = { here: ["start", "Start"] };
+    const nextProjection = { here: ["next", "Next"] };
+    let builds = 0;
+
+    const first = store.observationProjection(session.id, "compact:v5:hide:false", () => {
+      builds += 1;
+      return firstProjection;
+    });
+    const cached = store.observationProjection(session.id, "compact:v5:hide:false", () => {
+      builds += 1;
+      return nextProjection;
+    });
+    const otherShape = store.observationProjection(
+      session.id,
+      "public:compact-actions:true",
+      () => {
+        builds += 1;
+        return nextProjection;
+      },
+    );
+
+    expect(first).toBe(firstProjection);
+    expect(cached).toBe(firstProjection);
+    expect(otherShape).toBe(nextProjection);
+    expect(builds).toBe(2);
+    expect(session.observationProjectionCaches?.get("compact:v5:hide:false")?.stateHash).toBe(
+      session.stateHash,
+    );
+
+    store.appendTranscript(session.id, {
+      step: 1,
+      scene_id: "start",
+      title: "Start",
+      action_id: "look",
+      action_text: "look",
+      events: [],
+      result_scene_id: "start",
+      ended: false,
+      ending_id: null,
+    });
+    expect(session.observationProjectionCaches).toBeDefined();
+
+    store.update(session.id, state("next"));
+    expect(session.observationProjectionCaches).toBeUndefined();
+
+    const afterState = store.observationProjection(session.id, "compact:v5:hide:false", () => {
+      builds += 1;
+      return nextProjection;
+    });
+    expect(afterState).toBe(nextProjection);
+    expect(builds).toBe(3);
+  });
+
   it("caches transcript summaries until transcript or state changes", () => {
     const store = new SessionStore();
     const session = store.create(sessionInit());

@@ -59,7 +59,11 @@ import {
   RPG_COMPACT_EVENT_VERSION,
   type RpgCompactEvent,
 } from "./compact_rpg_event.js";
-import { compactRpgObservation, type RpgCompactObservation } from "./compact_rpg_observation.js";
+import {
+  compactRpgObservation,
+  RPG_COMPACT_OBSERVATION_VERSION,
+  type RpgCompactObservation,
+} from "./compact_rpg_observation.js";
 import type { WorldBinding, WorldManifest } from "../world/schema.js";
 import {
   normalizePackPath,
@@ -492,6 +496,8 @@ const TRANSCRIPT_PROJECTION_COMPACT_TURNS = "compact-turns:v1";
 const TRANSCRIPT_PROJECTION_VISIBLE_EVENTS = "visible-events:v1";
 const TRANSCRIPT_PROJECTION_COMPACT_EVENTS = `compact-events:v${RPG_COMPACT_EVENT_VERSION}`;
 const TRANSCRIPT_SUMMARY_PROJECTION_COMPACT = "compact-summary:v1";
+const OBSERVATION_PROJECTION_COMPACT = `compact-observation:v${RPG_COMPACT_OBSERVATION_VERSION}`;
+const OBSERVATION_PROJECTION_PUBLIC = "public-observation:v1";
 
 type RpgGetStateArgs = {
   session_id: string;
@@ -808,20 +814,41 @@ function publicObservation(
   };
 }
 
+type RpgObservationViewOptions = Pick<ObservationOptions, "hideGraph" | "includeWorldIntro">;
+
+function observationProjectionSuffix(opts: RpgObservationViewOptions, extra: string): string {
+  return `hide:${opts.hideGraph === true ? 1 : 0}:intro:${opts.includeWorldIntro === true ? 1 : 0}:${extra}`;
+}
+
 function rpgViewField<Args extends RpgResponseOptions>(
+  sessions: SessionStore,
+  session: Session,
   obs: RpgObservation,
   args: Args,
+  opts: RpgObservationViewOptions = {},
 ): RpgViewField<Args> {
   if (args.compact_observation === true) {
     return {
-      context: compactRpgObservation(
-        obs,
-        obs.available_actions.map((action) => action.id),
+      context: sessions.observationProjection(
+        session.id,
+        `${OBSERVATION_PROJECTION_COMPACT}:${observationProjectionSuffix(opts, "ids")}`,
+        () =>
+          compactRpgObservation(
+            obs,
+            obs.available_actions.map((action) => action.id),
+          ),
       ),
     } as RpgViewField<Args>;
   }
   return {
-    observation: publicObservation(obs, publicObservationOptions(args)),
+    observation: sessions.observationProjection(
+      session.id,
+      `${OBSERVATION_PROJECTION_PUBLIC}:${observationProjectionSuffix(
+        opts,
+        `compact-actions:${args.compact_actions === true ? 1 : 0}`,
+      )}`,
+      () => publicObservation(obs, publicObservationOptions(args)),
+    ),
   } as RpgViewField<Args>;
 }
 
@@ -983,11 +1010,13 @@ export function createToolApi(opts: { root: string }) {
     return session;
   }
 
-  const openingObsOf = (s: Session): RpgObservation =>
-    sessionObsOf(s, {
-      hideGraph: s.hideGraph ?? false,
-      includeWorldIntro: true,
-    });
+  const openingObservationOptions = (s: Session): RpgObservationViewOptions => ({
+    hideGraph: s.hideGraph ?? false,
+    includeWorldIntro: true,
+  });
+
+  const openingObsOf = (s: Session, opts = openingObservationOptions(s)): RpgObservation =>
+    sessionObsOf(s, opts);
 
   function startRpgSession<Args extends RpgResponseOptions>(
     compiled: CompiledRpgPack,
@@ -1003,9 +1032,10 @@ export function createToolApi(opts: { root: string }) {
         ? { generatedRpgSeed: source.generatedRpgSeed }
         : {}),
     });
+    const openingOpts = openingObservationOptions(session);
     return {
       session_id: session.id,
-      ...rpgViewField(openingObsOf(session), args),
+      ...rpgViewField(sessions, session, openingObsOf(session, openingOpts), args, openingOpts),
       ...rpgSourceFields(session),
       state_hash: session.stateHash,
     } as RpgSessionPayload<Args>;
@@ -1678,11 +1708,12 @@ export function createToolApi(opts: { root: string }) {
           unchanged: true,
         } as RpgObservationResponse<Args>;
       }
-      const obs = sessionObsOf(s, {
+      const obsOpts = {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
-      });
+      };
+      const obs = sessionObsOf(s, obsOpts);
       return {
-        ...rpgViewField(obs, args),
+        ...rpgViewField(sessions, s, obs, args, obsOpts),
         state_hash: stateHash,
       } as RpgObservationResponse<Args>;
     },
@@ -1723,9 +1754,10 @@ export function createToolApi(opts: { root: string }) {
       const beforeSceneId = s.state.current;
       const beforeTitle = rpgRoomTitle(s.index, s.state);
       if (actionOption === null) {
-        const before = sessionObsOf(s, {
+        const beforeObsOpts = {
           hideGraph: args.hide_graph ?? s.hideGraph ?? false,
-        });
+        };
+        const before = sessionObsOf(s, beforeObsOpts);
         // Unknown action ids never reach the engine.
         return {
           ok: false,
@@ -1735,15 +1767,16 @@ export function createToolApi(opts: { root: string }) {
             args,
           ),
           ...rpgStepEventVersion(args),
-          ...rpgViewField(before, args),
+          ...rpgViewField(sessions, s, before, args, beforeObsOpts),
           state_hash: currentStateHash,
         } as RpgStepActionResponse<Args>;
       }
       const result = makeStep(s.rules)(s.state, actionOption.action);
       sessions.update(s.id, result.state);
-      const after = sessionObsOf(s, {
+      const afterObsOpts = {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
-      });
+      };
+      const after = sessionObsOf(s, afterObsOpts);
       sessions.appendTranscript(s.id, {
         step: beforeStep,
         scene_id: beforeSceneId,
@@ -1761,7 +1794,7 @@ export function createToolApi(opts: { root: string }) {
           rejection_reason: result.rejectionReason ?? "Action rejected.",
           events: rpgStepEvents(result.events, args),
           ...rpgStepEventVersion(args),
-          ...rpgViewField(after, args),
+          ...rpgViewField(sessions, s, after, args, afterObsOpts),
           state_hash: s.stateHash,
         } as RpgStepActionResponse<Args>;
       }
@@ -1769,7 +1802,7 @@ export function createToolApi(opts: { root: string }) {
         ok: true,
         events: rpgStepEvents(result.events, args),
         ...rpgStepEventVersion(args),
-        ...rpgViewField(after, args),
+        ...rpgViewField(sessions, s, after, args, afterObsOpts),
         state_hash: s.stateHash,
       } as RpgStepActionResponse<Args>;
     },
@@ -1878,9 +1911,10 @@ export function createToolApi(opts: { root: string }) {
         ...(source.generateRpgSeed !== null ? { generatedRpgSeed: source.generateRpgSeed } : {}),
         ...(args.hide_graph ? { hideGraph: true } : {}),
       });
+      const openingOpts = openingObservationOptions(session);
       return {
         session_id: session.id,
-        ...rpgViewField(openingObsOf(session), args),
+        ...rpgViewField(sessions, session, openingObsOf(session, openingOpts), args, openingOpts),
         ...rpgSourceFields(session),
         state_hash: session.stateHash,
       } as RpgSessionPayload<Args>;

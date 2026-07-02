@@ -1881,6 +1881,23 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(compactObservation.context.actions?.[0]).toEqual(expect.any(String));
     expect("mode" in compactObservation.context).toBe(false);
 
+    const repeatedCompactObservation = a.get_observation({
+      session_id: fullStart.session_id,
+      hide_graph: true,
+      compact_observation: true,
+    });
+    expect(repeatedCompactObservation.context).toBe(compactObservation.context);
+
+    const fullObservation = a.get_observation({
+      session_id: fullStart.session_id,
+      hide_graph: true,
+    });
+    const repeatedFullObservation = a.get_observation({
+      session_id: fullStart.session_id,
+      hide_graph: true,
+    });
+    expect(repeatedFullObservation.observation).toBe(fullObservation.observation);
+
     const unchangedObservation = a.get_observation({
       session_id: fullStart.session_id,
       if_state_hash: compactObservation.state_hash,

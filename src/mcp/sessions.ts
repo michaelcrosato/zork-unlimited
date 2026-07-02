@@ -64,6 +64,13 @@ export type Session = {
     includeWorldIntro: boolean;
     observation: RpgObservation;
   };
+  observationProjectionCaches?: Map<
+    string,
+    {
+      stateHash: string;
+      projection: unknown;
+    }
+  >;
   transcript: TranscriptTurn[];
   transcriptLogHash: string;
   transcriptSummaryCache?: {
@@ -98,6 +105,7 @@ export type SessionInit = Omit<
   | "stateHash"
   | "legalActionsCache"
   | "observationCache"
+  | "observationProjectionCaches"
   | "transcriptLogHash"
   | "transcriptSummaryCache"
   | "transcriptSummaryProjectionCaches"
@@ -134,6 +142,7 @@ export class SessionStore {
     session.stateHash = hashState(state);
     delete session.legalActionsCache;
     delete session.observationCache;
+    delete session.observationProjectionCaches;
     delete session.transcriptSummaryCache;
     delete session.transcriptSummaryProjectionCaches;
     return session;
@@ -175,6 +184,22 @@ export class SessionStore {
       observation,
     };
     return observation;
+  }
+
+  observationProjection<T>(id: string, key: string, build: () => T): T {
+    const session = this.get(id);
+    const cache = session.observationProjectionCaches?.get(key);
+    if (cache?.stateHash === session.stateHash) {
+      return cache.projection as T;
+    }
+    const projection = build();
+    const caches = session.observationProjectionCaches ?? new Map();
+    caches.set(key, {
+      stateHash: session.stateHash,
+      projection,
+    });
+    session.observationProjectionCaches = caches;
+    return projection;
   }
 
   transcriptSummary(id: string, build: () => TranscriptSummary): TranscriptSummary {

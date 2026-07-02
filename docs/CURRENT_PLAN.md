@@ -157,6 +157,9 @@ Make discovered overworld quest leads start real RPG sessions.
   options, so repeated observe/render paths reuse visible object, exit, enemy,
   public-state, and action projection work until `sessions.update` invalidates
   the cache.
+- MCP RPG observation projections are cached per session/state hash plus compact,
+  public-action, graph, and intro shape, so repeated observation reads reuse
+  compact contexts or public observation rows until reducer state changes.
 - Public MCP `get_transcript` defaults to compact summary-only output; callers can
   pass `summary_only: false` and `compact_summary: false` when they need full
   route/event history.
