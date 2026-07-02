@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 76 -->
+<!-- historical_cycle_count: 77 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — narrow_new_game_to_generated
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/API surface: `new_game` now starts generated RPG packs only; shipped quests start through `start_world_quest`.
+- Loop effect: world-bound play has one fresh-start contract, and generated-pack smoke play remains a separate null-world path.
+- Evidence: public MCP `new_game` no longer advertises `world_quest_id`; ToolApi rejects `new_game({ world_quest_id })`.
+- Guard: overworld quest bridge, save/load regressions, hide-graph regressions, and catalog play tests now use `start_world_quest`.
+- VERIFY: focused MCP/source/start tests, typecheck, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.
 
 ### Cycle result — retire_start_quest_alias
 
@@ -740,7 +749,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Catalog source of truth: `list_world` is the single public view over the
   Charter Marches quest graph; `list_stories` is retired.
 - Preferred shipped-quest start: use `start_world_quest` / `world_quest_id`;
-  `new_game` rejects raw pack-path starts.
+  `new_game` is generated-pack only and rejects shipped quest ids/raw pack paths.
 - AFK baseline prompt now carries `main_world_quest_id`; blind baseline playtests
   should use `start_world_quest`.
 - Persistence: shipped quest saves reload with embedded/explicit
@@ -786,9 +795,9 @@ history only when deep recovery is truly needed. Keep future entries terse.
   embedded or explicit `world_quest_id`.
 - Quest tools: ToolApi and public MCP `validate_quest`/`load_quest`/`start_world_quest`
   use graph ids only; raw `quest_path`/`pack_path` is rejected.
-- Retired legacy aliases: live MCP uses `validate_quest`, `load_quest`,
-  `new_game`, and `start_world_quest`; legacy story and pack aliases are no
-  longer public sources.
+- Retired legacy aliases: live MCP uses `validate_quest`, `load_quest`, and
+  `start_world_quest` for shipped quests; `new_game` remains generated-pack
+  only.
 - Token economy: RPG start/load responses include compact source identity once;
   follow-up observations omit the repeated world binding.
 - Token economy: compact overworld quest refs are `[id,title]`; pack paths stay
@@ -813,8 +822,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   `worldQuestId` into traces.
 - Save restore source inference now shares the world source resolver with trace
   replay and CLI play.
-- `new_game` source selection is world-id or generated-pack only, keeping
-  generated packs as the explicit null-world source.
+- `new_game` source selection is generated-pack only, keeping shipped starts on
+  `start_world_quest` and generated packs as the explicit null-world source.
 - Generated RPG saves now embed `generatedRpgSeed`, so `load_game({ save })`
   can reconstruct in-memory generated packs without a raw pack path.
 - `load_game` source selection is save-embedded, `world_quest_id`, or

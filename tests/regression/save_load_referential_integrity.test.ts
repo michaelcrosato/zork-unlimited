@@ -18,7 +18,7 @@
  * from finiteness to reference: the checker is credibly sound only if it rejects
  * saves that are known-bad BY CONSTRUCTION, not merely accepts the ones it is fed.
  *
- * Each forged save is built by serializing a VALID save (new_game -> save_game),
+ * Each forged save is built by serializing a VALID save (start_world_quest -> save_game),
  * poisoning ONE referential field, then asserting load_game throws. The GREEN
  * false-rejection guards prove that legitimate RPG saves — including an ended
  * save whose `endingId` names a declared ending — still load byte-identically.
@@ -34,7 +34,7 @@ const api = () => createToolApi({ root: ROOT });
 /** Serialize a fresh valid save, then mutate ONE state field. */
 function forgeSave(poison: (state: Record<string, unknown>) => void): string {
   const a = api();
-  const game = a.new_game({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
+  const game = a.start_world_quest({ quest_id: WORLD_QUEST_ID, seed: 1 });
   const saved = a.save_game({ session_id: game.session_id });
   const bundle = JSON.parse(saved.save) as { state: Record<string, unknown> };
   poison(bundle.state);
@@ -118,7 +118,7 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
 describe("save/load referential integrity — GREEN false-rejection guards", () => {
   it("a clean mid-game RPG save still round-trips byte-identically", () => {
     const a = api();
-    const game = a.new_game({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
+    const game = a.start_world_quest({ quest_id: WORLD_QUEST_ID, seed: 1 });
     stepByCommand(a, game.session_id, "go down");
     const before = a.get_observation({ session_id: game.session_id }).state_hash;
     const saved = a.save_game({ session_id: game.session_id });
@@ -131,7 +131,7 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
     // The inventory gate must never reject a real declared object the player
     // picked up.
     const a = api();
-    const game = a.new_game({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
+    const game = a.start_world_quest({ quest_id: WORLD_QUEST_ID, seed: 1 });
     const sid = game.session_id;
     stepByCommand(a, sid, "go down");
     stepByCommand(a, sid, "take iron bar");
@@ -149,7 +149,7 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
     // At an RPG ending, current remains a declared room while endingId names a
     // declared ending. Both references must pass the pack-aware gate.
     const a = api();
-    const game = a.new_game({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
+    const game = a.start_world_quest({ quest_id: WORLD_QUEST_ID, seed: 1 });
     playSunkenBarrowToVictory(a, game.session_id);
     const ended = a.get_observation({ session_id: game.session_id });
     const saved = a.save_game({ session_id: game.session_id });

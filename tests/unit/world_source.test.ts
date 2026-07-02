@@ -229,32 +229,24 @@ describe("world source resolution", () => {
     expect(() => resolvePackSource(ROOT, {}, "test")).toThrow(/requires world_quest_id/);
   });
 
-  it("resolves new-game sources, including generated in-memory packs", () => {
-    expect(resolveGameSource(ROOT, { world_quest_id: "sunken_barrow" }, "new_game")).toEqual({
-      kind: "pack",
-      packPath: PACK,
-      worldQuestId: "sunken_barrow",
-      generateRpgSeed: null,
-    });
+  it("resolves generated new-game sources only", () => {
     expect(resolveGameSource(ROOT, { generate_rpg_seed: 3 }, "new_game")).toEqual({
       kind: "generated",
       packPath: null,
       worldQuestId: null,
       generateRpgSeed: 3,
     });
-    expect(() => resolveGameSource(ROOT, {}, "new_game")).toThrow(
-      /world_quest_id or generate_rpg_seed/,
-    );
+    expect(() => resolveGameSource(ROOT, {}, "new_game")).toThrow(/requires generate_rpg_seed/);
     expect(() => resolveGameSource(ROOT, { pack_path: PACK } as never, "new_game")).toThrow(
       /not pack_path/,
     );
     expect(() =>
       resolveGameSource(
         ROOT,
-        { world_quest_id: "sunken_barrow", generate_rpg_seed: 3 },
+        { world_quest_id: "sunken_barrow", generate_rpg_seed: 3 } as never,
         "new_game",
       ),
-    ).toThrow(/exactly one/);
+    ).toThrow(/start_world_quest/);
     expect(() => resolveGameSource(ROOT, { generate_rpg_seed: 3.5 } as never, "new_game")).toThrow(
       /must be an integer/,
     );

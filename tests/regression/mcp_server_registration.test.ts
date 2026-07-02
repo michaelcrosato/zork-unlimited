@@ -74,8 +74,8 @@ describe("MCP server registration", () => {
     const worldPath = registeredToolBlock("world_path");
     const loadGame = registeredToolBlock("load_game");
 
-    expect(newGame).toContain("world_quest_id");
     expect(newGame).toContain("generate_rpg_seed");
+    expect(newGame).not.toContain("world_quest_id");
     expect(newGame).not.toContain("pack_path");
     expect(loadGame).toContain("world_quest_id");
     expect(loadGame).toContain("generate_rpg_seed");

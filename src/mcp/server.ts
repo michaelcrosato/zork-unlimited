@@ -368,9 +368,8 @@ tool(
 
 tool(
   "new_game",
-  "Start a playable RPG quest; returns compact context by default.",
+  "Start a generated RPG quest; returns compact context by default.",
   {
-    world_quest_id: z.string().optional().describe("World quest id."),
     generate_rpg_seed: z.number().int().optional().describe("Procedural RPG seed."),
     seed: z.number().int().optional().describe("Deterministic runtime seed (default 1)."),
     ...HIDE_GRAPH,

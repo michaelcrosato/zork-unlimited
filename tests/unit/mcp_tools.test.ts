@@ -225,15 +225,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(followUp.title).toBe(started.observation.title);
     expect(followUp).not.toHaveProperty("world");
 
-    const viaNewGame = a.new_game({ world_quest_id: "breaking_weir", seed: 1 });
     const viaWorldQuest = a.start_world_quest({ quest_id: "breaking_weir", seed: 1 });
-    expect(viaNewGame.mode).toBe("rpg");
-    expect("pack_path" in viaNewGame).toBe(false);
-    expect(viaNewGame.world_quest_id).toBe("breaking_weir");
     expect("pack_path" in viaWorldQuest).toBe(false);
     expect(viaWorldQuest.world_quest_id).toBe("breaking_weir");
-    expect(viaNewGame.observation.title).toBe(viaWorldQuest.observation.title);
-    expect(viaNewGame.state_hash).toBe(viaWorldQuest.state_hash);
+    expect(() => a.new_game({ world_quest_id: "breaking_weir" } as never)).toThrow(
+      /start_world_quest/,
+    );
     expect(() => a.start_world_quest({ quest_id: "missing_quest" })).toThrow(
       /Unknown Charter Marches quest/,
     );
@@ -1121,9 +1118,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
 });
 
 describe("MCP tools — the play loop (§9.1)", () => {
-  it("new_game can play and transcript a shipped world quest", () => {
+  it("start_world_quest can play and transcript a shipped world quest", () => {
     const a = api();
-    const game = a.new_game({ world_quest_id: "sunken_barrow", seed: 1 });
+    const game = a.start_world_quest({ quest_id: "sunken_barrow", seed: 1 });
     expect(game.mode).toBe("rpg");
     expect("pack_path" in game).toBe(false);
     expect(game.world_quest_id).toBe("sunken_barrow");
@@ -1185,7 +1182,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
 
   it("can cap transcript summaries for token-light end-of-run audits", () => {
     const a = api();
-    const game = a.new_game({ world_quest_id: "sunken_barrow", seed: 1 });
+    const game = a.start_world_quest({ quest_id: "sunken_barrow", seed: 1 });
     const session = a.sessions.get(game.session_id);
     session.transcript = Array.from({ length: 20 }, (_, i) => ({
       step: i,
@@ -1266,7 +1263,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
 
   it("an agent can play a whole game via observe → choose → step", () => {
     const a = api();
-    const game = a.new_game({ world_quest_id: "sunken_barrow", seed: 1 });
+    const game = a.start_world_quest({ quest_id: "sunken_barrow", seed: 1 });
     expect(game.session_id).toBe("sess_1");
     expect(game.mode).toBe("rpg");
     expect(game.observation.available_actions.map((x) => x.id)).toContain("go_down");
@@ -1279,7 +1276,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
 
   it("keeps reducer action payloads out of MCP-facing action menus", () => {
     const a = api();
-    const game = a.new_game({ world_quest_id: "sunken_barrow", seed: 1 });
+    const game = a.start_world_quest({ quest_id: "sunken_barrow", seed: 1 });
     const assertPublicAction = (action: unknown): void => {
       expect(action).toMatchObject({ id: expect.any(String), command: expect.any(String) });
       expect(action).not.toHaveProperty("action");
@@ -1291,12 +1288,6 @@ describe("MCP tools — the play loop (§9.1)", () => {
     };
 
     assertPublicAction(game.observation.available_actions[0]);
-    const compactNewGame = a.new_game({
-      world_quest_id: "sunken_barrow",
-      seed: 1,
-      compact_actions: true,
-    });
-    assertCompactAction(compactNewGame.observation.available_actions[0]);
     const compactWorldQuest = a.start_world_quest({
       quest_id: "sunken_barrow",
       seed: 1,
@@ -1384,14 +1375,14 @@ describe("MCP tools — the play loop (§9.1)", () => {
 
   it("returns compact RPG context for repeated MCP loop turns", () => {
     const a = api();
-    const fullStart = a.new_game({
-      world_quest_id: "sunken_barrow",
+    const fullStart = a.start_world_quest({
+      quest_id: "sunken_barrow",
       seed: 1,
       hide_graph: true,
       compact_actions: true,
     });
-    const compactStart = a.new_game({
-      world_quest_id: "sunken_barrow",
+    const compactStart = a.start_world_quest({
+      quest_id: "sunken_barrow",
       seed: 1,
       hide_graph: true,
       compact_observation: true,
@@ -1494,7 +1485,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
 
   it("step_action rejects an illegal action without changing state", () => {
     const a = api();
-    const game = a.new_game({ world_quest_id: "sunken_barrow" });
+    const game = a.start_world_quest({ quest_id: "sunken_barrow" });
     const before = a.get_observation({ session_id: game.session_id }).state_hash;
     const r = a.step_action({ session_id: game.session_id, action_id: "not_a_real_choice" });
     expect(r.ok).toBe(false);
@@ -1504,8 +1495,8 @@ describe("MCP tools — the play loop (§9.1)", () => {
 
   it("step_action rejects stale expected_state_hash before mutating state", () => {
     const a = api();
-    const game = a.new_game({
-      world_quest_id: "sunken_barrow",
+    const game = a.start_world_quest({
+      quest_id: "sunken_barrow",
       seed: 1,
       compact_observation: true,
     });
@@ -1552,7 +1543,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
 describe("MCP tools — save / load round-trip (§8.7)", () => {
   it("a saved game reloads to the identical state hash", () => {
     const a = api();
-    const game = a.new_game({ world_quest_id: "sunken_barrow", seed: 1 });
+    const game = a.start_world_quest({ quest_id: "sunken_barrow", seed: 1 });
     stepByCommand(a, game.session_id, "go down");
     const after = a.get_observation({ session_id: game.session_id }).state_hash;
 

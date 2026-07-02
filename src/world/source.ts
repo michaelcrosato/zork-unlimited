@@ -40,7 +40,6 @@ export type SaveSourceArgs = {
 };
 
 export type GameSourceArgs = {
-  world_quest_id?: string;
   generate_rpg_seed?: number;
   pack_path?: never;
 };
@@ -68,6 +67,8 @@ export type GamePackSource =
       worldQuestId: null;
       generateRpgSeed: number;
     };
+
+export type GeneratedGameSource = Extract<GamePackSource, { kind: "generated" }>;
 
 const worldManifestCache = new Map<string, WorldManifest>();
 const overworldManifestCache = new Map<string, OverworldManifest>();
@@ -300,38 +301,25 @@ export function resolvePackSource(
 }
 
 export function resolveGameSource(
-  root: string,
+  _root: string,
   args: GameSourceArgs,
   operation: string,
-): GamePackSource {
+): GeneratedGameSource {
   if ((args as { pack_path?: unknown }).pack_path !== undefined) {
-    throw new Error(`${operation} accepts world_quest_id or generate_rpg_seed, not pack_path.`);
+    throw new Error(`${operation} accepts generate_rpg_seed, not pack_path.`);
   }
-  const sourceCount = [
-    args.world_quest_id !== undefined,
-    args.generate_rpg_seed !== undefined,
-  ].filter(Boolean).length;
-  if (sourceCount === 0) {
-    throw new Error(`${operation} requires world_quest_id or generate_rpg_seed.`);
+  if ((args as { world_quest_id?: unknown }).world_quest_id !== undefined) {
+    throw new Error(`${operation} starts generated RPG packs only; use start_world_quest.`);
   }
-  if (sourceCount > 1) {
-    throw new Error(`${operation} accepts exactly one of world_quest_id or generate_rpg_seed.`);
+  if (args.generate_rpg_seed === undefined) {
+    throw new Error(`${operation} requires generate_rpg_seed.`);
   }
-  if (args.generate_rpg_seed !== undefined) {
-    assertGenerateRpgSeed(args.generate_rpg_seed, operation);
-    return {
-      kind: "generated",
-      packPath: null,
-      worldQuestId: null,
-      generateRpgSeed: args.generate_rpg_seed,
-    };
-  }
-  const resolved = resolveWorldQuestPackPath(root, args.world_quest_id!);
+  assertGenerateRpgSeed(args.generate_rpg_seed, operation);
   return {
-    kind: "pack",
-    packPath: resolved.packPath,
-    worldQuestId: resolved.node.id,
-    generateRpgSeed: null,
+    kind: "generated",
+    packPath: null,
+    worldQuestId: null,
+    generateRpgSeed: args.generate_rpg_seed,
   };
 }
 

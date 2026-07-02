@@ -33,8 +33,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - `list_world` is now the only public quest catalog over the Charter Marches
   quest graph; the legacy `list_stories` compatibility catalog is retired.
 - Shipped quests can now start by Charter Marches graph id through
-  `start_world_quest` or `new_game({ world_quest_id })`; `new_game` rejects raw
-  `pack_path` starts.
+  `start_world_quest`; `new_game` is generated-pack only and rejects
+  `world_quest_id` / raw `pack_path` starts.
 - Shipped quest saves can now restore through embedded or explicit
   `world_quest_id`; `load_game` rejects raw `pack_path`.
 - Shipped quest traces can replay/inspect through `world_quest_id`, so verification
@@ -74,8 +74,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - `validate_quest` now accepts only `quest_id` / `world_quest_id` in ToolApi and
   public MCP; raw `quest_path` is rejected.
 - Retired legacy story and pack-named aliases from the live MCP surface; use
-  `validate_quest`, `load_quest`, `new_game`, and `start_world_quest` for
-  current RPG play.
+  `validate_quest`, `load_quest`, and `start_world_quest` for shipped RPG play.
+  `new_game` remains only for generated-pack smoke play.
 - RPG start/load responses now carry one-time world context; follow-up
   observations omit that repeated binding to lower per-turn MCP payload.
 - Repeated observe/step calls can carry action ids without repeated command
@@ -147,8 +147,9 @@ Make discovered overworld quest leads start real RPG sessions.
   `worldQuestId`, so local traces replay without raw pack paths.
 - Save restore source inference now shares the same world source resolver as
   trace replay and CLI play.
-- `new_game` source selection is now world-id or generated-pack only, keeping
-  generated packs as the explicit null-world source.
+- `new_game` source selection is now generated-pack only, keeping shipped quest
+  starts on `start_world_quest` and generated packs as the explicit null-world
+  source.
 - Generated RPG saves now embed `generatedRpgSeed`, letting `load_game({ save })`
   reconstruct in-memory generated packs without a raw pack path.
 - `load_game` source selection is save-embedded, `world_quest_id`, or

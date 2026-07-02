@@ -27,7 +27,7 @@
  *       safe, as narration/observation are not part of the state hash);
  *   (5) NON-RPG REJECTION: non-RPG pack shapes no longer start
  *       through MCP play tools;
- *   (6) the `new_game` world-id start honors the flag too.
+ *   (6) the `start_world_quest` world-id start honors the flag too.
  */
 import { describe, it, expect } from "vitest";
 import { createToolApi } from "../../src/mcp/tools.js";
@@ -51,7 +51,7 @@ function exitsOf(obs: unknown): { direction: string; to?: string }[] {
 describe("bug_0137 — hide_graph difficulty: exits hide their destination", () => {
   for (const quest of RPG_QUESTS) {
     it(`${quest.label}: DEFAULT exits carry a string destination (full graph, legacy)`, () => {
-      const g = api().new_game({ world_quest_id: quest.world_quest_id });
+      const g = api().start_world_quest({ quest_id: quest.world_quest_id });
       const exits = exitsOf(g.observation);
       expect(exits.length).toBeGreaterThan(0);
       for (const e of exits) {
@@ -62,9 +62,9 @@ describe("bug_0137 — hide_graph difficulty: exits hide their destination", () 
 
     it(`${quest.label}: HIDDEN drops every exit's destination but keeps the same directions`, () => {
       const a = api();
-      const open = exitsOf(a.new_game({ world_quest_id: quest.world_quest_id }).observation);
+      const open = exitsOf(a.start_world_quest({ quest_id: quest.world_quest_id }).observation);
       const hidden = exitsOf(
-        a.new_game({ world_quest_id: quest.world_quest_id, hide_graph: true }).observation,
+        a.start_world_quest({ quest_id: quest.world_quest_id, hide_graph: true }).observation,
       );
       // Same exits exist (you still see you CAN go each direction)…
       expect(hidden.map((e) => e.direction)).toEqual(open.map((e) => e.direction));
@@ -76,14 +76,14 @@ describe("bug_0137 — hide_graph difficulty: exits hide their destination", () 
 
     it(`${quest.label}: hide_graph is observation-only — the state_hash is identical`, () => {
       const a = api();
-      const open = a.new_game({ world_quest_id: quest.world_quest_id });
-      const hidden = a.new_game({ world_quest_id: quest.world_quest_id, hide_graph: true });
+      const open = a.start_world_quest({ quest_id: quest.world_quest_id });
+      const hidden = a.start_world_quest({ quest_id: quest.world_quest_id, hide_graph: true });
       expect(hidden.state_hash).toBe(open.state_hash);
     });
 
     it(`${quest.label}: still playable under hide_graph — a MOVE relocates the player`, () => {
       const a = api();
-      const g = a.new_game({ world_quest_id: quest.world_quest_id, hide_graph: true });
+      const g = a.start_world_quest({ quest_id: quest.world_quest_id, hide_graph: true });
       const before = exitsOf(g.observation);
       const startRoom = (g.observation as { room: string }).room;
       // Take the first available MOVE action (its destination is hidden from us).
@@ -109,12 +109,12 @@ describe("bug_0137 — hide_graph difficulty: exits hide their destination", () 
     );
   });
 
-  it("new_game world-id starts honor hide_graph", () => {
+  it("start_world_quest world-id starts honor hide_graph", () => {
     const a = api();
-    const g = a.new_game({ world_quest_id: "sunken_barrow", hide_graph: true });
+    const g = a.start_world_quest({ quest_id: "sunken_barrow", hide_graph: true });
     for (const e of exitsOf(g.observation)) expect(e.to).toBeUndefined();
     // And without the flag the supported start keeps the full graph.
-    const plain = a.new_game({ world_quest_id: "sunken_barrow" });
+    const plain = a.start_world_quest({ quest_id: "sunken_barrow" });
     expect(exitsOf(plain.observation).some((e) => typeof e.to === "string")).toBe(true);
   });
 });

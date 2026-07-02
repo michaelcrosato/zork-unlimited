@@ -53,7 +53,7 @@ describe("load_quest / validate_quest report RPG mode for world quests", () => {
 describe("RPG pack plays through the structured tool API", () => {
   it("can reach the wight and ATTACK via the legal-action set", () => {
     const a = api();
-    const game = a.new_game({ world_quest_id: RPG_WORLD_QUEST_ID });
+    const game = a.start_world_quest({ quest_id: RPG_WORLD_QUEST_ID });
     expect(game.mode).toBe("rpg");
     expect(game.observation.mode).toBe("rpg");
     if (game.observation.mode !== "rpg") return;

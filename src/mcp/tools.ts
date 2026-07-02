@@ -322,7 +322,6 @@ type RpgStepActionResponse<Args extends RpgResponseOptions> = {
 } & RpgViewField<Args>;
 
 type RpgNewGameArgs = {
-  world_quest_id?: string;
   generate_rpg_seed?: number;
   seed?: number;
   hide_graph?: boolean;
@@ -775,6 +774,30 @@ export function createToolApi(opts: { root: string }) {
       hideGraph: s.hideGraph ?? false,
       includeWorldIntro: true,
     });
+
+  function startRpgSession<Args extends RpgResponseOptions>(
+    compiled: CompiledRpgPack,
+    args: Args & { seed?: number; hide_graph?: boolean },
+    source: { packPath?: string; worldQuestId?: string; generatedRpgSeed?: number | null },
+  ): RpgSessionPayload<Args> {
+    const session = startSession(compiled, undefined, {
+      seed: args.seed ?? 1,
+      ...(args.hide_graph ? { hideGraph: true } : {}),
+      ...(source.packPath ? { packPath: source.packPath } : {}),
+      ...(source.worldQuestId ? { worldQuestId: source.worldQuestId } : {}),
+      ...(source.generatedRpgSeed !== undefined && source.generatedRpgSeed !== null
+        ? { generatedRpgSeed: source.generatedRpgSeed }
+        : {}),
+    });
+    return {
+      session_id: session.id,
+      mode: SAVE_MODE,
+      ...rpgViewField(openingObsOf(session), args),
+      world_quest_id: session.worldQuestId ?? null,
+      generated_rpg_seed: session.generatedRpgSeed ?? null,
+      state_hash: hashState(session.state),
+    } as RpgSessionPayload<Args>;
+  }
 
   function worldQuestPackPaths(world: WorldManifest): string[] {
     return world.graph.nodes
@@ -1319,13 +1342,13 @@ export function createToolApi(opts: { root: string }) {
         ) as OverworldQuestStartResponse<Args>;
       }
       const quest = session.startQuest(args.quest_id);
-      const rpgSession = this.new_game({
-        world_quest_id: quest.id,
+      const rpgSession = this.start_world_quest({
+        quest_id: quest.id,
         ...(args.seed !== undefined ? { seed: args.seed } : {}),
         ...(args.hide_graph ? { hide_graph: true } : {}),
         ...(args.compact_actions ? { compact_actions: true } : {}),
         ...(args.compact_observation ? { compact_observation: true } : {}),
-      } as RpgNewGameArgs & Args);
+      } as RpgStartWorldQuestArgs & Args);
       return {
         ok: true,
         session_id: args.session_id,
@@ -1402,42 +1425,21 @@ export function createToolApi(opts: { root: string }) {
     },
 
     new_game<Args extends RpgNewGameArgs>(args: Args): RpgSessionPayload<Args> {
-      // Either load a world-graph quest or mint a fresh RPG pack in-memory from
-      // `generate_rpg_seed`. The generation seed selects the minted pack's
-      // theme/structure; `seed` still seeds runtime state, so the two are independent.
+      // Mint a fresh RPG pack in-memory from `generate_rpg_seed`. The generation seed selects
+      // the minted pack's theme/structure; `seed` still seeds runtime state.
       const source = resolveGameSource(root, args, "new_game");
-      const compiled =
-        source.kind === "generated"
-          ? requireGeneratedRpgPlayable(source.generateRpgSeed)
-          : requirePlayable(source.packPath);
-      const session = startSession(compiled, undefined, {
-        seed: args.seed ?? 1,
-        ...(args.hide_graph ? { hideGraph: true } : {}),
-        ...(source.packPath ? { packPath: source.packPath } : {}),
-        ...(source.worldQuestId ? { worldQuestId: source.worldQuestId } : {}),
-        ...(source.generateRpgSeed !== null ? { generatedRpgSeed: source.generateRpgSeed } : {}),
-      });
-      return {
-        session_id: session.id,
-        mode: SAVE_MODE,
-        ...rpgViewField(openingObsOf(session), args),
-        world_quest_id: session.worldQuestId ?? null,
-        generated_rpg_seed: session.generatedRpgSeed ?? null,
-        state_hash: hashState(session.state),
-      } as RpgSessionPayload<Args>;
+      const compiled = requireGeneratedRpgPlayable(source.generateRpgSeed);
+      return startRpgSession(compiled, args, { generatedRpgSeed: source.generateRpgSeed });
     },
 
     start_world_quest<Args extends RpgStartWorldQuestArgs>(
       args: Args,
     ): RpgWorldQuestStartPayload<Args> {
       const resolved = resolveWorldQuestPackPath(args.quest_id);
-      const started = this.new_game({
-        world_quest_id: args.quest_id,
-        ...(args.seed !== undefined ? { seed: args.seed } : {}),
-        ...(args.hide_graph ? { hide_graph: true } : {}),
-        ...(args.compact_actions ? { compact_actions: true } : {}),
-        ...(args.compact_observation ? { compact_observation: true } : {}),
-      } as RpgNewGameArgs & Args);
+      const started = startRpgSession(requirePlayable(resolved.packPath), args, {
+        packPath: resolved.packPath,
+        worldQuestId: resolved.node.id,
+      });
       return {
         world: { id: resolved.world.id, name: resolved.world.name, hub: resolved.world.hub },
         quest: {

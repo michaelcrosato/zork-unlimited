@@ -40,7 +40,7 @@ function exitsOf(obs: unknown): { direction: string; to?: string }[] {
 describe("bug_0299 — hide_graph per-call override on observation tools", () => {
   it("(1) override on, session off: get_observation hides exits", () => {
     const a = api();
-    const g = a.new_game({ world_quest_id: WORLD_QUEST_ID }); // session default: hide_graph absent (false)
+    const g = a.start_world_quest({ quest_id: WORLD_QUEST_ID }); // session default: hide_graph absent (false)
     const r = a.get_observation({ session_id: g.session_id, hide_graph: true });
     const exits = exitsOf(r.observation);
     expect(exits.length).toBeGreaterThan(0);
@@ -51,7 +51,7 @@ describe("bug_0299 — hide_graph per-call override on observation tools", () =>
 
   it("(2) override off, session on: get_observation reveals exits", () => {
     const a = api();
-    const g = a.new_game({ world_quest_id: WORLD_QUEST_ID, hide_graph: true }); // session default: hidden
+    const g = a.start_world_quest({ quest_id: WORLD_QUEST_ID, hide_graph: true }); // session default: hidden
     const r = a.get_observation({ session_id: g.session_id, hide_graph: false });
     const exits = exitsOf(r.observation);
     expect(exits.length).toBeGreaterThan(0);
@@ -62,7 +62,7 @@ describe("bug_0299 — hide_graph per-call override on observation tools", () =>
 
   it("(3) override absent, session on: session default preserved (exits hidden)", () => {
     const a = api();
-    const g = a.new_game({ world_quest_id: WORLD_QUEST_ID, hide_graph: true }); // session default: hidden
+    const g = a.start_world_quest({ quest_id: WORLD_QUEST_ID, hide_graph: true }); // session default: hidden
     const r = a.get_observation({ session_id: g.session_id }); // no override
     const exits = exitsOf(r.observation);
     expect(exits.length).toBeGreaterThan(0);
@@ -73,7 +73,7 @@ describe("bug_0299 — hide_graph per-call override on observation tools", () =>
 
   it("(4) step_action per-call: override affects returned observation but does NOT mutate session", () => {
     const a = api();
-    const g = a.new_game({ world_quest_id: WORLD_QUEST_ID }); // session default: show graph
+    const g = a.start_world_quest({ quest_id: WORLD_QUEST_ID }); // session default: show graph
     // step_action with per-call hide_graph: true — returned observation should hide exits
     const moveAction = g.observation.available_actions.find(
       (act) => act.id.startsWith("go_") || (act.command ?? "").startsWith("go "),
@@ -98,7 +98,7 @@ describe("bug_0299 — hide_graph per-call override on observation tools", () =>
 
   it("(5) list_legal_actions per-call: call succeeds and returns same action ids", () => {
     const a = api();
-    const g = a.new_game({ world_quest_id: WORLD_QUEST_ID }); // session default: show graph
+    const g = a.start_world_quest({ quest_id: WORLD_QUEST_ID }); // session default: show graph
     const withoutFlag = a.list_legal_actions({ session_id: g.session_id });
     const withFlag = a.list_legal_actions({ session_id: g.session_id, hide_graph: true });
     // Both calls should return the same action ids
@@ -110,7 +110,7 @@ describe("bug_0299 — hide_graph per-call override on observation tools", () =>
 
   it("(6) non-vacuity: in override-off / session-on case exits genuinely carry destinations", () => {
     const a = api();
-    const g = a.new_game({ world_quest_id: WORLD_QUEST_ID, hide_graph: true }); // session: hidden
+    const g = a.start_world_quest({ quest_id: WORLD_QUEST_ID, hide_graph: true }); // session: hidden
     const r = a.get_observation({ session_id: g.session_id, hide_graph: false }); // override: show
     const exits = exitsOf(r.observation);
     // At least one exit must carry a string `to` — guards against vacuous pass with empty exits

@@ -42,7 +42,7 @@ const api = () => createToolApi({ root: ROOT });
 describe("MCP step_action / get_transcript hide internal __-prefixed events (bug_0260)", () => {
   it("a combat round writes __enemy_hp internally but never surfaces it as an event", () => {
     const a = api();
-    const game = a.new_game({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
+    const game = a.start_world_quest({ quest_id: WORLD_QUEST_ID, seed: 1 });
     const sid = game.session_id;
     const byCmd = (needle: string): string | undefined =>
       (a.list_legal_actions({ session_id: sid }).actions as LegalAction[]).find((x) =>
@@ -87,7 +87,7 @@ describe("MCP step_action / get_transcript hide internal __-prefixed events (bug
 
   it("a dialogue topic writes __dlg internally but never surfaces it as an event", () => {
     const a = api();
-    const game = a.new_game({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
+    const game = a.start_world_quest({ quest_id: WORLD_QUEST_ID, seed: 1 });
     const sid = game.session_id;
     const byCmd = (needle: string): string | undefined =>
       (a.list_legal_actions({ session_id: sid }).actions as LegalAction[]).find((x) =>
