@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 189 -->
+<!-- historical_cycle_count: 190 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_rpg_event_tags
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact RPG step events now use `event_v: 2` single-character tuple tags.
+- Loop effect: repeated `step_action` turns keep reducer-visible event semantics while paying fewer bytes per event type tag.
+- Guard: focused MCP event tests, typecheck, lint, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_rpg_score_vars
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/token surface: stale save/export/overworld checkpoint rejections no longer echo `session_id` or duplicate rejection events.
 - Loop effect: guarded checkpoint retries keep only `ok`, current hash, rejection reason, and current context where recovery needs it.
 - Guard: focused MCP checkpoint tests, typecheck, and format check passed before full gates.
-- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_inspect_trace_pack_id
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: public `inspect_trace()` summaries no longer echo `pack_id`.
-- Loop effect: trace audits use `world_quest_id` plus content/hash metadata while raw trace files retain internal pack identity for replay integrity.
-- Guard: focused trace/MCP tests, typecheck, and format check passed before full gates.
 - VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.

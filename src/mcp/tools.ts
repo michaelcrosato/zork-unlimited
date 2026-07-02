@@ -313,18 +313,18 @@ type RpgLegalActionsResponse<Args extends RpgLegalActionsArgs> = Args extends {
   : RpgLegalActionsPayload;
 
 type RpgCompactEvent =
-  | readonly ["reject", reason: string]
-  | readonly ["say", text: string]
-  | readonly ["state", effect: string, key: string | null, value?: unknown]
-  | readonly ["unlock", from: string, to: string]
-  | readonly ["open", id: string]
-  | readonly ["move", from: string, to: string]
-  | readonly ["take", item: string]
-  | readonly ["drop", item: string]
-  | readonly ["talk", npc: string, node: string]
-  | readonly ["end", endingId: string];
+  | readonly ["r", reason: string]
+  | readonly ["n", text: string]
+  | readonly ["s", effect: string, key: string | null, value?: unknown]
+  | readonly ["u", from: string, to: string]
+  | readonly ["o", id: string]
+  | readonly ["m", from: string, to: string]
+  | readonly ["t", item: string]
+  | readonly ["d", item: string]
+  | readonly ["q", npc: string, node: string]
+  | readonly ["e", endingId: string];
 
-const RPG_COMPACT_EVENT_VERSION = 1 as const;
+const RPG_COMPACT_EVENT_VERSION = 2 as const;
 
 type RpgStepEvents<Args extends RpgResponseOptions> = Args extends { compact_events: true }
   ? RpgCompactEvent[]
@@ -645,9 +645,9 @@ function playerVisibleEvents(events: GameEvent[]): GameEvent[] {
 function compactPlayerEvent(event: GameEvent): RpgCompactEvent {
   switch (event.type) {
     case "rejected":
-      return ["reject", event.reason];
+      return ["r", event.reason];
     case "narration":
-      return ["say", event.text];
+      return ["n", event.text];
     case "state_change": {
       const key =
         typeof event.flag === "string"
@@ -667,24 +667,22 @@ function compactPlayerEvent(event: GameEvent): RpgCompactEvent {
             : event.to !== undefined
               ? event.to
               : event.amount;
-      return value !== undefined
-        ? ["state", event.effect, key, value]
-        : ["state", event.effect, key];
+      return value !== undefined ? ["s", event.effect, key, value] : ["s", event.effect, key];
     }
     case "unlock_exit":
-      return ["unlock", event.from, event.to];
+      return ["u", event.from, event.to];
     case "open_object":
-      return ["open", event.id];
+      return ["o", event.id];
     case "move":
-      return ["move", event.from, event.to];
+      return ["m", event.from, event.to];
     case "take":
-      return ["take", event.item];
+      return ["t", event.item];
     case "drop":
-      return ["drop", event.item];
+      return ["d", event.item];
     case "dialogue":
-      return ["talk", event.npc, event.node];
+      return ["q", event.npc, event.node];
     case "ending":
-      return ["end", event.endingId];
+      return ["e", event.endingId];
   }
 }
 
