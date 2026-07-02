@@ -401,7 +401,7 @@ describe("OverworldSession", () => {
     expect(compact.ids.discovered_towns).toHaveLength(16);
     expect(compact.id_counts[0]).toBe(view.discovered.length);
     expect(compact.ids_truncated).toContain("discovered_towns");
-    expect(compact.id_counts[8]).toBe(view.resolvedEventIds.length);
+    expect(compact.id_counts[10]).toBe(view.resolvedEventIds.length);
     expect(compact.ids_truncated).not.toContain("resolved_events");
   });
 
@@ -570,6 +570,13 @@ describe("OverworldSession", () => {
     expect("pack" in discoveredQuest).toBe(false);
     expect(session.view().currentArea?.id).not.toBe(discoveredQuest.area);
     expect(() => session.startQuest(discoveredQuest.id)).toThrow(/Move to/i);
+    expect(() =>
+      session.completeQuest(discoveredQuest.id, {
+        endingId: "ending_victory",
+        endingTitle: "Victory",
+        death: false,
+      }),
+    ).toThrow(/Start that local quest/i);
 
     const routeToQuestArea = session
       .view()
@@ -590,6 +597,41 @@ describe("OverworldSession", () => {
       kind: "quest",
     });
     expect(() => session.startQuest(discoveredQuest.id)).toThrow(/already been started/i);
+    expect(() =>
+      session.completeQuest(discoveredQuest.id, {
+        endingId: "ending_fallen",
+        endingTitle: "Fallen",
+        death: true,
+      }),
+    ).toThrow(/death ending/i);
+
+    const completedQuest = session.completeQuest(discoveredQuest.id, {
+      endingId: "ending_victory",
+      endingTitle: "Victory",
+      death: false,
+    });
+    expect(completedQuest).toMatchObject({
+      alreadyKnown: false,
+      endingId: "ending_victory",
+      quest: { id: discoveredQuest.id },
+    });
+    expect(completedQuest.entry).toMatchObject({
+      id: `quest_done:${discoveredQuest.id}`,
+      kind: "quest_done",
+    });
+    expect(session.view().completedQuestIds).toEqual([discoveredQuest.id]);
+    expect(session.view().journal[0]).toMatchObject({
+      id: `quest_done:${discoveredQuest.id}`,
+      kind: "quest_done",
+    });
+
+    const repeatedCompletion = session.completeQuest(discoveredQuest.id, {
+      endingId: "ending_victory",
+      endingTitle: "Victory",
+      death: false,
+    });
+    expect(repeatedCompletion.alreadyKnown).toBe(true);
+    expect(session.view().completedQuestIds).toEqual([discoveredQuest.id]);
   });
 
   it("reveals exploration leads from the current local area", () => {

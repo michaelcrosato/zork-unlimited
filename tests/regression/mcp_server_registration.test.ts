@@ -161,6 +161,7 @@ describe("MCP server registration", () => {
       "explore_overworld_session_area",
       "move_overworld_session_area",
       "work_overworld_session_job",
+      "complete_overworld_session_quest",
     ]) {
       const block = registeredToolBlock(toolName);
       expect(block).toContain("defaultCompactOverworld(a)");

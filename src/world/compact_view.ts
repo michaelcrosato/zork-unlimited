@@ -81,6 +81,8 @@ export type OverworldCompactIdKey =
   | "discovered_sites"
   | "explored_sites"
   | "discovered_quests"
+  | "started_quests"
+  | "completed_quests"
   | "resolved_events";
 export type OverworldCompactIdMap = Record<OverworldCompactIdKey, string[]>;
 export type OverworldCompactIdCounts = readonly [
@@ -92,6 +94,8 @@ export type OverworldCompactIdCounts = readonly [
   discovered_sites: number,
   explored_sites: number,
   discovered_quests: number,
+  started_quests: number,
+  completed_quests: number,
   resolved_events: number,
 ];
 export type OverworldCompactIdTruncation = OverworldCompactIdKey[];
@@ -199,6 +203,8 @@ function compactIdPayload(values: OverworldCompactIdMap): {
     discovered_sites: compactIdList(values.discovered_sites),
     explored_sites: compactIdList(values.explored_sites),
     discovered_quests: compactIdList(values.discovered_quests),
+    started_quests: compactIdList(values.started_quests),
+    completed_quests: compactIdList(values.completed_quests),
     resolved_events: compactIdList(values.resolved_events),
   };
   const id_counts: OverworldCompactIdCounts = [
@@ -210,6 +216,8 @@ function compactIdPayload(values: OverworldCompactIdMap): {
     values.discovered_sites.length,
     values.explored_sites.length,
     values.discovered_quests.length,
+    values.started_quests.length,
+    values.completed_quests.length,
     values.resolved_events.length,
   ];
   const ids_truncated: OverworldCompactIdTruncation = [];
@@ -225,6 +233,9 @@ function compactIdPayload(values: OverworldCompactIdMap): {
   if (values.explored_sites.length > COMPACT_ID_LIST_LIMIT) ids_truncated.push("explored_sites");
   if (values.discovered_quests.length > COMPACT_ID_LIST_LIMIT)
     ids_truncated.push("discovered_quests");
+  if (values.started_quests.length > COMPACT_ID_LIST_LIMIT) ids_truncated.push("started_quests");
+  if (values.completed_quests.length > COMPACT_ID_LIST_LIMIT)
+    ids_truncated.push("completed_quests");
   if (values.resolved_events.length > COMPACT_ID_LIST_LIMIT) ids_truncated.push("resolved_events");
   return { ids, id_counts, ids_truncated };
 }
@@ -241,6 +252,8 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     discovered_sites: view.discoveredSiteIds,
     explored_sites: view.exploredSiteIds,
     discovered_quests: view.discoveredQuestIds,
+    started_quests: view.startedQuestIds,
+    completed_quests: view.completedQuestIds,
     resolved_events: view.resolvedEventIds,
   });
   const routeByDestination = new Map(

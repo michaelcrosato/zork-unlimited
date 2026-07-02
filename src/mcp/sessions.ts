@@ -32,6 +32,8 @@ export type Session = {
   packPath?: string;
   /** Canonical Charter Marches quest graph node id for shipped quest sessions. */
   worldQuestId?: string;
+  /** Overworld session that launched this RPG quest, when started through the bridge. */
+  overworldSessionId?: string;
   /** Procedural RPG generation seed for in-memory generated sessions. */
   generatedRpgSeed?: number;
   /** The compiled RPG index for this session. */

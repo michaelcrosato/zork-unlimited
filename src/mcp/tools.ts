@@ -66,6 +66,7 @@ import {
   OverworldSession,
   type OverworldActionResult,
   type OverworldAreaTravelResult,
+  type OverworldQuestCompletionResult,
   type OverworldRoadEncounterResult,
   type OverworldRoadEncounterStrategy,
   type OverworldSessionSnapshot,
@@ -1441,6 +1442,7 @@ export function createToolApi(opts: { root: string }) {
         ...(args.compact_actions ? { compact_actions: true } : {}),
         ...(args.compact_observation ? { compact_observation: true } : {}),
       } as RpgStartWorldQuestArgs & Args);
+      sessions.get(rpgSession.session_id).overworldSessionId = args.session_id;
       return {
         ok: true,
         session_id: args.session_id,
@@ -1450,6 +1452,34 @@ export function createToolApi(opts: { root: string }) {
         rpg_session: rpgSession,
         ...overworldViewField(args, session),
       } as OverworldQuestStartResponse<Args>;
+    },
+
+    complete_overworld_session_quest<
+      Args extends { session_id: string; rpg_session_id: string } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"result", OverworldQuestCompletionResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) => {
+        const rpgSession = sessions.get(args.rpg_session_id);
+        if (!rpgSession.worldQuestId) {
+          throw new Error("Only shipped world quest RPG sessions can complete overworld quests.");
+        }
+        if (rpgSession.overworldSessionId !== args.session_id) {
+          throw new Error("RPG quest session was not started from this overworld session.");
+        }
+        if (!rpgSession.state.ended || !rpgSession.state.endingId) {
+          throw new Error("RPG quest session has not ended yet.");
+        }
+        const ending = rpgSession.index.pack.endings.find(
+          (candidate) => candidate.id === rpgSession.state.endingId,
+        );
+        if (!ending) {
+          throw new Error(`RPG quest ended at unknown ending "${rpgSession.state.endingId}".`);
+        }
+        return session.completeQuest(rpgSession.worldQuestId, {
+          endingId: ending.id,
+          endingTitle: ending.title,
+          death: ending.death,
+        });
+      });
     },
 
     move_overworld_session_area<

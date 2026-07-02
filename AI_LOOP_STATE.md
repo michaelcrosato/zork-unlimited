@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 167 -->
+<!-- historical_cycle_count: 168 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_quest_completion_state
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/state surface: ended non-death RPG quest sessions can now mark their overworld quest complete via `completedQuestIds` plus `quest_done:*` journal entries.
+- Loop effect: the overworld/RPG bridge now has a start and completion path, while stale snapshot hashes, generated sessions, unfinished sessions, and death endings are rejected.
+- Guard: focused MCP/overworld/session tests, typecheck, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — overworld_quest_start_state
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: read-only generation/authoring payloads are RPG-only by tool contract and spend fewer tokens on a one-value discriminator.
 - Guard: generated-pack and adapt-story tests assert those non-session payloads omit `mode`.
 - VERIFY: focused generation/authoring tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_patch_proposal_mode
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: structured `apply_content_patch` proposals no longer require `mode: "rpg"`.
-- Loop effect: fixer payloads are world-quest-id scoped and RPG-only by construction, with one less model-facing discriminator.
-- Guard: fixer/MCP tests accept mode-free proposals, reject the retired proposal `mode`, and MCP registration no longer advertises it.
-- VERIFY: focused fixer/MCP tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.

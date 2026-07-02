@@ -44,7 +44,7 @@ import {
   type OverworldLocalActionKind,
 } from "./local_actions.js";
 
-export const OVERWORLD_SESSION_SAVE_VERSION = 4 as const;
+export const OVERWORLD_SESSION_SAVE_VERSION = 5 as const;
 const MAX_SUPPLIES = 8;
 const STARTING_SUPPLIES = 6;
 const MAX_FATIGUE = 100;
@@ -215,6 +215,7 @@ export type OverworldJournalEntry = {
     | "job"
     | "poi"
     | "quest"
+    | "quest_done"
     | "regional_arc"
     | "resolution"
     | "road"
@@ -236,6 +237,7 @@ const OverworldJournalEntrySchema = z
       "job",
       "poi",
       "quest",
+      "quest_done",
       "regional_arc",
       "resolution",
       "road",
@@ -272,6 +274,7 @@ export const OverworldSessionSnapshotSchema = z
     discoveredSiteIds: z.array(z.string().min(1)),
     discoveredQuestIds: z.array(z.string().min(1)),
     startedQuestIds: z.array(z.string().min(1)),
+    completedQuestIds: z.array(z.string().min(1)),
     exploredSiteIds: z.array(z.string().min(1)),
     regionRenown: z.array(z.tuple([z.string().min(1), z.number().int().nonnegative()])),
     completedRegionalArcIds: z.array(z.string().min(1)),
@@ -289,6 +292,15 @@ export type OverworldActionResult = {
   discoveredJobs?: OverworldLocalJob[];
   discoveredSites?: OverworldExplorationSite[];
   discoveredQuests?: OverworldQuestView[];
+};
+
+export type OverworldQuestCompletionResult = {
+  minutes: number;
+  alreadyKnown: boolean;
+  quest: OverworldQuestView;
+  endingId: string;
+  endingTitle: string;
+  entry: OverworldJournalEntry;
 };
 
 export type OverworldServiceResult = {
@@ -386,6 +398,7 @@ export type OverworldView = {
   completedJobIds: string[];
   discoveredQuestIds: string[];
   startedQuestIds: string[];
+  completedQuestIds: string[];
   exploredSiteIds: string[];
   resolvedEventIds: string[];
   regionRenown: Record<string, number>;
@@ -755,6 +768,15 @@ function assertSnapshotJournalSource(
       return;
     case "quest":
       assertKnownJournalSource(entry, "quest:", sources.questIds, "quest", sources.questTownNames);
+      return;
+    case "quest_done":
+      assertKnownJournalSource(
+        entry,
+        "quest_done:",
+        sources.questIds,
+        "quest",
+        sources.questTownNames,
+      );
       return;
     case "regional_arc":
       assertKnownJournalSource(
@@ -1205,6 +1227,12 @@ function assertSnapshotProgressJournalBindings(snapshot: OverworldSessionSnapsho
     journalSourceIdsForKind(snapshot, "quest", "quest:"),
   );
   assertJournalStateBinding(
+    "completed quest id",
+    snapshot.completedQuestIds,
+    "completed quest id",
+    journalSourceIdsForKind(snapshot, "quest_done", "quest_done:"),
+  );
+  assertJournalStateBinding(
     "explored site id",
     snapshot.exploredSiteIds,
     "explored site id",
@@ -1635,6 +1663,7 @@ function assertSnapshotDiscoveryLocality(
     );
   }
   const discoveredQuestIds = new Set(snapshot.discoveredQuestIds);
+  const startedQuestIds = new Set(snapshot.startedQuestIds);
   for (const questId of snapshot.startedQuestIds) {
     const quest = sources.questsById.get(questId);
     if (!quest) continue;
@@ -1644,6 +1673,20 @@ function assertSnapshotDiscoveryLocality(
     assertVisitedTownForDiscovery("started quest", questId, quest.home, sources.visitedTownIds);
     assertDiscoveredAreaForDiscovery(
       "started quest",
+      questId,
+      quest.area,
+      sources.discoveredAreaIds,
+    );
+  }
+  for (const questId of snapshot.completedQuestIds) {
+    const quest = sources.questsById.get(questId);
+    if (!quest) continue;
+    if (!startedQuestIds.has(questId)) {
+      throw new Error(`Overworld session snapshot completed quest "${questId}" is not started.`);
+    }
+    assertVisitedTownForDiscovery("completed quest", questId, quest.home, sources.visitedTownIds);
+    assertDiscoveredAreaForDiscovery(
+      "completed quest",
       questId,
       quest.area,
       sources.discoveredAreaIds,
@@ -2186,6 +2229,7 @@ export class OverworldSession {
   private readonly discoveredSiteIds = new Set<string>();
   private readonly discoveredQuestIds = new Set<string>();
   private readonly startedQuestIds = new Set<string>();
+  private readonly completedQuestIds = new Set<string>();
   private readonly exploredSiteIds = new Set<string>();
   private readonly regionRenown = new Map<string, number>();
   private readonly completedRegionalArcIds = new Set<string>();
@@ -2228,6 +2272,7 @@ export class OverworldSession {
       discoveredSiteIds: sortedStringSet(this.discoveredSiteIds),
       discoveredQuestIds: sortedStringSet(this.discoveredQuestIds),
       startedQuestIds: sortedStringSet(this.startedQuestIds),
+      completedQuestIds: sortedStringSet(this.completedQuestIds),
       exploredSiteIds: sortedStringSet(this.exploredSiteIds),
       regionRenown: sortedNumberMap(this.regionRenown),
       completedRegionalArcIds: sortedStringSet(this.completedRegionalArcIds),
@@ -2334,6 +2379,7 @@ export class OverworldSession {
     assertKnownIds("explored site id", snapshot.exploredSiteIds, siteIds);
     assertKnownIds("discovered quest id", snapshot.discoveredQuestIds, questIds);
     assertKnownIds("started quest id", snapshot.startedQuestIds, questIds);
+    assertKnownIds("completed quest id", snapshot.completedQuestIds, questIds);
     assertKnownIds("resolved event id", snapshot.resolvedEventIds, eventIds);
     assertKnownIds("completed regional arc id", snapshot.completedRegionalArcIds, arcIds);
     assertUniqueTupleKeys("area-map town", snapshot.currentAreaByTown);
@@ -2543,6 +2589,7 @@ export class OverworldSession {
     replaceStringSet(this.discoveredSiteIds, snapshot.discoveredSiteIds);
     replaceStringSet(this.discoveredQuestIds, snapshot.discoveredQuestIds);
     replaceStringSet(this.startedQuestIds, snapshot.startedQuestIds);
+    replaceStringSet(this.completedQuestIds, snapshot.completedQuestIds);
     replaceStringSet(this.exploredSiteIds, snapshot.exploredSiteIds);
     this.regionRenown.clear();
     for (const [region, renown] of snapshot.regionRenown) this.regionRenown.set(region, renown);
@@ -3026,6 +3073,7 @@ export class OverworldSession {
       discoveredSiteIds: [...this.discoveredSiteIds].sort(),
       discoveredQuestIds: [...this.discoveredQuestIds].sort(),
       startedQuestIds: [...this.startedQuestIds].sort(),
+      completedQuestIds: [...this.completedQuestIds].sort(),
       exploredSiteIds: [...this.exploredSiteIds].sort(),
       resolvedEventIds: [...this.resolvedEventIds].sort(),
       regionRenown: Object.fromEntries([...this.regionRenown.entries()].sort()),
@@ -3061,6 +3109,39 @@ export class OverworldSession {
     );
     if (!result.alreadyKnown) this.startedQuestIds.add(quest.id);
     return questView(quest);
+  }
+
+  completeQuest(
+    questId: string,
+    outcome: { endingId: string; endingTitle: string; death: boolean },
+  ): OverworldQuestCompletionResult {
+    const quest = this.world.quests.find((candidate) => candidate.id === questId);
+    if (!quest) throw new Error(`Unknown overworld quest "${questId}".`);
+    if (!this.startedQuestIds.has(quest.id)) {
+      throw new Error("Start that local quest lead before completing it.");
+    }
+    if (outcome.death) {
+      throw new Error("A death ending does not complete the overworld quest.");
+    }
+    const result = this.recordAction(
+      {
+        id: `quest_done:${quest.id}`,
+        kind: "quest_done",
+        town: this.nodes.get(quest.home)?.name ?? quest.home,
+        title: `Completed ${quest.title}`,
+        text: `The quest closed at ${outcome.endingTitle}.`,
+      },
+      0,
+    );
+    if (!result.alreadyKnown) this.completedQuestIds.add(quest.id);
+    return {
+      minutes: result.minutes,
+      alreadyKnown: result.alreadyKnown,
+      quest: questView(quest),
+      endingId: outcome.endingId,
+      endingTitle: outcome.endingTitle,
+      entry: result.entry,
+    };
   }
 
   scoutPoi(poiId: string): OverworldActionResult {

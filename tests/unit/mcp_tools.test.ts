@@ -119,6 +119,74 @@ function travelOverworldSessionTo(
   }
 }
 
+function revealOverworldQuest(a: ReturnType<typeof api>, sessionId: string, questId: string): void {
+  const quest = overworld.quests.find((candidate) => candidate.id === questId);
+  if (!quest) throw new Error(`Unknown overworld quest "${questId}".`);
+
+  for (const roadId of overworldRoadPath(
+    a.get_overworld_session({ session_id: sessionId }).observation.current.id,
+    quest.home,
+  )) {
+    a.travel_overworld_session({ session_id: sessionId, road_id: roadId });
+    let view = a.get_overworld_session({ session_id: sessionId }).observation;
+    if (view.pendingRoadEncounter) {
+      a.resolve_overworld_session_road_encounter({
+        session_id: sessionId,
+        strategy: "press_on",
+      });
+      view = a.get_overworld_session({ session_id: sessionId }).observation;
+    }
+    if (view.supplies <= 2) a.resupply_overworld_session({ session_id: sessionId });
+    if (view.fatigue >= 70) a.rest_overworld_session({ session_id: sessionId });
+  }
+
+  let view = a.get_overworld_session({ session_id: sessionId }).observation;
+  for (let i = 0; i < 8 && !view.discoveredAreaIds.includes(quest.area); i += 1) {
+    if (!view.currentArea) throw new Error(`No current area in ${view.current.id}.`);
+    a.explore_overworld_session_area({ session_id: sessionId, area_id: view.currentArea.id });
+    view = a.get_overworld_session({ session_id: sessionId }).observation;
+  }
+  if (!view.discoveredAreaIds.includes(quest.area)) {
+    throw new Error(`Quest area "${quest.area}" was not discovered.`);
+  }
+
+  for (const routeId of overworldAreaPath(view.currentArea!.id, quest.area)) {
+    a.move_overworld_session_area({ session_id: sessionId, area_route_id: routeId });
+  }
+
+  const revealActions = [
+    () => {
+      const poi = a.get_overworld_session({ session_id: sessionId }).observation.pois[0];
+      if (poi) a.scout_overworld_session_poi({ session_id: sessionId, poi_id: poi.id });
+    },
+    () => {
+      const contact = a.get_overworld_session({ session_id: sessionId }).observation.characters[0];
+      if (contact) {
+        a.talk_overworld_session_contact({
+          session_id: sessionId,
+          character_id: contact.id,
+        });
+      }
+    },
+    () => {
+      const event = a.get_overworld_session({ session_id: sessionId }).observation.events[0];
+      if (event) {
+        a.investigate_overworld_session_event({ session_id: sessionId, event_id: event.id });
+      }
+    },
+  ];
+  for (const action of revealActions) {
+    view = a.get_overworld_session({ session_id: sessionId }).observation;
+    if (view.discoveredQuestIds.includes(quest.id)) return;
+    action();
+  }
+
+  view = a.get_overworld_session({ session_id: sessionId }).observation;
+  if (!view.discoveredQuestIds.includes(quest.id)) {
+    throw new Error(`Quest "${quest.id}" was not discovered.`);
+  }
+}
+
 function resolveCurrentOverworldSessionEvent(
   a: ReturnType<typeof api>,
   sessionId: string,
@@ -455,6 +523,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
         quest_id: discoveredQuest.id,
       }),
     ).toThrow(/already been started/i);
+    expect(() =>
+      a.complete_overworld_session_quest({
+        session_id: started.session_id,
+        rpg_session_id: startedQuest.rpg_session_id,
+      }),
+    ).toThrow(/has not ended/i);
     const afterQuestStart = a.export_overworld_session({
       session_id: started.session_id,
       expected_snapshot_hash: startedQuest.snapshot_hash,
@@ -646,6 +720,103 @@ describe("MCP tools — validate / load (§9.4)", () => {
         road_id: "road_buffalo_city__tonawanda_town",
       }),
     ).toThrow(/not reachable/i);
+  });
+
+  it("syncs ended RPG quest sessions back into overworld progress", () => {
+    const a = api();
+    const started = a.start_overworld();
+    revealOverworldQuest(a, started.session_id, "sunken_barrow");
+
+    const launched = a.start_overworld_session_quest({
+      session_id: started.session_id,
+      quest_id: "sunken_barrow",
+      seed: 1,
+    });
+    const generated = a.new_game({ generate_rpg_seed: 1 });
+    expect(() =>
+      a.complete_overworld_session_quest({
+        session_id: started.session_id,
+        rpg_session_id: generated.session_id,
+      }),
+    ).toThrow(/Only shipped world quest/i);
+    const directWorldQuest = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 1 });
+    expect(() =>
+      a.complete_overworld_session_quest({
+        session_id: started.session_id,
+        rpg_session_id: directWorldQuest.session_id,
+      }),
+    ).toThrow(/not started from this overworld session/i);
+
+    const ended = playSunkenBarrowToVictory(a, launched.rpg_session_id);
+    expect(ended.observation.ended).toBe(true);
+    expect(ended.observation.ending_id).toBe("ending_victory");
+
+    const staleCompletion = a.complete_overworld_session_quest({
+      session_id: started.session_id,
+      rpg_session_id: launched.rpg_session_id,
+      expected_snapshot_hash: started.snapshot_hash,
+    });
+    expect(staleCompletion.ok).toBe(false);
+    if (staleCompletion.ok) throw new Error("expected stale completion rejection");
+    expect(staleCompletion.rejection_reason).toMatch(/Snapshot hash mismatch/i);
+
+    const completed = a.complete_overworld_session_quest({
+      session_id: started.session_id,
+      rpg_session_id: launched.rpg_session_id,
+      expected_snapshot_hash: launched.snapshot_hash,
+    });
+    expect(completed.ok).toBe(true);
+    if (!completed.ok) throw new Error("expected quest completion");
+    expect(completed.result).toMatchObject({
+      alreadyKnown: false,
+      endingId: "ending_victory",
+      quest: { id: "sunken_barrow" },
+    });
+    expect(completed.result.entry).toMatchObject({
+      id: "quest_done:sunken_barrow",
+      kind: "quest_done",
+    });
+    expect(completed.observation.completedQuestIds).toEqual(["sunken_barrow"]);
+    expect(completed.observation.journal[0]).toMatchObject({
+      id: "quest_done:sunken_barrow",
+      kind: "quest_done",
+    });
+    expect(
+      a.get_overworld_session_context({ session_id: started.session_id }).context.ids
+        .completed_quests,
+    ).toEqual(["sunken_barrow"]);
+
+    const repeated = a.complete_overworld_session_quest({
+      session_id: started.session_id,
+      rpg_session_id: launched.rpg_session_id,
+    });
+    expect(repeated.ok).toBe(true);
+    if (!repeated.ok) throw new Error("expected idempotent quest completion");
+    expect(repeated.result.alreadyKnown).toBe(true);
+    expect(repeated.snapshot_hash).toBe(completed.snapshot_hash);
+
+    const exported = a.export_overworld_session({
+      session_id: started.session_id,
+      expected_snapshot_hash: completed.snapshot_hash,
+    });
+    expect(exported.ok).toBe(true);
+    if (!exported.ok) throw new Error("expected completed quest export");
+    expect(exported.snapshot.completedQuestIds).toEqual(["sunken_barrow"]);
+    expect(() =>
+      a.restore_overworld_session({
+        snapshot: { ...exported.snapshot, completedQuestIds: [] },
+      }),
+    ).toThrow(/completed quest id/i);
+    expect(() =>
+      a.restore_overworld_session({
+        snapshot: {
+          ...exported.snapshot,
+          journalEntries: exported.snapshot.journalEntries.filter(
+            (entry) => entry.id !== "quest_done:sunken_barrow",
+          ),
+        },
+      }),
+    ).toThrow(/completed quest id/i);
   });
 
   it("returns compact stateful overworld context for repeated loop turns", () => {

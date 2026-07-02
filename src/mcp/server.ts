@@ -345,6 +345,16 @@ tool(
   },
   (a) => api.start_overworld_session_quest(defaultCompactOverworldAndRpg(a)),
 );
+tool(
+  "complete_overworld_session_quest",
+  "Sync an ended RPG quest session into overworld progress.",
+  {
+    session_id: z.string().describe("Session id returned by start_overworld."),
+    rpg_session_id: z.string().describe("Ended RPG session id returned by quest start."),
+    ...OVERWORLD_ACTION_CONTEXT,
+  },
+  (a) => api.complete_overworld_session_quest(defaultCompactOverworld(a)),
+);
 tool("validate_quest", "Validate one shipped RPG quest by id.", WORLD_QUEST_SOURCE, (a) =>
   api.validate_quest(a),
 );
