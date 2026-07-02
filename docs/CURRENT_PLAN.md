@@ -161,6 +161,9 @@ Make discovered overworld quest leads start real RPG sessions.
   manifests per process.
 - MCP pack loading now caches unchanged RPG compile/validate reports within each
   API instance.
+- `list_overworld` now keeps source/design-rule prose behind
+  `include_design_notes`, leaving the default catalog response counts-first and
+  token-small.
 - Overworld pending-road session snapshots now persist only the edge id and
   reconstruct road event/options from the content-bound world manifest.
 - Overworld travel-log session snapshots now persist road ids plus dynamic

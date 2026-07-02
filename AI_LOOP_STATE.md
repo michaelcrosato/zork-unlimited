@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 58 -->
+<!-- historical_cycle_count: 59 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_catalog_notes_opt_in
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent and WSL worktree path noise remains outside the green gate.
+- Token surface: `list_overworld` now returns counts/start metadata by default; verbose source/design-rule notes require `include_design_notes: true`.
+- Loop effect: overworld discovery/catalog calls avoid paying for authoring prose unless an agent is explicitly auditing world design.
+- Evidence: unit coverage pins default `list_overworld` JSON below 1700 chars; measured default is 1055 chars versus 5691 with opt-in notes.
+- VERIFY: focused MCP tools test, `npm run health`, `npm run validate`, and `npm test` passed: integrity, typecheck, lint, format check, 193 test files / 1356 tests, and validate.
+- Self-critique: this reduces catalog payloads, not the full-session observation size; compact overworld context remains the intended repeated-turn path.
 
 ### Cycle result — restore_trace_schema_trimmed
 

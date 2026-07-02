@@ -82,9 +82,11 @@ tool(
 );
 tool(
   "list_overworld",
-  "List the New York State overworld summary: start town, town/road/region/regional-arc counts, character/event/quest counts, sources, and design rules.",
-  {},
-  () => api.list_overworld(),
+  "List overworld counts and the start town; design notes are opt-in.",
+  {
+    include_design_notes: z.boolean().optional().describe("Include sources and design rules."),
+  },
+  (a) => api.list_overworld(a),
 );
 tool(
   "start_overworld",

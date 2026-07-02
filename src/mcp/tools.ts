@@ -136,6 +136,10 @@ type OverworldResponseOptions = {
   compact_context?: boolean;
 };
 
+type OverworldListOptions = {
+  include_design_notes?: boolean;
+};
+
 type RpgResponseOptions = {
   compact_actions?: boolean;
   compact_observation?: boolean;
@@ -155,6 +159,31 @@ type OverworldRestoreResponse<Args extends OverworldResponseOptions> = {
   ok: true;
   session_id: string;
 } & OverworldViewField<Args>;
+
+type OverworldListSummary = {
+  world: Pick<OverworldManifest, "id" | "name" | "start" | "premise">;
+  town_count: number;
+  road_count: number;
+  region_count: number;
+  regional_arc_count: number;
+  area_count: number;
+  area_route_count: number;
+  character_count: number;
+  local_event_count: number;
+  local_job_count: number;
+  road_event_count: number;
+  exploration_site_count: number;
+  quest_count: number;
+  start: OverworldNode;
+};
+
+type OverworldDesignNotes = {
+  sources: OverworldManifest["sources"];
+  design_rules: string[];
+};
+
+type OverworldListResponse<Args extends OverworldListOptions> = OverworldListSummary &
+  (Args extends { include_design_notes: true } ? OverworldDesignNotes : Record<string, never>);
 
 type RpgViewField<Args extends RpgResponseOptions> = Args extends {
   compact_observation: true;
@@ -858,28 +887,13 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    list_overworld(): {
-      world: Pick<OverworldManifest, "id" | "name" | "start" | "premise">;
-      town_count: number;
-      road_count: number;
-      region_count: number;
-      regional_arc_count: number;
-      area_count: number;
-      area_route_count: number;
-      character_count: number;
-      local_event_count: number;
-      local_job_count: number;
-      road_event_count: number;
-      exploration_site_count: number;
-      quest_count: number;
-      start: OverworldNode;
-      sources: OverworldManifest["sources"];
-      design_rules: string[];
-    } {
+    list_overworld<Args extends OverworldListOptions = Record<string, never>>(
+      args?: Args,
+    ): OverworldListResponse<Args> {
       const world = loadOverworldManifest();
       const start = world.nodes.find((node) => node.id === world.start);
       if (!start) throw new Error(`Overworld start node "${world.start}" is missing.`);
-      return {
+      const summary: OverworldListSummary = {
         world: {
           id: world.id,
           name: world.name,
@@ -899,9 +913,15 @@ export function createToolApi(opts: { root: string }) {
         exploration_site_count: world.exploration_sites.length,
         quest_count: world.quests.length,
         start,
-        sources: world.sources,
-        design_rules: world.design_rules,
       };
+      if (args?.include_design_notes === true) {
+        return {
+          ...summary,
+          sources: world.sources,
+          design_rules: world.design_rules,
+        } as unknown as OverworldListResponse<Args>;
+      }
+      return summary as OverworldListResponse<Args>;
     },
 
     start_overworld<Args extends OverworldResponseOptions = Record<string, never>>(

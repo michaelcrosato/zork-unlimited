@@ -246,6 +246,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
   it("lists the New York overworld as a start town plus weighted roads", () => {
     const a = api();
     const r = a.list_overworld();
+    const withDesignNotes = a.list_overworld({ include_design_notes: true });
     const canonicalQuestIds = new Set(a.list_world().quests.map((quest) => quest.graph_node));
     expect(r.world.id).toBe("new_york_overworld");
     expect(r.start.id).toBe("albany_city");
@@ -261,6 +262,11 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.road_event_count).toBe(r.road_count);
     expect(r.exploration_site_count).toBeGreaterThanOrEqual(r.region_count * 3);
     expect(r.quest_count).toBe(11);
+    expect(r).not.toHaveProperty("sources");
+    expect(r).not.toHaveProperty("design_rules");
+    expect(JSON.stringify(r).length).toBeLessThan(1700);
+    expect(withDesignNotes.sources.length).toBeGreaterThan(0);
+    expect(withDesignNotes.design_rules.join(" ")).toContain("not globally selectable");
     expect(overworld.quests.every((quest) => canonicalQuestIds.has(quest.id))).toBe(true);
   });
 
