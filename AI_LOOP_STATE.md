@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 221 -->
+<!-- historical_cycle_count: 222 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — indexed_overworld_snapshot_restore
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: `OverworldSession` now builds snapshot-restore manifest validation indexes once per session.
+- Loop effect: repeated overworld restore/load validation reuses town, area, local action, road, source-name, and regional-arc lookups instead of rebuilding those maps and sets per snapshot.
+- Guard: existing overworld MCP lifecycle and snapshot integrity tests cover the restore assertions that now read from the cached manifest index.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` also passed before the health run.
 
 ### Cycle result — typed_overworld_compact_clones
 

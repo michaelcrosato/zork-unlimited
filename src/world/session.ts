@@ -505,7 +505,11 @@ function assertUnique(label: string, values: readonly string[]): void {
   }
 }
 
-function assertKnownIds(label: string, values: readonly string[], known: Set<string>): void {
+function assertKnownIds(
+  label: string,
+  values: readonly string[],
+  known: ReadonlySet<string>,
+): void {
   assertUnique(label, values);
   for (const value of values) {
     if (!known.has(value))
@@ -599,6 +603,42 @@ type OverworldLocalActionJournalReachabilityIndex = {
   sitesById: ReadonlyMap<string, OverworldExplorationSite>;
   townVisitMinutes: ReadonlyMap<string, number>;
   visitedTownIds: ReadonlySet<string>;
+};
+
+type OverworldSnapshotManifestIndex = {
+  arcIds: ReadonlySet<string>;
+  arcRegionNames: ReadonlyMap<string, string>;
+  areaHomes: ReadonlyMap<string, string>;
+  areaIds: ReadonlySet<string>;
+  areasById: ReadonlyMap<string, OverworldArea>;
+  areaTownNames: ReadonlyMap<string, string>;
+  characterIds: ReadonlySet<string>;
+  charactersById: ReadonlyMap<string, OverworldCharacter>;
+  characterTownNames: ReadonlyMap<string, string>;
+  edgeIds: ReadonlySet<string>;
+  edgesById: ReadonlyMap<string, OverworldEdge>;
+  eventIds: ReadonlySet<string>;
+  eventsById: ReadonlyMap<string, OverworldLocalEvent>;
+  eventTownNames: ReadonlyMap<string, string>;
+  jobIds: ReadonlySet<string>;
+  jobsById: ReadonlyMap<string, OverworldLocalJob>;
+  jobTownNames: ReadonlyMap<string, string>;
+  nodeIds: ReadonlySet<string>;
+  nodesById: ReadonlyMap<string, OverworldNode>;
+  poiIds: ReadonlySet<string>;
+  poisById: ReadonlyMap<string, OverworldPoi>;
+  poiTownNames: ReadonlyMap<string, string>;
+  questIds: ReadonlySet<string>;
+  questsById: ReadonlyMap<string, OverworldQuest>;
+  questTownNames: ReadonlyMap<string, string>;
+  regionalArcs: readonly OverworldRegionalArc[];
+  regionNames: ReadonlySet<string>;
+  roadEventsByEdgeId: ReadonlyMap<string, OverworldRoadEvent>;
+  siteIds: ReadonlySet<string>;
+  sitesById: ReadonlyMap<string, OverworldExplorationSite>;
+  siteTownNames: ReadonlyMap<string, string>;
+  townNameForSource: (nodeId: string) => string;
+  townNames: ReadonlySet<string>;
 };
 
 type OverworldLocalJournalSource = {
@@ -2250,6 +2290,7 @@ export class OverworldSession {
   private readonly sitesByArea: Map<string, OverworldExplorationSite[]>;
   private readonly questsById: Map<string, OverworldQuest>;
   private readonly questsByTown: Map<string, OverworldQuest[]>;
+  private readonly snapshotManifestIndex: OverworldSnapshotManifestIndex;
   private readonly worldHash: string;
   private currentId: string;
   private currentAreaId: string | null = null;
@@ -2348,6 +2389,7 @@ export class OverworldSession {
       (quest) => quest.home,
       (a, b) => a.title.localeCompare(b.title),
     );
+    this.snapshotManifestIndex = this.buildSnapshotManifestIndex();
     this.worldHash = hashState(world);
     this.currentId = world.start;
     this.markSeen(world.start);
@@ -2402,6 +2444,62 @@ export class OverworldSession {
       );
     }
     return index;
+  }
+
+  private buildSnapshotManifestIndex(): OverworldSnapshotManifestIndex {
+    const townNameById = new Map(this.world.nodes.map((node) => [node.id, node.name]));
+    const townNameForSource = (nodeId: string): string => townNameById.get(nodeId) ?? nodeId;
+    const edgesById = new Map(this.world.edges.map((edge) => [edge.id, edge]));
+
+    return {
+      arcIds: new Set(this.world.regional_arcs.map((arc) => arc.id)),
+      arcRegionNames: new Map(this.world.regional_arcs.map((arc) => [arc.id, arc.region])),
+      areaHomes: new Map(this.world.areas.map((area) => [area.id, area.home])),
+      areaIds: new Set(this.world.areas.map((area) => area.id)),
+      areasById: this.areasById,
+      areaTownNames: new Map(
+        this.world.areas.map((area) => [area.id, townNameForSource(area.home)]),
+      ),
+      characterIds: new Set(this.world.characters.map((character) => character.id)),
+      charactersById: new Map(this.world.characters.map((character) => [character.id, character])),
+      characterTownNames: new Map(
+        this.world.characters.map((character) => [character.id, townNameForSource(character.home)]),
+      ),
+      edgeIds: new Set(edgesById.keys()),
+      edgesById,
+      eventIds: new Set(this.world.local_events.map((event) => event.id)),
+      eventsById: this.localEventsById,
+      eventTownNames: new Map(
+        this.world.local_events.map((event) => [event.id, townNameForSource(event.home)]),
+      ),
+      jobIds: new Set(this.world.local_jobs.map((job) => job.id)),
+      jobsById: new Map(this.world.local_jobs.map((job) => [job.id, job])),
+      jobTownNames: new Map(
+        this.world.local_jobs.map((job) => [job.id, townNameForSource(job.home)]),
+      ),
+      nodeIds: new Set(this.world.nodes.map((node) => node.id)),
+      nodesById: this.nodes,
+      poiIds: new Set(this.world.points_of_interest.map((poi) => poi.id)),
+      poisById: new Map(this.world.points_of_interest.map((poi) => [poi.id, poi])),
+      poiTownNames: new Map(
+        this.world.points_of_interest.map((poi) => [poi.id, townNameForSource(poi.home)]),
+      ),
+      questIds: new Set(this.world.quests.map((quest) => quest.id)),
+      questsById: this.questsById,
+      questTownNames: new Map(
+        this.world.quests.map((quest) => [quest.id, townNameForSource(quest.home)]),
+      ),
+      regionalArcs: this.world.regional_arcs,
+      regionNames: new Set(this.world.regions.map((region) => region.name)),
+      roadEventsByEdgeId: this.roadEventsByEdgeId,
+      siteIds: new Set(this.world.exploration_sites.map((site) => site.id)),
+      sitesById: new Map(this.world.exploration_sites.map((site) => [site.id, site])),
+      siteTownNames: new Map(
+        this.world.exploration_sites.map((site) => [site.id, townNameForSource(site.nearest_town)]),
+      ),
+      townNameForSource,
+      townNames: new Set(this.world.nodes.map((node) => node.name)),
+    };
   }
 
   private clearSnapshotCache(): void {
@@ -2471,60 +2569,14 @@ export class OverworldSession {
       throw new Error("Overworld session snapshot was made against a different world manifest.");
     }
 
-    const nodeIds = new Set(this.world.nodes.map((node) => node.id));
-    const areaIds = new Set(this.world.areas.map((area) => area.id));
-    const jobIds = new Set(this.world.local_jobs.map((job) => job.id));
-    const siteIds = new Set(this.world.exploration_sites.map((site) => site.id));
-    const questIds = new Set(this.world.quests.map((quest) => quest.id));
-    const eventIds = new Set(this.world.local_events.map((event) => event.id));
-    const arcIds = new Set(this.world.regional_arcs.map((arc) => arc.id));
-    const poiIds = new Set(this.world.points_of_interest.map((poi) => poi.id));
-    const characterIds = new Set(this.world.characters.map((character) => character.id));
-    const townNameById = new Map(this.world.nodes.map((node) => [node.id, node.name]));
-    const townNameForSource = (nodeId: string) => townNameById.get(nodeId) ?? nodeId;
-    const arcRegionNames = new Map(this.world.regional_arcs.map((arc) => [arc.id, arc.region]));
-    const areaTownNames = new Map(
-      this.world.areas.map((area) => [area.id, townNameForSource(area.home)]),
-    );
-    const characterTownNames = new Map(
-      this.world.characters.map((character) => [character.id, townNameForSource(character.home)]),
-    );
-    const eventTownNames = new Map(
-      this.world.local_events.map((event) => [event.id, townNameForSource(event.home)]),
-    );
-    const jobTownNames = new Map(
-      this.world.local_jobs.map((job) => [job.id, townNameForSource(job.home)]),
-    );
-    const poiTownNames = new Map(
-      this.world.points_of_interest.map((poi) => [poi.id, townNameForSource(poi.home)]),
-    );
-    const siteTownNames = new Map(
-      this.world.exploration_sites.map((site) => [site.id, townNameForSource(site.nearest_town)]),
-    );
-    const questTownNames = new Map(
-      this.world.quests.map((quest) => [quest.id, townNameForSource(quest.home)]),
-    );
-    const areasById = new Map(this.world.areas.map((area) => [area.id, area]));
-    const charactersById = new Map(
-      this.world.characters.map((character) => [character.id, character]),
-    );
-    const jobsById = new Map(this.world.local_jobs.map((job) => [job.id, job]));
-    const poisById = new Map(this.world.points_of_interest.map((poi) => [poi.id, poi]));
-    const sitesById = new Map(this.world.exploration_sites.map((site) => [site.id, site]));
-    const questsById = new Map(this.world.quests.map((quest) => [quest.id, quest]));
-    const eventsById = new Map(this.world.local_events.map((event) => [event.id, event]));
-    const edgesById = new Map(this.world.edges.map((edge) => [edge.id, edge]));
-    const roadEventsByEdgeId = new Map(this.world.road_events.map((event) => [event.edge, event]));
-    const regions = new Set(this.world.regions.map((region) => region.name));
-    const townNames = new Set(this.world.nodes.map((node) => node.name));
-    const areaHomes = new Map(this.world.areas.map((area) => [area.id, area.home]));
+    const indexes = this.snapshotManifestIndex;
     const travelLogArrivals = new Set(
       snapshot.travelLog.map((entry) => `${entry.edgeId}@${entry.arrivedAt}`),
     );
     const travelLogTownByArrival = new Map(
       snapshot.travelLog.map((entry) => [
         `${entry.edgeId}@${entry.arrivedAt}`,
-        townNameForSource(entry.toId),
+        indexes.townNameForSource(entry.toId),
       ]),
     );
     const travelLogByArrival = new Map(
@@ -2532,57 +2584,39 @@ export class OverworldSession {
     );
     let restoredPendingRoadEncounter: OverworldPendingRoadEncounter | null = null;
 
-    if (!nodeIds.has(snapshot.currentId)) {
+    if (!indexes.nodeIds.has(snapshot.currentId)) {
       throw new Error(
         `Overworld session snapshot has unknown current town "${snapshot.currentId}".`,
       );
     }
     if (snapshot.currentAreaId !== null) {
-      if (!areaIds.has(snapshot.currentAreaId)) {
+      if (!indexes.areaIds.has(snapshot.currentAreaId)) {
         throw new Error(
           `Overworld session snapshot has unknown current area "${snapshot.currentAreaId}".`,
         );
       }
-      if (areaHomes.get(snapshot.currentAreaId) !== snapshot.currentId) {
+      if (indexes.areaHomes.get(snapshot.currentAreaId) !== snapshot.currentId) {
         throw new Error("Overworld session snapshot current area is outside the current town.");
       }
     }
 
-    assertKnownIds("discovered town id", snapshot.discoveredIds, nodeIds);
-    assertKnownIds("visited town id", snapshot.visitedIds, nodeIds);
-    assertKnownIds("discovered area id", snapshot.discoveredAreaIds, areaIds);
-    assertKnownIds("visited area id", snapshot.visitedAreaIds, areaIds);
-    assertKnownIds("discovered job id", snapshot.discoveredJobIds, jobIds);
-    assertKnownIds("completed job id", snapshot.completedJobIds, jobIds);
-    assertKnownIds("discovered site id", snapshot.discoveredSiteIds, siteIds);
-    assertKnownIds("explored site id", snapshot.exploredSiteIds, siteIds);
-    assertKnownIds("discovered quest id", snapshot.discoveredQuestIds, questIds);
-    assertKnownIds("started quest id", snapshot.startedQuestIds, questIds);
-    assertKnownIds("completed quest id", snapshot.completedQuestIds, questIds);
-    assertKnownIds("resolved event id", snapshot.resolvedEventIds, eventIds);
-    assertKnownIds("completed regional arc id", snapshot.completedRegionalArcIds, arcIds);
+    assertKnownIds("discovered town id", snapshot.discoveredIds, indexes.nodeIds);
+    assertKnownIds("visited town id", snapshot.visitedIds, indexes.nodeIds);
+    assertKnownIds("discovered area id", snapshot.discoveredAreaIds, indexes.areaIds);
+    assertKnownIds("visited area id", snapshot.visitedAreaIds, indexes.areaIds);
+    assertKnownIds("discovered job id", snapshot.discoveredJobIds, indexes.jobIds);
+    assertKnownIds("completed job id", snapshot.completedJobIds, indexes.jobIds);
+    assertKnownIds("discovered site id", snapshot.discoveredSiteIds, indexes.siteIds);
+    assertKnownIds("explored site id", snapshot.exploredSiteIds, indexes.siteIds);
+    assertKnownIds("discovered quest id", snapshot.discoveredQuestIds, indexes.questIds);
+    assertKnownIds("started quest id", snapshot.startedQuestIds, indexes.questIds);
+    assertKnownIds("completed quest id", snapshot.completedQuestIds, indexes.questIds);
+    assertKnownIds("resolved event id", snapshot.resolvedEventIds, indexes.eventIds);
+    assertKnownIds("completed regional arc id", snapshot.completedRegionalArcIds, indexes.arcIds);
     assertUniqueTupleKeys("area-map town", snapshot.currentAreaByTown);
     assertUniqueTupleKeys("renown region", snapshot.regionRenown);
     assertSnapshotTimeline(snapshot, {
-      arcIds,
-      arcRegionNames,
-      areaIds,
-      areaTownNames,
-      characterIds,
-      characterTownNames,
-      edgeIds: new Set(edgesById.keys()),
-      eventIds,
-      eventTownNames,
-      jobIds,
-      jobTownNames,
-      poiIds,
-      poiTownNames,
-      questIds,
-      questTownNames,
-      regionNames: regions,
-      siteIds,
-      siteTownNames,
-      townNames,
+      ...indexes,
       travelLogArrivals,
       travelLogTownByArrival,
     });
@@ -2627,11 +2661,7 @@ export class OverworldSession {
     );
     assertSnapshotProgressJournalBindings(snapshot);
     assertSnapshotRegionRenown(snapshot, {
-      eventsById,
-      jobsById,
-      nodesById: this.nodes,
-      roadEventsByEdgeId,
-      sitesById,
+      ...indexes,
       travelLogByArrival,
     });
     if (snapshot.currentAreaId !== null && !discoveredAreaIds.has(snapshot.currentAreaId)) {
@@ -2641,13 +2671,13 @@ export class OverworldSession {
     assertSnapshotDiscoveredLocalSourcePrefixes(snapshot, this.world, visitedTownIds);
     assertSnapshotCurrentAreaMapExact(snapshot, this.world, visitedTownIds);
     for (const [townId, areaId] of snapshot.currentAreaByTown) {
-      if (!nodeIds.has(townId)) {
+      if (!indexes.nodeIds.has(townId)) {
         throw new Error(`Overworld session snapshot has unknown area-map town "${townId}".`);
       }
-      if (!areaIds.has(areaId)) {
+      if (!indexes.areaIds.has(areaId)) {
         throw new Error(`Overworld session snapshot has unknown saved area "${areaId}".`);
       }
-      if (areaHomes.get(areaId) !== townId) {
+      if (indexes.areaHomes.get(areaId) !== townId) {
         throw new Error(
           `Overworld session snapshot saved area "${areaId}" is outside "${townId}".`,
         );
@@ -2660,46 +2690,29 @@ export class OverworldSession {
       }
     }
     assertSnapshotDiscoveryLocality(snapshot, {
-      areaHomes,
+      ...indexes,
       discoveredAreaIds,
-      eventsById,
-      jobsById,
-      questsById,
-      sitesById,
       visitedTownIds,
     });
     const localActionJournalSources = {
-      areasById,
-      charactersById,
+      ...indexes,
       discoveredAreaIds,
-      eventsById,
-      jobsById,
-      poisById,
-      questsById,
-      sitesById,
       townVisitMinutes,
       visitedTownIds,
     };
     assertSnapshotLocalActionJournalReachability(snapshot, localActionJournalSources);
     assertSnapshotLocalActionDiscoveryChronology(snapshot, this.world, localActionJournalSources);
-    assertSnapshotEventResolutionProofs(snapshot, {
-      charactersById,
-      eventsById,
-      poisById,
-    });
-    assertSnapshotRegionalArcCompletionProofs(snapshot, {
-      eventsById,
-      regionalArcs: this.world.regional_arcs,
-    });
+    assertSnapshotEventResolutionProofs(snapshot, indexes);
+    assertSnapshotRegionalArcCompletionProofs(snapshot, indexes);
     assertSnapshotDiscoveredLocalSourceCountReplay(snapshot, localActionJournalSources);
     assertSnapshotDiscoveredAreaCountReplay(snapshot, this.world, localActionJournalSources);
     for (const [region] of snapshot.regionRenown) {
-      if (!regions.has(region)) {
+      if (!indexes.regionNames.has(region)) {
         throw new Error(`Overworld session snapshot has unknown renown region "${region}".`);
       }
     }
     if (snapshot.pendingRoadEncounter) {
-      const pendingEdge = edgesById.get(snapshot.pendingRoadEncounter.edgeId);
+      const pendingEdge = indexes.edgesById.get(snapshot.pendingRoadEncounter.edgeId);
       if (!pendingEdge) {
         throw new Error(
           `Overworld session snapshot has unknown pending road "${snapshot.pendingRoadEncounter.edgeId}".`,
@@ -2714,7 +2727,7 @@ export class OverworldSession {
           `Overworld session snapshot has no road event for "${snapshot.pendingRoadEncounter.edgeId}".`,
         );
       }
-      assertSnapshotPendingRoadEncounterBinding(snapshot, new Set(edgesById.keys()));
+      assertSnapshotPendingRoadEncounterBinding(snapshot, indexes.edgeIds);
       assertSnapshotPendingRoadEncounterUnresolved(snapshot);
       const fromId = pendingEdge.from === snapshot.currentId ? pendingEdge.to : pendingEdge.from;
       const from = this.nodes.get(fromId);
@@ -2730,14 +2743,7 @@ export class OverworldSession {
         snapshot.minutes,
       );
     }
-    assertSnapshotResourceReplay(
-      snapshot,
-      {
-        edgesById,
-        roadEventsByEdgeId,
-      },
-      localActionJournalSources,
-    );
+    assertSnapshotResourceReplay(snapshot, indexes, localActionJournalSources);
 
     this.currentId = snapshot.currentId;
     this.currentAreaId = snapshot.currentAreaId;
@@ -2753,7 +2759,7 @@ export class OverworldSession {
     this.travelLog.splice(
       0,
       this.travelLog.length,
-      ...snapshot.travelLog.map((entry) => this.restoreTravelLogEntry(entry, edgesById)),
+      ...snapshot.travelLog.map((entry) => this.restoreTravelLogEntry(entry, indexes.edgesById)),
     );
     this.replaceJournalEntries(cloneJson(snapshot.journalEntries));
     replaceStringSet(this.resolvedEventIds, snapshot.resolvedEventIds);

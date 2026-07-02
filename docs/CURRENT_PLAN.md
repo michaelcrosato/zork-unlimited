@@ -194,6 +194,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Overworld sessions maintain a journal-entry id index across live mutation and
   snapshot restore, so repeat-action checks and event-resolution prerequisites
   avoid scanning long journal histories.
+- Overworld sessions cache snapshot-restore manifest validation indexes at
+  construction, so restore/load validation reuses town, area, local action, road,
+  source-name, and regional-arc lookups instead of rebuilding them per snapshot.
 - Overworld sessions cache compact context payloads until mutation, so repeated
   compact overworld reads reuse route tuples, id payloads, local lists, and
   capped journal/travel slices while preserving clone-isolated returns.
