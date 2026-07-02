@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 207 -->
+<!-- historical_cycle_count: 208 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — cached_transcript_projections
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: `SessionStore` now caches transcript turn projections by shape and `transcriptLogHash`; transcript append/replace clears those projection caches.
+- Loop effect: repeated full/compact transcript reads avoid remapping transcript rows and refiltering/compacting visible events when transcript history is unchanged.
+- Guard: focused MCP session tests prove projection cache reuse across unchanged/state-only updates and invalidation on transcript append/replace.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — cached_transcript_summaries
 

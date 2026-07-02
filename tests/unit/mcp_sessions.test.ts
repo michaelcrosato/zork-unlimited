@@ -299,4 +299,60 @@ describe("SessionStore", () => {
     store.replaceTranscript(session.id, []);
     expect(session.transcriptSummaryCache).toBeUndefined();
   });
+
+  it("caches transcript projections until transcript rows change", () => {
+    const store = new SessionStore();
+    const session = store.create(sessionInit());
+    const firstProjection = [{ step: 0, scene_id: "start" }];
+    const nextProjection = [{ step: 1, scene_id: "next" }];
+    const turn = {
+      step: 1,
+      scene_id: "start",
+      title: "Start",
+      action_id: "look",
+      action_text: "look",
+      events: [],
+      result_scene_id: "start",
+      ended: false,
+      ending_id: null,
+    };
+    let builds = 0;
+
+    const first = store.transcriptProjection(session.id, "compact-turns:v1", () => {
+      builds += 1;
+      return firstProjection;
+    });
+    const cached = store.transcriptProjection(session.id, "compact-turns:v1", () => {
+      builds += 1;
+      return nextProjection;
+    });
+    const otherShape = store.transcriptProjection(session.id, "visible-events:v1", () => {
+      builds += 1;
+      return nextProjection;
+    });
+
+    expect(first).toBe(firstProjection);
+    expect(cached).toBe(firstProjection);
+    expect(otherShape).toBe(nextProjection);
+    expect(builds).toBe(2);
+    expect(session.transcriptProjectionCaches?.get("compact-turns:v1")?.transcriptLogHash).toBe(
+      session.transcriptLogHash,
+    );
+
+    store.update(session.id, state("next"));
+    expect(session.transcriptProjectionCaches).toBeDefined();
+
+    store.appendTranscript(session.id, turn);
+    expect(session.transcriptProjectionCaches).toBeUndefined();
+
+    const afterTranscript = store.transcriptProjection(session.id, "compact-turns:v1", () => {
+      builds += 1;
+      return nextProjection;
+    });
+    expect(afterTranscript).toBe(nextProjection);
+    expect(builds).toBe(3);
+
+    store.replaceTranscript(session.id, []);
+    expect(session.transcriptProjectionCaches).toBeUndefined();
+  });
 });

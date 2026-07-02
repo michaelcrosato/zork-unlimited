@@ -71,6 +71,13 @@ export type Session = {
     transcriptLogHash: string;
     summary: TranscriptSummary;
   };
+  transcriptProjectionCaches?: Map<
+    string,
+    {
+      transcriptLogHash: string;
+      projection: unknown;
+    }
+  >;
   /** Difficulty: when true, the agent-facing observation hides each exit's
    *  destination (`exit.to`) so the spatial graph must be reasoned out, not read
    *  off. Default false — full graph, the legacy behavior. */
@@ -85,6 +92,7 @@ export type SessionInit = Omit<
   | "observationCache"
   | "transcriptLogHash"
   | "transcriptSummaryCache"
+  | "transcriptProjectionCaches"
 >;
 
 type ObservationCacheOptions = Pick<ObservationOptions, "hideGraph" | "includeWorldIntro">;
@@ -176,6 +184,22 @@ export class SessionStore {
     return summary;
   }
 
+  transcriptProjection<T>(id: string, key: string, build: () => T): T {
+    const session = this.get(id);
+    const cache = session.transcriptProjectionCaches?.get(key);
+    if (cache?.transcriptLogHash === session.transcriptLogHash) {
+      return cache.projection as T;
+    }
+    const projection = build();
+    const caches = session.transcriptProjectionCaches ?? new Map();
+    caches.set(key, {
+      transcriptLogHash: session.transcriptLogHash,
+      projection,
+    });
+    session.transcriptProjectionCaches = caches;
+    return projection;
+  }
+
   appendTranscript(id: string, turn: TranscriptTurn): Session {
     const session = this.get(id);
     session.transcript.push(turn);
@@ -184,6 +208,7 @@ export class SessionStore {
       turn,
     });
     delete session.transcriptSummaryCache;
+    delete session.transcriptProjectionCaches;
     return session;
   }
 
@@ -192,6 +217,7 @@ export class SessionStore {
     session.transcript = transcript;
     session.transcriptLogHash = hashState(transcript);
     delete session.transcriptSummaryCache;
+    delete session.transcriptProjectionCaches;
     return session;
   }
 }

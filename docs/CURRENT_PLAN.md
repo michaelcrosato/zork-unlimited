@@ -137,6 +137,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Transcript summaries are cached per session state/transcript hash and
   invalidated on state or transcript mutation, so repeated non-unchanged
   transcript reads do not rescan full transcript history and public state arrays.
+- Transcript turn projections are cached by payload shape and transcript hash, so
+  repeated full/compact transcript audits do not remap every row or refilter
+  internal events until transcript history changes.
 - RPG session state hashes are cached in `SessionStore` and refreshed on
   `sessions.update`, so start/load, observation polling, legal-action polling,
   stale-action guards, transcript polling, and save guards do not repeatedly

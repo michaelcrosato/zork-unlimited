@@ -488,6 +488,10 @@ type TranscriptResponse<Args extends TranscriptArgs> = Args extends { if_state_h
     ? TranscriptPayload<Args> | TranscriptUnchanged
     : TranscriptPayload<Args>;
 
+const TRANSCRIPT_PROJECTION_COMPACT_TURNS = "compact-turns:v1";
+const TRANSCRIPT_PROJECTION_VISIBLE_EVENTS = "visible-events:v1";
+const TRANSCRIPT_PROJECTION_COMPACT_EVENTS = `compact-events:v${RPG_COMPACT_EVENT_VERSION}`;
+
 type RpgGetStateArgs = {
   session_id: string;
   include_state?: boolean;
@@ -684,6 +688,34 @@ function playerVisibleEvents(events: GameEvent[]): GameEvent[] {
     const key = typeof sc.flag === "string" ? sc.flag : typeof sc.name === "string" ? sc.name : "";
     return !key.startsWith("__");
   });
+}
+
+function transcriptTurnsFor<Args extends TranscriptArgs>(
+  sessions: SessionStore,
+  session: Session,
+  args: Args,
+): TranscriptTurnFor<Args>[] {
+  if (args.compact_turns) {
+    return sessions.transcriptProjection(session.id, TRANSCRIPT_PROJECTION_COMPACT_TURNS, () =>
+      session.transcript.map((t) => [t.step, t.scene_id, t.action_id, t.result_scene_id] as const),
+    ) as TranscriptTurnFor<Args>[];
+  }
+
+  if (args.compact_events === true) {
+    return sessions.transcriptProjection(session.id, TRANSCRIPT_PROJECTION_COMPACT_EVENTS, () =>
+      session.transcript.map((t) => ({
+        ...t,
+        events: playerVisibleEvents(t.events).map(compactPlayerEvent),
+      })),
+    ) as TranscriptTurnFor<Args>[];
+  }
+
+  return sessions.transcriptProjection(session.id, TRANSCRIPT_PROJECTION_VISIBLE_EVENTS, () =>
+    session.transcript.map((t) => ({
+      ...t,
+      events: playerVisibleEvents(t.events),
+    })),
+  ) as TranscriptTurnFor<Args>[];
 }
 
 function rpgStepEvents<Args extends RpgResponseOptions>(
@@ -1780,18 +1812,7 @@ export function createToolApi(opts: { root: string }) {
         ...(args.summary_only
           ? {}
           : {
-              turns: args.compact_turns
-                ? s.transcript.map(
-                    (t) => [t.step, t.scene_id, t.action_id, t.result_scene_id] as const,
-                  )
-                : s.transcript.map((t) => {
-                    const events = playerVisibleEvents(t.events);
-                    return {
-                      ...t,
-                      events:
-                        args.compact_events === true ? events.map(compactPlayerEvent) : events,
-                    };
-                  }),
+              turns: transcriptTurnsFor(sessions, s, args),
             }),
         summary: args.compact_summary ? compactTranscriptSummary(summary) : summary,
       };
