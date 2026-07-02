@@ -10,7 +10,7 @@ const COMPACT_JOURNAL_LIMIT = 5;
 const COMPACT_ROUTE_LIMIT = 8;
 const COMPACT_TRAVEL_LOG_LIMIT = 5;
 const COMPACT_ID_LIST_LIMIT = 16;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 2 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 3 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactQuestRef = readonly [id: string, title: string];
@@ -26,6 +26,12 @@ export type OverworldCompactVitals = readonly [
   maxSupplies: number,
   fatigue: number,
   condition: string,
+];
+export type OverworldCompactHiddenCounts = readonly [
+  areas: number,
+  jobs: number,
+  sites: number,
+  quests: number,
 ];
 export type OverworldCompactRoad = readonly [
   roadId: string,
@@ -108,12 +114,7 @@ export type OverworldCompactView = {
   time: string;
   here: OverworldCompactHere;
   vitals: OverworldCompactVitals;
-  hidden: {
-    areas: number;
-    jobs: number;
-    sites: number;
-    quests: number;
-  };
+  hidden: OverworldCompactHiddenCounts;
   roads: OverworldCompactRoad[];
   area_routes?: OverworldCompactAreaRoute[];
   route_options: OverworldCompactRouteOption[];
@@ -283,12 +284,12 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
       view.currentArea?.name ?? null,
     ],
     vitals: [view.supplies, view.maxSupplies, view.fatigue, view.travelCondition],
-    hidden: {
-      areas: view.hiddenAreaCount,
-      jobs: view.hiddenJobCount,
-      sites: view.hiddenSiteCount,
-      quests: view.hiddenQuestCount,
-    },
+    hidden: [
+      view.hiddenAreaCount,
+      view.hiddenJobCount,
+      view.hiddenSiteCount,
+      view.hiddenQuestCount,
+    ],
     roads: view.exits.map((exit) => {
       const plan = routeByDestination.get(exit.destination.id);
       return [

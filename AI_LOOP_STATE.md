@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 186 -->
+<!-- historical_cycle_count: 187 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_overworld_hidden_tuple
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact overworld `hidden` counts now serialize as `[areas, jobs, sites, quests]` under context `v: 3`.
+- Loop effect: every compact overworld turn keeps hidden frontier counts without repeating four object keys.
+- Guard: focused compact-overworld/MCP tests, typecheck, lint, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_overworld_empty_progress
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/token surface: public `save_game()` and `get_transcript()` wrappers no longer echo `pack_id`.
 - Loop effect: world-quest and generated loops rely on `world_quest_id` / `generated_rpg_seed` plus hashes, while persisted save blobs keep internal pack identity for integrity.
 - Guard: focused MCP save/transcript tests, typecheck, and format check passed before full gates.
-- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_transcript_summary_turns
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: `get_transcript({ summary_only: true })` now omits the empty `turns` array.
-- Loop effect: default public transcript audits keep session/hash/source/summary metadata without paying for a dead row field.
-- Guard: focused MCP transcript/schema tests, typecheck, and format check passed before full gates.
 - VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.

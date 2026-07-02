@@ -858,7 +858,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       JSON.stringify(compact).length,
     );
 
-    expect(compact.context.v).toBe(2);
+    expect(compact.context.v).toBe(3);
     expect(compact.context.here).toEqual([
       full.current.id,
       full.current.name,
@@ -871,6 +871,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
       full.maxSupplies,
       full.fatigue,
       full.travelCondition,
+    ]);
+    expect(compact.context.hidden).toEqual([
+      full.hiddenAreaCount,
+      full.hiddenJobCount,
+      full.hiddenSiteCount,
+      full.hiddenQuestCount,
     ]);
     expect(compact.context.roads.map(([roadId]) => roadId)).toEqual(
       full.exits.map((edge) => edge.id),
