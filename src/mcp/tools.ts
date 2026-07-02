@@ -1287,12 +1287,15 @@ export function createToolApi(opts: { root: string }) {
       session_id: string;
       hide_graph?: boolean;
       compact_actions?: boolean;
-    }) {
+    }): { actions: McpActionOption[]; state_hash: string } {
       const s = sessions.get(args.session_id);
       const obs = buildObsFor(s.index, s.state, {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
       });
-      return { actions: publicActions(obs, publicObservationOptions(args)) };
+      return {
+        actions: publicActions(obs, publicObservationOptions(args)),
+        state_hash: hashState(s.state),
+      };
     },
 
     step_action<Args extends RpgStepActionArgs>(args: Args): RpgStepActionResponse<Args> {

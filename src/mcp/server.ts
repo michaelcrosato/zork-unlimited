@@ -404,7 +404,7 @@ tool(
 );
 tool(
   "list_legal_actions",
-  "List legal RPG action ids; compact_actions false returns labels.",
+  "List legal RPG action ids plus state_hash; compact_actions false returns labels.",
   {
     ...SESSION,
     ...HIDE_GRAPH,

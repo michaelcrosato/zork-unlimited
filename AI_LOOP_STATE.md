@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 65 -->
+<!-- historical_cycle_count: 66 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — legal_actions_state_hash
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: RPG `list_legal_actions` responses now return `state_hash` beside the action menu.
+- Loop effect: agents can bind compact action ids to the exact reducer state without an extra observation/state read.
+- Evidence: live MCP default action menu returned a matching `state_hash` at 150 chars; after `go_down`, the menu hash matched the step hash and changed at 232 chars.
+- Guard: MCP action-payload regression asserts full and compact action menus carry the current hash and update after a step.
+- VERIFY: focused MCP action test, typecheck, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1360 tests, and validate.
 
 ### Cycle result — overworld_loop_snapshot_hash
 

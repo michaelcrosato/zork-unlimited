@@ -82,6 +82,8 @@ Make discovered overworld quest leads start real RPG sessions.
   labels; full labels remain available on demand.
 - Public MCP `list_legal_actions` defaults to compact action ids; callers can pass
   `compact_actions: false` when they need player-facing command labels.
+- `list_legal_actions` also returns `state_hash`, so compact action menus can be
+  bound to the reducer state without a follow-up state read.
 - Compact RPG MCP observations now cap inventory/flags and keep only recent
   journal entries, with `more` counts when state was omitted.
 - `get_transcript({ summary_only: true })` keeps session/end-state metadata while

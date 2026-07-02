@@ -1242,7 +1242,9 @@ describe("MCP tools — the play loop (§9.1)", () => {
     assertPublicAction(
       a.get_observation({ session_id: game.session_id }).observation.available_actions[0],
     );
-    assertPublicAction(a.list_legal_actions({ session_id: game.session_id }).actions[0]);
+    const listed = a.list_legal_actions({ session_id: game.session_id });
+    expect(listed.state_hash).toBe(game.state_hash);
+    assertPublicAction(listed.actions[0]);
 
     const compact = a.get_observation({
       session_id: game.session_id,
@@ -1252,9 +1254,12 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(JSON.stringify(compact.available_actions).length).toBeLessThan(
       JSON.stringify(game.observation.available_actions).length,
     );
-    assertCompactAction(
-      a.list_legal_actions({ session_id: game.session_id, compact_actions: true }).actions[0],
-    );
+    const compactListed = a.list_legal_actions({
+      session_id: game.session_id,
+      compact_actions: true,
+    });
+    expect(compactListed.state_hash).toBe(game.state_hash);
+    assertCompactAction(compactListed.actions[0]);
 
     const rejected = a.step_action({ session_id: game.session_id, action_id: "missing" });
     expect(rejected.ok).toBe(false);
@@ -1276,6 +1281,9 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_actions: true,
     });
     assertCompactAction(moved.observation.available_actions[0]);
+    expect(
+      a.list_legal_actions({ session_id: game.session_id, compact_actions: true }).state_hash,
+    ).toBe(moved.state_hash);
 
     const saved = a.save_game({ session_id: game.session_id });
     expect("pack_path" in saved).toBe(false);
