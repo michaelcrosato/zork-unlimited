@@ -120,6 +120,8 @@ Make discovered overworld quest leads start real RPG sessions.
   route/event history.
 - ToolApi/public MCP `get_state` defaults to hash-only output; callers can pass
   `include_state: true` only when they need the raw reducer state for debugging.
+- Public MCP successful tool results serialize as minified JSON text, so compact
+  handler payloads are not re-expanded by whitespace at the stdio adapter.
 - Blind-playtest MCP ToolSearch schema prose for the selected
   start/observe/action/transcript tools is trimmed and guarded by a source-size
   regression.

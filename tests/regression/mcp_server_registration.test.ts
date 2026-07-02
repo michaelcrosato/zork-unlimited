@@ -128,6 +128,13 @@ describe("MCP server registration", () => {
     expect(blindToolSchemaSource).toContain("compact_summary");
   });
 
+  it("serializes successful MCP tool results as minified JSON text", () => {
+    const text = readFileSync("src/mcp/server.ts", "utf8");
+
+    expect(text).toContain("JSON.stringify(value)");
+    expect(text).not.toContain("JSON.stringify(value, null, 2)");
+  });
+
   it("keeps restore and trace ToolSearch schema source terse", () => {
     const restoreTraceSchemaSource = [
       registeredToolBlock("world_path"),

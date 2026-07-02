@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 176 -->
+<!-- historical_cycle_count: 177 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_mcp_json_envelope
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: successful public MCP tool results now serialize as minified JSON text instead of two-space pretty JSON.
+- Loop effect: every external MCP play/read/checkpoint response preserves handler compaction at the stdio envelope.
+- Guard: MCP server registration tests, typecheck, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_checkpoint_rejections
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: cache-hit polling replies are now hash scoped only; callers already supplied the session id.
 - Guard: MCP tests assert unchanged replies omit `session_id` while changed/full responses still carry session identity.
 - VERIFY: focused MCP unchanged tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_step_rejection_reason
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: successful `step_action()` replies no longer emit `rejection_reason: null`.
-- Loop effect: every successful action turn drops a dead field while stale/illegal action replies still carry an explicit rejection reason.
-- Guard: MCP step tests assert success payloads omit `rejection_reason` and rejection payloads retain it.
-- VERIFY: focused MCP step tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.

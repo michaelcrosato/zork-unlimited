@@ -16,7 +16,7 @@ import { createToolApi } from "./tools.js";
 const api = createToolApi({ root: process.cwd() });
 
 function ok(value: unknown): CallToolResult {
-  return { content: [{ type: "text", text: JSON.stringify(value, null, 2) }] };
+  return { content: [{ type: "text", text: JSON.stringify(value) }] };
 }
 
 function wrap<A>(handler: (args: A) => unknown) {
