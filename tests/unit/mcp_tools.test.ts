@@ -1050,6 +1050,24 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(exported.snapshot.worldHash).toMatch(/^[0-9a-f]{64}$/);
     expect(exported.snapshot_hash).toBe(hashState(exported.snapshot));
     expect(JSON.stringify(staleExport).length).toBeLessThan(JSON.stringify(exported).length);
+    const repeatedExport = a.export_overworld_session({
+      session_id: started.session_id,
+      expected_snapshot_hash: exported.snapshot_hash,
+    });
+    expect(repeatedExport.ok).toBe(true);
+    if (!repeatedExport.ok) throw new Error("expected repeated guarded export success");
+    expect(repeatedExport.snapshot_hash).toBe(exported.snapshot_hash);
+    expect(repeatedExport.snapshot).toEqual(exported.snapshot);
+    expect(repeatedExport.snapshot).not.toBe(exported.snapshot);
+    repeatedExport.snapshot.currentId = "mutated_by_test";
+    const afterMutationExport = a.export_overworld_session({
+      session_id: started.session_id,
+      expected_snapshot_hash: repeatedExport.snapshot_hash,
+    });
+    expect(afterMutationExport.ok).toBe(true);
+    if (!afterMutationExport.ok) throw new Error("expected export after caller mutation");
+    expect(afterMutationExport.snapshot.currentId).toBe(exported.snapshot.currentId);
+    expect(afterMutationExport.snapshot.currentId).not.toBe("mutated_by_test");
 
     const restored = a.restore_overworld_session({ snapshot: exported.snapshot });
     expect(restored.session_id).not.toBe(started.session_id);

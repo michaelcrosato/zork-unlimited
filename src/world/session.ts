@@ -2245,6 +2245,10 @@ export class OverworldSession {
   private readonly regionRenown = new Map<string, number>();
   private readonly completedRegionalArcIds = new Set<string>();
   private pendingRoadEncounter: OverworldPendingRoadEncounter | null = null;
+  private snapshotCache?: {
+    snapshot: OverworldSessionSnapshot;
+    hash: string;
+  };
 
   constructor(private readonly world: OverworldManifest) {
     this.nodes = overworldNodesById(world);
@@ -2260,7 +2264,27 @@ export class OverworldSession {
     return session;
   }
 
+  private clearSnapshotCache(): void {
+    delete this.snapshotCache;
+  }
+
+  private cachedSnapshot(): { snapshot: OverworldSessionSnapshot; hash: string } {
+    if (this.snapshotCache) return this.snapshotCache;
+    const snapshot = this.buildSnapshot();
+    const hash = hashState(snapshot);
+    this.snapshotCache = { snapshot, hash };
+    return this.snapshotCache;
+  }
+
+  snapshotHash(): string {
+    return this.cachedSnapshot().hash;
+  }
+
   snapshot(): OverworldSessionSnapshot {
+    return cloneJson(this.cachedSnapshot().snapshot);
+  }
+
+  private buildSnapshot(): OverworldSessionSnapshot {
     return {
       version: OVERWORLD_SESSION_SAVE_VERSION,
       worldId: this.world.id,
@@ -2606,6 +2630,7 @@ export class OverworldSession {
     for (const [region, renown] of snapshot.regionRenown) this.regionRenown.set(region, renown);
     replaceStringSet(this.completedRegionalArcIds, snapshot.completedRegionalArcIds);
     this.pendingRoadEncounter = restoredPendingRoadEncounter;
+    this.clearSnapshotCache();
   }
 
   private restoreTravelLogEntry(
@@ -2658,6 +2683,7 @@ export class OverworldSession {
     for (const edge of overworldEdgesFrom(this.world, nodeId)) {
       this.discoveredIds.add(edge.destination.id);
     }
+    this.clearSnapshotCache();
   }
 
   private currentNode(): OverworldNode {
@@ -2678,6 +2704,7 @@ export class OverworldSession {
       recordedAt: timeLabel(this.minutes),
     };
     this.journalEntries.unshift(recorded);
+    this.clearSnapshotCache();
     return { minutes, alreadyKnown: false, entry: recorded };
   }
 
@@ -2708,6 +2735,7 @@ export class OverworldSession {
       recordedAt: timeLabel(this.minutes),
     };
     this.journalEntries.unshift(recorded);
+    this.clearSnapshotCache();
     return recorded;
   }
 
@@ -2727,10 +2755,16 @@ export class OverworldSession {
     const local = this.localAreas(nodeId);
     const saved = this.currentAreaByTown.get(nodeId);
     const next = saved && local.some((area) => area.id === saved) ? saved : (local[0]?.id ?? null);
+    const previous = this.currentAreaId;
+    const hadSaved = next ? this.currentAreaByTown.get(nodeId) === next : true;
+    const alreadyDiscovered = next ? this.discoveredAreaIds.has(next) : true;
     this.currentAreaId = next;
     if (next) {
       this.currentAreaByTown.set(nodeId, next);
       this.discoveredAreaIds.add(next);
+    }
+    if (previous !== next || !hadSaved || !alreadyDiscovered) {
+      this.clearSnapshotCache();
     }
   }
 
@@ -2779,7 +2813,10 @@ export class OverworldSession {
 
   private discoverInitialAreaForTown(nodeId: string): void {
     const firstArea = this.localAreas(nodeId)[0];
-    if (firstArea) this.discoveredAreaIds.add(firstArea.id);
+    if (firstArea && !this.discoveredAreaIds.has(firstArea.id)) {
+      this.discoveredAreaIds.add(firstArea.id);
+      this.clearSnapshotCache();
+    }
   }
 
   private discoverNextAreaForTown(nodeId: string): OverworldArea[] {
@@ -2788,6 +2825,7 @@ export class OverworldSession {
     );
     if (!area) return [];
     this.discoveredAreaIds.add(area.id);
+    this.clearSnapshotCache();
     return [area];
   }
 
@@ -2815,6 +2853,7 @@ export class OverworldSession {
     );
     if (!job) return [];
     this.discoveredJobIds.add(job.id);
+    this.clearSnapshotCache();
     return [job];
   }
 
@@ -2860,6 +2899,7 @@ export class OverworldSession {
     );
     if (!site) return [];
     this.discoveredSiteIds.add(site.id);
+    this.clearSnapshotCache();
     return [site];
   }
 
@@ -2870,6 +2910,7 @@ export class OverworldSession {
     );
     if (!quest) return [];
     this.discoveredQuestIds.add(quest.id);
+    this.clearSnapshotCache();
     return [questView(quest)];
   }
 
@@ -2988,6 +3029,7 @@ export class OverworldSession {
 
   private checkRegionalArcCompletion(region: string): void {
     const completedAt = timeLabel(this.minutes);
+    let completedAny = false;
     for (const arc of this.world.regional_arcs.filter((candidate) => candidate.region === region)) {
       if (this.completedRegionalArcIds.has(arc.id)) continue;
       if (this.resolvedAnchorTownIdsForArc(arc).size < arc.required_resolutions) continue;
@@ -3000,7 +3042,9 @@ export class OverworldSession {
         text: arc.reward,
         recordedAt: completedAt,
       });
+      completedAny = true;
     }
+    if (completedAny) this.clearSnapshotCache();
   }
 
   private roadEncounterOptions(roadEvent: OverworldRoadEvent): OverworldRoadEncounterOption[] {
@@ -3228,7 +3272,10 @@ export class OverworldSession {
       },
       0,
     );
-    if (!result.alreadyKnown) this.startedQuestIds.add(quest.id);
+    if (!result.alreadyKnown) {
+      this.startedQuestIds.add(quest.id);
+      this.clearSnapshotCache();
+    }
     return questView(quest);
   }
 
@@ -3254,7 +3301,10 @@ export class OverworldSession {
       },
       0,
     );
-    if (!result.alreadyKnown) this.completedQuestIds.add(quest.id);
+    if (!result.alreadyKnown) {
+      this.completedQuestIds.add(quest.id);
+      this.clearSnapshotCache();
+    }
     return {
       minutes: result.minutes,
       alreadyKnown: result.alreadyKnown,
@@ -3333,6 +3383,7 @@ export class OverworldSession {
     this.minutes += edge.travel_minutes;
     this.currentAreaId = edge.destination.id;
     this.currentAreaByTown.set(this.currentId, edge.destination.id);
+    this.clearSnapshotCache();
     return {
       from: currentArea,
       to: edge.destination,
@@ -3376,6 +3427,7 @@ export class OverworldSession {
         current.region,
         (this.regionRenown.get(current.region) ?? 0) + (action.regionalRenown ?? 0),
       );
+      this.clearSnapshotCache();
     }
     return {
       ...result,
@@ -3471,6 +3523,7 @@ export class OverworldSession {
         (this.regionRenown.get(current.region) ?? 0) + event.intensity,
       );
       this.checkRegionalArcCompletion(current.region);
+      this.clearSnapshotCache();
     }
     return {
       ...result,
@@ -3504,6 +3557,7 @@ export class OverworldSession {
         site.region,
         (this.regionRenown.get(site.region) ?? 0) + (action.regionalRenown ?? 0),
       );
+      this.clearSnapshotCache();
     }
     return {
       ...result,
@@ -3647,6 +3701,7 @@ export class OverworldSession {
       recordedAt: timeLabel(this.minutes),
     };
     this.journalEntries.unshift(entry);
+    this.clearSnapshotCache();
     return {
       strategy,
       minutes: option.minutes,
@@ -3700,6 +3755,7 @@ export class OverworldSession {
       roadEvent,
     };
     this.travelLog.unshift(entry);
+    this.clearSnapshotCache();
     return entry;
   }
 }

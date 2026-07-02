@@ -170,6 +170,9 @@ Make discovered overworld quest leads start real RPG sessions.
   `include_state: true` only when they need the raw reducer state for debugging.
 - Public MCP successful tool results serialize as minified JSON text, so compact
   handler payloads are not re-expanded by whitespace at the stdio adapter.
+- Overworld sessions cache their serialized snapshot plus hash at the session
+  layer, so repeated overworld read/guard/export calls avoid rebuilding and
+  hashing full snapshot state until a session mutation invalidates it.
 - Blind-playtest MCP ToolSearch schema prose for the selected
   start/observe/action/transcript tools is trimmed and guarded by a source-size
   regression.

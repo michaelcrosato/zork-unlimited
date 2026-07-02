@@ -1206,7 +1206,7 @@ export function createToolApi(opts: { root: string }) {
   }
 
   function overworldSnapshotHash(session: OverworldSession): string {
-    return hashState(session.snapshot());
+    return session.snapshotHash();
   }
 
   function overworldSnapshotHashRejection(snapshotHash: string): OverworldRejectedSessionPayload {
@@ -1420,8 +1420,7 @@ export function createToolApi(opts: { root: string }) {
       args: Args,
     ): OverworldExportResponse<Args> {
       const session = getOverworldSession(args.session_id);
-      const snapshot = session.snapshot();
-      const snapshotHash = hashState(snapshot);
+      const snapshotHash = overworldSnapshotHash(session);
       if (
         args.expected_snapshot_hash !== undefined &&
         args.expected_snapshot_hash !== snapshotHash
@@ -1433,6 +1432,7 @@ export function createToolApi(opts: { root: string }) {
           rejection_reason: reason,
         } as OverworldExportResponse<Args>;
       }
+      const snapshot = session.snapshot();
       return {
         ok: true,
         session_id: args.session_id,

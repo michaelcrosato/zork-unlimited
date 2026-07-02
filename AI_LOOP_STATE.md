@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 211 -->
+<!-- historical_cycle_count: 212 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — cached_overworld_snapshot_hashes
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: `OverworldSession` now caches its serialized snapshot plus `snapshotHash`; public snapshots stay clone-isolated while MCP guard paths read the cached hash.
+- Loop effect: repeated overworld reads, unchanged checks, stale-action rejections, route planning, and guarded exports avoid rebuilding and hashing the full session snapshot until state mutates.
+- Guard: focused MCP export tests prove repeated snapshot reuse semantics and protect against caller mutation of cached snapshot internals.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — cached_action_row_projections
 
