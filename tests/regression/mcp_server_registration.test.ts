@@ -163,7 +163,8 @@ describe("MCP server registration", () => {
     expect(registeredToolBlock("start_overworld_session_quest")).toContain(
       "defaultCompactOverworldAndRpg(a)",
     );
-    expect(registeredToolBlock("get_overworld_session")).not.toContain("defaultCompactOverworld");
+    expect(registeredToolBlock("get_overworld_session")).toContain("compactMcpOverworldSession(a)");
+    expect(registeredToolBlock("get_overworld_session")).toContain("include_observation");
   });
 
   it("defaults public RPG MCP play tools to compact observation", () => {

@@ -6,6 +6,15 @@ This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
 
+### Cycle result — mcp_overworld_read_compact_default
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Hidden loop surface: public MCP `get_overworld_session` now returns compact context by default; `include_observation: true` preserves full observation debugging.
+- Loop effect: agents that choose the obvious read tool no longer pull the full overworld object graph by accident.
+- Evidence: live MCP default read returned context at 3578 chars; explicit full observation returned 93888 chars.
+- Guard: MCP registration regression pins `compactMcpOverworldSession(a)` and the `include_observation` opt-in.
+- VERIFY: focused MCP registration regression, `npm run health`, `npm run validate`, and `npm test` passed: integrity, typecheck, lint, format check, 193 test files / 1360 tests, and validate.
+
 ### Cycle result — mcp_state_hash_default
 
 - Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.

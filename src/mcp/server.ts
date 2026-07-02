@@ -122,6 +122,17 @@ function compactMcpState(args: McpStateArgs): unknown {
   return args.include_state === true ? result : { state_hash: result.state_hash };
 }
 
+type McpOverworldReadArgs = {
+  session_id: string;
+  include_observation?: boolean;
+};
+
+function compactMcpOverworldSession(args: McpOverworldReadArgs): unknown {
+  return args.include_observation === true
+    ? api.get_overworld_session(args)
+    : api.get_overworld_session_context(args);
+}
+
 tool(
   "start_overworld",
   "Start a stateful New York overworld run; returns compact context by default.",
@@ -132,11 +143,12 @@ tool(
 );
 tool(
   "get_overworld_session",
-  "Read the current observation for a stateful New York overworld session.",
+  "Read compact overworld context; include_observation true returns full observation.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
+    include_observation: z.boolean().optional().describe("Include full observation object."),
   },
-  (a) => api.get_overworld_session(a),
+  (a) => compactMcpOverworldSession(a),
 );
 tool(
   "get_overworld_session_context",
