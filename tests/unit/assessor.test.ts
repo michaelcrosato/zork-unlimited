@@ -301,6 +301,14 @@ describe("blind-pass rotation (bug_0128)", () => {
     expect(offsets.has("sunken_barrow")).toBe(true);
   });
 
+  it("parseAttendanceOffsets recognizes current quest-labeled recommendation lines", () => {
+    const text =
+      '- Next best improvement (recommended): [content_fix] Blind-playtest quest "bellfounders_alarm" — structurally clean.';
+    const offsets = parseAttendanceOffsets(text);
+    expect(offsets.has("bellfounders_alarm")).toBe(true);
+    expect(offsets.has("quest")).toBe(false);
+  });
+
   it("parseBlindReportAttendanceOffsets recognizes timestamped accepted markdown reports", () => {
     const offsets = parseBlindReportAttendanceOffsets([
       "20260619T191648Z_aleconners_seal_seed7.md",

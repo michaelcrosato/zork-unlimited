@@ -243,17 +243,18 @@ function docStalenessDocs(root: string): string[] {
 }
 
 /**
- * Normalize a pack reference — a full path, a bare file stem, OR a pack id — to its
- * stem, so an attendance line that names a pack any of those ways maps to the same key.
+ * Normalize a quest reference — a full source path, a bare world quest id, OR a
+ * pack id — to its stem, so an attendance line that names a quest any of those ways
+ * maps to the same key.
  * E.g. "content/rpg/pack/cold_forge.yaml" → "cold_forge", a bare
  * "clockwork_heist" is unchanged, and the pack ID "clockwork_heist_v1" also → it.
  *
- * The trailing `_v\d+` strip matters for attendance keying (bug_0293): the candidate's
- * target is a PATH (file stem, no version), but the code-written recommendation line the
- * log records every cycle names the pack by its ID — `Blind-playtest "clockwork_heist_v1"`
- * — which carries the `_v1` suffix. Without this strip the id-form and the path-form key
- * to different stems and the recency lookup misses, re-freezing the rotation. No shipped
- * pack FILE name ends in `_v\d+`, so the strip never collides two real packs.
+ * The trailing `_v\d+` strip matters for attendance keying (bug_0293): legacy log
+ * lines named pack ids such as `Blind-playtest "clockwork_heist_v1"`, while current
+ * candidates target world quest ids such as `clockwork_heist`. Without this strip
+ * the id-form and world-id form key to different stems and the recency lookup misses,
+ * re-freezing the rotation. No shipped source file name ends in `_v\d+`, so the strip
+ * never collides two real sources.
  */
 export function packStem(ref: string): string {
   const base = ref.split("/").pop() ?? ref;
@@ -261,25 +262,25 @@ export function packStem(ref: string): string {
 }
 
 /**
- * Parse, from the AI_LOOP_STATE.md log, each pack's MOST RECENT blind-playtest
+ * Parse, from the AI_LOOP_STATE.md log, each quest's MOST RECENT blind-playtest
  * attendance — its character offset — keyed by {@link packStem}. A SMALLER offset
  * means more recently attended, because the log is written NEWEST-FIRST (every cycle
  * PREPENDS its entry at the top): a stem's FIRST match is its most recent attendance,
  * so we keep the first and ignore older repeats. Pure (text in, map out) so it
  * unit-tests without a fixture. Used to rotate the blind pass onto the
- * LEAST-recently-attended pack instead of re-nominating the alphabetically-first one.
+ * LEAST-recently-attended quest instead of re-nominating the alphabetically-first one.
  *
  * Recognizes BOTH the cycle-result phrasing the log actually uses today ("Mandated
- * blind pass ran on <pack>") AND the older structured-header marker ("Mandatory LLM
+ * blind pass ran on <quest>") AND the older structured-header marker ("Mandatory LLM
  * playtest target this cycle: <path>"); a token in either form may be a path or a
  * bare id. This is the bug_0128 fix: the attendance matcher previously matched ONLY the old
  * header — abandoned ~15 cycles ago for the prose format — so the recency signal had
  * frozen and the rotation silently fell back to alphabetical, re-nominating
  * clockwork_heist (the very lock-in the rotation was meant to cure). The caller
- * resolves only real pack stems, so incidental captures (e.g. "…ran on the assessor")
+ * resolves only real quest stems, so incidental captures (e.g. "…ran on the assessor")
  * land under a stem no candidate queries and are harmless.
  *
- * bug_0235: the same blindness recurred via MARKDOWN WRAPPING. The log writes the pack
+ * bug_0235: the same blindness recurred via MARKDOWN WRAPPING. The log writes the quest
  * bold+backticked — `- **Mandated blind pass ran on \`midnight_edition\`** …` — but the
  * capture class [A-Za-z0-9_./-] excluded the backtick, so the match failed at the opening
  * tick and EVERY recent entry was invisible: the just-played pack looked never-attended
@@ -292,12 +293,13 @@ export function packStem(ref: string): string {
 export function parseAttendanceOffsets(loopStateText: string): Map<string, number> {
   const map = new Map<string, number>();
   // bug_0293: ALSO match the model-INDEPENDENT code-written recommendation line
-  // `Blind-playtest "<id>"` (emitted by the assessor every cycle, see the playtest
+  // `Blind-playtest "<id>"` (legacy) and `Blind-playtest quest "<id>"` (current,
+  // emitted by the assessor every cycle, see the playtest
   // candidate title below) and the looser Sonnet-era agent phrasing "blind pass on
-  // `<pack>`". The wrapper class gains `"` so the quoted id is skipped; `i` tolerates
+  // `<quest>`". The wrapper class gains `"` so the quoted id is skipped; `i` tolerates
   // sentence-start caps; the `_v\d+` on a captured pack id is normalized by packStem.
   const re =
-    /(?:Mandatory LLM playtest target this cycle:|Mandated blind pass ran on|blind pass on|Blind-playtest)\s+["`*]*([A-Za-z0-9_./-]+)/gi;
+    /(?:Mandatory LLM playtest target this cycle:|Mandated blind pass ran on|blind pass on|Blind-playtest(?:\s+quest)?)\s+["`*]*([A-Za-z0-9_./-]+)/gi;
   for (const m of loopStateText.matchAll(re)) {
     const captured = m[1];
     if (captured === undefined) continue;

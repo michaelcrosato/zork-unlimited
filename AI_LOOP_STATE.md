@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 50 -->
+<!-- historical_cycle_count: 51 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — blind_rotation_quest_label_parsed
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner still fails broad root Prettier/ESLint/git-worktree checks, while its tsc/test portions passed.
+- Loop bug: blind-test attendance now parses current `Blind-playtest quest "<world_quest_id>"` recommendation lines instead of capturing literal `quest`.
+- Token/ops effect: rotation stays on real quest ids after the quest-first handoff, avoiding repeated blind passes caused by invisible attendance.
+- Evidence: focused assessor/rotation tests (43) cover the current quest-labeled line; `npm run assess` now rotates off `bellfounders_alarm`.
+- VERIFY: `npm run assess` and `npm run health` passed: integrity, typecheck, lint, format check, 192 test files / 1349 tests, and validate.
+- Self-critique: small but load-bearing loop fix; naming still keeps `packStem` for legacy log/path normalization.
 
 ### Cycle result — afk_assessment_quest_handoff
 
