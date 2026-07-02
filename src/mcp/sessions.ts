@@ -10,6 +10,7 @@ import type { GameState } from "../core/state.js";
 import type { Rules } from "../core/engine.js";
 import type { GameEvent } from "../core/events.js";
 import type { RpgAction } from "../api/types.js";
+import type { RpgActionOption } from "../rpg/legal_actions.js";
 import type { RpgIndex } from "../rpg/runner.js";
 import { hashState } from "../core/hash.js";
 
@@ -42,6 +43,10 @@ export type Session = {
   rules: Rules<RpgAction>;
   state: GameState;
   stateHash: string;
+  legalActionsCache?: {
+    stateHash: string;
+    actions: RpgActionOption[];
+  };
   transcript: TranscriptTurn[];
   transcriptLogHash: string;
   /** Difficulty: when true, the agent-facing observation hides each exit's
@@ -50,7 +55,10 @@ export type Session = {
   hideGraph?: boolean;
 };
 
-export type SessionInit = Omit<Session, "id" | "stateHash" | "transcriptLogHash">;
+export type SessionInit = Omit<
+  Session,
+  "id" | "stateHash" | "legalActionsCache" | "transcriptLogHash"
+>;
 
 export class SessionStore {
   private counter = 0;
@@ -78,7 +86,21 @@ export class SessionStore {
     const session = this.get(id);
     session.state = state;
     session.stateHash = hashState(state);
+    delete session.legalActionsCache;
     return session;
+  }
+
+  legalActions(id: string, enumerate: () => RpgActionOption[]): RpgActionOption[] {
+    const session = this.get(id);
+    if (session.legalActionsCache?.stateHash === session.stateHash) {
+      return session.legalActionsCache.actions;
+    }
+    const actions = enumerate();
+    session.legalActionsCache = {
+      stateHash: session.stateHash,
+      actions,
+    };
+    return actions;
   }
 
   appendTranscript(id: string, turn: TranscriptTurn): Session {

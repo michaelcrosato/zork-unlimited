@@ -4,6 +4,7 @@ import type { GameState } from "../../src/core/state.js";
 import { initState } from "../../src/core/state.js";
 import { hashState } from "../../src/core/hash.js";
 import { SessionStore, type SessionInit } from "../../src/mcp/sessions.js";
+import type { RpgActionOption } from "../../src/rpg/legal_actions.js";
 import type { RpgIndex } from "../../src/rpg/runner.js";
 import type { RpgAction } from "../../src/api/types.js";
 
@@ -112,5 +113,46 @@ describe("SessionStore", () => {
     store.replaceTranscript(session.id, []);
     expect(session.transcript).toEqual([]);
     expect(session.transcriptLogHash).toBe(hashState([]));
+  });
+
+  it("caches legal actions until the session state is replaced", () => {
+    const store = new SessionStore();
+    const session = store.create(sessionInit());
+    const firstActions: RpgActionOption[] = [
+      { id: "look", command: "look", action: { type: "LOOK" } },
+    ];
+    const nextActions: RpgActionOption[] = [
+      { id: "inventory", command: "inventory", action: { type: "INVENTORY" } },
+    ];
+    let enumerations = 0;
+
+    const first = store.legalActions(session.id, () => {
+      enumerations += 1;
+      return firstActions;
+    });
+    const cached = store.legalActions(session.id, () => {
+      enumerations += 1;
+      return nextActions;
+    });
+
+    expect(first).toBe(firstActions);
+    expect(cached).toBe(firstActions);
+    expect(enumerations).toBe(1);
+    expect(session.legalActionsCache?.stateHash).toBe(session.stateHash);
+
+    const nextState = state("next");
+    store.update(session.id, nextState);
+
+    expect(session.legalActionsCache).toBeUndefined();
+    expect(session.stateHash).toBe(hashState(nextState));
+
+    const afterUpdate = store.legalActions(session.id, () => {
+      enumerations += 1;
+      return nextActions;
+    });
+
+    expect(afterUpdate).toBe(nextActions);
+    expect(enumerations).toBe(2);
+    expect(session.legalActionsCache?.stateHash).toBe(session.stateHash);
   });
 });

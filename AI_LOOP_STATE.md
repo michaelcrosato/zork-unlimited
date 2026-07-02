@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 203 -->
+<!-- historical_cycle_count: 204 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — cached_legal_action_sets
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: RPG sessions now cache the current legal-action option set behind `SessionStore.legalActions`; `list_legal_actions` and `step_action` reuse it while `sessions.update` invalidates it.
+- Loop effect: list-then-step MCP turns avoid recomputing the same action graph for an unchanged reducer state, while stale-action protection still binds to the cached `stateHash`.
+- Guard: focused MCP session tests prove action caches are reused for unchanged state and cleared on state replacement.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — cached_session_state_hash
 

@@ -1640,7 +1640,7 @@ export function createToolApi(opts: { root: string }) {
           unchanged: true,
         } as RpgLegalActionsResponse<Args>;
       }
-      const actions = enumerateRpgActions(s.index, s.state);
+      const actions = sessions.legalActions(s.id, () => enumerateRpgActions(s.index, s.state));
       return {
         actions: publicActionRows(actions, args),
         state_hash: stateHash,
@@ -1657,7 +1657,9 @@ export function createToolApi(opts: { root: string }) {
           state_hash: currentStateHash,
         } as RpgStepActionResponse<Args>;
       }
-      const actionOptions = enumerateRpgActions(s.index, s.state);
+      const actionOptions = sessions.legalActions(s.id, () =>
+        enumerateRpgActions(s.index, s.state),
+      );
       const actionOption = actionOptionForId(actionOptions, args.action_id);
       const beforeStep = s.state.step;
       const beforeSceneId = s.state.current;

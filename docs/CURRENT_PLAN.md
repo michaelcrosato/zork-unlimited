@@ -138,6 +138,9 @@ Make discovered overworld quest leads start real RPG sessions.
   `sessions.update`, so start/load, observation polling, legal-action polling,
   stale-action guards, transcript polling, and save guards do not repeatedly
   re-hash reducer state between mutations.
+- RPG legal-action option sets are cached per session/state hash and invalidated
+  by `sessions.update`, so `list_legal_actions` followed by `step_action` does
+  not recompute the same legal-action graph for unchanged state.
 - Public MCP `get_transcript` defaults to compact summary-only output; callers can
   pass `summary_only: false` and `compact_summary: false` when they need full
   route/event history.
