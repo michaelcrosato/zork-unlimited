@@ -70,6 +70,7 @@ beforeAll(() => {
     trace_id: "tr_0190",
     pack_id: compiled.compiled.pack.meta.id,
     content_hash: compiled.compiled.contentHash,
+    worldQuestId: "sunken_barrow",
   };
   // GREEN guard #1 base: a clean fresh-init recorded trace.
   cleanTrace = recordTrace(rules, initStateForRpgPack(index, 1), ACTIONS, meta);
@@ -89,14 +90,10 @@ describe("bug_0190 — trace-load integrity gate: forged-trace REJECTION (§16 t
     const { mode: _drop, ...withoutMode } = cleanTrace;
     write(FIXTURE("missing_mode"), withoutMode as Trace);
     const path = FIXTURE("missing_mode");
-    expect(() => api().replay_trace({ trace_path: path, pack_path: PACK })).toThrow(
-      SaveIntegrityError,
-    );
-    expect(() => api().replay_trace({ trace_path: path, pack_path: PACK })).toThrow(/Trace mode/);
-    expect(() => api().inspect_trace({ trace_path: path, pack_path: PACK })).toThrow(
-      SaveIntegrityError,
-    );
-    expect(() => api().inspect_trace({ trace_path: path, pack_path: PACK })).toThrow(/Trace mode/);
+    expect(() => api().replay_trace({ trace_path: path })).toThrow(SaveIntegrityError);
+    expect(() => api().replay_trace({ trace_path: path })).toThrow(/Trace mode/);
+    expect(() => api().inspect_trace({ trace_path: path })).toThrow(SaveIntegrityError);
+    expect(() => api().inspect_trace({ trace_path: path })).toThrow(/Trace mode/);
   });
 
   it("WITNESS (a) finiteness: initial_state.vars -> Infinity (1e999) — both handlers throw", () => {
@@ -118,12 +115,8 @@ describe("bug_0190 — trace-load integrity gate: forged-trace REJECTION (§16 t
     mkdirSync("traces", { recursive: true });
     writeFileSync(path, forged);
     // Genuine witness: with the gate reverted, both calls return WITHOUT throwing.
-    expect(() => api().replay_trace({ trace_path: path, pack_path: PACK })).toThrow(
-      SaveIntegrityError,
-    );
-    expect(() => api().inspect_trace({ trace_path: path, pack_path: PACK })).toThrow(
-      SaveIntegrityError,
-    );
+    expect(() => api().replay_trace({ trace_path: path })).toThrow(SaveIntegrityError);
+    expect(() => api().inspect_trace({ trace_path: path })).toThrow(SaveIntegrityError);
   });
 
   it("WITNESS (b) referential: phantom initial_state.current — both handlers throw /unknown room/", () => {
@@ -133,16 +126,10 @@ describe("bug_0190 — trace-load integrity gate: forged-trace REJECTION (§16 t
     };
     write(FIXTURE("phantom_current"), poisoned);
     const path = FIXTURE("phantom_current");
-    expect(() => api().replay_trace({ trace_path: path, pack_path: PACK })).toThrow(
-      SaveIntegrityError,
-    );
-    expect(() => api().replay_trace({ trace_path: path, pack_path: PACK })).toThrow(/unknown room/);
-    expect(() => api().inspect_trace({ trace_path: path, pack_path: PACK })).toThrow(
-      SaveIntegrityError,
-    );
-    expect(() => api().inspect_trace({ trace_path: path, pack_path: PACK })).toThrow(
-      /unknown room/,
-    );
+    expect(() => api().replay_trace({ trace_path: path })).toThrow(SaveIntegrityError);
+    expect(() => api().replay_trace({ trace_path: path })).toThrow(/unknown room/);
+    expect(() => api().inspect_trace({ trace_path: path })).toThrow(SaveIntegrityError);
+    expect(() => api().inspect_trace({ trace_path: path })).toThrow(/unknown room/);
   });
 
   it("WITNESS (c) referential: phantom initial_state.endingId — both handlers throw /unknown ending/", () => {
@@ -152,18 +139,10 @@ describe("bug_0190 — trace-load integrity gate: forged-trace REJECTION (§16 t
     };
     write(FIXTURE("phantom_ending"), poisoned);
     const path = FIXTURE("phantom_ending");
-    expect(() => api().replay_trace({ trace_path: path, pack_path: PACK })).toThrow(
-      SaveIntegrityError,
-    );
-    expect(() => api().replay_trace({ trace_path: path, pack_path: PACK })).toThrow(
-      /unknown ending/,
-    );
-    expect(() => api().inspect_trace({ trace_path: path, pack_path: PACK })).toThrow(
-      SaveIntegrityError,
-    );
-    expect(() => api().inspect_trace({ trace_path: path, pack_path: PACK })).toThrow(
-      /unknown ending/,
-    );
+    expect(() => api().replay_trace({ trace_path: path })).toThrow(SaveIntegrityError);
+    expect(() => api().replay_trace({ trace_path: path })).toThrow(/unknown ending/);
+    expect(() => api().inspect_trace({ trace_path: path })).toThrow(SaveIntegrityError);
+    expect(() => api().inspect_trace({ trace_path: path })).toThrow(/unknown ending/);
   });
 });
 
@@ -171,9 +150,9 @@ describe("bug_0190 — trace-load integrity gate: GREEN false-rejection guards",
   it("a clean fresh-init recorded trace still replays + inspects unchanged", () => {
     write(FIXTURE("clean"), cleanTrace);
     const path = FIXTURE("clean");
-    const replay = api().replay_trace({ trace_path: path, pack_path: PACK }) as { ok: boolean };
+    const replay = api().replay_trace({ trace_path: path }) as { ok: boolean };
     expect(replay.ok).toBe(true);
-    const inspect = api().inspect_trace({ trace_path: path, pack_path: PACK }) as {
+    const inspect = api().inspect_trace({ trace_path: path }) as {
       ok: boolean;
       hash_ok: boolean;
       steps: number;
@@ -199,9 +178,9 @@ describe("bug_0190 — trace-load integrity gate: GREEN false-rejection guards",
 
     write(FIXTURE("midgame"), midGameTrace);
     const path = FIXTURE("midgame");
-    const replay = api().replay_trace({ trace_path: path, pack_path: PACK }) as { ok: boolean };
+    const replay = api().replay_trace({ trace_path: path }) as { ok: boolean };
     expect(replay.ok).toBe(true);
-    const inspect = api().inspect_trace({ trace_path: path, pack_path: PACK }) as {
+    const inspect = api().inspect_trace({ trace_path: path }) as {
       ok: boolean;
       hash_ok: boolean;
     };

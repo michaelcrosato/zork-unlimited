@@ -64,7 +64,10 @@ Make discovered overworld quest leads start real RPG sessions.
   MCP and returns world identity only; raw pack paths remain trace replay/inspect
   offline compatibility.
 - `replay_trace` and `inspect_trace` now advertise shipped `world_quest_id` on
-  public MCP; ToolApi/CLI can still replay raw-path traces for migration checks.
+  public MCP; CLI can still replay raw-path traces for migration checks.
+- ToolApi `replay_trace` and `inspect_trace` now reject raw `pack_path`; shipped
+  traces infer their source from embedded `worldQuestId` or explicit
+  `world_quest_id`.
 - `start_quest` and `validate_quest` now accept only `quest_id` /
   `world_quest_id` in ToolApi and public MCP; raw `quest_path` is rejected.
 - Retired legacy story aliases from the live MCP surface; use `validate_pack`,
@@ -181,8 +184,8 @@ Make discovered overworld quest leads start real RPG sessions.
 
 - Continue simplifying parser-era wording in historical docs when it affects current
   orientation.
-- Continue shrinking lower-level compatibility helpers that still accept raw
-  pack paths.
+- Continue shrinking lower-level CLI/offline compatibility helpers that still
+  accept raw pack paths.
 - Add lightweight token/cost telemetry under ignored run output when the loop needs
   measured efficiency data.
 - Tighten full restore-time local action sequencing beyond discovery prefixes;

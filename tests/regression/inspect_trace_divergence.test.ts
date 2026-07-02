@@ -66,6 +66,7 @@ beforeAll(() => {
     trace_id: "tr_0143",
     pack_id: compiled.compiled.pack.meta.id,
     content_hash: compiled.compiled.contentHash,
+    worldQuestId: "sunken_barrow",
   });
 });
 
@@ -74,7 +75,6 @@ describe("bug_0143 — inspect_trace surfaces per-step divergence (§8.8, §9.4)
     write(FIXTURE("clean"), cleanTrace);
     const r = api().inspect_trace({
       trace_path: FIXTURE("clean"),
-      pack_path: PACK,
     }) as InspectResult;
     expect(r.hash_ok).toBe(true);
     expect(r.diverged_at_step).toBeNull();
@@ -90,7 +90,6 @@ describe("bug_0143 — inspect_trace surfaces per-step divergence (§8.8, §9.4)
     write(FIXTURE("middiverge"), { ...cleanTrace, per_step_hashes: hashes });
     const r = api().inspect_trace({
       trace_path: FIXTURE("middiverge"),
-      pack_path: PACK,
     }) as InspectResult;
     expect(r.diverged_at_step).toBe(2);
     expect(r.hash_ok).toBe(false);
@@ -101,7 +100,6 @@ describe("bug_0143 — inspect_trace surfaces per-step divergence (§8.8, §9.4)
     write(FIXTURE("v1"), v1 as Trace);
     const r = api().inspect_trace({
       trace_path: FIXTURE("v1"),
-      pack_path: PACK,
     }) as InspectResult;
     expect(r.hash_ok).toBe(true);
     expect(r.diverged_at_step).toBeNull();

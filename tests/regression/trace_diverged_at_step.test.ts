@@ -103,6 +103,7 @@ beforeAll(() => {
     trace_id: "tr_0290_mcp",
     pack_id: compiled.compiled.pack.meta.id,
     content_hash: compiled.compiled.contentHash,
+    worldQuestId: "sunken_barrow",
   });
   // Corrupt step 2 of the per-step baseline to trigger a mid-trace divergence.
   divergedTraceMcp = corruptAt(cleanTraceMcp, 2);
@@ -145,7 +146,6 @@ describe("bug_0290 — divergedAtStep is populated in replayTrace and inspect_tr
     const api = createToolApi({ root: ROOT });
     const r = api.inspect_trace({
       trace_path: FIXTURE("diverged"),
-      pack_path: PACK,
     }) as { ok: boolean; hash_ok: boolean; diverged_at_step: number | null };
     expect(r.ok).toBe(true);
     expect(r.diverged_at_step).toBe(2);
@@ -155,7 +155,6 @@ describe("bug_0290 — divergedAtStep is populated in replayTrace and inspect_tr
     write(FIXTURE("clean"), cleanTraceMcp);
     const rClean = api.inspect_trace({
       trace_path: FIXTURE("clean"),
-      pack_path: PACK,
     }) as { ok: boolean; hash_ok: boolean; diverged_at_step: number | null };
     expect(rClean.ok).toBe(true);
     expect(rClean.diverged_at_step).toBeNull();

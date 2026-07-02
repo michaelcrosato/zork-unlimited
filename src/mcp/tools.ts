@@ -612,10 +612,15 @@ export function createToolApi(opts: { root: string }) {
   }
 
   function resolveTraceSource(
-    args: { pack_path?: string; world_quest_id?: string },
+    args: { world_quest_id?: string; pack_path?: never },
     trace: Trace<RpgAction>,
     operation: string,
   ): { packPath: string; worldQuestId: string | null; compiled: CompiledRpgPack } {
+    if ((args as { pack_path?: unknown }).pack_path !== undefined) {
+      throw new Error(
+        `${operation} accepts world_quest_id or embedded trace worldQuestId, not pack_path.`,
+      );
+    }
     const source = resolveTracePackSource(root, args, trace, operation);
     return { ...source, compiled: requirePlayable(source.packPath) };
   }
@@ -1372,7 +1377,7 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    replay_trace(args: { trace_path: string; pack_path?: string; world_quest_id?: string }) {
+    replay_trace(args: { trace_path: string; world_quest_id?: string; pack_path?: never }) {
       const traceAbs = safeResolve(root, args.trace_path);
       const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace<RpgAction>;
       assertTraceMode(trace);
@@ -1397,7 +1402,7 @@ export function createToolApi(opts: { root: string }) {
       return replayTrace(trace, rules);
     },
 
-    inspect_trace(args: { trace_path: string; pack_path?: string; world_quest_id?: string }) {
+    inspect_trace(args: { trace_path: string; world_quest_id?: string; pack_path?: never }) {
       // Summarize a recorded trace and surface suspected bugs (§9.4). Replays the
       // actions through the engine for a per-step location/event summary, asserts
       // the recorded final hash, localizes the first divergent step when the trace

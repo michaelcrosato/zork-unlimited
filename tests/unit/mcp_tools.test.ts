@@ -1451,7 +1451,7 @@ describe("MCP tools — replay + path confinement", () => {
   });
 
   it("replay_trace reproduces the recorded final hash", () => {
-    const r = api().replay_trace({ trace_path: "traces/mcp_replay.json", pack_path: PACK });
+    const r = api().replay_trace({ trace_path: "traces/mcp_replay.json" });
     expect(r.ok).toBe(true);
   });
 
@@ -1469,7 +1469,7 @@ describe("MCP tools — replay + path confinement", () => {
   });
 
   it("inspect_trace summarizes steps and finds no failure on a winning route (§9.4)", () => {
-    const r = api().inspect_trace({ trace_path: "traces/mcp_replay.json", pack_path: PACK }) as {
+    const r = api().inspect_trace({ trace_path: "traces/mcp_replay.json" }) as {
       ok: boolean;
       hash_ok: boolean;
       steps: number;
@@ -1512,22 +1512,20 @@ describe("MCP tools — replay + path confinement", () => {
     expect(r.diagnosis.type).toBe("no_failure");
   });
 
-  it("trace tools reject ambiguous content sources", () => {
+  it("trace tools reject raw pack paths on the ToolApi surface", () => {
     const a = api();
     expect(() =>
       a.replay_trace({
         trace_path: "traces/mcp_replay.json",
-        world_quest_id: "sunken_barrow",
         pack_path: PACK,
-      }),
-    ).toThrow(/exactly one/);
+      } as never),
+    ).toThrow(/not pack_path/);
     expect(() =>
       a.inspect_trace({
         trace_path: "traces/mcp_replay.json",
-        world_quest_id: "sunken_barrow",
         pack_path: PACK,
-      }),
-    ).toThrow(/exactly one/);
+      } as never),
+    ).toThrow(/not pack_path/);
   });
 
   it("trace tools reject a source that conflicts with the trace world quest id", () => {
