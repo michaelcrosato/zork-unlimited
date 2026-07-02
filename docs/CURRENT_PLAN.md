@@ -89,6 +89,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - Public MCP `get_transcript` defaults to compact summary-only output; callers can
   pass `summary_only: false` and `compact_summary: false` when they need full
   route/event history.
+- Public MCP `get_state` defaults to hash-only output; callers can pass
+  `include_state: true` only when they need the raw reducer state for debugging.
 - Blind-playtest MCP ToolSearch schema prose for the selected
   start/observe/action/transcript tools is trimmed and guarded by a source-size
   regression.

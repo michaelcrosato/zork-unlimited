@@ -112,6 +112,16 @@ function defaultCompactTranscript(args: unknown): never {
   return { summary_only: true, compact_summary: true, ...input } as never;
 }
 
+type McpStateArgs = {
+  session_id: string;
+  include_state?: boolean;
+};
+
+function compactMcpState(args: McpStateArgs): unknown {
+  const result = api.get_state(args);
+  return args.include_state === true ? result : { state_hash: result.state_hash };
+}
+
 tool(
   "start_overworld",
   "Start a stateful New York overworld run; returns compact context by default.",
@@ -412,9 +422,12 @@ tool(
 );
 tool(
   "get_state",
-  "Return the raw deterministic state and state hash for a session.",
-  SESSION,
-  (a) => api.get_state(a),
+  "Return state hash; include_state true returns raw deterministic state.",
+  {
+    ...SESSION,
+    include_state: z.boolean().optional().describe("Include raw reducer state for debugging."),
+  },
+  (a) => compactMcpState(a),
 );
 tool(
   "get_transcript",

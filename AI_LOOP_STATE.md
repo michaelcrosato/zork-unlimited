@@ -6,6 +6,15 @@ This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
 
+### Cycle result — mcp_state_hash_default
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Hidden loop surface: public MCP `get_state` now returns only `state_hash` by default; `include_state: true` opt-in preserves raw reducer state for debugging.
+- Loop effect: integrity/hash checks no longer leak full GameState through MCP unless the caller explicitly asks for it.
+- Evidence: live MCP `get_state` default returned hash-only at 86 chars; `include_state: true` returned raw state at 452 chars with matching hash.
+- Guard: MCP registration regression pins `compactMcpState(a)` and the `include_state` opt-in.
+- VERIFY: focused MCP registration regression, `npm run health`, `npm run validate`, and `npm test` passed: integrity, typecheck, lint, format check, 193 test files / 1360 tests, and validate.
+
 ### Cycle result — mcp_transcript_compact_default
 
 - Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.

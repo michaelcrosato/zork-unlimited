@@ -192,6 +192,13 @@ describe("MCP server registration", () => {
     expect(block).toContain("Default true; false returns full summary lists.");
   });
 
+  it("defaults public RPG MCP state reads to hash only", () => {
+    const block = registeredToolBlock("get_state");
+    expect(block).toContain("compactMcpState(a)");
+    expect(block).toContain("include_state");
+    expect(block).toContain("Return state hash");
+  });
+
   it("keeps retired static overworld compatibility helpers out of ToolApi and MCP", () => {
     const api = createToolApi({ root: process.cwd() }) as Record<string, unknown>;
     const registered = registeredServerTools();
