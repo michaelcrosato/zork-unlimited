@@ -411,12 +411,6 @@ tool(
   (a) => api.get_observation(defaultCompactRpg(a)),
 );
 tool(
-  "get_scene",
-  "Alias for get_observation; if_state_hash returns hash-only when unchanged.",
-  { ...SESSION, ...HIDE_GRAPH, ...IF_STATE_HASH, ...COMPACT_ACTIONS, ...COMPACT_OBSERVATION },
-  (a) => api.get_scene(defaultCompactRpg(a)),
-);
-tool(
   "list_legal_actions",
   "List action ids plus state_hash; if_state_hash returns hash-only when unchanged; compact_actions false returns labels.",
   {

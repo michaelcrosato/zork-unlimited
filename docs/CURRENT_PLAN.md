@@ -91,9 +91,9 @@ Make discovered overworld quest leads start real RPG sessions.
   alias is no longer part of the live MCP/ToolApi loop.
 - Compact RPG MCP observations now cap inventory/flags and keep only recent
   journal entries, with `more` counts when state was omitted.
-- `get_observation({ if_state_hash })` / `get_scene({ if_state_hash })` can return
-  hash-only `unchanged` responses, avoiding repeated context payloads for polling
-  or resume loops.
+- `get_observation({ if_state_hash })` can return hash-only `unchanged`
+  responses, avoiding repeated context payloads for polling or resume loops; the
+  old `get_scene` alias is no longer part of the live MCP/ToolApi loop.
 - `get_transcript({ summary_only: true })` keeps session/end-state metadata while
   dropping detailed turn/event payload for token-light checks.
 - `get_transcript({ compact_summary: true })` caps summary scenes, inventory,

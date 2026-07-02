@@ -175,7 +175,6 @@ describe("MCP server registration", () => {
       "start_world_quest",
       "start_quest",
       "get_observation",
-      "get_scene",
       "step_action",
       "load_game",
     ]) {
@@ -189,7 +188,6 @@ describe("MCP server registration", () => {
     expect(legalActions).toContain("if_state_hash");
     expect(legalActions).not.toContain("defaultCompactRpg");
     expect(registeredToolBlock("get_observation")).toContain("if_state_hash");
-    expect(registeredToolBlock("get_scene")).toContain("if_state_hash");
     expect(registeredToolBlock("get_state")).not.toContain("defaultCompactRpg");
   });
 

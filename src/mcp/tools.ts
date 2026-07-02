@@ -1486,10 +1486,6 @@ export function createToolApi(opts: { root: string }) {
       } as RpgObservationResponse<Args>;
     },
 
-    get_scene<Args extends RpgGetObservationArgs>(args: Args): RpgObservationResponse<Args> {
-      return this.get_observation(args);
-    },
-
     list_legal_actions<Args extends RpgLegalActionsArgs>(
       args: Args,
     ): RpgLegalActionsResponse<Args> {

@@ -1055,6 +1055,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const tools = api() as unknown as Record<string, unknown>;
     expect("validate_story" in tools).toBe(false);
     expect("start_game" in tools).toBe(false);
+    expect("get_scene" in tools).toBe(false);
     expect("choose_option" in tools).toBe(false);
   });
 
@@ -1127,7 +1128,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(game.world_quest_id).toBe("sunken_barrow");
     expect(game.observation.mode).toBe("rpg");
     expect(
-      a.get_scene({ session_id: game.session_id }).observation.available_actions.length,
+      a.get_observation({ session_id: game.session_id }).observation.available_actions.length,
     ).toBeGreaterThan(0);
 
     const last = playSunkenBarrowToVictory(a, game.session_id);
@@ -1492,7 +1493,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(moved.ok).toBe(true);
     expect(moved.context.here[0]).not.toBe(fullStart.observation.room);
 
-    const changedObservation = a.get_scene({
+    const changedObservation = a.get_observation({
       session_id: fullStart.session_id,
       if_state_hash: compactObservation.state_hash,
       compact_observation: true,
@@ -1502,7 +1503,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(changedObservation.state_hash).toBe(moved.state_hash);
     expect(changedObservation.context.here).toEqual(moved.context.here);
 
-    const scene = a.get_scene({
+    const scene = a.get_observation({
       session_id: fullStart.session_id,
       hide_graph: true,
       compact_observation: true,
