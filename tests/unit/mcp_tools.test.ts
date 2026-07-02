@@ -1656,7 +1656,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       "r",
       "That action is not available right now.",
     ]);
-    expect(compactEventRejected.event_v).toBe(2);
+    expect(compactEventRejected.event_v).toBe(3);
     expect(JSON.stringify(compactEventRejected.events).length).toBeLessThan(
       JSON.stringify(rejected.events).length,
     );
@@ -1686,7 +1686,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_observation: true,
     });
     expect(compactEventMoved.events[0]).toEqual(["m", moveEvent.from, moveEvent.to]);
-    expect(compactEventMoved.event_v).toBe(2);
+    expect(compactEventMoved.event_v).toBe(3);
     expect(JSON.stringify(compactEventMoved.events).length).toBeLessThan(
       JSON.stringify(moved.events).length,
     );

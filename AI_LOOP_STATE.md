@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 190 -->
+<!-- historical_cycle_count: 191 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_rpg_state_event_codes
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact RPG step events now use `event_v: 3` state-effect codes that preserve object, quest-stage, var, flag, journal, and diagnostic payloads.
+- Loop effect: compact MCP players keep full state-change identity without paying for long reducer effect names each turn.
+- Guard: focused compact-event/MCP tests, typecheck, lint, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_rpg_event_tags
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/token surface: successful public MCP tool results now serialize as minified JSON text instead of two-space pretty JSON.
 - Loop effect: every external MCP play/read/checkpoint response preserves handler compaction at the stdio envelope.
 - Guard: MCP server registration tests, typecheck, and format check passed before full gates.
-- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_checkpoint_rejections
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: stale save/export/overworld checkpoint rejections no longer echo `session_id` or duplicate rejection events.
-- Loop effect: guarded checkpoint retries keep only `ok`, current hash, rejection reason, and current context where recovery needs it.
-- Guard: focused MCP checkpoint tests, typecheck, and format check passed before full gates.
 - VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.

@@ -43,6 +43,11 @@ import {
   type McpActionOption,
   type McpObservation,
 } from "./types.js";
+import {
+  compactPlayerEvent,
+  RPG_COMPACT_EVENT_VERSION,
+  type RpgCompactEvent,
+} from "./compact_rpg_event.js";
 import { compactRpgObservation, type RpgCompactObservation } from "./compact_rpg_observation.js";
 import type { WorldBinding, WorldManifest } from "../world/schema.js";
 import {
@@ -311,20 +316,6 @@ type RpgLegalActionsResponse<Args extends RpgLegalActionsArgs> = Args extends {
 }
   ? RpgLegalActionsPayload | RpgLegalActionsUnchanged
   : RpgLegalActionsPayload;
-
-type RpgCompactEvent =
-  | readonly ["r", reason: string]
-  | readonly ["n", text: string]
-  | readonly ["s", effect: string, key: string | null, value?: unknown]
-  | readonly ["u", from: string, to: string]
-  | readonly ["o", id: string]
-  | readonly ["m", from: string, to: string]
-  | readonly ["t", item: string]
-  | readonly ["d", item: string]
-  | readonly ["q", npc: string, node: string]
-  | readonly ["e", endingId: string];
-
-const RPG_COMPACT_EVENT_VERSION = 2 as const;
 
 type RpgStepEvents<Args extends RpgResponseOptions> = Args extends { compact_events: true }
   ? RpgCompactEvent[]
@@ -640,50 +631,6 @@ function playerVisibleEvents(events: GameEvent[]): GameEvent[] {
     const key = typeof sc.flag === "string" ? sc.flag : typeof sc.name === "string" ? sc.name : "";
     return !key.startsWith("__");
   });
-}
-
-function compactPlayerEvent(event: GameEvent): RpgCompactEvent {
-  switch (event.type) {
-    case "rejected":
-      return ["r", event.reason];
-    case "narration":
-      return ["n", event.text];
-    case "state_change": {
-      const key =
-        typeof event.flag === "string"
-          ? event.flag
-          : typeof event.name === "string"
-            ? event.name
-            : typeof event.item === "string"
-              ? event.item
-              : typeof event.text === "string"
-                ? event.text
-                : null;
-      const value =
-        event.value !== undefined
-          ? event.value
-          : event.delta !== undefined
-            ? event.delta
-            : event.to !== undefined
-              ? event.to
-              : event.amount;
-      return value !== undefined ? ["s", event.effect, key, value] : ["s", event.effect, key];
-    }
-    case "unlock_exit":
-      return ["u", event.from, event.to];
-    case "open_object":
-      return ["o", event.id];
-    case "move":
-      return ["m", event.from, event.to];
-    case "take":
-      return ["t", event.item];
-    case "drop":
-      return ["d", event.item];
-    case "dialogue":
-      return ["q", event.npc, event.node];
-    case "ending":
-      return ["e", event.endingId];
-  }
 }
 
 function rpgStepEvents<Args extends RpgResponseOptions>(
