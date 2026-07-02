@@ -1057,21 +1057,16 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect("choose_option" in tools).toBe(false);
   });
 
-  it("validate_quest is the world-first validation alias", () => {
-    const r = api().validate_quest({ quest_id: "sunken_barrow" });
+  it("validate_quest uses world_quest_id only", () => {
+    const r = api().validate_quest({ world_quest_id: "sunken_barrow" });
     expect(r.ok).toBe(true);
     expect("pack_path" in r).toBe(false);
     expect(r.world_quest_id).toBe("sunken_barrow");
 
-    const viaWorldQuestId = api().validate_quest({ world_quest_id: "sunken_barrow" });
-    expect(viaWorldQuestId.ok).toBe(true);
-    expect("pack_path" in viaWorldQuestId).toBe(false);
-    expect(viaWorldQuestId.world_quest_id).toBe("sunken_barrow");
-
-    expect(() => api().validate_quest({})).toThrow(/requires quest_id or world_quest_id/);
-    expect(() =>
-      api().validate_quest({ quest_id: "sunken_barrow", world_quest_id: "sunken_barrow" }),
-    ).toThrow(/exactly one/);
+    expect(() => api().validate_quest({})).toThrow(/requires world_quest_id/);
+    expect(() => api().validate_quest({ quest_id: "sunken_barrow" } as never)).toThrow(
+      /not quest_id/,
+    );
     expect(() => api().validate_quest({ quest_path: PACK } as never)).toThrow(/not quest_path/);
   });
 
@@ -1086,8 +1081,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
   });
 
   it("validate/load quest reject missing or raw path source identity", () => {
-    expect(() => api().validate_quest({})).toThrow(/requires quest_id or world_quest_id/);
-    expect(() => api().load_quest({})).toThrow(/requires quest_id or world_quest_id/);
+    expect(() => api().validate_quest({})).toThrow(/requires world_quest_id/);
+    expect(() => api().load_quest({})).toThrow(/requires world_quest_id/);
+    expect(() => api().load_quest({ quest_id: "sunken_barrow" } as never)).toThrow(/not quest_id/);
     expect(() => api().validate_quest({ pack_path: PACK } as never)).toThrow(/not pack_path/);
     expect(() => api().load_quest({ pack_path: PACK } as never)).toThrow(/not pack_path/);
     expect(() =>

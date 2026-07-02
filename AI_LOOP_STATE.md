@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 77 -->
+<!-- historical_cycle_count: 78 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — retire_quest_id_validation_alias
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/API surface: `validate_quest` and `load_quest` now accept only `world_quest_id`.
+- Loop effect: shipped quest validation/loading have one source key; `quest_id` remains only on `start_world_quest`.
+- Evidence: public MCP registration uses `WORLD_QUEST_SOURCE`, and ToolApi rejects `quest_id` on validate/load.
+- Guard: MCP registration tests assert `QUEST_ID_SOURCE` is absent.
+- VERIFY: focused MCP/source tests, typecheck, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.
 
 ### Cycle result — narrow_new_game_to_generated
 
@@ -793,8 +802,9 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - ToolApi/public MCP validate/load/patch schemas and responses are
   `world_quest_id` only; trace replay/inspect resolve shipped sources from
   embedded or explicit `world_quest_id`.
-- Quest tools: ToolApi and public MCP `validate_quest`/`load_quest`/`start_world_quest`
-  use graph ids only; raw `quest_path`/`pack_path` is rejected.
+- Quest tools: ToolApi and public MCP `validate_quest`/`load_quest` use
+  `world_quest_id` only; `start_world_quest` uses `quest_id`; raw
+  `quest_path`/`pack_path` is rejected.
 - Retired legacy aliases: live MCP uses `validate_quest`, `load_quest`, and
   `start_world_quest` for shipped quests; `new_game` remains generated-pack
   only.

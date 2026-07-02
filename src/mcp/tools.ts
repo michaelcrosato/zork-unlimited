@@ -860,26 +860,23 @@ export function createToolApi(opts: { root: string }) {
     return { ...source, compiled: requirePlayable(source.packPath) };
   }
 
-  function resolveQuestIdSource(
-    args: { quest_id?: string; world_quest_id?: string },
+  function resolveRequiredWorldQuestId(
+    args: { world_quest_id?: string },
     operation: string,
-  ): { worldQuestId: string } {
+  ): string {
     if ((args as { pack_path?: unknown }).pack_path !== undefined) {
-      throw new Error(`${operation} accepts quest_id or world_quest_id, not pack_path.`);
+      throw new Error(`${operation} accepts world_quest_id, not pack_path.`);
     }
     if ((args as { quest_path?: unknown }).quest_path !== undefined) {
-      throw new Error(`${operation} accepts quest_id or world_quest_id, not quest_path.`);
+      throw new Error(`${operation} accepts world_quest_id, not quest_path.`);
     }
-    const sourceCount = [args.quest_id !== undefined, args.world_quest_id !== undefined].filter(
-      Boolean,
-    ).length;
-    if (sourceCount === 0) {
-      throw new Error(`${operation} requires quest_id or world_quest_id.`);
+    if ((args as { quest_id?: unknown }).quest_id !== undefined) {
+      throw new Error(`${operation} accepts world_quest_id, not quest_id.`);
     }
-    if (sourceCount > 1) {
-      throw new Error(`${operation} accepts exactly one of quest_id or world_quest_id.`);
+    if (args.world_quest_id === undefined) {
+      throw new Error(`${operation} requires world_quest_id.`);
     }
-    return { worldQuestId: args.quest_id ?? args.world_quest_id! };
+    return args.world_quest_id;
   }
 
   function validateWorldQuest(worldQuestId: string): {
@@ -1368,16 +1365,15 @@ export function createToolApi(opts: { root: string }) {
       );
     },
 
-    validate_quest(args: { quest_id?: string; world_quest_id?: string }): {
+    validate_quest(args: { world_quest_id?: string }): {
       ok: boolean;
       world_quest_id: string | null;
       report: ValidationReport;
     } {
-      const source = resolveQuestIdSource(args, "validate_quest");
-      return validateWorldQuest(source.worldQuestId);
+      return validateWorldQuest(resolveRequiredWorldQuestId(args, "validate_quest"));
     },
 
-    load_quest(args: { quest_id?: string; world_quest_id?: string }): {
+    load_quest(args: { world_quest_id?: string }): {
       ok: boolean;
       world_quest_id: string | null;
       mode?: PackMode;
@@ -1385,8 +1381,7 @@ export function createToolApi(opts: { root: string }) {
       content_hash?: string;
       report: ValidationReport;
     } {
-      const source = resolveQuestIdSource(args, "load_quest");
-      return loadWorldQuest(source.worldQuestId);
+      return loadWorldQuest(resolveRequiredWorldQuestId(args, "load_quest"));
     },
 
     /**

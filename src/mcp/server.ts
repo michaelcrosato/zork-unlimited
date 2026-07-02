@@ -43,10 +43,6 @@ function tool(
 const WORLD_QUEST_SOURCE = {
   world_quest_id: z.string().describe("Quest id."),
 };
-const QUEST_ID_SOURCE = {
-  quest_id: z.string().optional().describe("Quest id."),
-  world_quest_id: z.string().optional().describe("Alias."),
-};
 const SESSION = {
   session_id: z.string().describe("Session."),
 };
@@ -347,13 +343,13 @@ tool(
   },
   (a) => api.start_overworld_session_quest(defaultCompactOverworldAndRpg(a)),
 );
-tool("validate_quest", "Validate one shipped RPG quest by id.", QUEST_ID_SOURCE, (a) =>
+tool("validate_quest", "Validate one shipped RPG quest by id.", WORLD_QUEST_SOURCE, (a) =>
   api.validate_quest(a),
 );
 tool(
   "load_quest",
   "Compile a shipped world quest by graph id and return its mode, metadata, content hash, source identity, and validation report.",
-  QUEST_ID_SOURCE,
+  WORLD_QUEST_SOURCE,
   (a) => api.load_quest(a),
 );
 

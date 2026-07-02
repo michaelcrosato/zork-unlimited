@@ -82,15 +82,18 @@ describe("MCP server registration", () => {
     expect(loadGame).not.toContain("pack_path");
     expect(startWorldQuest).toContain("quest_id");
     expect(startWorldQuest).not.toContain("quest_path");
-    expect(validateQuest).toContain("QUEST_ID_SOURCE");
+    expect(validateQuest).toContain("WORLD_QUEST_SOURCE");
+    expect(validateQuest).not.toContain("QUEST_ID_SOURCE");
     expect(validateQuest).not.toContain("quest_path");
     expect(worldPath).toContain("world_quest_id");
     expect(worldPath).not.toContain("quest_path");
   });
 
   it("keeps public MCP content and trace tools quest-id first", () => {
-    const sharedSource = serverSourceBlock("const WORLD_QUEST_SOURCE", "const QUEST_ID_SOURCE");
+    const sharedSource = serverSourceBlock("const WORLD_QUEST_SOURCE", "const SESSION");
     expect(sharedSource).toContain("world_quest_id");
+    expect(sharedSource).not.toMatch(/\n\s+quest_id:/);
+    expect(sharedSource).not.toContain("Alias.");
     expect(sharedSource).not.toContain("pack_path");
 
     for (const toolName of [
@@ -101,7 +104,8 @@ describe("MCP server registration", () => {
       "inspect_trace",
     ]) {
       const block = registeredToolBlock(toolName);
-      expect(block).toMatch(/world_quest_id|WORLD_QUEST_SOURCE|QUEST_ID_SOURCE/);
+      expect(block).toMatch(/world_quest_id|WORLD_QUEST_SOURCE/);
+      expect(block).not.toContain("QUEST_ID_SOURCE");
       expect(block).not.toContain("pack_path");
     }
   });

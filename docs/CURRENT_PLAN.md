@@ -62,8 +62,8 @@ Make discovered overworld quest leads start real RPG sessions.
   and `world_quest_id`, not retired `pack_path` starts.
 - `world_path` now accepts `world_quest_id` only in ToolApi and public MCP, and
   returns graph-route metadata without raw `quest_path`.
-- `validate_quest` and `load_quest` now accept `quest_id` / `world_quest_id`
-  for shipped quests and return world identity without echoing raw pack paths.
+- `validate_quest` and `load_quest` now accept only `world_quest_id` for
+  shipped quests and return world identity without echoing raw pack paths.
 - `apply_content_patch` now accepts shipped `world_quest_id` in ToolApi/public
   MCP and returns world identity only.
 - `replay_trace` and `inspect_trace` now advertise shipped `world_quest_id` on
@@ -71,8 +71,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - ToolApi `replay_trace` and `inspect_trace` now reject raw `pack_path`; shipped
   traces infer their source from embedded `worldQuestId` or explicit
   `world_quest_id`.
-- `validate_quest` now accepts only `quest_id` / `world_quest_id` in ToolApi and
-  public MCP; raw `quest_path` is rejected.
+- `validate_quest` and `load_quest` now accept only `world_quest_id` in ToolApi
+  and public MCP; raw `quest_id` / `quest_path` aliases are rejected.
 - Retired legacy story and pack-named aliases from the live MCP surface; use
   `validate_quest`, `load_quest`, and `start_world_quest` for shipped RPG play.
   `new_game` remains only for generated-pack smoke play.
