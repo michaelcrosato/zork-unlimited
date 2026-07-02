@@ -498,6 +498,7 @@ const TRANSCRIPT_PROJECTION_COMPACT_EVENTS = `compact-events:v${RPG_COMPACT_EVEN
 const TRANSCRIPT_SUMMARY_PROJECTION_COMPACT = "compact-summary:v1";
 const OBSERVATION_PROJECTION_COMPACT = `compact-observation:v${RPG_COMPACT_OBSERVATION_VERSION}`;
 const OBSERVATION_PROJECTION_PUBLIC = "public-observation:v1";
+const LEGAL_ACTION_ROWS_PROJECTION = "legal-action-rows:v1";
 
 type RpgGetStateArgs = {
   session_id: string;
@@ -802,6 +803,19 @@ function publicActionRows<Args extends RpgLegalActionsArgs>(
       ? actions.map((option) => option.id)
       : publicActions(actions, publicObservationOptions(args))
   ) as RpgLegalActionRows<Args>;
+}
+
+function legalActionRowsFor<Args extends RpgLegalActionsArgs>(
+  sessions: SessionStore,
+  session: Session,
+  actions: readonly RpgActionOption[],
+  args: Args,
+): RpgLegalActionRows<Args> {
+  return sessions.legalActionProjection(
+    session.id,
+    `${LEGAL_ACTION_ROWS_PROJECTION}:compact:${args.compact_actions === true ? 1 : 0}`,
+    () => publicActionRows(actions, args),
+  );
 }
 
 function publicObservation(
@@ -1731,7 +1745,7 @@ export function createToolApi(opts: { root: string }) {
       }
       const actions = sessions.legalActions(s.id, () => enumerateRpgActions(s.index, s.state));
       return {
-        actions: publicActionRows(actions, args),
+        actions: legalActionRowsFor(sessions, s, actions, args),
         state_hash: stateHash,
       } as RpgLegalActionsResponse<Args>;
     },

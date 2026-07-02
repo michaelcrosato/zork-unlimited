@@ -3,7 +3,12 @@ import type { Rules } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import { initState } from "../../src/core/state.js";
 import { hashState } from "../../src/core/hash.js";
-import { SessionStore, type SessionInit, type TranscriptSummary } from "../../src/mcp/sessions.js";
+import {
+  SessionStore,
+  type SessionInit,
+  type TranscriptSummary,
+  type TranscriptTurn,
+} from "../../src/mcp/sessions.js";
 import type { RpgActionOption } from "../../src/rpg/legal_actions.js";
 import type { RpgObservation } from "../../src/rpg/observation.js";
 import type { RpgIndex } from "../../src/rpg/runner.js";
@@ -180,6 +185,70 @@ describe("SessionStore", () => {
     expect(afterUpdate).toBe(nextActions);
     expect(enumerations).toBe(2);
     expect(session.legalActionsCache?.stateHash).toBe(session.stateHash);
+  });
+
+  it("caches legal action projections until the session state is replaced", () => {
+    const store = new SessionStore();
+    const session = store.create(sessionInit());
+    const firstProjection = ["look"];
+    const nextProjection = ["inventory"];
+    const fullProjection = [{ id: "look", command: "look" }];
+    let builds = 0;
+
+    const first = store.legalActionProjection(session.id, "rows:compact:1", () => {
+      builds += 1;
+      return firstProjection;
+    });
+    const cached = store.legalActionProjection(session.id, "rows:compact:1", () => {
+      builds += 1;
+      return nextProjection;
+    });
+    const full = store.legalActionProjection(session.id, "rows:compact:0", () => {
+      builds += 1;
+      return fullProjection;
+    });
+
+    expect(first).toBe(firstProjection);
+    expect(cached).toBe(firstProjection);
+    expect(full).toBe(fullProjection);
+    expect(builds).toBe(2);
+    expect(session.legalActionProjectionCaches?.get("rows:compact:1")?.stateHash).toBe(
+      session.stateHash,
+    );
+
+    const turn: TranscriptTurn = {
+      step: 1,
+      scene_id: "start",
+      title: "Start",
+      action_id: "look",
+      action_text: "look",
+      events: [],
+      result_scene_id: "start",
+      ended: false,
+      ending_id: null,
+    };
+    store.appendTranscript(session.id, turn);
+    const afterTranscript = store.legalActionProjection(session.id, "rows:compact:1", () => {
+      builds += 1;
+      return nextProjection;
+    });
+
+    expect(afterTranscript).toBe(firstProjection);
+    expect(builds).toBe(2);
+
+    const nextState = state("next");
+    store.update(session.id, nextState);
+
+    expect(session.legalActionProjectionCaches).toBeUndefined();
+    expect(session.stateHash).toBe(hashState(nextState));
+
+    const afterUpdate = store.legalActionProjection(session.id, "rows:compact:1", () => {
+      builds += 1;
+      return nextProjection;
+    });
+
+    expect(afterUpdate).toBe(nextProjection);
+    expect(builds).toBe(3);
   });
 
   it("caches observations by state hash and graph options", () => {

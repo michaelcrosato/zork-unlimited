@@ -58,6 +58,13 @@ export type Session = {
     stateHash: string;
     actions: RpgActionOption[];
   };
+  legalActionProjectionCaches?: Map<
+    string,
+    {
+      stateHash: string;
+      projection: unknown;
+    }
+  >;
   observationCache?: {
     stateHash: string;
     hideGraph: boolean;
@@ -104,6 +111,7 @@ export type SessionInit = Omit<
   | "id"
   | "stateHash"
   | "legalActionsCache"
+  | "legalActionProjectionCaches"
   | "observationCache"
   | "observationProjectionCaches"
   | "transcriptLogHash"
@@ -141,6 +149,7 @@ export class SessionStore {
     session.state = state;
     session.stateHash = hashState(state);
     delete session.legalActionsCache;
+    delete session.legalActionProjectionCaches;
     delete session.observationCache;
     delete session.observationProjectionCaches;
     delete session.transcriptSummaryCache;
@@ -159,6 +168,22 @@ export class SessionStore {
       actions,
     };
     return actions;
+  }
+
+  legalActionProjection<T>(id: string, key: string, build: () => T): T {
+    const session = this.get(id);
+    const cache = session.legalActionProjectionCaches?.get(key);
+    if (cache?.stateHash === session.stateHash) {
+      return cache.projection as T;
+    }
+    const projection = build();
+    const caches = session.legalActionProjectionCaches ?? new Map();
+    caches.set(key, {
+      stateHash: session.stateHash,
+      projection,
+    });
+    session.legalActionProjectionCaches = caches;
+    return projection;
   }
 
   observation(

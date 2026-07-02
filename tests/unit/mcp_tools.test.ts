@@ -1698,6 +1698,13 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(JSON.stringify(compactListed.actions).length).toBeLessThan(
       JSON.stringify(listed.actions).length,
     );
+    const repeatedCompactListed = a.list_legal_actions({
+      session_id: game.session_id,
+      compact_actions: true,
+    });
+    expect(repeatedCompactListed.actions).toBe(compactListed.actions);
+    const repeatedListed = a.list_legal_actions({ session_id: game.session_id });
+    expect(repeatedListed.actions).toBe(listed.actions);
     const unchangedMenu = a.list_legal_actions({
       session_id: game.session_id,
       compact_actions: true,

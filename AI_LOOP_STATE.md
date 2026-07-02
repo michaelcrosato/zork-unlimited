@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 210 -->
+<!-- historical_cycle_count: 211 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — cached_action_row_projections
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: `SessionStore` now caches public legal-action row projections by shape and `stateHash`; `sessions.update` clears those projections with the legal-action cache.
+- Loop effect: repeated action-menu reads avoid remapping cached legal actions into compact id arrays or full public action rows for unchanged reducer state.
+- Guard: focused MCP session/tool tests prove row-projection reuse, separate compact/full entries, transcript-safe retention, and state invalidation.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — cached_observation_projections
 

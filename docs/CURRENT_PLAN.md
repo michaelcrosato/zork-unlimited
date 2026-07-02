@@ -150,6 +150,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - RPG legal-action option sets are cached per session/state hash and invalidated
   by `sessions.update`, so `list_legal_actions` followed by `step_action` does
   not recompute the same legal-action graph for unchanged state.
+- Public legal-action row projections are cached per session/state hash plus
+  compact/full shape, so repeated action-menu reads reuse compact id arrays or
+  public action rows until reducer state changes.
 - MCP RPG observations pass that cached legal-action set into
   `buildRpgObservation`, so start/open/read/reject/step observation payloads do
   not re-enumerate actions behind the session cache.
