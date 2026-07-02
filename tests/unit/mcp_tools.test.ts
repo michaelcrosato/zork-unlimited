@@ -18,6 +18,10 @@ const overworld = parseOverworldManifest(
   JSON.parse(readFileSync("content/world/new_york_overworld.json", "utf8")),
 );
 
+function numberedIds(prefix: string, count: number): string[] {
+  return Array.from({ length: count }, (_, i) => `${prefix}_${i.toString().padStart(2, "0")}`);
+}
+
 function actionIdByCommand(a: ReturnType<typeof api>, sessionId: string, needle: string): string {
   const actions = a.list_legal_actions({ session_id: sessionId }).actions as {
     id: string;
@@ -1079,6 +1083,58 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(byWorldQuestId.mode).toBe("rpg");
     expect("pack_path" in byWorldQuestId).toBe(false);
     expect(byWorldQuestId.world_quest_id).toBe("sunken_barrow");
+  });
+
+  it("can cap transcript summaries for token-light end-of-run audits", () => {
+    const a = api();
+    const game = a.new_game({ world_quest_id: "sunken_barrow", seed: 1 });
+    const session = a.sessions.get(game.session_id);
+    session.transcript = Array.from({ length: 20 }, (_, i) => ({
+      step: i,
+      scene_id: `scene_${i.toString().padStart(2, "0")}`,
+      title: `Scene ${i}`,
+      action_id: `action_${i}`,
+      action_text: `Action ${i}`,
+      events: [],
+      result_scene_id: `scene_${(i + 1).toString().padStart(2, "0")}`,
+      ended: false,
+      ending_id: null,
+    }));
+    session.state = {
+      ...session.state,
+      inventory: numberedIds("item", 20),
+      flags: {
+        ...Object.fromEntries(numberedIds("flag", 20).map((flag) => [flag, true])),
+        __internal_bookkeeping: true,
+      },
+      journal: numberedIds("journal", 10),
+    };
+
+    const full = a.get_transcript({ session_id: game.session_id, summary_only: true });
+    const compact = a.get_transcript({
+      session_id: game.session_id,
+      summary_only: true,
+      compact_summary: true,
+    });
+
+    expect(full.summary.scenes).toHaveLength(21);
+    expect(full.summary.inventory).toHaveLength(20);
+    expect(full.summary.flags).toHaveLength(20);
+    expect(full.summary.flags).not.toContain("__internal_bookkeeping");
+    expect(full.summary.journal).toHaveLength(10);
+    expect(full.summary).not.toHaveProperty("more");
+    expect(compact.turns).toEqual([]);
+    expect(compact.summary.scenes).toEqual(full.summary.scenes.slice(0, 16));
+    expect(compact.summary.inventory).toEqual(numberedIds("item", 16));
+    expect(compact.summary.flags).toEqual(numberedIds("flag", 16));
+    expect(compact.summary.journal).toEqual(numberedIds("journal", 10).slice(-5));
+    expect(compact.summary.more).toEqual({
+      scenes: 5,
+      inventory: 4,
+      flags: 4,
+      journal: 5,
+    });
+    expect(JSON.stringify(compact).length).toBeLessThan(JSON.stringify(full).length);
   });
 
   it("quest aliases can play and transcript a route", () => {

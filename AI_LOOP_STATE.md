@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 52 -->
+<!-- historical_cycle_count: 53 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_transcript_summary
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner still fails broad root Prettier/ESLint/git-worktree checks, while its tsc/test portions passed.
+- Engine/token surface: `get_transcript` now supports `compact_summary`, capping scenes/inventory/flags to 16 and journal to the 5 most recent entries with `summary.more` omitted counts.
+- Loop effect: blind end-of-run audits now request `summary_only: true, compact_summary: true`, so long playtests avoid full summary list growth unless explicitly diagnosing history.
+- Evidence: focused MCP/blind-doc tests (61) cover the compact summary cap and blind harness contract.
+- VERIFY: `npm run health`, `npm run validate`, and `npm test` passed: integrity, typecheck, lint, format check, 193 test files / 1352 tests, and validate.
+- Self-critique: opt-in preserves full transcript summary compatibility; later cycles can consider making compact summaries the default for AFK-owned callers.
 
 ### Cycle result — compact_rpg_state_caps
 

@@ -256,6 +256,12 @@ type TranscriptSummary = {
   inventory: string[];
   flags: string[];
   journal: string[];
+  more?: {
+    scenes?: number;
+    inventory?: number;
+    flags?: number;
+    journal?: number;
+  };
 };
 type TranscriptResponse<Turn> = {
   session_id: string;
@@ -270,6 +276,7 @@ type TranscriptArgs = {
   session_id: string;
   summary_only?: boolean;
   compact_turns?: boolean;
+  compact_summary?: boolean;
 };
 type TranscriptTurnFor<Args extends TranscriptArgs> = Args extends { compact_turns: true }
   ? TranscriptCompactTurn
@@ -307,6 +314,49 @@ function buildObsFor(
   opts: { hideGraph?: boolean; includeWorldIntro?: boolean } = {},
 ): RpgObservation {
   return buildRpgObservation(index, state, opts);
+}
+
+const TRANSCRIPT_SUMMARY_LIST_LIMIT = 16;
+const TRANSCRIPT_SUMMARY_JOURNAL_LIMIT = 5;
+
+function compactTranscriptHead(values: readonly string[], limit: number): string[] {
+  return values.slice(0, limit);
+}
+
+function compactTranscriptRecent(values: readonly string[], limit: number): string[] {
+  return values.slice(Math.max(0, values.length - limit));
+}
+
+function transcriptOmittedCount(
+  values: readonly string[],
+  compacted: readonly string[],
+): number | undefined {
+  return values.length > compacted.length ? values.length - compacted.length : undefined;
+}
+
+function compactTranscriptSummary(summary: TranscriptSummary): TranscriptSummary {
+  const scenes = compactTranscriptHead(summary.scenes, TRANSCRIPT_SUMMARY_LIST_LIMIT);
+  const inventory = compactTranscriptHead(summary.inventory, TRANSCRIPT_SUMMARY_LIST_LIMIT);
+  const flags = compactTranscriptHead(summary.flags, TRANSCRIPT_SUMMARY_LIST_LIMIT);
+  const journal = compactTranscriptRecent(summary.journal, TRANSCRIPT_SUMMARY_JOURNAL_LIMIT);
+  const omittedScenes = transcriptOmittedCount(summary.scenes, scenes);
+  const omittedInventory = transcriptOmittedCount(summary.inventory, inventory);
+  const omittedFlags = transcriptOmittedCount(summary.flags, flags);
+  const omittedJournal = transcriptOmittedCount(summary.journal, journal);
+  const more = {
+    ...(omittedScenes !== undefined ? { scenes: omittedScenes } : {}),
+    ...(omittedInventory !== undefined ? { inventory: omittedInventory } : {}),
+    ...(omittedFlags !== undefined ? { flags: omittedFlags } : {}),
+    ...(omittedJournal !== undefined ? { journal: omittedJournal } : {}),
+  };
+  return {
+    ...summary,
+    scenes,
+    inventory,
+    flags,
+    journal,
+    ...(Object.keys(more).length > 0 ? { more } : {}),
+  };
 }
 
 /** The current RPG room id. */
@@ -1256,6 +1306,17 @@ export function createToolApi(opts: { root: string }) {
       args: Args,
     ): TranscriptResponse<TranscriptTurnFor<Args>> {
       const s = sessions.get(args.session_id);
+      const summary: TranscriptSummary = {
+        steps: s.transcript.filter((t) => t.action_id !== null).length,
+        scenes: [...new Set(s.transcript.flatMap((t) => [t.scene_id, t.result_scene_id]))].sort(),
+        ended: s.state.ended,
+        ending_id: s.state.endingId,
+        inventory: [...s.state.inventory],
+        flags: Object.keys(s.state.flags)
+          .filter((f) => s.state.flags[f] === true && !f.startsWith("__"))
+          .sort(),
+        journal: [...s.state.journal],
+      };
       const response = {
         session_id: s.id,
         pack_id: s.packId,
@@ -1276,17 +1337,7 @@ export function createToolApi(opts: { root: string }) {
                 ending_id: t.ending_id,
               }))
             : s.transcript.map((t) => ({ ...t, events: playerVisibleEvents(t.events) })),
-        summary: {
-          steps: s.transcript.filter((t) => t.action_id !== null).length,
-          scenes: [...new Set(s.transcript.flatMap((t) => [t.scene_id, t.result_scene_id]))].sort(),
-          ended: s.state.ended,
-          ending_id: s.state.endingId,
-          inventory: [...s.state.inventory],
-          flags: Object.keys(s.state.flags)
-            .filter((f) => s.state.flags[f] === true && !f.startsWith("__"))
-            .sort(),
-          journal: [...s.state.journal],
-        },
+        summary: args.compact_summary ? compactTranscriptSummary(summary) : summary,
       };
       return response as unknown as TranscriptResponse<TranscriptTurnFor<Args>>;
     },

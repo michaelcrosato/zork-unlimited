@@ -144,7 +144,7 @@ async function main() {
     const transcript = parseResult(
       await client.callTool({
         name: "get_transcript",
-        arguments: { session_id, summary_only: true },
+        arguments: { session_id, summary_only: true, compact_summary: true },
       }),
     );
     if ((transcript.summary?.steps ?? -1) < stepped) {

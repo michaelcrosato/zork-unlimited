@@ -85,6 +85,7 @@ describe("bug_0049 — the current-process docs on the REAL repo (charter-cohere
     expect(protocol).toContain("context.actions");
     expect(protocol).toContain("list_legal_actions");
     expect(protocol).toContain("summary_only = true");
+    expect(protocol).toContain("compact_summary = true");
     expect(protocol).toContain("compact_turns = true");
   });
 
