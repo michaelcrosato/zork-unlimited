@@ -151,6 +151,7 @@ Make discovered overworld quest leads start real RPG sessions.
   drift, local source identity/chronology/count replay drift, site-prefix drift, saved-area-map drift,
   pending-road/travel binding drift,
   pending-road unresolved-state drift,
+  travel/road/service resource replay drift,
   local-action journal reachability/town-chronology drift,
   resolved-event locality/prerequisite drift,
   non-newest-first or future travel logs, and impossible travel vitals before

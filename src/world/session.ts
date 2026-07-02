@@ -119,6 +119,11 @@ type RoadJournalIdParts = {
   strategy: OverworldRoadEncounterStrategy;
 };
 
+type ServiceJournalIdParts = {
+  action: "rest" | "resupply";
+  recordedAt: number;
+};
+
 export type OverworldRoadEncounterOption = {
   strategy: OverworldRoadEncounterStrategy;
   label: string;
@@ -128,6 +133,57 @@ export type OverworldRoadEncounterOption = {
   renownGained: number;
   outcome: string;
 };
+
+function roadEncounterRisk(roadEvent: OverworldRoadEvent): number {
+  return roadEvent.risk === "high" ? 3 : roadEvent.risk === "medium" ? 2 : 1;
+}
+
+function roadEncounterOptionsFor(roadEvent: OverworldRoadEvent): OverworldRoadEncounterOption[] {
+  const risk = roadEncounterRisk(roadEvent);
+  return [
+    {
+      strategy: "cautious_scout",
+      label: "Scout the road problem",
+      minutes: 15 + risk * 10,
+      suppliesCost: 0,
+      fatigueGained: 0,
+      renownGained: 1,
+      outcome:
+        "You slow down, read the situation, and leave a useful warning for the next traveler.",
+    },
+    {
+      strategy: "assist_travelers",
+      label: "Help resolve it",
+      minutes: 25 + risk * 15,
+      suppliesCost: risk >= 3 ? 2 : 1,
+      fatigueGained: risk,
+      renownGained: risk + 1,
+      outcome:
+        "You spend supplies and effort stabilizing the road trouble instead of merely passing it.",
+    },
+    {
+      strategy: "press_on",
+      label: "Press on",
+      minutes: 0,
+      suppliesCost: 0,
+      fatigueGained: risk,
+      renownGained: 0,
+      outcome:
+        "You keep moving and accept the extra strain rather than spending daylight on the encounter.",
+    },
+  ];
+}
+
+function roadEncounterOptionFor(
+  roadEvent: OverworldRoadEvent,
+  strategy: OverworldRoadEncounterStrategy,
+): OverworldRoadEncounterOption {
+  const option = roadEncounterOptionsFor(roadEvent).find(
+    (candidate) => candidate.strategy === strategy,
+  );
+  if (!option) throw new Error(`Unknown road encounter strategy "${strategy}".`);
+  return option;
+}
 
 export type OverworldPendingRoadEncounter = {
   id: string;
@@ -478,6 +534,11 @@ type OverworldRenownSourceIndex = {
   travelLogByArrival: ReadonlyMap<string, TravelLogEntrySnapshot>;
 };
 
+type OverworldResourceReplayIndex = {
+  edgesById: ReadonlyMap<string, OverworldEdge>;
+  roadEventsByEdgeId: ReadonlyMap<string, OverworldRoadEvent>;
+};
+
 type OverworldDiscoveryLocalityIndex = {
   areaHomes: ReadonlyMap<string, string>;
   discoveredAreaIds: ReadonlySet<string>;
@@ -573,6 +634,25 @@ function parseRoadJournalId(entryId: string): RoadJournalIdParts {
   };
 }
 
+function parseServiceJournalId(entryId: string): ServiceJournalIdParts {
+  const match = /^service:(rest|resupply):(\d+)$/.exec(entryId);
+  if (!match) {
+    throw new Error(
+      `Overworld session snapshot journal service entry id "${entryId}" must match "service:<rest|resupply>:<minutes>".`,
+    );
+  }
+  const recordedAt = Number(match[2]!);
+  if (!Number.isSafeInteger(recordedAt)) {
+    throw new Error(
+      `Overworld session snapshot journal service entry has malformed minutes "${match[2]}".`,
+    );
+  }
+  return {
+    action: match[1] as "rest" | "resupply",
+    recordedAt,
+  };
+}
+
 function assertRoadJournalSource(
   entry: OverworldJournalEntry,
   recordedAt: number,
@@ -601,14 +681,8 @@ function assertRoadJournalSource(
 }
 
 function assertServiceJournalSource(entry: OverworldJournalEntry, recordedAt: number): void {
-  const match = /^service:(rest|resupply):(\d+)$/.exec(entry.id);
-  if (!match) {
-    throw new Error(
-      `Overworld session snapshot journal service entry id "${entry.id}" must match "service:<rest|resupply>:<minutes>".`,
-    );
-  }
-  const serviceAt = Number(match[2]!);
-  if (!Number.isSafeInteger(serviceAt) || serviceAt !== recordedAt) {
+  const service = parseServiceJournalId(entry.id);
+  if (service.recordedAt !== recordedAt) {
     throw new Error(
       "Overworld session snapshot journal service entry time does not match its timestamp.",
     );
@@ -728,6 +802,203 @@ function assertSnapshotTimeline(
       throw new Error("Overworld session snapshot journal must be newest-first.");
     }
     previousRecordedAt = recordedAt;
+  }
+}
+
+function travelResourceKey(entry: TravelLogEntrySnapshot): string {
+  return `${entry.edgeId}@${entry.arrivedAt}`;
+}
+
+function assertTravelResourceTransition(
+  entry: TravelLogEntrySnapshot,
+  edge: OverworldEdge,
+  roadEvent: OverworldRoadEvent | null,
+  state: { supplies: number; fatigue: number },
+): void {
+  const label = `${entry.edgeId}@${entry.arrivedAt}`;
+  const supplyCost = travelSupplyCost(edge.travel_minutes);
+  const expectedSuppliesUsed = Math.min(state.supplies, supplyCost);
+  const supplyDeficit = supplyCost - expectedSuppliesUsed;
+  const expectedDelayMinutes = travelDelayMinutes(
+    edge.travel_minutes,
+    state.fatigue,
+    supplyDeficit,
+  );
+  const expectedMinutes = edge.travel_minutes + expectedDelayMinutes;
+  const expectedSuppliesAfter = state.supplies - expectedSuppliesUsed;
+  const expectedFatigueGained =
+    travelFatigueGain(edge.travel_minutes, roadEvent) + supplyDeficit * 4;
+  const expectedFatigueAfter = Math.min(MAX_FATIGUE, state.fatigue + expectedFatigueGained);
+
+  if (entry.delayMinutes !== expectedDelayMinutes || entry.minutes !== expectedMinutes) {
+    throw new Error(
+      `Overworld session snapshot travel "${label}" does not match resource replay timing.`,
+    );
+  }
+  if (entry.suppliesUsed !== expectedSuppliesUsed) {
+    throw new Error(
+      `Overworld session snapshot travel "${label}" supplies used does not match resource replay.`,
+    );
+  }
+  if (entry.suppliesAfter !== expectedSuppliesAfter) {
+    throw new Error(
+      `Overworld session snapshot travel "${label}" supplies after does not match resource replay.`,
+    );
+  }
+  if (entry.fatigueGained !== expectedFatigueGained) {
+    throw new Error(
+      `Overworld session snapshot travel "${label}" fatigue gained does not match resource replay.`,
+    );
+  }
+  if (entry.fatigueAfter !== expectedFatigueAfter) {
+    throw new Error(
+      `Overworld session snapshot travel "${label}" fatigue after does not match resource replay.`,
+    );
+  }
+
+  state.supplies = expectedSuppliesAfter;
+  state.fatigue = expectedFatigueAfter;
+}
+
+function assertSnapshotRoadResolutionCoverage(
+  snapshot: OverworldSessionSnapshot,
+  sources: OverworldResourceReplayIndex,
+): Map<string, OverworldJournalEntry> {
+  const latestTravel = snapshot.travelLog[0];
+  const pendingRoadKey =
+    snapshot.pendingRoadEncounter && latestTravel?.edgeId === snapshot.pendingRoadEncounter.edgeId
+      ? travelResourceKey(latestTravel)
+      : null;
+  const roadResolutionByKey = new Map<string, OverworldJournalEntry>();
+  const travelEntriesOldestFirst = [...snapshot.travelLog].reverse();
+  const nextTravelArrivalByKey = new Map<string, number>();
+  for (let index = 0; index < travelEntriesOldestFirst.length - 1; index += 1) {
+    const current = travelEntriesOldestFirst[index]!;
+    nextTravelArrivalByKey.set(
+      travelResourceKey(current),
+      travelEntriesOldestFirst[index + 1]!.arrivedAt,
+    );
+  }
+
+  for (const entry of snapshot.journalEntries) {
+    if (entry.kind !== "road") continue;
+    const parsed = parseRoadJournalId(entry.id);
+    const key = `${parsed.edgeId}@${parsed.arrivedAt}`;
+    if (!sources.roadEventsByEdgeId.has(parsed.edgeId)) {
+      throw new Error(
+        `Overworld session snapshot road journal "${entry.id}" has no matching road event.`,
+      );
+    }
+    if (roadResolutionByKey.has(key)) {
+      throw new Error(
+        `Overworld session snapshot road encounter "${key}" has duplicate journal resolutions.`,
+      );
+    }
+    const nextTravelArrival = nextTravelArrivalByKey.get(key);
+    if (nextTravelArrival !== undefined && journalEntryRecordedAt(entry) > nextTravelArrival) {
+      throw new Error(
+        `Overworld session snapshot road encounter "${key}" was resolved after subsequent travel.`,
+      );
+    }
+    roadResolutionByKey.set(key, entry);
+  }
+
+  for (const entry of snapshot.travelLog) {
+    const key = travelResourceKey(entry);
+    if (!sources.roadEventsByEdgeId.has(entry.edgeId) || key === pendingRoadKey) continue;
+    if (!roadResolutionByKey.has(key)) {
+      throw new Error(
+        `Overworld session snapshot road encounter "${key}" is missing a journal resolution.`,
+      );
+    }
+  }
+
+  return roadResolutionByKey;
+}
+
+function assertSnapshotResourceReplay(
+  snapshot: OverworldSessionSnapshot,
+  sources: OverworldResourceReplayIndex,
+): void {
+  const roadResolutionByKey = assertSnapshotRoadResolutionCoverage(snapshot, sources);
+  const replayEvents: (
+    | { kind: "travel"; recordedAt: number; entry: TravelLogEntrySnapshot }
+    | { kind: "road"; recordedAt: number; entry: OverworldJournalEntry }
+    | { kind: "service"; recordedAt: number; entry: OverworldJournalEntry }
+  )[] = [];
+  for (const entry of snapshot.travelLog) {
+    replayEvents.push({ kind: "travel", recordedAt: entry.arrivedAt, entry });
+  }
+  for (const entry of snapshot.journalEntries) {
+    if (entry.kind === "road" || entry.kind === "service") {
+      replayEvents.push({ kind: entry.kind, recordedAt: journalEntryRecordedAt(entry), entry });
+    }
+  }
+  replayEvents.sort(
+    (left, right) =>
+      left.recordedAt - right.recordedAt ||
+      (left.kind === "travel" ? 0 : left.kind === "road" ? 1 : 2) -
+        (right.kind === "travel" ? 0 : right.kind === "road" ? 1 : 2),
+  );
+
+  const state = { supplies: STARTING_SUPPLIES, fatigue: 0 };
+  for (const event of replayEvents) {
+    if (event.kind === "travel") {
+      const edge = sources.edgesById.get(event.entry.edgeId);
+      if (!edge) {
+        throw new Error(
+          `Overworld session snapshot has unknown travel road "${event.entry.edgeId}".`,
+        );
+      }
+      assertTravelResourceTransition(
+        event.entry,
+        edge,
+        sources.roadEventsByEdgeId.get(event.entry.edgeId) ?? null,
+        state,
+      );
+      continue;
+    }
+
+    if (event.kind === "road") {
+      const parsed = parseRoadJournalId(event.entry.id);
+      const key = `${parsed.edgeId}@${parsed.arrivedAt}`;
+      if (roadResolutionByKey.get(key) !== event.entry) continue;
+      const roadEvent = sources.roadEventsByEdgeId.get(parsed.edgeId);
+      if (!roadEvent) continue;
+      const option = roadEncounterOptionFor(roadEvent, parsed.strategy);
+      const suppliesUsed = Math.min(state.supplies, option.suppliesCost);
+      const supplyDeficit = option.suppliesCost - suppliesUsed;
+      state.supplies -= suppliesUsed;
+      state.fatigue = Math.min(
+        MAX_FATIGUE,
+        state.fatigue + option.fatigueGained + supplyDeficit * 3,
+      );
+      continue;
+    }
+
+    const service = parseServiceJournalId(event.entry.id);
+    if (service.action === "rest") {
+      if (state.fatigue === 0) {
+        throw new Error(
+          `Overworld session snapshot service journal "${event.entry.id}" rests with no fatigue to recover.`,
+        );
+      }
+      state.fatigue = 0;
+    } else {
+      if (state.supplies >= MAX_SUPPLIES) {
+        throw new Error(
+          `Overworld session snapshot service journal "${event.entry.id}" resupplies with full supplies.`,
+        );
+      }
+      state.supplies = MAX_SUPPLIES;
+    }
+  }
+
+  if (snapshot.supplies !== state.supplies) {
+    throw new Error("Overworld session snapshot supplies do not match resource replay.");
+  }
+  if (snapshot.fatigue !== state.fatigue) {
+    throw new Error("Overworld session snapshot fatigue does not match resource replay.");
   }
 }
 
@@ -1077,15 +1348,7 @@ function roadRenownFor(
   roadEvent: OverworldRoadEvent,
   strategy: OverworldRoadEncounterStrategy,
 ): number {
-  const risk = roadEvent.risk === "high" ? 3 : roadEvent.risk === "medium" ? 2 : 1;
-  switch (strategy) {
-    case "assist_travelers":
-      return risk + 1;
-    case "cautious_scout":
-      return 1;
-    case "press_on":
-      return 0;
-  }
+  return roadEncounterOptionFor(roadEvent, strategy).renownGained;
 }
 
 function expectedSnapshotRegionRenown(
@@ -2008,6 +2271,10 @@ export class OverworldSession {
         snapshot.minutes,
       );
     }
+    assertSnapshotResourceReplay(snapshot, {
+      edgesById,
+      roadEventsByEdgeId,
+    });
 
     this.currentId = snapshot.currentId;
     this.currentAreaId = snapshot.currentAreaId;
@@ -2440,39 +2707,7 @@ export class OverworldSession {
   }
 
   private roadEncounterOptions(roadEvent: OverworldRoadEvent): OverworldRoadEncounterOption[] {
-    const risk = roadEvent.risk === "high" ? 3 : roadEvent.risk === "medium" ? 2 : 1;
-    return [
-      {
-        strategy: "cautious_scout",
-        label: "Scout the road problem",
-        minutes: 15 + risk * 10,
-        suppliesCost: 0,
-        fatigueGained: 0,
-        renownGained: 1,
-        outcome:
-          "You slow down, read the situation, and leave a useful warning for the next traveler.",
-      },
-      {
-        strategy: "assist_travelers",
-        label: "Help resolve it",
-        minutes: 25 + risk * 15,
-        suppliesCost: risk >= 3 ? 2 : 1,
-        fatigueGained: risk,
-        renownGained: risk + 1,
-        outcome:
-          "You spend supplies and effort stabilizing the road trouble instead of merely passing it.",
-      },
-      {
-        strategy: "press_on",
-        label: "Press on",
-        minutes: 0,
-        suppliesCost: 0,
-        fatigueGained: risk,
-        renownGained: 0,
-        outcome:
-          "You keep moving and accept the extra strain rather than spending daylight on the encounter.",
-      },
-    ];
+    return roadEncounterOptionsFor(roadEvent);
   }
 
   private setPendingRoadEncounter(

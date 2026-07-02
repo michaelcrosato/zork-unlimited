@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 41 -->
+<!-- historical_cycle_count: 42 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_snapshot_resource_replay
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner still fails broad root Prettier/ESLint outside canonical package scripts, while its tsc/test portions passed.
+- Engine/persistence: overworld restore now replays travel, road encounter, rest, and resupply resource effects before trusting saved supplies/fatigue or travel-log vitals.
+- Token economy: snapshots keep compact numeric vitals without verbose transition transcripts because restore derives the expected resource state from travel/journal chronology.
+- VERIFY: focused overworld snapshot test (82), typecheck, lint, format:check, validate, npm test (192/1342), `npm run health` EXIT 0.
+- Self-critique: closes travel/resource drift; exact clock replay across unjournaled area movement remains future work.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
 
 ### Cycle result — overworld_snapshot_local_source_identity_chronology
 

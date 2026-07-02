@@ -1691,13 +1691,34 @@ describe("overworld snapshot restore integrity", () => {
     );
   });
 
-  it("rejects impossible post-travel supplies and fatigue", () => {
+  it("rejects forged travel resource transitions inside schema bounds", () => {
+    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const latestTravel = snapshot.travelLog[0];
+    if (!latestTravel) throw new Error("expected travel history");
+    const forgedSuppliesAfter =
+      latestTravel.suppliesAfter === 0 ? 1 : latestTravel.suppliesAfter - 1;
+    const impossibleVitals = {
+      ...snapshot,
+      travelLog: [
+        { ...latestTravel, suppliesAfter: forgedSuppliesAfter },
+        ...snapshot.travelLog.slice(1),
+      ],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: impossibleVitals })).toThrow(
+      /supplies after.*resource replay/,
+    );
+  });
+
+  it("rejects final supplies that do not match resource replay", () => {
     const { a, snapshot } = exportedSnapshotAfterTwoRoads();
     const impossibleVitals = {
       ...snapshot,
-      travelLog: [{ ...snapshot.travelLog[0]!, suppliesAfter: 9 }, ...snapshot.travelLog.slice(1)],
+      supplies: snapshot.supplies === 0 ? 1 : snapshot.supplies - 1,
     };
 
-    expect(() => a.restore_overworld_session({ snapshot: impossibleVitals })).toThrow();
+    expect(() => a.restore_overworld_session({ snapshot: impossibleVitals })).toThrow(
+      /supplies do not match resource replay/,
+    );
   });
 });
