@@ -141,6 +141,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - RPG legal-action option sets are cached per session/state hash and invalidated
   by `sessions.update`, so `list_legal_actions` followed by `step_action` does
   not recompute the same legal-action graph for unchanged state.
+- MCP RPG observations pass that cached legal-action set into
+  `buildRpgObservation`, so start/open/read/reject/step observation payloads do
+  not re-enumerate actions behind the session cache.
 - Public MCP `get_transcript` defaults to compact summary-only output; callers can
   pass `summary_only: false` and `compact_summary: false` when they need full
   route/event history.

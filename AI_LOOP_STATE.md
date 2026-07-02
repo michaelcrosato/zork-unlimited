@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 204 -->
+<!-- historical_cycle_count: 205 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — cached_observation_actions
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: MCP RPG observation construction now passes the session cached legal-action set into `buildRpgObservation`, so start/open/read/reject/step observations do not re-enumerate actions behind the cache.
+- Loop effect: observe/list/step loops share one action graph per reducer state across both menu and observation payloads, while pure RPG observation callers keep the default enumerator path.
+- Guard: focused MCP tests prove cached legal actions are used when building observations and public action payloads still strip reducer actions.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — cached_legal_action_sets
 

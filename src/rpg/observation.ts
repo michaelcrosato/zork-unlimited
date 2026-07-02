@@ -22,9 +22,14 @@ import {
 import { enemyHp } from "./combat.js";
 import { publicFlags, publicInventory, publicJournal, publicVars } from "./observation_state.js";
 import { ATTACK_VAR, DEFENSE_VAR, HP_VAR, SCORE_VAR } from "./schema.js";
+import type { RpgActionOption } from "./legal_actions.js";
 import { enemyActive, enumerateRpgActions, type RpgIndex } from "./runner.js";
 
-export type ObservationOptions = { hideGraph?: boolean; includeWorldIntro?: boolean };
+export type ObservationOptions = {
+  hideGraph?: boolean;
+  includeWorldIntro?: boolean;
+  availableActions?: readonly RpgActionOption[];
+};
 
 export type RpgObservation = {
   mode: "rpg";
@@ -134,12 +139,14 @@ export function buildRpgObservation(
       attack: state.vars[ATTACK_VAR] ?? 0,
       defense: state.vars[DEFENSE_VAR] ?? 0,
     },
-    available_actions: enumerateRpgActions(index, state).map((option) => ({
-      id: option.id,
-      command: option.command,
-      action: option.action,
-      ...(option.skill_check ? { skill_check: option.skill_check } : {}),
-    })),
+    available_actions: (opts.availableActions ?? enumerateRpgActions(index, state)).map(
+      (option) => ({
+        id: option.id,
+        command: option.command,
+        action: option.action,
+        ...(option.skill_check ? { skill_check: option.skill_check } : {}),
+      }),
+    ),
     score,
     max_score: maxScore,
     ended: state.ended,

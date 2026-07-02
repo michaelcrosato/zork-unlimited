@@ -29,7 +29,11 @@ import {
   type RpgIndex,
 } from "../rpg/runner.js";
 import type { RpgActionOption } from "../rpg/legal_actions.js";
-import { buildRpgObservation, type RpgObservation } from "../rpg/observation.js";
+import {
+  buildRpgObservation,
+  type ObservationOptions,
+  type RpgObservation,
+} from "../rpg/observation.js";
 import { validateRpg } from "../validate/rpg_validator.js";
 import { assertRpgStateReferences } from "../rpg/state_integrity.js";
 
@@ -587,7 +591,7 @@ function initStateFor(index: RpgIndex, seed: number): GameState {
 function buildObsFor(
   index: RpgIndex,
   state: GameState,
-  opts: { hideGraph?: boolean; includeWorldIntro?: boolean } = {},
+  opts: ObservationOptions = {},
 ): RpgObservation {
   return buildRpgObservation(index, state, opts);
 }
@@ -878,6 +882,17 @@ export function createToolApi(opts: { root: string }) {
     return { pack, contentHash: hashState(pack) };
   }
 
+  function legalActionsFor(s: Session): RpgActionOption[] {
+    return sessions.legalActions(s.id, () => enumerateRpgActions(s.index, s.state));
+  }
+
+  function sessionObsOf(s: Session, opts: ObservationOptions = {}): RpgObservation {
+    return buildObsFor(s.index, s.state, {
+      ...opts,
+      availableActions: legalActionsFor(s),
+    });
+  }
+
   function startSession(
     compiled: CompiledRpgPack,
     state?: GameState,
@@ -910,7 +925,7 @@ export function createToolApi(opts: { root: string }) {
       transcript: [],
       ...(opts.hideGraph ? { hideGraph: true } : {}),
     });
-    const obs = buildObsFor(index, st);
+    const obs = sessionObsOf(session);
     sessions.appendTranscript(session.id, {
       step: st.step,
       scene_id: obsLocation(obs),
@@ -926,7 +941,7 @@ export function createToolApi(opts: { root: string }) {
   }
 
   const openingObsOf = (s: Session): RpgObservation =>
-    buildObsFor(s.index, s.state, {
+    sessionObsOf(s, {
       hideGraph: s.hideGraph ?? false,
       includeWorldIntro: true,
     });
@@ -1620,7 +1635,7 @@ export function createToolApi(opts: { root: string }) {
           unchanged: true,
         } as RpgObservationResponse<Args>;
       }
-      const obs = buildObsFor(s.index, s.state, {
+      const obs = sessionObsOf(s, {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
       });
       return {
@@ -1665,7 +1680,7 @@ export function createToolApi(opts: { root: string }) {
       const beforeSceneId = s.state.current;
       const beforeTitle = rpgRoomTitle(s.index, s.state);
       if (actionOption === null) {
-        const before = buildObsFor(s.index, s.state, {
+        const before = sessionObsOf(s, {
           hideGraph: args.hide_graph ?? s.hideGraph ?? false,
         });
         // Unknown action ids never reach the engine.
@@ -1683,7 +1698,7 @@ export function createToolApi(opts: { root: string }) {
       }
       const result = makeStep(s.rules)(s.state, actionOption.action);
       sessions.update(s.id, result.state);
-      const after = buildObsFor(s.index, s.state, {
+      const after = sessionObsOf(s, {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
       });
       sessions.appendTranscript(s.id, {

@@ -10,6 +10,7 @@ import { recordTrace } from "../../src/trace/record.js";
 import { parseOverworldManifest } from "../../src/world/overworld.js";
 import { hashState } from "../../src/core/hash.js";
 import type { RpgAction } from "../../src/api/types.js";
+import type { RpgActionOption } from "../../src/rpg/legal_actions.js";
 
 const ROOT = process.cwd();
 const PACK = "content/rpg/pack/sunken_barrow.yaml";
@@ -1796,6 +1797,33 @@ describe("MCP tools — the play loop (§9.1)", () => {
       "world",
     );
     assertPublicAction(loaded.observation.available_actions[0]);
+  });
+
+  it("reuses cached legal actions when building MCP observations", () => {
+    const a = api();
+    const game = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 1 });
+    const session = a.sessions.get(game.session_id);
+    const cachedActions: RpgActionOption[] = [
+      {
+        id: "cached_inventory",
+        command: "inventory",
+        action: { type: "INVENTORY" },
+      },
+    ];
+
+    session.legalActionsCache = {
+      stateHash: session.stateHash,
+      actions: cachedActions,
+    };
+
+    const full = a.get_observation({ session_id: game.session_id }).observation;
+    expect(full.available_actions).toEqual([{ id: "cached_inventory", command: "inventory" }]);
+
+    const compact = a.get_observation({
+      session_id: game.session_id,
+      compact_actions: true,
+    }).observation;
+    expect(compact.available_actions).toEqual([{ id: "cached_inventory" }]);
   });
 
   it("returns compact RPG context for repeated MCP loop turns", () => {
