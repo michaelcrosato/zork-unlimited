@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 175 -->
+<!-- historical_cycle_count: 176 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_checkpoint_rejections
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: stale save/export/overworld checkpoint rejections no longer echo `session_id` or duplicate rejection events.
+- Loop effect: guarded checkpoint retries keep only `ok`, current hash, rejection reason, and current context where recovery needs it.
+- Guard: focused MCP checkpoint tests, typecheck, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_inspect_trace_pack_id
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: every successful action turn drops a dead field while stale/illegal action replies still carry an explicit rejection reason.
 - Guard: MCP step tests assert success payloads omit `rejection_reason` and rejection payloads retain it.
 - VERIFY: focused MCP step tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_rpg_source_fields
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: RPG session, save, load, and transcript wrappers now emit only the active source field instead of pairing it with a null source branch.
-- Loop effect: world-quest loops carry `world_quest_id`; generated-pack loops carry `generated_rpg_seed`; neither repeats the absent source path.
-- Guard: generated-session/save/load tests assert `world_quest_id` is omitted, while world-quest session/save/transcript/load tests assert `generated_rpg_seed` is omitted.
-- VERIFY: focused MCP/source tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.

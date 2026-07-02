@@ -187,10 +187,8 @@ type OverworldViewField<Args extends OverworldResponseOptions> = Args extends {
 
 type OverworldRejectedSessionPayload<Args extends OverworldResponseOptions> = {
   ok: false;
-  session_id: string;
   snapshot_hash: string;
   rejection_reason: string;
-  events: [{ type: "rejected"; reason: string }];
 } & OverworldViewField<Args>;
 
 type OverworldGuardedRejection<Args extends OverworldResponseOptions> = Args extends {
@@ -224,10 +222,8 @@ type OverworldExportSuccess = {
 
 type OverworldExportRejection = {
   ok: false;
-  session_id: string;
   snapshot_hash: string;
   rejection_reason: string;
-  events: [{ type: "rejected"; reason: string }];
 };
 
 type OverworldExportResponse<Args extends OverworldExportArgs> = Args extends {
@@ -478,10 +474,8 @@ type RpgSaveSuccess = {
 
 type RpgSaveRejection = {
   ok: false;
-  session_id: string;
   state_hash: string;
   rejection_reason: string;
-  events: [{ type: "rejected"; reason: string }];
 };
 
 type RpgSaveResponse<Args extends RpgSaveArgs> = Args extends { expected_state_hash: string }
@@ -1074,17 +1068,14 @@ export function createToolApi(opts: { root: string }) {
 
   function overworldSnapshotHashRejection<Args extends OverworldResponseOptions>(
     args: Args,
-    sessionId: string,
     session: OverworldSession,
     snapshotHash: string,
   ): OverworldRejectedSessionPayload<Args> {
     const reason = "Snapshot hash mismatch; refresh the current overworld context.";
     return {
       ok: false,
-      session_id: sessionId,
       snapshot_hash: snapshotHash,
       rejection_reason: reason,
-      events: [{ type: "rejected", reason }],
       ...overworldViewField(args, session),
     } as OverworldRejectedSessionPayload<Args>;
   }
@@ -1114,7 +1105,6 @@ export function createToolApi(opts: { root: string }) {
     ) {
       return overworldSnapshotHashRejection(
         args,
-        sessionId,
         session,
         currentSnapshotHash,
       ) as OverworldSessionResponse<Key, Value, Args>;
@@ -1301,10 +1291,8 @@ export function createToolApi(opts: { root: string }) {
         const reason = "Snapshot hash mismatch; refresh the current overworld context.";
         return {
           ok: false,
-          session_id: args.session_id,
           snapshot_hash: snapshotHash,
           rejection_reason: reason,
-          events: [{ type: "rejected", reason }],
         } as OverworldExportResponse<Args>;
       }
       return {
@@ -1447,7 +1435,6 @@ export function createToolApi(opts: { root: string }) {
       ) {
         return overworldSnapshotHashRejection(
           args,
-          args.session_id,
           session,
           currentSnapshotHash,
         ) as OverworldQuestStartResponse<Args>;
@@ -1765,10 +1752,8 @@ export function createToolApi(opts: { root: string }) {
         const reason = "State hash mismatch; refresh the current observation or action menu.";
         return {
           ok: false,
-          session_id: args.session_id,
           state_hash: stateHash,
           rejection_reason: reason,
-          events: [{ type: "rejected", reason }],
         } as RpgSaveResponse<Args>;
       }
       // The save records the pack mode so load can refuse a mode mismatch (§8.7).

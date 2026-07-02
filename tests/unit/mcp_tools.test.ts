@@ -933,6 +933,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(staleTravel.ok).toBe(false);
     if (staleTravel.ok) throw new Error("stale snapshot hash should reject");
+    expect("session_id" in staleTravel).toBe(false);
+    expect("events" in staleTravel).toBe(false);
     expect(staleTravel.rejection_reason).toMatch(/snapshot hash/i);
     expect(staleTravel.snapshot_hash).toBe(compactTravel.snapshot_hash);
     expect(staleTravel.context.here[0]).toBe("colonie_town");
@@ -998,6 +1000,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(staleExport.ok).toBe(false);
     if (staleExport.ok) throw new Error("expected stale export rejection");
+    expect("session_id" in staleExport).toBe(false);
+    expect("events" in staleExport).toBe(false);
     expect(staleExport.snapshot_hash).toBe(beforeRead.snapshot_hash);
     expect(staleExport.rejection_reason).toMatch(/snapshot hash mismatch/i);
     expect("snapshot" in staleExport).toBe(false);
@@ -1882,6 +1886,8 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     });
     expect(stale.ok).toBe(false);
     if (stale.ok) throw new Error("expected stale save rejection");
+    expect("session_id" in stale).toBe(false);
+    expect("events" in stale).toBe(false);
     expect(stale.state_hash).toBe(after);
     expect(stale.rejection_reason).toMatch(/state hash mismatch/i);
     expect("save" in stale).toBe(false);
