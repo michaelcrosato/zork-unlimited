@@ -40,6 +40,7 @@ describe("compactRpgObservation", () => {
     const obs = observationWithLargeState();
     const compact = compactRpgObservation(obs, [{ id: "look" }]);
 
+    expect(compact.v).toBe(2);
     expect("mode" in compact).toBe(false);
     expect(compact.inv).toEqual(ids("item", 16));
     expect(compact.flags).toEqual(ids("flag", 16));

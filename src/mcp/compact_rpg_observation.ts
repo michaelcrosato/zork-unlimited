@@ -5,6 +5,7 @@ const CORE_STATE_VARS = new Set(["attack", "defense", "hp"]);
 const COMPACT_INVENTORY_LIMIT = 16;
 const COMPACT_FLAG_LIMIT = 16;
 const COMPACT_JOURNAL_LIMIT = 5;
+export const RPG_COMPACT_OBSERVATION_VERSION = 2 as const;
 
 export type RpgCompactRef = readonly [id: string, name: string];
 export type RpgCompactExit = string | readonly [direction: string, to: string];
@@ -20,7 +21,7 @@ export type RpgCompactVitals = readonly [
 ];
 
 export type RpgCompactObservation = {
-  v: 1;
+  v: typeof RPG_COMPACT_OBSERVATION_VERSION;
   here: readonly [room: string, title: string];
   text: string;
   exits: RpgCompactExit[];
@@ -85,7 +86,7 @@ export function compactRpgObservation(
     ...(omittedJournal !== undefined ? { journal: omittedJournal } : {}),
   };
   return {
-    v: 1,
+    v: RPG_COMPACT_OBSERVATION_VERSION,
     here: [obs.room, obs.title],
     text: obs.description,
     exits: obs.exits.map((exit) =>

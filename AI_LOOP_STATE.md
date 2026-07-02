@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 169 -->
+<!-- historical_cycle_count: 170 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_rpg_context_v2
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact RPG observation context now emits `v: 2` for the mode-free compact-action payload contract.
+- Loop effect: agents can distinguish the current compact RPG shape instead of reading the old `v: 1` discriminator after loop payload fields changed.
+- Guard: focused compact-RPG/MCP tests, typecheck, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_overworld_context_v2
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: repeated agent-loop observations keep full/client observations stable while dropping a redundant one-value field from compact context payloads.
 - Guard: compact-observation and MCP loop tests assert compact contexts omit `mode`.
 - VERIFY: focused compact/MCP tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_load_quest_mode
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: `load_quest()` responses no longer return `mode: "rpg"`.
-- Loop effect: world-id quest metadata loads are RPG-only by tool contract and spend fewer tokens on a one-value discriminator.
-- Guard: load/catalog tests assert non-session load payloads omit `mode`.
-- VERIFY: focused load/catalog tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
