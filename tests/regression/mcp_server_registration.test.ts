@@ -185,6 +185,13 @@ describe("MCP server registration", () => {
     expect(registeredToolBlock("get_state")).not.toContain("defaultCompactRpg");
   });
 
+  it("defaults public RPG MCP transcripts to compact summary only", () => {
+    const block = registeredToolBlock("get_transcript");
+    expect(block).toContain("defaultCompactTranscript(a)");
+    expect(block).toContain("Default true; false returns turn rows.");
+    expect(block).toContain("Default true; false returns full summary lists.");
+  });
+
   it("keeps retired static overworld compatibility helpers out of ToolApi and MCP", () => {
     const api = createToolApi({ root: process.cwd() }) as Record<string, unknown>;
     const registered = registeredServerTools();

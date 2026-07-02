@@ -6,6 +6,15 @@ This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
 
+### Cycle result — mcp_transcript_compact_default
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Hidden loop surface: public MCP `get_transcript` now defaults `summary_only: true` and `compact_summary: true`; explicit false flags keep full route/event history available.
+- Loop effect: blind/resume agents that forget transcript flags no longer pull full turn/event rows by accident after a play run.
+- Evidence: live MCP transcript with no flags returned summary-only at 380 chars; explicit full opt-out returned 4 turn rows at 1767 chars.
+- Guard: MCP registration regression pins the compact transcript default and keeps the blind ToolSearch schema budget green.
+- VERIFY: focused MCP registration regression, `npm run health`, `npm run validate`, and `npm test` passed: integrity, typecheck, lint, format check, 193 test files / 1359 tests, and validate.
+
 ### Cycle result — mcp_rpg_compact_default
 
 - Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests, with optional secret scanner still absent.

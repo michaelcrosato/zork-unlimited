@@ -86,6 +86,9 @@ Make discovered overworld quest leads start real RPG sessions.
   dropping detailed turn/event payload for token-light checks.
 - `get_transcript({ compact_summary: true })` caps summary scenes, inventory,
   flags, and journal entries for blind end-of-run audits.
+- Public MCP `get_transcript` defaults to compact summary-only output; callers can
+  pass `summary_only: false` and `compact_summary: false` when they need full
+  route/event history.
 - Blind-playtest MCP ToolSearch schema prose for the selected
   start/observe/action/transcript tools is trimmed and guarded by a source-size
   regression.

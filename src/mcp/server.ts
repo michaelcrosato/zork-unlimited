@@ -107,6 +107,11 @@ function defaultCompactOverworldAndRpg(args: unknown): never {
   return { compact_context: true, compact_observation: true, ...input } as never;
 }
 
+function defaultCompactTranscript(args: unknown): never {
+  const input = typeof args === "object" && args !== null ? args : {};
+  return { summary_only: true, compact_summary: true, ...input } as never;
+}
+
 tool(
   "start_overworld",
   "Start a stateful New York overworld run; returns compact context by default.",
@@ -413,20 +418,17 @@ tool(
 );
 tool(
   "get_transcript",
-  "Return transcript; use summary_only, compact_summary, and compact_turns to reduce payload.",
+  "Return compact transcript summary by default; opt into turn rows/full lists.",
   {
     ...SESSION,
-    summary_only: z.boolean().optional().describe("Omit turn rows."),
+    summary_only: z.boolean().optional().describe("Default true; false returns turn rows."),
     compact_summary: z
       .boolean()
       .optional()
-      .describe("Cap summary lists and return omitted counts."),
-    compact_turns: z
-      .boolean()
-      .optional()
-      .describe("Return id-only turn rows; ignored with summary_only."),
+      .describe("Default true; false returns full summary lists."),
+    compact_turns: z.boolean().optional().describe("Id-only rows; ignored with summary_only."),
   },
-  (a) => api.get_transcript(a),
+  (a) => api.get_transcript(defaultCompactTranscript(a)),
 );
 tool(
   "save_game",
