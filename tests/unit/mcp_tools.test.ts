@@ -1400,6 +1400,21 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(compactObservation.context.exits[0]).toEqual(expect.any(String));
     expect(compactObservation.context.actions[0]).not.toHaveProperty("command");
 
+    const unchangedObservation = a.get_observation({
+      session_id: fullStart.session_id,
+      if_state_hash: compactObservation.state_hash,
+      compact_observation: true,
+    });
+    expect("unchanged" in unchangedObservation).toBe(true);
+    if (!("unchanged" in unchangedObservation)) throw new Error("expected unchanged response");
+    expect(unchangedObservation.unchanged).toBe(true);
+    expect(unchangedObservation.state_hash).toBe(compactObservation.state_hash);
+    expect("context" in unchangedObservation).toBe(false);
+    expect("observation" in unchangedObservation).toBe(false);
+    expect(JSON.stringify(unchangedObservation).length).toBeLessThan(
+      JSON.stringify(compactObservation).length,
+    );
+
     const rejected = a.step_action({
       session_id: fullStart.session_id,
       action_id: "missing",
@@ -1423,6 +1438,16 @@ describe("MCP tools — the play loop (§9.1)", () => {
     });
     expect(moved.ok).toBe(true);
     expect(moved.context.here[0]).not.toBe(fullStart.observation.room);
+
+    const changedObservation = a.get_scene({
+      session_id: fullStart.session_id,
+      if_state_hash: compactObservation.state_hash,
+      compact_observation: true,
+    });
+    expect("unchanged" in changedObservation).toBe(false);
+    if ("unchanged" in changedObservation) throw new Error("expected changed observation");
+    expect(changedObservation.state_hash).toBe(moved.state_hash);
+    expect(changedObservation.context.here).toEqual(moved.context.here);
 
     const scene = a.get_scene({
       session_id: fullStart.session_id,

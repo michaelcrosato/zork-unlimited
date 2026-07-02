@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 70 -->
+<!-- historical_cycle_count: 71 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — observation_if_state_hash
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: RPG `get_observation` and `get_scene` now accept `if_state_hash`.
+- Loop effect: polling/resume loops can get a hash-only `unchanged` response instead of repeating compact/full observation context when reducer state has not changed.
+- Evidence: live MCP unchanged observation matched the supplied hash at 120 chars with no context; stale hash returned compact context at 878 chars matching the post-step hash.
+- Guard: MCP regression asserts matching hashes return no context/observation payload, while stale hashes still return compact context.
+- VERIFY: focused MCP and registration tests, typecheck, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.
 
 ### Cycle result — checkpoint_expected_hash
 

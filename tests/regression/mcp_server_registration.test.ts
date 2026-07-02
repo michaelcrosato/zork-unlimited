@@ -186,6 +186,8 @@ describe("MCP server registration", () => {
     expect(legalActions).toContain("defaultCompactActions(a)");
     expect(legalActions).toContain("Default true; false returns labels.");
     expect(legalActions).not.toContain("defaultCompactRpg");
+    expect(registeredToolBlock("get_observation")).toContain("if_state_hash");
+    expect(registeredToolBlock("get_scene")).toContain("if_state_hash");
     expect(registeredToolBlock("get_state")).not.toContain("defaultCompactRpg");
   });
 

@@ -59,6 +59,9 @@ const COMPACT_ACTIONS = {
 const COMPACT_OBSERVATION = {
   compact_observation: z.boolean().optional().describe("Default true; false full observation."),
 };
+const IF_STATE_HASH = {
+  if_state_hash: z.string().optional().describe("Hash-only when unchanged."),
+};
 const EXPECTED_STATE_HASH = {
   expected_state_hash: z.string().optional().describe("Reject stale state_hash."),
 };
@@ -397,14 +400,14 @@ tool(
 
 tool(
   "get_observation",
-  "Read compact RPG context; compact_observation false returns full.",
-  { ...SESSION, ...HIDE_GRAPH, ...COMPACT_ACTIONS, ...COMPACT_OBSERVATION },
+  "Read compact RPG context; if_state_hash returns hash-only when unchanged.",
+  { ...SESSION, ...HIDE_GRAPH, ...IF_STATE_HASH, ...COMPACT_ACTIONS, ...COMPACT_OBSERVATION },
   (a) => api.get_observation(defaultCompactRpg(a)),
 );
 tool(
   "get_scene",
-  "Alias for get_observation.",
-  { ...SESSION, ...HIDE_GRAPH, ...COMPACT_ACTIONS, ...COMPACT_OBSERVATION },
+  "Alias for get_observation; if_state_hash returns hash-only when unchanged.",
+  { ...SESSION, ...HIDE_GRAPH, ...IF_STATE_HASH, ...COMPACT_ACTIONS, ...COMPACT_OBSERVATION },
   (a) => api.get_scene(defaultCompactRpg(a)),
 );
 tool(

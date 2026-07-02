@@ -274,9 +274,21 @@ type RpgSessionPayload<Args extends RpgResponseOptions = RpgResponseOptions> = {
   state_hash: string;
 } & RpgViewField<Args>;
 
-type RpgObservationResponse<Args extends RpgResponseOptions> = {
+type RpgObservationPayload<Args extends RpgResponseOptions> = {
   state_hash: string;
 } & RpgViewField<Args>;
+
+type RpgObservationUnchanged = {
+  session_id: string;
+  state_hash: string;
+  unchanged: true;
+};
+
+type RpgObservationResponse<Args extends RpgResponseOptions> = Args extends {
+  if_state_hash: string;
+}
+  ? RpgObservationPayload<Args> | RpgObservationUnchanged
+  : RpgObservationPayload<Args>;
 
 type RpgStepActionResponse<Args extends RpgResponseOptions> = {
   ok: boolean;
@@ -308,6 +320,7 @@ type RpgStartQuestArgs = {
 type RpgGetObservationArgs = {
   session_id: string;
   hide_graph?: boolean;
+  if_state_hash?: string;
 } & RpgResponseOptions;
 
 type RpgStepActionArgs = {
@@ -1396,12 +1409,20 @@ export function createToolApi(opts: { root: string }) {
 
     get_observation<Args extends RpgGetObservationArgs>(args: Args): RpgObservationResponse<Args> {
       const s = sessions.get(args.session_id);
+      const stateHash = hashState(s.state);
+      if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
+        return {
+          session_id: args.session_id,
+          state_hash: stateHash,
+          unchanged: true,
+        } as RpgObservationResponse<Args>;
+      }
       const obs = buildObsFor(s.index, s.state, {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
       });
       return {
         ...rpgViewField(obs, args),
-        state_hash: hashState(s.state),
+        state_hash: stateHash,
       } as RpgObservationResponse<Args>;
     },
 
