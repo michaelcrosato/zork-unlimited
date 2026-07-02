@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 179 -->
+<!-- historical_cycle_count: 180 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_transcript_summary_ending
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact RPG transcript summaries now omit `ending_id` until an actual ending exists.
+- Loop effect: in-progress audit polls keep `ended` without paying for repeated `ending_id: null` scaffolding.
+- Guard: focused MCP transcript/docs tests, typecheck, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_transcript_turn_tuples
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: routine action turns keep observation/context state but drop repeated event-object keys from the hot play loop.
 - Guard: step-event tuple tests, MCP registration/source-size guard, docs/blind protocol tests, typecheck, and format check passed before full gates.
 - VERIFY: focused MCP/event tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_toolapi_state_read
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: ToolApi `get_state({ session_id })` now returns hash-only state by default; raw reducer state requires `include_state: true`.
-- Loop effect: direct ToolApi callers now match public MCP state reads and avoid accidental full-state payloads in repeated loop turns.
-- Guard: raw-state tests now opt in explicitly; focused MCP/state tests, registration guard, typecheck, and format check passed before full gates.
-- VERIFY: focused MCP/state tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.

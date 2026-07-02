@@ -1389,6 +1389,12 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(JSON.stringify(summaryOnlyTranscript).length).toBeLessThan(
       JSON.stringify(transcript).length,
     );
+    const compactEndedSummary = a.get_transcript({
+      session_id: game.session_id,
+      summary_only: true,
+      compact_summary: true,
+    });
+    expect(compactEndedSummary.summary.ending_id).toBe("ending_victory");
     const unchangedTranscript = a.get_transcript({
       session_id: game.session_id,
       summary_only: true,
@@ -1477,9 +1483,11 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(full.summary.flags).toHaveLength(20);
     expect(full.summary.flags).not.toContain("__internal_bookkeeping");
     expect(full.summary.journal).toHaveLength(10);
+    expect(full.summary.ending_id).toBeNull();
     expect(full.summary).not.toHaveProperty("more");
     expect("turns" in full).toBe(false);
     expect("turns" in compact).toBe(false);
+    expect(compact.summary).not.toHaveProperty("ending_id");
     expect(compact.summary.scenes).toEqual(full.summary.scenes.slice(0, 16));
     expect(compact.summary.inventory).toEqual(numberedIds("item", 16));
     expect(compact.summary.flags).toEqual(numberedIds("flag", 16));

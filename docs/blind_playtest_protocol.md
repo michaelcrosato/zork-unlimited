@@ -80,7 +80,8 @@ PLAY:
   summary_only = true, compact_summary = true, if_state_hash = latest state hash
   when rechecking unchanged state). Use compact_turns = true only when route rows
   are needed; compact rows are [step, scene_id, action_id, result_scene_id].
-  Avoid full transcripts unless diagnosing a specific event-history bug.
+  Compact summaries include ending_id only after an ending exists. Avoid full
+  transcripts unless diagnosing a specific event-history bug.
 - Make decisions a curious, sensible human would: follow clues, pursue the apparent
   goal, investigate what seems important. Don't pick randomly. Narrate your reasoning
   each turn. Do at most 2-3 playthroughs (try a different strategy on later runs).

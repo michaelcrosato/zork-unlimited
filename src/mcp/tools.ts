@@ -421,10 +421,16 @@ type TranscriptSummary = {
     journal?: number;
   };
 };
-type TranscriptPayloadBase = {
+type TranscriptCompactSummary = Omit<TranscriptSummary, "ending_id"> & {
+  ending_id?: string;
+};
+type TranscriptSummaryFor<Args extends TranscriptArgs> = Args extends { compact_summary: true }
+  ? TranscriptCompactSummary
+  : TranscriptSummary;
+type TranscriptPayloadBase<Args extends TranscriptArgs> = {
   session_id: string;
   state_hash: string;
-  summary: TranscriptSummary;
+  summary: TranscriptSummaryFor<Args>;
 } & RpgSourceFields;
 type TranscriptArgs = {
   session_id: string;
@@ -436,7 +442,7 @@ type TranscriptArgs = {
 type TranscriptTurnFor<Args extends TranscriptArgs> = Args extends { compact_turns: true }
   ? TranscriptCompactTurn
   : TranscriptFullTurn;
-type TranscriptPayload<Args extends TranscriptArgs> = TranscriptPayloadBase &
+type TranscriptPayload<Args extends TranscriptArgs> = TranscriptPayloadBase<Args> &
   (Args extends { summary_only: true }
     ? Record<string, never>
     : { turns: TranscriptTurnFor<Args>[] });
@@ -565,7 +571,7 @@ function transcriptOmittedCount(
   return values.length > compacted.length ? values.length - compacted.length : undefined;
 }
 
-function compactTranscriptSummary(summary: TranscriptSummary): TranscriptSummary {
+function compactTranscriptSummary(summary: TranscriptSummary): TranscriptCompactSummary {
   const scenes = compactTranscriptHead(summary.scenes, TRANSCRIPT_SUMMARY_LIST_LIMIT);
   const inventory = compactTranscriptHead(summary.inventory, TRANSCRIPT_SUMMARY_LIST_LIMIT);
   const flags = compactTranscriptHead(summary.flags, TRANSCRIPT_SUMMARY_LIST_LIMIT);
@@ -580,8 +586,10 @@ function compactTranscriptSummary(summary: TranscriptSummary): TranscriptSummary
     ...(omittedFlags !== undefined ? { flags: omittedFlags } : {}),
     ...(omittedJournal !== undefined ? { journal: omittedJournal } : {}),
   };
+  const { ending_id: endingId, ...baseSummary } = summary;
   return {
-    ...summary,
+    ...baseSummary,
+    ...(endingId ? { ending_id: endingId } : {}),
     scenes,
     inventory,
     flags,

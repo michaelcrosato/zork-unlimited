@@ -221,6 +221,8 @@ Make discovered overworld quest leads start real RPG sessions.
   menus, avoiding repeated command labels on the opening RPG observation.
 - RPG compact transcript turns are `[step, scene_id, action_id, result_scene_id]`
   tuples for route debugging without replaying event text or repeated row keys.
+- RPG compact transcript summaries omit `ending_id` until an actual ending exists;
+  full summaries keep the explicit `null` for debugging.
 - World source loading now caches parsed Charter Marches and New York overworld
   manifests per process.
 - MCP pack loading now caches unchanged RPG compile/validate reports within each
