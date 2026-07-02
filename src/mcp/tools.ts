@@ -290,6 +290,30 @@ type RpgObservationResponse<Args extends RpgResponseOptions> = Args extends {
   ? RpgObservationPayload<Args> | RpgObservationUnchanged
   : RpgObservationPayload<Args>;
 
+type RpgLegalActionsArgs = {
+  session_id: string;
+  hide_graph?: boolean;
+  compact_actions?: boolean;
+  if_state_hash?: string;
+};
+
+type RpgLegalActionsPayload = {
+  actions: McpActionOption[];
+  state_hash: string;
+};
+
+type RpgLegalActionsUnchanged = {
+  session_id: string;
+  state_hash: string;
+  unchanged: true;
+};
+
+type RpgLegalActionsResponse<Args extends RpgLegalActionsArgs> = Args extends {
+  if_state_hash: string;
+}
+  ? RpgLegalActionsPayload | RpgLegalActionsUnchanged
+  : RpgLegalActionsPayload;
+
 type RpgStepActionResponse<Args extends RpgResponseOptions> = {
   ok: boolean;
   rejection_reason: string | null;
@@ -1473,19 +1497,25 @@ export function createToolApi(opts: { root: string }) {
       return this.get_observation(args);
     },
 
-    list_legal_actions(args: {
-      session_id: string;
-      hide_graph?: boolean;
-      compact_actions?: boolean;
-    }): { actions: McpActionOption[]; state_hash: string } {
+    list_legal_actions<Args extends RpgLegalActionsArgs>(
+      args: Args,
+    ): RpgLegalActionsResponse<Args> {
       const s = sessions.get(args.session_id);
+      const stateHash = hashState(s.state);
+      if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
+        return {
+          session_id: args.session_id,
+          state_hash: stateHash,
+          unchanged: true,
+        } as RpgLegalActionsResponse<Args>;
+      }
       const obs = buildObsFor(s.index, s.state, {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
       });
       return {
         actions: publicActions(obs, publicObservationOptions(args)),
-        state_hash: hashState(s.state),
-      };
+        state_hash: stateHash,
+      } as RpgLegalActionsResponse<Args>;
     },
 
     step_action<Args extends RpgStepActionArgs>(args: Args): RpgStepActionResponse<Args> {

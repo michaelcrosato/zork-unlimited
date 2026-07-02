@@ -187,6 +187,7 @@ describe("MCP server registration", () => {
     const legalActions = registeredToolBlock("list_legal_actions");
     expect(legalActions).toContain("defaultCompactActions(a)");
     expect(legalActions).toContain("Default true; false returns labels.");
+    expect(legalActions).toContain("if_state_hash");
     expect(legalActions).not.toContain("defaultCompactRpg");
     expect(registeredToolBlock("get_observation")).toContain("if_state_hash");
     expect(registeredToolBlock("get_scene")).toContain("if_state_hash");

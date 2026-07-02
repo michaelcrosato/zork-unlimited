@@ -418,10 +418,11 @@ tool(
 );
 tool(
   "list_legal_actions",
-  "List action ids plus state_hash; compact_actions false returns labels.",
+  "List action ids plus state_hash; if_state_hash returns hash-only when unchanged; compact_actions false returns labels.",
   {
     ...SESSION,
     ...HIDE_GRAPH,
+    ...IF_STATE_HASH,
     compact_actions: z.boolean().optional().describe("Default true; false returns labels."),
   },
   (a) => api.list_legal_actions(defaultCompactActions(a)),

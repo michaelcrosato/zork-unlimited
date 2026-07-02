@@ -1333,6 +1333,17 @@ describe("MCP tools — the play loop (§9.1)", () => {
     });
     expect(compactListed.state_hash).toBe(game.state_hash);
     assertCompactAction(compactListed.actions[0]);
+    const unchangedMenu = a.list_legal_actions({
+      session_id: game.session_id,
+      compact_actions: true,
+      if_state_hash: game.state_hash,
+    });
+    expect("unchanged" in unchangedMenu).toBe(true);
+    if (!("unchanged" in unchangedMenu)) throw new Error("expected unchanged action menu");
+    expect(unchangedMenu.unchanged).toBe(true);
+    expect(unchangedMenu.state_hash).toBe(game.state_hash);
+    expect("actions" in unchangedMenu).toBe(false);
+    expect(JSON.stringify(unchangedMenu).length).toBeLessThan(JSON.stringify(compactListed).length);
 
     const rejected = a.step_action({ session_id: game.session_id, action_id: "missing" });
     expect(rejected.ok).toBe(false);
@@ -1357,6 +1368,15 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(
       a.list_legal_actions({ session_id: game.session_id, compact_actions: true }).state_hash,
     ).toBe(moved.state_hash);
+    const changedMenu = a.list_legal_actions({
+      session_id: game.session_id,
+      compact_actions: true,
+      if_state_hash: game.state_hash,
+    });
+    expect("unchanged" in changedMenu).toBe(false);
+    if ("unchanged" in changedMenu) throw new Error("expected changed action menu");
+    expect(changedMenu.state_hash).toBe(moved.state_hash);
+    assertCompactAction(changedMenu.actions[0]);
 
     const saved = a.save_game({ session_id: game.session_id });
     expect("pack_path" in saved).toBe(false);
