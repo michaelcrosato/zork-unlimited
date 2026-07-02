@@ -47,7 +47,7 @@ const SESSION = {
   session_id: z.string().describe("Session."),
 };
 const HIDE_GRAPH = {
-  hide_graph: z.boolean().optional().describe("Hide exit targets."),
+  hide_graph: z.boolean().optional().describe("Hide exits."),
 };
 const COMPACT_ACTIONS = {
   compact_actions: z.boolean().optional().describe("Ids only."),
@@ -59,10 +59,13 @@ const COMPACT_OBSERVATION = {
   compact_observation: z.boolean().optional().describe("Default true; false full obs."),
 };
 const IF_STATE_HASH = {
-  if_state_hash: z.string().optional().describe("Hash-only when unchanged."),
+  if_state_hash: z.string().optional().describe("Hash-only if same."),
+};
+const IF_TRANSCRIPT_HASH = {
+  if_transcript_hash: z.string().optional().describe("Hash-only same tx."),
 };
 const EXPECTED_STATE_HASH = {
-  expected_state_hash: z.string().optional().describe("Hash-only reject when stale."),
+  expected_state_hash: z.string().optional().describe("Hash-only stale reject."),
 };
 tool(
   "list_world",
@@ -388,7 +391,7 @@ tool(
 );
 tool(
   "start_world_quest",
-  "Start RPG quest; compact by default.",
+  "Start RPG; compact.",
   {
     world_quest_id: z.string().describe("World quest id."),
     seed: z.number().int().optional(),
@@ -401,13 +404,13 @@ tool(
 
 tool(
   "get_observation",
-  "Read compact RPG context; if_state_hash returns hash-only when unchanged.",
+  "Read compact RPG; if_state_hash hash-only.",
   { ...SESSION, ...HIDE_GRAPH, ...IF_STATE_HASH, ...COMPACT_ACTIONS, ...COMPACT_OBSERVATION },
   (a) => api.get_observation(defaultCompactRpg(a)),
 );
 tool(
   "list_legal_actions",
-  "List action ids plus state_hash; if_state_hash returns hash-only when unchanged; compact_actions false returns labels.",
+  "List action ids + state_hash; if_state_hash hash-only.",
   {
     ...SESSION,
     ...HIDE_GRAPH,
@@ -442,10 +445,11 @@ tool(
 );
 tool(
   "get_transcript",
-  "Transcript; hash-only when unchanged.",
+  "Transcript; hash-only.",
   {
     ...SESSION,
     ...IF_STATE_HASH,
+    ...IF_TRANSCRIPT_HASH,
     summary_only: z.boolean().optional().describe("Default true; omits turns."),
     compact_summary: z
       .boolean()

@@ -1401,6 +1401,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(transcript.turns.map((t) => t.action_id)).toContain("take_circlet");
     const currentStateHash = a.get_state({ session_id: game.session_id }).state_hash;
     expect(transcript.state_hash).toBe(currentStateHash);
+    expect(transcript.transcript_hash).toMatch(/^[0-9a-f]{64}$/);
     const hashOnlyState = a.get_state({ session_id: game.session_id });
     expect(hashOnlyState).toEqual({ state_hash: currentStateHash });
     expect("state" in hashOnlyState).toBe(false);
@@ -1412,6 +1413,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       summary_only: true,
     });
     expect(summaryOnlyTranscript.state_hash).toBe(currentStateHash);
+    expect(summaryOnlyTranscript.transcript_hash).toBe(transcript.transcript_hash);
     expect("mode" in summaryOnlyTranscript).toBe(false);
     expect(summaryOnlyTranscript.summary).toEqual(transcript.summary);
     expect("turns" in summaryOnlyTranscript).toBe(false);
@@ -1445,16 +1447,30 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect("session_id" in unchangedTranscript).toBe(false);
     expect(unchangedTranscript.unchanged).toBe(true);
     expect(unchangedTranscript.state_hash).toBe(currentStateHash);
+    expect(unchangedTranscript.transcript_hash).toBe(transcript.transcript_hash);
     expect("summary" in unchangedTranscript).toBe(false);
     expect("turns" in unchangedTranscript).toBe(false);
     expect(JSON.stringify(unchangedTranscript).length).toBeLessThan(
       JSON.stringify(summaryOnlyTranscript).length,
     );
+    const transcriptHashUnchanged = a.get_transcript({
+      session_id: game.session_id,
+      summary_only: true,
+      compact_summary: true,
+      if_transcript_hash: transcript.transcript_hash,
+    });
+    expect("unchanged" in transcriptHashUnchanged).toBe(true);
+    if (!("unchanged" in transcriptHashUnchanged)) {
+      throw new Error("expected unchanged transcript hash response");
+    }
+    expect(transcriptHashUnchanged.state_hash).toBe(currentStateHash);
+    expect(transcriptHashUnchanged.transcript_hash).toBe(transcript.transcript_hash);
     const compactTranscript = a.get_transcript({
       session_id: game.session_id,
       compact_turns: true,
     });
     expect(compactTranscript.state_hash).toBe(currentStateHash);
+    expect(compactTranscript.transcript_hash).toBe(transcript.transcript_hash);
     expect("mode" in compactTranscript).toBe(false);
     expect(compactTranscript.summary).toEqual(transcript.summary);
     expect(compactTranscript.turns.map(([, , actionId]) => actionId)).toEqual(
@@ -1554,6 +1570,40 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(compact.summary.journal).toEqual(numberedIds("journal", 10).slice(-5));
     expect(compact.summary.more).toEqual([5, 4, 4, 5]);
     expect(JSON.stringify(compact).length).toBeLessThan(JSON.stringify(full).length);
+  });
+
+  it("uses transcript_hash for transcript-only freshness checks", () => {
+    const a = api();
+    const game = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 1 });
+    const before = a.get_transcript({
+      session_id: game.session_id,
+      summary_only: true,
+      compact_summary: true,
+    });
+    const session = a.sessions.get(game.session_id);
+    session.transcript.push({
+      step: session.state.step,
+      scene_id: session.state.current,
+      title: "Synthetic transcript-only row",
+      action_id: "synthetic_no_state_change",
+      action_text: "synthetic no state change",
+      events: [],
+      result_scene_id: session.state.current,
+      ended: session.state.ended,
+      ending_id: session.state.endingId,
+    });
+
+    const changed = a.get_transcript({
+      session_id: game.session_id,
+      summary_only: true,
+      compact_summary: true,
+      if_transcript_hash: before.transcript_hash,
+    });
+    expect("unchanged" in changed).toBe(false);
+    if ("unchanged" in changed) throw new Error("expected changed transcript");
+    expect(changed.state_hash).toBe(before.state_hash);
+    expect(changed.transcript_hash).not.toBe(before.transcript_hash);
+    expect(changed.summary.steps).toBe(before.summary.steps + 1);
   });
 
   it("start_world_quest can play and transcript a route", () => {

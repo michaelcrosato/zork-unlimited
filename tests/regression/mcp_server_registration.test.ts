@@ -210,6 +210,7 @@ describe("MCP server registration", () => {
     const block = registeredToolBlock("get_transcript");
     expect(block).toContain("defaultCompactTranscript(a)");
     expect(block).toContain("IF_STATE_HASH");
+    expect(block).toContain("IF_TRANSCRIPT_HASH");
     expect(block).toContain("Default true; omits turns.");
     expect(block).toContain("Default true; false returns full summary lists.");
     expect(block).toContain("COMPACT_EVENTS");

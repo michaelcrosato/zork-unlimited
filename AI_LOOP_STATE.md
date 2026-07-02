@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 200 -->
+<!-- historical_cycle_count: 201 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — transcript_hash_polling
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: RPG transcript responses now include `transcript_hash`, and `get_transcript({ if_transcript_hash })` returns hash-only `unchanged` when transcript history is unchanged.
+- Loop effect: end-of-run audit loops can poll transcript history directly instead of overloading state freshness, preserving compact hash-only reads when transcript rows have not changed.
+- Guard: focused MCP transcript/tool-registration tests prove transcript-only mutations change `transcript_hash` while `state_hash` stays stable.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — direct_overworld_compact_view
 

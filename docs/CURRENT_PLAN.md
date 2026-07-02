@@ -126,10 +126,12 @@ Make discovered overworld quest leads start real RPG sessions.
   flags, and journal entries for blind end-of-run audits, and omits empty
   inventory/flag/journal lists; omission counts use
   `more: [scenes, inventory, flags, journal]`.
-- Transcript responses include `state_hash`, so compact end-of-run audits can
-  bind summary/turn rows to reducer state without a follow-up state read.
-- `get_transcript({ if_state_hash })` can return a hash-only `unchanged`
-  response, avoiding repeated transcript summary payloads in polling loops.
+- Transcript responses include `state_hash` and `transcript_hash`, so compact
+  end-of-run audits can bind rows to reducer state and poll transcript history
+  directly.
+- `get_transcript({ if_transcript_hash })` can return a hash-only `unchanged`
+  response, avoiding repeated transcript summary payloads when transcript rows
+  have not changed.
 - Public MCP `get_transcript` defaults to compact summary-only output; callers can
   pass `summary_only: false` and `compact_summary: false` when they need full
   route/event history.

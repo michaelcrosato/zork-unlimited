@@ -453,6 +453,7 @@ type TranscriptSummaryFor<Args extends TranscriptArgs> = Args extends { compact_
 type TranscriptPayloadBase<Args extends TranscriptArgs> = {
   session_id: string;
   state_hash: string;
+  transcript_hash: string;
   summary: TranscriptSummaryFor<Args>;
 } & RpgSourceFields;
 type TranscriptArgs = {
@@ -462,6 +463,7 @@ type TranscriptArgs = {
   compact_events?: boolean;
   compact_summary?: boolean;
   if_state_hash?: string;
+  if_transcript_hash?: string;
 };
 type TranscriptTurnFor<Args extends TranscriptArgs> = Args extends { compact_turns: true }
   ? TranscriptCompactTurn
@@ -482,11 +484,14 @@ type TranscriptPayload<Args extends TranscriptArgs> = TranscriptPayloadBase<Args
     : { turns: TranscriptTurnFor<Args>[] });
 type TranscriptUnchanged = {
   state_hash: string;
+  transcript_hash: string;
   unchanged: true;
 };
 type TranscriptResponse<Args extends TranscriptArgs> = Args extends { if_state_hash: string }
   ? TranscriptPayload<Args> | TranscriptUnchanged
-  : TranscriptPayload<Args>;
+  : Args extends { if_transcript_hash: string }
+    ? TranscriptPayload<Args> | TranscriptUnchanged
+    : TranscriptPayload<Args>;
 
 type RpgGetStateArgs = {
   session_id: string;
@@ -645,6 +650,13 @@ function compactTranscriptSummary(summary: TranscriptSummary): TranscriptCompact
     ...(journal.length > 0 ? { journal } : {}),
     ...(more ? { more } : {}),
   };
+}
+
+function hashTranscript(session: Session, stateHash: string): string {
+  return hashState({
+    state_hash: stateHash,
+    turns: session.transcript,
+  });
 }
 
 /** The current RPG room id. */
@@ -1714,9 +1726,21 @@ export function createToolApi(opts: { root: string }) {
     get_transcript<Args extends TranscriptArgs>(args: Args): TranscriptResponse<Args> {
       const s = sessions.get(args.session_id);
       const stateHash = hashState(s.state);
+      const currentTranscriptHash = hashTranscript(s, stateHash);
+      if (
+        args.if_transcript_hash !== undefined &&
+        args.if_transcript_hash === currentTranscriptHash
+      ) {
+        return {
+          state_hash: stateHash,
+          transcript_hash: currentTranscriptHash,
+          unchanged: true,
+        } as TranscriptResponse<Args>;
+      }
       if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
         return {
           state_hash: stateHash,
+          transcript_hash: currentTranscriptHash,
           unchanged: true,
         } as TranscriptResponse<Args>;
       }
@@ -1735,6 +1759,7 @@ export function createToolApi(opts: { root: string }) {
         session_id: s.id,
         ...rpgSourceFields(s),
         state_hash: stateHash,
+        transcript_hash: currentTranscriptHash,
         ...(args.compact_events === true &&
         args.summary_only !== true &&
         args.compact_turns !== true
