@@ -10,6 +10,7 @@ const COMPACT_JOURNAL_LIMIT = 5;
 const COMPACT_ROUTE_LIMIT = 8;
 const COMPACT_TRAVEL_LOG_LIMIT = 5;
 const COMPACT_ID_LIST_LIMIT = 16;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 2 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactQuestRef = readonly [id: string, title: string];
@@ -101,7 +102,7 @@ export type OverworldCompactIdCounts = readonly [
 export type OverworldCompactIdTruncation = OverworldCompactIdKey[];
 
 export type OverworldCompactView = {
-  v: 1;
+  v: typeof OVERWORLD_COMPACT_VIEW_VERSION;
   world: string;
   time: string;
   here: OverworldCompactHere;
@@ -260,7 +261,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     view.routeOptions.map((plan) => [plan.destination.id, plan] as const),
   );
   return {
-    v: 1,
+    v: OVERWORLD_COMPACT_VIEW_VERSION,
     world: view.world,
     time: view.timeLabel,
     here: [

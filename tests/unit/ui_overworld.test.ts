@@ -398,9 +398,13 @@ describe("OverworldSession", () => {
     const view = session.view();
     expect(view.discovered.length).toBeGreaterThan(24);
     const compact = compactOverworldView(view);
+    expect(compact.v).toBe(2);
     expect(compact.ids.discovered_towns).toHaveLength(16);
+    expect(compact.id_counts).toHaveLength(11);
     expect(compact.id_counts[0]).toBe(view.discovered.length);
     expect(compact.ids_truncated).toContain("discovered_towns");
+    expect(compact.id_counts[8]).toBe(view.startedQuestIds.length);
+    expect(compact.id_counts[9]).toBe(view.completedQuestIds.length);
     expect(compact.id_counts[10]).toBe(view.resolvedEventIds.length);
     expect(compact.ids_truncated).not.toContain("resolved_events");
   });

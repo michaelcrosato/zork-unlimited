@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 168 -->
+<!-- historical_cycle_count: 169 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_overworld_context_v2
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact overworld context now emits `v: 2` for the expanded progress-id tuple contract that includes started/completed quest ids.
+- Loop effect: agents can distinguish the current compact context shape instead of reading the old `v: 1` discriminator after tuple slots changed.
+- Guard: focused compact-overworld/MCP tests, typecheck, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — overworld_quest_completion_state
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: world-id quest metadata loads are RPG-only by tool contract and spend fewer tokens on a one-value discriminator.
 - Guard: load/catalog tests assert non-session load payloads omit `mode`.
 - VERIFY: focused load/catalog tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_generation_authoring_mode
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: `generate_rpg_pack()` and `adapt_story()` responses no longer return `mode: "rpg"`.
-- Loop effect: read-only generation/authoring payloads are RPG-only by tool contract and spend fewer tokens on a one-value discriminator.
-- Guard: generated-pack and adapt-story tests assert those non-session payloads omit `mode`.
-- VERIFY: focused generation/authoring tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
