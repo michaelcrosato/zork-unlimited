@@ -40,12 +40,12 @@ describe("list_world is the single RPG quest catalog", () => {
   });
 });
 
-describe("load_quest / validate_quest report RPG mode for world quests", () => {
+describe("load_quest / validate_quest use RPG-only world quest ids", () => {
   it("the default RPG quest loads and validates green", () => {
     const r = api().load_quest({ world_quest_id: "breaking_weir" });
     expect(r.ok).toBe(true);
     expect("pack_path" in r).toBe(false);
-    expect(r.mode).toBe("rpg");
+    expect("mode" in r).toBe(false);
     expect(r.content_hash).toMatch(/^[0-9a-f]{64}$/);
   });
 });

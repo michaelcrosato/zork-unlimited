@@ -895,7 +895,6 @@ export function createToolApi(opts: { root: string }) {
   function loadWorldQuest(worldQuestId: string): {
     ok: boolean;
     world_quest_id: string | null;
-    mode?: PackMode;
     meta?: CompiledRpgPack["pack"]["meta"];
     content_hash?: string;
     report: ValidationReport;
@@ -912,7 +911,6 @@ export function createToolApi(opts: { root: string }) {
     return {
       ok: lr.report.ok,
       world_quest_id: source.node.id,
-      mode: SAVE_MODE,
       meta: lr.compiled.pack.meta,
       content_hash: lr.compiled.contentHash,
       report: lr.report,
@@ -1374,7 +1372,6 @@ export function createToolApi(opts: { root: string }) {
     load_quest(args: { world_quest_id?: string }): {
       ok: boolean;
       world_quest_id: string | null;
-      mode?: PackMode;
       meta?: CompiledRpgPack["pack"]["meta"];
       content_hash?: string;
       report: ValidationReport;

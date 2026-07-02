@@ -1079,7 +1079,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.ok).toBe(true);
     expect("pack_path" in r).toBe(false);
     expect(r.world_quest_id).toBe("sunken_barrow");
-    expect(r.mode).toBe("rpg");
+    expect("mode" in r).toBe(false);
     expect(r.meta?.id).toBe("sunken_barrow_v1");
     expect(r.content_hash).toMatch(/^[0-9a-f]{64}$/);
   });

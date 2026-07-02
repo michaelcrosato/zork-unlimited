@@ -348,7 +348,7 @@ tool("validate_quest", "Validate one shipped RPG quest by id.", WORLD_QUEST_SOUR
 );
 tool(
   "load_quest",
-  "Compile a shipped world quest by graph id and return its mode, metadata, content hash, source identity, and validation report.",
+  "Compile a shipped world quest by graph id and return its metadata, content hash, source identity, and validation report.",
   WORLD_QUEST_SOURCE,
   (a) => api.load_quest(a),
 );
