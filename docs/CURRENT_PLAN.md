@@ -91,6 +91,8 @@ Make discovered overworld quest leads start real RPG sessions.
   regression.
 - The verifier negative corpus captures expected bad-ref Git stderr, keeping
   passing test logs free of fatal-looking synthetic failure noise.
+- The no-LLM blind MCP smoke harness is now inside the repo lint/format gates with
+  Node ESM globals, removing root-wide cleaner ESLint noise.
 - Save/load now requires `mode: "rpg"` on disk; missing or legacy modes are
   rejected at the integrity boundary.
 - Trace artifacts now carry and require `mode: "rpg"` before replay or inspect

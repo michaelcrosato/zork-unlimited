@@ -14,9 +14,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "format:check": "prettier --check src bin scripts agents tests ui",
-    "format": "prettier --write src bin scripts agents tests ui",
-    "lint": "eslint src bin scripts agents tests ui",
+    "format:check": "prettier --check src bin scripts agents tests blind-tester ui",
+    "format": "prettier --write src bin scripts agents tests blind-tester ui",
+    "lint": "eslint src bin scripts agents tests blind-tester ui",
     "test": "vitest run --reporter=dot",
     "verify:integrity": "tsx scripts/verify-integrity.ts",
     "health": "npm run verify:integrity && npm run typecheck && npm run lint && npm run format:check && npm test && npm run validate",
