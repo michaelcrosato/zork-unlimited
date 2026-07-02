@@ -28,12 +28,15 @@ function registeredServerTools(): string[] {
   return [...text.matchAll(/tool\(\s*\n?\s*["']([^"']+)["']/g)].map((match) => match[1]!).sort();
 }
 
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function registeredToolBlock(name: string): string {
   const text = readFileSync("src/mcp/server.ts", "utf8");
-  const marker = `  "${name}",`;
-  const start = text.indexOf(marker);
+  const start = new RegExp(`tool\\(\\s*["']${escapeRegex(name)}["']`).exec(text)?.index ?? -1;
   if (start < 0) throw new Error(`missing tool block ${name}`);
-  const next = text.indexOf("\ntool(", start + marker.length);
+  const next = text.indexOf("\ntool(", start + 1);
   return text.slice(start, next < 0 ? text.length : next);
 }
 
@@ -117,6 +120,22 @@ describe("MCP server registration", () => {
     expect(blindToolSchemaSource).not.toContain("Token economy:");
     expect(blindToolSchemaSource).toContain("compact_observation");
     expect(blindToolSchemaSource).toContain("compact_summary");
+  });
+
+  it("keeps restore and trace ToolSearch schema source terse", () => {
+    const restoreTraceSchemaSource = [
+      registeredToolBlock("world_path"),
+      registeredToolBlock("load_game"),
+      registeredToolBlock("replay_trace"),
+      registeredToolBlock("inspect_trace"),
+    ].join("\n");
+
+    expect(restoreTraceSchemaSource.length).toBeLessThanOrEqual(1500);
+    expect(restoreTraceSchemaSource).toContain("world_quest_id");
+    expect(restoreTraceSchemaSource).toContain("generate_rpg_seed");
+    expect(restoreTraceSchemaSource).not.toContain("list_world().quests[].graph_node");
+    expect(restoreTraceSchemaSource).not.toContain("Charter Marches quest graph node id");
+    expect(restoreTraceSchemaSource).not.toContain("content-hash + mode");
   });
 
   it("keeps retired static overworld compatibility helpers out of ToolApi and MCP", () => {

@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 57 -->
+<!-- historical_cycle_count: 58 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — restore_trace_schema_trimmed
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed repo gates, with only optional secret-scanner absence and WSL worktree path noise outside the green gate.
+- Token surface: `world_path`, `load_game`, `replay_trace`, and `inspect_trace` MCP schemas now use terse world-id/trace wording instead of repeating discovery-path prose.
+- Loop effect: restore/debug ToolSearch payloads stay small for agents inspecting saves and traces, while handler behavior remains unchanged.
+- Evidence: MCP registration regression pins the restore/trace schema block under 1500 source chars and bans the old `list_world().quests[].graph_node` hint.
+- VERIFY: focused MCP registration regression, `npm run health`, `npm run validate`, and `npm test` passed: integrity, typecheck, lint, format check, 193 test files / 1356 tests, and validate.
+- Self-critique: this trims schema noise only; the next hidden surface remains actual engine/session behavior, not blind-reported content polish.
 
 ### Cycle result — root_markdown_prettier_clean
 

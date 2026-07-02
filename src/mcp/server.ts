@@ -74,11 +74,9 @@ tool(
 );
 tool(
   "world_path",
-  "Return the route through the Charter Marches graph from Charterhaven to a shipped quest graph node, without raw quest file paths.",
+  "Return the route from Charterhaven to a shipped RPG quest.",
   {
-    world_quest_id: z
-      .string()
-      .describe("Charter Marches quest graph node id from list_world().quests[].graph_node."),
+    world_quest_id: z.string().describe("World quest id."),
   },
   (a) => api.world_path(a),
 );
@@ -282,11 +280,8 @@ tool(
   },
   (a) => api.start_overworld_session_quest(a),
 );
-tool(
-  "validate_quest",
-  "Validate one Charter Marches RPG quest by graph id.",
-  QUEST_ID_SOURCE,
-  (a) => api.validate_quest(a),
+tool("validate_quest", "Validate one shipped RPG quest by id.", QUEST_ID_SOURCE, (a) =>
+  api.validate_quest(a),
 );
 tool(
   "load_quest",
@@ -331,7 +326,7 @@ tool(
 );
 tool(
   "start_quest",
-  "Start a Charter Marches RPG quest by graph id for MCP-driven playtesting.",
+  "Start a shipped RPG quest by id.",
   {
     ...QUEST_ID_SOURCE,
     seed: z.number().int().optional(),
@@ -420,19 +415,17 @@ tool(
 );
 tool(
   "load_game",
-  "Load a save against its embedded shipped world quest id/generated RPG seed, or an explicit world_quest_id/generate_rpg_seed (content-hash + mode verified), and return a fresh session.",
+  "Restore a saved RPG session.",
   {
     world_quest_id: z
       .string()
       .optional()
-      .describe(
-        "Charter Marches quest graph node id from list_world().quests[].graph_node. Optional when the save embeds worldQuestId.",
-      ),
+      .describe("World quest id; optional when embedded in save."),
     generate_rpg_seed: z
       .number()
       .int()
       .optional()
-      .describe("Procedural RPG generation seed. Optional when the save embeds generatedRpgSeed."),
+      .describe("Generated RPG seed; optional when embedded in save."),
     save: z.string().describe("A save string produced by save_game."),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
@@ -443,15 +436,13 @@ tool(
 
 tool(
   "replay_trace",
-  "Replay a recorded RPG trace against its embedded worldQuestId or an explicit world_quest_id and assert its final-state hash (§8.8).",
+  "Replay an RPG trace and verify its final-state hash.",
   {
-    trace_path: z.string().describe("Path to a trace JSON, relative to the project root."),
+    trace_path: z.string().describe("Project-relative trace JSON path."),
     world_quest_id: z
       .string()
       .optional()
-      .describe(
-        "Charter Marches quest graph node id from list_world().quests[].graph_node. Optional when the trace embeds worldQuestId.",
-      ),
+      .describe("World quest id; optional when embedded in trace."),
   },
   (a) => api.replay_trace(a),
 );
@@ -467,15 +458,13 @@ tool(
 
 tool(
   "inspect_trace",
-  "Summarize a recorded trace against its embedded worldQuestId or an explicit world_quest_id: per-step locations/events, final-hash check, and the debugger's suspected-bug classification (§9.4, §12.5).",
+  "Summarize an RPG trace with replay diagnostics.",
   {
-    trace_path: z.string().describe("Path to a trace JSON, relative to the project root."),
+    trace_path: z.string().describe("Project-relative trace JSON path."),
     world_quest_id: z
       .string()
       .optional()
-      .describe(
-        "Charter Marches quest graph node id from list_world().quests[].graph_node. Optional when the trace embeds worldQuestId.",
-      ),
+      .describe("World quest id; optional when embedded in trace."),
   },
   (a) => api.inspect_trace(a),
 );

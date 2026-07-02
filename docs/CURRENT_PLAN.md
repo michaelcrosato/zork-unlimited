@@ -89,6 +89,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Blind-playtest MCP ToolSearch schema prose for the selected
   start/observe/action/transcript tools is trimmed and guarded by a source-size
   regression.
+- Restore/debug MCP ToolSearch schema prose for `world_path`, `load_game`,
+  `replay_trace`, and `inspect_trace` is trimmed and guarded by a source-size
+  regression.
 - The verifier negative corpus captures expected bad-ref Git stderr, keeping
   passing test logs free of fatal-looking synthetic failure noise.
 - The no-LLM blind MCP smoke harness is now inside the repo lint/format gates with
