@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 51 -->
+<!-- historical_cycle_count: 52 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_rpg_state_caps
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner still fails broad root Prettier/ESLint/git-worktree checks, while its tsc/test portions passed.
+- Engine/token surface: compact RPG MCP observations now cap inventory/flags to 16 entries and journal to the 5 most recent entries, with `more` counts for omitted state.
+- Loop effect: repeated blind/AFK turns no longer grow linearly with accumulated RPG state while full observations, saves, and transcripts remain complete.
+- Evidence: direct compact observation tests cover truncation, recent-journal retention, core-var filtering, and no-metadata complete lists.
+- VERIFY: `npm run health`, `npm run validate`, and `npm test` passed: integrity, typecheck, lint, format check, 193 test files / 1351 tests, and validate.
+- Self-critique: this bounds one MCP context payload; future work should audit other unbounded compact fields and transcript summaries.
 
 ### Cycle result — blind_rotation_quest_label_parsed
 

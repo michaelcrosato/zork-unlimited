@@ -2,6 +2,9 @@ import type { RpgObservation } from "../rpg/observation.js";
 import type { McpActionOption } from "./types.js";
 
 const CORE_STATE_VARS = new Set(["attack", "defense", "hp"]);
+const COMPACT_INVENTORY_LIMIT = 16;
+const COMPACT_FLAG_LIMIT = 16;
+const COMPACT_JOURNAL_LIMIT = 5;
 
 export type RpgCompactRef = readonly [id: string, name: string];
 export type RpgCompactExit = string | readonly [direction: string, to: string];
@@ -31,6 +34,11 @@ export type RpgCompactObservation = {
   flags?: string[];
   vars?: Record<string, number>;
   journal?: string[];
+  more?: {
+    inv?: number;
+    flags?: number;
+    journal?: number;
+  };
   dialogue?: RpgCompactDialogue;
   enemies?: RpgCompactEnemy[];
   ended?: true;
@@ -49,11 +57,34 @@ function compactVars(vars: Record<string, number>): Record<string, number> | und
   return Object.keys(compact).length > 0 ? compact : undefined;
 }
 
+function compactHead(values: readonly string[], limit: number): string[] {
+  return values.slice(0, limit);
+}
+
+function compactRecent(values: readonly string[], limit: number): string[] {
+  return values.slice(Math.max(0, values.length - limit));
+}
+
+function omittedCount(values: readonly string[], compacted: readonly string[]): number | undefined {
+  return values.length > compacted.length ? values.length - compacted.length : undefined;
+}
+
 export function compactRpgObservation(
   obs: RpgObservation,
   actions: McpActionOption[],
 ): RpgCompactObservation {
   const vars = compactVars(obs.state.vars);
+  const inv = compactHead(obs.inventory, COMPACT_INVENTORY_LIMIT);
+  const flags = compactHead(obs.state.flags, COMPACT_FLAG_LIMIT);
+  const journal = compactRecent(obs.state.journal, COMPACT_JOURNAL_LIMIT);
+  const omittedInv = omittedCount(obs.inventory, inv);
+  const omittedFlags = omittedCount(obs.state.flags, flags);
+  const omittedJournal = omittedCount(obs.state.journal, journal);
+  const more = {
+    ...(omittedInv !== undefined ? { inv: omittedInv } : {}),
+    ...(omittedFlags !== undefined ? { flags: omittedFlags } : {}),
+    ...(omittedJournal !== undefined ? { journal: omittedJournal } : {}),
+  };
   return {
     v: 1,
     mode: "rpg",
@@ -69,10 +100,11 @@ export function compactRpgObservation(
     ...(obs.blocked_exits.length > 0
       ? { blocked: obs.blocked_exits.map((exit) => [exit.direction, exit.message] as const) }
       : {}),
-    ...(obs.inventory.length > 0 ? { inv: obs.inventory } : {}),
-    ...(obs.state.flags.length > 0 ? { flags: obs.state.flags } : {}),
+    ...(inv.length > 0 ? { inv } : {}),
+    ...(flags.length > 0 ? { flags } : {}),
     ...(vars ? { vars } : {}),
-    ...(obs.state.journal.length > 0 ? { journal: obs.state.journal } : {}),
+    ...(journal.length > 0 ? { journal } : {}),
+    ...(Object.keys(more).length > 0 ? { more } : {}),
     ...(obs.dialogue ? { dialogue: [obs.dialogue.npc, obs.dialogue.npc_text] as const } : {}),
     ...(obs.enemies_present.length > 0
       ? { enemies: obs.enemies_present.map((enemy) => [enemy.id, enemy.name, enemy.hp] as const) }

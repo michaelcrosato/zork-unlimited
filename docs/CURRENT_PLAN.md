@@ -80,6 +80,8 @@ Make discovered overworld quest leads start real RPG sessions.
   observations omit that repeated binding to lower per-turn MCP payload.
 - Repeated observe/step calls can set `compact_actions` to carry action ids
   without repeated command labels; full labels remain available on demand.
+- Compact RPG MCP observations now cap inventory/flags and keep only recent
+  journal entries, with `more` counts when state was omitted.
 - `get_transcript({ summary_only: true })` keeps session/end-state metadata while
   dropping detailed turn/event payload for token-light checks.
 - Save/load now requires `mode: "rpg"` on disk; missing or legacy modes are
