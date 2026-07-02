@@ -892,6 +892,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect("quests" in compact.context).toBe(false);
     expect("journal" in compact.context).toBe(false);
     expect("travel_log" in compact.context).toBe(false);
+    expect(compact.context.progress.towns).toEqual([full.visitedCount, full.totalTowns]);
+    expect("renown" in compact.context.progress).toBe(false);
+    expect("completed_arcs" in compact.context.progress).toBe(false);
     expect(compact.context.ids.discovered_towns).toEqual(full.discovered.map((town) => town.id));
     expect(compact.context.ids.discovered_areas).toEqual(full.discoveredAreaIds);
     expect("visited_areas" in compact.context.ids).toBe(false);

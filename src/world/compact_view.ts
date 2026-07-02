@@ -131,8 +131,8 @@ export type OverworldCompactView = {
   travel_log_truncated?: true;
   progress: {
     towns: readonly [visited: number, total: number];
-    renown: readonly (readonly [region: string, value: number])[];
-    completed_arcs: string[];
+    renown?: readonly (readonly [region: string, value: number])[];
+    completed_arcs?: string[];
   };
   id_counts: OverworldCompactIdCounts;
   ids_truncated?: OverworldCompactIdTruncation;
@@ -250,6 +250,10 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const journal = view.journal
     .slice(0, COMPACT_JOURNAL_LIMIT)
     .map((entry) => [entry.kind, entry.title, entry.recordedAt] as const);
+  const renown = Object.entries(view.regionRenown).sort(([left], [right]) =>
+    left.localeCompare(right),
+  );
+  const completedArcs = view.completedRegionalArcIds;
   const idPayload = compactIdPayload({
     discovered_towns: view.discovered.map((town) => town.id),
     discovered_areas: view.discoveredAreaIds,
@@ -313,10 +317,8 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     ...(view.log.length > travelLog.length ? { travel_log_truncated: true as const } : {}),
     progress: {
       towns: [view.visitedCount, view.totalTowns],
-      renown: Object.entries(view.regionRenown).sort(([left], [right]) =>
-        left.localeCompare(right),
-      ),
-      completed_arcs: view.completedRegionalArcIds,
+      ...(renown.length > 0 ? { renown } : {}),
+      ...(completedArcs.length > 0 ? { completed_arcs: completedArcs } : {}),
     },
     id_counts: idPayload.id_counts,
     ...(idPayload.ids_truncated ? { ids_truncated: idPayload.ids_truncated } : {}),

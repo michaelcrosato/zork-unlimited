@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 185 -->
+<!-- historical_cycle_count: 186 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_overworld_empty_progress
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact overworld progress now omits empty renown and completed-arc lists.
+- Loop effect: fresh/idle overworld reads keep town progress without paying for two empty progress arrays.
+- Guard: focused compact-overworld/MCP tests, typecheck, lint, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_overworld_sparse_ids
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/token surface: `get_transcript({ summary_only: true })` now omits the empty `turns` array.
 - Loop effect: default public transcript audits keep session/hash/source/summary metadata without paying for a dead row field.
 - Guard: focused MCP transcript/schema tests, typecheck, and format check passed before full gates.
-- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_step_event_version
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: compact `step_action` event tuple replies now include `event_v: 1`.
-- Loop effect: agents can branch on compact event tuple contract without asking for full reducer event objects.
-- Guard: focused MCP compact/full step-event tests, typecheck, and format check passed before full gates.
 - VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.

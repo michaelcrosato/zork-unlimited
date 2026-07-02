@@ -210,8 +210,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Public MCP stateful overworld start/action tools now default to compact context;
   callers can pass `compact_context: false` only when they need full observations.
 - Compact overworld context omits absent pending-road encounters, empty local
-  action/recovery lists, empty progress-id lists, and false/empty truncation
-  markers; those fields appear only when they carry loop or recovery data.
+  action/recovery lists, empty progress and progress-id lists, and false/empty
+  truncation markers; those fields appear only when they carry loop or recovery
+  data.
 - Public MCP RPG start/read/step/load tools now default to compact observation
   context; callers can pass `compact_observation: false` when they need full
   observations.
