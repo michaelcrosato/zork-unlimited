@@ -129,25 +129,30 @@ function resolveCurrentOverworldSessionEvent(
 }
 
 describe("MCP tools — validate / load (§9.4)", () => {
-  it("keeps story discovery RPG-only and world-bound for AFK", () => {
+  it("keeps world discovery RPG-only and removes the legacy story catalog", () => {
     const a = api();
-    const r = a.list_stories();
+    expect((a as unknown as Record<string, unknown>).list_stories).toBeUndefined();
     const world = a.list_world();
-    expect("main_story" in r).toBe(false);
-    expect(r.main_world_quest_id).toBe("breaking_weir");
-    expect(r.stories).toHaveLength(16);
-    expect(r.stories.every((s) => !("path" in s))).toBe(true);
+    expect("main_story" in world).toBe(false);
+    expect("main_world_quest_id" in world).toBe(false);
+    expect(world.quests).toHaveLength(16);
     expect(world.quests.every((q) => !("path" in q))).toBe(true);
     expect(world.graph.nodes.every((node) => !("pack" in node))).toBe(true);
     expect(world.world.graph.nodes.every((node) => !("pack" in node))).toBe(true);
-    expect(r.stories.map((s) => s.world_quest_id)).toEqual(
-      world.quests.map((q) => q.world_quest_id),
+    expect(world.quests.every((q) => q.mode === "rpg")).toBe(true);
+    expect(world.quests.some((s) => s.world_quest_id === "sunken_barrow")).toBe(true);
+    expect(world.quests.some((s) => s.world_quest_id === "breaking_weir")).toBe(true);
+    expect(
+      world.quests.find((s) => s.world_quest_id === "breaking_weir")?.path_from_hub.at(-1)?.name,
+    ).toBe("The Breaking Weir");
+    expect(world.world.graph.nodes.find((node) => node.id === "breaking_weir")?.name).toBe(
+      "The Breaking Weir",
     );
-    expect(r.stories.every((s) => s.mode === "rpg")).toBe(true);
-    expect(r.stories.some((s) => s.world_quest_id === "sunken_barrow")).toBe(true);
-    expect(r.stories.some((s) => s.world_quest_id === "breaking_weir")).toBe(true);
-    expect(r.stories.find((s) => s.world_quest_id === "breaking_weir")?.world?.hub).toBe(
-      "Charterhaven",
+    expect(world.hub).toBe("Charterhaven");
+    expect(world.graph.hub).toBe("charterhaven");
+    expect(world.world.hub).toBe("Charterhaven");
+    expect(world.quests.map((q) => q.world_quest_id)).toEqual(
+      world.world.graph.nodes.filter((node) => node.kind === "quest").map((node) => node.id),
     );
   });
 

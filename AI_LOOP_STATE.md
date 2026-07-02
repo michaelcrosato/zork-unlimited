@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 47 -->
+<!-- historical_cycle_count: 48 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — mcp_list_stories_retired
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner still fails broad root Prettier/ESLint/git-worktree checks, while its tsc/test portions passed.
+- Public MCP/API: retired the `list_stories` compatibility catalog; `list_world` is the single quest discovery surface.
+- Token economy: blind/AFK agents no longer receive two catalogs for the same RPG quest graph.
+- VERIFY: focused MCP catalog/registration tests (55) and `npm run health` passed: integrity, typecheck, lint, format check, 192 test files / 1347 tests, and validate.
+- Self-critique: removes one compatibility alias; `validate_pack`/`load_pack` names still reflect source-package history.
 
 ### Cycle result — validate_cli_world_source_only
 
@@ -290,14 +298,14 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/API: overworld quest observations, action discoveries, compact context, and quest-start metadata now use `OverworldQuestView` without raw `pack`.
 - Internal boundary: canonical world manifests and source resolvers still keep quest pack paths for loading/hash checks; live view models expose quest ids.
 - VERIFY: focused MCP/overworld/world tests, typecheck, lint, format:check, validate, npm test, `npm run health` EXIT 0.
-- Self-critique: strong live-token/path cleanup; remaining raw path surface is mostly catalog/debug (`list_world`, `list_stories`, trace/offline).
+- Self-critique: strong live-token/path cleanup; later cycles removed `list_stories` and raw trace/validation selectors.
 - Operator direction: pause after this cycle; do not start another AFK cycle.
 
 ### Cycle result — list_world_graph_identity
 
 - Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; same broad helper drift outside canonical repo scripts.
 - Engine/API: `list_world` now returns sanitized world/graph quest ids without `pack` or `path` fields.
-- Internal boundary: canonical manifests and `list_stories` compatibility still keep raw pack paths for loading/AFK assessment.
+- Internal boundary: canonical manifests and then-current `list_stories` compatibility still kept raw pack paths; later cycles retired that catalog.
 - VERIFY: focused catalog/world tests, typecheck, lint, format:check, validate, npm test, `npm run health` EXIT 0.
 - Self-critique: closes the public world-catalog path leak; remaining raw path surfaces are compatibility/offline debug.
 - Operator direction: pause after this cycle; do not start another AFK cycle.
@@ -314,7 +322,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
 ### Cycle result — list_stories_world_id_catalog
 
 - Pre-cycle: ran `C:\dev\agent-cleaner` measure + gate helpers; same broad helper drift outside canonical repo scripts.
-- Public MCP: `list_stories` now returns quest ids/world metadata without `path` or `main_story`.
+- Public MCP: `list_stories` then returned quest ids/world metadata without `path` or `main_story`; it is now retired.
 - Loop internals: AFK path metadata now resolves through `world/source`, not the public story catalog.
 - VERIFY: focused catalog/loop/assessor tests, typecheck, lint, format:check, validate, npm test, `npm run health` EXIT 0.
 - Self-critique: closes another live path leak; remaining path usage is internal maintenance and offline trace/debug.
@@ -440,8 +448,8 @@ history only when deep recovery is truly needed. Keep future entries terse.
   routine work should prefer targeted fixes or structural checks over more log prose.
 - Current engine seam: public MCP and ToolApi push local overworld play through
   stateful sessions; the static overworld helper layer is retired.
-- Catalog source of truth: `list_stories` is a compatibility view over the Charter
-  Marches quest graph, not a raw RPG pack directory scan.
+- Catalog source of truth: `list_world` is the single public view over the
+  Charter Marches quest graph; `list_stories` is retired.
 - Preferred shipped-quest start: use `start_world_quest` / `world_quest_id`;
   `new_game` rejects raw pack-path starts.
 - AFK baseline prompt now carries `main_world_quest_id`; blind baseline playtests
@@ -467,7 +475,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Overworld quest view metadata: observations, action results, compact context,
   and quest-start responses expose quest ids/titles/areas without raw pack paths.
 - World catalog: `list_world` returns sanitized graph/quest ids without raw
-  `pack`/`path`; `list_stories` is now id-only compatibility.
+  `pack`/`path`; the legacy `list_stories` alias is retired.
 - AFK loop internals resolve pack paths through `world/source`, not public
   catalog responses.
 - AFK candidate targets and latest-cycle primary target are quest ids for

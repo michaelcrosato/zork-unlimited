@@ -5,7 +5,7 @@
  * built — the engine stays the source of truth. These are unit-tested directly,
  * without a live MCP client (a §9.4 rule); server.ts only adapts them to stdio.
  *
- * The public story catalog, pack-loading path, and live session dispatch are all
+ * The public world catalog, quest loading path, and live session dispatch are all
  * RPG-only. Legacy content files may still exist as data during migration, but MCP
  * never indexes, observes, starts, or validates them as playable sessions. Content
  * and traces are data only — no handler runs shell or code (§16).
@@ -99,7 +99,7 @@ type PackLoadCacheEntry = {
   result: LoadResult;
 };
 
-type StorySourceEntry = {
+type WorldQuestSourceEntry = {
   path: string;
   id: string;
   title: string;
@@ -108,8 +108,6 @@ type StorySourceEntry = {
   world: WorldBinding | null;
   world_quest_id: string | null;
 };
-
-type StoryEntry = Omit<StorySourceEntry, "path">;
 
 type PublicWorldGraphNode = Omit<WorldManifest["graph"]["nodes"][number], "pack">;
 
@@ -290,8 +288,6 @@ type OverworldContextPayload = {
   session_id: string;
   context: OverworldCompactView;
 };
-
-const MAIN_RPG_STORY = "content/rpg/pack/breaking_weir.yaml";
 
 function indexFor(pack: CompiledRpgPack["pack"]): RpgIndex {
   return indexRpgPack(pack);
@@ -545,7 +541,7 @@ export function createToolApi(opts: { root: string }) {
       .map((node) => normalizePackPath(node.pack ?? ""));
   }
 
-  function discoverStorySources(world = loadWorldManifest()): StorySourceEntry[] {
+  function discoverWorldQuestSources(world = loadWorldManifest()): WorldQuestSourceEntry[] {
     return worldQuestPackPaths(world).map((path) => {
       const lr = loadAndReport(path);
       const node = worldQuestNodeForPack(world, path);
@@ -559,17 +555,6 @@ export function createToolApi(opts: { root: string }) {
         world_quest_id: node?.id ?? null,
       };
     });
-  }
-
-  function publicStoryEntry(source: StorySourceEntry): StoryEntry {
-    return {
-      id: source.id,
-      title: source.title,
-      mode: source.mode,
-      playable: source.playable,
-      world: source.world,
-      world_quest_id: source.world_quest_id,
-    };
   }
 
   function publicWorldGraph(world: WorldManifest): PublicWorldGraph {
@@ -720,23 +705,6 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    list_stories(): {
-      stories: StoryEntry[];
-      main_world_quest_id: string | null;
-    } {
-      const sources = discoverStorySources();
-      // Keep blind/AFK agents on the richest currently shipped RPG pack by default.
-      const main =
-        sources.find((s) => s.path === MAIN_RPG_STORY && s.playable) ??
-        sources.find((s) => s.playable) ??
-        sources[0] ??
-        null;
-      return {
-        stories: sources.map(publicStoryEntry),
-        main_world_quest_id: main?.world_quest_id ?? null,
-      };
-    },
-
     list_world(): {
       world: PublicWorldManifest;
       hub: string;
@@ -757,7 +725,7 @@ export function createToolApi(opts: { root: string }) {
       }[];
     } {
       const world = loadWorldManifest();
-      const quests = discoverStorySources(world)
+      const quests = discoverWorldQuestSources(world)
         .filter((s) => s.world?.id === world.id)
         .map((s) => {
           const node = s.world_quest_id ? worldQuestNodeById(world, s.world_quest_id) : null;

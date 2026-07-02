@@ -19,20 +19,21 @@ describe("isRpgPackShape keeps RPG structural priority", () => {
   });
 });
 
-describe("list_stories exposes only world-graph RPG quests", () => {
-  it("discovers RPG packs from the world graph and chooses the high-depth RPG default", () => {
+describe("list_world is the single RPG quest catalog", () => {
+  it("discovers RPG quests from the world graph without the retired story catalog", () => {
     const a = api();
-    const { stories, main_world_quest_id } = a.list_stories();
+    expect((a as unknown as Record<string, unknown>).list_stories).toBeUndefined();
     const world = a.list_world();
-    expect(main_world_quest_id).toBe("breaking_weir");
-    expect(stories).toHaveLength(16);
-    expect(stories.every((s) => !("path" in s))).toBe(true);
+    expect("main_world_quest_id" in world).toBe(false);
+    expect(world.quests).toHaveLength(16);
     expect(world.quests.every((q) => !("path" in q))).toBe(true);
     expect(world.graph.nodes.every((node) => !("pack" in node))).toBe(true);
-    expect(stories.map((s) => s.world_quest_id)).toEqual(world.quests.map((q) => q.world_quest_id));
-    expect(stories.every((s) => s.mode === "rpg")).toBe(true);
-    expect(stories.some((s) => s.world_quest_id === "sunken_barrow")).toBe(true);
-    expect(stories.some((s) => s.world_quest_id === "breaking_weir")).toBe(true);
+    expect(world.quests.map((q) => q.world_quest_id)).toEqual(
+      world.world.graph.nodes.filter((node) => node.kind === "quest").map((node) => node.id),
+    );
+    expect(world.quests.every((s) => s.mode === "rpg")).toBe(true);
+    expect(world.quests.some((s) => s.world_quest_id === "sunken_barrow")).toBe(true);
+    expect(world.quests.some((s) => s.world_quest_id === "breaking_weir")).toBe(true);
   });
 });
 

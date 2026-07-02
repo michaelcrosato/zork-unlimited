@@ -100,12 +100,6 @@ tool(
   (a) => api.validate_pack(a),
 );
 tool(
-  "list_stories",
-  "Legacy compatibility catalog for blind/AFK play. Returns shipped RPG quest ids declared by the canonical Charter Marches world graph, without raw pack paths.",
-  {},
-  () => api.list_stories(),
-);
-tool(
   "list_world",
   "List the single canonical world graph, its hub city, and shipped RPG quests as reachable graph-id entries.",
   {},

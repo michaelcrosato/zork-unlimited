@@ -21,6 +21,8 @@ const RETIRED_STATIC_OVERWORLD_TOOLS = [
   "work_overworld_job",
 ] as const;
 
+const RETIRED_COMPATIBILITY_TOOLS = ["list_stories"] as const;
+
 function registeredServerTools(): string[] {
   const text = readFileSync("src/mcp/server.ts", "utf8");
   return [...text.matchAll(/tool\(\s*\n?\s*["']([^"']+)["']/g)].map((match) => match[1]!).sort();
@@ -99,7 +101,7 @@ describe("MCP server registration", () => {
     const api = createToolApi({ root: process.cwd() }) as Record<string, unknown>;
     const registered = registeredServerTools();
 
-    for (const helper of RETIRED_STATIC_OVERWORLD_TOOLS) {
+    for (const helper of [...RETIRED_STATIC_OVERWORLD_TOOLS, ...RETIRED_COMPATIBILITY_TOOLS]) {
       expect(api).not.toHaveProperty(helper);
       expect(registered).not.toContain(helper);
     }
