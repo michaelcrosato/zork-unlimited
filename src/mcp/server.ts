@@ -391,18 +391,6 @@ tool(
   },
   (a) => api.start_world_quest(defaultCompactRpg(a)),
 );
-tool(
-  "start_quest",
-  "Start a shipped RPG quest; returns compact context by default.",
-  {
-    ...QUEST_ID_SOURCE,
-    seed: z.number().int().optional(),
-    ...HIDE_GRAPH,
-    ...COMPACT_ACTIONS,
-    ...COMPACT_OBSERVATION,
-  },
-  (a) => api.start_quest(defaultCompactRpg(a)),
-);
 
 tool(
   "get_observation",

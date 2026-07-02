@@ -334,13 +334,6 @@ type RpgStartWorldQuestArgs = {
   hide_graph?: boolean;
 } & RpgResponseOptions;
 
-type RpgStartQuestArgs = {
-  quest_id?: string;
-  world_quest_id?: string;
-  seed?: number;
-  hide_graph?: boolean;
-} & RpgResponseOptions;
-
 type RpgGetObservationArgs = {
   session_id: string;
   hide_graph?: boolean;
@@ -1454,17 +1447,6 @@ export function createToolApi(opts: { root: string }) {
         },
         ...started,
       } as RpgWorldQuestStartPayload<Args>;
-    },
-
-    start_quest<Args extends RpgStartQuestArgs>(args: Args): RpgWorldQuestStartPayload<Args> {
-      const source = resolveQuestIdSource(args, "start_quest");
-      return this.start_world_quest({
-        quest_id: source.worldQuestId,
-        ...(args.seed !== undefined ? { seed: args.seed } : {}),
-        ...(args.hide_graph ? { hide_graph: true } : {}),
-        ...(args.compact_actions ? { compact_actions: true } : {}),
-        ...(args.compact_observation ? { compact_observation: true } : {}),
-      } as RpgStartWorldQuestArgs & Args);
     },
 
     get_observation<Args extends RpgGetObservationArgs>(args: Args): RpgObservationResponse<Args> {

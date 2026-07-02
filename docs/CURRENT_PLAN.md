@@ -71,8 +71,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - ToolApi `replay_trace` and `inspect_trace` now reject raw `pack_path`; shipped
   traces infer their source from embedded `worldQuestId` or explicit
   `world_quest_id`.
-- `start_quest` and `validate_quest` now accept only `quest_id` /
-  `world_quest_id` in ToolApi and public MCP; raw `quest_path` is rejected.
+- `validate_quest` now accepts only `quest_id` / `world_quest_id` in ToolApi and
+  public MCP; raw `quest_path` is rejected.
 - Retired legacy story and pack-named aliases from the live MCP surface; use
   `validate_quest`, `load_quest`, `new_game`, and `start_world_quest` for
   current RPG play.

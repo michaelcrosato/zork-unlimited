@@ -69,7 +69,7 @@ describe("MCP server registration", () => {
 
   it("advertises world-bound starts instead of raw pack-path gameplay starts", () => {
     const newGame = registeredToolBlock("new_game");
-    const startQuest = registeredToolBlock("start_quest");
+    const startWorldQuest = registeredToolBlock("start_world_quest");
     const validateQuest = registeredToolBlock("validate_quest");
     const worldPath = registeredToolBlock("world_path");
     const loadGame = registeredToolBlock("load_game");
@@ -80,8 +80,8 @@ describe("MCP server registration", () => {
     expect(loadGame).toContain("world_quest_id");
     expect(loadGame).toContain("generate_rpg_seed");
     expect(loadGame).not.toContain("pack_path");
-    expect(startQuest).toContain("QUEST_ID_SOURCE");
-    expect(startQuest).not.toContain("quest_path");
+    expect(startWorldQuest).toContain("quest_id");
+    expect(startWorldQuest).not.toContain("quest_path");
     expect(validateQuest).toContain("QUEST_ID_SOURCE");
     expect(validateQuest).not.toContain("quest_path");
     expect(worldPath).toContain("world_quest_id");
@@ -173,7 +173,6 @@ describe("MCP server registration", () => {
     for (const toolName of [
       "new_game",
       "start_world_quest",
-      "start_quest",
       "get_observation",
       "step_action",
       "load_game",

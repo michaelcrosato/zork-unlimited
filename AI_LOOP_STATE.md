@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 75 -->
+<!-- historical_cycle_count: 76 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — retire_start_quest_alias
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/API surface: removed the legacy `start_quest` alias from ToolApi and public MCP registration.
+- Loop effect: RPG quest starts now have one world-bound contract: `start_world_quest(quest_id, seed?, compact_observation?)`.
+- Evidence: live MCP registration and ToolApi key checks no longer expose `start_quest`; `start_world_quest` still carries compact defaults and world route context.
+- Guard: MCP registration stays exact against ToolApi handlers, and unit coverage asserts the alias is absent.
+- VERIFY: focused MCP registration/tools tests, typecheck, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.
 
 ### Cycle result — retire_get_scene_alias
 
@@ -775,7 +784,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - ToolApi/public MCP validate/load/patch schemas and responses are
   `world_quest_id` only; trace replay/inspect resolve shipped sources from
   embedded or explicit `world_quest_id`.
-- Quest tools: ToolApi and public MCP `validate_quest`/`load_quest`/`start_quest`
+- Quest tools: ToolApi and public MCP `validate_quest`/`load_quest`/`start_world_quest`
   use graph ids only; raw `quest_path`/`pack_path` is rejected.
 - Retired legacy aliases: live MCP uses `validate_quest`, `load_quest`,
   `new_game`, and `start_world_quest`; legacy story and pack aliases are no

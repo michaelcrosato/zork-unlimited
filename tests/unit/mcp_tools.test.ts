@@ -1055,6 +1055,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const tools = api() as unknown as Record<string, unknown>;
     expect("validate_story" in tools).toBe(false);
     expect("start_game" in tools).toBe(false);
+    expect("start_quest" in tools).toBe(false);
     expect("get_scene" in tools).toBe(false);
     expect("choose_option" in tools).toBe(false);
   });
@@ -1237,9 +1238,9 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(JSON.stringify(compact).length).toBeLessThan(JSON.stringify(full).length);
   });
 
-  it("quest aliases can play and transcript a route", () => {
+  it("start_world_quest can play and transcript a route", () => {
     const a = api();
-    const game = a.start_quest({ world_quest_id: "sunken_barrow", seed: 1 });
+    const game = a.start_world_quest({ quest_id: "sunken_barrow", seed: 1 });
     expect(game.mode).toBe("rpg");
     expect(game.observation.mode).toBe("rpg");
 
@@ -1247,7 +1248,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(last.observation.ending_id).toBe("ending_victory");
     expect(a.get_transcript({ session_id: game.session_id }).summary.ended).toBe(true);
 
-    const byQuestId = a.start_quest({ quest_id: "sunken_barrow", seed: 1 }) as unknown as {
+    const byQuestId = a.start_world_quest({ quest_id: "sunken_barrow", seed: 1 }) as unknown as {
       mode: string;
       world_quest_id: string | null;
       quest: { id: string; path_from_hub: { name: string }[] };
@@ -1261,12 +1262,6 @@ describe("MCP tools — the play loop (§9.1)", () => {
       "Moor Road",
       "The Sunken Barrow",
     ]);
-
-    expect(() => a.start_quest({})).toThrow(/requires quest_id or world_quest_id/);
-    expect(() =>
-      a.start_quest({ quest_id: "sunken_barrow", world_quest_id: "sunken_barrow" }),
-    ).toThrow(/exactly one/);
-    expect(() => a.start_quest({ quest_path: PACK } as never)).toThrow(/not quest_path/);
   });
 
   it("an agent can play a whole game via observe → choose → step", () => {
@@ -1308,12 +1303,6 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_actions: true,
     });
     assertCompactAction(compactWorldQuest.observation.available_actions[0]);
-    const compactStartQuest = a.start_quest({
-      quest_id: "sunken_barrow",
-      seed: 1,
-      compact_actions: true,
-    });
-    assertCompactAction(compactStartQuest.observation.available_actions[0]);
     assertPublicAction(
       a.get_observation({ session_id: game.session_id }).observation.available_actions[0],
     );
@@ -1437,14 +1426,6 @@ describe("MCP tools — the play loop (§9.1)", () => {
     });
     expect(compactWorldQuest.context.here[0]).toBe(fullStart.observation.room);
     expect("observation" in compactWorldQuest).toBe(false);
-
-    const compactStartQuest = a.start_quest({
-      quest_id: "sunken_barrow",
-      seed: 1,
-      hide_graph: true,
-      compact_observation: true,
-    });
-    expect(compactStartQuest.context.here[0]).toBe(fullStart.observation.room);
 
     const compactObservation = a.get_observation({
       session_id: fullStart.session_id,
