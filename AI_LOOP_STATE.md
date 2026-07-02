@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 222 -->
+<!-- historical_cycle_count: 223 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — indexed_overworld_regional_arc_state
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: `OverworldSession` now indexes regional arcs by region, caches their anchor-town nodes, and maintains resolved event home ids alongside resolved event ids.
+- Loop effect: event resolution, regional arc completion, and regional arc progress rebuilds avoid rescanning all resolved events and remapping anchor towns.
+- Guard: existing overworld MCP lifecycle and snapshot integrity tests cover live regional arc completion plus restore proofing.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` also passed before the health run.
 
 ### Cycle result — indexed_overworld_snapshot_restore
 

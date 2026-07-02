@@ -2290,6 +2290,8 @@ export class OverworldSession {
   private readonly sitesByArea: Map<string, OverworldExplorationSite[]>;
   private readonly questsById: Map<string, OverworldQuest>;
   private readonly questsByTown: Map<string, OverworldQuest[]>;
+  private readonly regionalArcsByRegion: Map<string, OverworldRegionalArc[]>;
+  private readonly regionalArcAnchorTownsById: Map<string, OverworldNode[]>;
   private readonly snapshotManifestIndex: OverworldSnapshotManifestIndex;
   private readonly worldHash: string;
   private currentId: string;
@@ -2304,6 +2306,7 @@ export class OverworldSession {
   private readonly journalEntries: OverworldJournalEntry[] = [];
   private readonly journalEntriesById = new Map<string, OverworldJournalEntry>();
   private readonly resolvedEventIds = new Set<string>();
+  private readonly resolvedEventHomeIds = new Set<string>();
   private readonly discoveredAreaIds = new Set<string>();
   private readonly visitedAreaIds = new Set<string>();
   private readonly discoveredJobIds = new Set<string>();
@@ -2389,6 +2392,8 @@ export class OverworldSession {
       (quest) => quest.home,
       (a, b) => a.title.localeCompare(b.title),
     );
+    this.regionalArcsByRegion = this.indexRegionalArcsByRegion();
+    this.regionalArcAnchorTownsById = this.indexRegionalArcAnchorTowns();
     this.snapshotManifestIndex = this.buildSnapshotManifestIndex();
     this.worldHash = hashState(world);
     this.currentId = world.start;
@@ -2441,6 +2446,25 @@ export class OverworldSession {
         (a, b) =>
           a.travel_minutes - b.travel_minutes ||
           a.destination.name.localeCompare(b.destination.name),
+      );
+    }
+    return index;
+  }
+
+  private indexRegionalArcsByRegion(): Map<string, OverworldRegionalArc[]> {
+    const index = new Map<string, OverworldRegionalArc[]>();
+    for (const arc of this.world.regional_arcs) pushIndexed(index, arc.region, arc);
+    return index;
+  }
+
+  private indexRegionalArcAnchorTowns(): Map<string, OverworldNode[]> {
+    const index = new Map<string, OverworldNode[]>();
+    for (const arc of this.world.regional_arcs) {
+      index.set(
+        arc.id,
+        arc.anchor_towns
+          .map((id) => this.nodes.get(id))
+          .filter((node): node is OverworldNode => node !== undefined),
       );
     }
     return index;
@@ -2763,6 +2787,7 @@ export class OverworldSession {
     );
     this.replaceJournalEntries(cloneJson(snapshot.journalEntries));
     replaceStringSet(this.resolvedEventIds, snapshot.resolvedEventIds);
+    this.rebuildResolvedEventHomeIds();
     replaceStringSet(this.discoveredAreaIds, snapshot.discoveredAreaIds);
     replaceStringSet(this.visitedAreaIds, snapshot.visitedAreaIds);
     replaceStringSet(this.discoveredJobIds, snapshot.discoveredJobIds);
@@ -2819,6 +2844,19 @@ export class OverworldSession {
       fatigueAfter: entry.fatigueAfter,
       roadEvent: this.roadEventFor(entry.edgeId),
     };
+  }
+
+  private rebuildResolvedEventHomeIds(): void {
+    this.resolvedEventHomeIds.clear();
+    for (const eventId of this.resolvedEventIds) {
+      const event = this.localEventsById.get(eventId);
+      if (event) this.resolvedEventHomeIds.add(event.home);
+    }
+  }
+
+  private markEventResolved(event: OverworldLocalEvent): void {
+    this.resolvedEventIds.add(event.id);
+    this.resolvedEventHomeIds.add(event.home);
   }
 
   private markSeen(nodeId: string): void {
@@ -3243,20 +3281,16 @@ export class OverworldSession {
   }
 
   private resolvedAnchorTownIdsForArc(arc: OverworldRegionalArc): Set<string> {
-    const anchorIds = new Set(arc.anchor_towns);
     const resolved = new Set<string>();
-    for (const eventId of this.resolvedEventIds) {
-      const event = this.localEventsById.get(eventId);
-      if (event && anchorIds.has(event.home)) resolved.add(event.home);
+    for (const townId of arc.anchor_towns) {
+      if (this.resolvedEventHomeIds.has(townId)) resolved.add(townId);
     }
     return resolved;
   }
 
   private progressForArc(arc: OverworldRegionalArc): OverworldRegionalArcProgress {
     const resolvedAnchorIds = this.resolvedAnchorTownIdsForArc(arc);
-    const anchorTowns = arc.anchor_towns
-      .map((id) => this.nodes.get(id))
-      .filter((node): node is OverworldNode => node !== undefined);
+    const anchorTowns = this.regionalArcAnchorTownsById.get(arc.id) ?? [];
     return {
       id: arc.id,
       region: arc.region,
@@ -3306,7 +3340,7 @@ export class OverworldSession {
   private checkRegionalArcCompletion(region: string): void {
     const completedAt = timeLabel(this.minutes);
     let completedAny = false;
-    for (const arc of this.world.regional_arcs.filter((candidate) => candidate.region === region)) {
+    for (const arc of this.regionalArcsByRegion.get(region) ?? []) {
       if (this.completedRegionalArcIds.has(arc.id)) continue;
       if (this.resolvedAnchorTownIdsForArc(arc).size < arc.required_resolutions) continue;
       this.completedRegionalArcIds.add(arc.id);
@@ -3851,7 +3885,7 @@ export class OverworldSession {
       30 + event.intensity * 10,
     );
     if (!result.alreadyKnown) {
-      this.resolvedEventIds.add(event.id);
+      this.markEventResolved(event);
       this.regionRenown.set(
         current.region,
         (this.regionRenown.get(current.region) ?? 0) + event.intensity,
