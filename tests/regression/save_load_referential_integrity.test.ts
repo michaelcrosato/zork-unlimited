@@ -123,6 +123,7 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
     const before = a.get_observation({ session_id: game.session_id }).state_hash;
     const saved = a.save_game({ session_id: game.session_id });
     const reloaded = a.load_game({ save: saved.save });
+    expect(saved.state_hash).toBe(before);
     expect(reloaded.state_hash).toBe(before);
   });
 
@@ -140,6 +141,7 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
     const bundle = JSON.parse(saved.save) as { state: { inventory: string[] } };
     expect(bundle.state.inventory.length).toBeGreaterThan(0);
     const reloaded = a.load_game({ save: saved.save });
+    expect(saved.state_hash).toBe(before);
     expect(reloaded.state_hash).toBe(before);
   });
 
@@ -156,6 +158,7 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
     expect(bundle.state.current).toBe("relic_chamber");
     expect(bundle.state.endingId).toBe("ending_victory");
     const reloaded = a.load_game({ save: saved.save });
+    expect(saved.state_hash).toBe(ended.state_hash);
     expect(reloaded.state_hash).toBe(ended.state_hash);
   });
 });

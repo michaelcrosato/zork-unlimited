@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 62 -->
+<!-- historical_cycle_count: 63 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — save_game_state_hash
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/persistence surface: `save_game` now returns the current `state_hash` with the serialized save.
+- Loop effect: checkpoint/resume agents can bind a save to reducer state without a follow-up `get_observation`/`get_state` call.
+- Evidence: live MCP `save_game` returned a 64-char `state_hash`; `load_game` restored to the same hash from that save.
+- Guard: save/load unit and referential-integrity regression tests assert saved hash equals the state that reloads.
+- VERIFY: focused save/load tests, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, typecheck, lint, format check, 193 test files / 1360 tests, and validate.
 
 ### Cycle result — mcp_legal_actions_compact_default
 

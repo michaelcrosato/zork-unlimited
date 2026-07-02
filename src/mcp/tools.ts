@@ -1391,6 +1391,7 @@ export function createToolApi(opts: { root: string }) {
         generated_rpg_seed: s.generatedRpgSeed ?? null,
         content_hash: s.contentHash,
         mode: SAVE_MODE,
+        state_hash: hashState(s.state),
       };
     },
 

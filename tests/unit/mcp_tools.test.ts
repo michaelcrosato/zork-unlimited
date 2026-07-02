@@ -1400,6 +1400,7 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     const saveBundle = JSON.parse(saved.save) as { worldQuestId?: string };
     expect("pack_path" in saved).toBe(false);
     expect(saved.world_quest_id).toBe("sunken_barrow");
+    expect(saved.state_hash).toBe(after);
     expect(saveBundle.worldQuestId).toBe("sunken_barrow");
     expect("pack_path" in reloaded).toBe(false);
     expect(reloaded.world_quest_id).toBe("sunken_barrow");
@@ -1419,6 +1420,7 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
       compact_observation: true,
     });
 
+    expect(saved.state_hash).toBe(after);
     expect(compactReload.state_hash).toBe(after);
     expect("pack_path" in compactReload).toBe(false);
     expect(compactReload.world_quest_id).toBe("sunken_barrow");
@@ -1444,6 +1446,7 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     expect(reloaded.mode).toBe("rpg");
     expect("pack_path" in saved).toBe(false);
     expect(saved.world_quest_id).toBe("sunken_barrow");
+    expect(saved.state_hash).toBe(after);
     expect("pack_path" in reloaded).toBe(false);
     expect(reloaded.world_quest_id).toBe("sunken_barrow");
     expect(reloaded.state_hash).toBe(after);
