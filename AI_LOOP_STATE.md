@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 181 -->
+<!-- historical_cycle_count: 182 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_rpg_empty_exits
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact RPG observations now omit `exits` when no exit ids are available.
+- Loop effect: terminal compact observations keep ending state without paying for an empty navigation array.
+- Guard: focused compact-RPG/MCP/docs tests, typecheck, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_rpg_empty_actions
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: the overworld/RPG bridge now has a start and completion path, while stale snapshot hashes, generated sessions, unfinished sessions, and death endings are rejected.
 - Guard: focused MCP/overworld/session tests, typecheck, and format check passed before full gates.
 - VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — overworld_quest_start_state
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/state surface: overworld quest starts now persist `startedQuestIds` plus `quest:*` journal entries and bump the snapshot version.
-- Loop effect: a discovered quest lead cannot be repeatedly launched from one overworld snapshot, and restored overworld state now proves the RPG handoff occurred.
-- Guard: focused MCP/overworld/save-load tests, typecheck, and format check passed before full gates.
-- VERIFY: focused MCP/overworld/save-load tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.

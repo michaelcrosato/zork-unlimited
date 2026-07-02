@@ -24,7 +24,7 @@ export type RpgCompactObservation = {
   v: typeof RPG_COMPACT_OBSERVATION_VERSION;
   here: readonly [room: string, title: string];
   text: string;
-  exits: RpgCompactExit[];
+  exits?: RpgCompactExit[];
   vitals: RpgCompactVitals;
   actions?: McpActionOption[];
   objects?: RpgCompactRef[];
@@ -80,6 +80,9 @@ export function compactRpgObservation(
   const omittedInv = omittedCount(obs.inventory, inv);
   const omittedFlags = omittedCount(obs.state.flags, flags);
   const omittedJournal = omittedCount(obs.state.journal, journal);
+  const exits: RpgCompactExit[] = obs.exits.map((exit) =>
+    exit.to === undefined ? exit.direction : ([exit.direction, exit.to] as const),
+  );
   const more = {
     ...(omittedInv !== undefined ? { inv: omittedInv } : {}),
     ...(omittedFlags !== undefined ? { flags: omittedFlags } : {}),
@@ -89,9 +92,7 @@ export function compactRpgObservation(
     v: RPG_COMPACT_OBSERVATION_VERSION,
     here: [obs.room, obs.title],
     text: obs.description,
-    exits: obs.exits.map((exit) =>
-      exit.to === undefined ? exit.direction : [exit.direction, exit.to],
-    ),
+    ...(exits.length > 0 ? { exits } : {}),
     vitals: [obs.stats.hp, obs.stats.attack, obs.stats.defense, obs.score, obs.max_score],
     ...(actions.length > 0 ? { actions } : {}),
     ...(obs.visible_objects.length > 0 ? { objects: obs.visible_objects.map(ref) } : {}),

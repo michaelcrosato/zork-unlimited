@@ -1735,7 +1735,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       hide_graph: true,
       compact_observation: true,
     });
-    expect(compactObservation.context.exits[0]).toEqual(expect.any(String));
+    expect(compactObservation.context.exits?.[0]).toEqual(expect.any(String));
     expect(compactObservation.context.actions?.[0]).not.toHaveProperty("command");
     expect("mode" in compactObservation.context).toBe(false);
 
@@ -1951,7 +1951,7 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
       fullReload.observation.room,
       fullReload.observation.title,
     ]);
-    expect(compactReload.context.exits[0]).toEqual(expect.any(String));
+    expect(compactReload.context.exits?.[0]).toEqual(expect.any(String));
     expect(compactReload.context.actions?.[0]).not.toHaveProperty("command");
     expect(JSON.stringify(compactReload).length).toBeLessThan(JSON.stringify(fullReload).length);
   });
