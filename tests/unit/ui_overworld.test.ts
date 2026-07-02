@@ -398,13 +398,14 @@ describe("OverworldSession", () => {
     const view = session.view();
     expect(view.discovered.length).toBeGreaterThan(24);
     const compact = compactOverworldView(view);
-    expect(compact.v).toBe(3);
+    expect(compact.v).toBe(4);
     expect(compact.hidden).toEqual([
       view.hiddenAreaCount,
       view.hiddenJobCount,
       view.hiddenSiteCount,
       view.hiddenQuestCount,
     ]);
+    expect(compact.progress).toEqual([view.visitedCount, view.totalTowns]);
     expect(compact.ids.discovered_towns).toHaveLength(16);
     expect(compact.id_counts).toHaveLength(11);
     expect(compact.id_counts[0]).toBe(view.discovered.length);

@@ -10,7 +10,7 @@ const COMPACT_JOURNAL_LIMIT = 5;
 const COMPACT_ROUTE_LIMIT = 8;
 const COMPACT_TRAVEL_LOG_LIMIT = 5;
 const COMPACT_ID_LIST_LIMIT = 16;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 3 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 4 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactQuestRef = readonly [id: string, title: string];
@@ -33,6 +33,7 @@ export type OverworldCompactHiddenCounts = readonly [
   sites: number,
   quests: number,
 ];
+export type OverworldCompactProgress = readonly [visited: number, total: number];
 export type OverworldCompactRoad = readonly [
   roadId: string,
   toId: string,
@@ -130,11 +131,9 @@ export type OverworldCompactView = {
   journal?: OverworldCompactJournalEntry[];
   travel_log?: OverworldCompactTravelLogEntry[];
   travel_log_truncated?: true;
-  progress: {
-    towns: readonly [visited: number, total: number];
-    renown?: readonly (readonly [region: string, value: number])[];
-    completed_arcs?: string[];
-  };
+  progress: OverworldCompactProgress;
+  renown?: readonly (readonly [region: string, value: number])[];
+  completed_arcs?: string[];
   id_counts: OverworldCompactIdCounts;
   ids_truncated?: OverworldCompactIdTruncation;
   ids: OverworldCompactIdMap;
@@ -316,11 +315,9 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     ...(journal.length > 0 ? { journal } : {}),
     ...(travelLog.length > 0 ? { travel_log: travelLog } : {}),
     ...(view.log.length > travelLog.length ? { travel_log_truncated: true as const } : {}),
-    progress: {
-      towns: [view.visitedCount, view.totalTowns],
-      ...(renown.length > 0 ? { renown } : {}),
-      ...(completedArcs.length > 0 ? { completed_arcs: completedArcs } : {}),
-    },
+    progress: [view.visitedCount, view.totalTowns],
+    ...(renown.length > 0 ? { renown } : {}),
+    ...(completedArcs.length > 0 ? { completed_arcs: completedArcs } : {}),
     id_counts: idPayload.id_counts,
     ...(idPayload.ids_truncated ? { ids_truncated: idPayload.ids_truncated } : {}),
     ids: idPayload.ids,

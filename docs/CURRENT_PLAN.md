@@ -203,8 +203,8 @@ Make discovered overworld quest leads start real RPG sessions.
   `unchanged` responses when the overworld snapshot has not changed.
 - Stateful overworld MCP actions now accept `compact_context` so repeated loop
   turns can avoid full observations after movement or local actions.
-- Compact overworld context is now versioned as `v: 3` for the tuple-packed
-  hidden-count shape plus the expanded progress-id tuple shape that includes
+- Compact overworld context is now versioned as `v: 4` for tuple-packed progress
+  and hidden-count shapes plus the expanded progress-id tuple shape that includes
   started/completed quest ids.
 - Overworld MCP start and restore also accept `compact_context`, so long-running
   agents can stay compact from the first session payload.

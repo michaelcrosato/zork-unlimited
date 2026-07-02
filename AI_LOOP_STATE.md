@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 187 -->
+<!-- historical_cycle_count: 188 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_overworld_progress_tuple
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact overworld `progress` now serializes as `[visited, total]` under context `v: 4`.
+- Loop effect: every compact overworld turn keeps town-progress counts without paying for the `towns` object wrapper.
+- Guard: focused compact-overworld/MCP tests, typecheck, lint, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_overworld_hidden_tuple
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/token surface: public `generate_rpg_pack()` no longer echoes top-level `pack_id`.
 - Loop effect: generated RPG flows use `generate_rpg_seed`, `meta.id`, and `content_hash` without an extra package identity field.
 - Guard: focused MCP generation tests, typecheck, and format check passed before full gates.
-- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_save_transcript_pack_id
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: public `save_game()` and `get_transcript()` wrappers no longer echo `pack_id`.
-- Loop effect: world-quest and generated loops rely on `world_quest_id` / `generated_rpg_seed` plus hashes, while persisted save blobs keep internal pack identity for integrity.
-- Guard: focused MCP save/transcript tests, typecheck, and format check passed before full gates.
 - VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
