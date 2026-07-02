@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 153 -->
+<!-- historical_cycle_count: 154 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_generation_authoring_mode
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: `generate_rpg_pack()` and `adapt_story()` responses no longer return `mode: "rpg"`.
+- Loop effect: read-only generation/authoring payloads are RPG-only by tool contract and spend fewer tokens on a one-value discriminator.
+- Guard: generated-pack and adapt-story tests assert those non-session payloads omit `mode`.
+- VERIFY: focused generation/authoring tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_patch_proposal_mode
 
@@ -126,13 +134,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: polling/resume loops can get a hash-only `unchanged` response instead of repeating compact/full observation context when reducer state has not changed.
 - Evidence: live MCP unchanged observation matched the supplied hash at 120 chars with no context; stale hash returned compact context at 878 chars matching the post-step hash.
 - Guard: MCP regression asserts matching hashes return no context/observation payload, while stale hashes still return compact context.
-- VERIFY: focused MCP and registration tests, typecheck, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.
-
-### Cycle result — checkpoint_expected_hash
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/persistence surface: RPG `save_game` accepts `expected_state_hash`, and overworld `export_overworld_session` accepts `expected_snapshot_hash`.
-- Loop effect: checkpoint loops can reject stale save/export requests before serializing save or snapshot blobs.
-- Evidence: live MCP stale save/export guards returned current hashes and omitted blobs at 315/308 chars; matching guards serialized at 761/1252 chars.
-- Guard: MCP regression asserts stale checkpoint guards return current hashes, omit save/snapshot payloads, and matching hashes still serialize.
 - VERIFY: focused MCP and registration tests, typecheck, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.

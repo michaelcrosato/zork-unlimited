@@ -17,7 +17,7 @@ describe("adapt_story RPG-only MCP authoring surface", () => {
     const r = await api().adapt_story({ premise: PREMISE });
 
     expect(r.ok).toBe(true);
-    expect(r.mode).toBe("rpg");
+    expect("mode" in r).toBe(false);
     expect(r.pack?.meta.id).toBe("lighthouse_rpg_v1");
     expect(r.report.ok).toBe(true);
     expect(r.story.title).toBe("The Lighthouse");

@@ -1391,7 +1391,6 @@ export function createToolApi(opts: { root: string }) {
      */
     generate_rpg_pack(args: { seed: number }): {
       ok: boolean;
-      mode: PackMode;
       pack_id: string;
       content_hash: string;
       seed: number;
@@ -1405,7 +1404,6 @@ export function createToolApi(opts: { root: string }) {
       const report = validateRpg(pack);
       return {
         ok: report.ok,
-        mode: SAVE_MODE,
         pack_id: pack.meta.id,
         content_hash: hashState(pack),
         seed: args.seed,
@@ -1669,7 +1667,6 @@ export function createToolApi(opts: { root: string }) {
       const result = await runRpgAdapter(provider, { story, contract });
       return {
         ok: result.ok,
-        mode: SAVE_MODE,
         rounds: result.rounds,
         story: { title: story.title, beats: story.beats.map((b) => b.id) },
         classifications: result.classifications,

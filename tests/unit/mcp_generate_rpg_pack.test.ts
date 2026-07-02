@@ -31,7 +31,7 @@ describe("bug_0160 — generate_rpg_pack MCP tool mints + validates a fresh RPG 
     expect(r.ok).toBe(true);
     expect(r.report.ok).toBe(true);
     expect(r.report.findings).toEqual([]); // clean of ANY severity, like a shipped RPG pack
-    expect(r.mode).toBe("rpg");
+    expect("mode" in r).toBe(false);
     expect(r.pack_id).toBe("genrpg_0_v1");
     expect(r.meta.id).toBe("genrpg_0_v1");
     expect(r.content_hash).toMatch(/^[0-9a-f]{64}$/);
