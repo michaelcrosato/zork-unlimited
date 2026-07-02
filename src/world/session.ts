@@ -539,6 +539,12 @@ type OverworldResourceReplayIndex = {
   roadEventsByEdgeId: ReadonlyMap<string, OverworldRoadEvent>;
 };
 
+type OverworldReplayState = {
+  minimumClock: number;
+  supplies: number;
+  fatigue: number;
+};
+
 type OverworldDiscoveryLocalityIndex = {
   areaHomes: ReadonlyMap<string, string>;
   discoveredAreaIds: ReadonlySet<string>;
@@ -809,11 +815,73 @@ function travelResourceKey(entry: TravelLogEntrySnapshot): string {
   return `${entry.edgeId}@${entry.arrivedAt}`;
 }
 
+function assertReplayClock(
+  sourceLabel: string,
+  recordedAt: number,
+  duration: number,
+  state: OverworldReplayState,
+): void {
+  const earliestCompletion = state.minimumClock + duration;
+  if (recordedAt < earliestCompletion) {
+    throw new Error(
+      `Overworld session snapshot ${sourceLabel} was recorded before enough clock time elapsed.`,
+    );
+  }
+  state.minimumClock = Math.max(state.minimumClock, recordedAt);
+}
+
+function localJournalActionDuration(
+  entry: OverworldJournalEntry,
+  sources: OverworldLocalActionJournalReachabilityIndex,
+): number | null {
+  switch (entry.kind) {
+    case "area": {
+      const sourceId = journalSourceId(entry, "area:");
+      const area = sourceId ? sources.areasById.get(sourceId) : undefined;
+      return area?.travel_minutes ?? null;
+    }
+    case "contact": {
+      const sourceId = journalSourceId(entry, "talk:");
+      const character = sourceId ? sources.charactersById.get(sourceId) : undefined;
+      return character ? describeOverworldContactAction(character).minutes : null;
+    }
+    case "event": {
+      const sourceId = journalSourceId(entry, "investigate:");
+      const event = sourceId ? sources.eventsById.get(sourceId) : undefined;
+      return event ? describeOverworldEventAction(event).minutes : null;
+    }
+    case "job": {
+      const sourceId = journalSourceId(entry, "job:");
+      const job = sourceId ? sources.jobsById.get(sourceId) : undefined;
+      if (!job) return null;
+      const area = sources.areasById.get(job.area) ?? null;
+      return describeOverworldJobAction(job, area).minutes;
+    }
+    case "poi": {
+      const sourceId = journalSourceId(entry, "scout:");
+      const poi = sourceId ? sources.poisById.get(sourceId) : undefined;
+      return poi ? 20 : null;
+    }
+    case "resolution": {
+      const sourceId = journalSourceId(entry, "resolve:");
+      const event = sourceId ? sources.eventsById.get(sourceId) : undefined;
+      return event ? 30 + event.intensity * 10 : null;
+    }
+    case "site": {
+      const sourceId = journalSourceId(entry, "site:");
+      const site = sourceId ? sources.sitesById.get(sourceId) : undefined;
+      return site ? describeOverworldSiteAction(site).minutes : null;
+    }
+    default:
+      return null;
+  }
+}
+
 function assertTravelResourceTransition(
   entry: TravelLogEntrySnapshot,
   edge: OverworldEdge,
   roadEvent: OverworldRoadEvent | null,
-  state: { supplies: number; fatigue: number },
+  state: OverworldReplayState,
 ): void {
   const label = `${entry.edgeId}@${entry.arrivedAt}`;
   const supplyCost = travelSupplyCost(edge.travel_minutes);
@@ -919,12 +987,19 @@ function assertSnapshotRoadResolutionCoverage(
 function assertSnapshotResourceReplay(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldResourceReplayIndex,
+  localActionSources: OverworldLocalActionJournalReachabilityIndex,
 ): void {
   const roadResolutionByKey = assertSnapshotRoadResolutionCoverage(snapshot, sources);
   const replayEvents: (
     | { kind: "travel"; recordedAt: number; entry: TravelLogEntrySnapshot }
     | { kind: "road"; recordedAt: number; entry: OverworldJournalEntry }
     | { kind: "service"; recordedAt: number; entry: OverworldJournalEntry }
+    | {
+        kind: "local";
+        recordedAt: number;
+        duration: number;
+        entry: OverworldJournalEntry;
+      }
   )[] = [];
   for (const entry of snapshot.travelLog) {
     replayEvents.push({ kind: "travel", recordedAt: entry.arrivedAt, entry });
@@ -932,6 +1007,16 @@ function assertSnapshotResourceReplay(
   for (const entry of snapshot.journalEntries) {
     if (entry.kind === "road" || entry.kind === "service") {
       replayEvents.push({ kind: entry.kind, recordedAt: journalEntryRecordedAt(entry), entry });
+      continue;
+    }
+    const duration = localJournalActionDuration(entry, localActionSources);
+    if (duration !== null) {
+      replayEvents.push({
+        kind: "local",
+        recordedAt: journalEntryRecordedAt(entry),
+        duration,
+        entry,
+      });
     }
   }
   replayEvents.sort(
@@ -941,7 +1026,11 @@ function assertSnapshotResourceReplay(
         (right.kind === "travel" ? 0 : right.kind === "road" ? 1 : 2),
   );
 
-  const state = { supplies: STARTING_SUPPLIES, fatigue: 0 };
+  const state: OverworldReplayState = {
+    minimumClock: STARTING_MINUTES,
+    supplies: STARTING_SUPPLIES,
+    fatigue: 0,
+  };
   for (const event of replayEvents) {
     if (event.kind === "travel") {
       const edge = sources.edgesById.get(event.entry.edgeId);
@@ -956,6 +1045,12 @@ function assertSnapshotResourceReplay(
         sources.roadEventsByEdgeId.get(event.entry.edgeId) ?? null,
         state,
       );
+      assertReplayClock(
+        `travel "${travelResourceKey(event.entry)}"`,
+        event.recordedAt,
+        event.entry.minutes,
+        state,
+      );
       continue;
     }
 
@@ -966,12 +1061,28 @@ function assertSnapshotResourceReplay(
       const roadEvent = sources.roadEventsByEdgeId.get(parsed.edgeId);
       if (!roadEvent) continue;
       const option = roadEncounterOptionFor(roadEvent, parsed.strategy);
+      assertReplayClock(
+        `road journal "${event.entry.id}"`,
+        event.recordedAt,
+        option.minutes,
+        state,
+      );
       const suppliesUsed = Math.min(state.supplies, option.suppliesCost);
       const supplyDeficit = option.suppliesCost - suppliesUsed;
       state.supplies -= suppliesUsed;
       state.fatigue = Math.min(
         MAX_FATIGUE,
         state.fatigue + option.fatigueGained + supplyDeficit * 3,
+      );
+      continue;
+    }
+
+    if (event.kind === "local") {
+      assertReplayClock(
+        `journal ${event.entry.kind} entry "${event.entry.id}"`,
+        event.recordedAt,
+        event.duration,
+        state,
       );
       continue;
     }
@@ -983,6 +1094,12 @@ function assertSnapshotResourceReplay(
           `Overworld session snapshot service journal "${event.entry.id}" rests with no fatigue to recover.`,
         );
       }
+      assertReplayClock(
+        `service journal "${event.entry.id}"`,
+        event.recordedAt,
+        Math.max(180, Math.ceil(state.fatigue / 20) * 60),
+        state,
+      );
       state.fatigue = 0;
     } else {
       if (state.supplies >= MAX_SUPPLIES) {
@@ -990,10 +1107,14 @@ function assertSnapshotResourceReplay(
           `Overworld session snapshot service journal "${event.entry.id}" resupplies with full supplies.`,
         );
       }
+      assertReplayClock(`service journal "${event.entry.id}"`, event.recordedAt, 45, state);
       state.supplies = MAX_SUPPLIES;
     }
   }
 
+  if (snapshot.minutes < state.minimumClock) {
+    throw new Error("Overworld session snapshot minutes do not match clock replay.");
+  }
   if (snapshot.supplies !== state.supplies) {
     throw new Error("Overworld session snapshot supplies do not match resource replay.");
   }
@@ -2271,10 +2392,14 @@ export class OverworldSession {
         snapshot.minutes,
       );
     }
-    assertSnapshotResourceReplay(snapshot, {
-      edgesById,
-      roadEventsByEdgeId,
-    });
+    assertSnapshotResourceReplay(
+      snapshot,
+      {
+        edgesById,
+        roadEventsByEdgeId,
+      },
+      localActionJournalSources,
+    );
 
     this.currentId = snapshot.currentId;
     this.currentAreaId = snapshot.currentAreaId;

@@ -1691,6 +1691,49 @@ describe("overworld snapshot restore integrity", () => {
     );
   });
 
+  it("rejects snapshots before the starting clock", () => {
+    const a = api();
+    const started = a.start_overworld();
+    const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
+    const forgedEarlyClock = {
+      ...snapshot,
+      minutes: 8 * 60 - 1,
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedEarlyClock })).toThrow(
+      /minutes.*clock replay/,
+    );
+  });
+
+  it("rejects local action journals before their action duration can elapse", () => {
+    const a = api();
+    const started = a.start_overworld();
+    const poi = started.observation.pois[0];
+    if (!poi) throw new Error("expected an initial point of interest");
+
+    a.scout_overworld_session_poi({
+      session_id: started.session_id,
+      poi_id: poi.id,
+    });
+    const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
+    const scoutEntryId = `scout:${poi.id}`;
+    const scoutEntry = snapshot.journalEntries.find((entry) => entry.id === scoutEntryId);
+    if (!scoutEntry) throw new Error("expected scout journal entry");
+    const forgedEarlyScout = {
+      ...snapshot,
+      journalEntries: [
+        {
+          ...scoutEntry,
+          recordedAt: timeLabelForMinutes(8 * 60 + 1),
+        },
+      ],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedEarlyScout })).toThrow(
+      /journal poi entry.*clock time elapsed/,
+    );
+  });
+
   it("rejects forged travel resource transitions inside schema bounds", () => {
     const { a, snapshot } = exportedSnapshotAfterTwoRoads();
     const latestTravel = snapshot.travelLog[0];

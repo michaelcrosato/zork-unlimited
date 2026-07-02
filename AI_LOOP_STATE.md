@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 42 -->
+<!-- historical_cycle_count: 43 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_snapshot_clock_replay
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner still fails broad root Prettier/ESLint outside canonical package scripts, while its tsc/test portions passed.
+- Engine/persistence: overworld restore now rejects snapshots whose local journals, travel, services, or final clock occur before deterministic elapsed time could reach them.
+- Token economy: compact saves still avoid step transcripts; restore derives minimum clock proof from manifest durations and journal/travel timestamps.
+- VERIFY: focused overworld snapshot test (84), typecheck, lint, format:check, validate, npm test (192/1344), `npm run health` EXIT 0.
+- Self-critique: closes too-early clock drift while still allowing extra unlogged local movement/wait time.
+- Operator direction: pause after this cycle; do not start another AFK cycle.
 
 ### Cycle result — overworld_snapshot_resource_replay
 
