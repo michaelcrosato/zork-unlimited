@@ -463,9 +463,8 @@ export function generatorRpgDriftCandidate(
 /**
  * The score at/below which only ROUTINE work remains. The blind-playtest review
  * stubs (the rotation candidates raised for gated/puzzle packs) all land on this
- * 0.5 floor — `score(1, "M", "content_fix")` — and tiny legacy coverage
- * gap also bottoms out here. So a top candidate at this floor means every
- * higher-value lever (real content gaps, net-new content, engine/repo, the
+ * 0.5 floor — `score(1, "M", "content_fix")`. So a top candidate at this
+ * floor means every higher-value lever (real content gaps, net-new content, engine/repo, the
  * frontier benchmark lever) has disarmed.
  */
 export const SATURATION_FLOOR = 0.5;
@@ -494,7 +493,7 @@ export function assess(root: string): Assessment {
         ? quest.id
         : resolveWorldQuestPackPath(root, quest.world_quest_id).packPath,
     pack_id: quest.id,
-    mode: quest.mode,
+    mode: "rpg",
     playable: quest.playable,
     world_quest_id: quest.world_quest_id,
   }));

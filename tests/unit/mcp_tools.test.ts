@@ -146,8 +146,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(world.quests).toHaveLength(16);
     expect(world.quests.every((q) => !("path" in q))).toBe(true);
     expect(world.quests.every((q) => !("path_from_hub" in q))).toBe(true);
+    expect(world.quests.every((q) => !("mode" in q))).toBe(true);
     expect(expanded.graph.nodes.every((node) => !("pack" in node))).toBe(true);
-    expect(world.quests.every((q) => q.mode === "rpg")).toBe(true);
     expect(world.quests.some((s) => s.world_quest_id === "sunken_barrow")).toBe(true);
     expect(world.quests.some((s) => s.world_quest_id === "breaking_weir")).toBe(true);
     expect(
@@ -162,7 +162,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(world.quests.map((q) => q.world_quest_id)).toEqual(
       expanded.graph.nodes.filter((node) => node.kind === "quest").map((node) => node.id),
     );
-    expect(JSON.stringify(world).length).toBeLessThan(7000);
+    expect(JSON.stringify(world).length).toBeLessThanOrEqual(6100);
   });
 
   it("lists the unified world as a hub plus quest areas", () => {
@@ -171,7 +171,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.hub).toBe("Charterhaven");
     expect(r.graph.hub).toBe("charterhaven");
     expect(r.quest_count).toBe(16);
-    expect(r.quests.every((q) => q.mode === "rpg")).toBe(true);
+    expect(r.quests.every((q) => !("mode" in q))).toBe(true);
     const breakingWeir = r.quests.find((q) => q.world_quest_id === "breaking_weir");
     expect(breakingWeir).toMatchObject({
       district: "Breaking Weir",

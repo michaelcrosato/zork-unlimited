@@ -164,7 +164,7 @@ describe("single-world library contract", () => {
     expect(world.graph.nodes.every((node) => !("pack" in node))).toBe(true);
     expect("graph" in world.world).toBe(false);
     expect(world.quests.every((q) => !("path" in q))).toBe(true);
-    expect(world.quests.every((q) => q.mode === "rpg")).toBe(true);
+    expect(world.quests.every((q) => !("mode" in q))).toBe(true);
     expect(breakingWeir?.graph_node).toBe("breaking_weir");
     expect(breakingWeir?.path_from_hub.map((step) => step.name)).toEqual([
       CANONICAL_HUB_CITY,

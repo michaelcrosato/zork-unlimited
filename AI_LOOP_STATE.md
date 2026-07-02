@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 151 -->
+<!-- historical_cycle_count: 152 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_world_catalog_mode
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: `list_world()` quest rows no longer repeat `mode: "rpg"` for every quest.
+- Loop effect: discovery payloads stay quest-id/world-graph first and spend fewer tokens on a discriminator with one legal value.
+- Guard: catalog/world-manifest tests assert quest rows omit `mode`, and the compact catalog size guard now caps the default JSON payload at 6100 chars.
+- VERIFY: focused catalog/assessor tests, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 195 test files / 1367 tests, and validate.
 
 ### Cycle result — active_roadmap_rpg_only
 
@@ -129,12 +137,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Evidence: live MCP default compact transcript and compact-turn transcript both matched the post-step hash; compact transcript was 346 chars and compact-turn transcript was 584 chars.
 - Guard: transcript regression asserts full, summary-only, and compact transcript responses carry the same current hash.
 - VERIFY: focused MCP transcript test, typecheck, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1361 tests, and validate.
-
-### Cycle result — overworld_expected_snapshot_hash
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: stateful overworld action tools now accept `expected_snapshot_hash`.
-- Loop effect: compact agents can reject stale route/local-action/quest menus before mutating overworld session state.
-- Evidence: live MCP accepted a matching travel hash, rejected the stale repeat, returned the current hash, preserved travel-log rows, and kept the stale response to 2656 chars.
-- Guard: compact overworld regression asserts matching hashes travel, stale hashes reject, current hash is returned, and travel log stays unchanged.
-- VERIFY: focused MCP and registration tests, typecheck, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1361 tests, and validate.

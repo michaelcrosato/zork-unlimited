@@ -34,7 +34,7 @@ describe("list_world is the single RPG quest catalog", () => {
     expect(world.quests.map((q) => q.world_quest_id)).toEqual(
       expanded.graph.nodes.filter((node) => node.kind === "quest").map((node) => node.id),
     );
-    expect(world.quests.every((s) => s.mode === "rpg")).toBe(true);
+    expect(world.quests.every((s) => !("mode" in s))).toBe(true);
     expect(world.quests.some((s) => s.world_quest_id === "sunken_barrow")).toBe(true);
     expect(world.quests.some((s) => s.world_quest_id === "breaking_weir")).toBe(true);
   });

@@ -126,7 +126,6 @@ type WorldListOptions = {
 type WorldQuestCatalogEntry = {
   id: string;
   title: string;
-  mode: PackMode | null;
   playable: boolean;
   world_quest_id: string | null;
   district: string;
@@ -1027,7 +1026,6 @@ export function createToolApi(opts: { root: string }) {
           const quest: WorldQuestCatalogEntry = {
             id: s.id,
             title: s.title,
-            mode: s.mode,
             playable: s.playable,
             world_quest_id: node?.id ?? null,
             district: s.world?.district ?? "",
