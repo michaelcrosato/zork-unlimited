@@ -70,8 +70,8 @@ PLAY:
 - Start shipped quests with mcp__adventureforge__start_world_quest,
   world_quest_id = "<QUEST_ID>", seed = <SEED>, hide_graph = true,
   compact_observation = true.
-- Each compact context gives scene text, state/vitals, and context.actions (stable
-  ids). Choose one with step_action(session_id, action_id, hide_graph = true,
+- Each live compact context gives scene text, state/vitals, and context.actions
+  (stable ids). Choose one with step_action(session_id, action_id, hide_graph = true,
   compact_observation = true). Step events are compact tuples by default; request
   compact_events = false only for event-history debugging. Repeat until
   context.ended is true. If an action id is unclear, call list_legal_actions with

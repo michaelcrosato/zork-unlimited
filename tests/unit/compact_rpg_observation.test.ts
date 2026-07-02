@@ -50,6 +50,13 @@ describe("compactRpgObservation", () => {
     expect(JSON.stringify(compact).length).toBeLessThan(JSON.stringify(obs).length);
   });
 
+  it("omits the compact action menu when no action ids are available", () => {
+    const compact = compactRpgObservation(observationWithLargeState(), []);
+
+    expect(compact.ended).toBeUndefined();
+    expect(compact.actions).toBeUndefined();
+  });
+
   it("omits truncation metadata when compact lists are complete", () => {
     const obs = {
       ...observationWithLargeState(),

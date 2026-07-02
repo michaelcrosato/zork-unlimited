@@ -26,7 +26,7 @@ export type RpgCompactObservation = {
   text: string;
   exits: RpgCompactExit[];
   vitals: RpgCompactVitals;
-  actions: McpActionOption[];
+  actions?: McpActionOption[];
   objects?: RpgCompactRef[];
   npcs?: RpgCompactRef[];
   blocked?: RpgCompactBlockedExit[];
@@ -93,7 +93,7 @@ export function compactRpgObservation(
       exit.to === undefined ? exit.direction : [exit.direction, exit.to],
     ),
     vitals: [obs.stats.hp, obs.stats.attack, obs.stats.defense, obs.score, obs.max_score],
-    actions,
+    ...(actions.length > 0 ? { actions } : {}),
     ...(obs.visible_objects.length > 0 ? { objects: obs.visible_objects.map(ref) } : {}),
     ...(obs.npcs_present.length > 0 ? { npcs: obs.npcs_present.map(ref) } : {}),
     ...(obs.blocked_exits.length > 0

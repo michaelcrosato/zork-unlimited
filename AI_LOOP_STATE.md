@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 180 -->
+<!-- historical_cycle_count: 181 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_rpg_empty_actions
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact RPG observations now omit `actions` when no action ids are available.
+- Loop effect: terminal compact observations keep ending state without paying for an empty live-menu array.
+- Guard: focused compact-RPG/MCP/docs tests, typecheck, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_transcript_summary_ending
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: a discovered quest lead cannot be repeatedly launched from one overworld snapshot, and restored overworld state now proves the RPG handoff occurred.
 - Guard: focused MCP/overworld/save-load tests, typecheck, and format check passed before full gates.
 - VERIFY: focused MCP/overworld/save-load tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_step_events
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: public MCP `step_action` now defaults to compact event tuples while ToolApi/full event objects remain available with `compact_events: false`.
-- Loop effect: routine action turns keep observation/context state but drop repeated event-object keys from the hot play loop.
-- Guard: step-event tuple tests, MCP registration/source-size guard, docs/blind protocol tests, typecheck, and format check passed before full gates.
-- VERIFY: focused MCP/event tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.

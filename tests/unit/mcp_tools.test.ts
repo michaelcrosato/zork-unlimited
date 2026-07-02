@@ -567,7 +567,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(compactStartedQuest.context.here[0]).toBe(started.observation.current.id);
     expect("observation" in compactStartedQuest).toBe(false);
-    expect(compactStartedQuest.rpg_session.context.actions[0]).not.toHaveProperty("command");
+    expect(compactStartedQuest.rpg_session.context.actions?.[0]).not.toHaveProperty("command");
     expect("observation" in compactStartedQuest.rpg_session).toBe(false);
     expect(JSON.stringify(compactStartedQuest).length).toBeLessThan(
       JSON.stringify(startedQuest).length,
@@ -1712,8 +1712,8 @@ describe("MCP tools — the play loop (§9.1)", () => {
       fullStart.observation.score,
       fullStart.observation.max_score,
     ]);
-    expect(compactStart.context.actions[0]).toMatchObject({ id: expect.any(String) });
-    expect(compactStart.context.actions[0]).not.toHaveProperty("command");
+    expect(compactStart.context.actions?.[0]).toMatchObject({ id: expect.any(String) });
+    expect(compactStart.context.actions?.[0]).not.toHaveProperty("command");
     expect(compactStart.context.vars).toMatchObject({ might: expect.any(Number) });
     expect(compactStart.context.vars).not.toHaveProperty("hp");
     expect(JSON.stringify(compactStart.context).length).toBeLessThan(
@@ -1736,7 +1736,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_observation: true,
     });
     expect(compactObservation.context.exits[0]).toEqual(expect.any(String));
-    expect(compactObservation.context.actions[0]).not.toHaveProperty("command");
+    expect(compactObservation.context.actions?.[0]).not.toHaveProperty("command");
     expect("mode" in compactObservation.context).toBe(false);
 
     const unchangedObservation = a.get_observation({
@@ -1766,7 +1766,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect("observation" in rejected).toBe(false);
     expect(rejected.context.here[0]).toBe(fullStart.observation.room);
 
-    const moveActionId = compactObservation.context.actions.find(
+    const moveActionId = compactObservation.context.actions?.find(
       (action) => action.id === "go_down",
     )?.id;
     expect(moveActionId).toBe("go_down");
@@ -1797,6 +1797,17 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_observation: true,
     });
     expect(scene.context.here[0]).toBe(moved.context.here[0]);
+
+    const terminalGame = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 1 });
+    const ended = playSunkenBarrowToVictory(a, terminalGame.session_id);
+    expect(ended.observation.ended).toBe(true);
+    const terminal = a.get_observation({
+      session_id: terminalGame.session_id,
+      hide_graph: true,
+      compact_observation: true,
+    });
+    expect(terminal.context.ended).toBe(true);
+    expect("actions" in terminal.context).toBe(false);
   });
 
   it("step_action rejects an illegal action without changing state", () => {
@@ -1941,7 +1952,7 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
       fullReload.observation.title,
     ]);
     expect(compactReload.context.exits[0]).toEqual(expect.any(String));
-    expect(compactReload.context.actions[0]).not.toHaveProperty("command");
+    expect(compactReload.context.actions?.[0]).not.toHaveProperty("command");
     expect(JSON.stringify(compactReload).length).toBeLessThan(JSON.stringify(fullReload).length);
   });
 
