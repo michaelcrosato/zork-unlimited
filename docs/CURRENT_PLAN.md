@@ -188,8 +188,9 @@ Make discovered overworld quest leads start real RPG sessions.
   token-small for blind/AFK setup.
 - Overworld pending-road session snapshots now persist only the edge id and
   reconstruct road event/options from the content-bound world manifest.
-- Overworld session export/restore now returns `snapshot_hash`, letting
-  checkpoint loops verify restored snapshot identity without re-exporting.
+- Overworld session start/read/action/export/restore responses now return
+  `snapshot_hash`, letting checkpoint loops verify session identity without
+  re-exporting.
 - Overworld travel-log session snapshots now persist road ids plus dynamic
   outcomes and rebuild route text/event payloads from the world manifest.
 - Overworld snapshot restore now rejects duplicate journal history,

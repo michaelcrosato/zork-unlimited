@@ -153,12 +153,14 @@ type WorldListResponse<Args extends WorldListOptions> = {
 type OverworldSessionPayload<Key extends string, Value> = {
   ok: true;
   session_id: string;
+  snapshot_hash: string;
   observation: OverworldView;
 } & { [P in Key]: Value };
 
 type OverworldCompactSessionPayload<Key extends string, Value> = {
   ok: true;
   session_id: string;
+  snapshot_hash: string;
   context: OverworldCompactView;
 } & { [P in Key]: Value };
 
@@ -183,6 +185,7 @@ type OverworldViewField<Args extends OverworldResponseOptions> = Args extends {
 
 type OverworldStartResponse<Args extends OverworldResponseOptions> = {
   session_id: string;
+  snapshot_hash: string;
 } & OverworldViewField<Args>;
 
 type OverworldRestoreResponse<Args extends OverworldResponseOptions> = {
@@ -298,6 +301,7 @@ type RpgWorldQuestStartPayload<Args extends RpgResponseOptions> = {
 type OverworldQuestStartResponse<Args extends OverworldResponseOptions & RpgResponseOptions> = {
   ok: true;
   session_id: string;
+  snapshot_hash: string;
   quest: OverworldQuestView;
   rpg_session_id: string;
   rpg_session: RpgSessionPayload<Args>;
@@ -353,6 +357,7 @@ type OverworldSessionResponse<
 type OverworldContextPayload = {
   ok: true;
   session_id: string;
+  snapshot_hash: string;
   context: OverworldCompactView;
 };
 
@@ -800,6 +805,10 @@ export function createToolApi(opts: { root: string }) {
     return session;
   }
 
+  function overworldSnapshotHash(session: OverworldSession): string {
+    return hashState(session.snapshot());
+  }
+
   function overworldViewField<Args extends OverworldResponseOptions>(
     args: Args,
     session: OverworldSession,
@@ -822,6 +831,7 @@ export function createToolApi(opts: { root: string }) {
     const payload = {
       ok: true,
       session_id: sessionId,
+      snapshot_hash: overworldSnapshotHash(session),
       [key]: value,
       ...overworldViewField(args, session),
     };
@@ -947,17 +957,20 @@ export function createToolApi(opts: { root: string }) {
       const created = createOverworldSession();
       return {
         session_id: created.session_id,
+        snapshot_hash: overworldSnapshotHash(created.session),
         ...overworldViewField(responseOptions, created.session),
       } as OverworldStartResponse<Args>;
     },
 
     get_overworld_session(args: { session_id: string }): {
       session_id: string;
+      snapshot_hash: string;
       observation: OverworldView;
     } {
       const session = getOverworldSession(args.session_id);
       return {
         session_id: args.session_id,
+        snapshot_hash: overworldSnapshotHash(session),
         observation: session.view(),
       };
     },
@@ -967,6 +980,7 @@ export function createToolApi(opts: { root: string }) {
       return {
         ok: true,
         session_id: args.session_id,
+        snapshot_hash: overworldSnapshotHash(session),
         context: compactOverworldView(session.view()),
       };
     },
@@ -994,7 +1008,7 @@ export function createToolApi(opts: { root: string }) {
       return {
         ok: true,
         session_id: restored.session_id,
-        snapshot_hash: hashState(restored.session.snapshot()),
+        snapshot_hash: overworldSnapshotHash(restored.session),
         ...overworldViewField(args, restored.session),
       } as OverworldRestoreResponse<Args>;
     },
@@ -1123,6 +1137,7 @@ export function createToolApi(opts: { root: string }) {
       return {
         ok: true,
         session_id: args.session_id,
+        snapshot_hash: overworldSnapshotHash(session),
         quest,
         rpg_session_id: rpgSession.session_id,
         rpg_session: rpgSession,

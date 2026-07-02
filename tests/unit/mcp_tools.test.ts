@@ -603,11 +603,16 @@ describe("MCP tools — validate / load (§9.4)", () => {
   it("returns compact stateful overworld context for repeated loop turns", () => {
     const a = api();
     const started = a.start_overworld();
-    const full = a.get_overworld_session({ session_id: started.session_id }).observation;
+    expect(started.snapshot_hash).toMatch(/^[0-9a-f]{64}$/);
+    const fullRead = a.get_overworld_session({ session_id: started.session_id });
+    const full = fullRead.observation;
     const compact = a.get_overworld_session_context({ session_id: started.session_id });
     const compactStarted = a.start_overworld({ compact_context: true });
 
     expect(compact).toMatchObject({ ok: true, session_id: started.session_id });
+    expect(fullRead.snapshot_hash).toBe(started.snapshot_hash);
+    expect(compact.snapshot_hash).toBe(started.snapshot_hash);
+    expect(compactStarted.snapshot_hash).toMatch(/^[0-9a-f]{64}$/);
     expect(compact.context.v).toBe(1);
     expect(compact.context.here).toEqual([
       full.current.id,
@@ -647,6 +652,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       compact_context: true,
     });
     expect(compactPlan.route.destination.id).toBe("colonie_town");
+    expect(compactPlan.snapshot_hash).toBe(started.snapshot_hash);
     expect(compactPlan.context.route_options[0]).toHaveLength(5);
     expect(compactPlan.context.here[0]).toBe(full.current.id);
     expect("observation" in compactPlan).toBe(false);
@@ -657,6 +663,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       compact_context: true,
     });
     expect(compactTravel.travel.baseMinutes).toBe(road!.travel_minutes);
+    expect(compactTravel.snapshot_hash).not.toBe(started.snapshot_hash);
     expect(compactTravel.context.here[0]).toBe("colonie_town");
     expect(compactTravel.context.travel_log[0]).toEqual([
       road!.id,
@@ -670,11 +677,15 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compactTravel.context.travel_log_truncated).toBe(false);
     expect("observation" in compactTravel).toBe(false);
 
-    const traveledFull = a.get_overworld_session({ session_id: started.session_id }).observation;
-    const traveledCompact = a.get_overworld_session_context({
+    const traveledFullRead = a.get_overworld_session({ session_id: started.session_id });
+    const traveledFull = traveledFullRead.observation;
+    const traveledCompactRead = a.get_overworld_session_context({
       session_id: started.session_id,
-    }).context;
+    });
+    const traveledCompact = traveledCompactRead.context;
 
+    expect(traveledFullRead.snapshot_hash).toBe(compactTravel.snapshot_hash);
+    expect(traveledCompactRead.snapshot_hash).toBe(compactTravel.snapshot_hash);
     expect(traveledCompact.here[0]).toBe("colonie_town");
     expect(traveledCompact.pending_road).toMatchObject({
       edge: road!.id,

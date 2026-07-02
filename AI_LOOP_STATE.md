@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 64 -->
+<!-- historical_cycle_count: 65 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_loop_snapshot_hash
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/persistence surface: overworld start/read/context/action/quest-start responses now return `snapshot_hash`.
+- Loop effect: agents can detect overworld state changes and bind compact loop turns to checkpoint identity without exporting full snapshots every turn.
+- Evidence: live MCP start/read/context hashes matched; travel changed the hash and returned a 3140-char compact payload.
+- Guard: overworld compact-context test asserts stable read/context hashes and changed action hashes after travel.
+- VERIFY: focused MCP loop-hash test, typecheck, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1360 tests, and validate.
 
 ### Cycle result — overworld_snapshot_hash
 
