@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 208 -->
+<!-- historical_cycle_count: 209 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — cached_compact_transcript_summaries
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: `SessionStore` now caches transcript summary projections by shape, `stateHash`, and `transcriptLogHash`; state/transcript mutations clear those projections.
+- Loop effect: repeated compact transcript-summary audits avoid rebuilding capped arrays and omission tuples when reducer state and transcript history are unchanged.
+- Guard: focused MCP session tests prove summary-projection reuse, separate shape entries, and invalidation on state and transcript mutation.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — cached_transcript_projections
 

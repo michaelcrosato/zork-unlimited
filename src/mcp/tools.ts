@@ -491,6 +491,7 @@ type TranscriptResponse<Args extends TranscriptArgs> = Args extends { if_state_h
 const TRANSCRIPT_PROJECTION_COMPACT_TURNS = "compact-turns:v1";
 const TRANSCRIPT_PROJECTION_VISIBLE_EVENTS = "visible-events:v1";
 const TRANSCRIPT_PROJECTION_COMPACT_EVENTS = `compact-events:v${RPG_COMPACT_EVENT_VERSION}`;
+const TRANSCRIPT_SUMMARY_PROJECTION_COMPACT = "compact-summary:v1";
 
 type RpgGetStateArgs = {
   session_id: string;
@@ -649,6 +650,23 @@ function compactTranscriptSummary(summary: TranscriptSummary): TranscriptCompact
     ...(journal.length > 0 ? { journal } : {}),
     ...(more ? { more } : {}),
   };
+}
+
+function transcriptSummaryFor<Args extends TranscriptArgs>(
+  sessions: SessionStore,
+  session: Session,
+  args: Args,
+  summary: TranscriptSummary,
+): TranscriptSummaryFor<Args> {
+  return (
+    args.compact_summary
+      ? sessions.transcriptSummaryProjection(
+          session.id,
+          TRANSCRIPT_SUMMARY_PROJECTION_COMPACT,
+          () => compactTranscriptSummary(summary),
+        )
+      : summary
+  ) as TranscriptSummaryFor<Args>;
 }
 
 function hashTranscript(session: Session, stateHash: string): string {
@@ -1814,7 +1832,7 @@ export function createToolApi(opts: { root: string }) {
           : {
               turns: transcriptTurnsFor(sessions, s, args),
             }),
-        summary: args.compact_summary ? compactTranscriptSummary(summary) : summary,
+        summary: transcriptSummaryFor(sessions, s, args, summary),
       };
       return response as unknown as TranscriptResponse<Args>;
     },

@@ -71,6 +71,14 @@ export type Session = {
     transcriptLogHash: string;
     summary: TranscriptSummary;
   };
+  transcriptSummaryProjectionCaches?: Map<
+    string,
+    {
+      stateHash: string;
+      transcriptLogHash: string;
+      projection: unknown;
+    }
+  >;
   transcriptProjectionCaches?: Map<
     string,
     {
@@ -92,6 +100,7 @@ export type SessionInit = Omit<
   | "observationCache"
   | "transcriptLogHash"
   | "transcriptSummaryCache"
+  | "transcriptSummaryProjectionCaches"
   | "transcriptProjectionCaches"
 >;
 
@@ -126,6 +135,7 @@ export class SessionStore {
     delete session.legalActionsCache;
     delete session.observationCache;
     delete session.transcriptSummaryCache;
+    delete session.transcriptSummaryProjectionCaches;
     return session;
   }
 
@@ -184,6 +194,26 @@ export class SessionStore {
     return summary;
   }
 
+  transcriptSummaryProjection<T>(id: string, key: string, build: () => T): T {
+    const session = this.get(id);
+    const cache = session.transcriptSummaryProjectionCaches?.get(key);
+    if (
+      cache?.stateHash === session.stateHash &&
+      cache.transcriptLogHash === session.transcriptLogHash
+    ) {
+      return cache.projection as T;
+    }
+    const projection = build();
+    const caches = session.transcriptSummaryProjectionCaches ?? new Map();
+    caches.set(key, {
+      stateHash: session.stateHash,
+      transcriptLogHash: session.transcriptLogHash,
+      projection,
+    });
+    session.transcriptSummaryProjectionCaches = caches;
+    return projection;
+  }
+
   transcriptProjection<T>(id: string, key: string, build: () => T): T {
     const session = this.get(id);
     const cache = session.transcriptProjectionCaches?.get(key);
@@ -208,6 +238,7 @@ export class SessionStore {
       turn,
     });
     delete session.transcriptSummaryCache;
+    delete session.transcriptSummaryProjectionCaches;
     delete session.transcriptProjectionCaches;
     return session;
   }
@@ -217,6 +248,7 @@ export class SessionStore {
     session.transcript = transcript;
     session.transcriptLogHash = hashState(transcript);
     delete session.transcriptSummaryCache;
+    delete session.transcriptSummaryProjectionCaches;
     delete session.transcriptProjectionCaches;
     return session;
   }

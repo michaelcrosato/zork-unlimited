@@ -300,6 +300,65 @@ describe("SessionStore", () => {
     expect(session.transcriptSummaryCache).toBeUndefined();
   });
 
+  it("caches transcript summary projections until state or transcript changes", () => {
+    const store = new SessionStore();
+    const session = store.create(sessionInit());
+    const firstProjection = { steps: 0, scenes: ["start"] };
+    const nextProjection = { steps: 1, scenes: ["next", "start"] };
+    const turn = {
+      step: 1,
+      scene_id: "start",
+      title: "Start",
+      action_id: "look",
+      action_text: "look",
+      events: [],
+      result_scene_id: "start",
+      ended: false,
+      ending_id: null,
+    };
+    let builds = 0;
+
+    const first = store.transcriptSummaryProjection(session.id, "compact-summary:v1", () => {
+      builds += 1;
+      return firstProjection;
+    });
+    const cached = store.transcriptSummaryProjection(session.id, "compact-summary:v1", () => {
+      builds += 1;
+      return nextProjection;
+    });
+    const otherShape = store.transcriptSummaryProjection(session.id, "audit-summary:v1", () => {
+      builds += 1;
+      return nextProjection;
+    });
+
+    expect(first).toBe(firstProjection);
+    expect(cached).toBe(firstProjection);
+    expect(otherShape).toBe(nextProjection);
+    expect(builds).toBe(2);
+    expect(session.transcriptSummaryProjectionCaches?.get("compact-summary:v1")?.stateHash).toBe(
+      session.stateHash,
+    );
+    expect(
+      session.transcriptSummaryProjectionCaches?.get("compact-summary:v1")?.transcriptLogHash,
+    ).toBe(session.transcriptLogHash);
+
+    store.update(session.id, state("next"));
+    expect(session.transcriptSummaryProjectionCaches).toBeUndefined();
+
+    const afterState = store.transcriptSummaryProjection(session.id, "compact-summary:v1", () => {
+      builds += 1;
+      return nextProjection;
+    });
+    expect(afterState).toBe(nextProjection);
+    expect(builds).toBe(3);
+
+    store.appendTranscript(session.id, turn);
+    expect(session.transcriptSummaryProjectionCaches).toBeUndefined();
+
+    store.replaceTranscript(session.id, []);
+    expect(session.transcriptSummaryProjectionCaches).toBeUndefined();
+  });
+
   it("caches transcript projections until transcript rows change", () => {
     const store = new SessionStore();
     const session = store.create(sessionInit());

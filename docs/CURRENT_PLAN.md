@@ -137,6 +137,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Transcript summaries are cached per session state/transcript hash and
   invalidated on state or transcript mutation, so repeated non-unchanged
   transcript reads do not rescan full transcript history and public state arrays.
+- Compact transcript-summary projections are cached by payload shape plus
+  state/transcript hash, so repeated audit reads do not rebuild capped summary
+  arrays or omission tuples while the reducer state and transcript are unchanged.
 - Transcript turn projections are cached by payload shape and transcript hash, so
   repeated full/compact transcript audits do not remap every row or refilter
   internal events until transcript history changes.
