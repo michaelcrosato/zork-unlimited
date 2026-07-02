@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 158 -->
+<!-- historical_cycle_count: 159 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_save_response_mode
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: `save_game()` success responses no longer return `mode: "rpg"`.
+- Loop effect: save replies stay state/source/hash scoped while the serialized save blob retains its persisted RPG mode guard.
+- Guard: save/load tests assert wrapper responses omit `mode` and the saved JSON still carries `mode: "rpg"`.
+- VERIFY: focused save/load tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_trace_inspect_mode
 
@@ -120,14 +128,5 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/API surface: removed the legacy `start_quest` alias from ToolApi and public MCP registration.
 - Loop effect: RPG quest starts now have one world-bound contract: `start_world_quest(world_quest_id, seed?, compact_observation?)`.
 - Evidence: live MCP registration and ToolApi key checks no longer expose `start_quest`; `start_world_quest` still carries compact defaults and world route context.
-- Guard: MCP registration stays exact against ToolApi handlers, and unit coverage asserts the alias is absent.
-- VERIFY: focused MCP registration/tools tests, typecheck, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.
-
-### Cycle result — retire_get_scene_alias
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/API surface: removed the legacy `get_scene` alias from ToolApi and public MCP registration.
-- Loop effect: RPG reads now have one observation contract: `get_observation(session_id, if_state_hash?, compact_observation?)`.
-- Evidence: live MCP registration and ToolApi key checks no longer expose `get_scene`; `get_observation` still carries compact defaults and hash-only unchanged responses.
 - Guard: MCP registration stays exact against ToolApi handlers, and unit coverage asserts the alias is absent.
 - VERIFY: focused MCP registration/tools tests, typecheck, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.

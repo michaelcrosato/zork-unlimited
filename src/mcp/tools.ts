@@ -424,7 +424,6 @@ type RpgSaveSuccess = {
   world_quest_id: string | null;
   generated_rpg_seed: number | null;
   content_hash: string;
-  mode: typeof SAVE_MODE;
   state_hash: string;
 };
 
@@ -1614,7 +1613,6 @@ export function createToolApi(opts: { root: string }) {
         world_quest_id: s.worldQuestId ?? null,
         generated_rpg_seed: s.generatedRpgSeed ?? null,
         content_hash: s.contentHash,
-        mode: SAVE_MODE,
         state_hash: stateHash,
       } as RpgSaveResponse<Args>;
     },

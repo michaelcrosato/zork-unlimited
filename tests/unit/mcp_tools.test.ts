@@ -1368,6 +1368,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
 
     const saved = a.save_game({ session_id: game.session_id });
     expect("pack_path" in saved).toBe(false);
+    expect("mode" in saved).toBe(false);
     expect(saved.world_quest_id).toBe("sunken_barrow");
     const loaded = a.load_game({ save: saved.save });
     expect("pack_path" in loaded).toBe(false);
@@ -1557,10 +1558,12 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
 
     const saved = a.save_game({ session_id: game.session_id });
     const reloaded = a.load_game({ save: saved.save });
-    const saveBundle = JSON.parse(saved.save) as { worldQuestId?: string };
+    const saveBundle = JSON.parse(saved.save) as { mode?: string; worldQuestId?: string };
     expect("pack_path" in saved).toBe(false);
+    expect("mode" in saved).toBe(false);
     expect(saved.world_quest_id).toBe("sunken_barrow");
     expect(saved.state_hash).toBe(after);
+    expect(saveBundle.mode).toBe("rpg");
     expect(saveBundle.worldQuestId).toBe("sunken_barrow");
     expect("pack_path" in reloaded).toBe(false);
     expect(reloaded.world_quest_id).toBe("sunken_barrow");
@@ -1590,6 +1593,7 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     });
     expect(saved.ok).toBe(true);
     if (!saved.ok) throw new Error("expected guarded save success");
+    expect("mode" in saved).toBe(false);
     expect(saved.state_hash).toBe(after);
     expect(a.load_game({ save: saved.save }).state_hash).toBe(after);
     expect(JSON.stringify(stale).length).toBeLessThan(JSON.stringify(saved).length);
