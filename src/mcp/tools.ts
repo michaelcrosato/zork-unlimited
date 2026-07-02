@@ -391,6 +391,9 @@ type OverworldQuestStartResponse<Args extends OverworldResponseOptions & RpgResp
   | OverworldGuardedRejection<Args>;
 
 type TranscriptFullTurn = Session["transcript"][number];
+type TranscriptCompactEventTurn = Omit<TranscriptFullTurn, "events"> & {
+  events: RpgCompactEvent[];
+};
 type TranscriptCompactTurn = readonly [
   step: number,
   scene_id: string,
@@ -433,13 +436,24 @@ type TranscriptArgs = {
   session_id: string;
   summary_only?: boolean;
   compact_turns?: boolean;
+  compact_events?: boolean;
   compact_summary?: boolean;
   if_state_hash?: string;
 };
 type TranscriptTurnFor<Args extends TranscriptArgs> = Args extends { compact_turns: true }
   ? TranscriptCompactTurn
-  : TranscriptFullTurn;
+  : Args extends { compact_events: true }
+    ? TranscriptCompactEventTurn
+    : TranscriptFullTurn;
+type TranscriptEventVersion<Args extends TranscriptArgs> = Args extends { summary_only: true }
+  ? Record<string, never>
+  : Args extends { compact_turns: true }
+    ? Record<string, never>
+    : Args extends { compact_events: true }
+      ? { event_v: typeof RPG_COMPACT_EVENT_VERSION }
+      : Record<string, never>;
 type TranscriptPayload<Args extends TranscriptArgs> = TranscriptPayloadBase<Args> &
+  TranscriptEventVersion<Args> &
   (Args extends { summary_only: true }
     ? Record<string, never>
     : { turns: TranscriptTurnFor<Args>[] });
@@ -1691,6 +1705,11 @@ export function createToolApi(opts: { root: string }) {
         session_id: s.id,
         ...rpgSourceFields(s),
         state_hash: stateHash,
+        ...(args.compact_events === true &&
+        args.summary_only !== true &&
+        args.compact_turns !== true
+          ? { event_v: RPG_COMPACT_EVENT_VERSION }
+          : {}),
         // Filter internal-bookkeeping events the same way step_action does, so the
         // transcript a player reads never surfaces `__`-prefixed vars/flags (bug_0260).
         ...(args.summary_only
@@ -1700,7 +1719,14 @@ export function createToolApi(opts: { root: string }) {
                 ? s.transcript.map(
                     (t) => [t.step, t.scene_id, t.action_id, t.result_scene_id] as const,
                   )
-                : s.transcript.map((t) => ({ ...t, events: playerVisibleEvents(t.events) })),
+                : s.transcript.map((t) => {
+                    const events = playerVisibleEvents(t.events);
+                    return {
+                      ...t,
+                      events:
+                        args.compact_events === true ? events.map(compactPlayerEvent) : events,
+                    };
+                  }),
             }),
         summary: args.compact_summary ? compactTranscriptSummary(summary) : summary,
       };

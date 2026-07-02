@@ -1470,6 +1470,27 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(JSON.stringify(compactTranscript).length).toBeLessThan(
       JSON.stringify(transcript).length,
     );
+    const compactEventTranscript = a.get_transcript({
+      session_id: game.session_id,
+      compact_events: true,
+    });
+    expect(compactEventTranscript.event_v).toBe(3);
+    const compactEventTurn = compactEventTranscript.turns.find((turn) => turn.events.length > 0);
+    const fullEventTurn = transcript.turns.find((turn) => turn.events.length > 0);
+    expect(compactEventTurn).toBeDefined();
+    expect(fullEventTurn).toBeDefined();
+    expect(Array.isArray(compactEventTurn?.events[0])).toBe(true);
+    expect(compactEventTurn?.events[0]).not.toHaveProperty("type");
+    expect(JSON.stringify(compactEventTranscript.turns).length).toBeLessThan(
+      JSON.stringify(transcript.turns).length,
+    );
+    const compactTurnsWithCompactEvents = a.get_transcript({
+      session_id: game.session_id,
+      compact_turns: true,
+      compact_events: true,
+    });
+    expect("event_v" in compactTurnsWithCompactEvents).toBe(false);
+    expect(compactTurnsWithCompactEvents.turns[0]).not.toHaveProperty("events");
     expect(currentStateHash).toMatch(/^[0-9a-f]{64}$/);
 
     const byWorldQuestId = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 1 });

@@ -112,7 +112,7 @@ function defaultCompactOverworldAndRpg(args: unknown): never {
 
 function defaultCompactTranscript(args: unknown): never {
   const input = typeof args === "object" && args !== null ? args : {};
-  return { summary_only: true, compact_summary: true, ...input } as never;
+  return { summary_only: true, compact_events: true, compact_summary: true, ...input } as never;
 }
 
 type McpStateArgs = {
@@ -442,7 +442,7 @@ tool(
 );
 tool(
   "get_transcript",
-  "Compact transcript; if_state_hash returns unchanged.",
+  "Transcript; hash-only when unchanged.",
   {
     ...SESSION,
     ...IF_STATE_HASH,
@@ -451,10 +451,8 @@ tool(
       .boolean()
       .optional()
       .describe("Default true; false returns full summary lists."),
-    compact_turns: z
-      .boolean()
-      .optional()
-      .describe("Rows [step,scene,action,result]; ignored with summary_only."),
+    compact_turns: z.boolean().optional().describe("Rows [step,scene,action,result]."),
+    ...COMPACT_EVENTS,
   },
   (a) => api.get_transcript(defaultCompactTranscript(a)),
 );

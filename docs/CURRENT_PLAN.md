@@ -110,6 +110,9 @@ Make discovered overworld quest leads start real RPG sessions.
   old `get_scene` alias is no longer part of the live MCP/ToolApi loop.
 - `get_transcript({ summary_only: true })` keeps session/end-state metadata while
   omitting the `turns` field for token-light checks.
+- `get_transcript({ compact_events: true })` keeps full transcript turn metadata
+  while encoding each turn's visible events as the same compact `event_v: 3`
+  tuples used by `step_action`.
 - `get_transcript({ compact_summary: true })` caps summary scenes, inventory,
   flags, and journal entries for blind end-of-run audits, and omits empty
   inventory/flag/journal lists.

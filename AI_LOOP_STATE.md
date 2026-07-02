@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 191 -->
+<!-- historical_cycle_count: 192 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_transcript_events
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: transcript turns now support `compact_events: true`, returning `event_v: 3` event tuples while preserving full turn metadata.
+- Loop effect: end-of-run audits can inspect event identity without paying for full reducer event objects or dropping events entirely.
+- Guard: focused transcript/MCP registration tests, typecheck, lint, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_rpg_state_event_codes
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/token surface: compact overworld contexts now omit absent `pending_road` and false/empty truncation markers.
 - Loop effect: ordinary overworld turns keep route/log/id counts without paying for idle null/false scaffolding.
 - Guard: focused compact-overworld/MCP tests, typecheck, and format check passed before full gates.
-- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_mcp_json_envelope
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: successful public MCP tool results now serialize as minified JSON text instead of two-space pretty JSON.
-- Loop effect: every external MCP play/read/checkpoint response preserves handler compaction at the stdio envelope.
-- Guard: MCP server registration tests, typecheck, and format check passed before full gates.
 - VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
