@@ -21,7 +21,14 @@ import type { GameEvent } from "../core/events.js";
 import { compileRpgPack, loadRpgPackFile, type CompiledRpgPack } from "../rpg/pack.js";
 import { generateRpgPack } from "../gen/rpg_generator.js";
 import type { RpgPack } from "../rpg/schema.js";
-import { indexRpgPack, buildRpgRules, initStateForRpgPack, type RpgIndex } from "../rpg/runner.js";
+import {
+  indexRpgPack,
+  buildRpgRules,
+  initStateForRpgPack,
+  enumerateRpgActions,
+  type RpgIndex,
+} from "../rpg/runner.js";
+import type { RpgActionOption } from "../rpg/legal_actions.js";
 import { buildRpgObservation, type RpgObservation } from "../rpg/observation.js";
 import { validateRpg } from "../validate/rpg_validator.js";
 import { assertRpgStateReferences } from "../rpg/state_integrity.js";
@@ -690,18 +697,20 @@ function rpgStepEventVersion<Args extends RpgResponseOptions>(
   ) as RpgStepEventVersion<Args>;
 }
 
-/** The human command label for an action id in this observation. */
-function obsActionText(obs: RpgObservation, id: string): string | null {
-  return obs.available_actions.find((a) => a.id === id)?.command ?? null;
+function rpgRoomTitle(index: RpgIndex, state: GameState): string {
+  return index.rooms.get(state.current)?.name ?? state.current;
 }
 
 /**
- * Map an action id from the RPG observation's legal set to a structured Action.
+ * Map an action id from the RPG runner's legal set to a structured Action.
  * Unknown ids are rejected before they reach the reducer, preserving the illegal
  * action / no state-change path.
  */
-function actionForId(obs: RpgObservation, id: string): RpgAction | null {
-  return obs.available_actions.find((a) => a.id === id)?.action ?? null;
+function actionOptionForId(
+  actions: readonly RpgActionOption[],
+  id: string,
+): RpgActionOption | null {
+  return actions.find((action) => action.id === id) ?? null;
 }
 
 type PublicObservationOptions = { compactActions?: boolean };
@@ -711,10 +720,10 @@ function publicObservationOptions(args: { compact_actions?: boolean }): PublicOb
 }
 
 function publicActions(
-  obs: RpgObservation,
+  actions: readonly RpgActionOption[],
   opts: PublicObservationOptions = {},
 ): McpActionOption[] {
-  return obs.available_actions.map((option) => ({
+  return actions.map((option) => ({
     id: option.id,
     ...(opts.compactActions ? {} : { command: option.command }),
     ...(option.skill_check ? { skill_check: option.skill_check } : {}),
@@ -722,13 +731,13 @@ function publicActions(
 }
 
 function publicActionRows<Args extends RpgLegalActionsArgs>(
-  obs: RpgObservation,
+  actions: readonly RpgActionOption[],
   args: Args,
 ): RpgLegalActionRows<Args> {
   return (
     args.compact_actions === true
-      ? obs.available_actions.map((option) => option.id)
-      : publicActions(obs, publicObservationOptions(args))
+      ? actions.map((option) => option.id)
+      : publicActions(actions, publicObservationOptions(args))
   ) as RpgLegalActionRows<Args>;
 }
 
@@ -738,7 +747,7 @@ function publicObservation(
 ): McpObservation {
   return {
     ...obs,
-    available_actions: publicActions(obs, opts),
+    available_actions: publicActions(obs.available_actions, opts),
   };
 }
 
@@ -1619,11 +1628,9 @@ export function createToolApi(opts: { root: string }) {
           unchanged: true,
         } as RpgLegalActionsResponse<Args>;
       }
-      const obs = buildObsFor(s.index, s.state, {
-        hideGraph: args.hide_graph ?? s.hideGraph ?? false,
-      });
+      const actions = enumerateRpgActions(s.index, s.state);
       return {
-        actions: publicActionRows(obs, args),
+        actions: publicActionRows(actions, args),
         state_hash: stateHash,
       } as RpgLegalActionsResponse<Args>;
     },
@@ -1638,13 +1645,15 @@ export function createToolApi(opts: { root: string }) {
           state_hash: currentStateHash,
         } as RpgStepActionResponse<Args>;
       }
-      const before = buildObsFor(s.index, s.state, {
-        hideGraph: args.hide_graph ?? s.hideGraph ?? false,
-      });
+      const actionOptions = enumerateRpgActions(s.index, s.state);
+      const actionOption = actionOptionForId(actionOptions, args.action_id);
       const beforeStep = s.state.step;
-      const actionText = obsActionText(before, args.action_id);
-      const action = actionForId(before, args.action_id);
-      if (action === null) {
+      const beforeSceneId = s.state.current;
+      const beforeTitle = rpgRoomTitle(s.index, s.state);
+      if (actionOption === null) {
+        const before = buildObsFor(s.index, s.state, {
+          hideGraph: args.hide_graph ?? s.hideGraph ?? false,
+        });
         // Unknown action ids never reach the engine.
         return {
           ok: false,
@@ -1658,17 +1667,17 @@ export function createToolApi(opts: { root: string }) {
           state_hash: currentStateHash,
         } as RpgStepActionResponse<Args>;
       }
-      const result = makeStep(s.rules)(s.state, action);
+      const result = makeStep(s.rules)(s.state, actionOption.action);
       sessions.update(s.id, result.state);
       const after = buildObsFor(s.index, s.state, {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
       });
       s.transcript.push({
         step: beforeStep,
-        scene_id: obsLocation(before),
-        title: before.title,
+        scene_id: beforeSceneId,
+        title: beforeTitle,
         action_id: args.action_id,
-        action_text: actionText,
+        action_text: actionOption.command,
         events: result.events,
         result_scene_id: obsLocation(after),
         ended: after.ended,
