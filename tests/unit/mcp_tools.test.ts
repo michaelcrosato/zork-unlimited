@@ -1549,12 +1549,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(compact.summary.inventory).toEqual(numberedIds("item", 16));
     expect(compact.summary.flags).toEqual(numberedIds("flag", 16));
     expect(compact.summary.journal).toEqual(numberedIds("journal", 10).slice(-5));
-    expect(compact.summary.more).toEqual({
-      scenes: 5,
-      inventory: 4,
-      flags: 4,
-      journal: 5,
-    });
+    expect(compact.summary.more).toEqual([5, 4, 4, 5]);
     expect(JSON.stringify(compact).length).toBeLessThan(JSON.stringify(full).length);
   });
 

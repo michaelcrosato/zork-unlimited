@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 193 -->
+<!-- historical_cycle_count: 194 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_transcript_more_tuple
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact transcript summary omissions now serialize as `more: [scenes, inventory, flags, journal]` with trailing zero counts trimmed.
+- Loop effect: end-of-run audits keep omitted route/state counts without repeating four object keys in long transcript summaries.
+- Guard: focused transcript-summary docs/tests, typecheck, lint, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_rpg_more_tuple
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/token surface: compact RPG transcript summaries now omit `ending_id` until an actual ending exists.
 - Loop effect: in-progress audit polls keep `ended` without paying for repeated `ending_id: null` scaffolding.
 - Guard: focused MCP transcript/docs tests, typecheck, and format check passed before full gates.
-- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_transcript_turn_tuples
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: compact RPG transcript turns now serialize as `[step, scene_id, action_id, result_scene_id]` tuples.
-- Loop effect: route/debug audits keep turn identity while dropping repeated row keys and per-turn ending scaffolding.
-- Guard: focused MCP transcript/schema tests, typecheck, and format check passed before full gates.
 - VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.

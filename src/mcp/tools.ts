@@ -408,13 +408,13 @@ type TranscriptSummary = {
   inventory: string[];
   flags: string[];
   journal: string[];
-  more?: {
-    scenes?: number;
-    inventory?: number;
-    flags?: number;
-    journal?: number;
-  };
 };
+type TranscriptCompactMore = readonly [
+  scenes: number,
+  inventory?: number,
+  flags?: number,
+  journal?: number,
+];
 type TranscriptCompactSummary = Omit<
   TranscriptSummary,
   "ending_id" | "inventory" | "flags" | "journal"
@@ -423,6 +423,7 @@ type TranscriptCompactSummary = Omit<
   inventory?: string[];
   flags?: string[];
   journal?: string[];
+  more?: TranscriptCompactMore;
 };
 type TranscriptSummaryFor<Args extends TranscriptArgs> = Args extends { compact_summary: true }
   ? TranscriptCompactSummary
@@ -582,6 +583,20 @@ function transcriptOmittedCount(
   return values.length > compacted.length ? values.length - compacted.length : undefined;
 }
 
+function compactTranscriptMore(
+  scenes: number | undefined,
+  inventory: number | undefined,
+  flags: number | undefined,
+  journal: number | undefined,
+): TranscriptCompactMore | undefined {
+  const counts = [scenes ?? 0, inventory ?? 0, flags ?? 0, journal ?? 0] as const;
+  if (counts[3] !== 0) return counts;
+  if (counts[2] !== 0) return [counts[0], counts[1], counts[2]];
+  if (counts[1] !== 0) return [counts[0], counts[1]];
+  if (counts[0] !== 0) return [counts[0]];
+  return undefined;
+}
+
 function compactTranscriptSummary(summary: TranscriptSummary): TranscriptCompactSummary {
   const scenes = compactTranscriptHead(summary.scenes, TRANSCRIPT_SUMMARY_LIST_LIMIT);
   const inventory = compactTranscriptHead(summary.inventory, TRANSCRIPT_SUMMARY_LIST_LIMIT);
@@ -591,12 +606,7 @@ function compactTranscriptSummary(summary: TranscriptSummary): TranscriptCompact
   const omittedInventory = transcriptOmittedCount(summary.inventory, inventory);
   const omittedFlags = transcriptOmittedCount(summary.flags, flags);
   const omittedJournal = transcriptOmittedCount(summary.journal, journal);
-  const more = {
-    ...(omittedScenes !== undefined ? { scenes: omittedScenes } : {}),
-    ...(omittedInventory !== undefined ? { inventory: omittedInventory } : {}),
-    ...(omittedFlags !== undefined ? { flags: omittedFlags } : {}),
-    ...(omittedJournal !== undefined ? { journal: omittedJournal } : {}),
-  };
+  const more = compactTranscriptMore(omittedScenes, omittedInventory, omittedFlags, omittedJournal);
   const {
     ending_id: endingId,
     inventory: _fullInventory,
@@ -611,7 +621,7 @@ function compactTranscriptSummary(summary: TranscriptSummary): TranscriptCompact
     ...(inventory.length > 0 ? { inventory } : {}),
     ...(flags.length > 0 ? { flags } : {}),
     ...(journal.length > 0 ? { journal } : {}),
-    ...(Object.keys(more).length > 0 ? { more } : {}),
+    ...(more ? { more } : {}),
   };
 }
 

@@ -116,7 +116,8 @@ Make discovered overworld quest leads start real RPG sessions.
   tuples used by `step_action`.
 - `get_transcript({ compact_summary: true })` caps summary scenes, inventory,
   flags, and journal entries for blind end-of-run audits, and omits empty
-  inventory/flag/journal lists.
+  inventory/flag/journal lists; omission counts use
+  `more: [scenes, inventory, flags, journal]`.
 - Transcript responses include `state_hash`, so compact end-of-run audits can
   bind summary/turn rows to reducer state without a follow-up state read.
 - `get_transcript({ if_state_hash })` can return a hash-only `unchanged`
