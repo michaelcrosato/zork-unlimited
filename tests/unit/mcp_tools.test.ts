@@ -624,6 +624,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect("unchanged" in unchangedFullRead).toBe(true);
     if (!("unchanged" in unchangedFullRead)) throw new Error("expected unchanged full read");
+    expect("session_id" in unchangedFullRead).toBe(false);
     expect(unchangedFullRead.snapshot_hash).toBe(started.snapshot_hash);
     expect("observation" in unchangedFullRead).toBe(false);
 
@@ -635,6 +636,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     if (!("unchanged" in unchangedCompactRead)) {
       throw new Error("expected unchanged compact read");
     }
+    expect("session_id" in unchangedCompactRead).toBe(false);
     expect(unchangedCompactRead.snapshot_hash).toBe(started.snapshot_hash);
     expect("context" in unchangedCompactRead).toBe(false);
     expect(JSON.stringify(unchangedCompactRead).length).toBeLessThan(
@@ -1333,6 +1335,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     });
     expect("unchanged" in unchangedMenu).toBe(true);
     if (!("unchanged" in unchangedMenu)) throw new Error("expected unchanged action menu");
+    expect("session_id" in unchangedMenu).toBe(false);
     expect(unchangedMenu.unchanged).toBe(true);
     expect(unchangedMenu.state_hash).toBe(game.state_hash);
     expect("actions" in unchangedMenu).toBe(false);
@@ -1453,6 +1456,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     });
     expect("unchanged" in unchangedObservation).toBe(true);
     if (!("unchanged" in unchangedObservation)) throw new Error("expected unchanged response");
+    expect("session_id" in unchangedObservation).toBe(false);
     expect(unchangedObservation.unchanged).toBe(true);
     expect(unchangedObservation.state_hash).toBe(compactObservation.state_hash);
     expect("context" in unchangedObservation).toBe(false);

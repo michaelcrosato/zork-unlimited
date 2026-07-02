@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 162 -->
+<!-- historical_cycle_count: 163 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_unchanged_session_echo
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: guarded unchanged RPG observation/action replies and overworld read/context replies no longer echo `session_id`.
+- Loop effect: cache-hit polling replies are now hash scoped only; callers already supplied the session id.
+- Guard: MCP tests assert unchanged replies omit `session_id` while changed/full responses still carry session identity.
+- VERIFY: focused MCP unchanged tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_step_rejection_reason
 
@@ -118,12 +126,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Evidence: rotation preserved total completed-cycle count in `historical_cycle_count` while moving old detail to ignored local archive/git history.
 - Guard: loop-state rotation and assessor seed-window tests cover count preservation.
 - VERIFY: focused loop-state/assessor tests, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.
-
-### Cycle result — unify_start_world_quest_source_key
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/API surface: `start_world_quest` now accepts only `world_quest_id`; standalone `quest_id` is rejected.
-- Loop effect: shipped quest start/validate/load/path/playtest surfaces now use one public source key.
-- Evidence: MCP schema, blind harness, MCP smoke, dev MCP harness, and AI loop prompt all pass `world_quest_id`.
-- Guard: MCP registration and ToolApi tests reject standalone `quest_id` on shipped starts.
-- VERIFY: focused MCP/blind/AI loop tests, blind MCP smoke, typecheck, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.

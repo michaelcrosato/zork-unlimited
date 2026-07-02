@@ -281,7 +281,6 @@ type RpgObservationPayload<Args extends RpgResponseOptions> = {
 } & RpgViewField<Args>;
 
 type RpgObservationUnchanged = {
-  session_id: string;
   state_hash: string;
   unchanged: true;
 };
@@ -305,7 +304,6 @@ type RpgLegalActionsPayload = {
 };
 
 type RpgLegalActionsUnchanged = {
-  session_id: string;
   state_hash: string;
   unchanged: true;
 };
@@ -461,7 +459,6 @@ type OverworldReadArgs = {
 };
 
 type OverworldReadUnchanged = {
-  session_id: string;
   snapshot_hash: string;
   unchanged: true;
 };
@@ -1147,7 +1144,6 @@ export function createToolApi(opts: { root: string }) {
       const snapshotHash = overworldSnapshotHash(session);
       if (args.if_snapshot_hash !== undefined && args.if_snapshot_hash === snapshotHash) {
         return {
-          session_id: args.session_id,
           snapshot_hash: snapshotHash,
           unchanged: true,
         } as OverworldReadResponse<Args>;
@@ -1166,7 +1162,6 @@ export function createToolApi(opts: { root: string }) {
       const snapshotHash = overworldSnapshotHash(session);
       if (args.if_snapshot_hash !== undefined && args.if_snapshot_hash === snapshotHash) {
         return {
-          session_id: args.session_id,
           snapshot_hash: snapshotHash,
           unchanged: true,
         } as OverworldContextResponse<Args>;
@@ -1459,7 +1454,6 @@ export function createToolApi(opts: { root: string }) {
       const stateHash = hashState(s.state);
       if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
         return {
-          session_id: args.session_id,
           state_hash: stateHash,
           unchanged: true,
         } as RpgObservationResponse<Args>;
@@ -1480,7 +1474,6 @@ export function createToolApi(opts: { root: string }) {
       const stateHash = hashState(s.state);
       if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
         return {
-          session_id: args.session_id,
           state_hash: stateHash,
           unchanged: true,
         } as RpgLegalActionsResponse<Args>;
