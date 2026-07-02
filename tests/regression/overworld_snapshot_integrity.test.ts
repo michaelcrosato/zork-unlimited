@@ -945,6 +945,64 @@ describe("overworld snapshot restore integrity", () => {
     );
   });
 
+  it("rejects local job journal entries recorded before that job's reveal order", () => {
+    const a = api();
+    const started = a.start_overworld();
+    const poi = started.observation.pois[0];
+    const contact = started.observation.characters[0];
+    if (!poi || !contact) throw new Error("expected initial local action sources");
+
+    const scouted = a.scout_overworld_session_poi({
+      session_id: started.session_id,
+      poi_id: poi.id,
+    });
+    const talked = a.talk_overworld_session_contact({
+      session_id: started.session_id,
+      character_id: contact.id,
+    });
+    const secondJob = talked.result.discoveredJobs?.[0];
+    if (!scouted.result.discoveredJobs?.[0] || !secondJob) {
+      throw new Error("expected two discovered jobs after two local actions");
+    }
+
+    const beforeMove = a.get_overworld_session({ session_id: started.session_id }).observation;
+    const routeToJobArea = beforeMove.areaExits.find(
+      (route) => route.destination.id === secondJob.area,
+    );
+    if (!routeToJobArea) throw new Error("expected a route to the second job area");
+    a.move_overworld_session_area({
+      session_id: started.session_id,
+      area_route_id: routeToJobArea.id,
+    });
+    a.work_overworld_session_job({
+      session_id: started.session_id,
+      job_id: secondJob.id,
+    });
+
+    const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
+    const jobEntryId = `job:${secondJob.id}`;
+    const jobEntry = snapshot.journalEntries.find((entry) => entry.id === jobEntryId);
+    const scoutEntry = snapshot.journalEntries.find((entry) => entry.id === `scout:${poi.id}`);
+    if (!jobEntry || !scoutEntry) throw new Error("expected job and scout journal entries");
+    const forgedEarlySecondJobEntry = {
+      ...snapshot,
+      journalEntries: [
+        ...snapshot.journalEntries.filter(
+          (entry) => entry.id !== jobEntryId && entry.id !== scoutEntry.id,
+        ),
+        {
+          ...jobEntry,
+          recordedAt: timeLabelForMinutes(8 * 60 + 21),
+        },
+        scoutEntry,
+      ],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedEarlySecondJobEntry })).toThrow(
+      /journal job.*before discovering job/,
+    );
+  });
+
   it("rejects local site journal entries recorded before site discovery", () => {
     const a = api();
     const started = a.start_overworld();
