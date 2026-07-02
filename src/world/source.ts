@@ -16,7 +16,7 @@ import {
   type WorldGraphNode,
   type WorldManifest,
 } from "./schema.js";
-import { normalizePackPath, worldQuestNodeById, worldQuestNodeForPack } from "./graph.js";
+import { normalizePackPath, worldQuestNodeById } from "./graph.js";
 
 export type WorldQuestPackSource = {
   world: WorldManifest;
@@ -25,8 +25,8 @@ export type WorldQuestPackSource = {
 };
 
 export type TraceSourceArgs = {
-  pack_path?: string;
   world_quest_id?: string;
+  pack_path?: never;
 };
 
 export type PackSourceArgs = {
@@ -249,10 +249,6 @@ export function resolveWorldQuestPackPath(
   return { world, node, packPath: normalizePackPath(node.pack) };
 }
 
-export function worldQuestIdForPackPath(root: string, packPath: string): string | null {
-  return worldQuestNodeForPack(loadWorldManifest(root), packPath)?.id ?? null;
-}
-
 export function assertOverworldQuestSourceBindings(
   world: WorldManifest,
   overworld: OverworldManifest,
@@ -384,11 +380,10 @@ function resolveEmbeddedPackSource(
   operation: string,
   sourceLabel: "save" | "trace",
 ): TracePackSource {
-  const sourceCount = [args.world_quest_id !== undefined, args.pack_path !== undefined].filter(
-    Boolean,
-  ).length;
-  if (sourceCount > 1) {
-    throw new Error(`${operation} accepts exactly one of world_quest_id or pack_path.`);
+  if ((args as { pack_path?: unknown }).pack_path !== undefined) {
+    throw new Error(
+      `${operation} accepts world_quest_id or embedded trace worldQuestId, not pack_path.`,
+    );
   }
 
   let packPath: string;
@@ -397,17 +392,12 @@ function resolveEmbeddedPackSource(
     const resolved = resolveWorldQuestPackPath(root, args.world_quest_id);
     packPath = resolved.packPath;
     worldQuestId = resolved.node.id;
-  } else if (args.pack_path !== undefined) {
-    packPath = args.pack_path;
-    worldQuestId = worldQuestIdForPackPath(root, packPath);
   } else if (embeddedWorldQuestId !== undefined) {
     const resolved = resolveWorldQuestPackPath(root, embeddedWorldQuestId);
     packPath = resolved.packPath;
     worldQuestId = resolved.node.id;
   } else {
-    throw new Error(
-      `${operation} requires world_quest_id, pack_path, or a ${sourceLabel} with worldQuestId.`,
-    );
+    throw new Error(`${operation} requires world_quest_id or a ${sourceLabel} with worldQuestId.`);
   }
 
   if (embeddedWorldQuestId !== undefined && embeddedWorldQuestId !== worldQuestId) {

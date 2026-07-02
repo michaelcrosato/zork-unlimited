@@ -27,7 +27,7 @@ function arg(name: string): string | undefined {
 function positionalSourceArg(): string | undefined {
   for (let i = 3; i < process.argv.length; i += 1) {
     const value = process.argv[i]!;
-    if (value === "--pack" || value === "--world-quest-id" || value === "--world_quest_id") {
+    if (value === "--world-quest-id" || value === "--world_quest_id") {
       i += 1;
       continue;
     }
@@ -38,24 +38,21 @@ function positionalSourceArg(): string | undefined {
 }
 
 function traceSourceArgs(): TraceSourceArgs {
-  const pack = arg("--pack");
+  if (arg("--pack") !== undefined || process.argv.includes("--pack")) {
+    throw new Error("replay accepts world_quest_id or embedded trace worldQuestId, not --pack.");
+  }
   const worldQuestId = arg("--world-quest-id") ?? arg("--world_quest_id");
   const positional = positionalSourceArg();
-  const count = [pack !== undefined, worldQuestId !== undefined, positional !== undefined].filter(
-    Boolean,
-  ).length;
+  const count = [worldQuestId !== undefined, positional !== undefined].filter(Boolean).length;
   if (count > 1) {
     throw new Error(
       "replay accepts exactly one trace source: --world-quest-id or a positional world quest id.",
     );
   }
-  if (pack !== undefined) return { pack_path: pack };
   if (worldQuestId !== undefined) return { world_quest_id: worldQuestId };
   if (positional === undefined) return {};
   if (/\.ya?ml$/i.test(positional) || positional.includes("/") || positional.includes("\\")) {
-    throw new Error(
-      "replay trace sources are world quest ids; raw pack paths are hidden offline compatibility via --pack.",
-    );
+    throw new Error("replay trace sources are world quest ids; raw pack paths are not accepted.");
   }
   return { world_quest_id: positional };
 }

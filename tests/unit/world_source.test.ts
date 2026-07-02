@@ -265,10 +265,9 @@ describe("world source resolution", () => {
       packPath: PACK,
       worldQuestId: "sunken_barrow",
     });
-    expect(resolveTracePackSource(ROOT, { pack_path: PACK }, trace, "trace_test")).toEqual({
-      packPath: PACK,
-      worldQuestId: "sunken_barrow",
-    });
+    expect(() =>
+      resolveTracePackSource(ROOT, { pack_path: PACK } as never, trace, "trace_test"),
+    ).toThrow(/not pack_path/);
     expect(resolveSaveGameSource(ROOT, {}, { worldQuestId: "sunken_barrow" }, "save_test")).toEqual(
       {
         kind: "pack",

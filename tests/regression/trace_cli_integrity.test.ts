@@ -82,16 +82,15 @@ describe("trace CLI integrity gate", () => {
 
     expect(result.status, output).toBe(2);
     expect(output).toContain("inspect targets are world quest ids");
-    expect(output).toContain("offline compatibility via --pack");
+    expect(output).toContain("raw pack paths are not accepted");
   });
 
-  it("npm run inspect keeps raw pack summaries behind explicit offline mode", () => {
+  it("npm run inspect rejects explicit raw pack summary mode", () => {
     const result = run(`npm run inspect -- --pack ${PACK}`);
     const output = outputOf(result);
 
-    expect(result.status, output).toBe(0);
-    expect(output).toContain("Pack: sunken_barrow_v1");
-    expect(output).not.toContain("World quest:");
+    expect(result.status, output).toBe(2);
+    expect(output).toContain("not --pack");
   });
 
   it("trace CLIs reject an explicit source that conflicts with the trace world quest id", () => {
@@ -112,6 +111,16 @@ describe("trace CLI integrity gate", () => {
     expect(outputOf(replay)).toContain("world quest ids");
     expect(inspect.status, outputOf(inspect)).not.toBe(0);
     expect(outputOf(inspect)).toContain("world quest ids");
+  });
+
+  it("trace CLIs reject explicit raw pack source flags", () => {
+    const replay = run(`npm run replay -- ${SOURCE_TRACE} --pack ${PACK}`);
+    const inspect = run(`npm run inspect -- ${SOURCE_TRACE} --pack ${PACK}`);
+
+    expect(replay.status, outputOf(replay)).not.toBe(0);
+    expect(outputOf(replay)).toContain("not --pack");
+    expect(inspect.status, outputOf(inspect)).not.toBe(0);
+    expect(outputOf(inspect)).toContain("not --pack");
   });
 
   it("npm run replay rejects a trace whose initial room is not in the RPG pack", () => {

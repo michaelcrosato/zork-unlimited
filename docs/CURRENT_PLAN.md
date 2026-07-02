@@ -61,10 +61,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - `validate_pack` and `load_pack` now accept `world_quest_id` for shipped quests
   and return world identity without echoing raw pack paths.
 - `apply_content_patch` now accepts shipped `world_quest_id` in ToolApi/public
-  MCP and returns world identity only; raw pack paths remain trace replay/inspect
-  offline compatibility.
+  MCP and returns world identity only.
 - `replay_trace` and `inspect_trace` now advertise shipped `world_quest_id` on
-  public MCP; CLI can still replay raw-path traces for migration checks.
+  public MCP; CLI replay/inspect now also reject raw pack paths.
 - ToolApi `replay_trace` and `inspect_trace` now reject raw `pack_path`; shipped
   traces infer their source from embedded `worldQuestId` or explicit
   `world_quest_id`.
@@ -90,9 +89,9 @@ Make discovered overworld quest leads start real RPG sessions.
   through the world graph without a separate raw pack-path argument.
 - CLI replay/inspect now share that source resolver, so shipped traces can be
   debugged without passing raw pack paths; positional trace sources are quest ids
-  only, with raw pack paths hidden behind offline compatibility.
+  only.
 - CLI inspect now summarizes shipped quest packs by `world_quest_id`; positional
-  raw pack summaries are rejected unless explicit offline `--pack` mode is used.
+  raw pack summaries and explicit `--pack` are rejected.
 - CLI validate now defaults through the canonical world graph and accepts
   targeted `world_quest_id` values; positional raw pack files are rejected unless
   explicit offline `--pack` mode is used.
@@ -108,8 +107,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - Generated RPG saves now embed `generatedRpgSeed`, letting `load_game({ save })`
   reconstruct in-memory generated packs without a raw pack path.
 - `load_game` source selection is save-embedded, `world_quest_id`, or
-  `generate_rpg_seed`; raw pack paths remain explicit offline `--pack` or
-  replay/inspect compatibility tooling only.
+  `generate_rpg_seed`; raw pack paths remain only in explicit offline validation
+  tooling.
 - `validate_pack`, `load_pack`, and `apply_content_patch` now use shared source
   identity directly instead of re-deriving `world_quest_id` from the resolved path.
 - Retired the static overworld compatibility helper module; local overworld play
