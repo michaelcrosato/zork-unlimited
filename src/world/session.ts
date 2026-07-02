@@ -2259,6 +2259,7 @@ export class OverworldSession {
   private readonly currentAreaByTown = new Map<string, string>();
   private readonly travelLog: TravelLogEntry[] = [];
   private readonly journalEntries: OverworldJournalEntry[] = [];
+  private readonly journalEntriesById = new Map<string, OverworldJournalEntry>();
   private readonly resolvedEventIds = new Set<string>();
   private readonly discoveredAreaIds = new Set<string>();
   private readonly visitedAreaIds = new Set<string>();
@@ -2728,11 +2729,7 @@ export class OverworldSession {
       this.travelLog.length,
       ...snapshot.travelLog.map((entry) => this.restoreTravelLogEntry(entry, edgesById)),
     );
-    this.journalEntries.splice(
-      0,
-      this.journalEntries.length,
-      ...cloneJson(snapshot.journalEntries),
-    );
+    this.replaceJournalEntries(cloneJson(snapshot.journalEntries));
     replaceStringSet(this.resolvedEventIds, snapshot.resolvedEventIds);
     replaceStringSet(this.discoveredAreaIds, snapshot.discoveredAreaIds);
     replaceStringSet(this.visitedAreaIds, snapshot.visitedAreaIds);
@@ -2813,14 +2810,14 @@ export class OverworldSession {
     entry: Omit<OverworldJournalEntry, "recordedAt">,
     minutes: number,
   ): OverworldActionResult {
-    const existing = this.journalEntries.find((candidate) => candidate.id === entry.id);
+    const existing = this.journalEntry(entry.id);
     if (existing) return { minutes: 0, alreadyKnown: true, entry: existing };
     this.minutes += minutes;
     const recorded: OverworldJournalEntry = {
       ...entry,
       recordedAt: timeLabel(this.minutes),
     };
-    this.journalEntries.unshift(recorded);
+    this.addJournalEntry(recorded);
     this.clearSnapshotCache();
     return { minutes, alreadyKnown: false, entry: recorded };
   }
@@ -2851,13 +2848,28 @@ export class OverworldSession {
       id: `${entry.id}:${this.minutes}`,
       recordedAt: timeLabel(this.minutes),
     };
-    this.journalEntries.unshift(recorded);
+    this.addJournalEntry(recorded);
     this.clearSnapshotCache();
     return recorded;
   }
 
+  private replaceJournalEntries(entries: OverworldJournalEntry[]): void {
+    this.journalEntries.splice(0, this.journalEntries.length, ...entries);
+    this.journalEntriesById.clear();
+    for (const entry of entries) this.journalEntriesById.set(entry.id, entry);
+  }
+
+  private addJournalEntry(entry: OverworldJournalEntry): void {
+    this.journalEntries.unshift(entry);
+    this.journalEntriesById.set(entry.id, entry);
+  }
+
+  private journalEntry(id: string): OverworldJournalEntry | undefined {
+    return this.journalEntriesById.get(id);
+  }
+
   private hasJournalEntry(id: string): boolean {
-    return this.journalEntries.some((entry) => entry.id === id);
+    return this.journalEntriesById.has(id);
   }
 
   private localAreas(nodeId: string): OverworldArea[] {
@@ -3186,7 +3198,7 @@ export class OverworldSession {
       if (this.completedRegionalArcIds.has(arc.id)) continue;
       if (this.resolvedAnchorTownIdsForArc(arc).size < arc.required_resolutions) continue;
       this.completedRegionalArcIds.add(arc.id);
-      this.journalEntries.unshift({
+      this.addJournalEntry({
         id: `arc:${arc.id}`,
         kind: "regional_arc",
         town: region,
@@ -3555,7 +3567,7 @@ export class OverworldSession {
       throw new Error("Move to that local area before exploring it.");
     }
     if (this.visitedAreaIds.has(area.id)) {
-      const existing = this.journalEntries.find((entry) => entry.id === `area:${area.id}`);
+      const existing = this.journalEntry(`area:${area.id}`);
       if (existing) {
         return {
           minutes: 0,
@@ -3614,7 +3626,7 @@ export class OverworldSession {
       throw new Error("Move to that local area before working that job.");
     }
     if (this.completedJobIds.has(job.id)) {
-      const existing = this.journalEntries.find((entry) => entry.id === `job:${job.id}`);
+      const existing = this.journalEntry(`job:${job.id}`);
       if (existing) {
         return {
           minutes: 0,
@@ -3696,7 +3708,7 @@ export class OverworldSession {
       throw new Error("Move to that local area before resolving that event.");
     }
     if (this.resolvedEventIds.has(event.id)) {
-      const existing = this.journalEntries.find((entry) => entry.id === `resolve:${event.id}`);
+      const existing = this.journalEntry(`resolve:${event.id}`);
       if (existing) return { minutes: 0, alreadyKnown: true, entry: existing };
     }
 
@@ -3755,7 +3767,7 @@ export class OverworldSession {
       throw new Error("Scout a local point of interest before exploring this site.");
     }
     if (this.exploredSiteIds.has(site.id)) {
-      const existing = this.journalEntries.find((entry) => entry.id === `site:${site.id}`);
+      const existing = this.journalEntry(`site:${site.id}`);
       if (existing) return { minutes: 0, alreadyKnown: true, entry: existing };
     }
 
@@ -3910,7 +3922,7 @@ export class OverworldSession {
       text: `${encounter.event.summary} ${option.outcome}${supplyDeficit > 0 ? " Lacking supplies made the work more exhausting." : ""}`,
       recordedAt: timeLabel(this.minutes),
     };
-    this.journalEntries.unshift(entry);
+    this.addJournalEntry(entry);
     this.clearSnapshotCache();
     return {
       strategy,

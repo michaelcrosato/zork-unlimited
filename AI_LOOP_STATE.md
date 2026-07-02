@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 218 -->
+<!-- historical_cycle_count: 219 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — indexed_overworld_journal_entries
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: `OverworldSession` now maintains a journal-entry id index across normal play, repeatable service entries, road events, regional arcs, and snapshot restore.
+- Loop effect: repeat-action detection, event-resolution prerequisites, restored idempotent actions, and journal proof checks avoid growing linear scans over long overworld play histories.
+- Guard: existing overworld MCP lifecycle and snapshot integrity tests cover the refactored journal mutation and restore paths.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — indexed_overworld_local_lists
 

@@ -188,6 +188,9 @@ Make discovered overworld quest leads start real RPG sessions.
   exits at construction, so full/compact views and local actions avoid repeated
   scans/sorts over areas, POIs, contacts, events, jobs, sites, quests, and area
   routes.
+- Overworld sessions maintain a journal-entry id index across live mutation and
+  snapshot restore, so repeat-action checks and event-resolution prerequisites
+  avoid scanning long journal histories.
 - Overworld sessions cache compact context payloads until mutation, so repeated
   compact overworld reads reuse route tuples, id payloads, local lists, and
   capped journal/travel slices while preserving clone-isolated returns.
