@@ -265,12 +265,16 @@ type RpgViewField<Args extends RpgResponseOptions> = Args extends {
   ? { context: RpgCompactObservation }
   : { observation: McpObservation };
 
+type RpgSourceFields = {
+  world_quest_id?: string;
+  generated_rpg_seed?: number;
+};
+
 type RpgSessionPayload<Args extends RpgResponseOptions = RpgResponseOptions> = {
   session_id: string;
-  world_quest_id: string | null;
-  generated_rpg_seed: number | null;
   state_hash: string;
-} & RpgViewField<Args>;
+} & RpgSourceFields &
+  RpgViewField<Args>;
 
 type RpgObservationPayload<Args extends RpgResponseOptions> = {
   state_hash: string;
@@ -395,12 +399,10 @@ type TranscriptSummary = {
 type TranscriptResponse<Turn> = {
   session_id: string;
   pack_id: string;
-  world_quest_id: string | null;
-  generated_rpg_seed: number | null;
   state_hash: string;
   turns: Turn[];
   summary: TranscriptSummary;
-};
+} & RpgSourceFields;
 type TranscriptArgs = {
   session_id: string;
   summary_only?: boolean;
@@ -420,11 +422,9 @@ type RpgSaveSuccess = {
   ok: true;
   save: string;
   pack_id: string;
-  world_quest_id: string | null;
-  generated_rpg_seed: number | null;
   content_hash: string;
   state_hash: string;
-};
+} & RpgSourceFields;
 
 type RpgSaveRejection = {
   ok: false;
@@ -632,6 +632,18 @@ function rpgViewField<Args extends RpgResponseOptions>(
   } as RpgViewField<Args>;
 }
 
+function rpgSourceFields(source: {
+  worldQuestId?: string | null;
+  generatedRpgSeed?: number | null;
+}): RpgSourceFields {
+  return {
+    ...(source.worldQuestId ? { world_quest_id: source.worldQuestId } : {}),
+    ...(source.generatedRpgSeed !== undefined && source.generatedRpgSeed !== null
+      ? { generated_rpg_seed: source.generatedRpgSeed }
+      : {}),
+  };
+}
+
 function schemaFindings(
   packPath: string,
   error: { issues: { message: string; path: (string | number)[] }[] },
@@ -788,8 +800,7 @@ export function createToolApi(opts: { root: string }) {
     return {
       session_id: session.id,
       ...rpgViewField(openingObsOf(session), args),
-      world_quest_id: session.worldQuestId ?? null,
-      generated_rpg_seed: session.generatedRpgSeed ?? null,
+      ...rpgSourceFields(session),
       state_hash: hashState(session.state),
     } as RpgSessionPayload<Args>;
   }
@@ -1564,8 +1575,7 @@ export function createToolApi(opts: { root: string }) {
       const response = {
         session_id: s.id,
         pack_id: s.packId,
-        world_quest_id: s.worldQuestId ?? null,
-        generated_rpg_seed: s.generatedRpgSeed ?? null,
+        ...rpgSourceFields(s),
         state_hash: hashState(s.state),
         // Filter internal-bookkeeping events the same way step_action does, so the
         // transcript a player reads never surfaces `__`-prefixed vars/flags (bug_0260).
@@ -1608,8 +1618,7 @@ export function createToolApi(opts: { root: string }) {
         ok: true,
         save: save(s.state, s.packId, s.contentHash, SAVE_MODE, saveMetadata),
         pack_id: s.packId,
-        world_quest_id: s.worldQuestId ?? null,
-        generated_rpg_seed: s.generatedRpgSeed ?? null,
+        ...rpgSourceFields(s),
         content_hash: s.contentHash,
         state_hash: stateHash,
       } as RpgSaveResponse<Args>;
@@ -1634,8 +1643,7 @@ export function createToolApi(opts: { root: string }) {
       return {
         session_id: session.id,
         ...rpgViewField(openingObsOf(session), args),
-        world_quest_id: session.worldQuestId ?? null,
-        generated_rpg_seed: session.generatedRpgSeed ?? null,
+        ...rpgSourceFields(session),
         state_hash: hashState(session.state),
       } as RpgSessionPayload<Args>;
     },

@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 160 -->
+<!-- historical_cycle_count: 161 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_rpg_source_fields
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: RPG session, save, load, and transcript wrappers now emit only the active source field instead of pairing it with a null source branch.
+- Loop effect: world-quest loops carry `world_quest_id`; generated-pack loops carry `generated_rpg_seed`; neither repeats the absent source path.
+- Guard: generated-session/save/load tests assert `world_quest_id` is omitted, while world-quest session/save/transcript/load tests assert `generated_rpg_seed` is omitted.
+- VERIFY: focused MCP/source tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_session_wrapper_mode
 
@@ -120,12 +128,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Evidence: public MCP registration uses `WORLD_QUEST_SOURCE`, and ToolApi rejects `quest_id` on validate/load.
 - Guard: MCP registration tests assert `QUEST_ID_SOURCE` is absent.
 - VERIFY: focused MCP/source tests, typecheck, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.
-
-### Cycle result — narrow_new_game_to_generated
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/API surface: `new_game` now starts generated RPG packs only; shipped quests start through `start_world_quest`.
-- Loop effect: world-bound play has one fresh-start contract, and generated-pack smoke play remains a separate null-world path.
-- Evidence: public MCP `new_game` no longer advertises `world_quest_id`; ToolApi rejects `new_game({ world_quest_id })`.
-- Guard: overworld quest bridge, save/load regressions, hide-graph regressions, and catalog play tests now use `start_world_quest`.
-- VERIFY: focused MCP/source/start tests, typecheck, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.
