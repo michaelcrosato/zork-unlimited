@@ -257,6 +257,9 @@ Make discovered overworld quest leads start real RPG sessions.
   re-exporting.
 - Stateful overworld action tools accept `expected_snapshot_hash` and reject stale
   compact menus before mutating route, local-action, or quest-handoff state.
+- Stale overworld action rejections return only `ok`, `snapshot_hash`, and
+  `rejection_reason`; callers refresh context explicitly instead of receiving a
+  duplicate compact/full overworld view.
 - Overworld travel-log session snapshots now persist road ids plus dynamic
   outcomes and rebuild route text/event payloads from the world manifest.
 - Overworld snapshot restore now rejects duplicate journal history,

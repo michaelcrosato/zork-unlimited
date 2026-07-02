@@ -190,16 +190,16 @@ type OverworldViewField<Args extends OverworldResponseOptions> = Args extends {
   ? { context: OverworldCompactView }
   : { observation: OverworldView };
 
-type OverworldRejectedSessionPayload<Args extends OverworldResponseOptions> = {
+type OverworldRejectedSessionPayload = {
   ok: false;
   snapshot_hash: string;
   rejection_reason: string;
-} & OverworldViewField<Args>;
+};
 
 type OverworldGuardedRejection<Args extends OverworldResponseOptions> = Args extends {
   expected_snapshot_hash: string;
 }
-  ? OverworldRejectedSessionPayload<Args>
+  ? OverworldRejectedSessionPayload
   : never;
 
 type OverworldStartResponse<Args extends OverworldResponseOptions> = {
@@ -1086,18 +1086,13 @@ export function createToolApi(opts: { root: string }) {
     return hashState(session.snapshot());
   }
 
-  function overworldSnapshotHashRejection<Args extends OverworldResponseOptions>(
-    args: Args,
-    session: OverworldSession,
-    snapshotHash: string,
-  ): OverworldRejectedSessionPayload<Args> {
+  function overworldSnapshotHashRejection(snapshotHash: string): OverworldRejectedSessionPayload {
     const reason = "Snapshot hash mismatch; refresh the current overworld context.";
     return {
       ok: false,
       snapshot_hash: snapshotHash,
       rejection_reason: reason,
-      ...overworldViewField(args, session),
-    } as OverworldRejectedSessionPayload<Args>;
+    };
   }
 
   function overworldViewField<Args extends OverworldResponseOptions>(
@@ -1123,11 +1118,11 @@ export function createToolApi(opts: { root: string }) {
       args.expected_snapshot_hash !== undefined &&
       args.expected_snapshot_hash !== currentSnapshotHash
     ) {
-      return overworldSnapshotHashRejection(
-        args,
-        session,
-        currentSnapshotHash,
-      ) as OverworldSessionResponse<Key, Value, Args>;
+      return overworldSnapshotHashRejection(currentSnapshotHash) as OverworldSessionResponse<
+        Key,
+        Value,
+        Args
+      >;
     }
     const value = action(session);
     const payload = {
@@ -1454,8 +1449,6 @@ export function createToolApi(opts: { root: string }) {
         args.expected_snapshot_hash !== currentSnapshotHash
       ) {
         return overworldSnapshotHashRejection(
-          args,
-          session,
           currentSnapshotHash,
         ) as OverworldQuestStartResponse<Args>;
       }

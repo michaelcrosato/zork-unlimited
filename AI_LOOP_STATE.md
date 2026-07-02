@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 197 -->
+<!-- historical_cycle_count: 198 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — hash_only_stale_overworld
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: stale overworld action guards now return only `ok`, `snapshot_hash`, and `rejection_reason` without constructing compact/full context.
+- Loop effect: stale travel/local/quest-handoff retries avoid duplicate overworld views; callers refresh context only when needed.
+- Guard: focused MCP overworld guard docs/tests, typecheck, lint, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — hash_only_stale_step
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/token surface: compact overworld contexts now omit empty area-route, job, site, quest, journal, and travel-log lists.
 - Loop effect: fresh/idle overworld reads keep navigation, visible locals, counts, and hashes without paying for local/recovery arrays that carry no choices.
 - Guard: focused MCP/overworld/docs tests, typecheck, lint, and format check passed before full gates.
-- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_transcript_empty_lists
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: compact RPG transcript summaries now omit empty inventory, flag, and journal lists.
-- Loop effect: early/state-light transcript audits keep route and hash metadata without paying for three empty arrays.
-- Guard: focused MCP/docs tests, typecheck, lint, and format check passed before full gates.
 - VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.

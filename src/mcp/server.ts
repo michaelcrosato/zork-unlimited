@@ -137,7 +137,7 @@ function compactMcpOverworldSession(args: McpOverworldReadArgs): unknown {
 }
 
 const EXPECTED_SNAPSHOT_HASH = {
-  expected_snapshot_hash: z.string().optional().describe("Reject stale snapshot_hash."),
+  expected_snapshot_hash: z.string().optional().describe("Hash-only reject when stale."),
 };
 const IF_SNAPSHOT_HASH = {
   if_snapshot_hash: z.string().optional().describe("Hash-only when unchanged."),

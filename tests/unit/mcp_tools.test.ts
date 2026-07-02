@@ -759,6 +759,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(staleCompletion.ok).toBe(false);
     if (staleCompletion.ok) throw new Error("expected stale completion rejection");
     expect(staleCompletion.rejection_reason).toMatch(/Snapshot hash mismatch/i);
+    expect("context" in staleCompletion).toBe(false);
+    expect("observation" in staleCompletion).toBe(false);
 
     const completed = a.complete_overworld_session_quest({
       session_id: started.session_id,
@@ -966,9 +968,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect("events" in staleTravel).toBe(false);
     expect(staleTravel.rejection_reason).toMatch(/snapshot hash/i);
     expect(staleTravel.snapshot_hash).toBe(compactTravel.snapshot_hash);
-    expect(staleTravel.context.here[0]).toBe("colonie_town");
-    expect(staleTravel.context.travel_log).toEqual(compactTravel.context.travel_log);
+    expect("context" in staleTravel).toBe(false);
+    expect("observation" in staleTravel).toBe(false);
     expect("travel" in staleTravel).toBe(false);
+    expect(JSON.stringify(staleTravel).length).toBeLessThan(JSON.stringify(compactTravel).length);
 
     const traveledFullRead = a.get_overworld_session({
       session_id: started.session_id,
