@@ -301,8 +301,14 @@ type RpgLegalActionsArgs = {
   if_state_hash?: string;
 };
 
-type RpgLegalActionsPayload = {
-  actions: McpActionOption[];
+type RpgLegalActionRows<Args extends RpgLegalActionsArgs> = Args extends {
+  compact_actions: true;
+}
+  ? string[]
+  : McpActionOption[];
+
+type RpgLegalActionsPayload<Args extends RpgLegalActionsArgs> = {
+  actions: RpgLegalActionRows<Args>;
   state_hash: string;
 };
 
@@ -314,8 +320,8 @@ type RpgLegalActionsUnchanged = {
 type RpgLegalActionsResponse<Args extends RpgLegalActionsArgs> = Args extends {
   if_state_hash: string;
 }
-  ? RpgLegalActionsPayload | RpgLegalActionsUnchanged
-  : RpgLegalActionsPayload;
+  ? RpgLegalActionsPayload<Args> | RpgLegalActionsUnchanged
+  : RpgLegalActionsPayload<Args>;
 
 type RpgStepEvents<Args extends RpgResponseOptions> = Args extends { compact_events: true }
   ? RpgCompactEvent[]
@@ -704,6 +710,17 @@ function publicActions(
     ...(opts.compactActions ? {} : { command: option.command }),
     ...(option.skill_check ? { skill_check: option.skill_check } : {}),
   }));
+}
+
+function publicActionRows<Args extends RpgLegalActionsArgs>(
+  obs: RpgObservation,
+  args: Args,
+): RpgLegalActionRows<Args> {
+  return (
+    args.compact_actions === true
+      ? obs.available_actions.map((option) => option.id)
+      : publicActions(obs, publicObservationOptions(args))
+  ) as RpgLegalActionRows<Args>;
 }
 
 function publicObservation(
@@ -1604,7 +1621,7 @@ export function createToolApi(opts: { root: string }) {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
       });
       return {
-        actions: publicActions(obs, publicObservationOptions(args)),
+        actions: publicActionRows(obs, args),
         state_hash: stateHash,
       } as RpgLegalActionsResponse<Args>;
     },

@@ -1606,6 +1606,9 @@ describe("MCP tools — the play loop (§9.1)", () => {
       expect(action).not.toHaveProperty("command");
       expect(action).not.toHaveProperty("action");
     };
+    const assertCompactActionId = (action: unknown): void => {
+      expect(action).toEqual(expect.any(String));
+    };
 
     assertPublicAction(game.observation.available_actions[0]);
     const compactWorldQuest = a.start_world_quest({
@@ -1634,7 +1637,10 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_actions: true,
     });
     expect(compactListed.state_hash).toBe(game.state_hash);
-    assertCompactAction(compactListed.actions[0]);
+    assertCompactActionId(compactListed.actions[0]);
+    expect(JSON.stringify(compactListed.actions).length).toBeLessThan(
+      JSON.stringify(listed.actions).length,
+    );
     const unchangedMenu = a.list_legal_actions({
       session_id: game.session_id,
       compact_actions: true,
@@ -1717,7 +1723,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect("unchanged" in changedMenu).toBe(false);
     if ("unchanged" in changedMenu) throw new Error("expected changed action menu");
     expect(changedMenu.state_hash).toBe(moved.state_hash);
-    assertCompactAction(changedMenu.actions[0]);
+    assertCompactActionId(changedMenu.actions[0]);
 
     const saved = a.save_game({ session_id: game.session_id });
     expect("pack_id" in saved).toBe(false);
@@ -1880,7 +1886,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_observation: true,
     });
     const menu = a.list_legal_actions({ session_id: game.session_id, compact_actions: true });
-    const moveActionId = menu.actions.find((action) => action.id === "go_down")?.id;
+    const moveActionId = menu.actions.find((action) => action === "go_down");
 
     expect(moveActionId).toBe("go_down");
     const moved = a.step_action({

@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 195 -->
+<!-- historical_cycle_count: 196 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_list_action_ids
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: `list_legal_actions({ compact_actions: true })` now returns action-id strings instead of `{ id }` rows.
+- Loop effect: polling/resume loops keep menu identity plus `state_hash` without object wrappers; command labels remain available with `compact_actions: false`.
+- Guard: focused MCP action-menu docs/tests, typecheck, lint, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_rpg_action_ids
 
@@ -115,13 +123,5 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
 - Engine/token surface: compact RPG observations now omit `exits` when no exit ids are available.
 - Loop effect: terminal compact observations keep ending state without paying for an empty navigation array.
-- Guard: focused compact-RPG/MCP/docs tests, typecheck, and format check passed before full gates.
-- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_rpg_empty_actions
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: compact RPG observations now omit `actions` when no action ids are available.
-- Loop effect: terminal compact observations keep ending state without paying for an empty live-menu array.
 - Guard: focused compact-RPG/MCP/docs tests, typecheck, and format check passed before full gates.
 - VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
