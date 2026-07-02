@@ -76,9 +76,10 @@ PLAY:
   is unclear, call list_legal_actions with compact_actions = false once for command
   text.
 - For an end-of-run transcript audit, call get_transcript(session_id,
-  summary_only = true, compact_summary = true). Use compact_turns = true only
-  when route rows are needed; avoid full transcripts unless diagnosing a
-  specific event-history bug.
+  summary_only = true, compact_summary = true, if_state_hash = latest state hash
+  when rechecking unchanged state). Use compact_turns = true only when route rows
+  are needed; avoid full transcripts unless diagnosing a specific event-history
+  bug.
 - Make decisions a curious, sensible human would: follow clues, pursue the apparent
   goal, investigate what seems important. Don't pick randomly. Narrate your reasoning
   each turn. Do at most 2-3 playthroughs (try a different strategy on later runs).

@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 163 -->
+<!-- historical_cycle_count: 164 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_transcript_cache_hit
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: `get_transcript({ if_state_hash })` now returns hash-only `unchanged` instead of rebuilding repeated summary/turn payloads.
+- Loop effect: end-of-run transcript polling joins observation/action cache-hit semantics and omits `session_id` on unchanged replies.
+- Guard: ToolApi, MCP registration, blind-protocol docs, focused MCP/docs tests, and typecheck passed before full gates.
+- VERIFY: focused MCP/docs tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_unchanged_session_echo
 
@@ -117,12 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: root-level active guidance no longer tells agents to build retired CYOA/parser stages or package-mode trees.
 - Guard: new build-spec regression rejects retired stage/path instructions and requires current RPG tool surfaces plus validate/test gates.
 - VERIFY: focused build-spec/RPG-only/verifier tests, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 194 test files / 1364 tests, and validate.
-
-### Cycle result — compact_live_loop_state
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Loop/token surface: rotated the tracked `AI_LOOP_STATE.md` back to the tested 15-entry live window.
-- Loop effect: fresh agents read a terse current index instead of 900+ lines of old cycle transcript.
-- Evidence: rotation preserved total completed-cycle count in `historical_cycle_count` while moving old detail to ignored local archive/git history.
-- Guard: loop-state rotation and assessor seed-window tests cover count preservation.
-- VERIFY: focused loop-state/assessor tests, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.

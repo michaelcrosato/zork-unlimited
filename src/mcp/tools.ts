@@ -396,7 +396,7 @@ type TranscriptSummary = {
     journal?: number;
   };
 };
-type TranscriptResponse<Turn> = {
+type TranscriptPayload<Turn> = {
   session_id: string;
   pack_id: string;
   state_hash: string;
@@ -408,10 +408,18 @@ type TranscriptArgs = {
   summary_only?: boolean;
   compact_turns?: boolean;
   compact_summary?: boolean;
+  if_state_hash?: string;
 };
 type TranscriptTurnFor<Args extends TranscriptArgs> = Args extends { compact_turns: true }
   ? TranscriptCompactTurn
   : TranscriptFullTurn;
+type TranscriptUnchanged = {
+  state_hash: string;
+  unchanged: true;
+};
+type TranscriptResponse<Args extends TranscriptArgs> = Args extends { if_state_hash: string }
+  ? TranscriptPayload<TranscriptTurnFor<Args>> | TranscriptUnchanged
+  : TranscriptPayload<TranscriptTurnFor<Args>>;
 
 type RpgSaveArgs = {
   session_id: string;
@@ -1560,10 +1568,15 @@ export function createToolApi(opts: { root: string }) {
       return { state: s.state, state_hash: hashState(s.state) };
     },
 
-    get_transcript<Args extends TranscriptArgs>(
-      args: Args,
-    ): TranscriptResponse<TranscriptTurnFor<Args>> {
+    get_transcript<Args extends TranscriptArgs>(args: Args): TranscriptResponse<Args> {
       const s = sessions.get(args.session_id);
+      const stateHash = hashState(s.state);
+      if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
+        return {
+          state_hash: stateHash,
+          unchanged: true,
+        } as TranscriptResponse<Args>;
+      }
       const summary: TranscriptSummary = {
         steps: s.transcript.filter((t) => t.action_id !== null).length,
         scenes: [...new Set(s.transcript.flatMap((t) => [t.scene_id, t.result_scene_id]))].sort(),
@@ -1579,7 +1592,7 @@ export function createToolApi(opts: { root: string }) {
         session_id: s.id,
         pack_id: s.packId,
         ...rpgSourceFields(s),
-        state_hash: hashState(s.state),
+        state_hash: stateHash,
         // Filter internal-bookkeeping events the same way step_action does, so the
         // transcript a player reads never surfaces `__`-prefixed vars/flags (bug_0260).
         turns: args.summary_only
@@ -1596,7 +1609,7 @@ export function createToolApi(opts: { root: string }) {
             : s.transcript.map((t) => ({ ...t, events: playerVisibleEvents(t.events) })),
         summary: args.compact_summary ? compactTranscriptSummary(summary) : summary,
       };
-      return response as unknown as TranscriptResponse<TranscriptTurnFor<Args>>;
+      return response as unknown as TranscriptResponse<Args>;
     },
 
     save_game<Args extends RpgSaveArgs>(args: Args): RpgSaveResponse<Args> {

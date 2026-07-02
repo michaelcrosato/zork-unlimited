@@ -429,9 +429,10 @@ tool(
 );
 tool(
   "get_transcript",
-  "Return compact transcript summary by default; opt into turn rows/full lists.",
+  "Return compact transcript summary by default; if_state_hash returns hash-only unchanged.",
   {
     ...SESSION,
+    ...IF_STATE_HASH,
     summary_only: z.boolean().optional().describe("Default true; false returns turn rows."),
     compact_summary: z
       .boolean()

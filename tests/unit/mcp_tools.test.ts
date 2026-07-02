@@ -1159,6 +1159,22 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(JSON.stringify(summaryOnlyTranscript).length).toBeLessThan(
       JSON.stringify(transcript).length,
     );
+    const unchangedTranscript = a.get_transcript({
+      session_id: game.session_id,
+      summary_only: true,
+      compact_summary: true,
+      if_state_hash: currentStateHash,
+    });
+    expect("unchanged" in unchangedTranscript).toBe(true);
+    if (!("unchanged" in unchangedTranscript)) throw new Error("expected unchanged transcript");
+    expect("session_id" in unchangedTranscript).toBe(false);
+    expect(unchangedTranscript.unchanged).toBe(true);
+    expect(unchangedTranscript.state_hash).toBe(currentStateHash);
+    expect("summary" in unchangedTranscript).toBe(false);
+    expect("turns" in unchangedTranscript).toBe(false);
+    expect(JSON.stringify(unchangedTranscript).length).toBeLessThan(
+      JSON.stringify(summaryOnlyTranscript).length,
+    );
     const compactTranscript = a.get_transcript({
       session_id: game.session_id,
       compact_turns: true,
