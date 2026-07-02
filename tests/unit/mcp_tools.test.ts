@@ -8,6 +8,7 @@ import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import { recordTrace } from "../../src/trace/record.js";
 import { parseOverworldManifest } from "../../src/world/overworld.js";
+import { hashState } from "../../src/core/hash.js";
 import type { RpgAction } from "../../src/api/types.js";
 
 const ROOT = process.cwd();
@@ -712,15 +713,18 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const exported = a.export_overworld_session({ session_id: started.session_id });
     expect(exported.snapshot.worldId).toBe("new_york_overworld");
     expect(exported.snapshot.worldHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(exported.snapshot_hash).toBe(hashState(exported.snapshot));
 
     const restored = a.restore_overworld_session({ snapshot: exported.snapshot });
     expect(restored.session_id).not.toBe(started.session_id);
+    expect(restored.snapshot_hash).toBe(exported.snapshot_hash);
     expect(restored.observation).toEqual(before);
     const compactRestored = a.restore_overworld_session({
       snapshot: exported.snapshot,
       compact_context: true,
     });
     expect(compactRestored.session_id).not.toBe(started.session_id);
+    expect(compactRestored.snapshot_hash).toBe(exported.snapshot_hash);
     expect(compactRestored.context.here[0]).toBe(before.current.id);
     expect(compactRestored.context.pending_road?.edge).toBe(before.pendingRoadEncounter?.edgeId);
     expect("observation" in compactRestored).toBe(false);

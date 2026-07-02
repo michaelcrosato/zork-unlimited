@@ -165,7 +165,7 @@ tool(
 );
 tool(
   "export_overworld_session",
-  "Export a content-bound snapshot for a stateful New York overworld session so a long run can be restored later.",
+  "Export a content-bound overworld snapshot plus snapshot_hash.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
   },
@@ -173,7 +173,7 @@ tool(
 );
 tool(
   "restore_overworld_session",
-  "Restore a stateful New York overworld session; returns compact context by default.",
+  "Restore an overworld snapshot; returns snapshot_hash and compact context by default.",
   {
     snapshot: z
       .record(z.unknown())

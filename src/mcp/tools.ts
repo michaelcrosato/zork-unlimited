@@ -188,6 +188,7 @@ type OverworldStartResponse<Args extends OverworldResponseOptions> = {
 type OverworldRestoreResponse<Args extends OverworldResponseOptions> = {
   ok: true;
   session_id: string;
+  snapshot_hash: string;
 } & OverworldViewField<Args>;
 
 type OverworldListSummary = {
@@ -973,13 +974,16 @@ export function createToolApi(opts: { root: string }) {
     export_overworld_session(args: { session_id: string }): {
       ok: true;
       session_id: string;
+      snapshot_hash: string;
       snapshot: OverworldSessionSnapshot;
     } {
       const session = getOverworldSession(args.session_id);
+      const snapshot = session.snapshot();
       return {
         ok: true,
         session_id: args.session_id,
-        snapshot: session.snapshot(),
+        snapshot_hash: hashState(snapshot),
+        snapshot,
       };
     },
 
@@ -990,6 +994,7 @@ export function createToolApi(opts: { root: string }) {
       return {
         ok: true,
         session_id: restored.session_id,
+        snapshot_hash: hashState(restored.session.snapshot()),
         ...overworldViewField(args, restored.session),
       } as OverworldRestoreResponse<Args>;
     },

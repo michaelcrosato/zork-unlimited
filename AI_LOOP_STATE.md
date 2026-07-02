@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 63 -->
+<!-- historical_cycle_count: 64 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_snapshot_hash
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/persistence surface: overworld `export_overworld_session` and `restore_overworld_session` now return `snapshot_hash`.
+- Loop effect: checkpoint/resume agents can bind exported and restored overworld snapshots without re-exporting or rereading full observations.
+- Evidence: live MCP export returned `snapshot_hash` with a 774-char snapshot; full and compact restore returned the same hash.
+- Guard: overworld MCP export/restore test asserts exported hash equals snapshot content and full/compact restores preserve it.
+- VERIFY: focused MCP export/restore test, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, typecheck, lint, format check, 193 test files / 1360 tests, and validate.
 
 ### Cycle result — save_game_state_hash
 
