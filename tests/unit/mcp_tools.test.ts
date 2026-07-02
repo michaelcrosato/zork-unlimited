@@ -2045,6 +2045,7 @@ describe("MCP tools — replay + path confinement", () => {
   it("inspect_trace summarizes steps and finds no failure on a winning route (§9.4)", () => {
     const r = api().inspect_trace({ trace_path: "traces/mcp_replay.json" }) as {
       ok: boolean;
+      world_quest_id: string | null;
       hash_ok: boolean;
       steps: number;
       diverged_at_step: number | null;
@@ -2053,6 +2054,8 @@ describe("MCP tools — replay + path confinement", () => {
     };
     expect(r.ok).toBe(true);
     expect("mode" in r).toBe(false);
+    expect("pack_id" in r).toBe(false);
+    expect(r.world_quest_id).toBe("sunken_barrow");
     expect(r.hash_ok).toBe(true);
     expect(r.steps).toBeGreaterThan(5);
     // A faithful Trace-v2 trace (mcp_replay.json carries per_step_hashes) has no
@@ -2068,11 +2071,14 @@ describe("MCP tools — replay + path confinement", () => {
       world_quest_id: "sunken_barrow",
     }) as {
       ok: boolean;
+      world_quest_id: string | null;
       hash_ok: boolean;
       diagnosis: { type: string };
     };
     expect(r.ok).toBe(true);
     expect("mode" in r).toBe(false);
+    expect("pack_id" in r).toBe(false);
+    expect(r.world_quest_id).toBe("sunken_barrow");
     expect(r.hash_ok).toBe(true);
     expect(r.diagnosis.type).toBe("no_failure");
   });
@@ -2080,11 +2086,14 @@ describe("MCP tools — replay + path confinement", () => {
   it("inspect_trace can infer a shipped trace source from embedded worldQuestId", () => {
     const r = api().inspect_trace({ trace_path: "traces/mcp_replay.json" }) as {
       ok: boolean;
+      world_quest_id: string | null;
       hash_ok: boolean;
       diagnosis: { type: string };
     };
     expect(r.ok).toBe(true);
     expect("mode" in r).toBe(false);
+    expect("pack_id" in r).toBe(false);
+    expect(r.world_quest_id).toBe("sunken_barrow");
     expect(r.hash_ok).toBe(true);
     expect(r.diagnosis.type).toBe("no_failure");
   });

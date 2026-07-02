@@ -42,8 +42,9 @@ Make discovered overworld quest leads start real RPG sessions.
   `world_quest_id` / raw `pack_path` starts.
 - Shipped quest saves can now restore through embedded or explicit
   `world_quest_id`; `load_game` rejects raw `pack_path`.
-- Shipped quest traces can replay/inspect through `world_quest_id`, so verification
-  follows the world graph too.
+- Shipped quest traces can replay/inspect through `world_quest_id`, and
+  `inspect_trace` summaries identify that world quest plus hashes without echoing
+  public `pack_id`.
 - Live shipped quest sessions now surface `world_quest_id` on start,
   transcript, save, and load responses without echoing raw pack paths.
 - Transcript and save wrappers now rely on `world_quest_id` or
@@ -74,7 +75,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - `apply_content_patch` now accepts shipped `world_quest_id` in ToolApi/public
   MCP and returns world identity only.
 - `replay_trace` and `inspect_trace` now advertise shipped `world_quest_id` on
-  public MCP; CLI replay/inspect now also reject raw pack paths.
+  public MCP; `inspect_trace` replies use that graph id plus content hashes
+  instead of public `pack_id`, and CLI replay/inspect now also reject raw pack paths.
 - ToolApi `replay_trace` and `inspect_trace` now reject raw `pack_path`; shipped
   traces infer their source from embedded `worldQuestId` or explicit
   `world_quest_id`.

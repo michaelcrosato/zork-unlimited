@@ -33,6 +33,7 @@ const api = () => createToolApi({ root: ROOT });
 
 type InspectResult = {
   ok: boolean;
+  world_quest_id: string | null;
   hash_ok: boolean;
   steps: number;
   diverged_at_step: number | null;
@@ -76,6 +77,8 @@ describe("bug_0143 — inspect_trace surfaces per-step divergence (§8.8, §9.4)
     const r = api().inspect_trace({
       trace_path: FIXTURE("clean"),
     }) as InspectResult;
+    expect("pack_id" in r).toBe(false);
+    expect(r.world_quest_id).toBe("sunken_barrow");
     expect(r.hash_ok).toBe(true);
     expect(r.diverged_at_step).toBeNull();
     expect(r.steps).toBe(5);

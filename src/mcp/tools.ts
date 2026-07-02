@@ -1868,7 +1868,8 @@ export function createToolApi(opts: { root: string }) {
       const traceAbs = safeResolve(root, args.trace_path);
       const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace<RpgAction>;
       assertTraceMode(trace);
-      const { compiled } = resolveTraceSource(args, trace, "inspect_trace");
+      const source = resolveTraceSource(args, trace, "inspect_trace");
+      const { compiled } = source;
       if (trace.content_hash !== compiled.contentHash) {
         return {
           ok: false,
@@ -1908,7 +1909,7 @@ export function createToolApi(opts: { root: string }) {
       const d = diagnose(rules, trace.initial_state, trace.actions);
       return {
         ok: true,
-        pack_id: trace.pack_id,
+        world_quest_id: source.worldQuestId,
         content_hash: trace.content_hash,
         seed: trace.seed,
         steps: trace.actions.length,

@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 174 -->
+<!-- historical_cycle_count: 175 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_inspect_trace_pack_id
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: public `inspect_trace()` summaries no longer echo `pack_id`.
+- Loop effect: trace audits use `world_quest_id` plus content/hash metadata while raw trace files retain internal pack identity for replay integrity.
+- Guard: focused trace/MCP tests, typecheck, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_generate_pack_id
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: world-quest loops carry `world_quest_id`; generated-pack loops carry `generated_rpg_seed`; neither repeats the absent source path.
 - Guard: generated-session/save/load tests assert `world_quest_id` is omitted, while world-quest session/save/transcript/load tests assert `generated_rpg_seed` is omitted.
 - VERIFY: focused MCP/source tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_session_wrapper_mode
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: RPG session wrapper responses no longer return top-level `mode: "rpg"`.
-- Loop effect: start/reload payloads stay session/hash/source scoped while full observations and persisted save/trace blobs keep mode where compatibility/integrity still needs it.
-- Guard: session-start, generated-session, catalog, and load-game tests assert wrapper payloads omit `mode` while observations still report RPG mode.
-- VERIFY: focused session-wrapper tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
