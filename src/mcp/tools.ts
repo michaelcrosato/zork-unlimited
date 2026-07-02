@@ -421,6 +421,20 @@ type TranscriptResponse<Args extends TranscriptArgs> = Args extends { if_state_h
   ? TranscriptPayload<TranscriptTurnFor<Args>> | TranscriptUnchanged
   : TranscriptPayload<TranscriptTurnFor<Args>>;
 
+type RpgGetStateArgs = {
+  session_id: string;
+  include_state?: boolean;
+};
+type RpgStateHashPayload = {
+  state_hash: string;
+};
+type RpgStatePayload = RpgStateHashPayload & {
+  state: GameState;
+};
+type RpgStateResponse<Args extends RpgGetStateArgs> = Args extends { include_state: true }
+  ? RpgStatePayload
+  : RpgStateHashPayload;
+
 type RpgSaveArgs = {
   session_id: string;
   expected_state_hash?: string;
@@ -1563,9 +1577,13 @@ export function createToolApi(opts: { root: string }) {
       } as RpgStepActionResponse<Args>;
     },
 
-    get_state(args: { session_id: string }) {
+    get_state<Args extends RpgGetStateArgs>(args: Args): RpgStateResponse<Args> {
       const s = sessions.get(args.session_id);
-      return { state: s.state, state_hash: hashState(s.state) };
+      const stateHash = hashState(s.state);
+      if (args.include_state === true) {
+        return { state: s.state, state_hash: stateHash } as RpgStateResponse<Args>;
+      }
+      return { state_hash: stateHash } as RpgStateResponse<Args>;
     },
 
     get_transcript<Args extends TranscriptArgs>(args: Args): TranscriptResponse<Args> {

@@ -55,7 +55,9 @@ function playSunkenBarrowToVictory(a: ReturnType<typeof api>, sessionId: string)
 
   last = stepByCommand(a, sessionId, "go east");
   for (let i = 0; i < 40 && !last.observation.ended; i += 1) {
-    const stage = a.get_state({ session_id: sessionId }).state.questStage["barrow"];
+    const stage = a.get_state({ session_id: sessionId, include_state: true }).state.questStage[
+      "barrow"
+    ];
     if (stage === "slab_moved") break;
     last = stepByCommand(a, sessionId, "lever stone slab");
   }
@@ -1148,6 +1150,12 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(transcript.turns.map((t) => t.action_id)).toContain("take_circlet");
     const currentStateHash = a.get_state({ session_id: game.session_id }).state_hash;
     expect(transcript.state_hash).toBe(currentStateHash);
+    const hashOnlyState = a.get_state({ session_id: game.session_id });
+    expect(hashOnlyState).toEqual({ state_hash: currentStateHash });
+    expect("state" in hashOnlyState).toBe(false);
+    const rawState = a.get_state({ session_id: game.session_id, include_state: true });
+    expect(rawState.state_hash).toBe(currentStateHash);
+    expect(rawState.state.current).toBe(last.observation.room);
     const summaryOnlyTranscript = a.get_transcript({
       session_id: game.session_id,
       summary_only: true,

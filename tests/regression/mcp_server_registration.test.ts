@@ -209,6 +209,7 @@ describe("MCP server registration", () => {
     expect(block).toContain("compactMcpState(a)");
     expect(block).toContain("include_state");
     expect(block).toContain("Return state hash");
+    expect(block).not.toContain("include_state === true");
   });
 
   it("keeps retired static overworld compatibility helpers out of ToolApi and MCP", () => {

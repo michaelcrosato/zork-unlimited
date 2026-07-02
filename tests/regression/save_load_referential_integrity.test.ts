@@ -73,7 +73,9 @@ function playSunkenBarrowToVictory(a: ReturnType<typeof api>, sessionId: string)
 
   last = stepByCommand(a, sessionId, "go east");
   for (let i = 0; i < 40 && !last.observation.ended; i += 1) {
-    const stage = a.get_state({ session_id: sessionId }).state.questStage["barrow"];
+    const stage = a.get_state({ session_id: sessionId, include_state: true }).state.questStage[
+      "barrow"
+    ];
     if (stage === "slab_moved") break;
     last = stepByCommand(a, sessionId, "lever stone slab");
   }

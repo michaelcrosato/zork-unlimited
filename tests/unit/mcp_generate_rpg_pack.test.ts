@@ -144,7 +144,7 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
   it("generated RPG saves embed the generation seed and load without a pack path", () => {
     const a = api();
     const g = a.new_game({ generate_rpg_seed: 3, seed: 7 });
-    const before = a.get_state({ session_id: g.session_id });
+    const before = a.get_state({ session_id: g.session_id, include_state: true });
     const saved = a.save_game({ session_id: g.session_id });
     const raw = JSON.parse(saved.save) as {
       worldQuestId?: unknown;
@@ -161,7 +161,9 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
     expect("pack_path" in loaded).toBe(false);
     expect("world_quest_id" in loaded).toBe(false);
     expect(loaded.generated_rpg_seed).toBe(3);
-    expect(a.get_state({ session_id: loaded.session_id }).state).toEqual(before.state);
+    expect(a.get_state({ session_id: loaded.session_id, include_state: true }).state).toEqual(
+      before.state,
+    );
   });
 
   it("generated RPG save source mismatches are integrity errors", () => {

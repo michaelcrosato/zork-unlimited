@@ -73,7 +73,9 @@ describe("MCP step_action / get_transcript hide internal __-prefixed events (bug
 
     // (2) Not vacuous: the combat round DID write the hidden enemy-HP var — the raw
     // GameState (get_state, the debug window, deliberately unfiltered) proves it.
-    const raw = a.get_state({ session_id: sid }) as { state: { vars: Record<string, number> } };
+    const raw = a.get_state({ session_id: sid, include_state: true }) as {
+      state: { vars: Record<string, number> };
+    };
     const enemyHpKey = Object.keys(raw.state.vars).find((k) => k.startsWith("__enemy_hp_"));
     expect(enemyHpKey).toBeTruthy();
 
@@ -115,7 +117,9 @@ describe("MCP step_action / get_transcript hide internal __-prefixed events (bug
     ).toBe(false);
 
     // ...yet the raw state proves the __dlg var was genuinely written.
-    const raw = a.get_state({ session_id: sid }) as { state: { vars: Record<string, number> } };
+    const raw = a.get_state({ session_id: sid, include_state: true }) as {
+      state: { vars: Record<string, number> };
+    };
     expect(Object.keys(raw.state.vars).some((v) => v.startsWith("__dlg_"))).toBe(true);
 
     // And the dialogue node text the player should read still surfaces via the

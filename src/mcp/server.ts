@@ -118,8 +118,7 @@ type McpStateArgs = {
 };
 
 function compactMcpState(args: McpStateArgs): unknown {
-  const result = api.get_state(args);
-  return args.include_state === true ? result : { state_hash: result.state_hash };
+  return api.get_state(args);
 }
 
 type McpOverworldReadArgs = {

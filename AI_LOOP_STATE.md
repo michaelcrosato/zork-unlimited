@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 164 -->
+<!-- historical_cycle_count: 165 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_toolapi_state_read
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: ToolApi `get_state({ session_id })` now returns hash-only state by default; raw reducer state requires `include_state: true`.
+- Loop effect: direct ToolApi callers now match public MCP state reads and avoid accidental full-state payloads in repeated loop turns.
+- Guard: raw-state tests now opt in explicitly; focused MCP/state tests, registration guard, typecheck, and format check passed before full gates.
+- VERIFY: focused MCP/state tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_transcript_cache_hit
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: active roadmap guidance no longer preserves retired staged-engine work as the next plan.
 - Guard: roadmap regression rejects retired mode/path guidance, and doc-staleness scanning now includes `docs/ROADMAP.md`.
 - VERIFY: focused roadmap/doc-staleness/assessor tests, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 195 test files / 1367 tests, and validate.
-
-### Cycle result — active_build_spec_rpg_only
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Docs/token surface: replaced the 61KB staged build spec with a 7.3KB RPG-only open-world engine spec.
-- Loop effect: root-level active guidance no longer tells agents to build retired CYOA/parser stages or package-mode trees.
-- Guard: new build-spec regression rejects retired stage/path instructions and requires current RPG tool surfaces plus validate/test gates.
-- VERIFY: focused build-spec/RPG-only/verifier tests, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 194 test files / 1364 tests, and validate.
