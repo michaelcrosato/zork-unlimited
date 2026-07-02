@@ -89,6 +89,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - Blind-playtest MCP ToolSearch schema prose for the selected
   start/observe/action/transcript tools is trimmed and guarded by a source-size
   regression.
+- The verifier negative corpus captures expected bad-ref Git stderr, keeping
+  passing test logs free of fatal-looking synthetic failure noise.
 - Save/load now requires `mode: "rpg"` on disk; missing or legacy modes are
   rejected at the integrity boundary.
 - Trace artifacts now carry and require `mode: "rpg"` before replay or inspect

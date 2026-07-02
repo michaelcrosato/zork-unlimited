@@ -37,7 +37,7 @@
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   runStatic,
   runDrift,
@@ -150,7 +150,26 @@ describe("bug_0227 — runDrift GIT_DIFF_FAILED on a bogus ref (the runDrift err
     // The bogus all-zeros ref makes `git diff` throw; runDrift's catch returns
     // GIT_DIFF_FAILED BEFORE the guard-self readFileSync, so the missing
     // scripts/verify-integrity.ts in the synthetic root is irrelevant here.
-    const res = runDrift(syntheticRoot, BOGUS_REF);
+    const stderrWrite = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const { res, stderrOutput } = (() => {
+      try {
+        const driftResult = runDrift(syntheticRoot, BOGUS_REF);
+        const capturedStderr = stderrWrite.mock.calls
+          .map(([chunk]) =>
+            typeof chunk === "string"
+              ? chunk
+              : Buffer.isBuffer(chunk)
+                ? chunk.toString("utf8")
+                : String(chunk),
+          )
+          .join("");
+        return { res: driftResult, stderrOutput: capturedStderr };
+      } finally {
+        stderrWrite.mockRestore();
+      }
+    })();
+
+    expect(stderrOutput).toMatch(new RegExp(`bad object ${BOGUS_REF}|Not a git repository`));
     expect(res.ok).toBe(false);
     const hit = res.findings.find((f) => f.code === "GIT_DIFF_FAILED");
     expect(hit).toBeDefined();

@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 54 -->
+<!-- historical_cycle_count: 55 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — verifier_bad_ref_stderr_silenced
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner still fails broad root Prettier/ESLint/git-worktree checks, while its tsc/test portions passed.
+- Loop/token surface: the verifier rejection corpus now captures expected `git diff` stderr for the synthetic bad-ref branch instead of leaking a fatal-looking Git line into every full test log.
+- Loop effect: green test/health runs are easier for agents to parse and no longer spend context on a known negative-test subprocess failure.
+- Evidence: focused verifier rejection test passes on Windows and WSL without emitting the zero-SHA fatal.
+- VERIFY: focused verifier rejection test on Windows/WSL, `npm run health`, `npm run validate`, and `npm test` passed: integrity, typecheck, lint, format check, 193 test files / 1353 tests, and validate.
+- Self-critique: this cleans verification-loop noise only; the broader cleaner WSL path mismatch and historical-doc formatting failures remain outside this scoped repo-local change.
 
 ### Cycle result — blind_tool_schema_trimmed
 
