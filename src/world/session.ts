@@ -40,6 +40,7 @@ import {
   OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT,
   OVERWORLD_COMPACT_VIEW_VERSION,
   compactIdPayload,
+  cloneOverworldCompactView,
   compactPendingRoad,
   compactRouteOption,
   compactTravelLogEntry,
@@ -3365,7 +3366,7 @@ export class OverworldSession {
   }
 
   compactView(): OverworldCompactView {
-    return cloneJson(this.cachedCompactView());
+    return cloneOverworldCompactView(this.cachedCompactView());
   }
 
   private buildCompactView(): OverworldCompactView {

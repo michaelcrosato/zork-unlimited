@@ -191,6 +191,10 @@ function compactIdList(values: readonly string[]): string[] {
   return values.slice(0, OVERWORLD_COMPACT_ID_LIST_LIMIT);
 }
 
+function cloneTupleList<T extends readonly unknown[]>(values: readonly T[]): T[] {
+  return values.map((value) => [...value] as unknown as T);
+}
+
 export function compactIdPayload(values: OverworldCompactFullIdMap): {
   ids: OverworldCompactIdMap;
   id_counts: OverworldCompactIdCounts;
@@ -242,6 +246,52 @@ export function compactIdPayload(values: OverworldCompactFullIdMap): {
     id_counts,
     ...(ids_truncated.length > 0 ? { ids_truncated } : {}),
   };
+}
+
+export function cloneOverworldCompactView(view: OverworldCompactView): OverworldCompactView {
+  const clone: OverworldCompactView = {
+    v: view.v,
+    world: view.world,
+    time: view.time,
+    here: [...view.here] as OverworldCompactHere,
+    vitals: [...view.vitals] as OverworldCompactVitals,
+    hidden: [...view.hidden] as OverworldCompactHiddenCounts,
+    roads: cloneTupleList(view.roads),
+    route_options: view.route_options.map(
+      (option) =>
+        [option[0], option[1], option[2], option[3], [...option[4]]] as OverworldCompactRouteOption,
+    ),
+    areas: cloneTupleList(view.areas),
+    poi: cloneTupleList(view.poi),
+    contacts: cloneTupleList(view.contacts),
+    events: cloneTupleList(view.events),
+    progress: [...view.progress] as OverworldCompactProgress,
+    id_counts: [...view.id_counts] as OverworldCompactIdCounts,
+    ids: Object.fromEntries(
+      Object.entries(view.ids).map(([key, values]) => [key, [...values]]),
+    ) as OverworldCompactIdMap,
+  };
+
+  if (view.area_routes) clone.area_routes = cloneTupleList(view.area_routes);
+  if (view.route_options_truncated) clone.route_options_truncated = true;
+  if (view.jobs) clone.jobs = cloneTupleList(view.jobs);
+  if (view.sites) clone.sites = cloneTupleList(view.sites);
+  if (view.quests) clone.quests = cloneTupleList(view.quests);
+  if (view.pending_road) {
+    clone.pending_road = {
+      ...view.pending_road,
+      event: [...view.pending_road.event] as readonly [id: string, risk: string],
+      options: cloneTupleList(view.pending_road.options),
+    };
+  }
+  if (view.journal) clone.journal = cloneTupleList(view.journal);
+  if (view.travel_log) clone.travel_log = cloneTupleList(view.travel_log);
+  if (view.travel_log_truncated) clone.travel_log_truncated = true;
+  if (view.renown) clone.renown = cloneTupleList(view.renown);
+  if (view.completed_arcs) clone.completed_arcs = [...view.completed_arcs];
+  if (view.ids_truncated) clone.ids_truncated = [...view.ids_truncated];
+
+  return clone;
 }
 
 export function compactOverworldView(view: OverworldView): OverworldCompactView {

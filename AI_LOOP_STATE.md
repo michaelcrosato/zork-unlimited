@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 220 -->
+<!-- historical_cycle_count: 221 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — typed_overworld_compact_clones
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact overworld context returns now clone cached payloads with typed tuple/array copies instead of JSON stringify/parse.
+- Loop effect: repeated compact overworld reads preserve caller isolation without paying full serialization/deserialization cost for unchanged session context.
+- Guard: MCP compact-context regression mutates nested route/id arrays and verifies cached context remains isolated.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — indexed_overworld_road_routes
 

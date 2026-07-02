@@ -197,6 +197,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Overworld sessions cache compact context payloads until mutation, so repeated
   compact overworld reads reuse route tuples, id payloads, local lists, and
   capped journal/travel slices while preserving clone-isolated returns.
+- Compact overworld context returns now use typed tuple/array clones instead of
+  JSON stringify/parse, preserving isolation with less serialization work on
+  repeated loop reads.
 - Blind-playtest MCP ToolSearch schema prose for the selected
   start/observe/action/transcript tools is trimmed and guarded by a source-size
   regression.
