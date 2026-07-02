@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 53 -->
+<!-- historical_cycle_count: 54 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — blind_tool_schema_trimmed
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner still fails broad root Prettier/ESLint/git-worktree checks, while its tsc/test portions passed.
+- Token surface: selected blind MCP tool descriptions for start/observe/actions/step/transcript are shorter and guarded by a source-size regression.
+- Loop effect: blind ToolSearch payload for the common play loop stays below the pinned budget without removing compact mode affordances.
+- Evidence: focused MCP registration/blind contract tests cover the schema budget and blind harness contract.
+- VERIFY: focused MCP/blind tests, `npm run health`, `npm run validate`, and `npm test` passed: integrity, typecheck, lint, format check, 193 test files / 1353 tests, and validate.
+- Self-critique: the guard approximates ToolSearch payload from server source, but it pins drift on the exact tools blind agents use every run.
 
 ### Cycle result — compact_transcript_summary
 

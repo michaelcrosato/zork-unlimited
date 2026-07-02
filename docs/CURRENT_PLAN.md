@@ -86,6 +86,9 @@ Make discovered overworld quest leads start real RPG sessions.
   dropping detailed turn/event payload for token-light checks.
 - `get_transcript({ compact_summary: true })` caps summary scenes, inventory,
   flags, and journal entries for blind end-of-run audits.
+- Blind-playtest MCP ToolSearch schema prose for the selected
+  start/observe/action/transcript tools is trimmed and guarded by a source-size
+  regression.
 - Save/load now requires `mode: "rpg"` on disk; missing or legacy modes are
   rejected at the integrity boundary.
 - Trace artifacts now carry and require `mode: "rpg"` before replay or inspect

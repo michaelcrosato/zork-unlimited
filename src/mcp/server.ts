@@ -41,56 +41,29 @@ function tool(
 }
 
 const WORLD_QUEST_SOURCE = {
-  world_quest_id: z
-    .string()
-    .describe("Charter Marches quest graph node id from list_world().quests[].graph_node."),
+  world_quest_id: z.string().describe("World quest id."),
 };
 const QUEST_ID_SOURCE = {
-  quest_id: z
-    .string()
-    .optional()
-    .describe(
-      "Preferred Charter Marches quest graph node id from list_world().quests[].graph_node.",
-    ),
-  world_quest_id: z
-    .string()
-    .optional()
-    .describe("Alias for quest_id, accepted for consistency with new_game/load_game."),
+  quest_id: z.string().optional().describe("World quest id."),
+  world_quest_id: z.string().optional().describe("Alias for quest_id."),
 };
 const SESSION = {
-  session_id: z.string().describe("A session id from new_game/start_quest/load_game."),
+  session_id: z.string().describe("Session id."),
 };
 const HIDE_GRAPH = {
-  hide_graph: z
-    .boolean()
-    .optional()
-    .describe(
-      "Difficulty: when true, exits report only their direction, not their destination - the spatial map must be reasoned out, not read off. Default false.",
-    ),
+  hide_graph: z.boolean().optional().describe("Hide exit destinations; keep directions only."),
 };
 const COMPACT_ACTIONS = {
-  compact_actions: z
-    .boolean()
-    .optional()
-    .describe(
-      "Token economy: when true, observation available_actions include stable ids and skill metadata but omit repeated command labels. Use list_legal_actions without this flag when command text is needed.",
-    ),
+  compact_actions: z.boolean().optional().describe("Return action ids without command labels."),
 };
 const COMPACT_OBSERVATION = {
   compact_observation: z
     .boolean()
     .optional()
-    .describe(
-      "Token economy: when true, RPG tools return a compact `context` instead of the full `observation`; context uses tuple fields and compact action ids for repeated loop turns.",
-    ),
+    .describe("Return compact `context` instead of full `observation`."),
 };
 const COMPACT_OVERWORLD_CONTEXT = {
-  compact_context: z
-    .boolean()
-    .optional()
-    .describe(
-      "Token economy: when true, stateful overworld action tools return compact context instead of the full observation object graph.",
-    ),
+  compact_context: z.boolean().optional().describe("Return compact overworld context."),
 };
 
 tool(
@@ -335,17 +308,8 @@ tool(
   "new_game",
   "Start a new session on a playable RPG quest; returns a session id, mode, and first observation. Use world_quest_id for shipped Charter Marches quests; generate_rpg_seed mints a procedural pack.",
   {
-    world_quest_id: z
-      .string()
-      .optional()
-      .describe("Charter Marches quest graph node id from list_world().quests[].graph_node."),
-    generate_rpg_seed: z
-      .number()
-      .int()
-      .optional()
-      .describe(
-        "Instead of world_quest_id: mint and play a fresh procedural RPG pack from this seed (see generate_rpg_pack). Independent of `seed` (which seeds runtime state).",
-      ),
+    world_quest_id: z.string().optional().describe("World quest id."),
+    generate_rpg_seed: z.number().int().optional().describe("Procedural RPG seed."),
     seed: z.number().int().optional().describe("Deterministic runtime seed (default 1)."),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
@@ -355,9 +319,9 @@ tool(
 );
 tool(
   "start_world_quest",
-  "Start a playable RPG session by Charter Marches quest graph node id and return the world route context plus the first RPG observation.",
+  "Start a shipped RPG quest by world quest id.",
   {
-    quest_id: z.string().describe("Quest graph node id from list_world().quests[].graph_node."),
+    quest_id: z.string().describe("World quest id."),
     seed: z.number().int().optional(),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
@@ -380,26 +344,26 @@ tool(
 
 tool(
   "get_observation",
-  "Get the current AI-facing RPG observation for a session (§9.1). Set compact_observation for lean repeated loop turns.",
+  "Read current RPG scene; compact_observation returns lean context.",
   { ...SESSION, ...HIDE_GRAPH, ...COMPACT_ACTIONS, ...COMPACT_OBSERVATION },
   (a) => api.get_observation(a),
 );
 tool(
   "get_scene",
-  "AFK alias for get_observation; returns current scene/room text, state, and visible options. Set compact_observation for compact repeated loop turns.",
+  "Alias for get_observation.",
   { ...SESSION, ...HIDE_GRAPH, ...COMPACT_ACTIONS, ...COMPACT_OBSERVATION },
   (a) => api.get_scene(a),
 );
 tool(
   "list_legal_actions",
-  "List the legal RPG actions available right now in a session (§9). Defaults to full command labels; compact_actions returns ids only.",
+  "List legal RPG actions; compact_actions returns ids only.",
   { ...SESSION, ...HIDE_GRAPH, ...COMPACT_ACTIONS },
   (a) => api.list_legal_actions(a),
 );
 
 tool(
   "step_action",
-  "Apply one chosen RPG action by its id from available_actions; returns events + the new observation.",
+  "Apply one action id and return events plus next scene.",
   {
     ...SESSION,
     action_id: z.string().describe("An action id from the current legal-action set."),
@@ -411,7 +375,7 @@ tool(
 );
 tool(
   "choose_option",
-  "AFK alias for step_action; choose one visible option id and return the next scene.",
+  "Alias for step_action.",
   {
     ...SESSION,
     option_id: z
@@ -433,27 +397,18 @@ tool(
 );
 tool(
   "get_transcript",
-  "Return a turn transcript with choices, events, inventory, flags, journal, and ending state. Set compact_summary for capped summary lists, compact_turns for id-only turn rows, or summary_only to omit turns.",
+  "Return transcript; use summary_only, compact_summary, and compact_turns to reduce payload.",
   {
     ...SESSION,
-    summary_only: z
-      .boolean()
-      .optional()
-      .describe(
-        "Token economy: when true, returns session metadata and summary while replacing detailed turns with an empty array.",
-      ),
+    summary_only: z.boolean().optional().describe("Omit turn rows."),
     compact_summary: z
       .boolean()
       .optional()
-      .describe(
-        "Token economy: when true, caps summary scenes/inventory/flags and keeps only recent journal entries with omitted counts.",
-      ),
+      .describe("Cap summary lists and return omitted counts."),
     compact_turns: z
       .boolean()
       .optional()
-      .describe(
-        "Token economy: when true, returns id-only turn rows without titles, command labels, or event payloads. Ignored when summary_only is true.",
-      ),
+      .describe("Return id-only turn rows; ignored with summary_only."),
   },
   (a) => api.get_transcript(a),
 );

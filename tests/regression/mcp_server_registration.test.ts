@@ -37,6 +37,15 @@ function registeredToolBlock(name: string): string {
   return text.slice(start, next < 0 ? text.length : next);
 }
 
+function sharedSchemaBlock(): string {
+  const text = readFileSync("src/mcp/server.ts", "utf8");
+  const start = text.indexOf("const WORLD_QUEST_SOURCE");
+  const listWorldTool = /tool\(\r?\n\s+"list_world"/.exec(text);
+  const end = listWorldTool?.index ?? -1;
+  if (start < 0 || end < 0) throw new Error("missing shared schema block");
+  return text.slice(start, end);
+}
+
 function serverSourceBlock(startMarker: string, endMarker: string): string {
   const text = readFileSync("src/mcp/server.ts", "utf8");
   const start = text.indexOf(startMarker);
@@ -92,6 +101,22 @@ describe("MCP server registration", () => {
       expect(block).toMatch(/world_quest_id|WORLD_QUEST_SOURCE|QUEST_ID_SOURCE/);
       expect(block).not.toContain("pack_path");
     }
+  });
+
+  it("keeps the blind-playtest ToolSearch schema source terse", () => {
+    const blindToolSchemaSource = [
+      sharedSchemaBlock(),
+      registeredToolBlock("start_world_quest"),
+      registeredToolBlock("get_observation"),
+      registeredToolBlock("list_legal_actions"),
+      registeredToolBlock("step_action"),
+      registeredToolBlock("get_transcript"),
+    ].join("\n");
+
+    expect(blindToolSchemaSource.length).toBeLessThanOrEqual(2600);
+    expect(blindToolSchemaSource).not.toContain("Token economy:");
+    expect(blindToolSchemaSource).toContain("compact_observation");
+    expect(blindToolSchemaSource).toContain("compact_summary");
   });
 
   it("keeps retired static overworld compatibility helpers out of ToolApi and MCP", () => {
