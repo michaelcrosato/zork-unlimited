@@ -1744,7 +1744,6 @@ export function createToolApi(opts: { root: string }) {
       const d = diagnose(rules, trace.initial_state, trace.actions);
       return {
         ok: true,
-        mode: SAVE_MODE,
         pack_id: trace.pack_id,
         content_hash: trace.content_hash,
         seed: trace.seed,

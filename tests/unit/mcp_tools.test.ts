@@ -1743,6 +1743,7 @@ describe("MCP tools — replay + path confinement", () => {
       step_summary: { ended: boolean; ending_id: string | null }[];
     };
     expect(r.ok).toBe(true);
+    expect("mode" in r).toBe(false);
     expect(r.hash_ok).toBe(true);
     expect(r.steps).toBeGreaterThan(5);
     // A faithful Trace-v2 trace (mcp_replay.json carries per_step_hashes) has no
@@ -1762,6 +1763,7 @@ describe("MCP tools — replay + path confinement", () => {
       diagnosis: { type: string };
     };
     expect(r.ok).toBe(true);
+    expect("mode" in r).toBe(false);
     expect(r.hash_ok).toBe(true);
     expect(r.diagnosis.type).toBe("no_failure");
   });
@@ -1773,6 +1775,7 @@ describe("MCP tools — replay + path confinement", () => {
       diagnosis: { type: string };
     };
     expect(r.ok).toBe(true);
+    expect("mode" in r).toBe(false);
     expect(r.hash_ok).toBe(true);
     expect(r.diagnosis.type).toBe("no_failure");
   });
