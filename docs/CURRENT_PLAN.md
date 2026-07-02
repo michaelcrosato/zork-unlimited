@@ -49,6 +49,8 @@ Make discovered overworld quest leads start real RPG sessions.
   not public catalog responses.
 - AFK assessment and `latest-cycle.json` now use quest ids as primary targets
   for world-bound content fixes; pack paths are edit metadata only.
+- AFK assessment output now reports quest counts/health and blind-playtest
+  recommendations by `world_quest_id`, not RPG pack ids.
 - AFK baseline playtests now carry `main_world_quest_id` and instruct blind agents
   to start shipped baseline quests through `start_world_quest`.
 - The external blind-test harness now starts shipped playtests only through

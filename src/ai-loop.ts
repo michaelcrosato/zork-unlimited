@@ -29,7 +29,7 @@ import {
   isSaturated,
   type Assessment,
   type ImprovementCandidate,
-  type PackHealth,
+  type QuestHealth,
 } from "./afk/assessor.js";
 import { createToolApi } from "./mcp/tools.js";
 import { rotateLoopState } from "./afk/loop_state.js";
@@ -44,7 +44,7 @@ type WorldCatalog = ReturnType<ReturnType<typeof createToolApi>["list_world"]>;
 // ignored ai-runs marker; the ultraplan cycle also gets a larger agent budget.
 const ULTRAPLAN_COOLDOWN = Number(process.env.AI_LOOP_ULTRAPLAN_COOLDOWN ?? 8);
 const ULTRAPLAN_TIMEOUT_SECONDS = Number(process.env.AI_LOOP_ULTRAPLAN_TIMEOUT_SECONDS ?? 3600);
-// Authoring a brand-new pack (content_new) is L-effort: it writes a whole pack +
+// Authoring a brand-new quest (content_new) is L-effort: it writes a quest +
 // validates + blind-playtests + locks tests, and was observed to hit loop.sh's
 // default 2400s routine budget (twice) and get terminated mid-author, wasting the
 // cycle. Give content_new cycles the SAME larger budget as ultraplan cycles via the
@@ -164,7 +164,7 @@ function main(): void {
   const playtestRecord = join(runDir, "playtest.md").replaceAll("\\", "/");
 
   const targetHealth =
-    a.packs.find((p) => p.world_quest_id !== null && p.world_quest_id === targetWorldQuestId) ??
+    a.quests.find((p) => p.world_quest_id !== null && p.world_quest_id === targetWorldQuestId) ??
     null;
   const targetPackPath = targetHealth?.path ?? null;
 
@@ -179,7 +179,7 @@ function main(): void {
     : buildPrompt({ a, top, target, targetWorldQuestId, targetHealth, playtestRecord });
 
   // Per-cycle agent budget: ultraplan (multi-agent re-aim) and content_new (L-effort
-  // pack authoring) both need more than the lean routine default; loop.sh reads this
+  // quest authoring) both need more than the lean routine default; loop.sh reads this
   // agentTimeoutSeconds override and falls back to its own default when absent.
   const agentTimeoutSeconds = ultraplan
     ? ULTRAPLAN_TIMEOUT_SECONDS
@@ -229,7 +229,7 @@ export function buildPrompt(ctx: {
   top: ImprovementCandidate | null;
   target: string;
   targetWorldQuestId?: string | null;
-  targetHealth: PackHealth | null;
+  targetHealth: QuestHealth | null;
   playtestRecord: string;
 }): string {
   const { a, top, target, targetWorldQuestId, targetHealth, playtestRecord } = ctx;
@@ -264,7 +264,7 @@ export function buildPrompt(ctx: {
         "## STEP 1 — Add the new world quest, THEN blind-playtest IT (quality feedback)",
         "",
         "You are expanding the single Charter Marches RPG world this cycle. Order for content_new:",
-        "1. Author the RPG quest pack, register it in the world graph/overworld manifest, and get it validating green (validate_quest / npm run validate).",
+        "1. Author/register the RPG quest in the world graph/overworld manifest, and get it validating green (validate_quest / npm run validate).",
         "2. THEN spawn a FRESH subagent with NO design context (Agent tool general-purpose, or a",
         "   clean `claude -p`). Hand it ONLY the locked-down prompt in docs/blind_playtest_protocol.md,",
         "   pointed at the QUEST_ID YOU JUST REGISTERED + a seed. It must play purely through",
@@ -311,8 +311,8 @@ export function buildPrompt(ctx: {
     "",
     "## STEP 2 — Make ONE improvement",
     "",
-    "- content_fix: edit the pack (or apply_content_patch); re-validate.",
-    "- content_new: add a world-graph RPG quest, not a detached pack; validate and playtest by quest_id.",
+    "- content_fix: edit the quest source (or apply_content_patch); re-validate.",
+    "- content_new: add a world-graph RPG quest, not a detached source file; validate and playtest by quest_id.",
     "- engine / repo: change freely under trust-but-verify. New mechanics no longer need",
     "  a §14 ceremony, but keep the verification green and add tests for new behavior.",
     "- If you fix a bug, add a traces/bugs/ artifact + a tests/regression/ test (§15).",
@@ -365,7 +365,7 @@ function appendState(
     "",
     `## AFK Cycle ${stamp}${ultraplan ? " — ULTRAPLAN (saturation re-aim)" : ""}`,
     "",
-    `- Assessment: RPG packs=${a.rpgPackCount}; world quests=${a.worldQuestCount}; ${a.candidates.length} candidate(s) ranked.`,
+    `- Assessment: RPG quests=${a.rpgQuestCount}; world quests=${a.worldQuestCount}; ${a.candidates.length} candidate(s) ranked.`,
     `- Next best improvement (recommended): ${top ? `[${top.category}] ${top.title}` : "(none — healthy)"}.`,
     top ? `- Why: ${top.rationale}` : "",
     ultraplan
@@ -391,7 +391,7 @@ function buildUltraplanPrompt(ctx: {
   a: Assessment;
   target: string;
   targetWorldQuestId?: string | null;
-  targetHealth: PackHealth | null;
+  targetHealth: QuestHealth | null;
   playtestRecord: string;
 }): string {
   const { target, targetWorldQuestId, targetHealth, playtestRecord } = ctx;
@@ -429,7 +429,7 @@ function buildUltraplanPrompt(ctx: {
     "  genuinely independent; never fan out a single tightly-coupled fix (keep that one agent).",
     "- LOCAL ONLY — do NOT use web search, web fetch, or any network/external tool. Web",
     "  tools force an interactive approval prompt that STALLS this unattended loop. Ground",
-    "  the re-aim entirely in the repo itself (source, tests, validators, generated packs).",
+    "  the re-aim entirely in the repo itself (source, tests, validators, generated RPG quests).",
     "- Ground it in docs/ULTRAPLAN-2026-06-02.md and docs/ROADMAP.md (the strategic",
     "  layer) and the recent AI_LOOP_STATE.md — ADVANCE them, do not restart from zero.",
     "",

@@ -3,8 +3,8 @@
  *
  * Each cycle the loop must decide where to spend its effort across FOUR categories:
  *   - content_new  : the world graph is thin (too few playable RPG quest nodes)
- *   - content_fix  : an existing pack has coverage gaps, unreached endings, or
- *                    validator warnings (the quality signal a real playtest probes)
+ *   - content_fix  : an existing quest has validator warnings, reachability gaps, or
+ *                    blind-playtest findings
  *   - engine       : code-level debt (TODO/FIXME markers, pending mechanics)
  *   - repo         : project hygiene (missing tooling, docs, etc.)
  *
@@ -41,26 +41,27 @@ export type ImprovementCandidate = {
   score: number; // impact-weighted, deterministic
 };
 
-export type PackHealth = {
+export type QuestHealth = {
   path: string;
+  pack_id: string;
   world_quest_id: string | null;
   mode: PackMode | null;
   playable: boolean;
   warnings: number;
 };
 
-type AssessedStory = {
+type AssessedQuest = {
   path: string;
-  id: string;
+  pack_id: string;
   mode: PackMode | null;
   playable: boolean;
   world_quest_id: string | null;
 };
 
 export type Assessment = {
-  rpgPackCount: number;
+  rpgQuestCount: number;
   worldQuestCount: number;
-  packs: PackHealth[];
+  quests: QuestHealth[];
   /** True iff this cycle's fresh generated RPG window validated clean. */
   allGeneratorsClean: boolean;
   candidates: ImprovementCandidate[];
@@ -68,7 +69,7 @@ export type Assessment = {
 };
 
 export type AssessmentFormatOptions = {
-  /** Print every pack/candidate with full rationale. Default output is compact for loop handoff. */
+  /** Print every quest/candidate with full rationale. Default output is compact for loop handoff. */
   full?: boolean;
   /** Maximum ranked candidates to show in compact mode before summarizing routine rows. */
   maxCandidates?: number;
@@ -84,7 +85,7 @@ const CATEGORY_WEIGHT: Record<Category, number> = {
 };
 // How many playable quest nodes in the contiguous world graph is "healthy" before
 // net-new world expansion is deprioritized. Count world_quest_id entries, not raw
-// pack files, so this lever cannot reintroduce standalone package authoring.
+// YAML files, so this lever cannot reintroduce standalone package authoring.
 const WORLD_QUEST_TARGET = 16;
 
 function score(impact: number, effort: ImprovementCandidate["effort"], category: Category): number {
@@ -486,28 +487,30 @@ export function isSaturated(a: Assessment): boolean {
 /** Deterministically assess the repo and rank the next-best improvements. */
 export function assess(root: string): Assessment {
   const api = createToolApi({ root });
-  const stories: AssessedStory[] = api.list_world().quests.map((quest) => ({
+  const quests: AssessedQuest[] = api.list_world().quests.map((quest) => ({
     path:
       quest.world_quest_id === null
         ? quest.id
         : resolveWorldQuestPackPath(root, quest.world_quest_id).packPath,
-    id: quest.id,
+    pack_id: quest.id,
     mode: quest.mode,
     playable: quest.playable,
     world_quest_id: quest.world_quest_id,
   }));
 
-  const packs: PackHealth[] = [];
+  const questHealth: QuestHealth[] = [];
   const candidates: ImprovementCandidate[] = [];
-  const rpgPackCount = stories.filter((s) => s.mode === "rpg").length;
-  const worldQuestCount = stories.filter((s) => s.playable && s.world_quest_id !== null).length;
+  const rpgQuestCount = quests.filter((s) => s.mode === "rpg").length;
+  const worldQuestCount = quests.filter((s) => s.playable && s.world_quest_id !== null).length;
 
-  // ── Per-pack health: validator findings (the deterministic dev-test signal) ───
-  for (const s of stories) {
+  // ── Per-quest health: validator findings (the deterministic dev-test signal) ───
+  for (const s of quests) {
     const targetRef = s.world_quest_id ?? s.path;
+    const targetLabel = s.world_quest_id ?? s.pack_id;
     if (!s.playable) {
-      packs.push({
+      questHealth.push({
         path: s.path,
+        pack_id: s.pack_id,
         world_quest_id: s.world_quest_id,
         mode: s.mode,
         playable: false,
@@ -517,10 +520,10 @@ export function assess(root: string): Assessment {
         id: `fix-unplayable-${targetRef}`,
         category: "content_fix",
         target: targetRef,
-        title: `Fix "${s.id}" — it does not validate (unplayable)`,
+        title: `Fix quest "${targetLabel}" — it does not validate (unplayable)`,
         rationale:
-          "An unplayable pack is the highest-impact thing to fix: nobody can experience it.",
-        evidence: [`${s.path} failed validation`],
+          "An unplayable world quest is the highest-impact thing to fix: nobody can experience it through the unified RPG runtime.",
+        evidence: [`${targetRef} failed validation`],
         impact: 5,
         effort: "M",
         score: score(5, "M", "content_fix"),
@@ -528,8 +531,9 @@ export function assess(root: string): Assessment {
       continue;
     }
     if (s.world_quest_id === null) {
-      packs.push({
+      questHealth.push({
         path: s.path,
+        pack_id: s.pack_id,
         world_quest_id: null,
         mode: s.mode,
         playable: true,
@@ -539,9 +543,9 @@ export function assess(root: string): Assessment {
         id: `fix-unbound-${s.path}`,
         category: "content_fix",
         target: s.path,
-        title: `Fix "${s.id}" — it is not bound to the world graph`,
+        title: `Fix quest "${s.pack_id}" — it is not bound to the world graph`,
         rationale:
-          "A playable pack without a world quest id cannot be reached through the single-world runtime.",
+          "A playable quest without a world quest id cannot be reached through the single-world runtime.",
         evidence: [`${s.path} has no world_quest_id`],
         impact: 5,
         effort: "M",
@@ -551,8 +555,9 @@ export function assess(root: string): Assessment {
     }
     const report = api.validate_quest({ world_quest_id: s.world_quest_id });
     const warnings = report.report.findings.filter((f) => f.severity === "warning").length;
-    packs.push({
+    questHealth.push({
       path: s.path,
+      pack_id: s.pack_id,
       world_quest_id: s.world_quest_id,
       mode: s.mode,
       playable: true,
@@ -562,7 +567,7 @@ export function assess(root: string): Assessment {
     // content_fix is driven by VALIDATOR findings — the deterministic, code-checkable
     // signal (the "specific dev tests"). Player-facing QUALITY (signposting, clarity,
     // pacing) is judged only by the mandatory blind LLM playtest each cycle, so a
-    // structurally-clean pack carries a low-priority blind-playtest rotation stub rather
+    // structurally-clean quest carries a low-priority blind-playtest rotation stub rather
     // than any heuristic-bot coverage score. (Two testing modes only: dev tests + blindtest.)
     if (warnings > 0) {
       const impact = Math.min(5, 1 + Math.ceil(warnings / 3));
@@ -570,9 +575,9 @@ export function assess(root: string): Assessment {
         id: `fix-${s.world_quest_id}`,
         category: "content_fix",
         target: s.world_quest_id,
-        title: `Fix "${s.id}" — ${warnings} validator warning(s)`,
+        title: `Fix quest "${s.world_quest_id}" — ${warnings} validator warning(s)`,
         rationale:
-          "Validator warnings are concrete, code-checkable content defects; clearing them keeps the pack sound and raises player-facing quality.",
+          "Validator warnings are concrete, code-checkable content defects; clearing them keeps the quest sound and raises player-facing quality.",
         evidence: [`${warnings} validator warning(s)`],
         impact,
         effort: "M",
@@ -586,9 +591,9 @@ export function assess(root: string): Assessment {
         id: `playtest-${s.world_quest_id}`,
         category: "content_fix",
         target: s.world_quest_id,
-        title: `Blind-playtest "${s.id}" — structurally clean; only a fresh blind LLM player can judge its quality`,
+        title: `Blind-playtest quest "${s.world_quest_id}" — structurally clean; only a fresh blind LLM player can judge its quality`,
         rationale:
-          "The validator and exhaustive solver prove this pack is winnable and sound; only a fresh blind LLM playtest reveals signposting/clarity/pacing issues a static check can't see.",
+          "The validator and exhaustive solver prove this quest is winnable and sound; only a fresh blind LLM playtest reveals signposting/clarity/pacing issues a static check can't see.",
         evidence: [
           "validator clean; due for a fresh blind LLM playtest (the rotation's quality judge)",
         ],
@@ -608,7 +613,7 @@ export function assess(root: string): Assessment {
       target: "world",
       title: `Add a new world-graph RPG quest (${worldQuestCount}/${WORLD_QUEST_TARGET})`,
       rationale:
-        "Breadth work must expand the contiguous Charter Marches graph, not create a detached pack. A registered world quest exercises the overworld handoff, RPG runtime, save metadata, and MCP quest-id path together.",
+        "Breadth work must expand the contiguous Charter Marches graph, not create a detached source file. A registered world quest exercises the overworld handoff, RPG runtime, save metadata, and MCP quest-id path together.",
       evidence: [`${worldQuestCount} playable world quest node(s), target ${WORLD_QUEST_TARGET}`],
       impact,
       effort: "L",
@@ -800,9 +805,9 @@ export function assess(root: string): Assessment {
     (a, b) => b.score - a.score || recencyOf(a) - recencyOf(b) || a.id.localeCompare(b.id),
   );
   return {
-    rpgPackCount,
+    rpgQuestCount,
     worldQuestCount,
-    packs,
+    quests: questHealth,
     allGeneratorsClean,
     candidates,
     top: candidates[0] ?? null,
@@ -818,31 +823,33 @@ function isRoutinePlaytestCandidate(c: ImprovementCandidate): boolean {
 export function formatAssessment(a: Assessment, opts: AssessmentFormatOptions = {}): string {
   const full = opts.full === true;
   const maxCandidates = opts.maxCandidates ?? 8;
-  const playable = a.packs.filter((p) => p.playable).length;
-  const warningCount = a.packs.reduce((sum, p) => sum + p.warnings, 0);
-  const unhealthy = a.packs.filter((p) => !p.playable || p.warnings > 0);
+  const playable = a.quests.filter((p) => p.playable).length;
+  const warningCount = a.quests.reduce((sum, p) => sum + p.warnings, 0);
+  const unhealthy = a.quests.filter((p) => !p.playable || p.warnings > 0);
   const lines: string[] = [];
   lines.push("# AFK assessment — next best improvement");
   lines.push("");
-  lines.push(`RPG catalog: ${a.rpgPackCount} pack(s), ${a.worldQuestCount} world quest node(s)`);
+  lines.push(`RPG catalog: ${a.rpgQuestCount} quest(s), ${a.worldQuestCount} world quest node(s)`);
   lines.push(
     `RPG generator mint-and-check: ${a.allGeneratorsClean ? "clean" : "findings present"}`,
   );
   lines.push("");
-  lines.push("## Pack health");
+  lines.push("## Quest health");
   lines.push(
-    `- ${playable}/${a.packs.length} playable; ${warningCount} validator warning(s); ${unhealthy.length} pack(s) need deterministic attention.`,
+    `- ${playable}/${a.quests.length} playable; ${warningCount} validator warning(s); ${unhealthy.length} quest(s) need deterministic attention.`,
   );
   if (full || unhealthy.length > 0) {
-    const listedPacks = full ? a.packs : unhealthy.slice(0, 8);
-    for (const p of listedPacks) {
+    const listedQuests = full ? a.quests : unhealthy.slice(0, 8);
+    for (const p of listedQuests) {
       const label = p.world_quest_id ?? p.path;
       lines.push(
         `- ${label} [${p.mode ?? "?"}] ${p.playable ? `${p.warnings} warning(s)` : "UNPLAYABLE"}`,
       );
     }
-    if (!full && unhealthy.length > listedPacks.length) {
-      lines.push(`- ... ${unhealthy.length - listedPacks.length} more unhealthy pack(s) in JSON.`);
+    if (!full && unhealthy.length > listedQuests.length) {
+      lines.push(
+        `- ... ${unhealthy.length - listedQuests.length} more unhealthy quest(s) in JSON.`,
+      );
     }
   }
   lines.push("");

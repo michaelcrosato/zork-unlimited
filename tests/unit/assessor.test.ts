@@ -1,7 +1,7 @@
 /**
  * The AFK assessor — the loop's deterministic "next best improvement" brain.
  * Verifies it spans the four categories, is deterministic (same repo ⇒ same
- * ranking), and reads real pack/mode health.
+ * ranking), and reads real quest health.
  */
 import { describe, it, expect } from "vitest";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -89,9 +89,9 @@ function withStaleAuditFixtureRoot(run: (root: string) => void): void {
 describe("assess()", () => {
   it("counts the RPG catalog and does not track retired legacy modes", () => {
     expect("packsByMode" in a).toBe(false);
-    expect(a.rpgPackCount).toBeGreaterThanOrEqual(16);
+    expect(a.rpgQuestCount).toBeGreaterThanOrEqual(16);
     expect(a.worldQuestCount).toBeGreaterThanOrEqual(16);
-    expect(a.packs.filter((p) => p.playable).every((p) => p.world_quest_id !== null)).toBe(true);
+    expect(a.quests.filter((p) => p.playable).every((p) => p.world_quest_id !== null)).toBe(true);
   });
 
   it("produces candidates and a top recommendation", () => {
@@ -128,7 +128,7 @@ describe("assess()", () => {
     // must not produce a high-impact `fix-` candidate from bot coverage alone.
     // (bug_0032 generalized this to planning-gated legacy content too — see
     // tests/regression/assessor_gated_cyoa_coverage.test.ts.)
-    for (const p of a.packs.filter((p) => p.mode === "rpg" && p.warnings === 0)) {
+    for (const p of a.quests.filter((p) => p.mode === "rpg" && p.warnings === 0)) {
       expect(
         a.candidates.find((c) => c.id === `fix-${p.world_quest_id ?? p.path}`),
       ).toBeUndefined();
@@ -162,7 +162,7 @@ describe("assess()", () => {
     // Breadth work is now a world graph target, not a mode/pack target. Legacy
     // content is no longer a breadth target, and raw RPG packs must not be raised
     // as detached authoring work.
-    expect(a.rpgPackCount).toBeGreaterThanOrEqual(16);
+    expect(a.rpgQuestCount).toBeGreaterThanOrEqual(16);
     expect(a.worldQuestCount).toBeGreaterThanOrEqual(16);
     expect(
       a.candidates.find((c) => c.category === "content_new" && c.target === "rpg"),
@@ -221,6 +221,10 @@ describe("assess()", () => {
     expect(out).toContain("RPG generator mint-and-check: clean");
     expect(out).toContain("Recommended next");
     expect(out).not.toContain("Packs by mode");
+    expect(out).toContain("Quest health");
+    expect(out).not.toContain("Pack health");
+    expect(out).toMatch(/Blind-playtest quest "[a-z0-9_]+"/);
+    expect(out).not.toMatch(/Blind-playtest "[a-z0-9_]+_v\d+"/);
   });
 
   it("formatAssessment compacts routine playtest rows but keeps full output available", () => {
@@ -397,9 +401,9 @@ describe("isSaturated — the saturation-triggered ultraplan signal", () => {
     score,
   });
   const withTop = (top: ImprovementCandidate | null): Assessment => ({
-    rpgPackCount: 16,
+    rpgQuestCount: 16,
     worldQuestCount: 16,
-    packs: [],
+    quests: [],
     allGeneratorsClean: true,
     candidates: top ? [top] : [],
     top,

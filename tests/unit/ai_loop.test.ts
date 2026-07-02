@@ -11,10 +11,10 @@ import {
   playtestTargetWorldQuestId,
   shouldRunUltraplan,
 } from "../../src/ai-loop.js";
-import type { Assessment, ImprovementCandidate, PackHealth } from "../../src/afk/assessor.js";
+import type { Assessment, ImprovementCandidate, QuestHealth } from "../../src/afk/assessor.js";
 
 const mainWorldQuestId = "breaking_weir";
-const mainStory = "content/rpg/pack/breaking_weir.yaml";
+const mainQuestPath = "content/rpg/pack/breaking_weir.yaml";
 const playtestRecord = "ai-runs/2026-06-25T00-00-00-000Z/playtest.md";
 
 function candidate(
@@ -36,18 +36,19 @@ function candidate(
 
 function assessment(top: ImprovementCandidate | null): Assessment {
   return {
-    rpgPackCount: 16,
+    rpgQuestCount: 16,
     worldQuestCount: 16,
-    packs: [],
+    quests: [],
     allGeneratorsClean: true,
     candidates: top ? [top] : [],
     top,
   };
 }
 
-function packHealth(path: string, warnings = 0): PackHealth {
+function questHealth(path: string, warnings = 0): QuestHealth {
   return {
     path,
+    pack_id: `${path.replace(/^content\/rpg\/pack\//, "").replace(/\.ya?ml$/, "")}_v1`,
     world_quest_id: path.replace(/^content\/rpg\/pack\//, "").replace(/\.ya?ml$/, ""),
     mode: "rpg",
     playable: true,
@@ -78,7 +79,7 @@ describe("shouldRunUltraplan", () => {
 });
 
 describe("playtestTarget", () => {
-  it("targets the pack being fixed for content_fix work", () => {
+  it("targets the quest being fixed for content_fix work", () => {
     const top = candidate("content_fix", "cold_forge");
 
     expect(playtestTarget(assessment(top), top, mainWorldQuestId)).toBe("cold_forge");
@@ -155,7 +156,7 @@ describe("buildPrompt blind-playtest contract", () => {
       top,
       target: top.target,
       targetWorldQuestId: "cold_forge",
-      targetHealth: packHealth("content/rpg/pack/cold_forge.yaml", 2),
+      targetHealth: questHealth("content/rpg/pack/cold_forge.yaml", 2),
       playtestRecord,
     });
 
@@ -178,7 +179,7 @@ describe("buildPrompt blind-playtest contract", () => {
       top,
       target: mainWorldQuestId,
       targetWorldQuestId: "breaking_weir",
-      targetHealth: packHealth(mainStory),
+      targetHealth: questHealth(mainQuestPath),
       playtestRecord,
     });
 
@@ -195,7 +196,7 @@ describe("buildPrompt blind-playtest contract", () => {
         a: assessment(top),
         top,
         target: top.target,
-        targetHealth: packHealth(top.target, 2),
+        targetHealth: questHealth(top.target, 2),
         playtestRecord,
       }),
     ).toThrow(/require a world quest id/);
@@ -207,12 +208,12 @@ describe("buildPrompt blind-playtest contract", () => {
       a: assessment(top),
       top,
       target: mainWorldQuestId,
-      targetHealth: packHealth(mainStory),
+      targetHealth: questHealth(mainQuestPath),
       playtestRecord,
     });
 
     expect(prompt).toContain("## STEP 1 — Add the new world quest, THEN blind-playtest IT");
-    expect(prompt).toContain("register it in the world graph/overworld manifest");
+    expect(prompt).toContain("Author/register the RPG quest in the world graph/overworld manifest");
     expect(prompt).toContain("pointed at the QUEST_ID YOU JUST REGISTERED");
     expect(prompt).toContain(
       "Let the blind read of YOUR new world quest drive a final polish pass",
@@ -220,6 +221,6 @@ describe("buildPrompt blind-playtest contract", () => {
     expect(prompt).toContain("playtest by quest_id");
     expect(prompt).toContain(`to: ${playtestRecord}`);
     expect(prompt).toContain(`Baseline ${mainWorldQuestId} need not be replayed`);
-    expect(prompt).not.toContain(`Playtest target this cycle: ${mainStory}`);
+    expect(prompt).not.toContain(`Playtest target this cycle: ${mainQuestPath}`);
   });
 });
