@@ -1134,6 +1134,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(last.observation.ending_id).toBe("ending_victory");
     const transcript = a.get_transcript({ session_id: game.session_id });
     expect("pack_path" in transcript).toBe(false);
+    expect("mode" in transcript).toBe(false);
     expect(transcript.world_quest_id).toBe("sunken_barrow");
     expect(transcript.summary.ended).toBe(true);
     expect(transcript.summary.ending_id).toBe("ending_victory");
@@ -1145,6 +1146,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       summary_only: true,
     });
     expect(summaryOnlyTranscript.state_hash).toBe(currentStateHash);
+    expect("mode" in summaryOnlyTranscript).toBe(false);
     expect(summaryOnlyTranscript.summary).toEqual(transcript.summary);
     expect(summaryOnlyTranscript.turns).toEqual([]);
     expect(JSON.stringify(summaryOnlyTranscript).length).toBeLessThan(
@@ -1155,6 +1157,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_turns: true,
     });
     expect(compactTranscript.state_hash).toBe(currentStateHash);
+    expect("mode" in compactTranscript).toBe(false);
     expect(compactTranscript.summary).toEqual(transcript.summary);
     expect(compactTranscript.turns.map((t) => t.action_id)).toEqual(
       transcript.turns.map((t) => t.action_id),

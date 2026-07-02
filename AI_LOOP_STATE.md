@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 156 -->
+<!-- historical_cycle_count: 157 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_transcript_mode
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: `get_transcript()` responses no longer return `mode: "rpg"`.
+- Loop effect: end-of-run audit payloads stay session/hash/source scoped while dropping another redundant one-value discriminator.
+- Guard: transcript tests assert full, summary-only, and compact-turn transcript payloads omit `mode`.
+- VERIFY: focused MCP tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_rpg_context_mode
 
@@ -124,12 +132,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Evidence: live MCP registration and ToolApi key checks no longer expose `choose_option`; `step_action` still carries compact defaults and stale-hash rejection.
 - Guard: MCP registration stays exact against ToolApi handlers, and unit coverage asserts the alias is absent.
 - VERIFY: focused MCP registration/tools tests, typecheck, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.
-
-### Cycle result — legal_actions_if_state_hash
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: RPG `list_legal_actions` now accepts `if_state_hash`.
-- Loop effect: polling/resume loops can get a hash-only `unchanged` response instead of repeating compact action menus when reducer state has not changed.
-- Evidence: live MCP unchanged action menu returned hash-only at 120 chars; stale menu read returned compact actions at 232 chars matching the post-step hash.
-- Guard: MCP regression asserts matching hashes return no action payload, while stale hashes still return compact actions.
-- VERIFY: focused MCP and registration tests, typecheck, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.

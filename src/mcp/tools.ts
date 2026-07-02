@@ -399,7 +399,6 @@ type TranscriptResponse<Turn> = {
   world_quest_id: string | null;
   generated_rpg_seed: number | null;
   state_hash: string;
-  mode: typeof SAVE_MODE;
   turns: Turn[];
   summary: TranscriptSummary;
 };
@@ -1571,7 +1570,6 @@ export function createToolApi(opts: { root: string }) {
         world_quest_id: s.worldQuestId ?? null,
         generated_rpg_seed: s.generatedRpgSeed ?? null,
         state_hash: hashState(s.state),
-        mode: SAVE_MODE,
         // Filter internal-bookkeeping events the same way step_action does, so the
         // transcript a player reads never surfaces `__`-prefixed vars/flags (bug_0260).
         turns: args.summary_only
