@@ -1523,17 +1523,20 @@ describe("MCP tools — the play loop (§9.1)", () => {
     const a = api();
     const game = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 1 });
     const session = a.sessions.get(game.session_id);
-    session.transcript = Array.from({ length: 20 }, (_, i) => ({
-      step: i,
-      scene_id: `scene_${i.toString().padStart(2, "0")}`,
-      title: `Scene ${i}`,
-      action_id: `action_${i}`,
-      action_text: `Action ${i}`,
-      events: [],
-      result_scene_id: `scene_${(i + 1).toString().padStart(2, "0")}`,
-      ended: false,
-      ending_id: null,
-    }));
+    a.sessions.replaceTranscript(
+      game.session_id,
+      Array.from({ length: 20 }, (_, i) => ({
+        step: i,
+        scene_id: `scene_${i.toString().padStart(2, "0")}`,
+        title: `Scene ${i}`,
+        action_id: `action_${i}`,
+        action_text: `Action ${i}`,
+        events: [],
+        result_scene_id: `scene_${(i + 1).toString().padStart(2, "0")}`,
+        ended: false,
+        ending_id: null,
+      })),
+    );
     session.state = {
       ...session.state,
       inventory: numberedIds("item", 20),
@@ -1581,7 +1584,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_summary: true,
     });
     const session = a.sessions.get(game.session_id);
-    session.transcript.push({
+    a.sessions.appendTranscript(game.session_id, {
       step: session.state.step,
       scene_id: session.state.current,
       title: "Synthetic transcript-only row",

@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { Rules } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import { initState } from "../../src/core/state.js";
-import { SessionStore, type Session } from "../../src/mcp/sessions.js";
+import { hashState } from "../../src/core/hash.js";
+import { SessionStore, type SessionInit } from "../../src/mcp/sessions.js";
 import type { RpgIndex } from "../../src/rpg/runner.js";
 import type { RpgAction } from "../../src/api/types.js";
 
@@ -15,7 +16,7 @@ function state(current = "start"): GameState {
   return initState({ seed: 7, start: current });
 }
 
-function sessionInit(overrides: Partial<Omit<Session, "id">> = {}): Omit<Session, "id"> {
+function sessionInit(overrides: Partial<SessionInit> = {}): SessionInit {
   return {
     packId: "test-pack",
     contentHash: "0".repeat(64),
@@ -77,5 +78,35 @@ describe("SessionStore", () => {
     expect(store.get(first.id).hideGraph).toBe(true);
     expect(store.get(second.id).state.current).toBe("other");
     expect(store.get(second.id).packId).toBe("other");
+  });
+
+  it("keeps transcript log hashes in sync with store-owned writes", () => {
+    const store = new SessionStore();
+    const session = store.create(sessionInit());
+    const emptyHash = session.transcriptLogHash;
+
+    const turn = {
+      step: 0,
+      scene_id: "start",
+      title: "Start",
+      action_id: null,
+      action_text: null,
+      events: [],
+      result_scene_id: "start",
+      ended: false,
+      ending_id: null,
+    };
+    store.appendTranscript(session.id, turn);
+    expect(session.transcript).toEqual([turn]);
+    expect(session.transcriptLogHash).toBe(
+      hashState({
+        previous: emptyHash,
+        turn,
+      }),
+    );
+
+    store.replaceTranscript(session.id, []);
+    expect(session.transcript).toEqual([]);
+    expect(session.transcriptLogHash).toBe(hashState([]));
   });
 });

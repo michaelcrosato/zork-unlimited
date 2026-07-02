@@ -11,6 +11,7 @@ import type { Rules } from "../core/engine.js";
 import type { GameEvent } from "../core/events.js";
 import type { RpgAction } from "../api/types.js";
 import type { RpgIndex } from "../rpg/runner.js";
+import { hashState } from "../core/hash.js";
 
 export type TranscriptTurn = {
   step: number;
@@ -41,19 +42,26 @@ export type Session = {
   rules: Rules<RpgAction>;
   state: GameState;
   transcript: TranscriptTurn[];
+  transcriptLogHash: string;
   /** Difficulty: when true, the agent-facing observation hides each exit's
    *  destination (`exit.to`) so the spatial graph must be reasoned out, not read
    *  off. Default false — full graph, the legacy behavior. */
   hideGraph?: boolean;
 };
 
+export type SessionInit = Omit<Session, "id" | "transcriptLogHash">;
+
 export class SessionStore {
   private counter = 0;
   private readonly sessions = new Map<string, Session>();
 
-  create(init: Omit<Session, "id">): Session {
+  create(init: SessionInit): Session {
     const id = `sess_${++this.counter}`;
-    const session: Session = { id, ...init };
+    const session: Session = {
+      id,
+      ...init,
+      transcriptLogHash: hashState(init.transcript),
+    };
     this.sessions.set(id, session);
     return session;
   }
@@ -67,6 +75,23 @@ export class SessionStore {
   update(id: string, state: GameState): Session {
     const session = this.get(id);
     session.state = state;
+    return session;
+  }
+
+  appendTranscript(id: string, turn: TranscriptTurn): Session {
+    const session = this.get(id);
+    session.transcript.push(turn);
+    session.transcriptLogHash = hashState({
+      previous: session.transcriptLogHash,
+      turn,
+    });
+    return session;
+  }
+
+  replaceTranscript(id: string, transcript: TranscriptTurn[]): Session {
+    const session = this.get(id);
+    session.transcript = transcript;
+    session.transcriptLogHash = hashState(transcript);
     return session;
   }
 }

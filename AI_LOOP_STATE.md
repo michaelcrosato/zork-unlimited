@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 201 -->
+<!-- historical_cycle_count: 202 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — cached_transcript_log_hash
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: session transcripts now maintain an append-only `transcriptLogHash`; `get_transcript` combines that cached log hash with `state_hash` instead of hashing full transcript rows every poll.
+- Loop effect: repeated transcript freshness checks stay O(1) relative to transcript length while still changing when state or transcript history changes.
+- Guard: focused MCP/session tests prove store-owned append/replace writes keep the transcript log hash in sync.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — transcript_hash_polling
 

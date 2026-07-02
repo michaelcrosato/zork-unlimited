@@ -655,7 +655,7 @@ function compactTranscriptSummary(summary: TranscriptSummary): TranscriptCompact
 function hashTranscript(session: Session, stateHash: string): string {
   return hashState({
     state_hash: stateHash,
-    turns: session.transcript,
+    transcript_log_hash: session.transcriptLogHash,
   });
 }
 
@@ -911,7 +911,7 @@ export function createToolApi(opts: { root: string }) {
       ...(opts.hideGraph ? { hideGraph: true } : {}),
     });
     const obs = buildObsFor(index, st);
-    session.transcript.push({
+    sessions.appendTranscript(session.id, {
       step: st.step,
       scene_id: obsLocation(obs),
       title: obs.title,
@@ -1684,7 +1684,7 @@ export function createToolApi(opts: { root: string }) {
       const after = buildObsFor(s.index, s.state, {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
       });
-      s.transcript.push({
+      sessions.appendTranscript(s.id, {
         step: beforeStep,
         scene_id: beforeSceneId,
         title: beforeTitle,

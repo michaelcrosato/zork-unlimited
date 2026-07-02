@@ -132,6 +132,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - `get_transcript({ if_transcript_hash })` can return a hash-only `unchanged`
   response, avoiding repeated transcript summary payloads when transcript rows
   have not changed.
+- Transcript freshness uses a cached session log hash plus `state_hash`, so
+  repeated transcript polls do not re-hash full turn history.
 - Public MCP `get_transcript` defaults to compact summary-only output; callers can
   pass `summary_only: false` and `compact_summary: false` when they need full
   route/event history.
