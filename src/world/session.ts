@@ -561,6 +561,11 @@ type OverworldResolutionProofIndex = {
   poisById: ReadonlyMap<string, OverworldPoi>;
 };
 
+type OverworldRegionalArcCompletionIndex = {
+  eventsById: ReadonlyMap<string, OverworldLocalEvent>;
+  regionalArcs: readonly OverworldRegionalArc[];
+};
+
 type OverworldLocalActionJournalReachabilityIndex = {
   areasById: ReadonlyMap<string, OverworldArea>;
   charactersById: ReadonlyMap<string, OverworldCharacter>;
@@ -2059,6 +2064,72 @@ function assertSnapshotEventResolutionProofs(
   }
 }
 
+function resolvedAnchorTimesForRegionalArc(
+  snapshot: OverworldSessionSnapshot,
+  arc: OverworldRegionalArc,
+  eventsById: ReadonlyMap<string, OverworldLocalEvent>,
+): number[] {
+  const anchorTownIds = new Set(arc.anchor_towns);
+  const journalById = new Map(snapshot.journalEntries.map((entry) => [entry.id, entry]));
+  const earliestResolutionByAnchorTown = new Map<string, number>();
+
+  for (const eventId of snapshot.resolvedEventIds) {
+    const event = eventsById.get(eventId);
+    if (!event || !anchorTownIds.has(event.home)) continue;
+    const resolution = journalById.get(`resolve:${eventId}`);
+    if (!resolution) continue;
+    const resolvedAt = journalEntryRecordedAt(resolution);
+    const previous = earliestResolutionByAnchorTown.get(event.home);
+    if (previous === undefined || resolvedAt < previous) {
+      earliestResolutionByAnchorTown.set(event.home, resolvedAt);
+    }
+  }
+
+  return [...earliestResolutionByAnchorTown.values()].sort((left, right) => left - right);
+}
+
+function assertSnapshotRegionalArcCompletionProofs(
+  snapshot: OverworldSessionSnapshot,
+  sources: OverworldRegionalArcCompletionIndex,
+): void {
+  const completedRegionalArcIds = new Set(snapshot.completedRegionalArcIds);
+  const journalById = new Map(snapshot.journalEntries.map((entry) => [entry.id, entry]));
+
+  for (const arc of sources.regionalArcs) {
+    const resolvedAnchorTimes = resolvedAnchorTimesForRegionalArc(
+      snapshot,
+      arc,
+      sources.eventsById,
+    );
+    const hasRequiredResolutions = resolvedAnchorTimes.length >= arc.required_resolutions;
+    const completed = completedRegionalArcIds.has(arc.id);
+
+    if (completed && !hasRequiredResolutions) {
+      throw new Error(
+        `Overworld session snapshot completed regional arc "${arc.id}" lacks required resolved anchor towns.`,
+      );
+    }
+    if (!completed && hasRequiredResolutions) {
+      throw new Error(
+        `Overworld session snapshot is missing completed regional arc "${arc.id}" earned by resolved anchor towns.`,
+      );
+    }
+    if (!completed) continue;
+
+    const arcEntry = journalById.get(`arc:${arc.id}`);
+    if (!arcEntry) continue;
+    const completionProofAt =
+      arc.required_resolutions > 0
+        ? resolvedAnchorTimes[arc.required_resolutions - 1]!
+        : STARTING_MINUTES;
+    if (journalEntryRecordedAt(arcEntry) < completionProofAt) {
+      throw new Error(
+        `Overworld session snapshot completed regional arc "${arc.id}" was recorded before enough anchor resolutions.`,
+      );
+    }
+  }
+}
+
 function replaceStringSet(target: Set<string>, values: readonly string[]): void {
   target.clear();
   for (const value of values) target.add(value);
@@ -2352,6 +2423,10 @@ export class OverworldSession {
       charactersById,
       eventsById,
       poisById,
+    });
+    assertSnapshotRegionalArcCompletionProofs(snapshot, {
+      eventsById,
+      regionalArcs: this.world.regional_arcs,
     });
     assertSnapshotDiscoveredLocalSourceCountReplay(snapshot, localActionJournalSources);
     assertSnapshotDiscoveredAreaCountReplay(snapshot, this.world, localActionJournalSources);

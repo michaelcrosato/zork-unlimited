@@ -185,6 +185,71 @@ function exportedSnapshotAfterRoadStrategy(strategy: "assist_travelers" | "cauti
   return { a, snapshot };
 }
 
+function overworldRoadPath(from: string, to: string): string[] {
+  const queue: { town: string; roadIds: string[] }[] = [{ town: from, roadIds: [] }];
+  const seen = new Set<string>([from]);
+  for (let index = 0; index < queue.length; index += 1) {
+    const current = queue[index]!;
+    if (current.town === to) return current.roadIds;
+    for (const edge of overworld.edges.filter(
+      (candidate) => candidate.from === current.town || candidate.to === current.town,
+    )) {
+      const nextTown = edge.from === current.town ? edge.to : edge.from;
+      if (seen.has(nextTown)) continue;
+      seen.add(nextTown);
+      queue.push({ town: nextTown, roadIds: [...current.roadIds, edge.id] });
+    }
+  }
+  throw new Error(`expected road path from ${from} to ${to}`);
+}
+
+function travelOverworldSessionTo(
+  a: ReturnType<typeof api>,
+  sessionId: string,
+  townId: string,
+): void {
+  const start = a.get_overworld_session({ session_id: sessionId }).observation.current.id;
+  for (const roadId of overworldRoadPath(start, townId)) {
+    a.travel_overworld_session({ session_id: sessionId, road_id: roadId });
+    const observation = a.get_overworld_session({ session_id: sessionId }).observation;
+    if (observation.pendingRoadEncounter) {
+      a.resolve_overworld_session_road_encounter({
+        session_id: sessionId,
+        strategy: "press_on",
+      });
+    }
+  }
+}
+
+function resolveCurrentOverworldSessionEvent(a: ReturnType<typeof api>, sessionId: string): void {
+  const view = a.get_overworld_session({ session_id: sessionId }).observation;
+  const event = view.events.find((candidate) => !view.resolvedEventIds.includes(candidate.id));
+  if (!event) throw new Error(`expected unresolved event in ${view.current.id}`);
+  const poi = view.pois[0];
+  const contact = view.characters[0];
+  if (!poi || !contact) throw new Error("expected local event prerequisites");
+  a.scout_overworld_session_poi({ session_id: sessionId, poi_id: poi.id });
+  a.talk_overworld_session_contact({ session_id: sessionId, character_id: contact.id });
+  a.investigate_overworld_session_event({ session_id: sessionId, event_id: event.id });
+  a.resolve_overworld_session_event({ session_id: sessionId, event_id: event.id });
+}
+
+function exportedSnapshotWithCompletedRegionalArc() {
+  const a = api();
+  const started = a.start_overworld();
+  const arc = overworld.regional_arcs.find((candidate) => candidate.region === "Capital / Mohawk");
+  if (!arc) throw new Error("expected Capital / Mohawk regional arc");
+
+  for (const townId of arc.anchor_towns.slice(0, arc.required_resolutions)) {
+    travelOverworldSessionTo(a, started.session_id, townId);
+    resolveCurrentOverworldSessionEvent(a, started.session_id);
+  }
+
+  const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
+  expect(snapshot.completedRegionalArcIds).toContain(arc.id);
+  return { a, snapshot, arc };
+}
+
 function exportedSnapshotWithPendingRoad() {
   const a = api();
   const started = a.start_overworld();
@@ -465,7 +530,7 @@ describe("overworld snapshot restore integrity", () => {
     );
   });
 
-  it("restores regional arc journal entries bound to known regions", () => {
+  it("rejects completed regional arcs without enough resolved anchors", () => {
     const { a, snapshot } = exportedSnapshotAfterTwoRoads();
     const arc = overworld.regional_arcs[0]!;
     const regionalArcSnapshot = {
@@ -484,7 +549,43 @@ describe("overworld snapshot restore integrity", () => {
       ],
     };
 
-    expect(() => a.restore_overworld_session({ snapshot: regionalArcSnapshot })).not.toThrow();
+    expect(() => a.restore_overworld_session({ snapshot: regionalArcSnapshot })).toThrow(
+      /completed regional arc.*required resolved anchor towns/,
+    );
+  });
+
+  it("rejects missing completed regional arcs earned by resolved anchors", () => {
+    const { a, snapshot, arc } = exportedSnapshotWithCompletedRegionalArc();
+    const forgedMissingArc = {
+      ...snapshot,
+      completedRegionalArcIds: snapshot.completedRegionalArcIds.filter((id) => id !== arc.id),
+      journalEntries: snapshot.journalEntries.filter((entry) => entry.id !== `arc:${arc.id}`),
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedMissingArc })).toThrow(
+      /missing completed regional arc.*resolved anchor towns/,
+    );
+  });
+
+  it("rejects regional arc journal entries before enough anchor resolutions", () => {
+    const { a, snapshot, arc } = exportedSnapshotWithCompletedRegionalArc();
+    const arcEntryId = `arc:${arc.id}`;
+    const arcEntry = snapshot.journalEntries.find((entry) => entry.id === arcEntryId);
+    if (!arcEntry) throw new Error("expected regional arc journal entry");
+    const forgedEarlyArcEntry = {
+      ...snapshot,
+      journalEntries: [
+        ...snapshot.journalEntries.filter((entry) => entry.id !== arcEntryId),
+        {
+          ...arcEntry,
+          recordedAt: timeLabelForMinutes(8 * 60),
+        },
+      ],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedEarlyArcEntry })).toThrow(
+      /completed regional arc.*before enough anchor resolutions/,
+    );
   });
 
   it.each(localActionJournalCases)(

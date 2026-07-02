@@ -154,6 +154,7 @@ Make discovered overworld quest leads start real RPG sessions.
   travel/road/service clock and resource replay drift,
   local-action journal reachability/town-chronology drift,
   resolved-event locality/prerequisite drift,
+  regional-arc completion proof/timing drift,
   non-newest-first or future travel logs, and impossible travel vitals before
   rebuilding live session state.
 - Compact overworld context now carries capped id-only recent travel tuples so
