@@ -38,14 +38,15 @@ function observationWithLargeState(): RpgObservation {
 describe("compactRpgObservation", () => {
   it("caps unbounded state lists and keeps recent journal entries", () => {
     const obs = observationWithLargeState();
-    const compact = compactRpgObservation(obs, [{ id: "look" }]);
+    const compact = compactRpgObservation(obs, ["look"]);
 
-    expect(compact.v).toBe(4);
+    expect(compact.v).toBe(5);
     expect("mode" in compact).toBe(false);
     expect(compact.inv).toEqual(ids("item", 16));
     expect(compact.flags).toEqual(ids("flag", 16));
     expect(compact.journal).toEqual(ids("journal", 10).slice(-5));
     expect(compact.more).toEqual([4, 4, 5]);
+    expect(compact.actions).toEqual(["look"]);
     expect(compact.vitals[3]).toBe(5);
     expect(compact.vars).toEqual({ lore: 3 });
     expect(JSON.stringify(compact).length).toBeLessThan(JSON.stringify(obs).length);
@@ -70,7 +71,7 @@ describe("compactRpgObservation", () => {
       },
     };
 
-    const compact = compactRpgObservation(obs, [{ id: "look" }]);
+    const compact = compactRpgObservation(obs, ["look"]);
 
     expect(compact.inv).toEqual(["key"]);
     expect(compact.flags).toEqual(["door_open"]);

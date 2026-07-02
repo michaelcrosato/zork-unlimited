@@ -722,7 +722,10 @@ function rpgViewField<Args extends RpgResponseOptions>(
 ): RpgViewField<Args> {
   if (args.compact_observation === true) {
     return {
-      context: compactRpgObservation(obs, publicActions(obs, { compactActions: true })),
+      context: compactRpgObservation(
+        obs,
+        obs.available_actions.map((action) => action.id),
+      ),
     } as RpgViewField<Args>;
   }
   return {

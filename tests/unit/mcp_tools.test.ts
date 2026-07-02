@@ -567,7 +567,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(compactStartedQuest.context.here[0]).toBe(started.observation.current.id);
     expect("observation" in compactStartedQuest).toBe(false);
-    expect(compactStartedQuest.rpg_session.context.actions?.[0]).not.toHaveProperty("command");
+    expect(compactStartedQuest.rpg_session.context.actions?.[0]).toEqual(expect.any(String));
     expect("observation" in compactStartedQuest.rpg_session).toBe(false);
     expect(JSON.stringify(compactStartedQuest).length).toBeLessThan(
       JSON.stringify(startedQuest).length,
@@ -1754,7 +1754,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect("observation" in compactStart).toBe(false);
     expect("mode" in compactStart.context).toBe(false);
     expect(compactStart.context).toMatchObject({
-      v: 4,
+      v: 5,
       here: [fullStart.observation.room, fullStart.observation.title],
     });
     expect(compactStart.context.vitals).toEqual([
@@ -1764,8 +1764,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       fullStart.observation.score,
       fullStart.observation.max_score,
     ]);
-    expect(compactStart.context.actions?.[0]).toMatchObject({ id: expect.any(String) });
-    expect(compactStart.context.actions?.[0]).not.toHaveProperty("command");
+    expect(compactStart.context.actions?.[0]).toEqual(expect.any(String));
     expect(compactStart.context.vars).toMatchObject({ might: expect.any(Number) });
     expect(compactStart.context.vars).not.toHaveProperty("hp");
     expect(compactStart.context.vars).not.toHaveProperty("score");
@@ -1789,7 +1788,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_observation: true,
     });
     expect(compactObservation.context.exits?.[0]).toEqual(expect.any(String));
-    expect(compactObservation.context.actions?.[0]).not.toHaveProperty("command");
+    expect(compactObservation.context.actions?.[0]).toEqual(expect.any(String));
     expect("mode" in compactObservation.context).toBe(false);
 
     const unchangedObservation = a.get_observation({
@@ -1819,9 +1818,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect("observation" in rejected).toBe(false);
     expect(rejected.context.here[0]).toBe(fullStart.observation.room);
 
-    const moveActionId = compactObservation.context.actions?.find(
-      (action) => action.id === "go_down",
-    )?.id;
+    const moveActionId = compactObservation.context.actions?.find((action) => action === "go_down");
     expect(moveActionId).toBe("go_down");
     const moved = a.step_action({
       session_id: fullStart.session_id,
@@ -2005,7 +2002,7 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
       fullReload.observation.title,
     ]);
     expect(compactReload.context.exits?.[0]).toEqual(expect.any(String));
-    expect(compactReload.context.actions?.[0]).not.toHaveProperty("command");
+    expect(compactReload.context.actions?.[0]).toEqual(expect.any(String));
     expect(JSON.stringify(compactReload).length).toBeLessThan(JSON.stringify(fullReload).length);
   });
 

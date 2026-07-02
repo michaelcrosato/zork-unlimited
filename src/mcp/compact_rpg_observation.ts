@@ -1,11 +1,9 @@
 import type { RpgObservation } from "../rpg/observation.js";
-import type { McpActionOption } from "./types.js";
-
 const CORE_STATE_VARS = new Set(["attack", "defense", "hp", "max_score", "score"]);
 const COMPACT_INVENTORY_LIMIT = 16;
 const COMPACT_FLAG_LIMIT = 16;
 const COMPACT_JOURNAL_LIMIT = 5;
-export const RPG_COMPACT_OBSERVATION_VERSION = 4 as const;
+export const RPG_COMPACT_OBSERVATION_VERSION = 5 as const;
 
 export type RpgCompactRef = readonly [id: string, name: string];
 export type RpgCompactExit = string | readonly [direction: string, to: string];
@@ -27,7 +25,7 @@ export type RpgCompactObservation = {
   text: string;
   exits?: RpgCompactExit[];
   vitals: RpgCompactVitals;
-  actions?: McpActionOption[];
+  actions?: string[];
   objects?: RpgCompactRef[];
   npcs?: RpgCompactRef[];
   blocked?: RpgCompactBlockedExit[];
@@ -68,7 +66,7 @@ function omittedCount(values: readonly string[], compacted: readonly string[]): 
 
 export function compactRpgObservation(
   obs: RpgObservation,
-  actions: McpActionOption[],
+  actionIds: string[],
 ): RpgCompactObservation {
   const vars = compactVars(obs.state.vars);
   const inv = compactHead(obs.inventory, COMPACT_INVENTORY_LIMIT);
@@ -90,7 +88,7 @@ export function compactRpgObservation(
     text: obs.description,
     ...(exits.length > 0 ? { exits } : {}),
     vitals: [obs.stats.hp, obs.stats.attack, obs.stats.defense, obs.score, obs.max_score],
-    ...(actions.length > 0 ? { actions } : {}),
+    ...(actionIds.length > 0 ? { actions: actionIds } : {}),
     ...(obs.visible_objects.length > 0 ? { objects: obs.visible_objects.map(ref) } : {}),
     ...(obs.npcs_present.length > 0 ? { npcs: obs.npcs_present.map(ref) } : {}),
     ...(obs.blocked_exits.length > 0

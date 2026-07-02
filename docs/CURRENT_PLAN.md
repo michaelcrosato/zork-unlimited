@@ -87,7 +87,7 @@ Make discovered overworld quest leads start real RPG sessions.
   `new_game` remains only for generated-pack smoke play.
 - RPG start/load responses now carry one-time world context; follow-up
   observations omit that repeated binding to lower per-turn MCP payload.
-- Repeated observe/step calls can carry action ids without repeated command
+- Compact RPG observations carry action ids as strings without repeated command
   labels; full labels remain available on demand.
 - Public MCP `list_legal_actions` defaults to compact action ids; callers can pass
   `compact_actions: false` when they need player-facing command labels.
@@ -105,7 +105,7 @@ Make discovered overworld quest leads start real RPG sessions.
   branch on shape without reading full reducer events.
 - Compact RPG MCP observations now cap inventory/flags and keep only recent
   journal entries, with `more: [inventory, flags, journal]` omission counts
-  under context `v: 4`.
+  and string action ids under context `v: 5`.
 - `get_observation({ if_state_hash })` can return hash-only `unchanged`
   responses, avoiding repeated context payloads for polling or resume loops; the
   old `get_scene` alias is no longer part of the live MCP/ToolApi loop.

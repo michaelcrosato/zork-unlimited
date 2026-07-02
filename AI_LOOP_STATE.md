@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 194 -->
+<!-- historical_cycle_count: 195 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_rpg_action_ids
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact RPG observation actions now serialize as bare action-id strings under context `v: 5`.
+- Loop effect: default MCP observe/start/step contexts keep legal action identity without repeating `{ "id": ... }` object wrappers every turn.
+- Guard: focused compact-observation/MCP docs/tests, typecheck, lint, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_transcript_more_tuple
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/token surface: compact RPG observations now omit `actions` when no action ids are available.
 - Loop effect: terminal compact observations keep ending state without paying for an empty live-menu array.
 - Guard: focused compact-RPG/MCP/docs tests, typecheck, and format check passed before full gates.
-- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_transcript_summary_ending
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: compact RPG transcript summaries now omit `ending_id` until an actual ending exists.
-- Loop effect: in-progress audit polls keep `ended` without paying for repeated `ending_id: null` scaffolding.
-- Guard: focused MCP transcript/docs tests, typecheck, and format check passed before full gates.
 - VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.

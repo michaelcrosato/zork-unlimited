@@ -79,6 +79,10 @@ function actionsOf(view) {
   return view?.actions ?? view?.available_actions ?? [];
 }
 
+function actionIdOf(action) {
+  return typeof action === "string" ? action : action?.id;
+}
+
 function fail(msg) {
   console.error(`✗ ${msg}`);
   process.exitCode = 1;
@@ -128,7 +132,8 @@ async function main() {
     for (let i = 0; i < STEPS; i++) {
       const actions = actionsOf(view);
       if (view?.ended || actions.length === 0) break;
-      const actionId = actions[0].id;
+      const actionId = actionIdOf(actions[0]);
+      if (typeof actionId !== "string") fail("first legal action did not expose an action id");
       const res = parseResult(
         await client.callTool({
           name: "step_action",
