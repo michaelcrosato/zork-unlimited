@@ -119,7 +119,7 @@ fi
 
 SOURCE_LABEL="quest=$QUEST_ID"
 SOURCE_SLUG="$QUEST_ID"
-START_INSTRUCTION="Start: \`mcp__adventureforge__start_world_quest\` with quest_id = \"$QUEST_ID\", seed = $SEED, hide_graph = true, compact_observation = true."
+START_INSTRUCTION="Start: \`mcp__adventureforge__start_world_quest\` with world_quest_id = \"$QUEST_ID\", seed = $SEED, hide_graph = true, compact_observation = true."
 
 # Smoke mode: prove the MCP path with no LLM and no token spend.
 if [[ "$SMOKE" == "1" ]]; then

@@ -328,7 +328,7 @@ type RpgNewGameArgs = {
 } & RpgResponseOptions;
 
 type RpgStartWorldQuestArgs = {
-  quest_id: string;
+  world_quest_id: string;
   seed?: number;
   hide_graph?: boolean;
 } & RpgResponseOptions;
@@ -1340,7 +1340,7 @@ export function createToolApi(opts: { root: string }) {
       }
       const quest = session.startQuest(args.quest_id);
       const rpgSession = this.start_world_quest({
-        quest_id: quest.id,
+        world_quest_id: quest.id,
         ...(args.seed !== undefined ? { seed: args.seed } : {}),
         ...(args.hide_graph ? { hide_graph: true } : {}),
         ...(args.compact_actions ? { compact_actions: true } : {}),
@@ -1430,7 +1430,13 @@ export function createToolApi(opts: { root: string }) {
     start_world_quest<Args extends RpgStartWorldQuestArgs>(
       args: Args,
     ): RpgWorldQuestStartPayload<Args> {
-      const resolved = resolveWorldQuestPackPath(args.quest_id);
+      if ((args as { quest_id?: unknown }).quest_id !== undefined) {
+        throw new Error("start_world_quest accepts world_quest_id, not quest_id.");
+      }
+      if ((args as { world_quest_id?: unknown }).world_quest_id === undefined) {
+        throw new Error("start_world_quest requires world_quest_id.");
+      }
+      const resolved = resolveWorldQuestPackPath(args.world_quest_id);
       const started = startRpgSession(requirePlayable(resolved.packPath), args, {
         packPath: resolved.packPath,
         worldQuestId: resolved.node.id,

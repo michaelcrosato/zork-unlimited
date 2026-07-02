@@ -164,7 +164,7 @@ describe("buildPrompt blind-playtest contract", () => {
     expect(prompt).toContain(
       "Playtest target this cycle: cold_forge (content/rpg/pack/cold_forge.yaml; 2 validator warning(s))",
     );
-    expect(prompt).toContain("with quest_id=cold_forge and a seed");
+    expect(prompt).toContain("with world_quest_id=cold_forge and a seed");
     expect(prompt).not.toContain("with this pack and a seed");
     expect(prompt).toContain("2 validator warning(s)");
     expect(prompt).toContain(`to: ${playtestRecord}`);
@@ -184,7 +184,7 @@ describe("buildPrompt blind-playtest contract", () => {
     });
 
     expect(prompt).toContain("Playtest target this cycle: breaking_weir (0 validator warning(s))");
-    expect(prompt).toContain("with quest_id=breaking_weir and a seed");
+    expect(prompt).toContain("with world_quest_id=breaking_weir and a seed");
     expect(prompt).not.toContain("with this pack and a seed");
   });
 
@@ -218,7 +218,7 @@ describe("buildPrompt blind-playtest contract", () => {
     expect(prompt).toContain(
       "Let the blind read of YOUR new world quest drive a final polish pass",
     );
-    expect(prompt).toContain("playtest by quest_id");
+    expect(prompt).toContain("playtest by world_quest_id");
     expect(prompt).toContain(`to: ${playtestRecord}`);
     expect(prompt).toContain(`Baseline ${mainWorldQuestId} need not be replayed`);
     expect(prompt).not.toContain(`Playtest target this cycle: ${mainQuestPath}`);

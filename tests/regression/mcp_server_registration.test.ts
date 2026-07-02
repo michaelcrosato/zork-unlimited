@@ -80,7 +80,8 @@ describe("MCP server registration", () => {
     expect(loadGame).toContain("world_quest_id");
     expect(loadGame).toContain("generate_rpg_seed");
     expect(loadGame).not.toContain("pack_path");
-    expect(startWorldQuest).toContain("quest_id");
+    expect(startWorldQuest).toContain("world_quest_id");
+    expect(startWorldQuest).not.toMatch(/\n\s+quest_id:/);
     expect(startWorldQuest).not.toContain("quest_path");
     expect(validateQuest).toContain("WORLD_QUEST_SOURCE");
     expect(validateQuest).not.toContain("QUEST_ID_SOURCE");

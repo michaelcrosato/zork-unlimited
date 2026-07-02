@@ -34,7 +34,7 @@ const api = () => createToolApi({ root: ROOT });
 /** Serialize a fresh valid save, then mutate ONE state field. */
 function forgeSave(poison: (state: Record<string, unknown>) => void): string {
   const a = api();
-  const game = a.start_world_quest({ quest_id: WORLD_QUEST_ID, seed: 1 });
+  const game = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
   const saved = a.save_game({ session_id: game.session_id });
   const bundle = JSON.parse(saved.save) as { state: Record<string, unknown> };
   poison(bundle.state);
@@ -118,7 +118,7 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
 describe("save/load referential integrity — GREEN false-rejection guards", () => {
   it("a clean mid-game RPG save still round-trips byte-identically", () => {
     const a = api();
-    const game = a.start_world_quest({ quest_id: WORLD_QUEST_ID, seed: 1 });
+    const game = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
     stepByCommand(a, game.session_id, "go down");
     const before = a.get_observation({ session_id: game.session_id }).state_hash;
     const saved = a.save_game({ session_id: game.session_id });
@@ -131,7 +131,7 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
     // The inventory gate must never reject a real declared object the player
     // picked up.
     const a = api();
-    const game = a.start_world_quest({ quest_id: WORLD_QUEST_ID, seed: 1 });
+    const game = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
     const sid = game.session_id;
     stepByCommand(a, sid, "go down");
     stepByCommand(a, sid, "take iron bar");
@@ -149,7 +149,7 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
     // At an RPG ending, current remains a declared room while endingId names a
     // declared ending. Both references must pass the pack-aware gate.
     const a = api();
-    const game = a.start_world_quest({ quest_id: WORLD_QUEST_ID, seed: 1 });
+    const game = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
     playSunkenBarrowToVictory(a, game.session_id);
     const ended = a.get_observation({ session_id: game.session_id });
     const saved = a.save_game({ session_id: game.session_id });

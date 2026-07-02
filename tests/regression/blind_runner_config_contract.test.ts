@@ -51,7 +51,7 @@ describe("blind runner MCP config contract", () => {
     expect(smoke).not.toContain('"start_game"');
     expect(mcpHarness).toContain("<world_quest_id>");
     expect(mcpHarness).toContain('"start_world_quest"');
-    expect(mcpHarness).toContain("quest_id: questId");
+    expect(mcpHarness).toContain("world_quest_id: questId");
     expect(mcpHarness).not.toContain('"new_game"');
     expect(mcpHarness).not.toContain("pack_path");
   });

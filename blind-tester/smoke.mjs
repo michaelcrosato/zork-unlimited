@@ -108,7 +108,12 @@ async function main() {
     const start = parseResult(
       await client.callTool({
         name: startTool,
-        arguments: { quest_id: QUEST_ID, seed: SEED, hide_graph: true, compact_observation: true },
+        arguments: {
+          world_quest_id: QUEST_ID,
+          seed: SEED,
+          hide_graph: true,
+          compact_observation: true,
+        },
       }),
     );
     if (!start.session_id) throw new Error(`${startTool} returned no session_id (${SOURCE_LABEL})`);

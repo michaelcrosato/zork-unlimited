@@ -68,7 +68,7 @@ STRICT RULES:
 
 PLAY:
 - Start shipped quests with mcp__adventureforge__start_world_quest,
-  quest_id = "<QUEST_ID>", seed = <SEED>, hide_graph = true,
+  world_quest_id = "<QUEST_ID>", seed = <SEED>, hide_graph = true,
   compact_observation = true.
 - Each compact context gives scene text, state/vitals, and context.actions (stable
   ids). Choose one with step_action(session_id, action_id, hide_graph = true,

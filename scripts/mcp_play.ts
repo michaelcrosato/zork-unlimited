@@ -57,7 +57,10 @@ async function main(): Promise<void> {
   await client.connect(transport);
 
   const game = parseResult(
-    await client.callTool({ name: "start_world_quest", arguments: { quest_id: questId, seed } }),
+    await client.callTool({
+      name: "start_world_quest",
+      arguments: { world_quest_id: questId, seed },
+    }),
   );
   const sessionId = game.session_id!;
   let current = game.observation;

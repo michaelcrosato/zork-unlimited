@@ -41,7 +41,7 @@ function tool(
 }
 
 const WORLD_QUEST_SOURCE = {
-  world_quest_id: z.string().describe("Quest id."),
+  world_quest_id: z.string().describe("World quest id."),
 };
 const SESSION = {
   session_id: z.string().describe("Session."),
@@ -378,7 +378,7 @@ tool(
   "start_world_quest",
   "Start RPG quest; compact by default.",
   {
-    quest_id: z.string().describe("World quest id."),
+    world_quest_id: z.string().describe("World quest id."),
     seed: z.number().int().optional(),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
