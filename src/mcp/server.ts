@@ -97,6 +97,11 @@ function defaultCompactRpg(args: unknown): never {
   return { compact_observation: true, ...input } as never;
 }
 
+function defaultCompactActions(args: unknown): never {
+  const input = typeof args === "object" && args !== null ? args : {};
+  return { compact_actions: true, ...input } as never;
+}
+
 function defaultCompactOverworld(args: unknown): never {
   const input = typeof args === "object" && args !== null ? args : {};
   return { compact_context: true, ...input } as never;
@@ -399,9 +404,13 @@ tool(
 );
 tool(
   "list_legal_actions",
-  "List legal RPG actions; compact_actions returns ids only.",
-  { ...SESSION, ...HIDE_GRAPH, ...COMPACT_ACTIONS },
-  (a) => api.list_legal_actions(a),
+  "List legal RPG action ids; compact_actions false returns labels.",
+  {
+    ...SESSION,
+    ...HIDE_GRAPH,
+    compact_actions: z.boolean().optional().describe("Default true; false returns labels."),
+  },
+  (a) => api.list_legal_actions(defaultCompactActions(a)),
 );
 
 tool(

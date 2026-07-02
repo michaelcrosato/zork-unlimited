@@ -78,8 +78,10 @@ Make discovered overworld quest leads start real RPG sessions.
   current RPG play.
 - RPG start/load responses now carry one-time world context; follow-up
   observations omit that repeated binding to lower per-turn MCP payload.
-- Repeated observe/step calls can set `compact_actions` to carry action ids
-  without repeated command labels; full labels remain available on demand.
+- Repeated observe/step calls can carry action ids without repeated command
+  labels; full labels remain available on demand.
+- Public MCP `list_legal_actions` defaults to compact action ids; callers can pass
+  `compact_actions: false` when they need player-facing command labels.
 - Compact RPG MCP observations now cap inventory/flags and keep only recent
   journal entries, with `more` counts when state was omitted.
 - `get_transcript({ summary_only: true })` keeps session/end-state metadata while
@@ -166,6 +168,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - Public MCP RPG start/read/step/load tools now default to compact observation
   context; callers can pass `compact_observation: false` when they need full
   observations.
+- Public MCP `list_legal_actions` now defaults to compact ids; callers can pass
+  `compact_actions: false` for command labels.
 - RPG session start tools and overworld quest handoff now accept compact action
   menus, avoiding repeated command labels on the opening RPG observation.
 - RPG transcripts now support compact id-only turn rows for route debugging

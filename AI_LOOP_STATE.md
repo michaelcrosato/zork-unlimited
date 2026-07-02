@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 61 -->
+<!-- historical_cycle_count: 62 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — mcp_legal_actions_compact_default
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Hidden loop surface: public MCP `list_legal_actions` now returns compact action ids by default; `compact_actions: false` preserves command-label debugging.
+- Loop effect: blind/resume agents that call the action-list helper mid-run no longer pay repeated command-label payloads unless labels are explicitly needed.
+- Evidence: live MCP `list_legal_actions` default returned ids-only at 70 chars; `compact_actions: false` returned command labels at 129 chars.
+- Guard: MCP registration regression pins `defaultCompactActions(a)`, the opt-out label wording, and blind protocol docs require `compact_actions = false` for command text.
+- VERIFY: focused MCP/docs regressions, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, typecheck, lint, format check, 193 test files / 1360 tests, and validate.
 
 ### Cycle result — mcp_overworld_read_compact_default
 

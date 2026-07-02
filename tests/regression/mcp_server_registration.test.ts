@@ -182,7 +182,10 @@ describe("MCP server registration", () => {
       expect(block).toContain("defaultCompactRpg(a)");
     }
 
-    expect(registeredToolBlock("list_legal_actions")).not.toContain("defaultCompactRpg");
+    const legalActions = registeredToolBlock("list_legal_actions");
+    expect(legalActions).toContain("defaultCompactActions(a)");
+    expect(legalActions).toContain("Default true; false returns labels.");
+    expect(legalActions).not.toContain("defaultCompactRpg");
     expect(registeredToolBlock("get_state")).not.toContain("defaultCompactRpg");
   });
 

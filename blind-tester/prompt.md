@@ -21,8 +21,8 @@ PLAY:
   (stable ids). Choose one by id with `mcp__adventureforge__step_action`
   (session_id, action_id, hide_graph: true, compact_observation: true). Repeat
   until `context.ended` is true. If an action id is unclear, call
-  `mcp__adventureforge__list_legal_actions` once without `compact_actions` for
-  player-facing command text.
+  `mcp__adventureforge__list_legal_actions` once with `compact_actions: false`
+  for player-facing command text.
 - For an end-of-run transcript sanity check, call
   `mcp__adventureforge__get_transcript` with `summary_only: true` and
   `compact_summary: true`. If you need route rows, use `compact_turns: true`;

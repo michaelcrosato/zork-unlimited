@@ -73,7 +73,8 @@ PLAY:
 - Each compact context gives scene text, state/vitals, and context.actions (stable
   ids). Choose one with step_action(session_id, action_id, hide_graph = true,
   compact_observation = true). Repeat until context.ended is true. If an action id
-  is unclear, call list_legal_actions without compact_actions once for command text.
+  is unclear, call list_legal_actions with compact_actions = false once for command
+  text.
 - For an end-of-run transcript audit, call get_transcript(session_id,
   summary_only = true, compact_summary = true). Use compact_turns = true only
   when route rows are needed; avoid full transcripts unless diagnosing a
