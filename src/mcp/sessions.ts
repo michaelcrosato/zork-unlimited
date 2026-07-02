@@ -27,6 +27,16 @@ export type TranscriptTurn = {
   ending_id: string | null;
 };
 
+export type TranscriptSummary = {
+  steps: number;
+  scenes: string[];
+  ended: boolean;
+  ending_id: string | null;
+  inventory: string[];
+  flags: string[];
+  journal: string[];
+};
+
 export type Session = {
   id: string;
   packId: string;
@@ -56,6 +66,11 @@ export type Session = {
   };
   transcript: TranscriptTurn[];
   transcriptLogHash: string;
+  transcriptSummaryCache?: {
+    stateHash: string;
+    transcriptLogHash: string;
+    summary: TranscriptSummary;
+  };
   /** Difficulty: when true, the agent-facing observation hides each exit's
    *  destination (`exit.to`) so the spatial graph must be reasoned out, not read
    *  off. Default false — full graph, the legacy behavior. */
@@ -64,7 +79,12 @@ export type Session = {
 
 export type SessionInit = Omit<
   Session,
-  "id" | "stateHash" | "legalActionsCache" | "observationCache" | "transcriptLogHash"
+  | "id"
+  | "stateHash"
+  | "legalActionsCache"
+  | "observationCache"
+  | "transcriptLogHash"
+  | "transcriptSummaryCache"
 >;
 
 type ObservationCacheOptions = Pick<ObservationOptions, "hideGraph" | "includeWorldIntro">;
@@ -97,6 +117,7 @@ export class SessionStore {
     session.stateHash = hashState(state);
     delete session.legalActionsCache;
     delete session.observationCache;
+    delete session.transcriptSummaryCache;
     return session;
   }
 
@@ -138,6 +159,23 @@ export class SessionStore {
     return observation;
   }
 
+  transcriptSummary(id: string, build: () => TranscriptSummary): TranscriptSummary {
+    const session = this.get(id);
+    if (
+      session.transcriptSummaryCache?.stateHash === session.stateHash &&
+      session.transcriptSummaryCache.transcriptLogHash === session.transcriptLogHash
+    ) {
+      return session.transcriptSummaryCache.summary;
+    }
+    const summary = build();
+    session.transcriptSummaryCache = {
+      stateHash: session.stateHash,
+      transcriptLogHash: session.transcriptLogHash,
+      summary,
+    };
+    return summary;
+  }
+
   appendTranscript(id: string, turn: TranscriptTurn): Session {
     const session = this.get(id);
     session.transcript.push(turn);
@@ -145,6 +183,7 @@ export class SessionStore {
       previous: session.transcriptLogHash,
       turn,
     });
+    delete session.transcriptSummaryCache;
     return session;
   }
 
@@ -152,6 +191,7 @@ export class SessionStore {
     const session = this.get(id);
     session.transcript = transcript;
     session.transcriptLogHash = hashState(transcript);
+    delete session.transcriptSummaryCache;
     return session;
   }
 }

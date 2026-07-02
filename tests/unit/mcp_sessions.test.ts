@@ -3,7 +3,7 @@ import type { Rules } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import { initState } from "../../src/core/state.js";
 import { hashState } from "../../src/core/hash.js";
-import { SessionStore, type SessionInit } from "../../src/mcp/sessions.js";
+import { SessionStore, type SessionInit, type TranscriptSummary } from "../../src/mcp/sessions.js";
 import type { RpgActionOption } from "../../src/rpg/legal_actions.js";
 import type { RpgObservation } from "../../src/rpg/observation.js";
 import type { RpgIndex } from "../../src/rpg/runner.js";
@@ -225,5 +225,78 @@ describe("SessionStore", () => {
     expect(afterUpdate).toBe(nextObservation);
     expect(builds).toBe(3);
     expect(session.observationCache?.stateHash).toBe(hashState(nextState));
+  });
+
+  it("caches transcript summaries until transcript or state changes", () => {
+    const store = new SessionStore();
+    const session = store.create(sessionInit());
+    const firstSummary: TranscriptSummary = {
+      steps: 0,
+      scenes: ["start"],
+      ended: false,
+      ending_id: null,
+      inventory: [],
+      flags: [],
+      journal: [],
+    };
+    const nextSummary: TranscriptSummary = {
+      ...firstSummary,
+      steps: 1,
+      scenes: ["next", "start"],
+    };
+    const stateSummary: TranscriptSummary = {
+      ...nextSummary,
+      inventory: ["lamp"],
+    };
+    const turn = {
+      step: 1,
+      scene_id: "start",
+      title: "Start",
+      action_id: "look",
+      action_text: "look",
+      events: [],
+      result_scene_id: "start",
+      ended: false,
+      ending_id: null,
+    };
+    let builds = 0;
+
+    const first = store.transcriptSummary(session.id, () => {
+      builds += 1;
+      return firstSummary;
+    });
+    const cached = store.transcriptSummary(session.id, () => {
+      builds += 1;
+      return nextSummary;
+    });
+
+    expect(first).toBe(firstSummary);
+    expect(cached).toBe(firstSummary);
+    expect(builds).toBe(1);
+    expect(session.transcriptSummaryCache?.stateHash).toBe(session.stateHash);
+    expect(session.transcriptSummaryCache?.transcriptLogHash).toBe(session.transcriptLogHash);
+
+    store.appendTranscript(session.id, turn);
+    expect(session.transcriptSummaryCache).toBeUndefined();
+
+    const afterTranscript = store.transcriptSummary(session.id, () => {
+      builds += 1;
+      return nextSummary;
+    });
+    expect(afterTranscript).toBe(nextSummary);
+    expect(builds).toBe(2);
+
+    store.update(session.id, state("next"));
+    expect(session.transcriptSummaryCache).toBeUndefined();
+
+    const afterState = store.transcriptSummary(session.id, () => {
+      builds += 1;
+      return stateSummary;
+    });
+    expect(afterState).toBe(stateSummary);
+    expect(builds).toBe(3);
+
+    store.replaceTranscript(session.id, []);
+    expect(session.transcriptSummaryCache).toBeUndefined();
   });
 });

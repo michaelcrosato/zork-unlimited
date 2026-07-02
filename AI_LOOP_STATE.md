@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 206 -->
+<!-- historical_cycle_count: 207 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — cached_transcript_summaries
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: `SessionStore` now caches transcript summaries by `stateHash` and `transcriptLogHash`; state/transcript mutations invalidate the summary cache.
+- Loop effect: repeated non-unchanged transcript reads avoid rebuilding step counts, scene sets, public flags, inventory, and journal arrays while compact/full summary projection stays unchanged.
+- Guard: focused MCP session tests prove summary cache reuse and invalidation on transcript append, transcript replace, and state replacement.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — cached_rpg_observations
 

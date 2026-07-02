@@ -47,7 +47,7 @@ import { SAVE_MODE, save, load, assertWellFormedState } from "../persist/save_lo
 import { assertTraceMode, replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
-import { SessionStore, type Session } from "./sessions.js";
+import { SessionStore, type Session, type TranscriptSummary } from "./sessions.js";
 import {
   isRpgPackShape,
   type PackMode,
@@ -426,15 +426,6 @@ type TranscriptCompactTurn = readonly [
   action_id: string | null,
   result_scene_id: string,
 ];
-type TranscriptSummary = {
-  steps: number;
-  scenes: string[];
-  ended: boolean;
-  ending_id: string | null;
-  inventory: string[];
-  flags: string[];
-  journal: string[];
-};
 type TranscriptCompactMore = readonly [
   scenes: number,
   inventory?: number,
@@ -1763,7 +1754,7 @@ export function createToolApi(opts: { root: string }) {
           unchanged: true,
         } as TranscriptResponse<Args>;
       }
-      const summary: TranscriptSummary = {
+      const summary = sessions.transcriptSummary(s.id, () => ({
         steps: s.transcript.filter((t) => t.action_id !== null).length,
         scenes: [...new Set(s.transcript.flatMap((t) => [t.scene_id, t.result_scene_id]))].sort(),
         ended: s.state.ended,
@@ -1773,7 +1764,7 @@ export function createToolApi(opts: { root: string }) {
           .filter((f) => s.state.flags[f] === true && !f.startsWith("__"))
           .sort(),
         journal: [...s.state.journal],
-      };
+      }));
       const response = {
         session_id: s.id,
         ...rpgSourceFields(s),

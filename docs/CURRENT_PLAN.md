@@ -134,6 +134,9 @@ Make discovered overworld quest leads start real RPG sessions.
   have not changed.
 - Transcript freshness uses a cached session log hash plus `state_hash`, so
   repeated transcript polls do not re-hash full turn history.
+- Transcript summaries are cached per session state/transcript hash and
+  invalidated on state or transcript mutation, so repeated non-unchanged
+  transcript reads do not rescan full transcript history and public state arrays.
 - RPG session state hashes are cached in `SessionStore` and refreshed on
   `sessions.update`, so start/load, observation polling, legal-action polling,
   stale-action guards, transcript polling, and save guards do not repeatedly
