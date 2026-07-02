@@ -1089,10 +1089,13 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(transcript.summary.ended).toBe(true);
     expect(transcript.summary.ending_id).toBe("ending_victory");
     expect(transcript.turns.map((t) => t.action_id)).toContain("take_circlet");
+    const currentStateHash = a.get_state({ session_id: game.session_id }).state_hash;
+    expect(transcript.state_hash).toBe(currentStateHash);
     const summaryOnlyTranscript = a.get_transcript({
       session_id: game.session_id,
       summary_only: true,
     });
+    expect(summaryOnlyTranscript.state_hash).toBe(currentStateHash);
     expect(summaryOnlyTranscript.summary).toEqual(transcript.summary);
     expect(summaryOnlyTranscript.turns).toEqual([]);
     expect(JSON.stringify(summaryOnlyTranscript).length).toBeLessThan(
@@ -1102,6 +1105,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       session_id: game.session_id,
       compact_turns: true,
     });
+    expect(compactTranscript.state_hash).toBe(currentStateHash);
     expect(compactTranscript.summary).toEqual(transcript.summary);
     expect(compactTranscript.turns.map((t) => t.action_id)).toEqual(
       transcript.turns.map((t) => t.action_id),
@@ -1119,7 +1123,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(JSON.stringify(compactTranscript).length).toBeLessThan(
       JSON.stringify(transcript).length,
     );
-    expect(a.get_state({ session_id: game.session_id }).state_hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(currentStateHash).toMatch(/^[0-9a-f]{64}$/);
 
     const byWorldQuestId = a.start_world_quest({ quest_id: "sunken_barrow", seed: 1 });
     expect(byWorldQuestId.mode).toBe("rpg");
@@ -1158,7 +1162,10 @@ describe("MCP tools — the play loop (§9.1)", () => {
       summary_only: true,
       compact_summary: true,
     });
+    const currentStateHash = a.get_state({ session_id: game.session_id }).state_hash;
 
+    expect(full.state_hash).toBe(currentStateHash);
+    expect(compact.state_hash).toBe(currentStateHash);
     expect(full.summary.scenes).toHaveLength(21);
     expect(full.summary.inventory).toHaveLength(20);
     expect(full.summary.flags).toHaveLength(20);

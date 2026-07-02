@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 68 -->
+<!-- historical_cycle_count: 69 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — transcript_state_hash
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: RPG `get_transcript` responses now return `state_hash`.
+- Loop effect: compact end-of-run audits can bind transcript summaries/turn rows to reducer state without a follow-up state read.
+- Evidence: live MCP default compact transcript and compact-turn transcript both matched the post-step hash; compact transcript was 346 chars and compact-turn transcript was 584 chars.
+- Guard: transcript regression asserts full, summary-only, and compact transcript responses carry the same current hash.
+- VERIFY: focused MCP transcript test, typecheck, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1361 tests, and validate.
 
 ### Cycle result — overworld_expected_snapshot_hash
 
