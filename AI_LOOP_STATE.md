@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 192 -->
+<!-- historical_cycle_count: 193 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_rpg_more_tuple
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact RPG observation truncation metadata now serializes as `more: [inventory, flags, journal]` under context `v: 4`.
+- Loop effect: long-running RPG turns keep omitted-state counts without repeating three object keys whenever inventory, flags, or journal are capped.
+- Guard: focused compact-observation docs/tests, typecheck, lint, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_transcript_events
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/token surface: compact RPG transcript turns now serialize as `[step, scene_id, action_id, result_scene_id]` tuples.
 - Loop effect: route/debug audits keep turn identity while dropping repeated row keys and per-turn ending scaffolding.
 - Guard: focused MCP transcript/schema tests, typecheck, and format check passed before full gates.
-- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_overworld_idle_markers
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: compact overworld contexts now omit absent `pending_road` and false/empty truncation markers.
-- Loop effect: ordinary overworld turns keep route/log/id counts without paying for idle null/false scaffolding.
-- Guard: focused compact-overworld/MCP tests, typecheck, and format check passed before full gates.
 - VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.

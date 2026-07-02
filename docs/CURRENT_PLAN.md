@@ -104,7 +104,8 @@ Make discovered overworld quest leads start real RPG sessions.
   single-character tuple tags and compact state-effect codes, so loop clients can
   branch on shape without reading full reducer events.
 - Compact RPG MCP observations now cap inventory/flags and keep only recent
-  journal entries, with `more` counts when state was omitted.
+  journal entries, with `more: [inventory, flags, journal]` omission counts
+  under context `v: 4`.
 - `get_observation({ if_state_hash })` can return hash-only `unchanged`
   responses, avoiding repeated context payloads for polling or resume loops; the
   old `get_scene` alias is no longer part of the live MCP/ToolApi loop.

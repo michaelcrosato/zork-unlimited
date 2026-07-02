@@ -5,13 +5,14 @@ const CORE_STATE_VARS = new Set(["attack", "defense", "hp", "max_score", "score"
 const COMPACT_INVENTORY_LIMIT = 16;
 const COMPACT_FLAG_LIMIT = 16;
 const COMPACT_JOURNAL_LIMIT = 5;
-export const RPG_COMPACT_OBSERVATION_VERSION = 3 as const;
+export const RPG_COMPACT_OBSERVATION_VERSION = 4 as const;
 
 export type RpgCompactRef = readonly [id: string, name: string];
 export type RpgCompactExit = string | readonly [direction: string, to: string];
 export type RpgCompactBlockedExit = readonly [direction: string, message: string];
 export type RpgCompactDialogue = readonly [npc: string, text: string];
 export type RpgCompactEnemy = readonly [id: string, name: string, hp: number];
+export type RpgCompactMore = readonly [inventory: number, flags: number, journal: number];
 export type RpgCompactVitals = readonly [
   hp: number,
   attack: number,
@@ -34,11 +35,7 @@ export type RpgCompactObservation = {
   flags?: string[];
   vars?: Record<string, number>;
   journal?: string[];
-  more?: {
-    inv?: number;
-    flags?: number;
-    journal?: number;
-  };
+  more?: RpgCompactMore;
   dialogue?: RpgCompactDialogue;
   enemies?: RpgCompactEnemy[];
   ended?: true;
@@ -83,11 +80,10 @@ export function compactRpgObservation(
   const exits: RpgCompactExit[] = obs.exits.map((exit) =>
     exit.to === undefined ? exit.direction : ([exit.direction, exit.to] as const),
   );
-  const more = {
-    ...(omittedInv !== undefined ? { inv: omittedInv } : {}),
-    ...(omittedFlags !== undefined ? { flags: omittedFlags } : {}),
-    ...(omittedJournal !== undefined ? { journal: omittedJournal } : {}),
-  };
+  const more =
+    omittedInv !== undefined || omittedFlags !== undefined || omittedJournal !== undefined
+      ? ([omittedInv ?? 0, omittedFlags ?? 0, omittedJournal ?? 0] as const)
+      : undefined;
   return {
     v: RPG_COMPACT_OBSERVATION_VERSION,
     here: [obs.room, obs.title],
@@ -104,7 +100,7 @@ export function compactRpgObservation(
     ...(flags.length > 0 ? { flags } : {}),
     ...(vars ? { vars } : {}),
     ...(journal.length > 0 ? { journal } : {}),
-    ...(Object.keys(more).length > 0 ? { more } : {}),
+    ...(more ? { more } : {}),
     ...(obs.dialogue ? { dialogue: [obs.dialogue.npc, obs.dialogue.npc_text] as const } : {}),
     ...(obs.enemies_present.length > 0
       ? { enemies: obs.enemies_present.map((enemy) => [enemy.id, enemy.name, enemy.hp] as const) }
