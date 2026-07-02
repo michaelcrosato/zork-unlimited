@@ -58,8 +58,8 @@ Make discovered overworld quest leads start real RPG sessions.
   and `world_quest_id`, not retired `pack_path` starts.
 - `world_path` now accepts `world_quest_id` only in ToolApi and public MCP, and
   returns graph-route metadata without raw `quest_path`.
-- `validate_pack` and `load_pack` now accept `world_quest_id` for shipped quests
-  and return world identity without echoing raw pack paths.
+- `validate_quest` and `load_quest` now accept `quest_id` / `world_quest_id`
+  for shipped quests and return world identity without echoing raw pack paths.
 - `apply_content_patch` now accepts shipped `world_quest_id` in ToolApi/public
   MCP and returns world identity only.
 - `replay_trace` and `inspect_trace` now advertise shipped `world_quest_id` on
@@ -69,8 +69,9 @@ Make discovered overworld quest leads start real RPG sessions.
   `world_quest_id`.
 - `start_quest` and `validate_quest` now accept only `quest_id` /
   `world_quest_id` in ToolApi and public MCP; raw `quest_path` is rejected.
-- Retired legacy story aliases from the live MCP surface; use `validate_pack`,
-  `new_game`, and `start_world_quest` for current RPG play.
+- Retired legacy story and pack-named aliases from the live MCP surface; use
+  `validate_quest`, `load_quest`, `new_game`, and `start_world_quest` for
+  current RPG play.
 - RPG start/load responses now carry one-time world context; follow-up
   observations omit that repeated binding to lower per-turn MCP payload.
 - Repeated observe/step calls can set `compact_actions` to carry action ids
@@ -109,8 +110,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - `load_game` source selection is save-embedded, `world_quest_id`, or
   `generate_rpg_seed`; raw pack paths are internal source metadata, not public
   loop inputs.
-- `validate_pack`, `load_pack`, and `apply_content_patch` now use shared source
-  identity directly instead of re-deriving `world_quest_id` from the resolved path.
+- `validate_quest`, `load_quest`, and `apply_content_patch` now use shared
+  source identity directly instead of re-deriving `world_quest_id` from the
+  resolved path.
 - Retired the static overworld compatibility helper module; local overworld play
   now goes through stateful sessions only.
 - Stateful overworld MCP action wrappers now share one session response envelope

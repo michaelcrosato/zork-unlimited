@@ -549,7 +549,7 @@ export function assess(root: string): Assessment {
       });
       continue;
     }
-    const report = api.validate_pack({ world_quest_id: s.world_quest_id });
+    const report = api.validate_quest({ world_quest_id: s.world_quest_id });
     const warnings = report.report.findings.filter((f) => f.severity === "warning").length;
     packs.push({
       path: s.path,

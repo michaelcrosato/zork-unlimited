@@ -40,7 +40,7 @@ function tool(
   server.registerTool(name, { description, inputSchema }, wrap(handler) as never);
 }
 
-const WORLD_QUEST_PACK_SOURCE = {
+const WORLD_QUEST_SOURCE = {
   world_quest_id: z
     .string()
     .describe("Charter Marches quest graph node id from list_world().quests[].graph_node."),
@@ -93,12 +93,6 @@ const COMPACT_OVERWORLD_CONTEXT = {
     ),
 };
 
-tool(
-  "validate_pack",
-  "Validate a shipped world quest by graph id; legacy CYOA/parser packs are rejected by the offline validation gate.",
-  WORLD_QUEST_PACK_SOURCE,
-  (a) => api.validate_pack(a),
-);
 tool(
   "list_world",
   "List the single canonical world graph, its hub city, and shipped RPG quests as reachable graph-id entries.",
@@ -322,10 +316,10 @@ tool(
   (a) => api.validate_quest(a),
 );
 tool(
-  "load_pack",
+  "load_quest",
   "Compile a shipped world quest by graph id and return its mode, metadata, content hash, source identity, and validation report.",
-  WORLD_QUEST_PACK_SOURCE,
-  (a) => api.load_pack(a),
+  QUEST_ID_SOURCE,
+  (a) => api.load_quest(a),
 );
 
 tool(
@@ -529,7 +523,7 @@ tool(
   "apply_content_patch",
   "Apply a structured, whitelisted content patch with deterministic code to a shipped world quest id and return the modified pack + validation report (§9.4, §16). Never writes files; never runs model-issued code.",
   {
-    ...WORLD_QUEST_PACK_SOURCE,
+    ...WORLD_QUEST_SOURCE,
     proposal: z
       .object({
         layer: z.enum([

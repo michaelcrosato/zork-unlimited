@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 48 -->
+<!-- historical_cycle_count: 49 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — mcp_pack_validation_aliases_retired
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner still fails broad root Prettier/ESLint/git-worktree checks, while its tsc/test portions passed.
+- Public MCP/API: retired `validate_pack` and `load_pack`; `validate_quest` and new `load_quest` are the world-quest validation/loading surface.
+- Loop internals: AFK assessment now calls `validate_quest`, keeping maintenance on quest ids.
+- Token economy: public agents no longer see duplicate pack/quest validation and loading tools for the same world graph.
+- VERIFY: focused MCP validation/loading tests (55), typecheck, lint, format:check, and `npm run health` passed: integrity, typecheck, lint, format check, 192 test files / 1347 tests, and validate.
+- Self-critique: removes public pack-named validation/loading; internal source helpers still compile YAML RPG packs by path.
 
 ### Cycle result — mcp_list_stories_retired
 
@@ -12,7 +21,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Public MCP/API: retired the `list_stories` compatibility catalog; `list_world` is the single quest discovery surface.
 - Token economy: blind/AFK agents no longer receive two catalogs for the same RPG quest graph.
 - VERIFY: focused MCP catalog/registration tests (55) and `npm run health` passed: integrity, typecheck, lint, format check, 192 test files / 1347 tests, and validate.
-- Self-critique: removes one compatibility alias; `validate_pack`/`load_pack` names still reflect source-package history.
+- Self-critique: removes one compatibility alias; later cycles retired public `validate_pack`/`load_pack` too.
 
 ### Cycle result — validate_cli_world_source_only
 
@@ -487,7 +496,7 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - World routes: ToolApi and public MCP `world_path` accept only
   `world_quest_id` and return graph-route metadata without raw `quest_path`;
   raw `quest_path` input is rejected.
-- Pack validation/loading/patching: shipped quests use `world_quest_id` and
+- Quest validation/loading/patching: shipped quests use `world_quest_id` and
   return world identity without raw path envelopes.
 - CLI validation: no-arg validation walks the canonical world graph; targeted
   validation uses `world_quest_id`; raw pack files and explicit `--pack` are
@@ -495,10 +504,11 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - ToolApi/public MCP validate/load/patch schemas and responses are
   `world_quest_id` only; trace replay/inspect resolve shipped sources from
   embedded or explicit `world_quest_id`.
-- Quest aliases: ToolApi and public MCP `validate_quest`/`start_quest` use
-  graph ids only; raw `quest_path` is rejected.
-- Retired legacy story aliases: live MCP uses `validate_pack`, `new_game`, and
-  `start_world_quest`; the legacy path alias is no longer a public start source.
+- Quest tools: ToolApi and public MCP `validate_quest`/`load_quest`/`start_quest`
+  use graph ids only; raw `quest_path`/`pack_path` is rejected.
+- Retired legacy aliases: live MCP uses `validate_quest`, `load_quest`,
+  `new_game`, and `start_world_quest`; legacy story and pack aliases are no
+  longer public sources.
 - Token economy: RPG start/load responses include compact source identity once;
   follow-up observations omit the repeated world binding.
 - Token economy: compact overworld quest refs are `[id,title]`; pack paths stay

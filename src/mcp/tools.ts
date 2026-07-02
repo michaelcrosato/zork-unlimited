@@ -614,6 +614,9 @@ export function createToolApi(opts: { root: string }) {
     args: { quest_id?: string; world_quest_id?: string },
     operation: string,
   ): { worldQuestId: string } {
+    if ((args as { pack_path?: unknown }).pack_path !== undefined) {
+      throw new Error(`${operation} accepts quest_id or world_quest_id, not pack_path.`);
+    }
     if ((args as { quest_path?: unknown }).quest_path !== undefined) {
       throw new Error(`${operation} accepts quest_id or world_quest_id, not quest_path.`);
     }
@@ -627,6 +630,47 @@ export function createToolApi(opts: { root: string }) {
       throw new Error(`${operation} accepts exactly one of quest_id or world_quest_id.`);
     }
     return { worldQuestId: args.quest_id ?? args.world_quest_id! };
+  }
+
+  function validateWorldQuest(worldQuestId: string): {
+    ok: boolean;
+    world_quest_id: string | null;
+    report: ValidationReport;
+  } {
+    const source = resolveWorldQuestPackPath(worldQuestId);
+    const lr = loadAndReport(source.packPath);
+    return {
+      ok: lr.report.ok,
+      world_quest_id: source.node.id,
+      report: lr.report,
+    };
+  }
+
+  function loadWorldQuest(worldQuestId: string): {
+    ok: boolean;
+    world_quest_id: string | null;
+    mode?: PackMode;
+    meta?: CompiledRpgPack["pack"]["meta"];
+    content_hash?: string;
+    report: ValidationReport;
+  } {
+    const source = resolveWorldQuestPackPath(worldQuestId);
+    const lr = loadAndReport(source.packPath);
+    if (!lr.ok) {
+      return {
+        ok: false,
+        world_quest_id: source.node.id,
+        report: lr.report,
+      };
+    }
+    return {
+      ok: lr.report.ok,
+      world_quest_id: source.node.id,
+      mode: SAVE_MODE,
+      meta: lr.compiled.pack.meta,
+      content_hash: lr.compiled.contentHash,
+      report: lr.report,
+    };
   }
 
   function loadWorldManifest(): WorldManifest {
@@ -690,20 +734,6 @@ export function createToolApi(opts: { root: string }) {
 
   return {
     sessions,
-
-    validate_pack(args: { world_quest_id?: string; pack_path?: never }): {
-      ok: boolean;
-      world_quest_id: string | null;
-      report: ValidationReport;
-    } {
-      const source = resolvePackSource(root, args, "validate_pack");
-      const lr = loadAndReport(source.packPath);
-      return {
-        ok: lr.report.ok,
-        world_quest_id: source.worldQuestId,
-        report: lr.report,
-      };
-    },
 
     list_world(): {
       world: PublicWorldManifest;
@@ -1024,10 +1054,10 @@ export function createToolApi(opts: { root: string }) {
       report: ValidationReport;
     } {
       const source = resolveQuestIdSource(args, "validate_quest");
-      return this.validate_pack({ world_quest_id: source.worldQuestId });
+      return validateWorldQuest(source.worldQuestId);
     },
 
-    load_pack(args: { world_quest_id?: string; pack_path?: never }): {
+    load_quest(args: { quest_id?: string; world_quest_id?: string }): {
       ok: boolean;
       world_quest_id: string | null;
       mode?: PackMode;
@@ -1035,23 +1065,8 @@ export function createToolApi(opts: { root: string }) {
       content_hash?: string;
       report: ValidationReport;
     } {
-      const source = resolvePackSource(root, args, "load_pack");
-      const lr = loadAndReport(source.packPath);
-      if (!lr.ok) {
-        return {
-          ok: false,
-          world_quest_id: source.worldQuestId,
-          report: lr.report,
-        };
-      }
-      return {
-        ok: lr.report.ok,
-        world_quest_id: source.worldQuestId,
-        mode: SAVE_MODE,
-        meta: lr.compiled.pack.meta,
-        content_hash: lr.compiled.contentHash,
-        report: lr.report,
-      };
+      const source = resolveQuestIdSource(args, "load_quest");
+      return loadWorldQuest(source.worldQuestId);
     },
 
     /**

@@ -77,22 +77,19 @@ describe("MCP server registration", () => {
   });
 
   it("keeps public MCP content and trace tools quest-id first", () => {
-    const sharedSource = serverSourceBlock(
-      "const WORLD_QUEST_PACK_SOURCE",
-      "const QUEST_ID_SOURCE",
-    );
+    const sharedSource = serverSourceBlock("const WORLD_QUEST_SOURCE", "const QUEST_ID_SOURCE");
     expect(sharedSource).toContain("world_quest_id");
     expect(sharedSource).not.toContain("pack_path");
 
     for (const toolName of [
-      "validate_pack",
-      "load_pack",
+      "validate_quest",
+      "load_quest",
       "apply_content_patch",
       "replay_trace",
       "inspect_trace",
     ]) {
       const block = registeredToolBlock(toolName);
-      expect(block).toMatch(/world_quest_id|WORLD_QUEST_PACK_SOURCE/);
+      expect(block).toMatch(/world_quest_id|WORLD_QUEST_SOURCE|QUEST_ID_SOURCE/);
       expect(block).not.toContain("pack_path");
     }
   });
@@ -101,7 +98,12 @@ describe("MCP server registration", () => {
     const api = createToolApi({ root: process.cwd() }) as Record<string, unknown>;
     const registered = registeredServerTools();
 
-    for (const helper of [...RETIRED_STATIC_OVERWORLD_TOOLS, ...RETIRED_COMPATIBILITY_TOOLS]) {
+    for (const helper of [
+      ...RETIRED_STATIC_OVERWORLD_TOOLS,
+      ...RETIRED_COMPATIBILITY_TOOLS,
+      "validate_pack",
+      "load_pack",
+    ]) {
       expect(api).not.toHaveProperty(helper);
       expect(registered).not.toContain(helper);
     }

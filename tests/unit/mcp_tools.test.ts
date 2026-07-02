@@ -230,10 +230,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
     );
   });
 
-  it("reuses unchanged RPG pack load reports inside one MCP API instance", () => {
+  it("reuses unchanged RPG quest load reports inside one MCP API instance", () => {
     const a = api();
-    const first = a.validate_pack({ world_quest_id: "sunken_barrow" });
-    const second = a.validate_pack({ world_quest_id: "sunken_barrow" });
+    const first = a.validate_quest({ world_quest_id: "sunken_barrow" });
+    const second = a.validate_quest({ world_quest_id: "sunken_barrow" });
     expect(first.ok).toBe(true);
     expect(second.ok).toBe(true);
     expect(second.report).toBe(first.report);
@@ -948,8 +948,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
   });
 
-  it("validate_pack reports the shipped pack as green", () => {
-    const r = api().validate_pack({ world_quest_id: "sunken_barrow" });
+  it("validate_quest reports the shipped quest as green", () => {
+    const r = api().validate_quest({ world_quest_id: "sunken_barrow" });
     expect(r.ok).toBe(true);
     expect("pack_path" in r).toBe(false);
     expect(r.world_quest_id).toBe("sunken_barrow");
@@ -980,8 +980,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(() => api().validate_quest({ quest_path: PACK } as never)).toThrow(/not quest_path/);
   });
 
-  it("load_pack returns meta + content hash", () => {
-    const r = api().load_pack({ world_quest_id: "sunken_barrow" });
+  it("load_quest returns meta + content hash", () => {
+    const r = api().load_quest({ world_quest_id: "sunken_barrow" });
     expect(r.ok).toBe(true);
     expect("pack_path" in r).toBe(false);
     expect(r.world_quest_id).toBe("sunken_barrow");
@@ -990,16 +990,16 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.content_hash).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it("validate/load pack reject missing or raw path source identity", () => {
-    expect(() => api().validate_pack({})).toThrow(/requires world_quest_id/);
-    expect(() => api().load_pack({})).toThrow(/requires world_quest_id/);
-    expect(() => api().validate_pack({ pack_path: PACK } as never)).toThrow(/not pack_path/);
-    expect(() => api().load_pack({ pack_path: PACK } as never)).toThrow(/not pack_path/);
+  it("validate/load quest reject missing or raw path source identity", () => {
+    expect(() => api().validate_quest({})).toThrow(/requires quest_id or world_quest_id/);
+    expect(() => api().load_quest({})).toThrow(/requires quest_id or world_quest_id/);
+    expect(() => api().validate_quest({ pack_path: PACK } as never)).toThrow(/not pack_path/);
+    expect(() => api().load_quest({ pack_path: PACK } as never)).toThrow(/not pack_path/);
     expect(() =>
-      api().validate_pack({ world_quest_id: "sunken_barrow", pack_path: PACK } as never),
+      api().validate_quest({ world_quest_id: "sunken_barrow", pack_path: PACK } as never),
     ).toThrow(/not pack_path/);
     expect(() =>
-      api().load_pack({ world_quest_id: "sunken_barrow", pack_path: PACK } as never),
+      api().load_quest({ world_quest_id: "sunken_barrow", pack_path: PACK } as never),
     ).toThrow(/not pack_path/);
   });
 
@@ -1012,8 +1012,11 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.classifications.length).toBeGreaterThanOrEqual(3);
   });
 
-  it("validate_pack rejects explicit raw pack targets", () => {
-    expect(() => api().validate_pack({ pack_path: NON_RPG_PACK } as never)).toThrow(
+  it("retired pack-named validation/loading tools are absent", () => {
+    const tools = api() as unknown as Record<string, unknown>;
+    expect(tools.validate_pack).toBeUndefined();
+    expect(tools.load_pack).toBeUndefined();
+    expect(() => api().validate_quest({ pack_path: NON_RPG_PACK } as never)).toThrow(
       /not pack_path/,
     );
   });

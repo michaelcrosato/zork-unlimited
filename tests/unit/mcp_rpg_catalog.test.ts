@@ -37,9 +37,9 @@ describe("list_world is the single RPG quest catalog", () => {
   });
 });
 
-describe("load_pack / validate_pack report RPG mode for catalog packs", () => {
-  it("the default RPG pack loads and validates green", () => {
-    const r = api().load_pack({ world_quest_id: "breaking_weir" });
+describe("load_quest / validate_quest report RPG mode for world quests", () => {
+  it("the default RPG quest loads and validates green", () => {
+    const r = api().load_quest({ world_quest_id: "breaking_weir" });
     expect(r.ok).toBe(true);
     expect("pack_path" in r).toBe(false);
     expect(r.mode).toBe("rpg");
