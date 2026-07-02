@@ -174,6 +174,7 @@ type OverworldListOptions = {
 
 type RpgResponseOptions = {
   compact_actions?: boolean;
+  compact_events?: boolean;
   compact_observation?: boolean;
 };
 
@@ -314,8 +315,24 @@ type RpgLegalActionsResponse<Args extends RpgLegalActionsArgs> = Args extends {
   ? RpgLegalActionsPayload | RpgLegalActionsUnchanged
   : RpgLegalActionsPayload;
 
+type RpgCompactEvent =
+  | readonly ["reject", reason: string]
+  | readonly ["say", text: string]
+  | readonly ["state", effect: string, key: string | null, value?: unknown]
+  | readonly ["unlock", from: string, to: string]
+  | readonly ["open", id: string]
+  | readonly ["move", from: string, to: string]
+  | readonly ["take", item: string]
+  | readonly ["drop", item: string]
+  | readonly ["talk", npc: string, node: string]
+  | readonly ["end", endingId: string];
+
+type RpgStepEvents<Args extends RpgResponseOptions> = Args extends { compact_events: true }
+  ? RpgCompactEvent[]
+  : ReturnType<typeof playerVisibleEvents>;
+
 type RpgStepActionBase<Args extends RpgResponseOptions> = {
-  events: ReturnType<typeof playerVisibleEvents>;
+  events: RpgStepEvents<Args>;
   state_hash: string;
 } & RpgViewField<Args>;
 
@@ -596,6 +613,62 @@ function playerVisibleEvents(events: GameEvent[]): GameEvent[] {
     const key = typeof sc.flag === "string" ? sc.flag : typeof sc.name === "string" ? sc.name : "";
     return !key.startsWith("__");
   });
+}
+
+function compactPlayerEvent(event: GameEvent): RpgCompactEvent {
+  switch (event.type) {
+    case "rejected":
+      return ["reject", event.reason];
+    case "narration":
+      return ["say", event.text];
+    case "state_change": {
+      const key =
+        typeof event.flag === "string"
+          ? event.flag
+          : typeof event.name === "string"
+            ? event.name
+            : typeof event.item === "string"
+              ? event.item
+              : typeof event.text === "string"
+                ? event.text
+                : null;
+      const value =
+        event.value !== undefined
+          ? event.value
+          : event.delta !== undefined
+            ? event.delta
+            : event.to !== undefined
+              ? event.to
+              : event.amount;
+      return value !== undefined
+        ? ["state", event.effect, key, value]
+        : ["state", event.effect, key];
+    }
+    case "unlock_exit":
+      return ["unlock", event.from, event.to];
+    case "open_object":
+      return ["open", event.id];
+    case "move":
+      return ["move", event.from, event.to];
+    case "take":
+      return ["take", event.item];
+    case "drop":
+      return ["drop", event.item];
+    case "dialogue":
+      return ["talk", event.npc, event.node];
+    case "ending":
+      return ["end", event.endingId];
+  }
+}
+
+function rpgStepEvents<Args extends RpgResponseOptions>(
+  events: GameEvent[],
+  args: Args,
+): RpgStepEvents<Args> {
+  const visible = playerVisibleEvents(events);
+  return (
+    args.compact_events === true ? visible.map(compactPlayerEvent) : visible
+  ) as RpgStepEvents<Args>;
 }
 
 /** The human command label for an action id in this observation. */
@@ -1519,12 +1592,15 @@ export function createToolApi(opts: { root: string }) {
         return {
           ok: false,
           rejection_reason: "State hash mismatch; refresh the current observation or action menu.",
-          events: [
-            {
-              type: "rejected" as const,
-              reason: "State hash mismatch; refresh the current observation or action menu.",
-            },
-          ],
+          events: rpgStepEvents(
+            [
+              {
+                type: "rejected" as const,
+                reason: "State hash mismatch; refresh the current observation or action menu.",
+              },
+            ],
+            args,
+          ),
           ...rpgViewField(before, args),
           state_hash: currentStateHash,
         } as RpgStepActionResponse<Args>;
@@ -1537,9 +1613,10 @@ export function createToolApi(opts: { root: string }) {
         return {
           ok: false,
           rejection_reason: "That action is not available right now.",
-          events: [
-            { type: "rejected" as const, reason: "That action is not available right now." },
-          ],
+          events: rpgStepEvents(
+            [{ type: "rejected" as const, reason: "That action is not available right now." }],
+            args,
+          ),
           ...rpgViewField(before, args),
           state_hash: currentStateHash,
         } as RpgStepActionResponse<Args>;
@@ -1564,14 +1641,14 @@ export function createToolApi(opts: { root: string }) {
         return {
           ok: false,
           rejection_reason: result.rejectionReason ?? "Action rejected.",
-          events: playerVisibleEvents(result.events),
+          events: rpgStepEvents(result.events, args),
           ...rpgViewField(after, args),
           state_hash: hashState(result.state),
         } as RpgStepActionResponse<Args>;
       }
       return {
         ok: true,
-        events: playerVisibleEvents(result.events),
+        events: rpgStepEvents(result.events, args),
         ...rpgViewField(after, args),
         state_hash: hashState(result.state),
       } as RpgStepActionResponse<Args>;

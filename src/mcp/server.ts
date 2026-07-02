@@ -52,8 +52,11 @@ const HIDE_GRAPH = {
 const COMPACT_ACTIONS = {
   compact_actions: z.boolean().optional().describe("Ids only."),
 };
+const COMPACT_EVENTS = {
+  compact_events: z.boolean().optional().describe("Default true; false full events."),
+};
 const COMPACT_OBSERVATION = {
-  compact_observation: z.boolean().optional().describe("Default true; false full observation."),
+  compact_observation: z.boolean().optional().describe("Default true; false full obs."),
 };
 const IF_STATE_HASH = {
   if_state_hash: z.string().optional().describe("Hash-only when unchanged."),
@@ -89,7 +92,7 @@ tool(
 
 function defaultCompactRpg(args: unknown): never {
   const input = typeof args === "object" && args !== null ? args : {};
-  return { compact_observation: true, ...input } as never;
+  return { compact_events: true, compact_observation: true, ...input } as never;
 }
 
 function defaultCompactActions(args: unknown): never {
@@ -406,13 +409,14 @@ tool(
 
 tool(
   "step_action",
-  "Apply action id; expected_state_hash rejects stale menus.",
+  "Apply action id; rejects stale menus.",
   {
     ...SESSION,
     action_id: z.string().describe("Current action id."),
     ...EXPECTED_STATE_HASH,
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
+    ...COMPACT_EVENTS,
     ...COMPACT_OBSERVATION,
   },
   (a) => api.step_action(defaultCompactRpg(a)),
@@ -428,7 +432,7 @@ tool(
 );
 tool(
   "get_transcript",
-  "Return compact transcript summary by default; if_state_hash returns hash-only unchanged.",
+  "Compact transcript; if_state_hash returns unchanged.",
   {
     ...SESSION,
     ...IF_STATE_HASH,

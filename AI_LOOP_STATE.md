@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 165 -->
+<!-- historical_cycle_count: 166 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_step_events
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: public MCP `step_action` now defaults to compact event tuples while ToolApi/full event objects remain available with `compact_events: false`.
+- Loop effect: routine action turns keep observation/context state but drop repeated event-object keys from the hot play loop.
+- Guard: step-event tuple tests, MCP registration/source-size guard, docs/blind protocol tests, typecheck, and format check passed before full gates.
+- VERIFY: focused MCP/event tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_toolapi_state_read
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: discovery payloads stay quest-id/world-graph first and spend fewer tokens on a discriminator with one legal value.
 - Guard: catalog/world-manifest tests assert quest rows omit `mode`, and the compact catalog size guard now caps the default JSON payload at 6100 chars.
 - VERIFY: focused catalog/assessor tests, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 195 test files / 1367 tests, and validate.
-
-### Cycle result — active_roadmap_rpg_only
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Docs/loop surface: replaced the stale multi-mode roadmap with current RPG-only open-world priorities.
-- Loop effect: active roadmap guidance no longer preserves retired staged-engine work as the next plan.
-- Guard: roadmap regression rejects retired mode/path guidance, and doc-staleness scanning now includes `docs/ROADMAP.md`.
-- VERIFY: focused roadmap/doc-staleness/assessor tests, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 195 test files / 1367 tests, and validate.

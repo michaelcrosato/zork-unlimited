@@ -193,6 +193,8 @@ describe("MCP server registration", () => {
     expect(legalActions).toContain("if_state_hash");
     expect(legalActions).not.toContain("defaultCompactRpg");
     expect(registeredToolBlock("get_observation")).toContain("if_state_hash");
+    expect(sharedSchemaBlock()).toContain("compact_events");
+    expect(registeredToolBlock("step_action")).toContain("COMPACT_EVENTS");
     expect(registeredToolBlock("get_state")).not.toContain("defaultCompactRpg");
   });
 

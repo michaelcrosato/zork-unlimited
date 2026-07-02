@@ -1378,6 +1378,19 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(compactRejected.ok).toBe(false);
     expect("rejection_reason" in compactRejected).toBe(true);
     assertCompactAction(compactRejected.observation.available_actions[0]);
+    const compactEventRejected = a.step_action({
+      session_id: game.session_id,
+      action_id: "missing",
+      compact_events: true,
+      compact_observation: true,
+    });
+    expect(compactEventRejected.events[0]).toEqual([
+      "reject",
+      "That action is not available right now.",
+    ]);
+    expect(JSON.stringify(compactEventRejected.events).length).toBeLessThan(
+      JSON.stringify(rejected.events).length,
+    );
 
     const moveActionId = compact.available_actions.find((action) => action.id === "go_down")?.id;
     expect(moveActionId).toBe("go_down");
@@ -1389,6 +1402,23 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(moved.ok).toBe(true);
     expect("rejection_reason" in moved).toBe(false);
     assertCompactAction(moved.observation.available_actions[0]);
+    const moveEvent = moved.events[0];
+    if (moveEvent?.type !== "move") throw new Error("expected full move event object");
+    const compactEventGame = a.start_world_quest({
+      world_quest_id: "sunken_barrow",
+      seed: 1,
+      compact_actions: true,
+    });
+    const compactEventMoved = a.step_action({
+      session_id: compactEventGame.session_id,
+      action_id: moveActionId!,
+      compact_events: true,
+      compact_observation: true,
+    });
+    expect(compactEventMoved.events[0]).toEqual(["move", moveEvent.from, moveEvent.to]);
+    expect(JSON.stringify(compactEventMoved.events).length).toBeLessThan(
+      JSON.stringify(moved.events).length,
+    );
     expect(
       a.list_legal_actions({ session_id: game.session_id, compact_actions: true }).state_hash,
     ).toBe(moved.state_hash);
