@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 170 -->
+<!-- historical_cycle_count: 171 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_step_event_version
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact `step_action` event tuple replies now include `event_v: 1`.
+- Loop effect: agents can branch on compact event tuple contract without asking for full reducer event objects.
+- Guard: focused MCP compact/full step-event tests, typecheck, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_rpg_context_v2
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: end-of-run audit payloads stay session/hash/source scoped while dropping another redundant one-value discriminator.
 - Guard: transcript tests assert full, summary-only, and compact-turn transcript payloads omit `mode`.
 - VERIFY: focused MCP tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — compact_rpg_context_mode
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: compact RPG MCP contexts no longer return `mode: "rpg"`.
-- Loop effect: repeated agent-loop observations keep full/client observations stable while dropping a redundant one-value field from compact context payloads.
-- Guard: compact-observation and MCP loop tests assert compact contexts omit `mode`.
-- VERIFY: focused compact/MCP tests and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.

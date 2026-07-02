@@ -1581,6 +1581,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     const rejected = a.step_action({ session_id: game.session_id, action_id: "missing" });
     expect(rejected.ok).toBe(false);
     expect("rejection_reason" in rejected).toBe(true);
+    expect("event_v" in rejected).toBe(false);
     assertPublicAction(rejected.observation.available_actions[0]);
 
     const compactRejected = a.step_action({
@@ -1601,6 +1602,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       "reject",
       "That action is not available right now.",
     ]);
+    expect(compactEventRejected.event_v).toBe(1);
     expect(JSON.stringify(compactEventRejected.events).length).toBeLessThan(
       JSON.stringify(rejected.events).length,
     );
@@ -1614,6 +1616,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     });
     expect(moved.ok).toBe(true);
     expect("rejection_reason" in moved).toBe(false);
+    expect("event_v" in moved).toBe(false);
     assertCompactAction(moved.observation.available_actions[0]);
     const moveEvent = moved.events[0];
     if (moveEvent?.type !== "move") throw new Error("expected full move event object");
@@ -1629,6 +1632,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_observation: true,
     });
     expect(compactEventMoved.events[0]).toEqual(["move", moveEvent.from, moveEvent.to]);
+    expect(compactEventMoved.event_v).toBe(1);
     expect(JSON.stringify(compactEventMoved.events).length).toBeLessThan(
       JSON.stringify(moved.events).length,
     );

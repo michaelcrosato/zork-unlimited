@@ -328,14 +328,23 @@ type RpgCompactEvent =
   | readonly ["talk", npc: string, node: string]
   | readonly ["end", endingId: string];
 
+const RPG_COMPACT_EVENT_VERSION = 1 as const;
+
 type RpgStepEvents<Args extends RpgResponseOptions> = Args extends { compact_events: true }
   ? RpgCompactEvent[]
   : ReturnType<typeof playerVisibleEvents>;
 
+type RpgStepEventVersion<Args extends RpgResponseOptions> = Args extends {
+  compact_events: true;
+}
+  ? { event_v: typeof RPG_COMPACT_EVENT_VERSION }
+  : Record<string, never>;
+
 type RpgStepActionBase<Args extends RpgResponseOptions> = {
   events: RpgStepEvents<Args>;
   state_hash: string;
-} & RpgViewField<Args>;
+} & RpgStepEventVersion<Args> &
+  RpgViewField<Args>;
 
 type RpgStepActionResponse<Args extends RpgResponseOptions> =
   | ({ ok: true } & RpgStepActionBase<Args>)
@@ -670,6 +679,14 @@ function rpgStepEvents<Args extends RpgResponseOptions>(
   return (
     args.compact_events === true ? visible.map(compactPlayerEvent) : visible
   ) as RpgStepEvents<Args>;
+}
+
+function rpgStepEventVersion<Args extends RpgResponseOptions>(
+  args: Args,
+): RpgStepEventVersion<Args> {
+  return (
+    args.compact_events === true ? { event_v: RPG_COMPACT_EVENT_VERSION } : {}
+  ) as RpgStepEventVersion<Args>;
 }
 
 /** The human command label for an action id in this observation. */
@@ -1631,6 +1648,7 @@ export function createToolApi(opts: { root: string }) {
             ],
             args,
           ),
+          ...rpgStepEventVersion(args),
           ...rpgViewField(before, args),
           state_hash: currentStateHash,
         } as RpgStepActionResponse<Args>;
@@ -1647,6 +1665,7 @@ export function createToolApi(opts: { root: string }) {
             [{ type: "rejected" as const, reason: "That action is not available right now." }],
             args,
           ),
+          ...rpgStepEventVersion(args),
           ...rpgViewField(before, args),
           state_hash: currentStateHash,
         } as RpgStepActionResponse<Args>;
@@ -1672,6 +1691,7 @@ export function createToolApi(opts: { root: string }) {
           ok: false,
           rejection_reason: result.rejectionReason ?? "Action rejected.",
           events: rpgStepEvents(result.events, args),
+          ...rpgStepEventVersion(args),
           ...rpgViewField(after, args),
           state_hash: hashState(result.state),
         } as RpgStepActionResponse<Args>;
@@ -1679,6 +1699,7 @@ export function createToolApi(opts: { root: string }) {
       return {
         ok: true,
         events: rpgStepEvents(result.events, args),
+        ...rpgStepEventVersion(args),
         ...rpgViewField(after, args),
         state_hash: hashState(result.state),
       } as RpgStepActionResponse<Args>;

@@ -96,6 +96,8 @@ Make discovered overworld quest leads start real RPG sessions.
   alias is no longer part of the live MCP/ToolApi loop.
 - Public MCP `step_action` defaults to compact event tuples; callers can pass
   `compact_events: false` when they need full reducer event objects.
+- Compact `step_action` event replies include `event_v` so loop clients can branch
+  on tuple shape without reading full reducer events.
 - Compact RPG MCP observations now cap inventory/flags and keep only recent
   journal entries, with `more` counts when state was omitted.
 - `get_observation({ if_state_hash })` can return hash-only `unchanged`
