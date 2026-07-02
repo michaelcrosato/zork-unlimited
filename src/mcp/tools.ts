@@ -166,6 +166,7 @@ type OverworldCompactSessionPayload<Key extends string, Value> = {
 
 type OverworldResponseOptions = {
   compact_context?: boolean;
+  expected_snapshot_hash?: string;
 };
 
 type OverworldListOptions = {
@@ -182,6 +183,20 @@ type OverworldViewField<Args extends OverworldResponseOptions> = Args extends {
 }
   ? { context: OverworldCompactView }
   : { observation: OverworldView };
+
+type OverworldRejectedSessionPayload<Args extends OverworldResponseOptions> = {
+  ok: false;
+  session_id: string;
+  snapshot_hash: string;
+  rejection_reason: string;
+  events: [{ type: "rejected"; reason: string }];
+} & OverworldViewField<Args>;
+
+type OverworldGuardedRejection<Args extends OverworldResponseOptions> = Args extends {
+  expected_snapshot_hash: string;
+}
+  ? OverworldRejectedSessionPayload<Args>
+  : never;
 
 type OverworldStartResponse<Args extends OverworldResponseOptions> = {
   session_id: string;
@@ -300,14 +315,16 @@ type RpgWorldQuestStartPayload<Args extends RpgResponseOptions> = {
   };
 } & RpgSessionPayload<Args>;
 
-type OverworldQuestStartResponse<Args extends OverworldResponseOptions & RpgResponseOptions> = {
-  ok: true;
-  session_id: string;
-  snapshot_hash: string;
-  quest: OverworldQuestView;
-  rpg_session_id: string;
-  rpg_session: RpgSessionPayload<Args>;
-} & OverworldViewField<Args>;
+type OverworldQuestStartResponse<Args extends OverworldResponseOptions & RpgResponseOptions> =
+  | ({
+      ok: true;
+      session_id: string;
+      snapshot_hash: string;
+      quest: OverworldQuestView;
+      rpg_session_id: string;
+      rpg_session: RpgSessionPayload<Args>;
+    } & OverworldViewField<Args>)
+  | OverworldGuardedRejection<Args>;
 
 type TranscriptFullTurn = Session["transcript"][number];
 type TranscriptCompactTurn = Pick<
@@ -353,8 +370,8 @@ type OverworldSessionResponse<
   Value,
   Args extends OverworldResponseOptions,
 > = Args extends { compact_context: true }
-  ? OverworldCompactSessionPayload<Key, Value>
-  : OverworldSessionPayload<Key, Value>;
+  ? OverworldCompactSessionPayload<Key, Value> | OverworldGuardedRejection<Args>
+  : OverworldSessionPayload<Key, Value> | OverworldGuardedRejection<Args>;
 
 type OverworldContextPayload = {
   ok: true;
@@ -811,6 +828,23 @@ export function createToolApi(opts: { root: string }) {
     return hashState(session.snapshot());
   }
 
+  function overworldSnapshotHashRejection<Args extends OverworldResponseOptions>(
+    args: Args,
+    sessionId: string,
+    session: OverworldSession,
+    snapshotHash: string,
+  ): OverworldRejectedSessionPayload<Args> {
+    const reason = "Snapshot hash mismatch; refresh the current overworld context.";
+    return {
+      ok: false,
+      session_id: sessionId,
+      snapshot_hash: snapshotHash,
+      rejection_reason: reason,
+      events: [{ type: "rejected", reason }],
+      ...overworldViewField(args, session),
+    } as OverworldRejectedSessionPayload<Args>;
+  }
+
   function overworldViewField<Args extends OverworldResponseOptions>(
     args: Args,
     session: OverworldSession,
@@ -829,6 +863,18 @@ export function createToolApi(opts: { root: string }) {
     action: (session: OverworldSession) => Value,
   ): OverworldSessionResponse<Key, Value, Args> {
     const session = getOverworldSession(sessionId);
+    const currentSnapshotHash = overworldSnapshotHash(session);
+    if (
+      args.expected_snapshot_hash !== undefined &&
+      args.expected_snapshot_hash !== currentSnapshotHash
+    ) {
+      return overworldSnapshotHashRejection(
+        args,
+        sessionId,
+        session,
+        currentSnapshotHash,
+      ) as OverworldSessionResponse<Key, Value, Args>;
+    }
     const value = action(session);
     const payload = {
       ok: true,
@@ -1128,6 +1174,18 @@ export function createToolApi(opts: { root: string }) {
       } & OverworldResponseOptions,
     >(args: Args): OverworldQuestStartResponse<Args> {
       const session = getOverworldSession(args.session_id);
+      const currentSnapshotHash = overworldSnapshotHash(session);
+      if (
+        args.expected_snapshot_hash !== undefined &&
+        args.expected_snapshot_hash !== currentSnapshotHash
+      ) {
+        return overworldSnapshotHashRejection(
+          args,
+          args.session_id,
+          session,
+          currentSnapshotHash,
+        ) as OverworldQuestStartResponse<Args>;
+      }
       const quest = session.startQuest(args.quest_id);
       const rpgSession = this.new_game({
         world_quest_id: quest.id,

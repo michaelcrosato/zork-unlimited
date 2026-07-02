@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 67 -->
+<!-- historical_cycle_count: 68 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_expected_snapshot_hash
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: stateful overworld action tools now accept `expected_snapshot_hash`.
+- Loop effect: compact agents can reject stale route/local-action/quest menus before mutating overworld session state.
+- Evidence: live MCP accepted a matching travel hash, rejected the stale repeat, returned the current hash, preserved travel-log rows, and kept the stale response to 2656 chars.
+- Guard: compact overworld regression asserts matching hashes travel, stale hashes reject, current hash is returned, and travel log stays unchanged.
+- VERIFY: focused MCP and registration tests, typecheck, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1361 tests, and validate.
 
 ### Cycle result — step_expected_state_hash
 

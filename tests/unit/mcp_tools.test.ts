@@ -660,8 +660,11 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const compactTravel = a.travel_overworld_session({
       session_id: started.session_id,
       road_id: road!.id,
+      expected_snapshot_hash: started.snapshot_hash,
       compact_context: true,
     });
+    expect(compactTravel.ok).toBe(true);
+    if (!compactTravel.ok) throw new Error("matching snapshot hash should travel");
     expect(compactTravel.travel.baseMinutes).toBe(road!.travel_minutes);
     expect(compactTravel.snapshot_hash).not.toBe(started.snapshot_hash);
     expect(compactTravel.context.here[0]).toBe("colonie_town");
@@ -676,6 +679,20 @@ describe("MCP tools — validate / load (§9.4)", () => {
     ]);
     expect(compactTravel.context.travel_log_truncated).toBe(false);
     expect("observation" in compactTravel).toBe(false);
+
+    const staleTravel = a.travel_overworld_session({
+      session_id: started.session_id,
+      road_id: road!.id,
+      expected_snapshot_hash: started.snapshot_hash,
+      compact_context: true,
+    });
+    expect(staleTravel.ok).toBe(false);
+    if (staleTravel.ok) throw new Error("stale snapshot hash should reject");
+    expect(staleTravel.rejection_reason).toMatch(/snapshot hash/i);
+    expect(staleTravel.snapshot_hash).toBe(compactTravel.snapshot_hash);
+    expect(staleTravel.context.here[0]).toBe("colonie_town");
+    expect(staleTravel.context.travel_log).toEqual(compactTravel.context.travel_log);
+    expect("travel" in staleTravel).toBe(false);
 
     const traveledFullRead = a.get_overworld_session({ session_id: started.session_id });
     const traveledFull = traveledFullRead.observation;
