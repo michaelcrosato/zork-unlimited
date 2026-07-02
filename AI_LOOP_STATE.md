@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 199 -->
+<!-- historical_cycle_count: 200 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — direct_overworld_compact_view
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact overworld MCP reads/actions now call `OverworldSession.compactView()` instead of building a full `view()` and compacting it afterward.
+- Loop effect: compact overworld turns skip full regional-arc expansion plus uncapped journal/log array clones before returning the capped context payload.
+- Guard: direct compact-view parity is asserted against the existing full-view compactor in long-session overworld tests.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — direct_rpg_action_enumeration
 

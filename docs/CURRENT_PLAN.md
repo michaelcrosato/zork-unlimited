@@ -98,6 +98,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - `list_legal_actions` and successful `step_action` now enumerate legal actions
   directly from the RPG runner, avoiding full pre-step observation construction
   when the response only needs action identity or post-step context.
+- Compact overworld MCP reads/actions now call `OverworldSession.compactView()`
+  directly, avoiding full view construction before capped context projection.
 - `step_action` accepts `expected_state_hash` and rejects stale action menus
   before mutating reducer state or transcript history; the old `choose_option`
   alias is no longer part of the live MCP/ToolApi loop.

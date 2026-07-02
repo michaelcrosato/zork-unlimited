@@ -6,10 +6,10 @@ import type {
   TravelLogEntry,
 } from "./session.js";
 
-const COMPACT_JOURNAL_LIMIT = 5;
-const COMPACT_ROUTE_LIMIT = 8;
-const COMPACT_TRAVEL_LOG_LIMIT = 5;
-const COMPACT_ID_LIST_LIMIT = 16;
+export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
+export const OVERWORLD_COMPACT_ROUTE_LIMIT = 8;
+export const OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT = 5;
+export const OVERWORLD_COMPACT_ID_LIST_LIMIT = 16;
 export const OVERWORLD_COMPACT_VIEW_VERSION = 4 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
@@ -92,7 +92,7 @@ export type OverworldCompactIdKey =
   | "started_quests"
   | "completed_quests"
   | "resolved_events";
-type OverworldCompactFullIdMap = Record<OverworldCompactIdKey, string[]>;
+export type OverworldCompactFullIdMap = Record<OverworldCompactIdKey, string[]>;
 export type OverworldCompactIdMap = Partial<OverworldCompactFullIdMap>;
 export type OverworldCompactIdCounts = readonly [
   discovered_towns: number,
@@ -147,7 +147,7 @@ function titledRef(value: { id: string; title: string }): OverworldCompactRef {
   return [value.id, value.title];
 }
 
-function compactRouteOption(plan: OverworldSessionRoutePlan): OverworldCompactRouteOption {
+export function compactRouteOption(plan: OverworldSessionRoutePlan): OverworldCompactRouteOption {
   return [
     plan.destination.id,
     plan.estimate.elapsedMinutes,
@@ -157,7 +157,7 @@ function compactRouteOption(plan: OverworldSessionRoutePlan): OverworldCompactRo
   ];
 }
 
-function compactPendingRoad(
+export function compactPendingRoad(
   encounter: OverworldPendingRoadEncounter | null,
 ): OverworldCompactRoadEncounter | undefined {
   if (!encounter) return undefined;
@@ -175,7 +175,7 @@ function compactPendingRoad(
   };
 }
 
-function compactTravelLogEntry(entry: TravelLogEntry): OverworldCompactTravelLogEntry {
+export function compactTravelLogEntry(entry: TravelLogEntry): OverworldCompactTravelLogEntry {
   return [
     entry.edgeId,
     entry.fromId,
@@ -188,10 +188,10 @@ function compactTravelLogEntry(entry: TravelLogEntry): OverworldCompactTravelLog
 }
 
 function compactIdList(values: readonly string[]): string[] {
-  return values.slice(0, COMPACT_ID_LIST_LIMIT);
+  return values.slice(0, OVERWORLD_COMPACT_ID_LIST_LIMIT);
 }
 
-function compactIdPayload(values: OverworldCompactFullIdMap): {
+export function compactIdPayload(values: OverworldCompactFullIdMap): {
   ids: OverworldCompactIdMap;
   id_counts: OverworldCompactIdCounts;
   ids_truncated?: OverworldCompactIdTruncation;
@@ -215,22 +215,28 @@ function compactIdPayload(values: OverworldCompactFullIdMap): {
     values.resolved_events.length,
   ];
   const ids_truncated: OverworldCompactIdTruncation = [];
-  if (values.discovered_towns.length > COMPACT_ID_LIST_LIMIT)
+  if (values.discovered_towns.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
     ids_truncated.push("discovered_towns");
-  if (values.discovered_areas.length > COMPACT_ID_LIST_LIMIT)
+  if (values.discovered_areas.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
     ids_truncated.push("discovered_areas");
-  if (values.visited_areas.length > COMPACT_ID_LIST_LIMIT) ids_truncated.push("visited_areas");
-  if (values.discovered_jobs.length > COMPACT_ID_LIST_LIMIT) ids_truncated.push("discovered_jobs");
-  if (values.completed_jobs.length > COMPACT_ID_LIST_LIMIT) ids_truncated.push("completed_jobs");
-  if (values.discovered_sites.length > COMPACT_ID_LIST_LIMIT)
+  if (values.visited_areas.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
+    ids_truncated.push("visited_areas");
+  if (values.discovered_jobs.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
+    ids_truncated.push("discovered_jobs");
+  if (values.completed_jobs.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
+    ids_truncated.push("completed_jobs");
+  if (values.discovered_sites.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
     ids_truncated.push("discovered_sites");
-  if (values.explored_sites.length > COMPACT_ID_LIST_LIMIT) ids_truncated.push("explored_sites");
-  if (values.discovered_quests.length > COMPACT_ID_LIST_LIMIT)
+  if (values.explored_sites.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
+    ids_truncated.push("explored_sites");
+  if (values.discovered_quests.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
     ids_truncated.push("discovered_quests");
-  if (values.started_quests.length > COMPACT_ID_LIST_LIMIT) ids_truncated.push("started_quests");
-  if (values.completed_quests.length > COMPACT_ID_LIST_LIMIT)
+  if (values.started_quests.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
+    ids_truncated.push("started_quests");
+  if (values.completed_quests.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
     ids_truncated.push("completed_quests");
-  if (values.resolved_events.length > COMPACT_ID_LIST_LIMIT) ids_truncated.push("resolved_events");
+  if (values.resolved_events.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
+    ids_truncated.push("resolved_events");
   return {
     ids: compactedIds,
     id_counts,
@@ -239,8 +245,12 @@ function compactIdPayload(values: OverworldCompactFullIdMap): {
 }
 
 export function compactOverworldView(view: OverworldView): OverworldCompactView {
-  const routeOptions = view.routeOptions.slice(0, COMPACT_ROUTE_LIMIT).map(compactRouteOption);
-  const travelLog = view.log.slice(0, COMPACT_TRAVEL_LOG_LIMIT).map(compactTravelLogEntry);
+  const routeOptions = view.routeOptions
+    .slice(0, OVERWORLD_COMPACT_ROUTE_LIMIT)
+    .map(compactRouteOption);
+  const travelLog = view.log
+    .slice(0, OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT)
+    .map(compactTravelLogEntry);
   const areaRoutes = view.areaExits.map(
     (exit) => [exit.id, exit.destination.id, exit.travel_minutes] as const,
   );
@@ -248,7 +258,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const sites = view.sites.map(titledRef);
   const quests = view.quests.map((quest) => [quest.id, quest.title] as const);
   const journal = view.journal
-    .slice(0, COMPACT_JOURNAL_LIMIT)
+    .slice(0, OVERWORLD_COMPACT_JOURNAL_LIMIT)
     .map((entry) => [entry.kind, entry.title, entry.recordedAt] as const);
   const renown = Object.entries(view.regionRenown).sort(([left], [right]) =>
     left.localeCompare(right),

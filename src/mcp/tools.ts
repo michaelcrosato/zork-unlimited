@@ -88,7 +88,7 @@ import {
   type OverworldView,
   type TravelLogEntry,
 } from "../world/session.js";
-import { compactOverworldView, type OverworldCompactView } from "../world/compact_view.js";
+import type { OverworldCompactView } from "../world/compact_view.js";
 import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
 import { resolveProvider } from "../../agents/llm/providers.js";
 import { loadEngineContract, runWriter } from "../../agents/authoring/writer.js";
@@ -1108,10 +1108,10 @@ export function createToolApi(opts: { root: string }) {
     args: Args,
     session: OverworldSession,
   ): OverworldViewField<Args> {
-    const view = session.view();
     if (args.compact_context === true) {
-      return { context: compactOverworldView(view) } as OverworldViewField<Args>;
+      return { context: session.compactView() } as OverworldViewField<Args>;
     }
+    const view = session.view();
     return { observation: view } as OverworldViewField<Args>;
   }
 
@@ -1298,7 +1298,7 @@ export function createToolApi(opts: { root: string }) {
         ok: true,
         session_id: args.session_id,
         snapshot_hash: snapshotHash,
-        context: compactOverworldView(session.view()),
+        context: session.compactView(),
       } as OverworldContextResponse<Args>;
     },
 

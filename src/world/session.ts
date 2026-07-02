@@ -43,6 +43,17 @@ import {
   type OverworldLocalActionDescriptor,
   type OverworldLocalActionKind,
 } from "./local_actions.js";
+import {
+  OVERWORLD_COMPACT_JOURNAL_LIMIT,
+  OVERWORLD_COMPACT_ROUTE_LIMIT,
+  OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT,
+  OVERWORLD_COMPACT_VIEW_VERSION,
+  compactIdPayload,
+  compactPendingRoad,
+  compactRouteOption,
+  compactTravelLogEntry,
+  type OverworldCompactView,
+} from "./compact_view.js";
 
 export const OVERWORLD_SESSION_SAVE_VERSION = 5 as const;
 const MAX_SUPPLIES = 8;
@@ -3031,6 +3042,116 @@ export class OverworldSession {
       arrivedAt: timeLabel(arrivedAtMinutes),
       event: roadEvent,
       options: this.roadEncounterOptions(roadEvent),
+    };
+  }
+
+  compactView(): OverworldCompactView {
+    const current = this.currentNode();
+    const currentArea = this.currentArea();
+    const areaRoutes = this.visibleAreaExits().map(
+      (exit) => [exit.id, exit.destination.id, exit.travel_minutes] as const,
+    );
+    const routeOptions = this.discoveredRouteOptions();
+    const compactRouteOptions = routeOptions
+      .slice(0, OVERWORLD_COMPACT_ROUTE_LIMIT)
+      .map(compactRouteOption);
+    const routeByDestination = new Map(
+      routeOptions.map((plan) => [plan.destination.id, plan] as const),
+    );
+    const sortedIdList = (values: ReadonlySet<string>): string[] => [...values].sort();
+    const discoveredTownIds = [...this.discoveredIds]
+      .map((id) => this.nodes.get(id))
+      .filter((node): node is OverworldNode => node !== undefined)
+      .sort((a, b) => b.population_2025 - a.population_2025 || a.name.localeCompare(b.name))
+      .map((town) => town.id);
+    const idPayload = compactIdPayload({
+      discovered_towns: discoveredTownIds,
+      discovered_areas: sortedIdList(this.discoveredAreaIds),
+      visited_areas: sortedIdList(this.visitedAreaIds),
+      discovered_jobs: sortedIdList(this.discoveredJobIds),
+      completed_jobs: sortedIdList(this.completedJobIds),
+      discovered_sites: sortedIdList(this.discoveredSiteIds),
+      explored_sites: sortedIdList(this.exploredSiteIds),
+      discovered_quests: sortedIdList(this.discoveredQuestIds),
+      started_quests: sortedIdList(this.startedQuestIds),
+      completed_quests: sortedIdList(this.completedQuestIds),
+      resolved_events: sortedIdList(this.resolvedEventIds),
+    });
+    const exits = overworldEdgesFrom(this.world, this.currentId);
+    const jobs = this.discoveredJobsInCurrentArea().map((job) => [job.id, job.title] as const);
+    const sites = this.discoveredSitesInCurrentArea().map((site) => [site.id, site.title] as const);
+    const quests = this.discoveredQuestsAt(this.currentId).map(
+      (quest) => [quest.id, quest.title] as const,
+    );
+    const pendingRoad = compactPendingRoad(this.pendingRoadEncounter);
+    const journal = this.journalEntries
+      .slice(0, OVERWORLD_COMPACT_JOURNAL_LIMIT)
+      .map((entry) => [entry.kind, entry.title, entry.recordedAt] as const);
+    const travelLog = this.travelLog
+      .slice(0, OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT)
+      .map(compactTravelLogEntry);
+    const renown = [...this.regionRenown.entries()].sort(([left], [right]) =>
+      left.localeCompare(right),
+    );
+    const completedArcs = sortedIdList(this.completedRegionalArcIds);
+
+    return {
+      v: OVERWORLD_COMPACT_VIEW_VERSION,
+      world: this.world.name,
+      time: timeLabel(this.minutes),
+      here: [
+        current.id,
+        current.name,
+        current.region,
+        currentArea?.id ?? null,
+        currentArea?.name ?? null,
+      ],
+      vitals: [
+        this.supplies,
+        MAX_SUPPLIES,
+        this.fatigue,
+        travelCondition(this.fatigue, this.supplies),
+      ],
+      hidden: [
+        this.hiddenAreaCountAt(this.currentId),
+        this.hiddenJobCountAt(this.currentId),
+        this.hiddenSiteCountInCurrentArea(),
+        this.hiddenQuestCountAt(this.currentId),
+      ],
+      roads: exits.map((exit) => {
+        const plan = routeByDestination.get(exit.destination.id);
+        return [
+          exit.id,
+          exit.destination.id,
+          plan?.estimate.elapsedMinutes ?? exit.travel_minutes,
+          plan?.estimate.suppliesNeeded ?? 0,
+          plan?.estimate.fatigueAfter ?? this.fatigue,
+        ];
+      }),
+      ...(areaRoutes.length > 0 ? { area_routes: areaRoutes } : {}),
+      route_options: compactRouteOptions,
+      ...(routeOptions.length > compactRouteOptions.length
+        ? { route_options_truncated: true as const }
+        : {}),
+      areas: this.discoveredAreasAt(this.currentId).map((area) => [area.id, area.name] as const),
+      poi: this.currentAreaPois().map((poi) => [poi.id, poi.title] as const),
+      contacts: this.currentAreaCharacters().map(
+        (character) => [character.id, character.name] as const,
+      ),
+      events: this.currentAreaEvents().map((event) => [event.id, event.title] as const),
+      ...(jobs.length > 0 ? { jobs } : {}),
+      ...(sites.length > 0 ? { sites } : {}),
+      ...(quests.length > 0 ? { quests } : {}),
+      ...(pendingRoad ? { pending_road: pendingRoad } : {}),
+      ...(journal.length > 0 ? { journal } : {}),
+      ...(travelLog.length > 0 ? { travel_log: travelLog } : {}),
+      ...(this.travelLog.length > travelLog.length ? { travel_log_truncated: true as const } : {}),
+      progress: [this.visitedIds.size, this.world.nodes.length],
+      ...(renown.length > 0 ? { renown } : {}),
+      ...(completedArcs.length > 0 ? { completed_arcs: completedArcs } : {}),
+      id_counts: idPayload.id_counts,
+      ...(idPayload.ids_truncated ? { ids_truncated: idPayload.ids_truncated } : {}),
+      ids: idPayload.ids,
     };
   }
 
