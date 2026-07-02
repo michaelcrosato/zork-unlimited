@@ -173,6 +173,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Public MCP `get_overworld_session` now returns compact context by default;
   callers can pass `include_observation: true` only when they need the full
   observation object.
+- `get_overworld_session({ if_snapshot_hash })` and
+  `get_overworld_session_context({ if_snapshot_hash })` can return hash-only
+  `unchanged` responses when the overworld snapshot has not changed.
 - Stateful overworld MCP actions now accept `compact_context` so repeated loop
   turns can avoid full observations after movement or local actions.
 - Overworld MCP start and restore also accept `compact_context`, so long-running

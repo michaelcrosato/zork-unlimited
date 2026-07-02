@@ -613,6 +613,30 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(fullRead.snapshot_hash).toBe(started.snapshot_hash);
     expect(compact.snapshot_hash).toBe(started.snapshot_hash);
     expect(compactStarted.snapshot_hash).toMatch(/^[0-9a-f]{64}$/);
+
+    const unchangedFullRead = a.get_overworld_session({
+      session_id: started.session_id,
+      if_snapshot_hash: started.snapshot_hash,
+    });
+    expect("unchanged" in unchangedFullRead).toBe(true);
+    if (!("unchanged" in unchangedFullRead)) throw new Error("expected unchanged full read");
+    expect(unchangedFullRead.snapshot_hash).toBe(started.snapshot_hash);
+    expect("observation" in unchangedFullRead).toBe(false);
+
+    const unchangedCompactRead = a.get_overworld_session_context({
+      session_id: started.session_id,
+      if_snapshot_hash: started.snapshot_hash,
+    });
+    expect("unchanged" in unchangedCompactRead).toBe(true);
+    if (!("unchanged" in unchangedCompactRead)) {
+      throw new Error("expected unchanged compact read");
+    }
+    expect(unchangedCompactRead.snapshot_hash).toBe(started.snapshot_hash);
+    expect("context" in unchangedCompactRead).toBe(false);
+    expect(JSON.stringify(unchangedCompactRead).length).toBeLessThan(
+      JSON.stringify(compact).length,
+    );
+
     expect(compact.context.v).toBe(1);
     expect(compact.context.here).toEqual([
       full.current.id,
@@ -694,11 +718,19 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(staleTravel.context.travel_log).toEqual(compactTravel.context.travel_log);
     expect("travel" in staleTravel).toBe(false);
 
-    const traveledFullRead = a.get_overworld_session({ session_id: started.session_id });
+    const traveledFullRead = a.get_overworld_session({
+      session_id: started.session_id,
+      if_snapshot_hash: started.snapshot_hash,
+    });
+    expect("unchanged" in traveledFullRead).toBe(false);
+    if ("unchanged" in traveledFullRead) throw new Error("expected changed full read");
     const traveledFull = traveledFullRead.observation;
     const traveledCompactRead = a.get_overworld_session_context({
       session_id: started.session_id,
+      if_snapshot_hash: started.snapshot_hash,
     });
+    expect("unchanged" in traveledCompactRead).toBe(false);
+    if ("unchanged" in traveledCompactRead) throw new Error("expected changed compact read");
     const traveledCompact = traveledCompactRead.context;
 
     expect(traveledFullRead.snapshot_hash).toBe(compactTravel.snapshot_hash);

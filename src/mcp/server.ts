@@ -129,6 +129,7 @@ function compactMcpState(args: McpStateArgs): unknown {
 type McpOverworldReadArgs = {
   session_id: string;
   include_observation?: boolean;
+  if_snapshot_hash?: string;
 };
 
 function compactMcpOverworldSession(args: McpOverworldReadArgs): unknown {
@@ -139,6 +140,9 @@ function compactMcpOverworldSession(args: McpOverworldReadArgs): unknown {
 
 const EXPECTED_SNAPSHOT_HASH = {
   expected_snapshot_hash: z.string().optional().describe("Reject stale snapshot_hash."),
+};
+const IF_SNAPSHOT_HASH = {
+  if_snapshot_hash: z.string().optional().describe("Hash-only when unchanged."),
 };
 const COMPACT_OVERWORLD_CONTEXT = {
   compact_context: z.boolean().optional().describe("Default true; false full observation."),
@@ -155,18 +159,20 @@ tool(
 );
 tool(
   "get_overworld_session",
-  "Read compact overworld context; include_observation true returns full observation.",
+  "Read compact overworld context; if_snapshot_hash returns hash-only when unchanged.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
+    ...IF_SNAPSHOT_HASH,
     include_observation: z.boolean().optional().describe("Include full observation object."),
   },
   (a) => compactMcpOverworldSession(a),
 );
 tool(
   "get_overworld_session_context",
-  "Read a compact stateful overworld context for repeated agent loop turns. Returns stable ids, vitals, local actions, nearby roads, capped route options, pending road options, and recent journal entries without the full object graph.",
+  "Read compact overworld context for repeated loop turns; if_snapshot_hash returns hash-only when unchanged.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
+    ...IF_SNAPSHOT_HASH,
   },
   (a) => api.get_overworld_session_context(a),
 );

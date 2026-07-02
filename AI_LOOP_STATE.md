@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 71 -->
+<!-- historical_cycle_count: 72 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — overworld_if_snapshot_hash
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: overworld `get_overworld_session` and `get_overworld_session_context` now accept `if_snapshot_hash`.
+- Loop effect: polling/resume loops can get a hash-only `unchanged` response instead of repeating compact/full overworld context when the snapshot has not changed.
+- Evidence: live MCP unchanged compact/full reads returned hash-only at 125 chars; stale reads returned compact/full payloads at 2466/70771 chars matching the post-travel hash.
+- Guard: MCP regression asserts matching hashes return no context/observation payload, while stale hashes still return compact/full context.
+- VERIFY: focused MCP and registration tests, typecheck, live MCP adapter check, `npm run health`, `npm run validate`, and `npm test` passed: integrity, lint, format check, 193 test files / 1362 tests, and validate.
 
 ### Cycle result — observation_if_state_hash
 

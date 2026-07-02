@@ -448,6 +448,35 @@ type OverworldContextPayload = {
   context: OverworldCompactView;
 };
 
+type OverworldReadArgs = {
+  session_id: string;
+  if_snapshot_hash?: string;
+};
+
+type OverworldReadUnchanged = {
+  session_id: string;
+  snapshot_hash: string;
+  unchanged: true;
+};
+
+type OverworldFullReadPayload = {
+  session_id: string;
+  snapshot_hash: string;
+  observation: OverworldView;
+};
+
+type OverworldReadResponse<Args extends OverworldReadArgs> = Args extends {
+  if_snapshot_hash: string;
+}
+  ? OverworldFullReadPayload | OverworldReadUnchanged
+  : OverworldFullReadPayload;
+
+type OverworldContextResponse<Args extends OverworldReadArgs> = Args extends {
+  if_snapshot_hash: string;
+}
+  ? OverworldContextPayload | OverworldReadUnchanged
+  : OverworldContextPayload;
+
 function indexFor(pack: CompiledRpgPack["pack"]): RpgIndex {
   return indexRpgPack(pack);
 }
@@ -1078,27 +1107,41 @@ export function createToolApi(opts: { root: string }) {
       } as OverworldStartResponse<Args>;
     },
 
-    get_overworld_session(args: { session_id: string }): {
-      session_id: string;
-      snapshot_hash: string;
-      observation: OverworldView;
-    } {
+    get_overworld_session<Args extends OverworldReadArgs>(args: Args): OverworldReadResponse<Args> {
       const session = getOverworldSession(args.session_id);
+      const snapshotHash = overworldSnapshotHash(session);
+      if (args.if_snapshot_hash !== undefined && args.if_snapshot_hash === snapshotHash) {
+        return {
+          session_id: args.session_id,
+          snapshot_hash: snapshotHash,
+          unchanged: true,
+        } as OverworldReadResponse<Args>;
+      }
       return {
         session_id: args.session_id,
-        snapshot_hash: overworldSnapshotHash(session),
+        snapshot_hash: snapshotHash,
         observation: session.view(),
-      };
+      } as OverworldReadResponse<Args>;
     },
 
-    get_overworld_session_context(args: { session_id: string }): OverworldContextPayload {
+    get_overworld_session_context<Args extends OverworldReadArgs>(
+      args: Args,
+    ): OverworldContextResponse<Args> {
       const session = getOverworldSession(args.session_id);
+      const snapshotHash = overworldSnapshotHash(session);
+      if (args.if_snapshot_hash !== undefined && args.if_snapshot_hash === snapshotHash) {
+        return {
+          session_id: args.session_id,
+          snapshot_hash: snapshotHash,
+          unchanged: true,
+        } as OverworldContextResponse<Args>;
+      }
       return {
         ok: true,
         session_id: args.session_id,
-        snapshot_hash: overworldSnapshotHash(session),
+        snapshot_hash: snapshotHash,
         context: compactOverworldView(session.view()),
-      };
+      } as OverworldContextResponse<Args>;
     },
 
     export_overworld_session<Args extends OverworldExportArgs>(
