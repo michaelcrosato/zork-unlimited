@@ -110,7 +110,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - `get_transcript({ summary_only: true })` keeps session/end-state metadata while
   omitting the `turns` field for token-light checks.
 - `get_transcript({ compact_summary: true })` caps summary scenes, inventory,
-  flags, and journal entries for blind end-of-run audits.
+  flags, and journal entries for blind end-of-run audits, and omits empty
+  inventory/flag/journal lists.
 - Transcript responses include `state_hash`, so compact end-of-run audits can
   bind summary/turn rows to reducer state without a follow-up state read.
 - `get_transcript({ if_state_hash })` can return a hash-only `unchanged`
@@ -225,6 +226,8 @@ Make discovered overworld quest leads start real RPG sessions.
   tuples for route debugging without replaying event text or repeated row keys.
 - RPG compact transcript summaries omit `ending_id` until an actual ending exists;
   full summaries keep the explicit `null` for debugging.
+- RPG compact transcript summaries omit empty inventory/flag/journal lists on
+  early or state-light audit polls.
 - World source loading now caches parsed Charter Marches and New York overworld
   manifests per process.
 - MCP pack loading now caches unchanged RPG compile/validate reports within each

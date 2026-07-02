@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 182 -->
+<!-- historical_cycle_count: 183 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — compact_transcript_empty_lists
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact RPG transcript summaries now omit empty inventory, flag, and journal lists.
+- Loop effect: early/state-light transcript audits keep route and hash metadata without paying for three empty arrays.
+- Guard: focused MCP/docs tests, typecheck, lint, and format check passed before full gates.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
 
 ### Cycle result — compact_rpg_empty_exits
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/token surface: compact overworld context now emits `v: 2` for the expanded progress-id tuple contract that includes started/completed quest ids.
 - Loop effect: agents can distinguish the current compact context shape instead of reading the old `v: 1` discriminator after tuple slots changed.
 - Guard: focused compact-overworld/MCP tests, typecheck, and format check passed before full gates.
-- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.
-
-### Cycle result — overworld_quest_completion_state
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/state surface: ended non-death RPG quest sessions can now mark their overworld quest complete via `completedQuestIds` plus `quest_done:*` journal entries.
-- Loop effect: the overworld/RPG bridge now has a start and completion path, while stale snapshot hashes, generated sessions, unfinished sessions, and death endings are rejected.
-- Guard: focused MCP/overworld/session tests, typecheck, and format check passed before full gates.
 - VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` passed on the final tree.

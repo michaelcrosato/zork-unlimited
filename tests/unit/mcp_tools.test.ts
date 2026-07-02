@@ -1395,6 +1395,16 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_summary: true,
     });
     expect(compactEndedSummary.summary.ending_id).toBe("ending_victory");
+    const freshGame = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 1 });
+    const freshCompactSummary = a.get_transcript({
+      session_id: freshGame.session_id,
+      summary_only: true,
+      compact_summary: true,
+    });
+    expect(freshCompactSummary.summary.scenes).toEqual(["barrow_mouth"]);
+    expect("inventory" in freshCompactSummary.summary).toBe(false);
+    expect("flags" in freshCompactSummary.summary).toBe(false);
+    expect("journal" in freshCompactSummary.summary).toBe(false);
     const unchangedTranscript = a.get_transcript({
       session_id: game.session_id,
       summary_only: true,

@@ -421,8 +421,14 @@ type TranscriptSummary = {
     journal?: number;
   };
 };
-type TranscriptCompactSummary = Omit<TranscriptSummary, "ending_id"> & {
+type TranscriptCompactSummary = Omit<
+  TranscriptSummary,
+  "ending_id" | "inventory" | "flags" | "journal"
+> & {
   ending_id?: string;
+  inventory?: string[];
+  flags?: string[];
+  journal?: string[];
 };
 type TranscriptSummaryFor<Args extends TranscriptArgs> = Args extends { compact_summary: true }
   ? TranscriptCompactSummary
@@ -586,14 +592,20 @@ function compactTranscriptSummary(summary: TranscriptSummary): TranscriptCompact
     ...(omittedFlags !== undefined ? { flags: omittedFlags } : {}),
     ...(omittedJournal !== undefined ? { journal: omittedJournal } : {}),
   };
-  const { ending_id: endingId, ...baseSummary } = summary;
+  const {
+    ending_id: endingId,
+    inventory: _fullInventory,
+    flags: _fullFlags,
+    journal: _fullJournal,
+    ...baseSummary
+  } = summary;
   return {
     ...baseSummary,
     ...(endingId ? { ending_id: endingId } : {}),
     scenes,
-    inventory,
-    flags,
-    journal,
+    ...(inventory.length > 0 ? { inventory } : {}),
+    ...(flags.length > 0 ? { flags } : {}),
+    ...(journal.length > 0 ? { journal } : {}),
     ...(Object.keys(more).length > 0 ? { more } : {}),
   };
 }
