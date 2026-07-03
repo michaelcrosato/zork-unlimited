@@ -664,6 +664,18 @@ type OverworldLocalJournalSource = {
   area: string;
 };
 
+type OverworldLocalActionJournalReplayEntry = {
+  entry: OverworldJournalEntry;
+  source: OverworldLocalJournalSource;
+  recordedAt: number;
+};
+
+type OverworldLocalActionJournalReplayIndex = {
+  entries: readonly OverworldLocalActionJournalReplayEntry[];
+  localActionCountByArea: ReadonlyMap<string, number>;
+  localActionCountByTown: ReadonlyMap<string, number>;
+};
+
 function assertKnownJournalSource(
   entry: OverworldJournalEntry,
   prefix: string,
@@ -1868,15 +1880,39 @@ function localJournalSource(
   }
 }
 
+function localActionJournalReplayIndex(
+  snapshot: OverworldSessionSnapshot,
+  sources: OverworldLocalActionJournalReachabilityIndex,
+): OverworldLocalActionJournalReplayIndex {
+  const entries: OverworldLocalActionJournalReplayEntry[] = [];
+  const localActionCountByTown = new Map<string, number>();
+  const localActionCountByArea = new Map<string, number>();
+
+  for (const entry of snapshot.journalEntries) {
+    const source = localJournalSource(entry, sources);
+    if (!source) continue;
+    entries.push({
+      entry,
+      source,
+      recordedAt: journalEntryRecordedAt(entry),
+    });
+    incrementCount(localActionCountByTown, source.home);
+    incrementCount(localActionCountByArea, source.area);
+  }
+
+  entries.sort((left, right) => left.recordedAt - right.recordedAt);
+  return { entries, localActionCountByArea, localActionCountByTown };
+}
+
 function assertJournalAfterTownVisit(
   sourceLabel: string,
   sourceId: string,
-  entry: OverworldJournalEntry,
+  recordedAt: number,
   townId: string,
   townVisitMinutes: ReadonlyMap<string, number>,
 ): void {
   const visitedAt = townVisitMinutes.get(townId);
-  if (visitedAt !== undefined && journalEntryRecordedAt(entry) < visitedAt) {
+  if (visitedAt !== undefined && recordedAt < visitedAt) {
     throw new Error(
       `Overworld session snapshot ${sourceLabel} "${sourceId}" was recorded before visiting town "${townId}".`,
     );
@@ -1884,12 +1920,10 @@ function assertJournalAfterTownVisit(
 }
 
 function assertSnapshotLocalActionJournalReachability(
-  snapshot: OverworldSessionSnapshot,
+  localActionJournal: OverworldLocalActionJournalReplayIndex,
   sources: OverworldLocalActionJournalReachabilityIndex,
 ): void {
-  for (const entry of snapshot.journalEntries) {
-    const source = localJournalSource(entry, sources);
-    if (!source) continue;
+  for (const { source, recordedAt } of localActionJournal.entries) {
     assertVisitedTownForDiscovery(
       source.sourceLabel,
       source.sourceId,
@@ -1905,7 +1939,7 @@ function assertSnapshotLocalActionJournalReachability(
     assertJournalAfterTownVisit(
       source.sourceLabel,
       source.sourceId,
-      entry,
+      recordedAt,
       source.home,
       sources.townVisitMinutes,
     );
@@ -1955,29 +1989,20 @@ function replayedDiscoveredSiteIdsBeforeLocalAction(
 }
 
 function assertSnapshotLocalActionDiscoveryChronology(
-  snapshot: OverworldSessionSnapshot,
+  localActionJournal: OverworldLocalActionJournalReplayIndex,
   sources: OverworldLocalActionJournalReachabilityIndex,
 ): void {
-  const entries = snapshot.journalEntries
-    .map((entry) => {
-      const source = localJournalSource(entry, sources);
-      if (!source) return null;
-      return {
-        entry,
-        source,
-        recordedAt: journalEntryRecordedAt(entry),
-      };
-    })
-    .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
-    .sort((left, right) => left.recordedAt - right.recordedAt);
   const priorLocalActionCountByTown = new Map<string, number>();
   const priorLocalActionCountByArea = new Map<string, number>();
 
-  for (let index = 0; index < entries.length; ) {
-    const recordedAt = entries[index]!.recordedAt;
+  for (let index = 0; index < localActionJournal.entries.length; ) {
+    const recordedAt = localActionJournal.entries[index]!.recordedAt;
     const group = [];
-    while (index < entries.length && entries[index]!.recordedAt === recordedAt) {
-      group.push(entries[index]!);
+    while (
+      index < localActionJournal.entries.length &&
+      localActionJournal.entries[index]!.recordedAt === recordedAt
+    ) {
+      group.push(localActionJournal.entries[index]!);
       index += 1;
     }
 
@@ -2041,20 +2066,17 @@ function recordEarliestTime(times: Map<string, number>, key: string, recordedAt:
 function assertSnapshotDiscoveredAreaCountReplay(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldLocalActionJournalReachabilityIndex,
+  localActionJournal: OverworldLocalActionJournalReplayIndex,
 ): void {
-  const localActionCountByTown = new Map<string, number>();
-  for (const entry of snapshot.journalEntries) {
-    const source = localJournalSource(entry, sources);
-    if (!source) continue;
-    incrementCount(localActionCountByTown, source.home);
-  }
-
   for (const townId of snapshot.visitedIds) {
     const localAreas = indexedList(sources.areasByTown, townId);
     const expectedDiscoveredCount =
       localAreas.length === 0
         ? 0
-        : Math.min(localAreas.length, 1 + (localActionCountByTown.get(townId) ?? 0));
+        : Math.min(
+            localAreas.length,
+            1 + (localActionJournal.localActionCountByTown.get(townId) ?? 0),
+          );
     const actualDiscoveredCount = localAreas.filter((area) =>
       sources.discoveredAreaIds.has(area.id),
     ).length;
@@ -2091,19 +2113,12 @@ function assertDiscoveredSourceCountReplay(
 function assertSnapshotDiscoveredLocalSourceCountReplay(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldLocalActionJournalReachabilityIndex,
+  localActionJournal: OverworldLocalActionJournalReplayIndex,
 ): void {
-  const localActionCountByTown = new Map<string, number>();
-  const localActionCountByArea = new Map<string, number>();
   const discoveredJobCountByTown = new Map<string, number>();
   const discoveredQuestCountByTown = new Map<string, number>();
   const discoveredSiteCountByArea = new Map<string, number>();
 
-  for (const entry of snapshot.journalEntries) {
-    const source = localJournalSource(entry, sources);
-    if (!source) continue;
-    incrementCount(localActionCountByTown, source.home);
-    incrementCount(localActionCountByArea, source.area);
-  }
   for (const jobId of snapshot.discoveredJobIds) {
     const job = sources.jobsById.get(jobId);
     if (job) incrementCount(discoveredJobCountByTown, job.home);
@@ -2118,7 +2133,7 @@ function assertSnapshotDiscoveredLocalSourceCountReplay(
   }
 
   for (const townId of snapshot.visitedIds) {
-    const localActionCount = localActionCountByTown.get(townId) ?? 0;
+    const localActionCount = localActionJournal.localActionCountByTown.get(townId) ?? 0;
     const availableJobCount = countValues(indexedList(sources.jobsByTown, townId), (job) =>
       sources.discoveredAreaIds.has(job.area),
     );
@@ -2141,7 +2156,7 @@ function assertSnapshotDiscoveredLocalSourceCountReplay(
     );
   }
   for (const areaId of sources.discoveredAreaIds) {
-    const localActionCount = localActionCountByArea.get(areaId) ?? 0;
+    const localActionCount = localActionJournal.localActionCountByArea.get(areaId) ?? 0;
     const availableSiteCount = indexedList(sources.sitesByArea, areaId).length;
     assertDiscoveredSourceCountReplay(
       "site",
@@ -2765,6 +2780,7 @@ export class OverworldSession {
       townVisitMinutes,
       visitedTownIds,
     };
+    const localActionJournal = localActionJournalReplayIndex(snapshot, localActionJournalSources);
     assertSnapshotDiscoveredAreaPrefix(snapshot, indexes.areasByTown, visitedTownIds);
     assertSnapshotDiscoveredLocalSourcePrefixes(
       snapshot,
@@ -2796,12 +2812,20 @@ export class OverworldSession {
       discoveredAreaIds,
       visitedTownIds,
     });
-    assertSnapshotLocalActionJournalReachability(snapshot, localActionJournalSources);
-    assertSnapshotLocalActionDiscoveryChronology(snapshot, localActionJournalSources);
+    assertSnapshotLocalActionJournalReachability(localActionJournal, localActionJournalSources);
+    assertSnapshotLocalActionDiscoveryChronology(localActionJournal, localActionJournalSources);
     assertSnapshotEventResolutionProofs(snapshot, indexes);
     assertSnapshotRegionalArcCompletionProofs(snapshot, indexes);
-    assertSnapshotDiscoveredLocalSourceCountReplay(snapshot, localActionJournalSources);
-    assertSnapshotDiscoveredAreaCountReplay(snapshot, localActionJournalSources);
+    assertSnapshotDiscoveredLocalSourceCountReplay(
+      snapshot,
+      localActionJournalSources,
+      localActionJournal,
+    );
+    assertSnapshotDiscoveredAreaCountReplay(
+      snapshot,
+      localActionJournalSources,
+      localActionJournal,
+    );
     for (const [region] of snapshot.regionRenown) {
       if (!indexes.regionNames.has(region)) {
         throw new Error(`Overworld session snapshot has unknown renown region "${region}".`);

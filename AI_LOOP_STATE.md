@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 227 -->
+<!-- historical_cycle_count: 228 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — indexed_overworld_restore_local_journal
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: snapshot restore now builds one local-action journal replay index with sorted source entries and town/area action counts.
+- Loop effect: local reachability, chronology, area-count replay, and source-count replay proofs share parsed journal facts instead of remapping journal entries independently.
+- Guard: focused typecheck plus overworld MCP lifecycle and snapshot integrity tests passed over the refactored replay index.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result — indexed_overworld_restore_event_proofs
 

@@ -209,6 +209,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Snapshot restore proof helpers read local area/job/quest/site lists from those
   session indexes, so local source prefix, chronology, and count replay checks
   avoid fallback manifest scans.
+- Snapshot restore local-action proofs now share one replay index with sorted
+  source entries and town/area action counts, avoiding duplicate journal
+  remapping across reachability, chronology, and count checks.
 - Snapshot restore event and regional-arc proofing indexes journal ids, local
   scout/contact proof times, and resolved-event town times once per check, so
   proof validation avoids nested journal/event scans.
