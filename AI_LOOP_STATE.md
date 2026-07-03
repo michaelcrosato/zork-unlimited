@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 257 -->
+<!-- historical_cycle_count: 258 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - direct_overworld_route_option_loops
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: discovered route-option cache construction now walks discovered town ids directly, and route search seeds unsettled ids without cloning through arrays.
+- Loop effect: compact/full overworld views avoid intermediate `filter`/`map` route arrays and per-route allowed-id arrays while preserving destination sorting and estimates.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over direct route-option loops.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - direct_overworld_session_id_indexes
 

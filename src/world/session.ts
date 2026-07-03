@@ -3708,9 +3708,7 @@ export class OverworldSession {
 
     const distance = new Map<string, number>([[fromId, 0]]);
     const previous = new Map<string, { from: string; edge: OverworldExit }>();
-    const unsettled = new Set<string>(
-      allowedNodeIds ? [...allowedNodeIds] : [...this.nodes.keys()],
-    );
+    const unsettled = new Set<string>(allowedNodeIds ?? this.nodes.keys());
 
     while (unsettled.size > 0) {
       let current: string | null = null;
@@ -3765,20 +3763,22 @@ export class OverworldSession {
   private discoveredRouteOptions(): OverworldSessionRoutePlan[] {
     if (this.routeOptionsCache) return this.routeOptionsCache;
     const current = this.currentNode();
-    const options = [...this.discoveredIds]
-      .filter((id) => id !== this.currentId)
-      .map((id) => this.indexedRoute(this.currentId, id, this.discoveredIds))
-      .filter((plan): plan is OverworldRoutePlan => plan !== null && plan.steps.length > 0)
-      .map((plan) => this.routeWithEstimate(plan))
-      .sort(
-        (a, b) =>
-          Number(b.destination.region === current.region) -
-            Number(a.destination.region === current.region) ||
-          a.estimate.elapsedMinutes - b.estimate.elapsedMinutes ||
-          a.totalMinutes - b.totalMinutes ||
-          b.destination.population_2025 - a.destination.population_2025 ||
-          a.destination.name.localeCompare(b.destination.name),
-      );
+    const options: OverworldSessionRoutePlan[] = [];
+    for (const id of this.discoveredIds) {
+      if (id === this.currentId) continue;
+      const plan = this.indexedRoute(this.currentId, id, this.discoveredIds);
+      if (!plan || plan.steps.length === 0) continue;
+      options.push(this.routeWithEstimate(plan));
+    }
+    options.sort(
+      (a, b) =>
+        Number(b.destination.region === current.region) -
+          Number(a.destination.region === current.region) ||
+        a.estimate.elapsedMinutes - b.estimate.elapsedMinutes ||
+        a.totalMinutes - b.totalMinutes ||
+        b.destination.population_2025 - a.destination.population_2025 ||
+        a.destination.name.localeCompare(b.destination.name),
+    );
     this.routeOptionsCache = options;
     return options;
   }
@@ -3934,9 +3934,8 @@ export class OverworldSession {
     const compactRouteOptions = routeOptions
       .slice(0, OVERWORLD_COMPACT_ROUTE_LIMIT)
       .map(compactRouteOption);
-    const routeByDestination = new Map(
-      routeOptions.map((plan) => [plan.destination.id, plan] as const),
-    );
+    const routeByDestination = new Map<string, OverworldSessionRoutePlan>();
+    for (const plan of routeOptions) routeByDestination.set(plan.destination.id, plan);
     const sortedIdList = (values: ReadonlySet<string>): string[] => [...values].sort();
     const discoveredTownIds = [...this.discoveredIds]
       .map((id) => this.nodes.get(id))

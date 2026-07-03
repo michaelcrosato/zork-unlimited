@@ -213,6 +213,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Overworld session construction now uses direct keyed/id index loops for core
   world lookup maps and nested route/action indexes, avoiding tuple arrays from
   `new Map(array.map(...))` during start/restore.
+- Discovered route-option cache construction now walks discovered town ids
+  directly and seeds route-search unsettled ids from iterables, avoiding
+  intermediate route arrays and allowed-id clones during compact/full view builds.
 - Snapshot known-id validation now returns verified unique state-id sets, so
   current-town membership, subset checks, frontier proofing, and local proof inputs
   reuse validation state instead of rebuilding those sets later in restore.
