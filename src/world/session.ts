@@ -556,7 +556,6 @@ type OverworldJournalTimelineIndex = {
   eventResolutionProofs: OverworldEventResolutionJournalIndex;
   localActionEntries: readonly OverworldLocalActionJournalTimelineEntry[];
   progressSources: OverworldProgressJournalSourceIndex;
-  recordedAtById: ReadonlyMap<string, number>;
   roadJournalEntries: readonly OverworldRoadJournalResolutionEntry[];
   serviceJournal: OverworldServiceJournalReplayIndex;
 };
@@ -1127,11 +1126,6 @@ function assertSnapshotTimeline(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldJournalTimelineSourceIndex,
 ): OverworldJournalTimelineIndex {
-  assertUnique(
-    "journal entry id",
-    snapshot.journalEntries.map((entry) => entry.id),
-  );
-
   let previousRecordedAt = Number.POSITIVE_INFINITY;
   const progressSources = emptyProgressJournalSourceIndex();
   const localActionEntries: OverworldLocalActionJournalTimelineEntry[] = [];
@@ -1145,6 +1139,9 @@ function assertSnapshotTimeline(
     scoutTimeByArea: new Map<string, number>(),
   };
   for (const entry of snapshot.journalEntries) {
+    if (recordedAtById.has(entry.id)) {
+      throw new Error(`Overworld session snapshot has duplicate journal entry id "${entry.id}".`);
+    }
     const recordedAt = parseTimeLabel(entry.recordedAt);
     assertSnapshotJournalSource(entry, recordedAt, sources);
     if (recordedAt > snapshot.minutes) {
@@ -1166,7 +1163,6 @@ function assertSnapshotTimeline(
     eventResolutionProofs,
     localActionEntries,
     progressSources,
-    recordedAtById,
     roadJournalEntries,
     serviceJournal: { entries: serviceReplayEntries },
   };

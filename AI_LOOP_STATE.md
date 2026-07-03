@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 242 -->
+<!-- historical_cycle_count: 243 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - folded_overworld_restore_journal_uniqueness_into_timeline
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: snapshot timeline validation now checks duplicate journal ids inside the single journal walk and stops exposing a redundant top-level recorded-time map.
+- Loop effect: restore/load validation avoids the pre-loop journal id array allocation while preserving event/regional-arc recorded-time proofing.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over the folded journal-id path.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - folded_overworld_restore_local_actions_into_timeline
 
