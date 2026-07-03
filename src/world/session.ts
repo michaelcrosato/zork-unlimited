@@ -492,25 +492,27 @@ function sortedNumberMap(values: Map<string, number>): [string, number][] {
   return [...values.entries()].sort(([left], [right]) => left.localeCompare(right));
 }
 
-function assertUnique(label: string, values: readonly string[]): void {
+function assertUnique(label: string, values: readonly string[]): Set<string> {
   const seen = new Set<string>();
   for (const value of values) {
     if (seen.has(value))
       throw new Error(`Overworld session snapshot has duplicate ${label} "${value}".`);
     seen.add(value);
   }
+  return seen;
 }
 
 function assertKnownIds(
   label: string,
   values: readonly string[],
   known: ReadonlySet<string>,
-): void {
-  assertUnique(label, values);
-  for (const value of values) {
+): Set<string> {
+  const seen = assertUnique(label, values);
+  for (const value of seen) {
     if (!known.has(value))
       throw new Error(`Overworld session snapshot has unknown ${label} "${value}".`);
   }
+  return seen;
 }
 
 function assertUniqueTupleKeys(
@@ -2860,13 +2862,29 @@ export class OverworldSession {
       }
     }
 
-    assertKnownIds("discovered town id", snapshot.discoveredIds, indexes.nodeIds);
-    assertKnownIds("visited town id", snapshot.visitedIds, indexes.nodeIds);
-    assertKnownIds("discovered area id", snapshot.discoveredAreaIds, indexes.areaIds);
+    const discoveredTownIds = assertKnownIds(
+      "discovered town id",
+      snapshot.discoveredIds,
+      indexes.nodeIds,
+    );
+    const visitedTownIds = assertKnownIds("visited town id", snapshot.visitedIds, indexes.nodeIds);
+    const discoveredAreaIds = assertKnownIds(
+      "discovered area id",
+      snapshot.discoveredAreaIds,
+      indexes.areaIds,
+    );
     assertKnownIds("visited area id", snapshot.visitedAreaIds, indexes.areaIds);
-    assertKnownIds("discovered job id", snapshot.discoveredJobIds, indexes.jobIds);
+    const discoveredJobIds = assertKnownIds(
+      "discovered job id",
+      snapshot.discoveredJobIds,
+      indexes.jobIds,
+    );
     assertKnownIds("completed job id", snapshot.completedJobIds, indexes.jobIds);
-    assertKnownIds("discovered site id", snapshot.discoveredSiteIds, indexes.siteIds);
+    const discoveredSiteIds = assertKnownIds(
+      "discovered site id",
+      snapshot.discoveredSiteIds,
+      indexes.siteIds,
+    );
     assertKnownIds("explored site id", snapshot.exploredSiteIds, indexes.siteIds);
     assertKnownIds("discovered quest id", snapshot.discoveredQuestIds, indexes.questIds);
     assertKnownIds("started quest id", snapshot.startedQuestIds, indexes.questIds);
@@ -2888,20 +2906,15 @@ export class OverworldSession {
     );
     const serviceJournal = serviceJournalReplayIndex(snapshot, journalTimeline);
 
-    if (!snapshot.discoveredIds.includes(snapshot.currentId)) {
+    if (!discoveredTownIds.has(snapshot.currentId)) {
       throw new Error("Overworld session snapshot current town is not discovered.");
     }
-    if (!snapshot.visitedIds.includes(snapshot.currentId)) {
+    if (!visitedTownIds.has(snapshot.currentId)) {
       throw new Error("Overworld session snapshot current town is not visited.");
     }
-    const discoveredTownIds = new Set(snapshot.discoveredIds);
-    const visitedTownIds = new Set(snapshot.visitedIds);
     const townVisitMinutes = assertSnapshotVisitedTownTravelProof(snapshot, travelTimeline);
     assertSnapshotTravelPathContinuity(snapshot, this.world.start, travelTimeline);
     assertSnapshotDiscoveredTownFrontier(snapshot, this.world, visitedTownIds);
-    const discoveredAreaIds = new Set(snapshot.discoveredAreaIds);
-    const discoveredJobIds = new Set(snapshot.discoveredJobIds);
-    const discoveredSiteIds = new Set(snapshot.discoveredSiteIds);
     assertStringSetSubset(
       "visited town id",
       snapshot.visitedIds,

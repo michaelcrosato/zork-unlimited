@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 235 -->
+<!-- historical_cycle_count: 236 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - indexed_overworld_restore_known_ids
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: snapshot known-id validation now returns verified unique state-id sets for downstream restore proofing.
+- Loop effect: current-town membership, subset checks, frontier proofing, and local proof sources reuse validated sets instead of rebuilding discovered/visited/progress sets later in `applySnapshot`.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over the known-id reuse path.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - indexed_overworld_restore_progress_timeline
 
