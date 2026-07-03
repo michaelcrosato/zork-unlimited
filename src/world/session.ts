@@ -561,6 +561,16 @@ type OverworldResourceReplayIndex = {
   roadEventsByEdgeId: ReadonlyMap<string, OverworldRoadEvent>;
 };
 
+type OverworldProgressJournalSourceIndex = {
+  completedJobIds: ReadonlySet<string>;
+  completedQuestIds: ReadonlySet<string>;
+  completedRegionalArcIds: ReadonlySet<string>;
+  exploredSiteIds: ReadonlySet<string>;
+  resolvedEventIds: ReadonlySet<string>;
+  startedQuestIds: ReadonlySet<string>;
+  visitedAreaIds: ReadonlySet<string>;
+};
+
 type OverworldReplayState = {
   minimumClock: number;
   supplies: number;
@@ -1244,16 +1254,54 @@ function assertStringSetSubset(
   }
 }
 
-function journalSourceIdsForKind(
+function progressJournalSourceIndex(
   snapshot: OverworldSessionSnapshot,
-  kind: OverworldJournalEntry["kind"],
-  prefix: string,
-): Set<string> {
-  const ids = new Set<string>();
+): OverworldProgressJournalSourceIndex {
+  const completedJobIds = new Set<string>();
+  const completedQuestIds = new Set<string>();
+  const completedRegionalArcIds = new Set<string>();
+  const exploredSiteIds = new Set<string>();
+  const resolvedEventIds = new Set<string>();
+  const startedQuestIds = new Set<string>();
+  const visitedAreaIds = new Set<string>();
+
   for (const entry of snapshot.journalEntries) {
-    if (entry.kind === kind) ids.add(entry.id.slice(prefix.length));
+    switch (entry.kind) {
+      case "area":
+        visitedAreaIds.add(entry.id.slice("area:".length));
+        break;
+      case "job":
+        completedJobIds.add(entry.id.slice("job:".length));
+        break;
+      case "quest":
+        startedQuestIds.add(entry.id.slice("quest:".length));
+        break;
+      case "quest_done":
+        completedQuestIds.add(entry.id.slice("quest_done:".length));
+        break;
+      case "regional_arc":
+        completedRegionalArcIds.add(entry.id.slice("arc:".length));
+        break;
+      case "resolution":
+        resolvedEventIds.add(entry.id.slice("resolve:".length));
+        break;
+      case "site":
+        exploredSiteIds.add(entry.id.slice("site:".length));
+        break;
+      default:
+        break;
+    }
   }
-  return ids;
+
+  return {
+    completedJobIds,
+    completedQuestIds,
+    completedRegionalArcIds,
+    exploredSiteIds,
+    resolvedEventIds,
+    startedQuestIds,
+    visitedAreaIds,
+  };
 }
 
 function assertJournalStateBinding(
@@ -1280,47 +1328,49 @@ function assertJournalStateBinding(
 }
 
 function assertSnapshotProgressJournalBindings(snapshot: OverworldSessionSnapshot): void {
+  const journalSources = progressJournalSourceIndex(snapshot);
+
   assertJournalStateBinding(
     "visited area id",
     snapshot.visitedAreaIds,
     "visited area id",
-    journalSourceIdsForKind(snapshot, "area", "area:"),
+    journalSources.visitedAreaIds,
   );
   assertJournalStateBinding(
     "completed job id",
     snapshot.completedJobIds,
     "completed job id",
-    journalSourceIdsForKind(snapshot, "job", "job:"),
+    journalSources.completedJobIds,
   );
   assertJournalStateBinding(
     "started quest id",
     snapshot.startedQuestIds,
     "started quest id",
-    journalSourceIdsForKind(snapshot, "quest", "quest:"),
+    journalSources.startedQuestIds,
   );
   assertJournalStateBinding(
     "completed quest id",
     snapshot.completedQuestIds,
     "completed quest id",
-    journalSourceIdsForKind(snapshot, "quest_done", "quest_done:"),
+    journalSources.completedQuestIds,
   );
   assertJournalStateBinding(
     "explored site id",
     snapshot.exploredSiteIds,
     "explored site id",
-    journalSourceIdsForKind(snapshot, "site", "site:"),
+    journalSources.exploredSiteIds,
   );
   assertJournalStateBinding(
     "resolved event id",
     snapshot.resolvedEventIds,
     "resolved event id",
-    journalSourceIdsForKind(snapshot, "resolution", "resolve:"),
+    journalSources.resolvedEventIds,
   );
   assertJournalStateBinding(
     "completed regional arc id",
     snapshot.completedRegionalArcIds,
     "completed regional arc id",
-    journalSourceIdsForKind(snapshot, "regional_arc", "arc:"),
+    journalSources.completedRegionalArcIds,
   );
 }
 

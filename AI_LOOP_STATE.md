@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 229 -->
+<!-- historical_cycle_count: 230 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - indexed_overworld_restore_progress_bindings
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: snapshot restore now builds one progress journal source index for visited areas, jobs, quests, sites, event resolutions, and regional arcs.
+- Loop effect: progress/state journal binding checks avoid seven full journal passes during repeated overworld restore/load validation.
+- Guard: focused typecheck plus overworld MCP lifecycle and snapshot integrity tests passed over the refactored binding path.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - indexed_overworld_restore_resource_replay
 
