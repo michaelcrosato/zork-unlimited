@@ -3927,6 +3927,18 @@ export class OverworldSession {
     return cloneOverworldCompactView(this.cachedCompactView());
   }
 
+  private sortedDiscoveredTownsByPopulation(): OverworldNode[] {
+    const discoveredTowns: OverworldNode[] = [];
+    for (const id of this.discoveredIds) {
+      const town = this.nodes.get(id);
+      if (town) discoveredTowns.push(town);
+    }
+    discoveredTowns.sort(
+      (a, b) => b.population_2025 - a.population_2025 || a.name.localeCompare(b.name),
+    );
+    return discoveredTowns;
+  }
+
   private buildCompactView(): OverworldCompactView {
     const current = this.currentNode();
     const currentArea = this.currentArea();
@@ -3945,16 +3957,8 @@ export class OverworldSession {
     const routeByDestination = new Map<string, OverworldSessionRoutePlan>();
     for (const plan of routeOptions) routeByDestination.set(plan.destination.id, plan);
     const sortedIdList = (values: ReadonlySet<string>): string[] => [...values].sort();
-    const discoveredTowns: OverworldNode[] = [];
-    for (const id of this.discoveredIds) {
-      const node = this.nodes.get(id);
-      if (node) discoveredTowns.push(node);
-    }
-    discoveredTowns.sort(
-      (a, b) => b.population_2025 - a.population_2025 || a.name.localeCompare(b.name),
-    );
     const discoveredTownIds: string[] = [];
-    for (const town of discoveredTowns) discoveredTownIds.push(town.id);
+    for (const town of this.sortedDiscoveredTownsByPopulation()) discoveredTownIds.push(town.id);
     const idPayload = compactIdPayload({
       discovered_towns: discoveredTownIds,
       discovered_areas: sortedIdList(this.discoveredAreaIds),
@@ -4126,10 +4130,7 @@ export class OverworldSession {
       quests: this.discoveredQuestsAt(this.currentId),
       hiddenQuestCount: this.hiddenQuestCountAt(this.currentId),
       routeOptions: this.routeOptionsForView(),
-      discovered: [...this.discoveredIds]
-        .map((id) => this.nodes.get(id))
-        .filter((node): node is OverworldNode => node !== undefined)
-        .sort((a, b) => b.population_2025 - a.population_2025 || a.name.localeCompare(b.name)),
+      discovered: this.sortedDiscoveredTownsByPopulation(),
       visitedCount: this.visitedIds.size,
       totalTowns: this.world.nodes.length,
       supplies: this.supplies,

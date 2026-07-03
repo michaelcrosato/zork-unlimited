@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 259 -->
+<!-- historical_cycle_count: 260 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - shared_direct_overworld_discovered_town_sort
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact and full overworld view builders now share a direct-loop discovered-town sorter by population/name.
+- Loop effect: repeated context reads avoid duplicate id-to-node map/filter arrays while preserving town ordering for compact id payloads and full views.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over the shared direct discovered-town sorter.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - direct_overworld_compact_capped_lists
 
