@@ -573,6 +573,16 @@ type OverworldRoadJournalResolutionIndex = {
   entries: readonly OverworldRoadJournalResolutionEntry[];
 };
 
+type OverworldServiceJournalReplayEntry = {
+  entry: OverworldJournalEntry;
+  parsed: ServiceJournalIdParts;
+  recordedAt: number;
+};
+
+type OverworldServiceJournalReplayIndex = {
+  entries: readonly OverworldServiceJournalReplayEntry[];
+};
+
 type OverworldProgressJournalSourceIndex = {
   completedJobIds: ReadonlySet<string>;
   completedQuestIds: ReadonlySet<string>;
@@ -1107,6 +1117,23 @@ function roadJournalResolutionIndex(
   return { byKey, entries };
 }
 
+function serviceJournalReplayIndex(
+  snapshot: OverworldSessionSnapshot,
+): OverworldServiceJournalReplayIndex {
+  const entries: OverworldServiceJournalReplayEntry[] = [];
+
+  for (const entry of snapshot.journalEntries) {
+    if (entry.kind !== "service") continue;
+    entries.push({
+      entry,
+      parsed: parseServiceJournalId(entry.id),
+      recordedAt: journalEntryRecordedAt(entry),
+    });
+  }
+
+  return { entries };
+}
+
 function assertSnapshotRoadResolutionCoverage(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldResourceReplayIndex,
@@ -1133,13 +1160,14 @@ function assertSnapshotResourceReplay(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldResourceReplayIndex,
   roadJournal: OverworldRoadJournalResolutionIndex,
+  serviceJournal: OverworldServiceJournalReplayIndex,
   localActionJournal: OverworldLocalActionJournalReplayIndex,
 ): void {
   assertSnapshotRoadResolutionCoverage(snapshot, sources, roadJournal);
   const replayEvents: (
     | { kind: "travel"; recordedAt: number; entry: TravelLogEntrySnapshot }
     | { kind: "road"; recordedAt: number; resolution: OverworldRoadJournalResolutionEntry }
-    | { kind: "service"; recordedAt: number; entry: OverworldJournalEntry }
+    | { kind: "service"; recordedAt: number; service: OverworldServiceJournalReplayEntry }
     | {
         kind: "local";
         recordedAt: number;
@@ -1153,10 +1181,8 @@ function assertSnapshotResourceReplay(
   for (const resolution of roadJournal.entries) {
     replayEvents.push({ kind: "road", recordedAt: resolution.recordedAt, resolution });
   }
-  for (const entry of snapshot.journalEntries) {
-    if (entry.kind === "service") {
-      replayEvents.push({ kind: "service", recordedAt: journalEntryRecordedAt(entry), entry });
-    }
+  for (const service of serviceJournal.entries) {
+    replayEvents.push({ kind: "service", recordedAt: service.recordedAt, service });
   }
   for (const { entry, recordedAt, duration } of localActionJournal.entries) {
     if (duration !== null) {
@@ -1233,15 +1259,14 @@ function assertSnapshotResourceReplay(
       continue;
     }
 
-    const service = parseServiceJournalId(event.entry.id);
-    if (service.action === "rest") {
+    if (event.service.parsed.action === "rest") {
       if (state.fatigue === 0) {
         throw new Error(
-          `Overworld session snapshot service journal "${event.entry.id}" rests with no fatigue to recover.`,
+          `Overworld session snapshot service journal "${event.service.entry.id}" rests with no fatigue to recover.`,
         );
       }
       assertReplayClock(
-        `service journal "${event.entry.id}"`,
+        `service journal "${event.service.entry.id}"`,
         event.recordedAt,
         Math.max(180, Math.ceil(state.fatigue / 20) * 60),
         state,
@@ -1250,10 +1275,10 @@ function assertSnapshotResourceReplay(
     } else {
       if (state.supplies >= MAX_SUPPLIES) {
         throw new Error(
-          `Overworld session snapshot service journal "${event.entry.id}" resupplies with full supplies.`,
+          `Overworld session snapshot service journal "${event.service.entry.id}" resupplies with full supplies.`,
         );
       }
-      assertReplayClock(`service journal "${event.entry.id}"`, event.recordedAt, 45, state);
+      assertReplayClock(`service journal "${event.service.entry.id}"`, event.recordedAt, 45, state);
       state.supplies = MAX_SUPPLIES;
     }
   }
@@ -2807,6 +2832,7 @@ export class OverworldSession {
       travelLogTownByArrival,
     });
     const roadJournal = roadJournalResolutionIndex(snapshot, indexes);
+    const serviceJournal = serviceJournalReplayIndex(snapshot);
 
     if (!snapshot.discoveredIds.includes(snapshot.currentId)) {
       throw new Error("Overworld session snapshot current town is not discovered.");
@@ -2947,7 +2973,13 @@ export class OverworldSession {
         snapshot.minutes,
       );
     }
-    assertSnapshotResourceReplay(snapshot, indexes, roadJournal, localActionJournal);
+    assertSnapshotResourceReplay(
+      snapshot,
+      indexes,
+      roadJournal,
+      serviceJournal,
+      localActionJournal,
+    );
 
     this.currentId = snapshot.currentId;
     this.currentAreaId = snapshot.currentAreaId;

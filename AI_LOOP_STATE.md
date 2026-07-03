@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 231 -->
+<!-- historical_cycle_count: 232 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - indexed_overworld_restore_service_journal
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: snapshot restore now builds one parsed service-journal replay index with service action and recorded time.
+- Loop effect: resource replay consumes service replay facts directly instead of scanning the full journal and reparsing service ids during restore/load validation.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over the service replay path.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - indexed_overworld_restore_road_journal
 
