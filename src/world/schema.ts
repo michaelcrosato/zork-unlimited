@@ -71,7 +71,7 @@ export type WorldManifest = z.infer<typeof WorldManifestSchema>;
  *
  * This is optional at the schema layer so minimal test fixtures and generated eval
  * packs can stay focused. The shipped-content regression suite makes it mandatory
- * for content/{cyoa,parser,rpg}/pack: those are no longer separate campaigns, but
+ * for content/{parser,rpg}/pack: those are no longer separate campaigns, but
  * quest/area entries in the Charter Marches world.
  */
 export const WorldBindingSchema = z

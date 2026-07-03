@@ -2,12 +2,11 @@
  * bug_0236 — author revise-loop resilience to off-shape model replies.
  *
  * `runAdaptLoop` (agents/authoring/adapter.ts) is the author → validate → revise loop
- * behind every authoring mode. Its only model call is `provider.completeJson(...)`,
+ * behind the RPG authoring path. Its only model call is `provider.completeJson(...)`,
  * which does `schema.parse(extractJson(text))`: it THROWS both when no balanced JSON
  * can be extracted (prose / fences / truncation) AND when the parsed object fails the
  * `.strict()` adapter OUTPUT schema (an extra key, a wrong shape). The deterministic
- * MockAuthorProvider never does either — but a live frontier model will, which is the
- * exact risk the keystone keyed real-model run carries ([[ultraplan-true-goal-pivot]]).
+ * MockAuthorProvider never does either — but a live frontier model will.
  *
  * BEFORE this fix the throw propagated straight out of the loop, aborting the whole
  * authoring run on the offending round with a raw, unattributed error and zero retries.
@@ -25,8 +24,8 @@ import { describe, it, expect } from "vitest";
 import type { Provider, CompletionRequest } from "../../agents/llm/provider.js";
 import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
 import { loadEngineContract, runWriter } from "../../agents/authoring/writer.js";
-import { runAdapter } from "../../agents/authoring/adapter.js";
-import { validateCyoa } from "../../src/validate/cyoa_validator.js";
+import { runRpgAdapter } from "../../agents/authoring/adapter.js";
+import { validateRpg } from "../../src/validate/rpg_validator.js";
 
 const contract = loadEngineContract();
 const PREMISE = "A keeper must relight a dead lighthouse before a ship wrecks.";
@@ -64,11 +63,11 @@ describe("adapter revise-loop resilience (bug_0236)", () => {
 
     // Before the fix this REJECTS (the round-1 throw escapes the loop). After it, the
     // loop swallows the throw, revises, and converges on the corrected pack.
-    const result = await runAdapter(provider, { story, contract });
+    const result = await runRpgAdapter(provider, { story, contract });
 
     expect(result.ok).toBe(true);
     expect(result.report.ok).toBe(true);
-    expect(validateCyoa(result.pack).ok).toBe(true);
+    expect(validateRpg(result.pack).ok).toBe(true);
     // One thrown round + one successful round = exactly two adapter calls.
     expect(provider.adapterCalls).toBe(2);
     // The revise prompt actually carried the parse-error feedback (non-vacuous: proves
@@ -82,7 +81,7 @@ describe("adapter revise-loop resilience (bug_0236)", () => {
     const provider = new FlakyAuthorProvider(new MockAuthorProvider(), 99);
     const story = await runWriter(provider, { premise: PREMISE, contract });
 
-    await expect(runAdapter(provider, { story, contract })).rejects.toThrow(
+    await expect(runRpgAdapter(provider, { story, contract })).rejects.toThrow(
       /no schema-valid output/i,
     );
     // It exhausted the default 4-round budget rather than bailing on the first throw —
@@ -94,7 +93,7 @@ describe("adapter revise-loop resilience (bug_0236)", () => {
     const provider = new FlakyAuthorProvider(new MockAuthorProvider(), 99);
     const story = await runWriter(provider, { premise: PREMISE, contract });
 
-    await expect(runAdapter(provider, { story, contract, maxRounds: 2 })).rejects.toThrow(
+    await expect(runRpgAdapter(provider, { story, contract, maxRounds: 2 })).rejects.toThrow(
       /2 round\(s\)/,
     );
     expect(provider.adapterCalls).toBe(2);

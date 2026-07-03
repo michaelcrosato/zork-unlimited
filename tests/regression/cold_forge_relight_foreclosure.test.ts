@@ -38,7 +38,7 @@ import {
   initStateForRpgPack,
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
-import { buildParserObservation } from "../../src/parser/observation.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { makeStep, actionEquals } from "../../src/core/engine.js";
 import type { Action } from "../../src/api/types.js";
@@ -51,7 +51,7 @@ const index = indexRpgPack(pack);
 const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
-const score = (s: GameState): number => buildParserObservation(index, s).score;
+const score = (s: GameState): number => buildRpgObservation(index, s).score;
 const options = (s: GameState) => enumerateRpgActions(index, s);
 const askIds = (s: GameState): string[] =>
   options(s)

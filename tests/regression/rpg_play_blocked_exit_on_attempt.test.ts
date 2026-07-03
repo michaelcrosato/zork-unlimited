@@ -1,12 +1,11 @@
 /**
- * Regression (§15) for bug_0207 — the RPG CLI's ON-ATTEMPT message reaches parity
- * with the parser CLI's. bug_0201 surfaced a barred exit's authored `locked_msg` in
+ * Regression (§15) for bug_0207 — the RPG CLI's ON-ATTEMPT message surfaces the
+ * authored blocked-exit reason. bug_0201 surfaced a barred exit's `locked_msg` in
  * the structured `blocked_exits` hint (agent surface); bug_0206 rendered that hint on
- * the human surfaces (CLI bins + UI). But one human path stayed generic: when a player
- * actually TYPED a move onto a barred exit, `bin/parser_play.ts` answered with the
- * exit's `locked_msg` (via illegalReason), while `bin/rpg_play.ts` printed a flat
+ * the human surfaces (CLI + UI). But one human path stayed generic: when a player
+ * actually TYPED a move onto a barred exit, `bin/rpg_play.ts` printed a flat
  * "You can't do that right now." — dropping the very string the author wrote to explain
- * the wall. This pins the RPG bin's `illegalReason` to the parser bin's behaviour.
+ * the wall. This pins the RPG bin's `illegalReason` to authored locked messages.
  *
  * WITNESS: drives the REAL sunken_barrow pack through the REAL engine to guard_crypt
  * with the wight alive (its east exit barred), then asserts illegalReason() for a MOVE
@@ -20,7 +19,7 @@ import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 
 const loaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
 if (!loaded.ok) throw new Error("sunken_barrow must compile");
@@ -29,7 +28,7 @@ const step = makeStep(buildRpgRules(index));
 const WIGHT_MSG = "The barrow-wight bars the way; you cannot pass while it stands.";
 
 function move(s: GameState, direction: string): GameState {
-  const r = step(s, { type: "MOVE", direction } as Action);
+  const r = step(s, { type: "MOVE", direction } satisfies RpgAction);
   expect(r.ok, `move ${direction} in ${s.current}`).toBe(true);
   return r.state;
 }
@@ -42,7 +41,7 @@ describe("bug_0207 — RPG CLI on-attempt message surfaces a barred exit's locke
     expect(s.current).toBe("guard_crypt");
     expect(s.flags["wight_slain"]).not.toBe(true);
     // east is present-but-barred while the wight stands (the action set hides it).
-    expect(illegalReason(index, s, { type: "MOVE", direction: "east" } as Action)).toBe(WIGHT_MSG);
+    expect(illegalReason(index, s, { type: "MOVE", direction: "east" })).toBe(WIGHT_MSG);
   });
 
   it("falls back to the generic message for a non-MOVE illegal action and a non-existent direction", () => {
@@ -50,11 +49,11 @@ describe("bug_0207 — RPG CLI on-attempt message surfaces a barred exit's locke
     s = move(s, "down");
     s = move(s, "north");
     // An ATTACK is not a MOVE → generic.
-    expect(illegalReason(index, s, { type: "ATTACK", enemy: "barrow_wight" } as Action)).toBe(
+    expect(illegalReason(index, s, { type: "ATTACK", enemy: "barrow_wight" })).toBe(
       "You can't do that right now.",
     );
     // A direction with no exit at all → generic (no false locked_msg).
-    expect(illegalReason(index, s, { type: "MOVE", direction: "up" } as Action)).toBe(
+    expect(illegalReason(index, s, { type: "MOVE", direction: "up" })).toBe(
       "You can't do that right now.",
     );
   });
@@ -68,7 +67,7 @@ describe("bug_0207 — RPG CLI on-attempt message surfaces a barred exit's locke
     // Drive combat to slay the wight (seed 1 is the acceptance-proven survivable seed).
     let guard = 0;
     while (!s.flags["wight_slain"] && guard++ < 50) {
-      const r = step(s, { type: "ATTACK", enemy: "barrow_wight" } as Action);
+      const r = step(s, { type: "ATTACK", enemy: "barrow_wight" } satisfies RpgAction);
       expect(r.ok).toBe(true);
       s = r.state;
     }
@@ -78,7 +77,7 @@ describe("bug_0207 — RPG CLI on-attempt message surfaces a barred exit's locke
     // text is surfaced ONLY while the way is genuinely barred, never after it clears.
     const eastExit = index.rooms.get("guard_crypt")?.exits.find((e) => e.direction === "east");
     expect(eastExit).toBeTruthy();
-    expect(illegalReason(index, s, { type: "MOVE", direction: "east" } as Action)).toBe(
+    expect(illegalReason(index, s, { type: "MOVE", direction: "east" })).toBe(
       "You can't do that right now.",
     );
   });

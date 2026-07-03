@@ -19,7 +19,7 @@
 import { describe, it, expect } from "vitest";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
-import { roomDescription } from "../../src/parser/model.js";
+import { roomDescription } from "../../src/rpg/model.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 
 const PACK_PATH = "content/rpg/pack/dawn_beacon.yaml";

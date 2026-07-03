@@ -11,6 +11,8 @@ import type { GameState } from "../core/state.js";
 import { canonicalize } from "../core/hash.js";
 
 export const SAVE_VERSION = 1 as const;
+export const SAVE_MODE = "rpg" as const;
+export type SaveMode = typeof SAVE_MODE;
 
 /**
  * Structural + finiteness validator for a loaded GameState (§16 "integrity at
@@ -78,9 +80,9 @@ const GameStateSchema = z
 /**
  * Assert a (possibly untrusted) GameState is well-formed + FINITE per §16
  * "integrity at load". REUSED at every untrusted-state-from-disk boundary: the
- * save load() guard below AND the trace-load gate in src/mcp/tools.ts
- * (replay_trace/inspect_trace). Same safeParse-without-substitution path as
- * load() — a valid state's bytes/hash stay identical. Throws (never coerces).
+ * save load() guard below and the trace/CLI load gates. Same
+ * safeParse-without-substitution path as load() — a valid state's bytes/hash stay
+ * identical. Throws (never coerces).
  */
 export function assertWellFormedState(state: unknown): GameState {
   const parsed = GameStateSchema.safeParse(state);
@@ -94,36 +96,85 @@ export type SaveBundle = {
   version: typeof SAVE_VERSION;
   packId: string;
   contentHash: string;
-  /** Pack mode (cyoa|parser|rpg). Optional for backward-compat with v1 saves
-   *  written before multi-mode; when present, load can refuse a mode mismatch. */
-  mode?: string;
+  /** Pack mode. Required so persisted state is bound to the unified RPG engine. */
+  mode: SaveMode;
+  /** Shipped world quest id, when the save belongs to the open-world graph. */
+  worldQuestId?: string;
+  /** Procedural RPG generation seed, when the save belongs to an in-memory generated pack. */
+  generatedRpgSeed?: number;
   state: GameState;
 };
 
+export type SaveMetadata = {
+  worldQuestId?: string | null;
+  generatedRpgSeed?: number | null;
+};
+
 /** Serialize a save to canonical bytes (stable across machines/runs). */
-export function save(state: GameState, packId: string, contentHash: string, mode?: string): string {
+export function save(
+  state: GameState,
+  packId: string,
+  contentHash: string,
+  mode: SaveMode = SAVE_MODE,
+  metadata: SaveMetadata = {},
+): string {
+  assertRpgMode(mode, "Save mode");
+  assertSaveSourceMetadata(metadata);
   const bundle: SaveBundle = {
     version: SAVE_VERSION,
     packId,
     contentHash,
     state,
-    ...(mode !== undefined ? { mode } : {}),
+    mode,
+    ...(metadata.worldQuestId ? { worldQuestId: metadata.worldQuestId } : {}),
+    ...(metadata.generatedRpgSeed !== undefined && metadata.generatedRpgSeed !== null
+      ? { generatedRpgSeed: metadata.generatedRpgSeed }
+      : {}),
   };
   return canonicalize(bundle);
 }
 
 export class SaveIntegrityError extends Error {}
 
+function assertRpgMode(mode: unknown, label: string): asserts mode is SaveMode {
+  if (mode !== SAVE_MODE) {
+    throw new SaveIntegrityError(`${label} must be "${SAVE_MODE}", got ${JSON.stringify(mode)}.`);
+  }
+}
+
+function assertOptionalRpgMode(mode: unknown, label: string): asserts mode is SaveMode | undefined {
+  if (mode !== undefined) assertRpgMode(mode, label);
+}
+
+function assertGeneratedRpgSeed(seed: unknown, label: string): asserts seed is number {
+  if (typeof seed !== "number" || !Number.isInteger(seed)) {
+    throw new SaveIntegrityError(`${label} must be an integer, got ${JSON.stringify(seed)}.`);
+  }
+}
+
+function assertSaveSourceMetadata(metadata: SaveMetadata): void {
+  const hasWorldQuest = metadata.worldQuestId !== undefined && metadata.worldQuestId !== null;
+  const hasGeneratedSeed =
+    metadata.generatedRpgSeed !== undefined && metadata.generatedRpgSeed !== null;
+  if (hasWorldQuest && hasGeneratedSeed) {
+    throw new SaveIntegrityError(
+      "Save source cannot carry both worldQuestId and generatedRpgSeed.",
+    );
+  }
+  if (hasGeneratedSeed) {
+    assertGeneratedRpgSeed(metadata.generatedRpgSeed, "Save generatedRpgSeed");
+  }
+}
+
 /**
  * Deserialize a save. If `expectedContentHash` is given, the save's contentHash
- * must match it exactly (§8.7). If `expectedMode` is given AND the save records a
- * mode, the modes must match too — a save can't be loaded against a different
- * mode. A pre-mode (v1) save carries no mode and skips that check (backward-compat).
+ * must match it exactly (§8.7). Saves must carry the RPG mode; missing or
+ * legacy modes are integrity failures, not migration inputs.
  */
 export function load(
   bytes: string,
   expectedContentHash?: string,
-  expectedMode?: string,
+  expectedMode?: SaveMode,
 ): SaveBundle {
   let parsed: unknown;
   try {
@@ -135,15 +186,36 @@ export function load(
   if (bundle.version !== SAVE_VERSION) {
     throw new SaveIntegrityError(`Unsupported save version: ${String(bundle.version)}`);
   }
+  assertRpgMode((bundle as { mode?: unknown }).mode, "Save mode");
+  assertOptionalRpgMode(expectedMode, "Expected mode");
+  if (
+    "worldQuestId" in (bundle as Record<string, unknown>) &&
+    typeof (bundle as { worldQuestId?: unknown }).worldQuestId !== "string"
+  ) {
+    throw new SaveIntegrityError(
+      `Save worldQuestId must be a string when present, got ${JSON.stringify(
+        (bundle as { worldQuestId?: unknown }).worldQuestId,
+      )}.`,
+    );
+  }
+  if ("generatedRpgSeed" in (bundle as Record<string, unknown>)) {
+    assertGeneratedRpgSeed(
+      (bundle as { generatedRpgSeed?: unknown }).generatedRpgSeed,
+      "Save generatedRpgSeed",
+    );
+  }
+  if (
+    (bundle as { worldQuestId?: unknown }).worldQuestId !== undefined &&
+    (bundle as { generatedRpgSeed?: unknown }).generatedRpgSeed !== undefined
+  ) {
+    throw new SaveIntegrityError(
+      "Save source cannot carry both worldQuestId and generatedRpgSeed.",
+    );
+  }
   if (expectedContentHash !== undefined && bundle.contentHash !== expectedContentHash) {
     throw new SaveIntegrityError(
       `Content hash mismatch: save was made against ${bundle.contentHash}, ` +
         `but the loaded pack is ${expectedContentHash}.`,
-    );
-  }
-  if (expectedMode !== undefined && bundle.mode !== undefined && bundle.mode !== expectedMode) {
-    throw new SaveIntegrityError(
-      `Mode mismatch: save is a "${bundle.mode}" game, but the loaded pack is "${expectedMode}".`,
     );
   }
   // §16 integrity at load: the state must be a well-formed, FINITE GameState

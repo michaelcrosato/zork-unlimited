@@ -15,9 +15,9 @@ materially refine the prior plan's #1 and #2 levers.
   turns, auto-notifies on wrapper death), watches git/log/proc state on a staged cadence, and on
   anomaly pauses → diagnoses → fixes → relaunches. Durable state: `ai-runs/orchestration-state.md`.
 - **Wrapper** `loop.sh`: `while true`: `npm run ai:loop` (assess) → `run_agent` (`claude -p --model
-  <sonnet> --dangerously-skip-permissions`, prompt on stdin, `timeout` 2400s routine / 3600s ultraplan
+<sonnet> --dangerously-skip-permissions`, prompt on stdin, `timeout` 2400s routine / 3600s ultraplan
   **and now 3600s for content_new authoring**) → `npm run health` (BLOCKING) → `verify:integrity
-  --against <pre-ref>` → `require_playtest_record` → commit → push. Circuit breaker = 5 consecutive
+--against <pre-ref>` → `require_playtest_record` → commit → push. Circuit breaker = 5 consecutive
   no-progress; 10s inter-cycle delay.
 - **Assessor** `src/afk/assessor.ts` (deterministic): ranks content_fix/content_new/engine/repo
   candidates + 3 generator mint-and-check levers; saturated → ULTRAPLAN cycle (multi-agent re-aim,
@@ -35,22 +35,22 @@ materially refine the prior plan's #1 and #2 levers.
 
 ## 2. Measured telemetry (this run, last 12h, 31 transcripts)
 
-| Class | Tokens | Share |
-|---|---|---|
-| cache_read | **183.1M** | **92.9%** |
-| cache_create | 9.9M | 5.0% |
-| output | 4.1M | 2.1% |
-| input | 0.1M | 0.1% |
-| **total** | **197.1M** | across **2,128 assistant messages** |
+| Class        | Tokens     | Share                               |
+| ------------ | ---------- | ----------------------------------- |
+| cache_read   | **183.1M** | **92.9%**                           |
+| cache_create | 9.9M       | 5.0%                                |
+| output       | 4.1M       | 2.1%                                |
+| input        | 0.1M       | 0.1%                                |
+| **total**    | **197.1M** | across **2,128 assistant messages** |
 
 **The governing equation: `cache_read ≈ messages × cached-prefix-size`.** 183.1M ÷ 2,128 ≈ **~86k cached
 tokens re-read per message**. Token cost is **round-trips × prefix**, and round-trips alone multiply
-**92.9%** of all tokens. Output is 2.1% of tokens but (on Opus rates) ~30% of *cost*. cache_create
+**92.9%** of all tokens. Output is 2.1% of tokens but (on Opus rates) ~30% of _cost_. cache_create
 (9.9M) is the per-cycle **cold start** — every cycle is a fresh `claude -p`.
 
-**Shift since 2026-06-08:** the loop pivoted from one-line content_fix to authoring whole packs
+**Shift since 2026-06-08:** the loop pivoted from one-line content*fix to authoring whole packs
 (content_new). Authoring cycles are output-heavier and longer (output share rose 1.3% → 2.1%; one hour
-hit 535k output) and run ~40 min with many round-trips — so round-trip and output levers matter *more*
+hit 535k output) and run ~40 min with many round-trips — so round-trip and output levers matter \_more*
 now than in the prior plan.
 
 ## 3. June-2026 web findings that refine the plan (primary sources)
@@ -64,7 +64,7 @@ now than in the prior plan.
 - **Tool Search Tool (TST)** — Anthropic: **85%** tool-schema reduction (58 tools 55K→8.7K; ~500 tokens
   for the search tool + ~3K per loaded tool). Use when tool defs >10K tokens / 10+ tools / multi-server
   MCP. **Caveat for this repo:** Claude Code CLI (June 2026) **already defers MCP tool schemas** — in
-  this very session `mcp__adventureforge__*` arrived as *deferred* tools fetched on demand. So the prior
+  this very session `mcp__adventureforge__*` arrived as _deferred_ tools fetched on demand. So the prior
   plan's assumption ("22 schemas re-read on every message") is **likely already mitigated** and must be
   re-measured, not assumed.
 - **MCP cache hygiene** — connecting/disconnecting an MCP server mid-session **wipes the entire prompt
@@ -79,7 +79,7 @@ now than in the prior plan.
 92.9% of tokens; the densest source is the blind playtest's 15–30 sequential MCP calls/seed. Refinement
 forced by the PTC evidence: the **known-good regression route is a FIXED action list** → 3+ dependent
 calls, no per-step reasoning → PTC's sweet spot → run it as ONE scripted replay. The **exploratory route
-must stay reasoned round-trips** — its per-step LLM judgment *is* the quality oracle; scripting it is the
+must stay reasoned round-trips** — its per-step LLM judgment _is_ the quality oracle; scripting it is the
 exact "Claude should reason about all intermediate results" anti-case (and τ²-bench shows no benefit).
 Net: ~halve blind-playtest round-trips with zero quality loss. Effort M; risk low (additive; the
 exploratory oracle is untouched).
@@ -93,16 +93,16 @@ apply **context editing** to clear consumed MCP observations mid-cycle. Either w
 
 **#3 — Right-size model per role + cut output + warm the cross-cycle cache.** (a) Blind playtest is
 mechanical → **Haiku 4.5 / Opus fast mode** (runs every cycle, ~40% of RT); keep the improvement agent
-on **Opus 4.8**. (b) Output is ~30% of Opus *cost* → terse-default + `effort high` (not max); the
+on **Opus 4.8**. (b) Output is ~30% of Opus _cost_ → terse-default + `effort high` (not max); the
 self-critique/terseness prompt nudges already added help. (c) Each cycle is a cold `claude -p` (9.9M
 cache_create/12h) → keep the system+tools prefix byte-identical and use a **1-h cache TTL / pre-warm** so
 consecutive cycles (10s apart) reuse a warm cache. Effort S–M; risk low–medium (spot-check Haiku verdict
 quality before trusting).
 
 **#4 — Add token instrumentation (enabling lever).** No in-repo tracking today. A post-cycle step that
-parses the cycle transcript's `usage` → `ai-runs/<id>/cost.json` (RT, cache_read, output, est $) makes
+parses the cycle transcript's `usage` → `ai-runs/<id>/cost.json` (RT, cache*read, output, est $) makes
 every lever above measurable and catches regressions (e.g., the March-2026 caching bug that silently
-inflated tokens 10–20×). Effort S; risk none. *Do this first — it is the measurement substrate.*
+inflated tokens 10–20×). Effort S; risk none. \_Do this first — it is the measurement substrate.*
 
 **#5 — Fewer blind seeds on clean packs.** Validator + exhaustive solver already prove structure; 1–2
 seeds suffice for the experience read on a structurally-clean pack. Effort S; gate on verdict-trend.
@@ -111,6 +111,7 @@ seeds suffice for the experience read on a structurally-clean pack. Effort S; ga
 Keep it that way.
 
 ## 5. Honest caveats
+
 - The decisive unknown is **what actually composes the ~86k/msg prefix** under CLI's current deferred-
   tools behavior. Lever #2 is measurement-gated for exactly this reason; #4 unblocks it.
 - Scripting the exploratory blind route would cut tokens but **destroy the quality oracle** — explicitly
@@ -118,6 +119,7 @@ Keep it that way.
 - Haiku for the blind playtest must keep producing discerning structured reports — spot-check before trusting.
 
 ## 6. Top 3 (reported to the user)
+
 1. **Cut round-trips by scripting only the fixed regression route (PTC), keeping the exploratory blind
    route reasoned.** Attacks the 92.9% cache_read line at its densest source; ~halves blind-playtest RT
    with zero quality loss.

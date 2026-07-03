@@ -1,26 +1,16 @@
 import { z } from "zod";
 import { hashState } from "../core/hash.js";
 import {
-  OverworldRoadEventSchema,
   overworldAreasAt,
-  overworldAreaEdgesFrom,
-  overworldCharactersAt,
-  overworldCharactersInArea,
   overworldEdgesFrom,
-  overworldEventsAt,
-  overworldEventsInArea,
-  overworldExplorationSitesNear,
   overworldExplorationSitesInArea,
   overworldJobsAt,
   overworldNodesById,
-  overworldPoisAt,
-  overworldPoisInArea,
   overworldQuestsAt,
-  overworldRoadEventFor,
-  planOverworldRoute,
   type OverworldArea,
   type OverworldAreaExit,
   type OverworldCharacter,
+  type OverworldEdge,
   type OverworldExit,
   type OverworldExplorationSite,
   type OverworldLocalJob,
@@ -31,15 +21,42 @@ import {
   type OverworldQuest,
   type OverworldRegionalArc,
   type OverworldRoutePlan,
+  type OverworldRouteStep,
   type OverworldRoadEvent,
 } from "./overworld.js";
+import {
+  describeOverworldAreaAction,
+  describeOverworldContactAction,
+  describeOverworldEventAction,
+  describeOverworldJobAction,
+  describeOverworldPoiAction,
+  describeOverworldSiteAction,
+  type OverworldLocalActionDescriptor,
+  type OverworldLocalActionKind,
+} from "./local_actions.js";
+import {
+  OVERWORLD_COMPACT_JOURNAL_LIMIT,
+  OVERWORLD_COMPACT_ROUTE_LIMIT,
+  OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT,
+  OVERWORLD_COMPACT_VIEW_VERSION,
+  compactIdPayload,
+  cloneOverworldCompactView,
+  compactPendingRoad,
+  compactRouteOption,
+  compactTravelLogEntry,
+  type OverworldCompactView,
+} from "./compact_view.js";
 
-export const OVERWORLD_SESSION_SAVE_VERSION = 1 as const;
+export const OVERWORLD_SESSION_SAVE_VERSION = 5 as const;
 const MAX_SUPPLIES = 8;
 const STARTING_SUPPLIES = 6;
 const MAX_FATIGUE = 100;
+const STARTING_MINUTES = 8 * 60;
 
 export type TravelLogEntry = {
+  edgeId: string;
+  fromId: string;
+  toId: string;
   from: string;
   to: string;
   route: string;
@@ -55,21 +72,31 @@ export type TravelLogEntry = {
   roadEvent: OverworldRoadEvent | null;
 };
 
-const TravelLogEntrySchema = z
+export type TravelLogEntrySnapshot = {
+  edgeId: string;
+  fromId: string;
+  toId: string;
+  delayMinutes: number;
+  minutes: number;
+  arrivedAt: number;
+  suppliesUsed: number;
+  suppliesAfter: number;
+  fatigueGained: number;
+  fatigueAfter: number;
+};
+
+const TravelLogEntrySnapshotSchema = z
   .object({
-    from: z.string().min(1),
-    to: z.string().min(1),
-    route: z.string().min(1),
-    distanceMi: z.number().finite().nonnegative(),
-    baseMinutes: z.number().int().nonnegative(),
+    edgeId: z.string().min(1),
+    fromId: z.string().min(1),
+    toId: z.string().min(1),
     delayMinutes: z.number().int().nonnegative(),
     minutes: z.number().int().nonnegative(),
     arrivedAt: z.number().int().nonnegative(),
-    suppliesUsed: z.number().int().nonnegative(),
-    suppliesAfter: z.number().int().nonnegative(),
+    suppliesUsed: z.number().int().min(0).max(MAX_SUPPLIES),
+    suppliesAfter: z.number().int().min(0).max(MAX_SUPPLIES),
     fatigueGained: z.number().int().nonnegative(),
-    fatigueAfter: z.number().int().nonnegative(),
-    roadEvent: OverworldRoadEventSchema.nullable(),
+    fatigueAfter: z.number().int().min(0).max(MAX_FATIGUE),
   })
   .strict();
 
@@ -83,6 +110,23 @@ export type OverworldAreaTravelResult = {
 
 export type OverworldRoadEncounterStrategy = "assist_travelers" | "cautious_scout" | "press_on";
 
+const ROAD_ENCOUNTER_STRATEGIES = new Set<string>([
+  "assist_travelers",
+  "cautious_scout",
+  "press_on",
+]);
+
+type RoadJournalIdParts = {
+  edgeId: string;
+  arrivedAt: number;
+  strategy: OverworldRoadEncounterStrategy;
+};
+
+type ServiceJournalIdParts = {
+  action: "rest" | "resupply";
+  recordedAt: number;
+};
+
 export type OverworldRoadEncounterOption = {
   strategy: OverworldRoadEncounterStrategy;
   label: string;
@@ -93,17 +137,56 @@ export type OverworldRoadEncounterOption = {
   outcome: string;
 };
 
-const OverworldRoadEncounterOptionSchema = z
-  .object({
-    strategy: z.enum(["assist_travelers", "cautious_scout", "press_on"]),
-    label: z.string().min(1),
-    minutes: z.number().int().nonnegative(),
-    suppliesCost: z.number().int().nonnegative(),
-    fatigueGained: z.number().int().nonnegative(),
-    renownGained: z.number().int().nonnegative(),
-    outcome: z.string().min(1),
-  })
-  .strict();
+function roadEncounterRisk(roadEvent: OverworldRoadEvent): number {
+  return roadEvent.risk === "high" ? 3 : roadEvent.risk === "medium" ? 2 : 1;
+}
+
+function roadEncounterOptionsFor(roadEvent: OverworldRoadEvent): OverworldRoadEncounterOption[] {
+  const risk = roadEncounterRisk(roadEvent);
+  return [
+    {
+      strategy: "cautious_scout",
+      label: "Scout the road problem",
+      minutes: 15 + risk * 10,
+      suppliesCost: 0,
+      fatigueGained: 0,
+      renownGained: 1,
+      outcome:
+        "You slow down, read the situation, and leave a useful warning for the next traveler.",
+    },
+    {
+      strategy: "assist_travelers",
+      label: "Help resolve it",
+      minutes: 25 + risk * 15,
+      suppliesCost: risk >= 3 ? 2 : 1,
+      fatigueGained: risk,
+      renownGained: risk + 1,
+      outcome:
+        "You spend supplies and effort stabilizing the road trouble instead of merely passing it.",
+    },
+    {
+      strategy: "press_on",
+      label: "Press on",
+      minutes: 0,
+      suppliesCost: 0,
+      fatigueGained: risk,
+      renownGained: 0,
+      outcome:
+        "You keep moving and accept the extra strain rather than spending daylight on the encounter.",
+    },
+  ];
+}
+
+function roadEncounterOptionFor(
+  roadEvent: OverworldRoadEvent,
+  strategy: OverworldRoadEncounterStrategy,
+): OverworldRoadEncounterOption {
+  const option = roadEncounterOptionsFor(roadEvent).find(
+    (candidate) => candidate.strategy === strategy,
+  );
+  if (!option) throw new Error(`Unknown road encounter strategy "${strategy}".`);
+  return option;
+}
 
 export type OverworldPendingRoadEncounter = {
   id: string;
@@ -116,16 +199,13 @@ export type OverworldPendingRoadEncounter = {
   options: OverworldRoadEncounterOption[];
 };
 
-const OverworldPendingRoadEncounterSchema = z
+export type OverworldPendingRoadEncounterSnapshot = {
+  edgeId: string;
+};
+
+const OverworldPendingRoadEncounterSnapshotSchema = z
   .object({
-    id: z.string().min(1),
     edgeId: z.string().min(1),
-    from: z.string().min(1),
-    to: z.string().min(1),
-    route: z.string().min(1),
-    arrivedAt: z.string().min(1),
-    event: OverworldRoadEventSchema,
-    options: z.array(OverworldRoadEncounterOptionSchema).min(1),
   })
   .strict();
 
@@ -137,6 +217,8 @@ export type OverworldJournalEntry = {
     | "event"
     | "job"
     | "poi"
+    | "quest"
+    | "quest_done"
     | "regional_arc"
     | "resolution"
     | "road"
@@ -157,6 +239,8 @@ const OverworldJournalEntrySchema = z
       "event",
       "job",
       "poi",
+      "quest",
+      "quest_done",
       "regional_arc",
       "resolution",
       "road",
@@ -183,7 +267,7 @@ export const OverworldSessionSnapshotSchema = z
     discoveredIds: z.array(z.string().min(1)),
     visitedIds: z.array(z.string().min(1)),
     currentAreaByTown: z.array(z.tuple([z.string().min(1), z.string().min(1)])),
-    travelLog: z.array(TravelLogEntrySchema),
+    travelLog: z.array(TravelLogEntrySnapshotSchema),
     journalEntries: z.array(OverworldJournalEntrySchema),
     resolvedEventIds: z.array(z.string().min(1)),
     discoveredAreaIds: z.array(z.string().min(1)),
@@ -192,10 +276,12 @@ export const OverworldSessionSnapshotSchema = z
     completedJobIds: z.array(z.string().min(1)),
     discoveredSiteIds: z.array(z.string().min(1)),
     discoveredQuestIds: z.array(z.string().min(1)),
+    startedQuestIds: z.array(z.string().min(1)),
+    completedQuestIds: z.array(z.string().min(1)),
     exploredSiteIds: z.array(z.string().min(1)),
     regionRenown: z.array(z.tuple([z.string().min(1), z.number().int().nonnegative()])),
     completedRegionalArcIds: z.array(z.string().min(1)),
-    pendingRoadEncounter: OverworldPendingRoadEncounterSchema.nullable(),
+    pendingRoadEncounter: OverworldPendingRoadEncounterSnapshotSchema.nullable(),
   })
   .strict();
 
@@ -208,7 +294,16 @@ export type OverworldActionResult = {
   discoveredAreas?: OverworldArea[];
   discoveredJobs?: OverworldLocalJob[];
   discoveredSites?: OverworldExplorationSite[];
-  discoveredQuests?: OverworldQuest[];
+  discoveredQuests?: OverworldQuestView[];
+};
+
+export type OverworldQuestCompletionResult = {
+  minutes: number;
+  alreadyKnown: boolean;
+  quest: OverworldQuestView;
+  endingId: string;
+  endingTitle: string;
+  entry: OverworldJournalEntry;
 };
 
 export type OverworldServiceResult = {
@@ -263,6 +358,15 @@ export type OverworldRegionalArcProgress = {
   reward: string;
 };
 
+export type OverworldQuestView = {
+  id: string;
+  title: string;
+  home: string;
+  area: string;
+  discovery: string;
+  visibility: OverworldQuest["visibility"];
+};
+
 export type OverworldView = {
   world: string;
   timeLabel: string;
@@ -279,7 +383,7 @@ export type OverworldView = {
   hiddenJobCount: number;
   sites: OverworldExplorationSite[];
   hiddenSiteCount: number;
-  quests: OverworldQuest[];
+  quests: OverworldQuestView[];
   hiddenQuestCount: number;
   routeOptions: OverworldSessionRoutePlan[];
   discovered: OverworldNode[];
@@ -296,6 +400,8 @@ export type OverworldView = {
   visitedAreaIds: string[];
   completedJobIds: string[];
   discoveredQuestIds: string[];
+  startedQuestIds: string[];
+  completedQuestIds: string[];
   exploredSiteIds: string[];
   resolvedEventIds: string[];
   regionRenown: Record<string, number>;
@@ -305,12 +411,34 @@ export type OverworldView = {
   log: TravelLogEntry[];
 };
 
+function questView(quest: OverworldQuest): OverworldQuestView {
+  return {
+    id: quest.id,
+    title: quest.title,
+    home: quest.home,
+    area: quest.area,
+    discovery: quest.discovery,
+    visibility: quest.visibility,
+  };
+}
+
 function timeLabel(minutes: number): string {
   const day = Math.floor(minutes / 1440) + 1;
   const minuteOfDay = minutes % 1440;
   const hour = Math.floor(minuteOfDay / 60);
   const minute = minuteOfDay % 60;
   return `Day ${day}, ${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+}
+
+function parseTimeLabel(label: string): number {
+  const match = /^Day ([1-9]\d*), ([01]\d|2[0-3]):([0-5]\d)$/.exec(label);
+  if (!match) {
+    throw new Error(`Overworld session snapshot has malformed journal timestamp "${label}".`);
+  }
+  const day = Number(match[1]);
+  const hour = Number(match[2]);
+  const minute = Number(match[3]);
+  return (day - 1) * 1440 + hour * 60 + minute;
 }
 
 function travelSupplyCost(minutes: number): number {
@@ -341,6 +469,21 @@ function cloneJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+function snapshotTravelLogEntry(entry: TravelLogEntry): TravelLogEntrySnapshot {
+  return {
+    edgeId: entry.edgeId,
+    fromId: entry.fromId,
+    toId: entry.toId,
+    delayMinutes: entry.delayMinutes,
+    minutes: entry.minutes,
+    arrivedAt: entry.arrivedAt,
+    suppliesUsed: entry.suppliesUsed,
+    suppliesAfter: entry.suppliesAfter,
+    fatigueGained: entry.fatigueGained,
+    fatigueAfter: entry.fatigueAfter,
+  };
+}
+
 function sortedStringSet(values: Set<string>): string[] {
   return [...values].sort();
 }
@@ -362,11 +505,1744 @@ function assertUnique(label: string, values: readonly string[]): void {
   }
 }
 
-function assertKnownIds(label: string, values: readonly string[], known: Set<string>): void {
+function assertKnownIds(
+  label: string,
+  values: readonly string[],
+  known: ReadonlySet<string>,
+): void {
   assertUnique(label, values);
   for (const value of values) {
     if (!known.has(value))
       throw new Error(`Overworld session snapshot has unknown ${label} "${value}".`);
+  }
+}
+
+function assertUniqueTupleKeys(
+  label: string,
+  values: readonly (readonly [string, unknown])[],
+): void {
+  assertUnique(
+    label,
+    values.map(([key]) => key),
+  );
+}
+
+type OverworldJournalSourceIndex = {
+  arcIds: ReadonlySet<string>;
+  arcRegionNames: ReadonlyMap<string, string>;
+  areaIds: ReadonlySet<string>;
+  areaTownNames: ReadonlyMap<string, string>;
+  characterIds: ReadonlySet<string>;
+  characterTownNames: ReadonlyMap<string, string>;
+  edgeIds: ReadonlySet<string>;
+  eventIds: ReadonlySet<string>;
+  eventTownNames: ReadonlyMap<string, string>;
+  jobIds: ReadonlySet<string>;
+  jobTownNames: ReadonlyMap<string, string>;
+  poiIds: ReadonlySet<string>;
+  poiTownNames: ReadonlyMap<string, string>;
+  questIds: ReadonlySet<string>;
+  questTownNames: ReadonlyMap<string, string>;
+  regionNames: ReadonlySet<string>;
+  siteIds: ReadonlySet<string>;
+  siteTownNames: ReadonlyMap<string, string>;
+  townNames: ReadonlySet<string>;
+  travelLogArrivals: ReadonlySet<string>;
+  travelLogTownByArrival: ReadonlyMap<string, string>;
+};
+
+type OverworldRenownSourceIndex = {
+  eventsById: ReadonlyMap<string, OverworldLocalEvent>;
+  jobsById: ReadonlyMap<string, OverworldLocalJob>;
+  nodesById: ReadonlyMap<string, OverworldNode>;
+  roadEventsByEdgeId: ReadonlyMap<string, OverworldRoadEvent>;
+  sitesById: ReadonlyMap<string, OverworldExplorationSite>;
+  travelLogByArrival: ReadonlyMap<string, TravelLogEntrySnapshot>;
+};
+
+type OverworldResourceReplayIndex = {
+  edgesById: ReadonlyMap<string, OverworldEdge>;
+  roadEventsByEdgeId: ReadonlyMap<string, OverworldRoadEvent>;
+};
+
+type OverworldReplayState = {
+  minimumClock: number;
+  supplies: number;
+  fatigue: number;
+};
+
+type OverworldDiscoveryLocalityIndex = {
+  areaHomes: ReadonlyMap<string, string>;
+  discoveredAreaIds: ReadonlySet<string>;
+  eventsById: ReadonlyMap<string, OverworldLocalEvent>;
+  jobsById: ReadonlyMap<string, OverworldLocalJob>;
+  questsById: ReadonlyMap<string, OverworldQuest>;
+  sitesById: ReadonlyMap<string, OverworldExplorationSite>;
+  visitedTownIds: ReadonlySet<string>;
+};
+
+type OverworldResolutionProofIndex = {
+  charactersById: ReadonlyMap<string, OverworldCharacter>;
+  eventsById: ReadonlyMap<string, OverworldLocalEvent>;
+  poisById: ReadonlyMap<string, OverworldPoi>;
+};
+
+type OverworldRegionalArcCompletionIndex = {
+  eventsById: ReadonlyMap<string, OverworldLocalEvent>;
+  regionalArcs: readonly OverworldRegionalArc[];
+};
+
+type OverworldLocalActionJournalReachabilityIndex = {
+  areasById: ReadonlyMap<string, OverworldArea>;
+  charactersById: ReadonlyMap<string, OverworldCharacter>;
+  discoveredAreaIds: ReadonlySet<string>;
+  eventsById: ReadonlyMap<string, OverworldLocalEvent>;
+  jobsById: ReadonlyMap<string, OverworldLocalJob>;
+  poisById: ReadonlyMap<string, OverworldPoi>;
+  questsById: ReadonlyMap<string, OverworldQuest>;
+  sitesById: ReadonlyMap<string, OverworldExplorationSite>;
+  townVisitMinutes: ReadonlyMap<string, number>;
+  visitedTownIds: ReadonlySet<string>;
+};
+
+type OverworldSnapshotManifestIndex = {
+  arcIds: ReadonlySet<string>;
+  arcRegionNames: ReadonlyMap<string, string>;
+  areaHomes: ReadonlyMap<string, string>;
+  areaIds: ReadonlySet<string>;
+  areasById: ReadonlyMap<string, OverworldArea>;
+  areaTownNames: ReadonlyMap<string, string>;
+  characterIds: ReadonlySet<string>;
+  charactersById: ReadonlyMap<string, OverworldCharacter>;
+  characterTownNames: ReadonlyMap<string, string>;
+  edgeIds: ReadonlySet<string>;
+  edgesById: ReadonlyMap<string, OverworldEdge>;
+  eventIds: ReadonlySet<string>;
+  eventsById: ReadonlyMap<string, OverworldLocalEvent>;
+  eventTownNames: ReadonlyMap<string, string>;
+  jobIds: ReadonlySet<string>;
+  jobsById: ReadonlyMap<string, OverworldLocalJob>;
+  jobTownNames: ReadonlyMap<string, string>;
+  nodeIds: ReadonlySet<string>;
+  nodesById: ReadonlyMap<string, OverworldNode>;
+  poiIds: ReadonlySet<string>;
+  poisById: ReadonlyMap<string, OverworldPoi>;
+  poiTownNames: ReadonlyMap<string, string>;
+  questIds: ReadonlySet<string>;
+  questsById: ReadonlyMap<string, OverworldQuest>;
+  questTownNames: ReadonlyMap<string, string>;
+  regionalArcs: readonly OverworldRegionalArc[];
+  regionNames: ReadonlySet<string>;
+  roadEventsByEdgeId: ReadonlyMap<string, OverworldRoadEvent>;
+  siteIds: ReadonlySet<string>;
+  sitesById: ReadonlyMap<string, OverworldExplorationSite>;
+  siteTownNames: ReadonlyMap<string, string>;
+  townNameForSource: (nodeId: string) => string;
+  townNames: ReadonlySet<string>;
+};
+
+type OverworldLocalJournalSource = {
+  sourceLabel: string;
+  sourceId: string;
+  home: string;
+  area: string;
+};
+
+function assertKnownJournalSource(
+  entry: OverworldJournalEntry,
+  prefix: string,
+  known: ReadonlySet<string>,
+  sourceLabel: string,
+  sourcePlaces?: ReadonlyMap<string, string>,
+  placeLabel = "town",
+): void {
+  if (!entry.id.startsWith(prefix)) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry id "${entry.id}" must start with "${prefix}".`,
+    );
+  }
+  const sourceId = entry.id.slice(prefix.length);
+  if (!sourceId) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry has an empty ${sourceLabel} id.`,
+    );
+  }
+  if (!known.has(sourceId)) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry references unknown ${sourceLabel} "${sourceId}".`,
+    );
+  }
+  const expectedPlace = sourcePlaces?.get(sourceId);
+  if (expectedPlace && entry.town !== expectedPlace) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry "${entry.id}" is bound to ${placeLabel} "${entry.town}", expected "${expectedPlace}".`,
+    );
+  }
+}
+
+function parseRoadJournalId(entryId: string): RoadJournalIdParts {
+  const match = /^road:(.+):(\d+):([a-z_]+)$/.exec(entryId);
+  if (!match) {
+    throw new Error(
+      `Overworld session snapshot journal road entry id "${entryId}" must match "road:<road_id>:<arrival_minutes>:<strategy>".`,
+    );
+  }
+  const edgeId = match[1]!;
+  const arrivedAt = Number(match[2]!);
+  const strategy = match[3]!;
+  if (!Number.isSafeInteger(arrivedAt)) {
+    throw new Error(
+      `Overworld session snapshot journal road entry has malformed arrival minutes "${match[2]}".`,
+    );
+  }
+  if (!ROAD_ENCOUNTER_STRATEGIES.has(strategy)) {
+    throw new Error(
+      `Overworld session snapshot journal road entry references unknown strategy "${strategy}".`,
+    );
+  }
+  return {
+    edgeId,
+    arrivedAt,
+    strategy: strategy as OverworldRoadEncounterStrategy,
+  };
+}
+
+function parseServiceJournalId(entryId: string): ServiceJournalIdParts {
+  const match = /^service:(rest|resupply):(\d+)$/.exec(entryId);
+  if (!match) {
+    throw new Error(
+      `Overworld session snapshot journal service entry id "${entryId}" must match "service:<rest|resupply>:<minutes>".`,
+    );
+  }
+  const recordedAt = Number(match[2]!);
+  if (!Number.isSafeInteger(recordedAt)) {
+    throw new Error(
+      `Overworld session snapshot journal service entry has malformed minutes "${match[2]}".`,
+    );
+  }
+  return {
+    action: match[1] as "rest" | "resupply",
+    recordedAt,
+  };
+}
+
+function assertRoadJournalSource(
+  entry: OverworldJournalEntry,
+  recordedAt: number,
+  sources: OverworldJournalSourceIndex,
+): void {
+  const parsed = parseRoadJournalId(entry.id);
+  if (!sources.edgeIds.has(parsed.edgeId)) {
+    throw new Error(
+      `Overworld session snapshot journal road entry references unknown road "${parsed.edgeId}".`,
+    );
+  }
+  if (parsed.arrivedAt > recordedAt) {
+    throw new Error("Overworld session snapshot journal road entry predates its road arrival.");
+  }
+  if (!sources.travelLogArrivals.has(`${parsed.edgeId}@${parsed.arrivedAt}`)) {
+    throw new Error(
+      `Overworld session snapshot journal road entry has no matching travel log for "${parsed.edgeId}" at ${parsed.arrivedAt}.`,
+    );
+  }
+  const expectedTown = sources.travelLogTownByArrival.get(`${parsed.edgeId}@${parsed.arrivedAt}`);
+  if (expectedTown && entry.town !== expectedTown) {
+    throw new Error(
+      `Overworld session snapshot journal road entry "${entry.id}" is bound to town "${entry.town}", expected "${expectedTown}".`,
+    );
+  }
+}
+
+function assertServiceJournalSource(entry: OverworldJournalEntry, recordedAt: number): void {
+  const service = parseServiceJournalId(entry.id);
+  if (service.recordedAt !== recordedAt) {
+    throw new Error(
+      "Overworld session snapshot journal service entry time does not match its timestamp.",
+    );
+  }
+}
+
+function assertSnapshotJournalSource(
+  entry: OverworldJournalEntry,
+  recordedAt: number,
+  sources: OverworldJournalSourceIndex,
+): void {
+  const placeNames = entry.kind === "regional_arc" ? sources.regionNames : sources.townNames;
+  const placeLabel = entry.kind === "regional_arc" ? "region" : "town";
+  if (!placeNames.has(entry.town)) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} references unknown ${placeLabel} "${entry.town}".`,
+    );
+  }
+
+  switch (entry.kind) {
+    case "area":
+      assertKnownJournalSource(entry, "area:", sources.areaIds, "area", sources.areaTownNames);
+      return;
+    case "contact":
+      assertKnownJournalSource(
+        entry,
+        "talk:",
+        sources.characterIds,
+        "contact",
+        sources.characterTownNames,
+      );
+      return;
+    case "event":
+      assertKnownJournalSource(
+        entry,
+        "investigate:",
+        sources.eventIds,
+        "event",
+        sources.eventTownNames,
+      );
+      return;
+    case "job":
+      assertKnownJournalSource(entry, "job:", sources.jobIds, "job", sources.jobTownNames);
+      return;
+    case "poi":
+      assertKnownJournalSource(
+        entry,
+        "scout:",
+        sources.poiIds,
+        "point of interest",
+        sources.poiTownNames,
+      );
+      return;
+    case "quest":
+      assertKnownJournalSource(entry, "quest:", sources.questIds, "quest", sources.questTownNames);
+      return;
+    case "quest_done":
+      assertKnownJournalSource(
+        entry,
+        "quest_done:",
+        sources.questIds,
+        "quest",
+        sources.questTownNames,
+      );
+      return;
+    case "regional_arc":
+      assertKnownJournalSource(
+        entry,
+        "arc:",
+        sources.arcIds,
+        "regional arc",
+        sources.arcRegionNames,
+        "region",
+      );
+      return;
+    case "resolution":
+      assertKnownJournalSource(
+        entry,
+        "resolve:",
+        sources.eventIds,
+        "event resolution",
+        sources.eventTownNames,
+      );
+      return;
+    case "road":
+      assertRoadJournalSource(entry, recordedAt, sources);
+      return;
+    case "service":
+      assertServiceJournalSource(entry, recordedAt);
+      return;
+    case "site":
+      assertKnownJournalSource(entry, "site:", sources.siteIds, "site", sources.siteTownNames);
+      return;
+  }
+}
+
+function assertSnapshotTimeline(
+  snapshot: OverworldSessionSnapshot,
+  sources: OverworldJournalSourceIndex,
+): void {
+  assertUnique(
+    "journal entry id",
+    snapshot.journalEntries.map((entry) => entry.id),
+  );
+  assertUnique(
+    "travel log entry",
+    snapshot.travelLog.map((entry) => `${entry.edgeId}@${entry.arrivedAt}`),
+  );
+
+  let previousArrivedAt = Number.POSITIVE_INFINITY;
+  for (const entry of snapshot.travelLog) {
+    if (entry.arrivedAt > snapshot.minutes) {
+      throw new Error("Overworld session snapshot travel log contains a future arrival.");
+    }
+    if (entry.arrivedAt > previousArrivedAt) {
+      throw new Error("Overworld session snapshot travel log must be newest-first.");
+    }
+    previousArrivedAt = entry.arrivedAt;
+  }
+
+  let previousRecordedAt = Number.POSITIVE_INFINITY;
+  for (const entry of snapshot.journalEntries) {
+    const recordedAt = parseTimeLabel(entry.recordedAt);
+    assertSnapshotJournalSource(entry, recordedAt, sources);
+    if (recordedAt > snapshot.minutes) {
+      throw new Error("Overworld session snapshot journal contains a future entry.");
+    }
+    if (recordedAt > previousRecordedAt) {
+      throw new Error("Overworld session snapshot journal must be newest-first.");
+    }
+    previousRecordedAt = recordedAt;
+  }
+}
+
+function travelResourceKey(entry: TravelLogEntrySnapshot): string {
+  return `${entry.edgeId}@${entry.arrivedAt}`;
+}
+
+function assertReplayClock(
+  sourceLabel: string,
+  recordedAt: number,
+  duration: number,
+  state: OverworldReplayState,
+): void {
+  const earliestCompletion = state.minimumClock + duration;
+  if (recordedAt < earliestCompletion) {
+    throw new Error(
+      `Overworld session snapshot ${sourceLabel} was recorded before enough clock time elapsed.`,
+    );
+  }
+  state.minimumClock = Math.max(state.minimumClock, recordedAt);
+}
+
+function localJournalActionDuration(
+  entry: OverworldJournalEntry,
+  sources: OverworldLocalActionJournalReachabilityIndex,
+): number | null {
+  switch (entry.kind) {
+    case "area": {
+      const sourceId = journalSourceId(entry, "area:");
+      const area = sourceId ? sources.areasById.get(sourceId) : undefined;
+      return area?.travel_minutes ?? null;
+    }
+    case "contact": {
+      const sourceId = journalSourceId(entry, "talk:");
+      const character = sourceId ? sources.charactersById.get(sourceId) : undefined;
+      return character ? describeOverworldContactAction(character).minutes : null;
+    }
+    case "event": {
+      const sourceId = journalSourceId(entry, "investigate:");
+      const event = sourceId ? sources.eventsById.get(sourceId) : undefined;
+      return event ? describeOverworldEventAction(event).minutes : null;
+    }
+    case "job": {
+      const sourceId = journalSourceId(entry, "job:");
+      const job = sourceId ? sources.jobsById.get(sourceId) : undefined;
+      if (!job) return null;
+      const area = sources.areasById.get(job.area) ?? null;
+      return describeOverworldJobAction(job, area).minutes;
+    }
+    case "poi": {
+      const sourceId = journalSourceId(entry, "scout:");
+      const poi = sourceId ? sources.poisById.get(sourceId) : undefined;
+      return poi ? 20 : null;
+    }
+    case "resolution": {
+      const sourceId = journalSourceId(entry, "resolve:");
+      const event = sourceId ? sources.eventsById.get(sourceId) : undefined;
+      return event ? 30 + event.intensity * 10 : null;
+    }
+    case "site": {
+      const sourceId = journalSourceId(entry, "site:");
+      const site = sourceId ? sources.sitesById.get(sourceId) : undefined;
+      return site ? describeOverworldSiteAction(site).minutes : null;
+    }
+    default:
+      return null;
+  }
+}
+
+function assertTravelResourceTransition(
+  entry: TravelLogEntrySnapshot,
+  edge: OverworldEdge,
+  roadEvent: OverworldRoadEvent | null,
+  state: OverworldReplayState,
+): void {
+  const label = `${entry.edgeId}@${entry.arrivedAt}`;
+  const supplyCost = travelSupplyCost(edge.travel_minutes);
+  const expectedSuppliesUsed = Math.min(state.supplies, supplyCost);
+  const supplyDeficit = supplyCost - expectedSuppliesUsed;
+  const expectedDelayMinutes = travelDelayMinutes(
+    edge.travel_minutes,
+    state.fatigue,
+    supplyDeficit,
+  );
+  const expectedMinutes = edge.travel_minutes + expectedDelayMinutes;
+  const expectedSuppliesAfter = state.supplies - expectedSuppliesUsed;
+  const expectedFatigueGained =
+    travelFatigueGain(edge.travel_minutes, roadEvent) + supplyDeficit * 4;
+  const expectedFatigueAfter = Math.min(MAX_FATIGUE, state.fatigue + expectedFatigueGained);
+
+  if (entry.delayMinutes !== expectedDelayMinutes || entry.minutes !== expectedMinutes) {
+    throw new Error(
+      `Overworld session snapshot travel "${label}" does not match resource replay timing.`,
+    );
+  }
+  if (entry.suppliesUsed !== expectedSuppliesUsed) {
+    throw new Error(
+      `Overworld session snapshot travel "${label}" supplies used does not match resource replay.`,
+    );
+  }
+  if (entry.suppliesAfter !== expectedSuppliesAfter) {
+    throw new Error(
+      `Overworld session snapshot travel "${label}" supplies after does not match resource replay.`,
+    );
+  }
+  if (entry.fatigueGained !== expectedFatigueGained) {
+    throw new Error(
+      `Overworld session snapshot travel "${label}" fatigue gained does not match resource replay.`,
+    );
+  }
+  if (entry.fatigueAfter !== expectedFatigueAfter) {
+    throw new Error(
+      `Overworld session snapshot travel "${label}" fatigue after does not match resource replay.`,
+    );
+  }
+
+  state.supplies = expectedSuppliesAfter;
+  state.fatigue = expectedFatigueAfter;
+}
+
+function assertSnapshotRoadResolutionCoverage(
+  snapshot: OverworldSessionSnapshot,
+  sources: OverworldResourceReplayIndex,
+): Map<string, OverworldJournalEntry> {
+  const latestTravel = snapshot.travelLog[0];
+  const pendingRoadKey =
+    snapshot.pendingRoadEncounter && latestTravel?.edgeId === snapshot.pendingRoadEncounter.edgeId
+      ? travelResourceKey(latestTravel)
+      : null;
+  const roadResolutionByKey = new Map<string, OverworldJournalEntry>();
+  const travelEntriesOldestFirst = [...snapshot.travelLog].reverse();
+  const nextTravelArrivalByKey = new Map<string, number>();
+  for (let index = 0; index < travelEntriesOldestFirst.length - 1; index += 1) {
+    const current = travelEntriesOldestFirst[index]!;
+    nextTravelArrivalByKey.set(
+      travelResourceKey(current),
+      travelEntriesOldestFirst[index + 1]!.arrivedAt,
+    );
+  }
+
+  for (const entry of snapshot.journalEntries) {
+    if (entry.kind !== "road") continue;
+    const parsed = parseRoadJournalId(entry.id);
+    const key = `${parsed.edgeId}@${parsed.arrivedAt}`;
+    if (!sources.roadEventsByEdgeId.has(parsed.edgeId)) {
+      throw new Error(
+        `Overworld session snapshot road journal "${entry.id}" has no matching road event.`,
+      );
+    }
+    if (roadResolutionByKey.has(key)) {
+      throw new Error(
+        `Overworld session snapshot road encounter "${key}" has duplicate journal resolutions.`,
+      );
+    }
+    const nextTravelArrival = nextTravelArrivalByKey.get(key);
+    if (nextTravelArrival !== undefined && journalEntryRecordedAt(entry) > nextTravelArrival) {
+      throw new Error(
+        `Overworld session snapshot road encounter "${key}" was resolved after subsequent travel.`,
+      );
+    }
+    roadResolutionByKey.set(key, entry);
+  }
+
+  for (const entry of snapshot.travelLog) {
+    const key = travelResourceKey(entry);
+    if (!sources.roadEventsByEdgeId.has(entry.edgeId) || key === pendingRoadKey) continue;
+    if (!roadResolutionByKey.has(key)) {
+      throw new Error(
+        `Overworld session snapshot road encounter "${key}" is missing a journal resolution.`,
+      );
+    }
+  }
+
+  return roadResolutionByKey;
+}
+
+function assertSnapshotResourceReplay(
+  snapshot: OverworldSessionSnapshot,
+  sources: OverworldResourceReplayIndex,
+  localActionSources: OverworldLocalActionJournalReachabilityIndex,
+): void {
+  const roadResolutionByKey = assertSnapshotRoadResolutionCoverage(snapshot, sources);
+  const replayEvents: (
+    | { kind: "travel"; recordedAt: number; entry: TravelLogEntrySnapshot }
+    | { kind: "road"; recordedAt: number; entry: OverworldJournalEntry }
+    | { kind: "service"; recordedAt: number; entry: OverworldJournalEntry }
+    | {
+        kind: "local";
+        recordedAt: number;
+        duration: number;
+        entry: OverworldJournalEntry;
+      }
+  )[] = [];
+  for (const entry of snapshot.travelLog) {
+    replayEvents.push({ kind: "travel", recordedAt: entry.arrivedAt, entry });
+  }
+  for (const entry of snapshot.journalEntries) {
+    if (entry.kind === "road" || entry.kind === "service") {
+      replayEvents.push({ kind: entry.kind, recordedAt: journalEntryRecordedAt(entry), entry });
+      continue;
+    }
+    const duration = localJournalActionDuration(entry, localActionSources);
+    if (duration !== null) {
+      replayEvents.push({
+        kind: "local",
+        recordedAt: journalEntryRecordedAt(entry),
+        duration,
+        entry,
+      });
+    }
+  }
+  replayEvents.sort(
+    (left, right) =>
+      left.recordedAt - right.recordedAt ||
+      (left.kind === "travel" ? 0 : left.kind === "road" ? 1 : 2) -
+        (right.kind === "travel" ? 0 : right.kind === "road" ? 1 : 2),
+  );
+
+  const state: OverworldReplayState = {
+    minimumClock: STARTING_MINUTES,
+    supplies: STARTING_SUPPLIES,
+    fatigue: 0,
+  };
+  for (const event of replayEvents) {
+    if (event.kind === "travel") {
+      const edge = sources.edgesById.get(event.entry.edgeId);
+      if (!edge) {
+        throw new Error(
+          `Overworld session snapshot has unknown travel road "${event.entry.edgeId}".`,
+        );
+      }
+      assertTravelResourceTransition(
+        event.entry,
+        edge,
+        sources.roadEventsByEdgeId.get(event.entry.edgeId) ?? null,
+        state,
+      );
+      assertReplayClock(
+        `travel "${travelResourceKey(event.entry)}"`,
+        event.recordedAt,
+        event.entry.minutes,
+        state,
+      );
+      continue;
+    }
+
+    if (event.kind === "road") {
+      const parsed = parseRoadJournalId(event.entry.id);
+      const key = `${parsed.edgeId}@${parsed.arrivedAt}`;
+      if (roadResolutionByKey.get(key) !== event.entry) continue;
+      const roadEvent = sources.roadEventsByEdgeId.get(parsed.edgeId);
+      if (!roadEvent) continue;
+      const option = roadEncounterOptionFor(roadEvent, parsed.strategy);
+      assertReplayClock(
+        `road journal "${event.entry.id}"`,
+        event.recordedAt,
+        option.minutes,
+        state,
+      );
+      const suppliesUsed = Math.min(state.supplies, option.suppliesCost);
+      const supplyDeficit = option.suppliesCost - suppliesUsed;
+      state.supplies -= suppliesUsed;
+      state.fatigue = Math.min(
+        MAX_FATIGUE,
+        state.fatigue + option.fatigueGained + supplyDeficit * 3,
+      );
+      continue;
+    }
+
+    if (event.kind === "local") {
+      assertReplayClock(
+        `journal ${event.entry.kind} entry "${event.entry.id}"`,
+        event.recordedAt,
+        event.duration,
+        state,
+      );
+      continue;
+    }
+
+    const service = parseServiceJournalId(event.entry.id);
+    if (service.action === "rest") {
+      if (state.fatigue === 0) {
+        throw new Error(
+          `Overworld session snapshot service journal "${event.entry.id}" rests with no fatigue to recover.`,
+        );
+      }
+      assertReplayClock(
+        `service journal "${event.entry.id}"`,
+        event.recordedAt,
+        Math.max(180, Math.ceil(state.fatigue / 20) * 60),
+        state,
+      );
+      state.fatigue = 0;
+    } else {
+      if (state.supplies >= MAX_SUPPLIES) {
+        throw new Error(
+          `Overworld session snapshot service journal "${event.entry.id}" resupplies with full supplies.`,
+        );
+      }
+      assertReplayClock(`service journal "${event.entry.id}"`, event.recordedAt, 45, state);
+      state.supplies = MAX_SUPPLIES;
+    }
+  }
+
+  if (snapshot.minutes < state.minimumClock) {
+    throw new Error("Overworld session snapshot minutes do not match clock replay.");
+  }
+  if (snapshot.supplies !== state.supplies) {
+    throw new Error("Overworld session snapshot supplies do not match resource replay.");
+  }
+  if (snapshot.fatigue !== state.fatigue) {
+    throw new Error("Overworld session snapshot fatigue does not match resource replay.");
+  }
+}
+
+function assertStringSetSubset(
+  label: string,
+  values: readonly string[],
+  parentLabel: string,
+  parent: Set<string>,
+): void {
+  for (const value of values) {
+    if (!parent.has(value)) {
+      throw new Error(`Overworld session snapshot ${label} "${value}" is not in ${parentLabel}.`);
+    }
+  }
+}
+
+function journalSourceIdsForKind(
+  snapshot: OverworldSessionSnapshot,
+  kind: OverworldJournalEntry["kind"],
+  prefix: string,
+): Set<string> {
+  const ids = new Set<string>();
+  for (const entry of snapshot.journalEntries) {
+    if (entry.kind === kind) ids.add(entry.id.slice(prefix.length));
+  }
+  return ids;
+}
+
+function assertJournalStateBinding(
+  stateLabel: string,
+  stateIds: readonly string[],
+  journalLabel: string,
+  journalIds: ReadonlySet<string>,
+): void {
+  const state = new Set(stateIds);
+  for (const id of state) {
+    if (!journalIds.has(id)) {
+      throw new Error(
+        `Overworld session snapshot ${stateLabel} "${id}" has no matching journal entry.`,
+      );
+    }
+  }
+  for (const id of journalIds) {
+    if (!state.has(id)) {
+      throw new Error(
+        `Overworld session snapshot journal ${journalLabel} "${id}" is missing from saved state.`,
+      );
+    }
+  }
+}
+
+function assertSnapshotProgressJournalBindings(snapshot: OverworldSessionSnapshot): void {
+  assertJournalStateBinding(
+    "visited area id",
+    snapshot.visitedAreaIds,
+    "visited area id",
+    journalSourceIdsForKind(snapshot, "area", "area:"),
+  );
+  assertJournalStateBinding(
+    "completed job id",
+    snapshot.completedJobIds,
+    "completed job id",
+    journalSourceIdsForKind(snapshot, "job", "job:"),
+  );
+  assertJournalStateBinding(
+    "started quest id",
+    snapshot.startedQuestIds,
+    "started quest id",
+    journalSourceIdsForKind(snapshot, "quest", "quest:"),
+  );
+  assertJournalStateBinding(
+    "completed quest id",
+    snapshot.completedQuestIds,
+    "completed quest id",
+    journalSourceIdsForKind(snapshot, "quest_done", "quest_done:"),
+  );
+  assertJournalStateBinding(
+    "explored site id",
+    snapshot.exploredSiteIds,
+    "explored site id",
+    journalSourceIdsForKind(snapshot, "site", "site:"),
+  );
+  assertJournalStateBinding(
+    "resolved event id",
+    snapshot.resolvedEventIds,
+    "resolved event id",
+    journalSourceIdsForKind(snapshot, "resolution", "resolve:"),
+  );
+  assertJournalStateBinding(
+    "completed regional arc id",
+    snapshot.completedRegionalArcIds,
+    "completed regional arc id",
+    journalSourceIdsForKind(snapshot, "regional_arc", "arc:"),
+  );
+}
+
+function snapshotTownVisitMinutes(
+  snapshot: OverworldSessionSnapshot,
+  startTownId: string,
+): Map<string, number> {
+  const visitedAt = new Map<string, number>([[startTownId, STARTING_MINUTES]]);
+  for (const entry of snapshot.travelLog) {
+    const previous = visitedAt.get(entry.toId);
+    if (previous === undefined || entry.arrivedAt < previous) {
+      visitedAt.set(entry.toId, entry.arrivedAt);
+    }
+  }
+  return visitedAt;
+}
+
+function assertSnapshotVisitedTownTravelProof(
+  snapshot: OverworldSessionSnapshot,
+  startTownId: string,
+): Map<string, number> {
+  const visitedAt = snapshotTownVisitMinutes(snapshot, startTownId);
+  const visitedTownIds = new Set(snapshot.visitedIds);
+  for (const townId of snapshot.visitedIds) {
+    if (!visitedAt.has(townId)) {
+      throw new Error(`Overworld session snapshot visited town "${townId}" has no travel arrival.`);
+    }
+  }
+  for (const entry of snapshot.travelLog) {
+    if (!visitedTownIds.has(entry.toId)) {
+      throw new Error(
+        `Overworld session snapshot travel arrival town "${entry.toId}" is missing from visited towns.`,
+      );
+    }
+  }
+  return visitedAt;
+}
+
+function assertSnapshotTravelPathContinuity(
+  snapshot: OverworldSessionSnapshot,
+  startTownId: string,
+): void {
+  let currentTownId = startTownId;
+  for (const entry of [...snapshot.travelLog].reverse()) {
+    if (entry.fromId !== currentTownId) {
+      throw new Error(
+        `Overworld session snapshot travel log is not contiguous at road "${entry.edgeId}".`,
+      );
+    }
+    currentTownId = entry.toId;
+  }
+  if (snapshot.currentId !== currentTownId) {
+    throw new Error("Overworld session snapshot current town does not match travel history.");
+  }
+}
+
+function assertSnapshotPendingRoadEncounterBinding(
+  snapshot: OverworldSessionSnapshot,
+  edgeIds: ReadonlySet<string>,
+): void {
+  if (!snapshot.pendingRoadEncounter) return;
+  const latestTravel = snapshot.travelLog[0];
+  if (!latestTravel) {
+    throw new Error("Overworld session snapshot pending road encounter has no travel log.");
+  }
+  if (!edgeIds.has(latestTravel.edgeId)) return;
+  if (latestTravel.edgeId !== snapshot.pendingRoadEncounter.edgeId) {
+    throw new Error(
+      `Overworld session snapshot pending road encounter "${snapshot.pendingRoadEncounter.edgeId}" does not match latest travel log road "${latestTravel.edgeId}".`,
+    );
+  }
+}
+
+function assertSnapshotPendingRoadEncounterUnresolved(snapshot: OverworldSessionSnapshot): void {
+  const pendingRoadEncounter = snapshot.pendingRoadEncounter;
+  if (!pendingRoadEncounter) return;
+  const latestTravel = snapshot.travelLog[0];
+  if (!latestTravel) return;
+
+  const pendingArrivalKey = `${pendingRoadEncounter.edgeId}@${latestTravel.arrivedAt}`;
+  for (const entry of snapshot.journalEntries) {
+    if (entry.kind !== "road") continue;
+    const parsed = parseRoadJournalId(entry.id);
+    if (`${parsed.edgeId}@${parsed.arrivedAt}` === pendingArrivalKey) {
+      throw new Error(
+        `Overworld session snapshot pending road encounter "${pendingRoadEncounter.edgeId}" already has a road journal resolution.`,
+      );
+    }
+  }
+}
+
+function expectedDiscoveredTownIds(
+  world: OverworldManifest,
+  visitedTownIds: ReadonlySet<string>,
+): Set<string> {
+  const expected = new Set<string>();
+  for (const townId of visitedTownIds) {
+    expected.add(townId);
+    for (const edge of overworldEdgesFrom(world, townId)) {
+      expected.add(edge.destination.id);
+    }
+  }
+  return expected;
+}
+
+function assertSnapshotDiscoveredTownFrontier(
+  snapshot: OverworldSessionSnapshot,
+  world: OverworldManifest,
+  visitedTownIds: ReadonlySet<string>,
+): void {
+  const expected = expectedDiscoveredTownIds(world, visitedTownIds);
+  const discoveredTownIds = new Set(snapshot.discoveredIds);
+  for (const townId of snapshot.discoveredIds) {
+    if (!expected.has(townId)) {
+      throw new Error(
+        `Overworld session snapshot discovered town "${townId}" is outside the visited frontier.`,
+      );
+    }
+  }
+  for (const townId of expected) {
+    if (!discoveredTownIds.has(townId)) {
+      throw new Error(
+        `Overworld session snapshot discovered town frontier is missing "${townId}".`,
+      );
+    }
+  }
+}
+
+function assertSnapshotDiscoveredAreaPrefix(
+  snapshot: OverworldSessionSnapshot,
+  world: OverworldManifest,
+  visitedTownIds: ReadonlySet<string>,
+): void {
+  const discoveredAreaIds = new Set(snapshot.discoveredAreaIds);
+  for (const townId of visitedTownIds) {
+    const areas = overworldAreasAt(world, townId);
+    if (areas.length === 0) continue;
+    let discoveredAny = false;
+    let hiddenAreaSeen = false;
+    for (const area of areas) {
+      const discovered = discoveredAreaIds.has(area.id);
+      if (discovered) {
+        discoveredAny = true;
+        if (hiddenAreaSeen) {
+          throw new Error(
+            `Overworld session snapshot discovered area "${area.id}" skips an earlier area in "${townId}".`,
+          );
+        }
+      } else {
+        hiddenAreaSeen = true;
+      }
+    }
+    if (!discoveredAny) {
+      throw new Error(
+        `Overworld session snapshot visited town "${townId}" is missing its initial discovered area.`,
+      );
+    }
+  }
+}
+
+function assertSnapshotDiscoveredSourcePrefix(
+  sourceLabel: string,
+  discoveredIds: ReadonlySet<string>,
+  orderedSources: readonly { id: string }[],
+  contextId: string,
+): void {
+  let hiddenSourceSeen = false;
+  for (const source of orderedSources) {
+    if (discoveredIds.has(source.id)) {
+      if (hiddenSourceSeen) {
+        throw new Error(
+          `Overworld session snapshot discovered ${sourceLabel} "${source.id}" skips an earlier ${sourceLabel} in "${contextId}".`,
+        );
+      }
+    } else {
+      hiddenSourceSeen = true;
+    }
+  }
+}
+
+function assertSnapshotDiscoveredLocalSourcePrefixes(
+  snapshot: OverworldSessionSnapshot,
+  world: OverworldManifest,
+  visitedTownIds: ReadonlySet<string>,
+): void {
+  const discoveredAreaIds = new Set(snapshot.discoveredAreaIds);
+  const discoveredJobIds = new Set(snapshot.discoveredJobIds);
+  const discoveredSiteIds = new Set(snapshot.discoveredSiteIds);
+  const discoveredQuestIds = new Set(snapshot.discoveredQuestIds);
+  for (const townId of visitedTownIds) {
+    assertSnapshotDiscoveredSourcePrefix(
+      "job",
+      discoveredJobIds,
+      overworldJobsAt(world, townId).filter((job) => discoveredAreaIds.has(job.area)),
+      townId,
+    );
+    assertSnapshotDiscoveredSourcePrefix(
+      "quest",
+      discoveredQuestIds,
+      overworldQuestsAt(world, townId).filter((quest) => discoveredAreaIds.has(quest.area)),
+      townId,
+    );
+  }
+  for (const areaId of discoveredAreaIds) {
+    assertSnapshotDiscoveredSourcePrefix(
+      "site",
+      discoveredSiteIds,
+      overworldExplorationSitesInArea(world, areaId),
+      areaId,
+    );
+  }
+}
+
+function assertSnapshotCurrentAreaMapExact(
+  snapshot: OverworldSessionSnapshot,
+  world: OverworldManifest,
+  visitedTownIds: ReadonlySet<string>,
+): void {
+  const currentAreaByTown = new Map(snapshot.currentAreaByTown);
+  for (const townId of visitedTownIds) {
+    const localAreas = overworldAreasAt(world, townId);
+    if (localAreas.length > 0 && !currentAreaByTown.has(townId)) {
+      throw new Error(
+        `Overworld session snapshot saved area map is missing visited town "${townId}".`,
+      );
+    }
+  }
+  for (const [townId] of currentAreaByTown) {
+    if (!visitedTownIds.has(townId)) continue;
+    if (overworldAreasAt(world, townId).length === 0) {
+      throw new Error(
+        `Overworld session snapshot has saved area for town "${townId}" with no local areas.`,
+      );
+    }
+  }
+
+  if (overworldAreasAt(world, snapshot.currentId).length === 0) return;
+  const savedCurrentArea = currentAreaByTown.get(snapshot.currentId);
+  if (!savedCurrentArea) return;
+  if (snapshot.currentAreaId === null) {
+    throw new Error("Overworld session snapshot current area is missing for a local town.");
+  }
+  if (savedCurrentArea !== snapshot.currentAreaId) {
+    throw new Error("Overworld session snapshot current area does not match saved area map.");
+  }
+}
+
+function addRegionRenown(target: Map<string, number>, region: string, amount: number): void {
+  if (amount <= 0) return;
+  target.set(region, (target.get(region) ?? 0) + amount);
+}
+
+function nodeRegionFor(
+  nodesById: ReadonlyMap<string, OverworldNode>,
+  nodeId: string,
+  sourceLabel: string,
+): string {
+  const node = nodesById.get(nodeId);
+  if (!node) {
+    throw new Error(`Overworld session snapshot ${sourceLabel} references unknown town.`);
+  }
+  return node.region;
+}
+
+function roadRenownFor(
+  roadEvent: OverworldRoadEvent,
+  strategy: OverworldRoadEncounterStrategy,
+): number {
+  return roadEncounterOptionFor(roadEvent, strategy).renownGained;
+}
+
+function expectedSnapshotRegionRenown(
+  snapshot: OverworldSessionSnapshot,
+  sources: OverworldRenownSourceIndex,
+): Map<string, number> {
+  const expected = new Map<string, number>();
+
+  for (const jobId of snapshot.completedJobIds) {
+    const job = sources.jobsById.get(jobId);
+    if (!job) continue;
+    addRegionRenown(
+      expected,
+      nodeRegionFor(sources.nodesById, job.home, `completed job "${jobId}"`),
+      job.difficulty,
+    );
+  }
+  for (const siteId of snapshot.exploredSiteIds) {
+    const site = sources.sitesById.get(siteId);
+    if (site) addRegionRenown(expected, site.region, site.danger);
+  }
+  for (const eventId of snapshot.resolvedEventIds) {
+    const event = sources.eventsById.get(eventId);
+    if (!event) continue;
+    addRegionRenown(
+      expected,
+      nodeRegionFor(sources.nodesById, event.home, `resolved event "${eventId}"`),
+      event.intensity,
+    );
+  }
+  for (const entry of snapshot.journalEntries) {
+    if (entry.kind !== "road") continue;
+    const parsed = parseRoadJournalId(entry.id);
+    const roadEvent = sources.roadEventsByEdgeId.get(parsed.edgeId);
+    const travelLog = sources.travelLogByArrival.get(`${parsed.edgeId}@${parsed.arrivedAt}`);
+    if (!roadEvent || !travelLog) continue;
+    addRegionRenown(
+      expected,
+      nodeRegionFor(sources.nodesById, travelLog.toId, `road journal "${entry.id}"`),
+      roadRenownFor(roadEvent, parsed.strategy),
+    );
+  }
+
+  return expected;
+}
+
+function assertSnapshotRegionRenown(
+  snapshot: OverworldSessionSnapshot,
+  sources: OverworldRenownSourceIndex,
+): void {
+  const expected = expectedSnapshotRegionRenown(snapshot, sources);
+  const actual = new Map(snapshot.regionRenown);
+  for (const [region, expectedRenown] of expected) {
+    const actualRenown = actual.get(region) ?? 0;
+    if (actualRenown !== expectedRenown) {
+      throw new Error(
+        `Overworld session snapshot region renown for "${region}" is ${actualRenown}, expected ${expectedRenown}.`,
+      );
+    }
+  }
+  for (const [region, actualRenown] of actual) {
+    if (!expected.has(region)) {
+      throw new Error(
+        `Overworld session snapshot has unexpected region renown for "${region}" (${actualRenown}).`,
+      );
+    }
+  }
+}
+
+function assertVisitedTownForDiscovery(
+  sourceLabel: string,
+  sourceId: string,
+  townId: string,
+  visitedTownIds: ReadonlySet<string>,
+): void {
+  if (!visitedTownIds.has(townId)) {
+    throw new Error(
+      `Overworld session snapshot ${sourceLabel} "${sourceId}" belongs to unvisited town "${townId}".`,
+    );
+  }
+}
+
+function assertDiscoveredAreaForDiscovery(
+  sourceLabel: string,
+  sourceId: string,
+  areaId: string,
+  discoveredAreaIds: ReadonlySet<string>,
+): void {
+  if (!discoveredAreaIds.has(areaId)) {
+    throw new Error(
+      `Overworld session snapshot ${sourceLabel} "${sourceId}" is in undiscovered area "${areaId}".`,
+    );
+  }
+}
+
+function assertSnapshotDiscoveryLocality(
+  snapshot: OverworldSessionSnapshot,
+  sources: OverworldDiscoveryLocalityIndex,
+): void {
+  for (const areaId of snapshot.discoveredAreaIds) {
+    const home = sources.areaHomes.get(areaId);
+    if (home) {
+      assertVisitedTownForDiscovery("discovered area", areaId, home, sources.visitedTownIds);
+    }
+  }
+  for (const areaId of snapshot.visitedAreaIds) {
+    const home = sources.areaHomes.get(areaId);
+    if (home) {
+      assertVisitedTownForDiscovery("visited area", areaId, home, sources.visitedTownIds);
+    }
+  }
+  for (const jobId of snapshot.discoveredJobIds) {
+    const job = sources.jobsById.get(jobId);
+    if (!job) continue;
+    assertVisitedTownForDiscovery("discovered job", jobId, job.home, sources.visitedTownIds);
+    assertDiscoveredAreaForDiscovery("discovered job", jobId, job.area, sources.discoveredAreaIds);
+  }
+  for (const siteId of snapshot.discoveredSiteIds) {
+    const site = sources.sitesById.get(siteId);
+    if (!site) continue;
+    assertVisitedTownForDiscovery(
+      "discovered site",
+      siteId,
+      site.nearest_town,
+      sources.visitedTownIds,
+    );
+    assertDiscoveredAreaForDiscovery(
+      "discovered site",
+      siteId,
+      site.area,
+      sources.discoveredAreaIds,
+    );
+  }
+  for (const questId of snapshot.discoveredQuestIds) {
+    const quest = sources.questsById.get(questId);
+    if (!quest) continue;
+    assertVisitedTownForDiscovery("discovered quest", questId, quest.home, sources.visitedTownIds);
+    assertDiscoveredAreaForDiscovery(
+      "discovered quest",
+      questId,
+      quest.area,
+      sources.discoveredAreaIds,
+    );
+  }
+  const discoveredQuestIds = new Set(snapshot.discoveredQuestIds);
+  const startedQuestIds = new Set(snapshot.startedQuestIds);
+  for (const questId of snapshot.startedQuestIds) {
+    const quest = sources.questsById.get(questId);
+    if (!quest) continue;
+    if (!discoveredQuestIds.has(questId)) {
+      throw new Error(`Overworld session snapshot started quest "${questId}" is not discovered.`);
+    }
+    assertVisitedTownForDiscovery("started quest", questId, quest.home, sources.visitedTownIds);
+    assertDiscoveredAreaForDiscovery(
+      "started quest",
+      questId,
+      quest.area,
+      sources.discoveredAreaIds,
+    );
+  }
+  for (const questId of snapshot.completedQuestIds) {
+    const quest = sources.questsById.get(questId);
+    if (!quest) continue;
+    if (!startedQuestIds.has(questId)) {
+      throw new Error(`Overworld session snapshot completed quest "${questId}" is not started.`);
+    }
+    assertVisitedTownForDiscovery("completed quest", questId, quest.home, sources.visitedTownIds);
+    assertDiscoveredAreaForDiscovery(
+      "completed quest",
+      questId,
+      quest.area,
+      sources.discoveredAreaIds,
+    );
+  }
+  for (const eventId of snapshot.resolvedEventIds) {
+    const event = sources.eventsById.get(eventId);
+    if (!event) continue;
+    assertVisitedTownForDiscovery("resolved event", eventId, event.home, sources.visitedTownIds);
+    assertDiscoveredAreaForDiscovery(
+      "resolved event",
+      eventId,
+      event.area,
+      sources.discoveredAreaIds,
+    );
+  }
+}
+
+function journalEntryRecordedAt(entry: OverworldJournalEntry): number {
+  return parseTimeLabel(entry.recordedAt);
+}
+
+function journalSourceId(entry: OverworldJournalEntry, prefix: string): string | null {
+  return entry.id.startsWith(prefix) ? entry.id.slice(prefix.length) : null;
+}
+
+function localJournalSource(
+  entry: OverworldJournalEntry,
+  sources: OverworldLocalActionJournalReachabilityIndex,
+): OverworldLocalJournalSource | null {
+  switch (entry.kind) {
+    case "area": {
+      const sourceId = journalSourceId(entry, "area:");
+      if (!sourceId) return null;
+      const area = sources.areasById.get(sourceId);
+      if (!area) return null;
+      return {
+        sourceLabel: "journal area",
+        sourceId,
+        home: area.home,
+        area: area.id,
+      };
+    }
+    case "contact": {
+      const sourceId = journalSourceId(entry, "talk:");
+      if (!sourceId) return null;
+      const character = sources.charactersById.get(sourceId);
+      if (!character) return null;
+      return {
+        sourceLabel: "journal contact",
+        sourceId,
+        home: character.home,
+        area: character.area,
+      };
+    }
+    case "event": {
+      const sourceId = journalSourceId(entry, "investigate:");
+      if (!sourceId) return null;
+      const event = sources.eventsById.get(sourceId);
+      if (!event) return null;
+      return {
+        sourceLabel: "journal event",
+        sourceId,
+        home: event.home,
+        area: event.area,
+      };
+    }
+    case "job": {
+      const sourceId = journalSourceId(entry, "job:");
+      if (!sourceId) return null;
+      const job = sources.jobsById.get(sourceId);
+      if (!job) return null;
+      return {
+        sourceLabel: "journal job",
+        sourceId,
+        home: job.home,
+        area: job.area,
+      };
+    }
+    case "poi": {
+      const sourceId = journalSourceId(entry, "scout:");
+      if (!sourceId) return null;
+      const poi = sources.poisById.get(sourceId);
+      if (!poi) return null;
+      return {
+        sourceLabel: "journal point of interest",
+        sourceId,
+        home: poi.home,
+        area: poi.area,
+      };
+    }
+    case "resolution": {
+      const sourceId = journalSourceId(entry, "resolve:");
+      if (!sourceId) return null;
+      const event = sources.eventsById.get(sourceId);
+      if (!event) return null;
+      return {
+        sourceLabel: "journal resolved event",
+        sourceId,
+        home: event.home,
+        area: event.area,
+      };
+    }
+    case "site": {
+      const sourceId = journalSourceId(entry, "site:");
+      if (!sourceId) return null;
+      const site = sources.sitesById.get(sourceId);
+      if (!site) return null;
+      return {
+        sourceLabel: "journal site",
+        sourceId,
+        home: site.nearest_town,
+        area: site.area,
+      };
+    }
+    default:
+      return null;
+  }
+}
+
+function assertJournalAfterTownVisit(
+  sourceLabel: string,
+  sourceId: string,
+  entry: OverworldJournalEntry,
+  townId: string,
+  townVisitMinutes: ReadonlyMap<string, number>,
+): void {
+  const visitedAt = townVisitMinutes.get(townId);
+  if (visitedAt !== undefined && journalEntryRecordedAt(entry) < visitedAt) {
+    throw new Error(
+      `Overworld session snapshot ${sourceLabel} "${sourceId}" was recorded before visiting town "${townId}".`,
+    );
+  }
+}
+
+function assertSnapshotLocalActionJournalReachability(
+  snapshot: OverworldSessionSnapshot,
+  sources: OverworldLocalActionJournalReachabilityIndex,
+): void {
+  for (const entry of snapshot.journalEntries) {
+    const source = localJournalSource(entry, sources);
+    if (!source) continue;
+    assertVisitedTownForDiscovery(
+      source.sourceLabel,
+      source.sourceId,
+      source.home,
+      sources.visitedTownIds,
+    );
+    assertDiscoveredAreaForDiscovery(
+      source.sourceLabel,
+      source.sourceId,
+      source.area,
+      sources.discoveredAreaIds,
+    );
+    assertJournalAfterTownVisit(
+      source.sourceLabel,
+      source.sourceId,
+      entry,
+      source.home,
+      sources.townVisitMinutes,
+    );
+  }
+}
+
+function replayedDiscoveredAreaIdsBeforeLocalAction(
+  world: OverworldManifest,
+  townId: string,
+  priorLocalActionCount: number,
+): ReadonlySet<string> {
+  const localAreas = overworldAreasAt(world, townId);
+  return new Set(
+    localAreas
+      .slice(0, Math.min(localAreas.length, 1 + priorLocalActionCount))
+      .map((area) => area.id),
+  );
+}
+
+function replayedDiscoveredJobIdsBeforeLocalAction(
+  world: OverworldManifest,
+  townId: string,
+  priorLocalActionCount: number,
+): ReadonlySet<string> {
+  const discoveredAreaIds = replayedDiscoveredAreaIdsBeforeLocalAction(
+    world,
+    townId,
+    priorLocalActionCount,
+  );
+  const visibleJobs = overworldJobsAt(world, townId).filter((job) =>
+    discoveredAreaIds.has(job.area),
+  );
+  return new Set(
+    visibleJobs.slice(0, Math.min(priorLocalActionCount, visibleJobs.length)).map((job) => job.id),
+  );
+}
+
+function replayedDiscoveredSiteIdsBeforeLocalAction(
+  world: OverworldManifest,
+  areaId: string,
+  priorAreaLocalActionCount: number,
+): ReadonlySet<string> {
+  const sites = overworldExplorationSitesInArea(world, areaId);
+  return new Set(
+    sites.slice(0, Math.min(priorAreaLocalActionCount, sites.length)).map((site) => site.id),
+  );
+}
+
+function assertSnapshotLocalActionDiscoveryChronology(
+  snapshot: OverworldSessionSnapshot,
+  world: OverworldManifest,
+  sources: OverworldLocalActionJournalReachabilityIndex,
+): void {
+  const entries = snapshot.journalEntries
+    .map((entry) => {
+      const source = localJournalSource(entry, sources);
+      if (!source) return null;
+      return {
+        entry,
+        source,
+        recordedAt: journalEntryRecordedAt(entry),
+      };
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+    .sort((left, right) => left.recordedAt - right.recordedAt);
+  const priorLocalActionCountByTown = new Map<string, number>();
+  const priorLocalActionCountByArea = new Map<string, number>();
+
+  for (let index = 0; index < entries.length; ) {
+    const recordedAt = entries[index]!.recordedAt;
+    const group = [];
+    while (index < entries.length && entries[index]!.recordedAt === recordedAt) {
+      group.push(entries[index]!);
+      index += 1;
+    }
+
+    for (const { entry, source } of group) {
+      const priorLocalActionCount = priorLocalActionCountByTown.get(source.home) ?? 0;
+      const areaIndex = overworldAreasAt(world, source.home).findIndex(
+        (area) => area.id === source.area,
+      );
+      if (areaIndex > 0 && priorLocalActionCount < areaIndex) {
+        throw new Error(
+          `Overworld session snapshot ${source.sourceLabel} "${source.sourceId}" was recorded before discovering area "${source.area}".`,
+        );
+      }
+      if (
+        entry.kind === "job" &&
+        !replayedDiscoveredJobIdsBeforeLocalAction(world, source.home, priorLocalActionCount).has(
+          source.sourceId,
+        )
+      ) {
+        throw new Error(
+          `Overworld session snapshot ${source.sourceLabel} "${source.sourceId}" was recorded before discovering job "${source.sourceId}".`,
+        );
+      }
+      const priorAreaLocalActionCount = priorLocalActionCountByArea.get(source.area) ?? 0;
+      if (
+        entry.kind === "site" &&
+        !replayedDiscoveredSiteIdsBeforeLocalAction(
+          world,
+          source.area,
+          priorAreaLocalActionCount,
+        ).has(source.sourceId)
+      ) {
+        throw new Error(
+          `Overworld session snapshot ${source.sourceLabel} "${source.sourceId}" was recorded before discovering site "${source.sourceId}".`,
+        );
+      }
+    }
+
+    for (const { source } of group) {
+      priorLocalActionCountByTown.set(
+        source.home,
+        (priorLocalActionCountByTown.get(source.home) ?? 0) + 1,
+      );
+      priorLocalActionCountByArea.set(
+        source.area,
+        (priorLocalActionCountByArea.get(source.area) ?? 0) + 1,
+      );
+    }
+  }
+}
+
+function incrementCount(counts: Map<string, number>, key: string): void {
+  counts.set(key, (counts.get(key) ?? 0) + 1);
+}
+
+function assertSnapshotDiscoveredAreaCountReplay(
+  snapshot: OverworldSessionSnapshot,
+  world: OverworldManifest,
+  sources: OverworldLocalActionJournalReachabilityIndex,
+): void {
+  const localActionCountByTown = new Map<string, number>();
+  for (const entry of snapshot.journalEntries) {
+    const source = localJournalSource(entry, sources);
+    if (!source) continue;
+    incrementCount(localActionCountByTown, source.home);
+  }
+
+  for (const townId of snapshot.visitedIds) {
+    const localAreas = overworldAreasAt(world, townId);
+    const expectedDiscoveredCount =
+      localAreas.length === 0
+        ? 0
+        : Math.min(localAreas.length, 1 + (localActionCountByTown.get(townId) ?? 0));
+    const actualDiscoveredCount = localAreas.filter((area) =>
+      sources.discoveredAreaIds.has(area.id),
+    ).length;
+    if (actualDiscoveredCount !== expectedDiscoveredCount) {
+      throw new Error(
+        `Overworld session snapshot discovered area count in town "${townId}" does not match local action replay.`,
+      );
+    }
+  }
+}
+
+function countValues<T>(values: Iterable<T>, predicate: (value: T) => boolean): number {
+  let count = 0;
+  for (const value of values) {
+    if (predicate(value)) count += 1;
+  }
+  return count;
+}
+
+function assertDiscoveredSourceCountReplay(
+  sourceLabel: string,
+  contextLabel: string,
+  contextId: string,
+  discoveredCount: number,
+  expectedCount: number,
+): void {
+  if (discoveredCount !== expectedCount) {
+    throw new Error(
+      `Overworld session snapshot discovered ${sourceLabel} count in ${contextLabel} "${contextId}" does not match local action proof replay.`,
+    );
+  }
+}
+
+function assertSnapshotDiscoveredLocalSourceCountReplay(
+  snapshot: OverworldSessionSnapshot,
+  sources: OverworldLocalActionJournalReachabilityIndex,
+): void {
+  const localActionCountByTown = new Map<string, number>();
+  const localActionCountByArea = new Map<string, number>();
+  const discoveredJobCountByTown = new Map<string, number>();
+  const discoveredQuestCountByTown = new Map<string, number>();
+  const discoveredSiteCountByArea = new Map<string, number>();
+
+  for (const entry of snapshot.journalEntries) {
+    const source = localJournalSource(entry, sources);
+    if (!source) continue;
+    incrementCount(localActionCountByTown, source.home);
+    incrementCount(localActionCountByArea, source.area);
+  }
+  for (const jobId of snapshot.discoveredJobIds) {
+    const job = sources.jobsById.get(jobId);
+    if (job) incrementCount(discoveredJobCountByTown, job.home);
+  }
+  for (const siteId of snapshot.discoveredSiteIds) {
+    const site = sources.sitesById.get(siteId);
+    if (site) incrementCount(discoveredSiteCountByArea, site.area);
+  }
+  for (const questId of snapshot.discoveredQuestIds) {
+    const quest = sources.questsById.get(questId);
+    if (quest) incrementCount(discoveredQuestCountByTown, quest.home);
+  }
+
+  for (const townId of snapshot.visitedIds) {
+    const localActionCount = localActionCountByTown.get(townId) ?? 0;
+    const availableJobCount = countValues(
+      sources.jobsById.values(),
+      (job) => job.home === townId && sources.discoveredAreaIds.has(job.area),
+    );
+    assertDiscoveredSourceCountReplay(
+      "job",
+      "town",
+      townId,
+      discoveredJobCountByTown.get(townId) ?? 0,
+      Math.min(localActionCount, availableJobCount),
+    );
+    const availableQuestCount = countValues(
+      sources.questsById.values(),
+      (quest) => quest.home === townId && sources.discoveredAreaIds.has(quest.area),
+    );
+    assertDiscoveredSourceCountReplay(
+      "quest",
+      "town",
+      townId,
+      discoveredQuestCountByTown.get(townId) ?? 0,
+      Math.min(localActionCount, availableQuestCount),
+    );
+  }
+  for (const areaId of sources.discoveredAreaIds) {
+    const localActionCount = localActionCountByArea.get(areaId) ?? 0;
+    const availableSiteCount = countValues(
+      sources.sitesById.values(),
+      (site) => site.area === areaId,
+    );
+    assertDiscoveredSourceCountReplay(
+      "site",
+      "area",
+      areaId,
+      discoveredSiteCountByArea.get(areaId) ?? 0,
+      Math.min(localActionCount, availableSiteCount),
+    );
+  }
+}
+
+function assertSnapshotEventResolutionProofs(
+  snapshot: OverworldSessionSnapshot,
+  sources: OverworldResolutionProofIndex,
+): void {
+  const journalById = new Map(snapshot.journalEntries.map((entry) => [entry.id, entry]));
+  for (const eventId of snapshot.resolvedEventIds) {
+    const event = sources.eventsById.get(eventId);
+    if (!event) continue;
+    const resolution = journalById.get(`resolve:${eventId}`);
+    if (!resolution) continue;
+    const resolvedAt = journalEntryRecordedAt(resolution);
+
+    const hasLocalScout = snapshot.journalEntries.some((entry) => {
+      if (entry.kind !== "poi" || !entry.id.startsWith("scout:")) return false;
+      const poi = sources.poisById.get(entry.id.slice("scout:".length));
+      return poi?.area === event.area && journalEntryRecordedAt(entry) <= resolvedAt;
+    });
+    if (!hasLocalScout) {
+      throw new Error(
+        `Overworld session snapshot resolved event "${eventId}" is missing a local scout prerequisite.`,
+      );
+    }
+
+    const hasLocalContact = snapshot.journalEntries.some((entry) => {
+      if (entry.kind !== "contact" || !entry.id.startsWith("talk:")) return false;
+      const character = sources.charactersById.get(entry.id.slice("talk:".length));
+      return character?.area === event.area && journalEntryRecordedAt(entry) <= resolvedAt;
+    });
+    if (!hasLocalContact) {
+      throw new Error(
+        `Overworld session snapshot resolved event "${eventId}" is missing a local contact prerequisite.`,
+      );
+    }
+
+    const investigation = journalById.get(`investigate:${eventId}`);
+    if (!investigation || journalEntryRecordedAt(investigation) > resolvedAt) {
+      throw new Error(
+        `Overworld session snapshot resolved event "${eventId}" is missing an investigated event prerequisite.`,
+      );
+    }
+  }
+}
+
+function resolvedAnchorTimesForRegionalArc(
+  snapshot: OverworldSessionSnapshot,
+  arc: OverworldRegionalArc,
+  eventsById: ReadonlyMap<string, OverworldLocalEvent>,
+): number[] {
+  const anchorTownIds = new Set(arc.anchor_towns);
+  const journalById = new Map(snapshot.journalEntries.map((entry) => [entry.id, entry]));
+  const earliestResolutionByAnchorTown = new Map<string, number>();
+
+  for (const eventId of snapshot.resolvedEventIds) {
+    const event = eventsById.get(eventId);
+    if (!event || !anchorTownIds.has(event.home)) continue;
+    const resolution = journalById.get(`resolve:${eventId}`);
+    if (!resolution) continue;
+    const resolvedAt = journalEntryRecordedAt(resolution);
+    const previous = earliestResolutionByAnchorTown.get(event.home);
+    if (previous === undefined || resolvedAt < previous) {
+      earliestResolutionByAnchorTown.set(event.home, resolvedAt);
+    }
+  }
+
+  return [...earliestResolutionByAnchorTown.values()].sort((left, right) => left - right);
+}
+
+function assertSnapshotRegionalArcCompletionProofs(
+  snapshot: OverworldSessionSnapshot,
+  sources: OverworldRegionalArcCompletionIndex,
+): void {
+  const completedRegionalArcIds = new Set(snapshot.completedRegionalArcIds);
+  const journalById = new Map(snapshot.journalEntries.map((entry) => [entry.id, entry]));
+
+  for (const arc of sources.regionalArcs) {
+    const resolvedAnchorTimes = resolvedAnchorTimesForRegionalArc(
+      snapshot,
+      arc,
+      sources.eventsById,
+    );
+    const hasRequiredResolutions = resolvedAnchorTimes.length >= arc.required_resolutions;
+    const completed = completedRegionalArcIds.has(arc.id);
+
+    if (completed && !hasRequiredResolutions) {
+      throw new Error(
+        `Overworld session snapshot completed regional arc "${arc.id}" lacks required resolved anchor towns.`,
+      );
+    }
+    if (!completed && hasRequiredResolutions) {
+      throw new Error(
+        `Overworld session snapshot is missing completed regional arc "${arc.id}" earned by resolved anchor towns.`,
+      );
+    }
+    if (!completed) continue;
+
+    const arcEntry = journalById.get(`arc:${arc.id}`);
+    if (!arcEntry) continue;
+    const completionProofAt =
+      arc.required_resolutions > 0
+        ? resolvedAnchorTimes[arc.required_resolutions - 1]!
+        : STARTING_MINUTES;
+    if (journalEntryRecordedAt(arcEntry) < completionProofAt) {
+      throw new Error(
+        `Overworld session snapshot completed regional arc "${arc.id}" was recorded before enough anchor resolutions.`,
+      );
+    }
   }
 }
 
@@ -375,12 +2251,56 @@ function replaceStringSet(target: Set<string>, values: readonly string[]): void 
   for (const value of values) target.add(value);
 }
 
+function pushIndexed<T>(index: Map<string, T[]>, key: string, value: T): void {
+  const values = index.get(key);
+  if (values) {
+    values.push(value);
+    return;
+  }
+  index.set(key, [value]);
+}
+
+function sortedIndex<T>(
+  values: readonly T[],
+  keyFor: (value: T) => string,
+  compare: (a: T, b: T) => number,
+): Map<string, T[]> {
+  const index = new Map<string, T[]>();
+  for (const value of values) pushIndexed(index, keyFor(value), value);
+  for (const indexed of index.values()) indexed.sort(compare);
+  return index;
+}
+
 export class OverworldSession {
   private readonly nodes: Map<string, OverworldNode>;
+  private readonly roadExitsByTown: Map<string, OverworldExit[]>;
+  private readonly roadEventsByEdgeId: Map<string, OverworldRoadEvent>;
+  private readonly areasById: Map<string, OverworldArea>;
+  private readonly areasByTown: Map<string, OverworldArea[]>;
+  private readonly areaExitsByArea: Map<string, OverworldAreaExit[]>;
+  private readonly poisById: Map<string, OverworldPoi>;
+  private readonly poisByTown: Map<string, OverworldPoi[]>;
+  private readonly poisByArea: Map<string, OverworldPoi[]>;
+  private readonly charactersById: Map<string, OverworldCharacter>;
+  private readonly charactersByTown: Map<string, OverworldCharacter[]>;
+  private readonly charactersByArea: Map<string, OverworldCharacter[]>;
+  private readonly eventsByTown: Map<string, OverworldLocalEvent[]>;
+  private readonly eventsByArea: Map<string, OverworldLocalEvent[]>;
+  private readonly localEventsById: Map<string, OverworldLocalEvent>;
+  private readonly jobsById: Map<string, OverworldLocalJob>;
+  private readonly jobsByTown: Map<string, OverworldLocalJob[]>;
+  private readonly sitesById: Map<string, OverworldExplorationSite>;
+  private readonly sitesByTown: Map<string, OverworldExplorationSite[]>;
+  private readonly sitesByArea: Map<string, OverworldExplorationSite[]>;
+  private readonly questsById: Map<string, OverworldQuest>;
+  private readonly questsByTown: Map<string, OverworldQuest[]>;
+  private readonly regionalArcsByRegion: Map<string, OverworldRegionalArc[]>;
+  private readonly regionalArcAnchorTownsById: Map<string, OverworldNode[]>;
+  private readonly snapshotManifestIndex: OverworldSnapshotManifestIndex;
   private readonly worldHash: string;
   private currentId: string;
   private currentAreaId: string | null = null;
-  private minutes = 8 * 60;
+  private minutes = STARTING_MINUTES;
   private supplies = STARTING_SUPPLIES;
   private fatigue = 0;
   private readonly discoveredIds = new Set<string>();
@@ -388,20 +2308,101 @@ export class OverworldSession {
   private readonly currentAreaByTown = new Map<string, string>();
   private readonly travelLog: TravelLogEntry[] = [];
   private readonly journalEntries: OverworldJournalEntry[] = [];
+  private readonly journalEntriesById = new Map<string, OverworldJournalEntry>();
   private readonly resolvedEventIds = new Set<string>();
+  private readonly resolvedEventHomeIds = new Set<string>();
   private readonly discoveredAreaIds = new Set<string>();
   private readonly visitedAreaIds = new Set<string>();
   private readonly discoveredJobIds = new Set<string>();
   private readonly completedJobIds = new Set<string>();
   private readonly discoveredSiteIds = new Set<string>();
   private readonly discoveredQuestIds = new Set<string>();
+  private readonly startedQuestIds = new Set<string>();
+  private readonly completedQuestIds = new Set<string>();
   private readonly exploredSiteIds = new Set<string>();
   private readonly regionRenown = new Map<string, number>();
   private readonly completedRegionalArcIds = new Set<string>();
   private pendingRoadEncounter: OverworldPendingRoadEncounter | null = null;
+  private snapshotCache?: {
+    snapshot: OverworldSessionSnapshot;
+    hash: string;
+  };
+  private routeOptionsCache?: OverworldSessionRoutePlan[];
+  private compactViewCache?: OverworldCompactView;
+  private regionalArcProgressCache?: OverworldRegionalArcProgress[];
+  private viewCache?: OverworldView;
 
   constructor(private readonly world: OverworldManifest) {
     this.nodes = overworldNodesById(world);
+    this.roadExitsByTown = this.indexRoadExits();
+    this.roadEventsByEdgeId = new Map(world.road_events.map((event) => [event.edge, event]));
+    this.areasById = new Map(world.areas.map((area) => [area.id, area]));
+    this.areasByTown = sortedIndex(
+      world.areas,
+      (area) => area.home,
+      (a, b) => a.travel_minutes - b.travel_minutes || a.name.localeCompare(b.name),
+    );
+    this.areaExitsByArea = this.indexAreaExits();
+    this.poisById = new Map(world.points_of_interest.map((poi) => [poi.id, poi]));
+    this.poisByTown = sortedIndex(
+      world.points_of_interest,
+      (poi) => poi.home,
+      (a, b) => a.title.localeCompare(b.title),
+    );
+    this.poisByArea = sortedIndex(
+      world.points_of_interest,
+      (poi) => poi.area,
+      (a, b) => a.title.localeCompare(b.title),
+    );
+    this.charactersById = new Map(world.characters.map((character) => [character.id, character]));
+    this.charactersByTown = sortedIndex(
+      world.characters,
+      (character) => character.home,
+      (a, b) => a.name.localeCompare(b.name),
+    );
+    this.charactersByArea = sortedIndex(
+      world.characters,
+      (character) => character.area,
+      (a, b) => a.name.localeCompare(b.name),
+    );
+    this.eventsByTown = sortedIndex(
+      world.local_events,
+      (event) => event.home,
+      (a, b) => b.intensity - a.intensity || a.title.localeCompare(b.title),
+    );
+    this.eventsByArea = sortedIndex(
+      world.local_events,
+      (event) => event.area,
+      (a, b) => b.intensity - a.intensity || a.title.localeCompare(b.title),
+    );
+    this.localEventsById = new Map(world.local_events.map((event) => [event.id, event]));
+    this.jobsById = new Map(world.local_jobs.map((job) => [job.id, job]));
+    this.jobsByTown = sortedIndex(
+      world.local_jobs,
+      (job) => job.home,
+      (a, b) =>
+        a.difficulty - b.difficulty || a.minutes - b.minutes || a.title.localeCompare(b.title),
+    );
+    this.sitesById = new Map(world.exploration_sites.map((site) => [site.id, site]));
+    this.sitesByTown = sortedIndex(
+      world.exploration_sites,
+      (site) => site.nearest_town,
+      (a, b) => b.danger - a.danger || a.title.localeCompare(b.title),
+    );
+    this.sitesByArea = sortedIndex(
+      world.exploration_sites,
+      (site) => site.area,
+      (a, b) => b.danger - a.danger || a.title.localeCompare(b.title),
+    );
+    this.questsById = new Map(world.quests.map((quest) => [quest.id, quest]));
+    this.questsByTown = sortedIndex(
+      world.quests,
+      (quest) => quest.home,
+      (a, b) => a.title.localeCompare(b.title),
+    );
+    this.regionalArcsByRegion = this.indexRegionalArcsByRegion();
+    this.regionalArcAnchorTownsById = this.indexRegionalArcAnchorTowns();
+    this.snapshotManifestIndex = this.buildSnapshotManifestIndex();
     this.worldHash = hashState(world);
     this.currentId = world.start;
     this.markSeen(world.start);
@@ -414,7 +2415,150 @@ export class OverworldSession {
     return session;
   }
 
+  private indexAreaExits(): Map<string, OverworldAreaExit[]> {
+    const index = new Map<string, OverworldAreaExit[]>();
+    for (const edge of this.world.area_edges) {
+      const fromDestination = this.areasById.get(edge.to_area);
+      const toDestination = this.areasById.get(edge.from_area);
+      if (!fromDestination || !toDestination) {
+        const missingAreaId = fromDestination ? edge.from_area : edge.to_area;
+        throw new Error(`Overworld area edge references missing area "${missingAreaId}".`);
+      }
+      pushIndexed(index, edge.from_area, { ...edge, destination: fromDestination });
+      pushIndexed(index, edge.to_area, { ...edge, destination: toDestination });
+    }
+    for (const exits of index.values()) {
+      exits.sort(
+        (a, b) =>
+          a.travel_minutes - b.travel_minutes ||
+          a.destination.name.localeCompare(b.destination.name),
+      );
+    }
+    return index;
+  }
+
+  private indexRoadExits(): Map<string, OverworldExit[]> {
+    const index = new Map<string, OverworldExit[]>();
+    for (const edge of this.world.edges) {
+      const fromDestination = this.nodes.get(edge.to);
+      const toDestination = this.nodes.get(edge.from);
+      if (!fromDestination || !toDestination) {
+        const missingNodeId = fromDestination ? edge.from : edge.to;
+        throw new Error(`Overworld edge references missing node "${missingNodeId}".`);
+      }
+      pushIndexed(index, edge.from, { ...edge, destination: fromDestination });
+      pushIndexed(index, edge.to, { ...edge, destination: toDestination });
+    }
+    for (const exits of index.values()) {
+      exits.sort(
+        (a, b) =>
+          a.travel_minutes - b.travel_minutes ||
+          a.destination.name.localeCompare(b.destination.name),
+      );
+    }
+    return index;
+  }
+
+  private indexRegionalArcsByRegion(): Map<string, OverworldRegionalArc[]> {
+    const index = new Map<string, OverworldRegionalArc[]>();
+    for (const arc of this.world.regional_arcs) pushIndexed(index, arc.region, arc);
+    return index;
+  }
+
+  private indexRegionalArcAnchorTowns(): Map<string, OverworldNode[]> {
+    const index = new Map<string, OverworldNode[]>();
+    for (const arc of this.world.regional_arcs) {
+      index.set(
+        arc.id,
+        arc.anchor_towns
+          .map((id) => this.nodes.get(id))
+          .filter((node): node is OverworldNode => node !== undefined),
+      );
+    }
+    return index;
+  }
+
+  private buildSnapshotManifestIndex(): OverworldSnapshotManifestIndex {
+    const townNameById = new Map(this.world.nodes.map((node) => [node.id, node.name]));
+    const townNameForSource = (nodeId: string): string => townNameById.get(nodeId) ?? nodeId;
+    const edgesById = new Map(this.world.edges.map((edge) => [edge.id, edge]));
+
+    return {
+      arcIds: new Set(this.world.regional_arcs.map((arc) => arc.id)),
+      arcRegionNames: new Map(this.world.regional_arcs.map((arc) => [arc.id, arc.region])),
+      areaHomes: new Map(this.world.areas.map((area) => [area.id, area.home])),
+      areaIds: new Set(this.world.areas.map((area) => area.id)),
+      areasById: this.areasById,
+      areaTownNames: new Map(
+        this.world.areas.map((area) => [area.id, townNameForSource(area.home)]),
+      ),
+      characterIds: new Set(this.world.characters.map((character) => character.id)),
+      charactersById: this.charactersById,
+      characterTownNames: new Map(
+        this.world.characters.map((character) => [character.id, townNameForSource(character.home)]),
+      ),
+      edgeIds: new Set(edgesById.keys()),
+      edgesById,
+      eventIds: new Set(this.world.local_events.map((event) => event.id)),
+      eventsById: this.localEventsById,
+      eventTownNames: new Map(
+        this.world.local_events.map((event) => [event.id, townNameForSource(event.home)]),
+      ),
+      jobIds: new Set(this.world.local_jobs.map((job) => job.id)),
+      jobsById: this.jobsById,
+      jobTownNames: new Map(
+        this.world.local_jobs.map((job) => [job.id, townNameForSource(job.home)]),
+      ),
+      nodeIds: new Set(this.world.nodes.map((node) => node.id)),
+      nodesById: this.nodes,
+      poiIds: new Set(this.world.points_of_interest.map((poi) => poi.id)),
+      poisById: this.poisById,
+      poiTownNames: new Map(
+        this.world.points_of_interest.map((poi) => [poi.id, townNameForSource(poi.home)]),
+      ),
+      questIds: new Set(this.world.quests.map((quest) => quest.id)),
+      questsById: this.questsById,
+      questTownNames: new Map(
+        this.world.quests.map((quest) => [quest.id, townNameForSource(quest.home)]),
+      ),
+      regionalArcs: this.world.regional_arcs,
+      regionNames: new Set(this.world.regions.map((region) => region.name)),
+      roadEventsByEdgeId: this.roadEventsByEdgeId,
+      siteIds: new Set(this.world.exploration_sites.map((site) => site.id)),
+      sitesById: this.sitesById,
+      siteTownNames: new Map(
+        this.world.exploration_sites.map((site) => [site.id, townNameForSource(site.nearest_town)]),
+      ),
+      townNameForSource,
+      townNames: new Set(this.world.nodes.map((node) => node.name)),
+    };
+  }
+
+  private clearSnapshotCache(): void {
+    delete this.snapshotCache;
+    delete this.routeOptionsCache;
+    delete this.compactViewCache;
+    delete this.regionalArcProgressCache;
+    delete this.viewCache;
+  }
+
+  private cachedSnapshot(): { snapshot: OverworldSessionSnapshot; hash: string } {
+    if (this.snapshotCache) return this.snapshotCache;
+    const snapshot = this.buildSnapshot();
+    const hash = hashState(snapshot);
+    this.snapshotCache = { snapshot, hash };
+    return this.snapshotCache;
+  }
+
+  snapshotHash(): string {
+    return this.cachedSnapshot().hash;
+  }
+
   snapshot(): OverworldSessionSnapshot {
+    return cloneJson(this.cachedSnapshot().snapshot);
+  }
+
+  private buildSnapshot(): OverworldSessionSnapshot {
     return {
       version: OVERWORLD_SESSION_SAVE_VERSION,
       worldId: this.world.id,
@@ -427,7 +2571,7 @@ export class OverworldSession {
       discoveredIds: sortedStringSet(this.discoveredIds),
       visitedIds: sortedStringSet(this.visitedIds),
       currentAreaByTown: sortedStringMap(this.currentAreaByTown),
-      travelLog: cloneJson(this.travelLog),
+      travelLog: this.travelLog.map(snapshotTravelLogEntry),
       journalEntries: cloneJson(this.journalEntries),
       resolvedEventIds: sortedStringSet(this.resolvedEventIds),
       discoveredAreaIds: sortedStringSet(this.discoveredAreaIds),
@@ -436,10 +2580,14 @@ export class OverworldSession {
       completedJobIds: sortedStringSet(this.completedJobIds),
       discoveredSiteIds: sortedStringSet(this.discoveredSiteIds),
       discoveredQuestIds: sortedStringSet(this.discoveredQuestIds),
+      startedQuestIds: sortedStringSet(this.startedQuestIds),
+      completedQuestIds: sortedStringSet(this.completedQuestIds),
       exploredSiteIds: sortedStringSet(this.exploredSiteIds),
       regionRenown: sortedNumberMap(this.regionRenown),
       completedRegionalArcIds: sortedStringSet(this.completedRegionalArcIds),
-      pendingRoadEncounter: cloneJson(this.pendingRoadEncounter),
+      pendingRoadEncounter: this.pendingRoadEncounter
+        ? { edgeId: this.pendingRoadEncounter.edgeId }
+        : null,
     };
   }
 
@@ -453,44 +2601,57 @@ export class OverworldSession {
       throw new Error("Overworld session snapshot was made against a different world manifest.");
     }
 
-    const nodeIds = new Set(this.world.nodes.map((node) => node.id));
-    const areaIds = new Set(this.world.areas.map((area) => area.id));
-    const jobIds = new Set(this.world.local_jobs.map((job) => job.id));
-    const siteIds = new Set(this.world.exploration_sites.map((site) => site.id));
-    const questIds = new Set(this.world.quests.map((quest) => quest.id));
-    const eventIds = new Set(this.world.local_events.map((event) => event.id));
-    const arcIds = new Set(this.world.regional_arcs.map((arc) => arc.id));
-    const edgeIds = new Set(this.world.edges.map((edge) => edge.id));
-    const regions = new Set(this.world.regions.map((region) => region.name));
-    const areaHomes = new Map(this.world.areas.map((area) => [area.id, area.home]));
+    const indexes = this.snapshotManifestIndex;
+    const travelLogArrivals = new Set(
+      snapshot.travelLog.map((entry) => `${entry.edgeId}@${entry.arrivedAt}`),
+    );
+    const travelLogTownByArrival = new Map(
+      snapshot.travelLog.map((entry) => [
+        `${entry.edgeId}@${entry.arrivedAt}`,
+        indexes.townNameForSource(entry.toId),
+      ]),
+    );
+    const travelLogByArrival = new Map(
+      snapshot.travelLog.map((entry) => [`${entry.edgeId}@${entry.arrivedAt}`, entry]),
+    );
+    let restoredPendingRoadEncounter: OverworldPendingRoadEncounter | null = null;
 
-    if (!nodeIds.has(snapshot.currentId)) {
+    if (!indexes.nodeIds.has(snapshot.currentId)) {
       throw new Error(
         `Overworld session snapshot has unknown current town "${snapshot.currentId}".`,
       );
     }
     if (snapshot.currentAreaId !== null) {
-      if (!areaIds.has(snapshot.currentAreaId)) {
+      if (!indexes.areaIds.has(snapshot.currentAreaId)) {
         throw new Error(
           `Overworld session snapshot has unknown current area "${snapshot.currentAreaId}".`,
         );
       }
-      if (areaHomes.get(snapshot.currentAreaId) !== snapshot.currentId) {
+      if (indexes.areaHomes.get(snapshot.currentAreaId) !== snapshot.currentId) {
         throw new Error("Overworld session snapshot current area is outside the current town.");
       }
     }
 
-    assertKnownIds("discovered town id", snapshot.discoveredIds, nodeIds);
-    assertKnownIds("visited town id", snapshot.visitedIds, nodeIds);
-    assertKnownIds("discovered area id", snapshot.discoveredAreaIds, areaIds);
-    assertKnownIds("visited area id", snapshot.visitedAreaIds, areaIds);
-    assertKnownIds("discovered job id", snapshot.discoveredJobIds, jobIds);
-    assertKnownIds("completed job id", snapshot.completedJobIds, jobIds);
-    assertKnownIds("discovered site id", snapshot.discoveredSiteIds, siteIds);
-    assertKnownIds("explored site id", snapshot.exploredSiteIds, siteIds);
-    assertKnownIds("discovered quest id", snapshot.discoveredQuestIds, questIds);
-    assertKnownIds("resolved event id", snapshot.resolvedEventIds, eventIds);
-    assertKnownIds("completed regional arc id", snapshot.completedRegionalArcIds, arcIds);
+    assertKnownIds("discovered town id", snapshot.discoveredIds, indexes.nodeIds);
+    assertKnownIds("visited town id", snapshot.visitedIds, indexes.nodeIds);
+    assertKnownIds("discovered area id", snapshot.discoveredAreaIds, indexes.areaIds);
+    assertKnownIds("visited area id", snapshot.visitedAreaIds, indexes.areaIds);
+    assertKnownIds("discovered job id", snapshot.discoveredJobIds, indexes.jobIds);
+    assertKnownIds("completed job id", snapshot.completedJobIds, indexes.jobIds);
+    assertKnownIds("discovered site id", snapshot.discoveredSiteIds, indexes.siteIds);
+    assertKnownIds("explored site id", snapshot.exploredSiteIds, indexes.siteIds);
+    assertKnownIds("discovered quest id", snapshot.discoveredQuestIds, indexes.questIds);
+    assertKnownIds("started quest id", snapshot.startedQuestIds, indexes.questIds);
+    assertKnownIds("completed quest id", snapshot.completedQuestIds, indexes.questIds);
+    assertKnownIds("resolved event id", snapshot.resolvedEventIds, indexes.eventIds);
+    assertKnownIds("completed regional arc id", snapshot.completedRegionalArcIds, indexes.arcIds);
+    assertUniqueTupleKeys("area-map town", snapshot.currentAreaByTown);
+    assertUniqueTupleKeys("renown region", snapshot.regionRenown);
+    assertSnapshotTimeline(snapshot, {
+      ...indexes,
+      travelLogArrivals,
+      travelLogTownByArrival,
+    });
 
     if (!snapshot.discoveredIds.includes(snapshot.currentId)) {
       throw new Error("Overworld session snapshot current town is not discovered.");
@@ -498,34 +2659,123 @@ export class OverworldSession {
     if (!snapshot.visitedIds.includes(snapshot.currentId)) {
       throw new Error("Overworld session snapshot current town is not visited.");
     }
+    const discoveredTownIds = new Set(snapshot.discoveredIds);
+    const visitedTownIds = new Set(snapshot.visitedIds);
+    const townVisitMinutes = assertSnapshotVisitedTownTravelProof(snapshot, this.world.start);
+    assertSnapshotTravelPathContinuity(snapshot, this.world.start);
+    assertSnapshotDiscoveredTownFrontier(snapshot, this.world, visitedTownIds);
+    const discoveredAreaIds = new Set(snapshot.discoveredAreaIds);
+    const discoveredJobIds = new Set(snapshot.discoveredJobIds);
+    const discoveredSiteIds = new Set(snapshot.discoveredSiteIds);
+    assertStringSetSubset(
+      "visited town id",
+      snapshot.visitedIds,
+      "discovered town ids",
+      discoveredTownIds,
+    );
+    assertStringSetSubset(
+      "visited area id",
+      snapshot.visitedAreaIds,
+      "discovered area ids",
+      discoveredAreaIds,
+    );
+    assertStringSetSubset(
+      "completed job id",
+      snapshot.completedJobIds,
+      "discovered job ids",
+      discoveredJobIds,
+    );
+    assertStringSetSubset(
+      "explored site id",
+      snapshot.exploredSiteIds,
+      "discovered site ids",
+      discoveredSiteIds,
+    );
+    assertSnapshotProgressJournalBindings(snapshot);
+    assertSnapshotRegionRenown(snapshot, {
+      ...indexes,
+      travelLogByArrival,
+    });
+    if (snapshot.currentAreaId !== null && !discoveredAreaIds.has(snapshot.currentAreaId)) {
+      throw new Error("Overworld session snapshot current area is not discovered.");
+    }
+    assertSnapshotDiscoveredAreaPrefix(snapshot, this.world, visitedTownIds);
+    assertSnapshotDiscoveredLocalSourcePrefixes(snapshot, this.world, visitedTownIds);
+    assertSnapshotCurrentAreaMapExact(snapshot, this.world, visitedTownIds);
     for (const [townId, areaId] of snapshot.currentAreaByTown) {
-      if (!nodeIds.has(townId)) {
+      if (!indexes.nodeIds.has(townId)) {
         throw new Error(`Overworld session snapshot has unknown area-map town "${townId}".`);
       }
-      if (!areaIds.has(areaId)) {
+      if (!indexes.areaIds.has(areaId)) {
         throw new Error(`Overworld session snapshot has unknown saved area "${areaId}".`);
       }
-      if (areaHomes.get(areaId) !== townId) {
+      if (indexes.areaHomes.get(areaId) !== townId) {
         throw new Error(
           `Overworld session snapshot saved area "${areaId}" is outside "${townId}".`,
         );
       }
+      if (!visitedTownIds.has(townId)) {
+        throw new Error(`Overworld session snapshot saved area town "${townId}" is not visited.`);
+      }
+      if (!discoveredAreaIds.has(areaId)) {
+        throw new Error(`Overworld session snapshot saved area "${areaId}" is not discovered.`);
+      }
     }
+    assertSnapshotDiscoveryLocality(snapshot, {
+      ...indexes,
+      discoveredAreaIds,
+      visitedTownIds,
+    });
+    const localActionJournalSources = {
+      ...indexes,
+      discoveredAreaIds,
+      townVisitMinutes,
+      visitedTownIds,
+    };
+    assertSnapshotLocalActionJournalReachability(snapshot, localActionJournalSources);
+    assertSnapshotLocalActionDiscoveryChronology(snapshot, this.world, localActionJournalSources);
+    assertSnapshotEventResolutionProofs(snapshot, indexes);
+    assertSnapshotRegionalArcCompletionProofs(snapshot, indexes);
+    assertSnapshotDiscoveredLocalSourceCountReplay(snapshot, localActionJournalSources);
+    assertSnapshotDiscoveredAreaCountReplay(snapshot, this.world, localActionJournalSources);
     for (const [region] of snapshot.regionRenown) {
-      if (!regions.has(region)) {
+      if (!indexes.regionNames.has(region)) {
         throw new Error(`Overworld session snapshot has unknown renown region "${region}".`);
       }
     }
     if (snapshot.pendingRoadEncounter) {
-      if (!edgeIds.has(snapshot.pendingRoadEncounter.edgeId)) {
+      const pendingEdge = indexes.edgesById.get(snapshot.pendingRoadEncounter.edgeId);
+      if (!pendingEdge) {
         throw new Error(
           `Overworld session snapshot has unknown pending road "${snapshot.pendingRoadEncounter.edgeId}".`,
         );
       }
-      if (snapshot.pendingRoadEncounter.event.edge !== snapshot.pendingRoadEncounter.edgeId) {
-        throw new Error("Overworld session snapshot pending road event does not match its road.");
+      if (pendingEdge.from !== snapshot.currentId && pendingEdge.to !== snapshot.currentId) {
+        throw new Error("Overworld session snapshot pending road is not at the current town.");
       }
+      const manifestEvent = this.roadEventFor(snapshot.pendingRoadEncounter.edgeId);
+      if (!manifestEvent) {
+        throw new Error(
+          `Overworld session snapshot has no road event for "${snapshot.pendingRoadEncounter.edgeId}".`,
+        );
+      }
+      assertSnapshotPendingRoadEncounterBinding(snapshot, indexes.edgeIds);
+      assertSnapshotPendingRoadEncounterUnresolved(snapshot);
+      const fromId = pendingEdge.from === snapshot.currentId ? pendingEdge.to : pendingEdge.from;
+      const from = this.nodes.get(fromId);
+      const to = this.nodes.get(snapshot.currentId);
+      if (!from || !to) {
+        throw new Error("Overworld session snapshot pending road references an unknown town.");
+      }
+      restoredPendingRoadEncounter = this.buildPendingRoadEncounter(
+        from,
+        to,
+        pendingEdge,
+        manifestEvent,
+        snapshot.minutes,
+      );
     }
+    assertSnapshotResourceReplay(snapshot, indexes, localActionJournalSources);
 
     this.currentId = snapshot.currentId;
     this.currentAreaId = snapshot.currentAreaId;
@@ -538,24 +2788,83 @@ export class OverworldSession {
     for (const [townId, areaId] of snapshot.currentAreaByTown) {
       this.currentAreaByTown.set(townId, areaId);
     }
-    this.travelLog.splice(0, this.travelLog.length, ...cloneJson(snapshot.travelLog));
-    this.journalEntries.splice(
+    this.travelLog.splice(
       0,
-      this.journalEntries.length,
-      ...cloneJson(snapshot.journalEntries),
+      this.travelLog.length,
+      ...snapshot.travelLog.map((entry) => this.restoreTravelLogEntry(entry, indexes.edgesById)),
     );
+    this.replaceJournalEntries(cloneJson(snapshot.journalEntries));
     replaceStringSet(this.resolvedEventIds, snapshot.resolvedEventIds);
+    this.rebuildResolvedEventHomeIds();
     replaceStringSet(this.discoveredAreaIds, snapshot.discoveredAreaIds);
     replaceStringSet(this.visitedAreaIds, snapshot.visitedAreaIds);
     replaceStringSet(this.discoveredJobIds, snapshot.discoveredJobIds);
     replaceStringSet(this.completedJobIds, snapshot.completedJobIds);
     replaceStringSet(this.discoveredSiteIds, snapshot.discoveredSiteIds);
     replaceStringSet(this.discoveredQuestIds, snapshot.discoveredQuestIds);
+    replaceStringSet(this.startedQuestIds, snapshot.startedQuestIds);
+    replaceStringSet(this.completedQuestIds, snapshot.completedQuestIds);
     replaceStringSet(this.exploredSiteIds, snapshot.exploredSiteIds);
     this.regionRenown.clear();
     for (const [region, renown] of snapshot.regionRenown) this.regionRenown.set(region, renown);
     replaceStringSet(this.completedRegionalArcIds, snapshot.completedRegionalArcIds);
-    this.pendingRoadEncounter = cloneJson(snapshot.pendingRoadEncounter);
+    this.pendingRoadEncounter = restoredPendingRoadEncounter;
+    this.clearSnapshotCache();
+  }
+
+  private restoreTravelLogEntry(
+    entry: TravelLogEntrySnapshot,
+    edgesById: ReadonlyMap<string, OverworldEdge>,
+  ): TravelLogEntry {
+    const edge = edgesById.get(entry.edgeId);
+    if (!edge) {
+      throw new Error(`Overworld session snapshot has unknown travel road "${entry.edgeId}".`);
+    }
+    const endpointsMatch =
+      (edge.from === entry.fromId && edge.to === entry.toId) ||
+      (edge.from === entry.toId && edge.to === entry.fromId);
+    if (!endpointsMatch) {
+      throw new Error("Overworld session snapshot travel road endpoints do not match the world.");
+    }
+    if (entry.minutes !== edge.travel_minutes + entry.delayMinutes) {
+      throw new Error("Overworld session snapshot travel minutes do not match the road.");
+    }
+    const from = this.nodes.get(entry.fromId);
+    const to = this.nodes.get(entry.toId);
+    if (!from || !to) {
+      throw new Error("Overworld session snapshot travel log references an unknown town.");
+    }
+    return {
+      edgeId: entry.edgeId,
+      fromId: entry.fromId,
+      toId: entry.toId,
+      from: from.name,
+      to: to.name,
+      route: edge.route,
+      distanceMi: edge.distance_mi,
+      baseMinutes: edge.travel_minutes,
+      delayMinutes: entry.delayMinutes,
+      minutes: entry.minutes,
+      arrivedAt: entry.arrivedAt,
+      suppliesUsed: entry.suppliesUsed,
+      suppliesAfter: entry.suppliesAfter,
+      fatigueGained: entry.fatigueGained,
+      fatigueAfter: entry.fatigueAfter,
+      roadEvent: this.roadEventFor(entry.edgeId),
+    };
+  }
+
+  private rebuildResolvedEventHomeIds(): void {
+    this.resolvedEventHomeIds.clear();
+    for (const eventId of this.resolvedEventIds) {
+      const event = this.localEventsById.get(eventId);
+      if (event) this.resolvedEventHomeIds.add(event.home);
+    }
+  }
+
+  private markEventResolved(event: OverworldLocalEvent): void {
+    this.resolvedEventIds.add(event.id);
+    this.resolvedEventHomeIds.add(event.home);
   }
 
   private markSeen(nodeId: string): void {
@@ -563,9 +2872,10 @@ export class OverworldSession {
     this.visitedIds.add(nodeId);
     this.discoverInitialAreaForTown(nodeId);
     this.setCurrentAreaForTown(nodeId);
-    for (const edge of overworldEdgesFrom(this.world, nodeId)) {
+    for (const edge of this.roadsFrom(nodeId)) {
       this.discoveredIds.add(edge.destination.id);
     }
+    this.clearSnapshotCache();
   }
 
   private currentNode(): OverworldNode {
@@ -574,19 +2884,44 @@ export class OverworldSession {
     return current;
   }
 
+  private roadsFrom(nodeId: string): OverworldExit[] {
+    return this.roadExitsByTown.get(nodeId) ?? [];
+  }
+
+  private roadEventFor(edgeId: string): OverworldRoadEvent | null {
+    return this.roadEventsByEdgeId.get(edgeId) ?? null;
+  }
+
   private recordAction(
     entry: Omit<OverworldJournalEntry, "recordedAt">,
     minutes: number,
   ): OverworldActionResult {
-    const existing = this.journalEntries.find((candidate) => candidate.id === entry.id);
+    const existing = this.journalEntry(entry.id);
     if (existing) return { minutes: 0, alreadyKnown: true, entry: existing };
     this.minutes += minutes;
     const recorded: OverworldJournalEntry = {
       ...entry,
       recordedAt: timeLabel(this.minutes),
     };
-    this.journalEntries.unshift(recorded);
+    this.addJournalEntry(recorded);
+    this.clearSnapshotCache();
     return { minutes, alreadyKnown: false, entry: recorded };
+  }
+
+  private recordLocalAction<Kind extends OverworldLocalActionKind>(
+    action: OverworldLocalActionDescriptor<Kind>,
+    town: string,
+  ): OverworldActionResult {
+    return this.recordAction(
+      {
+        id: action.id,
+        kind: action.kind,
+        town,
+        title: action.title,
+        text: action.text,
+      },
+      action.minutes,
+    );
   }
 
   private recordRepeatableEntry(
@@ -599,30 +2934,52 @@ export class OverworldSession {
       id: `${entry.id}:${this.minutes}`,
       recordedAt: timeLabel(this.minutes),
     };
-    this.journalEntries.unshift(recorded);
+    this.addJournalEntry(recorded);
+    this.clearSnapshotCache();
     return recorded;
   }
 
+  private replaceJournalEntries(entries: OverworldJournalEntry[]): void {
+    this.journalEntries.splice(0, this.journalEntries.length, ...entries);
+    this.journalEntriesById.clear();
+    for (const entry of entries) this.journalEntriesById.set(entry.id, entry);
+  }
+
+  private addJournalEntry(entry: OverworldJournalEntry): void {
+    this.journalEntries.unshift(entry);
+    this.journalEntriesById.set(entry.id, entry);
+  }
+
+  private journalEntry(id: string): OverworldJournalEntry | undefined {
+    return this.journalEntriesById.get(id);
+  }
+
   private hasJournalEntry(id: string): boolean {
-    return this.journalEntries.some((entry) => entry.id === id);
+    return this.journalEntriesById.has(id);
   }
 
   private localAreas(nodeId: string): OverworldArea[] {
-    return overworldAreasAt(this.world, nodeId);
+    return this.areasByTown.get(nodeId) ?? [];
   }
 
   private areaById(areaId: string): OverworldArea | null {
-    return this.world.areas.find((area) => area.id === areaId) ?? null;
+    return this.areasById.get(areaId) ?? null;
   }
 
   private setCurrentAreaForTown(nodeId: string): void {
     const local = this.localAreas(nodeId);
     const saved = this.currentAreaByTown.get(nodeId);
     const next = saved && local.some((area) => area.id === saved) ? saved : (local[0]?.id ?? null);
+    const previous = this.currentAreaId;
+    const hadSaved = next ? this.currentAreaByTown.get(nodeId) === next : true;
+    const alreadyDiscovered = next ? this.discoveredAreaIds.has(next) : true;
     this.currentAreaId = next;
     if (next) {
       this.currentAreaByTown.set(nodeId, next);
       this.discoveredAreaIds.add(next);
+    }
+    if (previous !== next || !hadSaved || !alreadyDiscovered) {
+      this.clearSnapshotCache();
     }
   }
 
@@ -638,7 +2995,7 @@ export class OverworldSession {
   private visibleAreaExits(): OverworldAreaExit[] {
     const area = this.currentArea();
     if (!area) return [];
-    return overworldAreaEdgesFrom(this.world, area.id).filter((exit) =>
+    return (this.areaExitsByArea.get(area.id) ?? []).filter((exit) =>
       this.discoveredAreaIds.has(exit.destination.id),
     );
   }
@@ -658,20 +3015,23 @@ export class OverworldSession {
   }
 
   private currentAreaPois(): OverworldPoi[] {
-    return overworldPoisInArea(this.world, this.currentAreaIdOrThrow());
+    return this.poisByArea.get(this.currentAreaIdOrThrow()) ?? [];
   }
 
   private currentAreaCharacters(): OverworldCharacter[] {
-    return overworldCharactersInArea(this.world, this.currentAreaIdOrThrow());
+    return this.charactersByArea.get(this.currentAreaIdOrThrow()) ?? [];
   }
 
   private currentAreaEvents(): OverworldLocalEvent[] {
-    return overworldEventsInArea(this.world, this.currentAreaIdOrThrow());
+    return this.eventsByArea.get(this.currentAreaIdOrThrow()) ?? [];
   }
 
   private discoverInitialAreaForTown(nodeId: string): void {
     const firstArea = this.localAreas(nodeId)[0];
-    if (firstArea) this.discoveredAreaIds.add(firstArea.id);
+    if (firstArea && !this.discoveredAreaIds.has(firstArea.id)) {
+      this.discoveredAreaIds.add(firstArea.id);
+      this.clearSnapshotCache();
+    }
   }
 
   private discoverNextAreaForTown(nodeId: string): OverworldArea[] {
@@ -680,11 +3040,12 @@ export class OverworldSession {
     );
     if (!area) return [];
     this.discoveredAreaIds.add(area.id);
+    this.clearSnapshotCache();
     return [area];
   }
 
   private localJobs(nodeId: string): OverworldLocalJob[] {
-    return overworldJobsAt(this.world, nodeId);
+    return this.jobsByTown.get(nodeId) ?? [];
   }
 
   private discoveredJobsAt(nodeId: string): OverworldLocalJob[] {
@@ -707,11 +3068,12 @@ export class OverworldSession {
     );
     if (!job) return [];
     this.discoveredJobIds.add(job.id);
+    this.clearSnapshotCache();
     return [job];
   }
 
   private localSites(nodeId: string): OverworldExplorationSite[] {
-    return overworldExplorationSitesNear(this.world, nodeId);
+    return this.sitesByTown.get(nodeId) ?? [];
   }
 
   private discoveredSitesAt(nodeId: string): OverworldExplorationSite[] {
@@ -719,7 +3081,7 @@ export class OverworldSession {
   }
 
   private currentAreaSites(): OverworldExplorationSite[] {
-    return overworldExplorationSitesInArea(this.world, this.currentAreaIdOrThrow());
+    return this.sitesByArea.get(this.currentAreaIdOrThrow()) ?? [];
   }
 
   private discoveredSitesInCurrentArea(): OverworldExplorationSite[] {
@@ -731,11 +3093,13 @@ export class OverworldSession {
   }
 
   private localQuests(nodeId: string): OverworldQuest[] {
-    return overworldQuestsAt(this.world, nodeId);
+    return this.questsByTown.get(nodeId) ?? [];
   }
 
-  private discoveredQuestsAt(nodeId: string): OverworldQuest[] {
-    return this.localQuests(nodeId).filter((quest) => this.discoveredQuestIds.has(quest.id));
+  private discoveredQuestsAt(nodeId: string): OverworldQuestView[] {
+    return this.localQuests(nodeId)
+      .filter((quest) => this.discoveredQuestIds.has(quest.id))
+      .map(questView);
   }
 
   private hiddenQuestCountAt(nodeId: string): number {
@@ -750,17 +3114,19 @@ export class OverworldSession {
     );
     if (!site) return [];
     this.discoveredSiteIds.add(site.id);
+    this.clearSnapshotCache();
     return [site];
   }
 
-  private discoverNextQuestForTown(nodeId: string): OverworldQuest[] {
+  private discoverNextQuestForTown(nodeId: string): OverworldQuestView[] {
     const quest = this.localQuests(nodeId).find(
       (candidate) =>
         this.discoveredAreaIds.has(candidate.area) && !this.discoveredQuestIds.has(candidate.id),
     );
     if (!quest) return [];
     this.discoveredQuestIds.add(quest.id);
-    return [quest];
+    this.clearSnapshotCache();
+    return [questView(quest)];
   }
 
   private questAreaName(quest: OverworldQuest): string {
@@ -817,11 +3183,84 @@ export class OverworldSession {
     };
   }
 
+  private indexedRoute(
+    fromId: string,
+    destinationId: string,
+    allowedNodeIds?: ReadonlySet<string>,
+  ): OverworldRoutePlan | null {
+    const from = this.nodes.get(fromId);
+    if (!from) throw new Error(`Unknown overworld route start "${fromId}".`);
+    const destination = this.nodes.get(destinationId);
+    if (!destination) throw new Error(`Unknown overworld route destination "${destinationId}".`);
+    if (allowedNodeIds && (!allowedNodeIds.has(fromId) || !allowedNodeIds.has(destinationId))) {
+      return null;
+    }
+    if (fromId === destinationId) {
+      return { from, destination, steps: [], totalDistanceMi: 0, totalMinutes: 0 };
+    }
+
+    const distance = new Map<string, number>([[fromId, 0]]);
+    const previous = new Map<string, { from: string; edge: OverworldExit }>();
+    const unsettled = new Set<string>(
+      allowedNodeIds ? [...allowedNodeIds] : [...this.nodes.keys()],
+    );
+
+    while (unsettled.size > 0) {
+      let current: string | null = null;
+      let best = Number.POSITIVE_INFINITY;
+      for (const candidate of unsettled) {
+        const candidateDistance = distance.get(candidate) ?? Number.POSITIVE_INFINITY;
+        if (candidateDistance < best) {
+          current = candidate;
+          best = candidateDistance;
+        }
+      }
+      if (current === null || best === Number.POSITIVE_INFINITY) break;
+      unsettled.delete(current);
+      if (current === destinationId) break;
+
+      for (const edge of this.roadsFrom(current)) {
+        const next = edge.destination.id;
+        if (!unsettled.has(next)) continue;
+        const nextDistance = best + edge.travel_minutes;
+        if (nextDistance >= (distance.get(next) ?? Number.POSITIVE_INFINITY)) continue;
+        distance.set(next, nextDistance);
+        previous.set(next, { from: current, edge });
+      }
+    }
+
+    if (!previous.has(destinationId)) return null;
+    const steps: OverworldRouteStep[] = [];
+    for (let cursor = destinationId; cursor !== fromId; ) {
+      const prev = previous.get(cursor);
+      if (!prev) return null;
+      const stepFrom = this.nodes.get(prev.from);
+      const stepTo = this.nodes.get(cursor);
+      if (!stepFrom || !stepTo) return null;
+      steps.unshift({
+        from: stepFrom,
+        to: stepTo,
+        edge: prev.edge,
+        roadEvent: this.roadEventFor(prev.edge.id),
+      });
+      cursor = prev.from;
+    }
+
+    return {
+      from,
+      destination,
+      steps,
+      totalDistanceMi: steps.reduce((sum, step) => sum + step.edge.distance_mi, 0),
+      totalMinutes: steps.reduce((sum, step) => sum + step.edge.travel_minutes, 0),
+    };
+  }
+
   private discoveredRouteOptions(): OverworldSessionRoutePlan[] {
+    if (this.routeOptionsCache) return this.routeOptionsCache;
     const current = this.currentNode();
-    return [...this.discoveredIds]
+    const options = [...this.discoveredIds]
       .filter((id) => id !== this.currentId)
-      .map((id) => planOverworldRoute(this.world, this.currentId, id, this.discoveredIds))
+      .map((id) => this.indexedRoute(this.currentId, id, this.discoveredIds))
       .filter((plan): plan is OverworldRoutePlan => plan !== null && plan.steps.length > 0)
       .map((plan) => this.routeWithEstimate(plan))
       .sort(
@@ -833,23 +3272,33 @@ export class OverworldSession {
           b.destination.population_2025 - a.destination.population_2025 ||
           a.destination.name.localeCompare(b.destination.name),
       );
+    this.routeOptionsCache = options;
+    return options;
+  }
+
+  private routeOptionsForView(): OverworldSessionRoutePlan[] {
+    return this.discoveredRouteOptions().map((plan) => this.cloneRouteOption(plan));
+  }
+
+  private cloneRouteOption(plan: OverworldSessionRoutePlan): OverworldSessionRoutePlan {
+    return {
+      ...plan,
+      steps: [...plan.steps],
+      estimate: { ...plan.estimate },
+    };
   }
 
   private resolvedAnchorTownIdsForArc(arc: OverworldRegionalArc): Set<string> {
-    const anchorIds = new Set(arc.anchor_towns);
     const resolved = new Set<string>();
-    for (const eventId of this.resolvedEventIds) {
-      const event = this.world.local_events.find((candidate) => candidate.id === eventId);
-      if (event && anchorIds.has(event.home)) resolved.add(event.home);
+    for (const townId of arc.anchor_towns) {
+      if (this.resolvedEventHomeIds.has(townId)) resolved.add(townId);
     }
     return resolved;
   }
 
   private progressForArc(arc: OverworldRegionalArc): OverworldRegionalArcProgress {
     const resolvedAnchorIds = this.resolvedAnchorTownIdsForArc(arc);
-    const anchorTowns = arc.anchor_towns
-      .map((id) => this.nodes.get(id))
-      .filter((node): node is OverworldNode => node !== undefined);
+    const anchorTowns = this.regionalArcAnchorTownsById.get(arc.id) ?? [];
     return {
       id: arc.id,
       region: arc.region,
@@ -864,7 +3313,27 @@ export class OverworldSession {
     };
   }
 
-  private regionalArcProgress(): OverworldRegionalArcProgress[] {
+  private cachedRegionalArcProgress(): OverworldRegionalArcProgress[] {
+    if (this.regionalArcProgressCache) return this.regionalArcProgressCache;
+    this.regionalArcProgressCache = this.buildRegionalArcProgress();
+    return this.regionalArcProgressCache;
+  }
+
+  private regionalArcProgressForView(): OverworldRegionalArcProgress[] {
+    return this.cachedRegionalArcProgress().map((arc) => this.cloneRegionalArcProgress(arc));
+  }
+
+  private cloneRegionalArcProgress(
+    arc: OverworldRegionalArcProgress,
+  ): OverworldRegionalArcProgress {
+    return {
+      ...arc,
+      anchorTowns: [...arc.anchorTowns],
+      resolvedAnchorTowns: [...arc.resolvedAnchorTowns],
+    };
+  }
+
+  private buildRegionalArcProgress(): OverworldRegionalArcProgress[] {
     const currentRegion = this.currentNode().region;
     return this.world.regional_arcs
       .map((arc) => this.progressForArc(arc))
@@ -878,11 +3347,12 @@ export class OverworldSession {
 
   private checkRegionalArcCompletion(region: string): void {
     const completedAt = timeLabel(this.minutes);
-    for (const arc of this.world.regional_arcs.filter((candidate) => candidate.region === region)) {
+    let completedAny = false;
+    for (const arc of this.regionalArcsByRegion.get(region) ?? []) {
       if (this.completedRegionalArcIds.has(arc.id)) continue;
       if (this.resolvedAnchorTownIdsForArc(arc).size < arc.required_resolutions) continue;
       this.completedRegionalArcIds.add(arc.id);
-      this.journalEntries.unshift({
+      this.addJournalEntry({
         id: `arc:${arc.id}`,
         kind: "regional_arc",
         town: region,
@@ -890,43 +3360,13 @@ export class OverworldSession {
         text: arc.reward,
         recordedAt: completedAt,
       });
+      completedAny = true;
     }
+    if (completedAny) this.clearSnapshotCache();
   }
 
   private roadEncounterOptions(roadEvent: OverworldRoadEvent): OverworldRoadEncounterOption[] {
-    const risk = roadEvent.risk === "high" ? 3 : roadEvent.risk === "medium" ? 2 : 1;
-    return [
-      {
-        strategy: "cautious_scout",
-        label: "Scout the road problem",
-        minutes: 15 + risk * 10,
-        suppliesCost: 0,
-        fatigueGained: 0,
-        renownGained: 1,
-        outcome:
-          "You slow down, read the situation, and leave a useful warning for the next traveler.",
-      },
-      {
-        strategy: "assist_travelers",
-        label: "Help resolve it",
-        minutes: 25 + risk * 15,
-        suppliesCost: risk >= 3 ? 2 : 1,
-        fatigueGained: risk,
-        renownGained: risk + 1,
-        outcome:
-          "You spend supplies and effort stabilizing the road trouble instead of merely passing it.",
-      },
-      {
-        strategy: "press_on",
-        label: "Press on",
-        minutes: 0,
-        suppliesCost: 0,
-        fatigueGained: risk,
-        renownGained: 0,
-        outcome:
-          "You keep moving and accept the extra strain rather than spending daylight on the encounter.",
-      },
-    ];
+    return roadEncounterOptionsFor(roadEvent);
   }
 
   private setPendingRoadEncounter(
@@ -939,19 +3379,203 @@ export class OverworldSession {
       this.pendingRoadEncounter = null;
       return;
     }
-    this.pendingRoadEncounter = {
-      id: `road:${edge.id}:${this.minutes}`,
+    this.pendingRoadEncounter = this.buildPendingRoadEncounter(
+      from,
+      to,
+      edge,
+      roadEvent,
+      this.minutes,
+    );
+  }
+
+  private buildPendingRoadEncounter(
+    from: OverworldNode,
+    to: OverworldNode,
+    edge: OverworldEdge,
+    roadEvent: OverworldRoadEvent,
+    arrivedAtMinutes: number,
+  ): OverworldPendingRoadEncounter {
+    return {
+      id: `road:${edge.id}:${arrivedAtMinutes}`,
       edgeId: edge.id,
       from: from.name,
       to: to.name,
       route: edge.route,
-      arrivedAt: timeLabel(this.minutes),
+      arrivedAt: timeLabel(arrivedAtMinutes),
       event: roadEvent,
       options: this.roadEncounterOptions(roadEvent),
     };
   }
 
+  private cachedCompactView(): OverworldCompactView {
+    if (this.compactViewCache) return this.compactViewCache;
+    this.compactViewCache = this.buildCompactView();
+    return this.compactViewCache;
+  }
+
+  compactView(): OverworldCompactView {
+    return cloneOverworldCompactView(this.cachedCompactView());
+  }
+
+  private buildCompactView(): OverworldCompactView {
+    const current = this.currentNode();
+    const currentArea = this.currentArea();
+    const areaRoutes = this.visibleAreaExits().map(
+      (exit) => [exit.id, exit.destination.id, exit.travel_minutes] as const,
+    );
+    const routeOptions = this.discoveredRouteOptions();
+    const compactRouteOptions = routeOptions
+      .slice(0, OVERWORLD_COMPACT_ROUTE_LIMIT)
+      .map(compactRouteOption);
+    const routeByDestination = new Map(
+      routeOptions.map((plan) => [plan.destination.id, plan] as const),
+    );
+    const sortedIdList = (values: ReadonlySet<string>): string[] => [...values].sort();
+    const discoveredTownIds = [...this.discoveredIds]
+      .map((id) => this.nodes.get(id))
+      .filter((node): node is OverworldNode => node !== undefined)
+      .sort((a, b) => b.population_2025 - a.population_2025 || a.name.localeCompare(b.name))
+      .map((town) => town.id);
+    const idPayload = compactIdPayload({
+      discovered_towns: discoveredTownIds,
+      discovered_areas: sortedIdList(this.discoveredAreaIds),
+      visited_areas: sortedIdList(this.visitedAreaIds),
+      discovered_jobs: sortedIdList(this.discoveredJobIds),
+      completed_jobs: sortedIdList(this.completedJobIds),
+      discovered_sites: sortedIdList(this.discoveredSiteIds),
+      explored_sites: sortedIdList(this.exploredSiteIds),
+      discovered_quests: sortedIdList(this.discoveredQuestIds),
+      started_quests: sortedIdList(this.startedQuestIds),
+      completed_quests: sortedIdList(this.completedQuestIds),
+      resolved_events: sortedIdList(this.resolvedEventIds),
+    });
+    const exits = this.roadsFrom(this.currentId);
+    const jobs = this.discoveredJobsInCurrentArea().map((job) => [job.id, job.title] as const);
+    const sites = this.discoveredSitesInCurrentArea().map((site) => [site.id, site.title] as const);
+    const quests = this.discoveredQuestsAt(this.currentId).map(
+      (quest) => [quest.id, quest.title] as const,
+    );
+    const pendingRoad = compactPendingRoad(this.pendingRoadEncounter);
+    const journal = this.journalEntries
+      .slice(0, OVERWORLD_COMPACT_JOURNAL_LIMIT)
+      .map((entry) => [entry.kind, entry.title, entry.recordedAt] as const);
+    const travelLog = this.travelLog
+      .slice(0, OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT)
+      .map(compactTravelLogEntry);
+    const renown = [...this.regionRenown.entries()].sort(([left], [right]) =>
+      left.localeCompare(right),
+    );
+    const completedArcs = sortedIdList(this.completedRegionalArcIds);
+
+    return {
+      v: OVERWORLD_COMPACT_VIEW_VERSION,
+      world: this.world.name,
+      time: timeLabel(this.minutes),
+      here: [
+        current.id,
+        current.name,
+        current.region,
+        currentArea?.id ?? null,
+        currentArea?.name ?? null,
+      ],
+      vitals: [
+        this.supplies,
+        MAX_SUPPLIES,
+        this.fatigue,
+        travelCondition(this.fatigue, this.supplies),
+      ],
+      hidden: [
+        this.hiddenAreaCountAt(this.currentId),
+        this.hiddenJobCountAt(this.currentId),
+        this.hiddenSiteCountInCurrentArea(),
+        this.hiddenQuestCountAt(this.currentId),
+      ],
+      roads: exits.map((exit) => {
+        const plan = routeByDestination.get(exit.destination.id);
+        return [
+          exit.id,
+          exit.destination.id,
+          plan?.estimate.elapsedMinutes ?? exit.travel_minutes,
+          plan?.estimate.suppliesNeeded ?? 0,
+          plan?.estimate.fatigueAfter ?? this.fatigue,
+        ];
+      }),
+      ...(areaRoutes.length > 0 ? { area_routes: areaRoutes } : {}),
+      route_options: compactRouteOptions,
+      ...(routeOptions.length > compactRouteOptions.length
+        ? { route_options_truncated: true as const }
+        : {}),
+      areas: this.discoveredAreasAt(this.currentId).map((area) => [area.id, area.name] as const),
+      poi: this.currentAreaPois().map((poi) => [poi.id, poi.title] as const),
+      contacts: this.currentAreaCharacters().map(
+        (character) => [character.id, character.name] as const,
+      ),
+      events: this.currentAreaEvents().map((event) => [event.id, event.title] as const),
+      ...(jobs.length > 0 ? { jobs } : {}),
+      ...(sites.length > 0 ? { sites } : {}),
+      ...(quests.length > 0 ? { quests } : {}),
+      ...(pendingRoad ? { pending_road: pendingRoad } : {}),
+      ...(journal.length > 0 ? { journal } : {}),
+      ...(travelLog.length > 0 ? { travel_log: travelLog } : {}),
+      ...(this.travelLog.length > travelLog.length ? { travel_log_truncated: true as const } : {}),
+      progress: [this.visitedIds.size, this.world.nodes.length],
+      ...(renown.length > 0 ? { renown } : {}),
+      ...(completedArcs.length > 0 ? { completed_arcs: completedArcs } : {}),
+      id_counts: idPayload.id_counts,
+      ...(idPayload.ids_truncated ? { ids_truncated: idPayload.ids_truncated } : {}),
+      ids: idPayload.ids,
+    };
+  }
+
+  private cachedView(): OverworldView {
+    if (this.viewCache) return this.viewCache;
+    this.viewCache = this.buildView();
+    return this.viewCache;
+  }
+
+  private cloneView(view: OverworldView): OverworldView {
+    return {
+      ...view,
+      areaExits: view.areaExits.map((exit) => ({ ...exit })),
+      exits: view.exits.map((exit) => ({ ...exit })),
+      areas: [...view.areas],
+      pois: [...view.pois],
+      characters: [...view.characters],
+      events: [...view.events],
+      jobs: [...view.jobs],
+      sites: [...view.sites],
+      quests: view.quests.map((quest) => ({ ...quest })),
+      routeOptions: view.routeOptions.map((plan) => this.cloneRouteOption(plan)),
+      discovered: [...view.discovered],
+      journal: view.journal.map((entry) => ({ ...entry })),
+      discoveredAreaIds: [...view.discoveredAreaIds],
+      discoveredJobIds: [...view.discoveredJobIds],
+      visitedAreaIds: [...view.visitedAreaIds],
+      completedJobIds: [...view.completedJobIds],
+      discoveredSiteIds: [...view.discoveredSiteIds],
+      discoveredQuestIds: [...view.discoveredQuestIds],
+      startedQuestIds: [...view.startedQuestIds],
+      completedQuestIds: [...view.completedQuestIds],
+      exploredSiteIds: [...view.exploredSiteIds],
+      resolvedEventIds: [...view.resolvedEventIds],
+      regionRenown: { ...view.regionRenown },
+      regionalArcs: view.regionalArcs.map((arc) => this.cloneRegionalArcProgress(arc)),
+      completedRegionalArcIds: [...view.completedRegionalArcIds],
+      pendingRoadEncounter: view.pendingRoadEncounter
+        ? {
+            ...view.pendingRoadEncounter,
+            options: view.pendingRoadEncounter.options.map((option) => ({ ...option })),
+          }
+        : null,
+      log: view.log.map((entry) => ({ ...entry })),
+    };
+  }
+
   view(): OverworldView {
+    return this.cloneView(this.cachedView());
+  }
+
+  private buildView(): OverworldView {
     const current = this.currentNode();
     return {
       world: this.world.name,
@@ -959,7 +3583,7 @@ export class OverworldSession {
       current,
       currentArea: this.currentArea(),
       areaExits: this.visibleAreaExits(),
-      exits: overworldEdgesFrom(this.world, this.currentId),
+      exits: this.roadsFrom(this.currentId),
       areas: this.discoveredAreasAt(this.currentId),
       hiddenAreaCount: this.hiddenAreaCountAt(this.currentId),
       pois: this.currentAreaPois(),
@@ -971,7 +3595,7 @@ export class OverworldSession {
       hiddenSiteCount: this.hiddenSiteCountInCurrentArea(),
       quests: this.discoveredQuestsAt(this.currentId),
       hiddenQuestCount: this.hiddenQuestCountAt(this.currentId),
-      routeOptions: this.discoveredRouteOptions(),
+      routeOptions: this.routeOptionsForView(),
       discovered: [...this.discoveredIds]
         .map((id) => this.nodes.get(id))
         .filter((node): node is OverworldNode => node !== undefined)
@@ -989,48 +3613,95 @@ export class OverworldSession {
       completedJobIds: [...this.completedJobIds].sort(),
       discoveredSiteIds: [...this.discoveredSiteIds].sort(),
       discoveredQuestIds: [...this.discoveredQuestIds].sort(),
+      startedQuestIds: [...this.startedQuestIds].sort(),
+      completedQuestIds: [...this.completedQuestIds].sort(),
       exploredSiteIds: [...this.exploredSiteIds].sort(),
       resolvedEventIds: [...this.resolvedEventIds].sort(),
       regionRenown: Object.fromEntries([...this.regionRenown.entries()].sort()),
-      regionalArcs: this.regionalArcProgress(),
+      regionalArcs: this.regionalArcProgressForView(),
       completedRegionalArcIds: [...this.completedRegionalArcIds].sort(),
       pendingRoadEncounter: this.pendingRoadEncounter,
       log: [...this.travelLog],
     };
   }
 
-  startQuest(questId: string): OverworldQuest {
-    const quest = this.localQuests(this.currentId).find((candidate) => candidate.id === questId);
-    if (!quest) throw new Error("That quest lead is not in this town.");
+  startQuest(questId: string): OverworldQuestView {
+    const quest = this.questsById.get(questId);
+    if (!quest || quest.home !== this.currentId)
+      throw new Error("That quest lead is not in this town.");
     if (!this.discoveredQuestIds.has(quest.id)) {
       throw new Error("Discover that local quest lead before starting it.");
+    }
+    if (this.startedQuestIds.has(quest.id)) {
+      throw new Error(`Quest ${quest.title} has already been started from this overworld session.`);
     }
     const area = this.currentArea();
     if (area?.id !== quest.area) {
       throw new Error(`Move to ${this.questAreaName(quest)} before starting ${quest.title}.`);
     }
-    return quest;
+    const result = this.recordAction(
+      {
+        id: `quest:${quest.id}`,
+        kind: "quest",
+        town: this.currentNode().name,
+        title: `Started ${quest.title}`,
+        text: `You turn the local lead "${quest.discovery}" into an active quest.`,
+      },
+      0,
+    );
+    if (!result.alreadyKnown) {
+      this.startedQuestIds.add(quest.id);
+      this.clearSnapshotCache();
+    }
+    return questView(quest);
+  }
+
+  completeQuest(
+    questId: string,
+    outcome: { endingId: string; endingTitle: string; death: boolean },
+  ): OverworldQuestCompletionResult {
+    const quest = this.questsById.get(questId);
+    if (!quest) throw new Error(`Unknown overworld quest "${questId}".`);
+    if (!this.startedQuestIds.has(quest.id)) {
+      throw new Error("Start that local quest lead before completing it.");
+    }
+    if (outcome.death) {
+      throw new Error("A death ending does not complete the overworld quest.");
+    }
+    const result = this.recordAction(
+      {
+        id: `quest_done:${quest.id}`,
+        kind: "quest_done",
+        town: this.nodes.get(quest.home)?.name ?? quest.home,
+        title: `Completed ${quest.title}`,
+        text: `The quest closed at ${outcome.endingTitle}.`,
+      },
+      0,
+    );
+    if (!result.alreadyKnown) {
+      this.completedQuestIds.add(quest.id);
+      this.clearSnapshotCache();
+    }
+    return {
+      minutes: result.minutes,
+      alreadyKnown: result.alreadyKnown,
+      quest: questView(quest),
+      endingId: outcome.endingId,
+      endingTitle: outcome.endingTitle,
+      entry: result.entry,
+    };
   }
 
   scoutPoi(poiId: string): OverworldActionResult {
     const current = this.currentNode();
-    const poi = overworldPoisAt(this.world, this.currentId).find(
-      (candidate) => candidate.id === poiId,
-    );
-    if (!poi) throw new Error("That point of interest is not in this town.");
+    const poi = this.poisById.get(poiId);
+    if (!poi || poi.home !== this.currentId) {
+      throw new Error("That point of interest is not in this town.");
+    }
     if (poi.area !== this.currentAreaIdOrThrow()) {
       throw new Error("Move to that local area before scouting this point of interest.");
     }
-    const result = this.recordAction(
-      {
-        id: `scout:${poi.id}`,
-        kind: "poi",
-        town: current.name,
-        title: `Scouted ${poi.title}`,
-        text: `${poi.summary} You mark the site as a local lead for ${current.name}.`,
-      },
-      20,
-    );
+    const result = this.recordLocalAction(describeOverworldPoiAction(poi, current), current.name);
     return {
       ...result,
       discoveredAreas: result.alreadyKnown ? [] : this.discoverNextAreaForTown(current.id),
@@ -1042,8 +3713,8 @@ export class OverworldSession {
 
   exploreArea(areaId: string): OverworldActionResult {
     const current = this.currentNode();
-    const area = this.localAreas(this.currentId).find((candidate) => candidate.id === areaId);
-    if (!area) throw new Error("That area is not in this town.");
+    const area = this.areaById(areaId);
+    if (!area || area.home !== this.currentId) throw new Error("That area is not in this town.");
     if (!this.discoveredAreaIds.has(area.id)) {
       throw new Error("Scout, talk, investigate, or explore known areas to map that district.");
     }
@@ -1051,7 +3722,7 @@ export class OverworldSession {
       throw new Error("Move to that local area before exploring it.");
     }
     if (this.visitedAreaIds.has(area.id)) {
-      const existing = this.journalEntries.find((entry) => entry.id === `area:${area.id}`);
+      const existing = this.journalEntry(`area:${area.id}`);
       if (existing) {
         return {
           minutes: 0,
@@ -1065,16 +3736,7 @@ export class OverworldSession {
       }
     }
 
-    const result = this.recordAction(
-      {
-        id: `area:${area.id}`,
-        kind: "area",
-        town: current.name,
-        title: `Explored ${area.name}`,
-        text: `${area.summary} ${area.discovery}`,
-      },
-      area.travel_minutes,
-    );
+    const result = this.recordLocalAction(describeOverworldAreaAction(area), current.name);
     if (!result.alreadyKnown) this.visitedAreaIds.add(area.id);
     return {
       ...result,
@@ -1088,7 +3750,7 @@ export class OverworldSession {
   moveArea(areaRouteId: string): OverworldAreaTravelResult {
     const currentArea = this.currentArea();
     if (!currentArea) throw new Error("There is no current local area in this town.");
-    const edge = overworldAreaEdgesFrom(this.world, currentArea.id).find(
+    const edge = (this.areaExitsByArea.get(currentArea.id) ?? []).find(
       (candidate) => candidate.id === areaRouteId,
     );
     if (!edge) throw new Error("That local route is not reachable from here.");
@@ -1098,6 +3760,7 @@ export class OverworldSession {
     this.minutes += edge.travel_minutes;
     this.currentAreaId = edge.destination.id;
     this.currentAreaByTown.set(this.currentId, edge.destination.id);
+    this.clearSnapshotCache();
     return {
       from: currentArea,
       to: edge.destination,
@@ -1109,8 +3772,10 @@ export class OverworldSession {
 
   workLocalJob(jobId: string): OverworldActionResult {
     const current = this.currentNode();
-    const job = this.localJobs(this.currentId).find((candidate) => candidate.id === jobId);
-    if (!job) throw new Error("That local job is not in this town.");
+    const job = this.jobsById.get(jobId);
+    if (!job || job.home !== this.currentId) {
+      throw new Error("That local job is not in this town.");
+    }
     if (!this.discoveredJobIds.has(job.id)) {
       throw new Error("Explore local areas or talk to locals before working that job.");
     }
@@ -1118,7 +3783,7 @@ export class OverworldSession {
       throw new Error("Move to that local area before working that job.");
     }
     if (this.completedJobIds.has(job.id)) {
-      const existing = this.journalEntries.find((entry) => entry.id === `job:${job.id}`);
+      const existing = this.journalEntry(`job:${job.id}`);
       if (existing) {
         return {
           minutes: 0,
@@ -1132,23 +3797,16 @@ export class OverworldSession {
       }
     }
 
-    const area = this.localAreas(this.currentId).find((candidate) => candidate.id === job.area);
-    const result = this.recordAction(
-      {
-        id: `job:${job.id}`,
-        kind: "job",
-        town: current.name,
-        title: `Completed ${job.title}`,
-        text: `${job.objective} ${job.reward}${area ? ` The work is logged against ${area.name}.` : ""}`,
-      },
-      job.minutes,
-    );
+    const area = this.areaById(job.area);
+    const action = describeOverworldJobAction(job, area ?? null);
+    const result = this.recordLocalAction(action, current.name);
     if (!result.alreadyKnown) {
       this.completedJobIds.add(job.id);
       this.regionRenown.set(
         current.region,
-        (this.regionRenown.get(current.region) ?? 0) + job.difficulty,
+        (this.regionRenown.get(current.region) ?? 0) + (action.regionalRenown ?? 0),
       );
+      this.clearSnapshotCache();
     }
     return {
       ...result,
@@ -1161,23 +3819,14 @@ export class OverworldSession {
 
   talkToCharacter(characterId: string): OverworldActionResult {
     const current = this.currentNode();
-    const character = overworldCharactersAt(this.world, this.currentId).find(
-      (candidate) => candidate.id === characterId,
-    );
-    if (!character) throw new Error("That contact is not in this town.");
+    const character = this.charactersById.get(characterId);
+    if (!character || character.home !== this.currentId) {
+      throw new Error("That contact is not in this town.");
+    }
     if (character.area !== this.currentAreaIdOrThrow()) {
       throw new Error("Move to that local area before talking to that contact.");
     }
-    const result = this.recordAction(
-      {
-        id: `talk:${character.id}`,
-        kind: "contact",
-        town: current.name,
-        title: `Talked to ${character.name}`,
-        text: `${character.summary} ${character.agenda}`,
-      },
-      15,
-    );
+    const result = this.recordLocalAction(describeOverworldContactAction(character), current.name);
     return {
       ...result,
       discoveredAreas: result.alreadyKnown ? [] : this.discoverNextAreaForTown(current.id),
@@ -1189,23 +3838,14 @@ export class OverworldSession {
 
   investigateEvent(eventId: string): OverworldActionResult {
     const current = this.currentNode();
-    const event = overworldEventsAt(this.world, this.currentId).find(
-      (candidate) => candidate.id === eventId,
-    );
-    if (!event) throw new Error("That event is not active in this town.");
+    const event = this.localEventsById.get(eventId);
+    if (!event || event.home !== this.currentId) {
+      throw new Error("That event is not active in this town.");
+    }
     if (event.area !== this.currentAreaIdOrThrow()) {
       throw new Error("Move to that local area before investigating that event.");
     }
-    const result = this.recordAction(
-      {
-        id: `investigate:${event.id}`,
-        kind: "event",
-        town: current.name,
-        title: `Investigated ${event.title}`,
-        text: `${event.summary} The pressure is ${event.pressure}, intensity ${event.intensity}.`,
-      },
-      20 + event.intensity * 5,
-    );
+    const result = this.recordLocalAction(describeOverworldEventAction(event), current.name);
     return {
       ...result,
       discoveredAreas: result.alreadyKnown ? [] : this.discoverNextAreaForTown(current.id),
@@ -1217,22 +3857,22 @@ export class OverworldSession {
 
   resolveEvent(eventId: string): OverworldActionResult {
     const current = this.currentNode();
-    const event = overworldEventsAt(this.world, this.currentId).find(
-      (candidate) => candidate.id === eventId,
-    );
-    if (!event) throw new Error("That event is not active in this town.");
+    const event = this.localEventsById.get(eventId);
+    if (!event || event.home !== this.currentId) {
+      throw new Error("That event is not active in this town.");
+    }
     if (event.area !== this.currentAreaIdOrThrow()) {
       throw new Error("Move to that local area before resolving that event.");
     }
     if (this.resolvedEventIds.has(event.id)) {
-      const existing = this.journalEntries.find((entry) => entry.id === `resolve:${event.id}`);
+      const existing = this.journalEntry(`resolve:${event.id}`);
       if (existing) return { minutes: 0, alreadyKnown: true, entry: existing };
     }
 
-    const scoutedPoi = overworldPoisInArea(this.world, event.area).some((poi) =>
+    const scoutedPoi = (this.poisByArea.get(event.area) ?? []).some((poi) =>
       this.hasJournalEntry(`scout:${poi.id}`),
     );
-    const talkedContact = overworldCharactersInArea(this.world, event.area).some((character) =>
+    const talkedContact = (this.charactersByArea.get(event.area) ?? []).some((character) =>
       this.hasJournalEntry(`talk:${character.id}`),
     );
     const investigatedEvent = this.hasJournalEntry(`investigate:${event.id}`);
@@ -1256,12 +3896,13 @@ export class OverworldSession {
       30 + event.intensity * 10,
     );
     if (!result.alreadyKnown) {
-      this.resolvedEventIds.add(event.id);
+      this.markEventResolved(event);
       this.regionRenown.set(
         current.region,
         (this.regionRenown.get(current.region) ?? 0) + event.intensity,
       );
       this.checkRegionalArcCompletion(current.region);
+      this.clearSnapshotCache();
     }
     return {
       ...result,
@@ -1274,8 +3915,10 @@ export class OverworldSession {
 
   exploreSite(siteId: string): OverworldActionResult {
     const current = this.currentNode();
-    const site = this.localSites(this.currentId).find((candidate) => candidate.id === siteId);
-    if (!site) throw new Error("That exploration site is not reachable from this town.");
+    const site = this.sitesById.get(siteId);
+    if (!site || site.nearest_town !== this.currentId) {
+      throw new Error("That exploration site is not reachable from this town.");
+    }
     if (site.area !== this.currentAreaIdOrThrow()) {
       throw new Error("Move to that local area before exploring this site.");
     }
@@ -1283,23 +3926,19 @@ export class OverworldSession {
       throw new Error("Scout a local point of interest before exploring this site.");
     }
     if (this.exploredSiteIds.has(site.id)) {
-      const existing = this.journalEntries.find((entry) => entry.id === `site:${site.id}`);
+      const existing = this.journalEntry(`site:${site.id}`);
       if (existing) return { minutes: 0, alreadyKnown: true, entry: existing };
     }
 
-    const result = this.recordAction(
-      {
-        id: `site:${site.id}`,
-        kind: "site",
-        town: current.name,
-        title: `Explored ${site.title}`,
-        text: `${site.summary} ${site.reward}`,
-      },
-      45 + site.danger * 15,
-    );
+    const action = describeOverworldSiteAction(site);
+    const result = this.recordLocalAction(action, current.name);
     if (!result.alreadyKnown) {
       this.exploredSiteIds.add(site.id);
-      this.regionRenown.set(site.region, (this.regionRenown.get(site.region) ?? 0) + site.danger);
+      this.regionRenown.set(
+        site.region,
+        (this.regionRenown.get(site.region) ?? 0) + (action.regionalRenown ?? 0),
+      );
+      this.clearSnapshotCache();
     }
     return {
       ...result,
@@ -1409,7 +4048,7 @@ export class OverworldSession {
     if (!this.discoveredIds.has(destinationId)) {
       throw new Error("That destination is not discovered yet.");
     }
-    const plan = planOverworldRoute(this.world, this.currentId, destinationId, this.discoveredIds);
+    const plan = this.indexedRoute(this.currentId, destinationId, this.discoveredIds);
     if (!plan) throw new Error("No discovered route reaches that destination yet.");
     return this.routeWithEstimate(plan);
   }
@@ -1442,7 +4081,8 @@ export class OverworldSession {
       text: `${encounter.event.summary} ${option.outcome}${supplyDeficit > 0 ? " Lacking supplies made the work more exhausting." : ""}`,
       recordedAt: timeLabel(this.minutes),
     };
-    this.journalEntries.unshift(entry);
+    this.addJournalEntry(entry);
+    this.clearSnapshotCache();
     return {
       strategy,
       minutes: option.minutes,
@@ -1458,12 +4098,10 @@ export class OverworldSession {
     if (this.pendingRoadEncounter) {
       throw new Error("Address the pending road encounter before choosing another road.");
     }
-    const edge = overworldEdgesFrom(this.world, this.currentId).find(
-      (candidate) => candidate.id === edgeId,
-    );
+    const edge = this.roadsFrom(this.currentId).find((candidate) => candidate.id === edgeId);
     if (!edge) throw new Error("That road is not reachable from here.");
     const from = this.currentNode();
-    const roadEvent = overworldRoadEventFor(this.world, edge.id);
+    const roadEvent = this.roadEventFor(edge.id);
     const supplyCost = travelSupplyCost(edge.travel_minutes);
     const suppliesUsed = Math.min(this.supplies, supplyCost);
     const supplyDeficit = supplyCost - suppliesUsed;
@@ -1478,6 +4116,9 @@ export class OverworldSession {
     this.markSeen(this.currentId);
     this.setPendingRoadEncounter(from, edge.destination, edge, roadEvent);
     const entry: TravelLogEntry = {
+      edgeId: edge.id,
+      fromId: from.id,
+      toId: edge.destination.id,
       from: from.name,
       to: edge.destination.name,
       route: edge.route,
@@ -1493,6 +4134,7 @@ export class OverworldSession {
       roadEvent,
     };
     this.travelLog.unshift(entry);
+    this.clearSnapshotCache();
     return entry;
   }
 }

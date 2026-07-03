@@ -8,7 +8,7 @@
  * well-formed and finite, but NOT whether its `current` location / `endingId`
  * name symbols that actually exist in the pack. A forged-but-finite save (valid
  * structure, correct hash + mode) can therefore set `current` to a phantom
- * room/scene (the engine would render the whole game from a location that does
+ * room (the engine would render the whole game from a location that does
  * not exist) or `endingId` to a fabricated ending, and bug_0181's gate waves it
  * through. `src/mcp/tools.ts` `assertLoadedStateRefs` (run at `startSession`, the
  * one chokepoint that has BOTH the loaded state and the pack index) closes that:
@@ -18,151 +18,149 @@
  * from finiteness to reference: the checker is credibly sound only if it rejects
  * saves that are known-bad BY CONSTRUCTION, not merely accepts the ones it is fed.
  *
- * Each forged save is built by serializing a VALID save (new_game -> save_game),
+ * Each forged save is built by serializing a VALID save (start_world_quest -> save_game),
  * poisoning ONE referential field, then asserting load_game throws. The GREEN
- * false-rejection guards prove that legitimate saves — including an ENDED CYOA
- * save whose `current`/`endingId` is a TERMINAL id (not a scene), the case the
- * gate's `terminalIds` fold exists for — still load byte-identically.
+ * false-rejection guards prove that legitimate RPG saves — including an ended
+ * save whose `endingId` names a declared ending — still load byte-identically.
  */
 import { describe, it, expect } from "vitest";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { SaveIntegrityError } from "../../src/persist/save_load.js";
 
 const ROOT = process.cwd();
-const CYOA = "content/cyoa/pack/watchtower_road.yaml";
-const PARSER = "content/parser/pack/alchemists_tower.yaml";
+const WORLD_QUEST_ID = "sunken_barrow";
 const api = () => createToolApi({ root: ROOT });
 
-/** Serialize a fresh valid save for `packPath`, then mutate ONE state field. */
-function forgeSave(packPath: string, poison: (state: Record<string, unknown>) => void): string {
+/** Serialize a fresh valid save, then mutate ONE state field. */
+function forgeSave(poison: (state: Record<string, unknown>) => void): string {
   const a = api();
-  const game = a.new_game({ pack_path: packPath, seed: 1 });
+  const game = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
   const saved = a.save_game({ session_id: game.session_id });
   const bundle = JSON.parse(saved.save) as { state: Record<string, unknown> };
   poison(bundle.state);
   return JSON.stringify(bundle);
 }
 
-describe("save/load referential integrity — forged-reference REJECTION (§16)", () => {
-  it("CYOA: a phantom `current` scene is a hard SaveIntegrityError", () => {
-    // current is a valid STRING (bug_0181's GameStateSchema passes it), so only a
-    // pack-aware gate can know `no_such_scene` is not a real location.
-    const forged = forgeSave(CYOA, (s) => {
-      s.current = "no_such_scene";
-    });
-    expect(() => api().load_game({ pack_path: CYOA, save: forged })).toThrow(SaveIntegrityError);
-    expect(() => api().load_game({ pack_path: CYOA, save: forged })).toThrow(/unknown scene/);
-  });
+function actionIdByCommand(a: ReturnType<typeof api>, sessionId: string, needle: string): string {
+  const actions = a.list_legal_actions({ session_id: sessionId }).actions as {
+    id: string;
+    command?: string;
+  }[];
+  const found = actions.find((action) => action.command?.includes(needle));
+  if (!found) throw new Error(`No legal action containing "${needle}".`);
+  return found.id;
+}
 
-  it("parser: a phantom `current` room is a hard SaveIntegrityError", () => {
-    const forged = forgeSave(PARSER, (s) => {
+function stepByCommand(a: ReturnType<typeof api>, sessionId: string, needle: string) {
+  return a.step_action({
+    session_id: sessionId,
+    action_id: actionIdByCommand(a, sessionId, needle),
+  });
+}
+
+function playSunkenBarrowToVictory(a: ReturnType<typeof api>, sessionId: string) {
+  let last = stepByCommand(a, sessionId, "go down");
+  expect(last.ok).toBe(true);
+  last = stepByCommand(a, sessionId, "take iron bar");
+  expect(last.ok).toBe(true);
+  last = stepByCommand(a, sessionId, "go north");
+
+  for (let i = 0; i < 40 && !last.observation.ended; i += 1) {
+    if (last.observation.mode !== "rpg") throw new Error("expected RPG observation");
+    if (!last.observation.enemies_present.some((enemy) => enemy.id === "barrow_wight")) break;
+    last = stepByCommand(a, sessionId, "attack");
+  }
+
+  last = stepByCommand(a, sessionId, "go east");
+  for (let i = 0; i < 40 && !last.observation.ended; i += 1) {
+    const stage = a.get_state({ session_id: sessionId, include_state: true }).state.questStage[
+      "barrow"
+    ];
+    if (stage === "slab_moved") break;
+    last = stepByCommand(a, sessionId, "lever stone slab");
+  }
+  stepByCommand(a, sessionId, "go down");
+  return stepByCommand(a, sessionId, "take Barrow");
+}
+
+describe("save/load referential integrity — forged-reference REJECTION (§16)", () => {
+  it("RPG: a phantom `current` room is a hard SaveIntegrityError", () => {
+    // current is a valid STRING (bug_0181's GameStateSchema passes it), so only a
+    // pack-aware gate can know `no_such_room` is not a real location.
+    const forged = forgeSave((s) => {
       s.current = "no_such_room";
     });
-    expect(() => api().load_game({ pack_path: PARSER, save: forged })).toThrow(SaveIntegrityError);
-    expect(() => api().load_game({ pack_path: PARSER, save: forged })).toThrow(/unknown room/);
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/unknown room/);
   });
 
-  it("parser: a fabricated `endingId` is a hard SaveIntegrityError", () => {
+  it("RPG: a fabricated `endingId` is a hard SaveIntegrityError", () => {
     // The benchmark-credibility witness: a forged save that CLAIMS an ending the
     // pack never declares. endingId is a valid nullable string to bug_0181's gate.
-    const forged = forgeSave(PARSER, (s) => {
+    const forged = forgeSave((s) => {
       s.endingId = "fabricated_win";
     });
-    expect(() => api().load_game({ pack_path: PARSER, save: forged })).toThrow(SaveIntegrityError);
-    expect(() => api().load_game({ pack_path: PARSER, save: forged })).toThrow(/unknown ending/);
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/unknown ending/);
   });
 
-  it("parser: a phantom inventory item is a hard SaveIntegrityError (bug_0184)", () => {
+  it("RPG: a phantom inventory item is a hard SaveIntegrityError (bug_0184)", () => {
     // A phantom item renders verbatim in the observation and in the INVENTORY
     // narration, so it is the third "render a nonexistent symbol" hole. The valid
     // item set (declared objects ∪ add_item targets) is provably complete, so this
     // id — neither — can never be held legitimately.
-    const forged = forgeSave(PARSER, (s) => {
+    const forged = forgeSave((s) => {
       s.inventory = ["no_such_item"];
     });
-    expect(() => api().load_game({ pack_path: PARSER, save: forged })).toThrow(SaveIntegrityError);
-    expect(() => api().load_game({ pack_path: PARSER, save: forged })).toThrow(/unknown item/);
-  });
-
-  it("CYOA: a phantom inventory item is a hard SaveIntegrityError (bug_0184)", () => {
-    // CYOA has no object namespace, so its only legitimate items are add_item
-    // targets; an arbitrary id is therefore unambiguously forged.
-    const forged = forgeSave(CYOA, (s) => {
-      s.inventory = ["no_such_item"];
-    });
-    expect(() => api().load_game({ pack_path: CYOA, save: forged })).toThrow(SaveIntegrityError);
-    expect(() => api().load_game({ pack_path: CYOA, save: forged })).toThrow(/unknown item/);
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/unknown item/);
   });
 });
 
 describe("save/load referential integrity — GREEN false-rejection guards", () => {
-  it("a clean mid-game CYOA save still round-trips byte-identically", () => {
+  it("a clean mid-game RPG save still round-trips byte-identically", () => {
     const a = api();
-    const game = a.new_game({ pack_path: CYOA, seed: 1 });
-    a.step_action({ session_id: game.session_id, action_id: "go_west" });
+    const game = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
+    stepByCommand(a, game.session_id, "go down");
     const before = a.get_observation({ session_id: game.session_id }).state_hash;
     const saved = a.save_game({ session_id: game.session_id });
-    const reloaded = a.load_game({ pack_path: CYOA, save: saved.save });
+    const reloaded = a.load_game({ save: saved.save });
+    expect(saved.state_hash).toBe(before);
     expect(reloaded.state_hash).toBe(before);
   });
 
-  it("a parser save holding a legitimately TAKEN item still loads (bug_0184 guard)", () => {
+  it("an RPG save holding a legitimately TAKEN item still loads (bug_0184 guard)", () => {
     // The inventory gate must never reject a real declared object the player
-    // picked up. We explore until a take action is offered (the start room may
-    // hold nothing), preferring an unvisited move, so the guard stays robust to
-    // pack edits without reading the YAML.
+    // picked up.
     const a = api();
-    const game = a.new_game({ pack_path: PARSER, seed: 1 });
+    const game = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
     const sid = game.session_id;
-    const seenRooms = new Set<string>();
-    let took = false;
-    for (let i = 0; i < 30 && !took; i++) {
-      const obs = a.get_observation({ session_id: sid }).observation as {
-        room: string;
-        exits: { direction: string; to?: string }[];
-        available_actions: { id: string }[];
-      };
-      seenRooms.add(obs.room);
-      const take = obs.available_actions.find((act) => act.id.startsWith("take_"));
-      if (take) {
-        a.step_action({ session_id: sid, action_id: take.id });
-        took = true;
-        break;
-      }
-      // Walk toward an unvisited room (using the exit destinations) to avoid
-      // ping-ponging; fall back to any exit if all neighbours are seen.
-      const exits = obs.exits;
-      const exit = exits.find((e) => e.to !== undefined && !seenRooms.has(e.to)) ?? exits[0];
-      if (!exit) break;
-      a.step_action({ session_id: sid, action_id: `go_${exit.direction}` });
-    }
-    expect(took, "should reach a takeable item within 30 steps").toBe(true);
+    stepByCommand(a, sid, "go down");
+    stepByCommand(a, sid, "take iron bar");
     const before = a.get_observation({ session_id: sid }).state_hash;
     const saved = a.save_game({ session_id: sid });
     // Sanity: the save really carries a held item (so the gate is exercised).
     const bundle = JSON.parse(saved.save) as { state: { inventory: string[] } };
     expect(bundle.state.inventory.length).toBeGreaterThan(0);
-    const reloaded = a.load_game({ pack_path: PARSER, save: saved.save });
+    const reloaded = a.load_game({ save: saved.save });
+    expect(saved.state_hash).toBe(before);
     expect(reloaded.state_hash).toBe(before);
   });
 
-  it("an ENDED CYOA save (current = a TERMINAL id, not a scene) still loads", () => {
-    // The reason the gate folds `terminalIds` into the valid-location set: when a
-    // CYOA game ends via goto+end_game (cyoa/runner.ts), `current` and `endingId`
-    // become the terminal id (here `ending_escape`), which is NOT a scene. A naive
-    // "current must be a scene" check would falsely reject every ended CYOA save.
+  it("an ended RPG save still loads", () => {
+    // At an RPG ending, current remains a declared room while endingId names a
+    // declared ending. Both references must pass the pack-aware gate.
     const a = api();
-    const game = a.new_game({ pack_path: CYOA, seed: 1 });
-    for (const id of ["go_west", "ford_brook", "cross_north", "slip_into_woods", "slip_away"]) {
-      a.step_action({ session_id: game.session_id, action_id: id });
-    }
+    const game = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
+    playSunkenBarrowToVictory(a, game.session_id);
     const ended = a.get_observation({ session_id: game.session_id });
     const saved = a.save_game({ session_id: game.session_id });
-    // Sanity: the save really carries a terminal id as current (not a scene).
+    // Sanity: the save really carries a declared ending id.
     const bundle = JSON.parse(saved.save) as { state: { current: string; endingId: string } };
-    expect(bundle.state.current).toBe("ending_escape");
-    expect(bundle.state.endingId).toBe("ending_escape");
-    const reloaded = a.load_game({ pack_path: CYOA, save: saved.save });
+    expect(bundle.state.current).toBe("relic_chamber");
+    expect(bundle.state.endingId).toBe("ending_victory");
+    const reloaded = a.load_game({ save: saved.save });
+    expect(saved.state_hash).toBe(ended.state_hash);
     expect(reloaded.state_hash).toBe(ended.state_hash);
   });
 });

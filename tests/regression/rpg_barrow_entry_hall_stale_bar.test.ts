@@ -9,7 +9,7 @@
  * in. It is the same class fixed for guard_crypt / slab_passage in bug_0011 — the
  * engine already carries reactive room `variants` ({ when, text }); the first whose
  * conditions hold replaces the base description, read identically by the observation
- * builder and the LOOK action.
+ * builder and the LOOK RpgAction.
  *
  * The fix is pure CONTENT — one variant on entry_hall gated on `has_item: iron_bar`
  * (the closed condition DSL has no object-in-room predicate, so holding the bar is
@@ -31,7 +31,7 @@ import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep, actionEquals } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 
 const loaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
@@ -40,11 +40,13 @@ const index = indexRpgPack(loaded.compiled.pack);
 const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
-/** Issue an action, asserting it was legal first (legal ⊇ executable). */
-function act(state: GameState, action: Action): GameState {
-  const legal = rules.legalActions(state).some((a) => actionEquals(a, action));
-  expect(legal, `action ${JSON.stringify(action)} must be legal in ${state.current}`).toBe(true);
-  const r = step(state, action);
+/** Issue an RpgAction, asserting it was legal first (legal ⊇ executable). */
+function act(state: GameState, RpgAction: RpgAction): GameState {
+  const legal = rules.legalActions(state).some((a) => actionEquals(a, RpgAction));
+  expect(legal, `RpgAction ${JSON.stringify(RpgAction)} must be legal in ${state.current}`).toBe(
+    true,
+  );
+  const r = step(state, RpgAction);
   expect(r.ok).toBe(true);
   return r.state;
 }

@@ -7,7 +7,7 @@
  * `claude -p` blind run to confirm the harness is wired correctly without spending
  * any subscription/token budget.
  *
- *   node blind-tester/smoke.mjs [--pack <path>] [--seed <n>] [--steps <n>]
+ *   node blind-tester/smoke.mjs [--quest <id>] [--seed <n>] [--steps <n>]
  */
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -22,9 +22,43 @@ function arg(flag, fallback) {
   return i >= 0 && process.argv[i + 1] !== undefined ? process.argv[i + 1] : fallback;
 }
 
-const PACK = arg("--pack", "content/cyoa/pack/watchtower_road.yaml");
-const SEED = Number(arg("--seed", "7"));
-const STEPS = Number(arg("--steps", "3"));
+function hasArg(flag) {
+  return process.argv.includes(flag);
+}
+
+function positionalArgs() {
+  const out = [];
+  for (let i = 2; i < process.argv.length; i += 1) {
+    const token = process.argv[i];
+    if (token?.startsWith("--")) {
+      if (process.argv[i + 1] !== undefined && !process.argv[i + 1]?.startsWith("--")) i += 1;
+      continue;
+    }
+    if (token !== undefined) out.push(token);
+  }
+  return out;
+}
+
+const POSITIONAL = positionalArgs();
+const QUEST_EXPLICIT = hasArg("--quest") || hasArg("--quest-id");
+const POSITIONAL_SOURCE = QUEST_EXPLICIT ? "" : (POSITIONAL[0] ?? "");
+const POSITIONAL_IS_PACK =
+  POSITIONAL_SOURCE.endsWith(".yaml") ||
+  POSITIONAL_SOURCE.includes("/") ||
+  POSITIONAL_SOURCE.includes("\\");
+if (hasArg("--pack") || POSITIONAL_IS_PACK) {
+  throw new Error("Blind smoke starts shipped quests by quest id only; use --quest <id>.");
+}
+
+const QUEST_ID = QUEST_EXPLICIT
+  ? arg("--quest", arg("--quest-id", ""))
+  : POSITIONAL_SOURCE || "breaking_weir";
+const SEED = Number(arg("--seed", POSITIONAL[1] ?? "7"));
+const STEPS = Number(arg("--steps", POSITIONAL[2] ?? "3"));
+if (!QUEST_ID) {
+  throw new Error("A smoke run needs --quest <id>.");
+}
+const SOURCE_LABEL = `quest ${QUEST_ID}`;
 
 /** MCP text-content tool results carry a JSON string; parse it defensively. */
 function parseResult(result) {
@@ -35,6 +69,18 @@ function parseResult(result) {
   } catch {
     return { raw: text };
   }
+}
+
+function viewOf(payload) {
+  return payload?.context ?? payload?.observation ?? payload;
+}
+
+function actionsOf(view) {
+  return view?.actions ?? view?.available_actions ?? [];
+}
+
+function actionIdOf(action) {
+  return typeof action === "string" ? action : action?.id;
 }
 
 function fail(msg) {
@@ -58,40 +104,76 @@ async function main() {
     const { tools } = await client.listTools();
     const names = new Set(tools.map((t) => t.name));
     console.log(`• tools/list → ${tools.length} tools`);
-    for (const required of ["start_game", "get_scene", "step_action"]) {
+    const startTool = "start_world_quest";
+    for (const required of [startTool, "get_observation", "step_action", "get_transcript"]) {
       if (!names.has(required)) fail(`MCP server is missing the "${required}" tool`);
     }
 
     const start = parseResult(
-      await client.callTool({ name: "start_game", arguments: { story_path: PACK, seed: SEED } }),
+      await client.callTool({
+        name: startTool,
+        arguments: {
+          world_quest_id: QUEST_ID,
+          seed: SEED,
+          hide_graph: true,
+          compact_observation: true,
+        },
+      }),
     );
-    if (!start.session_id) throw new Error(`start_game returned no session_id (pack ${PACK})`);
+    if (!start.session_id) throw new Error(`${startTool} returned no session_id (${SOURCE_LABEL})`);
     const session_id = start.session_id;
-    let obs = start.observation;
-    const sceneText = (obs?.scene?.text ?? obs?.text ?? "").slice(0, 90).replace(/\s+/g, " ");
-    console.log(`• start_game ok → session ${session_id} · mode ${start.mode}`);
-    console.log(`  scene: "${sceneText}…"  (${obs?.available_actions?.length ?? 0} actions)`);
+    let view = viewOf(start);
+    const sceneText = (view?.scene?.text ?? view?.text ?? "").slice(0, 90).replace(/\s+/g, " ");
+    console.log(`• ${startTool} ok → session ${session_id} · mode ${start.mode} · ${SOURCE_LABEL}`);
+    console.log(`  scene: "${sceneText}…"  (${actionsOf(view).length} actions)`);
 
     // Step a few actions (first legal action each turn) to prove stepping works.
     let stepped = 0;
     for (let i = 0; i < STEPS; i++) {
-      const actions = obs?.available_actions ?? [];
-      if (obs?.ended || actions.length === 0) break;
-      const actionId = actions[0].id;
+      const actions = actionsOf(view);
+      if (view?.ended || actions.length === 0) break;
+      const actionId = actionIdOf(actions[0]);
+      if (typeof actionId !== "string") fail("first legal action did not expose an action id");
       const res = parseResult(
         await client.callTool({
           name: "step_action",
-          arguments: { session_id, action_id: actionId },
+          arguments: {
+            session_id,
+            action_id: actionId,
+            hide_graph: true,
+            compact_observation: true,
+          },
         }),
       );
-      obs = res.observation ?? res;
+      view = viewOf(res);
       stepped++;
-      console.log(`  step ${i + 1}: ${actionId} → ${obs?.ended ? "[ended]" : "ok"}`);
+      console.log(`  step ${i + 1}: ${actionId} → ${view?.ended ? "[ended]" : "ok"}`);
     }
 
     if (stepped === 0) fail("could not step any action from the opening scene");
+    const transcript = parseResult(
+      await client.callTool({
+        name: "get_transcript",
+        arguments: { session_id, summary_only: true, compact_summary: true },
+      }),
+    );
+    if ((transcript.summary?.steps ?? -1) < stepped) {
+      fail("summary transcript under-counted stepped actions");
+    }
+    if (Array.isArray(transcript.turns) && transcript.turns.length > 0) {
+      fail("summary transcript unexpectedly returned turn rows");
+    }
+    console.log(
+      `  transcript summary: ${transcript.summary?.steps ?? 0} step(s), ${
+        transcript.summary?.scenes?.length ?? 0
+      } scene(s)`,
+    );
+
     if (process.exitCode) console.error("\nSMOKE: FAIL");
-    else console.log(`\n✓ SMOKE OK — MCP path works (no LLM, no API key). Stepped ${stepped} action(s).`);
+    else
+      console.log(
+        `\n✓ SMOKE OK — MCP path works (no LLM, no API key). Stepped ${stepped} action(s).`,
+      );
   } finally {
     await client.close();
   }

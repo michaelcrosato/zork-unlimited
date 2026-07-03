@@ -6,9 +6,8 @@
  * flows through the seeded PRNG (core/rng.ts) derived from state.seed/state.step.
  *
  * Content lives OUTSIDE the engine. The engine asks a `Rules` resolver what an
- * action means in the current state — Stage 1 (CYOA) and Stage 2 (parser) each
- * supply their own resolver over the same core. This is the Layer-2/Layer-3
- * boundary (§3): the single most important invariant in the system.
+ * action means in the current state. Each runtime can narrow the action surface
+ * it accepts while sharing the same pure reducer.
  */
 import type { GameState } from "./state.js";
 import type { GameEvent } from "./events.js";
@@ -18,6 +17,9 @@ import type { Effect } from "./effects.js";
 import { applyEffects } from "./effects.js";
 import { canonicalize } from "./hash.js";
 import type { Action, StepResult } from "../api/types.js";
+
+/** Minimal shape the generic reducer needs from any temporary runtime action. */
+export type EngineAction = { type: string; [key: string]: unknown };
 
 /** What an action resolves to in a given state. `null` ⇒ no such rule. */
 export type Resolution = {
@@ -29,13 +31,13 @@ export type Resolution = {
  * The content layer's contract with the engine. A resolver is pure: same state
  * + same action ⇒ same resolution. It never touches I/O or randomness.
  */
-export type Rules = {
+export type Rules<A extends EngineAction = Action> = {
   /** The legal-action set for this state (Jericho-style, §9). Ground truth for legality. */
-  legalActions(state: GameState): Action[];
+  legalActions: (state: GameState) => A[];
   /** Conditions + effects for an action, or null if the action has no rule here. */
-  resolve(state: GameState, action: Action): Resolution | null;
+  resolve: (state: GameState, action: A) => Resolution | null;
   /** Effects fired when a location is entered (scene/room `on_enter`, §8.4 step 4). */
-  onEnter?(state: GameState, locationId: string): Effect[];
+  onEnter?: (state: GameState, locationId: string) => Effect[];
   /**
    * Win conditions evaluated after an action's effects, even when NO location
    * transition occurred (§8.4.5) — for a win that must fire on a deliberate
@@ -45,7 +47,7 @@ export type Rules = {
    * keeps `onEnter`'s win check (the two are complementary — `onEnter` covers
    * reach-the-room wins, `checkWin` covers act-in-the-room wins).
    */
-  checkWin?(state: GameState): Effect[];
+  checkWin?: (state: GameState) => Effect[];
   /**
    * Optional: append extra events derived from the events a step just produced —
    * engine *chrome*, not content. The canonical use is Zork-style score feedback:
@@ -56,11 +58,11 @@ export type Rules = {
    * content-free engine never inspects which var is "score" — that knowledge stays
    * in the content layer that supplies this hook. Omitted ⇒ no decoration (CYOA).
    */
-  decorateEvents?(events: GameEvent[]): GameEvent[];
+  decorateEvents?: (events: GameEvent[]) => GameEvent[];
 };
 
 /** Structural equality for actions — used to test membership in the legal set. */
-export function actionEquals(a: Action, b: Action): boolean {
+export function actionEquals(a: EngineAction, b: EngineAction): boolean {
   return canonicalize(a) === canonicalize(b);
 }
 
@@ -73,8 +75,8 @@ function reject(state: GameState, reason: string): StepResult {
  * Build the pure `step(state, action)` for a given rule set. The returned
  * function matches the §8.1 signature exactly.
  */
-export function makeStep(rules: Rules) {
-  return function step(state: GameState, action: Action): StepResult {
+export function makeStep<A extends EngineAction = Action>(rules: Rules<A>) {
+  return function step(state: GameState, action: A): StepResult {
     // A finished game accepts no further actions. No state change.
     if (state.ended) return reject(state, "The game has already ended.");
 

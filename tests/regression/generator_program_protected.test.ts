@@ -1,15 +1,9 @@
 /**
- * bug_0167 — the generator program is under the verifier-integrity guard.
+ * bug_0167 — active generator programs are under the verifier-integrity guard.
  *
- * The procedural generators (src/gen/{cyoa,rpg,parser}_generator.ts) + the seal CLI
- * (bin/seal-corpus.ts) are the eval distribution's CREDIBILITY ANCHOR: they mint the
- * never-frozen packs the assessor mint-and-check levers confront every cycle (CYOA
- * bug_0158 / RPG bug_0162 / parser bug_0166) and seal the committed held-out corpus
- * the benchmark thesis rests on (bug_0163/bug_0165). Until this cycle they sat OUTSIDE
- * PROTECTED_FILES, so a silent source weakening would only ever be caught downstream by
- * the output gates — not by the integrity guard itself. This test locks them under the
- * guard: deleting one is a hard error, editing one surfaces for review, and dropping one
- * from the protected list is itself the DGM "edit-the-checker" launder (GUARD_WEAKENED).
+ * The supported procedural generator (src/gen/rpg_generator.ts) and the seal CLI are
+ * protected. Retired non-RPG generators move to FORBIDDEN_FILES so they cannot
+ * reappear as hidden authoring paths.
  *
  * It exercises the REAL pure detectors on the REAL PROTECTED_FILES list (not synthetic
  * stand-ins), so it fails if a future cycle removes a generator from the guard's surface.
@@ -18,6 +12,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it, expect } from "vitest";
 import {
+  FORBIDDEN_FILES,
   PROTECTED_FILES,
   classifyDrift,
   detectGuardWeakening,
@@ -25,14 +20,10 @@ import {
   type GuardConstants,
 } from "../../scripts/verify-integrity.js";
 
-const GENERATOR_PROGRAM = [
-  "src/gen/cyoa_generator.ts",
-  "src/gen/rpg_generator.ts",
-  "src/gen/parser_generator.ts",
-  "bin/seal-corpus.ts",
-] as const;
+const GENERATOR_PROGRAM = ["src/gen/rpg_generator.ts", "bin/seal-corpus.ts"] as const;
+const RETIRED_GENERATORS = ["src/gen/cyoa_generator.ts", "src/gen/parser_generator.ts"] as const;
 
-describe("bug_0167 — the generator program is guarded", () => {
+describe("bug_0167 — active generator programs are guarded", () => {
   it("every generator-program file is in PROTECTED_FILES", () => {
     for (const f of GENERATOR_PROGRAM) expect(PROTECTED_FILES).toContain(f);
   });
@@ -47,16 +38,26 @@ describe("bug_0167 — the generator program is guarded", () => {
     for (const f of GENERATOR_PROGRAM) expect(missing).not.toContain(f);
   });
 
-  it("DELETING a generator now trips PROTECTED_DELETED (hard error)", () => {
-    const fs = classifyDrift(["src/gen/cyoa_generator.ts"], () => false);
+  it("retired non-RPG generators are forbidden rather than protected", () => {
+    for (const f of RETIRED_GENERATORS) {
+      expect(PROTECTED_FILES).not.toContain(f);
+      expect(FORBIDDEN_FILES).toContain(f);
+      expect(existsSync(join(process.cwd(), f))).toBe(false);
+    }
+    const res = runStatic(process.cwd());
+    expect(res.findings.filter((f) => f.code === "FORBIDDEN_FILE_PRESENT")).toEqual([]);
+  });
+
+  it("DELETING the RPG generator now trips PROTECTED_DELETED (hard error)", () => {
+    const fs = classifyDrift(["src/gen/rpg_generator.ts"], () => false);
     const del = fs.find((f) => f.code === "PROTECTED_DELETED");
     expect(del).toBeDefined();
     expect(del!.severity).toBe("error");
-    expect(del!.where).toBe("src/gen/cyoa_generator.ts");
+    expect(del!.where).toBe("src/gen/rpg_generator.ts");
   });
 
-  it("EDITING a generator surfaces VERIFIER_TOUCHED (warning, not a block — deepen cycles stay legal)", () => {
-    const fs = classifyDrift(["src/gen/parser_generator.ts"], () => true);
+  it("EDITING the RPG generator surfaces VERIFIER_TOUCHED (warning, not a block — deepen cycles stay legal)", () => {
+    const fs = classifyDrift(["src/gen/rpg_generator.ts"], () => true);
     expect(fs.some((f) => f.code === "VERIFIER_TOUCHED" && f.severity === "warning")).toBe(true);
     // a mere edit must NOT be a hard error — a deliberate deepen behind a generator_version
     // bump should commit, just visibly.
@@ -69,6 +70,7 @@ describe("bug_0167 — the generator program is guarded", () => {
       minAssertions: 400,
       minStrongAssertions: 400,
       protectedFiles: [...PROTECTED_FILES],
+      forbiddenFiles: [...FORBIDDEN_FILES],
       hashPinFiles: [],
     };
     const now: GuardConstants = {

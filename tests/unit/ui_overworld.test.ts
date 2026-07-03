@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { parseOverworldManifest } from "../../src/world/overworld.js";
+import { compactOverworldView } from "../../src/world/compact_view.js";
 import { OverworldSession } from "../../ui/src/overworld.js";
 
 const world = parseOverworldManifest(
@@ -108,7 +109,7 @@ describe("OverworldSession", () => {
     expect(explored.discoveredAreas?.map((area) => area.id)).toEqual([localAreas[1]!.id]);
     expect(explored.discoveredJobs).toHaveLength(1);
     expect(explored.discoveredSites).toHaveLength(1);
-    expect(explored.discoveredQuests).toHaveLength(1);
+    expect(explored.discoveredQuests).toEqual([]);
 
     const after = session.view();
     expect(after.visitedAreaIds).toContain(firstArea.id);
@@ -206,6 +207,9 @@ describe("OverworldSession", () => {
     expect(entry.fatigueGained).toBeGreaterThan(0);
     expect(entry.fatigueAfter).toBeGreaterThan(before.fatigue);
     expect(after.log[0]).toMatchObject({
+      edgeId: road!.id,
+      fromId: "albany_city",
+      toId: "colonie_town",
       from: "Albany city",
       to: "Colonie town",
       baseMinutes: road!.travel_minutes,
@@ -281,7 +285,31 @@ describe("OverworldSession", () => {
     const before = session.view();
     expect(before.pendingRoadEncounter).toBeDefined();
 
-    const snapshot = JSON.parse(JSON.stringify(session.snapshot())) as unknown;
+    const snapshot = JSON.parse(JSON.stringify(session.snapshot())) as ReturnType<
+      typeof session.snapshot
+    >;
+    expect(snapshot.pendingRoadEncounter).toEqual({ edgeId: road!.id });
+    expect(snapshot.pendingRoadEncounter).not.toHaveProperty("event");
+    expect(snapshot.pendingRoadEncounter).not.toHaveProperty("options");
+    expect(JSON.stringify(snapshot.pendingRoadEncounter).length).toBeLessThan(
+      JSON.stringify(before.pendingRoadEncounter).length / 4,
+    );
+    expect(snapshot.travelLog[0]).toMatchObject({
+      edgeId: road!.id,
+      fromId: start.current.id,
+      toId: road!.destination.id,
+      minutes: before.log[0]!.minutes,
+      arrivedAt: before.log[0]!.arrivedAt,
+    });
+    expect(snapshot.travelLog[0]).not.toHaveProperty("roadEvent");
+    expect(snapshot.travelLog[0]).not.toHaveProperty("from");
+    expect(snapshot.travelLog[0]).not.toHaveProperty("to");
+    expect(snapshot.travelLog[0]).not.toHaveProperty("route");
+    expect(snapshot.travelLog[0]).not.toHaveProperty("distanceMi");
+    expect(snapshot.travelLog[0]).not.toHaveProperty("baseMinutes");
+    expect(JSON.stringify(snapshot.travelLog[0]).length).toBeLessThan(
+      JSON.stringify(before.log[0]).length / 2,
+    );
     const restored = OverworldSession.restore(world, snapshot);
     expect(restored.view()).toEqual(before);
     expect(() => restored.travel(restored.view().exits[0]!.id)).toThrow(/pending road encounter/i);
@@ -303,6 +331,93 @@ describe("OverworldSession", () => {
       currentId: "missing_town",
     };
     expect(() => OverworldSession.restore(world, corruptSnapshot)).toThrow(/unknown current town/i);
+
+    const validSnapshot = session.snapshot();
+    const duplicateAreaMapSnapshot = {
+      ...validSnapshot,
+      currentAreaByTown: [validSnapshot.currentAreaByTown[0]!, validSnapshot.currentAreaByTown[0]!],
+    };
+    expect(() => OverworldSession.restore(world, duplicateAreaMapSnapshot)).toThrow(
+      /duplicate area-map town/i,
+    );
+
+    const duplicateRenownSnapshot = {
+      ...validSnapshot,
+      regionRenown: [
+        [start.current.region, 1],
+        [start.current.region, 2],
+      ],
+    };
+    expect(() => OverworldSession.restore(world, duplicateRenownSnapshot)).toThrow(
+      /duplicate renown region/i,
+    );
+
+    const undiscoveredCurrentAreaSnapshot = {
+      ...validSnapshot,
+      discoveredAreaIds: validSnapshot.discoveredAreaIds.filter(
+        (id) => id !== validSnapshot.currentAreaId,
+      ),
+    };
+    expect(() => OverworldSession.restore(world, undiscoveredCurrentAreaSnapshot)).toThrow(
+      /current area is not discovered/i,
+    );
+
+    const tamperedPendingRoadSnapshot = JSON.parse(JSON.stringify(validSnapshot)) as ReturnType<
+      typeof session.snapshot
+    >;
+    expect(tamperedPendingRoadSnapshot.pendingRoadEncounter).toBeDefined();
+    tamperedPendingRoadSnapshot.pendingRoadEncounter!.edgeId = "missing_road";
+    expect(() => OverworldSession.restore(world, tamperedPendingRoadSnapshot)).toThrow(
+      /unknown pending road/i,
+    );
+
+    const tamperedTravelLogSnapshot = JSON.parse(JSON.stringify(validSnapshot)) as ReturnType<
+      typeof session.snapshot
+    >;
+    tamperedTravelLogSnapshot.travelLog[0]!.edgeId = "missing_road";
+    expect(() => OverworldSession.restore(world, tamperedTravelLogSnapshot)).toThrow(
+      /unknown travel road/i,
+    );
+  });
+
+  it("caps compact context id lists while keeping counts and truncation flags", () => {
+    const session = new OverworldSession(world);
+    for (let i = 0; i < 120 && session.view().discovered.length <= 24; i += 1) {
+      let view = session.view();
+      if (view.pendingRoadEncounter) session.resolveRoadEncounter("press_on");
+      view = session.view();
+      const next =
+        view.exits.find(
+          (exit) => !view.discovered.some((town) => town.id === exit.destination.id),
+        ) ?? view.exits[i % view.exits.length];
+      if (!next) break;
+      session.travel(next.id);
+    }
+    if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
+
+    const view = session.view();
+    expect(view.discovered.length).toBeGreaterThan(24);
+    const compact = compactOverworldView(view);
+    expect(session.compactView()).toEqual(compact);
+    expect(compact.v).toBe(4);
+    expect(compact.hidden).toEqual([
+      view.hiddenAreaCount,
+      view.hiddenJobCount,
+      view.hiddenSiteCount,
+      view.hiddenQuestCount,
+    ]);
+    expect(compact.progress).toEqual([view.visitedCount, view.totalTowns]);
+    expect(compact.ids.discovered_towns).toHaveLength(16);
+    expect(compact.id_counts).toHaveLength(11);
+    expect(compact.id_counts[0]).toBe(view.discovered.length);
+    expect(compact.ids_truncated).toContain("discovered_towns");
+    expect(compact.id_counts[8]).toBe(view.startedQuestIds.length);
+    expect(compact.id_counts[9]).toBe(view.completedQuestIds.length);
+    expect(compact.id_counts[10]).toBe(view.resolvedEventIds.length);
+    expect(compact.ids_truncated).not.toContain("resolved_events");
+    if (view.resolvedEventIds.length === 0) {
+      expect("resolved_events" in compact.ids).toBe(false);
+    }
   });
 
   it("adds deterministic travel delay when fatigue or supply shortage catches up", () => {
@@ -413,23 +528,14 @@ describe("OverworldSession", () => {
     expect(scouted.minutes).toBe(20);
     expect(scouted.entry.kind).toBe("poi");
     expect(scouted.discoveredSites).toHaveLength(1);
-    expect(scouted.discoveredQuests?.map((quest) => quest.id)).toEqual(
-      localQuests.slice(0, 1).map((quest) => quest.id),
-    );
+    expect(scouted.discoveredQuests).toEqual([]);
     expect(session.view().journal[0]?.title).toContain(poi.title);
     expect(session.view().sites.map((site) => site.id)).toEqual(
       scouted.discoveredSites?.map((site) => site.id),
     );
-    expect(session.view().quests.map((quest) => quest.id)).toEqual(
-      localQuests.slice(0, 1).map((quest) => quest.id),
-    );
-    expect(session.view().discoveredQuestIds).toEqual(
-      localQuests
-        .slice(0, 1)
-        .map((quest) => quest.id)
-        .sort(),
-    );
-    expect(session.view().hiddenQuestCount).toBe(localQuests.length - 1);
+    expect(session.view().quests).toEqual([]);
+    expect(session.view().discoveredQuestIds).toEqual([]);
+    expect(session.view().hiddenQuestCount).toBe(localQuests.length);
 
     const repeated = session.scoutPoi(poi.id);
     expect(repeated.alreadyKnown).toBe(true);
@@ -441,11 +547,13 @@ describe("OverworldSession", () => {
     expect(talked.minutes).toBe(15);
     expect(talked.entry.text).toContain(contact.agenda);
     expect(talked.discoveredQuests?.map((quest) => quest.id)).toEqual(
-      localQuests.slice(1, 2).map((quest) => quest.id),
+      localQuests.slice(0, 1).map((quest) => quest.id),
     );
+    expect(talked.discoveredQuests?.every((quest) => !("pack" in quest))).toBe(true);
     expect(session.view().quests.map((quest) => quest.id)).toEqual(
-      localQuests.slice(0, 2).map((quest) => quest.id),
+      localQuests.slice(0, 1).map((quest) => quest.id),
     );
+    expect(session.view().quests.every((quest) => !("pack" in quest))).toBe(true);
 
     const investigated = session.investigateEvent(event.id);
     expect(investigated.minutes).toBe(20 + event.intensity * 5);
@@ -468,12 +576,22 @@ describe("OverworldSession", () => {
     expect(() => session.startQuest(firstLocalQuest.id)).toThrow(/Discover/i);
 
     const scouted = session.scoutPoi(initial.pois[0]!.id);
-    const discoveredQuests = scouted.discoveredQuests ?? [];
+    expect(scouted.discoveredQuests).toEqual([]);
+    const talked = session.talkToCharacter(initial.characters[0]!.id);
+    const discoveredQuests = talked.discoveredQuests ?? [];
     expect(discoveredQuests).toHaveLength(1);
     const discoveredQuest = discoveredQuests[0]!;
     expect(discoveredQuest.id).toBe(firstLocalQuest.id);
+    expect("pack" in discoveredQuest).toBe(false);
     expect(session.view().currentArea?.id).not.toBe(discoveredQuest.area);
     expect(() => session.startQuest(discoveredQuest.id)).toThrow(/Move to/i);
+    expect(() =>
+      session.completeQuest(discoveredQuest.id, {
+        endingId: "ending_victory",
+        endingTitle: "Victory",
+        death: false,
+      }),
+    ).toThrow(/Start that local quest/i);
 
     const routeToQuestArea = session
       .view()
@@ -482,10 +600,53 @@ describe("OverworldSession", () => {
 
     const moved = session.moveArea(routeToQuestArea!.id);
     expect(moved.to.id).toBe(discoveredQuest.area);
-    expect(session.startQuest(discoveredQuest.id)).toMatchObject({
+    const startedQuest = session.startQuest(discoveredQuest.id);
+    expect(startedQuest).toMatchObject({
       id: discoveredQuest.id,
       area: discoveredQuest.area,
     });
+    expect("pack" in startedQuest).toBe(false);
+    expect(session.view().startedQuestIds).toEqual([discoveredQuest.id]);
+    expect(session.view().journal[0]).toMatchObject({
+      id: `quest:${discoveredQuest.id}`,
+      kind: "quest",
+    });
+    expect(() => session.startQuest(discoveredQuest.id)).toThrow(/already been started/i);
+    expect(() =>
+      session.completeQuest(discoveredQuest.id, {
+        endingId: "ending_fallen",
+        endingTitle: "Fallen",
+        death: true,
+      }),
+    ).toThrow(/death ending/i);
+
+    const completedQuest = session.completeQuest(discoveredQuest.id, {
+      endingId: "ending_victory",
+      endingTitle: "Victory",
+      death: false,
+    });
+    expect(completedQuest).toMatchObject({
+      alreadyKnown: false,
+      endingId: "ending_victory",
+      quest: { id: discoveredQuest.id },
+    });
+    expect(completedQuest.entry).toMatchObject({
+      id: `quest_done:${discoveredQuest.id}`,
+      kind: "quest_done",
+    });
+    expect(session.view().completedQuestIds).toEqual([discoveredQuest.id]);
+    expect(session.view().journal[0]).toMatchObject({
+      id: `quest_done:${discoveredQuest.id}`,
+      kind: "quest_done",
+    });
+
+    const repeatedCompletion = session.completeQuest(discoveredQuest.id, {
+      endingId: "ending_victory",
+      endingTitle: "Victory",
+      death: false,
+    });
+    expect(repeatedCompletion.alreadyKnown).toBe(true);
+    expect(session.view().completedQuestIds).toEqual([discoveredQuest.id]);
   });
 
   it("reveals exploration leads from the current local area", () => {

@@ -17,12 +17,12 @@ loop.sh  (outer driver — orchestration + the bar)
 │     improvement candidates across four categories:
 │        content_fix · content_new · engine · repo
 │     Emits: ai-runs/<id>/assessment.md, prompt.md, and latest-cycle.json
-│     (which records the pack to playtest and where the playtest report must go).
+│     (which records the quest/source to playtest and where the playtest report must go).
 │
 ├─ 2. WORK          the operating agent (claude -p / codex exec / Agent tool)
 │     Reads the cycle prompt and:
 │       a. MANDATORY LLM PLAYTEST — spawns a fresh, no-context subagent that plays
-│          the target pack purely through the mcp__adventureforge__* tools
+│          the target quest purely through the mcp__adventureforge__* tools
 │          (docs/blind_playtest_protocol.md) and writes a structured report
 │          (route, mechanics, clarity 1-5, enjoyment 1-5, findings, verdict) to the
 │          path in latest-cycle.json. This is the per-cycle quality signal.

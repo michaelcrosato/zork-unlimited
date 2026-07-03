@@ -2,8 +2,10 @@
  * The shipped library is one world, not a shelf of unrelated campaigns.
  *
  * Schemas keep `meta.world` optional so tiny validator fixtures and generated eval
- * packs stay minimal. Shipped packs are different: every playable YAML under
- * content/{cyoa,parser,rpg}/pack must bind to the same canonical world and hub.
+ * packs stay minimal. Shipped packs are different: every YAML under
+ * content/rpg/pack must bind to the same canonical world and hub.
+ * MCP play is RPG-only, so the shipped quest graph is now the same set that
+ * play tools can start.
  */
 import { describe, expect, it } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
@@ -15,11 +17,15 @@ import {
   CANONICAL_WORLD_NAME,
   WorldManifestSchema,
 } from "../../src/world/schema.js";
-import { normalizePackPath, worldRouteForPack } from "../../src/world/graph.js";
+import {
+  normalizePackPath,
+  worldQuestNodeForPack,
+  worldRouteForPack,
+} from "../../src/world/graph.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 
 const root = process.cwd();
-const PACK_DIRS = ["content/cyoa/pack", "content/parser/pack", "content/rpg/pack"];
+const PACK_DIRS = ["content/rpg/pack"];
 
 type RawPack = {
   meta?: {
@@ -37,12 +43,14 @@ type RawPack = {
   };
 };
 
-function discoverPacks(): string[] {
-  return PACK_DIRS.flatMap((dir) =>
-    readdirSync(join(root, dir))
-      .filter((file) => file.endsWith(".yaml"))
-      .map((file) => `${dir}/${file}`),
-  ).sort();
+function discoverPacks(dirs: string[] = PACK_DIRS): string[] {
+  return dirs
+    .flatMap((dir) =>
+      readdirSync(join(root, dir))
+        .filter((file) => file.endsWith(".yaml"))
+        .map((file) => `${dir}/${file}`),
+    )
+    .sort();
 }
 
 function loadYaml(path: string): unknown {
@@ -133,40 +141,45 @@ describe("single-world library contract", () => {
     ).toBeGreaterThan(24);
   });
 
-  it.each(packs)("%s opens as a Charterhaven quest in play", (path) => {
+  it.each(packs)("%s opens as a Charterhaven RPG quest in play", (path) => {
     const pack = loadYaml(path) as RawPack;
-    const world = pack.meta?.world;
-    const game = api.new_game({ pack_path: path });
-    const opening =
-      game.observation.mode === "cyoa" ? game.observation.text : game.observation.description;
+    const packWorld = pack.meta?.world;
+    const quest = worldQuestNodeForPack(loadWorldManifest(), path);
+    const game = api.start_world_quest({ world_quest_id: quest?.id ?? "" });
+    if (game.observation.mode !== "rpg") throw new Error("expected RPG observation");
+    const opening = game.observation.description;
 
     expect(game.observation.world?.id).toBe(CANONICAL_WORLD_ID);
     expect(opening).toContain(CANONICAL_HUB_CITY);
-    expect(opening).toContain(world?.district);
-    expect(opening).toContain(world?.role);
-    expect(opening).toContain(world?.quest);
+    expect(opening).toContain(packWorld?.district);
+    expect(opening).toContain(packWorld?.role);
+    expect(opening).toContain(packWorld?.quest);
   });
 
   it("exposes graph routes through the MCP world listing", () => {
-    const world = api.list_world();
-    const watchtower = world.quests.find(
-      (q) => q.path === "content/cyoa/pack/watchtower_road.yaml",
-    );
+    const world = api.list_world({ include_graph: true, include_routes: true });
+    const breakingWeir = world.quests.find((q) => q.world_quest_id === "breaking_weir");
 
     expect(world.graph.hub).toBe("charterhaven");
-    expect(watchtower?.graph_node).toBe("watchtower_road");
-    expect(watchtower?.path_from_hub.map((step) => step.name)).toEqual([
+    expect(world.graph.nodes.every((node) => !("pack" in node))).toBe(true);
+    expect("graph" in world.world).toBe(false);
+    expect(world.quests.every((q) => !("path" in q))).toBe(true);
+    expect(world.quests.every((q) => !("mode" in q))).toBe(true);
+    expect(breakingWeir?.graph_node).toBe("breaking_weir");
+    expect(breakingWeir?.path_from_hub.map((step) => step.name)).toEqual([
       CANONICAL_HUB_CITY,
-      "North Road",
-      "The Watchtower Road",
+      "Industrial Cut",
+      "The Breaking Weir",
     ]);
     for (const quest of world.quests) {
-      expect(quest.path_from_hub[0]?.name, `${quest.path} route must start at the hub`).toBe(
-        CANONICAL_HUB_CITY,
-      );
-      expect(quest.path_from_hub.at(-1)?.kind, `${quest.path} route must end at the quest`).toBe(
-        "quest",
-      );
+      expect(
+        quest.path_from_hub[0]?.name,
+        `${quest.world_quest_id} route must start at the hub`,
+      ).toBe(CANONICAL_HUB_CITY);
+      expect(
+        quest.path_from_hub.at(-1)?.kind,
+        `${quest.world_quest_id} route must end at the quest`,
+      ).toBe("quest");
     }
   });
 });

@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { initState, type GameState } from "../../src/core/state.js";
 import type { Rules } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
 import { exhaustiveEndings } from "./support/exhaustive_endings.js";
 
 /**
@@ -52,15 +51,17 @@ import { exhaustiveEndings } from "./support/exhaustive_endings.js";
 // than hanging on an infinite space), so a broken backstop fails as a clean assertion red,
 // not a wall-clock timeout. `BOUND` is chosen comfortably above the small cap below.
 const BOUND = 500;
-const TICK: Action = { type: "CHOOSE", choiceId: "tick" };
-const FINISH: Action = { type: "CHOOSE", choiceId: "finish" };
+type ChainAction = { type: "CHOOSE"; choiceId: "tick" | "finish" };
+
+const TICK: ChainAction = { type: "CHOOSE", choiceId: "tick" };
+const FINISH: ChainAction = { type: "CHOOSE", choiceId: "finish" };
 const DEEP_END = "deep_end";
 
-const chainRules: Rules = {
-  legalActions(state: GameState): Action[] {
+const chainRules: Rules<ChainAction> = {
+  legalActions(state: GameState): ChainAction[] {
     return (state.vars.n ?? 0) >= BOUND ? [FINISH] : [TICK];
   },
-  resolve(_state: GameState, action: Action) {
+  resolve(_state: GameState, action: ChainAction) {
     if (action.type === "CHOOSE" && action.choiceId === "finish") {
       return { conditions: [], effects: [{ end_game: DEEP_END }] };
     }
@@ -116,7 +117,7 @@ describe("exhaustive solver — MAX_STATES backstop fires (bug_0243)", () => {
     // FAILS on cappedOut, so the search can never silently pass by truncating." An ever-
     // incrementing var yields infinitely many distinct fingerprints; without the backstop
     // the BFS would never return. The cap makes it return promptly with cappedOut=true.
-    const unboundedRules: Rules = {
+    const unboundedRules: Rules<ChainAction> = {
       legalActions: () => [TICK],
       resolve: () => ({ conditions: [], effects: [{ inc_var: { name: "n", by: 1 } }] }),
     };

@@ -16,6 +16,7 @@ import {
   rotateLoopState,
   totalCycleCount,
   countCycleEntries,
+  historicalCycleCount,
   ROTATE_KEEP,
   LOOP_STATE_FILE,
   LOOP_ARCHIVE_FILE,
@@ -55,6 +56,7 @@ describe("AI_LOOP_STATE rotation (token efficiency)", () => {
 
     const live = readFileSync(join(root, LOOP_STATE_FILE), "utf8");
     expect(countCycleEntries(live)).toBe(ROTATE_KEEP);
+    expect(historicalCycleCount(live)).toBe(N - ROTATE_KEEP);
     expect(live.startsWith("# AI Loop State")).toBe(true); // the agent's prepend target survives
     expect(live).toContain(`cycle ${N - 1} did a thing`); // newest kept
     expect(live).not.toContain("cycle 0 did a thing"); // oldest archived
@@ -63,6 +65,14 @@ describe("AI_LOOP_STATE rotation (token efficiency)", () => {
       N - ROTATE_KEEP,
     );
     expect(totalCycleCount(root)).toBe(N); // monotonic count exactly preserved across the split
+  });
+
+  it("uses the compact historical marker on a fresh clone without a local archive", () => {
+    writeFileSync(
+      join(root, LOOP_STATE_FILE),
+      "# AI Loop State\n\n<!-- historical_cycle_count: 40 -->\n\n### Cycle result — recent\n",
+    );
+    expect(totalCycleCount(root)).toBe(41);
   });
 
   it("is idempotent — a second rotation moves nothing more", () => {

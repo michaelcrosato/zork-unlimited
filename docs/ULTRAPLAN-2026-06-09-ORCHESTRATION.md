@@ -21,7 +21,7 @@ observed live** across this session's runs. Companion docs: `ULTRAPLAN-2026-06-0
 - **Wrapper** `loop.sh`: `while true`: `npm run ai:loop` (assess + emit prompt) → `run_agent`
   (`claude -p --model sonnet --dangerously-skip-permissions`, prompt on stdin, `timeout` 2400s routine /
   3600s ultraplan / **3600s content_new**) → `npm run health` (BLOCKING) → `verify:integrity --against
-  <pre-ref>` → `require_playtest_record` → commit → push. Circuit breaker = 5 consecutive no-progress.
+<pre-ref>` → `require_playtest_record` → commit → push. Circuit breaker = 5 consecutive no-progress.
 - **Subagents:** (a) the **blind-playtest subagent** — a strong contract (objective: play blind; output:
   6 structured sections; tools: MCP-only via ToolSearch; boundary: never read content/src/ui/tests; stop:
   ending reached / report written). (b) the **ultraplan reviewers** — fan out ONLY when saturated; now
@@ -103,7 +103,7 @@ quality oracle was spent re-playing watchtower_road. The prompt now flips the or
 the pack → validate green → blind-playtest THAT pack → final polish → commit. Every new pack now ships
 experience-tested. Pure prompt-layer change (no engine/schema/validator/hash touched); `npm run health` green.
 
-*Not implemented now (deliberately):* the orphaned-agent loop.sh fix (risky/unverifiable blind — orchestrator
+_Not implemented now (deliberately):_ the orphaned-agent loop.sh fix (risky/unverifiable blind — orchestrator
 procedure covers it); LLM-judge evaluator (bigger build); token-reduction levers (separate doc, not the goal).
 
 ## 6. Ranked backlog (future)

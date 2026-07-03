@@ -11,14 +11,15 @@
  * not a second source of truth.
  *
  * The total completed-cycle count (which the generator seed window rides on, see
- * assessor.ts `generatedEvalSeedBase`) is recovered by counting "### Cycle result"
- * entries across BOTH files, so trimming the live log never resets it.
+ * assessor.ts `generatedEvalSeedBase`) is recovered from a tiny historical marker
+ * plus recent "### Cycle result" entries, so trimming the live log never resets it.
  */
 import { existsSync, readFileSync, writeFileSync, appendFileSync } from "node:fs";
 import { join } from "node:path";
 
 export const LOOP_STATE_FILE = "AI_LOOP_STATE.md";
 export const LOOP_ARCHIVE_FILE = "AI_LOOP_STATE_ARCHIVE.md";
+const HISTORICAL_CYCLE_COUNT_RE = /^<!--\s*historical_cycle_count:\s*(\d+)\s*-->/m;
 
 /**
  * How many recent rich cycle entries stay in the live log. Sized so the agent keeps
@@ -35,16 +36,37 @@ export function countCycleEntries(text: string): number {
   return (text.match(CYCLE_ENTRY) ?? []).length;
 }
 
+/** Count completed cycles intentionally removed from the live log. */
+export function historicalCycleCount(text: string): number {
+  const m = HISTORICAL_CYCLE_COUNT_RE.exec(text);
+  if (!m) return 0;
+  const n = Number(m[1]);
+  return Number.isInteger(n) && n >= 0 ? n : 0;
+}
+
+/** Total completed cycles represented by one loop-state file. */
+export function completedCycleCount(text: string): number {
+  return historicalCycleCount(text) + countCycleEntries(text);
+}
+
+function upsertHistoricalCycleCount(text: string, count: number): string {
+  const line = `<!-- historical_cycle_count: ${count} -->`;
+  if (HISTORICAL_CYCLE_COUNT_RE.test(text)) return text.replace(HISTORICAL_CYCLE_COUNT_RE, line);
+  return text.replace(/^# AI Loop State\s*/, `# AI Loop State\n\n${line}\n\n`);
+}
+
 /**
  * Total completed cycles across the live log + the archive — the monotonic count the
- * generator seed window rides on. Robust to rotation: entries moved to the archive are
- * still counted. On a fresh clone with no local archive it returns just the live count
- * (only the running loop relies on the absolute value; tests use synthetic input).
+ * generator seed window rides on. New trimmed files carry a historical-cycle marker in
+ * AI_LOOP_STATE.md so a fresh clone preserves the count without reading archived prose.
+ * Legacy worktrees with no marker still count entries from the local ignored archive.
  */
 export function totalCycleCount(root: string): number {
   const live = join(root, LOOP_STATE_FILE);
   const arch = join(root, LOOP_ARCHIVE_FILE);
-  const liveN = existsSync(live) ? countCycleEntries(readFileSync(live, "utf8")) : 0;
+  const liveText = existsSync(live) ? readFileSync(live, "utf8") : "";
+  const liveN = liveText ? completedCycleCount(liveText) : 0;
+  if (historicalCycleCount(liveText) > 0) return liveN;
   const archN = existsSync(arch) ? countCycleEntries(readFileSync(arch, "utf8")) : 0;
   return liveN + archN;
 }
@@ -66,10 +88,14 @@ export function rotateLoopState(root: string, keep: number = ROTATE_KEEP): numbe
   if (entries.length <= keep) return 0;
 
   const cut = entries[keep]!.index!; // first char of the (keep+1)th entry from the top
-  const kept = text.slice(0, cut).replace(/\s+$/, "") + "\n";
+  const movedCount = entries.length - keep;
+  const kept = upsertHistoricalCycleCount(
+    text.slice(0, cut).replace(/\s+$/, "") + "\n",
+    historicalCycleCount(text) + movedCount,
+  );
   const moved = text.slice(cut);
 
   appendFileSync(join(root, LOOP_ARCHIVE_FILE), moved.startsWith("\n") ? moved : "\n" + moved);
   writeFileSync(live, kept);
-  return entries.length - keep;
+  return movedCount;
 }

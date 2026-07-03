@@ -5,8 +5,7 @@
  * present to examine) — exactly the text a real player sees. The RPG completion of the
  * dead-reactive-prose liveness trilogy: CYOA (bug_0145) + parser (bug_0146) closed the
  * two deterministic modes; this closes the last, genuinely-harder mode. Together with the
- * static shadowing checks (bug_0085 CYOA / bug_0091 parser — RPG rooms/objects reuse the
- * parser schema, so `parser_variant_shadowing` already covers their SHADOWING half) the
+ * static shadowing checks the
  * "dead reactive prose" defect class is now closed across all three modes.
  *
  * The defect class has two causes; this proves the LIVE half directly against ground
@@ -18,8 +17,7 @@
  *     viewing context can satisfy — a flag set only on a branch that never returns, a var
  *     threshold the gating never reaches, an enemy never defeated. Not shadowed; its guard
  *     is simply unreachable, so its text is dead and no blind playtest is guaranteed to
- *     surface it. RPG rooms/objects carry the parser variants (RpgIndex extends ParserIndex);
- *     RPG endings reuse ParserEndingSchema, which has no `variants`, so room + object
+ *     surface it. RPG rooms/objects and endings carry reactive variants, so room + object
  *     variants are the whole scope, exactly as in the parser proof.
  *
  * ── Why RPG is the harder mode, and how this stays SOUND ─────────────────────────────
@@ -84,11 +82,11 @@ import {
   type RpgIndex,
 } from "../../src/rpg/runner.js";
 import { HP_VAR } from "../../src/rpg/schema.js";
-import { visibleObjectIds } from "../../src/parser/model.js";
+import { visibleObjectIds } from "../../src/rpg/model.js";
 import { evalConditions } from "../../src/core/conditions.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
-import type { RoomVariant, ObjectVariant, ParserEndingVariant } from "../../src/parser/schema.js";
+import type { RoomVariant, ObjectVariant, EndingVariant } from "../../src/rpg/schema.js";
 import type { Action } from "../../src/api/types.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 
@@ -181,7 +179,7 @@ function readsHpInCondition(node: unknown): boolean {
 /** The index of the first variant whose `when` holds in `state` (first-match-wins,
  *  identical to model.ts roomDescription/objectDescription), or -1 for the base text. */
 function firstMatch(
-  variants: readonly (RoomVariant | ObjectVariant | ParserEndingVariant)[],
+  variants: readonly (RoomVariant | ObjectVariant | EndingVariant)[],
   state: GameState,
 ): number {
   for (let i = 0; i < variants.length; i++) {

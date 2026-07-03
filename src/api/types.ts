@@ -1,17 +1,14 @@
 /**
  * Action + StepResult types (spec §8.1, §8.2).
  *
- * The Action union is the closed set of things a player (human or AI) can do.
- * CYOA uses only CHOOSE; the parser stage uses the rest. New action types arrive
- * only through the §14 engine-extension gate.
+ * `RpgAction` is the canonical live reducer surface. `Action` is kept as a
+ * stable API alias for callers that have not adopted the explicit RPG name yet;
+ * it no longer includes retired CYOA `CHOOSE` actions.
  */
 import type { GameState } from "../core/state.js";
 import type { GameEvent } from "../core/events.js";
 
-export type Action =
-  // CYOA
-  | { type: "CHOOSE"; choiceId: string }
-  // Parser (Stage 2+)
+export type RpgAction =
   | { type: "LOOK"; target?: string }
   | { type: "MOVE"; direction: string }
   | { type: "TAKE"; item: string }
@@ -26,9 +23,9 @@ export type Action =
   | { type: "READ"; target: string }
   | { type: "INSPECT"; target: string }
   | { type: "INVENTORY" }
-  // RPG (Stage 4, §13) — arrives through the §14 engine-extension gate. One ATTACK
-  // is one deterministic, seeded combat round resolved entirely in code.
   | { type: "ATTACK"; enemy: string };
+
+export type Action = RpgAction;
 
 export type StepResult = {
   state: GameState; // NEW state (engine is pure; input state unmutated)

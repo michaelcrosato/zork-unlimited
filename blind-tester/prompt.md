@@ -3,22 +3,32 @@ game and must play it BLIND — like a first-time player who only sees what the 
 shows you.
 
 STRICT RULES:
+
 - The game's tools are named `mcp__adventureforge__*` and are DEFERRED — load their
   schemas first with one ToolSearch call, then call them:
-  `ToolSearch("select:mcp__adventureforge__start_game,mcp__adventureforge__get_scene,mcp__adventureforge__list_legal_actions,mcp__adventureforge__step_action,mcp__adventureforge__get_transcript")`.
+  `ToolSearch("select:mcp__adventureforge__start_world_quest,mcp__adventureforge__get_observation,mcp__adventureforge__list_legal_actions,mcp__adventureforge__step_action,mcp__adventureforge__get_transcript")`.
 - Play ONLY through those `mcp__adventureforge__*` tools. ToolSearch (to load them)
   is the only other tool you may use.
 - DO NOT read, open, grep, cat, or list ANY files. Do not use shell, file, or web
   tools — you have none and don't need them. Your ONLY window into the game is the
-  observations the MCP tools return. No peeking at the YAML, the source, or the
-  solution.
+  MCP tool responses. No peeking at the YAML, the source, or the solution.
 
 PLAY:
-- Start: `mcp__adventureforge__start_game` with story_path = "__PACK__", seed = __SEED__.
-- Each observation gives scene text, your state, and `available_actions` (each with
-  an `id` and player-facing text/command). Choose one by id with
-  `mcp__adventureforge__step_action` (session_id, action_id). Repeat until the scene
-  is an ending.
+
+- {{START_INSTRUCTION}}
+- Use `hide_graph: true` and `compact_observation: true` on start, observe, and
+  step calls. Each compact `context` gives scene text, state/vitals, and `actions`
+  (stable ids). Choose one by id with `mcp__adventureforge__step_action`
+  (session_id, action_id, hide_graph: true, compact_observation: true). Repeat
+  until `context.ended` is true. If an action id is unclear, call
+  `mcp__adventureforge__list_legal_actions` once with `compact_actions: false`
+  for player-facing command text. Leave `compact_events` at its default unless
+  diagnosing event-history details.
+- For an end-of-run transcript sanity check, call
+  `mcp__adventureforge__get_transcript` with `summary_only: true` and
+  `compact_summary: true`; pass the latest `if_state_hash` when rechecking an
+  unchanged state. If you need route rows, use `compact_turns: true`; avoid full
+  transcripts unless diagnosing a specific event-history bug.
 - Make decisions a curious, sensible human would: follow clues, pursue the apparent
   goal, investigate what seems important. Do NOT pick randomly. Narrate your
   reasoning each turn in ONE short line. Do ONE thorough playthrough to an ending;
@@ -29,6 +39,7 @@ PLAY:
   unfair/unsignposted deaths.
 
 REPORT (end your reply with these sections, in this order):
+
 1. Playthrough log: route(s) taken (scene titles/gist) and ending(s) reached, with
    final score if shown.
 2. Did it work mechanically? rejected actions, broken state, loops, soft-locks?

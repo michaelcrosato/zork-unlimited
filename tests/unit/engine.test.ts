@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { makeStep, actionEquals } from "../../src/core/engine.js";
-import { microRules, microInitState } from "../../src/demo/micro.js";
+import { MICRO_ACTIONS, microRules, microInitState } from "../../src/demo/micro.js";
 
 const step = makeStep(microRules);
 
@@ -15,13 +15,14 @@ describe("engine.step (§8.4 resolution order)", () => {
 
   it("rejects a legal action whose conditions are unmet (no state change)", () => {
     const s = microInitState(); // no torch yet
-    const r = step(s, { type: "CHOOSE", choiceId: "grab_gold" }); // requires has_torch... but wrong scene
+    const cave = step(s, MICRO_ACTIONS.enterCave).state;
+    const r = step(cave, MICRO_ACTIONS.grabGold); // requires has_torch
     expect(r.ok).toBe(false);
   });
 
   it("applies effects and advances the step counter", () => {
     const s = microInitState();
-    const r = step(s, { type: "CHOOSE", choiceId: "take_torch" });
+    const r = step(s, MICRO_ACTIONS.takeTorch);
     expect(r.ok).toBe(true);
     expect(r.state.flags["has_torch"]).toBe(true);
     expect(r.state.inventory).toEqual(["torch"]);
@@ -30,17 +31,17 @@ describe("engine.step (§8.4 resolution order)", () => {
 
   it("fires on_enter effects on a location transition", () => {
     const s = microInitState();
-    const r = step(s, { type: "CHOOSE", choiceId: "enter_cave" });
+    const r = step(s, MICRO_ACTIONS.enterCave);
     expect(r.ok).toBe(true);
     expect(r.state.current).toBe("cave");
     expect(r.state.journal).toContain("The cave breathes cold air.");
   });
 
-  it("a condition-gated choice succeeds once the flag is set", () => {
+  it("a condition-gated action succeeds once the flag is set", () => {
     let s = microInitState();
-    s = step(s, { type: "CHOOSE", choiceId: "take_torch" }).state;
-    s = step(s, { type: "CHOOSE", choiceId: "enter_cave" }).state;
-    const r = step(s, { type: "CHOOSE", choiceId: "grab_gold" });
+    s = step(s, MICRO_ACTIONS.takeTorch).state;
+    s = step(s, MICRO_ACTIONS.enterCave).state;
+    const r = step(s, MICRO_ACTIONS.grabGold);
     expect(r.ok).toBe(true);
     expect(r.state.current).toBe("treasure");
     expect(r.state.vars["score"]).toBe(10);
@@ -48,20 +49,16 @@ describe("engine.step (§8.4 resolution order)", () => {
 
   it("a finished game accepts no further actions", () => {
     let s = microInitState();
-    s = step(s, { type: "CHOOSE", choiceId: "enter_cave" }).state;
-    s = step(s, { type: "CHOOSE", choiceId: "leave" }).state;
-    s = step(s, { type: "CHOOSE", choiceId: "go" }).state;
+    s = step(s, MICRO_ACTIONS.enterCave).state;
+    s = step(s, MICRO_ACTIONS.leaveCave).state;
+    s = step(s, MICRO_ACTIONS.leaveWorld).state;
     expect(s.ended).toBe(true);
-    const r = step(s, { type: "CHOOSE", choiceId: "go" });
+    const r = step(s, MICRO_ACTIONS.leaveWorld);
     expect(r.ok).toBe(false);
   });
 
   it("actionEquals compares structurally", () => {
-    expect(actionEquals({ type: "CHOOSE", choiceId: "a" }, { type: "CHOOSE", choiceId: "a" })).toBe(
-      true,
-    );
-    expect(actionEquals({ type: "CHOOSE", choiceId: "a" }, { type: "CHOOSE", choiceId: "b" })).toBe(
-      false,
-    );
+    expect(actionEquals(MICRO_ACTIONS.takeTorch, { type: "TAKE", item: "torch" })).toBe(true);
+    expect(actionEquals(MICRO_ACTIONS.takeTorch, MICRO_ACTIONS.grabGold)).toBe(false);
   });
 });

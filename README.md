@@ -1,12 +1,12 @@
 # AdventureForge
 
-A headless, AI-authored text-adventure engine spanning CYOA, a Zork-style parser,
-a Sierra-Quest scoring game, a Hero's-Quest RPG, and a React UI. See
+A headless, AI-authored text-adventure engine centered on a Hero's-Quest RPG,
+with procedural authoring, MCP play, an overworld layer, and a React UI. See
 [`ADVENTUREFORGE_BUILD_SPEC.md`](./ADVENTUREFORGE_BUILD_SPEC.md) for the original
 design brief.
 
 > **Trust, but verify.** The coding agent has free rein over all game code — no
-> human-approval gate, no §14 engine-extension ceremony; it decides *what* to
+> human-approval gate, no §14 engine-extension ceremony; it decides _what_ to
 > build. But the automated verification stays the **bar**: tests, the determinism
 > property checks, the validator, trace replay/regression, and green CI must pass —
 > the autonomous loop and CI won't land red work. Freedom in design, honesty in
@@ -20,77 +20,46 @@ design brief.
 The trustworthy spine every later stage sits on. No content in the engine — just a core
 the AI can later author into but cannot corrupt.
 
-| Piece | File |
-|---|---|
-| Unified `GameState` (§6) | `src/core/state.ts` |
-| Condition DSL + evaluator (§7.1) | `src/core/conditions.ts` |
-| Effect DSL + pure reducer (§7.1) | `src/core/effects.ts` |
-| Event log (§8.3) | `src/core/events.ts` |
-| Seeded PRNG (§4.1, §8.5) | `src/core/rng.ts` |
-| Canonical state hash (§8.6) | `src/core/hash.ts` |
-| Pure `step` reducer + `Rules` resolver (§8.1, §8.4) | `src/core/engine.ts` |
-| Save / load with content-hash integrity (§8.7) | `src/persist/save_load.ts` |
-| Trace record / replay (§8.8) | `src/trace/` |
+| Piece                                               | File                       |
+| --------------------------------------------------- | -------------------------- |
+| Unified `GameState` (§6)                            | `src/core/state.ts`        |
+| Condition DSL + evaluator (§7.1)                    | `src/core/conditions.ts`   |
+| Effect DSL + pure reducer (§7.1)                    | `src/core/effects.ts`      |
+| Event log (§8.3)                                    | `src/core/events.ts`       |
+| Seeded PRNG (§4.1, §8.5)                            | `src/core/rng.ts`          |
+| Canonical state hash (§8.6)                         | `src/core/hash.ts`         |
+| Pure `step` reducer + `Rules` resolver (§8.1, §8.4) | `src/core/engine.ts`       |
+| Save / load with content-hash integrity (§8.7)      | `src/persist/save_load.ts` |
+| Trace record / replay (§8.8)                        | `src/trace/`               |
 
 The Layer-2/Layer-3 boundary (§3) is enforced by the `Rules` resolver: the engine asks
 content what an action means, but contains no content itself.
 
-### Stage 1 — CYOA engine ✅ (schema · validator · play CLI)
+### Stage 1 — retired CYOA prototype
 
-| Piece | File |
-|---|---|
-| CYOA schema (§7.2) | `src/cyoa/schema.ts` |
-| Pack loader (YAML → validated JSON + content hash) | `src/cyoa/pack.ts` |
-| Runner: pack → `Rules` resolver (§8.4) | `src/cyoa/runner.ts` |
-| AI-/human-facing observation (§9.1) | `src/cyoa/observation.ts` |
-| CYOA validator (§10.1) | `src/validate/cyoa_validator.ts` |
-| Sample pack: *The Watchtower Road* (20 scenes, 3 endings) | `content/cyoa/pack/watchtower_road.yaml` |
-| Negative fixtures that MUST fail (§10.4) | `content/broken-fixtures/` |
+The original CYOA runtime and content tree were retired during RPG-only consolidation.
+Their replacement is the shared RPG-owned schema/runner/validator surface below; old
+CYOA assets are forbidden from reappearing by `scripts/verify-integrity.ts`.
 
-The validator checks reference integrity, reachability, ending reachability, soft-locks,
-dead ends, flag/item feasibility, contradictions, and duplicate endings. Where flags/items
-make a property undecidable in general it uses a documented conservative approximation
-(see header comments) rather than silently checking something weaker.
+### Stage 2 — retired parser prototype
 
-### Stage 2 — Zork-style parser adventure ✅
-
-The same Stage-0 core, now driving a parser game: rooms, objects, containers, locked
-doors, an NPC dialogue tree, and USE puzzles — exposed to agents as a Jericho-style
-**legal-action set**, never a raw parser to guess at.
-
-| Piece | File |
-|---|---|
-| Parser schema (§7.3) | `src/parser/schema.ts` |
-| World model: object location, containers, dialogue state | `src/parser/model.ts` |
-| Legal-action generator + resolver (§9, §9.2) | `src/parser/legal_actions.ts` |
-| Runner: pack → `Rules`, win conditions on room entry (§8.4) | `src/parser/runner.ts` |
-| Parser observation (§9.2) | `src/parser/observation.ts` |
-| Controlled human command parser (§9.3) | `src/parser/command_map.ts` |
-| Parser validator (§10.2) | `src/validate/parser_validator.ts` |
-| Sample pack: *The Sealed Crypt* (10 rooms, 8 objects, 2 containers, 2 locked doors, 1 NPC, 2 puzzles) | `content/parser/pack/sealed_crypt.yaml` |
-| Negative fixtures that MUST fail (§10.4) | `content/broken-fixtures/parser_*.yaml` |
-| Bug artifact + regression (§15) | `traces/bugs/bug_0001_*.yaml`, `tests/regression/parser_crypt_softlock.test.ts` |
-
-Two small **additive** engine extensions went through the §14 gate: an
-`ObjectRuntime.room` field and a `place_object` effect (both needed for DROP).
-Every existing CYOA trace still replays to an identical hash.
-
-The parser validator adds the §10.2 invariants on top of graph reachability:
-locked-exit/locked-container key satisfiability, an item-obtainability fixpoint
-(keys that unlock containers that hold keys…), `quest_critical` permanent-loss
-guards (consumption and one-way-map drops), dialogue-tree termination, and
-win reachability — each with a documented conservative approximation.
+The original parser runtime and content packs were retired during RPG-only
+consolidation. Its useful mechanics — rooms, objects, containers, locked doors,
+NPC dialogue, USE puzzles, legal-action menus, reactive prose, and structural
+validation — now live in the RPG-owned schema, model, runner, observation, and
+foundation validator. Parser assets are forbidden from reappearing by
+`scripts/verify-integrity.ts`.
 
 ### Stage 3 — Sierra-Quest style (score · death/restore · puzzle chains) ✅
 
 Same core again, now with a **score**, **death endings recoverable via load**, and
 longer puzzle chains.
 
-| Piece | File |
-|---|---|
-| Score (`inc_var` on a `score` var) + `max_score`, `ending.death` flag | `src/parser/schema.ts` |
-| Validator extensions (§13 Stage 3) | `src/validate/parser_validator.ts` |
-| Sample pack: *The Alchemist's Tower* (brew an antidote; a fatal black phial) | `content/parser/pack/alchemists_tower.yaml` |
+| Piece                                                                 | File                                       |
+| --------------------------------------------------------------------- | ------------------------------------------ |
+| Score (`inc_var` on a `score` var) + `max_score`, `ending.death` flag | `src/rpg/schema.ts`                        |
+| Validator extensions (§13 Stage 3)                                    | `src/validate/rpg_foundation_validator.ts` |
+| Sample pack                                                           | Retired during RPG-only consolidation      |
 
 Scoring is a conventional `score` var awarded via `inc_var`; death endings are
 terminal non-win endings reached by an `end_game` effect, and are recoverable by
@@ -104,34 +73,33 @@ The same headless core, now with character stats, a seeded turn-based fight, and
 seeded d20 skill check — all through the **§14 engine-extension gate**, with every
 roll flowing through the PRNG so fights replay exactly (§8.5).
 
-| Piece | File |
-|---|---|
-| RPG schema (parser pack + enemies; `skill_check` on interactions) | `src/rpg/schema.ts` |
-| Seeded combat + skill-check resolvers (randomness in the pure resolver) | `src/rpg/combat.ts` |
-| RPG runner (parser actions + `ATTACK`) + observation | `src/rpg/runner.ts`, `src/rpg/observation.ts` |
-| RPG validator (winnability, skill passability, stat/death-ending checks) | `src/validate/rpg_validator.ts` |
-| Gated core DSL additions: `set_quest_stage` effect, `quest_stage` condition, `ATTACK` action | `src/core/`, `src/api/types.ts` |
-| Sample pack: *The Sunken Barrow* | `content/rpg/pack/sunken_barrow.yaml` |
-| Negative fixture (`COMBAT_UNWINNABLE`) | `content/broken-fixtures/rpg_unwinnable.yaml` |
-| §14 gate record (all six items) | [`docs/stage4_rpg_gate.md`](./docs/stage4_rpg_gate.md) |
-| Acceptance + unit + regression tests, recorded victory trace | `tests/`, `traces/rpg/barrow_victory.json` |
+| Piece                                                                                        | File                                                   |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| RPG schema (`skill_check` on interactions, enemies, stats, world binding)                    | `src/rpg/schema.ts`                                    |
+| Seeded combat + skill-check resolvers (randomness in the pure resolver)                      | `src/rpg/combat.ts`                                    |
+| RPG runner (legal-action menu + `ATTACK`) + observation                                      | `src/rpg/runner.ts`, `src/rpg/observation.ts`          |
+| RPG validator (winnability, skill passability, stat/death-ending checks)                     | `src/validate/rpg_validator.ts`                        |
+| Gated core DSL additions: `set_quest_stage` effect, `quest_stage` condition, `ATTACK` action | `src/core/`, `src/api/types.ts`                        |
+| Sample pack: _The Sunken Barrow_                                                             | `content/rpg/pack/sunken_barrow.yaml`                  |
+| Negative fixture (`COMBAT_UNWINNABLE`)                                                       | `content/broken-fixtures/rpg_unwinnable.yaml`          |
+| §14 gate record (all six items)                                                              | [`docs/stage4_rpg_gate.md`](./docs/stage4_rpg_gate.md) |
+| Acceptance + unit + regression tests, recorded victory trace                                 | `tests/`, `traces/rpg/barrow_victory.json`             |
 
-Stage 4 is **backward-compatible**: the additions are optional or top-level, so
-every Stage 0–3 pack compiles to identical content (the CYOA content hash is
-asserted unchanged) and every prior trace still replays.
+Stage 4 made RPG the canonical runtime surface; old CYOA and parser code/content
+have since been retired.
 
 ### Stage 5 — Web UI (React + Vite) ✅
 
-A **view** over the headless engine: it compiles a pack in-browser and drives the
-same `step` reducer the CLI and MCP server use — one code path for CYOA, parser,
-and RPG packs. The engine stays authoritative; the UI never decides legality.
+A **view** over the headless engine: it compiles an RPG pack in-browser and drives
+the same `step` reducer the CLI and MCP server use. The engine stays authoritative;
+the UI never decides legality.
 
-| Piece | File |
-|---|---|
-| Browser engine client (one `GameSession` for all modes) | `ui/src/engine.ts` |
-| React play view + pack picker | `ui/src/App.tsx`, `ui/src/packs.ts` |
-| Pure-JS SHA-256 (makes the core browser-safe; byte-identical digests) | `src/core/sha256.ts` |
-| Node test proving the UI uses only the structured API | `tests/unit/ui_engine.test.ts` |
+| Piece                                                                 | File                                |
+| --------------------------------------------------------------------- | ----------------------------------- |
+| Browser engine client (`GameSession` for RPG play)                    | `ui/src/engine.ts`                  |
+| React play view + pack picker                                         | `ui/src/App.tsx`, `ui/src/packs.ts` |
+| Pure-JS SHA-256 (makes the core browser-safe; byte-identical digests) | `src/core/sha256.ts`                |
+| Node test proving the UI uses only the structured API                 | `tests/unit/ui_engine.test.ts`      |
 
 ```bash
 npm run ui:dev     # http://localhost:5173 (after: npm --prefix ui install)
@@ -149,66 +117,66 @@ the schema or fails validation is refused. Exposed over MCP as `apply_content_pa
 
 ### AI authoring — packs from prose (§11, §12.1–3)
 
-A pack can be **authored from a one-line premise** by the writer → adapter →
-validator loop. The writer drafts prose + beats; the adapter emits a CYOA pack and
-classifies each beat against the engine contract (`content/engine_contract.yaml`,
-§11); it loops against the validator until the report is green — the validator, not
-the model, decides correctness (§16). The default `MockAuthorProvider` is
-deterministic (no API keys); its first attempt ships a dangling reference and
-self-corrects once the validator's errors are fed back. A real provider slots in
-behind an env var (§12.7).
+The public author CLI can **author an RPG pack from a one-line premise** by the
+writer → adapter → validator loop. The writer drafts prose + beats; the adapter
+emits an RPG pack and classifies each beat against the engine contract
+(`content/engine_contract.yaml`, §11); it loops against the validator until the
+report is green — the validator, not the model, decides correctness (§16). The
+default `MockAuthorProvider` is deterministic (no API keys); its first attempt
+ships a dangling reference and self-corrects once the validator's errors are fed
+back. A real provider slots in behind an env var (§12.7).
 
 ```bash
 npm run author -- "A keeper must relight a dead lighthouse before a ship wrecks."
 ```
 
-The same pipeline is exposed over MCP as the `adapt_story` tool.
+MCP authoring/generation tools still exist as migration scaffolding while the
+runtime consolidates around the RPG engine.
 
 ### Procedural pack generation — evolving the eval distribution
 
 Every structural proof in the suite (endings-reachable, variant-liveness, soft-lock
 liveness, score-economy, menu-integrity) is exercised against the ten curated packs
-below. A *frozen* eval set is the condition under which a self-improving loop's verifier
+below. A _frozen_ eval set is the condition under which a self-improving loop's verifier
 stops being a moving target and becomes a memorisable one. The antidote is to **evolve the
 distribution**: mint fresh, never-authored packs the same checks must hold on.
 
-`src/gen/cyoa_generator.ts` (`generateCyoaPack(seed)`) and `src/gen/rpg_generator.ts`
-(`generateRpgPack(seed)`) are **pure, deterministic** minting cores — same seed ⇒
-byte-identical pack (no `Date`/`Math.random`, §8.5). Each emits a schema-valid pack of a
-proven AdventureForge shape (a knowledge-gated moral fork; a winnable hero's-quest with a
-tight score economy) and is held to the **identical bar** as the curated content: the same
-`validateCyoa`/`validateRpg` validator and the same exhaustive best/worst-roll solver that
-prove the shipped packs. Generated packs are deliberately **not** committed under
-`content/` — they are an on-demand eval distribution, not curated showcase content, so they
-carry no blind-playtest obligation and never pollute the hand-authored set.
+`src/gen/rpg_generator.ts` (`generateRpgPack(seed)`) is a **pure, deterministic**
+minting core — same seed ⇒ byte-identical pack (no `Date`/`Math.random`, §8.5).
+It emits a schema-valid, winnable hero's-quest with a tight score economy and is
+held to the **identical bar** as the curated RPG content: the same `validateRpg`
+validator and the same exhaustive best/worst-roll solver that prove the shipped
+packs. Generated packs are deliberately **not** committed under `content/` — they
+are an on-demand eval distribution, not curated showcase content, so they carry
+no blind-playtest obligation and never pollute the hand-authored set.
 
-The CYOA generator is exposed over MCP as `generate_pack` (mint + validate a fresh pack,
-read-only) and is playable in-memory via `new_game`'s `generate_seed`.
+The RPG generator is exposed over MCP as `generate_rpg_pack` (mint + validate a
+fresh pack, read-only) and is playable in-memory via `new_game`'s
+`generate_rpg_seed`.
 
-## Content library (17 packs)
+## Content Library
 
 The shipped, validated content — every pack passes the validator and is wired into
 `npm run health`:
 
-| Mode | Pack | File |
-|---|---|---|
-| CYOA | The Watchtower Road | `content/cyoa/pack/watchtower_road.yaml` |
-| CYOA | The Clockwork Heist | `content/cyoa/pack/clockwork_heist.yaml` |
-| CYOA | The Wrecker's Light | `content/cyoa/pack/wreckers_light.yaml` |
-| CYOA | The White Stag | `content/cyoa/pack/white_stag.yaml` |
-| CYOA | Dead Reckoning | `content/cyoa/pack/dead_reckoning.yaml` |
-| CYOA | The Tithe-Barn | `content/cyoa/pack/tithe_barn.yaml` |
-| CYOA | The Midnight Edition | `content/cyoa/pack/midnight_edition.yaml` |
-| Parser | The Sealed Crypt | `content/parser/pack/sealed_crypt.yaml` |
-| Parser | The Alchemist's Tower | `content/parser/pack/alchemists_tower.yaml` |
-| Parser | The Friars' Postern | `content/parser/pack/friars_postern.yaml` |
-| Parser | The Lamplighter's Round | `content/parser/pack/lamplighters_round.yaml` |
-| Parser | The Tide-Mill | `content/parser/pack/tide_mill.yaml` |
-| RPG | The Sunken Barrow | `content/rpg/pack/sunken_barrow.yaml` |
-| RPG | The Cold Forge | `content/rpg/pack/cold_forge.yaml` |
-| RPG | The Dawn Beacon | `content/rpg/pack/dawn_beacon.yaml` |
-| RPG | The Wolf-Winter | `content/rpg/pack/wolf_winter.yaml` |
-| RPG | The Breaking Weir | `content/rpg/pack/breaking_weir.yaml` |
+| Pack                     | File                                        |
+| ------------------------ | ------------------------------------------- |
+| The Advocate's Case      | `content/rpg/pack/advocates_case.yaml`      |
+| The Bellfounder's Alarm  | `content/rpg/pack/bellfounders_alarm.yaml`  |
+| The Breaking Weir        | `content/rpg/pack/breaking_weir.yaml`       |
+| The Bridgewright's Proof | `content/rpg/pack/bridgewrights_proof.yaml` |
+| The Cold Forge           | `content/rpg/pack/cold_forge.yaml`          |
+| The Dawn Beacon          | `content/rpg/pack/dawn_beacon.yaml`         |
+| The Factor's Mark        | `content/rpg/pack/factors_mark.yaml`        |
+| The Falconer's Ransom    | `content/rpg/pack/falconers_ransom.yaml`    |
+| The Gallowmere           | `content/rpg/pack/gallowmere.yaml`          |
+| The Lock-Keeper's Toll   | `content/rpg/pack/lockkeepers_toll.yaml`    |
+| The Powder Mill Surety   | `content/rpg/pack/powder_mill_surety.yaml`  |
+| The Printer's Night      | `content/rpg/pack/printers_night.yaml`      |
+| The Quarrymen's Fault    | `content/rpg/pack/quarrymens_fault.yaml`    |
+| The Sunken Barrow        | `content/rpg/pack/sunken_barrow.yaml`       |
+| The Tanner's Fever       | `content/rpg/pack/tanners_fever.yaml`       |
+| The Wolf-Winter          | `content/rpg/pack/wolf_winter.yaml`         |
 
 Most of this library — plus engine refinements like reactive room/scene descriptions
 (`variants`), an opt-in `meta.deadline` timer, and natural USE-verbs — was produced
@@ -225,51 +193,53 @@ npm run typecheck                                        # tsc --noEmit
 npm run lint                                             # ESLint
 npm run format:check                                     # Prettier (use `npm run format` to fix)
 npm test                                                  # unit + property tests
-npm run replay                                            # Stage 0: round-trip a trace
-npm run validate -- content/cyoa/pack/watchtower_road.yaml # Stage 1: validate a pack
-npm run play -- content/cyoa/pack/watchtower_road.yaml     # Stage 1: play it (interactive)
-npm run validate -- content/parser/pack/sealed_crypt.yaml  # Stage 2: validate the parser pack
-npm run play:parser -- content/parser/pack/sealed_crypt.yaml # Stage 2: play it (interactive)
-npm run play:parser -- content/parser/pack/alchemists_tower.yaml  # Stage 3: score + death/restore
-npm run validate -- content/rpg/pack/sunken_barrow.yaml    # Stage 4: validate the RPG pack
-npm run play:rpg -- content/rpg/pack/sunken_barrow.yaml     # Stage 4: play it (combat + skill check)
+npm run replay                                            # replay the committed RPG smoke trace
+npm run validate                                           # validate all shipped RPG packs
+npm run validate -- content/rpg/pack/sunken_barrow.yaml    # validate one RPG pack
+npm run play                                                # play the default world quest
+npm run play -- sunken_barrow                               # play a shipped world quest
 npm run inspect -- content/rpg/pack/sunken_barrow.yaml      # summarize a pack (or a trace)
-npm run author -- "your one-line premise here"             # author a pack from prose (§12.1-3)
+npm run author -- "your one-line premise here"             # author an RPG pack from prose (§12.1-3)
 npm run ui:dev                                             # Stage 5: web UI (after npm --prefix ui install)
 ```
 
-Non-interactive play (scriptable / CI): for CYOA add `--choices id1,id2,...`; for the
-parser/RPG add `--commands "go north; take rope; attack wight; ..."`. Both accept
-`--record traces/run.json` to save a replayable trace. `npm run validate` and
-`npm run inspect` auto-detect CYOA vs parser vs RPG packs.
+Non-interactive play (scriptable / CI): add
+`--commands "go north; take rope; attack wight; ..."`. Use
+`--record traces/run.json` to save a replayable trace; shipped quest traces embed
+their `worldQuestId`, so `npm run replay -- <recorded-trace>` needs no pack path.
+Raw pack paths remain accepted only for offline validation/replay/inspection
+compatibility. `npm run validate` is the RPG content gate and rejects non-RPG pack
+shapes.
 
 ### MCP server — how an agent plays the game (§9.4)
 
 The engine is exposed as an MCP server so any agent harness (Claude Code, Codex,
 Gemini CLI, …) plays via native tool calls over the structured observation/action
-loop — never a raw parser. **The tools are multi-mode**: the same `new_game` /
-`step_action` / `get_observation` / `validate_pack` / save·load /
-replay path plays CYOA, parser, and RPG packs — mode is auto-detected from the
-pack's structure (never a field in content, §16) and carried on every observation
-as `mode`. Tools: `validate_pack`, `load_pack`, `new_game`, `get_observation`,
-`list_legal_actions`, `step_action`, `save_game`, `load_game`,
-`replay_trace`, `inspect_trace` (per-step summary + suspected bugs),
-`apply_content_patch` (deterministic, whitelisted patch — cyoa/parser),
-`adapt_story` (author a pack from a premise),
-`generate_pack` (mint + validate a fresh procedural CYOA pack from a seed — read-only;
-play it in-memory via `new_game`'s `generate_seed`). `list_stories` discovers packs
-across `content/{cyoa,parser,rpg}/pack` with each pack's mode. All paths are
-confined to the project root; content and traces are data only (§16). The handlers
-(`src/mcp/tools.ts`) are unit-tested directly without a live client.
+loop — never a raw parser. The MCP catalog is RPG-only: `list_stories`
+reads the Charter Marches quest graph, picks the high-depth RPG pack
+`breaking_weir` as the default, and `list_world` reports the same RPG quest set
+with hub routes. Shipped quests should start through `start_world_quest` or
+`new_game` with `world_quest_id`; raw `pack_path` live starts are rejected. Saves
+for shipped quests can also restore with `world_quest_id`. The same world id can
+replay or inspect shipped traces. The same structured `new_game` /
+`step_action` / `get_observation` / save·load path drives RPG sessions through
+stable action ids and deterministic state hashes. Explicit non-RPG pack loading is
+rejected through MCP with an `UNSUPPORTED_LEGACY_PACK` report; old pack shapes are
+now migration data, not playable agent targets. The CYOA tree has been retired. All
+paths are confined to the project root; content and traces are data only (§16). The
+handlers (`src/mcp/tools.ts`)
+are unit-tested directly without a live client.
 
 ```bash
 npm run mcp   # start the stdio server
 ```
 
 The project ships `.mcp.json`, so an MCP client opened in this repo can connect
-automatically (approve the `adventureforge` server when prompted). The agent loop is:
-`new_game` → read `observation.available_actions` → `step_action` with a chosen
-`action_id` → repeat until `observation.ended`.
+automatically (approve the `adventureforge` server when prompted). The direct
+quest loop is: `new_game` → read `observation.available_actions` → `step_action`
+with a chosen `action_id` → repeat until `observation.ended`. The open-world loop
+starts with `start_overworld`; after discovering a local lead,
+`start_overworld_session_quest` returns the playable RPG session for that quest.
 
 ### Testing: two modes — dev tests + a blind LLM playtest
 
@@ -277,11 +247,11 @@ Quality rests on exactly two kinds of testing, nothing in between:
 
 - **Dev tests** (full knowledge, specific assertions): the vitest unit/regression
   suite plus the validators (`src/validate/`) and the exhaustive BFS solver, which
-  *prove* every declared ending is reachable, no path soft-locks, and the score
+  _prove_ every declared ending is reachable, no path soft-locks, and the score
   economy is sound. These run in `npm run health`.
-- **Blind LLM playtest**: a fresh subagent with NO repo access plays a pack purely
-  through the MCP tools and reports its route, step count, choices, and a
-  clarity/enjoyment/confusion read — the only judge of player-facing quality
+- **Blind LLM playtest**: a fresh subagent with NO repo access plays a shipped
+  quest id purely through the MCP tools and reports its route, step count, choices,
+  and a clarity/enjoyment/confusion read — the only judge of player-facing quality
   (signposting, pacing, discoverability) a static check can't see. The harness is in
   `blind-tester/` and the protocol in `docs/blind_playtest_protocol.md`; the AFK loop
   runs one every cycle.
@@ -291,15 +261,14 @@ OpenAI/Anthropic/Google backends sit behind env vars and fall back to a determin
 keyless mock, so authoring/adapting runs in CI with no API keys.
 
 ```bash
-npm run blind -- --pack content/parser/pack/sealed_crypt.yaml --seed 7
+npm run blind -- --quest sunken_barrow --seed 7
 ```
 
 ## Status: all stages complete ✅
 
-Stages 0–5 are implemented and green — the full proof path from a deterministic
-core, through CYOA, a Zork-style parser, a Sierra-Quest scoring/death game, a
-Hero's-Quest RPG (stats + seeded combat + skill checks via the §14 gate), to a
-React web UI that is a pure view over the same headless engine. The complete loop
+Stages 0–5 are implemented and green — the proof path now runs from a deterministic
+core through the RPG runtime (stats + seeded combat + skill checks via the §14 gate)
+to a React web UI that is a pure view over the same headless engine. The complete loop
 from the thesis — AI writes a story → adapts it to a validated pack → the engine
 validates it → an AI plays every route through the structured legal-action API →
 records its experience → a debugger finds a flaw → a fixer patches it → a

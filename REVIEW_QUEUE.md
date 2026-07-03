@@ -14,6 +14,7 @@ question (two autonomous systems can't co-develop one `main`; the contention cra
 claude loop twice with exit 255).
 
 **Your call — pick one:**
+
 - **(a)** agy keeps `main` → I leave the loop down. I can `git reset --hard origin/main` to
   drop my local commit if you don't want claude's pack on agy's history (recoverable via reflog).
 - **(b)** claude loop resumes on `main` (only safe if agy is truly off) → I push and relaunch.

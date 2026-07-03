@@ -70,150 +70,6 @@ graph:
       name: "Winter Steadings"
       kind: route
       district: "Outlying steads under Charterhaven writ"
-    - id: aleconners_seal
-      name: "The Ale-Conner's Seal"
-      kind: quest
-      pack: "content/cyoa/pack/aleconners_seal.yaml"
-    - id: alnagers_fault
-      name: "The Alnager's Fault"
-      kind: quest
-      pack: "content/cyoa/pack/alnagers_fault.yaml"
-    - id: bellmans_round
-      name: "The Bellman's Round"
-      kind: quest
-      pack: "content/cyoa/pack/bellmans_round.yaml"
-    - id: bread_assize
-      name: "The Bread Assize"
-      kind: quest
-      pack: "content/cyoa/pack/bread_assize.yaml"
-    - id: clockwork_heist
-      name: "The Clockwork Heist"
-      kind: quest
-      pack: "content/cyoa/pack/clockwork_heist.yaml"
-    - id: croft_inquest
-      name: "The Croft Inquest"
-      kind: quest
-      pack: "content/cyoa/pack/croft_inquest.yaml"
-    - id: dead_reckoning
-      name: "Dead Reckoning"
-      kind: quest
-      pack: "content/cyoa/pack/dead_reckoning.yaml"
-    - id: examiners_commission
-      name: "The Examiner's Commission"
-      kind: quest
-      pack: "content/cyoa/pack/examiners_commission.yaml"
-    - id: excise_surveyors_round
-      name: "The Surveyor's Round"
-      kind: quest
-      pack: "content/cyoa/pack/excise_surveyors_round.yaml"
-    - id: ferrymansprice
-      name: "The Ferryman's Price"
-      kind: quest
-      pack: "content/cyoa/pack/ferrymansprice.yaml"
-    - id: fire_office_examiner
-      name: "The Fire Office Examiner"
-      kind: quest
-      pack: "content/cyoa/pack/fire_office_examiner.yaml"
-    - id: fishermans_privilege
-      name: "The Fisherman's Privilege"
-      kind: quest
-      pack: "content/cyoa/pack/fishermans_privilege.yaml"
-    - id: midnight_edition
-      name: "The Midnight Edition"
-      kind: quest
-      pack: "content/cyoa/pack/midnight_edition.yaml"
-    - id: night_dispensary
-      name: "The Night Dispensary"
-      kind: quest
-      pack: "content/cyoa/pack/night_dispensary.yaml"
-    - id: priors_cellar
-      name: "The Prior's Cellar"
-      kind: quest
-      pack: "content/cyoa/pack/priors_cellar.yaml"
-    - id: tidewaiters_watch
-      name: "The Tidewaiter's Watch"
-      kind: quest
-      pack: "content/cyoa/pack/tidewaiters_watch.yaml"
-    - id: tithe_barn
-      name: "The Tithe-Barn"
-      kind: quest
-      pack: "content/cyoa/pack/tithe_barn.yaml"
-    - id: watchtower_road
-      name: "The Watchtower Road"
-      kind: quest
-      pack: "content/cyoa/pack/watchtower_road.yaml"
-    - id: white_stag
-      name: "The White Stag"
-      kind: quest
-      pack: "content/cyoa/pack/white_stag.yaml"
-    - id: wreckers_light
-      name: "The Wrecker's Light"
-      kind: quest
-      pack: "content/cyoa/pack/wreckers_light.yaml"
-    - id: alchemists_tower
-      name: "The Alchemist's Tower"
-      kind: quest
-      pack: "content/parser/pack/alchemists_tower.yaml"
-    - id: apothecaries_standard
-      name: "The Apothecary's Standard"
-      kind: quest
-      pack: "content/parser/pack/apothecaries_standard.yaml"
-    - id: assayers_mark
-      name: "The Assayer's Mark"
-      kind: quest
-      pack: "content/parser/pack/assayers_mark.yaml"
-    - id: cellarmans_dark
-      name: "The Cellarman's Dark"
-      kind: quest
-      pack: "content/parser/pack/cellarmans_dark.yaml"
-    - id: chandlers_lot
-      name: "The Chandler's Lot"
-      kind: quest
-      pack: "content/parser/pack/chandlers_lot.yaml"
-    - id: collectors_warrant
-      name: "The Collector's Warrant"
-      kind: quest
-      pack: "content/parser/pack/collectors_warrant.yaml"
-    - id: coroners_errand
-      name: "The Coroner's Errand"
-      kind: quest
-      pack: "content/parser/pack/coroners_errand.yaml"
-    - id: dyers_weight
-      name: "The Dyer's Weight"
-      kind: quest
-      pack: "content/parser/pack/dyers_weight.yaml"
-    - id: friars_postern
-      name: "The Friars' Postern"
-      kind: quest
-      pack: "content/parser/pack/friars_postern.yaml"
-    - id: gaugers_register
-      name: "The Gauger's Register"
-      kind: quest
-      pack: "content/parser/pack/gaugers_register.yaml"
-    - id: lamplighters_round
-      name: "The Lamplighter's Round"
-      kind: quest
-      pack: "content/parser/pack/lamplighters_round.yaml"
-    - id: ropewalkers_twist
-      name: "The Ropewalker's Twist"
-      kind: quest
-      pack: "content/parser/pack/ropewalkers_twist.yaml"
-    - id: scriveners_proof
-      name: "The Scrivener's Proof"
-      kind: quest
-      pack: "content/parser/pack/scriveners_proof.yaml"
-    - id: sealed_crypt
-      name: "The Sealed Crypt"
-      kind: quest
-      pack: "content/parser/pack/sealed_crypt.yaml"
-    - id: tide_mill
-      name: "The Tide-Mill"
-      kind: quest
-      pack: "content/parser/pack/tide_mill.yaml"
-    - id: weighmasters_round
-      name: "The Weighmaster's Round"
-      kind: quest
-      pack: "content/parser/pack/weighmasters_round.yaml"
     - id: advocates_case
       name: "The Advocate's Case"
       kind: quest
@@ -316,92 +172,11 @@ graph:
       to: winter_steadings
       route: "winter road"
     - from: guildhall_yard
-      to: alnagers_fault
-      route: "cloth-hall summons"
-    - from: guildhall_yard
       to: advocates_case
       route: "pleas-yard summons"
-    - from: guildhall_yard
-      to: apothecaries_standard
-      route: "apothecaries' standard writ"
-    - from: guildhall_yard
-      to: assayers_mark
-      route: "goldsmiths' assay lane"
-    - from: guildhall_yard
-      to: dyers_weight
-      route: "dye-house warrant"
-    - from: guildhall_yard
-      to: scriveners_proof
-      route: "scrivener's lane"
-    - from: guildhall_yard
-      to: fire_office_examiner
-      route: "insurance office writ"
-    - from: doctors_commons
-      to: examiners_commission
-      route: "registry stair"
-    - from: doctors_commons
-      to: coroners_errand
-      route: "coroner's lane"
-    - from: doctors_commons
-      to: croft_inquest
-      route: "inquest road"
-    - from: printers_ward
-      to: midnight_edition
-      route: "midnight press run"
     - from: printers_ward
       to: printers_night
       route: "night court alley"
-    - from: printers_ward
-      to: bellmans_round
-      route: "bellman's watch"
-    - from: printers_ward
-      to: clockwork_heist
-      route: "clockmaker's ward"
-    - from: printers_ward
-      to: night_dispensary
-      route: "apothecary row"
-    - from: printers_ward
-      to: priors_cellar
-      route: "prior's cellar stair"
-    - from: printers_ward
-      to: alchemists_tower
-      route: "old tower lane"
-    - from: printers_ward
-      to: cellarmans_dark
-      route: "coal-yard descent"
-    - from: river_stairs
-      to: ferrymansprice
-      route: "south ferry chain"
-    - from: river_stairs
-      to: lamplighters_round
-      route: "lamp round"
-    - from: river_stairs
-      to: chandlers_lot
-      route: "chandler's stair"
-    - from: river_stairs
-      to: tidewaiters_watch
-      route: "tide office quay"
-    - from: east_quay
-      to: dead_reckoning
-      route: "pilot's berth"
-    - from: east_quay
-      to: fishermans_privilege
-      route: "harbour magistracy"
-    - from: east_quay
-      to: collectors_warrant
-      route: "customs duty room"
-    - from: east_quay
-      to: weighmasters_round
-      route: "weighmaster's counting house"
-    - from: east_quay
-      to: gaugers_register
-      route: "gauger's yard"
-    - from: east_quay
-      to: ropewalkers_twist
-      route: "ropewalk quay"
-    - from: industrial_cut
-      to: tide_mill
-      route: "mill race"
     - from: industrial_cut
       to: bellfounders_alarm
       route: "bellfounders' yard"
@@ -424,35 +199,11 @@ graph:
       to: powder_mill_surety
       route: "powder mill race"
     - from: market_parishes
-      to: aleconners_seal
-      route: "brewers' row"
-    - from: market_parishes
-      to: bread_assize
-      route: "bread market"
-    - from: market_parishes
-      to: excise_surveyors_round
-      route: "maltsters' ward"
-    - from: market_parishes
       to: tanners_fever
       route: "tanner's sickroom"
     - from: north_road
-      to: watchtower_road
-      route: "watch road"
-    - from: north_road
-      to: tithe_barn
-      route: "barn track"
-    - from: north_road
-      to: friars_postern
-      route: "postern lane"
-    - from: north_road
-      to: sealed_crypt
-      route: "crypt chapel road"
-    - from: north_road
       to: quarrymens_fault
       route: "quarry cutting"
-    - from: forest_manors
-      to: white_stag
-      route: "stag forest ride"
     - from: forest_manors
       to: falconers_ransom
       route: "hawk yard"
@@ -462,9 +213,6 @@ graph:
     - from: moor_road
       to: sunken_barrow
       route: "barrow causeway"
-    - from: coast_road
-      to: wreckers_light
-      route: "wreckers' cliff road"
     - from: coast_road
       to: dawn_beacon
       route: "beacon muster"

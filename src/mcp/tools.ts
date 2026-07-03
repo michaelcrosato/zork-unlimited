@@ -5,43 +5,37 @@
  * built — the engine stays the source of truth. These are unit-tested directly,
  * without a live MCP client (a §9.4 rule); server.ts only adapts them to stdio.
  *
- * The tools are MULTI-MODE (roadmap Milestone 1): one session abstraction plays
- * CYOA, parser, and RPG packs. Mode is detected from the pack structure
- * (`detectMode`, never a field in content, §16) and every play/validate/playtest
- * tool dispatches on it. CYOA behavior is kept byte-identical (its playtest path
- * is unchanged). Content and traces are data only — no handler runs shell or
- * code (§16).
+ * The public world catalog, quest loading path, and live session dispatch are all
+ * RPG-only. Legacy content files may still exist as data during migration, but MCP
+ * never indexes, observes, starts, or validates them as playable sessions. Content
+ * and traces are data only — no handler runs shell or code (§16).
  */
-import { readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { readFileSync, statSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 import { hashState } from "../core/hash.js";
 import { makeStep, type Rules } from "../core/engine.js";
-import type { Action } from "../api/types.js";
+import type { RpgAction } from "../api/types.js";
 import type { GameState } from "../core/state.js";
 import type { GameEvent } from "../core/events.js";
 
-import { compilePack, loadPackFile } from "../cyoa/pack.js";
-import { generateCyoaPack } from "../gen/cyoa_generator.js";
-import type { CyoaPack } from "../cyoa/schema.js";
-import { indexPack, buildRules, initStateForPack, type CyoaIndex } from "../cyoa/runner.js";
-import type { ParserIndex } from "../parser/model.js";
-import { buildObservation } from "../cyoa/observation.js";
-import { validateCyoa } from "../validate/cyoa_validator.js";
-
-import { compileParserPack, loadParserPackFile } from "../parser/pack.js";
-import { generateParserPack } from "../gen/parser_generator.js";
-import type { ParserPack } from "../parser/schema.js";
-import { indexParserPack, buildParserRules, initStateForParserPack } from "../parser/runner.js";
-import { buildParserObservation } from "../parser/observation.js";
-import { validateParser } from "../validate/parser_validator.js";
-
-import { compileRpgPack } from "../rpg/pack.js";
+import { compileRpgPack, loadRpgPackFile, type CompiledRpgPack } from "../rpg/pack.js";
 import { generateRpgPack } from "../gen/rpg_generator.js";
 import type { RpgPack } from "../rpg/schema.js";
-import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../rpg/runner.js";
-import { buildRpgObservation } from "../rpg/observation.js";
+import {
+  indexRpgPack,
+  buildRpgRules,
+  initStateForRpgPack,
+  enumerateRpgActions,
+  type RpgIndex,
+} from "../rpg/runner.js";
+import type { RpgActionOption } from "../rpg/legal_actions.js";
+import {
+  buildRpgObservation,
+  type ObservationOptions,
+  type RpgObservation,
+} from "../rpg/observation.js";
 import { validateRpg } from "../validate/rpg_validator.js";
+import { assertRpgStateReferences } from "../rpg/state_integrity.js";
 
 import {
   makeReport,
@@ -49,67 +43,64 @@ import {
   type Finding,
   type ValidationReport,
 } from "../validate/report.js";
-import { save, load, SaveIntegrityError, assertWellFormedState } from "../persist/save_load.js";
-import { replayTrace } from "../trace/replay.js";
+import { SAVE_MODE, save, load, assertWellFormedState } from "../persist/save_load.js";
+import { assertTraceMode, replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
-import { SessionStore, type Session } from "./sessions.js";
+import { SessionStore, type Session, type TranscriptSummary } from "./sessions.js";
 import {
-  detectMode,
+  isRpgPackShape,
   type PackMode,
-  type AnyCompiledPack,
-  type AnyIndex,
-  type AnyObservation,
+  type McpActionOption,
+  type McpObservation,
 } from "./types.js";
+import {
+  compactPlayerEvent,
+  RPG_COMPACT_EVENT_VERSION,
+  type RpgCompactEvent,
+} from "./compact_rpg_event.js";
+import {
+  compactRpgObservation,
+  RPG_COMPACT_OBSERVATION_VERSION,
+  type RpgCompactObservation,
+} from "./compact_rpg_observation.js";
 import type { WorldBinding, WorldManifest } from "../world/schema.js";
 import {
-  CANONICAL_HUB_CITY,
-  CANONICAL_WORLD_ID,
-  CANONICAL_WORLD_NAME,
-  WorldManifestSchema,
-} from "../world/schema.js";
-import { worldQuestNodeForPack, worldRouteForPack, type WorldRouteStep } from "../world/graph.js";
+  normalizePackPath,
+  worldQuestNodeById,
+  worldQuestNodeForPack,
+  worldRouteFromHub,
+  type WorldRouteStep,
+} from "../world/graph.js";
 import {
-  assertOverworldIntegrity,
-  overworldAreasAt,
-  overworldCharactersAt,
-  overworldEdgesFrom,
-  overworldEventsAt,
-  overworldExplorationSitesNear,
-  overworldJobsAt,
-  overworldPoisAt,
-  overworldQuestsAt,
-  overworldRoadEventFor,
-  parseOverworldManifest,
-  type OverworldArea,
-  type OverworldAreaEdge,
-  type OverworldEdge,
-  type OverworldCharacter,
-  type OverworldExplorationSite,
-  type OverworldLocalJob,
-  type OverworldLocalEvent,
-  type OverworldManifest,
-  type OverworldNode,
-  type OverworldPoi,
-  type OverworldQuest,
-  type OverworldRoadEvent,
-} from "../world/overworld.js";
+  loadOverworldManifest as loadOverworldManifestFromRoot,
+  loadWorldManifest as loadWorldManifestFromRoot,
+  resolveGameSource,
+  resolvePackSource,
+  resolveSaveGameSource,
+  resolveTracePackSource,
+  resolveWorldQuestPackPath as resolveWorldQuestPackPathFromRoot,
+} from "../world/source.js";
+import { type OverworldManifest, type OverworldNode } from "../world/overworld.js";
 import {
   OverworldSession,
   type OverworldActionResult,
   type OverworldAreaTravelResult,
+  type OverworldQuestCompletionResult,
   type OverworldRoadEncounterResult,
   type OverworldRoadEncounterStrategy,
   type OverworldSessionSnapshot,
   type OverworldSessionRoutePlan,
   type OverworldServiceResult,
+  type OverworldQuestView,
   type OverworldView,
   type TravelLogEntry,
 } from "../world/session.js";
+import type { OverworldCompactView } from "../world/compact_view.js";
 import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
 import { resolveProvider } from "../../agents/llm/providers.js";
 import { loadEngineContract, runWriter } from "../../agents/authoring/writer.js";
-import { runAdapter, runParserAdapter, runRpgAdapter } from "../../agents/authoring/adapter.js";
+import { runRpgAdapter } from "../../agents/authoring/adapter.js";
 import { diagnose } from "../../agents/debugger.js";
 import {
   applyContentPatch,
@@ -120,135 +111,581 @@ import {
 export type ToolApi = ReturnType<typeof createToolApi>;
 
 type LoadResult =
-  | { ok: true; mode: PackMode; compiled: AnyCompiledPack; report: ValidationReport }
+  | { ok: true; compiled: CompiledRpgPack; report: ValidationReport }
   | { ok: false; report: ValidationReport };
 
-type StoryEntry = {
+type PackLoadCacheEntry = {
+  mtimeMs: number;
+  size: number;
+  result: LoadResult;
+};
+
+type WorldQuestSourceEntry = {
   path: string;
   id: string;
   title: string;
   mode: PackMode | null;
   playable: boolean;
   world: WorldBinding | null;
+  world_quest_id: string | null;
 };
 
-// ── Mode-aware dispatch (the §3 Layer-2/3 boundary stays per-mode) ──────────────
-// `mode` and `index` are always created together (startSession), so narrowing the
-// AnyIndex union by `mode` in these switches is sound — a localized, documented
-// cast rather than a structural guess.
+type PublicWorldGraphNode = Omit<WorldManifest["graph"]["nodes"][number], "pack">;
 
-function indexFor(mode: PackMode, pack: AnyCompiledPack["pack"]): AnyIndex {
-  if (mode === "cyoa") return indexPack(pack as Parameters<typeof indexPack>[0]);
-  if (mode === "parser") return indexParserPack(pack as Parameters<typeof indexParserPack>[0]);
-  return indexRpgPack(pack as Parameters<typeof indexRpgPack>[0]);
+type PublicWorldGraph = Omit<WorldManifest["graph"], "nodes" | "edges"> & {
+  nodes: PublicWorldGraphNode[];
+  edges: WorldManifest["graph"]["edges"];
+};
+
+type PublicWorldSummary = Pick<WorldManifest, "id" | "name" | "hub">;
+
+type WorldListOptions = {
+  include_graph?: boolean;
+  include_routes?: boolean;
+};
+
+type WorldQuestCatalogEntry = {
+  id: string;
+  title: string;
+  playable: boolean;
+  world_quest_id: string | null;
+  district: string;
+  quest: string;
+  role: string;
+  connection: string;
+  graph_node: string | null;
+};
+
+type WorldQuestRouteDetails = {
+  path_from_hub: WorldRouteStep[];
+};
+
+type WorldListQuest<Args extends WorldListOptions> = WorldQuestCatalogEntry &
+  (Args extends { include_routes: true } ? WorldQuestRouteDetails : Record<string, never>);
+
+type WorldListResponse<Args extends WorldListOptions> = {
+  world: PublicWorldSummary;
+  hub: string;
+  quest_count: number;
+  quests: WorldListQuest<Args>[];
+} & (Args extends { include_graph: true } ? { graph: PublicWorldGraph } : Record<string, never>);
+
+type OverworldSessionPayload<Key extends string, Value> = {
+  ok: true;
+  session_id: string;
+  snapshot_hash: string;
+  observation: OverworldView;
+} & { [P in Key]: Value };
+
+type OverworldCompactSessionPayload<Key extends string, Value> = {
+  ok: true;
+  session_id: string;
+  snapshot_hash: string;
+  context: OverworldCompactView;
+} & { [P in Key]: Value };
+
+type OverworldResponseOptions = {
+  compact_context?: boolean;
+  expected_snapshot_hash?: string;
+};
+
+type OverworldListOptions = {
+  include_design_notes?: boolean;
+};
+
+type RpgResponseOptions = {
+  compact_actions?: boolean;
+  compact_events?: boolean;
+  compact_observation?: boolean;
+};
+
+type OverworldViewField<Args extends OverworldResponseOptions> = Args extends {
+  compact_context: true;
+}
+  ? { context: OverworldCompactView }
+  : { observation: OverworldView };
+
+type OverworldRejectedSessionPayload = {
+  ok: false;
+  snapshot_hash: string;
+  rejection_reason: string;
+};
+
+type OverworldGuardedRejection<Args extends OverworldResponseOptions> = Args extends {
+  expected_snapshot_hash: string;
+}
+  ? OverworldRejectedSessionPayload
+  : never;
+
+type OverworldStartResponse<Args extends OverworldResponseOptions> = {
+  session_id: string;
+  snapshot_hash: string;
+} & OverworldViewField<Args>;
+
+type OverworldRestoreResponse<Args extends OverworldResponseOptions> = {
+  ok: true;
+  session_id: string;
+  snapshot_hash: string;
+} & OverworldViewField<Args>;
+
+type OverworldExportArgs = {
+  session_id: string;
+  expected_snapshot_hash?: string;
+};
+
+type OverworldExportSuccess = {
+  ok: true;
+  session_id: string;
+  snapshot_hash: string;
+  snapshot: OverworldSessionSnapshot;
+};
+
+type OverworldExportRejection = {
+  ok: false;
+  snapshot_hash: string;
+  rejection_reason: string;
+};
+
+type OverworldExportResponse<Args extends OverworldExportArgs> = Args extends {
+  expected_snapshot_hash: string;
+}
+  ? OverworldExportSuccess | OverworldExportRejection
+  : OverworldExportSuccess;
+
+type OverworldListSummary = {
+  world: Pick<OverworldManifest, "id" | "name" | "start" | "premise">;
+  town_count: number;
+  road_count: number;
+  region_count: number;
+  regional_arc_count: number;
+  area_count: number;
+  area_route_count: number;
+  character_count: number;
+  local_event_count: number;
+  local_job_count: number;
+  road_event_count: number;
+  exploration_site_count: number;
+  quest_count: number;
+  start: OverworldNode;
+};
+
+type OverworldDesignNotes = {
+  sources: OverworldManifest["sources"];
+  design_rules: string[];
+};
+
+type OverworldListResponse<Args extends OverworldListOptions> = OverworldListSummary &
+  (Args extends { include_design_notes: true } ? OverworldDesignNotes : Record<string, never>);
+
+type RpgViewField<Args extends RpgResponseOptions> = Args extends {
+  compact_observation: true;
+}
+  ? { context: RpgCompactObservation }
+  : { observation: McpObservation };
+
+type RpgSourceFields = {
+  world_quest_id?: string;
+  generated_rpg_seed?: number;
+};
+
+type RpgSessionPayload<Args extends RpgResponseOptions = RpgResponseOptions> = {
+  session_id: string;
+  state_hash: string;
+} & RpgSourceFields &
+  RpgViewField<Args>;
+
+type RpgObservationPayload<Args extends RpgResponseOptions> = {
+  state_hash: string;
+} & RpgViewField<Args>;
+
+type RpgObservationUnchanged = {
+  state_hash: string;
+  unchanged: true;
+};
+
+type RpgObservationResponse<Args extends RpgResponseOptions> = Args extends {
+  if_state_hash: string;
+}
+  ? RpgObservationPayload<Args> | RpgObservationUnchanged
+  : RpgObservationPayload<Args>;
+
+type RpgLegalActionsArgs = {
+  session_id: string;
+  hide_graph?: boolean;
+  compact_actions?: boolean;
+  if_state_hash?: string;
+};
+
+type RpgLegalActionRows<Args extends RpgLegalActionsArgs> = Args extends {
+  compact_actions: true;
+}
+  ? string[]
+  : McpActionOption[];
+
+type RpgLegalActionsPayload<Args extends RpgLegalActionsArgs> = {
+  actions: RpgLegalActionRows<Args>;
+  state_hash: string;
+};
+
+type RpgLegalActionsUnchanged = {
+  state_hash: string;
+  unchanged: true;
+};
+
+type RpgLegalActionsResponse<Args extends RpgLegalActionsArgs> = Args extends {
+  if_state_hash: string;
+}
+  ? RpgLegalActionsPayload<Args> | RpgLegalActionsUnchanged
+  : RpgLegalActionsPayload<Args>;
+
+type RpgStepEvents<Args extends RpgResponseOptions> = Args extends { compact_events: true }
+  ? RpgCompactEvent[]
+  : ReturnType<typeof playerVisibleEvents>;
+
+type RpgStepEventVersion<Args extends RpgResponseOptions> = Args extends {
+  compact_events: true;
+}
+  ? { event_v: typeof RPG_COMPACT_EVENT_VERSION }
+  : Record<string, never>;
+
+type RpgStepActionBase<Args extends RpgResponseOptions> = {
+  events: RpgStepEvents<Args>;
+  state_hash: string;
+} & RpgStepEventVersion<Args> &
+  RpgViewField<Args>;
+
+type RpgStepGuardRejection = {
+  ok: false;
+  state_hash: string;
+  rejection_reason: string;
+};
+
+type RpgStepResponseOptions = RpgResponseOptions & { expected_state_hash?: string };
+
+type RpgStepActionResponse<Args extends RpgStepResponseOptions> =
+  | ({ ok: true } & RpgStepActionBase<Args>)
+  | ({ ok: false; rejection_reason: string } & RpgStepActionBase<Args>)
+  | (Args extends { expected_state_hash: string } ? RpgStepGuardRejection : never);
+
+type RpgNewGameArgs = {
+  generate_rpg_seed?: number;
+  seed?: number;
+  hide_graph?: boolean;
+} & RpgResponseOptions;
+
+type RpgStartWorldQuestArgs = {
+  world_quest_id: string;
+  seed?: number;
+  hide_graph?: boolean;
+} & RpgResponseOptions;
+
+type RpgGetObservationArgs = {
+  session_id: string;
+  hide_graph?: boolean;
+  if_state_hash?: string;
+} & RpgResponseOptions;
+
+type RpgStepActionArgs = {
+  session_id: string;
+  action_id: string;
+  expected_state_hash?: string;
+  hide_graph?: boolean;
+} & RpgResponseOptions;
+
+type RpgLoadGameArgs = {
+  world_quest_id?: string;
+  generate_rpg_seed?: number;
+  pack_path?: never;
+  save: string;
+  hide_graph?: boolean;
+} & RpgResponseOptions;
+
+type RpgWorldQuestStartPayload<Args extends RpgResponseOptions> = {
+  world: { id: string; name: string; hub: string };
+  quest: {
+    id: string;
+    name: string;
+    path_from_hub: WorldRouteStep[];
+  };
+} & RpgSessionPayload<Args>;
+
+type OverworldQuestStartResponse<Args extends OverworldResponseOptions & RpgResponseOptions> =
+  | ({
+      ok: true;
+      session_id: string;
+      snapshot_hash: string;
+      quest: OverworldQuestView;
+      rpg_session_id: string;
+      rpg_session: RpgSessionPayload<Args>;
+    } & OverworldViewField<Args>)
+  | OverworldGuardedRejection<Args>;
+
+type TranscriptFullTurn = Session["transcript"][number];
+type TranscriptCompactEventTurn = Omit<TranscriptFullTurn, "events"> & {
+  events: RpgCompactEvent[];
+};
+type TranscriptCompactTurn = readonly [
+  step: number,
+  scene_id: string,
+  action_id: string | null,
+  result_scene_id: string,
+];
+type TranscriptCompactMore = readonly [
+  scenes: number,
+  inventory?: number,
+  flags?: number,
+  journal?: number,
+];
+type TranscriptCompactSummary = Omit<
+  TranscriptSummary,
+  "ending_id" | "inventory" | "flags" | "journal"
+> & {
+  ending_id?: string;
+  inventory?: string[];
+  flags?: string[];
+  journal?: string[];
+  more?: TranscriptCompactMore;
+};
+type TranscriptSummaryFor<Args extends TranscriptArgs> = Args extends { compact_summary: true }
+  ? TranscriptCompactSummary
+  : TranscriptSummary;
+type TranscriptPayloadBase<Args extends TranscriptArgs> = {
+  session_id: string;
+  state_hash: string;
+  transcript_hash: string;
+  summary: TranscriptSummaryFor<Args>;
+} & RpgSourceFields;
+type TranscriptArgs = {
+  session_id: string;
+  summary_only?: boolean;
+  compact_turns?: boolean;
+  compact_events?: boolean;
+  compact_summary?: boolean;
+  if_state_hash?: string;
+  if_transcript_hash?: string;
+};
+type TranscriptTurnFor<Args extends TranscriptArgs> = Args extends { compact_turns: true }
+  ? TranscriptCompactTurn
+  : Args extends { compact_events: true }
+    ? TranscriptCompactEventTurn
+    : TranscriptFullTurn;
+type TranscriptEventVersion<Args extends TranscriptArgs> = Args extends { summary_only: true }
+  ? Record<string, never>
+  : Args extends { compact_turns: true }
+    ? Record<string, never>
+    : Args extends { compact_events: true }
+      ? { event_v: typeof RPG_COMPACT_EVENT_VERSION }
+      : Record<string, never>;
+type TranscriptPayload<Args extends TranscriptArgs> = TranscriptPayloadBase<Args> &
+  TranscriptEventVersion<Args> &
+  (Args extends { summary_only: true }
+    ? Record<string, never>
+    : { turns: TranscriptTurnFor<Args>[] });
+type TranscriptUnchanged = {
+  state_hash: string;
+  transcript_hash: string;
+  unchanged: true;
+};
+type TranscriptResponse<Args extends TranscriptArgs> = Args extends { if_state_hash: string }
+  ? TranscriptPayload<Args> | TranscriptUnchanged
+  : Args extends { if_transcript_hash: string }
+    ? TranscriptPayload<Args> | TranscriptUnchanged
+    : TranscriptPayload<Args>;
+
+const TRANSCRIPT_PROJECTION_COMPACT_TURNS = "compact-turns:v1";
+const TRANSCRIPT_PROJECTION_VISIBLE_EVENTS = "visible-events:v1";
+const TRANSCRIPT_PROJECTION_COMPACT_EVENTS = `compact-events:v${RPG_COMPACT_EVENT_VERSION}`;
+const TRANSCRIPT_SUMMARY_PROJECTION_COMPACT = "compact-summary:v1";
+const OBSERVATION_PROJECTION_COMPACT = `compact-observation:v${RPG_COMPACT_OBSERVATION_VERSION}`;
+const OBSERVATION_PROJECTION_PUBLIC = "public-observation:v1";
+const LEGAL_ACTION_ROWS_PROJECTION = "legal-action-rows:v1";
+
+type RpgGetStateArgs = {
+  session_id: string;
+  include_state?: boolean;
+};
+type RpgStateHashPayload = {
+  state_hash: string;
+};
+type RpgStatePayload = RpgStateHashPayload & {
+  state: GameState;
+};
+type RpgStateResponse<Args extends RpgGetStateArgs> = Args extends { include_state: true }
+  ? RpgStatePayload
+  : RpgStateHashPayload;
+
+type RpgSaveArgs = {
+  session_id: string;
+  expected_state_hash?: string;
+};
+
+type RpgSaveSuccess = {
+  ok: true;
+  save: string;
+  content_hash: string;
+  state_hash: string;
+} & RpgSourceFields;
+
+type RpgSaveRejection = {
+  ok: false;
+  state_hash: string;
+  rejection_reason: string;
+};
+
+type RpgSaveResponse<Args extends RpgSaveArgs> = Args extends { expected_state_hash: string }
+  ? RpgSaveSuccess | RpgSaveRejection
+  : RpgSaveSuccess;
+
+type OverworldSessionResponse<
+  Key extends string,
+  Value,
+  Args extends OverworldResponseOptions,
+> = Args extends { compact_context: true }
+  ? OverworldCompactSessionPayload<Key, Value> | OverworldGuardedRejection<Args>
+  : OverworldSessionPayload<Key, Value> | OverworldGuardedRejection<Args>;
+
+type OverworldContextPayload = {
+  ok: true;
+  session_id: string;
+  snapshot_hash: string;
+  context: OverworldCompactView;
+};
+
+type OverworldReadArgs = {
+  session_id: string;
+  if_snapshot_hash?: string;
+};
+
+type OverworldReadUnchanged = {
+  snapshot_hash: string;
+  unchanged: true;
+};
+
+type OverworldFullReadPayload = {
+  session_id: string;
+  snapshot_hash: string;
+  observation: OverworldView;
+};
+
+type OverworldReadResponse<Args extends OverworldReadArgs> = Args extends {
+  if_snapshot_hash: string;
+}
+  ? OverworldFullReadPayload | OverworldReadUnchanged
+  : OverworldFullReadPayload;
+
+type OverworldContextResponse<Args extends OverworldReadArgs> = Args extends {
+  if_snapshot_hash: string;
+}
+  ? OverworldContextPayload | OverworldReadUnchanged
+  : OverworldContextPayload;
+
+function indexFor(pack: CompiledRpgPack["pack"]): RpgIndex {
+  return indexRpgPack(pack);
 }
 
-function rulesFor(mode: PackMode, index: AnyIndex): Rules {
-  if (mode === "cyoa") return buildRules(index as Parameters<typeof buildRules>[0]);
-  if (mode === "parser") return buildParserRules(index as Parameters<typeof buildParserRules>[0]);
-  return buildRpgRules(index as Parameters<typeof buildRpgRules>[0]);
+function rulesFor(index: RpgIndex): Rules<RpgAction> {
+  return buildRpgRules(index);
 }
 
-function initStateFor(mode: PackMode, index: AnyIndex, seed: number): GameState {
-  if (mode === "cyoa")
-    return initStateForPack(index as Parameters<typeof initStateForPack>[0], seed);
-  if (mode === "parser")
-    return initStateForParserPack(index as Parameters<typeof initStateForParserPack>[0], seed);
-  return initStateForRpgPack(index as Parameters<typeof initStateForRpgPack>[0], seed);
+function initStateFor(index: RpgIndex, seed: number): GameState {
+  return initStateForRpgPack(index, seed);
 }
 
 function buildObsFor(
-  mode: PackMode,
-  index: AnyIndex,
+  index: RpgIndex,
   state: GameState,
-  opts: { hideGraph?: boolean; includeWorldIntro?: boolean } = {},
-): AnyObservation {
-  const obsOpts = { includeWorldIntro: true, ...opts };
-  if (mode === "cyoa")
-    return buildObservation(index as Parameters<typeof buildObservation>[0], state, obsOpts);
-  if (mode === "parser")
-    return buildParserObservation(
-      index as Parameters<typeof buildParserObservation>[0],
-      state,
-      obsOpts,
-    );
-  return buildRpgObservation(index as Parameters<typeof buildRpgObservation>[0], state, obsOpts);
+  opts: ObservationOptions = {},
+): RpgObservation {
+  return buildRpgObservation(index, state, opts);
 }
 
-/**
- * Referential-integrity gate for a LOADED state (§16 "integrity at load") — the
- * pack-aware complement to save_load.ts's `GameStateSchema` (bug_0181). That
- * schema guards WHETHER a loaded state is well-formed and finite, but `load()`
- * holds only the content hash, not the pack, so it cannot tell whether the
- * state's symbols actually EXIST. A forged-but-finite save (valid structure,
- * correct hash) can set `current` to a phantom location — the engine would then
- * render the whole game from a room/scene that does not exist — or `endingId` to
- * a fabricated ending. This runs at `startSession`, the one chokepoint that has
- * BOTH the loaded state and the index, and REJECTS such a save (throws
- * `SaveIntegrityError`); it never coerces. It is the SoundnessBench
- * REJECTION-DIRECTION oracle (cf. bug_0181) carried from finiteness to reference.
- *
- * CYOA terminals are reached by goto+end_game (cyoa/runner.ts), so a legitimately
- * ENDED CYOA save carries `current`/`endingId` = a terminal id that is NOT a
- * scene; the valid sets fold in `terminalIds` so those real saves still load.
- * Parser/RPG keep the player in a room at end_game, so their `current` is always
- * a room id and their `endingId` a declared ending.
- *
- * `inventory` is the third rendered referential field (bug_0184): a phantom item
- * id surfaces verbatim in the observation and in the `INVENTORY` narration ("You
- * are carrying: <phantom>"), so an un-gated forged save shows the player a symbol
- * the pack never declares — the same "render a nonexistent symbol" hole bug_0183
- * closed for `current`. The valid item set is PROVABLY COMPLETE, so gating it can
- * never false-reject a legitimate save: an item can only enter inventory via a
- * parser/RPG `TAKE` (which only succeeds for a DECLARED object, legal_actions.ts)
- * or an `add_item` effect — so `declared objects ∪ every add_item target in the
- * pack` is exactly the set a real playthrough could ever hold. CYOA has no object
- * namespace, so its legitimate items are the add_item targets alone.
- */
-function collectAddItemTargets(node: unknown, acc: Set<string>): Set<string> {
-  if (Array.isArray(node)) {
-    for (const el of node) collectAddItemTargets(el, acc);
-  } else if (node !== null && typeof node === "object") {
-    for (const [k, v] of Object.entries(node)) {
-      if (k === "add_item" && typeof v === "string") acc.add(v);
-      collectAddItemTargets(v, acc);
-    }
-  }
-  return acc;
+const TRANSCRIPT_SUMMARY_LIST_LIMIT = 16;
+const TRANSCRIPT_SUMMARY_JOURNAL_LIMIT = 5;
+
+function compactTranscriptHead(values: readonly string[], limit: number): string[] {
+  return values.slice(0, limit);
 }
 
-function assertLoadedStateRefs(mode: PackMode, index: AnyIndex, state: GameState): void {
-  let locations: Set<string>;
-  let endings: Set<string>;
-  const items = collectAddItemTargets(index.pack, new Set<string>());
-  if (mode === "cyoa") {
-    const ix = index as CyoaIndex;
-    locations = new Set<string>([...ix.scenes.keys(), ...ix.terminalIds]);
-    endings = ix.terminalIds;
-  } else {
-    const ix = index as ParserIndex;
-    locations = new Set<string>(ix.rooms.keys());
-    endings = new Set<string>(ix.pack.endings.map((e) => e.id));
-    for (const id of ix.objects.keys()) items.add(id);
-  }
-  if (!locations.has(state.current)) {
-    throw new SaveIntegrityError(
-      `Save references unknown ${mode === "cyoa" ? "scene" : "room"} "${state.current}".`,
-    );
-  }
-  if (state.endingId !== null && !endings.has(state.endingId)) {
-    throw new SaveIntegrityError(`Save references unknown ending "${state.endingId}".`);
-  }
-  for (const id of state.inventory) {
-    if (!items.has(id)) {
-      throw new SaveIntegrityError(`Save references unknown item "${id}".`);
-    }
-  }
+function compactTranscriptRecent(values: readonly string[], limit: number): string[] {
+  return values.slice(Math.max(0, values.length - limit));
 }
 
-/** The current location id, normalized across modes (scene id ⟷ room id). */
-function obsLocation(obs: AnyObservation): string {
-  return obs.mode === "cyoa" ? obs.scene_id : obs.room;
+function transcriptOmittedCount(
+  values: readonly string[],
+  compacted: readonly string[],
+): number | undefined {
+  return values.length > compacted.length ? values.length - compacted.length : undefined;
+}
+
+function compactTranscriptMore(
+  scenes: number | undefined,
+  inventory: number | undefined,
+  flags: number | undefined,
+  journal: number | undefined,
+): TranscriptCompactMore | undefined {
+  const counts = [scenes ?? 0, inventory ?? 0, flags ?? 0, journal ?? 0] as const;
+  if (counts[3] !== 0) return counts;
+  if (counts[2] !== 0) return [counts[0], counts[1], counts[2]];
+  if (counts[1] !== 0) return [counts[0], counts[1]];
+  if (counts[0] !== 0) return [counts[0]];
+  return undefined;
+}
+
+function compactTranscriptSummary(summary: TranscriptSummary): TranscriptCompactSummary {
+  const scenes = compactTranscriptHead(summary.scenes, TRANSCRIPT_SUMMARY_LIST_LIMIT);
+  const inventory = compactTranscriptHead(summary.inventory, TRANSCRIPT_SUMMARY_LIST_LIMIT);
+  const flags = compactTranscriptHead(summary.flags, TRANSCRIPT_SUMMARY_LIST_LIMIT);
+  const journal = compactTranscriptRecent(summary.journal, TRANSCRIPT_SUMMARY_JOURNAL_LIMIT);
+  const omittedScenes = transcriptOmittedCount(summary.scenes, scenes);
+  const omittedInventory = transcriptOmittedCount(summary.inventory, inventory);
+  const omittedFlags = transcriptOmittedCount(summary.flags, flags);
+  const omittedJournal = transcriptOmittedCount(summary.journal, journal);
+  const more = compactTranscriptMore(omittedScenes, omittedInventory, omittedFlags, omittedJournal);
+  const {
+    ending_id: endingId,
+    inventory: _fullInventory,
+    flags: _fullFlags,
+    journal: _fullJournal,
+    ...baseSummary
+  } = summary;
+  return {
+    ...baseSummary,
+    ...(endingId ? { ending_id: endingId } : {}),
+    scenes,
+    ...(inventory.length > 0 ? { inventory } : {}),
+    ...(flags.length > 0 ? { flags } : {}),
+    ...(journal.length > 0 ? { journal } : {}),
+    ...(more ? { more } : {}),
+  };
+}
+
+function transcriptSummaryFor<Args extends TranscriptArgs>(
+  sessions: SessionStore,
+  session: Session,
+  args: Args,
+  summary: TranscriptSummary,
+): TranscriptSummaryFor<Args> {
+  return (
+    args.compact_summary
+      ? sessions.transcriptSummaryProjection(
+          session.id,
+          TRANSCRIPT_SUMMARY_PROJECTION_COMPACT,
+          () => compactTranscriptSummary(summary),
+        )
+      : summary
+  ) as TranscriptSummaryFor<Args>;
+}
+
+function hashTranscript(session: Session, stateHash: string): string {
+  return hashState({
+    state_hash: stateHash,
+    transcript_log_hash: session.transcriptLogHash,
+  });
+}
+
+/** The current RPG room id. */
+function obsLocation(obs: RpgObservation): string {
+  return obs.room;
 }
 
 /**
@@ -256,7 +693,7 @@ function obsLocation(obs: AnyObservation): string {
  * stream (bug_0260, a blind-playtest finding). Some engine effects write `__`-
  * prefixed vars/flags that exist only to drive mechanics, never to be read by the
  * player: the per-enemy HP tracker `__enemy_hp_<id>` (rpg/schema enemyHpVar, set
- * each combat round) and the dialogue-progress flag `__dlg_<npc>` (parser/model).
+ * each combat round) and the dialogue-progress flag `__dlg_<npc>`.
  * observation.ts ALREADY hides these from `state.flags`/`state.vars` (and
  * get_transcript's summary.flags filters them too), but the raw `events` array
  * returned by step_action — and recorded in the transcript get_transcript shows —
@@ -278,21 +715,167 @@ function playerVisibleEvents(events: GameEvent[]): GameEvent[] {
   });
 }
 
-/** The human label for an action id in this observation (choice text ⟷ command). */
-function obsActionText(obs: AnyObservation, id: string): string | null {
-  if (obs.mode === "cyoa") return obs.available_actions.find((a) => a.id === id)?.text ?? null;
-  return obs.available_actions.find((a) => a.id === id)?.command ?? null;
+function transcriptTurnsFor<Args extends TranscriptArgs>(
+  sessions: SessionStore,
+  session: Session,
+  args: Args,
+): TranscriptTurnFor<Args>[] {
+  if (args.compact_turns) {
+    return sessions.transcriptProjection(session.id, TRANSCRIPT_PROJECTION_COMPACT_TURNS, () =>
+      session.transcript.map((t) => [t.step, t.scene_id, t.action_id, t.result_scene_id] as const),
+    ) as TranscriptTurnFor<Args>[];
+  }
+
+  if (args.compact_events === true) {
+    return sessions.transcriptProjection(session.id, TRANSCRIPT_PROJECTION_COMPACT_EVENTS, () =>
+      session.transcript.map((t) => ({
+        ...t,
+        events: playerVisibleEvents(t.events).map(compactPlayerEvent),
+      })),
+    ) as TranscriptTurnFor<Args>[];
+  }
+
+  return sessions.transcriptProjection(session.id, TRANSCRIPT_PROJECTION_VISIBLE_EVENTS, () =>
+    session.transcript.map((t) => ({
+      ...t,
+      events: playerVisibleEvents(t.events),
+    })),
+  ) as TranscriptTurnFor<Args>[];
+}
+
+function rpgStepEvents<Args extends RpgResponseOptions>(
+  events: GameEvent[],
+  args: Args,
+): RpgStepEvents<Args> {
+  const visible = playerVisibleEvents(events);
+  return (
+    args.compact_events === true ? visible.map(compactPlayerEvent) : visible
+  ) as RpgStepEvents<Args>;
+}
+
+function rpgStepEventVersion<Args extends RpgResponseOptions>(
+  args: Args,
+): RpgStepEventVersion<Args> {
+  return (
+    args.compact_events === true ? { event_v: RPG_COMPACT_EVENT_VERSION } : {}
+  ) as RpgStepEventVersion<Args>;
+}
+
+function rpgRoomTitle(index: RpgIndex, state: GameState): string {
+  return index.rooms.get(state.current)?.name ?? state.current;
 }
 
 /**
- * Map an action id (from the observation's legal set) to a structured Action.
- * CYOA always yields a CHOOSE (an unknown id is rejected by the engine, preserving
- * the "illegal action, no state change" path); parser/RPG look up the action
- * object the legal-action generator already attached.
+ * Map an action id from the RPG runner's legal set to a structured Action.
+ * Unknown ids are rejected before they reach the reducer, preserving the illegal
+ * action / no state-change path.
  */
-function actionForId(obs: AnyObservation, id: string): Action | null {
-  if (obs.mode === "cyoa") return { type: "CHOOSE", choiceId: id };
-  return obs.available_actions.find((a) => a.id === id)?.action ?? null;
+function actionOptionForId(
+  actions: readonly RpgActionOption[],
+  id: string,
+): RpgActionOption | null {
+  return actions.find((action) => action.id === id) ?? null;
+}
+
+type PublicObservationOptions = { compactActions?: boolean };
+
+function publicObservationOptions(args: { compact_actions?: boolean }): PublicObservationOptions {
+  return args.compact_actions ? { compactActions: true } : {};
+}
+
+function publicActions(
+  actions: readonly RpgActionOption[],
+  opts: PublicObservationOptions = {},
+): McpActionOption[] {
+  return actions.map((option) => ({
+    id: option.id,
+    ...(opts.compactActions ? {} : { command: option.command }),
+    ...(option.skill_check ? { skill_check: option.skill_check } : {}),
+  }));
+}
+
+function publicActionRows<Args extends RpgLegalActionsArgs>(
+  actions: readonly RpgActionOption[],
+  args: Args,
+): RpgLegalActionRows<Args> {
+  return (
+    args.compact_actions === true
+      ? actions.map((option) => option.id)
+      : publicActions(actions, publicObservationOptions(args))
+  ) as RpgLegalActionRows<Args>;
+}
+
+function legalActionRowsFor<Args extends RpgLegalActionsArgs>(
+  sessions: SessionStore,
+  session: Session,
+  actions: readonly RpgActionOption[],
+  args: Args,
+): RpgLegalActionRows<Args> {
+  return sessions.legalActionProjection(
+    session.id,
+    `${LEGAL_ACTION_ROWS_PROJECTION}:compact:${args.compact_actions === true ? 1 : 0}`,
+    () => publicActionRows(actions, args),
+  );
+}
+
+function publicObservation(
+  obs: RpgObservation,
+  opts: PublicObservationOptions = {},
+): McpObservation {
+  return {
+    ...obs,
+    available_actions: publicActions(obs.available_actions, opts),
+  };
+}
+
+type RpgObservationViewOptions = Pick<ObservationOptions, "hideGraph" | "includeWorldIntro">;
+
+function observationProjectionSuffix(opts: RpgObservationViewOptions, extra: string): string {
+  return `hide:${opts.hideGraph === true ? 1 : 0}:intro:${opts.includeWorldIntro === true ? 1 : 0}:${extra}`;
+}
+
+function rpgViewField<Args extends RpgResponseOptions>(
+  sessions: SessionStore,
+  session: Session,
+  obs: RpgObservation,
+  args: Args,
+  opts: RpgObservationViewOptions = {},
+): RpgViewField<Args> {
+  if (args.compact_observation === true) {
+    return {
+      context: sessions.observationProjection(
+        session.id,
+        `${OBSERVATION_PROJECTION_COMPACT}:${observationProjectionSuffix(opts, "ids")}`,
+        () =>
+          compactRpgObservation(
+            obs,
+            obs.available_actions.map((action) => action.id),
+          ),
+      ),
+    } as RpgViewField<Args>;
+  }
+  return {
+    observation: sessions.observationProjection(
+      session.id,
+      `${OBSERVATION_PROJECTION_PUBLIC}:${observationProjectionSuffix(
+        opts,
+        `compact-actions:${args.compact_actions === true ? 1 : 0}`,
+      )}`,
+      () => publicObservation(obs, publicObservationOptions(args)),
+    ),
+  } as RpgViewField<Args>;
+}
+
+function rpgSourceFields(source: {
+  worldQuestId?: string | null;
+  generatedRpgSeed?: number | null;
+}): RpgSourceFields {
+  return {
+    ...(source.worldQuestId ? { world_quest_id: source.worldQuestId } : {}),
+    ...(source.generatedRpgSeed !== undefined && source.generatedRpgSeed !== null
+      ? { generated_rpg_seed: source.generatedRpgSeed }
+      : {}),
+  };
 }
 
 function schemaFindings(
@@ -310,81 +893,67 @@ function schemaFindings(
 export function createToolApi(opts: { root: string }) {
   const root = opts.root;
   const sessions = new SessionStore();
+  const packLoadCache = new Map<string, PackLoadCacheEntry>();
   let overworldCounter = 0;
   const overworldSessions = new Map<string, OverworldSession>();
 
-  /** Read a pack, detect its mode, compile + validate with the right loader. */
+  /** Read an RPG pack, compile, and validate it with the single runtime loader. */
   function loadAndReport(packPath: string): LoadResult {
     const abs = safeResolve(root, packPath);
+    const stat = statSync(abs);
+    const cached = packLoadCache.get(abs);
+    if (cached && cached.mtimeMs === stat.mtimeMs && cached.size === stat.size) {
+      return cached.result;
+    }
+
     const source = readFileSync(abs, "utf8");
-    const mode = detectMode(parseYaml(source) as unknown);
-    const compileRes =
-      mode === "cyoa"
-        ? compilePack(source)
-        : mode === "parser"
-          ? compileParserPack(source)
-          : compileRpgPack(source);
-    if (!compileRes.ok)
-      return {
+    let result: LoadResult;
+    if (!isRpgPackShape(parseYaml(source) as unknown)) {
+      result = {
+        ok: false,
+        report: makeReport(packPath, [
+          {
+            severity: "error",
+            code: "UNSUPPORTED_LEGACY_PACK",
+            message: "MCP pack loading is RPG-only; legacy pack shapes are migration data.",
+            where: [packPath],
+          },
+        ]),
+      };
+      packLoadCache.set(abs, { mtimeMs: stat.mtimeMs, size: stat.size, result });
+      return result;
+    }
+    const compileRes = compileRpgPack(source);
+    if (!compileRes.ok) {
+      result = {
         ok: false,
         report: makeReport(packPath, schemaFindings(packPath, compileRes.error)),
       };
+      packLoadCache.set(abs, { mtimeMs: stat.mtimeMs, size: stat.size, result });
+      return result;
+    }
     const pack = compileRes.compiled.pack;
-    const report =
-      mode === "cyoa"
-        ? validateCyoa(pack as never)
-        : mode === "parser"
-          ? validateParser(pack as never)
-          : validateRpg(pack as never);
-    return { ok: true, mode, compiled: compileRes.compiled, report };
+    const report = validateRpg(pack);
+    result = { ok: true, compiled: compileRes.compiled, report };
+    packLoadCache.set(abs, { mtimeMs: stat.mtimeMs, size: stat.size, result });
+    return result;
   }
 
   /** Compile + validate, refusing to play an invalid pack (§0, §10). */
-  function requirePlayable(packPath: string): { mode: PackMode; compiled: AnyCompiledPack } {
+  function requirePlayable(packPath: string): CompiledRpgPack {
     const lr = loadAndReport(packPath);
     if (!lr.ok || !lr.report.ok) {
       throw new Error(`Pack is not playable:\n${formatReport(lr.ok ? lr.report : lr.report)}`);
     }
-    return { mode: lr.mode, compiled: lr.compiled };
+    return lr.compiled;
   }
 
   /**
-   * Mint a fresh CYOA pack from a seed and refuse to play it unless it clears the SAME
-   * validator the curated packs clear (the generate_pack/new_game seam — the MCP slice of
-   * "evolve the eval distribution", docs/CURRENT_PLAN.md). The pack is compiled IN-MEMORY:
-   * the generator already returns a `CyoaPackSchema.parse`d pack, so `{ pack, contentHash:
-   * hashState(pack) }` is byte-identical to what `compilePack` produces from the same pack's
-   * YAML — no file is written (the server stays read-only/least-privilege, §16), and the
-   * generated pack never lands under content/ to pollute the hand-authored showcase set.
+   * Mint a fresh RPG pack from a seed and refuse to play it unless it clears the SAME
+   * `validateRpg` gate the curated RPG packs clear. This is the only public MCP
+   * generation route.
    */
-  function requireGeneratedPlayable(seed: number): {
-    mode: PackMode;
-    compiled: AnyCompiledPack;
-  } {
-    const pack = generateCyoaPack(seed); // mints + schema self-check (throws on malformed emission)
-    const report = validateCyoa(pack);
-    if (!report.ok) {
-      throw new Error(`Generated pack (seed ${seed}) is not playable:\n${formatReport(report)}`);
-    }
-    return { mode: "cyoa", compiled: { pack, contentHash: hashState(pack) } };
-  }
-
-  /**
-   * The RPG twin of `requireGeneratedPlayable` (the MODE-WIDENING slice of the generator
-   * program — bug_0159 built the RPG minting core, this exposes it through the same seam).
-   * Mints a fresh RPG pack from a seed and refuses to play it unless it clears the SAME
-   * `validateRpg` gate the curated RPG packs clear — so the COMBAT-winnability and
-   * SCORE-economy proofs (the richest verifier surfaces in the suite) face a moving target,
-   * not just the two frozen hand-authored packs. The generator already returns an
-   * `RpgPackSchema.parse`d pack, so `{ pack, contentHash: hashState(pack) }` is byte-identical
-   * to what `compileRpgPack` produces from the same pack's YAML — no file is written (the
-   * server stays read-only/least-privilege, §16), and the minted pack never lands under
-   * content/rpg/pack to pollute the hand-authored showcase set.
-   */
-  function requireGeneratedRpgPlayable(seed: number): {
-    mode: PackMode;
-    compiled: AnyCompiledPack;
-  } {
+  function requireGeneratedRpgPlayable(seed: number): CompiledRpgPack {
     const pack = generateRpgPack(seed); // mints + schema self-check (throws on malformed emission)
     const report = validateRpg(pack);
     if (!report.ok) {
@@ -392,61 +961,56 @@ export function createToolApi(opts: { root: string }) {
         `Generated RPG pack (seed ${seed}) is not playable:\n${formatReport(report)}`,
       );
     }
-    return { mode: "rpg", compiled: { pack, contentHash: hashState(pack) } };
+    return { pack, contentHash: hashState(pack) };
   }
 
-  /**
-   * The PARSER twin of `requireGeneratedPlayable`/`requireGeneratedRpgPlayable` — the third and
-   * final mode of the generator program (the assessor already mints from `generateParserPack`,
-   * src/afk/assessor.ts:843; this closes the MCP authoring asymmetry so all three generators are
-   * reachable through the same agent-facing seam). Mints a fresh parser pack from a seed and
-   * refuses to play it unless it clears the SAME `validateParser` gate the curated parser packs
-   * clear — so the parser verifier surfaces (depth-2 obtainability / soft-lock, the moral
-   * same-key fork) face a moving target, not just the frozen hand-authored parser packs. The
-   * generator already returns a `ParserPackSchema.parse`d pack, so `{ pack, contentHash:
-   * hashState(pack) }` is byte-identical to what `compileParserPack` produces from the same pack's
-   * YAML — no file is written (the server stays read-only/least-privilege, §16), and the minted
-   * pack never lands under content/parser/pack to pollute the hand-authored showcase set.
-   */
-  function requireGeneratedParserPlayable(seed: number): {
-    mode: PackMode;
-    compiled: AnyCompiledPack;
-  } {
-    const pack = generateParserPack(seed); // mints + schema self-check (throws on malformed emission)
-    const report = validateParser(pack);
-    if (!report.ok) {
-      throw new Error(
-        `Generated parser pack (seed ${seed}) is not playable:\n${formatReport(report)}`,
-      );
-    }
-    return { mode: "parser", compiled: { pack, contentHash: hashState(pack) } };
+  function legalActionsFor(s: Session): RpgActionOption[] {
+    return sessions.legalActions(s.id, () => enumerateRpgActions(s.index, s.state));
+  }
+
+  function sessionObsOf(s: Session, opts: ObservationOptions = {}): RpgObservation {
+    return sessions.observation(s.id, opts, () =>
+      buildObsFor(s.index, s.state, {
+        ...opts,
+        availableActions: legalActionsFor(s),
+      }),
+    );
   }
 
   function startSession(
-    mode: PackMode,
-    compiled: AnyCompiledPack,
+    compiled: CompiledRpgPack,
     state?: GameState,
-    opts: { hideGraph?: boolean } = {},
+    opts: {
+      hideGraph?: boolean;
+      packPath?: string;
+      worldQuestId?: string | null;
+      generatedRpgSeed?: number | null;
+      seed?: number;
+    } = {},
   ): Session {
-    const index = indexFor(mode, compiled.pack);
-    const st = state ?? initStateFor(mode, index, 1);
+    const index = indexFor(compiled.pack);
+    const st = state ?? initStateFor(index, opts.seed ?? 1);
     // §16 integrity at load: a PROVIDED state is untrusted (it came off a save
     // file via load_game), so its `current`/`endingId` must name symbols that
     // exist in THIS pack before it is handed to the engine. A freshly-built init
     // state (state === undefined) is trusted and skipped. Rejects, never coerces.
-    if (state !== undefined) assertLoadedStateRefs(mode, index, st);
+    if (state !== undefined) assertRpgStateReferences(index, st);
     const session = sessions.create({
       packId: compiled.pack.meta.id,
       contentHash: compiled.contentHash,
-      mode,
+      ...(opts.packPath ? { packPath: opts.packPath } : {}),
+      ...(opts.worldQuestId ? { worldQuestId: opts.worldQuestId } : {}),
+      ...(opts.generatedRpgSeed !== undefined && opts.generatedRpgSeed !== null
+        ? { generatedRpgSeed: opts.generatedRpgSeed }
+        : {}),
       index,
-      rules: rulesFor(mode, index),
+      rules: rulesFor(index),
       state: st,
       transcript: [],
       ...(opts.hideGraph ? { hideGraph: true } : {}),
     });
-    const obs = buildObsFor(mode, index, st);
-    session.transcript.push({
+    const obs = sessionObsOf(session);
+    sessions.appendTranscript(session.id, {
       step: st.step,
       scene_id: obsLocation(obs),
       title: obs.title,
@@ -460,74 +1024,162 @@ export function createToolApi(opts: { root: string }) {
     return session;
   }
 
-  const obsOf = (s: Session): AnyObservation =>
-    buildObsFor(s.mode, s.index, s.state, { hideGraph: s.hideGraph ?? false });
+  const openingObservationOptions = (s: Session): RpgObservationViewOptions => ({
+    hideGraph: s.hideGraph ?? false,
+    includeWorldIntro: true,
+  });
 
-  function listYamlFiles(dir: string): string[] {
-    try {
-      return readdirSync(dir, { withFileTypes: true })
-        .filter((entry) => entry.isFile() && /\.(ya?ml)$/i.test(entry.name))
-        .map((entry) => relative(root, join(dir, entry.name)).replaceAll("\\", "/"))
-        .sort();
-    } catch {
-      return [];
-    }
+  const openingObsOf = (s: Session, opts = openingObservationOptions(s)): RpgObservation =>
+    sessionObsOf(s, opts);
+
+  function startRpgSession<Args extends RpgResponseOptions>(
+    compiled: CompiledRpgPack,
+    args: Args & { seed?: number; hide_graph?: boolean },
+    source: { packPath?: string; worldQuestId?: string; generatedRpgSeed?: number | null },
+  ): RpgSessionPayload<Args> {
+    const session = startSession(compiled, undefined, {
+      seed: args.seed ?? 1,
+      ...(args.hide_graph ? { hideGraph: true } : {}),
+      ...(source.packPath ? { packPath: source.packPath } : {}),
+      ...(source.worldQuestId ? { worldQuestId: source.worldQuestId } : {}),
+      ...(source.generatedRpgSeed !== undefined && source.generatedRpgSeed !== null
+        ? { generatedRpgSeed: source.generatedRpgSeed }
+        : {}),
+    });
+    const openingOpts = openingObservationOptions(session);
+    return {
+      session_id: session.id,
+      ...rpgViewField(sessions, session, openingObsOf(session, openingOpts), args, openingOpts),
+      ...rpgSourceFields(session),
+      state_hash: session.stateHash,
+    } as RpgSessionPayload<Args>;
   }
 
-  function discoverStoryEntries(): StoryEntry[] {
-    const dirs: [string, PackMode][] = [
-      [join(root, "content", "cyoa", "pack"), "cyoa"],
-      [join(root, "content", "parser", "pack"), "parser"],
-      [join(root, "content", "rpg", "pack"), "rpg"],
-    ];
-    return dirs
-      .flatMap(([dir]) => listYamlFiles(dir))
-      .map((path) => {
-        const lr = loadAndReport(path);
-        return {
-          path,
-          id: lr.ok ? lr.compiled.pack.meta.id : path,
-          title: lr.ok ? lr.compiled.pack.meta.title : path,
-          mode: lr.ok ? lr.mode : null,
-          playable: lr.ok && lr.report.ok,
-          world: lr.ok ? (lr.compiled.pack.meta.world ?? null) : null,
-        };
-      });
+  function worldQuestPackPaths(world: WorldManifest): string[] {
+    return world.graph.nodes
+      .filter((node) => node.kind === "quest" && node.pack)
+      .map((node) => normalizePackPath(node.pack ?? ""));
+  }
+
+  function discoverWorldQuestSources(world = loadWorldManifest()): WorldQuestSourceEntry[] {
+    return worldQuestPackPaths(world).map((path) => {
+      const lr = loadAndReport(path);
+      const node = worldQuestNodeForPack(world, path);
+      return {
+        path,
+        id: lr.ok ? lr.compiled.pack.meta.id : path,
+        title: lr.ok ? lr.compiled.pack.meta.title : path,
+        mode: lr.ok ? SAVE_MODE : null,
+        playable: lr.ok && lr.report.ok,
+        world: lr.ok ? (lr.compiled.pack.meta.world ?? null) : null,
+        world_quest_id: node?.id ?? null,
+      };
+    });
+  }
+
+  function publicWorldGraph(world: WorldManifest): PublicWorldGraph {
+    return {
+      hub: world.graph.hub,
+      nodes: world.graph.nodes.map((node) => ({
+        id: node.id,
+        name: node.name,
+        kind: node.kind,
+        ...(node.district === undefined ? {} : { district: node.district }),
+      })),
+      edges: world.graph.edges.map((edge) => ({
+        from: edge.from,
+        to: edge.to,
+        route: edge.route,
+      })),
+    };
+  }
+
+  function resolveWorldQuestPackPath(worldQuestId: string): {
+    world: WorldManifest;
+    node: NonNullable<ReturnType<typeof worldQuestNodeById>>;
+    packPath: string;
+  } {
+    return resolveWorldQuestPackPathFromRoot(root, worldQuestId);
+  }
+
+  function resolveTraceSource(
+    args: { world_quest_id?: string; pack_path?: never },
+    trace: Trace<RpgAction>,
+    operation: string,
+  ): { packPath: string; worldQuestId: string | null; compiled: CompiledRpgPack } {
+    if ((args as { pack_path?: unknown }).pack_path !== undefined) {
+      throw new Error(
+        `${operation} accepts world_quest_id or embedded trace worldQuestId, not pack_path.`,
+      );
+    }
+    const source = resolveTracePackSource(root, args, trace, operation);
+    return { ...source, compiled: requirePlayable(source.packPath) };
+  }
+
+  function resolveRequiredWorldQuestId(
+    args: { world_quest_id?: string },
+    operation: string,
+  ): string {
+    if ((args as { pack_path?: unknown }).pack_path !== undefined) {
+      throw new Error(`${operation} accepts world_quest_id, not pack_path.`);
+    }
+    if ((args as { quest_path?: unknown }).quest_path !== undefined) {
+      throw new Error(`${operation} accepts world_quest_id, not quest_path.`);
+    }
+    if ((args as { quest_id?: unknown }).quest_id !== undefined) {
+      throw new Error(`${operation} accepts world_quest_id, not quest_id.`);
+    }
+    if (args.world_quest_id === undefined) {
+      throw new Error(`${operation} requires world_quest_id.`);
+    }
+    return args.world_quest_id;
+  }
+
+  function validateWorldQuest(worldQuestId: string): {
+    ok: boolean;
+    world_quest_id: string | null;
+    report: ValidationReport;
+  } {
+    const source = resolveWorldQuestPackPath(worldQuestId);
+    const lr = loadAndReport(source.packPath);
+    return {
+      ok: lr.report.ok,
+      world_quest_id: source.node.id,
+      report: lr.report,
+    };
+  }
+
+  function loadWorldQuest(worldQuestId: string): {
+    ok: boolean;
+    world_quest_id: string | null;
+    meta?: CompiledRpgPack["pack"]["meta"];
+    content_hash?: string;
+    report: ValidationReport;
+  } {
+    const source = resolveWorldQuestPackPath(worldQuestId);
+    const lr = loadAndReport(source.packPath);
+    if (!lr.ok) {
+      return {
+        ok: false,
+        world_quest_id: source.node.id,
+        report: lr.report,
+      };
+    }
+    return {
+      ok: lr.report.ok,
+      world_quest_id: source.node.id,
+      meta: lr.compiled.pack.meta,
+      content_hash: lr.compiled.contentHash,
+      report: lr.report,
+    };
   }
 
   function loadWorldManifest(): WorldManifest {
-    try {
-      const raw = parseYaml(
-        readFileSync(join(root, "content", "world", "charter_marches.yaml"), "utf8"),
-      );
-      return WorldManifestSchema.parse(raw);
-    } catch {
-      return {
-        id: CANONICAL_WORLD_ID,
-        name: CANONICAL_WORLD_NAME,
-        hub: CANONICAL_HUB_CITY,
-        graph: {
-          hub: "charterhaven",
-          nodes: [
-            {
-              id: "charterhaven",
-              name: CANONICAL_HUB_CITY,
-              kind: "hub",
-            },
-          ],
-          edges: [],
-        },
-      };
-    }
+    return loadWorldManifestFromRoot(root);
   }
 
   function loadOverworldManifest(): OverworldManifest {
-    const raw = JSON.parse(
-      readFileSync(join(root, "content", "world", "new_york_overworld.json"), "utf8"),
-    );
-    const world = parseOverworldManifest(raw);
-    assertOverworldIntegrity(world);
-    return world;
+    return loadOverworldManifestFromRoot(root);
   }
 
   function createOverworldSession(): { session_id: string; session: OverworldSession } {
@@ -553,104 +1205,140 @@ export function createToolApi(opts: { root: string }) {
     return session;
   }
 
+  function overworldSnapshotHash(session: OverworldSession): string {
+    return session.snapshotHash();
+  }
+
+  function overworldSnapshotHashRejection(snapshotHash: string): OverworldRejectedSessionPayload {
+    const reason = "Snapshot hash mismatch; refresh the current overworld context.";
+    return {
+      ok: false,
+      snapshot_hash: snapshotHash,
+      rejection_reason: reason,
+    };
+  }
+
+  function overworldViewField<Args extends OverworldResponseOptions>(
+    args: Args,
+    session: OverworldSession,
+  ): OverworldViewField<Args> {
+    if (args.compact_context === true) {
+      return { context: session.compactView() } as OverworldViewField<Args>;
+    }
+    const view = session.view();
+    return { observation: view } as OverworldViewField<Args>;
+  }
+
+  function runOverworldSession<Key extends string, Value, Args extends OverworldResponseOptions>(
+    args: Args,
+    sessionId: string,
+    key: Key,
+    action: (session: OverworldSession) => Value,
+  ): OverworldSessionResponse<Key, Value, Args> {
+    const session = getOverworldSession(sessionId);
+    const currentSnapshotHash = overworldSnapshotHash(session);
+    if (
+      args.expected_snapshot_hash !== undefined &&
+      args.expected_snapshot_hash !== currentSnapshotHash
+    ) {
+      return overworldSnapshotHashRejection(currentSnapshotHash) as OverworldSessionResponse<
+        Key,
+        Value,
+        Args
+      >;
+    }
+    const value = action(session);
+    const payload = {
+      ok: true,
+      session_id: sessionId,
+      snapshot_hash: overworldSnapshotHash(session),
+      [key]: value,
+      ...overworldViewField(args, session),
+    };
+    return payload as unknown as OverworldSessionResponse<Key, Value, Args>;
+  }
+
   return {
     sessions,
 
-    validate_pack(args: { pack_path: string }): { ok: boolean; report: ValidationReport } {
-      const lr = loadAndReport(args.pack_path);
-      return { ok: lr.report.ok, report: lr.report };
-    },
-
-    list_stories(): {
-      stories: StoryEntry[];
-      main_story: string | null;
-    } {
-      const stories = discoverStoryEntries();
-      // Keep watchtower the default main story for the existing AFK loop.
-      const main =
-        stories.find((s) => s.path.endsWith("watchtower_road.yaml")) ?? stories[0] ?? null;
-      return { stories, main_story: main?.path ?? null };
-    },
-
-    list_world(): {
-      world: WorldManifest;
-      hub: string;
-      graph: WorldManifest["graph"];
-      quest_count: number;
-      quests: {
-        path: string;
-        id: string;
-        title: string;
-        mode: PackMode | null;
-        playable: boolean;
-        district: string;
-        quest: string;
-        role: string;
-        connection: string;
-        graph_node: string | null;
-        path_from_hub: WorldRouteStep[];
-      }[];
-    } {
+    list_world<Args extends WorldListOptions = Record<string, never>>(
+      args?: Args,
+    ): WorldListResponse<Args> {
       const world = loadWorldManifest();
-      const quests = discoverStoryEntries()
+      const quests = discoverWorldQuestSources(world)
         .filter((s) => s.world?.id === world.id)
         .map((s) => {
-          const node = worldQuestNodeForPack(world, s.path);
-          return {
-            path: s.path,
+          const node = s.world_quest_id ? worldQuestNodeById(world, s.world_quest_id) : null;
+          const quest: WorldQuestCatalogEntry = {
             id: s.id,
             title: s.title,
-            mode: s.mode,
             playable: s.playable,
+            world_quest_id: node?.id ?? null,
             district: s.world?.district ?? "",
             quest: s.world?.quest ?? "",
             role: s.world?.role ?? "",
             connection: s.world?.connection ?? "",
             graph_node: node?.id ?? null,
-            path_from_hub: node ? (worldRouteForPack(world, s.path) ?? []) : [],
           };
+          if (args?.include_routes === true) {
+            return {
+              ...quest,
+              path_from_hub: node ? (worldRouteFromHub(world, node.id) ?? []) : [],
+            } as unknown as WorldListQuest<Args>;
+          }
+          return quest as WorldListQuest<Args>;
         });
-      return { world, hub: world.hub, graph: world.graph, quest_count: quests.length, quests };
+      const catalog = {
+        world: {
+          id: world.id,
+          name: world.name,
+          hub: world.hub,
+        },
+        hub: world.hub,
+        quest_count: quests.length,
+        quests,
+      };
+      if (args?.include_graph === true) {
+        return {
+          ...catalog,
+          graph: publicWorldGraph(world),
+        } as unknown as WorldListResponse<Args>;
+      }
+      return catalog as WorldListResponse<Args>;
     },
 
-    world_path(args: { quest_path: string }): {
+    world_path(args: { world_quest_id?: string }): {
       world: Pick<WorldManifest, "id" | "name" | "hub">;
-      quest_path: string;
+      world_quest_id: string | null;
       graph_node: string | null;
       path_from_hub: WorldRouteStep[];
     } {
-      const world = loadWorldManifest();
-      const node = worldQuestNodeForPack(world, args.quest_path);
+      if ((args as { quest_path?: unknown }).quest_path !== undefined) {
+        throw new Error("world_path accepts world_quest_id, not quest_path.");
+      }
+      if (args.world_quest_id === undefined) {
+        throw new Error("world_path requires world_quest_id.");
+      }
+      const resolved = resolveWorldQuestPackPath(args.world_quest_id);
       return {
-        world: { id: world.id, name: world.name, hub: world.hub },
-        quest_path: args.quest_path,
-        graph_node: node?.id ?? null,
-        path_from_hub: node ? (worldRouteForPack(world, args.quest_path) ?? []) : [],
+        world: {
+          id: resolved.world.id,
+          name: resolved.world.name,
+          hub: resolved.world.hub,
+        },
+        world_quest_id: resolved.node.id,
+        graph_node: resolved.node.id,
+        path_from_hub: worldRouteFromHub(resolved.world, resolved.node.id) ?? [],
       };
     },
 
-    list_overworld(): {
-      world: Pick<OverworldManifest, "id" | "name" | "start" | "premise">;
-      town_count: number;
-      road_count: number;
-      region_count: number;
-      regional_arc_count: number;
-      area_count: number;
-      area_route_count: number;
-      character_count: number;
-      local_event_count: number;
-      local_job_count: number;
-      road_event_count: number;
-      exploration_site_count: number;
-      quest_count: number;
-      start: OverworldNode;
-      sources: OverworldManifest["sources"];
-      design_rules: string[];
-    } {
+    list_overworld<Args extends OverworldListOptions = Record<string, never>>(
+      args?: Args,
+    ): OverworldListResponse<Args> {
       const world = loadOverworldManifest();
       const start = world.nodes.find((node) => node.id === world.start);
       if (!start) throw new Error(`Overworld start node "${world.start}" is missing.`);
-      return {
+      const summary: OverworldListSummary = {
         world: {
           id: world.id,
           name: world.name,
@@ -670,624 +1358,306 @@ export function createToolApi(opts: { root: string }) {
         exploration_site_count: world.exploration_sites.length,
         quest_count: world.quests.length,
         start,
-        sources: world.sources,
-        design_rules: world.design_rules,
       };
+      if (args?.include_design_notes === true) {
+        return {
+          ...summary,
+          sources: world.sources,
+          design_rules: world.design_rules,
+        } as unknown as OverworldListResponse<Args>;
+      }
+      return summary as OverworldListResponse<Args>;
     },
 
-    start_overworld(): {
-      session_id: string;
-      observation: OverworldView;
-    } {
+    start_overworld<Args extends OverworldResponseOptions = Record<string, never>>(
+      args?: Args,
+    ): OverworldStartResponse<Args> {
+      const responseOptions = (args ?? {}) as Args;
       const created = createOverworldSession();
       return {
         session_id: created.session_id,
-        observation: created.session.view(),
-      };
+        snapshot_hash: overworldSnapshotHash(created.session),
+        ...overworldViewField(responseOptions, created.session),
+      } as OverworldStartResponse<Args>;
     },
 
-    get_overworld_session(args: { session_id: string }): {
-      session_id: string;
-      observation: OverworldView;
-    } {
+    get_overworld_session<Args extends OverworldReadArgs>(args: Args): OverworldReadResponse<Args> {
       const session = getOverworldSession(args.session_id);
+      const snapshotHash = overworldSnapshotHash(session);
+      if (args.if_snapshot_hash !== undefined && args.if_snapshot_hash === snapshotHash) {
+        return {
+          snapshot_hash: snapshotHash,
+          unchanged: true,
+        } as OverworldReadResponse<Args>;
+      }
       return {
         session_id: args.session_id,
+        snapshot_hash: snapshotHash,
         observation: session.view(),
-      };
+      } as OverworldReadResponse<Args>;
     },
 
-    export_overworld_session(args: { session_id: string }): {
-      ok: true;
-      session_id: string;
-      snapshot: OverworldSessionSnapshot;
-    } {
+    get_overworld_session_context<Args extends OverworldReadArgs>(
+      args: Args,
+    ): OverworldContextResponse<Args> {
       const session = getOverworldSession(args.session_id);
+      const snapshotHash = overworldSnapshotHash(session);
+      if (args.if_snapshot_hash !== undefined && args.if_snapshot_hash === snapshotHash) {
+        return {
+          snapshot_hash: snapshotHash,
+          unchanged: true,
+        } as OverworldContextResponse<Args>;
+      }
       return {
         ok: true,
         session_id: args.session_id,
-        snapshot: session.snapshot(),
-      };
+        snapshot_hash: snapshotHash,
+        context: session.compactView(),
+      } as OverworldContextResponse<Args>;
     },
 
-    restore_overworld_session(args: { snapshot: unknown }): {
-      ok: true;
-      session_id: string;
-      observation: OverworldView;
-    } {
+    export_overworld_session<Args extends OverworldExportArgs>(
+      args: Args,
+    ): OverworldExportResponse<Args> {
+      const session = getOverworldSession(args.session_id);
+      const snapshotHash = overworldSnapshotHash(session);
+      if (
+        args.expected_snapshot_hash !== undefined &&
+        args.expected_snapshot_hash !== snapshotHash
+      ) {
+        const reason = "Snapshot hash mismatch; refresh the current overworld context.";
+        return {
+          ok: false,
+          snapshot_hash: snapshotHash,
+          rejection_reason: reason,
+        } as OverworldExportResponse<Args>;
+      }
+      const snapshot = session.snapshot();
+      return {
+        ok: true,
+        session_id: args.session_id,
+        snapshot_hash: snapshotHash,
+        snapshot,
+      } as OverworldExportResponse<Args>;
+    },
+
+    restore_overworld_session<Args extends { snapshot: unknown } & OverworldResponseOptions>(
+      args: Args,
+    ): OverworldRestoreResponse<Args> {
       const restored = restoreOverworldSession(args.snapshot);
       return {
         ok: true,
         session_id: restored.session_id,
-        observation: restored.session.view(),
-      };
+        snapshot_hash: overworldSnapshotHash(restored.session),
+        ...overworldViewField(args, restored.session),
+      } as OverworldRestoreResponse<Args>;
     },
 
-    plan_overworld_session_route(args: { session_id: string; destination_town_id: string }): {
-      ok: true;
-      session_id: string;
-      route: OverworldSessionRoutePlan;
-      observation: OverworldView;
-    } {
-      const session = getOverworldSession(args.session_id);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        route: session.planRoute(args.destination_town_id),
-        observation: session.view(),
-      };
+    plan_overworld_session_route<
+      Args extends {
+        session_id: string;
+        destination_town_id: string;
+      } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"route", OverworldSessionRoutePlan, Args> {
+      return runOverworldSession(args, args.session_id, "route", (session) =>
+        session.planRoute(args.destination_town_id),
+      );
     },
 
-    travel_overworld_session(args: { session_id: string; road_id: string }): {
-      ok: true;
-      session_id: string;
-      travel: TravelLogEntry;
-      observation: OverworldView;
-    } {
-      const session = getOverworldSession(args.session_id);
-      const travel = session.travel(args.road_id);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        travel,
-        observation: session.view(),
-      };
+    travel_overworld_session<
+      Args extends { session_id: string; road_id: string } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"travel", TravelLogEntry, Args> {
+      return runOverworldSession(args, args.session_id, "travel", (session) =>
+        session.travel(args.road_id),
+      );
     },
 
-    resolve_overworld_session_road_encounter(args: {
-      session_id: string;
-      strategy: OverworldRoadEncounterStrategy;
-    }): {
-      ok: true;
-      session_id: string;
-      result: OverworldRoadEncounterResult;
-      observation: OverworldView;
-    } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.resolveRoadEncounter(args.strategy);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+    resolve_overworld_session_road_encounter<
+      Args extends {
+        session_id: string;
+        strategy: OverworldRoadEncounterStrategy;
+      } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"result", OverworldRoadEncounterResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
+        session.resolveRoadEncounter(args.strategy),
+      );
     },
 
-    resupply_overworld_session(args: { session_id: string }): {
-      ok: true;
-      session_id: string;
-      result: OverworldServiceResult;
-      observation: OverworldView;
-    } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.resupplyAtTown();
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+    resupply_overworld_session<Args extends { session_id: string } & OverworldResponseOptions>(
+      args: Args,
+    ): OverworldSessionResponse<"result", OverworldServiceResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
+        session.resupplyAtTown(),
+      );
     },
 
-    rest_overworld_session(args: { session_id: string }): {
-      ok: true;
-      session_id: string;
-      result: OverworldServiceResult;
-      observation: OverworldView;
-    } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.restAtTown();
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+    rest_overworld_session<Args extends { session_id: string } & OverworldResponseOptions>(
+      args: Args,
+    ): OverworldSessionResponse<"result", OverworldServiceResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
+        session.restAtTown(),
+      );
     },
 
-    scout_overworld_session_poi(args: { session_id: string; poi_id: string }): {
-      ok: true;
-      session_id: string;
-      result: OverworldActionResult;
-      observation: OverworldView;
-    } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.scoutPoi(args.poi_id);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+    scout_overworld_session_poi<
+      Args extends { session_id: string; poi_id: string } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"result", OverworldActionResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
+        session.scoutPoi(args.poi_id),
+      );
     },
 
-    talk_overworld_session_contact(args: { session_id: string; character_id: string }): {
-      ok: true;
-      session_id: string;
-      result: OverworldActionResult;
-      observation: OverworldView;
-    } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.talkToCharacter(args.character_id);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+    talk_overworld_session_contact<
+      Args extends { session_id: string; character_id: string } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"result", OverworldActionResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
+        session.talkToCharacter(args.character_id),
+      );
     },
 
-    investigate_overworld_session_event(args: { session_id: string; event_id: string }): {
-      ok: true;
-      session_id: string;
-      result: OverworldActionResult;
-      observation: OverworldView;
-    } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.investigateEvent(args.event_id);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+    investigate_overworld_session_event<
+      Args extends { session_id: string; event_id: string } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"result", OverworldActionResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
+        session.investigateEvent(args.event_id),
+      );
     },
 
-    resolve_overworld_session_event(args: { session_id: string; event_id: string }): {
-      ok: true;
-      session_id: string;
-      result: OverworldActionResult;
-      observation: OverworldView;
-    } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.resolveEvent(args.event_id);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+    resolve_overworld_session_event<
+      Args extends { session_id: string; event_id: string } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"result", OverworldActionResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
+        session.resolveEvent(args.event_id),
+      );
     },
 
-    explore_overworld_session_site(args: { session_id: string; site_id: string }): {
-      ok: true;
-      session_id: string;
-      result: OverworldActionResult;
-      observation: OverworldView;
-    } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.exploreSite(args.site_id);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+    explore_overworld_session_site<
+      Args extends { session_id: string; site_id: string } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"result", OverworldActionResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
+        session.exploreSite(args.site_id),
+      );
     },
 
-    explore_overworld_session_area(args: { session_id: string; area_id: string }): {
-      ok: true;
-      session_id: string;
-      result: OverworldActionResult;
-      observation: OverworldView;
-    } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.exploreArea(args.area_id);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+    explore_overworld_session_area<
+      Args extends { session_id: string; area_id: string } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"result", OverworldActionResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
+        session.exploreArea(args.area_id),
+      );
     },
 
-    work_overworld_session_job(args: { session_id: string; job_id: string }): {
-      ok: true;
-      session_id: string;
-      result: OverworldActionResult;
-      observation: OverworldView;
-    } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.workLocalJob(args.job_id);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+    work_overworld_session_job<
+      Args extends { session_id: string; job_id: string } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"result", OverworldActionResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
+        session.workLocalJob(args.job_id),
+      );
     },
 
-    start_overworld_session_quest(args: { session_id: string; quest_id: string }): {
-      ok: true;
-      session_id: string;
-      quest: OverworldQuest;
-      observation: OverworldView;
-    } {
+    start_overworld_session_quest<
+      Args extends {
+        session_id: string;
+        quest_id: string;
+        seed?: number;
+        hide_graph?: boolean;
+        compact_actions?: boolean;
+        compact_observation?: boolean;
+      } & OverworldResponseOptions,
+    >(args: Args): OverworldQuestStartResponse<Args> {
       const session = getOverworldSession(args.session_id);
+      const currentSnapshotHash = overworldSnapshotHash(session);
+      if (
+        args.expected_snapshot_hash !== undefined &&
+        args.expected_snapshot_hash !== currentSnapshotHash
+      ) {
+        return overworldSnapshotHashRejection(
+          currentSnapshotHash,
+        ) as OverworldQuestStartResponse<Args>;
+      }
       const quest = session.startQuest(args.quest_id);
+      const rpgSession = this.start_world_quest({
+        world_quest_id: quest.id,
+        ...(args.seed !== undefined ? { seed: args.seed } : {}),
+        ...(args.hide_graph ? { hide_graph: true } : {}),
+        ...(args.compact_actions ? { compact_actions: true } : {}),
+        ...(args.compact_observation ? { compact_observation: true } : {}),
+      } as RpgStartWorldQuestArgs & Args);
+      sessions.get(rpgSession.session_id).overworldSessionId = args.session_id;
       return {
         ok: true,
         session_id: args.session_id,
+        snapshot_hash: overworldSnapshotHash(session),
         quest,
-        observation: session.view(),
-      };
+        rpg_session_id: rpgSession.session_id,
+        rpg_session: rpgSession,
+        ...overworldViewField(args, session),
+      } as OverworldQuestStartResponse<Args>;
     },
 
-    move_overworld_session_area(args: { session_id: string; area_route_id: string }): {
-      ok: true;
-      session_id: string;
-      result: OverworldAreaTravelResult;
-      observation: OverworldView;
-    } {
-      const session = getOverworldSession(args.session_id);
-      const result = session.moveArea(args.area_route_id);
-      return {
-        ok: true,
-        session_id: args.session_id,
-        result,
-        observation: session.view(),
-      };
+    complete_overworld_session_quest<
+      Args extends { session_id: string; rpg_session_id: string } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"result", OverworldQuestCompletionResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) => {
+        const rpgSession = sessions.get(args.rpg_session_id);
+        if (!rpgSession.worldQuestId) {
+          throw new Error("Only shipped world quest RPG sessions can complete overworld quests.");
+        }
+        if (rpgSession.overworldSessionId !== args.session_id) {
+          throw new Error("RPG quest session was not started from this overworld session.");
+        }
+        if (!rpgSession.state.ended || !rpgSession.state.endingId) {
+          throw new Error("RPG quest session has not ended yet.");
+        }
+        const ending = rpgSession.index.pack.endings.find(
+          (candidate) => candidate.id === rpgSession.state.endingId,
+        );
+        if (!ending) {
+          throw new Error(`RPG quest ended at unknown ending "${rpgSession.state.endingId}".`);
+        }
+        return session.completeQuest(rpgSession.worldQuestId, {
+          endingId: ending.id,
+          endingTitle: ending.title,
+          death: ending.death,
+        });
+      });
     },
 
-    look_overworld(args: { town_id?: string }): {
-      world: Pick<OverworldManifest, "id" | "name">;
-      current: OverworldNode;
-      exits: (OverworldEdge & { destination: OverworldNode })[];
-      areas: OverworldArea[];
-      local_area_routes: OverworldAreaEdge[];
-      points_of_interest: OverworldPoi[];
-      characters: OverworldCharacter[];
-      local_events: OverworldLocalEvent[];
-      local_jobs: OverworldLocalJob[];
-      nearby_sites: OverworldExplorationSite[];
-      local_quests: OverworldQuest[];
-    } {
-      const world = loadOverworldManifest();
-      const townId = args.town_id ?? world.start;
-      const current = world.nodes.find((node) => node.id === townId);
-      if (!current) throw new Error(`Unknown overworld town "${townId}".`);
-      return {
-        world: { id: world.id, name: world.name },
-        current,
-        exits: overworldEdgesFrom(world, townId),
-        areas: overworldAreasAt(world, townId),
-        local_area_routes: world.area_edges
-          .filter((edge) => edge.home === townId)
-          .sort((a, b) => a.travel_minutes - b.travel_minutes || a.route.localeCompare(b.route)),
-        points_of_interest: overworldPoisAt(world, townId),
-        characters: overworldCharactersAt(world, townId),
-        local_events: overworldEventsAt(world, townId),
-        local_jobs: overworldJobsAt(world, townId),
-        nearby_sites: overworldExplorationSitesNear(world, townId),
-        local_quests: overworldQuestsAt(world, townId),
-      };
-    },
-
-    travel_overworld(args: { from_town: string; road_id: string }): {
-      ok: true;
-      from: OverworldNode;
-      to: OverworldNode;
-      road: OverworldEdge;
-      road_event: OverworldRoadEvent | null;
-      arrival: {
-        world: Pick<OverworldManifest, "id" | "name">;
-        current: OverworldNode;
-        exits: (OverworldEdge & { destination: OverworldNode })[];
-        areas: OverworldArea[];
-        local_area_routes: OverworldAreaEdge[];
-        points_of_interest: OverworldPoi[];
-        characters: OverworldCharacter[];
-        local_events: OverworldLocalEvent[];
-        local_jobs: OverworldLocalJob[];
-        nearby_sites: OverworldExplorationSite[];
-        local_quests: OverworldQuest[];
-      };
-    } {
-      const world = loadOverworldManifest();
-      const current = world.nodes.find((node) => node.id === args.from_town);
-      if (!current) throw new Error(`Unknown overworld town "${args.from_town}".`);
-      const road = overworldEdgesFrom(world, args.from_town).find(
-        (edge) => edge.id === args.road_id,
+    move_overworld_session_area<
+      Args extends { session_id: string; area_route_id: string } & OverworldResponseOptions,
+    >(args: Args): OverworldSessionResponse<"result", OverworldAreaTravelResult, Args> {
+      return runOverworldSession(args, args.session_id, "result", (session) =>
+        session.moveArea(args.area_route_id),
       );
-      if (!road)
-        throw new Error(`Road "${args.road_id}" is not reachable from "${args.from_town}".`);
-      return {
-        ok: true,
-        from: current,
-        to: road.destination,
-        road,
-        road_event: overworldRoadEventFor(world, road.id),
-        arrival: this.look_overworld({ town_id: road.destination.id }),
-      };
     },
 
-    explore_overworld_area(args: { town_id?: string; area_id: string }): {
-      ok: true;
-      current: OverworldNode;
-      area: OverworldArea;
-      minutes: number;
-      journal_entry: {
-        kind: "area";
-        title: string;
-        text: string;
-      };
-    } {
-      const world = loadOverworldManifest();
-      const townId = args.town_id ?? world.start;
-      const current = world.nodes.find((node) => node.id === townId);
-      if (!current) throw new Error(`Unknown overworld town "${townId}".`);
-      const area = overworldAreasAt(world, townId).find(
-        (candidate) => candidate.id === args.area_id,
-      );
-      if (!area) throw new Error(`Area "${args.area_id}" is not in "${townId}".`);
-      return {
-        ok: true,
-        current,
-        area,
-        minutes: area.travel_minutes,
-        journal_entry: {
-          kind: "area",
-          title: `Explored ${area.name}`,
-          text: `${area.summary} ${area.discovery}`,
-        },
-      };
-    },
-
-    work_overworld_job(args: { town_id?: string; job_id: string }): {
-      ok: true;
-      current: OverworldNode;
-      job: OverworldLocalJob;
-      minutes: number;
-      regional_renown: number;
-      journal_entry: {
-        kind: "job";
-        title: string;
-        text: string;
-      };
-    } {
-      const world = loadOverworldManifest();
-      const townId = args.town_id ?? world.start;
-      const current = world.nodes.find((node) => node.id === townId);
-      if (!current) throw new Error(`Unknown overworld town "${townId}".`);
-      const job = overworldJobsAt(world, townId).find((candidate) => candidate.id === args.job_id);
-      if (!job) throw new Error(`Local job "${args.job_id}" is not in "${townId}".`);
-      return {
-        ok: true,
-        current,
-        job,
-        minutes: job.minutes,
-        regional_renown: job.difficulty,
-        journal_entry: {
-          kind: "job",
-          title: `Completed ${job.title}`,
-          text: `${job.objective} ${job.reward}`,
-        },
-      };
-    },
-
-    scout_overworld_poi(args: { town_id?: string; poi_id: string }): {
-      ok: true;
-      current: OverworldNode;
-      point_of_interest: OverworldPoi;
-      minutes: number;
-      journal_entry: {
-        kind: "poi";
-        title: string;
-        text: string;
-      };
-    } {
-      const world = loadOverworldManifest();
-      const townId = args.town_id ?? world.start;
-      const current = world.nodes.find((node) => node.id === townId);
-      if (!current) throw new Error(`Unknown overworld town "${townId}".`);
-      const poi = overworldPoisAt(world, townId).find((candidate) => candidate.id === args.poi_id);
-      if (!poi) throw new Error(`Point of interest "${args.poi_id}" is not in "${townId}".`);
-      return {
-        ok: true,
-        current,
-        point_of_interest: poi,
-        minutes: 20,
-        journal_entry: {
-          kind: "poi",
-          title: `Scouted ${poi.title}`,
-          text: `${poi.summary} You mark the site as a local lead for ${current.name}.`,
-        },
-      };
-    },
-
-    talk_overworld_contact(args: { town_id?: string; character_id: string }): {
-      ok: true;
-      current: OverworldNode;
-      character: OverworldCharacter;
-      minutes: number;
-      journal_entry: {
-        kind: "contact";
-        title: string;
-        text: string;
-      };
-    } {
-      const world = loadOverworldManifest();
-      const townId = args.town_id ?? world.start;
-      const current = world.nodes.find((node) => node.id === townId);
-      if (!current) throw new Error(`Unknown overworld town "${townId}".`);
-      const character = overworldCharactersAt(world, townId).find(
-        (candidate) => candidate.id === args.character_id,
-      );
-      if (!character) throw new Error(`Contact "${args.character_id}" is not in "${townId}".`);
-      return {
-        ok: true,
-        current,
-        character,
-        minutes: 15,
-        journal_entry: {
-          kind: "contact",
-          title: `Talked to ${character.name}`,
-          text: `${character.summary} ${character.agenda}`,
-        },
-      };
-    },
-
-    investigate_overworld_event(args: { town_id?: string; event_id: string }): {
-      ok: true;
-      current: OverworldNode;
-      event: OverworldLocalEvent;
-      minutes: number;
-      journal_entry: {
-        kind: "event";
-        title: string;
-        text: string;
-      };
-    } {
-      const world = loadOverworldManifest();
-      const townId = args.town_id ?? world.start;
-      const current = world.nodes.find((node) => node.id === townId);
-      if (!current) throw new Error(`Unknown overworld town "${townId}".`);
-      const event = overworldEventsAt(world, townId).find(
-        (candidate) => candidate.id === args.event_id,
-      );
-      if (!event) throw new Error(`Event "${args.event_id}" is not active in "${townId}".`);
-      return {
-        ok: true,
-        current,
-        event,
-        minutes: 20 + event.intensity * 5,
-        journal_entry: {
-          kind: "event",
-          title: `Investigated ${event.title}`,
-          text: `${event.summary} The pressure is ${event.pressure}, intensity ${event.intensity}.`,
-        },
-      };
-    },
-
-    validate_story(args: { story_path: string }): { ok: boolean; report: ValidationReport } {
-      return this.validate_pack({ pack_path: args.story_path });
-    },
-
-    validate_quest(args: { quest_path: string }): { ok: boolean; report: ValidationReport } {
-      return this.validate_pack({ pack_path: args.quest_path });
-    },
-
-    load_pack(args: { pack_path: string }): {
+    validate_quest(args: { world_quest_id?: string }): {
       ok: boolean;
-      mode?: PackMode;
-      meta?: AnyCompiledPack["pack"]["meta"];
+      world_quest_id: string | null;
+      report: ValidationReport;
+    } {
+      return validateWorldQuest(resolveRequiredWorldQuestId(args, "validate_quest"));
+    },
+
+    load_quest(args: { world_quest_id?: string }): {
+      ok: boolean;
+      world_quest_id: string | null;
+      meta?: CompiledRpgPack["pack"]["meta"];
       content_hash?: string;
       report: ValidationReport;
     } {
-      const lr = loadAndReport(args.pack_path);
-      if (!lr.ok) return { ok: false, report: lr.report };
-      return {
-        ok: lr.report.ok,
-        mode: lr.mode,
-        meta: lr.compiled.pack.meta,
-        content_hash: lr.compiled.contentHash,
-        report: lr.report,
-      };
-    },
-
-    explore_overworld_site(args: { town_id?: string; site_id: string }): {
-      ok: true;
-      current: OverworldNode;
-      site: OverworldExplorationSite;
-      minutes: number;
-      regional_renown: number;
-      journal_entry: {
-        kind: "site";
-        title: string;
-        text: string;
-      };
-    } {
-      const world = loadOverworldManifest();
-      const townId = args.town_id ?? world.start;
-      const current = world.nodes.find((node) => node.id === townId);
-      if (!current) throw new Error(`Unknown overworld town "${townId}".`);
-      const site = overworldExplorationSitesNear(world, townId).find(
-        (candidate) => candidate.id === args.site_id,
-      );
-      if (!site) throw new Error(`Exploration site "${args.site_id}" is not near "${townId}".`);
-      return {
-        ok: true,
-        current,
-        site,
-        minutes: 45 + site.danger * 15,
-        regional_renown: site.danger,
-        journal_entry: {
-          kind: "site",
-          title: `Explored ${site.title}`,
-          text: `${site.summary} ${site.reward}`,
-        },
-      };
-    },
-
-    /**
-     * Mint a fresh CYOA pack from a seed and validate it against the SAME `validateCyoa`
-     * gate the curated packs clear (the first deferred slice of "evolve the eval
-     * distribution", docs/CURRENT_PLAN.md / bug_0156 → bug_0157). This exposes the
-     * generator (src/gen/cyoa_generator.ts) through the MCP surface: a never-authored,
-     * never-seen pack whose structure the verifier must hold on. Pure + deterministic
-     * (same seed ⇒ identical pack) and read-only — nothing is written to disk. To PLAY
-     * the minted pack, pass the same value to `new_game`'s `generate_seed`.
-     */
-    generate_pack(args: { seed: number }): {
-      ok: boolean;
-      mode: PackMode;
-      pack_id: string;
-      content_hash: string;
-      seed: number;
-      meta: CyoaPack["meta"];
-      scene_count: number;
-      ending_count: number;
-      report: ValidationReport;
-    } {
-      const pack = generateCyoaPack(args.seed);
-      const report = validateCyoa(pack);
-      return {
-        ok: report.ok,
-        mode: "cyoa",
-        pack_id: pack.meta.id,
-        content_hash: hashState(pack),
-        seed: args.seed,
-        meta: pack.meta,
-        scene_count: pack.scenes.length,
-        ending_count: pack.endings.length,
-        report,
-      };
+      return loadWorldQuest(resolveRequiredWorldQuestId(args, "load_quest"));
     },
 
     /**
      * Mint a fresh RPG pack from a seed and validate it against the SAME `validateRpg` gate
-     * the curated RPG packs clear (the MODE-WIDENING slice of "evolve the eval distribution",
-     * docs/CURRENT_PLAN.md / bug_0159 → this). The RPG twin of `generate_pack`: it exposes the
-     * RPG generator (src/gen/rpg_generator.ts) through the MCP surface so a never-authored,
-     * never-seen pack exercises the COMBAT-winnability and SCORE-economy proofs — the verifier
-     * surfaces the CYOA generator never touches. Pure + deterministic (same seed ⇒ identical
-     * pack) and read-only — nothing is written to disk. To PLAY the minted pack, pass the same
-     * value to `new_game`'s `generate_rpg_seed`.
+     * the curated RPG packs clear. This is the single public MCP generation surface.
+     * Pure + deterministic (same seed ⇒ identical pack) and read-only — nothing is
+     * written to disk. To PLAY the minted pack, pass the same value to `new_game`'s
+     * `generate_rpg_seed`.
      */
     generate_rpg_pack(args: { seed: number }): {
       ok: boolean;
-      mode: PackMode;
-      pack_id: string;
       content_hash: string;
       seed: number;
       meta: RpgPack["meta"];
@@ -1300,8 +1670,6 @@ export function createToolApi(opts: { root: string }) {
       const report = validateRpg(pack);
       return {
         ok: report.ok,
-        mode: "rpg",
-        pack_id: pack.meta.id,
         content_hash: hashState(pack),
         seed: args.seed,
         meta: pack.meta,
@@ -1312,228 +1680,258 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    /**
-     * Mint a fresh PARSER pack from a seed and validate it against the SAME `validateParser` gate
-     * the curated parser packs clear (the THIRD mode of "evolve the eval distribution", closing the
-     * MCP authoring asymmetry — the assessor already mints parser packs from `generateParserPack`,
-     * src/afk/assessor.ts:843, but no MCP tool exposed it). The parser twin of `generate_pack` /
-     * `generate_rpg_pack`: it exposes the parser generator (src/gen/parser_generator.ts) through the
-     * MCP surface so a never-authored, never-seen pack exercises the parser-only verifier surfaces
-     * (depth-2 obtainability / soft-lock, the moral same-key fork) the CYOA and RPG generators never
-     * touch. Pure + deterministic (same seed ⇒ identical pack) and read-only — nothing is written to
-     * disk. To PLAY the minted pack, pass the same value to `new_game`'s `generate_parser_seed`.
-     */
-    generate_parser_pack(args: { seed: number }): {
-      ok: boolean;
-      mode: PackMode;
-      pack_id: string;
-      content_hash: string;
-      seed: number;
-      meta: ParserPack["meta"];
-      room_count: number;
-      object_count: number;
-      ending_count: number;
-      report: ValidationReport;
-    } {
-      const pack = generateParserPack(args.seed);
-      const report = validateParser(pack);
-      return {
-        ok: report.ok,
-        mode: "parser",
-        pack_id: pack.meta.id,
-        content_hash: hashState(pack),
-        seed: args.seed,
-        meta: pack.meta,
-        room_count: pack.rooms.length,
-        object_count: pack.objects.length,
-        ending_count: pack.endings.length,
-        report,
-      };
+    new_game<Args extends RpgNewGameArgs>(args: Args): RpgSessionPayload<Args> {
+      // Mint a fresh RPG pack in-memory from `generate_rpg_seed`. The generation seed selects
+      // the minted pack's theme/structure; `seed` still seeds runtime state.
+      const source = resolveGameSource(root, args, "new_game");
+      const compiled = requireGeneratedRpgPlayable(source.generateRpgSeed);
+      return startRpgSession(compiled, args, { generatedRpgSeed: source.generateRpgSeed });
     },
 
-    new_game(args: {
-      pack_path?: string;
-      generate_seed?: number;
-      generate_rpg_seed?: number;
-      generate_parser_seed?: number;
-      seed?: number;
-      hide_graph?: boolean;
-    }) {
-      // Either load a pack from disk OR mint a fresh one in-memory from `generate_seed`
-      // (a CYOA pack) / `generate_rpg_seed` (an RPG pack) / `generate_parser_seed` (a parser
-      // pack) — the eval-distribution path, a never-authored pack held to the same playable
-      // bar. The generate_* seed selects the minted pack's THEME/structure; `seed` still seeds
-      // runtime state, so the two are independent.
-      const { mode, compiled } =
-        args.generate_seed !== undefined
-          ? requireGeneratedPlayable(args.generate_seed)
-          : args.generate_rpg_seed !== undefined
-            ? requireGeneratedRpgPlayable(args.generate_rpg_seed)
-            : args.generate_parser_seed !== undefined
-              ? requireGeneratedParserPlayable(args.generate_parser_seed)
-              : requirePlayable(
-                  args.pack_path ??
-                    ((): never => {
-                      throw new Error(
-                        "new_game requires pack_path, generate_seed, generate_rpg_seed, or generate_parser_seed.",
-                      );
-                    })(),
-                );
-      const session = startSession(mode, compiled, undefined, {
-        ...(args.hide_graph ? { hideGraph: true } : {}),
-      });
-      if (args.seed !== undefined && args.seed !== 1) {
-        // Re-seed: rebuild the initial state at the requested seed.
-        session.state = initStateFor(mode, session.index, args.seed);
+    start_world_quest<Args extends RpgStartWorldQuestArgs>(
+      args: Args,
+    ): RpgWorldQuestStartPayload<Args> {
+      if ((args as { quest_id?: unknown }).quest_id !== undefined) {
+        throw new Error("start_world_quest accepts world_quest_id, not quest_id.");
       }
+      if ((args as { world_quest_id?: unknown }).world_quest_id === undefined) {
+        throw new Error("start_world_quest requires world_quest_id.");
+      }
+      const resolved = resolveWorldQuestPackPath(args.world_quest_id);
+      const started = startRpgSession(requirePlayable(resolved.packPath), args, {
+        packPath: resolved.packPath,
+        worldQuestId: resolved.node.id,
+      });
       return {
-        session_id: session.id,
-        mode,
-        observation: obsOf(session),
-        state_hash: hashState(session.state),
+        world: { id: resolved.world.id, name: resolved.world.name, hub: resolved.world.hub },
+        quest: {
+          id: resolved.node.id,
+          name: resolved.node.name,
+          path_from_hub: worldRouteFromHub(resolved.world, resolved.node.id) ?? [],
+        },
+        ...started,
+      } as RpgWorldQuestStartPayload<Args>;
+    },
+
+    get_observation<Args extends RpgGetObservationArgs>(args: Args): RpgObservationResponse<Args> {
+      const s = sessions.get(args.session_id);
+      const stateHash = s.stateHash;
+      if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
+        return {
+          state_hash: stateHash,
+          unchanged: true,
+        } as RpgObservationResponse<Args>;
+      }
+      const obsOpts = {
+        hideGraph: args.hide_graph ?? s.hideGraph ?? false,
       };
+      const obs = sessionObsOf(s, obsOpts);
+      return {
+        ...rpgViewField(sessions, s, obs, args, obsOpts),
+        state_hash: stateHash,
+      } as RpgObservationResponse<Args>;
     },
 
-    start_game(args: { story_path: string; seed?: number; hide_graph?: boolean }) {
-      return this.new_game({
-        pack_path: args.story_path,
-        ...(args.seed !== undefined ? { seed: args.seed } : {}),
-        ...(args.hide_graph ? { hide_graph: true } : {}),
-      });
-    },
-
-    start_quest(args: { quest_path: string; seed?: number; hide_graph?: boolean }) {
-      return this.new_game({
-        pack_path: args.quest_path,
-        ...(args.seed !== undefined ? { seed: args.seed } : {}),
-        ...(args.hide_graph ? { hide_graph: true } : {}),
-      });
-    },
-
-    get_observation(args: { session_id: string; hide_graph?: boolean }) {
+    list_legal_actions<Args extends RpgLegalActionsArgs>(
+      args: Args,
+    ): RpgLegalActionsResponse<Args> {
       const s = sessions.get(args.session_id);
-      const obs = buildObsFor(s.mode, s.index, s.state, {
-        hideGraph: args.hide_graph ?? s.hideGraph ?? false,
-      });
-      return { observation: obs, state_hash: hashState(s.state) };
+      const stateHash = s.stateHash;
+      if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
+        return {
+          state_hash: stateHash,
+          unchanged: true,
+        } as RpgLegalActionsResponse<Args>;
+      }
+      const actions = sessions.legalActions(s.id, () => enumerateRpgActions(s.index, s.state));
+      return {
+        actions: legalActionRowsFor(sessions, s, actions, args),
+        state_hash: stateHash,
+      } as RpgLegalActionsResponse<Args>;
     },
 
-    get_scene(args: { session_id: string; hide_graph?: boolean }) {
-      return this.get_observation(args);
-    },
-
-    list_legal_actions(args: { session_id: string; hide_graph?: boolean }) {
+    step_action<Args extends RpgStepActionArgs>(args: Args): RpgStepActionResponse<Args> {
       const s = sessions.get(args.session_id);
-      const obs = buildObsFor(s.mode, s.index, s.state, {
-        hideGraph: args.hide_graph ?? s.hideGraph ?? false,
-      });
-      return { actions: obs.available_actions };
-    },
-
-    step_action(args: { session_id: string; action_id: string; hide_graph?: boolean }) {
-      const s = sessions.get(args.session_id);
-      const before = buildObsFor(s.mode, s.index, s.state, {
-        hideGraph: args.hide_graph ?? s.hideGraph ?? false,
-      });
+      const currentStateHash = s.stateHash;
+      if (args.expected_state_hash !== undefined && args.expected_state_hash !== currentStateHash) {
+        return {
+          ok: false,
+          rejection_reason: "State hash mismatch; refresh the current observation or action menu.",
+          state_hash: currentStateHash,
+        } as RpgStepActionResponse<Args>;
+      }
+      const actionOptions = sessions.legalActions(s.id, () =>
+        enumerateRpgActions(s.index, s.state),
+      );
+      const actionOption = actionOptionForId(actionOptions, args.action_id);
       const beforeStep = s.state.step;
-      const actionText = obsActionText(before, args.action_id);
-      const action = actionForId(before, args.action_id);
-      if (action === null) {
-        // Parser/RPG: an id not in the legal set never reaches the engine.
+      const beforeSceneId = s.state.current;
+      const beforeTitle = rpgRoomTitle(s.index, s.state);
+      if (actionOption === null) {
+        const beforeObsOpts = {
+          hideGraph: args.hide_graph ?? s.hideGraph ?? false,
+        };
+        const before = sessionObsOf(s, beforeObsOpts);
+        // Unknown action ids never reach the engine.
         return {
           ok: false,
           rejection_reason: "That action is not available right now.",
-          events: [
-            { type: "rejected" as const, reason: "That action is not available right now." },
-          ],
-          observation: before,
-          state_hash: hashState(s.state),
-        };
+          events: rpgStepEvents(
+            [{ type: "rejected" as const, reason: "That action is not available right now." }],
+            args,
+          ),
+          ...rpgStepEventVersion(args),
+          ...rpgViewField(sessions, s, before, args, beforeObsOpts),
+          state_hash: currentStateHash,
+        } as RpgStepActionResponse<Args>;
       }
-      const result = makeStep(s.rules)(s.state, action);
+      const result = makeStep(s.rules)(s.state, actionOption.action);
       sessions.update(s.id, result.state);
-      const after = buildObsFor(s.mode, s.index, s.state, {
+      const afterObsOpts = {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
-      });
-      s.transcript.push({
+      };
+      const after = sessionObsOf(s, afterObsOpts);
+      sessions.appendTranscript(s.id, {
         step: beforeStep,
-        scene_id: obsLocation(before),
-        title: before.title,
+        scene_id: beforeSceneId,
+        title: beforeTitle,
         action_id: args.action_id,
-        action_text: actionText,
+        action_text: actionOption.command,
         events: result.events,
         result_scene_id: obsLocation(after),
         ended: after.ended,
         ending_id: after.ending_id,
       });
+      if (!result.ok) {
+        return {
+          ok: false,
+          rejection_reason: result.rejectionReason ?? "Action rejected.",
+          events: rpgStepEvents(result.events, args),
+          ...rpgStepEventVersion(args),
+          ...rpgViewField(sessions, s, after, args, afterObsOpts),
+          state_hash: s.stateHash,
+        } as RpgStepActionResponse<Args>;
+      }
       return {
-        ok: result.ok,
-        rejection_reason: result.rejectionReason ?? null,
-        events: playerVisibleEvents(result.events),
-        observation: after,
-        state_hash: hashState(result.state),
-      };
+        ok: true,
+        events: rpgStepEvents(result.events, args),
+        ...rpgStepEventVersion(args),
+        ...rpgViewField(sessions, s, after, args, afterObsOpts),
+        state_hash: s.stateHash,
+      } as RpgStepActionResponse<Args>;
     },
 
-    choose_option(args: { session_id: string; option_id: string; hide_graph?: boolean }) {
-      return this.step_action({
-        session_id: args.session_id,
-        action_id: args.option_id,
-        ...(args.hide_graph !== undefined && { hide_graph: args.hide_graph }),
-      });
-    },
-
-    get_state(args: { session_id: string }) {
+    get_state<Args extends RpgGetStateArgs>(args: Args): RpgStateResponse<Args> {
       const s = sessions.get(args.session_id);
-      return { state: s.state, state_hash: hashState(s.state) };
+      const stateHash = s.stateHash;
+      if (args.include_state === true) {
+        return { state: s.state, state_hash: stateHash } as RpgStateResponse<Args>;
+      }
+      return { state_hash: stateHash } as RpgStateResponse<Args>;
     },
 
-    get_transcript(args: { session_id: string }) {
+    get_transcript<Args extends TranscriptArgs>(args: Args): TranscriptResponse<Args> {
       const s = sessions.get(args.session_id);
-      return {
+      const stateHash = s.stateHash;
+      const currentTranscriptHash = hashTranscript(s, stateHash);
+      if (
+        args.if_transcript_hash !== undefined &&
+        args.if_transcript_hash === currentTranscriptHash
+      ) {
+        return {
+          state_hash: stateHash,
+          transcript_hash: currentTranscriptHash,
+          unchanged: true,
+        } as TranscriptResponse<Args>;
+      }
+      if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
+        return {
+          state_hash: stateHash,
+          transcript_hash: currentTranscriptHash,
+          unchanged: true,
+        } as TranscriptResponse<Args>;
+      }
+      const summary = sessions.transcriptSummary(s.id, () => ({
+        steps: s.transcript.filter((t) => t.action_id !== null).length,
+        scenes: [...new Set(s.transcript.flatMap((t) => [t.scene_id, t.result_scene_id]))].sort(),
+        ended: s.state.ended,
+        ending_id: s.state.endingId,
+        inventory: [...s.state.inventory],
+        flags: Object.keys(s.state.flags)
+          .filter((f) => s.state.flags[f] === true && !f.startsWith("__"))
+          .sort(),
+        journal: [...s.state.journal],
+      }));
+      const response = {
         session_id: s.id,
-        pack_id: s.packId,
-        mode: s.mode,
+        ...rpgSourceFields(s),
+        state_hash: stateHash,
+        transcript_hash: currentTranscriptHash,
+        ...(args.compact_events === true &&
+        args.summary_only !== true &&
+        args.compact_turns !== true
+          ? { event_v: RPG_COMPACT_EVENT_VERSION }
+          : {}),
         // Filter internal-bookkeeping events the same way step_action does, so the
         // transcript a player reads never surfaces `__`-prefixed vars/flags (bug_0260).
-        turns: s.transcript.map((t) => ({ ...t, events: playerVisibleEvents(t.events) })),
-        summary: {
-          steps: s.transcript.filter((t) => t.action_id !== null).length,
-          scenes: [...new Set(s.transcript.flatMap((t) => [t.scene_id, t.result_scene_id]))].sort(),
-          ended: s.state.ended,
-          ending_id: s.state.endingId,
-          inventory: [...s.state.inventory],
-          flags: Object.keys(s.state.flags)
-            .filter((f) => s.state.flags[f] === true && !f.startsWith("__"))
-            .sort(),
-          journal: [...s.state.journal],
-        },
+        ...(args.summary_only
+          ? {}
+          : {
+              turns: transcriptTurnsFor(sessions, s, args),
+            }),
+        summary: transcriptSummaryFor(sessions, s, args, summary),
       };
+      return response as unknown as TranscriptResponse<Args>;
     },
 
-    save_game(args: { session_id: string }) {
+    save_game<Args extends RpgSaveArgs>(args: Args): RpgSaveResponse<Args> {
       const s = sessions.get(args.session_id);
+      const stateHash = s.stateHash;
+      if (args.expected_state_hash !== undefined && args.expected_state_hash !== stateHash) {
+        const reason = "State hash mismatch; refresh the current observation or action menu.";
+        return {
+          ok: false,
+          state_hash: stateHash,
+          rejection_reason: reason,
+        } as RpgSaveResponse<Args>;
+      }
       // The save records the pack mode so load can refuse a mode mismatch (§8.7).
-      return {
-        save: save(s.state, s.packId, s.contentHash, s.mode),
-        pack_id: s.packId,
-        content_hash: s.contentHash,
-        mode: s.mode,
+      const saveMetadata = {
+        ...(s.worldQuestId ? { worldQuestId: s.worldQuestId } : {}),
+        ...(s.generatedRpgSeed !== undefined ? { generatedRpgSeed: s.generatedRpgSeed } : {}),
       };
+      return {
+        ok: true,
+        save: save(s.state, s.packId, s.contentHash, SAVE_MODE, saveMetadata),
+        ...rpgSourceFields(s),
+        content_hash: s.contentHash,
+        state_hash: stateHash,
+      } as RpgSaveResponse<Args>;
     },
 
-    load_game(args: { pack_path: string; save: string }) {
-      const { mode, compiled } = requirePlayable(args.pack_path);
+    load_game<Args extends RpgLoadGameArgs>(args: Args): RpgSessionPayload<Args> {
+      const bundle = load(args.save, undefined, SAVE_MODE);
+      const source = resolveSaveGameSource(root, args, bundle, "load_game");
+      const compiled =
+        source.kind === "generated"
+          ? requireGeneratedRpgPlayable(source.generateRpgSeed)
+          : requirePlayable(source.packPath);
       // Content-hash check is enforced by load() against the loaded pack (§8.7);
       // mode is verified too, so a save can't be loaded against a different mode.
-      const bundle = load(args.save, compiled.contentHash, mode);
-      const session = startSession(mode, compiled, bundle.state);
+      const verified = load(args.save, compiled.contentHash, SAVE_MODE);
+      const session = startSession(compiled, verified.state, {
+        ...(source.packPath ? { packPath: source.packPath } : {}),
+        ...(source.worldQuestId ? { worldQuestId: source.worldQuestId } : {}),
+        ...(source.generateRpgSeed !== null ? { generatedRpgSeed: source.generateRpgSeed } : {}),
+        ...(args.hide_graph ? { hideGraph: true } : {}),
+      });
+      const openingOpts = openingObservationOptions(session);
       return {
         session_id: session.id,
-        mode,
-        observation: obsOf(session),
-        state_hash: hashState(session.state),
-      };
+        ...rpgViewField(sessions, session, openingObsOf(session, openingOpts), args, openingOpts),
+        ...rpgSourceFields(session),
+        state_hash: session.stateHash,
+      } as RpgSessionPayload<Args>;
     },
 
     async adapt_story(args: { premise: string; mode?: PackMode }) {
@@ -1544,26 +1942,15 @@ export function createToolApi(opts: { root: string }) {
       // stay green and offline while a keyed run exercises the genuine §1 author.
       // Mirrors bin/author.ts. Returns the story, the green/red pack, the validation
       // report, and the per-beat classification (§11). Never writes files.
-      //
-      // `mode` routes the SAME writer story through the matching adapter so all three
-      // engine modes are authorable from MCP, closing the authoring-side twin of the
-      // generate_* generation symmetry (bug_0192): cyoa (default) → runAdapter behind
-      // validateCyoa; parser → runParserAdapter behind validateParser; rpg →
-      // runRpgAdapter behind the richest validateRpg. The story is mode-agnostic — each
-      // adapter re-adapts the same beats into its own pack type against its own validator.
-      const mode: PackMode = args.mode ?? "cyoa";
+      if (args.mode !== undefined) {
+        throw new Error("adapt_story is RPG-only; mode is no longer supported.");
+      }
       const provider = resolveProvider({ mock: new MockAuthorProvider() });
       const contract = loadEngineContract();
       const story = await runWriter(provider, { premise: args.premise, contract });
-      const result =
-        mode === "parser"
-          ? await runParserAdapter(provider, { story, contract })
-          : mode === "rpg"
-            ? await runRpgAdapter(provider, { story, contract })
-            : await runAdapter(provider, { story, contract });
+      const result = await runRpgAdapter(provider, { story, contract });
       return {
         ok: result.ok,
-        mode,
         rounds: result.rounds,
         story: { title: story.title, beats: story.beats.map((b) => b.id) },
         classifications: result.classifications,
@@ -1572,10 +1959,11 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    replay_trace(args: { trace_path: string; pack_path: string }) {
+    replay_trace(args: { trace_path: string; world_quest_id?: string; pack_path?: never }) {
       const traceAbs = safeResolve(root, args.trace_path);
-      const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace;
-      const { mode, compiled } = requirePlayable(args.pack_path);
+      const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace<RpgAction>;
+      assertTraceMode(trace);
+      const { compiled } = resolveTraceSource(args, trace, "replay_trace");
       if (trace.content_hash !== compiled.contentHash) {
         return {
           ok: false,
@@ -1586,8 +1974,9 @@ export function createToolApi(opts: { root: string }) {
       // content-hash check above guards WHICH pack, not WHETHER the state is well-
       // formed). Gate it the same way a loaded save is gated, BEFORE any engine call.
       assertWellFormedState(trace.initial_state);
-      assertLoadedStateRefs(mode, indexFor(mode, compiled.pack), trace.initial_state);
-      const rules = rulesFor(mode, indexFor(mode, compiled.pack));
+      const index = indexFor(compiled.pack);
+      assertRpgStateReferences(index, trace.initial_state);
+      const rules = rulesFor(index);
       // Replay asserts the recorded final hash, and — for a Trace-v2 trace that
       // also carries `per_step_hashes` — localizes the FIRST divergent action via
       // `divergedAtStep` (returned straight through). A v1 trace (final hash only)
@@ -1595,15 +1984,17 @@ export function createToolApi(opts: { root: string }) {
       return replayTrace(trace, rules);
     },
 
-    inspect_trace(args: { trace_path: string; pack_path: string }) {
+    inspect_trace(args: { trace_path: string; world_quest_id?: string; pack_path?: never }) {
       // Summarize a recorded trace and surface suspected bugs (§9.4). Replays the
       // actions through the engine for a per-step location/event summary, asserts
       // the recorded final hash, localizes the first divergent step when the trace
       // carries a Trace-v2 per-step baseline (§8.8), and runs the debugger's
       // classifier (§12.5).
       const traceAbs = safeResolve(root, args.trace_path);
-      const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace;
-      const { mode, compiled } = requirePlayable(args.pack_path);
+      const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace<RpgAction>;
+      assertTraceMode(trace);
+      const source = resolveTraceSource(args, trace, "inspect_trace");
+      const { compiled } = source;
       if (trace.content_hash !== compiled.contentHash) {
         return {
           ok: false,
@@ -1614,13 +2005,14 @@ export function createToolApi(opts: { root: string }) {
       // is fed RAW into the per-step loop (let state = trace.initial_state) and into
       // diagnose() below, so it must be well-formed + referentially sound first.
       assertWellFormedState(trace.initial_state);
-      assertLoadedStateRefs(mode, indexFor(mode, compiled.pack), trace.initial_state);
-      const rules = rulesFor(mode, indexFor(mode, compiled.pack));
+      const index = indexFor(compiled.pack);
+      assertRpgStateReferences(index, trace.initial_state);
+      const rules = rulesFor(index);
       const step = makeStep(rules);
       let state = trace.initial_state;
       const steps: {
         i: number;
-        action: Action;
+        action: RpgAction;
         ok: boolean;
         location: string;
         ended: boolean;
@@ -1642,8 +2034,7 @@ export function createToolApi(opts: { root: string }) {
       const d = diagnose(rules, trace.initial_state, trace.actions);
       return {
         ok: true,
-        mode,
-        pack_id: trace.pack_id,
+        world_quest_id: source.worldQuestId,
         content_hash: trace.content_hash,
         seed: trace.seed,
         steps: trace.actions.length,
@@ -1660,32 +2051,47 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    apply_content_patch(args: { pack_path: string; proposal: ContentPatchProposal }) {
+    apply_content_patch(args: {
+      world_quest_id?: string;
+      pack_path?: never;
+      proposal: ContentPatchProposal;
+    }) {
       // Apply a structured patch with deterministic code and return the modified
       // pack + validation report (§9.4, §12.5). The model never writes files: a
-      // patch is data, validated before it can be played (§16). The fixer supports
-      // cyoa | parser only — RPG packs are intentionally out of the auto-fix path
-      // until the fixer is extended (roadmap), so a proposal.mode is never 'rpg'.
+      // patch is data, validated before it can be played (§16). The fixer is RPG-only,
+      // matching the public catalog and runtime.
+      const source = resolvePackSource(root, args, "apply_content_patch");
       const proposal = ContentPatchProposalSchema.parse(args.proposal);
-      const abs = safeResolve(root, args.pack_path);
-      const loaded = proposal.mode === "cyoa" ? loadPackFile(abs) : loadParserPackFile(abs);
+      const abs = safeResolve(root, source.packPath);
+      const loaded = loadRpgPackFile(abs);
       if (!loaded.ok) {
         return {
           ok: false,
-          report: makeReport(args.pack_path, [
+          world_quest_id: source.worldQuestId,
+          report: makeReport(source.packPath, [
             {
               severity: "error" as const,
               code: "SCHEMA",
               message: "pack failed to compile",
-              where: [args.pack_path],
+              where: [source.packPath],
             },
           ]),
         };
       }
       const result = applyContentPatch(loaded.compiled.pack, proposal);
       return result.ok
-        ? { ok: true, applied: result.applied, report: result.report, pack: result.pack }
-        : { ok: false, report: result.report };
+        ? {
+            ok: true,
+            world_quest_id: source.worldQuestId,
+            applied: result.applied,
+            report: result.report,
+            pack: result.pack,
+          }
+        : {
+            ok: false,
+            world_quest_id: source.worldQuestId,
+            report: result.report,
+          };
     },
   };
 }

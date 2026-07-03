@@ -44,7 +44,6 @@ import {
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
-import { buildParserObservation } from "../../src/parser/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { Action } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
@@ -57,7 +56,7 @@ const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
 const desc = (s: GameState): string => buildRpgObservation(index, s).description;
-const score = (s: GameState): number => buildParserObservation(index, s).score;
+const score = (s: GameState): number => buildRpgObservation(index, s).score;
 const options = (s: GameState) => enumerateRpgActions(index, s);
 
 function act(s: GameState, pred: (a: Action) => boolean): GameState {

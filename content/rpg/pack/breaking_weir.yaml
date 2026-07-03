@@ -217,8 +217,7 @@ rooms:
       - direction: north
         to: race_house
         conditions: [{ has_flag: walk_crossed }]
-        # locked_msg names the PRECONDITION (the life-line clipped to the run-wire), the house
-        # style of the lamplighters harbour_head down-exit ("…until the great lamp is lit") — WHY
+        # locked_msg names the PRECONDITION (the life-line clipped to the run-wire) — WHY
         # blocked, not HOW to clear (the crossing action stays hidden until the line is held,
         # the bug_0201 blocked_exits discipline). The bug_0225 blind-pass finding: the old generic
         # "still ahead of you" named no precondition, so a player who left the life-line in the

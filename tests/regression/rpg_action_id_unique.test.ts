@@ -39,13 +39,8 @@
  *     is the orthogonal property: two DISTINCT, individually-resolvable options can still
  *     collide on their id string.
  *
- * Note the CYOA mode needs no dynamic analogue: a CYOA observation's action ids ARE the
- * scene's declared choice ids (`available_actions = scene.choices.filter(cond).map(c => c.id)`,
- * src/cyoa/observation.ts), and the CYOA validator already dup-checks choice ids WITHIN each
- * scene (cyoa_validator.ts DUPLICATE_ID). The runtime menu is a condition-filtered SUBSET of
- * those statically-unique ids, so it is unique by construction — menu-integrity holds for
- * CYOA statically. PARSER (bug_0151) and RPG (here) are the modes whose enumerators MINT ids
- * the static checks cannot see, so they are the two that need a runtime proof.
+ * Parser (bug_0151) and RPG (here) are the modes whose enumerators mint ids the static
+ * checks cannot see, so they are the two that need a runtime proof.
  *
  * ── How it is proven (sound + exhaustive) ───────────────────────────────────────────
  * For each auto-discovered RPG pack it runs the shared exhaustive concrete BFS

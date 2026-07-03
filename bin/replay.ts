@@ -1,53 +1,88 @@
 #!/usr/bin/env -S npx tsx
 /**
- * bin/replay — replay a recorded trace and assert its final-state hash (§8.8).
+ * bin/replay — replay an RPG trace and assert its final-state hash (§8.8).
  *
  * Usage:
- *   npm run replay                 # build + round-trip a hand-written demo trace
- *   npm run replay -- <trace.json> # replay a trace file against the demo rules
- *
- * Stage 0 only knows the demo rule set (src/demo/micro.ts). Later stages select
- * a rule set by the trace's pack_id.
+ *   npm run replay                              # replay the committed RPG smoke trace
+ *   npm run replay -- <trace.json>              # infer a shipped trace's worldQuestId
+ *   npm run replay -- <trace.json> <world_quest_id>
  */
 import { readFileSync } from "node:fs";
-import type { Action } from "../src/api/types.js";
-import { recordTrace, type Trace } from "../src/trace/record.js";
-import { replayTrace } from "../src/trace/replay.js";
-import {
-  microRules,
-  microInitState,
-  MICRO_PACK_ID,
-  MICRO_CONTENT_HASH,
-  MICRO_SEED,
-} from "../src/demo/micro.js";
+import { type Trace } from "../src/trace/record.js";
+import { assertTraceMode, replayTrace } from "../src/trace/replay.js";
+import { loadRpgPackFile } from "../src/rpg/pack.js";
+import { buildRpgRules, indexRpgPack } from "../src/rpg/runner.js";
+import type { RpgAction } from "../src/api/types.js";
+import { assertWellFormedState } from "../src/persist/save_load.js";
+import { assertRpgStateReferences } from "../src/rpg/state_integrity.js";
+import { resolveTracePackSource, type TraceSourceArgs } from "../src/world/source.js";
 
-/** The canonical hand-written trace: take torch → enter cave → grab gold → win. */
-function demoTrace(): Trace {
-  const actions: Action[] = [
-    { type: "CHOOSE", choiceId: "take_torch" },
-    { type: "CHOOSE", choiceId: "enter_cave" },
-    { type: "CHOOSE", choiceId: "grab_gold" },
-    { type: "CHOOSE", choiceId: "win" },
-  ];
-  return recordTrace(microRules, microInitState(MICRO_SEED), actions, {
-    trace_id: "tr_demo_0001",
-    pack_id: MICRO_PACK_ID,
-    content_hash: MICRO_CONTENT_HASH,
-  });
+const DEFAULT_TRACE = "traces/rpg/barrow_victory.json";
+
+function arg(name: string): string | undefined {
+  const i = process.argv.indexOf(name);
+  return i >= 0 ? process.argv[i + 1] : undefined;
+}
+
+function positionalSourceArg(): string | undefined {
+  for (let i = 3; i < process.argv.length; i += 1) {
+    const value = process.argv[i]!;
+    if (value === "--world-quest-id" || value === "--world_quest_id") {
+      i += 1;
+      continue;
+    }
+    if (value === "--" || value.startsWith("--")) continue;
+    return value;
+  }
+  return undefined;
+}
+
+function traceSourceArgs(): TraceSourceArgs {
+  if (arg("--pack") !== undefined || process.argv.includes("--pack")) {
+    throw new Error("replay accepts world_quest_id or embedded trace worldQuestId, not --pack.");
+  }
+  const worldQuestId = arg("--world-quest-id") ?? arg("--world_quest_id");
+  const positional = positionalSourceArg();
+  const count = [worldQuestId !== undefined, positional !== undefined].filter(Boolean).length;
+  if (count > 1) {
+    throw new Error(
+      "replay accepts exactly one trace source: --world-quest-id or a positional world quest id.",
+    );
+  }
+  if (worldQuestId !== undefined) return { world_quest_id: worldQuestId };
+  if (positional === undefined) return {};
+  if (/\.ya?ml$/i.test(positional) || positional.includes("/") || positional.includes("\\")) {
+    throw new Error("replay trace sources are world quest ids; raw pack paths are not accepted.");
+  }
+  return { world_quest_id: positional };
 }
 
 function main(): void {
-  const arg = process.argv[2];
-  const trace: Trace = arg ? (JSON.parse(readFileSync(arg, "utf8")) as Trace) : demoTrace();
-
-  if (trace.pack_id !== MICRO_PACK_ID) {
-    console.error(`Unknown pack_id "${trace.pack_id}". Stage 0 only knows "${MICRO_PACK_ID}".`);
-    process.exit(2);
+  const tracePath = process.argv[2] ?? DEFAULT_TRACE;
+  const trace = JSON.parse(readFileSync(tracePath, "utf8")) as Trace<RpgAction>;
+  assertTraceMode(trace);
+  const source = resolveTracePackSource(process.cwd(), traceSourceArgs(), trace, "replay");
+  const packPath = source.packPath;
+  const loaded = loadRpgPackFile(packPath);
+  if (!loaded.ok) {
+    console.error(`Pack ${packPath} failed to compile as an RPG pack.`);
+    process.exit(1);
   }
 
-  const result = replayTrace(trace, microRules);
+  if (trace.content_hash !== loaded.compiled.contentHash) {
+    console.error(
+      `Trace content ${trace.content_hash} does not match pack ${loaded.compiled.contentHash}.`,
+    );
+    process.exit(1);
+  }
+  assertWellFormedState(trace.initial_state);
+  const index = indexRpgPack(loaded.compiled.pack);
+  assertRpgStateReferences(index, trace.initial_state);
+  const rules = buildRpgRules(index);
+  const result = replayTrace(trace, rules);
   console.log(`trace_id:     ${trace.trace_id}`);
   console.log(`pack_id:      ${trace.pack_id}`);
+  console.log(`world quest:  ${source.worldQuestId ?? "(none)"}`);
   console.log(`actions:      ${trace.actions.length}`);
   console.log(`final hash:   ${result.finalHash}`);
   console.log(`expected:     ${result.expectedFinalHash ?? "(none)"}`);

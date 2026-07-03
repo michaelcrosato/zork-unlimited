@@ -9,16 +9,20 @@
 import type { GameState } from "../core/state.js";
 import { hashState } from "../core/hash.js";
 import type { Action, StepResult } from "../api/types.js";
-import type { Rules } from "../core/engine.js";
+import type { EngineAction, Rules } from "../core/engine.js";
 import { makeStep } from "../core/engine.js";
+import { SAVE_MODE, type SaveMode } from "../persist/save_load.js";
 
-export type Trace = {
+export type Trace<A extends EngineAction = Action> = {
+  mode: SaveMode;
+  /** Shipped world quest id, when the trace belongs to the open-world graph. */
+  worldQuestId?: string;
   trace_id: string;
   pack_id: string;
   content_hash: string;
   seed: number;
   initial_state: GameState;
-  actions: Action[];
+  actions: A[];
   /** Optional; asserted on replay (§8.8). */
   expected_final_hash?: string;
   /**
@@ -38,7 +42,11 @@ export type RunResult = {
 };
 
 /** Apply a sequence of actions through the engine. Pure end to end. */
-export function runActions(rules: Rules, initialState: GameState, actions: Action[]): RunResult {
+export function runActions<A extends EngineAction>(
+  rules: Rules<A>,
+  initialState: GameState,
+  actions: A[],
+): RunResult {
   const step = makeStep(rules);
   let state = initialState;
   const steps: StepResult[] = [];
@@ -56,17 +64,20 @@ export type RecordOptions = {
   trace_id: string;
   pack_id: string;
   content_hash: string;
+  worldQuestId?: string | null;
 };
 
 /** Run the actions and produce a Trace stamped with the final-state hash. */
-export function recordTrace(
-  rules: Rules,
+export function recordTrace<A extends EngineAction>(
+  rules: Rules<A>,
   initialState: GameState,
-  actions: Action[],
+  actions: A[],
   opts: RecordOptions,
-): Trace {
+): Trace<A> {
   const run = runActions(rules, initialState, actions);
   return {
+    mode: SAVE_MODE,
+    ...(opts.worldQuestId ? { worldQuestId: opts.worldQuestId } : {}),
     trace_id: opts.trace_id,
     pack_id: opts.pack_id,
     content_hash: opts.content_hash,

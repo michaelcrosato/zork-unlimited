@@ -31,7 +31,7 @@ import {
   initStateForRpgPack,
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
-import { buildParserObservation } from "../../src/parser/observation.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
@@ -43,7 +43,7 @@ const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
 const step = makeStep(buildRpgRules(index));
 
-const obs = (s: GameState) => buildParserObservation(index, s);
+const obs = (s: GameState) => buildRpgObservation(index, s);
 const options = (s: GameState) => enumerateRpgActions(index, s);
 const norm = (s: string) => s.replace(/\s+/g, " ").trim();
 

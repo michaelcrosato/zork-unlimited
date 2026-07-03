@@ -1,17 +1,14 @@
 /**
- * The `generate_rpg_pack` MCP tool + `new_game(generate_rpg_seed)` seam (bug_0160) — the
- * MODE-WIDENING slice of "evolve the eval distribution" (docs/CURRENT_PLAN.md; the deferred next
- * slice named by bug_0159's RPG-generator docstring, mirroring the CYOA program bug_0156 → bug_0157).
- * It exposes the procedural RPG generator (src/gen/rpg_generator.ts) through the agent-facing MCP
- * surface so a FRESH, never-authored RPG pack can be minted, validated against the SAME gate the
- * curated RPG packs clear, and PLAYED — extending the moving-target property to the RICHEST verifier
- * surfaces in the suite (COMBAT winnability + SCORE-economy soundness), which the CYOA generator never
- * touches and which until now ran only against the two FROZEN hand-authored RPG packs.
+ * The `generate_rpg_pack` MCP tool + `new_game(generate_rpg_seed)` seam is the
+ * consolidated procedural generation surface. It exposes the procedural RPG
+ * generator (src/gen/rpg_generator.ts) through MCP so a FRESH, never-authored RPG
+ * pack can be minted, validated against the SAME gate the curated RPG packs clear,
+ * and PLAYED.
  *
  * These tests hold the MCP path to the same bar the generator's own unit test (rpg_generator.test.ts)
  * holds the core to, reusing the production handlers (createToolApi), no weaker MCP-specific substitute:
  *   1. generate_rpg_pack MINTS + VALIDATES — a minted pack is reported playable (validateRpg-clean,
- *      zero findings of ANY severity) with the schema-stamped id/hash, never weaker than a shipped pack.
+ *      zero findings of ANY severity) with schema-stamped meta/hash, never weaker than a shipped pack.
  *   2. DETERMINISM (§8.5) carries through the tool — same seed ⇒ identical content hash + meta.
  *   3. new_game(generate_rpg_seed) genuinely PLAYS the minted pack through the live engine, and the
  *      COMBAT gate is load-bearing on that live surface: the foe is present in the gallery and offers an
@@ -34,8 +31,8 @@ describe("bug_0160 — generate_rpg_pack MCP tool mints + validates a fresh RPG 
     expect(r.ok).toBe(true);
     expect(r.report.ok).toBe(true);
     expect(r.report.findings).toEqual([]); // clean of ANY severity, like a shipped RPG pack
-    expect(r.mode).toBe("rpg");
-    expect(r.pack_id).toBe("genrpg_0_v1");
+    expect("mode" in r).toBe(false);
+    expect("pack_id" in r).toBe(false);
     expect(r.meta.id).toBe("genrpg_0_v1");
     expect(r.content_hash).toMatch(/^[0-9a-f]{64}$/);
     // The deepened hero's-descent shape (bug_0171): seven rooms, a TWO-fight gauntlet, three
@@ -77,7 +74,10 @@ describe("bug_0160 — generate_rpg_pack MCP tool mints + validates a fresh RPG 
 describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack in-memory", () => {
   it("starts a session on a generated RPG pack with no file on disk", () => {
     const g = api().new_game({ generate_rpg_seed: 3 });
-    expect(g.mode).toBe("rpg");
+    expect("mode" in g).toBe(false);
+    expect("pack_path" in g).toBe(false);
+    expect("world_quest_id" in g).toBe(false);
+    expect(g.generated_rpg_seed).toBe(3);
     expect(g.observation.ended).toBe(false);
     expect(g.state_hash).toMatch(/^[0-9a-f]{64}$/);
     // Init stats from the generated meta.vars_init, surfaced live in the RPG observation.
@@ -128,10 +128,54 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
     expect(after.stats.attack).toBe(6); // +2, applied live through the engine
   });
 
-  it("new_game with no pack source (no pack_path / generate_seed / generate_rpg_seed) errors clearly", () => {
-    // The message now names all four sources (generate_parser_seed added in bug_0192).
-    expect(() => api().new_game({})).toThrow(
-      /pack_path, generate_seed, generate_rpg_seed, or generate_parser_seed/,
+  it("new_game with no pack source errors clearly", () => {
+    expect(() => api().new_game({})).toThrow(/requires generate_rpg_seed/);
+  });
+
+  it("new_game rejects shipped quest starts", () => {
+    expect(() =>
+      api().new_game({
+        world_quest_id: "breaking_weir",
+        generate_rpg_seed: 3,
+      } as never),
+    ).toThrow(/start_world_quest/);
+  });
+
+  it("generated RPG saves embed the generation seed and load without a pack path", () => {
+    const a = api();
+    const g = a.new_game({ generate_rpg_seed: 3, seed: 7 });
+    const before = a.get_state({ session_id: g.session_id, include_state: true });
+    const saved = a.save_game({ session_id: g.session_id });
+    const raw = JSON.parse(saved.save) as {
+      worldQuestId?: unknown;
+      generatedRpgSeed?: unknown;
+    };
+
+    expect("pack_path" in saved).toBe(false);
+    expect("world_quest_id" in saved).toBe(false);
+    expect(saved.generated_rpg_seed).toBe(3);
+    expect(raw.worldQuestId).toBeUndefined();
+    expect(raw.generatedRpgSeed).toBe(3);
+
+    const loaded = a.load_game({ save: saved.save });
+    expect("pack_path" in loaded).toBe(false);
+    expect("world_quest_id" in loaded).toBe(false);
+    expect(loaded.generated_rpg_seed).toBe(3);
+    expect(a.get_state({ session_id: loaded.session_id, include_state: true }).state).toEqual(
+      before.state,
+    );
+  });
+
+  it("generated RPG save source mismatches are integrity errors", () => {
+    const a = api();
+    const g = a.new_game({ generate_rpg_seed: 3 });
+    const saved = a.save_game({ session_id: g.session_id });
+
+    expect(() => a.load_game({ save: saved.save, generate_rpg_seed: 4 })).toThrow(
+      /generatedRpgSeed/,
+    );
+    expect(() => a.load_game({ save: saved.save, world_quest_id: "breaking_weir" })).toThrow(
+      /generatedRpgSeed/,
     );
   });
 });

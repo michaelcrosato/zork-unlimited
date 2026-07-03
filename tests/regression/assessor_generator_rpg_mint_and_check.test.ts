@@ -1,10 +1,9 @@
 /**
- * bug_0162 — the assessor's RPG GENERATOR MINT-AND-CHECK lever (the bug_0158 twin one mode over).
+ * bug_0162 — the assessor's RPG GENERATOR MINT-AND-CHECK lever.
  *
- * The CYOA generator went core (bug_0156) → MCP (bug_0157) → assessor mint-and-check (bug_0158).
- * The RPG generator (src/gen/rpg_generator.ts) went core (bug_0159) → MCP (bug_0160), and this
- * slice lands its mint-and-check half: every cycle the assessor mints a fresh WINDOW of never-seen
- * RPG packs and asserts the production `validateRpg` bar holds on them — so the suite's RICHEST
+ * The RPG generator (src/gen/rpg_generator.ts) is the consolidated loop's only live generated
+ * eval surface. Every cycle the assessor mints a fresh WINDOW of never-seen RPG packs and asserts
+ * the production `validateRpg` bar holds on them — so the suite's RICHEST
  * verifier surfaces (COMBAT winnability + SCORE-economy soundness, the RPG-only checks) are
  * exercised against a MOVING target each pass, not just the two FROZEN hand-authored RPG packs
  * (sunken_barrow, cold_forge), the memorisable-target condition the frozen-verifier literature
@@ -16,7 +15,7 @@
  *   1. A clean sweep raises NO candidate (the healthy state — the lever must not mask the 0.5
  *      saturation floor); a sweep where the REAL validateRpg flags a minted pack raises a
  *      high-priority engine candidate naming the offending seed + finding code — proven against
- *      the RPG-only SCORE_UNREACHABLE bar, the bite the CYOA lever cannot reach.
+ *      the RPG-only SCORE_UNREACHABLE bar.
  *   2. On the real repo the lever is LIVE but inert: the current cycle's RPG window mints clean
  *      packs, so no generator-rpg-drift candidate is raised — and we prove the window is
  *      non-trivial (the check genuinely ran), so the green is real, not vacuous.
@@ -53,9 +52,9 @@ describe("bug_0162 — generatorRpgDriftCandidate (clean ⇒ null, dirty ⇒ hig
 
   it("fires a high-priority engine candidate when the REAL validateRpg flags a minted pack", () => {
     // Take a real generated RPG pack and mutate it into a SCORE-UNREACHABLE shape: declare a
-    // max_score LARGER than the reachable award sum (the RPG-only economy check — the bite the
-    // CYOA lever cannot reach). We run the genuine production validateRpg over it — no
-    // hand-authored fake report — so the negative path is proven against the same bar the curated
+    // max_score LARGER than the reachable award sum (the RPG-only economy check). We run the
+    // genuine production validateRpg over it — no hand-authored fake report — so the negative path
+    // is proven against the same bar the curated
     // RPG packs clear, exactly as the RPG generator's own test does.
     const seed = 7;
     const good = generateRpgPack(seed);
@@ -95,8 +94,8 @@ describe("bug_0162 — the RPG lever is LIVE on the real repo, and inert because
   it("is non-vacuous: this cycle's RPG seed window is real and mints validateRpg-clean packs", () => {
     // Prove the assess() above genuinely exercised the RPG verifier on a non-trivial window, so
     // its green is real (not "the check never ran"). Recompute the exact window assess() checked
-    // (the SAME advancing base the CYOA lever uses) and assert every RPG pack in it is clean — the
-    // reason no candidate was raised — confirming the COMBAT/SCORE checks all held.
+    // and assert every RPG pack in it is clean — the reason no candidate was raised — confirming
+    // the COMBAT/SCORE checks all held.
     const log = readFileSync(join(process.cwd(), "AI_LOOP_STATE.md"), "utf8");
     const cycles = generatedEvalSeedBase(log);
     expect(cycles).toBeGreaterThan(0); // the loop HAS run; the window is past seed 0

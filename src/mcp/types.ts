@@ -1,42 +1,40 @@
 /**
- * MCP multi-mode dispatch types (roadmap Milestone 1, item 1a-1).
+ * MCP RPG session types.
  *
- * The MCP tools play CYOA, parser, and RPG packs through one session abstraction.
- * Mode is detected from the pack's STRUCTURE — never a field added to content, so
- * content stays unchanged (§16) and existing packs keep their hashes. Detection
- * keys off property PRESENCE, not array contents: an RPG pack is a parser pack
- * plus `enemies` (which defaults to `[]`), so we must check `"enemies" in pack`,
- * not `enemies.length` — otherwise an enemy-less RPG pack would run as parser.
+ * MCP is now a single runtime surface: RPG. Full observations still preserve the
+ * `mode` discriminator for client stability, but session wrappers and compact loop
+ * contexts omit it because those public surfaces have exactly one runtime.
+ * Persisted save/trace blobs keep mode for integrity checks.
+ * Legacy CYOA/parser pack shapes are rejected before session creation.
  */
-import type { CyoaIndex } from "../cyoa/runner.js";
-import type { ParserIndex } from "../parser/model.js";
-import type { RpgIndex } from "../rpg/runner.js";
-import type { CyoaObservation } from "../cyoa/observation.js";
-import type { ParserObservation } from "../parser/observation.js";
 import type { RpgObservation } from "../rpg/observation.js";
-import type { CompiledPack } from "../cyoa/pack.js";
-import type { CompiledParserPack } from "../parser/pack.js";
-import type { CompiledRpgPack } from "../rpg/pack.js";
 
-export type PackMode = "cyoa" | "parser" | "rpg";
-
-/** Any mode's compiled-pack index. Sessions carry exactly one. */
-export type AnyIndex = CyoaIndex | ParserIndex | RpgIndex;
-
-/** Any mode's AI-facing observation. The `mode` field is the discriminator. */
-export type AnyObservation = CyoaObservation | ParserObservation | RpgObservation;
-
-/** Any mode's compiled pack (pack + content hash). */
-export type AnyCompiledPack = CompiledPack | CompiledParserPack | CompiledRpgPack;
+export type PackMode = "rpg";
 
 /**
- * Detect a pack's mode from the parsed YAML/JSON object. Order matters: an RPG
- * pack also has `rooms`, so test `enemies` first. Pure, total.
+ * Public MCP action menu entries omit reducer-only structured actions. With
+ * compact action menus, `command` is also omitted so loops can carry stable ids
+ * without reducer payloads.
  */
-export function detectMode(raw: unknown): PackMode {
-  if (raw !== null && typeof raw === "object") {
-    if ("enemies" in raw) return "rpg";
-    if ("rooms" in raw) return "parser";
-  }
-  return "cyoa";
+export type McpActionOption = {
+  id: string;
+  command?: string;
+  skill_check?: RpgObservation["available_actions"][number]["skill_check"];
+};
+
+/**
+ * Public MCP observations keep the RPG player view but strip the internal action
+ * object. MCP clients step by `action_id`, so returning reducer payloads only
+ * spends tokens and leaks engine internals.
+ */
+export type McpObservation = Omit<RpgObservation, "available_actions"> & {
+  available_actions: McpActionOption[];
+};
+
+/**
+ * Detect the only accepted MCP pack shape from parsed YAML/JSON. Use property
+ * presence, not `enemies.length`: an enemy-less RPG pack is still RPG.
+ */
+export function isRpgPackShape(raw: unknown): raw is Record<string, unknown> {
+  return raw !== null && typeof raw === "object" && "enemies" in raw;
 }

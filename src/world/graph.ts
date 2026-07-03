@@ -40,6 +40,14 @@ export function worldQuestNodeForPack(
   );
 }
 
+export function worldQuestNodeById(
+  manifest: WorldManifest,
+  questNodeId: string,
+): WorldGraphNode | null {
+  const node = worldNodeById(manifest).get(questNodeId) ?? null;
+  return node?.kind === "quest" ? node : null;
+}
+
 export function worldPathFromHub(manifest: WorldManifest, targetNodeId: string): string[] | null {
   const nodes = worldNodeById(manifest);
   if (!nodes.has(manifest.graph.hub) || !nodes.has(targetNodeId)) return null;

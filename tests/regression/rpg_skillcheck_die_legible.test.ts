@@ -20,7 +20,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { initState, type GameState } from "../../src/core/state.js";
-import { resolveSkillCheck } from "../../src/rpg/combat.js";
+import { resolveSkillCheck } from "../../src/core/skill_check.js";
 import type { Rng } from "../../src/core/rng.js";
 import type { Effect } from "../../src/core/effects.js";
 

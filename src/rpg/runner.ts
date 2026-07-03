@@ -1,46 +1,44 @@
 /**
  * RPG runner (spec §13 Stage 4, §14) — adapts an RPG pack into the engine's pure
- * `Rules`, layered on the Stage-2 parser runner.
+ * `Rules`.
  *
- * It reuses the parser's legal-action generator and resolver for everything the
- * parser already does (move/look/take/open/use/talk…), and adds exactly two
- * mechanics: ATTACK (a seeded combat round, combat.ts) and skill-check USE
- * interactions (a seeded d20 check). The engine stays content-free; all RPG
- * randomness is confined to the resolver and derived from (seed, step), so the
- * determinism contract is preserved (§8.5).
+ * RPG owns its pack schema, indexing, fresh-state setup, command mapping, combat,
+ * and skill-check resolution while preserving deterministic seeded randomness.
  */
-import type { Action } from "../api/types.js";
+import type { RpgAction } from "../api/types.js";
 import type { Effect } from "../core/effects.js";
 import type { GameState } from "../core/state.js";
 import type { Resolution, Rules } from "../core/engine.js";
 import {
-  type ParserIndex,
-  indexParserPack,
-  initStateForParserPack,
+  type RpgModelIndex,
+  indexRpgModel,
+  initStateForRpgModel,
   activeDialogue,
-} from "../parser/model.js";
+} from "./model.js";
 import {
-  enumerateActions,
+  enumerateRpgBaseActions,
   present,
-  resolveParserAction,
+  resolveRpgAction,
   useInteraction,
-  type ParserActionOption,
-} from "../parser/legal_actions.js";
+  type RpgActionOption,
+} from "./legal_actions.js";
 import { evalConditions } from "../core/conditions.js";
 import type { GameEvent } from "../core/events.js";
-import { winningEnding, scoreChangeNarrations } from "../parser/runner.js";
 import { type RpgPack, type Enemy } from "./schema.js";
-import { resolveAttack, resolveSkillCheck, enemyAlive } from "./combat.js";
-import { rngForStep, type Rng } from "../core/rng.js";
+import { resolveAttack, enemyAlive } from "./combat.js";
+import { resolveSkillCheck } from "../core/skill_check.js";
+import { rngForRuntimeState, type RuntimeRngFor } from "./runtime_rng.js";
+import { decorateRpgScoreEvents } from "./score_events.js";
+import { endGameEffects } from "./terminal_effects.js";
 
-export type RpgIndex = ParserIndex & {
+export type RpgIndex = RpgModelIndex & {
   rpgPack: RpgPack;
   enemies: Map<string, Enemy>;
   enemyByRoom: Map<string, Enemy[]>;
 };
 
 export function indexRpgPack(pack: RpgPack): RpgIndex {
-  const base = indexParserPack(pack);
+  const base = indexRpgModel(pack);
   const enemies = new Map(pack.enemies.map((e) => [e.id, e]));
   const enemyByRoom = new Map<string, Enemy[]>();
   for (const e of pack.enemies) {
@@ -61,13 +59,20 @@ function enemiesHere(index: RpgIndex, state: GameState): Enemy[] {
   return (index.enemyByRoom.get(state.current) ?? []).filter((e) => enemyActive(state, e));
 }
 
+export function winningRpgEnding(index: RpgIndex, state: GameState): string | null {
+  for (const wc of index.pack.win_conditions) {
+    if (evalConditions(wc.conditions, state)) return wc.ending;
+  }
+  return null;
+}
+
 /**
- * Every legal action: the parser set plus an ATTACK per living enemy in the room
+ * Every legal action: the base command set plus an ATTACK per living enemy in the room
  * (offered only outside conversation). Each carries the stable id/command/action
- * shape the observation and human parser consume.
+ * shape the observation and human clients consume.
  */
-export function enumerateRpgActions(index: RpgIndex, state: GameState): ParserActionOption[] {
-  const out = enumerateActions(index, state);
+export function enumerateRpgActions(index: RpgIndex, state: GameState): RpgActionOption[] {
+  const out = enumerateRpgBaseActions(index, state);
   if (state.ended || activeDialogue(index, state)) return out;
   for (const enemy of enemiesHere(index, state)) {
     out.push({
@@ -81,7 +86,7 @@ export function enumerateRpgActions(index: RpgIndex, state: GameState): ParserAc
 
 /**
  * `rngFor` supplies the PRNG a combat round / skill check draws from. It defaults to
- * the step-keyed stream (core/rng.ts), so production callers pass nothing and play is
+ * the shared step-keyed runtime stream, so production callers pass nothing and play is
  * byte-identical. The parameter is a verification seam ONLY: the exhaustive RPG
  * ending-reachability proof builds two rule sets — one whose rng forces the player's
  * BEST rolls, one their WORST — and steps every action under both, so combat and
@@ -90,14 +95,14 @@ export function enumerateRpgActions(index: RpgIndex, state: GameState): ParserAc
  */
 export function buildRpgRules(
   index: RpgIndex,
-  rngFor: (state: GameState) => Rng = (s) => rngForStep(s.seed, s.step),
-): Rules {
+  rngFor: RuntimeRngFor = rngForRuntimeState,
+): Rules<RpgAction> {
   return {
-    legalActions(state: GameState): Action[] {
+    legalActions(state: GameState): RpgAction[] {
       return enumerateRpgActions(index, state).map((o) => o.action);
     },
 
-    resolve(state: GameState, action: Action): Resolution | null {
+    resolve(state: GameState, action: RpgAction): Resolution | null {
       if (action.type === "ATTACK") {
         const enemy = index.enemies.get(action.enemy);
         if (!enemy || enemy.room !== state.current || !enemyActive(state, enemy)) return null;
@@ -118,35 +123,33 @@ export function buildRpgRules(
           return resolveSkillCheck(state, it.skill_check, rngFor(state));
         }
       }
-      return resolveParserAction(index, state, action);
+      return resolveRpgAction(index, state, action);
     },
 
     onEnter(state: GameState, locationId: string): Effect[] {
       const room = index.rooms.get(locationId);
       const effects: Effect[] = room ? [...room.on_enter] : [];
-      const ending = winningEnding(index, state);
-      if (ending) effects.push({ end_game: ending });
+      const ending = winningRpgEnding(index, state);
+      if (ending) effects.push(...endGameEffects(ending));
       return effects;
     },
 
-    // Mirrors the parser runner: a win that turns on a deliberate non-move action
-    // (claiming the Barrow-Lord's circlet) fires here, against the post-effects
-    // state, rather than on bare room entry. Skipped once the game has ended.
+    // A win that turns on a deliberate non-move action (claiming the Barrow-Lord's
+    // circlet) fires here, against the post-effects state, rather than on bare room
+    // entry. Skipped once the game has ended.
     checkWin(state: GameState): Effect[] {
-      const ending = winningEnding(index, state);
-      return ending ? [{ end_game: ending }] : [];
+      const ending = winningRpgEnding(index, state);
+      return ending ? endGameEffects(ending) : [];
     },
 
-    // Same Zork-style score feedback the parser runner emits — RPG packs track score
-    // through the conventional `score` var too (§13 Stage 4 awards), so a +N here
-    // (e.g. claiming the relic) gets the player-facing "[Your score has gone up…]" line.
+    // Zork-style score feedback derived from the RPG `score` var.
     decorateEvents(events: GameEvent[]): GameEvent[] {
-      return scoreChangeNarrations(events, index.pack.meta.max_score ?? 0);
+      return decorateRpgScoreEvents(events, index.pack.meta.max_score);
     },
   };
 }
 
 /** Fresh state for an RPG pack (player stats come from meta.vars_init). */
 export function initStateForRpgPack(index: RpgIndex, seed: number): GameState {
-  return initStateForParserPack(index, seed);
+  return initStateForRpgModel(index, seed);
 }

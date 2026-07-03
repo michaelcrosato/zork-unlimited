@@ -1,7 +1,7 @@
 /**
  * Regression (§15) for bug_0137 — engine/benchmark: the agent-facing observation
  * gains an opt-in `hide_graph` difficulty (ULTRAPLAN 2026-06-02 §Week.4). Today the
- * structured API hands the agent the full room adjacency — every parser/RPG exit
+ * structured API hands the agent the full room adjacency — every RPG exit
  * carries its destination (`exit.to`) — so the spatial-reasoning task that
  * TALES/Jericho measure is trivialized: the map is read off, not reasoned out. With
  * `hide_graph: true` each exit reports only its `direction`; the destination is
@@ -16,7 +16,7 @@
  * internal coverage bot").
  *
  * Locked here:
- *   (1) DEFAULT: parser/RPG exits carry a string `to` (legacy full-graph view);
+ *   (1) DEFAULT: RPG exits carry a string `to` (legacy full-graph view);
  *   (2) HIDDEN: with hide_graph every exit's `to` is absent while the SAME set of
  *       directions remains — only the destination is hidden, never the exit's
  *       existence;
@@ -25,9 +25,9 @@
  *   (4) STATE UNTOUCHED: hide_graph changes only the rendered observation, never the
  *       state — the state_hash is identical with and without it (determinism/replay
  *       safe, as narration/observation are not part of the state hash);
- *   (5) CYOA NO-OP: a CYOA observation never exposed `choice.next`, so hide_graph is
- *       a documented no-op there — the observation is unchanged and still playable;
- *   (6) the `start_game` AFK alias honors the flag too.
+ *   (5) NON-RPG REJECTION: non-RPG pack shapes no longer start
+ *       through MCP play tools;
+ *   (6) the `start_world_quest` world-id start honors the flag too.
  */
 import { describe, it, expect } from "vitest";
 import { createToolApi } from "../../src/mcp/tools.js";
@@ -35,21 +35,23 @@ import { createToolApi } from "../../src/mcp/tools.js";
 const ROOT = process.cwd();
 const api = () => createToolApi({ root: ROOT });
 
-const PARSER = "content/parser/pack/sealed_crypt.yaml";
-const RPG = "content/rpg/pack/sunken_barrow.yaml";
-const CYOA = "content/cyoa/pack/watchtower_road.yaml";
+const NON_RPG_PACK = "content/broken-fixtures/duplicate_id.yaml";
+const RPG_QUESTS = [
+  { label: "sunken_barrow", world_quest_id: "sunken_barrow" },
+  { label: "breaking_weir", world_quest_id: "breaking_weir" },
+];
 
-/** Narrow to the parser/RPG observation shape (both carry `exits`). */
+/** Narrow to the RPG observation shape. */
 function exitsOf(obs: unknown): { direction: string; to?: string }[] {
   const o = obs as { mode: string; exits?: { direction: string; to?: string }[] };
-  if (o.mode === "cyoa") throw new Error("CYOA observation has no exits");
+  if (o.mode !== "rpg") throw new Error("expected RPG observation");
   return o.exits ?? [];
 }
 
 describe("bug_0137 — hide_graph difficulty: exits hide their destination", () => {
-  for (const pack of [PARSER, RPG]) {
-    it(`${pack}: DEFAULT exits carry a string destination (full graph, legacy)`, () => {
-      const g = api().new_game({ pack_path: pack });
+  for (const quest of RPG_QUESTS) {
+    it(`${quest.label}: DEFAULT exits carry a string destination (full graph, legacy)`, () => {
+      const g = api().start_world_quest({ world_quest_id: quest.world_quest_id });
       const exits = exitsOf(g.observation);
       expect(exits.length).toBeGreaterThan(0);
       for (const e of exits) {
@@ -58,10 +60,14 @@ describe("bug_0137 — hide_graph difficulty: exits hide their destination", () 
       }
     });
 
-    it(`${pack}: HIDDEN drops every exit's destination but keeps the same directions`, () => {
+    it(`${quest.label}: HIDDEN drops every exit's destination but keeps the same directions`, () => {
       const a = api();
-      const open = exitsOf(a.new_game({ pack_path: pack }).observation);
-      const hidden = exitsOf(a.new_game({ pack_path: pack, hide_graph: true }).observation);
+      const open = exitsOf(
+        a.start_world_quest({ world_quest_id: quest.world_quest_id }).observation,
+      );
+      const hidden = exitsOf(
+        a.start_world_quest({ world_quest_id: quest.world_quest_id, hide_graph: true }).observation,
+      );
       // Same exits exist (you still see you CAN go each direction)…
       expect(hidden.map((e) => e.direction)).toEqual(open.map((e) => e.direction));
       // …but no destination is leaked.
@@ -70,21 +76,24 @@ describe("bug_0137 — hide_graph difficulty: exits hide their destination", () 
       expect(open.some((e) => typeof e.to === "string")).toBe(true);
     });
 
-    it(`${pack}: hide_graph is observation-only — the state_hash is identical`, () => {
+    it(`${quest.label}: hide_graph is observation-only — the state_hash is identical`, () => {
       const a = api();
-      const open = a.new_game({ pack_path: pack });
-      const hidden = a.new_game({ pack_path: pack, hide_graph: true });
+      const open = a.start_world_quest({ world_quest_id: quest.world_quest_id });
+      const hidden = a.start_world_quest({
+        world_quest_id: quest.world_quest_id,
+        hide_graph: true,
+      });
       expect(hidden.state_hash).toBe(open.state_hash);
     });
 
-    it(`${pack}: still playable under hide_graph — a MOVE relocates the player`, () => {
+    it(`${quest.label}: still playable under hide_graph — a MOVE relocates the player`, () => {
       const a = api();
-      const g = a.new_game({ pack_path: pack, hide_graph: true });
+      const g = a.start_world_quest({ world_quest_id: quest.world_quest_id, hide_graph: true });
       const before = exitsOf(g.observation);
       const startRoom = (g.observation as { room: string }).room;
       // Take the first available MOVE action (its destination is hidden from us).
       const moveAction = g.observation.available_actions.find(
-        (act) => (act as { action: { type: string } }).action.type === "MOVE",
+        (act) => act.id.startsWith("go_") || (act.command ?? "").startsWith("go "),
       );
       expect(moveAction).toBeDefined();
       const r = a.step_action({ session_id: g.session_id, action_id: moveAction!.id });
@@ -98,23 +107,19 @@ describe("bug_0137 — hide_graph difficulty: exits hide their destination", () 
     });
   }
 
-  it("CYOA: hide_graph is a no-op — the observation is unchanged and still playable", () => {
+  it("pack-path starts are rejected by MCP play tools", () => {
     const a = api();
-    const open = a.new_game({ pack_path: CYOA, seed: 7 });
-    const hidden = a.new_game({ pack_path: CYOA, seed: 7, hide_graph: true });
-    expect(hidden.observation).toEqual(open.observation);
-    expect(hidden.state_hash).toBe(open.state_hash);
-    // The choice destinations (`choice.next`) were never in the observation anyway.
-    if (hidden.observation.mode === "cyoa")
-      expect(hidden.observation.available_actions.length).toBeGreaterThan(0);
+    expect(() => a.new_game({ pack_path: NON_RPG_PACK, seed: 7 } as never)).toThrow(
+      /not pack_path/,
+    );
   });
 
-  it("start_game alias honors hide_graph", () => {
+  it("start_world_quest world-id starts honor hide_graph", () => {
     const a = api();
-    const g = a.start_game({ story_path: PARSER, hide_graph: true });
+    const g = a.start_world_quest({ world_quest_id: "sunken_barrow", hide_graph: true });
     for (const e of exitsOf(g.observation)) expect(e.to).toBeUndefined();
-    // And without the flag the alias keeps the full graph.
-    const plain = a.start_game({ story_path: PARSER });
+    // And without the flag the supported start keeps the full graph.
+    const plain = a.start_world_quest({ world_quest_id: "sunken_barrow" });
     expect(exitsOf(plain.observation).some((e) => typeof e.to === "string")).toBe(true);
   });
 });

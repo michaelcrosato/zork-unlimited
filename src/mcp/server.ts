@@ -16,7 +16,7 @@ import { createToolApi } from "./tools.js";
 const api = createToolApi({ root: process.cwd() });
 
 function ok(value: unknown): CallToolResult {
-  return { content: [{ type: "text", text: JSON.stringify(value, null, 2) }] };
+  return { content: [{ type: "text", text: JSON.stringify(value) }] };
 }
 
 function wrap<A>(handler: (args: A) => unknown) {
@@ -40,130 +40,206 @@ function tool(
   server.registerTool(name, { description, inputSchema }, wrap(handler) as never);
 }
 
-const PACK = {
-  pack_path: z
-    .string()
-    .describe(
-      "Path to a quest content pack (.yaml) - CYOA, parser, or RPG; mode is auto-detected - relative to the project root.",
-    ),
+const WORLD_QUEST_SOURCE = {
+  world_quest_id: z.string().describe("World quest id."),
 };
 const SESSION = {
-  session_id: z.string().describe("A session id from new_game/start_quest/load_game."),
+  session_id: z.string().describe("Session."),
 };
 const HIDE_GRAPH = {
-  hide_graph: z
-    .boolean()
-    .optional()
-    .describe(
-      "Difficulty: when true, exits report only their direction, not their destination - the spatial map must be reasoned out, not read off (parser/RPG; no-op for CYOA). Default false.",
-    ),
+  hide_graph: z.boolean().optional().describe("Hide exits."),
 };
-
-tool(
-  "validate_pack",
-  "Validate a quest content pack (CYOA, parser, or RPG - auto-detected); returns the validation report.",
-  PACK,
-  (a) => api.validate_pack(a),
-);
-tool(
-  "list_stories",
-  "Legacy AFK discovery alias. Prefer list_world for the canonical Charter Marches hub and quest list.",
-  {},
-  () => api.list_stories(),
-);
+const COMPACT_ACTIONS = {
+  compact_actions: z.boolean().optional().describe("Ids only."),
+};
+const COMPACT_EVENTS = {
+  compact_events: z.boolean().optional().describe("Default true; false full events."),
+};
+const COMPACT_OBSERVATION = {
+  compact_observation: z.boolean().optional().describe("Default true; false full obs."),
+};
+const IF_STATE_HASH = {
+  if_state_hash: z.string().optional().describe("Hash-only if same."),
+};
+const IF_TRANSCRIPT_HASH = {
+  if_transcript_hash: z.string().optional().describe("Hash-only same tx."),
+};
+const EXPECTED_STATE_HASH = {
+  expected_state_hash: z.string().optional().describe("Hash-only stale reject."),
+};
 tool(
   "list_world",
-  "List the single canonical world graph, its hub city, and every shipped pack as a reachable quest/area in that world.",
-  {},
-  () => api.list_world(),
+  "List shipped RPG quest ids; graph and all routes are opt-in.",
+  {
+    include_graph: z.boolean().optional().describe("Include the pack-free world graph."),
+    include_routes: z.boolean().optional().describe("Include every quest route from the hub."),
+  },
+  (a) => api.list_world(a),
 );
 tool(
   "world_path",
-  "Return the route through the Charter Marches graph from Charterhaven to one quest pack.",
+  "Return the route from Charterhaven to a shipped RPG quest.",
   {
-    quest_path: z
-      .string()
-      .describe("Path to a quest content pack (any mode), relative to the project root."),
+    world_quest_id: z.string().describe("World quest id."),
   },
   (a) => api.world_path(a),
 );
 tool(
   "list_overworld",
-  "List the New York State overworld summary: start town, town/road/region/regional-arc counts, character/event/quest counts, sources, and design rules.",
-  {},
-  () => api.list_overworld(),
+  "List overworld counts and the start town; design notes are opt-in.",
+  {
+    include_design_notes: z.boolean().optional().describe("Include sources and design rules."),
+  },
+  (a) => api.list_overworld(a),
 );
+
+function defaultCompactRpg(args: unknown): never {
+  const input = typeof args === "object" && args !== null ? args : {};
+  return { compact_events: true, compact_observation: true, ...input } as never;
+}
+
+function defaultCompactActions(args: unknown): never {
+  const input = typeof args === "object" && args !== null ? args : {};
+  return { compact_actions: true, ...input } as never;
+}
+
+function defaultCompactOverworld(args: unknown): never {
+  const input = typeof args === "object" && args !== null ? args : {};
+  return { compact_context: true, ...input } as never;
+}
+
+function defaultCompactOverworldAndRpg(args: unknown): never {
+  const input = typeof args === "object" && args !== null ? args : {};
+  return { compact_context: true, compact_observation: true, ...input } as never;
+}
+
+function defaultCompactTranscript(args: unknown): never {
+  const input = typeof args === "object" && args !== null ? args : {};
+  return { summary_only: true, compact_events: true, compact_summary: true, ...input } as never;
+}
+
+type McpStateArgs = {
+  session_id: string;
+  include_state?: boolean;
+};
+
+function compactMcpState(args: McpStateArgs): unknown {
+  return api.get_state(args);
+}
+
+type McpOverworldReadArgs = {
+  session_id: string;
+  include_observation?: boolean;
+  if_snapshot_hash?: string;
+};
+
+function compactMcpOverworldSession(args: McpOverworldReadArgs): unknown {
+  return args.include_observation === true
+    ? api.get_overworld_session(args)
+    : api.get_overworld_session_context(args);
+}
+
+const EXPECTED_SNAPSHOT_HASH = {
+  expected_snapshot_hash: z.string().optional().describe("Hash-only reject when stale."),
+};
+const IF_SNAPSHOT_HASH = {
+  if_snapshot_hash: z.string().optional().describe("Hash-only when unchanged."),
+};
+const COMPACT_OVERWORLD_CONTEXT = {
+  compact_context: z.boolean().optional().describe("Default true; false full observation."),
+};
+const OVERWORLD_ACTION_CONTEXT = { ...EXPECTED_SNAPSHOT_HASH, ...COMPACT_OVERWORLD_CONTEXT };
+
 tool(
   "start_overworld",
-  "Start a stateful New York overworld run at Albany and return the current location, local actions, discovered quest leads, regional arcs, journal, discovered towns, and roads.",
-  {},
-  () => api.start_overworld(),
+  "Start a stateful New York overworld run; returns compact context by default.",
+  {
+    ...COMPACT_OVERWORLD_CONTEXT,
+  },
+  (a) => api.start_overworld(defaultCompactOverworld(a)),
 );
 tool(
   "get_overworld_session",
-  "Read the current observation for a stateful New York overworld session.",
+  "Read compact overworld context; if_snapshot_hash returns hash-only when unchanged.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
+    ...IF_SNAPSHOT_HASH,
+    include_observation: z.boolean().optional().describe("Include full observation object."),
   },
-  (a) => api.get_overworld_session(a),
+  (a) => compactMcpOverworldSession(a),
+);
+tool(
+  "get_overworld_session_context",
+  "Read compact overworld context for repeated loop turns; if_snapshot_hash returns hash-only when unchanged.",
+  {
+    session_id: z.string().describe("Session id returned by start_overworld."),
+    ...IF_SNAPSHOT_HASH,
+  },
+  (a) => api.get_overworld_session_context(a),
 );
 tool(
   "export_overworld_session",
-  "Export a content-bound snapshot for a stateful New York overworld session so a long run can be restored later.",
+  "Export a content-bound overworld snapshot plus snapshot_hash; expected_snapshot_hash rejects stale checkpoints.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
+    ...EXPECTED_SNAPSHOT_HASH,
   },
   (a) => api.export_overworld_session(a),
 );
 tool(
   "restore_overworld_session",
-  "Restore a new stateful New York overworld session from a snapshot previously returned by export_overworld_session.",
+  "Restore an overworld snapshot; returns snapshot_hash and compact context by default.",
   {
     snapshot: z
       .record(z.unknown())
       .describe("Snapshot object previously returned as export_overworld_session.snapshot."),
+    ...COMPACT_OVERWORLD_CONTEXT,
   },
-  (a) => api.restore_overworld_session(a),
+  (a) => api.restore_overworld_session(defaultCompactOverworld(a)),
 );
 tool(
   "travel_overworld_session",
-  "Travel in a stateful New York overworld session along an adjacent road id from the current town. Travel consumes supplies, adds fatigue, and can add elapsed delay when fatigue or supply shortage catches up.",
+  "Travel along an adjacent road id; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     road_id: z.string().describe("Road id from the session observation's exits list."),
+    ...OVERWORLD_ACTION_CONTEXT,
   },
-  (a) => api.travel_overworld_session(a),
+  (a) => api.travel_overworld_session(defaultCompactOverworld(a)),
 );
 tool(
   "resolve_overworld_session_road_encounter",
-  "Resolve the pending road encounter after travel with a strategy: scout it, help resolve it, or press on. Clears the encounter before the next road leg.",
+  "Resolve the pending road encounter; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     strategy: z
       .enum(["cautious_scout", "assist_travelers", "press_on"])
       .describe("Road encounter response from observation.pendingRoadEncounter.options."),
+    ...OVERWORLD_ACTION_CONTEXT,
   },
-  (a) => api.resolve_overworld_session_road_encounter(a),
+  (a) => api.resolve_overworld_session_road_encounter(defaultCompactOverworld(a)),
 );
 tool(
   "resupply_overworld_session",
-  "Resupply at the current town if it has a market, inn, or stable. Returns updated supplies, fatigue, time, and observation.",
+  "Resupply at the current town; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
+    ...OVERWORLD_ACTION_CONTEXT,
   },
-  (a) => api.resupply_overworld_session(a),
+  (a) => api.resupply_overworld_session(defaultCompactOverworld(a)),
 );
 tool(
   "rest_overworld_session",
-  "Rest at the current town if it has an inn or healer. Returns updated fatigue, supplies, time, and observation.",
+  "Rest at the current town; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
+    ...OVERWORLD_ACTION_CONTEXT,
   },
-  (a) => api.rest_overworld_session(a),
+  (a) => api.rest_overworld_session(defaultCompactOverworld(a)),
 );
 tool(
   "plan_overworld_session_route",
-  "Plan the shortest known route in a stateful New York overworld session to a discovered town. Returns ordered road legs without moving the session.",
+  "Plan the shortest known route to a discovered town; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     destination_town_id: z
@@ -171,203 +247,130 @@ tool(
       .describe(
         "Discovered town id from the session observation's discovered or routeOptions list.",
       ),
+    ...OVERWORLD_ACTION_CONTEXT,
   },
-  (a) => api.plan_overworld_session_route(a),
+  (a) => api.plan_overworld_session_route(defaultCompactOverworld(a)),
 );
 tool(
   "scout_overworld_session_poi",
-  "Scout a local point of interest in a stateful New York overworld session, revealing nearby sites and local quest leads while updating journal/time.",
+  "Scout a local point of interest; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     poi_id: z.string().describe("Point-of-interest id from the session observation."),
+    ...OVERWORLD_ACTION_CONTEXT,
   },
-  (a) => api.scout_overworld_session_poi(a),
+  (a) => api.scout_overworld_session_poi(defaultCompactOverworld(a)),
 );
 tool(
   "talk_overworld_session_contact",
-  "Talk to a local contact in a stateful New York overworld session, revealing local quest leads while updating journal/time.",
+  "Talk to a local contact; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     character_id: z.string().describe("Character id from the session observation."),
+    ...OVERWORLD_ACTION_CONTEXT,
   },
-  (a) => api.talk_overworld_session_contact(a),
+  (a) => api.talk_overworld_session_contact(defaultCompactOverworld(a)),
 );
 tool(
   "investigate_overworld_session_event",
-  "Investigate a local event in a stateful New York overworld session, revealing local quest leads while updating journal/time.",
+  "Investigate a local event; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     event_id: z.string().describe("Event id from the session observation."),
+    ...OVERWORLD_ACTION_CONTEXT,
   },
-  (a) => api.investigate_overworld_session_event(a),
+  (a) => api.investigate_overworld_session_event(defaultCompactOverworld(a)),
 );
 tool(
   "resolve_overworld_session_event",
-  "Resolve a local event in a stateful New York overworld session after scouting a local POI, talking to a local contact, and investigating the event.",
+  "Resolve a local event; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     event_id: z.string().describe("Event id from the session observation."),
+    ...OVERWORLD_ACTION_CONTEXT,
   },
-  (a) => api.resolve_overworld_session_event(a),
+  (a) => api.resolve_overworld_session_event(defaultCompactOverworld(a)),
 );
 tool(
   "explore_overworld_session_site",
-  "Explore a discovered regional site in a stateful New York overworld session. Scout a local point of interest first to reveal nearby sites.",
+  "Explore a discovered regional site; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     site_id: z.string().describe("Exploration site id from the session observation's sites list."),
+    ...OVERWORLD_ACTION_CONTEXT,
   },
-  (a) => api.explore_overworld_session_site(a),
+  (a) => api.explore_overworld_session_site(defaultCompactOverworld(a)),
 );
 tool(
   "explore_overworld_session_area",
-  "Explore a discovered local area or district in a stateful New York overworld session. Larger towns expose more areas over time.",
+  "Explore a discovered local area; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     area_id: z.string().describe("Area id from the session observation's areas list."),
+    ...OVERWORLD_ACTION_CONTEXT,
   },
-  (a) => api.explore_overworld_session_area(a),
+  (a) => api.explore_overworld_session_area(defaultCompactOverworld(a)),
 );
 tool(
   "move_overworld_session_area",
-  "Move inside the current town along a discovered local-area route. This changes the current area and consumes local walking time.",
+  "Move inside the current town along a local-area route; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     area_route_id: z.string().describe("Area route id from observation.areaExits."),
+    ...OVERWORLD_ACTION_CONTEXT,
   },
-  (a) => api.move_overworld_session_area(a),
+  (a) => api.move_overworld_session_area(defaultCompactOverworld(a)),
 );
 tool(
   "work_overworld_session_job",
-  "Work a discovered local job in a stateful New York overworld session. Jobs are tied to mapped town areas and award regional renown.",
+  "Work a discovered local job; returns compact context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     job_id: z.string().describe("Job id from the session observation's jobs list."),
+    ...OVERWORLD_ACTION_CONTEXT,
   },
-  (a) => api.work_overworld_session_job(a),
+  (a) => api.work_overworld_session_job(defaultCompactOverworld(a)),
 );
 tool(
   "start_overworld_session_quest",
-  "Start a discovered local quest lead in a stateful New York overworld session. The lead must belong to the current town and current local area.",
+  "Start a discovered local quest lead; returns compact overworld/RPG context by default.",
   {
     session_id: z.string().describe("Session id returned by start_overworld."),
     quest_id: z.string().describe("Quest id from the session observation's quests list."),
-  },
-  (a) => api.start_overworld_session_quest(a),
-);
-tool(
-  "look_overworld",
-  "Inspect one New York overworld town as static map data. Returns adjacent roads, local areas, points of interest, contacts, events, local jobs, and the authored local quest catalog; use start_overworld for discovery-gated play.",
-  {
-    town_id: z
-      .string()
+    seed: z.number().int().optional().describe("Optional runtime seed for the RPG quest session."),
+    hide_graph: z
+      .boolean()
       .optional()
-      .describe("Overworld town id to inspect. Defaults to the starting town."),
+      .describe("When true, hide RPG graph destinations in the returned quest observation."),
+    ...COMPACT_ACTIONS,
+    ...COMPACT_OBSERVATION,
+    ...OVERWORLD_ACTION_CONTEXT,
   },
-  (a) => api.look_overworld(a),
+  (a) => api.start_overworld_session_quest(defaultCompactOverworldAndRpg(a)),
 );
 tool(
-  "travel_overworld",
-  "Travel from one New York overworld town along an adjacent road id and return the route event plus arrival town. Rejects non-adjacent roads.",
+  "complete_overworld_session_quest",
+  "Sync an ended RPG quest session into overworld progress.",
   {
-    from_town: z.string().describe("Current overworld town id."),
-    road_id: z.string().describe("Road id from look_overworld(current town)."),
+    session_id: z.string().describe("Session id returned by start_overworld."),
+    rpg_session_id: z.string().describe("Ended RPG session id returned by quest start."),
+    ...OVERWORLD_ACTION_CONTEXT,
   },
-  (a) => api.travel_overworld(a),
+  (a) => api.complete_overworld_session_quest(defaultCompactOverworld(a)),
+);
+tool("validate_quest", "Validate one shipped RPG quest by id.", WORLD_QUEST_SOURCE, (a) =>
+  api.validate_quest(a),
 );
 tool(
-  "explore_overworld_area",
-  "Explore one static local area from look_overworld and return its time cost and journal text. Use explore_overworld_session_area for discovery-gated play.",
-  {
-    town_id: z.string().optional().describe("Overworld town id. Defaults to the starting town."),
-    area_id: z.string().describe("Area id from look_overworld(current town)."),
-  },
-  (a) => api.explore_overworld_area(a),
-);
-tool(
-  "work_overworld_job",
-  "Inspect one static local job from look_overworld and return its time cost, renown, and journal text. Use work_overworld_session_job for discovery-gated play.",
-  {
-    town_id: z.string().optional().describe("Overworld town id. Defaults to the starting town."),
-    job_id: z.string().describe("Job id from look_overworld(current town)."),
-  },
-  (a) => api.work_overworld_job(a),
-);
-tool(
-  "scout_overworld_poi",
-  "Scout a local point of interest in one New York overworld town and return a journal entry. The poi_id must come from look_overworld for that town.",
-  {
-    town_id: z.string().optional().describe("Overworld town id. Defaults to the starting town."),
-    poi_id: z.string().describe("Point-of-interest id from look_overworld(current town)."),
-  },
-  (a) => api.scout_overworld_poi(a),
-);
-tool(
-  "talk_overworld_contact",
-  "Talk to a local overworld contact and return a journal entry. The character_id must come from look_overworld for that town.",
-  {
-    town_id: z.string().optional().describe("Overworld town id. Defaults to the starting town."),
-    character_id: z.string().describe("Character id from look_overworld(current town)."),
-  },
-  (a) => api.talk_overworld_contact(a),
-);
-tool(
-  "investigate_overworld_event",
-  "Investigate a local overworld event and return a journal entry. The event_id must come from look_overworld for that town.",
-  {
-    town_id: z.string().optional().describe("Overworld town id. Defaults to the starting town."),
-    event_id: z.string().describe("Event id from look_overworld(current town)."),
-  },
-  (a) => api.investigate_overworld_event(a),
-);
-tool(
-  "explore_overworld_site",
-  "Explore a local regional site and return the time cost, reward, and journal entry. The site_id must come from look_overworld for that town.",
-  {
-    town_id: z.string().optional().describe("Overworld town id. Defaults to the starting town."),
-    site_id: z.string().describe("Exploration site id from look_overworld(current town)."),
-  },
-  (a) => api.explore_overworld_site(a),
-);
-tool(
-  "validate_story",
-  "AFK alias for validate_pack; validates one pack (any mode) and returns hard errors/warnings.",
-  {
-    story_path: z
-      .string()
-      .describe("Path to a content pack (any mode), relative to the project root."),
-  },
-  (a) => api.validate_story(a),
-);
-tool(
-  "validate_quest",
-  "Validate one Charter Marches quest pack (any mode) and return hard errors/warnings.",
-  {
-    quest_path: z
-      .string()
-      .describe("Path to a quest content pack (any mode), relative to the project root."),
-  },
-  (a) => api.validate_quest(a),
-);
-tool(
-  "load_pack",
-  "Compile a quest pack (any mode) and return its mode, metadata, content hash, and validation report.",
-  PACK,
-  (a) => api.load_pack(a),
-);
-
-tool(
-  "generate_pack",
-  "Mint a FRESH procedural CYOA pack from a seed and validate it against the same gate the curated packs clear (the eval-distribution lever: a never-authored pack the verifier must hold on). Pure + deterministic; writes nothing. Play it with new_game's generate_seed.",
-  {
-    seed: z.number().int().describe("Generation seed — selects the minted pack's theme/structure."),
-  },
-  (a) => api.generate_pack(a),
+  "load_quest",
+  "Compile a shipped world quest by graph id and return its metadata, content hash, source identity, and validation report.",
+  WORLD_QUEST_SOURCE,
+  (a) => api.load_quest(a),
 );
 
 tool(
   "generate_rpg_pack",
-  "Mint a FRESH procedural RPG pack from a seed and validate it against the same gate the curated RPG packs clear — exercising the combat-winnability and score-economy proofs (the verifier surfaces generate_pack's CYOA packs never touch) against a moving target. Pure + deterministic; writes nothing. Play it with new_game's generate_rpg_seed.",
+  "Mint a FRESH procedural RPG pack from a seed and validate it against the same gate the curated RPG packs clear — exercising the combat-winnability and score-economy proofs against a moving target. Pure + deterministic; writes nothing. Play it with new_game's generate_rpg_seed.",
   {
     seed: z.number().int().describe("Generation seed — selects the minted pack's theme/structure."),
   },
@@ -375,175 +378,155 @@ tool(
 );
 
 tool(
-  "generate_parser_pack",
-  "Mint a FRESH procedural parser pack from a seed and validate it against the same gate the curated parser packs clear — exercising the parser-only verifier surfaces (depth-2 obtainability / soft-lock, the moral same-key fork) the CYOA and RPG generators never touch, against a moving target. Pure + deterministic; writes nothing. Play it with new_game's generate_parser_seed.",
-  {
-    seed: z.number().int().describe("Generation seed — selects the minted pack's theme/structure."),
-  },
-  (a) => api.generate_parser_pack(a),
-);
-
-tool(
   "new_game",
-  "Start a new session on a playable quest pack of any mode; returns a session id, the detected mode, and the first observation. Provide pack_path to load from disk, OR generate_seed to mint+play a fresh procedural CYOA pack, OR generate_rpg_seed for a fresh procedural RPG pack, OR generate_parser_seed for a fresh procedural parser pack - all in-memory.",
+  "Start a generated RPG quest; returns compact context by default.",
   {
-    pack_path: z
-      .string()
-      .optional()
-      .describe(
-        "Path to a quest content pack (.yaml) - CYOA, parser, or RPG; mode is auto-detected - relative to the project root. Omit when using generate_seed/generate_rpg_seed/generate_parser_seed.",
-      ),
-    generate_seed: z
-      .number()
-      .int()
-      .optional()
-      .describe(
-        "Instead of pack_path: mint and play a fresh procedural CYOA pack from this seed (see generate_pack). Independent of `seed` (which seeds runtime state).",
-      ),
-    generate_rpg_seed: z
-      .number()
-      .int()
-      .optional()
-      .describe(
-        "Instead of pack_path: mint and play a fresh procedural RPG pack from this seed (see generate_rpg_pack). Independent of `seed` (which seeds runtime state).",
-      ),
-    generate_parser_seed: z
-      .number()
-      .int()
-      .optional()
-      .describe(
-        "Instead of pack_path: mint and play a fresh procedural parser pack from this seed (see generate_parser_pack). Independent of `seed` (which seeds runtime state).",
-      ),
+    generate_rpg_seed: z.number().int().optional().describe("Procedural RPG seed."),
     seed: z.number().int().optional().describe("Deterministic runtime seed (default 1)."),
     ...HIDE_GRAPH,
+    ...COMPACT_ACTIONS,
+    ...COMPACT_OBSERVATION,
   },
-  (a) => api.new_game(a),
+  (a) => api.new_game(defaultCompactRpg(a)),
 );
 tool(
-  "start_game",
-  "Legacy AFK alias for new_game; start a session on a quest pack of any mode for MCP-driven playtesting.",
+  "start_world_quest",
+  "Start RPG; compact.",
   {
-    story_path: z.string().describe("Path to a content pack (any mode)."),
+    world_quest_id: z.string().describe("World quest id."),
     seed: z.number().int().optional(),
     ...HIDE_GRAPH,
+    ...COMPACT_ACTIONS,
+    ...COMPACT_OBSERVATION,
   },
-  (a) => api.start_game(a),
-);
-tool(
-  "start_quest",
-  "Start a session on a Charter Marches quest pack of any mode for MCP-driven playtesting.",
-  {
-    quest_path: z.string().describe("Path to a quest content pack (any mode)."),
-    seed: z.number().int().optional(),
-    ...HIDE_GRAPH,
-  },
-  (a) => api.start_quest(a),
+  (a) => api.start_world_quest(defaultCompactRpg(a)),
 );
 
 tool(
   "get_observation",
-  "Get the current AI-facing observation for a session (§9.1). The `mode` field discriminates cyoa | parser | rpg.",
-  { ...SESSION, ...HIDE_GRAPH },
-  (a) => api.get_observation(a),
-);
-tool(
-  "get_scene",
-  "AFK alias for get_observation; returns current scene/room text, state, and visible options.",
-  { ...SESSION, ...HIDE_GRAPH },
-  (a) => api.get_scene(a),
+  "Read compact RPG; if_state_hash hash-only.",
+  { ...SESSION, ...HIDE_GRAPH, ...IF_STATE_HASH, ...COMPACT_ACTIONS, ...COMPACT_OBSERVATION },
+  (a) => api.get_observation(defaultCompactRpg(a)),
 );
 tool(
   "list_legal_actions",
-  "List the legal actions available right now in a session, any mode (§9).",
-  { ...SESSION, ...HIDE_GRAPH },
-  (a) => api.list_legal_actions(a),
+  "List action ids + state_hash; if_state_hash hash-only.",
+  {
+    ...SESSION,
+    ...HIDE_GRAPH,
+    ...IF_STATE_HASH,
+    compact_actions: z.boolean().optional().describe("Default true; false returns labels."),
+  },
+  (a) => api.list_legal_actions(defaultCompactActions(a)),
 );
 
 tool(
   "step_action",
-  "Apply one chosen action by its id from available_actions (any mode — CYOA choice or parser/RPG command); returns events + the new observation.",
+  "Apply action id; stale menus return hash plus reason only.",
   {
     ...SESSION,
-    action_id: z.string().describe("An action id from the current legal-action set."),
+    action_id: z.string().describe("Current action id."),
+    ...EXPECTED_STATE_HASH,
     ...HIDE_GRAPH,
+    ...COMPACT_ACTIONS,
+    ...COMPACT_EVENTS,
+    ...COMPACT_OBSERVATION,
   },
-  (a) => api.step_action(a),
-);
-tool(
-  "choose_option",
-  "AFK alias for step_action; choose one visible option id and return the next scene.",
-  {
-    ...SESSION,
-    option_id: z
-      .string()
-      .describe("An option/action id from get_scene().observation.available_actions."),
-    ...HIDE_GRAPH,
-  },
-  (a) => api.choose_option(a),
+  (a) => api.step_action(defaultCompactRpg(a)),
 );
 tool(
   "get_state",
-  "Return the raw deterministic state and state hash for a session.",
-  SESSION,
-  (a) => api.get_state(a),
+  "Return state hash; include_state true returns raw deterministic state.",
+  {
+    ...SESSION,
+    include_state: z.boolean().optional().describe("Include raw reducer state for debugging."),
+  },
+  (a) => compactMcpState(a),
 );
 tool(
   "get_transcript",
-  "Return a compact turn transcript with choices, events, inventory, flags, journal, and ending state.",
-  SESSION,
-  (a) => api.get_transcript(a),
+  "Transcript; hash-only.",
+  {
+    ...SESSION,
+    ...IF_STATE_HASH,
+    ...IF_TRANSCRIPT_HASH,
+    summary_only: z.boolean().optional().describe("Default true; omits turns."),
+    compact_summary: z
+      .boolean()
+      .optional()
+      .describe("Default true; false returns full summary lists."),
+    compact_turns: z.boolean().optional().describe("Rows [step,scene,action,result]."),
+    ...COMPACT_EVENTS,
+  },
+  (a) => api.get_transcript(defaultCompactTranscript(a)),
 );
 tool(
   "save_game",
-  "Serialize a session to a save string (content-hash + mode bound, §8.7).",
-  SESSION,
+  "Serialize a session to a save string; expected_state_hash rejects stale checkpoints.",
+  { ...SESSION, ...EXPECTED_STATE_HASH },
   (a) => api.save_game(a),
 );
 tool(
   "load_game",
-  "Load a save against a pack (content-hash + mode verified) and return a fresh session.",
-  { ...PACK, save: z.string().describe("A save string produced by save_game.") },
-  (a) => api.load_game(a),
+  "Restore a saved RPG session; returns compact context by default.",
+  {
+    world_quest_id: z
+      .string()
+      .optional()
+      .describe("World quest id; optional when embedded in save."),
+    generate_rpg_seed: z
+      .number()
+      .int()
+      .optional()
+      .describe("Generated RPG seed; optional when embedded in save."),
+    save: z.string().describe("A save string produced by save_game."),
+    ...HIDE_GRAPH,
+    ...COMPACT_ACTIONS,
+    ...COMPACT_OBSERVATION,
+  },
+  (a) => api.load_game(defaultCompactRpg(a)),
 );
 
 tool(
   "replay_trace",
-  "Replay a recorded trace against a pack of any mode and assert its final-state hash (§8.8).",
+  "Replay an RPG trace and verify its final-state hash.",
   {
-    trace_path: z.string().describe("Path to a trace JSON, relative to the project root."),
-    ...PACK,
+    trace_path: z.string().describe("Project-relative trace JSON path."),
+    world_quest_id: z
+      .string()
+      .optional()
+      .describe("World quest id; optional when embedded in trace."),
   },
   (a) => api.replay_trace(a),
 );
 
 tool(
   "adapt_story",
-  "Author a pack from a premise via the writer→adapter→validator loop (§12.1–3); returns the pack, validation report, and per-beat classification. `mode` selects the engine mode (cyoa default, parser, or rpg) — the same story is adapted behind that mode's validator.",
+  "Author an RPG pack from a premise via the writer→adapter→validator loop (§12.1–3); returns the pack, validation report, and per-beat classification.",
   {
     premise: z.string().describe("A one-sentence story premise to author from."),
-    mode: z
-      .enum(["cyoa", "parser", "rpg"])
-      .optional()
-      .describe("Engine mode to author for (default cyoa)."),
   },
   (a) => api.adapt_story(a),
 );
 
 tool(
   "inspect_trace",
-  "Summarize a recorded trace: per-step locations/events, final-hash check, and the debugger's suspected-bug classification (§9.4, §12.5).",
+  "Summarize an RPG trace with replay diagnostics.",
   {
-    trace_path: z.string().describe("Path to a trace JSON, relative to the project root."),
-    ...PACK,
+    trace_path: z.string().describe("Project-relative trace JSON path."),
+    world_quest_id: z
+      .string()
+      .optional()
+      .describe("World quest id; optional when embedded in trace."),
   },
   (a) => api.inspect_trace(a),
 );
 
 tool(
   "apply_content_patch",
-  "Apply a structured, whitelisted content patch with deterministic code and return the modified pack + validation report (§9.4, §16). Never writes files; never runs model-issued code.",
+  "Apply a structured, whitelisted content patch with deterministic code to a shipped world quest id and return the modified pack + validation report (§9.4, §16). Never writes files; never runs model-issued code.",
   {
-    ...PACK,
+    ...WORLD_QUEST_SOURCE,
     proposal: z
       .object({
         layer: z.enum([
@@ -554,7 +537,6 @@ tool(
           "hint_text",
           "quest_structure",
         ]),
-        mode: z.enum(["cyoa", "parser"]),
         summary: z.string(),
         ops: z
           .array(z.record(z.string(), z.unknown()))

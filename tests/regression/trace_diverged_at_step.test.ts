@@ -31,27 +31,30 @@ import { writeFileSync, mkdirSync } from "node:fs";
 import { replayTrace } from "../../src/trace/replay.js";
 import { recordTrace, type Trace } from "../../src/trace/record.js";
 import { createToolApi } from "../../src/mcp/tools.js";
-import { loadPackFile } from "../../src/cyoa/pack.js";
-import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
+import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import {
+  MICRO_ACTIONS,
   microRules,
   microInitState,
   MICRO_PACK_ID,
   MICRO_CONTENT_HASH,
 } from "../../src/demo/micro.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 
-// Four-action winning route through the micro engine (take_torch → enter_cave →
-// grab_gold → win). These cover steps 0–3, giving us indices 0–3 for divergence
+// Four-action winning route through the micro engine (take torch -> enter cave ->
+// grab gold -> claim treasure). These cover steps 0-3, giving us indices 0-3 for divergence
 // injection testing.
-const WIN: Action[] = [
-  { type: "CHOOSE", choiceId: "take_torch" },
-  { type: "CHOOSE", choiceId: "enter_cave" },
-  { type: "CHOOSE", choiceId: "grab_gold" },
-  { type: "CHOOSE", choiceId: "win" },
+const WIN: RpgAction[] = [
+  MICRO_ACTIONS.takeTorch,
+  MICRO_ACTIONS.enterCave,
+  MICRO_ACTIONS.grabGold,
+  MICRO_ACTIONS.claimTreasure,
 ];
 
-function newTrace(): Trace {
+type RpgTrace = Trace<RpgAction>;
+
+function newTrace(): RpgTrace {
   return recordTrace(microRules, microInitState(), WIN, {
     trace_id: "tr_0290_regression",
     pack_id: MICRO_PACK_ID,
@@ -60,7 +63,7 @@ function newTrace(): Trace {
 }
 
 /** Return a trace whose per_step_hashes baseline is corrupted at the given indices. */
-function corruptAt(trace: Trace, ...indices: number[]): Trace {
+function corruptAt(trace: RpgTrace, ...indices: number[]): RpgTrace {
   const hashes = [...trace.per_step_hashes!];
   for (const i of indices) {
     hashes[i] = "0".repeat(64); // a known-bad 64-char hash string
@@ -72,30 +75,35 @@ function corruptAt(trace: Trace, ...indices: number[]): Trace {
 // MCP fixture support (case 4) — write a trace to disk for inspect_trace.
 // ------------------------------------------------------------------
 const ROOT = process.cwd();
-const PACK = "content/cyoa/pack/watchtower_road.yaml";
+const PACK = "content/rpg/pack/sunken_barrow.yaml";
 const FIXTURE = (name: string) => `traces/bug_0290_${name}.json`;
 
-const ACTIONS_WT = ["go_west", "ford_brook", "cross_north", "slip_into_woods", "slip_away"].map(
-  (id) => ({ type: "CHOOSE" as const, choiceId: id }),
-);
+const ACTIONS_RPG: RpgAction[] = [
+  { type: "MOVE", direction: "down" },
+  { type: "TAKE", item: "iron_bar" },
+  { type: "MOVE", direction: "west" },
+  { type: "TALK", npc: "reaver_shade" },
+  { type: "ASK", npc: "reaver_shade", topic: "ask_wight" },
+];
 
-let cleanTraceMcp: Trace;
-let divergedTraceMcp: Trace;
+let cleanTraceMcp: RpgTrace;
+let divergedTraceMcp: RpgTrace;
 
-function write(path: string, trace: Trace): void {
+function write(path: string, trace: RpgTrace): void {
   mkdirSync("traces", { recursive: true });
   writeFileSync(path, JSON.stringify(trace));
 }
 
 beforeAll(() => {
-  const compiled = loadPackFile(PACK);
+  const compiled = loadRpgPackFile(PACK);
   if (!compiled.ok) throw new Error("pack must compile for MCP fixture");
-  const index = indexPack(compiled.compiled.pack);
-  const rules = buildRules(index);
-  cleanTraceMcp = recordTrace(rules, initStateForPack(index, 1), ACTIONS_WT, {
+  const index = indexRpgPack(compiled.compiled.pack);
+  const rules = buildRpgRules(index);
+  cleanTraceMcp = recordTrace(rules, initStateForRpgPack(index, 1), ACTIONS_RPG, {
     trace_id: "tr_0290_mcp",
     pack_id: compiled.compiled.pack.meta.id,
     content_hash: compiled.compiled.contentHash,
+    worldQuestId: "sunken_barrow",
   });
   // Corrupt step 2 of the per-step baseline to trigger a mid-trace divergence.
   divergedTraceMcp = corruptAt(cleanTraceMcp, 2);
@@ -138,7 +146,6 @@ describe("bug_0290 — divergedAtStep is populated in replayTrace and inspect_tr
     const api = createToolApi({ root: ROOT });
     const r = api.inspect_trace({
       trace_path: FIXTURE("diverged"),
-      pack_path: PACK,
     }) as { ok: boolean; hash_ok: boolean; diverged_at_step: number | null };
     expect(r.ok).toBe(true);
     expect(r.diverged_at_step).toBe(2);
@@ -148,7 +155,6 @@ describe("bug_0290 — divergedAtStep is populated in replayTrace and inspect_tr
     write(FIXTURE("clean"), cleanTraceMcp);
     const rClean = api.inspect_trace({
       trace_path: FIXTURE("clean"),
-      pack_path: PACK,
     }) as { ok: boolean; hash_ok: boolean; diverged_at_step: number | null };
     expect(rClean.ok).toBe(true);
     expect(rClean.diverged_at_step).toBeNull();
@@ -166,7 +172,7 @@ describe("bug_0290 — divergedAtStep is populated in replayTrace and inspect_tr
 
     // And a v1 trace (no per_step_hashes) must replay without error, divergedAtStep undefined.
     const { per_step_hashes: _omit, ...v1 } = newTrace();
-    const v1Result = replayTrace(v1 as Trace, microRules);
+    const v1Result = replayTrace(v1 as RpgTrace, microRules);
     expect(v1Result.ok).toBe(true);
     expect(v1Result.divergedAtStep).toBeUndefined();
   });

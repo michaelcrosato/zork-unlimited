@@ -5,36 +5,47 @@
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { GameSession, detectMode } from "../../ui/src/engine.js";
+import { GameSession, isRpgSource } from "../../ui/src/engine.js";
 
 const read = (p: string): string => readFileSync(p, "utf8");
+const NON_RPG_SOURCE = `
+meta: { id: non_rpg, title: "Non RPG", start_room: start }
+rooms:
+  - id: start
+    name: "Start"
+    description: "No RPG enemies field."
+    exits: []
+objects: []
+win_conditions:
+  - { id: done, conditions: [{ visited: start }], ending: done }
+endings:
+  - { id: done, title: "Done", text: "Done." }
+`;
 
-describe("GameSession — mode detection + structured play", () => {
-  it("detects all three modes", () => {
-    expect(detectMode(read("content/cyoa/pack/watchtower_road.yaml"))).toBe("cyoa");
-    expect(detectMode(read("content/parser/pack/sealed_crypt.yaml"))).toBe("parser");
-    expect(detectMode(read("content/rpg/pack/sunken_barrow.yaml"))).toBe("rpg");
+describe("GameSession — RPG-only structured play", () => {
+  it("accepts RPG sources and rejects legacy pack shapes", () => {
+    expect(isRpgSource(read("content/rpg/pack/sunken_barrow.yaml"))).toBe(true);
+    expect(isRpgSource(NON_RPG_SOURCE)).toBe(false);
+    expect(() => GameSession.start(NON_RPG_SOURCE, 1)).toThrow(/RPG-only/i);
   });
 
-  it("plays a CYOA route to an ending via choice ids", () => {
-    const s = GameSession.start(read("content/cyoa/pack/watchtower_road.yaml"), 1);
-    expect(s.mode).toBe("cyoa");
-    const view = s.view();
-    expect(view.choices.length).toBeGreaterThan(0);
-    for (const id of ["go_west", "ford_brook", "cross_north", "slip_into_woods", "slip_away"]) {
-      expect(s.choose(id).ok).toBe(true);
-    }
-    const end = s.view();
-    expect(end.ended).toBe(true);
-    expect(end.endingId).toBe("ending_escape");
-  });
-
-  it("rejects an illegal choice id without advancing", () => {
-    const s = GameSession.start(read("content/cyoa/pack/watchtower_road.yaml"), 1);
+  it("rejects an illegal action id without advancing", () => {
+    const s = GameSession.start(read("content/rpg/pack/sunken_barrow.yaml"), 1);
     const before = s.view().stateHash;
-    const out = s.choose("not_a_choice");
+    const out = s.choose("not_an_action");
     expect(out.ok).toBe(false);
     expect(s.view().stateHash).toBe(before);
+  });
+
+  it("reset restores the deterministic initial RPG state", () => {
+    const s = GameSession.start(read("content/rpg/pack/sunken_barrow.yaml"), 1);
+    const initial = s.view().stateHash;
+    const down = s.view().choices.find((c) => c.label === "go down");
+    expect(down).toBeTruthy();
+    expect(s.choose(down!.id).ok).toBe(true);
+    expect(s.view().stateHash).not.toBe(initial);
+    s.reset();
+    expect(s.view().stateHash).toBe(initial);
   });
 
   it("plays the RPG pack (combat + skill check) to victory and is deterministic", () => {

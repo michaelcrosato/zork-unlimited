@@ -32,7 +32,7 @@ import {
   initStateForRpgPack,
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
-import { buildParserObservation } from "../../src/parser/observation.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Action } from "../../src/api/types.js";
@@ -105,7 +105,7 @@ describe("bug_0276 — The Sunken Barrow's doom epilogue reframes on whether the
     s = doomFromEntryHall(s);
     expect(s.flags["heard_lord_lore"]).toBe(true);
 
-    const obs = buildParserObservation(index, s);
+    const obs = buildRpgObservation(index, s);
     expect(obs.ending!.id).toBe("ending_woken");
     expect(obs.ending!.text).toContain("the shade's last counsel rings true after all");
     expect(obs.ending!.text).not.toContain("some instinct older than reason");
@@ -120,7 +120,7 @@ describe("bug_0276 — The Sunken Barrow's doom epilogue reframes on whether the
     s = doomFromEntryHall(s);
     expect(s.flags["heard_lord_lore"]).toBeUndefined();
 
-    const obs = buildParserObservation(index, s);
+    const obs = buildRpgObservation(index, s);
     expect(obs.ending!.id).toBe("ending_woken");
     // The non-sequitur the playtester flagged must be GONE on the uninformed path.
     expect(obs.ending!.text).not.toContain("the shade's last counsel");
@@ -148,7 +148,7 @@ describe("bug_0276 — The Sunken Barrow's doom epilogue reframes on whether the
     blind = doomFromEntryHall(blind);
 
     for (const s of [informed, blind]) {
-      const obs = buildParserObservation(index, s);
+      const obs = buildRpgObservation(index, s);
       expect(obs.ending!.death).toBe(true);
       expect(s.vars.score).toBe(25); // never took the crown → incomplete
     }

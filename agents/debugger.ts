@@ -14,10 +14,9 @@
  * classification here is code, so it cannot be argued away.
  */
 import type { GameState } from "../src/core/state.js";
-import type { Rules } from "../src/core/engine.js";
+import type { EngineAction, Rules } from "../src/core/engine.js";
 import { makeStep } from "../src/core/engine.js";
 import { hashState } from "../src/core/hash.js";
-import type { Action } from "../src/api/types.js";
 
 export type FailureType =
   | "soft_lock" // not ended, but no legal action makes progress
@@ -47,10 +46,10 @@ export type DiagnoseOptions = {
  * same diagnosis (§8.5). Detects the classic adventure failure modes a playtester
  * persona surfaces (§12.8) without needing to understand the content.
  */
-export function diagnose(
-  rules: Rules,
+export function diagnose<A extends EngineAction>(
+  rules: Rules<A>,
   initialState: GameState,
-  actions: Action[],
+  actions: A[],
   opts: DiagnoseOptions = {},
 ): Diagnosis {
   const step = makeStep(rules);
@@ -144,7 +143,7 @@ export type BugArtifact = {
   content_hash: string;
   seed: number;
   initial_state: "start" | GameState;
-  trace: Action[];
+  trace: EngineAction[];
   failure: { type: FailureType; description: string; severity: Diagnosis["severity"] };
   expected: string[];
   fix?: { layer: FixLayer; summary: string };
@@ -165,7 +164,7 @@ export type BuildArtifactOptions = {
 /** Build a §15 bug artifact from a diagnosis + the offending trace. */
 export function toBugArtifact(
   initialState: GameState,
-  actions: Action[],
+  actions: EngineAction[],
   diagnosis: Diagnosis,
   opts: BuildArtifactOptions,
 ): BugArtifact {

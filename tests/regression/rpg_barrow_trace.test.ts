@@ -9,10 +9,13 @@ import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { indexRpgPack, buildRpgRules } from "../../src/rpg/runner.js";
 import { replayTrace } from "../../src/trace/replay.js";
 import type { Trace } from "../../src/trace/record.js";
+import type { RpgAction } from "../../src/api/types.js";
 
 describe("rpg barrow victory trace", () => {
   it("replays to its recorded final hash (combat + skill check are reproducible)", () => {
-    const trace = JSON.parse(readFileSync("traces/rpg/barrow_victory.json", "utf8")) as Trace;
+    const trace = JSON.parse(
+      readFileSync("traces/rpg/barrow_victory.json", "utf8"),
+    ) as Trace<RpgAction>;
     const loaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;

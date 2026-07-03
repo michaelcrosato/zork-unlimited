@@ -184,12 +184,20 @@ describe("bug_0293 — recency rotation survives the SONNET phrasing + uses the 
     expect(offsets.has("clockwork_heist_v1")).toBe(false);
   });
 
+  it('recognizes the current code-written `Blind-playtest quest "<world_quest_id>"` line', () => {
+    const line =
+      '- Next best improvement (recommended): [content_fix] Blind-playtest quest "bellfounders_alarm" — structurally clean.';
+    const offsets = parseAttendanceOffsets(line);
+    expect(offsets.has("bellfounders_alarm")).toBe(true);
+    expect(offsets.has("quest")).toBe(false);
+  });
+
   it("a freshly-attended pack (new forms) sorts LAST in the rotation, never first", () => {
     // Realistic newest-first entry: code line + Sonnet prose both name clockwork on top.
     const log = [
-      '- Next best improvement (recommended): [content_fix] Blind-playtest "clockwork_heist_v1" — clean.',
+      '- Next best improvement (recommended): [content_fix] Blind-playtest quest "clockwork_heist" — clean.',
       "### Cycle result — (bug_0292): blind pass on `clockwork_heist` (seed 7).",
-      '- Next best improvement (recommended): [content_fix] Blind-playtest "midnight_edition_v1" — clean.',
+      '- Next best improvement (recommended): [content_fix] Blind-playtest quest "midnight_edition" — clean.',
     ].join("\n");
     const offsets = parseAttendanceOffsets(log);
     const rank = (stem: string): number => {
@@ -213,7 +221,8 @@ describe("bug_0293 — recency rotation survives the SONNET phrasing + uses the 
     // (The bug_0235 guard greps only "Mandated …ran on `X`", which the live Sonnet log no
     // longer contains, so it vacuously skips — exactly how bug_0293 slipped past.)
     const m =
-      raw.match(/Blind-playtest "([a-z0-9_]+)"/i) ?? raw.match(/blind pass on\s+`([a-z0-9_]+)`/i);
+      raw.match(/Blind-playtest(?:\s+quest)? "([a-z0-9_]+)"/i) ??
+      raw.match(/blind pass on\s+`([a-z0-9_]+)`/i);
     if (!m) return;
     const loggedMostRecent = packStem(m[1]!);
     const logOffsets = parseAttendanceOffsets(raw);
@@ -250,7 +259,7 @@ describe("local blind reports — rotation sees accepted report artifacts before
 
   it("merged attendance treats local accepted reports as newer than AI_LOOP_STATE.md", () => {
     const logOffsets = parseAttendanceOffsets(
-      '- Next best improvement (recommended): [content_fix] Blind-playtest "aleconners_seal_v1" — clean.',
+      '- Next best improvement (recommended): [content_fix] Blind-playtest quest "aleconners_seal" — clean.',
     );
     const reportOffsets = parseBlindReportAttendanceOffsets([
       "20260619T191648Z_aleconners_seal_seed7.md",

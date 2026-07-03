@@ -1,43 +1,56 @@
 #!/usr/bin/env -S npx tsx
 /**
- * bin/author — author a content pack from a premise (spec §12.1–3).
+ * bin/author — author a draft RPG pack from a premise (spec §12.1–3).
  *
  * Usage:
- *   npm run author -- "a premise sentence" [--mode cyoa|parser|rpg] [--out content/.../foo.yaml]
+ *   npm run author -- "a premise sentence" [-- --out ai-runs/drafts/foo.yaml]
  *
  * Runs the writer → adapter → validator loop with the deterministic
- * MockAuthorProvider (no API keys). `--mode parser` routes through the richer
- * Zork-style parser validator; `--mode rpg` through the richest, `validateRpg` (parser
- * checks PLUS the Stage-4 combat/skill-check layer); default: cyoa. Prints the per-beat
- * classification and the validation report; with --out, writes the green pack as YAML. A
- * real provider would slot in behind an env var (§12.7).
+ * MockAuthorProvider (no API keys). The CLI is deliberately RPG-only: no legacy
+ * authoring mode is exposed. Prints the per-beat classification and validation
+ * report; with --out, writes the green draft RPG pack as YAML. Shipped content
+ * must be registered through the world graph instead of writing directly into
+ * content/rpg/pack. A real provider slots in behind an env var (§12.7).
  */
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { stringify as toYaml } from "yaml";
 import { MockAuthorProvider } from "../agents/authoring/mock_author.js";
 import { resolveProvider } from "../agents/llm/providers.js";
 import { loadEngineContract, runWriter } from "../agents/authoring/writer.js";
-import { runAdapter, runParserAdapter, runRpgAdapter } from "../agents/authoring/adapter.js";
+import { runRpgAdapter } from "../agents/authoring/adapter.js";
 import { formatReport } from "../src/validate/report.js";
+
+const SHIPPED_PACK_DIR = resolve(process.cwd(), "content", "rpg", "pack");
+
+function isShippedPackOutput(path: string): boolean {
+  const rel = relative(SHIPPED_PACK_DIR, resolve(process.cwd(), path));
+  return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
+}
 
 async function main(): Promise<void> {
   const premise = process.argv[2];
   if (!premise || premise.startsWith("--")) {
-    console.error('Usage: npm run author -- "a premise" [--out path.yaml]');
+    console.error('Usage: npm run author -- "a premise" [-- --out ai-runs/drafts/path.yaml]');
     process.exit(2);
   }
   let out: string | null = null;
-  let mode: "cyoa" | "parser" | "rpg" = "cyoa";
   for (let i = 3; i < process.argv.length; i++) {
+    if (process.argv[i] === "--") continue;
     if (process.argv[i] === "--out") out = process.argv[++i] ?? null;
     else if (process.argv[i] === "--mode") {
-      const m = process.argv[++i];
-      if (m !== "cyoa" && m !== "parser" && m !== "rpg") {
-        console.error(`--mode must be cyoa, parser, or rpg, got "${m}"`);
-        process.exit(2);
-      }
-      mode = m;
+      console.error("author is RPG-only; --mode is no longer supported.");
+      process.exit(2);
+    } else {
+      console.error(`Unknown option: ${process.argv[i]}`);
+      process.exit(2);
     }
+  }
+  if (out && isShippedPackOutput(out)) {
+    console.error(
+      "author writes draft RPG packs only; shipped quests must be registered through the canonical world graph, not written directly under content/rpg/pack.",
+    );
+    process.exit(2);
   }
 
   // Deterministic mock by default; a real backend is used only when its key is
@@ -51,14 +64,9 @@ async function main(): Promise<void> {
     `Writer drafted "${story.title}" — ${story.chapters.length} chapters, ${story.beats.length} beats.`,
   );
 
-  const result =
-    mode === "rpg"
-      ? await runRpgAdapter(provider, { story, contract })
-      : mode === "parser"
-        ? await runParserAdapter(provider, { story, contract })
-        : await runAdapter(provider, { story, contract });
+  const result = await runRpgAdapter(provider, { story, contract });
   console.log(
-    `\nAdapter reached a ${result.ok ? "GREEN" : "RED"} ${mode} pack in ${result.rounds} round(s).`,
+    `\nAdapter reached a ${result.ok ? "GREEN" : "RED"} rpg pack in ${result.rounds} round(s).`,
   );
   console.log("\nBeat classifications (§11):");
   for (const c of result.classifications)
@@ -70,8 +78,9 @@ async function main(): Promise<void> {
     process.exit(1);
   }
   if (out) {
+    mkdirSync(dirname(out), { recursive: true });
     writeFileSync(out, toYaml(result.pack));
-    console.log(`\nWrote pack to ${out}`);
+    console.log(`\nWrote draft RPG pack to ${out}`);
   }
 }
 

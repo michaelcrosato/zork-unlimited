@@ -49,7 +49,7 @@ import {
   initStateForRpgPack,
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
-import { buildParserObservation } from "../../src/parser/observation.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep, actionEquals } from "../../src/core/engine.js";
 import type { Rng } from "../../src/core/rng.js";
 import type { Action } from "../../src/api/types.js";
@@ -94,7 +94,7 @@ const rngFor = (s: GameState): Rng =>
 const rules = buildRpgRules(index, rngFor);
 const step = makeStep(rules);
 
-const score = (s: GameState): number => buildParserObservation(index, s).score;
+const score = (s: GameState): number => buildRpgObservation(index, s).score;
 const options = (s: GameState) => enumerateRpgActions(index, s);
 const narrations = (effects: Effect[]): string[] =>
   effects.filter((e): e is { narrate: string } => "narrate" in e).map((e) => e.narrate);

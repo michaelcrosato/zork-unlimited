@@ -1,6 +1,8 @@
 node_modules/
 dist/
+ui/dist/
 *.log
+ui/.vite-dev*.log
 .DS_Store
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
@@ -21,6 +23,10 @@ AI_LOOP_STATE_ARCHIVE.md
 .codex/*
 !.codex/config.toml
 
+# Local maintenance/runtime state
+.agent-cleaner/
+*.tsbuildinfo
+
 # Blind-tester run outputs (regenerable; not source)
 blind-tester/reports/*
 !blind-tester/reports/.gitkeep
@@ -28,4 +34,3 @@ blind-tester/reports/*
 # Agent metadata and requests
 .agents/
 ORIGINAL_REQUEST.md
-

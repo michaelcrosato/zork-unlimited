@@ -97,7 +97,7 @@
  * A missed relabel site leaves an id that `mapId` keeps as itself, which then mismatches
  * the twin's relabeled id — a loud failure, never a silently-minted token. (Behavioural
  * witness: temporarily appending " [SABOTAGE]" to the room description in
- * buildParserObservation when `!state.current.startsWith("mx_")` — firing only on original,
+ * buildRpgObservation when `!state.current.startsWith("mx_")` — firing only on original,
  * non-relabeled room ids — fails every RPG pack at the first state; reverted → green.)
  */
 import { describe, it, expect } from "vitest";
@@ -114,10 +114,11 @@ import {
 import { buildRpgObservation, type RpgObservation } from "../../src/rpg/observation.js";
 import { makeStep, type Rules } from "../../src/core/engine.js";
 import type { Rng } from "../../src/core/rng.js";
+import type { StepResult } from "../../src/api/types.js";
 import { stateKey } from "./support/exhaustive_endings.js";
 import { relabelRpgPack } from "./support/relabel_rpg.js";
-import type { ParserRelabeler } from "./support/relabel_parser.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgRelabeler } from "./support/relabel_rpg.js";
+import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 
 const PACK_DIR = "content/rpg/pack";
@@ -130,14 +131,14 @@ const SEED = 7;
 // every legal action EXCEPT the purely reversible / narrate-only verbs — crucially
 // STEPPING READ, USE (skill-checks) and ATTACK, which carry sticky/combat effects and so
 // open new observation states. Skipped verbs are still observation-CHECKED at every state.
-const LIVENESS_SKIP: ReadonlySet<Action["type"]> = new Set([
+const LIVENESS_SKIP: ReadonlySet<RpgAction["type"]> = new Set([
   "DROP",
   "CLOSE",
   "LOOK",
   "INVENTORY",
   "INSPECT",
 ]);
-const explore = (a: Action): boolean => !LIVENESS_SKIP.has(a.type);
+const explore = (a: RpgAction): boolean => !LIVENESS_SKIP.has(a.type);
 // Matches the RPG census/reachability oracles' bound. We walk the bracketed graph twice
 // in lock-step per pack; a cap-out surfaces as a loud failure rather than a hang.
 const MAX_STATES = 200_000;
@@ -180,7 +181,7 @@ const worstRng = (): Rng => fixedSeqRng([LOW, HIGH]);
  * a loud divergence. The reserved vars `score`/`hp`/`attack`/`defense` are never entered
  * into the map, so they are fixed points here exactly as the relabeler holds them fixed.
  */
-function mapIdFn(relabeler: ParserRelabeler): (id: string) => string {
+function mapIdFn(relabeler: RpgRelabeler): (id: string) => string {
   return (id: string) => relabeler.map.get(id) ?? id;
 }
 
@@ -191,7 +192,7 @@ function mapIdFn(relabeler: ParserRelabeler): (id: string) => string {
  * action it must reproduce the production id (cross-checked in the walk); applied to a
  * bijection-MAPPED action it yields the corresponding twin id.
  */
-function rpgOptionId(a: Action): string {
+function rpgOptionId(a: RpgAction): string {
   switch (a.type) {
     case "ATTACK":
       return `attack_${a.enemy}`;
@@ -221,7 +222,6 @@ function rpgOptionId(a: Action): string {
       return `ask_${a.topic}`;
     case "INVENTORY":
       return "inventory";
-    case "CHOOSE":
     case "CLOSE":
     case "GIVE":
     case "INSPECT":
@@ -233,7 +233,7 @@ function rpgOptionId(a: Action): string {
  *  through `mapId`; the MOVE `direction` is command vocabulary and stays byte-identical.
  *  Throwing on the kinds the RPG runner never emits keeps the oracle honest if the action
  *  surface ever widens. */
-function relabelAction(a: Action, mapId: (id: string) => string): Action {
+function relabelAction(a: RpgAction, mapId: (id: string) => string): RpgAction {
   switch (a.type) {
     case "ATTACK":
       return { type: "ATTACK", enemy: mapId(a.enemy) };
@@ -267,8 +267,6 @@ function relabelAction(a: Action, mapId: (id: string) => string): Action {
       return { type: "INSPECT", target: mapId(a.target) };
     case "INVENTORY":
       return { type: "INVENTORY" };
-    case "CHOOSE":
-      throw new Error(`unexpected RPG action type "${a.type}" — extend relabelAction`);
   }
 }
 
@@ -350,6 +348,7 @@ function canonical(o: RpgObservation): RpgObservation {
 }
 
 type WalkResult = { compared: number; cappedOut: boolean };
+type RpgStep = (state: GameState, action: RpgAction) => StepResult;
 
 /**
  * BFS over state PAIRS, stepping every explored action under BOTH roll regimes (best /
@@ -360,15 +359,15 @@ type WalkResult = { compared: number; cappedOut: boolean };
 function walkInLockStep(
   origIndex: RpgIndex,
   twinIndex: RpgIndex,
-  origRulesBest: Rules,
-  origRulesWorst: Rules,
-  twinRulesBest: Rules,
-  twinRulesWorst: Rules,
+  origRulesBest: Rules<RpgAction>,
+  origRulesWorst: Rules<RpgAction>,
+  twinRulesBest: Rules<RpgAction>,
+  twinRulesWorst: Rules<RpgAction>,
   origStart: GameState,
   twinStart: GameState,
   mapId: (id: string) => string,
 ): WalkResult {
-  const regimes: [ReturnType<typeof makeStep>, ReturnType<typeof makeStep>][] = [
+  const regimes: [RpgStep, RpgStep][] = [
     [makeStep(origRulesBest), makeStep(twinRulesBest)],
     [makeStep(origRulesWorst), makeStep(twinRulesWorst)],
   ];

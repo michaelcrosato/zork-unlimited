@@ -2,62 +2,6 @@
   "generated_by": "bin/seal-corpus.ts",
   "entries": [
     {
-      "content_hash": "2825f16a37fee8753acf76a94f08b7f8b313582cc4f196217a832cce20799f87",
-      "generator_version": 3,
-      "mode": "cyoa",
-      "pack_id": "gen_0_v1",
-      "seed": 0
-    },
-    {
-      "content_hash": "d0007246ea0a71edf71bdb64fd8f544d4ded6106f7ec00b6e5a49ad3e5830894",
-      "generator_version": 3,
-      "mode": "cyoa",
-      "pack_id": "gen_1_v1",
-      "seed": 1
-    },
-    {
-      "content_hash": "bea8e9a24366223a1da12daf60be652d45ed28ef238016a938613f3ab3e26dd1",
-      "generator_version": 3,
-      "mode": "cyoa",
-      "pack_id": "gen_2_v1",
-      "seed": 2
-    },
-    {
-      "content_hash": "2e98518ec3409a7d64cdae399e412ee72b4e4221b9f73eee23612da6662b3fc0",
-      "generator_version": 3,
-      "mode": "cyoa",
-      "pack_id": "gen_3_v1",
-      "seed": 3
-    },
-    {
-      "content_hash": "283907284f6714d67b14e00a5142863a4eb29c366bb5f919c37e77d20daeb1c8",
-      "generator_version": 3,
-      "mode": "parser",
-      "pack_id": "genpar_0_v1",
-      "seed": 0
-    },
-    {
-      "content_hash": "eeba725b1c133b01570c00c53b090bb8662b39d8d0080f886c4ebc8aba7e7e82",
-      "generator_version": 3,
-      "mode": "parser",
-      "pack_id": "genpar_1_v1",
-      "seed": 1
-    },
-    {
-      "content_hash": "a91c15255113d0636d10e2131c68ffd533300d36c24a311d854f20e73b246e2e",
-      "generator_version": 3,
-      "mode": "parser",
-      "pack_id": "genpar_2_v1",
-      "seed": 2
-    },
-    {
-      "content_hash": "28ee01f877f4d62ec127daddf85b3227a0631b89913687af51446d6f8089793f",
-      "generator_version": 3,
-      "mode": "parser",
-      "pack_id": "genpar_3_v1",
-      "seed": 3
-    },
-    {
       "content_hash": "cf012fbd6f52dc18f6a53e7dfdfdacec88956a45070876a320a4aee4e54b5804",
       "generator_version": 4,
       "mode": "rpg",

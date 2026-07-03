@@ -2,14 +2,14 @@
  * The AFK loop's brain — "what is the next best improvement?" (trust-but-verify).
  *
  * Each cycle the loop must decide where to spend its effort across FOUR categories:
- *   - content_new  : the game is thin somewhere (a mode with too few packs)
- *   - content_fix  : an existing pack has coverage gaps, unreached endings, or
- *                    validator warnings (the quality signal a real playtest probes)
+ *   - content_new  : the world graph is thin (too few playable RPG quest nodes)
+ *   - content_fix  : an existing quest has validator warnings, reachability gaps, or
+ *                    blind-playtest findings
  *   - engine       : code-level debt (TODO/FIXME markers, pending mechanics)
  *   - repo         : project hygiene (missing tooling, docs, etc.)
  *
  * The assessor gathers evidence DETERMINISTICALLY through the same tool API the MCP
- * server exposes (list_stories / validate) — no clock, no RNG, no network — scores
+ * server exposes (list_world / validate) — no clock, no RNG, no network — scores
  * candidates, and recommends the single highest-value next action.
  * It is the deterministic *evaluator*; the actual quality judgement each cycle comes
  * from a mandatory LLM playtest (see docs/afk_loop.md). Pure enough to unit-test:
@@ -20,22 +20,19 @@ import { join, relative } from "node:path";
 import { createToolApi } from "../mcp/tools.js";
 import type { PackMode } from "../mcp/types.js";
 import { verifyBlindReportText } from "../blind/report_verifier.js";
-import { totalCycleCount } from "./loop_state.js";
-import { generateCyoaPack } from "../gen/cyoa_generator.js";
+import { completedCycleCount, totalCycleCount } from "./loop_state.js";
 import { generateRpgPack } from "../gen/rpg_generator.js";
-import { generateParserPack } from "../gen/parser_generator.js";
-import { validateCyoa } from "../validate/cyoa_validator.js";
 import { validateRpg } from "../validate/rpg_validator.js";
-import { validateParser } from "../validate/parser_validator.js";
 import type { ValidationReport } from "../validate/report.js";
 import { auditStaleReactiveRoomItems } from "./stale_reactive_audit.js";
+import { resolveWorldQuestPackPath } from "../world/source.js";
 
 export type Category = "content_fix" | "content_new" | "engine" | "repo";
 
 export type ImprovementCandidate = {
   id: string;
   category: Category;
-  target: string; // a pack path, a mode, or a repo area
+  target: string; // a world quest id, a mode, or a repo area; paths are metadata only.
   title: string;
   rationale: string;
   evidence: string[];
@@ -44,20 +41,38 @@ export type ImprovementCandidate = {
   score: number; // impact-weighted, deterministic
 };
 
-export type PackHealth = {
+export type QuestHealth = {
   path: string;
+  pack_id: string;
+  world_quest_id: string | null;
   mode: PackMode | null;
   playable: boolean;
   warnings: number;
 };
 
+type AssessedQuest = {
+  path: string;
+  pack_id: string;
+  mode: PackMode | null;
+  playable: boolean;
+  world_quest_id: string | null;
+};
+
 export type Assessment = {
-  packsByMode: Record<string, number>;
-  packs: PackHealth[];
-  /** True iff this cycle's fresh generated CYOA/RPG/parser windows all validated clean. */
+  rpgQuestCount: number;
+  worldQuestCount: number;
+  quests: QuestHealth[];
+  /** True iff this cycle's fresh generated RPG window validated clean. */
   allGeneratorsClean: boolean;
   candidates: ImprovementCandidate[];
   top: ImprovementCandidate | null;
+};
+
+export type AssessmentFormatOptions = {
+  /** Print every quest/candidate with full rationale. Default output is compact for loop handoff. */
+  full?: boolean;
+  /** Maximum ranked candidates to show in compact mode before summarizing routine rows. */
+  maxCandidates?: number;
 };
 
 const EFFORT_COST: Record<ImprovementCandidate["effort"], number> = { S: 1, M: 2, L: 3 };
@@ -68,11 +83,10 @@ const CATEGORY_WEIGHT: Record<Category, number> = {
   engine: 0.8,
   repo: 0.6,
 };
-// How many packs per mode is "healthy" before net-new content is deprioritized.
-// Raised to {cyoa:20, parser:16, rpg:16} (bug_0336) to provide ~8 packs of headroom
-// per mode and prevent re-saturation after a single authoring run. Prior values:
-// {cyoa:10, parser:8, rpg:8} (bug_0332), {cyoa:12, parser:10, rpg:10} (bug_0335).
-const TARGET_PER_MODE: Record<string, number> = { cyoa: 20, parser: 16, rpg: 16 };
+// How many playable quest nodes in the contiguous world graph is "healthy" before
+// net-new world expansion is deprioritized. Count world_quest_id entries, not raw
+// YAML files, so this lever cannot reintroduce standalone package authoring.
+const WORLD_QUEST_TARGET = 16;
 
 function score(impact: number, effort: ImprovementCandidate["effort"], category: Category): number {
   // Deterministic: (impact / effort) * weight, rounded to 3 dp.
@@ -162,7 +176,7 @@ const DOC_REF_PREFIXES = [
 const DOC_REF_RE = new RegExp(`(?:${DOC_REF_PREFIXES.join("|")})/[A-Za-z0-9_./-]+`, "g");
 const DOC_REF_EXT = /\.(?:ts|tsx|js|mjs|cjs|json|yaml|yml|md|sh)$/;
 // A path token is NOT a liveness claim when it is a glob/brace/placeholder pattern
-// (content/cyoa/pack/*.yaml, traces/bugs/bug_0001_*.yaml, ai-runs/<id>/playtest.md)…
+// (content/rpg/pack/*.yaml, traces/bugs/bug_0001_*.yaml, ai-runs/<id>/playtest.md)…
 const DOC_REF_PATTERN_CHARS = /[*{}?[\]<>]|\.\.\./;
 // …or a command-line OUTPUT DESTINATION (`--record traces/run.json`, `--out …`,
 // `-o file`, `> file`): the doc tells you to CREATE it, not that it already exists.
@@ -199,9 +213,17 @@ export function findStaleDocRefs(docText: string, exists: (relPath: string) => b
  * Deliberately EXCLUDED (scanning them for liveness would be wrong, not missing —
  * the same discipline as LINT_DIRS omitting data/forward dirs): AI_LOOP_STATE.md (a
  * historical per-cycle log that records paths/hashes as they were, some since
- * moved), docs/ROADMAP.md and ADVENTUREFORGE_BUILD_SPEC.md (forward-looking — they
- * may name planned files that don't exist yet).
+ * moved), plus historical planning/gate logs that intentionally preserve retired
+ * variant paths. Active current docs such as docs/ROADMAP.md and
+ * ADVENTUREFORGE_BUILD_SPEC.md stay inside the scan.
  */
+const DOC_STALENESS_EXCLUDED_DOCS = new Set([
+  "DECISION_LOG.md",
+  "RPG-STANDARDIZATION-PLAN.md",
+  "ULTRAPLAN-2026-06-02.md",
+  "stage4_rpg_gate.md",
+]);
+
 function docStalenessDocs(root: string): string[] {
   const out: string[] = [];
   for (const f of ["AGENTS.md", "README.md", "AI_AGENT_PROMPT.md"]) {
@@ -212,7 +234,7 @@ function docStalenessDocs(root: string): string[] {
     for (const e of readdirSync(docsDir, { withFileTypes: true }).sort((a, b) =>
       a.name.localeCompare(b.name),
     )) {
-      if (e.isFile() && e.name.endsWith(".md") && e.name !== "ROADMAP.md")
+      if (e.isFile() && e.name.endsWith(".md") && !DOC_STALENESS_EXCLUDED_DOCS.has(e.name))
         out.push(`docs/${e.name}`);
     }
   }
@@ -220,17 +242,18 @@ function docStalenessDocs(root: string): string[] {
 }
 
 /**
- * Normalize a pack reference — a full path, a bare file stem, OR a pack id — to its
- * stem, so an attendance line that names a pack any of those ways maps to the same key.
- * E.g. "content/cyoa/pack/clockwork_heist.yaml" → "clockwork_heist", a bare
+ * Normalize a quest reference — a full source path, a bare world quest id, OR a
+ * pack id — to its stem, so an attendance line that names a quest any of those ways
+ * maps to the same key.
+ * E.g. "content/rpg/pack/cold_forge.yaml" → "cold_forge", a bare
  * "clockwork_heist" is unchanged, and the pack ID "clockwork_heist_v1" also → it.
  *
- * The trailing `_v\d+` strip matters for attendance keying (bug_0293): the candidate's
- * target is a PATH (file stem, no version), but the code-written recommendation line the
- * log records every cycle names the pack by its ID — `Blind-playtest "clockwork_heist_v1"`
- * — which carries the `_v1` suffix. Without this strip the id-form and the path-form key
- * to different stems and the recency lookup misses, re-freezing the rotation. No shipped
- * pack FILE name ends in `_v\d+`, so the strip never collides two real packs.
+ * The trailing `_v\d+` strip matters for attendance keying (bug_0293): legacy log
+ * lines named pack ids such as `Blind-playtest "clockwork_heist_v1"`, while current
+ * candidates target world quest ids such as `clockwork_heist`. Without this strip
+ * the id-form and world-id form key to different stems and the recency lookup misses,
+ * re-freezing the rotation. No shipped source file name ends in `_v\d+`, so the strip
+ * never collides two real sources.
  */
 export function packStem(ref: string): string {
   const base = ref.split("/").pop() ?? ref;
@@ -238,25 +261,25 @@ export function packStem(ref: string): string {
 }
 
 /**
- * Parse, from the AI_LOOP_STATE.md log, each pack's MOST RECENT blind-playtest
+ * Parse, from the AI_LOOP_STATE.md log, each quest's MOST RECENT blind-playtest
  * attendance — its character offset — keyed by {@link packStem}. A SMALLER offset
  * means more recently attended, because the log is written NEWEST-FIRST (every cycle
  * PREPENDS its entry at the top): a stem's FIRST match is its most recent attendance,
  * so we keep the first and ignore older repeats. Pure (text in, map out) so it
  * unit-tests without a fixture. Used to rotate the blind pass onto the
- * LEAST-recently-attended pack instead of re-nominating the alphabetically-first one.
+ * LEAST-recently-attended quest instead of re-nominating the alphabetically-first one.
  *
  * Recognizes BOTH the cycle-result phrasing the log actually uses today ("Mandated
- * blind pass ran on <pack>") AND the older structured-header marker ("Mandatory LLM
+ * blind pass ran on <quest>") AND the older structured-header marker ("Mandatory LLM
  * playtest target this cycle: <path>"); a token in either form may be a path or a
- * bare id. This is the bug_0128 fix: the parser previously matched ONLY the old
+ * bare id. This is the bug_0128 fix: the attendance matcher previously matched ONLY the old
  * header — abandoned ~15 cycles ago for the prose format — so the recency signal had
  * frozen and the rotation silently fell back to alphabetical, re-nominating
  * clockwork_heist (the very lock-in the rotation was meant to cure). The caller
- * resolves only real pack stems, so incidental captures (e.g. "…ran on the assessor")
+ * resolves only real quest stems, so incidental captures (e.g. "…ran on the assessor")
  * land under a stem no candidate queries and are harmless.
  *
- * bug_0235: the same blindness recurred via MARKDOWN WRAPPING. The log writes the pack
+ * bug_0235: the same blindness recurred via MARKDOWN WRAPPING. The log writes the quest
  * bold+backticked — `- **Mandated blind pass ran on \`midnight_edition\`** …` — but the
  * capture class [A-Za-z0-9_./-] excluded the backtick, so the match failed at the opening
  * tick and EVERY recent entry was invisible: the just-played pack looked never-attended
@@ -269,12 +292,13 @@ export function packStem(ref: string): string {
 export function parseAttendanceOffsets(loopStateText: string): Map<string, number> {
   const map = new Map<string, number>();
   // bug_0293: ALSO match the model-INDEPENDENT code-written recommendation line
-  // `Blind-playtest "<id>"` (emitted by the assessor every cycle, see the playtest
+  // `Blind-playtest "<id>"` (legacy) and `Blind-playtest quest "<id>"` (current,
+  // emitted by the assessor every cycle, see the playtest
   // candidate title below) and the looser Sonnet-era agent phrasing "blind pass on
-  // `<pack>`". The wrapper class gains `"` so the quoted id is skipped; `i` tolerates
+  // `<quest>`". The wrapper class gains `"` so the quoted id is skipped; `i` tolerates
   // sentence-start caps; the `_v\d+` on a captured pack id is normalized by packStem.
   const re =
-    /(?:Mandatory LLM playtest target this cycle:|Mandated blind pass ran on|blind pass on|Blind-playtest)\s+["`*]*([A-Za-z0-9_./-]+)/gi;
+    /(?:Mandatory LLM playtest target this cycle:|Mandated blind pass ran on|blind pass on|Blind-playtest(?:\s+quest)?)\s+["`*]*([A-Za-z0-9_./-]+)/gi;
   for (const m of loopStateText.matchAll(re)) {
     const captured = m[1];
     if (captured === undefined) continue;
@@ -358,28 +382,21 @@ function lastAttendanceOffsets(root: string): Map<string, number> {
   return mergeAttendanceOffsets(loopStateOffsets, blindReportAttendanceOffsets(root));
 }
 
-// ── Generator mint-and-check lever (bug_0158) ─────────────────────────────────
-// The fresh-pack generator (src/gen/cyoa_generator.ts, bug_0156) exists to EVOLVE
-// the eval distribution so the verifier faces a MOVING target rather than a
-// memorisable frozen set — the published cure for the frozen-verifier stall the
-// assessor itself collapsed into (arXiv 2510.14253; [[fresh-pack-generator]],
-// [[verifier-assertion-guard]]). bug_0156 built the minting core, bug_0157 exposed
-// it through MCP; this is the next documented slice (docs/CURRENT_PLAN.md): make
-// the assessor mint-and-check a fresh slice of the distribution EVERY cycle, so the
-// production verifier is provably exercised against never-seen packs each pass, not
-// just the curated ten.
+// ── RPG generator mint-and-check lever ─────────────────────────────────────────
+// The consolidated public runtime is RPG-only, so the assessor's moving eval target
+// must be RPG-only too. Keeping retired generator windows here would spend every
+// loop on retired modes and could re-raise work that the consolidation goal explicitly
+// strips. The remaining window still advances with cycle count, keeping the RPG verifier
+// on fresh generated packs instead of a frozen hand-authored set.
 
 /**
- * How many completed improvement cycles AI_LOOP_STATE.md records — each cycle PREPENDS
- * one "### Cycle result" entry, so this count grows by one per cycle. It is the per-cycle
- * base for the generator mint-and-check below: a PURE function of repo state (same log ⇒
- * same count, so `assess()` stays deterministic) that nonetheless ADVANCES every cycle, so
- * successive cycles confront DISJOINT windows of the generated seed space rather than
- * re-checking one frozen pack. That advancing-yet-deterministic seed is exactly the
- * "moving target" property the frozen-verifier literature prescribes.
+ * How many completed improvement cycles AI_LOOP_STATE.md records. Recent cycles are
+ * "### Cycle result" entries; older token-heavy entries may be folded into the tiny
+ * historical_cycle_count marker. This stays a PURE function of repo state while letting
+ * the live loop memory remain small.
  */
 export function generatedEvalSeedBase(loopStateText: string): number {
-  return (loopStateText.match(/^### Cycle result/gm) ?? []).length;
+  return completedCycleCount(loopStateText);
 }
 
 /**
@@ -408,54 +425,6 @@ export function allGeneratedChecksClean(checks: GeneratedPackCheck[]): boolean {
 }
 
 /**
- * The generator mint-and-check verdict. Given this cycle's freshly minted-and-validated
- * generated packs, return an improvement candidate IFF the production verifier did NOT hold
- * on one of them — i.e. a minted pack carries ANY finding (error OR warning), the same
- * zero-findings bar the curated packs and the generator's own test (cyoa_generator.test.ts)
- * clear. A clean sweep returns null: the verifier held on this cycle's moving target, the
- * healthy state (so the lever correctly does NOT mask the 0.5 saturation floor — it only
- * lifts above it when there is a real defect). When it fires it is a genuine, fixable
- * problem — the generator emitted an unclean/unsolvable shape, OR the fresh distribution
- * surfaced a verifier gap — scored high (a minted pack the verifier rejects is nearly as
- * urgent as an unplayable curated pack), so the loop spends the cycle closing the
- * generator/verifier divergence rather than re-polishing clean prose. Pure (validated
- * checks in, candidate out) so the negative path unit-tests against the REAL validateCyoa
- * with no disk and no clock.
- */
-export function generatorDriftCandidate(checks: GeneratedPackCheck[]): ImprovementCandidate | null {
-  const bad = checks.filter((c) => c.report.findings.length > 0);
-  if (bad.length === 0) return null;
-  return {
-    id: "generator-drift",
-    category: "engine",
-    target: "src/gen/cyoa_generator.ts",
-    title: `The pack generator minted ${bad.length} pack(s) the verifier rejects — the evolving eval distribution has drifted from the shipped bar`,
-    rationale:
-      "Evolving the eval distribution only works if every minted pack clears the SAME zero-findings bar the curated packs do (docs/CURRENT_PLAN.md). A generated pack the production validateCyoa flags is a real defect: either the generator emits an unclean/unsolvable shape, or the fresh distribution has surfaced a verifier gap. Fixing it keeps the generator a trustworthy moving target instead of a source of false signal.",
-    evidence: bad.map(
-      (c) =>
-        `seed ${c.seed} (${c.pack_id}): ${c.report.findings.map((f) => `${f.severity}:${f.code}`).join(", ")}`,
-    ),
-    impact: 5,
-    effort: "M",
-    score: score(5, "M", "engine"),
-  };
-}
-
-// ── RPG generator mint-and-check lever (bug_0162) ─────────────────────────────
-// The RPG twin of {@link generatorDriftCandidate} — the bug_0158 analogue one mode over.
-// The CYOA generator went core (bug_0156) → MCP (bug_0157) → assessor mint-and-check
-// (bug_0158); the RPG generator (src/gen/rpg_generator.ts) went core (bug_0159) → MCP
-// (bug_0160), and this lands its mint-and-check slice (docs/CURRENT_PLAN.md /
-// [[fresh-pack-generator]]; named as the open next-slice by bug_0160 and bug_0161). It is the
-// HIGHER-value half: it extends the per-cycle moving target to the RICHEST verifier surfaces in
-// the suite — COMBAT winnability (the bug_0097/0113/0114 best/worst-roll bound) and
-// SCORE-ECONOMY soundness (declared max_score == reachable award sum) — the RPG-only checks the
-// CYOA generator never touches, which until now ran ONLY against the two FROZEN hand-authored
-// RPG packs (sunken_barrow, cold_forge), the memorisable-target condition the frozen-verifier
-// literature warns against (arXiv 2510.14253; [[verifier-assertion-guard]]).
-
-/**
  * The RPG generator mint-and-check verdict. Given this cycle's freshly minted-and-validated
  * generated RPG packs, return an improvement candidate IFF the production `validateRpg` did NOT
  * hold on one of them — i.e. a minted pack carries ANY finding (error OR warning), the same
@@ -467,7 +436,7 @@ export function generatorDriftCandidate(checks: GeneratedPackCheck[]): Improveme
  * unclean/unwinnable/score-unreachable shape, OR the fresh distribution surfaced a verifier gap
  * — scored high so the loop closes the divergence rather than re-polishing clean prose. Pure
  * (validated checks in, candidate out) so the negative path unit-tests against the REAL
- * validateRpg with no disk and no clock, exactly like {@link generatorDriftCandidate}.
+ * validateRpg with no disk and no clock.
  */
 export function generatorRpgDriftCandidate(
   checks: GeneratedPackCheck[],
@@ -491,64 +460,11 @@ export function generatorRpgDriftCandidate(
   };
 }
 
-// ── Parser generator mint-and-check lever (bug_0166) ──────────────────────────
-// The THIRD twin of {@link generatorDriftCandidate} — the lever that completes the
-// generator trilogy on the assessor side. The CYOA generator went core (bug_0156) →
-// MCP (bug_0157) → assessor mint-and-check (bug_0158); the RPG generator went core
-// (bug_0159) → MCP (bug_0160) → assessor mint-and-check (bug_0162); the PARSER generator
-// (src/gen/parser_generator.ts) went core+MCP (bug_0164) and was sealed into the held-out
-// corpus (bug_0163) and scored (bug_0165) — but it never got its per-cycle mint-and-check
-// half. This lands it. Parser owns the STRICTEST validator in the suite (the obtainability
-// fixpoint, soft-lock detection, the WIN_FIRES_AT_START stability proof, and the
-// SCORE_UNREACHABLE economy check ~1200 lines), so until now those checks ran against fresh
-// generated content ONLY via the static 24-seed unit test and the 4-seed sealed corpus —
-// never against the per-cycle MOVING window the CYOA and RPG levers already give. Completing
-// the trilogy makes the per-cycle never-frozen-target property hold for all THREE modes, not
-// two — the memorisable-target condition the frozen-verifier literature warns against
-// (arXiv 2510.14253; [[verifier-assertion-guard]]) closed on the strictest verifier.
-
-/**
- * The parser generator mint-and-check verdict. Given this cycle's freshly minted-and-validated
- * generated parser packs, return an improvement candidate IFF the production `validateParser` did
- * NOT hold on one of them — i.e. a minted pack carries ANY finding (error OR warning), the same
- * zero-findings bar the curated parser packs and the generator's own test (parser_generator.test.ts)
- * clear, which INCLUDES the parser-only obtainability / soft-lock / SCORE_UNREACHABLE checks. A
- * clean sweep returns null (the verifier held on this cycle's parser moving target — the healthy
- * state, so the lever does NOT mask the 0.5 saturation floor). When it fires it is a genuine,
- * fixable problem — the parser generator emitted an unclean/unsolvable/score-unreachable shape, OR
- * the fresh distribution surfaced a verifier gap — scored high so the loop closes the divergence
- * rather than re-polishing clean prose. Pure (validated checks in, candidate out) so the negative
- * path unit-tests against the REAL validateParser with no disk and no clock, exactly like
- * {@link generatorDriftCandidate} and {@link generatorRpgDriftCandidate}.
- */
-export function generatorParserDriftCandidate(
-  checks: GeneratedPackCheck[],
-): ImprovementCandidate | null {
-  const bad = checks.filter((c) => c.report.findings.length > 0);
-  if (bad.length === 0) return null;
-  return {
-    id: "generator-parser-drift",
-    category: "engine",
-    target: "src/gen/parser_generator.ts",
-    title: `The parser pack generator minted ${bad.length} pack(s) the verifier rejects — the evolving parser eval distribution has drifted from the shipped bar`,
-    rationale:
-      "Evolving the parser eval distribution only works if every minted pack clears the SAME zero-findings bar the curated parser packs do — which for parser includes the strictest checks in the suite: obtainability fixpoint, soft-lock detection, and SCORE-economy soundness (docs/CURRENT_PLAN.md). A generated parser pack the production validateParser flags is a real defect: either the generator emits an unclean/unsolvable/score-unreachable shape, or the fresh distribution has surfaced a verifier gap. Fixing it keeps the parser generator a trustworthy moving target instead of a source of false signal.",
-    evidence: bad.map(
-      (c) =>
-        `seed ${c.seed} (${c.pack_id}): ${c.report.findings.map((f) => `${f.severity}:${f.code}`).join(", ")}`,
-    ),
-    impact: 5,
-    effort: "M",
-    score: score(5, "M", "engine"),
-  };
-}
-
 /**
  * The score at/below which only ROUTINE work remains. The blind-playtest review
  * stubs (the rotation candidates raised for gated/puzzle packs) all land on this
- * 0.5 floor — `score(1, "M", "content_fix")` — and a tiny ungated-CYOA coverage
- * gap also bottoms out here. So a top candidate at this floor means every
- * higher-value lever (real content gaps, net-new content, engine/repo, the
+ * 0.5 floor — `score(1, "M", "content_fix")`. So a top candidate at this
+ * floor means every higher-value lever (real content gaps, net-new content, engine/repo, the
  * frontier benchmark lever) has disarmed.
  */
 export const SATURATION_FLOOR = 0.5;
@@ -571,49 +487,97 @@ export function isSaturated(a: Assessment): boolean {
 /** Deterministically assess the repo and rank the next-best improvements. */
 export function assess(root: string): Assessment {
   const api = createToolApi({ root });
-  const { stories } = api.list_stories();
+  const quests: AssessedQuest[] = api.list_world().quests.map((quest) => ({
+    path:
+      quest.world_quest_id === null
+        ? quest.id
+        : resolveWorldQuestPackPath(root, quest.world_quest_id).packPath,
+    pack_id: quest.id,
+    mode: "rpg",
+    playable: quest.playable,
+    world_quest_id: quest.world_quest_id,
+  }));
 
-  const packsByMode: Record<string, number> = { cyoa: 0, parser: 0, rpg: 0 };
-  const packs: PackHealth[] = [];
+  const questHealth: QuestHealth[] = [];
   const candidates: ImprovementCandidate[] = [];
+  const rpgQuestCount = quests.filter((s) => s.mode === "rpg").length;
+  const worldQuestCount = quests.filter((s) => s.playable && s.world_quest_id !== null).length;
 
-  // ── Per-pack health: validator findings (the deterministic dev-test signal) ───
-  for (const s of stories) {
-    if (s.mode) packsByMode[s.mode] = (packsByMode[s.mode] ?? 0) + 1;
+  // ── Per-quest health: validator findings (the deterministic dev-test signal) ───
+  for (const s of quests) {
+    const targetRef = s.world_quest_id ?? s.path;
+    const targetLabel = s.world_quest_id ?? s.pack_id;
     if (!s.playable) {
-      packs.push({ path: s.path, mode: s.mode, playable: false, warnings: 0 });
+      questHealth.push({
+        path: s.path,
+        pack_id: s.pack_id,
+        world_quest_id: s.world_quest_id,
+        mode: s.mode,
+        playable: false,
+        warnings: 0,
+      });
       candidates.push({
-        id: `fix-unplayable-${s.path}`,
+        id: `fix-unplayable-${targetRef}`,
         category: "content_fix",
-        target: s.path,
-        title: `Fix "${s.id}" — it does not validate (unplayable)`,
+        target: targetRef,
+        title: `Fix quest "${targetLabel}" — it does not validate (unplayable)`,
         rationale:
-          "An unplayable pack is the highest-impact thing to fix: nobody can experience it.",
-        evidence: [`${s.path} failed validation`],
+          "An unplayable world quest is the highest-impact thing to fix: nobody can experience it through the unified RPG runtime.",
+        evidence: [`${targetRef} failed validation`],
         impact: 5,
         effort: "M",
         score: score(5, "M", "content_fix"),
       });
       continue;
     }
-    const report = api.validate_pack({ pack_path: s.path });
+    if (s.world_quest_id === null) {
+      questHealth.push({
+        path: s.path,
+        pack_id: s.pack_id,
+        world_quest_id: null,
+        mode: s.mode,
+        playable: true,
+        warnings: 0,
+      });
+      candidates.push({
+        id: `fix-unbound-${s.path}`,
+        category: "content_fix",
+        target: s.path,
+        title: `Fix quest "${s.pack_id}" — it is not bound to the world graph`,
+        rationale:
+          "A playable quest without a world quest id cannot be reached through the single-world runtime.",
+        evidence: [`${s.path} has no world_quest_id`],
+        impact: 5,
+        effort: "M",
+        score: score(5, "M", "content_fix"),
+      });
+      continue;
+    }
+    const report = api.validate_quest({ world_quest_id: s.world_quest_id });
     const warnings = report.report.findings.filter((f) => f.severity === "warning").length;
-    packs.push({ path: s.path, mode: s.mode, playable: true, warnings });
+    questHealth.push({
+      path: s.path,
+      pack_id: s.pack_id,
+      world_quest_id: s.world_quest_id,
+      mode: s.mode,
+      playable: true,
+      warnings,
+    });
 
     // content_fix is driven by VALIDATOR findings — the deterministic, code-checkable
     // signal (the "specific dev tests"). Player-facing QUALITY (signposting, clarity,
     // pacing) is judged only by the mandatory blind LLM playtest each cycle, so a
-    // structurally-clean pack carries a low-priority blind-playtest rotation stub rather
+    // structurally-clean quest carries a low-priority blind-playtest rotation stub rather
     // than any heuristic-bot coverage score. (Two testing modes only: dev tests + blindtest.)
     if (warnings > 0) {
       const impact = Math.min(5, 1 + Math.ceil(warnings / 3));
       candidates.push({
-        id: `fix-${s.path}`,
+        id: `fix-${s.world_quest_id}`,
         category: "content_fix",
-        target: s.path,
-        title: `Fix "${s.id}" — ${warnings} validator warning(s)`,
+        target: s.world_quest_id,
+        title: `Fix quest "${s.world_quest_id}" — ${warnings} validator warning(s)`,
         rationale:
-          "Validator warnings are concrete, code-checkable content defects; clearing them keeps the pack sound and raises player-facing quality.",
+          "Validator warnings are concrete, code-checkable content defects; clearing them keeps the quest sound and raises player-facing quality.",
         evidence: [`${warnings} validator warning(s)`],
         impact,
         effort: "M",
@@ -624,12 +588,12 @@ export function assess(root: string): Assessment {
       // sound): keep it on the radar as a LOW-priority blind-playtest review, rotated by
       // recency. The blind LLM playtest is the only judge of its signposting/clarity/pacing.
       candidates.push({
-        id: `playtest-${s.path}`,
+        id: `playtest-${s.world_quest_id}`,
         category: "content_fix",
-        target: s.path,
-        title: `Blind-playtest "${s.id}" — structurally clean; only a fresh blind LLM player can judge its quality`,
+        target: s.world_quest_id,
+        title: `Blind-playtest quest "${s.world_quest_id}" — structurally clean; only a fresh blind LLM player can judge its quality`,
         rationale:
-          "The validator and exhaustive solver prove this pack is winnable and sound; only a fresh blind LLM playtest reveals signposting/clarity/pacing issues a static check can't see.",
+          "The validator and exhaustive solver prove this quest is winnable and sound; only a fresh blind LLM playtest reveals signposting/clarity/pacing issues a static check can't see.",
         evidence: [
           "validator clean; due for a fresh blind LLM playtest (the rotation's quality judge)",
         ],
@@ -640,23 +604,21 @@ export function assess(root: string): Assessment {
     }
   }
 
-  // ── content_new: modes that are thin relative to TARGET_PER_MODE ──────────────
-  for (const [mode, target] of Object.entries(TARGET_PER_MODE)) {
-    const have = packsByMode[mode] ?? 0;
-    if (have < target) {
-      const impact = Math.min(5, 2 + (target - have));
-      candidates.push({
-        id: `new-${mode}`,
-        category: "content_new",
-        target: mode,
-        title: `Author a new ${mode} pack (${have}/${target}) to broaden the game`,
-        rationale: `Only ${have} playable ${mode} pack(s) exist; more breadth exercises the engine and gives players more to do.`,
-        evidence: [`${have} ${mode} pack(s) present, target ${target}`],
-        impact,
-        effort: "L",
-        score: score(impact, "L", "content_new"),
-      });
-    }
+  // ── content_new: contiguous world graph breadth ───────────────────────────────
+  if (worldQuestCount < WORLD_QUEST_TARGET) {
+    const impact = Math.min(5, 2 + (WORLD_QUEST_TARGET - worldQuestCount));
+    candidates.push({
+      id: "new-world-quest",
+      category: "content_new",
+      target: "world",
+      title: `Add a new world-graph RPG quest (${worldQuestCount}/${WORLD_QUEST_TARGET})`,
+      rationale:
+        "Breadth work must expand the contiguous Charter Marches graph, not create a detached source file. A registered world quest exercises the overworld handoff, RPG runtime, save metadata, and MCP quest-id path together.",
+      evidence: [`${worldQuestCount} playable world quest node(s), target ${WORLD_QUEST_TARGET}`],
+      impact,
+      effort: "L",
+      score: score(impact, "L", "content_new"),
+    });
   }
 
   // ── engine: TODO/FIXME debt in src/ ───────────────────────────────────────────
@@ -691,7 +653,7 @@ export function assess(root: string): Assessment {
   // noisy across the current corpus. Keep it as a deterministic audit signal first:
   // static room prose that names a takeable object in that room, with no room variant
   // reading that object's inventory state. The suppression rule is concrete enough to
-  // tune before promoting any subset into validateParser.
+  // tune before promoting any subset into validateRpg.
   const staleReactive = auditStaleReactiveRoomItems(root);
   if (staleReactive.sites.length > 0) {
     const examples = staleReactive.sites
@@ -704,7 +666,7 @@ export function assess(root: string): Assessment {
     candidates.push({
       id: "stale-reactive-room-item-audit",
       category: "engine",
-      target: "src/validate/parser_validator.ts",
+      target: "src/validate/rpg_validator.ts",
       title: `Tune a class-level stale reactive-description check (${staleReactive.sites.length} room/item site(s) need triage)`,
       rationale:
         "Recent cycles repeatedly fixed stale prose one instance at a time. This audit measures the narrow structural slice most responsible for that class — room base text naming takeable objects after they may be removed — without turning the noisy first pass into shipped-pack warnings. The next move is to tune suppressions or promote the proven subset into validation.",
@@ -804,33 +766,11 @@ export function assess(root: string): Assessment {
     });
   }
 
-  // ── eval-distribution: mint-and-check a fresh slice of the generated distribution ──
-  // Make the generator a LIVE, self-renewing eval signal (bug_0158, the slice after the
-  // MCP generate_pack tool of bug_0157; docs/CURRENT_PLAN.md / [[fresh-pack-generator]]).
-  // Every cycle the assessor mints a fresh WINDOW of never-seen packs — the seed base
-  // advances with the cycle count, so the windows are DISJOINT cycle-to-cycle — and asserts
-  // the SAME zero-findings validateCyoa bar the curated packs clear holds on them. A clean
-  // sweep adds no candidate (the verifier held on this cycle's moving target); a miss
-  // surfaces a high-priority engine fix. `assess()` stays deterministic because the seed
-  // base is a pure function of the tracked AI_LOOP_STATE.md, not a clock or RNG.
+  // ── eval-distribution: mint-and-check a fresh RPG generator window ────────────
+  // The public runtime is now RPG-only. Each assessor cycle still confronts the RPG
+  // verifier with a fresh, deterministic seed window, but retired legacy windows
+  // no longer consume loop time or reintroduce legacy work.
   const genBase = generatedEvalSeedBaseFromDisk(root) * GEN_EVAL_CHECK_COUNT;
-  const genChecks: GeneratedPackCheck[] = Array.from({ length: GEN_EVAL_CHECK_COUNT }, (_, i) => {
-    const seed = genBase + i;
-    const pack = generateCyoaPack(seed);
-    return { seed, pack_id: pack.meta.id, report: validateCyoa(pack) };
-  });
-  const genDrift = generatorDriftCandidate(genChecks);
-  if (genDrift) candidates.push(genDrift);
-
-  // ── eval-distribution: the SAME lever one mode over — mint-and-check a fresh RPG window ──
-  // The RPG twin (bug_0162) of the CYOA mint-and-check above. The two levers SHARE the advancing
-  // seed base (so both stay deterministic for a snapshot yet sweep a fresh window each cycle) but
-  // draw from INDEPENDENT generators — `generateCyoaPack` vs `generateRpgPack` — so each confronts
-  // its own never-frozen distribution; within each generator the per-cycle windows are disjoint
-  // (base advances by GEN_EVAL_CHECK_COUNT each cycle). This window exercises the production
-  // `validateRpg` — the full parser bar PLUS the RPG-only COMBAT_UNWINNABLE / SCORE_UNREACHABLE /
-  // SKILL_CHECK_IMPOSSIBLE checks, the richest verifier surfaces in the suite — against fresh,
-  // never-seen RPG packs, so those checks stop being exercised only by the two frozen hand packs.
   const rpgGenChecks: GeneratedPackCheck[] = Array.from(
     { length: GEN_EVAL_CHECK_COUNT },
     (_, i) => {
@@ -841,31 +781,7 @@ export function assess(root: string): Assessment {
   );
   const rpgGenDrift = generatorRpgDriftCandidate(rpgGenChecks);
   if (rpgGenDrift) candidates.push(rpgGenDrift);
-
-  // ── eval-distribution: the SAME lever a THIRD mode over — mint-and-check a fresh parser window ──
-  // The parser twin (bug_0166) that completes the generator trilogy on the assessor side. It shares
-  // the SAME advancing `genBase` as the CYOA and RPG levers (so all three stay deterministic for a
-  // snapshot yet sweep a fresh, disjoint window each cycle) but draws from the INDEPENDENT
-  // `generateParserPack`, so it confronts its own never-frozen distribution. This window exercises
-  // the production `validateParser` — the STRICTEST verifier in the suite (obtainability fixpoint,
-  // soft-lock detection, WIN_FIRES_AT_START stability, SCORE_UNREACHABLE economy) — against fresh,
-  // never-seen parser packs, so those checks stop being exercised against generated content only by
-  // the static 24-seed unit test and the 4-seed sealed corpus.
-  const parserGenChecks: GeneratedPackCheck[] = Array.from(
-    { length: GEN_EVAL_CHECK_COUNT },
-    (_, i) => {
-      const seed = genBase + i;
-      const pack = generateParserPack(seed);
-      return { seed, pack_id: pack.meta.id, report: validateParser(pack) };
-    },
-  );
-  const parserGenDrift = generatorParserDriftCandidate(parserGenChecks);
-  if (parserGenDrift) candidates.push(parserGenDrift);
-  const allGeneratorsClean = allGeneratedChecksClean([
-    ...genChecks,
-    ...rpgGenChecks,
-    ...parserGenChecks,
-  ]);
+  const allGeneratorsClean = allGeneratedChecksClean(rpgGenChecks);
 
   // Deterministic ordering: score desc, then — among equal scores — rotate the
   // blind-playtest pass onto the LEAST-recently-attended pack (never-attended first,
@@ -875,7 +791,8 @@ export function assess(root: string): Assessment {
   // order is unchanged. attendance offsets come from the NEWEST-FIRST log, so a
   // SMALLER offset is MORE recent — we negate it so a less-recent (larger-offset) pack
   // sorts EARLIER, and a never-attended pack (MIN_SAFE_INTEGER) sorts earliest of all.
-  // c.target is a path; the attendance map is stem-keyed, so resolve via packStem.
+  // c.target is a world quest id for shipped content; legacy/path fallbacks still
+  // normalize through packStem so old loop-state attendance remains usable.
   // Reading the tracked AI_LOOP_STATE.md keeps this a pure function of repo state
   // (same repo ⇒ same ranking), curing the clockwork_heist lock-in (bug_0128).
   const attendance = lastAttendanceOffsets(root);
@@ -887,33 +804,86 @@ export function assess(root: string): Assessment {
   candidates.sort(
     (a, b) => b.score - a.score || recencyOf(a) - recencyOf(b) || a.id.localeCompare(b.id),
   );
-  return { packsByMode, packs, allGeneratorsClean, candidates, top: candidates[0] ?? null };
+  return {
+    rpgQuestCount,
+    worldQuestCount,
+    quests: questHealth,
+    allGeneratorsClean,
+    candidates,
+    top: candidates[0] ?? null,
+  };
 }
 
-export function formatAssessment(a: Assessment): string {
+function isRoutinePlaytestCandidate(c: ImprovementCandidate): boolean {
+  return (
+    c.category === "content_fix" && c.id.startsWith("playtest-") && c.score <= SATURATION_FLOOR
+  );
+}
+
+export function formatAssessment(a: Assessment, opts: AssessmentFormatOptions = {}): string {
+  const full = opts.full === true;
+  const maxCandidates = opts.maxCandidates ?? 8;
+  const playable = a.quests.filter((p) => p.playable).length;
+  const warningCount = a.quests.reduce((sum, p) => sum + p.warnings, 0);
+  const unhealthy = a.quests.filter((p) => !p.playable || p.warnings > 0);
   const lines: string[] = [];
   lines.push("# AFK assessment — next best improvement");
   lines.push("");
+  lines.push(`RPG catalog: ${a.rpgQuestCount} quest(s), ${a.worldQuestCount} world quest node(s)`);
   lines.push(
-    `Packs by mode: ${Object.entries(a.packsByMode)
-      .map(([m, n]) => `${m}=${n}`)
-      .join("  ")}`,
+    `RPG generator mint-and-check: ${a.allGeneratorsClean ? "clean" : "findings present"}`,
   );
-  lines.push(`Generator mint-and-check: ${a.allGeneratorsClean ? "clean" : "findings present"}`);
   lines.push("");
-  lines.push("## Pack health");
-  for (const p of a.packs) {
-    lines.push(
-      `- ${p.path} [${p.mode ?? "?"}] ${p.playable ? `${p.warnings} warning(s)` : "UNPLAYABLE"}`,
-    );
+  lines.push("## Quest health");
+  lines.push(
+    `- ${playable}/${a.quests.length} playable; ${warningCount} validator warning(s); ${unhealthy.length} quest(s) need deterministic attention.`,
+  );
+  if (full || unhealthy.length > 0) {
+    const listedQuests = full ? a.quests : unhealthy.slice(0, 8);
+    for (const p of listedQuests) {
+      const label = p.world_quest_id ?? p.path;
+      lines.push(
+        `- ${label} [${p.mode ?? "?"}] ${p.playable ? `${p.warnings} warning(s)` : "UNPLAYABLE"}`,
+      );
+    }
+    if (!full && unhealthy.length > listedQuests.length) {
+      lines.push(
+        `- ... ${unhealthy.length - listedQuests.length} more unhealthy quest(s) in JSON.`,
+      );
+    }
   }
   lines.push("");
   lines.push("## Ranked candidates");
+  let shown = 0;
+  let omittedRoutine = 0;
+  let omittedOther = 0;
   a.candidates.forEach((c, i) => {
+    if (!full && shown >= maxCandidates) {
+      if (isRoutinePlaytestCandidate(c)) omittedRoutine++;
+      else omittedOther++;
+      return;
+    }
+    if (!full && isRoutinePlaytestCandidate(c) && shown >= 3) {
+      omittedRoutine++;
+      return;
+    }
     lines.push(`${i + 1}. [${c.score}] (${c.category}/${c.effort}) ${c.title}`);
-    lines.push(`     why: ${c.rationale}`);
-    for (const e of c.evidence) lines.push(`     · ${e}`);
+    if (full || !isRoutinePlaytestCandidate(c)) {
+      lines.push(`     why: ${c.rationale}`);
+      for (const e of c.evidence) lines.push(`     · ${e}`);
+    }
+    shown++;
   });
+  if (!full && omittedRoutine > 0) {
+    lines.push(
+      `... ${omittedRoutine} routine blind-playtest rotation candidate(s) omitted; full list is in assessment.json.`,
+    );
+  }
+  if (!full && omittedOther > 0) {
+    lines.push(
+      `... ${omittedOther} additional candidate(s) omitted; full list is in assessment.json.`,
+    );
+  }
   lines.push("");
   lines.push(
     a.top

@@ -5,8 +5,8 @@ UI talks only to the structured engine API: it compiles a Charter Marches quest
 pack in the browser and drives the same `step` reducer the CLI and MCP server use.
 It renders the structured observation and turns clicks into
 `GameSession.choose(id)` calls; it never decides what is legal or what an action
-does. One code path plays CYOA, parser, and RPG quests, because `ui/src/engine.ts`
-normalizes every mode's observation into a single `View`.
+does. One code path plays RPG quests, because `ui/src/engine.ts` exposes a single
+RPG `View`.
 
 ## Run
 
@@ -27,8 +27,8 @@ From the repo root you can also use `npm run ui:dev` / `npm run ui:build`.
 - **Browser-safe core.** The engine has no Node-only dependencies; the state hash
   is a pure-JS SHA-256 (`src/core/sha256.ts`), identical to Node's `crypto`.
 - **Tested without a browser.** `tests/unit/ui_engine.test.ts` drives
-  `GameSession` for all three modes in Node, proving the UI uses only the
-  structured API and stays deterministic.
-- **Quests are data.** Vite bundles the shipped `content/**/pack/*.yaml` and
+  `GameSession` in Node, proving the UI uses only the structured API and stays
+  deterministic.
+- **Quests are data.** Vite bundles the shipped `content/rpg/pack/*.yaml` and
   `content/world/charter_marches.yaml` as raw text; the browser never touches the
   filesystem and content never runs as code (§16).

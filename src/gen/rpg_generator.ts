@@ -1,18 +1,11 @@
 /**
- * Procedural RPG pack generator — the MODE-WIDENING slice of "evolve the eval distribution"
- * (docs/CURRENT_PLAN.md; the documented next slice after the CYOA generator program of
- * bug_0156 → bug_0157 → bug_0158).
+ * Procedural RPG pack generator — the RPG-only moving-target eval distribution.
  *
- * Why widen the mode. The CYOA generator (src/gen/cyoa_generator.ts) makes the eval set a
- * MOVING target — but only for the CYOA validator. The richest verifier surfaces in the suite
- * are the RPG-only proofs: COMBAT winnability (the bug_0097/0113/0114 best/worst-roll bound)
- * and SCORE-ECONOMY soundness (the declared max_score must equal the reachable award sum,
- * folding in combat/skill awards the parser scan can't see). Those validators are exercised
- * today ONLY against the two hand-authored RPG packs (sunken_barrow, cold_forge) — a frozen,
- * memorisable target, the exact condition the frozen-verifier literature warns against
- * (arXiv 2510.14253, and the assessor's own 0.5-floor collapse, [[verifier-assertion-guard]]).
+ * Why it exists. The richest verifier surfaces in the suite are the RPG-only proofs: COMBAT
+ * winnability (the bug_0097/0113/0114 best/worst-roll bound) and SCORE-ECONOMY soundness
+ * (the declared max_score must equal the reachable award sum, folding in combat/skill awards).
  * This module mints fresh, never-seen RPG packs the COMBAT + SCORE checks must hold on, so the
- * moving-target property extends to the validators that matter most for the RPG mode.
+ * moving-target property stays attached to the only supported runtime.
  *
  * What it is. `generateRpgPack(seed)` is a PURE, DETERMINISTIC function (same seed ⇒
  * byte-identical pack — no Date/Math.random, §8.5) that emits a schema-valid `RpgPack` of the
@@ -64,10 +57,9 @@
  * stay reachable and the 3-ending census holds — preparation is now a guaranteed-sufficient
  * strategy, not a hope, the player-experience contract every RPG blind playtest asks for.
  *
- * What it is NOT. Like the CYOA generator's first slice (bug_0156), the generated packs are NOT
- * committed under content/rpg/pack (an on-demand eval distribution, not curated showcase content
- * — no blind-playtest obligation, no pollution of the hand-authored set). They ARE persisted as
- * the sealed held-out corpus (bug_0163, behind a generator_version bump + re-seal).
+ * What it is NOT. Generated packs are NOT committed under content/rpg/pack: this is an
+ * on-demand eval distribution, not curated showcase content. They ARE persisted as the
+ * sealed held-out corpus behind a generator_version bump + re-seal.
  */
 import { RpgPackSchema, type RpgPack } from "../rpg/schema.js";
 
@@ -84,8 +76,8 @@ import { RpgPackSchema, type RpgPack } from "../rpg/schema.js";
 export const RPG_GENERATOR_VERSION = 4;
 
 /**
- * The same tiny deterministic PRNG (mulberry32) the CYOA generator uses. Pure and
- * self-contained: no global RNG, no Date — randomness comes only from the integer seed.
+ * Tiny deterministic PRNG (mulberry32). Pure and self-contained: no global RNG,
+ * no Date — randomness comes only from the integer seed.
  */
 function makeRng(seed: number): { int: (n: number) => number; pick: <T>(xs: readonly T[]) => T } {
   let a = (seed ^ 0x9e3779b9) >>> 0;
