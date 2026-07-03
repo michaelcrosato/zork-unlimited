@@ -92,6 +92,21 @@ export type OverworldCompactIdKey =
   | "started_quests"
   | "completed_quests"
   | "resolved_events";
+
+const OVERWORLD_COMPACT_ID_KEYS: readonly OverworldCompactIdKey[] = [
+  "discovered_towns",
+  "discovered_areas",
+  "visited_areas",
+  "discovered_jobs",
+  "completed_jobs",
+  "discovered_sites",
+  "explored_sites",
+  "discovered_quests",
+  "started_quests",
+  "completed_quests",
+  "resolved_events",
+];
+
 export type OverworldCompactFullIdMap = Record<OverworldCompactIdKey, string[]>;
 export type OverworldCompactIdMap = Partial<OverworldCompactFullIdMap>;
 export type OverworldCompactIdCounts = readonly [
@@ -195,16 +210,28 @@ function cloneTupleList<T extends readonly unknown[]>(values: readonly T[]): T[]
   return values.map((value) => [...value] as unknown as T);
 }
 
+function cloneCompactIdMap(ids: OverworldCompactIdMap): OverworldCompactIdMap {
+  const clone: OverworldCompactIdMap = {};
+  for (const key of OVERWORLD_COMPACT_ID_KEYS) {
+    const values = ids[key];
+    if (values && values.length > 0) clone[key] = [...values];
+  }
+  return clone;
+}
+
 export function compactIdPayload(values: OverworldCompactFullIdMap): {
   ids: OverworldCompactIdMap;
   id_counts: OverworldCompactIdCounts;
   ids_truncated?: OverworldCompactIdTruncation;
 } {
-  const compactedIds = Object.fromEntries(
-    Object.entries(values)
-      .map(([key, value]) => [key, compactIdList(value)] as const)
-      .filter(([, value]) => value.length > 0),
-  ) as OverworldCompactIdMap;
+  const ids: OverworldCompactIdMap = {};
+  const ids_truncated: OverworldCompactIdTruncation = [];
+  for (const key of OVERWORLD_COMPACT_ID_KEYS) {
+    const fullList = values[key];
+    const compacted = compactIdList(fullList);
+    if (compacted.length > 0) ids[key] = compacted;
+    if (fullList.length > OVERWORLD_COMPACT_ID_LIST_LIMIT) ids_truncated.push(key);
+  }
   const id_counts: OverworldCompactIdCounts = [
     values.discovered_towns.length,
     values.discovered_areas.length,
@@ -218,31 +245,8 @@ export function compactIdPayload(values: OverworldCompactFullIdMap): {
     values.completed_quests.length,
     values.resolved_events.length,
   ];
-  const ids_truncated: OverworldCompactIdTruncation = [];
-  if (values.discovered_towns.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
-    ids_truncated.push("discovered_towns");
-  if (values.discovered_areas.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
-    ids_truncated.push("discovered_areas");
-  if (values.visited_areas.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
-    ids_truncated.push("visited_areas");
-  if (values.discovered_jobs.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
-    ids_truncated.push("discovered_jobs");
-  if (values.completed_jobs.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
-    ids_truncated.push("completed_jobs");
-  if (values.discovered_sites.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
-    ids_truncated.push("discovered_sites");
-  if (values.explored_sites.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
-    ids_truncated.push("explored_sites");
-  if (values.discovered_quests.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
-    ids_truncated.push("discovered_quests");
-  if (values.started_quests.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
-    ids_truncated.push("started_quests");
-  if (values.completed_quests.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
-    ids_truncated.push("completed_quests");
-  if (values.resolved_events.length > OVERWORLD_COMPACT_ID_LIST_LIMIT)
-    ids_truncated.push("resolved_events");
   return {
-    ids: compactedIds,
+    ids,
     id_counts,
     ...(ids_truncated.length > 0 ? { ids_truncated } : {}),
   };
@@ -267,9 +271,7 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
     events: cloneTupleList(view.events),
     progress: [...view.progress] as OverworldCompactProgress,
     id_counts: [...view.id_counts] as OverworldCompactIdCounts,
-    ids: Object.fromEntries(
-      Object.entries(view.ids).map(([key, values]) => [key, [...values]]),
-    ) as OverworldCompactIdMap,
+    ids: cloneCompactIdMap(view.ids),
   };
 
   if (view.area_routes) clone.area_routes = cloneTupleList(view.area_routes);

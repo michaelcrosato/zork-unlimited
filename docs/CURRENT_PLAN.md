@@ -255,6 +255,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Overworld snapshot exports use typed shallow save-state clones, preserving
   nested array and pending-road isolation without JSON serializing whole
   snapshots.
+- Compact overworld id payload build and clone use the fixed compact-id key
+  order directly, avoiding `Object.entries`/`fromEntries` remapping on compact
+  context cache rebuilds and repeated reads.
 - Snapshot regional-arc restore proofing now derives resolved anchor counts and
   completion proof time in one bounded pass, avoiding per-arc full timestamp
   sorting while preserving completion and journal timing checks.

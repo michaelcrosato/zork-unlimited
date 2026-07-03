@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 252 -->
+<!-- historical_cycle_count: 253 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - fixed_key_compact_overworld_id_payloads
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact overworld id payload build and clone now use the fixed compact-id key order directly instead of `Object.entries`/`fromEntries` remapping.
+- Loop effect: repeated compact context reads and cache rebuilds preserve id isolation/counts/truncation order with fewer intermediate arrays in the AI loop payload path.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over fixed-key compact id payloads.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - typed_overworld_snapshot_export_clones
 
