@@ -252,6 +252,9 @@ Make discovered overworld quest leads start real RPG sessions.
   full journal-entry retention, and nested journal/event scans.
 - Overworld snapshot build and restore use typed journal-entry clones, preserving
   internal/external isolation without JSON serializing long flat journal arrays.
+- Overworld snapshot exports use typed shallow save-state clones, preserving
+  nested array and pending-road isolation without JSON serializing whole
+  snapshots.
 - Snapshot regional-arc restore proofing now derives resolved anchor counts and
   completion proof time in one bounded pass, avoiding per-arc full timestamp
   sorting while preserving completion and journal timing checks.

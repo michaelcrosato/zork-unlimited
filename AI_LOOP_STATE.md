@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 251 -->
+<!-- historical_cycle_count: 252 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - typed_overworld_snapshot_export_clones
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: overworld snapshot exports now clone the shallow save-state shape with typed array/object copies instead of JSON stringify/parse.
+- Loop effect: repeated export/guard flows preserve caller isolation for nested snapshot arrays and pending-road state without serializing full session snapshots.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over typed snapshot export clones.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - typed_overworld_journal_snapshot_clones
 

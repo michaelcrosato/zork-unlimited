@@ -460,12 +460,50 @@ function travelCondition(fatigue: number, supplies: number): string {
   return "ready";
 }
 
-function cloneJson<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T;
-}
-
 function cloneJournalEntries(entries: readonly OverworldJournalEntry[]): OverworldJournalEntry[] {
   return entries.map((entry) => ({ ...entry }));
+}
+
+function cloneTravelLogSnapshots(
+  entries: readonly TravelLogEntrySnapshot[],
+): TravelLogEntrySnapshot[] {
+  return entries.map((entry) => ({ ...entry }));
+}
+
+function cloneStringTuples(values: readonly (readonly [string, string])[]): [string, string][] {
+  return values.map(([left, right]) => [left, right]);
+}
+
+function cloneNumberTuples(values: readonly (readonly [string, number])[]): [string, number][] {
+  return values.map(([left, right]) => [left, right]);
+}
+
+function cloneOverworldSessionSnapshot(
+  snapshot: OverworldSessionSnapshot,
+): OverworldSessionSnapshot {
+  return {
+    ...snapshot,
+    discoveredIds: [...snapshot.discoveredIds],
+    visitedIds: [...snapshot.visitedIds],
+    currentAreaByTown: cloneStringTuples(snapshot.currentAreaByTown),
+    travelLog: cloneTravelLogSnapshots(snapshot.travelLog),
+    journalEntries: cloneJournalEntries(snapshot.journalEntries),
+    resolvedEventIds: [...snapshot.resolvedEventIds],
+    discoveredAreaIds: [...snapshot.discoveredAreaIds],
+    visitedAreaIds: [...snapshot.visitedAreaIds],
+    discoveredJobIds: [...snapshot.discoveredJobIds],
+    completedJobIds: [...snapshot.completedJobIds],
+    discoveredSiteIds: [...snapshot.discoveredSiteIds],
+    discoveredQuestIds: [...snapshot.discoveredQuestIds],
+    startedQuestIds: [...snapshot.startedQuestIds],
+    completedQuestIds: [...snapshot.completedQuestIds],
+    exploredSiteIds: [...snapshot.exploredSiteIds],
+    regionRenown: cloneNumberTuples(snapshot.regionRenown),
+    completedRegionalArcIds: [...snapshot.completedRegionalArcIds],
+    pendingRoadEncounter: snapshot.pendingRoadEncounter
+      ? { ...snapshot.pendingRoadEncounter }
+      : null,
+  };
 }
 
 function snapshotTravelLogEntry(entry: TravelLogEntry): TravelLogEntrySnapshot {
@@ -2845,7 +2883,7 @@ export class OverworldSession {
   }
 
   snapshot(): OverworldSessionSnapshot {
-    return cloneJson(this.cachedSnapshot().snapshot);
+    return cloneOverworldSessionSnapshot(this.cachedSnapshot().snapshot);
   }
 
   private buildSnapshot(): OverworldSessionSnapshot {

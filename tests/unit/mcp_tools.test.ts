@@ -1119,7 +1119,16 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(repeatedExport.snapshot_hash).toBe(exported.snapshot_hash);
     expect(repeatedExport.snapshot).toEqual(exported.snapshot);
     expect(repeatedExport.snapshot).not.toBe(exported.snapshot);
+    expect(repeatedExport.snapshot.discoveredIds).not.toBe(exported.snapshot.discoveredIds);
+    expect(repeatedExport.snapshot.travelLog).not.toBe(exported.snapshot.travelLog);
+    expect(repeatedExport.snapshot.travelLog[0]).not.toBe(exported.snapshot.travelLog[0]);
+    expect(repeatedExport.snapshot.pendingRoadEncounter).not.toBe(
+      exported.snapshot.pendingRoadEncounter,
+    );
     repeatedExport.snapshot.currentId = "mutated_by_test";
+    repeatedExport.snapshot.discoveredIds[0] = "mutated_by_test";
+    repeatedExport.snapshot.travelLog[0]!.edgeId = "mutated_by_test";
+    repeatedExport.snapshot.pendingRoadEncounter!.edgeId = "mutated_by_test";
     const afterMutationExport = a.export_overworld_session({
       session_id: started.session_id,
       expected_snapshot_hash: repeatedExport.snapshot_hash,
@@ -1128,6 +1137,16 @@ describe("MCP tools — validate / load (§9.4)", () => {
     if (!afterMutationExport.ok) throw new Error("expected export after caller mutation");
     expect(afterMutationExport.snapshot.currentId).toBe(exported.snapshot.currentId);
     expect(afterMutationExport.snapshot.currentId).not.toBe("mutated_by_test");
+    expect(afterMutationExport.snapshot.discoveredIds[0]).toBe(exported.snapshot.discoveredIds[0]);
+    expect(afterMutationExport.snapshot.discoveredIds[0]).not.toBe("mutated_by_test");
+    expect(afterMutationExport.snapshot.travelLog[0]?.edgeId).toBe(
+      exported.snapshot.travelLog[0]?.edgeId,
+    );
+    expect(afterMutationExport.snapshot.travelLog[0]?.edgeId).not.toBe("mutated_by_test");
+    expect(afterMutationExport.snapshot.pendingRoadEncounter?.edgeId).toBe(
+      exported.snapshot.pendingRoadEncounter?.edgeId,
+    );
+    expect(afterMutationExport.snapshot.pendingRoadEncounter?.edgeId).not.toBe("mutated_by_test");
 
     const restored = a.restore_overworld_session({ snapshot: exported.snapshot });
     expect(restored.session_id).not.toBe(started.session_id);
