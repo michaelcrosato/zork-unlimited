@@ -1511,12 +1511,11 @@ function assertStringSetSubset(
 
 function assertJournalStateBinding(
   stateLabel: string,
-  stateIds: readonly string[],
+  stateIds: ReadonlySet<string>,
   journalLabel: string,
   journalIds: ReadonlySet<string>,
 ): void {
-  const state = new Set(stateIds);
-  for (const id of state) {
+  for (const id of stateIds) {
     if (!journalIds.has(id)) {
       throw new Error(
         `Overworld session snapshot ${stateLabel} "${id}" has no matching journal entry.`,
@@ -1524,7 +1523,7 @@ function assertJournalStateBinding(
     }
   }
   for (const id of journalIds) {
-    if (!state.has(id)) {
+    if (!stateIds.has(id)) {
       throw new Error(
         `Overworld session snapshot journal ${journalLabel} "${id}" is missing from saved state.`,
       );
@@ -1533,48 +1532,48 @@ function assertJournalStateBinding(
 }
 
 function assertSnapshotProgressJournalBindings(
-  snapshot: OverworldSessionSnapshot,
+  stateIds: OverworldProgressJournalSourceIndex,
   journalSources: OverworldProgressJournalSourceIndex,
 ): void {
   assertJournalStateBinding(
     "visited area id",
-    snapshot.visitedAreaIds,
+    stateIds.visitedAreaIds,
     "visited area id",
     journalSources.visitedAreaIds,
   );
   assertJournalStateBinding(
     "completed job id",
-    snapshot.completedJobIds,
+    stateIds.completedJobIds,
     "completed job id",
     journalSources.completedJobIds,
   );
   assertJournalStateBinding(
     "started quest id",
-    snapshot.startedQuestIds,
+    stateIds.startedQuestIds,
     "started quest id",
     journalSources.startedQuestIds,
   );
   assertJournalStateBinding(
     "completed quest id",
-    snapshot.completedQuestIds,
+    stateIds.completedQuestIds,
     "completed quest id",
     journalSources.completedQuestIds,
   );
   assertJournalStateBinding(
     "explored site id",
-    snapshot.exploredSiteIds,
+    stateIds.exploredSiteIds,
     "explored site id",
     journalSources.exploredSiteIds,
   );
   assertJournalStateBinding(
     "resolved event id",
-    snapshot.resolvedEventIds,
+    stateIds.resolvedEventIds,
     "resolved event id",
     journalSources.resolvedEventIds,
   );
   assertJournalStateBinding(
     "completed regional arc id",
-    snapshot.completedRegionalArcIds,
+    stateIds.completedRegionalArcIds,
     "completed regional arc id",
     journalSources.completedRegionalArcIds,
   );
@@ -2900,28 +2899,61 @@ export class OverworldSession {
       snapshot.discoveredAreaIds,
       indexes.areaIds,
     );
-    assertKnownIds("visited area id", snapshot.visitedAreaIds, indexes.areaIds);
+    const visitedAreaIds = assertKnownIds(
+      "visited area id",
+      snapshot.visitedAreaIds,
+      indexes.areaIds,
+    );
     const discoveredJobIds = assertKnownIds(
       "discovered job id",
       snapshot.discoveredJobIds,
       indexes.jobIds,
     );
-    assertKnownIds("completed job id", snapshot.completedJobIds, indexes.jobIds);
+    const completedJobIds = assertKnownIds(
+      "completed job id",
+      snapshot.completedJobIds,
+      indexes.jobIds,
+    );
     const discoveredSiteIds = assertKnownIds(
       "discovered site id",
       snapshot.discoveredSiteIds,
       indexes.siteIds,
     );
-    assertKnownIds("explored site id", snapshot.exploredSiteIds, indexes.siteIds);
+    const exploredSiteIds = assertKnownIds(
+      "explored site id",
+      snapshot.exploredSiteIds,
+      indexes.siteIds,
+    );
     assertKnownIds("discovered quest id", snapshot.discoveredQuestIds, indexes.questIds);
-    assertKnownIds("started quest id", snapshot.startedQuestIds, indexes.questIds);
-    assertKnownIds("completed quest id", snapshot.completedQuestIds, indexes.questIds);
-    assertKnownIds("resolved event id", snapshot.resolvedEventIds, indexes.eventIds);
+    const startedQuestIds = assertKnownIds(
+      "started quest id",
+      snapshot.startedQuestIds,
+      indexes.questIds,
+    );
+    const completedQuestIds = assertKnownIds(
+      "completed quest id",
+      snapshot.completedQuestIds,
+      indexes.questIds,
+    );
+    const resolvedEventIds = assertKnownIds(
+      "resolved event id",
+      snapshot.resolvedEventIds,
+      indexes.eventIds,
+    );
     const completedRegionalArcIds = assertKnownIds(
       "completed regional arc id",
       snapshot.completedRegionalArcIds,
       indexes.arcIds,
     );
+    const progressStateIds: OverworldProgressJournalSourceIndex = {
+      completedJobIds,
+      completedQuestIds,
+      completedRegionalArcIds,
+      exploredSiteIds,
+      resolvedEventIds,
+      startedQuestIds,
+      visitedAreaIds,
+    };
     assertUniqueTupleKeys("area-map town", snapshot.currentAreaByTown);
     assertUniqueTupleKeys("renown region", snapshot.regionRenown);
     const journalTimeline = assertSnapshotTimeline(snapshot, {
@@ -2970,7 +3002,7 @@ export class OverworldSession {
       "discovered site ids",
       discoveredSiteIds,
     );
-    assertSnapshotProgressJournalBindings(snapshot, journalTimeline.progressSources);
+    assertSnapshotProgressJournalBindings(progressStateIds, journalTimeline.progressSources);
     assertSnapshotRegionRenown(
       snapshot,
       {

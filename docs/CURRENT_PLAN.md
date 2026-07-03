@@ -222,8 +222,9 @@ Make discovered overworld quest leads start real RPG sessions.
   and stored durations, so resource validation only remaps road/service journal
   rows instead of every local journal action.
 - Snapshot restore progress/state journal bindings now reuse source-id sets from
-  the validated journal timeline for area, job, quest, site, event-resolution,
-  and regional-arc journals instead of scanning entries in a separate proof pass.
+  the validated journal timeline plus validated state-id sets for area, job,
+  quest, site, event-resolution, and regional-arc journals instead of scanning
+  entries or rebuilding state sets in separate proof passes.
 - Snapshot timeline validation now records parsed road-journal resolution rows,
   so pending-road checks, road renown replay, and resource replay share road
   facts without another full journal scan or independent road-entry parse pass.
