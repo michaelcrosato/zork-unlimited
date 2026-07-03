@@ -39,7 +39,11 @@ import {
   compactPendingRoad,
   compactRouteOption,
   compactTravelLogEntry,
+  type OverworldCompactAreaRoute,
   type OverworldCompactJournalEntry,
+  type OverworldCompactQuestRef,
+  type OverworldCompactRef,
+  type OverworldCompactRoad,
   type OverworldCompactRouteOption,
   type OverworldCompactTravelLogEntry,
   type OverworldCompactView,
@@ -3965,9 +3969,10 @@ export class OverworldSession {
   private buildCompactView(): OverworldCompactView {
     const current = this.currentNode();
     const currentArea = this.currentArea();
-    const areaRoutes = this.visibleAreaExits().map(
-      (exit) => [exit.id, exit.destination.id, exit.travel_minutes] as const,
-    );
+    const areaRoutes: OverworldCompactAreaRoute[] = [];
+    for (const exit of this.visibleAreaExits()) {
+      areaRoutes.push([exit.id, exit.destination.id, exit.travel_minutes]);
+    }
     const routeOptions = this.discoveredRouteOptions();
     const compactRouteOptions: OverworldCompactRouteOption[] = [];
     for (
@@ -3996,11 +4001,14 @@ export class OverworldSession {
       resolved_events: sortedIdList(this.resolvedEventIds),
     });
     const exits = this.roadsFrom(this.currentId);
-    const jobs = this.discoveredJobsInCurrentArea().map((job) => [job.id, job.title] as const);
-    const sites = this.discoveredSitesInCurrentArea().map((site) => [site.id, site.title] as const);
-    const quests = this.discoveredQuestsAt(this.currentId).map(
-      (quest) => [quest.id, quest.title] as const,
-    );
+    const jobs: OverworldCompactRef[] = [];
+    for (const job of this.discoveredJobsInCurrentArea()) jobs.push([job.id, job.title]);
+    const sites: OverworldCompactRef[] = [];
+    for (const site of this.discoveredSitesInCurrentArea()) sites.push([site.id, site.title]);
+    const quests: OverworldCompactQuestRef[] = [];
+    for (const quest of this.discoveredQuestsAt(this.currentId)) {
+      quests.push([quest.id, quest.title]);
+    }
     const pendingRoad = compactPendingRoad(this.pendingRoadEncounter);
     const journal: OverworldCompactJournalEntry[] = [];
     for (
@@ -4023,6 +4031,26 @@ export class OverworldSession {
       left.localeCompare(right),
     );
     const completedArcs = sortedIdList(this.completedRegionalArcIds);
+    const roads: OverworldCompactRoad[] = [];
+    for (const exit of exits) {
+      const plan = routeByDestination.get(exit.destination.id);
+      roads.push([
+        exit.id,
+        exit.destination.id,
+        plan?.estimate.elapsedMinutes ?? exit.travel_minutes,
+        plan?.estimate.suppliesNeeded ?? 0,
+        plan?.estimate.fatigueAfter ?? this.fatigue,
+      ]);
+    }
+    const areas: OverworldCompactRef[] = [];
+    for (const area of this.discoveredAreasAt(this.currentId)) areas.push([area.id, area.name]);
+    const poi: OverworldCompactRef[] = [];
+    for (const point of this.currentAreaPois()) poi.push([point.id, point.title]);
+    const contacts: OverworldCompactRef[] = [];
+    for (const character of this.currentAreaCharacters())
+      contacts.push([character.id, character.name]);
+    const events: OverworldCompactRef[] = [];
+    for (const event of this.currentAreaEvents()) events.push([event.id, event.title]);
 
     return {
       v: OVERWORLD_COMPACT_VIEW_VERSION,
@@ -4047,27 +4075,16 @@ export class OverworldSession {
         this.hiddenSiteCountInCurrentArea(),
         this.hiddenQuestCountAt(this.currentId),
       ],
-      roads: exits.map((exit) => {
-        const plan = routeByDestination.get(exit.destination.id);
-        return [
-          exit.id,
-          exit.destination.id,
-          plan?.estimate.elapsedMinutes ?? exit.travel_minutes,
-          plan?.estimate.suppliesNeeded ?? 0,
-          plan?.estimate.fatigueAfter ?? this.fatigue,
-        ];
-      }),
+      roads,
       ...(areaRoutes.length > 0 ? { area_routes: areaRoutes } : {}),
       route_options: compactRouteOptions,
       ...(routeOptions.length > compactRouteOptions.length
         ? { route_options_truncated: true as const }
         : {}),
-      areas: this.discoveredAreasAt(this.currentId).map((area) => [area.id, area.name] as const),
-      poi: this.currentAreaPois().map((poi) => [poi.id, poi.title] as const),
-      contacts: this.currentAreaCharacters().map(
-        (character) => [character.id, character.name] as const,
-      ),
-      events: this.currentAreaEvents().map((event) => [event.id, event.title] as const),
+      areas,
+      poi,
+      contacts,
+      events,
       ...(jobs.length > 0 ? { jobs } : {}),
       ...(sites.length > 0 ? { sites } : {}),
       ...(quests.length > 0 ? { quests } : {}),

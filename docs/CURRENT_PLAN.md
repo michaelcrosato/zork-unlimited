@@ -228,6 +228,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Area-exit, discovered-area, and quest visibility helpers now use direct loops
   for rows and hidden counts, avoiding intermediate local area/quest filter
   arrays on repeated compact/full overworld reads.
+- Compact overworld context now projects road, area-route, local reference, and
+  quest reference tuples with direct loops, avoiding extra `map` callbacks while
+  preserving tuple payload ordering and optional gates.
 - Snapshot known-id validation now returns verified unique state-id sets, so
   current-town membership, subset checks, frontier proofing, and local proof inputs
   reuse validation state instead of rebuilding those sets later in restore.

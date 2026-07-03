@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 262 -->
+<!-- historical_cycle_count: 263 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - direct_overworld_compact_tuple_projection
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact overworld context now projects road, area-route, local ref, and quest ref tuples with direct loops.
+- Loop effect: repeated compact reads avoid extra `map` callbacks while preserving compact tuple shapes, ordering, and optional payload gates.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over direct compact tuple projection.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - direct_overworld_area_quest_visibility_filters
 
