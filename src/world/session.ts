@@ -39,6 +39,9 @@ import {
   compactPendingRoad,
   compactRouteOption,
   compactTravelLogEntry,
+  type OverworldCompactJournalEntry,
+  type OverworldCompactRouteOption,
+  type OverworldCompactTravelLogEntry,
   type OverworldCompactView,
 } from "./compact_view.js";
 
@@ -3931,17 +3934,27 @@ export class OverworldSession {
       (exit) => [exit.id, exit.destination.id, exit.travel_minutes] as const,
     );
     const routeOptions = this.discoveredRouteOptions();
-    const compactRouteOptions = routeOptions
-      .slice(0, OVERWORLD_COMPACT_ROUTE_LIMIT)
-      .map(compactRouteOption);
+    const compactRouteOptions: OverworldCompactRouteOption[] = [];
+    for (
+      let index = 0;
+      index < routeOptions.length && index < OVERWORLD_COMPACT_ROUTE_LIMIT;
+      index += 1
+    ) {
+      compactRouteOptions.push(compactRouteOption(routeOptions[index]!));
+    }
     const routeByDestination = new Map<string, OverworldSessionRoutePlan>();
     for (const plan of routeOptions) routeByDestination.set(plan.destination.id, plan);
     const sortedIdList = (values: ReadonlySet<string>): string[] => [...values].sort();
-    const discoveredTownIds = [...this.discoveredIds]
-      .map((id) => this.nodes.get(id))
-      .filter((node): node is OverworldNode => node !== undefined)
-      .sort((a, b) => b.population_2025 - a.population_2025 || a.name.localeCompare(b.name))
-      .map((town) => town.id);
+    const discoveredTowns: OverworldNode[] = [];
+    for (const id of this.discoveredIds) {
+      const node = this.nodes.get(id);
+      if (node) discoveredTowns.push(node);
+    }
+    discoveredTowns.sort(
+      (a, b) => b.population_2025 - a.population_2025 || a.name.localeCompare(b.name),
+    );
+    const discoveredTownIds: string[] = [];
+    for (const town of discoveredTowns) discoveredTownIds.push(town.id);
     const idPayload = compactIdPayload({
       discovered_towns: discoveredTownIds,
       discovered_areas: sortedIdList(this.discoveredAreaIds),
@@ -3962,12 +3975,23 @@ export class OverworldSession {
       (quest) => [quest.id, quest.title] as const,
     );
     const pendingRoad = compactPendingRoad(this.pendingRoadEncounter);
-    const journal = this.journalEntries
-      .slice(0, OVERWORLD_COMPACT_JOURNAL_LIMIT)
-      .map((entry) => [entry.kind, entry.title, entry.recordedAt] as const);
-    const travelLog = this.travelLog
-      .slice(0, OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT)
-      .map(compactTravelLogEntry);
+    const journal: OverworldCompactJournalEntry[] = [];
+    for (
+      let index = 0;
+      index < this.journalEntries.length && index < OVERWORLD_COMPACT_JOURNAL_LIMIT;
+      index += 1
+    ) {
+      const entry = this.journalEntries[index]!;
+      journal.push([entry.kind, entry.title, entry.recordedAt]);
+    }
+    const travelLog: OverworldCompactTravelLogEntry[] = [];
+    for (
+      let index = 0;
+      index < this.travelLog.length && index < OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT;
+      index += 1
+    ) {
+      travelLog.push(compactTravelLogEntry(this.travelLog[index]!));
+    }
     const renown = [...this.regionRenown.entries()].sort(([left], [right]) =>
       left.localeCompare(right),
     );

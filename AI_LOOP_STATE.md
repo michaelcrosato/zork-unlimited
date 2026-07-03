@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 258 -->
+<!-- historical_cycle_count: 259 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - direct_overworld_compact_capped_lists
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact overworld view now fills capped route, journal, travel-log, and discovered-town id lists with direct loops.
+- Loop effect: repeated compact context builds avoid extra `slice`/`map` chains and node filter arrays while preserving route ordering, id counts, and truncation flags.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over direct compact capped-list builds.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - direct_overworld_route_option_loops
 
