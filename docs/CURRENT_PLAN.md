@@ -231,8 +231,9 @@ Make discovered overworld quest leads start real RPG sessions.
   journal id, so road, service, local-action, event-resolution, and regional-arc
   restore proofs reuse validated timestamps instead of reparsing labels.
 - Snapshot restore event and regional-arc proofing share one journal index with
-  local scout/contact proof times and resolved-event town times, so proof
-  validation avoids duplicate journal maps and nested journal/event scans.
+  compact journal timestamps, local scout/contact proof times, and
+  resolved-event town times, so proof validation avoids duplicate journal maps,
+  full journal-entry retention, and nested journal/event scans.
 - Overworld sessions cache compact context payloads until mutation, so repeated
   compact overworld reads reuse route tuples, id payloads, local lists, and
   capped journal/travel slices while preserving clone-isolated returns.

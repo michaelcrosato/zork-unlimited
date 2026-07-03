@@ -647,7 +647,7 @@ type OverworldRegionalArcCompletionIndex = {
 
 type OverworldEventResolutionJournalIndex = {
   contactTimeByArea: ReadonlyMap<string, number>;
-  journalById: ReadonlyMap<string, OverworldJournalEntry>;
+  recordedAtById: ReadonlyMap<string, number>;
   resolutionTimeByTown: ReadonlyMap<string, number>;
   scoutTimeByArea: ReadonlyMap<string, number>;
 };
@@ -2331,13 +2331,12 @@ function eventResolutionJournalIndex(
   sources: OverworldResolutionProofIndex,
   journalTimeline: OverworldJournalTimelineIndex,
 ): OverworldEventResolutionJournalIndex {
-  const journalById = new Map<string, OverworldJournalEntry>();
+  const { recordedAtById } = journalTimeline;
   const scoutTimeByArea = new Map<string, number>();
   const contactTimeByArea = new Map<string, number>();
   const resolutionTimeByTown = new Map<string, number>();
 
   for (const entry of snapshot.journalEntries) {
-    journalById.set(entry.id, entry);
     const recordedAt = journalRecordedAt(journalTimeline, entry);
     if (entry.kind === "poi") {
       const sourceId = journalSourceId(entry, "scout:");
@@ -2358,21 +2357,19 @@ function eventResolutionJournalIndex(
     }
   }
 
-  return { contactTimeByArea, journalById, resolutionTimeByTown, scoutTimeByArea };
+  return { contactTimeByArea, recordedAtById, resolutionTimeByTown, scoutTimeByArea };
 }
 
 function assertSnapshotEventResolutionProofs(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldResolutionProofIndex,
-  journalTimeline: OverworldJournalTimelineIndex,
   journal: OverworldEventResolutionJournalIndex,
 ): void {
   for (const eventId of snapshot.resolvedEventIds) {
     const event = sources.eventsById.get(eventId);
     if (!event) continue;
-    const resolution = journal.journalById.get(`resolve:${eventId}`);
-    if (!resolution) continue;
-    const resolvedAt = journalRecordedAt(journalTimeline, resolution);
+    const resolvedAt = journal.recordedAtById.get(`resolve:${eventId}`);
+    if (resolvedAt === undefined) continue;
 
     const scoutAt = journal.scoutTimeByArea.get(event.area);
     if (scoutAt === undefined || scoutAt > resolvedAt) {
@@ -2388,8 +2385,8 @@ function assertSnapshotEventResolutionProofs(
       );
     }
 
-    const investigation = journal.journalById.get(`investigate:${eventId}`);
-    if (!investigation || journalRecordedAt(journalTimeline, investigation) > resolvedAt) {
+    const investigationAt = journal.recordedAtById.get(`investigate:${eventId}`);
+    if (investigationAt === undefined || investigationAt > resolvedAt) {
       throw new Error(
         `Overworld session snapshot resolved event "${eventId}" is missing an investigated event prerequisite.`,
       );
@@ -2411,7 +2408,6 @@ function resolvedAnchorTimesForRegionalArc(
 
 function assertSnapshotRegionalArcCompletionProofs(
   sources: OverworldRegionalArcCompletionIndex,
-  journalTimeline: OverworldJournalTimelineIndex,
   journal: OverworldEventResolutionJournalIndex,
   completedRegionalArcIds: ReadonlySet<string>,
 ): void {
@@ -2435,13 +2431,13 @@ function assertSnapshotRegionalArcCompletionProofs(
     }
     if (!completed) continue;
 
-    const arcEntry = journal.journalById.get(`arc:${arc.id}`);
-    if (!arcEntry) continue;
+    const arcRecordedAt = journal.recordedAtById.get(`arc:${arc.id}`);
+    if (arcRecordedAt === undefined) continue;
     const completionProofAt =
       arc.required_resolutions > 0
         ? resolvedAnchorTimes[arc.required_resolutions - 1]!
         : STARTING_MINUTES;
-    if (journalRecordedAt(journalTimeline, arcEntry) < completionProofAt) {
+    if (arcRecordedAt < completionProofAt) {
       throw new Error(
         `Overworld session snapshot completed regional arc "${arc.id}" was recorded before enough anchor resolutions.`,
       );
@@ -2984,10 +2980,9 @@ export class OverworldSession {
     assertSnapshotLocalActionJournalReachability(localActionJournal, localActionJournalSources);
     assertSnapshotLocalActionDiscoveryChronology(localActionJournal, localActionJournalSources);
     const eventResolutionJournal = eventResolutionJournalIndex(snapshot, indexes, journalTimeline);
-    assertSnapshotEventResolutionProofs(snapshot, indexes, journalTimeline, eventResolutionJournal);
+    assertSnapshotEventResolutionProofs(snapshot, indexes, eventResolutionJournal);
     assertSnapshotRegionalArcCompletionProofs(
       indexes,
-      journalTimeline,
       eventResolutionJournal,
       completedRegionalArcIds,
     );
