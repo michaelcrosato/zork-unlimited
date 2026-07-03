@@ -325,13 +325,38 @@ export function resolveGameSource(
 
 export function traceWorldQuestId(trace: Trace, operation: string): string | undefined {
   const raw = (trace as { worldQuestId?: unknown }).worldQuestId;
-  if (raw === undefined) return undefined;
-  if (typeof raw !== "string") {
+  let worldQuestId: string | undefined;
+  if (raw !== undefined && typeof raw !== "string") {
     throw new SaveIntegrityError(
       `${operation} trace worldQuestId must be a string when present, got ${JSON.stringify(raw)}.`,
     );
   }
-  return raw;
+  if (typeof raw === "string") worldQuestId = raw;
+
+  const sourceRef = (trace as { source_ref?: unknown }).source_ref;
+  if (sourceRef !== undefined) {
+    if (!Array.isArray(sourceRef) || sourceRef.length !== 2) {
+      throw new SaveIntegrityError(
+        `${operation} trace source_ref must be a compact tuple when present.`,
+      );
+    }
+    if (sourceRef[0] === "wq") {
+      if (typeof sourceRef[1] !== "string") {
+        throw new SaveIntegrityError(
+          `${operation} trace source_ref world quest id must be a string.`,
+        );
+      }
+      if (worldQuestId !== undefined && worldQuestId !== sourceRef[1]) {
+        throw new SaveIntegrityError(
+          `Trace source_ref world quest ${JSON.stringify(
+            sourceRef[1],
+          )} does not match worldQuestId ${JSON.stringify(worldQuestId)}.`,
+        );
+      }
+      worldQuestId = sourceRef[1];
+    }
+  }
+  return worldQuestId;
 }
 
 export function saveWorldQuestId(bundle: SaveWorldSource, operation: string): string | undefined {

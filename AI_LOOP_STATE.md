@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 271 -->
+<!-- historical_cycle_count: 272 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - compact_trace_source_refs
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/consolidation surface: recorded traces now carry compact `source_ref` tuples for world quest, generated seed, or legacy pack fallback identity.
+- Loop effect: trace replay/inspect CLIs print canonical source identity instead of leading with `pack_id`, while old traces still replay through `worldQuestId`/`pack_id` compatibility.
+- Guard: focused typecheck plus trace recording, source inference, CLI replay/inspect, MCP trace inspection, and play-record replay tests passed over compact source refs.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - rpg_action_default_contract
 

@@ -1,7 +1,7 @@
 /**
  * Trace recording (spec §8.8).
  *
- * A Trace is a fully replayable artifact: pack id, content hash, seed, the
+ * A Trace is a fully replayable artifact: source ref, content hash, seed, the
  * initial state, and the ordered actions. It is the backbone of regression
  * testing and bug reproduction (§15). The recorder runs the actions through the
  * engine and stamps the resulting final state hash so replay can assert it.
@@ -13,11 +13,16 @@ import type { EngineAction, Rules } from "../core/engine.js";
 import { makeStep } from "../core/engine.js";
 import { SAVE_MODE, type SaveMode } from "../persist/save_load.js";
 
+export type TraceSourceRef = ["wq", string] | ["gen", number] | ["pack", string];
+
 export type Trace<A extends EngineAction = RpgAction> = {
   mode: SaveMode;
+  /** Compact canonical source: world quest, generated RPG seed, or legacy pack fallback. */
+  source_ref?: TraceSourceRef;
   /** Shipped world quest id, when the trace belongs to the open-world graph. */
   worldQuestId?: string;
   trace_id: string;
+  /** Compatibility id retained for older tooling and historical traces. */
   pack_id: string;
   content_hash: string;
   seed: number;
@@ -65,7 +70,38 @@ export type RecordOptions = {
   pack_id: string;
   content_hash: string;
   worldQuestId?: string | null;
+  generatedRpgSeed?: number | null;
 };
+
+function traceSourceRef(opts: RecordOptions): TraceSourceRef {
+  const worldQuestId = opts.worldQuestId ?? undefined;
+  const generatedRpgSeed = opts.generatedRpgSeed ?? undefined;
+  const hasWorldQuest = worldQuestId !== undefined;
+  const hasGeneratedSeed = generatedRpgSeed !== undefined;
+  if (hasWorldQuest && hasGeneratedSeed) {
+    throw new Error("Trace source cannot carry both worldQuestId and generatedRpgSeed.");
+  }
+  if (worldQuestId !== undefined) return ["wq", worldQuestId];
+  if (hasGeneratedSeed) {
+    if (!Number.isInteger(generatedRpgSeed)) {
+      throw new Error(`Trace generatedRpgSeed must be an integer, got ${generatedRpgSeed}.`);
+    }
+    return ["gen", generatedRpgSeed];
+  }
+  return ["pack", opts.pack_id];
+}
+
+export function traceSourceLabel(trace: {
+  source_ref?: TraceSourceRef;
+  worldQuestId?: string;
+  pack_id: string;
+}): string {
+  const ref = trace.source_ref;
+  if (ref?.[0] === "wq") return `world_quest_id:${ref[1]}`;
+  if (ref?.[0] === "gen") return `generate_rpg_seed:${ref[1]}`;
+  if (ref?.[0] === "pack") return `pack_id:${ref[1]}`;
+  return trace.worldQuestId ? `world_quest_id:${trace.worldQuestId}` : `pack_id:${trace.pack_id}`;
+}
 
 /** Run the actions and produce a Trace stamped with the final-state hash. */
 export function recordTrace<A extends EngineAction>(
@@ -77,6 +113,7 @@ export function recordTrace<A extends EngineAction>(
   const run = runActions(rules, initialState, actions);
   return {
     mode: SAVE_MODE,
+    source_ref: traceSourceRef(opts),
     ...(opts.worldQuestId ? { worldQuestId: opts.worldQuestId } : {}),
     trace_id: opts.trace_id,
     pack_id: opts.pack_id,

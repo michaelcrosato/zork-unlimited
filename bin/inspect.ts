@@ -17,7 +17,7 @@ import { validateRpg } from "../src/validate/rpg_validator.js";
 import { makeStep } from "../src/core/engine.js";
 import { diagnose } from "../agents/debugger.js";
 import { assertTraceMode, replayTrace } from "../src/trace/replay.js";
-import type { Trace } from "../src/trace/record.js";
+import { traceSourceLabel, type Trace } from "../src/trace/record.js";
 import { formatReport } from "../src/validate/report.js";
 import type { RpgAction } from "../src/api/types.js";
 import { assertWellFormedState } from "../src/persist/save_load.js";
@@ -81,7 +81,7 @@ function inspectTrace(tracePath: string, sourceArgs: TraceSourceArgs): void {
     process.exit(1);
   }
   console.log(
-    `Trace: ${trace.trace_id}  pack: ${trace.pack_id}  world_quest: ${source.worldQuestId ?? "(none)"}  seed: ${trace.seed}  steps: ${trace.actions.length}`,
+    `Trace: ${trace.trace_id}  source: ${traceSourceLabel(trace)}  world_quest: ${source.worldQuestId ?? "(none)"}  seed: ${trace.seed}  steps: ${trace.actions.length}`,
   );
   if (trace.content_hash !== loaded.compiled.contentHash) {
     console.log(

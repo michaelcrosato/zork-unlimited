@@ -93,6 +93,7 @@ describe("trace record / replay (§8.8)", () => {
       worldQuestId: "sunken_barrow",
     });
     expect(trace.mode).toBe(SAVE_MODE);
+    expect(trace.source_ref).toEqual(["wq", "sunken_barrow"]);
     expect(trace.worldQuestId).toBe("sunken_barrow");
     expect(trace.expected_final_hash).toBeDefined();
     const result = replayTrace(trace, microRules);
@@ -106,9 +107,22 @@ describe("trace record / replay (§8.8)", () => {
       pack_id: MICRO_PACK_ID,
       content_hash: MICRO_CONTENT_HASH,
     });
+    expect(trace.source_ref).toEqual(["pack", MICRO_PACK_ID]);
     const { mode: _drop, ...withoutMode } = trace;
     expect(() => replayTrace(withoutMode as typeof trace, microRules)).toThrow(SaveIntegrityError);
     expect(() => replayTrace(withoutMode as typeof trace, microRules)).toThrow(/Trace mode/);
+  });
+
+  it("rejects ambiguous trace source metadata", () => {
+    expect(() =>
+      recordTrace(microRules, microInitState(), WIN, {
+        trace_id: "tr_test",
+        pack_id: MICRO_PACK_ID,
+        content_hash: MICRO_CONTENT_HASH,
+        worldQuestId: "sunken_barrow",
+        generatedRpgSeed: 3,
+      }),
+    ).toThrow(/both worldQuestId and generatedRpgSeed/);
   });
 
   it("detects divergence when the expected hash is wrong", () => {

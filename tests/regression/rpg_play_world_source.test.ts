@@ -68,17 +68,21 @@ describe("RPG play CLI world quest source", () => {
 
     const trace = JSON.parse(readFileSync(RECORDED_TRACE, "utf8")) as {
       mode?: string;
+      source_ref?: unknown;
       worldQuestId?: string;
       trace_id?: string;
     };
     expect(trace.mode).toBe("rpg");
     expect(trace.trace_id).toBe("tr_rpg_play");
+    expect(trace.source_ref).toEqual(["wq", "sunken_barrow"]);
     expect(trace.worldQuestId).toBe("sunken_barrow");
 
     const replay = runBin("bin/replay.ts", [RECORDED_TRACE]);
     const replayOutput = outputOf(replay);
     expect(replay.status, replayOutput).toBe(0);
+    expect(replayOutput).toContain("source:       world_quest_id:sunken_barrow");
     expect(replayOutput).toContain("world quest:  sunken_barrow");
+    expect(replayOutput).not.toContain("pack_id:");
     expect(replayOutput).toContain("REPLAY OK");
   });
 

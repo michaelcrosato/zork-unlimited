@@ -67,6 +67,7 @@ function connectedWorld(): WorldManifest {
 const trace = {
   mode: "rpg",
   worldQuestId: "sunken_barrow",
+  source_ref: ["wq", "sunken_barrow"],
   trace_id: "tr_source_test",
   pack_id: "sunken_barrow_v1",
   content_hash: "unused",
@@ -257,6 +258,12 @@ describe("world source resolution", () => {
       packPath: PACK,
       worldQuestId: "sunken_barrow",
     });
+    const traceWithSourceRefOnly = { ...trace };
+    delete (traceWithSourceRefOnly as { worldQuestId?: string }).worldQuestId;
+    expect(resolveTracePackSource(ROOT, {}, traceWithSourceRefOnly, "trace_test")).toEqual({
+      packPath: PACK,
+      worldQuestId: "sunken_barrow",
+    });
     expect(() =>
       resolveTracePackSource(ROOT, { pack_path: PACK } as never, trace, "trace_test"),
     ).toThrow(/not pack_path/);
@@ -333,11 +340,21 @@ describe("world source resolution", () => {
         "save_test",
       ),
     ).toThrow(SaveIntegrityError);
+
+    expect(() =>
+      resolveTracePackSource(
+        ROOT,
+        {},
+        { ...trace, source_ref: ["wq", "cold_forge"] },
+        "trace_test",
+      ),
+    ).toThrow(SaveIntegrityError);
   });
 
   it("requires a source when save and trace metadata carry no world quest id", () => {
     const traceWithoutWorldQuest = { ...trace };
     delete (traceWithoutWorldQuest as { worldQuestId?: string }).worldQuestId;
+    delete (traceWithoutWorldQuest as { source_ref?: unknown }).source_ref;
 
     expect(() => resolveTracePackSource(ROOT, {}, traceWithoutWorldQuest, "trace_test")).toThrow(
       /trace with worldQuestId/,

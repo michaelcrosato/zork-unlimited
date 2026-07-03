@@ -8,7 +8,7 @@
  *   npm run replay -- <trace.json> <world_quest_id>
  */
 import { readFileSync } from "node:fs";
-import { type Trace } from "../src/trace/record.js";
+import { traceSourceLabel, type Trace } from "../src/trace/record.js";
 import { assertTraceMode, replayTrace } from "../src/trace/replay.js";
 import { loadRpgPackFile } from "../src/rpg/pack.js";
 import { buildRpgRules, indexRpgPack } from "../src/rpg/runner.js";
@@ -81,7 +81,7 @@ function main(): void {
   const rules = buildRpgRules(index);
   const result = replayTrace(trace, rules);
   console.log(`trace_id:     ${trace.trace_id}`);
-  console.log(`pack_id:      ${trace.pack_id}`);
+  console.log(`source:       ${traceSourceLabel(trace)}`);
   console.log(`world quest:  ${source.worldQuestId ?? "(none)"}`);
   console.log(`actions:      ${trace.actions.length}`);
   console.log(`final hash:   ${result.finalHash}`);
