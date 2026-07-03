@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 248 -->
+<!-- historical_cycle_count: 249 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - indexed_overworld_restore_latest_travel
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: snapshot travel timeline validation now exposes the latest validated travel row for pending-road proofing.
+- Loop effect: restore/load pending-road checks and event-resolution proofs reuse timeline and known-id indexes instead of reading raw snapshot travel or resolved-event arrays inside proof helpers.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over the latest-travel restore path.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - indexed_overworld_restore_tuple_maps
 

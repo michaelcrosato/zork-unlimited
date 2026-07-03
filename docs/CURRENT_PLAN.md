@@ -232,6 +232,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Snapshot restore tuple validation now returns canonical current-area and
   region-renown maps, so area-map exactness, region-renown replay, region
   validation, and final restore assignment share one validated tuple pass.
+- Snapshot travel timeline validation now exposes the latest validated travel
+  row, so pending-road binding/unresolved checks and event-resolution proofs
+  reuse timeline and known-id indexes instead of rereading raw snapshot arrays.
 - Snapshot timeline validation now records parsed road-journal resolution rows,
   so pending-road checks, road renown replay, and resource replay share road
   facts without another full journal scan or independent road-entry parse pass.

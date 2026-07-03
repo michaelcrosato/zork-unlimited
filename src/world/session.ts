@@ -566,6 +566,7 @@ type OverworldTravelTimelineIndex = {
   arrivals: ReadonlySet<string>;
   arrivedTownIds: ReadonlySet<string>;
   byArrival: ReadonlyMap<string, TravelLogEntrySnapshot>;
+  latest: TravelLogEntrySnapshot | null;
   oldestFirst: readonly TravelLogEntrySnapshot[];
   townByArrival: ReadonlyMap<string, string>;
   townVisitMinutes: ReadonlyMap<string, number>;
@@ -1013,6 +1014,7 @@ function snapshotTravelTimelineIndex(
     arrivals,
     arrivedTownIds,
     byArrival,
+    latest: oldestFirst[oldestFirst.length - 1] ?? null,
     oldestFirst,
     townByArrival,
     townVisitMinutes,
@@ -1314,11 +1316,10 @@ function roadJournalResolutionIndex(
   pendingRoadEncounter: OverworldPendingRoadEncounterSnapshot | null,
 ): OverworldRoadJournalResolutionIndex {
   const byKey = new Map<string, OverworldRoadJournalResolutionEntry>();
-  const latestTravel = travelTimeline.oldestFirst[travelTimeline.oldestFirst.length - 1];
   const nextTravelArrivalByKey = new Map<string, number>();
   const pendingRoadKey =
-    pendingRoadEncounter && latestTravel?.edgeId === pendingRoadEncounter.edgeId
-      ? travelResourceKey(latestTravel)
+    pendingRoadEncounter && travelTimeline.latest?.edgeId === pendingRoadEncounter.edgeId
+      ? travelResourceKey(travelTimeline.latest)
       : null;
   const requiredRoadResolutionKeys = new Set<string>();
   for (let index = 0; index < travelTimeline.oldestFirst.length; index += 1) {
@@ -1613,48 +1614,47 @@ function assertSnapshotVisitedTownTravelProof(
 }
 
 function assertSnapshotTravelPathContinuity(
-  snapshot: OverworldSessionSnapshot,
+  snapshotCurrentTownId: string,
   startTownId: string,
   travelTimeline: OverworldTravelTimelineIndex,
 ): void {
-  let currentTownId = startTownId;
+  let replayTownId = startTownId;
   for (const entry of travelTimeline.oldestFirst) {
-    if (entry.fromId !== currentTownId) {
+    if (entry.fromId !== replayTownId) {
       throw new Error(
         `Overworld session snapshot travel log is not contiguous at road "${entry.edgeId}".`,
       );
     }
-    currentTownId = entry.toId;
+    replayTownId = entry.toId;
   }
-  if (snapshot.currentId !== currentTownId) {
+  if (snapshotCurrentTownId !== replayTownId) {
     throw new Error("Overworld session snapshot current town does not match travel history.");
   }
 }
 
 function assertSnapshotPendingRoadEncounterBinding(
-  snapshot: OverworldSessionSnapshot,
+  pendingRoadEncounter: OverworldPendingRoadEncounterSnapshot | null,
+  latestTravel: TravelLogEntrySnapshot | null,
   edgeIds: ReadonlySet<string>,
 ): void {
-  if (!snapshot.pendingRoadEncounter) return;
-  const latestTravel = snapshot.travelLog[0];
+  if (!pendingRoadEncounter) return;
   if (!latestTravel) {
     throw new Error("Overworld session snapshot pending road encounter has no travel log.");
   }
   if (!edgeIds.has(latestTravel.edgeId)) return;
-  if (latestTravel.edgeId !== snapshot.pendingRoadEncounter.edgeId) {
+  if (latestTravel.edgeId !== pendingRoadEncounter.edgeId) {
     throw new Error(
-      `Overworld session snapshot pending road encounter "${snapshot.pendingRoadEncounter.edgeId}" does not match latest travel log road "${latestTravel.edgeId}".`,
+      `Overworld session snapshot pending road encounter "${pendingRoadEncounter.edgeId}" does not match latest travel log road "${latestTravel.edgeId}".`,
     );
   }
 }
 
 function assertSnapshotPendingRoadEncounterUnresolved(
-  snapshot: OverworldSessionSnapshot,
+  pendingRoadEncounter: OverworldPendingRoadEncounterSnapshot | null,
+  latestTravel: TravelLogEntrySnapshot | null,
   roadJournal: OverworldRoadJournalResolutionIndex,
 ): void {
-  const pendingRoadEncounter = snapshot.pendingRoadEncounter;
   if (!pendingRoadEncounter) return;
-  const latestTravel = snapshot.travelLog[0];
   if (!latestTravel) return;
 
   const pendingArrivalKey = `${pendingRoadEncounter.edgeId}@${latestTravel.arrivedAt}`;
@@ -2408,11 +2408,11 @@ function assertSnapshotDiscoveredLocalSourceCountReplay(
 }
 
 function assertSnapshotEventResolutionProofs(
-  snapshot: OverworldSessionSnapshot,
+  resolvedEventIds: ReadonlySet<string>,
   sources: OverworldResolutionProofIndex,
   journal: OverworldEventResolutionJournalIndex,
 ): void {
-  for (const eventId of snapshot.resolvedEventIds) {
+  for (const eventId of resolvedEventIds) {
     const event = sources.eventsById.get(eventId);
     if (!event) continue;
     const resolvedAt = journal.recordedAtById.get(`resolve:${eventId}`);
@@ -2982,7 +2982,7 @@ export class OverworldSession {
       throw new Error("Overworld session snapshot current town is not visited.");
     }
     const townVisitMinutes = assertSnapshotVisitedTownTravelProof(visitedTownIds, travelTimeline);
-    assertSnapshotTravelPathContinuity(snapshot, this.world.start, travelTimeline);
+    assertSnapshotTravelPathContinuity(snapshot.currentId, this.world.start, travelTimeline);
     assertSnapshotDiscoveredTownFrontier(
       discoveredTownIds,
       indexes.roadExitsByTown,
@@ -3081,7 +3081,7 @@ export class OverworldSession {
     assertSnapshotLocalActionJournalReachability(localActionJournal, localActionJournalSources);
     assertSnapshotLocalActionDiscoveryChronology(localActionJournal, localActionJournalSources);
     const eventResolutionJournal = journalTimeline.eventResolutionProofs;
-    assertSnapshotEventResolutionProofs(snapshot, indexes, eventResolutionJournal);
+    assertSnapshotEventResolutionProofs(resolvedEventIds, indexes, eventResolutionJournal);
     assertSnapshotRegionalArcCompletionProofs(
       indexes,
       eventResolutionJournal,
@@ -3110,8 +3110,16 @@ export class OverworldSession {
           `Overworld session snapshot has no road event for "${snapshot.pendingRoadEncounter.edgeId}".`,
         );
       }
-      assertSnapshotPendingRoadEncounterBinding(snapshot, indexes.edgeIds);
-      assertSnapshotPendingRoadEncounterUnresolved(snapshot, roadJournal);
+      assertSnapshotPendingRoadEncounterBinding(
+        snapshot.pendingRoadEncounter,
+        travelTimeline.latest,
+        indexes.edgeIds,
+      );
+      assertSnapshotPendingRoadEncounterUnresolved(
+        snapshot.pendingRoadEncounter,
+        travelTimeline.latest,
+        roadJournal,
+      );
       const fromId = pendingEdge.from === snapshot.currentId ? pendingEdge.to : pendingEdge.from;
       const from = this.nodes.get(fromId);
       const to = this.nodes.get(snapshot.currentId);
