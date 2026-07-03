@@ -229,6 +229,9 @@ Make discovered overworld quest leads start real RPG sessions.
   progress state-id sets, plus cached road-exit indexes, for town frontier,
   local source prefix, locality, and local-source count replay checks instead of
   rebuilding helper-local sets or rescanning manifest roads.
+- Snapshot restore tuple validation now returns canonical current-area and
+  region-renown maps, so area-map exactness, region-renown replay, region
+  validation, and final restore assignment share one validated tuple pass.
 - Snapshot timeline validation now records parsed road-journal resolution rows,
   so pending-road checks, road renown replay, and resource replay share road
   facts without another full journal scan or independent road-entry parse pass.

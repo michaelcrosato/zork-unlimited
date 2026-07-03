@@ -514,14 +514,17 @@ function assertKnownIds(
   return seen;
 }
 
-function assertUniqueTupleKeys(
+function assertUniqueTupleMap<T>(
   label: string,
-  values: readonly (readonly [string, unknown])[],
-): void {
-  assertUnique(
-    label,
-    values.map(([key]) => key),
-  );
+  values: readonly (readonly [string, T])[],
+): Map<string, T> {
+  const seen = new Map<string, T>();
+  for (const [key, value] of values) {
+    if (seen.has(key))
+      throw new Error(`Overworld session snapshot has duplicate ${label} "${key}".`);
+    seen.set(key, value);
+  }
+  return seen;
 }
 
 type OverworldJournalSourceIndex = {
@@ -1781,11 +1784,12 @@ function assertSnapshotDiscoveredLocalSourcePrefixes(
 }
 
 function assertSnapshotCurrentAreaMapExact(
-  snapshot: OverworldSessionSnapshot,
+  currentTownId: string,
+  currentAreaId: string | null,
+  currentAreaByTown: ReadonlyMap<string, string>,
   areasByTown: ReadonlyMap<string, readonly OverworldArea[]>,
   visitedTownIds: ReadonlySet<string>,
 ): void {
-  const currentAreaByTown = new Map(snapshot.currentAreaByTown);
   for (const townId of visitedTownIds) {
     const localAreas = indexedList(areasByTown, townId);
     if (localAreas.length > 0 && !currentAreaByTown.has(townId)) {
@@ -1803,13 +1807,13 @@ function assertSnapshotCurrentAreaMapExact(
     }
   }
 
-  if (indexedList(areasByTown, snapshot.currentId).length === 0) return;
-  const savedCurrentArea = currentAreaByTown.get(snapshot.currentId);
+  if (indexedList(areasByTown, currentTownId).length === 0) return;
+  const savedCurrentArea = currentAreaByTown.get(currentTownId);
   if (!savedCurrentArea) return;
-  if (snapshot.currentAreaId === null) {
+  if (currentAreaId === null) {
     throw new Error("Overworld session snapshot current area is missing for a local town.");
   }
-  if (savedCurrentArea !== snapshot.currentAreaId) {
+  if (savedCurrentArea !== currentAreaId) {
     throw new Error("Overworld session snapshot current area does not match saved area map.");
   }
 }
@@ -1839,13 +1843,13 @@ function roadRenownFor(
 }
 
 function expectedSnapshotRegionRenown(
-  snapshot: OverworldSessionSnapshot,
+  stateIds: OverworldProgressJournalSourceIndex,
   sources: OverworldRenownSourceIndex,
   roadJournal: OverworldRoadJournalResolutionIndex,
 ): Map<string, number> {
   const expected = new Map<string, number>();
 
-  for (const jobId of snapshot.completedJobIds) {
+  for (const jobId of stateIds.completedJobIds) {
     const job = sources.jobsById.get(jobId);
     if (!job) continue;
     addRegionRenown(
@@ -1854,11 +1858,11 @@ function expectedSnapshotRegionRenown(
       job.difficulty,
     );
   }
-  for (const siteId of snapshot.exploredSiteIds) {
+  for (const siteId of stateIds.exploredSiteIds) {
     const site = sources.sitesById.get(siteId);
     if (site) addRegionRenown(expected, site.region, site.danger);
   }
-  for (const eventId of snapshot.resolvedEventIds) {
+  for (const eventId of stateIds.resolvedEventIds) {
     const event = sources.eventsById.get(eventId);
     if (!event) continue;
     addRegionRenown(
@@ -1882,12 +1886,12 @@ function expectedSnapshotRegionRenown(
 }
 
 function assertSnapshotRegionRenown(
-  snapshot: OverworldSessionSnapshot,
+  actual: ReadonlyMap<string, number>,
+  stateIds: OverworldProgressJournalSourceIndex,
   sources: OverworldRenownSourceIndex,
   roadJournal: OverworldRoadJournalResolutionIndex,
 ): void {
-  const expected = expectedSnapshotRegionRenown(snapshot, sources, roadJournal);
-  const actual = new Map(snapshot.regionRenown);
+  const expected = expectedSnapshotRegionRenown(stateIds, sources, roadJournal);
   for (const [region, expectedRenown] of expected) {
     const actualRenown = actual.get(region) ?? 0;
     if (actualRenown !== expectedRenown) {
@@ -2956,8 +2960,8 @@ export class OverworldSession {
       startedQuestIds,
       visitedAreaIds,
     };
-    assertUniqueTupleKeys("area-map town", snapshot.currentAreaByTown);
-    assertUniqueTupleKeys("renown region", snapshot.regionRenown);
+    const currentAreaByTown = assertUniqueTupleMap("area-map town", snapshot.currentAreaByTown);
+    const regionRenown = assertUniqueTupleMap("renown region", snapshot.regionRenown);
     const journalTimeline = assertSnapshotTimeline(snapshot, {
       ...indexes,
       travelLogArrivals: travelTimeline.arrivals,
@@ -3010,7 +3014,8 @@ export class OverworldSession {
     );
     assertSnapshotProgressJournalBindings(progressStateIds, journalTimeline.progressSources);
     assertSnapshotRegionRenown(
-      snapshot,
+      regionRenown,
+      progressStateIds,
       {
         ...indexes,
         travelLogByArrival: travelTimeline.byArrival,
@@ -3035,8 +3040,14 @@ export class OverworldSession {
     );
     assertSnapshotDiscoveredAreaPrefix(indexes.areasByTown, discoveredAreaIds, visitedTownIds);
     assertSnapshotDiscoveredLocalSourcePrefixes(localActionJournalSources, visitedTownIds);
-    assertSnapshotCurrentAreaMapExact(snapshot, indexes.areasByTown, visitedTownIds);
-    for (const [townId, areaId] of snapshot.currentAreaByTown) {
+    assertSnapshotCurrentAreaMapExact(
+      snapshot.currentId,
+      snapshot.currentAreaId,
+      currentAreaByTown,
+      indexes.areasByTown,
+      visitedTownIds,
+    );
+    for (const [townId, areaId] of currentAreaByTown) {
       if (!indexes.nodeIds.has(townId)) {
         throw new Error(`Overworld session snapshot has unknown area-map town "${townId}".`);
       }
@@ -3078,7 +3089,7 @@ export class OverworldSession {
     );
     assertSnapshotDiscoveredLocalSourceCountReplay(localActionJournalSources, localActionJournal);
     assertSnapshotDiscoveredAreaCountReplay(localActionJournalSources, localActionJournal);
-    for (const [region] of snapshot.regionRenown) {
+    for (const [region] of regionRenown) {
       if (!indexes.regionNames.has(region)) {
         throw new Error(`Overworld session snapshot has unknown renown region "${region}".`);
       }
@@ -3132,7 +3143,7 @@ export class OverworldSession {
     replaceStringSet(this.discoveredIds, snapshot.discoveredIds);
     replaceStringSet(this.visitedIds, snapshot.visitedIds);
     this.currentAreaByTown.clear();
-    for (const [townId, areaId] of snapshot.currentAreaByTown) {
+    for (const [townId, areaId] of currentAreaByTown) {
       this.currentAreaByTown.set(townId, areaId);
     }
     this.travelLog.splice(
@@ -3153,7 +3164,7 @@ export class OverworldSession {
     replaceStringSet(this.completedQuestIds, snapshot.completedQuestIds);
     replaceStringSet(this.exploredSiteIds, snapshot.exploredSiteIds);
     this.regionRenown.clear();
-    for (const [region, renown] of snapshot.regionRenown) this.regionRenown.set(region, renown);
+    for (const [region, renown] of regionRenown) this.regionRenown.set(region, renown);
     replaceStringSet(this.completedRegionalArcIds, snapshot.completedRegionalArcIds);
     this.pendingRoadEncounter = restoredPendingRoadEncounter;
     this.clearSnapshotCache();

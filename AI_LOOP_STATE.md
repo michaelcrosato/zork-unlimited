@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 247 -->
+<!-- historical_cycle_count: 248 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - indexed_overworld_restore_tuple_maps
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: snapshot restore tuple uniqueness validation now returns canonical current-area and region-renown maps for downstream proofing.
+- Loop effect: restore/load current-area and region-renown proofs reuse validated tuple maps instead of allocating helper-local maps or replaying raw snapshot tuples during assignment.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over the tuple-map restore path.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - indexed_overworld_restore_discovery_state_ids
 
