@@ -2271,13 +2271,25 @@ function sortedIndex<T>(
   return index;
 }
 
+function nestedIdIndex<T extends { id: string }>(
+  source: ReadonlyMap<string, readonly T[]>,
+): Map<string, Map<string, T>> {
+  const index = new Map<string, Map<string, T>>();
+  for (const [ownerId, values] of source) {
+    index.set(ownerId, new Map(values.map((value) => [value.id, value])));
+  }
+  return index;
+}
+
 export class OverworldSession {
   private readonly nodes: Map<string, OverworldNode>;
   private readonly roadExitsByTown: Map<string, OverworldExit[]>;
+  private readonly roadExitsByTownAndId: Map<string, Map<string, OverworldExit>>;
   private readonly roadEventsByEdgeId: Map<string, OverworldRoadEvent>;
   private readonly areasById: Map<string, OverworldArea>;
   private readonly areasByTown: Map<string, OverworldArea[]>;
   private readonly areaExitsByArea: Map<string, OverworldAreaExit[]>;
+  private readonly areaExitsByAreaAndId: Map<string, Map<string, OverworldAreaExit>>;
   private readonly poisById: Map<string, OverworldPoi>;
   private readonly poisByTown: Map<string, OverworldPoi[]>;
   private readonly poisByArea: Map<string, OverworldPoi[]>;
@@ -2335,6 +2347,7 @@ export class OverworldSession {
   constructor(private readonly world: OverworldManifest) {
     this.nodes = overworldNodesById(world);
     this.roadExitsByTown = this.indexRoadExits();
+    this.roadExitsByTownAndId = nestedIdIndex(this.roadExitsByTown);
     this.roadEventsByEdgeId = new Map(world.road_events.map((event) => [event.edge, event]));
     this.areasById = new Map(world.areas.map((area) => [area.id, area]));
     this.areasByTown = sortedIndex(
@@ -2343,6 +2356,7 @@ export class OverworldSession {
       (a, b) => a.travel_minutes - b.travel_minutes || a.name.localeCompare(b.name),
     );
     this.areaExitsByArea = this.indexAreaExits();
+    this.areaExitsByAreaAndId = nestedIdIndex(this.areaExitsByArea);
     this.poisById = new Map(world.points_of_interest.map((poi) => [poi.id, poi]));
     this.poisByTown = sortedIndex(
       world.points_of_interest,
@@ -2888,6 +2902,10 @@ export class OverworldSession {
     return this.roadExitsByTown.get(nodeId) ?? [];
   }
 
+  private roadFrom(nodeId: string, edgeId: string): OverworldExit | null {
+    return this.roadExitsByTownAndId.get(nodeId)?.get(edgeId) ?? null;
+  }
+
   private roadEventFor(edgeId: string): OverworldRoadEvent | null {
     return this.roadEventsByEdgeId.get(edgeId) ?? null;
   }
@@ -2998,6 +3016,10 @@ export class OverworldSession {
     return (this.areaExitsByArea.get(area.id) ?? []).filter((exit) =>
       this.discoveredAreaIds.has(exit.destination.id),
     );
+  }
+
+  private areaExitFrom(areaId: string, routeId: string): OverworldAreaExit | null {
+    return this.areaExitsByAreaAndId.get(areaId)?.get(routeId) ?? null;
   }
 
   private discoveredAreasAt(nodeId: string): OverworldArea[] {
@@ -3750,9 +3772,7 @@ export class OverworldSession {
   moveArea(areaRouteId: string): OverworldAreaTravelResult {
     const currentArea = this.currentArea();
     if (!currentArea) throw new Error("There is no current local area in this town.");
-    const edge = (this.areaExitsByArea.get(currentArea.id) ?? []).find(
-      (candidate) => candidate.id === areaRouteId,
-    );
+    const edge = this.areaExitFrom(currentArea.id, areaRouteId);
     if (!edge) throw new Error("That local route is not reachable from here.");
     if (!this.discoveredAreaIds.has(edge.destination.id)) {
       throw new Error("Map that local area before moving there.");
@@ -4098,7 +4118,7 @@ export class OverworldSession {
     if (this.pendingRoadEncounter) {
       throw new Error("Address the pending road encounter before choosing another road.");
     }
-    const edge = this.roadsFrom(this.currentId).find((candidate) => candidate.id === edgeId);
+    const edge = this.roadFrom(this.currentId, edgeId);
     if (!edge) throw new Error("That road is not reachable from here.");
     const from = this.currentNode();
     const roadEvent = this.roadEventFor(edge.id);
