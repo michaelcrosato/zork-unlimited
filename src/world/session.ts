@@ -549,7 +549,11 @@ type OverworldJournalSourceIndex = {
   travelLogTownByArrival: ReadonlyMap<string, string>;
 };
 
+type OverworldJournalTimelineSourceIndex = OverworldJournalSourceIndex &
+  OverworldResolutionProofIndex;
+
 type OverworldJournalTimelineIndex = {
+  eventResolutionProofs: OverworldEventResolutionJournalIndex;
   progressSources: OverworldProgressJournalSourceIndex;
   recordedAtById: ReadonlyMap<string, number>;
 };
@@ -650,6 +654,13 @@ type OverworldEventResolutionJournalIndex = {
   recordedAtById: ReadonlyMap<string, number>;
   resolutionTimeByTown: ReadonlyMap<string, number>;
   scoutTimeByArea: ReadonlyMap<string, number>;
+};
+
+type MutableOverworldEventResolutionJournalIndex = {
+  contactTimeByArea: Map<string, number>;
+  recordedAtById: ReadonlyMap<string, number>;
+  resolutionTimeByTown: Map<string, number>;
+  scoutTimeByArea: Map<string, number>;
 };
 
 type OverworldLocalActionJournalReachabilityIndex = {
@@ -1026,9 +1037,39 @@ function recordProgressJournalSource(
   }
 }
 
+function recordEventResolutionJournalProof(
+  proofs: MutableOverworldEventResolutionJournalIndex,
+  sources: OverworldResolutionProofIndex,
+  entry: OverworldJournalEntry,
+  recordedAt: number,
+): void {
+  switch (entry.kind) {
+    case "poi": {
+      const sourceId = journalSourceId(entry, "scout:");
+      const poi = sourceId ? sources.poisById.get(sourceId) : undefined;
+      if (poi) recordEarliestTime(proofs.scoutTimeByArea, poi.area, recordedAt);
+      return;
+    }
+    case "resolution": {
+      const sourceId = journalSourceId(entry, "resolve:");
+      const event = sourceId ? sources.eventsById.get(sourceId) : undefined;
+      if (event) recordEarliestTime(proofs.resolutionTimeByTown, event.home, recordedAt);
+      return;
+    }
+    case "contact": {
+      const sourceId = journalSourceId(entry, "talk:");
+      const character = sourceId ? sources.charactersById.get(sourceId) : undefined;
+      if (character) recordEarliestTime(proofs.contactTimeByArea, character.area, recordedAt);
+      return;
+    }
+    default:
+      return;
+  }
+}
+
 function assertSnapshotTimeline(
   snapshot: OverworldSessionSnapshot,
-  sources: OverworldJournalSourceIndex,
+  sources: OverworldJournalTimelineSourceIndex,
 ): OverworldJournalTimelineIndex {
   assertUnique(
     "journal entry id",
@@ -1038,6 +1079,12 @@ function assertSnapshotTimeline(
   let previousRecordedAt = Number.POSITIVE_INFINITY;
   const progressSources = emptyProgressJournalSourceIndex();
   const recordedAtById = new Map<string, number>();
+  const eventResolutionProofs: MutableOverworldEventResolutionJournalIndex = {
+    contactTimeByArea: new Map<string, number>(),
+    recordedAtById,
+    resolutionTimeByTown: new Map<string, number>(),
+    scoutTimeByArea: new Map<string, number>(),
+  };
   for (const entry of snapshot.journalEntries) {
     const recordedAt = parseTimeLabel(entry.recordedAt);
     assertSnapshotJournalSource(entry, recordedAt, sources);
@@ -1049,10 +1096,11 @@ function assertSnapshotTimeline(
     }
     recordedAtById.set(entry.id, recordedAt);
     recordProgressJournalSource(progressSources, entry);
+    recordEventResolutionJournalProof(eventResolutionProofs, sources, entry, recordedAt);
     previousRecordedAt = recordedAt;
   }
 
-  return { progressSources, recordedAtById };
+  return { eventResolutionProofs, progressSources, recordedAtById };
 }
 
 function travelResourceKey(entry: TravelLogEntrySnapshot): string {
@@ -2326,40 +2374,6 @@ function assertSnapshotDiscoveredLocalSourceCountReplay(
   }
 }
 
-function eventResolutionJournalIndex(
-  snapshot: OverworldSessionSnapshot,
-  sources: OverworldResolutionProofIndex,
-  journalTimeline: OverworldJournalTimelineIndex,
-): OverworldEventResolutionJournalIndex {
-  const { recordedAtById } = journalTimeline;
-  const scoutTimeByArea = new Map<string, number>();
-  const contactTimeByArea = new Map<string, number>();
-  const resolutionTimeByTown = new Map<string, number>();
-
-  for (const entry of snapshot.journalEntries) {
-    const recordedAt = journalRecordedAt(journalTimeline, entry);
-    if (entry.kind === "poi") {
-      const sourceId = journalSourceId(entry, "scout:");
-      const poi = sourceId ? sources.poisById.get(sourceId) : undefined;
-      if (poi) recordEarliestTime(scoutTimeByArea, poi.area, recordedAt);
-      continue;
-    }
-    if (entry.kind === "resolution") {
-      const sourceId = journalSourceId(entry, "resolve:");
-      const event = sourceId ? sources.eventsById.get(sourceId) : undefined;
-      if (event) recordEarliestTime(resolutionTimeByTown, event.home, recordedAt);
-      continue;
-    }
-    if (entry.kind === "contact") {
-      const sourceId = journalSourceId(entry, "talk:");
-      const character = sourceId ? sources.charactersById.get(sourceId) : undefined;
-      if (character) recordEarliestTime(contactTimeByArea, character.area, recordedAt);
-    }
-  }
-
-  return { contactTimeByArea, recordedAtById, resolutionTimeByTown, scoutTimeByArea };
-}
-
 function assertSnapshotEventResolutionProofs(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldResolutionProofIndex,
@@ -2979,7 +2993,7 @@ export class OverworldSession {
     });
     assertSnapshotLocalActionJournalReachability(localActionJournal, localActionJournalSources);
     assertSnapshotLocalActionDiscoveryChronology(localActionJournal, localActionJournalSources);
-    const eventResolutionJournal = eventResolutionJournalIndex(snapshot, indexes, journalTimeline);
+    const eventResolutionJournal = journalTimeline.eventResolutionProofs;
     assertSnapshotEventResolutionProofs(snapshot, indexes, eventResolutionJournal);
     assertSnapshotRegionalArcCompletionProofs(
       indexes,

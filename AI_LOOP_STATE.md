@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 238 -->
+<!-- historical_cycle_count: 239 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - folded_overworld_restore_event_proofs_into_timeline
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: snapshot timeline validation now records event/regional-arc proof timing facts while validating journal ids and timestamps.
+- Loop effect: restore/load validation drops the separate event-resolution journal pass; resolved-event prerequisites and regional-arc proofs reuse the single validated journal timeline index.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over the folded proof path.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - compacted_overworld_restore_event_arc_timestamps
 
