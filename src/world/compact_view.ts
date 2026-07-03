@@ -163,12 +163,14 @@ function titledRef(value: { id: string; title: string }): OverworldCompactRef {
 }
 
 export function compactRouteOption(plan: OverworldSessionRoutePlan): OverworldCompactRouteOption {
+  const roadIds: string[] = [];
+  for (const step of plan.steps) roadIds.push(step.edge.id);
   return [
     plan.destination.id,
     plan.estimate.elapsedMinutes,
     plan.estimate.suppliesNeeded,
     plan.estimate.fatigueAfter,
-    plan.steps.map((step) => step.edge.id),
+    roadIds,
   ];
 }
 
@@ -176,17 +178,21 @@ export function compactPendingRoad(
   encounter: OverworldPendingRoadEncounter | null,
 ): OverworldCompactRoadEncounter | undefined {
   if (!encounter) return undefined;
-  return {
-    id: encounter.id,
-    edge: encounter.edgeId,
-    event: [encounter.event.id, encounter.event.risk],
-    options: encounter.options.map((option) => [
+  const options: OverworldCompactRoadEncounterOption[] = [];
+  for (const option of encounter.options) {
+    options.push([
       option.strategy,
       option.minutes,
       option.suppliesCost,
       option.fatigueGained,
       option.renownGained,
-    ]),
+    ]);
+  }
+  return {
+    id: encounter.id,
+    edge: encounter.edgeId,
+    event: [encounter.event.id, encounter.event.risk],
+    options,
   };
 }
 
@@ -203,11 +209,26 @@ export function compactTravelLogEntry(entry: TravelLogEntry): OverworldCompactTr
 }
 
 function compactIdList(values: readonly string[]): string[] {
-  return values.slice(0, OVERWORLD_COMPACT_ID_LIST_LIMIT);
+  const compacted: string[] = [];
+  const limit = Math.min(values.length, OVERWORLD_COMPACT_ID_LIST_LIMIT);
+  for (let index = 0; index < limit; index += 1) compacted.push(values[index]!);
+  return compacted;
 }
 
 function cloneTupleList<T extends readonly unknown[]>(values: readonly T[]): T[] {
-  return values.map((value) => [...value] as unknown as T);
+  const clone: T[] = [];
+  for (const value of values) clone.push([...value] as unknown as T);
+  return clone;
+}
+
+function cloneCompactRouteOptions(
+  values: readonly OverworldCompactRouteOption[],
+): OverworldCompactRouteOption[] {
+  const clone: OverworldCompactRouteOption[] = [];
+  for (const option of values) {
+    clone.push([option[0], option[1], option[2], option[3], [...option[4]]]);
+  }
+  return clone;
 }
 
 function cloneCompactIdMap(ids: OverworldCompactIdMap): OverworldCompactIdMap {
@@ -261,10 +282,7 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
     vitals: [...view.vitals] as OverworldCompactVitals,
     hidden: [...view.hidden] as OverworldCompactHiddenCounts,
     roads: cloneTupleList(view.roads),
-    route_options: view.route_options.map(
-      (option) =>
-        [option[0], option[1], option[2], option[3], [...option[4]]] as OverworldCompactRouteOption,
-    ),
+    route_options: cloneCompactRouteOptions(view.route_options),
     areas: cloneTupleList(view.areas),
     poi: cloneTupleList(view.poi),
     contacts: cloneTupleList(view.contacts),

@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 268 -->
+<!-- historical_cycle_count: 269 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - direct_overworld_compact_clone_helpers
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact overworld route, pending-road, id-list, and tuple clone helpers now build capped payloads through direct loops.
+- Loop effect: repeated compact MCP reads avoid route-step maps, pending-option maps, id-list slices, and tuple clone maps while preserving compact payload shape.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over direct compact clone helpers.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - direct_overworld_local_action_replay_sets
 

@@ -228,6 +228,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Compact overworld view builds capped route, journal, travel-log, and
   discovered-town id lists with direct loops, avoiding extra `slice`/`map` chains
   and node filter arrays on repeated context reads.
+- Compact overworld route, pending-road, id-list, and tuple clone helpers now
+  build capped payloads with direct loops, avoiding route-step maps, pending
+  option maps, id-list slices, and tuple clone maps on repeated compact reads.
 - Compact and full overworld views now share a direct-loop discovered-town
   sorter, avoiding duplicate id-to-node map/filter arrays while preserving
   population/name ordering.
