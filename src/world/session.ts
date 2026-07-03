@@ -551,6 +551,14 @@ type OverworldJournalTimelineIndex = {
   recordedAtById: ReadonlyMap<string, number>;
 };
 
+type OverworldTravelTimelineIndex = {
+  arrivals: ReadonlySet<string>;
+  byArrival: ReadonlyMap<string, TravelLogEntrySnapshot>;
+  oldestFirst: readonly TravelLogEntrySnapshot[];
+  townByArrival: ReadonlyMap<string, string>;
+  townVisitMinutes: ReadonlyMap<string, number>;
+};
+
 type OverworldRenownSourceIndex = {
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   jobsById: ReadonlyMap<string, OverworldLocalJob>;
@@ -917,6 +925,50 @@ function assertSnapshotJournalSource(
   }
 }
 
+function snapshotTravelTimelineIndex(
+  snapshot: OverworldSessionSnapshot,
+  townNameForSource: (nodeId: string) => string,
+  startTownId: string,
+): OverworldTravelTimelineIndex {
+  const arrivals = new Set<string>();
+  const byArrival = new Map<string, TravelLogEntrySnapshot>();
+  const oldestFirst: TravelLogEntrySnapshot[] = [];
+  const townByArrival = new Map<string, string>();
+  const townVisitMinutes = new Map<string, number>([[startTownId, STARTING_MINUTES]]);
+
+  let previousArrivedAt = Number.POSITIVE_INFINITY;
+  for (const entry of snapshot.travelLog) {
+    const key = travelResourceKey(entry);
+    if (arrivals.has(key)) {
+      throw new Error(`Overworld session snapshot has duplicate travel log entry "${key}".`);
+    }
+    if (entry.arrivedAt > snapshot.minutes) {
+      throw new Error("Overworld session snapshot travel log contains a future arrival.");
+    }
+    if (entry.arrivedAt > previousArrivedAt) {
+      throw new Error("Overworld session snapshot travel log must be newest-first.");
+    }
+    arrivals.add(key);
+    byArrival.set(key, entry);
+    oldestFirst.push(entry);
+    townByArrival.set(key, townNameForSource(entry.toId));
+    const previousTownVisit = townVisitMinutes.get(entry.toId);
+    if (previousTownVisit === undefined || entry.arrivedAt < previousTownVisit) {
+      townVisitMinutes.set(entry.toId, entry.arrivedAt);
+    }
+    previousArrivedAt = entry.arrivedAt;
+  }
+  oldestFirst.reverse();
+
+  return {
+    arrivals,
+    byArrival,
+    oldestFirst,
+    townByArrival,
+    townVisitMinutes,
+  };
+}
+
 function assertSnapshotTimeline(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldJournalSourceIndex,
@@ -925,21 +977,6 @@ function assertSnapshotTimeline(
     "journal entry id",
     snapshot.journalEntries.map((entry) => entry.id),
   );
-  assertUnique(
-    "travel log entry",
-    snapshot.travelLog.map((entry) => `${entry.edgeId}@${entry.arrivedAt}`),
-  );
-
-  let previousArrivedAt = Number.POSITIVE_INFINITY;
-  for (const entry of snapshot.travelLog) {
-    if (entry.arrivedAt > snapshot.minutes) {
-      throw new Error("Overworld session snapshot travel log contains a future arrival.");
-    }
-    if (entry.arrivedAt > previousArrivedAt) {
-      throw new Error("Overworld session snapshot travel log must be newest-first.");
-    }
-    previousArrivedAt = entry.arrivedAt;
-  }
 
   let previousRecordedAt = Number.POSITIVE_INFINITY;
   const recordedAtById = new Map<string, number>();
@@ -1084,16 +1121,16 @@ function roadJournalResolutionIndex(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldResourceReplayIndex,
   journalTimeline: OverworldJournalTimelineIndex,
+  travelTimeline: OverworldTravelTimelineIndex,
 ): OverworldRoadJournalResolutionIndex {
   const byKey = new Map<string, OverworldRoadJournalResolutionEntry>();
   const entries: OverworldRoadJournalResolutionEntry[] = [];
-  const travelEntriesOldestFirst = [...snapshot.travelLog].reverse();
   const nextTravelArrivalByKey = new Map<string, number>();
-  for (let index = 0; index < travelEntriesOldestFirst.length - 1; index += 1) {
-    const current = travelEntriesOldestFirst[index]!;
+  for (let index = 0; index < travelTimeline.oldestFirst.length - 1; index += 1) {
+    const current = travelTimeline.oldestFirst[index]!;
     nextTravelArrivalByKey.set(
       travelResourceKey(current),
-      travelEntriesOldestFirst[index + 1]!.arrivedAt,
+      travelTimeline.oldestFirst[index + 1]!.arrivedAt,
     );
   }
 
@@ -1437,25 +1474,11 @@ function assertSnapshotProgressJournalBindings(snapshot: OverworldSessionSnapsho
   );
 }
 
-function snapshotTownVisitMinutes(
-  snapshot: OverworldSessionSnapshot,
-  startTownId: string,
-): Map<string, number> {
-  const visitedAt = new Map<string, number>([[startTownId, STARTING_MINUTES]]);
-  for (const entry of snapshot.travelLog) {
-    const previous = visitedAt.get(entry.toId);
-    if (previous === undefined || entry.arrivedAt < previous) {
-      visitedAt.set(entry.toId, entry.arrivedAt);
-    }
-  }
-  return visitedAt;
-}
-
 function assertSnapshotVisitedTownTravelProof(
   snapshot: OverworldSessionSnapshot,
-  startTownId: string,
-): Map<string, number> {
-  const visitedAt = snapshotTownVisitMinutes(snapshot, startTownId);
+  travelTimeline: OverworldTravelTimelineIndex,
+): ReadonlyMap<string, number> {
+  const visitedAt = travelTimeline.townVisitMinutes;
   const visitedTownIds = new Set(snapshot.visitedIds);
   for (const townId of snapshot.visitedIds) {
     if (!visitedAt.has(townId)) {
@@ -1475,9 +1498,10 @@ function assertSnapshotVisitedTownTravelProof(
 function assertSnapshotTravelPathContinuity(
   snapshot: OverworldSessionSnapshot,
   startTownId: string,
+  travelTimeline: OverworldTravelTimelineIndex,
 ): void {
   let currentTownId = startTownId;
-  for (const entry of [...snapshot.travelLog].reverse()) {
+  for (const entry of travelTimeline.oldestFirst) {
     if (entry.fromId !== currentTownId) {
       throw new Error(
         `Overworld session snapshot travel log is not contiguous at road "${entry.edgeId}".`,
@@ -2806,17 +2830,10 @@ export class OverworldSession {
     }
 
     const indexes = this.snapshotManifestIndex;
-    const travelLogArrivals = new Set(
-      snapshot.travelLog.map((entry) => `${entry.edgeId}@${entry.arrivedAt}`),
-    );
-    const travelLogTownByArrival = new Map(
-      snapshot.travelLog.map((entry) => [
-        `${entry.edgeId}@${entry.arrivedAt}`,
-        indexes.townNameForSource(entry.toId),
-      ]),
-    );
-    const travelLogByArrival = new Map(
-      snapshot.travelLog.map((entry) => [`${entry.edgeId}@${entry.arrivedAt}`, entry]),
+    const travelTimeline = snapshotTravelTimelineIndex(
+      snapshot,
+      indexes.townNameForSource,
+      this.world.start,
     );
     let restoredPendingRoadEncounter: OverworldPendingRoadEncounter | null = null;
 
@@ -2853,10 +2870,15 @@ export class OverworldSession {
     assertUniqueTupleKeys("renown region", snapshot.regionRenown);
     const journalTimeline = assertSnapshotTimeline(snapshot, {
       ...indexes,
-      travelLogArrivals,
-      travelLogTownByArrival,
+      travelLogArrivals: travelTimeline.arrivals,
+      travelLogTownByArrival: travelTimeline.townByArrival,
     });
-    const roadJournal = roadJournalResolutionIndex(snapshot, indexes, journalTimeline);
+    const roadJournal = roadJournalResolutionIndex(
+      snapshot,
+      indexes,
+      journalTimeline,
+      travelTimeline,
+    );
     const serviceJournal = serviceJournalReplayIndex(snapshot, journalTimeline);
 
     if (!snapshot.discoveredIds.includes(snapshot.currentId)) {
@@ -2867,8 +2889,8 @@ export class OverworldSession {
     }
     const discoveredTownIds = new Set(snapshot.discoveredIds);
     const visitedTownIds = new Set(snapshot.visitedIds);
-    const townVisitMinutes = assertSnapshotVisitedTownTravelProof(snapshot, this.world.start);
-    assertSnapshotTravelPathContinuity(snapshot, this.world.start);
+    const townVisitMinutes = assertSnapshotVisitedTownTravelProof(snapshot, travelTimeline);
+    assertSnapshotTravelPathContinuity(snapshot, this.world.start, travelTimeline);
     assertSnapshotDiscoveredTownFrontier(snapshot, this.world, visitedTownIds);
     const discoveredAreaIds = new Set(snapshot.discoveredAreaIds);
     const discoveredJobIds = new Set(snapshot.discoveredJobIds);
@@ -2902,7 +2924,7 @@ export class OverworldSession {
       snapshot,
       {
         ...indexes,
-        travelLogByArrival,
+        travelLogByArrival: travelTimeline.byArrival,
       },
       roadJournal,
     );
