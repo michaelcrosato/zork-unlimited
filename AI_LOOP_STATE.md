@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 264 -->
+<!-- historical_cycle_count: 265 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - direct_overworld_full_view_renown_record
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: full overworld views now serialize region renown through a sorted direct-key record helper.
+- Loop effect: repeated full overworld reads avoid `Object.fromEntries` and sorted entry-tuple reconstruction while preserving stable region ordering.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over direct full-view renown records.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - direct_mcp_compact_rpg_observation_packing
 

@@ -540,6 +540,13 @@ function sortedNumberMap(values: Map<string, number>): [string, number][] {
   return [...values.entries()].sort(([left], [right]) => left.localeCompare(right));
 }
 
+function sortedNumberRecord(values: Map<string, number>): Record<string, number> {
+  const record: Record<string, number> = {};
+  const keys = [...values.keys()].sort();
+  for (const key of keys) record[key] = values.get(key)!;
+  return record;
+}
+
 function assertUnique(label: string, values: readonly string[]): Set<string> {
   const seen = new Set<string>();
   for (const value of values) {
@@ -4027,9 +4034,7 @@ export class OverworldSession {
     ) {
       travelLog.push(compactTravelLogEntry(this.travelLog[index]!));
     }
-    const renown = [...this.regionRenown.entries()].sort(([left], [right]) =>
-      left.localeCompare(right),
-    );
+    const renown = sortedNumberMap(this.regionRenown);
     const completedArcs = sortedIdList(this.completedRegionalArcIds);
     const roads: OverworldCompactRoad[] = [];
     for (const exit of exits) {
@@ -4188,7 +4193,7 @@ export class OverworldSession {
       completedQuestIds: [...this.completedQuestIds].sort(),
       exploredSiteIds: [...this.exploredSiteIds].sort(),
       resolvedEventIds: [...this.resolvedEventIds].sort(),
-      regionRenown: Object.fromEntries([...this.regionRenown.entries()].sort()),
+      regionRenown: sortedNumberRecord(this.regionRenown),
       regionalArcs: this.regionalArcProgressForView(),
       completedRegionalArcIds: [...this.completedRegionalArcIds].sort(),
       pendingRoadEncounter: this.pendingRoadEncounter,
