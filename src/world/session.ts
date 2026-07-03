@@ -3218,7 +3218,7 @@ export class OverworldSession {
       this.currentAreaByTown.set(townId, areaId);
     }
     this.replaceTravelLogEntries(snapshot.travelLog, indexes.edgesById);
-    this.replaceJournalEntries(cloneJournalEntries(snapshot.journalEntries));
+    this.replaceJournalEntries(snapshot.journalEntries);
     replaceStringSet(this.resolvedEventIds, snapshot.resolvedEventIds);
     this.rebuildResolvedEventHomeIds();
     replaceStringSet(this.discoveredAreaIds, snapshot.discoveredAreaIds);
@@ -3376,10 +3376,14 @@ export class OverworldSession {
     return recorded;
   }
 
-  private replaceJournalEntries(entries: OverworldJournalEntry[]): void {
-    this.journalEntries.splice(0, this.journalEntries.length, ...entries);
+  private replaceJournalEntries(entries: readonly OverworldJournalEntry[]): void {
+    this.journalEntries.length = 0;
     this.journalEntriesById.clear();
-    for (const entry of entries) this.journalEntriesById.set(entry.id, entry);
+    for (const entry of entries) {
+      const restored = { ...entry };
+      this.journalEntries.push(restored);
+      this.journalEntriesById.set(restored.id, restored);
+    }
   }
 
   private addJournalEntry(entry: OverworldJournalEntry): void {

@@ -258,6 +258,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Overworld snapshot restore repopulates the live travel log with a direct
   validated-entry loop, avoiding an intermediate restored travel array before
   assignment.
+- Overworld snapshot restore repopulates live journal entries and the journal-id
+  index in one direct clone-and-index pass, avoiding an intermediate cloned
+  journal array plus spread assignment.
 - Compact overworld id payload build and clone use the fixed compact-id key
   order directly, avoiding `Object.entries`/`fromEntries` remapping on compact
   context cache rebuilds and repeated reads.
