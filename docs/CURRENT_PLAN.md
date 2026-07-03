@@ -181,6 +181,9 @@ Make discovered overworld quest leads start real RPG sessions.
   across the discovered town frontier.
 - Overworld sessions cache regional arc progress until mutation, so repeated full
   overworld reads do not rescan resolved events and rebuild arc progress rows.
+- Full overworld route-option and regional-arc view projections now clone/build
+  rows with direct loops, avoiding route clone maps, regional arc progress maps,
+  and resolved-anchor filters on repeated full reads.
 - Overworld sessions cache full observation shells until mutation, so repeated
   full overworld reads reuse local lists, id arrays, route rows, regional arcs,
   and travel state while preserving clone-isolated returns.

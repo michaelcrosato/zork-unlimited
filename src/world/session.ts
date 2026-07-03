@@ -3835,7 +3835,9 @@ export class OverworldSession {
   }
 
   private routeOptionsForView(): OverworldSessionRoutePlan[] {
-    return this.discoveredRouteOptions().map((plan) => this.cloneRouteOption(plan));
+    const options: OverworldSessionRoutePlan[] = [];
+    for (const plan of this.discoveredRouteOptions()) options.push(this.cloneRouteOption(plan));
+    return options;
   }
 
   private cloneRouteOption(plan: OverworldSessionRoutePlan): OverworldSessionRoutePlan {
@@ -3857,6 +3859,10 @@ export class OverworldSession {
   private progressForArc(arc: OverworldRegionalArc): OverworldRegionalArcProgress {
     const resolvedAnchorIds = this.resolvedAnchorTownIdsForArc(arc);
     const anchorTowns = this.regionalArcAnchorTownsById.get(arc.id) ?? [];
+    const resolvedAnchorTowns: OverworldNode[] = [];
+    for (const town of anchorTowns) {
+      if (resolvedAnchorIds.has(town.id)) resolvedAnchorTowns.push(town);
+    }
     return {
       id: arc.id,
       region: arc.region,
@@ -3865,7 +3871,7 @@ export class OverworldSession {
       requiredResolutions: arc.required_resolutions,
       resolvedInRegion: resolvedAnchorIds.size,
       anchorTowns,
-      resolvedAnchorTowns: anchorTowns.filter((town) => resolvedAnchorIds.has(town.id)),
+      resolvedAnchorTowns,
       completed: this.completedRegionalArcIds.has(arc.id),
       reward: arc.reward,
     };
@@ -3878,7 +3884,11 @@ export class OverworldSession {
   }
 
   private regionalArcProgressForView(): OverworldRegionalArcProgress[] {
-    return this.cachedRegionalArcProgress().map((arc) => this.cloneRegionalArcProgress(arc));
+    const progress: OverworldRegionalArcProgress[] = [];
+    for (const arc of this.cachedRegionalArcProgress()) {
+      progress.push(this.cloneRegionalArcProgress(arc));
+    }
+    return progress;
   }
 
   private cloneRegionalArcProgress(
@@ -3893,14 +3903,15 @@ export class OverworldSession {
 
   private buildRegionalArcProgress(): OverworldRegionalArcProgress[] {
     const currentRegion = this.currentNode().region;
-    return this.world.regional_arcs
-      .map((arc) => this.progressForArc(arc))
-      .sort(
-        (a, b) =>
-          Number(b.region === currentRegion) - Number(a.region === currentRegion) ||
-          Number(a.completed) - Number(b.completed) ||
-          a.region.localeCompare(b.region),
-      );
+    const progress: OverworldRegionalArcProgress[] = [];
+    for (const arc of this.world.regional_arcs) progress.push(this.progressForArc(arc));
+    progress.sort(
+      (a, b) =>
+        Number(b.region === currentRegion) - Number(a.region === currentRegion) ||
+        Number(a.completed) - Number(b.completed) ||
+        a.region.localeCompare(b.region),
+    );
+    return progress;
   }
 
   private checkRegionalArcCompletion(region: string): void {

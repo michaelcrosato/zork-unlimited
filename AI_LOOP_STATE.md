@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 266 -->
+<!-- historical_cycle_count: 267 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - direct_overworld_route_arc_view_projection
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: full overworld route-option and regional-arc view projections now clone/build rows through direct loops.
+- Loop effect: repeated full overworld reads avoid route clone maps, regional arc progress maps, and resolved-anchor filters while preserving sort order and clone isolation.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over direct route/arc projection.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - direct_overworld_snapshot_clone_packing
 
