@@ -395,6 +395,9 @@ Make discovered overworld quest leads start real RPG sessions.
   travel-timeline indexes so restore validators reuse parsed `recordedAt`,
   journal progress ids, travel arrival maps, arrived town ids, visit minutes, and
   oldest-first travel order instead of recomputing them across proof passes.
+- Snapshot road-journal indexing now derives required road-resolution keys from
+  the travel timeline, so road coverage checks and resource replay consume
+  validated travel rows instead of rescanning raw snapshot travel logs.
 - Compact overworld context now carries capped id-only recent travel tuples so
   agents do not need full observations to recover route history.
 - Compact overworld context now caps global progress id arrays and exposes

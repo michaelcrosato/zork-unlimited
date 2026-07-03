@@ -593,6 +593,7 @@ type OverworldRoadJournalResolutionEntry = {
 type OverworldRoadJournalResolutionIndex = {
   byKey: ReadonlyMap<string, OverworldRoadJournalResolutionEntry>;
   entries: readonly OverworldRoadJournalResolutionEntry[];
+  requiredKeys: ReadonlySet<string>;
 };
 
 type OverworldServiceJournalReplayEntry = {
@@ -1297,15 +1298,24 @@ function roadJournalResolutionIndex(
   sources: OverworldResourceReplayIndex,
   journalTimeline: OverworldJournalTimelineIndex,
   travelTimeline: OverworldTravelTimelineIndex,
+  pendingRoadEncounter: OverworldPendingRoadEncounterSnapshot | null,
 ): OverworldRoadJournalResolutionIndex {
   const byKey = new Map<string, OverworldRoadJournalResolutionEntry>();
+  const latestTravel = travelTimeline.oldestFirst[travelTimeline.oldestFirst.length - 1];
   const nextTravelArrivalByKey = new Map<string, number>();
-  for (let index = 0; index < travelTimeline.oldestFirst.length - 1; index += 1) {
+  const pendingRoadKey =
+    pendingRoadEncounter && latestTravel?.edgeId === pendingRoadEncounter.edgeId
+      ? travelResourceKey(latestTravel)
+      : null;
+  const requiredRoadResolutionKeys = new Set<string>();
+  for (let index = 0; index < travelTimeline.oldestFirst.length; index += 1) {
     const current = travelTimeline.oldestFirst[index]!;
-    nextTravelArrivalByKey.set(
-      travelResourceKey(current),
-      travelTimeline.oldestFirst[index + 1]!.arrivedAt,
-    );
+    const key = travelResourceKey(current);
+    const next = travelTimeline.oldestFirst[index + 1];
+    if (next) nextTravelArrivalByKey.set(key, next.arrivedAt);
+    if (sources.roadEventsByEdgeId.has(current.edgeId) && key !== pendingRoadKey) {
+      requiredRoadResolutionKeys.add(key);
+    }
   }
 
   for (const resolution of journalTimeline.roadJournalEntries) {
@@ -1328,23 +1338,17 @@ function roadJournalResolutionIndex(
     byKey.set(resolution.key, resolution);
   }
 
-  return { byKey, entries: journalTimeline.roadJournalEntries };
+  return {
+    byKey,
+    entries: journalTimeline.roadJournalEntries,
+    requiredKeys: requiredRoadResolutionKeys,
+  };
 }
 
 function assertSnapshotRoadResolutionCoverage(
-  snapshot: OverworldSessionSnapshot,
-  sources: OverworldResourceReplayIndex,
   roadJournal: OverworldRoadJournalResolutionIndex,
 ): void {
-  const latestTravel = snapshot.travelLog[0];
-  const pendingRoadKey =
-    snapshot.pendingRoadEncounter && latestTravel?.edgeId === snapshot.pendingRoadEncounter.edgeId
-      ? travelResourceKey(latestTravel)
-      : null;
-
-  for (const entry of snapshot.travelLog) {
-    const key = travelResourceKey(entry);
-    if (!sources.roadEventsByEdgeId.has(entry.edgeId) || key === pendingRoadKey) continue;
+  for (const key of roadJournal.requiredKeys) {
     if (!roadJournal.byKey.has(key)) {
       throw new Error(
         `Overworld session snapshot road encounter "${key}" is missing a journal resolution.`,
@@ -1356,11 +1360,12 @@ function assertSnapshotRoadResolutionCoverage(
 function assertSnapshotResourceReplay(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldResourceReplayIndex,
+  travelTimeline: OverworldTravelTimelineIndex,
   roadJournal: OverworldRoadJournalResolutionIndex,
   serviceJournal: OverworldServiceJournalReplayIndex,
   localActionJournal: OverworldLocalActionJournalReplayIndex,
 ): void {
-  assertSnapshotRoadResolutionCoverage(snapshot, sources, roadJournal);
+  assertSnapshotRoadResolutionCoverage(roadJournal);
   const replayEvents: (
     | { kind: "travel"; recordedAt: number; entry: TravelLogEntrySnapshot }
     | { kind: "road"; recordedAt: number; resolution: OverworldRoadJournalResolutionEntry }
@@ -1372,7 +1377,7 @@ function assertSnapshotResourceReplay(
         entry: OverworldJournalEntry;
       }
   )[] = [];
-  for (const entry of snapshot.travelLog) {
+  for (const entry of travelTimeline.oldestFirst) {
     replayEvents.push({ kind: "travel", recordedAt: entry.arrivedAt, entry });
   }
   for (const resolution of roadJournal.entries) {
@@ -2924,7 +2929,12 @@ export class OverworldSession {
       travelLogArrivals: travelTimeline.arrivals,
       travelLogTownByArrival: travelTimeline.townByArrival,
     });
-    const roadJournal = roadJournalResolutionIndex(indexes, journalTimeline, travelTimeline);
+    const roadJournal = roadJournalResolutionIndex(
+      indexes,
+      journalTimeline,
+      travelTimeline,
+      snapshot.pendingRoadEncounter,
+    );
     const serviceJournal = journalTimeline.serviceJournal;
 
     if (!discoveredTownIds.has(snapshot.currentId)) {
@@ -3072,6 +3082,7 @@ export class OverworldSession {
     assertSnapshotResourceReplay(
       snapshot,
       indexes,
+      travelTimeline,
       roadJournal,
       serviceJournal,
       localActionJournal,
