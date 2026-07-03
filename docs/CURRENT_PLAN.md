@@ -255,6 +255,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Overworld snapshot exports use typed shallow save-state clones, preserving
   nested array and pending-road isolation without JSON serializing whole
   snapshots.
+- Overworld snapshot restore repopulates the live travel log with a direct
+  validated-entry loop, avoiding an intermediate restored travel array before
+  assignment.
 - Compact overworld id payload build and clone use the fixed compact-id key
   order directly, avoiding `Object.entries`/`fromEntries` remapping on compact
   context cache rebuilds and repeated reads.

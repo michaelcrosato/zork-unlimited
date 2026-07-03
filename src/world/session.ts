@@ -3217,11 +3217,7 @@ export class OverworldSession {
     for (const [townId, areaId] of currentAreaByTown) {
       this.currentAreaByTown.set(townId, areaId);
     }
-    this.travelLog.splice(
-      0,
-      this.travelLog.length,
-      ...snapshot.travelLog.map((entry) => this.restoreTravelLogEntry(entry, indexes.edgesById)),
-    );
+    this.replaceTravelLogEntries(snapshot.travelLog, indexes.edgesById);
     this.replaceJournalEntries(cloneJournalEntries(snapshot.journalEntries));
     replaceStringSet(this.resolvedEventIds, snapshot.resolvedEventIds);
     this.rebuildResolvedEventHomeIds();
@@ -3281,6 +3277,14 @@ export class OverworldSession {
       fatigueAfter: entry.fatigueAfter,
       roadEvent: this.roadEventFor(entry.edgeId),
     };
+  }
+
+  private replaceTravelLogEntries(
+    entries: readonly TravelLogEntrySnapshot[],
+    edgesById: ReadonlyMap<string, OverworldEdge>,
+  ): void {
+    this.travelLog.length = 0;
+    for (const entry of entries) this.travelLog.push(this.restoreTravelLogEntry(entry, edgesById));
   }
 
   private rebuildResolvedEventHomeIds(): void {

@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 253 -->
+<!-- historical_cycle_count: 254 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - direct_overworld_restore_travel_log_assignment
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: overworld snapshot restore now repopulates the live travel log with a direct validated-entry loop instead of `map` plus spread.
+- Loop effect: restore/load avoids a full intermediate restored travel array while preserving travel-row validation and runtime route decoration.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over direct travel-log restore assignment.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - fixed_key_compact_overworld_id_payloads
 
