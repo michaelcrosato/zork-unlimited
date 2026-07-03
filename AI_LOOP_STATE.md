@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 241 -->
+<!-- historical_cycle_count: 242 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - folded_overworld_restore_local_actions_into_timeline
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: snapshot timeline validation now records local-action journal rows while validating journal ids and timestamps.
+- Loop effect: restore/load local-action proofing consumes filtered local-action entries from the single journal timeline index instead of scanning all journal entries again.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over the folded local-action replay path.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - folded_overworld_restore_road_replay_into_timeline
 

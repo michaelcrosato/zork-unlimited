@@ -554,6 +554,7 @@ type OverworldJournalTimelineSourceIndex = OverworldJournalSourceIndex &
 
 type OverworldJournalTimelineIndex = {
   eventResolutionProofs: OverworldEventResolutionJournalIndex;
+  localActionEntries: readonly OverworldLocalActionJournalTimelineEntry[];
   progressSources: OverworldProgressJournalSourceIndex;
   recordedAtById: ReadonlyMap<string, number>;
   roadJournalEntries: readonly OverworldRoadJournalResolutionEntry[];
@@ -740,6 +741,11 @@ type OverworldLocalActionJournalReplayEntry = {
   source: OverworldLocalJournalSource;
   recordedAt: number;
   duration: number | null;
+};
+
+type OverworldLocalActionJournalTimelineEntry = {
+  entry: OverworldJournalEntry;
+  recordedAt: number;
 };
 
 type OverworldLocalActionJournalReplayIndex = {
@@ -1097,6 +1103,26 @@ function recordRoadJournalResolution(
   });
 }
 
+function recordLocalActionJournalEntry(
+  entries: OverworldLocalActionJournalTimelineEntry[],
+  entry: OverworldJournalEntry,
+  recordedAt: number,
+): void {
+  switch (entry.kind) {
+    case "area":
+    case "contact":
+    case "event":
+    case "job":
+    case "poi":
+    case "resolution":
+    case "site":
+      entries.push({ entry, recordedAt });
+      return;
+    default:
+      return;
+  }
+}
+
 function assertSnapshotTimeline(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldJournalTimelineSourceIndex,
@@ -1108,6 +1134,7 @@ function assertSnapshotTimeline(
 
   let previousRecordedAt = Number.POSITIVE_INFINITY;
   const progressSources = emptyProgressJournalSourceIndex();
+  const localActionEntries: OverworldLocalActionJournalTimelineEntry[] = [];
   const recordedAtById = new Map<string, number>();
   const roadJournalEntries: OverworldRoadJournalResolutionEntry[] = [];
   const serviceReplayEntries: OverworldServiceJournalReplayEntry[] = [];
@@ -1129,6 +1156,7 @@ function assertSnapshotTimeline(
     recordedAtById.set(entry.id, recordedAt);
     recordProgressJournalSource(progressSources, entry);
     recordEventResolutionJournalProof(eventResolutionProofs, sources, entry, recordedAt);
+    recordLocalActionJournalEntry(localActionEntries, entry, recordedAt);
     recordRoadJournalResolution(roadJournalEntries, entry, recordedAt);
     recordServiceJournalReplay(serviceReplayEntries, entry, recordedAt);
     previousRecordedAt = recordedAt;
@@ -1136,6 +1164,7 @@ function assertSnapshotTimeline(
 
   return {
     eventResolutionProofs,
+    localActionEntries,
     progressSources,
     recordedAtById,
     roadJournalEntries,
@@ -1987,19 +2016,6 @@ function assertSnapshotDiscoveryLocality(
   }
 }
 
-function journalRecordedAt(
-  journalTimeline: OverworldJournalTimelineIndex,
-  entry: OverworldJournalEntry,
-): number {
-  const recordedAt = journalTimeline.recordedAtById.get(entry.id);
-  if (recordedAt === undefined) {
-    throw new Error(
-      `Overworld session snapshot journal entry "${entry.id}" is missing from the timeline index.`,
-    );
-  }
-  return recordedAt;
-}
-
 function journalSourceId(entry: OverworldJournalEntry, prefix: string): string | null {
   return entry.id.startsWith(prefix) ? entry.id.slice(prefix.length) : null;
 }
@@ -2099,7 +2115,6 @@ function localJournalSource(
 }
 
 function localActionJournalReplayIndex(
-  snapshot: OverworldSessionSnapshot,
   sources: OverworldLocalActionJournalReachabilityIndex,
   journalTimeline: OverworldJournalTimelineIndex,
 ): OverworldLocalActionJournalReplayIndex {
@@ -2107,13 +2122,13 @@ function localActionJournalReplayIndex(
   const localActionCountByTown = new Map<string, number>();
   const localActionCountByArea = new Map<string, number>();
 
-  for (const entry of snapshot.journalEntries) {
+  for (const { entry, recordedAt } of journalTimeline.localActionEntries) {
     const source = localJournalSource(entry, sources);
     if (!source) continue;
     entries.push({
       entry,
       source,
-      recordedAt: journalRecordedAt(journalTimeline, entry),
+      recordedAt,
       duration: localJournalActionDuration(entry, sources),
     });
     incrementCount(localActionCountByTown, source.home);
@@ -2965,7 +2980,6 @@ export class OverworldSession {
       visitedTownIds,
     };
     const localActionJournal = localActionJournalReplayIndex(
-      snapshot,
       localActionJournalSources,
       journalTimeline,
     );
