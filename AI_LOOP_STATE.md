@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 267 -->
+<!-- historical_cycle_count: 268 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - direct_overworld_local_action_replay_sets
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: snapshot local-action replay proofs now build discovered area/job/site sets and area counts with direct loops.
+- Loop effect: restore validation avoids `slice`/`map`/`filter` arrays while preserving replay limits for discovered local action state.
+- Guard: focused typecheck plus snapshot integrity and MCP tool tests passed over direct local-action replay proof sets.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - direct_overworld_route_arc_view_projection
 

@@ -2263,11 +2263,12 @@ function replayedDiscoveredAreaIdsBeforeLocalAction(
   priorLocalActionCount: number,
 ): ReadonlySet<string> {
   const localAreas = indexedList(areasByTown, townId);
-  return new Set(
-    localAreas
-      .slice(0, Math.min(localAreas.length, 1 + priorLocalActionCount))
-      .map((area) => area.id),
-  );
+  const discovered = new Set<string>();
+  const limit = Math.min(localAreas.length, 1 + priorLocalActionCount);
+  for (let index = 0; index < limit; index += 1) {
+    discovered.add(localAreas[index]!.id);
+  }
+  return discovered;
 }
 
 function replayedDiscoveredJobIdsBeforeLocalAction(
@@ -2280,12 +2281,14 @@ function replayedDiscoveredJobIdsBeforeLocalAction(
     townId,
     priorLocalActionCount,
   );
-  const visibleJobs = indexedList(sources.jobsByTown, townId).filter((job) =>
-    discoveredAreaIds.has(job.area),
-  );
-  return new Set(
-    visibleJobs.slice(0, Math.min(priorLocalActionCount, visibleJobs.length)).map((job) => job.id),
-  );
+  const discovered = new Set<string>();
+  if (priorLocalActionCount <= 0) return discovered;
+  for (const job of indexedList(sources.jobsByTown, townId)) {
+    if (!discoveredAreaIds.has(job.area)) continue;
+    discovered.add(job.id);
+    if (discovered.size >= priorLocalActionCount) break;
+  }
+  return discovered;
 }
 
 function replayedDiscoveredSiteIdsBeforeLocalAction(
@@ -2294,9 +2297,12 @@ function replayedDiscoveredSiteIdsBeforeLocalAction(
   priorAreaLocalActionCount: number,
 ): ReadonlySet<string> {
   const sites = indexedList(sitesByArea, areaId);
-  return new Set(
-    sites.slice(0, Math.min(priorAreaLocalActionCount, sites.length)).map((site) => site.id),
-  );
+  const discovered = new Set<string>();
+  const limit = Math.min(priorAreaLocalActionCount, sites.length);
+  for (let index = 0; index < limit; index += 1) {
+    discovered.add(sites[index]!.id);
+  }
+  return discovered;
 }
 
 function assertSnapshotLocalActionDiscoveryChronology(
@@ -2387,9 +2393,10 @@ function assertSnapshotDiscoveredAreaCountReplay(
             localAreas.length,
             1 + (localActionJournal.localActionCountByTown.get(townId) ?? 0),
           );
-    const actualDiscoveredCount = localAreas.filter((area) =>
-      sources.discoveredAreaIds.has(area.id),
-    ).length;
+    let actualDiscoveredCount = 0;
+    for (const area of localAreas) {
+      if (sources.discoveredAreaIds.has(area.id)) actualDiscoveredCount += 1;
+    }
     if (actualDiscoveredCount !== expectedDiscoveredCount) {
       throw new Error(
         `Overworld session snapshot discovered area count in town "${townId}" does not match local action replay.`,
