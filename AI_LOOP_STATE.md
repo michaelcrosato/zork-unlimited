@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 265 -->
+<!-- historical_cycle_count: 266 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - direct_overworld_snapshot_clone_packing
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: overworld snapshot clone/export helpers now project journal entries, travel logs, and tuple state through direct loops.
+- Loop effect: repeated snapshot reads and hash rebuilds avoid clone `map` chains while preserving clone isolation and stable serialized payload shape.
+- Guard: focused typecheck plus snapshot integrity and MCP tool tests passed over direct snapshot clone/export helpers.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - direct_overworld_full_view_renown_record
 

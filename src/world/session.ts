@@ -468,21 +468,29 @@ function travelCondition(fatigue: number, supplies: number): string {
 }
 
 function cloneJournalEntries(entries: readonly OverworldJournalEntry[]): OverworldJournalEntry[] {
-  return entries.map((entry) => ({ ...entry }));
+  const clones: OverworldJournalEntry[] = [];
+  for (const entry of entries) clones.push({ ...entry });
+  return clones;
 }
 
 function cloneTravelLogSnapshots(
   entries: readonly TravelLogEntrySnapshot[],
 ): TravelLogEntrySnapshot[] {
-  return entries.map((entry) => ({ ...entry }));
+  const clones: TravelLogEntrySnapshot[] = [];
+  for (const entry of entries) clones.push({ ...entry });
+  return clones;
 }
 
 function cloneStringTuples(values: readonly (readonly [string, string])[]): [string, string][] {
-  return values.map(([left, right]) => [left, right]);
+  const clones: [string, string][] = [];
+  for (const [left, right] of values) clones.push([left, right]);
+  return clones;
 }
 
 function cloneNumberTuples(values: readonly (readonly [string, number])[]): [string, number][] {
-  return values.map(([left, right]) => [left, right]);
+  const clones: [string, number][] = [];
+  for (const [left, right] of values) clones.push([left, right]);
+  return clones;
 }
 
 function cloneOverworldSessionSnapshot(
@@ -526,6 +534,12 @@ function snapshotTravelLogEntry(entry: TravelLogEntry): TravelLogEntrySnapshot {
     fatigueGained: entry.fatigueGained,
     fatigueAfter: entry.fatigueAfter,
   };
+}
+
+function snapshotTravelLogEntries(entries: readonly TravelLogEntry[]): TravelLogEntrySnapshot[] {
+  const snapshots: TravelLogEntrySnapshot[] = [];
+  for (const entry of entries) snapshots.push(snapshotTravelLogEntry(entry));
+  return snapshots;
 }
 
 function sortedStringSet(values: Set<string>): string[] {
@@ -2975,7 +2989,7 @@ export class OverworldSession {
       discoveredIds: sortedStringSet(this.discoveredIds),
       visitedIds: sortedStringSet(this.visitedIds),
       currentAreaByTown: sortedStringMap(this.currentAreaByTown),
-      travelLog: this.travelLog.map(snapshotTravelLogEntry),
+      travelLog: snapshotTravelLogEntries(this.travelLog),
       journalEntries: cloneJournalEntries(this.journalEntries),
       resolvedEventIds: sortedStringSet(this.resolvedEventIds),
       discoveredAreaIds: sortedStringSet(this.discoveredAreaIds),
