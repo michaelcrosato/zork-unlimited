@@ -224,9 +224,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Snapshot restore road-journal validation now builds one parsed resolution index
   keyed by road arrival, so pending-road checks, road renown replay, and resource
   replay share road facts instead of reparsing road entries independently.
-- Snapshot restore service-journal replay now builds one parsed service action
-  index, so resource replay consumes rest/resupply facts without another full
-  journal scan.
+- Snapshot timeline validation now records parsed service-journal replay entries,
+  so resource replay consumes rest/resupply facts from the single validated
+  journal pass without another full journal scan.
 - Snapshot timeline validation now returns one recorded-time index plus
   event/regional-arc proof facts keyed by journal id/source locality, so road,
   service, local-action, event-resolution, and regional-arc restore proofs reuse

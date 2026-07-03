@@ -556,6 +556,7 @@ type OverworldJournalTimelineIndex = {
   eventResolutionProofs: OverworldEventResolutionJournalIndex;
   progressSources: OverworldProgressJournalSourceIndex;
   recordedAtById: ReadonlyMap<string, number>;
+  serviceJournal: OverworldServiceJournalReplayIndex;
 };
 
 type OverworldTravelTimelineIndex = {
@@ -1067,6 +1068,19 @@ function recordEventResolutionJournalProof(
   }
 }
 
+function recordServiceJournalReplay(
+  entries: OverworldServiceJournalReplayEntry[],
+  entry: OverworldJournalEntry,
+  recordedAt: number,
+): void {
+  if (entry.kind !== "service") return;
+  entries.push({
+    entry,
+    parsed: parseServiceJournalId(entry.id),
+    recordedAt,
+  });
+}
+
 function assertSnapshotTimeline(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldJournalTimelineSourceIndex,
@@ -1079,6 +1093,7 @@ function assertSnapshotTimeline(
   let previousRecordedAt = Number.POSITIVE_INFINITY;
   const progressSources = emptyProgressJournalSourceIndex();
   const recordedAtById = new Map<string, number>();
+  const serviceReplayEntries: OverworldServiceJournalReplayEntry[] = [];
   const eventResolutionProofs: MutableOverworldEventResolutionJournalIndex = {
     contactTimeByArea: new Map<string, number>(),
     recordedAtById,
@@ -1097,10 +1112,16 @@ function assertSnapshotTimeline(
     recordedAtById.set(entry.id, recordedAt);
     recordProgressJournalSource(progressSources, entry);
     recordEventResolutionJournalProof(eventResolutionProofs, sources, entry, recordedAt);
+    recordServiceJournalReplay(serviceReplayEntries, entry, recordedAt);
     previousRecordedAt = recordedAt;
   }
 
-  return { eventResolutionProofs, progressSources, recordedAtById };
+  return {
+    eventResolutionProofs,
+    progressSources,
+    recordedAtById,
+    serviceJournal: { entries: serviceReplayEntries },
+  };
 }
 
 function travelResourceKey(entry: TravelLogEntrySnapshot): string {
@@ -1268,24 +1289,6 @@ function roadJournalResolutionIndex(
   }
 
   return { byKey, entries };
-}
-
-function serviceJournalReplayIndex(
-  snapshot: OverworldSessionSnapshot,
-  journalTimeline: OverworldJournalTimelineIndex,
-): OverworldServiceJournalReplayIndex {
-  const entries: OverworldServiceJournalReplayEntry[] = [];
-
-  for (const entry of snapshot.journalEntries) {
-    if (entry.kind !== "service") continue;
-    entries.push({
-      entry,
-      parsed: parseServiceJournalId(entry.id),
-      recordedAt: journalRecordedAt(journalTimeline, entry),
-    });
-  }
-
-  return { entries };
 }
 
 function assertSnapshotRoadResolutionCoverage(
@@ -2902,7 +2905,7 @@ export class OverworldSession {
       journalTimeline,
       travelTimeline,
     );
-    const serviceJournal = serviceJournalReplayIndex(snapshot, journalTimeline);
+    const serviceJournal = journalTimeline.serviceJournal;
 
     if (!discoveredTownIds.has(snapshot.currentId)) {
       throw new Error("Overworld session snapshot current town is not discovered.");
