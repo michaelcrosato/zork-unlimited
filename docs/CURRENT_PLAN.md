@@ -210,6 +210,9 @@ Make discovered overworld quest leads start real RPG sessions.
   source-id, source-name, and region lookups through direct loops over existing
   session indexes, avoiding repeated mapped-array allocations across the large
   world manifest at start/restore.
+- Overworld session construction now uses direct keyed/id index loops for core
+  world lookup maps and nested route/action indexes, avoiding tuple arrays from
+  `new Map(array.map(...))` during start/restore.
 - Snapshot known-id validation now returns verified unique state-id sets, so
   current-town membership, subset checks, frontier proofing, and local proof inputs
   reuse validation state instead of rebuilding those sets later in restore.

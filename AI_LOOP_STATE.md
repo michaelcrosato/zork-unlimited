@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 256 -->
+<!-- historical_cycle_count: 257 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - direct_overworld_session_id_indexes
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: overworld session constructor now builds by-id, keyed road-event, and nested local route indexes with direct loops instead of `new Map(array.map(...))`.
+- Loop effect: session start/restore avoids tuple-array allocations for core world lookup maps while preserving stable id resolution for routes, local actions, and restore validators.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over direct constructor id indexes.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - direct_overworld_manifest_restore_indexes
 

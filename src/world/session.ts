@@ -2580,12 +2580,24 @@ function sortedIndex<T>(
   return index;
 }
 
+function keyedIndex<T>(values: readonly T[], keyFor: (value: T) => string): Map<string, T> {
+  const index = new Map<string, T>();
+  for (const value of values) index.set(keyFor(value), value);
+  return index;
+}
+
+function idIndex<T extends { id: string }>(values: readonly T[]): Map<string, T> {
+  return keyedIndex(values, (value) => value.id);
+}
+
 function nestedIdIndex<T extends { id: string }>(
   source: ReadonlyMap<string, readonly T[]>,
 ): Map<string, Map<string, T>> {
   const index = new Map<string, Map<string, T>>();
   for (const [ownerId, values] of source) {
-    index.set(ownerId, new Map(values.map((value) => [value.id, value])));
+    const ownerIndex = new Map<string, T>();
+    for (const value of values) ownerIndex.set(value.id, value);
+    index.set(ownerId, ownerIndex);
   }
   return index;
 }
@@ -2657,8 +2669,8 @@ export class OverworldSession {
     this.nodes = overworldNodesById(world);
     this.roadExitsByTown = this.indexRoadExits();
     this.roadExitsByTownAndId = nestedIdIndex(this.roadExitsByTown);
-    this.roadEventsByEdgeId = new Map(world.road_events.map((event) => [event.edge, event]));
-    this.areasById = new Map(world.areas.map((area) => [area.id, area]));
+    this.roadEventsByEdgeId = keyedIndex(world.road_events, (event) => event.edge);
+    this.areasById = idIndex(world.areas);
     this.areasByTown = sortedIndex(
       world.areas,
       (area) => area.home,
@@ -2666,7 +2678,7 @@ export class OverworldSession {
     );
     this.areaExitsByArea = this.indexAreaExits();
     this.areaExitsByAreaAndId = nestedIdIndex(this.areaExitsByArea);
-    this.poisById = new Map(world.points_of_interest.map((poi) => [poi.id, poi]));
+    this.poisById = idIndex(world.points_of_interest);
     this.poisByTown = sortedIndex(
       world.points_of_interest,
       (poi) => poi.home,
@@ -2677,7 +2689,7 @@ export class OverworldSession {
       (poi) => poi.area,
       (a, b) => a.title.localeCompare(b.title),
     );
-    this.charactersById = new Map(world.characters.map((character) => [character.id, character]));
+    this.charactersById = idIndex(world.characters);
     this.charactersByTown = sortedIndex(
       world.characters,
       (character) => character.home,
@@ -2698,15 +2710,15 @@ export class OverworldSession {
       (event) => event.area,
       (a, b) => b.intensity - a.intensity || a.title.localeCompare(b.title),
     );
-    this.localEventsById = new Map(world.local_events.map((event) => [event.id, event]));
-    this.jobsById = new Map(world.local_jobs.map((job) => [job.id, job]));
+    this.localEventsById = idIndex(world.local_events);
+    this.jobsById = idIndex(world.local_jobs);
     this.jobsByTown = sortedIndex(
       world.local_jobs,
       (job) => job.home,
       (a, b) =>
         a.difficulty - b.difficulty || a.minutes - b.minutes || a.title.localeCompare(b.title),
     );
-    this.sitesById = new Map(world.exploration_sites.map((site) => [site.id, site]));
+    this.sitesById = idIndex(world.exploration_sites);
     this.sitesByTown = sortedIndex(
       world.exploration_sites,
       (site) => site.nearest_town,
@@ -2717,7 +2729,7 @@ export class OverworldSession {
       (site) => site.area,
       (a, b) => b.danger - a.danger || a.title.localeCompare(b.title),
     );
-    this.questsById = new Map(world.quests.map((quest) => [quest.id, quest]));
+    this.questsById = idIndex(world.quests);
     this.questsByTown = sortedIndex(
       world.quests,
       (quest) => quest.home,
