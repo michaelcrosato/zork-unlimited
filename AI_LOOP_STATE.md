@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 261 -->
+<!-- historical_cycle_count: 262 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - direct_overworld_area_quest_visibility_filters
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: local area-exit, discovered-area, and quest visibility helpers now use direct loops for rows and hidden counts.
+- Loop effect: repeated compact/full overworld reads avoid intermediate local area/quest filter arrays while preserving indexed ordering and discovery gates.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over direct area/quest visibility projections.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - direct_overworld_current_area_action_filters
 

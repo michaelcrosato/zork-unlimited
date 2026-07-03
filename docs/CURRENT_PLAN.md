@@ -225,6 +225,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Current-area job/site view projections now use direct loops for discovered
   rows and hidden counts, avoiding intermediate local-action filter arrays on
   repeated compact/full overworld reads.
+- Area-exit, discovered-area, and quest visibility helpers now use direct loops
+  for rows and hidden counts, avoiding intermediate local area/quest filter
+  arrays on repeated compact/full overworld reads.
 - Snapshot known-id validation now returns verified unique state-id sets, so
   current-town membership, subset checks, frontier proofing, and local proof inputs
   reuse validation state instead of rebuilding those sets later in restore.

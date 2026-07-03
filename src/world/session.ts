@@ -3501,9 +3501,11 @@ export class OverworldSession {
   private visibleAreaExits(): OverworldAreaExit[] {
     const area = this.currentArea();
     if (!area) return [];
-    return (this.areaExitsByArea.get(area.id) ?? []).filter((exit) =>
-      this.discoveredAreaIds.has(exit.destination.id),
-    );
+    const exits: OverworldAreaExit[] = [];
+    for (const exit of this.areaExitsByArea.get(area.id) ?? []) {
+      if (this.discoveredAreaIds.has(exit.destination.id)) exits.push(exit);
+    }
+    return exits;
   }
 
   private areaExitFrom(areaId: string, routeId: string): OverworldAreaExit | null {
@@ -3511,11 +3513,19 @@ export class OverworldSession {
   }
 
   private discoveredAreasAt(nodeId: string): OverworldArea[] {
-    return this.localAreas(nodeId).filter((area) => this.discoveredAreaIds.has(area.id));
+    const areas: OverworldArea[] = [];
+    for (const area of this.localAreas(nodeId)) {
+      if (this.discoveredAreaIds.has(area.id)) areas.push(area);
+    }
+    return areas;
   }
 
   private hiddenAreaCountAt(nodeId: string): number {
-    return this.localAreas(nodeId).filter((area) => !this.discoveredAreaIds.has(area.id)).length;
+    let count = 0;
+    for (const area of this.localAreas(nodeId)) {
+      if (!this.discoveredAreaIds.has(area.id)) count += 1;
+    }
+    return count;
   }
 
   private currentAreaIdOrThrow(): string {
@@ -3615,14 +3625,19 @@ export class OverworldSession {
   }
 
   private discoveredQuestsAt(nodeId: string): OverworldQuestView[] {
-    return this.localQuests(nodeId)
-      .filter((quest) => this.discoveredQuestIds.has(quest.id))
-      .map(questView);
+    const quests: OverworldQuestView[] = [];
+    for (const quest of this.localQuests(nodeId)) {
+      if (this.discoveredQuestIds.has(quest.id)) quests.push(questView(quest));
+    }
+    return quests;
   }
 
   private hiddenQuestCountAt(nodeId: string): number {
-    return this.localQuests(nodeId).filter((quest) => !this.discoveredQuestIds.has(quest.id))
-      .length;
+    let count = 0;
+    for (const quest of this.localQuests(nodeId)) {
+      if (!this.discoveredQuestIds.has(quest.id)) count += 1;
+    }
+    return count;
   }
 
   private discoverNextSiteForTown(nodeId: string): OverworldExplorationSite[] {
