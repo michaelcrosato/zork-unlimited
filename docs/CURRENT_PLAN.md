@@ -194,6 +194,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Overworld sessions maintain a journal-entry id index across live mutation and
   snapshot restore, so repeat-action checks and event-resolution prerequisites
   avoid scanning long journal histories.
+- Overworld sessions keep direct local action source id indexes for POIs,
+  contacts, jobs, and exploration sites, so action entry points resolve stable
+  ids directly before applying current-town/current-area gates.
 - Overworld sessions index regional arcs by region, cache their anchor-town
   nodes, and maintain resolved event home ids, so event resolution and regional
   arc progress avoid rescanning all resolved events.

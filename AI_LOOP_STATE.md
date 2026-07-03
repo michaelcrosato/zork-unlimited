@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 223 -->
+<!-- historical_cycle_count: 224 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — indexed_overworld_local_action_sources
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: `OverworldSession` now keeps direct id indexes for POIs, contacts, jobs, and exploration sites, sharing them with snapshot restore validation.
+- Loop effect: local action entry points resolve stable ids directly and then apply current-town/current-area gates, avoiding repeated scans across town lists during agent play.
+- Guard: existing overworld MCP lifecycle and snapshot integrity tests cover local actions, quest handoff, event resolution, and restore validation over the refactored lookups.
+- VERIFY: focused checks and `npm run health` passed; final explicit `npm run validate` and `npm test` also passed before the health run.
 
 ### Cycle result — indexed_overworld_regional_arc_state
 
