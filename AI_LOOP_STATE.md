@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 249 -->
+<!-- historical_cycle_count: 250 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - bounded_overworld_restore_regional_arc_proofs
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: snapshot regional-arc restore proofing now derives resolved anchor counts and completion proof time in one bounded pass.
+- Loop effect: restore/load regional-arc checks avoid sorting all resolved anchor timestamps for every arc while preserving completion and journal timing validation.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over the bounded regional-arc proof path.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - indexed_overworld_restore_latest_travel
 

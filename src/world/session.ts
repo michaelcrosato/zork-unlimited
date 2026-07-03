@@ -2441,16 +2441,43 @@ function assertSnapshotEventResolutionProofs(
   }
 }
 
-function resolvedAnchorTimesForRegionalArc(
+type RegionalArcResolutionProof = {
+  completionProofAt: number;
+  resolvedCount: number;
+};
+
+function regionalArcResolutionProof(
   arc: OverworldRegionalArc,
   resolutionTimesByTown: ReadonlyMap<string, number>,
-): number[] {
-  const times: number[] = [];
+): RegionalArcResolutionProof {
+  const required = arc.required_resolutions;
+  const requiredResolutionTimes: number[] = [];
+  let resolvedCount = 0;
+
   for (const townId of arc.anchor_towns) {
     const resolvedAt = resolutionTimesByTown.get(townId);
-    if (resolvedAt !== undefined) times.push(resolvedAt);
+    if (resolvedAt === undefined) continue;
+
+    resolvedCount += 1;
+    if (required <= 0) continue;
+
+    let insertAt = requiredResolutionTimes.length;
+    while (insertAt > 0 && requiredResolutionTimes[insertAt - 1]! > resolvedAt) {
+      insertAt -= 1;
+    }
+    if (insertAt >= required) continue;
+
+    requiredResolutionTimes.splice(insertAt, 0, resolvedAt);
+    if (requiredResolutionTimes.length > required) requiredResolutionTimes.pop();
   }
-  return times.sort((left, right) => left - right);
+
+  return {
+    completionProofAt:
+      required > 0 && requiredResolutionTimes.length >= required
+        ? requiredResolutionTimes[required - 1]!
+        : STARTING_MINUTES,
+    resolvedCount,
+  };
 }
 
 function assertSnapshotRegionalArcCompletionProofs(
@@ -2459,11 +2486,8 @@ function assertSnapshotRegionalArcCompletionProofs(
   completedRegionalArcIds: ReadonlySet<string>,
 ): void {
   for (const arc of sources.regionalArcs) {
-    const resolvedAnchorTimes = resolvedAnchorTimesForRegionalArc(
-      arc,
-      journal.resolutionTimeByTown,
-    );
-    const hasRequiredResolutions = resolvedAnchorTimes.length >= arc.required_resolutions;
+    const resolutionProof = regionalArcResolutionProof(arc, journal.resolutionTimeByTown);
+    const hasRequiredResolutions = resolutionProof.resolvedCount >= arc.required_resolutions;
     const completed = completedRegionalArcIds.has(arc.id);
 
     if (completed && !hasRequiredResolutions) {
@@ -2480,10 +2504,7 @@ function assertSnapshotRegionalArcCompletionProofs(
 
     const arcRecordedAt = journal.recordedAtById.get(`arc:${arc.id}`);
     if (arcRecordedAt === undefined) continue;
-    const completionProofAt =
-      arc.required_resolutions > 0
-        ? resolvedAnchorTimes[arc.required_resolutions - 1]!
-        : STARTING_MINUTES;
+    const completionProofAt = resolutionProof.completionProofAt;
     if (arcRecordedAt < completionProofAt) {
       throw new Error(
         `Overworld session snapshot completed regional arc "${arc.id}" was recorded before enough anchor resolutions.`,
