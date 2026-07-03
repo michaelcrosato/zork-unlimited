@@ -547,6 +547,10 @@ type OverworldJournalSourceIndex = {
   travelLogTownByArrival: ReadonlyMap<string, string>;
 };
 
+type OverworldJournalTimelineIndex = {
+  recordedAtById: ReadonlyMap<string, number>;
+};
+
 type OverworldRenownSourceIndex = {
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   jobsById: ReadonlyMap<string, OverworldLocalJob>;
@@ -916,7 +920,7 @@ function assertSnapshotJournalSource(
 function assertSnapshotTimeline(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldJournalSourceIndex,
-): void {
+): OverworldJournalTimelineIndex {
   assertUnique(
     "journal entry id",
     snapshot.journalEntries.map((entry) => entry.id),
@@ -938,6 +942,7 @@ function assertSnapshotTimeline(
   }
 
   let previousRecordedAt = Number.POSITIVE_INFINITY;
+  const recordedAtById = new Map<string, number>();
   for (const entry of snapshot.journalEntries) {
     const recordedAt = parseTimeLabel(entry.recordedAt);
     assertSnapshotJournalSource(entry, recordedAt, sources);
@@ -947,8 +952,11 @@ function assertSnapshotTimeline(
     if (recordedAt > previousRecordedAt) {
       throw new Error("Overworld session snapshot journal must be newest-first.");
     }
+    recordedAtById.set(entry.id, recordedAt);
     previousRecordedAt = recordedAt;
   }
+
+  return { recordedAtById };
 }
 
 function travelResourceKey(entry: TravelLogEntrySnapshot): string {
@@ -1075,6 +1083,7 @@ function assertTravelResourceTransition(
 function roadJournalResolutionIndex(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldResourceReplayIndex,
+  journalTimeline: OverworldJournalTimelineIndex,
 ): OverworldRoadJournalResolutionIndex {
   const byKey = new Map<string, OverworldRoadJournalResolutionEntry>();
   const entries: OverworldRoadJournalResolutionEntry[] = [];
@@ -1103,7 +1112,7 @@ function roadJournalResolutionIndex(
       );
     }
     const nextTravelArrival = nextTravelArrivalByKey.get(key);
-    const recordedAt = journalEntryRecordedAt(entry);
+    const recordedAt = journalRecordedAt(journalTimeline, entry);
     if (nextTravelArrival !== undefined && recordedAt > nextTravelArrival) {
       throw new Error(
         `Overworld session snapshot road encounter "${key}" was resolved after subsequent travel.`,
@@ -1119,6 +1128,7 @@ function roadJournalResolutionIndex(
 
 function serviceJournalReplayIndex(
   snapshot: OverworldSessionSnapshot,
+  journalTimeline: OverworldJournalTimelineIndex,
 ): OverworldServiceJournalReplayIndex {
   const entries: OverworldServiceJournalReplayEntry[] = [];
 
@@ -1127,7 +1137,7 @@ function serviceJournalReplayIndex(
     entries.push({
       entry,
       parsed: parseServiceJournalId(entry.id),
-      recordedAt: journalEntryRecordedAt(entry),
+      recordedAt: journalRecordedAt(journalTimeline, entry),
     });
   }
 
@@ -1881,8 +1891,17 @@ function assertSnapshotDiscoveryLocality(
   }
 }
 
-function journalEntryRecordedAt(entry: OverworldJournalEntry): number {
-  return parseTimeLabel(entry.recordedAt);
+function journalRecordedAt(
+  journalTimeline: OverworldJournalTimelineIndex,
+  entry: OverworldJournalEntry,
+): number {
+  const recordedAt = journalTimeline.recordedAtById.get(entry.id);
+  if (recordedAt === undefined) {
+    throw new Error(
+      `Overworld session snapshot journal entry "${entry.id}" is missing from the timeline index.`,
+    );
+  }
+  return recordedAt;
 }
 
 function journalSourceId(entry: OverworldJournalEntry, prefix: string): string | null {
@@ -1986,6 +2005,7 @@ function localJournalSource(
 function localActionJournalReplayIndex(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldLocalActionJournalReachabilityIndex,
+  journalTimeline: OverworldJournalTimelineIndex,
 ): OverworldLocalActionJournalReplayIndex {
   const entries: OverworldLocalActionJournalReplayEntry[] = [];
   const localActionCountByTown = new Map<string, number>();
@@ -1997,7 +2017,7 @@ function localActionJournalReplayIndex(
     entries.push({
       entry,
       source,
-      recordedAt: journalEntryRecordedAt(entry),
+      recordedAt: journalRecordedAt(journalTimeline, entry),
       duration: localJournalActionDuration(entry, sources),
     });
     incrementCount(localActionCountByTown, source.home);
@@ -2275,6 +2295,7 @@ function assertSnapshotDiscoveredLocalSourceCountReplay(
 function eventResolutionJournalIndex(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldResolutionProofIndex,
+  journalTimeline: OverworldJournalTimelineIndex,
 ): OverworldEventResolutionJournalIndex {
   const journalById = new Map<string, OverworldJournalEntry>();
   const scoutTimeByArea = new Map<string, number>();
@@ -2282,7 +2303,7 @@ function eventResolutionJournalIndex(
 
   for (const entry of snapshot.journalEntries) {
     journalById.set(entry.id, entry);
-    const recordedAt = journalEntryRecordedAt(entry);
+    const recordedAt = journalRecordedAt(journalTimeline, entry);
     if (entry.kind === "poi") {
       const sourceId = journalSourceId(entry, "scout:");
       const poi = sourceId ? sources.poisById.get(sourceId) : undefined;
@@ -2302,14 +2323,15 @@ function eventResolutionJournalIndex(
 function assertSnapshotEventResolutionProofs(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldResolutionProofIndex,
+  journalTimeline: OverworldJournalTimelineIndex,
 ): void {
-  const journal = eventResolutionJournalIndex(snapshot, sources);
+  const journal = eventResolutionJournalIndex(snapshot, sources, journalTimeline);
   for (const eventId of snapshot.resolvedEventIds) {
     const event = sources.eventsById.get(eventId);
     if (!event) continue;
     const resolution = journal.journalById.get(`resolve:${eventId}`);
     if (!resolution) continue;
-    const resolvedAt = journalEntryRecordedAt(resolution);
+    const resolvedAt = journalRecordedAt(journalTimeline, resolution);
 
     const scoutAt = journal.scoutTimeByArea.get(event.area);
     if (scoutAt === undefined || scoutAt > resolvedAt) {
@@ -2326,7 +2348,7 @@ function assertSnapshotEventResolutionProofs(
     }
 
     const investigation = journal.journalById.get(`investigate:${eventId}`);
-    if (!investigation || journalEntryRecordedAt(investigation) > resolvedAt) {
+    if (!investigation || journalRecordedAt(journalTimeline, investigation) > resolvedAt) {
       throw new Error(
         `Overworld session snapshot resolved event "${eventId}" is missing an investigated event prerequisite.`,
       );
@@ -2338,6 +2360,7 @@ function earliestResolutionTimesByTown(
   snapshot: OverworldSessionSnapshot,
   eventsById: ReadonlyMap<string, OverworldLocalEvent>,
   journalById: ReadonlyMap<string, OverworldJournalEntry>,
+  journalTimeline: OverworldJournalTimelineIndex,
 ): Map<string, number> {
   const timesByTown = new Map<string, number>();
 
@@ -2346,7 +2369,7 @@ function earliestResolutionTimesByTown(
     if (!event) continue;
     const resolution = journalById.get(`resolve:${eventId}`);
     if (!resolution) continue;
-    recordEarliestTime(timesByTown, event.home, journalEntryRecordedAt(resolution));
+    recordEarliestTime(timesByTown, event.home, journalRecordedAt(journalTimeline, resolution));
   }
 
   return timesByTown;
@@ -2367,6 +2390,7 @@ function resolvedAnchorTimesForRegionalArc(
 function assertSnapshotRegionalArcCompletionProofs(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldRegionalArcCompletionIndex,
+  journalTimeline: OverworldJournalTimelineIndex,
 ): void {
   const completedRegionalArcIds = new Set(snapshot.completedRegionalArcIds);
   const journalById = new Map(snapshot.journalEntries.map((entry) => [entry.id, entry]));
@@ -2374,6 +2398,7 @@ function assertSnapshotRegionalArcCompletionProofs(
     snapshot,
     sources.eventsById,
     journalById,
+    journalTimeline,
   );
 
   for (const arc of sources.regionalArcs) {
@@ -2399,7 +2424,7 @@ function assertSnapshotRegionalArcCompletionProofs(
       arc.required_resolutions > 0
         ? resolvedAnchorTimes[arc.required_resolutions - 1]!
         : STARTING_MINUTES;
-    if (journalEntryRecordedAt(arcEntry) < completionProofAt) {
+    if (journalRecordedAt(journalTimeline, arcEntry) < completionProofAt) {
       throw new Error(
         `Overworld session snapshot completed regional arc "${arc.id}" was recorded before enough anchor resolutions.`,
       );
@@ -2826,13 +2851,13 @@ export class OverworldSession {
     assertKnownIds("completed regional arc id", snapshot.completedRegionalArcIds, indexes.arcIds);
     assertUniqueTupleKeys("area-map town", snapshot.currentAreaByTown);
     assertUniqueTupleKeys("renown region", snapshot.regionRenown);
-    assertSnapshotTimeline(snapshot, {
+    const journalTimeline = assertSnapshotTimeline(snapshot, {
       ...indexes,
       travelLogArrivals,
       travelLogTownByArrival,
     });
-    const roadJournal = roadJournalResolutionIndex(snapshot, indexes);
-    const serviceJournal = serviceJournalReplayIndex(snapshot);
+    const roadJournal = roadJournalResolutionIndex(snapshot, indexes, journalTimeline);
+    const serviceJournal = serviceJournalReplayIndex(snapshot, journalTimeline);
 
     if (!snapshot.discoveredIds.includes(snapshot.currentId)) {
       throw new Error("Overworld session snapshot current town is not discovered.");
@@ -2890,7 +2915,11 @@ export class OverworldSession {
       townVisitMinutes,
       visitedTownIds,
     };
-    const localActionJournal = localActionJournalReplayIndex(snapshot, localActionJournalSources);
+    const localActionJournal = localActionJournalReplayIndex(
+      snapshot,
+      localActionJournalSources,
+      journalTimeline,
+    );
     assertSnapshotDiscoveredAreaPrefix(snapshot, indexes.areasByTown, visitedTownIds);
     assertSnapshotDiscoveredLocalSourcePrefixes(
       snapshot,
@@ -2924,8 +2953,8 @@ export class OverworldSession {
     });
     assertSnapshotLocalActionJournalReachability(localActionJournal, localActionJournalSources);
     assertSnapshotLocalActionDiscoveryChronology(localActionJournal, localActionJournalSources);
-    assertSnapshotEventResolutionProofs(snapshot, indexes);
-    assertSnapshotRegionalArcCompletionProofs(snapshot, indexes);
+    assertSnapshotEventResolutionProofs(snapshot, indexes, journalTimeline);
+    assertSnapshotRegionalArcCompletionProofs(snapshot, indexes, journalTimeline);
     assertSnapshotDiscoveredLocalSourceCountReplay(
       snapshot,
       localActionJournalSources,

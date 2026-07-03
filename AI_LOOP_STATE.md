@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 232 -->
+<!-- historical_cycle_count: 233 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - indexed_overworld_restore_journal_times
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: snapshot timeline validation now returns a journal recorded-time index keyed by journal id.
+- Loop effect: road, service, local-action, event-resolution, and regional-arc restore proofs reuse validated timestamps instead of reparsing `recordedAt` labels.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over the shared timeline path.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - indexed_overworld_restore_service_journal
 
