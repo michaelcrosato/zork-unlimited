@@ -393,8 +393,8 @@ Make discovered overworld quest leads start real RPG sessions.
   rebuilding live session state.
 - Snapshot restore now builds shared journal-time, progress-source, and
   travel-timeline indexes so restore validators reuse parsed `recordedAt`,
-  journal progress ids, travel arrival maps, visit minutes, and oldest-first travel
-  order instead of recomputing them across proof passes.
+  journal progress ids, travel arrival maps, arrived town ids, visit minutes, and
+  oldest-first travel order instead of recomputing them across proof passes.
 - Compact overworld context now carries capped id-only recent travel tuples so
   agents do not need full observations to recover route history.
 - Compact overworld context now caps global progress id arrays and exposes

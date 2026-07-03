@@ -562,6 +562,7 @@ type OverworldJournalTimelineIndex = {
 
 type OverworldTravelTimelineIndex = {
   arrivals: ReadonlySet<string>;
+  arrivedTownIds: ReadonlySet<string>;
   byArrival: ReadonlyMap<string, TravelLogEntrySnapshot>;
   oldestFirst: readonly TravelLogEntrySnapshot[];
   townByArrival: ReadonlyMap<string, string>;
@@ -963,6 +964,7 @@ function snapshotTravelTimelineIndex(
   startTownId: string,
 ): OverworldTravelTimelineIndex {
   const arrivals = new Set<string>();
+  const arrivedTownIds = new Set<string>();
   const byArrival = new Map<string, TravelLogEntrySnapshot>();
   const oldestFirst: TravelLogEntrySnapshot[] = [];
   const townByArrival = new Map<string, string>();
@@ -981,6 +983,7 @@ function snapshotTravelTimelineIndex(
       throw new Error("Overworld session snapshot travel log must be newest-first.");
     }
     arrivals.add(key);
+    arrivedTownIds.add(entry.toId);
     byArrival.set(key, entry);
     oldestFirst.push(entry);
     townByArrival.set(key, townNameForSource(entry.toId));
@@ -994,6 +997,7 @@ function snapshotTravelTimelineIndex(
 
   return {
     arrivals,
+    arrivedTownIds,
     byArrival,
     oldestFirst,
     townByArrival,
@@ -1572,20 +1576,19 @@ function assertSnapshotProgressJournalBindings(
 }
 
 function assertSnapshotVisitedTownTravelProof(
-  snapshot: OverworldSessionSnapshot,
+  visitedTownIds: ReadonlySet<string>,
   travelTimeline: OverworldTravelTimelineIndex,
 ): ReadonlyMap<string, number> {
   const visitedAt = travelTimeline.townVisitMinutes;
-  const visitedTownIds = new Set(snapshot.visitedIds);
-  for (const townId of snapshot.visitedIds) {
+  for (const townId of visitedTownIds) {
     if (!visitedAt.has(townId)) {
       throw new Error(`Overworld session snapshot visited town "${townId}" has no travel arrival.`);
     }
   }
-  for (const entry of snapshot.travelLog) {
-    if (!visitedTownIds.has(entry.toId)) {
+  for (const townId of travelTimeline.arrivedTownIds) {
+    if (!visitedTownIds.has(townId)) {
       throw new Error(
-        `Overworld session snapshot travel arrival town "${entry.toId}" is missing from visited towns.`,
+        `Overworld session snapshot travel arrival town "${townId}" is missing from visited towns.`,
       );
     }
   }
@@ -2930,7 +2933,7 @@ export class OverworldSession {
     if (!visitedTownIds.has(snapshot.currentId)) {
       throw new Error("Overworld session snapshot current town is not visited.");
     }
-    const townVisitMinutes = assertSnapshotVisitedTownTravelProof(snapshot, travelTimeline);
+    const townVisitMinutes = assertSnapshotVisitedTownTravelProof(visitedTownIds, travelTimeline);
     assertSnapshotTravelPathContinuity(snapshot, this.world.start, travelTimeline);
     assertSnapshotDiscoveredTownFrontier(snapshot, this.world, visitedTownIds);
     assertStringSetSubset(
