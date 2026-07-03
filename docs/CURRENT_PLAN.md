@@ -222,6 +222,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Compact and full overworld views now share a direct-loop discovered-town
   sorter, avoiding duplicate id-to-node map/filter arrays while preserving
   population/name ordering.
+- Current-area job/site view projections now use direct loops for discovered
+  rows and hidden counts, avoiding intermediate local-action filter arrays on
+  repeated compact/full overworld reads.
 - Snapshot known-id validation now returns verified unique state-id sets, so
   current-town membership, subset checks, frontier proofing, and local proof inputs
   reuse validation state instead of rebuilding those sets later in restore.

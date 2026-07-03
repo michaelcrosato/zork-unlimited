@@ -3558,17 +3558,21 @@ export class OverworldSession {
     return this.jobsByTown.get(nodeId) ?? [];
   }
 
-  private discoveredJobsAt(nodeId: string): OverworldLocalJob[] {
-    return this.localJobs(nodeId).filter((job) => this.discoveredJobIds.has(job.id));
-  }
-
   private discoveredJobsInCurrentArea(): OverworldLocalJob[] {
     const areaId = this.currentAreaIdOrThrow();
-    return this.discoveredJobsAt(this.currentId).filter((job) => job.area === areaId);
+    const jobs: OverworldLocalJob[] = [];
+    for (const job of this.localJobs(this.currentId)) {
+      if (job.area === areaId && this.discoveredJobIds.has(job.id)) jobs.push(job);
+    }
+    return jobs;
   }
 
   private hiddenJobCountAt(nodeId: string): number {
-    return this.localJobs(nodeId).filter((job) => !this.discoveredJobIds.has(job.id)).length;
+    let count = 0;
+    for (const job of this.localJobs(nodeId)) {
+      if (!this.discoveredJobIds.has(job.id)) count += 1;
+    }
+    return count;
   }
 
   private discoverNextJobForTown(nodeId: string): OverworldLocalJob[] {
@@ -3586,20 +3590,24 @@ export class OverworldSession {
     return this.sitesByTown.get(nodeId) ?? [];
   }
 
-  private discoveredSitesAt(nodeId: string): OverworldExplorationSite[] {
-    return this.localSites(nodeId).filter((site) => this.discoveredSiteIds.has(site.id));
-  }
-
   private currentAreaSites(): OverworldExplorationSite[] {
     return this.sitesByArea.get(this.currentAreaIdOrThrow()) ?? [];
   }
 
   private discoveredSitesInCurrentArea(): OverworldExplorationSite[] {
-    return this.currentAreaSites().filter((site) => this.discoveredSiteIds.has(site.id));
+    const sites: OverworldExplorationSite[] = [];
+    for (const site of this.currentAreaSites()) {
+      if (this.discoveredSiteIds.has(site.id)) sites.push(site);
+    }
+    return sites;
   }
 
   private hiddenSiteCountInCurrentArea(): number {
-    return this.currentAreaSites().filter((site) => !this.discoveredSiteIds.has(site.id)).length;
+    let count = 0;
+    for (const site of this.currentAreaSites()) {
+      if (!this.discoveredSiteIds.has(site.id)) count += 1;
+    }
+    return count;
   }
 
   private localQuests(nodeId: string): OverworldQuest[] {
