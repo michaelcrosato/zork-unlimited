@@ -556,6 +556,7 @@ type OverworldJournalTimelineIndex = {
   eventResolutionProofs: OverworldEventResolutionJournalIndex;
   progressSources: OverworldProgressJournalSourceIndex;
   recordedAtById: ReadonlyMap<string, number>;
+  roadJournalEntries: readonly OverworldRoadJournalResolutionEntry[];
   serviceJournal: OverworldServiceJournalReplayIndex;
 };
 
@@ -1081,6 +1082,21 @@ function recordServiceJournalReplay(
   });
 }
 
+function recordRoadJournalResolution(
+  entries: OverworldRoadJournalResolutionEntry[],
+  entry: OverworldJournalEntry,
+  recordedAt: number,
+): void {
+  if (entry.kind !== "road") return;
+  const parsed = parseRoadJournalId(entry.id);
+  entries.push({
+    entry,
+    key: roadResolutionKey(parsed),
+    parsed,
+    recordedAt,
+  });
+}
+
 function assertSnapshotTimeline(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldJournalTimelineSourceIndex,
@@ -1093,6 +1109,7 @@ function assertSnapshotTimeline(
   let previousRecordedAt = Number.POSITIVE_INFINITY;
   const progressSources = emptyProgressJournalSourceIndex();
   const recordedAtById = new Map<string, number>();
+  const roadJournalEntries: OverworldRoadJournalResolutionEntry[] = [];
   const serviceReplayEntries: OverworldServiceJournalReplayEntry[] = [];
   const eventResolutionProofs: MutableOverworldEventResolutionJournalIndex = {
     contactTimeByArea: new Map<string, number>(),
@@ -1112,6 +1129,7 @@ function assertSnapshotTimeline(
     recordedAtById.set(entry.id, recordedAt);
     recordProgressJournalSource(progressSources, entry);
     recordEventResolutionJournalProof(eventResolutionProofs, sources, entry, recordedAt);
+    recordRoadJournalResolution(roadJournalEntries, entry, recordedAt);
     recordServiceJournalReplay(serviceReplayEntries, entry, recordedAt);
     previousRecordedAt = recordedAt;
   }
@@ -1120,6 +1138,7 @@ function assertSnapshotTimeline(
     eventResolutionProofs,
     progressSources,
     recordedAtById,
+    roadJournalEntries,
     serviceJournal: { entries: serviceReplayEntries },
   };
 }
@@ -1246,13 +1265,11 @@ function assertTravelResourceTransition(
 }
 
 function roadJournalResolutionIndex(
-  snapshot: OverworldSessionSnapshot,
   sources: OverworldResourceReplayIndex,
   journalTimeline: OverworldJournalTimelineIndex,
   travelTimeline: OverworldTravelTimelineIndex,
 ): OverworldRoadJournalResolutionIndex {
   const byKey = new Map<string, OverworldRoadJournalResolutionEntry>();
-  const entries: OverworldRoadJournalResolutionEntry[] = [];
   const nextTravelArrivalByKey = new Map<string, number>();
   for (let index = 0; index < travelTimeline.oldestFirst.length - 1; index += 1) {
     const current = travelTimeline.oldestFirst[index]!;
@@ -1262,33 +1279,27 @@ function roadJournalResolutionIndex(
     );
   }
 
-  for (const entry of snapshot.journalEntries) {
-    if (entry.kind !== "road") continue;
-    const parsed = parseRoadJournalId(entry.id);
-    const key = roadResolutionKey(parsed);
-    if (!sources.roadEventsByEdgeId.has(parsed.edgeId)) {
+  for (const resolution of journalTimeline.roadJournalEntries) {
+    if (!sources.roadEventsByEdgeId.has(resolution.parsed.edgeId)) {
       throw new Error(
-        `Overworld session snapshot road journal "${entry.id}" has no matching road event.`,
+        `Overworld session snapshot road journal "${resolution.entry.id}" has no matching road event.`,
       );
     }
-    if (byKey.has(key)) {
+    if (byKey.has(resolution.key)) {
       throw new Error(
-        `Overworld session snapshot road encounter "${key}" has duplicate journal resolutions.`,
+        `Overworld session snapshot road encounter "${resolution.key}" has duplicate journal resolutions.`,
       );
     }
-    const nextTravelArrival = nextTravelArrivalByKey.get(key);
-    const recordedAt = journalRecordedAt(journalTimeline, entry);
-    if (nextTravelArrival !== undefined && recordedAt > nextTravelArrival) {
+    const nextTravelArrival = nextTravelArrivalByKey.get(resolution.key);
+    if (nextTravelArrival !== undefined && resolution.recordedAt > nextTravelArrival) {
       throw new Error(
-        `Overworld session snapshot road encounter "${key}" was resolved after subsequent travel.`,
+        `Overworld session snapshot road encounter "${resolution.key}" was resolved after subsequent travel.`,
       );
     }
-    const resolution = { entry, key, parsed, recordedAt };
-    byKey.set(key, resolution);
-    entries.push(resolution);
+    byKey.set(resolution.key, resolution);
   }
 
-  return { byKey, entries };
+  return { byKey, entries: journalTimeline.roadJournalEntries };
 }
 
 function assertSnapshotRoadResolutionCoverage(
@@ -2899,12 +2910,7 @@ export class OverworldSession {
       travelLogArrivals: travelTimeline.arrivals,
       travelLogTownByArrival: travelTimeline.townByArrival,
     });
-    const roadJournal = roadJournalResolutionIndex(
-      snapshot,
-      indexes,
-      journalTimeline,
-      travelTimeline,
-    );
+    const roadJournal = roadJournalResolutionIndex(indexes, journalTimeline, travelTimeline);
     const serviceJournal = journalTimeline.serviceJournal;
 
     if (!discoveredTownIds.has(snapshot.currentId)) {
