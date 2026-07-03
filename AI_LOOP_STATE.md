@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 255 -->
+<!-- historical_cycle_count: 256 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - direct_overworld_manifest_restore_indexes
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: snapshot-restore manifest index construction now fills town, edge, arc, source-id, source-name, and region indexes through direct loops over existing session indexes.
+- Loop effect: session start/restore avoids repeated `map`-allocated arrays across the large world manifest while preserving restore validator lookup surfaces.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over direct manifest-index construction.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - direct_overworld_restore_journal_assignment
 

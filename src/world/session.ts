@@ -2802,63 +2802,113 @@ export class OverworldSession {
   }
 
   private buildSnapshotManifestIndex(): OverworldSnapshotManifestIndex {
-    const townNameById = new Map(this.world.nodes.map((node) => [node.id, node.name]));
+    const townNameById = new Map<string, string>();
+    const nodeIds = new Set<string>();
+    const townNames = new Set<string>();
+    for (const [nodeId, node] of this.nodes) {
+      townNameById.set(nodeId, node.name);
+      nodeIds.add(nodeId);
+      townNames.add(node.name);
+    }
     const townNameForSource = (nodeId: string): string => townNameById.get(nodeId) ?? nodeId;
-    const edgesById = new Map(this.world.edges.map((edge) => [edge.id, edge]));
+    const edgesById = new Map<string, OverworldEdge>();
+    const edgeIds = new Set<string>();
+    for (const edge of this.world.edges) {
+      edgesById.set(edge.id, edge);
+      edgeIds.add(edge.id);
+    }
+    const arcIds = new Set<string>();
+    const arcRegionNames = new Map<string, string>();
+    for (const arc of this.world.regional_arcs) {
+      arcIds.add(arc.id);
+      arcRegionNames.set(arc.id, arc.region);
+    }
+    const areaHomes = new Map<string, string>();
+    const areaIds = new Set<string>();
+    const areaTownNames = new Map<string, string>();
+    for (const [areaId, area] of this.areasById) {
+      areaHomes.set(areaId, area.home);
+      areaIds.add(areaId);
+      areaTownNames.set(areaId, townNameForSource(area.home));
+    }
+    const characterIds = new Set<string>();
+    const characterTownNames = new Map<string, string>();
+    for (const [characterId, character] of this.charactersById) {
+      characterIds.add(characterId);
+      characterTownNames.set(characterId, townNameForSource(character.home));
+    }
+    const eventIds = new Set<string>();
+    const eventTownNames = new Map<string, string>();
+    for (const [eventId, event] of this.localEventsById) {
+      eventIds.add(eventId);
+      eventTownNames.set(eventId, townNameForSource(event.home));
+    }
+    const jobIds = new Set<string>();
+    const jobTownNames = new Map<string, string>();
+    for (const [jobId, job] of this.jobsById) {
+      jobIds.add(jobId);
+      jobTownNames.set(jobId, townNameForSource(job.home));
+    }
+    const poiIds = new Set<string>();
+    const poiTownNames = new Map<string, string>();
+    for (const [poiId, poi] of this.poisById) {
+      poiIds.add(poiId);
+      poiTownNames.set(poiId, townNameForSource(poi.home));
+    }
+    const questIds = new Set<string>();
+    const questTownNames = new Map<string, string>();
+    for (const [questId, quest] of this.questsById) {
+      questIds.add(questId);
+      questTownNames.set(questId, townNameForSource(quest.home));
+    }
+    const regionNames = new Set<string>();
+    for (const region of this.world.regions) regionNames.add(region.name);
+    const siteIds = new Set<string>();
+    const siteTownNames = new Map<string, string>();
+    for (const [siteId, site] of this.sitesById) {
+      siteIds.add(siteId);
+      siteTownNames.set(siteId, townNameForSource(site.nearest_town));
+    }
 
     return {
-      arcIds: new Set(this.world.regional_arcs.map((arc) => arc.id)),
-      arcRegionNames: new Map(this.world.regional_arcs.map((arc) => [arc.id, arc.region])),
-      areaHomes: new Map(this.world.areas.map((area) => [area.id, area.home])),
-      areaIds: new Set(this.world.areas.map((area) => area.id)),
+      arcIds,
+      arcRegionNames,
+      areaHomes,
+      areaIds,
       areasById: this.areasById,
       areasByTown: this.areasByTown,
-      areaTownNames: new Map(
-        this.world.areas.map((area) => [area.id, townNameForSource(area.home)]),
-      ),
-      characterIds: new Set(this.world.characters.map((character) => character.id)),
+      areaTownNames,
+      characterIds,
       charactersById: this.charactersById,
-      characterTownNames: new Map(
-        this.world.characters.map((character) => [character.id, townNameForSource(character.home)]),
-      ),
-      edgeIds: new Set(edgesById.keys()),
+      characterTownNames,
+      edgeIds,
       edgesById,
-      eventIds: new Set(this.world.local_events.map((event) => event.id)),
+      eventIds,
       eventsById: this.localEventsById,
-      eventTownNames: new Map(
-        this.world.local_events.map((event) => [event.id, townNameForSource(event.home)]),
-      ),
-      jobIds: new Set(this.world.local_jobs.map((job) => job.id)),
+      eventTownNames,
+      jobIds,
       jobsById: this.jobsById,
       jobsByTown: this.jobsByTown,
-      jobTownNames: new Map(
-        this.world.local_jobs.map((job) => [job.id, townNameForSource(job.home)]),
-      ),
-      nodeIds: new Set(this.world.nodes.map((node) => node.id)),
+      jobTownNames,
+      nodeIds,
       nodesById: this.nodes,
-      poiIds: new Set(this.world.points_of_interest.map((poi) => poi.id)),
+      poiIds,
       poisById: this.poisById,
-      poiTownNames: new Map(
-        this.world.points_of_interest.map((poi) => [poi.id, townNameForSource(poi.home)]),
-      ),
-      questIds: new Set(this.world.quests.map((quest) => quest.id)),
+      poiTownNames,
+      questIds,
       questsById: this.questsById,
       questsByTown: this.questsByTown,
-      questTownNames: new Map(
-        this.world.quests.map((quest) => [quest.id, townNameForSource(quest.home)]),
-      ),
+      questTownNames,
       regionalArcs: this.world.regional_arcs,
-      regionNames: new Set(this.world.regions.map((region) => region.name)),
+      regionNames,
       roadEventsByEdgeId: this.roadEventsByEdgeId,
       roadExitsByTown: this.roadExitsByTown,
-      siteIds: new Set(this.world.exploration_sites.map((site) => site.id)),
+      siteIds,
       sitesByArea: this.sitesByArea,
       sitesById: this.sitesById,
-      siteTownNames: new Map(
-        this.world.exploration_sites.map((site) => [site.id, townNameForSource(site.nearest_town)]),
-      ),
+      siteTownNames,
       townNameForSource,
-      townNames: new Set(this.world.nodes.map((node) => node.name)),
+      townNames,
     };
   }
 
