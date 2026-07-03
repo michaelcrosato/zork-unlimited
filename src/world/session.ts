@@ -561,6 +561,18 @@ type OverworldResourceReplayIndex = {
   roadEventsByEdgeId: ReadonlyMap<string, OverworldRoadEvent>;
 };
 
+type OverworldRoadJournalResolutionEntry = {
+  entry: OverworldJournalEntry;
+  key: string;
+  parsed: RoadJournalIdParts;
+  recordedAt: number;
+};
+
+type OverworldRoadJournalResolutionIndex = {
+  byKey: ReadonlyMap<string, OverworldRoadJournalResolutionEntry>;
+  entries: readonly OverworldRoadJournalResolutionEntry[];
+};
+
 type OverworldProgressJournalSourceIndex = {
   completedJobIds: ReadonlySet<string>;
   completedQuestIds: ReadonlySet<string>;
@@ -933,6 +945,10 @@ function travelResourceKey(entry: TravelLogEntrySnapshot): string {
   return `${entry.edgeId}@${entry.arrivedAt}`;
 }
 
+function roadResolutionKey(parsed: RoadJournalIdParts): string {
+  return `${parsed.edgeId}@${parsed.arrivedAt}`;
+}
+
 function assertReplayClock(
   sourceLabel: string,
   recordedAt: number,
@@ -1046,16 +1062,12 @@ function assertTravelResourceTransition(
   state.fatigue = expectedFatigueAfter;
 }
 
-function assertSnapshotRoadResolutionCoverage(
+function roadJournalResolutionIndex(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldResourceReplayIndex,
-): Map<string, OverworldJournalEntry> {
-  const latestTravel = snapshot.travelLog[0];
-  const pendingRoadKey =
-    snapshot.pendingRoadEncounter && latestTravel?.edgeId === snapshot.pendingRoadEncounter.edgeId
-      ? travelResourceKey(latestTravel)
-      : null;
-  const roadResolutionByKey = new Map<string, OverworldJournalEntry>();
+): OverworldRoadJournalResolutionIndex {
+  const byKey = new Map<string, OverworldRoadJournalResolutionEntry>();
+  const entries: OverworldRoadJournalResolutionEntry[] = [];
   const travelEntriesOldestFirst = [...snapshot.travelLog].reverse();
   const nextTravelArrivalByKey = new Map<string, number>();
   for (let index = 0; index < travelEntriesOldestFirst.length - 1; index += 1) {
@@ -1069,48 +1081,64 @@ function assertSnapshotRoadResolutionCoverage(
   for (const entry of snapshot.journalEntries) {
     if (entry.kind !== "road") continue;
     const parsed = parseRoadJournalId(entry.id);
-    const key = `${parsed.edgeId}@${parsed.arrivedAt}`;
+    const key = roadResolutionKey(parsed);
     if (!sources.roadEventsByEdgeId.has(parsed.edgeId)) {
       throw new Error(
         `Overworld session snapshot road journal "${entry.id}" has no matching road event.`,
       );
     }
-    if (roadResolutionByKey.has(key)) {
+    if (byKey.has(key)) {
       throw new Error(
         `Overworld session snapshot road encounter "${key}" has duplicate journal resolutions.`,
       );
     }
     const nextTravelArrival = nextTravelArrivalByKey.get(key);
-    if (nextTravelArrival !== undefined && journalEntryRecordedAt(entry) > nextTravelArrival) {
+    const recordedAt = journalEntryRecordedAt(entry);
+    if (nextTravelArrival !== undefined && recordedAt > nextTravelArrival) {
       throw new Error(
         `Overworld session snapshot road encounter "${key}" was resolved after subsequent travel.`,
       );
     }
-    roadResolutionByKey.set(key, entry);
+    const resolution = { entry, key, parsed, recordedAt };
+    byKey.set(key, resolution);
+    entries.push(resolution);
   }
+
+  return { byKey, entries };
+}
+
+function assertSnapshotRoadResolutionCoverage(
+  snapshot: OverworldSessionSnapshot,
+  sources: OverworldResourceReplayIndex,
+  roadJournal: OverworldRoadJournalResolutionIndex,
+): void {
+  const latestTravel = snapshot.travelLog[0];
+  const pendingRoadKey =
+    snapshot.pendingRoadEncounter && latestTravel?.edgeId === snapshot.pendingRoadEncounter.edgeId
+      ? travelResourceKey(latestTravel)
+      : null;
 
   for (const entry of snapshot.travelLog) {
     const key = travelResourceKey(entry);
     if (!sources.roadEventsByEdgeId.has(entry.edgeId) || key === pendingRoadKey) continue;
-    if (!roadResolutionByKey.has(key)) {
+    if (!roadJournal.byKey.has(key)) {
       throw new Error(
         `Overworld session snapshot road encounter "${key}" is missing a journal resolution.`,
       );
     }
   }
-
-  return roadResolutionByKey;
 }
 
 function assertSnapshotResourceReplay(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldResourceReplayIndex,
+  roadJournal: OverworldRoadJournalResolutionIndex,
   localActionJournal: OverworldLocalActionJournalReplayIndex,
 ): void {
-  const roadResolutionByKey = assertSnapshotRoadResolutionCoverage(snapshot, sources);
+  assertSnapshotRoadResolutionCoverage(snapshot, sources, roadJournal);
   const replayEvents: (
     | { kind: "travel"; recordedAt: number; entry: TravelLogEntrySnapshot }
-    | { kind: "road"; recordedAt: number; entry: OverworldJournalEntry }
+    | { kind: "road"; recordedAt: number; resolution: OverworldRoadJournalResolutionEntry }
     | { kind: "service"; recordedAt: number; entry: OverworldJournalEntry }
     | {
         kind: "local";
@@ -1122,9 +1150,12 @@ function assertSnapshotResourceReplay(
   for (const entry of snapshot.travelLog) {
     replayEvents.push({ kind: "travel", recordedAt: entry.arrivedAt, entry });
   }
+  for (const resolution of roadJournal.entries) {
+    replayEvents.push({ kind: "road", recordedAt: resolution.recordedAt, resolution });
+  }
   for (const entry of snapshot.journalEntries) {
-    if (entry.kind === "road" || entry.kind === "service") {
-      replayEvents.push({ kind: entry.kind, recordedAt: journalEntryRecordedAt(entry), entry });
+    if (entry.kind === "service") {
+      replayEvents.push({ kind: "service", recordedAt: journalEntryRecordedAt(entry), entry });
     }
   }
   for (const { entry, recordedAt, duration } of localActionJournal.entries) {
@@ -1173,14 +1204,11 @@ function assertSnapshotResourceReplay(
     }
 
     if (event.kind === "road") {
-      const parsed = parseRoadJournalId(event.entry.id);
-      const key = `${parsed.edgeId}@${parsed.arrivedAt}`;
-      if (roadResolutionByKey.get(key) !== event.entry) continue;
-      const roadEvent = sources.roadEventsByEdgeId.get(parsed.edgeId);
+      const roadEvent = sources.roadEventsByEdgeId.get(event.resolution.parsed.edgeId);
       if (!roadEvent) continue;
-      const option = roadEncounterOptionFor(roadEvent, parsed.strategy);
+      const option = roadEncounterOptionFor(roadEvent, event.resolution.parsed.strategy);
       assertReplayClock(
-        `road journal "${event.entry.id}"`,
+        `road journal "${event.resolution.entry.id}"`,
         event.recordedAt,
         option.minutes,
         state,
@@ -1444,21 +1472,20 @@ function assertSnapshotPendingRoadEncounterBinding(
   }
 }
 
-function assertSnapshotPendingRoadEncounterUnresolved(snapshot: OverworldSessionSnapshot): void {
+function assertSnapshotPendingRoadEncounterUnresolved(
+  snapshot: OverworldSessionSnapshot,
+  roadJournal: OverworldRoadJournalResolutionIndex,
+): void {
   const pendingRoadEncounter = snapshot.pendingRoadEncounter;
   if (!pendingRoadEncounter) return;
   const latestTravel = snapshot.travelLog[0];
   if (!latestTravel) return;
 
   const pendingArrivalKey = `${pendingRoadEncounter.edgeId}@${latestTravel.arrivedAt}`;
-  for (const entry of snapshot.journalEntries) {
-    if (entry.kind !== "road") continue;
-    const parsed = parseRoadJournalId(entry.id);
-    if (`${parsed.edgeId}@${parsed.arrivedAt}` === pendingArrivalKey) {
-      throw new Error(
-        `Overworld session snapshot pending road encounter "${pendingRoadEncounter.edgeId}" already has a road journal resolution.`,
-      );
-    }
+  if (roadJournal.byKey.has(pendingArrivalKey)) {
+    throw new Error(
+      `Overworld session snapshot pending road encounter "${pendingRoadEncounter.edgeId}" already has a road journal resolution.`,
+    );
   }
 }
 
@@ -1647,6 +1674,7 @@ function roadRenownFor(
 function expectedSnapshotRegionRenown(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldRenownSourceIndex,
+  roadJournal: OverworldRoadJournalResolutionIndex,
 ): Map<string, number> {
   const expected = new Map<string, number>();
 
@@ -1672,16 +1700,14 @@ function expectedSnapshotRegionRenown(
       event.intensity,
     );
   }
-  for (const entry of snapshot.journalEntries) {
-    if (entry.kind !== "road") continue;
-    const parsed = parseRoadJournalId(entry.id);
-    const roadEvent = sources.roadEventsByEdgeId.get(parsed.edgeId);
-    const travelLog = sources.travelLogByArrival.get(`${parsed.edgeId}@${parsed.arrivedAt}`);
+  for (const resolution of roadJournal.entries) {
+    const roadEvent = sources.roadEventsByEdgeId.get(resolution.parsed.edgeId);
+    const travelLog = sources.travelLogByArrival.get(resolution.key);
     if (!roadEvent || !travelLog) continue;
     addRegionRenown(
       expected,
-      nodeRegionFor(sources.nodesById, travelLog.toId, `road journal "${entry.id}"`),
-      roadRenownFor(roadEvent, parsed.strategy),
+      nodeRegionFor(sources.nodesById, travelLog.toId, `road journal "${resolution.entry.id}"`),
+      roadRenownFor(roadEvent, resolution.parsed.strategy),
     );
   }
 
@@ -1691,8 +1717,9 @@ function expectedSnapshotRegionRenown(
 function assertSnapshotRegionRenown(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldRenownSourceIndex,
+  roadJournal: OverworldRoadJournalResolutionIndex,
 ): void {
-  const expected = expectedSnapshotRegionRenown(snapshot, sources);
+  const expected = expectedSnapshotRegionRenown(snapshot, sources, roadJournal);
   const actual = new Map(snapshot.regionRenown);
   for (const [region, expectedRenown] of expected) {
     const actualRenown = actual.get(region) ?? 0;
@@ -2779,6 +2806,7 @@ export class OverworldSession {
       travelLogArrivals,
       travelLogTownByArrival,
     });
+    const roadJournal = roadJournalResolutionIndex(snapshot, indexes);
 
     if (!snapshot.discoveredIds.includes(snapshot.currentId)) {
       throw new Error("Overworld session snapshot current town is not discovered.");
@@ -2819,10 +2847,14 @@ export class OverworldSession {
       discoveredSiteIds,
     );
     assertSnapshotProgressJournalBindings(snapshot);
-    assertSnapshotRegionRenown(snapshot, {
-      ...indexes,
-      travelLogByArrival,
-    });
+    assertSnapshotRegionRenown(
+      snapshot,
+      {
+        ...indexes,
+        travelLogByArrival,
+      },
+      roadJournal,
+    );
     if (snapshot.currentAreaId !== null && !discoveredAreaIds.has(snapshot.currentAreaId)) {
       throw new Error("Overworld session snapshot current area is not discovered.");
     }
@@ -2900,7 +2932,7 @@ export class OverworldSession {
         );
       }
       assertSnapshotPendingRoadEncounterBinding(snapshot, indexes.edgeIds);
-      assertSnapshotPendingRoadEncounterUnresolved(snapshot);
+      assertSnapshotPendingRoadEncounterUnresolved(snapshot, roadJournal);
       const fromId = pendingEdge.from === snapshot.currentId ? pendingEdge.to : pendingEdge.from;
       const from = this.nodes.get(fromId);
       const to = this.nodes.get(snapshot.currentId);
@@ -2915,7 +2947,7 @@ export class OverworldSession {
         snapshot.minutes,
       );
     }
-    assertSnapshotResourceReplay(snapshot, indexes, localActionJournal);
+    assertSnapshotResourceReplay(snapshot, indexes, roadJournal, localActionJournal);
 
     this.currentId = snapshot.currentId;
     this.currentAreaId = snapshot.currentAreaId;

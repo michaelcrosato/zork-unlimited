@@ -218,6 +218,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Snapshot restore progress/state journal bindings now build one source-id index
   for area, job, quest, site, event-resolution, and regional-arc journals instead
   of scanning all journal entries once per saved progress set.
+- Snapshot restore road-journal validation now builds one parsed resolution index
+  keyed by road arrival, so pending-road checks, road renown replay, and resource
+  replay share road facts instead of reparsing road entries independently.
 - Snapshot restore event and regional-arc proofing indexes journal ids, local
   scout/contact proof times, and resolved-event town times once per check, so
   proof validation avoids nested journal/event scans.

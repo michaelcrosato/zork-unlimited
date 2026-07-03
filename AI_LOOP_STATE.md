@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 230 -->
+<!-- historical_cycle_count: 231 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - indexed_overworld_restore_road_journal
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: snapshot restore now builds one parsed road-journal resolution index keyed by road arrival.
+- Loop effect: pending-road checks, road renown replay, and resource replay share road journal facts instead of rescanning and reparsing road entries independently.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over the shared road-journal path.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - indexed_overworld_restore_progress_bindings
 
