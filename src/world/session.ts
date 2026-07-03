@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { hashState } from "../core/hash.js";
 import {
-  overworldEdgesFrom,
   overworldNodesById,
   type OverworldArea,
   type OverworldAreaExit,
@@ -634,11 +633,18 @@ type OverworldReplayState = {
 
 type OverworldDiscoveryLocalityIndex = {
   areaHomes: ReadonlyMap<string, string>;
+  completedQuestIds: ReadonlySet<string>;
   discoveredAreaIds: ReadonlySet<string>;
+  discoveredJobIds: ReadonlySet<string>;
+  discoveredQuestIds: ReadonlySet<string>;
+  discoveredSiteIds: ReadonlySet<string>;
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   jobsById: ReadonlyMap<string, OverworldLocalJob>;
   questsById: ReadonlyMap<string, OverworldQuest>;
+  resolvedEventIds: ReadonlySet<string>;
   sitesById: ReadonlyMap<string, OverworldExplorationSite>;
+  startedQuestIds: ReadonlySet<string>;
+  visitedAreaIds: ReadonlySet<string>;
   visitedTownIds: ReadonlySet<string>;
 };
 
@@ -672,6 +678,9 @@ type OverworldLocalActionJournalReachabilityIndex = {
   areasByTown: ReadonlyMap<string, readonly OverworldArea[]>;
   charactersById: ReadonlyMap<string, OverworldCharacter>;
   discoveredAreaIds: ReadonlySet<string>;
+  discoveredJobIds: ReadonlySet<string>;
+  discoveredQuestIds: ReadonlySet<string>;
+  discoveredSiteIds: ReadonlySet<string>;
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   jobsById: ReadonlyMap<string, OverworldLocalJob>;
   jobsByTown: ReadonlyMap<string, readonly OverworldLocalJob[]>;
@@ -716,6 +725,7 @@ type OverworldSnapshotManifestIndex = {
   regionalArcs: readonly OverworldRegionalArc[];
   regionNames: ReadonlySet<string>;
   roadEventsByEdgeId: ReadonlyMap<string, OverworldRoadEvent>;
+  roadExitsByTown: ReadonlyMap<string, readonly OverworldExit[]>;
   siteIds: ReadonlySet<string>;
   sitesByArea: ReadonlyMap<string, readonly OverworldExplorationSite[]>;
   sitesById: ReadonlyMap<string, OverworldExplorationSite>;
@@ -1498,9 +1508,9 @@ function assertSnapshotResourceReplay(
 
 function assertStringSetSubset(
   label: string,
-  values: readonly string[],
+  values: Iterable<string>,
   parentLabel: string,
-  parent: Set<string>,
+  parent: ReadonlySet<string>,
 ): void {
   for (const value of values) {
     if (!parent.has(value)) {
@@ -1653,13 +1663,13 @@ function assertSnapshotPendingRoadEncounterUnresolved(
 }
 
 function expectedDiscoveredTownIds(
-  world: OverworldManifest,
+  roadExitsByTown: ReadonlyMap<string, readonly OverworldExit[]>,
   visitedTownIds: ReadonlySet<string>,
 ): Set<string> {
   const expected = new Set<string>();
   for (const townId of visitedTownIds) {
     expected.add(townId);
-    for (const edge of overworldEdgesFrom(world, townId)) {
+    for (const edge of indexedList(roadExitsByTown, townId)) {
       expected.add(edge.destination.id);
     }
   }
@@ -1667,13 +1677,12 @@ function expectedDiscoveredTownIds(
 }
 
 function assertSnapshotDiscoveredTownFrontier(
-  snapshot: OverworldSessionSnapshot,
-  world: OverworldManifest,
+  discoveredTownIds: ReadonlySet<string>,
+  roadExitsByTown: ReadonlyMap<string, readonly OverworldExit[]>,
   visitedTownIds: ReadonlySet<string>,
 ): void {
-  const expected = expectedDiscoveredTownIds(world, visitedTownIds);
-  const discoveredTownIds = new Set(snapshot.discoveredIds);
-  for (const townId of snapshot.discoveredIds) {
+  const expected = expectedDiscoveredTownIds(roadExitsByTown, visitedTownIds);
+  for (const townId of discoveredTownIds) {
     if (!expected.has(townId)) {
       throw new Error(
         `Overworld session snapshot discovered town "${townId}" is outside the visited frontier.`,
@@ -1690,11 +1699,10 @@ function assertSnapshotDiscoveredTownFrontier(
 }
 
 function assertSnapshotDiscoveredAreaPrefix(
-  snapshot: OverworldSessionSnapshot,
   areasByTown: ReadonlyMap<string, readonly OverworldArea[]>,
+  discoveredAreaIds: ReadonlySet<string>,
   visitedTownIds: ReadonlySet<string>,
 ): void {
-  const discoveredAreaIds = new Set(snapshot.discoveredAreaIds);
   for (const townId of visitedTownIds) {
     const areas = indexedList(areasByTown, townId);
     if (areas.length === 0) continue;
@@ -1742,24 +1750,20 @@ function assertSnapshotDiscoveredSourcePrefix(
 }
 
 function assertSnapshotDiscoveredLocalSourcePrefixes(
-  snapshot: OverworldSessionSnapshot,
   sources: OverworldLocalActionJournalReachabilityIndex,
   visitedTownIds: ReadonlySet<string>,
 ): void {
   const discoveredAreaIds = sources.discoveredAreaIds;
-  const discoveredJobIds = new Set(snapshot.discoveredJobIds);
-  const discoveredSiteIds = new Set(snapshot.discoveredSiteIds);
-  const discoveredQuestIds = new Set(snapshot.discoveredQuestIds);
   for (const townId of visitedTownIds) {
     assertSnapshotDiscoveredSourcePrefix(
       "job",
-      discoveredJobIds,
+      sources.discoveredJobIds,
       indexedList(sources.jobsByTown, townId).filter((job) => discoveredAreaIds.has(job.area)),
       townId,
     );
     assertSnapshotDiscoveredSourcePrefix(
       "quest",
-      discoveredQuestIds,
+      sources.discoveredQuestIds,
       indexedList(sources.questsByTown, townId).filter((quest) =>
         discoveredAreaIds.has(quest.area),
       ),
@@ -1769,7 +1773,7 @@ function assertSnapshotDiscoveredLocalSourcePrefixes(
   for (const areaId of discoveredAreaIds) {
     assertSnapshotDiscoveredSourcePrefix(
       "site",
-      discoveredSiteIds,
+      sources.discoveredSiteIds,
       indexedList(sources.sitesByArea, areaId),
       areaId,
     );
@@ -1927,29 +1931,26 @@ function assertDiscoveredAreaForDiscovery(
   }
 }
 
-function assertSnapshotDiscoveryLocality(
-  snapshot: OverworldSessionSnapshot,
-  sources: OverworldDiscoveryLocalityIndex,
-): void {
-  for (const areaId of snapshot.discoveredAreaIds) {
+function assertSnapshotDiscoveryLocality(sources: OverworldDiscoveryLocalityIndex): void {
+  for (const areaId of sources.discoveredAreaIds) {
     const home = sources.areaHomes.get(areaId);
     if (home) {
       assertVisitedTownForDiscovery("discovered area", areaId, home, sources.visitedTownIds);
     }
   }
-  for (const areaId of snapshot.visitedAreaIds) {
+  for (const areaId of sources.visitedAreaIds) {
     const home = sources.areaHomes.get(areaId);
     if (home) {
       assertVisitedTownForDiscovery("visited area", areaId, home, sources.visitedTownIds);
     }
   }
-  for (const jobId of snapshot.discoveredJobIds) {
+  for (const jobId of sources.discoveredJobIds) {
     const job = sources.jobsById.get(jobId);
     if (!job) continue;
     assertVisitedTownForDiscovery("discovered job", jobId, job.home, sources.visitedTownIds);
     assertDiscoveredAreaForDiscovery("discovered job", jobId, job.area, sources.discoveredAreaIds);
   }
-  for (const siteId of snapshot.discoveredSiteIds) {
+  for (const siteId of sources.discoveredSiteIds) {
     const site = sources.sitesById.get(siteId);
     if (!site) continue;
     assertVisitedTownForDiscovery(
@@ -1965,7 +1966,7 @@ function assertSnapshotDiscoveryLocality(
       sources.discoveredAreaIds,
     );
   }
-  for (const questId of snapshot.discoveredQuestIds) {
+  for (const questId of sources.discoveredQuestIds) {
     const quest = sources.questsById.get(questId);
     if (!quest) continue;
     assertVisitedTownForDiscovery("discovered quest", questId, quest.home, sources.visitedTownIds);
@@ -1976,12 +1977,10 @@ function assertSnapshotDiscoveryLocality(
       sources.discoveredAreaIds,
     );
   }
-  const discoveredQuestIds = new Set(snapshot.discoveredQuestIds);
-  const startedQuestIds = new Set(snapshot.startedQuestIds);
-  for (const questId of snapshot.startedQuestIds) {
+  for (const questId of sources.startedQuestIds) {
     const quest = sources.questsById.get(questId);
     if (!quest) continue;
-    if (!discoveredQuestIds.has(questId)) {
+    if (!sources.discoveredQuestIds.has(questId)) {
       throw new Error(`Overworld session snapshot started quest "${questId}" is not discovered.`);
     }
     assertVisitedTownForDiscovery("started quest", questId, quest.home, sources.visitedTownIds);
@@ -1992,10 +1991,10 @@ function assertSnapshotDiscoveryLocality(
       sources.discoveredAreaIds,
     );
   }
-  for (const questId of snapshot.completedQuestIds) {
+  for (const questId of sources.completedQuestIds) {
     const quest = sources.questsById.get(questId);
     if (!quest) continue;
-    if (!startedQuestIds.has(questId)) {
+    if (!sources.startedQuestIds.has(questId)) {
       throw new Error(`Overworld session snapshot completed quest "${questId}" is not started.`);
     }
     assertVisitedTownForDiscovery("completed quest", questId, quest.home, sources.visitedTownIds);
@@ -2006,7 +2005,7 @@ function assertSnapshotDiscoveryLocality(
       sources.discoveredAreaIds,
     );
   }
-  for (const eventId of snapshot.resolvedEventIds) {
+  for (const eventId of sources.resolvedEventIds) {
     const event = sources.eventsById.get(eventId);
     if (!event) continue;
     assertVisitedTownForDiscovery("resolved event", eventId, event.home, sources.visitedTownIds);
@@ -2302,11 +2301,10 @@ function recordEarliestTime(times: Map<string, number>, key: string, recordedAt:
 }
 
 function assertSnapshotDiscoveredAreaCountReplay(
-  snapshot: OverworldSessionSnapshot,
   sources: OverworldLocalActionJournalReachabilityIndex,
   localActionJournal: OverworldLocalActionJournalReplayIndex,
 ): void {
-  for (const townId of snapshot.visitedIds) {
+  for (const townId of sources.visitedTownIds) {
     const localAreas = indexedList(sources.areasByTown, townId);
     const expectedDiscoveredCount =
       localAreas.length === 0
@@ -2349,7 +2347,6 @@ function assertDiscoveredSourceCountReplay(
 }
 
 function assertSnapshotDiscoveredLocalSourceCountReplay(
-  snapshot: OverworldSessionSnapshot,
   sources: OverworldLocalActionJournalReachabilityIndex,
   localActionJournal: OverworldLocalActionJournalReplayIndex,
 ): void {
@@ -2357,20 +2354,20 @@ function assertSnapshotDiscoveredLocalSourceCountReplay(
   const discoveredQuestCountByTown = new Map<string, number>();
   const discoveredSiteCountByArea = new Map<string, number>();
 
-  for (const jobId of snapshot.discoveredJobIds) {
+  for (const jobId of sources.discoveredJobIds) {
     const job = sources.jobsById.get(jobId);
     if (job) incrementCount(discoveredJobCountByTown, job.home);
   }
-  for (const siteId of snapshot.discoveredSiteIds) {
+  for (const siteId of sources.discoveredSiteIds) {
     const site = sources.sitesById.get(siteId);
     if (site) incrementCount(discoveredSiteCountByArea, site.area);
   }
-  for (const questId of snapshot.discoveredQuestIds) {
+  for (const questId of sources.discoveredQuestIds) {
     const quest = sources.questsById.get(questId);
     if (quest) incrementCount(discoveredQuestCountByTown, quest.home);
   }
 
-  for (const townId of snapshot.visitedIds) {
+  for (const townId of sources.visitedTownIds) {
     const localActionCount = localActionJournal.localActionCountByTown.get(townId) ?? 0;
     const availableJobCount = countValues(indexedList(sources.jobsByTown, townId), (job) =>
       sources.discoveredAreaIds.has(job.area),
@@ -2786,6 +2783,7 @@ export class OverworldSession {
       regionalArcs: this.world.regional_arcs,
       regionNames: new Set(this.world.regions.map((region) => region.name)),
       roadEventsByEdgeId: this.roadEventsByEdgeId,
+      roadExitsByTown: this.roadExitsByTown,
       siteIds: new Set(this.world.exploration_sites.map((site) => site.id)),
       sitesByArea: this.sitesByArea,
       sitesById: this.sitesById,
@@ -2924,7 +2922,11 @@ export class OverworldSession {
       snapshot.exploredSiteIds,
       indexes.siteIds,
     );
-    assertKnownIds("discovered quest id", snapshot.discoveredQuestIds, indexes.questIds);
+    const discoveredQuestIds = assertKnownIds(
+      "discovered quest id",
+      snapshot.discoveredQuestIds,
+      indexes.questIds,
+    );
     const startedQuestIds = assertKnownIds(
       "started quest id",
       snapshot.startedQuestIds,
@@ -2977,28 +2979,32 @@ export class OverworldSession {
     }
     const townVisitMinutes = assertSnapshotVisitedTownTravelProof(visitedTownIds, travelTimeline);
     assertSnapshotTravelPathContinuity(snapshot, this.world.start, travelTimeline);
-    assertSnapshotDiscoveredTownFrontier(snapshot, this.world, visitedTownIds);
+    assertSnapshotDiscoveredTownFrontier(
+      discoveredTownIds,
+      indexes.roadExitsByTown,
+      visitedTownIds,
+    );
     assertStringSetSubset(
       "visited town id",
-      snapshot.visitedIds,
+      visitedTownIds,
       "discovered town ids",
       discoveredTownIds,
     );
     assertStringSetSubset(
       "visited area id",
-      snapshot.visitedAreaIds,
+      visitedAreaIds,
       "discovered area ids",
       discoveredAreaIds,
     );
     assertStringSetSubset(
       "completed job id",
-      snapshot.completedJobIds,
+      completedJobIds,
       "discovered job ids",
       discoveredJobIds,
     );
     assertStringSetSubset(
       "explored site id",
-      snapshot.exploredSiteIds,
+      exploredSiteIds,
       "discovered site ids",
       discoveredSiteIds,
     );
@@ -3017,6 +3023,9 @@ export class OverworldSession {
     const localActionJournalSources = {
       ...indexes,
       discoveredAreaIds,
+      discoveredJobIds,
+      discoveredQuestIds,
+      discoveredSiteIds,
       townVisitMinutes,
       visitedTownIds,
     };
@@ -3024,12 +3033,8 @@ export class OverworldSession {
       localActionJournalSources,
       journalTimeline,
     );
-    assertSnapshotDiscoveredAreaPrefix(snapshot, indexes.areasByTown, visitedTownIds);
-    assertSnapshotDiscoveredLocalSourcePrefixes(
-      snapshot,
-      localActionJournalSources,
-      visitedTownIds,
-    );
+    assertSnapshotDiscoveredAreaPrefix(indexes.areasByTown, discoveredAreaIds, visitedTownIds);
+    assertSnapshotDiscoveredLocalSourcePrefixes(localActionJournalSources, visitedTownIds);
     assertSnapshotCurrentAreaMapExact(snapshot, indexes.areasByTown, visitedTownIds);
     for (const [townId, areaId] of snapshot.currentAreaByTown) {
       if (!indexes.nodeIds.has(townId)) {
@@ -3050,9 +3055,16 @@ export class OverworldSession {
         throw new Error(`Overworld session snapshot saved area "${areaId}" is not discovered.`);
       }
     }
-    assertSnapshotDiscoveryLocality(snapshot, {
+    assertSnapshotDiscoveryLocality({
       ...indexes,
+      completedQuestIds,
       discoveredAreaIds,
+      discoveredJobIds,
+      discoveredQuestIds,
+      discoveredSiteIds,
+      resolvedEventIds,
+      startedQuestIds,
+      visitedAreaIds,
       visitedTownIds,
     });
     assertSnapshotLocalActionJournalReachability(localActionJournal, localActionJournalSources);
@@ -3064,16 +3076,8 @@ export class OverworldSession {
       eventResolutionJournal,
       completedRegionalArcIds,
     );
-    assertSnapshotDiscoveredLocalSourceCountReplay(
-      snapshot,
-      localActionJournalSources,
-      localActionJournal,
-    );
-    assertSnapshotDiscoveredAreaCountReplay(
-      snapshot,
-      localActionJournalSources,
-      localActionJournal,
-    );
+    assertSnapshotDiscoveredLocalSourceCountReplay(localActionJournalSources, localActionJournal);
+    assertSnapshotDiscoveredAreaCountReplay(localActionJournalSources, localActionJournal);
     for (const [region] of snapshot.regionRenown) {
       if (!indexes.regionNames.has(region)) {
         throw new Error(`Overworld session snapshot has unknown renown region "${region}".`);

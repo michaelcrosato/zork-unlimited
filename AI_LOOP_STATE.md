@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 246 -->
+<!-- historical_cycle_count: 247 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - indexed_overworld_restore_discovery_state_ids
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: snapshot restore now carries validated discovery state-id sets for towns, areas, jobs, sites, and quests into frontier, prefix, locality, and local-source count proofs.
+- Loop effect: restore/load discovery proofs reuse session road-exit indexes and validated state sets instead of rescanning manifest roads or rebuilding raw snapshot sets inside helper-local passes.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over the discovery-state index path.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - indexed_overworld_restore_progress_state_ids
 

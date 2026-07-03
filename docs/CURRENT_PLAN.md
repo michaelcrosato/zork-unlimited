@@ -225,6 +225,10 @@ Make discovered overworld quest leads start real RPG sessions.
   the validated journal timeline plus validated state-id sets for area, job,
   quest, site, event-resolution, and regional-arc journals instead of scanning
   entries or rebuilding state sets in separate proof passes.
+- Snapshot restore discovery/locality proofs now reuse validated discovery and
+  progress state-id sets, plus cached road-exit indexes, for town frontier,
+  local source prefix, locality, and local-source count replay checks instead of
+  rebuilding helper-local sets or rescanning manifest roads.
 - Snapshot timeline validation now records parsed road-journal resolution rows,
   so pending-road checks, road renown replay, and resource replay share road
   facts without another full journal scan or independent road-entry parse pass.
