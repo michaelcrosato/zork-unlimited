@@ -464,6 +464,10 @@ function cloneJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+function cloneJournalEntries(entries: readonly OverworldJournalEntry[]): OverworldJournalEntry[] {
+  return entries.map((entry) => ({ ...entry }));
+}
+
 function snapshotTravelLogEntry(entry: TravelLogEntry): TravelLogEntrySnapshot {
   return {
     edgeId: entry.edgeId,
@@ -2858,7 +2862,7 @@ export class OverworldSession {
       visitedIds: sortedStringSet(this.visitedIds),
       currentAreaByTown: sortedStringMap(this.currentAreaByTown),
       travelLog: this.travelLog.map(snapshotTravelLogEntry),
-      journalEntries: cloneJson(this.journalEntries),
+      journalEntries: cloneJournalEntries(this.journalEntries),
       resolvedEventIds: sortedStringSet(this.resolvedEventIds),
       discoveredAreaIds: sortedStringSet(this.discoveredAreaIds),
       visitedAreaIds: sortedStringSet(this.visitedAreaIds),
@@ -3180,7 +3184,7 @@ export class OverworldSession {
       this.travelLog.length,
       ...snapshot.travelLog.map((entry) => this.restoreTravelLogEntry(entry, indexes.edgesById)),
     );
-    this.replaceJournalEntries(cloneJson(snapshot.journalEntries));
+    this.replaceJournalEntries(cloneJournalEntries(snapshot.journalEntries));
     replaceStringSet(this.resolvedEventIds, snapshot.resolvedEventIds);
     this.rebuildResolvedEventHomeIds();
     replaceStringSet(this.discoveredAreaIds, snapshot.discoveredAreaIds);

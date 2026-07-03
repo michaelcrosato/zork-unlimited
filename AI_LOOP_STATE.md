@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 250 -->
+<!-- historical_cycle_count: 251 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - typed_overworld_journal_snapshot_clones
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: overworld snapshot build and restore now clone flat journal-entry arrays with typed object copies instead of JSON stringify/parse.
+- Loop effect: persistence and restore paths preserve caller isolation without serializing long journal histories for internal array replacement.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over the typed journal clone path.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - bounded_overworld_restore_regional_arc_proofs
 

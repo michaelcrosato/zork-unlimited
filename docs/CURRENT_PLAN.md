@@ -250,6 +250,8 @@ Make discovered overworld quest leads start real RPG sessions.
   compact journal timestamps, local scout/contact proof times, and
   resolved-event town times, so proof validation avoids duplicate journal maps,
   full journal-entry retention, and nested journal/event scans.
+- Overworld snapshot build and restore use typed journal-entry clones, preserving
+  internal/external isolation without JSON serializing long flat journal arrays.
 - Snapshot regional-arc restore proofing now derives resolved anchor counts and
   completion proof time in one bounded pass, avoiding per-arc full timestamp
   sorting while preserving completion and journal timing checks.
