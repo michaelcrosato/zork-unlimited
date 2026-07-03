@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 225 -->
+<!-- historical_cycle_count: 226 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — indexed_overworld_restore_local_proofs
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: snapshot restore proof helpers now reuse the session's indexed local area/job/quest/site lists through the cached manifest index.
+- Loop effect: repeated overworld restore/load validation avoids falling back to full manifest scans for local source prefix, chronology, and count replay checks.
+- Guard: focused typecheck plus overworld MCP lifecycle and snapshot integrity tests passed over the refactored restore proofs.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result — indexed_overworld_travel_exits
 
