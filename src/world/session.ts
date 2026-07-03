@@ -548,6 +548,7 @@ type OverworldJournalSourceIndex = {
 };
 
 type OverworldJournalTimelineIndex = {
+  progressSources: OverworldProgressJournalSourceIndex;
   recordedAtById: ReadonlyMap<string, number>;
 };
 
@@ -603,6 +604,16 @@ type OverworldProgressJournalSourceIndex = {
   resolvedEventIds: ReadonlySet<string>;
   startedQuestIds: ReadonlySet<string>;
   visitedAreaIds: ReadonlySet<string>;
+};
+
+type MutableOverworldProgressJournalSourceIndex = {
+  completedJobIds: Set<string>;
+  completedQuestIds: Set<string>;
+  completedRegionalArcIds: Set<string>;
+  exploredSiteIds: Set<string>;
+  resolvedEventIds: Set<string>;
+  startedQuestIds: Set<string>;
+  visitedAreaIds: Set<string>;
 };
 
 type OverworldReplayState = {
@@ -969,6 +980,49 @@ function snapshotTravelTimelineIndex(
   };
 }
 
+function emptyProgressJournalSourceIndex(): MutableOverworldProgressJournalSourceIndex {
+  return {
+    completedJobIds: new Set<string>(),
+    completedQuestIds: new Set<string>(),
+    completedRegionalArcIds: new Set<string>(),
+    exploredSiteIds: new Set<string>(),
+    resolvedEventIds: new Set<string>(),
+    startedQuestIds: new Set<string>(),
+    visitedAreaIds: new Set<string>(),
+  };
+}
+
+function recordProgressJournalSource(
+  sources: MutableOverworldProgressJournalSourceIndex,
+  entry: OverworldJournalEntry,
+): void {
+  switch (entry.kind) {
+    case "area":
+      sources.visitedAreaIds.add(entry.id.slice("area:".length));
+      return;
+    case "job":
+      sources.completedJobIds.add(entry.id.slice("job:".length));
+      return;
+    case "quest":
+      sources.startedQuestIds.add(entry.id.slice("quest:".length));
+      return;
+    case "quest_done":
+      sources.completedQuestIds.add(entry.id.slice("quest_done:".length));
+      return;
+    case "regional_arc":
+      sources.completedRegionalArcIds.add(entry.id.slice("arc:".length));
+      return;
+    case "resolution":
+      sources.resolvedEventIds.add(entry.id.slice("resolve:".length));
+      return;
+    case "site":
+      sources.exploredSiteIds.add(entry.id.slice("site:".length));
+      return;
+    default:
+      return;
+  }
+}
+
 function assertSnapshotTimeline(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldJournalSourceIndex,
@@ -979,6 +1033,7 @@ function assertSnapshotTimeline(
   );
 
   let previousRecordedAt = Number.POSITIVE_INFINITY;
+  const progressSources = emptyProgressJournalSourceIndex();
   const recordedAtById = new Map<string, number>();
   for (const entry of snapshot.journalEntries) {
     const recordedAt = parseTimeLabel(entry.recordedAt);
@@ -990,10 +1045,11 @@ function assertSnapshotTimeline(
       throw new Error("Overworld session snapshot journal must be newest-first.");
     }
     recordedAtById.set(entry.id, recordedAt);
+    recordProgressJournalSource(progressSources, entry);
     previousRecordedAt = recordedAt;
   }
 
-  return { recordedAtById };
+  return { progressSources, recordedAtById };
 }
 
 function travelResourceKey(entry: TravelLogEntrySnapshot): string {
@@ -1354,56 +1410,6 @@ function assertStringSetSubset(
   }
 }
 
-function progressJournalSourceIndex(
-  snapshot: OverworldSessionSnapshot,
-): OverworldProgressJournalSourceIndex {
-  const completedJobIds = new Set<string>();
-  const completedQuestIds = new Set<string>();
-  const completedRegionalArcIds = new Set<string>();
-  const exploredSiteIds = new Set<string>();
-  const resolvedEventIds = new Set<string>();
-  const startedQuestIds = new Set<string>();
-  const visitedAreaIds = new Set<string>();
-
-  for (const entry of snapshot.journalEntries) {
-    switch (entry.kind) {
-      case "area":
-        visitedAreaIds.add(entry.id.slice("area:".length));
-        break;
-      case "job":
-        completedJobIds.add(entry.id.slice("job:".length));
-        break;
-      case "quest":
-        startedQuestIds.add(entry.id.slice("quest:".length));
-        break;
-      case "quest_done":
-        completedQuestIds.add(entry.id.slice("quest_done:".length));
-        break;
-      case "regional_arc":
-        completedRegionalArcIds.add(entry.id.slice("arc:".length));
-        break;
-      case "resolution":
-        resolvedEventIds.add(entry.id.slice("resolve:".length));
-        break;
-      case "site":
-        exploredSiteIds.add(entry.id.slice("site:".length));
-        break;
-      default:
-        break;
-    }
-  }
-
-  return {
-    completedJobIds,
-    completedQuestIds,
-    completedRegionalArcIds,
-    exploredSiteIds,
-    resolvedEventIds,
-    startedQuestIds,
-    visitedAreaIds,
-  };
-}
-
 function assertJournalStateBinding(
   stateLabel: string,
   stateIds: readonly string[],
@@ -1427,9 +1433,10 @@ function assertJournalStateBinding(
   }
 }
 
-function assertSnapshotProgressJournalBindings(snapshot: OverworldSessionSnapshot): void {
-  const journalSources = progressJournalSourceIndex(snapshot);
-
+function assertSnapshotProgressJournalBindings(
+  snapshot: OverworldSessionSnapshot,
+  journalSources: OverworldProgressJournalSourceIndex,
+): void {
   assertJournalStateBinding(
     "visited area id",
     snapshot.visitedAreaIds,
@@ -2919,7 +2926,7 @@ export class OverworldSession {
       "discovered site ids",
       discoveredSiteIds,
     );
-    assertSnapshotProgressJournalBindings(snapshot);
+    assertSnapshotProgressJournalBindings(snapshot, journalTimeline.progressSources);
     assertSnapshotRegionRenown(
       snapshot,
       {

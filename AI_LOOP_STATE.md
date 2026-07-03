@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 234 -->
+<!-- historical_cycle_count: 235 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - indexed_overworld_restore_progress_timeline
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: snapshot timeline validation now returns progress journal source sets alongside recorded-time indexes.
+- Loop effect: progress/state binding checks reuse the validated journal pass instead of rescanning all journal entries after timeline validation.
+- Guard: focused typecheck plus overworld MCP lifecycle, UI overworld, and snapshot integrity tests passed over the shared progress timeline path.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - indexed_overworld_restore_travel_timeline
 

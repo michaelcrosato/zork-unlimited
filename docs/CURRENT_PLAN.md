@@ -215,9 +215,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Snapshot restore resource replay now reuses those local-action replay entries
   and stored durations, so resource validation only remaps road/service journal
   rows instead of every local journal action.
-- Snapshot restore progress/state journal bindings now build one source-id index
-  for area, job, quest, site, event-resolution, and regional-arc journals instead
-  of scanning all journal entries once per saved progress set.
+- Snapshot restore progress/state journal bindings now reuse source-id sets from
+  the validated journal timeline for area, job, quest, site, event-resolution,
+  and regional-arc journals instead of scanning entries in a separate proof pass.
 - Snapshot restore road-journal validation now builds one parsed resolution index
   keyed by road arrival, so pending-road checks, road renown replay, and resource
   replay share road facts instead of reparsing road entries independently.
@@ -382,9 +382,10 @@ Make discovered overworld quest leads start real RPG sessions.
   regional-arc completion proof/timing drift,
   non-newest-first or future travel logs, and impossible travel vitals before
   rebuilding live session state.
-- Snapshot restore now builds shared journal-time and travel-timeline indexes so
-  restore validators reuse parsed `recordedAt`, travel arrival maps, visit minutes,
-  and oldest-first travel order instead of recomputing them across proof passes.
+- Snapshot restore now builds shared journal-time, progress-source, and
+  travel-timeline indexes so restore validators reuse parsed `recordedAt`,
+  journal progress ids, travel arrival maps, visit minutes, and oldest-first travel
+  order instead of recomputing them across proof passes.
 - Compact overworld context now carries capped id-only recent travel tuples so
   agents do not need full observations to recover route history.
 - Compact overworld context now caps global progress id arrays and exposes
