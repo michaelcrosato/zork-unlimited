@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 226 -->
+<!-- historical_cycle_count: 227 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result — indexed_overworld_restore_event_proofs
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: snapshot restore event proofing now indexes journal ids plus earliest scout/contact times by area and earliest resolved-event times by town.
+- Loop effect: repeated overworld restore/load validation avoids per-resolved-event journal scans and per-regional-arc resolved-event walks.
+- Guard: focused typecheck plus overworld MCP lifecycle and snapshot integrity tests passed over the refactored proof indexes.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result — indexed_overworld_restore_local_proofs
 

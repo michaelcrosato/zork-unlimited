@@ -588,6 +588,12 @@ type OverworldRegionalArcCompletionIndex = {
   regionalArcs: readonly OverworldRegionalArc[];
 };
 
+type OverworldEventResolutionJournalIndex = {
+  contactTimeByArea: ReadonlyMap<string, number>;
+  journalById: ReadonlyMap<string, OverworldJournalEntry>;
+  scoutTimeByArea: ReadonlyMap<string, number>;
+};
+
 type OverworldLocalActionJournalReachabilityIndex = {
   areasById: ReadonlyMap<string, OverworldArea>;
   areasByTown: ReadonlyMap<string, readonly OverworldArea[]>;
@@ -2027,6 +2033,11 @@ function incrementCount(counts: Map<string, number>, key: string): void {
   counts.set(key, (counts.get(key) ?? 0) + 1);
 }
 
+function recordEarliestTime(times: Map<string, number>, key: string, recordedAt: number): void {
+  const previous = times.get(key);
+  if (previous === undefined || recordedAt < previous) times.set(key, recordedAt);
+}
+
 function assertSnapshotDiscoveredAreaCountReplay(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldLocalActionJournalReachabilityIndex,
@@ -2142,41 +2153,60 @@ function assertSnapshotDiscoveredLocalSourceCountReplay(
   }
 }
 
+function eventResolutionJournalIndex(
+  snapshot: OverworldSessionSnapshot,
+  sources: OverworldResolutionProofIndex,
+): OverworldEventResolutionJournalIndex {
+  const journalById = new Map<string, OverworldJournalEntry>();
+  const scoutTimeByArea = new Map<string, number>();
+  const contactTimeByArea = new Map<string, number>();
+
+  for (const entry of snapshot.journalEntries) {
+    journalById.set(entry.id, entry);
+    const recordedAt = journalEntryRecordedAt(entry);
+    if (entry.kind === "poi") {
+      const sourceId = journalSourceId(entry, "scout:");
+      const poi = sourceId ? sources.poisById.get(sourceId) : undefined;
+      if (poi) recordEarliestTime(scoutTimeByArea, poi.area, recordedAt);
+      continue;
+    }
+    if (entry.kind === "contact") {
+      const sourceId = journalSourceId(entry, "talk:");
+      const character = sourceId ? sources.charactersById.get(sourceId) : undefined;
+      if (character) recordEarliestTime(contactTimeByArea, character.area, recordedAt);
+    }
+  }
+
+  return { contactTimeByArea, journalById, scoutTimeByArea };
+}
+
 function assertSnapshotEventResolutionProofs(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldResolutionProofIndex,
 ): void {
-  const journalById = new Map(snapshot.journalEntries.map((entry) => [entry.id, entry]));
+  const journal = eventResolutionJournalIndex(snapshot, sources);
   for (const eventId of snapshot.resolvedEventIds) {
     const event = sources.eventsById.get(eventId);
     if (!event) continue;
-    const resolution = journalById.get(`resolve:${eventId}`);
+    const resolution = journal.journalById.get(`resolve:${eventId}`);
     if (!resolution) continue;
     const resolvedAt = journalEntryRecordedAt(resolution);
 
-    const hasLocalScout = snapshot.journalEntries.some((entry) => {
-      if (entry.kind !== "poi" || !entry.id.startsWith("scout:")) return false;
-      const poi = sources.poisById.get(entry.id.slice("scout:".length));
-      return poi?.area === event.area && journalEntryRecordedAt(entry) <= resolvedAt;
-    });
-    if (!hasLocalScout) {
+    const scoutAt = journal.scoutTimeByArea.get(event.area);
+    if (scoutAt === undefined || scoutAt > resolvedAt) {
       throw new Error(
         `Overworld session snapshot resolved event "${eventId}" is missing a local scout prerequisite.`,
       );
     }
 
-    const hasLocalContact = snapshot.journalEntries.some((entry) => {
-      if (entry.kind !== "contact" || !entry.id.startsWith("talk:")) return false;
-      const character = sources.charactersById.get(entry.id.slice("talk:".length));
-      return character?.area === event.area && journalEntryRecordedAt(entry) <= resolvedAt;
-    });
-    if (!hasLocalContact) {
+    const contactAt = journal.contactTimeByArea.get(event.area);
+    if (contactAt === undefined || contactAt > resolvedAt) {
       throw new Error(
         `Overworld session snapshot resolved event "${eventId}" is missing a local contact prerequisite.`,
       );
     }
 
-    const investigation = journalById.get(`investigate:${eventId}`);
+    const investigation = journal.journalById.get(`investigate:${eventId}`);
     if (!investigation || journalEntryRecordedAt(investigation) > resolvedAt) {
       throw new Error(
         `Overworld session snapshot resolved event "${eventId}" is missing an investigated event prerequisite.`,
@@ -2185,28 +2215,34 @@ function assertSnapshotEventResolutionProofs(
   }
 }
 
-function resolvedAnchorTimesForRegionalArc(
+function earliestResolutionTimesByTown(
   snapshot: OverworldSessionSnapshot,
-  arc: OverworldRegionalArc,
   eventsById: ReadonlyMap<string, OverworldLocalEvent>,
-): number[] {
-  const anchorTownIds = new Set(arc.anchor_towns);
-  const journalById = new Map(snapshot.journalEntries.map((entry) => [entry.id, entry]));
-  const earliestResolutionByAnchorTown = new Map<string, number>();
+  journalById: ReadonlyMap<string, OverworldJournalEntry>,
+): Map<string, number> {
+  const timesByTown = new Map<string, number>();
 
   for (const eventId of snapshot.resolvedEventIds) {
     const event = eventsById.get(eventId);
-    if (!event || !anchorTownIds.has(event.home)) continue;
+    if (!event) continue;
     const resolution = journalById.get(`resolve:${eventId}`);
     if (!resolution) continue;
-    const resolvedAt = journalEntryRecordedAt(resolution);
-    const previous = earliestResolutionByAnchorTown.get(event.home);
-    if (previous === undefined || resolvedAt < previous) {
-      earliestResolutionByAnchorTown.set(event.home, resolvedAt);
-    }
+    recordEarliestTime(timesByTown, event.home, journalEntryRecordedAt(resolution));
   }
 
-  return [...earliestResolutionByAnchorTown.values()].sort((left, right) => left - right);
+  return timesByTown;
+}
+
+function resolvedAnchorTimesForRegionalArc(
+  arc: OverworldRegionalArc,
+  resolutionTimesByTown: ReadonlyMap<string, number>,
+): number[] {
+  const times: number[] = [];
+  for (const townId of arc.anchor_towns) {
+    const resolvedAt = resolutionTimesByTown.get(townId);
+    if (resolvedAt !== undefined) times.push(resolvedAt);
+  }
+  return times.sort((left, right) => left - right);
 }
 
 function assertSnapshotRegionalArcCompletionProofs(
@@ -2215,13 +2251,14 @@ function assertSnapshotRegionalArcCompletionProofs(
 ): void {
   const completedRegionalArcIds = new Set(snapshot.completedRegionalArcIds);
   const journalById = new Map(snapshot.journalEntries.map((entry) => [entry.id, entry]));
+  const resolutionTimesByTown = earliestResolutionTimesByTown(
+    snapshot,
+    sources.eventsById,
+    journalById,
+  );
 
   for (const arc of sources.regionalArcs) {
-    const resolvedAnchorTimes = resolvedAnchorTimesForRegionalArc(
-      snapshot,
-      arc,
-      sources.eventsById,
-    );
+    const resolvedAnchorTimes = resolvedAnchorTimesForRegionalArc(arc, resolutionTimesByTown);
     const hasRequiredResolutions = resolvedAnchorTimes.length >= arc.required_resolutions;
     const completed = completedRegionalArcIds.has(arc.id);
 
