@@ -41,23 +41,30 @@ export type RpgCompactObservation = {
   ending?: RpgObservation["ending"];
 };
 
-function ref(value: { id: string; name: string }): RpgCompactRef {
-  return [value.id, value.name];
-}
-
 function compactVars(vars: Record<string, number>): Record<string, number> | undefined {
-  const compact = Object.fromEntries(
-    Object.entries(vars).filter(([key]) => !CORE_STATE_VARS.has(key)),
-  );
-  return Object.keys(compact).length > 0 ? compact : undefined;
+  const compact: Record<string, number> = {};
+  let hasCompactVar = false;
+  for (const key in vars) {
+    if (!Object.prototype.hasOwnProperty.call(vars, key) || CORE_STATE_VARS.has(key)) continue;
+    compact[key] = vars[key]!;
+    hasCompactVar = true;
+  }
+  return hasCompactVar ? compact : undefined;
 }
 
 function compactHead(values: readonly string[], limit: number): string[] {
-  return values.slice(0, limit);
+  const compact: string[] = [];
+  for (let index = 0; index < values.length && index < limit; index += 1) {
+    compact.push(values[index]!);
+  }
+  return compact;
 }
 
 function compactRecent(values: readonly string[], limit: number): string[] {
-  return values.slice(Math.max(0, values.length - limit));
+  const compact: string[] = [];
+  const start = Math.max(0, values.length - limit);
+  for (let index = start; index < values.length; index += 1) compact.push(values[index]!);
+  return compact;
 }
 
 function omittedCount(values: readonly string[], compacted: readonly string[]): number | undefined {
@@ -75,9 +82,18 @@ export function compactRpgObservation(
   const omittedInv = omittedCount(obs.inventory, inv);
   const omittedFlags = omittedCount(obs.state.flags, flags);
   const omittedJournal = omittedCount(obs.state.journal, journal);
-  const exits: RpgCompactExit[] = obs.exits.map((exit) =>
-    exit.to === undefined ? exit.direction : ([exit.direction, exit.to] as const),
-  );
+  const exits: RpgCompactExit[] = [];
+  for (const exit of obs.exits) {
+    exits.push(exit.to === undefined ? exit.direction : [exit.direction, exit.to]);
+  }
+  const objects: RpgCompactRef[] = [];
+  for (const object of obs.visible_objects) objects.push([object.id, object.name]);
+  const npcs: RpgCompactRef[] = [];
+  for (const npc of obs.npcs_present) npcs.push([npc.id, npc.name]);
+  const blocked: RpgCompactBlockedExit[] = [];
+  for (const exit of obs.blocked_exits) blocked.push([exit.direction, exit.message]);
+  const enemies: RpgCompactEnemy[] = [];
+  for (const enemy of obs.enemies_present) enemies.push([enemy.id, enemy.name, enemy.hp]);
   const more =
     omittedInv !== undefined || omittedFlags !== undefined || omittedJournal !== undefined
       ? ([omittedInv ?? 0, omittedFlags ?? 0, omittedJournal ?? 0] as const)
@@ -89,20 +105,16 @@ export function compactRpgObservation(
     ...(exits.length > 0 ? { exits } : {}),
     vitals: [obs.stats.hp, obs.stats.attack, obs.stats.defense, obs.score, obs.max_score],
     ...(actionIds.length > 0 ? { actions: actionIds } : {}),
-    ...(obs.visible_objects.length > 0 ? { objects: obs.visible_objects.map(ref) } : {}),
-    ...(obs.npcs_present.length > 0 ? { npcs: obs.npcs_present.map(ref) } : {}),
-    ...(obs.blocked_exits.length > 0
-      ? { blocked: obs.blocked_exits.map((exit) => [exit.direction, exit.message] as const) }
-      : {}),
+    ...(objects.length > 0 ? { objects } : {}),
+    ...(npcs.length > 0 ? { npcs } : {}),
+    ...(blocked.length > 0 ? { blocked } : {}),
     ...(inv.length > 0 ? { inv } : {}),
     ...(flags.length > 0 ? { flags } : {}),
     ...(vars ? { vars } : {}),
     ...(journal.length > 0 ? { journal } : {}),
     ...(more ? { more } : {}),
     ...(obs.dialogue ? { dialogue: [obs.dialogue.npc, obs.dialogue.npc_text] as const } : {}),
-    ...(obs.enemies_present.length > 0
-      ? { enemies: obs.enemies_present.map((enemy) => [enemy.id, enemy.name, enemy.hp] as const) }
-      : {}),
+    ...(enemies.length > 0 ? { enemies } : {}),
     ...(obs.ended ? { ended: true as const } : {}),
     ...(obs.ending_id ? { ending_id: obs.ending_id } : {}),
     ...(obs.ending ? { ending: obs.ending } : {}),

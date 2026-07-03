@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 263 -->
+<!-- historical_cycle_count: 264 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - direct_mcp_compact_rpg_observation_packing
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: MCP compact RPG observation packing now builds vars, capped lists, exits, refs, blocked exits, and enemies with direct loops.
+- Loop effect: repeated compact agent reads avoid `Object.fromEntries`, `slice`, and `map` allocation chains while preserving payload shape and compact limits.
+- Guard: focused typecheck plus compact RPG observation, MCP tools, and session tests passed over direct compact packing.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - direct_overworld_compact_tuple_projection
 

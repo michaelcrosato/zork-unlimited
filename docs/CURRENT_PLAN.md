@@ -163,6 +163,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - MCP RPG observation projections are cached per session/state hash plus compact,
   public-action, graph, and intro shape, so repeated observation reads reuse
   compact contexts or public observation rows until reducer state changes.
+- MCP compact RPG observation packing now fills vars, capped lists, exits, refs,
+  blocked exits, and enemies with direct loops, avoiding `Object.fromEntries`,
+  `slice`, and `map` allocation chains on repeated compact agent reads.
 - Public MCP `get_transcript` defaults to compact summary-only output; callers can
   pass `summary_only: false` and `compact_summary: false` when they need full
   route/event history.
