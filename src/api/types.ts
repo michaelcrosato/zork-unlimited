@@ -2,8 +2,7 @@
  * Action + StepResult types (spec §8.1, §8.2).
  *
  * `RpgAction` is the canonical live reducer surface. `Action` is kept as a
- * stable API alias for callers that have not adopted the explicit RPG name yet;
- * it no longer includes retired CYOA `CHOOSE` actions.
+ * stable API alias for callers that have not adopted the explicit RPG name yet.
  */
 import type { GameState } from "../core/state.js";
 import type { GameEvent } from "../core/events.js";

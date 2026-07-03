@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 270 -->
+<!-- historical_cycle_count: 271 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - rpg_action_default_contract
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/consolidation surface: core reducer `Rules`/`makeStep` and trace records now default to `RpgAction`, not the legacy-compatible `Action` alias.
+- Loop effect: new engine and trace call sites bind to the single RPG action contract by default while existing helper aliases remain source-compatible.
+- Guard: focused typecheck plus RPG schema, action-boundary, save, and trace integrity tests passed over the default-contract change.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - direct_rpg_observation_projection
 

@@ -101,7 +101,7 @@ function makeRng(seed: number): { int: (n: number) => number; pick: <T>(xs: read
  * setting, the room/enemy/item prose, and the natural command verb for the lever-puzzle, so
  * two seeds read as different quests while the proof-relevant shape (descent → optional ward →
  * TWO winnable fights → passable check → relic) is constant. `leverVerb` is the natural verb the
- * puzzle's command primes ("lever"/"force"/...) — it must not shadow a builtin parser verb.
+ * puzzle's command primes ("lever"/"force"/...) — it must not shadow a built-in RPG command verb.
  */
 type Theme = {
   key: string;

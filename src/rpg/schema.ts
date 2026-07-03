@@ -113,7 +113,7 @@ export const InteractionSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["command_verb"],
-          message: `command_verb "${it.command_verb}" shadows a builtin parser verb`,
+          message: `command_verb "${it.command_verb}" shadows a built-in RPG command verb`,
         });
       }
     }
@@ -130,7 +130,7 @@ export const InteractionSchema = z
           code: z.ZodIssueCode.custom,
           path: ["command_template"],
           message:
-            "command_template must begin with command_verb (the displayed command's first word is the verb the parser keys on)",
+            "command_template must begin with command_verb (the displayed command's first word is the RPG command resolver key)",
         });
       }
       if (it.item !== undefined && it.item === it.target) {

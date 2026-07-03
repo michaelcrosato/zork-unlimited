@@ -8,12 +8,12 @@
  */
 import type { GameState } from "../core/state.js";
 import { hashState } from "../core/hash.js";
-import type { Action, StepResult } from "../api/types.js";
+import type { RpgAction, StepResult } from "../api/types.js";
 import type { EngineAction, Rules } from "../core/engine.js";
 import { makeStep } from "../core/engine.js";
 import { SAVE_MODE, type SaveMode } from "../persist/save_load.js";
 
-export type Trace<A extends EngineAction = Action> = {
+export type Trace<A extends EngineAction = RpgAction> = {
   mode: SaveMode;
   /** Shipped world quest id, when the trace belongs to the open-world graph. */
   worldQuestId?: string;

@@ -120,7 +120,7 @@ describe("seeded skill checks (§8.5)", () => {
 });
 
 describe("RPG action boundary", () => {
-  it("rejects retired CYOA CHOOSE actions before RPG resolution", () => {
+  it("rejects non-RPG CHOOSE actions before RPG resolution", () => {
     const loaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
     if (!loaded.ok) throw new Error("sunken_barrow must compile");
     const index = indexRpgPack(loaded.compiled.pack);

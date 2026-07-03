@@ -85,6 +85,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Retired legacy story and pack-named aliases from the live MCP surface; use
   `validate_quest`, `load_quest`, and `start_world_quest` for shipped RPG play.
   `new_game` remains only for generated-pack smoke play.
+- Core reducer `Rules`/`makeStep` and trace records now default to `RpgAction`,
+  so new engine and trace call sites bind to the single RPG action contract by
+  default instead of the legacy-compatible `Action` alias.
 - RPG start/load responses now carry one-time world context; follow-up
   observations omit that repeated binding to lower per-turn MCP payload.
 - Compact RPG observations carry action ids as strings without repeated command
