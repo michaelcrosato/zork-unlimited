@@ -668,6 +668,7 @@ type OverworldLocalActionJournalReplayEntry = {
   entry: OverworldJournalEntry;
   source: OverworldLocalJournalSource;
   recordedAt: number;
+  duration: number | null;
 };
 
 type OverworldLocalActionJournalReplayIndex = {
@@ -1094,7 +1095,7 @@ function assertSnapshotRoadResolutionCoverage(
 function assertSnapshotResourceReplay(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldResourceReplayIndex,
-  localActionSources: OverworldLocalActionJournalReachabilityIndex,
+  localActionJournal: OverworldLocalActionJournalReplayIndex,
 ): void {
   const roadResolutionByKey = assertSnapshotRoadResolutionCoverage(snapshot, sources);
   const replayEvents: (
@@ -1114,13 +1115,13 @@ function assertSnapshotResourceReplay(
   for (const entry of snapshot.journalEntries) {
     if (entry.kind === "road" || entry.kind === "service") {
       replayEvents.push({ kind: entry.kind, recordedAt: journalEntryRecordedAt(entry), entry });
-      continue;
     }
-    const duration = localJournalActionDuration(entry, localActionSources);
+  }
+  for (const { entry, recordedAt, duration } of localActionJournal.entries) {
     if (duration !== null) {
       replayEvents.push({
         kind: "local",
-        recordedAt: journalEntryRecordedAt(entry),
+        recordedAt,
         duration,
         entry,
       });
@@ -1895,6 +1896,7 @@ function localActionJournalReplayIndex(
       entry,
       source,
       recordedAt: journalEntryRecordedAt(entry),
+      duration: localJournalActionDuration(entry, sources),
     });
     incrementCount(localActionCountByTown, source.home);
     incrementCount(localActionCountByArea, source.area);
@@ -2863,7 +2865,7 @@ export class OverworldSession {
         snapshot.minutes,
       );
     }
-    assertSnapshotResourceReplay(snapshot, indexes, localActionJournalSources);
+    assertSnapshotResourceReplay(snapshot, indexes, localActionJournal);
 
     this.currentId = snapshot.currentId;
     this.currentAreaId = snapshot.currentAreaId;

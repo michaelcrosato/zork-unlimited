@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 228 -->
+<!-- historical_cycle_count: 229 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - indexed_overworld_restore_resource_replay
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: local-action replay entries now carry action duration, and snapshot resource replay consumes that index instead of remapping every local journal entry from the full journal.
+- Loop effect: repeated overworld restore/load validation only scans the journal for road/service rows during resource replay while reusing parsed local action facts.
+- Guard: focused typecheck plus overworld MCP lifecycle and snapshot integrity tests passed over the refactored replay path.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result — indexed_overworld_restore_local_journal
 
