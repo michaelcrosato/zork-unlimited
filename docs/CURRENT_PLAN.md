@@ -166,6 +166,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - MCP compact RPG observation packing now fills vars, capped lists, exits, refs,
   blocked exits, and enemies with direct loops, avoiding `Object.fromEntries`,
   `slice`, and `map` allocation chains on repeated compact agent reads.
+- Live RPG observations now project visible objects, NPCs, exits, blocked exits,
+  enemies, and action rows through direct loops, avoiding repeated observation
+  `map`/`filter` chains per turn.
 - Public MCP `get_transcript` defaults to compact summary-only output; callers can
   pass `summary_only: false` and `compact_summary: false` when they need full
   route/event history.

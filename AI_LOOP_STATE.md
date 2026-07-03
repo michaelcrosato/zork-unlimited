@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 269 -->
+<!-- historical_cycle_count: 270 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - direct_rpg_observation_projection
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: live RPG observations now project visible objects, NPCs, exits, blocked exits, enemies, and action rows through direct loops.
+- Loop effect: repeated turn observations avoid observation `map`/`filter` chains while preserving ordering, condition gates, and payload shape.
+- Guard: focused typecheck plus RPG runtime, MCP tools, action-id, and observation-stream tests passed over direct RPG observation projection.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - direct_overworld_compact_clone_helpers
 

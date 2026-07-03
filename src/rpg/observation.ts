@@ -83,36 +83,53 @@ export function buildRpgObservation(
   const baseDescription = room ? roomDescription(room, state) : "";
   const world = index.pack.meta.world;
 
-  const visibleObjects = visibleObjectIds(index, state, state.current).map((id) => {
+  const visibleObjects: RpgObservation["visible_objects"] = [];
+  for (const id of visibleObjectIds(index, state, state.current)) {
     const object = index.objects.get(id);
-    return { id, name: object ? objectName(object, state) : id };
-  });
+    visibleObjects.push({ id, name: object ? objectName(object, state) : id });
+  }
 
-  const npcs = (index.npcByRoom.get(state.current) ?? [])
-    .filter((npc) => evalConditions(npc.conditions ?? [], state))
-    .map((npc) => ({ id: npc.id, name: npc.name }));
+  const npcs: RpgObservation["npcs_present"] = [];
+  for (const npc of index.npcByRoom.get(state.current) ?? []) {
+    if (evalConditions(npc.conditions ?? [], state)) {
+      npcs.push({ id: npc.id, name: npc.name });
+    }
+  }
 
-  const exits = room
-    ? room.exits
-        .filter((exit) => evalConditions(exit.conditions, state))
-        .map((exit) =>
+  const exits: RpgObservation["exits"] = [];
+  const blockedExits: RpgObservation["blocked_exits"] = [];
+  if (room) {
+    for (const exit of room.exits) {
+      if (evalConditions(exit.conditions, state)) {
+        exits.push(
           opts.hideGraph
             ? { direction: exit.direction }
             : { direction: exit.direction, to: exit.to },
-        )
-        .sort((a, b) => a.direction.localeCompare(b.direction))
-    : [];
+        );
+      } else if (exit.locked_msg !== undefined) {
+        blockedExits.push({ direction: exit.direction, message: exit.locked_msg });
+      }
+    }
+    exits.sort((a, b) => a.direction.localeCompare(b.direction));
+    blockedExits.sort((a, b) => a.direction.localeCompare(b.direction));
+  }
 
-  const blockedExits = room
-    ? room.exits
-        .filter((exit) => exit.locked_msg !== undefined && !evalConditions(exit.conditions, state))
-        .map((exit) => ({ direction: exit.direction, message: exit.locked_msg as string }))
-        .sort((a, b) => a.direction.localeCompare(b.direction))
-    : [];
+  const enemies: RpgObservation["enemies_present"] = [];
+  for (const enemy of index.enemyByRoom.get(state.current) ?? []) {
+    if (enemyActive(state, enemy)) {
+      enemies.push({ id: enemy.id, name: enemy.name, hp: enemyHp(state, enemy) });
+    }
+  }
 
-  const enemies = (index.enemyByRoom.get(state.current) ?? [])
-    .filter((enemy) => enemyActive(state, enemy))
-    .map((enemy) => ({ id: enemy.id, name: enemy.name, hp: enemyHp(state, enemy) }));
+  const availableActions: RpgObservation["available_actions"] = [];
+  for (const option of opts.availableActions ?? enumerateRpgActions(index, state)) {
+    availableActions.push({
+      id: option.id,
+      command: option.command,
+      action: option.action,
+      ...(option.skill_check ? { skill_check: option.skill_check } : {}),
+    });
+  }
 
   return {
     mode: "rpg",
@@ -139,14 +156,7 @@ export function buildRpgObservation(
       attack: state.vars[ATTACK_VAR] ?? 0,
       defense: state.vars[DEFENSE_VAR] ?? 0,
     },
-    available_actions: (opts.availableActions ?? enumerateRpgActions(index, state)).map(
-      (option) => ({
-        id: option.id,
-        command: option.command,
-        action: option.action,
-        ...(option.skill_check ? { skill_check: option.skill_check } : {}),
-      }),
-    ),
+    available_actions: availableActions,
     score,
     max_score: maxScore,
     ended: state.ended,
