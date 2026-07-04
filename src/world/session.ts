@@ -23,26 +23,7 @@ import {
   type OverworldLocalActionDescriptor,
   type OverworldLocalActionKind,
 } from "./local_actions.js";
-import {
-  OVERWORLD_COMPACT_ROUTE_LIMIT,
-  OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT,
-  OVERWORLD_COMPACT_VIEW_VERSION,
-  cloneOverworldCompactView,
-  compactOverworldJournalEntries,
-  compactOverworldLabel,
-  compactOverworldQuestRefs,
-  compactOverworldRefs,
-  compactOverworldRenownEntries,
-  compactOverworldTitleRefs,
-  compactPendingRoad,
-  compactRouteOption,
-  compactTravelLogEntry,
-  type OverworldCompactAreaRoute,
-  type OverworldCompactRoad,
-  type OverworldCompactRouteOption,
-  type OverworldCompactTravelLogEntry,
-  type OverworldCompactView,
-} from "./compact_view.js";
+import { cloneOverworldCompactView, type OverworldCompactView } from "./compact_view.js";
 import {
   assertKnownIds,
   assertUniqueTupleMap,
@@ -52,9 +33,7 @@ import {
   pushIndexed,
   replaceStringSet,
   sortedIndex,
-  sortedNumberMap,
   sortedNumberRecord,
-  sortedStringSet,
 } from "./session_collections.js";
 import {
   OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES,
@@ -165,7 +144,7 @@ import {
   type TravelLogEntry,
 } from "./session_snapshot.js";
 import { restoreOverworldTravelLogEntries } from "./session_travel_log.js";
-import { compactOverworldSessionIdPayload } from "./session_compact_ids.js";
+import { buildOverworldSessionCompactView } from "./session_compact_view.js";
 import {
   clearOverworldSessionCaches,
   type OverworldSessionCaches,
@@ -1211,114 +1190,50 @@ export class OverworldSession {
   private buildCompactView(): OverworldCompactView {
     const current = this.currentNode();
     const currentArea = this.currentArea();
-    const areaRoutes: OverworldCompactAreaRoute[] = [];
-    for (const exit of this.visibleAreaExits()) {
-      areaRoutes.push([exit.id, exit.destination.id, exit.travel_minutes]);
-    }
     const routeOptions = this.discoveredRouteOptions();
-    const compactRouteOptions: OverworldCompactRouteOption[] = [];
-    for (
-      let index = 0;
-      index < routeOptions.length && index < OVERWORLD_COMPACT_ROUTE_LIMIT;
-      index += 1
-    ) {
-      compactRouteOptions.push(compactRouteOption(routeOptions[index]!));
-    }
-    const routeByDestination = new Map<string, OverworldSessionRoutePlan>();
-    for (const plan of routeOptions) routeByDestination.set(plan.destination.id, plan);
-    const idPayload = compactOverworldSessionIdPayload({
-      discoveredIds: this.discoveredIds,
-      nodes: this.nodes,
-      discoveredAreaIds: this.discoveredAreaIds,
-      visitedAreaIds: this.visitedAreaIds,
-      discoveredJobIds: this.discoveredJobIds,
-      completedJobIds: this.completedJobIds,
-      discoveredSiteIds: this.discoveredSiteIds,
-      exploredSiteIds: this.exploredSiteIds,
-      discoveredQuestIds: this.discoveredQuestIds,
-      startedQuestIds: this.startedQuestIds,
-      completedQuestIds: this.completedQuestIds,
-      resolvedEventIds: this.resolvedEventIds,
+    return buildOverworldSessionCompactView({
+      worldName: this.world.name,
+      worldTownCount: this.world.nodes.length,
+      current,
+      currentArea,
+      minutes: this.minutes,
+      supplies: this.supplies,
+      fatigue: this.fatigue,
+      roads: this.roadsFrom(this.currentId),
+      areaExits: this.visibleAreaExits(),
+      routeOptions,
+      areas: this.discoveredAreasAt(this.currentId),
+      poi: this.currentAreaPois(),
+      contacts: this.currentAreaCharacters(),
+      events: this.currentAreaEvents(),
+      jobs: this.discoveredJobsInCurrentArea(),
+      sites: this.discoveredSitesInCurrentArea(),
+      quests: this.discoveredQuestsAt(this.currentId),
+      hiddenAreaCount: this.hiddenAreaCountAt(this.currentId),
+      hiddenJobCount: this.hiddenJobCountAt(this.currentId),
+      hiddenSiteCount: this.hiddenSiteCountInCurrentArea(),
+      hiddenQuestCount: this.hiddenQuestCountAt(this.currentId),
+      journalEntries: this.journalEntries,
+      travelLog: this.travelLog,
+      visitedCount: this.visitedIds.size,
+      regionRenown: this.regionRenown,
+      completedRegionalArcIds: this.completedRegionalArcIds,
+      pendingRoadEncounter: this.pendingRoadEncounter,
+      ids: {
+        discoveredIds: this.discoveredIds,
+        nodes: this.nodes,
+        discoveredAreaIds: this.discoveredAreaIds,
+        visitedAreaIds: this.visitedAreaIds,
+        discoveredJobIds: this.discoveredJobIds,
+        completedJobIds: this.completedJobIds,
+        discoveredSiteIds: this.discoveredSiteIds,
+        exploredSiteIds: this.exploredSiteIds,
+        discoveredQuestIds: this.discoveredQuestIds,
+        startedQuestIds: this.startedQuestIds,
+        completedQuestIds: this.completedQuestIds,
+        resolvedEventIds: this.resolvedEventIds,
+      },
     });
-    const exits = this.roadsFrom(this.currentId);
-    const jobs = compactOverworldTitleRefs(this.discoveredJobsInCurrentArea());
-    const sites = compactOverworldTitleRefs(this.discoveredSitesInCurrentArea());
-    const quests = compactOverworldQuestRefs(this.discoveredQuestsAt(this.currentId));
-    const pendingRoad = compactPendingRoad(this.pendingRoadEncounter);
-    const journal = compactOverworldJournalEntries(this.journalEntries);
-    const travelLog: OverworldCompactTravelLogEntry[] = [];
-    for (
-      let index = 0;
-      index < this.travelLog.length && index < OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT;
-      index += 1
-    ) {
-      travelLog.push(compactTravelLogEntry(this.travelLog[index]!));
-    }
-    const renown = compactOverworldRenownEntries(sortedNumberMap(this.regionRenown));
-    const completedArcs = sortedStringSet(this.completedRegionalArcIds);
-    const roads: OverworldCompactRoad[] = [];
-    for (const exit of exits) {
-      const plan = routeByDestination.get(exit.destination.id);
-      roads.push([
-        exit.id,
-        exit.destination.id,
-        plan?.estimate.elapsedMinutes ?? exit.travel_minutes,
-        plan?.estimate.suppliesNeeded ?? 0,
-        plan?.estimate.fatigueAfter ?? this.fatigue,
-      ]);
-    }
-    const areas = compactOverworldRefs(this.discoveredAreasAt(this.currentId));
-    const poi = compactOverworldTitleRefs(this.currentAreaPois());
-    const contacts = compactOverworldRefs(this.currentAreaCharacters());
-    const events = compactOverworldTitleRefs(this.currentAreaEvents());
-
-    return {
-      v: OVERWORLD_COMPACT_VIEW_VERSION,
-      world: compactOverworldLabel(this.world.name),
-      time: timeLabel(this.minutes),
-      here: [
-        current.id,
-        compactOverworldLabel(current.name),
-        compactOverworldLabel(current.region),
-        currentArea?.id ?? null,
-        currentArea ? compactOverworldLabel(currentArea.name) : null,
-      ],
-      vitals: [
-        this.supplies,
-        MAX_SUPPLIES,
-        this.fatigue,
-        travelCondition(this.fatigue, this.supplies),
-      ],
-      hidden: [
-        this.hiddenAreaCountAt(this.currentId),
-        this.hiddenJobCountAt(this.currentId),
-        this.hiddenSiteCountInCurrentArea(),
-        this.hiddenQuestCountAt(this.currentId),
-      ],
-      roads,
-      ...(areaRoutes.length > 0 ? { area_routes: areaRoutes } : {}),
-      route_options: compactRouteOptions,
-      ...(routeOptions.length > compactRouteOptions.length
-        ? { route_options_truncated: true as const }
-        : {}),
-      areas,
-      poi,
-      contacts,
-      events,
-      ...(jobs.length > 0 ? { jobs } : {}),
-      ...(sites.length > 0 ? { sites } : {}),
-      ...(quests.length > 0 ? { quests } : {}),
-      ...(pendingRoad ? { pending_road: pendingRoad } : {}),
-      ...(journal.length > 0 ? { journal } : {}),
-      ...(travelLog.length > 0 ? { travel_log: travelLog } : {}),
-      ...(this.travelLog.length > travelLog.length ? { travel_log_truncated: true as const } : {}),
-      progress: [this.visitedIds.size, this.world.nodes.length],
-      ...(renown.length > 0 ? { renown } : {}),
-      ...(completedArcs.length > 0 ? { completed_arcs: completedArcs } : {}),
-      id_counts: idPayload.id_counts,
-      ...(idPayload.ids_truncated ? { ids_truncated: idPayload.ids_truncated } : {}),
-      ids: idPayload.ids,
-    };
   }
 
   private cachedView(): OverworldView {
