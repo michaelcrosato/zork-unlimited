@@ -10,6 +10,7 @@ import { z } from "zod";
 import type { GameState } from "../core/state.js";
 import { canonicalize } from "../core/hash.js";
 import {
+  compactSourceLegacyMetadata,
   compactSourceRefFromMetadata,
   compactSourceRefValidationError,
   type CompactSourceRef,
@@ -135,6 +136,7 @@ export function save(
 ): string {
   assertRpgMode(mode, "Save mode");
   const sourceRef = saveSourceRef(packId, metadata);
+  const sourceMetadata = compactSourceLegacyMetadata(sourceRef);
   const bundle: SaveBundle = {
     version: SAVE_VERSION,
     packId,
@@ -142,8 +144,12 @@ export function save(
     state,
     mode,
     source_ref: sourceRef,
-    ...(sourceRef[0] === "wq" ? { worldQuestId: sourceRef[1] } : {}),
-    ...(sourceRef[0] === "gen" ? { generatedRpgSeed: sourceRef[1] } : {}),
+    ...(sourceMetadata.worldQuestId !== undefined
+      ? { worldQuestId: sourceMetadata.worldQuestId }
+      : {}),
+    ...(sourceMetadata.generatedRpgSeed !== undefined
+      ? { generatedRpgSeed: sourceMetadata.generatedRpgSeed }
+      : {}),
   };
   return canonicalize(bundle);
 }

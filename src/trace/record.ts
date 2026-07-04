@@ -12,7 +12,12 @@ import type { RpgAction, StepResult } from "../api/types.js";
 import type { EngineAction, Rules } from "../core/engine.js";
 import { makeStep } from "../core/engine.js";
 import { SAVE_MODE, type SaveMode } from "../persist/save_load.js";
-import { compactSourceRefFromMetadata, type CompactSourceRef } from "../world/source_ref.js";
+import {
+  compactSourceLegacyMetadata,
+  compactSourceRefFromMetadata,
+  compactSourceRefLabel,
+  type CompactSourceRef,
+} from "../world/source_ref.js";
 
 export type TraceSourceRef = CompactSourceRef;
 
@@ -92,9 +97,7 @@ export function traceSourceLabel(trace: {
   pack_id: string;
 }): string {
   const ref = trace.source_ref;
-  if (ref?.[0] === "wq") return `world_quest_id:${ref[1]}`;
-  if (ref?.[0] === "gen") return `generate_rpg_seed:${ref[1]}`;
-  if (ref?.[0] === "pack") return `pack_id:${ref[1]}`;
+  if (ref !== undefined) return compactSourceRefLabel(ref);
   return trace.worldQuestId ? `world_quest_id:${trace.worldQuestId}` : `pack_id:${trace.pack_id}`;
 }
 
@@ -106,10 +109,14 @@ export function recordTrace<A extends EngineAction>(
   opts: RecordOptions,
 ): Trace<A> {
   const run = runActions(rules, initialState, actions);
+  const sourceRef = traceSourceRef(opts);
+  const sourceMetadata = compactSourceLegacyMetadata(sourceRef);
   return {
     mode: SAVE_MODE,
-    source_ref: traceSourceRef(opts),
-    ...(opts.worldQuestId ? { worldQuestId: opts.worldQuestId } : {}),
+    source_ref: sourceRef,
+    ...(sourceMetadata.worldQuestId !== undefined
+      ? { worldQuestId: sourceMetadata.worldQuestId }
+      : {}),
     trace_id: opts.trace_id,
     pack_id: opts.pack_id,
     content_hash: opts.content_hash,

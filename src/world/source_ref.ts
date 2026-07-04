@@ -16,6 +16,11 @@ export type CompactSourceRefResult =
   | { ok: true; sourceRef: CompactSourceRef }
   | { ok: false; error: string };
 
+export type CompactSourceLegacyMetadata = {
+  worldQuestId?: string;
+  generatedRpgSeed?: number;
+};
+
 export function compactSourceRefFromMetadata(
   fallbackPackId: string,
   metadata: CompactSourceMetadata,
@@ -52,6 +57,20 @@ export function compactSourceRefFromMetadata(
     return { ok: true, sourceRef: ["gen", generatedRpgSeed] };
   }
   return { ok: true, sourceRef: ["pack", fallbackPackId] };
+}
+
+export function compactSourceLegacyMetadata(
+  sourceRef: CompactSourceRef,
+): CompactSourceLegacyMetadata {
+  if (sourceRef[0] === "wq") return { worldQuestId: sourceRef[1] };
+  if (sourceRef[0] === "gen") return { generatedRpgSeed: sourceRef[1] };
+  return {};
+}
+
+export function compactSourceRefLabel(sourceRef: CompactSourceRef): string {
+  if (sourceRef[0] === "wq") return `world_quest_id:${sourceRef[1]}`;
+  if (sourceRef[0] === "gen") return `generate_rpg_seed:${sourceRef[1]}`;
+  return `pack_id:${sourceRef[1]}`;
 }
 
 export function compactSourceRefValidationError(raw: unknown, label: string): string | undefined {
