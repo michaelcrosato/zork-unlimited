@@ -106,6 +106,14 @@ import {
   type OverworldSnapshotManifestIndex,
 } from "./session_manifest_index.js";
 import {
+  buildOverworldRegionalArcProgress,
+  cloneOverworldRegionalArcProgress,
+  indexOverworldRegionalArcAnchorTowns,
+  indexOverworldRegionalArcsByRegion,
+  regionalArcCompletionsForRegion,
+  type OverworldRegionalArcProgress,
+} from "./session_regional_arcs.js";
+import {
   assertSnapshotProgressJournalBindings,
   assertStringSetSubset,
   type OverworldProgressJournalSourceIndex,
@@ -145,6 +153,7 @@ export type {
 } from "./travel_mechanics.js";
 export type { OverworldRouteEstimate, OverworldSessionRoutePlan } from "./session_routes.js";
 export type { OverworldRoadEncounterResult } from "./session_road_encounters.js";
+export type { OverworldRegionalArcProgress } from "./session_regional_arcs.js";
 export {
   OVERWORLD_SESSION_SAVE_VERSION,
   OverworldSessionSnapshotSchema,
@@ -195,19 +204,6 @@ export type OverworldServiceResult = {
   fatigueAfter: number;
   message: string;
   entry: OverworldJournalEntry | null;
-};
-
-export type OverworldRegionalArcProgress = {
-  id: string;
-  region: string;
-  title: string;
-  summary: string;
-  requiredResolutions: number;
-  resolvedInRegion: number;
-  anchorTowns: OverworldNode[];
-  resolvedAnchorTowns: OverworldNode[];
-  completed: boolean;
-  reward: string;
 };
 
 export type OverworldQuestView = {
@@ -408,8 +404,11 @@ export class OverworldSession {
       (quest) => quest.home,
       (a, b) => a.title.localeCompare(b.title),
     );
-    this.regionalArcsByRegion = this.indexRegionalArcsByRegion();
-    this.regionalArcAnchorTownsById = this.indexRegionalArcAnchorTowns();
+    this.regionalArcsByRegion = indexOverworldRegionalArcsByRegion(world.regional_arcs);
+    this.regionalArcAnchorTownsById = indexOverworldRegionalArcAnchorTowns(
+      world.regional_arcs,
+      this.nodes,
+    );
     this.routePlannerIndex = {
       nodes: this.nodes,
       roadEventsByEdgeId: this.roadEventsByEdgeId,
@@ -483,25 +482,6 @@ export class OverworldSession {
         (a, b) =>
           a.travel_minutes - b.travel_minutes ||
           a.destination.name.localeCompare(b.destination.name),
-      );
-    }
-    return index;
-  }
-
-  private indexRegionalArcsByRegion(): Map<string, OverworldRegionalArc[]> {
-    const index = new Map<string, OverworldRegionalArc[]>();
-    for (const arc of this.world.regional_arcs) pushIndexed(index, arc.region, arc);
-    return index;
-  }
-
-  private indexRegionalArcAnchorTowns(): Map<string, OverworldNode[]> {
-    const index = new Map<string, OverworldNode[]>();
-    for (const arc of this.world.regional_arcs) {
-      index.set(
-        arc.id,
-        arc.anchor_towns
-          .map((id) => this.nodes.get(id))
-          .filter((node): node is OverworldNode => node !== undefined),
       );
     }
     return index;
@@ -1287,35 +1267,6 @@ export class OverworldSession {
     return options;
   }
 
-  private resolvedAnchorTownIdsForArc(arc: OverworldRegionalArc): Set<string> {
-    const resolved = new Set<string>();
-    for (const townId of arc.anchor_towns) {
-      if (this.resolvedEventHomeIds.has(townId)) resolved.add(townId);
-    }
-    return resolved;
-  }
-
-  private progressForArc(arc: OverworldRegionalArc): OverworldRegionalArcProgress {
-    const resolvedAnchorIds = this.resolvedAnchorTownIdsForArc(arc);
-    const anchorTowns = this.regionalArcAnchorTownsById.get(arc.id) ?? [];
-    const resolvedAnchorTowns: OverworldNode[] = [];
-    for (const town of anchorTowns) {
-      if (resolvedAnchorIds.has(town.id)) resolvedAnchorTowns.push(town);
-    }
-    return {
-      id: arc.id,
-      region: arc.region,
-      title: arc.title,
-      summary: arc.summary,
-      requiredResolutions: arc.required_resolutions,
-      resolvedInRegion: resolvedAnchorIds.size,
-      anchorTowns,
-      resolvedAnchorTowns,
-      completed: this.completedRegionalArcIds.has(arc.id),
-      reward: arc.reward,
-    };
-  }
-
   private cachedRegionalArcProgress(): OverworldRegionalArcProgress[] {
     if (this.regionalArcProgressCache) return this.regionalArcProgressCache;
     this.regionalArcProgressCache = this.buildRegionalArcProgress();
@@ -1325,52 +1276,35 @@ export class OverworldSession {
   private regionalArcProgressForView(): OverworldRegionalArcProgress[] {
     const progress: OverworldRegionalArcProgress[] = [];
     for (const arc of this.cachedRegionalArcProgress()) {
-      progress.push(this.cloneRegionalArcProgress(arc));
+      progress.push(cloneOverworldRegionalArcProgress(arc));
     }
     return progress;
-  }
-
-  private cloneRegionalArcProgress(
-    arc: OverworldRegionalArcProgress,
-  ): OverworldRegionalArcProgress {
-    return {
-      ...arc,
-      anchorTowns: [...arc.anchorTowns],
-      resolvedAnchorTowns: [...arc.resolvedAnchorTowns],
-    };
   }
 
   private buildRegionalArcProgress(): OverworldRegionalArcProgress[] {
-    const currentRegion = this.currentNode().region;
-    const progress: OverworldRegionalArcProgress[] = [];
-    for (const arc of this.world.regional_arcs) progress.push(this.progressForArc(arc));
-    progress.sort(
-      (a, b) =>
-        Number(b.region === currentRegion) - Number(a.region === currentRegion) ||
-        Number(a.completed) - Number(b.completed) ||
-        a.region.localeCompare(b.region),
+    return buildOverworldRegionalArcProgress(
+      this.world.regional_arcs,
+      this.currentNode().region,
+      this.regionalArcAnchorTownsById,
+      this.resolvedEventHomeIds,
+      this.completedRegionalArcIds,
     );
-    return progress;
   }
 
   private checkRegionalArcCompletion(region: string): void {
-    const completedAt = timeLabel(this.minutes);
-    let completedAny = false;
-    for (const arc of this.regionalArcsByRegion.get(region) ?? []) {
-      if (this.completedRegionalArcIds.has(arc.id)) continue;
-      if (this.resolvedAnchorTownIdsForArc(arc).size < arc.required_resolutions) continue;
-      this.completedRegionalArcIds.add(arc.id);
-      this.addJournalEntry({
-        id: `arc:${arc.id}`,
-        kind: "regional_arc",
-        town: region,
-        title: `Completed ${arc.title}`,
-        text: arc.reward,
-        recordedAt: completedAt,
-      });
-      completedAny = true;
+    const completions = regionalArcCompletionsForRegion(
+      region,
+      this.regionalArcsByRegion,
+      this.resolvedEventHomeIds,
+      this.completedRegionalArcIds,
+      this.minutes,
+    );
+    if (completions.length === 0) return;
+    for (const completion of completions) {
+      this.completedRegionalArcIds.add(completion.arc.id);
+      this.addJournalEntry(completion.entry);
     }
-    if (completedAny) this.clearSnapshotCache();
+    this.clearSnapshotCache();
   }
 
   private setPendingRoadEncounter(
@@ -1559,7 +1493,7 @@ export class OverworldSession {
       exploredSiteIds: [...view.exploredSiteIds],
       resolvedEventIds: [...view.resolvedEventIds],
       regionRenown: { ...view.regionRenown },
-      regionalArcs: view.regionalArcs.map((arc) => this.cloneRegionalArcProgress(arc)),
+      regionalArcs: view.regionalArcs.map((arc) => cloneOverworldRegionalArcProgress(arc)),
       completedRegionalArcIds: [...view.completedRegionalArcIds],
       pendingRoadEncounter: view.pendingRoadEncounter
         ? {
