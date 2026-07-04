@@ -138,6 +138,11 @@ type GeneratedRpgCacheEntry = {
   report: ValidationReport;
 };
 
+type RpgRuntimeCacheEntry = {
+  index: RpgIndex;
+  rules: Rules<RpgAction>;
+};
+
 type WorldQuestSourceEntry = {
   path: string;
   id: string;
@@ -935,6 +940,7 @@ export function createToolApi(opts: { root: string }) {
   const sessions = new SessionStore();
   const packLoadCache = new Map<string, PackLoadCacheEntry>();
   const generatedRpgCache = new Map<number, GeneratedRpgCacheEntry>();
+  const rpgRuntimeCache = new WeakMap<RpgPack, RpgRuntimeCacheEntry>();
   let overworldCounter = 0;
   const overworldSessions = new Map<string, OverworldSession>();
 
@@ -1014,6 +1020,15 @@ export function createToolApi(opts: { root: string }) {
     return compiled;
   }
 
+  function runtimeFor(pack: RpgPack): RpgRuntimeCacheEntry {
+    const cached = rpgRuntimeCache.get(pack);
+    if (cached) return cached;
+    const index = indexFor(pack);
+    const entry = { index, rules: rulesFor(index) };
+    rpgRuntimeCache.set(pack, entry);
+    return entry;
+  }
+
   function legalActionsFor(s: Session): RpgActionOption[] {
     return sessions.legalActions(s.id, () => enumerateRpgActions(s.index, s.state));
   }
@@ -1038,7 +1053,7 @@ export function createToolApi(opts: { root: string }) {
       seed?: number;
     } = {},
   ): Session {
-    const index = indexFor(compiled.pack);
+    const { index, rules } = runtimeFor(compiled.pack);
     const st = state ?? initStateFor(index, opts.seed ?? 1);
     // §16 integrity at load: a PROVIDED state is untrusted (it came off a save
     // file via load_game), so its `current`/`endingId` must name symbols that
@@ -1054,7 +1069,7 @@ export function createToolApi(opts: { root: string }) {
         ? { generatedRpgSeed: opts.generatedRpgSeed }
         : {}),
       index,
-      rules: rulesFor(index),
+      rules,
       state: st,
       transcript: [],
       ...(opts.hideGraph ? { hideGraph: true } : {}),
@@ -1994,9 +2009,8 @@ export function createToolApi(opts: { root: string }) {
       // content-hash check above guards WHICH pack, not WHETHER the state is well-
       // formed). Gate it the same way a loaded save is gated, BEFORE any engine call.
       assertWellFormedState(trace.initial_state);
-      const index = indexFor(compiled.pack);
+      const { index, rules } = runtimeFor(compiled.pack);
       assertRpgStateReferences(index, trace.initial_state);
-      const rules = rulesFor(index);
       // Replay asserts the recorded final hash, and — for a Trace-v2 trace that
       // also carries `per_step_hashes` — localizes the FIRST divergent action via
       // `divergedAtStep` (returned straight through). A v1 trace (final hash only)
@@ -2025,9 +2039,8 @@ export function createToolApi(opts: { root: string }) {
       // is fed RAW into the per-step loop (let state = trace.initial_state) and into
       // diagnose() below, so it must be well-formed + referentially sound first.
       assertWellFormedState(trace.initial_state);
-      const index = indexFor(compiled.pack);
+      const { index, rules } = runtimeFor(compiled.pack);
       assertRpgStateReferences(index, trace.initial_state);
-      const rules = rulesFor(index);
       const step = makeStep(rules);
       let state = trace.initial_state;
       const steps: {

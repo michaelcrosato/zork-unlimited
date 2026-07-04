@@ -364,6 +364,22 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(otherSession.index.pack).not.toBe(firstSession.index.pack);
   });
 
+  it("reuses RPG runtime indexes and rules inside one MCP API instance", () => {
+    const a = api();
+    const first = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 1 });
+    const second = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 2 });
+    const saved = a.save_game({ session_id: first.session_id });
+    const loaded = a.load_game({ save: saved.save });
+    const firstSession = a.sessions.get(first.session_id);
+    const secondSession = a.sessions.get(second.session_id);
+    const loadedSession = a.sessions.get(loaded.session_id);
+
+    expect(secondSession.index).toBe(firstSession.index);
+    expect(secondSession.rules).toBe(firstSession.rules);
+    expect(loadedSession.index).toBe(firstSession.index);
+    expect(loadedSession.rules).toBe(firstSession.rules);
+  });
+
   it("lists the New York overworld as a start town plus weighted roads", () => {
     const a = api();
     const r = a.list_overworld();
