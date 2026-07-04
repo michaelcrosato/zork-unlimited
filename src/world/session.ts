@@ -69,6 +69,7 @@ import {
   planOverworldQuestStart,
   type OverworldQuestCompletionOutcome,
   type OverworldQuestCompletionResult,
+  type OverworldQuestStartPlan,
 } from "./session_quests.js";
 import { type OverworldSnapshotManifestIndex } from "./session_manifest_index.js";
 import {
@@ -911,8 +912,8 @@ export class OverworldSession {
     };
   }
 
-  startQuest(questId: string): OverworldQuestView {
-    const plan = planOverworldQuestStart({
+  private questStartPlan(questId: string): OverworldQuestStartPlan {
+    return planOverworldQuestStart({
       questId,
       questsById: this.questsById,
       areasById: this.areasById,
@@ -922,6 +923,14 @@ export class OverworldSession {
       discoveredQuestIds: this.discoveredQuestIds,
       startedQuestIds: this.startedQuestIds,
     });
+  }
+
+  previewQuestStart(questId: string): OverworldQuestView {
+    return this.questStartPlan(questId).quest;
+  }
+
+  startQuest(questId: string): OverworldQuestView {
+    const plan = this.questStartPlan(questId);
     const result = this.recordAction(plan.entryDraft, plan.minutes);
     if (!result.alreadyKnown) {
       applyOverworldQuestStart({ startedQuestIds: this.startedQuestIds }, plan);

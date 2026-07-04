@@ -556,6 +556,28 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(beforeQuestStart.ok).toBe(true);
     if (!beforeQuestStart.ok) throw new Error("expected pre-quest export");
+    const originalStartWorldQuest = a.start_world_quest;
+    a.start_world_quest = (() => {
+      throw new Error("simulated RPG startup failure");
+    }) as typeof a.start_world_quest;
+    try {
+      expect(() =>
+        a.start_overworld_session_quest({
+          session_id: started.session_id,
+          quest_id: discoveredQuest.id,
+        }),
+      ).toThrow(/simulated RPG startup failure/);
+    } finally {
+      a.start_world_quest = originalStartWorldQuest;
+    }
+    const afterFailedQuestStart = a.export_overworld_session({
+      session_id: started.session_id,
+    });
+    expect(afterFailedQuestStart.ok).toBe(true);
+    if (!afterFailedQuestStart.ok) throw new Error("expected post-failure export");
+    expect(afterFailedQuestStart.snapshot_hash).toBe(beforeQuestStart.snapshot_hash);
+    expect(afterFailedQuestStart.snapshot).toEqual(beforeQuestStart.snapshot);
+    expect(afterFailedQuestStart.snapshot.startedQuestIds).toEqual([]);
     const startedQuest = a.start_overworld_session_quest({
       session_id: started.session_id,
       quest_id: discoveredQuest.id,

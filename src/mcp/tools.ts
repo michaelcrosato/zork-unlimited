@@ -1160,7 +1160,7 @@ export function createToolApi(opts: { root: string }) {
         return guarded as OverworldQuestStartResponse<Args>;
       }
       const { session } = guarded;
-      const quest = session.startQuest(args.quest_id);
+      const quest = session.previewQuestStart(args.quest_id);
       const rpgSession = this.start_world_quest({
         world_quest_id: quest.id,
         ...(args.seed !== undefined ? { seed: args.seed } : {}),
@@ -1168,8 +1168,10 @@ export function createToolApi(opts: { root: string }) {
         ...(args.compact_actions ? { compact_actions: true } : {}),
         ...(args.compact_observation ? { compact_observation: true } : {}),
       } as RpgStartWorldQuestArgs & Args);
+      const startedQuest = session.startQuest(quest.id);
       sessions.get(rpgSession.session_id).overworldSessionId = args.session_id;
-      const questResult = args.compact_result === true ? compactOverworldQuestRef(quest) : quest;
+      const questResult =
+        args.compact_result === true ? compactOverworldQuestRef(startedQuest) : startedQuest;
       return {
         ok: true,
         session_id: args.session_id,
