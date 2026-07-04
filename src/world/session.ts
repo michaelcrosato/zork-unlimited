@@ -33,6 +33,7 @@ import {
   type OverworldRoadEncounterStrategy,
 } from "./travel_mechanics.js";
 import {
+  buildOverworldDiscoveredRouteOptions,
   cloneOverworldRouteOption,
   indexedOverworldRoute,
   withOverworldRouteEstimate,
@@ -685,30 +686,17 @@ export class OverworldSession {
 
   private discoveredRouteOptions(): OverworldSessionRoutePlan[] {
     if (this.caches.routeOptions) return this.caches.routeOptions;
-    const current = this.currentNode();
-    const options: OverworldSessionRoutePlan[] = [];
-    for (const id of this.discoveredIds) {
-      if (id === this.currentId) continue;
-      const plan = indexedOverworldRoute(
-        this.routePlannerIndex,
-        this.currentId,
-        id,
-        this.discoveredIds,
-      );
-      if (!plan || plan.steps.length === 0) continue;
-      options.push(this.routeWithEstimate(plan));
-    }
-    options.sort(
-      (a, b) =>
-        Number(b.destination.region === current.region) -
-          Number(a.destination.region === current.region) ||
-        a.estimate.elapsedMinutes - b.estimate.elapsedMinutes ||
-        a.totalMinutes - b.totalMinutes ||
-        b.destination.population_2025 - a.destination.population_2025 ||
-        a.destination.name.localeCompare(b.destination.name),
-    );
-    this.caches.routeOptions = options;
-    return options;
+    this.caches.routeOptions = buildOverworldDiscoveredRouteOptions({
+      routePlannerIndex: this.routePlannerIndex,
+      current: this.currentNode(),
+      currentId: this.currentId,
+      discoveredIds: this.discoveredIds,
+      resources: {
+        fatigue: this.fatigue,
+        supplies: this.supplies,
+      },
+    });
+    return this.caches.routeOptions;
   }
 
   private routeOptionsForView(): OverworldSessionRoutePlan[] {

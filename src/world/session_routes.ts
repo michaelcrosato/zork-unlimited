@@ -36,6 +36,14 @@ export type OverworldRoutePlannerIndex = {
 
 export type OverworldRouteResourceState = OverworldTravelResourceState;
 
+export type OverworldDiscoveredRouteOptionsState = {
+  routePlannerIndex: OverworldRoutePlannerIndex;
+  current: OverworldNode;
+  currentId: string;
+  discoveredIds: ReadonlySet<string>;
+  resources: OverworldRouteResourceState;
+};
+
 export function estimateOverworldRoute(
   plan: OverworldRoutePlan,
   resources: OverworldRouteResourceState,
@@ -170,4 +178,38 @@ export function cloneOverworldRouteOption(
     steps: [...plan.steps],
     estimate: { ...plan.estimate },
   };
+}
+
+export function buildOverworldDiscoveredRouteOptions(
+  state: OverworldDiscoveredRouteOptionsState,
+): OverworldSessionRoutePlan[] {
+  const options: OverworldSessionRoutePlan[] = [];
+  for (const id of state.discoveredIds) {
+    if (id === state.currentId) continue;
+    const plan = indexedOverworldRoute(
+      state.routePlannerIndex,
+      state.currentId,
+      id,
+      state.discoveredIds,
+    );
+    if (!plan || plan.steps.length === 0) continue;
+    options.push(withOverworldRouteEstimate(plan, state.resources));
+  }
+  options.sort((left, right) => compareOverworldRouteOptions(left, right, state.current.region));
+  return options;
+}
+
+function compareOverworldRouteOptions(
+  left: OverworldSessionRoutePlan,
+  right: OverworldSessionRoutePlan,
+  currentRegion: string,
+): number {
+  return (
+    Number(right.destination.region === currentRegion) -
+      Number(left.destination.region === currentRegion) ||
+    left.estimate.elapsedMinutes - right.estimate.elapsedMinutes ||
+    left.totalMinutes - right.totalMinutes ||
+    right.destination.population_2025 - left.destination.population_2025 ||
+    left.destination.name.localeCompare(right.destination.name)
+  );
 }

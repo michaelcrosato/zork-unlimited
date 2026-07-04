@@ -7,6 +7,7 @@ import type {
   OverworldRoutePlan,
 } from "../../src/world/overworld.js";
 import {
+  buildOverworldDiscoveredRouteOptions,
   cloneOverworldRouteOption,
   estimateOverworldRoute,
   indexedOverworldRoute,
@@ -163,6 +164,42 @@ describe("overworld session route helpers", () => {
     expect(cloned).toEqual(routeOption);
     expect(cloned.steps).not.toBe(routeOption.steps);
     expect(cloned.estimate).not.toBe(routeOption.estimate);
+  });
+
+  it("builds discovered route options in view priority order", () => {
+    const current = node("a", { name: "Anchor", region: "Capital" });
+    const sameRegion = node("b", { name: "Bayside", region: "Capital" });
+    const largerSameRegion = node("c", {
+      name: "Crossing",
+      population_2025: 50_000,
+      region: "Capital",
+    });
+    const otherRegion = node("d", { name: "Depot", region: "Frontier" });
+    const hidden = node("e", { name: "Hidden", region: "Capital" });
+    const index = routeIndex(
+      [current, sameRegion, largerSameRegion, otherRegion, hidden],
+      [
+        edge("road:a-b", "a", "b", 20),
+        edge("road:a-c", "a", "c", 20),
+        edge("road:a-d", "a", "d", 5),
+        edge("road:a-e", "a", "e", 1),
+      ],
+    );
+
+    const options = buildOverworldDiscoveredRouteOptions({
+      routePlannerIndex: index,
+      current,
+      currentId: current.id,
+      discoveredIds: new Set([current.id, sameRegion.id, largerSameRegion.id, otherRegion.id]),
+      resources: { fatigue: 0, supplies: 6 },
+    });
+
+    expect(options.map((option) => option.destination.id)).toEqual([
+      largerSameRegion.id,
+      sameRegion.id,
+      otherRegion.id,
+    ]);
+    expect(options.map((option) => option.estimate.elapsedMinutes)).toEqual([20, 20, 5]);
   });
 
   it("returns a zero-length plan when route start and destination match", () => {
