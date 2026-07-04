@@ -38,6 +38,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
+import { countCycleEntries, LOOP_STATE_FILE, ROTATE_KEEP } from "../src/afk/loop_state.js";
 
 /** Verification assets the project's correctness rests on. Must always exist. */
 export const PROTECTED_FILES = [
@@ -137,6 +138,10 @@ export type Finding = {
  *  guard fires on any INCREASE across a cycle. */
 export const MAX_TAUTOLOGY_ASSERTIONS = 0;
 
+/** Live loop-state handoff must stay bounded; old cycle detail belongs in git
+ *  history or ignored local archives, not in every agent prompt. */
+export const MAX_LIVE_LOOP_STATE_ENTRIES = ROTATE_KEEP;
+
 /** Matches vacuous assertion patterns the three-count system cannot catch:
  *  (a) literal-bool:   expect(true).toBe(true)  / expect(false).toBe(false)
  *  (b) literal-null:   expect(null).toBe(null)  / expect(undefined).toBe(undefined)
@@ -174,6 +179,23 @@ export function countTautologyAssertions(files: { text: string }[]): number {
     const re = new RegExp(TAUTOLOGY_RE.source, TAUTOLOGY_RE.flags);
     return n + (f.text.match(re)?.length ?? 0);
   }, 0);
+}
+
+export function detectLoopStateOverflow(
+  text: string,
+  keep: number = MAX_LIVE_LOOP_STATE_ENTRIES,
+  where: string = LOOP_STATE_FILE,
+): Finding[] {
+  const entries = countCycleEntries(text);
+  if (entries <= keep) return [];
+  return [
+    {
+      severity: "error",
+      code: "LOOP_STATE_OVER_ROTATED",
+      message: `${LOOP_STATE_FILE} carries ${entries} live cycle entries; limit is ${keep}. Rotate before committing so old detail stays in git history or ignored local archives instead of every agent context.`,
+      where,
+    },
+  ];
 }
 
 function listFiles(root: string, dir: string, match: (p: string) => boolean): string[] {
@@ -288,6 +310,10 @@ export function runStatic(root: string): { ok: boolean; findings: Finding[] } {
       message: `${tautologies} tautological assertion(s) found; floor is ${MAX_TAUTOLOGY_ASSERTIONS} (vacuous expect(x).toBe(x) patterns keep the strong-matcher count but assert nothing)`,
       where: "tests/",
     });
+  }
+  const loopState = join(root, LOOP_STATE_FILE);
+  if (existsSync(loopState)) {
+    findings.push(...detectLoopStateOverflow(readFileSync(loopState, "utf8")));
   }
   return { ok: !findings.some((f) => f.severity === "error"), findings };
 }

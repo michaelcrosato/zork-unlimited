@@ -17,6 +17,7 @@ import {
   countStrongAssertions,
   detectTautologies,
   countTautologyAssertions,
+  detectLoopStateOverflow,
   detectCountRegressions,
   parseGuardConstants,
   detectGuardWeakening,
@@ -30,6 +31,7 @@ import {
   MIN_ASSERTIONS,
   MIN_STRONG_ASSERTIONS,
   MAX_TAUTOLOGY_ASSERTIONS,
+  MAX_LIVE_LOOP_STATE_ENTRIES,
   type GuardConstants,
 } from "../../scripts/verify-integrity.js";
 
@@ -144,6 +146,21 @@ describe("detectCountRegressions — counts cannot drop and tautologies cannot r
     );
     expect(codes(fs)).toEqual(["ASSERTION_COUNT_REGRESSION"]);
     expect(fs[0]!.severity).toBe("error");
+  });
+});
+
+describe("detectLoopStateOverflow — live handoff stays token-small", () => {
+  const log = (n: number): string =>
+    Array.from({ length: n }, (_, i) => `### Cycle result - compact_${i}\n\n- done.\n`).join("\n");
+
+  it("allows the configured live rotation window", () => {
+    expect(detectLoopStateOverflow(log(MAX_LIVE_LOOP_STATE_ENTRIES))).toEqual([]);
+  });
+
+  it("blocks an overgrown live AI_LOOP_STATE.md", () => {
+    const findings = detectLoopStateOverflow(log(MAX_LIVE_LOOP_STATE_ENTRIES + 1));
+    expect(findings.map((f) => f.code)).toEqual(["LOOP_STATE_OVER_ROTATED"]);
+    expect(findings[0]!.message).toContain(`${MAX_LIVE_LOOP_STATE_ENTRIES + 1}`);
   });
 });
 
