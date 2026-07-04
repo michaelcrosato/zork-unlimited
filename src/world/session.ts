@@ -57,7 +57,6 @@ import {
   sortedIndex,
   sortedNumberMap,
   sortedNumberRecord,
-  sortedStringMap,
   sortedStringSet,
 } from "./session_collections.js";
 import {
@@ -159,12 +158,10 @@ import {
   assertSnapshotVisitedTownTravelProof,
 } from "./session_snapshot_proofs.js";
 import { snapshotTravelTimelineIndex } from "./session_snapshot_timeline.js";
+import { buildOverworldSessionSnapshot } from "./session_snapshot_builder.js";
 import {
-  OVERWORLD_SESSION_SAVE_VERSION,
   OverworldSessionSnapshotSchema,
-  cloneJournalEntries,
   cloneOverworldSessionSnapshot,
-  snapshotTravelLogEntries,
   type OverworldJournalEntry,
   type OverworldPendingRoadEncounter,
   type OverworldSessionSnapshot,
@@ -493,8 +490,7 @@ export class OverworldSession {
   }
 
   private buildSnapshot(): OverworldSessionSnapshot {
-    return {
-      version: OVERWORLD_SESSION_SAVE_VERSION,
+    return buildOverworldSessionSnapshot({
       worldId: this.world.id,
       worldHash: this.worldHash,
       currentId: this.currentId,
@@ -502,27 +498,25 @@ export class OverworldSession {
       minutes: this.minutes,
       supplies: this.supplies,
       fatigue: this.fatigue,
-      discoveredIds: sortedStringSet(this.discoveredIds),
-      visitedIds: sortedStringSet(this.visitedIds),
-      currentAreaByTown: sortedStringMap(this.currentAreaByTown),
-      travelLog: snapshotTravelLogEntries(this.travelLog),
-      journalEntries: cloneJournalEntries(this.journalEntries),
-      resolvedEventIds: sortedStringSet(this.resolvedEventIds),
-      discoveredAreaIds: sortedStringSet(this.discoveredAreaIds),
-      visitedAreaIds: sortedStringSet(this.visitedAreaIds),
-      discoveredJobIds: sortedStringSet(this.discoveredJobIds),
-      completedJobIds: sortedStringSet(this.completedJobIds),
-      discoveredSiteIds: sortedStringSet(this.discoveredSiteIds),
-      discoveredQuestIds: sortedStringSet(this.discoveredQuestIds),
-      startedQuestIds: sortedStringSet(this.startedQuestIds),
-      completedQuestIds: sortedStringSet(this.completedQuestIds),
-      exploredSiteIds: sortedStringSet(this.exploredSiteIds),
-      regionRenown: sortedNumberMap(this.regionRenown),
-      completedRegionalArcIds: sortedStringSet(this.completedRegionalArcIds),
-      pendingRoadEncounter: this.pendingRoadEncounter
-        ? { edgeId: this.pendingRoadEncounter.edgeId }
-        : null,
-    };
+      discoveredIds: this.discoveredIds,
+      visitedIds: this.visitedIds,
+      currentAreaByTown: this.currentAreaByTown,
+      travelLog: this.travelLog,
+      journalEntries: this.journalEntries,
+      resolvedEventIds: this.resolvedEventIds,
+      discoveredAreaIds: this.discoveredAreaIds,
+      visitedAreaIds: this.visitedAreaIds,
+      discoveredJobIds: this.discoveredJobIds,
+      completedJobIds: this.completedJobIds,
+      discoveredSiteIds: this.discoveredSiteIds,
+      discoveredQuestIds: this.discoveredQuestIds,
+      startedQuestIds: this.startedQuestIds,
+      completedQuestIds: this.completedQuestIds,
+      exploredSiteIds: this.exploredSiteIds,
+      regionRenown: this.regionRenown,
+      completedRegionalArcIds: this.completedRegionalArcIds,
+      pendingRoadEncounter: this.pendingRoadEncounter,
+    });
   }
 
   private applySnapshot(snapshot: OverworldSessionSnapshot): void {

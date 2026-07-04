@@ -2,15 +2,15 @@ import { OVERWORLD_COMPACT_ID_LIST_LIMIT, type OverworldCompactIdBucket } from "
 
 const EMPTY_INDEX_LIST: readonly never[] = [];
 
-export function sortedStringSet(values: Set<string>): string[] {
+export function sortedStringSet(values: ReadonlySet<string>): string[] {
   return [...values].sort();
 }
 
-export function sortedStringMap(values: Map<string, string>): [string, string][] {
+export function sortedStringMap(values: ReadonlyMap<string, string>): [string, string][] {
   return [...values.entries()].sort(([left], [right]) => left.localeCompare(right));
 }
 
-export function sortedNumberMap(values: Map<string, number>): [string, number][] {
+export function sortedNumberMap(values: ReadonlyMap<string, number>): [string, number][] {
   return [...values.entries()].sort(([left], [right]) => left.localeCompare(right));
 }
 
