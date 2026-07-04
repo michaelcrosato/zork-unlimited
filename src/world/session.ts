@@ -79,12 +79,14 @@ import {
   type OverworldRoadEncounterOption,
   type OverworldRoadEncounterStrategy,
 } from "./travel_mechanics.js";
+import { timeLabel } from "./session_journal_codec.js";
 import {
-  parseRoadJournalId,
-  parseServiceJournalId,
-  parseTimeLabel,
-  timeLabel,
-} from "./session_journal_codec.js";
+  assertSnapshotTimeline,
+  journalSourceId,
+  type OverworldEventResolutionJournalIndex,
+  type OverworldJournalTimelineIndex,
+  type OverworldResolutionProofIndex,
+} from "./session_journal_timeline.js";
 import {
   buildOverworldSnapshotManifestIndex,
   type OverworldSnapshotManifestIndex,
@@ -92,19 +94,12 @@ import {
 import {
   assertSnapshotProgressJournalBindings,
   assertStringSetSubset,
-  emptyProgressJournalSourceIndex,
-  recordProgressJournalSource,
   type OverworldProgressJournalSourceIndex,
 } from "./session_progress_journal.js";
 import { assertSnapshotRegionRenown } from "./session_region_renown.js";
 import {
   assertSnapshotResourceReplay,
-  recordRoadJournalResolution,
-  recordServiceJournalReplay,
   roadJournalResolutionIndex,
-  type OverworldRoadJournalResolutionEntry,
-  type OverworldServiceJournalReplayEntry,
-  type OverworldServiceJournalReplayIndex,
 } from "./session_resource_replay.js";
 import {
   assertSnapshotCurrentAreaMapExact,
@@ -290,41 +285,6 @@ function questView(quest: OverworldQuest): OverworldQuestView {
   };
 }
 
-type OverworldJournalSourceIndex = {
-  arcIds: ReadonlySet<string>;
-  arcRegionNames: ReadonlyMap<string, string>;
-  areaIds: ReadonlySet<string>;
-  areaTownNames: ReadonlyMap<string, string>;
-  characterIds: ReadonlySet<string>;
-  characterTownNames: ReadonlyMap<string, string>;
-  edgeIds: ReadonlySet<string>;
-  eventIds: ReadonlySet<string>;
-  eventTownNames: ReadonlyMap<string, string>;
-  jobIds: ReadonlySet<string>;
-  jobTownNames: ReadonlyMap<string, string>;
-  poiIds: ReadonlySet<string>;
-  poiTownNames: ReadonlyMap<string, string>;
-  questIds: ReadonlySet<string>;
-  questTownNames: ReadonlyMap<string, string>;
-  regionNames: ReadonlySet<string>;
-  siteIds: ReadonlySet<string>;
-  siteTownNames: ReadonlyMap<string, string>;
-  townNames: ReadonlySet<string>;
-  travelLogArrivals: ReadonlySet<string>;
-  travelLogTownByArrival: ReadonlyMap<string, string>;
-};
-
-type OverworldJournalTimelineSourceIndex = OverworldJournalSourceIndex &
-  OverworldResolutionProofIndex;
-
-type OverworldJournalTimelineIndex = {
-  eventResolutionProofs: OverworldEventResolutionJournalIndex;
-  localActionEntries: readonly OverworldLocalActionJournalTimelineEntry[];
-  progressSources: OverworldProgressJournalSourceIndex;
-  roadJournalEntries: readonly OverworldRoadJournalResolutionEntry[];
-  serviceJournal: OverworldServiceJournalReplayIndex;
-};
-
 type OverworldDiscoveryLocalityIndex = {
   areaHomes: ReadonlyMap<string, string>;
   completedQuestIds: ReadonlySet<string>;
@@ -342,29 +302,9 @@ type OverworldDiscoveryLocalityIndex = {
   visitedTownIds: ReadonlySet<string>;
 };
 
-type OverworldResolutionProofIndex = {
-  charactersById: ReadonlyMap<string, OverworldCharacter>;
-  eventsById: ReadonlyMap<string, OverworldLocalEvent>;
-  poisById: ReadonlyMap<string, OverworldPoi>;
-};
-
 type OverworldRegionalArcCompletionIndex = {
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   regionalArcs: readonly OverworldRegionalArc[];
-};
-
-type OverworldEventResolutionJournalIndex = {
-  contactTimeByArea: ReadonlyMap<string, number>;
-  recordedAtById: ReadonlyMap<string, number>;
-  resolutionTimeByTown: ReadonlyMap<string, number>;
-  scoutTimeByArea: ReadonlyMap<string, number>;
-};
-
-type MutableOverworldEventResolutionJournalIndex = {
-  contactTimeByArea: Map<string, number>;
-  recordedAtById: ReadonlyMap<string, number>;
-  resolutionTimeByTown: Map<string, number>;
-  scoutTimeByArea: Map<string, number>;
 };
 
 type OverworldLocalActionJournalReachabilityIndex = {
@@ -401,270 +341,11 @@ type OverworldLocalActionJournalReplayEntry = {
   duration: number | null;
 };
 
-type OverworldLocalActionJournalTimelineEntry = {
-  entry: OverworldJournalEntry;
-  recordedAt: number;
-};
-
 type OverworldLocalActionJournalReplayIndex = {
   entries: readonly OverworldLocalActionJournalReplayEntry[];
   localActionCountByArea: ReadonlyMap<string, number>;
   localActionCountByTown: ReadonlyMap<string, number>;
 };
-
-function assertKnownJournalSource(
-  entry: OverworldJournalEntry,
-  prefix: string,
-  known: ReadonlySet<string>,
-  sourceLabel: string,
-  sourcePlaces?: ReadonlyMap<string, string>,
-  placeLabel = "town",
-): void {
-  if (!entry.id.startsWith(prefix)) {
-    throw new Error(
-      `Overworld session snapshot journal ${entry.kind} entry id "${entry.id}" must start with "${prefix}".`,
-    );
-  }
-  const sourceId = entry.id.slice(prefix.length);
-  if (!sourceId) {
-    throw new Error(
-      `Overworld session snapshot journal ${entry.kind} entry has an empty ${sourceLabel} id.`,
-    );
-  }
-  if (!known.has(sourceId)) {
-    throw new Error(
-      `Overworld session snapshot journal ${entry.kind} entry references unknown ${sourceLabel} "${sourceId}".`,
-    );
-  }
-  const expectedPlace = sourcePlaces?.get(sourceId);
-  if (expectedPlace && entry.town !== expectedPlace) {
-    throw new Error(
-      `Overworld session snapshot journal ${entry.kind} entry "${entry.id}" is bound to ${placeLabel} "${entry.town}", expected "${expectedPlace}".`,
-    );
-  }
-}
-
-function assertRoadJournalSource(
-  entry: OverworldJournalEntry,
-  recordedAt: number,
-  sources: OverworldJournalSourceIndex,
-): void {
-  const parsed = parseRoadJournalId(entry.id);
-  if (!sources.edgeIds.has(parsed.edgeId)) {
-    throw new Error(
-      `Overworld session snapshot journal road entry references unknown road "${parsed.edgeId}".`,
-    );
-  }
-  if (parsed.arrivedAt > recordedAt) {
-    throw new Error("Overworld session snapshot journal road entry predates its road arrival.");
-  }
-  if (!sources.travelLogArrivals.has(`${parsed.edgeId}@${parsed.arrivedAt}`)) {
-    throw new Error(
-      `Overworld session snapshot journal road entry has no matching travel log for "${parsed.edgeId}" at ${parsed.arrivedAt}.`,
-    );
-  }
-  const expectedTown = sources.travelLogTownByArrival.get(`${parsed.edgeId}@${parsed.arrivedAt}`);
-  if (expectedTown && entry.town !== expectedTown) {
-    throw new Error(
-      `Overworld session snapshot journal road entry "${entry.id}" is bound to town "${entry.town}", expected "${expectedTown}".`,
-    );
-  }
-}
-
-function assertServiceJournalSource(entry: OverworldJournalEntry, recordedAt: number): void {
-  const service = parseServiceJournalId(entry.id);
-  if (service.recordedAt !== recordedAt) {
-    throw new Error(
-      "Overworld session snapshot journal service entry time does not match its timestamp.",
-    );
-  }
-}
-
-function assertSnapshotJournalSource(
-  entry: OverworldJournalEntry,
-  recordedAt: number,
-  sources: OverworldJournalSourceIndex,
-): void {
-  const placeNames = entry.kind === "regional_arc" ? sources.regionNames : sources.townNames;
-  const placeLabel = entry.kind === "regional_arc" ? "region" : "town";
-  if (!placeNames.has(entry.town)) {
-    throw new Error(
-      `Overworld session snapshot journal ${entry.kind} references unknown ${placeLabel} "${entry.town}".`,
-    );
-  }
-
-  switch (entry.kind) {
-    case "area":
-      assertKnownJournalSource(entry, "area:", sources.areaIds, "area", sources.areaTownNames);
-      return;
-    case "contact":
-      assertKnownJournalSource(
-        entry,
-        "talk:",
-        sources.characterIds,
-        "contact",
-        sources.characterTownNames,
-      );
-      return;
-    case "event":
-      assertKnownJournalSource(
-        entry,
-        "investigate:",
-        sources.eventIds,
-        "event",
-        sources.eventTownNames,
-      );
-      return;
-    case "job":
-      assertKnownJournalSource(entry, "job:", sources.jobIds, "job", sources.jobTownNames);
-      return;
-    case "poi":
-      assertKnownJournalSource(
-        entry,
-        "scout:",
-        sources.poiIds,
-        "point of interest",
-        sources.poiTownNames,
-      );
-      return;
-    case "quest":
-      assertKnownJournalSource(entry, "quest:", sources.questIds, "quest", sources.questTownNames);
-      return;
-    case "quest_done":
-      assertKnownJournalSource(
-        entry,
-        "quest_done:",
-        sources.questIds,
-        "quest",
-        sources.questTownNames,
-      );
-      return;
-    case "regional_arc":
-      assertKnownJournalSource(
-        entry,
-        "arc:",
-        sources.arcIds,
-        "regional arc",
-        sources.arcRegionNames,
-        "region",
-      );
-      return;
-    case "resolution":
-      assertKnownJournalSource(
-        entry,
-        "resolve:",
-        sources.eventIds,
-        "event resolution",
-        sources.eventTownNames,
-      );
-      return;
-    case "road":
-      assertRoadJournalSource(entry, recordedAt, sources);
-      return;
-    case "service":
-      assertServiceJournalSource(entry, recordedAt);
-      return;
-    case "site":
-      assertKnownJournalSource(entry, "site:", sources.siteIds, "site", sources.siteTownNames);
-      return;
-  }
-}
-
-function recordEventResolutionJournalProof(
-  proofs: MutableOverworldEventResolutionJournalIndex,
-  sources: OverworldResolutionProofIndex,
-  entry: OverworldJournalEntry,
-  recordedAt: number,
-): void {
-  switch (entry.kind) {
-    case "poi": {
-      const sourceId = journalSourceId(entry, "scout:");
-      const poi = sourceId ? sources.poisById.get(sourceId) : undefined;
-      if (poi) recordEarliestTime(proofs.scoutTimeByArea, poi.area, recordedAt);
-      return;
-    }
-    case "resolution": {
-      const sourceId = journalSourceId(entry, "resolve:");
-      const event = sourceId ? sources.eventsById.get(sourceId) : undefined;
-      if (event) recordEarliestTime(proofs.resolutionTimeByTown, event.home, recordedAt);
-      return;
-    }
-    case "contact": {
-      const sourceId = journalSourceId(entry, "talk:");
-      const character = sourceId ? sources.charactersById.get(sourceId) : undefined;
-      if (character) recordEarliestTime(proofs.contactTimeByArea, character.area, recordedAt);
-      return;
-    }
-    default:
-      return;
-  }
-}
-
-function recordLocalActionJournalEntry(
-  entries: OverworldLocalActionJournalTimelineEntry[],
-  entry: OverworldJournalEntry,
-  recordedAt: number,
-): void {
-  switch (entry.kind) {
-    case "area":
-    case "contact":
-    case "event":
-    case "job":
-    case "poi":
-    case "resolution":
-    case "site":
-      entries.push({ entry, recordedAt });
-      return;
-    default:
-      return;
-  }
-}
-
-function assertSnapshotTimeline(
-  snapshot: OverworldSessionSnapshot,
-  sources: OverworldJournalTimelineSourceIndex,
-): OverworldJournalTimelineIndex {
-  let previousRecordedAt = Number.POSITIVE_INFINITY;
-  const progressSources = emptyProgressJournalSourceIndex();
-  const localActionEntries: OverworldLocalActionJournalTimelineEntry[] = [];
-  const recordedAtById = new Map<string, number>();
-  const roadJournalEntries: OverworldRoadJournalResolutionEntry[] = [];
-  const serviceReplayEntries: OverworldServiceJournalReplayEntry[] = [];
-  const eventResolutionProofs: MutableOverworldEventResolutionJournalIndex = {
-    contactTimeByArea: new Map<string, number>(),
-    recordedAtById,
-    resolutionTimeByTown: new Map<string, number>(),
-    scoutTimeByArea: new Map<string, number>(),
-  };
-  for (const entry of snapshot.journalEntries) {
-    if (recordedAtById.has(entry.id)) {
-      throw new Error(`Overworld session snapshot has duplicate journal entry id "${entry.id}".`);
-    }
-    const recordedAt = parseTimeLabel(entry.recordedAt);
-    assertSnapshotJournalSource(entry, recordedAt, sources);
-    if (recordedAt > snapshot.minutes) {
-      throw new Error("Overworld session snapshot journal contains a future entry.");
-    }
-    if (recordedAt > previousRecordedAt) {
-      throw new Error("Overworld session snapshot journal must be newest-first.");
-    }
-    recordedAtById.set(entry.id, recordedAt);
-    recordProgressJournalSource(progressSources, entry);
-    recordEventResolutionJournalProof(eventResolutionProofs, sources, entry, recordedAt);
-    recordLocalActionJournalEntry(localActionEntries, entry, recordedAt);
-    recordRoadJournalResolution(roadJournalEntries, entry, recordedAt);
-    recordServiceJournalReplay(serviceReplayEntries, entry, recordedAt);
-    previousRecordedAt = recordedAt;
-  }
-
-  return {
-    eventResolutionProofs,
-    localActionEntries,
-    progressSources,
-    roadJournalEntries,
-    serviceJournal: { entries: serviceReplayEntries },
-  };
-}
 
 function localJournalActionDuration(
   entry: OverworldJournalEntry,
@@ -824,10 +505,6 @@ function assertSnapshotDiscoveryLocality(sources: OverworldDiscoveryLocalityInde
       sources.discoveredAreaIds,
     );
   }
-}
-
-function journalSourceId(entry: OverworldJournalEntry, prefix: string): string | null {
-  return entry.id.startsWith(prefix) ? entry.id.slice(prefix.length) : null;
 }
 
 function localJournalSource(
@@ -1107,11 +784,6 @@ function assertSnapshotLocalActionDiscoveryChronology(
 
 function incrementCount(counts: Map<string, number>, key: string): void {
   counts.set(key, (counts.get(key) ?? 0) + 1);
-}
-
-function recordEarliestTime(times: Map<string, number>, key: string, recordedAt: number): void {
-  const previous = times.get(key);
-  if (previous === undefined || recordedAt < previous) times.set(key, recordedAt);
 }
 
 function assertSnapshotDiscoveredAreaCountReplay(
