@@ -240,12 +240,12 @@ function docStalenessDocs(root: string): string[] {
  * Normalize a quest reference — a full source path, a bare world quest id, OR a
  * pack id — to its stem, so an attendance line that names a quest any of those ways
  * maps to the same key.
- * E.g. "content/rpg/pack/cold_forge.yaml" → "cold_forge", a bare
- * "clockwork_heist" is unchanged, and the pack ID "clockwork_heist_v1" also → it.
+ * E.g. "content/rpg/pack/cold_forge.yaml" -> "cold_forge", a bare
+ * "sunken_barrow" is unchanged, and the pack ID "cold_forge_v1" also -> it.
  *
  * The trailing `_v\d+` strip matters for attendance keying (bug_0293): legacy log
- * lines named pack ids such as `Blind-playtest "clockwork_heist_v1"`, while current
- * candidates target world quest ids such as `clockwork_heist`. Without this strip
+ * lines named pack ids such as `Blind-playtest "cold_forge_v1"`, while current
+ * candidates target world quest ids such as `cold_forge`. Without this strip
  * the id-form and world-id form key to different stems and the recency lookup misses,
  * re-freezing the rotation. No shipped source file name ends in `_v\d+`, so the strip
  * never collides two real sources.
@@ -270,15 +270,15 @@ export function packStem(ref: string): string {
  * bare id. This is the bug_0128 fix: the attendance matcher previously matched ONLY the old
  * header — abandoned ~15 cycles ago for the prose format — so the recency signal had
  * frozen and the rotation silently fell back to alphabetical, re-nominating
- * clockwork_heist (the very lock-in the rotation was meant to cure). The caller
+ * cold_forge (the very lock-in the rotation was meant to cure). The caller
  * resolves only real quest stems, so incidental captures (e.g. "…ran on the assessor")
  * land under a stem no candidate queries and are harmless.
  *
  * bug_0235: the same blindness recurred via MARKDOWN WRAPPING. The log writes the quest
- * bold+backticked — `- **Mandated blind pass ran on \`midnight_edition\`** …` — but the
+ * bold+backticked — `- **Mandated blind pass ran on \`bellfounders_alarm\`** …` — but the
  * capture class [A-Za-z0-9_./-] excluded the backtick, so the match failed at the opening
  * tick and EVERY recent entry was invisible: the just-played pack looked never-attended
- * (undefined offset) and the rotation re-nominated it FIRST (observed: midnight_edition
+ * (undefined offset) and the rotation re-nominated it FIRST (observed: bellfounders_alarm
  * ranked #1 the cycle after it was played). The optional `[\`*]*` wrapper below skips a
  * leading backtick/asterisk run; the capture still stops at the CLOSING tick (a backtick
  * is not in the class), so the bare stem is recovered. Unwrapped prose and path forms are
@@ -779,7 +779,7 @@ export function assess(root: string): Assessment {
   // c.target is a world quest id for shipped content; legacy/path fallbacks still
   // normalize through packStem so old loop-state attendance remains usable.
   // Reading the tracked AI_LOOP_STATE.md keeps this a pure function of repo state
-  // (same repo ⇒ same ranking), curing the clockwork_heist lock-in (bug_0128).
+  // (same repo ⇒ same ranking), curing the cold_forge lock-in (bug_0128).
   const attendance = lastAttendanceOffsets(root);
   const recencyOf = (c: ImprovementCandidate): number => {
     if (!c.id.startsWith("playtest-")) return Number.MAX_SAFE_INTEGER;

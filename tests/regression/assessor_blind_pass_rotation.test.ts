@@ -2,14 +2,14 @@
  * Regression — bug_0128: the AFK assessor's blind-pass RECENCY ROTATION must track
  * true recency from the log AS IT IS ACTUALLY WRITTEN.
  *
- * The rotation was added to cure a "clockwork_heist lock-in" (one pack re-nominated
+ * The rotation was added to cure a "cold_forge lock-in" (one quest re-nominated
  * every cycle). It then silently broke two ways: (1) it matched only the legacy
  * "Mandatory LLM playtest target this cycle: <path>" header, abandoned ~15 cycles ago
  * for prose "Mandated blind pass ran on <pack>", so recent attendance was invisible;
  * and (2) it assumed an oldest-first log ("last write wins (most recent)") while
  * AI_LOOP_STATE.md is newest-first (prepended), so it kept each pack's OLDEST mention
  * and the sort direction inverted. With stale/inverted data the tiebreak fell back to
- * alphabetical — re-nominating clockwork_heist, the very lock-in it was meant to cure.
+ * alphabetical — re-nominating cold_forge, the very lock-in it was meant to cure.
  */
 import { describe, it, expect } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
@@ -42,33 +42,33 @@ describe("bug_0128 — blind-pass rotation tracks true recency", () => {
   it("treats the log as NEWEST-FIRST: a pack's topmost mention is its most recent", () => {
     // Realistic prepend order: newest cycle entry on top, oldest at the bottom.
     const text = [
-      "- Mandated blind pass ran on watchtower_road (CYOA, seed 1).", // newest (topmost)
-      "- Mandated blind pass ran on clockwork_heist (CYOA, seed 2).",
-      "- Mandated blind pass ran on watchtower_road (CYOA, seed 3).", // older repeat
+      "- Mandated blind pass ran on wolf_winter (rpg, seed 1).", // newest (topmost)
+      "- Mandated blind pass ran on cold_forge (rpg, seed 2).",
+      "- Mandated blind pass ran on wolf_winter (rpg, seed 3).", // older repeat
     ].join("\n");
     const offsets = parseAttendanceOffsets(text);
-    // watchtower kept its FIRST/topmost (most recent) offset, which precedes clockwork's.
-    expect(offsets.get("watchtower_road")!).toBeLessThan(offsets.get("clockwork_heist")!);
+    // wolf_winter kept its FIRST/topmost (most recent) offset, which precedes cold_forge's.
+    expect(offsets.get("wolf_winter")!).toBeLessThan(offsets.get("cold_forge")!);
   });
 
   it("does NOT lock onto a freshly-attended pack: most-recent sorts LAST in the rotation", () => {
-    // clockwork is the MOST recent attendance here; wreckers is never mentioned. The
-    // rotation must surface the never-attended pack first and clockwork last — not the
-    // alphabetical-first clockwork the broken parser produced.
+    // cold_forge is the MOST recent attendance here; dawn_beacon is never mentioned. The
+    // rotation must surface the never-attended quest first and cold_forge last — not the
+    // alphabetical-first cold_forge the stale matcher produced.
     const log = [
-      "- Mandated blind pass ran on clockwork_heist (CYOA, seed 5).",
-      "- Mandated blind pass ran on cold_forge (rpg, seed 7).",
+      "- Mandated blind pass ran on cold_forge (rpg, seed 5).",
+      "- Mandated blind pass ran on sunken_barrow (rpg, seed 7).",
     ].join("\n");
     const offsets = parseAttendanceOffsets(log);
     const rank = (stem: string): number => {
       const off = offsets.get(stem);
       return off === undefined ? Number.MIN_SAFE_INTEGER : -off;
     };
-    const order = ["clockwork_heist", "cold_forge", "wreckers_light"].sort(
+    const order = ["cold_forge", "sunken_barrow", "dawn_beacon"].sort(
       (x, y) => rank(x) - rank(y) || x.localeCompare(y),
     );
-    expect(order[0]).toBe("wreckers_light"); // never attended → first
-    expect(order[order.length - 1]).toBe("clockwork_heist"); // most recent → last
+    expect(order[0]).toBe("dawn_beacon"); // never attended -> first
+    expect(order[order.length - 1]).toBe("cold_forge"); // most recent -> last
   });
 
   it("on the real repo, the rotation no longer re-nominates the MOST-recently-attended pack", () => {
@@ -103,41 +103,41 @@ describe("bug_0128 — blind-pass rotation tracks true recency", () => {
 describe("bug_0235 — recency rotation sees BACKTICK/BOLD-wrapped attendance entries", () => {
   it("parses the `backtick`-wrapped format the log ACTUALLY writes (the blindness recurrence)", () => {
     // The live log writes the pack bold+backticked:
-    //   - **Mandated blind pass ran on `midnight_edition`** (cyoa, seed 4) — …
+    //   - **Mandated blind pass ran on `bellfounders_alarm`** (rpg, seed 4) — …
     // Pre-fix the capture class excluded the backtick, so the match FAILED at the opening
-    // tick and the entry was invisible → the just-played pack looked never-attended.
+    // tick and the entry was invisible -> the just-played quest looked never-attended.
     const text = [
-      "- **Mandated blind pass ran on `midnight_edition`** (cyoa, seed 4) — clean.", // newest
-      "- **Mandated blind pass ran on `tide_mill`** (parser, seed 41).",
-      "- Mandated blind pass ran on `clockwork_heist` (cyoa, seed 2).", // oldest
+      "- **Mandated blind pass ran on `bellfounders_alarm`** (rpg, seed 4) — clean.", // newest
+      "- **Mandated blind pass ran on `gallowmere`** (rpg, seed 41).",
+      "- Mandated blind pass ran on `cold_forge` (rpg, seed 2).", // oldest
     ].join("\n");
     const offsets = parseAttendanceOffsets(text);
-    expect(offsets.has("midnight_edition")).toBe(true); // pre-fix: false (backtick-blind)
-    expect(offsets.has("tide_mill")).toBe(true);
-    expect(offsets.has("clockwork_heist")).toBe(true);
+    expect(offsets.has("bellfounders_alarm")).toBe(true); // pre-fix: false (backtick-blind)
+    expect(offsets.has("gallowmere")).toBe(true);
+    expect(offsets.has("cold_forge")).toBe(true);
     // newest-first log ⇒ the topmost (just-played) pack carries the SMALLEST offset.
-    expect(offsets.get("midnight_edition")!).toBeLessThan(offsets.get("clockwork_heist")!);
+    expect(offsets.get("bellfounders_alarm")!).toBeLessThan(offsets.get("cold_forge")!);
   });
 
   it("a freshly-attended backtick pack sorts LAST in the rotation, never first", () => {
     const log = [
-      "- **Mandated blind pass ran on `midnight_edition`** (cyoa, seed 4).", // most recent
-      "- Mandated blind pass ran on `clockwork_heist` (cyoa, seed 2).",
+      "- **Mandated blind pass ran on `bellfounders_alarm`** (rpg, seed 4).", // most recent
+      "- Mandated blind pass ran on `cold_forge` (rpg, seed 2).",
     ].join("\n");
     const offsets = parseAttendanceOffsets(log);
     const rank = (stem: string): number => {
       const off = offsets.get(stem);
       return off === undefined ? Number.MIN_SAFE_INTEGER : -off;
     };
-    // white_stag is never mentioned (genuinely never-attended).
-    const order = ["midnight_edition", "clockwork_heist", "white_stag"].sort(
+    // factors_mark is never mentioned (genuinely never-attended).
+    const order = ["bellfounders_alarm", "cold_forge", "factors_mark"].sort(
       (x, y) => rank(x) - rank(y) || x.localeCompare(y),
     );
-    // Pre-fix midnight_edition was INVISIBLE (undefined ⇒ MIN_SAFE_INTEGER) and, being
-    // alphabetically before white_stag, sorted FIRST — the exact "re-nominate the
+    // Pre-fix bellfounders_alarm was INVISIBLE (undefined ⇒ MIN_SAFE_INTEGER) and, being
+    // alphabetically before factors_mark, sorted FIRST — the exact "re-nominate the
     // just-played pack" bug. Post-fix it carries a real recent offset and sorts last.
-    expect(order[0]).toBe("white_stag"); // never attended → first
-    expect(order[order.length - 1]).toBe("midnight_edition"); // most recent → last
+    expect(order[0]).toBe("factors_mark"); // never attended -> first
+    expect(order[order.length - 1]).toBe("bellfounders_alarm"); // most recent -> last
   });
 
   it("on the real repo, the most-recent backtick pack is parsed and NOT re-nominated first", () => {
@@ -149,7 +149,7 @@ describe("bug_0235 — recency rotation sees BACKTICK/BOLD-wrapped attendance en
     if (!m) return;
     const mostRecent = m[1]!;
     const offsets = parseAttendanceOffsets(raw);
-    // The parser MUST see it (pre-fix this was undefined — the vacuous-skip that let the
+    // The matcher MUST see it (pre-fix this was undefined — the vacuous-skip that let the
     // bug_0128 real-repo guard pass while the bug was live).
     expect(offsets.has(mostRecent)).toBe(true);
     const a = assess(process.cwd());
@@ -162,26 +162,24 @@ describe("bug_0235 — recency rotation sees BACKTICK/BOLD-wrapped attendance en
 });
 
 describe("bug_0293 — recency rotation survives the SONNET phrasing + uses the code-written line", () => {
-  // Third recurrence of the clockwork_heist lock-in. After the cycle agent defaulted to
-  // Sonnet, its entries wrote "blind pass on `clockwork_heist`" (no "Mandated …ran"), so
-  // the canonical-only parser saw nothing → 7 straight clockwork cycles. The durable cure
+  // Third recurrence of the cold_forge lock-in. After the cycle agent defaulted to
+  // Sonnet, its entries wrote "blind pass on `cold_forge`" (no "Mandated …ran"), so
+  // the canonical-only matcher saw nothing -> repeated cold_forge cycles. The durable cure
   // parses the MODEL-INDEPENDENT recommendation line the assessor emits every cycle —
   // `Blind-playtest "<id>"` — and tolerates the looser agent phrasing too.
   it("recognizes the Sonnet-era prose 'blind pass on `X`' form", () => {
-    const offsets = parseAttendanceOffsets(
-      "…(bug_0292): blind pass on `clockwork_heist` (seed 7).",
-    );
-    expect(offsets.has("clockwork_heist")).toBe(true);
+    const offsets = parseAttendanceOffsets("…(bug_0292): blind pass on `cold_forge` (seed 7).");
+    expect(offsets.has("cold_forge")).toBe(true);
   });
 
   it('recognizes the code-written `Blind-playtest "<id>"` line and normalizes the _v1 id', () => {
     // The exact shape ai-loop.ts prepends every cycle (the assessor's recommendation).
     const line =
-      '- Next best improvement (recommended): [content_fix] Blind-playtest "clockwork_heist_v1" — structurally clean.';
+      '- Next best improvement (recommended): [content_fix] Blind-playtest "cold_forge_v1" — structurally clean.';
     const offsets = parseAttendanceOffsets(line);
     // Keyed by the path-stem (no _v1) so it matches packStem(candidate.target).
-    expect(offsets.has("clockwork_heist")).toBe(true);
-    expect(offsets.has("clockwork_heist_v1")).toBe(false);
+    expect(offsets.has("cold_forge")).toBe(true);
+    expect(offsets.has("cold_forge_v1")).toBe(false);
   });
 
   it('recognizes the current code-written `Blind-playtest quest "<world_quest_id>"` line', () => {
@@ -193,23 +191,23 @@ describe("bug_0293 — recency rotation survives the SONNET phrasing + uses the 
   });
 
   it("a freshly-attended pack (new forms) sorts LAST in the rotation, never first", () => {
-    // Realistic newest-first entry: code line + Sonnet prose both name clockwork on top.
+    // Realistic newest-first entry: code line + Sonnet prose both name cold_forge on top.
     const log = [
-      "- Rec: playtest-clockwork_heist (content_fix/S; score=0.5).",
-      "### Cycle result — (bug_0292): blind pass on `clockwork_heist` (seed 7).",
-      '- Next best improvement (recommended): [content_fix] Blind-playtest quest "midnight_edition" — clean.',
+      "- Rec: playtest-cold_forge (content_fix/S; score=0.5).",
+      "### Cycle result — (bug_0292): blind pass on `cold_forge` (seed 7).",
+      '- Next best improvement (recommended): [content_fix] Blind-playtest quest "bellfounders_alarm" — clean.',
     ].join("\n");
     const offsets = parseAttendanceOffsets(log);
     const rank = (stem: string): number => {
       const off = offsets.get(stem);
       return off === undefined ? Number.MIN_SAFE_INTEGER : -off;
     };
-    // dead_reckoning is never mentioned (genuinely never-attended).
-    const order = ["clockwork_heist", "midnight_edition", "dead_reckoning"].sort(
+    // factors_mark is never mentioned (genuinely never-attended).
+    const order = ["cold_forge", "bellfounders_alarm", "factors_mark"].sort(
       (x, y) => rank(x) - rank(y) || x.localeCompare(y),
     );
-    expect(order[0]).toBe("dead_reckoning"); // never attended → first
-    expect(order[order.length - 1]).toBe("clockwork_heist"); // most recent → last
+    expect(order[0]).toBe("factors_mark"); // never attended -> first
+    expect(order[order.length - 1]).toBe("cold_forge"); // most recent -> last
   });
 
   it("on the real repo, the live code line is parsed and the newest attendance is NOT re-nominated", () => {
