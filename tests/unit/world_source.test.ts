@@ -395,6 +395,28 @@ describe("world source resolution", () => {
         "trace_test",
       ),
     ).toThrow(SaveIntegrityError);
+
+    expect(() =>
+      resolveTracePackSource(ROOT, {}, { ...trace, source_ref: ["gen", 3] }, "trace_test"),
+    ).toThrow(SaveIntegrityError);
+
+    expect(() =>
+      resolveTracePackSource(
+        ROOT,
+        {},
+        { ...trace, source_ref: ["pack", "sunken_barrow_v1"] },
+        "trace_test",
+      ),
+    ).toThrow(SaveIntegrityError);
+
+    const malformedGeneratedTraceRef = {
+      ...trace,
+      source_ref: ["gen", 3.5],
+    } as unknown as Trace<RpgAction>;
+    delete (malformedGeneratedTraceRef as { worldQuestId?: string }).worldQuestId;
+    expect(() =>
+      resolveTracePackSource(ROOT, {}, malformedGeneratedTraceRef, "trace_test"),
+    ).toThrow(SaveIntegrityError);
   });
 
   it("requires a source when save and trace metadata carry no world quest id", () => {

@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { SaveIntegrityError, type SaveSourceRef } from "../persist/save_load.js";
-import type { Trace } from "../trace/record.js";
+import type { Trace, TraceSourceRef } from "../trace/record.js";
 import {
   assertOverworldIntegrity,
   parseOverworldManifest,
@@ -325,6 +325,7 @@ export function resolveGameSource(
 }
 
 export function traceWorldQuestId(trace: Trace, operation: string): string | undefined {
+  const sourceRef = traceSourceRef(trace, operation);
   const raw = (trace as { worldQuestId?: unknown }).worldQuestId;
   let worldQuestId: string | undefined;
   if (raw !== undefined && typeof raw !== "string") {
@@ -334,30 +335,56 @@ export function traceWorldQuestId(trace: Trace, operation: string): string | und
   }
   if (typeof raw === "string") worldQuestId = raw;
 
-  const sourceRef = (trace as { source_ref?: unknown }).source_ref;
-  if (sourceRef !== undefined) {
-    if (!Array.isArray(sourceRef) || sourceRef.length !== 2) {
+  if (sourceRef?.[0] === "wq") {
+    if (worldQuestId !== undefined && worldQuestId !== sourceRef[1]) {
       throw new SaveIntegrityError(
-        `${operation} trace source_ref must be a compact tuple when present.`,
+        `Trace source_ref world quest ${JSON.stringify(
+          sourceRef[1],
+        )} does not match worldQuestId ${JSON.stringify(worldQuestId)}.`,
       );
     }
-    if (sourceRef[0] === "wq") {
-      if (typeof sourceRef[1] !== "string") {
-        throw new SaveIntegrityError(
-          `${operation} trace source_ref world quest id must be a string.`,
-        );
-      }
-      if (worldQuestId !== undefined && worldQuestId !== sourceRef[1]) {
-        throw new SaveIntegrityError(
-          `Trace source_ref world quest ${JSON.stringify(
-            sourceRef[1],
-          )} does not match worldQuestId ${JSON.stringify(worldQuestId)}.`,
-        );
-      }
-      worldQuestId = sourceRef[1];
-    }
+    worldQuestId = sourceRef[1];
+  } else if (sourceRef !== undefined && worldQuestId !== undefined) {
+    throw new SaveIntegrityError("Trace source_ref conflicts with worldQuestId.");
   }
   return worldQuestId;
+}
+
+function traceSourceRef(trace: Trace, operation: string): TraceSourceRef | undefined {
+  const sourceRef = (trace as { source_ref?: unknown }).source_ref;
+  if (sourceRef === undefined) return undefined;
+  if (!Array.isArray(sourceRef) || sourceRef.length !== 2) {
+    throw new SaveIntegrityError(
+      `${operation} trace source_ref must be a compact tuple when present.`,
+    );
+  }
+  if (sourceRef[0] === "wq") {
+    if (typeof sourceRef[1] !== "string") {
+      throw new SaveIntegrityError(
+        `${operation} trace source_ref world quest id must be a string.`,
+      );
+    }
+    return sourceRef as TraceSourceRef;
+  }
+  if (sourceRef[0] === "gen") {
+    if (typeof sourceRef[1] !== "number" || !Number.isInteger(sourceRef[1])) {
+      throw new SaveIntegrityError(
+        `${operation} trace source_ref generated seed must be an integer.`,
+      );
+    }
+    return sourceRef as TraceSourceRef;
+  }
+  if (sourceRef[0] === "pack") {
+    if (typeof sourceRef[1] !== "string") {
+      throw new SaveIntegrityError(`${operation} trace source_ref pack id must be a string.`);
+    }
+    return sourceRef as TraceSourceRef;
+  }
+  throw new SaveIntegrityError(
+    `${operation} trace source_ref tag must be "wq", "gen", or "pack", got ${JSON.stringify(
+      sourceRef[0],
+    )}.`,
+  );
 }
 
 export function saveWorldQuestId(bundle: SaveWorldSource, operation: string): string | undefined {
