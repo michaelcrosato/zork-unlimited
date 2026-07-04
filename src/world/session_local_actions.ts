@@ -105,6 +105,19 @@ export type OverworldAppliedAreaExploration = {
   areaId: string;
 };
 
+export type OverworldCurrentAreaSelectionState = {
+  nodeId: string;
+  localAreas: readonly Pick<OverworldArea, "id">[];
+  currentAreaId: string | null;
+  currentAreaByTown: Map<string, string>;
+  discoveredAreaIds: Set<string>;
+};
+
+export type OverworldAppliedCurrentAreaSelection = {
+  currentAreaIdAfter: string | null;
+  stateChanged: boolean;
+};
+
 export type OverworldAreaExplorationState = {
   areaId: string;
   areasById: ReadonlyMap<string, OverworldArea>;
@@ -161,6 +174,28 @@ export function applyOverworldAreaExploration(
 ): OverworldAppliedAreaExploration {
   state.visitedAreaIds.add(plan.areaId);
   return { areaId: plan.areaId };
+}
+
+export function applyOverworldCurrentAreaSelection(
+  state: OverworldCurrentAreaSelectionState,
+): OverworldAppliedCurrentAreaSelection {
+  const saved = state.currentAreaByTown.get(state.nodeId);
+  const next =
+    saved && state.localAreas.some((area) => area.id === saved)
+      ? saved
+      : (state.localAreas[0]?.id ?? null);
+  const hadSaved = next ? state.currentAreaByTown.get(state.nodeId) === next : true;
+  const alreadyDiscovered = next ? state.discoveredAreaIds.has(next) : true;
+
+  if (next) {
+    state.currentAreaByTown.set(state.nodeId, next);
+    state.discoveredAreaIds.add(next);
+  }
+
+  return {
+    currentAreaIdAfter: next,
+    stateChanged: state.currentAreaId !== next || !hadSaved || !alreadyDiscovered,
+  };
 }
 
 function applyOverworldLocalRenownCompletion(

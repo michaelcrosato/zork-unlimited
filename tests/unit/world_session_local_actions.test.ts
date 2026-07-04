@@ -8,6 +8,7 @@ import type {
 import {
   applyOverworldAreaExploration,
   applyOverworldAreaTravel,
+  applyOverworldCurrentAreaSelection,
   applyOverworldLocalJobCompletion,
   applyOverworldSiteExploration,
   planOverworldAreaExploration,
@@ -103,6 +104,46 @@ describe("overworld local action planning", () => {
       currentAreaByTownEntry: ["town_a", "area_b"],
       minutesAfter: 498,
     });
+  });
+
+  it("applies current area selection from saved area when it is still local", () => {
+    const currentAreaByTown = new Map([["town_a", "area_b"]]);
+    const discoveredAreaIds = new Set(["area_b"]);
+
+    expect(
+      applyOverworldCurrentAreaSelection({
+        nodeId: "town_a",
+        localAreas: [area("area_a"), area("area_b")],
+        currentAreaId: "area_b",
+        currentAreaByTown,
+        discoveredAreaIds,
+      }),
+    ).toEqual({
+      currentAreaIdAfter: "area_b",
+      stateChanged: false,
+    });
+    expect(currentAreaByTown.get("town_a")).toBe("area_b");
+    expect([...discoveredAreaIds]).toEqual(["area_b"]);
+  });
+
+  it("applies current area selection fallback into area index and discovery state", () => {
+    const currentAreaByTown = new Map([["town_a", "stale_area"]]);
+    const discoveredAreaIds = new Set<string>();
+
+    expect(
+      applyOverworldCurrentAreaSelection({
+        nodeId: "town_a",
+        localAreas: [area("area_a"), area("area_b")],
+        currentAreaId: "stale_area",
+        currentAreaByTown,
+        discoveredAreaIds,
+      }),
+    ).toEqual({
+      currentAreaIdAfter: "area_a",
+      stateChanged: true,
+    });
+    expect(currentAreaByTown.get("town_a")).toBe("area_a");
+    expect([...discoveredAreaIds]).toEqual(["area_a"]);
   });
 
   it("plans area exploration and preserves idempotent journal replay", () => {

@@ -89,6 +89,7 @@ import {
 import {
   applyOverworldAreaTravel,
   applyOverworldAreaExploration,
+  applyOverworldCurrentAreaSelection,
   applyOverworldLocalJobCompletion,
   applyOverworldSiteExploration,
   planOverworldAreaExploration,
@@ -489,20 +490,15 @@ export class OverworldSession {
   }
 
   private setCurrentAreaForTown(nodeId: string): void {
-    const local = this.localAreas(nodeId);
-    const saved = this.currentAreaByTown.get(nodeId);
-    const next = saved && local.some((area) => area.id === saved) ? saved : (local[0]?.id ?? null);
-    const previous = this.currentAreaId;
-    const hadSaved = next ? this.currentAreaByTown.get(nodeId) === next : true;
-    const alreadyDiscovered = next ? this.discoveredAreaIds.has(next) : true;
-    this.currentAreaId = next;
-    if (next) {
-      this.currentAreaByTown.set(nodeId, next);
-      this.discoveredAreaIds.add(next);
-    }
-    if (previous !== next || !hadSaved || !alreadyDiscovered) {
-      this.clearSnapshotCache();
-    }
+    const applied = applyOverworldCurrentAreaSelection({
+      nodeId,
+      localAreas: this.localAreas(nodeId),
+      currentAreaId: this.currentAreaId,
+      currentAreaByTown: this.currentAreaByTown,
+      discoveredAreaIds: this.discoveredAreaIds,
+    });
+    this.currentAreaId = applied.currentAreaIdAfter;
+    if (applied.stateChanged) this.clearSnapshotCache();
   }
 
   private currentArea(): OverworldArea | null {
