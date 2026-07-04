@@ -11,6 +11,7 @@ import {
   applyOverworldCurrentAreaSelection,
   applyOverworldLocalJobCompletion,
   applyOverworldSiteExploration,
+  applyOverworldTownVisit,
   planOverworldAreaExploration,
   planOverworldLocalJobCompletion,
   planOverworldSiteExploration,
@@ -144,6 +145,81 @@ describe("overworld local action planning", () => {
     });
     expect(currentAreaByTown.get("town_a")).toBe("area_a");
     expect([...discoveredAreaIds]).toEqual(["area_a"]);
+  });
+
+  it("applies town visits into visited towns, frontier discovery, and local area bootstrap", () => {
+    const discoveredIds = new Set<string>();
+    const visitedIds = new Set<string>();
+    const discoveredAreaIds = new Set<string>();
+    const currentAreaByTown = new Map<string, string>();
+
+    expect(
+      applyOverworldTownVisit({
+        nodeId: "town_a",
+        localAreas: [area("area_a"), area("area_b")],
+        currentAreaId: null,
+        currentAreaByTown,
+        discoveredAreaIds,
+        discoveredIds,
+        roadDestinationIds: ["town_b", "town_c"],
+        visitedIds,
+      }),
+    ).toEqual({
+      currentAreaIdAfter: "area_a",
+      stateChanged: true,
+    });
+    expect([...discoveredIds]).toEqual(["town_a", "town_b", "town_c"]);
+    expect([...visitedIds]).toEqual(["town_a"]);
+    expect([...discoveredAreaIds]).toEqual(["area_a"]);
+    expect([...currentAreaByTown]).toEqual([["town_a", "area_a"]]);
+  });
+
+  it("applies town visits without losing a saved current area", () => {
+    const discoveredIds = new Set(["town_a", "town_b"]);
+    const visitedIds = new Set(["town_a"]);
+    const discoveredAreaIds = new Set(["area_b"]);
+    const currentAreaByTown = new Map([["town_a", "area_b"]]);
+
+    expect(
+      applyOverworldTownVisit({
+        nodeId: "town_a",
+        localAreas: [area("area_a"), area("area_b")],
+        currentAreaId: "area_b",
+        currentAreaByTown,
+        discoveredAreaIds,
+        discoveredIds,
+        roadDestinationIds: ["town_b"],
+        visitedIds,
+      }),
+    ).toEqual({
+      currentAreaIdAfter: "area_b",
+      stateChanged: true,
+    });
+    expect([...discoveredAreaIds]).toEqual(["area_b", "area_a"]);
+    expect([...currentAreaByTown]).toEqual([["town_a", "area_b"]]);
+  });
+
+  it("treats repeated town visits as unchanged when all visit state is already current", () => {
+    const discoveredIds = new Set(["town_a", "town_b"]);
+    const visitedIds = new Set(["town_a"]);
+    const discoveredAreaIds = new Set(["area_a"]);
+    const currentAreaByTown = new Map([["town_a", "area_a"]]);
+
+    expect(
+      applyOverworldTownVisit({
+        nodeId: "town_a",
+        localAreas: [area("area_a"), area("area_b")],
+        currentAreaId: "area_a",
+        currentAreaByTown,
+        discoveredAreaIds,
+        discoveredIds,
+        roadDestinationIds: ["town_b"],
+        visitedIds,
+      }),
+    ).toEqual({
+      currentAreaIdAfter: "area_a",
+      stateChanged: false,
+    });
   });
 
   it("plans area exploration and preserves idempotent journal replay", () => {

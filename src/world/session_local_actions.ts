@@ -118,6 +118,17 @@ export type OverworldAppliedCurrentAreaSelection = {
   stateChanged: boolean;
 };
 
+export type OverworldTownVisitApplicationState = OverworldCurrentAreaSelectionState & {
+  discoveredIds: Set<string>;
+  roadDestinationIds: readonly string[];
+  visitedIds: Set<string>;
+};
+
+export type OverworldAppliedTownVisit = {
+  currentAreaIdAfter: string | null;
+  stateChanged: boolean;
+};
+
 export type OverworldAreaExplorationState = {
   areaId: string;
   areasById: ReadonlyMap<string, OverworldArea>;
@@ -149,6 +160,12 @@ export type OverworldSiteExplorationState = {
   exploredSiteIds: ReadonlySet<string>;
   journalEntries: OverworldJournalEntryLookup;
 };
+
+function addStringId(target: Set<string>, value: string): boolean {
+  const changed = !target.has(value);
+  target.add(value);
+  return changed;
+}
 
 export function applyOverworldAreaTravel(
   currentArea: OverworldArea,
@@ -195,6 +212,30 @@ export function applyOverworldCurrentAreaSelection(
   return {
     currentAreaIdAfter: next,
     stateChanged: state.currentAreaId !== next || !hadSaved || !alreadyDiscovered,
+  };
+}
+
+export function applyOverworldTownVisit(
+  state: OverworldTownVisitApplicationState,
+): OverworldAppliedTownVisit {
+  let stateChanged = addStringId(state.discoveredIds, state.nodeId);
+  stateChanged = addStringId(state.visitedIds, state.nodeId) || stateChanged;
+
+  const initialAreaId = state.localAreas[0]?.id;
+  if (initialAreaId) {
+    stateChanged = addStringId(state.discoveredAreaIds, initialAreaId) || stateChanged;
+  }
+
+  const areaSelection = applyOverworldCurrentAreaSelection(state);
+  stateChanged = areaSelection.stateChanged || stateChanged;
+
+  for (const destinationId of state.roadDestinationIds) {
+    stateChanged = addStringId(state.discoveredIds, destinationId) || stateChanged;
+  }
+
+  return {
+    currentAreaIdAfter: areaSelection.currentAreaIdAfter,
+    stateChanged,
   };
 }
 

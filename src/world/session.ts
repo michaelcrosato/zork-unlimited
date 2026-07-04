@@ -91,6 +91,7 @@ import {
   applyOverworldCurrentAreaSelection,
   applyOverworldLocalJobCompletion,
   applyOverworldSiteExploration,
+  applyOverworldTownVisit,
   planOverworldAreaExploration,
   planOverworldLocalJobCompletion,
   planOverworldSiteExploration,
@@ -401,14 +402,18 @@ export class OverworldSession {
   }
 
   private markSeen(nodeId: string): void {
-    this.discoveredIds.add(nodeId);
-    this.visitedIds.add(nodeId);
-    this.discoverInitialAreaForTown(nodeId);
-    this.setCurrentAreaForTown(nodeId);
-    for (const edge of this.roadsFrom(nodeId)) {
-      this.discoveredIds.add(edge.destination.id);
-    }
-    this.clearSnapshotCache();
+    const applied = applyOverworldTownVisit({
+      nodeId,
+      localAreas: this.localAreas(nodeId),
+      currentAreaId: this.currentAreaId,
+      currentAreaByTown: this.currentAreaByTown,
+      discoveredAreaIds: this.discoveredAreaIds,
+      discoveredIds: this.discoveredIds,
+      roadDestinationIds: this.roadsFrom(nodeId).map((edge) => edge.destination.id),
+      visitedIds: this.visitedIds,
+    });
+    this.currentAreaId = applied.currentAreaIdAfter;
+    if (applied.stateChanged) this.clearSnapshotCache();
   }
 
   private currentNode(): OverworldNode {
@@ -561,14 +566,6 @@ export class OverworldSession {
 
   private currentAreaEvents(): OverworldLocalEvent[] {
     return this.eventsByArea.get(this.currentAreaIdOrThrow()) ?? [];
-  }
-
-  private discoverInitialAreaForTown(nodeId: string): void {
-    const firstArea = this.localAreas(nodeId)[0];
-    if (firstArea && !this.discoveredAreaIds.has(firstArea.id)) {
-      this.discoveredAreaIds.add(firstArea.id);
-      this.clearSnapshotCache();
-    }
   }
 
   private localJobs(nodeId: string): OverworldLocalJob[] {
