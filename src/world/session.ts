@@ -1,6 +1,5 @@
 import { hashState } from "../core/hash.js";
 import {
-  overworldNodesById,
   type OverworldArea,
   type OverworldAreaExit,
   type OverworldCharacter,
@@ -24,15 +23,7 @@ import {
   type OverworldLocalActionKind,
 } from "./local_actions.js";
 import { cloneOverworldCompactView, type OverworldCompactView } from "./compact_view.js";
-import {
-  idIndex,
-  keyedIndex,
-  nestedIdIndex,
-  pushIndexed,
-  replaceStringSet,
-  sortedIndex,
-  sortedNumberRecord,
-} from "./session_collections.js";
+import { replaceStringSet, sortedNumberRecord } from "./session_collections.js";
 import {
   OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES,
   OVERWORLD_STARTING_MINUTES as STARTING_MINUTES,
@@ -72,15 +63,10 @@ import {
   type OverworldQuestCompletionOutcome,
   type OverworldQuestCompletionResult,
 } from "./session_quests.js";
-import {
-  buildOverworldSnapshotManifestIndex,
-  type OverworldSnapshotManifestIndex,
-} from "./session_manifest_index.js";
+import { type OverworldSnapshotManifestIndex } from "./session_manifest_index.js";
 import {
   buildOverworldRegionalArcProgress,
   cloneOverworldRegionalArcProgress,
-  indexOverworldRegionalArcAnchorTowns,
-  indexOverworldRegionalArcsByRegion,
   regionalArcCompletionsForRegion,
   type OverworldRegionalArcProgress,
 } from "./session_regional_arcs.js";
@@ -111,6 +97,7 @@ import {
   type OverworldSessionSnapshotCache,
 } from "./session_cache.js";
 import { cloneOverworldView } from "./session_view_clone.js";
+import { buildOverworldSessionIndexes } from "./session_indices.js";
 import { planOverworldSessionSnapshotRestore } from "./session_snapshot_restore.js";
 
 export type {
@@ -255,98 +242,35 @@ export class OverworldSession {
   private readonly caches: OverworldSessionCaches = {};
 
   constructor(private readonly world: OverworldManifest) {
-    this.nodes = overworldNodesById(world);
-    this.roadExitsByTown = this.indexRoadExits();
-    this.roadExitsByTownAndId = nestedIdIndex(this.roadExitsByTown);
-    this.roadEventsByEdgeId = keyedIndex(world.road_events, (event) => event.edge);
-    this.areasById = idIndex(world.areas);
-    this.areasByTown = sortedIndex(
-      world.areas,
-      (area) => area.home,
-      (a, b) => a.travel_minutes - b.travel_minutes || a.name.localeCompare(b.name),
-    );
-    this.areaExitsByArea = this.indexAreaExits();
-    this.areaExitsByAreaAndId = nestedIdIndex(this.areaExitsByArea);
-    this.poisById = idIndex(world.points_of_interest);
-    this.poisByTown = sortedIndex(
-      world.points_of_interest,
-      (poi) => poi.home,
-      (a, b) => a.title.localeCompare(b.title),
-    );
-    this.poisByArea = sortedIndex(
-      world.points_of_interest,
-      (poi) => poi.area,
-      (a, b) => a.title.localeCompare(b.title),
-    );
-    this.charactersById = idIndex(world.characters);
-    this.charactersByTown = sortedIndex(
-      world.characters,
-      (character) => character.home,
-      (a, b) => a.name.localeCompare(b.name),
-    );
-    this.charactersByArea = sortedIndex(
-      world.characters,
-      (character) => character.area,
-      (a, b) => a.name.localeCompare(b.name),
-    );
-    this.eventsByTown = sortedIndex(
-      world.local_events,
-      (event) => event.home,
-      (a, b) => b.intensity - a.intensity || a.title.localeCompare(b.title),
-    );
-    this.eventsByArea = sortedIndex(
-      world.local_events,
-      (event) => event.area,
-      (a, b) => b.intensity - a.intensity || a.title.localeCompare(b.title),
-    );
-    this.localEventsById = idIndex(world.local_events);
-    this.jobsById = idIndex(world.local_jobs);
-    this.jobsByTown = sortedIndex(
-      world.local_jobs,
-      (job) => job.home,
-      (a, b) =>
-        a.difficulty - b.difficulty || a.minutes - b.minutes || a.title.localeCompare(b.title),
-    );
-    this.sitesById = idIndex(world.exploration_sites);
-    this.sitesByArea = sortedIndex(
-      world.exploration_sites,
-      (site) => site.area,
-      (a, b) => b.danger - a.danger || a.title.localeCompare(b.title),
-    );
-    this.questsById = idIndex(world.quests);
-    this.questsByTown = sortedIndex(
-      world.quests,
-      (quest) => quest.home,
-      (a, b) => a.title.localeCompare(b.title),
-    );
-    this.regionalArcsByRegion = indexOverworldRegionalArcsByRegion(world.regional_arcs);
-    this.regionalArcAnchorTownsById = indexOverworldRegionalArcAnchorTowns(
-      world.regional_arcs,
-      this.nodes,
-    );
-    this.routePlannerIndex = {
-      nodes: this.nodes,
-      roadEventsByEdgeId: this.roadEventsByEdgeId,
-      roadExitsByTown: this.roadExitsByTown,
-    };
-    this.snapshotManifestIndex = buildOverworldSnapshotManifestIndex({
-      areasById: this.areasById,
-      areasByTown: this.areasByTown,
-      charactersById: this.charactersById,
-      eventsById: this.localEventsById,
-      jobsById: this.jobsById,
-      jobsByTown: this.jobsByTown,
-      nodesById: this.nodes,
-      poisById: this.poisById,
-      questsById: this.questsById,
-      questsByTown: this.questsByTown,
-      roadEventsByEdgeId: this.roadEventsByEdgeId,
-      roadExitsByTown: this.roadExitsByTown,
-      sitesByArea: this.sitesByArea,
-      sitesById: this.sitesById,
-      world: this.world,
-    });
-    this.worldHash = hashState(world);
+    const indexes = buildOverworldSessionIndexes(world);
+    this.nodes = indexes.nodes;
+    this.roadExitsByTown = indexes.roadExitsByTown;
+    this.roadExitsByTownAndId = indexes.roadExitsByTownAndId;
+    this.roadEventsByEdgeId = indexes.roadEventsByEdgeId;
+    this.areasById = indexes.areasById;
+    this.areasByTown = indexes.areasByTown;
+    this.areaExitsByArea = indexes.areaExitsByArea;
+    this.areaExitsByAreaAndId = indexes.areaExitsByAreaAndId;
+    this.poisById = indexes.poisById;
+    this.poisByTown = indexes.poisByTown;
+    this.poisByArea = indexes.poisByArea;
+    this.charactersById = indexes.charactersById;
+    this.charactersByTown = indexes.charactersByTown;
+    this.charactersByArea = indexes.charactersByArea;
+    this.eventsByTown = indexes.eventsByTown;
+    this.eventsByArea = indexes.eventsByArea;
+    this.localEventsById = indexes.localEventsById;
+    this.jobsById = indexes.jobsById;
+    this.jobsByTown = indexes.jobsByTown;
+    this.sitesById = indexes.sitesById;
+    this.sitesByArea = indexes.sitesByArea;
+    this.questsById = indexes.questsById;
+    this.questsByTown = indexes.questsByTown;
+    this.regionalArcsByRegion = indexes.regionalArcsByRegion;
+    this.regionalArcAnchorTownsById = indexes.regionalArcAnchorTownsById;
+    this.routePlannerIndex = indexes.routePlannerIndex;
+    this.snapshotManifestIndex = indexes.snapshotManifestIndex;
+    this.worldHash = indexes.worldHash;
     this.currentId = world.start;
     this.markSeen(world.start);
   }
@@ -356,50 +280,6 @@ export class OverworldSession {
     const session = new OverworldSession(world);
     session.applySnapshot(snapshot);
     return session;
-  }
-
-  private indexAreaExits(): Map<string, OverworldAreaExit[]> {
-    const index = new Map<string, OverworldAreaExit[]>();
-    for (const edge of this.world.area_edges) {
-      const fromDestination = this.areasById.get(edge.to_area);
-      const toDestination = this.areasById.get(edge.from_area);
-      if (!fromDestination || !toDestination) {
-        const missingAreaId = fromDestination ? edge.from_area : edge.to_area;
-        throw new Error(`Overworld area edge references missing area "${missingAreaId}".`);
-      }
-      pushIndexed(index, edge.from_area, { ...edge, destination: fromDestination });
-      pushIndexed(index, edge.to_area, { ...edge, destination: toDestination });
-    }
-    for (const exits of index.values()) {
-      exits.sort(
-        (a, b) =>
-          a.travel_minutes - b.travel_minutes ||
-          a.destination.name.localeCompare(b.destination.name),
-      );
-    }
-    return index;
-  }
-
-  private indexRoadExits(): Map<string, OverworldExit[]> {
-    const index = new Map<string, OverworldExit[]>();
-    for (const edge of this.world.edges) {
-      const fromDestination = this.nodes.get(edge.to);
-      const toDestination = this.nodes.get(edge.from);
-      if (!fromDestination || !toDestination) {
-        const missingNodeId = fromDestination ? edge.from : edge.to;
-        throw new Error(`Overworld edge references missing node "${missingNodeId}".`);
-      }
-      pushIndexed(index, edge.from, { ...edge, destination: fromDestination });
-      pushIndexed(index, edge.to, { ...edge, destination: toDestination });
-    }
-    for (const exits of index.values()) {
-      exits.sort(
-        (a, b) =>
-          a.travel_minutes - b.travel_minutes ||
-          a.destination.name.localeCompare(b.destination.name),
-      );
-    }
-    return index;
   }
 
   private clearSnapshotCache(): void {
