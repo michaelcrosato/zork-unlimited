@@ -145,6 +145,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Compact RPG MCP observations now cap inventory/flags and keep only recent
   journal entries, with `more: [inventory, flags, journal]` omission counts
   trimmed for trailing zero buckets and string action ids under context `v: 6`.
+- Compact RPG observations and compact transcript summaries now share the same
+  capped-list, recent-list, omission-count, and trailing-zero `more` tuple
+  helper, keeping loop context and end-of-run audit payload rules aligned.
 - `get_observation({ if_state_hash })` can return hash-only `unchanged`
   responses, avoiding repeated context payloads for polling or resume loops; the
   old `get_scene` alias is no longer part of the live MCP/ToolApi loop.

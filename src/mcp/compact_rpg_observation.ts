@@ -1,4 +1,10 @@
 import type { RpgObservation } from "../rpg/observation.js";
+import {
+  compactHead,
+  compactRecent,
+  compactTrailingOmissionCounts,
+  omittedCount,
+} from "./compact_truncation.js";
 const CORE_STATE_VARS = new Set(["attack", "defense", "hp", "max_score", "score"]);
 const COMPACT_INVENTORY_LIMIT = 16;
 const COMPACT_FLAG_LIMIT = 16;
@@ -52,37 +58,6 @@ function compactVars(vars: Record<string, number>): Record<string, number> | und
   return hasCompactVar ? compact : undefined;
 }
 
-function compactHead(values: readonly string[], limit: number): string[] {
-  const compact: string[] = [];
-  for (let index = 0; index < values.length && index < limit; index += 1) {
-    compact.push(values[index]!);
-  }
-  return compact;
-}
-
-function compactRecent(values: readonly string[], limit: number): string[] {
-  const compact: string[] = [];
-  const start = Math.max(0, values.length - limit);
-  for (let index = start; index < values.length; index += 1) compact.push(values[index]!);
-  return compact;
-}
-
-function omittedCount(values: readonly string[], compacted: readonly string[]): number | undefined {
-  return values.length > compacted.length ? values.length - compacted.length : undefined;
-}
-
-function compactMore(
-  inventory: number | undefined,
-  flags: number | undefined,
-  journal: number | undefined,
-): RpgCompactMore | undefined {
-  const counts = [inventory ?? 0, flags ?? 0, journal ?? 0] as const;
-  if (counts[2] !== 0) return counts;
-  if (counts[1] !== 0) return [counts[0], counts[1]];
-  if (counts[0] !== 0) return [counts[0]];
-  return undefined;
-}
-
 export function compactRpgObservation(
   obs: RpgObservation,
   actionIds: string[],
@@ -106,7 +81,11 @@ export function compactRpgObservation(
   for (const exit of obs.blocked_exits) blocked.push([exit.direction, exit.message]);
   const enemies: RpgCompactEnemy[] = [];
   for (const enemy of obs.enemies_present) enemies.push([enemy.id, enemy.name, enemy.hp]);
-  const more = compactMore(omittedInv, omittedFlags, omittedJournal);
+  const more = compactTrailingOmissionCounts([
+    omittedInv ?? 0,
+    omittedFlags ?? 0,
+    omittedJournal ?? 0,
+  ]) as RpgCompactMore | undefined;
   return {
     v: RPG_COMPACT_OBSERVATION_VERSION,
     here: [obs.room, obs.title],

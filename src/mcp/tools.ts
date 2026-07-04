@@ -70,6 +70,12 @@ import {
   RPG_COMPACT_OBSERVATION_VERSION,
   type RpgCompactObservation,
 } from "./compact_rpg_observation.js";
+import {
+  compactHead,
+  compactRecent,
+  compactTrailingOmissionCounts,
+  omittedCount,
+} from "./compact_truncation.js";
 import type { WorldBinding, WorldManifest } from "../world/schema.js";
 import {
   normalizePackPath,
@@ -645,45 +651,21 @@ function buildObsFor(
 const TRANSCRIPT_SUMMARY_LIST_LIMIT = 16;
 const TRANSCRIPT_SUMMARY_JOURNAL_LIMIT = 5;
 
-function compactTranscriptHead(values: readonly string[], limit: number): string[] {
-  return values.slice(0, limit);
-}
-
-function compactTranscriptRecent(values: readonly string[], limit: number): string[] {
-  return values.slice(Math.max(0, values.length - limit));
-}
-
-function transcriptOmittedCount(
-  values: readonly string[],
-  compacted: readonly string[],
-): number | undefined {
-  return values.length > compacted.length ? values.length - compacted.length : undefined;
-}
-
-function compactTranscriptMore(
-  scenes: number | undefined,
-  inventory: number | undefined,
-  flags: number | undefined,
-  journal: number | undefined,
-): TranscriptCompactMore | undefined {
-  const counts = [scenes ?? 0, inventory ?? 0, flags ?? 0, journal ?? 0] as const;
-  if (counts[3] !== 0) return counts;
-  if (counts[2] !== 0) return [counts[0], counts[1], counts[2]];
-  if (counts[1] !== 0) return [counts[0], counts[1]];
-  if (counts[0] !== 0) return [counts[0]];
-  return undefined;
-}
-
 function compactTranscriptSummary(summary: TranscriptSummary): TranscriptCompactSummary {
-  const scenes = compactTranscriptHead(summary.scenes, TRANSCRIPT_SUMMARY_LIST_LIMIT);
-  const inventory = compactTranscriptHead(summary.inventory, TRANSCRIPT_SUMMARY_LIST_LIMIT);
-  const flags = compactTranscriptHead(summary.flags, TRANSCRIPT_SUMMARY_LIST_LIMIT);
-  const journal = compactTranscriptRecent(summary.journal, TRANSCRIPT_SUMMARY_JOURNAL_LIMIT);
-  const omittedScenes = transcriptOmittedCount(summary.scenes, scenes);
-  const omittedInventory = transcriptOmittedCount(summary.inventory, inventory);
-  const omittedFlags = transcriptOmittedCount(summary.flags, flags);
-  const omittedJournal = transcriptOmittedCount(summary.journal, journal);
-  const more = compactTranscriptMore(omittedScenes, omittedInventory, omittedFlags, omittedJournal);
+  const scenes = compactHead(summary.scenes, TRANSCRIPT_SUMMARY_LIST_LIMIT);
+  const inventory = compactHead(summary.inventory, TRANSCRIPT_SUMMARY_LIST_LIMIT);
+  const flags = compactHead(summary.flags, TRANSCRIPT_SUMMARY_LIST_LIMIT);
+  const journal = compactRecent(summary.journal, TRANSCRIPT_SUMMARY_JOURNAL_LIMIT);
+  const omittedScenes = omittedCount(summary.scenes, scenes);
+  const omittedInventory = omittedCount(summary.inventory, inventory);
+  const omittedFlags = omittedCount(summary.flags, flags);
+  const omittedJournal = omittedCount(summary.journal, journal);
+  const more = compactTrailingOmissionCounts([
+    omittedScenes ?? 0,
+    omittedInventory ?? 0,
+    omittedFlags ?? 0,
+    omittedJournal ?? 0,
+  ]) as TranscriptCompactMore | undefined;
   const {
     ending_id: endingId,
     inventory: _fullInventory,

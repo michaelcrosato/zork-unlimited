@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 284 -->
+<!-- historical_cycle_count: 285 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - shared_compact_truncation_helpers
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact RPG observations and compact transcript summaries now share one truncation helper for capped lists, recent journals, omission counts, and trimmed `more` tuples.
+- Loop effect: future compact context/audit changes update one helper boundary instead of parallel tuple/list logic in engine-facing MCP paths.
+- Guard: focused Prettier, typecheck, shared truncation helper, compact observation, MCP tool, and MCP server-registration tests passed.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - compact_rpg_more_trailing_zero_trim
 
