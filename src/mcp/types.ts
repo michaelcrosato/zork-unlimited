@@ -9,8 +9,6 @@
  */
 import type { RpgObservation } from "../rpg/observation.js";
 
-export type PackMode = "rpg";
-
 /**
  * Public MCP action menu entries omit reducer-only structured actions. With
  * compact action menus, `command` is also omitted so loops can carry stable ids

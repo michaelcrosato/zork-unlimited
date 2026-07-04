@@ -3,7 +3,7 @@
  *
  * Older migration tests required `adapt_story` to route across CYOA/parser/RPG.
  * The public contract now mirrors `bin/author.ts`: authoring from prose produces
- * an RPG pack and rejects explicit mode selection.
+ * an RPG pack and rejects stray explicit mode selection.
  */
 import { describe, expect, it } from "vitest";
 import { createToolApi } from "../../src/mcp/tools.js";
@@ -30,7 +30,7 @@ describe("adapt_story RPG-only MCP authoring surface", () => {
   });
 
   it("rejects legacy mode selection", async () => {
-    await expect(api().adapt_story({ premise: PREMISE, mode: "cyoa" as never })).rejects.toThrow(
+    await expect(api().adapt_story({ premise: PREMISE, mode: "cyoa" } as never)).rejects.toThrow(
       "adapt_story is RPG-only",
     );
   });

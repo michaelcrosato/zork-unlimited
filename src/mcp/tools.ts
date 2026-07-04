@@ -49,17 +49,13 @@ import {
   load,
   assertSaveContentHash,
   assertWellFormedState,
+  type SaveMode,
 } from "../persist/save_load.js";
 import { assertTraceMode, replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
 import { SessionStore, type Session, type TranscriptSummary } from "./sessions.js";
-import {
-  isRpgPackShape,
-  type PackMode,
-  type McpActionOption,
-  type McpObservation,
-} from "./types.js";
+import { isRpgPackShape, type McpActionOption, type McpObservation } from "./types.js";
 import {
   compactPlayerEvent,
   RPG_COMPACT_EVENT_VERSION,
@@ -142,7 +138,7 @@ type WorldQuestSourceEntry = {
   path: string;
   id: string;
   title: string;
-  mode: PackMode | null;
+  mode: SaveMode | null;
   playable: boolean;
   world: WorldBinding | null;
   world_quest_id: string | null;
@@ -1936,7 +1932,7 @@ export function createToolApi(opts: { root: string }) {
       } as RpgSessionPayload<Args>;
     },
 
-    async adapt_story(args: { premise: string; mode?: PackMode }) {
+    async adapt_story(args: { premise: string }) {
       // Author a pack from a premise via the writer → adapter → validator loop
       // (§12.1–3). Uses a REAL frontier model when a provider key is present
       // (ANTHROPIC/OPENAI/GOOGLE, or AF_LLM_PROVIDER), falling back to the
@@ -1944,7 +1940,7 @@ export function createToolApi(opts: { root: string }) {
       // stay green and offline while a keyed run exercises the genuine §1 author.
       // Mirrors bin/author.ts. Returns the story, the green/red pack, the validation
       // report, and the per-beat classification (§11). Never writes files.
-      if (args.mode !== undefined) {
+      if ((args as { mode?: unknown }).mode !== undefined) {
         throw new Error("adapt_story is RPG-only; mode is no longer supported.");
       }
       const provider = resolveProvider({ mock: new MockAuthorProvider() });

@@ -12,7 +12,6 @@ import type { Condition } from "../core/conditions.js";
 import type { Effect } from "../core/effects.js";
 import { loadRpgPackFile } from "../rpg/pack.js";
 import type { RpgPack } from "../rpg/schema.js";
-import type { PackMode } from "../mcp/types.js";
 
 type Room = RpgPack["rooms"][number];
 type GameObject = RpgPack["objects"][number];
@@ -21,7 +20,7 @@ type WinCondition = RpgPack["win_conditions"][number];
 export type StaleReactiveRoomItemSite = {
   packPath: string;
   packId: string;
-  mode: Extract<PackMode, "rpg">;
+  mode: StaleReactivePackMode;
   roomId: string;
   objectId: string;
   objectName: string;
@@ -33,6 +32,7 @@ export type StaleReactiveAudit = {
 };
 
 const PACK_DIRS = [["content/rpg/pack", "rpg"]] as const;
+type StaleReactivePackMode = (typeof PACK_DIRS)[number][1];
 
 const MIN_TERM_LENGTH = 4;
 
@@ -55,7 +55,7 @@ export function auditStaleReactiveRoomItems(root: string): StaleReactiveAudit {
 export function auditRpgPackForStaleRoomItems(
   pack: RpgPack,
   packPath: string,
-  mode: Extract<PackMode, "rpg">,
+  mode: StaleReactivePackMode,
 ): StaleReactiveRoomItemSite[] {
   const objects = new Map(pack.objects.map((object) => [object.id, object]));
   const sites: StaleReactiveRoomItemSite[] = [];

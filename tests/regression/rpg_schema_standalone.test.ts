@@ -64,7 +64,7 @@ describe("RPG owns the live content/runtime contract", () => {
     expect(apiTypes).toContain("export type RpgAction");
     expect(apiTypes).toContain("export type Action = RpgAction");
     expect(apiTypes).not.toContain("LegacyChooseAction");
-    expect(mcpTypes).toContain('export type PackMode = "rpg"');
+    expect(mcpTypes).not.toContain("PackMode");
     expect(sessions).toContain("Rules<RpgAction>");
     expect(traceRecord).toContain("export type Trace<A extends EngineAction = RpgAction>");
     expect(traceReplay).toContain("trace: Trace<A>");
