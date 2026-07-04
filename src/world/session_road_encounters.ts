@@ -1,6 +1,15 @@
 import type { OverworldEdge, OverworldNode, OverworldRoadEvent } from "./overworld.js";
 import { timeLabel } from "./session_journal_codec.js";
-import type { OverworldJournalEntry, OverworldPendingRoadEncounter } from "./session_snapshot.js";
+import type {
+  OverworldJournalEntry,
+  OverworldPendingRoadEncounter,
+  OverworldPendingRoadEncounterSnapshot,
+  TravelLogEntrySnapshot,
+} from "./session_snapshot.js";
+import {
+  assertSnapshotPendingRoadEncounterBinding,
+  assertSnapshotPendingRoadEncounterUnresolved,
+} from "./session_snapshot_proofs.js";
 import {
   OVERWORLD_MAX_FATIGUE as MAX_FATIGUE,
   roadEncounterOptionsFor,
@@ -31,6 +40,17 @@ export type OverworldRoadEncounterResolution = {
   minutesAfter: number;
 };
 
+export type OverworldPendingRoadEncounterRestoreIndex = {
+  currentId: string;
+  edgeIds: ReadonlySet<string>;
+  edgesById: ReadonlyMap<string, OverworldEdge>;
+  latestTravel: TravelLogEntrySnapshot | null;
+  minutes: number;
+  nodesById: ReadonlyMap<string, OverworldNode>;
+  roadEventsByEdgeId: ReadonlyMap<string, OverworldRoadEvent>;
+  roadJournal: { byKey: ReadonlyMap<string, unknown> };
+};
+
 export function buildOverworldPendingRoadEncounter(
   from: OverworldNode,
   to: OverworldNode,
@@ -48,6 +68,50 @@ export function buildOverworldPendingRoadEncounter(
     event: roadEvent,
     options: roadEncounterOptionsFor(roadEvent),
   };
+}
+
+export function restoreOverworldPendingRoadEncounter(
+  pendingRoadEncounter: OverworldPendingRoadEncounterSnapshot | null,
+  indexes: OverworldPendingRoadEncounterRestoreIndex,
+): OverworldPendingRoadEncounter | null {
+  if (!pendingRoadEncounter) return null;
+
+  const pendingEdge = indexes.edgesById.get(pendingRoadEncounter.edgeId);
+  if (!pendingEdge) {
+    throw new Error(
+      `Overworld session snapshot has unknown pending road "${pendingRoadEncounter.edgeId}".`,
+    );
+  }
+  if (pendingEdge.from !== indexes.currentId && pendingEdge.to !== indexes.currentId) {
+    throw new Error("Overworld session snapshot pending road is not at the current town.");
+  }
+
+  const manifestEvent = indexes.roadEventsByEdgeId.get(pendingRoadEncounter.edgeId);
+  if (!manifestEvent) {
+    throw new Error(
+      `Overworld session snapshot has no road event for "${pendingRoadEncounter.edgeId}".`,
+    );
+  }
+
+  assertSnapshotPendingRoadEncounterBinding(
+    pendingRoadEncounter,
+    indexes.latestTravel,
+    indexes.edgeIds,
+  );
+  assertSnapshotPendingRoadEncounterUnresolved(
+    pendingRoadEncounter,
+    indexes.latestTravel,
+    indexes.roadJournal,
+  );
+
+  const fromId = pendingEdge.from === indexes.currentId ? pendingEdge.to : pendingEdge.from;
+  const from = indexes.nodesById.get(fromId);
+  const to = indexes.nodesById.get(indexes.currentId);
+  if (!from || !to) {
+    throw new Error("Overworld session snapshot pending road references an unknown town.");
+  }
+
+  return buildOverworldPendingRoadEncounter(from, to, pendingEdge, manifestEvent, indexes.minutes);
 }
 
 export function resolveOverworldRoadEncounter(

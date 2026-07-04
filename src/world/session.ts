@@ -79,6 +79,7 @@ import {
 import {
   buildOverworldPendingRoadEncounter,
   resolveOverworldRoadEncounter,
+  restoreOverworldPendingRoadEncounter,
   type OverworldRoadEncounterResult,
 } from "./session_road_encounters.js";
 import { timeLabel } from "./session_journal_codec.js";
@@ -151,8 +152,6 @@ import {
   assertSnapshotCurrentAreaMapBindings,
   assertSnapshotCurrentLocationManifestBinding,
   assertSnapshotCurrentTownReachability,
-  assertSnapshotPendingRoadEncounterBinding,
-  assertSnapshotPendingRoadEncounterUnresolved,
   assertSnapshotTravelPathContinuity,
   assertSnapshotVisitedTownTravelProof,
 } from "./session_snapshot_proofs.js";
@@ -539,7 +538,6 @@ export class OverworldSession {
       indexes.townNameForSource,
       this.world.start,
     );
-    let restoredPendingRoadEncounter: OverworldPendingRoadEncounter | null = null;
 
     assertSnapshotCurrentLocationManifestBinding(snapshot, indexes);
 
@@ -727,46 +725,19 @@ export class OverworldSession {
         throw new Error(`Overworld session snapshot has unknown renown region "${region}".`);
       }
     }
-    if (snapshot.pendingRoadEncounter) {
-      const pendingEdge = indexes.edgesById.get(snapshot.pendingRoadEncounter.edgeId);
-      if (!pendingEdge) {
-        throw new Error(
-          `Overworld session snapshot has unknown pending road "${snapshot.pendingRoadEncounter.edgeId}".`,
-        );
-      }
-      if (pendingEdge.from !== snapshot.currentId && pendingEdge.to !== snapshot.currentId) {
-        throw new Error("Overworld session snapshot pending road is not at the current town.");
-      }
-      const manifestEvent = this.roadEventFor(snapshot.pendingRoadEncounter.edgeId);
-      if (!manifestEvent) {
-        throw new Error(
-          `Overworld session snapshot has no road event for "${snapshot.pendingRoadEncounter.edgeId}".`,
-        );
-      }
-      assertSnapshotPendingRoadEncounterBinding(
-        snapshot.pendingRoadEncounter,
-        travelTimeline.latest,
-        indexes.edgeIds,
-      );
-      assertSnapshotPendingRoadEncounterUnresolved(
-        snapshot.pendingRoadEncounter,
-        travelTimeline.latest,
+    const restoredPendingRoadEncounter = restoreOverworldPendingRoadEncounter(
+      snapshot.pendingRoadEncounter,
+      {
+        currentId: snapshot.currentId,
+        edgeIds: indexes.edgeIds,
+        edgesById: indexes.edgesById,
+        latestTravel: travelTimeline.latest,
+        minutes: snapshot.minutes,
+        nodesById: this.nodes,
+        roadEventsByEdgeId: this.roadEventsByEdgeId,
         roadJournal,
-      );
-      const fromId = pendingEdge.from === snapshot.currentId ? pendingEdge.to : pendingEdge.from;
-      const from = this.nodes.get(fromId);
-      const to = this.nodes.get(snapshot.currentId);
-      if (!from || !to) {
-        throw new Error("Overworld session snapshot pending road references an unknown town.");
-      }
-      restoredPendingRoadEncounter = buildOverworldPendingRoadEncounter(
-        from,
-        to,
-        pendingEdge,
-        manifestEvent,
-        snapshot.minutes,
-      );
-    }
+      },
+    );
     assertSnapshotResourceReplay(
       snapshot,
       indexes,
