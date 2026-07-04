@@ -110,21 +110,26 @@ import {
   type TravelLogEntry,
 } from "../world/session.js";
 import {
-  compactOverworldJournalEntries,
   compactOverworldQuestRef,
-  compactOverworldRefs,
-  compactOverworldTitleRefs,
-  compactPendingRoad,
   compactRouteOption,
   compactTravelLogEntry,
-  type OverworldCompactJournalEntry,
   type OverworldCompactQuestRef,
-  type OverworldCompactRef,
-  type OverworldCompactRoadEncounter,
   type OverworldCompactRouteOption,
   type OverworldCompactTravelLogEntry,
   type OverworldCompactView,
 } from "../world/compact_view.js";
+import {
+  compactOverworldActionResult,
+  compactOverworldAreaTravelResult,
+  compactOverworldQuestCompletionResult,
+  compactOverworldRoadEncounterResult,
+  compactOverworldServiceResult,
+  type OverworldCompactActionResult,
+  type OverworldCompactAreaTravelResult,
+  type OverworldCompactQuestCompletionResult,
+  type OverworldCompactRoadEncounterResult,
+  type OverworldCompactServiceResult,
+} from "./compact_overworld_result.js";
 import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
 import { resolveProvider } from "../../agents/llm/providers.js";
 import { loadEngineContract, runWriter } from "../../agents/authoring/writer.js";
@@ -246,51 +251,6 @@ type OverworldViewField<Args extends OverworldResponseOptions> = Args extends {
 }
   ? { context: OverworldCompactView }
   : { observation: OverworldView };
-
-type OverworldCompactActionResult = {
-  m: number;
-  known?: true;
-  entry: OverworldCompactJournalEntry;
-  areas?: OverworldCompactRef[];
-  jobs?: OverworldCompactRef[];
-  sites?: OverworldCompactRef[];
-  quests?: OverworldCompactQuestRef[];
-};
-
-type OverworldCompactQuestCompletionResult = {
-  m: number;
-  known?: true;
-  quest: OverworldCompactQuestRef;
-  ending: readonly [id: string, title: string];
-  entry: OverworldCompactJournalEntry;
-};
-
-type OverworldCompactServiceResult = {
-  action: OverworldServiceResult["action"];
-  m: number;
-  changed: boolean;
-  supplies: readonly [before: number, after: number];
-  fatigue: readonly [before: number, after: number];
-  entry?: OverworldCompactJournalEntry;
-};
-
-type OverworldCompactRoadEncounterResult = {
-  strategy: OverworldRoadEncounterStrategy;
-  m: number;
-  supplies: number;
-  fatigue: number;
-  renown: number;
-  encounter: OverworldCompactRoadEncounter;
-  entry: OverworldCompactJournalEntry;
-};
-
-type OverworldCompactAreaTravelResult = {
-  from: OverworldCompactRef;
-  to: OverworldCompactRef;
-  route: string;
-  m: number;
-  at: string;
-};
 
 type OverworldResultValue<
   Args extends OverworldResponseOptions,
@@ -708,86 +668,6 @@ function overworldSnapshotHashRejection(snapshotHash: string): OverworldRejected
     ok: false,
     snapshot_hash: snapshotHash,
     rejection_reason: OVERWORLD_SNAPSHOT_HASH_MISMATCH_REASON,
-  };
-}
-
-function compactOverworldJournalEntry(entry: {
-  kind: string;
-  title: string;
-  recordedAt: string;
-}): OverworldCompactJournalEntry {
-  return compactOverworldJournalEntries([entry])[0]!;
-}
-
-function compactOverworldActionResult(result: OverworldActionResult): OverworldCompactActionResult {
-  const compact: OverworldCompactActionResult = {
-    m: result.minutes,
-    entry: compactOverworldJournalEntry(result.entry),
-  };
-  if (result.alreadyKnown) compact.known = true;
-  const areas = result.discoveredAreas ? compactOverworldRefs(result.discoveredAreas) : [];
-  const jobs = result.discoveredJobs ? compactOverworldTitleRefs(result.discoveredJobs) : [];
-  const sites = result.discoveredSites ? compactOverworldTitleRefs(result.discoveredSites) : [];
-  const quests = result.discoveredQuests
-    ? result.discoveredQuests.map(compactOverworldQuestRef)
-    : [];
-  if (areas.length > 0) compact.areas = areas;
-  if (jobs.length > 0) compact.jobs = jobs;
-  if (sites.length > 0) compact.sites = sites;
-  if (quests.length > 0) compact.quests = quests;
-  return compact;
-}
-
-function compactOverworldServiceResult(
-  result: OverworldServiceResult,
-): OverworldCompactServiceResult {
-  return {
-    action: result.action,
-    m: result.minutes,
-    changed: result.changed,
-    supplies: [result.suppliesBefore, result.suppliesAfter],
-    fatigue: [result.fatigueBefore, result.fatigueAfter],
-    ...(result.entry ? { entry: compactOverworldJournalEntry(result.entry) } : {}),
-  };
-}
-
-function compactOverworldRoadEncounterResult(
-  result: OverworldRoadEncounterResult,
-): OverworldCompactRoadEncounterResult {
-  const encounter = compactPendingRoad(result.encounter);
-  if (!encounter) throw new Error("Cannot compact missing overworld road encounter.");
-  return {
-    strategy: result.strategy,
-    m: result.minutes,
-    supplies: result.suppliesUsed,
-    fatigue: result.fatigueGained,
-    renown: result.renownGained,
-    encounter,
-    entry: compactOverworldJournalEntry(result.entry),
-  };
-}
-
-function compactOverworldQuestCompletionResult(
-  result: OverworldQuestCompletionResult,
-): OverworldCompactQuestCompletionResult {
-  return {
-    m: result.minutes,
-    ...(result.alreadyKnown ? { known: true as const } : {}),
-    quest: compactOverworldQuestRef(result.quest),
-    ending: [result.endingId, result.endingTitle],
-    entry: compactOverworldJournalEntry(result.entry),
-  };
-}
-
-function compactOverworldAreaTravelResult(
-  result: OverworldAreaTravelResult,
-): OverworldCompactAreaTravelResult {
-  return {
-    from: compactOverworldRefs([result.from])[0]!,
-    to: compactOverworldRefs([result.to])[0]!,
-    route: result.route,
-    m: result.minutes,
-    at: result.arrivedAt,
   };
 }
 
