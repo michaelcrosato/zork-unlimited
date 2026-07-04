@@ -12,6 +12,7 @@ import {
   allGeneratedChecksClean,
   blindReportAttendanceOffsets,
   formatAssessment,
+  generatorRpgDriftCandidate,
   isSaturated,
   mergeAttendanceOffsets,
   packStem,
@@ -269,16 +270,15 @@ describe("allGeneratedChecksClean", () => {
   it("is true only when every generated pack report has zero findings", () => {
     expect(
       allGeneratedChecksClean([
-        { seed: 1, pack_id: "a", report: { pack_id: "a", ok: true, findings: [] } },
-        { seed: 2, pack_id: "b", report: { pack_id: "b", ok: true, findings: [] } },
+        { seed: 1, report: { pack_id: "a", ok: true, findings: [] } },
+        { seed: 2, report: { pack_id: "b", ok: true, findings: [] } },
       ]),
     ).toBe(true);
     expect(
       allGeneratedChecksClean([
-        { seed: 1, pack_id: "a", report: { pack_id: "a", ok: true, findings: [] } },
+        { seed: 1, report: { pack_id: "a", ok: true, findings: [] } },
         {
           seed: 2,
-          pack_id: "b",
           report: {
             pack_id: "b",
             ok: true,
@@ -289,6 +289,23 @@ describe("allGeneratedChecksClean", () => {
         },
       ]),
     ).toBe(false);
+  });
+
+  it("keys generated drift evidence by seed without echoing generated pack ids", () => {
+    const candidate = generatorRpgDriftCandidate([
+      {
+        seed: 7,
+        report: {
+          pack_id: "generated_rpg_7",
+          ok: true,
+          findings: [
+            { severity: "warning", code: "X", message: "unclean generated pack", where: [] },
+          ],
+        },
+      },
+    ]);
+
+    expect(candidate?.evidence).toEqual(["seed 7: warning:X"]);
   });
 });
 

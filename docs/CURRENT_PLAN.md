@@ -102,6 +102,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - AFK quest-health payloads no longer carry constant `mode`, raw `pack_id`, or
   raw pack path fields; the loop's catalog axis is the world quest id plus
   playable/validator status.
+- AFK generated RPG mint-and-check rows identify generated packs by seed only;
+  validator reports keep their internal pack ids for diagnostics.
 - The stale-reactive room-item audit now scans the single RPG pack directory
   directly, maps shipped packs through the canonical world graph, and emits
   `world_quest_id` instead of constant mode, pack-id, or raw pack-path fields in

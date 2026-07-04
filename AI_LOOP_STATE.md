@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 396 -->
+<!-- historical_cycle_count: 397 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - generated_checks_seed_only
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: generated RPG mint-and-check rows now carry only deterministic seed plus the production validator report; drift evidence names `seed N`.
+- Loop effect: AFK generator drift candidates no longer duplicate public generated pack ids, while validator reports keep internal pack ids for diagnostics.
+- Guard: focused Prettier, typecheck, assessor, AI loop, RPG schema-standalone, and generator mint-and-check tests passed over the cleanup.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - stale_reactive_audit_world_quest_ids
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: machine handoff removes another repeated path while ai-runs artifacts still use `ai-runs/<runId>/...`.
 - Guard: focused Prettier, typecheck, AI loop metadata, loop driver gate, and loop-state rotation tests passed.
 - VERIFY: `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed.
-
-### Cycle result - compact_afk_handoff_recommendations
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: `latest-cycle.json` and automatic loop-state appends now persist recommendation ids/categories instead of full titles and rationales.
-- Loop effect: per-cycle machine handoffs stay quest-id/status based and avoid re-ingesting verbose recommendation prose outside the human prompt.
-- Guard: focused Prettier, typecheck, AI loop metadata, assessor attendance, loop driver gate, and loop-state rotation tests passed.
-- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.

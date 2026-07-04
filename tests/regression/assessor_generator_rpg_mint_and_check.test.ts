@@ -45,7 +45,7 @@ describe("bug_0162 — generatorRpgDriftCandidate (clean ⇒ null, dirty ⇒ hig
       const pack = generateRpgPack(seed);
       const report = validateRpg(pack);
       expect(report.findings).toHaveLength(0); // precondition: these packs ARE clean
-      return { seed, pack_id: pack.meta.id, report };
+      return { seed, report };
     });
     expect(generatorRpgDriftCandidate(clean)).toBeNull();
   });
@@ -66,8 +66,8 @@ describe("bug_0162 — generatorRpgDriftCandidate (clean ⇒ null, dirty ⇒ hig
     expect(report.findings.some((f) => f.code === "SCORE_UNREACHABLE")).toBe(true); // the bar bites
 
     const cand = generatorRpgDriftCandidate([
-      { seed: 0, pack_id: good.meta.id, report: validateRpg(good) }, // clean — must not be blamed
-      { seed, pack_id: broken.meta.id, report },
+      { seed: 0, report: validateRpg(good) }, // clean — must not be blamed
+      { seed, report },
     ]);
     expect(cand).not.toBeNull();
     expect(cand!.id).toBe("generator-rpg-drift");
@@ -80,6 +80,7 @@ describe("bug_0162 — generatorRpgDriftCandidate (clean ⇒ null, dirty ⇒ hig
     expect(cand!.evidence).toHaveLength(1);
     expect(cand!.evidence[0]).toContain(`seed ${seed}`);
     expect(cand!.evidence[0]).toContain("SCORE_UNREACHABLE");
+    expect(cand!.evidence[0]).not.toContain(broken.meta.id);
     expect(cand!.evidence.join("\n")).not.toContain("seed 0");
   });
 });

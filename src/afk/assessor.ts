@@ -412,8 +412,8 @@ function generatedEvalSeedBaseFromDisk(root: string): number {
  */
 export const GEN_EVAL_CHECK_COUNT = 4;
 
-/** One minted-and-validated generated pack: the seed, its id, and the production report. */
-export type GeneratedPackCheck = { seed: number; pack_id: string; report: ValidationReport };
+/** One minted-and-validated generated pack: the deterministic seed and production report. */
+export type GeneratedPackCheck = { seed: number; report: ValidationReport };
 
 export function allGeneratedChecksClean(checks: GeneratedPackCheck[]): boolean {
   return checks.every((c) => c.report.findings.length === 0);
@@ -447,7 +447,7 @@ export function generatorRpgDriftCandidate(
       "Evolving the RPG eval distribution only works if every minted pack clears the SAME zero-findings bar the curated RPG packs do — which for RPG includes COMBAT winnability and SCORE-economy soundness (docs/CURRENT_PLAN.md). A generated RPG pack the production validateRpg flags is a real defect: either the generator emits an unclean/unwinnable/score-unreachable shape, or the fresh distribution has surfaced a verifier gap. Fixing it keeps the RPG generator a trustworthy moving target instead of a source of false signal.",
     evidence: bad.map(
       (c) =>
-        `seed ${c.seed} (${c.pack_id}): ${c.report.findings.map((f) => `${f.severity}:${f.code}`).join(", ")}`,
+        `seed ${c.seed}: ${c.report.findings.map((f) => `${f.severity}:${f.code}`).join(", ")}`,
     ),
     impact: 5,
     effort: "M",
@@ -761,7 +761,7 @@ export function assess(root: string): Assessment {
     (_, i) => {
       const seed = genBase + i;
       const pack = generateRpgPack(seed);
-      return { seed, pack_id: pack.meta.id, report: validateRpg(pack) };
+      return { seed, report: validateRpg(pack) };
     },
   );
   const rpgGenDrift = generatorRpgDriftCandidate(rpgGenChecks);
