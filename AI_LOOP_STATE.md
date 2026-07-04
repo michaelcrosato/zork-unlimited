@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 405 -->
+<!-- historical_cycle_count: 406 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - overworld_schema_prose_trimmed
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: overworld MCP ToolSearch schema prose now reuses terse shared session/hash fields and short action-id descriptions, guarded by a source-size regression.
+- Loop effect: overworld loop/action discovery spends fewer tokens on repeated schema prose before agents reach compact context payloads.
+- Guard: focused Prettier, MCP registration schema-size regression, and typecheck passed.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused regression, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - authoring_fix_schema_prose_trimmed
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/public surface: removed the `PackMode` alias and the `adapt_story` mode parameter from the in-process MCP tool API; stray runtime `mode` input still rejects.
 - Loop effect: MCP and AFK internals now key the single runtime through `SAVE_MODE` or literal RPG-only directory tuples instead of a fake mode selector.
 - Guard: focused Prettier, typecheck, MCP authoring, MCP registration, RPG schema-standalone, and stale-reactive audit tests passed.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - equal_hash_session_cache_retention
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: `SessionStore.update` now preserves state-derived legal-action, observation, and transcript-summary caches when a replacement state has the same canonical hash.
-- Loop effect: no-op, rejected, and state-equivalent turns keep compact MCP projections warm instead of rebuilding token-facing views on unchanged state.
-- Guard: focused Prettier, typecheck, MCP session, and MCP tool tests passed over equal-hash cache retention.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.

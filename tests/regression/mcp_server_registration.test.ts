@@ -23,6 +23,29 @@ const RETIRED_STATIC_OVERWORLD_TOOLS = [
 
 const RETIRED_COMPATIBILITY_TOOLS = ["list_stories"] as const;
 
+const OVERWORLD_SCHEMA_TOOLS = [
+  "start_overworld",
+  "get_overworld_session",
+  "get_overworld_session_context",
+  "export_overworld_session",
+  "restore_overworld_session",
+  "travel_overworld_session",
+  "resolve_overworld_session_road_encounter",
+  "resupply_overworld_session",
+  "rest_overworld_session",
+  "plan_overworld_session_route",
+  "scout_overworld_session_poi",
+  "talk_overworld_session_contact",
+  "investigate_overworld_session_event",
+  "resolve_overworld_session_event",
+  "explore_overworld_session_site",
+  "explore_overworld_session_area",
+  "move_overworld_session_area",
+  "work_overworld_session_job",
+  "start_overworld_session_quest",
+  "complete_overworld_session_quest",
+] as const;
+
 function registeredServerTools(): string[] {
   const text = readFileSync("src/mcp/server.ts", "utf8");
   return [...text.matchAll(/tool\(\s*\n?\s*["']([^"']+)["']/g)].map((match) => match[1]!).sort();
@@ -164,6 +187,17 @@ describe("MCP server registration", () => {
     expect(authoringFixSchemaSource).not.toContain("combat-winnability and score-economy");
   });
 
+  it("keeps overworld ToolSearch schema source terse", () => {
+    const overworldSchemaSource = OVERWORLD_SCHEMA_TOOLS.map((toolName) =>
+      registeredToolBlock(toolName),
+    ).join("\n");
+
+    expect(overworldSchemaSource.length).toBeLessThanOrEqual(5000);
+    expect(overworldSchemaSource).not.toContain("Session id returned by start_overworld");
+    expect(overworldSchemaSource).not.toContain("returns compact context by default");
+    expect(overworldSchemaSource).not.toContain("from the session observation");
+  });
+
   it("defaults stateful overworld MCP actions to compact context", () => {
     for (const toolName of [
       "start_overworld",
@@ -192,8 +226,8 @@ describe("MCP server registration", () => {
     );
     expect(registeredToolBlock("get_overworld_session")).toContain("compactMcpOverworldSession(a)");
     expect(registeredToolBlock("get_overworld_session")).toContain("include_observation");
-    expect(registeredToolBlock("get_overworld_session")).toContain("if_snapshot_hash");
-    expect(registeredToolBlock("get_overworld_session_context")).toContain("if_snapshot_hash");
+    expect(registeredToolBlock("get_overworld_session")).toContain("IF_SNAPSHOT_HASH");
+    expect(registeredToolBlock("get_overworld_session_context")).toContain("IF_SNAPSHOT_HASH");
   });
 
   it("defaults public RPG MCP play tools to compact observation", () => {

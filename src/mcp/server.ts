@@ -150,13 +150,13 @@ const IF_SNAPSHOT_HASH = {
   if_snapshot_hash: z.string().optional().describe("Hash-only when unchanged."),
 };
 const COMPACT_OVERWORLD_CONTEXT = {
-  compact_context: z.boolean().optional().describe("Default true; false full observation."),
+  compact_context: z.boolean().optional().describe("Default true; false full obs."),
 };
 const OVERWORLD_ACTION_CONTEXT = { ...EXPECTED_SNAPSHOT_HASH, ...COMPACT_OVERWORLD_CONTEXT };
 
 tool(
   "start_overworld",
-  "Start a stateful New York overworld run; returns compact context by default.",
+  "Start overworld; compact.",
   {
     ...COMPACT_OVERWORLD_CONTEXT,
   },
@@ -164,188 +164,179 @@ tool(
 );
 tool(
   "get_overworld_session",
-  "Read compact overworld context; if_snapshot_hash returns hash-only when unchanged.",
+  "Read overworld; hash-only if same.",
   {
-    session_id: z.string().describe("Session id returned by start_overworld."),
+    ...SESSION,
     ...IF_SNAPSHOT_HASH,
-    include_observation: z.boolean().optional().describe("Include full observation object."),
+    include_observation: z.boolean().optional().describe("Return full obs."),
   },
   (a) => compactMcpOverworldSession(a),
 );
 tool(
   "get_overworld_session_context",
-  "Read compact overworld context for repeated loop turns; if_snapshot_hash returns hash-only when unchanged.",
+  "Read compact overworld; hash-only if same.",
   {
-    session_id: z.string().describe("Session id returned by start_overworld."),
+    ...SESSION,
     ...IF_SNAPSHOT_HASH,
   },
   (a) => api.get_overworld_session_context(a),
 );
 tool(
   "export_overworld_session",
-  "Export a content-bound overworld snapshot plus snapshot_hash; expected_snapshot_hash rejects stale checkpoints.",
+  "Export overworld snapshot; stale hash rejects.",
   {
-    session_id: z.string().describe("Session id returned by start_overworld."),
+    ...SESSION,
     ...EXPECTED_SNAPSHOT_HASH,
   },
   (a) => api.export_overworld_session(a),
 );
 tool(
   "restore_overworld_session",
-  "Restore an overworld snapshot; returns snapshot_hash and compact context by default.",
+  "Restore overworld snapshot; compact.",
   {
-    snapshot: z
-      .record(z.unknown())
-      .describe("Snapshot object previously returned as export_overworld_session.snapshot."),
+    snapshot: z.record(z.unknown()).describe("Exported snapshot."),
     ...COMPACT_OVERWORLD_CONTEXT,
   },
   (a) => api.restore_overworld_session(defaultCompactOverworld(a)),
 );
 tool(
   "travel_overworld_session",
-  "Travel along an adjacent road id; returns compact context by default.",
+  "Travel road.",
   {
-    session_id: z.string().describe("Session id returned by start_overworld."),
-    road_id: z.string().describe("Road id from the session observation's exits list."),
+    ...SESSION,
+    road_id: z.string().describe("Road id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.travel_overworld_session(defaultCompactOverworld(a)),
 );
 tool(
   "resolve_overworld_session_road_encounter",
-  "Resolve the pending road encounter; returns compact context by default.",
+  "Resolve road encounter.",
   {
-    session_id: z.string().describe("Session id returned by start_overworld."),
+    ...SESSION,
     strategy: z
       .enum(["cautious_scout", "assist_travelers", "press_on"])
-      .describe("Road encounter response from observation.pendingRoadEncounter.options."),
+      .describe("Encounter option."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.resolve_overworld_session_road_encounter(defaultCompactOverworld(a)),
 );
 tool(
   "resupply_overworld_session",
-  "Resupply at the current town; returns compact context by default.",
+  "Resupply.",
   {
-    session_id: z.string().describe("Session id returned by start_overworld."),
+    ...SESSION,
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.resupply_overworld_session(defaultCompactOverworld(a)),
 );
 tool(
   "rest_overworld_session",
-  "Rest at the current town; returns compact context by default.",
+  "Rest.",
   {
-    session_id: z.string().describe("Session id returned by start_overworld."),
+    ...SESSION,
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.rest_overworld_session(defaultCompactOverworld(a)),
 );
 tool(
   "plan_overworld_session_route",
-  "Plan the shortest known route to a discovered town; returns compact context by default.",
+  "Plan route.",
   {
-    session_id: z.string().describe("Session id returned by start_overworld."),
-    destination_town_id: z
-      .string()
-      .describe(
-        "Discovered town id from the session observation's discovered or routeOptions list.",
-      ),
+    ...SESSION,
+    destination_town_id: z.string().describe("Town id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.plan_overworld_session_route(defaultCompactOverworld(a)),
 );
 tool(
   "scout_overworld_session_poi",
-  "Scout a local point of interest; returns compact context by default.",
+  "Scout POI.",
   {
-    session_id: z.string().describe("Session id returned by start_overworld."),
-    poi_id: z.string().describe("Point-of-interest id from the session observation."),
+    ...SESSION,
+    poi_id: z.string().describe("POI id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.scout_overworld_session_poi(defaultCompactOverworld(a)),
 );
 tool(
   "talk_overworld_session_contact",
-  "Talk to a local contact; returns compact context by default.",
+  "Talk contact.",
   {
-    session_id: z.string().describe("Session id returned by start_overworld."),
-    character_id: z.string().describe("Character id from the session observation."),
+    ...SESSION,
+    character_id: z.string().describe("Contact id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.talk_overworld_session_contact(defaultCompactOverworld(a)),
 );
 tool(
   "investigate_overworld_session_event",
-  "Investigate a local event; returns compact context by default.",
+  "Investigate event.",
   {
-    session_id: z.string().describe("Session id returned by start_overworld."),
-    event_id: z.string().describe("Event id from the session observation."),
+    ...SESSION,
+    event_id: z.string().describe("Event id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.investigate_overworld_session_event(defaultCompactOverworld(a)),
 );
 tool(
   "resolve_overworld_session_event",
-  "Resolve a local event; returns compact context by default.",
+  "Resolve event.",
   {
-    session_id: z.string().describe("Session id returned by start_overworld."),
-    event_id: z.string().describe("Event id from the session observation."),
+    ...SESSION,
+    event_id: z.string().describe("Event id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.resolve_overworld_session_event(defaultCompactOverworld(a)),
 );
 tool(
   "explore_overworld_session_site",
-  "Explore a discovered regional site; returns compact context by default.",
+  "Explore site.",
   {
-    session_id: z.string().describe("Session id returned by start_overworld."),
-    site_id: z.string().describe("Exploration site id from the session observation's sites list."),
+    ...SESSION,
+    site_id: z.string().describe("Site id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.explore_overworld_session_site(defaultCompactOverworld(a)),
 );
 tool(
   "explore_overworld_session_area",
-  "Explore a discovered local area; returns compact context by default.",
+  "Explore area.",
   {
-    session_id: z.string().describe("Session id returned by start_overworld."),
-    area_id: z.string().describe("Area id from the session observation's areas list."),
+    ...SESSION,
+    area_id: z.string().describe("Area id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.explore_overworld_session_area(defaultCompactOverworld(a)),
 );
 tool(
   "move_overworld_session_area",
-  "Move inside the current town along a local-area route; returns compact context by default.",
+  "Move area route.",
   {
-    session_id: z.string().describe("Session id returned by start_overworld."),
-    area_route_id: z.string().describe("Area route id from observation.areaExits."),
+    ...SESSION,
+    area_route_id: z.string().describe("Area route id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.move_overworld_session_area(defaultCompactOverworld(a)),
 );
 tool(
   "work_overworld_session_job",
-  "Work a discovered local job; returns compact context by default.",
+  "Work job.",
   {
-    session_id: z.string().describe("Session id returned by start_overworld."),
-    job_id: z.string().describe("Job id from the session observation's jobs list."),
+    ...SESSION,
+    job_id: z.string().describe("Job id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.work_overworld_session_job(defaultCompactOverworld(a)),
 );
 tool(
   "start_overworld_session_quest",
-  "Start a discovered local quest lead; returns compact overworld/RPG context by default.",
+  "Start local quest; compact overworld/RPG.",
   {
-    session_id: z.string().describe("Session id returned by start_overworld."),
-    quest_id: z.string().describe("Quest id from the session observation's quests list."),
-    seed: z.number().int().optional().describe("Optional runtime seed for the RPG quest session."),
-    hide_graph: z
-      .boolean()
-      .optional()
-      .describe("When true, hide RPG graph destinations in the returned quest observation."),
+    ...SESSION,
+    quest_id: z.string().describe("Quest id."),
+    seed: z.number().int().optional().describe("Runtime seed."),
+    ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
     ...OVERWORLD_ACTION_CONTEXT,
@@ -356,8 +347,8 @@ tool(
   "complete_overworld_session_quest",
   "Sync an ended RPG quest session into overworld progress.",
   {
-    session_id: z.string().describe("Session id returned by start_overworld."),
-    rpg_session_id: z.string().describe("Ended RPG session id returned by quest start."),
+    ...SESSION,
+    rpg_session_id: z.string().describe("Ended RPG session."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.complete_overworld_session_quest(defaultCompactOverworld(a)),
