@@ -87,6 +87,8 @@ Make discovered overworld quest leads start real RPG sessions.
   Manhattan distances in the opt-in public graph, derived from one helper.
 - `world_path` now accepts either a shipped `world_quest_id` or an exact node
   coordinate, so the coordinate matrix is a route input as well as output.
+- RPG session updates now keep state-derived MCP caches when a replacement state
+  has the same canonical hash, reducing rebuilds for state-equivalent turns.
 - AFK loop internals resolve any needed maintenance paths through `world/source`,
   not public catalog responses.
 - AFK assessment and `latest-cycle.json` now use quest ids as primary targets

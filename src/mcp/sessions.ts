@@ -193,8 +193,12 @@ export class SessionStore {
 
   update(id: string, state: GameState): Session {
     const session = this.get(id);
+    const stateHash = state === session.state ? session.stateHash : hashState(state);
     session.state = state;
-    session.stateHash = hashState(state);
+    if (stateHash === session.stateHash) {
+      return session;
+    }
+    session.stateHash = stateHash;
     invalidateStateCaches(session);
     return session;
   }

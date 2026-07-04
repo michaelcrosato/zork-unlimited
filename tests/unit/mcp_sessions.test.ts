@@ -115,6 +115,86 @@ describe("SessionStore", () => {
     expect(store.get(second.id).packId).toBe("other");
   });
 
+  it("preserves state-derived caches when the canonical state hash is unchanged", () => {
+    const store = new SessionStore();
+    const initialState = state();
+    const session = store.create(sessionInit({ state: initialState }));
+    const actions: RpgActionOption[] = [{ id: "look", command: "look", action: { type: "LOOK" } }];
+    const actionProjection = ["look"];
+    const obs = observation("start");
+    const observationProjection = { here: ["start", "Start"] };
+    const summary: TranscriptSummary = {
+      steps: 0,
+      scenes: ["start"],
+      ended: false,
+      ending_id: null,
+      inventory: [],
+      flags: [],
+      journal: [],
+    };
+    const summaryProjection = { steps: 0, scenes: ["start"] };
+
+    store.legalActions(session.id, () => actions);
+    store.legalActionProjection(session.id, "rows:compact:1", () => actionProjection);
+    store.observation(session.id, {}, () => obs);
+    store.observationProjection(session.id, "compact:v6", () => observationProjection);
+    store.transcriptSummary(session.id, () => summary);
+    store.transcriptSummaryProjection(session.id, "summary:compact:1", () => summaryProjection);
+
+    const stateHash = session.stateHash;
+    const equalState = JSON.parse(JSON.stringify(initialState)) as GameState;
+    const updated = store.update(session.id, equalState);
+
+    expect(updated).toBe(session);
+    expect(session.state).toBe(equalState);
+    expect(session.stateHash).toBe(stateHash);
+    expect(session.legalActionsCache).toBeDefined();
+    expect(session.legalActionProjectionCaches).toBeDefined();
+    expect(session.observationCache).toBeDefined();
+    expect(session.observationProjectionCaches).toBeDefined();
+    expect(session.transcriptSummaryCache).toBeDefined();
+    expect(session.transcriptSummaryProjectionCaches).toBeDefined();
+
+    let rebuilds = 0;
+    expect(
+      store.legalActions(session.id, () => {
+        rebuilds += 1;
+        return [];
+      }),
+    ).toBe(actions);
+    expect(
+      store.legalActionProjection(session.id, "rows:compact:1", () => {
+        rebuilds += 1;
+        return [];
+      }),
+    ).toBe(actionProjection);
+    expect(
+      store.observation(session.id, {}, () => {
+        rebuilds += 1;
+        return observation("rebuilt");
+      }),
+    ).toBe(obs);
+    expect(
+      store.observationProjection(session.id, "compact:v6", () => {
+        rebuilds += 1;
+        return { here: ["rebuilt", "Rebuilt"] };
+      }),
+    ).toBe(observationProjection);
+    expect(
+      store.transcriptSummary(session.id, () => {
+        rebuilds += 1;
+        return { ...summary, steps: 1 };
+      }),
+    ).toBe(summary);
+    expect(
+      store.transcriptSummaryProjection(session.id, "summary:compact:1", () => {
+        rebuilds += 1;
+        return { steps: 1 };
+      }),
+    ).toBe(summaryProjection);
+    expect(rebuilds).toBe(0);
+  });
+
   it("keeps transcript log hashes in sync with store-owned writes", () => {
     const store = new SessionStore();
     const session = store.create(sessionInit());

@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 390 -->
+<!-- historical_cycle_count: 391 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - equal_hash_session_cache_retention
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: `SessionStore.update` now preserves state-derived legal-action, observation, and transcript-summary caches when a replacement state has the same canonical hash.
+- Loop effect: no-op, rejected, and state-equivalent turns keep compact MCP projections warm instead of rebuilding token-facing views on unchanged state.
+- Guard: focused Prettier, typecheck, MCP session, and MCP tool tests passed over equal-hash cache retention.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - world_path_coordinate_lookup
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/token surface: compact RPG observations and compact transcript summaries now share one truncation helper for capped lists, recent journals, omission counts, and trimmed `more` tuples.
 - Loop effect: future compact context/audit changes update one helper boundary instead of parallel tuple/list logic in engine-facing MCP paths.
 - Guard: focused Prettier, typecheck, shared truncation helper, compact observation, MCP tool, and MCP server-registration tests passed.
-- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
-
-### Cycle result - compact_rpg_more_trailing_zero_trim
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: compact RPG observation `more` tuples now trim trailing zero omission counts and advertise context `v: 6`.
-- Loop effect: sparse inventory/flag overflows avoid carrying redundant later zero buckets while journal-only overflow keeps positional counts explicit.
-- Guard: focused Prettier, typecheck, compact-observation, MCP tool, and MCP server-registration tests passed after the versioned tuple change.
 - VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
