@@ -1762,12 +1762,13 @@ describe("MCP tools — the play loop (§9.1)", () => {
       ending_id: session.state.endingId,
     });
 
-    const stateOnlyPoll = a.get_transcript({
+    const staleStateOnlyArgs = {
       session_id: game.session_id,
       summary_only: true,
       compact_summary: true,
       if_state_hash: before.state_hash,
-    });
+    } as unknown as Parameters<typeof a.get_transcript>[0];
+    const stateOnlyPoll = a.get_transcript(staleStateOnlyArgs);
     expect("unchanged" in stateOnlyPoll).toBe(false);
     if ("unchanged" in stateOnlyPoll) {
       throw new Error("state hash alone must not hide transcript-only changes");

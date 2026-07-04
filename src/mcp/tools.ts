@@ -484,7 +484,6 @@ type TranscriptArgs = {
   compact_turns?: boolean;
   compact_events?: boolean;
   compact_summary?: boolean;
-  if_state_hash?: string;
   if_transcript_hash?: string;
 };
 type TranscriptTurnFor<Args extends TranscriptArgs> = Args extends { compact_turns: true }

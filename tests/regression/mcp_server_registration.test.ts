@@ -80,6 +80,14 @@ function serverSourceBlock(startMarker: string, endMarker: string): string {
   return text.slice(start, end);
 }
 
+function toolApiSourceBlock(startMarker: string, endMarker: string): string {
+  const text = readFileSync("src/mcp/tools.ts", "utf8");
+  const start = text.indexOf(startMarker);
+  const end = text.indexOf(endMarker, start);
+  if (start < 0 || end < 0) throw new Error(`missing tool API source block ${startMarker}`);
+  return text.slice(start, end);
+}
+
 describe("MCP server registration", () => {
   it("registers exactly the tested ToolApi handlers", () => {
     const api = createToolApi({ root: process.cwd() }) as Record<string, unknown>;
@@ -273,9 +281,12 @@ describe("MCP server registration", () => {
 
   it("defaults public RPG MCP transcripts to compact summary only", () => {
     const block = registeredToolBlock("get_transcript");
+    const args = toolApiSourceBlock("type TranscriptArgs", "type TranscriptTurnFor");
     expect(block).toContain("defaultCompactTranscript(a)");
     expect(block).not.toContain("IF_STATE_HASH");
     expect(block).toContain("IF_TRANSCRIPT_HASH");
+    expect(args).not.toContain("if_state_hash");
+    expect(args).toContain("if_transcript_hash");
     expect(block).toContain("Default true; no turns.");
     expect(block).toContain("Default true; capped lists.");
     expect(block).toContain("COMPACT_EVENTS");
