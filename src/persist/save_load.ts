@@ -143,6 +143,18 @@ export function save(
 
 export class SaveIntegrityError extends Error {}
 
+export function assertSaveContentHash(
+  bundle: Pick<SaveBundle, "contentHash">,
+  expectedContentHash: string,
+): void {
+  if (bundle.contentHash !== expectedContentHash) {
+    throw new SaveIntegrityError(
+      `Content hash mismatch: save was made against ${bundle.contentHash}, ` +
+        `but the loaded pack is ${expectedContentHash}.`,
+    );
+  }
+}
+
 function assertRpgMode(mode: unknown, label: string): asserts mode is SaveMode {
   if (mode !== SAVE_MODE) {
     throw new SaveIntegrityError(`${label} must be "${SAVE_MODE}", got ${JSON.stringify(mode)}.`);
@@ -299,12 +311,7 @@ export function load(
     );
   }
   assertSaveSourceRefConsistency(bundle);
-  if (expectedContentHash !== undefined && bundle.contentHash !== expectedContentHash) {
-    throw new SaveIntegrityError(
-      `Content hash mismatch: save was made against ${bundle.contentHash}, ` +
-        `but the loaded pack is ${expectedContentHash}.`,
-    );
-  }
+  if (expectedContentHash !== undefined) assertSaveContentHash(bundle, expectedContentHash);
   // §16 integrity at load: the state must be a well-formed, FINITE GameState
   // before it is handed back to the engine. Reject (never coerce) — a poisoned
   // save is an integrity failure, not a value to repair. We validate WITHOUT

@@ -48,6 +48,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - Saved games now carry compact `source_ref` tuples for world quest, generated
   seed, or legacy pack fallback identity, so load source resolution can use the
   same compact source shape as traces.
+- MCP `load_game` now parses and state-gates each save once, then binds that
+  loaded bundle to the resolved pack through the shared content-hash assertion.
 - Recorded traces now carry compact `source_ref` tuples for world quest,
   generated seed, or legacy pack fallback identity; replay/inspect CLIs print the
   canonical source instead of leading with `pack_id`.

@@ -2148,7 +2148,11 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
 
     const saved = a.save_game({ session_id: game.session_id });
     const reloaded = a.load_game({ save: saved.save });
-    const saveBundle = JSON.parse(saved.save) as { mode?: string; worldQuestId?: string };
+    const saveBundle = JSON.parse(saved.save) as {
+      mode?: string;
+      source_ref?: unknown;
+      worldQuestId?: string;
+    };
     expect("pack_id" in saved).toBe(false);
     expect("pack_path" in saved).toBe(false);
     expect("mode" in saved).toBe(false);
@@ -2156,6 +2160,7 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     expect("generated_rpg_seed" in saved).toBe(false);
     expect(saved.state_hash).toBe(after);
     expect(saveBundle.mode).toBe("rpg");
+    expect(saveBundle.source_ref).toEqual(["wq", "sunken_barrow"]);
     expect(saveBundle.worldQuestId).toBe("sunken_barrow");
     expect("pack_path" in reloaded).toBe(false);
     expect(reloaded.world_quest_id).toBe("sunken_barrow");

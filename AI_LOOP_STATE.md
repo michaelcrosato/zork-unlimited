@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 273 -->
+<!-- historical_cycle_count: 274 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - single_pass_mcp_save_load_binding
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/persistence surface: `load_game` now parses and state-gates a save once, then binds the loaded bundle to the resolved pack through the shared save content-hash assertion.
+- Loop effect: MCP save restore avoids a duplicate JSON parse/state validation pass while preserving mode, source, content-hash, and state-reference integrity gates.
+- Guard: focused typecheck plus save/load, MCP save/load, generated-save, and referential-integrity tests passed over single-pass restore binding.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - compact_save_source_refs
 

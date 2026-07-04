@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { save, load, SaveIntegrityError, SAVE_MODE } from "../../src/persist/save_load.js";
+import {
+  save,
+  load,
+  assertSaveContentHash,
+  SaveIntegrityError,
+  SAVE_MODE,
+} from "../../src/persist/save_load.js";
 import { hashState } from "../../src/core/hash.js";
 import { recordTrace } from "../../src/trace/record.js";
 import { replayTrace } from "../../src/trace/replay.js";
@@ -33,6 +39,13 @@ describe("save / load (§8.7)", () => {
   it("rejects a content-hash mismatch as a hard error", () => {
     const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH);
     expect(() => load(bytes, "deadbeef")).toThrow(SaveIntegrityError);
+  });
+
+  it("checks a loaded save bundle against a resolved pack hash", () => {
+    const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH);
+    const loaded = load(bytes);
+    expect(() => assertSaveContentHash(loaded, MICRO_CONTENT_HASH)).not.toThrow();
+    expect(() => assertSaveContentHash(loaded, "deadbeef")).toThrow(SaveIntegrityError);
   });
 
   it("loads without verification when no expected hash is supplied", () => {

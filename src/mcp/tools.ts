@@ -43,7 +43,13 @@ import {
   type Finding,
   type ValidationReport,
 } from "../validate/report.js";
-import { SAVE_MODE, save, load, assertWellFormedState } from "../persist/save_load.js";
+import {
+  SAVE_MODE,
+  save,
+  load,
+  assertSaveContentHash,
+  assertWellFormedState,
+} from "../persist/save_load.js";
 import { assertTraceMode, replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
@@ -1916,10 +1922,10 @@ export function createToolApi(opts: { root: string }) {
         source.kind === "generated"
           ? requireGeneratedRpgPlayable(source.generateRpgSeed)
           : requirePlayable(source.packPath);
-      // Content-hash check is enforced by load() against the loaded pack (§8.7);
-      // mode is verified too, so a save can't be loaded against a different mode.
-      const verified = load(args.save, compiled.contentHash, SAVE_MODE);
-      const session = startSession(compiled, verified.state, {
+      // The save was already parsed and state-gated above; bind those bytes to the
+      // resolved pack hash here without reparsing the same blob.
+      assertSaveContentHash(bundle, compiled.contentHash);
+      const session = startSession(compiled, bundle.state, {
         ...(source.packPath ? { packPath: source.packPath } : {}),
         ...(source.worldQuestId ? { worldQuestId: source.worldQuestId } : {}),
         ...(source.generateRpgSeed !== null ? { generatedRpgSeed: source.generateRpgSeed } : {}),

@@ -147,6 +147,7 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
     const before = a.get_state({ session_id: g.session_id, include_state: true });
     const saved = a.save_game({ session_id: g.session_id });
     const raw = JSON.parse(saved.save) as {
+      source_ref?: unknown;
       worldQuestId?: unknown;
       generatedRpgSeed?: unknown;
     };
@@ -154,6 +155,7 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
     expect("pack_path" in saved).toBe(false);
     expect("world_quest_id" in saved).toBe(false);
     expect(saved.generated_rpg_seed).toBe(3);
+    expect(raw.source_ref).toEqual(["gen", 3]);
     expect(raw.worldQuestId).toBeUndefined();
     expect(raw.generatedRpgSeed).toBe(3);
 
