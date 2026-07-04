@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Rules } from "../../src/core/engine.js";
+import { makeStep, type Rules } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import { initState } from "../../src/core/state.js";
 import { hashState } from "../../src/core/hash.js";
@@ -29,6 +29,7 @@ function sessionInit(overrides: Partial<SessionInit> = {}): SessionInit {
     contentHash: "0".repeat(64),
     index: {} as RpgIndex,
     rules,
+    step: makeStep(rules),
     state: state(),
     transcript: [],
     ...overrides,

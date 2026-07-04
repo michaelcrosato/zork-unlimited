@@ -376,8 +376,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
     expect(secondSession.index).toBe(firstSession.index);
     expect(secondSession.rules).toBe(firstSession.rules);
+    expect(secondSession.step).toBe(firstSession.step);
     expect(loadedSession.index).toBe(firstSession.index);
     expect(loadedSession.rules).toBe(firstSession.rules);
+    expect(loadedSession.step).toBe(firstSession.step);
   });
 
   it("lists the New York overworld as a start town plus weighted roads", () => {

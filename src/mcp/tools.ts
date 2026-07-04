@@ -53,7 +53,7 @@ import {
 import { assertTraceMode, replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
-import { SessionStore, type Session, type TranscriptSummary } from "./sessions.js";
+import { SessionStore, type RpgStep, type Session, type TranscriptSummary } from "./sessions.js";
 import { isRpgPackShape, type McpActionOption, type McpObservation } from "./types.js";
 import {
   compactPlayerEvent,
@@ -141,6 +141,7 @@ type GeneratedRpgCacheEntry = {
 type RpgRuntimeCacheEntry = {
   index: RpgIndex;
   rules: Rules<RpgAction>;
+  step: RpgStep;
 };
 
 type WorldQuestSourceEntry = {
@@ -1024,7 +1025,8 @@ export function createToolApi(opts: { root: string }) {
     const cached = rpgRuntimeCache.get(pack);
     if (cached) return cached;
     const index = indexFor(pack);
-    const entry = { index, rules: rulesFor(index) };
+    const rules = rulesFor(index);
+    const entry = { index, rules, step: makeStep(rules) };
     rpgRuntimeCache.set(pack, entry);
     return entry;
   }
@@ -1053,7 +1055,7 @@ export function createToolApi(opts: { root: string }) {
       seed?: number;
     } = {},
   ): Session {
-    const { index, rules } = runtimeFor(compiled.pack);
+    const { index, rules, step } = runtimeFor(compiled.pack);
     const st = state ?? initStateFor(index, opts.seed ?? 1);
     // §16 integrity at load: a PROVIDED state is untrusted (it came off a save
     // file via load_game), so its `current`/`endingId` must name symbols that
@@ -1070,6 +1072,7 @@ export function createToolApi(opts: { root: string }) {
         : {}),
       index,
       rules,
+      step,
       state: st,
       transcript: [],
       ...(opts.hideGraph ? { hideGraph: true } : {}),
@@ -1833,7 +1836,7 @@ export function createToolApi(opts: { root: string }) {
           state_hash: currentStateHash,
         } as RpgStepActionResponse<Args>;
       }
-      const result = makeStep(s.rules)(s.state, actionOption.action);
+      const result = s.step(s.state, actionOption.action);
       sessions.update(s.id, result.state);
       const afterObsOpts = {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,

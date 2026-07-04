@@ -9,7 +9,7 @@
 import type { GameState } from "../core/state.js";
 import type { Rules } from "../core/engine.js";
 import type { GameEvent } from "../core/events.js";
-import type { RpgAction } from "../api/types.js";
+import type { RpgAction, StepResult } from "../api/types.js";
 import type { RpgActionOption } from "../rpg/legal_actions.js";
 import type { ObservationOptions, RpgObservation } from "../rpg/observation.js";
 import type { RpgIndex } from "../rpg/runner.js";
@@ -37,6 +37,8 @@ export type TranscriptSummary = {
   journal: string[];
 };
 
+export type RpgStep = (state: GameState, action: RpgAction) => StepResult;
+
 export type Session = {
   id: string;
   packId: string;
@@ -52,6 +54,7 @@ export type Session = {
   /** The compiled RPG index for this session. */
   index: RpgIndex;
   rules: Rules<RpgAction>;
+  step: RpgStep;
   state: GameState;
   stateHash: string;
   legalActionsCache?: {
