@@ -151,7 +151,7 @@ function inspectRpgPack(path: string, worldQuestId: string): void {
   }
   const { pack, contentHash } = result.compiled;
   console.log(`World quest: ${worldQuestId}`);
-  console.log(`Pack: ${pack.meta.id} "${pack.meta.title}"  mode: rpg  hash: ${contentHash}`);
+  console.log(`Pack: ${pack.meta.id} "${pack.meta.title}"  hash: ${contentHash}`);
   console.log(
     `  rooms: ${pack.rooms.length}  objects: ${pack.objects.length}  enemies: ${pack.enemies.length}  win_conditions: ${pack.win_conditions.length}`,
   );

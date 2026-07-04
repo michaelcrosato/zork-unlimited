@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 399 -->
+<!-- historical_cycle_count: 400 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - inspect_cli_mode_line_removed
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: `npm run inspect -- <world_quest_id>` no longer repeats `mode: rpg`; quest summaries keep world quest id, pack title/counts, and hash.
+- Loop effect: local inspection stays RPG-only while dropping another redundant single-runtime token from CLI diagnostics.
+- Guard: focused Prettier, typecheck, trace CLI, validation-bar, and RPG schema-standalone tests passed over the cleanup.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - validate_cli_mode_line_removed
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: `list_world({ include_graph: true })` exposes pack-free map coordinates, giving blind agents and future engine work a stable matrix surface instead of prose-only routes.
 - Guard: focused typecheck plus world-source, manifest, MCP catalog, and MCP tool tests passed over coordinate validation/projection.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - verifier_legacy_cli_test_families
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: verifier integrity now forbids retired CYOA/parser CLI files and unit-test path families from reappearing.
-- Loop effect: single-RPG runtime lock-down covers the objective's old binary/test surfaces, not only source/content directories.
-- Guard: focused Prettier, typecheck, verifier integrity, RPG-only guard, generator-protection, and loop-state rotation tests passed.
-- VERIFY: `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed.
