@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 274 -->
+<!-- historical_cycle_count: 275 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - single_pass_save_source_extraction
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/source surface: save source resolution now extracts embedded `worldQuestId`, `generatedRpgSeed`, and compact `source_ref` identity through one shared helper.
+- Loop effect: `load_game` source selection avoids reparsing the same compact save source tuple while exported compatibility helpers keep tuple-only inference behavior.
+- Guard: focused typecheck plus world-source, save/load, MCP save/load, and referential-integrity tests passed over single-pass save source extraction.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - single_pass_mcp_save_load_binding
 

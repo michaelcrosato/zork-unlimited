@@ -13,6 +13,8 @@ import {
   resolvePackSource,
   resolveSaveGameSource,
   resolveTracePackSource,
+  saveGeneratedRpgSeed,
+  saveWorldQuestId,
 } from "../../src/world/source.js";
 import type { Trace } from "../../src/trace/record.js";
 import type { RpgAction } from "../../src/api/types.js";
@@ -301,6 +303,10 @@ describe("world source resolution", () => {
       worldQuestId: null,
       generateRpgSeed: 3,
     });
+    expect(saveWorldQuestId({ source_ref: ["wq", "sunken_barrow"] }, "save_test")).toBe(
+      "sunken_barrow",
+    );
+    expect(saveGeneratedRpgSeed({ source_ref: ["gen", 3] }, "save_test")).toBe(3);
   });
 
   it("rejects ambiguous or conflicting shipped source identities", () => {
