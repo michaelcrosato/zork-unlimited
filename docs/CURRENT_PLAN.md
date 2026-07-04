@@ -54,6 +54,8 @@ Make discovered overworld quest leads start real RPG sessions.
   through one helper, so load source selection reads the compact tuple once.
 - Save and trace metadata share the same compact source-ref tuple type, keeping
   persistence and trace source contracts aligned.
+- Save/load and trace source resolution now validate compact source-ref tuple
+  shape through one shared helper before source inference.
 - Trace source resolution now validates every compact `source_ref` tuple variant
   before replay/inspect resolves shipped trace sources.
 - Recorded traces now carry compact `source_ref` tuples for world quest,

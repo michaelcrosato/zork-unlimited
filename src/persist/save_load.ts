@@ -9,7 +9,7 @@
 import { z } from "zod";
 import type { GameState } from "../core/state.js";
 import { canonicalize } from "../core/hash.js";
-import type { CompactSourceRef } from "../world/source_ref.js";
+import { compactSourceRefValidationError, type CompactSourceRef } from "../world/source_ref.js";
 
 export const SAVE_VERSION = 1 as const;
 export const SAVE_MODE = "rpg" as const;
@@ -203,29 +203,8 @@ function assertSaveSourceMetadata(metadata: SaveMetadata): void {
 
 function assertSaveSourceRef(raw: unknown): asserts raw is SaveSourceRef {
   if (raw === undefined) return;
-  if (!Array.isArray(raw) || raw.length !== 2) {
-    throw new SaveIntegrityError("Save source_ref must be a compact tuple when present.");
-  }
-  const [tag, value] = raw;
-  if (tag === "wq") {
-    if (typeof value !== "string") {
-      throw new SaveIntegrityError("Save source_ref world quest id must be a string.");
-    }
-    return;
-  }
-  if (tag === "gen") {
-    assertGeneratedRpgSeed(value, "Save source_ref generated seed");
-    return;
-  }
-  if (tag === "pack") {
-    if (typeof value !== "string") {
-      throw new SaveIntegrityError("Save source_ref pack id must be a string.");
-    }
-    return;
-  }
-  throw new SaveIntegrityError(
-    `Save source_ref tag must be "wq", "gen", or "pack", got ${JSON.stringify(tag)}.`,
-  );
+  const error = compactSourceRefValidationError(raw, "Save source_ref");
+  if (error !== undefined) throw new SaveIntegrityError(error);
 }
 
 function assertSaveSourceRefConsistency(bundle: SaveBundle): void {
