@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { hashState } from "../core/hash.js";
 import {
   overworldNodesById,
@@ -67,60 +66,36 @@ import {
   type OverworldRoadEncounterOption,
   type OverworldRoadEncounterStrategy,
 } from "./travel_mechanics.js";
+import {
+  OVERWORLD_SESSION_SAVE_VERSION,
+  OverworldSessionSnapshotSchema,
+  cloneJournalEntries,
+  cloneOverworldSessionSnapshot,
+  snapshotTravelLogEntries,
+  type OverworldJournalEntry,
+  type OverworldPendingRoadEncounter,
+  type OverworldPendingRoadEncounterSnapshot,
+  type OverworldSessionSnapshot,
+  type TravelLogEntry,
+  type TravelLogEntrySnapshot,
+} from "./session_snapshot.js";
 
 export type {
   OverworldRoadEncounterOption,
   OverworldRoadEncounterStrategy,
 } from "./travel_mechanics.js";
-
-export const OVERWORLD_SESSION_SAVE_VERSION = 5 as const;
-
-export type TravelLogEntry = {
-  edgeId: string;
-  fromId: string;
-  toId: string;
-  from: string;
-  to: string;
-  route: string;
-  distanceMi: number;
-  baseMinutes: number;
-  delayMinutes: number;
-  minutes: number;
-  arrivedAt: number;
-  suppliesUsed: number;
-  suppliesAfter: number;
-  fatigueGained: number;
-  fatigueAfter: number;
-  roadEvent: OverworldRoadEvent | null;
-};
-
-export type TravelLogEntrySnapshot = {
-  edgeId: string;
-  fromId: string;
-  toId: string;
-  delayMinutes: number;
-  minutes: number;
-  arrivedAt: number;
-  suppliesUsed: number;
-  suppliesAfter: number;
-  fatigueGained: number;
-  fatigueAfter: number;
-};
-
-const TravelLogEntrySnapshotSchema = z
-  .object({
-    edgeId: z.string().min(1),
-    fromId: z.string().min(1),
-    toId: z.string().min(1),
-    delayMinutes: z.number().int().nonnegative(),
-    minutes: z.number().int().nonnegative(),
-    arrivedAt: z.number().int().nonnegative(),
-    suppliesUsed: z.number().int().min(0).max(MAX_SUPPLIES),
-    suppliesAfter: z.number().int().min(0).max(MAX_SUPPLIES),
-    fatigueGained: z.number().int().nonnegative(),
-    fatigueAfter: z.number().int().min(0).max(MAX_FATIGUE),
-  })
-  .strict();
+export {
+  OVERWORLD_SESSION_SAVE_VERSION,
+  OverworldSessionSnapshotSchema,
+} from "./session_snapshot.js";
+export type {
+  OverworldJournalEntry,
+  OverworldPendingRoadEncounter,
+  OverworldPendingRoadEncounterSnapshot,
+  OverworldSessionSnapshot,
+  TravelLogEntry,
+  TravelLogEntrySnapshot,
+} from "./session_snapshot.js";
 
 export type OverworldAreaTravelResult = {
   from: OverworldArea;
@@ -140,105 +115,6 @@ type ServiceJournalIdParts = {
   action: "rest" | "resupply";
   recordedAt: number;
 };
-
-export type OverworldPendingRoadEncounter = {
-  id: string;
-  edgeId: string;
-  from: string;
-  to: string;
-  route: string;
-  arrivedAt: string;
-  event: OverworldRoadEvent;
-  options: OverworldRoadEncounterOption[];
-};
-
-export type OverworldPendingRoadEncounterSnapshot = {
-  edgeId: string;
-};
-
-const OverworldPendingRoadEncounterSnapshotSchema = z
-  .object({
-    edgeId: z.string().min(1),
-  })
-  .strict();
-
-export type OverworldJournalEntry = {
-  id: string;
-  kind:
-    | "area"
-    | "contact"
-    | "event"
-    | "job"
-    | "poi"
-    | "quest"
-    | "quest_done"
-    | "regional_arc"
-    | "resolution"
-    | "road"
-    | "service"
-    | "site";
-  town: string;
-  title: string;
-  text: string;
-  recordedAt: string;
-};
-
-const OverworldJournalEntrySchema = z
-  .object({
-    id: z.string().min(1),
-    kind: z.enum([
-      "area",
-      "contact",
-      "event",
-      "job",
-      "poi",
-      "quest",
-      "quest_done",
-      "regional_arc",
-      "resolution",
-      "road",
-      "service",
-      "site",
-    ]),
-    town: z.string().min(1),
-    title: z.string().min(1),
-    text: z.string().min(1),
-    recordedAt: z.string().min(1),
-  })
-  .strict();
-
-export const OverworldSessionSnapshotSchema = z
-  .object({
-    version: z.literal(OVERWORLD_SESSION_SAVE_VERSION),
-    worldId: z.string().min(1),
-    worldHash: z.string().regex(/^[0-9a-f]{64}$/),
-    currentId: z.string().min(1),
-    currentAreaId: z.string().min(1).nullable(),
-    minutes: z.number().int().nonnegative(),
-    supplies: z.number().int().min(0).max(MAX_SUPPLIES),
-    fatigue: z.number().int().min(0).max(MAX_FATIGUE),
-    discoveredIds: z.array(z.string().min(1)),
-    visitedIds: z.array(z.string().min(1)),
-    currentAreaByTown: z.array(z.tuple([z.string().min(1), z.string().min(1)])),
-    travelLog: z.array(TravelLogEntrySnapshotSchema),
-    journalEntries: z.array(OverworldJournalEntrySchema),
-    resolvedEventIds: z.array(z.string().min(1)),
-    discoveredAreaIds: z.array(z.string().min(1)),
-    visitedAreaIds: z.array(z.string().min(1)),
-    discoveredJobIds: z.array(z.string().min(1)),
-    completedJobIds: z.array(z.string().min(1)),
-    discoveredSiteIds: z.array(z.string().min(1)),
-    discoveredQuestIds: z.array(z.string().min(1)),
-    startedQuestIds: z.array(z.string().min(1)),
-    completedQuestIds: z.array(z.string().min(1)),
-    exploredSiteIds: z.array(z.string().min(1)),
-    regionRenown: z.array(z.tuple([z.string().min(1), z.number().int().nonnegative()])),
-    completedRegionalArcIds: z.array(z.string().min(1)),
-    pendingRoadEncounter: OverworldPendingRoadEncounterSnapshotSchema.nullable(),
-  })
-  .strict();
-
-export type OverworldSessionSnapshot = z.infer<typeof OverworldSessionSnapshotSchema>;
 
 export type OverworldActionResult = {
   minutes: number;
@@ -392,81 +268,6 @@ function parseTimeLabel(label: string): number {
   const hour = Number(match[2]);
   const minute = Number(match[3]);
   return (day - 1) * 1440 + hour * 60 + minute;
-}
-
-function cloneJournalEntries(entries: readonly OverworldJournalEntry[]): OverworldJournalEntry[] {
-  const clones: OverworldJournalEntry[] = [];
-  for (const entry of entries) clones.push({ ...entry });
-  return clones;
-}
-
-function cloneTravelLogSnapshots(
-  entries: readonly TravelLogEntrySnapshot[],
-): TravelLogEntrySnapshot[] {
-  const clones: TravelLogEntrySnapshot[] = [];
-  for (const entry of entries) clones.push({ ...entry });
-  return clones;
-}
-
-function cloneStringTuples(values: readonly (readonly [string, string])[]): [string, string][] {
-  const clones: [string, string][] = [];
-  for (const [left, right] of values) clones.push([left, right]);
-  return clones;
-}
-
-function cloneNumberTuples(values: readonly (readonly [string, number])[]): [string, number][] {
-  const clones: [string, number][] = [];
-  for (const [left, right] of values) clones.push([left, right]);
-  return clones;
-}
-
-function cloneOverworldSessionSnapshot(
-  snapshot: OverworldSessionSnapshot,
-): OverworldSessionSnapshot {
-  return {
-    ...snapshot,
-    discoveredIds: [...snapshot.discoveredIds],
-    visitedIds: [...snapshot.visitedIds],
-    currentAreaByTown: cloneStringTuples(snapshot.currentAreaByTown),
-    travelLog: cloneTravelLogSnapshots(snapshot.travelLog),
-    journalEntries: cloneJournalEntries(snapshot.journalEntries),
-    resolvedEventIds: [...snapshot.resolvedEventIds],
-    discoveredAreaIds: [...snapshot.discoveredAreaIds],
-    visitedAreaIds: [...snapshot.visitedAreaIds],
-    discoveredJobIds: [...snapshot.discoveredJobIds],
-    completedJobIds: [...snapshot.completedJobIds],
-    discoveredSiteIds: [...snapshot.discoveredSiteIds],
-    discoveredQuestIds: [...snapshot.discoveredQuestIds],
-    startedQuestIds: [...snapshot.startedQuestIds],
-    completedQuestIds: [...snapshot.completedQuestIds],
-    exploredSiteIds: [...snapshot.exploredSiteIds],
-    regionRenown: cloneNumberTuples(snapshot.regionRenown),
-    completedRegionalArcIds: [...snapshot.completedRegionalArcIds],
-    pendingRoadEncounter: snapshot.pendingRoadEncounter
-      ? { ...snapshot.pendingRoadEncounter }
-      : null,
-  };
-}
-
-function snapshotTravelLogEntry(entry: TravelLogEntry): TravelLogEntrySnapshot {
-  return {
-    edgeId: entry.edgeId,
-    fromId: entry.fromId,
-    toId: entry.toId,
-    delayMinutes: entry.delayMinutes,
-    minutes: entry.minutes,
-    arrivedAt: entry.arrivedAt,
-    suppliesUsed: entry.suppliesUsed,
-    suppliesAfter: entry.suppliesAfter,
-    fatigueGained: entry.fatigueGained,
-    fatigueAfter: entry.fatigueAfter,
-  };
-}
-
-function snapshotTravelLogEntries(entries: readonly TravelLogEntry[]): TravelLogEntrySnapshot[] {
-  const snapshots: TravelLogEntrySnapshot[] = [];
-  for (const entry of entries) snapshots.push(snapshotTravelLogEntry(entry));
-  return snapshots;
 }
 
 function sortedStringSet(values: Set<string>): string[] {
@@ -1344,7 +1145,9 @@ function roadJournalResolutionIndex(
   const byKey = new Map<string, OverworldRoadJournalResolutionEntry>();
   const nextTravelArrivalByKey = new Map<string, number>();
   const pendingRoadKey =
-    pendingRoadEncounter && travelTimeline.latest?.edgeId === pendingRoadEncounter.edgeId
+    pendingRoadEncounter &&
+    travelTimeline.latest &&
+    travelTimeline.latest.edgeId === pendingRoadEncounter.edgeId
       ? travelResourceKey(travelTimeline.latest)
       : null;
   const requiredRoadResolutionKeys = new Set<string>();
