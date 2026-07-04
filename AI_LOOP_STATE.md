@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 281 -->
+<!-- historical_cycle_count: 282 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - shared_session_projection_cache
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: MCP session action, observation, transcript-summary, and transcript-row projection caches now build through one shared helper.
+- Loop effect: state-hash and transcript-hash cache invalidation rules are centralized, reducing drift risk in compact repeated reads that blind play agents only see indirectly.
+- Guard: focused Prettier, typecheck, MCP session/tool/server-registration tests passed over the shared cache path.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - shared_compact_source_ref_consistency
 

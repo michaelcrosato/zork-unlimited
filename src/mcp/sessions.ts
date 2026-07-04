@@ -121,6 +121,53 @@ export type SessionInit = Omit<
 >;
 
 type ObservationCacheOptions = Pick<ObservationOptions, "hideGraph" | "includeWorldIntro">;
+type StateProjectionCacheEntry = {
+  stateHash: string;
+  projection: unknown;
+};
+type TranscriptProjectionCacheEntry = {
+  transcriptLogHash: string;
+  projection: unknown;
+};
+type StateTranscriptProjectionCacheEntry = {
+  stateHash: string;
+  transcriptLogHash: string;
+  projection: unknown;
+};
+
+function cachedProjection<T, Entry extends { projection: unknown }>(
+  cacheMap: Map<string, Entry> | undefined,
+  key: string,
+  isFresh: (entry: Entry) => boolean,
+  entryFor: (projection: T) => Entry,
+  build: () => T,
+): { value: T; cacheMap: Map<string, Entry> } {
+  if (cacheMap !== undefined) {
+    const cached = cacheMap.get(key);
+    if (cached !== undefined && isFresh(cached)) {
+      return { value: cached.projection as T, cacheMap };
+    }
+  }
+  const value = build();
+  const nextCacheMap = cacheMap ?? new Map<string, Entry>();
+  nextCacheMap.set(key, entryFor(value));
+  return { value, cacheMap: nextCacheMap };
+}
+
+function invalidateStateCaches(session: Session): void {
+  delete session.legalActionsCache;
+  delete session.legalActionProjectionCaches;
+  delete session.observationCache;
+  delete session.observationProjectionCaches;
+  delete session.transcriptSummaryCache;
+  delete session.transcriptSummaryProjectionCaches;
+}
+
+function invalidateTranscriptCaches(session: Session): void {
+  delete session.transcriptSummaryCache;
+  delete session.transcriptSummaryProjectionCaches;
+  delete session.transcriptProjectionCaches;
+}
 
 export class SessionStore {
   private counter = 0;
@@ -148,12 +195,7 @@ export class SessionStore {
     const session = this.get(id);
     session.state = state;
     session.stateHash = hashState(state);
-    delete session.legalActionsCache;
-    delete session.legalActionProjectionCaches;
-    delete session.observationCache;
-    delete session.observationProjectionCaches;
-    delete session.transcriptSummaryCache;
-    delete session.transcriptSummaryProjectionCaches;
+    invalidateStateCaches(session);
     return session;
   }
 
@@ -172,18 +214,18 @@ export class SessionStore {
 
   legalActionProjection<T>(id: string, key: string, build: () => T): T {
     const session = this.get(id);
-    const cache = session.legalActionProjectionCaches?.get(key);
-    if (cache?.stateHash === session.stateHash) {
-      return cache.projection as T;
-    }
-    const projection = build();
-    const caches = session.legalActionProjectionCaches ?? new Map();
-    caches.set(key, {
-      stateHash: session.stateHash,
-      projection,
-    });
-    session.legalActionProjectionCaches = caches;
-    return projection;
+    const cached = cachedProjection<T, StateProjectionCacheEntry>(
+      session.legalActionProjectionCaches,
+      key,
+      (entry) => entry.stateHash === session.stateHash,
+      (projection) => ({
+        stateHash: session.stateHash,
+        projection,
+      }),
+      build,
+    );
+    session.legalActionProjectionCaches = cached.cacheMap;
+    return cached.value;
   }
 
   observation(
@@ -213,18 +255,18 @@ export class SessionStore {
 
   observationProjection<T>(id: string, key: string, build: () => T): T {
     const session = this.get(id);
-    const cache = session.observationProjectionCaches?.get(key);
-    if (cache?.stateHash === session.stateHash) {
-      return cache.projection as T;
-    }
-    const projection = build();
-    const caches = session.observationProjectionCaches ?? new Map();
-    caches.set(key, {
-      stateHash: session.stateHash,
-      projection,
-    });
-    session.observationProjectionCaches = caches;
-    return projection;
+    const cached = cachedProjection<T, StateProjectionCacheEntry>(
+      session.observationProjectionCaches,
+      key,
+      (entry) => entry.stateHash === session.stateHash,
+      (projection) => ({
+        stateHash: session.stateHash,
+        projection,
+      }),
+      build,
+    );
+    session.observationProjectionCaches = cached.cacheMap;
+    return cached.value;
   }
 
   transcriptSummary(id: string, build: () => TranscriptSummary): TranscriptSummary {
@@ -246,38 +288,37 @@ export class SessionStore {
 
   transcriptSummaryProjection<T>(id: string, key: string, build: () => T): T {
     const session = this.get(id);
-    const cache = session.transcriptSummaryProjectionCaches?.get(key);
-    if (
-      cache?.stateHash === session.stateHash &&
-      cache.transcriptLogHash === session.transcriptLogHash
-    ) {
-      return cache.projection as T;
-    }
-    const projection = build();
-    const caches = session.transcriptSummaryProjectionCaches ?? new Map();
-    caches.set(key, {
-      stateHash: session.stateHash,
-      transcriptLogHash: session.transcriptLogHash,
-      projection,
-    });
-    session.transcriptSummaryProjectionCaches = caches;
-    return projection;
+    const cached = cachedProjection<T, StateTranscriptProjectionCacheEntry>(
+      session.transcriptSummaryProjectionCaches,
+      key,
+      (entry) =>
+        entry.stateHash === session.stateHash &&
+        entry.transcriptLogHash === session.transcriptLogHash,
+      (projection) => ({
+        stateHash: session.stateHash,
+        transcriptLogHash: session.transcriptLogHash,
+        projection,
+      }),
+      build,
+    );
+    session.transcriptSummaryProjectionCaches = cached.cacheMap;
+    return cached.value;
   }
 
   transcriptProjection<T>(id: string, key: string, build: () => T): T {
     const session = this.get(id);
-    const cache = session.transcriptProjectionCaches?.get(key);
-    if (cache?.transcriptLogHash === session.transcriptLogHash) {
-      return cache.projection as T;
-    }
-    const projection = build();
-    const caches = session.transcriptProjectionCaches ?? new Map();
-    caches.set(key, {
-      transcriptLogHash: session.transcriptLogHash,
-      projection,
-    });
-    session.transcriptProjectionCaches = caches;
-    return projection;
+    const cached = cachedProjection<T, TranscriptProjectionCacheEntry>(
+      session.transcriptProjectionCaches,
+      key,
+      (entry) => entry.transcriptLogHash === session.transcriptLogHash,
+      (projection) => ({
+        transcriptLogHash: session.transcriptLogHash,
+        projection,
+      }),
+      build,
+    );
+    session.transcriptProjectionCaches = cached.cacheMap;
+    return cached.value;
   }
 
   appendTranscript(id: string, turn: TranscriptTurn): Session {
@@ -287,9 +328,7 @@ export class SessionStore {
       previous: session.transcriptLogHash,
       turn,
     });
-    delete session.transcriptSummaryCache;
-    delete session.transcriptSummaryProjectionCaches;
-    delete session.transcriptProjectionCaches;
+    invalidateTranscriptCaches(session);
     return session;
   }
 
@@ -297,9 +336,7 @@ export class SessionStore {
     const session = this.get(id);
     session.transcript = transcript;
     session.transcriptLogHash = hashState(transcript);
-    delete session.transcriptSummaryCache;
-    delete session.transcriptSummaryProjectionCaches;
-    delete session.transcriptProjectionCaches;
+    invalidateTranscriptCaches(session);
     return session;
   }
 }
