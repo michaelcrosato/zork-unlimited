@@ -199,10 +199,27 @@ export type OverworldView = {
   log: TravelLogEntry[];
 };
 
-type OverworldResourceClockState = {
+type OverworldClockState = {
+  minutesAfter: number;
+};
+
+type OverworldResourceClockState = OverworldClockState & {
   suppliesAfter: number;
   fatigueAfter: number;
-  minutesAfter: number;
+};
+
+type OverworldCurrentTownState = {
+  currentIdAfter: string;
+};
+
+type OverworldCurrentAreaState = {
+  currentAreaIdAfter: string | null;
+};
+
+type OverworldCurrentAreaTravelState = OverworldCurrentAreaState & OverworldClockState;
+
+type OverworldPendingRoadEncounterState = {
+  pendingRoadEncounterAfter: OverworldPendingRoadEncounter | null;
 };
 
 export class OverworldSession {
@@ -306,10 +323,31 @@ export class OverworldSession {
     clearOverworldSessionCaches(this.caches);
   }
 
+  private applyClockState(state: OverworldClockState): void {
+    this.minutes = state.minutesAfter;
+  }
+
   private applyResourceClockState(state: OverworldResourceClockState): void {
     this.supplies = state.suppliesAfter;
     this.fatigue = state.fatigueAfter;
-    this.minutes = state.minutesAfter;
+    this.applyClockState(state);
+  }
+
+  private applyCurrentTownState(state: OverworldCurrentTownState): void {
+    this.currentId = state.currentIdAfter;
+  }
+
+  private applyCurrentAreaState(state: OverworldCurrentAreaState): void {
+    this.currentAreaId = state.currentAreaIdAfter;
+  }
+
+  private applyCurrentAreaTravelState(state: OverworldCurrentAreaTravelState): void {
+    this.applyClockState(state);
+    this.applyCurrentAreaState(state);
+  }
+
+  private applyPendingRoadEncounterState(state: OverworldPendingRoadEncounterState): void {
+    this.pendingRoadEncounter = state.pendingRoadEncounterAfter;
   }
 
   private cachedSnapshot(): OverworldSessionSnapshotCache {
@@ -395,11 +433,11 @@ export class OverworldSession {
       snapshot,
       restorePlan,
     );
-    this.currentId = applied.currentIdAfter;
-    this.currentAreaId = applied.currentAreaIdAfter;
+    this.applyCurrentTownState(applied);
+    this.applyCurrentAreaState(applied);
     this.applyResourceClockState(applied);
     this.rebuildResolvedEventHomeIds();
-    this.pendingRoadEncounter = applied.pendingRoadEncounterAfter;
+    this.applyPendingRoadEncounterState(applied);
     this.clearSnapshotCache();
   }
 
@@ -422,7 +460,7 @@ export class OverworldSession {
       roadDestinationIds: this.roadsFrom(nodeId).map((edge) => edge.destination.id),
       visitedIds: this.visitedIds,
     });
-    this.currentAreaId = applied.currentAreaIdAfter;
+    this.applyCurrentAreaState(applied);
     if (applied.stateChanged) this.clearSnapshotCache();
   }
 
@@ -453,7 +491,7 @@ export class OverworldSession {
   }
 
   private applyRecordedAction(recorded: OverworldRecordedActionResult): OverworldActionResult {
-    this.minutes = recorded.minutesAfter;
+    this.applyClockState(recorded);
     if (recorded.stateChanged) this.clearSnapshotCache();
     return {
       minutes: recorded.minutes,
@@ -515,7 +553,7 @@ export class OverworldSession {
       currentAreaByTown: this.currentAreaByTown,
       discoveredAreaIds: this.discoveredAreaIds,
     });
-    this.currentAreaId = applied.currentAreaIdAfter;
+    this.applyCurrentAreaState(applied);
     if (applied.stateChanged) this.clearSnapshotCache();
   }
 
@@ -971,8 +1009,7 @@ export class OverworldSession {
       currentTownId: this.currentId,
       minutes: this.minutes,
     });
-    this.minutes = applied.minutesAfter;
-    this.currentAreaId = applied.currentAreaIdAfter;
+    this.applyCurrentAreaTravelState(applied);
     this.clearSnapshotCache();
     return {
       from: applied.from,
@@ -1159,7 +1196,7 @@ export class OverworldSession {
     });
 
     this.applyResourceClockState(applied);
-    this.pendingRoadEncounter = applied.pendingRoadEncounterAfter;
+    this.applyPendingRoadEncounterState(applied);
     this.clearSnapshotCache();
     return applied.result;
   }
@@ -1179,9 +1216,9 @@ export class OverworldSession {
     });
     const recorded = recordOverworldTravelLeg({ travelLog: this.travelLog }, applied);
     this.applyResourceClockState(recorded);
-    this.currentId = recorded.currentIdAfter;
+    this.applyCurrentTownState(recorded);
     this.markSeen(this.currentId);
-    this.pendingRoadEncounter = recorded.pendingRoadEncounterAfter;
+    this.applyPendingRoadEncounterState(recorded);
     this.clearSnapshotCache();
     return recorded.entry;
   }
