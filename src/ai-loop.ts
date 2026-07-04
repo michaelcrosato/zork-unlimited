@@ -124,7 +124,6 @@ export function playtestTargetWorldQuestId(
 
 type LatestCycleMetadata = {
   runId: string;
-  runDir: string;
   target: string;
   targetWorldQuestId?: string;
   playtestRecord: string;
@@ -155,7 +154,6 @@ export function playtestTargetSummary(
 
 export function buildLatestCycleMetadata(ctx: {
   runId: string;
-  runDir: string;
   target: string;
   targetWorldQuestId: string | null;
   playtestRecord: string;
@@ -165,7 +163,6 @@ export function buildLatestCycleMetadata(ctx: {
 }): LatestCycleMetadata {
   const metadata: LatestCycleMetadata = {
     runId: ctx.runId,
-    runDir: ctx.runDir,
     ...playtestTargetMetadata(ctx.target, ctx.targetWorldQuestId),
     playtestRecord: ctx.playtestRecord,
     recommendationId: ctx.top?.id ?? null,
@@ -231,7 +228,6 @@ function main(): void {
     JSON.stringify(
       buildLatestCycleMetadata({
         runId: stamp,
-        runDir,
         target,
         targetWorldQuestId,
         playtestRecord,

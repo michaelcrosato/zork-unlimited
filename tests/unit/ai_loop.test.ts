@@ -147,7 +147,6 @@ describe("compact AFK handoff metadata", () => {
 
     const metadata = buildLatestCycleMetadata({
       runId: "2026-07-04T00-00-00-000Z",
-      runDir: "ai-runs/2026-07-04T00-00-00-000Z",
       target: "breaking_weir",
       targetWorldQuestId: "breaking_weir",
       playtestRecord: "ai-runs/2026-07-04T00-00-00-000Z/playtest.md",
@@ -163,6 +162,7 @@ describe("compact AFK handoff metadata", () => {
       recommendationCategory: "engine",
       mode: "standard",
     });
+    expect("runDir" in metadata).toBe(false);
     expect("recommendation" in metadata).toBe(false);
     expect(JSON.stringify(metadata)).not.toContain(top.title);
     expect(JSON.stringify(metadata)).not.toContain(top.rationale);

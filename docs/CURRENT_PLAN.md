@@ -86,6 +86,8 @@ Make discovered overworld quest leads start real RPG sessions.
   playable/validator status.
 - AFK `latest-cycle.json` and automatic loop-state appends now carry compact
   recommendation ids/categories instead of repeating full titles and rationales.
+- AFK `latest-cycle.json` now omits the derived run directory; run artifacts
+  remain addressable from `runId` and explicit record paths.
 - AFK blind-test rotation now parses quest-labeled titles and compact
   `playtest-<world_quest_id>` recommendation ids, so recently played quests
   remain visible to the attendance sorter.

@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 290 -->
+<!-- historical_cycle_count: 291 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - compact_latest_cycle_run_dir_removed
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: `latest-cycle.json` no longer stores derived `runDir`; consumers keep `runId`, target, playtest record, mode, timeout, and compact recommendation ids.
+- Loop effect: machine handoff removes another repeated path while ai-runs artifacts still use `ai-runs/<runId>/...`.
+- Guard: focused Prettier, typecheck, AI loop metadata, loop driver gate, and loop-state rotation tests passed.
+- VERIFY: `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed.
 
 ### Cycle result - compact_afk_handoff_recommendations
 
