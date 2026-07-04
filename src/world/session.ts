@@ -27,7 +27,6 @@ import {
   OVERWORLD_COMPACT_ROUTE_LIMIT,
   OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT,
   OVERWORLD_COMPACT_VIEW_VERSION,
-  compactIdPayloadFromBuckets,
   cloneOverworldCompactView,
   compactOverworldJournalEntries,
   compactOverworldLabel,
@@ -47,8 +46,6 @@ import {
 import {
   assertKnownIds,
   assertUniqueTupleMap,
-  compactSortedStringSet,
-  compactSortedTownIdsByPopulation,
   idIndex,
   keyedIndex,
   nestedIdIndex,
@@ -168,6 +165,7 @@ import {
   type TravelLogEntry,
 } from "./session_snapshot.js";
 import { restoreOverworldTravelLogEntries } from "./session_travel_log.js";
+import { compactOverworldSessionIdPayload } from "./session_compact_ids.js";
 
 export type {
   OverworldRoadEncounterOption,
@@ -1233,19 +1231,19 @@ export class OverworldSession {
     }
     const routeByDestination = new Map<string, OverworldSessionRoutePlan>();
     for (const plan of routeOptions) routeByDestination.set(plan.destination.id, plan);
-    const discoveredTownIds = compactSortedTownIdsByPopulation(this.discoveredIds, this.nodes);
-    const idPayload = compactIdPayloadFromBuckets({
-      discovered_towns: { ids: discoveredTownIds, count: this.discoveredIds.size },
-      discovered_areas: compactSortedStringSet(this.discoveredAreaIds),
-      visited_areas: compactSortedStringSet(this.visitedAreaIds),
-      discovered_jobs: compactSortedStringSet(this.discoveredJobIds),
-      completed_jobs: compactSortedStringSet(this.completedJobIds),
-      discovered_sites: compactSortedStringSet(this.discoveredSiteIds),
-      explored_sites: compactSortedStringSet(this.exploredSiteIds),
-      discovered_quests: compactSortedStringSet(this.discoveredQuestIds),
-      started_quests: compactSortedStringSet(this.startedQuestIds),
-      completed_quests: compactSortedStringSet(this.completedQuestIds),
-      resolved_events: compactSortedStringSet(this.resolvedEventIds),
+    const idPayload = compactOverworldSessionIdPayload({
+      discoveredIds: this.discoveredIds,
+      nodes: this.nodes,
+      discoveredAreaIds: this.discoveredAreaIds,
+      visitedAreaIds: this.visitedAreaIds,
+      discoveredJobIds: this.discoveredJobIds,
+      completedJobIds: this.completedJobIds,
+      discoveredSiteIds: this.discoveredSiteIds,
+      exploredSiteIds: this.exploredSiteIds,
+      discoveredQuestIds: this.discoveredQuestIds,
+      startedQuestIds: this.startedQuestIds,
+      completedQuestIds: this.completedQuestIds,
+      resolvedEventIds: this.resolvedEventIds,
     });
     const exits = this.roadsFrom(this.currentId);
     const jobs = compactOverworldTitleRefs(this.discoveredJobsInCurrentArea());
