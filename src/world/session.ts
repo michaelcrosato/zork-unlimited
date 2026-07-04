@@ -166,6 +166,11 @@ import {
 } from "./session_snapshot.js";
 import { restoreOverworldTravelLogEntries } from "./session_travel_log.js";
 import { compactOverworldSessionIdPayload } from "./session_compact_ids.js";
+import {
+  clearOverworldSessionCaches,
+  type OverworldSessionCaches,
+  type OverworldSessionSnapshotCache,
+} from "./session_cache.js";
 import { cloneOverworldView } from "./session_view_clone.js";
 
 export type {
@@ -307,14 +312,7 @@ export class OverworldSession {
   private readonly regionRenown = new Map<string, number>();
   private readonly completedRegionalArcIds = new Set<string>();
   private pendingRoadEncounter: OverworldPendingRoadEncounter | null = null;
-  private snapshotCache?: {
-    snapshot: OverworldSessionSnapshot;
-    hash: string;
-  };
-  private routeOptionsCache?: OverworldSessionRoutePlan[];
-  private compactViewCache?: OverworldCompactView;
-  private regionalArcProgressCache?: OverworldRegionalArcProgress[];
-  private viewCache?: OverworldView;
+  private readonly caches: OverworldSessionCaches = {};
 
   constructor(private readonly world: OverworldManifest) {
     this.nodes = overworldNodesById(world);
@@ -465,19 +463,15 @@ export class OverworldSession {
   }
 
   private clearSnapshotCache(): void {
-    delete this.snapshotCache;
-    delete this.routeOptionsCache;
-    delete this.compactViewCache;
-    delete this.regionalArcProgressCache;
-    delete this.viewCache;
+    clearOverworldSessionCaches(this.caches);
   }
 
-  private cachedSnapshot(): { snapshot: OverworldSessionSnapshot; hash: string } {
-    if (this.snapshotCache) return this.snapshotCache;
+  private cachedSnapshot(): OverworldSessionSnapshotCache {
+    if (this.caches.snapshot) return this.caches.snapshot;
     const snapshot = this.buildSnapshot();
     const hash = hashState(snapshot);
-    this.snapshotCache = { snapshot, hash };
-    return this.snapshotCache;
+    this.caches.snapshot = { snapshot, hash };
+    return this.caches.snapshot;
   }
 
   snapshotHash(): string {
@@ -1100,7 +1094,7 @@ export class OverworldSession {
   }
 
   private discoveredRouteOptions(): OverworldSessionRoutePlan[] {
-    if (this.routeOptionsCache) return this.routeOptionsCache;
+    if (this.caches.routeOptions) return this.caches.routeOptions;
     const current = this.currentNode();
     const options: OverworldSessionRoutePlan[] = [];
     for (const id of this.discoveredIds) {
@@ -1123,7 +1117,7 @@ export class OverworldSession {
         b.destination.population_2025 - a.destination.population_2025 ||
         a.destination.name.localeCompare(b.destination.name),
     );
-    this.routeOptionsCache = options;
+    this.caches.routeOptions = options;
     return options;
   }
 
@@ -1134,9 +1128,9 @@ export class OverworldSession {
   }
 
   private cachedRegionalArcProgress(): OverworldRegionalArcProgress[] {
-    if (this.regionalArcProgressCache) return this.regionalArcProgressCache;
-    this.regionalArcProgressCache = this.buildRegionalArcProgress();
-    return this.regionalArcProgressCache;
+    if (this.caches.regionalArcProgress) return this.caches.regionalArcProgress;
+    this.caches.regionalArcProgress = this.buildRegionalArcProgress();
+    return this.caches.regionalArcProgress;
   }
 
   private regionalArcProgressForView(): OverworldRegionalArcProgress[] {
@@ -1193,9 +1187,9 @@ export class OverworldSession {
   }
 
   private cachedCompactView(): OverworldCompactView {
-    if (this.compactViewCache) return this.compactViewCache;
-    this.compactViewCache = this.buildCompactView();
-    return this.compactViewCache;
+    if (this.caches.compactView) return this.caches.compactView;
+    this.caches.compactView = this.buildCompactView();
+    return this.caches.compactView;
   }
 
   compactView(): OverworldCompactView {
@@ -1328,9 +1322,9 @@ export class OverworldSession {
   }
 
   private cachedView(): OverworldView {
-    if (this.viewCache) return this.viewCache;
-    this.viewCache = this.buildView();
-    return this.viewCache;
+    if (this.caches.view) return this.caches.view;
+    this.caches.view = this.buildView();
+    return this.caches.view;
   }
 
   view(): OverworldView {
