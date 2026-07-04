@@ -5,6 +5,7 @@ import {
   assertSnapshotRegionalArcCompletionProofs,
   missingOverworldEventResolutionStepLabels,
   overworldEventResolutionReadiness,
+  planOverworldEventResolution,
   regionalArcResolutionProof,
 } from "../../src/world/session_event_resolution.js";
 import type {
@@ -17,6 +18,7 @@ import type {
   OverworldPoi,
   OverworldRegionalArc,
 } from "../../src/world/overworld.js";
+import type { OverworldJournalEntry } from "../../src/world/session_snapshot.js";
 
 function event(id: string, home: string, area: string): OverworldLocalEvent {
   return {
@@ -93,6 +95,21 @@ function journal(
   };
 }
 
+function journalEntry(
+  id: string,
+  kind: OverworldJournalEntry["kind"],
+  recordedAt = "Day 1, 10:00",
+): OverworldJournalEntry {
+  return {
+    id,
+    kind,
+    town: "Alden",
+    title: id,
+    text: id,
+    recordedAt,
+  };
+}
+
 describe("overworld event and regional arc proof replay", () => {
   it("evaluates live event-resolution readiness from local journal prerequisites", () => {
     const localEvent = event("event_a", "town_a", "area_a");
@@ -140,6 +157,99 @@ describe("overworld event and regional arc proof replay", () => {
       }),
     ).toThrow(
       /Before resolving this event, scout a local point of interest, investigate the event\./,
+    );
+  });
+
+  it("plans live event resolution journal entries and renown without mutating sources", () => {
+    const localEvent = event("event_a", "town_a", "area_a");
+    const journalEntries = new Map([
+      ["scout:poi_a", journalEntry("scout:poi_a", "poi")],
+      ["talk:character_a", journalEntry("talk:character_a", "contact")],
+      ["investigate:event_a", journalEntry("investigate:event_a", "event")],
+    ]);
+
+    expect(
+      planOverworldEventResolution({
+        eventId: localEvent.id,
+        eventsById: new Map([[localEvent.id, localEvent]]),
+        currentTownId: "town_a",
+        currentTownName: "Alden",
+        currentRegion: "North",
+        currentAreaId: "area_a",
+        resolvedEventIds: new Set(),
+        journalEntries,
+        poisByArea: new Map([["area_a", [poi("poi_a")]]]),
+        charactersByArea: new Map([["area_a", [character("character_a")]]]),
+      }),
+    ).toEqual({
+      alreadyKnown: false,
+      event: localEvent,
+      minutes: 50,
+      renown: 2,
+      region: "North",
+      entryDraft: {
+        id: "resolve:event_a",
+        kind: "resolution",
+        town: "Alden",
+        title: "Resolved event_a",
+        text: "Alden stabilizes around event_a. Your work reduces hazard pressure and earns 2 North renown.",
+      },
+    });
+    expect([...journalEntries.keys()]).toEqual([
+      "scout:poi_a",
+      "talk:character_a",
+      "investigate:event_a",
+    ]);
+  });
+
+  it("reuses an existing resolved-event journal entry before checking prerequisites", () => {
+    const localEvent = event("event_a", "town_a", "area_a");
+    const existing = journalEntry("resolve:event_a", "resolution", "Day 1, 11:00");
+
+    expect(
+      planOverworldEventResolution({
+        eventId: localEvent.id,
+        eventsById: new Map([[localEvent.id, localEvent]]),
+        currentTownId: "town_a",
+        currentTownName: "Alden",
+        currentRegion: "North",
+        currentAreaId: "area_a",
+        resolvedEventIds: new Set([localEvent.id]),
+        journalEntries: new Map([[existing.id, existing]]),
+        poisByArea: new Map(),
+        charactersByArea: new Map(),
+      }),
+    ).toEqual({
+      alreadyKnown: true,
+      event: localEvent,
+      minutes: 0,
+      entry: existing,
+    });
+  });
+
+  it("rejects event resolution plans outside the active town and area", () => {
+    const localEvent = event("event_a", "town_a", "area_a");
+    const baseState = {
+      eventId: localEvent.id,
+      eventsById: new Map([[localEvent.id, localEvent]]),
+      currentTownId: "town_a",
+      currentTownName: "Alden",
+      currentRegion: "North",
+      currentAreaId: "area_a",
+      resolvedEventIds: new Set<string>(),
+      journalEntries: new Map<string, OverworldJournalEntry>(),
+      poisByArea: new Map<string, readonly OverworldPoi[]>(),
+      charactersByArea: new Map<string, readonly OverworldCharacter[]>(),
+    };
+
+    expect(() => planOverworldEventResolution({ ...baseState, eventId: "missing_event" })).toThrow(
+      /not active in this town/,
+    );
+    expect(() => planOverworldEventResolution({ ...baseState, currentTownId: "town_b" })).toThrow(
+      /not active in this town/,
+    );
+    expect(() => planOverworldEventResolution({ ...baseState, currentAreaId: "area_b" })).toThrow(
+      /Move to that local area/,
     );
   });
 

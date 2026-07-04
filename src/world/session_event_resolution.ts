@@ -8,6 +8,7 @@ import {
   type OverworldEventResolutionJournalIndex,
   type OverworldResolutionProofIndex,
 } from "./session_journal_timeline.js";
+import type { OverworldJournalEntry } from "./session_snapshot.js";
 import { OVERWORLD_STARTING_MINUTES as STARTING_MINUTES } from "./travel_mechanics.js";
 
 export type OverworldRegionalArcCompletionIndex = {
@@ -51,6 +52,43 @@ export type OverworldEventResolutionReadiness = {
   missing: OverworldEventResolutionPrerequisite[];
 };
 
+export type OverworldJournalEntryReadIndex = OverworldJournalEntryPresence & {
+  get(id: string): OverworldJournalEntry | undefined;
+};
+
+export type OverworldEventResolutionPlanState = {
+  eventId: string;
+  eventsById: ReadonlyMap<string, OverworldLocalEvent>;
+  currentTownId: string;
+  currentTownName: string;
+  currentRegion: string;
+  currentAreaId: string | null;
+  resolvedEventIds: ReadonlySet<string>;
+  journalEntries: OverworldJournalEntryReadIndex;
+  poisByArea: ReadonlyMap<string, readonly Pick<OverworldPoi, "id">[]>;
+  charactersByArea: ReadonlyMap<string, readonly Pick<OverworldCharacter, "id">[]>;
+};
+
+export type OverworldEventResolutionActionPlan = {
+  alreadyKnown: false;
+  event: OverworldLocalEvent;
+  minutes: number;
+  renown: number;
+  region: string;
+  entryDraft: Omit<OverworldJournalEntry, "recordedAt">;
+};
+
+export type OverworldEventResolutionAlreadyKnownPlan = {
+  alreadyKnown: true;
+  event: OverworldLocalEvent;
+  minutes: 0;
+  entry: OverworldJournalEntry;
+};
+
+export type OverworldEventResolutionPlan =
+  | OverworldEventResolutionActionPlan
+  | OverworldEventResolutionAlreadyKnownPlan;
+
 function prerequisiteLabel(prerequisite: OverworldEventResolutionPrerequisite): string {
   return OVERWORLD_EVENT_RESOLUTION_PREREQUISITES.find((entry) => entry.id === prerequisite)!.label;
 }
@@ -91,6 +129,53 @@ export function assertOverworldEventResolutionReady(
   throw new Error(
     `Before resolving this event, ${missingOverworldEventResolutionStepLabels(readiness.missing).join(", ")}.`,
   );
+}
+
+export function planOverworldEventResolution(
+  state: OverworldEventResolutionPlanState,
+): OverworldEventResolutionPlan {
+  const event = state.eventsById.get(state.eventId);
+  if (!event || event.home !== state.currentTownId) {
+    throw new Error("That event is not active in this town.");
+  }
+  if (event.area !== state.currentAreaId) {
+    throw new Error("Move to that local area before resolving that event.");
+  }
+
+  const entryId = `resolve:${event.id}`;
+  if (state.resolvedEventIds.has(event.id)) {
+    const existing = state.journalEntries.get(entryId);
+    if (existing) {
+      return {
+        alreadyKnown: true,
+        event,
+        minutes: 0,
+        entry: existing,
+      };
+    }
+  }
+
+  assertOverworldEventResolutionReady({
+    charactersByArea: state.charactersByArea,
+    event,
+    journalEntryIds: state.journalEntries,
+    poisByArea: state.poisByArea,
+  });
+
+  return {
+    alreadyKnown: false,
+    event,
+    minutes: 30 + event.intensity * 10,
+    renown: event.intensity,
+    region: state.currentRegion,
+    entryDraft: {
+      id: entryId,
+      kind: "resolution",
+      town: state.currentTownName,
+      title: `Resolved ${event.title}`,
+      text: `${state.currentTownName} stabilizes around ${event.title}. Your work reduces ${event.pressure} pressure and earns ${event.intensity} ${state.currentRegion} renown.`,
+    },
+  };
 }
 
 export function assertSnapshotEventResolutionProofs(

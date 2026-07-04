@@ -87,9 +87,9 @@ import {
 import { timeLabel } from "./session_journal_codec.js";
 import { assertSnapshotTimeline } from "./session_journal_timeline.js";
 import {
-  assertOverworldEventResolutionReady,
   assertSnapshotEventResolutionProofs,
   assertSnapshotRegionalArcCompletionProofs,
+  planOverworldEventResolution,
 } from "./session_event_resolution.js";
 import {
   assertSnapshotDiscoveredAreaCountReplay,
@@ -1714,42 +1714,25 @@ export class OverworldSession {
 
   resolveEvent(eventId: string): OverworldActionResult {
     const current = this.currentNode();
-    const event = this.localEventsById.get(eventId);
-    if (!event || event.home !== this.currentId) {
-      throw new Error("That event is not active in this town.");
-    }
-    if (event.area !== this.currentAreaIdOrThrow()) {
-      throw new Error("Move to that local area before resolving that event.");
-    }
-    if (this.resolvedEventIds.has(event.id)) {
-      const existing = this.journalEntry(`resolve:${event.id}`);
-      if (existing) return { minutes: 0, alreadyKnown: true, entry: existing };
-    }
-
-    assertOverworldEventResolutionReady({
-      charactersByArea: this.charactersByArea,
-      event,
-      journalEntryIds: this.journalEntriesById,
+    const plan = planOverworldEventResolution({
+      eventId,
+      eventsById: this.localEventsById,
+      currentTownId: this.currentId,
+      currentTownName: current.name,
+      currentRegion: current.region,
+      currentAreaId: this.currentAreaIdOrThrow(),
+      resolvedEventIds: this.resolvedEventIds,
+      journalEntries: this.journalEntriesById,
       poisByArea: this.poisByArea,
+      charactersByArea: this.charactersByArea,
     });
+    if (plan.alreadyKnown) return { minutes: 0, alreadyKnown: true, entry: plan.entry };
 
-    const result = this.recordAction(
-      {
-        id: `resolve:${event.id}`,
-        kind: "resolution",
-        town: current.name,
-        title: `Resolved ${event.title}`,
-        text: `${current.name} stabilizes around ${event.title}. Your work reduces ${event.pressure} pressure and earns ${event.intensity} ${current.region} renown.`,
-      },
-      30 + event.intensity * 10,
-    );
+    const result = this.recordAction(plan.entryDraft, plan.minutes);
     if (!result.alreadyKnown) {
-      this.markEventResolved(event);
-      this.regionRenown.set(
-        current.region,
-        (this.regionRenown.get(current.region) ?? 0) + event.intensity,
-      );
-      this.checkRegionalArcCompletion(current.region);
+      this.markEventResolved(plan.event);
+      this.regionRenown.set(plan.region, (this.regionRenown.get(plan.region) ?? 0) + plan.renown);
+      this.checkRegionalArcCompletion(plan.region);
       this.clearSnapshotCache();
     }
     return this.withLocalDiscovery(result, current.id);
