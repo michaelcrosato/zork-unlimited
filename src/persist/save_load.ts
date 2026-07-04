@@ -98,12 +98,16 @@ export type SaveBundle = {
   contentHash: string;
   /** Pack mode. Required so persisted state is bound to the unified RPG engine. */
   mode: SaveMode;
+  /** Compact canonical source identity. Legacy fields below remain compatibility mirrors. */
+  source_ref?: SaveSourceRef;
   /** Shipped world quest id, when the save belongs to the open-world graph. */
   worldQuestId?: string;
   /** Procedural RPG generation seed, when the save belongs to an in-memory generated pack. */
   generatedRpgSeed?: number;
   state: GameState;
 };
+
+export type SaveSourceRef = ["wq", string] | ["gen", number] | ["pack", string];
 
 export type SaveMetadata = {
   worldQuestId?: string | null;
@@ -126,7 +130,10 @@ export function save(
     contentHash,
     state,
     mode,
-    ...(metadata.worldQuestId ? { worldQuestId: metadata.worldQuestId } : {}),
+    source_ref: saveSourceRef(packId, metadata),
+    ...(metadata.worldQuestId !== undefined && metadata.worldQuestId !== null
+      ? { worldQuestId: metadata.worldQuestId }
+      : {}),
     ...(metadata.generatedRpgSeed !== undefined && metadata.generatedRpgSeed !== null
       ? { generatedRpgSeed: metadata.generatedRpgSeed }
       : {}),
@@ -152,6 +159,16 @@ function assertGeneratedRpgSeed(seed: unknown, label: string): asserts seed is n
   }
 }
 
+function saveSourceRef(packId: string, metadata: SaveMetadata): SaveSourceRef {
+  if (metadata.worldQuestId !== undefined && metadata.worldQuestId !== null) {
+    return ["wq", metadata.worldQuestId];
+  }
+  if (metadata.generatedRpgSeed !== undefined && metadata.generatedRpgSeed !== null) {
+    return ["gen", metadata.generatedRpgSeed];
+  }
+  return ["pack", packId];
+}
+
 function assertSaveSourceMetadata(metadata: SaveMetadata): void {
   const hasWorldQuest = metadata.worldQuestId !== undefined && metadata.worldQuestId !== null;
   const hasGeneratedSeed =
@@ -161,8 +178,77 @@ function assertSaveSourceMetadata(metadata: SaveMetadata): void {
       "Save source cannot carry both worldQuestId and generatedRpgSeed.",
     );
   }
+  if (hasWorldQuest && typeof metadata.worldQuestId !== "string") {
+    throw new SaveIntegrityError(
+      `Save worldQuestId must be a string, got ${JSON.stringify(metadata.worldQuestId)}.`,
+    );
+  }
   if (hasGeneratedSeed) {
     assertGeneratedRpgSeed(metadata.generatedRpgSeed, "Save generatedRpgSeed");
+  }
+}
+
+function assertSaveSourceRef(raw: unknown): asserts raw is SaveSourceRef {
+  if (raw === undefined) return;
+  if (!Array.isArray(raw) || raw.length !== 2) {
+    throw new SaveIntegrityError("Save source_ref must be a compact tuple when present.");
+  }
+  const [tag, value] = raw;
+  if (tag === "wq") {
+    if (typeof value !== "string") {
+      throw new SaveIntegrityError("Save source_ref world quest id must be a string.");
+    }
+    return;
+  }
+  if (tag === "gen") {
+    assertGeneratedRpgSeed(value, "Save source_ref generated seed");
+    return;
+  }
+  if (tag === "pack") {
+    if (typeof value !== "string") {
+      throw new SaveIntegrityError("Save source_ref pack id must be a string.");
+    }
+    return;
+  }
+  throw new SaveIntegrityError(
+    `Save source_ref tag must be "wq", "gen", or "pack", got ${JSON.stringify(tag)}.`,
+  );
+}
+
+function assertSaveSourceRefConsistency(bundle: SaveBundle): void {
+  const sourceRef = (bundle as { source_ref?: unknown }).source_ref;
+  if (sourceRef === undefined) return;
+  assertSaveSourceRef(sourceRef);
+
+  const worldQuestId = (bundle as { worldQuestId?: unknown }).worldQuestId;
+  const generatedRpgSeed = (bundle as { generatedRpgSeed?: unknown }).generatedRpgSeed;
+
+  if (sourceRef[0] === "wq") {
+    if (worldQuestId !== undefined && worldQuestId !== sourceRef[1]) {
+      throw new SaveIntegrityError(
+        `Save source_ref world quest ${JSON.stringify(
+          sourceRef[1],
+        )} does not match worldQuestId ${JSON.stringify(worldQuestId)}.`,
+      );
+    }
+    if (generatedRpgSeed !== undefined) {
+      throw new SaveIntegrityError("Save source_ref world quest conflicts with generatedRpgSeed.");
+    }
+  } else if (sourceRef[0] === "gen") {
+    if (generatedRpgSeed !== undefined && generatedRpgSeed !== sourceRef[1]) {
+      throw new SaveIntegrityError(
+        `Save source_ref generated seed ${JSON.stringify(
+          sourceRef[1],
+        )} does not match generatedRpgSeed ${JSON.stringify(generatedRpgSeed)}.`,
+      );
+    }
+    if (worldQuestId !== undefined) {
+      throw new SaveIntegrityError("Save source_ref generated seed conflicts with worldQuestId.");
+    }
+  } else if (worldQuestId !== undefined || generatedRpgSeed !== undefined) {
+    throw new SaveIntegrityError(
+      "Save source_ref pack fallback conflicts with explicit save source metadata.",
+    );
   }
 }
 
@@ -212,6 +298,7 @@ export function load(
       "Save source cannot carry both worldQuestId and generatedRpgSeed.",
     );
   }
+  assertSaveSourceRefConsistency(bundle);
   if (expectedContentHash !== undefined && bundle.contentHash !== expectedContentHash) {
     throw new SaveIntegrityError(
       `Content hash mismatch: save was made against ${bundle.contentHash}, ` +

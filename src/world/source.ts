@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
-import { SaveIntegrityError } from "../persist/save_load.js";
+import { SaveIntegrityError, type SaveSourceRef } from "../persist/save_load.js";
 import type { Trace } from "../trace/record.js";
 import {
   assertOverworldIntegrity,
@@ -47,6 +47,7 @@ export type GameSourceArgs = {
 export type SaveWorldSource = {
   worldQuestId?: unknown;
   generatedRpgSeed?: unknown;
+  source_ref?: unknown;
 };
 
 export type TracePackSource = {
@@ -360,30 +361,97 @@ export function traceWorldQuestId(trace: Trace, operation: string): string | und
 }
 
 export function saveWorldQuestId(bundle: SaveWorldSource, operation: string): string | undefined {
+  const sourceRef = saveSourceRef(bundle, operation);
   const raw = bundle.worldQuestId;
-  if (raw === undefined) return undefined;
-  if (typeof raw !== "string") {
+  let worldQuestId: string | undefined;
+  if (raw !== undefined && typeof raw !== "string") {
     throw new SaveIntegrityError(
       `${operation} save worldQuestId must be a string when present, got ${JSON.stringify(raw)}.`,
     );
   }
-  return raw;
+  if (typeof raw === "string") worldQuestId = raw;
+
+  if (sourceRef?.[0] === "wq") {
+    if (worldQuestId !== undefined && worldQuestId !== sourceRef[1]) {
+      throw new SaveIntegrityError(
+        `Save source_ref world quest ${JSON.stringify(
+          sourceRef[1],
+        )} does not match worldQuestId ${JSON.stringify(worldQuestId)}.`,
+      );
+    }
+    worldQuestId = sourceRef[1];
+  } else if (sourceRef !== undefined && worldQuestId !== undefined) {
+    throw new SaveIntegrityError("Save source_ref conflicts with worldQuestId.");
+  }
+
+  return worldQuestId;
 }
 
 export function saveGeneratedRpgSeed(
   bundle: SaveWorldSource,
   operation: string,
 ): number | undefined {
+  const sourceRef = saveSourceRef(bundle, operation);
   const raw = bundle.generatedRpgSeed;
-  if (raw === undefined) return undefined;
-  if (typeof raw !== "number" || !Number.isInteger(raw)) {
+  let generatedRpgSeed: number | undefined;
+  if (raw !== undefined && (typeof raw !== "number" || !Number.isInteger(raw))) {
     throw new SaveIntegrityError(
       `${operation} save generatedRpgSeed must be an integer when present, got ${JSON.stringify(
         raw,
       )}.`,
     );
   }
-  return raw;
+  if (typeof raw === "number") generatedRpgSeed = raw;
+
+  if (sourceRef?.[0] === "gen") {
+    if (generatedRpgSeed !== undefined && generatedRpgSeed !== sourceRef[1]) {
+      throw new SaveIntegrityError(
+        `Save source_ref generated seed ${JSON.stringify(
+          sourceRef[1],
+        )} does not match generatedRpgSeed ${JSON.stringify(generatedRpgSeed)}.`,
+      );
+    }
+    generatedRpgSeed = sourceRef[1];
+  } else if (sourceRef !== undefined && generatedRpgSeed !== undefined) {
+    throw new SaveIntegrityError("Save source_ref conflicts with generatedRpgSeed.");
+  }
+
+  return generatedRpgSeed;
+}
+
+function saveSourceRef(bundle: SaveWorldSource, operation: string): SaveSourceRef | undefined {
+  const sourceRef = bundle.source_ref;
+  if (sourceRef === undefined) return undefined;
+  if (!Array.isArray(sourceRef) || sourceRef.length !== 2) {
+    throw new SaveIntegrityError(
+      `${operation} save source_ref must be a compact tuple when present.`,
+    );
+  }
+  if (sourceRef[0] === "wq") {
+    if (typeof sourceRef[1] !== "string") {
+      throw new SaveIntegrityError(`${operation} save source_ref world quest id must be a string.`);
+    }
+    return sourceRef as SaveSourceRef;
+  }
+  if (sourceRef[0] === "gen") {
+    if (typeof sourceRef[1] !== "number" || !Number.isInteger(sourceRef[1])) {
+      throw new SaveIntegrityError(
+        `${operation} save source_ref generated seed must be an integer.`,
+      );
+    }
+    return sourceRef as SaveSourceRef;
+  }
+  if (sourceRef[0] === "pack") {
+    if (typeof sourceRef[1] !== "string") {
+      throw new SaveIntegrityError(`${operation} save source_ref pack id must be a string.`);
+    }
+    return sourceRef as SaveSourceRef;
+  }
+  throw new SaveIntegrityError(
+    `${operation} save source_ref tag must be "wq", "gen", or "pack", got ${JSON.stringify(
+      sourceRef[0],
+    )}.`,
+  );
 }
 
 function resolveEmbeddedPackSource(

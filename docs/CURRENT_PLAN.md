@@ -45,6 +45,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Shipped quest traces can replay/inspect through `world_quest_id`, and
   `inspect_trace` summaries identify that world quest plus hashes without echoing
   public `pack_id`.
+- Saved games now carry compact `source_ref` tuples for world quest, generated
+  seed, or legacy pack fallback identity, so load source resolution can use the
+  same compact source shape as traces.
 - Recorded traces now carry compact `source_ref` tuples for world quest,
   generated seed, or legacy pack fallback identity; replay/inspect CLIs print the
   canonical source instead of leading with `pack_id`.

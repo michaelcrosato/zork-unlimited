@@ -27,6 +27,7 @@ describe("save / load (§8.7)", () => {
     expect(hashState(loaded.state)).toBe(hashState(s));
     expect(loaded.packId).toBe(MICRO_PACK_ID);
     expect(loaded.mode).toBe(SAVE_MODE);
+    expect(loaded.source_ref).toEqual(["pack", MICRO_PACK_ID]);
   });
 
   it("rejects a content-hash mismatch as a hard error", () => {
@@ -43,7 +44,18 @@ describe("save / load (§8.7)", () => {
     const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH, SAVE_MODE, {
       worldQuestId: "sunken_barrow",
     });
-    expect(load(bytes, MICRO_CONTENT_HASH).worldQuestId).toBe("sunken_barrow");
+    const loaded = load(bytes, MICRO_CONTENT_HASH);
+    expect(loaded.worldQuestId).toBe("sunken_barrow");
+    expect(loaded.source_ref).toEqual(["wq", "sunken_barrow"]);
+  });
+
+  it("round-trips optional generated RPG identity", () => {
+    const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH, SAVE_MODE, {
+      generatedRpgSeed: 3,
+    });
+    const loaded = load(bytes, MICRO_CONTENT_HASH);
+    expect(loaded.generatedRpgSeed).toBe(3);
+    expect(loaded.source_ref).toEqual(["gen", 3]);
   });
 
   it("rejects saves that omit the RPG mode", () => {
@@ -70,6 +82,24 @@ describe("save / load (§8.7)", () => {
     bundle.worldQuestId = null;
     expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
     expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(/worldQuestId/);
+  });
+
+  it("rejects conflicting compact save source identity", () => {
+    const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH, SAVE_MODE, {
+      worldQuestId: "sunken_barrow",
+    });
+    const bundle = JSON.parse(bytes) as Record<string, unknown>;
+    bundle.source_ref = ["wq", "cold_forge"];
+    expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
+    expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(/source_ref/);
+  });
+
+  it("rejects malformed compact save source identity", () => {
+    const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH);
+    const bundle = JSON.parse(bytes) as Record<string, unknown>;
+    bundle.source_ref = ["gen", 3.5];
+    expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
+    expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(/source_ref/);
   });
 
   it("rejects attempts to write a non-RPG mode", () => {

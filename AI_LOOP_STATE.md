@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 272 -->
+<!-- historical_cycle_count: 273 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - compact_save_source_refs
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/persistence surface: saved games now carry compact `source_ref` tuples for world quest, generated seed, or legacy pack fallback identity.
+- Loop effect: save/load source resolution can recover canonical source identity from compact tuples while preserving `worldQuestId`/`generatedRpgSeed` compatibility.
+- Guard: focused typecheck plus save/trace, source-resolution, MCP save/load, generated-save, and referential-integrity tests passed over compact save source refs.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - compact_trace_source_refs
 
