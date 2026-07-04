@@ -39,7 +39,6 @@ describe("stale reactive room-item audit", () => {
     expect(sites).toEqual([
       {
         packPath: "fixture.yaml",
-        packId: "audit_fixture",
         roomId: "room",
         objectId: "lamp",
         objectName: "brass lamp",
@@ -47,6 +46,7 @@ describe("stale reactive room-item audit", () => {
       },
     ]);
     expect(sites[0]).not.toHaveProperty("mode");
+    expect(sites[0]).not.toHaveProperty("packId");
   });
 
   it("suppresses the site when a room variant reads whether the item has been taken", () => {

@@ -19,7 +19,6 @@ type WinCondition = RpgPack["win_conditions"][number];
 
 export type StaleReactiveRoomItemSite = {
   packPath: string;
-  packId: string;
   roomId: string;
   objectId: string;
   objectName: string;
@@ -65,7 +64,6 @@ export function auditRpgPackForStaleRoomItems(
       if (!matchedTerm) continue;
       sites.push({
         packPath,
-        packId: pack.meta.id,
         roomId: room.id,
         objectId,
         objectName: object.name,

@@ -103,7 +103,8 @@ Make discovered overworld quest leads start real RPG sessions.
   raw pack path fields; the loop's catalog axis is the world quest id plus
   playable/validator status.
 - The stale-reactive room-item audit now scans the single RPG pack directory
-  directly and emits no constant mode field in its loop-facing site payloads.
+  directly and emits no constant mode or pack-id fields in loop-facing site
+  payloads.
 - AFK `latest-cycle.json` and automatic loop-state appends now carry compact
   recommendation ids/categories instead of repeating full titles and rationales.
 - AFK `latest-cycle.json` now omits the derived run directory; run artifacts
