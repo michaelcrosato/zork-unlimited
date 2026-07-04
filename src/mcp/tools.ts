@@ -133,6 +133,11 @@ type PackLoadCacheEntry = {
   result: LoadResult;
 };
 
+type GeneratedRpgCacheEntry = {
+  compiled: CompiledRpgPack;
+  report: ValidationReport;
+};
+
 type WorldQuestSourceEntry = {
   path: string;
   id: string;
@@ -929,6 +934,7 @@ export function createToolApi(opts: { root: string }) {
   const root = opts.root;
   const sessions = new SessionStore();
   const packLoadCache = new Map<string, PackLoadCacheEntry>();
+  const generatedRpgCache = new Map<number, GeneratedRpgCacheEntry>();
   let overworldCounter = 0;
   const overworldSessions = new Map<string, OverworldSession>();
 
@@ -983,20 +989,29 @@ export function createToolApi(opts: { root: string }) {
     return lr.compiled;
   }
 
+  function generatedRpg(seed: number): GeneratedRpgCacheEntry {
+    const cached = generatedRpgCache.get(seed);
+    if (cached) return cached;
+    const pack = generateRpgPack(seed); // mints + schema self-check (throws on malformed emission)
+    const report = validateRpg(pack);
+    const entry = { compiled: { pack, contentHash: hashState(pack) }, report };
+    generatedRpgCache.set(seed, entry);
+    return entry;
+  }
+
   /**
    * Mint a fresh RPG pack from a seed and refuse to play it unless it clears the SAME
    * `validateRpg` gate the curated RPG packs clear. This is the only public MCP
    * generation route.
    */
   function requireGeneratedRpgPlayable(seed: number): CompiledRpgPack {
-    const pack = generateRpgPack(seed); // mints + schema self-check (throws on malformed emission)
-    const report = validateRpg(pack);
+    const { compiled, report } = generatedRpg(seed);
     if (!report.ok) {
       throw new Error(
         `Generated RPG pack (seed ${seed}) is not playable:\n${formatReport(report)}`,
       );
     }
-    return { pack, contentHash: hashState(pack) };
+    return compiled;
   }
 
   function legalActionsFor(s: Session): RpgActionOption[] {
@@ -1692,11 +1707,13 @@ export function createToolApi(opts: { root: string }) {
       ending_count: number;
       report: ValidationReport;
     } {
-      const pack = generateRpgPack(args.seed);
-      const report = validateRpg(pack);
+      const {
+        compiled: { pack, contentHash },
+        report,
+      } = generatedRpg(args.seed);
       return {
         ok: report.ok,
-        content_hash: hashState(pack),
+        content_hash: contentHash,
         seed: args.seed,
         meta: pack.meta,
         room_count: pack.rooms.length,

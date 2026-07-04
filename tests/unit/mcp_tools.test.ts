@@ -347,6 +347,23 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(second.report).toBe(first.report);
   });
 
+  it("reuses generated RPG packs by seed inside one MCP API instance", () => {
+    const a = api();
+    const preview = a.generate_rpg_pack({ seed: 7 });
+    const first = a.new_game({ generate_rpg_seed: 7 });
+    const second = a.new_game({ generate_rpg_seed: 7 });
+    const other = a.new_game({ generate_rpg_seed: 8 });
+    const firstSession = a.sessions.get(first.session_id);
+    const secondSession = a.sessions.get(second.session_id);
+    const otherSession = a.sessions.get(other.session_id);
+
+    expect(preview.ok).toBe(true);
+    expect(first.generated_rpg_seed).toBe(7);
+    expect(firstSession.contentHash).toBe(preview.content_hash);
+    expect(secondSession.index.pack).toBe(firstSession.index.pack);
+    expect(otherSession.index.pack).not.toBe(firstSession.index.pack);
+  });
+
   it("lists the New York overworld as a start town plus weighted roads", () => {
     const a = api();
     const r = a.list_overworld();
