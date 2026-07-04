@@ -5,12 +5,16 @@ import type {
   OverworldView,
   TravelLogEntry,
 } from "./session.js";
+import { compactText } from "../core/compact_text.js";
 
 export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
 export const OVERWORLD_COMPACT_ROUTE_LIMIT = 8;
 export const OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT = 5;
 export const OVERWORLD_COMPACT_ID_LIST_LIMIT = 16;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 4 as const;
+export const OVERWORLD_COMPACT_LABEL_CHAR_LIMIT = 96;
+export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
+export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 5 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactQuestRef = readonly [id: string, title: string];
@@ -164,12 +168,34 @@ export type OverworldCompactView = {
   ids: OverworldCompactIdMap;
 };
 
-function ref(value: { id: string; name: string }): OverworldCompactRef {
-  return [value.id, value.name];
+export function compactOverworldLabel(value: string): string {
+  return compactText(value, OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
 }
 
-function titledRef(value: { id: string; title: string }): OverworldCompactRef {
-  return [value.id, value.title];
+export function compactOverworldTitle(value: string): string {
+  return compactText(value, OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
+}
+
+export function compactOverworldRisk(value: string): string {
+  return compactText(value, OVERWORLD_COMPACT_RISK_CHAR_LIMIT);
+}
+
+export function compactOverworldRef(value: { id: string; name: string }): OverworldCompactRef {
+  return [value.id, compactOverworldLabel(value.name)];
+}
+
+export function compactOverworldTitleRef(value: {
+  id: string;
+  title: string;
+}): OverworldCompactRef {
+  return [value.id, compactOverworldTitle(value.title)];
+}
+
+export function compactOverworldQuestRef(value: {
+  id: string;
+  title: string;
+}): OverworldCompactQuestRef {
+  return [value.id, compactOverworldTitle(value.title)];
 }
 
 export function compactRouteOption(plan: OverworldSessionRoutePlan): OverworldCompactRouteOption {
@@ -201,7 +227,7 @@ export function compactPendingRoad(
   return {
     id: encounter.id,
     edge: encounter.edgeId,
-    event: [encounter.event.id, encounter.event.risk],
+    event: [encounter.event.id, compactOverworldRisk(encounter.event.risk)],
     options,
   };
 }
@@ -381,15 +407,15 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const areaRoutes = view.areaExits.map(
     (exit) => [exit.id, exit.destination.id, exit.travel_minutes] as const,
   );
-  const jobs = view.jobs.map(titledRef);
-  const sites = view.sites.map(titledRef);
-  const quests = view.quests.map((quest) => [quest.id, quest.title] as const);
+  const jobs = view.jobs.map(compactOverworldTitleRef);
+  const sites = view.sites.map(compactOverworldTitleRef);
+  const quests = view.quests.map(compactOverworldQuestRef);
   const journal = view.journal
     .slice(0, OVERWORLD_COMPACT_JOURNAL_LIMIT)
-    .map((entry) => [entry.kind, entry.title, entry.recordedAt] as const);
-  const renown = Object.entries(view.regionRenown).sort(([left], [right]) =>
-    left.localeCompare(right),
-  );
+    .map((entry) => [entry.kind, compactOverworldTitle(entry.title), entry.recordedAt] as const);
+  const renown = Object.entries(view.regionRenown)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([region, value]) => [compactOverworldLabel(region), value] as const);
   const completedArcs = view.completedRegionalArcIds;
   const idPayload = compactIdPayload({
     discovered_towns: view.discovered.map((town) => town.id),
@@ -410,14 +436,14 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   );
   return {
     v: OVERWORLD_COMPACT_VIEW_VERSION,
-    world: view.world,
+    world: compactOverworldLabel(view.world),
     time: view.timeLabel,
     here: [
       view.current.id,
-      view.current.name,
-      view.current.region,
+      compactOverworldLabel(view.current.name),
+      compactOverworldLabel(view.current.region),
       view.currentArea?.id ?? null,
-      view.currentArea?.name ?? null,
+      view.currentArea ? compactOverworldLabel(view.currentArea.name) : null,
     ],
     vitals: [view.supplies, view.maxSupplies, view.fatigue, view.travelCondition],
     hidden: [
@@ -441,10 +467,10 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     ...(view.routeOptions.length > routeOptions.length
       ? { route_options_truncated: true as const }
       : {}),
-    areas: view.areas.map(ref),
-    poi: view.pois.map(titledRef),
-    contacts: view.characters.map((character) => [character.id, character.name]),
-    events: view.events.map(titledRef),
+    areas: view.areas.map(compactOverworldRef),
+    poi: view.pois.map(compactOverworldTitleRef),
+    contacts: view.characters.map(compactOverworldRef),
+    events: view.events.map(compactOverworldTitleRef),
     ...(jobs.length > 0 ? { jobs } : {}),
     ...(sites.length > 0 ? { sites } : {}),
     ...(quests.length > 0 ? { quests } : {}),

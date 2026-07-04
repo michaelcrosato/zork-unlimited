@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { parseOverworldManifest } from "../../src/world/overworld.js";
-import { compactOverworldView } from "../../src/world/compact_view.js";
+import {
+  OVERWORLD_COMPACT_LABEL_CHAR_LIMIT,
+  OVERWORLD_COMPACT_RISK_CHAR_LIMIT,
+  OVERWORLD_COMPACT_TITLE_CHAR_LIMIT,
+  compactOverworldView,
+} from "../../src/world/compact_view.js";
 import { OverworldSession } from "../../ui/src/overworld.js";
 
 const world = parseOverworldManifest(
@@ -399,7 +404,7 @@ describe("OverworldSession", () => {
     expect(view.discovered.length).toBeGreaterThan(24);
     const compact = compactOverworldView(view);
     expect(session.compactView()).toEqual(compact);
-    expect(compact.v).toBe(4);
+    expect(compact.v).toBe(5);
     expect(compact.hidden).toEqual([
       view.hiddenAreaCount,
       view.hiddenJobCount,
@@ -418,6 +423,72 @@ describe("OverworldSession", () => {
     if (view.resolvedEventIds.length === 0) {
       expect("resolved_events" in compact.ids).toBe(false);
     }
+  });
+
+  it("caps compact context labels, titles, and risk text", () => {
+    const session = new OverworldSession(world);
+    const road = session.view().exits.find((exit) => exit.destination.id === "colonie_town");
+    expect(road).toBeDefined();
+    session.travel(road!.id);
+
+    const view = session.view();
+    expect(view.pendingRoadEncounter).toBeDefined();
+    expect(view.currentArea).toBeDefined();
+    expect(view.areas[0]).toBeDefined();
+    expect(view.pois[0]).toBeDefined();
+    expect(view.characters[0]).toBeDefined();
+    expect(view.events[0]).toBeDefined();
+    const longLabel = "label ".repeat(40);
+    const longTitle = "title ".repeat(60);
+    const longRisk = "risk ".repeat(70);
+
+    const pendingRoadEncounter = view.pendingRoadEncounter!;
+    const compact = compactOverworldView({
+      ...view,
+      world: longLabel,
+      current: { ...view.current, name: longLabel, region: longLabel },
+      currentArea: view.currentArea ? { ...view.currentArea, name: longLabel } : null,
+      areas: view.areas.map((area, index) => (index === 0 ? { ...area, name: longLabel } : area)),
+      pois: view.pois.map((poi, index) => (index === 0 ? { ...poi, title: longTitle } : poi)),
+      characters: view.characters.map((character, index) =>
+        index === 0 ? { ...character, name: longLabel } : character,
+      ),
+      events: view.events.map((event, index) =>
+        index === 0 ? { ...event, title: longTitle } : event,
+      ),
+      journal: [
+        {
+          id: "synthetic_long_title",
+          kind: "event",
+          town: view.current.id,
+          title: longTitle,
+          text: "Synthetic compact-title boundary row.",
+          recordedAt: view.timeLabel,
+        },
+        ...view.journal,
+      ],
+      pendingRoadEncounter: {
+        ...pendingRoadEncounter,
+        event: {
+          ...pendingRoadEncounter.event,
+          risk: longRisk as typeof pendingRoadEncounter.event.risk,
+        },
+      },
+      regionRenown: { [longLabel]: 7 },
+    });
+
+    expect(compact.world).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
+    expect(compact.here[1]).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
+    expect(compact.here[2]).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
+    expect(compact.here[4]).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
+    expect(compact.areas[0]?.[1]).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
+    expect(compact.contacts[0]?.[1]).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
+    expect(compact.poi[0]?.[1]).toHaveLength(OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
+    expect(compact.events[0]?.[1]).toHaveLength(OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
+    expect(compact.journal?.[0]?.[1]).toHaveLength(OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
+    expect(compact.pending_road?.event[1]).toHaveLength(OVERWORLD_COMPACT_RISK_CHAR_LIMIT);
+    expect(compact.renown?.[0]?.[0]).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
+    expect(compact.world).toMatch(/\.\.\.\(\+\d+ chars\)$/);
   });
 
   it("adds deterministic travel delay when fatigue or supply shortage catches up", () => {

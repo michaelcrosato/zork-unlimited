@@ -37,6 +37,11 @@ import {
   OVERWORLD_COMPACT_VIEW_VERSION,
   compactIdPayloadFromBuckets,
   cloneOverworldCompactView,
+  compactOverworldLabel,
+  compactOverworldQuestRef,
+  compactOverworldRef,
+  compactOverworldTitle,
+  compactOverworldTitleRef,
   compactPendingRoad,
   compactRouteOption,
   compactTravelLogEntry,
@@ -4083,12 +4088,13 @@ export class OverworldSession {
     });
     const exits = this.roadsFrom(this.currentId);
     const jobs: OverworldCompactRef[] = [];
-    for (const job of this.discoveredJobsInCurrentArea()) jobs.push([job.id, job.title]);
+    for (const job of this.discoveredJobsInCurrentArea()) jobs.push(compactOverworldTitleRef(job));
     const sites: OverworldCompactRef[] = [];
-    for (const site of this.discoveredSitesInCurrentArea()) sites.push([site.id, site.title]);
+    for (const site of this.discoveredSitesInCurrentArea())
+      sites.push(compactOverworldTitleRef(site));
     const quests: OverworldCompactQuestRef[] = [];
     for (const quest of this.discoveredQuestsAt(this.currentId)) {
-      quests.push([quest.id, quest.title]);
+      quests.push(compactOverworldQuestRef(quest));
     }
     const pendingRoad = compactPendingRoad(this.pendingRoadEncounter);
     const journal: OverworldCompactJournalEntry[] = [];
@@ -4098,7 +4104,7 @@ export class OverworldSession {
       index += 1
     ) {
       const entry = this.journalEntries[index]!;
-      journal.push([entry.kind, entry.title, entry.recordedAt]);
+      journal.push([entry.kind, compactOverworldTitle(entry.title), entry.recordedAt]);
     }
     const travelLog: OverworldCompactTravelLogEntry[] = [];
     for (
@@ -4108,7 +4114,9 @@ export class OverworldSession {
     ) {
       travelLog.push(compactTravelLogEntry(this.travelLog[index]!));
     }
-    const renown = sortedNumberMap(this.regionRenown);
+    const renown = sortedNumberMap(this.regionRenown).map(
+      ([region, value]) => [compactOverworldLabel(region), value] as const,
+    );
     const completedArcs = sortedStringSet(this.completedRegionalArcIds);
     const roads: OverworldCompactRoad[] = [];
     for (const exit of exits) {
@@ -4122,25 +4130,26 @@ export class OverworldSession {
       ]);
     }
     const areas: OverworldCompactRef[] = [];
-    for (const area of this.discoveredAreasAt(this.currentId)) areas.push([area.id, area.name]);
+    for (const area of this.discoveredAreasAt(this.currentId))
+      areas.push(compactOverworldRef(area));
     const poi: OverworldCompactRef[] = [];
-    for (const point of this.currentAreaPois()) poi.push([point.id, point.title]);
+    for (const point of this.currentAreaPois()) poi.push(compactOverworldTitleRef(point));
     const contacts: OverworldCompactRef[] = [];
     for (const character of this.currentAreaCharacters())
-      contacts.push([character.id, character.name]);
+      contacts.push(compactOverworldRef(character));
     const events: OverworldCompactRef[] = [];
-    for (const event of this.currentAreaEvents()) events.push([event.id, event.title]);
+    for (const event of this.currentAreaEvents()) events.push(compactOverworldTitleRef(event));
 
     return {
       v: OVERWORLD_COMPACT_VIEW_VERSION,
-      world: this.world.name,
+      world: compactOverworldLabel(this.world.name),
       time: timeLabel(this.minutes),
       here: [
         current.id,
-        current.name,
-        current.region,
+        compactOverworldLabel(current.name),
+        compactOverworldLabel(current.region),
         currentArea?.id ?? null,
-        currentArea?.name ?? null,
+        currentArea ? compactOverworldLabel(currentArea.name) : null,
       ],
       vitals: [
         this.supplies,
