@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 282 -->
+<!-- historical_cycle_count: 283 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - shared_mcp_hash_only_responses
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: MCP RPG state-hash unchanged/rejection, transcript unchanged, and overworld snapshot unchanged/rejection replies now construct through shared helpers.
+- Loop effect: compact polling and stale-write responses keep one token-small shape across observation, action menu, transcript, save, step, and overworld handlers.
+- Guard: focused Prettier, typecheck, MCP tool, and MCP server-registration tests passed over the shared hash-only response path.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - shared_session_projection_cache
 

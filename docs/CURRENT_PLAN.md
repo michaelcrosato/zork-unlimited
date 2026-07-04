@@ -126,6 +126,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - MCP session projections for compact action rows, observations, transcript
   summaries, and transcript rows now share one cache helper plus centralized
   state/transcript invalidation rules.
+- MCP hash-only unchanged and stale-hash rejection replies now share helper
+  constructors across RPG state polling, transcript polling, save/step guards,
+  and overworld snapshot polling.
 - Compact overworld MCP reads/actions now call `OverworldSession.compactView()`
   directly, avoiding full view construction before capped context projection.
 - `step_action` accepts `expected_state_hash` and rejects stale action menus

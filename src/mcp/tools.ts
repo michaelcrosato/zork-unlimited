@@ -304,10 +304,11 @@ type RpgObservationPayload<Args extends RpgResponseOptions> = {
   state_hash: string;
 } & RpgViewField<Args>;
 
-type RpgObservationUnchanged = {
+type RpgStateUnchanged = {
   state_hash: string;
   unchanged: true;
 };
+type RpgObservationUnchanged = RpgStateUnchanged;
 
 type RpgObservationResponse<Args extends RpgResponseOptions> = Args extends {
   if_state_hash: string;
@@ -333,10 +334,7 @@ type RpgLegalActionsPayload<Args extends RpgLegalActionsArgs> = {
   state_hash: string;
 };
 
-type RpgLegalActionsUnchanged = {
-  state_hash: string;
-  unchanged: true;
-};
+type RpgLegalActionsUnchanged = RpgStateUnchanged;
 
 type RpgLegalActionsResponse<Args extends RpgLegalActionsArgs> = Args extends {
   if_state_hash: string;
@@ -360,11 +358,12 @@ type RpgStepActionBase<Args extends RpgResponseOptions> = {
 } & RpgStepEventVersion<Args> &
   RpgViewField<Args>;
 
-type RpgStepGuardRejection = {
+type RpgStateHashRejection = {
   ok: false;
   state_hash: string;
   rejection_reason: string;
 };
+type RpgStepGuardRejection = RpgStateHashRejection;
 
 type RpgStepResponseOptions = RpgResponseOptions & { expected_state_hash?: string };
 
@@ -505,6 +504,10 @@ const TRANSCRIPT_SUMMARY_PROJECTION_COMPACT = "compact-summary:v1";
 const OBSERVATION_PROJECTION_COMPACT = `compact-observation:v${RPG_COMPACT_OBSERVATION_VERSION}`;
 const OBSERVATION_PROJECTION_PUBLIC = "public-observation:v1";
 const LEGAL_ACTION_ROWS_PROJECTION = "legal-action-rows:v1";
+const RPG_STATE_HASH_MISMATCH_REASON =
+  "State hash mismatch; refresh the current observation or action menu.";
+const OVERWORLD_SNAPSHOT_HASH_MISMATCH_REASON =
+  "Snapshot hash mismatch; refresh the current overworld context.";
 
 type RpgGetStateArgs = {
   session_id: string;
@@ -532,11 +535,7 @@ type RpgSaveSuccess = {
   state_hash: string;
 } & RpgSourceFields;
 
-type RpgSaveRejection = {
-  ok: false;
-  state_hash: string;
-  rejection_reason: string;
-};
+type RpgSaveRejection = RpgStateHashRejection;
 
 type RpgSaveResponse<Args extends RpgSaveArgs> = Args extends { expected_state_hash: string }
   ? RpgSaveSuccess | RpgSaveRejection
@@ -584,6 +583,44 @@ type OverworldContextResponse<Args extends OverworldReadArgs> = Args extends {
 }
   ? OverworldContextPayload | OverworldReadUnchanged
   : OverworldContextPayload;
+
+function rpgStateUnchanged(stateHash: string): RpgStateUnchanged {
+  return {
+    state_hash: stateHash,
+    unchanged: true,
+  };
+}
+
+function rpgStateHashRejection(stateHash: string): RpgStateHashRejection {
+  return {
+    ok: false,
+    state_hash: stateHash,
+    rejection_reason: RPG_STATE_HASH_MISMATCH_REASON,
+  };
+}
+
+function transcriptUnchanged(stateHash: string, transcriptHash: string): TranscriptUnchanged {
+  return {
+    state_hash: stateHash,
+    transcript_hash: transcriptHash,
+    unchanged: true,
+  };
+}
+
+function overworldReadUnchanged(snapshotHash: string): OverworldReadUnchanged {
+  return {
+    snapshot_hash: snapshotHash,
+    unchanged: true,
+  };
+}
+
+function overworldSnapshotHashRejection(snapshotHash: string): OverworldRejectedSessionPayload {
+  return {
+    ok: false,
+    snapshot_hash: snapshotHash,
+    rejection_reason: OVERWORLD_SNAPSHOT_HASH_MISMATCH_REASON,
+  };
+}
 
 function indexFor(pack: CompiledRpgPack["pack"]): RpgIndex {
   return indexRpgPack(pack);
@@ -1215,15 +1252,6 @@ export function createToolApi(opts: { root: string }) {
     return session.snapshotHash();
   }
 
-  function overworldSnapshotHashRejection(snapshotHash: string): OverworldRejectedSessionPayload {
-    const reason = "Snapshot hash mismatch; refresh the current overworld context.";
-    return {
-      ok: false,
-      snapshot_hash: snapshotHash,
-      rejection_reason: reason,
-    };
-  }
-
   function overworldViewField<Args extends OverworldResponseOptions>(
     args: Args,
     session: OverworldSession,
@@ -1391,10 +1419,7 @@ export function createToolApi(opts: { root: string }) {
       const session = getOverworldSession(args.session_id);
       const snapshotHash = overworldSnapshotHash(session);
       if (args.if_snapshot_hash !== undefined && args.if_snapshot_hash === snapshotHash) {
-        return {
-          snapshot_hash: snapshotHash,
-          unchanged: true,
-        } as OverworldReadResponse<Args>;
+        return overworldReadUnchanged(snapshotHash) as OverworldReadResponse<Args>;
       }
       return {
         session_id: args.session_id,
@@ -1409,10 +1434,7 @@ export function createToolApi(opts: { root: string }) {
       const session = getOverworldSession(args.session_id);
       const snapshotHash = overworldSnapshotHash(session);
       if (args.if_snapshot_hash !== undefined && args.if_snapshot_hash === snapshotHash) {
-        return {
-          snapshot_hash: snapshotHash,
-          unchanged: true,
-        } as OverworldContextResponse<Args>;
+        return overworldReadUnchanged(snapshotHash) as OverworldContextResponse<Args>;
       }
       return {
         ok: true,
@@ -1431,12 +1453,7 @@ export function createToolApi(opts: { root: string }) {
         args.expected_snapshot_hash !== undefined &&
         args.expected_snapshot_hash !== snapshotHash
       ) {
-        const reason = "Snapshot hash mismatch; refresh the current overworld context.";
-        return {
-          ok: false,
-          snapshot_hash: snapshotHash,
-          rejection_reason: reason,
-        } as OverworldExportResponse<Args>;
+        return overworldSnapshotHashRejection(snapshotHash) as OverworldExportResponse<Args>;
       }
       const snapshot = session.snapshot();
       return {
@@ -1723,10 +1740,7 @@ export function createToolApi(opts: { root: string }) {
       const s = sessions.get(args.session_id);
       const stateHash = s.stateHash;
       if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
-        return {
-          state_hash: stateHash,
-          unchanged: true,
-        } as RpgObservationResponse<Args>;
+        return rpgStateUnchanged(stateHash) as RpgObservationResponse<Args>;
       }
       const obsOpts = {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
@@ -1744,10 +1758,7 @@ export function createToolApi(opts: { root: string }) {
       const s = sessions.get(args.session_id);
       const stateHash = s.stateHash;
       if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
-        return {
-          state_hash: stateHash,
-          unchanged: true,
-        } as RpgLegalActionsResponse<Args>;
+        return rpgStateUnchanged(stateHash) as RpgLegalActionsResponse<Args>;
       }
       const actions = sessions.legalActions(s.id, () => enumerateRpgActions(s.index, s.state));
       return {
@@ -1760,11 +1771,7 @@ export function createToolApi(opts: { root: string }) {
       const s = sessions.get(args.session_id);
       const currentStateHash = s.stateHash;
       if (args.expected_state_hash !== undefined && args.expected_state_hash !== currentStateHash) {
-        return {
-          ok: false,
-          rejection_reason: "State hash mismatch; refresh the current observation or action menu.",
-          state_hash: currentStateHash,
-        } as RpgStepActionResponse<Args>;
+        return rpgStateHashRejection(currentStateHash) as RpgStepActionResponse<Args>;
       }
       const actionOptions = sessions.legalActions(s.id, () =>
         enumerateRpgActions(s.index, s.state),
@@ -1844,18 +1851,10 @@ export function createToolApi(opts: { root: string }) {
         args.if_transcript_hash !== undefined &&
         args.if_transcript_hash === currentTranscriptHash
       ) {
-        return {
-          state_hash: stateHash,
-          transcript_hash: currentTranscriptHash,
-          unchanged: true,
-        } as TranscriptResponse<Args>;
+        return transcriptUnchanged(stateHash, currentTranscriptHash) as TranscriptResponse<Args>;
       }
       if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
-        return {
-          state_hash: stateHash,
-          transcript_hash: currentTranscriptHash,
-          unchanged: true,
-        } as TranscriptResponse<Args>;
+        return transcriptUnchanged(stateHash, currentTranscriptHash) as TranscriptResponse<Args>;
       }
       const summary = sessions.transcriptSummary(s.id, () => ({
         steps: s.transcript.filter((t) => t.action_id !== null).length,
@@ -1894,12 +1893,7 @@ export function createToolApi(opts: { root: string }) {
       const s = sessions.get(args.session_id);
       const stateHash = s.stateHash;
       if (args.expected_state_hash !== undefined && args.expected_state_hash !== stateHash) {
-        const reason = "State hash mismatch; refresh the current observation or action menu.";
-        return {
-          ok: false,
-          state_hash: stateHash,
-          rejection_reason: reason,
-        } as RpgSaveResponse<Args>;
+        return rpgStateHashRejection(stateHash) as RpgSaveResponse<Args>;
       }
       // The save records the pack mode so load can refuse a mode mismatch (§8.7).
       const saveMetadata = {
