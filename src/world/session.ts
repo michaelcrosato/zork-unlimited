@@ -25,8 +25,6 @@ import {
 } from "./local_actions.js";
 import { cloneOverworldCompactView, type OverworldCompactView } from "./compact_view.js";
 import {
-  assertKnownIds,
-  assertUniqueTupleMap,
   idIndex,
   keyedIndex,
   nestedIdIndex,
@@ -53,7 +51,6 @@ import {
 import {
   buildOverworldPendingRoadEncounter,
   resolveOverworldRoadEncounter,
-  restoreOverworldPendingRoadEncounter,
   type OverworldRoadEncounterResult,
 } from "./session_road_encounters.js";
 import {
@@ -61,20 +58,7 @@ import {
   replaceOverworldJournalEntries,
 } from "./session_journal_store.js";
 import { timeLabel } from "./session_journal_codec.js";
-import { assertSnapshotTimeline } from "./session_journal_timeline.js";
-import {
-  assertSnapshotEventResolutionProofs,
-  assertSnapshotRegionalArcCompletionProofs,
-  planOverworldEventResolution,
-} from "./session_event_resolution.js";
-import {
-  assertSnapshotDiscoveredAreaCountReplay,
-  assertSnapshotDiscoveredLocalSourceCountReplay,
-  assertSnapshotDiscoveryLocality,
-  assertSnapshotLocalActionDiscoveryChronology,
-  assertSnapshotLocalActionJournalReachability,
-  localActionJournalReplayIndex,
-} from "./session_local_action_journal.js";
+import { planOverworldEventResolution } from "./session_event_resolution.js";
 import {
   emptyOverworldLocalDiscovery,
   planOverworldLocalDiscovery,
@@ -107,33 +91,10 @@ import {
   type OverworldServiceResult,
 } from "./session_services.js";
 import {
-  assertSnapshotProgressJournalBindings,
-  assertStringSetSubset,
-  type OverworldProgressJournalSourceIndex,
-} from "./session_progress_journal.js";
-import { assertSnapshotRegionRenown } from "./session_region_renown.js";
-import {
   planOverworldAreaExploration,
   planOverworldLocalJobCompletion,
   planOverworldSiteExploration,
 } from "./session_local_actions.js";
-import {
-  assertSnapshotResourceReplay,
-  roadJournalResolutionIndex,
-} from "./session_resource_replay.js";
-import {
-  assertSnapshotCurrentAreaReachability,
-  assertSnapshotCurrentAreaMapExact,
-  assertSnapshotDiscoveredAreaPrefix,
-  assertSnapshotDiscoveredLocalSourcePrefixes,
-  assertSnapshotDiscoveredTownFrontier,
-  assertSnapshotCurrentAreaMapBindings,
-  assertSnapshotCurrentLocationManifestBinding,
-  assertSnapshotCurrentTownReachability,
-  assertSnapshotTravelPathContinuity,
-  assertSnapshotVisitedTownTravelProof,
-} from "./session_snapshot_proofs.js";
-import { snapshotTravelTimelineIndex } from "./session_snapshot_timeline.js";
 import { buildOverworldSessionSnapshot } from "./session_snapshot_builder.js";
 import {
   OverworldSessionSnapshotSchema,
@@ -143,7 +104,6 @@ import {
   type OverworldSessionSnapshot,
   type TravelLogEntry,
 } from "./session_snapshot.js";
-import { restoreOverworldTravelLogEntries } from "./session_travel_log.js";
 import { buildOverworldSessionCompactView } from "./session_compact_view.js";
 import {
   clearOverworldSessionCaches,
@@ -151,6 +111,7 @@ import {
   type OverworldSessionSnapshotCache,
 } from "./session_cache.js";
 import { cloneOverworldView } from "./session_view_clone.js";
+import { planOverworldSessionSnapshotRestore } from "./session_snapshot_restore.js";
 
 export type {
   OverworldRoadEncounterOption,
@@ -492,229 +453,13 @@ export class OverworldSession {
   }
 
   private applySnapshot(snapshot: OverworldSessionSnapshot): void {
-    if (snapshot.worldId !== this.world.id) {
-      throw new Error(
-        `Overworld session snapshot is for world "${snapshot.worldId}", not "${this.world.id}".`,
-      );
-    }
-    if (snapshot.worldHash !== this.worldHash) {
-      throw new Error("Overworld session snapshot was made against a different world manifest.");
-    }
-
-    const indexes = this.snapshotManifestIndex;
-    const travelTimeline = snapshotTravelTimelineIndex(
+    const restorePlan = planOverworldSessionSnapshotRestore({
+      indexes: this.snapshotManifestIndex,
       snapshot,
-      indexes.townNameForSource,
-      this.world.start,
-    );
-
-    assertSnapshotCurrentLocationManifestBinding(snapshot, indexes);
-
-    const discoveredTownIds = assertKnownIds(
-      "discovered town id",
-      snapshot.discoveredIds,
-      indexes.nodeIds,
-    );
-    const visitedTownIds = assertKnownIds("visited town id", snapshot.visitedIds, indexes.nodeIds);
-    const discoveredAreaIds = assertKnownIds(
-      "discovered area id",
-      snapshot.discoveredAreaIds,
-      indexes.areaIds,
-    );
-    const visitedAreaIds = assertKnownIds(
-      "visited area id",
-      snapshot.visitedAreaIds,
-      indexes.areaIds,
-    );
-    const discoveredJobIds = assertKnownIds(
-      "discovered job id",
-      snapshot.discoveredJobIds,
-      indexes.jobIds,
-    );
-    const completedJobIds = assertKnownIds(
-      "completed job id",
-      snapshot.completedJobIds,
-      indexes.jobIds,
-    );
-    const discoveredSiteIds = assertKnownIds(
-      "discovered site id",
-      snapshot.discoveredSiteIds,
-      indexes.siteIds,
-    );
-    const exploredSiteIds = assertKnownIds(
-      "explored site id",
-      snapshot.exploredSiteIds,
-      indexes.siteIds,
-    );
-    const discoveredQuestIds = assertKnownIds(
-      "discovered quest id",
-      snapshot.discoveredQuestIds,
-      indexes.questIds,
-    );
-    const startedQuestIds = assertKnownIds(
-      "started quest id",
-      snapshot.startedQuestIds,
-      indexes.questIds,
-    );
-    const completedQuestIds = assertKnownIds(
-      "completed quest id",
-      snapshot.completedQuestIds,
-      indexes.questIds,
-    );
-    const resolvedEventIds = assertKnownIds(
-      "resolved event id",
-      snapshot.resolvedEventIds,
-      indexes.eventIds,
-    );
-    const completedRegionalArcIds = assertKnownIds(
-      "completed regional arc id",
-      snapshot.completedRegionalArcIds,
-      indexes.arcIds,
-    );
-    const progressStateIds: OverworldProgressJournalSourceIndex = {
-      completedJobIds,
-      completedQuestIds,
-      completedRegionalArcIds,
-      exploredSiteIds,
-      resolvedEventIds,
-      startedQuestIds,
-      visitedAreaIds,
-    };
-    const currentAreaByTown = assertUniqueTupleMap("area-map town", snapshot.currentAreaByTown);
-    const regionRenown = assertUniqueTupleMap("renown region", snapshot.regionRenown);
-    const journalTimeline = assertSnapshotTimeline(snapshot, {
-      ...indexes,
-      travelLogArrivals: travelTimeline.arrivals,
-      travelLogTownByArrival: travelTimeline.townByArrival,
+      startTownId: this.world.start,
+      worldHash: this.worldHash,
+      worldId: this.world.id,
     });
-    const roadJournal = roadJournalResolutionIndex(
-      indexes,
-      journalTimeline,
-      travelTimeline,
-      snapshot.pendingRoadEncounter,
-    );
-    const serviceJournal = journalTimeline.serviceJournal;
-
-    assertSnapshotCurrentTownReachability(snapshot.currentId, discoveredTownIds, visitedTownIds);
-    const townVisitMinutes = assertSnapshotVisitedTownTravelProof(visitedTownIds, travelTimeline);
-    assertSnapshotTravelPathContinuity(snapshot.currentId, this.world.start, travelTimeline);
-    assertSnapshotDiscoveredTownFrontier(
-      discoveredTownIds,
-      indexes.roadExitsByTown,
-      visitedTownIds,
-    );
-    assertStringSetSubset(
-      "visited town id",
-      visitedTownIds,
-      "discovered town ids",
-      discoveredTownIds,
-    );
-    assertStringSetSubset(
-      "visited area id",
-      visitedAreaIds,
-      "discovered area ids",
-      discoveredAreaIds,
-    );
-    assertStringSetSubset(
-      "completed job id",
-      completedJobIds,
-      "discovered job ids",
-      discoveredJobIds,
-    );
-    assertStringSetSubset(
-      "explored site id",
-      exploredSiteIds,
-      "discovered site ids",
-      discoveredSiteIds,
-    );
-    assertSnapshotProgressJournalBindings(progressStateIds, journalTimeline.progressSources);
-    assertSnapshotRegionRenown(
-      regionRenown,
-      progressStateIds,
-      {
-        ...indexes,
-        travelLogByArrival: travelTimeline.byArrival,
-      },
-      roadJournal,
-    );
-    assertSnapshotCurrentAreaReachability(snapshot.currentAreaId, discoveredAreaIds);
-    const localActionJournalSources = {
-      ...indexes,
-      discoveredAreaIds,
-      discoveredJobIds,
-      discoveredQuestIds,
-      discoveredSiteIds,
-      townVisitMinutes,
-      visitedTownIds,
-    };
-    const localActionJournal = localActionJournalReplayIndex(
-      localActionJournalSources,
-      journalTimeline,
-    );
-    assertSnapshotDiscoveredAreaPrefix(indexes.areasByTown, discoveredAreaIds, visitedTownIds);
-    assertSnapshotDiscoveredLocalSourcePrefixes(localActionJournalSources, visitedTownIds);
-    assertSnapshotCurrentAreaMapExact(
-      snapshot.currentId,
-      snapshot.currentAreaId,
-      currentAreaByTown,
-      indexes.areasByTown,
-      visitedTownIds,
-    );
-    assertSnapshotCurrentAreaMapBindings(
-      currentAreaByTown,
-      indexes,
-      visitedTownIds,
-      discoveredAreaIds,
-    );
-    assertSnapshotDiscoveryLocality({
-      ...indexes,
-      completedQuestIds,
-      discoveredAreaIds,
-      discoveredJobIds,
-      discoveredQuestIds,
-      discoveredSiteIds,
-      resolvedEventIds,
-      startedQuestIds,
-      visitedAreaIds,
-      visitedTownIds,
-    });
-    assertSnapshotLocalActionJournalReachability(localActionJournal, localActionJournalSources);
-    assertSnapshotLocalActionDiscoveryChronology(localActionJournal, localActionJournalSources);
-    const eventResolutionJournal = journalTimeline.eventResolutionProofs;
-    assertSnapshotEventResolutionProofs(resolvedEventIds, indexes, eventResolutionJournal);
-    assertSnapshotRegionalArcCompletionProofs(
-      indexes,
-      eventResolutionJournal,
-      completedRegionalArcIds,
-    );
-    assertSnapshotDiscoveredLocalSourceCountReplay(localActionJournalSources, localActionJournal);
-    assertSnapshotDiscoveredAreaCountReplay(localActionJournalSources, localActionJournal);
-    for (const [region] of regionRenown) {
-      if (!indexes.regionNames.has(region)) {
-        throw new Error(`Overworld session snapshot has unknown renown region "${region}".`);
-      }
-    }
-    const restoredPendingRoadEncounter = restoreOverworldPendingRoadEncounter(
-      snapshot.pendingRoadEncounter,
-      {
-        currentId: snapshot.currentId,
-        edgeIds: indexes.edgeIds,
-        edgesById: indexes.edgesById,
-        latestTravel: travelTimeline.latest,
-        minutes: snapshot.minutes,
-        nodesById: this.nodes,
-        roadEventsByEdgeId: this.roadEventsByEdgeId,
-        roadJournal,
-      },
-    );
-    assertSnapshotResourceReplay(
-      snapshot,
-      indexes,
-      travelTimeline,
-      roadJournal,
-      serviceJournal,
-      localActionJournal,
-    );
 
     this.currentId = snapshot.currentId;
     this.currentAreaId = snapshot.currentAreaId;
@@ -724,16 +469,11 @@ export class OverworldSession {
     replaceStringSet(this.discoveredIds, snapshot.discoveredIds);
     replaceStringSet(this.visitedIds, snapshot.visitedIds);
     this.currentAreaByTown.clear();
-    for (const [townId, areaId] of currentAreaByTown) {
+    for (const [townId, areaId] of restorePlan.currentAreaByTown) {
       this.currentAreaByTown.set(townId, areaId);
     }
-    const restoredTravelLog = restoreOverworldTravelLogEntries(snapshot.travelLog, {
-      edgesById: indexes.edgesById,
-      nodesById: this.nodes,
-      roadEventsByEdgeId: this.roadEventsByEdgeId,
-    });
     this.travelLog.length = 0;
-    for (const entry of restoredTravelLog) this.travelLog.push(entry);
+    for (const entry of restorePlan.travelLog) this.travelLog.push(entry);
     replaceOverworldJournalEntries(
       this.journalEntries,
       this.journalEntriesById,
@@ -751,9 +491,9 @@ export class OverworldSession {
     replaceStringSet(this.completedQuestIds, snapshot.completedQuestIds);
     replaceStringSet(this.exploredSiteIds, snapshot.exploredSiteIds);
     this.regionRenown.clear();
-    for (const [region, renown] of regionRenown) this.regionRenown.set(region, renown);
+    for (const [region, renown] of restorePlan.regionRenown) this.regionRenown.set(region, renown);
     replaceStringSet(this.completedRegionalArcIds, snapshot.completedRegionalArcIds);
-    this.pendingRoadEncounter = restoredPendingRoadEncounter;
+    this.pendingRoadEncounter = restorePlan.pendingRoadEncounter;
     this.clearSnapshotCache();
   }
 
