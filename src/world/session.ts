@@ -99,6 +99,13 @@ import {
   localActionJournalReplayIndex,
 } from "./session_local_action_journal.js";
 import {
+  emptyOverworldLocalDiscovery,
+  planOverworldLocalDiscovery,
+  questView,
+  type OverworldLocalDiscoveryResult,
+  type OverworldQuestView,
+} from "./session_local_discovery.js";
+import {
   buildOverworldSnapshotManifestIndex,
   type OverworldSnapshotManifestIndex,
 } from "./session_manifest_index.js";
@@ -158,6 +165,7 @@ export type { OverworldRouteEstimate, OverworldSessionRoutePlan } from "./sessio
 export type { OverworldRoadEncounterResult } from "./session_road_encounters.js";
 export type { OverworldRegionalArcProgress } from "./session_regional_arcs.js";
 export type { OverworldServiceResult } from "./session_services.js";
+export type { OverworldQuestView } from "./session_local_discovery.js";
 export {
   OVERWORLD_SESSION_SAVE_VERSION,
   OverworldSessionSnapshotSchema,
@@ -196,15 +204,6 @@ export type OverworldQuestCompletionResult = {
   endingId: string;
   endingTitle: string;
   entry: OverworldJournalEntry;
-};
-
-export type OverworldQuestView = {
-  id: string;
-  title: string;
-  home: string;
-  area: string;
-  discovery: string;
-  visibility: OverworldQuest["visibility"];
 };
 
 export type OverworldView = {
@@ -251,17 +250,6 @@ export type OverworldView = {
   log: TravelLogEntry[];
 };
 
-function questView(quest: OverworldQuest): OverworldQuestView {
-  return {
-    id: quest.id,
-    title: quest.title,
-    home: quest.home,
-    area: quest.area,
-    discovery: quest.discovery,
-    visibility: quest.visibility,
-  };
-}
-
 export class OverworldSession {
   private readonly nodes: Map<string, OverworldNode>;
   private readonly roadExitsByTown: Map<string, OverworldExit[]>;
@@ -283,7 +271,6 @@ export class OverworldSession {
   private readonly jobsById: Map<string, OverworldLocalJob>;
   private readonly jobsByTown: Map<string, OverworldLocalJob[]>;
   private readonly sitesById: Map<string, OverworldExplorationSite>;
-  private readonly sitesByTown: Map<string, OverworldExplorationSite[]>;
   private readonly sitesByArea: Map<string, OverworldExplorationSite[]>;
   private readonly questsById: Map<string, OverworldQuest>;
   private readonly questsByTown: Map<string, OverworldQuest[]>;
@@ -380,11 +367,6 @@ export class OverworldSession {
         a.difficulty - b.difficulty || a.minutes - b.minutes || a.title.localeCompare(b.title),
     );
     this.sitesById = idIndex(world.exploration_sites);
-    this.sitesByTown = sortedIndex(
-      world.exploration_sites,
-      (site) => site.nearest_town,
-      (a, b) => b.danger - a.danger || a.title.localeCompare(b.title),
-    );
     this.sitesByArea = sortedIndex(
       world.exploration_sites,
       (site) => site.area,
@@ -1122,16 +1104,6 @@ export class OverworldSession {
     }
   }
 
-  private discoverNextAreaForTown(nodeId: string): OverworldArea[] {
-    const area = this.localAreas(nodeId).find(
-      (candidate) => !this.discoveredAreaIds.has(candidate.id),
-    );
-    if (!area) return [];
-    this.discoveredAreaIds.add(area.id);
-    this.clearSnapshotCache();
-    return [area];
-  }
-
   private localJobs(nodeId: string): OverworldLocalJob[] {
     return this.jobsByTown.get(nodeId) ?? [];
   }
@@ -1151,21 +1123,6 @@ export class OverworldSession {
       if (!this.discoveredJobIds.has(job.id)) count += 1;
     }
     return count;
-  }
-
-  private discoverNextJobForTown(nodeId: string): OverworldLocalJob[] {
-    const job = this.localJobs(nodeId).find(
-      (candidate) =>
-        this.discoveredAreaIds.has(candidate.area) && !this.discoveredJobIds.has(candidate.id),
-    );
-    if (!job) return [];
-    this.discoveredJobIds.add(job.id);
-    this.clearSnapshotCache();
-    return [job];
-  }
-
-  private localSites(nodeId: string): OverworldExplorationSite[] {
-    return this.sitesByTown.get(nodeId) ?? [];
   }
 
   private currentAreaSites(): OverworldExplorationSite[] {
@@ -1208,30 +1165,60 @@ export class OverworldSession {
     return count;
   }
 
-  private discoverNextSiteForTown(nodeId: string): OverworldExplorationSite[] {
-    if (nodeId !== this.currentId) return [];
-    const site = this.currentAreaSites().find(
-      (candidate) => !this.discoveredSiteIds.has(candidate.id),
-    );
-    if (!site) return [];
-    this.discoveredSiteIds.add(site.id);
-    this.clearSnapshotCache();
-    return [site];
-  }
-
-  private discoverNextQuestForTown(nodeId: string): OverworldQuestView[] {
-    const quest = this.localQuests(nodeId).find(
-      (candidate) =>
-        this.discoveredAreaIds.has(candidate.area) && !this.discoveredQuestIds.has(candidate.id),
-    );
-    if (!quest) return [];
-    this.discoveredQuestIds.add(quest.id);
-    this.clearSnapshotCache();
-    return [questView(quest)];
-  }
-
   private questAreaName(quest: OverworldQuest): string {
     return this.areaById(quest.area)?.name ?? quest.area;
+  }
+
+  private applyLocalDiscovery(discovery: OverworldLocalDiscoveryResult): void {
+    let changed = false;
+    for (const area of discovery.discoveredAreas) {
+      if (this.discoveredAreaIds.has(area.id)) continue;
+      this.discoveredAreaIds.add(area.id);
+      changed = true;
+    }
+    for (const job of discovery.discoveredJobs) {
+      if (this.discoveredJobIds.has(job.id)) continue;
+      this.discoveredJobIds.add(job.id);
+      changed = true;
+    }
+    for (const site of discovery.discoveredSites) {
+      if (this.discoveredSiteIds.has(site.id)) continue;
+      this.discoveredSiteIds.add(site.id);
+      changed = true;
+    }
+    for (const quest of discovery.discoveredQuests) {
+      if (this.discoveredQuestIds.has(quest.id)) continue;
+      this.discoveredQuestIds.add(quest.id);
+      changed = true;
+    }
+    if (changed) this.clearSnapshotCache();
+  }
+
+  private discoverLocalProgressForTown(nodeId: string): OverworldLocalDiscoveryResult {
+    const discovery = planOverworldLocalDiscovery({
+      townId: nodeId,
+      currentTownId: this.currentId,
+      areasByTown: this.areasByTown,
+      jobsByTown: this.jobsByTown,
+      currentAreaSites: nodeId === this.currentId ? this.currentAreaSites() : [],
+      questsByTown: this.questsByTown,
+      discoveredAreaIds: this.discoveredAreaIds,
+      discoveredJobIds: this.discoveredJobIds,
+      discoveredSiteIds: this.discoveredSiteIds,
+      discoveredQuestIds: this.discoveredQuestIds,
+    });
+    this.applyLocalDiscovery(discovery);
+    return discovery;
+  }
+
+  private withLocalDiscovery(result: OverworldActionResult, nodeId: string): OverworldActionResult {
+    const discovery = result.alreadyKnown
+      ? emptyOverworldLocalDiscovery()
+      : this.discoverLocalProgressForTown(nodeId);
+    return {
+      ...result,
+      ...discovery,
+    };
   }
 
   private routeWithEstimate(plan: OverworldRoutePlan): OverworldSessionRoutePlan {
@@ -1641,13 +1628,7 @@ export class OverworldSession {
       throw new Error("Move to that local area before scouting this point of interest.");
     }
     const result = this.recordLocalAction(describeOverworldPoiAction(poi, current), current.name);
-    return {
-      ...result,
-      discoveredAreas: result.alreadyKnown ? [] : this.discoverNextAreaForTown(current.id),
-      discoveredJobs: result.alreadyKnown ? [] : this.discoverNextJobForTown(current.id),
-      discoveredSites: result.alreadyKnown ? [] : this.discoverNextSiteForTown(current.id),
-      discoveredQuests: result.alreadyKnown ? [] : this.discoverNextQuestForTown(current.id),
-    };
+    return this.withLocalDiscovery(result, current.id);
   }
 
   exploreArea(areaId: string): OverworldActionResult {
@@ -1667,23 +1648,14 @@ export class OverworldSession {
           minutes: 0,
           alreadyKnown: true,
           entry: existing,
-          discoveredAreas: [],
-          discoveredJobs: [],
-          discoveredSites: [],
-          discoveredQuests: [],
+          ...emptyOverworldLocalDiscovery(),
         };
       }
     }
 
     const result = this.recordLocalAction(describeOverworldAreaAction(area), current.name);
     if (!result.alreadyKnown) this.visitedAreaIds.add(area.id);
-    return {
-      ...result,
-      discoveredAreas: result.alreadyKnown ? [] : this.discoverNextAreaForTown(current.id),
-      discoveredJobs: result.alreadyKnown ? [] : this.discoverNextJobForTown(current.id),
-      discoveredSites: result.alreadyKnown ? [] : this.discoverNextSiteForTown(current.id),
-      discoveredQuests: result.alreadyKnown ? [] : this.discoverNextQuestForTown(current.id),
-    };
+    return this.withLocalDiscovery(result, current.id);
   }
 
   moveArea(areaRouteId: string): OverworldAreaTravelResult {
@@ -1726,10 +1698,7 @@ export class OverworldSession {
           minutes: 0,
           alreadyKnown: true,
           entry: existing,
-          discoveredAreas: [],
-          discoveredJobs: [],
-          discoveredSites: [],
-          discoveredQuests: [],
+          ...emptyOverworldLocalDiscovery(),
         };
       }
     }
@@ -1745,13 +1714,7 @@ export class OverworldSession {
       );
       this.clearSnapshotCache();
     }
-    return {
-      ...result,
-      discoveredAreas: result.alreadyKnown ? [] : this.discoverNextAreaForTown(current.id),
-      discoveredJobs: result.alreadyKnown ? [] : this.discoverNextJobForTown(current.id),
-      discoveredSites: result.alreadyKnown ? [] : this.discoverNextSiteForTown(current.id),
-      discoveredQuests: result.alreadyKnown ? [] : this.discoverNextQuestForTown(current.id),
-    };
+    return this.withLocalDiscovery(result, current.id);
   }
 
   talkToCharacter(characterId: string): OverworldActionResult {
@@ -1764,13 +1727,7 @@ export class OverworldSession {
       throw new Error("Move to that local area before talking to that contact.");
     }
     const result = this.recordLocalAction(describeOverworldContactAction(character), current.name);
-    return {
-      ...result,
-      discoveredAreas: result.alreadyKnown ? [] : this.discoverNextAreaForTown(current.id),
-      discoveredJobs: result.alreadyKnown ? [] : this.discoverNextJobForTown(current.id),
-      discoveredSites: result.alreadyKnown ? [] : this.discoverNextSiteForTown(current.id),
-      discoveredQuests: result.alreadyKnown ? [] : this.discoverNextQuestForTown(current.id),
-    };
+    return this.withLocalDiscovery(result, current.id);
   }
 
   investigateEvent(eventId: string): OverworldActionResult {
@@ -1783,13 +1740,7 @@ export class OverworldSession {
       throw new Error("Move to that local area before investigating that event.");
     }
     const result = this.recordLocalAction(describeOverworldEventAction(event), current.name);
-    return {
-      ...result,
-      discoveredAreas: result.alreadyKnown ? [] : this.discoverNextAreaForTown(current.id),
-      discoveredJobs: result.alreadyKnown ? [] : this.discoverNextJobForTown(current.id),
-      discoveredSites: result.alreadyKnown ? [] : this.discoverNextSiteForTown(current.id),
-      discoveredQuests: result.alreadyKnown ? [] : this.discoverNextQuestForTown(current.id),
-    };
+    return this.withLocalDiscovery(result, current.id);
   }
 
   resolveEvent(eventId: string): OverworldActionResult {
@@ -1841,13 +1792,7 @@ export class OverworldSession {
       this.checkRegionalArcCompletion(current.region);
       this.clearSnapshotCache();
     }
-    return {
-      ...result,
-      discoveredAreas: result.alreadyKnown ? [] : this.discoverNextAreaForTown(current.id),
-      discoveredJobs: result.alreadyKnown ? [] : this.discoverNextJobForTown(current.id),
-      discoveredSites: result.alreadyKnown ? [] : this.discoverNextSiteForTown(current.id),
-      discoveredQuests: result.alreadyKnown ? [] : this.discoverNextQuestForTown(current.id),
-    };
+    return this.withLocalDiscovery(result, current.id);
   }
 
   exploreSite(siteId: string): OverworldActionResult {
@@ -1877,13 +1822,7 @@ export class OverworldSession {
       );
       this.clearSnapshotCache();
     }
-    return {
-      ...result,
-      discoveredAreas: result.alreadyKnown ? [] : this.discoverNextAreaForTown(current.id),
-      discoveredJobs: result.alreadyKnown ? [] : this.discoverNextJobForTown(current.id),
-      discoveredSites: result.alreadyKnown ? [] : this.discoverNextSiteForTown(current.id),
-      discoveredQuests: result.alreadyKnown ? [] : this.discoverNextQuestForTown(current.id),
-    };
+    return this.withLocalDiscovery(result, current.id);
   }
 
   restAtTown(): OverworldServiceResult {
