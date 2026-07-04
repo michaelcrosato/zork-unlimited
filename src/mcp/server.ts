@@ -374,10 +374,10 @@ tool(
 
 tool(
   "new_game",
-  "Start a generated RPG quest; returns compact context by default.",
+  "Start generated RPG; compact.",
   {
-    generate_rpg_seed: z.number().int().optional().describe("Procedural RPG seed."),
-    seed: z.number().int().optional().describe("Deterministic runtime seed (default 1)."),
+    generate_rpg_seed: z.number().int().optional().describe("Generated seed."),
+    seed: z.number().int().optional().describe("Runtime seed."),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
@@ -431,50 +431,40 @@ tool(
 );
 tool(
   "get_state",
-  "Return state hash; include_state true returns raw deterministic state.",
+  "State hash; include_state returns raw state.",
   {
     ...SESSION,
-    include_state: z.boolean().optional().describe("Include raw reducer state for debugging."),
+    include_state: z.boolean().optional().describe("Return raw state."),
   },
   (a) => compactMcpState(a),
 );
 tool(
   "get_transcript",
-  "Transcript; hash-only.",
+  "Transcript hash/summary.",
   {
     ...SESSION,
     ...IF_STATE_HASH,
     ...IF_TRANSCRIPT_HASH,
-    summary_only: z.boolean().optional().describe("Default true; omits turns."),
-    compact_summary: z
-      .boolean()
-      .optional()
-      .describe("Default true; false returns full summary lists."),
-    compact_turns: z.boolean().optional().describe("Rows [step,scene,action,result]."),
+    summary_only: z.boolean().optional().describe("Default true; no turns."),
+    compact_summary: z.boolean().optional().describe("Default true; capped lists."),
+    compact_turns: z.boolean().optional().describe("Rows tuple."),
     ...COMPACT_EVENTS,
   },
   (a) => api.get_transcript(defaultCompactTranscript(a)),
 );
 tool(
   "save_game",
-  "Serialize a session to a save string; expected_state_hash rejects stale checkpoints.",
+  "Serialize save; stale hash rejects.",
   { ...SESSION, ...EXPECTED_STATE_HASH },
   (a) => api.save_game(a),
 );
 tool(
   "load_game",
-  "Restore a saved RPG session; returns compact context by default.",
+  "Restore save; compact.",
   {
-    world_quest_id: z
-      .string()
-      .optional()
-      .describe("World quest id; optional when embedded in save."),
-    generate_rpg_seed: z
-      .number()
-      .int()
-      .optional()
-      .describe("Generated RPG seed; optional when embedded in save."),
-    save: z.string().describe("A save string produced by save_game."),
+    world_quest_id: z.string().optional().describe("World quest id."),
+    generate_rpg_seed: z.number().int().optional().describe("Generated seed."),
+    save: z.string().describe("Save string."),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
@@ -486,11 +476,8 @@ tool(
   "replay_trace",
   "Replay an RPG trace and verify its final-state hash.",
   {
-    trace_path: z.string().describe("Project-relative trace JSON path."),
-    world_quest_id: z
-      .string()
-      .optional()
-      .describe("World quest id; optional when embedded in trace."),
+    trace_path: z.string().describe("Trace JSON path."),
+    world_quest_id: z.string().optional().describe("World quest id."),
   },
   (a) => api.replay_trace(a),
 );
@@ -508,11 +495,8 @@ tool(
   "inspect_trace",
   "Summarize an RPG trace with replay diagnostics.",
   {
-    trace_path: z.string().describe("Project-relative trace JSON path."),
-    world_quest_id: z
-      .string()
-      .optional()
-      .describe("World quest id; optional when embedded in trace."),
+    trace_path: z.string().describe("Trace JSON path."),
+    world_quest_id: z.string().optional().describe("World quest id."),
   },
   (a) => api.inspect_trace(a),
 );

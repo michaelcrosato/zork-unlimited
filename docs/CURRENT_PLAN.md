@@ -409,6 +409,9 @@ Make discovered overworld quest leads start real RPG sessions.
   source-size regression.
 - Overworld MCP ToolSearch schema prose now reuses terse shared session/hash
   fields and short action-id descriptions, guarded by a source-size regression.
+- Public RPG utility MCP schema prose for generated starts, state reads,
+  transcripts, saves, loads, and trace helpers is trimmed and guarded by
+  source-size regressions.
 - The verifier negative corpus captures expected bad-ref Git stderr, keeping
   passing test logs free of fatal-looking synthetic failure noise.
 - The no-LLM blind MCP smoke harness is now inside the repo lint/format gates with

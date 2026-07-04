@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 406 -->
+<!-- historical_cycle_count: 407 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - rpg_utility_schema_prose_trimmed
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: public RPG utility MCP schema prose for generated starts, state reads, transcripts, saves, loads, and trace helpers is trimmed and guarded by source-size regressions.
+- Loop effect: generated-game, save/load, transcript, and trace ToolSearch reads spend fewer tokens before agents reach compact RPG payloads.
+- Guard: focused Prettier, MCP registration schema-size regression, and typecheck passed.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused regression, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - overworld_schema_prose_trimmed
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/public surface: world quest discovery no longer stores a discarded internal `mode` field before building the mode-free `list_world` catalog.
 - Loop effect: the world catalog path carries only quest/world identity and playability, avoiding constant single-runtime metadata in the discovery projection.
 - Guard: focused Prettier, typecheck, MCP tools, and RPG schema-standalone tests passed over the catalog cleanup.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - remove_packmode_alias
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/public surface: removed the `PackMode` alias and the `adapt_story` mode parameter from the in-process MCP tool API; stray runtime `mode` input still rejects.
-- Loop effect: MCP and AFK internals now key the single runtime through `SAVE_MODE` or literal RPG-only directory tuples instead of a fake mode selector.
-- Guard: focused Prettier, typecheck, MCP authoring, MCP registration, RPG schema-standalone, and stale-reactive audit tests passed.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.

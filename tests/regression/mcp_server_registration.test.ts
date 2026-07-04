@@ -166,12 +166,14 @@ describe("MCP server registration", () => {
       registeredToolBlock("inspect_trace"),
     ].join("\n");
 
-    expect(restoreTraceSchemaSource.length).toBeLessThanOrEqual(1500);
+    expect(restoreTraceSchemaSource.length).toBeLessThanOrEqual(1200);
     expect(restoreTraceSchemaSource).toContain("world_quest_id");
     expect(restoreTraceSchemaSource).toContain("generate_rpg_seed");
     expect(restoreTraceSchemaSource).not.toContain("list_world().quests[].graph_node");
     expect(restoreTraceSchemaSource).not.toContain("Charter Marches quest graph node id");
     expect(restoreTraceSchemaSource).not.toContain("content-hash + mode");
+    expect(restoreTraceSchemaSource).not.toContain("optional when embedded");
+    expect(restoreTraceSchemaSource).not.toContain("Project-relative trace");
   });
 
   it("keeps authoring and fix ToolSearch schema source terse", () => {
@@ -196,6 +198,22 @@ describe("MCP server registration", () => {
     expect(overworldSchemaSource).not.toContain("Session id returned by start_overworld");
     expect(overworldSchemaSource).not.toContain("returns compact context by default");
     expect(overworldSchemaSource).not.toContain("from the session observation");
+  });
+
+  it("keeps public RPG utility ToolSearch schema source terse", () => {
+    const rpgUtilitySchemaSource = [
+      registeredToolBlock("new_game"),
+      registeredToolBlock("get_state"),
+      registeredToolBlock("get_transcript"),
+      registeredToolBlock("load_game"),
+    ].join("\n");
+
+    expect(rpgUtilitySchemaSource.length).toBeLessThanOrEqual(1400);
+    expect(rpgUtilitySchemaSource).not.toContain("returns compact context by default");
+    expect(rpgUtilitySchemaSource).not.toContain("Deterministic runtime seed");
+    expect(rpgUtilitySchemaSource).not.toContain("Include raw reducer state");
+    expect(rpgUtilitySchemaSource).not.toContain("full summary lists");
+    expect(rpgUtilitySchemaSource).not.toContain("A save string produced");
   });
 
   it("defaults stateful overworld MCP actions to compact context", () => {
@@ -258,8 +276,8 @@ describe("MCP server registration", () => {
     expect(block).toContain("defaultCompactTranscript(a)");
     expect(block).toContain("IF_STATE_HASH");
     expect(block).toContain("IF_TRANSCRIPT_HASH");
-    expect(block).toContain("Default true; omits turns.");
-    expect(block).toContain("Default true; false returns full summary lists.");
+    expect(block).toContain("Default true; no turns.");
+    expect(block).toContain("Default true; capped lists.");
     expect(block).toContain("COMPACT_EVENTS");
     expect(serverSourceBlock("function defaultCompactTranscript", "type McpStateArgs")).toContain(
       "compact_events: true",
@@ -270,7 +288,7 @@ describe("MCP server registration", () => {
     const block = registeredToolBlock("get_state");
     expect(block).toContain("compactMcpState(a)");
     expect(block).toContain("include_state");
-    expect(block).toContain("Return state hash");
+    expect(block).toContain("State hash");
     expect(block).not.toContain("include_state === true");
   });
 
