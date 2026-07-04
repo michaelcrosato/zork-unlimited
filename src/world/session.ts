@@ -49,6 +49,13 @@ import {
   replaceOverworldJournalEntries,
 } from "./session_journal_store.js";
 import { timeLabel } from "./session_journal_codec.js";
+import {
+  recordOverworldAction,
+  recordOverworldLocalAction,
+  recordOverworldRepeatableEntry,
+  type OverworldActionJournalState,
+  type OverworldRecordedActionResult,
+} from "./session_action_recording.js";
 import { planOverworldEventResolution } from "./session_event_resolution.js";
 import {
   emptyOverworldLocalDiscovery,
@@ -419,35 +426,39 @@ export class OverworldSession {
     return this.roadEventsByEdgeId.get(edgeId) ?? null;
   }
 
+  private actionJournalState(): OverworldActionJournalState {
+    return {
+      minutes: this.minutes,
+      journalEntries: this.journalEntries,
+      journalEntriesById: this.journalEntriesById,
+    };
+  }
+
+  private applyRecordedAction(recorded: OverworldRecordedActionResult): OverworldActionResult {
+    this.minutes = recorded.minutesAfter;
+    if (recorded.stateChanged) this.clearSnapshotCache();
+    return {
+      minutes: recorded.minutes,
+      alreadyKnown: recorded.alreadyKnown,
+      entry: recorded.entry,
+    };
+  }
+
   private recordAction(
     entry: Omit<OverworldJournalEntry, "recordedAt">,
     minutes: number,
   ): OverworldActionResult {
-    const existing = this.journalEntriesById.get(entry.id);
-    if (existing) return { minutes: 0, alreadyKnown: true, entry: existing };
-    this.minutes += minutes;
-    const recorded: OverworldJournalEntry = {
-      ...entry,
-      recordedAt: timeLabel(this.minutes),
-    };
-    addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, recorded);
-    this.clearSnapshotCache();
-    return { minutes, alreadyKnown: false, entry: recorded };
+    return this.applyRecordedAction(
+      recordOverworldAction(this.actionJournalState(), entry, minutes),
+    );
   }
 
   private recordLocalAction<Kind extends OverworldLocalActionKind>(
     action: OverworldLocalActionDescriptor<Kind>,
     town: string,
   ): OverworldActionResult {
-    return this.recordAction(
-      {
-        id: action.id,
-        kind: action.kind,
-        town,
-        title: action.title,
-        text: action.text,
-      },
-      action.minutes,
+    return this.applyRecordedAction(
+      recordOverworldLocalAction(this.actionJournalState(), action, town),
     );
   }
 
@@ -455,15 +466,10 @@ export class OverworldSession {
     entry: Omit<OverworldJournalEntry, "recordedAt">,
     minutes: number,
   ): OverworldJournalEntry {
-    this.minutes += minutes;
-    const recorded: OverworldJournalEntry = {
-      ...entry,
-      id: `${entry.id}:${this.minutes}`,
-      recordedAt: timeLabel(this.minutes),
-    };
-    addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, recorded);
+    const recorded = recordOverworldRepeatableEntry(this.actionJournalState(), entry, minutes);
+    this.minutes = recorded.minutesAfter;
     this.clearSnapshotCache();
-    return recorded;
+    return recorded.entry;
   }
 
   private applyServicePlan(plan: OverworldServicePlan): OverworldServiceResult {
