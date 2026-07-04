@@ -1,20 +1,16 @@
 import {
-  OVERWORLD_COMPACT_ROUTE_LIMIT,
-  OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT,
   OVERWORLD_COMPACT_VIEW_VERSION,
+  compactOverworldAreaRoutes,
   compactOverworldJournalEntries,
   compactOverworldLabel,
   compactOverworldQuestRefs,
   compactOverworldRefs,
   compactOverworldRenownEntries,
+  compactOverworldRoads,
+  compactOverworldRouteOptions,
   compactOverworldTitleRefs,
+  compactOverworldTravelLog,
   compactPendingRoad,
-  compactRouteOption,
-  compactTravelLogEntry,
-  type OverworldCompactAreaRoute,
-  type OverworldCompactRoad,
-  type OverworldCompactRouteOption,
-  type OverworldCompactTravelLogEntry,
   type OverworldCompactView,
 } from "./compact_view.js";
 import type {
@@ -77,53 +73,18 @@ export type OverworldSessionCompactViewState = {
 export function buildOverworldSessionCompactView(
   state: OverworldSessionCompactViewState,
 ): OverworldCompactView {
-  const areaRoutes: OverworldCompactAreaRoute[] = [];
-  for (const exit of state.areaExits) {
-    areaRoutes.push([exit.id, exit.destination.id, exit.travel_minutes]);
-  }
-
-  const compactRouteOptions: OverworldCompactRouteOption[] = [];
-  for (
-    let index = 0;
-    index < state.routeOptions.length && index < OVERWORLD_COMPACT_ROUTE_LIMIT;
-    index += 1
-  ) {
-    compactRouteOptions.push(compactRouteOption(state.routeOptions[index]!));
-  }
-
-  const routeByDestination = new Map<string, OverworldSessionRoutePlan>();
-  for (const plan of state.routeOptions) routeByDestination.set(plan.destination.id, plan);
-
+  const areaRoutes = compactOverworldAreaRoutes(state.areaExits);
+  const compactRouteOptions = compactOverworldRouteOptions(state.routeOptions);
   const idPayload = compactOverworldSessionIdPayload(state.ids);
   const jobs = compactOverworldTitleRefs(state.jobs);
   const sites = compactOverworldTitleRefs(state.sites);
   const quests = compactOverworldQuestRefs(state.quests);
   const pendingRoad = compactPendingRoad(state.pendingRoadEncounter);
   const journal = compactOverworldJournalEntries(state.journalEntries);
-
-  const travelLog: OverworldCompactTravelLogEntry[] = [];
-  for (
-    let index = 0;
-    index < state.travelLog.length && index < OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT;
-    index += 1
-  ) {
-    travelLog.push(compactTravelLogEntry(state.travelLog[index]!));
-  }
-
+  const travelLog = compactOverworldTravelLog(state.travelLog);
   const renown = compactOverworldRenownEntries(sortedNumberMap(state.regionRenown));
   const completedArcs = sortedStringSet(state.completedRegionalArcIds);
-  const roads: OverworldCompactRoad[] = [];
-  for (const exit of state.roads) {
-    const plan = routeByDestination.get(exit.destination.id);
-    roads.push([
-      exit.id,
-      exit.destination.id,
-      plan?.estimate.elapsedMinutes ?? exit.travel_minutes,
-      plan?.estimate.suppliesNeeded ?? 0,
-      plan?.estimate.fatigueAfter ?? state.fatigue,
-    ]);
-  }
-
+  const roads = compactOverworldRoads(state.roads, state.routeOptions, state.fatigue);
   const areas = compactOverworldRefs(state.areas);
   const poi = compactOverworldTitleRefs(state.poi);
   const contacts = compactOverworldRefs(state.contacts);

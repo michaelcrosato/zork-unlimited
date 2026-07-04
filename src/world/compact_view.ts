@@ -258,6 +258,52 @@ export function compactRouteOption(plan: OverworldSessionRoutePlan): OverworldCo
   ];
 }
 
+export function compactOverworldRouteOptions(
+  plans: readonly OverworldSessionRoutePlan[],
+): OverworldCompactRouteOption[] {
+  const compact: OverworldCompactRouteOption[] = [];
+  for (let index = 0; index < plans.length && index < OVERWORLD_COMPACT_ROUTE_LIMIT; index += 1) {
+    compact.push(compactRouteOption(plans[index]!));
+  }
+  return compact;
+}
+
+type OverworldCompactRouteSource = {
+  id: string;
+  destination: { id: string };
+  travel_minutes: number;
+};
+
+export function compactOverworldAreaRoutes(
+  exits: readonly OverworldCompactRouteSource[],
+): OverworldCompactAreaRoute[] {
+  const compact: OverworldCompactAreaRoute[] = [];
+  for (const exit of exits) compact.push([exit.id, exit.destination.id, exit.travel_minutes]);
+  return compact;
+}
+
+export function compactOverworldRoads(
+  exits: readonly OverworldCompactRouteSource[],
+  routeOptions: readonly OverworldSessionRoutePlan[],
+  fallbackFatigue: number,
+): OverworldCompactRoad[] {
+  const routeByDestination = new Map<string, OverworldSessionRoutePlan>();
+  for (const plan of routeOptions) routeByDestination.set(plan.destination.id, plan);
+
+  const compact: OverworldCompactRoad[] = [];
+  for (const exit of exits) {
+    const plan = routeByDestination.get(exit.destination.id);
+    compact.push([
+      exit.id,
+      exit.destination.id,
+      plan?.estimate.elapsedMinutes ?? exit.travel_minutes,
+      plan?.estimate.suppliesNeeded ?? 0,
+      plan?.estimate.fatigueAfter ?? fallbackFatigue,
+    ]);
+  }
+  return compact;
+}
+
 export function compactPendingRoad(
   encounter: OverworldPendingRoadEncounter | null,
 ): OverworldCompactRoadEncounter | undefined {
@@ -290,6 +336,20 @@ export function compactTravelLogEntry(entry: TravelLogEntry): OverworldCompactTr
     entry.fatigueGained,
     entry.roadEvent?.id ?? null,
   ];
+}
+
+export function compactOverworldTravelLog(
+  entries: readonly TravelLogEntry[],
+): OverworldCompactTravelLogEntry[] {
+  const compact: OverworldCompactTravelLogEntry[] = [];
+  for (
+    let index = 0;
+    index < entries.length && index < OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT;
+    index += 1
+  ) {
+    compact.push(compactTravelLogEntry(entries[index]!));
+  }
+  return compact;
 }
 
 function compactIdList(values: readonly string[]): string[] {
@@ -446,15 +506,9 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
 }
 
 export function compactOverworldView(view: OverworldView): OverworldCompactView {
-  const routeOptions = view.routeOptions
-    .slice(0, OVERWORLD_COMPACT_ROUTE_LIMIT)
-    .map(compactRouteOption);
-  const travelLog = view.log
-    .slice(0, OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT)
-    .map(compactTravelLogEntry);
-  const areaRoutes = view.areaExits.map(
-    (exit) => [exit.id, exit.destination.id, exit.travel_minutes] as const,
-  );
+  const routeOptions = compactOverworldRouteOptions(view.routeOptions);
+  const travelLog = compactOverworldTravelLog(view.log);
+  const areaRoutes = compactOverworldAreaRoutes(view.areaExits);
   const jobs = compactOverworldTitleRefs(view.jobs);
   const sites = compactOverworldTitleRefs(view.sites);
   const quests = compactOverworldQuestRefs(view.quests);
@@ -477,9 +531,6 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     resolved_events: view.resolvedEventIds,
   });
   const pendingRoad = compactPendingRoad(view.pendingRoadEncounter);
-  const routeByDestination = new Map(
-    view.routeOptions.map((plan) => [plan.destination.id, plan] as const),
-  );
   return {
     v: OVERWORLD_COMPACT_VIEW_VERSION,
     world: compactOverworldLabel(view.world),
@@ -498,16 +549,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
       view.hiddenSiteCount,
       view.hiddenQuestCount,
     ],
-    roads: view.exits.map((exit) => {
-      const plan = routeByDestination.get(exit.destination.id);
-      return [
-        exit.id,
-        exit.destination.id,
-        plan?.estimate.elapsedMinutes ?? exit.travel_minutes,
-        plan?.estimate.suppliesNeeded ?? 0,
-        plan?.estimate.fatigueAfter ?? view.fatigue,
-      ];
-    }),
+    roads: compactOverworldRoads(view.exits, view.routeOptions, view.fatigue),
     ...(areaRoutes.length > 0 ? { area_routes: areaRoutes } : {}),
     route_options: routeOptions,
     ...(view.routeOptions.length > routeOptions.length
