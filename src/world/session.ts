@@ -29,7 +29,6 @@ import {
   type OverworldLocalActionKind,
 } from "./local_actions.js";
 import {
-  OVERWORLD_COMPACT_ID_LIST_LIMIT,
   OVERWORLD_COMPACT_ROUTE_LIMIT,
   OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT,
   OVERWORLD_COMPACT_VIEW_VERSION,
@@ -45,12 +44,28 @@ import {
   compactRouteOption,
   compactTravelLogEntry,
   type OverworldCompactAreaRoute,
-  type OverworldCompactIdBucket,
   type OverworldCompactRoad,
   type OverworldCompactRouteOption,
   type OverworldCompactTravelLogEntry,
   type OverworldCompactView,
 } from "./compact_view.js";
+import {
+  assertKnownIds,
+  assertUniqueTupleMap,
+  compactSortedStringSet,
+  compactSortedTownIdsByPopulation,
+  idIndex,
+  indexedList,
+  keyedIndex,
+  nestedIdIndex,
+  pushIndexed,
+  replaceStringSet,
+  sortedIndex,
+  sortedNumberMap,
+  sortedNumberRecord,
+  sortedStringMap,
+  sortedStringSet,
+} from "./session_collections.js";
 import {
   OVERWORLD_MAX_FATIGUE as MAX_FATIGUE,
   OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES,
@@ -270,90 +285,6 @@ function parseTimeLabel(label: string): number {
   return (day - 1) * 1440 + hour * 60 + minute;
 }
 
-function sortedStringSet(values: Set<string>): string[] {
-  return [...values].sort();
-}
-
-function sortedStringMap(values: Map<string, string>): [string, string][] {
-  return [...values.entries()].sort(([left], [right]) => left.localeCompare(right));
-}
-
-function sortedNumberMap(values: Map<string, number>): [string, number][] {
-  return [...values.entries()].sort(([left], [right]) => left.localeCompare(right));
-}
-
-function sortedNumberRecord(values: Map<string, number>): Record<string, number> {
-  const record: Record<string, number> = {};
-  const keys = [...values.keys()].sort();
-  for (const key of keys) record[key] = values.get(key)!;
-  return record;
-}
-
-function compareStringId(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-
-function insertBoundedSorted<T>(
-  target: T[],
-  value: T,
-  limit: number,
-  compare: (left: T, right: T) => number,
-): void {
-  let index = 0;
-  while (index < target.length && compare(target[index]!, value) <= 0) index += 1;
-  if (index >= limit) return;
-  target.splice(index, 0, value);
-  if (target.length > limit) target.pop();
-}
-
-function compactSortedStringSet(values: ReadonlySet<string>): OverworldCompactIdBucket {
-  const ids: string[] = [];
-  for (const value of values) {
-    insertBoundedSorted(ids, value, OVERWORLD_COMPACT_ID_LIST_LIMIT, compareStringId);
-  }
-  return { ids, count: values.size };
-}
-
-function compareTownByPopulationThenName(left: OverworldNode, right: OverworldNode): number {
-  return right.population_2025 - left.population_2025 || left.name.localeCompare(right.name);
-}
-
-function assertUnique(label: string, values: readonly string[]): Set<string> {
-  const seen = new Set<string>();
-  for (const value of values) {
-    if (seen.has(value))
-      throw new Error(`Overworld session snapshot has duplicate ${label} "${value}".`);
-    seen.add(value);
-  }
-  return seen;
-}
-
-function assertKnownIds(
-  label: string,
-  values: readonly string[],
-  known: ReadonlySet<string>,
-): Set<string> {
-  const seen = assertUnique(label, values);
-  for (const value of seen) {
-    if (!known.has(value))
-      throw new Error(`Overworld session snapshot has unknown ${label} "${value}".`);
-  }
-  return seen;
-}
-
-function assertUniqueTupleMap<T>(
-  label: string,
-  values: readonly (readonly [string, T])[],
-): Map<string, T> {
-  const seen = new Map<string, T>();
-  for (const [key, value] of values) {
-    if (seen.has(key))
-      throw new Error(`Overworld session snapshot has duplicate ${label} "${key}".`);
-    seen.set(key, value);
-  }
-  return seen;
-}
-
 type OverworldJournalSourceIndex = {
   arcIds: ReadonlySet<string>;
   arcRegionNames: ReadonlyMap<string, string>;
@@ -564,12 +495,6 @@ type OverworldSnapshotManifestIndex = {
   townNameForSource: (nodeId: string) => string;
   townNames: ReadonlySet<string>;
 };
-
-const EMPTY_INDEX_LIST: readonly never[] = [];
-
-function indexedList<T>(index: ReadonlyMap<string, readonly T[]>, key: string): readonly T[] {
-  return index.get(key) ?? EMPTY_INDEX_LIST;
-}
 
 type OverworldLocalJournalSource = {
   sourceLabel: string;
@@ -2349,53 +2274,6 @@ function assertSnapshotRegionalArcCompletionProofs(
   }
 }
 
-function replaceStringSet(target: Set<string>, values: readonly string[]): void {
-  target.clear();
-  for (const value of values) target.add(value);
-}
-
-function pushIndexed<T>(index: Map<string, T[]>, key: string, value: T): void {
-  const values = index.get(key);
-  if (values) {
-    values.push(value);
-    return;
-  }
-  index.set(key, [value]);
-}
-
-function sortedIndex<T>(
-  values: readonly T[],
-  keyFor: (value: T) => string,
-  compare: (a: T, b: T) => number,
-): Map<string, T[]> {
-  const index = new Map<string, T[]>();
-  for (const value of values) pushIndexed(index, keyFor(value), value);
-  for (const indexed of index.values()) indexed.sort(compare);
-  return index;
-}
-
-function keyedIndex<T>(values: readonly T[], keyFor: (value: T) => string): Map<string, T> {
-  const index = new Map<string, T>();
-  for (const value of values) index.set(keyFor(value), value);
-  return index;
-}
-
-function idIndex<T extends { id: string }>(values: readonly T[]): Map<string, T> {
-  return keyedIndex(values, (value) => value.id);
-}
-
-function nestedIdIndex<T extends { id: string }>(
-  source: ReadonlyMap<string, readonly T[]>,
-): Map<string, Map<string, T>> {
-  const index = new Map<string, Map<string, T>>();
-  for (const [ownerId, values] of source) {
-    const ownerIndex = new Map<string, T>();
-    for (const value of values) ownerIndex.set(value.id, value);
-    index.set(ownerId, ownerIndex);
-  }
-  return index;
-}
-
 export class OverworldSession {
   private readonly nodes: Map<string, OverworldNode>;
   private readonly roadExitsByTown: Map<string, OverworldExit[]>;
@@ -3782,20 +3660,7 @@ export class OverworldSession {
     }
     const routeByDestination = new Map<string, OverworldSessionRoutePlan>();
     for (const plan of routeOptions) routeByDestination.set(plan.destination.id, plan);
-    const compactDiscoveredTowns: OverworldNode[] = [];
-    for (const id of this.discoveredIds) {
-      const town = this.nodes.get(id);
-      if (town) {
-        insertBoundedSorted(
-          compactDiscoveredTowns,
-          town,
-          OVERWORLD_COMPACT_ID_LIST_LIMIT,
-          compareTownByPopulationThenName,
-        );
-      }
-    }
-    const discoveredTownIds: string[] = [];
-    for (const town of compactDiscoveredTowns) discoveredTownIds.push(town.id);
+    const discoveredTownIds = compactSortedTownIdsByPopulation(this.discoveredIds, this.nodes);
     const idPayload = compactIdPayloadFromBuckets({
       discovered_towns: { ids: discoveredTownIds, count: this.discoveredIds.size },
       discovered_areas: compactSortedStringSet(this.discoveredAreaIds),
