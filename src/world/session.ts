@@ -199,6 +199,12 @@ export type OverworldView = {
   log: TravelLogEntry[];
 };
 
+type OverworldResourceClockState = {
+  suppliesAfter: number;
+  fatigueAfter: number;
+  minutesAfter: number;
+};
+
 export class OverworldSession {
   private readonly nodes: Map<string, OverworldNode>;
   private readonly roadExitsByTown: Map<string, OverworldExit[]>;
@@ -300,6 +306,12 @@ export class OverworldSession {
     clearOverworldSessionCaches(this.caches);
   }
 
+  private applyResourceClockState(state: OverworldResourceClockState): void {
+    this.supplies = state.suppliesAfter;
+    this.fatigue = state.fatigueAfter;
+    this.minutes = state.minutesAfter;
+  }
+
   private cachedSnapshot(): OverworldSessionSnapshotCache {
     if (this.caches.snapshot) return this.caches.snapshot;
     const snapshot = this.buildSnapshot();
@@ -385,9 +397,7 @@ export class OverworldSession {
     );
     this.currentId = applied.currentIdAfter;
     this.currentAreaId = applied.currentAreaIdAfter;
-    this.minutes = applied.minutesAfter;
-    this.supplies = applied.suppliesAfter;
-    this.fatigue = applied.fatigueAfter;
+    this.applyResourceClockState(applied);
     this.rebuildResolvedEventHomeIds();
     this.pendingRoadEncounter = applied.pendingRoadEncounterAfter;
     this.clearSnapshotCache();
@@ -473,9 +483,7 @@ export class OverworldSession {
   private applyServicePlan(plan: OverworldServicePlan): OverworldServiceResult {
     const applied = applyOverworldServicePlan(this.actionJournalState(), plan);
     if (applied.stateChanged) {
-      this.supplies = plan.suppliesAfter;
-      this.fatigue = plan.fatigueAfter;
-      this.minutes = applied.minutesAfter;
+      this.applyResourceClockState(applied);
       this.clearSnapshotCache();
     }
     return {
@@ -1150,9 +1158,7 @@ export class OverworldSession {
       townName: current.name,
     });
 
-    this.supplies = applied.suppliesAfter;
-    this.fatigue = applied.fatigueAfter;
-    this.minutes = applied.minutesAfter;
+    this.applyResourceClockState(applied);
     this.pendingRoadEncounter = applied.pendingRoadEncounterAfter;
     this.clearSnapshotCache();
     return applied.result;
@@ -1172,9 +1178,7 @@ export class OverworldSession {
       supplies: this.supplies,
     });
     const recorded = recordOverworldTravelLeg({ travelLog: this.travelLog }, applied);
-    this.supplies = recorded.suppliesAfter;
-    this.fatigue = recorded.fatigueAfter;
-    this.minutes = recorded.minutesAfter;
+    this.applyResourceClockState(recorded);
     this.currentId = recorded.currentIdAfter;
     this.markSeen(this.currentId);
     this.pendingRoadEncounter = recorded.pendingRoadEncounterAfter;
