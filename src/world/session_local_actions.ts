@@ -41,6 +41,11 @@ export type OverworldLocalJobCompletionPlan =
       renown: number;
     };
 
+export type OverworldPlannedLocalJobCompletion = Extract<
+  OverworldLocalJobCompletionPlan,
+  { alreadyKnown: false }
+>;
+
 export type OverworldSiteExplorationPlan =
   | OverworldLocalActionKnownPlan
   | {
@@ -50,6 +55,11 @@ export type OverworldSiteExplorationPlan =
       renownRegion: string;
       renown: number;
     };
+
+export type OverworldPlannedSiteExploration = Extract<
+  OverworldSiteExplorationPlan,
+  { alreadyKnown: false }
+>;
 
 export type OverworldAreaTravelResult = {
   from: OverworldArea;
@@ -68,6 +78,18 @@ export type OverworldAppliedAreaTravel = OverworldAreaTravelResult & {
   currentAreaIdAfter: string;
   currentAreaByTownEntry: readonly [string, string];
   minutesAfter: number;
+};
+
+export type OverworldLocalRenownCompletionState = {
+  completedIds: Set<string>;
+  regionRenown: Map<string, number>;
+};
+
+export type OverworldAppliedLocalRenownCompletion = {
+  completedId: string;
+  renownRegion: string;
+  renownGained: number;
+  renownAfter: number;
 };
 
 export type OverworldAreaExplorationState = {
@@ -118,6 +140,58 @@ export function applyOverworldAreaTravel(
     currentAreaByTownEntry: [state.currentTownId, edge.destination.id],
     minutesAfter,
   };
+}
+
+function applyOverworldLocalRenownCompletion(
+  state: OverworldLocalRenownCompletionState,
+  completedId: string,
+  renownRegion: string,
+  renownGained: number,
+): OverworldAppliedLocalRenownCompletion {
+  state.completedIds.add(completedId);
+  state.regionRenown.set(renownRegion, (state.regionRenown.get(renownRegion) ?? 0) + renownGained);
+  return {
+    completedId,
+    renownRegion,
+    renownGained,
+    renownAfter: state.regionRenown.get(renownRegion) ?? 0,
+  };
+}
+
+export function applyOverworldLocalJobCompletion(
+  state: {
+    completedJobIds: Set<string>;
+    regionRenown: Map<string, number>;
+  },
+  plan: OverworldPlannedLocalJobCompletion,
+): OverworldAppliedLocalRenownCompletion {
+  return applyOverworldLocalRenownCompletion(
+    {
+      completedIds: state.completedJobIds,
+      regionRenown: state.regionRenown,
+    },
+    plan.jobId,
+    plan.renownRegion,
+    plan.renown,
+  );
+}
+
+export function applyOverworldSiteExploration(
+  state: {
+    exploredSiteIds: Set<string>;
+    regionRenown: Map<string, number>;
+  },
+  plan: OverworldPlannedSiteExploration,
+): OverworldAppliedLocalRenownCompletion {
+  return applyOverworldLocalRenownCompletion(
+    {
+      completedIds: state.exploredSiteIds,
+      regionRenown: state.regionRenown,
+    },
+    plan.siteId,
+    plan.renownRegion,
+    plan.renown,
+  );
 }
 
 export function planOverworldAreaExploration(

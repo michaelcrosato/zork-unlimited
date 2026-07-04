@@ -7,6 +7,8 @@ import type {
 } from "../../src/world/overworld.js";
 import {
   applyOverworldAreaTravel,
+  applyOverworldLocalJobCompletion,
+  applyOverworldSiteExploration,
   planOverworldAreaExploration,
   planOverworldLocalJobCompletion,
   planOverworldSiteExploration,
@@ -211,6 +213,33 @@ describe("overworld local action planning", () => {
     ).toEqual({ alreadyKnown: true, minutes: 0, entry: existing });
   });
 
+  it("applies local job completion into completion ids and regional renown", () => {
+    const localJob = job("job_a");
+    const plan = planOverworldLocalJobCompletion({
+      jobId: localJob.id,
+      jobsById: new Map([[localJob.id, localJob]]),
+      areasById: new Map([["area_a", area("area_a")]]),
+      currentTownId: "town_a",
+      currentRegion: "North",
+      currentAreaId: "area_a",
+      discoveredJobIds: new Set([localJob.id]),
+      completedJobIds: new Set(),
+      journalEntries: new Map(),
+    });
+    if (plan.alreadyKnown) throw new Error("expected a new job completion plan");
+    const completedJobIds = new Set<string>();
+    const regionRenown = new Map([["North", 1]]);
+
+    expect(applyOverworldLocalJobCompletion({ completedJobIds, regionRenown }, plan)).toEqual({
+      completedId: localJob.id,
+      renownRegion: "North",
+      renownGained: 2,
+      renownAfter: 3,
+    });
+    expect([...completedJobIds]).toEqual([localJob.id]);
+    expect(regionRenown.get("North")).toBe(3);
+  });
+
   it("rejects local job completion before discovery or area alignment", () => {
     const localJob = job("job_a", "area_a");
     const baseState = {
@@ -276,6 +305,31 @@ describe("overworld local action planning", () => {
         journalEntries: new Map([[existing.id, existing]]),
       }),
     ).toEqual({ alreadyKnown: true, minutes: 0, entry: existing });
+  });
+
+  it("applies site exploration into explored ids and regional renown", () => {
+    const localSite = site("site_a");
+    const plan = planOverworldSiteExploration({
+      siteId: localSite.id,
+      sitesById: new Map([[localSite.id, localSite]]),
+      currentTownId: "town_a",
+      currentAreaId: localSite.area,
+      discoveredSiteIds: new Set([localSite.id]),
+      exploredSiteIds: new Set(),
+      journalEntries: new Map(),
+    });
+    if (plan.alreadyKnown) throw new Error("expected a new site exploration plan");
+    const exploredSiteIds = new Set<string>();
+    const regionRenown = new Map([["Test Region", 4]]);
+
+    expect(applyOverworldSiteExploration({ exploredSiteIds, regionRenown }, plan)).toEqual({
+      completedId: localSite.id,
+      renownRegion: "Test Region",
+      renownGained: 3,
+      renownAfter: 7,
+    });
+    expect([...exploredSiteIds]).toEqual([localSite.id]);
+    expect(regionRenown.get("Test Region")).toBe(7);
   });
 
   it("rejects exploration site completion before scouting or area alignment", () => {

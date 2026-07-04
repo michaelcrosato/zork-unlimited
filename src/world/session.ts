@@ -83,6 +83,8 @@ import {
 } from "./session_services.js";
 import {
   applyOverworldAreaTravel,
+  applyOverworldLocalJobCompletion,
+  applyOverworldSiteExploration,
   planOverworldAreaExploration,
   planOverworldLocalJobCompletion,
   planOverworldSiteExploration,
@@ -996,10 +998,12 @@ export class OverworldSession {
 
     const result = this.recordLocalAction(plan.action, current.name);
     if (!result.alreadyKnown) {
-      this.completedJobIds.add(plan.jobId);
-      this.regionRenown.set(
-        plan.renownRegion,
-        (this.regionRenown.get(plan.renownRegion) ?? 0) + plan.renown,
+      applyOverworldLocalJobCompletion(
+        {
+          completedJobIds: this.completedJobIds,
+          regionRenown: this.regionRenown,
+        },
+        plan,
       );
       this.clearSnapshotCache();
     }
@@ -1073,10 +1077,12 @@ export class OverworldSession {
 
     const result = this.recordLocalAction(plan.action, current.name);
     if (!result.alreadyKnown) {
-      this.exploredSiteIds.add(plan.siteId);
-      this.regionRenown.set(
-        plan.renownRegion,
-        (this.regionRenown.get(plan.renownRegion) ?? 0) + plan.renown,
+      applyOverworldSiteExploration(
+        {
+          exploredSiteIds: this.exploredSiteIds,
+          regionRenown: this.regionRenown,
+        },
+        plan,
       );
       this.clearSnapshotCache();
     }
