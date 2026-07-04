@@ -13,26 +13,12 @@
 import { readFileSync, statSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 import { hashState } from "../core/hash.js";
-import { makeStep, type Rules } from "../core/engine.js";
 import type { RpgAction } from "../api/types.js";
 import type { GameState } from "../core/state.js";
 
 import { compileRpgPack, loadRpgPackFile, type CompiledRpgPack } from "../rpg/pack.js";
 import { generateRpgPack } from "../gen/rpg_generator.js";
-import type { RpgPack } from "../rpg/schema.js";
-import {
-  indexRpgPack,
-  buildRpgRules,
-  initStateForRpgPack,
-  enumerateRpgActions,
-  type RpgIndex,
-} from "../rpg/runner.js";
 import type { RpgActionOption } from "../rpg/legal_actions.js";
-import {
-  buildRpgObservation,
-  type ObservationOptions,
-  type RpgObservation,
-} from "../rpg/observation.js";
 import { validateRpg } from "../validate/rpg_validator.js";
 import { assertRpgStateReferences } from "../rpg/state_integrity.js";
 
@@ -52,7 +38,7 @@ import {
 import { assertTraceMode, replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
-import { SessionStore, type RpgStep, type Session, type TranscriptSummary } from "./sessions.js";
+import { SessionStore, type Session, type TranscriptSummary } from "./sessions.js";
 import { isRpgPackShape, type McpActionOption, type McpObservation } from "./types.js";
 import { RPG_COMPACT_EVENT_VERSION, type RpgCompactEvent } from "./compact_rpg_event.js";
 import type { RpgCompactObservation } from "./compact_rpg_observation.js";
@@ -67,11 +53,8 @@ import {
   type RpgStepEvents,
   type RpgStepEventVersion,
 } from "./transcript_projection.js";
-import {
-  legalActionRowsFor,
-  rpgViewField,
-  type RpgObservationViewOptions,
-} from "./rpg_view_projection.js";
+import { legalActionRowsFor, rpgViewField } from "./rpg_view_projection.js";
+import { RpgMcpSessionRuntime, rpgRoomTitle, rpgSourceFields } from "./rpg_session_runtime.js";
 import {
   OverworldMcpSessionStore,
   overworldReadUnchanged,
@@ -166,12 +149,6 @@ type PackLoadCacheEntry = {
 type GeneratedRpgCacheEntry = {
   compiled: CompiledRpgPack;
   report: ValidationReport;
-};
-
-type RpgRuntimeCacheEntry = {
-  index: RpgIndex;
-  rules: Rules<RpgAction>;
-  step: RpgStep;
 };
 
 type WorldQuestSourceEntry = {
@@ -604,42 +581,9 @@ function rpgStateHashRejection(stateHash: string): RpgStateHashRejection {
   };
 }
 
-function indexFor(pack: CompiledRpgPack["pack"]): RpgIndex {
-  return indexRpgPack(pack);
-}
-
-function rulesFor(index: RpgIndex): Rules<RpgAction> {
-  return buildRpgRules(index);
-}
-
-function initStateFor(index: RpgIndex, seed: number): GameState {
-  return initStateForRpgPack(index, seed);
-}
-
-function buildObsFor(
-  index: RpgIndex,
-  state: GameState,
-  opts: ObservationOptions = {},
-): RpgObservation {
-  return buildRpgObservation(index, state, opts);
-}
-
 /** The current RPG room id. */
-function obsLocation(obs: RpgObservation): string {
+function obsLocation(obs: { room: string }): string {
   return obs.room;
-}
-
-function rpgRoomTitle(index: RpgIndex, state: GameState): string {
-  return index.rooms.get(state.current)?.name ?? state.current;
-}
-
-function rpgStateTitle(index: RpgIndex, state: GameState): string {
-  if (state.ended && state.endingId) {
-    return (
-      index.pack.endings.find((ending) => ending.id === state.endingId)?.title ?? state.endingId
-    );
-  }
-  return rpgRoomTitle(index, state);
 }
 
 /**
@@ -652,18 +596,6 @@ function actionOptionForId(
   id: string,
 ): RpgActionOption | null {
   return actions.find((action) => action.id === id) ?? null;
-}
-
-function rpgSourceFields(source: {
-  worldQuestId?: string | null;
-  generatedRpgSeed?: number | null;
-}): RpgSourceFields {
-  return {
-    ...(source.worldQuestId ? { world_quest_id: source.worldQuestId } : {}),
-    ...(source.generatedRpgSeed !== undefined && source.generatedRpgSeed !== null
-      ? { generated_rpg_seed: source.generatedRpgSeed }
-      : {}),
-  };
 }
 
 function schemaFindings(
@@ -683,7 +615,7 @@ export function createToolApi(opts: { root: string }) {
   const sessions = new SessionStore();
   const packLoadCache = new Map<string, PackLoadCacheEntry>();
   const generatedRpgCache = new Map<number, GeneratedRpgCacheEntry>();
-  const rpgRuntimeCache = new WeakMap<RpgPack, RpgRuntimeCacheEntry>();
+  const rpgRuntime = new RpgMcpSessionRuntime(sessions);
   const overworldSessions = new OverworldMcpSessionStore(() => loadOverworldManifestFromRoot(root));
 
   /** Read an RPG pack, compile, and validate it with the single runtime loader. */
@@ -760,107 +692,6 @@ export function createToolApi(opts: { root: string }) {
       );
     }
     return compiled;
-  }
-
-  function runtimeFor(pack: RpgPack): RpgRuntimeCacheEntry {
-    const cached = rpgRuntimeCache.get(pack);
-    if (cached) return cached;
-    const index = indexFor(pack);
-    const rules = rulesFor(index);
-    const entry = { index, rules, step: makeStep(rules) };
-    rpgRuntimeCache.set(pack, entry);
-    return entry;
-  }
-
-  function legalActionsFor(s: Session): RpgActionOption[] {
-    return sessions.legalActions(s.id, () => enumerateRpgActions(s.index, s.state));
-  }
-
-  function sessionObsOf(s: Session, opts: ObservationOptions = {}): RpgObservation {
-    return sessions.observation(s.id, opts, () =>
-      buildObsFor(s.index, s.state, {
-        ...opts,
-        availableActions: legalActionsFor(s),
-      }),
-    );
-  }
-
-  function startSession(
-    compiled: CompiledRpgPack,
-    state?: GameState,
-    opts: {
-      hideGraph?: boolean;
-      packPath?: string;
-      worldQuestId?: string | null;
-      generatedRpgSeed?: number | null;
-      seed?: number;
-    } = {},
-  ): Session {
-    const { index, rules, step } = runtimeFor(compiled.pack);
-    const st = state ?? initStateFor(index, opts.seed ?? 1);
-    // §16 integrity at load: a PROVIDED state is untrusted (it came off a save
-    // file via load_game), so its `current`/`endingId` must name symbols that
-    // exist in THIS pack before it is handed to the engine. A freshly-built init
-    // state (state === undefined) is trusted and skipped. Rejects, never coerces.
-    if (state !== undefined) assertRpgStateReferences(index, st);
-    const session = sessions.create({
-      packId: compiled.pack.meta.id,
-      contentHash: compiled.contentHash,
-      ...(opts.packPath ? { packPath: opts.packPath } : {}),
-      ...(opts.worldQuestId ? { worldQuestId: opts.worldQuestId } : {}),
-      ...(opts.generatedRpgSeed !== undefined && opts.generatedRpgSeed !== null
-        ? { generatedRpgSeed: opts.generatedRpgSeed }
-        : {}),
-      index,
-      rules,
-      step,
-      state: st,
-      transcript: [],
-      ...(opts.hideGraph ? { hideGraph: true } : {}),
-    });
-    sessions.appendTranscript(session.id, {
-      step: st.step,
-      scene_id: st.current,
-      title: rpgStateTitle(index, st),
-      action_id: null,
-      action_text: null,
-      events: [],
-      result_scene_id: st.current,
-      ended: st.ended,
-      ending_id: st.endingId,
-    });
-    return session;
-  }
-
-  const openingObservationOptions = (s: Session): RpgObservationViewOptions => ({
-    hideGraph: s.hideGraph ?? false,
-    includeWorldIntro: true,
-  });
-
-  const openingObsOf = (s: Session, opts = openingObservationOptions(s)): RpgObservation =>
-    sessionObsOf(s, opts);
-
-  function startRpgSession<Args extends RpgViewOptions>(
-    compiled: CompiledRpgPack,
-    args: Args & { seed?: number; hide_graph?: boolean },
-    source: { packPath?: string; worldQuestId?: string; generatedRpgSeed?: number | null },
-  ): RpgSessionPayload<Args> {
-    const session = startSession(compiled, undefined, {
-      seed: args.seed ?? 1,
-      ...(args.hide_graph ? { hideGraph: true } : {}),
-      ...(source.packPath ? { packPath: source.packPath } : {}),
-      ...(source.worldQuestId ? { worldQuestId: source.worldQuestId } : {}),
-      ...(source.generatedRpgSeed !== undefined && source.generatedRpgSeed !== null
-        ? { generatedRpgSeed: source.generatedRpgSeed }
-        : {}),
-    });
-    const openingOpts = openingObservationOptions(session);
-    return {
-      session_id: session.id,
-      ...rpgViewField(sessions, session, openingObsOf(session, openingOpts), args, openingOpts),
-      ...rpgSourceFields(session),
-      state_hash: session.stateHash,
-    } as RpgSessionPayload<Args>;
   }
 
   function worldQuestPackPaths(world: WorldManifest): string[] {
@@ -1537,7 +1368,7 @@ export function createToolApi(opts: { root: string }) {
       ok: boolean;
       content_hash: string;
       seed: number;
-      meta: RpgPack["meta"];
+      meta: CompiledRpgPack["pack"]["meta"];
       room_count: number;
       enemy_count: number;
       ending_count: number;
@@ -1564,7 +1395,9 @@ export function createToolApi(opts: { root: string }) {
       // the minted pack's theme/structure; `seed` still seeds runtime state.
       const source = resolveGameSource(root, args, "new_game");
       const compiled = requireGeneratedRpgPlayable(source.generateRpgSeed);
-      return startRpgSession(compiled, args, { generatedRpgSeed: source.generateRpgSeed });
+      return rpgRuntime.startRpgSession(compiled, args, {
+        generatedRpgSeed: source.generateRpgSeed,
+      });
     },
 
     start_world_quest<Args extends RpgStartWorldQuestArgs>(
@@ -1577,7 +1410,7 @@ export function createToolApi(opts: { root: string }) {
         throw new Error("start_world_quest requires world_quest_id.");
       }
       const resolved = resolveWorldQuestPackPath(args.world_quest_id);
-      const started = startRpgSession(requirePlayable(resolved.packPath), args, {
+      const started = rpgRuntime.startRpgSession(requirePlayable(resolved.packPath), args, {
         packPath: resolved.packPath,
         worldQuestId: resolved.node.id,
       });
@@ -1601,7 +1434,7 @@ export function createToolApi(opts: { root: string }) {
       const obsOpts = {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
       };
-      const obs = sessionObsOf(s, obsOpts);
+      const obs = rpgRuntime.observationOf(s, obsOpts);
       return {
         ...rpgViewField(sessions, s, obs, args, obsOpts),
         state_hash: stateHash,
@@ -1616,7 +1449,7 @@ export function createToolApi(opts: { root: string }) {
       if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
         return rpgStateUnchanged(stateHash) as RpgLegalActionsResponse<Args>;
       }
-      const actions = sessions.legalActions(s.id, () => enumerateRpgActions(s.index, s.state));
+      const actions = rpgRuntime.legalActionsFor(s);
       return {
         actions: legalActionRowsFor(sessions, s, actions, args),
         state_hash: stateHash,
@@ -1629,9 +1462,7 @@ export function createToolApi(opts: { root: string }) {
       if (args.expected_state_hash !== undefined && args.expected_state_hash !== currentStateHash) {
         return rpgStateHashRejection(currentStateHash) as RpgStepActionResponse<Args>;
       }
-      const actionOptions = sessions.legalActions(s.id, () =>
-        enumerateRpgActions(s.index, s.state),
-      );
+      const actionOptions = rpgRuntime.legalActionsFor(s);
       const actionOption = actionOptionForId(actionOptions, args.action_id);
       const beforeStep = s.state.step;
       const beforeSceneId = s.state.current;
@@ -1640,7 +1471,7 @@ export function createToolApi(opts: { root: string }) {
         const beforeObsOpts = {
           hideGraph: args.hide_graph ?? s.hideGraph ?? false,
         };
-        const before = sessionObsOf(s, beforeObsOpts);
+        const before = rpgRuntime.observationOf(s, beforeObsOpts);
         // Unknown action ids never reach the engine.
         return {
           ok: false,
@@ -1659,7 +1490,7 @@ export function createToolApi(opts: { root: string }) {
       const afterObsOpts = {
         hideGraph: args.hide_graph ?? s.hideGraph ?? false,
       };
-      const after = sessionObsOf(s, afterObsOpts);
+      const after = rpgRuntime.observationOf(s, afterObsOpts);
       sessions.appendTranscript(s.id, {
         step: beforeStep,
         scene_id: beforeSceneId,
@@ -1768,16 +1599,22 @@ export function createToolApi(opts: { root: string }) {
       // The save was already parsed and state-gated above; bind those bytes to the
       // resolved pack hash here without reparsing the same blob.
       assertSaveContentHash(bundle, compiled.contentHash);
-      const session = startSession(compiled, bundle.state, {
+      const session = rpgRuntime.startSession(compiled, bundle.state, {
         ...(source.packPath ? { packPath: source.packPath } : {}),
         ...(source.worldQuestId ? { worldQuestId: source.worldQuestId } : {}),
         ...(source.generateRpgSeed !== null ? { generatedRpgSeed: source.generateRpgSeed } : {}),
         ...(args.hide_graph ? { hideGraph: true } : {}),
       });
-      const openingOpts = openingObservationOptions(session);
+      const openingOpts = rpgRuntime.openingObservationOptions(session);
       return {
         session_id: session.id,
-        ...rpgViewField(sessions, session, openingObsOf(session, openingOpts), args, openingOpts),
+        ...rpgViewField(
+          sessions,
+          session,
+          rpgRuntime.openingObservationOf(session, openingOpts),
+          args,
+          openingOpts,
+        ),
         ...rpgSourceFields(session),
         state_hash: session.stateHash,
       } as RpgSessionPayload<Args>;
@@ -1823,7 +1660,7 @@ export function createToolApi(opts: { root: string }) {
       // content-hash check above guards WHICH pack, not WHETHER the state is well-
       // formed). Gate it the same way a loaded save is gated, BEFORE any engine call.
       assertWellFormedState(trace.initial_state);
-      const { index, rules } = runtimeFor(compiled.pack);
+      const { index, rules } = rpgRuntime.runtimeFor(compiled.pack);
       assertRpgStateReferences(index, trace.initial_state);
       // Replay asserts the recorded final hash, and — for a Trace-v2 trace that
       // also carries `per_step_hashes` — localizes the FIRST divergent action via
@@ -1853,9 +1690,8 @@ export function createToolApi(opts: { root: string }) {
       // is fed RAW into the per-step loop (let state = trace.initial_state) and into
       // diagnose() below, so it must be well-formed + referentially sound first.
       assertWellFormedState(trace.initial_state);
-      const { index, rules } = runtimeFor(compiled.pack);
+      const { index, rules, step } = rpgRuntime.runtimeFor(compiled.pack);
       assertRpgStateReferences(index, trace.initial_state);
-      const step = makeStep(rules);
       let state = trace.initial_state;
       const steps: {
         i: number;
