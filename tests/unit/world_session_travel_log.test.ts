@@ -6,6 +6,7 @@ import type {
 } from "../../src/world/overworld.js";
 import type { TravelLogEntrySnapshot } from "../../src/world/session_snapshot.js";
 import {
+  applyOverworldTravelLeg,
   restoreOverworldTravelLogEntries,
   restoreOverworldTravelLogEntry,
 } from "../../src/world/session_travel_log.js";
@@ -87,6 +88,84 @@ function restoreIndexes(
 }
 
 describe("overworld session travel log restoration", () => {
+  it("applies travel legs into runtime log entries and pending road encounters", () => {
+    const from = node("town_a", "Albany");
+    const to = node("town_b", "Colonie");
+    const event = roadEvent();
+
+    const applied = applyOverworldTravelLeg(from, to, edge(), event, {
+      minutes: 480,
+      supplies: 6,
+      fatigue: 25,
+    });
+
+    expect(applied).toMatchObject({
+      currentIdAfter: "town_b",
+      minutesAfter: 546,
+      suppliesAfter: 5,
+      fatigueAfter: 30,
+      entry: {
+        edgeId: "road:a-b",
+        fromId: "town_a",
+        toId: "town_b",
+        from: "Albany",
+        to: "Colonie",
+        route: "Test Road",
+        distanceMi: 12,
+        baseMinutes: 60,
+        delayMinutes: 6,
+        minutes: 66,
+        arrivedAt: 546,
+        suppliesUsed: 1,
+        suppliesAfter: 5,
+        fatigueGained: 5,
+        fatigueAfter: 30,
+        roadEvent: event,
+      },
+      pendingRoadEncounter: {
+        id: "road:road:a-b:546",
+        edgeId: "road:a-b",
+        from: "Albany",
+        to: "Colonie",
+        route: "Test Road",
+        arrivedAt: "Day 1, 09:06",
+        event,
+      },
+    });
+  });
+
+  it("applies plain travel legs without creating pending road encounters", () => {
+    const applied = applyOverworldTravelLeg(
+      node("town_a", "Albany"),
+      node("town_b", "Colonie"),
+      edge(),
+      null,
+      {
+        minutes: 480,
+        supplies: 6,
+        fatigue: 0,
+      },
+    );
+
+    expect(applied).toMatchObject({
+      currentIdAfter: "town_b",
+      minutesAfter: 540,
+      suppliesAfter: 5,
+      fatigueAfter: 2,
+      pendingRoadEncounter: null,
+      entry: {
+        delayMinutes: 0,
+        minutes: 60,
+        arrivedAt: 540,
+        suppliesUsed: 1,
+        suppliesAfter: 5,
+        fatigueGained: 2,
+        fatigueAfter: 2,
+        roadEvent: null,
+      },
+    });
+  });
+
   it("restores runtime travel log entries from compact snapshot entries", () => {
     expect(restoreOverworldTravelLogEntry(travelEntry(), restoreIndexes())).toMatchObject({
       edgeId: "road:a-b",

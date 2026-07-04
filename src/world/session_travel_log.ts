@@ -1,11 +1,75 @@
 import type { OverworldEdge, OverworldNode, OverworldRoadEvent } from "./overworld.js";
-import type { TravelLogEntry, TravelLogEntrySnapshot } from "./session_snapshot.js";
+import { buildOverworldPendingRoadEncounter } from "./session_road_encounters.js";
+import type {
+  OverworldPendingRoadEncounter,
+  TravelLogEntry,
+  TravelLogEntrySnapshot,
+} from "./session_snapshot.js";
+import { resolveOverworldTravelLeg } from "./travel_mechanics.js";
+
+export type OverworldTravelApplicationState = {
+  minutes: number;
+  supplies: number;
+  fatigue: number;
+};
+
+export type OverworldAppliedTravelLeg = {
+  entry: TravelLogEntry;
+  currentIdAfter: string;
+  minutesAfter: number;
+  suppliesAfter: number;
+  fatigueAfter: number;
+  pendingRoadEncounter: OverworldPendingRoadEncounter | null;
+};
 
 export type OverworldTravelLogRestoreIndex = {
   edgesById: ReadonlyMap<string, OverworldEdge>;
   nodesById: ReadonlyMap<string, OverworldNode>;
   roadEventsByEdgeId: ReadonlyMap<string, OverworldRoadEvent>;
 };
+
+export function applyOverworldTravelLeg(
+  from: OverworldNode,
+  to: OverworldNode,
+  edge: OverworldEdge,
+  roadEvent: OverworldRoadEvent | null,
+  state: OverworldTravelApplicationState,
+): OverworldAppliedTravelLeg {
+  const travelResult = resolveOverworldTravelLeg(edge.travel_minutes, roadEvent, {
+    fatigue: state.fatigue,
+    supplies: state.supplies,
+  });
+  const minutesAfter = state.minutes + travelResult.elapsedMinutes;
+  const entry: TravelLogEntry = {
+    edgeId: edge.id,
+    fromId: from.id,
+    toId: to.id,
+    from: from.name,
+    to: to.name,
+    route: edge.route,
+    distanceMi: edge.distance_mi,
+    baseMinutes: edge.travel_minutes,
+    delayMinutes: travelResult.delayMinutes,
+    minutes: travelResult.elapsedMinutes,
+    arrivedAt: minutesAfter,
+    suppliesUsed: travelResult.suppliesUsed,
+    suppliesAfter: travelResult.suppliesAfter,
+    fatigueGained: travelResult.fatigueGained,
+    fatigueAfter: travelResult.fatigueAfter,
+    roadEvent,
+  };
+
+  return {
+    entry,
+    currentIdAfter: to.id,
+    minutesAfter,
+    suppliesAfter: travelResult.suppliesAfter,
+    fatigueAfter: travelResult.fatigueAfter,
+    pendingRoadEncounter: roadEvent
+      ? buildOverworldPendingRoadEncounter(from, to, edge, roadEvent, minutesAfter)
+      : null,
+  };
+}
 
 export function restoreOverworldTravelLogEntry(
   entry: TravelLogEntrySnapshot,

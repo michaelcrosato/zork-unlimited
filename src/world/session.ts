@@ -28,7 +28,6 @@ import {
   OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES,
   OVERWORLD_STARTING_MINUTES as STARTING_MINUTES,
   OVERWORLD_STARTING_SUPPLIES as STARTING_SUPPLIES,
-  resolveOverworldTravelLeg,
   travelCondition,
   type OverworldRoadEncounterStrategy,
 } from "./travel_mechanics.js";
@@ -41,7 +40,6 @@ import {
   type OverworldSessionRoutePlan,
 } from "./session_routes.js";
 import {
-  buildOverworldPendingRoadEncounter,
   resolveOverworldRoadEncounter,
   type OverworldRoadEncounterResult,
 } from "./session_road_encounters.js";
@@ -92,6 +90,7 @@ import {
   planOverworldSiteExploration,
 } from "./session_local_actions.js";
 import { buildOverworldSessionSnapshot } from "./session_snapshot_builder.js";
+import { applyOverworldTravelLeg } from "./session_travel_log.js";
 import {
   OverworldSessionSnapshotSchema,
   cloneOverworldSessionSnapshot,
@@ -745,25 +744,6 @@ export class OverworldSession {
     if (changed) this.clearSnapshotCache();
   }
 
-  private setPendingRoadEncounter(
-    from: OverworldNode,
-    to: OverworldNode,
-    edge: OverworldExit,
-    roadEvent: OverworldRoadEvent | null,
-  ): void {
-    if (!roadEvent) {
-      this.pendingRoadEncounter = null;
-      return;
-    }
-    this.pendingRoadEncounter = buildOverworldPendingRoadEncounter(
-      from,
-      to,
-      edge,
-      roadEvent,
-      this.minutes,
-    );
-  }
-
   private cachedCompactView(): OverworldCompactView {
     if (this.caches.compactView) return this.caches.compactView;
     this.caches.compactView = this.buildCompactView();
@@ -1180,36 +1160,19 @@ export class OverworldSession {
     if (!edge) throw new Error("That road is not reachable from here.");
     const from = this.currentNode();
     const roadEvent = this.roadEventFor(edge.id);
-    const travelResult = resolveOverworldTravelLeg(edge.travel_minutes, roadEvent, {
+    const applied = applyOverworldTravelLeg(from, edge.destination, edge, roadEvent, {
+      minutes: this.minutes,
       fatigue: this.fatigue,
       supplies: this.supplies,
     });
-    this.supplies = travelResult.suppliesAfter;
-    this.fatigue = travelResult.fatigueAfter;
-    this.minutes += travelResult.elapsedMinutes;
-    this.currentId = edge.destination.id;
+    this.supplies = applied.suppliesAfter;
+    this.fatigue = applied.fatigueAfter;
+    this.minutes = applied.minutesAfter;
+    this.currentId = applied.currentIdAfter;
     this.markSeen(this.currentId);
-    this.setPendingRoadEncounter(from, edge.destination, edge, roadEvent);
-    const entry: TravelLogEntry = {
-      edgeId: edge.id,
-      fromId: from.id,
-      toId: edge.destination.id,
-      from: from.name,
-      to: edge.destination.name,
-      route: edge.route,
-      distanceMi: edge.distance_mi,
-      baseMinutes: edge.travel_minutes,
-      delayMinutes: travelResult.delayMinutes,
-      minutes: travelResult.elapsedMinutes,
-      arrivedAt: this.minutes,
-      suppliesUsed: travelResult.suppliesUsed,
-      suppliesAfter: this.supplies,
-      fatigueGained: travelResult.fatigueGained,
-      fatigueAfter: this.fatigue,
-      roadEvent,
-    };
-    this.travelLog.unshift(entry);
+    this.pendingRoadEncounter = applied.pendingRoadEncounter;
+    this.travelLog.unshift(applied.entry);
     this.clearSnapshotCache();
-    return entry;
+    return applied.entry;
   }
 }
