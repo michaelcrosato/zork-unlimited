@@ -57,12 +57,17 @@ import { legalActionRowsFor, rpgViewField } from "./rpg_view_projection.js";
 import { RpgMcpSessionRuntime, rpgRoomTitle, rpgSourceFields } from "./rpg_session_runtime.js";
 import {
   OverworldMcpSessionStore,
-  overworldReadUnchanged,
   overworldSnapshotHashRejection,
-  type OverworldMcpReadUnchanged,
+  type OverworldMcpContextResponse,
+  type OverworldMcpExportArgs,
+  type OverworldMcpExportResponse,
+  type OverworldMcpReadArgs,
+  type OverworldMcpReadResponse,
   type OverworldMcpRejectedSessionPayload,
   type OverworldMcpResponseOptions,
+  type OverworldMcpRestoreResponse,
   type OverworldMcpSessionResponse,
+  type OverworldMcpStartResponse,
   type OverworldMcpViewField,
 } from "./overworld_sessions.js";
 import type { WorldBinding, WorldManifest } from "../world/schema.js";
@@ -95,11 +100,9 @@ import {
   type OverworldQuestCompletionResult,
   type OverworldRoadEncounterResult,
   type OverworldRoadEncounterStrategy,
-  type OverworldSessionSnapshot,
   type OverworldSessionRoutePlan,
   type OverworldServiceResult,
   type OverworldQuestView,
-  type OverworldView,
   type TravelLogEntry,
 } from "../world/session.js";
 import {
@@ -109,7 +112,6 @@ import {
   type OverworldCompactQuestRef,
   type OverworldCompactRouteOption,
   type OverworldCompactTravelLogEntry,
-  type OverworldCompactView,
 } from "../world/compact_view.js";
 import {
   compactOverworldActionResult,
@@ -231,40 +233,15 @@ type OverworldGuardedRejection<Args extends OverworldResponseOptions> = Args ext
   ? OverworldRejectedSessionPayload
   : never;
 
-type OverworldStartResponse<Args extends OverworldResponseOptions> = {
-  session_id: string;
-  snapshot_hash: string;
-} & OverworldViewField<Args>;
+type OverworldStartResponse<Args extends OverworldResponseOptions> =
+  OverworldMcpStartResponse<Args>;
 
-type OverworldRestoreResponse<Args extends OverworldResponseOptions> = {
-  ok: true;
-  session_id: string;
-  snapshot_hash: string;
-} & OverworldViewField<Args>;
+type OverworldRestoreResponse<Args extends OverworldResponseOptions> =
+  OverworldMcpRestoreResponse<Args>;
 
-type OverworldExportArgs = {
-  session_id: string;
-  expected_snapshot_hash?: string;
-};
+type OverworldExportArgs = OverworldMcpExportArgs;
 
-type OverworldExportSuccess = {
-  ok: true;
-  session_id: string;
-  snapshot_hash: string;
-  snapshot: OverworldSessionSnapshot;
-};
-
-type OverworldExportRejection = {
-  ok: false;
-  snapshot_hash: string;
-  rejection_reason: string;
-};
-
-type OverworldExportResponse<Args extends OverworldExportArgs> = Args extends {
-  expected_snapshot_hash: string;
-}
-  ? OverworldExportSuccess | OverworldExportRejection
-  : OverworldExportSuccess;
+type OverworldExportResponse<Args extends OverworldExportArgs> = OverworldMcpExportResponse<Args>;
 
 type OverworldListSummary = {
   world: Pick<OverworldManifest, "id" | "name" | "start" | "premise">;
@@ -534,37 +511,11 @@ type OverworldSessionResponse<
   CompactValue = Value,
 > = OverworldMcpSessionResponse<Key, Value, Args, CompactValue>;
 
-type OverworldContextPayload = {
-  ok: true;
-  session_id: string;
-  snapshot_hash: string;
-  context: OverworldCompactView;
-};
+type OverworldReadArgs = OverworldMcpReadArgs;
 
-type OverworldReadArgs = {
-  session_id: string;
-  if_snapshot_hash?: string;
-};
+type OverworldReadResponse<Args extends OverworldReadArgs> = OverworldMcpReadResponse<Args>;
 
-type OverworldReadUnchanged = OverworldMcpReadUnchanged;
-
-type OverworldFullReadPayload = {
-  session_id: string;
-  snapshot_hash: string;
-  observation: OverworldView;
-};
-
-type OverworldReadResponse<Args extends OverworldReadArgs> = Args extends {
-  if_snapshot_hash: string;
-}
-  ? OverworldFullReadPayload | OverworldReadUnchanged
-  : OverworldFullReadPayload;
-
-type OverworldContextResponse<Args extends OverworldReadArgs> = Args extends {
-  if_snapshot_hash: string;
-}
-  ? OverworldContextPayload | OverworldReadUnchanged
-  : OverworldContextPayload;
+type OverworldContextResponse<Args extends OverworldReadArgs> = OverworldMcpContextResponse<Args>;
 
 function rpgStateUnchanged(stateHash: string): RpgStateUnchanged {
   return {
@@ -944,73 +895,29 @@ export function createToolApi(opts: { root: string }) {
       args?: Args,
     ): OverworldStartResponse<Args> {
       const responseOptions = (args ?? {}) as Args;
-      const created = overworldSessions.create();
-      return {
-        session_id: created.session_id,
-        snapshot_hash: overworldSessions.snapshotHash(created.session),
-        ...overworldSessions.viewField(responseOptions, created.session),
-      } as OverworldStartResponse<Args>;
+      return overworldSessions.startResponse(responseOptions);
     },
 
     get_overworld_session<Args extends OverworldReadArgs>(args: Args): OverworldReadResponse<Args> {
-      const session = overworldSessions.get(args.session_id);
-      const snapshotHash = overworldSessions.snapshotHash(session);
-      if (args.if_snapshot_hash !== undefined && args.if_snapshot_hash === snapshotHash) {
-        return overworldReadUnchanged(snapshotHash) as OverworldReadResponse<Args>;
-      }
-      return {
-        session_id: args.session_id,
-        snapshot_hash: snapshotHash,
-        observation: session.view(),
-      } as OverworldReadResponse<Args>;
+      return overworldSessions.read(args);
     },
 
     get_overworld_session_context<Args extends OverworldReadArgs>(
       args: Args,
     ): OverworldContextResponse<Args> {
-      const session = overworldSessions.get(args.session_id);
-      const snapshotHash = overworldSessions.snapshotHash(session);
-      if (args.if_snapshot_hash !== undefined && args.if_snapshot_hash === snapshotHash) {
-        return overworldReadUnchanged(snapshotHash) as OverworldContextResponse<Args>;
-      }
-      return {
-        ok: true,
-        session_id: args.session_id,
-        snapshot_hash: snapshotHash,
-        context: session.compactView(),
-      } as OverworldContextResponse<Args>;
+      return overworldSessions.readContext(args);
     },
 
     export_overworld_session<Args extends OverworldExportArgs>(
       args: Args,
     ): OverworldExportResponse<Args> {
-      const session = overworldSessions.get(args.session_id);
-      const snapshotHash = overworldSessions.snapshotHash(session);
-      if (
-        args.expected_snapshot_hash !== undefined &&
-        args.expected_snapshot_hash !== snapshotHash
-      ) {
-        return overworldSnapshotHashRejection(snapshotHash) as OverworldExportResponse<Args>;
-      }
-      const snapshot = session.snapshot();
-      return {
-        ok: true,
-        session_id: args.session_id,
-        snapshot_hash: snapshotHash,
-        snapshot,
-      } as OverworldExportResponse<Args>;
+      return overworldSessions.exportSnapshot(args);
     },
 
     restore_overworld_session<Args extends { snapshot: unknown } & OverworldResponseOptions>(
       args: Args,
     ): OverworldRestoreResponse<Args> {
-      const restored = overworldSessions.restore(args.snapshot);
-      return {
-        ok: true,
-        session_id: restored.session_id,
-        snapshot_hash: overworldSessions.snapshotHash(restored.session),
-        ...overworldSessions.viewField(args, restored.session),
-      } as OverworldRestoreResponse<Args>;
+      return overworldSessions.restoreResponse(args, args.snapshot);
     },
 
     plan_overworld_session_route<
