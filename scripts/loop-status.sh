@@ -40,7 +40,21 @@ if [ "$unpushed" -gt 0 ]; then echo "push: ${unpushed} local commit(s) NOT on or
 
 if [ -f ai-runs/latest-cycle.json ]; then
   echo "--- current cycle (latest-cycle.json) ---"
-  node -e 'try{const c=JSON.parse(require("fs").readFileSync("ai-runs/latest-cycle.json","utf8"));console.log("  runId="+c.runId+"  mode="+c.mode+"  budget="+(c.agentTimeoutSeconds||"default")+"s\n  target="+c.target+"\n  rec="+(c.recommendation||"").slice(0,90));}catch(e){console.log("  (unreadable)");}' 2>/dev/null
+  node <<'NODE' 2>/dev/null
+try {
+  const c = JSON.parse(require("fs").readFileSync("ai-runs/latest-cycle.json", "utf8"));
+  const rec = c.recommendationId
+    ? `${c.recommendationCategory ? `${c.recommendationCategory}/` : ""}${c.recommendationId}`
+    : c.recommendation || "";
+  console.log(
+    `  runId=${c.runId}  mode=${c.mode}  budget=${c.agentTimeoutSeconds || "default"}s\n` +
+      `  target=${c.target}\n` +
+      `  rec=${rec.slice(0, 90)}`,
+  );
+} catch {
+  console.log("  (unreadable)");
+}
+NODE
 fi
 
 if [ -f ai-runs/wrapper.log ]; then

@@ -5,9 +5,12 @@
  */
 import { describe, it, expect } from "vitest";
 import {
+  buildLatestCycleMetadata,
   buildPrompt,
+  formatLoopStateAppend,
   playtestTargetSummary,
   playtestTarget,
+  playtestTargetMetadata,
   playtestTargetWorldQuestId,
   shouldRunUltraplan,
 } from "../../src/ai-loop.js";
@@ -130,6 +133,68 @@ describe("playtestTargetSummary", () => {
       "cold_forge",
     );
     expect(playtestTargetSummary(mainWorldQuestId, "breaking_weir")).toBe("breaking_weir");
+  });
+});
+
+describe("compact AFK handoff metadata", () => {
+  it("writes latest-cycle metadata with recommendation ids instead of verbose titles", () => {
+    const top = {
+      ...candidate("engine", "src/core/engine.ts"),
+      id: "engine-runtime-cache",
+      title: "Refactor the runtime cache into something with a deliberately long title",
+      rationale: "Long rationale that belongs in the prompt, not latest-cycle metadata.",
+    };
+
+    const metadata = buildLatestCycleMetadata({
+      runId: "2026-07-04T00-00-00-000Z",
+      runDir: "ai-runs/2026-07-04T00-00-00-000Z",
+      target: "breaking_weir",
+      targetWorldQuestId: "breaking_weir",
+      playtestRecord: "ai-runs/2026-07-04T00-00-00-000Z/playtest.md",
+      top,
+      ultraplan: false,
+      agentTimeoutSeconds: null,
+    });
+
+    expect(metadata).toMatchObject({
+      target: "breaking_weir",
+      targetWorldQuestId: "breaking_weir",
+      recommendationId: "engine-runtime-cache",
+      recommendationCategory: "engine",
+      mode: "standard",
+    });
+    expect("recommendation" in metadata).toBe(false);
+    expect(JSON.stringify(metadata)).not.toContain(top.title);
+    expect(JSON.stringify(metadata)).not.toContain(top.rationale);
+  });
+
+  it("keeps playtest target metadata quest-id based", () => {
+    expect(playtestTargetMetadata("content/rpg/pack/cold_forge.yaml", "cold_forge")).toEqual({
+      target: "cold_forge",
+      targetWorldQuestId: "cold_forge",
+    });
+  });
+
+  it("keeps automatic loop-state appends compact", () => {
+    const top = {
+      ...candidate("engine", "src/core/engine.ts"),
+      id: "engine-runtime-cache",
+      title: "Verbose title that should stay out of compact loop state",
+      rationale: "Verbose rationale that should stay out of compact loop state.",
+    };
+    const text = formatLoopStateAppend(
+      "2026-07-04T00-00-00-000Z",
+      assessment(top),
+      "breaking_weir",
+      "breaking_weir",
+      false,
+    );
+
+    expect(text).toContain("Rec: engine-runtime-cache (engine/M; score=1).");
+    expect(text).toContain("Playtest: breaking_weir.");
+    expect(text).not.toContain(top.title);
+    expect(text).not.toContain(top.rationale);
+    expect(text).not.toContain("Process: assessor ranks");
   });
 });
 

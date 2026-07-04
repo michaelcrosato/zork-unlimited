@@ -287,13 +287,13 @@ export function packStem(ref: string): string {
 export function parseAttendanceOffsets(loopStateText: string): Map<string, number> {
   const map = new Map<string, number>();
   // bug_0293: ALSO match the model-INDEPENDENT code-written recommendation line
-  // `Blind-playtest "<id>"` (legacy) and `Blind-playtest quest "<id>"` (current,
-  // emitted by the assessor every cycle, see the playtest
-  // candidate title below) and the looser Sonnet-era agent phrasing "blind pass on
-  // `<quest>`". The wrapper class gains `"` so the quoted id is skipped; `i` tolerates
-  // sentence-start caps; the `_v\d+` on a captured pack id is normalized by packStem.
+  // `Blind-playtest "<id>"` (legacy), `Blind-playtest quest "<id>"` (current title
+  // form), compact `Rec: playtest-<id>` loop-driver entries, and the looser
+  // Sonnet-era agent phrasing "blind pass on `<quest>`". The wrapper class gains
+  // `"` so the quoted id is skipped; `i` tolerates sentence-start caps; the `_v\d+`
+  // on a captured pack id is normalized by packStem.
   const re =
-    /(?:Mandatory LLM playtest target this cycle:|Mandated blind pass ran on|blind pass on|Blind-playtest(?:\s+quest)?)\s+["`*]*([A-Za-z0-9_./-]+)/gi;
+    /(?:(?:Mandatory LLM playtest target this cycle:|Mandated blind pass ran on|blind pass on|Blind-playtest(?:\s+quest)?)\s+["`*]*|Rec:\s+playtest-)([A-Za-z0-9_./-]+)/gi;
   for (const m of loopStateText.matchAll(re)) {
     const captured = m[1];
     if (captured === undefined) continue;

@@ -122,7 +122,19 @@ export function playtestTargetWorldQuestId(
   return mainWorldQuestId;
 }
 
-function playtestTargetMetadata(
+type LatestCycleMetadata = {
+  runId: string;
+  runDir: string;
+  target: string;
+  targetWorldQuestId?: string;
+  playtestRecord: string;
+  recommendationId: string | null;
+  recommendationCategory: ImprovementCandidate["category"] | null;
+  mode: "standard" | "ultraplan";
+  agentTimeoutSeconds?: number;
+};
+
+export function playtestTargetMetadata(
   target: string,
   targetWorldQuestId: string | null | undefined,
 ): { target: string; targetWorldQuestId?: string } {
@@ -139,6 +151,29 @@ export function playtestTargetSummary(
 ): string {
   if (!targetWorldQuestId) return target;
   return targetWorldQuestId;
+}
+
+export function buildLatestCycleMetadata(ctx: {
+  runId: string;
+  runDir: string;
+  target: string;
+  targetWorldQuestId: string | null;
+  playtestRecord: string;
+  top: ImprovementCandidate | null;
+  ultraplan: boolean;
+  agentTimeoutSeconds: number | null;
+}): LatestCycleMetadata {
+  const metadata: LatestCycleMetadata = {
+    runId: ctx.runId,
+    runDir: ctx.runDir,
+    ...playtestTargetMetadata(ctx.target, ctx.targetWorldQuestId),
+    playtestRecord: ctx.playtestRecord,
+    recommendationId: ctx.top?.id ?? null,
+    recommendationCategory: ctx.top?.category ?? null,
+    mode: ctx.ultraplan ? "ultraplan" : "standard",
+  };
+  if (ctx.agentTimeoutSeconds !== null) metadata.agentTimeoutSeconds = ctx.agentTimeoutSeconds;
+  return metadata;
 }
 
 function main(): void {
@@ -194,15 +229,16 @@ function main(): void {
   writeFileSync(
     join("ai-runs", "latest-cycle.json"),
     JSON.stringify(
-      {
+      buildLatestCycleMetadata({
         runId: stamp,
         runDir,
-        ...playtestTargetMetadata(target, targetWorldQuestId),
+        target,
+        targetWorldQuestId,
         playtestRecord,
-        recommendation: top?.title ?? null,
-        mode: ultraplan ? "ultraplan" : "standard",
-        ...(agentTimeoutSeconds !== null ? { agentTimeoutSeconds } : {}),
-      },
+        top,
+        ultraplan,
+        agentTimeoutSeconds,
+      }),
       null,
       2,
     ),
@@ -212,7 +248,10 @@ function main(): void {
     SATURATION_STATE_FILE,
     JSON.stringify({ saturated, cyclesSinceUltraplan: ultraplan ? 0 : cyclesSince + 1 }, null, 2),
   );
-  appendState(stamp, a, target, targetWorldQuestId, ultraplan);
+  appendFileSync(
+    "AI_LOOP_STATE.md",
+    formatLoopStateAppend(stamp, a, target, targetWorldQuestId, ultraplan),
+  );
 
   console.log(`AFK cycle ${stamp}${ultraplan ? "  [ULTRAPLAN MODE — assessor saturated]" : ""}`);
   console.log(`  assessment: ${runDir}/assessment.md`);
@@ -349,32 +388,29 @@ export function buildPrompt(ctx: {
   ].join("\n");
 }
 
-function appendState(
+export function formatLoopStateAppend(
   stamp: string,
   a: Assessment,
   target: string,
   targetWorldQuestId: string | null,
   ultraplan: boolean,
-): void {
+): string {
   const top = a.top;
   const targetSummary = playtestTargetSummary(target, targetWorldQuestId);
   const text = [
     "",
     `## AFK Cycle ${stamp}${ultraplan ? " — ULTRAPLAN (saturation re-aim)" : ""}`,
     "",
-    `- Assessment: RPG quests=${a.rpgQuestCount}; world quests=${a.worldQuestCount}; ${a.candidates.length} candidate(s) ranked.`,
-    `- Next best improvement (recommended): ${top ? `[${top.category}] ${top.title}` : "(none — healthy)"}.`,
-    top ? `- Why: ${top.rationale}` : "",
-    ultraplan
-      ? "- ⟳ SATURATED: top candidate at the 0.5 floor → this cycle runs a multi-agent ultraplan to re-aim (plan → docs/CURRENT_PLAN.md), then implements in a fresh context."
-      : "",
-    `- Mandatory LLM playtest target this cycle: ${targetSummary}.`,
-    "- Process: assessor ranks → blind LLM playtest for quality → one improvement → health + verify:integrity green → commit (trust-but-verify).",
+    `- Assess: rpg=${a.rpgQuestCount}; world=${a.worldQuestCount}; candidates=${a.candidates.length}.`,
+    `- Rec: ${top ? `${top.id} (${top.category}/${top.effort}; score=${top.score})` : "none"}.`,
+    ultraplan ? "- Mode: ultraplan re-aim; plan docs/CURRENT_PLAN.md." : "",
+    `- Playtest: ${targetSummary}.`,
+    "- Guard: blind report + health + verify:integrity before commit.",
     "",
   ]
     .filter((l) => l !== "")
     .join("\n");
-  appendFileSync("AI_LOOP_STATE.md", text + "\n");
+  return text + "\n";
 }
 
 /**

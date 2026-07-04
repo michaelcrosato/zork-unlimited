@@ -310,6 +310,12 @@ describe("blind-pass rotation (bug_0128)", () => {
     expect(offsets.has("quest")).toBe(false);
   });
 
+  it("parseAttendanceOffsets recognizes compact playtest recommendation ids", () => {
+    const text = "- Rec: playtest-bellfounders_alarm (content_fix/S; score=0.5).";
+    const offsets = parseAttendanceOffsets(text);
+    expect(offsets.has("bellfounders_alarm")).toBe(true);
+  });
+
   it("parseBlindReportAttendanceOffsets recognizes timestamped accepted markdown reports", () => {
     const offsets = parseBlindReportAttendanceOffsets([
       "20260619T191648Z_aleconners_seal_seed7.md",

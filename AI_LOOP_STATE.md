@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 289 -->
+<!-- historical_cycle_count: 290 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - compact_afk_handoff_recommendations
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: `latest-cycle.json` and automatic loop-state appends now persist recommendation ids/categories instead of full titles and rationales.
+- Loop effect: per-cycle machine handoffs stay quest-id/status based and avoid re-ingesting verbose recommendation prose outside the human prompt.
+- Guard: focused Prettier, typecheck, AI loop metadata, assessor attendance, loop driver gate, and loop-state rotation tests passed.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - afk_quest_health_path_removed
 

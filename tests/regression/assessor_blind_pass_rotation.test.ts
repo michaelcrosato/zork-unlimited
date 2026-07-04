@@ -195,7 +195,7 @@ describe("bug_0293 — recency rotation survives the SONNET phrasing + uses the 
   it("a freshly-attended pack (new forms) sorts LAST in the rotation, never first", () => {
     // Realistic newest-first entry: code line + Sonnet prose both name clockwork on top.
     const log = [
-      '- Next best improvement (recommended): [content_fix] Blind-playtest quest "clockwork_heist" — clean.',
+      "- Rec: playtest-clockwork_heist (content_fix/S; score=0.5).",
       "### Cycle result — (bug_0292): blind pass on `clockwork_heist` (seed 7).",
       '- Next best improvement (recommended): [content_fix] Blind-playtest quest "midnight_edition" — clean.',
     ].join("\n");

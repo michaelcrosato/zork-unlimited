@@ -84,8 +84,11 @@ Make discovered overworld quest leads start real RPG sessions.
 - AFK quest-health payloads no longer carry constant `mode`, raw `pack_id`, or
   raw pack path fields; the loop's catalog axis is the world quest id plus
   playable/validator status.
-- AFK blind-test rotation now parses those quest-labeled recommendation lines,
-  so recently played quests remain visible to the attendance sorter.
+- AFK `latest-cycle.json` and automatic loop-state appends now carry compact
+  recommendation ids/categories instead of repeating full titles and rationales.
+- AFK blind-test rotation now parses quest-labeled titles and compact
+  `playtest-<world_quest_id>` recommendation ids, so recently played quests
+  remain visible to the attendance sorter.
 - AFK baseline playtests now carry `main_world_quest_id` and instruct blind agents
   to start shipped baseline quests through `start_world_quest`.
 - The external blind-test harness now starts shipped playtests only through
