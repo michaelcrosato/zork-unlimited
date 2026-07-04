@@ -4,7 +4,13 @@ import {
   describeOverworldSiteAction,
   type OverworldLocalActionDescriptor,
 } from "./local_actions.js";
-import type { OverworldArea, OverworldExplorationSite, OverworldLocalJob } from "./overworld.js";
+import type {
+  OverworldArea,
+  OverworldAreaExit,
+  OverworldExplorationSite,
+  OverworldLocalJob,
+} from "./overworld.js";
+import { timeLabel } from "./session_journal_codec.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 
 export type OverworldJournalEntryLookup = {
@@ -45,6 +51,25 @@ export type OverworldSiteExplorationPlan =
       renown: number;
     };
 
+export type OverworldAreaTravelResult = {
+  from: OverworldArea;
+  to: OverworldArea;
+  route: string;
+  minutes: number;
+  arrivedAt: string;
+};
+
+export type OverworldAreaTravelApplicationState = {
+  currentTownId: string;
+  minutes: number;
+};
+
+export type OverworldAppliedAreaTravel = OverworldAreaTravelResult & {
+  currentAreaIdAfter: string;
+  currentAreaByTownEntry: readonly [string, string];
+  minutesAfter: number;
+};
+
 export type OverworldAreaExplorationState = {
   areaId: string;
   areasById: ReadonlyMap<string, OverworldArea>;
@@ -76,6 +101,24 @@ export type OverworldSiteExplorationState = {
   exploredSiteIds: ReadonlySet<string>;
   journalEntries: OverworldJournalEntryLookup;
 };
+
+export function applyOverworldAreaTravel(
+  currentArea: OverworldArea,
+  edge: OverworldAreaExit,
+  state: OverworldAreaTravelApplicationState,
+): OverworldAppliedAreaTravel {
+  const minutesAfter = state.minutes + edge.travel_minutes;
+  return {
+    from: currentArea,
+    to: edge.destination,
+    route: edge.route,
+    minutes: edge.travel_minutes,
+    arrivedAt: timeLabel(minutesAfter),
+    currentAreaIdAfter: edge.destination.id,
+    currentAreaByTownEntry: [state.currentTownId, edge.destination.id],
+    minutesAfter,
+  };
+}
 
 export function planOverworldAreaExploration(
   state: OverworldAreaExplorationState,

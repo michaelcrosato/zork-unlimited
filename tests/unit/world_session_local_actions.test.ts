@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type {
   OverworldArea,
+  OverworldAreaExit,
   OverworldExplorationSite,
   OverworldLocalJob,
 } from "../../src/world/overworld.js";
 import {
+  applyOverworldAreaTravel,
   planOverworldAreaExploration,
   planOverworldLocalJobCompletion,
   planOverworldSiteExploration,
@@ -21,6 +23,18 @@ function area(id: string, home = "town_a"): OverworldArea {
     discovery: `${id} discovery`,
     travel_minutes: 20,
     services: [],
+  };
+}
+
+function areaExit(destination = area("area_b")): OverworldAreaExit {
+  return {
+    id: "area-route:a-b",
+    home: "town_a",
+    from_area: "area_a",
+    to_area: destination.id,
+    route: "Arcade walk",
+    travel_minutes: 18,
+    destination,
   };
 }
 
@@ -67,6 +81,27 @@ function journalEntry(id: string, kind: OverworldJournalEntry["kind"]): Overworl
 }
 
 describe("overworld local action planning", () => {
+  it("applies local area travel into arrival state", () => {
+    const currentArea = area("area_a");
+    const destination = area("area_b");
+
+    expect(
+      applyOverworldAreaTravel(currentArea, areaExit(destination), {
+        currentTownId: "town_a",
+        minutes: 480,
+      }),
+    ).toEqual({
+      from: currentArea,
+      to: destination,
+      route: "Arcade walk",
+      minutes: 18,
+      arrivedAt: "Day 1, 08:18",
+      currentAreaIdAfter: "area_b",
+      currentAreaByTownEntry: ["town_a", "area_b"],
+      minutesAfter: 498,
+    });
+  });
+
   it("plans area exploration and preserves idempotent journal replay", () => {
     const localArea = area("area_a");
     const visitedAreaIds = new Set<string>();

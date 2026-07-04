@@ -82,9 +82,11 @@ import {
   type OverworldServiceResult,
 } from "./session_services.js";
 import {
+  applyOverworldAreaTravel,
   planOverworldAreaExploration,
   planOverworldLocalJobCompletion,
   planOverworldSiteExploration,
+  type OverworldAreaTravelResult,
 } from "./session_local_actions.js";
 import { buildOverworldSessionSnapshot } from "./session_snapshot_builder.js";
 import { applyOverworldTravelLeg } from "./session_travel_log.js";
@@ -116,6 +118,7 @@ export type { OverworldRegionalArcProgress } from "./session_regional_arcs.js";
 export type { OverworldServiceResult } from "./session_services.js";
 export type { OverworldQuestView } from "./session_local_discovery.js";
 export type { OverworldQuestCompletionResult } from "./session_quests.js";
+export type { OverworldAreaTravelResult } from "./session_local_actions.js";
 export {
   OVERWORLD_SESSION_SAVE_VERSION,
   OverworldSessionSnapshotSchema,
@@ -128,14 +131,6 @@ export type {
   TravelLogEntry,
   TravelLogEntrySnapshot,
 } from "./session_snapshot.js";
-
-export type OverworldAreaTravelResult = {
-  from: OverworldArea;
-  to: OverworldArea;
-  route: string;
-  minutes: number;
-  arrivedAt: string;
-};
 
 export type OverworldActionResult = {
   minutes: number;
@@ -960,16 +955,20 @@ export class OverworldSession {
     if (!this.discoveredAreaIds.has(edge.destination.id)) {
       throw new Error("Map that local area before moving there.");
     }
-    this.minutes += edge.travel_minutes;
-    this.currentAreaId = edge.destination.id;
-    this.currentAreaByTown.set(this.currentId, edge.destination.id);
+    const applied = applyOverworldAreaTravel(currentArea, edge, {
+      currentTownId: this.currentId,
+      minutes: this.minutes,
+    });
+    this.minutes = applied.minutesAfter;
+    this.currentAreaId = applied.currentAreaIdAfter;
+    this.currentAreaByTown.set(...applied.currentAreaByTownEntry);
     this.clearSnapshotCache();
     return {
-      from: currentArea,
-      to: edge.destination,
-      route: edge.route,
-      minutes: edge.travel_minutes,
-      arrivedAt: timeLabel(this.minutes),
+      from: applied.from,
+      to: applied.to,
+      route: applied.route,
+      minutes: applied.minutes,
+      arrivedAt: applied.arrivedAt,
     };
   }
 
