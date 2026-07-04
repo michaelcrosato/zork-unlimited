@@ -55,11 +55,7 @@ import { safeResolve } from "./paths.js";
 import { SessionStore, type RpgStep, type Session, type TranscriptSummary } from "./sessions.js";
 import { isRpgPackShape, type McpActionOption, type McpObservation } from "./types.js";
 import { RPG_COMPACT_EVENT_VERSION, type RpgCompactEvent } from "./compact_rpg_event.js";
-import {
-  compactRpgObservation,
-  RPG_COMPACT_OBSERVATION_VERSION,
-  type RpgCompactObservation,
-} from "./compact_rpg_observation.js";
+import type { RpgCompactObservation } from "./compact_rpg_observation.js";
 import {
   hashTranscript,
   rpgStepEventVersion,
@@ -71,6 +67,11 @@ import {
   type RpgStepEvents,
   type RpgStepEventVersion,
 } from "./transcript_projection.js";
+import {
+  legalActionRowsFor,
+  rpgViewField,
+  type RpgObservationViewOptions,
+} from "./rpg_view_projection.js";
 import type { WorldBinding, WorldManifest } from "../world/schema.js";
 import {
   normalizePackPath,
@@ -531,9 +532,6 @@ type TranscriptResponse<Args extends TranscriptArgs> = Args extends { if_transcr
   ? TranscriptPayload<Args> | TranscriptUnchanged
   : TranscriptPayload<Args>;
 
-const OBSERVATION_PROJECTION_COMPACT = `compact-observation:v${RPG_COMPACT_OBSERVATION_VERSION}`;
-const OBSERVATION_PROJECTION_PUBLIC = "public-observation:v1";
-const LEGAL_ACTION_ROWS_PROJECTION = "legal-action-rows:v1";
 const RPG_STATE_HASH_MISMATCH_REASON =
   "State hash mismatch; refresh the current observation or action menu.";
 const OVERWORLD_SNAPSHOT_HASH_MISMATCH_REASON =
@@ -697,95 +695,6 @@ function actionOptionForId(
   id: string,
 ): RpgActionOption | null {
   return actions.find((action) => action.id === id) ?? null;
-}
-
-type PublicObservationOptions = { compactActions?: boolean };
-
-function publicObservationOptions(args: { compact_actions?: boolean }): PublicObservationOptions {
-  return args.compact_actions ? { compactActions: true } : {};
-}
-
-function publicActions(
-  actions: readonly RpgActionOption[],
-  opts: PublicObservationOptions = {},
-): McpActionOption[] {
-  return actions.map((option) => ({
-    id: option.id,
-    ...(opts.compactActions ? {} : { command: option.command }),
-    ...(option.skill_check ? { skill_check: option.skill_check } : {}),
-  }));
-}
-
-function publicActionRows<Args extends RpgLegalActionsArgs>(
-  actions: readonly RpgActionOption[],
-  args: Args,
-): RpgLegalActionRows<Args> {
-  return (
-    args.compact_actions === true
-      ? actions.map((option) => option.id)
-      : publicActions(actions, publicObservationOptions(args))
-  ) as RpgLegalActionRows<Args>;
-}
-
-function legalActionRowsFor<Args extends RpgLegalActionsArgs>(
-  sessions: SessionStore,
-  session: Session,
-  actions: readonly RpgActionOption[],
-  args: Args,
-): RpgLegalActionRows<Args> {
-  return sessions.legalActionProjection(
-    session.id,
-    `${LEGAL_ACTION_ROWS_PROJECTION}:compact:${args.compact_actions === true ? 1 : 0}`,
-    () => publicActionRows(actions, args),
-  );
-}
-
-function publicObservation(
-  obs: RpgObservation,
-  opts: PublicObservationOptions = {},
-): McpObservation {
-  return {
-    ...obs,
-    available_actions: publicActions(obs.available_actions, opts),
-  };
-}
-
-type RpgObservationViewOptions = Pick<ObservationOptions, "hideGraph" | "includeWorldIntro">;
-
-function observationProjectionSuffix(opts: RpgObservationViewOptions, extra: string): string {
-  return `hide:${opts.hideGraph === true ? 1 : 0}:intro:${opts.includeWorldIntro === true ? 1 : 0}:${extra}`;
-}
-
-function rpgViewField<Args extends RpgViewOptions>(
-  sessions: SessionStore,
-  session: Session,
-  obs: RpgObservation,
-  args: Args,
-  opts: RpgObservationViewOptions = {},
-): RpgViewField<Args> {
-  if (args.compact_observation === true) {
-    return {
-      context: sessions.observationProjection(
-        session.id,
-        `${OBSERVATION_PROJECTION_COMPACT}:${observationProjectionSuffix(opts, "ids")}`,
-        () =>
-          compactRpgObservation(
-            obs,
-            obs.available_actions.map((action) => action.id),
-          ),
-      ),
-    } as RpgViewField<Args>;
-  }
-  return {
-    observation: sessions.observationProjection(
-      session.id,
-      `${OBSERVATION_PROJECTION_PUBLIC}:${observationProjectionSuffix(
-        opts,
-        `compact-actions:${args.compact_actions === true ? 1 : 0}`,
-      )}`,
-      () => publicObservation(obs, publicObservationOptions(args)),
-    ),
-  } as RpgViewField<Args>;
 }
 
 function rpgSourceFields(source: {
