@@ -166,6 +166,7 @@ import {
 } from "./session_snapshot.js";
 import { restoreOverworldTravelLogEntries } from "./session_travel_log.js";
 import { compactOverworldSessionIdPayload } from "./session_compact_ids.js";
+import { cloneOverworldView } from "./session_view_clone.js";
 
 export type {
   OverworldRoadEncounterOption,
@@ -1332,46 +1333,8 @@ export class OverworldSession {
     return this.viewCache;
   }
 
-  private cloneView(view: OverworldView): OverworldView {
-    return {
-      ...view,
-      areaExits: view.areaExits.map((exit) => ({ ...exit })),
-      exits: view.exits.map((exit) => ({ ...exit })),
-      areas: [...view.areas],
-      pois: [...view.pois],
-      characters: [...view.characters],
-      events: [...view.events],
-      jobs: [...view.jobs],
-      sites: [...view.sites],
-      quests: view.quests.map((quest) => ({ ...quest })),
-      routeOptions: view.routeOptions.map((plan) => cloneOverworldRouteOption(plan)),
-      discovered: [...view.discovered],
-      journal: view.journal.map((entry) => ({ ...entry })),
-      discoveredAreaIds: [...view.discoveredAreaIds],
-      discoveredJobIds: [...view.discoveredJobIds],
-      visitedAreaIds: [...view.visitedAreaIds],
-      completedJobIds: [...view.completedJobIds],
-      discoveredSiteIds: [...view.discoveredSiteIds],
-      discoveredQuestIds: [...view.discoveredQuestIds],
-      startedQuestIds: [...view.startedQuestIds],
-      completedQuestIds: [...view.completedQuestIds],
-      exploredSiteIds: [...view.exploredSiteIds],
-      resolvedEventIds: [...view.resolvedEventIds],
-      regionRenown: { ...view.regionRenown },
-      regionalArcs: view.regionalArcs.map((arc) => cloneOverworldRegionalArcProgress(arc)),
-      completedRegionalArcIds: [...view.completedRegionalArcIds],
-      pendingRoadEncounter: view.pendingRoadEncounter
-        ? {
-            ...view.pendingRoadEncounter,
-            options: view.pendingRoadEncounter.options.map((option) => ({ ...option })),
-          }
-        : null,
-      log: view.log.map((entry) => ({ ...entry })),
-    };
-  }
-
   view(): OverworldView {
-    return this.cloneView(this.cachedView());
+    return cloneOverworldView(this.cachedView());
   }
 
   private buildView(): OverworldView {
