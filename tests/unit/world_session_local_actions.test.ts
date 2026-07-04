@@ -6,6 +6,7 @@ import type {
   OverworldLocalJob,
 } from "../../src/world/overworld.js";
 import {
+  applyOverworldAreaExploration,
   applyOverworldAreaTravel,
   applyOverworldLocalJobCompletion,
   applyOverworldSiteExploration,
@@ -166,6 +167,26 @@ describe("overworld local action planning", () => {
     expect(() =>
       planOverworldAreaExploration({ ...baseState, currentAreaId: "other_area" }),
     ).toThrow(/Move to that local area/);
+  });
+
+  it("applies area exploration into visited area ids", () => {
+    const localArea = area("area_a");
+    const plan = planOverworldAreaExploration({
+      areaId: localArea.id,
+      areasById: new Map([[localArea.id, localArea]]),
+      currentTownId: "town_a",
+      currentAreaId: localArea.id,
+      discoveredAreaIds: new Set([localArea.id]),
+      visitedAreaIds: new Set(),
+      journalEntries: new Map(),
+    });
+    if (plan.alreadyKnown) throw new Error("expected a new area exploration plan");
+    const visitedAreaIds = new Set<string>();
+
+    expect(applyOverworldAreaExploration({ visitedAreaIds }, plan)).toEqual({
+      areaId: localArea.id,
+    });
+    expect([...visitedAreaIds]).toEqual([localArea.id]);
   });
 
   it("plans local job completion with renown and idempotent replay", () => {

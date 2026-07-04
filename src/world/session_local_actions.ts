@@ -31,6 +31,11 @@ export type OverworldAreaExplorationPlan =
       action: OverworldLocalActionDescriptor<"area">;
     };
 
+export type OverworldPlannedAreaExploration = Extract<
+  OverworldAreaExplorationPlan,
+  { alreadyKnown: false }
+>;
+
 export type OverworldLocalJobCompletionPlan =
   | OverworldLocalActionKnownPlan
   | {
@@ -92,6 +97,14 @@ export type OverworldAppliedLocalRenownCompletion = {
   renownAfter: number;
 };
 
+export type OverworldAreaExplorationApplicationState = {
+  visitedAreaIds: Set<string>;
+};
+
+export type OverworldAppliedAreaExploration = {
+  areaId: string;
+};
+
 export type OverworldAreaExplorationState = {
   areaId: string;
   areasById: ReadonlyMap<string, OverworldArea>;
@@ -140,6 +153,14 @@ export function applyOverworldAreaTravel(
     currentAreaByTownEntry: [state.currentTownId, edge.destination.id],
     minutesAfter,
   };
+}
+
+export function applyOverworldAreaExploration(
+  state: OverworldAreaExplorationApplicationState,
+  plan: OverworldPlannedAreaExploration,
+): OverworldAppliedAreaExploration {
+  state.visitedAreaIds.add(plan.areaId);
+  return { areaId: plan.areaId };
 }
 
 function applyOverworldLocalRenownCompletion(

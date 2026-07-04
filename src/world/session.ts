@@ -88,6 +88,7 @@ import {
 } from "./session_services.js";
 import {
   applyOverworldAreaTravel,
+  applyOverworldAreaExploration,
   applyOverworldLocalJobCompletion,
   applyOverworldSiteExploration,
   planOverworldAreaExploration,
@@ -945,7 +946,9 @@ export class OverworldSession {
     }
 
     const result = this.recordLocalAction(plan.action, current.name);
-    if (!result.alreadyKnown) this.visitedAreaIds.add(plan.areaId);
+    if (!result.alreadyKnown) {
+      applyOverworldAreaExploration({ visitedAreaIds: this.visitedAreaIds }, plan);
+    }
     return this.withLocalDiscovery(result, current.id);
   }
 
