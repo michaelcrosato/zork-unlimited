@@ -1,16 +1,24 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 288 -->
+<!-- historical_cycle_count: 289 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
 
+### Cycle result - afk_quest_health_path_removed
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: AFK quest-health rows no longer carry raw pack paths; shipped loop metadata and prompts use `world_quest_id` plus warning/playable status.
+- Loop effect: assessment JSON and latest-cycle payloads stop repeating source paths while assessor candidates still retain internal edit refs for diagnostics.
+- Guard: focused Prettier, typecheck, assessor, AFK loop prompt, and loop-state rotation tests passed.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
+
 ### Cycle result - afk_quest_health_pack_id_removed
 
 - Pre-cycle: ran `C:\dev\agent-cleaner` gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
 - Engine/loop surface: AFK assessment quest-health entries no longer carry duplicate raw `pack_id`; internal assessor labels keep pack ids only for unbound fallback diagnostics.
-- Loop effect: assessment JSON rows shrink to path, `world_quest_id`, playable, and validator warning status while preserving target selection and prompt wording.
+- Loop effect: assessment JSON rows shrink to `world_quest_id`, playable, and validator warning status while preserving target selection and prompt wording.
 - Guard: focused Prettier, typecheck, assessor, AFK loop prompt, and loop-state rotation tests passed.
 - VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 

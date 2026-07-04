@@ -125,26 +125,20 @@ export function playtestTargetWorldQuestId(
 function playtestTargetMetadata(
   target: string,
   targetWorldQuestId: string | null | undefined,
-  targetPackPath?: string | null,
-): { target: string; targetWorldQuestId?: string; targetPackPath?: string } {
+): { target: string; targetWorldQuestId?: string } {
   if (!targetWorldQuestId) return { target };
-  const metadata: { target: string; targetWorldQuestId?: string; targetPackPath?: string } = {
+  return {
     target: targetWorldQuestId,
     targetWorldQuestId,
   };
-  if (targetPackPath) metadata.targetPackPath = targetPackPath;
-  return metadata;
 }
 
 export function playtestTargetSummary(
-  top: ImprovementCandidate | null,
   target: string,
   targetWorldQuestId: string | null | undefined,
 ): string {
   if (!targetWorldQuestId) return target;
-  return top?.category === "content_fix" && target !== targetWorldQuestId
-    ? `${targetWorldQuestId} (${target})`
-    : targetWorldQuestId;
+  return targetWorldQuestId;
 }
 
 function main(): void {
@@ -171,7 +165,6 @@ function main(): void {
   const targetHealth =
     a.quests.find((p) => p.world_quest_id !== null && p.world_quest_id === targetWorldQuestId) ??
     null;
-  const targetPackPath = targetHealth?.path ?? null;
 
   // Saturation-triggered ultraplan: re-aim with a multi-agent ultraplan only when
   // the cheap assessor has run dry AND we're off the cooldown.
@@ -204,7 +197,7 @@ function main(): void {
       {
         runId: stamp,
         runDir,
-        ...playtestTargetMetadata(target, targetWorldQuestId, targetPackPath),
+        ...playtestTargetMetadata(target, targetWorldQuestId),
         playtestRecord,
         recommendation: top?.title ?? null,
         mode: ultraplan ? "ultraplan" : "standard",
@@ -257,10 +250,9 @@ export function buildPrompt(ctx: {
       )}.`,
     );
   }
-  const editRef = targetHealth?.path ?? target;
   const targetLabel =
     targetWorldQuestId && top?.category === "content_fix"
-      ? `${targetWorldQuestId} (${editRef}; ${health})`
+      ? `${targetWorldQuestId} (${health})`
       : targetWorldQuestId
         ? `${targetWorldQuestId} (${health})`
         : `${target}  (${health})`;
@@ -365,7 +357,7 @@ function appendState(
   ultraplan: boolean,
 ): void {
   const top = a.top;
-  const targetSummary = playtestTargetSummary(top, target, targetWorldQuestId);
+  const targetSummary = playtestTargetSummary(target, targetWorldQuestId);
   const text = [
     "",
     `## AFK Cycle ${stamp}${ultraplan ? " — ULTRAPLAN (saturation re-aim)" : ""}`,

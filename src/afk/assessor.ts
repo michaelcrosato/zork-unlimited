@@ -41,7 +41,6 @@ export type ImprovementCandidate = {
 };
 
 export type QuestHealth = {
-  path: string;
   world_quest_id: string | null;
   playable: boolean;
   warnings: number;
@@ -504,7 +503,6 @@ export function assess(root: string): Assessment {
     const targetLabel = s.world_quest_id ?? s.pack_id;
     if (!s.playable) {
       questHealth.push({
-        path: s.path,
         world_quest_id: s.world_quest_id,
         playable: false,
         warnings: 0,
@@ -525,7 +523,6 @@ export function assess(root: string): Assessment {
     }
     if (s.world_quest_id === null) {
       questHealth.push({
-        path: s.path,
         world_quest_id: null,
         playable: true,
         warnings: 0,
@@ -547,7 +544,6 @@ export function assess(root: string): Assessment {
     const report = api.validate_quest({ world_quest_id: s.world_quest_id });
     const warnings = report.report.findings.filter((f) => f.severity === "warning").length;
     questHealth.push({
-      path: s.path,
       world_quest_id: s.world_quest_id,
       playable: true,
       warnings,
@@ -830,7 +826,7 @@ export function formatAssessment(a: Assessment, opts: AssessmentFormatOptions = 
   if (full || unhealthy.length > 0) {
     const listedQuests = full ? a.quests : unhealthy.slice(0, 8);
     for (const p of listedQuests) {
-      const label = p.world_quest_id ?? p.path;
+      const label = p.world_quest_id ?? "unbound quest";
       lines.push(`- ${label} ${p.playable ? `${p.warnings} warning(s)` : "UNPLAYABLE"}`);
     }
     if (!full && unhealthy.length > listedQuests.length) {

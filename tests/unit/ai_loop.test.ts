@@ -45,10 +45,9 @@ function assessment(top: ImprovementCandidate | null): Assessment {
   };
 }
 
-function questHealth(path: string, warnings = 0): QuestHealth {
+function questHealth(worldQuestId: string, warnings = 0): QuestHealth {
   return {
-    path,
-    world_quest_id: path.replace(/^content\/rpg\/pack\//, "").replace(/\.ya?ml$/, ""),
+    world_quest_id: worldQuestId.replace(/^content\/rpg\/pack\//, "").replace(/\.ya?ml$/, ""),
     playable: true,
     warnings,
   };
@@ -125,24 +124,12 @@ describe("playtestTargetWorldQuestId", () => {
 });
 
 describe("playtestTargetSummary", () => {
-  it("keeps quest ids primary while retaining edit paths for content fixes", () => {
-    expect(
-      playtestTargetSummary(candidate("content_fix", "cold_forge"), "cold_forge", "cold_forge"),
-    ).toBe("cold_forge");
-    expect(
-      playtestTargetSummary(
-        candidate("content_fix", "content/rpg/pack/cold_forge.yaml"),
-        "content/rpg/pack/cold_forge.yaml",
-        "cold_forge",
-      ),
-    ).toBe("cold_forge (content/rpg/pack/cold_forge.yaml)");
-    expect(
-      playtestTargetSummary(
-        candidate("engine", "src/core/engine.ts"),
-        mainWorldQuestId,
-        "breaking_weir",
-      ),
-    ).toBe("breaking_weir");
+  it("keeps quest ids primary without echoing edit paths for content fixes", () => {
+    expect(playtestTargetSummary("cold_forge", "cold_forge")).toBe("cold_forge");
+    expect(playtestTargetSummary("content/rpg/pack/cold_forge.yaml", "cold_forge")).toBe(
+      "cold_forge",
+    );
+    expect(playtestTargetSummary(mainWorldQuestId, "breaking_weir")).toBe("breaking_weir");
   });
 });
 
@@ -159,9 +146,8 @@ describe("buildPrompt blind-playtest contract", () => {
     });
 
     expect(prompt).toContain("## STEP 1 — MANDATORY LLM playtest");
-    expect(prompt).toContain(
-      "Playtest target this cycle: cold_forge (content/rpg/pack/cold_forge.yaml; 2 validator warning(s))",
-    );
+    expect(prompt).toContain("Playtest target this cycle: cold_forge (2 validator warning(s))");
+    expect(prompt).not.toContain("content/rpg/pack/cold_forge.yaml");
     expect(prompt).toContain("with world_quest_id=cold_forge and a seed");
     expect(prompt).not.toContain("with this pack and a seed");
     expect(prompt).toContain("2 validator warning(s)");

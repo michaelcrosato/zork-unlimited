@@ -93,6 +93,7 @@ describe("assess()", () => {
     expect(a.worldQuestCount).toBeGreaterThanOrEqual(16);
     expect(a.quests.filter((p) => p.playable).every((p) => p.world_quest_id !== null)).toBe(true);
     expect(a.quests.every((p) => !("pack_id" in p))).toBe(true);
+    expect(a.quests.every((p) => !("path" in p))).toBe(true);
   });
 
   it("produces candidates and a top recommendation", () => {
@@ -130,9 +131,7 @@ describe("assess()", () => {
     // (bug_0032 generalized this to planning-gated legacy content too — see
     // tests/regression/assessor_gated_cyoa_coverage.test.ts.)
     for (const p of a.quests.filter((p) => p.world_quest_id !== null && p.warnings === 0)) {
-      expect(
-        a.candidates.find((c) => c.id === `fix-${p.world_quest_id ?? p.path}`),
-      ).toBeUndefined();
+      expect(a.candidates.find((c) => c.id === `fix-${p.world_quest_id}`)).toBeUndefined();
     }
   });
 
