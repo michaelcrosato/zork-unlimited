@@ -71,6 +71,7 @@ describe("bug_0167 — active generator programs are guarded", () => {
       minStrongAssertions: 400,
       protectedFiles: [...PROTECTED_FILES],
       forbiddenFiles: [...FORBIDDEN_FILES],
+      forbiddenPathPatterns: [],
       hashPinFiles: [],
     };
     const now: GuardConstants = {

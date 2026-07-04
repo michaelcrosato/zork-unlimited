@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 384 -->
+<!-- historical_cycle_count: 385 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - verifier_legacy_cli_test_families
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: verifier integrity now forbids retired CYOA/parser CLI files and unit-test path families from reappearing.
+- Loop effect: single-RPG runtime lock-down covers the objective's old binary/test surfaces, not only source/content directories.
+- Guard: focused Prettier, typecheck, verifier integrity, RPG-only guard, generator-protection, and loop-state rotation tests passed.
+- VERIFY: `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed.
 
 ### Cycle result - verify_loop_state_rotation_bound
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/source surface: save serialization and trace recording now construct compact source refs through one shared metadata resolver.
 - Loop effect: persisted `source_ref` tuples and legacy save mirrors derive from the same resolved source identity, avoiding repeated null/seed/pack fallback branching.
 - Guard: focused typecheck plus save/trace, world-source, MCP save/load, trace CLI, referential-integrity, and RPG play source tests passed over shared construction.
-- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
-
-### Cycle result - shared_compact_source_ref_validation
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/source surface: compact save and trace `source_ref` shape validation now flows through one pure helper shared by persistence and world source resolution.
-- Loop effect: malformed source identity tuples fail through the same tag/value contract before save load, trace replay, or shipped-source inference proceeds.
-- Guard: focused typecheck plus save/trace, world-source, MCP save/load, trace CLI, and referential-integrity tests passed over shared validation.
 - VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.

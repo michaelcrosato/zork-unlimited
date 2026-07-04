@@ -18,6 +18,7 @@ import {
   detectTautologies,
   countTautologyAssertions,
   detectLoopStateOverflow,
+  detectForbiddenPathPatterns,
   detectCountRegressions,
   parseGuardConstants,
   detectGuardWeakening,
@@ -26,6 +27,7 @@ import {
   classifyDrift,
   PROTECTED_FILES,
   FORBIDDEN_FILES,
+  FORBIDDEN_PATH_PATTERNS,
   HASH_PIN_FILES,
   MIN_TEST_CASES,
   MIN_ASSERTIONS,
@@ -164,6 +166,21 @@ describe("detectLoopStateOverflow — live handoff stays token-small", () => {
   });
 });
 
+describe("detectForbiddenPathPatterns — retired test families stay gone", () => {
+  it("blocks recreated CYOA/parser unit test families by path pattern", () => {
+    const findings = detectForbiddenPathPatterns([
+      "tests/unit/cyoa_engine.test.ts",
+      "tests/unit/parser_grammar.test.ts",
+      "tests/unit/rpg.test.ts",
+    ]);
+    expect(findings.map((f) => f.where)).toEqual([
+      "tests/unit/cyoa_engine.test.ts",
+      "tests/unit/parser_grammar.test.ts",
+    ]);
+    expect(findings.every((f) => f.code === "FORBIDDEN_PATH_PATTERN")).toBe(true);
+  });
+});
+
 describe("classifyDrift — legitimate re-pin vs launder vs weakening (research-aligned)", () => {
   const errs = (fs: { severity: string }[]) => fs.filter((f) => f.severity === "error");
 
@@ -206,6 +223,7 @@ describe("parseGuardConstants — pure parse of the guard's own defensive surfac
     expect(parsed!.minStrongAssertions).toBe(MIN_STRONG_ASSERTIONS);
     expect(parsed!.protectedFiles).toEqual(PROTECTED_FILES);
     expect(parsed!.forbiddenFiles).toEqual(FORBIDDEN_FILES);
+    expect(parsed!.forbiddenPathPatterns).toEqual(FORBIDDEN_PATH_PATTERNS);
     expect(parsed!.hashPinFiles).toEqual(HASH_PIN_FILES);
   });
 
@@ -228,6 +246,7 @@ describe("detectGuardWeakening — lowering a floor or dropping a protected entr
     minStrongAssertions: 400,
     protectedFiles: ["a.ts", "b.ts"],
     forbiddenFiles: ["legacy.ts"],
+    forbiddenPathPatterns: ["^legacy/.*$"],
     hashPinFiles: ["pin.ts"],
   };
   const codes = (fs: { code: string }[]) => fs.map((f) => f.code);
@@ -243,6 +262,7 @@ describe("detectGuardWeakening — lowering a floor or dropping a protected entr
       minAssertions: 410,
       protectedFiles: ["a.ts", "b.ts", "c.ts"],
       forbiddenFiles: ["legacy.ts", "legacy2.ts"],
+      forbiddenPathPatterns: ["^legacy/.*$", "^retired/.*$"],
       hashPinFiles: ["pin.ts", "pin2.ts"],
     };
     expect(detectGuardWeakening(base, stronger)).toEqual([]);
@@ -295,6 +315,12 @@ describe("detectGuardWeakening — lowering a floor or dropping a protected entr
     const fs = detectGuardWeakening(base, { ...base, forbiddenFiles: [] });
     expect(codes(fs)).toEqual(["GUARD_WEAKENED"]);
     expect(fs[0]!.message).toContain("legacy.ts");
+  });
+
+  it("removing a FORBIDDEN_PATH_PATTERNS entry → GUARD_WEAKENED error", () => {
+    const fs = detectGuardWeakening(base, { ...base, forbiddenPathPatterns: [] });
+    expect(codes(fs)).toEqual(["GUARD_WEAKENED"]);
+    expect(fs[0]!.message).toContain("^legacy/.*$");
   });
 
   it("mentions the AI_LOOP_ALLOW_VERIFIER_EDITS override so a deliberate loosening has a path", () => {
@@ -360,6 +386,7 @@ describe("runDrift surfaces GUARD_WEAKENED (and the env override downgrades it)"
       minStrongAssertions: 400,
       protectedFiles: ["a.ts"],
       forbiddenFiles: [],
+      forbiddenPathPatterns: [],
       hashPinFiles: [],
     };
     const now: GuardConstants = { ...before, minTestCases: 120 };
@@ -394,6 +421,8 @@ describe("runStatic on the real repo (this is the bar)", () => {
   it("forbidden legacy assets are absent from the real repo", () => {
     expect(FORBIDDEN_FILES).toContain("src/gen/cyoa_generator.ts");
     expect(FORBIDDEN_FILES).toContain("src/gen/parser_generator.ts");
+    expect(FORBIDDEN_FILES).toContain("bin/cyoa.ts");
+    expect(FORBIDDEN_FILES).toContain("bin/parser_play.ts");
     expect(FORBIDDEN_FILES).toContain("src/cyoa");
     expect(FORBIDDEN_FILES).toContain("src/validate/cyoa_validator.ts");
     expect(FORBIDDEN_FILES).toContain("content/cyoa");
@@ -401,7 +430,10 @@ describe("runStatic on the real repo (this is the bar)", () => {
     expect(FORBIDDEN_FILES).toContain("src/validate/parser_validator.ts");
     expect(FORBIDDEN_FILES).toContain("content/parser");
     expect(FORBIDDEN_FILES).toContain("tests/property/parser_determinism.test.ts");
+    expect(FORBIDDEN_PATH_PATTERNS).toContain("^tests/unit/cyoa.*\\.test\\.ts$");
+    expect(FORBIDDEN_PATH_PATTERNS).toContain("^tests/unit/parser.*\\.test\\.ts$");
     expect(res.findings.filter((f) => f.code === "FORBIDDEN_FILE_PRESENT")).toEqual([]);
+    expect(res.findings.filter((f) => f.code === "FORBIDDEN_PATH_PATTERN")).toEqual([]);
   });
 
   it("the repo is comfortably above the test-count floor", () => {

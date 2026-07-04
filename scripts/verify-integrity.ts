@@ -73,6 +73,8 @@ export const PROTECTED_FILES = [
 export const FORBIDDEN_FILES = [
   "src/gen/cyoa_generator.ts",
   "src/gen/parser_generator.ts",
+  "bin/cyoa.ts",
+  "bin/parser_play.ts",
   "src/cyoa",
   "src/validate/cyoa_validator.ts",
   "content/cyoa",
@@ -81,6 +83,13 @@ export const FORBIDDEN_FILES = [
   "content/parser",
   "tests/property/parser_determinism.test.ts",
 ];
+
+/** Glob-like path patterns for retired test families that should not reappear
+ *  under a new filename while the repo is locked to the RPG runtime. */
+export const FORBIDDEN_PATH_PATTERNS = [
+  "^tests/unit/cyoa.*\\.test\\.ts$",
+  "^tests/unit/parser.*\\.test\\.ts$",
+] as const;
 
 /** Files holding committed hash pins / known-answer vectors that should not change
  *  silently — a change here in a cycle's diff is surfaced for human review. */
@@ -198,6 +207,26 @@ export function detectLoopStateOverflow(
   ];
 }
 
+export function detectForbiddenPathPatterns(
+  paths: string[],
+  patterns: readonly string[] = FORBIDDEN_PATH_PATTERNS,
+): Finding[] {
+  const compiled = patterns.map((pattern) => ({ pattern, re: new RegExp(pattern) }));
+  const findings: Finding[] = [];
+  for (const path of paths) {
+    for (const { pattern, re } of compiled) {
+      if (!re.test(path)) continue;
+      findings.push({
+        severity: "error",
+        code: "FORBIDDEN_PATH_PATTERN",
+        message: `legacy CYOA/parser test family must not reappear in the RPG-only runtime: ${path} matches ${pattern}`,
+        where: path,
+      });
+    }
+  }
+  return findings;
+}
+
 function listFiles(root: string, dir: string, match: (p: string) => boolean): string[] {
   const abs = join(root, dir);
   if (!existsSync(abs)) return [];
@@ -272,7 +301,9 @@ export function runStatic(root: string): { ok: boolean; findings: Finding[] } {
         where: f,
       });
   }
-  const testFiles = readAll(root, listTestFiles(root));
+  const testPaths = listTestFiles(root);
+  findings.push(...detectForbiddenPathPatterns(testPaths));
+  const testFiles = readAll(root, testPaths);
   findings.push(...detectDisabledTests(testFiles));
   const cases = countTestCases(testFiles);
   if (cases < MIN_TEST_CASES) {
@@ -477,6 +508,7 @@ export type GuardConstants = {
   maxTautologyAssertions?: number;
   protectedFiles: string[];
   forbiddenFiles: string[];
+  forbiddenPathPatterns: string[];
   hashPinFiles: string[];
 };
 
@@ -497,7 +529,9 @@ export function parseGuardConstants(text: string): GuardConstants | null {
     if (!m) return null;
     const entries = m[1]!.match(/"([^"]*)"|'([^']*)'/g);
     if (!entries) return null;
-    return entries.map((e) => e.slice(1, -1));
+    return entries.map((e) =>
+      e.startsWith('"') ? (JSON.parse(e) as string) : e.slice(1, -1).replace(/\\\\/g, "\\"),
+    );
   };
   const minTestCases = num("MIN_TEST_CASES");
   const minAssertions = num("MIN_ASSERTIONS");
@@ -505,6 +539,7 @@ export function parseGuardConstants(text: string): GuardConstants | null {
   const maxTautologyAssertions = num("MAX_TAUTOLOGY_ASSERTIONS");
   const protectedFiles = arr("PROTECTED_FILES");
   const forbiddenFiles = arr("FORBIDDEN_FILES") ?? [];
+  const forbiddenPathPatterns = arr("FORBIDDEN_PATH_PATTERNS") ?? [];
   const hashPinFiles = arr("HASH_PIN_FILES");
   if (
     minTestCases === null ||
@@ -520,6 +555,7 @@ export function parseGuardConstants(text: string): GuardConstants | null {
     minStrongAssertions,
     protectedFiles,
     forbiddenFiles,
+    forbiddenPathPatterns,
     hashPinFiles,
   };
   if (maxTautologyAssertions !== null) result.maxTautologyAssertions = maxTautologyAssertions;
@@ -565,6 +601,7 @@ export function detectGuardWeakening(before: GuardConstants, now: GuardConstants
     if (!nowProtected.has(entry) && !nowForbidden.has(entry))
       weakened.push(`PROTECTED_FILES entry removed: ${entry}`);
   removedFrom("FORBIDDEN_FILES", before.forbiddenFiles, now.forbiddenFiles);
+  removedFrom("FORBIDDEN_PATH_PATTERNS", before.forbiddenPathPatterns, now.forbiddenPathPatterns);
   removedFrom("HASH_PIN_FILES", before.hashPinFiles, now.hashPinFiles);
   if (weakened.length === 0) return [];
   return [
