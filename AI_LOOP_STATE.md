@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 393 -->
+<!-- historical_cycle_count: 394 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - stale_reactive_audit_mode_removed
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: stale-reactive room-item audit now scans the single RPG pack directory directly and no longer emits a constant `mode` field on audit sites.
+- Loop effect: AFK structural candidates carry only pack identity and room/object evidence, removing a retired mode axis from loop-facing audit payloads.
+- Guard: focused Prettier, typecheck, stale-reactive audit, assessor, and RPG schema-standalone tests passed over the cleanup.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - world_catalog_mode_field_removed
 
@@ -115,13 +123,5 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Pre-cycle: ran `C:\dev\agent-cleaner` gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
 - Engine/loop surface: AFK assessment quest-health entries no longer carry duplicate raw `pack_id`; internal assessor labels keep pack ids only for unbound fallback diagnostics.
 - Loop effect: assessment JSON rows shrink to `world_quest_id`, playable, and validator warning status while preserving target selection and prompt wording.
-- Guard: focused Prettier, typecheck, assessor, AFK loop prompt, and loop-state rotation tests passed.
-- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
-
-### Cycle result - afk_quest_health_mode_field_removed
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: AFK assessment quest-health entries no longer carry the constant RPG `mode`; world quest id plus playable/warning status is the catalog axis.
-- Loop effect: assessment JSON/markdown drops a retired multi-mode field from every quest row while preserving ranking, playtest targeting, and validator evidence.
 - Guard: focused Prettier, typecheck, assessor, AFK loop prompt, and loop-state rotation tests passed.
 - VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.

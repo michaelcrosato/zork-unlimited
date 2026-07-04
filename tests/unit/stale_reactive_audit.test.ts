@@ -34,19 +34,19 @@ const basePack = (): RpgPack =>
 
 describe("stale reactive room-item audit", () => {
   it("finds room base prose that names a takeable room object without an item-state variant", () => {
-    const sites = auditRpgPackForStaleRoomItems(basePack(), "fixture.yaml", "rpg");
+    const sites = auditRpgPackForStaleRoomItems(basePack(), "fixture.yaml");
 
     expect(sites).toEqual([
       {
         packPath: "fixture.yaml",
         packId: "audit_fixture",
-        mode: "rpg",
         roomId: "room",
         objectId: "lamp",
         objectName: "brass lamp",
         matchedTerm: "brass lamp",
       },
     ]);
+    expect(sites[0]).not.toHaveProperty("mode");
   });
 
   it("suppresses the site when a room variant reads whether the item has been taken", () => {
@@ -58,7 +58,7 @@ describe("stale reactive room-item audit", () => {
       },
     ];
 
-    expect(auditRpgPackForStaleRoomItems(pack, "fixture.yaml", "rpg")).toEqual([]);
+    expect(auditRpgPackForStaleRoomItems(pack, "fixture.yaml")).toEqual([]);
   });
 
   it("treats nested none_of item checks as a real item-state read", () => {
@@ -70,7 +70,7 @@ describe("stale reactive room-item audit", () => {
       },
     ];
 
-    expect(auditRpgPackForStaleRoomItems(pack, "fixture.yaml", "rpg")).toEqual([]);
+    expect(auditRpgPackForStaleRoomItems(pack, "fixture.yaml")).toEqual([]);
   });
 
   it("suppresses the site when a room variant reads state written by the item's take effects", () => {
@@ -83,7 +83,7 @@ describe("stale reactive room-item audit", () => {
       },
     ];
 
-    expect(auditRpgPackForStaleRoomItems(pack, "fixture.yaml", "rpg")).toEqual([]);
+    expect(auditRpgPackForStaleRoomItems(pack, "fixture.yaml")).toEqual([]);
   });
 
   it("still reports a site when room variants read unrelated state", () => {
@@ -96,7 +96,7 @@ describe("stale reactive room-item audit", () => {
       },
     ];
 
-    expect(auditRpgPackForStaleRoomItems(pack, "fixture.yaml", "rpg")).toHaveLength(1);
+    expect(auditRpgPackForStaleRoomItems(pack, "fixture.yaml")).toHaveLength(1);
   });
 
   it("suppresses the site when taking the item immediately satisfies a terminal condition", () => {
@@ -105,7 +105,7 @@ describe("stale reactive room-item audit", () => {
       { id: "win", conditions: [{ visited: "room" }, { has_item: "lamp" }], ending: "ending_win" },
     ];
 
-    expect(auditRpgPackForStaleRoomItems(pack, "fixture.yaml", "rpg")).toEqual([]);
+    expect(auditRpgPackForStaleRoomItems(pack, "fixture.yaml")).toEqual([]);
   });
 
   it("suppresses non-start rooms that become terminal as soon as the player enters", () => {
@@ -121,11 +121,11 @@ describe("stale reactive room-item audit", () => {
     });
     pack.win_conditions = [{ id: "win", conditions: [{ visited: "room" }], ending: "ending_win" }];
 
-    expect(auditRpgPackForStaleRoomItems(pack, "fixture.yaml", "rpg")).toEqual([]);
+    expect(auditRpgPackForStaleRoomItems(pack, "fixture.yaml")).toEqual([]);
   });
 
   it("still reports start-room prose even if a visited-start win condition would be malformed content", () => {
-    const sites = auditRpgPackForStaleRoomItems(basePack(), "fixture.yaml", "rpg");
+    const sites = auditRpgPackForStaleRoomItems(basePack(), "fixture.yaml");
 
     expect(sites).toHaveLength(1);
   });
@@ -134,7 +134,7 @@ describe("stale reactive room-item audit", () => {
     const pack = basePack();
     pack.objects[0]!.take_effects = [{ end_game: "ending_win" }];
 
-    expect(auditRpgPackForStaleRoomItems(pack, "fixture.yaml", "rpg")).toEqual([]);
+    expect(auditRpgPackForStaleRoomItems(pack, "fixture.yaml")).toEqual([]);
   });
 
   it("does not treat a terminal requiring extra state as guaranteed by taking the item", () => {
@@ -147,7 +147,7 @@ describe("stale reactive room-item audit", () => {
       },
     ];
 
-    expect(auditRpgPackForStaleRoomItems(pack, "fixture.yaml", "rpg")).toHaveLength(1);
+    expect(auditRpgPackForStaleRoomItems(pack, "fixture.yaml")).toHaveLength(1);
   });
 
   it("matches whole phrases only, not substrings inside other words", () => {
@@ -156,6 +156,6 @@ describe("stale reactive room-item audit", () => {
     pack.objects[0]!.aliases = [];
     pack.rooms[0]!.description = "The coincidence is hard to ignore.";
 
-    expect(auditRpgPackForStaleRoomItems(pack, "fixture.yaml", "rpg")).toEqual([]);
+    expect(auditRpgPackForStaleRoomItems(pack, "fixture.yaml")).toEqual([]);
   });
 });

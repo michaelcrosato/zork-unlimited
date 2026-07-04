@@ -20,7 +20,6 @@ type WinCondition = RpgPack["win_conditions"][number];
 export type StaleReactiveRoomItemSite = {
   packPath: string;
   packId: string;
-  mode: StaleReactivePackMode;
   roomId: string;
   objectId: string;
   objectName: string;
@@ -31,23 +30,20 @@ export type StaleReactiveAudit = {
   sites: StaleReactiveRoomItemSite[];
 };
 
-const PACK_DIRS = [["content/rpg/pack", "rpg"]] as const;
-type StaleReactivePackMode = (typeof PACK_DIRS)[number][1];
+const RPG_PACK_DIR = "content/rpg/pack";
 
 const MIN_TERM_LENGTH = 4;
 
 export function auditStaleReactiveRoomItems(root: string): StaleReactiveAudit {
   const sites: StaleReactiveRoomItemSite[] = [];
-  for (const [dir, mode] of PACK_DIRS) {
-    const abs = join(root, dir);
-    if (!existsSync(abs)) continue;
-    for (const file of readdirSync(abs).sort()) {
-      if (!file.endsWith(".yaml")) continue;
-      const path = `${dir}/${file}`;
-      const loaded = loadRpgPackFile(join(root, path));
-      if (!loaded.ok) continue;
-      sites.push(...auditRpgPackForStaleRoomItems(loaded.compiled.pack, path, mode));
-    }
+  const abs = join(root, RPG_PACK_DIR);
+  if (!existsSync(abs)) return { sites };
+  for (const file of readdirSync(abs).sort()) {
+    if (!file.endsWith(".yaml")) continue;
+    const path = `${RPG_PACK_DIR}/${file}`;
+    const loaded = loadRpgPackFile(join(root, path));
+    if (!loaded.ok) continue;
+    sites.push(...auditRpgPackForStaleRoomItems(loaded.compiled.pack, path));
   }
   return { sites };
 }
@@ -55,7 +51,6 @@ export function auditStaleReactiveRoomItems(root: string): StaleReactiveAudit {
 export function auditRpgPackForStaleRoomItems(
   pack: RpgPack,
   packPath: string,
-  mode: StaleReactivePackMode,
 ): StaleReactiveRoomItemSite[] {
   const objects = new Map(pack.objects.map((object) => [object.id, object]));
   const sites: StaleReactiveRoomItemSite[] = [];
@@ -71,7 +66,6 @@ export function auditRpgPackForStaleRoomItems(
       sites.push({
         packPath,
         packId: pack.meta.id,
-        mode,
         roomId: room.id,
         objectId,
         objectName: object.name,
