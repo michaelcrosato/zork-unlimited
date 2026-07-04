@@ -42,7 +42,6 @@ export type ImprovementCandidate = {
 
 export type QuestHealth = {
   path: string;
-  pack_id: string;
   world_quest_id: string | null;
   playable: boolean;
   warnings: number;
@@ -506,7 +505,6 @@ export function assess(root: string): Assessment {
     if (!s.playable) {
       questHealth.push({
         path: s.path,
-        pack_id: s.pack_id,
         world_quest_id: s.world_quest_id,
         playable: false,
         warnings: 0,
@@ -528,7 +526,6 @@ export function assess(root: string): Assessment {
     if (s.world_quest_id === null) {
       questHealth.push({
         path: s.path,
-        pack_id: s.pack_id,
         world_quest_id: null,
         playable: true,
         warnings: 0,
@@ -551,7 +548,6 @@ export function assess(root: string): Assessment {
     const warnings = report.report.findings.filter((f) => f.severity === "warning").length;
     questHealth.push({
       path: s.path,
-      pack_id: s.pack_id,
       world_quest_id: s.world_quest_id,
       playable: true,
       warnings,

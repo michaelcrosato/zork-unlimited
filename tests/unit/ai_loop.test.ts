@@ -48,7 +48,6 @@ function assessment(top: ImprovementCandidate | null): Assessment {
 function questHealth(path: string, warnings = 0): QuestHealth {
   return {
     path,
-    pack_id: `${path.replace(/^content\/rpg\/pack\//, "").replace(/\.ya?ml$/, "")}_v1`,
     world_quest_id: path.replace(/^content\/rpg\/pack\//, "").replace(/\.ya?ml$/, ""),
     playable: true,
     warnings,

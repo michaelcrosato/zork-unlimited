@@ -92,6 +92,7 @@ describe("assess()", () => {
     expect(a.rpgQuestCount).toBeGreaterThanOrEqual(16);
     expect(a.worldQuestCount).toBeGreaterThanOrEqual(16);
     expect(a.quests.filter((p) => p.playable).every((p) => p.world_quest_id !== null)).toBe(true);
+    expect(a.quests.every((p) => !("pack_id" in p))).toBe(true);
   });
 
   it("produces candidates and a top recommendation", () => {
