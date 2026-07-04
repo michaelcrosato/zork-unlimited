@@ -128,6 +128,8 @@ Make discovered overworld quest leads start real RPG sessions.
   validation, or replay inputs.
 - The dev MCP play harness also starts shipped quests through `start_world_quest`
   and `world_quest_id`, not retired `pack_path` starts.
+- The no-LLM blind smoke runner no longer prints a stale top-level `mode`, so
+  MCP harness checks align with mode-free start responses.
 - `world_path` now accepts `world_quest_id` only in ToolApi and public MCP, and
   returns graph-route metadata without raw `quest_path`.
 - `validate_quest` and `load_quest` now accept only `world_quest_id` for

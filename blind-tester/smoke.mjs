@@ -124,7 +124,7 @@ async function main() {
     const session_id = start.session_id;
     let view = viewOf(start);
     const sceneText = (view?.scene?.text ?? view?.text ?? "").slice(0, 90).replace(/\s+/g, " ");
-    console.log(`• ${startTool} ok → session ${session_id} · mode ${start.mode} · ${SOURCE_LABEL}`);
+    console.log(`• ${startTool} ok → session ${session_id} · ${SOURCE_LABEL}`);
     console.log(`  scene: "${sceneText}…"  (${actionsOf(view).length} actions)`);
 
     // Step a few actions (first legal action each turn) to prove stepping works.

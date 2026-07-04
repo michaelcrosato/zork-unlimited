@@ -46,6 +46,8 @@ describe("blind runner MCP config contract", () => {
     expect(smoke).toContain("summary_only: true");
     expect(smoke).toContain("compact_summary: true");
     expect(smoke).toContain("context");
+    expect(smoke).not.toContain("start.mode");
+    expect(smoke).not.toContain("mode ${start.mode}");
     expect(smoke).not.toContain('"new_game"');
     expect(smoke).not.toContain("pack_path");
     expect(smoke).not.toContain('"start_game"');

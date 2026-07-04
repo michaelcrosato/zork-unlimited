@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 400 -->
+<!-- historical_cycle_count: 401 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - blind_smoke_mode_line_removed
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: the no-LLM blind MCP smoke runner no longer prints stale top-level `mode` from `start_world_quest`; startup logs keep session id plus quest id.
+- Loop effect: blind harness smoke output now matches mode-free MCP start responses instead of showing `mode undefined` during preflight checks.
+- Guard: focused Prettier, typecheck, blind runner contract, and blind smoke checks passed over the cleanup.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm run blind:smoke`, focused test, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - inspect_cli_mode_line_removed
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/world surface: `worldRouteFromHub` now projects graph coordinates, movement deltas, and Manhattan step distances into route steps.
 - Loop effect: `world_path`, `list_world` route opt-ins, and quest-start metadata consume the coordinate map directly instead of returning prose-only routes.
 - Guard: focused typecheck plus MCP tool, MCP RPG catalog, and single-world manifest tests passed over coordinate route projection.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - canonical_world_graph_coordinates
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/world surface: the canonical Charter Marches graph now carries unique integer coordinates for every hub, route, district, and quest node.
-- Loop effect: `list_world({ include_graph: true })` exposes pack-free map coordinates, giving blind agents and future engine work a stable matrix surface instead of prose-only routes.
-- Guard: focused typecheck plus world-source, manifest, MCP catalog, and MCP tool tests passed over coordinate validation/projection.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
