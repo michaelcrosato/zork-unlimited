@@ -1522,6 +1522,14 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(transcript.summary.ended).toBe(true);
     expect(transcript.summary.ending_id).toBe("ending_victory");
     expect(transcript.turns.map((t) => t.action_id)).toContain("take_circlet");
+    expect(transcript.turns[0]).toMatchObject({
+      scene_id: game.observation.room,
+      title: game.observation.title,
+      action_id: null,
+      result_scene_id: game.observation.room,
+      ended: game.observation.ended,
+      ending_id: game.observation.ending_id,
+    });
     const currentStateHash = a.get_state({ session_id: game.session_id }).state_hash;
     expect(transcript.state_hash).toBe(currentStateHash);
     expect(transcript.transcript_hash).toMatch(/^[0-9a-f]{64}$/);

@@ -791,6 +791,15 @@ function rpgRoomTitle(index: RpgIndex, state: GameState): string {
   return index.rooms.get(state.current)?.name ?? state.current;
 }
 
+function rpgStateTitle(index: RpgIndex, state: GameState): string {
+  if (state.ended && state.endingId) {
+    return (
+      index.pack.endings.find((ending) => ending.id === state.endingId)?.title ?? state.endingId
+    );
+  }
+  return rpgRoomTitle(index, state);
+}
+
 /**
  * Map an action id from the RPG runner's legal set to a structured Action.
  * Unknown ids are rejected before they reach the reducer, preserving the illegal
@@ -1035,17 +1044,16 @@ export function createToolApi(opts: { root: string }) {
       transcript: [],
       ...(opts.hideGraph ? { hideGraph: true } : {}),
     });
-    const obs = sessionObsOf(session);
     sessions.appendTranscript(session.id, {
       step: st.step,
-      scene_id: obsLocation(obs),
-      title: obs.title,
+      scene_id: st.current,
+      title: rpgStateTitle(index, st),
       action_id: null,
       action_text: null,
       events: [],
-      result_scene_id: obsLocation(obs),
-      ended: obs.ended,
-      ending_id: obs.ending_id,
+      result_scene_id: st.current,
+      ended: st.ended,
+      ending_id: st.endingId,
     });
     return session;
   }
