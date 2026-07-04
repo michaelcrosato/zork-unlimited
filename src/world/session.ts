@@ -30,26 +30,23 @@ import {
   type OverworldLocalActionKind,
 } from "./local_actions.js";
 import {
-  OVERWORLD_COMPACT_JOURNAL_LIMIT,
   OVERWORLD_COMPACT_ID_LIST_LIMIT,
   OVERWORLD_COMPACT_ROUTE_LIMIT,
   OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT,
   OVERWORLD_COMPACT_VIEW_VERSION,
   compactIdPayloadFromBuckets,
   cloneOverworldCompactView,
+  compactOverworldJournalEntries,
   compactOverworldLabel,
-  compactOverworldQuestRef,
-  compactOverworldRef,
-  compactOverworldTitle,
-  compactOverworldTitleRef,
+  compactOverworldQuestRefs,
+  compactOverworldRefs,
+  compactOverworldRenownEntries,
+  compactOverworldTitleRefs,
   compactPendingRoad,
   compactRouteOption,
   compactTravelLogEntry,
   type OverworldCompactAreaRoute,
   type OverworldCompactIdBucket,
-  type OverworldCompactJournalEntry,
-  type OverworldCompactQuestRef,
-  type OverworldCompactRef,
   type OverworldCompactRoad,
   type OverworldCompactRouteOption,
   type OverworldCompactTravelLogEntry,
@@ -4087,25 +4084,11 @@ export class OverworldSession {
       resolved_events: compactSortedStringSet(this.resolvedEventIds),
     });
     const exits = this.roadsFrom(this.currentId);
-    const jobs: OverworldCompactRef[] = [];
-    for (const job of this.discoveredJobsInCurrentArea()) jobs.push(compactOverworldTitleRef(job));
-    const sites: OverworldCompactRef[] = [];
-    for (const site of this.discoveredSitesInCurrentArea())
-      sites.push(compactOverworldTitleRef(site));
-    const quests: OverworldCompactQuestRef[] = [];
-    for (const quest of this.discoveredQuestsAt(this.currentId)) {
-      quests.push(compactOverworldQuestRef(quest));
-    }
+    const jobs = compactOverworldTitleRefs(this.discoveredJobsInCurrentArea());
+    const sites = compactOverworldTitleRefs(this.discoveredSitesInCurrentArea());
+    const quests = compactOverworldQuestRefs(this.discoveredQuestsAt(this.currentId));
     const pendingRoad = compactPendingRoad(this.pendingRoadEncounter);
-    const journal: OverworldCompactJournalEntry[] = [];
-    for (
-      let index = 0;
-      index < this.journalEntries.length && index < OVERWORLD_COMPACT_JOURNAL_LIMIT;
-      index += 1
-    ) {
-      const entry = this.journalEntries[index]!;
-      journal.push([entry.kind, compactOverworldTitle(entry.title), entry.recordedAt]);
-    }
+    const journal = compactOverworldJournalEntries(this.journalEntries);
     const travelLog: OverworldCompactTravelLogEntry[] = [];
     for (
       let index = 0;
@@ -4114,9 +4097,7 @@ export class OverworldSession {
     ) {
       travelLog.push(compactTravelLogEntry(this.travelLog[index]!));
     }
-    const renown = sortedNumberMap(this.regionRenown).map(
-      ([region, value]) => [compactOverworldLabel(region), value] as const,
-    );
+    const renown = compactOverworldRenownEntries(sortedNumberMap(this.regionRenown));
     const completedArcs = sortedStringSet(this.completedRegionalArcIds);
     const roads: OverworldCompactRoad[] = [];
     for (const exit of exits) {
@@ -4129,16 +4110,10 @@ export class OverworldSession {
         plan?.estimate.fatigueAfter ?? this.fatigue,
       ]);
     }
-    const areas: OverworldCompactRef[] = [];
-    for (const area of this.discoveredAreasAt(this.currentId))
-      areas.push(compactOverworldRef(area));
-    const poi: OverworldCompactRef[] = [];
-    for (const point of this.currentAreaPois()) poi.push(compactOverworldTitleRef(point));
-    const contacts: OverworldCompactRef[] = [];
-    for (const character of this.currentAreaCharacters())
-      contacts.push(compactOverworldRef(character));
-    const events: OverworldCompactRef[] = [];
-    for (const event of this.currentAreaEvents()) events.push(compactOverworldTitleRef(event));
+    const areas = compactOverworldRefs(this.discoveredAreasAt(this.currentId));
+    const poi = compactOverworldTitleRefs(this.currentAreaPois());
+    const contacts = compactOverworldRefs(this.currentAreaCharacters());
+    const events = compactOverworldTitleRefs(this.currentAreaEvents());
 
     return {
       v: OVERWORLD_COMPACT_VIEW_VERSION,

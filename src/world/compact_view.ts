@@ -75,6 +75,7 @@ export type OverworldCompactJournalEntry = readonly [
   title: string,
   recordedAt: string,
 ];
+export type OverworldCompactRenownEntry = readonly [region: string, value: number];
 export type OverworldCompactTravelLogEntry = readonly [
   edgeId: string,
   fromId: string,
@@ -161,7 +162,7 @@ export type OverworldCompactView = {
   travel_log?: OverworldCompactTravelLogEntry[];
   travel_log_truncated?: true;
   progress: OverworldCompactProgress;
-  renown?: readonly (readonly [region: string, value: number])[];
+  renown?: OverworldCompactRenownEntry[];
   completed_arcs?: string[];
   id_counts: OverworldCompactIdCounts;
   ids_truncated?: OverworldCompactIdTruncation;
@@ -196,6 +197,53 @@ export function compactOverworldQuestRef(value: {
   title: string;
 }): OverworldCompactQuestRef {
   return [value.id, compactOverworldTitle(value.title)];
+}
+
+export function compactOverworldRefs(
+  values: readonly { id: string; name: string }[],
+): OverworldCompactRef[] {
+  const refs: OverworldCompactRef[] = [];
+  for (const value of values) refs.push(compactOverworldRef(value));
+  return refs;
+}
+
+export function compactOverworldTitleRefs(
+  values: readonly { id: string; title: string }[],
+): OverworldCompactRef[] {
+  const refs: OverworldCompactRef[] = [];
+  for (const value of values) refs.push(compactOverworldTitleRef(value));
+  return refs;
+}
+
+export function compactOverworldQuestRefs(
+  values: readonly { id: string; title: string }[],
+): OverworldCompactQuestRef[] {
+  const refs: OverworldCompactQuestRef[] = [];
+  for (const value of values) refs.push(compactOverworldQuestRef(value));
+  return refs;
+}
+
+export function compactOverworldJournalEntries(
+  values: readonly { kind: string; title: string; recordedAt: string }[],
+): OverworldCompactJournalEntry[] {
+  const journal: OverworldCompactJournalEntry[] = [];
+  for (
+    let index = 0;
+    index < values.length && index < OVERWORLD_COMPACT_JOURNAL_LIMIT;
+    index += 1
+  ) {
+    const entry = values[index]!;
+    journal.push([entry.kind, compactOverworldTitle(entry.title), entry.recordedAt]);
+  }
+  return journal;
+}
+
+export function compactOverworldRenownEntries(
+  values: readonly (readonly [region: string, value: number])[],
+): OverworldCompactRenownEntry[] {
+  const compact: OverworldCompactRenownEntry[] = [];
+  for (const [region, value] of values) compact.push([compactOverworldLabel(region), value]);
+  return compact;
 }
 
 export function compactRouteOption(plan: OverworldSessionRoutePlan): OverworldCompactRouteOption {
@@ -407,15 +455,13 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const areaRoutes = view.areaExits.map(
     (exit) => [exit.id, exit.destination.id, exit.travel_minutes] as const,
   );
-  const jobs = view.jobs.map(compactOverworldTitleRef);
-  const sites = view.sites.map(compactOverworldTitleRef);
-  const quests = view.quests.map(compactOverworldQuestRef);
-  const journal = view.journal
-    .slice(0, OVERWORLD_COMPACT_JOURNAL_LIMIT)
-    .map((entry) => [entry.kind, compactOverworldTitle(entry.title), entry.recordedAt] as const);
-  const renown = Object.entries(view.regionRenown)
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([region, value]) => [compactOverworldLabel(region), value] as const);
+  const jobs = compactOverworldTitleRefs(view.jobs);
+  const sites = compactOverworldTitleRefs(view.sites);
+  const quests = compactOverworldQuestRefs(view.quests);
+  const journal = compactOverworldJournalEntries(view.journal);
+  const renown = compactOverworldRenownEntries(
+    Object.entries(view.regionRenown).sort(([left], [right]) => left.localeCompare(right)),
+  );
   const completedArcs = view.completedRegionalArcIds;
   const idPayload = compactIdPayload({
     discovered_towns: view.discovered.map((town) => town.id),
@@ -467,10 +513,10 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     ...(view.routeOptions.length > routeOptions.length
       ? { route_options_truncated: true as const }
       : {}),
-    areas: view.areas.map(compactOverworldRef),
-    poi: view.pois.map(compactOverworldTitleRef),
-    contacts: view.characters.map(compactOverworldRef),
-    events: view.events.map(compactOverworldTitleRef),
+    areas: compactOverworldRefs(view.areas),
+    poi: compactOverworldTitleRefs(view.pois),
+    contacts: compactOverworldRefs(view.characters),
+    events: compactOverworldTitleRefs(view.events),
     ...(jobs.length > 0 ? { jobs } : {}),
     ...(sites.length > 0 ? { sites } : {}),
     ...(quests.length > 0 ? { quests } : {}),

@@ -237,6 +237,7 @@ describe("OverworldSession", () => {
       "assist_travelers",
       "press_on",
     ]);
+    expect(session.compactView()).toEqual(compactOverworldView(after));
     const backRoute = session.planRoute("albany_city");
     expect(backRoute.totalMinutes).toBe(road!.travel_minutes);
     expect(backRoute.steps.map((step) => step.to.id)).toEqual(["albany_city"]);
@@ -274,6 +275,7 @@ describe("OverworldSession", () => {
       kind: "road",
       title: `${option!.label}: ${encounter!.event.title}`,
     });
+    expect(session.compactView()).toEqual(compactOverworldView(after));
     expect(after.regionRenown[arrived.current.region]).toBe(option!.renownGained);
     expect(() => session.travel(after.exits[0]!.id)).not.toThrow();
   });
