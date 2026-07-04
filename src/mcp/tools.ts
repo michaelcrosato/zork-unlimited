@@ -81,9 +81,11 @@ import {
   normalizePackPath,
   worldMapBounds,
   worldMapEdges,
+  worldNodeAtCoord,
   worldQuestNodeById,
   worldQuestNodeForPack,
   worldRouteFromHub,
+  type WorldCoord,
   type WorldMapBounds,
   type WorldMapEdge,
   type WorldRouteStep,
@@ -1327,7 +1329,7 @@ export function createToolApi(opts: { root: string }) {
       return catalog as WorldListResponse<Args>;
     },
 
-    world_path(args: { world_quest_id?: string }): {
+    world_path(args: { world_quest_id?: string; coord?: WorldCoord }): {
       world: Pick<WorldManifest, "id" | "name" | "hub">;
       world_quest_id: string | null;
       graph_node: string | null;
@@ -1336,19 +1338,33 @@ export function createToolApi(opts: { root: string }) {
       if ((args as { quest_path?: unknown }).quest_path !== undefined) {
         throw new Error("world_path accepts world_quest_id, not quest_path.");
       }
-      if (args.world_quest_id === undefined) {
-        throw new Error("world_path requires world_quest_id.");
+      if (args.world_quest_id !== undefined && args.coord !== undefined) {
+        throw new Error("world_path accepts either world_quest_id or coord, not both.");
       }
-      const resolved = resolveWorldQuestPackPath(args.world_quest_id);
+      if (args.world_quest_id === undefined && args.coord === undefined) {
+        throw new Error("world_path requires world_quest_id or coord.");
+      }
+      const world = loadWorldManifest();
+      const node =
+        args.world_quest_id === undefined
+          ? worldNodeAtCoord(world, args.coord!)
+          : worldQuestNodeById(world, args.world_quest_id);
+      if (!node) {
+        const source =
+          args.world_quest_id === undefined
+            ? `coord ${JSON.stringify(args.coord)}`
+            : `world quest "${args.world_quest_id}"`;
+        throw new Error(`Unknown world graph ${source}.`);
+      }
       return {
         world: {
-          id: resolved.world.id,
-          name: resolved.world.name,
-          hub: resolved.world.hub,
+          id: world.id,
+          name: world.name,
+          hub: world.hub,
         },
-        world_quest_id: resolved.node.id,
-        graph_node: resolved.node.id,
-        path_from_hub: worldRouteFromHub(resolved.world, resolved.node.id) ?? [],
+        world_quest_id: node.kind === "quest" ? node.id : null,
+        graph_node: node.id,
+        path_from_hub: worldRouteFromHub(world, node.id) ?? [],
       };
     },
 

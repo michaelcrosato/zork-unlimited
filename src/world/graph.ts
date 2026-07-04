@@ -52,8 +52,27 @@ function coordDistance(delta: WorldCoord): number {
   return Math.abs(delta[0]) + Math.abs(delta[1]);
 }
 
+function coordKey(coord: WorldCoord): string {
+  return `${coord[0]},${coord[1]}`;
+}
+
 export function worldNodeById(manifest: WorldManifest): Map<string, WorldGraphNode> {
   return new Map(manifest.graph.nodes.map((node) => [node.id, node]));
+}
+
+export function worldNodeByCoord(manifest: WorldManifest): Map<string, WorldGraphNode> {
+  const nodes = new Map<string, WorldGraphNode>();
+  for (const node of manifest.graph.nodes) {
+    if (node.coord) nodes.set(coordKey(node.coord), node);
+  }
+  return nodes;
+}
+
+export function worldNodeAtCoord(
+  manifest: WorldManifest,
+  coord: WorldCoord,
+): WorldGraphNode | null {
+  return worldNodeByCoord(manifest).get(coordKey(coord)) ?? null;
 }
 
 export function worldMapBounds(manifest: WorldManifest): WorldMapBounds | null {

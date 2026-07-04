@@ -81,9 +81,10 @@ tool(
 );
 tool(
   "world_path",
-  "Return the route from Charterhaven to a shipped RPG quest.",
+  "Return the route from Charterhaven to a world graph node.",
   {
-    world_quest_id: z.string().describe("World quest id."),
+    world_quest_id: z.string().optional().describe("World quest id."),
+    coord: z.tuple([z.number().int(), z.number().int()]).optional().describe("Node coordinate."),
   },
   (a) => api.world_path(a),
 );

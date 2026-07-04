@@ -287,7 +287,17 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.path_from_hub[2]?.delta_from_previous).toEqual([-1, 1]);
     expect(r.path_from_hub[2]?.distance_from_previous).toBe(2);
 
-    expect(() => api().world_path({})).toThrow(/requires world_quest_id/);
+    const byCoord = api().world_path({ coord: [-2, 2] });
+    expect(byCoord.world_quest_id).toBeNull();
+    expect(byCoord.graph_node).toBe("moor_road");
+    expect(byCoord.path_from_hub.map((step) => step.name)).toEqual(["Charterhaven", "Moor Road"]);
+    expect(byCoord.path_from_hub.at(-1)?.coord).toEqual([-2, 2]);
+
+    expect(() => api().world_path({})).toThrow(/requires world_quest_id or coord/);
+    expect(() => api().world_path({ world_quest_id: "sunken_barrow", coord: [-2, 2] })).toThrow(
+      /either world_quest_id or coord/,
+    );
+    expect(() => api().world_path({ coord: [99, 99] })).toThrow(/Unknown world graph coord/);
     expect(() => api().world_path({ quest_path: PACK } as never)).toThrow(/not quest_path/);
   });
 

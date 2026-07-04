@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 389 -->
+<!-- historical_cycle_count: 390 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - world_path_coordinate_lookup
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/world surface: world graph helpers now resolve nodes by coordinate, and `world_path` can route from Charterhaven to a node coordinate.
+- Loop effect: the coordinate matrix is now an input surface for route lookup, not only metadata emitted by `list_world`.
+- Guard: focused typecheck plus MCP tool, MCP server registration, and single-world manifest tests passed over coordinate route lookup.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - world_graph_edge_metrics
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/token surface: compact RPG observation `more` tuples now trim trailing zero omission counts and advertise context `v: 6`.
 - Loop effect: sparse inventory/flag overflows avoid carrying redundant later zero buckets while journal-only overflow keeps positional counts explicit.
 - Guard: focused Prettier, typecheck, compact-observation, MCP tool, and MCP server-registration tests passed after the versioned tuple change.
-- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
-
-### Cycle result - shared_mcp_hash_only_responses
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: MCP RPG state-hash unchanged/rejection, transcript unchanged, and overworld snapshot unchanged/rejection replies now construct through shared helpers.
-- Loop effect: compact polling and stale-write responses keep one token-small shape across observation, action menu, transcript, save, step, and overworld handlers.
-- Guard: focused Prettier, typecheck, MCP tool, and MCP server-registration tests passed over the shared hash-only response path.
 - VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.

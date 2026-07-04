@@ -21,6 +21,7 @@ import {
   normalizePackPath,
   worldMapBounds,
   worldMapEdges,
+  worldNodeAtCoord,
   worldQuestNodeForPack,
   worldRouteForPack,
 } from "../../src/world/graph.js";
@@ -111,6 +112,8 @@ describe("single-world library contract", () => {
       delta: [-2, 2],
       distance: 4,
     });
+    expect(worldNodeAtCoord(world, [-2, 2])?.id).toBe("moor_road");
+    expect(worldNodeAtCoord(world, [99, 99])).toBeNull();
 
     for (const edge of world.graph.edges) {
       expect(nodes.has(edge.from), `missing graph edge endpoint ${edge.from}`).toBe(true);
