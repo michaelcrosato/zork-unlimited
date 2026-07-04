@@ -443,7 +443,6 @@ tool(
   "Transcript hash/summary.",
   {
     ...SESSION,
-    ...IF_STATE_HASH,
     ...IF_TRANSCRIPT_HASH,
     summary_only: z.boolean().optional().describe("Default true; no turns."),
     compact_summary: z.boolean().optional().describe("Default true; capped lists."),

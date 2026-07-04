@@ -274,7 +274,7 @@ describe("MCP server registration", () => {
   it("defaults public RPG MCP transcripts to compact summary only", () => {
     const block = registeredToolBlock("get_transcript");
     expect(block).toContain("defaultCompactTranscript(a)");
-    expect(block).toContain("IF_STATE_HASH");
+    expect(block).not.toContain("IF_STATE_HASH");
     expect(block).toContain("IF_TRANSCRIPT_HASH");
     expect(block).toContain("Default true; no turns.");
     expect(block).toContain("Default true; capped lists.");

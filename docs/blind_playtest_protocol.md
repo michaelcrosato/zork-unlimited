@@ -78,9 +78,10 @@ PLAY:
   context.ended is true. If an action id is unclear, call list_legal_actions with
   compact_actions = false once for command text.
 - For an end-of-run transcript audit, call get_transcript(session_id,
-  summary_only = true, compact_summary = true, if_state_hash = latest state hash
-  when rechecking unchanged state). Use compact_turns = true only when route rows
-  are needed; compact rows are [step, scene_id, action_id, result_scene_id].
+  summary_only = true, compact_summary = true, if_transcript_hash = latest
+  transcript hash when rechecking unchanged history). Use compact_turns = true
+  only when route rows are needed; compact rows are [step, scene_id, action_id,
+  result_scene_id].
   Compact summaries include ending_id only after an ending exists and may omit
   empty inventory/flag/journal lists. Avoid full transcripts unless diagnosing a
   specific event-history bug.

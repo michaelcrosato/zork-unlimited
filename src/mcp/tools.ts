@@ -509,11 +509,9 @@ type TranscriptUnchanged = {
   transcript_hash: string;
   unchanged: true;
 };
-type TranscriptResponse<Args extends TranscriptArgs> = Args extends { if_state_hash: string }
+type TranscriptResponse<Args extends TranscriptArgs> = Args extends { if_transcript_hash: string }
   ? TranscriptPayload<Args> | TranscriptUnchanged
-  : Args extends { if_transcript_hash: string }
-    ? TranscriptPayload<Args> | TranscriptUnchanged
-    : TranscriptPayload<Args>;
+  : TranscriptPayload<Args>;
 
 const TRANSCRIPT_PROJECTION_COMPACT_TURNS = "compact-turns:v1";
 const TRANSCRIPT_PROJECTION_VISIBLE_EVENTS = "visible-events:v1";
@@ -1889,9 +1887,6 @@ export function createToolApi(opts: { root: string }) {
         args.if_transcript_hash !== undefined &&
         args.if_transcript_hash === currentTranscriptHash
       ) {
-        return transcriptUnchanged(stateHash, currentTranscriptHash) as TranscriptResponse<Args>;
-      }
-      if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
         return transcriptUnchanged(stateHash, currentTranscriptHash) as TranscriptResponse<Args>;
       }
       const summary = sessions.transcriptSummary(s.id, () => ({

@@ -1606,7 +1606,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       session_id: game.session_id,
       summary_only: true,
       compact_summary: true,
-      if_state_hash: currentStateHash,
+      if_transcript_hash: transcript.transcript_hash,
     });
     expect("unchanged" in unchangedTranscript).toBe(true);
     if (!("unchanged" in unchangedTranscript)) throw new Error("expected unchanged transcript");
@@ -1761,6 +1761,20 @@ describe("MCP tools — the play loop (§9.1)", () => {
       ended: session.state.ended,
       ending_id: session.state.endingId,
     });
+
+    const stateOnlyPoll = a.get_transcript({
+      session_id: game.session_id,
+      summary_only: true,
+      compact_summary: true,
+      if_state_hash: before.state_hash,
+    });
+    expect("unchanged" in stateOnlyPoll).toBe(false);
+    if ("unchanged" in stateOnlyPoll) {
+      throw new Error("state hash alone must not hide transcript-only changes");
+    }
+    expect(stateOnlyPoll.state_hash).toBe(before.state_hash);
+    expect(stateOnlyPoll.transcript_hash).not.toBe(before.transcript_hash);
+    expect(stateOnlyPoll.summary.steps).toBe(before.summary.steps + 1);
 
     const changed = a.get_transcript({
       session_id: game.session_id,
