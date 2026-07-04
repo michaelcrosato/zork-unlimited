@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 285 -->
+<!-- historical_cycle_count: 286 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - bounded_overworld_compact_id_buckets
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: live overworld compact views now build capped ID buckets directly, keeping counts from progress sets without materializing every sorted ID list for loop payloads.
+- Loop effect: repeated compact overworld reads keep the same `ids`/`id_counts` contract while scaling better as sessions discover more towns, areas, quests, jobs, sites, and events.
+- Guard: focused Prettier, typecheck, UI overworld, MCP tool, and overworld snapshot-integrity tests passed.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - shared_compact_truncation_helpers
 

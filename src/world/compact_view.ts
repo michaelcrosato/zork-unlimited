@@ -109,6 +109,11 @@ const OVERWORLD_COMPACT_ID_KEYS: readonly OverworldCompactIdKey[] = [
 
 export type OverworldCompactFullIdMap = Record<OverworldCompactIdKey, string[]>;
 export type OverworldCompactIdMap = Partial<OverworldCompactFullIdMap>;
+export type OverworldCompactIdBucket = {
+  ids: readonly string[];
+  count: number;
+};
+export type OverworldCompactIdBuckets = Record<OverworldCompactIdKey, OverworldCompactIdBucket>;
 export type OverworldCompactIdCounts = readonly [
   discovered_towns: number,
   discovered_areas: number,
@@ -123,6 +128,11 @@ export type OverworldCompactIdCounts = readonly [
   resolved_events: number,
 ];
 export type OverworldCompactIdTruncation = OverworldCompactIdKey[];
+export type OverworldCompactIdPayload = {
+  ids: OverworldCompactIdMap;
+  id_counts: OverworldCompactIdCounts;
+  ids_truncated?: OverworldCompactIdTruncation;
+};
 
 export type OverworldCompactView = {
   v: typeof OVERWORLD_COMPACT_VIEW_VERSION;
@@ -240,31 +250,78 @@ function cloneCompactIdMap(ids: OverworldCompactIdMap): OverworldCompactIdMap {
   return clone;
 }
 
-export function compactIdPayload(values: OverworldCompactFullIdMap): {
-  ids: OverworldCompactIdMap;
-  id_counts: OverworldCompactIdCounts;
-  ids_truncated?: OverworldCompactIdTruncation;
-} {
+export function compactIdPayload(values: OverworldCompactFullIdMap): OverworldCompactIdPayload {
+  return compactIdPayloadFromBuckets({
+    discovered_towns: {
+      ids: values.discovered_towns,
+      count: values.discovered_towns.length,
+    },
+    discovered_areas: {
+      ids: values.discovered_areas,
+      count: values.discovered_areas.length,
+    },
+    visited_areas: {
+      ids: values.visited_areas,
+      count: values.visited_areas.length,
+    },
+    discovered_jobs: {
+      ids: values.discovered_jobs,
+      count: values.discovered_jobs.length,
+    },
+    completed_jobs: {
+      ids: values.completed_jobs,
+      count: values.completed_jobs.length,
+    },
+    discovered_sites: {
+      ids: values.discovered_sites,
+      count: values.discovered_sites.length,
+    },
+    explored_sites: {
+      ids: values.explored_sites,
+      count: values.explored_sites.length,
+    },
+    discovered_quests: {
+      ids: values.discovered_quests,
+      count: values.discovered_quests.length,
+    },
+    started_quests: {
+      ids: values.started_quests,
+      count: values.started_quests.length,
+    },
+    completed_quests: {
+      ids: values.completed_quests,
+      count: values.completed_quests.length,
+    },
+    resolved_events: {
+      ids: values.resolved_events,
+      count: values.resolved_events.length,
+    },
+  });
+}
+
+export function compactIdPayloadFromBuckets(
+  values: OverworldCompactIdBuckets,
+): OverworldCompactIdPayload {
   const ids: OverworldCompactIdMap = {};
   const ids_truncated: OverworldCompactIdTruncation = [];
   for (const key of OVERWORLD_COMPACT_ID_KEYS) {
-    const fullList = values[key];
-    const compacted = compactIdList(fullList);
+    const bucket = values[key];
+    const compacted = compactIdList(bucket.ids);
     if (compacted.length > 0) ids[key] = compacted;
-    if (fullList.length > OVERWORLD_COMPACT_ID_LIST_LIMIT) ids_truncated.push(key);
+    if (bucket.count > compacted.length) ids_truncated.push(key);
   }
   const id_counts: OverworldCompactIdCounts = [
-    values.discovered_towns.length,
-    values.discovered_areas.length,
-    values.visited_areas.length,
-    values.discovered_jobs.length,
-    values.completed_jobs.length,
-    values.discovered_sites.length,
-    values.explored_sites.length,
-    values.discovered_quests.length,
-    values.started_quests.length,
-    values.completed_quests.length,
-    values.resolved_events.length,
+    values.discovered_towns.count,
+    values.discovered_areas.count,
+    values.visited_areas.count,
+    values.discovered_jobs.count,
+    values.completed_jobs.count,
+    values.discovered_sites.count,
+    values.explored_sites.count,
+    values.discovered_quests.count,
+    values.started_quests.count,
+    values.completed_quests.count,
+    values.resolved_events.count,
   ];
   return {
     ids,

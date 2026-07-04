@@ -31,15 +31,17 @@ import {
 } from "./local_actions.js";
 import {
   OVERWORLD_COMPACT_JOURNAL_LIMIT,
+  OVERWORLD_COMPACT_ID_LIST_LIMIT,
   OVERWORLD_COMPACT_ROUTE_LIMIT,
   OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT,
   OVERWORLD_COMPACT_VIEW_VERSION,
-  compactIdPayload,
+  compactIdPayloadFromBuckets,
   cloneOverworldCompactView,
   compactPendingRoad,
   compactRouteOption,
   compactTravelLogEntry,
   type OverworldCompactAreaRoute,
+  type OverworldCompactIdBucket,
   type OverworldCompactJournalEntry,
   type OverworldCompactQuestRef,
   type OverworldCompactRef,
@@ -559,6 +561,35 @@ function sortedNumberRecord(values: Map<string, number>): Record<string, number>
   const keys = [...values.keys()].sort();
   for (const key of keys) record[key] = values.get(key)!;
   return record;
+}
+
+function compareStringId(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function insertBoundedSorted<T>(
+  target: T[],
+  value: T,
+  limit: number,
+  compare: (left: T, right: T) => number,
+): void {
+  let index = 0;
+  while (index < target.length && compare(target[index]!, value) <= 0) index += 1;
+  if (index >= limit) return;
+  target.splice(index, 0, value);
+  if (target.length > limit) target.pop();
+}
+
+function compactSortedStringSet(values: ReadonlySet<string>): OverworldCompactIdBucket {
+  const ids: string[] = [];
+  for (const value of values) {
+    insertBoundedSorted(ids, value, OVERWORLD_COMPACT_ID_LIST_LIMIT, compareStringId);
+  }
+  return { ids, count: values.size };
+}
+
+function compareTownByPopulationThenName(left: OverworldNode, right: OverworldNode): number {
+  return right.population_2025 - left.population_2025 || left.name.localeCompare(right.name);
 }
 
 function assertUnique(label: string, values: readonly string[]): Set<string> {
@@ -4023,21 +4054,32 @@ export class OverworldSession {
     }
     const routeByDestination = new Map<string, OverworldSessionRoutePlan>();
     for (const plan of routeOptions) routeByDestination.set(plan.destination.id, plan);
-    const sortedIdList = (values: ReadonlySet<string>): string[] => [...values].sort();
+    const compactDiscoveredTowns: OverworldNode[] = [];
+    for (const id of this.discoveredIds) {
+      const town = this.nodes.get(id);
+      if (town) {
+        insertBoundedSorted(
+          compactDiscoveredTowns,
+          town,
+          OVERWORLD_COMPACT_ID_LIST_LIMIT,
+          compareTownByPopulationThenName,
+        );
+      }
+    }
     const discoveredTownIds: string[] = [];
-    for (const town of this.sortedDiscoveredTownsByPopulation()) discoveredTownIds.push(town.id);
-    const idPayload = compactIdPayload({
-      discovered_towns: discoveredTownIds,
-      discovered_areas: sortedIdList(this.discoveredAreaIds),
-      visited_areas: sortedIdList(this.visitedAreaIds),
-      discovered_jobs: sortedIdList(this.discoveredJobIds),
-      completed_jobs: sortedIdList(this.completedJobIds),
-      discovered_sites: sortedIdList(this.discoveredSiteIds),
-      explored_sites: sortedIdList(this.exploredSiteIds),
-      discovered_quests: sortedIdList(this.discoveredQuestIds),
-      started_quests: sortedIdList(this.startedQuestIds),
-      completed_quests: sortedIdList(this.completedQuestIds),
-      resolved_events: sortedIdList(this.resolvedEventIds),
+    for (const town of compactDiscoveredTowns) discoveredTownIds.push(town.id);
+    const idPayload = compactIdPayloadFromBuckets({
+      discovered_towns: { ids: discoveredTownIds, count: this.discoveredIds.size },
+      discovered_areas: compactSortedStringSet(this.discoveredAreaIds),
+      visited_areas: compactSortedStringSet(this.visitedAreaIds),
+      discovered_jobs: compactSortedStringSet(this.discoveredJobIds),
+      completed_jobs: compactSortedStringSet(this.completedJobIds),
+      discovered_sites: compactSortedStringSet(this.discoveredSiteIds),
+      explored_sites: compactSortedStringSet(this.exploredSiteIds),
+      discovered_quests: compactSortedStringSet(this.discoveredQuestIds),
+      started_quests: compactSortedStringSet(this.startedQuestIds),
+      completed_quests: compactSortedStringSet(this.completedQuestIds),
+      resolved_events: compactSortedStringSet(this.resolvedEventIds),
     });
     const exits = this.roadsFrom(this.currentId);
     const jobs: OverworldCompactRef[] = [];
@@ -4067,7 +4109,7 @@ export class OverworldSession {
       travelLog.push(compactTravelLogEntry(this.travelLog[index]!));
     }
     const renown = sortedNumberMap(this.regionRenown);
-    const completedArcs = sortedIdList(this.completedRegionalArcIds);
+    const completedArcs = sortedStringSet(this.completedRegionalArcIds);
     const roads: OverworldCompactRoad[] = [];
     for (const exit of exits) {
       const plan = routeByDestination.get(exit.destination.id);
