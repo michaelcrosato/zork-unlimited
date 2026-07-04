@@ -1,10 +1,15 @@
 import type { WorldGraphEdge, WorldGraphNode, WorldManifest } from "./schema.js";
 
+export type WorldCoord = [number, number];
+
 export type WorldRouteStep = {
   id: string;
   name: string;
   kind: WorldGraphNode["kind"];
+  coord?: WorldCoord;
   route_from_previous?: string;
+  delta_from_previous?: WorldCoord;
+  distance_from_previous?: number;
 };
 
 export function normalizePackPath(path: string): string {
@@ -22,6 +27,14 @@ function routeLookup(edges: WorldGraphEdge[]): Map<string, string> {
     routes.set(edgeKey(edge.to, edge.from), edge.route);
   }
   return routes;
+}
+
+function coordDelta(from: WorldCoord, to: WorldCoord): WorldCoord {
+  return [to[0] - from[0], to[1] - from[1]];
+}
+
+function coordDistance(delta: WorldCoord): number {
+  return Math.abs(delta[0]) + Math.abs(delta[1]);
 }
 
 export function worldNodeById(manifest: WorldManifest): Map<string, WorldGraphNode> {
@@ -92,10 +105,17 @@ export function worldRouteFromHub(
     const node = nodes.get(id);
     if (!node) throw new Error(`World graph path references missing node "${id}".`);
     const step: WorldRouteStep = { id: node.id, name: node.name, kind: node.kind };
+    if (node.coord) step.coord = node.coord;
     if (index > 0) {
       const prev = ids[index - 1]!;
+      const prevNode = nodes.get(prev);
       const route = routes.get(edgeKey(prev, id));
       if (route) step.route_from_previous = route;
+      if (prevNode?.coord && node.coord) {
+        const delta = coordDelta(prevNode.coord, node.coord);
+        step.delta_from_previous = delta;
+        step.distance_from_previous = coordDistance(delta);
+      }
     }
     return step;
   });

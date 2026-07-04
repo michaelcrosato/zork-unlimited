@@ -270,7 +270,16 @@ describe("MCP tools — validate / load (§9.4)", () => {
       "Moor Road",
       "The Sunken Barrow",
     ]);
+    expect(r.path_from_hub.map((step) => step.coord)).toEqual([
+      [0, 0],
+      [-2, 2],
+      [-3, 3],
+    ]);
     expect(r.path_from_hub[1]?.route_from_previous).toBe("moor road");
+    expect(r.path_from_hub[1]?.delta_from_previous).toEqual([-2, 2]);
+    expect(r.path_from_hub[1]?.distance_from_previous).toBe(4);
+    expect(r.path_from_hub[2]?.delta_from_previous).toEqual([-1, 1]);
+    expect(r.path_from_hub[2]?.distance_from_previous).toBe(2);
 
     expect(() => api().world_path({})).toThrow(/requires world_quest_id/);
     expect(() => api().world_path({ quest_path: PACK } as never)).toThrow(/not quest_path/);

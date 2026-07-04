@@ -78,6 +78,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - The canonical Charter Marches graph now carries unique integer coordinates for
   every node; loader integrity rejects partial/duplicate coordinate maps before
   play starts, and MCP exposes the pack-free coordinates through `list_world`.
+- World graph route helpers now project coordinates, movement deltas, and
+  Manhattan step distances through `world_path`, route listings, and quest-start
+  metadata.
 - AFK loop internals resolve any needed maintenance paths through `world/source`,
   not public catalog responses.
 - AFK assessment and `latest-cycle.json` now use quest ids as primary targets

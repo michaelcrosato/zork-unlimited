@@ -127,6 +127,14 @@ describe("single-world library contract", () => {
       const route = worldRouteForPack(world, path);
       expect(route?.[0]?.name, `${path} route must start at the hub`).toBe(CANONICAL_HUB_CITY);
       expect(route?.at(-1)?.kind, `${path} route must end at the quest`).toBe("quest");
+      expect(
+        route?.every((step) => Array.isArray(step.coord)),
+        `${path} route must carry map coordinates`,
+      ).toBe(true);
+      expect(
+        route?.slice(1).every((step) => Array.isArray(step.delta_from_previous)),
+        `${path} route must carry map deltas`,
+      ).toBe(true);
     }
   });
 
