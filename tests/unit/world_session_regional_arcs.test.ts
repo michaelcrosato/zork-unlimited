@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { OverworldNode, OverworldRegionalArc } from "../../src/world/overworld.js";
 import {
+  applyOverworldRegionalArcCompletions,
   buildOverworldRegionalArcProgress,
   cloneOverworldRegionalArcProgress,
   indexOverworldRegionalArcAnchorTowns,
@@ -140,5 +141,31 @@ describe("overworld session regional arcs", () => {
       recordedAt: "Day 1, 10:00",
     });
     expect([...completed]).toEqual(["arc_c"]);
+  });
+
+  it("applies regional arc completions to state and journal indexes", () => {
+    const completion = {
+      arc: arc("arc_a", "West", ["town_a"], 1),
+      entry: {
+        id: "arc:arc_a",
+        kind: "regional_arc" as const,
+        town: "West",
+        title: "Completed arc_a title",
+        text: "arc_a reward",
+        recordedAt: "Day 1, 10:00",
+      },
+    };
+    const state = {
+      completedRegionalArcIds: new Set<string>(),
+      journalEntries: [],
+      journalEntriesById: new Map(),
+    };
+
+    expect(applyOverworldRegionalArcCompletions(state, [completion])).toBe(true);
+    expect([...state.completedRegionalArcIds]).toEqual(["arc_a"]);
+    expect(state.journalEntries).toEqual([completion.entry]);
+    expect(state.journalEntriesById.get(completion.entry.id)).toBe(completion.entry);
+    expect(applyOverworldRegionalArcCompletions(state, [completion])).toBe(false);
+    expect(state.journalEntries).toEqual([completion.entry]);
   });
 });

@@ -1,5 +1,6 @@
 import type { OverworldNode, OverworldRegionalArc } from "./overworld.js";
 import { timeLabel } from "./session_journal_codec.js";
+import { addOverworldJournalEntry } from "./session_journal_store.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 import { pushIndexed } from "./session_collections.js";
 
@@ -19,6 +20,12 @@ export type OverworldRegionalArcProgress = {
 export type OverworldRegionalArcCompletion = {
   arc: OverworldRegionalArc;
   entry: OverworldJournalEntry;
+};
+
+export type MutableOverworldRegionalArcCompletionState = {
+  completedRegionalArcIds: Set<string>;
+  journalEntries: OverworldJournalEntry[];
+  journalEntriesById: Map<string, OverworldJournalEntry>;
 };
 
 export function indexOverworldRegionalArcsByRegion(
@@ -129,4 +136,20 @@ export function regionalArcCompletionsForRegion(
     });
   }
   return completions;
+}
+
+export function applyOverworldRegionalArcCompletions(
+  state: MutableOverworldRegionalArcCompletionState,
+  completions: readonly OverworldRegionalArcCompletion[],
+): boolean {
+  let changed = false;
+  for (const completion of completions) {
+    if (state.completedRegionalArcIds.has(completion.arc.id)) continue;
+    state.completedRegionalArcIds.add(completion.arc.id);
+    if (!state.journalEntriesById.has(completion.entry.id)) {
+      addOverworldJournalEntry(state.journalEntries, state.journalEntriesById, completion.entry);
+    }
+    changed = true;
+  }
+  return changed;
 }

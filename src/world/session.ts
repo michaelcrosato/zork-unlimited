@@ -74,6 +74,7 @@ import {
 } from "./session_quests.js";
 import { type OverworldSnapshotManifestIndex } from "./session_manifest_index.js";
 import {
+  applyOverworldRegionalArcCompletions,
   buildOverworldRegionalArcProgress,
   cloneOverworldRegionalArcProgress,
   regionalArcCompletionsForRegion,
@@ -738,11 +739,15 @@ export class OverworldSession {
       this.minutes,
     );
     if (completions.length === 0) return;
-    for (const completion of completions) {
-      this.completedRegionalArcIds.add(completion.arc.id);
-      addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, completion.entry);
-    }
-    this.clearSnapshotCache();
+    const changed = applyOverworldRegionalArcCompletions(
+      {
+        completedRegionalArcIds: this.completedRegionalArcIds,
+        journalEntries: this.journalEntries,
+        journalEntriesById: this.journalEntriesById,
+      },
+      completions,
+    );
+    if (changed) this.clearSnapshotCache();
   }
 
   private setPendingRoadEncounter(
