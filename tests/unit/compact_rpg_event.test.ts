@@ -4,8 +4,8 @@ import { compactPlayerEvent, RPG_COMPACT_EVENT_VERSION } from "../../src/mcp/com
 import type { GameEvent } from "../../src/core/events.js";
 
 describe("compactPlayerEvent", () => {
-  it("uses the v3 single-character event contract", () => {
-    expect(RPG_COMPACT_EVENT_VERSION).toBe(3);
+  it("uses the v4 single-character event contract", () => {
+    expect(RPG_COMPACT_EVENT_VERSION).toBe(4);
     expect(compactPlayerEvent({ type: "rejected", reason: "no" })).toEqual(["r", "no"]);
     expect(compactPlayerEvent({ type: "move", from: "yard", to: "road" })).toEqual([
       "m",
@@ -94,5 +94,47 @@ describe("compactPlayerEvent", () => {
       Number.MAX_VALUE,
       "non-finite rejected",
     ]);
+  });
+
+  it("caps prose-bearing compact event fields", () => {
+    const longNarration = "narration ".repeat(80);
+    const longRejection = "rejected ".repeat(40);
+    const longJournal = "journal ".repeat(80);
+    const longDiagnostic = "diagnostic ".repeat(40);
+    const longFallback = "fallback ".repeat(80);
+
+    const narration = compactPlayerEvent({ type: "narration", text: longNarration });
+    const rejection = compactPlayerEvent({ type: "rejected", reason: longRejection });
+    const journal = compactPlayerEvent({
+      type: "state_change",
+      effect: "add_journal",
+      text: longJournal,
+    });
+    const diagnostic = compactPlayerEvent({
+      type: "state_change",
+      effect: "set_var",
+      name: "score",
+      value: 1,
+      diagnostic: longDiagnostic,
+    });
+    const fallback = compactPlayerEvent({
+      type: "state_change",
+      effect: "custom_note" as never,
+      text: longFallback,
+    });
+
+    expect(narration[1].length).toBeLessThanOrEqual(500);
+    expect(narration[1]).toMatch(/\.\.\.\(\+\d+ chars\)$/);
+    expect(rejection[1].length).toBeLessThanOrEqual(240);
+    expect(rejection[1]).toMatch(/\.\.\.\(\+\d+ chars\)$/);
+    expect(journal[2]!.length).toBeLessThanOrEqual(320);
+    expect(journal[2]).toMatch(/\.\.\.\(\+\d+ chars\)$/);
+    expect(diagnostic[3]).toBe(1);
+    expect(String(diagnostic[4]).length).toBeLessThanOrEqual(240);
+    expect(String(diagnostic[4])).toMatch(/\.\.\.\(\+\d+ chars\)$/);
+    expect(String(fallback[2]).length).toBeLessThanOrEqual(320);
+    expect(String(fallback[2])).toMatch(/\.\.\.\(\+\d+ chars\)$/);
+    expect(longNarration.length).toBeGreaterThan(narration[1].length);
+    expect(longRejection.length).toBeGreaterThan(rejection[1].length);
   });
 });

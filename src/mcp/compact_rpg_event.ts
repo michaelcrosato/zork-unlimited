@@ -1,4 +1,11 @@
 import type { GameEvent } from "../core/events.js";
+import { compactText } from "./compact_truncation.js";
+
+const COMPACT_NARRATION_CHAR_LIMIT = 500;
+const COMPACT_REJECTION_CHAR_LIMIT = 240;
+const COMPACT_JOURNAL_CHAR_LIMIT = 320;
+const COMPACT_DIAGNOSTIC_CHAR_LIMIT = 240;
+const COMPACT_STATE_VALUE_CHAR_LIMIT = 320;
 
 export type RpgCompactEvent =
   | readonly ["r", reason: string]
@@ -19,7 +26,7 @@ export type RpgCompactEvent =
   | readonly ["q", npc: string, node: string]
   | readonly ["e", endingId: string];
 
-export const RPG_COMPACT_EVENT_VERSION = 3 as const;
+export const RPG_COMPACT_EVENT_VERSION = 4 as const;
 
 type RpgStateChangeEvent = Extract<GameEvent, { type: "state_change" }>;
 
@@ -34,7 +41,25 @@ function stringField(event: GameEvent, key: string): string {
 
 function diagnosticField(event: GameEvent): string | undefined {
   const diagnostic = field(event, "diagnostic");
-  return typeof diagnostic === "string" ? diagnostic : undefined;
+  return typeof diagnostic === "string"
+    ? compactText(diagnostic, COMPACT_DIAGNOSTIC_CHAR_LIMIT)
+    : undefined;
+}
+
+function compactValue(value: unknown): unknown {
+  return typeof value === "string" ? compactText(value, COMPACT_STATE_VALUE_CHAR_LIMIT) : value;
+}
+
+function compactFallbackKey(event: GameEvent): string | null {
+  return (
+    stringField(event, "flag") ||
+    stringField(event, "name") ||
+    stringField(event, "id") ||
+    stringField(event, "item") ||
+    compactText(stringField(event, "text"), COMPACT_STATE_VALUE_CHAR_LIMIT) ||
+    stringField(event, "quest") ||
+    null
+  );
 }
 
 function withDiagnostic(event: GameEvent, compact: readonly unknown[]): RpgCompactEvent {
@@ -49,27 +74,41 @@ function compactStateChangeEvent(event: RpgStateChangeEvent): RpgCompactEvent {
     case "clear_flag":
       return withDiagnostic(event, ["s", "x", stringField(event, "flag")]);
     case "set_var":
-      return withDiagnostic(event, ["s", "v", stringField(event, "name"), field(event, "value")]);
+      return withDiagnostic(event, [
+        "s",
+        "v",
+        stringField(event, "name"),
+        compactValue(field(event, "value")),
+      ]);
     case "inc_var":
       return withDiagnostic(event, [
         "s",
         "+",
         stringField(event, "name"),
-        field(event, "delta"),
-        field(event, "value"),
+        compactValue(field(event, "delta")),
+        compactValue(field(event, "value")),
       ]);
     case "dec_var":
       return withDiagnostic(event, [
         "s",
         "-",
         stringField(event, "name"),
-        field(event, "delta"),
-        field(event, "value"),
+        compactValue(field(event, "delta")),
+        compactValue(field(event, "value")),
       ]);
     case "add_journal":
-      return withDiagnostic(event, ["s", "j", stringField(event, "text")]);
+      return withDiagnostic(event, [
+        "s",
+        "j",
+        compactText(stringField(event, "text"), COMPACT_JOURNAL_CHAR_LIMIT),
+      ]);
     case "set_object_locked":
-      return withDiagnostic(event, ["s", "l", stringField(event, "id"), field(event, "locked")]);
+      return withDiagnostic(event, [
+        "s",
+        "l",
+        stringField(event, "id"),
+        compactValue(field(event, "locked")),
+      ]);
     case "place_object":
       return withDiagnostic(event, [
         "s",
@@ -85,22 +124,16 @@ function compactStateChangeEvent(event: RpgStateChangeEvent): RpgCompactEvent {
         stringField(event, "stage"),
       ]);
     default: {
-      const key =
-        stringField(event, "flag") ||
-        stringField(event, "name") ||
-        stringField(event, "id") ||
-        stringField(event, "item") ||
-        stringField(event, "text") ||
-        stringField(event, "quest") ||
-        null;
-      const value =
+      const key = compactFallbackKey(event);
+      const value = compactValue(
         field(event, "value") ??
-        field(event, "delta") ??
-        field(event, "to") ??
-        field(event, "amount") ??
-        field(event, "locked") ??
-        field(event, "room") ??
-        field(event, "stage");
+          field(event, "delta") ??
+          field(event, "to") ??
+          field(event, "amount") ??
+          field(event, "locked") ??
+          field(event, "room") ??
+          field(event, "stage"),
+      );
       return value !== undefined
         ? withDiagnostic(event, ["s", event.effect, key, value])
         : withDiagnostic(event, ["s", event.effect, key]);
@@ -111,9 +144,9 @@ function compactStateChangeEvent(event: RpgStateChangeEvent): RpgCompactEvent {
 export function compactPlayerEvent(event: GameEvent): RpgCompactEvent {
   switch (event.type) {
     case "rejected":
-      return ["r", event.reason];
+      return ["r", compactText(event.reason, COMPACT_REJECTION_CHAR_LIMIT)];
     case "narration":
-      return ["n", event.text];
+      return ["n", compactText(event.text, COMPACT_NARRATION_CHAR_LIMIT)];
     case "state_change":
       return compactStateChangeEvent(event);
     case "unlock_exit":
