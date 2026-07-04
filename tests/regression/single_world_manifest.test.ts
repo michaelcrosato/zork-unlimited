@@ -20,6 +20,7 @@ import {
 import {
   normalizePackPath,
   worldMapBounds,
+  worldMapEdges,
   worldQuestNodeForPack,
   worldRouteForPack,
 } from "../../src/world/graph.js";
@@ -101,6 +102,14 @@ describe("single-world library contract", () => {
       width: 9,
       height: 6,
       node_count: world.graph.nodes.length,
+    });
+    expect(worldMapEdges(world).find((edge) => edge.route === "moor road")).toMatchObject({
+      from: "charterhaven",
+      to: "moor_road",
+      from_coord: [0, 0],
+      to_coord: [-2, 2],
+      delta: [-2, 2],
+      distance: 4,
     });
 
     for (const edge of world.graph.edges) {
@@ -192,6 +201,14 @@ describe("single-world library contract", () => {
       width: 9,
       height: 6,
       node_count: world.graph.nodes.length,
+    });
+    expect(world.graph.edges.find((edge) => edge.route === "moor road")).toMatchObject({
+      from: "charterhaven",
+      to: "moor_road",
+      from_coord: [0, 0],
+      to_coord: [-2, 2],
+      delta: [-2, 2],
+      distance: 4,
     });
     expect(world.graph.nodes.every((node) => !("pack" in node))).toBe(true);
     expect(world.graph.nodes.every((node) => Array.isArray(node.coord))).toBe(true);

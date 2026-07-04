@@ -10,6 +10,13 @@ export type WorldMapBounds = {
   node_count: number;
 };
 
+export type WorldMapEdge = WorldGraphEdge & {
+  from_coord?: WorldCoord;
+  to_coord?: WorldCoord;
+  delta?: WorldCoord;
+  distance?: number;
+};
+
 export type WorldRouteStep = {
   id: string;
   name: string;
@@ -64,6 +71,23 @@ export function worldMapBounds(manifest: WorldManifest): WorldMapBounds | null {
     height: max[1] - min[1] + 1,
     node_count: coords.length,
   };
+}
+
+export function worldMapEdges(manifest: WorldManifest): WorldMapEdge[] {
+  const nodes = worldNodeById(manifest);
+  return manifest.graph.edges.map((edge) => {
+    const mappedEdge: WorldMapEdge = { from: edge.from, to: edge.to, route: edge.route };
+    const from = nodes.get(edge.from);
+    const to = nodes.get(edge.to);
+    if (from?.coord && to?.coord) {
+      const delta = coordDelta(from.coord, to.coord);
+      mappedEdge.from_coord = from.coord;
+      mappedEdge.to_coord = to.coord;
+      mappedEdge.delta = delta;
+      mappedEdge.distance = coordDistance(delta);
+    }
+    return mappedEdge;
+  });
 }
 
 export function worldQuestNodeForPack(

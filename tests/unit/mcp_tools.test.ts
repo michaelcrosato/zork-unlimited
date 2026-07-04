@@ -241,6 +241,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.world.id).toBe("charter_marches");
     expect(r.hub).toBe("Charterhaven");
     expect(r.graph.hub).toBe("charterhaven");
+    expect(r.graph.edges.find((edge) => edge.route === "moor road")).toMatchObject({
+      from_coord: [0, 0],
+      to_coord: [-2, 2],
+      delta: [-2, 2],
+      distance: 4,
+    });
     expect(r.quest_count).toBe(16);
     expect(r.quests.every((q) => !("mode" in q))).toBe(true);
     const breakingWeir = r.quests.find((q) => q.world_quest_id === "breaking_weir");

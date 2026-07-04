@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 388 -->
+<!-- historical_cycle_count: 389 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - world_graph_edge_metrics
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/world surface: world graph edge projection now derives endpoint coordinates, deltas, and Manhattan distances from canonical node coordinates.
+- Loop effect: `list_world({ include_graph: true })` exposes a pack-free coordinate edge map while the default catalog remains compact.
+- Guard: focused typecheck plus MCP tool, MCP RPG catalog, and single-world manifest tests passed over edge metric projection.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - world_graph_map_bounds
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/loop surface: MCP RPG state-hash unchanged/rejection, transcript unchanged, and overworld snapshot unchanged/rejection replies now construct through shared helpers.
 - Loop effect: compact polling and stale-write responses keep one token-small shape across observation, action menu, transcript, save, step, and overworld handlers.
 - Guard: focused Prettier, typecheck, MCP tool, and MCP server-registration tests passed over the shared hash-only response path.
-- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
-
-### Cycle result - shared_session_projection_cache
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: MCP session action, observation, transcript-summary, and transcript-row projection caches now build through one shared helper.
-- Loop effect: state-hash and transcript-hash cache invalidation rules are centralized, reducing drift risk in compact repeated reads that blind play agents only see indirectly.
-- Guard: focused Prettier, typecheck, MCP session/tool/server-registration tests passed over the shared cache path.
 - VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
