@@ -52,12 +52,14 @@ function validateOne(target: ValidationTarget): boolean {
   const path = target.path;
   const result = loadRpgPackFile(path);
   if (!result.ok) {
-    console.log(formatReport(makeReport(path, schemaFindings(result.error))));
+    console.log(
+      formatReport(makeReport(path, schemaFindings(result.error)), { includePackId: false }),
+    );
     return false;
   }
 
   const report = validateRpg(result.compiled.pack);
-  console.log(formatReport(report));
+  console.log(formatReport(report, { includePackId: false }));
   console.log(`content_hash: ${result.compiled.contentHash}`);
   return report.ok;
 }

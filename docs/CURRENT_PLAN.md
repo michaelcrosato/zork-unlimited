@@ -436,6 +436,8 @@ Make discovered overworld quest leads start real RPG sessions.
   `--pack` mode are rejected.
 - CLI validate output no longer repeats `mode: rpg` for every shipped quest; the
   RPG-only gate prints world quest id, report, and content hash.
+- CLI validate output also omits internal `Pack:` identifiers for shipped world
+  quests, keeping the recurring gate output keyed by world quest id plus hash.
 - CLI authoring now writes draft RPG packs only; direct `content/rpg/pack` output
   is rejected until the quest is deliberately registered in the canonical world
   graph.

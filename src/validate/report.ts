@@ -27,10 +27,15 @@ export function makeReport(packId: string, findings: Finding[]): ValidationRepor
   };
 }
 
+type FormatReportOptions = {
+  includePackId?: boolean;
+};
+
 /** Human-readable formatting for the CLI. */
-export function formatReport(report: ValidationReport): string {
+export function formatReport(report: ValidationReport, opts: FormatReportOptions = {}): string {
+  const includePackId = opts.includePackId ?? true;
   const lines: string[] = [];
-  lines.push(`Pack: ${report.pack_id}`);
+  if (includePackId) lines.push(`Pack: ${report.pack_id}`);
   const errors = report.findings.filter((f) => f.severity === "error").length;
   const warnings = report.findings.filter((f) => f.severity === "warning").length;
   lines.push(

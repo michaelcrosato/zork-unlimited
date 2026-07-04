@@ -104,6 +104,7 @@ describe("single-engine RPG validation bar", () => {
     expect(output).not.toContain("mode: cyoa");
     expect(output).not.toContain("mode: parser");
     expect(output).not.toContain("mode: rpg");
+    expect(output).not.toContain("Pack:");
     expect(output).not.toContain("content/rpg/pack/");
     expect(output.match(/content_hash: [0-9a-f]{64}/g)?.length ?? 0).toBe(worldQuestIds.length);
     for (const worldQuestId of worldQuestIds) {
@@ -119,6 +120,7 @@ describe("single-engine RPG validation bar", () => {
     expect(output).toContain("== world_quest_id: sunken_barrow ==");
     expect(output).not.toContain("content/rpg/pack/sunken_barrow.yaml");
     expect(output).not.toContain("mode: rpg");
+    expect(output).not.toContain("Pack:");
     expect(output.match(/content_hash: [0-9a-f]{64}/g)?.length ?? 0).toBe(1);
   });
 
