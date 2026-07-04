@@ -12,7 +12,7 @@ import type { RpgAction, StepResult } from "../api/types.js";
 import type { EngineAction, Rules } from "../core/engine.js";
 import { makeStep } from "../core/engine.js";
 import { SAVE_MODE, type SaveMode } from "../persist/save_load.js";
-import type { CompactSourceRef } from "../world/source_ref.js";
+import { compactSourceRefFromMetadata, type CompactSourceRef } from "../world/source_ref.js";
 
 export type TraceSourceRef = CompactSourceRef;
 
@@ -74,22 +74,16 @@ export type RecordOptions = {
   generatedRpgSeed?: number | null;
 };
 
+const TRACE_SOURCE_LABELS = {
+  source: "Trace source",
+  worldQuestId: "Trace worldQuestId",
+  generatedRpgSeed: "Trace generatedRpgSeed",
+} as const;
+
 function traceSourceRef(opts: RecordOptions): TraceSourceRef {
-  const worldQuestId = opts.worldQuestId ?? undefined;
-  const generatedRpgSeed = opts.generatedRpgSeed ?? undefined;
-  const hasWorldQuest = worldQuestId !== undefined;
-  const hasGeneratedSeed = generatedRpgSeed !== undefined;
-  if (hasWorldQuest && hasGeneratedSeed) {
-    throw new Error("Trace source cannot carry both worldQuestId and generatedRpgSeed.");
-  }
-  if (worldQuestId !== undefined) return ["wq", worldQuestId];
-  if (hasGeneratedSeed) {
-    if (!Number.isInteger(generatedRpgSeed)) {
-      throw new Error(`Trace generatedRpgSeed must be an integer, got ${generatedRpgSeed}.`);
-    }
-    return ["gen", generatedRpgSeed];
-  }
-  return ["pack", opts.pack_id];
+  const sourceRef = compactSourceRefFromMetadata(opts.pack_id, opts, TRACE_SOURCE_LABELS);
+  if (!sourceRef.ok) throw new Error(sourceRef.error);
+  return sourceRef.sourceRef;
 }
 
 export function traceSourceLabel(trace: {

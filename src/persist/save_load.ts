@@ -9,7 +9,11 @@
 import { z } from "zod";
 import type { GameState } from "../core/state.js";
 import { canonicalize } from "../core/hash.js";
-import { compactSourceRefValidationError, type CompactSourceRef } from "../world/source_ref.js";
+import {
+  compactSourceRefFromMetadata,
+  compactSourceRefValidationError,
+  type CompactSourceRef,
+} from "../world/source_ref.js";
 
 export const SAVE_VERSION = 1 as const;
 export const SAVE_MODE = "rpg" as const;
@@ -115,6 +119,12 @@ export type SaveMetadata = {
   generatedRpgSeed?: number | null;
 };
 
+const SAVE_SOURCE_LABELS = {
+  source: "Save source",
+  worldQuestId: "Save worldQuestId",
+  generatedRpgSeed: "Save generatedRpgSeed",
+} as const;
+
 /** Serialize a save to canonical bytes (stable across machines/runs). */
 export function save(
   state: GameState,
@@ -124,20 +134,16 @@ export function save(
   metadata: SaveMetadata = {},
 ): string {
   assertRpgMode(mode, "Save mode");
-  assertSaveSourceMetadata(metadata);
+  const sourceRef = saveSourceRef(packId, metadata);
   const bundle: SaveBundle = {
     version: SAVE_VERSION,
     packId,
     contentHash,
     state,
     mode,
-    source_ref: saveSourceRef(packId, metadata),
-    ...(metadata.worldQuestId !== undefined && metadata.worldQuestId !== null
-      ? { worldQuestId: metadata.worldQuestId }
-      : {}),
-    ...(metadata.generatedRpgSeed !== undefined && metadata.generatedRpgSeed !== null
-      ? { generatedRpgSeed: metadata.generatedRpgSeed }
-      : {}),
+    source_ref: sourceRef,
+    ...(sourceRef[0] === "wq" ? { worldQuestId: sourceRef[1] } : {}),
+    ...(sourceRef[0] === "gen" ? { generatedRpgSeed: sourceRef[1] } : {}),
   };
   return canonicalize(bundle);
 }
@@ -173,32 +179,9 @@ function assertGeneratedRpgSeed(seed: unknown, label: string): asserts seed is n
 }
 
 function saveSourceRef(packId: string, metadata: SaveMetadata): SaveSourceRef {
-  if (metadata.worldQuestId !== undefined && metadata.worldQuestId !== null) {
-    return ["wq", metadata.worldQuestId];
-  }
-  if (metadata.generatedRpgSeed !== undefined && metadata.generatedRpgSeed !== null) {
-    return ["gen", metadata.generatedRpgSeed];
-  }
-  return ["pack", packId];
-}
-
-function assertSaveSourceMetadata(metadata: SaveMetadata): void {
-  const hasWorldQuest = metadata.worldQuestId !== undefined && metadata.worldQuestId !== null;
-  const hasGeneratedSeed =
-    metadata.generatedRpgSeed !== undefined && metadata.generatedRpgSeed !== null;
-  if (hasWorldQuest && hasGeneratedSeed) {
-    throw new SaveIntegrityError(
-      "Save source cannot carry both worldQuestId and generatedRpgSeed.",
-    );
-  }
-  if (hasWorldQuest && typeof metadata.worldQuestId !== "string") {
-    throw new SaveIntegrityError(
-      `Save worldQuestId must be a string, got ${JSON.stringify(metadata.worldQuestId)}.`,
-    );
-  }
-  if (hasGeneratedSeed) {
-    assertGeneratedRpgSeed(metadata.generatedRpgSeed, "Save generatedRpgSeed");
-  }
+  const sourceRef = compactSourceRefFromMetadata(packId, metadata, SAVE_SOURCE_LABELS);
+  if (!sourceRef.ok) throw new SaveIntegrityError(sourceRef.error);
+  return sourceRef.sourceRef;
 }
 
 function assertSaveSourceRef(raw: unknown): asserts raw is SaveSourceRef {

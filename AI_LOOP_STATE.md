@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 278 -->
+<!-- historical_cycle_count: 279 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - shared_compact_source_ref_construction
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/source surface: save serialization and trace recording now construct compact source refs through one shared metadata resolver.
+- Loop effect: persisted `source_ref` tuples and legacy save mirrors derive from the same resolved source identity, avoiding repeated null/seed/pack fallback branching.
+- Guard: focused typecheck plus save/trace, world-source, MCP save/load, trace CLI, referential-integrity, and RPG play source tests passed over shared construction.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - shared_compact_source_ref_validation
 
