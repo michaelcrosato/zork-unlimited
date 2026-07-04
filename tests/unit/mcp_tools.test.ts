@@ -1132,6 +1132,97 @@ describe("MCP tools — validate / load (§9.4)", () => {
     );
   });
 
+  it("returns compact overworld action results when requested", () => {
+    const a = api();
+    const fullAreaStart = a.start_overworld();
+    const area = fullAreaStart.observation.areas[0]!;
+    const fullExplore = a.explore_overworld_session_area({
+      session_id: fullAreaStart.session_id,
+      area_id: area.id,
+    });
+
+    const compactAreaStart = a.start_overworld({ compact_context: true });
+    const compactExplore = a.explore_overworld_session_area({
+      session_id: compactAreaStart.session_id,
+      area_id: area.id,
+      compact_context: true,
+      compact_result: true,
+    });
+
+    expect(compactExplore.result.m).toBe(fullExplore.result.minutes);
+    expect(compactExplore.result.entry).toEqual([
+      fullExplore.result.entry.kind,
+      fullExplore.result.entry.title,
+      fullExplore.result.entry.recordedAt,
+    ]);
+    expect(compactExplore.result.areas?.map(([id]) => id)).toEqual(
+      fullExplore.result.discoveredAreas?.map((candidate) => candidate.id),
+    );
+    expect("text" in compactExplore.result.entry).toBe(false);
+    expect(JSON.stringify(compactExplore.result).length).toBeLessThan(
+      JSON.stringify(fullExplore.result).length,
+    );
+    expect("observation" in compactExplore).toBe(false);
+
+    const fullTravelStart = a.start_overworld();
+    const road = fullTravelStart.observation.exits.find(
+      (candidate) => candidate.destination.id === "colonie_town",
+    );
+    expect(road).toBeDefined();
+    const fullTravel = a.travel_overworld_session({
+      session_id: fullTravelStart.session_id,
+      road_id: road!.id,
+    });
+    const compactTravelStart = a.start_overworld({ compact_context: true });
+    const compactTravel = a.travel_overworld_session({
+      session_id: compactTravelStart.session_id,
+      road_id: road!.id,
+      compact_context: true,
+      compact_result: true,
+    });
+
+    expect(compactTravel.travel).toEqual([
+      road!.id,
+      fullTravelStart.observation.current.id,
+      road!.destination.id,
+      fullTravel.travel.minutes,
+      fullTravel.travel.suppliesUsed,
+      fullTravel.travel.fatigueGained,
+      fullTravel.travel.roadEvent?.id ?? null,
+    ]);
+    expect(JSON.stringify(compactTravel.travel).length).toBeLessThan(
+      JSON.stringify(fullTravel.travel).length,
+    );
+
+    const fullResolved = a.resolve_overworld_session_road_encounter({
+      session_id: fullTravelStart.session_id,
+      strategy: "press_on",
+    });
+    const compactResolved = a.resolve_overworld_session_road_encounter({
+      session_id: compactTravelStart.session_id,
+      strategy: "press_on",
+      compact_context: true,
+      compact_result: true,
+    });
+
+    expect(compactResolved.result).toMatchObject({
+      strategy: "press_on",
+      m: fullResolved.result.minutes,
+      supplies: fullResolved.result.suppliesUsed,
+      fatigue: fullResolved.result.fatigueGained,
+      renown: fullResolved.result.renownGained,
+    });
+    expect(compactResolved.result.encounter.event[0]).toBe(fullResolved.result.encounter.event.id);
+    expect(compactResolved.result.entry).toEqual([
+      fullResolved.result.entry.kind,
+      fullResolved.result.entry.title,
+      fullResolved.result.entry.recordedAt,
+    ]);
+    expect(JSON.stringify(compactResolved.result).length).toBeLessThan(
+      JSON.stringify(fullResolved.result).length,
+    );
+  });
+
   it("exports and restores stateful New York overworld sessions through MCP", () => {
     const a = api();
     const started = a.start_overworld();

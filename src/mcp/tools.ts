@@ -109,7 +109,22 @@ import {
   type OverworldView,
   type TravelLogEntry,
 } from "../world/session.js";
-import type { OverworldCompactView } from "../world/compact_view.js";
+import {
+  compactOverworldJournalEntries,
+  compactOverworldQuestRef,
+  compactOverworldRefs,
+  compactOverworldTitleRefs,
+  compactPendingRoad,
+  compactRouteOption,
+  compactTravelLogEntry,
+  type OverworldCompactJournalEntry,
+  type OverworldCompactQuestRef,
+  type OverworldCompactRef,
+  type OverworldCompactRoadEncounter,
+  type OverworldCompactRouteOption,
+  type OverworldCompactTravelLogEntry,
+  type OverworldCompactView,
+} from "../world/compact_view.js";
 import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
 import { resolveProvider } from "../../agents/llm/providers.js";
 import { loadEngineContract, runWriter } from "../../agents/authoring/writer.js";
@@ -210,6 +225,7 @@ type OverworldCompactSessionPayload<Key extends string, Value> = {
 
 type OverworldResponseOptions = {
   compact_context?: boolean;
+  compact_result?: boolean;
   expected_snapshot_hash?: string;
 };
 
@@ -230,6 +246,57 @@ type OverworldViewField<Args extends OverworldResponseOptions> = Args extends {
 }
   ? { context: OverworldCompactView }
   : { observation: OverworldView };
+
+type OverworldCompactActionResult = {
+  m: number;
+  known?: true;
+  entry: OverworldCompactJournalEntry;
+  areas?: OverworldCompactRef[];
+  jobs?: OverworldCompactRef[];
+  sites?: OverworldCompactRef[];
+  quests?: OverworldCompactQuestRef[];
+};
+
+type OverworldCompactQuestCompletionResult = {
+  m: number;
+  known?: true;
+  quest: OverworldCompactQuestRef;
+  ending: readonly [id: string, title: string];
+  entry: OverworldCompactJournalEntry;
+};
+
+type OverworldCompactServiceResult = {
+  action: OverworldServiceResult["action"];
+  m: number;
+  changed: boolean;
+  supplies: readonly [before: number, after: number];
+  fatigue: readonly [before: number, after: number];
+  entry?: OverworldCompactJournalEntry;
+};
+
+type OverworldCompactRoadEncounterResult = {
+  strategy: OverworldRoadEncounterStrategy;
+  m: number;
+  supplies: number;
+  fatigue: number;
+  renown: number;
+  encounter: OverworldCompactRoadEncounter;
+  entry: OverworldCompactJournalEntry;
+};
+
+type OverworldCompactAreaTravelResult = {
+  from: OverworldCompactRef;
+  to: OverworldCompactRef;
+  route: string;
+  m: number;
+  at: string;
+};
+
+type OverworldResultValue<
+  Args extends OverworldResponseOptions,
+  Value,
+  CompactValue,
+> = Args extends { compact_result: true } ? CompactValue : Value;
 
 type OverworldRejectedSessionPayload = {
   ok: false;
@@ -439,7 +506,7 @@ type OverworldQuestStartResponse<Args extends OverworldResponseOptions & RpgView
       ok: true;
       session_id: string;
       snapshot_hash: string;
-      quest: OverworldQuestView;
+      quest: OverworldResultValue<Args, OverworldQuestView, OverworldCompactQuestRef>;
       rpg_session_id: string;
       rpg_session: RpgSessionPayload<Args>;
     } & OverworldViewField<Args>)
@@ -562,9 +629,14 @@ type OverworldSessionResponse<
   Key extends string,
   Value,
   Args extends OverworldResponseOptions,
+  CompactValue = Value,
 > = Args extends { compact_context: true }
-  ? OverworldCompactSessionPayload<Key, Value> | OverworldGuardedRejection<Args>
-  : OverworldSessionPayload<Key, Value> | OverworldGuardedRejection<Args>;
+  ?
+      | OverworldCompactSessionPayload<Key, OverworldResultValue<Args, Value, CompactValue>>
+      | OverworldGuardedRejection<Args>
+  :
+      | OverworldSessionPayload<Key, OverworldResultValue<Args, Value, CompactValue>>
+      | OverworldGuardedRejection<Args>;
 
 type OverworldContextPayload = {
   ok: true;
@@ -636,6 +708,86 @@ function overworldSnapshotHashRejection(snapshotHash: string): OverworldRejected
     ok: false,
     snapshot_hash: snapshotHash,
     rejection_reason: OVERWORLD_SNAPSHOT_HASH_MISMATCH_REASON,
+  };
+}
+
+function compactOverworldJournalEntry(entry: {
+  kind: string;
+  title: string;
+  recordedAt: string;
+}): OverworldCompactJournalEntry {
+  return compactOverworldJournalEntries([entry])[0]!;
+}
+
+function compactOverworldActionResult(result: OverworldActionResult): OverworldCompactActionResult {
+  const compact: OverworldCompactActionResult = {
+    m: result.minutes,
+    entry: compactOverworldJournalEntry(result.entry),
+  };
+  if (result.alreadyKnown) compact.known = true;
+  const areas = result.discoveredAreas ? compactOverworldRefs(result.discoveredAreas) : [];
+  const jobs = result.discoveredJobs ? compactOverworldTitleRefs(result.discoveredJobs) : [];
+  const sites = result.discoveredSites ? compactOverworldTitleRefs(result.discoveredSites) : [];
+  const quests = result.discoveredQuests
+    ? result.discoveredQuests.map(compactOverworldQuestRef)
+    : [];
+  if (areas.length > 0) compact.areas = areas;
+  if (jobs.length > 0) compact.jobs = jobs;
+  if (sites.length > 0) compact.sites = sites;
+  if (quests.length > 0) compact.quests = quests;
+  return compact;
+}
+
+function compactOverworldServiceResult(
+  result: OverworldServiceResult,
+): OverworldCompactServiceResult {
+  return {
+    action: result.action,
+    m: result.minutes,
+    changed: result.changed,
+    supplies: [result.suppliesBefore, result.suppliesAfter],
+    fatigue: [result.fatigueBefore, result.fatigueAfter],
+    ...(result.entry ? { entry: compactOverworldJournalEntry(result.entry) } : {}),
+  };
+}
+
+function compactOverworldRoadEncounterResult(
+  result: OverworldRoadEncounterResult,
+): OverworldCompactRoadEncounterResult {
+  const encounter = compactPendingRoad(result.encounter);
+  if (!encounter) throw new Error("Cannot compact missing overworld road encounter.");
+  return {
+    strategy: result.strategy,
+    m: result.minutes,
+    supplies: result.suppliesUsed,
+    fatigue: result.fatigueGained,
+    renown: result.renownGained,
+    encounter,
+    entry: compactOverworldJournalEntry(result.entry),
+  };
+}
+
+function compactOverworldQuestCompletionResult(
+  result: OverworldQuestCompletionResult,
+): OverworldCompactQuestCompletionResult {
+  return {
+    m: result.minutes,
+    ...(result.alreadyKnown ? { known: true as const } : {}),
+    quest: compactOverworldQuestRef(result.quest),
+    ending: [result.endingId, result.endingTitle],
+    entry: compactOverworldJournalEntry(result.entry),
+  };
+}
+
+function compactOverworldAreaTravelResult(
+  result: OverworldAreaTravelResult,
+): OverworldCompactAreaTravelResult {
+  return {
+    from: compactOverworldRefs([result.from])[0]!,
+    to: compactOverworldRefs([result.to])[0]!,
+    route: result.route,
+    m: result.minutes,
+    at: result.arrivedAt,
   };
 }
 
@@ -1282,12 +1434,18 @@ export function createToolApi(opts: { root: string }) {
     return { observation: view } as OverworldViewField<Args>;
   }
 
-  function runOverworldSession<Key extends string, Value, Args extends OverworldResponseOptions>(
+  function runOverworldSession<
+    Key extends string,
+    Value,
+    Args extends OverworldResponseOptions,
+    CompactValue = Value,
+  >(
     args: Args,
     sessionId: string,
     key: Key,
     action: (session: OverworldSession) => Value,
-  ): OverworldSessionResponse<Key, Value, Args> {
+    compactValue?: (value: Value) => CompactValue,
+  ): OverworldSessionResponse<Key, Value, Args, CompactValue> {
     const session = getOverworldSession(sessionId);
     const currentSnapshotHash = overworldSnapshotHash(session);
     if (
@@ -1297,18 +1455,21 @@ export function createToolApi(opts: { root: string }) {
       return overworldSnapshotHashRejection(currentSnapshotHash) as OverworldSessionResponse<
         Key,
         Value,
-        Args
+        Args,
+        CompactValue
       >;
     }
     const value = action(session);
+    const responseValue =
+      args.compact_result === true && compactValue ? compactValue(value) : value;
     const payload = {
       ok: true,
       session_id: sessionId,
       snapshot_hash: overworldSnapshotHash(session),
-      [key]: value,
+      [key]: responseValue,
       ...overworldViewField(args, session),
     };
-    return payload as unknown as OverworldSessionResponse<Key, Value, Args>;
+    return payload as unknown as OverworldSessionResponse<Key, Value, Args, CompactValue>;
   }
 
   return {
@@ -1514,17 +1675,34 @@ export function createToolApi(opts: { root: string }) {
         session_id: string;
         destination_town_id: string;
       } & OverworldResponseOptions,
-    >(args: Args): OverworldSessionResponse<"route", OverworldSessionRoutePlan, Args> {
-      return runOverworldSession(args, args.session_id, "route", (session) =>
-        session.planRoute(args.destination_town_id),
+    >(
+      args: Args,
+    ): OverworldSessionResponse<
+      "route",
+      OverworldSessionRoutePlan,
+      Args,
+      OverworldCompactRouteOption
+    > {
+      return runOverworldSession(
+        args,
+        args.session_id,
+        "route",
+        (session) => session.planRoute(args.destination_town_id),
+        compactRouteOption,
       );
     },
 
     travel_overworld_session<
       Args extends { session_id: string; road_id: string } & OverworldResponseOptions,
-    >(args: Args): OverworldSessionResponse<"travel", TravelLogEntry, Args> {
-      return runOverworldSession(args, args.session_id, "travel", (session) =>
-        session.travel(args.road_id),
+    >(
+      args: Args,
+    ): OverworldSessionResponse<"travel", TravelLogEntry, Args, OverworldCompactTravelLogEntry> {
+      return runOverworldSession(
+        args,
+        args.session_id,
+        "travel",
+        (session) => session.travel(args.road_id),
+        compactTravelLogEntry,
       );
     },
 
@@ -1533,81 +1711,187 @@ export function createToolApi(opts: { root: string }) {
         session_id: string;
         strategy: OverworldRoadEncounterStrategy;
       } & OverworldResponseOptions,
-    >(args: Args): OverworldSessionResponse<"result", OverworldRoadEncounterResult, Args> {
-      return runOverworldSession(args, args.session_id, "result", (session) =>
-        session.resolveRoadEncounter(args.strategy),
+    >(
+      args: Args,
+    ): OverworldSessionResponse<
+      "result",
+      OverworldRoadEncounterResult,
+      Args,
+      OverworldCompactRoadEncounterResult
+    > {
+      return runOverworldSession(
+        args,
+        args.session_id,
+        "result",
+        (session) => session.resolveRoadEncounter(args.strategy),
+        compactOverworldRoadEncounterResult,
       );
     },
 
     resupply_overworld_session<Args extends { session_id: string } & OverworldResponseOptions>(
       args: Args,
-    ): OverworldSessionResponse<"result", OverworldServiceResult, Args> {
-      return runOverworldSession(args, args.session_id, "result", (session) =>
-        session.resupplyAtTown(),
+    ): OverworldSessionResponse<
+      "result",
+      OverworldServiceResult,
+      Args,
+      OverworldCompactServiceResult
+    > {
+      return runOverworldSession(
+        args,
+        args.session_id,
+        "result",
+        (session) => session.resupplyAtTown(),
+        compactOverworldServiceResult,
       );
     },
 
     rest_overworld_session<Args extends { session_id: string } & OverworldResponseOptions>(
       args: Args,
-    ): OverworldSessionResponse<"result", OverworldServiceResult, Args> {
-      return runOverworldSession(args, args.session_id, "result", (session) =>
-        session.restAtTown(),
+    ): OverworldSessionResponse<
+      "result",
+      OverworldServiceResult,
+      Args,
+      OverworldCompactServiceResult
+    > {
+      return runOverworldSession(
+        args,
+        args.session_id,
+        "result",
+        (session) => session.restAtTown(),
+        compactOverworldServiceResult,
       );
     },
 
     scout_overworld_session_poi<
       Args extends { session_id: string; poi_id: string } & OverworldResponseOptions,
-    >(args: Args): OverworldSessionResponse<"result", OverworldActionResult, Args> {
-      return runOverworldSession(args, args.session_id, "result", (session) =>
-        session.scoutPoi(args.poi_id),
+    >(
+      args: Args,
+    ): OverworldSessionResponse<
+      "result",
+      OverworldActionResult,
+      Args,
+      OverworldCompactActionResult
+    > {
+      return runOverworldSession(
+        args,
+        args.session_id,
+        "result",
+        (session) => session.scoutPoi(args.poi_id),
+        compactOverworldActionResult,
       );
     },
 
     talk_overworld_session_contact<
       Args extends { session_id: string; character_id: string } & OverworldResponseOptions,
-    >(args: Args): OverworldSessionResponse<"result", OverworldActionResult, Args> {
-      return runOverworldSession(args, args.session_id, "result", (session) =>
-        session.talkToCharacter(args.character_id),
+    >(
+      args: Args,
+    ): OverworldSessionResponse<
+      "result",
+      OverworldActionResult,
+      Args,
+      OverworldCompactActionResult
+    > {
+      return runOverworldSession(
+        args,
+        args.session_id,
+        "result",
+        (session) => session.talkToCharacter(args.character_id),
+        compactOverworldActionResult,
       );
     },
 
     investigate_overworld_session_event<
       Args extends { session_id: string; event_id: string } & OverworldResponseOptions,
-    >(args: Args): OverworldSessionResponse<"result", OverworldActionResult, Args> {
-      return runOverworldSession(args, args.session_id, "result", (session) =>
-        session.investigateEvent(args.event_id),
+    >(
+      args: Args,
+    ): OverworldSessionResponse<
+      "result",
+      OverworldActionResult,
+      Args,
+      OverworldCompactActionResult
+    > {
+      return runOverworldSession(
+        args,
+        args.session_id,
+        "result",
+        (session) => session.investigateEvent(args.event_id),
+        compactOverworldActionResult,
       );
     },
 
     resolve_overworld_session_event<
       Args extends { session_id: string; event_id: string } & OverworldResponseOptions,
-    >(args: Args): OverworldSessionResponse<"result", OverworldActionResult, Args> {
-      return runOverworldSession(args, args.session_id, "result", (session) =>
-        session.resolveEvent(args.event_id),
+    >(
+      args: Args,
+    ): OverworldSessionResponse<
+      "result",
+      OverworldActionResult,
+      Args,
+      OverworldCompactActionResult
+    > {
+      return runOverworldSession(
+        args,
+        args.session_id,
+        "result",
+        (session) => session.resolveEvent(args.event_id),
+        compactOverworldActionResult,
       );
     },
 
     explore_overworld_session_site<
       Args extends { session_id: string; site_id: string } & OverworldResponseOptions,
-    >(args: Args): OverworldSessionResponse<"result", OverworldActionResult, Args> {
-      return runOverworldSession(args, args.session_id, "result", (session) =>
-        session.exploreSite(args.site_id),
+    >(
+      args: Args,
+    ): OverworldSessionResponse<
+      "result",
+      OverworldActionResult,
+      Args,
+      OverworldCompactActionResult
+    > {
+      return runOverworldSession(
+        args,
+        args.session_id,
+        "result",
+        (session) => session.exploreSite(args.site_id),
+        compactOverworldActionResult,
       );
     },
 
     explore_overworld_session_area<
       Args extends { session_id: string; area_id: string } & OverworldResponseOptions,
-    >(args: Args): OverworldSessionResponse<"result", OverworldActionResult, Args> {
-      return runOverworldSession(args, args.session_id, "result", (session) =>
-        session.exploreArea(args.area_id),
+    >(
+      args: Args,
+    ): OverworldSessionResponse<
+      "result",
+      OverworldActionResult,
+      Args,
+      OverworldCompactActionResult
+    > {
+      return runOverworldSession(
+        args,
+        args.session_id,
+        "result",
+        (session) => session.exploreArea(args.area_id),
+        compactOverworldActionResult,
       );
     },
 
     work_overworld_session_job<
       Args extends { session_id: string; job_id: string } & OverworldResponseOptions,
-    >(args: Args): OverworldSessionResponse<"result", OverworldActionResult, Args> {
-      return runOverworldSession(args, args.session_id, "result", (session) =>
-        session.workLocalJob(args.job_id),
+    >(
+      args: Args,
+    ): OverworldSessionResponse<
+      "result",
+      OverworldActionResult,
+      Args,
+      OverworldCompactActionResult
+    > {
+      return runOverworldSession(
+        args,
+        args.session_id,
+        "result",
+        (session) => session.workLocalJob(args.job_id),
+        compactOverworldActionResult,
       );
     },
 
@@ -1640,50 +1924,75 @@ export function createToolApi(opts: { root: string }) {
         ...(args.compact_observation ? { compact_observation: true } : {}),
       } as RpgStartWorldQuestArgs & Args);
       sessions.get(rpgSession.session_id).overworldSessionId = args.session_id;
+      const questResult = args.compact_result === true ? compactOverworldQuestRef(quest) : quest;
       return {
         ok: true,
         session_id: args.session_id,
         snapshot_hash: overworldSnapshotHash(session),
-        quest,
+        quest: questResult,
         rpg_session_id: rpgSession.session_id,
         rpg_session: rpgSession,
         ...overworldViewField(args, session),
-      } as OverworldQuestStartResponse<Args>;
+      } as unknown as OverworldQuestStartResponse<Args>;
     },
 
     complete_overworld_session_quest<
       Args extends { session_id: string; rpg_session_id: string } & OverworldResponseOptions,
-    >(args: Args): OverworldSessionResponse<"result", OverworldQuestCompletionResult, Args> {
-      return runOverworldSession(args, args.session_id, "result", (session) => {
-        const rpgSession = sessions.get(args.rpg_session_id);
-        if (!rpgSession.worldQuestId) {
-          throw new Error("Only shipped world quest RPG sessions can complete overworld quests.");
-        }
-        if (rpgSession.overworldSessionId !== args.session_id) {
-          throw new Error("RPG quest session was not started from this overworld session.");
-        }
-        if (!rpgSession.state.ended || !rpgSession.state.endingId) {
-          throw new Error("RPG quest session has not ended yet.");
-        }
-        const ending = rpgSession.index.pack.endings.find(
-          (candidate) => candidate.id === rpgSession.state.endingId,
-        );
-        if (!ending) {
-          throw new Error(`RPG quest ended at unknown ending "${rpgSession.state.endingId}".`);
-        }
-        return session.completeQuest(rpgSession.worldQuestId, {
-          endingId: ending.id,
-          endingTitle: ending.title,
-          death: ending.death,
-        });
-      });
+    >(
+      args: Args,
+    ): OverworldSessionResponse<
+      "result",
+      OverworldQuestCompletionResult,
+      Args,
+      OverworldCompactQuestCompletionResult
+    > {
+      return runOverworldSession(
+        args,
+        args.session_id,
+        "result",
+        (session) => {
+          const rpgSession = sessions.get(args.rpg_session_id);
+          if (!rpgSession.worldQuestId) {
+            throw new Error("Only shipped world quest RPG sessions can complete overworld quests.");
+          }
+          if (rpgSession.overworldSessionId !== args.session_id) {
+            throw new Error("RPG quest session was not started from this overworld session.");
+          }
+          if (!rpgSession.state.ended || !rpgSession.state.endingId) {
+            throw new Error("RPG quest session has not ended yet.");
+          }
+          const ending = rpgSession.index.pack.endings.find(
+            (candidate) => candidate.id === rpgSession.state.endingId,
+          );
+          if (!ending) {
+            throw new Error(`RPG quest ended at unknown ending "${rpgSession.state.endingId}".`);
+          }
+          return session.completeQuest(rpgSession.worldQuestId, {
+            endingId: ending.id,
+            endingTitle: ending.title,
+            death: ending.death,
+          });
+        },
+        compactOverworldQuestCompletionResult,
+      );
     },
 
     move_overworld_session_area<
       Args extends { session_id: string; area_route_id: string } & OverworldResponseOptions,
-    >(args: Args): OverworldSessionResponse<"result", OverworldAreaTravelResult, Args> {
-      return runOverworldSession(args, args.session_id, "result", (session) =>
-        session.moveArea(args.area_route_id),
+    >(
+      args: Args,
+    ): OverworldSessionResponse<
+      "result",
+      OverworldAreaTravelResult,
+      Args,
+      OverworldCompactAreaTravelResult
+    > {
+      return runOverworldSession(
+        args,
+        args.session_id,
+        "result",
+        (session) => session.moveArea(args.area_route_id),
+        compactOverworldAreaTravelResult,
       );
     },
 

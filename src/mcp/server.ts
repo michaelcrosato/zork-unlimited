@@ -109,12 +109,18 @@ function defaultCompactActions(args: unknown): never {
 
 function defaultCompactOverworld(args: unknown): never {
   const input = typeof args === "object" && args !== null ? args : {};
-  return { compact_context: true, ...input } as never;
+  return { compact_context: true, compact_result: true, ...input } as never;
 }
 
 function defaultCompactOverworldAndRpg(args: unknown): never {
   const input = typeof args === "object" && args !== null ? args : {};
-  return { compact_context: true, hide_graph: true, compact_observation: true, ...input } as never;
+  return {
+    compact_context: true,
+    compact_result: true,
+    hide_graph: true,
+    compact_observation: true,
+    ...input,
+  } as never;
 }
 
 function defaultCompactTranscript(args: unknown): never {
@@ -152,7 +158,14 @@ const IF_SNAPSHOT_HASH = {
 const COMPACT_OVERWORLD_CONTEXT = {
   compact_context: z.boolean().optional().describe("Default true; false full obs."),
 };
-const OVERWORLD_ACTION_CONTEXT = { ...EXPECTED_SNAPSHOT_HASH, ...COMPACT_OVERWORLD_CONTEXT };
+const COMPACT_OVERWORLD_RESULT = {
+  compact_result: z.boolean().optional().describe("Default true; false full result."),
+};
+const OVERWORLD_ACTION_CONTEXT = {
+  ...EXPECTED_SNAPSHOT_HASH,
+  ...COMPACT_OVERWORLD_CONTEXT,
+  ...COMPACT_OVERWORLD_RESULT,
+};
 
 tool(
   "start_overworld",

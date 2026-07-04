@@ -224,7 +224,7 @@ describe("MCP server registration", () => {
     expect(rpgUtilitySchemaSource).not.toContain("A save string produced");
   });
 
-  it("defaults stateful overworld MCP actions to compact context", () => {
+  it("defaults stateful overworld MCP actions to compact context and results", () => {
     for (const toolName of [
       "start_overworld",
       "restore_overworld_session",
@@ -247,6 +247,16 @@ describe("MCP server registration", () => {
       expect(block).toContain("defaultCompactOverworld(a)");
     }
 
+    const overworldDefaults = serverSourceBlock(
+      "function defaultCompactOverworld",
+      "function defaultCompactOverworldAndRpg",
+    );
+    expect(overworldDefaults).toContain("compact_context: true");
+    expect(overworldDefaults).toContain("compact_result: true");
+    expect(overworldDefaults.indexOf("compact_result: true")).toBeLessThan(
+      overworldDefaults.indexOf("...input"),
+    );
+
     expect(registeredToolBlock("start_overworld_session_quest")).toContain(
       "defaultCompactOverworldAndRpg(a)",
     );
@@ -258,6 +268,13 @@ describe("MCP server registration", () => {
     expect(overworldAndRpgDefaults.indexOf("hide_graph: true")).toBeLessThan(
       overworldAndRpgDefaults.indexOf("...input"),
     );
+    expect(overworldAndRpgDefaults).toContain("compact_result: true");
+    expect(overworldAndRpgDefaults.indexOf("compact_result: true")).toBeLessThan(
+      overworldAndRpgDefaults.indexOf("...input"),
+    );
+    expect(
+      serverSourceBlock("const COMPACT_OVERWORLD_CONTEXT", 'tool(\n  "start_overworld"'),
+    ).toContain("compact_result");
     expect(registeredToolBlock("get_overworld_session")).toContain("compactMcpOverworldSession(a)");
     expect(registeredToolBlock("get_overworld_session")).toContain("include_observation");
     expect(registeredToolBlock("get_overworld_session")).toContain("IF_SNAPSHOT_HASH");
