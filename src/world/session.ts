@@ -147,6 +147,7 @@ import {
   assertSnapshotDiscoveredAreaPrefix,
   assertSnapshotDiscoveredLocalSourcePrefixes,
   assertSnapshotDiscoveredTownFrontier,
+  assertSnapshotCurrentAreaMapBindings,
   assertSnapshotPendingRoadEncounterBinding,
   assertSnapshotPendingRoadEncounterUnresolved,
   assertSnapshotTravelPathContinuity,
@@ -710,25 +711,12 @@ export class OverworldSession {
       indexes.areasByTown,
       visitedTownIds,
     );
-    for (const [townId, areaId] of currentAreaByTown) {
-      if (!indexes.nodeIds.has(townId)) {
-        throw new Error(`Overworld session snapshot has unknown area-map town "${townId}".`);
-      }
-      if (!indexes.areaIds.has(areaId)) {
-        throw new Error(`Overworld session snapshot has unknown saved area "${areaId}".`);
-      }
-      if (indexes.areaHomes.get(areaId) !== townId) {
-        throw new Error(
-          `Overworld session snapshot saved area "${areaId}" is outside "${townId}".`,
-        );
-      }
-      if (!visitedTownIds.has(townId)) {
-        throw new Error(`Overworld session snapshot saved area town "${townId}" is not visited.`);
-      }
-      if (!discoveredAreaIds.has(areaId)) {
-        throw new Error(`Overworld session snapshot saved area "${areaId}" is not discovered.`);
-      }
-    }
+    assertSnapshotCurrentAreaMapBindings(
+      currentAreaByTown,
+      indexes,
+      visitedTownIds,
+      discoveredAreaIds,
+    );
     assertSnapshotDiscoveryLocality({
       ...indexes,
       completedQuestIds,

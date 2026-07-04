@@ -245,3 +245,34 @@ export function assertSnapshotCurrentAreaMapExact(
     throw new Error("Overworld session snapshot current area does not match saved area map.");
   }
 }
+
+export type OverworldCurrentAreaMapBindingIndex = {
+  nodeIds: ReadonlySet<string>;
+  areaIds: ReadonlySet<string>;
+  areaHomes: ReadonlyMap<string, string>;
+};
+
+export function assertSnapshotCurrentAreaMapBindings(
+  currentAreaByTown: ReadonlyMap<string, string>,
+  indexes: OverworldCurrentAreaMapBindingIndex,
+  visitedTownIds: ReadonlySet<string>,
+  discoveredAreaIds: ReadonlySet<string>,
+): void {
+  for (const [townId, areaId] of currentAreaByTown) {
+    if (!indexes.nodeIds.has(townId)) {
+      throw new Error(`Overworld session snapshot has unknown area-map town "${townId}".`);
+    }
+    if (!indexes.areaIds.has(areaId)) {
+      throw new Error(`Overworld session snapshot has unknown saved area "${areaId}".`);
+    }
+    if (indexes.areaHomes.get(areaId) !== townId) {
+      throw new Error(`Overworld session snapshot saved area "${areaId}" is outside "${townId}".`);
+    }
+    if (!visitedTownIds.has(townId)) {
+      throw new Error(`Overworld session snapshot saved area town "${townId}" is not visited.`);
+    }
+    if (!discoveredAreaIds.has(areaId)) {
+      throw new Error(`Overworld session snapshot saved area "${areaId}" is not discovered.`);
+    }
+  }
+}

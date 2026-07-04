@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  assertSnapshotCurrentAreaMapBindings,
   assertSnapshotCurrentAreaMapExact,
   assertSnapshotDiscoveredAreaPrefix,
   assertSnapshotDiscoveredLocalSourcePrefixes,
@@ -190,5 +191,65 @@ describe("overworld snapshot travel and discovery proofs", () => {
         new Set(["town_a"]),
       ),
     ).toThrow(/saved area map is missing visited town/);
+  });
+
+  it("checks saved current area map bindings against known and reached local state", () => {
+    const indexes = {
+      nodeIds: new Set(["town_a", "town_b"]),
+      areaIds: new Set(["area_a", "area_b"]),
+      areaHomes: new Map([
+        ["area_a", "town_a"],
+        ["area_b", "town_b"],
+      ]),
+    };
+
+    expect(() =>
+      assertSnapshotCurrentAreaMapBindings(
+        new Map([["town_a", "area_a"]]),
+        indexes,
+        new Set(["town_a"]),
+        new Set(["area_a"]),
+      ),
+    ).not.toThrow();
+    expect(() =>
+      assertSnapshotCurrentAreaMapBindings(
+        new Map([["missing_town", "area_a"]]),
+        indexes,
+        new Set(["missing_town"]),
+        new Set(["area_a"]),
+      ),
+    ).toThrow(/unknown area-map town/);
+    expect(() =>
+      assertSnapshotCurrentAreaMapBindings(
+        new Map([["town_a", "missing_area"]]),
+        indexes,
+        new Set(["town_a"]),
+        new Set(["missing_area"]),
+      ),
+    ).toThrow(/unknown saved area/);
+    expect(() =>
+      assertSnapshotCurrentAreaMapBindings(
+        new Map([["town_a", "area_b"]]),
+        indexes,
+        new Set(["town_a"]),
+        new Set(["area_b"]),
+      ),
+    ).toThrow(/outside "town_a"/);
+    expect(() =>
+      assertSnapshotCurrentAreaMapBindings(
+        new Map([["town_a", "area_a"]]),
+        indexes,
+        new Set(),
+        new Set(["area_a"]),
+      ),
+    ).toThrow(/saved area town "town_a" is not visited/);
+    expect(() =>
+      assertSnapshotCurrentAreaMapBindings(
+        new Map([["town_a", "area_a"]]),
+        indexes,
+        new Set(["town_a"]),
+        new Set(),
+      ),
+    ).toThrow(/saved area "area_a" is not discovered/);
   });
 });
