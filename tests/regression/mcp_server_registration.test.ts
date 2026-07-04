@@ -250,13 +250,21 @@ describe("MCP server registration", () => {
     expect(registeredToolBlock("start_overworld_session_quest")).toContain(
       "defaultCompactOverworldAndRpg(a)",
     );
+    const overworldAndRpgDefaults = serverSourceBlock(
+      "function defaultCompactOverworldAndRpg",
+      "function defaultCompactTranscript",
+    );
+    expect(overworldAndRpgDefaults).toContain("hide_graph: true");
+    expect(overworldAndRpgDefaults.indexOf("hide_graph: true")).toBeLessThan(
+      overworldAndRpgDefaults.indexOf("...input"),
+    );
     expect(registeredToolBlock("get_overworld_session")).toContain("compactMcpOverworldSession(a)");
     expect(registeredToolBlock("get_overworld_session")).toContain("include_observation");
     expect(registeredToolBlock("get_overworld_session")).toContain("IF_SNAPSHOT_HASH");
     expect(registeredToolBlock("get_overworld_session_context")).toContain("IF_SNAPSHOT_HASH");
   });
 
-  it("defaults public RPG MCP play tools to compact observation", () => {
+  it("defaults public RPG MCP play tools to compact hidden-graph observation", () => {
     for (const toolName of [
       "new_game",
       "start_world_quest",
@@ -268,8 +276,22 @@ describe("MCP server registration", () => {
       expect(block).toContain("defaultCompactRpg(a)");
     }
 
+    const rpgDefaults = serverSourceBlock(
+      "function defaultCompactRpg",
+      "function defaultCompactActions",
+    );
+    expect(rpgDefaults).toContain("hide_graph: true");
+    expect(rpgDefaults.indexOf("hide_graph: true")).toBeLessThan(rpgDefaults.indexOf("...input"));
     const legalActions = registeredToolBlock("list_legal_actions");
+    const actionDefaults = serverSourceBlock(
+      "function defaultCompactActions",
+      "function defaultCompactOverworld",
+    );
     expect(legalActions).toContain("defaultCompactActions(a)");
+    expect(actionDefaults).toContain("hide_graph: true");
+    expect(actionDefaults.indexOf("hide_graph: true")).toBeLessThan(
+      actionDefaults.indexOf("...input"),
+    );
     expect(legalActions).toContain("Default true; false returns labels.");
     expect(legalActions).toContain("if_state_hash");
     expect(legalActions).not.toContain("defaultCompactRpg");

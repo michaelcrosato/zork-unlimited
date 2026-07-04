@@ -99,12 +99,12 @@ tool(
 
 function defaultCompactRpg(args: unknown): never {
   const input = typeof args === "object" && args !== null ? args : {};
-  return { compact_events: true, compact_observation: true, ...input } as never;
+  return { hide_graph: true, compact_events: true, compact_observation: true, ...input } as never;
 }
 
 function defaultCompactActions(args: unknown): never {
   const input = typeof args === "object" && args !== null ? args : {};
-  return { compact_actions: true, ...input } as never;
+  return { hide_graph: true, compact_actions: true, ...input } as never;
 }
 
 function defaultCompactOverworld(args: unknown): never {
@@ -114,7 +114,7 @@ function defaultCompactOverworld(args: unknown): never {
 
 function defaultCompactOverworldAndRpg(args: unknown): never {
   const input = typeof args === "object" && args !== null ? args : {};
-  return { compact_context: true, compact_observation: true, ...input } as never;
+  return { compact_context: true, hide_graph: true, compact_observation: true, ...input } as never;
 }
 
 function defaultCompactTranscript(args: unknown): never {
