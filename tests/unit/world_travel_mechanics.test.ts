@@ -8,6 +8,7 @@ import {
   isOverworldRoadEncounterStrategy,
   roadEncounterOptionFor,
   roadEncounterOptionsFor,
+  resolveOverworldTravelLeg,
   travelCondition,
   travelDelayMinutes,
   travelFatigueGain,
@@ -44,6 +45,36 @@ describe("overworld travel mechanics", () => {
     expect(travelDelayMinutes(100, 50, 0)).toBe(20);
     expect(travelDelayMinutes(100, 80, 0)).toBe(35);
     expect(travelDelayMinutes(100, 0, 2)).toBe(60);
+  });
+
+  it("resolves a single travel leg through the shared resource transition", () => {
+    expect(resolveOverworldTravelLeg(60, null, { supplies: 6, fatigue: 0 })).toEqual({
+      baseMinutes: 60,
+      delayMinutes: 0,
+      elapsedMinutes: 60,
+      suppliesNeeded: 1,
+      suppliesUsed: 1,
+      supplyDeficit: 0,
+      suppliesAfter: 5,
+      fatigueGained: 2,
+      fatigueAfter: 2,
+      travelConditionAfter: "ready",
+    });
+
+    expect(resolveOverworldTravelLeg(240, highRiskRoadEvent, { supplies: 1, fatigue: 99 })).toEqual(
+      {
+        baseMinutes: 240,
+        delayMinutes: 114,
+        elapsedMinutes: 354,
+        suppliesNeeded: 2,
+        suppliesUsed: 1,
+        supplyDeficit: 1,
+        suppliesAfter: 0,
+        fatigueGained: 13,
+        fatigueAfter: OVERWORLD_MAX_FATIGUE,
+        travelConditionAfter: "exhausted and out of supplies",
+      },
+    );
   });
 
   it("labels travel condition from fatigue and supplies", () => {

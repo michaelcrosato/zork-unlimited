@@ -23,6 +23,24 @@ export type OverworldRoadEncounterOption = {
   outcome: string;
 };
 
+export type OverworldTravelResourceState = {
+  supplies: number;
+  fatigue: number;
+};
+
+export type OverworldTravelLegResult = {
+  baseMinutes: number;
+  delayMinutes: number;
+  elapsedMinutes: number;
+  suppliesNeeded: number;
+  suppliesUsed: number;
+  supplyDeficit: number;
+  suppliesAfter: number;
+  fatigueGained: number;
+  fatigueAfter: number;
+  travelConditionAfter: string;
+};
+
 export function isOverworldRoadEncounterStrategy(
   value: string,
 ): value is OverworldRoadEncounterStrategy {
@@ -108,4 +126,31 @@ export function travelCondition(fatigue: number, supplies: number): string {
   if (supplies === 0) return "out of supplies";
   if (fatigue >= 25) return "tired";
   return "ready";
+}
+
+export function resolveOverworldTravelLeg(
+  minutes: number,
+  roadEvent: OverworldRoadEvent | null,
+  resources: OverworldTravelResourceState,
+): OverworldTravelLegResult {
+  const suppliesNeeded = travelSupplyCost(minutes);
+  const suppliesUsed = Math.min(resources.supplies, suppliesNeeded);
+  const supplyDeficit = suppliesNeeded - suppliesUsed;
+  const delayMinutes = travelDelayMinutes(minutes, resources.fatigue, supplyDeficit);
+  const fatigueGained = travelFatigueGain(minutes, roadEvent) + supplyDeficit * 4;
+  const suppliesAfter = resources.supplies - suppliesUsed;
+  const fatigueAfter = Math.min(OVERWORLD_MAX_FATIGUE, resources.fatigue + fatigueGained);
+
+  return {
+    baseMinutes: minutes,
+    delayMinutes,
+    elapsedMinutes: minutes + delayMinutes,
+    suppliesNeeded,
+    suppliesUsed,
+    supplyDeficit,
+    suppliesAfter,
+    fatigueGained,
+    fatigueAfter,
+    travelConditionAfter: travelCondition(fatigueAfter, suppliesAfter),
+  };
 }

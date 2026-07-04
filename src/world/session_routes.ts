@@ -6,11 +6,9 @@ import type {
   OverworldRouteStep,
 } from "./overworld.js";
 import {
-  OVERWORLD_MAX_FATIGUE as MAX_FATIGUE,
+  resolveOverworldTravelLeg,
   travelCondition,
-  travelDelayMinutes,
-  travelFatigueGain,
-  travelSupplyCost,
+  type OverworldTravelResourceState,
 } from "./travel_mechanics.js";
 
 export type OverworldRouteEstimate = {
@@ -36,10 +34,7 @@ export type OverworldRoutePlannerIndex = {
   roadEventsByEdgeId: ReadonlyMap<string, OverworldRoadEvent>;
 };
 
-export type OverworldRouteResourceState = {
-  supplies: number;
-  fatigue: number;
-};
+export type OverworldRouteResourceState = OverworldTravelResourceState;
 
 export function estimateOverworldRoute(
   plan: OverworldRoutePlan,
@@ -55,22 +50,19 @@ export function estimateOverworldRoute(
   let fatigueGained = 0;
 
   for (const step of plan.steps) {
-    const stepMinutes = step.edge.travel_minutes;
-    const stepSupplyCost = travelSupplyCost(stepMinutes);
-    const stepSuppliesUsed = Math.min(supplies, stepSupplyCost);
-    const stepSupplyDeficit = stepSupplyCost - stepSuppliesUsed;
-    const stepDelay = travelDelayMinutes(stepMinutes, fatigue, stepSupplyDeficit);
-    const stepFatigueGained =
-      travelFatigueGain(stepMinutes, step.roadEvent) + stepSupplyDeficit * 4;
+    const stepResult = resolveOverworldTravelLeg(step.edge.travel_minutes, step.roadEvent, {
+      fatigue,
+      supplies,
+    });
 
-    baseMinutes += stepMinutes;
-    delayMinutes += stepDelay;
-    suppliesNeeded += stepSupplyCost;
-    suppliesUsed += stepSuppliesUsed;
-    supplyDeficit += stepSupplyDeficit;
-    fatigueGained += stepFatigueGained;
-    supplies -= stepSuppliesUsed;
-    fatigue = Math.min(MAX_FATIGUE, fatigue + stepFatigueGained);
+    baseMinutes += stepResult.baseMinutes;
+    delayMinutes += stepResult.delayMinutes;
+    suppliesNeeded += stepResult.suppliesNeeded;
+    suppliesUsed += stepResult.suppliesUsed;
+    supplyDeficit += stepResult.supplyDeficit;
+    fatigueGained += stepResult.fatigueGained;
+    supplies = stepResult.suppliesAfter;
+    fatigue = stepResult.fatigueAfter;
   }
 
   return {

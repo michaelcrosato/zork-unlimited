@@ -65,14 +65,11 @@ import {
   sortedStringSet,
 } from "./session_collections.js";
 import {
-  OVERWORLD_MAX_FATIGUE as MAX_FATIGUE,
   OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES,
   OVERWORLD_STARTING_MINUTES as STARTING_MINUTES,
   OVERWORLD_STARTING_SUPPLIES as STARTING_SUPPLIES,
+  resolveOverworldTravelLeg,
   travelCondition,
-  travelDelayMinutes,
-  travelFatigueGain,
-  travelSupplyCost,
   type OverworldRoadEncounterStrategy,
 } from "./travel_mechanics.js";
 import {
@@ -1962,16 +1959,13 @@ export class OverworldSession {
     if (!edge) throw new Error("That road is not reachable from here.");
     const from = this.currentNode();
     const roadEvent = this.roadEventFor(edge.id);
-    const supplyCost = travelSupplyCost(edge.travel_minutes);
-    const suppliesUsed = Math.min(this.supplies, supplyCost);
-    const supplyDeficit = supplyCost - suppliesUsed;
-    const fatigueBefore = this.fatigue;
-    const delayMinutes = travelDelayMinutes(edge.travel_minutes, fatigueBefore, supplyDeficit);
-    const elapsedMinutes = edge.travel_minutes + delayMinutes;
-    const fatigueGained = travelFatigueGain(edge.travel_minutes, roadEvent) + supplyDeficit * 4;
-    this.supplies -= suppliesUsed;
-    this.fatigue = Math.min(MAX_FATIGUE, this.fatigue + fatigueGained);
-    this.minutes += elapsedMinutes;
+    const travelResult = resolveOverworldTravelLeg(edge.travel_minutes, roadEvent, {
+      fatigue: this.fatigue,
+      supplies: this.supplies,
+    });
+    this.supplies = travelResult.suppliesAfter;
+    this.fatigue = travelResult.fatigueAfter;
+    this.minutes += travelResult.elapsedMinutes;
     this.currentId = edge.destination.id;
     this.markSeen(this.currentId);
     this.setPendingRoadEncounter(from, edge.destination, edge, roadEvent);
@@ -1984,12 +1978,12 @@ export class OverworldSession {
       route: edge.route,
       distanceMi: edge.distance_mi,
       baseMinutes: edge.travel_minutes,
-      delayMinutes,
-      minutes: elapsedMinutes,
+      delayMinutes: travelResult.delayMinutes,
+      minutes: travelResult.elapsedMinutes,
       arrivedAt: this.minutes,
-      suppliesUsed,
+      suppliesUsed: travelResult.suppliesUsed,
       suppliesAfter: this.supplies,
-      fatigueGained,
+      fatigueGained: travelResult.fatigueGained,
       fatigueAfter: this.fatigue,
       roadEvent,
     };
