@@ -18,12 +18,9 @@ import {
   type OverworldRoadEvent,
 } from "./overworld.js";
 import {
-  describeOverworldAreaAction,
   describeOverworldContactAction,
   describeOverworldEventAction,
-  describeOverworldJobAction,
   describeOverworldPoiAction,
-  describeOverworldSiteAction,
   type OverworldLocalActionDescriptor,
   type OverworldLocalActionKind,
 } from "./local_actions.js";
@@ -136,6 +133,11 @@ import {
   type OverworldProgressJournalSourceIndex,
 } from "./session_progress_journal.js";
 import { assertSnapshotRegionRenown } from "./session_region_renown.js";
+import {
+  planOverworldAreaExploration,
+  planOverworldLocalJobCompletion,
+  planOverworldSiteExploration,
+} from "./session_local_actions.js";
 import {
   assertSnapshotResourceReplay,
   roadJournalResolutionIndex,
@@ -1602,28 +1604,26 @@ export class OverworldSession {
 
   exploreArea(areaId: string): OverworldActionResult {
     const current = this.currentNode();
-    const area = this.areaById(areaId);
-    if (!area || area.home !== this.currentId) throw new Error("That area is not in this town.");
-    if (!this.discoveredAreaIds.has(area.id)) {
-      throw new Error("Scout, talk, investigate, or explore known areas to map that district.");
-    }
-    if (this.currentArea()?.id !== area.id) {
-      throw new Error("Move to that local area before exploring it.");
-    }
-    if (this.visitedAreaIds.has(area.id)) {
-      const existing = this.journalEntry(`area:${area.id}`);
-      if (existing) {
-        return {
-          minutes: 0,
-          alreadyKnown: true,
-          entry: existing,
-          ...emptyOverworldLocalDiscovery(),
-        };
-      }
+    const plan = planOverworldAreaExploration({
+      areaId,
+      areasById: this.areasById,
+      currentTownId: this.currentId,
+      currentAreaId: this.currentArea()?.id ?? null,
+      discoveredAreaIds: this.discoveredAreaIds,
+      visitedAreaIds: this.visitedAreaIds,
+      journalEntries: this.journalEntriesById,
+    });
+    if (plan.alreadyKnown) {
+      return {
+        minutes: 0,
+        alreadyKnown: true,
+        entry: plan.entry,
+        ...emptyOverworldLocalDiscovery(),
+      };
     }
 
-    const result = this.recordLocalAction(describeOverworldAreaAction(area), current.name);
-    if (!result.alreadyKnown) this.visitedAreaIds.add(area.id);
+    const result = this.recordLocalAction(plan.action, current.name);
+    if (!result.alreadyKnown) this.visitedAreaIds.add(plan.areaId);
     return this.withLocalDiscovery(result, current.id);
   }
 
@@ -1650,36 +1650,32 @@ export class OverworldSession {
 
   workLocalJob(jobId: string): OverworldActionResult {
     const current = this.currentNode();
-    const job = this.jobsById.get(jobId);
-    if (!job || job.home !== this.currentId) {
-      throw new Error("That local job is not in this town.");
-    }
-    if (!this.discoveredJobIds.has(job.id)) {
-      throw new Error("Explore local areas or talk to locals before working that job.");
-    }
-    if (job.area !== this.currentAreaIdOrThrow()) {
-      throw new Error("Move to that local area before working that job.");
-    }
-    if (this.completedJobIds.has(job.id)) {
-      const existing = this.journalEntry(`job:${job.id}`);
-      if (existing) {
-        return {
-          minutes: 0,
-          alreadyKnown: true,
-          entry: existing,
-          ...emptyOverworldLocalDiscovery(),
-        };
-      }
+    const plan = planOverworldLocalJobCompletion({
+      jobId,
+      jobsById: this.jobsById,
+      areasById: this.areasById,
+      currentTownId: this.currentId,
+      currentRegion: current.region,
+      currentAreaId: this.currentAreaIdOrThrow(),
+      discoveredJobIds: this.discoveredJobIds,
+      completedJobIds: this.completedJobIds,
+      journalEntries: this.journalEntriesById,
+    });
+    if (plan.alreadyKnown) {
+      return {
+        minutes: 0,
+        alreadyKnown: true,
+        entry: plan.entry,
+        ...emptyOverworldLocalDiscovery(),
+      };
     }
 
-    const area = this.areaById(job.area);
-    const action = describeOverworldJobAction(job, area ?? null);
-    const result = this.recordLocalAction(action, current.name);
+    const result = this.recordLocalAction(plan.action, current.name);
     if (!result.alreadyKnown) {
-      this.completedJobIds.add(job.id);
+      this.completedJobIds.add(plan.jobId);
       this.regionRenown.set(
-        current.region,
-        (this.regionRenown.get(current.region) ?? 0) + (action.regionalRenown ?? 0),
+        plan.renownRegion,
+        (this.regionRenown.get(plan.renownRegion) ?? 0) + plan.renown,
       );
       this.clearSnapshotCache();
     }
@@ -1740,28 +1736,23 @@ export class OverworldSession {
 
   exploreSite(siteId: string): OverworldActionResult {
     const current = this.currentNode();
-    const site = this.sitesById.get(siteId);
-    if (!site || site.nearest_town !== this.currentId) {
-      throw new Error("That exploration site is not reachable from this town.");
-    }
-    if (site.area !== this.currentAreaIdOrThrow()) {
-      throw new Error("Move to that local area before exploring this site.");
-    }
-    if (!this.discoveredSiteIds.has(site.id)) {
-      throw new Error("Scout a local point of interest before exploring this site.");
-    }
-    if (this.exploredSiteIds.has(site.id)) {
-      const existing = this.journalEntry(`site:${site.id}`);
-      if (existing) return { minutes: 0, alreadyKnown: true, entry: existing };
-    }
+    const plan = planOverworldSiteExploration({
+      siteId,
+      sitesById: this.sitesById,
+      currentTownId: this.currentId,
+      currentAreaId: this.currentAreaIdOrThrow(),
+      discoveredSiteIds: this.discoveredSiteIds,
+      exploredSiteIds: this.exploredSiteIds,
+      journalEntries: this.journalEntriesById,
+    });
+    if (plan.alreadyKnown) return { minutes: 0, alreadyKnown: true, entry: plan.entry };
 
-    const action = describeOverworldSiteAction(site);
-    const result = this.recordLocalAction(action, current.name);
+    const result = this.recordLocalAction(plan.action, current.name);
     if (!result.alreadyKnown) {
-      this.exploredSiteIds.add(site.id);
+      this.exploredSiteIds.add(plan.siteId);
       this.regionRenown.set(
-        site.region,
-        (this.regionRenown.get(site.region) ?? 0) + (action.regionalRenown ?? 0),
+        plan.renownRegion,
+        (this.regionRenown.get(plan.renownRegion) ?? 0) + plan.renown,
       );
       this.clearSnapshotCache();
     }
