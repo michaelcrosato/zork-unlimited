@@ -69,12 +69,10 @@ import {
   OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES,
   OVERWORLD_STARTING_MINUTES as STARTING_MINUTES,
   OVERWORLD_STARTING_SUPPLIES as STARTING_SUPPLIES,
-  roadEncounterOptionsFor,
   travelCondition,
   travelDelayMinutes,
   travelFatigueGain,
   travelSupplyCost,
-  type OverworldRoadEncounterOption,
   type OverworldRoadEncounterStrategy,
 } from "./travel_mechanics.js";
 import {
@@ -84,6 +82,11 @@ import {
   type OverworldRoutePlannerIndex,
   type OverworldSessionRoutePlan,
 } from "./session_routes.js";
+import {
+  buildOverworldPendingRoadEncounter,
+  resolveOverworldRoadEncounter,
+  type OverworldRoadEncounterResult,
+} from "./session_road_encounters.js";
 import { timeLabel } from "./session_journal_codec.js";
 import { assertSnapshotTimeline } from "./session_journal_timeline.js";
 import {
@@ -141,6 +144,7 @@ export type {
   OverworldRoadEncounterStrategy,
 } from "./travel_mechanics.js";
 export type { OverworldRouteEstimate, OverworldSessionRoutePlan } from "./session_routes.js";
+export type { OverworldRoadEncounterResult } from "./session_road_encounters.js";
 export {
   OVERWORLD_SESSION_SAVE_VERSION,
   OverworldSessionSnapshotSchema,
@@ -191,16 +195,6 @@ export type OverworldServiceResult = {
   fatigueAfter: number;
   message: string;
   entry: OverworldJournalEntry | null;
-};
-
-export type OverworldRoadEncounterResult = {
-  strategy: OverworldRoadEncounterStrategy;
-  minutes: number;
-  suppliesUsed: number;
-  fatigueGained: number;
-  renownGained: number;
-  encounter: OverworldPendingRoadEncounter;
-  entry: OverworldJournalEntry;
 };
 
 export type OverworldRegionalArcProgress = {
@@ -840,7 +834,7 @@ export class OverworldSession {
       if (!from || !to) {
         throw new Error("Overworld session snapshot pending road references an unknown town.");
       }
-      restoredPendingRoadEncounter = this.buildPendingRoadEncounter(
+      restoredPendingRoadEncounter = buildOverworldPendingRoadEncounter(
         from,
         to,
         pendingEdge,
@@ -1379,10 +1373,6 @@ export class OverworldSession {
     if (completedAny) this.clearSnapshotCache();
   }
 
-  private roadEncounterOptions(roadEvent: OverworldRoadEvent): OverworldRoadEncounterOption[] {
-    return roadEncounterOptionsFor(roadEvent);
-  }
-
   private setPendingRoadEncounter(
     from: OverworldNode,
     to: OverworldNode,
@@ -1393,32 +1383,13 @@ export class OverworldSession {
       this.pendingRoadEncounter = null;
       return;
     }
-    this.pendingRoadEncounter = this.buildPendingRoadEncounter(
+    this.pendingRoadEncounter = buildOverworldPendingRoadEncounter(
       from,
       to,
       edge,
       roadEvent,
       this.minutes,
     );
-  }
-
-  private buildPendingRoadEncounter(
-    from: OverworldNode,
-    to: OverworldNode,
-    edge: OverworldEdge,
-    roadEvent: OverworldRoadEvent,
-    arrivedAtMinutes: number,
-  ): OverworldPendingRoadEncounter {
-    return {
-      id: `road:${edge.id}:${arrivedAtMinutes}`,
-      edgeId: edge.id,
-      from: from.name,
-      to: to.name,
-      route: edge.route,
-      arrivedAt: timeLabel(arrivedAtMinutes),
-      event: roadEvent,
-      options: this.roadEncounterOptions(roadEvent),
-    };
   }
 
   private cachedCompactView(): OverworldCompactView {
@@ -2085,42 +2056,27 @@ export class OverworldSession {
   resolveRoadEncounter(strategy: OverworldRoadEncounterStrategy): OverworldRoadEncounterResult {
     const encounter = this.pendingRoadEncounter;
     if (!encounter) throw new Error("There is no pending road encounter.");
-    const option = encounter.options.find((candidate) => candidate.strategy === strategy);
-    if (!option) throw new Error(`Unknown road encounter strategy "${strategy}".`);
-
-    const suppliesUsed = Math.min(this.supplies, option.suppliesCost);
-    const supplyDeficit = option.suppliesCost - suppliesUsed;
-    const fatigueGained = option.fatigueGained + supplyDeficit * 3;
-    this.supplies -= suppliesUsed;
-    this.fatigue = Math.min(MAX_FATIGUE, this.fatigue + fatigueGained);
-    this.minutes += option.minutes;
     const current = this.currentNode();
-    if (option.renownGained > 0) {
+    const resolution = resolveOverworldRoadEncounter(encounter, strategy, {
+      fatigue: this.fatigue,
+      minutes: this.minutes,
+      supplies: this.supplies,
+      townName: current.name,
+    });
+
+    this.supplies = resolution.suppliesAfter;
+    this.fatigue = resolution.fatigueAfter;
+    this.minutes = resolution.minutesAfter;
+    if (resolution.result.renownGained > 0) {
       this.regionRenown.set(
         current.region,
-        (this.regionRenown.get(current.region) ?? 0) + option.renownGained,
+        (this.regionRenown.get(current.region) ?? 0) + resolution.result.renownGained,
       );
     }
     this.pendingRoadEncounter = null;
-    const entry: OverworldJournalEntry = {
-      id: `${encounter.id}:${strategy}`,
-      kind: "road",
-      town: current.name,
-      title: `${option.label}: ${encounter.event.title}`,
-      text: `${encounter.event.summary} ${option.outcome}${supplyDeficit > 0 ? " Lacking supplies made the work more exhausting." : ""}`,
-      recordedAt: timeLabel(this.minutes),
-    };
-    this.addJournalEntry(entry);
+    this.addJournalEntry(resolution.result.entry);
     this.clearSnapshotCache();
-    return {
-      strategy,
-      minutes: option.minutes,
-      suppliesUsed,
-      fatigueGained,
-      renownGained: option.renownGained,
-      encounter,
-      entry,
-    };
+    return resolution.result;
   }
 
   travel(edgeId: string): TravelLogEntry {
