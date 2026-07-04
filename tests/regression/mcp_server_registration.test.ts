@@ -151,6 +151,19 @@ describe("MCP server registration", () => {
     expect(restoreTraceSchemaSource).not.toContain("content-hash + mode");
   });
 
+  it("keeps authoring and fix ToolSearch schema source terse", () => {
+    const authoringFixSchemaSource = [
+      registeredToolBlock("generate_rpg_pack"),
+      registeredToolBlock("adapt_story"),
+      registeredToolBlock("apply_content_patch"),
+    ].join("\n");
+
+    expect(authoringFixSchemaSource.length).toBeLessThanOrEqual(1450);
+    expect(authoringFixSchemaSource).not.toContain("writer→adapter→validator");
+    expect(authoringFixSchemaSource).not.toContain("model-issued code");
+    expect(authoringFixSchemaSource).not.toContain("combat-winnability and score-economy");
+  });
+
   it("defaults stateful overworld MCP actions to compact context", () => {
     for (const toolName of [
       "start_overworld",

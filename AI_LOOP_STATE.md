@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 404 -->
+<!-- historical_cycle_count: 405 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - authoring_fix_schema_prose_trimmed
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: authoring/fix MCP ToolSearch schema prose for `generate_rpg_pack`, `adapt_story`, and `apply_content_patch` is trimmed and guarded by a source-size regression.
+- Loop effect: ToolSearch reads for generation, authoring, and content-patch operations spend fewer tokens before the agent reaches actual engine/tool payloads.
+- Guard: focused Prettier, MCP registration schema-size regression, and typecheck passed.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused regression, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - trace_cli_duplicate_world_source_removed
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/loop surface: `SessionStore.update` now preserves state-derived legal-action, observation, and transcript-summary caches when a replacement state has the same canonical hash.
 - Loop effect: no-op, rejected, and state-equivalent turns keep compact MCP projections warm instead of rebuilding token-facing views on unchanged state.
 - Guard: focused Prettier, typecheck, MCP session, and MCP tool tests passed over equal-hash cache retention.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - world_path_coordinate_lookup
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/world surface: world graph helpers now resolve nodes by coordinate, and `world_path` can route from Charterhaven to a node coordinate.
-- Loop effect: the coordinate matrix is now an input surface for route lookup, not only metadata emitted by `list_world`.
-- Guard: focused typecheck plus MCP tool, MCP server registration, and single-world manifest tests passed over coordinate route lookup.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.

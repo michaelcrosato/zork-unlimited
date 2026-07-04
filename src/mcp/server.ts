@@ -367,16 +367,16 @@ tool("validate_quest", "Validate one shipped RPG quest by id.", WORLD_QUEST_SOUR
 );
 tool(
   "load_quest",
-  "Compile a shipped world quest by graph id and return its metadata, content hash, source identity, and validation report.",
+  "Compile a shipped RPG quest; return metadata, hash, and report.",
   WORLD_QUEST_SOURCE,
   (a) => api.load_quest(a),
 );
 
 tool(
   "generate_rpg_pack",
-  "Mint a FRESH procedural RPG pack from a seed and validate it against the same gate the curated RPG packs clear — exercising the combat-winnability and score-economy proofs against a moving target. Pure + deterministic; writes nothing. Play it with new_game's generate_rpg_seed.",
+  "Mint and validate a deterministic RPG pack from a seed; writes nothing.",
   {
-    seed: z.number().int().describe("Generation seed — selects the minted pack's theme/structure."),
+    seed: z.number().int().describe("Generation seed."),
   },
   (a) => api.generate_rpg_pack(a),
 );
@@ -506,9 +506,9 @@ tool(
 
 tool(
   "adapt_story",
-  "Author an RPG pack from a premise via the writer→adapter→validator loop (§12.1–3); returns the pack, validation report, and per-beat classification.",
+  "Author an RPG pack from a premise; return pack, report, and classifications.",
   {
-    premise: z.string().describe("A one-sentence story premise to author from."),
+    premise: z.string().describe("Story premise."),
   },
   (a) => api.adapt_story(a),
 );
@@ -528,7 +528,7 @@ tool(
 
 tool(
   "apply_content_patch",
-  "Apply a structured, whitelisted content patch with deterministic code to a shipped world quest id and return the modified pack + validation report (§9.4, §16). Never writes files; never runs model-issued code.",
+  "Apply a whitelisted content patch to a world quest; return pack and report.",
   {
     ...WORLD_QUEST_SOURCE,
     proposal: z
@@ -542,15 +542,9 @@ tool(
           "quest_structure",
         ]),
         summary: z.string(),
-        ops: z
-          .array(z.record(z.string(), z.unknown()))
-          .describe(
-            "Closed-vocabulary patch ops; validated against the fixer's op schema (§12.5).",
-          ),
+        ops: z.array(z.record(z.string(), z.unknown())).describe("Validated patch ops."),
       })
-      .describe(
-        "A ContentPatchProposal: a single-layer, op-based edit applied by code, not the model.",
-      ),
+      .describe("Op-based patch proposal."),
   },
   (a) => api.apply_content_patch(a as never),
 );

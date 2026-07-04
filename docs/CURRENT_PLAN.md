@@ -404,6 +404,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Restore/debug MCP ToolSearch schema prose for `world_path`, `load_game`,
   `replay_trace`, and `inspect_trace` is trimmed and guarded by a source-size
   regression.
+- Authoring/fix MCP ToolSearch schema prose for `generate_rpg_pack`,
+  `adapt_story`, and `apply_content_patch` is trimmed and guarded by a
+  source-size regression.
 - The verifier negative corpus captures expected bad-ref Git stderr, keeping
   passing test logs free of fatal-looking synthetic failure noise.
 - The no-LLM blind MCP smoke harness is now inside the repo lint/format gates with
