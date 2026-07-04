@@ -351,6 +351,12 @@ export class OverworldSession {
     this.pendingRoadEncounter = state.pendingRoadEncounterAfter;
   }
 
+  private assertNoPendingRoadEncounter(action: string): void {
+    if (this.pendingRoadEncounter) {
+      throw new Error(`Resolve the pending road encounter before ${action}.`);
+    }
+  }
+
   private cachedSnapshot(): OverworldSessionSnapshotCache {
     if (this.caches.snapshot) return this.caches.snapshot;
     const snapshot = this.buildSnapshot();
@@ -913,6 +919,7 @@ export class OverworldSession {
   }
 
   private questStartPlan(questId: string): OverworldQuestStartPlan {
+    this.assertNoPendingRoadEncounter("starting a quest");
     return planOverworldQuestStart({
       questId,
       questsById: this.questsById,
@@ -943,6 +950,7 @@ export class OverworldSession {
     questId: string,
     outcome: OverworldQuestCompletionOutcome,
   ): OverworldQuestCompletionResult {
+    this.assertNoPendingRoadEncounter("completing a quest");
     const plan = planOverworldQuestCompletion({
       questId,
       outcome,
@@ -966,6 +974,7 @@ export class OverworldSession {
   }
 
   scoutPoi(poiId: string): OverworldActionResult {
+    this.assertNoPendingRoadEncounter("scouting a point of interest");
     const current = this.currentNode();
     const poi = this.poisById.get(poiId);
     if (!poi || poi.home !== this.currentId) {
@@ -979,6 +988,7 @@ export class OverworldSession {
   }
 
   exploreArea(areaId: string): OverworldActionResult {
+    this.assertNoPendingRoadEncounter("exploring a local area");
     const current = this.currentNode();
     const plan = planOverworldAreaExploration({
       areaId,
@@ -1006,6 +1016,7 @@ export class OverworldSession {
   }
 
   moveArea(areaRouteId: string): OverworldAreaTravelResult {
+    this.assertNoPendingRoadEncounter("moving between local areas");
     const currentArea = this.currentArea();
     if (!currentArea) throw new Error("There is no current local area in this town.");
     const edge = this.areaExitFrom(currentArea.id, areaRouteId);
@@ -1030,6 +1041,7 @@ export class OverworldSession {
   }
 
   workLocalJob(jobId: string): OverworldActionResult {
+    this.assertNoPendingRoadEncounter("working a local job");
     const current = this.currentNode();
     const plan = planOverworldLocalJobCompletion({
       jobId,
@@ -1066,6 +1078,7 @@ export class OverworldSession {
   }
 
   talkToCharacter(characterId: string): OverworldActionResult {
+    this.assertNoPendingRoadEncounter("talking to a contact");
     const current = this.currentNode();
     const character = this.charactersById.get(characterId);
     if (!character || character.home !== this.currentId) {
@@ -1079,6 +1092,7 @@ export class OverworldSession {
   }
 
   investigateEvent(eventId: string): OverworldActionResult {
+    this.assertNoPendingRoadEncounter("investigating a local event");
     const current = this.currentNode();
     const event = this.localEventsById.get(eventId);
     if (!event || event.home !== this.currentId) {
@@ -1092,6 +1106,7 @@ export class OverworldSession {
   }
 
   resolveEvent(eventId: string): OverworldActionResult {
+    this.assertNoPendingRoadEncounter("resolving a local event");
     const current = this.currentNode();
     const plan = planOverworldEventResolution({
       eventId,
@@ -1124,6 +1139,7 @@ export class OverworldSession {
   }
 
   exploreSite(siteId: string): OverworldActionResult {
+    this.assertNoPendingRoadEncounter("exploring a site");
     const current = this.currentNode();
     const plan = planOverworldSiteExploration({
       siteId,
@@ -1151,6 +1167,7 @@ export class OverworldSession {
   }
 
   restAtTown(): OverworldServiceResult {
+    this.assertNoPendingRoadEncounter("resting at town");
     const current = this.currentNode();
     return this.applyServicePlan(
       planOverworldTownRest({
@@ -1163,6 +1180,7 @@ export class OverworldSession {
   }
 
   resupplyAtTown(): OverworldServiceResult {
+    this.assertNoPendingRoadEncounter("resupplying at town");
     const current = this.currentNode();
     return this.applyServicePlan(
       planOverworldTownResupply({
@@ -1175,6 +1193,7 @@ export class OverworldSession {
   }
 
   planRoute(destinationId: string): OverworldSessionRoutePlan {
+    this.assertNoPendingRoadEncounter("planning another road route");
     if (destinationId === this.currentId) throw new Error("You are already there.");
     if (!this.discoveredIds.has(destinationId)) {
       throw new Error("That destination is not discovered yet.");

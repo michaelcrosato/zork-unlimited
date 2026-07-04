@@ -238,6 +238,8 @@ describe("OverworldSession", () => {
       "press_on",
     ]);
     expect(session.compactView()).toEqual(compactOverworldView(after));
+    expect(() => session.planRoute("albany_city")).toThrow(/pending road encounter/i);
+    session.resolveRoadEncounter("press_on");
     const backRoute = session.planRoute("albany_city");
     expect(backRoute.totalMinutes).toBe(road!.travel_minutes);
     expect(backRoute.steps.map((step) => step.to.id)).toEqual(["albany_city"]);
@@ -519,6 +521,8 @@ describe("OverworldSession", () => {
     const road = session.view().exits.find((exit) => exit.destination.id === "colonie_town");
     expect(road).toBeDefined();
     session.travel(road!.id);
+    expect(() => session.resupplyAtTown()).toThrow(/pending road encounter/i);
+    session.resolveRoadEncounter("press_on");
 
     const worn = session.view();
     expect(worn.supplies).toBeLessThan(worn.maxSupplies);

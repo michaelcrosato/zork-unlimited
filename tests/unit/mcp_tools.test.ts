@@ -753,6 +753,17 @@ describe("MCP tools — validate / load (§9.4)", () => {
         road_id: traveled.observation.exits[0]!.id,
       }),
     ).toThrow(/pending road encounter/i);
+    expect(() =>
+      a.resupply_overworld_session({
+        session_id: started.session_id,
+      }),
+    ).toThrow(/pending road encounter/i);
+    expect(() =>
+      a.plan_overworld_session_route({
+        session_id: started.session_id,
+        destination_town_id: traveled.observation.exits[0]!.destination.id,
+      }),
+    ).toThrow(/pending road encounter/i);
 
     const roadEncounter = a.resolve_overworld_session_road_encounter({
       session_id: started.session_id,
