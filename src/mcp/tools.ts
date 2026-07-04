@@ -16,7 +16,6 @@ import { hashState } from "../core/hash.js";
 import { makeStep, type Rules } from "../core/engine.js";
 import type { RpgAction } from "../api/types.js";
 import type { GameState } from "../core/state.js";
-import type { GameEvent } from "../core/events.js";
 
 import { compileRpgPack, loadRpgPackFile, type CompiledRpgPack } from "../rpg/pack.js";
 import { generateRpgPack } from "../gen/rpg_generator.js";
@@ -55,22 +54,23 @@ import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
 import { SessionStore, type RpgStep, type Session, type TranscriptSummary } from "./sessions.js";
 import { isRpgPackShape, type McpActionOption, type McpObservation } from "./types.js";
-import {
-  compactPlayerEvent,
-  RPG_COMPACT_EVENT_VERSION,
-  type RpgCompactEvent,
-} from "./compact_rpg_event.js";
+import { RPG_COMPACT_EVENT_VERSION, type RpgCompactEvent } from "./compact_rpg_event.js";
 import {
   compactRpgObservation,
   RPG_COMPACT_OBSERVATION_VERSION,
   type RpgCompactObservation,
 } from "./compact_rpg_observation.js";
 import {
-  compactHead,
-  compactRecent,
-  compactTrailingOmissionCounts,
-  omittedCount,
-} from "./compact_truncation.js";
+  hashTranscript,
+  rpgStepEventVersion,
+  rpgStepEvents,
+  transcriptEventVersion,
+  transcriptSummaryFor,
+  transcriptTurnsFor,
+  transcriptUnchanged,
+  type RpgStepEvents,
+  type RpgStepEventVersion,
+} from "./transcript_projection.js";
 import type { WorldBinding, WorldManifest } from "../world/schema.js";
 import {
   normalizePackPath,
@@ -242,10 +242,10 @@ type RpgViewOptions = {
   compact_actions?: boolean;
   compact_observation?: boolean;
 };
+
 type RpgEventOptions = {
   compact_events?: boolean;
 };
-
 type OverworldViewField<Args extends OverworldResponseOptions> = Args extends {
   compact_context: true;
 }
@@ -387,16 +387,6 @@ type RpgLegalActionsResponse<Args extends RpgLegalActionsArgs> = Args extends {
 }
   ? RpgLegalActionsPayload<Args> | RpgLegalActionsUnchanged
   : RpgLegalActionsPayload<Args>;
-
-type RpgStepEvents<Args extends RpgEventOptions> = Args extends { compact_events: true }
-  ? RpgCompactEvent[]
-  : ReturnType<typeof playerVisibleEvents>;
-
-type RpgStepEventVersion<Args extends RpgEventOptions> = Args extends {
-  compact_events: true;
-}
-  ? { event_v: typeof RPG_COMPACT_EVENT_VERSION }
-  : Record<string, never>;
 
 type RpgStepActionBase<Args extends RpgViewOptions & RpgEventOptions> = {
   events: RpgStepEvents<Args>;
@@ -541,10 +531,6 @@ type TranscriptResponse<Args extends TranscriptArgs> = Args extends { if_transcr
   ? TranscriptPayload<Args> | TranscriptUnchanged
   : TranscriptPayload<Args>;
 
-const TRANSCRIPT_PROJECTION_COMPACT_TURNS = "compact-turns:v1";
-const TRANSCRIPT_PROJECTION_VISIBLE_EVENTS = "visible-events:v1";
-const TRANSCRIPT_PROJECTION_COMPACT_EVENTS = `compact-events:v${RPG_COMPACT_EVENT_VERSION}`;
-const TRANSCRIPT_SUMMARY_PROJECTION_COMPACT = "compact-summary:v1";
 const OBSERVATION_PROJECTION_COMPACT = `compact-observation:v${RPG_COMPACT_OBSERVATION_VERSION}`;
 const OBSERVATION_PROJECTION_PUBLIC = "public-observation:v1";
 const LEGAL_ACTION_ROWS_PROJECTION = "legal-action-rows:v1";
@@ -648,14 +634,6 @@ function rpgStateHashRejection(stateHash: string): RpgStateHashRejection {
   };
 }
 
-function transcriptUnchanged(stateHash: string, transcriptHash: string): TranscriptUnchanged {
-  return {
-    state_hash: stateHash,
-    transcript_hash: transcriptHash,
-    unchanged: true,
-  };
-}
-
 function overworldReadUnchanged(snapshotHash: string): OverworldReadUnchanged {
   return {
     snapshot_hash: snapshotHash,
@@ -691,140 +669,9 @@ function buildObsFor(
   return buildRpgObservation(index, state, opts);
 }
 
-const TRANSCRIPT_SUMMARY_LIST_LIMIT = 16;
-const TRANSCRIPT_SUMMARY_JOURNAL_LIMIT = 5;
-
-function compactTranscriptSummary(summary: TranscriptSummary): TranscriptCompactSummary {
-  const scenes = compactHead(summary.scenes, TRANSCRIPT_SUMMARY_LIST_LIMIT);
-  const inventory = compactHead(summary.inventory, TRANSCRIPT_SUMMARY_LIST_LIMIT);
-  const flags = compactHead(summary.flags, TRANSCRIPT_SUMMARY_LIST_LIMIT);
-  const journal = compactRecent(summary.journal, TRANSCRIPT_SUMMARY_JOURNAL_LIMIT);
-  const omittedScenes = omittedCount(summary.scenes, scenes);
-  const omittedInventory = omittedCount(summary.inventory, inventory);
-  const omittedFlags = omittedCount(summary.flags, flags);
-  const omittedJournal = omittedCount(summary.journal, journal);
-  const more = compactTrailingOmissionCounts([
-    omittedScenes ?? 0,
-    omittedInventory ?? 0,
-    omittedFlags ?? 0,
-    omittedJournal ?? 0,
-  ]) as TranscriptCompactMore | undefined;
-  const {
-    ending_id: endingId,
-    inventory: _fullInventory,
-    flags: _fullFlags,
-    journal: _fullJournal,
-    ...baseSummary
-  } = summary;
-  return {
-    ...baseSummary,
-    ...(endingId ? { ending_id: endingId } : {}),
-    scenes,
-    ...(inventory.length > 0 ? { inventory } : {}),
-    ...(flags.length > 0 ? { flags } : {}),
-    ...(journal.length > 0 ? { journal } : {}),
-    ...(more ? { more } : {}),
-  };
-}
-
-function transcriptSummaryFor<Args extends TranscriptArgs>(
-  sessions: SessionStore,
-  session: Session,
-  args: Args,
-  summary: TranscriptSummary,
-): TranscriptSummaryFor<Args> {
-  return (
-    args.compact_summary
-      ? sessions.transcriptSummaryProjection(
-          session.id,
-          TRANSCRIPT_SUMMARY_PROJECTION_COMPACT,
-          () => compactTranscriptSummary(summary),
-        )
-      : summary
-  ) as TranscriptSummaryFor<Args>;
-}
-
-function hashTranscript(session: Session, stateHash: string): string {
-  return hashState({
-    state_hash: stateHash,
-    transcript_log_hash: session.transcriptLogHash,
-  });
-}
-
 /** The current RPG room id. */
 function obsLocation(obs: RpgObservation): string {
   return obs.room;
-}
-
-/**
- * Strip internal-bookkeeping `state_change` events from the player-facing event
- * stream (bug_0260, a blind-playtest finding). Some engine effects write `__`-
- * prefixed vars/flags that exist only to drive mechanics, never to be read by the
- * player: the per-enemy HP tracker `__enemy_hp_<id>` (rpg/schema enemyHpVar, set
- * each combat round) and the dialogue-progress flag `__dlg_<npc>`.
- * observation.ts ALREADY hides these from `state.flags`/`state.vars` (and
- * get_transcript's summary.flags filters them too), but the raw `events` array
- * returned by step_action — and recorded in the transcript get_transcript shows —
- * still surfaced them as `set_var`/`set_flag` state_change events, leaking
- * `__enemy_hp_barrow_wight` / `__dlg_reaver_shade` into a source-blind player's
- * view (sunken_barrow seed 13 §4, ai-runs/2026-06-04T23-46-24-371Z/playtest.md).
- * The legible combat/dialogue NARRATION events ("You strike … it has N HP left")
- * are not `__`-prefixed and are untouched, so the player loses no information.
- * This filters DISPLAY ONLY: the engine's effects, the stored GameState, and the
- * state_hash are unchanged (determinism/save integrity §8.5/§8.7 hold), and the
- * engine-level `result.events` stays complete for tests, traces, and debugging.
- */
-function playerVisibleEvents(events: GameEvent[]): GameEvent[] {
-  return events.filter((e) => {
-    if (e.type !== "state_change") return true;
-    const sc = e as { flag?: unknown; name?: unknown };
-    const key = typeof sc.flag === "string" ? sc.flag : typeof sc.name === "string" ? sc.name : "";
-    return !key.startsWith("__");
-  });
-}
-
-function transcriptTurnsFor<Args extends TranscriptArgs>(
-  sessions: SessionStore,
-  session: Session,
-  args: Args,
-): TranscriptTurnFor<Args>[] {
-  if (args.compact_turns) {
-    return sessions.transcriptProjection(session.id, TRANSCRIPT_PROJECTION_COMPACT_TURNS, () =>
-      session.transcript.map((t) => [t.step, t.scene_id, t.action_id, t.result_scene_id] as const),
-    ) as TranscriptTurnFor<Args>[];
-  }
-
-  if (args.compact_events === true) {
-    return sessions.transcriptProjection(session.id, TRANSCRIPT_PROJECTION_COMPACT_EVENTS, () =>
-      session.transcript.map((t) => ({
-        ...t,
-        events: playerVisibleEvents(t.events).map(compactPlayerEvent),
-      })),
-    ) as TranscriptTurnFor<Args>[];
-  }
-
-  return sessions.transcriptProjection(session.id, TRANSCRIPT_PROJECTION_VISIBLE_EVENTS, () =>
-    session.transcript.map((t) => ({
-      ...t,
-      events: playerVisibleEvents(t.events),
-    })),
-  ) as TranscriptTurnFor<Args>[];
-}
-
-function rpgStepEvents<Args extends RpgEventOptions>(
-  events: GameEvent[],
-  args: Args,
-): RpgStepEvents<Args> {
-  const visible = playerVisibleEvents(events);
-  return (
-    args.compact_events === true ? visible.map(compactPlayerEvent) : visible
-  ) as RpgStepEvents<Args>;
-}
-
-function rpgStepEventVersion<Args extends RpgEventOptions>(args: Args): RpgStepEventVersion<Args> {
-  return (
-    args.compact_events === true ? { event_v: RPG_COMPACT_EVENT_VERSION } : {}
-  ) as RpgStepEventVersion<Args>;
 }
 
 function rpgRoomTitle(index: RpgIndex, state: GameState): string {
@@ -2093,11 +1940,7 @@ export function createToolApi(opts: { root: string }) {
         ...rpgSourceFields(s),
         state_hash: stateHash,
         transcript_hash: currentTranscriptHash,
-        ...(args.compact_events === true &&
-        args.summary_only !== true &&
-        args.compact_turns !== true
-          ? { event_v: RPG_COMPACT_EVENT_VERSION }
-          : {}),
+        ...transcriptEventVersion(args),
         // Filter internal-bookkeeping events the same way step_action does, so the
         // transcript a player reads never surfaces `__`-prefixed vars/flags (bug_0260).
         ...(args.summary_only
