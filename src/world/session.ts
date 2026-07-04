@@ -107,6 +107,12 @@ import {
   type OverworldQuestView,
 } from "./session_local_discovery.js";
 import {
+  planOverworldQuestCompletion,
+  planOverworldQuestStart,
+  type OverworldQuestCompletionOutcome,
+  type OverworldQuestCompletionResult,
+} from "./session_quests.js";
+import {
   buildOverworldSnapshotManifestIndex,
   type OverworldSnapshotManifestIndex,
 } from "./session_manifest_index.js";
@@ -167,6 +173,7 @@ export type { OverworldRoadEncounterResult } from "./session_road_encounters.js"
 export type { OverworldRegionalArcProgress } from "./session_regional_arcs.js";
 export type { OverworldServiceResult } from "./session_services.js";
 export type { OverworldQuestView } from "./session_local_discovery.js";
+export type { OverworldQuestCompletionResult } from "./session_quests.js";
 export {
   OVERWORLD_SESSION_SAVE_VERSION,
   OverworldSessionSnapshotSchema,
@@ -196,15 +203,6 @@ export type OverworldActionResult = {
   discoveredJobs?: OverworldLocalJob[];
   discoveredSites?: OverworldExplorationSite[];
   discoveredQuests?: OverworldQuestView[];
-};
-
-export type OverworldQuestCompletionResult = {
-  minutes: number;
-  alreadyKnown: boolean;
-  quest: OverworldQuestView;
-  endingId: string;
-  endingTitle: string;
-  entry: OverworldJournalEntry;
 };
 
 export type OverworldView = {
@@ -1162,10 +1160,6 @@ export class OverworldSession {
     return count;
   }
 
-  private questAreaName(quest: OverworldQuest): string {
-    return this.areaById(quest.area)?.name ?? quest.area;
-  }
-
   private applyLocalDiscovery(discovery: OverworldLocalDiscoveryResult): void {
     let changed = false;
     for (const area of discovery.discoveredAreas) {
@@ -1549,68 +1543,46 @@ export class OverworldSession {
   }
 
   startQuest(questId: string): OverworldQuestView {
-    const quest = this.questsById.get(questId);
-    if (!quest || quest.home !== this.currentId)
-      throw new Error("That quest lead is not in this town.");
-    if (!this.discoveredQuestIds.has(quest.id)) {
-      throw new Error("Discover that local quest lead before starting it.");
-    }
-    if (this.startedQuestIds.has(quest.id)) {
-      throw new Error(`Quest ${quest.title} has already been started from this overworld session.`);
-    }
-    const area = this.currentArea();
-    if (area?.id !== quest.area) {
-      throw new Error(`Move to ${this.questAreaName(quest)} before starting ${quest.title}.`);
-    }
-    const result = this.recordAction(
-      {
-        id: `quest:${quest.id}`,
-        kind: "quest",
-        town: this.currentNode().name,
-        title: `Started ${quest.title}`,
-        text: `You turn the local lead "${quest.discovery}" into an active quest.`,
-      },
-      0,
-    );
+    const plan = planOverworldQuestStart({
+      questId,
+      questsById: this.questsById,
+      areasById: this.areasById,
+      currentTownId: this.currentId,
+      currentTownName: this.currentNode().name,
+      currentAreaId: this.currentArea()?.id ?? null,
+      discoveredQuestIds: this.discoveredQuestIds,
+      startedQuestIds: this.startedQuestIds,
+    });
+    const result = this.recordAction(plan.entryDraft, plan.minutes);
     if (!result.alreadyKnown) {
-      this.startedQuestIds.add(quest.id);
+      this.startedQuestIds.add(plan.quest.id);
       this.clearSnapshotCache();
     }
-    return questView(quest);
+    return plan.quest;
   }
 
   completeQuest(
     questId: string,
-    outcome: { endingId: string; endingTitle: string; death: boolean },
+    outcome: OverworldQuestCompletionOutcome,
   ): OverworldQuestCompletionResult {
-    const quest = this.questsById.get(questId);
-    if (!quest) throw new Error(`Unknown overworld quest "${questId}".`);
-    if (!this.startedQuestIds.has(quest.id)) {
-      throw new Error("Start that local quest lead before completing it.");
-    }
-    if (outcome.death) {
-      throw new Error("A death ending does not complete the overworld quest.");
-    }
-    const result = this.recordAction(
-      {
-        id: `quest_done:${quest.id}`,
-        kind: "quest_done",
-        town: this.nodes.get(quest.home)?.name ?? quest.home,
-        title: `Completed ${quest.title}`,
-        text: `The quest closed at ${outcome.endingTitle}.`,
-      },
-      0,
-    );
+    const plan = planOverworldQuestCompletion({
+      questId,
+      outcome,
+      questsById: this.questsById,
+      nodesById: this.nodes,
+      startedQuestIds: this.startedQuestIds,
+    });
+    const result = this.recordAction(plan.entryDraft, plan.minutes);
     if (!result.alreadyKnown) {
-      this.completedQuestIds.add(quest.id);
+      this.completedQuestIds.add(plan.quest.id);
       this.clearSnapshotCache();
     }
     return {
       minutes: result.minutes,
       alreadyKnown: result.alreadyKnown,
-      quest: questView(quest),
-      endingId: outcome.endingId,
-      endingTitle: outcome.endingTitle,
+      quest: plan.quest,
+      endingId: plan.endingId,
+      endingTitle: plan.endingTitle,
       entry: result.entry,
     };
   }
