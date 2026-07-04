@@ -23,7 +23,7 @@ import {
   type OverworldLocalActionKind,
 } from "./local_actions.js";
 import { cloneOverworldCompactView, type OverworldCompactView } from "./compact_view.js";
-import { replaceStringSet, sortedNumberRecord } from "./session_collections.js";
+import { sortedNumberRecord } from "./session_collections.js";
 import {
   OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES,
   OVERWORLD_STARTING_MINUTES as STARTING_MINUTES,
@@ -43,7 +43,6 @@ import {
   applyOverworldRoadEncounter,
   type OverworldRoadEncounterResult,
 } from "./session_road_encounters.js";
-import { replaceOverworldJournalEntries } from "./session_journal_store.js";
 import { timeLabel } from "./session_journal_codec.js";
 import {
   recordOverworldAction,
@@ -115,7 +114,11 @@ import {
 } from "./session_cache.js";
 import { cloneOverworldView } from "./session_view_clone.js";
 import { buildOverworldSessionIndexes } from "./session_indices.js";
-import { planOverworldSessionSnapshotRestore } from "./session_snapshot_restore.js";
+import {
+  applyOverworldSessionSnapshotRestore,
+  planOverworldSessionSnapshotRestore,
+  type OverworldSessionSnapshotRestoreState,
+} from "./session_snapshot_restore.js";
 
 export type {
   OverworldRoadEncounterOption,
@@ -342,6 +345,29 @@ export class OverworldSession {
     });
   }
 
+  private snapshotRestoreState(): OverworldSessionSnapshotRestoreState {
+    return {
+      completedJobIds: this.completedJobIds,
+      completedQuestIds: this.completedQuestIds,
+      completedRegionalArcIds: this.completedRegionalArcIds,
+      currentAreaByTown: this.currentAreaByTown,
+      discoveredAreaIds: this.discoveredAreaIds,
+      discoveredIds: this.discoveredIds,
+      discoveredJobIds: this.discoveredJobIds,
+      discoveredQuestIds: this.discoveredQuestIds,
+      discoveredSiteIds: this.discoveredSiteIds,
+      exploredSiteIds: this.exploredSiteIds,
+      journalEntries: this.journalEntries,
+      journalEntriesById: this.journalEntriesById,
+      regionRenown: this.regionRenown,
+      resolvedEventIds: this.resolvedEventIds,
+      startedQuestIds: this.startedQuestIds,
+      travelLog: this.travelLog,
+      visitedAreaIds: this.visitedAreaIds,
+      visitedIds: this.visitedIds,
+    };
+  }
+
   private applySnapshot(snapshot: OverworldSessionSnapshot): void {
     const restorePlan = planOverworldSessionSnapshotRestore({
       indexes: this.snapshotManifestIndex,
@@ -351,39 +377,18 @@ export class OverworldSession {
       worldId: this.world.id,
     });
 
-    this.currentId = snapshot.currentId;
-    this.currentAreaId = snapshot.currentAreaId;
-    this.minutes = snapshot.minutes;
-    this.supplies = snapshot.supplies;
-    this.fatigue = snapshot.fatigue;
-    replaceStringSet(this.discoveredIds, snapshot.discoveredIds);
-    replaceStringSet(this.visitedIds, snapshot.visitedIds);
-    this.currentAreaByTown.clear();
-    for (const [townId, areaId] of restorePlan.currentAreaByTown) {
-      this.currentAreaByTown.set(townId, areaId);
-    }
-    this.travelLog.length = 0;
-    for (const entry of restorePlan.travelLog) this.travelLog.push(entry);
-    replaceOverworldJournalEntries(
-      this.journalEntries,
-      this.journalEntriesById,
-      snapshot.journalEntries,
+    const applied = applyOverworldSessionSnapshotRestore(
+      this.snapshotRestoreState(),
+      snapshot,
+      restorePlan,
     );
-    replaceStringSet(this.resolvedEventIds, snapshot.resolvedEventIds);
+    this.currentId = applied.currentIdAfter;
+    this.currentAreaId = applied.currentAreaIdAfter;
+    this.minutes = applied.minutesAfter;
+    this.supplies = applied.suppliesAfter;
+    this.fatigue = applied.fatigueAfter;
     this.rebuildResolvedEventHomeIds();
-    replaceStringSet(this.discoveredAreaIds, snapshot.discoveredAreaIds);
-    replaceStringSet(this.visitedAreaIds, snapshot.visitedAreaIds);
-    replaceStringSet(this.discoveredJobIds, snapshot.discoveredJobIds);
-    replaceStringSet(this.completedJobIds, snapshot.completedJobIds);
-    replaceStringSet(this.discoveredSiteIds, snapshot.discoveredSiteIds);
-    replaceStringSet(this.discoveredQuestIds, snapshot.discoveredQuestIds);
-    replaceStringSet(this.startedQuestIds, snapshot.startedQuestIds);
-    replaceStringSet(this.completedQuestIds, snapshot.completedQuestIds);
-    replaceStringSet(this.exploredSiteIds, snapshot.exploredSiteIds);
-    this.regionRenown.clear();
-    for (const [region, renown] of restorePlan.regionRenown) this.regionRenown.set(region, renown);
-    replaceStringSet(this.completedRegionalArcIds, snapshot.completedRegionalArcIds);
-    this.pendingRoadEncounter = restorePlan.pendingRoadEncounter;
+    this.pendingRoadEncounter = applied.pendingRoadEncounterAfter;
     this.clearSnapshotCache();
   }
 

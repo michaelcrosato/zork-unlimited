@@ -1,10 +1,12 @@
 import type {
+  OverworldJournalEntry,
   OverworldPendingRoadEncounter,
   OverworldSessionSnapshot,
   TravelLogEntry,
 } from "./session_snapshot.js";
-import { assertKnownIds, assertUniqueTupleMap } from "./session_collections.js";
+import { assertKnownIds, assertUniqueTupleMap, replaceStringSet } from "./session_collections.js";
 import { assertSnapshotTimeline } from "./session_journal_timeline.js";
+import { replaceOverworldJournalEntries } from "./session_journal_store.js";
 import {
   assertSnapshotEventResolutionProofs,
   assertSnapshotRegionalArcCompletionProofs,
@@ -50,6 +52,88 @@ export type OverworldSessionSnapshotRestorePlan = {
   regionRenown: ReadonlyMap<string, number>;
   travelLog: readonly TravelLogEntry[];
 };
+
+export type OverworldSessionSnapshotRestoreState = {
+  completedJobIds: Set<string>;
+  completedQuestIds: Set<string>;
+  completedRegionalArcIds: Set<string>;
+  currentAreaByTown: Map<string, string>;
+  discoveredAreaIds: Set<string>;
+  discoveredIds: Set<string>;
+  discoveredJobIds: Set<string>;
+  discoveredQuestIds: Set<string>;
+  discoveredSiteIds: Set<string>;
+  exploredSiteIds: Set<string>;
+  journalEntries: OverworldJournalEntry[];
+  journalEntriesById: Map<string, OverworldJournalEntry>;
+  regionRenown: Map<string, number>;
+  resolvedEventIds: Set<string>;
+  startedQuestIds: Set<string>;
+  travelLog: TravelLogEntry[];
+  visitedAreaIds: Set<string>;
+  visitedIds: Set<string>;
+};
+
+export type OverworldAppliedSessionSnapshotRestore = {
+  currentIdAfter: string;
+  currentAreaIdAfter: string | null;
+  minutesAfter: number;
+  suppliesAfter: number;
+  fatigueAfter: number;
+  pendingRoadEncounterAfter: OverworldPendingRoadEncounter | null;
+};
+
+function replaceStringMap(target: Map<string, string>, source: ReadonlyMap<string, string>): void {
+  target.clear();
+  for (const [key, value] of source) target.set(key, value);
+}
+
+function replaceNumberMap(target: Map<string, number>, source: ReadonlyMap<string, number>): void {
+  target.clear();
+  for (const [key, value] of source) target.set(key, value);
+}
+
+function replaceTravelLog(target: TravelLogEntry[], source: readonly TravelLogEntry[]): void {
+  target.length = 0;
+  for (const entry of source) target.push(entry);
+}
+
+export function applyOverworldSessionSnapshotRestore(
+  state: OverworldSessionSnapshotRestoreState,
+  snapshot: OverworldSessionSnapshot,
+  plan: OverworldSessionSnapshotRestorePlan,
+): OverworldAppliedSessionSnapshotRestore {
+  replaceStringSet(state.discoveredIds, snapshot.discoveredIds);
+  replaceStringSet(state.visitedIds, snapshot.visitedIds);
+  replaceStringMap(state.currentAreaByTown, plan.currentAreaByTown);
+  replaceTravelLog(state.travelLog, plan.travelLog);
+  replaceOverworldJournalEntries(
+    state.journalEntries,
+    state.journalEntriesById,
+    snapshot.journalEntries,
+  );
+  replaceStringSet(state.resolvedEventIds, snapshot.resolvedEventIds);
+  replaceStringSet(state.discoveredAreaIds, snapshot.discoveredAreaIds);
+  replaceStringSet(state.visitedAreaIds, snapshot.visitedAreaIds);
+  replaceStringSet(state.discoveredJobIds, snapshot.discoveredJobIds);
+  replaceStringSet(state.completedJobIds, snapshot.completedJobIds);
+  replaceStringSet(state.discoveredSiteIds, snapshot.discoveredSiteIds);
+  replaceStringSet(state.discoveredQuestIds, snapshot.discoveredQuestIds);
+  replaceStringSet(state.startedQuestIds, snapshot.startedQuestIds);
+  replaceStringSet(state.completedQuestIds, snapshot.completedQuestIds);
+  replaceStringSet(state.exploredSiteIds, snapshot.exploredSiteIds);
+  replaceNumberMap(state.regionRenown, plan.regionRenown);
+  replaceStringSet(state.completedRegionalArcIds, snapshot.completedRegionalArcIds);
+
+  return {
+    currentIdAfter: snapshot.currentId,
+    currentAreaIdAfter: snapshot.currentAreaId,
+    minutesAfter: snapshot.minutes,
+    suppliesAfter: snapshot.supplies,
+    fatigueAfter: snapshot.fatigue,
+    pendingRoadEncounterAfter: plan.pendingRoadEncounter,
+  };
+}
 
 export function planOverworldSessionSnapshotRestore(args: {
   indexes: OverworldSnapshotManifestIndex;
