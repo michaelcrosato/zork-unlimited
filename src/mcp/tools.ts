@@ -72,6 +72,16 @@ import {
   rpgViewField,
   type RpgObservationViewOptions,
 } from "./rpg_view_projection.js";
+import {
+  OverworldMcpSessionStore,
+  overworldReadUnchanged,
+  overworldSnapshotHashRejection,
+  type OverworldMcpReadUnchanged,
+  type OverworldMcpRejectedSessionPayload,
+  type OverworldMcpResponseOptions,
+  type OverworldMcpSessionResponse,
+  type OverworldMcpViewField,
+} from "./overworld_sessions.js";
 import type { WorldBinding, WorldManifest } from "../world/schema.js";
 import {
   normalizePackPath,
@@ -97,7 +107,6 @@ import {
 } from "../world/source.js";
 import { type OverworldManifest, type OverworldNode } from "../world/overworld.js";
 import {
-  OverworldSession,
   type OverworldActionResult,
   type OverworldAreaTravelResult,
   type OverworldQuestCompletionResult,
@@ -215,25 +224,7 @@ type WorldListResponse<Args extends WorldListOptions> = {
   quests: WorldListQuest<Args>[];
 } & (Args extends { include_graph: true } ? { graph: PublicWorldGraph } : Record<string, never>);
 
-type OverworldSessionPayload<Key extends string, Value> = {
-  ok: true;
-  session_id: string;
-  snapshot_hash: string;
-  observation: OverworldView;
-} & { [P in Key]: Value };
-
-type OverworldCompactSessionPayload<Key extends string, Value> = {
-  ok: true;
-  session_id: string;
-  snapshot_hash: string;
-  context: OverworldCompactView;
-} & { [P in Key]: Value };
-
-type OverworldResponseOptions = {
-  compact_context?: boolean;
-  compact_result?: boolean;
-  expected_snapshot_hash?: string;
-};
+type OverworldResponseOptions = OverworldMcpResponseOptions;
 
 type OverworldListOptions = {
   include_design_notes?: boolean;
@@ -247,11 +238,7 @@ type RpgViewOptions = {
 type RpgEventOptions = {
   compact_events?: boolean;
 };
-type OverworldViewField<Args extends OverworldResponseOptions> = Args extends {
-  compact_context: true;
-}
-  ? { context: OverworldCompactView }
-  : { observation: OverworldView };
+type OverworldViewField<Args extends OverworldResponseOptions> = OverworldMcpViewField<Args>;
 
 type OverworldResultValue<
   Args extends OverworldResponseOptions,
@@ -259,11 +246,7 @@ type OverworldResultValue<
   CompactValue,
 > = Args extends { compact_result: true } ? CompactValue : Value;
 
-type OverworldRejectedSessionPayload = {
-  ok: false;
-  snapshot_hash: string;
-  rejection_reason: string;
-};
+type OverworldRejectedSessionPayload = OverworldMcpRejectedSessionPayload;
 
 type OverworldGuardedRejection<Args extends OverworldResponseOptions> = Args extends {
   expected_snapshot_hash: string;
@@ -534,8 +517,6 @@ type TranscriptResponse<Args extends TranscriptArgs> = Args extends { if_transcr
 
 const RPG_STATE_HASH_MISMATCH_REASON =
   "State hash mismatch; refresh the current observation or action menu.";
-const OVERWORLD_SNAPSHOT_HASH_MISMATCH_REASON =
-  "Snapshot hash mismatch; refresh the current overworld context.";
 
 type RpgGetStateArgs = {
   session_id: string;
@@ -574,13 +555,7 @@ type OverworldSessionResponse<
   Value,
   Args extends OverworldResponseOptions,
   CompactValue = Value,
-> = Args extends { compact_context: true }
-  ?
-      | OverworldCompactSessionPayload<Key, OverworldResultValue<Args, Value, CompactValue>>
-      | OverworldGuardedRejection<Args>
-  :
-      | OverworldSessionPayload<Key, OverworldResultValue<Args, Value, CompactValue>>
-      | OverworldGuardedRejection<Args>;
+> = OverworldMcpSessionResponse<Key, Value, Args, CompactValue>;
 
 type OverworldContextPayload = {
   ok: true;
@@ -594,10 +569,7 @@ type OverworldReadArgs = {
   if_snapshot_hash?: string;
 };
 
-type OverworldReadUnchanged = {
-  snapshot_hash: string;
-  unchanged: true;
-};
+type OverworldReadUnchanged = OverworldMcpReadUnchanged;
 
 type OverworldFullReadPayload = {
   session_id: string;
@@ -629,21 +601,6 @@ function rpgStateHashRejection(stateHash: string): RpgStateHashRejection {
     ok: false,
     state_hash: stateHash,
     rejection_reason: RPG_STATE_HASH_MISMATCH_REASON,
-  };
-}
-
-function overworldReadUnchanged(snapshotHash: string): OverworldReadUnchanged {
-  return {
-    snapshot_hash: snapshotHash,
-    unchanged: true,
-  };
-}
-
-function overworldSnapshotHashRejection(snapshotHash: string): OverworldRejectedSessionPayload {
-  return {
-    ok: false,
-    snapshot_hash: snapshotHash,
-    rejection_reason: OVERWORLD_SNAPSHOT_HASH_MISMATCH_REASON,
   };
 }
 
@@ -727,8 +684,7 @@ export function createToolApi(opts: { root: string }) {
   const packLoadCache = new Map<string, PackLoadCacheEntry>();
   const generatedRpgCache = new Map<number, GeneratedRpgCacheEntry>();
   const rpgRuntimeCache = new WeakMap<RpgPack, RpgRuntimeCacheEntry>();
-  let overworldCounter = 0;
-  const overworldSessions = new Map<string, OverworldSession>();
+  const overworldSessions = new OverworldMcpSessionStore(() => loadOverworldManifestFromRoot(root));
 
   /** Read an RPG pack, compile, and validate it with the single runtime loader. */
   function loadAndReport(packPath: string): LoadResult {
@@ -1028,86 +984,6 @@ export function createToolApi(opts: { root: string }) {
     return loadWorldManifestFromRoot(root);
   }
 
-  function loadOverworldManifest(): OverworldManifest {
-    return loadOverworldManifestFromRoot(root);
-  }
-
-  function createOverworldSession(): { session_id: string; session: OverworldSession } {
-    const session = new OverworldSession(loadOverworldManifest());
-    const sessionId = `oworld_${++overworldCounter}`;
-    overworldSessions.set(sessionId, session);
-    return { session_id: sessionId, session };
-  }
-
-  function restoreOverworldSession(snapshot: unknown): {
-    session_id: string;
-    session: OverworldSession;
-  } {
-    const session = OverworldSession.restore(loadOverworldManifest(), snapshot);
-    const sessionId = `oworld_${++overworldCounter}`;
-    overworldSessions.set(sessionId, session);
-    return { session_id: sessionId, session };
-  }
-
-  function getOverworldSession(sessionId: string): OverworldSession {
-    const session = overworldSessions.get(sessionId);
-    if (!session) throw new Error(`Unknown overworld session "${sessionId}".`);
-    return session;
-  }
-
-  function overworldSnapshotHash(session: OverworldSession): string {
-    return session.snapshotHash();
-  }
-
-  function overworldViewField<Args extends OverworldResponseOptions>(
-    args: Args,
-    session: OverworldSession,
-  ): OverworldViewField<Args> {
-    if (args.compact_context === true) {
-      return { context: session.compactView() } as OverworldViewField<Args>;
-    }
-    const view = session.view();
-    return { observation: view } as OverworldViewField<Args>;
-  }
-
-  function runOverworldSession<
-    Key extends string,
-    Value,
-    Args extends OverworldResponseOptions,
-    CompactValue = Value,
-  >(
-    args: Args,
-    sessionId: string,
-    key: Key,
-    action: (session: OverworldSession) => Value,
-    compactValue?: (value: Value) => CompactValue,
-  ): OverworldSessionResponse<Key, Value, Args, CompactValue> {
-    const session = getOverworldSession(sessionId);
-    const currentSnapshotHash = overworldSnapshotHash(session);
-    if (
-      args.expected_snapshot_hash !== undefined &&
-      args.expected_snapshot_hash !== currentSnapshotHash
-    ) {
-      return overworldSnapshotHashRejection(currentSnapshotHash) as OverworldSessionResponse<
-        Key,
-        Value,
-        Args,
-        CompactValue
-      >;
-    }
-    const value = action(session);
-    const responseValue =
-      args.compact_result === true && compactValue ? compactValue(value) : value;
-    const payload = {
-      ok: true,
-      session_id: sessionId,
-      snapshot_hash: overworldSnapshotHash(session),
-      [key]: responseValue,
-      ...overworldViewField(args, session),
-    };
-    return payload as unknown as OverworldSessionResponse<Key, Value, Args, CompactValue>;
-  }
-
   return {
     sessions,
 
@@ -1199,7 +1075,7 @@ export function createToolApi(opts: { root: string }) {
     list_overworld<Args extends OverworldListOptions = Record<string, never>>(
       args?: Args,
     ): OverworldListResponse<Args> {
-      const world = loadOverworldManifest();
+      const world = loadOverworldManifestFromRoot(root);
       const start = world.nodes.find((node) => node.id === world.start);
       if (!start) throw new Error(`Overworld start node "${world.start}" is missing.`);
       const summary: OverworldListSummary = {
@@ -1237,17 +1113,17 @@ export function createToolApi(opts: { root: string }) {
       args?: Args,
     ): OverworldStartResponse<Args> {
       const responseOptions = (args ?? {}) as Args;
-      const created = createOverworldSession();
+      const created = overworldSessions.create();
       return {
         session_id: created.session_id,
-        snapshot_hash: overworldSnapshotHash(created.session),
-        ...overworldViewField(responseOptions, created.session),
+        snapshot_hash: overworldSessions.snapshotHash(created.session),
+        ...overworldSessions.viewField(responseOptions, created.session),
       } as OverworldStartResponse<Args>;
     },
 
     get_overworld_session<Args extends OverworldReadArgs>(args: Args): OverworldReadResponse<Args> {
-      const session = getOverworldSession(args.session_id);
-      const snapshotHash = overworldSnapshotHash(session);
+      const session = overworldSessions.get(args.session_id);
+      const snapshotHash = overworldSessions.snapshotHash(session);
       if (args.if_snapshot_hash !== undefined && args.if_snapshot_hash === snapshotHash) {
         return overworldReadUnchanged(snapshotHash) as OverworldReadResponse<Args>;
       }
@@ -1261,8 +1137,8 @@ export function createToolApi(opts: { root: string }) {
     get_overworld_session_context<Args extends OverworldReadArgs>(
       args: Args,
     ): OverworldContextResponse<Args> {
-      const session = getOverworldSession(args.session_id);
-      const snapshotHash = overworldSnapshotHash(session);
+      const session = overworldSessions.get(args.session_id);
+      const snapshotHash = overworldSessions.snapshotHash(session);
       if (args.if_snapshot_hash !== undefined && args.if_snapshot_hash === snapshotHash) {
         return overworldReadUnchanged(snapshotHash) as OverworldContextResponse<Args>;
       }
@@ -1277,8 +1153,8 @@ export function createToolApi(opts: { root: string }) {
     export_overworld_session<Args extends OverworldExportArgs>(
       args: Args,
     ): OverworldExportResponse<Args> {
-      const session = getOverworldSession(args.session_id);
-      const snapshotHash = overworldSnapshotHash(session);
+      const session = overworldSessions.get(args.session_id);
+      const snapshotHash = overworldSessions.snapshotHash(session);
       if (
         args.expected_snapshot_hash !== undefined &&
         args.expected_snapshot_hash !== snapshotHash
@@ -1297,12 +1173,12 @@ export function createToolApi(opts: { root: string }) {
     restore_overworld_session<Args extends { snapshot: unknown } & OverworldResponseOptions>(
       args: Args,
     ): OverworldRestoreResponse<Args> {
-      const restored = restoreOverworldSession(args.snapshot);
+      const restored = overworldSessions.restore(args.snapshot);
       return {
         ok: true,
         session_id: restored.session_id,
-        snapshot_hash: overworldSnapshotHash(restored.session),
-        ...overworldViewField(args, restored.session),
+        snapshot_hash: overworldSessions.snapshotHash(restored.session),
+        ...overworldSessions.viewField(args, restored.session),
       } as OverworldRestoreResponse<Args>;
     },
 
@@ -1319,7 +1195,7 @@ export function createToolApi(opts: { root: string }) {
       Args,
       OverworldCompactRouteOption
     > {
-      return runOverworldSession(
+      return overworldSessions.run(
         args,
         args.session_id,
         "route",
@@ -1333,7 +1209,7 @@ export function createToolApi(opts: { root: string }) {
     >(
       args: Args,
     ): OverworldSessionResponse<"travel", TravelLogEntry, Args, OverworldCompactTravelLogEntry> {
-      return runOverworldSession(
+      return overworldSessions.run(
         args,
         args.session_id,
         "travel",
@@ -1355,7 +1231,7 @@ export function createToolApi(opts: { root: string }) {
       Args,
       OverworldCompactRoadEncounterResult
     > {
-      return runOverworldSession(
+      return overworldSessions.run(
         args,
         args.session_id,
         "result",
@@ -1372,7 +1248,7 @@ export function createToolApi(opts: { root: string }) {
       Args,
       OverworldCompactServiceResult
     > {
-      return runOverworldSession(
+      return overworldSessions.run(
         args,
         args.session_id,
         "result",
@@ -1389,7 +1265,7 @@ export function createToolApi(opts: { root: string }) {
       Args,
       OverworldCompactServiceResult
     > {
-      return runOverworldSession(
+      return overworldSessions.run(
         args,
         args.session_id,
         "result",
@@ -1408,7 +1284,7 @@ export function createToolApi(opts: { root: string }) {
       Args,
       OverworldCompactActionResult
     > {
-      return runOverworldSession(
+      return overworldSessions.run(
         args,
         args.session_id,
         "result",
@@ -1427,7 +1303,7 @@ export function createToolApi(opts: { root: string }) {
       Args,
       OverworldCompactActionResult
     > {
-      return runOverworldSession(
+      return overworldSessions.run(
         args,
         args.session_id,
         "result",
@@ -1446,7 +1322,7 @@ export function createToolApi(opts: { root: string }) {
       Args,
       OverworldCompactActionResult
     > {
-      return runOverworldSession(
+      return overworldSessions.run(
         args,
         args.session_id,
         "result",
@@ -1465,7 +1341,7 @@ export function createToolApi(opts: { root: string }) {
       Args,
       OverworldCompactActionResult
     > {
-      return runOverworldSession(
+      return overworldSessions.run(
         args,
         args.session_id,
         "result",
@@ -1484,7 +1360,7 @@ export function createToolApi(opts: { root: string }) {
       Args,
       OverworldCompactActionResult
     > {
-      return runOverworldSession(
+      return overworldSessions.run(
         args,
         args.session_id,
         "result",
@@ -1503,7 +1379,7 @@ export function createToolApi(opts: { root: string }) {
       Args,
       OverworldCompactActionResult
     > {
-      return runOverworldSession(
+      return overworldSessions.run(
         args,
         args.session_id,
         "result",
@@ -1522,7 +1398,7 @@ export function createToolApi(opts: { root: string }) {
       Args,
       OverworldCompactActionResult
     > {
-      return runOverworldSession(
+      return overworldSessions.run(
         args,
         args.session_id,
         "result",
@@ -1541,8 +1417,8 @@ export function createToolApi(opts: { root: string }) {
         compact_observation?: boolean;
       } & OverworldResponseOptions,
     >(args: Args): OverworldQuestStartResponse<Args> {
-      const session = getOverworldSession(args.session_id);
-      const currentSnapshotHash = overworldSnapshotHash(session);
+      const session = overworldSessions.get(args.session_id);
+      const currentSnapshotHash = overworldSessions.snapshotHash(session);
       if (
         args.expected_snapshot_hash !== undefined &&
         args.expected_snapshot_hash !== currentSnapshotHash
@@ -1564,11 +1440,11 @@ export function createToolApi(opts: { root: string }) {
       return {
         ok: true,
         session_id: args.session_id,
-        snapshot_hash: overworldSnapshotHash(session),
+        snapshot_hash: overworldSessions.snapshotHash(session),
         quest: questResult,
         rpg_session_id: rpgSession.session_id,
         rpg_session: rpgSession,
-        ...overworldViewField(args, session),
+        ...overworldSessions.viewField(args, session),
       } as unknown as OverworldQuestStartResponse<Args>;
     },
 
@@ -1582,7 +1458,7 @@ export function createToolApi(opts: { root: string }) {
       Args,
       OverworldCompactQuestCompletionResult
     > {
-      return runOverworldSession(
+      return overworldSessions.run(
         args,
         args.session_id,
         "result",
@@ -1623,7 +1499,7 @@ export function createToolApi(opts: { root: string }) {
       Args,
       OverworldCompactAreaTravelResult
     > {
-      return runOverworldSession(
+      return overworldSessions.run(
         args,
         args.session_id,
         "result",
