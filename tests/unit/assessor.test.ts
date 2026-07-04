@@ -37,6 +37,30 @@ function withStaleAuditFixtureRoot(run: (root: string) => void): void {
   const root = mkdtempSync(join(tmpdir(), "af-assessor-"));
   try {
     mkdirSync(join(root, "content", "rpg", "pack"), { recursive: true });
+    mkdirSync(join(root, "content", "world"), { recursive: true });
+    writeFileSync(
+      join(root, "content", "world", "charter_marches.yaml"),
+      [
+        "id: charter_marches",
+        'name: "The Charter Marches"',
+        'hub: "Charterhaven"',
+        "graph:",
+        "  hub: charterhaven",
+        "  nodes:",
+        "    - id: charterhaven",
+        '      name: "Charterhaven"',
+        "      kind: hub",
+        "    - id: stale_fixture",
+        '      name: "Stale Fixture"',
+        "      kind: quest",
+        "      pack: content/rpg/pack/stale_fixture.yaml",
+        "  edges:",
+        "    - from: charterhaven",
+        "      to: stale_fixture",
+        "      route: fixture road",
+        "",
+      ].join("\n"),
+    );
     writeFileSync(
       join(root, "content", "rpg", "pack", "stale_fixture.yaml"),
       [
@@ -155,6 +179,8 @@ describe("assess()", () => {
       expect(candidate?.category).toBe("engine");
       expect(candidate?.score).toBeGreaterThan(SATURATION_FLOOR);
       expect(candidate?.evidence[0]).toContain("item/take-effect state");
+      expect(candidate?.evidence[0]).toContain("world_quest_id:stale_fixture");
+      expect(candidate?.evidence[0]).not.toContain("content/rpg/pack/");
     });
   });
 

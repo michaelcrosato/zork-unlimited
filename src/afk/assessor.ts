@@ -645,7 +645,7 @@ export function assess(root: string): Assessment {
       .slice(0, 6)
       .map(
         (site) =>
-          `${site.packPath} room:${site.roomId} names object:${site.objectId} (` +
+          `world_quest_id:${site.worldQuestId} room:${site.roomId} names object:${site.objectId} (` +
           `"${site.matchedTerm}") with no room variant reading item/take-effect state`,
       );
     candidates.push({

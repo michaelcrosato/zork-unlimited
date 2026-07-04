@@ -12,13 +12,15 @@ import type { Condition } from "../core/conditions.js";
 import type { Effect } from "../core/effects.js";
 import { loadRpgPackFile } from "../rpg/pack.js";
 import type { RpgPack } from "../rpg/schema.js";
+import { worldQuestNodeForPack } from "../world/graph.js";
+import { loadWorldManifest } from "../world/source.js";
 
 type Room = RpgPack["rooms"][number];
 type GameObject = RpgPack["objects"][number];
 type WinCondition = RpgPack["win_conditions"][number];
 
 export type StaleReactiveRoomItemSite = {
-  packPath: string;
+  worldQuestId: string;
   roomId: string;
   objectId: string;
   objectName: string;
@@ -37,19 +39,22 @@ export function auditStaleReactiveRoomItems(root: string): StaleReactiveAudit {
   const sites: StaleReactiveRoomItemSite[] = [];
   const abs = join(root, RPG_PACK_DIR);
   if (!existsSync(abs)) return { sites };
+  const world = loadWorldManifest(root);
   for (const file of readdirSync(abs).sort()) {
     if (!file.endsWith(".yaml")) continue;
     const path = `${RPG_PACK_DIR}/${file}`;
+    const node = worldQuestNodeForPack(world, path);
+    if (!node) continue;
     const loaded = loadRpgPackFile(join(root, path));
     if (!loaded.ok) continue;
-    sites.push(...auditRpgPackForStaleRoomItems(loaded.compiled.pack, path));
+    sites.push(...auditRpgPackForStaleRoomItems(loaded.compiled.pack, node.id));
   }
   return { sites };
 }
 
 export function auditRpgPackForStaleRoomItems(
   pack: RpgPack,
-  packPath: string,
+  worldQuestId: string,
 ): StaleReactiveRoomItemSite[] {
   const objects = new Map(pack.objects.map((object) => [object.id, object]));
   const sites: StaleReactiveRoomItemSite[] = [];
@@ -63,7 +68,7 @@ export function auditRpgPackForStaleRoomItems(
       const matchedTerm = firstMentionedObjectTerm(room.description, object);
       if (!matchedTerm) continue;
       sites.push({
-        packPath,
+        worldQuestId,
         roomId: room.id,
         objectId,
         objectName: object.name,
