@@ -4,7 +4,6 @@ import {
   type OverworldArea,
   type OverworldAreaExit,
   type OverworldCharacter,
-  type OverworldEdge,
   type OverworldExit,
   type OverworldExplorationSite,
   type OverworldLocalJob,
@@ -166,8 +165,8 @@ import {
   type OverworldPendingRoadEncounter,
   type OverworldSessionSnapshot,
   type TravelLogEntry,
-  type TravelLogEntrySnapshot,
 } from "./session_snapshot.js";
+import { restoreOverworldTravelLogEntries } from "./session_travel_log.js";
 
 export type {
   OverworldRoadEncounterOption,
@@ -758,7 +757,13 @@ export class OverworldSession {
     for (const [townId, areaId] of currentAreaByTown) {
       this.currentAreaByTown.set(townId, areaId);
     }
-    this.replaceTravelLogEntries(snapshot.travelLog, indexes.edgesById);
+    const restoredTravelLog = restoreOverworldTravelLogEntries(snapshot.travelLog, {
+      edgesById: indexes.edgesById,
+      nodesById: this.nodes,
+      roadEventsByEdgeId: this.roadEventsByEdgeId,
+    });
+    this.travelLog.length = 0;
+    for (const entry of restoredTravelLog) this.travelLog.push(entry);
     this.replaceJournalEntries(snapshot.journalEntries);
     replaceStringSet(this.resolvedEventIds, snapshot.resolvedEventIds);
     this.rebuildResolvedEventHomeIds();
@@ -776,56 +781,6 @@ export class OverworldSession {
     replaceStringSet(this.completedRegionalArcIds, snapshot.completedRegionalArcIds);
     this.pendingRoadEncounter = restoredPendingRoadEncounter;
     this.clearSnapshotCache();
-  }
-
-  private restoreTravelLogEntry(
-    entry: TravelLogEntrySnapshot,
-    edgesById: ReadonlyMap<string, OverworldEdge>,
-  ): TravelLogEntry {
-    const edge = edgesById.get(entry.edgeId);
-    if (!edge) {
-      throw new Error(`Overworld session snapshot has unknown travel road "${entry.edgeId}".`);
-    }
-    const endpointsMatch =
-      (edge.from === entry.fromId && edge.to === entry.toId) ||
-      (edge.from === entry.toId && edge.to === entry.fromId);
-    if (!endpointsMatch) {
-      throw new Error("Overworld session snapshot travel road endpoints do not match the world.");
-    }
-    if (entry.minutes !== edge.travel_minutes + entry.delayMinutes) {
-      throw new Error("Overworld session snapshot travel minutes do not match the road.");
-    }
-    const from = this.nodes.get(entry.fromId);
-    const to = this.nodes.get(entry.toId);
-    if (!from || !to) {
-      throw new Error("Overworld session snapshot travel log references an unknown town.");
-    }
-    return {
-      edgeId: entry.edgeId,
-      fromId: entry.fromId,
-      toId: entry.toId,
-      from: from.name,
-      to: to.name,
-      route: edge.route,
-      distanceMi: edge.distance_mi,
-      baseMinutes: edge.travel_minutes,
-      delayMinutes: entry.delayMinutes,
-      minutes: entry.minutes,
-      arrivedAt: entry.arrivedAt,
-      suppliesUsed: entry.suppliesUsed,
-      suppliesAfter: entry.suppliesAfter,
-      fatigueGained: entry.fatigueGained,
-      fatigueAfter: entry.fatigueAfter,
-      roadEvent: this.roadEventFor(entry.edgeId),
-    };
-  }
-
-  private replaceTravelLogEntries(
-    entries: readonly TravelLogEntrySnapshot[],
-    edgesById: ReadonlyMap<string, OverworldEdge>,
-  ): void {
-    this.travelLog.length = 0;
-    for (const entry of entries) this.travelLog.push(this.restoreTravelLogEntry(entry, edgesById));
   }
 
   private rebuildResolvedEventHomeIds(): void {
