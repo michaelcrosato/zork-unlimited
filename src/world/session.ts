@@ -87,6 +87,7 @@ import {
 import { timeLabel } from "./session_journal_codec.js";
 import { assertSnapshotTimeline } from "./session_journal_timeline.js";
 import {
+  assertOverworldEventResolutionReady,
   assertSnapshotEventResolutionProofs,
   assertSnapshotRegionalArcCompletionProofs,
 } from "./session_event_resolution.js";
@@ -994,10 +995,6 @@ export class OverworldSession {
     return this.journalEntriesById.get(id);
   }
 
-  private hasJournalEntry(id: string): boolean {
-    return this.journalEntriesById.has(id);
-  }
-
   private applyServicePlan(plan: OverworldServicePlan): OverworldServiceResult {
     const { entryDraft, ...result } = plan;
     if (!result.changed) return { ...result, entry: null };
@@ -1757,21 +1754,12 @@ export class OverworldSession {
       if (existing) return { minutes: 0, alreadyKnown: true, entry: existing };
     }
 
-    const scoutedPoi = (this.poisByArea.get(event.area) ?? []).some((poi) =>
-      this.hasJournalEntry(`scout:${poi.id}`),
-    );
-    const talkedContact = (this.charactersByArea.get(event.area) ?? []).some((character) =>
-      this.hasJournalEntry(`talk:${character.id}`),
-    );
-    const investigatedEvent = this.hasJournalEntry(`investigate:${event.id}`);
-    const missing = [
-      !scoutedPoi ? "scout a local point of interest" : null,
-      !talkedContact ? "talk to a local contact" : null,
-      !investigatedEvent ? "investigate the event" : null,
-    ].filter((step): step is string => step !== null);
-    if (missing.length > 0) {
-      throw new Error(`Before resolving this event, ${missing.join(", ")}.`);
-    }
+    assertOverworldEventResolutionReady({
+      charactersByArea: this.charactersByArea,
+      event,
+      journalEntryIds: this.journalEntriesById,
+      poisByArea: this.poisByArea,
+    });
 
     const result = this.recordAction(
       {

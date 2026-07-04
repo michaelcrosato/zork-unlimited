@@ -1,4 +1,9 @@
-import type { OverworldLocalEvent, OverworldRegionalArc } from "./overworld.js";
+import type {
+  OverworldCharacter,
+  OverworldLocalEvent,
+  OverworldPoi,
+  OverworldRegionalArc,
+} from "./overworld.js";
 import {
   type OverworldEventResolutionJournalIndex,
   type OverworldResolutionProofIndex,
@@ -9,6 +14,84 @@ export type OverworldRegionalArcCompletionIndex = {
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   regionalArcs: readonly OverworldRegionalArc[];
 };
+
+export const OVERWORLD_EVENT_RESOLUTION_PREREQUISITES = [
+  {
+    id: "scout_poi",
+    label: "scout a local point of interest",
+  },
+  {
+    id: "talk_contact",
+    label: "talk to a local contact",
+  },
+  {
+    id: "investigate_event",
+    label: "investigate the event",
+  },
+] as const;
+
+export type OverworldEventResolutionPrerequisite =
+  (typeof OVERWORLD_EVENT_RESOLUTION_PREREQUISITES)[number]["id"];
+
+export type OverworldJournalEntryPresence = {
+  has(id: string): boolean;
+};
+
+export type OverworldEventResolutionReadinessIndex = {
+  event: Pick<OverworldLocalEvent, "area" | "id">;
+  poisByArea: ReadonlyMap<string, readonly Pick<OverworldPoi, "id">[]>;
+  charactersByArea: ReadonlyMap<string, readonly Pick<OverworldCharacter, "id">[]>;
+  journalEntryIds: OverworldJournalEntryPresence;
+};
+
+export type OverworldEventResolutionReadiness = {
+  scoutedPoi: boolean;
+  talkedContact: boolean;
+  investigatedEvent: boolean;
+  missing: OverworldEventResolutionPrerequisite[];
+};
+
+function prerequisiteLabel(prerequisite: OverworldEventResolutionPrerequisite): string {
+  return OVERWORLD_EVENT_RESOLUTION_PREREQUISITES.find((entry) => entry.id === prerequisite)!.label;
+}
+
+export function overworldEventResolutionReadiness(
+  sources: OverworldEventResolutionReadinessIndex,
+): OverworldEventResolutionReadiness {
+  const scoutedPoi = (sources.poisByArea.get(sources.event.area) ?? []).some((poi) =>
+    sources.journalEntryIds.has(`scout:${poi.id}`),
+  );
+  const talkedContact = (sources.charactersByArea.get(sources.event.area) ?? []).some((character) =>
+    sources.journalEntryIds.has(`talk:${character.id}`),
+  );
+  const investigatedEvent = sources.journalEntryIds.has(`investigate:${sources.event.id}`);
+  const missing: OverworldEventResolutionPrerequisite[] = [];
+  if (!scoutedPoi) missing.push("scout_poi");
+  if (!talkedContact) missing.push("talk_contact");
+  if (!investigatedEvent) missing.push("investigate_event");
+  return {
+    scoutedPoi,
+    talkedContact,
+    investigatedEvent,
+    missing,
+  };
+}
+
+export function missingOverworldEventResolutionStepLabels(
+  missing: readonly OverworldEventResolutionPrerequisite[],
+): string[] {
+  return missing.map((prerequisite) => prerequisiteLabel(prerequisite));
+}
+
+export function assertOverworldEventResolutionReady(
+  sources: OverworldEventResolutionReadinessIndex,
+): void {
+  const readiness = overworldEventResolutionReadiness(sources);
+  if (readiness.missing.length === 0) return;
+  throw new Error(
+    `Before resolving this event, ${missingOverworldEventResolutionStepLabels(readiness.missing).join(", ")}.`,
+  );
+}
 
 export function assertSnapshotEventResolutionProofs(
   resolvedEventIds: ReadonlySet<string>,

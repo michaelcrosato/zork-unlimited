@@ -1,14 +1,22 @@
 import { describe, expect, it } from "vitest";
 import {
+  assertOverworldEventResolutionReady,
   assertSnapshotEventResolutionProofs,
   assertSnapshotRegionalArcCompletionProofs,
+  missingOverworldEventResolutionStepLabels,
+  overworldEventResolutionReadiness,
   regionalArcResolutionProof,
 } from "../../src/world/session_event_resolution.js";
 import type {
   OverworldEventResolutionJournalIndex,
   OverworldResolutionProofIndex,
 } from "../../src/world/session_journal_timeline.js";
-import type { OverworldLocalEvent, OverworldRegionalArc } from "../../src/world/overworld.js";
+import type {
+  OverworldCharacter,
+  OverworldLocalEvent,
+  OverworldPoi,
+  OverworldRegionalArc,
+} from "../../src/world/overworld.js";
 
 function event(id: string, home: string, area: string): OverworldLocalEvent {
   return {
@@ -19,6 +27,30 @@ function event(id: string, home: string, area: string): OverworldLocalEvent {
     pressure: "hazard",
     intensity: 2,
     summary: `${id} summary`,
+  };
+}
+
+function poi(id: string, area = "area_a"): OverworldPoi {
+  return {
+    id,
+    home: "town_a",
+    area,
+    kind: "landmark",
+    title: id,
+    summary: `${id} summary`,
+  };
+}
+
+function character(id: string, area = "area_a"): OverworldCharacter {
+  return {
+    id,
+    home: "town_a",
+    area,
+    name: id,
+    role: "contact",
+    faction: "locals",
+    summary: `${id} summary`,
+    agenda: `${id} agenda`,
   };
 }
 
@@ -62,6 +94,55 @@ function journal(
 }
 
 describe("overworld event and regional arc proof replay", () => {
+  it("evaluates live event-resolution readiness from local journal prerequisites", () => {
+    const localEvent = event("event_a", "town_a", "area_a");
+    const sources = {
+      event: localEvent,
+      poisByArea: new Map([["area_a", [poi("poi_a")]]]),
+      charactersByArea: new Map([["area_a", [character("character_a")]]]),
+      journalEntryIds: new Set(["scout:poi_a", "talk:character_a", "investigate:event_a"]),
+    };
+
+    expect(overworldEventResolutionReadiness(sources)).toEqual({
+      scoutedPoi: true,
+      talkedContact: true,
+      investigatedEvent: true,
+      missing: [],
+    });
+    expect(() => assertOverworldEventResolutionReady(sources)).not.toThrow();
+  });
+
+  it("labels missing live event-resolution prerequisites in action order", () => {
+    const localEvent = event("event_a", "town_a", "area_a");
+    const readiness = overworldEventResolutionReadiness({
+      event: localEvent,
+      poisByArea: new Map([["area_a", [poi("poi_a")]]]),
+      charactersByArea: new Map([["area_a", [character("character_a")]]]),
+      journalEntryIds: new Set(["talk:character_a"]),
+    });
+
+    expect(readiness).toEqual({
+      scoutedPoi: false,
+      talkedContact: true,
+      investigatedEvent: false,
+      missing: ["scout_poi", "investigate_event"],
+    });
+    expect(missingOverworldEventResolutionStepLabels(readiness.missing)).toEqual([
+      "scout a local point of interest",
+      "investigate the event",
+    ]);
+    expect(() =>
+      assertOverworldEventResolutionReady({
+        event: localEvent,
+        poisByArea: new Map([["area_a", [poi("poi_a")]]]),
+        charactersByArea: new Map([["area_a", [character("character_a")]]]),
+        journalEntryIds: new Set(["talk:character_a"]),
+      }),
+    ).toThrow(
+      /Before resolving this event, scout a local point of interest, investigate the event\./,
+    );
+  });
+
   it("accepts resolved events with local scout, contact, and investigation prerequisites", () => {
     expect(() =>
       assertSnapshotEventResolutionProofs(
