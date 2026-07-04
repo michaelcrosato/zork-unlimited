@@ -1,0 +1,181 @@
+import type {
+  OverworldExit,
+  OverworldNode,
+  OverworldRoadEvent,
+  OverworldRoutePlan,
+  OverworldRouteStep,
+} from "./overworld.js";
+import {
+  OVERWORLD_MAX_FATIGUE as MAX_FATIGUE,
+  travelCondition,
+  travelDelayMinutes,
+  travelFatigueGain,
+  travelSupplyCost,
+} from "./travel_mechanics.js";
+
+export type OverworldRouteEstimate = {
+  baseMinutes: number;
+  delayMinutes: number;
+  elapsedMinutes: number;
+  suppliesNeeded: number;
+  suppliesUsed: number;
+  supplyDeficit: number;
+  suppliesAfter: number;
+  fatigueGained: number;
+  fatigueAfter: number;
+  travelConditionAfter: string;
+};
+
+export type OverworldSessionRoutePlan = OverworldRoutePlan & {
+  estimate: OverworldRouteEstimate;
+};
+
+export type OverworldRoutePlannerIndex = {
+  nodes: ReadonlyMap<string, OverworldNode>;
+  roadExitsByTown: ReadonlyMap<string, readonly OverworldExit[]>;
+  roadEventsByEdgeId: ReadonlyMap<string, OverworldRoadEvent>;
+};
+
+export type OverworldRouteResourceState = {
+  supplies: number;
+  fatigue: number;
+};
+
+export function estimateOverworldRoute(
+  plan: OverworldRoutePlan,
+  resources: OverworldRouteResourceState,
+): OverworldRouteEstimate {
+  let supplies = resources.supplies;
+  let fatigue = resources.fatigue;
+  let baseMinutes = 0;
+  let delayMinutes = 0;
+  let suppliesNeeded = 0;
+  let suppliesUsed = 0;
+  let supplyDeficit = 0;
+  let fatigueGained = 0;
+
+  for (const step of plan.steps) {
+    const stepMinutes = step.edge.travel_minutes;
+    const stepSupplyCost = travelSupplyCost(stepMinutes);
+    const stepSuppliesUsed = Math.min(supplies, stepSupplyCost);
+    const stepSupplyDeficit = stepSupplyCost - stepSuppliesUsed;
+    const stepDelay = travelDelayMinutes(stepMinutes, fatigue, stepSupplyDeficit);
+    const stepFatigueGained =
+      travelFatigueGain(stepMinutes, step.roadEvent) + stepSupplyDeficit * 4;
+
+    baseMinutes += stepMinutes;
+    delayMinutes += stepDelay;
+    suppliesNeeded += stepSupplyCost;
+    suppliesUsed += stepSuppliesUsed;
+    supplyDeficit += stepSupplyDeficit;
+    fatigueGained += stepFatigueGained;
+    supplies -= stepSuppliesUsed;
+    fatigue = Math.min(MAX_FATIGUE, fatigue + stepFatigueGained);
+  }
+
+  return {
+    baseMinutes,
+    delayMinutes,
+    elapsedMinutes: baseMinutes + delayMinutes,
+    suppliesNeeded,
+    suppliesUsed,
+    supplyDeficit,
+    suppliesAfter: supplies,
+    fatigueGained,
+    fatigueAfter: fatigue,
+    travelConditionAfter: travelCondition(fatigue, supplies),
+  };
+}
+
+export function withOverworldRouteEstimate(
+  plan: OverworldRoutePlan,
+  resources: OverworldRouteResourceState,
+): OverworldSessionRoutePlan {
+  return {
+    ...plan,
+    estimate: estimateOverworldRoute(plan, resources),
+  };
+}
+
+export function indexedOverworldRoute(
+  index: OverworldRoutePlannerIndex,
+  fromId: string,
+  destinationId: string,
+  allowedNodeIds?: ReadonlySet<string>,
+): OverworldRoutePlan | null {
+  const from = index.nodes.get(fromId);
+  if (!from) throw new Error(`Unknown overworld route start "${fromId}".`);
+  const destination = index.nodes.get(destinationId);
+  if (!destination) {
+    throw new Error(`Unknown overworld route destination "${destinationId}".`);
+  }
+  if (allowedNodeIds && (!allowedNodeIds.has(fromId) || !allowedNodeIds.has(destinationId))) {
+    return null;
+  }
+  if (fromId === destinationId) {
+    return { from, destination, steps: [], totalDistanceMi: 0, totalMinutes: 0 };
+  }
+
+  const distance = new Map<string, number>([[fromId, 0]]);
+  const previous = new Map<string, { from: string; edge: OverworldExit }>();
+  const unsettled = new Set<string>(allowedNodeIds ?? index.nodes.keys());
+
+  while (unsettled.size > 0) {
+    let current: string | null = null;
+    let best = Number.POSITIVE_INFINITY;
+    for (const candidate of unsettled) {
+      const candidateDistance = distance.get(candidate) ?? Number.POSITIVE_INFINITY;
+      if (candidateDistance < best) {
+        current = candidate;
+        best = candidateDistance;
+      }
+    }
+    if (current === null || best === Number.POSITIVE_INFINITY) break;
+    unsettled.delete(current);
+    if (current === destinationId) break;
+
+    for (const edge of index.roadExitsByTown.get(current) ?? []) {
+      const next = edge.destination.id;
+      if (!unsettled.has(next)) continue;
+      const nextDistance = best + edge.travel_minutes;
+      if (nextDistance >= (distance.get(next) ?? Number.POSITIVE_INFINITY)) continue;
+      distance.set(next, nextDistance);
+      previous.set(next, { from: current, edge });
+    }
+  }
+
+  if (!previous.has(destinationId)) return null;
+  const steps: OverworldRouteStep[] = [];
+  for (let cursor = destinationId; cursor !== fromId; ) {
+    const prev = previous.get(cursor);
+    if (!prev) return null;
+    const stepFrom = index.nodes.get(prev.from);
+    const stepTo = index.nodes.get(cursor);
+    if (!stepFrom || !stepTo) return null;
+    steps.unshift({
+      from: stepFrom,
+      to: stepTo,
+      edge: prev.edge,
+      roadEvent: index.roadEventsByEdgeId.get(prev.edge.id) ?? null,
+    });
+    cursor = prev.from;
+  }
+
+  return {
+    from,
+    destination,
+    steps,
+    totalDistanceMi: steps.reduce((sum, step) => sum + step.edge.distance_mi, 0),
+    totalMinutes: steps.reduce((sum, step) => sum + step.edge.travel_minutes, 0),
+  };
+}
+
+export function cloneOverworldRouteOption(
+  plan: OverworldSessionRoutePlan,
+): OverworldSessionRoutePlan {
+  return {
+    ...plan,
+    steps: [...plan.steps],
+    estimate: { ...plan.estimate },
+  };
+}

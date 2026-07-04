@@ -15,7 +15,6 @@ import {
   type OverworldQuest,
   type OverworldRegionalArc,
   type OverworldRoutePlan,
-  type OverworldRouteStep,
   type OverworldRoadEvent,
 } from "./overworld.js";
 import {
@@ -78,6 +77,13 @@ import {
   type OverworldRoadEncounterOption,
   type OverworldRoadEncounterStrategy,
 } from "./travel_mechanics.js";
+import {
+  cloneOverworldRouteOption,
+  indexedOverworldRoute,
+  withOverworldRouteEstimate,
+  type OverworldRoutePlannerIndex,
+  type OverworldSessionRoutePlan,
+} from "./session_routes.js";
 import { timeLabel } from "./session_journal_codec.js";
 import { assertSnapshotTimeline } from "./session_journal_timeline.js";
 import {
@@ -134,6 +140,7 @@ export type {
   OverworldRoadEncounterOption,
   OverworldRoadEncounterStrategy,
 } from "./travel_mechanics.js";
+export type { OverworldRouteEstimate, OverworldSessionRoutePlan } from "./session_routes.js";
 export {
   OVERWORLD_SESSION_SAVE_VERSION,
   OverworldSessionSnapshotSchema,
@@ -194,23 +201,6 @@ export type OverworldRoadEncounterResult = {
   renownGained: number;
   encounter: OverworldPendingRoadEncounter;
   entry: OverworldJournalEntry;
-};
-
-export type OverworldRouteEstimate = {
-  baseMinutes: number;
-  delayMinutes: number;
-  elapsedMinutes: number;
-  suppliesNeeded: number;
-  suppliesUsed: number;
-  supplyDeficit: number;
-  suppliesAfter: number;
-  fatigueGained: number;
-  fatigueAfter: number;
-  travelConditionAfter: string;
-};
-
-export type OverworldSessionRoutePlan = OverworldRoutePlan & {
-  estimate: OverworldRouteEstimate;
 };
 
 export type OverworldRegionalArcProgress = {
@@ -317,6 +307,7 @@ export class OverworldSession {
   private readonly questsByTown: Map<string, OverworldQuest[]>;
   private readonly regionalArcsByRegion: Map<string, OverworldRegionalArc[]>;
   private readonly regionalArcAnchorTownsById: Map<string, OverworldNode[]>;
+  private readonly routePlannerIndex: OverworldRoutePlannerIndex;
   private readonly snapshotManifestIndex: OverworldSnapshotManifestIndex;
   private readonly worldHash: string;
   private currentId: string;
@@ -425,6 +416,11 @@ export class OverworldSession {
     );
     this.regionalArcsByRegion = this.indexRegionalArcsByRegion();
     this.regionalArcAnchorTownsById = this.indexRegionalArcAnchorTowns();
+    this.routePlannerIndex = {
+      nodes: this.nodes,
+      roadEventsByEdgeId: this.roadEventsByEdgeId,
+      roadExitsByTown: this.roadExitsByTown,
+    };
     this.snapshotManifestIndex = buildOverworldSnapshotManifestIndex({
       areasById: this.areasById,
       areasByTown: this.areasByTown,
@@ -1256,124 +1252,11 @@ export class OverworldSession {
     return this.areaById(quest.area)?.name ?? quest.area;
   }
 
-  private estimateRoute(plan: OverworldRoutePlan): OverworldRouteEstimate {
-    let supplies = this.supplies;
-    let fatigue = this.fatigue;
-    let baseMinutes = 0;
-    let delayMinutes = 0;
-    let suppliesNeeded = 0;
-    let suppliesUsed = 0;
-    let supplyDeficit = 0;
-    let fatigueGained = 0;
-
-    for (const step of plan.steps) {
-      const stepMinutes = step.edge.travel_minutes;
-      const stepSupplyCost = travelSupplyCost(stepMinutes);
-      const stepSuppliesUsed = Math.min(supplies, stepSupplyCost);
-      const stepSupplyDeficit = stepSupplyCost - stepSuppliesUsed;
-      const stepDelay = travelDelayMinutes(stepMinutes, fatigue, stepSupplyDeficit);
-      const stepFatigueGained =
-        travelFatigueGain(stepMinutes, step.roadEvent) + stepSupplyDeficit * 4;
-
-      baseMinutes += stepMinutes;
-      delayMinutes += stepDelay;
-      suppliesNeeded += stepSupplyCost;
-      suppliesUsed += stepSuppliesUsed;
-      supplyDeficit += stepSupplyDeficit;
-      fatigueGained += stepFatigueGained;
-      supplies -= stepSuppliesUsed;
-      fatigue = Math.min(MAX_FATIGUE, fatigue + stepFatigueGained);
-    }
-
-    return {
-      baseMinutes,
-      delayMinutes,
-      elapsedMinutes: baseMinutes + delayMinutes,
-      suppliesNeeded,
-      suppliesUsed,
-      supplyDeficit,
-      suppliesAfter: supplies,
-      fatigueGained,
-      fatigueAfter: fatigue,
-      travelConditionAfter: travelCondition(fatigue, supplies),
-    };
-  }
-
   private routeWithEstimate(plan: OverworldRoutePlan): OverworldSessionRoutePlan {
-    return {
-      ...plan,
-      estimate: this.estimateRoute(plan),
-    };
-  }
-
-  private indexedRoute(
-    fromId: string,
-    destinationId: string,
-    allowedNodeIds?: ReadonlySet<string>,
-  ): OverworldRoutePlan | null {
-    const from = this.nodes.get(fromId);
-    if (!from) throw new Error(`Unknown overworld route start "${fromId}".`);
-    const destination = this.nodes.get(destinationId);
-    if (!destination) throw new Error(`Unknown overworld route destination "${destinationId}".`);
-    if (allowedNodeIds && (!allowedNodeIds.has(fromId) || !allowedNodeIds.has(destinationId))) {
-      return null;
-    }
-    if (fromId === destinationId) {
-      return { from, destination, steps: [], totalDistanceMi: 0, totalMinutes: 0 };
-    }
-
-    const distance = new Map<string, number>([[fromId, 0]]);
-    const previous = new Map<string, { from: string; edge: OverworldExit }>();
-    const unsettled = new Set<string>(allowedNodeIds ?? this.nodes.keys());
-
-    while (unsettled.size > 0) {
-      let current: string | null = null;
-      let best = Number.POSITIVE_INFINITY;
-      for (const candidate of unsettled) {
-        const candidateDistance = distance.get(candidate) ?? Number.POSITIVE_INFINITY;
-        if (candidateDistance < best) {
-          current = candidate;
-          best = candidateDistance;
-        }
-      }
-      if (current === null || best === Number.POSITIVE_INFINITY) break;
-      unsettled.delete(current);
-      if (current === destinationId) break;
-
-      for (const edge of this.roadsFrom(current)) {
-        const next = edge.destination.id;
-        if (!unsettled.has(next)) continue;
-        const nextDistance = best + edge.travel_minutes;
-        if (nextDistance >= (distance.get(next) ?? Number.POSITIVE_INFINITY)) continue;
-        distance.set(next, nextDistance);
-        previous.set(next, { from: current, edge });
-      }
-    }
-
-    if (!previous.has(destinationId)) return null;
-    const steps: OverworldRouteStep[] = [];
-    for (let cursor = destinationId; cursor !== fromId; ) {
-      const prev = previous.get(cursor);
-      if (!prev) return null;
-      const stepFrom = this.nodes.get(prev.from);
-      const stepTo = this.nodes.get(cursor);
-      if (!stepFrom || !stepTo) return null;
-      steps.unshift({
-        from: stepFrom,
-        to: stepTo,
-        edge: prev.edge,
-        roadEvent: this.roadEventFor(prev.edge.id),
-      });
-      cursor = prev.from;
-    }
-
-    return {
-      from,
-      destination,
-      steps,
-      totalDistanceMi: steps.reduce((sum, step) => sum + step.edge.distance_mi, 0),
-      totalMinutes: steps.reduce((sum, step) => sum + step.edge.travel_minutes, 0),
-    };
+    return withOverworldRouteEstimate(plan, {
+      fatigue: this.fatigue,
+      supplies: this.supplies,
+    });
   }
 
   private discoveredRouteOptions(): OverworldSessionRoutePlan[] {
@@ -1382,7 +1265,12 @@ export class OverworldSession {
     const options: OverworldSessionRoutePlan[] = [];
     for (const id of this.discoveredIds) {
       if (id === this.currentId) continue;
-      const plan = this.indexedRoute(this.currentId, id, this.discoveredIds);
+      const plan = indexedOverworldRoute(
+        this.routePlannerIndex,
+        this.currentId,
+        id,
+        this.discoveredIds,
+      );
       if (!plan || plan.steps.length === 0) continue;
       options.push(this.routeWithEstimate(plan));
     }
@@ -1401,16 +1289,8 @@ export class OverworldSession {
 
   private routeOptionsForView(): OverworldSessionRoutePlan[] {
     const options: OverworldSessionRoutePlan[] = [];
-    for (const plan of this.discoveredRouteOptions()) options.push(this.cloneRouteOption(plan));
+    for (const plan of this.discoveredRouteOptions()) options.push(cloneOverworldRouteOption(plan));
     return options;
-  }
-
-  private cloneRouteOption(plan: OverworldSessionRoutePlan): OverworldSessionRoutePlan {
-    return {
-      ...plan,
-      steps: [...plan.steps],
-      estimate: { ...plan.estimate },
-    };
   }
 
   private resolvedAnchorTownIdsForArc(arc: OverworldRegionalArc): Set<string> {
@@ -1694,7 +1574,7 @@ export class OverworldSession {
       jobs: [...view.jobs],
       sites: [...view.sites],
       quests: view.quests.map((quest) => ({ ...quest })),
-      routeOptions: view.routeOptions.map((plan) => this.cloneRouteOption(plan)),
+      routeOptions: view.routeOptions.map((plan) => cloneOverworldRouteOption(plan)),
       discovered: [...view.discovered],
       journal: view.journal.map((entry) => ({ ...entry })),
       discoveredAreaIds: [...view.discoveredAreaIds],
@@ -2192,7 +2072,12 @@ export class OverworldSession {
     if (!this.discoveredIds.has(destinationId)) {
       throw new Error("That destination is not discovered yet.");
     }
-    const plan = this.indexedRoute(this.currentId, destinationId, this.discoveredIds);
+    const plan = indexedOverworldRoute(
+      this.routePlannerIndex,
+      this.currentId,
+      destinationId,
+      this.discoveredIds,
+    );
     if (!plan) throw new Error("No discovered route reaches that destination yet.");
     return this.routeWithEstimate(plan);
   }
