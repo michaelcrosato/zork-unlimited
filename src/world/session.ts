@@ -81,6 +81,10 @@ import {
   restoreOverworldPendingRoadEncounter,
   type OverworldRoadEncounterResult,
 } from "./session_road_encounters.js";
+import {
+  addOverworldJournalEntry,
+  replaceOverworldJournalEntries,
+} from "./session_journal_store.js";
 import { timeLabel } from "./session_journal_codec.js";
 import { assertSnapshotTimeline } from "./session_journal_timeline.js";
 import {
@@ -764,7 +768,11 @@ export class OverworldSession {
     });
     this.travelLog.length = 0;
     for (const entry of restoredTravelLog) this.travelLog.push(entry);
-    this.replaceJournalEntries(snapshot.journalEntries);
+    replaceOverworldJournalEntries(
+      this.journalEntries,
+      this.journalEntriesById,
+      snapshot.journalEntries,
+    );
     replaceStringSet(this.resolvedEventIds, snapshot.resolvedEventIds);
     this.rebuildResolvedEventHomeIds();
     replaceStringSet(this.discoveredAreaIds, snapshot.discoveredAreaIds);
@@ -829,14 +837,14 @@ export class OverworldSession {
     entry: Omit<OverworldJournalEntry, "recordedAt">,
     minutes: number,
   ): OverworldActionResult {
-    const existing = this.journalEntry(entry.id);
+    const existing = this.journalEntriesById.get(entry.id);
     if (existing) return { minutes: 0, alreadyKnown: true, entry: existing };
     this.minutes += minutes;
     const recorded: OverworldJournalEntry = {
       ...entry,
       recordedAt: timeLabel(this.minutes),
     };
-    this.addJournalEntry(recorded);
+    addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, recorded);
     this.clearSnapshotCache();
     return { minutes, alreadyKnown: false, entry: recorded };
   }
@@ -867,28 +875,9 @@ export class OverworldSession {
       id: `${entry.id}:${this.minutes}`,
       recordedAt: timeLabel(this.minutes),
     };
-    this.addJournalEntry(recorded);
+    addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, recorded);
     this.clearSnapshotCache();
     return recorded;
-  }
-
-  private replaceJournalEntries(entries: readonly OverworldJournalEntry[]): void {
-    this.journalEntries.length = 0;
-    this.journalEntriesById.clear();
-    for (const entry of entries) {
-      const restored = { ...entry };
-      this.journalEntries.push(restored);
-      this.journalEntriesById.set(restored.id, restored);
-    }
-  }
-
-  private addJournalEntry(entry: OverworldJournalEntry): void {
-    this.journalEntries.unshift(entry);
-    this.journalEntriesById.set(entry.id, entry);
-  }
-
-  private journalEntry(id: string): OverworldJournalEntry | undefined {
-    return this.journalEntriesById.get(id);
   }
 
   private applyServicePlan(plan: OverworldServicePlan): OverworldServiceResult {
@@ -1186,7 +1175,7 @@ export class OverworldSession {
     if (completions.length === 0) return;
     for (const completion of completions) {
       this.completedRegionalArcIds.add(completion.arc.id);
-      this.addJournalEntry(completion.entry);
+      addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, completion.entry);
     }
     this.clearSnapshotCache();
   }
@@ -1715,7 +1704,7 @@ export class OverworldSession {
       );
     }
     this.pendingRoadEncounter = null;
-    this.addJournalEntry(resolution.result.entry);
+    addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, resolution.result.entry);
     this.clearSnapshotCache();
     return resolution.result;
   }
