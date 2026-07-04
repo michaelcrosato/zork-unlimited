@@ -58,6 +58,7 @@ import {
 } from "./session_action_recording.js";
 import { planOverworldEventResolution } from "./session_event_resolution.js";
 import {
+  applyOverworldLocalDiscovery,
   emptyOverworldLocalDiscovery,
   planOverworldLocalDiscovery,
   questView,
@@ -639,31 +640,6 @@ export class OverworldSession {
     return count;
   }
 
-  private applyLocalDiscovery(discovery: OverworldLocalDiscoveryResult): void {
-    let changed = false;
-    for (const area of discovery.discoveredAreas) {
-      if (this.discoveredAreaIds.has(area.id)) continue;
-      this.discoveredAreaIds.add(area.id);
-      changed = true;
-    }
-    for (const job of discovery.discoveredJobs) {
-      if (this.discoveredJobIds.has(job.id)) continue;
-      this.discoveredJobIds.add(job.id);
-      changed = true;
-    }
-    for (const site of discovery.discoveredSites) {
-      if (this.discoveredSiteIds.has(site.id)) continue;
-      this.discoveredSiteIds.add(site.id);
-      changed = true;
-    }
-    for (const quest of discovery.discoveredQuests) {
-      if (this.discoveredQuestIds.has(quest.id)) continue;
-      this.discoveredQuestIds.add(quest.id);
-      changed = true;
-    }
-    if (changed) this.clearSnapshotCache();
-  }
-
   private discoverLocalProgressForTown(nodeId: string): OverworldLocalDiscoveryResult {
     const discovery = planOverworldLocalDiscovery({
       townId: nodeId,
@@ -677,7 +653,16 @@ export class OverworldSession {
       discoveredSiteIds: this.discoveredSiteIds,
       discoveredQuestIds: this.discoveredQuestIds,
     });
-    this.applyLocalDiscovery(discovery);
+    const changed = applyOverworldLocalDiscovery(
+      {
+        discoveredAreaIds: this.discoveredAreaIds,
+        discoveredJobIds: this.discoveredJobIds,
+        discoveredSiteIds: this.discoveredSiteIds,
+        discoveredQuestIds: this.discoveredQuestIds,
+      },
+      discovery,
+    );
+    if (changed) this.clearSnapshotCache();
     return discovery;
   }
 

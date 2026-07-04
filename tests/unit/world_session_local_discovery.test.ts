@@ -6,6 +6,7 @@ import type {
   OverworldQuest,
 } from "../../src/world/overworld.js";
 import {
+  applyOverworldLocalDiscovery,
   emptyOverworldLocalDiscovery,
   planOverworldLocalDiscovery,
   questView,
@@ -128,5 +129,31 @@ describe("overworld local discovery planning", () => {
       discovery: "quest_a discovery",
       visibility: "local_notice_board",
     });
+  });
+
+  it("applies all discovered ids and reports idempotent replays", () => {
+    const nextArea = area("area_b");
+    const nextJob = job("job_b", nextArea.id);
+    const nextSite = site("site_b", nextArea.id);
+    const nextQuest = questView(quest("quest_b", nextArea.id));
+    const state = {
+      discoveredAreaIds: new Set<string>(),
+      discoveredJobIds: new Set<string>(),
+      discoveredSiteIds: new Set<string>(),
+      discoveredQuestIds: new Set<string>(),
+    };
+    const discovery = {
+      discoveredAreas: [nextArea],
+      discoveredJobs: [nextJob],
+      discoveredSites: [nextSite],
+      discoveredQuests: [nextQuest],
+    };
+
+    expect(applyOverworldLocalDiscovery(state, discovery)).toBe(true);
+    expect([...state.discoveredAreaIds]).toEqual([nextArea.id]);
+    expect([...state.discoveredJobIds]).toEqual([nextJob.id]);
+    expect([...state.discoveredSiteIds]).toEqual([nextSite.id]);
+    expect([...state.discoveredQuestIds]).toEqual([nextQuest.id]);
+    expect(applyOverworldLocalDiscovery(state, discovery)).toBe(false);
   });
 });

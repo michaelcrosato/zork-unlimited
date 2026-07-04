@@ -34,6 +34,13 @@ export type OverworldLocalDiscoveryState = {
   discoveredQuestIds: ReadonlySet<string>;
 };
 
+export type MutableOverworldLocalDiscoveryIds = {
+  discoveredAreaIds: Set<string>;
+  discoveredJobIds: Set<string>;
+  discoveredSiteIds: Set<string>;
+  discoveredQuestIds: Set<string>;
+};
+
 export function questView(quest: OverworldQuest): OverworldQuestView {
   return {
     id: quest.id,
@@ -87,4 +94,28 @@ export function planOverworldLocalDiscovery(
   if (quest) discovery.discoveredQuests.push(questView(quest));
 
   return discovery;
+}
+
+function addDiscoveredIds<T extends { id: string }>(
+  target: Set<string>,
+  values: readonly T[],
+): boolean {
+  let changed = false;
+  for (const value of values) {
+    if (target.has(value.id)) continue;
+    target.add(value.id);
+    changed = true;
+  }
+  return changed;
+}
+
+export function applyOverworldLocalDiscovery(
+  state: MutableOverworldLocalDiscoveryIds,
+  discovery: OverworldLocalDiscoveryResult,
+): boolean {
+  const areasChanged = addDiscoveredIds(state.discoveredAreaIds, discovery.discoveredAreas);
+  const jobsChanged = addDiscoveredIds(state.discoveredJobIds, discovery.discoveredJobs);
+  const sitesChanged = addDiscoveredIds(state.discoveredSiteIds, discovery.discoveredSites);
+  const questsChanged = addDiscoveredIds(state.discoveredQuestIds, discovery.discoveredQuests);
+  return areasChanged || jobsChanged || sitesChanged || questsChanged;
 }
