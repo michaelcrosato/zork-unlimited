@@ -1,0 +1,117 @@
+import type { OverworldLocalEvent, OverworldRegionalArc } from "./overworld.js";
+import {
+  type OverworldEventResolutionJournalIndex,
+  type OverworldResolutionProofIndex,
+} from "./session_journal_timeline.js";
+import { OVERWORLD_STARTING_MINUTES as STARTING_MINUTES } from "./travel_mechanics.js";
+
+export type OverworldRegionalArcCompletionIndex = {
+  eventsById: ReadonlyMap<string, OverworldLocalEvent>;
+  regionalArcs: readonly OverworldRegionalArc[];
+};
+
+export function assertSnapshotEventResolutionProofs(
+  resolvedEventIds: ReadonlySet<string>,
+  sources: OverworldResolutionProofIndex,
+  journal: OverworldEventResolutionJournalIndex,
+): void {
+  for (const eventId of resolvedEventIds) {
+    const event = sources.eventsById.get(eventId);
+    if (!event) continue;
+    const resolvedAt = journal.recordedAtById.get(`resolve:${eventId}`);
+    if (resolvedAt === undefined) continue;
+
+    const scoutAt = journal.scoutTimeByArea.get(event.area);
+    if (scoutAt === undefined || scoutAt > resolvedAt) {
+      throw new Error(
+        `Overworld session snapshot resolved event "${eventId}" is missing a local scout prerequisite.`,
+      );
+    }
+
+    const contactAt = journal.contactTimeByArea.get(event.area);
+    if (contactAt === undefined || contactAt > resolvedAt) {
+      throw new Error(
+        `Overworld session snapshot resolved event "${eventId}" is missing a local contact prerequisite.`,
+      );
+    }
+
+    const investigationAt = journal.recordedAtById.get(`investigate:${eventId}`);
+    if (investigationAt === undefined || investigationAt > resolvedAt) {
+      throw new Error(
+        `Overworld session snapshot resolved event "${eventId}" is missing an investigated event prerequisite.`,
+      );
+    }
+  }
+}
+
+export type RegionalArcResolutionProof = {
+  completionProofAt: number;
+  resolvedCount: number;
+};
+
+export function regionalArcResolutionProof(
+  arc: OverworldRegionalArc,
+  resolutionTimesByTown: ReadonlyMap<string, number>,
+): RegionalArcResolutionProof {
+  const required = arc.required_resolutions;
+  const requiredResolutionTimes: number[] = [];
+  let resolvedCount = 0;
+
+  for (const townId of arc.anchor_towns) {
+    const resolvedAt = resolutionTimesByTown.get(townId);
+    if (resolvedAt === undefined) continue;
+
+    resolvedCount += 1;
+    if (required <= 0) continue;
+
+    let insertAt = requiredResolutionTimes.length;
+    while (insertAt > 0 && requiredResolutionTimes[insertAt - 1]! > resolvedAt) {
+      insertAt -= 1;
+    }
+    if (insertAt >= required) continue;
+
+    requiredResolutionTimes.splice(insertAt, 0, resolvedAt);
+    if (requiredResolutionTimes.length > required) requiredResolutionTimes.pop();
+  }
+
+  return {
+    completionProofAt:
+      required > 0 && requiredResolutionTimes.length >= required
+        ? requiredResolutionTimes[required - 1]!
+        : STARTING_MINUTES,
+    resolvedCount,
+  };
+}
+
+export function assertSnapshotRegionalArcCompletionProofs(
+  sources: OverworldRegionalArcCompletionIndex,
+  journal: OverworldEventResolutionJournalIndex,
+  completedRegionalArcIds: ReadonlySet<string>,
+): void {
+  for (const arc of sources.regionalArcs) {
+    const resolutionProof = regionalArcResolutionProof(arc, journal.resolutionTimeByTown);
+    const hasRequiredResolutions = resolutionProof.resolvedCount >= arc.required_resolutions;
+    const completed = completedRegionalArcIds.has(arc.id);
+
+    if (completed && !hasRequiredResolutions) {
+      throw new Error(
+        `Overworld session snapshot completed regional arc "${arc.id}" lacks required resolved anchor towns.`,
+      );
+    }
+    if (!completed && hasRequiredResolutions) {
+      throw new Error(
+        `Overworld session snapshot is missing completed regional arc "${arc.id}" earned by resolved anchor towns.`,
+      );
+    }
+    if (!completed) continue;
+
+    const arcRecordedAt = journal.recordedAtById.get(`arc:${arc.id}`);
+    if (arcRecordedAt === undefined) continue;
+    const completionProofAt = resolutionProof.completionProofAt;
+    if (arcRecordedAt < completionProofAt) {
+      throw new Error(
+        `Overworld session snapshot completed regional arc "${arc.id}" was recorded before enough anchor resolutions.`,
+      );
+    }
+  }
+}
