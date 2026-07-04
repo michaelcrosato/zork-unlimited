@@ -103,8 +103,9 @@ describe("single-engine RPG validation bar", () => {
     expect(result.status, output).toBe(0);
     expect(output).not.toContain("mode: cyoa");
     expect(output).not.toContain("mode: parser");
+    expect(output).not.toContain("mode: rpg");
     expect(output).not.toContain("content/rpg/pack/");
-    expect(output.match(/mode: rpg/g)?.length ?? 0).toBe(worldQuestIds.length);
+    expect(output.match(/content_hash: [0-9a-f]{64}/g)?.length ?? 0).toBe(worldQuestIds.length);
     for (const worldQuestId of worldQuestIds) {
       expect(output).toContain(`== world_quest_id: ${worldQuestId} ==`);
     }
@@ -117,7 +118,8 @@ describe("single-engine RPG validation bar", () => {
     expect(result.status, output).toBe(0);
     expect(output).toContain("== world_quest_id: sunken_barrow ==");
     expect(output).not.toContain("content/rpg/pack/sunken_barrow.yaml");
-    expect(output.match(/mode: rpg/g)?.length ?? 0).toBe(1);
+    expect(output).not.toContain("mode: rpg");
+    expect(output.match(/content_hash: [0-9a-f]{64}/g)?.length ?? 0).toBe(1);
   });
 
   it("npm run validate rejects positional raw pack path targets", () => {

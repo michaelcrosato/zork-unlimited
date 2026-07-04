@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 398 -->
+<!-- historical_cycle_count: 399 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - validate_cli_mode_line_removed
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: `npm run validate` no longer repeats `mode: rpg` for every shipped quest; each report keeps world quest id plus content hash.
+- Loop effect: the public validation gate stays RPG-only while dropping another redundant single-runtime token from every cycle's validation output.
+- Guard: focused Prettier, typecheck, validation-bar, loop-driver, and RPG schema-standalone tests passed over the cleanup.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - latest_cycle_mode_removed
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/loop surface: verifier integrity now forbids retired CYOA/parser CLI files and unit-test path families from reappearing.
 - Loop effect: single-RPG runtime lock-down covers the objective's old binary/test surfaces, not only source/content directories.
 - Guard: focused Prettier, typecheck, verifier integrity, RPG-only guard, generator-protection, and loop-state rotation tests passed.
-- VERIFY: `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed.
-
-### Cycle result - verify_loop_state_rotation_bound
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: verifier integrity now fails when live `AI_LOOP_STATE.md` exceeds the rotation keep window.
-- Loop effect: manual and automated cycles cannot silently rebuild a large prompt handoff; older detail stays in git history or ignored archives.
-- Guard: focused Prettier, typecheck, verifier integrity, and loop-state rotation tests passed.
 - VERIFY: `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed.

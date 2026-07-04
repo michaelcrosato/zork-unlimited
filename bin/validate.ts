@@ -58,7 +58,7 @@ function validateOne(target: ValidationTarget): boolean {
 
   const report = validateRpg(result.compiled.pack);
   console.log(formatReport(report));
-  console.log(`mode: rpg  content_hash: ${result.compiled.contentHash}`);
+  console.log(`content_hash: ${result.compiled.contentHash}`);
   return report.ok;
 }
 
