@@ -129,7 +129,6 @@ type LatestCycleMetadata = {
   playtestRecord: string;
   recommendationId: string | null;
   recommendationCategory: ImprovementCandidate["category"] | null;
-  mode: "standard" | "ultraplan";
   agentTimeoutSeconds?: number;
 };
 
@@ -167,7 +166,6 @@ export function buildLatestCycleMetadata(ctx: {
     playtestRecord: ctx.playtestRecord,
     recommendationId: ctx.top?.id ?? null,
     recommendationCategory: ctx.top?.category ?? null,
-    mode: ctx.ultraplan ? "ultraplan" : "standard",
   };
   if (ctx.agentTimeoutSeconds !== null) metadata.agentTimeoutSeconds = ctx.agentTimeoutSeconds;
   return metadata;

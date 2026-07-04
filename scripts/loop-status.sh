@@ -47,7 +47,7 @@ try {
     ? `${c.recommendationCategory ? `${c.recommendationCategory}/` : ""}${c.recommendationId}`
     : c.recommendation || "";
   console.log(
-    `  runId=${c.runId}  mode=${c.mode}  budget=${c.agentTimeoutSeconds || "default"}s\n` +
+    `  runId=${c.runId}  budget=${c.agentTimeoutSeconds || "default"}s\n` +
       `  target=${c.target}\n` +
       `  rec=${rec.slice(0, 90)}`,
   );

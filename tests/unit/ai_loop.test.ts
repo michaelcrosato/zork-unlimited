@@ -160,8 +160,8 @@ describe("compact AFK handoff metadata", () => {
       targetWorldQuestId: "breaking_weir",
       recommendationId: "engine-runtime-cache",
       recommendationCategory: "engine",
-      mode: "standard",
     });
+    expect("mode" in metadata).toBe(false);
     expect("runDir" in metadata).toBe(false);
     expect("recommendation" in metadata).toBe(false);
     expect(JSON.stringify(metadata)).not.toContain(top.title);

@@ -112,6 +112,8 @@ Make discovered overworld quest leads start real RPG sessions.
   recommendation ids/categories instead of repeating full titles and rationales.
 - AFK `latest-cycle.json` now omits the derived run directory; run artifacts
   remain addressable from `runId` and explicit record paths.
+- AFK `latest-cycle.json` no longer carries a generic cycle `mode`; loop status
+  reports run id, budget, target, and compact recommendation identity.
 - Verifier integrity now enforces the `AI_LOOP_STATE.md` live rotation window so
   the tracked cycle handoff cannot quietly grow beyond the token-small budget.
 - Verifier integrity now also forbids retired CYOA/parser CLI entrypoints and

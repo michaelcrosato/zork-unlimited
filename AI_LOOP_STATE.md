@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 397 -->
+<!-- historical_cycle_count: 398 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - latest_cycle_mode_removed
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: `latest-cycle.json` no longer carries generic `mode`; loop status reports run id, budget, target, and compact recommendation identity.
+- Loop effect: the AFK handoff keeps prompt style out of machine metadata, reducing another non-RPG mode axis in unattended cycle coordination.
+- Guard: focused Prettier, typecheck, AI loop tests, loop driver gates, and RPG schema-standalone tests passed over the cleanup.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - generated_checks_seed_only
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/loop surface: verifier integrity now fails when live `AI_LOOP_STATE.md` exceeds the rotation keep window.
 - Loop effect: manual and automated cycles cannot silently rebuild a large prompt handoff; older detail stays in git history or ignored archives.
 - Guard: focused Prettier, typecheck, verifier integrity, and loop-state rotation tests passed.
-- VERIFY: `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed.
-
-### Cycle result - compact_latest_cycle_run_dir_removed
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: `latest-cycle.json` no longer stores derived `runDir`; consumers keep `runId`, target, playtest record, mode, timeout, and compact recommendation ids.
-- Loop effect: machine handoff removes another repeated path while ai-runs artifacts still use `ai-runs/<runId>/...`.
-- Guard: focused Prettier, typecheck, AI loop metadata, loop driver gate, and loop-state rotation tests passed.
 - VERIFY: `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed.
