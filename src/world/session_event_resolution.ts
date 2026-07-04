@@ -89,6 +89,25 @@ export type OverworldEventResolutionPlan =
   | OverworldEventResolutionActionPlan
   | OverworldEventResolutionAlreadyKnownPlan;
 
+export type OverworldPlannedEventResolution = Extract<
+  OverworldEventResolutionPlan,
+  { alreadyKnown: false }
+>;
+
+export type OverworldEventResolutionApplicationState = {
+  resolvedEventIds: Set<string>;
+  resolvedEventHomeIds: Set<string>;
+  regionRenown: Map<string, number>;
+};
+
+export type OverworldAppliedEventResolution = {
+  eventId: string;
+  eventHome: string;
+  renownRegion: string;
+  renownGained: number;
+  renownAfter: number;
+};
+
 function prerequisiteLabel(prerequisite: OverworldEventResolutionPrerequisite): string {
   return OVERWORLD_EVENT_RESOLUTION_PREREQUISITES.find((entry) => entry.id === prerequisite)!.label;
 }
@@ -175,6 +194,22 @@ export function planOverworldEventResolution(
       title: `Resolved ${event.title}`,
       text: `${state.currentTownName} stabilizes around ${event.title}. Your work reduces ${event.pressure} pressure and earns ${event.intensity} ${state.currentRegion} renown.`,
     },
+  };
+}
+
+export function applyOverworldEventResolution(
+  state: OverworldEventResolutionApplicationState,
+  plan: OverworldPlannedEventResolution,
+): OverworldAppliedEventResolution {
+  state.resolvedEventIds.add(plan.event.id);
+  state.resolvedEventHomeIds.add(plan.event.home);
+  state.regionRenown.set(plan.region, (state.regionRenown.get(plan.region) ?? 0) + plan.renown);
+  return {
+    eventId: plan.event.id,
+    eventHome: plan.event.home,
+    renownRegion: plan.region,
+    renownGained: plan.renown,
+    renownAfter: state.regionRenown.get(plan.region) ?? 0,
   };
 }
 

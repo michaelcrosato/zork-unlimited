@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyOverworldEventResolution,
   assertOverworldEventResolutionReady,
   assertSnapshotEventResolutionProofs,
   assertSnapshotRegionalArcCompletionProofs,
@@ -200,6 +201,43 @@ describe("overworld event and regional arc proof replay", () => {
       "talk:character_a",
       "investigate:event_a",
     ]);
+  });
+
+  it("applies live event resolution into lifecycle ids and regional renown", () => {
+    const localEvent = event("event_a", "town_a", "area_a");
+    const plan = planOverworldEventResolution({
+      eventId: localEvent.id,
+      eventsById: new Map([[localEvent.id, localEvent]]),
+      currentTownId: "town_a",
+      currentTownName: "Alden",
+      currentRegion: "North",
+      currentAreaId: "area_a",
+      resolvedEventIds: new Set(),
+      journalEntries: new Map([
+        ["scout:poi_a", journalEntry("scout:poi_a", "poi")],
+        ["talk:character_a", journalEntry("talk:character_a", "contact")],
+        ["investigate:event_a", journalEntry("investigate:event_a", "event")],
+      ]),
+      poisByArea: new Map([["area_a", [poi("poi_a")]]]),
+      charactersByArea: new Map([["area_a", [character("character_a")]]]),
+    });
+    if (plan.alreadyKnown) throw new Error("expected a new event resolution plan");
+    const resolvedEventIds = new Set<string>();
+    const resolvedEventHomeIds = new Set<string>();
+    const regionRenown = new Map([["North", 3]]);
+
+    expect(
+      applyOverworldEventResolution({ resolvedEventIds, resolvedEventHomeIds, regionRenown }, plan),
+    ).toEqual({
+      eventId: "event_a",
+      eventHome: "town_a",
+      renownRegion: "North",
+      renownGained: 2,
+      renownAfter: 5,
+    });
+    expect([...resolvedEventIds]).toEqual(["event_a"]);
+    expect([...resolvedEventHomeIds]).toEqual(["town_a"]);
+    expect(regionRenown.get("North")).toBe(5);
   });
 
   it("reuses an existing resolved-event journal entry before checking prerequisites", () => {

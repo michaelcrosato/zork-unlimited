@@ -51,7 +51,10 @@ import {
   type OverworldActionJournalState,
   type OverworldRecordedActionResult,
 } from "./session_action_recording.js";
-import { planOverworldEventResolution } from "./session_event_resolution.js";
+import {
+  applyOverworldEventResolution,
+  planOverworldEventResolution,
+} from "./session_event_resolution.js";
 import {
   applyOverworldLocalDiscovery,
   emptyOverworldLocalDiscovery,
@@ -386,11 +389,6 @@ export class OverworldSession {
       const event = this.localEventsById.get(eventId);
       if (event) this.resolvedEventHomeIds.add(event.home);
     }
-  }
-
-  private markEventResolved(event: OverworldLocalEvent): void {
-    this.resolvedEventIds.add(event.id);
-    this.resolvedEventHomeIds.add(event.home);
   }
 
   private markSeen(nodeId: string): void {
@@ -1054,8 +1052,14 @@ export class OverworldSession {
 
     const result = this.recordAction(plan.entryDraft, plan.minutes);
     if (!result.alreadyKnown) {
-      this.markEventResolved(plan.event);
-      this.regionRenown.set(plan.region, (this.regionRenown.get(plan.region) ?? 0) + plan.renown);
+      applyOverworldEventResolution(
+        {
+          resolvedEventIds: this.resolvedEventIds,
+          resolvedEventHomeIds: this.resolvedEventHomeIds,
+          regionRenown: this.regionRenown,
+        },
+        plan,
+      );
       this.checkRegionalArcCompletion(plan.region);
       this.clearSnapshotCache();
     }
