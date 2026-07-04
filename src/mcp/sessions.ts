@@ -14,6 +14,15 @@ import type { RpgActionOption } from "../rpg/legal_actions.js";
 import type { ObservationOptions, RpgObservation } from "../rpg/observation.js";
 import type { RpgIndex } from "../rpg/runner.js";
 import { hashState } from "../core/hash.js";
+import {
+  cachedSessionProjection,
+  invalidateSessionStateCaches,
+  invalidateSessionTranscriptCaches,
+  type SessionRuntimeCaches,
+  type StateProjectionCacheEntry,
+  type StateTranscriptProjectionCacheEntry,
+  type TranscriptProjectionCacheEntry,
+} from "./session_cache.js";
 
 export type TranscriptTurn = {
   step: number;
@@ -39,7 +48,7 @@ export type TranscriptSummary = {
 
 export type RpgStep = (state: GameState, action: RpgAction) => StepResult;
 
-export type Session = {
+export type Session = SessionRuntimeCaches<TranscriptSummary> & {
   id: string;
   packId: string;
   contentHash: string;
@@ -57,52 +66,8 @@ export type Session = {
   step: RpgStep;
   state: GameState;
   stateHash: string;
-  legalActionsCache?: {
-    stateHash: string;
-    actions: RpgActionOption[];
-  };
-  legalActionProjectionCaches?: Map<
-    string,
-    {
-      stateHash: string;
-      projection: unknown;
-    }
-  >;
-  observationCache?: {
-    stateHash: string;
-    hideGraph: boolean;
-    includeWorldIntro: boolean;
-    observation: RpgObservation;
-  };
-  observationProjectionCaches?: Map<
-    string,
-    {
-      stateHash: string;
-      projection: unknown;
-    }
-  >;
   transcript: TranscriptTurn[];
   transcriptLogHash: string;
-  transcriptSummaryCache?: {
-    stateHash: string;
-    transcriptLogHash: string;
-    summary: TranscriptSummary;
-  };
-  transcriptSummaryProjectionCaches?: Map<
-    string,
-    {
-      stateHash: string;
-      transcriptLogHash: string;
-      projection: unknown;
-    }
-  >;
-  transcriptProjectionCaches?: Map<
-    string,
-    {
-      transcriptLogHash: string;
-      projection: unknown;
-    }
-  >;
   /** Difficulty: when true, the agent-facing observation hides each exit's
    *  destination (`exit.to`) so the spatial graph must be reasoned out, not read
    *  off. Default false — full graph, the legacy behavior. */
@@ -124,53 +89,6 @@ export type SessionInit = Omit<
 >;
 
 type ObservationCacheOptions = Pick<ObservationOptions, "hideGraph" | "includeWorldIntro">;
-type StateProjectionCacheEntry = {
-  stateHash: string;
-  projection: unknown;
-};
-type TranscriptProjectionCacheEntry = {
-  transcriptLogHash: string;
-  projection: unknown;
-};
-type StateTranscriptProjectionCacheEntry = {
-  stateHash: string;
-  transcriptLogHash: string;
-  projection: unknown;
-};
-
-function cachedProjection<T, Entry extends { projection: unknown }>(
-  cacheMap: Map<string, Entry> | undefined,
-  key: string,
-  isFresh: (entry: Entry) => boolean,
-  entryFor: (projection: T) => Entry,
-  build: () => T,
-): { value: T; cacheMap: Map<string, Entry> } {
-  if (cacheMap !== undefined) {
-    const cached = cacheMap.get(key);
-    if (cached !== undefined && isFresh(cached)) {
-      return { value: cached.projection as T, cacheMap };
-    }
-  }
-  const value = build();
-  const nextCacheMap = cacheMap ?? new Map<string, Entry>();
-  nextCacheMap.set(key, entryFor(value));
-  return { value, cacheMap: nextCacheMap };
-}
-
-function invalidateStateCaches(session: Session): void {
-  delete session.legalActionsCache;
-  delete session.legalActionProjectionCaches;
-  delete session.observationCache;
-  delete session.observationProjectionCaches;
-  delete session.transcriptSummaryCache;
-  delete session.transcriptSummaryProjectionCaches;
-}
-
-function invalidateTranscriptCaches(session: Session): void {
-  delete session.transcriptSummaryCache;
-  delete session.transcriptSummaryProjectionCaches;
-  delete session.transcriptProjectionCaches;
-}
 
 export class SessionStore {
   private counter = 0;
@@ -202,7 +120,7 @@ export class SessionStore {
       return session;
     }
     session.stateHash = stateHash;
-    invalidateStateCaches(session);
+    invalidateSessionStateCaches(session);
     return session;
   }
 
@@ -221,7 +139,7 @@ export class SessionStore {
 
   legalActionProjection<T>(id: string, key: string, build: () => T): T {
     const session = this.get(id);
-    const cached = cachedProjection<T, StateProjectionCacheEntry>(
+    const cached = cachedSessionProjection<T, StateProjectionCacheEntry>(
       session.legalActionProjectionCaches,
       key,
       (entry) => entry.stateHash === session.stateHash,
@@ -262,7 +180,7 @@ export class SessionStore {
 
   observationProjection<T>(id: string, key: string, build: () => T): T {
     const session = this.get(id);
-    const cached = cachedProjection<T, StateProjectionCacheEntry>(
+    const cached = cachedSessionProjection<T, StateProjectionCacheEntry>(
       session.observationProjectionCaches,
       key,
       (entry) => entry.stateHash === session.stateHash,
@@ -295,7 +213,7 @@ export class SessionStore {
 
   transcriptSummaryProjection<T>(id: string, key: string, build: () => T): T {
     const session = this.get(id);
-    const cached = cachedProjection<T, StateTranscriptProjectionCacheEntry>(
+    const cached = cachedSessionProjection<T, StateTranscriptProjectionCacheEntry>(
       session.transcriptSummaryProjectionCaches,
       key,
       (entry) =>
@@ -314,7 +232,7 @@ export class SessionStore {
 
   transcriptProjection<T>(id: string, key: string, build: () => T): T {
     const session = this.get(id);
-    const cached = cachedProjection<T, TranscriptProjectionCacheEntry>(
+    const cached = cachedSessionProjection<T, TranscriptProjectionCacheEntry>(
       session.transcriptProjectionCaches,
       key,
       (entry) => entry.transcriptLogHash === session.transcriptLogHash,
@@ -335,7 +253,7 @@ export class SessionStore {
       previous: session.transcriptLogHash,
       turn,
     });
-    invalidateTranscriptCaches(session);
+    invalidateSessionTranscriptCaches(session);
     return session;
   }
 
@@ -343,7 +261,7 @@ export class SessionStore {
     const session = this.get(id);
     session.transcript = transcript;
     session.transcriptLogHash = hashState(transcript);
-    invalidateTranscriptCaches(session);
+    invalidateSessionTranscriptCaches(session);
     return session;
   }
 }
