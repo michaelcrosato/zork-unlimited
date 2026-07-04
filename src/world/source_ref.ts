@@ -21,6 +21,19 @@ export type CompactSourceLegacyMetadata = {
   generatedRpgSeed?: number;
 };
 
+export type CompactSourceRefConsistencyMessages = {
+  sourceConflict: string;
+  worldQuestMismatch: (sourceRefWorldQuestId: string, worldQuestId: string) => string;
+  generatedSeedMismatch: (sourceRefGeneratedSeed: number, generatedRpgSeed: number) => string;
+  sourceRefConflictsWithGeneratedRpgSeed: string;
+  sourceRefConflictsWithWorldQuestId: string;
+  sourceRefPackFallbackConflict?: string;
+};
+
+export type CompactSourceRefConsistencyResult =
+  | { ok: true; metadata: CompactSourceLegacyMetadata }
+  | { ok: false; error: string };
+
 export function compactSourceRefFromMetadata(
   fallbackPackId: string,
   metadata: CompactSourceMetadata,
@@ -71,6 +84,53 @@ export function compactSourceRefLabel(sourceRef: CompactSourceRef): string {
   if (sourceRef[0] === "wq") return `world_quest_id:${sourceRef[1]}`;
   if (sourceRef[0] === "gen") return `generate_rpg_seed:${sourceRef[1]}`;
   return `pack_id:${sourceRef[1]}`;
+}
+
+export function compactSourceRefLegacyConsistency(
+  sourceRef: CompactSourceRef | undefined,
+  metadata: CompactSourceLegacyMetadata,
+  messages: CompactSourceRefConsistencyMessages,
+): CompactSourceRefConsistencyResult {
+  let { worldQuestId, generatedRpgSeed } = metadata;
+  if (sourceRef?.[0] === "wq") {
+    if (worldQuestId !== undefined && worldQuestId !== sourceRef[1]) {
+      return { ok: false, error: messages.worldQuestMismatch(sourceRef[1], worldQuestId) };
+    }
+    if (generatedRpgSeed !== undefined) {
+      return { ok: false, error: messages.sourceRefConflictsWithGeneratedRpgSeed };
+    }
+    worldQuestId = sourceRef[1];
+  } else if (sourceRef?.[0] === "gen") {
+    if (generatedRpgSeed !== undefined && generatedRpgSeed !== sourceRef[1]) {
+      return { ok: false, error: messages.generatedSeedMismatch(sourceRef[1], generatedRpgSeed) };
+    }
+    if (worldQuestId !== undefined) {
+      return { ok: false, error: messages.sourceRefConflictsWithWorldQuestId };
+    }
+    generatedRpgSeed = sourceRef[1];
+  } else if (sourceRef !== undefined) {
+    if (worldQuestId !== undefined || generatedRpgSeed !== undefined) {
+      return {
+        ok: false,
+        error:
+          messages.sourceRefPackFallbackConflict ??
+          (worldQuestId !== undefined
+            ? messages.sourceRefConflictsWithWorldQuestId
+            : messages.sourceRefConflictsWithGeneratedRpgSeed),
+      };
+    }
+  }
+
+  if (worldQuestId !== undefined && generatedRpgSeed !== undefined) {
+    return { ok: false, error: messages.sourceConflict };
+  }
+  return {
+    ok: true,
+    metadata: {
+      ...(worldQuestId !== undefined ? { worldQuestId } : {}),
+      ...(generatedRpgSeed !== undefined ? { generatedRpgSeed } : {}),
+    },
+  };
 }
 
 export function compactSourceRefValidationError(raw: unknown, label: string): string | undefined {

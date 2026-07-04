@@ -17,13 +17,30 @@ import {
   type WorldManifest,
 } from "./schema.js";
 import { normalizePackPath, worldQuestNodeById } from "./graph.js";
-import { compactSourceRefValidationError } from "./source_ref.js";
+import {
+  compactSourceRefLegacyConsistency,
+  compactSourceRefValidationError,
+} from "./source_ref.js";
 
 export type WorldQuestPackSource = {
   world: WorldManifest;
   node: WorldGraphNode;
   packPath: string;
 };
+
+const SAVE_SOURCE_REF_CONSISTENCY_MESSAGES = {
+  sourceConflict: "Save source cannot carry both worldQuestId and generatedRpgSeed.",
+  worldQuestMismatch: (sourceRefWorldQuestId: string, worldQuestId: string) =>
+    `Save source_ref world quest ${JSON.stringify(
+      sourceRefWorldQuestId,
+    )} does not match worldQuestId ${JSON.stringify(worldQuestId)}.`,
+  generatedSeedMismatch: (sourceRefGeneratedSeed: number, generatedRpgSeed: number) =>
+    `Save source_ref generated seed ${JSON.stringify(
+      sourceRefGeneratedSeed,
+    )} does not match generatedRpgSeed ${JSON.stringify(generatedRpgSeed)}.`,
+  sourceRefConflictsWithGeneratedRpgSeed: "Save source_ref conflicts with generatedRpgSeed.",
+  sourceRefConflictsWithWorldQuestId: "Save source_ref conflicts with worldQuestId.",
+} as const;
 
 export type TraceSourceArgs = {
   world_quest_id?: string;
@@ -403,49 +420,16 @@ function saveEmbeddedSource(
   }
   if (typeof rawGeneratedRpgSeed === "number") generatedRpgSeed = rawGeneratedRpgSeed;
 
-  if (sourceRef?.[0] === "wq") {
-    if (worldQuestId !== undefined && worldQuestId !== sourceRef[1]) {
-      throw new SaveIntegrityError(
-        `Save source_ref world quest ${JSON.stringify(
-          sourceRef[1],
-        )} does not match worldQuestId ${JSON.stringify(worldQuestId)}.`,
-      );
-    }
-    if (generatedRpgSeed !== undefined) {
-      throw new SaveIntegrityError("Save source_ref conflicts with generatedRpgSeed.");
-    }
-    worldQuestId = sourceRef[1];
-  } else if (sourceRef?.[0] === "gen") {
-    if (generatedRpgSeed !== undefined && generatedRpgSeed !== sourceRef[1]) {
-      throw new SaveIntegrityError(
-        `Save source_ref generated seed ${JSON.stringify(
-          sourceRef[1],
-        )} does not match generatedRpgSeed ${JSON.stringify(generatedRpgSeed)}.`,
-      );
-    }
-    if (worldQuestId !== undefined) {
-      throw new SaveIntegrityError("Save source_ref conflicts with worldQuestId.");
-    }
-    generatedRpgSeed = sourceRef[1];
-  } else if (sourceRef !== undefined) {
-    if (worldQuestId !== undefined) {
-      throw new SaveIntegrityError("Save source_ref conflicts with worldQuestId.");
-    }
-    if (generatedRpgSeed !== undefined) {
-      throw new SaveIntegrityError("Save source_ref conflicts with generatedRpgSeed.");
-    }
-  }
-
-  if (worldQuestId !== undefined && generatedRpgSeed !== undefined) {
-    throw new SaveIntegrityError(
-      "Save source cannot carry both worldQuestId and generatedRpgSeed.",
-    );
-  }
-
-  return {
-    ...(worldQuestId !== undefined ? { worldQuestId } : {}),
-    ...(generatedRpgSeed !== undefined ? { generatedRpgSeed } : {}),
-  };
+  const consistency = compactSourceRefLegacyConsistency(
+    sourceRef,
+    {
+      ...(worldQuestId !== undefined ? { worldQuestId } : {}),
+      ...(generatedRpgSeed !== undefined ? { generatedRpgSeed } : {}),
+    },
+    SAVE_SOURCE_REF_CONSISTENCY_MESSAGES,
+  );
+  if (!consistency.ok) throw new SaveIntegrityError(consistency.error);
+  return consistency.metadata;
 }
 
 function saveSourceRef(bundle: SaveWorldSource, operation: string): SaveSourceRef | undefined {

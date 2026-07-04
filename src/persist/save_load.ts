@@ -12,6 +12,7 @@ import { canonicalize } from "../core/hash.js";
 import {
   compactSourceLegacyMetadata,
   compactSourceRefFromMetadata,
+  compactSourceRefLegacyConsistency,
   compactSourceRefValidationError,
   type CompactSourceRef,
 } from "../world/source_ref.js";
@@ -125,6 +126,22 @@ const SAVE_SOURCE_LABELS = {
   worldQuestId: "Save worldQuestId",
   generatedRpgSeed: "Save generatedRpgSeed",
 } as const;
+const SAVE_SOURCE_REF_CONSISTENCY_MESSAGES = {
+  sourceConflict: "Save source cannot carry both worldQuestId and generatedRpgSeed.",
+  worldQuestMismatch: (sourceRefWorldQuestId: string, worldQuestId: string) =>
+    `Save source_ref world quest ${JSON.stringify(
+      sourceRefWorldQuestId,
+    )} does not match worldQuestId ${JSON.stringify(worldQuestId)}.`,
+  generatedSeedMismatch: (sourceRefGeneratedSeed: number, generatedRpgSeed: number) =>
+    `Save source_ref generated seed ${JSON.stringify(
+      sourceRefGeneratedSeed,
+    )} does not match generatedRpgSeed ${JSON.stringify(generatedRpgSeed)}.`,
+  sourceRefConflictsWithGeneratedRpgSeed:
+    "Save source_ref world quest conflicts with generatedRpgSeed.",
+  sourceRefConflictsWithWorldQuestId: "Save source_ref generated seed conflicts with worldQuestId.",
+  sourceRefPackFallbackConflict:
+    "Save source_ref pack fallback conflicts with explicit save source metadata.",
+} as const;
 
 /** Serialize a save to canonical bytes (stable across machines/runs). */
 export function save(
@@ -200,37 +217,19 @@ function assertSaveSourceRefConsistency(bundle: SaveBundle): void {
   const sourceRef = (bundle as { source_ref?: unknown }).source_ref;
   if (sourceRef === undefined) return;
   assertSaveSourceRef(sourceRef);
-
-  const worldQuestId = (bundle as { worldQuestId?: unknown }).worldQuestId;
-  const generatedRpgSeed = (bundle as { generatedRpgSeed?: unknown }).generatedRpgSeed;
-
-  if (sourceRef[0] === "wq") {
-    if (worldQuestId !== undefined && worldQuestId !== sourceRef[1]) {
-      throw new SaveIntegrityError(
-        `Save source_ref world quest ${JSON.stringify(
-          sourceRef[1],
-        )} does not match worldQuestId ${JSON.stringify(worldQuestId)}.`,
-      );
-    }
-    if (generatedRpgSeed !== undefined) {
-      throw new SaveIntegrityError("Save source_ref world quest conflicts with generatedRpgSeed.");
-    }
-  } else if (sourceRef[0] === "gen") {
-    if (generatedRpgSeed !== undefined && generatedRpgSeed !== sourceRef[1]) {
-      throw new SaveIntegrityError(
-        `Save source_ref generated seed ${JSON.stringify(
-          sourceRef[1],
-        )} does not match generatedRpgSeed ${JSON.stringify(generatedRpgSeed)}.`,
-      );
-    }
-    if (worldQuestId !== undefined) {
-      throw new SaveIntegrityError("Save source_ref generated seed conflicts with worldQuestId.");
-    }
-  } else if (worldQuestId !== undefined || generatedRpgSeed !== undefined) {
-    throw new SaveIntegrityError(
-      "Save source_ref pack fallback conflicts with explicit save source metadata.",
-    );
-  }
+  const consistency = compactSourceRefLegacyConsistency(
+    sourceRef,
+    {
+      ...((bundle as { worldQuestId?: string }).worldQuestId !== undefined
+        ? { worldQuestId: (bundle as { worldQuestId: string }).worldQuestId }
+        : {}),
+      ...((bundle as { generatedRpgSeed?: number }).generatedRpgSeed !== undefined
+        ? { generatedRpgSeed: (bundle as { generatedRpgSeed: number }).generatedRpgSeed }
+        : {}),
+    },
+    SAVE_SOURCE_REF_CONSISTENCY_MESSAGES,
+  );
+  if (!consistency.ok) throw new SaveIntegrityError(consistency.error);
 }
 
 /**

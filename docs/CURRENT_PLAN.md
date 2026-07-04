@@ -60,6 +60,8 @@ Make discovered overworld quest leads start real RPG sessions.
   through one shared metadata resolver before writing tuples.
 - Save bundles and trace labels now project legacy metadata from compact source
   refs through shared helpers instead of call-site tuple branching.
+- Save load and world source inference now merge compact source refs with legacy
+  source metadata through one shared consistency helper.
 - Trace source resolution now validates every compact `source_ref` tuple variant
   before replay/inspect resolves shipped trace sources.
 - Recorded traces now carry compact `source_ref` tuples for world quest,
