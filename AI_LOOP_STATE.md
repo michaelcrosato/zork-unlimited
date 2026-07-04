@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 392 -->
+<!-- historical_cycle_count: 393 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - world_catalog_mode_field_removed
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/public surface: world quest discovery no longer stores a discarded internal `mode` field before building the mode-free `list_world` catalog.
+- Loop effect: the world catalog path carries only quest/world identity and playability, avoiding constant single-runtime metadata in the discovery projection.
+- Guard: focused Prettier, typecheck, MCP tools, and RPG schema-standalone tests passed over the catalog cleanup.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - remove_packmode_alias
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/loop surface: AFK assessment quest-health entries no longer carry the constant RPG `mode`; world quest id plus playable/warning status is the catalog axis.
 - Loop effect: assessment JSON/markdown drops a retired multi-mode field from every quest row while preserving ranking, playtest targeting, and validator evidence.
 - Guard: focused Prettier, typecheck, assessor, AFK loop prompt, and loop-state rotation tests passed.
-- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
-
-### Cycle result - bounded_overworld_compact_id_buckets
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/token surface: live overworld compact views now build capped ID buckets directly, keeping counts from progress sets without materializing every sorted ID list for loop payloads.
-- Loop effect: repeated compact overworld reads keep the same `ids`/`id_counts` contract while scaling better as sessions discover more towns, areas, quests, jobs, sites, and events.
-- Guard: focused Prettier, typecheck, UI overworld, MCP tool, and overworld snapshot-integrity tests passed.
 - VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.

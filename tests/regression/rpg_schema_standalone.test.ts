@@ -56,6 +56,7 @@ describe("RPG owns the live content/runtime contract", () => {
 
   it("uses an RPG-only action and observation surface at public runtime boundaries", () => {
     const apiTypes = readFileSync("src/api/types.ts", "utf8");
+    const mcpTools = readFileSync("src/mcp/tools.ts", "utf8");
     const mcpTypes = readFileSync("src/mcp/types.ts", "utf8");
     const sessions = readFileSync("src/mcp/sessions.ts", "utf8");
     const traceRecord = readFileSync("src/trace/record.ts", "utf8");
@@ -65,6 +66,8 @@ describe("RPG owns the live content/runtime contract", () => {
     expect(apiTypes).toContain("export type Action = RpgAction");
     expect(apiTypes).not.toContain("LegacyChooseAction");
     expect(mcpTypes).not.toContain("PackMode");
+    expect(mcpTools).not.toContain("mode: SaveMode");
+    expect(mcpTools).not.toContain("mode: lr.ok ? SAVE_MODE");
     expect(sessions).toContain("Rules<RpgAction>");
     expect(traceRecord).toContain("export type Trace<A extends EngineAction = RpgAction>");
     expect(traceReplay).toContain("trace: Trace<A>");

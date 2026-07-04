@@ -73,6 +73,8 @@ Make discovered overworld quest leads start real RPG sessions.
   `generated_rpg_seed` plus hashes, without echoing public `pack_id`.
 - MCP internals no longer export a `PackMode` selector alias; runtime mode is the
   single `SAVE_MODE`/RPG constant, and `adapt_story` has no mode parameter.
+- World quest discovery no longer carries a discarded internal `mode` field
+  before building the mode-free `list_world` catalog.
 - Overworld quest observations, action discoveries, compact context, and
   quest-start metadata expose quest ids/titles/areas without raw pack paths.
 - `list_world` exposes sanitized world graph/quest-id entries without raw

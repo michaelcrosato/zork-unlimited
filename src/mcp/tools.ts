@@ -49,7 +49,6 @@ import {
   load,
   assertSaveContentHash,
   assertWellFormedState,
-  type SaveMode,
 } from "../persist/save_load.js";
 import { assertTraceMode, replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
@@ -138,7 +137,6 @@ type WorldQuestSourceEntry = {
   path: string;
   id: string;
   title: string;
-  mode: SaveMode | null;
   playable: boolean;
   world: WorldBinding | null;
   world_quest_id: string | null;
@@ -1097,7 +1095,6 @@ export function createToolApi(opts: { root: string }) {
         path,
         id: lr.ok ? lr.compiled.pack.meta.id : path,
         title: lr.ok ? lr.compiled.pack.meta.title : path,
-        mode: lr.ok ? SAVE_MODE : null,
         playable: lr.ok && lr.report.ok,
         world: lr.ok ? (lr.compiled.pack.meta.world ?? null) : null,
         world_quest_id: node?.id ?? null,
