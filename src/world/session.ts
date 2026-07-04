@@ -40,13 +40,10 @@ import {
   type OverworldSessionRoutePlan,
 } from "./session_routes.js";
 import {
-  resolveOverworldRoadEncounter,
+  applyOverworldRoadEncounter,
   type OverworldRoadEncounterResult,
 } from "./session_road_encounters.js";
-import {
-  addOverworldJournalEntry,
-  replaceOverworldJournalEntries,
-} from "./session_journal_store.js";
+import { replaceOverworldJournalEntries } from "./session_journal_store.js";
 import { timeLabel } from "./session_journal_codec.js";
 import {
   recordOverworldAction,
@@ -1130,26 +1127,23 @@ export class OverworldSession {
     const encounter = this.pendingRoadEncounter;
     if (!encounter) throw new Error("There is no pending road encounter.");
     const current = this.currentNode();
-    const resolution = resolveOverworldRoadEncounter(encounter, strategy, {
+    const applied = applyOverworldRoadEncounter(encounter, strategy, {
       fatigue: this.fatigue,
+      journalEntries: this.journalEntries,
+      journalEntriesById: this.journalEntriesById,
       minutes: this.minutes,
+      region: current.region,
+      regionRenown: this.regionRenown,
       supplies: this.supplies,
       townName: current.name,
     });
 
-    this.supplies = resolution.suppliesAfter;
-    this.fatigue = resolution.fatigueAfter;
-    this.minutes = resolution.minutesAfter;
-    if (resolution.result.renownGained > 0) {
-      this.regionRenown.set(
-        current.region,
-        (this.regionRenown.get(current.region) ?? 0) + resolution.result.renownGained,
-      );
-    }
-    this.pendingRoadEncounter = null;
-    addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, resolution.result.entry);
+    this.supplies = applied.suppliesAfter;
+    this.fatigue = applied.fatigueAfter;
+    this.minutes = applied.minutesAfter;
+    this.pendingRoadEncounter = applied.pendingRoadEncounterAfter;
     this.clearSnapshotCache();
-    return resolution.result;
+    return applied.result;
   }
 
   travel(edgeId: string): TravelLogEntry {

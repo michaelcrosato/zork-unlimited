@@ -5,11 +5,15 @@ import type {
   OverworldRoadEvent,
 } from "../../src/world/overworld.js";
 import {
+  applyOverworldRoadEncounter,
   buildOverworldPendingRoadEncounter,
   resolveOverworldRoadEncounter,
   restoreOverworldPendingRoadEncounter,
 } from "../../src/world/session_road_encounters.js";
-import type { TravelLogEntrySnapshot } from "../../src/world/session_snapshot.js";
+import type {
+  OverworldJournalEntry,
+  TravelLogEntrySnapshot,
+} from "../../src/world/session_snapshot.js";
 
 function node(id: string, name = id.toUpperCase()): OverworldNode {
   return {
@@ -70,6 +74,30 @@ function travelEntry(overrides: Partial<TravelLogEntrySnapshot> = {}): TravelLog
 
 function restoreIndexes(overrides: Parameters<typeof restoreOverworldPendingRoadEncounter>[1]) {
   return overrides;
+}
+
+function roadApplicationState(
+  overrides: {
+    fatigue?: number;
+    journalEntries?: OverworldJournalEntry[];
+    journalEntriesById?: Map<string, OverworldJournalEntry>;
+    minutes?: number;
+    region?: string;
+    regionRenown?: Map<string, number>;
+    supplies?: number;
+    townName?: string;
+  } = {},
+) {
+  return {
+    fatigue: overrides.fatigue ?? 10,
+    journalEntries: overrides.journalEntries ?? [],
+    journalEntriesById: overrides.journalEntriesById ?? new Map(),
+    minutes: overrides.minutes ?? 600,
+    region: overrides.region ?? "Capital Region",
+    regionRenown: overrides.regionRenown ?? new Map(),
+    supplies: overrides.supplies ?? 3,
+    townName: overrides.townName ?? "Colonie",
+  };
 }
 
 describe("overworld session road encounters", () => {
@@ -262,6 +290,71 @@ describe("overworld session road encounters", () => {
       },
     });
     expect(resolution.result.entry.text).not.toContain("Lacking supplies");
+  });
+
+  it("applies resolved road encounters to journals and regional renown", () => {
+    const pending = buildOverworldPendingRoadEncounter(
+      node("town_a", "Albany"),
+      node("town_b", "Colonie"),
+      edge(),
+      roadEvent(),
+      540,
+    );
+    const state = roadApplicationState({
+      fatigue: 99,
+      regionRenown: new Map([["Capital Region", 2]]),
+      supplies: 1,
+    });
+
+    const applied = applyOverworldRoadEncounter(pending, "assist_travelers", state);
+
+    expect(applied).toMatchObject({
+      suppliesAfter: 0,
+      fatigueAfter: 100,
+      minutesAfter: 670,
+      pendingRoadEncounterAfter: null,
+      regionRenownAfter: 6,
+      result: {
+        strategy: "assist_travelers",
+        suppliesUsed: 1,
+        fatigueGained: 6,
+        renownGained: 4,
+      },
+    });
+    expect(state.regionRenown.get("Capital Region")).toBe(6);
+    expect(state.journalEntries).toEqual([applied.result.entry]);
+    expect(state.journalEntriesById.get("road:road:a-b:540:assist_travelers")).toBe(
+      applied.result.entry,
+    );
+  });
+
+  it("applies zero-renown road encounters without changing region renown", () => {
+    const pending = buildOverworldPendingRoadEncounter(
+      node("town_a", "Albany"),
+      node("town_b", "Colonie"),
+      edge(),
+      roadEvent(),
+      540,
+    );
+    const state = roadApplicationState({
+      regionRenown: new Map([["Capital Region", 2]]),
+    });
+
+    const applied = applyOverworldRoadEncounter(pending, "press_on", state);
+
+    expect(applied).toMatchObject({
+      suppliesAfter: 3,
+      fatigueAfter: 13,
+      minutesAfter: 600,
+      pendingRoadEncounterAfter: null,
+      regionRenownAfter: 2,
+      result: {
+        strategy: "press_on",
+        renownGained: 0,
+      },
+    });
+    expect(state.regionRenown.get("Capital Region")).toBe(2);
+    expect(state.journalEntries).toEqual([applied.result.entry]);
   });
 
   it("rejects unknown strategies against the pending encounter options", () => {

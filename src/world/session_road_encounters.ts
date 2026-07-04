@@ -1,4 +1,5 @@
 import type { OverworldEdge, OverworldNode, OverworldRoadEvent } from "./overworld.js";
+import { addOverworldJournalEntry } from "./session_journal_store.js";
 import { timeLabel } from "./session_journal_codec.js";
 import type {
   OverworldJournalEntry,
@@ -38,6 +39,18 @@ export type OverworldRoadEncounterResolution = {
   suppliesAfter: number;
   fatigueAfter: number;
   minutesAfter: number;
+};
+
+export type OverworldRoadEncounterApplicationState = OverworldRoadEncounterResourceState & {
+  region: string;
+  regionRenown: Map<string, number>;
+  journalEntries: OverworldJournalEntry[];
+  journalEntriesById: Map<string, OverworldJournalEntry>;
+};
+
+export type OverworldAppliedRoadEncounter = OverworldRoadEncounterResolution & {
+  pendingRoadEncounterAfter: null;
+  regionRenownAfter: number;
 };
 
 export type OverworldPendingRoadEncounterRestoreIndex = {
@@ -150,5 +163,26 @@ export function resolveOverworldRoadEncounter(
     suppliesAfter,
     fatigueAfter,
     minutesAfter,
+  };
+}
+
+export function applyOverworldRoadEncounter(
+  encounter: OverworldPendingRoadEncounter,
+  strategy: OverworldRoadEncounterStrategy,
+  state: OverworldRoadEncounterApplicationState,
+): OverworldAppliedRoadEncounter {
+  const resolution = resolveOverworldRoadEncounter(encounter, strategy, state);
+  if (resolution.result.renownGained > 0) {
+    state.regionRenown.set(
+      state.region,
+      (state.regionRenown.get(state.region) ?? 0) + resolution.result.renownGained,
+    );
+  }
+  addOverworldJournalEntry(state.journalEntries, state.journalEntriesById, resolution.result.entry);
+
+  return {
+    ...resolution,
+    pendingRoadEncounterAfter: null,
+    regionRenownAfter: state.regionRenown.get(state.region) ?? 0,
   };
 }
