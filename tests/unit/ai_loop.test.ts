@@ -50,7 +50,6 @@ function questHealth(path: string, warnings = 0): QuestHealth {
     path,
     pack_id: `${path.replace(/^content\/rpg\/pack\//, "").replace(/\.ya?ml$/, "")}_v1`,
     world_quest_id: path.replace(/^content\/rpg\/pack\//, "").replace(/\.ya?ml$/, ""),
-    mode: "rpg",
     playable: true,
     warnings,
   };

@@ -81,6 +81,8 @@ Make discovered overworld quest leads start real RPG sessions.
   for world-bound content fixes; pack paths are edit metadata only.
 - AFK assessment output now reports quest counts/health and blind-playtest
   recommendations by `world_quest_id`, not RPG pack ids.
+- AFK quest-health payloads no longer carry a constant `mode` field; the loop's
+  catalog axis is the world quest id plus playable/validator status.
 - AFK blind-test rotation now parses those quest-labeled recommendation lines,
   so recently played quests remain visible to the attendance sorter.
 - AFK baseline playtests now carry `main_world_quest_id` and instruct blind agents

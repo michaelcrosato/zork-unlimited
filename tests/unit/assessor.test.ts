@@ -110,7 +110,7 @@ describe("assess()", () => {
     // The assessor's only non-content lever was "Add ESLint + Prettier (lint is just
     // tsc)". bug_0031 CLOSED that gap — eslint.config.js + .prettierrc.json ship and
     // `npm run lint` / `format:check` now run ESLint / Prettier. So, exactly as
-    // content_new disarms once every mode meets its breadth target (see "raises no
+    // content_new disarms once the world graph meets its breadth target (see "raises no
     // content_new candidate …" below), the repo-eslint candidate is correctly no
     // longer raised; content_fix (low-priority RPG blind-playtest reviews — a distinct
     // kind of content work, guarded below) is the
@@ -128,7 +128,7 @@ describe("assess()", () => {
     // must not produce a high-impact `fix-` candidate from bot coverage alone.
     // (bug_0032 generalized this to planning-gated legacy content too — see
     // tests/regression/assessor_gated_cyoa_coverage.test.ts.)
-    for (const p of a.quests.filter((p) => p.mode === "rpg" && p.warnings === 0)) {
+    for (const p of a.quests.filter((p) => p.world_quest_id !== null && p.warnings === 0)) {
       expect(
         a.candidates.find((c) => c.id === `fix-${p.world_quest_id ?? p.path}`),
       ).toBeUndefined();
@@ -223,6 +223,7 @@ describe("assess()", () => {
     expect(out).not.toContain("Packs by mode");
     expect(out).toContain("Quest health");
     expect(out).not.toContain("Pack health");
+    expect(out).not.toMatch(/\[[?a-z]+\]/);
     expect(out).toMatch(/Blind-playtest quest "[a-z0-9_]+"/);
     expect(out).not.toMatch(/Blind-playtest "[a-z0-9_]+_v\d+"/);
   });

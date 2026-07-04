@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 286 -->
+<!-- historical_cycle_count: 287 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - afk_quest_health_mode_field_removed
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: AFK assessment quest-health entries no longer carry the constant RPG `mode`; world quest id plus playable/warning status is the catalog axis.
+- Loop effect: assessment JSON/markdown drops a retired multi-mode field from every quest row while preserving ranking, playtest targeting, and validator evidence.
+- Guard: focused Prettier, typecheck, assessor, AFK loop prompt, and loop-state rotation tests passed.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - bounded_overworld_compact_id_buckets
 

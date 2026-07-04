@@ -18,7 +18,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { createToolApi } from "../mcp/tools.js";
-import type { PackMode } from "../mcp/types.js";
 import { verifyBlindReportText } from "../blind/report_verifier.js";
 import { completedCycleCount, totalCycleCount } from "./loop_state.js";
 import { generateRpgPack } from "../gen/rpg_generator.js";
@@ -32,7 +31,7 @@ export type Category = "content_fix" | "content_new" | "engine" | "repo";
 export type ImprovementCandidate = {
   id: string;
   category: Category;
-  target: string; // a world quest id, a mode, or a repo area; paths are metadata only.
+  target: string; // a world quest id, the world graph, or a repo area; paths are metadata only.
   title: string;
   rationale: string;
   evidence: string[];
@@ -45,7 +44,6 @@ export type QuestHealth = {
   path: string;
   pack_id: string;
   world_quest_id: string | null;
-  mode: PackMode | null;
   playable: boolean;
   warnings: number;
 };
@@ -53,7 +51,6 @@ export type QuestHealth = {
 type AssessedQuest = {
   path: string;
   pack_id: string;
-  mode: PackMode | null;
   playable: boolean;
   world_quest_id: string | null;
 };
@@ -493,14 +490,13 @@ export function assess(root: string): Assessment {
         ? quest.id
         : resolveWorldQuestPackPath(root, quest.world_quest_id).packPath,
     pack_id: quest.id,
-    mode: "rpg",
     playable: quest.playable,
     world_quest_id: quest.world_quest_id,
   }));
 
   const questHealth: QuestHealth[] = [];
   const candidates: ImprovementCandidate[] = [];
-  const rpgQuestCount = quests.filter((s) => s.mode === "rpg").length;
+  const rpgQuestCount = quests.length;
   const worldQuestCount = quests.filter((s) => s.playable && s.world_quest_id !== null).length;
 
   // ── Per-quest health: validator findings (the deterministic dev-test signal) ───
@@ -512,7 +508,6 @@ export function assess(root: string): Assessment {
         path: s.path,
         pack_id: s.pack_id,
         world_quest_id: s.world_quest_id,
-        mode: s.mode,
         playable: false,
         warnings: 0,
       });
@@ -535,7 +530,6 @@ export function assess(root: string): Assessment {
         path: s.path,
         pack_id: s.pack_id,
         world_quest_id: null,
-        mode: s.mode,
         playable: true,
         warnings: 0,
       });
@@ -559,7 +553,6 @@ export function assess(root: string): Assessment {
       path: s.path,
       pack_id: s.pack_id,
       world_quest_id: s.world_quest_id,
-      mode: s.mode,
       playable: true,
       warnings,
     });
@@ -842,9 +835,7 @@ export function formatAssessment(a: Assessment, opts: AssessmentFormatOptions = 
     const listedQuests = full ? a.quests : unhealthy.slice(0, 8);
     for (const p of listedQuests) {
       const label = p.world_quest_id ?? p.path;
-      lines.push(
-        `- ${label} [${p.mode ?? "?"}] ${p.playable ? `${p.warnings} warning(s)` : "UNPLAYABLE"}`,
-      );
+      lines.push(`- ${label} ${p.playable ? `${p.warnings} warning(s)` : "UNPLAYABLE"}`);
     }
     if (!full && unhealthy.length > listedQuests.length) {
       lines.push(
