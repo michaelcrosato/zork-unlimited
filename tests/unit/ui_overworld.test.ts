@@ -791,6 +791,10 @@ describe("OverworldSession", () => {
     const repeated = session.exploreSite(site!.id);
     expect(repeated.alreadyKnown).toBe(true);
     expect(repeated.minutes).toBe(0);
+    expect(repeated.discoveredAreas).toEqual([]);
+    expect(repeated.discoveredJobs).toEqual([]);
+    expect(repeated.discoveredSites).toEqual([]);
+    expect(repeated.discoveredQuests).toEqual([]);
     expect(session.view().regionRenown[start.current.region]).toBe(site!.danger);
   });
 
@@ -819,6 +823,10 @@ describe("OverworldSession", () => {
     const repeated = session.resolveEvent(event.id);
     expect(repeated.alreadyKnown).toBe(true);
     expect(repeated.minutes).toBe(0);
+    expect(repeated.discoveredAreas).toEqual([]);
+    expect(repeated.discoveredJobs).toEqual([]);
+    expect(repeated.discoveredSites).toEqual([]);
+    expect(repeated.discoveredQuests).toEqual([]);
     expect(session.view().regionRenown[start.current.region]).toBe(event.intensity);
   });
 

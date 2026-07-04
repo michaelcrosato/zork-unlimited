@@ -718,6 +718,15 @@ export class OverworldSession {
     };
   }
 
+  private alreadyKnownLocalAction(entry: OverworldJournalEntry): OverworldActionResult {
+    return {
+      minutes: 0,
+      alreadyKnown: true,
+      entry,
+      ...emptyOverworldLocalDiscovery(),
+    };
+  }
+
   private routeWithEstimate(plan: OverworldRoutePlan): OverworldSessionRoutePlan {
     return withOverworldRouteEstimate(plan, {
       fatigue: this.fatigue,
@@ -1000,12 +1009,7 @@ export class OverworldSession {
       journalEntries: this.journalEntriesById,
     });
     if (plan.alreadyKnown) {
-      return {
-        minutes: 0,
-        alreadyKnown: true,
-        entry: plan.entry,
-        ...emptyOverworldLocalDiscovery(),
-      };
+      return this.alreadyKnownLocalAction(plan.entry);
     }
 
     const result = this.recordLocalAction(plan.action, current.name);
@@ -1055,12 +1059,7 @@ export class OverworldSession {
       journalEntries: this.journalEntriesById,
     });
     if (plan.alreadyKnown) {
-      return {
-        minutes: 0,
-        alreadyKnown: true,
-        entry: plan.entry,
-        ...emptyOverworldLocalDiscovery(),
-      };
+      return this.alreadyKnownLocalAction(plan.entry);
     }
 
     const result = this.recordLocalAction(plan.action, current.name);
@@ -1120,7 +1119,7 @@ export class OverworldSession {
       poisByArea: this.poisByArea,
       charactersByArea: this.charactersByArea,
     });
-    if (plan.alreadyKnown) return { minutes: 0, alreadyKnown: true, entry: plan.entry };
+    if (plan.alreadyKnown) return this.alreadyKnownLocalAction(plan.entry);
 
     const result = this.recordAction(plan.entryDraft, plan.minutes);
     if (!result.alreadyKnown) {
@@ -1150,7 +1149,7 @@ export class OverworldSession {
       exploredSiteIds: this.exploredSiteIds,
       journalEntries: this.journalEntriesById,
     });
-    if (plan.alreadyKnown) return { minutes: 0, alreadyKnown: true, entry: plan.entry };
+    if (plan.alreadyKnown) return this.alreadyKnownLocalAction(plan.entry);
 
     const result = this.recordLocalAction(plan.action, current.name);
     if (!result.alreadyKnown) {

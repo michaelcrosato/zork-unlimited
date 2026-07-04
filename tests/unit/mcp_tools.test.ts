@@ -717,6 +717,17 @@ describe("MCP tools — validate / load (§9.4)", () => {
       resolvedInRegion: 1,
       completed: false,
     });
+    const repeatedResolved = a.resolve_overworld_session_event({
+      session_id: started.session_id,
+      event_id: event.id,
+    });
+    expect(repeatedResolved.result.alreadyKnown).toBe(true);
+    expect(repeatedResolved.result.minutes).toBe(0);
+    expect(repeatedResolved.result.discoveredAreas).toEqual([]);
+    expect(repeatedResolved.result.discoveredJobs).toEqual([]);
+    expect(repeatedResolved.result.discoveredSites).toEqual([]);
+    expect(repeatedResolved.result.discoveredQuests).toEqual([]);
+    expect(repeatedResolved.snapshot_hash).toBe(resolved.snapshot_hash);
 
     const road = resolved.observation.exits.find((edge) => edge.destination.id === "colonie_town");
     expect(road).toBeTruthy();
@@ -1556,6 +1567,17 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(explored.observation.regionRenown[started.observation.current.region]).toBe(
       site!.danger,
     );
+    const repeated = a.explore_overworld_session_site({
+      session_id: started.session_id,
+      site_id: site!.id,
+    });
+    expect(repeated.result.alreadyKnown).toBe(true);
+    expect(repeated.result.minutes).toBe(0);
+    expect(repeated.result.discoveredAreas).toEqual([]);
+    expect(repeated.result.discoveredJobs).toEqual([]);
+    expect(repeated.result.discoveredSites).toEqual([]);
+    expect(repeated.result.discoveredQuests).toEqual([]);
+    expect(repeated.snapshot_hash).toBe(explored.snapshot_hash);
   });
 
   it("completes a regional arc through stateful MCP overworld play", () => {
