@@ -9,10 +9,13 @@ import {
 export const OVERWORLD_SNAPSHOT_HASH_MISMATCH_REASON =
   "Snapshot hash mismatch; refresh the current overworld context.";
 
-export type OverworldMcpResponseOptions = {
+type OverworldMcpSnapshotGuardOptions = {
+  expected_snapshot_hash?: string;
+};
+
+export type OverworldMcpResponseOptions = OverworldMcpSnapshotGuardOptions & {
   compact_context?: boolean;
   compact_result?: boolean;
-  expected_snapshot_hash?: string;
 };
 
 export type OverworldMcpViewField<Args extends OverworldMcpResponseOptions> = Args extends {
@@ -106,6 +109,10 @@ export type OverworldMcpRejectedSessionPayload = {
   rejection_reason: string;
 };
 
+export type OverworldMcpGuardedSession =
+  | OverworldMcpSessionEntry
+  | OverworldMcpRejectedSessionPayload;
+
 export type OverworldMcpExportArgs = {
   session_id: string;
   expected_snapshot_hash?: string;
@@ -141,6 +148,12 @@ export function overworldSnapshotHashRejection(
   };
 }
 
+export function isOverworldMcpRejectedSessionPayload(
+  value: OverworldMcpGuardedSession,
+): value is OverworldMcpRejectedSessionPayload {
+  return "ok" in value && value.ok === false;
+}
+
 export class OverworldMcpSessionStore {
   private counter = 0;
   private readonly sessions = new Map<string, OverworldSession>();
@@ -169,6 +182,18 @@ export class OverworldMcpSessionStore {
 
   snapshotHash(session: OverworldSession): string {
     return session.snapshotHash();
+  }
+
+  guardedSession<Args extends OverworldMcpSnapshotGuardOptions>(
+    args: Args,
+    sessionId: string,
+  ): OverworldMcpGuardedSession {
+    const session = this.get(sessionId);
+    const snapshotHash = this.snapshotHash(session);
+    if (args.expected_snapshot_hash !== undefined && args.expected_snapshot_hash !== snapshotHash) {
+      return overworldSnapshotHashRejection(snapshotHash);
+    }
+    return { session_id: sessionId, session };
   }
 
   viewField<Args extends OverworldMcpResponseOptions>(
@@ -235,11 +260,12 @@ export class OverworldMcpSessionStore {
   exportSnapshot<Args extends OverworldMcpExportArgs>(
     args: Args,
   ): OverworldMcpExportResponse<Args> {
-    const session = this.get(args.session_id);
-    const snapshotHash = this.snapshotHash(session);
-    if (args.expected_snapshot_hash !== undefined && args.expected_snapshot_hash !== snapshotHash) {
-      return overworldSnapshotHashRejection(snapshotHash) as OverworldMcpExportResponse<Args>;
+    const guarded = this.guardedSession(args, args.session_id);
+    if (isOverworldMcpRejectedSessionPayload(guarded)) {
+      return guarded as OverworldMcpExportResponse<Args>;
     }
+    const { session } = guarded;
+    const snapshotHash = this.snapshotHash(session);
     return {
       ok: true,
       session_id: args.session_id,
@@ -255,19 +281,11 @@ export class OverworldMcpSessionStore {
     action: (session: OverworldSession) => Value,
     compactValue?: (value: Value) => CompactValue,
   ): OverworldMcpSessionResponse<Key, Value, Args, CompactValue> {
-    const session = this.get(sessionId);
-    const currentSnapshotHash = this.snapshotHash(session);
-    if (
-      args.expected_snapshot_hash !== undefined &&
-      args.expected_snapshot_hash !== currentSnapshotHash
-    ) {
-      return overworldSnapshotHashRejection(currentSnapshotHash) as OverworldMcpSessionResponse<
-        Key,
-        Value,
-        Args,
-        CompactValue
-      >;
+    const guarded = this.guardedSession(args, sessionId);
+    if (isOverworldMcpRejectedSessionPayload(guarded)) {
+      return guarded as OverworldMcpSessionResponse<Key, Value, Args, CompactValue>;
     }
+    const { session } = guarded;
     const value = action(session);
     const responseValue =
       args.compact_result === true && compactValue ? compactValue(value) : value;

@@ -56,8 +56,8 @@ import {
 import { legalActionRowsFor, rpgViewField } from "./rpg_view_projection.js";
 import { RpgMcpSessionRuntime, rpgRoomTitle, rpgSourceFields } from "./rpg_session_runtime.js";
 import {
+  isOverworldMcpRejectedSessionPayload,
   OverworldMcpSessionStore,
-  overworldSnapshotHashRejection,
   type OverworldMcpContextResponse,
   type OverworldMcpExportArgs,
   type OverworldMcpExportResponse,
@@ -1155,16 +1155,11 @@ export function createToolApi(opts: { root: string }) {
         compact_observation?: boolean;
       } & OverworldResponseOptions,
     >(args: Args): OverworldQuestStartResponse<Args> {
-      const session = overworldSessions.get(args.session_id);
-      const currentSnapshotHash = overworldSessions.snapshotHash(session);
-      if (
-        args.expected_snapshot_hash !== undefined &&
-        args.expected_snapshot_hash !== currentSnapshotHash
-      ) {
-        return overworldSnapshotHashRejection(
-          currentSnapshotHash,
-        ) as OverworldQuestStartResponse<Args>;
+      const guarded = overworldSessions.guardedSession(args, args.session_id);
+      if (isOverworldMcpRejectedSessionPayload(guarded)) {
+        return guarded as OverworldQuestStartResponse<Args>;
       }
+      const { session } = guarded;
       const quest = session.startQuest(args.quest_id);
       const rpgSession = this.start_world_quest({
         world_quest_id: quest.id,
