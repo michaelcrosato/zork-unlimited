@@ -21,6 +21,57 @@ export type OverworldDiscoveredLocalSourcePrefixIndex = {
   sitesByArea: ReadonlyMap<string, readonly { id: string }[]>;
 };
 
+export type OverworldCurrentLocationSnapshot = {
+  currentId: string;
+  currentAreaId: string | null;
+};
+
+export type OverworldCurrentLocationIndex = {
+  nodeIds: ReadonlySet<string>;
+  areaIds: ReadonlySet<string>;
+  areaHomes: ReadonlyMap<string, string>;
+};
+
+export function assertSnapshotCurrentLocationManifestBinding(
+  current: OverworldCurrentLocationSnapshot,
+  indexes: OverworldCurrentLocationIndex,
+): void {
+  if (!indexes.nodeIds.has(current.currentId)) {
+    throw new Error(`Overworld session snapshot has unknown current town "${current.currentId}".`);
+  }
+  if (current.currentAreaId === null) return;
+  if (!indexes.areaIds.has(current.currentAreaId)) {
+    throw new Error(
+      `Overworld session snapshot has unknown current area "${current.currentAreaId}".`,
+    );
+  }
+  if (indexes.areaHomes.get(current.currentAreaId) !== current.currentId) {
+    throw new Error("Overworld session snapshot current area is outside the current town.");
+  }
+}
+
+export function assertSnapshotCurrentTownReachability(
+  currentTownId: string,
+  discoveredTownIds: ReadonlySet<string>,
+  visitedTownIds: ReadonlySet<string>,
+): void {
+  if (!discoveredTownIds.has(currentTownId)) {
+    throw new Error("Overworld session snapshot current town is not discovered.");
+  }
+  if (!visitedTownIds.has(currentTownId)) {
+    throw new Error("Overworld session snapshot current town is not visited.");
+  }
+}
+
+export function assertSnapshotCurrentAreaReachability(
+  currentAreaId: string | null,
+  discoveredAreaIds: ReadonlySet<string>,
+): void {
+  if (currentAreaId !== null && !discoveredAreaIds.has(currentAreaId)) {
+    throw new Error("Overworld session snapshot current area is not discovered.");
+  }
+}
+
 export function assertSnapshotVisitedTownTravelProof(
   visitedTownIds: ReadonlySet<string>,
   travelTimeline: OverworldTravelTimelineIndex,
@@ -246,11 +297,7 @@ export function assertSnapshotCurrentAreaMapExact(
   }
 }
 
-export type OverworldCurrentAreaMapBindingIndex = {
-  nodeIds: ReadonlySet<string>;
-  areaIds: ReadonlySet<string>;
-  areaHomes: ReadonlyMap<string, string>;
-};
+export type OverworldCurrentAreaMapBindingIndex = OverworldCurrentLocationIndex;
 
 export function assertSnapshotCurrentAreaMapBindings(
   currentAreaByTown: ReadonlyMap<string, string>,

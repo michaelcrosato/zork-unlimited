@@ -143,11 +143,14 @@ import {
   roadJournalResolutionIndex,
 } from "./session_resource_replay.js";
 import {
+  assertSnapshotCurrentAreaReachability,
   assertSnapshotCurrentAreaMapExact,
   assertSnapshotDiscoveredAreaPrefix,
   assertSnapshotDiscoveredLocalSourcePrefixes,
   assertSnapshotDiscoveredTownFrontier,
   assertSnapshotCurrentAreaMapBindings,
+  assertSnapshotCurrentLocationManifestBinding,
+  assertSnapshotCurrentTownReachability,
   assertSnapshotPendingRoadEncounterBinding,
   assertSnapshotPendingRoadEncounterUnresolved,
   assertSnapshotTravelPathContinuity,
@@ -538,21 +541,7 @@ export class OverworldSession {
     );
     let restoredPendingRoadEncounter: OverworldPendingRoadEncounter | null = null;
 
-    if (!indexes.nodeIds.has(snapshot.currentId)) {
-      throw new Error(
-        `Overworld session snapshot has unknown current town "${snapshot.currentId}".`,
-      );
-    }
-    if (snapshot.currentAreaId !== null) {
-      if (!indexes.areaIds.has(snapshot.currentAreaId)) {
-        throw new Error(
-          `Overworld session snapshot has unknown current area "${snapshot.currentAreaId}".`,
-        );
-      }
-      if (indexes.areaHomes.get(snapshot.currentAreaId) !== snapshot.currentId) {
-        throw new Error("Overworld session snapshot current area is outside the current town.");
-      }
-    }
+    assertSnapshotCurrentLocationManifestBinding(snapshot, indexes);
 
     const discoveredTownIds = assertKnownIds(
       "discovered town id",
@@ -639,12 +628,7 @@ export class OverworldSession {
     );
     const serviceJournal = journalTimeline.serviceJournal;
 
-    if (!discoveredTownIds.has(snapshot.currentId)) {
-      throw new Error("Overworld session snapshot current town is not discovered.");
-    }
-    if (!visitedTownIds.has(snapshot.currentId)) {
-      throw new Error("Overworld session snapshot current town is not visited.");
-    }
+    assertSnapshotCurrentTownReachability(snapshot.currentId, discoveredTownIds, visitedTownIds);
     const townVisitMinutes = assertSnapshotVisitedTownTravelProof(visitedTownIds, travelTimeline);
     assertSnapshotTravelPathContinuity(snapshot.currentId, this.world.start, travelTimeline);
     assertSnapshotDiscoveredTownFrontier(
@@ -686,9 +670,7 @@ export class OverworldSession {
       },
       roadJournal,
     );
-    if (snapshot.currentAreaId !== null && !discoveredAreaIds.has(snapshot.currentAreaId)) {
-      throw new Error("Overworld session snapshot current area is not discovered.");
-    }
+    assertSnapshotCurrentAreaReachability(snapshot.currentAreaId, discoveredAreaIds);
     const localActionJournalSources = {
       ...indexes,
       discoveredAreaIds,

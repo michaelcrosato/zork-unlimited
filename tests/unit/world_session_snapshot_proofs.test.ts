@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  assertSnapshotCurrentAreaReachability,
   assertSnapshotCurrentAreaMapBindings,
   assertSnapshotCurrentAreaMapExact,
+  assertSnapshotCurrentLocationManifestBinding,
+  assertSnapshotCurrentTownReachability,
   assertSnapshotDiscoveredAreaPrefix,
   assertSnapshotDiscoveredLocalSourcePrefixes,
   assertSnapshotDiscoveredTownFrontier,
@@ -159,6 +162,61 @@ describe("overworld snapshot travel and discovery proofs", () => {
         new Set(["town_a"]),
       ),
     ).toThrow(/discovered job "job_b" skips an earlier job/);
+  });
+
+  it("checks current location manifest bindings", () => {
+    const indexes = {
+      nodeIds: new Set(["town_a", "town_b"]),
+      areaIds: new Set(["area_a", "area_b"]),
+      areaHomes: new Map([
+        ["area_a", "town_a"],
+        ["area_b", "town_b"],
+      ]),
+    };
+
+    expect(() =>
+      assertSnapshotCurrentLocationManifestBinding(
+        { currentId: "town_a", currentAreaId: "area_a" },
+        indexes,
+      ),
+    ).not.toThrow();
+    expect(() =>
+      assertSnapshotCurrentLocationManifestBinding(
+        { currentId: "missing_town", currentAreaId: null },
+        indexes,
+      ),
+    ).toThrow(/unknown current town/);
+    expect(() =>
+      assertSnapshotCurrentLocationManifestBinding(
+        { currentId: "town_a", currentAreaId: "missing_area" },
+        indexes,
+      ),
+    ).toThrow(/unknown current area/);
+    expect(() =>
+      assertSnapshotCurrentLocationManifestBinding(
+        { currentId: "town_a", currentAreaId: "area_b" },
+        indexes,
+      ),
+    ).toThrow(/outside the current town/);
+  });
+
+  it("checks current town and area reachability", () => {
+    expect(() =>
+      assertSnapshotCurrentTownReachability("town_a", new Set(["town_a"]), new Set(["town_a"])),
+    ).not.toThrow();
+    expect(() =>
+      assertSnapshotCurrentTownReachability("town_a", new Set(), new Set(["town_a"])),
+    ).toThrow(/current town is not discovered/);
+    expect(() =>
+      assertSnapshotCurrentTownReachability("town_a", new Set(["town_a"]), new Set()),
+    ).toThrow(/current town is not visited/);
+    expect(() =>
+      assertSnapshotCurrentAreaReachability("area_a", new Set(["area_a"])),
+    ).not.toThrow();
+    expect(() => assertSnapshotCurrentAreaReachability(null, new Set())).not.toThrow();
+    expect(() => assertSnapshotCurrentAreaReachability("area_a", new Set())).toThrow(
+      /current area is not discovered/,
+    );
   });
 
   it("checks saved current area map consistency", () => {
