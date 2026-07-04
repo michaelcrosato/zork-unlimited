@@ -81,7 +81,7 @@ describe("RPG play CLI world quest source", () => {
     const replayOutput = outputOf(replay);
     expect(replay.status, replayOutput).toBe(0);
     expect(replayOutput).toContain("source:       world_quest_id:sunken_barrow");
-    expect(replayOutput).toContain("world quest:  sunken_barrow");
+    expect(replayOutput).not.toContain("world quest:");
     expect(replayOutput).not.toContain("pack_id:");
     expect(replayOutput).toContain("REPLAY OK");
   });

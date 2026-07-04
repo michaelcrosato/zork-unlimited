@@ -50,7 +50,7 @@ describe("trace CLI integrity gate", () => {
 
     expect(result.status, output).toBe(0);
     expect(output).toContain("source:       world_quest_id:sunken_barrow");
-    expect(output).toContain("world quest:  sunken_barrow");
+    expect(output).not.toContain("world quest:");
     expect(output).not.toContain("pack file:");
     expect(output).not.toContain("pack_id:");
     expect(output).not.toContain(PACK);
@@ -63,7 +63,7 @@ describe("trace CLI integrity gate", () => {
 
     expect(result.status, output).toBe(0);
     expect(output).toContain("source: world_quest_id:sunken_barrow");
-    expect(output).toContain("world_quest: sunken_barrow");
+    expect(output).not.toContain("world_quest:");
     expect(output).not.toContain(PACK);
     expect(output).toContain("Replay: OK");
     expect(output).toContain("Suspected bug:");

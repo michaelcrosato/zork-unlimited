@@ -81,7 +81,7 @@ function inspectTrace(tracePath: string, sourceArgs: TraceSourceArgs): void {
     process.exit(1);
   }
   console.log(
-    `Trace: ${trace.trace_id}  source: ${traceSourceLabel(trace)}  world_quest: ${source.worldQuestId ?? "(none)"}  seed: ${trace.seed}  steps: ${trace.actions.length}`,
+    `Trace: ${trace.trace_id}  source: ${traceSourceLabel(trace)}  seed: ${trace.seed}  steps: ${trace.actions.length}`,
   );
   if (trace.content_hash !== loaded.compiled.contentHash) {
     console.log(

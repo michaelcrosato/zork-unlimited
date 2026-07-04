@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 403 -->
+<!-- historical_cycle_count: 404 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - trace_cli_duplicate_world_source_removed
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: CLI replay/inspect trace summaries no longer repeat world quest identity after `source: world_quest_id:*`; trace diagnostics keep trace id, source, seed/steps, hashes, and replay status.
+- Loop effect: trace debugging output stays world-bound while dropping a duplicate package-era source axis from every replay/inspect trace read.
+- Guard: focused Prettier, typecheck, trace CLI, RPG play source, and replay smoke checks passed over the cleanup.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - inspect_cli_pack_line_removed
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/world surface: world graph helpers now resolve nodes by coordinate, and `world_path` can route from Charterhaven to a node coordinate.
 - Loop effect: the coordinate matrix is now an input surface for route lookup, not only metadata emitted by `list_world`.
 - Guard: focused typecheck plus MCP tool, MCP server registration, and single-world manifest tests passed over coordinate route lookup.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - world_graph_edge_metrics
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/world surface: world graph edge projection now derives endpoint coordinates, deltas, and Manhattan distances from canonical node coordinates.
-- Loop effect: `list_world({ include_graph: true })` exposes a pack-free coordinate edge map while the default catalog remains compact.
-- Guard: focused typecheck plus MCP tool, MCP RPG catalog, and single-world manifest tests passed over edge metric projection.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.

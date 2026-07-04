@@ -82,7 +82,6 @@ function main(): void {
   const result = replayTrace(trace, rules);
   console.log(`trace_id:     ${trace.trace_id}`);
   console.log(`source:       ${traceSourceLabel(trace)}`);
-  console.log(`world quest:  ${source.worldQuestId ?? "(none)"}`);
   console.log(`actions:      ${trace.actions.length}`);
   console.log(`final hash:   ${result.finalHash}`);
   console.log(`expected:     ${result.expectedFinalHash ?? "(none)"}`);
