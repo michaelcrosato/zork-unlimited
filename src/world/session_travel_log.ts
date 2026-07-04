@@ -22,6 +22,14 @@ export type OverworldAppliedTravelLeg = {
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
 };
 
+export type OverworldTravelLegRecordingState = {
+  travelLog: TravelLogEntry[];
+};
+
+export type OverworldRecordedTravelLeg = Omit<OverworldAppliedTravelLeg, "pendingRoadEncounter"> & {
+  pendingRoadEncounterAfter: OverworldPendingRoadEncounter | null;
+};
+
 export type OverworldTravelLogRestoreIndex = {
   edgesById: ReadonlyMap<string, OverworldEdge>;
   nodesById: ReadonlyMap<string, OverworldNode>;
@@ -68,6 +76,21 @@ export function applyOverworldTravelLeg(
     pendingRoadEncounter: roadEvent
       ? buildOverworldPendingRoadEncounter(from, to, edge, roadEvent, minutesAfter)
       : null,
+  };
+}
+
+export function recordOverworldTravelLeg(
+  state: OverworldTravelLegRecordingState,
+  applied: OverworldAppliedTravelLeg,
+): OverworldRecordedTravelLeg {
+  state.travelLog.unshift(applied.entry);
+  return {
+    entry: applied.entry,
+    currentIdAfter: applied.currentIdAfter,
+    minutesAfter: applied.minutesAfter,
+    suppliesAfter: applied.suppliesAfter,
+    fatigueAfter: applied.fatigueAfter,
+    pendingRoadEncounterAfter: applied.pendingRoadEncounter,
   };
 }
 

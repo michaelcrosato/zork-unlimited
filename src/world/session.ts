@@ -98,7 +98,7 @@ import {
   type OverworldAreaTravelResult,
 } from "./session_local_actions.js";
 import { buildOverworldSessionSnapshot } from "./session_snapshot_builder.js";
-import { applyOverworldTravelLeg } from "./session_travel_log.js";
+import { applyOverworldTravelLeg, recordOverworldTravelLeg } from "./session_travel_log.js";
 import {
   OverworldSessionSnapshotSchema,
   cloneOverworldSessionSnapshot,
@@ -1169,14 +1169,14 @@ export class OverworldSession {
       fatigue: this.fatigue,
       supplies: this.supplies,
     });
-    this.supplies = applied.suppliesAfter;
-    this.fatigue = applied.fatigueAfter;
-    this.minutes = applied.minutesAfter;
-    this.currentId = applied.currentIdAfter;
+    const recorded = recordOverworldTravelLeg({ travelLog: this.travelLog }, applied);
+    this.supplies = recorded.suppliesAfter;
+    this.fatigue = recorded.fatigueAfter;
+    this.minutes = recorded.minutesAfter;
+    this.currentId = recorded.currentIdAfter;
     this.markSeen(this.currentId);
-    this.pendingRoadEncounter = applied.pendingRoadEncounter;
-    this.travelLog.unshift(applied.entry);
+    this.pendingRoadEncounter = recorded.pendingRoadEncounterAfter;
     this.clearSnapshotCache();
-    return applied.entry;
+    return recorded.entry;
   }
 }

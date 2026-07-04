@@ -4,9 +4,10 @@ import type {
   OverworldNode,
   OverworldRoadEvent,
 } from "../../src/world/overworld.js";
-import type { TravelLogEntrySnapshot } from "../../src/world/session_snapshot.js";
+import type { TravelLogEntry, TravelLogEntrySnapshot } from "../../src/world/session_snapshot.js";
 import {
   applyOverworldTravelLeg,
+  recordOverworldTravelLeg,
   restoreOverworldTravelLogEntries,
   restoreOverworldTravelLogEntry,
 } from "../../src/world/session_travel_log.js";
@@ -164,6 +165,44 @@ describe("overworld session travel log restoration", () => {
         roadEvent: null,
       },
     });
+  });
+
+  it("records applied travel legs in most-recent-first order", () => {
+    const travelLog: TravelLogEntry[] = [];
+    const first = applyOverworldTravelLeg(
+      node("town_a", "Albany"),
+      node("town_b", "Colonie"),
+      edge(),
+      null,
+      {
+        minutes: 480,
+        supplies: 6,
+        fatigue: 0,
+      },
+    );
+    const second = applyOverworldTravelLeg(
+      node("town_b", "Colonie"),
+      node("town_c", "Hudson"),
+      edge({ id: "road:b-c", from: "town_b", to: "town_c" }),
+      roadEvent({ edge: "road:b-c" }),
+      {
+        minutes: first.minutesAfter,
+        supplies: first.suppliesAfter,
+        fatigue: first.fatigueAfter,
+      },
+    );
+
+    expect(recordOverworldTravelLeg({ travelLog }, first)).toMatchObject({
+      entry: first.entry,
+      currentIdAfter: "town_b",
+      pendingRoadEncounterAfter: null,
+    });
+    expect(recordOverworldTravelLeg({ travelLog }, second)).toMatchObject({
+      entry: second.entry,
+      currentIdAfter: "town_c",
+      pendingRoadEncounterAfter: second.pendingRoadEncounter,
+    });
+    expect(travelLog.map((entry) => entry.edgeId)).toEqual(["road:b-c", "road:a-b"]);
   });
 
   it("restores runtime travel log entries from compact snapshot entries", () => {
