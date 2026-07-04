@@ -2,6 +2,7 @@ import type { RpgObservation } from "../rpg/observation.js";
 import {
   compactHead,
   compactRecent,
+  compactText,
   compactTrailingOmissionCounts,
   omittedCount,
 } from "./compact_truncation.js";
@@ -9,7 +10,11 @@ const CORE_STATE_VARS = new Set(["attack", "defense", "hp", "max_score", "score"
 const COMPACT_INVENTORY_LIMIT = 16;
 const COMPACT_FLAG_LIMIT = 16;
 const COMPACT_JOURNAL_LIMIT = 5;
-export const RPG_COMPACT_OBSERVATION_VERSION = 6 as const;
+const COMPACT_DESCRIPTION_CHAR_LIMIT = 900;
+const COMPACT_DIALOGUE_CHAR_LIMIT = 700;
+const COMPACT_BLOCKED_EXIT_CHAR_LIMIT = 320;
+const COMPACT_ENDING_TEXT_CHAR_LIMIT = 900;
+export const RPG_COMPACT_OBSERVATION_VERSION = 7 as const;
 
 export type RpgCompactRef = readonly [id: string, name: string];
 export type RpgCompactExit = string | readonly [direction: string, to: string];
@@ -47,6 +52,15 @@ export type RpgCompactObservation = {
   ending?: RpgObservation["ending"];
 };
 
+function compactEnding(ending: RpgObservation["ending"]): RpgObservation["ending"] {
+  return ending === null
+    ? null
+    : {
+        ...ending,
+        text: compactText(ending.text, COMPACT_ENDING_TEXT_CHAR_LIMIT),
+      };
+}
+
 function compactVars(vars: Record<string, number>): Record<string, number> | undefined {
   const compact: Record<string, number> = {};
   let hasCompactVar = false;
@@ -78,7 +92,9 @@ export function compactRpgObservation(
   const npcs: RpgCompactRef[] = [];
   for (const npc of obs.npcs_present) npcs.push([npc.id, npc.name]);
   const blocked: RpgCompactBlockedExit[] = [];
-  for (const exit of obs.blocked_exits) blocked.push([exit.direction, exit.message]);
+  for (const exit of obs.blocked_exits) {
+    blocked.push([exit.direction, compactText(exit.message, COMPACT_BLOCKED_EXIT_CHAR_LIMIT)]);
+  }
   const enemies: RpgCompactEnemy[] = [];
   for (const enemy of obs.enemies_present) enemies.push([enemy.id, enemy.name, enemy.hp]);
   const more = compactTrailingOmissionCounts([
@@ -89,7 +105,7 @@ export function compactRpgObservation(
   return {
     v: RPG_COMPACT_OBSERVATION_VERSION,
     here: [obs.room, obs.title],
-    text: obs.description,
+    text: compactText(obs.description, COMPACT_DESCRIPTION_CHAR_LIMIT),
     ...(exits.length > 0 ? { exits } : {}),
     vitals: [obs.stats.hp, obs.stats.attack, obs.stats.defense, obs.score, obs.max_score],
     ...(actionIds.length > 0 ? { actions: actionIds } : {}),
@@ -101,10 +117,17 @@ export function compactRpgObservation(
     ...(vars ? { vars } : {}),
     ...(journal.length > 0 ? { journal } : {}),
     ...(more ? { more } : {}),
-    ...(obs.dialogue ? { dialogue: [obs.dialogue.npc, obs.dialogue.npc_text] as const } : {}),
+    ...(obs.dialogue
+      ? {
+          dialogue: [
+            obs.dialogue.npc,
+            compactText(obs.dialogue.npc_text, COMPACT_DIALOGUE_CHAR_LIMIT),
+          ] as const,
+        }
+      : {}),
     ...(enemies.length > 0 ? { enemies } : {}),
     ...(obs.ended ? { ended: true as const } : {}),
     ...(obs.ending_id ? { ending_id: obs.ending_id } : {}),
-    ...(obs.ending ? { ending: obs.ending } : {}),
+    ...(obs.ending ? { ending: compactEnding(obs.ending) } : {}),
   };
 }

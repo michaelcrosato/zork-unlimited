@@ -40,7 +40,7 @@ describe("compactRpgObservation", () => {
     const obs = observationWithLargeState();
     const compact = compactRpgObservation(obs, ["look"]);
 
-    expect(compact.v).toBe(6);
+    expect(compact.v).toBe(7);
     expect("mode" in compact).toBe(false);
     expect(compact.inv).toEqual(ids("item", 16));
     expect(compact.flags).toEqual(ids("flag", 16));
@@ -119,5 +119,41 @@ describe("compactRpgObservation", () => {
     expect(compact.journal).toEqual(["Found the key."]);
     expect(compact.more).toBeUndefined();
     expect(compact.vars).toBeUndefined();
+  });
+
+  it("caps long prose fields in compact loop context only", () => {
+    const longDescription = "room ".repeat(260);
+    const longDialogue = "dialogue ".repeat(120);
+    const longBlockedExit = "blocked ".repeat(80);
+    const longEndingText = "ending ".repeat(180);
+    const obs: RpgObservation = {
+      ...observationWithLargeState(),
+      description: longDescription,
+      blocked_exits: [{ direction: "north", message: longBlockedExit }],
+      dialogue: { npc: "archivist", npc_text: longDialogue },
+      ended: true,
+      ending_id: "ending_archive",
+      ending: {
+        id: "ending_archive",
+        title: "Archive Closed",
+        text: longEndingText,
+        death: false,
+      },
+    };
+
+    const compact = compactRpgObservation(obs, ["look"]);
+
+    expect(compact.text.length).toBeLessThanOrEqual(900);
+    expect(compact.text).toMatch(/\.\.\.\(\+\d+ chars\)$/);
+    expect(compact.dialogue?.[1].length).toBeLessThanOrEqual(700);
+    expect(compact.dialogue?.[1]).toMatch(/\.\.\.\(\+\d+ chars\)$/);
+    expect(compact.blocked?.[0]?.[1].length).toBeLessThanOrEqual(320);
+    expect(compact.blocked?.[0]?.[1]).toMatch(/\.\.\.\(\+\d+ chars\)$/);
+    expect(compact.ending?.text.length).toBeLessThanOrEqual(900);
+    expect(compact.ending?.text).toMatch(/\.\.\.\(\+\d+ chars\)$/);
+    expect(obs.description).toBe(longDescription);
+    expect(obs.dialogue?.npc_text).toBe(longDialogue);
+    expect(obs.blocked_exits[0]?.message).toBe(longBlockedExit);
+    expect(obs.ending?.text).toBe(longEndingText);
   });
 });

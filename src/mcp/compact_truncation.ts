@@ -25,3 +25,17 @@ export function compactTrailingOmissionCounts(counts: readonly number[]): number
   for (let index = 0; index < end; index += 1) compact.push(counts[index]!);
   return compact;
 }
+
+export function compactText(value: string, limit: number): string {
+  if (value.length <= limit) return value;
+  if (limit <= 0) return "";
+  let omitted = value.length;
+  for (;;) {
+    const suffix = `...(+${omitted} chars)`;
+    if (suffix.length >= limit) return suffix.slice(0, limit);
+    const headLength = limit - suffix.length;
+    const nextOmitted = value.length - headLength;
+    if (nextOmitted === omitted) return `${value.slice(0, headLength)}${suffix}`;
+    omitted = nextOmitted;
+  }
+}
