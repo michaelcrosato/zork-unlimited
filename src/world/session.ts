@@ -53,7 +53,6 @@ import { timeLabel } from "./session_journal_codec.js";
 import {
   recordOverworldAction,
   recordOverworldLocalAction,
-  recordOverworldRepeatableEntry,
   type OverworldActionJournalState,
   type OverworldRecordedActionResult,
 } from "./session_action_recording.js";
@@ -81,6 +80,7 @@ import {
   type OverworldRegionalArcProgress,
 } from "./session_regional_arcs.js";
 import {
+  applyOverworldServicePlan,
   planOverworldTownRest,
   planOverworldTownResupply,
   type OverworldServicePlan,
@@ -465,29 +465,24 @@ export class OverworldSession {
     );
   }
 
-  private recordRepeatableEntry(
-    entry: Omit<OverworldJournalEntry, "recordedAt">,
-    minutes: number,
-  ): OverworldJournalEntry {
-    const recorded = recordOverworldRepeatableEntry(this.actionJournalState(), entry, minutes);
-    this.minutes = recorded.minutesAfter;
-    this.clearSnapshotCache();
-    return recorded.entry;
-  }
-
   private applyServicePlan(plan: OverworldServicePlan): OverworldServiceResult {
-    const { entryDraft, ...result } = plan;
-    if (!result.changed) return { ...result, entry: null };
-    if (!entryDraft) {
-      throw new Error("Changed overworld service plan is missing a journal entry.");
+    const applied = applyOverworldServicePlan(this.actionJournalState(), plan);
+    if (applied.stateChanged) {
+      this.supplies = plan.suppliesAfter;
+      this.fatigue = plan.fatigueAfter;
+      this.minutes = applied.minutesAfter;
+      this.clearSnapshotCache();
     }
-    this.supplies = plan.suppliesAfter;
-    this.fatigue = plan.fatigueAfter;
-    const entry = this.recordRepeatableEntry(entryDraft, plan.minutes);
     return {
-      ...result,
-      message: entry.text,
-      entry,
+      action: applied.action,
+      minutes: applied.minutes,
+      changed: applied.changed,
+      suppliesBefore: applied.suppliesBefore,
+      suppliesAfter: applied.suppliesAfter,
+      fatigueBefore: applied.fatigueBefore,
+      fatigueAfter: applied.fatigueAfter,
+      message: applied.message,
+      entry: applied.entry,
     };
   }
 

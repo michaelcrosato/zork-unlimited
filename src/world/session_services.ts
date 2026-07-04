@@ -1,3 +1,7 @@
+import {
+  recordOverworldRepeatableEntry,
+  type OverworldActionJournalState,
+} from "./session_action_recording.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 import { OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES } from "./travel_mechanics.js";
 
@@ -19,6 +23,11 @@ export type OverworldServicePlan = Omit<OverworldServiceResult, "entry"> & {
   entryDraft: Omit<OverworldJournalEntry, "recordedAt"> | null;
 };
 
+export type OverworldAppliedServicePlan = OverworldServiceResult & {
+  minutesAfter: number;
+  stateChanged: boolean;
+};
+
 export type OverworldServiceState = {
   townName: string;
   services: readonly string[];
@@ -32,6 +41,32 @@ export function canRestAtOverworldTown(services: readonly string[]): boolean {
 
 export function canResupplyAtOverworldTown(services: readonly string[]): boolean {
   return services.includes("market") || services.includes("inn") || services.includes("stable");
+}
+
+export function applyOverworldServicePlan(
+  state: OverworldActionJournalState,
+  plan: OverworldServicePlan,
+): OverworldAppliedServicePlan {
+  const { entryDraft, ...result } = plan;
+  if (!result.changed) {
+    return {
+      ...result,
+      entry: null,
+      minutesAfter: state.minutes,
+      stateChanged: false,
+    };
+  }
+  if (!entryDraft) {
+    throw new Error("Changed overworld service plan is missing a journal entry.");
+  }
+  const recorded = recordOverworldRepeatableEntry(state, entryDraft, plan.minutes);
+  return {
+    ...result,
+    message: recorded.entry.text,
+    entry: recorded.entry,
+    minutesAfter: recorded.minutesAfter,
+    stateChanged: true,
+  };
 }
 
 export function planOverworldTownRest(state: OverworldServiceState): OverworldServicePlan {
