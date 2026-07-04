@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 387 -->
+<!-- historical_cycle_count: 388 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - world_graph_map_bounds
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/world surface: world graph helpers now derive compact matrix bounds from complete node coordinates.
+- Loop effect: `list_world({ include_graph: true })` exposes pack-free map bounds so tool consumers can reason about world extent without scanning every node first.
+- Guard: focused typecheck plus MCP tool, MCP RPG catalog, and single-world manifest tests passed over bounds derivation/projection.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - world_route_coordinate_steps
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/loop surface: MCP session action, observation, transcript-summary, and transcript-row projection caches now build through one shared helper.
 - Loop effect: state-hash and transcript-hash cache invalidation rules are centralized, reducing drift risk in compact repeated reads that blind play agents only see indirectly.
 - Guard: focused Prettier, typecheck, MCP session/tool/server-registration tests passed over the shared cache path.
-- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
-
-### Cycle result - shared_compact_source_ref_consistency
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/source surface: compact `source_ref` and legacy source metadata consistency now merges through one shared helper for save load and world source inference.
-- Loop effect: persisted saves reject mismatched world quest/generated seed metadata through the same tuple-vs-mirror contract before load or source selection proceeds.
-- Guard: focused typecheck plus save/trace, world-source, MCP save/load, trace CLI, referential-integrity, and RPG play source tests passed over shared consistency.
 - VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.

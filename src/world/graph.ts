@@ -2,6 +2,14 @@ import type { WorldGraphEdge, WorldGraphNode, WorldManifest } from "./schema.js"
 
 export type WorldCoord = [number, number];
 
+export type WorldMapBounds = {
+  min: WorldCoord;
+  max: WorldCoord;
+  width: number;
+  height: number;
+  node_count: number;
+};
+
 export type WorldRouteStep = {
   id: string;
   name: string;
@@ -39,6 +47,23 @@ function coordDistance(delta: WorldCoord): number {
 
 export function worldNodeById(manifest: WorldManifest): Map<string, WorldGraphNode> {
   return new Map(manifest.graph.nodes.map((node) => [node.id, node]));
+}
+
+export function worldMapBounds(manifest: WorldManifest): WorldMapBounds | null {
+  const coords = manifest.graph.nodes.flatMap((node) => (node.coord ? [node.coord] : []));
+  if (coords.length === 0 || coords.length !== manifest.graph.nodes.length) return null;
+
+  const xs = coords.map((coord) => coord[0]);
+  const ys = coords.map((coord) => coord[1]);
+  const min: WorldCoord = [Math.min(...xs), Math.min(...ys)];
+  const max: WorldCoord = [Math.max(...xs), Math.max(...ys)];
+  return {
+    min,
+    max,
+    width: max[0] - min[0] + 1,
+    height: max[1] - min[1] + 1,
+    node_count: coords.length,
+  };
 }
 
 export function worldQuestNodeForPack(

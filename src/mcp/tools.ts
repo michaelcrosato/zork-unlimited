@@ -79,9 +79,11 @@ import {
 import type { WorldBinding, WorldManifest } from "../world/schema.js";
 import {
   normalizePackPath,
+  worldMapBounds,
   worldQuestNodeById,
   worldQuestNodeForPack,
   worldRouteFromHub,
+  type WorldMapBounds,
   type WorldRouteStep,
 } from "../world/graph.js";
 import {
@@ -145,6 +147,7 @@ type WorldQuestSourceEntry = {
 type PublicWorldGraphNode = Omit<WorldManifest["graph"]["nodes"][number], "pack">;
 
 type PublicWorldGraph = Omit<WorldManifest["graph"], "nodes" | "edges"> & {
+  bounds?: WorldMapBounds;
   nodes: PublicWorldGraphNode[];
   edges: WorldManifest["graph"]["edges"];
 };
@@ -1103,8 +1106,10 @@ export function createToolApi(opts: { root: string }) {
   }
 
   function publicWorldGraph(world: WorldManifest): PublicWorldGraph {
+    const bounds = worldMapBounds(world);
     return {
       hub: world.graph.hub,
+      ...(bounds === null ? {} : { bounds }),
       nodes: world.graph.nodes.map((node) => ({
         id: node.id,
         name: node.name,

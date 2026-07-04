@@ -81,6 +81,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - World graph route helpers now project coordinates, movement deltas, and
   Manhattan step distances through `world_path`, route listings, and quest-start
   metadata.
+- World graph helpers now derive compact map bounds from the coordinate matrix;
+  `list_world({ include_graph: true })` exposes those bounds without pack paths.
 - AFK loop internals resolve any needed maintenance paths through `world/source`,
   not public catalog responses.
 - AFK assessment and `latest-cycle.json` now use quest ids as primary targets

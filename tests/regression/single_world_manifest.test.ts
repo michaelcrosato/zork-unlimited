@@ -19,6 +19,7 @@ import {
 } from "../../src/world/schema.js";
 import {
   normalizePackPath,
+  worldMapBounds,
   worldQuestNodeForPack,
   worldRouteForPack,
 } from "../../src/world/graph.js";
@@ -94,6 +95,13 @@ describe("single-world library contract", () => {
     expect(world.graph.nodes.every((node) => node.coord !== undefined)).toBe(true);
     expect(nodes.get(world.graph.hub)?.coord).toEqual([0, 0]);
     expect(new Set(coordKeys).size).toBe(world.graph.nodes.length);
+    expect(worldMapBounds(world)).toEqual({
+      min: [-4, -2],
+      max: [4, 3],
+      width: 9,
+      height: 6,
+      node_count: world.graph.nodes.length,
+    });
 
     for (const edge of world.graph.edges) {
       expect(nodes.has(edge.from), `missing graph edge endpoint ${edge.from}`).toBe(true);
@@ -178,6 +186,13 @@ describe("single-world library contract", () => {
     const breakingWeir = world.quests.find((q) => q.world_quest_id === "breaking_weir");
 
     expect(world.graph.hub).toBe("charterhaven");
+    expect(world.graph.bounds).toEqual({
+      min: [-4, -2],
+      max: [4, 3],
+      width: 9,
+      height: 6,
+      node_count: world.graph.nodes.length,
+    });
     expect(world.graph.nodes.every((node) => !("pack" in node))).toBe(true);
     expect(world.graph.nodes.every((node) => Array.isArray(node.coord))).toBe(true);
     expect(world.graph.nodes.find((node) => node.id === "charterhaven")?.coord).toEqual([0, 0]);
