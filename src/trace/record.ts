@@ -12,8 +12,9 @@ import type { RpgAction, StepResult } from "../api/types.js";
 import type { EngineAction, Rules } from "../core/engine.js";
 import { makeStep } from "../core/engine.js";
 import { SAVE_MODE, type SaveMode } from "../persist/save_load.js";
+import type { CompactSourceRef } from "../world/source_ref.js";
 
-export type TraceSourceRef = ["wq", string] | ["gen", number] | ["pack", string];
+export type TraceSourceRef = CompactSourceRef;
 
 export type Trace<A extends EngineAction = RpgAction> = {
   mode: SaveMode;

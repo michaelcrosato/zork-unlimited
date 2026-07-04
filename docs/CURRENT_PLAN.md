@@ -52,6 +52,8 @@ Make discovered overworld quest leads start real RPG sessions.
   loaded bundle to the resolved pack through the shared content-hash assertion.
 - Save source resolution now extracts legacy and compact save source identity
   through one helper, so load source selection reads the compact tuple once.
+- Save and trace metadata share the same compact source-ref tuple type, keeping
+  persistence and trace source contracts aligned.
 - Trace source resolution now validates every compact `source_ref` tuple variant
   before replay/inspect resolves shipped trace sources.
 - Recorded traces now carry compact `source_ref` tuples for world quest,

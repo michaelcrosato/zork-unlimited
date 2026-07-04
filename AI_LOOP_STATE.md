@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 276 -->
+<!-- historical_cycle_count: 277 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - shared_compact_source_ref_type
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/source surface: save and trace metadata now share one compact source-ref tuple type for world quest, generated RPG seed, and pack fallback identity.
+- Loop effect: persistence and trace source contracts cannot drift through parallel tuple aliases while retaining existing save/trace compatibility.
+- Guard: focused typecheck plus save/trace, world-source, MCP save/load, trace CLI, and referential-integrity tests passed over the shared compact source-ref type.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - strict_trace_source_ref_validation
 

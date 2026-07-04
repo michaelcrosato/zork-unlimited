@@ -9,6 +9,7 @@
 import { z } from "zod";
 import type { GameState } from "../core/state.js";
 import { canonicalize } from "../core/hash.js";
+import type { CompactSourceRef } from "../world/source_ref.js";
 
 export const SAVE_VERSION = 1 as const;
 export const SAVE_MODE = "rpg" as const;
@@ -107,7 +108,7 @@ export type SaveBundle = {
   state: GameState;
 };
 
-export type SaveSourceRef = ["wq", string] | ["gen", number] | ["pack", string];
+export type SaveSourceRef = CompactSourceRef;
 
 export type SaveMetadata = {
   worldQuestId?: string | null;
