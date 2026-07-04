@@ -89,9 +89,11 @@ describe("overworld local action planning", () => {
   it("applies local area travel into arrival state", () => {
     const currentArea = area("area_a");
     const destination = area("area_b");
+    const currentAreaByTown = new Map<string, string>();
 
     expect(
       applyOverworldAreaTravel(currentArea, areaExit(destination), {
+        currentAreaByTown,
         currentTownId: "town_a",
         minutes: 480,
       }),
@@ -105,6 +107,7 @@ describe("overworld local action planning", () => {
       currentAreaByTownEntry: ["town_a", "area_b"],
       minutesAfter: 498,
     });
+    expect([...currentAreaByTown]).toEqual([["town_a", "area_b"]]);
   });
 
   it("applies current area selection from saved area when it is still local", () => {

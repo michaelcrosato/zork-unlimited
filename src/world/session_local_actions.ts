@@ -75,6 +75,7 @@ export type OverworldAreaTravelResult = {
 };
 
 export type OverworldAreaTravelApplicationState = {
+  currentAreaByTown: Map<string, string>;
   currentTownId: string;
   minutes: number;
 };
@@ -173,6 +174,11 @@ export function applyOverworldAreaTravel(
   state: OverworldAreaTravelApplicationState,
 ): OverworldAppliedAreaTravel {
   const minutesAfter = state.minutes + edge.travel_minutes;
+  const currentAreaByTownEntry: readonly [string, string] = [
+    state.currentTownId,
+    edge.destination.id,
+  ];
+  state.currentAreaByTown.set(...currentAreaByTownEntry);
   return {
     from: currentArea,
     to: edge.destination,
@@ -180,7 +186,7 @@ export function applyOverworldAreaTravel(
     minutes: edge.travel_minutes,
     arrivedAt: timeLabel(minutesAfter),
     currentAreaIdAfter: edge.destination.id,
-    currentAreaByTownEntry: [state.currentTownId, edge.destination.id],
+    currentAreaByTownEntry,
     minutesAfter,
   };
 }

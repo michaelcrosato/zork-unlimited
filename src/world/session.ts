@@ -959,12 +959,12 @@ export class OverworldSession {
       throw new Error("Map that local area before moving there.");
     }
     const applied = applyOverworldAreaTravel(currentArea, edge, {
+      currentAreaByTown: this.currentAreaByTown,
       currentTownId: this.currentId,
       minutes: this.minutes,
     });
     this.minutes = applied.minutesAfter;
     this.currentAreaId = applied.currentAreaIdAfter;
-    this.currentAreaByTown.set(...applied.currentAreaByTownEntry);
     this.clearSnapshotCache();
     return {
       from: applied.from,
