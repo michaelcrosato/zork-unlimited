@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { OverworldArea, OverworldNode, OverworldQuest } from "../../src/world/overworld.js";
 import {
+  applyOverworldQuestCompletion,
+  applyOverworldQuestStart,
   planOverworldQuestCompletion,
   planOverworldQuestStart,
 } from "../../src/world/session_quests.js";
@@ -116,6 +118,24 @@ describe("overworld quest lifecycle planning", () => {
     ).toThrow(/Move to Old Market before starting/);
   });
 
+  it("applies quest start into lifecycle state", () => {
+    const lead = quest();
+    const plan = planOverworldQuestStart({
+      questId: lead.id,
+      questsById: new Map([[lead.id, lead]]),
+      areasById: new Map([[lead.area, area(lead.area, "Old Market")]]),
+      currentTownId: lead.home,
+      currentTownName: "Alden",
+      currentAreaId: lead.area,
+      discoveredQuestIds: new Set([lead.id]),
+      startedQuestIds: new Set(),
+    });
+    const startedQuestIds = new Set<string>();
+
+    expect(applyOverworldQuestStart({ startedQuestIds }, plan)).toEqual({ questId: lead.id });
+    expect([...startedQuestIds]).toEqual([lead.id]);
+  });
+
   it("plans quest completion entries without mutating completion state", () => {
     const lead = quest("lost_letter", "market", "town_a");
     const startedQuestIds = new Set([lead.id]);
@@ -153,6 +173,27 @@ describe("overworld quest lifecycle planning", () => {
       },
     });
     expect([...startedQuestIds]).toEqual([lead.id]);
+  });
+
+  it("applies quest completion into lifecycle state", () => {
+    const lead = quest("lost_letter", "market", "town_a");
+    const plan = planOverworldQuestCompletion({
+      questId: lead.id,
+      outcome: {
+        endingId: "ending_victory",
+        endingTitle: "Victory",
+        death: false,
+      },
+      questsById: new Map([[lead.id, lead]]),
+      nodesById: new Map([[lead.home, node(lead.home, "Alden")]]),
+      startedQuestIds: new Set([lead.id]),
+    });
+    const completedQuestIds = new Set<string>();
+
+    expect(applyOverworldQuestCompletion({ completedQuestIds }, plan)).toEqual({
+      questId: lead.id,
+    });
+    expect([...completedQuestIds]).toEqual([lead.id]);
   });
 
   it("rejects quest completion attempts that cannot close overworld progress", () => {

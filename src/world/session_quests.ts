@@ -41,6 +41,18 @@ export type OverworldQuestCompletionPlan = {
   entryDraft: Omit<OverworldJournalEntry, "recordedAt">;
 };
 
+export type OverworldQuestStartApplicationState = {
+  startedQuestIds: Set<string>;
+};
+
+export type OverworldQuestCompletionApplicationState = {
+  completedQuestIds: Set<string>;
+};
+
+export type OverworldAppliedQuestLifecycle = {
+  questId: string;
+};
+
 export type OverworldQuestCompletionResult = {
   minutes: number;
   alreadyKnown: boolean;
@@ -110,4 +122,20 @@ export function planOverworldQuestCompletion(
       text: `The quest closed at ${state.outcome.endingTitle}.`,
     },
   };
+}
+
+export function applyOverworldQuestStart(
+  state: OverworldQuestStartApplicationState,
+  plan: OverworldQuestStartPlan,
+): OverworldAppliedQuestLifecycle {
+  state.startedQuestIds.add(plan.quest.id);
+  return { questId: plan.quest.id };
+}
+
+export function applyOverworldQuestCompletion(
+  state: OverworldQuestCompletionApplicationState,
+  plan: OverworldQuestCompletionPlan,
+): OverworldAppliedQuestLifecycle {
+  state.completedQuestIds.add(plan.quest.id);
+  return { questId: plan.quest.id };
 }

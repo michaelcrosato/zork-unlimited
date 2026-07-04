@@ -64,6 +64,8 @@ import {
   type OverworldQuestView,
 } from "./session_local_discovery.js";
 import {
+  applyOverworldQuestCompletion,
+  applyOverworldQuestStart,
   planOverworldQuestCompletion,
   planOverworldQuestStart,
   type OverworldQuestCompletionOutcome,
@@ -877,7 +879,7 @@ export class OverworldSession {
     });
     const result = this.recordAction(plan.entryDraft, plan.minutes);
     if (!result.alreadyKnown) {
-      this.startedQuestIds.add(plan.quest.id);
+      applyOverworldQuestStart({ startedQuestIds: this.startedQuestIds }, plan);
       this.clearSnapshotCache();
     }
     return plan.quest;
@@ -896,7 +898,7 @@ export class OverworldSession {
     });
     const result = this.recordAction(plan.entryDraft, plan.minutes);
     if (!result.alreadyKnown) {
-      this.completedQuestIds.add(plan.quest.id);
+      applyOverworldQuestCompletion({ completedQuestIds: this.completedQuestIds }, plan);
       this.clearSnapshotCache();
     }
     return {
