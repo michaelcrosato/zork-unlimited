@@ -86,14 +86,23 @@ describe("single-world library contract", () => {
       .filter((node) => node.kind === "quest")
       .map((node) => normalizePackPath(node.pack ?? ""))
       .sort();
+    const coordKeys = world.graph.nodes.map((node) => node.coord?.join(","));
 
     expect(new Set(world.graph.nodes.map((node) => node.id)).size).toBe(world.graph.nodes.length);
     expect(new Set(questPacks).size).toBe(questPacks.length);
     expect(questPacks).toEqual(packs);
+    expect(world.graph.nodes.every((node) => node.coord !== undefined)).toBe(true);
+    expect(nodes.get(world.graph.hub)?.coord).toEqual([0, 0]);
+    expect(new Set(coordKeys).size).toBe(world.graph.nodes.length);
 
     for (const edge of world.graph.edges) {
       expect(nodes.has(edge.from), `missing graph edge endpoint ${edge.from}`).toBe(true);
       expect(nodes.has(edge.to), `missing graph edge endpoint ${edge.to}`).toBe(true);
+      expect(
+        nodes.get(edge.from)?.coord,
+        `missing graph edge coordinate ${edge.from}`,
+      ).toBeDefined();
+      expect(nodes.get(edge.to)?.coord, `missing graph edge coordinate ${edge.to}`).toBeDefined();
     }
 
     const adjacency = new Map(world.graph.nodes.map((node) => [node.id, [] as string[]]));
@@ -162,6 +171,8 @@ describe("single-world library contract", () => {
 
     expect(world.graph.hub).toBe("charterhaven");
     expect(world.graph.nodes.every((node) => !("pack" in node))).toBe(true);
+    expect(world.graph.nodes.every((node) => Array.isArray(node.coord))).toBe(true);
+    expect(world.graph.nodes.find((node) => node.id === "charterhaven")?.coord).toEqual([0, 0]);
     expect("graph" in world.world).toBe(false);
     expect(world.quests.every((q) => !("path" in q))).toBe(true);
     expect(world.quests.every((q) => !("mode" in q))).toBe(true);

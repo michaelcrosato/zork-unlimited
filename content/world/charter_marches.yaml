@@ -22,117 +22,146 @@ graph:
       name: "Charterhaven"
       kind: hub
       district: "Guildhall and river city"
+      coord: [0, 0]
     - id: guildhall_yard
       name: "Guildhall Yard"
       kind: district
       district: "Guildhall and assay courts"
+      coord: [-1, 0]
     - id: doctors_commons
       name: "Doctors' Commons"
       kind: district
       district: "Probate and coroner courts"
+      coord: [-1, -1]
     - id: printers_ward
       name: "Printers' Ward"
       kind: district
       district: "Presses, night courts, and clock shops"
+      coord: [0, -1]
     - id: river_stairs
       name: "River Stairs"
       kind: route
       district: "Ferry, lamp, and tide offices"
+      coord: [1, 0]
     - id: east_quay
       name: "East Quay"
       kind: district
       district: "Harbour magistracy and customs houses"
+      coord: [2, 0]
     - id: industrial_cut
       name: "Industrial Cut"
       kind: route
       district: "Mills, yards, and flood works"
+      coord: [3, 0]
     - id: market_parishes
       name: "Market Parishes"
       kind: route
       district: "Cloth, dye, malt, and fever wards"
+      coord: [0, 1]
     - id: north_road
       name: "North Road"
       kind: route
       district: "Watch, barns, chapel road, and posterns"
+      coord: [0, 2]
     - id: forest_manors
       name: "Forest Manors"
       kind: route
       district: "Old forest claims and hawk yards"
+      coord: [-1, 2]
     - id: moor_road
       name: "Moor Road"
       kind: route
       district: "Barrows, meres, and cold works"
+      coord: [-2, 2]
     - id: coast_road
       name: "Coast Road"
       kind: route
       district: "Lights, wrecks, and beacon musters"
+      coord: [-3, 2]
     - id: winter_steadings
       name: "Winter Steadings"
       kind: route
       district: "Outlying steads under Charterhaven writ"
+      coord: [1, 2]
     - id: advocates_case
       name: "The Advocate's Case"
       kind: quest
+      coord: [-2, 0]
       pack: "content/rpg/pack/advocates_case.yaml"
     - id: bellfounders_alarm
       name: "The Bellfounder's Alarm"
       kind: quest
+      coord: [3, -1]
       pack: "content/rpg/pack/bellfounders_alarm.yaml"
     - id: breaking_weir
       name: "The Breaking Weir"
       kind: quest
+      coord: [4, 0]
       pack: "content/rpg/pack/breaking_weir.yaml"
     - id: bridgewrights_proof
       name: "The Bridgewright's Proof"
       kind: quest
+      coord: [3, 1]
       pack: "content/rpg/pack/bridgewrights_proof.yaml"
     - id: cold_forge
       name: "The Cold Forge"
       kind: quest
+      coord: [4, -1]
       pack: "content/rpg/pack/cold_forge.yaml"
     - id: dawn_beacon
       name: "The Dawn Beacon"
       kind: quest
+      coord: [-4, 2]
       pack: "content/rpg/pack/dawn_beacon.yaml"
     - id: factors_mark
       name: "The Factor's Mark"
       kind: quest
+      coord: [4, 1]
       pack: "content/rpg/pack/factors_mark.yaml"
     - id: falconers_ransom
       name: "The Falconer's Ransom"
       kind: quest
+      coord: [-1, 3]
       pack: "content/rpg/pack/falconers_ransom.yaml"
     - id: gallowmere
       name: "The Gallowmere"
       kind: quest
+      coord: [-2, 3]
       pack: "content/rpg/pack/gallowmere.yaml"
     - id: lockkeepers_toll
       name: "The Lock-Keeper's Toll"
       kind: quest
+      coord: [2, 1]
       pack: "content/rpg/pack/lockkeepers_toll.yaml"
     - id: printers_night
       name: "The Printer's Night"
       kind: quest
+      coord: [0, -2]
       pack: "content/rpg/pack/printers_night.yaml"
     - id: quarrymens_fault
       name: "The Quarrymen's Fault"
       kind: quest
+      coord: [0, 3]
       pack: "content/rpg/pack/quarrymens_fault.yaml"
     - id: powder_mill_surety
       name: "The Powder Mill Surety"
       kind: quest
+      coord: [2, -1]
       pack: "content/rpg/pack/powder_mill_surety.yaml"
     - id: sunken_barrow
       name: "The Sunken Barrow"
       kind: quest
+      coord: [-3, 3]
       pack: "content/rpg/pack/sunken_barrow.yaml"
     - id: tanners_fever
       name: "The Tanner's Fever"
       kind: quest
+      coord: [1, 1]
       pack: "content/rpg/pack/tanners_fever.yaml"
     - id: wolf_winter
       name: "The Wolf-Winter"
       kind: quest
+      coord: [2, 2]
       pack: "content/rpg/pack/wolf_winter.yaml"
   edges:
     - from: charterhaven

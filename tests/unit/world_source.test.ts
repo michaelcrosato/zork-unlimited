@@ -184,6 +184,31 @@ describe("world source resolution", () => {
         graph: { ...connectedWorld().graph, edges: [] },
       }),
     ).toThrow(/disconnected from hub/);
+
+    expect(() =>
+      assertWorldGraphIntegrity({
+        ...connectedWorld(),
+        graph: {
+          ...connectedWorld().graph,
+          nodes: connectedWorld().graph.nodes.map((node) =>
+            node.id === "hub" ? { ...node, coord: [0, 0] as [number, number] } : node,
+          ),
+        },
+      }),
+    ).toThrow(/coordinate map is incomplete/);
+
+    expect(() =>
+      assertWorldGraphIntegrity({
+        ...connectedWorld(),
+        graph: {
+          ...connectedWorld().graph,
+          nodes: connectedWorld().graph.nodes.map((node) => ({
+            ...node,
+            coord: [0, 0] as [number, number],
+          })),
+        },
+      }),
+    ).toThrow(/duplicate coordinate/);
   });
 
   it("rejects detached, duplicate, or unshipped RPG pack bindings in the world graph", () => {

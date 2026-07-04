@@ -71,7 +71,10 @@ tool(
   "list_world",
   "List shipped RPG quest ids; graph and all routes are opt-in.",
   {
-    include_graph: z.boolean().optional().describe("Include the pack-free world graph."),
+    include_graph: z
+      .boolean()
+      .optional()
+      .describe("Include the pack-free world graph with map coordinates."),
     include_routes: z.boolean().optional().describe("Include every quest route from the hub."),
   },
   (a) => api.list_world(a),

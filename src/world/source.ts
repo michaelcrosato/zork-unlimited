@@ -129,6 +129,10 @@ function duplicateValues(values: string[]): string[] {
   return [...duplicates].sort();
 }
 
+function coordKey(coord: readonly [number, number]): string {
+  return `${coord[0]},${coord[1]}`;
+}
+
 function discoverShippedRpgPackPaths(root: string): string[] {
   try {
     return readdirSync(join(root, "content", "rpg", "pack"))
@@ -193,6 +197,25 @@ export function assertWorldGraphIntegrity(world: WorldManifest): void {
   }
   if (hub.kind !== "hub") {
     throw new Error(`Canonical world graph hub "${world.graph.hub}" must be a hub node.`);
+  }
+
+  const mappedNodes = world.graph.nodes.filter((node) => node.coord !== undefined);
+  if (mappedNodes.length > 0 && mappedNodes.length !== world.graph.nodes.length) {
+    const unmapped = world.graph.nodes
+      .filter((node) => node.coord === undefined)
+      .map((node) => node.id)
+      .sort();
+    throw new Error(
+      `Canonical world graph coordinate map is incomplete; missing coordinate(s): ${unmapped.join(
+        ", ",
+      )}.`,
+    );
+  }
+  const duplicateCoords = duplicateValues(mappedNodes.map((node) => coordKey(node.coord!)));
+  if (duplicateCoords.length > 0) {
+    throw new Error(
+      `Canonical world graph has duplicate coordinate(s): ${duplicateCoords.join(", ")}.`,
+    );
   }
 
   const adjacency = new Map(world.graph.nodes.map((node) => [node.id, [] as string[]]));

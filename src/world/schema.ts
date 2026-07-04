@@ -12,6 +12,7 @@ export const WorldGraphNodeSchema = z
     name: z.string().min(1),
     kind: WorldGraphNodeKindSchema,
     district: z.string().min(1).optional(),
+    coord: z.tuple([z.number().int(), z.number().int()]).optional(),
     pack: z.string().min(1).optional(),
   })
   .strict()
@@ -71,7 +72,7 @@ export type WorldManifest = z.infer<typeof WorldManifestSchema>;
  *
  * This is optional at the schema layer so minimal test fixtures and generated eval
  * packs can stay focused. The shipped-content regression suite makes it mandatory
- * for content/{parser,rpg}/pack: those are no longer separate campaigns, but
+ * for content/rpg/pack: those are no longer separate campaigns, but
  * quest/area entries in the Charter Marches world.
  */
 export const WorldBindingSchema = z

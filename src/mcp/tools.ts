@@ -1110,6 +1110,7 @@ export function createToolApi(opts: { root: string }) {
         name: node.name,
         kind: node.kind,
         ...(node.district === undefined ? {} : { district: node.district }),
+        ...(node.coord === undefined ? {} : { coord: node.coord }),
       })),
       edges: world.graph.edges.map((edge) => ({
         from: edge.from,
