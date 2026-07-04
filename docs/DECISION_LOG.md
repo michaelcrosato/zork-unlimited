@@ -34,8 +34,8 @@ Seeded 2026-06-08 from `docs/CURRENT_PLAN.md` re-aim #19 (and #17/#18) "false al
 - **LRU blind-pass rotation correctness** — three regression tests confirm correct recency rotation;
   no lock-in path (`tests/regression/assessor_blind_pass_rotation.test.ts`, bug_0128/0235/0293). (re-aim #19)
 - **`DIALOGUE_GOTO_MISSING`** — already implemented. (re-aim #17)
-- **Per-call `hide_graph` override** — landed (bug_0299); spread into the 5 observation tools in
-  `src/mcp/server.ts`. (re-aim #17, #18)
+- **Per-call `hide_graph` override** — landed (bug_0299); applies to observation-returning RPG
+  tools in `src/mcp/server.ts`, not action-menu reads. (re-aim #17, #18)
 - **`ITEM_UNPLACED` orphan-object validator** — landed (bug_0317) in `src/validate/parser_validator.ts`;
   regression `tests/regression/parser_validator_item_unplaced.test.ts`. (chosen by re-aim #19)
 

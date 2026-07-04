@@ -104,7 +104,7 @@ function defaultCompactRpg(args: unknown): never {
 
 function defaultCompactActions(args: unknown): never {
   const input = typeof args === "object" && args !== null ? args : {};
-  return { hide_graph: true, compact_actions: true, ...input } as never;
+  return { compact_actions: true, ...input } as never;
 }
 
 function defaultCompactOverworld(args: unknown): never {
@@ -408,7 +408,6 @@ tool(
   "List action ids + state_hash; if_state_hash hash-only.",
   {
     ...SESSION,
-    ...HIDE_GRAPH,
     ...IF_STATE_HASH,
     compact_actions: z.boolean().optional().describe("Default true; false returns labels."),
   },

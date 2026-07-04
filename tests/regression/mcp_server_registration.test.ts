@@ -288,12 +288,16 @@ describe("MCP server registration", () => {
       "function defaultCompactOverworld",
     );
     expect(legalActions).toContain("defaultCompactActions(a)");
-    expect(actionDefaults).toContain("hide_graph: true");
-    expect(actionDefaults.indexOf("hide_graph: true")).toBeLessThan(
-      actionDefaults.indexOf("...input"),
+    expect(actionDefaults).not.toContain("hide_graph");
+    const legalActionArgs = toolApiSourceBlock(
+      "type RpgLegalActionsArgs",
+      "type RpgLegalActionRows",
     );
+    expect(legalActionArgs).not.toContain("hide_graph");
     expect(legalActions).toContain("Default true; false returns labels.");
     expect(legalActions).toContain("if_state_hash");
+    expect(legalActions).not.toContain("HIDE_GRAPH");
+    expect(legalActions).not.toContain("hide_graph");
     expect(legalActions).not.toContain("defaultCompactRpg");
     expect(registeredToolBlock("get_observation")).toContain("if_state_hash");
     expect(sharedSchemaBlock()).toContain("compact_events");

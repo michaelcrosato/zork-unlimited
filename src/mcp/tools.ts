@@ -336,7 +336,6 @@ type RpgObservationResponse<Args extends RpgResponseOptions> = Args extends {
 
 type RpgLegalActionsArgs = {
   session_id: string;
-  hide_graph?: boolean;
   compact_actions?: boolean;
   if_state_hash?: string;
 };
