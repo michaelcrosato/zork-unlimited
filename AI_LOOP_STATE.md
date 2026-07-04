@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 283 -->
+<!-- historical_cycle_count: 284 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - compact_rpg_more_trailing_zero_trim
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/token surface: compact RPG observation `more` tuples now trim trailing zero omission counts and advertise context `v: 6`.
+- Loop effect: sparse inventory/flag overflows avoid carrying redundant later zero buckets while journal-only overflow keeps positional counts explicit.
+- Guard: focused Prettier, typecheck, compact-observation, MCP tool, and MCP server-registration tests passed after the versioned tuple change.
+- VERIFY: focused checks, `npm run validate`, `npm test`, and `npm run health` passed on the final tree.
 
 ### Cycle result - shared_mcp_hash_only_responses
 

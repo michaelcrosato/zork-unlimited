@@ -40,7 +40,7 @@ describe("compactRpgObservation", () => {
     const obs = observationWithLargeState();
     const compact = compactRpgObservation(obs, ["look"]);
 
-    expect(compact.v).toBe(5);
+    expect(compact.v).toBe(6);
     expect("mode" in compact).toBe(false);
     expect(compact.inv).toEqual(ids("item", 16));
     expect(compact.flags).toEqual(ids("flag", 16));
@@ -50,6 +50,47 @@ describe("compactRpgObservation", () => {
     expect(compact.vitals[3]).toBe(5);
     expect(compact.vars).toEqual({ lore: 3 });
     expect(JSON.stringify(compact).length).toBeLessThan(JSON.stringify(obs).length);
+  });
+
+  it("trims trailing zero truncation counts from sparse more tuples", () => {
+    const inventoryOnly = compactRpgObservation(
+      {
+        ...observationWithLargeState(),
+        state: {
+          flags: ["door_open"],
+          vars: { hp: 8, attack: 2, defense: 1 },
+          journal: ["Found the key."],
+        },
+      },
+      ["look"],
+    );
+    const inventoryAndFlags = compactRpgObservation(
+      {
+        ...observationWithLargeState(),
+        state: {
+          flags: ids("flag", 20),
+          vars: { hp: 8, attack: 2, defense: 1 },
+          journal: ["Found the key."],
+        },
+      },
+      ["look"],
+    );
+    const journalOnly = compactRpgObservation(
+      {
+        ...observationWithLargeState(),
+        inventory: ["key"],
+        state: {
+          flags: ["door_open"],
+          vars: { hp: 8, attack: 2, defense: 1 },
+          journal: ids("journal", 10),
+        },
+      },
+      ["look"],
+    );
+
+    expect(inventoryOnly.more).toEqual([4]);
+    expect(inventoryAndFlags.more).toEqual([4, 4]);
+    expect(journalOnly.more).toEqual([0, 0, 5]);
   });
 
   it("omits empty navigation and action arrays", () => {

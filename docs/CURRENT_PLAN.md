@@ -144,7 +144,7 @@ Make discovered overworld quest leads start real RPG sessions.
   branch on shape without reading full reducer events.
 - Compact RPG MCP observations now cap inventory/flags and keep only recent
   journal entries, with `more: [inventory, flags, journal]` omission counts
-  and string action ids under context `v: 5`.
+  trimmed for trailing zero buckets and string action ids under context `v: 6`.
 - `get_observation({ if_state_hash })` can return hash-only `unchanged`
   responses, avoiding repeated context payloads for polling or resume loops; the
   old `get_scene` alias is no longer part of the live MCP/ToolApi loop.
