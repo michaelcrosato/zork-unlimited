@@ -217,10 +217,12 @@ type OverworldListOptions = {
   include_design_notes?: boolean;
 };
 
-type RpgResponseOptions = {
+type RpgViewOptions = {
   compact_actions?: boolean;
-  compact_events?: boolean;
   compact_observation?: boolean;
+};
+type RpgEventOptions = {
+  compact_events?: boolean;
 };
 
 type OverworldViewField<Args extends OverworldResponseOptions> = Args extends {
@@ -301,7 +303,7 @@ type OverworldDesignNotes = {
 type OverworldListResponse<Args extends OverworldListOptions> = OverworldListSummary &
   (Args extends { include_design_notes: true } ? OverworldDesignNotes : Record<string, never>);
 
-type RpgViewField<Args extends RpgResponseOptions> = Args extends {
+type RpgViewField<Args extends RpgViewOptions> = Args extends {
   compact_observation: true;
 }
   ? { context: RpgCompactObservation }
@@ -312,13 +314,13 @@ type RpgSourceFields = {
   generated_rpg_seed?: number;
 };
 
-type RpgSessionPayload<Args extends RpgResponseOptions = RpgResponseOptions> = {
+type RpgSessionPayload<Args extends RpgViewOptions = RpgViewOptions> = {
   session_id: string;
   state_hash: string;
 } & RpgSourceFields &
   RpgViewField<Args>;
 
-type RpgObservationPayload<Args extends RpgResponseOptions> = {
+type RpgObservationPayload<Args extends RpgViewOptions> = {
   state_hash: string;
 } & RpgViewField<Args>;
 
@@ -328,7 +330,7 @@ type RpgStateUnchanged = {
 };
 type RpgObservationUnchanged = RpgStateUnchanged;
 
-type RpgObservationResponse<Args extends RpgResponseOptions> = Args extends {
+type RpgObservationResponse<Args extends RpgViewOptions> = Args extends {
   if_state_hash: string;
 }
   ? RpgObservationPayload<Args> | RpgObservationUnchanged
@@ -359,17 +361,17 @@ type RpgLegalActionsResponse<Args extends RpgLegalActionsArgs> = Args extends {
   ? RpgLegalActionsPayload<Args> | RpgLegalActionsUnchanged
   : RpgLegalActionsPayload<Args>;
 
-type RpgStepEvents<Args extends RpgResponseOptions> = Args extends { compact_events: true }
+type RpgStepEvents<Args extends RpgEventOptions> = Args extends { compact_events: true }
   ? RpgCompactEvent[]
   : ReturnType<typeof playerVisibleEvents>;
 
-type RpgStepEventVersion<Args extends RpgResponseOptions> = Args extends {
+type RpgStepEventVersion<Args extends RpgEventOptions> = Args extends {
   compact_events: true;
 }
   ? { event_v: typeof RPG_COMPACT_EVENT_VERSION }
   : Record<string, never>;
 
-type RpgStepActionBase<Args extends RpgResponseOptions> = {
+type RpgStepActionBase<Args extends RpgViewOptions & RpgEventOptions> = {
   events: RpgStepEvents<Args>;
   state_hash: string;
 } & RpgStepEventVersion<Args> &
@@ -382,7 +384,7 @@ type RpgStateHashRejection = {
 };
 type RpgStepGuardRejection = RpgStateHashRejection;
 
-type RpgStepResponseOptions = RpgResponseOptions & { expected_state_hash?: string };
+type RpgStepResponseOptions = RpgViewOptions & RpgEventOptions & { expected_state_hash?: string };
 
 type RpgStepActionResponse<Args extends RpgStepResponseOptions> =
   | ({ ok: true } & RpgStepActionBase<Args>)
@@ -393,26 +395,27 @@ type RpgNewGameArgs = {
   generate_rpg_seed?: number;
   seed?: number;
   hide_graph?: boolean;
-} & RpgResponseOptions;
+} & RpgViewOptions;
 
 type RpgStartWorldQuestArgs = {
   world_quest_id: string;
   seed?: number;
   hide_graph?: boolean;
-} & RpgResponseOptions;
+} & RpgViewOptions;
 
 type RpgGetObservationArgs = {
   session_id: string;
   hide_graph?: boolean;
   if_state_hash?: string;
-} & RpgResponseOptions;
+} & RpgViewOptions;
 
 type RpgStepActionArgs = {
   session_id: string;
   action_id: string;
   expected_state_hash?: string;
   hide_graph?: boolean;
-} & RpgResponseOptions;
+} & RpgViewOptions &
+  RpgEventOptions;
 
 type RpgLoadGameArgs = {
   world_quest_id?: string;
@@ -420,9 +423,9 @@ type RpgLoadGameArgs = {
   pack_path?: never;
   save: string;
   hide_graph?: boolean;
-} & RpgResponseOptions;
+} & RpgViewOptions;
 
-type RpgWorldQuestStartPayload<Args extends RpgResponseOptions> = {
+type RpgWorldQuestStartPayload<Args extends RpgViewOptions> = {
   world: { id: string; name: string; hub: string };
   quest: {
     id: string;
@@ -431,7 +434,7 @@ type RpgWorldQuestStartPayload<Args extends RpgResponseOptions> = {
   };
 } & RpgSessionPayload<Args>;
 
-type OverworldQuestStartResponse<Args extends OverworldResponseOptions & RpgResponseOptions> =
+type OverworldQuestStartResponse<Args extends OverworldResponseOptions & RpgViewOptions> =
   | ({
       ok: true;
       session_id: string;
@@ -776,7 +779,7 @@ function transcriptTurnsFor<Args extends TranscriptArgs>(
   ) as TranscriptTurnFor<Args>[];
 }
 
-function rpgStepEvents<Args extends RpgResponseOptions>(
+function rpgStepEvents<Args extends RpgEventOptions>(
   events: GameEvent[],
   args: Args,
 ): RpgStepEvents<Args> {
@@ -786,9 +789,7 @@ function rpgStepEvents<Args extends RpgResponseOptions>(
   ) as RpgStepEvents<Args>;
 }
 
-function rpgStepEventVersion<Args extends RpgResponseOptions>(
-  args: Args,
-): RpgStepEventVersion<Args> {
+function rpgStepEventVersion<Args extends RpgEventOptions>(args: Args): RpgStepEventVersion<Args> {
   return (
     args.compact_events === true ? { event_v: RPG_COMPACT_EVENT_VERSION } : {}
   ) as RpgStepEventVersion<Args>;
@@ -876,7 +877,7 @@ function observationProjectionSuffix(opts: RpgObservationViewOptions, extra: str
   return `hide:${opts.hideGraph === true ? 1 : 0}:intro:${opts.includeWorldIntro === true ? 1 : 0}:${extra}`;
 }
 
-function rpgViewField<Args extends RpgResponseOptions>(
+function rpgViewField<Args extends RpgViewOptions>(
   sessions: SessionStore,
   session: Session,
   obs: RpgObservation,
@@ -1095,7 +1096,7 @@ export function createToolApi(opts: { root: string }) {
   const openingObsOf = (s: Session, opts = openingObservationOptions(s)): RpgObservation =>
     sessionObsOf(s, opts);
 
-  function startRpgSession<Args extends RpgResponseOptions>(
+  function startRpgSession<Args extends RpgViewOptions>(
     compiled: CompiledRpgPack,
     args: Args & { seed?: number; hide_graph?: boolean },
     source: { packPath?: string; worldQuestId?: string; generatedRpgSeed?: number | null },

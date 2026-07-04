@@ -282,6 +282,20 @@ describe("MCP server registration", () => {
     );
     expect(rpgDefaults).toContain("hide_graph: true");
     expect(rpgDefaults.indexOf("hide_graph: true")).toBeLessThan(rpgDefaults.indexOf("...input"));
+    const rpgViewOptions = toolApiSourceBlock("type RpgViewOptions", "type RpgEventOptions");
+    const rpgEventOptions = toolApiSourceBlock("type RpgEventOptions", "type OverworldViewField");
+    const viewOnlyRpgArgs = [
+      toolApiSourceBlock("type RpgNewGameArgs", "type RpgStartWorldQuestArgs"),
+      toolApiSourceBlock("type RpgStartWorldQuestArgs", "type RpgGetObservationArgs"),
+      toolApiSourceBlock("type RpgGetObservationArgs", "type RpgStepActionArgs"),
+      toolApiSourceBlock("type RpgLoadGameArgs", "type RpgWorldQuestStartPayload"),
+    ].join("\n");
+    const stepArgs = toolApiSourceBlock("type RpgStepActionArgs", "type RpgLoadGameArgs");
+    expect(rpgViewOptions).toContain("compact_observation");
+    expect(rpgViewOptions).not.toContain("compact_events");
+    expect(rpgEventOptions).toContain("compact_events");
+    expect(viewOnlyRpgArgs).not.toContain("compact_events");
+    expect(stepArgs).toContain("RpgEventOptions");
     const legalActions = registeredToolBlock("list_legal_actions");
     const actionDefaults = serverSourceBlock(
       "function defaultCompactActions",
