@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 402 -->
+<!-- historical_cycle_count: 403 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - inspect_cli_pack_line_removed
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: `npm run inspect -- <world_quest_id>` no longer prints internal `Pack:` identifiers; quest summaries keep world quest id, title, counts, stats, enemies, and hash.
+- Loop effect: shipped quest diagnostics drop the package-era id while preserving internal pack ids for author/generated diagnostics.
+- Guard: focused Prettier, typecheck, trace CLI, and report-format checks passed over the cleanup.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - validate_cli_pack_line_removed
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/world surface: world graph edge projection now derives endpoint coordinates, deltas, and Manhattan distances from canonical node coordinates.
 - Loop effect: `list_world({ include_graph: true })` exposes a pack-free coordinate edge map while the default catalog remains compact.
 - Guard: focused typecheck plus MCP tool, MCP RPG catalog, and single-world manifest tests passed over edge metric projection.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - world_graph_map_bounds
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/world surface: world graph helpers now derive compact matrix bounds from complete node coordinates.
-- Loop effect: `list_world({ include_graph: true })` exposes pack-free map bounds so tool consumers can reason about world extent without scanning every node first.
-- Guard: focused typecheck plus MCP tool, MCP RPG catalog, and single-world manifest tests passed over bounds derivation/projection.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
