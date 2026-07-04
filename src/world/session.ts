@@ -114,6 +114,12 @@ import {
   type OverworldRegionalArcProgress,
 } from "./session_regional_arcs.js";
 import {
+  planOverworldTownRest,
+  planOverworldTownResupply,
+  type OverworldServicePlan,
+  type OverworldServiceResult,
+} from "./session_services.js";
+import {
   assertSnapshotProgressJournalBindings,
   assertStringSetSubset,
   type OverworldProgressJournalSourceIndex,
@@ -154,6 +160,7 @@ export type {
 export type { OverworldRouteEstimate, OverworldSessionRoutePlan } from "./session_routes.js";
 export type { OverworldRoadEncounterResult } from "./session_road_encounters.js";
 export type { OverworldRegionalArcProgress } from "./session_regional_arcs.js";
+export type { OverworldServiceResult } from "./session_services.js";
 export {
   OVERWORLD_SESSION_SAVE_VERSION,
   OverworldSessionSnapshotSchema,
@@ -192,18 +199,6 @@ export type OverworldQuestCompletionResult = {
   endingId: string;
   endingTitle: string;
   entry: OverworldJournalEntry;
-};
-
-export type OverworldServiceResult = {
-  action: "resupply" | "rest";
-  minutes: number;
-  changed: boolean;
-  suppliesBefore: number;
-  suppliesAfter: number;
-  fatigueBefore: number;
-  fatigueAfter: number;
-  message: string;
-  entry: OverworldJournalEntry | null;
 };
 
 export type OverworldQuestView = {
@@ -1022,6 +1017,22 @@ export class OverworldSession {
 
   private hasJournalEntry(id: string): boolean {
     return this.journalEntriesById.has(id);
+  }
+
+  private applyServicePlan(plan: OverworldServicePlan): OverworldServiceResult {
+    const { entryDraft, ...result } = plan;
+    if (!result.changed) return { ...result, entry: null };
+    if (!entryDraft) {
+      throw new Error("Changed overworld service plan is missing a journal entry.");
+    }
+    this.supplies = plan.suppliesAfter;
+    this.fatigue = plan.fatigueAfter;
+    const entry = this.recordRepeatableEntry(entryDraft, plan.minutes);
+    return {
+      ...result,
+      message: entry.text,
+      entry,
+    };
   }
 
   private localAreas(nodeId: string): OverworldArea[] {
@@ -1880,96 +1891,26 @@ export class OverworldSession {
 
   restAtTown(): OverworldServiceResult {
     const current = this.currentNode();
-    if (!current.services.includes("inn") && !current.services.includes("healer")) {
-      throw new Error("There is no inn or healer here to rest safely.");
-    }
-    const fatigueBefore = this.fatigue;
-    const suppliesBefore = this.supplies;
-    if (fatigueBefore === 0) {
-      return {
-        action: "rest",
-        minutes: 0,
-        changed: false,
-        suppliesBefore,
-        suppliesAfter: this.supplies,
-        fatigueBefore,
-        fatigueAfter: this.fatigue,
-        message: "You are already rested.",
-        entry: null,
-      };
-    }
-    const minutes = Math.max(180, Math.ceil(fatigueBefore / 20) * 60);
-    this.fatigue = 0;
-    const entry = this.recordRepeatableEntry(
-      {
-        id: "service:rest",
-        kind: "service",
-        town: current.name,
-        title: `Rested in ${current.name}`,
-        text: `You spend ${minutes} minutes recovering at a safe local service. Fatigue falls from ${fatigueBefore} to 0.`,
-      },
-      minutes,
+    return this.applyServicePlan(
+      planOverworldTownRest({
+        fatigue: this.fatigue,
+        services: current.services,
+        supplies: this.supplies,
+        townName: current.name,
+      }),
     );
-    return {
-      action: "rest",
-      minutes,
-      changed: true,
-      suppliesBefore,
-      suppliesAfter: this.supplies,
-      fatigueBefore,
-      fatigueAfter: this.fatigue,
-      message: entry.text,
-      entry,
-    };
   }
 
   resupplyAtTown(): OverworldServiceResult {
     const current = this.currentNode();
-    if (
-      !current.services.includes("market") &&
-      !current.services.includes("inn") &&
-      !current.services.includes("stable")
-    ) {
-      throw new Error("There is no market, inn, or stable here to resupply.");
-    }
-    const fatigueBefore = this.fatigue;
-    const suppliesBefore = this.supplies;
-    if (suppliesBefore >= MAX_SUPPLIES) {
-      return {
-        action: "resupply",
-        minutes: 0,
-        changed: false,
-        suppliesBefore,
-        suppliesAfter: this.supplies,
-        fatigueBefore,
-        fatigueAfter: this.fatigue,
-        message: "Your supplies are already full.",
-        entry: null,
-      };
-    }
-    this.supplies = MAX_SUPPLIES;
-    const minutes = 45;
-    const entry = this.recordRepeatableEntry(
-      {
-        id: "service:resupply",
-        kind: "service",
-        town: current.name,
-        title: `Resupplied in ${current.name}`,
-        text: `You spend ${minutes} minutes buying food, lamp oil, and road gear. Supplies rise from ${suppliesBefore} to ${MAX_SUPPLIES}.`,
-      },
-      minutes,
+    return this.applyServicePlan(
+      planOverworldTownResupply({
+        fatigue: this.fatigue,
+        services: current.services,
+        supplies: this.supplies,
+        townName: current.name,
+      }),
     );
-    return {
-      action: "resupply",
-      minutes,
-      changed: true,
-      suppliesBefore,
-      suppliesAfter: this.supplies,
-      fatigueBefore,
-      fatigueAfter: this.fatigue,
-      message: entry.text,
-      entry,
-    };
   }
 
   planRoute(destinationId: string): OverworldSessionRoutePlan {
