@@ -113,6 +113,20 @@ function collectJournalTargets(node: unknown, acc: Set<string>): Set<string> {
   return acc;
 }
 
+function countJournalWrites(node: unknown): number {
+  if (Array.isArray(node)) {
+    return node.reduce((sum, el) => sum + countJournalWrites(el), 0);
+  }
+  if (node === null || typeof node !== "object") return 0;
+
+  let count = 0;
+  for (const [k, v] of Object.entries(node)) {
+    if (k === "add_journal" && typeof v === "string") count += 1;
+    count += countJournalWrites(v);
+  }
+  return count;
+}
+
 function assertNonnegativeIntegerVar(id: string, value: number, label: string): void {
   if (!Number.isInteger(value) || value < 0) {
     throw new SaveIntegrityError(`Save references invalid ${label} var "${id}" (${value}).`);
@@ -171,6 +185,7 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   const flags = collectFlagTargets(index.pack, new Map<string, Set<boolean>>());
   const vars = collectVarTargets(index.pack, new Set(Object.keys(index.pack.meta.vars_init)));
   const journals = collectJournalTargets(index.pack, new Set<string>());
+  const journalWriteCount = countJournalWrites(index.pack);
   const heldItems = new Set<string>();
   const objectRuntimeTargets = collectObjectRuntimeTargets(index.pack, {
     open: new Set<string>(),
@@ -273,6 +288,12 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
     if (!journals.has(entry)) {
       throw new SaveIntegrityError(`Save references unknown journal entry "${entry}".`);
     }
+  }
+  const maxJournalEntries = state.step * journalWriteCount;
+  if (state.journal.length > maxJournalEntries) {
+    throw new SaveIntegrityError(
+      `Save references impossible journal entry count (${state.journal.length}) for step ${state.step}.`,
+    );
   }
   const inventory = new Set<string>();
   for (const id of state.inventory) {
