@@ -1,4 +1,5 @@
 import type { GameState } from "../core/state.js";
+import { cloneGameState } from "../core/state.js";
 import { SAVE_MODE, save } from "../persist/save_load.js";
 import {
   legalActionRowsFor,
@@ -18,6 +19,7 @@ import {
 import type { Session, SessionStore, TranscriptSummary } from "./sessions.js";
 import {
   TRANSCRIPT_SUMMARY_PROJECTION_COMPACT,
+  cloneTranscriptSummary,
   compactTranscriptSummary,
   hashTranscript,
   transcriptEventVersion,
@@ -183,7 +185,7 @@ export function runRpgGetState<Args extends RpgGetStateToolArgs>(
   const s = deps.sessions.get(args.session_id);
   const stateHash = s.stateHash;
   if (args.include_state === true) {
-    return { state: s.state, state_hash: stateHash } as RpgStateToolResponse<Args>;
+    return { state: cloneGameState(s.state), state_hash: stateHash } as RpgStateToolResponse<Args>;
   }
   return { state_hash: stateHash } as RpgStateToolResponse<Args>;
 }
@@ -199,12 +201,13 @@ export function runRpgGetTranscript<Args extends TranscriptArgs>(
   if (args.if_transcript_hash !== undefined && args.if_transcript_hash === currentTranscriptHash) {
     return transcriptUnchanged(stateHash, currentTranscriptHash) as TranscriptResponse<Args>;
   }
-  const summary =
+  const summarySource =
     args.compact_summary === true
       ? sessions.transcriptSummaryProjection(s.id, TRANSCRIPT_SUMMARY_PROJECTION_COMPACT, () =>
           compactTranscriptSummaryForSession(s),
         )
       : sessions.transcriptSummary(s.id, () => fullTranscriptSummary(s));
+  const summary = cloneTranscriptSummary(summarySource);
   const turnsOmitted = args.summary_only ? 0 : transcriptTurnsOmitted(s, args);
   const response = {
     session_id: s.id,

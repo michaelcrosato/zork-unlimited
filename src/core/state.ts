@@ -63,3 +63,23 @@ export function initState(opts: InitOptions): GameState {
     endingId: null,
   };
 }
+
+export function cloneGameState(state: GameState): GameState {
+  const objectState: GameState["objectState"] = {};
+  for (const [id, object] of Object.entries(state.objectState)) {
+    objectState[id] = {
+      ...object,
+      ...(object.contents ? { contents: [...object.contents] } : {}),
+    };
+  }
+  return {
+    ...state,
+    visited: { ...state.visited },
+    flags: { ...state.flags },
+    vars: { ...state.vars },
+    inventory: [...state.inventory],
+    objectState,
+    journal: [...state.journal],
+    questStage: { ...state.questStage },
+  };
+}

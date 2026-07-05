@@ -190,6 +190,26 @@ export function transcriptSummaryFor<Args extends TranscriptArgs>(
   ) as TranscriptSummaryFor<Args>;
 }
 
+type PublicTranscriptSummary = TranscriptSummary | TranscriptCompactSummary;
+
+export function cloneTranscriptSummary<Summary extends PublicTranscriptSummary>(
+  summary: Summary,
+): Summary {
+  const source = summary as PublicTranscriptSummary;
+  return {
+    ...source,
+    scenes: [...source.scenes],
+    ...("inventory" in source && source.inventory !== undefined
+      ? { inventory: [...source.inventory] }
+      : {}),
+    ...("flags" in source && source.flags !== undefined ? { flags: [...source.flags] } : {}),
+    ...("journal" in source && source.journal !== undefined
+      ? { journal: [...source.journal] }
+      : {}),
+    ...("more" in source && source.more !== undefined ? { more: [...source.more] } : {}),
+  } as Summary;
+}
+
 function transcriptTurnLimit(args: Pick<TranscriptArgs, "turn_limit">, total: number): number {
   if (args.turn_limit === undefined) return total;
   if (!Number.isInteger(args.turn_limit) || args.turn_limit < 0) {
@@ -240,6 +260,31 @@ export function playerVisibleEvents(events: GameEvent[]): GameEvent[] {
   });
 }
 
+function cloneTranscriptEvent<Event extends GameEvent | RpgCompactEvent>(event: Event): Event {
+  return (Array.isArray(event) ? [...event] : { ...event }) as Event;
+}
+
+function cloneTranscriptTurn<Turn extends TranscriptFullTurn | TranscriptCompactEventTurn>(
+  turn: Turn,
+): Turn {
+  return {
+    ...turn,
+    events: turn.events.map(cloneTranscriptEvent),
+  } as Turn;
+}
+
+export function cloneTranscriptTurns<Args extends TranscriptArgs>(
+  turns: readonly TranscriptTurnFor<Args>[],
+): TranscriptTurnFor<Args>[] {
+  return turns.map((turn) =>
+    Array.isArray(turn)
+      ? ([...turn] as unknown as TranscriptTurnFor<Args>)
+      : (cloneTranscriptTurn(
+          turn as TranscriptFullTurn | TranscriptCompactEventTurn,
+        ) as unknown as TranscriptTurnFor<Args>),
+  );
+}
+
 export function transcriptTurnsFor<Args extends TranscriptArgs>(
   sessions: SessionStore,
   session: Session,
@@ -247,15 +292,16 @@ export function transcriptTurnsFor<Args extends TranscriptArgs>(
 ): TranscriptTurnFor<Args>[] {
   const window = transcriptTurnWindow(session, args);
   if (args.compact_turns) {
-    return sessions.transcriptProjection(
+    const turns = sessions.transcriptProjection(
       session.id,
       `${TRANSCRIPT_PROJECTION_COMPACT_TURNS}:${window.keySuffix}`,
       () => window.turns.map((t) => [t.step, t.scene_id, t.action_id, t.result_scene_id] as const),
     ) as TranscriptTurnFor<Args>[];
+    return cloneTranscriptTurns(turns);
   }
 
   if (args.compact_events === true) {
-    return sessions.transcriptProjection(
+    const turns = sessions.transcriptProjection(
       session.id,
       `${TRANSCRIPT_PROJECTION_COMPACT_EVENTS}:${window.keySuffix}`,
       () =>
@@ -264,9 +310,10 @@ export function transcriptTurnsFor<Args extends TranscriptArgs>(
           events: playerVisibleEvents(t.events).map(compactPlayerEvent),
         })),
     ) as TranscriptTurnFor<Args>[];
+    return cloneTranscriptTurns(turns);
   }
 
-  return sessions.transcriptProjection(
+  const turns = sessions.transcriptProjection(
     session.id,
     `${TRANSCRIPT_PROJECTION_VISIBLE_EVENTS}:${window.keySuffix}`,
     () =>
@@ -275,6 +322,7 @@ export function transcriptTurnsFor<Args extends TranscriptArgs>(
         events: playerVisibleEvents(t.events),
       })),
   ) as TranscriptTurnFor<Args>[];
+  return cloneTranscriptTurns(turns);
 }
 
 export function rpgStepEvents<Args extends RpgEventOptions>(
@@ -283,7 +331,9 @@ export function rpgStepEvents<Args extends RpgEventOptions>(
 ): RpgStepEvents<Args> {
   const visible = playerVisibleEvents(events);
   return (
-    args.compact_events === true ? visible.map(compactPlayerEvent) : visible
+    args.compact_events === true
+      ? visible.map((event) => cloneTranscriptEvent(compactPlayerEvent(event)))
+      : visible.map(cloneTranscriptEvent)
   ) as RpgStepEvents<Args>;
 }
 

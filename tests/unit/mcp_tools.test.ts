@@ -1694,6 +1694,11 @@ describe("MCP tools — the play loop (§9.1)", () => {
     const last = playSunkenBarrowToVictory(a, game.session_id);
     expect(last.ok).toBe(true);
     expect(last.observation.ending_id).toBe("ending_victory");
+    const stepEvent = last.events.find((event) => event.type === "ending");
+    expect(stepEvent).toBeDefined();
+    if (stepEvent === undefined) throw new Error("expected final step ending event");
+    (stepEvent as { type: string }).type = "rejected";
+    (stepEvent as { reason?: string }).reason = "mutated_step_event";
     const transcript = a.get_transcript({ session_id: game.session_id });
     expect("pack_id" in transcript).toBe(false);
     expect("pack_path" in transcript).toBe(false);
@@ -1720,6 +1725,21 @@ describe("MCP tools — the play loop (§9.1)", () => {
     const rawState = a.get_state({ session_id: game.session_id, include_state: true });
     expect(rawState.state_hash).toBe(currentStateHash);
     expect(rawState.state.current).toBe(last.observation.room);
+    expect(rawState.state).not.toBe(a.sessions.get(game.session_id).state);
+    const rawStateRoom = rawState.state.current;
+    rawState.state.current = "mutated_room";
+    rawState.state.inventory.push("mutated_item");
+    rawState.state.visited.mutated_room = true;
+    rawState.state.objectState.mutated_object = { contents: ["mutated_child"] };
+    const afterRawStateMutation = a.get_state({
+      session_id: game.session_id,
+      include_state: true,
+    });
+    expect(afterRawStateMutation.state.current).toBe(rawStateRoom);
+    expect(afterRawStateMutation.state.inventory).not.toContain("mutated_item");
+    expect(afterRawStateMutation.state.visited).not.toHaveProperty("mutated_room");
+    expect(afterRawStateMutation.state.objectState).not.toHaveProperty("mutated_object");
+    expect(afterRawStateMutation.state_hash).toBe(currentStateHash);
     const summaryOnlyTranscript = a.get_transcript({
       session_id: game.session_id,
       summary_only: true,
@@ -1833,6 +1853,52 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect("event_v" in compactTurnsWithCompactEvents).toBe(false);
     expect(compactTurnsWithCompactEvents.turns[0]).not.toHaveProperty("events");
     expect(currentStateHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(
+      transcript.turns.some((turn) =>
+        turn.events.some(
+          (event) =>
+            event.type === "rejected" && "reason" in event && event.reason === "mutated_step_event",
+        ),
+      ),
+    ).toBe(false);
+    const transcriptEvent = fullEventTurn?.events[0];
+    expect(transcriptEvent).toBeDefined();
+    if (transcriptEvent === undefined) throw new Error("expected full transcript event");
+    const transcriptEventType = transcriptEvent.type;
+    (transcriptEvent as { type: string }).type = "rejected";
+    (transcriptEvent as { reason?: string }).reason = "mutated_transcript_event";
+    transcript.summary.scenes.push("mutated_scene");
+    (compactTranscript.turns[0] as unknown as string[])[1] = "mutated_scene";
+    (compactEventTurn!.events[0] as unknown as string[])[0] = "x";
+    const afterTranscriptMutation = a.get_transcript({ session_id: game.session_id });
+    expect(afterTranscriptMutation.summary.scenes).not.toContain("mutated_scene");
+    expect(afterTranscriptMutation.turns[0]?.scene_id).toBe(game.observation.room);
+    expect(
+      afterTranscriptMutation.turns.some((turn) => turn.events[0]?.type === transcriptEventType),
+    ).toBe(true);
+    expect(
+      afterTranscriptMutation.turns.some((turn) =>
+        turn.events.some(
+          (event) =>
+            event.type === "rejected" &&
+            "reason" in event &&
+            event.reason === "mutated_transcript_event",
+        ),
+      ),
+    ).toBe(false);
+    const afterCompactTranscriptMutation = a.get_transcript({
+      session_id: game.session_id,
+      compact_turns: true,
+    });
+    expect(afterCompactTranscriptMutation.turns[0]?.[1]).toBe(game.observation.room);
+    const afterCompactEventTranscriptMutation = a.get_transcript({
+      session_id: game.session_id,
+      compact_events: true,
+    });
+    const afterCompactEventTurn = afterCompactEventTranscriptMutation.turns.find(
+      (turn) => turn.events.length > 0,
+    );
+    expect(afterCompactEventTurn?.events[0]?.[0]).not.toBe("x");
 
     const byWorldQuestId = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 1 });
     expect("mode" in byWorldQuestId).toBe(false);

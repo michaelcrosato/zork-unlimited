@@ -450,10 +450,10 @@ tool(
 );
 tool(
   "get_state",
-  "State hash; include_state returns raw state.",
+  "State hash; optional state snapshot.",
   {
     ...SESSION,
-    include_state: z.boolean().optional().describe("Return raw state."),
+    include_state: z.boolean().optional().describe("State snapshot."),
   },
   (a) => compactMcpState(a),
 );
