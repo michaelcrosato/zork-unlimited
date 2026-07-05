@@ -29,7 +29,9 @@ describe("blind runner MCP config contract", () => {
     expect(runner).not.toContain("BLIND_PACK=");
     expect(runner).not.toContain("pack_path");
     expect(prompt).toContain("mcp__adventureforge__start_world_quest");
+    expect(prompt).toContain("mcp__adventureforge__get_state");
     expect(prompt).toContain("compact_observation: true");
+    expect(prompt).toContain("compact_state: true");
     expect(prompt).toContain("summary_only: true");
     expect(prompt).toContain("compact_summary: true");
     expect(prompt).toContain("compact_turns: true");
@@ -43,6 +45,8 @@ describe("blind runner MCP config contract", () => {
     expect(smoke).toContain('"start_world_quest"');
     expect(smoke).toContain("compact_observation: true");
     expect(smoke).toContain('"get_transcript"');
+    expect(smoke).toContain('"get_state"');
+    expect(smoke).toContain("compact_state: true");
     expect(smoke).toContain("summary_only: true");
     expect(smoke).toContain("compact_summary: true");
     expect(smoke).toContain("context");

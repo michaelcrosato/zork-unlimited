@@ -6,7 +6,7 @@ STRICT RULES:
 
 - The game's tools are named `mcp__adventureforge__*` and are DEFERRED — load their
   schemas first with one ToolSearch call, then call them:
-  `ToolSearch("select:mcp__adventureforge__start_world_quest,mcp__adventureforge__get_observation,mcp__adventureforge__list_legal_actions,mcp__adventureforge__step_action,mcp__adventureforge__get_transcript")`.
+  `ToolSearch("select:mcp__adventureforge__start_world_quest,mcp__adventureforge__get_observation,mcp__adventureforge__list_legal_actions,mcp__adventureforge__step_action,mcp__adventureforge__get_state,mcp__adventureforge__get_transcript")`.
 - Play ONLY through those `mcp__adventureforge__*` tools. ToolSearch (to load them)
   is the only other tool you may use.
 - DO NOT read, open, grep, cat, or list ANY files. Do not use shell, file, or web
@@ -29,6 +29,9 @@ PLAY:
   `compact_summary: true`; pass the latest `if_state_hash` when rechecking an
   unchanged state. If you need route rows, use `compact_turns: true`; avoid full
   transcripts unless diagnosing a specific event-history bug.
+- For a mechanical state audit, call `mcp__adventureforge__get_state` with
+  `compact_state: true`; pass `if_state_hash` when rechecking. Do not use
+  `include_state: true` unless you are diagnosing a raw engine-state bug.
 - Make decisions a curious, sensible human would: follow clues, pursue the apparent
   goal, investigate what seems important. Do NOT pick randomly. Narrate your
   reasoning each turn in ONE short line. Do ONE thorough playthrough to an ending;

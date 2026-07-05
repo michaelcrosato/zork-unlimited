@@ -61,7 +61,7 @@ shows you.
 
 STRICT RULES:
 - Play ONLY through the MCP tools named `mcp__adventureforge__*`. Find their schemas
-  with ToolSearch: "select:mcp__adventureforge__start_world_quest,mcp__adventureforge__step_action,mcp__adventureforge__get_observation,mcp__adventureforge__list_legal_actions,mcp__adventureforge__get_transcript".
+  with ToolSearch: "select:mcp__adventureforge__start_world_quest,mcp__adventureforge__step_action,mcp__adventureforge__get_observation,mcp__adventureforge__list_legal_actions,mcp__adventureforge__get_state,mcp__adventureforge__get_transcript".
 - DO NOT read, open, grep, or cat ANY repo files — especially nothing under
   content/, src/, ui/, or tests/. No peeking at the YAML or the solution. Your only
   window into the game is the MCP tool responses.
@@ -85,6 +85,9 @@ PLAY:
   Compact summaries include ending_id only after an ending exists and may omit
   empty inventory/flag/journal lists. Avoid full transcripts unless diagnosing a
   specific event-history bug.
+- For a mechanical state audit, call get_state(session_id, compact_state = true,
+  if_state_hash = latest state hash when rechecking unchanged state). Do not request
+  include_state = true unless diagnosing a raw engine-state bug.
 - Make decisions a curious, sensible human would: follow clues, pursue the apparent
   goal, investigate what seems important. Don't pick randomly. Narrate your reasoning
   each turn. Do at most 2-3 playthroughs (try a different strategy on later runs).

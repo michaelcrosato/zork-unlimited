@@ -252,7 +252,8 @@ Make discovered overworld quest leads start real RPG sessions.
   pass `summary_only: false` and `compact_summary: false` when they need full
   route/event history.
 - ToolApi/public MCP `get_state` defaults to hash-only output; callers can pass
-  `include_state: true` only when they need the raw reducer state for debugging.
+  `compact_state: true` for capped state audits, and reserve `include_state: true`
+  for raw reducer-state debugging.
 - Public MCP successful tool results serialize as minified JSON text, so compact
   handler payloads are not re-expanded by whitespace at the stdio adapter.
 - Overworld sessions cache their serialized snapshot plus hash at the session

@@ -53,22 +53,22 @@ const HIDE_GRAPH = {
   hide_graph: z.boolean().optional().describe("Hide exits."),
 };
 const COMPACT_ACTIONS = {
-  compact_actions: z.boolean().optional().describe("Ids only."),
+  compact_actions: z.boolean().optional().describe("Ids."),
 };
 const COMPACT_EVENTS = {
-  compact_events: z.boolean().optional().describe("Default true; false full events."),
+  compact_events: z.boolean().optional().describe("Full events?"),
 };
 const COMPACT_OBSERVATION = {
-  compact_observation: z.boolean().optional().describe("Default true; false full obs."),
+  compact_observation: z.boolean().optional().describe("Full obs?"),
 };
 const IF_STATE_HASH = {
-  if_state_hash: z.string().optional().describe("Hash-only if same."),
+  if_state_hash: z.string().optional().describe("If same."),
 };
 const IF_TRANSCRIPT_HASH = {
-  if_transcript_hash: z.string().optional().describe("Hash-only same tx."),
+  if_transcript_hash: z.string().optional().describe("If same tx."),
 };
 const EXPECTED_STATE_HASH = {
-  expected_state_hash: z.string().optional().describe("Hash-only stale reject."),
+  expected_state_hash: z.string().optional().describe("Reject stale."),
 };
 tool(
   "list_world",
@@ -407,7 +407,7 @@ tool(
 
 tool(
   "new_game",
-  "Start RPG; compact.",
+  "Start RPG.",
   {
     generate_rpg_seed: G.optional().describe("Gen seed."),
     seed: z.number().int().safe().optional().describe("Seed."),
@@ -419,7 +419,7 @@ tool(
 );
 tool(
   "start_world_quest",
-  "Start RPG; compact.",
+  "Start RPG.",
   {
     world_quest_id: z.string().describe("World quest id."),
     seed: z.number().int().safe().optional(),
@@ -432,27 +432,27 @@ tool(
 
 tool(
   "get_observation",
-  "Read compact RPG; if_state_hash hash-only.",
+  "Observe.",
   { ...SESSION, ...HIDE_GRAPH, ...IF_STATE_HASH, ...COMPACT_ACTIONS, ...COMPACT_OBSERVATION },
   (a) => api.get_observation(defaultCompactRpg(a)),
 );
 tool(
   "list_legal_actions",
-  "List action ids + state_hash; if_state_hash hash-only.",
+  "Actions.",
   {
     ...SESSION,
     ...IF_STATE_HASH,
-    compact_actions: z.boolean().optional().describe("Default true; false returns labels."),
+    compact_actions: z.boolean().optional().describe("Labels?"),
   },
   (a) => api.list_legal_actions(defaultCompactActions(a)),
 );
 
 tool(
   "step_action",
-  "Apply action id; stale menus return hash plus reason only.",
+  "Step action.",
   {
     ...SESSION,
-    action_id: z.string().describe("Current action id."),
+    action_id: z.string().describe("Action id."),
     ...EXPECTED_STATE_HASH,
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
@@ -474,13 +474,13 @@ tool(
 );
 tool(
   "get_transcript",
-  "Transcript hash/summary.",
+  "Transcript.",
   {
     ...SESSION,
     ...IF_TRANSCRIPT_HASH,
-    summary_only: z.boolean().optional().describe("Default true; no turns."),
-    compact_summary: z.boolean().optional().describe("Default true; capped lists."),
-    compact_turns: z.boolean().optional().describe("Rows tuple."),
+    summary_only: z.boolean().optional().describe("No turns."),
+    compact_summary: z.boolean().optional().describe("Capped lists."),
+    compact_turns: z.boolean().optional().describe("Row tuples."),
     turn_limit: z.number().int().min(0).optional().describe("Rows."),
     ...COMPACT_EVENTS,
   },

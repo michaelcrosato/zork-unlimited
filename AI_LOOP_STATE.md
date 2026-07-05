@@ -6,6 +6,14 @@ This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
 
+### Cycle result - blind_compact_state_audits
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: blind MCP prompt/protocol/smoke now load `get_state` up front and prescribe `compact_state: true` for mechanical audits, reserving raw `include_state` for engine-state debugging.
+- Loop effect: blind agents can verify state/hash freshness without pulling full reducer snapshots, and the no-LLM smoke path proves compact state plus unchanged polling.
+- Guard: focused blind runner/docs/MCP registration contracts, blind smoke, and schema-size budget passed.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused regressions, `npm run blind:smoke`, `npm test`, and `npm run health` passed.
+
 ### Cycle result - rpg_utility_schema_prose_trimmed
 
 - Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/loop surface: stale-reactive room-item audit now scans the single RPG pack directory directly and no longer emits a constant `mode` field on audit sites.
 - Loop effect: AFK structural candidates carry only pack identity and room/object evidence, removing a retired mode axis from loop-facing audit payloads.
 - Guard: focused Prettier, typecheck, stale-reactive audit, assessor, and RPG schema-standalone tests passed over the cleanup.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - world_catalog_mode_field_removed
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/public surface: world quest discovery no longer stores a discarded internal `mode` field before building the mode-free `list_world` catalog.
-- Loop effect: the world catalog path carries only quest/world identity and playability, avoiding constant single-runtime metadata in the discovery projection.
-- Guard: focused Prettier, typecheck, MCP tools, and RPG schema-standalone tests passed over the catalog cleanup.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.

@@ -105,7 +105,13 @@ async function main() {
     const names = new Set(tools.map((t) => t.name));
     console.log(`• tools/list → ${tools.length} tools`);
     const startTool = "start_world_quest";
-    for (const required of [startTool, "get_observation", "step_action", "get_transcript"]) {
+    for (const required of [
+      startTool,
+      "get_observation",
+      "step_action",
+      "get_state",
+      "get_transcript",
+    ]) {
       if (!names.has(required)) fail(`MCP server is missing the "${required}" tool`);
     }
 
@@ -151,6 +157,25 @@ async function main() {
     }
 
     if (stepped === 0) fail("could not step any action from the opening scene");
+    const state = parseResult(
+      await client.callTool({
+        name: "get_state",
+        arguments: { session_id, compact_state: true },
+      }),
+    );
+    if (!state.compact_state || state.state) {
+      fail("compact state audit did not return compact_state without raw state");
+    }
+    const unchangedState = parseResult(
+      await client.callTool({
+        name: "get_state",
+        arguments: { session_id, compact_state: true, if_state_hash: state.state_hash },
+      }),
+    );
+    if (unchangedState.unchanged !== true || unchangedState.compact_state) {
+      fail("compact state freshness check did not return hash-only unchanged");
+    }
+    console.log(`  compact state: step ${state.compact_state?.step ?? "?"}`);
     const transcript = parseResult(
       await client.callTool({
         name: "get_transcript",

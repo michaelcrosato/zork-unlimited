@@ -154,12 +154,14 @@ describe("MCP server registration", () => {
       registeredToolBlock("get_observation"),
       registeredToolBlock("list_legal_actions"),
       registeredToolBlock("step_action"),
+      registeredToolBlock("get_state"),
       registeredToolBlock("get_transcript"),
     ].join("\n");
 
     expect(blindToolSchemaSource.length).toBeLessThanOrEqual(2600);
     expect(blindToolSchemaSource).not.toContain("Token economy:");
     expect(blindToolSchemaSource).toContain("compact_observation");
+    expect(blindToolSchemaSource).toContain("compact_state");
     expect(blindToolSchemaSource).toContain("compact_summary");
   });
 
@@ -341,12 +343,12 @@ describe("MCP server registration", () => {
       "type RpgLegalActionRows",
     );
     expect(legalActionArgs).not.toContain("hide_graph");
-    expect(legalActions).toContain("Default true; false returns labels.");
-    expect(legalActions).toContain("if_state_hash");
+    expect(legalActions).toContain("Labels?");
+    expect(legalActions).toContain("IF_STATE_HASH");
     expect(legalActions).not.toContain("HIDE_GRAPH");
     expect(legalActions).not.toContain("hide_graph");
     expect(legalActions).not.toContain("defaultCompactRpg");
-    expect(registeredToolBlock("get_observation")).toContain("if_state_hash");
+    expect(registeredToolBlock("get_observation")).toContain("IF_STATE_HASH");
     expect(sharedSchemaBlock()).toContain("compact_events");
     expect(registeredToolBlock("step_action")).toContain("COMPACT_EVENTS");
     expect(registeredToolBlock("get_state")).not.toContain("defaultCompactRpg");
@@ -365,8 +367,8 @@ describe("MCP server registration", () => {
     expect(args).not.toContain("if_state_hash");
     expect(args).toContain("if_transcript_hash");
     expect(args).toContain("turn_limit");
-    expect(block).toContain("Default true; no turns.");
-    expect(block).toContain("Default true; capped lists.");
+    expect(block).toContain("No turns.");
+    expect(block).toContain("Capped lists.");
     expect(block).toContain("turn_limit");
     expect(block).toContain("COMPACT_EVENTS");
     const defaultTranscript = serverSourceBlock(
