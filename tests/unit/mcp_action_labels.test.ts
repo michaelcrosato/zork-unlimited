@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   compactMcpTranscriptActionId,
+  compactMcpTranscriptSceneId,
+  compactMcpTranscriptTitle,
   MCP_ACTION_LABEL_CHAR_LIMIT,
   MCP_TRANSCRIPT_ACTION_ID_CHAR_LIMIT,
+  MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT,
+  MCP_TRANSCRIPT_TITLE_CHAR_LIMIT,
 } from "../../src/mcp/action_labels.js";
 import { publicActions } from "../../src/mcp/rpg_view_projection.js";
 import type { RpgActionOption } from "../../src/rpg/legal_actions.js";
@@ -51,5 +55,21 @@ describe("MCP action labels", () => {
     expect(compact).toMatch(/\.\.\.\(\+\d+ chars\)#[0-9a-f]{12}$/);
     expect(samePrefixCompact).not.toBe(compact);
     expect(compactMcpTranscriptActionId("take_circlet")).toBe("take_circlet");
+  });
+
+  it("caps transcript scene ids and titles while preserving short values exactly", () => {
+    const sceneId = `room_${"x".repeat(400)}a`;
+    const title = `Room ${"x".repeat(400)}a`;
+
+    expect(compactMcpTranscriptSceneId(sceneId)).toHaveLength(MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT);
+    expect(compactMcpTranscriptSceneId(sceneId)).toMatch(
+      /^room_x+.*\.\.\.\(\+\d+ chars\)#[0-9a-f]{12}$/,
+    );
+    expect(compactMcpTranscriptTitle(title)).toHaveLength(MCP_TRANSCRIPT_TITLE_CHAR_LIMIT);
+    expect(compactMcpTranscriptTitle(title)).toMatch(
+      /^Room x+.*\.\.\.\(\+\d+ chars\)#[0-9a-f]{12}$/,
+    );
+    expect(compactMcpTranscriptSceneId("barrow_mouth")).toBe("barrow_mouth");
+    expect(compactMcpTranscriptTitle("Barrow Mouth")).toBe("Barrow Mouth");
   });
 });

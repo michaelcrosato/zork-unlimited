@@ -25,6 +25,12 @@ import {
   type StateTranscriptProjectionCacheEntry,
   type TranscriptProjectionCacheEntry,
 } from "./session_cache.js";
+import {
+  compactMcpActionLabel,
+  compactMcpTranscriptActionId,
+  compactMcpTranscriptSceneId,
+  compactMcpTranscriptTitle,
+} from "./action_labels.js";
 
 export type TranscriptTurn = {
   step: number;
@@ -215,6 +221,11 @@ function transcriptLogHashFor(transcript: readonly TranscriptTurn[]): string {
 function cloneTranscriptTurn(turn: TranscriptTurn): TranscriptTurn {
   return {
     ...turn,
+    scene_id: compactMcpTranscriptSceneId(turn.scene_id),
+    title: compactMcpTranscriptTitle(turn.title),
+    action_id: turn.action_id === null ? null : compactMcpTranscriptActionId(turn.action_id),
+    action_text: turn.action_text === null ? null : compactMcpActionLabel(turn.action_text),
+    result_scene_id: compactMcpTranscriptSceneId(turn.result_scene_id),
     events: turn.events.map((event) => cloneMcpEvent(event) as GameEvent),
   };
 }

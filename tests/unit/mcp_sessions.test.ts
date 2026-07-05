@@ -11,6 +11,12 @@ import {
   type TranscriptTurn,
 } from "../../src/mcp/sessions.js";
 import {
+  MCP_ACTION_LABEL_CHAR_LIMIT,
+  MCP_TRANSCRIPT_ACTION_ID_CHAR_LIMIT,
+  MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT,
+  MCP_TRANSCRIPT_TITLE_CHAR_LIMIT,
+} from "../../src/mcp/action_labels.js";
+import {
   TRANSCRIPT_TURN_LIMIT_DEFAULT,
   transcriptTurnsFor,
   transcriptTurnsOmitted,
@@ -181,6 +187,49 @@ describe("SessionStore", () => {
     transcript[0]!.scene_id = "mutated_after_create";
     expect(store.get(first.id).state.current).toBe("next");
     expect(store.get(first.id).transcript[0]?.scene_id).toBe("start");
+  });
+
+  it("compacts transcript fields at the storage boundary", () => {
+    const store = new SessionStore();
+    const session = store.create(sessionInit());
+    const longTurn: TranscriptTurn = {
+      ...transcriptTurn(1, `action_${"x".repeat(400)}a`),
+      scene_id: `scene_${"x".repeat(400)}a`,
+      title: `Scene ${"x".repeat(400)}a`,
+      action_text: `do ${"x".repeat(400)}a`,
+      result_scene_id: `result_${"x".repeat(400)}a`,
+    };
+    const replacement: TranscriptTurn = {
+      ...transcriptTurn(2, `action_${"x".repeat(400)}b`),
+      scene_id: `scene_${"x".repeat(400)}b`,
+      title: `Scene ${"x".repeat(400)}b`,
+      action_text: `do ${"x".repeat(400)}b`,
+      result_scene_id: `result_${"x".repeat(400)}b`,
+    };
+
+    store.appendTranscript(session.id, longTurn);
+    const stored = session.transcript[0]!;
+
+    expect(stored.scene_id).not.toBe(longTurn.scene_id);
+    expect(stored.scene_id).toHaveLength(MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT);
+    expect(stored.title).not.toBe(longTurn.title);
+    expect(stored.title).toHaveLength(MCP_TRANSCRIPT_TITLE_CHAR_LIMIT);
+    expect(stored.action_id).not.toBe(longTurn.action_id);
+    expect(stored.action_id).toHaveLength(MCP_TRANSCRIPT_ACTION_ID_CHAR_LIMIT);
+    expect(stored.action_text).not.toBe(longTurn.action_text);
+    expect(stored.action_text).toHaveLength(MCP_ACTION_LABEL_CHAR_LIMIT);
+    expect(stored.result_scene_id).not.toBe(longTurn.result_scene_id);
+    expect(stored.result_scene_id).toHaveLength(MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT);
+    expect(stored.action_id).toMatch(/\.\.\.\(\+\d+ chars\)#[0-9a-f]{12}$/);
+
+    store.replaceTranscript(session.id, [replacement]);
+    const replaced = session.transcript[0]!;
+
+    expect(replaced.scene_id).toHaveLength(MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT);
+    expect(replaced.title).toHaveLength(MCP_TRANSCRIPT_TITLE_CHAR_LIMIT);
+    expect(replaced.action_id).toHaveLength(MCP_TRANSCRIPT_ACTION_ID_CHAR_LIMIT);
+    expect(replaced.action_text).toHaveLength(MCP_ACTION_LABEL_CHAR_LIMIT);
+    expect(replaced.action_id).not.toBe(stored.action_id);
   });
 
   it("preserves state-derived caches when the canonical state hash is unchanged", () => {
