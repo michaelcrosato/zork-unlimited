@@ -2579,18 +2579,23 @@ describe("MCP tools — the play loop (§9.1)", () => {
       session_id: game.session_id,
       summary_only: true,
     });
-    const longActionId = `not_a_real_choice_${"x".repeat(500)}`;
+    const longActionId = `not_a_real_choice_${"x".repeat(500)}a`;
+    const samePrefixActionId = `not_a_real_choice_${"x".repeat(500)}b`;
     const r = a.step_action({ session_id: game.session_id, action_id: longActionId });
+    const second = a.step_action({ session_id: game.session_id, action_id: samePrefixActionId });
     expect(r.ok).toBe(false);
+    expect(second.ok).toBe(false);
     expect("rejection_reason" in r).toBe(true);
     if (r.ok) throw new Error("expected illegal action rejection");
     expect(r.rejection_reason).toBeTruthy();
     expect(r.state_hash).toBe(before);
+    expect(second.state_hash).toBe(before);
     const transcriptAfter = a.get_transcript({ session_id: game.session_id });
-    const rejectedTurn = transcriptAfter.turns[transcriptAfter.turns.length - 1]!;
+    const rejectedTurn = transcriptAfter.turns[transcriptAfter.turns.length - 2]!;
+    const secondRejectedTurn = transcriptAfter.turns[transcriptAfter.turns.length - 1]!;
     expect(transcriptAfter.state_hash).toBe(before);
     expect(transcriptAfter.transcript_hash).not.toBe(transcriptBefore.transcript_hash);
-    expect(transcriptAfter.summary.steps).toBe(transcriptBefore.summary.steps + 1);
+    expect(transcriptAfter.summary.steps).toBe(transcriptBefore.summary.steps + 2);
     expect(rejectedTurn).toMatchObject({
       action_text: null,
       scene_id: game.observation.room,
@@ -2601,10 +2606,15 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(rejectedTurn.action_id).not.toBe(longActionId);
     expect(rejectedTurn.action_id?.length).toBeLessThanOrEqual(128);
     expect(rejectedTurn.action_id).toMatch(/^not_a_real_choice_x+/);
-    expect(rejectedTurn.action_id).toMatch(/\.\.\.\(\+\d+ chars\)$/);
+    expect(rejectedTurn.action_id).toMatch(/\.\.\.\(\+\d+ chars\)#[0-9a-f]{12}$/);
+    expect(secondRejectedTurn.action_id).not.toBe(samePrefixActionId);
+    expect(secondRejectedTurn.action_id?.length).toBeLessThanOrEqual(128);
+    expect(secondRejectedTurn.action_id).toMatch(/\.\.\.\(\+\d+ chars\)#[0-9a-f]{12}$/);
+    expect(secondRejectedTurn.action_id).not.toBe(rejectedTurn.action_id);
     expect(rejectedTurn.events).toEqual([
       { type: "rejected", reason: "That action is not available right now." },
     ]);
+    expect(secondRejectedTurn.events).toEqual(rejectedTurn.events);
   });
 
   it("step_action rejects stale expected_state_hash before mutating state", () => {
