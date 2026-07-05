@@ -222,6 +222,14 @@ describe("save / load (§8.7)", () => {
     expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(/source_ref/);
   });
 
+  it("rejects saves without compact source identity at the load boundary", () => {
+    const bytes = saveMicro();
+    const bundle = JSON.parse(bytes) as Record<string, unknown>;
+    delete bundle.source_ref;
+    expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
+    expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(/source_ref/);
+  });
+
   it("loads historical package-only source fallback saves", () => {
     const bytes = JSON.stringify({
       version: 1,

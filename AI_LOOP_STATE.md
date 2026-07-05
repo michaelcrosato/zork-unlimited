@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 416 -->
+<!-- historical_cycle_count: 417 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - save_source_ref_required
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: `load()` now requires compact `source_ref` on every save bundle before accepting persisted state.
+- Loop effect: loose legacy `worldQuestId`/`generatedRpgSeed` fields no longer pass the persistence boundary alone, while explicit historical `["pack", id]` source refs remain load-only compatibility.
+- Guard: focused save/trace, forged-save, world-source, MCP save/load, and generated-pack regressions cover the stricter load boundary.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused persistence/source tests, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - session_source_required
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/loop surface: CLI replay/inspect trace summaries no longer repeat world quest identity after `source: world_quest_id:*`; trace diagnostics keep trace id, source, seed/steps, hashes, and replay status.
 - Loop effect: trace debugging output stays world-bound while dropping a duplicate package-era source axis from every replay/inspect trace read.
 - Guard: focused Prettier, typecheck, trace CLI, RPG play source, and replay smoke checks passed over the cleanup.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - inspect_cli_pack_line_removed
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: `npm run inspect -- <world_quest_id>` no longer prints internal `Pack:` identifiers; quest summaries keep world quest id, title, counts, stats, enemies, and hash.
-- Loop effect: shipped quest diagnostics drop the package-era id while preserving internal pack ids for author/generated diagnostics.
-- Guard: focused Prettier, typecheck, trace CLI, and report-format checks passed over the cleanup.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.

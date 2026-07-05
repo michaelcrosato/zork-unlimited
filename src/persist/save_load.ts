@@ -257,7 +257,9 @@ function assertSaveSourceRef(raw: unknown): asserts raw is SaveSourceRef {
 
 function assertSaveSourceRefConsistency(bundle: SaveBundle): void {
   const sourceRef = (bundle as { source_ref?: unknown }).source_ref;
-  if (sourceRef === undefined) return;
+  if (sourceRef === undefined) {
+    throw new SaveIntegrityError("Save source_ref is required.");
+  }
   assertSaveSourceRef(sourceRef);
   const consistency = compactSourceRefLegacyConsistency(
     sourceRef,
