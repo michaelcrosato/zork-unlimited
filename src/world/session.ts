@@ -12,7 +12,6 @@ import {
   type OverworldPoi,
   type OverworldQuest,
   type OverworldRegionalArc,
-  type OverworldRoutePlan,
   type OverworldRoadEvent,
 } from "./overworld.js";
 import {
@@ -29,9 +28,7 @@ import {
   type OverworldRoadEncounterStrategy,
 } from "./travel_mechanics.js";
 import {
-  buildOverworldDiscoveredRouteOptions,
   indexedOverworldRoute,
-  withOverworldRouteEstimate,
   type OverworldRoutePlannerIndex,
   type OverworldSessionRoutePlan,
 } from "./session_routes.js";
@@ -70,12 +67,6 @@ import {
   type OverworldQuestStartPlan,
 } from "./session_quests.js";
 import { type OverworldSnapshotManifestIndex } from "./session_manifest_index.js";
-import {
-  applyOverworldRegionalArcCompletions,
-  buildOverworldRegionalArcProgress,
-  regionalArcCompletionsForRegion,
-  type OverworldRegionalArcProgress,
-} from "./session_regional_arcs.js";
 import {
   applyOverworldServicePlan,
   planOverworldTownRest,
@@ -122,6 +113,12 @@ import {
   buildOverworldSessionViewFromState,
   type OverworldSessionViewModelState,
 } from "./session_view_state.js";
+import {
+  applyOverworldSessionRegionalArcCompletionsForRegion,
+  cachedOverworldSessionDiscoveredRouteOptions,
+  cachedOverworldSessionRegionalArcProgress,
+  withOverworldSessionRouteEstimate,
+} from "./session_route_progress.js";
 
 export type {
   OverworldRoadEncounterOption,
@@ -605,64 +602,6 @@ export class OverworldSession {
     };
   }
 
-  private routeWithEstimate(plan: OverworldRoutePlan): OverworldSessionRoutePlan {
-    return withOverworldRouteEstimate(plan, {
-      fatigue: this.fatigue,
-      supplies: this.supplies,
-    });
-  }
-
-  private discoveredRouteOptions(): OverworldSessionRoutePlan[] {
-    if (this.caches.routeOptions) return this.caches.routeOptions;
-    this.caches.routeOptions = buildOverworldDiscoveredRouteOptions({
-      routePlannerIndex: this.routePlannerIndex,
-      current: this.currentNode(),
-      currentId: this.currentId,
-      discoveredIds: this.discoveredIds,
-      resources: {
-        fatigue: this.fatigue,
-        supplies: this.supplies,
-      },
-    });
-    return this.caches.routeOptions;
-  }
-
-  private cachedRegionalArcProgress(): OverworldRegionalArcProgress[] {
-    if (this.caches.regionalArcProgress) return this.caches.regionalArcProgress;
-    this.caches.regionalArcProgress = this.buildRegionalArcProgress();
-    return this.caches.regionalArcProgress;
-  }
-
-  private buildRegionalArcProgress(): OverworldRegionalArcProgress[] {
-    return buildOverworldRegionalArcProgress(
-      this.world.regional_arcs,
-      this.currentNode().region,
-      this.regionalArcAnchorTownsById,
-      this.resolvedEventHomeIds,
-      this.completedRegionalArcIds,
-    );
-  }
-
-  private checkRegionalArcCompletion(region: string): void {
-    const completions = regionalArcCompletionsForRegion(
-      region,
-      this.regionalArcsByRegion,
-      this.resolvedEventHomeIds,
-      this.completedRegionalArcIds,
-      this.minutes,
-    );
-    if (completions.length === 0) return;
-    const changed = applyOverworldRegionalArcCompletions(
-      {
-        completedRegionalArcIds: this.completedRegionalArcIds,
-        journalEntries: this.journalEntries,
-        journalEntriesById: this.journalEntriesById,
-      },
-      completions,
-    );
-    if (changed) this.clearSnapshotCache();
-  }
-
   private cachedCompactView(): OverworldCompactView {
     if (this.caches.compactView) return this.caches.compactView;
     this.caches.compactView = this.buildCompactView();
@@ -676,7 +615,17 @@ export class OverworldSession {
   private viewModelState(): OverworldSessionViewModelState {
     const current = this.currentNode();
     const currentArea = this.currentArea();
-    const routeOptions = this.discoveredRouteOptions();
+    const routeOptions = cachedOverworldSessionDiscoveredRouteOptions({
+      caches: this.caches,
+      routePlannerIndex: this.routePlannerIndex,
+      current,
+      currentId: this.currentId,
+      discoveredIds: this.discoveredIds,
+      resources: {
+        fatigue: this.fatigue,
+        supplies: this.supplies,
+      },
+    });
     const localView = this.currentLocalView();
     return {
       worldName: this.world.name,
@@ -731,9 +680,17 @@ export class OverworldSession {
   }
 
   private buildView(): OverworldView {
+    const state = this.viewModelState();
     return buildOverworldSessionViewFromState({
-      ...this.viewModelState(),
-      regionalArcs: this.cachedRegionalArcProgress(),
+      ...state,
+      regionalArcs: cachedOverworldSessionRegionalArcProgress({
+        caches: this.caches,
+        regionalArcs: this.world.regional_arcs,
+        currentRegion: state.current.region,
+        regionalArcAnchorTownsById: this.regionalArcAnchorTownsById,
+        resolvedEventHomeIds: this.resolvedEventHomeIds,
+        completedRegionalArcIds: this.completedRegionalArcIds,
+      }),
     });
   }
 
@@ -941,7 +898,17 @@ export class OverworldSession {
         },
         plan,
       );
-      this.checkRegionalArcCompletion(plan.region);
+      applyOverworldSessionRegionalArcCompletionsForRegion(
+        {
+          regionalArcsByRegion: this.regionalArcsByRegion,
+          resolvedEventHomeIds: this.resolvedEventHomeIds,
+          completedRegionalArcIds: this.completedRegionalArcIds,
+          minutes: this.minutes,
+          journalEntries: this.journalEntries,
+          journalEntriesById: this.journalEntriesById,
+        },
+        plan.region,
+      );
       this.clearSnapshotCache();
     }
     return this.withLocalDiscovery(result, current.id);
@@ -1014,7 +981,10 @@ export class OverworldSession {
       this.discoveredIds,
     );
     if (!plan) throw new Error("No discovered route reaches that destination yet.");
-    return this.routeWithEstimate(plan);
+    return withOverworldSessionRouteEstimate(plan, {
+      fatigue: this.fatigue,
+      supplies: this.supplies,
+    });
   }
 
   resolveRoadEncounter(strategy: OverworldRoadEncounterStrategy): OverworldRoadEncounterResult {
