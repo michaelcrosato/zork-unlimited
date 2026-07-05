@@ -113,7 +113,7 @@ export function applyEffect(
   }
   if ("add_item" in effect) {
     const inventory = state.inventory.includes(effect.add_item)
-      ? state.inventory
+      ? [...state.inventory]
       : [...state.inventory, effect.add_item];
     return {
       state: { ...state, inventory },
