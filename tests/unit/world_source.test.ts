@@ -357,14 +357,6 @@ describe("world source resolution", () => {
     expect(() => resolveTracePackSource(ROOT, {}, generatedTrace, "trace_test")).toThrow(
       /world quest trace source/,
     );
-    expect(resolveSaveGameSource(ROOT, {}, { worldQuestId: "sunken_barrow" }, "save_test")).toEqual(
-      {
-        kind: "pack",
-        packPath: PACK,
-        worldQuestId: "sunken_barrow",
-        generateRpgSeed: null,
-      },
-    );
     expect(
       resolveSaveGameSource(ROOT, {}, { source_ref: ["wq", "sunken_barrow"] }, "save_test"),
     ).toEqual({
@@ -373,19 +365,33 @@ describe("world source resolution", () => {
       worldQuestId: "sunken_barrow",
       generateRpgSeed: null,
     });
-    expect(resolveSaveGameSource(ROOT, {}, { generatedRpgSeed: 3 }, "save_test")).toEqual({
-      kind: "generated",
-      packPath: null,
-      worldQuestId: null,
-      generateRpgSeed: 3,
-    });
     expect(resolveSaveGameSource(ROOT, {}, { source_ref: ["gen", 3] }, "save_test")).toEqual({
       kind: "generated",
       packPath: null,
       worldQuestId: null,
       generateRpgSeed: 3,
     });
-    expect(resolveSaveGameSource(ROOT, { generate_rpg_seed: 3 }, {}, "save_test")).toEqual({
+    expect(
+      resolveSaveGameSource(
+        ROOT,
+        { world_quest_id: "sunken_barrow" },
+        { source_ref: ["pack", "sunken_barrow_v1"] },
+        "save_test",
+      ),
+    ).toEqual({
+      kind: "pack",
+      packPath: PACK,
+      worldQuestId: "sunken_barrow",
+      generateRpgSeed: null,
+    });
+    expect(
+      resolveSaveGameSource(
+        ROOT,
+        { generate_rpg_seed: 3 },
+        { source_ref: ["pack", "genrpg_3_v1"] },
+        "save_test",
+      ),
+    ).toEqual({
       kind: "generated",
       packPath: null,
       worldQuestId: null,
@@ -422,7 +428,7 @@ describe("world source resolution", () => {
 
     expect(() =>
       resolveSaveGameSource(ROOT, {}, { generatedRpgSeed: UNSAFE_GENERATED_RPG_SEED }, "save_test"),
-    ).toThrow(SaveIntegrityError);
+    ).toThrow(/source_ref/);
 
     expect(() =>
       resolveSaveGameSource(
@@ -437,20 +443,25 @@ describe("world source resolution", () => {
       resolveSaveGameSource(
         ROOT,
         {},
-        { worldQuestId: "sunken_barrow", generatedRpgSeed: 3 },
+        { worldQuestId: "sunken_barrow", generatedRpgSeed: 3, source_ref: ["wq", "sunken_barrow"] },
         "save_test",
       ),
     ).toThrow(SaveIntegrityError);
 
     expect(() =>
-      resolveSaveGameSource(ROOT, { generate_rpg_seed: 4 }, { generatedRpgSeed: 3 }, "save_test"),
+      resolveSaveGameSource(
+        ROOT,
+        { generate_rpg_seed: 4 },
+        { generatedRpgSeed: 3, source_ref: ["gen", 3] },
+        "save_test",
+      ),
     ).toThrow(SaveIntegrityError);
 
     expect(() =>
       resolveSaveGameSource(
         ROOT,
         { pack_path: PACK } as never,
-        { generatedRpgSeed: 3 },
+        { generatedRpgSeed: 3, source_ref: ["gen", 3] },
         "save_test",
       ),
     ).toThrow(/not pack_path/);
@@ -458,7 +469,7 @@ describe("world source resolution", () => {
       resolveSaveGameSource(
         ROOT,
         { pack_path: PACK } as never,
-        { worldQuestId: "sunken_barrow" },
+        { worldQuestId: "sunken_barrow", source_ref: ["wq", "sunken_barrow"] },
         "save_test",
       ),
     ).toThrow(/not pack_path/);
@@ -466,7 +477,7 @@ describe("world source resolution", () => {
       resolveSaveGameSource(
         ROOT,
         { world_quest_id: "cold_forge" },
-        { worldQuestId: "sunken_barrow" },
+        { worldQuestId: "sunken_barrow", source_ref: ["wq", "sunken_barrow"] },
         "save_test",
       ),
     ).toThrow(SaveIntegrityError);
@@ -549,8 +560,24 @@ describe("world source resolution", () => {
     expect(() => resolveTraceGameSource(ROOT, {}, traceWithoutWorldQuest, "trace_test")).toThrow(
       /source_ref/,
     );
-    expect(() => resolveSaveGameSource(ROOT, {}, {}, "save_test")).toThrow(
-      /worldQuestId\/generatedRpgSeed/,
+    expect(() => resolveSaveGameSource(ROOT, {}, {}, "save_test")).toThrow(/source_ref/);
+  });
+
+  it("rejects loose legacy save source metadata without source_ref", () => {
+    expect(() =>
+      resolveSaveGameSource(ROOT, {}, { worldQuestId: "sunken_barrow" }, "save_test"),
+    ).toThrow(SaveIntegrityError);
+    expect(() =>
+      resolveSaveGameSource(ROOT, {}, { worldQuestId: "sunken_barrow" }, "save_test"),
+    ).toThrow(/source_ref/);
+    expect(() => resolveSaveGameSource(ROOT, {}, { generatedRpgSeed: 3 }, "save_test")).toThrow(
+      SaveIntegrityError,
+    );
+    expect(() => resolveSaveGameSource(ROOT, {}, { generatedRpgSeed: 3 }, "save_test")).toThrow(
+      /source_ref/,
+    );
+    expect(() => resolveSaveGameSource(ROOT, { generate_rpg_seed: 3 }, {}, "save_test")).toThrow(
+      /source_ref/,
     );
   });
 

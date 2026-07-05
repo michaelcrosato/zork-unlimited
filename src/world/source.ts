@@ -519,9 +519,11 @@ function saveEmbeddedSource(
   return consistency.metadata;
 }
 
-function saveSourceRef(bundle: SaveWorldSource, operation: string): SaveSourceRef | undefined {
+function saveSourceRef(bundle: SaveWorldSource, operation: string): SaveSourceRef {
   const sourceRef = bundle.source_ref;
-  if (sourceRef === undefined) return undefined;
+  if (sourceRef === undefined) {
+    throw new SaveIntegrityError(`${operation} save source_ref is required.`);
+  }
   const error = compactSourceRefValidationError(sourceRef, `${operation} save source_ref`);
   if (error !== undefined) throw new SaveIntegrityError(error);
   return sourceRef as SaveSourceRef;
@@ -534,10 +536,6 @@ export function resolveSaveGameSource(
   operation: string,
 ): GamePackSource {
   rejectRetiredWorldQuestSourceAliases(args, operation, "world_quest_id or generate_rpg_seed");
-  const embeddedSource = saveEmbeddedSource(bundle, operation);
-  const embeddedWorldQuestId = embeddedSource.worldQuestId;
-  const embeddedGeneratedRpgSeed = embeddedSource.generatedRpgSeed;
-
   const explicitCount = [
     args.world_quest_id !== undefined,
     args.generate_rpg_seed !== undefined,
@@ -545,10 +543,16 @@ export function resolveSaveGameSource(
   if (explicitCount > 1) {
     throw new Error(`${operation} accepts exactly one of world_quest_id or generate_rpg_seed.`);
   }
+  if (args.generate_rpg_seed !== undefined) {
+    assertGenerateRpgSeed(args.generate_rpg_seed, operation);
+  }
+
+  const embeddedSource = saveEmbeddedSource(bundle, operation);
+  const embeddedWorldQuestId = embeddedSource.worldQuestId;
+  const embeddedGeneratedRpgSeed = embeddedSource.generatedRpgSeed;
 
   let source: GamePackSource;
   if (args.generate_rpg_seed !== undefined) {
-    assertGenerateRpgSeed(args.generate_rpg_seed, operation);
     source = {
       kind: "generated",
       packPath: null,
