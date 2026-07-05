@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import { compactPlayerEvent, RPG_COMPACT_EVENT_VERSION } from "../../src/mcp/compact_rpg_event.js";
+import {
+  MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT,
+  MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT,
+} from "../../src/mcp/action_labels.js";
 import type { GameEvent } from "../../src/core/events.js";
 
 describe("compactPlayerEvent", () => {
-  it("uses the v4 single-character event contract", () => {
-    expect(RPG_COMPACT_EVENT_VERSION).toBe(4);
+  it("uses the v5 single-character event contract", () => {
+    expect(RPG_COMPACT_EVENT_VERSION).toBe(5);
     expect(compactPlayerEvent({ type: "rejected", reason: "no" })).toEqual(["r", "no"]);
     expect(compactPlayerEvent({ type: "move", from: "yard", to: "road" })).toEqual([
       "m",
@@ -133,8 +137,92 @@ describe("compactPlayerEvent", () => {
     expect(String(diagnostic[4]).length).toBeLessThanOrEqual(240);
     expect(String(diagnostic[4])).toMatch(/\.\.\.\(\+\d+ chars\)$/);
     expect(String(fallback[2]).length).toBeLessThanOrEqual(320);
-    expect(String(fallback[2])).toMatch(/\.\.\.\(\+\d+ chars\)$/);
+    expect(String(fallback[2])).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(String(fallback[2])).toMatch(/\.\.\.\(\+\d+ chars\)#[0-9a-f]{12}$/);
     expect(longNarration.length).toBeGreaterThan(narration[1].length);
     expect(longRejection.length).toBeGreaterThan(rejection[1].length);
+  });
+
+  it("caps compact scalar identity fields with hashed suffixes", () => {
+    const longScene = `room_${"x".repeat(400)}a`;
+    const longTargetScene = `room_${"x".repeat(400)}b`;
+    const longId = `id_${"x".repeat(400)}a`;
+    const longStage = `stage_${"x".repeat(400)}a`;
+    const longEffect = `effect_${"x".repeat(400)}a`;
+    const longValue = `value_${"x".repeat(400)}a`;
+
+    const setFlag = compactPlayerEvent({ type: "state_change", effect: "set_flag", flag: longId });
+    const setVar = compactPlayerEvent({
+      type: "state_change",
+      effect: "set_var",
+      name: longId,
+      value: longValue,
+    });
+    const placeObject = compactPlayerEvent({
+      type: "state_change",
+      effect: "place_object",
+      id: longId,
+      room: longScene,
+    });
+    const questStage = compactPlayerEvent({
+      type: "state_change",
+      effect: "set_quest_stage",
+      quest: longId,
+      stage: longStage,
+    });
+    const fallback = compactPlayerEvent({
+      type: "state_change",
+      effect: longEffect,
+      id: longId,
+      value: longValue,
+    });
+    const unlock = compactPlayerEvent({
+      type: "unlock_exit",
+      from: longScene,
+      to: longTargetScene,
+    });
+    const move = compactPlayerEvent({ type: "move", from: longScene, to: longTargetScene });
+    const open = compactPlayerEvent({ type: "open_object", id: longId });
+    const take = compactPlayerEvent({ type: "take", item: longId });
+    const drop = compactPlayerEvent({ type: "drop", item: longId });
+    const dialogue = compactPlayerEvent({ type: "dialogue", npc: longId, node: longStage });
+    const ending = compactPlayerEvent({ type: "ending", endingId: longId });
+
+    expect(String(setFlag[2])).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(String(setVar[2])).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(String(setVar[3])).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(String(placeObject[2])).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(String(placeObject[3])).toHaveLength(MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT);
+    expect(String(questStage[2])).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(String(questStage[3])).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(String(fallback[1])).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(String(fallback[2])).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(String(fallback[3])).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(String(unlock[1])).toHaveLength(MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT);
+    expect(String(unlock[2])).toHaveLength(MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT);
+    expect(String(move[1])).toHaveLength(MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT);
+    expect(String(move[2])).toHaveLength(MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT);
+    expect(String(open[1])).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(String(take[1])).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(String(drop[1])).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(String(dialogue[1])).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(String(dialogue[2])).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(String(ending[1])).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(
+      JSON.stringify([
+        setFlag,
+        setVar,
+        placeObject,
+        questStage,
+        fallback,
+        unlock,
+        move,
+        open,
+        take,
+        drop,
+        dialogue,
+        ending,
+      ]),
+    ).not.toContain("x".repeat(300));
   });
 });

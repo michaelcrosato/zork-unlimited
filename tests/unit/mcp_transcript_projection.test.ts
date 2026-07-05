@@ -6,6 +6,7 @@ import {
   rpgStepEvents,
   transcriptEventVersion,
 } from "../../src/mcp/transcript_projection.js";
+import { RPG_COMPACT_EVENT_VERSION } from "../../src/mcp/compact_rpg_event.js";
 
 describe("MCP transcript projection", () => {
   it("removes internal state-change events from player-facing streams", () => {
@@ -24,7 +25,7 @@ describe("MCP transcript projection", () => {
 
   it("emits compact event versions only when compact event rows are visible", () => {
     expect(transcriptEventVersion({ session_id: "sess_1", compact_events: true })).toEqual({
-      event_v: 4,
+      event_v: RPG_COMPACT_EVENT_VERSION,
     });
     expect(
       transcriptEventVersion({

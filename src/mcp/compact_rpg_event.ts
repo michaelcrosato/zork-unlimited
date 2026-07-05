@@ -1,11 +1,11 @@
 import type { GameEvent } from "../core/events.js";
 import { compactText } from "./compact_truncation.js";
+import { compactMcpTranscriptSceneId, compactMcpTranscriptSummaryValue } from "./action_labels.js";
 
 const COMPACT_NARRATION_CHAR_LIMIT = 500;
 const COMPACT_REJECTION_CHAR_LIMIT = 240;
 const COMPACT_JOURNAL_CHAR_LIMIT = 320;
 const COMPACT_DIAGNOSTIC_CHAR_LIMIT = 240;
-const COMPACT_STATE_VALUE_CHAR_LIMIT = 320;
 
 export type RpgCompactEvent =
   | readonly ["r", reason: string]
@@ -26,7 +26,7 @@ export type RpgCompactEvent =
   | readonly ["q", npc: string, node: string]
   | readonly ["e", endingId: string];
 
-export const RPG_COMPACT_EVENT_VERSION = 4 as const;
+export const RPG_COMPACT_EVENT_VERSION = 5 as const;
 
 type RpgStateChangeEvent = Extract<GameEvent, { type: "state_change" }>;
 
@@ -47,19 +47,18 @@ function diagnosticField(event: GameEvent): string | undefined {
 }
 
 function compactValue(value: unknown): unknown {
-  return typeof value === "string" ? compactText(value, COMPACT_STATE_VALUE_CHAR_LIMIT) : value;
+  return typeof value === "string" ? compactMcpTranscriptSummaryValue(value) : value;
 }
 
 function compactFallbackKey(event: GameEvent): string | null {
-  return (
+  const key =
     stringField(event, "flag") ||
     stringField(event, "name") ||
     stringField(event, "id") ||
     stringField(event, "item") ||
-    compactText(stringField(event, "text"), COMPACT_STATE_VALUE_CHAR_LIMIT) ||
-    stringField(event, "quest") ||
-    null
-  );
+    stringField(event, "text") ||
+    stringField(event, "quest");
+  return key ? compactMcpTranscriptSummaryValue(key) : null;
 }
 
 function withDiagnostic(event: GameEvent, compact: readonly unknown[]): RpgCompactEvent {
@@ -70,21 +69,29 @@ function withDiagnostic(event: GameEvent, compact: readonly unknown[]): RpgCompa
 function compactStateChangeEvent(event: RpgStateChangeEvent): RpgCompactEvent {
   switch (event.effect) {
     case "set_flag":
-      return withDiagnostic(event, ["s", "f", stringField(event, "flag")]);
+      return withDiagnostic(event, [
+        "s",
+        "f",
+        compactMcpTranscriptSummaryValue(stringField(event, "flag")),
+      ]);
     case "clear_flag":
-      return withDiagnostic(event, ["s", "x", stringField(event, "flag")]);
+      return withDiagnostic(event, [
+        "s",
+        "x",
+        compactMcpTranscriptSummaryValue(stringField(event, "flag")),
+      ]);
     case "set_var":
       return withDiagnostic(event, [
         "s",
         "v",
-        stringField(event, "name"),
+        compactMcpTranscriptSummaryValue(stringField(event, "name")),
         compactValue(field(event, "value")),
       ]);
     case "inc_var":
       return withDiagnostic(event, [
         "s",
         "+",
-        stringField(event, "name"),
+        compactMcpTranscriptSummaryValue(stringField(event, "name")),
         compactValue(field(event, "delta")),
         compactValue(field(event, "value")),
       ]);
@@ -92,7 +99,7 @@ function compactStateChangeEvent(event: RpgStateChangeEvent): RpgCompactEvent {
       return withDiagnostic(event, [
         "s",
         "-",
-        stringField(event, "name"),
+        compactMcpTranscriptSummaryValue(stringField(event, "name")),
         compactValue(field(event, "delta")),
         compactValue(field(event, "value")),
       ]);
@@ -106,22 +113,22 @@ function compactStateChangeEvent(event: RpgStateChangeEvent): RpgCompactEvent {
       return withDiagnostic(event, [
         "s",
         "l",
-        stringField(event, "id"),
+        compactMcpTranscriptSummaryValue(stringField(event, "id")),
         compactValue(field(event, "locked")),
       ]);
     case "place_object":
       return withDiagnostic(event, [
         "s",
         "p",
-        stringField(event, "id"),
-        stringField(event, "room"),
+        compactMcpTranscriptSummaryValue(stringField(event, "id")),
+        compactMcpTranscriptSceneId(stringField(event, "room")),
       ]);
     case "set_quest_stage":
       return withDiagnostic(event, [
         "s",
         "q",
-        stringField(event, "quest"),
-        stringField(event, "stage"),
+        compactMcpTranscriptSummaryValue(stringField(event, "quest")),
+        compactMcpTranscriptSummaryValue(stringField(event, "stage")),
       ]);
     default: {
       const key = compactFallbackKey(event);
@@ -135,8 +142,8 @@ function compactStateChangeEvent(event: RpgStateChangeEvent): RpgCompactEvent {
           field(event, "stage"),
       );
       return value !== undefined
-        ? withDiagnostic(event, ["s", event.effect, key, value])
-        : withDiagnostic(event, ["s", event.effect, key]);
+        ? withDiagnostic(event, ["s", compactMcpTranscriptSummaryValue(event.effect), key, value])
+        : withDiagnostic(event, ["s", compactMcpTranscriptSummaryValue(event.effect), key]);
     }
   }
 }
@@ -150,18 +157,22 @@ export function compactPlayerEvent(event: GameEvent): RpgCompactEvent {
     case "state_change":
       return compactStateChangeEvent(event);
     case "unlock_exit":
-      return ["u", event.from, event.to];
+      return ["u", compactMcpTranscriptSceneId(event.from), compactMcpTranscriptSceneId(event.to)];
     case "open_object":
-      return ["o", event.id];
+      return ["o", compactMcpTranscriptSummaryValue(event.id)];
     case "move":
-      return ["m", event.from, event.to];
+      return ["m", compactMcpTranscriptSceneId(event.from), compactMcpTranscriptSceneId(event.to)];
     case "take":
-      return ["t", event.item];
+      return ["t", compactMcpTranscriptSummaryValue(event.item)];
     case "drop":
-      return ["d", event.item];
+      return ["d", compactMcpTranscriptSummaryValue(event.item)];
     case "dialogue":
-      return ["q", event.npc, event.node];
+      return [
+        "q",
+        compactMcpTranscriptSummaryValue(event.npc),
+        compactMcpTranscriptSummaryValue(event.node),
+      ];
     case "ending":
-      return ["e", event.endingId];
+      return ["e", compactMcpTranscriptSummaryValue(event.endingId)];
   }
 }

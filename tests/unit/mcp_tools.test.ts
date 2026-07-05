@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { writeFileSync, mkdirSync, readFileSync } from "node:fs";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { RPG_COMPACT_OBSERVATION_VERSION } from "../../src/mcp/compact_rpg_observation.js";
+import { RPG_COMPACT_EVENT_VERSION } from "../../src/mcp/compact_rpg_event.js";
 import { PathEscapeError } from "../../src/mcp/paths.js";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
@@ -1979,7 +1980,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       session_id: game.session_id,
       compact_events: true,
     });
-    expect(compactEventTranscript.event_v).toBe(4);
+    expect(compactEventTranscript.event_v).toBe(RPG_COMPACT_EVENT_VERSION);
     const compactEventTurn = compactEventTranscript.turns.find((turn) => turn.events.length > 0);
     const fullEventTurn = transcript.turns.find((turn) => turn.events.length > 0);
     expect(compactEventTurn).toBeDefined();
@@ -2301,7 +2302,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       "r",
       "That action is not available right now.",
     ]);
-    expect(compactEventRejected.event_v).toBe(4);
+    expect(compactEventRejected.event_v).toBe(RPG_COMPACT_EVENT_VERSION);
     expect(JSON.stringify(compactEventRejected.events).length).toBeLessThan(
       JSON.stringify(rejected.events).length,
     );
@@ -2331,7 +2332,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_observation: true,
     });
     expect(compactEventMoved.events[0]).toEqual(["m", moveEvent.from, moveEvent.to]);
-    expect(compactEventMoved.event_v).toBe(4);
+    expect(compactEventMoved.event_v).toBe(RPG_COMPACT_EVENT_VERSION);
     expect(JSON.stringify(compactEventMoved.events).length).toBeLessThan(
       JSON.stringify(moved.events).length,
     );
