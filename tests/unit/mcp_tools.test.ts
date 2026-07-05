@@ -3,6 +3,7 @@ import { writeFileSync, mkdirSync, readFileSync } from "node:fs";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { RPG_COMPACT_OBSERVATION_VERSION } from "../../src/mcp/compact_rpg_observation.js";
 import { RPG_COMPACT_EVENT_VERSION } from "../../src/mcp/compact_rpg_event.js";
+import { RPG_COMPACT_STATE_VERSION } from "../../src/mcp/compact_rpg_state.js";
 import { PathEscapeError } from "../../src/mcp/paths.js";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
@@ -1864,6 +1865,28 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(rawState.state_hash).toBe(currentStateHash);
     expect(rawState.state.current).toBe(last.observation.room);
     expect(rawState.state).not.toBe(a.sessions.get(game.session_id).state);
+    const compactState = a.get_state({ session_id: game.session_id, compact_state: true });
+    expect(compactState.state_hash).toBe(currentStateHash);
+    expect("state" in compactState).toBe(false);
+    expect(compactState.compact_state.v).toBe(RPG_COMPACT_STATE_VERSION);
+    expect(compactState.compact_state.at).toBe(last.observation.room);
+    expect(compactState.compact_state.vitals).toEqual([
+      last.observation.stats.hp,
+      last.observation.stats.attack,
+      last.observation.stats.defense,
+      last.observation.score,
+      last.observation.max_score,
+    ]);
+    expect("mode" in compactState.compact_state).toBe(false);
+    expect(JSON.stringify(compactState).length).toBeLessThan(JSON.stringify(rawState).length);
+    const rawAndCompactState = a.get_state({
+      session_id: game.session_id,
+      include_state: true,
+      compact_state: true,
+    });
+    expect(rawAndCompactState.state_hash).toBe(currentStateHash);
+    expect(rawAndCompactState.state.current).toBe(last.observation.room);
+    expect(rawAndCompactState.compact_state.at).toBe(last.observation.room);
     const rawStateRoom = rawState.state.current;
     rawState.state.current = "mutated_room";
     rawState.state.inventory.push("mutated_item");
@@ -1885,6 +1908,13 @@ describe("MCP tools — the play loop (§9.1)", () => {
     });
     expect(unchangedRawState).toEqual({ state_hash: currentStateHash, unchanged: true });
     expect("state" in unchangedRawState).toBe(false);
+    const unchangedCompactState = a.get_state({
+      session_id: game.session_id,
+      compact_state: true,
+      if_state_hash: currentStateHash,
+    });
+    expect(unchangedCompactState).toEqual({ state_hash: currentStateHash, unchanged: true });
+    expect("compact_state" in unchangedCompactState).toBe(false);
     const summaryOnlyTranscript = a.get_transcript({
       session_id: game.session_id,
       summary_only: true,
@@ -2086,10 +2116,12 @@ describe("MCP tools — the play loop (§9.1)", () => {
       summary_only: true,
       compact_summary: true,
     });
+    const compactState = a.get_state({ session_id: game.session_id, compact_state: true });
     const currentStateHash = a.get_state({ session_id: game.session_id }).state_hash;
 
     expect(full.state_hash).toBe(currentStateHash);
     expect(compact.state_hash).toBe(currentStateHash);
+    expect(compactState.state_hash).toBe(currentStateHash);
     expect(full.summary.scenes).toHaveLength(21);
     expect(full.summary.inventory).toHaveLength(20);
     expect(full.summary.flags).toHaveLength(20);
@@ -2105,6 +2137,8 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(compact.summary.flags).toEqual(numberedIds("flag", 16));
     expect(compact.summary.journal).toEqual(numberedIds("journal", 10).slice(-5));
     expect(compact.summary.more).toEqual([5, 4, 4, 5]);
+    expect(compactState.compact_state.flags).toEqual(numberedIds("flag", 16));
+    expect(JSON.stringify(compactState.compact_state)).not.toContain("__internal_bookkeeping");
     expect(JSON.stringify(compact).length).toBeLessThan(JSON.stringify(full).length);
   });
 

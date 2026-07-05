@@ -1,6 +1,7 @@
 import type { GameState } from "../core/state.js";
 import { cloneGameState } from "../core/state.js";
 import { SAVE_MODE, save } from "../persist/save_load.js";
+import { compactRpgState, type RpgCompactState } from "./compact_rpg_state.js";
 import {
   legalActionRowsFor,
   rpgViewField,
@@ -65,6 +66,7 @@ export type RpgLegalActionsToolResponse<Args extends RpgLegalActionsToolArgs> = 
 export type RpgGetStateToolArgs = {
   session_id: string;
   include_state?: boolean;
+  compact_state?: boolean;
   if_state_hash?: string;
 };
 
@@ -72,15 +74,22 @@ type RpgStateHashToolPayload = {
   state_hash: string;
 };
 
-type RpgStateToolPayload = RpgStateHashToolPayload & {
+type RpgRawStateToolField = {
   state: GameState;
+};
+
+type RpgCompactStateToolField = {
+  compact_state: RpgCompactState;
 };
 
 type RpgStateToolPayloadFor<Args extends RpgGetStateToolArgs> = Args extends {
   include_state: true;
 }
-  ? RpgStateToolPayload
-  : RpgStateHashToolPayload;
+  ? RpgStateHashToolPayload &
+      RpgRawStateToolField &
+      (Args extends { compact_state: true } ? RpgCompactStateToolField : Record<string, never>)
+  : RpgStateHashToolPayload &
+      (Args extends { compact_state: true } ? RpgCompactStateToolField : Record<string, never>);
 
 export type RpgStateToolResponse<Args extends RpgGetStateToolArgs> = Args extends {
   if_state_hash: string;
@@ -206,10 +215,19 @@ export function runRpgGetState<Args extends RpgGetStateToolArgs>(
   if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
     return rpgStateUnchanged(stateHash) as RpgStateToolResponse<Args>;
   }
+  const response: RpgStateHashToolPayload &
+    Partial<RpgRawStateToolField & RpgCompactStateToolField> = {
+    state_hash: stateHash,
+  };
   if (args.include_state === true) {
-    return { state: cloneGameState(s.state), state_hash: stateHash } as RpgStateToolResponse<Args>;
+    response.state = cloneGameState(s.state);
   }
-  return { state_hash: stateHash } as RpgStateToolResponse<Args>;
+  if (args.compact_state === true) {
+    response.compact_state = compactRpgState(s.state, {
+      maxScore: s.index.pack.meta.max_score ?? 0,
+    });
+  }
+  return response as RpgStateToolResponse<Args>;
 }
 
 export function runRpgGetTranscript<Args extends TranscriptArgs>(

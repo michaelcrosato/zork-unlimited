@@ -25,6 +25,7 @@ import { safeResolve } from "./paths.js";
 import { SessionStore } from "./sessions.js";
 import { type McpActionOption, type McpObservation } from "./types.js";
 import type { RpgCompactObservation } from "./compact_rpg_observation.js";
+import type { RpgCompactState } from "./compact_rpg_state.js";
 import { RpgMcpSessionRuntime } from "./rpg_session_runtime.js";
 import {
   runRpgLoadGame,
@@ -220,17 +221,24 @@ type RpgStartWorldQuestInvoker = {
 type RpgGetStateArgs = {
   session_id: string;
   include_state?: boolean;
+  compact_state?: boolean;
   if_state_hash?: string;
 };
 type RpgStateHashPayload = {
   state_hash: string;
 };
-type RpgStatePayload = RpgStateHashPayload & {
+type RpgRawStatePayloadField = {
   state: GameState;
 };
+type RpgCompactStatePayloadField = {
+  compact_state: RpgCompactState;
+};
 type RpgStatePayloadFor<Args extends RpgGetStateArgs> = Args extends { include_state: true }
-  ? RpgStatePayload
-  : RpgStateHashPayload;
+  ? RpgStateHashPayload &
+      RpgRawStatePayloadField &
+      (Args extends { compact_state: true } ? RpgCompactStatePayloadField : Record<string, never>)
+  : RpgStateHashPayload &
+      (Args extends { compact_state: true } ? RpgCompactStatePayloadField : Record<string, never>);
 type RpgStateResponse<Args extends RpgGetStateArgs> = Args extends { if_state_hash: string }
   ? RpgStatePayloadFor<Args> | RpgStateUnchanged
   : RpgStatePayloadFor<Args>;

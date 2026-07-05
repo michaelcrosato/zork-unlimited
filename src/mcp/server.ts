@@ -147,6 +147,7 @@ function defaultCompactTranscript(args: unknown): never {
 type McpStateArgs = {
   session_id: string;
   include_state?: boolean;
+  compact_state?: boolean;
   if_state_hash?: string;
 };
 
@@ -406,10 +407,10 @@ tool(
 
 tool(
   "new_game",
-  "Start generated RPG; compact.",
+  "Start RPG; compact.",
   {
-    generate_rpg_seed: G.optional().describe("Generated seed."),
-    seed: z.number().int().safe().optional().describe("Runtime seed."),
+    generate_rpg_seed: G.optional().describe("Gen seed."),
+    seed: z.number().int().safe().optional().describe("Seed."),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
@@ -462,11 +463,12 @@ tool(
 );
 tool(
   "get_state",
-  "State hash; optional snapshot.",
+  "State hash.",
   {
     ...SESSION,
     ...IF_STATE_HASH,
-    include_state: z.boolean().optional().describe("Snapshot."),
+    include_state: z.boolean().optional().describe("Raw."),
+    compact_state: z.boolean().optional().describe("Compact."),
   },
   (a) => compactMcpState(a),
 );
@@ -495,7 +497,7 @@ tool(
   "Restore save; compact.",
   {
     world_quest_id: z.string().optional().describe("World quest id."),
-    generate_rpg_seed: G.optional().describe("Generated seed."),
+    generate_rpg_seed: G.optional().describe("Gen seed."),
     save: z.string().describe("Save string."),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
