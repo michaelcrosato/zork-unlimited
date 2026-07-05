@@ -10,23 +10,14 @@
  * never indexes, observes, starts, or validates them as playable sessions. Content
  * and traces are data only — no handler runs shell or code (§16).
  */
-import { readFileSync, statSync } from "node:fs";
-import { parse as parseYaml } from "yaml";
-import { hashState } from "../core/hash.js";
+import { readFileSync } from "node:fs";
 import type { RpgAction } from "../api/types.js";
 import type { GameState } from "../core/state.js";
 
-import { compileRpgPack, loadRpgPackFile, type CompiledRpgPack } from "../rpg/pack.js";
-import { generateRpgPack } from "../gen/rpg_generator.js";
-import { validateRpg } from "../validate/rpg_validator.js";
+import { loadRpgPackFile, type CompiledRpgPack } from "../rpg/pack.js";
 import { assertRpgStateReferences } from "../rpg/state_integrity.js";
 
-import {
-  makeReport,
-  formatReport,
-  type Finding,
-  type ValidationReport,
-} from "../validate/report.js";
+import { makeReport, type ValidationReport } from "../validate/report.js";
 import {
   SAVE_MODE,
   load,
@@ -37,11 +28,12 @@ import { assertTraceMode, replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
 import { SessionStore, type Session, type TranscriptSummary } from "./sessions.js";
-import { isRpgPackShape, type McpActionOption, type McpObservation } from "./types.js";
+import { type McpActionOption, type McpObservation } from "./types.js";
 import { RPG_COMPACT_EVENT_VERSION, type RpgCompactEvent } from "./compact_rpg_event.js";
 import type { RpgCompactObservation } from "./compact_rpg_observation.js";
 import { rpgViewField } from "./rpg_view_projection.js";
 import { RpgMcpSessionRuntime, rpgSourceFields } from "./rpg_session_runtime.js";
+import { RpgSourceRuntime, type PublicWorldGraph } from "./rpg_source_runtime.js";
 import {
   runRpgGetObservation,
   runRpgGetState,
@@ -73,28 +65,19 @@ import {
   overworldQuestCompletionFromRpgSession,
   startOverworldQuestThroughRpg,
 } from "./overworld_quest_bridge.js";
-import type { WorldBinding, WorldManifest } from "../world/schema.js";
+import type { WorldManifest } from "../world/schema.js";
 import {
-  normalizePackPath,
-  worldMapBounds,
-  worldMapEdges,
   worldNodeAtCoord,
   worldQuestNodeById,
-  worldQuestNodeForPack,
   worldRouteFromHub,
   type WorldCoord,
-  type WorldMapBounds,
-  type WorldMapEdge,
   type WorldRouteStep,
 } from "../world/graph.js";
 import {
   loadOverworldManifest as loadOverworldManifestFromRoot,
-  loadWorldManifest as loadWorldManifestFromRoot,
   resolveGameSource,
   resolvePackSource,
   resolveSaveGameSource,
-  resolveTracePackSource,
-  resolveWorldQuestPackPath as resolveWorldQuestPackPathFromRoot,
 } from "../world/source.js";
 import { loadWorldQuestReport, validateWorldQuestReport } from "./world_quest_reports.js";
 import { type OverworldManifest, type OverworldNode } from "../world/overworld.js";
@@ -141,38 +124,6 @@ import {
 } from "../../agents/fixer.js";
 
 export type ToolApi = ReturnType<typeof createToolApi>;
-
-type LoadResult =
-  | { ok: true; compiled: CompiledRpgPack; report: ValidationReport }
-  | { ok: false; report: ValidationReport };
-
-type PackLoadCacheEntry = {
-  mtimeMs: number;
-  size: number;
-  result: LoadResult;
-};
-
-type GeneratedRpgCacheEntry = {
-  compiled: CompiledRpgPack;
-  report: ValidationReport;
-};
-
-type WorldQuestSourceEntry = {
-  path: string;
-  id: string;
-  title: string;
-  playable: boolean;
-  world: WorldBinding | null;
-  world_quest_id: string | null;
-};
-
-type PublicWorldGraphNode = Omit<WorldManifest["graph"]["nodes"][number], "pack">;
-
-type PublicWorldGraph = Omit<WorldManifest["graph"], "nodes" | "edges"> & {
-  bounds?: WorldMapBounds;
-  nodes: PublicWorldGraphNode[];
-  edges: WorldMapEdge[];
-};
 
 type PublicWorldSummary = Pick<WorldManifest, "id" | "name" | "hub">;
 
@@ -496,164 +447,12 @@ type OverworldReadResponse<Args extends OverworldReadArgs> = OverworldMcpReadRes
 
 type OverworldContextResponse<Args extends OverworldReadArgs> = OverworldMcpContextResponse<Args>;
 
-function schemaFindings(
-  packPath: string,
-  error: { issues: { message: string; path: (string | number)[] }[] },
-): Finding[] {
-  return error.issues.map((i) => ({
-    severity: "error" as const,
-    code: "SCHEMA",
-    message: `${i.message} (${i.path.join(".") || "<root>"})`,
-    where: [i.path.join(".") || "<root>"],
-  }));
-}
-
 export function createToolApi(opts: { root: string }) {
   const root = opts.root;
   const sessions = new SessionStore();
-  const packLoadCache = new Map<string, PackLoadCacheEntry>();
-  const generatedRpgCache = new Map<number, GeneratedRpgCacheEntry>();
+  const rpgSources = new RpgSourceRuntime(root);
   const rpgRuntime = new RpgMcpSessionRuntime(sessions);
   const overworldSessions = new OverworldMcpSessionStore(() => loadOverworldManifestFromRoot(root));
-
-  /** Read an RPG pack, compile, and validate it with the single runtime loader. */
-  function loadAndReport(packPath: string): LoadResult {
-    const abs = safeResolve(root, packPath);
-    const stat = statSync(abs);
-    const cached = packLoadCache.get(abs);
-    if (cached && cached.mtimeMs === stat.mtimeMs && cached.size === stat.size) {
-      return cached.result;
-    }
-
-    const source = readFileSync(abs, "utf8");
-    let result: LoadResult;
-    if (!isRpgPackShape(parseYaml(source) as unknown)) {
-      result = {
-        ok: false,
-        report: makeReport(packPath, [
-          {
-            severity: "error",
-            code: "UNSUPPORTED_LEGACY_PACK",
-            message: "MCP pack loading is RPG-only; legacy pack shapes are migration data.",
-            where: [packPath],
-          },
-        ]),
-      };
-      packLoadCache.set(abs, { mtimeMs: stat.mtimeMs, size: stat.size, result });
-      return result;
-    }
-    const compileRes = compileRpgPack(source);
-    if (!compileRes.ok) {
-      result = {
-        ok: false,
-        report: makeReport(packPath, schemaFindings(packPath, compileRes.error)),
-      };
-      packLoadCache.set(abs, { mtimeMs: stat.mtimeMs, size: stat.size, result });
-      return result;
-    }
-    const pack = compileRes.compiled.pack;
-    const report = validateRpg(pack);
-    result = { ok: true, compiled: compileRes.compiled, report };
-    packLoadCache.set(abs, { mtimeMs: stat.mtimeMs, size: stat.size, result });
-    return result;
-  }
-
-  /** Compile + validate, refusing to play an invalid pack (§0, §10). */
-  function requirePlayable(packPath: string): CompiledRpgPack {
-    const lr = loadAndReport(packPath);
-    if (!lr.ok || !lr.report.ok) {
-      throw new Error(`Pack is not playable:\n${formatReport(lr.ok ? lr.report : lr.report)}`);
-    }
-    return lr.compiled;
-  }
-
-  function generatedRpg(seed: number): GeneratedRpgCacheEntry {
-    const cached = generatedRpgCache.get(seed);
-    if (cached) return cached;
-    const pack = generateRpgPack(seed); // mints + schema self-check (throws on malformed emission)
-    const report = validateRpg(pack);
-    const entry = { compiled: { pack, contentHash: hashState(pack) }, report };
-    generatedRpgCache.set(seed, entry);
-    return entry;
-  }
-
-  /**
-   * Mint a fresh RPG pack from a seed and refuse to play it unless it clears the SAME
-   * `validateRpg` gate the curated RPG packs clear. This is the only public MCP
-   * generation route.
-   */
-  function requireGeneratedRpgPlayable(seed: number): CompiledRpgPack {
-    const { compiled, report } = generatedRpg(seed);
-    if (!report.ok) {
-      throw new Error(
-        `Generated RPG pack (seed ${seed}) is not playable:\n${formatReport(report)}`,
-      );
-    }
-    return compiled;
-  }
-
-  function worldQuestPackPaths(world: WorldManifest): string[] {
-    return world.graph.nodes
-      .filter((node) => node.kind === "quest" && node.pack)
-      .map((node) => normalizePackPath(node.pack ?? ""));
-  }
-
-  function discoverWorldQuestSources(world = loadWorldManifest()): WorldQuestSourceEntry[] {
-    return worldQuestPackPaths(world).map((path) => {
-      const lr = loadAndReport(path);
-      const node = worldQuestNodeForPack(world, path);
-      return {
-        path,
-        id: lr.ok ? lr.compiled.pack.meta.id : path,
-        title: lr.ok ? lr.compiled.pack.meta.title : path,
-        playable: lr.ok && lr.report.ok,
-        world: lr.ok ? (lr.compiled.pack.meta.world ?? null) : null,
-        world_quest_id: node?.id ?? null,
-      };
-    });
-  }
-
-  function publicWorldGraph(world: WorldManifest): PublicWorldGraph {
-    const bounds = worldMapBounds(world);
-    return {
-      hub: world.graph.hub,
-      ...(bounds === null ? {} : { bounds }),
-      nodes: world.graph.nodes.map((node) => ({
-        id: node.id,
-        name: node.name,
-        kind: node.kind,
-        ...(node.district === undefined ? {} : { district: node.district }),
-        ...(node.coord === undefined ? {} : { coord: node.coord }),
-      })),
-      edges: worldMapEdges(world),
-    };
-  }
-
-  function resolveWorldQuestPackPath(worldQuestId: string): {
-    world: WorldManifest;
-    node: NonNullable<ReturnType<typeof worldQuestNodeById>>;
-    packPath: string;
-  } {
-    return resolveWorldQuestPackPathFromRoot(root, worldQuestId);
-  }
-
-  function resolveTraceSource(
-    args: { world_quest_id?: string; pack_path?: never },
-    trace: Trace<RpgAction>,
-    operation: string,
-  ): { packPath: string; worldQuestId: string | null; compiled: CompiledRpgPack } {
-    if ((args as { pack_path?: unknown }).pack_path !== undefined) {
-      throw new Error(
-        `${operation} accepts world_quest_id or embedded trace worldQuestId, not pack_path.`,
-      );
-    }
-    const source = resolveTracePackSource(root, args, trace, operation);
-    return { ...source, compiled: requirePlayable(source.packPath) };
-  }
-
-  function loadWorldManifest(): WorldManifest {
-    return loadWorldManifestFromRoot(root);
-  }
 
   return {
     sessions,
@@ -661,8 +460,9 @@ export function createToolApi(opts: { root: string }) {
     list_world<Args extends WorldListOptions = Record<string, never>>(
       args?: Args,
     ): WorldListResponse<Args> {
-      const world = loadWorldManifest();
-      const quests = discoverWorldQuestSources(world)
+      const world = rpgSources.loadWorldManifest();
+      const quests = rpgSources
+        .discoverWorldQuestSources(world)
         .filter((s) => s.world?.id === world.id)
         .map((s) => {
           const node = s.world_quest_id ? worldQuestNodeById(world, s.world_quest_id) : null;
@@ -698,7 +498,7 @@ export function createToolApi(opts: { root: string }) {
       if (args?.include_graph === true) {
         return {
           ...catalog,
-          graph: publicWorldGraph(world),
+          graph: rpgSources.publicWorldGraph(world),
         } as unknown as WorldListResponse<Args>;
       }
       return catalog as WorldListResponse<Args>;
@@ -719,7 +519,7 @@ export function createToolApi(opts: { root: string }) {
       if (args.world_quest_id === undefined && args.coord === undefined) {
         throw new Error("world_path requires world_quest_id or coord.");
       }
-      const world = loadWorldManifest();
+      const world = rpgSources.loadWorldManifest();
       const node =
         args.world_quest_id === undefined
           ? worldNodeAtCoord(world, args.coord!)
@@ -1120,7 +920,9 @@ export function createToolApi(opts: { root: string }) {
       world_quest_id: string | null;
       report: ValidationReport;
     } {
-      return validateWorldQuestReport(root, args, "validate_quest", loadAndReport);
+      return validateWorldQuestReport(root, args, "validate_quest", (packPath) =>
+        rpgSources.loadAndReport(packPath),
+      );
     },
 
     load_quest(args: { world_quest_id?: string }): {
@@ -1130,7 +932,9 @@ export function createToolApi(opts: { root: string }) {
       content_hash?: string;
       report: ValidationReport;
     } {
-      return loadWorldQuestReport(root, args, "load_quest", loadAndReport);
+      return loadWorldQuestReport(root, args, "load_quest", (packPath) =>
+        rpgSources.loadAndReport(packPath),
+      );
     },
 
     /**
@@ -1153,7 +957,7 @@ export function createToolApi(opts: { root: string }) {
       const {
         compiled: { pack, contentHash },
         report,
-      } = generatedRpg(args.seed);
+      } = rpgSources.generatedRpg(args.seed);
       return {
         ok: report.ok,
         content_hash: contentHash,
@@ -1170,7 +974,7 @@ export function createToolApi(opts: { root: string }) {
       // Mint a fresh RPG pack in-memory from `generate_rpg_seed`. The generation seed selects
       // the minted pack's theme/structure; `seed` still seeds runtime state.
       const source = resolveGameSource(root, args, "new_game");
-      const compiled = requireGeneratedRpgPlayable(source.generateRpgSeed);
+      const compiled = rpgSources.requireGeneratedRpgPlayable(source.generateRpgSeed);
       return rpgRuntime.startRpgSession(compiled, args, {
         generatedRpgSeed: source.generateRpgSeed,
       });
@@ -1185,11 +989,15 @@ export function createToolApi(opts: { root: string }) {
       if ((args as { world_quest_id?: unknown }).world_quest_id === undefined) {
         throw new Error("start_world_quest requires world_quest_id.");
       }
-      const resolved = resolveWorldQuestPackPath(args.world_quest_id);
-      const started = rpgRuntime.startRpgSession(requirePlayable(resolved.packPath), args, {
-        packPath: resolved.packPath,
-        worldQuestId: resolved.node.id,
-      });
+      const resolved = rpgSources.resolveWorldQuestPackPath(args.world_quest_id);
+      const started = rpgRuntime.startRpgSession(
+        rpgSources.requirePlayable(resolved.packPath),
+        args,
+        {
+          packPath: resolved.packPath,
+          worldQuestId: resolved.node.id,
+        },
+      );
       return {
         world: { id: resolved.world.id, name: resolved.world.name, hub: resolved.world.hub },
         quest: {
@@ -1235,8 +1043,8 @@ export function createToolApi(opts: { root: string }) {
       const source = resolveSaveGameSource(root, args, bundle, "load_game");
       const compiled =
         source.kind === "generated"
-          ? requireGeneratedRpgPlayable(source.generateRpgSeed)
-          : requirePlayable(source.packPath);
+          ? rpgSources.requireGeneratedRpgPlayable(source.generateRpgSeed)
+          : rpgSources.requirePlayable(source.packPath);
       // The save was already parsed and state-gated above; bind those bytes to the
       // resolved pack hash here without reparsing the same blob.
       assertSaveContentHash(bundle, compiled.contentHash);
@@ -1290,7 +1098,7 @@ export function createToolApi(opts: { root: string }) {
       const traceAbs = safeResolve(root, args.trace_path);
       const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace<RpgAction>;
       assertTraceMode(trace);
-      const { compiled } = resolveTraceSource(args, trace, "replay_trace");
+      const { compiled } = rpgSources.resolveTraceSource(args, trace, "replay_trace");
       if (trace.content_hash !== compiled.contentHash) {
         return {
           ok: false,
@@ -1319,7 +1127,7 @@ export function createToolApi(opts: { root: string }) {
       const traceAbs = safeResolve(root, args.trace_path);
       const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace<RpgAction>;
       assertTraceMode(trace);
-      const source = resolveTraceSource(args, trace, "inspect_trace");
+      const source = rpgSources.resolveTraceSource(args, trace, "inspect_trace");
       const { compiled } = source;
       if (trace.content_hash !== compiled.contentHash) {
         return {

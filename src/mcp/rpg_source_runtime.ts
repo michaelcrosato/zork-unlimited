@@ -1,0 +1,221 @@
+import { readFileSync, statSync } from "node:fs";
+import { parse as parseYaml } from "yaml";
+import { hashState } from "../core/hash.js";
+import type { RpgAction } from "../api/types.js";
+import { compileRpgPack, type CompiledRpgPack } from "../rpg/pack.js";
+import { generateRpgPack } from "../gen/rpg_generator.js";
+import { validateRpg } from "../validate/rpg_validator.js";
+import {
+  formatReport,
+  makeReport,
+  type Finding,
+  type ValidationReport,
+} from "../validate/report.js";
+import type { Trace } from "../trace/record.js";
+import type { WorldBinding, WorldManifest } from "../world/schema.js";
+import {
+  normalizePackPath,
+  worldMapBounds,
+  worldMapEdges,
+  worldQuestNodeForPack,
+  type WorldMapBounds,
+  type WorldMapEdge,
+} from "../world/graph.js";
+import {
+  loadWorldManifest as loadWorldManifestFromRoot,
+  resolveTracePackSource,
+  resolveWorldQuestPackPath as resolveWorldQuestPackPathFromRoot,
+  type TracePackSource,
+  type WorldQuestPackSource,
+} from "../world/source.js";
+import { safeResolve } from "./paths.js";
+import { isRpgPackShape } from "./types.js";
+
+export type RpgLoadResult =
+  | { ok: true; compiled: CompiledRpgPack; report: ValidationReport }
+  | { ok: false; report: ValidationReport };
+
+type RpgPackLoadCacheEntry = {
+  mtimeMs: number;
+  size: number;
+  result: RpgLoadResult;
+};
+
+export type GeneratedRpgCacheEntry = {
+  compiled: CompiledRpgPack;
+  report: ValidationReport;
+};
+
+export type WorldQuestSourceEntry = {
+  path: string;
+  id: string;
+  title: string;
+  playable: boolean;
+  world: WorldBinding | null;
+  world_quest_id: string | null;
+};
+
+type PublicWorldGraphNode = Omit<WorldManifest["graph"]["nodes"][number], "pack">;
+
+export type PublicWorldGraph = Omit<WorldManifest["graph"], "nodes" | "edges"> & {
+  bounds?: WorldMapBounds;
+  nodes: PublicWorldGraphNode[];
+  edges: WorldMapEdge[];
+};
+
+export type RpgTraceSource = TracePackSource & {
+  compiled: CompiledRpgPack;
+};
+
+function schemaFindings(
+  packPath: string,
+  error: { issues: { message: string; path: (string | number)[] }[] },
+): Finding[] {
+  return error.issues.map((i) => ({
+    severity: "error" as const,
+    code: "SCHEMA",
+    message: `${i.message} (${i.path.join(".") || "<root>"})`,
+    where: [i.path.join(".") || "<root>"],
+  }));
+}
+
+export class RpgSourceRuntime {
+  private readonly packLoadCache = new Map<string, RpgPackLoadCacheEntry>();
+  private readonly generatedRpgCache = new Map<number, GeneratedRpgCacheEntry>();
+
+  constructor(private readonly root: string) {}
+
+  /** Read an RPG pack, compile, and validate it with the single runtime loader. */
+  loadAndReport(packPath: string): RpgLoadResult {
+    const abs = safeResolve(this.root, packPath);
+    const stat = statSync(abs);
+    const cached = this.packLoadCache.get(abs);
+    if (cached && cached.mtimeMs === stat.mtimeMs && cached.size === stat.size) {
+      return cached.result;
+    }
+
+    const source = readFileSync(abs, "utf8");
+    let result: RpgLoadResult;
+    if (!isRpgPackShape(parseYaml(source) as unknown)) {
+      result = {
+        ok: false,
+        report: makeReport(packPath, [
+          {
+            severity: "error",
+            code: "UNSUPPORTED_LEGACY_PACK",
+            message: "MCP pack loading is RPG-only; legacy pack shapes are migration data.",
+            where: [packPath],
+          },
+        ]),
+      };
+      this.packLoadCache.set(abs, { mtimeMs: stat.mtimeMs, size: stat.size, result });
+      return result;
+    }
+    const compileRes = compileRpgPack(source);
+    if (!compileRes.ok) {
+      result = {
+        ok: false,
+        report: makeReport(packPath, schemaFindings(packPath, compileRes.error)),
+      };
+      this.packLoadCache.set(abs, { mtimeMs: stat.mtimeMs, size: stat.size, result });
+      return result;
+    }
+    const pack = compileRes.compiled.pack;
+    const report = validateRpg(pack);
+    result = { ok: true, compiled: compileRes.compiled, report };
+    this.packLoadCache.set(abs, { mtimeMs: stat.mtimeMs, size: stat.size, result });
+    return result;
+  }
+
+  /** Compile + validate, refusing to play an invalid pack (§0, §10). */
+  requirePlayable(packPath: string): CompiledRpgPack {
+    const lr = this.loadAndReport(packPath);
+    if (!lr.ok || !lr.report.ok) {
+      throw new Error(`Pack is not playable:\n${formatReport(lr.report)}`);
+    }
+    return lr.compiled;
+  }
+
+  generatedRpg(seed: number): GeneratedRpgCacheEntry {
+    const cached = this.generatedRpgCache.get(seed);
+    if (cached) return cached;
+    const pack = generateRpgPack(seed);
+    const report = validateRpg(pack);
+    const entry = { compiled: { pack, contentHash: hashState(pack) }, report };
+    this.generatedRpgCache.set(seed, entry);
+    return entry;
+  }
+
+  /**
+   * Mint a fresh RPG pack from a seed and refuse to play it unless it clears the
+   * same validator gate the curated RPG packs clear.
+   */
+  requireGeneratedRpgPlayable(seed: number): CompiledRpgPack {
+    const { compiled, report } = this.generatedRpg(seed);
+    if (!report.ok) {
+      throw new Error(
+        `Generated RPG pack (seed ${seed}) is not playable:\n${formatReport(report)}`,
+      );
+    }
+    return compiled;
+  }
+
+  discoverWorldQuestSources(world = this.loadWorldManifest()): WorldQuestSourceEntry[] {
+    return this.worldQuestPackPaths(world).map((path) => {
+      const lr = this.loadAndReport(path);
+      const node = worldQuestNodeForPack(world, path);
+      return {
+        path,
+        id: lr.ok ? lr.compiled.pack.meta.id : path,
+        title: lr.ok ? lr.compiled.pack.meta.title : path,
+        playable: lr.ok && lr.report.ok,
+        world: lr.ok ? (lr.compiled.pack.meta.world ?? null) : null,
+        world_quest_id: node?.id ?? null,
+      };
+    });
+  }
+
+  publicWorldGraph(world: WorldManifest): PublicWorldGraph {
+    const bounds = worldMapBounds(world);
+    return {
+      hub: world.graph.hub,
+      ...(bounds === null ? {} : { bounds }),
+      nodes: world.graph.nodes.map((node) => ({
+        id: node.id,
+        name: node.name,
+        kind: node.kind,
+        ...(node.district === undefined ? {} : { district: node.district }),
+        ...(node.coord === undefined ? {} : { coord: node.coord }),
+      })),
+      edges: worldMapEdges(world),
+    };
+  }
+
+  resolveWorldQuestPackPath(worldQuestId: string): WorldQuestPackSource {
+    return resolveWorldQuestPackPathFromRoot(this.root, worldQuestId);
+  }
+
+  resolveTraceSource(
+    args: { world_quest_id?: string; pack_path?: never },
+    trace: Trace<RpgAction>,
+    operation: string,
+  ): RpgTraceSource {
+    if ((args as { pack_path?: unknown }).pack_path !== undefined) {
+      throw new Error(
+        `${operation} accepts world_quest_id or embedded trace worldQuestId, not pack_path.`,
+      );
+    }
+    const source = resolveTracePackSource(this.root, args, trace, operation);
+    return { ...source, compiled: this.requirePlayable(source.packPath) };
+  }
+
+  loadWorldManifest(): WorldManifest {
+    return loadWorldManifestFromRoot(this.root);
+  }
+
+  private worldQuestPackPaths(world: WorldManifest): string[] {
+    return world.graph.nodes
+      .filter((node) => node.kind === "quest" && node.pack)
+      .map((node) => normalizePackPath(node.pack ?? ""));
+  }
+}
