@@ -89,6 +89,10 @@ function readsHpInCondition(node: unknown): boolean {
 }
 
 describe("the procedural RPG generator emits packs that clear the shipped RPG bar", () => {
+  it("rejects unsafe integer seeds before generation", () => {
+    expect(() => generateRpgPack(Number.MAX_SAFE_INTEGER + 1)).toThrow(/safe range/);
+  });
+
   it("is deterministic: the same seed yields a byte-identical pack", () => {
     for (const seed of [0, 3, 7, 19]) {
       expect(generateRpgPack(seed)).toEqual(generateRpgPack(seed));

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { SaveIntegrityError, type SaveSourceRef } from "../persist/save_load.js";
 import type { Trace, TraceSourceRef } from "../trace/record.js";
+import { generatedRpgSeedValidationMessage, isGeneratedRpgSeed } from "../gen/seed.js";
 import {
   assertOverworldIntegrity,
   parseOverworldManifest,
@@ -107,10 +108,8 @@ function deepFreeze<T>(value: T): T {
 }
 
 function assertGenerateRpgSeed(seed: unknown, operation: string): asserts seed is number {
-  if (typeof seed !== "number" || !Number.isInteger(seed)) {
-    throw new Error(
-      `${operation} generate_rpg_seed must be an integer, got ${JSON.stringify(seed)}.`,
-    );
+  if (!isGeneratedRpgSeed(seed)) {
+    throw new Error(generatedRpgSeedValidationMessage(`${operation} generate_rpg_seed`, seed));
   }
 }
 
@@ -464,14 +463,9 @@ function saveEmbeddedSource(
 
   const rawGeneratedRpgSeed = bundle.generatedRpgSeed;
   let generatedRpgSeed: number | undefined;
-  if (
-    rawGeneratedRpgSeed !== undefined &&
-    (typeof rawGeneratedRpgSeed !== "number" || !Number.isInteger(rawGeneratedRpgSeed))
-  ) {
+  if (rawGeneratedRpgSeed !== undefined && !isGeneratedRpgSeed(rawGeneratedRpgSeed)) {
     throw new SaveIntegrityError(
-      `${operation} save generatedRpgSeed must be an integer when present, got ${JSON.stringify(
-        rawGeneratedRpgSeed,
-      )}.`,
+      generatedRpgSeedValidationMessage(`${operation} save generatedRpgSeed`, rawGeneratedRpgSeed),
     );
   }
   if (typeof rawGeneratedRpgSeed === "number") generatedRpgSeed = rawGeneratedRpgSeed;

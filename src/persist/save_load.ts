@@ -9,6 +9,7 @@
 import { z } from "zod";
 import { MAX_ENGINE_STEP, type GameState } from "../core/state.js";
 import { canonicalize } from "../core/hash.js";
+import { generatedRpgSeedValidationMessage, isGeneratedRpgSeed } from "../gen/seed.js";
 import {
   compactSourceLegacyMetadata,
   compactSourceRefFromMetadata,
@@ -198,8 +199,8 @@ function assertOptionalRpgMode(mode: unknown, label: string): asserts mode is Sa
 }
 
 function assertGeneratedRpgSeed(seed: unknown, label: string): asserts seed is number {
-  if (typeof seed !== "number" || !Number.isInteger(seed)) {
-    throw new SaveIntegrityError(`${label} must be an integer, got ${JSON.stringify(seed)}.`);
+  if (!isGeneratedRpgSeed(seed)) {
+    throw new SaveIntegrityError(generatedRpgSeedValidationMessage(label, seed));
   }
 }
 

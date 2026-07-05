@@ -62,6 +62,7 @@
  * sealed held-out corpus behind a generator_version bump + re-seal.
  */
 import { RpgPackSchema, type RpgPack } from "../rpg/schema.js";
+import { assertGeneratedRpgSeed } from "./seed.js";
 
 /**
  * Generator version stamp (bug_0163, held-out corpus persistence). This does NOT change any
@@ -269,6 +270,7 @@ const THEMES: readonly Theme[] = [
  * applied defaults exactly like a pack loaded from YAML.
  */
 export function generateRpgPack(seed: number): RpgPack {
+  assertGeneratedRpgSeed(seed, "generateRpgPack seed");
   const rng = makeRng(seed);
   const theme = THEMES[Math.abs(Math.trunc(seed)) % THEMES.length] as Theme;
 

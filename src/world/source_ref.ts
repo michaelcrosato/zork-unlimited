@@ -1,3 +1,5 @@
+import { generatedRpgSeedValidationMessage, isGeneratedRpgSeed } from "../gen/seed.js";
+
 /** Compact canonical source identity shared by saves, traces, and source resolution. */
 export type CompactSourceRef = ["wq", string] | ["gen", number] | ["pack", string];
 
@@ -59,12 +61,10 @@ export function compactSourceRefFromMetadata(
     return { ok: true, sourceRef: ["wq", worldQuestId] };
   }
   if (hasGeneratedSeed) {
-    if (typeof generatedRpgSeed !== "number" || !Number.isInteger(generatedRpgSeed)) {
+    if (!isGeneratedRpgSeed(generatedRpgSeed)) {
       return {
         ok: false,
-        error: `${labels.generatedRpgSeed} must be an integer, got ${JSON.stringify(
-          generatedRpgSeed,
-        )}.`,
+        error: generatedRpgSeedValidationMessage(labels.generatedRpgSeed, generatedRpgSeed),
       };
     }
     return { ok: true, sourceRef: ["gen", generatedRpgSeed] };
@@ -142,9 +142,9 @@ export function compactSourceRefValidationError(raw: unknown, label: string): st
     return typeof value === "string" ? undefined : `${label} world quest id must be a string.`;
   }
   if (tag === "gen") {
-    return typeof value === "number" && Number.isInteger(value)
+    return isGeneratedRpgSeed(value)
       ? undefined
-      : `${label} generated seed must be an integer.`;
+      : `${label} generated seed must be an integer within JavaScript's safe range.`;
   }
   if (tag === "pack") {
     return typeof value === "string" ? undefined : `${label} pack id must be a string.`;

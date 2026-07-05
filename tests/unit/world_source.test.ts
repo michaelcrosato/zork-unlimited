@@ -22,6 +22,7 @@ import type { WorldManifest } from "../../src/world/schema.js";
 
 const ROOT = process.cwd();
 const PACK = "content/rpg/pack/sunken_barrow.yaml";
+const UNSAFE_GENERATED_RPG_SEED = Number.MAX_SAFE_INTEGER + 1;
 const overworld = loadOverworldManifest(ROOT);
 
 function worldWithQuestPacks(quests: Array<{ id: string; pack: string }>): WorldManifest {
@@ -302,6 +303,13 @@ describe("world source resolution", () => {
     expect(() => resolveGameSource(ROOT, { generate_rpg_seed: 3.5 } as never, "new_game")).toThrow(
       /must be an integer/,
     );
+    expect(() =>
+      resolveGameSource(
+        ROOT,
+        { generate_rpg_seed: UNSAFE_GENERATED_RPG_SEED } as never,
+        "new_game",
+      ),
+    ).toThrow(/safe range/);
   });
 
   it("infers trace and save sources from embedded worldQuestId", () => {
@@ -371,6 +379,28 @@ describe("world source resolution", () => {
     expect(() =>
       resolveSaveGameSource(ROOT, { generate_rpg_seed: 3.5 } as never, {}, "save_test"),
     ).toThrow(/must be an integer/);
+
+    expect(() =>
+      resolveSaveGameSource(
+        ROOT,
+        { generate_rpg_seed: UNSAFE_GENERATED_RPG_SEED } as never,
+        {},
+        "save_test",
+      ),
+    ).toThrow(/safe range/);
+
+    expect(() =>
+      resolveSaveGameSource(ROOT, {}, { generatedRpgSeed: UNSAFE_GENERATED_RPG_SEED }, "save_test"),
+    ).toThrow(SaveIntegrityError);
+
+    expect(() =>
+      resolveSaveGameSource(
+        ROOT,
+        {},
+        { source_ref: ["gen", UNSAFE_GENERATED_RPG_SEED] },
+        "save_test",
+      ),
+    ).toThrow(SaveIntegrityError);
 
     expect(() =>
       resolveSaveGameSource(

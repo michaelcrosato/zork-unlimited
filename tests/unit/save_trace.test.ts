@@ -24,6 +24,7 @@ const WIN: RpgAction[] = [
   MICRO_ACTIONS.grabGold,
   MICRO_ACTIONS.claimTreasure,
 ];
+const UNSAFE_GENERATED_RPG_SEED = Number.MAX_SAFE_INTEGER + 1;
 
 describe("save / load (§8.7)", () => {
   it("round-trips to an identical state hash", () => {
@@ -79,6 +80,24 @@ describe("save / load (§8.7)", () => {
     const loaded = load(bytes, MICRO_CONTENT_HASH);
     expect(loaded.generatedRpgSeed).toBe(3);
     expect(loaded.source_ref).toEqual(["gen", 3]);
+  });
+
+  it("rejects unsafe generated RPG source identities", () => {
+    expect(() =>
+      save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH, SAVE_MODE, {
+        generatedRpgSeed: UNSAFE_GENERATED_RPG_SEED,
+      }),
+    ).toThrow(SaveIntegrityError);
+
+    const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH, SAVE_MODE, {
+      generatedRpgSeed: 3,
+    });
+    const bundle = JSON.parse(bytes) as Record<string, unknown>;
+    bundle.generatedRpgSeed = UNSAFE_GENERATED_RPG_SEED;
+    bundle.source_ref = ["gen", UNSAFE_GENERATED_RPG_SEED];
+
+    expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
+    expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(/safe range/);
   });
 
   it("rejects saves that omit the RPG mode", () => {
@@ -176,6 +195,17 @@ describe("trace record / replay (§8.8)", () => {
         generatedRpgSeed: 3,
       }),
     ).toThrow(/both worldQuestId and generatedRpgSeed/);
+  });
+
+  it("rejects unsafe generated trace source identities", () => {
+    expect(() =>
+      recordTrace(microRules, microInitState(), WIN, {
+        trace_id: "tr_test",
+        pack_id: MICRO_PACK_ID,
+        content_hash: MICRO_CONTENT_HASH,
+        generatedRpgSeed: UNSAFE_GENERATED_RPG_SEED,
+      }),
+    ).toThrow(/safe range/);
   });
 
   it("detects divergence when the expected hash is wrong", () => {

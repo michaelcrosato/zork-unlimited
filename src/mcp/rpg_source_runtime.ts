@@ -4,6 +4,7 @@ import { hashState } from "../core/hash.js";
 import type { RpgAction } from "../api/types.js";
 import { compileRpgPack, type CompiledRpgPack } from "../rpg/pack.js";
 import { generateRpgPack } from "../gen/rpg_generator.js";
+import { assertGeneratedRpgSeed } from "../gen/seed.js";
 import { validateRpg } from "../validate/rpg_validator.js";
 import {
   formatReport,
@@ -174,6 +175,7 @@ export class RpgSourceRuntime {
   }
 
   generatedRpg(seed: number): GeneratedRpgCacheEntry {
+    assertGeneratedRpgSeed(seed, "Generated RPG seed");
     const cached = refreshSourceCacheEntry(this.generatedRpgCache, seed);
     if (cached) return cached;
     const pack = generateRpgPack(seed);

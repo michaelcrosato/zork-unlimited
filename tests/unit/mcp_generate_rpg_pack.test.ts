@@ -26,6 +26,12 @@ const ROOT = process.cwd();
 const api = () => createToolApi({ root: ROOT });
 
 describe("bug_0160 — generate_rpg_pack MCP tool mints + validates a fresh RPG pack", () => {
+  it("rejects unsafe integer seeds before minting", () => {
+    expect(() => api().generate_rpg_pack({ seed: Number.MAX_SAFE_INTEGER + 1 })).toThrow(
+      /safe range/,
+    );
+  });
+
   it("mints a validateRpg-clean pack carrying the schema-stamped id and hash", () => {
     const r = api().generate_rpg_pack({ seed: 0 });
     expect(r.ok).toBe(true);
@@ -72,6 +78,12 @@ describe("bug_0160 — generate_rpg_pack MCP tool mints + validates a fresh RPG 
 });
 
 describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack in-memory", () => {
+  it("rejects unsafe generated RPG source identities before play starts", () => {
+    expect(() => api().new_game({ generate_rpg_seed: Number.MAX_SAFE_INTEGER + 1 })).toThrow(
+      /safe range/,
+    );
+  });
+
   it("starts a session on a generated RPG pack with no file on disk", () => {
     const g = api().new_game({ generate_rpg_seed: 3 });
     expect("mode" in g).toBe(false);

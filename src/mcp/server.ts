@@ -13,6 +13,7 @@ import { z, type ZodRawShape } from "zod";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { createToolApi } from "./tools.js";
 import { TRANSCRIPT_TURN_LIMIT_DEFAULT } from "./transcript_projection.js";
+import { isGeneratedRpgSeed as genSeed } from "../gen/seed.js";
 
 const api = createToolApi({ root: process.cwd() });
 
@@ -44,6 +45,7 @@ function tool(
 const WORLD_QUEST_SOURCE = {
   world_quest_id: z.string().describe("World quest id."),
 };
+const GEN_SEED = z.number().int().refine(genSeed);
 const SESSION = {
   session_id: z.string().describe("Session."),
 };
@@ -397,7 +399,7 @@ tool(
   "generate_rpg_pack",
   "Mint and validate a deterministic RPG pack from a seed; writes nothing.",
   {
-    seed: z.number().int().describe("Generation seed."),
+    seed: GEN_SEED.describe("Generation seed."),
   },
   (a) => api.generate_rpg_pack(a),
 );
@@ -406,7 +408,7 @@ tool(
   "new_game",
   "Start generated RPG; compact.",
   {
-    generate_rpg_seed: z.number().int().optional().describe("Generated seed."),
+    generate_rpg_seed: GEN_SEED.optional().describe("Generated seed."),
     seed: z.number().int().optional().describe("Runtime seed."),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
@@ -493,7 +495,7 @@ tool(
   "Restore save; compact.",
   {
     world_quest_id: z.string().optional().describe("World quest id."),
-    generate_rpg_seed: z.number().int().optional().describe("Generated seed."),
+    generate_rpg_seed: GEN_SEED.optional().describe("Generated seed."),
     save: z.string().describe("Save string."),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
