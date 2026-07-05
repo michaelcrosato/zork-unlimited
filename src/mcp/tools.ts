@@ -22,9 +22,8 @@ import { assertWellFormedState } from "../persist/save_load.js";
 import { assertTraceMode, replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
-import { SessionStore, type Session, type TranscriptSummary } from "./sessions.js";
+import { SessionStore } from "./sessions.js";
 import { type McpActionOption, type McpObservation } from "./types.js";
-import { RPG_COMPACT_EVENT_VERSION, type RpgCompactEvent } from "./compact_rpg_event.js";
 import type { RpgCompactObservation } from "./compact_rpg_observation.js";
 import { RpgMcpSessionRuntime } from "./rpg_session_runtime.js";
 import {
@@ -46,6 +45,7 @@ import {
   type RpgStepActionResponse as RpgRuntimeStepActionResponse,
 } from "./rpg_step_action.js";
 import type { RpgStateHashRejection, RpgStateUnchanged } from "./rpg_state_guards.js";
+import type { TranscriptArgs, TranscriptResponse } from "./transcript_projection.js";
 import { OverworldMcpSessionStore } from "./overworld_sessions.js";
 import { createOverworldToolHandlers } from "./overworld_tool_handlers.js";
 import type { WorldManifest } from "../world/schema.js";
@@ -214,77 +214,6 @@ type RpgStartWorldQuestInvoker = {
     args: Args,
   ): RpgWorldQuestStartPayload<Args>;
 };
-
-type TranscriptFullTurn = Session["transcript"][number];
-type TranscriptCompactEventTurn = Omit<TranscriptFullTurn, "events"> & {
-  events: RpgCompactEvent[];
-};
-type TranscriptCompactTurn = readonly [
-  step: number,
-  scene_id: string,
-  action_id: string | null,
-  result_scene_id: string,
-];
-type TranscriptCompactMore = readonly [
-  scenes: number,
-  inventory?: number,
-  flags?: number,
-  journal?: number,
-];
-type TranscriptCompactSummary = Omit<
-  TranscriptSummary,
-  "ending_id" | "inventory" | "flags" | "journal"
-> & {
-  ending_id?: string;
-  inventory?: string[];
-  flags?: string[];
-  journal?: string[];
-  more?: TranscriptCompactMore;
-};
-type TranscriptSummaryFor<Args extends TranscriptArgs> = Args extends { compact_summary: true }
-  ? TranscriptCompactSummary
-  : TranscriptSummary;
-type TranscriptPayloadBase<Args extends TranscriptArgs> = {
-  session_id: string;
-  state_hash: string;
-  transcript_hash: string;
-  summary: TranscriptSummaryFor<Args>;
-  turns_omitted?: number;
-} & RpgSourceFields;
-type TranscriptArgs = {
-  session_id: string;
-  summary_only?: boolean;
-  compact_turns?: boolean;
-  compact_events?: boolean;
-  compact_summary?: boolean;
-  if_transcript_hash?: string;
-  turn_limit?: number;
-};
-type TranscriptTurnFor<Args extends TranscriptArgs> = Args extends { compact_turns: true }
-  ? TranscriptCompactTurn
-  : Args extends { compact_events: true }
-    ? TranscriptCompactEventTurn
-    : TranscriptFullTurn;
-type TranscriptEventVersion<Args extends TranscriptArgs> = Args extends { summary_only: true }
-  ? Record<string, never>
-  : Args extends { compact_turns: true }
-    ? Record<string, never>
-    : Args extends { compact_events: true }
-      ? { event_v: typeof RPG_COMPACT_EVENT_VERSION }
-      : Record<string, never>;
-type TranscriptPayload<Args extends TranscriptArgs> = TranscriptPayloadBase<Args> &
-  TranscriptEventVersion<Args> &
-  (Args extends { summary_only: true }
-    ? Record<string, never>
-    : { turns: TranscriptTurnFor<Args>[] });
-type TranscriptUnchanged = {
-  state_hash: string;
-  transcript_hash: string;
-  unchanged: true;
-};
-type TranscriptResponse<Args extends TranscriptArgs> = Args extends { if_transcript_hash: string }
-  ? TranscriptPayload<Args> | TranscriptUnchanged
-  : TranscriptPayload<Args>;
 
 type RpgGetStateArgs = {
   session_id: string;

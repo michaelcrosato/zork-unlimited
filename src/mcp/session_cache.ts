@@ -1,6 +1,8 @@
 import type { RpgActionOption } from "../rpg/legal_actions.js";
 import type { RpgObservation } from "../rpg/observation.js";
 
+export const SESSION_PROJECTION_CACHE_LIMIT = 8;
+
 export type StateProjectionCacheEntry = {
   stateHash: string;
   projection: unknown;
@@ -45,16 +47,25 @@ export function cachedSessionProjection<T, Entry extends { projection: unknown }
   isFresh: (entry: Entry) => boolean,
   entryFor: (projection: T) => Entry,
   build: () => T,
+  maxEntries = SESSION_PROJECTION_CACHE_LIMIT,
 ): { value: T; cacheMap: Map<string, Entry> } {
   if (cacheMap !== undefined) {
     const cached = cacheMap.get(key);
     if (cached !== undefined && isFresh(cached)) {
+      cacheMap.delete(key);
+      cacheMap.set(key, cached);
       return { value: cached.projection as T, cacheMap };
     }
   }
   const value = build();
   const nextCacheMap = cacheMap ?? new Map<string, Entry>();
+  nextCacheMap.delete(key);
   nextCacheMap.set(key, entryFor(value));
+  while (nextCacheMap.size > maxEntries) {
+    const oldestKey = nextCacheMap.keys().next().value as string | undefined;
+    if (oldestKey === undefined) break;
+    nextCacheMap.delete(oldestKey);
+  }
   return { value, cacheMap: nextCacheMap };
 }
 

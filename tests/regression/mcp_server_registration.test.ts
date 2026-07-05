@@ -80,12 +80,16 @@ function serverSourceBlock(startMarker: string, endMarker: string): string {
   return text.slice(start, end);
 }
 
-function toolApiSourceBlock(startMarker: string, endMarker: string): string {
-  const text = readFileSync("src/mcp/tools.ts", "utf8");
+function sourceBlock(path: string, startMarker: string, endMarker: string): string {
+  const text = readFileSync(path, "utf8");
   const start = text.indexOf(startMarker);
   const end = text.indexOf(endMarker, start);
-  if (start < 0 || end < 0) throw new Error(`missing tool API source block ${startMarker}`);
+  if (start < 0 || end < 0) throw new Error(`missing source block ${path}:${startMarker}`);
   return text.slice(start, end);
+}
+
+function toolApiSourceBlock(startMarker: string, endMarker: string): string {
+  return sourceBlock("src/mcp/tools.ts", startMarker, endMarker);
 }
 
 describe("MCP server registration", () => {
@@ -338,7 +342,11 @@ describe("MCP server registration", () => {
 
   it("defaults public RPG MCP transcripts to compact summary only", () => {
     const block = registeredToolBlock("get_transcript");
-    const args = toolApiSourceBlock("type TranscriptArgs", "type TranscriptTurnFor");
+    const args = sourceBlock(
+      "src/mcp/transcript_projection.ts",
+      "export type TranscriptArgs",
+      "type TranscriptTurnFor",
+    );
     expect(block).toContain("defaultCompactTranscript(a)");
     expect(block).not.toContain("IF_STATE_HASH");
     expect(block).toContain("IF_TRANSCRIPT_HASH");
