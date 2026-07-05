@@ -2187,7 +2187,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect("observation" in compactStart).toBe(false);
     expect("mode" in compactStart.context).toBe(false);
     expect(compactStart.context).toMatchObject({
-      v: 8,
+      v: 9,
       here: [fullStart.observation.room, fullStart.observation.title],
     });
     expect(compactStart.context.vitals).toEqual([

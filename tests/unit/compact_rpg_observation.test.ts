@@ -5,6 +5,7 @@ import {
   COMPACT_BLOCKED_EXIT_LIMIT,
   COMPACT_ENEMY_LIMIT,
   COMPACT_EXIT_LIMIT,
+  COMPACT_VAR_LIMIT,
   COMPACT_VISIBLE_REF_LIMIT,
   compactRpgObservation,
 } from "../../src/mcp/compact_rpg_observation.js";
@@ -47,12 +48,12 @@ describe("compactRpgObservation", () => {
     const obs = observationWithLargeState();
     const compact = compactRpgObservation(obs, ["look"]);
 
-    expect(compact.v).toBe(8);
+    expect(compact.v).toBe(9);
     expect("mode" in compact).toBe(false);
     expect(compact.inv).toEqual(ids("item", 16));
     expect(compact.flags).toEqual(ids("flag", 16));
     expect(compact.journal).toEqual(ids("journal", 10).slice(-5));
-    expect(compact.more).toEqual([4, 4, 5]);
+    expect(compact.more).toEqual([4, 4, 0, 5]);
     expect(compact.actions).toEqual(["look"]);
     expect(compact.vitals[3]).toBe(5);
     expect(compact.vars).toEqual({ lore: 3 });
@@ -97,7 +98,7 @@ describe("compactRpgObservation", () => {
 
     expect(inventoryOnly.more).toEqual([4]);
     expect(inventoryAndFlags.more).toEqual([4, 4]);
-    expect(journalOnly.more).toEqual([0, 0, 5]);
+    expect(journalOnly.more).toEqual([0, 0, 0, 5]);
   });
 
   it("omits empty navigation and action arrays", () => {
@@ -154,7 +155,7 @@ describe("compactRpgObservation", () => {
     expect(compact.npcs).toHaveLength(COMPACT_VISIBLE_REF_LIMIT);
     expect(compact.blocked).toHaveLength(COMPACT_BLOCKED_EXIT_LIMIT);
     expect(compact.enemies).toHaveLength(COMPACT_ENEMY_LIMIT);
-    expect(compact.more).toEqual([0, 0, 0, 3, 4, 5, 5, 2, 6]);
+    expect(compact.more).toEqual([0, 0, 0, 0, 3, 4, 5, 5, 2, 6]);
     expect(obs.exits).toHaveLength(exitCount);
     expect(obs.visible_objects).toHaveLength(refCount);
     expect(obs.npcs_present).toHaveLength(refCount);
@@ -180,6 +181,30 @@ describe("compactRpgObservation", () => {
     expect(compact.journal).toEqual(["Found the key."]);
     expect(compact.more).toBeUndefined();
     expect(compact.vars).toBeUndefined();
+  });
+
+  it("caps compact non-core vars while preserving stable key order", () => {
+    const extraVars = Object.fromEntries(
+      ids("skill", COMPACT_VAR_LIMIT + 3)
+        .reverse()
+        .map((id, index) => [id, index + 1]),
+    );
+    const obs = {
+      ...observationWithLargeState(),
+      inventory: [],
+      state: {
+        flags: [],
+        vars: { hp: 8, attack: 2, defense: 1, score: 5, ...extraVars },
+        journal: [],
+      },
+    };
+
+    const compact = compactRpgObservation(obs, ["look"]);
+
+    expect(Object.keys(compact.vars ?? {})).toEqual(ids("skill", COMPACT_VAR_LIMIT));
+    expect(compact.vars).not.toHaveProperty("hp");
+    expect(compact.vars).not.toHaveProperty("score");
+    expect(compact.more).toEqual([0, 0, 3]);
   });
 
   it("caps long prose fields in compact loop context only", () => {

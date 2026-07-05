@@ -12,6 +12,7 @@ export const COMPACT_EXIT_LIMIT = 12;
 export const COMPACT_VISIBLE_REF_LIMIT = 16;
 export const COMPACT_BLOCKED_EXIT_LIMIT = 8;
 export const COMPACT_ENEMY_LIMIT = 16;
+export const COMPACT_VAR_LIMIT = 16;
 const COMPACT_INVENTORY_LIMIT = 16;
 const COMPACT_FLAG_LIMIT = 16;
 const COMPACT_JOURNAL_LIMIT = 5;
@@ -19,7 +20,7 @@ const COMPACT_DESCRIPTION_CHAR_LIMIT = 900;
 const COMPACT_DIALOGUE_CHAR_LIMIT = 700;
 const COMPACT_BLOCKED_EXIT_CHAR_LIMIT = 320;
 const COMPACT_ENDING_TEXT_CHAR_LIMIT = 900;
-export const RPG_COMPACT_OBSERVATION_VERSION = 8 as const;
+export const RPG_COMPACT_OBSERVATION_VERSION = 9 as const;
 
 export type RpgCompactRef = readonly [id: string, name: string];
 export type RpgCompactExit = string | readonly [direction: string, to: string];
@@ -29,6 +30,7 @@ export type RpgCompactEnemy = readonly [id: string, name: string, hp: number];
 export type RpgCompactMore = readonly [
   inventory: number,
   flags?: number,
+  vars?: number,
   journal?: number,
   actions?: number,
   exits?: number,
@@ -76,15 +78,25 @@ function compactEnding(ending: RpgObservation["ending"]): RpgObservation["ending
       };
 }
 
-function compactVars(vars: Record<string, number>): Record<string, number> | undefined {
+type CompactVarsResult = {
+  vars?: Record<string, number>;
+  omitted: number;
+};
+
+function compactVars(vars: Record<string, number>): CompactVarsResult {
+  const keys = Object.keys(vars)
+    .filter((key) => !CORE_STATE_VARS.has(key))
+    .sort();
   const compact: Record<string, number> = {};
-  let hasCompactVar = false;
-  for (const key in vars) {
-    if (!Object.prototype.hasOwnProperty.call(vars, key) || CORE_STATE_VARS.has(key)) continue;
+  const capped = Math.min(keys.length, COMPACT_VAR_LIMIT);
+  for (let index = 0; index < capped; index += 1) {
+    const key = keys[index]!;
     compact[key] = vars[key]!;
-    hasCompactVar = true;
   }
-  return hasCompactVar ? compact : undefined;
+  return {
+    ...(capped > 0 ? { vars: compact } : {}),
+    omitted: keys.length - capped,
+  };
 }
 
 export function compactRpgObservation(
@@ -127,6 +139,7 @@ export function compactRpgObservation(
   const more = compactTrailingOmissionCounts([
     omittedInv ?? 0,
     omittedFlags ?? 0,
+    vars.omitted,
     omittedJournal ?? 0,
     omittedActions ?? 0,
     omittedExits ?? 0,
@@ -147,7 +160,7 @@ export function compactRpgObservation(
     ...(blocked.length > 0 ? { blocked } : {}),
     ...(inv.length > 0 ? { inv } : {}),
     ...(flags.length > 0 ? { flags } : {}),
-    ...(vars ? { vars } : {}),
+    ...(vars.vars ? { vars: vars.vars } : {}),
     ...(journal.length > 0 ? { journal } : {}),
     ...(more ? { more } : {}),
     ...(obs.dialogue
