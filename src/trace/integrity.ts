@@ -1,4 +1,5 @@
 import { isRuntimeSeed, type GameState } from "../core/state.js";
+import type { EngineAction } from "../core/engine.js";
 import { assertWellFormedState, SaveIntegrityError } from "../persist/save_load.js";
 
 export type TraceIdentityFields = {
@@ -12,7 +13,7 @@ export type TraceStepHashFields = {
 };
 
 export type TraceActionFields = {
-  actions: unknown[];
+  actions: EngineAction[];
 };
 
 export type TraceStateFields = {
@@ -50,6 +51,21 @@ export function assertTraceActions<T extends { actions?: unknown }>(
   if (!Array.isArray(trace.actions)) {
     throw new SaveIntegrityError("Trace actions must be an array.");
   }
+  trace.actions.forEach((action, i) => {
+    if (action === null || typeof action !== "object" || Array.isArray(action)) {
+      throw new SaveIntegrityError(
+        `Trace actions[${i}] must be an object with a non-empty string type, got ${JSON.stringify(
+          action,
+        )}.`,
+      );
+    }
+    const type = (action as { type?: unknown }).type;
+    if (typeof type !== "string" || type.length === 0) {
+      throw new SaveIntegrityError(
+        `Trace actions[${i}].type must be a non-empty string, got ${JSON.stringify(type)}.`,
+      );
+    }
+  });
 }
 
 export function assertTraceState<T extends { seed?: unknown; initial_state?: unknown }>(

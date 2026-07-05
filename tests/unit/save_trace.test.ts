@@ -296,6 +296,21 @@ describe("trace record / replay (§8.8)", () => {
     }
   });
 
+  it("rejects malformed trace action entries at the replay boundary", () => {
+    const trace = recordTrace(microRules, microInitState(), WIN, {
+      trace_id: "tr_test",
+      pack_id: MICRO_PACK_ID,
+      content_hash: MICRO_CONTENT_HASH,
+    });
+
+    for (const value of [null, "look", [], { type: "" }, { type: 12 }]) {
+      const malformed = { ...trace, actions: [value] } as unknown as typeof trace;
+
+      expect(() => replayTrace(malformed, microRules)).toThrow(SaveIntegrityError);
+      expect(() => replayTrace(malformed, microRules)).toThrow(/actions\[0\]/);
+    }
+  });
+
   it("rejects malformed trace initial state at the replay boundary", () => {
     const trace = recordTrace(microRules, microInitState(), WIN, {
       trace_id: "tr_test",
