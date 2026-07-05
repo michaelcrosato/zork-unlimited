@@ -21,7 +21,6 @@ import {
   type OverworldRoadEncounterStrategy,
 } from "./travel_mechanics.js";
 import {
-  indexedOverworldRoute,
   type OverworldRoutePlannerIndex,
   type OverworldSessionRoutePlan,
 } from "./session_routes.js";
@@ -92,7 +91,7 @@ import {
   buildOverworldSessionViewFromSource,
   type OverworldSessionViewModelSourceState,
 } from "./session_view_state.js";
-import { withOverworldSessionRouteEstimate } from "./session_route_progress.js";
+import { planOverworldSessionRoadRoute } from "./session_route_lifecycle.js";
 import {
   applyOverworldSessionEventResolution,
   planOverworldSessionEventResolution,
@@ -825,20 +824,15 @@ export class OverworldSession {
 
   planRoute(destinationId: string): OverworldSessionRoutePlan {
     this.assertNoPendingRoadEncounter("planning another road route");
-    if (destinationId === this.currentId) throw new Error("You are already there.");
-    if (!this.discoveredIds.has(destinationId)) {
-      throw new Error("That destination is not discovered yet.");
-    }
-    const plan = indexedOverworldRoute(
-      this.routePlannerIndex,
-      this.currentId,
+    return planOverworldSessionRoadRoute({
       destinationId,
-      this.discoveredIds,
-    );
-    if (!plan) throw new Error("No discovered route reaches that destination yet.");
-    return withOverworldSessionRouteEstimate(plan, {
-      fatigue: this.fatigue,
-      supplies: this.supplies,
+      routePlannerIndex: this.routePlannerIndex,
+      currentId: this.currentId,
+      discoveredIds: this.discoveredIds,
+      resources: {
+        fatigue: this.fatigue,
+        supplies: this.supplies,
+      },
     });
   }
 
