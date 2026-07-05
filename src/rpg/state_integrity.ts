@@ -209,6 +209,11 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
       throw new SaveIntegrityError(`Save references invalid flag state "${id}" (${value}).`);
     }
   }
+  for (const id of Object.keys(index.pack.meta.vars_init)) {
+    if (state.vars[id] === undefined) {
+      throw new SaveIntegrityError(`Save is missing initialized var "${id}".`);
+    }
+  }
   for (const [id, value] of Object.entries(state.vars)) {
     if (!vars.has(id)) {
       throw new SaveIntegrityError(`Save references unknown var "${id}".`);

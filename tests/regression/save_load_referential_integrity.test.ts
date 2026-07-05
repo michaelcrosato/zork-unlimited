@@ -223,6 +223,16 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     expect(() => api().load_game({ save: forged })).toThrow(/unknown var/);
   });
 
+  it("RPG: a missing initialized runtime var is a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      const vars = { ...(s.vars as Record<string, number>) };
+      delete vars.hp;
+      s.vars = vars;
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/missing initialized var/);
+  });
+
   it("RPG: an invalid enemy HP var is a hard SaveIntegrityError", () => {
     const forged = forgeSave((s) => {
       s.vars = { ...(s.vars as Record<string, number>), __enemy_hp_barrow_wight: -1 };
