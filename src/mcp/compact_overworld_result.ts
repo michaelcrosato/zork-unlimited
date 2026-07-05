@@ -9,6 +9,7 @@ import type {
 import {
   compactOverworldJournalEntries,
   compactOverworldQuestRef,
+  compactOverworldQuestRefs,
   compactOverworldRefs,
   compactOverworldTitleRefs,
   compactPendingRoad,
@@ -18,6 +19,8 @@ import {
   type OverworldCompactRoadEncounter,
 } from "../world/compact_view.js";
 
+export type OverworldCompactDiscoveryKey = "areas" | "jobs" | "sites" | "quests";
+
 export type OverworldCompactActionResult = {
   m: number;
   known?: true;
@@ -26,6 +29,7 @@ export type OverworldCompactActionResult = {
   jobs?: OverworldCompactRef[];
   sites?: OverworldCompactRef[];
   quests?: OverworldCompactQuestRef[];
+  discovered_truncated?: OverworldCompactDiscoveryKey[];
 };
 
 export type OverworldCompactQuestCompletionResult = {
@@ -82,13 +86,17 @@ export function compactOverworldActionResult(
   const areas = result.discoveredAreas ? compactOverworldRefs(result.discoveredAreas) : [];
   const jobs = result.discoveredJobs ? compactOverworldTitleRefs(result.discoveredJobs) : [];
   const sites = result.discoveredSites ? compactOverworldTitleRefs(result.discoveredSites) : [];
-  const quests = result.discoveredQuests
-    ? result.discoveredQuests.map(compactOverworldQuestRef)
-    : [];
+  const quests = result.discoveredQuests ? compactOverworldQuestRefs(result.discoveredQuests) : [];
+  const discoveredTruncated: OverworldCompactDiscoveryKey[] = [];
+  if ((result.discoveredAreas?.length ?? 0) > areas.length) discoveredTruncated.push("areas");
+  if ((result.discoveredJobs?.length ?? 0) > jobs.length) discoveredTruncated.push("jobs");
+  if ((result.discoveredSites?.length ?? 0) > sites.length) discoveredTruncated.push("sites");
+  if ((result.discoveredQuests?.length ?? 0) > quests.length) discoveredTruncated.push("quests");
   if (areas.length > 0) compact.areas = areas;
   if (jobs.length > 0) compact.jobs = jobs;
   if (sites.length > 0) compact.sites = sites;
   if (quests.length > 0) compact.quests = quests;
+  if (discoveredTruncated.length > 0) compact.discovered_truncated = discoveredTruncated;
   return compact;
 }
 
