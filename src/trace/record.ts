@@ -28,6 +28,8 @@ export type Trace<A extends EngineAction = RpgAction> = {
   source_ref?: TraceSourceRef;
   /** Shipped world quest id, when the trace belongs to the open-world graph. */
   worldQuestId?: string;
+  /** Procedural RPG generation seed, when the trace belongs to an in-memory generated pack. */
+  generatedRpgSeed?: number;
   trace_id: string;
   /** Compatibility id retained for older tooling and historical traces. */
   pack_id: string;
@@ -95,10 +97,12 @@ function traceSourceRef(opts: RecordOptions): TraceSourceRef {
 export function traceSourceLabel(trace: {
   source_ref?: TraceSourceRef;
   worldQuestId?: string;
+  generatedRpgSeed?: number;
   pack_id: string;
 }): string {
   const ref = trace.source_ref;
   if (ref !== undefined) return compactSourceRefLabel(ref);
+  if (trace.generatedRpgSeed !== undefined) return `generate_rpg_seed:${trace.generatedRpgSeed}`;
   return trace.worldQuestId ? `world_quest_id:${trace.worldQuestId}` : `pack_id:${trace.pack_id}`;
 }
 
@@ -118,6 +122,9 @@ export function recordTrace<A extends EngineAction>(
     source_ref: sourceRef,
     ...(sourceMetadata.worldQuestId !== undefined
       ? { worldQuestId: sourceMetadata.worldQuestId }
+      : {}),
+    ...(sourceMetadata.generatedRpgSeed !== undefined
+      ? { generatedRpgSeed: sourceMetadata.generatedRpgSeed }
       : {}),
     trace_id: opts.trace_id,
     pack_id: opts.pack_id,

@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 411 -->
+<!-- historical_cycle_count: 412 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - trace_source_ref_replay_guarded
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: trace replay now validates compact `source_ref` consistency with `worldQuestId`/`generatedRpgSeed` before stepping untrusted trace state through the engine.
+- Loop effect: generated RPG traces carry explicit generated-seed metadata, and malformed or conflicting trace source identity fails at the replay boundary.
+- Guard: save/trace, world-source, and trace CLI focused regressions cover generated trace identity plus replay-boundary source-ref rejection.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused trace/source regressions, `npm test`, and `npm run health` passed.
 
 ### Cycle result - source_discovery_identity_trimmed
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/loop surface: `npm run validate` no longer repeats `mode: rpg` for every shipped quest; each report keeps world quest id plus content hash.
 - Loop effect: the public validation gate stays RPG-only while dropping another redundant single-runtime token from every cycle's validation output.
 - Guard: focused Prettier, typecheck, validation-bar, loop-driver, and RPG schema-standalone tests passed over the cleanup.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - latest_cycle_mode_removed
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: `latest-cycle.json` no longer carries generic `mode`; loop status reports run id, budget, target, and compact recommendation identity.
-- Loop effect: the AFK handoff keeps prompt style out of machine metadata, reducing another non-RPG mode axis in unattended cycle coordination.
-- Guard: focused Prettier, typecheck, AI loop tests, loop driver gates, and RPG schema-standalone tests passed over the cleanup.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.

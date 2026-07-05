@@ -16,11 +16,13 @@ import {
   assertTraceActions,
   assertTraceExpectedFinalHash,
   assertTraceIdentityFields,
+  assertTraceSourceRefConsistency,
   assertTraceState,
   assertTraceStepHashes,
   type TraceActionFields,
   type TraceExpectedFinalHashFields,
   type TraceIdentityFields,
+  type TraceSourceRefFields,
   type TraceStateFields,
   type TraceStepHashFields,
 } from "./integrity.js";
@@ -57,11 +59,15 @@ export function assertTraceMode(trace: {
   actions?: unknown;
   expected_final_hash?: unknown;
   per_step_hashes?: unknown;
+  source_ref?: unknown;
+  worldQuestId?: unknown;
+  generatedRpgSeed?: unknown;
 }): asserts trace is { mode: typeof SAVE_MODE } & TraceIdentityFields &
   TraceActionFields &
   TraceStateFields &
   TraceExpectedFinalHashFields &
-  TraceStepHashFields {
+  TraceStepHashFields &
+  TraceSourceRefFields {
   if (trace.mode !== SAVE_MODE) {
     throw new SaveIntegrityError(
       `Trace mode must be "${SAVE_MODE}", got ${JSON.stringify(trace.mode)}.`,
@@ -72,6 +78,7 @@ export function assertTraceMode(trace: {
   assertTraceActions(trace);
   assertTraceExpectedFinalHash(trace);
   assertTraceStepHashes(trace);
+  assertTraceSourceRefConsistency(trace);
 }
 
 /**

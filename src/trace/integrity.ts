@@ -1,6 +1,12 @@
 import { isRuntimeSeed, type GameState } from "../core/state.js";
 import type { EngineAction } from "../core/engine.js";
 import { assertWellFormedState, SaveIntegrityError } from "../persist/save_load.js";
+import { generatedRpgSeedValidationMessage, isGeneratedRpgSeed } from "../gen/seed.js";
+import {
+  compactSourceRefLegacyConsistency,
+  compactSourceRefValidationError,
+  type CompactSourceRef,
+} from "../world/source_ref.js";
 
 export type TraceIdentityFields = {
   trace_id: string;
@@ -24,6 +30,30 @@ export type TraceStateFields = {
 export type TraceExpectedFinalHashFields = {
   expected_final_hash?: string;
 };
+
+export type TraceSourceRefFields = {
+  source_ref?: CompactSourceRef;
+  worldQuestId?: string;
+  generatedRpgSeed?: number;
+};
+
+const TRACE_SOURCE_REF_CONSISTENCY_MESSAGES = {
+  sourceConflict: "Trace source cannot carry both worldQuestId and generatedRpgSeed.",
+  worldQuestMismatch: (sourceRefWorldQuestId: string, worldQuestId: string) =>
+    `Trace source_ref world quest ${JSON.stringify(
+      sourceRefWorldQuestId,
+    )} does not match worldQuestId ${JSON.stringify(worldQuestId)}.`,
+  generatedSeedMismatch: (sourceRefGeneratedSeed: number, generatedRpgSeed: number) =>
+    `Trace source_ref generated seed ${JSON.stringify(
+      sourceRefGeneratedSeed,
+    )} does not match generatedRpgSeed ${JSON.stringify(generatedRpgSeed)}.`,
+  sourceRefConflictsWithGeneratedRpgSeed:
+    "Trace source_ref world quest conflicts with generatedRpgSeed.",
+  sourceRefConflictsWithWorldQuestId:
+    "Trace source_ref generated seed conflicts with worldQuestId.",
+  sourceRefPackFallbackConflict:
+    "Trace source_ref pack fallback conflicts with explicit trace source metadata.",
+} as const;
 
 function assertNonEmptyString(value: unknown, label: string): asserts value is string {
   if (typeof value !== "string" || value.length === 0) {
@@ -114,4 +144,42 @@ export function assertTraceStepHashes<
   trace.per_step_hashes.forEach((hash, i) => {
     assertNonEmptyString(hash, `Trace per_step_hashes[${i}]`);
   });
+}
+
+export function assertTraceSourceRefConsistency<
+  T extends {
+    source_ref?: unknown;
+    worldQuestId?: unknown;
+    generatedRpgSeed?: unknown;
+  },
+>(trace: T): asserts trace is T & TraceSourceRefFields {
+  if (trace.worldQuestId !== undefined && typeof trace.worldQuestId !== "string") {
+    throw new SaveIntegrityError(
+      `Trace worldQuestId must be a string when present, got ${JSON.stringify(
+        trace.worldQuestId,
+      )}.`,
+    );
+  }
+  if (trace.generatedRpgSeed !== undefined && !isGeneratedRpgSeed(trace.generatedRpgSeed)) {
+    throw new SaveIntegrityError(
+      generatedRpgSeedValidationMessage("Trace generatedRpgSeed", trace.generatedRpgSeed),
+    );
+  }
+  if (trace.worldQuestId !== undefined && trace.generatedRpgSeed !== undefined) {
+    throw new SaveIntegrityError(
+      "Trace source cannot carry both worldQuestId and generatedRpgSeed.",
+    );
+  }
+  if (trace.source_ref === undefined) return;
+  const error = compactSourceRefValidationError(trace.source_ref, "Trace source_ref");
+  if (error !== undefined) throw new SaveIntegrityError(error);
+  const consistency = compactSourceRefLegacyConsistency(
+    trace.source_ref as CompactSourceRef,
+    {
+      ...(trace.worldQuestId !== undefined ? { worldQuestId: trace.worldQuestId } : {}),
+      ...(trace.generatedRpgSeed !== undefined ? { generatedRpgSeed: trace.generatedRpgSeed } : {}),
+    },
+    TRACE_SOURCE_REF_CONSISTENCY_MESSAGES,
+  );
+  if (!consistency.ok) throw new SaveIntegrityError(consistency.error);
 }

@@ -7,7 +7,7 @@ import {
   SAVE_MODE,
 } from "../../src/persist/save_load.js";
 import { hashState } from "../../src/core/hash.js";
-import { recordTrace } from "../../src/trace/record.js";
+import { recordTrace, traceSourceLabel } from "../../src/trace/record.js";
 import { replayTrace } from "../../src/trace/replay.js";
 import type { RpgAction } from "../../src/api/types.js";
 import {
@@ -233,6 +233,20 @@ describe("trace record / replay (§8.8)", () => {
     expect(result.finalHash).toBe(trace.expected_final_hash);
   });
 
+  it("round-trips generated RPG trace identity", () => {
+    const trace = recordTrace(microRules, microInitState(), WIN, {
+      trace_id: "tr_generated",
+      pack_id: MICRO_PACK_ID,
+      content_hash: MICRO_CONTENT_HASH,
+      generatedRpgSeed: 3,
+    });
+    expect(trace.source_ref).toEqual(["gen", 3]);
+    expect(trace.generatedRpgSeed).toBe(3);
+    expect(trace.worldQuestId).toBeUndefined();
+    expect(traceSourceLabel(trace)).toBe("generate_rpg_seed:3");
+    expect(replayTrace(trace, microRules).ok).toBe(true);
+  });
+
   it("rejects traces that omit the RPG mode", () => {
     const trace = recordTrace(microRules, microInitState(), WIN, {
       trace_id: "tr_test",
@@ -380,6 +394,41 @@ describe("trace record / replay (§8.8)", () => {
         generatedRpgSeed: UNSAFE_GENERATED_RPG_SEED,
       }),
     ).toThrow(/safe range/);
+  });
+
+  it("rejects conflicting compact trace source identity at the replay boundary", () => {
+    const trace = recordTrace(microRules, microInitState(), WIN, {
+      trace_id: "tr_generated",
+      pack_id: MICRO_PACK_ID,
+      content_hash: MICRO_CONTENT_HASH,
+      generatedRpgSeed: 3,
+    });
+
+    const mismatchedGenerated = { ...trace, source_ref: ["gen", 4] } as unknown as typeof trace;
+    expect(() => replayTrace(mismatchedGenerated, microRules)).toThrow(SaveIntegrityError);
+    expect(() => replayTrace(mismatchedGenerated, microRules)).toThrow(/source_ref/);
+
+    const conflictingWorldQuest = {
+      ...trace,
+      source_ref: ["wq", "sunken_barrow"],
+    } as unknown as typeof trace;
+    expect(() => replayTrace(conflictingWorldQuest, microRules)).toThrow(SaveIntegrityError);
+    expect(() => replayTrace(conflictingWorldQuest, microRules)).toThrow(/source_ref/);
+  });
+
+  it("rejects malformed generated trace metadata at the replay boundary", () => {
+    const trace = recordTrace(microRules, microInitState(), WIN, {
+      trace_id: "tr_generated",
+      pack_id: MICRO_PACK_ID,
+      content_hash: MICRO_CONTENT_HASH,
+      generatedRpgSeed: 3,
+    });
+
+    for (const value of [Number.MAX_SAFE_INTEGER + 1, 3.5, null]) {
+      const malformed = { ...trace, generatedRpgSeed: value } as unknown as typeof trace;
+      expect(() => replayTrace(malformed, microRules)).toThrow(SaveIntegrityError);
+      expect(() => replayTrace(malformed, microRules)).toThrow(/generatedRpgSeed/);
+    }
   });
 
   it("detects divergence when the expected hash is wrong", () => {
