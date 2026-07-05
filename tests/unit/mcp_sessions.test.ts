@@ -101,6 +101,19 @@ describe("SessionStore", () => {
     expect(store.get("sess_2").packId).toBe("second");
   });
 
+  it("keeps session ids monotonic past the safe integer boundary", () => {
+    const store = new SessionStore();
+    (store as unknown as { counter: bigint }).counter = BigInt(Number.MAX_SAFE_INTEGER);
+
+    const first = store.create(sessionInit({ packId: "first" }));
+    const second = store.create(sessionInit({ packId: "second" }));
+
+    expect(first.id).toBe("sess_9007199254740992");
+    expect(second.id).toBe("sess_9007199254740993");
+    expect(store.get(first.id)).toBe(first);
+    expect(store.get(second.id)).toBe(second);
+  });
+
   it("rejects unknown sessions with the id in the error message", () => {
     const store = new SessionStore();
 

@@ -199,7 +199,7 @@ export function isOverworldMcpRejectedSessionPayload(
 }
 
 export class OverworldMcpSessionStore {
-  private counter = 0;
+  private counter = 0n;
   private readonly sessions = new Map<string, OverworldSession>();
 
   constructor(

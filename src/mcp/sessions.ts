@@ -188,7 +188,7 @@ export type SessionInit = Omit<
 type ObservationCacheOptions = Pick<ObservationOptions, "hideGraph" | "includeWorldIntro">;
 
 export class SessionStore {
-  private counter = 0;
+  private counter = 0n;
   private readonly sessions = new Map<string, Session>();
 
   constructor(

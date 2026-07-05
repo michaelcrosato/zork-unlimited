@@ -8,6 +8,19 @@ function boundedStore(maxSessions = 2): OverworldMcpSessionStore {
 }
 
 describe("OverworldMcpSessionStore", () => {
+  it("keeps session ids monotonic past the safe integer boundary", () => {
+    const store = boundedStore();
+    (store as unknown as { counter: bigint }).counter = BigInt(Number.MAX_SAFE_INTEGER);
+
+    const first = store.create();
+    const second = store.create();
+
+    expect(first.session_id).toBe("oworld_9007199254740992");
+    expect(second.session_id).toBe("oworld_9007199254740993");
+    expect(store.get(first.session_id)).toBe(first.session);
+    expect(store.get(second.session_id)).toBe(second.session);
+  });
+
   it("bounds created sessions and keeps recently accessed sessions", () => {
     const store = boundedStore();
 
