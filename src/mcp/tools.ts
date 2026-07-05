@@ -70,6 +70,7 @@ import {
   type OverworldMcpStartResponse,
   type OverworldMcpViewField,
 } from "./overworld_sessions.js";
+import { overworldQuestCompletionFromRpgSession } from "./overworld_quest_completion.js";
 import type { WorldBinding, WorldManifest } from "../world/schema.js";
 import {
   normalizePackPath,
@@ -1198,27 +1199,11 @@ export function createToolApi(opts: { root: string }) {
         args.session_id,
         "result",
         (session) => {
-          const rpgSession = sessions.get(args.rpg_session_id);
-          if (!rpgSession.worldQuestId) {
-            throw new Error("Only shipped world quest RPG sessions can complete overworld quests.");
-          }
-          if (rpgSession.overworldSessionId !== args.session_id) {
-            throw new Error("RPG quest session was not started from this overworld session.");
-          }
-          if (!rpgSession.state.ended || !rpgSession.state.endingId) {
-            throw new Error("RPG quest session has not ended yet.");
-          }
-          const ending = rpgSession.index.pack.endings.find(
-            (candidate) => candidate.id === rpgSession.state.endingId,
+          const completion = overworldQuestCompletionFromRpgSession(
+            sessions.get(args.rpg_session_id),
+            args.session_id,
           );
-          if (!ending) {
-            throw new Error(`RPG quest ended at unknown ending "${rpgSession.state.endingId}".`);
-          }
-          return session.completeQuest(rpgSession.worldQuestId, {
-            endingId: ending.id,
-            endingTitle: ending.title,
-            death: ending.death,
-          });
+          return session.completeQuest(completion.questId, completion.outcome);
         },
         compactOverworldQuestCompletionResult,
       );
