@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { compactRpgObservation } from "../../src/mcp/compact_rpg_observation.js";
+import {
+  COMPACT_ACTION_LIMIT,
+  COMPACT_BLOCKED_EXIT_LIMIT,
+  COMPACT_ENEMY_LIMIT,
+  COMPACT_EXIT_LIMIT,
+  COMPACT_VISIBLE_REF_LIMIT,
+  compactRpgObservation,
+} from "../../src/mcp/compact_rpg_observation.js";
 import type { RpgObservation } from "../../src/rpg/observation.js";
 
 function ids(prefix: string, count: number): string[] {
@@ -40,7 +47,7 @@ describe("compactRpgObservation", () => {
     const obs = observationWithLargeState();
     const compact = compactRpgObservation(obs, ["look"]);
 
-    expect(compact.v).toBe(7);
+    expect(compact.v).toBe(8);
     expect("mode" in compact).toBe(false);
     expect(compact.inv).toEqual(ids("item", 16));
     expect(compact.flags).toEqual(ids("flag", 16));
@@ -99,6 +106,60 @@ describe("compactRpgObservation", () => {
     expect(compact.ended).toBeUndefined();
     expect(compact.exits).toBeUndefined();
     expect(compact.actions).toBeUndefined();
+  });
+
+  it("caps action and visible world buckets with compact omission counts", () => {
+    const actionCount = COMPACT_ACTION_LIMIT + 3;
+    const exitCount = COMPACT_EXIT_LIMIT + 4;
+    const refCount = COMPACT_VISIBLE_REF_LIMIT + 5;
+    const blockedCount = COMPACT_BLOCKED_EXIT_LIMIT + 2;
+    const enemyCount = COMPACT_ENEMY_LIMIT + 6;
+    const obs: RpgObservation = {
+      ...observationWithLargeState(),
+      inventory: [],
+      state: {
+        flags: [],
+        vars: { hp: 8, attack: 2, defense: 1 },
+        journal: [],
+      },
+      exits: Array.from({ length: exitCount }, (_, index) => ({
+        direction: `dir_${index}`,
+        to: `room_${index}`,
+      })),
+      visible_objects: Array.from({ length: refCount }, (_, index) => ({
+        id: `obj_${index}`,
+        name: `Object ${index}`,
+      })),
+      npcs_present: Array.from({ length: refCount }, (_, index) => ({
+        id: `npc_${index}`,
+        name: `NPC ${index}`,
+      })),
+      blocked_exits: Array.from({ length: blockedCount }, (_, index) => ({
+        direction: `blocked_${index}`,
+        message: `Blocked ${index}`,
+      })),
+      enemies_present: Array.from({ length: enemyCount }, (_, index) => ({
+        id: `enemy_${index}`,
+        name: `Enemy ${index}`,
+        hp: index + 1,
+      })),
+    };
+    const actionIds = ids("action", actionCount);
+
+    const compact = compactRpgObservation(obs, actionIds);
+
+    expect(compact.actions).toEqual(actionIds.slice(0, COMPACT_ACTION_LIMIT));
+    expect(compact.exits).toHaveLength(COMPACT_EXIT_LIMIT);
+    expect(compact.objects).toHaveLength(COMPACT_VISIBLE_REF_LIMIT);
+    expect(compact.npcs).toHaveLength(COMPACT_VISIBLE_REF_LIMIT);
+    expect(compact.blocked).toHaveLength(COMPACT_BLOCKED_EXIT_LIMIT);
+    expect(compact.enemies).toHaveLength(COMPACT_ENEMY_LIMIT);
+    expect(compact.more).toEqual([0, 0, 0, 3, 4, 5, 5, 2, 6]);
+    expect(obs.exits).toHaveLength(exitCount);
+    expect(obs.visible_objects).toHaveLength(refCount);
+    expect(obs.npcs_present).toHaveLength(refCount);
+    expect(obs.blocked_exits).toHaveLength(blockedCount);
+    expect(obs.enemies_present).toHaveLength(enemyCount);
   });
 
   it("omits truncation metadata when compact lists are complete", () => {

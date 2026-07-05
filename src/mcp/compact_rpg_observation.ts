@@ -7,6 +7,11 @@ import {
   omittedCount,
 } from "./compact_truncation.js";
 const CORE_STATE_VARS = new Set(["attack", "defense", "hp", "max_score", "score"]);
+export const COMPACT_ACTION_LIMIT = 24;
+export const COMPACT_EXIT_LIMIT = 12;
+export const COMPACT_VISIBLE_REF_LIMIT = 16;
+export const COMPACT_BLOCKED_EXIT_LIMIT = 8;
+export const COMPACT_ENEMY_LIMIT = 16;
 const COMPACT_INVENTORY_LIMIT = 16;
 const COMPACT_FLAG_LIMIT = 16;
 const COMPACT_JOURNAL_LIMIT = 5;
@@ -14,14 +19,24 @@ const COMPACT_DESCRIPTION_CHAR_LIMIT = 900;
 const COMPACT_DIALOGUE_CHAR_LIMIT = 700;
 const COMPACT_BLOCKED_EXIT_CHAR_LIMIT = 320;
 const COMPACT_ENDING_TEXT_CHAR_LIMIT = 900;
-export const RPG_COMPACT_OBSERVATION_VERSION = 7 as const;
+export const RPG_COMPACT_OBSERVATION_VERSION = 8 as const;
 
 export type RpgCompactRef = readonly [id: string, name: string];
 export type RpgCompactExit = string | readonly [direction: string, to: string];
 export type RpgCompactBlockedExit = readonly [direction: string, message: string];
 export type RpgCompactDialogue = readonly [npc: string, text: string];
 export type RpgCompactEnemy = readonly [id: string, name: string, hp: number];
-export type RpgCompactMore = readonly [inventory: number, flags?: number, journal?: number];
+export type RpgCompactMore = readonly [
+  inventory: number,
+  flags?: number,
+  journal?: number,
+  actions?: number,
+  exits?: number,
+  objects?: number,
+  npcs?: number,
+  blocked?: number,
+  enemies?: number,
+];
 export type RpgCompactVitals = readonly [
   hp: number,
   attack: number,
@@ -77,30 +92,48 @@ export function compactRpgObservation(
   actionIds: string[],
 ): RpgCompactObservation {
   const vars = compactVars(obs.state.vars);
+  const actions = compactHead(actionIds, COMPACT_ACTION_LIMIT);
   const inv = compactHead(obs.inventory, COMPACT_INVENTORY_LIMIT);
   const flags = compactHead(obs.state.flags, COMPACT_FLAG_LIMIT);
   const journal = compactRecent(obs.state.journal, COMPACT_JOURNAL_LIMIT);
+  const compactExits = compactHead(obs.exits, COMPACT_EXIT_LIMIT);
+  const compactObjects = compactHead(obs.visible_objects, COMPACT_VISIBLE_REF_LIMIT);
+  const compactNpcs = compactHead(obs.npcs_present, COMPACT_VISIBLE_REF_LIMIT);
+  const compactBlockedExits = compactHead(obs.blocked_exits, COMPACT_BLOCKED_EXIT_LIMIT);
+  const compactEnemies = compactHead(obs.enemies_present, COMPACT_ENEMY_LIMIT);
+  const omittedActions = omittedCount(actionIds, actions);
   const omittedInv = omittedCount(obs.inventory, inv);
   const omittedFlags = omittedCount(obs.state.flags, flags);
   const omittedJournal = omittedCount(obs.state.journal, journal);
+  const omittedExits = omittedCount(obs.exits, compactExits);
+  const omittedObjects = omittedCount(obs.visible_objects, compactObjects);
+  const omittedNpcs = omittedCount(obs.npcs_present, compactNpcs);
+  const omittedBlocked = omittedCount(obs.blocked_exits, compactBlockedExits);
+  const omittedEnemies = omittedCount(obs.enemies_present, compactEnemies);
   const exits: RpgCompactExit[] = [];
-  for (const exit of obs.exits) {
+  for (const exit of compactExits) {
     exits.push(exit.to === undefined ? exit.direction : [exit.direction, exit.to]);
   }
   const objects: RpgCompactRef[] = [];
-  for (const object of obs.visible_objects) objects.push([object.id, object.name]);
+  for (const object of compactObjects) objects.push([object.id, object.name]);
   const npcs: RpgCompactRef[] = [];
-  for (const npc of obs.npcs_present) npcs.push([npc.id, npc.name]);
+  for (const npc of compactNpcs) npcs.push([npc.id, npc.name]);
   const blocked: RpgCompactBlockedExit[] = [];
-  for (const exit of obs.blocked_exits) {
+  for (const exit of compactBlockedExits) {
     blocked.push([exit.direction, compactText(exit.message, COMPACT_BLOCKED_EXIT_CHAR_LIMIT)]);
   }
   const enemies: RpgCompactEnemy[] = [];
-  for (const enemy of obs.enemies_present) enemies.push([enemy.id, enemy.name, enemy.hp]);
+  for (const enemy of compactEnemies) enemies.push([enemy.id, enemy.name, enemy.hp]);
   const more = compactTrailingOmissionCounts([
     omittedInv ?? 0,
     omittedFlags ?? 0,
     omittedJournal ?? 0,
+    omittedActions ?? 0,
+    omittedExits ?? 0,
+    omittedObjects ?? 0,
+    omittedNpcs ?? 0,
+    omittedBlocked ?? 0,
+    omittedEnemies ?? 0,
   ]) as RpgCompactMore | undefined;
   return {
     v: RPG_COMPACT_OBSERVATION_VERSION,
@@ -108,7 +141,7 @@ export function compactRpgObservation(
     text: compactText(obs.description, COMPACT_DESCRIPTION_CHAR_LIMIT),
     ...(exits.length > 0 ? { exits } : {}),
     vitals: [obs.stats.hp, obs.stats.attack, obs.stats.defense, obs.score, obs.max_score],
-    ...(actionIds.length > 0 ? { actions: actionIds } : {}),
+    ...(actions.length > 0 ? { actions } : {}),
     ...(objects.length > 0 ? { objects } : {}),
     ...(npcs.length > 0 ? { npcs } : {}),
     ...(blocked.length > 0 ? { blocked } : {}),
