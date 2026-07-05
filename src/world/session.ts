@@ -105,20 +105,24 @@ import {
   type OverworldSessionSnapshot,
   type TravelLogEntry,
 } from "./session_snapshot.js";
-import { buildOverworldSessionCompactView } from "./session_compact_view.js";
 import {
   clearOverworldSessionCaches,
   type OverworldSessionCaches,
   type OverworldSessionSnapshotCache,
 } from "./session_cache.js";
 import { cloneOverworldView } from "./session_view_clone.js";
-import { buildOverworldSessionView, type OverworldView } from "./session_view.js";
+import type { OverworldView } from "./session_view.js";
 import { buildOverworldSessionIndexes } from "./session_indices.js";
 import {
   applyOverworldSessionSnapshotRestore,
   planOverworldSessionSnapshotRestore,
   type OverworldSessionSnapshotRestoreState,
 } from "./session_snapshot_restore.js";
+import {
+  buildOverworldSessionCompactViewFromState,
+  buildOverworldSessionViewFromState,
+  type OverworldSessionViewModelState,
+} from "./session_view_state.js";
 
 export type {
   OverworldRoadEncounterOption,
@@ -693,12 +697,12 @@ export class OverworldSession {
     return cloneOverworldCompactView(this.cachedCompactView());
   }
 
-  private buildCompactView(): OverworldCompactView {
+  private viewModelState(): OverworldSessionViewModelState {
     const current = this.currentNode();
     const currentArea = this.currentArea();
     const routeOptions = this.discoveredRouteOptions();
     const localView = this.currentLocalView();
-    return buildOverworldSessionCompactView({
+    return {
       worldName: this.world.name,
       worldTownCount: this.world.nodes.length,
       current,
@@ -709,17 +713,10 @@ export class OverworldSession {
       roads: this.roadsFrom(this.currentId),
       areaExits: this.visibleAreaExits(),
       routeOptions,
-      areas: localView.areas,
+      localView,
       poi: this.currentAreaPois(),
       contacts: this.currentAreaCharacters(),
       events: this.currentAreaEvents(),
-      jobs: localView.jobs,
-      sites: localView.sites,
-      quests: localView.quests,
-      hiddenAreaCount: localView.hiddenAreaCount,
-      hiddenJobCount: localView.hiddenJobCount,
-      hiddenSiteCount: localView.hiddenSiteCount,
-      hiddenQuestCount: localView.hiddenQuestCount,
       journalEntries: this.journalEntries,
       travelLog: this.travelLog,
       visitedCount: this.visitedIds.size,
@@ -740,7 +737,11 @@ export class OverworldSession {
         completedQuestIds: this.completedQuestIds,
         resolvedEventIds: this.resolvedEventIds,
       },
-    });
+    };
+  }
+
+  private buildCompactView(): OverworldCompactView {
+    return buildOverworldSessionCompactViewFromState(this.viewModelState());
   }
 
   private cachedView(): OverworldView {
@@ -754,49 +755,9 @@ export class OverworldSession {
   }
 
   private buildView(): OverworldView {
-    const current = this.currentNode();
-    const localView = this.currentLocalView();
-    return buildOverworldSessionView({
-      worldName: this.world.name,
-      worldTownCount: this.world.nodes.length,
-      current,
-      currentArea: this.currentArea(),
-      minutes: this.minutes,
-      supplies: this.supplies,
-      fatigue: this.fatigue,
-      roads: this.roadsFrom(this.currentId),
-      areaExits: this.visibleAreaExits(),
-      areas: localView.areas,
-      hiddenAreaCount: localView.hiddenAreaCount,
-      poi: this.currentAreaPois(),
-      contacts: this.currentAreaCharacters(),
-      events: this.currentAreaEvents(),
-      jobs: localView.jobs,
-      hiddenJobCount: localView.hiddenJobCount,
-      sites: localView.sites,
-      hiddenSiteCount: localView.hiddenSiteCount,
-      quests: localView.quests,
-      hiddenQuestCount: localView.hiddenQuestCount,
-      routeOptions: this.discoveredRouteOptions(),
-      discoveredIds: this.discoveredIds,
-      nodes: this.nodes,
-      visitedCount: this.visitedIds.size,
-      journalEntries: this.journalEntries,
-      discoveredAreaIds: this.discoveredAreaIds,
-      visitedAreaIds: this.visitedAreaIds,
-      discoveredJobIds: this.discoveredJobIds,
-      completedJobIds: this.completedJobIds,
-      discoveredSiteIds: this.discoveredSiteIds,
-      discoveredQuestIds: this.discoveredQuestIds,
-      startedQuestIds: this.startedQuestIds,
-      completedQuestIds: this.completedQuestIds,
-      exploredSiteIds: this.exploredSiteIds,
-      resolvedEventIds: this.resolvedEventIds,
-      regionRenown: this.regionRenown,
+    return buildOverworldSessionViewFromState({
+      ...this.viewModelState(),
       regionalArcs: this.cachedRegionalArcProgress(),
-      completedRegionalArcIds: this.completedRegionalArcIds,
-      pendingRoadEncounter: this.pendingRoadEncounter,
-      travelLog: this.travelLog,
     });
   }
 
