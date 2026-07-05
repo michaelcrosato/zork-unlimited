@@ -24,8 +24,8 @@ export type TraceSourceRef = CompactSourceRef;
 
 export type Trace<A extends EngineAction = RpgAction> = {
   mode: SaveMode;
-  /** Compact canonical source; historical traces may carry legacy pack fallback. */
-  source_ref?: TraceSourceRef;
+  /** Compact canonical source; historical traces may carry explicit legacy pack fallback. */
+  source_ref: TraceSourceRef;
   /** Shipped world quest id, when the trace belongs to the open-world graph. */
   worldQuestId?: string;
   /** Procedural RPG generation seed, when the trace belongs to an in-memory generated pack. */

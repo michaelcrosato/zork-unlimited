@@ -108,7 +108,7 @@ export type SaveBundle = {
   /** Pack mode. Required so persisted state is bound to the unified RPG engine. */
   mode: SaveMode;
   /** Compact canonical source identity. Legacy fields below remain compatibility mirrors. */
-  source_ref?: SaveSourceRef;
+  source_ref: SaveSourceRef;
   /** Shipped world quest id, when the save belongs to the open-world graph. */
   worldQuestId?: string;
   /** Procedural RPG generation seed, when the save belongs to an in-memory generated pack. */
@@ -142,8 +142,8 @@ function deepFreezeSaveBundle<T>(value: T, seen = new WeakSet<object>()): T {
   return Object.freeze(value);
 }
 
-function cloneSaveSourceRef(sourceRef: SaveSourceRef | undefined): SaveSourceRef | undefined {
-  return sourceRef ? ([sourceRef[0], sourceRef[1]] as SaveSourceRef) : undefined;
+function cloneSaveSourceRef(sourceRef: SaveSourceRef): SaveSourceRef {
+  return [sourceRef[0], sourceRef[1]] as SaveSourceRef;
 }
 
 function immutableLoadedSaveBundle(bundle: SaveBundle): SaveBundle {
@@ -151,7 +151,7 @@ function immutableLoadedSaveBundle(bundle: SaveBundle): SaveBundle {
   return deepFreezeSaveBundle({
     ...bundle,
     state: cloneGameState(bundle.state),
-    ...(sourceRef ? { source_ref: sourceRef } : {}),
+    source_ref: sourceRef,
   });
 }
 
@@ -250,16 +250,15 @@ function saveSourceRef(packId: string, metadata: SaveMetadata): SaveSourceRef {
 }
 
 function assertSaveSourceRef(raw: unknown): asserts raw is SaveSourceRef {
-  if (raw === undefined) return;
+  if (raw === undefined) {
+    throw new SaveIntegrityError("Save source_ref is required.");
+  }
   const error = compactSourceRefValidationError(raw, "Save source_ref");
   if (error !== undefined) throw new SaveIntegrityError(error);
 }
 
 function assertSaveSourceRefConsistency(bundle: SaveBundle): void {
   const sourceRef = (bundle as { source_ref?: unknown }).source_ref;
-  if (sourceRef === undefined) {
-    throw new SaveIntegrityError("Save source_ref is required.");
-  }
   assertSaveSourceRef(sourceRef);
   const consistency = compactSourceRefLegacyConsistency(
     sourceRef,

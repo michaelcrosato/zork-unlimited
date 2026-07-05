@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 419 -->
+<!-- historical_cycle_count: 420 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - source_ref_types_required
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: `SaveBundle` and `Trace` now declare compact `source_ref` as required, matching the runtime load/replay/source-resolution gates.
+- Loop effect: new code can no longer treat persisted save/trace source identity as optional at the typed boundary; permissive optional shapes remain only at raw untrusted parse/forgery tests.
+- Guard: schema-standalone regression now pins required save/trace source refs, and focused save/trace, world-source, MCP save/load, and generated-save tests passed.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused source/persistence regressions, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - save_source_ref_resolver_required
 
@@ -115,13 +123,5 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
 - Engine/loop surface: public RPG utility MCP schema prose for generated starts, state reads, transcripts, saves, loads, and trace helpers is trimmed and guarded by source-size regressions.
 - Loop effect: generated-game, save/load, transcript, and trace ToolSearch reads spend fewer tokens before agents reach compact RPG payloads.
-- Guard: focused Prettier, MCP registration schema-size regression, and typecheck passed.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused regression, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - overworld_schema_prose_trimmed
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: overworld MCP ToolSearch schema prose now reuses terse shared session/hash fields and short action-id descriptions, guarded by a source-size regression.
-- Loop effect: overworld loop/action discovery spends fewer tokens on repeated schema prose before agents reach compact context payloads.
 - Guard: focused Prettier, MCP registration schema-size regression, and typecheck passed.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused regression, `npm test`, and `npm run health` passed after loop-state rotation.

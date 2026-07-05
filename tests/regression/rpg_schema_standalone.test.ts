@@ -59,6 +59,7 @@ describe("RPG owns the live content/runtime contract", () => {
     const mcpTools = readFileSync("src/mcp/tools.ts", "utf8");
     const mcpTypes = readFileSync("src/mcp/types.ts", "utf8");
     const sessions = readFileSync("src/mcp/sessions.ts", "utf8");
+    const saveLoad = readFileSync("src/persist/save_load.ts", "utf8");
     const traceRecord = readFileSync("src/trace/record.ts", "utf8");
     const traceReplay = readFileSync("src/trace/replay.ts", "utf8");
 
@@ -69,7 +70,9 @@ describe("RPG owns the live content/runtime contract", () => {
     expect(mcpTools).not.toContain("mode: SaveMode");
     expect(mcpTools).not.toContain("mode: lr.ok ? SAVE_MODE");
     expect(sessions).toContain("Rules<RpgAction>");
+    expect(saveLoad).toContain("source_ref: SaveSourceRef;");
     expect(traceRecord).toContain("export type Trace<A extends EngineAction = RpgAction>");
+    expect(traceRecord).toContain("source_ref: TraceSourceRef;");
     expect(traceReplay).toContain("trace: Trace<A>");
   });
 });
