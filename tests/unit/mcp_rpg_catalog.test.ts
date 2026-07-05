@@ -30,6 +30,8 @@ describe("list_world is the single RPG quest catalog", () => {
     expect(world.quests).toHaveLength(16);
     expect(world.quests.every((q) => !("path" in q))).toBe(true);
     expect(world.quests.every((q) => !("path_from_hub" in q))).toBe(true);
+    expect(world.quests.every((q) => !("id" in q))).toBe(true);
+    expect(world.quests.every((q) => !("graph_node" in q))).toBe(true);
     expect(expanded.graph.nodes.every((node) => !("pack" in node))).toBe(true);
     expect(world.quests.map((q) => q.world_quest_id)).toEqual(
       expanded.graph.nodes.filter((node) => node.kind === "quest").map((node) => node.id),

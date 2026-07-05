@@ -83,7 +83,6 @@ type WorldListOptions = {
 };
 
 type WorldQuestCatalogEntry = {
-  id: string;
   title: string;
   playable: boolean;
   world_quest_id: string | null;
@@ -91,7 +90,6 @@ type WorldQuestCatalogEntry = {
   quest: string;
   role: string;
   connection: string;
-  graph_node: string | null;
 };
 
 type WorldQuestRouteDetails = {
@@ -286,7 +284,6 @@ export function createToolApi(opts: { root: string }) {
         .map((s) => {
           const node = s.world_quest_id ? worldQuestNodeById(world, s.world_quest_id) : null;
           const quest: WorldQuestCatalogEntry = {
-            id: s.id,
             title: s.title,
             playable: s.playable,
             world_quest_id: node?.id ?? null,
@@ -294,7 +291,6 @@ export function createToolApi(opts: { root: string }) {
             quest: s.world?.quest ?? "",
             role: s.world?.role ?? "",
             connection: s.world?.connection ?? "",
-            graph_node: node?.id ?? null,
           };
           if (args?.include_routes === true) {
             return {

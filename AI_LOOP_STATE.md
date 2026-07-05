@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 409 -->
+<!-- historical_cycle_count: 410 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - world_catalog_identity_compacted
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: `list_world` quest rows now expose canonical `world_quest_id` without duplicate row `id` or `graph_node`; `world_path` keeps graph node identity for coordinate/path lookups.
+- Loop effect: public world discovery and AFK ranking stay world-graph keyed while catalog payload size drops to about 5.1 KB.
+- Guard: catalog, RPG tool, world manifest, and assessor focused regressions cover the compact identity contract.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused regressions, `npm test`, and `npm run health` passed.
 
 ### Cycle result - mcp_play_compact_context
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/loop surface: generated RPG mint-and-check rows now carry only deterministic seed plus the production validator report; drift evidence names `seed N`.
 - Loop effect: AFK generator drift candidates no longer duplicate public generated pack ids, while validator reports keep internal pack ids for diagnostics.
 - Guard: focused Prettier, typecheck, assessor, AI loop, RPG schema-standalone, and generator mint-and-check tests passed over the cleanup.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - stale_reactive_audit_world_quest_ids
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: stale-reactive room-item audit now maps shipped packs through the canonical world graph and emits `worldQuestId` instead of raw pack paths.
-- Loop effect: AFK structural candidate evidence names `world_quest_id:*` targets, keeping raw pack paths internal to loading while preserving room/object stale-prose triage.
-- Guard: focused Prettier, typecheck, stale-reactive audit, assessor, and RPG schema-standalone tests passed over the cleanup.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.

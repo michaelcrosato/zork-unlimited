@@ -20,7 +20,6 @@ import { join, relative } from "node:path";
 import { createToolApi } from "../mcp/tools.js";
 import { verifyBlindReportText } from "../blind/report_verifier.js";
 import { auditStaleReactiveRoomItems } from "./stale_reactive_audit.js";
-import { resolveWorldQuestPackPath } from "../world/source.js";
 import { score, type ImprovementCandidate } from "./assessment_model.js";
 import {
   allGeneratedChecksClean,
@@ -44,8 +43,8 @@ export type QuestHealth = {
 };
 
 type AssessedQuest = {
-  path: string;
-  pack_id: string;
+  target_ref: string;
+  target_label: string;
   playable: boolean;
   world_quest_id: string | null;
 };
@@ -389,11 +388,8 @@ export function isSaturated(a: Assessment): boolean {
 export function assess(root: string): Assessment {
   const api = createToolApi({ root });
   const quests: AssessedQuest[] = api.list_world().quests.map((quest) => ({
-    path:
-      quest.world_quest_id === null
-        ? quest.id
-        : resolveWorldQuestPackPath(root, quest.world_quest_id).packPath,
-    pack_id: quest.id,
+    target_ref: quest.world_quest_id ?? `unbound:${quest.title}`,
+    target_label: quest.world_quest_id ?? quest.title,
     playable: quest.playable,
     world_quest_id: quest.world_quest_id,
   }));
@@ -405,8 +401,6 @@ export function assess(root: string): Assessment {
 
   // ── Per-quest health: validator findings (the deterministic dev-test signal) ───
   for (const s of quests) {
-    const targetRef = s.world_quest_id ?? s.path;
-    const targetLabel = s.world_quest_id ?? s.pack_id;
     if (!s.playable) {
       questHealth.push({
         world_quest_id: s.world_quest_id,
@@ -414,13 +408,13 @@ export function assess(root: string): Assessment {
         warnings: 0,
       });
       candidates.push({
-        id: `fix-unplayable-${targetRef}`,
+        id: `fix-unplayable-${s.target_ref}`,
         category: "content_fix",
-        target: targetRef,
-        title: `Fix quest "${targetLabel}" — it does not validate (unplayable)`,
+        target: s.target_ref,
+        title: `Fix quest "${s.target_label}" — it does not validate (unplayable)`,
         rationale:
           "An unplayable world quest is the highest-impact thing to fix: nobody can experience it through the unified RPG runtime.",
-        evidence: [`${targetRef} failed validation`],
+        evidence: [`${s.target_ref} failed validation`],
         impact: 5,
         effort: "M",
         score: score(5, "M", "content_fix"),
@@ -434,13 +428,13 @@ export function assess(root: string): Assessment {
         warnings: 0,
       });
       candidates.push({
-        id: `fix-unbound-${s.path}`,
+        id: `fix-unbound-${s.target_ref}`,
         category: "content_fix",
-        target: s.path,
-        title: `Fix quest "${s.pack_id}" — it is not bound to the world graph`,
+        target: s.target_ref,
+        title: `Fix quest "${s.target_label}" — it is not bound to the world graph`,
         rationale:
           "A playable quest without a world quest id cannot be reached through the single-world runtime.",
-        evidence: [`${s.path} has no world_quest_id`],
+        evidence: [`${s.target_ref} has no world_quest_id`],
         impact: 5,
         effort: "M",
         score: score(5, "M", "content_fix"),

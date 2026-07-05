@@ -221,6 +221,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(world.quests.every((q) => !("path" in q))).toBe(true);
     expect(world.quests.every((q) => !("path_from_hub" in q))).toBe(true);
     expect(world.quests.every((q) => !("mode" in q))).toBe(true);
+    expect(world.quests.every((q) => !("id" in q))).toBe(true);
+    expect(world.quests.every((q) => !("graph_node" in q))).toBe(true);
     expect(expanded.graph.nodes.every((node) => !("pack" in node))).toBe(true);
     expect(world.quests.some((s) => s.world_quest_id === "sunken_barrow")).toBe(true);
     expect(world.quests.some((s) => s.world_quest_id === "breaking_weir")).toBe(true);
@@ -236,7 +238,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(world.quests.map((q) => q.world_quest_id)).toEqual(
       expanded.graph.nodes.filter((node) => node.kind === "quest").map((node) => node.id),
     );
-    expect(JSON.stringify(world).length).toBeLessThanOrEqual(6100);
+    expect(JSON.stringify(world).length).toBeLessThanOrEqual(5300);
   });
 
   it("lists the unified world as a hub plus quest areas", () => {
@@ -252,6 +254,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(r.quest_count).toBe(16);
     expect(r.quests.every((q) => !("mode" in q))).toBe(true);
+    expect(r.quests.every((q) => !("id" in q))).toBe(true);
+    expect(r.quests.every((q) => !("graph_node" in q))).toBe(true);
     const breakingWeir = r.quests.find((q) => q.world_quest_id === "breaking_weir");
     expect(breakingWeir).toMatchObject({
       district: "Breaking Weir",
@@ -259,7 +263,6 @@ describe("MCP tools — validate / load (§9.4)", () => {
       role: "weir keeper",
       playable: true,
       world_quest_id: "breaking_weir",
-      graph_node: "breaking_weir",
     });
     expect("path" in (breakingWeir ?? {})).toBe(false);
     expect(breakingWeir?.path_from_hub.map((step) => step.name)).toEqual([
@@ -451,7 +454,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const a = api();
     const r = a.list_overworld();
     const withDesignNotes = a.list_overworld({ include_design_notes: true });
-    const canonicalQuestIds = new Set(a.list_world().quests.map((quest) => quest.graph_node));
+    const canonicalQuestIds = new Set(a.list_world().quests.map((quest) => quest.world_quest_id));
     expect(r.world.id).toBe("new_york_overworld");
     expect(r.start.id).toBe("albany_city");
     expect(r.town_count).toBeGreaterThanOrEqual(240);

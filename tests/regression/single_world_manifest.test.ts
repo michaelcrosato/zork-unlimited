@@ -219,7 +219,9 @@ describe("single-world library contract", () => {
     expect("graph" in world.world).toBe(false);
     expect(world.quests.every((q) => !("path" in q))).toBe(true);
     expect(world.quests.every((q) => !("mode" in q))).toBe(true);
-    expect(breakingWeir?.graph_node).toBe("breaking_weir");
+    expect(world.quests.every((q) => !("id" in q))).toBe(true);
+    expect(world.quests.every((q) => !("graph_node" in q))).toBe(true);
+    expect(breakingWeir?.world_quest_id).toBe("breaking_weir");
     expect(breakingWeir?.path_from_hub.map((step) => step.name)).toEqual([
       CANONICAL_HUB_CITY,
       "Industrial Cut",
