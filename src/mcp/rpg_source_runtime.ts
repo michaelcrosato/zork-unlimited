@@ -105,6 +105,22 @@ function schemaFindings(
   }));
 }
 
+function deepFreezeSourceResult<T>(value: T): T {
+  if (value === null || typeof value !== "object" || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value as Record<string, unknown>)) {
+    deepFreezeSourceResult(child);
+  }
+  return Object.freeze(value);
+}
+
+function freezeLoadResult(result: RpgLoadResult): RpgLoadResult {
+  return deepFreezeSourceResult(result);
+}
+
+function freezeGeneratedEntry(entry: GeneratedRpgCacheEntry): GeneratedRpgCacheEntry {
+  return deepFreezeSourceResult(entry);
+}
+
 export class RpgSourceRuntime {
   private readonly packLoadCache = new Map<string, RpgPackLoadCacheEntry>();
   private readonly generatedRpgCache = new Map<number, GeneratedRpgCacheEntry>();
@@ -123,7 +139,7 @@ export class RpgSourceRuntime {
     const source = readFileSync(abs, "utf8");
     let result: RpgLoadResult;
     if (!isRpgPackShape(parseYaml(source) as unknown)) {
-      result = {
+      result = freezeLoadResult({
         ok: false,
         report: makeReport(packPath, [
           {
@@ -133,7 +149,7 @@ export class RpgSourceRuntime {
             where: [packPath],
           },
         ]),
-      };
+      });
       rememberSourceCacheEntry(this.packLoadCache, abs, {
         mtimeMs: stat.mtimeMs,
         size: stat.size,
@@ -143,10 +159,10 @@ export class RpgSourceRuntime {
     }
     const compileRes = compileRpgPack(source);
     if (!compileRes.ok) {
-      result = {
+      result = freezeLoadResult({
         ok: false,
         report: makeReport(packPath, schemaFindings(packPath, compileRes.error)),
-      };
+      });
       rememberSourceCacheEntry(this.packLoadCache, abs, {
         mtimeMs: stat.mtimeMs,
         size: stat.size,
@@ -156,7 +172,7 @@ export class RpgSourceRuntime {
     }
     const pack = compileRes.compiled.pack;
     const report = validateRpg(pack);
-    result = { ok: true, compiled: compileRes.compiled, report };
+    result = freezeLoadResult({ ok: true, compiled: compileRes.compiled, report });
     rememberSourceCacheEntry(this.packLoadCache, abs, {
       mtimeMs: stat.mtimeMs,
       size: stat.size,
@@ -180,7 +196,10 @@ export class RpgSourceRuntime {
     if (cached) return cached;
     const pack = generateRpgPack(seed);
     const report = validateRpg(pack);
-    const entry = { compiled: { pack, contentHash: hashState(pack) }, report };
+    const entry = freezeGeneratedEntry({
+      compiled: { pack, contentHash: hashState(pack) },
+      report,
+    });
     rememberSourceCacheEntry(this.generatedRpgCache, seed, entry);
     return entry;
   }

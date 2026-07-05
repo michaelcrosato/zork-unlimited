@@ -345,6 +345,17 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(first.ok).toBe(true);
     expect(second.ok).toBe(true);
     expect(second.report).toBe(first.report);
+    expect(Object.isFrozen(first.report)).toBe(true);
+    expect(Object.isFrozen(first.report.findings)).toBe(true);
+    expect(() => {
+      first.report.findings.push({
+        severity: "error",
+        code: "MUTATED",
+        message: "mutated report",
+        where: ["test"],
+      });
+    }).toThrow();
+    expect(a.validate_quest({ world_quest_id: "sunken_barrow" }).report.findings).toEqual([]);
   });
 
   it("reuses generated RPG packs by seed inside one MCP API instance", () => {
@@ -362,6 +373,13 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(firstSession.contentHash).toBe(preview.content_hash);
     expect(secondSession.index.pack).toBe(firstSession.index.pack);
     expect(otherSession.index.pack).not.toBe(firstSession.index.pack);
+    expect(Object.isFrozen(preview.report)).toBe(true);
+    expect(Object.isFrozen(preview.meta)).toBe(true);
+    expect(Object.isFrozen(firstSession.index.pack)).toBe(true);
+    expect(() => {
+      preview.meta.title = "Mutated generated title";
+    }).toThrow();
+    expect(a.generate_rpg_pack({ seed: 7 }).meta.title).toBe(preview.meta.title);
   });
 
   it("rejects unsafe runtime seeds before RPG session creation", () => {
