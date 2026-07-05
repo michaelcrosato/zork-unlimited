@@ -7,21 +7,37 @@ import type {
   OverworldLocalEvent,
   OverworldNode,
   OverworldPoi,
+  OverworldRegionalArc,
 } from "./overworld.js";
+import type { OverworldSessionCaches } from "./session_cache.js";
 import {
   buildOverworldSessionCompactView,
   type OverworldSessionCompactViewState,
 } from "./session_compact_view.js";
 import type { OverworldCompactSessionIdState } from "./session_compact_ids.js";
+import {
+  currentOverworldSessionAreaContent,
+  type MutableOverworldSessionLocalState,
+  type OverworldSessionAreaContent,
+} from "./session_local_state.js";
 import type { OverworldSessionLocalView } from "./session_local_view.js";
 import type { OverworldRegionalArcProgress } from "./session_regional_arcs.js";
-import type { OverworldSessionRoutePlan } from "./session_routes.js";
+import {
+  cachedOverworldSessionDiscoveredRouteOptions,
+  cachedOverworldSessionRegionalArcProgress,
+} from "./session_route_progress.js";
+import type { OverworldRoutePlannerIndex, OverworldSessionRoutePlan } from "./session_routes.js";
 import type {
   OverworldJournalEntry,
   OverworldPendingRoadEncounter,
   TravelLogEntry,
 } from "./session_snapshot.js";
 import { buildOverworldSessionView, type OverworldView } from "./session_view.js";
+
+type OverworldSessionViewLocalContentState = Pick<
+  MutableOverworldSessionLocalState,
+  "poisByArea" | "charactersByArea" | "eventsByArea" | "sitesByArea"
+>;
 
 export type OverworldSessionViewModelState = {
   worldName: string;
@@ -50,6 +66,103 @@ export type OverworldSessionViewModelState = {
 export type OverworldSessionFullViewModelState = OverworldSessionViewModelState & {
   regionalArcs: readonly OverworldRegionalArcProgress[];
 };
+
+export type OverworldSessionViewModelSourceState = {
+  caches: OverworldSessionCaches;
+  worldName: string;
+  worldTownCount: number;
+  current: OverworldNode;
+  currentArea: OverworldArea | null;
+  currentId: string;
+  minutes: number;
+  supplies: number;
+  fatigue: number;
+  roads: readonly OverworldExit[];
+  areaExits: readonly OverworldAreaExit[];
+  localState: OverworldSessionViewLocalContentState;
+  localView: OverworldSessionLocalView;
+  routePlannerIndex: OverworldRoutePlannerIndex;
+  journalEntries: readonly OverworldJournalEntry[];
+  travelLog: readonly TravelLogEntry[];
+  visitedCount: number;
+  regionRenown: ReadonlyMap<string, number>;
+  completedRegionalArcIds: ReadonlySet<string>;
+  pendingRoadEncounter: OverworldPendingRoadEncounter | null;
+  ids: OverworldCompactSessionIdState;
+};
+
+export type OverworldSessionFullViewModelSourceState = OverworldSessionViewModelSourceState & {
+  regionalArcs: readonly OverworldRegionalArc[];
+  regionalArcAnchorTownsById: ReadonlyMap<string, readonly OverworldNode[]>;
+  resolvedEventHomeIds: ReadonlySet<string>;
+};
+
+const EMPTY_AREA_CONTENT: OverworldSessionAreaContent = {
+  characters: [],
+  events: [],
+  poi: [],
+  sites: [],
+};
+
+export function buildOverworldSessionViewModelState(
+  source: OverworldSessionViewModelSourceState,
+): OverworldSessionViewModelState {
+  const currentAreaContent = source.currentArea
+    ? currentOverworldSessionAreaContent(source.localState, source.currentArea.id)
+    : EMPTY_AREA_CONTENT;
+  const routeOptions = cachedOverworldSessionDiscoveredRouteOptions({
+    caches: source.caches,
+    routePlannerIndex: source.routePlannerIndex,
+    current: source.current,
+    currentId: source.currentId,
+    discoveredIds: source.ids.discoveredIds,
+    resources: {
+      fatigue: source.fatigue,
+      supplies: source.supplies,
+    },
+  });
+
+  return {
+    worldName: source.worldName,
+    worldTownCount: source.worldTownCount,
+    current: source.current,
+    currentArea: source.currentArea,
+    minutes: source.minutes,
+    supplies: source.supplies,
+    fatigue: source.fatigue,
+    roads: source.roads,
+    areaExits: source.areaExits,
+    routeOptions,
+    localView: source.localView,
+    poi: currentAreaContent.poi,
+    contacts: currentAreaContent.characters,
+    events: currentAreaContent.events,
+    journalEntries: source.journalEntries,
+    travelLog: source.travelLog,
+    visitedCount: source.visitedCount,
+    regionRenown: source.regionRenown,
+    completedRegionalArcIds: source.completedRegionalArcIds,
+    pendingRoadEncounter: source.pendingRoadEncounter,
+    ids: source.ids,
+  };
+}
+
+export function buildOverworldSessionFullViewModelState(
+  source: OverworldSessionFullViewModelSourceState,
+): OverworldSessionFullViewModelState {
+  const state = buildOverworldSessionViewModelState(source);
+  return {
+    ...state,
+    regionalArcs: cachedOverworldSessionRegionalArcProgress({
+      caches: source.caches,
+      regionalArcs: source.regionalArcs,
+      currentRegion: source.current.region,
+      regionalArcAnchorTownsById: source.regionalArcAnchorTownsById,
+      resolvedEventHomeIds: source.resolvedEventHomeIds,
+      completedRegionalArcIds: source.completedRegionalArcIds,
+    }),
+  };
+}
 
 function compactViewState(state: OverworldSessionViewModelState): OverworldSessionCompactViewState {
   return {
@@ -88,6 +201,12 @@ export function buildOverworldSessionCompactViewFromState(
   state: OverworldSessionViewModelState,
 ): OverworldCompactView {
   return buildOverworldSessionCompactView(compactViewState(state));
+}
+
+export function buildOverworldSessionCompactViewFromSource(
+  source: OverworldSessionViewModelSourceState,
+): OverworldCompactView {
+  return buildOverworldSessionCompactViewFromState(buildOverworldSessionViewModelState(source));
 }
 
 export function buildOverworldSessionViewFromState(
@@ -135,4 +254,10 @@ export function buildOverworldSessionViewFromState(
     pendingRoadEncounter: state.pendingRoadEncounter,
     travelLog: state.travelLog,
   });
+}
+
+export function buildOverworldSessionViewFromSource(
+  source: OverworldSessionFullViewModelSourceState,
+): OverworldView {
+  return buildOverworldSessionViewFromState(buildOverworldSessionFullViewModelState(source));
 }

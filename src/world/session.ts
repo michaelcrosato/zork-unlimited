@@ -40,7 +40,6 @@ import {
   type OverworldLocalDiscoveryResult,
   type OverworldQuestView,
 } from "./session_local_discovery.js";
-import { type OverworldSessionLocalView } from "./session_local_view.js";
 import {
   applyOverworldQuestCompletion,
   applyOverworldQuestStart,
@@ -90,21 +89,18 @@ import {
   type OverworldSessionPersistenceState,
 } from "./session_persistence.js";
 import {
-  buildOverworldSessionCompactViewFromState,
-  buildOverworldSessionViewFromState,
-  type OverworldSessionViewModelState,
+  buildOverworldSessionCompactViewFromSource,
+  buildOverworldSessionViewFromSource,
+  type OverworldSessionViewModelSourceState,
 } from "./session_view_state.js";
 import {
   applyOverworldSessionRegionalArcCompletionsForRegion,
-  cachedOverworldSessionDiscoveredRouteOptions,
-  cachedOverworldSessionRegionalArcProgress,
   withOverworldSessionRouteEstimate,
 } from "./session_route_progress.js";
 import {
   applyOverworldSessionCurrentAreaForTown,
   applyOverworldSessionLocalDiscoveryForTown,
   buildOverworldSessionCurrentLocalView,
-  currentOverworldSessionAreaContent,
   overworldSessionLocalAreas,
   requireOverworldSessionCurrentAreaId,
   resolveOverworldSessionCurrentArea,
@@ -493,21 +489,12 @@ export class OverworldSession {
     return resolution.area;
   }
 
-  private visibleAreaExits(): OverworldAreaExit[] {
-    return visibleOverworldSessionAreaExits(this.localState(), this.currentArea());
-  }
-
   private areaExitFrom(areaId: string, routeId: string): OverworldAreaExit | null {
     return this.areaExitsByAreaAndId.get(areaId)?.get(routeId) ?? null;
   }
 
   private currentAreaIdOrThrow(): string {
     return requireOverworldSessionCurrentAreaId(this.currentArea());
-  }
-
-  private currentLocalView(): OverworldSessionLocalView {
-    const currentAreaId = this.currentAreaIdOrThrow();
-    return buildOverworldSessionCurrentLocalView(this.localState(), currentAreaId);
   }
 
   private discoverLocalProgressForTown(nodeId: string): OverworldLocalDiscoveryResult {
@@ -537,39 +524,26 @@ export class OverworldSession {
     return cloneOverworldCompactView(this.cachedCompactView());
   }
 
-  private viewModelState(): OverworldSessionViewModelState {
+  private viewModelSourceState(): OverworldSessionViewModelSourceState {
     const current = this.currentNode();
     const currentArea = this.currentArea();
-    const currentAreaContent = currentArea
-      ? currentOverworldSessionAreaContent(this.localState(), currentArea.id)
-      : { poi: [], characters: [], events: [], sites: [] };
-    const routeOptions = cachedOverworldSessionDiscoveredRouteOptions({
-      caches: this.caches,
-      routePlannerIndex: this.routePlannerIndex,
-      current,
-      currentId: this.currentId,
-      discoveredIds: this.discoveredIds,
-      resources: {
-        fatigue: this.fatigue,
-        supplies: this.supplies,
-      },
-    });
-    const localView = this.currentLocalView();
+    const localState = this.localState();
+    const currentAreaId = requireOverworldSessionCurrentAreaId(currentArea);
     return {
+      caches: this.caches,
       worldName: this.world.name,
       worldTownCount: this.world.nodes.length,
       current,
       currentArea,
+      currentId: this.currentId,
       minutes: this.minutes,
       supplies: this.supplies,
       fatigue: this.fatigue,
       roads: this.roadsFrom(this.currentId),
-      areaExits: this.visibleAreaExits(),
-      routeOptions,
-      localView,
-      poi: currentAreaContent.poi,
-      contacts: currentAreaContent.characters,
-      events: currentAreaContent.events,
+      areaExits: visibleOverworldSessionAreaExits(localState, currentArea),
+      localState,
+      localView: buildOverworldSessionCurrentLocalView(localState, currentAreaId),
+      routePlannerIndex: this.routePlannerIndex,
       journalEntries: this.journalEntries,
       travelLog: this.travelLog,
       visitedCount: this.visitedIds.size,
@@ -594,7 +568,7 @@ export class OverworldSession {
   }
 
   private buildCompactView(): OverworldCompactView {
-    return buildOverworldSessionCompactViewFromState(this.viewModelState());
+    return buildOverworldSessionCompactViewFromSource(this.viewModelSourceState());
   }
 
   private cachedView(): OverworldView {
@@ -608,17 +582,11 @@ export class OverworldSession {
   }
 
   private buildView(): OverworldView {
-    const state = this.viewModelState();
-    return buildOverworldSessionViewFromState({
-      ...state,
-      regionalArcs: cachedOverworldSessionRegionalArcProgress({
-        caches: this.caches,
-        regionalArcs: this.world.regional_arcs,
-        currentRegion: state.current.region,
-        regionalArcAnchorTownsById: this.regionalArcAnchorTownsById,
-        resolvedEventHomeIds: this.resolvedEventHomeIds,
-        completedRegionalArcIds: this.completedRegionalArcIds,
-      }),
+    return buildOverworldSessionViewFromSource({
+      ...this.viewModelSourceState(),
+      regionalArcs: this.world.regional_arcs,
+      regionalArcAnchorTownsById: this.regionalArcAnchorTownsById,
+      resolvedEventHomeIds: this.resolvedEventHomeIds,
     });
   }
 
