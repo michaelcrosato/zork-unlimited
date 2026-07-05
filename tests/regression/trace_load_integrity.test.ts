@@ -144,6 +144,19 @@ describe("bug_0190 — trace-load integrity gate: forged-trace REJECTION (§16 t
     expect(() => api().inspect_trace({ trace_path: path })).toThrow(SaveIntegrityError);
     expect(() => api().inspect_trace({ trace_path: path })).toThrow(/unknown ending/);
   });
+
+  it("WITNESS (d) referential: phantom initial_state flag — both handlers throw /unknown flag/", () => {
+    const poisoned: Trace = {
+      ...cleanTrace,
+      initial_state: { ...cleanTrace.initial_state, flags: { no_such_flag: true } },
+    };
+    write(FIXTURE("phantom_flag"), poisoned);
+    const path = FIXTURE("phantom_flag");
+    expect(() => api().replay_trace({ trace_path: path })).toThrow(SaveIntegrityError);
+    expect(() => api().replay_trace({ trace_path: path })).toThrow(/unknown flag/);
+    expect(() => api().inspect_trace({ trace_path: path })).toThrow(SaveIntegrityError);
+    expect(() => api().inspect_trace({ trace_path: path })).toThrow(/unknown flag/);
+  });
 });
 
 describe("bug_0190 — trace-load integrity gate: GREEN false-rejection guards", () => {

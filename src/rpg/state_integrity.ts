@@ -1,4 +1,5 @@
 import type { GameState } from "../core/state.js";
+import { exitFlag } from "../core/effects.js";
 import { SaveIntegrityError } from "../persist/save_load.js";
 import type { RpgIndex } from "./runner.js";
 
@@ -50,6 +51,25 @@ function collectQuestStageTargets(
   return acc;
 }
 
+function collectFlagTargets(node: unknown, acc: Set<string>): Set<string> {
+  if (Array.isArray(node)) {
+    for (const el of node) collectFlagTargets(el, acc);
+  } else if (node !== null && typeof node === "object") {
+    for (const [k, v] of Object.entries(node)) {
+      if ((k === "set_flag" || k === "clear_flag") && typeof v === "string") {
+        acc.add(v);
+      } else if (k === "unlock_exit" && v !== null && typeof v === "object") {
+        const edge = v as Record<string, unknown>;
+        if (typeof edge.from === "string" && typeof edge.to === "string") {
+          acc.add(exitFlag(edge.from, edge.to));
+        }
+      }
+      collectFlagTargets(v, acc);
+    }
+  }
+  return acc;
+}
+
 /**
  * Pack-aware referential-integrity gate for loaded RPG state. The generic save
  * schema can prove shape/finiteness, but only the RPG index can prove that
@@ -62,7 +82,11 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   const endings = new Set<string>(index.pack.endings.map((e) => e.id));
   const objects = new Set<string>(index.objects.keys());
   const questStages = collectQuestStageTargets(index.pack, new Map<string, Set<string>>());
+  const flags = collectFlagTargets(index.pack, new Set(index.pack.meta.flags_init));
   for (const id of objects) items.add(id);
+  for (const enemy of index.pack.enemies) {
+    if (enemy.defeat_flag !== undefined) flags.add(enemy.defeat_flag);
+  }
   if (!locations.has(state.current)) {
     throw new SaveIntegrityError(`Save references unknown room "${state.current}".`);
   }
@@ -73,6 +97,11 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   }
   if (state.endingId !== null && !endings.has(state.endingId)) {
     throw new SaveIntegrityError(`Save references unknown ending "${state.endingId}".`);
+  }
+  for (const id of Object.keys(state.flags)) {
+    if (!flags.has(id)) {
+      throw new SaveIntegrityError(`Save references unknown flag "${id}".`);
+    }
   }
   for (const id of state.inventory) {
     if (!items.has(id)) {

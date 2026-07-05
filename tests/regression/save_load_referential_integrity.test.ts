@@ -112,6 +112,14 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     expect(() => api().load_game({ save: forged })).toThrow(/unknown ending/);
   });
 
+  it("RPG: a phantom runtime flag is a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      s.flags = { ...(s.flags as Record<string, boolean>), no_such_flag: true };
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/unknown flag/);
+  });
+
   it("RPG: a phantom inventory item is a hard SaveIntegrityError (bug_0184)", () => {
     // A phantom item renders verbatim in the observation and in the INVENTORY
     // narration, so it is the third "render a nonexistent symbol" hole. The valid
@@ -190,6 +198,31 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
     // Sanity: the save really carries a held item (so the gate is exercised).
     const bundle = JSON.parse(saved.save) as { state: { inventory: string[] } };
     expect(bundle.state.inventory.length).toBeGreaterThan(0);
+    const reloaded = a.load_game({ save: saved.save });
+    expect(saved.state_hash).toBe(before);
+    expect(reloaded.state_hash).toBe(before);
+  });
+
+  it("an RPG save with a legitimately written combat flag still loads", () => {
+    const a = api();
+    const game = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
+    const sid = game.session_id;
+    stepByCommand(a, sid, "go down");
+    stepByCommand(a, sid, "take iron bar");
+    let last = stepByCommand(a, sid, "go north");
+
+    for (let i = 0; i < 40 && !last.observation.ended; i += 1) {
+      const flags = a.get_state({ session_id: sid, include_state: true }).state.flags;
+      if (flags.wight_slain === true) break;
+      last = stepByCommand(a, sid, "attack");
+    }
+
+    const before = a.get_observation({ session_id: sid }).state_hash;
+    const saved = a.save_game({ session_id: sid });
+    const bundle = JSON.parse(saved.save) as {
+      state: { flags: Record<string, boolean> };
+    };
+    expect(bundle.state.flags.wight_slain).toBe(true);
     const reloaded = a.load_game({ save: saved.save });
     expect(saved.state_hash).toBe(before);
     expect(reloaded.state_hash).toBe(before);
