@@ -95,7 +95,6 @@ import {
   planOverworldSiteExploration,
   type OverworldAreaTravelResult,
 } from "./session_local_actions.js";
-import { buildOverworldSessionSnapshot } from "./session_snapshot_builder.js";
 import { applyOverworldTravelLeg, recordOverworldTravelLeg } from "./session_travel_log.js";
 import {
   OverworldSessionSnapshotSchema,
@@ -114,10 +113,10 @@ import { cloneOverworldView } from "./session_view_clone.js";
 import type { OverworldView } from "./session_view.js";
 import { buildOverworldSessionIndexes } from "./session_indices.js";
 import {
-  applyOverworldSessionSnapshotRestore,
-  planOverworldSessionSnapshotRestore,
-  type OverworldSessionSnapshotRestoreState,
-} from "./session_snapshot_restore.js";
+  buildOverworldSessionSnapshotFromState,
+  restoreOverworldSessionSnapshotIntoState,
+  type OverworldSessionPersistenceState,
+} from "./session_persistence.js";
 import {
   buildOverworldSessionCompactViewFromState,
   buildOverworldSessionViewFromState,
@@ -333,8 +332,8 @@ export class OverworldSession {
     return cloneOverworldSessionSnapshot(this.cachedSnapshot().snapshot);
   }
 
-  private buildSnapshot(): OverworldSessionSnapshot {
-    return buildOverworldSessionSnapshot({
+  private persistenceState(): OverworldSessionPersistenceState {
+    return {
       worldId: this.world.id,
       worldHash: this.worldHash,
       currentId: this.currentId,
@@ -347,6 +346,7 @@ export class OverworldSession {
       currentAreaByTown: this.currentAreaByTown,
       travelLog: this.travelLog,
       journalEntries: this.journalEntries,
+      journalEntriesById: this.journalEntriesById,
       resolvedEventIds: this.resolvedEventIds,
       discoveredAreaIds: this.discoveredAreaIds,
       visitedAreaIds: this.visitedAreaIds,
@@ -360,46 +360,22 @@ export class OverworldSession {
       regionRenown: this.regionRenown,
       completedRegionalArcIds: this.completedRegionalArcIds,
       pendingRoadEncounter: this.pendingRoadEncounter,
-    });
-  }
-
-  private snapshotRestoreState(): OverworldSessionSnapshotRestoreState {
-    return {
-      completedJobIds: this.completedJobIds,
-      completedQuestIds: this.completedQuestIds,
-      completedRegionalArcIds: this.completedRegionalArcIds,
-      currentAreaByTown: this.currentAreaByTown,
-      discoveredAreaIds: this.discoveredAreaIds,
-      discoveredIds: this.discoveredIds,
-      discoveredJobIds: this.discoveredJobIds,
-      discoveredQuestIds: this.discoveredQuestIds,
-      discoveredSiteIds: this.discoveredSiteIds,
-      exploredSiteIds: this.exploredSiteIds,
-      journalEntries: this.journalEntries,
-      journalEntriesById: this.journalEntriesById,
-      regionRenown: this.regionRenown,
-      resolvedEventIds: this.resolvedEventIds,
-      startedQuestIds: this.startedQuestIds,
-      travelLog: this.travelLog,
-      visitedAreaIds: this.visitedAreaIds,
-      visitedIds: this.visitedIds,
     };
   }
 
+  private buildSnapshot(): OverworldSessionSnapshot {
+    return buildOverworldSessionSnapshotFromState(this.persistenceState());
+  }
+
   private applySnapshot(snapshot: OverworldSessionSnapshot): void {
-    const restorePlan = planOverworldSessionSnapshotRestore({
+    const applied = restoreOverworldSessionSnapshotIntoState({
       indexes: this.snapshotManifestIndex,
       snapshot,
       startTownId: this.world.start,
+      state: this.persistenceState(),
       worldHash: this.worldHash,
       worldId: this.world.id,
     });
-
-    const applied = applyOverworldSessionSnapshotRestore(
-      this.snapshotRestoreState(),
-      snapshot,
-      restorePlan,
-    );
     this.applyCurrentTownState(applied);
     this.applyCurrentAreaState(applied);
     this.applyResourceClockState(applied);
