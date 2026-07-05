@@ -20,6 +20,9 @@ export type OverworldSessionTownServicePlanState = {
   fatigue: number;
 };
 
+export type OverworldSessionTownServiceState = OverworldSessionTownServicePlanState &
+  OverworldActionJournalState;
+
 function overworldSessionTownServiceState(
   state: OverworldSessionTownServicePlanState,
 ): OverworldServiceState {
@@ -48,4 +51,16 @@ export function applyOverworldSessionTownServicePlan(
   plan: OverworldServicePlan,
 ): OverworldSessionServiceApplication {
   return applyOverworldSessionServicePlan(state, plan);
+}
+
+export function applyOverworldSessionTownRestFromState(
+  state: OverworldSessionTownServiceState,
+): OverworldSessionServiceApplication {
+  return applyOverworldSessionTownServicePlan(state, planOverworldSessionTownRest(state));
+}
+
+export function applyOverworldSessionTownResupplyFromState(
+  state: OverworldSessionTownServiceState,
+): OverworldSessionServiceApplication {
+  return applyOverworldSessionTownServicePlan(state, planOverworldSessionTownResupply(state));
 }

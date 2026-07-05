@@ -42,11 +42,10 @@ import {
 } from "./session_quest_lifecycle.js";
 import { type OverworldSnapshotManifestIndex } from "./session_manifest_index.js";
 import {
-  applyOverworldSessionTownServicePlan,
-  planOverworldSessionTownRest,
-  planOverworldSessionTownResupply,
-  type OverworldServicePlan,
+  applyOverworldSessionTownRestFromState,
+  applyOverworldSessionTownResupplyFromState,
   type OverworldServiceResult,
+  type OverworldSessionServiceApplication,
 } from "./session_service_lifecycle.js";
 import { type OverworldAreaTravelResult } from "./session_local_actions.js";
 import {
@@ -419,8 +418,9 @@ export class OverworldSession {
     return applied.result;
   }
 
-  private applyServicePlan(plan: OverworldServicePlan): OverworldServiceResult {
-    const applied = applyOverworldSessionTownServicePlan(this.actionJournalState(), plan);
+  private applyServiceApplication(
+    applied: OverworldSessionServiceApplication,
+  ): OverworldServiceResult {
     if (applied.stateChanged) {
       this.applyResourceClockState(applied);
       this.clearSnapshotCache();
@@ -749,8 +749,9 @@ export class OverworldSession {
   restAtTown(): OverworldServiceResult {
     this.assertNoPendingRoadEncounter("resting at town");
     const current = this.currentNode();
-    return this.applyServicePlan(
-      planOverworldSessionTownRest({
+    return this.applyServiceApplication(
+      applyOverworldSessionTownRestFromState({
+        ...this.actionJournalState(),
         currentTown: current,
         fatigue: this.fatigue,
         supplies: this.supplies,
@@ -761,8 +762,9 @@ export class OverworldSession {
   resupplyAtTown(): OverworldServiceResult {
     this.assertNoPendingRoadEncounter("resupplying at town");
     const current = this.currentNode();
-    return this.applyServicePlan(
-      planOverworldSessionTownResupply({
+    return this.applyServiceApplication(
+      applyOverworldSessionTownResupplyFromState({
+        ...this.actionJournalState(),
         currentTown: current,
         fatigue: this.fatigue,
         supplies: this.supplies,
