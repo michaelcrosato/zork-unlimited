@@ -191,13 +191,20 @@ function transcriptTurnWindow<Args extends TranscriptArgs>(
   session: Session,
   args: Args,
 ): { turns: Session["transcript"]; omitted: number; keySuffix: string } {
-  const total = session.transcript.length;
+  const total = session.transcriptStats.turns;
+  const retainedOffset = total - session.transcript.length;
   const limit = transcriptTurnLimit(args, total);
-  const omitted = total - limit;
+  const firstRequested = total - limit;
+  const firstReturned = Math.max(retainedOffset, firstRequested);
+  const omitted = firstReturned;
+  const retainedStart = firstReturned - retainedOffset;
   return {
-    turns: omitted > 0 ? session.transcript.slice(omitted) : session.transcript,
+    turns: retainedStart > 0 ? session.transcript.slice(retainedStart) : session.transcript,
     omitted,
-    keySuffix: args.turn_limit === undefined ? "all" : `last:${limit}:of:${total}`,
+    keySuffix:
+      args.turn_limit === undefined
+        ? `all:from:${firstReturned}:of:${total}`
+        : `last:${limit}:from:${firstReturned}:of:${total}`,
   };
 }
 

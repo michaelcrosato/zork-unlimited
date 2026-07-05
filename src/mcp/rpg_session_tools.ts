@@ -164,8 +164,8 @@ export function runRpgGetTranscript<Args extends TranscriptArgs>(
     return transcriptUnchanged(stateHash, currentTranscriptHash) as TranscriptResponse<Args>;
   }
   const summary = sessions.transcriptSummary(s.id, () => ({
-    steps: s.transcript.filter((t) => t.action_id !== null).length,
-    scenes: [...new Set(s.transcript.flatMap((t) => [t.scene_id, t.result_scene_id]))].sort(),
+    steps: s.transcriptStats.actionTurns,
+    scenes: [...s.transcriptStats.scenes].sort(),
     ended: s.state.ended,
     ending_id: s.state.endingId,
     inventory: [...s.state.inventory],

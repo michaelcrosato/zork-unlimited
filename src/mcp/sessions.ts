@@ -49,12 +49,26 @@ export type TranscriptSummary = {
 export type RpgStep = (state: GameState, action: RpgAction) => StepResult;
 
 export const MCP_SESSION_STORE_LIMIT = 64;
+export const MCP_SESSION_TRANSCRIPT_TURN_LIMIT = 128;
+
+export type TranscriptStats = {
+  turns: number;
+  actionTurns: number;
+  scenes: string[];
+};
 
 function assertSessionStoreLimit(maxSessions: number): number {
   if (!Number.isInteger(maxSessions) || maxSessions < 1) {
     throw new Error("MCP session store limit must be a positive integer.");
   }
   return maxSessions;
+}
+
+function assertTranscriptTurnLimit(maxTurns: number): number {
+  if (!Number.isInteger(maxTurns) || maxTurns < 1) {
+    throw new Error("MCP session transcript turn limit must be a positive integer.");
+  }
+  return maxTurns;
 }
 
 function refreshSessionEntry<Key, Entry>(sessions: Map<Key, Entry>, key: Key): Entry | undefined {
@@ -80,6 +94,32 @@ function rememberSessionEntry<Key, Entry>(
   }
 }
 
+function emptyTranscriptStats(): TranscriptStats {
+  return {
+    turns: 0,
+    actionTurns: 0,
+    scenes: [],
+  };
+}
+
+function recordTranscriptTurn(stats: TranscriptStats, turn: TranscriptTurn): void {
+  stats.turns += 1;
+  if (turn.action_id !== null) stats.actionTurns += 1;
+  for (const scene of [turn.scene_id, turn.result_scene_id]) {
+    if (!stats.scenes.includes(scene)) stats.scenes.push(scene);
+  }
+}
+
+function transcriptStatsFor(transcript: readonly TranscriptTurn[]): TranscriptStats {
+  const stats = emptyTranscriptStats();
+  for (const turn of transcript) recordTranscriptTurn(stats, turn);
+  return stats;
+}
+
+function retainedTranscript(transcript: TranscriptTurn[], maxTurns: number): TranscriptTurn[] {
+  return transcript.length > maxTurns ? transcript.slice(transcript.length - maxTurns) : transcript;
+}
+
 export type Session = SessionRuntimeCaches<TranscriptSummary> & {
   id: string;
   packId: string;
@@ -100,6 +140,7 @@ export type Session = SessionRuntimeCaches<TranscriptSummary> & {
   stateHash: string;
   transcript: TranscriptTurn[];
   transcriptLogHash: string;
+  transcriptStats: TranscriptStats;
   /** Difficulty: when true, the agent-facing observation hides each exit's
    *  destination (`exit.to`) so the spatial graph must be reasoned out, not read
    *  off. Default false — full graph, the legacy behavior. */
@@ -115,6 +156,7 @@ export type SessionInit = Omit<
   | "observationCache"
   | "observationProjectionCaches"
   | "transcriptLogHash"
+  | "transcriptStats"
   | "transcriptSummaryCache"
   | "transcriptSummaryProjectionCaches"
   | "transcriptProjectionCaches"
@@ -126,8 +168,12 @@ export class SessionStore {
   private counter = 0;
   private readonly sessions = new Map<string, Session>();
 
-  constructor(private readonly maxSessions = MCP_SESSION_STORE_LIMIT) {
+  constructor(
+    private readonly maxSessions = MCP_SESSION_STORE_LIMIT,
+    private readonly maxTranscriptTurns = MCP_SESSION_TRANSCRIPT_TURN_LIMIT,
+  ) {
     assertSessionStoreLimit(maxSessions);
+    assertTranscriptTurnLimit(maxTranscriptTurns);
   }
 
   create(init: SessionInit): Session {
@@ -136,7 +182,9 @@ export class SessionStore {
       id,
       ...init,
       stateHash: hashState(init.state),
+      transcript: retainedTranscript(init.transcript, this.maxTranscriptTurns),
       transcriptLogHash: hashState(init.transcript),
+      transcriptStats: transcriptStatsFor(init.transcript),
     };
     rememberSessionEntry(this.sessions, id, session, this.maxSessions);
     return session;
@@ -285,6 +333,8 @@ export class SessionStore {
   appendTranscript(id: string, turn: TranscriptTurn): Session {
     const session = this.get(id);
     session.transcript.push(turn);
+    recordTranscriptTurn(session.transcriptStats, turn);
+    session.transcript = retainedTranscript(session.transcript, this.maxTranscriptTurns);
     session.transcriptLogHash = hashState({
       previous: session.transcriptLogHash,
       turn,
@@ -295,8 +345,9 @@ export class SessionStore {
 
   replaceTranscript(id: string, transcript: TranscriptTurn[]): Session {
     const session = this.get(id);
-    session.transcript = transcript;
+    session.transcript = retainedTranscript(transcript, this.maxTranscriptTurns);
     session.transcriptLogHash = hashState(transcript);
+    session.transcriptStats = transcriptStatsFor(transcript);
     invalidateSessionTranscriptCaches(session);
     return session;
   }

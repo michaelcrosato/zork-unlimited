@@ -4,11 +4,14 @@ import type { GameState } from "../../src/core/state.js";
 import { initState } from "../../src/core/state.js";
 import { hashState } from "../../src/core/hash.js";
 import {
+  MCP_SESSION_STORE_LIMIT,
   SessionStore,
   type SessionInit,
   type TranscriptSummary,
   type TranscriptTurn,
 } from "../../src/mcp/sessions.js";
+import { transcriptTurnsFor, transcriptTurnsOmitted } from "../../src/mcp/transcript_projection.js";
+import { runRpgGetTranscript } from "../../src/mcp/rpg_session_tools.js";
 import type { RpgActionOption } from "../../src/rpg/legal_actions.js";
 import type { RpgObservation } from "../../src/rpg/observation.js";
 import type { RpgIndex } from "../../src/rpg/runner.js";
@@ -33,6 +36,20 @@ function sessionInit(overrides: Partial<SessionInit> = {}): SessionInit {
     state: state(),
     transcript: [],
     ...overrides,
+  };
+}
+
+function transcriptTurn(step: number, actionId: string | null = `action_${step}`): TranscriptTurn {
+  return {
+    step,
+    scene_id: `scene_${step}`,
+    title: `Scene ${step}`,
+    action_id: actionId,
+    action_text: actionId,
+    events: [],
+    result_scene_id: `scene_${step + 1}`,
+    ended: false,
+    ending_id: null,
   };
 }
 
@@ -238,6 +255,77 @@ describe("SessionStore", () => {
     store.replaceTranscript(session.id, []);
     expect(session.transcript).toEqual([]);
     expect(session.transcriptLogHash).toBe(hashState([]));
+  });
+
+  it("bounds retained transcript rows while preserving hashes and aggregate stats", () => {
+    const store = new SessionStore(MCP_SESSION_STORE_LIMIT, 3);
+    const session = store.create(sessionInit());
+    const emptyHash = session.transcriptLogHash;
+    const turns = [
+      transcriptTurn(0, null),
+      transcriptTurn(1),
+      transcriptTurn(2),
+      transcriptTurn(3),
+    ];
+
+    for (const turn of turns) store.appendTranscript(session.id, turn);
+
+    const rollingHash = turns.reduce((previous, turn) => hashState({ previous, turn }), emptyHash);
+    expect(session.transcript.map((turn) => turn.step)).toEqual([1, 2, 3]);
+    expect(session.transcriptLogHash).toBe(rollingHash);
+    expect(session.transcriptStats.turns).toBe(4);
+    expect(session.transcriptStats.actionTurns).toBe(3);
+    expect(session.transcriptStats.scenes).toEqual([
+      "scene_0",
+      "scene_1",
+      "scene_2",
+      "scene_3",
+      "scene_4",
+    ]);
+    expect(transcriptTurnsOmitted(session, { session_id: session.id })).toBe(1);
+    expect(
+      transcriptTurnsFor(store, session, {
+        session_id: session.id,
+        compact_turns: true,
+      }),
+    ).toEqual([
+      [1, "scene_1", "action_1", "scene_2"],
+      [2, "scene_2", "action_2", "scene_3"],
+      [3, "scene_3", "action_3", "scene_4"],
+    ]);
+    expect(transcriptTurnsOmitted(session, { session_id: session.id, turn_limit: 2 })).toBe(2);
+  });
+
+  it("rebuilds transcript retention and aggregate stats on replacement", () => {
+    const store = new SessionStore(MCP_SESSION_STORE_LIMIT, 2);
+    const session = store.create(sessionInit());
+    const turns = [transcriptTurn(0, null), transcriptTurn(1), transcriptTurn(2)];
+
+    store.replaceTranscript(session.id, turns);
+
+    expect(session.transcript).toEqual(turns.slice(-2));
+    expect(session.transcriptLogHash).toBe(hashState(turns));
+    expect(session.transcriptStats.turns).toBe(3);
+    expect(session.transcriptStats.actionTurns).toBe(2);
+    expect(session.transcriptStats.scenes).toEqual(["scene_0", "scene_1", "scene_2", "scene_3"]);
+    expect(transcriptTurnsOmitted(session, { session_id: session.id })).toBe(1);
+  });
+
+  it("reports transcript summaries from aggregate stats when old rows are pruned", () => {
+    const store = new SessionStore(MCP_SESSION_STORE_LIMIT, 2);
+    const session = store.create(sessionInit());
+    const turns = [transcriptTurn(0, null), transcriptTurn(1), transcriptTurn(2)];
+    for (const turn of turns) store.appendTranscript(session.id, turn);
+
+    const transcript = runRpgGetTranscript(
+      { sessions: store },
+      { session_id: session.id, summary_only: true },
+    );
+
+    expect(transcript.summary.steps).toBe(2);
+    expect(transcript.summary.scenes).toEqual(["scene_0", "scene_1", "scene_2", "scene_3"]);
+    expect(transcript.turns_omitted).toBeUndefined();
+    expect("turns" in transcript).toBe(false);
   });
 
   it("caches legal actions until the session state is replaced", () => {
