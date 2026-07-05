@@ -159,9 +159,9 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   const dialogueVars = new Map<string, { room: string; maxOrdinal: number }>();
   const enemyHpVars = new Map<string, number>();
   for (const id of index.pack.meta.flags_init) addBooleanRuntimeTarget(flags, id, true);
-  for (const id of objects) items.add(id);
   // Built-in OPEN/UNLOCK actions write sparse runtime state; static defaults do not.
   for (const object of index.pack.objects) {
+    if (object.takeable || object.held) items.add(object.id);
     if (object.openable) objectRuntimeTargets.open.add(object.id);
     if (object.locked && object.key_id !== undefined) {
       addLockedRuntimeTarget(objectRuntimeTargets.locked, object.id, false);
@@ -238,7 +238,8 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   const inventory = new Set<string>();
   for (const id of state.inventory) {
     if (!items.has(id)) {
-      throw new SaveIntegrityError(`Save references unknown item "${id}".`);
+      const reason = objects.has(id) ? "non-inventory object" : "unknown item";
+      throw new SaveIntegrityError(`Save references ${reason} "${id}".`);
     }
     if (inventory.has(id)) {
       throw new SaveIntegrityError(`Save references duplicate inventory item "${id}".`);

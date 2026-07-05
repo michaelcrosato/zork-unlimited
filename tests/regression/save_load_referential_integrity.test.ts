@@ -252,13 +252,21 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
   it("RPG: a phantom inventory item is a hard SaveIntegrityError (bug_0184)", () => {
     // A phantom item renders verbatim in the observation and in the INVENTORY
     // narration, so it is the third "render a nonexistent symbol" hole. The valid
-    // item set (declared objects ∪ add_item targets) is provably complete, so this
-    // id — neither — can never be held legitimately.
+    // item set (inventory-capable objects ∪ add_item targets) is provably complete,
+    // so this id — neither — can never be held legitimately.
     const forged = forgeSave((s) => {
       s.inventory = ["no_such_item"];
     });
     expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
     expect(() => api().load_game({ save: forged })).toThrow(/unknown item/);
+  });
+
+  it("RPG: a non-inventory scenery object cannot be forged into inventory", () => {
+    const forged = forgeSave((s) => {
+      s.inventory = ["sarcophagus"];
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/non-inventory object/);
   });
 
   it("RPG: a duplicated inventory item is a hard SaveIntegrityError", () => {
