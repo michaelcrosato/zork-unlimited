@@ -54,6 +54,12 @@ export const MCP_SESSION_STORE_LIMIT = 64;
 export const MCP_SESSION_TRANSCRIPT_TURN_LIMIT = 128;
 
 export type TranscriptStats = {
+  readonly turns: number;
+  readonly actionTurns: number;
+  readonly scenes: readonly string[];
+};
+
+type MutableTranscriptStats = {
   turns: number;
   actionTurns: number;
   scenes: string[];
@@ -96,7 +102,7 @@ function rememberSessionEntry<Key, Entry>(
   }
 }
 
-function emptyTranscriptStats(): TranscriptStats {
+function emptyTranscriptStats(): MutableTranscriptStats {
   return {
     turns: 0,
     actionTurns: 0,
@@ -104,7 +110,7 @@ function emptyTranscriptStats(): TranscriptStats {
   };
 }
 
-function recordTranscriptTurn(stats: TranscriptStats, turn: TranscriptTurn): void {
+function recordTranscriptTurn(stats: MutableTranscriptStats, turn: TranscriptTurn): void {
   stats.turns += 1;
   if (turn.action_id !== null) stats.actionTurns += 1;
   for (const scene of [turn.scene_id, turn.result_scene_id]) {
@@ -112,10 +118,28 @@ function recordTranscriptTurn(stats: TranscriptStats, turn: TranscriptTurn): voi
   }
 }
 
+function freezeTranscriptStats(stats: MutableTranscriptStats): TranscriptStats {
+  return Object.freeze({
+    turns: stats.turns,
+    actionTurns: stats.actionTurns,
+    scenes: Object.freeze([...stats.scenes]),
+  });
+}
+
 function transcriptStatsFor(transcript: readonly TranscriptTurn[]): TranscriptStats {
   const stats = emptyTranscriptStats();
   for (const turn of transcript) recordTranscriptTurn(stats, turn);
-  return stats;
+  return freezeTranscriptStats(stats);
+}
+
+function transcriptStatsWithTurn(stats: TranscriptStats, turn: TranscriptTurn): TranscriptStats {
+  const nextStats = {
+    turns: stats.turns,
+    actionTurns: stats.actionTurns,
+    scenes: [...stats.scenes],
+  };
+  recordTranscriptTurn(nextStats, turn);
+  return freezeTranscriptStats(nextStats);
 }
 
 function retainedTranscript(transcript: TranscriptTurn[], maxTurns: number): TranscriptTurn[] {
@@ -361,7 +385,7 @@ export class SessionStore {
     const session = this.get(id);
     const storedTurn = cloneTranscriptTurn(turn);
     session.transcript.push(storedTurn);
-    recordTranscriptTurn(session.transcriptStats, storedTurn);
+    session.transcriptStats = transcriptStatsWithTurn(session.transcriptStats, storedTurn);
     session.transcript = retainedTranscript(session.transcript, this.maxTranscriptTurns);
     session.transcriptLogHash = hashState({
       previous: session.transcriptLogHash,

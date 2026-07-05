@@ -371,6 +371,36 @@ describe("SessionStore", () => {
     expect(transcriptTurnsOmitted(session, { session_id: session.id, turn_limit: 2 })).toBe(2);
   });
 
+  it("freezes transcript aggregate stats against external mutation", () => {
+    const store = new SessionStore(MCP_SESSION_STORE_LIMIT, 2);
+    const session = store.create(sessionInit({ transcript: [transcriptTurn(0, null)] }));
+
+    expect(Object.isFrozen(session.transcriptStats)).toBe(true);
+    expect(Object.isFrozen(session.transcriptStats.scenes)).toBe(true);
+    expect(() => {
+      (session.transcriptStats as { turns: number }).turns = 999;
+    }).toThrow();
+    expect(() => {
+      (session.transcriptStats.scenes as string[]).push("fake_scene");
+    }).toThrow();
+
+    store.appendTranscript(session.id, transcriptTurn(1));
+
+    expect(session.transcriptStats.turns).toBe(2);
+    expect(session.transcriptStats.actionTurns).toBe(1);
+    expect(session.transcriptStats.scenes).toEqual(["scene_0", "scene_1", "scene_2"]);
+    expect(Object.isFrozen(session.transcriptStats)).toBe(true);
+    expect(Object.isFrozen(session.transcriptStats.scenes)).toBe(true);
+
+    store.replaceTranscript(session.id, [transcriptTurn(2), transcriptTurn(3)]);
+
+    expect(session.transcriptStats.turns).toBe(2);
+    expect(session.transcriptStats.actionTurns).toBe(2);
+    expect(session.transcriptStats.scenes).toEqual(["scene_2", "scene_3", "scene_4"]);
+    expect(Object.isFrozen(session.transcriptStats)).toBe(true);
+    expect(Object.isFrozen(session.transcriptStats.scenes)).toBe(true);
+  });
+
   it("caps default transcript turn windows while allowing explicit retained reads", () => {
     const store = new SessionStore(MCP_SESSION_STORE_LIMIT, TRANSCRIPT_TURN_LIMIT_DEFAULT + 4);
     const session = store.create(sessionInit());
