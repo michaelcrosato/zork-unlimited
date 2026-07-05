@@ -120,6 +120,30 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     expect(() => api().load_game({ save: forged })).toThrow(/unknown flag/);
   });
 
+  it("RPG: a phantom runtime var is a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      s.vars = { ...(s.vars as Record<string, number>), no_such_var: 1 };
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/unknown var/);
+  });
+
+  it("RPG: an invalid enemy HP var is a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      s.vars = { ...(s.vars as Record<string, number>), __enemy_hp_barrow_wight: -1 };
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/invalid enemy hp var/);
+  });
+
+  it("RPG: active dialogue cannot be forged from outside the NPC room", () => {
+    const forged = forgeSave((s) => {
+      s.vars = { ...(s.vars as Record<string, number>), __dlg_reaver_shade: 1 };
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/active dialogue/);
+  });
+
   it("RPG: a phantom inventory item is a hard SaveIntegrityError (bug_0184)", () => {
     // A phantom item renders verbatim in the observation and in the INVENTORY
     // narration, so it is the third "render a nonexistent symbol" hole. The valid
@@ -198,6 +222,26 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
     // Sanity: the save really carries a held item (so the gate is exercised).
     const bundle = JSON.parse(saved.save) as { state: { inventory: string[] } };
     expect(bundle.state.inventory.length).toBeGreaterThan(0);
+    const reloaded = a.load_game({ save: saved.save });
+    expect(saved.state_hash).toBe(before);
+    expect(reloaded.state_hash).toBe(before);
+  });
+
+  it("an RPG save with a legitimate active dialogue still loads", () => {
+    const a = api();
+    const game = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
+    const sid = game.session_id;
+    stepByCommand(a, sid, "go down");
+    stepByCommand(a, sid, "take iron bar");
+    stepByCommand(a, sid, "go west");
+    stepByCommand(a, sid, "talk to");
+    const before = a.get_observation({ session_id: sid }).state_hash;
+    const saved = a.save_game({ session_id: sid });
+    const bundle = JSON.parse(saved.save) as {
+      state: { current: string; vars: Record<string, number> };
+    };
+    expect(bundle.state.current).toBe("reaver_rest");
+    expect(bundle.state.vars.__dlg_reaver_shade).toBeGreaterThan(0);
     const reloaded = a.load_game({ save: saved.save });
     expect(saved.state_hash).toBe(before);
     expect(reloaded.state_hash).toBe(before);

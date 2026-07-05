@@ -1,7 +1,9 @@
 import type { GameState } from "../core/state.js";
+import { dlgVar } from "../core/dialogue_state.js";
 import { exitFlag } from "../core/effects.js";
 import { SaveIntegrityError } from "../persist/save_load.js";
 import type { RpgIndex } from "./runner.js";
+import { enemyHpVar } from "./schema.js";
 
 /**
  * Collect item ids that can legitimately enter inventory through authored effects.
@@ -70,6 +72,25 @@ function collectFlagTargets(node: unknown, acc: Set<string>): Set<string> {
   return acc;
 }
 
+function collectVarTargets(node: unknown, acc: Set<string>): Set<string> {
+  if (Array.isArray(node)) {
+    for (const el of node) collectVarTargets(el, acc);
+  } else if (node !== null && typeof node === "object") {
+    for (const [k, v] of Object.entries(node)) {
+      if (
+        (k === "set_var" || k === "inc_var" || k === "dec_var") &&
+        v !== null &&
+        typeof v === "object"
+      ) {
+        const ref = v as Record<string, unknown>;
+        if (typeof ref.name === "string") acc.add(ref.name);
+      }
+      collectVarTargets(v, acc);
+    }
+  }
+  return acc;
+}
+
 /**
  * Pack-aware referential-integrity gate for loaded RPG state. The generic save
  * schema can prove shape/finiteness, but only the RPG index can prove that
@@ -83,9 +104,20 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   const objects = new Set<string>(index.objects.keys());
   const questStages = collectQuestStageTargets(index.pack, new Map<string, Set<string>>());
   const flags = collectFlagTargets(index.pack, new Set(index.pack.meta.flags_init));
+  const vars = collectVarTargets(index.pack, new Set(Object.keys(index.pack.meta.vars_init)));
+  const dialogueVars = new Map<string, { room: string; maxOrdinal: number }>();
+  const enemyHpVars = new Map<string, number>();
   for (const id of objects) items.add(id);
+  for (const npc of index.pack.npcs) {
+    const key = dlgVar(npc.id);
+    vars.add(key);
+    dialogueVars.set(key, { room: npc.room, maxOrdinal: npc.dialogue.nodes.length });
+  }
   for (const enemy of index.pack.enemies) {
     if (enemy.defeat_flag !== undefined) flags.add(enemy.defeat_flag);
+    const key = enemyHpVar(enemy.id);
+    vars.add(key);
+    enemyHpVars.set(key, enemy.hp);
   }
   if (!locations.has(state.current)) {
     throw new SaveIntegrityError(`Save references unknown room "${state.current}".`);
@@ -101,6 +133,27 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   for (const id of Object.keys(state.flags)) {
     if (!flags.has(id)) {
       throw new SaveIntegrityError(`Save references unknown flag "${id}".`);
+    }
+  }
+  for (const [id, value] of Object.entries(state.vars)) {
+    if (!vars.has(id)) {
+      throw new SaveIntegrityError(`Save references unknown var "${id}".`);
+    }
+    const dialogue = dialogueVars.get(id);
+    if (
+      dialogue !== undefined &&
+      (!Number.isInteger(value) || value < 0 || value > dialogue.maxOrdinal)
+    ) {
+      throw new SaveIntegrityError(`Save references invalid dialogue var "${id}" (${value}).`);
+    }
+    if (dialogue !== undefined && value > 0 && state.current !== dialogue.room) {
+      throw new SaveIntegrityError(
+        `Save references active dialogue "${id}" outside NPC room "${dialogue.room}".`,
+      );
+    }
+    const enemyMaxHp = enemyHpVars.get(id);
+    if (enemyMaxHp !== undefined && (!Number.isInteger(value) || value < 0 || value > enemyMaxHp)) {
+      throw new SaveIntegrityError(`Save references invalid enemy hp var "${id}" (${value}).`);
     }
   }
   for (const id of state.inventory) {
