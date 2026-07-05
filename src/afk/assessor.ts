@@ -19,26 +19,23 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { createToolApi } from "../mcp/tools.js";
 import { verifyBlindReportText } from "../blind/report_verifier.js";
-import { completedCycleCount, totalCycleCount } from "./loop_state.js";
-import { generateRpgPack } from "../gen/rpg_generator.js";
-import { validateRpg } from "../validate/rpg_validator.js";
-import type { ValidationReport } from "../validate/report.js";
 import { auditStaleReactiveRoomItems } from "./stale_reactive_audit.js";
 import { resolveWorldQuestPackPath } from "../world/source.js";
+import { score, type ImprovementCandidate } from "./assessment_model.js";
+import {
+  allGeneratedChecksClean,
+  generatorRpgDriftCandidate,
+  rpgGeneratorChecksForRoot,
+} from "./generated_eval.js";
 
-export type Category = "content_fix" | "content_new" | "engine" | "repo";
-
-export type ImprovementCandidate = {
-  id: string;
-  category: Category;
-  target: string; // a world quest id, the world graph, or a repo area; paths are metadata only.
-  title: string;
-  rationale: string;
-  evidence: string[];
-  impact: number; // 1-5
-  effort: "S" | "M" | "L";
-  score: number; // impact-weighted, deterministic
-};
+export type { Category, ImprovementCandidate } from "./assessment_model.js";
+export {
+  allGeneratedChecksClean,
+  generatedEvalSeedBase,
+  generatorRpgDriftCandidate,
+  GEN_EVAL_CHECK_COUNT,
+} from "./generated_eval.js";
+export type { GeneratedPackCheck } from "./generated_eval.js";
 
 export type QuestHealth = {
   world_quest_id: string | null;
@@ -70,23 +67,10 @@ export type AssessmentFormatOptions = {
   maxCandidates?: number;
 };
 
-const EFFORT_COST: Record<ImprovementCandidate["effort"], number> = { S: 1, M: 2, L: 3 };
-// Quality-first weighting: improving what players actually touch beats net-new bulk.
-const CATEGORY_WEIGHT: Record<Category, number> = {
-  content_fix: 1.0,
-  content_new: 0.85,
-  engine: 0.8,
-  repo: 0.6,
-};
 // How many playable quest nodes in the contiguous world graph is "healthy" before
 // net-new world expansion is deprioritized. Count world_quest_id entries, not raw
 // YAML files, so this lever cannot reintroduce standalone package authoring.
 const WORLD_QUEST_TARGET = 16;
-
-function score(impact: number, effort: ImprovementCandidate["effort"], category: Category): number {
-  // Deterministic: (impact / effort) * weight, rounded to 3 dp.
-  return Math.round((impact / EFFORT_COST[effort]) * CATEGORY_WEIGHT[category] * 1000) / 1000;
-}
 
 function listSourceFiles(root: string): string[] {
   const out: string[] = [];
@@ -375,84 +359,6 @@ function lastAttendanceOffsets(root: string): Map<string, number> {
     ? parseAttendanceOffsets(readFileSync(p, "utf8"))
     : new Map();
   return mergeAttendanceOffsets(loopStateOffsets, blindReportAttendanceOffsets(root));
-}
-
-// ── RPG generator mint-and-check lever ─────────────────────────────────────────
-// The consolidated public runtime is RPG-only, so the assessor's moving eval target
-// must be RPG-only too. Keeping retired generator windows here would spend every
-// loop on retired modes and could re-raise work that the consolidation goal explicitly
-// strips. The remaining window still advances with cycle count, keeping the RPG verifier
-// on fresh generated packs instead of a frozen hand-authored set.
-
-/**
- * How many completed improvement cycles AI_LOOP_STATE.md records. Recent cycles are
- * "### Cycle result" entries; older token-heavy entries may be folded into the tiny
- * historical_cycle_count marker. This stays a PURE function of repo state while letting
- * the live loop memory remain small.
- */
-export function generatedEvalSeedBase(loopStateText: string): number {
-  return completedCycleCount(loopStateText);
-}
-
-/**
- * Disk wrapper: total completed cycles across the live log + the rotated archive
- * ({@link totalCycleCount}), so the generator seed window stays monotonic even after
- * AI_LOOP_STATE.md is trimmed by the rotation. {@link generatedEvalSeedBase} remains the
- * pure, single-file counter the unit tests pin.
- */
-function generatedEvalSeedBaseFromDisk(root: string): number {
-  return totalCycleCount(root);
-}
-
-/**
- * How many fresh generated packs the assessor mints-and-checks each cycle. A small WINDOW
- * (not one pack) so a single cycle confronts several themes/structures; combined with the
- * advancing {@link generatedEvalSeedBase}, successive cycles sweep disjoint windows of the
- * seed space, exercising the verifier across an ever-widening, never-frozen slice.
- */
-export const GEN_EVAL_CHECK_COUNT = 4;
-
-/** One minted-and-validated generated pack: the deterministic seed and production report. */
-export type GeneratedPackCheck = { seed: number; report: ValidationReport };
-
-export function allGeneratedChecksClean(checks: GeneratedPackCheck[]): boolean {
-  return checks.every((c) => c.report.findings.length === 0);
-}
-
-/**
- * The RPG generator mint-and-check verdict. Given this cycle's freshly minted-and-validated
- * generated RPG packs, return an improvement candidate IFF the production `validateRpg` did NOT
- * hold on one of them — i.e. a minted pack carries ANY finding (error OR warning), the same
- * zero-findings bar the curated RPG packs and the generator's own test (rpg_generator.test.ts)
- * clear, which INCLUDES the RPG-only COMBAT_UNWINNABLE / SCORE_UNREACHABLE /
- * SKILL_CHECK_IMPOSSIBLE checks. A clean sweep returns null (the verifier held on this cycle's
- * RPG moving target — the healthy state, so the lever does NOT mask the 0.5 saturation floor).
- * When it fires it is a genuine, fixable problem — the RPG generator emitted an
- * unclean/unwinnable/score-unreachable shape, OR the fresh distribution surfaced a verifier gap
- * — scored high so the loop closes the divergence rather than re-polishing clean prose. Pure
- * (validated checks in, candidate out) so the negative path unit-tests against the REAL
- * validateRpg with no disk and no clock.
- */
-export function generatorRpgDriftCandidate(
-  checks: GeneratedPackCheck[],
-): ImprovementCandidate | null {
-  const bad = checks.filter((c) => c.report.findings.length > 0);
-  if (bad.length === 0) return null;
-  return {
-    id: "generator-rpg-drift",
-    category: "engine",
-    target: "src/gen/rpg_generator.ts",
-    title: `The RPG pack generator minted ${bad.length} pack(s) the verifier rejects — the evolving RPG eval distribution has drifted from the shipped bar`,
-    rationale:
-      "Evolving the RPG eval distribution only works if every minted pack clears the SAME zero-findings bar the curated RPG packs do — which for RPG includes COMBAT winnability and SCORE-economy soundness (docs/CURRENT_PLAN.md). A generated RPG pack the production validateRpg flags is a real defect: either the generator emits an unclean/unwinnable/score-unreachable shape, or the fresh distribution has surfaced a verifier gap. Fixing it keeps the RPG generator a trustworthy moving target instead of a source of false signal.",
-    evidence: bad.map(
-      (c) =>
-        `seed ${c.seed}: ${c.report.findings.map((f) => `${f.severity}:${f.code}`).join(", ")}`,
-    ),
-    impact: 5,
-    effort: "M",
-    score: score(5, "M", "engine"),
-  };
 }
 
 /**
@@ -755,15 +661,7 @@ export function assess(root: string): Assessment {
   // The public runtime is now RPG-only. Each assessor cycle still confronts the RPG
   // verifier with a fresh, deterministic seed window, but retired legacy windows
   // no longer consume loop time or reintroduce legacy work.
-  const genBase = generatedEvalSeedBaseFromDisk(root) * GEN_EVAL_CHECK_COUNT;
-  const rpgGenChecks: GeneratedPackCheck[] = Array.from(
-    { length: GEN_EVAL_CHECK_COUNT },
-    (_, i) => {
-      const seed = genBase + i;
-      const pack = generateRpgPack(seed);
-      return { seed, report: validateRpg(pack) };
-    },
-  );
+  const rpgGenChecks = rpgGeneratorChecksForRoot(root);
   const rpgGenDrift = generatorRpgDriftCandidate(rpgGenChecks);
   if (rpgGenDrift) candidates.push(rpgGenDrift);
   const allGeneratorsClean = allGeneratedChecksClean(rpgGenChecks);
