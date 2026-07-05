@@ -105,12 +105,23 @@ describe("save/load integrity gate — forged-save REJECTION (§16, SoundnessBen
     // A fractional seed ABOVE the 2^32 range: finite (so the old `.finite()` gate
     // accepted it) but non-integer, and `>>> 0` both truncates the fraction AND
     // wraps the magnitude (4294967301.5 >>> 0 === 5) — doubly divergent from the
-    // hash-committed value. NOTE: a bare INTEGER above 2^32-1 (e.g. 4294967301)
-    // is a legitimate `.int()` value and is intentionally NOT rejected (see
-    // CRITICAL #1: no sign/range bound on seed); only the non-integer is forged here.
+    // hash-committed value. A safe integer above 2^32-1 is still accepted, but
+    // non-integers and unsafe integers are not valid persisted seed identities.
     const forged = forgeWithToken((s) => ({ ...microInitState(), seed: s }), "4294967301.5");
     expect((JSON.parse(forged) as { state: { seed: number } }).state.seed).toBe(4294967301.5);
     expect(() => load(forged, MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
+  });
+
+  it("WITNESS: an unsafe seed integer is a hard SaveIntegrityError", () => {
+    // The runtime RNG narrows to 32 bits, but the persisted seed is still a JS
+    // number identity. Unsafe integers cannot be represented precisely, so a
+    // forged save must not be allowed to commit one as the replay seed.
+    const forged = forgeWithToken((s) => ({ ...microInitState(), seed: s }), "9007199254740992");
+    const seed = (JSON.parse(forged) as { state: { seed: number } }).state.seed;
+    expect(seed).toBe(Number.MAX_SAFE_INTEGER + 1);
+    expect(Number.isSafeInteger(seed)).toBe(false);
+    expect(() => load(forged, MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
+    expect(() => load(forged, MICRO_CONTENT_HASH)).toThrow(/safe integer range/);
   });
 
   it("WITNESS: step = 1.5 (fractional, truncates to a different stream) is a hard SaveIntegrityError", () => {
@@ -174,11 +185,20 @@ describe("save/load integrity gate — GREEN round-trip (no false rejection)", (
   });
 
   it("OVER-RESTRICTION GUARD: a NEGATIVE integer seed (seed:-3) still round-trips with hash unchanged", () => {
-    // The new `.int()` gate must match the entry boundary (server.ts:147 bare
-    // .int()) EXACTLY — a negative seed is legitimate (`mulberry32(-3 >>> 0)` is
+    // A negative safe seed is legitimate (`mulberry32(-3 >>> 0)` is
     // well-defined), so it MUST NOT be false-rejected. This proves the gate did
-    // NOT over-restrict to `gte(0)` / a 2^32 range bound.
+    // NOT over-restrict to `gte(0)` / an unsigned 32-bit range bound.
     const s: GameState = { ...microInitState(), seed: -3, step: 0 };
+    const bytes = cleanBytes(s);
+    let loaded!: ReturnType<typeof load>;
+    expect(() => {
+      loaded = load(bytes, MICRO_CONTENT_HASH);
+    }).not.toThrow();
+    expect(hashState(loaded.state)).toBe(hashState(s));
+  });
+
+  it("OVER-RESTRICTION GUARD: a safe integer seed above 32 bits still round-trips", () => {
+    const s: GameState = { ...microInitState(), seed: 4294967301, step: 0 };
     const bytes = cleanBytes(s);
     let loaded!: ReturnType<typeof load>;
     expect(() => {

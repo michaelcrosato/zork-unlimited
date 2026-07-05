@@ -364,6 +364,16 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(otherSession.index.pack).not.toBe(firstSession.index.pack);
   });
 
+  it("rejects unsafe runtime seeds before RPG session creation", () => {
+    const a = api();
+    const unsafeSeed = Number.MAX_SAFE_INTEGER + 1;
+
+    expect(() =>
+      a.start_world_quest({ world_quest_id: "sunken_barrow", seed: unsafeSeed }),
+    ).toThrow(/safe range/);
+    expect(() => a.new_game({ generate_rpg_seed: 7, seed: unsafeSeed })).toThrow(/safe range/);
+  });
+
   it("reuses RPG runtime indexes and rules inside one MCP API instance", () => {
     const a = api();
     const first = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 1 });

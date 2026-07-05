@@ -7,7 +7,7 @@
  * load"). This prevents replaying a save against edited content and corrupting it.
  */
 import { z } from "zod";
-import { MAX_ENGINE_STEP, type GameState } from "../core/state.js";
+import { MAX_ENGINE_STEP, isRuntimeSeed, type GameState } from "../core/state.js";
 import { canonicalize } from "../core/hash.js";
 import { generatedRpgSeedValidationMessage, isGeneratedRpgSeed } from "../gen/seed.js";
 import {
@@ -36,16 +36,14 @@ export type SaveMode = typeof SAVE_MODE;
  * always-true (NaN makes every `var_*` always-false). The gate REJECTS such a
  * save (throws `SaveIntegrityError`); it never coerces/clamps.
  *
- * `seed`/`step` are gated to the INTEGER domain `rngForStep` (rng.ts:44)
- * consumes via `seed >>> 0` / `step >>> 0` — a non-integer would silently
- * truncate to a DIFFERENT value than the one the save's content hash
- * (hash.ts `canonicalize`) committed to. This restores entry↔disk symmetry
- * with the MCP entry boundary (server.ts:147), which already gates
- * `seed: z.number().int()`. `step` is also bounded to the engine's safe
- * increment domain; an unsafe integer can make `step + 1` stop advancing
- * precisely. No sign/range bound is placed on `seed` — negative seeds are
- * legitimate (`mulberry32` does `seed >>> 0`, defined for negatives) and the
- * entry boundary accepts them.
+ * `seed`/`step` are gated to the safe INTEGER domain. `rngForStep`
+ * (rng.ts:44) consumes both via `>>> 0`, so non-integers silently truncate to a
+ * DIFFERENT value than the one the save's content hash (hash.ts `canonicalize`)
+ * committed to. `step` is also bounded to the engine's safe increment domain;
+ * an unsafe integer can make `step + 1` stop advancing precisely. `seed` stays
+ * signed — negative seeds are legitimate (`mulberry32` does `seed >>> 0`,
+ * defined for negatives) — but unsafe integers are rejected before persistence
+ * can commit an imprecise identity.
  *
  * `objectState` mirrors `ObjectRuntime` (state.ts:9–15) with `.strict()` so an
  * unknown or wrong-typed key is rejected, not silently carried into the engine.
@@ -66,7 +64,9 @@ const GameStateSchema = z
     // consumes via `>>> 0`); rejects non-integers AND Infinity/-Infinity/NaN.
     // Matches the MCP entry gate (server.ts:147) exactly: bare .int() on seed
     // (negative seeds are legitimate); step is a bounded monotonic counter.
-    seed: z.number().int(),
+    seed: z.number().int().refine(isRuntimeSeed, {
+      message: "GameState seed must be within JavaScript's safe integer range.",
+    }),
     step: z.number().int().nonnegative().max(MAX_ENGINE_STEP),
     // location
     current: z.string(),

@@ -12,6 +12,18 @@
  */
 export const MAX_ENGINE_STEP = Number.MAX_SAFE_INTEGER - 1;
 
+export function isRuntimeSeed(seed: unknown): seed is number {
+  return typeof seed === "number" && Number.isSafeInteger(seed);
+}
+
+export function runtimeSeedValidationMessage(label: string, seed: unknown): string {
+  return `${label} must be an integer within JavaScript's safe range, got ${JSON.stringify(seed)}.`;
+}
+
+export function assertRuntimeSeed(seed: unknown, label: string): asserts seed is number {
+  if (!isRuntimeSeed(seed)) throw new Error(runtimeSeedValidationMessage(label, seed));
+}
+
 export type ObjectRuntime = {
   open?: boolean;
   locked?: boolean;
@@ -53,6 +65,7 @@ export type InitOptions = {
 
 /** Build a fresh GameState. Pure: no clock, no global RNG. */
 export function initState(opts: InitOptions): GameState {
+  assertRuntimeSeed(opts.seed, "GameState seed");
   const flags: Record<string, boolean> = {};
   for (const f of opts.flagsInit ?? []) flags[f] = true;
   return {

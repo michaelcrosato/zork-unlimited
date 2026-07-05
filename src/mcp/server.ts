@@ -45,7 +45,7 @@ function tool(
 const WORLD_QUEST_SOURCE = {
   world_quest_id: z.string().describe("World quest id."),
 };
-const GEN_SEED = z.number().int().refine(genSeed);
+const G = z.number().int().refine(genSeed);
 const SESSION = {
   session_id: z.string().describe("Session."),
 };
@@ -366,7 +366,7 @@ tool(
   {
     ...SESSION,
     quest_id: z.string().describe("Quest id."),
-    seed: z.number().int().optional().describe("Runtime seed."),
+    seed: z.number().int().safe().optional().describe("Runtime seed."),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
@@ -399,7 +399,7 @@ tool(
   "generate_rpg_pack",
   "Mint and validate a deterministic RPG pack from a seed; writes nothing.",
   {
-    seed: GEN_SEED.describe("Generation seed."),
+    seed: G.describe("Generation seed."),
   },
   (a) => api.generate_rpg_pack(a),
 );
@@ -408,8 +408,8 @@ tool(
   "new_game",
   "Start generated RPG; compact.",
   {
-    generate_rpg_seed: GEN_SEED.optional().describe("Generated seed."),
-    seed: z.number().int().optional().describe("Runtime seed."),
+    generate_rpg_seed: G.optional().describe("Generated seed."),
+    seed: z.number().int().safe().optional().describe("Runtime seed."),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
@@ -421,7 +421,7 @@ tool(
   "Start RPG; compact.",
   {
     world_quest_id: z.string().describe("World quest id."),
-    seed: z.number().int().optional(),
+    seed: z.number().int().safe().optional(),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
@@ -495,7 +495,7 @@ tool(
   "Restore save; compact.",
   {
     world_quest_id: z.string().optional().describe("World quest id."),
-    generate_rpg_seed: GEN_SEED.optional().describe("Generated seed."),
+    generate_rpg_seed: G.optional().describe("Generated seed."),
     save: z.string().describe("Save string."),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
