@@ -52,9 +52,10 @@ describe("save / load (§8.7)", () => {
     const bytes = saveMicro(s);
     const loaded = load(bytes, MICRO_CONTENT_HASH);
     expect(hashState(loaded.state)).toBe(hashState(s));
-    expect(loaded.packId).toBe(MICRO_PACK_ID);
     expect(loaded.mode).toBe(SAVE_MODE);
     expect(loaded.source_ref).toEqual(["wq", MICRO_WORLD_QUEST_ID]);
+    expect("packId" in loaded).toBe(false);
+    expect("packId" in (JSON.parse(bytes) as Record<string, unknown>)).toBe(false);
   });
 
   it("returns immutable loaded bundles after validation", () => {
@@ -122,7 +123,7 @@ describe("save / load (§8.7)", () => {
   });
 
   it("rejects malformed save envelope identity at the load boundary", () => {
-    for (const field of ["packId", "contentHash"] as const) {
+    for (const field of ["contentHash"] as const) {
       for (const value of ["", 12, null]) {
         const bundle = JSON.parse(saveMicro()) as { [key: string]: unknown };
         bundle[field] = value;
@@ -131,6 +132,14 @@ describe("save / load (§8.7)", () => {
         expect(() => load(JSON.stringify(bundle))).toThrow(field);
       }
     }
+  });
+
+  it("rejects retired package identity at the load boundary", () => {
+    const bundle = JSON.parse(saveMicro()) as Record<string, unknown>;
+    bundle.packId = MICRO_PACK_ID;
+
+    expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
+    expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(/packId is retired/);
   });
 
   it("checks a loaded save bundle against a resolved pack hash", () => {
@@ -232,7 +241,6 @@ describe("save / load (§8.7)", () => {
   it("rejects package-only source fallback saves at the load boundary", () => {
     const bytes = JSON.stringify({
       version: 1,
-      packId: MICRO_PACK_ID,
       contentHash: MICRO_CONTENT_HASH,
       mode: SAVE_MODE,
       source_ref: ["pack", MICRO_PACK_ID],

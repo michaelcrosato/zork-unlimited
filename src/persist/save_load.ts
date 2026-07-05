@@ -1,10 +1,11 @@
 /**
  * Save / load (spec §8.7).
  *
- * A save = the full GameState + the content-pack id + its content hash. Loading
- * MUST verify the content hash against the pack it will be played on; a mismatch
- * is a hard error, never a silent re-interpretation (§8.8, §16 "integrity at
- * load"). This prevents replaying a save against edited content and corrupting it.
+ * A save = the full GameState + compact RPG source identity + content hash.
+ * Loading MUST verify the content hash against the content it will be played on;
+ * a mismatch is a hard error, never a silent re-interpretation (§8.8, §16
+ * "integrity at load"). This prevents replaying a save against edited content
+ * and corrupting it.
  */
 import { z } from "zod";
 import { MAX_ENGINE_STEP, cloneGameState, isRuntimeSeed, type GameState } from "../core/state.js";
@@ -103,7 +104,6 @@ export function assertWellFormedState(state: unknown): GameState {
 
 export type SaveBundle = {
   version: typeof SAVE_VERSION;
-  packId: string;
   contentHash: string;
   /** Pack mode. Required so persisted state is bound to the unified RPG engine. */
   mode: SaveMode;
@@ -187,11 +187,10 @@ export function save(
   assertNonEmptyString(packId, "Save packId");
   assertNonEmptyString(contentHash, "Save contentHash");
   assertWellFormedState(state);
-  const sourceRef = saveSourceRef(packId, metadata);
+  const sourceRef = saveSourceRef(metadata);
   const sourceMetadata = compactSourceLegacyMetadata(sourceRef);
   const bundle: SaveBundle = {
     version: SAVE_VERSION,
-    packId,
     contentHash,
     state,
     mode,
@@ -236,7 +235,7 @@ function assertGeneratedRpgSeed(seed: unknown, label: string): asserts seed is n
   }
 }
 
-function saveSourceRef(packId: string, metadata: SaveMetadata): SaveSourceRef {
+function saveSourceRef(metadata: SaveMetadata): SaveSourceRef {
   const sourceRef = compactSourceRefFromMetadata(metadata, SAVE_SOURCE_LABELS);
   if (!sourceRef.ok) throw new SaveIntegrityError(sourceRef.error);
   return sourceRef.sourceRef;
@@ -288,9 +287,11 @@ export function load(
   if (bundle.version !== SAVE_VERSION) {
     throw new SaveIntegrityError(`Unsupported save version: ${String(bundle.version)}`);
   }
+  if ("packId" in (bundle as Record<string, unknown>)) {
+    throw new SaveIntegrityError("Save packId is retired; use source_ref plus contentHash.");
+  }
   assertRpgMode((bundle as { mode?: unknown }).mode, "Save mode");
   assertOptionalRpgMode(expectedMode, "Expected mode");
-  assertNonEmptyString((bundle as { packId?: unknown }).packId, "Save packId");
   assertNonEmptyString((bundle as { contentHash?: unknown }).contentHash, "Save contentHash");
   if (
     "worldQuestId" in (bundle as Record<string, unknown>) &&

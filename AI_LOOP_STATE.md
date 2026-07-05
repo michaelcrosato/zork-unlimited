@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 422 -->
+<!-- historical_cycle_count: 423 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - save_pack_id_retired
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: persisted `SaveBundle` bytes no longer serialize package-era `packId`; `load()` rejects forged or historical `packId` fields and requires `source_ref` plus `contentHash`.
+- Loop effect: save/load identity cannot fall back to package ids while the live `save(..., packId, ...)` call still validates existing runtime callers during staged consolidation.
+- Guard: focused save/trace, forged-save, save referential, and MCP save/load regressions passed.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused persistence/MCP regressions, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - trace_pack_id_retired
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: the external MCP play harness exercises the same compact payload path blind agents use, including compact step events and action ids.
 - Guard: blind-runner contract now asserts compact harness args/context shape, and a live `npx tsx scripts/mcp_play.ts breaking_weir --seed 1` MCP round trip passed.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused regression, `npm test`, and `npm run health` passed.
-
-### Cycle result - compact_state_projection_cached
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: `get_state({ compact_state: true })` now uses a version-keyed, state-hash `SessionStore` projection cache and returns cloned compact payloads.
-- Loop effect: repeated compact-state polling avoids rebuilding public state scalars, lists, object summaries, and quest stages while keeping returned MCP payloads detached.
-- Guard: session cache invalidation/freeze coverage, compact-state tool cache use, and response-mutation regression passed.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused unit tests, `npm test`, and `npm run health` passed.
