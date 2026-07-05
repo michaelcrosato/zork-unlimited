@@ -272,8 +272,13 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
         `Save references unknown object room "${runtime.room}" for "${id}".`,
       );
     }
-    if (runtime.takenBy !== undefined && runtime.room === undefined) {
-      throw new SaveIntegrityError(`Save references object takenBy without room for "${id}".`);
+    if (runtime.takenBy !== undefined) {
+      if (runtime.room === undefined) {
+        throw new SaveIntegrityError(`Save references object takenBy without room for "${id}".`);
+      }
+      if (!items.has(id)) {
+        throw new SaveIntegrityError(`Save references invalid object takenBy state for "${id}".`);
+      }
     }
     for (const childId of runtime.contents ?? []) {
       if (!objects.has(childId)) {

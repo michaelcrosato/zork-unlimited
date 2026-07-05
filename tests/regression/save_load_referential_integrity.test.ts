@@ -357,6 +357,14 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     expect(() => api().load_game({ save: forged })).toThrow(/takenBy without room/);
   });
 
+  it("RPG: object takenBy on scenery is a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      s.objectState = { sarcophagus: { room: "entry_hall", takenBy: "player" } };
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/invalid object takenBy state/);
+  });
+
   it("RPG: a phantom questStage quest is a hard SaveIntegrityError", () => {
     const forged = forgeSave((s) => {
       s.questStage = { no_such_quest: "slab_moved" };
