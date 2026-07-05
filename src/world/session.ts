@@ -49,16 +49,14 @@ import {
   type OverworldServicePlan,
   type OverworldServiceResult,
 } from "./session_services.js";
-import {
-  applyOverworldTownVisit,
-  type OverworldAreaTravelResult,
-} from "./session_local_actions.js";
+import { type OverworldAreaTravelResult } from "./session_local_actions.js";
 import {
   applyOverworldSessionArea,
   applyOverworldSessionAreaTravel,
   applyOverworldSessionLocalInteraction,
   applyOverworldSessionLocalJob,
   applyOverworldSessionSite,
+  applyOverworldSessionTownVisit,
   planOverworldSessionArea,
   planOverworldSessionAreaTravel,
   planOverworldSessionContactTalk,
@@ -102,7 +100,6 @@ import {
   applyOverworldSessionCurrentAreaForTown,
   applyOverworldSessionLocalDiscoveryForTown,
   buildOverworldSessionCurrentLocalView,
-  overworldSessionLocalAreas,
   requireOverworldSessionCurrentAreaId,
   resolveOverworldSessionCurrentArea,
   visibleOverworldSessionAreaExits,
@@ -379,14 +376,14 @@ export class OverworldSession {
   }
 
   private markSeen(nodeId: string): void {
-    const applied = applyOverworldTownVisit({
+    const applied = applyOverworldSessionTownVisit({
       nodeId,
-      localAreas: this.localAreas(nodeId),
       currentAreaId: this.currentAreaId,
       currentAreaByTown: this.currentAreaByTown,
+      areasByTown: this.areasByTown,
       discoveredAreaIds: this.discoveredAreaIds,
       discoveredIds: this.discoveredIds,
-      roadDestinationIds: this.roadsFrom(nodeId).map((edge) => edge.destination.id),
+      roadExitsByTown: this.roadExitsByTown,
       visitedIds: this.visitedIds,
     });
     this.applyCurrentAreaState(applied);
@@ -447,10 +444,6 @@ export class OverworldSession {
       this.clearSnapshotCache();
     }
     return applied.result;
-  }
-
-  private localAreas(nodeId: string): OverworldArea[] {
-    return [...overworldSessionLocalAreas(this.localState(), nodeId)];
   }
 
   private setCurrentAreaForTown(nodeId: string): void {

@@ -10,6 +10,7 @@ import type {
   OverworldAreaExit,
   OverworldCharacter,
   OverworldExplorationSite,
+  OverworldExit,
   OverworldLocalEvent,
   OverworldLocalJob,
   OverworldNode,
@@ -25,10 +26,12 @@ import {
   applyOverworldAreaTravel,
   applyOverworldLocalJobCompletion,
   applyOverworldSiteExploration,
+  applyOverworldTownVisit,
   planOverworldAreaExploration,
   planOverworldLocalJobCompletion,
   planOverworldSiteExploration,
   type OverworldAppliedAreaTravel,
+  type OverworldAppliedTownVisit,
   type OverworldAreaExplorationPlan,
   type OverworldLocalJobCompletionPlan,
   type OverworldSiteExplorationPlan,
@@ -55,6 +58,17 @@ export type OverworldSessionAreaTravelPlanState = {
 export type OverworldSessionAreaTravelPlan = {
   currentArea: OverworldArea;
   edge: OverworldAreaExit;
+};
+
+export type MutableOverworldSessionTownVisitState = {
+  nodeId: string;
+  areasByTown: ReadonlyMap<string, readonly OverworldArea[]>;
+  roadExitsByTown: ReadonlyMap<string, readonly OverworldExit[]>;
+  currentAreaId: string | null;
+  currentAreaByTown: Map<string, string>;
+  discoveredAreaIds: Set<string>;
+  discoveredIds: Set<string>;
+  visitedIds: Set<string>;
 };
 
 export type OverworldSessionLocalJobPlanState = {
@@ -213,6 +227,23 @@ export function applyOverworldSessionAreaTravel(
   plan: OverworldSessionAreaTravelPlan,
 ): OverworldAppliedAreaTravel {
   return applyOverworldAreaTravel(plan.currentArea, plan.edge, state);
+}
+
+export function applyOverworldSessionTownVisit(
+  state: MutableOverworldSessionTownVisitState,
+): OverworldAppliedTownVisit {
+  return applyOverworldTownVisit({
+    nodeId: state.nodeId,
+    localAreas: state.areasByTown.get(state.nodeId) ?? [],
+    currentAreaId: state.currentAreaId,
+    currentAreaByTown: state.currentAreaByTown,
+    discoveredAreaIds: state.discoveredAreaIds,
+    discoveredIds: state.discoveredIds,
+    roadDestinationIds: (state.roadExitsByTown.get(state.nodeId) ?? []).map(
+      (edge) => edge.destination.id,
+    ),
+    visitedIds: state.visitedIds,
+  });
 }
 
 export function applyOverworldSessionArea(
