@@ -145,6 +145,7 @@ function defaultCompactTranscript(args: unknown): never {
 type McpStateArgs = {
   session_id: string;
   include_state?: boolean;
+  if_state_hash?: string;
 };
 
 function compactMcpState(args: McpStateArgs): unknown {
@@ -457,10 +458,11 @@ tool(
 );
 tool(
   "get_state",
-  "State hash; optional state snapshot.",
+  "State hash; optional snapshot.",
   {
     ...SESSION,
-    include_state: z.boolean().optional().describe("State snapshot."),
+    ...IF_STATE_HASH,
+    include_state: z.boolean().optional().describe("Snapshot."),
   },
   (a) => compactMcpState(a),
 );

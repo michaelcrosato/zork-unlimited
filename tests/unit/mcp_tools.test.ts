@@ -1740,6 +1740,13 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(afterRawStateMutation.state.visited).not.toHaveProperty("mutated_room");
     expect(afterRawStateMutation.state.objectState).not.toHaveProperty("mutated_object");
     expect(afterRawStateMutation.state_hash).toBe(currentStateHash);
+    const unchangedRawState = a.get_state({
+      session_id: game.session_id,
+      include_state: true,
+      if_state_hash: currentStateHash,
+    });
+    expect(unchangedRawState).toEqual({ state_hash: currentStateHash, unchanged: true });
+    expect("state" in unchangedRawState).toBe(false);
     const summaryOnlyTranscript = a.get_transcript({
       session_id: game.session_id,
       summary_only: true,

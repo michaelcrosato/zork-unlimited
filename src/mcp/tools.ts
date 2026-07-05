@@ -218,6 +218,7 @@ type RpgStartWorldQuestInvoker = {
 type RpgGetStateArgs = {
   session_id: string;
   include_state?: boolean;
+  if_state_hash?: string;
 };
 type RpgStateHashPayload = {
   state_hash: string;
@@ -225,9 +226,12 @@ type RpgStateHashPayload = {
 type RpgStatePayload = RpgStateHashPayload & {
   state: GameState;
 };
-type RpgStateResponse<Args extends RpgGetStateArgs> = Args extends { include_state: true }
+type RpgStatePayloadFor<Args extends RpgGetStateArgs> = Args extends { include_state: true }
   ? RpgStatePayload
   : RpgStateHashPayload;
+type RpgStateResponse<Args extends RpgGetStateArgs> = Args extends { if_state_hash: string }
+  ? RpgStatePayloadFor<Args> | RpgStateUnchanged
+  : RpgStatePayloadFor<Args>;
 
 type RpgSaveArgs = {
   session_id: string;

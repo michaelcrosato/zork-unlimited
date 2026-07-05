@@ -65,6 +65,7 @@ export type RpgLegalActionsToolResponse<Args extends RpgLegalActionsToolArgs> = 
 export type RpgGetStateToolArgs = {
   session_id: string;
   include_state?: boolean;
+  if_state_hash?: string;
 };
 
 type RpgStateHashToolPayload = {
@@ -75,11 +76,17 @@ type RpgStateToolPayload = RpgStateHashToolPayload & {
   state: GameState;
 };
 
-export type RpgStateToolResponse<Args extends RpgGetStateToolArgs> = Args extends {
+type RpgStateToolPayloadFor<Args extends RpgGetStateToolArgs> = Args extends {
   include_state: true;
 }
   ? RpgStateToolPayload
   : RpgStateHashToolPayload;
+
+export type RpgStateToolResponse<Args extends RpgGetStateToolArgs> = Args extends {
+  if_state_hash: string;
+}
+  ? RpgStateToolPayloadFor<Args> | RpgStateUnchanged
+  : RpgStateToolPayloadFor<Args>;
 
 export type RpgSaveToolArgs = {
   session_id: string;
@@ -184,6 +191,9 @@ export function runRpgGetState<Args extends RpgGetStateToolArgs>(
 ): RpgStateToolResponse<Args> {
   const s = deps.sessions.get(args.session_id);
   const stateHash = s.stateHash;
+  if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
+    return rpgStateUnchanged(stateHash) as RpgStateToolResponse<Args>;
+  }
   if (args.include_state === true) {
     return { state: cloneGameState(s.state), state_hash: stateHash } as RpgStateToolResponse<Args>;
   }

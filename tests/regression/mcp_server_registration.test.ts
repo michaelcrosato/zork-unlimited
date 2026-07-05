@@ -376,6 +376,7 @@ describe("MCP server registration", () => {
   it("defaults public RPG MCP state reads to hash only", () => {
     const block = registeredToolBlock("get_state");
     expect(block).toContain("compactMcpState(a)");
+    expect(block).toContain("IF_STATE_HASH");
     expect(block).toContain("include_state");
     expect(block).toContain("State hash");
     expect(block).not.toContain("include_state === true");
