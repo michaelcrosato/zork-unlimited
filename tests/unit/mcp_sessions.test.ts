@@ -99,6 +99,14 @@ describe("SessionStore", () => {
     expect("mode" in first).toBe(false);
     expect(store.get("sess_1").packId).toBe("first");
     expect(store.get("sess_2").packId).toBe("second");
+
+    const forged = store.create({
+      ...sessionInit({ packId: "forged" }),
+      id: "forged_session",
+    } as unknown as SessionInit);
+    expect(forged.id).toBe("sess_3");
+    expect(store.get("sess_3")).toBe(forged);
+    expect(() => store.get("forged_session")).toThrow('Unknown session "forged_session".');
   });
 
   it("keeps session ids monotonic past the safe integer boundary", () => {
@@ -288,6 +296,66 @@ describe("SessionStore", () => {
     expect(Object.isFrozen(session.state.inventory)).toBe(true);
     expect(session.legalActionsCache).toBeUndefined();
     expect(session.observationCache).toBeUndefined();
+  });
+
+  it("locks session metadata while leaving runtime state and caches writable", () => {
+    const store = new SessionStore();
+    const replacementStep = makeStep(rules);
+    const session = store.create(
+      sessionInit({
+        packPath: "content/rpg/pack/test.yaml",
+        worldQuestId: "test_quest",
+        overworldSessionId: "ow_1",
+        generatedRpgSeed: 9,
+        hideGraph: true,
+      }),
+    );
+    const immutableFields = [
+      "id",
+      "packId",
+      "contentHash",
+      "packPath",
+      "worldQuestId",
+      "overworldSessionId",
+      "generatedRpgSeed",
+      "index",
+      "rules",
+      "step",
+      "hideGraph",
+    ] as const;
+
+    for (const field of immutableFields) {
+      expect(Object.getOwnPropertyDescriptor(session, field)).toMatchObject({
+        configurable: false,
+        writable: false,
+      });
+    }
+    expect(Object.isExtensible(session)).toBe(true);
+    expect(Object.getOwnPropertyDescriptor(session, "state")).toMatchObject({ writable: true });
+    expect(() => {
+      (session as { packId: string }).packId = "mutated_pack";
+    }).toThrow();
+    expect(() => {
+      (session as { overworldSessionId: string }).overworldSessionId = "ow_2";
+    }).toThrow();
+    expect(() => {
+      (session as { generatedRpgSeed: number }).generatedRpgSeed = 10;
+    }).toThrow();
+    expect(() => {
+      (session as { hideGraph: boolean }).hideGraph = false;
+    }).toThrow();
+    expect(() => {
+      (session as { step: typeof replacementStep }).step = replacementStep;
+    }).toThrow();
+
+    store.legalActions(session.id, () => []);
+    expect(session.legalActionsCache).toBeDefined();
+
+    const updated = store.update(session.id, state("next"));
+    expect(updated).toBe(session);
+    expect(session.state.current).toBe("next");
+    expect(session.stateHash).toBe(hashState(session.state));
+    expect(session.legalActionsCache).toBeUndefined();
   });
 
   it("keeps transcript log hashes in sync with store-owned writes", () => {

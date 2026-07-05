@@ -180,6 +180,8 @@ type RpgStartWorldQuestArgs = {
   world_quest_id: string;
   seed?: number;
   hide_graph?: boolean;
+  /** Internal bridge binding; not registered as public MCP input. */
+  overworldSessionId?: string;
 } & RpgViewOptions;
 
 type RpgGetObservationArgs = {

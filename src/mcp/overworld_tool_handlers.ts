@@ -458,7 +458,6 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         overworldSessionId: args.session_id,
         questId: args.quest_id,
         startOptions: args,
-        sessions,
         startWorldQuest: deps.startWorldQuest,
       });
       const questResult =

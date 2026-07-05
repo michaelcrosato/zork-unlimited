@@ -44,6 +44,7 @@ export type RpgSessionPayload<Args extends RpgViewOptions = RpgViewOptions> = {
 export type RpgSessionSource = {
   packPath?: string;
   worldQuestId?: string | null;
+  overworldSessionId?: string | null;
   generatedRpgSeed?: number | null;
 };
 
@@ -127,6 +128,7 @@ export class RpgMcpSessionRuntime {
       contentHash: compiled.contentHash,
       ...(opts.packPath ? { packPath: opts.packPath } : {}),
       ...(opts.worldQuestId ? { worldQuestId: opts.worldQuestId } : {}),
+      ...(opts.overworldSessionId ? { overworldSessionId: opts.overworldSessionId } : {}),
       ...(opts.generatedRpgSeed !== undefined && opts.generatedRpgSeed !== null
         ? { generatedRpgSeed: opts.generatedRpgSeed }
         : {}),
@@ -176,6 +178,7 @@ export class RpgMcpSessionRuntime {
       ...(args.hide_graph ? { hideGraph: true } : {}),
       ...(source.packPath ? { packPath: source.packPath } : {}),
       ...(source.worldQuestId ? { worldQuestId: source.worldQuestId } : {}),
+      ...(source.overworldSessionId ? { overworldSessionId: source.overworldSessionId } : {}),
       ...(source.generatedRpgSeed !== undefined && source.generatedRpgSeed !== null
         ? { generatedRpgSeed: source.generatedRpgSeed }
         : {}),

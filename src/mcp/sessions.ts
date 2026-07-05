@@ -152,6 +152,31 @@ function cloneFrozenGameState(state: GameState): GameState {
   return deepFreeze(cloneGameState(state));
 }
 
+const SESSION_IMMUTABLE_FIELDS = [
+  "id",
+  "packId",
+  "contentHash",
+  "packPath",
+  "worldQuestId",
+  "overworldSessionId",
+  "generatedRpgSeed",
+  "index",
+  "rules",
+  "step",
+  "hideGraph",
+] as const satisfies readonly (keyof Session)[];
+
+function lockSessionMetadata(session: Session): Session {
+  for (const field of SESSION_IMMUTABLE_FIELDS) {
+    if (!Object.prototype.hasOwnProperty.call(session, field)) continue;
+    Object.defineProperty(session, field, {
+      configurable: false,
+      writable: false,
+    });
+  }
+  return session;
+}
+
 function transcriptLogHashFor(transcript: readonly TranscriptTurn[]): string {
   return transcript.reduce((previous, turn) => hashState({ previous, turn }), hashState([]));
 }
@@ -241,15 +266,15 @@ export class SessionStore {
     const state = cloneFrozenGameState(init.state);
     const transcript = cloneTranscriptRows(init.transcript);
     const session: Session = {
-      id,
       ...init,
+      id,
       state,
       stateHash: hashState(state),
       transcript: retainedTranscript(transcript, this.maxTranscriptTurns),
       transcriptLogHash: transcriptLogHashFor(transcript),
       transcriptStats: transcriptStatsFor(transcript),
     };
-    rememberSessionEntry(this.sessions, id, session, this.maxSessions);
+    rememberSessionEntry(this.sessions, id, lockSessionMetadata(session), this.maxSessions);
     return session;
   }
 

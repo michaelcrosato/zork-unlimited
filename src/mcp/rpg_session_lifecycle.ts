@@ -20,6 +20,8 @@ export type RpgStartWorldQuestToolArgs = {
   world_quest_id: string;
   seed?: number;
   hide_graph?: boolean;
+  /** Internal bridge binding for RPG sessions launched from an overworld session. */
+  overworldSessionId?: string;
 } & RpgViewOptions;
 
 export type RpgLoadGameToolArgs = {
@@ -74,6 +76,7 @@ export function runRpgStartWorldQuest<Args extends RpgStartWorldQuestToolArgs>(
     {
       packPath: resolved.packPath,
       worldQuestId: resolved.node.id,
+      ...(args.overworldSessionId ? { overworldSessionId: args.overworldSessionId } : {}),
     },
   );
   return {

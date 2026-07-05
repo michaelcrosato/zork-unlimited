@@ -1,6 +1,6 @@
 import type { OverworldQuestView, OverworldSession } from "../world/session.js";
 import type { OverworldQuestCompletionOutcome } from "../world/session_quests.js";
-import type { Session, SessionStore } from "./sessions.js";
+import type { Session } from "./sessions.js";
 
 export type OverworldQuestRpgStartOptions = {
   seed?: number;
@@ -11,6 +11,7 @@ export type OverworldQuestRpgStartOptions = {
 
 export type OverworldQuestRpgStartArgs = {
   world_quest_id: string;
+  overworldSessionId: string;
 } & OverworldQuestRpgStartOptions;
 
 export type OverworldStartedRpgSession = {
@@ -29,10 +30,12 @@ export type OverworldQuestCompletionSync = {
 
 function rpgStartArgsForOverworldQuest(
   questId: string,
+  overworldSessionId: string,
   options: OverworldQuestRpgStartOptions,
 ): OverworldQuestRpgStartArgs {
   return {
     world_quest_id: questId,
+    overworldSessionId,
     ...(options.seed !== undefined ? { seed: options.seed } : {}),
     ...(options.hide_graph ? { hide_graph: true } : {}),
     ...(options.compact_actions ? { compact_actions: true } : {}),
@@ -45,15 +48,13 @@ export function startOverworldQuestThroughRpg<Payload extends OverworldStartedRp
   overworldSessionId: string;
   questId: string;
   startOptions: OverworldQuestRpgStartOptions;
-  sessions: SessionStore;
   startWorldQuest: (startArgs: OverworldQuestRpgStartArgs) => Payload;
 }): OverworldQuestStartSync<Payload> {
   const quest = args.session.previewQuestStart(args.questId);
   const rpgSession = args.startWorldQuest(
-    rpgStartArgsForOverworldQuest(quest.id, args.startOptions),
+    rpgStartArgsForOverworldQuest(quest.id, args.overworldSessionId, args.startOptions),
   );
   const startedQuest = args.session.startQuest(quest.id);
-  args.sessions.get(rpgSession.session_id).overworldSessionId = args.overworldSessionId;
   return { quest: startedQuest, rpgSession };
 }
 
