@@ -33,10 +33,6 @@ import {
 import { type OverworldRoadEncounterResult } from "./session_road_encounters.js";
 import { type OverworldActionJournalState } from "./session_action_recording.js";
 import {
-  applyOverworldEventResolution,
-  planOverworldEventResolution,
-} from "./session_event_resolution.js";
-import {
   type OverworldLocalDiscoveryResult,
   type OverworldQuestView,
 } from "./session_local_discovery.js";
@@ -95,10 +91,11 @@ import {
   buildOverworldSessionViewFromSource,
   type OverworldSessionViewModelSourceState,
 } from "./session_view_state.js";
+import { withOverworldSessionRouteEstimate } from "./session_route_progress.js";
 import {
-  applyOverworldSessionRegionalArcCompletionsForRegion,
-  withOverworldSessionRouteEstimate,
-} from "./session_route_progress.js";
+  applyOverworldSessionEventResolution,
+  planOverworldSessionEventResolution,
+} from "./session_event_lifecycle.js";
 import {
   applyOverworldSessionCurrentAreaForTown,
   applyOverworldSessionLocalDiscoveryForTown,
@@ -776,43 +773,30 @@ export class OverworldSession {
   resolveEvent(eventId: string): OverworldActionResult {
     this.assertNoPendingRoadEncounter("resolving a local event");
     const current = this.currentNode();
-    const plan = planOverworldEventResolution({
-      eventId,
-      eventsById: this.localEventsById,
-      currentTownId: this.currentId,
-      currentTownName: current.name,
-      currentRegion: current.region,
-      currentAreaId: this.currentAreaIdOrThrow(),
-      resolvedEventIds: this.resolvedEventIds,
-      journalEntries: this.journalEntriesById,
-      poisByArea: this.poisByArea,
-      charactersByArea: this.charactersByArea,
-    });
-    if (plan.alreadyKnown) return this.alreadyKnownLocalAction(plan.entry);
-
-    const result = this.recordAction(plan.entryDraft, plan.minutes);
-    if (!result.alreadyKnown) {
-      applyOverworldEventResolution(
+    const result = this.applyActionApplication(
+      applyOverworldSessionEventResolution(
         {
+          ...this.actionJournalState(),
           resolvedEventIds: this.resolvedEventIds,
           resolvedEventHomeIds: this.resolvedEventHomeIds,
           regionRenown: this.regionRenown,
-        },
-        plan,
-      );
-      applyOverworldSessionRegionalArcCompletionsForRegion(
-        {
           regionalArcsByRegion: this.regionalArcsByRegion,
-          resolvedEventHomeIds: this.resolvedEventHomeIds,
           completedRegionalArcIds: this.completedRegionalArcIds,
-          minutes: this.minutes,
-          journalEntries: this.journalEntries,
-          journalEntriesById: this.journalEntriesById,
         },
-        plan.region,
-      );
-      this.clearSnapshotCache();
-    }
+        planOverworldSessionEventResolution({
+          eventId,
+          eventsById: this.localEventsById,
+          currentTownId: this.currentId,
+          currentTownName: current.name,
+          currentRegion: current.region,
+          currentAreaId: this.currentAreaIdOrThrow(),
+          resolvedEventIds: this.resolvedEventIds,
+          journalEntries: this.journalEntriesById,
+          poisByArea: this.poisByArea,
+          charactersByArea: this.charactersByArea,
+        }),
+      ),
+    );
     return this.withLocalDiscovery(result, current.id);
   }
 
