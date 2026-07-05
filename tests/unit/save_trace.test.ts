@@ -281,6 +281,21 @@ describe("trace record / replay (§8.8)", () => {
     }
   });
 
+  it("rejects malformed trace action lists at the replay boundary", () => {
+    const trace = recordTrace(microRules, microInitState(), WIN, {
+      trace_id: "tr_test",
+      pack_id: MICRO_PACK_ID,
+      content_hash: MICRO_CONTENT_HASH,
+    });
+
+    for (const value of [undefined, null, "not-actions", { 0: MICRO_ACTIONS.takeTorch }]) {
+      const malformed = { ...trace, actions: value } as unknown as typeof trace;
+
+      expect(() => replayTrace(malformed, microRules)).toThrow(SaveIntegrityError);
+      expect(() => replayTrace(malformed, microRules)).toThrow(/actions/);
+    }
+  });
+
   it("rejects ambiguous trace source metadata", () => {
     expect(() =>
       recordTrace(microRules, microInitState(), WIN, {
@@ -369,5 +384,13 @@ describe("trace v2: per-step divergence localization (§8.8)", () => {
     const result = replayTrace(v1, microRules);
     expect(result.ok).toBe(true);
     expect(result.divergedAtStep).toBeUndefined();
+  });
+
+  it("rejects malformed v1 trace action lists before replaying", () => {
+    const { per_step_hashes: _omit, ...v1 } = newTrace();
+    const malformed = { ...v1, actions: "not-actions" } as unknown as typeof v1;
+
+    expect(() => replayTrace(malformed, microRules)).toThrow(SaveIntegrityError);
+    expect(() => replayTrace(malformed, microRules)).toThrow(/actions/);
   });
 });

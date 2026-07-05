@@ -13,8 +13,10 @@ import type { EngineAction, Rules } from "../core/engine.js";
 import { runActions, type Trace } from "./record.js";
 import { SAVE_MODE, SaveIntegrityError } from "../persist/save_load.js";
 import {
+  assertTraceActions,
   assertTraceIdentityFields,
   assertTraceStepHashes,
+  type TraceActionFields,
   type TraceIdentityFields,
   type TraceStepHashFields,
 } from "./integrity.js";
@@ -48,13 +50,16 @@ export function assertTraceMode(trace: {
   content_hash?: unknown;
   actions?: unknown;
   per_step_hashes?: unknown;
-}): asserts trace is { mode: typeof SAVE_MODE } & TraceIdentityFields & TraceStepHashFields {
+}): asserts trace is { mode: typeof SAVE_MODE } & TraceIdentityFields &
+  TraceActionFields &
+  TraceStepHashFields {
   if (trace.mode !== SAVE_MODE) {
     throw new SaveIntegrityError(
       `Trace mode must be "${SAVE_MODE}", got ${JSON.stringify(trace.mode)}.`,
     );
   }
   assertTraceIdentityFields(trace);
+  assertTraceActions(trace);
   assertTraceStepHashes(trace);
 }
 
