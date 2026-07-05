@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 413 -->
+<!-- historical_cycle_count: 414 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - session_source_identity_guarded
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: `SessionStore.create` now rejects contradictory MCP RPG source identity before retaining a session.
+- Loop effect: generated sessions cannot also carry world quest or pack-path identity, and overworld-launched RPG sessions must bind to a world quest.
+- Guard: focused session-store regression covers conflict rejection, safe generated-seed validation, id preservation after rejected creates, and metadata locks for shipped/generated sessions.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused session regression, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - trace_generated_source_replay
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: blind harness smoke output now matches mode-free MCP start responses instead of showing `mode undefined` during preflight checks.
 - Guard: focused Prettier, typecheck, blind runner contract, and blind smoke checks passed over the cleanup.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm run blind:smoke`, focused test, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - inspect_cli_mode_line_removed
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: `npm run inspect -- <world_quest_id>` no longer repeats `mode: rpg`; quest summaries keep world quest id, pack title/counts, and hash.
-- Loop effect: local inspection stays RPG-only while dropping another redundant single-runtime token from CLI diagnostics.
-- Guard: focused Prettier, typecheck, trace CLI, validation-bar, and RPG schema-standalone tests passed over the cleanup.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.

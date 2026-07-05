@@ -138,6 +138,36 @@ describe("SessionStore", () => {
     );
   });
 
+  it("rejects contradictory session source identity before retaining a session", () => {
+    const store = new SessionStore();
+
+    expect(() =>
+      store.create(sessionInit({ worldQuestId: "test_quest", generatedRpgSeed: 9 })),
+    ).toThrow(/worldQuestId and generatedRpgSeed/);
+    expect(() =>
+      store.create(sessionInit({ packPath: "content/rpg/pack/test.yaml", generatedRpgSeed: 9 })),
+    ).toThrow(/packPath and generatedRpgSeed/);
+    expect(() => store.create(sessionInit({ overworldSessionId: "ow_1" }))).toThrow(
+      /requires worldQuestId/,
+    );
+    expect(() =>
+      store.create(sessionInit({ generatedRpgSeed: Number.MAX_SAFE_INTEGER + 1 })),
+    ).toThrow(/safe range/);
+
+    const validWorld = store.create(
+      sessionInit({
+        packPath: "content/rpg/pack/test.yaml",
+        worldQuestId: "test_quest",
+        overworldSessionId: "ow_1",
+      }),
+    );
+    const validGenerated = store.create(sessionInit({ generatedRpgSeed: 9 }));
+
+    expect(validWorld.id).toBe("sess_1");
+    expect(validGenerated.id).toBe("sess_2");
+    expect(() => store.get("sess_3")).toThrow('Unknown session "sess_3".');
+  });
+
   it("bounds stored sessions and keeps recently accessed sessions", () => {
     const store = new SessionStore(2);
 
@@ -365,7 +395,6 @@ describe("SessionStore", () => {
         packPath: "content/rpg/pack/test.yaml",
         worldQuestId: "test_quest",
         overworldSessionId: "ow_1",
-        generatedRpgSeed: 9,
         hideGraph: true,
       }),
     );
@@ -376,7 +405,6 @@ describe("SessionStore", () => {
       "packPath",
       "worldQuestId",
       "overworldSessionId",
-      "generatedRpgSeed",
       "index",
       "rules",
       "step",
@@ -398,9 +426,6 @@ describe("SessionStore", () => {
       (session as { overworldSessionId: string }).overworldSessionId = "ow_2";
     }).toThrow();
     expect(() => {
-      (session as { generatedRpgSeed: number }).generatedRpgSeed = 10;
-    }).toThrow();
-    expect(() => {
       (session as { hideGraph: boolean }).hideGraph = false;
     }).toThrow();
     expect(() => {
@@ -415,6 +440,15 @@ describe("SessionStore", () => {
     expect(session.state.current).toBe("next");
     expect(session.stateHash).toBe(hashState(session.state));
     expect(session.legalActionsCache).toBeUndefined();
+
+    const generatedSession = store.create(sessionInit({ generatedRpgSeed: 9 }));
+    expect(Object.getOwnPropertyDescriptor(generatedSession, "generatedRpgSeed")).toMatchObject({
+      configurable: false,
+      writable: false,
+    });
+    expect(() => {
+      (generatedSession as { generatedRpgSeed: number }).generatedRpgSeed = 10;
+    }).toThrow();
   });
 
   it("keeps transcript log hashes in sync with store-owned writes", () => {

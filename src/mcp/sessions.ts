@@ -15,6 +15,7 @@ import type { RpgActionOption } from "../rpg/legal_actions.js";
 import type { ObservationOptions, RpgObservation } from "../rpg/observation.js";
 import type { RpgIndex } from "../rpg/runner.js";
 import { hashState } from "../core/hash.js";
+import { generatedRpgSeedValidationMessage, isGeneratedRpgSeed } from "../gen/seed.js";
 import { cloneMcpEvent } from "./event_clone.js";
 import {
   cachedSessionProjection,
@@ -84,6 +85,32 @@ function assertTranscriptTurnLimit(maxTurns: number): number {
     throw new Error("MCP session transcript turn limit must be a positive integer.");
   }
   return maxTurns;
+}
+
+function assertOptionalNonEmptyString(value: unknown, label: string): void {
+  if (value !== undefined && (typeof value !== "string" || value.length === 0)) {
+    throw new Error(`${label} must be a non-empty string when present.`);
+  }
+}
+
+function assertSessionSourceIdentity(init: SessionInit): void {
+  assertOptionalNonEmptyString(init.packPath, "MCP session packPath");
+  assertOptionalNonEmptyString(init.worldQuestId, "MCP session worldQuestId");
+  assertOptionalNonEmptyString(init.overworldSessionId, "MCP session overworldSessionId");
+  if (init.generatedRpgSeed !== undefined && !isGeneratedRpgSeed(init.generatedRpgSeed)) {
+    throw new Error(
+      generatedRpgSeedValidationMessage("MCP session generatedRpgSeed", init.generatedRpgSeed),
+    );
+  }
+  if (init.generatedRpgSeed !== undefined && init.worldQuestId !== undefined) {
+    throw new Error("MCP session source cannot carry both worldQuestId and generatedRpgSeed.");
+  }
+  if (init.generatedRpgSeed !== undefined && init.packPath !== undefined) {
+    throw new Error("MCP session source cannot carry both packPath and generatedRpgSeed.");
+  }
+  if (init.overworldSessionId !== undefined && init.worldQuestId === undefined) {
+    throw new Error("MCP session overworldSessionId requires worldQuestId.");
+  }
 }
 
 function refreshSessionEntry<Key, Entry>(sessions: Map<Key, Entry>, key: Key): Entry | undefined {
@@ -345,6 +372,7 @@ export class SessionStore {
   }
 
   create(init: SessionInit): Session {
+    assertSessionSourceIdentity(init);
     const id = `sess_${++this.counter}`;
     const state = cloneFrozenGameState(init.state);
     const transcript = cloneTranscriptRows(init.transcript);
