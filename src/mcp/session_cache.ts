@@ -25,6 +25,7 @@ export type SessionRuntimeCaches<TranscriptSummary> = {
     actions: RpgActionOption[];
   };
   legalActionProjectionCaches?: Map<string, StateProjectionCacheEntry>;
+  stateProjectionCaches?: Map<string, StateProjectionCacheEntry>;
   observationCache?: {
     stateHash: string;
     hideGraph: boolean;
@@ -72,6 +73,7 @@ export function cachedSessionProjection<T, Entry extends { projection: unknown }
 export function invalidateSessionStateCaches(caches: SessionRuntimeCaches<unknown>): void {
   delete caches.legalActionsCache;
   delete caches.legalActionProjectionCaches;
+  delete caches.stateProjectionCaches;
   delete caches.observationCache;
   delete caches.observationProjectionCaches;
   delete caches.transcriptSummaryCache;

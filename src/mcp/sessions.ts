@@ -320,6 +320,7 @@ export type SessionInit = Omit<
   | "stateHash"
   | "legalActionsCache"
   | "legalActionProjectionCaches"
+  | "stateProjectionCaches"
   | "observationCache"
   | "observationProjectionCaches"
   | "transcriptLogHash"
@@ -405,6 +406,22 @@ export class SessionStore {
       () => deepFreeze(build()),
     );
     session.legalActionProjectionCaches = cached.cacheMap;
+    return cached.value;
+  }
+
+  stateProjection<T>(id: string, key: string, build: () => T): T {
+    const session = this.get(id);
+    const cached = cachedSessionProjection<T, StateProjectionCacheEntry>(
+      session.stateProjectionCaches,
+      key,
+      (entry) => entry.stateHash === session.stateHash,
+      (projection) => ({
+        stateHash: session.stateHash,
+        projection,
+      }),
+      () => deepFreeze(build()),
+    );
+    session.stateProjectionCaches = cached.cacheMap;
     return cached.value;
   }
 

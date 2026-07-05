@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 407 -->
+<!-- historical_cycle_count: 408 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - compact_state_projection_cached
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: `get_state({ compact_state: true })` now uses a version-keyed, state-hash `SessionStore` projection cache and returns cloned compact payloads.
+- Loop effect: repeated compact-state polling avoids rebuilding public state scalars, lists, object summaries, and quest stages while keeping returned MCP payloads detached.
+- Guard: session cache invalidation/freeze coverage, compact-state tool cache use, and response-mutation regression passed.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused unit tests, `npm test`, and `npm run health` passed.
 
 ### Cycle result - blind_compact_state_audits
 
@@ -115,13 +123,5 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
 - Engine/loop surface: stale-reactive room-item audit sites no longer carry unused pack metadata; site payloads keep only pack path plus room/object evidence needed for triage.
 - Loop effect: AFK structural candidates avoid another raw pack identity field while preserving deterministic stale-prose evidence for engine-side follow-up.
-- Guard: focused Prettier, typecheck, stale-reactive audit, assessor, and RPG schema-standalone tests passed over the cleanup.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - stale_reactive_audit_mode_removed
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: stale-reactive room-item audit now scans the single RPG pack directory directly and no longer emits a constant `mode` field on audit sites.
-- Loop effect: AFK structural candidates carry only pack identity and room/object evidence, removing a retired mode axis from loop-facing audit payloads.
 - Guard: focused Prettier, typecheck, stale-reactive audit, assessor, and RPG schema-standalone tests passed over the cleanup.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.

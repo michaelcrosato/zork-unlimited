@@ -239,6 +239,7 @@ describe("SessionStore", () => {
     const session = store.create(sessionInit({ state: initialState }));
     const actions: RpgActionOption[] = [{ id: "look", command: "look", action: { type: "LOOK" } }];
     const actionProjection = ["look"];
+    const stateProjection = { at: "start", vitals: [0, 0, 0] };
     const obs = observation("start");
     const observationProjection = { here: ["start", "Start"] };
     const summary: TranscriptSummary = {
@@ -254,6 +255,7 @@ describe("SessionStore", () => {
 
     store.legalActions(session.id, () => actions);
     store.legalActionProjection(session.id, "rows:compact:1", () => actionProjection);
+    store.stateProjection(session.id, "compact-state:v1", () => stateProjection);
     store.observation(session.id, {}, () => obs);
     store.observationProjection(session.id, "compact:v6", () => observationProjection);
     store.transcriptSummary(session.id, () => summary);
@@ -269,6 +271,7 @@ describe("SessionStore", () => {
     expect(session.stateHash).toBe(stateHash);
     expect(session.legalActionsCache).toBeDefined();
     expect(session.legalActionProjectionCaches).toBeDefined();
+    expect(session.stateProjectionCaches).toBeDefined();
     expect(session.observationCache).toBeDefined();
     expect(session.observationProjectionCaches).toBeDefined();
     expect(session.transcriptSummaryCache).toBeDefined();
@@ -287,6 +290,12 @@ describe("SessionStore", () => {
         return [];
       }),
     ).toBe(actionProjection);
+    expect(
+      store.stateProjection(session.id, "compact-state:v1", () => {
+        rebuilds += 1;
+        return { at: "rebuilt", vitals: [1, 1, 1] };
+      }),
+    ).toBe(stateProjection);
     expect(
       store.observation(session.id, {}, () => {
         rebuilds += 1;
@@ -936,6 +945,59 @@ describe("SessionStore", () => {
     expect(builds).toBe(3);
   });
 
+  it("caches state projections until state changes", () => {
+    const store = new SessionStore();
+    const session = store.create(sessionInit());
+    const firstProjection = { at: "start", vitals: [0, 0, 0] };
+    const nextProjection = { at: "next", vitals: [1, 1, 1] };
+    const otherProjection = { at: "start", flags: ["visited"] };
+    let builds = 0;
+
+    const first = store.stateProjection(session.id, "compact-state:v1", () => {
+      builds += 1;
+      return firstProjection;
+    });
+    const cached = store.stateProjection(session.id, "compact-state:v1", () => {
+      builds += 1;
+      return nextProjection;
+    });
+    const otherShape = store.stateProjection(session.id, "state-flags:v1", () => {
+      builds += 1;
+      return otherProjection;
+    });
+
+    expect(first).toBe(firstProjection);
+    expect(cached).toBe(firstProjection);
+    expect(otherShape).toBe(otherProjection);
+    expect(builds).toBe(2);
+    expect(session.stateProjectionCaches?.get("compact-state:v1")?.stateHash).toBe(
+      session.stateHash,
+    );
+
+    store.appendTranscript(session.id, {
+      step: 1,
+      scene_id: "start",
+      title: "Start",
+      action_id: "look",
+      action_text: "look",
+      events: [],
+      result_scene_id: "start",
+      ended: false,
+      ending_id: null,
+    });
+    expect(session.stateProjectionCaches).toBeDefined();
+
+    store.update(session.id, state("next"));
+    expect(session.stateProjectionCaches).toBeUndefined();
+
+    const afterState = store.stateProjection(session.id, "compact-state:v1", () => {
+      builds += 1;
+      return nextProjection;
+    });
+    expect(afterState).toBe(nextProjection);
+    expect(builds).toBe(3);
+  });
+
   it("freezes cached session payloads against in-process mutation", () => {
     const store = new SessionStore();
     const session = store.create(sessionInit());
@@ -962,6 +1024,10 @@ describe("SessionStore", () => {
     const legalProjection = store.legalActionProjection(session.id, "rows:full", () => [
       { id: "look", command: "look", skill_check: { skill: "lore", difficulty: 7, die: "d20" } },
     ]);
+    const stateProjection = store.stateProjection(session.id, "compact-state", () => ({
+      at: "start",
+      vitals: [0, 0, 0],
+    }));
     const obs = store.observation(session.id, {}, () => observed);
     const observationProjection = store.observationProjection(session.id, "compact", () => ({
       here: ["start", "Start"],
@@ -988,6 +1054,8 @@ describe("SessionStore", () => {
     expect(Object.isFrozen(legalProjection)).toBe(true);
     expect(Object.isFrozen(legalProjection[0])).toBe(true);
     expect(Object.isFrozen(legalProjection[0]!.skill_check)).toBe(true);
+    expect(Object.isFrozen(stateProjection)).toBe(true);
+    expect(Object.isFrozen(stateProjection.vitals)).toBe(true);
     expect(Object.isFrozen(obs)).toBe(true);
     expect(Object.isFrozen(obs.available_actions)).toBe(true);
     expect(Object.isFrozen(obs.available_actions[0]!.action)).toBe(true);

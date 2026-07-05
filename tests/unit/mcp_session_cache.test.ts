@@ -31,6 +31,7 @@ function populatedCaches(): SessionRuntimeCaches<TranscriptSummary> {
   return {
     legalActionsCache: { stateHash: "state-1", actions },
     legalActionProjectionCaches: new Map([["legal:v1", { stateHash: "state-1", projection: [] }]]),
+    stateProjectionCaches: new Map([["state:v1", { stateHash: "state-1", projection: {} }]]),
     observationCache: {
       stateHash: "state-1",
       hideGraph: false,
@@ -60,6 +61,7 @@ describe("MCP session caches", () => {
 
     expect(caches.legalActionsCache).toBeUndefined();
     expect(caches.legalActionProjectionCaches).toBeUndefined();
+    expect(caches.stateProjectionCaches).toBeUndefined();
     expect(caches.observationCache).toBeUndefined();
     expect(caches.observationProjectionCaches).toBeUndefined();
     expect(caches.transcriptSummaryCache).toBeUndefined();
@@ -74,6 +76,7 @@ describe("MCP session caches", () => {
 
     expect(caches.legalActionsCache).toBeDefined();
     expect(caches.legalActionProjectionCaches).toBeDefined();
+    expect(caches.stateProjectionCaches).toBeDefined();
     expect(caches.observationCache).toBeDefined();
     expect(caches.observationProjectionCaches).toBeDefined();
     expect(caches.transcriptSummaryCache).toBeUndefined();

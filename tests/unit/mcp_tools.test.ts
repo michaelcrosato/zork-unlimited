@@ -1879,6 +1879,17 @@ describe("MCP tools — the play loop (§9.1)", () => {
     ]);
     expect("mode" in compactState.compact_state).toBe(false);
     expect(JSON.stringify(compactState).length).toBeLessThan(JSON.stringify(rawState).length);
+    expect(a.sessions.get(game.session_id).stateProjectionCaches?.size).toBe(1);
+    const compactStateRoom = compactState.compact_state.at;
+    (compactState.compact_state as { at: string }).at = "mutated_room";
+    (compactState.compact_state.vitals as unknown as number[])[0] = -999;
+    const afterCompactStateMutation = a.get_state({
+      session_id: game.session_id,
+      compact_state: true,
+    });
+    expect(afterCompactStateMutation.compact_state.at).toBe(compactStateRoom);
+    expect(afterCompactStateMutation.compact_state.vitals[0]).toBe(last.observation.stats.hp);
+    expect(a.sessions.get(game.session_id).stateProjectionCaches?.size).toBe(1);
     const rawAndCompactState = a.get_state({
       session_id: game.session_id,
       include_state: true,

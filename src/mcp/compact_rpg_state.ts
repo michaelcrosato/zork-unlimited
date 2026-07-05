@@ -202,3 +202,39 @@ export function compactRpgState(state: GameState, opts: CompactStateOptions = {}
     ...(state.endingId ? { ending_id: compactMcpTranscriptSummaryValue(state.endingId) } : {}),
   };
 }
+
+function cloneCompactRpgStateObject(object: RpgCompactStateObject): RpgCompactStateObject {
+  return {
+    id: object.id,
+    ...(object.open === true ? { open: true as const } : {}),
+    ...(object.locked !== undefined ? { locked: object.locked } : {}),
+    ...(object.by !== undefined ? { by: object.by } : {}),
+    ...(object.room !== undefined ? { room: object.room } : {}),
+    ...(object.contents !== undefined ? { contents: [...object.contents] } : {}),
+    ...(object.contents_more !== undefined ? { contents_more: object.contents_more } : {}),
+  };
+}
+
+export function cloneCompactRpgState(state: RpgCompactState): RpgCompactState {
+  return {
+    v: state.v,
+    at: state.at,
+    step: state.step,
+    seed: state.seed,
+    vitals: [...state.vitals] as RpgCompactStateVitals,
+    ...(state.inv !== undefined ? { inv: [...state.inv] } : {}),
+    ...(state.flags !== undefined ? { flags: [...state.flags] } : {}),
+    ...(state.vars !== undefined ? { vars: { ...state.vars } } : {}),
+    ...(state.journal !== undefined ? { journal: [...state.journal] } : {}),
+    ...(state.visited !== undefined ? { visited: [...state.visited] } : {}),
+    ...(state.objects !== undefined
+      ? { objects: state.objects.map(cloneCompactRpgStateObject) }
+      : {}),
+    ...(state.quests !== undefined
+      ? { quests: state.quests.map((quest) => [quest[0], quest[1]] as RpgCompactQuestStage) }
+      : {}),
+    ...(state.more !== undefined ? { more: [...state.more] as RpgCompactStateMore } : {}),
+    ...(state.ended === true ? { ended: true as const } : {}),
+    ...(state.ending_id !== undefined ? { ending_id: state.ending_id } : {}),
+  };
+}

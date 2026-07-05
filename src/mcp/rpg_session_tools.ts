@@ -1,7 +1,12 @@
 import type { GameState } from "../core/state.js";
 import { cloneGameState } from "../core/state.js";
 import { SAVE_MODE, save } from "../persist/save_load.js";
-import { compactRpgState, type RpgCompactState } from "./compact_rpg_state.js";
+import {
+  RPG_COMPACT_STATE_VERSION,
+  cloneCompactRpgState,
+  compactRpgState,
+  type RpgCompactState,
+} from "./compact_rpg_state.js";
 import {
   legalActionRowsFor,
   rpgViewField,
@@ -223,9 +228,13 @@ export function runRpgGetState<Args extends RpgGetStateToolArgs>(
     response.state = cloneGameState(s.state);
   }
   if (args.compact_state === true) {
-    response.compact_state = compactRpgState(s.state, {
-      maxScore: s.index.pack.meta.max_score ?? 0,
-    });
+    response.compact_state = cloneCompactRpgState(
+      deps.sessions.stateProjection(s.id, `compact-state:v${RPG_COMPACT_STATE_VERSION}`, () =>
+        compactRpgState(s.state, {
+          maxScore: s.index.pack.meta.max_score ?? 0,
+        }),
+      ),
+    );
   }
   return response as RpgStateToolResponse<Args>;
 }
