@@ -2575,12 +2575,32 @@ describe("MCP tools — the play loop (§9.1)", () => {
     const a = api();
     const game = a.start_world_quest({ world_quest_id: "sunken_barrow" });
     const before = a.get_observation({ session_id: game.session_id }).state_hash;
+    const transcriptBefore = a.get_transcript({
+      session_id: game.session_id,
+      summary_only: true,
+    });
     const r = a.step_action({ session_id: game.session_id, action_id: "not_a_real_choice" });
     expect(r.ok).toBe(false);
     expect("rejection_reason" in r).toBe(true);
     if (r.ok) throw new Error("expected illegal action rejection");
     expect(r.rejection_reason).toBeTruthy();
     expect(r.state_hash).toBe(before);
+    const transcriptAfter = a.get_transcript({ session_id: game.session_id });
+    const rejectedTurn = transcriptAfter.turns[transcriptAfter.turns.length - 1]!;
+    expect(transcriptAfter.state_hash).toBe(before);
+    expect(transcriptAfter.transcript_hash).not.toBe(transcriptBefore.transcript_hash);
+    expect(transcriptAfter.summary.steps).toBe(transcriptBefore.summary.steps + 1);
+    expect(rejectedTurn).toMatchObject({
+      action_id: "not_a_real_choice",
+      action_text: null,
+      scene_id: game.observation.room,
+      result_scene_id: game.observation.room,
+      ended: game.observation.ended,
+      ending_id: game.observation.ending_id,
+    });
+    expect(rejectedTurn.events).toEqual([
+      { type: "rejected", reason: "That action is not available right now." },
+    ]);
   });
 
   it("step_action rejects stale expected_state_hash before mutating state", () => {

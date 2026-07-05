@@ -62,16 +62,26 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
   const beforeSceneId = s.state.current;
   const beforeTitle = rpgRoomTitle(s.index, s.state);
   if (actionOption === null) {
+    const rejectionReason = "That action is not available right now.";
+    const rejectionEvents = [{ type: "rejected" as const, reason: rejectionReason }];
     const beforeObsOpts = {
       hideGraph: args.hide_graph ?? s.hideGraph ?? false,
     };
+    sessions.appendTranscript(s.id, {
+      step: beforeStep,
+      scene_id: beforeSceneId,
+      title: beforeTitle,
+      action_id: args.action_id,
+      action_text: null,
+      events: rejectionEvents,
+      result_scene_id: beforeSceneId,
+      ended: s.state.ended,
+      ending_id: s.state.endingId,
+    });
     return {
       ok: false,
-      rejection_reason: "That action is not available right now.",
-      events: rpgStepEvents(
-        [{ type: "rejected" as const, reason: "That action is not available right now." }],
-        args,
-      ),
+      rejection_reason: rejectionReason,
+      events: rpgStepEvents(rejectionEvents, args),
       ...rpgStepEventVersion(args),
       ...rpgViewField(
         sessions,
