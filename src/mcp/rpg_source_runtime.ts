@@ -37,6 +37,7 @@ export type RpgLoadResult =
   | { ok: false; report: ValidationReport };
 
 type RpgPackLoadCacheEntry = {
+  ctimeMs: number;
   mtimeMs: number;
   size: number;
   result: RpgLoadResult;
@@ -132,7 +133,12 @@ export class RpgSourceRuntime {
     const abs = safeResolve(this.root, packPath);
     const stat = statSync(abs);
     const cached = refreshSourceCacheEntry(this.packLoadCache, abs);
-    if (cached && cached.mtimeMs === stat.mtimeMs && cached.size === stat.size) {
+    if (
+      cached &&
+      cached.ctimeMs === stat.ctimeMs &&
+      cached.mtimeMs === stat.mtimeMs &&
+      cached.size === stat.size
+    ) {
       return cached.result;
     }
 
@@ -151,6 +157,7 @@ export class RpgSourceRuntime {
         ]),
       });
       rememberSourceCacheEntry(this.packLoadCache, abs, {
+        ctimeMs: stat.ctimeMs,
         mtimeMs: stat.mtimeMs,
         size: stat.size,
         result,
@@ -164,6 +171,7 @@ export class RpgSourceRuntime {
         report: makeReport(packPath, schemaFindings(packPath, compileRes.error)),
       });
       rememberSourceCacheEntry(this.packLoadCache, abs, {
+        ctimeMs: stat.ctimeMs,
         mtimeMs: stat.mtimeMs,
         size: stat.size,
         result,
@@ -174,6 +182,7 @@ export class RpgSourceRuntime {
     const report = validateRpg(pack);
     result = freezeLoadResult({ ok: true, compiled: compileRes.compiled, report });
     rememberSourceCacheEntry(this.packLoadCache, abs, {
+      ctimeMs: stat.ctimeMs,
       mtimeMs: stat.mtimeMs,
       size: stat.size,
       result,

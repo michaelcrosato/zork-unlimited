@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { mkdirSync, mkdtempSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import {
   RPG_SOURCE_RUNTIME_CACHE_LIMIT,
@@ -17,6 +20,22 @@ const PACK_PATHS = [
   "content/rpg/pack/falconers_ransom.yaml",
   "content/rpg/pack/gallowmere.yaml",
 ] as const;
+
+function withTempRoot(run: (root: string) => void): void {
+  const root = mkdtempSync(join(tmpdir(), "rpg-source-cache-"));
+  try {
+    run(root);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
+function waitForTimestampTick(): void {
+  const start = Date.now();
+  while (Date.now() - start < 20) {
+    // Busy wait keeps this test dependency-free and below filesystem timestamp granularity.
+  }
+}
 
 describe("RpgSourceRuntime caches", () => {
   it("bounds generated RPG cache entries while preserving recent seed reuse", () => {
@@ -52,5 +71,31 @@ describe("RpgSourceRuntime caches", () => {
     expect(added).not.toBe(loaded[RPG_SOURCE_RUNTIME_CACHE_LIMIT - 1]);
     expect(retainedFirst).toBe(loaded[0]);
     expect(evictedSecond).not.toBe(loaded[1]);
+  });
+
+  it("invalidates file-backed reports after same-size rewrites with restored mtime", () => {
+    withTempRoot((root) => {
+      mkdirSync(join(root, "packs"), { recursive: true });
+      const packPath = join(root, "packs", "same-size.yaml");
+      const packSource = "not: rpg\n";
+      const fixedTime = new Date("2026-01-01T00:00:00.000Z");
+      writeFileSync(packPath, packSource, "utf8");
+      utimesSync(packPath, fixedTime, fixedTime);
+
+      const runtime = new RpgSourceRuntime(root);
+      const first = runtime.loadAndReport("packs/same-size.yaml");
+      const firstStat = statSync(packPath);
+      waitForTimestampTick();
+      writeFileSync(packPath, packSource, "utf8");
+      utimesSync(packPath, fixedTime, fixedTime);
+      const secondStat = statSync(packPath);
+      const second = runtime.loadAndReport("packs/same-size.yaml");
+
+      expect(secondStat.size).toBe(firstStat.size);
+      expect(secondStat.mtimeMs).toBe(firstStat.mtimeMs);
+      expect(secondStat.ctimeMs).not.toBe(firstStat.ctimeMs);
+      expect(second).not.toBe(first);
+      expect(second).toEqual(first);
+    });
   });
 });
