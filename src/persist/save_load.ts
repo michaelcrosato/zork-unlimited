@@ -7,7 +7,7 @@
  * load"). This prevents replaying a save against edited content and corrupting it.
  */
 import { z } from "zod";
-import type { GameState } from "../core/state.js";
+import { MAX_ENGINE_STEP, type GameState } from "../core/state.js";
 import { canonicalize } from "../core/hash.js";
 import {
   compactSourceLegacyMetadata,
@@ -40,10 +40,11 @@ export type SaveMode = typeof SAVE_MODE;
  * truncate to a DIFFERENT value than the one the save's content hash
  * (hash.ts `canonicalize`) committed to. This restores entry↔disk symmetry
  * with the MCP entry boundary (server.ts:147), which already gates
- * `seed: z.number().int()`; `step` is a counter from 0 (state.ts:20), so it is
- * additionally `.nonnegative()`. No sign/range bound is placed on `seed` —
- * negative seeds are legitimate (`mulberry32` does `seed >>> 0`, defined for
- * negatives) and the entry boundary accepts them.
+ * `seed: z.number().int()`. `step` is also bounded to the engine's safe
+ * increment domain; an unsafe integer can make `step + 1` stop advancing
+ * precisely. No sign/range bound is placed on `seed` — negative seeds are
+ * legitimate (`mulberry32` does `seed >>> 0`, defined for negatives) and the
+ * entry boundary accepts them.
  *
  * `objectState` mirrors `ObjectRuntime` (state.ts:9–15) with `.strict()` so an
  * unknown or wrong-typed key is rejected, not silently carried into the engine.
@@ -63,9 +64,9 @@ const GameStateSchema = z
     // identity / determinism — INTEGER domain only (the values rngForStep
     // consumes via `>>> 0`); rejects non-integers AND Infinity/-Infinity/NaN.
     // Matches the MCP entry gate (server.ts:147) exactly: bare .int() on seed
-    // (negative seeds are legitimate); step is a counter from 0 so .nonnegative().
+    // (negative seeds are legitimate); step is a bounded monotonic counter.
     seed: z.number().int(),
-    step: z.number().int().nonnegative(),
+    step: z.number().int().nonnegative().max(MAX_ENGINE_STEP),
     // location
     current: z.string(),
     visited: z.record(z.boolean()),

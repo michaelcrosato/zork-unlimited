@@ -18,7 +18,7 @@
 import { describe, it, expect } from "vitest";
 import { save, load, SaveIntegrityError } from "../../src/persist/save_load.js";
 import { hashState } from "../../src/core/hash.js";
-import type { GameState } from "../../src/core/state.js";
+import { MAX_ENGINE_STEP, type GameState } from "../../src/core/state.js";
 import { microInitState, MICRO_PACK_ID, MICRO_CONTENT_HASH } from "../../src/demo/micro.js";
 
 /** Build the canonical clean save bytes for the micro pack. */
@@ -121,6 +121,17 @@ describe("save/load integrity gate — forged-save REJECTION (§16, SoundnessBen
     expect(() => load(forged, MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
   });
 
+  it("WITNESS: an unsafe step integer is a hard SaveIntegrityError", () => {
+    // At 2^53, `step + 1` is no longer exact (`n + 1 === n`). A loaded save with
+    // that counter would break the monotonic RNG/trace clock without tripping a
+    // normal playtest, so the load boundary rejects it.
+    const forged = forgeWithToken((s) => ({ ...microInitState(), step: s }), "9007199254740992");
+    const step = (JSON.parse(forged) as { state: { step: number } }).state.step;
+    expect(step).toBe(Number.MAX_SAFE_INTEGER + 1);
+    expect(Number.isSafeInteger(step)).toBe(false);
+    expect(() => load(forged, MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
+  });
+
   it("wrong-type flag (flags.lever = string, not boolean) is a hard SaveIntegrityError", () => {
     const bytes = forgeState((state) => {
       state.flags = { lever: "yes" };
@@ -168,6 +179,16 @@ describe("save/load integrity gate — GREEN round-trip (no false rejection)", (
     // well-defined), so it MUST NOT be false-rejected. This proves the gate did
     // NOT over-restrict to `gte(0)` / a 2^32 range bound.
     const s: GameState = { ...microInitState(), seed: -3, step: 0 };
+    const bytes = cleanBytes(s);
+    let loaded!: ReturnType<typeof load>;
+    expect(() => {
+      loaded = load(bytes, MICRO_CONTENT_HASH);
+    }).not.toThrow();
+    expect(hashState(loaded.state)).toBe(hashState(s));
+  });
+
+  it("OVER-RESTRICTION GUARD: the maximum safe engine step still round-trips", () => {
+    const s: GameState = { ...microInitState(), step: MAX_ENGINE_STEP };
     const bytes = cleanBytes(s);
     let loaded!: ReturnType<typeof load>;
     expect(() => {

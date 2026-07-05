@@ -9,7 +9,7 @@
  * an action means in the current state while keeping the reducer pure and
  * content-agnostic.
  */
-import type { GameState } from "./state.js";
+import { MAX_ENGINE_STEP, type GameState } from "./state.js";
 import type { GameEvent } from "./events.js";
 import type { Condition } from "./conditions.js";
 import { evalConditions } from "./conditions.js";
@@ -79,6 +79,13 @@ export function makeStep<A extends EngineAction = RpgAction>(rules: Rules<A>) {
   return function step(state: GameState, action: A): StepResult {
     // A finished game accepts no further actions. No state change.
     if (state.ended) return reject(state, "The game has already ended.");
+
+    // Keep the public action counter inside the safe integer domain. `step`
+    // feeds deterministic RNG and trace hashes; once it cannot advance exactly,
+    // replay and save/load integrity are no longer trustworthy.
+    if (state.step >= MAX_ENGINE_STEP) {
+      return reject(state, "The game has reached the maximum safe step count.");
+    }
 
     // §8.4.1 — legality against the legal-action set. No state change on failure.
     const legal = rules.legalActions(state).some((a) => actionEquals(a, action));

@@ -5,6 +5,13 @@
  * as immutable — every transition returns a fresh value (see core/engine.ts).
  */
 
+/**
+ * Highest persisted action counter the engine will accept. The reducer needs
+ * one safe integer of headroom for `step + 1`; beyond this, JavaScript number
+ * precision can stop the monotonic counter from advancing.
+ */
+export const MAX_ENGINE_STEP = Number.MAX_SAFE_INTEGER - 1;
+
 export type ObjectRuntime = {
   open?: boolean;
   locked?: boolean;

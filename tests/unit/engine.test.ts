@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { makeStep, actionEquals } from "../../src/core/engine.js";
+import { MAX_ENGINE_STEP } from "../../src/core/state.js";
 import { MICRO_ACTIONS, microRules, microInitState } from "../../src/demo/micro.js";
 
 const step = makeStep(microRules);
@@ -55,6 +56,14 @@ describe("engine.step (§8.4 resolution order)", () => {
     expect(s.ended).toBe(true);
     const r = step(s, MICRO_ACTIONS.leaveWorld);
     expect(r.ok).toBe(false);
+  });
+
+  it("rejects actions at the maximum safe step count", () => {
+    const s = { ...microInitState(), step: MAX_ENGINE_STEP };
+    const r = step(s, MICRO_ACTIONS.takeTorch);
+    expect(r.ok).toBe(false);
+    expect(r.state).toBe(s);
+    expect(r.rejectionReason).toMatch(/maximum safe step count/);
   });
 
   it("actionEquals compares structurally", () => {
