@@ -53,10 +53,13 @@ import {
   applyOverworldLocalDiscovery,
   emptyOverworldLocalDiscovery,
   planOverworldLocalDiscovery,
-  questView,
   type OverworldLocalDiscoveryResult,
   type OverworldQuestView,
 } from "./session_local_discovery.js";
+import {
+  buildOverworldSessionLocalView,
+  type OverworldSessionLocalView,
+} from "./session_local_view.js";
 import {
   applyOverworldQuestCompletion,
   applyOverworldQuestStart,
@@ -540,22 +543,6 @@ export class OverworldSession {
     return this.areaExitsByAreaAndId.get(areaId)?.get(routeId) ?? null;
   }
 
-  private discoveredAreasAt(nodeId: string): OverworldArea[] {
-    const areas: OverworldArea[] = [];
-    for (const area of this.localAreas(nodeId)) {
-      if (this.discoveredAreaIds.has(area.id)) areas.push(area);
-    }
-    return areas;
-  }
-
-  private hiddenAreaCountAt(nodeId: string): number {
-    let count = 0;
-    for (const area of this.localAreas(nodeId)) {
-      if (!this.discoveredAreaIds.has(area.id)) count += 1;
-    }
-    return count;
-  }
-
   private currentAreaIdOrThrow(): string {
     const area = this.currentArea();
     if (!area) throw new Error("There is no current local area in this town.");
@@ -574,65 +561,23 @@ export class OverworldSession {
     return this.eventsByArea.get(this.currentAreaIdOrThrow()) ?? [];
   }
 
-  private localJobs(nodeId: string): OverworldLocalJob[] {
-    return this.jobsByTown.get(nodeId) ?? [];
-  }
-
-  private discoveredJobsInCurrentArea(): OverworldLocalJob[] {
-    const areaId = this.currentAreaIdOrThrow();
-    const jobs: OverworldLocalJob[] = [];
-    for (const job of this.localJobs(this.currentId)) {
-      if (job.area === areaId && this.discoveredJobIds.has(job.id)) jobs.push(job);
-    }
-    return jobs;
-  }
-
-  private hiddenJobCountAt(nodeId: string): number {
-    let count = 0;
-    for (const job of this.localJobs(nodeId)) {
-      if (!this.discoveredJobIds.has(job.id)) count += 1;
-    }
-    return count;
-  }
-
   private currentAreaSites(): OverworldExplorationSite[] {
     return this.sitesByArea.get(this.currentAreaIdOrThrow()) ?? [];
   }
 
-  private discoveredSitesInCurrentArea(): OverworldExplorationSite[] {
-    const sites: OverworldExplorationSite[] = [];
-    for (const site of this.currentAreaSites()) {
-      if (this.discoveredSiteIds.has(site.id)) sites.push(site);
-    }
-    return sites;
-  }
-
-  private hiddenSiteCountInCurrentArea(): number {
-    let count = 0;
-    for (const site of this.currentAreaSites()) {
-      if (!this.discoveredSiteIds.has(site.id)) count += 1;
-    }
-    return count;
-  }
-
-  private localQuests(nodeId: string): OverworldQuest[] {
-    return this.questsByTown.get(nodeId) ?? [];
-  }
-
-  private discoveredQuestsAt(nodeId: string): OverworldQuestView[] {
-    const quests: OverworldQuestView[] = [];
-    for (const quest of this.localQuests(nodeId)) {
-      if (this.discoveredQuestIds.has(quest.id)) quests.push(questView(quest));
-    }
-    return quests;
-  }
-
-  private hiddenQuestCountAt(nodeId: string): number {
-    let count = 0;
-    for (const quest of this.localQuests(nodeId)) {
-      if (!this.discoveredQuestIds.has(quest.id)) count += 1;
-    }
-    return count;
+  private currentLocalView(): OverworldSessionLocalView {
+    const currentAreaId = this.currentAreaIdOrThrow();
+    return buildOverworldSessionLocalView({
+      currentAreaId,
+      localAreas: this.localAreas(this.currentId),
+      localJobs: this.jobsByTown.get(this.currentId) ?? [],
+      currentAreaSites: this.sitesByArea.get(currentAreaId) ?? [],
+      localQuests: this.questsByTown.get(this.currentId) ?? [],
+      discoveredAreaIds: this.discoveredAreaIds,
+      discoveredJobIds: this.discoveredJobIds,
+      discoveredSiteIds: this.discoveredSiteIds,
+      discoveredQuestIds: this.discoveredQuestIds,
+    });
   }
 
   private discoverLocalProgressForTown(nodeId: string): OverworldLocalDiscoveryResult {
@@ -752,6 +697,7 @@ export class OverworldSession {
     const current = this.currentNode();
     const currentArea = this.currentArea();
     const routeOptions = this.discoveredRouteOptions();
+    const localView = this.currentLocalView();
     return buildOverworldSessionCompactView({
       worldName: this.world.name,
       worldTownCount: this.world.nodes.length,
@@ -763,17 +709,17 @@ export class OverworldSession {
       roads: this.roadsFrom(this.currentId),
       areaExits: this.visibleAreaExits(),
       routeOptions,
-      areas: this.discoveredAreasAt(this.currentId),
+      areas: localView.areas,
       poi: this.currentAreaPois(),
       contacts: this.currentAreaCharacters(),
       events: this.currentAreaEvents(),
-      jobs: this.discoveredJobsInCurrentArea(),
-      sites: this.discoveredSitesInCurrentArea(),
-      quests: this.discoveredQuestsAt(this.currentId),
-      hiddenAreaCount: this.hiddenAreaCountAt(this.currentId),
-      hiddenJobCount: this.hiddenJobCountAt(this.currentId),
-      hiddenSiteCount: this.hiddenSiteCountInCurrentArea(),
-      hiddenQuestCount: this.hiddenQuestCountAt(this.currentId),
+      jobs: localView.jobs,
+      sites: localView.sites,
+      quests: localView.quests,
+      hiddenAreaCount: localView.hiddenAreaCount,
+      hiddenJobCount: localView.hiddenJobCount,
+      hiddenSiteCount: localView.hiddenSiteCount,
+      hiddenQuestCount: localView.hiddenQuestCount,
       journalEntries: this.journalEntries,
       travelLog: this.travelLog,
       visitedCount: this.visitedIds.size,
@@ -809,6 +755,7 @@ export class OverworldSession {
 
   private buildView(): OverworldView {
     const current = this.currentNode();
+    const localView = this.currentLocalView();
     return buildOverworldSessionView({
       worldName: this.world.name,
       worldTownCount: this.world.nodes.length,
@@ -819,17 +766,17 @@ export class OverworldSession {
       fatigue: this.fatigue,
       roads: this.roadsFrom(this.currentId),
       areaExits: this.visibleAreaExits(),
-      areas: this.discoveredAreasAt(this.currentId),
-      hiddenAreaCount: this.hiddenAreaCountAt(this.currentId),
+      areas: localView.areas,
+      hiddenAreaCount: localView.hiddenAreaCount,
       poi: this.currentAreaPois(),
       contacts: this.currentAreaCharacters(),
       events: this.currentAreaEvents(),
-      jobs: this.discoveredJobsInCurrentArea(),
-      hiddenJobCount: this.hiddenJobCountAt(this.currentId),
-      sites: this.discoveredSitesInCurrentArea(),
-      hiddenSiteCount: this.hiddenSiteCountInCurrentArea(),
-      quests: this.discoveredQuestsAt(this.currentId),
-      hiddenQuestCount: this.hiddenQuestCountAt(this.currentId),
+      jobs: localView.jobs,
+      hiddenJobCount: localView.hiddenJobCount,
+      sites: localView.sites,
+      hiddenSiteCount: localView.hiddenSiteCount,
+      quests: localView.quests,
+      hiddenQuestCount: localView.hiddenQuestCount,
       routeOptions: this.discoveredRouteOptions(),
       discoveredIds: this.discoveredIds,
       nodes: this.nodes,
