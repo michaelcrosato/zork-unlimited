@@ -30,10 +30,7 @@ import {
   type OverworldRoutePlannerIndex,
   type OverworldSessionRoutePlan,
 } from "./session_routes.js";
-import {
-  applyOverworldRoadEncounter,
-  type OverworldRoadEncounterResult,
-} from "./session_road_encounters.js";
+import { type OverworldRoadEncounterResult } from "./session_road_encounters.js";
 import { type OverworldActionJournalState } from "./session_action_recording.js";
 import {
   applyOverworldEventResolution,
@@ -71,7 +68,6 @@ import {
   planOverworldSiteExploration,
   type OverworldAreaTravelResult,
 } from "./session_local_actions.js";
-import { applyOverworldTravelLeg, recordOverworldTravelLeg } from "./session_travel_log.js";
 import {
   OverworldSessionSnapshotSchema,
   cloneOverworldSessionSnapshot,
@@ -125,6 +121,10 @@ import {
   type OverworldSessionActionApplication,
   type OverworldSessionLocalAction,
 } from "./session_action_application.js";
+import {
+  applyOverworldSessionRoadEncounter,
+  applyOverworldSessionRoadTravel,
+} from "./session_road_travel.js";
 
 export type {
   OverworldRoadEncounterOption,
@@ -408,14 +408,6 @@ export class OverworldSession {
 
   private roadsFrom(nodeId: string): OverworldExit[] {
     return this.roadExitsByTown.get(nodeId) ?? [];
-  }
-
-  private roadFrom(nodeId: string, edgeId: string): OverworldExit | null {
-    return this.roadExitsByTownAndId.get(nodeId)?.get(edgeId) ?? null;
-  }
-
-  private roadEventFor(edgeId: string): OverworldRoadEvent | null {
-    return this.roadEventsByEdgeId.get(edgeId) ?? null;
   }
 
   private localState(): MutableOverworldSessionLocalState {
@@ -924,20 +916,19 @@ export class OverworldSession {
   }
 
   resolveRoadEncounter(strategy: OverworldRoadEncounterStrategy): OverworldRoadEncounterResult {
-    const encounter = this.pendingRoadEncounter;
-    if (!encounter) throw new Error("There is no pending road encounter.");
-    const current = this.currentNode();
-    const applied = applyOverworldRoadEncounter(encounter, strategy, {
-      fatigue: this.fatigue,
-      journalEntries: this.journalEntries,
-      journalEntriesById: this.journalEntriesById,
-      minutes: this.minutes,
-      region: current.region,
-      regionRenown: this.regionRenown,
-      supplies: this.supplies,
-      townName: current.name,
-    });
-
+    const applied = applyOverworldSessionRoadEncounter(
+      {
+        pendingRoadEncounter: this.pendingRoadEncounter,
+        current: this.currentNode(),
+        minutes: this.minutes,
+        supplies: this.supplies,
+        fatigue: this.fatigue,
+        regionRenown: this.regionRenown,
+        journalEntries: this.journalEntries,
+        journalEntriesById: this.journalEntriesById,
+      },
+      strategy,
+    );
     this.applyResourceClockState(applied);
     this.applyPendingRoadEncounterState(applied);
     this.clearSnapshotCache();
@@ -945,19 +936,20 @@ export class OverworldSession {
   }
 
   travel(edgeId: string): TravelLogEntry {
-    if (this.pendingRoadEncounter) {
-      throw new Error("Address the pending road encounter before choosing another road.");
-    }
-    const edge = this.roadFrom(this.currentId, edgeId);
-    if (!edge) throw new Error("That road is not reachable from here.");
-    const from = this.currentNode();
-    const roadEvent = this.roadEventFor(edge.id);
-    const applied = applyOverworldTravelLeg(from, edge.destination, edge, roadEvent, {
-      minutes: this.minutes,
-      fatigue: this.fatigue,
-      supplies: this.supplies,
-    });
-    const recorded = recordOverworldTravelLeg({ travelLog: this.travelLog }, applied);
+    const recorded = applyOverworldSessionRoadTravel(
+      {
+        pendingRoadEncounter: this.pendingRoadEncounter,
+        current: this.currentNode(),
+        currentId: this.currentId,
+        roadExitsByTownAndId: this.roadExitsByTownAndId,
+        roadEventsByEdgeId: this.roadEventsByEdgeId,
+        minutes: this.minutes,
+        supplies: this.supplies,
+        fatigue: this.fatigue,
+        travelLog: this.travelLog,
+      },
+      edgeId,
+    );
     this.applyResourceClockState(recorded);
     this.applyCurrentTownState(recorded);
     this.markSeen(this.currentId);
