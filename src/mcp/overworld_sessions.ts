@@ -1,10 +1,7 @@
 import type { OverworldCompactView } from "../world/compact_view.js";
 import type { OverworldManifest } from "../world/overworld.js";
-import {
-  OverworldSession,
-  type OverworldSessionSnapshot,
-  type OverworldView,
-} from "../world/session.js";
+import { OverworldSession, type OverworldSessionSnapshot } from "../world/session.js";
+import type { OverworldView } from "../world/session_view.js";
 
 export const OVERWORLD_SNAPSHOT_HASH_MISMATCH_REASON =
   "Snapshot hash mismatch; refresh the current overworld context.";

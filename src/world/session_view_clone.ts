@@ -1,6 +1,6 @@
 import { cloneOverworldRouteOption } from "./session_routes.js";
 import { cloneOverworldRegionalArcProgress } from "./session_regional_arcs.js";
-import type { OverworldView } from "./session.js";
+import type { OverworldView } from "./session_view.js";
 
 export function cloneOverworldView(view: OverworldView): OverworldView {
   return {

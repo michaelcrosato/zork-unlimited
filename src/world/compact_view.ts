@@ -1,10 +1,7 @@
-import type {
-  OverworldPendingRoadEncounter,
-  OverworldRoadEncounterOption,
-  OverworldSessionRoutePlan,
-  OverworldView,
-  TravelLogEntry,
-} from "./session.js";
+import type { OverworldPendingRoadEncounter, TravelLogEntry } from "./session_snapshot.js";
+import type { OverworldSessionRoutePlan } from "./session_routes.js";
+import type { OverworldView } from "./session_view.js";
+import type { OverworldRoadEncounterOption } from "./travel_mechanics.js";
 import { compactText } from "../core/compact_text.js";
 
 export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;

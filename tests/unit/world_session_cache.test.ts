@@ -8,7 +8,7 @@ import {
 import type { OverworldRegionalArcProgress } from "../../src/world/session_regional_arcs.js";
 import type { OverworldSessionRoutePlan } from "../../src/world/session_routes.js";
 import type { OverworldSessionSnapshot } from "../../src/world/session_snapshot.js";
-import type { OverworldView } from "../../src/world/session.js";
+import type { OverworldView } from "../../src/world/session_view.js";
 
 describe("overworld session cache", () => {
   it("clears every runtime cache slot together", () => {

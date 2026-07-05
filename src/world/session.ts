@@ -23,17 +23,13 @@ import {
   type OverworldLocalActionKind,
 } from "./local_actions.js";
 import { cloneOverworldCompactView, type OverworldCompactView } from "./compact_view.js";
-import { sortedNumberRecord } from "./session_collections.js";
 import {
-  OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES,
   OVERWORLD_STARTING_MINUTES as STARTING_MINUTES,
   OVERWORLD_STARTING_SUPPLIES as STARTING_SUPPLIES,
-  travelCondition,
   type OverworldRoadEncounterStrategy,
 } from "./travel_mechanics.js";
 import {
   buildOverworldDiscoveredRouteOptions,
-  cloneOverworldRouteOption,
   indexedOverworldRoute,
   withOverworldRouteEstimate,
   type OverworldRoutePlannerIndex,
@@ -43,7 +39,6 @@ import {
   applyOverworldRoadEncounter,
   type OverworldRoadEncounterResult,
 } from "./session_road_encounters.js";
-import { timeLabel } from "./session_journal_codec.js";
 import {
   recordOverworldAction,
   recordOverworldLocalAction,
@@ -75,7 +70,6 @@ import { type OverworldSnapshotManifestIndex } from "./session_manifest_index.js
 import {
   applyOverworldRegionalArcCompletions,
   buildOverworldRegionalArcProgress,
-  cloneOverworldRegionalArcProgress,
   regionalArcCompletionsForRegion,
   type OverworldRegionalArcProgress,
 } from "./session_regional_arcs.js";
@@ -115,6 +109,7 @@ import {
   type OverworldSessionSnapshotCache,
 } from "./session_cache.js";
 import { cloneOverworldView } from "./session_view_clone.js";
+import { buildOverworldSessionView, type OverworldView } from "./session_view.js";
 import { buildOverworldSessionIndexes } from "./session_indices.js";
 import {
   applyOverworldSessionSnapshotRestore,
@@ -156,49 +151,7 @@ export type OverworldActionResult = {
   discoveredQuests?: OverworldQuestView[];
 };
 
-export type OverworldView = {
-  world: string;
-  timeLabel: string;
-  current: OverworldNode;
-  currentArea: OverworldArea | null;
-  areaExits: OverworldAreaExit[];
-  exits: OverworldExit[];
-  areas: OverworldArea[];
-  hiddenAreaCount: number;
-  pois: OverworldPoi[];
-  characters: OverworldCharacter[];
-  events: OverworldLocalEvent[];
-  jobs: OverworldLocalJob[];
-  hiddenJobCount: number;
-  sites: OverworldExplorationSite[];
-  hiddenSiteCount: number;
-  quests: OverworldQuestView[];
-  hiddenQuestCount: number;
-  routeOptions: OverworldSessionRoutePlan[];
-  discovered: OverworldNode[];
-  visitedCount: number;
-  totalTowns: number;
-  supplies: number;
-  maxSupplies: number;
-  fatigue: number;
-  travelCondition: string;
-  journal: OverworldJournalEntry[];
-  discoveredSiteIds: string[];
-  discoveredAreaIds: string[];
-  discoveredJobIds: string[];
-  visitedAreaIds: string[];
-  completedJobIds: string[];
-  discoveredQuestIds: string[];
-  startedQuestIds: string[];
-  completedQuestIds: string[];
-  exploredSiteIds: string[];
-  resolvedEventIds: string[];
-  regionRenown: Record<string, number>;
-  regionalArcs: OverworldRegionalArcProgress[];
-  completedRegionalArcIds: string[];
-  pendingRoadEncounter: OverworldPendingRoadEncounter | null;
-  log: TravelLogEntry[];
-};
+export type { OverworldView } from "./session_view.js";
 
 type OverworldClockState = {
   minutesAfter: number;
@@ -749,24 +702,10 @@ export class OverworldSession {
     return this.caches.routeOptions;
   }
 
-  private routeOptionsForView(): OverworldSessionRoutePlan[] {
-    const options: OverworldSessionRoutePlan[] = [];
-    for (const plan of this.discoveredRouteOptions()) options.push(cloneOverworldRouteOption(plan));
-    return options;
-  }
-
   private cachedRegionalArcProgress(): OverworldRegionalArcProgress[] {
     if (this.caches.regionalArcProgress) return this.caches.regionalArcProgress;
     this.caches.regionalArcProgress = this.buildRegionalArcProgress();
     return this.caches.regionalArcProgress;
-  }
-
-  private regionalArcProgressForView(): OverworldRegionalArcProgress[] {
-    const progress: OverworldRegionalArcProgress[] = [];
-    for (const arc of this.cachedRegionalArcProgress()) {
-      progress.push(cloneOverworldRegionalArcProgress(arc));
-    }
-    return progress;
   }
 
   private buildRegionalArcProgress(): OverworldRegionalArcProgress[] {
@@ -807,18 +746,6 @@ export class OverworldSession {
 
   compactView(): OverworldCompactView {
     return cloneOverworldCompactView(this.cachedCompactView());
-  }
-
-  private sortedDiscoveredTownsByPopulation(): OverworldNode[] {
-    const discoveredTowns: OverworldNode[] = [];
-    for (const id of this.discoveredIds) {
-      const town = this.nodes.get(id);
-      if (town) discoveredTowns.push(town);
-    }
-    discoveredTowns.sort(
-      (a, b) => b.population_2025 - a.population_2025 || a.name.localeCompare(b.name),
-    );
-    return discoveredTowns;
   }
 
   private buildCompactView(): OverworldCompactView {
@@ -882,17 +809,20 @@ export class OverworldSession {
 
   private buildView(): OverworldView {
     const current = this.currentNode();
-    return {
-      world: this.world.name,
-      timeLabel: timeLabel(this.minutes),
+    return buildOverworldSessionView({
+      worldName: this.world.name,
+      worldTownCount: this.world.nodes.length,
       current,
       currentArea: this.currentArea(),
+      minutes: this.minutes,
+      supplies: this.supplies,
+      fatigue: this.fatigue,
+      roads: this.roadsFrom(this.currentId),
       areaExits: this.visibleAreaExits(),
-      exits: this.roadsFrom(this.currentId),
       areas: this.discoveredAreasAt(this.currentId),
       hiddenAreaCount: this.hiddenAreaCountAt(this.currentId),
-      pois: this.currentAreaPois(),
-      characters: this.currentAreaCharacters(),
+      poi: this.currentAreaPois(),
+      contacts: this.currentAreaCharacters(),
       events: this.currentAreaEvents(),
       jobs: this.discoveredJobsInCurrentArea(),
       hiddenJobCount: this.hiddenJobCountAt(this.currentId),
@@ -900,31 +830,27 @@ export class OverworldSession {
       hiddenSiteCount: this.hiddenSiteCountInCurrentArea(),
       quests: this.discoveredQuestsAt(this.currentId),
       hiddenQuestCount: this.hiddenQuestCountAt(this.currentId),
-      routeOptions: this.routeOptionsForView(),
-      discovered: this.sortedDiscoveredTownsByPopulation(),
+      routeOptions: this.discoveredRouteOptions(),
+      discoveredIds: this.discoveredIds,
+      nodes: this.nodes,
       visitedCount: this.visitedIds.size,
-      totalTowns: this.world.nodes.length,
-      supplies: this.supplies,
-      maxSupplies: MAX_SUPPLIES,
-      fatigue: this.fatigue,
-      travelCondition: travelCondition(this.fatigue, this.supplies),
-      journal: [...this.journalEntries],
-      discoveredAreaIds: [...this.discoveredAreaIds].sort(),
-      discoveredJobIds: [...this.discoveredJobIds].sort(),
-      visitedAreaIds: [...this.visitedAreaIds].sort(),
-      completedJobIds: [...this.completedJobIds].sort(),
-      discoveredSiteIds: [...this.discoveredSiteIds].sort(),
-      discoveredQuestIds: [...this.discoveredQuestIds].sort(),
-      startedQuestIds: [...this.startedQuestIds].sort(),
-      completedQuestIds: [...this.completedQuestIds].sort(),
-      exploredSiteIds: [...this.exploredSiteIds].sort(),
-      resolvedEventIds: [...this.resolvedEventIds].sort(),
-      regionRenown: sortedNumberRecord(this.regionRenown),
-      regionalArcs: this.regionalArcProgressForView(),
-      completedRegionalArcIds: [...this.completedRegionalArcIds].sort(),
+      journalEntries: this.journalEntries,
+      discoveredAreaIds: this.discoveredAreaIds,
+      visitedAreaIds: this.visitedAreaIds,
+      discoveredJobIds: this.discoveredJobIds,
+      completedJobIds: this.completedJobIds,
+      discoveredSiteIds: this.discoveredSiteIds,
+      discoveredQuestIds: this.discoveredQuestIds,
+      startedQuestIds: this.startedQuestIds,
+      completedQuestIds: this.completedQuestIds,
+      exploredSiteIds: this.exploredSiteIds,
+      resolvedEventIds: this.resolvedEventIds,
+      regionRenown: this.regionRenown,
+      regionalArcs: this.cachedRegionalArcProgress(),
+      completedRegionalArcIds: this.completedRegionalArcIds,
       pendingRoadEncounter: this.pendingRoadEncounter,
-      log: [...this.travelLog],
-    };
+      travelLog: this.travelLog,
+    });
   }
 
   private questStartPlan(questId: string): OverworldQuestStartPlan {

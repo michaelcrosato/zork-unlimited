@@ -14,7 +14,7 @@ export function sortedNumberMap(values: ReadonlyMap<string, number>): [string, n
   return [...values.entries()].sort(([left], [right]) => left.localeCompare(right));
 }
 
-export function sortedNumberRecord(values: Map<string, number>): Record<string, number> {
+export function sortedNumberRecord(values: ReadonlyMap<string, number>): Record<string, number> {
   const record: Record<string, number> = {};
   const keys = [...values.keys()].sort();
   for (const key of keys) record[key] = values.get(key)!;
