@@ -4,6 +4,7 @@ import { parseOverworldManifest } from "../../src/world/overworld.js";
 import {
   OVERWORLD_COMPACT_LABEL_CHAR_LIMIT,
   OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
+  OVERWORLD_COMPACT_MOVEMENT_LIMIT,
   OVERWORLD_COMPACT_RISK_CHAR_LIMIT,
   OVERWORLD_COMPACT_ROUTE_STEP_LIMIT,
   OVERWORLD_COMPACT_TITLE_CHAR_LIMIT,
@@ -413,7 +414,7 @@ describe("OverworldSession", () => {
     expect(view.discovered.length).toBeGreaterThan(24);
     const compact = compactOverworldView(view);
     expect(session.compactView()).toEqual(compact);
-    expect(compact.v).toBe(7);
+    expect(compact.v).toBe(8);
     expect(compact.hidden).toEqual([
       view.hiddenAreaCount,
       view.hiddenJobCount,
@@ -432,6 +433,101 @@ describe("OverworldSession", () => {
     if (view.resolvedEventIds.length === 0) {
       expect("resolved_events" in compact.ids).toBe(false);
     }
+  });
+
+  it("caps compact context movement lists while marking truncated roads and area routes", () => {
+    const session = new OverworldSession(world);
+    const view = session.view();
+    expect(view.exits[0]).toBeDefined();
+    expect(view.areas[0]).toBeDefined();
+
+    const denseCount = OVERWORLD_COMPACT_MOVEMENT_LIMIT + 4;
+    const denseRoads = Array.from({ length: denseCount }, (_, index) => ({
+      ...view.exits[0]!,
+      id: `dense_road_${index}`,
+      destination: {
+        ...view.exits[0]!.destination,
+        id: `dense_town_${index}`,
+      },
+    }));
+    const denseAreaRoutes = Array.from({ length: denseCount }, (_, index) => ({
+      id: `dense_area_route_${index}`,
+      home: view.current.id,
+      from_area: view.currentArea?.id ?? view.areas[0]!.id,
+      to_area: `dense_area_${index}`,
+      route: `Dense lane ${index}`,
+      travel_minutes: index + 1,
+      destination: {
+        ...view.areas[0]!,
+        id: `dense_area_${index}`,
+      },
+    }));
+
+    const compact = compactOverworldView({
+      ...view,
+      exits: denseRoads,
+      areaExits: denseAreaRoutes,
+    });
+    expect(compact.roads).toHaveLength(OVERWORLD_COMPACT_MOVEMENT_LIMIT);
+    expect(compact.area_routes).toHaveLength(OVERWORLD_COMPACT_MOVEMENT_LIMIT);
+    expect(compact.roads_truncated).toBe(true);
+    expect(compact.area_routes_truncated).toBe(true);
+
+    const built = buildOverworldSessionCompactView({
+      worldName: view.world,
+      worldTownCount: view.totalTowns,
+      current: view.current,
+      currentArea: view.currentArea,
+      minutes: 0,
+      supplies: view.supplies,
+      fatigue: view.fatigue,
+      roads: denseRoads,
+      areaExits: denseAreaRoutes,
+      routeOptions: view.routeOptions,
+      areas: view.areas,
+      poi: view.pois,
+      contacts: view.characters,
+      events: view.events,
+      jobs: view.jobs,
+      sites: view.sites,
+      quests: view.quests,
+      hiddenAreaCount: view.hiddenAreaCount,
+      hiddenJobCount: view.hiddenJobCount,
+      hiddenSiteCount: view.hiddenSiteCount,
+      hiddenQuestCount: view.hiddenQuestCount,
+      journalEntries: view.journal,
+      travelLog: view.log,
+      visitedCount: view.visitedCount,
+      regionRenown: new Map(Object.entries(view.regionRenown)),
+      completedRegionalArcIds: new Set(view.completedRegionalArcIds),
+      pendingRoadEncounter: view.pendingRoadEncounter,
+      ids: {
+        discoveredIds: new Set(view.discovered.map((town) => town.id)),
+        nodes: new Map(world.nodes.map((town) => [town.id, town])),
+        discoveredAreaIds: new Set(view.discoveredAreaIds),
+        visitedAreaIds: new Set(view.visitedAreaIds),
+        discoveredJobIds: new Set(view.discoveredJobIds),
+        completedJobIds: new Set(view.completedJobIds),
+        discoveredSiteIds: new Set(view.discoveredSiteIds),
+        exploredSiteIds: new Set(view.exploredSiteIds),
+        discoveredQuestIds: new Set(view.discoveredQuestIds),
+        startedQuestIds: new Set(view.startedQuestIds),
+        completedQuestIds: new Set(view.completedQuestIds),
+        resolvedEventIds: new Set(view.resolvedEventIds),
+      },
+    });
+    expect(built.roads).toHaveLength(OVERWORLD_COMPACT_MOVEMENT_LIMIT);
+    expect(built.area_routes).toHaveLength(OVERWORLD_COMPACT_MOVEMENT_LIMIT);
+    expect(built.roads_truncated).toBe(true);
+    expect(built.area_routes_truncated).toBe(true);
+
+    const cloned = cloneOverworldCompactView(compact);
+    expect(cloned.roads_truncated).toBe(true);
+    expect(cloned.area_routes_truncated).toBe(true);
+    cloned.roads.push(["mutated_by_test", "mutated", 1, 0, 0]);
+    cloned.area_routes?.push(["mutated_by_test", "mutated", 1]);
+    expect(compact.roads).toHaveLength(OVERWORLD_COMPACT_MOVEMENT_LIMIT);
+    expect(compact.area_routes).toHaveLength(OVERWORLD_COMPACT_MOVEMENT_LIMIT);
   });
 
   it("caps compact context route path summaries while preserving explicit compact plans", () => {

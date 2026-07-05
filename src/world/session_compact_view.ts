@@ -4,6 +4,7 @@ import {
   compactOverworldAreaRoutes,
   compactOverworldJournalEntries,
   compactOverworldLabel,
+  compactOverworldMovementTruncated,
   compactOverworldQuestRefs,
   compactOverworldRefs,
   compactOverworldRenownEntries,
@@ -76,6 +77,8 @@ export function buildOverworldSessionCompactView(
   state: OverworldSessionCompactViewState,
 ): OverworldCompactView {
   const areaRoutes = compactOverworldAreaRoutes(state.areaExits);
+  const roadsTruncated = compactOverworldMovementTruncated(state.roads);
+  const areaRoutesTruncated = compactOverworldMovementTruncated(state.areaExits);
   const compactRouteOptions = compactOverworldRouteOptions(state.routeOptions);
   const routePathsTruncated = compactOverworldRoutePathsTruncated(state.routeOptions);
   const idPayload = compactOverworldSessionIdPayload(state.ids);
@@ -126,7 +129,9 @@ export function buildOverworldSessionCompactView(
       state.hiddenQuestCount,
     ],
     roads,
+    ...(roadsTruncated ? { roads_truncated: true as const } : {}),
     ...(areaRoutes.length > 0 ? { area_routes: areaRoutes } : {}),
+    ...(areaRoutesTruncated ? { area_routes_truncated: true as const } : {}),
     route_options: compactRouteOptions,
     ...(state.routeOptions.length > compactRouteOptions.length
       ? { route_options_truncated: true as const }

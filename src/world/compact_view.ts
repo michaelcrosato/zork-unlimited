@@ -7,13 +7,14 @@ import { compactText } from "../core/compact_text.js";
 export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
 export const OVERWORLD_COMPACT_ROUTE_LIMIT = 8;
 export const OVERWORLD_COMPACT_ROUTE_STEP_LIMIT = 12;
+export const OVERWORLD_COMPACT_MOVEMENT_LIMIT = 12;
 export const OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT = 5;
 export const OVERWORLD_COMPACT_ID_LIST_LIMIT = 16;
 export const OVERWORLD_COMPACT_LOCAL_REF_LIMIT = 12;
 export const OVERWORLD_COMPACT_LABEL_CHAR_LIMIT = 96;
 export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 7 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 8 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactQuestRef = readonly [id: string, title: string];
@@ -167,7 +168,9 @@ export type OverworldCompactView = {
   vitals: OverworldCompactVitals;
   hidden: OverworldCompactHiddenCounts;
   roads: OverworldCompactRoad[];
+  roads_truncated?: true;
   area_routes?: OverworldCompactAreaRoute[];
+  area_routes_truncated?: true;
   route_options: OverworldCompactRouteOption[];
   route_options_truncated?: true;
   route_paths_truncated?: true;
@@ -331,9 +334,14 @@ type OverworldCompactRouteSource = {
 
 export function compactOverworldAreaRoutes(
   exits: readonly OverworldCompactRouteSource[],
+  limit = OVERWORLD_COMPACT_MOVEMENT_LIMIT,
 ): OverworldCompactAreaRoute[] {
   const compact: OverworldCompactAreaRoute[] = [];
-  for (const exit of exits) compact.push([exit.id, exit.destination.id, exit.travel_minutes]);
+  const capped = Math.min(exits.length, limit);
+  for (let index = 0; index < capped; index += 1) {
+    const exit = exits[index]!;
+    compact.push([exit.id, exit.destination.id, exit.travel_minutes]);
+  }
   return compact;
 }
 
@@ -341,12 +349,15 @@ export function compactOverworldRoads(
   exits: readonly OverworldCompactRouteSource[],
   routeOptions: readonly OverworldSessionRoutePlan[],
   fallbackFatigue: number,
+  limit = OVERWORLD_COMPACT_MOVEMENT_LIMIT,
 ): OverworldCompactRoad[] {
   const routeByDestination = new Map<string, OverworldSessionRoutePlan>();
   for (const plan of routeOptions) routeByDestination.set(plan.destination.id, plan);
 
   const compact: OverworldCompactRoad[] = [];
-  for (const exit of exits) {
+  const capped = Math.min(exits.length, limit);
+  for (let index = 0; index < capped; index += 1) {
+    const exit = exits[index]!;
     const plan = routeByDestination.get(exit.destination.id);
     compact.push([
       exit.id,
@@ -357,6 +368,13 @@ export function compactOverworldRoads(
     ]);
   }
   return compact;
+}
+
+export function compactOverworldMovementTruncated(
+  values: readonly unknown[],
+  limit = OVERWORLD_COMPACT_MOVEMENT_LIMIT,
+): boolean {
+  return values.length > limit;
 }
 
 export function compactPendingRoad(
@@ -539,6 +557,8 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
   };
 
   if (view.area_routes) clone.area_routes = cloneTupleList(view.area_routes);
+  if (view.roads_truncated) clone.roads_truncated = true;
+  if (view.area_routes_truncated) clone.area_routes_truncated = true;
   if (view.route_options_truncated) clone.route_options_truncated = true;
   if (view.route_paths_truncated) clone.route_paths_truncated = true;
   if (view.jobs) clone.jobs = cloneTupleList(view.jobs);
@@ -567,6 +587,8 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const routePathsTruncated = compactOverworldRoutePathsTruncated(view.routeOptions);
   const travelLog = compactOverworldTravelLog(view.log);
   const areaRoutes = compactOverworldAreaRoutes(view.areaExits);
+  const roadsTruncated = compactOverworldMovementTruncated(view.exits);
+  const areaRoutesTruncated = compactOverworldMovementTruncated(view.areaExits);
   const jobs = compactOverworldTitleRefs(view.jobs);
   const sites = compactOverworldTitleRefs(view.sites);
   const quests = compactOverworldQuestRefs(view.quests);
@@ -617,7 +639,9 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
       view.hiddenQuestCount,
     ],
     roads: compactOverworldRoads(view.exits, view.routeOptions, view.fatigue),
+    ...(roadsTruncated ? { roads_truncated: true as const } : {}),
     ...(areaRoutes.length > 0 ? { area_routes: areaRoutes } : {}),
+    ...(areaRoutesTruncated ? { area_routes_truncated: true as const } : {}),
     route_options: routeOptions,
     ...(view.routeOptions.length > routeOptions.length
       ? { route_options_truncated: true as const }
