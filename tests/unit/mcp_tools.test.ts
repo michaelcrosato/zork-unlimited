@@ -2579,7 +2579,8 @@ describe("MCP tools — the play loop (§9.1)", () => {
       session_id: game.session_id,
       summary_only: true,
     });
-    const r = a.step_action({ session_id: game.session_id, action_id: "not_a_real_choice" });
+    const longActionId = `not_a_real_choice_${"x".repeat(500)}`;
+    const r = a.step_action({ session_id: game.session_id, action_id: longActionId });
     expect(r.ok).toBe(false);
     expect("rejection_reason" in r).toBe(true);
     if (r.ok) throw new Error("expected illegal action rejection");
@@ -2591,13 +2592,16 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(transcriptAfter.transcript_hash).not.toBe(transcriptBefore.transcript_hash);
     expect(transcriptAfter.summary.steps).toBe(transcriptBefore.summary.steps + 1);
     expect(rejectedTurn).toMatchObject({
-      action_id: "not_a_real_choice",
       action_text: null,
       scene_id: game.observation.room,
       result_scene_id: game.observation.room,
       ended: game.observation.ended,
       ending_id: game.observation.ending_id,
     });
+    expect(rejectedTurn.action_id).not.toBe(longActionId);
+    expect(rejectedTurn.action_id?.length).toBeLessThanOrEqual(128);
+    expect(rejectedTurn.action_id).toMatch(/^not_a_real_choice_x+/);
+    expect(rejectedTurn.action_id).toMatch(/\.\.\.\(\+\d+ chars\)$/);
     expect(rejectedTurn.events).toEqual([
       { type: "rejected", reason: "That action is not available right now." },
     ]);
