@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 420 -->
+<!-- historical_cycle_count: 421 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - pack_source_ref_retired
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: compact save/trace `source_ref` now admits only world quest or generated RPG identity; package-id tuples are malformed input.
+- Loop effect: package-only persisted artifacts cannot re-enter load, replay, source resolution, or CLI trace labels as a valid engine source identity.
+- Guard: focused save/trace, world-source, trace CLI, play CLI, and schema-standalone regressions cover rejection plus canonical labels.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused source/persistence/CLI regressions, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - source_ref_types_required
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: blind agents can verify state/hash freshness without pulling full reducer snapshots, and the no-LLM smoke path proves compact state plus unchanged polling.
 - Guard: focused blind runner/docs/MCP registration contracts, blind smoke, and schema-size budget passed.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused regressions, `npm run blind:smoke`, `npm test`, and `npm run health` passed.
-
-### Cycle result - rpg_utility_schema_prose_trimmed
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: public RPG utility MCP schema prose for generated starts, state reads, transcripts, saves, loads, and trace helpers is trimmed and guarded by source-size regressions.
-- Loop effect: generated-game, save/load, transcript, and trace ToolSearch reads spend fewer tokens before agents reach compact RPG payloads.
-- Guard: focused Prettier, MCP registration schema-size regression, and typecheck passed.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused regression, `npm test`, and `npm run health` passed after loop-state rotation.

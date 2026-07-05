@@ -24,7 +24,7 @@ export type TraceSourceRef = CompactSourceRef;
 
 export type Trace<A extends EngineAction = RpgAction> = {
   mode: SaveMode;
-  /** Compact canonical source; historical traces may carry explicit legacy pack fallback. */
+  /** Compact canonical world quest or generated-RPG source identity. */
   source_ref: TraceSourceRef;
   /** Shipped world quest id, when the trace belongs to the open-world graph. */
   worldQuestId?: string;
@@ -91,24 +91,11 @@ const TRACE_SOURCE_LABELS = {
 function traceSourceRef(opts: RecordOptions): TraceSourceRef {
   const sourceRef = compactSourceRefFromMetadata(opts.pack_id, opts, TRACE_SOURCE_LABELS);
   if (!sourceRef.ok) throw new SaveIntegrityError(sourceRef.error);
-  if (sourceRef.sourceRef[0] === "pack") {
-    throw new SaveIntegrityError(
-      "Trace source requires worldQuestId or generatedRpgSeed; packId fallback is replay-only.",
-    );
-  }
   return sourceRef.sourceRef;
 }
 
-export function traceSourceLabel(trace: {
-  source_ref?: TraceSourceRef;
-  worldQuestId?: string;
-  generatedRpgSeed?: number;
-  pack_id: string;
-}): string {
-  const ref = trace.source_ref;
-  if (ref !== undefined) return compactSourceRefLabel(ref);
-  if (trace.generatedRpgSeed !== undefined) return `generate_rpg_seed:${trace.generatedRpgSeed}`;
-  return trace.worldQuestId ? `world_quest_id:${trace.worldQuestId}` : `pack_id:${trace.pack_id}`;
+export function traceSourceLabel(trace: { source_ref: TraceSourceRef }): string {
+  return compactSourceRefLabel(trace.source_ref);
 }
 
 /** Run the actions and produce a Trace stamped with the final-state hash. */

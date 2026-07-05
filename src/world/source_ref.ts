@@ -1,7 +1,7 @@
 import { generatedRpgSeedValidationMessage, isGeneratedRpgSeed } from "../gen/seed.js";
 
 /** Compact canonical source identity shared by saves, traces, and source resolution. */
-export type CompactSourceRef = ["wq", string] | ["gen", number] | ["pack", string];
+export type CompactSourceRef = ["wq", string] | ["gen", number];
 
 export type CompactSourceMetadata = {
   worldQuestId?: unknown;
@@ -29,7 +29,6 @@ export type CompactSourceRefConsistencyMessages = {
   generatedSeedMismatch: (sourceRefGeneratedSeed: number, generatedRpgSeed: number) => string;
   sourceRefConflictsWithGeneratedRpgSeed: string;
   sourceRefConflictsWithWorldQuestId: string;
-  sourceRefPackFallbackConflict?: string;
 };
 
 export type CompactSourceRefConsistencyResult =
@@ -37,7 +36,7 @@ export type CompactSourceRefConsistencyResult =
   | { ok: false; error: string };
 
 export function compactSourceRefFromMetadata(
-  fallbackPackId: string,
+  _fallbackPackId: string,
   metadata: CompactSourceMetadata,
   labels: CompactSourceMetadataLabels,
 ): CompactSourceRefResult {
@@ -69,21 +68,22 @@ export function compactSourceRefFromMetadata(
     }
     return { ok: true, sourceRef: ["gen", generatedRpgSeed] };
   }
-  return { ok: true, sourceRef: ["pack", fallbackPackId] };
+  return {
+    ok: false,
+    error: `${labels.source} requires worldQuestId or generatedRpgSeed.`,
+  };
 }
 
 export function compactSourceLegacyMetadata(
   sourceRef: CompactSourceRef,
 ): CompactSourceLegacyMetadata {
   if (sourceRef[0] === "wq") return { worldQuestId: sourceRef[1] };
-  if (sourceRef[0] === "gen") return { generatedRpgSeed: sourceRef[1] };
-  return {};
+  return { generatedRpgSeed: sourceRef[1] };
 }
 
 export function compactSourceRefLabel(sourceRef: CompactSourceRef): string {
   if (sourceRef[0] === "wq") return `world_quest_id:${sourceRef[1]}`;
-  if (sourceRef[0] === "gen") return `generate_rpg_seed:${sourceRef[1]}`;
-  return `pack_id:${sourceRef[1]}`;
+  return `generate_rpg_seed:${sourceRef[1]}`;
 }
 
 export function compactSourceRefLegacyConsistency(
@@ -108,17 +108,6 @@ export function compactSourceRefLegacyConsistency(
       return { ok: false, error: messages.sourceRefConflictsWithWorldQuestId };
     }
     generatedRpgSeed = sourceRef[1];
-  } else if (sourceRef !== undefined) {
-    if (worldQuestId !== undefined || generatedRpgSeed !== undefined) {
-      return {
-        ok: false,
-        error:
-          messages.sourceRefPackFallbackConflict ??
-          (worldQuestId !== undefined
-            ? messages.sourceRefConflictsWithWorldQuestId
-            : messages.sourceRefConflictsWithGeneratedRpgSeed),
-      };
-    }
   }
 
   if (worldQuestId !== undefined && generatedRpgSeed !== undefined) {
@@ -146,8 +135,5 @@ export function compactSourceRefValidationError(raw: unknown, label: string): st
       ? undefined
       : `${label} generated seed must be an integer within JavaScript's safe range.`;
   }
-  if (tag === "pack") {
-    return typeof value === "string" ? undefined : `${label} pack id must be a string.`;
-  }
-  return `${label} tag must be "wq", "gen", or "pack", got ${JSON.stringify(tag)}.`;
+  return `${label} tag must be "wq" or "gen", got ${JSON.stringify(tag)}.`;
 }

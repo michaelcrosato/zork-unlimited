@@ -75,4 +75,13 @@ describe("RPG owns the live content/runtime contract", () => {
     expect(traceRecord).toContain("source_ref: TraceSourceRef;");
     expect(traceReplay).toContain("trace: Trace<A>");
   });
+
+  it("does not admit package ids as compact save or trace source refs", () => {
+    const sourceRef = readFileSync("src/world/source_ref.ts", "utf8");
+
+    expect(sourceRef).toContain('export type CompactSourceRef = ["wq", string] | ["gen", number];');
+    expect(sourceRef).not.toContain('["pack"');
+    expect(sourceRef).not.toContain('tag === "pack"');
+    expect(sourceRef).not.toContain("pack fallback");
+  });
 });

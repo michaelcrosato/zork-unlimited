@@ -230,7 +230,7 @@ describe("save / load (§8.7)", () => {
     expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(/source_ref/);
   });
 
-  it("loads historical package-only source fallback saves", () => {
+  it("rejects package-only source fallback saves at the load boundary", () => {
     const bytes = JSON.stringify({
       version: 1,
       packId: MICRO_PACK_ID,
@@ -239,12 +239,9 @@ describe("save / load (§8.7)", () => {
       source_ref: ["pack", MICRO_PACK_ID],
       state: microInitState(),
     });
-    const loaded = load(bytes, MICRO_CONTENT_HASH);
 
-    expect(loaded.source_ref).toEqual(["pack", MICRO_PACK_ID]);
-    expect(loaded.worldQuestId).toBeUndefined();
-    expect(loaded.generatedRpgSeed).toBeUndefined();
-    expect(Object.isFrozen(loaded.source_ref)).toBe(true);
+    expect(() => load(bytes, MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
+    expect(() => load(bytes, MICRO_CONTENT_HASH)).toThrow(/source_ref/);
   });
 
   it("rejects attempts to write a non-RPG mode", () => {
@@ -472,7 +469,7 @@ describe("trace record / replay (§8.8)", () => {
     expect(result.message).toContain("!=");
   });
 
-  it("replays historical package-only source fallback traces", () => {
+  it("rejects package-only source fallback traces at the replay boundary", () => {
     const canonical = recordTrace(microRules, microInitState(), WIN, traceOptions());
     const legacyTrace = {
       ...canonical,
@@ -480,8 +477,8 @@ describe("trace record / replay (§8.8)", () => {
       worldQuestId: undefined,
     } as unknown as typeof canonical;
 
-    expect(traceSourceLabel(legacyTrace)).toBe(`pack_id:${MICRO_PACK_ID}`);
-    expect(replayTrace(legacyTrace, microRules).ok).toBe(true);
+    expect(() => replayTrace(legacyTrace, microRules)).toThrow(SaveIntegrityError);
+    expect(() => replayTrace(legacyTrace, microRules)).toThrow(/source_ref/);
   });
 });
 

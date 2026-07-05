@@ -371,32 +371,6 @@ describe("world source resolution", () => {
       worldQuestId: null,
       generateRpgSeed: 3,
     });
-    expect(
-      resolveSaveGameSource(
-        ROOT,
-        { world_quest_id: "sunken_barrow" },
-        { source_ref: ["pack", "sunken_barrow_v1"] },
-        "save_test",
-      ),
-    ).toEqual({
-      kind: "pack",
-      packPath: PACK,
-      worldQuestId: "sunken_barrow",
-      generateRpgSeed: null,
-    });
-    expect(
-      resolveSaveGameSource(
-        ROOT,
-        { generate_rpg_seed: 3 },
-        { source_ref: ["pack", "genrpg_3_v1"] },
-        "save_test",
-      ),
-    ).toEqual({
-      kind: "generated",
-      packPath: null,
-      worldQuestId: null,
-      generateRpgSeed: 3,
-    });
     expect(saveWorldQuestId({ source_ref: ["wq", "sunken_barrow"] }, "save_test")).toBe(
       "sunken_barrow",
     );
@@ -509,6 +483,24 @@ describe("world source resolution", () => {
     );
 
     expect(() =>
+      resolveSaveGameSource(
+        ROOT,
+        { world_quest_id: "sunken_barrow" },
+        { source_ref: ["pack", "sunken_barrow_v1"] },
+        "save_test",
+      ),
+    ).toThrow(SaveIntegrityError);
+
+    expect(() =>
+      resolveSaveGameSource(
+        ROOT,
+        { generate_rpg_seed: 3 },
+        { source_ref: ["pack", "genrpg_3_v1"] },
+        "save_test",
+      ),
+    ).toThrow(SaveIntegrityError);
+
+    expect(() =>
       resolveTracePackSource(
         ROOT,
         {},
@@ -521,14 +513,13 @@ describe("world source resolution", () => {
       resolveTracePackSource(ROOT, {}, { ...trace, source_ref: ["gen", 3] }, "trace_test"),
     ).toThrow(SaveIntegrityError);
 
-    expect(() =>
-      resolveTracePackSource(
-        ROOT,
-        {},
-        { ...trace, source_ref: ["pack", "sunken_barrow_v1"] },
-        "trace_test",
-      ),
-    ).toThrow(SaveIntegrityError);
+    const malformedPackTraceRef = {
+      ...trace,
+      source_ref: ["pack", "sunken_barrow_v1"],
+    } as unknown as Trace<RpgAction>;
+    expect(() => resolveTracePackSource(ROOT, {}, malformedPackTraceRef, "trace_test")).toThrow(
+      SaveIntegrityError,
+    );
 
     const malformedGeneratedTraceRef = {
       ...trace,

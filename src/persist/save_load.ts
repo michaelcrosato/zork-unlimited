@@ -173,8 +173,6 @@ const SAVE_SOURCE_REF_CONSISTENCY_MESSAGES = {
   sourceRefConflictsWithGeneratedRpgSeed:
     "Save source_ref world quest conflicts with generatedRpgSeed.",
   sourceRefConflictsWithWorldQuestId: "Save source_ref generated seed conflicts with worldQuestId.",
-  sourceRefPackFallbackConflict:
-    "Save source_ref pack fallback conflicts with explicit save source metadata.",
 } as const;
 
 /** Serialize a save to canonical bytes (stable across machines/runs). */
@@ -241,11 +239,6 @@ function assertGeneratedRpgSeed(seed: unknown, label: string): asserts seed is n
 function saveSourceRef(packId: string, metadata: SaveMetadata): SaveSourceRef {
   const sourceRef = compactSourceRefFromMetadata(packId, metadata, SAVE_SOURCE_LABELS);
   if (!sourceRef.ok) throw new SaveIntegrityError(sourceRef.error);
-  if (sourceRef.sourceRef[0] === "pack") {
-    throw new SaveIntegrityError(
-      "Save source requires worldQuestId or generatedRpgSeed; packId fallback is load-only.",
-    );
-  }
   return sourceRef.sourceRef;
 }
 

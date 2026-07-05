@@ -51,8 +51,6 @@ const TRACE_SOURCE_REF_CONSISTENCY_MESSAGES = {
     "Trace source_ref world quest conflicts with generatedRpgSeed.",
   sourceRefConflictsWithWorldQuestId:
     "Trace source_ref generated seed conflicts with worldQuestId.",
-  sourceRefPackFallbackConflict:
-    "Trace source_ref pack fallback conflicts with explicit trace source metadata.",
 } as const;
 
 function assertNonEmptyString(value: unknown, label: string): asserts value is string {
