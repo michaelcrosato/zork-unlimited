@@ -29,7 +29,6 @@ import {
 } from "../validate/report.js";
 import {
   SAVE_MODE,
-  save,
   load,
   assertSaveContentHash,
   assertWellFormedState,
@@ -41,25 +40,20 @@ import { SessionStore, type Session, type TranscriptSummary } from "./sessions.j
 import { isRpgPackShape, type McpActionOption, type McpObservation } from "./types.js";
 import { RPG_COMPACT_EVENT_VERSION, type RpgCompactEvent } from "./compact_rpg_event.js";
 import type { RpgCompactObservation } from "./compact_rpg_observation.js";
-import {
-  hashTranscript,
-  transcriptEventVersion,
-  transcriptSummaryFor,
-  transcriptTurnsFor,
-  transcriptUnchanged,
-} from "./transcript_projection.js";
-import { legalActionRowsFor, rpgViewField } from "./rpg_view_projection.js";
+import { rpgViewField } from "./rpg_view_projection.js";
 import { RpgMcpSessionRuntime, rpgSourceFields } from "./rpg_session_runtime.js";
+import {
+  runRpgGetObservation,
+  runRpgGetState,
+  runRpgGetTranscript,
+  runRpgListLegalActions,
+  runRpgSaveGame,
+} from "./rpg_session_tools.js";
 import {
   runRpgStepAction,
   type RpgStepActionResponse as RpgRuntimeStepActionResponse,
 } from "./rpg_step_action.js";
-import {
-  rpgStateHashRejection,
-  rpgStateUnchanged,
-  type RpgStateHashRejection,
-  type RpgStateUnchanged,
-} from "./rpg_state_guards.js";
+import type { RpgStateHashRejection, RpgStateUnchanged } from "./rpg_state_guards.js";
 import {
   isOverworldMcpRejectedSessionPayload,
   OverworldMcpSessionStore,
@@ -1208,34 +1202,16 @@ export function createToolApi(opts: { root: string }) {
     },
 
     get_observation<Args extends RpgGetObservationArgs>(args: Args): RpgObservationResponse<Args> {
-      const s = sessions.get(args.session_id);
-      const stateHash = s.stateHash;
-      if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
-        return rpgStateUnchanged(stateHash) as RpgObservationResponse<Args>;
-      }
-      const obsOpts = {
-        hideGraph: args.hide_graph ?? s.hideGraph ?? false,
-      };
-      const obs = rpgRuntime.observationOf(s, obsOpts);
-      return {
-        ...rpgViewField(sessions, s, obs, args, obsOpts),
-        state_hash: stateHash,
-      } as RpgObservationResponse<Args>;
+      return runRpgGetObservation({ sessions, rpgRuntime }, args) as RpgObservationResponse<Args>;
     },
 
     list_legal_actions<Args extends RpgLegalActionsArgs>(
       args: Args,
     ): RpgLegalActionsResponse<Args> {
-      const s = sessions.get(args.session_id);
-      const stateHash = s.stateHash;
-      if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
-        return rpgStateUnchanged(stateHash) as RpgLegalActionsResponse<Args>;
-      }
-      const actions = rpgRuntime.legalActionsFor(s);
-      return {
-        actions: legalActionRowsFor(sessions, s, actions, args),
-        state_hash: stateHash,
-      } as RpgLegalActionsResponse<Args>;
+      return runRpgListLegalActions(
+        { sessions, rpgRuntime },
+        args,
+      ) as RpgLegalActionsResponse<Args>;
     },
 
     step_action<Args extends RpgStepActionArgs>(args: Args): RpgStepActionResponse<Args> {
@@ -1243,71 +1219,15 @@ export function createToolApi(opts: { root: string }) {
     },
 
     get_state<Args extends RpgGetStateArgs>(args: Args): RpgStateResponse<Args> {
-      const s = sessions.get(args.session_id);
-      const stateHash = s.stateHash;
-      if (args.include_state === true) {
-        return { state: s.state, state_hash: stateHash } as RpgStateResponse<Args>;
-      }
-      return { state_hash: stateHash } as RpgStateResponse<Args>;
+      return runRpgGetState({ sessions }, args) as RpgStateResponse<Args>;
     },
 
     get_transcript<Args extends TranscriptArgs>(args: Args): TranscriptResponse<Args> {
-      const s = sessions.get(args.session_id);
-      const stateHash = s.stateHash;
-      const currentTranscriptHash = hashTranscript(s, stateHash);
-      if (
-        args.if_transcript_hash !== undefined &&
-        args.if_transcript_hash === currentTranscriptHash
-      ) {
-        return transcriptUnchanged(stateHash, currentTranscriptHash) as TranscriptResponse<Args>;
-      }
-      const summary = sessions.transcriptSummary(s.id, () => ({
-        steps: s.transcript.filter((t) => t.action_id !== null).length,
-        scenes: [...new Set(s.transcript.flatMap((t) => [t.scene_id, t.result_scene_id]))].sort(),
-        ended: s.state.ended,
-        ending_id: s.state.endingId,
-        inventory: [...s.state.inventory],
-        flags: Object.keys(s.state.flags)
-          .filter((f) => s.state.flags[f] === true && !f.startsWith("__"))
-          .sort(),
-        journal: [...s.state.journal],
-      }));
-      const response = {
-        session_id: s.id,
-        ...rpgSourceFields(s),
-        state_hash: stateHash,
-        transcript_hash: currentTranscriptHash,
-        ...transcriptEventVersion(args),
-        // Filter internal-bookkeeping events the same way step_action does, so the
-        // transcript a player reads never surfaces `__`-prefixed vars/flags (bug_0260).
-        ...(args.summary_only
-          ? {}
-          : {
-              turns: transcriptTurnsFor(sessions, s, args),
-            }),
-        summary: transcriptSummaryFor(sessions, s, args, summary),
-      };
-      return response as unknown as TranscriptResponse<Args>;
+      return runRpgGetTranscript({ sessions }, args) as TranscriptResponse<Args>;
     },
 
     save_game<Args extends RpgSaveArgs>(args: Args): RpgSaveResponse<Args> {
-      const s = sessions.get(args.session_id);
-      const stateHash = s.stateHash;
-      if (args.expected_state_hash !== undefined && args.expected_state_hash !== stateHash) {
-        return rpgStateHashRejection(stateHash) as RpgSaveResponse<Args>;
-      }
-      // The save records the pack mode so load can refuse a mode mismatch (§8.7).
-      const saveMetadata = {
-        ...(s.worldQuestId ? { worldQuestId: s.worldQuestId } : {}),
-        ...(s.generatedRpgSeed !== undefined ? { generatedRpgSeed: s.generatedRpgSeed } : {}),
-      };
-      return {
-        ok: true,
-        save: save(s.state, s.packId, s.contentHash, SAVE_MODE, saveMetadata),
-        ...rpgSourceFields(s),
-        content_hash: s.contentHash,
-        state_hash: stateHash,
-      } as RpgSaveResponse<Args>;
+      return runRpgSaveGame({ sessions }, args) as RpgSaveResponse<Args>;
     },
 
     load_game<Args extends RpgLoadGameArgs>(args: Args): RpgSessionPayload<Args> {
