@@ -14,11 +14,6 @@ import {
   type OverworldRegionalArc,
   type OverworldRoadEvent,
 } from "./overworld.js";
-import {
-  describeOverworldContactAction,
-  describeOverworldEventAction,
-  describeOverworldPoiAction,
-} from "./local_actions.js";
 import { cloneOverworldCompactView, type OverworldCompactView } from "./compact_view.js";
 import {
   OVERWORLD_STARTING_MINUTES as STARTING_MINUTES,
@@ -61,10 +56,14 @@ import {
 } from "./session_local_actions.js";
 import {
   applyOverworldSessionArea,
+  applyOverworldSessionLocalInteraction,
   applyOverworldSessionLocalJob,
   applyOverworldSessionSite,
   planOverworldSessionArea,
+  planOverworldSessionContactTalk,
+  planOverworldSessionEventInvestigation,
   planOverworldSessionLocalJob,
+  planOverworldSessionPoiScout,
   planOverworldSessionSite,
 } from "./session_local_lifecycle.js";
 import {
@@ -110,12 +109,9 @@ import {
 } from "./session_local_state.js";
 import {
   applyOverworldSessionServicePlan,
-  recordOverworldSessionAction,
-  recordOverworldSessionLocalAction,
   withOverworldSessionLocalDiscovery,
   type OverworldActionResult,
   type OverworldSessionActionApplication,
-  type OverworldSessionLocalAction,
 } from "./session_action_application.js";
 import {
   applyOverworldSessionRoadEncounter,
@@ -443,24 +439,6 @@ export class OverworldSession {
     return applied.result;
   }
 
-  private recordAction(
-    entry: Omit<OverworldJournalEntry, "recordedAt">,
-    minutes: number,
-  ): OverworldActionResult {
-    return this.applyActionApplication(
-      recordOverworldSessionAction(this.actionJournalState(), entry, minutes),
-    );
-  }
-
-  private recordLocalAction(
-    action: OverworldSessionLocalAction,
-    town: string,
-  ): OverworldActionResult {
-    return this.applyActionApplication(
-      recordOverworldSessionLocalAction(this.actionJournalState(), action, town),
-    );
-  }
-
   private applyServicePlan(plan: OverworldServicePlan): OverworldServiceResult {
     const applied = applyOverworldSessionServicePlan(this.actionJournalState(), plan);
     if (applied.stateChanged) {
@@ -648,14 +626,18 @@ export class OverworldSession {
   scoutPoi(poiId: string): OverworldActionResult {
     this.assertNoPendingRoadEncounter("scouting a point of interest");
     const current = this.currentNode();
-    const poi = this.poisById.get(poiId);
-    if (!poi || poi.home !== this.currentId) {
-      throw new Error("That point of interest is not in this town.");
-    }
-    if (poi.area !== this.currentAreaIdOrThrow()) {
-      throw new Error("Move to that local area before scouting this point of interest.");
-    }
-    const result = this.recordLocalAction(describeOverworldPoiAction(poi, current), current.name);
+    const result = this.applyActionApplication(
+      applyOverworldSessionLocalInteraction(
+        this.actionJournalState(),
+        planOverworldSessionPoiScout({
+          poiId,
+          poisById: this.poisById,
+          currentTown: current,
+          currentAreaId: () => this.currentAreaIdOrThrow(),
+        }),
+        current.name,
+      ),
+    );
     return this.withLocalDiscovery(result, current.id);
   }
 
@@ -738,28 +720,36 @@ export class OverworldSession {
   talkToCharacter(characterId: string): OverworldActionResult {
     this.assertNoPendingRoadEncounter("talking to a contact");
     const current = this.currentNode();
-    const character = this.charactersById.get(characterId);
-    if (!character || character.home !== this.currentId) {
-      throw new Error("That contact is not in this town.");
-    }
-    if (character.area !== this.currentAreaIdOrThrow()) {
-      throw new Error("Move to that local area before talking to that contact.");
-    }
-    const result = this.recordLocalAction(describeOverworldContactAction(character), current.name);
+    const result = this.applyActionApplication(
+      applyOverworldSessionLocalInteraction(
+        this.actionJournalState(),
+        planOverworldSessionContactTalk({
+          characterId,
+          charactersById: this.charactersById,
+          currentTownId: this.currentId,
+          currentAreaId: () => this.currentAreaIdOrThrow(),
+        }),
+        current.name,
+      ),
+    );
     return this.withLocalDiscovery(result, current.id);
   }
 
   investigateEvent(eventId: string): OverworldActionResult {
     this.assertNoPendingRoadEncounter("investigating a local event");
     const current = this.currentNode();
-    const event = this.localEventsById.get(eventId);
-    if (!event || event.home !== this.currentId) {
-      throw new Error("That event is not active in this town.");
-    }
-    if (event.area !== this.currentAreaIdOrThrow()) {
-      throw new Error("Move to that local area before investigating that event.");
-    }
-    const result = this.recordLocalAction(describeOverworldEventAction(event), current.name);
+    const result = this.applyActionApplication(
+      applyOverworldSessionLocalInteraction(
+        this.actionJournalState(),
+        planOverworldSessionEventInvestigation({
+          eventId,
+          eventsById: this.localEventsById,
+          currentTownId: this.currentId,
+          currentAreaId: () => this.currentAreaIdOrThrow(),
+        }),
+        current.name,
+      ),
+    );
     return this.withLocalDiscovery(result, current.id);
   }
 

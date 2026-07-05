@@ -1,4 +1,19 @@
-import type { OverworldArea, OverworldExplorationSite, OverworldLocalJob } from "./overworld.js";
+import {
+  describeOverworldContactAction,
+  describeOverworldEventAction,
+  describeOverworldPoiAction,
+  type OverworldLocalActionDescriptor,
+  type OverworldLocalActionKind,
+} from "./local_actions.js";
+import type {
+  OverworldArea,
+  OverworldCharacter,
+  OverworldExplorationSite,
+  OverworldLocalEvent,
+  OverworldLocalJob,
+  OverworldNode,
+  OverworldPoi,
+} from "./overworld.js";
 import {
   recordOverworldSessionLocalAction,
   type OverworldSessionActionApplication,
@@ -49,6 +64,33 @@ export type OverworldSessionSitePlanState = {
   journalEntries: ReadonlyMap<string, OverworldJournalEntry>;
 };
 
+export type OverworldSessionPoiScoutPlanState = {
+  poiId: string;
+  poisById: ReadonlyMap<string, OverworldPoi>;
+  currentTown: OverworldNode;
+  currentAreaId: () => string;
+};
+
+export type OverworldSessionContactTalkPlanState = {
+  characterId: string;
+  charactersById: ReadonlyMap<string, OverworldCharacter>;
+  currentTownId: string;
+  currentAreaId: () => string;
+};
+
+export type OverworldSessionEventInvestigationPlanState = {
+  eventId: string;
+  eventsById: ReadonlyMap<string, OverworldLocalEvent>;
+  currentTownId: string;
+  currentAreaId: () => string;
+};
+
+export type OverworldSessionLocalInteractionPlan<
+  Kind extends OverworldLocalActionKind = OverworldLocalActionKind,
+> = {
+  action: OverworldLocalActionDescriptor<Kind>;
+};
+
 export type MutableOverworldSessionLocalJobState = OverworldActionJournalState & {
   completedJobIds: Set<string>;
   regionRenown: Map<string, number>;
@@ -79,6 +121,53 @@ export function planOverworldSessionSite(
   state: OverworldSessionSitePlanState,
 ): OverworldSiteExplorationPlan {
   return planOverworldSiteExploration(state);
+}
+
+export function planOverworldSessionPoiScout(
+  state: OverworldSessionPoiScoutPlanState,
+): OverworldSessionLocalInteractionPlan<"poi"> {
+  const poi = state.poisById.get(state.poiId);
+  if (!poi || poi.home !== state.currentTown.id) {
+    throw new Error("That point of interest is not in this town.");
+  }
+  if (poi.area !== state.currentAreaId()) {
+    throw new Error("Move to that local area before scouting this point of interest.");
+  }
+  return { action: describeOverworldPoiAction(poi, state.currentTown) };
+}
+
+export function planOverworldSessionContactTalk(
+  state: OverworldSessionContactTalkPlanState,
+): OverworldSessionLocalInteractionPlan<"contact"> {
+  const character = state.charactersById.get(state.characterId);
+  if (!character || character.home !== state.currentTownId) {
+    throw new Error("That contact is not in this town.");
+  }
+  if (character.area !== state.currentAreaId()) {
+    throw new Error("Move to that local area before talking to that contact.");
+  }
+  return { action: describeOverworldContactAction(character) };
+}
+
+export function planOverworldSessionEventInvestigation(
+  state: OverworldSessionEventInvestigationPlanState,
+): OverworldSessionLocalInteractionPlan<"event"> {
+  const event = state.eventsById.get(state.eventId);
+  if (!event || event.home !== state.currentTownId) {
+    throw new Error("That event is not active in this town.");
+  }
+  if (event.area !== state.currentAreaId()) {
+    throw new Error("Move to that local area before investigating that event.");
+  }
+  return { action: describeOverworldEventAction(event) };
+}
+
+export function applyOverworldSessionLocalInteraction(
+  state: OverworldActionJournalState,
+  plan: OverworldSessionLocalInteractionPlan,
+  townName: string,
+): OverworldSessionActionApplication {
+  return recordOverworldSessionLocalAction(state, plan.action, townName);
 }
 
 export function applyOverworldSessionArea(
