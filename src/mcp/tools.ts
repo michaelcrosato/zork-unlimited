@@ -18,7 +18,6 @@ import type { GameState } from "../core/state.js";
 
 import { compileRpgPack, loadRpgPackFile, type CompiledRpgPack } from "../rpg/pack.js";
 import { generateRpgPack } from "../gen/rpg_generator.js";
-import type { RpgActionOption } from "../rpg/legal_actions.js";
 import { validateRpg } from "../validate/rpg_validator.js";
 import { assertRpgStateReferences } from "../rpg/state_integrity.js";
 
@@ -44,17 +43,23 @@ import { RPG_COMPACT_EVENT_VERSION, type RpgCompactEvent } from "./compact_rpg_e
 import type { RpgCompactObservation } from "./compact_rpg_observation.js";
 import {
   hashTranscript,
-  rpgStepEventVersion,
-  rpgStepEvents,
   transcriptEventVersion,
   transcriptSummaryFor,
   transcriptTurnsFor,
   transcriptUnchanged,
-  type RpgStepEvents,
-  type RpgStepEventVersion,
 } from "./transcript_projection.js";
 import { legalActionRowsFor, rpgViewField } from "./rpg_view_projection.js";
-import { RpgMcpSessionRuntime, rpgRoomTitle, rpgSourceFields } from "./rpg_session_runtime.js";
+import { RpgMcpSessionRuntime, rpgSourceFields } from "./rpg_session_runtime.js";
+import {
+  runRpgStepAction,
+  type RpgStepActionResponse as RpgRuntimeStepActionResponse,
+} from "./rpg_step_action.js";
+import {
+  rpgStateHashRejection,
+  rpgStateUnchanged,
+  type RpgStateHashRejection,
+  type RpgStateUnchanged,
+} from "./rpg_state_guards.js";
 import {
   isOverworldMcpRejectedSessionPayload,
   OverworldMcpSessionStore,
@@ -294,10 +299,6 @@ type RpgObservationPayload<Args extends RpgViewOptions> = {
   state_hash: string;
 } & RpgViewField<Args>;
 
-type RpgStateUnchanged = {
-  state_hash: string;
-  unchanged: true;
-};
 type RpgObservationUnchanged = RpgStateUnchanged;
 
 type RpgObservationResponse<Args extends RpgViewOptions> = Args extends {
@@ -331,26 +332,6 @@ type RpgLegalActionsResponse<Args extends RpgLegalActionsArgs> = Args extends {
   ? RpgLegalActionsPayload<Args> | RpgLegalActionsUnchanged
   : RpgLegalActionsPayload<Args>;
 
-type RpgStepActionBase<Args extends RpgViewOptions & RpgEventOptions> = {
-  events: RpgStepEvents<Args>;
-  state_hash: string;
-} & RpgStepEventVersion<Args> &
-  RpgViewField<Args>;
-
-type RpgStateHashRejection = {
-  ok: false;
-  state_hash: string;
-  rejection_reason: string;
-};
-type RpgStepGuardRejection = RpgStateHashRejection;
-
-type RpgStepResponseOptions = RpgViewOptions & RpgEventOptions & { expected_state_hash?: string };
-
-type RpgStepActionResponse<Args extends RpgStepResponseOptions> =
-  | ({ ok: true } & RpgStepActionBase<Args>)
-  | ({ ok: false; rejection_reason: string } & RpgStepActionBase<Args>)
-  | (Args extends { expected_state_hash: string } ? RpgStepGuardRejection : never);
-
 type RpgNewGameArgs = {
   generate_rpg_seed?: number;
   seed?: number;
@@ -376,6 +357,8 @@ type RpgStepActionArgs = {
   hide_graph?: boolean;
 } & RpgViewOptions &
   RpgEventOptions;
+
+type RpgStepActionResponse<Args extends RpgStepActionArgs> = RpgRuntimeStepActionResponse<Args>;
 
 type RpgLoadGameArgs = {
   world_quest_id?: string;
@@ -474,9 +457,6 @@ type TranscriptResponse<Args extends TranscriptArgs> = Args extends { if_transcr
   ? TranscriptPayload<Args> | TranscriptUnchanged
   : TranscriptPayload<Args>;
 
-const RPG_STATE_HASH_MISMATCH_REASON =
-  "State hash mismatch; refresh the current observation or action menu.";
-
 type RpgGetStateArgs = {
   session_id: string;
   include_state?: boolean;
@@ -521,38 +501,6 @@ type OverworldReadArgs = OverworldMcpReadArgs;
 type OverworldReadResponse<Args extends OverworldReadArgs> = OverworldMcpReadResponse<Args>;
 
 type OverworldContextResponse<Args extends OverworldReadArgs> = OverworldMcpContextResponse<Args>;
-
-function rpgStateUnchanged(stateHash: string): RpgStateUnchanged {
-  return {
-    state_hash: stateHash,
-    unchanged: true,
-  };
-}
-
-function rpgStateHashRejection(stateHash: string): RpgStateHashRejection {
-  return {
-    ok: false,
-    state_hash: stateHash,
-    rejection_reason: RPG_STATE_HASH_MISMATCH_REASON,
-  };
-}
-
-/** The current RPG room id. */
-function obsLocation(obs: { room: string }): string {
-  return obs.room;
-}
-
-/**
- * Map an action id from the RPG runner's legal set to a structured Action.
- * Unknown ids are rejected before they reach the reducer, preserving the illegal
- * action / no state-change path.
- */
-function actionOptionForId(
-  actions: readonly RpgActionOption[],
-  id: string,
-): RpgActionOption | null {
-  return actions.find((action) => action.id === id) ?? null;
-}
 
 function schemaFindings(
   packPath: string,
@@ -1291,68 +1239,7 @@ export function createToolApi(opts: { root: string }) {
     },
 
     step_action<Args extends RpgStepActionArgs>(args: Args): RpgStepActionResponse<Args> {
-      const s = sessions.get(args.session_id);
-      const currentStateHash = s.stateHash;
-      if (args.expected_state_hash !== undefined && args.expected_state_hash !== currentStateHash) {
-        return rpgStateHashRejection(currentStateHash) as RpgStepActionResponse<Args>;
-      }
-      const actionOptions = rpgRuntime.legalActionsFor(s);
-      const actionOption = actionOptionForId(actionOptions, args.action_id);
-      const beforeStep = s.state.step;
-      const beforeSceneId = s.state.current;
-      const beforeTitle = rpgRoomTitle(s.index, s.state);
-      if (actionOption === null) {
-        const beforeObsOpts = {
-          hideGraph: args.hide_graph ?? s.hideGraph ?? false,
-        };
-        const before = rpgRuntime.observationOf(s, beforeObsOpts);
-        // Unknown action ids never reach the engine.
-        return {
-          ok: false,
-          rejection_reason: "That action is not available right now.",
-          events: rpgStepEvents(
-            [{ type: "rejected" as const, reason: "That action is not available right now." }],
-            args,
-          ),
-          ...rpgStepEventVersion(args),
-          ...rpgViewField(sessions, s, before, args, beforeObsOpts),
-          state_hash: currentStateHash,
-        } as RpgStepActionResponse<Args>;
-      }
-      const result = s.step(s.state, actionOption.action);
-      sessions.update(s.id, result.state);
-      const afterObsOpts = {
-        hideGraph: args.hide_graph ?? s.hideGraph ?? false,
-      };
-      const after = rpgRuntime.observationOf(s, afterObsOpts);
-      sessions.appendTranscript(s.id, {
-        step: beforeStep,
-        scene_id: beforeSceneId,
-        title: beforeTitle,
-        action_id: args.action_id,
-        action_text: actionOption.command,
-        events: result.events,
-        result_scene_id: obsLocation(after),
-        ended: after.ended,
-        ending_id: after.ending_id,
-      });
-      if (!result.ok) {
-        return {
-          ok: false,
-          rejection_reason: result.rejectionReason ?? "Action rejected.",
-          events: rpgStepEvents(result.events, args),
-          ...rpgStepEventVersion(args),
-          ...rpgViewField(sessions, s, after, args, afterObsOpts),
-          state_hash: s.stateHash,
-        } as RpgStepActionResponse<Args>;
-      }
-      return {
-        ok: true,
-        events: rpgStepEvents(result.events, args),
-        ...rpgStepEventVersion(args),
-        ...rpgViewField(sessions, s, after, args, afterObsOpts),
-        state_hash: s.stateHash,
-      } as RpgStepActionResponse<Args>;
+      return runRpgStepAction({ sessions, rpgRuntime }, args);
     },
 
     get_state<Args extends RpgGetStateArgs>(args: Args): RpgStateResponse<Args> {
