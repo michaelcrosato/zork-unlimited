@@ -41,14 +41,16 @@ import {
   type OverworldQuestView,
 } from "./session_local_discovery.js";
 import {
-  applyOverworldQuestCompletion,
-  applyOverworldQuestStart,
-  planOverworldQuestCompletion,
-  planOverworldQuestStart,
   type OverworldQuestCompletionOutcome,
   type OverworldQuestCompletionResult,
   type OverworldQuestStartPlan,
 } from "./session_quests.js";
+import {
+  applyOverworldSessionQuestCompletion,
+  applyOverworldSessionQuestStart,
+  planOverworldSessionQuestCompletion,
+  planOverworldSessionQuestStart,
+} from "./session_quest_lifecycle.js";
 import { type OverworldSnapshotManifestIndex } from "./session_manifest_index.js";
 import {
   planOverworldTownRest,
@@ -592,7 +594,7 @@ export class OverworldSession {
 
   private questStartPlan(questId: string): OverworldQuestStartPlan {
     this.assertNoPendingRoadEncounter("starting a quest");
-    return planOverworldQuestStart({
+    return planOverworldSessionQuestStart({
       questId,
       questsById: this.questsById,
       areasById: this.areasById,
@@ -610,12 +612,18 @@ export class OverworldSession {
 
   startQuest(questId: string): OverworldQuestView {
     const plan = this.questStartPlan(questId);
-    const result = this.recordAction(plan.entryDraft, plan.minutes);
-    if (!result.alreadyKnown) {
-      applyOverworldQuestStart({ startedQuestIds: this.startedQuestIds }, plan);
+    const applied = applyOverworldSessionQuestStart(
+      {
+        ...this.actionJournalState(),
+        startedQuestIds: this.startedQuestIds,
+      },
+      plan,
+    );
+    this.applyClockState(applied);
+    if (applied.stateChanged) {
       this.clearSnapshotCache();
     }
-    return plan.quest;
+    return applied.quest;
   }
 
   completeQuest(
@@ -623,26 +631,24 @@ export class OverworldSession {
     outcome: OverworldQuestCompletionOutcome,
   ): OverworldQuestCompletionResult {
     this.assertNoPendingRoadEncounter("completing a quest");
-    const plan = planOverworldQuestCompletion({
-      questId,
-      outcome,
-      questsById: this.questsById,
-      nodesById: this.nodes,
-      startedQuestIds: this.startedQuestIds,
-    });
-    const result = this.recordAction(plan.entryDraft, plan.minutes);
-    if (!result.alreadyKnown) {
-      applyOverworldQuestCompletion({ completedQuestIds: this.completedQuestIds }, plan);
+    const applied = applyOverworldSessionQuestCompletion(
+      {
+        ...this.actionJournalState(),
+        completedQuestIds: this.completedQuestIds,
+      },
+      planOverworldSessionQuestCompletion({
+        questId,
+        outcome,
+        questsById: this.questsById,
+        nodesById: this.nodes,
+        startedQuestIds: this.startedQuestIds,
+      }),
+    );
+    this.applyClockState(applied);
+    if (applied.stateChanged) {
       this.clearSnapshotCache();
     }
-    return {
-      minutes: result.minutes,
-      alreadyKnown: result.alreadyKnown,
-      quest: plan.quest,
-      endingId: plan.endingId,
-      endingTitle: plan.endingTitle,
-      entry: result.entry,
-    };
+    return applied.result;
   }
 
   scoutPoi(poiId: string): OverworldActionResult {
