@@ -73,7 +73,9 @@ export const PROTECTED_FILES = [
 export const FORBIDDEN_FILES = [
   "src/gen/cyoa_generator.ts",
   "src/gen/parser_generator.ts",
+  "bin/play.ts",
   "bin/cyoa.ts",
+  "bin/parser.ts",
   "bin/parser_play.ts",
   "src/cyoa",
   "src/validate/cyoa_validator.ts",
@@ -89,6 +91,8 @@ export const FORBIDDEN_FILES = [
 export const FORBIDDEN_PATH_PATTERNS = [
   "^tests/unit/cyoa.*\\.test\\.ts$",
   "^tests/unit/parser.*\\.test\\.ts$",
+  "^tests/(?:regression|property)/cyoa.*\\.test\\.ts$",
+  "^tests/(?:regression|property)/parser.*\\.test\\.ts$",
 ] as const;
 
 /** Files holding committed hash pins / known-answer vectors that should not change
@@ -222,6 +226,7 @@ export function detectForbiddenPathPatterns(
         message: `legacy CYOA/parser test family must not reappear in the RPG-only runtime: ${path} matches ${pattern}`,
         where: path,
       });
+      break;
     }
   }
   return findings;

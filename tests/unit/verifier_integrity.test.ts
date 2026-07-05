@@ -171,11 +171,19 @@ describe("detectForbiddenPathPatterns — retired test families stay gone", () =
     const findings = detectForbiddenPathPatterns([
       "tests/unit/cyoa_engine.test.ts",
       "tests/unit/parser_grammar.test.ts",
+      "tests/regression/cyoa_score_economy.test.ts",
+      "tests/regression/parser_all_endings_reachable.test.ts",
+      "tests/property/cyoa_determinism.test.ts",
+      "tests/property/parser_determinism.test.ts",
       "tests/unit/rpg.test.ts",
     ]);
     expect(findings.map((f) => f.where)).toEqual([
       "tests/unit/cyoa_engine.test.ts",
       "tests/unit/parser_grammar.test.ts",
+      "tests/regression/cyoa_score_economy.test.ts",
+      "tests/regression/parser_all_endings_reachable.test.ts",
+      "tests/property/cyoa_determinism.test.ts",
+      "tests/property/parser_determinism.test.ts",
     ]);
     expect(findings.every((f) => f.code === "FORBIDDEN_PATH_PATTERN")).toBe(true);
   });
@@ -421,7 +429,9 @@ describe("runStatic on the real repo (this is the bar)", () => {
   it("forbidden legacy assets are absent from the real repo", () => {
     expect(FORBIDDEN_FILES).toContain("src/gen/cyoa_generator.ts");
     expect(FORBIDDEN_FILES).toContain("src/gen/parser_generator.ts");
+    expect(FORBIDDEN_FILES).toContain("bin/play.ts");
     expect(FORBIDDEN_FILES).toContain("bin/cyoa.ts");
+    expect(FORBIDDEN_FILES).toContain("bin/parser.ts");
     expect(FORBIDDEN_FILES).toContain("bin/parser_play.ts");
     expect(FORBIDDEN_FILES).toContain("src/cyoa");
     expect(FORBIDDEN_FILES).toContain("src/validate/cyoa_validator.ts");
@@ -432,6 +442,10 @@ describe("runStatic on the real repo (this is the bar)", () => {
     expect(FORBIDDEN_FILES).toContain("tests/property/parser_determinism.test.ts");
     expect(FORBIDDEN_PATH_PATTERNS).toContain("^tests/unit/cyoa.*\\.test\\.ts$");
     expect(FORBIDDEN_PATH_PATTERNS).toContain("^tests/unit/parser.*\\.test\\.ts$");
+    expect(FORBIDDEN_PATH_PATTERNS).toContain("^tests/(?:regression|property)/cyoa.*\\.test\\.ts$");
+    expect(FORBIDDEN_PATH_PATTERNS).toContain(
+      "^tests/(?:regression|property)/parser.*\\.test\\.ts$",
+    );
     expect(res.findings.filter((f) => f.code === "FORBIDDEN_FILE_PRESENT")).toEqual([]);
     expect(res.findings.filter((f) => f.code === "FORBIDDEN_PATH_PATTERN")).toEqual([]);
   });
