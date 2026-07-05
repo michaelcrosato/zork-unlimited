@@ -95,6 +95,7 @@ describe("Stage 4 — The Sunken Barrow", () => {
       trace_id: "tr_barrow_victory",
       pack_id: compiled.pack.meta.id,
       content_hash: compiled.contentHash,
+      worldQuestId: "sunken_barrow",
     });
     const replay = replayTrace(trace, rules);
     expect(replay.ok).toBe(true);
@@ -108,7 +109,9 @@ describe("Stage 4 — The Sunken Barrow", () => {
     state = act(state, { type: "MOVE", direction: "down" }, setup);
     state = act(state, { type: "TAKE", item: "iron_bar" }, setup);
     state = act(state, { type: "MOVE", direction: "north" }, setup);
-    const saveStr = save(state, compiled.pack.meta.id, compiled.contentHash);
+    const saveStr = save(state, compiled.pack.meta.id, compiled.contentHash, undefined, {
+      worldQuestId: "sunken_barrow",
+    });
 
     // A wounded hero (hp 1) walks into the same fight and dies — a real death ending.
     let doomed: GameState = { ...state, vars: { ...state.vars, hp: 1 } };

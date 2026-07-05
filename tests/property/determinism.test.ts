@@ -101,7 +101,12 @@ describe("determinism contract (§8.5)", () => {
     fc.assert(
       fc.property(picksArb, seedArb, (picks, seed) => {
         for (const s of walk(picks, seed).states) {
-          const restored = load(save(s, MICRO_PACK_ID, MICRO_CONTENT_HASH), MICRO_CONTENT_HASH);
+          const restored = load(
+            save(s, MICRO_PACK_ID, MICRO_CONTENT_HASH, undefined, {
+              worldQuestId: "micro_determinism",
+            }),
+            MICRO_CONTENT_HASH,
+          );
           expect(hashState(restored.state)).toBe(hashState(s));
         }
       }),

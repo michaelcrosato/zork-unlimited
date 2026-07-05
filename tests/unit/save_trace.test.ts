@@ -5,9 +5,10 @@ import {
   assertSaveContentHash,
   SaveIntegrityError,
   SAVE_MODE,
+  type SaveMetadata,
 } from "../../src/persist/save_load.js";
 import { hashState } from "../../src/core/hash.js";
-import { recordTrace, traceSourceLabel } from "../../src/trace/record.js";
+import { recordTrace, traceSourceLabel, type RecordOptions } from "../../src/trace/record.js";
 import { replayTrace } from "../../src/trace/replay.js";
 import type { RpgAction } from "../../src/api/types.js";
 import {
@@ -25,30 +26,44 @@ const WIN: RpgAction[] = [
   MICRO_ACTIONS.claimTreasure,
 ];
 const UNSAFE_GENERATED_RPG_SEED = Number.MAX_SAFE_INTEGER + 1;
+const MICRO_WORLD_QUEST_ID = "sunken_barrow";
+const MICRO_SAVE_SOURCE: SaveMetadata = { worldQuestId: MICRO_WORLD_QUEST_ID };
+
+function saveMicro(state = microInitState(), metadata: SaveMetadata = MICRO_SAVE_SOURCE): string {
+  return save(state, MICRO_PACK_ID, MICRO_CONTENT_HASH, SAVE_MODE, metadata);
+}
+
+function traceOptions(overrides: Partial<RecordOptions> = {}): RecordOptions {
+  const source =
+    overrides.generatedRpgSeed === undefined && overrides.worldQuestId === undefined
+      ? { worldQuestId: MICRO_WORLD_QUEST_ID }
+      : {};
+  return {
+    trace_id: "tr_test",
+    pack_id: MICRO_PACK_ID,
+    content_hash: MICRO_CONTENT_HASH,
+    ...source,
+    ...overrides,
+  };
+}
 
 describe("save / load (§8.7)", () => {
   it("round-trips to an identical state hash", () => {
     const s = microInitState();
-    const bytes = save(s, MICRO_PACK_ID, MICRO_CONTENT_HASH);
+    const bytes = saveMicro(s);
     const loaded = load(bytes, MICRO_CONTENT_HASH);
     expect(hashState(loaded.state)).toBe(hashState(s));
     expect(loaded.packId).toBe(MICRO_PACK_ID);
     expect(loaded.mode).toBe(SAVE_MODE);
-    expect(loaded.source_ref).toEqual(["pack", MICRO_PACK_ID]);
+    expect(loaded.source_ref).toEqual(["wq", MICRO_WORLD_QUEST_ID]);
   });
 
   it("returns immutable loaded bundles after validation", () => {
-    const bytes = save(
-      {
-        ...microInitState(),
-        inventory: ["torch"],
-        objectState: { chest: { contents: ["ruby"] } },
-      },
-      MICRO_PACK_ID,
-      MICRO_CONTENT_HASH,
-      SAVE_MODE,
-      { worldQuestId: "sunken_barrow" },
-    );
+    const bytes = saveMicro({
+      ...microInitState(),
+      inventory: ["torch"],
+      objectState: { chest: { contents: ["ruby"] } },
+    });
     const loaded = load(bytes, MICRO_CONTENT_HASH);
 
     expect(Object.isFrozen(loaded)).toBe(true);
@@ -77,7 +92,7 @@ describe("save / load (§8.7)", () => {
       ...microInitState(),
       vars: { hp: Infinity },
     };
-    const write = () => save(poisoned, MICRO_PACK_ID, MICRO_CONTENT_HASH);
+    const write = () => saveMicro(poisoned);
     expect(write).toThrow(SaveIntegrityError);
     expect(write).toThrow(/malformed or non-finite/);
   });
@@ -93,17 +108,24 @@ describe("save / load (§8.7)", () => {
     );
   });
 
+  it("rejects package-only source fallback at the write boundary", () => {
+    expect(() => save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH)).toThrow(
+      SaveIntegrityError,
+    );
+    expect(() => save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH)).toThrow(
+      /worldQuestId or generatedRpgSeed/,
+    );
+  });
+
   it("rejects a content-hash mismatch as a hard error", () => {
-    const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH);
+    const bytes = saveMicro();
     expect(() => load(bytes, "deadbeef")).toThrow(SaveIntegrityError);
   });
 
   it("rejects malformed save envelope identity at the load boundary", () => {
     for (const field of ["packId", "contentHash"] as const) {
       for (const value of ["", 12, null]) {
-        const bundle = JSON.parse(save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH)) as {
-          [key: string]: unknown;
-        };
+        const bundle = JSON.parse(saveMicro()) as { [key: string]: unknown };
         bundle[field] = value;
 
         expect(() => load(JSON.stringify(bundle))).toThrow(SaveIntegrityError);
@@ -113,24 +135,22 @@ describe("save / load (§8.7)", () => {
   });
 
   it("checks a loaded save bundle against a resolved pack hash", () => {
-    const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH);
+    const bytes = saveMicro();
     const loaded = load(bytes);
     expect(() => assertSaveContentHash(loaded, MICRO_CONTENT_HASH)).not.toThrow();
     expect(() => assertSaveContentHash(loaded, "deadbeef")).toThrow(SaveIntegrityError);
   });
 
   it("loads without verification when no expected hash is supplied", () => {
-    const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH);
+    const bytes = saveMicro();
     expect(load(bytes).contentHash).toBe(MICRO_CONTENT_HASH);
   });
 
   it("round-trips optional world quest identity", () => {
-    const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH, SAVE_MODE, {
-      worldQuestId: "sunken_barrow",
-    });
+    const bytes = saveMicro();
     const loaded = load(bytes, MICRO_CONTENT_HASH);
-    expect(loaded.worldQuestId).toBe("sunken_barrow");
-    expect(loaded.source_ref).toEqual(["wq", "sunken_barrow"]);
+    expect(loaded.worldQuestId).toBe(MICRO_WORLD_QUEST_ID);
+    expect(loaded.source_ref).toEqual(["wq", MICRO_WORLD_QUEST_ID]);
   });
 
   it("round-trips optional generated RPG identity", () => {
@@ -161,7 +181,7 @@ describe("save / load (§8.7)", () => {
   });
 
   it("rejects saves that omit the RPG mode", () => {
-    const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH);
+    const bytes = saveMicro();
     const bundle = JSON.parse(bytes) as Record<string, unknown>;
     delete bundle.mode;
     expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
@@ -169,7 +189,7 @@ describe("save / load (§8.7)", () => {
   });
 
   it("rejects explicit legacy save modes", () => {
-    const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH);
+    const bytes = saveMicro();
     for (const mode of ["parser", "cyoa"]) {
       const bundle = JSON.parse(bytes) as Record<string, unknown>;
       bundle.mode = mode;
@@ -179,7 +199,7 @@ describe("save / load (§8.7)", () => {
   });
 
   it("rejects malformed world quest identity", () => {
-    const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH);
+    const bytes = saveMicro();
     const bundle = JSON.parse(bytes) as Record<string, unknown>;
     bundle.worldQuestId = null;
     expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
@@ -187,9 +207,7 @@ describe("save / load (§8.7)", () => {
   });
 
   it("rejects conflicting compact save source identity", () => {
-    const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH, SAVE_MODE, {
-      worldQuestId: "sunken_barrow",
-    });
+    const bytes = saveMicro();
     const bundle = JSON.parse(bytes) as Record<string, unknown>;
     bundle.source_ref = ["wq", "cold_forge"];
     expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
@@ -197,11 +215,28 @@ describe("save / load (§8.7)", () => {
   });
 
   it("rejects malformed compact save source identity", () => {
-    const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH);
+    const bytes = saveMicro();
     const bundle = JSON.parse(bytes) as Record<string, unknown>;
     bundle.source_ref = ["gen", 3.5];
     expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
     expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(/source_ref/);
+  });
+
+  it("loads historical package-only source fallback saves", () => {
+    const bytes = JSON.stringify({
+      version: 1,
+      packId: MICRO_PACK_ID,
+      contentHash: MICRO_CONTENT_HASH,
+      mode: SAVE_MODE,
+      source_ref: ["pack", MICRO_PACK_ID],
+      state: microInitState(),
+    });
+    const loaded = load(bytes, MICRO_CONTENT_HASH);
+
+    expect(loaded.source_ref).toEqual(["pack", MICRO_PACK_ID]);
+    expect(loaded.worldQuestId).toBeUndefined();
+    expect(loaded.generatedRpgSeed).toBeUndefined();
+    expect(Object.isFrozen(loaded.source_ref)).toBe(true);
   });
 
   it("rejects attempts to write a non-RPG mode", () => {
@@ -218,15 +253,10 @@ describe("save / load (§8.7)", () => {
 
 describe("trace record / replay (§8.8)", () => {
   it("a hand-written trace round-trips: record then replay reproduces the hash", () => {
-    const trace = recordTrace(microRules, microInitState(), WIN, {
-      trace_id: "tr_test",
-      pack_id: MICRO_PACK_ID,
-      content_hash: MICRO_CONTENT_HASH,
-      worldQuestId: "sunken_barrow",
-    });
+    const trace = recordTrace(microRules, microInitState(), WIN, traceOptions());
     expect(trace.mode).toBe(SAVE_MODE);
-    expect(trace.source_ref).toEqual(["wq", "sunken_barrow"]);
-    expect(trace.worldQuestId).toBe("sunken_barrow");
+    expect(trace.source_ref).toEqual(["wq", MICRO_WORLD_QUEST_ID]);
+    expect(trace.worldQuestId).toBe(MICRO_WORLD_QUEST_ID);
     expect(trace.expected_final_hash).toBeDefined();
     const result = replayTrace(trace, microRules);
     expect(result.ok).toBe(true);
@@ -248,23 +278,32 @@ describe("trace record / replay (§8.8)", () => {
   });
 
   it("rejects traces that omit the RPG mode", () => {
-    const trace = recordTrace(microRules, microInitState(), WIN, {
-      trace_id: "tr_test",
-      pack_id: MICRO_PACK_ID,
-      content_hash: MICRO_CONTENT_HASH,
-    });
-    expect(trace.source_ref).toEqual(["pack", MICRO_PACK_ID]);
+    const trace = recordTrace(microRules, microInitState(), WIN, traceOptions());
+    expect(trace.source_ref).toEqual(["wq", MICRO_WORLD_QUEST_ID]);
     const { mode: _drop, ...withoutMode } = trace;
     expect(() => replayTrace(withoutMode as typeof trace, microRules)).toThrow(SaveIntegrityError);
     expect(() => replayTrace(withoutMode as typeof trace, microRules)).toThrow(/Trace mode/);
   });
 
+  it("rejects package-only source fallback at the recording boundary", () => {
+    expect(() =>
+      recordTrace(microRules, microInitState(), WIN, {
+        trace_id: "tr_test",
+        pack_id: MICRO_PACK_ID,
+        content_hash: MICRO_CONTENT_HASH,
+      }),
+    ).toThrow(SaveIntegrityError);
+    expect(() =>
+      recordTrace(microRules, microInitState(), WIN, {
+        trace_id: "tr_test",
+        pack_id: MICRO_PACK_ID,
+        content_hash: MICRO_CONTENT_HASH,
+      }),
+    ).toThrow(/worldQuestId or generatedRpgSeed/);
+  });
+
   it("rejects malformed trace identity at the recording boundary", () => {
-    const base = {
-      trace_id: "tr_test",
-      pack_id: MICRO_PACK_ID,
-      content_hash: MICRO_CONTENT_HASH,
-    };
+    const base = traceOptions();
 
     for (const field of ["trace_id", "pack_id", "content_hash"] as const) {
       for (const value of ["", 12, null]) {
@@ -279,11 +318,7 @@ describe("trace record / replay (§8.8)", () => {
   });
 
   it("rejects malformed trace identity at the replay boundary", () => {
-    const trace = recordTrace(microRules, microInitState(), WIN, {
-      trace_id: "tr_test",
-      pack_id: MICRO_PACK_ID,
-      content_hash: MICRO_CONTENT_HASH,
-    });
+    const trace = recordTrace(microRules, microInitState(), WIN, traceOptions());
 
     for (const field of ["trace_id", "pack_id", "content_hash"] as const) {
       for (const value of ["", 12, null]) {
@@ -296,11 +331,7 @@ describe("trace record / replay (§8.8)", () => {
   });
 
   it("rejects malformed trace action lists at the replay boundary", () => {
-    const trace = recordTrace(microRules, microInitState(), WIN, {
-      trace_id: "tr_test",
-      pack_id: MICRO_PACK_ID,
-      content_hash: MICRO_CONTENT_HASH,
-    });
+    const trace = recordTrace(microRules, microInitState(), WIN, traceOptions());
 
     for (const value of [undefined, null, "not-actions", { 0: MICRO_ACTIONS.takeTorch }]) {
       const malformed = { ...trace, actions: value } as unknown as typeof trace;
@@ -311,11 +342,7 @@ describe("trace record / replay (§8.8)", () => {
   });
 
   it("rejects malformed trace action entries at the replay boundary", () => {
-    const trace = recordTrace(microRules, microInitState(), WIN, {
-      trace_id: "tr_test",
-      pack_id: MICRO_PACK_ID,
-      content_hash: MICRO_CONTENT_HASH,
-    });
+    const trace = recordTrace(microRules, microInitState(), WIN, traceOptions());
 
     for (const value of [null, "look", [], { type: "" }, { type: 12 }]) {
       const malformed = { ...trace, actions: [value] } as unknown as typeof trace;
@@ -326,11 +353,7 @@ describe("trace record / replay (§8.8)", () => {
   });
 
   it("rejects malformed trace initial state at the replay boundary", () => {
-    const trace = recordTrace(microRules, microInitState(), WIN, {
-      trace_id: "tr_test",
-      pack_id: MICRO_PACK_ID,
-      content_hash: MICRO_CONTENT_HASH,
-    });
+    const trace = recordTrace(microRules, microInitState(), WIN, traceOptions());
     const malformed = {
       ...trace,
       initial_state: {
@@ -344,11 +367,7 @@ describe("trace record / replay (§8.8)", () => {
   });
 
   it("rejects traces whose reported seed is detached from initial_state.seed", () => {
-    const trace = recordTrace(microRules, microInitState(), WIN, {
-      trace_id: "tr_test",
-      pack_id: MICRO_PACK_ID,
-      content_hash: MICRO_CONTENT_HASH,
-    });
+    const trace = recordTrace(microRules, microInitState(), WIN, traceOptions());
 
     for (const value of [trace.seed + 1, Number.MAX_SAFE_INTEGER + 1, 3.5, null]) {
       const malformed = { ...trace, seed: value } as unknown as typeof trace;
@@ -359,11 +378,7 @@ describe("trace record / replay (§8.8)", () => {
   });
 
   it("rejects malformed expected final hashes at the replay boundary", () => {
-    const trace = recordTrace(microRules, microInitState(), WIN, {
-      trace_id: "tr_test",
-      pack_id: MICRO_PACK_ID,
-      content_hash: MICRO_CONTENT_HASH,
-    });
+    const trace = recordTrace(microRules, microInitState(), WIN, traceOptions());
 
     for (const value of ["", null, 12, ["not-a-hash"]]) {
       const malformed = { ...trace, expected_final_hash: value } as unknown as typeof trace;
@@ -432,25 +447,29 @@ describe("trace record / replay (§8.8)", () => {
   });
 
   it("detects divergence when the expected hash is wrong", () => {
-    const trace = recordTrace(microRules, microInitState(), WIN, {
-      trace_id: "tr_test",
-      pack_id: MICRO_PACK_ID,
-      content_hash: MICRO_CONTENT_HASH,
-    });
+    const trace = recordTrace(microRules, microInitState(), WIN, traceOptions());
     const tampered = { ...trace, expected_final_hash: "0".repeat(64) };
     const result = replayTrace(tampered, microRules);
     expect(result.ok).toBe(false);
     expect(result.message).toContain("!=");
   });
+
+  it("replays historical package-only source fallback traces", () => {
+    const canonical = recordTrace(microRules, microInitState(), WIN, traceOptions());
+    const legacyTrace = {
+      ...canonical,
+      source_ref: ["pack", MICRO_PACK_ID],
+      worldQuestId: undefined,
+    } as unknown as typeof canonical;
+
+    expect(traceSourceLabel(legacyTrace)).toBe(`pack_id:${MICRO_PACK_ID}`);
+    expect(replayTrace(legacyTrace, microRules).ok).toBe(true);
+  });
 });
 
 describe("trace v2: per-step divergence localization (§8.8)", () => {
   const newTrace = () =>
-    recordTrace(microRules, microInitState(), WIN, {
-      trace_id: "tr_v2",
-      pack_id: MICRO_PACK_ID,
-      content_hash: MICRO_CONTENT_HASH,
-    });
+    recordTrace(microRules, microInitState(), WIN, traceOptions({ trace_id: "tr_v2" }));
 
   it("records a per-step hash for every action", () => {
     const trace = newTrace();

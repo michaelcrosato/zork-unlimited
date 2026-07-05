@@ -23,7 +23,9 @@ import { microInitState, MICRO_PACK_ID, MICRO_CONTENT_HASH } from "../../src/dem
 
 /** Build the canonical clean save bytes for the micro pack. */
 function cleanBytes(state: GameState = microInitState()): string {
-  return save(state, MICRO_PACK_ID, MICRO_CONTENT_HASH);
+  return save(state, MICRO_PACK_ID, MICRO_CONTENT_HASH, undefined, {
+    worldQuestId: "micro_adversarial",
+  });
 }
 
 function forgeState(mutate: (state: Record<string, unknown>) => void): string {

@@ -11,7 +11,7 @@ import { hashState } from "../core/hash.js";
 import type { RpgAction, StepResult } from "../api/types.js";
 import type { EngineAction, Rules } from "../core/engine.js";
 import { makeStep } from "../core/engine.js";
-import { SAVE_MODE, type SaveMode } from "../persist/save_load.js";
+import { SaveIntegrityError, SAVE_MODE, type SaveMode } from "../persist/save_load.js";
 import { assertTraceIdentityFields } from "./integrity.js";
 import {
   compactSourceLegacyMetadata,
@@ -24,7 +24,7 @@ export type TraceSourceRef = CompactSourceRef;
 
 export type Trace<A extends EngineAction = RpgAction> = {
   mode: SaveMode;
-  /** Compact canonical source: world quest, generated RPG seed, or legacy pack fallback. */
+  /** Compact canonical source; historical traces may carry legacy pack fallback. */
   source_ref?: TraceSourceRef;
   /** Shipped world quest id, when the trace belongs to the open-world graph. */
   worldQuestId?: string;
@@ -90,7 +90,12 @@ const TRACE_SOURCE_LABELS = {
 
 function traceSourceRef(opts: RecordOptions): TraceSourceRef {
   const sourceRef = compactSourceRefFromMetadata(opts.pack_id, opts, TRACE_SOURCE_LABELS);
-  if (!sourceRef.ok) throw new Error(sourceRef.error);
+  if (!sourceRef.ok) throw new SaveIntegrityError(sourceRef.error);
+  if (sourceRef.sourceRef[0] === "pack") {
+    throw new SaveIntegrityError(
+      "Trace source requires worldQuestId or generatedRpgSeed; packId fallback is replay-only.",
+    );
+  }
   return sourceRef.sourceRef;
 }
 

@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 414 -->
+<!-- historical_cycle_count: 415 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - write_source_pack_fallback_retired
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: save and trace writers now require canonical `worldQuestId` or `generatedRpgSeed` instead of minting package-only `source_ref` fallback.
+- Loop effect: new persisted artifacts stay tied to world/generated identity while historical `["pack", id]` save/trace artifacts remain load/replay-only compatibility inputs.
+- Guard: focused save/trace, stage4, determinism, and source-integrity regressions cover write rejection plus legacy load/replay tolerance.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused changed tests, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - session_source_identity_guarded
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: the recurring validation gate drops another package-era identity line per quest while preserving internal pack ids for author/generated diagnostics.
 - Guard: focused Prettier, typecheck, validation-bar, and report-format checks passed over the cleanup.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - blind_smoke_mode_line_removed
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: the no-LLM blind MCP smoke runner no longer prints stale top-level `mode` from `start_world_quest`; startup logs keep session id plus quest id.
-- Loop effect: blind harness smoke output now matches mode-free MCP start responses instead of showing `mode undefined` during preflight checks.
-- Guard: focused Prettier, typecheck, blind runner contract, and blind smoke checks passed over the cleanup.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm run blind:smoke`, focused test, `npm test`, and `npm run health` passed after loop-state rotation.

@@ -59,6 +59,7 @@ function newTrace(): RpgTrace {
     trace_id: "tr_0290_regression",
     pack_id: MICRO_PACK_ID,
     content_hash: MICRO_CONTENT_HASH,
+    worldQuestId: "micro_divergence",
   });
 }
 
