@@ -152,6 +152,7 @@ export function save(
   metadata: SaveMetadata = {},
 ): string {
   assertRpgMode(mode, "Save mode");
+  assertWellFormedState(state);
   const sourceRef = saveSourceRef(packId, metadata);
   const sourceMetadata = compactSourceLegacyMetadata(sourceRef);
   const bundle: SaveBundle = {

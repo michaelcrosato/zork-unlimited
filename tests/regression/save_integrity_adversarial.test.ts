@@ -26,6 +26,12 @@ function cleanBytes(state: GameState = microInitState()): string {
   return save(state, MICRO_PACK_ID, MICRO_CONTENT_HASH);
 }
 
+function forgeState(mutate: (state: Record<string, unknown>) => void): string {
+  const bundle = JSON.parse(cleanBytes()) as { state: Record<string, unknown> };
+  mutate(bundle.state);
+  return JSON.stringify(bundle);
+}
+
 /**
  * Forge a save string carrying a NON-FINITE numeric token that no JSON encoder
  * would emit (JSON.stringify(Infinity) === "null", JSON.stringify(NaN) ===
@@ -116,32 +122,30 @@ describe("save/load integrity gate — forged-save REJECTION (§16, SoundnessBen
   });
 
   it("wrong-type flag (flags.lever = string, not boolean) is a hard SaveIntegrityError", () => {
-    const state = { ...microInitState(), flags: { lever: "yes" } } as unknown as GameState;
-    const bytes = cleanBytes(state);
+    const bytes = forgeState((state) => {
+      state.flags = { lever: "yes" };
+    });
     expect(() => load(bytes, MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
   });
 
   it("missing required field (no `current`) is a hard SaveIntegrityError", () => {
-    const { current: _drop, ...rest } = microInitState();
-    const bytes = cleanBytes(rest as unknown as GameState);
+    const bytes = forgeState((state) => {
+      delete state.current;
+    });
     expect(() => load(bytes, MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
   });
 
   it("malformed objectState (box.open = string) is a hard SaveIntegrityError", () => {
-    const state = {
-      ...microInitState(),
-      objectState: { box: { open: "true" } },
-    } as unknown as GameState;
-    const bytes = cleanBytes(state);
+    const bytes = forgeState((state) => {
+      state.objectState = { box: { open: "true" } };
+    });
     expect(() => load(bytes, MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
   });
 
   it("unknown objectState key is a hard SaveIntegrityError (.strict mirrors ObjectRuntime)", () => {
-    const state = {
-      ...microInitState(),
-      objectState: { box: { open: true, sabotage: 1 } },
-    } as unknown as GameState;
-    const bytes = cleanBytes(state);
+    const bytes = forgeState((state) => {
+      state.objectState = { box: { open: true, sabotage: 1 } };
+    });
     expect(() => load(bytes, MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
   });
 });

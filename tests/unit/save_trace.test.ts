@@ -36,6 +36,16 @@ describe("save / load (§8.7)", () => {
     expect(loaded.source_ref).toEqual(["pack", MICRO_PACK_ID]);
   });
 
+  it("rejects malformed state at the save write boundary", () => {
+    const poisoned = {
+      ...microInitState(),
+      vars: { hp: Infinity },
+    };
+    const write = () => save(poisoned, MICRO_PACK_ID, MICRO_CONTENT_HASH);
+    expect(write).toThrow(SaveIntegrityError);
+    expect(write).toThrow(/malformed or non-finite/);
+  });
+
   it("rejects a content-hash mismatch as a hard error", () => {
     const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH);
     expect(() => load(bytes, "deadbeef")).toThrow(SaveIntegrityError);
