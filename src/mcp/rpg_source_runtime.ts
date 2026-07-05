@@ -49,8 +49,6 @@ export type GeneratedRpgCacheEntry = {
 };
 
 export type WorldQuestSourceEntry = {
-  path: string;
-  id: string;
   title: string;
   playable: boolean;
   world: WorldBinding | null;
@@ -232,9 +230,7 @@ export class RpgSourceRuntime {
       const lr = this.loadAndReport(path);
       const node = worldQuestNodeForPack(world, path);
       return {
-        path,
-        id: lr.ok ? lr.compiled.pack.meta.id : path,
-        title: lr.ok ? lr.compiled.pack.meta.title : path,
+        title: lr.ok ? lr.compiled.pack.meta.title : (node?.name ?? "Unknown world quest"),
         playable: lr.ok && lr.report.ok,
         world: lr.ok ? (lr.compiled.pack.meta.world ?? null) : null,
         world_quest_id: node?.id ?? null,

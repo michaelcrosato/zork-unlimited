@@ -6,6 +6,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { createToolApi } from "../../src/mcp/tools.js";
+import { RpgSourceRuntime } from "../../src/mcp/rpg_source_runtime.js";
 import { isRpgPackShape } from "../../src/mcp/types.js";
 
 const ROOT = process.cwd();
@@ -20,6 +21,19 @@ describe("isRpgPackShape keeps RPG structural priority", () => {
 });
 
 describe("list_world is the single RPG quest catalog", () => {
+  it("keeps source discovery keyed by the canonical world graph", () => {
+    const sources = new RpgSourceRuntime(ROOT).discoverWorldQuestSources();
+    expect(sources).toHaveLength(16);
+    expect(sources.every((source) => !("path" in source))).toBe(true);
+    expect(sources.every((source) => !("id" in source))).toBe(true);
+    expect(sources.every((source) => source.world_quest_id !== null)).toBe(true);
+    expect(sources.map((source) => source.world_quest_id)).toEqual(
+      api()
+        .list_world()
+        .quests.map((quest) => quest.world_quest_id),
+    );
+  });
+
   it("discovers RPG quests from the world graph without the retired story catalog", () => {
     const a = api();
     expect((a as unknown as Record<string, unknown>).list_stories).toBeUndefined();

@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 410 -->
+<!-- historical_cycle_count: 411 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - source_discovery_identity_trimmed
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: internal world quest source discovery no longer returns package-era `path` or pack `id`; entries carry title, playability, world binding, and canonical `world_quest_id`.
+- Loop effect: `list_world` and AFK discovery stay on world graph identity before public catalog packing, with less stale package identity available to re-leak.
+- Guard: focused RPG catalog test asserts source discovery has no `path`/`id` and matches `list_world` world quest ids.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused RPG catalog test, `npm test`, and `npm run health` passed.
 
 ### Cycle result - world_catalog_identity_compacted
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/loop surface: `latest-cycle.json` no longer carries generic `mode`; loop status reports run id, budget, target, and compact recommendation identity.
 - Loop effect: the AFK handoff keeps prompt style out of machine metadata, reducing another non-RPG mode axis in unattended cycle coordination.
 - Guard: focused Prettier, typecheck, AI loop tests, loop driver gates, and RPG schema-standalone tests passed over the cleanup.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - generated_checks_seed_only
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: generated RPG mint-and-check rows now carry only deterministic seed plus the production validator report; drift evidence names `seed N`.
-- Loop effect: AFK generator drift candidates no longer duplicate public generated pack ids, while validator reports keep internal pack ids for diagnostics.
-- Guard: focused Prettier, typecheck, assessor, AI loop, RPG schema-standalone, and generator mint-and-check tests passed over the cleanup.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
