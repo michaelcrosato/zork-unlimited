@@ -10,11 +10,13 @@ import {
   type RpgStepEventVersion,
 } from "./transcript_projection.js";
 import { rpgViewField, type RpgViewField, type RpgViewOptions } from "./rpg_view_projection.js";
-import { compactMcpActionLabel } from "./action_labels.js";
-import { compactTextWithHash } from "./compact_truncation.js";
+import {
+  compactMcpActionLabel,
+  compactMcpTranscriptActionId,
+  MCP_TRANSCRIPT_ACTION_ID_CHAR_LIMIT,
+} from "./action_labels.js";
 
-export const REJECTED_ACTION_ID_TRANSCRIPT_LIMIT = 128;
-const REJECTED_ACTION_ID_HASH_LENGTH = 12;
+export const REJECTED_ACTION_ID_TRANSCRIPT_LIMIT = MCP_TRANSCRIPT_ACTION_ID_CHAR_LIMIT;
 
 export type RpgStepActionArgs = {
   session_id: string;
@@ -48,14 +50,6 @@ function obsLocation(obs: { room: string }): string {
   return obs.room;
 }
 
-function rejectedActionIdForTranscript(actionId: string): string {
-  return compactTextWithHash(
-    actionId,
-    REJECTED_ACTION_ID_TRANSCRIPT_LIMIT,
-    REJECTED_ACTION_ID_HASH_LENGTH,
-  );
-}
-
 export function runRpgStepAction<Args extends RpgStepActionArgs>(
   deps: {
     sessions: SessionStore;
@@ -84,7 +78,7 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
       step: beforeStep,
       scene_id: beforeSceneId,
       title: beforeTitle,
-      action_id: rejectedActionIdForTranscript(args.action_id),
+      action_id: compactMcpTranscriptActionId(args.action_id),
       action_text: null,
       events: rejectionEvents,
       result_scene_id: beforeSceneId,
@@ -116,7 +110,7 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
     step: beforeStep,
     scene_id: beforeSceneId,
     title: beforeTitle,
-    action_id: args.action_id,
+    action_id: compactMcpTranscriptActionId(args.action_id),
     action_text: compactMcpActionLabel(actionOption.command),
     events: result.events,
     result_scene_id: obsLocation(after),

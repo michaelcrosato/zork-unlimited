@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { MCP_ACTION_LABEL_CHAR_LIMIT } from "../../src/mcp/action_labels.js";
+import {
+  compactMcpTranscriptActionId,
+  MCP_ACTION_LABEL_CHAR_LIMIT,
+  MCP_TRANSCRIPT_ACTION_ID_CHAR_LIMIT,
+} from "../../src/mcp/action_labels.js";
 import { publicActions } from "../../src/mcp/rpg_view_projection.js";
 import type { RpgActionOption } from "../../src/rpg/legal_actions.js";
 
@@ -33,5 +37,19 @@ describe("MCP action labels", () => {
 
     expect(fullRow?.command).toBe("look");
     expect(compactRow).toEqual({ id: "use_long_template" });
+  });
+
+  it("caps transcript action ids while preserving short ids exactly", () => {
+    const actionId = `use_${"x".repeat(400)}a`;
+    const samePrefixActionId = `use_${"x".repeat(400)}b`;
+    const compact = compactMcpTranscriptActionId(actionId);
+    const samePrefixCompact = compactMcpTranscriptActionId(samePrefixActionId);
+
+    expect(compact).not.toBe(actionId);
+    expect(compact).toHaveLength(MCP_TRANSCRIPT_ACTION_ID_CHAR_LIMIT);
+    expect(compact).toMatch(/^use_x+/);
+    expect(compact).toMatch(/\.\.\.\(\+\d+ chars\)#[0-9a-f]{12}$/);
+    expect(samePrefixCompact).not.toBe(compact);
+    expect(compactMcpTranscriptActionId("take_circlet")).toBe("take_circlet");
   });
 });
