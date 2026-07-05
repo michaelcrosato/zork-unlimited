@@ -50,16 +50,17 @@ import {
   type OverworldServiceResult,
 } from "./session_services.js";
 import {
-  applyOverworldAreaTravel,
   applyOverworldTownVisit,
   type OverworldAreaTravelResult,
 } from "./session_local_actions.js";
 import {
   applyOverworldSessionArea,
+  applyOverworldSessionAreaTravel,
   applyOverworldSessionLocalInteraction,
   applyOverworldSessionLocalJob,
   applyOverworldSessionSite,
   planOverworldSessionArea,
+  planOverworldSessionAreaTravel,
   planOverworldSessionContactTalk,
   planOverworldSessionEventInvestigation,
   planOverworldSessionLocalJob,
@@ -467,10 +468,6 @@ export class OverworldSession {
     return resolution.area;
   }
 
-  private areaExitFrom(areaId: string, routeId: string): OverworldAreaExit | null {
-    return this.areaExitsByAreaAndId.get(areaId)?.get(routeId) ?? null;
-  }
-
   private currentAreaIdOrThrow(): string {
     return requireOverworldSessionCurrentAreaId(this.currentArea());
   }
@@ -667,18 +664,19 @@ export class OverworldSession {
 
   moveArea(areaRouteId: string): OverworldAreaTravelResult {
     this.assertNoPendingRoadEncounter("moving between local areas");
-    const currentArea = this.currentArea();
-    if (!currentArea) throw new Error("There is no current local area in this town.");
-    const edge = this.areaExitFrom(currentArea.id, areaRouteId);
-    if (!edge) throw new Error("That local route is not reachable from here.");
-    if (!this.discoveredAreaIds.has(edge.destination.id)) {
-      throw new Error("Map that local area before moving there.");
-    }
-    const applied = applyOverworldAreaTravel(currentArea, edge, {
-      currentAreaByTown: this.currentAreaByTown,
-      currentTownId: this.currentId,
-      minutes: this.minutes,
-    });
+    const applied = applyOverworldSessionAreaTravel(
+      {
+        currentAreaByTown: this.currentAreaByTown,
+        currentTownId: this.currentId,
+        minutes: this.minutes,
+      },
+      planOverworldSessionAreaTravel({
+        areaRouteId,
+        currentArea: this.currentArea(),
+        areaExitsByAreaAndId: this.areaExitsByAreaAndId,
+        discoveredAreaIds: this.discoveredAreaIds,
+      }),
+    );
     this.applyCurrentAreaTravelState(applied);
     this.clearSnapshotCache();
     return {

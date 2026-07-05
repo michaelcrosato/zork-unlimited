@@ -7,6 +7,7 @@ import {
 } from "./local_actions.js";
 import type {
   OverworldArea,
+  OverworldAreaExit,
   OverworldCharacter,
   OverworldExplorationSite,
   OverworldLocalEvent,
@@ -21,11 +22,13 @@ import {
 import type { OverworldActionJournalState } from "./session_action_recording.js";
 import {
   applyOverworldAreaExploration,
+  applyOverworldAreaTravel,
   applyOverworldLocalJobCompletion,
   applyOverworldSiteExploration,
   planOverworldAreaExploration,
   planOverworldLocalJobCompletion,
   planOverworldSiteExploration,
+  type OverworldAppliedAreaTravel,
   type OverworldAreaExplorationPlan,
   type OverworldLocalJobCompletionPlan,
   type OverworldSiteExplorationPlan,
@@ -40,6 +43,18 @@ export type OverworldSessionAreaPlanState = {
   discoveredAreaIds: ReadonlySet<string>;
   visitedAreaIds: ReadonlySet<string>;
   journalEntries: ReadonlyMap<string, OverworldJournalEntry>;
+};
+
+export type OverworldSessionAreaTravelPlanState = {
+  areaRouteId: string;
+  currentArea: OverworldArea | null;
+  areaExitsByAreaAndId: ReadonlyMap<string, ReadonlyMap<string, OverworldAreaExit>>;
+  discoveredAreaIds: ReadonlySet<string>;
+};
+
+export type OverworldSessionAreaTravelPlan = {
+  currentArea: OverworldArea;
+  edge: OverworldAreaExit;
 };
 
 export type OverworldSessionLocalJobPlanState = {
@@ -100,6 +115,12 @@ export type MutableOverworldSessionAreaState = OverworldActionJournalState & {
   visitedAreaIds: Set<string>;
 };
 
+export type MutableOverworldSessionAreaTravelState = {
+  currentAreaByTown: Map<string, string>;
+  currentTownId: string;
+  minutes: number;
+};
+
 export type MutableOverworldSessionSiteState = OverworldActionJournalState & {
   exploredSiteIds: Set<string>;
   regionRenown: Map<string, number>;
@@ -109,6 +130,23 @@ export function planOverworldSessionArea(
   state: OverworldSessionAreaPlanState,
 ): OverworldAreaExplorationPlan {
   return planOverworldAreaExploration(state);
+}
+
+export function planOverworldSessionAreaTravel(
+  state: OverworldSessionAreaTravelPlanState,
+): OverworldSessionAreaTravelPlan {
+  if (!state.currentArea) throw new Error("There is no current local area in this town.");
+
+  const edge = state.areaExitsByAreaAndId.get(state.currentArea.id)?.get(state.areaRouteId);
+  if (!edge) throw new Error("That local route is not reachable from here.");
+  if (!state.discoveredAreaIds.has(edge.destination.id)) {
+    throw new Error("Map that local area before moving there.");
+  }
+
+  return {
+    currentArea: state.currentArea,
+    edge,
+  };
 }
 
 export function planOverworldSessionLocalJob(
@@ -168,6 +206,13 @@ export function applyOverworldSessionLocalInteraction(
   townName: string,
 ): OverworldSessionActionApplication {
   return recordOverworldSessionLocalAction(state, plan.action, townName);
+}
+
+export function applyOverworldSessionAreaTravel(
+  state: MutableOverworldSessionAreaTravelState,
+  plan: OverworldSessionAreaTravelPlan,
+): OverworldAppliedAreaTravel {
+  return applyOverworldAreaTravel(plan.currentArea, plan.edge, state);
 }
 
 export function applyOverworldSessionArea(
