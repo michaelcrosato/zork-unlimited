@@ -276,6 +276,10 @@ describe("MCP server registration", () => {
     expect(overworldAndRpgDefaults.indexOf("compact_result: true")).toBeLessThan(
       overworldAndRpgDefaults.indexOf("...input"),
     );
+    expect(overworldAndRpgDefaults).toContain("compact_actions: true");
+    expect(overworldAndRpgDefaults.indexOf("compact_actions: true")).toBeLessThan(
+      overworldAndRpgDefaults.indexOf("...input"),
+    );
     expect(
       serverSourceBlock("const COMPACT_OVERWORLD_CONTEXT", 'tool(\n  "start_overworld"'),
     ).toContain("compact_result");
@@ -303,6 +307,10 @@ describe("MCP server registration", () => {
     );
     expect(rpgDefaults).toContain("hide_graph: true");
     expect(rpgDefaults.indexOf("hide_graph: true")).toBeLessThan(rpgDefaults.indexOf("...input"));
+    expect(rpgDefaults).toContain("compact_actions: true");
+    expect(rpgDefaults.indexOf("compact_actions: true")).toBeLessThan(
+      rpgDefaults.indexOf("...input"),
+    );
     const rpgViewOptions = toolApiSourceBlock("type RpgViewOptions", "type RpgEventOptions");
     const rpgEventOptions = toolApiSourceBlock("type RpgEventOptions", "type RpgViewField");
     const viewOnlyRpgArgs = [

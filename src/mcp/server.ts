@@ -100,7 +100,13 @@ tool(
 
 function defaultCompactRpg(args: unknown): never {
   const input = typeof args === "object" && args !== null ? args : {};
-  return { hide_graph: true, compact_events: true, compact_observation: true, ...input } as never;
+  return {
+    hide_graph: true,
+    compact_actions: true,
+    compact_events: true,
+    compact_observation: true,
+    ...input,
+  } as never;
 }
 
 function defaultCompactActions(args: unknown): never {
@@ -119,6 +125,7 @@ function defaultCompactOverworldAndRpg(args: unknown): never {
     compact_context: true,
     compact_result: true,
     hide_graph: true,
+    compact_actions: true,
     compact_observation: true,
     ...input,
   } as never;
