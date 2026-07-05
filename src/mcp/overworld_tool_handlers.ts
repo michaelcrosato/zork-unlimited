@@ -49,6 +49,7 @@ import {
   overworldQuestCompletionFromRpgSession,
   startOverworldQuestThroughRpg,
 } from "./overworld_quest_bridge.js";
+import { rpgStateHashRejection, type RpgStateHashRejection } from "./rpg_state_guards.js";
 import type {
   RpgStartWorldQuestToolArgs,
   RpgWorldQuestStartPayload,
@@ -474,28 +475,58 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     },
 
     complete_overworld_session_quest<
-      Args extends { session_id: string; rpg_session_id: string } & OverworldResponseOptions,
+      Args extends {
+        session_id: string;
+        rpg_session_id: string;
+        expected_rpg_state_hash?: string;
+      } & OverworldResponseOptions,
     >(
       args: Args,
-    ): OverworldSessionResponse<
-      "result",
-      OverworldQuestCompletionResult,
-      Args,
-      OverworldCompactQuestCompletionResult
-    > {
-      return overworldSessions.run(
-        args,
-        args.session_id,
+    ):
+      | OverworldSessionResponse<
+          "result",
+          OverworldQuestCompletionResult,
+          Args,
+          OverworldCompactQuestCompletionResult
+        >
+      | (Args extends { expected_rpg_state_hash: string } ? RpgStateHashRejection : never) {
+      const guarded = overworldSessions.guardedSession(args, args.session_id);
+      if (isOverworldMcpRejectedSessionPayload(guarded)) {
+        return guarded as OverworldSessionResponse<
+          "result",
+          OverworldQuestCompletionResult,
+          Args,
+          OverworldCompactQuestCompletionResult
+        >;
+      }
+      const rpgSession = sessions.get(args.rpg_session_id);
+      if (
+        args.expected_rpg_state_hash !== undefined &&
+        args.expected_rpg_state_hash !== rpgSession.stateHash
+      ) {
+        return rpgStateHashRejection(rpgSession.stateHash) as Args extends {
+          expected_rpg_state_hash: string;
+        }
+          ? RpgStateHashRejection
+          : never;
+      }
+      const { session } = guarded;
+      const completion = overworldQuestCompletionFromRpgSession(rpgSession, args.session_id);
+      const result = session.completeQuest(completion.questId, completion.outcome);
+      const responseValue =
+        args.compact_result === true ? compactOverworldQuestCompletionResult(result) : result;
+      return {
+        ok: true,
+        session_id: args.session_id,
+        snapshot_hash: overworldSessions.snapshotHash(session),
+        result: responseValue,
+        ...overworldSessions.viewField(args, session),
+      } as OverworldSessionResponse<
         "result",
-        (session) => {
-          const completion = overworldQuestCompletionFromRpgSession(
-            sessions.get(args.rpg_session_id),
-            args.session_id,
-          );
-          return session.completeQuest(completion.questId, completion.outcome);
-        },
-        compactOverworldQuestCompletionResult,
-      );
+        OverworldQuestCompletionResult,
+        Args,
+        OverworldCompactQuestCompletionResult
+      >;
     },
 
     move_overworld_session_area<

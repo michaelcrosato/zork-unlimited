@@ -867,10 +867,30 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect("context" in staleCompletion).toBe(false);
     expect("observation" in staleCompletion).toBe(false);
 
+    const staleRpgCompletion = a.complete_overworld_session_quest({
+      session_id: started.session_id,
+      rpg_session_id: launched.rpg_session_id,
+      expected_snapshot_hash: launched.snapshot_hash,
+      expected_rpg_state_hash: launched.rpg_session.state_hash,
+    });
+    expect(staleRpgCompletion.ok).toBe(false);
+    if (staleRpgCompletion.ok) throw new Error("expected stale RPG completion rejection");
+    expect("state_hash" in staleRpgCompletion).toBe(true);
+    if (!("state_hash" in staleRpgCompletion)) {
+      throw new Error("expected RPG state hash rejection");
+    }
+    expect(staleRpgCompletion.state_hash).toBe(ended.state_hash);
+    expect(staleRpgCompletion.rejection_reason).toMatch(/state hash mismatch/i);
+    expect("snapshot_hash" in staleRpgCompletion).toBe(false);
+    expect("result" in staleRpgCompletion).toBe(false);
+    expect("context" in staleRpgCompletion).toBe(false);
+    expect("observation" in staleRpgCompletion).toBe(false);
+
     const completed = a.complete_overworld_session_quest({
       session_id: started.session_id,
       rpg_session_id: launched.rpg_session_id,
       expected_snapshot_hash: launched.snapshot_hash,
+      expected_rpg_state_hash: ended.state_hash,
     });
     expect(completed.ok).toBe(true);
     if (!completed.ok) throw new Error("expected quest completion");

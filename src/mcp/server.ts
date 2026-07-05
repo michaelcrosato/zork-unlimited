@@ -378,6 +378,7 @@ tool(
   {
     ...SESSION,
     rpg_session_id: z.string().describe("Ended RPG session."),
+    expected_rpg_state_hash: z.string().optional().describe("Reject stale RPG state."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.complete_overworld_session_quest(defaultCompactOverworld(a)),

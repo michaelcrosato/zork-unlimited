@@ -250,6 +250,9 @@ describe("MCP server registration", () => {
       const block = registeredToolBlock(toolName);
       expect(block).toContain("defaultCompactOverworld(a)");
     }
+    expect(registeredToolBlock("complete_overworld_session_quest")).toContain(
+      "expected_rpg_state_hash",
+    );
 
     const overworldDefaults = serverSourceBlock(
       "function defaultCompactOverworld",
