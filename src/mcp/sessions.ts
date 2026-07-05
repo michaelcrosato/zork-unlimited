@@ -15,6 +15,7 @@ import type { RpgActionOption } from "../rpg/legal_actions.js";
 import type { ObservationOptions, RpgObservation } from "../rpg/observation.js";
 import type { RpgIndex } from "../rpg/runner.js";
 import { hashState } from "../core/hash.js";
+import { cloneMcpEvent } from "./event_clone.js";
 import {
   cachedSessionProjection,
   invalidateSessionStateCaches,
@@ -121,20 +122,10 @@ function retainedTranscript(transcript: TranscriptTurn[], maxTurns: number): Tra
   return transcript.length > maxTurns ? transcript.slice(transcript.length - maxTurns) : transcript;
 }
 
-function cloneEventValue<T>(value: T): T {
-  if (Array.isArray(value)) return value.map(cloneEventValue) as T;
-  if (value !== null && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, nested]) => [key, cloneEventValue(nested)]),
-    ) as T;
-  }
-  return value;
-}
-
 function cloneTranscriptTurn(turn: TranscriptTurn): TranscriptTurn {
   return {
     ...turn,
-    events: turn.events.map((event) => cloneEventValue(event) as GameEvent),
+    events: turn.events.map((event) => cloneMcpEvent(event) as GameEvent),
   };
 }
 

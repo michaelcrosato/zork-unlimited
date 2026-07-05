@@ -6,6 +6,7 @@ import {
   RPG_COMPACT_EVENT_VERSION,
   type RpgCompactEvent,
 } from "./compact_rpg_event.js";
+import { cloneMcpEvent } from "./event_clone.js";
 import {
   compactHead,
   compactRecent,
@@ -260,16 +261,12 @@ export function playerVisibleEvents(events: GameEvent[]): GameEvent[] {
   });
 }
 
-function cloneTranscriptEvent<Event extends GameEvent | RpgCompactEvent>(event: Event): Event {
-  return (Array.isArray(event) ? [...event] : { ...event }) as Event;
-}
-
 function cloneTranscriptTurn<Turn extends TranscriptFullTurn | TranscriptCompactEventTurn>(
   turn: Turn,
 ): Turn {
   return {
     ...turn,
-    events: turn.events.map(cloneTranscriptEvent),
+    events: turn.events.map(cloneMcpEvent),
   } as Turn;
 }
 
@@ -332,8 +329,8 @@ export function rpgStepEvents<Args extends RpgEventOptions>(
   const visible = playerVisibleEvents(events);
   return (
     args.compact_events === true
-      ? visible.map((event) => cloneTranscriptEvent(compactPlayerEvent(event)))
-      : visible.map(cloneTranscriptEvent)
+      ? visible.map((event) => cloneMcpEvent(compactPlayerEvent(event)))
+      : visible.map(cloneMcpEvent)
   ) as RpgStepEvents<Args>;
 }
 

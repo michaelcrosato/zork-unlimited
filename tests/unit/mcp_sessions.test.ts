@@ -268,6 +268,28 @@ describe("SessionStore", () => {
     expect(session.transcriptLogHash).toBe(hashState([]));
   });
 
+  it("keeps transcript reads detached from retained nested event payloads", () => {
+    const store = new SessionStore();
+    const session = store.create(sessionInit());
+    const event = {
+      type: "state_change",
+      effect: "custom_payload",
+      value: { nested: ["original"] },
+    } as const;
+    store.appendTranscript(session.id, {
+      ...transcriptTurn(1),
+      events: [event],
+    });
+
+    const first = runRpgGetTranscript({ sessions: store }, { session_id: session.id });
+    const value = first.turns[0]?.events[0] as { value?: { nested?: string[] } } | undefined;
+    value?.value?.nested?.push("mutated_response");
+
+    const second = runRpgGetTranscript({ sessions: store }, { session_id: session.id });
+    const rereadValue = second.turns[0]?.events[0] as { value?: { nested?: string[] } } | undefined;
+    expect(rereadValue?.value?.nested).toEqual(["original"]);
+  });
+
   it("bounds retained transcript rows while preserving hashes and aggregate stats", () => {
     const store = new SessionStore(MCP_SESSION_STORE_LIMIT, 3);
     const session = store.create(sessionInit());
