@@ -1,5 +1,4 @@
 import type { RpgActionOption } from "../rpg/legal_actions.js";
-import { sha256Hex } from "../core/sha256.js";
 import { rpgRoomTitle, type RpgMcpSessionRuntime } from "./rpg_session_runtime.js";
 import type { SessionStore } from "./sessions.js";
 import { rpgStateHashRejection, type RpgStateHashRejection } from "./rpg_state_guards.js";
@@ -11,7 +10,8 @@ import {
   type RpgStepEventVersion,
 } from "./transcript_projection.js";
 import { rpgViewField, type RpgViewField, type RpgViewOptions } from "./rpg_view_projection.js";
-import { compactText } from "./compact_truncation.js";
+import { compactMcpActionLabel } from "./action_labels.js";
+import { compactTextWithHash } from "./compact_truncation.js";
 
 export const REJECTED_ACTION_ID_TRANSCRIPT_LIMIT = 128;
 const REJECTED_ACTION_ID_HASH_LENGTH = 12;
@@ -49,9 +49,11 @@ function obsLocation(obs: { room: string }): string {
 }
 
 function rejectedActionIdForTranscript(actionId: string): string {
-  if (actionId.length <= REJECTED_ACTION_ID_TRANSCRIPT_LIMIT) return actionId;
-  const suffix = `#${sha256Hex(actionId).slice(0, REJECTED_ACTION_ID_HASH_LENGTH)}`;
-  return `${compactText(actionId, REJECTED_ACTION_ID_TRANSCRIPT_LIMIT - suffix.length)}${suffix}`;
+  return compactTextWithHash(
+    actionId,
+    REJECTED_ACTION_ID_TRANSCRIPT_LIMIT,
+    REJECTED_ACTION_ID_HASH_LENGTH,
+  );
 }
 
 export function runRpgStepAction<Args extends RpgStepActionArgs>(
@@ -115,7 +117,7 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
     scene_id: beforeSceneId,
     title: beforeTitle,
     action_id: args.action_id,
-    action_text: actionOption.command,
+    action_text: compactMcpActionLabel(actionOption.command),
     events: result.events,
     result_scene_id: obsLocation(after),
     ended: after.ended,

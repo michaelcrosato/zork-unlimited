@@ -1,4 +1,7 @@
-export { compactText } from "../core/compact_text.js";
+import { compactText } from "../core/compact_text.js";
+import { sha256Hex } from "../core/sha256.js";
+
+export { compactText };
 
 function assertCompactListLimit(limit: number): void {
   if (!Number.isInteger(limit) || limit < 0) {
@@ -9,6 +12,18 @@ function assertCompactListLimit(limit: number): void {
 function assertCompactOmissionCount(count: number): void {
   if (!Number.isInteger(count) || count < 0) {
     throw new Error("Compact omission count must be a non-negative finite integer.");
+  }
+}
+
+function assertCompactTextLimit(limit: number): void {
+  if (!Number.isInteger(limit) || limit < 0) {
+    throw new Error("Compact text limit must be a non-negative finite integer.");
+  }
+}
+
+function assertCompactHashLength(length: number): void {
+  if (!Number.isInteger(length) || length < 1) {
+    throw new Error("Compact hash length must be a positive finite integer.");
   }
 }
 
@@ -42,4 +57,14 @@ export function compactTrailingOmissionCounts(counts: readonly number[]): number
   const compact: number[] = [];
   for (let index = 0; index < end; index += 1) compact.push(counts[index]!);
   return compact;
+}
+
+export function compactTextWithHash(value: string, limit: number, hashLength: number): string {
+  assertCompactTextLimit(limit);
+  assertCompactHashLength(hashLength);
+  if (value.length <= limit) return value;
+  if (limit <= 0) return "";
+  const suffix = `#${sha256Hex(value).slice(0, hashLength)}`;
+  if (suffix.length >= limit) return suffix.slice(0, limit);
+  return `${compactText(value, limit - suffix.length)}${suffix}`;
 }

@@ -4,6 +4,7 @@ import {
   compactHead,
   compactRecent,
   compactText,
+  compactTextWithHash,
   compactTrailingOmissionCounts,
   omittedCount,
 } from "../../src/mcp/compact_truncation.js";
@@ -56,6 +57,26 @@ describe("compact truncation helpers", () => {
   it("rejects invalid text limits before truncation", () => {
     for (const limit of [Number.NaN, Number.POSITIVE_INFINITY, -1, 1.5]) {
       expect(() => compactText("abc", limit)).toThrow(/non-negative finite integer/);
+    }
+  });
+
+  it("caps long text with a deterministic collision-resistant suffix", () => {
+    const first = `label ${"x".repeat(300)}a`;
+    const second = `label ${"x".repeat(300)}b`;
+    const compact = compactTextWithHash(first, 80, 12);
+    const samePrefixCompact = compactTextWithHash(second, 80, 12);
+
+    expect(compact).toHaveLength(80);
+    expect(compact).toMatch(/^label x+/);
+    expect(compact).toMatch(/\.\.\.\(\+\d+ chars\)#[0-9a-f]{12}$/);
+    expect(samePrefixCompact).not.toBe(compact);
+    expect(compactTextWithHash("short", 80, 12)).toBe("short");
+
+    for (const limit of [Number.NaN, Number.POSITIVE_INFINITY, -1, 1.5]) {
+      expect(() => compactTextWithHash("abc", limit, 12)).toThrow(/non-negative finite integer/);
+    }
+    for (const hashLength of [Number.NaN, Number.POSITIVE_INFINITY, 0, -1, 1.5]) {
+      expect(() => compactTextWithHash("abc", 80, hashLength)).toThrow(/positive finite integer/);
     }
   });
 });

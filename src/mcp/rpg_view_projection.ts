@@ -2,6 +2,7 @@ import type { ObservationOptions, RpgObservation } from "../rpg/observation.js";
 import type { RpgActionOption } from "../rpg/legal_actions.js";
 import { SessionStore, type Session } from "./sessions.js";
 import type { McpActionOption, McpObservation } from "./types.js";
+import { compactMcpActionLabel } from "./action_labels.js";
 import {
   compactRpgObservation,
   RPG_COMPACT_OBSERVATION_VERSION,
@@ -49,7 +50,7 @@ export function publicActions(
 ): McpActionOption[] {
   return actions.map((option) => ({
     id: option.id,
-    ...(opts.compactActions ? {} : { command: option.command }),
+    ...(opts.compactActions ? {} : { command: compactMcpActionLabel(option.command) }),
     ...(option.skill_check ? { skill_check: { ...option.skill_check } } : {}),
   }));
 }
