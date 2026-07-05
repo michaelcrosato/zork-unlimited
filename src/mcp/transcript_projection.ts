@@ -13,6 +13,7 @@ import {
   compactTrailingOmissionCounts,
   omittedCount,
 } from "./compact_truncation.js";
+import { compactMcpTranscriptSceneId, compactMcpTranscriptSummaryValue } from "./action_labels.js";
 
 export type RpgEventOptions = {
   compact_events?: boolean;
@@ -142,10 +143,18 @@ export function hashTranscript(session: Session, stateHash: string): string {
 export function compactTranscriptSummary(
   summary: TranscriptSummarySource,
 ): TranscriptCompactSummary {
-  const scenes = compactHead(summary.scenes, TRANSCRIPT_SUMMARY_LIST_LIMIT);
-  const inventory = compactHead(summary.inventory, TRANSCRIPT_SUMMARY_LIST_LIMIT);
-  const flags = compactHead(summary.flags, TRANSCRIPT_SUMMARY_LIST_LIMIT);
-  const journal = compactRecent(summary.journal, TRANSCRIPT_SUMMARY_JOURNAL_LIMIT);
+  const scenes = compactHead(summary.scenes, TRANSCRIPT_SUMMARY_LIST_LIMIT).map(
+    compactMcpTranscriptSceneId,
+  );
+  const inventory = compactHead(summary.inventory, TRANSCRIPT_SUMMARY_LIST_LIMIT).map(
+    compactMcpTranscriptSummaryValue,
+  );
+  const flags = compactHead(summary.flags, TRANSCRIPT_SUMMARY_LIST_LIMIT).map(
+    compactMcpTranscriptSummaryValue,
+  );
+  const journal = compactRecent(summary.journal, TRANSCRIPT_SUMMARY_JOURNAL_LIMIT).map(
+    compactMcpTranscriptSummaryValue,
+  );
   const omittedScenes = omittedCount(summary.scenes, scenes);
   const omittedInventory = omittedCount(summary.inventory, inventory);
   const omittedFlags = omittedCount(summary.flags, flags);
@@ -165,7 +174,7 @@ export function compactTranscriptSummary(
   } = summary;
   return {
     ...baseSummary,
-    ...(endingId ? { ending_id: endingId } : {}),
+    ...(endingId ? { ending_id: compactMcpTranscriptSummaryValue(endingId) } : {}),
     scenes,
     ...(inventory.length > 0 ? { inventory } : {}),
     ...(flags.length > 0 ? { flags } : {}),

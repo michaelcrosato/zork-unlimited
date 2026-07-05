@@ -14,6 +14,7 @@ import {
   MCP_ACTION_LABEL_CHAR_LIMIT,
   MCP_TRANSCRIPT_ACTION_ID_CHAR_LIMIT,
   MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT,
+  MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT,
   MCP_TRANSCRIPT_TITLE_CHAR_LIMIT,
 } from "../../src/mcp/action_labels.js";
 import {
@@ -685,6 +686,47 @@ describe("SessionStore", () => {
 
     expect(full.summary.journal).toEqual(journal);
     expect(session.transcriptSummaryCache?.summary.journal).toEqual(journal);
+  });
+
+  it("compacts transcript summary strings from full and compact summary paths", () => {
+    const store = new SessionStore();
+    const longJournal = `journal_${"x".repeat(400)}a`;
+    const longInventory = `item_${"x".repeat(400)}a`;
+    const longFlag = `flag_${"x".repeat(400)}a`;
+    const session = store.create(
+      sessionInit({
+        state: {
+          ...state(),
+          inventory: [longInventory],
+          flags: { [longFlag]: true },
+          journal: [longJournal],
+          endingId: `ending_${"x".repeat(400)}a`,
+        },
+      }),
+    );
+    store.appendTranscript(session.id, {
+      ...transcriptTurn(1),
+      scene_id: `scene_${"x".repeat(400)}a`,
+      result_scene_id: `result_${"x".repeat(400)}a`,
+      ending_id: session.state.endingId,
+    });
+
+    const full = runRpgGetTranscript({ sessions: store }, { session_id: session.id });
+    const compact = runRpgGetTranscript(
+      { sessions: store },
+      { session_id: session.id, compact_summary: true },
+    );
+
+    expect(full.summary.scenes[0]).toHaveLength(MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT);
+    expect(full.summary.inventory[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(full.summary.flags[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(full.summary.journal[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(full.summary.ending_id).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(compact.summary.scenes[0]).toBe(full.summary.scenes[0]);
+    expect(compact.summary.inventory?.[0]).toBe(full.summary.inventory[0]);
+    expect(compact.summary.flags?.[0]).toBe(full.summary.flags[0]);
+    expect(compact.summary.journal?.[0]).toBe(full.summary.journal[0]);
+    expect(compact.summary.ending_id).toBe(full.summary.ending_id);
   });
 
   it("caches legal actions until the session state is replaced", () => {

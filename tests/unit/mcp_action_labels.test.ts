@@ -3,10 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   compactMcpTranscriptActionId,
   compactMcpTranscriptSceneId,
+  compactMcpTranscriptSummaryValue,
   compactMcpTranscriptTitle,
   MCP_ACTION_LABEL_CHAR_LIMIT,
   MCP_TRANSCRIPT_ACTION_ID_CHAR_LIMIT,
   MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT,
+  MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT,
   MCP_TRANSCRIPT_TITLE_CHAR_LIMIT,
 } from "../../src/mcp/action_labels.js";
 import { publicActions } from "../../src/mcp/rpg_view_projection.js";
@@ -71,5 +73,18 @@ describe("MCP action labels", () => {
     );
     expect(compactMcpTranscriptSceneId("barrow_mouth")).toBe("barrow_mouth");
     expect(compactMcpTranscriptTitle("Barrow Mouth")).toBe("Barrow Mouth");
+  });
+
+  it("caps transcript summary values while preserving short values exactly", () => {
+    const value = `flag_${"x".repeat(400)}a`;
+    const samePrefixValue = `flag_${"x".repeat(400)}b`;
+    const compact = compactMcpTranscriptSummaryValue(value);
+
+    expect(compact).not.toBe(value);
+    expect(compact).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(compact).toMatch(/^flag_x+/);
+    expect(compact).toMatch(/\.\.\.\(\+\d+ chars\)#[0-9a-f]{12}$/);
+    expect(compactMcpTranscriptSummaryValue(samePrefixValue)).not.toBe(compact);
+    expect(compactMcpTranscriptSummaryValue("flag_short")).toBe("flag_short");
   });
 });

@@ -29,6 +29,7 @@ import {
   compactMcpActionLabel,
   compactMcpTranscriptActionId,
   compactMcpTranscriptSceneId,
+  compactMcpTranscriptSummaryValue,
   compactMcpTranscriptTitle,
 } from "./action_labels.js";
 
@@ -234,6 +235,45 @@ function cloneTranscriptRows(transcript: readonly TranscriptTurn[]): TranscriptT
   return transcript.map(cloneTranscriptTurn);
 }
 
+function compactSummaryList(
+  values: string[],
+  compact: (value: string) => string,
+): { values: string[]; changed: boolean } {
+  let changed = false;
+  const compacted = values.map((value) => {
+    const next = compact(value);
+    if (next !== value) changed = true;
+    return next;
+  });
+  return { values: compacted, changed };
+}
+
+function normalizeTranscriptSummary(summary: TranscriptSummary): TranscriptSummary {
+  const endingId =
+    summary.ending_id === null ? null : compactMcpTranscriptSummaryValue(summary.ending_id);
+  const scenes = compactSummaryList(summary.scenes, compactMcpTranscriptSceneId);
+  const inventory = compactSummaryList(summary.inventory, compactMcpTranscriptSummaryValue);
+  const flags = compactSummaryList(summary.flags, compactMcpTranscriptSummaryValue);
+  const journal = compactSummaryList(summary.journal, compactMcpTranscriptSummaryValue);
+  if (
+    endingId === summary.ending_id &&
+    !scenes.changed &&
+    !inventory.changed &&
+    !flags.changed &&
+    !journal.changed
+  ) {
+    return summary;
+  }
+  return {
+    ...summary,
+    ending_id: endingId,
+    scenes: scenes.values,
+    inventory: inventory.values,
+    flags: flags.values,
+    journal: journal.values,
+  };
+}
+
 function freezeTranscriptRows(transcript: readonly TranscriptTurn[]): readonly TranscriptTurn[] {
   return deepFreeze(cloneTranscriptRows(transcript));
 }
@@ -417,7 +457,7 @@ export class SessionStore {
     ) {
       return session.transcriptSummaryCache.summary;
     }
-    const summary = deepFreeze(build());
+    const summary = deepFreeze(normalizeTranscriptSummary(build()));
     session.transcriptSummaryCache = {
       stateHash: session.stateHash,
       transcriptLogHash: session.transcriptLogHash,
