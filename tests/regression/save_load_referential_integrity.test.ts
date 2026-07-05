@@ -260,6 +260,22 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     expect(() => api().load_game({ save: forged })).toThrow(/unknown contained object/);
   });
 
+  it("RPG: runtime container contents are a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      s.objectState = { sarcophagus: { contents: ["iron_bar"] } };
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/invalid object contents state/);
+  });
+
+  it("RPG: object takenBy without a runtime room is a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      s.objectState = { iron_bar: { takenBy: "player" } };
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/takenBy without room/);
+  });
+
   it("RPG: a phantom questStage quest is a hard SaveIntegrityError", () => {
     const forged = forgeSave((s) => {
       s.questStage = { no_such_quest: "slab_moved" };
