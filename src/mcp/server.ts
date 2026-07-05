@@ -12,6 +12,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z, type ZodRawShape } from "zod";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { createToolApi } from "./tools.js";
+import { TRANSCRIPT_TURN_LIMIT_DEFAULT } from "./transcript_projection.js";
 
 const api = createToolApi({ root: process.cwd() });
 
@@ -125,7 +126,13 @@ function defaultCompactOverworldAndRpg(args: unknown): never {
 
 function defaultCompactTranscript(args: unknown): never {
   const input = typeof args === "object" && args !== null ? args : {};
-  return { summary_only: true, compact_events: true, compact_summary: true, ...input } as never;
+  return {
+    summary_only: true,
+    compact_events: true,
+    compact_summary: true,
+    turn_limit: TRANSCRIPT_TURN_LIMIT_DEFAULT,
+    ...input,
+  } as never;
 }
 
 type McpStateArgs = {
@@ -459,6 +466,7 @@ tool(
     summary_only: z.boolean().optional().describe("Default true; no turns."),
     compact_summary: z.boolean().optional().describe("Default true; capped lists."),
     compact_turns: z.boolean().optional().describe("Rows tuple."),
+    turn_limit: z.number().int().min(0).optional().describe("Rows."),
     ...COMPACT_EVENTS,
   },
   (a) => api.get_transcript(defaultCompactTranscript(a)),

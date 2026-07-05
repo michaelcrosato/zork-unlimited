@@ -34,6 +34,7 @@ export type TranscriptArgs = {
   compact_events?: boolean;
   compact_summary?: boolean;
   if_transcript_hash?: string;
+  turn_limit?: number;
 };
 
 type TranscriptFullTurn = Session["transcript"][number];
@@ -70,6 +71,7 @@ type TranscriptPayloadBase<Args extends TranscriptArgs> = {
   state_hash: string;
   transcript_hash: string;
   summary: TranscriptSummaryFor<Args>;
+  turns_omitted?: number;
   world_quest_id?: string;
   generated_rpg_seed?: number;
 };
@@ -107,6 +109,7 @@ const TRANSCRIPT_PROJECTION_COMPACT_EVENTS = `compact-events:v${RPG_COMPACT_EVEN
 const TRANSCRIPT_SUMMARY_PROJECTION_COMPACT = "compact-summary:v1";
 const TRANSCRIPT_SUMMARY_LIST_LIMIT = 16;
 const TRANSCRIPT_SUMMARY_JOURNAL_LIMIT = 5;
+export const TRANSCRIPT_TURN_LIMIT_DEFAULT = 64;
 
 export function transcriptUnchanged(
   stateHash: string,
@@ -176,6 +179,35 @@ export function transcriptSummaryFor<Args extends TranscriptArgs>(
   ) as TranscriptSummaryFor<Args>;
 }
 
+function transcriptTurnLimit(args: Pick<TranscriptArgs, "turn_limit">, total: number): number {
+  if (args.turn_limit === undefined) return total;
+  if (!Number.isInteger(args.turn_limit) || args.turn_limit < 0) {
+    throw new Error(`Transcript turn_limit must be a non-negative integer.`);
+  }
+  return Math.min(args.turn_limit, total);
+}
+
+function transcriptTurnWindow<Args extends TranscriptArgs>(
+  session: Session,
+  args: Args,
+): { turns: Session["transcript"]; omitted: number; keySuffix: string } {
+  const total = session.transcript.length;
+  const limit = transcriptTurnLimit(args, total);
+  const omitted = total - limit;
+  return {
+    turns: omitted > 0 ? session.transcript.slice(omitted) : session.transcript,
+    omitted,
+    keySuffix: args.turn_limit === undefined ? "all" : `last:${limit}:of:${total}`,
+  };
+}
+
+export function transcriptTurnsOmitted<Args extends TranscriptArgs>(
+  session: Session,
+  args: Args,
+): number {
+  return transcriptTurnWindow(session, args).omitted;
+}
+
 /**
  * Strip internal-bookkeeping `state_change` events from the player-facing event
  * stream. The engine state and state hashes keep the full event/effect history;
@@ -195,26 +227,35 @@ export function transcriptTurnsFor<Args extends TranscriptArgs>(
   session: Session,
   args: Args,
 ): TranscriptTurnFor<Args>[] {
+  const window = transcriptTurnWindow(session, args);
   if (args.compact_turns) {
-    return sessions.transcriptProjection(session.id, TRANSCRIPT_PROJECTION_COMPACT_TURNS, () =>
-      session.transcript.map((t) => [t.step, t.scene_id, t.action_id, t.result_scene_id] as const),
+    return sessions.transcriptProjection(
+      session.id,
+      `${TRANSCRIPT_PROJECTION_COMPACT_TURNS}:${window.keySuffix}`,
+      () => window.turns.map((t) => [t.step, t.scene_id, t.action_id, t.result_scene_id] as const),
     ) as TranscriptTurnFor<Args>[];
   }
 
   if (args.compact_events === true) {
-    return sessions.transcriptProjection(session.id, TRANSCRIPT_PROJECTION_COMPACT_EVENTS, () =>
-      session.transcript.map((t) => ({
-        ...t,
-        events: playerVisibleEvents(t.events).map(compactPlayerEvent),
-      })),
+    return sessions.transcriptProjection(
+      session.id,
+      `${TRANSCRIPT_PROJECTION_COMPACT_EVENTS}:${window.keySuffix}`,
+      () =>
+        window.turns.map((t) => ({
+          ...t,
+          events: playerVisibleEvents(t.events).map(compactPlayerEvent),
+        })),
     ) as TranscriptTurnFor<Args>[];
   }
 
-  return sessions.transcriptProjection(session.id, TRANSCRIPT_PROJECTION_VISIBLE_EVENTS, () =>
-    session.transcript.map((t) => ({
-      ...t,
-      events: playerVisibleEvents(t.events),
-    })),
+  return sessions.transcriptProjection(
+    session.id,
+    `${TRANSCRIPT_PROJECTION_VISIBLE_EVENTS}:${window.keySuffix}`,
+    () =>
+      window.turns.map((t) => ({
+        ...t,
+        events: playerVisibleEvents(t.events),
+      })),
   ) as TranscriptTurnFor<Args>[];
 }
 

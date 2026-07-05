@@ -21,6 +21,7 @@ import {
   transcriptEventVersion,
   transcriptSummaryFor,
   transcriptTurnsFor,
+  transcriptTurnsOmitted,
   transcriptUnchanged,
   type TranscriptArgs,
   type TranscriptResponse,
@@ -173,6 +174,7 @@ export function runRpgGetTranscript<Args extends TranscriptArgs>(
       .sort(),
     journal: [...s.state.journal],
   }));
+  const turnsOmitted = args.summary_only ? 0 : transcriptTurnsOmitted(s, args);
   const response = {
     session_id: s.id,
     ...rpgSourceFields(s),
@@ -182,6 +184,7 @@ export function runRpgGetTranscript<Args extends TranscriptArgs>(
     ...(args.summary_only
       ? {}
       : {
+          ...(turnsOmitted > 0 ? { turns_omitted: turnsOmitted } : {}),
           turns: transcriptTurnsFor(sessions, s, args),
         }),
     summary: transcriptSummaryFor(sessions, s, args, summary),

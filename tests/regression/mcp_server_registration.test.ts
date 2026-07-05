@@ -344,12 +344,17 @@ describe("MCP server registration", () => {
     expect(block).toContain("IF_TRANSCRIPT_HASH");
     expect(args).not.toContain("if_state_hash");
     expect(args).toContain("if_transcript_hash");
+    expect(args).toContain("turn_limit");
     expect(block).toContain("Default true; no turns.");
     expect(block).toContain("Default true; capped lists.");
+    expect(block).toContain("turn_limit");
     expect(block).toContain("COMPACT_EVENTS");
-    expect(serverSourceBlock("function defaultCompactTranscript", "type McpStateArgs")).toContain(
-      "compact_events: true",
+    const defaultTranscript = serverSourceBlock(
+      "function defaultCompactTranscript",
+      "type McpStateArgs",
     );
+    expect(defaultTranscript).toContain("compact_events: true");
+    expect(defaultTranscript).toContain("turn_limit: TRANSCRIPT_TURN_LIMIT_DEFAULT");
   });
 
   it("defaults public RPG MCP state reads to hash only", () => {

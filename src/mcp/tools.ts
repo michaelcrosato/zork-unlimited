@@ -249,6 +249,7 @@ type TranscriptPayloadBase<Args extends TranscriptArgs> = {
   state_hash: string;
   transcript_hash: string;
   summary: TranscriptSummaryFor<Args>;
+  turns_omitted?: number;
 } & RpgSourceFields;
 type TranscriptArgs = {
   session_id: string;
@@ -257,6 +258,7 @@ type TranscriptArgs = {
   compact_events?: boolean;
   compact_summary?: boolean;
   if_transcript_hash?: string;
+  turn_limit?: number;
 };
 type TranscriptTurnFor<Args extends TranscriptArgs> = Args extends { compact_turns: true }
   ? TranscriptCompactTurn

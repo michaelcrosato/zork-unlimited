@@ -1801,6 +1801,16 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(JSON.stringify(compactTranscript).length).toBeLessThan(
       JSON.stringify(transcript).length,
     );
+    const cappedCompactTranscript = a.get_transcript({
+      session_id: game.session_id,
+      compact_turns: true,
+      turn_limit: 2,
+    });
+    expect(cappedCompactTranscript.state_hash).toBe(currentStateHash);
+    expect(cappedCompactTranscript.transcript_hash).toBe(transcript.transcript_hash);
+    expect(cappedCompactTranscript.summary).toEqual(transcript.summary);
+    expect(cappedCompactTranscript.turns).toEqual(compactTranscript.turns.slice(-2));
+    expect(cappedCompactTranscript.turns_omitted).toBe(compactTranscript.turns.length - 2);
     const compactEventTranscript = a.get_transcript({
       session_id: game.session_id,
       compact_events: true,
