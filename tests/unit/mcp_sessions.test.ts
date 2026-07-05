@@ -680,6 +680,69 @@ describe("SessionStore", () => {
     expect(builds).toBe(3);
   });
 
+  it("freezes cached session payloads against in-process mutation", () => {
+    const store = new SessionStore();
+    const session = store.create(sessionInit());
+    const actions: RpgActionOption[] = [
+      { id: "look", command: "look", action: { type: "LOOK", target: "glyph" } },
+    ];
+    const observed: RpgObservation = {
+      ...observation("start"),
+      available_actions: [
+        { id: "look", command: "look", action: { type: "LOOK", target: "glyph" } },
+      ],
+    };
+    const summary: TranscriptSummary = {
+      steps: 0,
+      scenes: ["start"],
+      ended: false,
+      ending_id: null,
+      inventory: ["lamp"],
+      flags: ["lit"],
+      journal: ["read_glyph"],
+    };
+
+    const legal = store.legalActions(session.id, () => actions);
+    const legalProjection = store.legalActionProjection(session.id, "rows:full", () => [
+      { id: "look", command: "look", skill_check: { skill: "lore", difficulty: 7, die: "d20" } },
+    ]);
+    const obs = store.observation(session.id, {}, () => observed);
+    const observationProjection = store.observationProjection(session.id, "compact", () => ({
+      here: ["start", "Start"],
+      vars: { lore: 2 },
+    }));
+    const transcriptSummary = store.transcriptSummary(session.id, () => summary);
+    const summaryProjection = store.transcriptSummaryProjection(session.id, "summary", () => ({
+      scenes: ["start"],
+    }));
+    const transcriptProjection = store.transcriptProjection(session.id, "turns", () => [
+      { step: 0, events: [{ type: "narrated", text: "Start." }] },
+    ]);
+
+    expect(Object.isFrozen(legal)).toBe(true);
+    expect(Object.isFrozen(legal[0])).toBe(true);
+    expect(Object.isFrozen(legal[0]!.action)).toBe(true);
+    expect(() =>
+      legal.push({ id: "inventory", command: "inventory", action: { type: "INVENTORY" } }),
+    ).toThrow();
+    expect(Object.isFrozen(legalProjection)).toBe(true);
+    expect(Object.isFrozen(legalProjection[0])).toBe(true);
+    expect(Object.isFrozen(legalProjection[0]!.skill_check)).toBe(true);
+    expect(Object.isFrozen(obs)).toBe(true);
+    expect(Object.isFrozen(obs.available_actions)).toBe(true);
+    expect(Object.isFrozen(obs.available_actions[0]!.action)).toBe(true);
+    expect(Object.isFrozen(obs.state.vars)).toBe(true);
+    expect(Object.isFrozen(observationProjection)).toBe(true);
+    expect(Object.isFrozen(observationProjection.here)).toBe(true);
+    expect(Object.isFrozen(observationProjection.vars)).toBe(true);
+    expect(Object.isFrozen(transcriptSummary)).toBe(true);
+    expect(Object.isFrozen(transcriptSummary.scenes)).toBe(true);
+    expect(Object.isFrozen(summaryProjection)).toBe(true);
+    expect(Object.isFrozen(summaryProjection.scenes)).toBe(true);
+    expect(Object.isFrozen(transcriptProjection)).toBe(true);
+    expect(Object.isFrozen(transcriptProjection[0]!.events)).toBe(true);
+  });
+
   it("caches transcript summaries until transcript or state changes", () => {
     const store = new SessionStore();
     const session = store.create(sessionInit());

@@ -122,6 +122,12 @@ function retainedTranscript(transcript: TranscriptTurn[], maxTurns: number): Tra
   return transcript.length > maxTurns ? transcript.slice(transcript.length - maxTurns) : transcript;
 }
 
+function deepFreeze<T>(value: T): T {
+  if (value === null || typeof value !== "object" || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
+  return Object.freeze(value);
+}
+
 function transcriptLogHashFor(transcript: readonly TranscriptTurn[]): string {
   return transcript.reduce((previous, turn) => hashState({ previous, turn }), hashState([]));
 }
@@ -234,7 +240,7 @@ export class SessionStore {
     if (session.legalActionsCache?.stateHash === session.stateHash) {
       return session.legalActionsCache.actions;
     }
-    const actions = enumerate();
+    const actions = deepFreeze(enumerate());
     session.legalActionsCache = {
       stateHash: session.stateHash,
       actions,
@@ -252,7 +258,7 @@ export class SessionStore {
         stateHash: session.stateHash,
         projection,
       }),
-      build,
+      () => deepFreeze(build()),
     );
     session.legalActionProjectionCaches = cached.cacheMap;
     return cached.value;
@@ -273,7 +279,7 @@ export class SessionStore {
     ) {
       return session.observationCache.observation;
     }
-    const observation = build();
+    const observation = deepFreeze(build());
     session.observationCache = {
       stateHash: session.stateHash,
       hideGraph,
@@ -293,7 +299,7 @@ export class SessionStore {
         stateHash: session.stateHash,
         projection,
       }),
-      build,
+      () => deepFreeze(build()),
     );
     session.observationProjectionCaches = cached.cacheMap;
     return cached.value;
@@ -307,7 +313,7 @@ export class SessionStore {
     ) {
       return session.transcriptSummaryCache.summary;
     }
-    const summary = build();
+    const summary = deepFreeze(build());
     session.transcriptSummaryCache = {
       stateHash: session.stateHash,
       transcriptLogHash: session.transcriptLogHash,
@@ -329,7 +335,7 @@ export class SessionStore {
         transcriptLogHash: session.transcriptLogHash,
         projection,
       }),
-      build,
+      () => deepFreeze(build()),
     );
     session.transcriptSummaryProjectionCaches = cached.cacheMap;
     return cached.value;
@@ -345,7 +351,7 @@ export class SessionStore {
         transcriptLogHash: session.transcriptLogHash,
         projection,
       }),
-      build,
+      () => deepFreeze(build()),
     );
     session.transcriptProjectionCaches = cached.cacheMap;
     return cached.value;
