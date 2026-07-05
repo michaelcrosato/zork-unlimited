@@ -47,16 +47,11 @@ import {
   planOverworldEventResolution,
 } from "./session_event_resolution.js";
 import {
-  applyOverworldLocalDiscovery,
   emptyOverworldLocalDiscovery,
-  planOverworldLocalDiscovery,
   type OverworldLocalDiscoveryResult,
   type OverworldQuestView,
 } from "./session_local_discovery.js";
-import {
-  buildOverworldSessionLocalView,
-  type OverworldSessionLocalView,
-} from "./session_local_view.js";
+import { type OverworldSessionLocalView } from "./session_local_view.js";
 import {
   applyOverworldQuestCompletion,
   applyOverworldQuestStart,
@@ -77,7 +72,6 @@ import {
 import {
   applyOverworldAreaTravel,
   applyOverworldAreaExploration,
-  applyOverworldCurrentAreaSelection,
   applyOverworldLocalJobCompletion,
   applyOverworldSiteExploration,
   applyOverworldTownVisit,
@@ -119,6 +113,17 @@ import {
   cachedOverworldSessionRegionalArcProgress,
   withOverworldSessionRouteEstimate,
 } from "./session_route_progress.js";
+import {
+  applyOverworldSessionCurrentAreaForTown,
+  applyOverworldSessionLocalDiscoveryForTown,
+  buildOverworldSessionCurrentLocalView,
+  currentOverworldSessionAreaContent,
+  overworldSessionLocalAreas,
+  requireOverworldSessionCurrentAreaId,
+  resolveOverworldSessionCurrentArea,
+  visibleOverworldSessionAreaExits,
+  type MutableOverworldSessionLocalState,
+} from "./session_local_state.js";
 
 export type {
   OverworldRoadEncounterOption,
@@ -422,6 +427,27 @@ export class OverworldSession {
     return this.roadEventsByEdgeId.get(edgeId) ?? null;
   }
 
+  private localState(): MutableOverworldSessionLocalState {
+    return {
+      currentTownId: this.currentId,
+      currentAreaId: this.currentAreaId,
+      areasById: this.areasById,
+      areasByTown: this.areasByTown,
+      currentAreaByTown: this.currentAreaByTown,
+      areaExitsByArea: this.areaExitsByArea,
+      poisByArea: this.poisByArea,
+      charactersByArea: this.charactersByArea,
+      eventsByArea: this.eventsByArea,
+      sitesByArea: this.sitesByArea,
+      jobsByTown: this.jobsByTown,
+      questsByTown: this.questsByTown,
+      discoveredAreaIds: this.discoveredAreaIds,
+      discoveredJobIds: this.discoveredJobIds,
+      discoveredSiteIds: this.discoveredSiteIds,
+      discoveredQuestIds: this.discoveredQuestIds,
+    };
+  }
+
   private actionJournalState(): OverworldActionJournalState {
     return {
       minutes: this.minutes,
@@ -478,42 +504,26 @@ export class OverworldSession {
   }
 
   private localAreas(nodeId: string): OverworldArea[] {
-    return this.areasByTown.get(nodeId) ?? [];
-  }
-
-  private areaById(areaId: string): OverworldArea | null {
-    return this.areasById.get(areaId) ?? null;
+    return [...overworldSessionLocalAreas(this.localState(), nodeId)];
   }
 
   private setCurrentAreaForTown(nodeId: string): void {
-    const applied = applyOverworldCurrentAreaSelection({
-      nodeId,
-      localAreas: this.localAreas(nodeId),
-      currentAreaId: this.currentAreaId,
-      currentAreaByTown: this.currentAreaByTown,
-      discoveredAreaIds: this.discoveredAreaIds,
-    });
+    const applied = applyOverworldSessionCurrentAreaForTown(this.localState(), nodeId);
     this.applyCurrentAreaState(applied);
     if (applied.stateChanged) this.clearSnapshotCache();
   }
 
   private currentArea(): OverworldArea | null {
-    if (this.currentAreaId) {
-      const area = this.areaById(this.currentAreaId);
-      if (area?.home === this.currentId) return area;
+    const resolution = resolveOverworldSessionCurrentArea(this.localState());
+    if (resolution.applied) {
+      this.applyCurrentAreaState(resolution.applied);
+      if (resolution.applied.stateChanged) this.clearSnapshotCache();
     }
-    this.setCurrentAreaForTown(this.currentId);
-    return this.currentAreaId ? this.areaById(this.currentAreaId) : null;
+    return resolution.area;
   }
 
   private visibleAreaExits(): OverworldAreaExit[] {
-    const area = this.currentArea();
-    if (!area) return [];
-    const exits: OverworldAreaExit[] = [];
-    for (const exit of this.areaExitsByArea.get(area.id) ?? []) {
-      if (this.discoveredAreaIds.has(exit.destination.id)) exits.push(exit);
-    }
-    return exits;
+    return visibleOverworldSessionAreaExits(this.localState(), this.currentArea());
   }
 
   private areaExitFrom(areaId: string, routeId: string): OverworldAreaExit | null {
@@ -521,66 +531,18 @@ export class OverworldSession {
   }
 
   private currentAreaIdOrThrow(): string {
-    const area = this.currentArea();
-    if (!area) throw new Error("There is no current local area in this town.");
-    return area.id;
-  }
-
-  private currentAreaPois(): OverworldPoi[] {
-    return this.poisByArea.get(this.currentAreaIdOrThrow()) ?? [];
-  }
-
-  private currentAreaCharacters(): OverworldCharacter[] {
-    return this.charactersByArea.get(this.currentAreaIdOrThrow()) ?? [];
-  }
-
-  private currentAreaEvents(): OverworldLocalEvent[] {
-    return this.eventsByArea.get(this.currentAreaIdOrThrow()) ?? [];
-  }
-
-  private currentAreaSites(): OverworldExplorationSite[] {
-    return this.sitesByArea.get(this.currentAreaIdOrThrow()) ?? [];
+    return requireOverworldSessionCurrentAreaId(this.currentArea());
   }
 
   private currentLocalView(): OverworldSessionLocalView {
     const currentAreaId = this.currentAreaIdOrThrow();
-    return buildOverworldSessionLocalView({
-      currentAreaId,
-      localAreas: this.localAreas(this.currentId),
-      localJobs: this.jobsByTown.get(this.currentId) ?? [],
-      currentAreaSites: this.sitesByArea.get(currentAreaId) ?? [],
-      localQuests: this.questsByTown.get(this.currentId) ?? [],
-      discoveredAreaIds: this.discoveredAreaIds,
-      discoveredJobIds: this.discoveredJobIds,
-      discoveredSiteIds: this.discoveredSiteIds,
-      discoveredQuestIds: this.discoveredQuestIds,
-    });
+    return buildOverworldSessionCurrentLocalView(this.localState(), currentAreaId);
   }
 
   private discoverLocalProgressForTown(nodeId: string): OverworldLocalDiscoveryResult {
-    const discovery = planOverworldLocalDiscovery({
-      townId: nodeId,
-      currentTownId: this.currentId,
-      areasByTown: this.areasByTown,
-      jobsByTown: this.jobsByTown,
-      currentAreaSites: nodeId === this.currentId ? this.currentAreaSites() : [],
-      questsByTown: this.questsByTown,
-      discoveredAreaIds: this.discoveredAreaIds,
-      discoveredJobIds: this.discoveredJobIds,
-      discoveredSiteIds: this.discoveredSiteIds,
-      discoveredQuestIds: this.discoveredQuestIds,
-    });
-    const changed = applyOverworldLocalDiscovery(
-      {
-        discoveredAreaIds: this.discoveredAreaIds,
-        discoveredJobIds: this.discoveredJobIds,
-        discoveredSiteIds: this.discoveredSiteIds,
-        discoveredQuestIds: this.discoveredQuestIds,
-      },
-      discovery,
-    );
-    if (changed) this.clearSnapshotCache();
-    return discovery;
+    const applied = applyOverworldSessionLocalDiscoveryForTown(this.localState(), nodeId);
+    if (applied.stateChanged) this.clearSnapshotCache();
+    return applied.discovery;
   }
 
   private withLocalDiscovery(result: OverworldActionResult, nodeId: string): OverworldActionResult {
@@ -615,6 +577,9 @@ export class OverworldSession {
   private viewModelState(): OverworldSessionViewModelState {
     const current = this.currentNode();
     const currentArea = this.currentArea();
+    const currentAreaContent = currentArea
+      ? currentOverworldSessionAreaContent(this.localState(), currentArea.id)
+      : { poi: [], characters: [], events: [], sites: [] };
     const routeOptions = cachedOverworldSessionDiscoveredRouteOptions({
       caches: this.caches,
       routePlannerIndex: this.routePlannerIndex,
@@ -639,9 +604,9 @@ export class OverworldSession {
       areaExits: this.visibleAreaExits(),
       routeOptions,
       localView,
-      poi: this.currentAreaPois(),
-      contacts: this.currentAreaCharacters(),
-      events: this.currentAreaEvents(),
+      poi: currentAreaContent.poi,
+      contacts: currentAreaContent.characters,
+      events: currentAreaContent.events,
       journalEntries: this.journalEntries,
       travelLog: this.travelLog,
       visitedCount: this.visitedIds.size,
