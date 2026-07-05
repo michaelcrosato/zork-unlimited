@@ -140,6 +140,19 @@ export type MutableOverworldSessionSiteState = OverworldActionJournalState & {
   regionRenown: Map<string, number>;
 };
 
+export type OverworldSessionPoiScoutState = OverworldActionJournalState &
+  OverworldSessionPoiScoutPlanState;
+
+export type OverworldSessionContactTalkState = OverworldActionJournalState &
+  OverworldSessionContactTalkPlanState & {
+    currentTownName: string;
+  };
+
+export type OverworldSessionEventInvestigationState = OverworldActionJournalState &
+  OverworldSessionEventInvestigationPlanState & {
+    currentTownName: string;
+  };
+
 export function planOverworldSessionArea(
   state: OverworldSessionAreaPlanState,
 ): OverworldAreaExplorationPlan {
@@ -220,6 +233,36 @@ export function applyOverworldSessionLocalInteraction(
   townName: string,
 ): OverworldSessionActionApplication {
   return recordOverworldSessionLocalAction(state, plan.action, townName);
+}
+
+export function applyOverworldSessionPoiScoutFromState(
+  state: OverworldSessionPoiScoutState,
+): OverworldSessionActionApplication {
+  return applyOverworldSessionLocalInteraction(
+    state,
+    planOverworldSessionPoiScout(state),
+    state.currentTown.name,
+  );
+}
+
+export function applyOverworldSessionContactTalkFromState(
+  state: OverworldSessionContactTalkState,
+): OverworldSessionActionApplication {
+  return applyOverworldSessionLocalInteraction(
+    state,
+    planOverworldSessionContactTalk(state),
+    state.currentTownName,
+  );
+}
+
+export function applyOverworldSessionEventInvestigationFromState(
+  state: OverworldSessionEventInvestigationState,
+): OverworldSessionActionApplication {
+  return applyOverworldSessionLocalInteraction(
+    state,
+    planOverworldSessionEventInvestigation(state),
+    state.currentTownName,
+  );
 }
 
 export function applyOverworldSessionAreaTravel(

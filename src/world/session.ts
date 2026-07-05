@@ -52,16 +52,15 @@ import { type OverworldAreaTravelResult } from "./session_local_actions.js";
 import {
   applyOverworldSessionArea,
   applyOverworldSessionAreaTravel,
-  applyOverworldSessionLocalInteraction,
+  applyOverworldSessionContactTalkFromState,
+  applyOverworldSessionEventInvestigationFromState,
   applyOverworldSessionLocalJob,
+  applyOverworldSessionPoiScoutFromState,
   applyOverworldSessionSite,
   applyOverworldSessionTownVisit,
   planOverworldSessionArea,
   planOverworldSessionAreaTravel,
-  planOverworldSessionContactTalk,
-  planOverworldSessionEventInvestigation,
   planOverworldSessionLocalJob,
-  planOverworldSessionPoiScout,
   planOverworldSessionSite,
 } from "./session_local_lifecycle.js";
 import {
@@ -468,6 +467,13 @@ export class OverworldSession {
     );
   }
 
+  private applyLocalActionWithDiscovery(
+    current: OverworldNode,
+    applied: OverworldSessionActionApplication,
+  ): OverworldActionResult {
+    return this.withLocalDiscovery(this.applyActionApplication(applied), current.id);
+  }
+
   private cachedCompactView(): OverworldCompactView {
     if (this.caches.compactView) return this.caches.compactView;
     this.caches.compactView = this.buildCompactView();
@@ -596,25 +602,23 @@ export class OverworldSession {
   scoutPoi(poiId: string): OverworldActionResult {
     this.assertNoPendingRoadEncounter("scouting a point of interest");
     const current = this.currentNode();
-    const result = this.applyActionApplication(
-      applyOverworldSessionLocalInteraction(
-        this.actionJournalState(),
-        planOverworldSessionPoiScout({
-          poiId,
-          poisById: this.poisById,
-          currentTown: current,
-          currentAreaId: () => this.currentAreaIdOrThrow(),
-        }),
-        current.name,
-      ),
+    return this.applyLocalActionWithDiscovery(
+      current,
+      applyOverworldSessionPoiScoutFromState({
+        ...this.actionJournalState(),
+        poiId,
+        poisById: this.poisById,
+        currentTown: current,
+        currentAreaId: () => this.currentAreaIdOrThrow(),
+      }),
     );
-    return this.withLocalDiscovery(result, current.id);
   }
 
   exploreArea(areaId: string): OverworldActionResult {
     this.assertNoPendingRoadEncounter("exploring a local area");
     const current = this.currentNode();
-    const result = this.applyActionApplication(
+    return this.applyLocalActionWithDiscovery(
+      current,
       applyOverworldSessionArea(
         {
           ...this.actionJournalState(),
@@ -632,7 +636,6 @@ export class OverworldSession {
         current.name,
       ),
     );
-    return this.withLocalDiscovery(result, current.id);
   }
 
   moveArea(areaRouteId: string): OverworldAreaTravelResult {
@@ -664,7 +667,8 @@ export class OverworldSession {
   workLocalJob(jobId: string): OverworldActionResult {
     this.assertNoPendingRoadEncounter("working a local job");
     const current = this.currentNode();
-    const result = this.applyActionApplication(
+    return this.applyLocalActionWithDiscovery(
+      current,
       applyOverworldSessionLocalJob(
         {
           ...this.actionJournalState(),
@@ -685,49 +689,45 @@ export class OverworldSession {
         current.name,
       ),
     );
-    return this.withLocalDiscovery(result, current.id);
   }
 
   talkToCharacter(characterId: string): OverworldActionResult {
     this.assertNoPendingRoadEncounter("talking to a contact");
     const current = this.currentNode();
-    const result = this.applyActionApplication(
-      applyOverworldSessionLocalInteraction(
-        this.actionJournalState(),
-        planOverworldSessionContactTalk({
-          characterId,
-          charactersById: this.charactersById,
-          currentTownId: this.currentId,
-          currentAreaId: () => this.currentAreaIdOrThrow(),
-        }),
-        current.name,
-      ),
+    return this.applyLocalActionWithDiscovery(
+      current,
+      applyOverworldSessionContactTalkFromState({
+        ...this.actionJournalState(),
+        characterId,
+        charactersById: this.charactersById,
+        currentTownId: this.currentId,
+        currentAreaId: () => this.currentAreaIdOrThrow(),
+        currentTownName: current.name,
+      }),
     );
-    return this.withLocalDiscovery(result, current.id);
   }
 
   investigateEvent(eventId: string): OverworldActionResult {
     this.assertNoPendingRoadEncounter("investigating a local event");
     const current = this.currentNode();
-    const result = this.applyActionApplication(
-      applyOverworldSessionLocalInteraction(
-        this.actionJournalState(),
-        planOverworldSessionEventInvestigation({
-          eventId,
-          eventsById: this.localEventsById,
-          currentTownId: this.currentId,
-          currentAreaId: () => this.currentAreaIdOrThrow(),
-        }),
-        current.name,
-      ),
+    return this.applyLocalActionWithDiscovery(
+      current,
+      applyOverworldSessionEventInvestigationFromState({
+        ...this.actionJournalState(),
+        eventId,
+        eventsById: this.localEventsById,
+        currentTownId: this.currentId,
+        currentAreaId: () => this.currentAreaIdOrThrow(),
+        currentTownName: current.name,
+      }),
     );
-    return this.withLocalDiscovery(result, current.id);
   }
 
   resolveEvent(eventId: string): OverworldActionResult {
     this.assertNoPendingRoadEncounter("resolving a local event");
     const current = this.currentNode();
-    const result = this.applyActionApplication(
+    return this.applyLocalActionWithDiscovery(
+      current,
       applyOverworldSessionEventResolution(
         {
           ...this.actionJournalState(),
@@ -751,13 +751,13 @@ export class OverworldSession {
         }),
       ),
     );
-    return this.withLocalDiscovery(result, current.id);
   }
 
   exploreSite(siteId: string): OverworldActionResult {
     this.assertNoPendingRoadEncounter("exploring a site");
     const current = this.currentNode();
-    const result = this.applyActionApplication(
+    return this.applyLocalActionWithDiscovery(
+      current,
       applyOverworldSessionSite(
         {
           ...this.actionJournalState(),
@@ -776,7 +776,6 @@ export class OverworldSession {
         current.name,
       ),
     );
-    return this.withLocalDiscovery(result, current.id);
   }
 
   restAtTown(): OverworldServiceResult {
