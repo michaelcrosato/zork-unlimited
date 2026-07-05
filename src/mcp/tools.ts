@@ -18,12 +18,7 @@ import { loadRpgPackFile, type CompiledRpgPack } from "../rpg/pack.js";
 import { assertRpgStateReferences } from "../rpg/state_integrity.js";
 
 import { makeReport, type ValidationReport } from "../validate/report.js";
-import {
-  SAVE_MODE,
-  load,
-  assertSaveContentHash,
-  assertWellFormedState,
-} from "../persist/save_load.js";
+import { assertWellFormedState } from "../persist/save_load.js";
 import { assertTraceMode, replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
@@ -31,8 +26,13 @@ import { SessionStore, type Session, type TranscriptSummary } from "./sessions.j
 import { type McpActionOption, type McpObservation } from "./types.js";
 import { RPG_COMPACT_EVENT_VERSION, type RpgCompactEvent } from "./compact_rpg_event.js";
 import type { RpgCompactObservation } from "./compact_rpg_observation.js";
-import { rpgViewField } from "./rpg_view_projection.js";
-import { RpgMcpSessionRuntime, rpgSourceFields } from "./rpg_session_runtime.js";
+import { RpgMcpSessionRuntime } from "./rpg_session_runtime.js";
+import {
+  runRpgLoadGame,
+  runRpgNewGame,
+  runRpgStartWorldQuest,
+  type RpgWorldQuestStartPayload as RpgRuntimeWorldQuestStartPayload,
+} from "./rpg_session_lifecycle.js";
 import { RpgSourceRuntime, type PublicWorldGraph } from "./rpg_source_runtime.js";
 import {
   runRpgGetObservation,
@@ -75,9 +75,7 @@ import {
 } from "../world/graph.js";
 import {
   loadOverworldManifest as loadOverworldManifestFromRoot,
-  resolveGameSource,
   resolvePackSource,
-  resolveSaveGameSource,
 } from "../world/source.js";
 import { loadWorldQuestReport, validateWorldQuestReport } from "./world_quest_reports.js";
 import { type OverworldManifest, type OverworldNode } from "../world/overworld.js";
@@ -313,14 +311,8 @@ type RpgLoadGameArgs = {
   hide_graph?: boolean;
 } & RpgViewOptions;
 
-type RpgWorldQuestStartPayload<Args extends RpgViewOptions> = {
-  world: { id: string; name: string; hub: string };
-  quest: {
-    id: string;
-    name: string;
-    path_from_hub: WorldRouteStep[];
-  };
-} & RpgSessionPayload<Args>;
+type RpgWorldQuestStartPayload<Args extends RpgViewOptions> =
+  RpgRuntimeWorldQuestStartPayload<Args>;
 
 type OverworldQuestStartResponse<Args extends OverworldResponseOptions & RpgViewOptions> =
   | ({
@@ -971,42 +963,16 @@ export function createToolApi(opts: { root: string }) {
     },
 
     new_game<Args extends RpgNewGameArgs>(args: Args): RpgSessionPayload<Args> {
-      // Mint a fresh RPG pack in-memory from `generate_rpg_seed`. The generation seed selects
-      // the minted pack's theme/structure; `seed` still seeds runtime state.
-      const source = resolveGameSource(root, args, "new_game");
-      const compiled = rpgSources.requireGeneratedRpgPlayable(source.generateRpgSeed);
-      return rpgRuntime.startRpgSession(compiled, args, {
-        generatedRpgSeed: source.generateRpgSeed,
-      });
+      return runRpgNewGame({ root, rpgRuntime, rpgSources }, args);
     },
 
     start_world_quest<Args extends RpgStartWorldQuestArgs>(
       args: Args,
     ): RpgWorldQuestStartPayload<Args> {
-      if ((args as { quest_id?: unknown }).quest_id !== undefined) {
-        throw new Error("start_world_quest accepts world_quest_id, not quest_id.");
-      }
-      if ((args as { world_quest_id?: unknown }).world_quest_id === undefined) {
-        throw new Error("start_world_quest requires world_quest_id.");
-      }
-      const resolved = rpgSources.resolveWorldQuestPackPath(args.world_quest_id);
-      const started = rpgRuntime.startRpgSession(
-        rpgSources.requirePlayable(resolved.packPath),
+      return runRpgStartWorldQuest(
+        { rpgRuntime, rpgSources },
         args,
-        {
-          packPath: resolved.packPath,
-          worldQuestId: resolved.node.id,
-        },
-      );
-      return {
-        world: { id: resolved.world.id, name: resolved.world.name, hub: resolved.world.hub },
-        quest: {
-          id: resolved.node.id,
-          name: resolved.node.name,
-          path_from_hub: worldRouteFromHub(resolved.world, resolved.node.id) ?? [],
-        },
-        ...started,
-      } as RpgWorldQuestStartPayload<Args>;
+      ) as RpgWorldQuestStartPayload<Args>;
     },
 
     get_observation<Args extends RpgGetObservationArgs>(args: Args): RpgObservationResponse<Args> {
@@ -1039,34 +1005,7 @@ export function createToolApi(opts: { root: string }) {
     },
 
     load_game<Args extends RpgLoadGameArgs>(args: Args): RpgSessionPayload<Args> {
-      const bundle = load(args.save, undefined, SAVE_MODE);
-      const source = resolveSaveGameSource(root, args, bundle, "load_game");
-      const compiled =
-        source.kind === "generated"
-          ? rpgSources.requireGeneratedRpgPlayable(source.generateRpgSeed)
-          : rpgSources.requirePlayable(source.packPath);
-      // The save was already parsed and state-gated above; bind those bytes to the
-      // resolved pack hash here without reparsing the same blob.
-      assertSaveContentHash(bundle, compiled.contentHash);
-      const session = rpgRuntime.startSession(compiled, bundle.state, {
-        ...(source.packPath ? { packPath: source.packPath } : {}),
-        ...(source.worldQuestId ? { worldQuestId: source.worldQuestId } : {}),
-        ...(source.generateRpgSeed !== null ? { generatedRpgSeed: source.generateRpgSeed } : {}),
-        ...(args.hide_graph ? { hideGraph: true } : {}),
-      });
-      const openingOpts = rpgRuntime.openingObservationOptions(session);
-      return {
-        session_id: session.id,
-        ...rpgViewField(
-          sessions,
-          session,
-          rpgRuntime.openingObservationOf(session, openingOpts),
-          args,
-          openingOpts,
-        ),
-        ...rpgSourceFields(session),
-        state_hash: session.stateHash,
-      } as RpgSessionPayload<Args>;
+      return runRpgLoadGame({ root, sessions, rpgRuntime, rpgSources }, args);
     },
 
     async adapt_story(args: { premise: string }) {
