@@ -45,21 +45,29 @@ const SAVE_SOURCE_REF_CONSISTENCY_MESSAGES = {
 export type TraceSourceArgs = {
   world_quest_id?: string;
   pack_path?: never;
+  quest_id?: never;
+  quest_path?: never;
 };
 
 export type PackSourceArgs = {
   world_quest_id?: string;
   pack_path?: never;
+  quest_id?: never;
+  quest_path?: never;
 };
 export type SaveSourceArgs = {
   world_quest_id?: string;
   generate_rpg_seed?: number;
   pack_path?: never;
+  quest_id?: never;
+  quest_path?: never;
 };
 
 export type GameSourceArgs = {
   generate_rpg_seed?: number;
   pack_path?: never;
+  quest_id?: never;
+  quest_path?: never;
 };
 
 export type SaveWorldSource = {
@@ -97,6 +105,27 @@ function assertGenerateRpgSeed(seed: unknown, operation: string): asserts seed i
     throw new Error(
       `${operation} generate_rpg_seed must be an integer, got ${JSON.stringify(seed)}.`,
     );
+  }
+}
+
+function rejectRetiredWorldQuestSourceAliases(
+  args: unknown,
+  operation: string,
+  accepted: string,
+): void {
+  const source = args as {
+    pack_path?: unknown;
+    quest_id?: unknown;
+    quest_path?: unknown;
+  };
+  if (source.pack_path !== undefined) {
+    throw new Error(`${operation} accepts ${accepted}, not pack_path.`);
+  }
+  if (source.quest_path !== undefined) {
+    throw new Error(`${operation} accepts ${accepted}, not quest_path.`);
+  }
+  if (source.quest_id !== undefined) {
+    throw new Error(`${operation} accepts ${accepted}, not quest_id.`);
   }
 }
 
@@ -332,9 +361,7 @@ export function resolvePackSource(
   args: PackSourceArgs,
   operation: string,
 ): TracePackSource {
-  if ((args as { pack_path?: unknown }).pack_path !== undefined) {
-    throw new Error(`${operation} accepts world_quest_id, not pack_path.`);
-  }
+  rejectRetiredWorldQuestSourceAliases(args, operation, "world_quest_id");
   if (args.world_quest_id === undefined) {
     throw new Error(`${operation} requires world_quest_id.`);
   }
@@ -347,9 +374,7 @@ export function resolveGameSource(
   args: GameSourceArgs,
   operation: string,
 ): GeneratedGameSource {
-  if ((args as { pack_path?: unknown }).pack_path !== undefined) {
-    throw new Error(`${operation} accepts generate_rpg_seed, not pack_path.`);
-  }
+  rejectRetiredWorldQuestSourceAliases(args, operation, "generate_rpg_seed");
   if ((args as { world_quest_id?: unknown }).world_quest_id !== undefined) {
     throw new Error(`${operation} starts generated RPG packs only; use start_world_quest.`);
   }
@@ -470,11 +495,11 @@ function resolveEmbeddedPackSource(
   operation: string,
   sourceLabel: "save" | "trace",
 ): TracePackSource {
-  if ((args as { pack_path?: unknown }).pack_path !== undefined) {
-    throw new Error(
-      `${operation} accepts world_quest_id or embedded trace worldQuestId, not pack_path.`,
-    );
-  }
+  rejectRetiredWorldQuestSourceAliases(
+    args,
+    operation,
+    "world_quest_id or embedded trace worldQuestId",
+  );
 
   let packPath: string;
   let worldQuestId: string | null;
@@ -507,9 +532,7 @@ export function resolveSaveGameSource(
   bundle: SaveWorldSource,
   operation: string,
 ): GamePackSource {
-  if ((args as { pack_path?: unknown }).pack_path !== undefined) {
-    throw new Error(`${operation} accepts world_quest_id or generate_rpg_seed, not pack_path.`);
-  }
+  rejectRetiredWorldQuestSourceAliases(args, operation, "world_quest_id or generate_rpg_seed");
   const embeddedSource = saveEmbeddedSource(bundle, operation);
   const embeddedWorldQuestId = embeddedSource.worldQuestId;
   const embeddedGeneratedRpgSeed = embeddedSource.generatedRpgSeed;
