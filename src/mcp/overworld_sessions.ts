@@ -113,6 +113,7 @@ export type OverworldMcpGuardedSession =
 export type OverworldMcpExportArgs = {
   session_id: string;
   expected_snapshot_hash?: string;
+  if_snapshot_hash?: string;
 };
 
 export type OverworldMcpExportSuccess = {
@@ -157,11 +158,22 @@ function rememberOverworldSessionEntry<Key, Entry>(
   }
 }
 
-export type OverworldMcpExportResponse<Args extends OverworldMcpExportArgs> = Args extends {
+type OverworldMcpExportRejected<Args extends OverworldMcpExportArgs> = Args extends {
   expected_snapshot_hash: string;
 }
-  ? OverworldMcpExportSuccess | OverworldMcpRejectedSessionPayload
-  : OverworldMcpExportSuccess;
+  ? OverworldMcpRejectedSessionPayload
+  : never;
+
+type OverworldMcpExportUnchanged<Args extends OverworldMcpExportArgs> = Args extends {
+  if_snapshot_hash: string;
+}
+  ? OverworldMcpReadUnchanged
+  : never;
+
+export type OverworldMcpExportResponse<Args extends OverworldMcpExportArgs> =
+  | OverworldMcpExportSuccess
+  | OverworldMcpExportRejected<Args>
+  | OverworldMcpExportUnchanged<Args>;
 
 export function overworldReadUnchanged(snapshotHash: string): OverworldMcpReadUnchanged {
   return {
@@ -303,6 +315,9 @@ export class OverworldMcpSessionStore {
     }
     const { session } = guarded;
     const snapshotHash = this.snapshotHash(session);
+    if (args.if_snapshot_hash !== undefined && args.if_snapshot_hash === snapshotHash) {
+      return overworldReadUnchanged(snapshotHash) as OverworldMcpExportResponse<Args>;
+    }
     return {
       ok: true,
       session_id: args.session_id,

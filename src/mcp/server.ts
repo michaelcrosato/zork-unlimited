@@ -211,10 +211,11 @@ tool(
 );
 tool(
   "export_overworld_session",
-  "Export overworld snapshot; stale hash rejects.",
+  "Export overworld snapshot; hash guards.",
   {
     ...SESSION,
     ...EXPECTED_SNAPSHOT_HASH,
+    ...IF_SNAPSHOT_HASH,
   },
   (a) => api.export_overworld_session(a),
 );

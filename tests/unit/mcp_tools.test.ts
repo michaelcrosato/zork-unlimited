@@ -1305,6 +1305,18 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(exported.snapshot.worldHash).toMatch(/^[0-9a-f]{64}$/);
     expect(exported.snapshot_hash).toBe(hashState(exported.snapshot));
     expect(JSON.stringify(staleExport).length).toBeLessThan(JSON.stringify(exported).length);
+    const unchangedExport = a.export_overworld_session({
+      session_id: started.session_id,
+      expected_snapshot_hash: exported.snapshot_hash,
+      if_snapshot_hash: exported.snapshot_hash,
+    });
+    expect(unchangedExport).toEqual({
+      snapshot_hash: exported.snapshot_hash,
+      unchanged: true,
+    });
+    expect("ok" in unchangedExport).toBe(false);
+    expect("session_id" in unchangedExport).toBe(false);
+    expect("snapshot" in unchangedExport).toBe(false);
     const repeatedExport = a.export_overworld_session({
       session_id: started.session_id,
       expected_snapshot_hash: exported.snapshot_hash,

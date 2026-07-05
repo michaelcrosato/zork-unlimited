@@ -287,6 +287,7 @@ describe("MCP server registration", () => {
     expect(registeredToolBlock("get_overworld_session")).toContain("include_observation");
     expect(registeredToolBlock("get_overworld_session")).toContain("IF_SNAPSHOT_HASH");
     expect(registeredToolBlock("get_overworld_session_context")).toContain("IF_SNAPSHOT_HASH");
+    expect(registeredToolBlock("export_overworld_session")).toContain("IF_SNAPSHOT_HASH");
   });
 
   it("defaults public RPG MCP play tools to compact hidden-graph observation", () => {
