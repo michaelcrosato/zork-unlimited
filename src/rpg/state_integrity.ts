@@ -29,9 +29,15 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   const items = collectAddItemTargets(index.pack, new Set<string>());
   const locations = new Set<string>(index.rooms.keys());
   const endings = new Set<string>(index.pack.endings.map((e) => e.id));
-  for (const id of index.objects.keys()) items.add(id);
+  const objects = new Set<string>(index.objects.keys());
+  for (const id of objects) items.add(id);
   if (!locations.has(state.current)) {
     throw new SaveIntegrityError(`Save references unknown room "${state.current}".`);
+  }
+  for (const id of Object.keys(state.visited)) {
+    if (!locations.has(id)) {
+      throw new SaveIntegrityError(`Save references unknown visited room "${id}".`);
+    }
   }
   if (state.endingId !== null && !endings.has(state.endingId)) {
     throw new SaveIntegrityError(`Save references unknown ending "${state.endingId}".`);
@@ -39,6 +45,23 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   for (const id of state.inventory) {
     if (!items.has(id)) {
       throw new SaveIntegrityError(`Save references unknown item "${id}".`);
+    }
+  }
+  for (const [id, runtime] of Object.entries(state.objectState)) {
+    if (!objects.has(id)) {
+      throw new SaveIntegrityError(`Save references unknown object "${id}".`);
+    }
+    if (runtime.room !== undefined && !locations.has(runtime.room)) {
+      throw new SaveIntegrityError(
+        `Save references unknown object room "${runtime.room}" for "${id}".`,
+      );
+    }
+    for (const childId of runtime.contents ?? []) {
+      if (!objects.has(childId)) {
+        throw new SaveIntegrityError(
+          `Save references unknown contained object "${childId}" for "${id}".`,
+        );
+      }
     }
   }
 }

@@ -94,6 +94,14 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     expect(() => api().load_game({ save: forged })).toThrow(/unknown room/);
   });
 
+  it("RPG: a phantom visited room is a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      s.visited = { ...(s.visited as Record<string, boolean>), no_such_room: true };
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/unknown visited room/);
+  });
+
   it("RPG: a fabricated `endingId` is a hard SaveIntegrityError", () => {
     // The benchmark-credibility witness: a forged save that CLAIMS an ending the
     // pack never declares. endingId is a valid nullable string to bug_0181's gate.
@@ -114,6 +122,30 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     });
     expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
     expect(() => api().load_game({ save: forged })).toThrow(/unknown item/);
+  });
+
+  it("RPG: a phantom objectState key is a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      s.objectState = { no_such_object: { open: true } };
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/unknown object/);
+  });
+
+  it("RPG: a moved object in a phantom room is a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      s.objectState = { iron_bar: { room: "no_such_room" } };
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/unknown object room/);
+  });
+
+  it("RPG: a runtime container with a phantom child object is a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      s.objectState = { sarcophagus: { contents: ["no_such_object"] } };
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/unknown contained object/);
   });
 });
 
@@ -142,6 +174,29 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
     // Sanity: the save really carries a held item (so the gate is exercised).
     const bundle = JSON.parse(saved.save) as { state: { inventory: string[] } };
     expect(bundle.state.inventory.length).toBeGreaterThan(0);
+    const reloaded = a.load_game({ save: saved.save });
+    expect(saved.state_hash).toBe(before);
+    expect(reloaded.state_hash).toBe(before);
+  });
+
+  it("an RPG save with a legitimately moved object still loads", () => {
+    const a = api();
+    const game = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
+    const sid = game.session_id;
+    stepByCommand(a, sid, "go down");
+    stepByCommand(a, sid, "take iron bar");
+    stepByCommand(a, sid, "drop iron bar");
+    const before = a.get_observation({ session_id: sid }).state_hash;
+    const saved = a.save_game({ session_id: sid });
+    const bundle = JSON.parse(saved.save) as {
+      state: {
+        objectState: Record<string, { room?: string; takenBy?: string }>;
+      };
+    };
+    expect(bundle.state.objectState["iron_bar"]).toMatchObject({
+      room: "entry_hall",
+      takenBy: "player",
+    });
     const reloaded = a.load_game({ save: saved.save });
     expect(saved.state_hash).toBe(before);
     expect(reloaded.state_hash).toBe(before);
