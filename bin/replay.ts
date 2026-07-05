@@ -4,18 +4,18 @@
  *
  * Usage:
  *   npm run replay                              # replay the committed RPG smoke trace
- *   npm run replay -- <trace.json>              # infer a shipped trace's worldQuestId
+ *   npm run replay -- <trace.json>              # infer shipped/generated trace source
  *   npm run replay -- <trace.json> <world_quest_id>
  */
 import { readFileSync } from "node:fs";
 import { traceSourceLabel, type Trace } from "../src/trace/record.js";
 import { assertTraceMode, replayTrace } from "../src/trace/replay.js";
-import { loadRpgPackFile } from "../src/rpg/pack.js";
 import { buildRpgRules, indexRpgPack } from "../src/rpg/runner.js";
 import type { RpgAction } from "../src/api/types.js";
 import { assertWellFormedState } from "../src/persist/save_load.js";
 import { assertRpgStateReferences } from "../src/rpg/state_integrity.js";
-import { resolveTracePackSource, type TraceSourceArgs } from "../src/world/source.js";
+import { RpgSourceRuntime } from "../src/mcp/rpg_source_runtime.js";
+import { resolveTraceGameSource, type TraceSourceArgs } from "../src/world/source.js";
 
 const DEFAULT_TRACE = "traces/rpg/barrow_victory.json";
 
@@ -61,22 +61,22 @@ function main(): void {
   const tracePath = process.argv[2] ?? DEFAULT_TRACE;
   const trace = JSON.parse(readFileSync(tracePath, "utf8")) as Trace<RpgAction>;
   assertTraceMode(trace);
-  const source = resolveTracePackSource(process.cwd(), traceSourceArgs(), trace, "replay");
-  const packPath = source.packPath;
-  const loaded = loadRpgPackFile(packPath);
-  if (!loaded.ok) {
-    console.error(`Pack ${packPath} failed to compile as an RPG pack.`);
-    process.exit(1);
-  }
+  const root = process.cwd();
+  const source = resolveTraceGameSource(root, traceSourceArgs(), trace, "replay");
+  const rpgSources = new RpgSourceRuntime(root);
+  const compiled =
+    source.kind === "generated"
+      ? rpgSources.requireGeneratedRpgPlayable(source.generateRpgSeed)
+      : rpgSources.requirePlayable(source.packPath);
 
-  if (trace.content_hash !== loaded.compiled.contentHash) {
+  if (trace.content_hash !== compiled.contentHash) {
     console.error(
-      `Trace content ${trace.content_hash} does not match pack ${loaded.compiled.contentHash}.`,
+      `Trace content ${trace.content_hash} does not match pack ${compiled.contentHash}.`,
     );
     process.exit(1);
   }
   assertWellFormedState(trace.initial_state);
-  const index = indexRpgPack(loaded.compiled.pack);
+  const index = indexRpgPack(compiled.pack);
   assertRpgStateReferences(index, trace.initial_state);
   const rules = buildRpgRules(index);
   const result = replayTrace(trace, rules);

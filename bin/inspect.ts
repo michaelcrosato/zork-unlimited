@@ -4,7 +4,7 @@
  *
  * Usage:
  *   npm run inspect -- <world_quest_id>    # stats, validator findings
- *   npm run inspect -- <trace.json>        # infer a shipped trace's worldQuestId
+ *   npm run inspect -- <trace.json>        # infer shipped/generated trace source
  *   npm run inspect -- <trace.json> <world_quest_id>
  *
  * Auto-detects: a `.json` argument is treated as a trace; otherwise positional
@@ -22,8 +22,9 @@ import { formatReport } from "../src/validate/report.js";
 import type { RpgAction } from "../src/api/types.js";
 import { assertWellFormedState } from "../src/persist/save_load.js";
 import { assertRpgStateReferences } from "../src/rpg/state_integrity.js";
+import { RpgSourceRuntime } from "../src/mcp/rpg_source_runtime.js";
 import {
-  resolveTracePackSource,
+  resolveTraceGameSource,
   resolveWorldQuestPackPath,
   type TraceSourceArgs,
 } from "../src/world/source.js";
@@ -73,24 +74,24 @@ function traceSourceArgs(): TraceSourceArgs {
 function inspectTrace(tracePath: string, sourceArgs: TraceSourceArgs): void {
   const trace = JSON.parse(readFileSync(tracePath, "utf8")) as Trace<RpgAction>;
   assertTraceMode(trace);
-  const source = resolveTracePackSource(process.cwd(), sourceArgs, trace, "inspect");
-  const packPath = source.packPath;
-  const loaded = loadRpgPackFile(packPath);
-  if (!loaded.ok) {
-    console.error(`Pack ${packPath} failed to compile as an RPG pack.`);
-    process.exit(1);
-  }
+  const root = process.cwd();
+  const source = resolveTraceGameSource(root, sourceArgs, trace, "inspect");
+  const rpgSources = new RpgSourceRuntime(root);
+  const compiled =
+    source.kind === "generated"
+      ? rpgSources.requireGeneratedRpgPlayable(source.generateRpgSeed)
+      : rpgSources.requirePlayable(source.packPath);
   console.log(
     `Trace: ${trace.trace_id}  source: ${traceSourceLabel(trace)}  seed: ${trace.seed}  steps: ${trace.actions.length}`,
   );
-  if (trace.content_hash !== loaded.compiled.contentHash) {
+  if (trace.content_hash !== compiled.contentHash) {
     console.log(
-      `  ! content hash mismatch: trace ${trace.content_hash} ≠ pack ${loaded.compiled.contentHash}`,
+      `  ! content hash mismatch: trace ${trace.content_hash} ≠ pack ${compiled.contentHash}`,
     );
     process.exit(1);
   }
   assertWellFormedState(trace.initial_state);
-  const index = indexRpgPack(loaded.compiled.pack);
+  const index = indexRpgPack(compiled.pack);
   assertRpgStateReferences(index, trace.initial_state);
   const rules = buildRpgRules(index);
   const step = makeStep(rules);

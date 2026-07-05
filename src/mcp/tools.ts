@@ -570,6 +570,7 @@ export function createToolApi(opts: { root: string }) {
       return {
         ok: true,
         world_quest_id: source.worldQuestId,
+        ...(source.generateRpgSeed !== null ? { generated_rpg_seed: source.generateRpgSeed } : {}),
         content_hash: trace.content_hash,
         seed: trace.seed,
         steps: trace.actions.length,

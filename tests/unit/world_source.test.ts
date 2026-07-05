@@ -12,9 +12,11 @@ import {
   resolveGameSource,
   resolvePackSource,
   resolveSaveGameSource,
+  resolveTraceGameSource,
   resolveTracePackSource,
   saveGeneratedRpgSeed,
   saveWorldQuestId,
+  traceGeneratedRpgSeed,
 } from "../../src/world/source.js";
 import type { Trace } from "../../src/trace/record.js";
 import type { RpgAction } from "../../src/api/types.js";
@@ -73,6 +75,19 @@ const trace = {
   source_ref: ["wq", "sunken_barrow"],
   trace_id: "tr_source_test",
   pack_id: "sunken_barrow_v1",
+  content_hash: "unused",
+  seed: 1,
+  initial_state: {},
+  actions: [],
+  expected_final_hash: "unused",
+} as unknown as Trace<RpgAction>;
+
+const generatedTrace = {
+  mode: "rpg",
+  source_ref: ["gen", 3],
+  generatedRpgSeed: 3,
+  trace_id: "tr_generated_source_test",
+  pack_id: "generated_rpg_3",
   content_hash: "unused",
   seed: 1,
   initial_state: {},
@@ -323,9 +338,25 @@ describe("world source resolution", () => {
       packPath: PACK,
       worldQuestId: "sunken_barrow",
     });
+    expect(resolveTraceGameSource(ROOT, {}, trace, "trace_test")).toEqual({
+      kind: "pack",
+      packPath: PACK,
+      worldQuestId: "sunken_barrow",
+      generateRpgSeed: null,
+    });
+    expect(resolveTraceGameSource(ROOT, {}, generatedTrace, "trace_test")).toEqual({
+      kind: "generated",
+      packPath: null,
+      worldQuestId: null,
+      generateRpgSeed: 3,
+    });
+    expect(traceGeneratedRpgSeed(generatedTrace, "trace_test")).toBe(3);
     expect(() =>
       resolveTracePackSource(ROOT, { pack_path: PACK } as never, trace, "trace_test"),
     ).toThrow(/not pack_path/);
+    expect(() => resolveTracePackSource(ROOT, {}, generatedTrace, "trace_test")).toThrow(
+      /world quest trace source/,
+    );
     expect(resolveSaveGameSource(ROOT, {}, { worldQuestId: "sunken_barrow" }, "save_test")).toEqual(
       {
         kind: "pack",
@@ -496,6 +527,15 @@ describe("world source resolution", () => {
     expect(() =>
       resolveTracePackSource(ROOT, {}, malformedGeneratedTraceRef, "trace_test"),
     ).toThrow(SaveIntegrityError);
+
+    expect(() =>
+      resolveTraceGameSource(
+        ROOT,
+        { world_quest_id: "sunken_barrow" },
+        generatedTrace,
+        "trace_test",
+      ),
+    ).toThrow(SaveIntegrityError);
   });
 
   it("requires a source when save and trace metadata carry no world quest id", () => {
@@ -504,7 +544,10 @@ describe("world source resolution", () => {
     delete (traceWithoutWorldQuest as { source_ref?: unknown }).source_ref;
 
     expect(() => resolveTracePackSource(ROOT, {}, traceWithoutWorldQuest, "trace_test")).toThrow(
-      /trace with worldQuestId/,
+      /worldQuestId\/generatedRpgSeed/,
+    );
+    expect(() => resolveTraceGameSource(ROOT, {}, traceWithoutWorldQuest, "trace_test")).toThrow(
+      /worldQuestId\/generatedRpgSeed/,
     );
     expect(() => resolveSaveGameSource(ROOT, {}, {}, "save_test")).toThrow(
       /worldQuestId\/generatedRpgSeed/,

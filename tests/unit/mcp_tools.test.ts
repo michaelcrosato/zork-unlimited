@@ -12,6 +12,7 @@ import { makeStep } from "../../src/core/engine.js";
 import { recordTrace } from "../../src/trace/record.js";
 import { parseOverworldManifest } from "../../src/world/overworld.js";
 import { hashState } from "../../src/core/hash.js";
+import { generateRpgPack } from "../../src/gen/rpg_generator.js";
 import type { RpgAction } from "../../src/api/types.js";
 import type { RpgActionOption } from "../../src/rpg/legal_actions.js";
 
@@ -2916,6 +2917,17 @@ describe("MCP tools — replay + path confinement", () => {
     });
     mkdirSync("traces", { recursive: true });
     writeFileSync("traces/mcp_replay.json", JSON.stringify(trace));
+
+    const generatedPack = generateRpgPack(3);
+    const generatedIndex = indexRpgPack(generatedPack);
+    const generatedRules = buildRpgRules(generatedIndex);
+    const generatedTrace = recordTrace(generatedRules, initStateForRpgPack(generatedIndex, 7), [], {
+      trace_id: "tr_mcp_generated",
+      pack_id: generatedPack.meta.id,
+      content_hash: hashState(generatedPack),
+      generatedRpgSeed: 3,
+    });
+    writeFileSync("traces/mcp_generated_replay.json", JSON.stringify(generatedTrace));
   });
 
   it("replay_trace reproduces the recorded final hash", () => {
@@ -2933,6 +2945,11 @@ describe("MCP tools — replay + path confinement", () => {
 
   it("replay_trace can infer a shipped trace source from embedded worldQuestId", () => {
     const r = api().replay_trace({ trace_path: "traces/mcp_replay.json" });
+    expect(r.ok).toBe(true);
+  });
+
+  it("replay_trace can infer a generated trace source from embedded generatedRpgSeed", () => {
+    const r = api().replay_trace({ trace_path: "traces/mcp_generated_replay.json" });
     expect(r.ok).toBe(true);
   });
 
@@ -2992,6 +3009,25 @@ describe("MCP tools — replay + path confinement", () => {
     expect(r.diagnosis.type).toBe("no_failure");
   });
 
+  it("inspect_trace can infer a generated trace source from embedded generatedRpgSeed", () => {
+    const r = api().inspect_trace({ trace_path: "traces/mcp_generated_replay.json" }) as {
+      ok: boolean;
+      world_quest_id: string | null;
+      generated_rpg_seed: number;
+      hash_ok: boolean;
+      steps: number;
+      diagnosis: { type: string };
+    };
+    expect(r.ok).toBe(true);
+    expect("mode" in r).toBe(false);
+    expect("pack_id" in r).toBe(false);
+    expect(r.world_quest_id).toBeNull();
+    expect(r.generated_rpg_seed).toBe(3);
+    expect(r.hash_ok).toBe(true);
+    expect(r.steps).toBe(0);
+    expect(r.diagnosis.type).toBe("no_failure");
+  });
+
   it("trace tools reject raw pack paths on the ToolApi surface", () => {
     const a = api();
     expect(() =>
@@ -3022,6 +3058,18 @@ describe("MCP tools — replay + path confinement", () => {
         world_quest_id: "cold_forge",
       }),
     ).toThrow(/worldQuestId/);
+    expect(() =>
+      a.replay_trace({
+        trace_path: "traces/mcp_generated_replay.json",
+        world_quest_id: "sunken_barrow",
+      }),
+    ).toThrow(/generatedRpgSeed/);
+    expect(() =>
+      a.inspect_trace({
+        trace_path: "traces/mcp_generated_replay.json",
+        world_quest_id: "sunken_barrow",
+      }),
+    ).toThrow(/generatedRpgSeed/);
   });
 
   it("rejects a path that escapes the project root", () => {
