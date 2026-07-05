@@ -11,10 +11,12 @@ export const OVERWORLD_COMPACT_MOVEMENT_LIMIT = 12;
 export const OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT = 5;
 export const OVERWORLD_COMPACT_ID_LIST_LIMIT = 16;
 export const OVERWORLD_COMPACT_LOCAL_REF_LIMIT = 12;
+export const OVERWORLD_COMPACT_RENOWN_LIMIT = 16;
+export const OVERWORLD_COMPACT_COMPLETED_ARC_LIMIT = 16;
 export const OVERWORLD_COMPACT_LABEL_CHAR_LIMIT = 96;
 export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 8 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 9 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactQuestRef = readonly [id: string, title: string];
@@ -188,7 +190,9 @@ export type OverworldCompactView = {
   travel_log_truncated?: true;
   progress: OverworldCompactProgress;
   renown?: OverworldCompactRenownEntry[];
+  renown_truncated?: true;
   completed_arcs?: string[];
+  completed_arcs_truncated?: true;
   id_counts: OverworldCompactIdCounts;
   ids_truncated?: OverworldCompactIdTruncation;
   ids: OverworldCompactIdMap;
@@ -285,9 +289,24 @@ export function compactOverworldJournalEntries(
 
 export function compactOverworldRenownEntries(
   values: readonly (readonly [region: string, value: number])[],
+  limit = OVERWORLD_COMPACT_RENOWN_LIMIT,
 ): OverworldCompactRenownEntry[] {
   const compact: OverworldCompactRenownEntry[] = [];
-  for (const [region, value] of values) compact.push([compactOverworldLabel(region), value]);
+  const capped = Math.min(values.length, limit);
+  for (let index = 0; index < capped; index += 1) {
+    const [region, value] = values[index]!;
+    compact.push([compactOverworldLabel(region), value]);
+  }
+  return compact;
+}
+
+export function compactOverworldCompletedArcs(
+  values: readonly string[],
+  limit = OVERWORLD_COMPACT_COMPLETED_ARC_LIMIT,
+): string[] {
+  const compact: string[] = [];
+  const capped = Math.min(values.length, limit);
+  for (let index = 0; index < capped; index += 1) compact.push(values[index]!);
   return compact;
 }
 
@@ -576,7 +595,9 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
   if (view.travel_log) clone.travel_log = cloneTupleList(view.travel_log);
   if (view.travel_log_truncated) clone.travel_log_truncated = true;
   if (view.renown) clone.renown = cloneTupleList(view.renown);
+  if (view.renown_truncated) clone.renown_truncated = true;
   if (view.completed_arcs) clone.completed_arcs = [...view.completed_arcs];
+  if (view.completed_arcs_truncated) clone.completed_arcs_truncated = true;
   if (view.ids_truncated) clone.ids_truncated = [...view.ids_truncated];
 
   return clone;
@@ -602,10 +623,12 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     quests: view.quests.length,
   });
   const journal = compactOverworldJournalEntries(view.journal);
-  const renown = compactOverworldRenownEntries(
-    Object.entries(view.regionRenown).sort(([left], [right]) => left.localeCompare(right)),
+  const renownEntries = Object.entries(view.regionRenown).sort(([left], [right]) =>
+    left.localeCompare(right),
   );
-  const completedArcs = view.completedRegionalArcIds;
+  const renown = compactOverworldRenownEntries(renownEntries);
+  const completedArcIds = view.completedRegionalArcIds;
+  const completedArcs = compactOverworldCompletedArcs(completedArcIds);
   const idPayload = compactIdPayload({
     discovered_towns: view.discovered.map((town) => town.id),
     discovered_areas: view.discoveredAreaIds,
@@ -661,7 +684,11 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     ...(view.log.length > travelLog.length ? { travel_log_truncated: true as const } : {}),
     progress: [view.visitedCount, view.totalTowns],
     ...(renown.length > 0 ? { renown } : {}),
+    ...(renownEntries.length > renown.length ? { renown_truncated: true as const } : {}),
     ...(completedArcs.length > 0 ? { completed_arcs: completedArcs } : {}),
+    ...(completedArcIds.length > completedArcs.length
+      ? { completed_arcs_truncated: true as const }
+      : {}),
     id_counts: idPayload.id_counts,
     ...(idPayload.ids_truncated ? { ids_truncated: idPayload.ids_truncated } : {}),
     ids: idPayload.ids,

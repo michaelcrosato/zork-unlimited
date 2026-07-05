@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { parseOverworldManifest } from "../../src/world/overworld.js";
 import {
+  OVERWORLD_COMPACT_COMPLETED_ARC_LIMIT,
   OVERWORLD_COMPACT_LABEL_CHAR_LIMIT,
   OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
   OVERWORLD_COMPACT_MOVEMENT_LIMIT,
+  OVERWORLD_COMPACT_RENOWN_LIMIT,
   OVERWORLD_COMPACT_RISK_CHAR_LIMIT,
   OVERWORLD_COMPACT_ROUTE_STEP_LIMIT,
   OVERWORLD_COMPACT_TITLE_CHAR_LIMIT,
@@ -414,7 +416,7 @@ describe("OverworldSession", () => {
     expect(view.discovered.length).toBeGreaterThan(24);
     const compact = compactOverworldView(view);
     expect(session.compactView()).toEqual(compact);
-    expect(compact.v).toBe(8);
+    expect(compact.v).toBe(9);
     expect(compact.hidden).toEqual([
       view.hiddenAreaCount,
       view.hiddenJobCount,
@@ -433,6 +435,99 @@ describe("OverworldSession", () => {
     if (view.resolvedEventIds.length === 0) {
       expect("resolved_events" in compact.ids).toBe(false);
     }
+  });
+
+  it("caps compact context progress lists while marking truncated renown and completed arcs", () => {
+    const session = new OverworldSession(world);
+    const view = session.view();
+    const denseCount =
+      Math.max(OVERWORLD_COMPACT_RENOWN_LIMIT, OVERWORLD_COMPACT_COMPLETED_ARC_LIMIT) + 3;
+    const denseRenown: Record<string, number> = Object.fromEntries(
+      Array.from({ length: denseCount }, (_, index) => [
+        `Dense Region ${String(index).padStart(2, "0")}`,
+        index,
+      ]),
+    );
+    const denseCompletedArcs = Array.from(
+      { length: denseCount },
+      (_, index) => `dense_arc_${String(index).padStart(2, "0")}`,
+    );
+
+    const compact = compactOverworldView({
+      ...view,
+      regionRenown: denseRenown,
+      completedRegionalArcIds: denseCompletedArcs,
+    });
+    if (!compact.renown || !compact.completed_arcs) {
+      throw new Error("expected compact progress lists");
+    }
+    expect(compact.renown).toHaveLength(OVERWORLD_COMPACT_RENOWN_LIMIT);
+    expect(compact.completed_arcs).toHaveLength(OVERWORLD_COMPACT_COMPLETED_ARC_LIMIT);
+    expect(compact.renown_truncated).toBe(true);
+    expect(compact.completed_arcs_truncated).toBe(true);
+    expect(compact.renown[0]).toEqual(["Dense Region 00", 0]);
+    expect(compact.completed_arcs).toEqual(
+      denseCompletedArcs.slice(0, OVERWORLD_COMPACT_COMPLETED_ARC_LIMIT),
+    );
+
+    const built = buildOverworldSessionCompactView({
+      worldName: view.world,
+      worldTownCount: view.totalTowns,
+      current: view.current,
+      currentArea: view.currentArea,
+      minutes: 0,
+      supplies: view.supplies,
+      fatigue: view.fatigue,
+      roads: view.exits,
+      areaExits: view.areaExits,
+      routeOptions: view.routeOptions,
+      areas: view.areas,
+      poi: view.pois,
+      contacts: view.characters,
+      events: view.events,
+      jobs: view.jobs,
+      sites: view.sites,
+      quests: view.quests,
+      hiddenAreaCount: view.hiddenAreaCount,
+      hiddenJobCount: view.hiddenJobCount,
+      hiddenSiteCount: view.hiddenSiteCount,
+      hiddenQuestCount: view.hiddenQuestCount,
+      journalEntries: view.journal,
+      travelLog: view.log,
+      visitedCount: view.visitedCount,
+      regionRenown: new Map(Object.entries(denseRenown)),
+      completedRegionalArcIds: new Set(denseCompletedArcs),
+      pendingRoadEncounter: view.pendingRoadEncounter,
+      ids: {
+        discoveredIds: new Set(view.discovered.map((town) => town.id)),
+        nodes: new Map(world.nodes.map((town) => [town.id, town])),
+        discoveredAreaIds: new Set(view.discoveredAreaIds),
+        visitedAreaIds: new Set(view.visitedAreaIds),
+        discoveredJobIds: new Set(view.discoveredJobIds),
+        completedJobIds: new Set(view.completedJobIds),
+        discoveredSiteIds: new Set(view.discoveredSiteIds),
+        exploredSiteIds: new Set(view.exploredSiteIds),
+        discoveredQuestIds: new Set(view.discoveredQuestIds),
+        startedQuestIds: new Set(view.startedQuestIds),
+        completedQuestIds: new Set(view.completedQuestIds),
+        resolvedEventIds: new Set(view.resolvedEventIds),
+      },
+    });
+    expect(built.renown).toEqual(compact.renown);
+    expect(built.completed_arcs).toEqual(compact.completed_arcs);
+    expect(built.renown_truncated).toBe(true);
+    expect(built.completed_arcs_truncated).toBe(true);
+
+    const cloned = cloneOverworldCompactView(compact);
+    if (!cloned.renown || !cloned.completed_arcs) {
+      throw new Error("expected cloned compact progress lists");
+    }
+    expect(cloned.renown_truncated).toBe(true);
+    expect(cloned.completed_arcs_truncated).toBe(true);
+    cloned.renown.push(["mutated_by_test", 1]);
+    cloned.completed_arcs.push("mutated_by_test");
+    expect(compact.renown).toHaveLength(OVERWORLD_COMPACT_RENOWN_LIMIT);
+    expect(compact.completed_arcs).toHaveLength(OVERWORLD_COMPACT_COMPLETED_ARC_LIMIT);
   });
 
   it("caps compact context movement lists while marking truncated roads and area routes", () => {

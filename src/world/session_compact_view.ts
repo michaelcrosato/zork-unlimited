@@ -2,6 +2,7 @@ import {
   OVERWORLD_COMPACT_VIEW_VERSION,
   compactLocalRefTruncation,
   compactOverworldAreaRoutes,
+  compactOverworldCompletedArcs,
   compactOverworldJournalEntries,
   compactOverworldLabel,
   compactOverworldMovementTruncated,
@@ -88,8 +89,10 @@ export function buildOverworldSessionCompactView(
   const pendingRoad = compactPendingRoad(state.pendingRoadEncounter);
   const journal = compactOverworldJournalEntries(state.journalEntries);
   const travelLog = compactOverworldTravelLog(state.travelLog);
-  const renown = compactOverworldRenownEntries(sortedNumberMap(state.regionRenown));
-  const completedArcs = sortedStringSet(state.completedRegionalArcIds);
+  const renownEntries = sortedNumberMap(state.regionRenown);
+  const renown = compactOverworldRenownEntries(renownEntries);
+  const completedArcIds = sortedStringSet(state.completedRegionalArcIds);
+  const completedArcs = compactOverworldCompletedArcs(completedArcIds);
   const roads = compactOverworldRoads(state.roads, state.routeOptions, state.fatigue);
   const areas = compactOverworldRefs(state.areas);
   const poi = compactOverworldTitleRefs(state.poi);
@@ -151,7 +154,11 @@ export function buildOverworldSessionCompactView(
     ...(state.travelLog.length > travelLog.length ? { travel_log_truncated: true as const } : {}),
     progress: [state.visitedCount, state.worldTownCount],
     ...(renown.length > 0 ? { renown } : {}),
+    ...(renownEntries.length > renown.length ? { renown_truncated: true as const } : {}),
     ...(completedArcs.length > 0 ? { completed_arcs: completedArcs } : {}),
+    ...(completedArcIds.length > completedArcs.length
+      ? { completed_arcs_truncated: true as const }
+      : {}),
     id_counts: idPayload.id_counts,
     ...(idPayload.ids_truncated ? { ids_truncated: idPayload.ids_truncated } : {}),
     ids: idPayload.ids,
