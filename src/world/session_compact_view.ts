@@ -1,5 +1,6 @@
 import {
   OVERWORLD_COMPACT_VIEW_VERSION,
+  compactLocalRefTruncation,
   compactOverworldAreaRoutes,
   compactOverworldJournalEntries,
   compactOverworldLabel,
@@ -89,6 +90,15 @@ export function buildOverworldSessionCompactView(
   const poi = compactOverworldTitleRefs(state.poi);
   const contacts = compactOverworldRefs(state.contacts);
   const events = compactOverworldTitleRefs(state.events);
+  const localRefsTruncated = compactLocalRefTruncation({
+    areas: state.areas.length,
+    poi: state.poi.length,
+    contacts: state.contacts.length,
+    events: state.events.length,
+    jobs: state.jobs.length,
+    sites: state.sites.length,
+    quests: state.quests.length,
+  });
 
   return {
     v: OVERWORLD_COMPACT_VIEW_VERSION,
@@ -123,6 +133,7 @@ export function buildOverworldSessionCompactView(
     poi,
     contacts,
     events,
+    ...(localRefsTruncated.length > 0 ? { local_refs_truncated: localRefsTruncated } : {}),
     ...(jobs.length > 0 ? { jobs } : {}),
     ...(sites.length > 0 ? { sites } : {}),
     ...(quests.length > 0 ? { quests } : {}),

@@ -3,10 +3,13 @@ import { readFileSync } from "node:fs";
 import { parseOverworldManifest } from "../../src/world/overworld.js";
 import {
   OVERWORLD_COMPACT_LABEL_CHAR_LIMIT,
+  OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
   OVERWORLD_COMPACT_RISK_CHAR_LIMIT,
   OVERWORLD_COMPACT_TITLE_CHAR_LIMIT,
+  cloneOverworldCompactView,
   compactOverworldView,
 } from "../../src/world/compact_view.js";
+import { buildOverworldSessionCompactView } from "../../src/world/session_compact_view.js";
 import { OverworldSession } from "../../ui/src/overworld.js";
 
 const world = parseOverworldManifest(
@@ -408,7 +411,7 @@ describe("OverworldSession", () => {
     expect(view.discovered.length).toBeGreaterThan(24);
     const compact = compactOverworldView(view);
     expect(session.compactView()).toEqual(compact);
-    expect(compact.v).toBe(5);
+    expect(compact.v).toBe(6);
     expect(compact.hidden).toEqual([
       view.hiddenAreaCount,
       view.hiddenJobCount,
@@ -427,6 +430,112 @@ describe("OverworldSession", () => {
     if (view.resolvedEventIds.length === 0) {
       expect("resolved_events" in compact.ids).toBe(false);
     }
+  });
+
+  it("caps compact context local refs while marking truncated buckets", () => {
+    const session = new OverworldSession(world);
+    const view = session.view();
+    expect(view.areas[0]).toBeDefined();
+    expect(view.pois[0]).toBeDefined();
+    expect(view.characters[0]).toBeDefined();
+    expect(view.events[0]).toBeDefined();
+
+    const denseCount = OVERWORLD_COMPACT_LOCAL_REF_LIMIT + 3;
+    const denseNames = Array.from({ length: denseCount }, (_, index) => ({
+      id: `dense_name_${index}`,
+      name: `Dense Name ${index}`,
+    }));
+    const denseTitles = Array.from({ length: denseCount }, (_, index) => ({
+      id: `dense_title_${index}`,
+      title: `Dense Title ${index}`,
+    }));
+    const compact = compactOverworldView({
+      ...view,
+      areas: denseNames.map((value) => ({ ...view.areas[0]!, ...value })),
+      pois: denseTitles.map((value) => ({ ...view.pois[0]!, ...value })),
+      characters: denseNames.map((value) => ({ ...view.characters[0]!, ...value })),
+      events: denseTitles.map((value) => ({ ...view.events[0]!, ...value })),
+      jobs: denseTitles as typeof view.jobs,
+      sites: denseTitles as typeof view.sites,
+      quests: denseTitles as typeof view.quests,
+    });
+
+    expect(compact.areas).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
+    expect(compact.poi).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
+    expect(compact.contacts).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
+    expect(compact.events).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
+    expect(compact.jobs).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
+    expect(compact.sites).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
+    expect(compact.quests).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
+    expect(compact.local_refs_truncated).toEqual([
+      "areas",
+      "poi",
+      "contacts",
+      "events",
+      "jobs",
+      "sites",
+      "quests",
+    ]);
+
+    const built = buildOverworldSessionCompactView({
+      worldName: view.world,
+      worldTownCount: view.totalTowns,
+      current: view.current,
+      currentArea: view.currentArea,
+      minutes: 0,
+      supplies: view.supplies,
+      fatigue: view.fatigue,
+      roads: view.exits,
+      areaExits: view.areaExits,
+      routeOptions: view.routeOptions,
+      areas: denseNames.map((value) => ({ ...view.areas[0]!, ...value })),
+      poi: denseTitles.map((value) => ({ ...view.pois[0]!, ...value })),
+      contacts: denseNames.map((value) => ({ ...view.characters[0]!, ...value })),
+      events: denseTitles.map((value) => ({ ...view.events[0]!, ...value })),
+      jobs: denseTitles as typeof view.jobs,
+      sites: denseTitles as typeof view.sites,
+      quests: denseTitles as typeof view.quests,
+      hiddenAreaCount: view.hiddenAreaCount,
+      hiddenJobCount: view.hiddenJobCount,
+      hiddenSiteCount: view.hiddenSiteCount,
+      hiddenQuestCount: view.hiddenQuestCount,
+      journalEntries: view.journal,
+      travelLog: view.log,
+      visitedCount: view.visitedCount,
+      regionRenown: new Map(Object.entries(view.regionRenown)),
+      completedRegionalArcIds: new Set(view.completedRegionalArcIds),
+      pendingRoadEncounter: view.pendingRoadEncounter,
+      ids: {
+        discoveredIds: new Set(view.discovered.map((town) => town.id)),
+        nodes: new Map(world.nodes.map((town) => [town.id, town])),
+        discoveredAreaIds: new Set(view.discoveredAreaIds),
+        visitedAreaIds: new Set(view.visitedAreaIds),
+        discoveredJobIds: new Set(view.discoveredJobIds),
+        completedJobIds: new Set(view.completedJobIds),
+        discoveredSiteIds: new Set(view.discoveredSiteIds),
+        exploredSiteIds: new Set(view.exploredSiteIds),
+        discoveredQuestIds: new Set(view.discoveredQuestIds),
+        startedQuestIds: new Set(view.startedQuestIds),
+        completedQuestIds: new Set(view.completedQuestIds),
+        resolvedEventIds: new Set(view.resolvedEventIds),
+      },
+    });
+    expect(built.local_refs_truncated).toEqual(compact.local_refs_truncated);
+    expect(built.areas).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
+    expect(built.jobs).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
+
+    const cloned = cloneOverworldCompactView(compact);
+    expect(cloned.local_refs_truncated).toEqual(compact.local_refs_truncated);
+    cloned.local_refs_truncated?.push("areas");
+    expect(compact.local_refs_truncated).toEqual([
+      "areas",
+      "poi",
+      "contacts",
+      "events",
+      "jobs",
+      "sites",
+      "quests",
+    ]);
   });
 
   it("caps compact context labels, titles, and risk text", () => {

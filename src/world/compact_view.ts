@@ -8,10 +8,11 @@ export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
 export const OVERWORLD_COMPACT_ROUTE_LIMIT = 8;
 export const OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT = 5;
 export const OVERWORLD_COMPACT_ID_LIST_LIMIT = 16;
+export const OVERWORLD_COMPACT_LOCAL_REF_LIMIT = 12;
 export const OVERWORLD_COMPACT_LABEL_CHAR_LIMIT = 96;
 export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 5 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 6 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactQuestRef = readonly [id: string, title: string];
@@ -95,6 +96,25 @@ export type OverworldCompactIdKey =
   | "completed_quests"
   | "resolved_events";
 
+export type OverworldCompactLocalRefKey =
+  | "areas"
+  | "poi"
+  | "contacts"
+  | "events"
+  | "jobs"
+  | "sites"
+  | "quests";
+
+const OVERWORLD_COMPACT_LOCAL_REF_KEYS: readonly OverworldCompactLocalRefKey[] = [
+  "areas",
+  "poi",
+  "contacts",
+  "events",
+  "jobs",
+  "sites",
+  "quests",
+];
+
 const OVERWORLD_COMPACT_ID_KEYS: readonly OverworldCompactIdKey[] = [
   "discovered_towns",
   "discovered_areas",
@@ -130,6 +150,8 @@ export type OverworldCompactIdCounts = readonly [
   resolved_events: number,
 ];
 export type OverworldCompactIdTruncation = OverworldCompactIdKey[];
+export type OverworldCompactLocalRefTruncation = OverworldCompactLocalRefKey[];
+export type OverworldCompactLocalRefCounts = Record<OverworldCompactLocalRefKey, number>;
 export type OverworldCompactIdPayload = {
   ids: OverworldCompactIdMap;
   id_counts: OverworldCompactIdCounts;
@@ -151,6 +173,7 @@ export type OverworldCompactView = {
   poi: OverworldCompactRef[];
   contacts: OverworldCompactRef[];
   events: OverworldCompactRef[];
+  local_refs_truncated?: OverworldCompactLocalRefTruncation;
   jobs?: OverworldCompactRef[];
   sites?: OverworldCompactRef[];
   quests?: OverworldCompactQuestRef[];
@@ -198,26 +221,46 @@ export function compactOverworldQuestRef(value: {
 
 export function compactOverworldRefs(
   values: readonly { id: string; name: string }[],
+  limit = OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
 ): OverworldCompactRef[] {
   const refs: OverworldCompactRef[] = [];
-  for (const value of values) refs.push(compactOverworldRef(value));
+  const capped = Math.min(values.length, limit);
+  for (let index = 0; index < capped; index += 1) refs.push(compactOverworldRef(values[index]!));
   return refs;
 }
 
 export function compactOverworldTitleRefs(
   values: readonly { id: string; title: string }[],
+  limit = OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
 ): OverworldCompactRef[] {
   const refs: OverworldCompactRef[] = [];
-  for (const value of values) refs.push(compactOverworldTitleRef(value));
+  const capped = Math.min(values.length, limit);
+  for (let index = 0; index < capped; index += 1) {
+    refs.push(compactOverworldTitleRef(values[index]!));
+  }
   return refs;
 }
 
 export function compactOverworldQuestRefs(
   values: readonly { id: string; title: string }[],
+  limit = OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
 ): OverworldCompactQuestRef[] {
   const refs: OverworldCompactQuestRef[] = [];
-  for (const value of values) refs.push(compactOverworldQuestRef(value));
+  const capped = Math.min(values.length, limit);
+  for (let index = 0; index < capped; index += 1) {
+    refs.push(compactOverworldQuestRef(values[index]!));
+  }
   return refs;
+}
+
+export function compactLocalRefTruncation(
+  counts: OverworldCompactLocalRefCounts,
+): OverworldCompactLocalRefTruncation {
+  const truncated: OverworldCompactLocalRefTruncation = [];
+  for (const key of OVERWORLD_COMPACT_LOCAL_REF_KEYS) {
+    if (counts[key] > OVERWORLD_COMPACT_LOCAL_REF_LIMIT) truncated.push(key);
+  }
+  return truncated;
 }
 
 export function compactOverworldJournalEntries(
@@ -485,6 +528,7 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
   if (view.jobs) clone.jobs = cloneTupleList(view.jobs);
   if (view.sites) clone.sites = cloneTupleList(view.sites);
   if (view.quests) clone.quests = cloneTupleList(view.quests);
+  if (view.local_refs_truncated) clone.local_refs_truncated = [...view.local_refs_truncated];
   if (view.pending_road) {
     clone.pending_road = {
       ...view.pending_road,
@@ -509,6 +553,15 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const jobs = compactOverworldTitleRefs(view.jobs);
   const sites = compactOverworldTitleRefs(view.sites);
   const quests = compactOverworldQuestRefs(view.quests);
+  const localRefsTruncated = compactLocalRefTruncation({
+    areas: view.areas.length,
+    poi: view.pois.length,
+    contacts: view.characters.length,
+    events: view.events.length,
+    jobs: view.jobs.length,
+    sites: view.sites.length,
+    quests: view.quests.length,
+  });
   const journal = compactOverworldJournalEntries(view.journal);
   const renown = compactOverworldRenownEntries(
     Object.entries(view.regionRenown).sort(([left], [right]) => left.localeCompare(right)),
@@ -556,6 +609,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     poi: compactOverworldTitleRefs(view.pois),
     contacts: compactOverworldRefs(view.characters),
     events: compactOverworldTitleRefs(view.events),
+    ...(localRefsTruncated.length > 0 ? { local_refs_truncated: localRefsTruncated } : {}),
     ...(jobs.length > 0 ? { jobs } : {}),
     ...(sites.length > 0 ? { sites } : {}),
     ...(quests.length > 0 ? { quests } : {}),
