@@ -25,9 +25,9 @@ import {
 import { SessionStore, type RpgStep, type Session } from "./sessions.js";
 
 export type RpgRuntimeCacheEntry = {
-  index: RpgIndex;
-  rules: Rules<RpgAction>;
-  step: RpgStep;
+  readonly index: RpgIndex;
+  readonly rules: Rules<RpgAction>;
+  readonly step: RpgStep;
 };
 
 export type RpgSourceFields = {
@@ -78,6 +78,39 @@ export function rpgStateTitle(index: RpgIndex, state: GameState): string {
   return rpgRoomTitle(index, state);
 }
 
+function rejectRuntimeGraphMutation(): never {
+  throw new TypeError("RPG runtime graph indexes are immutable.");
+}
+
+function deepFreezeRuntimeGraph<T>(value: T, seen = new WeakSet<object>()): T {
+  if (value === null || (typeof value !== "object" && typeof value !== "function")) return value;
+  const object = value as object;
+  if (seen.has(object) || Object.isFrozen(object)) return value;
+  seen.add(object);
+
+  if (value instanceof Map) {
+    for (const [key, child] of value.entries()) {
+      deepFreezeRuntimeGraph(key, seen);
+      deepFreezeRuntimeGraph(child, seen);
+    }
+    Object.defineProperties(value, {
+      set: { value: rejectRuntimeGraphMutation, writable: false, configurable: false },
+      delete: { value: rejectRuntimeGraphMutation, writable: false, configurable: false },
+      clear: { value: rejectRuntimeGraphMutation, writable: false, configurable: false },
+    });
+    return Object.freeze(value);
+  }
+
+  for (const child of Object.values(value as Record<string, unknown>)) {
+    deepFreezeRuntimeGraph(child, seen);
+  }
+  return Object.freeze(value);
+}
+
+function freezeRuntimeCacheEntry(entry: RpgRuntimeCacheEntry): RpgRuntimeCacheEntry {
+  return deepFreezeRuntimeGraph(entry);
+}
+
 export class RpgMcpSessionRuntime {
   private readonly runtimeCache = new WeakMap<RpgPack, RpgRuntimeCacheEntry>();
 
@@ -88,7 +121,7 @@ export class RpgMcpSessionRuntime {
     if (cached) return cached;
     const index = indexRpgPack(pack);
     const rules = buildRpgRules(index);
-    const entry = { index, rules, step: makeStep(rules) };
+    const entry = freezeRuntimeCacheEntry({ index, rules, step: makeStep(rules) });
     this.runtimeCache.set(pack, entry);
     return entry;
   }

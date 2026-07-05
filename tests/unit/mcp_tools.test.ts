@@ -390,6 +390,40 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(loadedSession.index).toBe(firstSession.index);
     expect(loadedSession.rules).toBe(firstSession.rules);
     expect(loadedSession.step).toBe(firstSession.step);
+
+    const startRoom = firstSession.index.rooms.get(firstSession.index.pack.meta.start_room);
+    if (!startRoom) throw new Error("expected runtime start room");
+    expect(Object.isFrozen(firstSession.index)).toBe(true);
+    expect(Object.isFrozen(firstSession.index.rooms)).toBe(true);
+    expect(Object.isFrozen(firstSession.index.enemies)).toBe(true);
+    expect(Object.isFrozen(firstSession.index.enemyByRoom)).toBe(true);
+    expect(Object.isFrozen(firstSession.index.pack)).toBe(true);
+    expect(Object.isFrozen(firstSession.index.pack.rooms)).toBe(true);
+    expect(Object.isFrozen(startRoom)).toBe(true);
+    expect(Object.isFrozen(firstSession.rules)).toBe(true);
+    expect(() => {
+      firstSession.index.rooms.set("__mutated_room", startRoom);
+    }).toThrow(/immutable/);
+    expect(() => {
+      firstSession.index.enemyByRoom.clear();
+    }).toThrow(/immutable/);
+    expect(() => {
+      firstSession.index.pack.rooms.push(startRoom);
+    }).toThrow();
+    expect(() => {
+      startRoom.name = "Mutated Room";
+    }).toThrow();
+    expect(() => {
+      (firstSession.rules as { legalActions: unknown }).legalActions = () => [];
+    }).toThrow();
+
+    const third = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 3 });
+    const thirdSession = a.sessions.get(third.session_id);
+    expect(thirdSession.index).toBe(firstSession.index);
+    expect(thirdSession.index.rooms.has("__mutated_room")).toBe(false);
+    expect(thirdSession.index.rooms.get(firstSession.index.pack.meta.start_room)?.name).toBe(
+      startRoom.name,
+    );
   });
 
   it("lists the New York overworld as a start town plus weighted roads", () => {
@@ -2909,7 +2943,9 @@ describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
       ],
     } as never;
 
-    const r = api().apply_content_patch({
+    const a = api();
+    a.start_world_quest({ world_quest_id: "cold_forge" });
+    const r = a.apply_content_patch({
       world_quest_id: "cold_forge",
       proposal,
     }) as {
