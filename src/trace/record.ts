@@ -31,8 +31,6 @@ export type Trace<A extends EngineAction = RpgAction> = {
   /** Procedural RPG generation seed, when the trace belongs to an in-memory generated pack. */
   generatedRpgSeed?: number;
   trace_id: string;
-  /** Compatibility id retained for older tooling and historical traces. */
-  pack_id: string;
   content_hash: string;
   seed: number;
   initial_state: GameState;
@@ -76,7 +74,6 @@ export function runActions<A extends EngineAction>(
 
 export type RecordOptions = {
   trace_id: string;
-  pack_id: string;
   content_hash: string;
   worldQuestId?: string | null;
   generatedRpgSeed?: number | null;
@@ -89,7 +86,7 @@ const TRACE_SOURCE_LABELS = {
 } as const;
 
 function traceSourceRef(opts: RecordOptions): TraceSourceRef {
-  const sourceRef = compactSourceRefFromMetadata(opts.pack_id, opts, TRACE_SOURCE_LABELS);
+  const sourceRef = compactSourceRefFromMetadata(opts, TRACE_SOURCE_LABELS);
   if (!sourceRef.ok) throw new SaveIntegrityError(sourceRef.error);
   return sourceRef.sourceRef;
 }
@@ -119,7 +116,6 @@ export function recordTrace<A extends EngineAction>(
       ? { generatedRpgSeed: sourceMetadata.generatedRpgSeed }
       : {}),
     trace_id: opts.trace_id,
-    pack_id: opts.pack_id,
     content_hash: opts.content_hash,
     seed: initialState.seed,
     initial_state: initialState,

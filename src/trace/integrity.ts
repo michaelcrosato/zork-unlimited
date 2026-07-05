@@ -10,7 +10,6 @@ import {
 
 export type TraceIdentityFields = {
   trace_id: string;
-  pack_id: string;
   content_hash: string;
 };
 
@@ -64,12 +63,10 @@ function assertNonEmptyString(value: unknown, label: string): asserts value is s
 export function assertTraceIdentityFields<
   T extends {
     trace_id?: unknown;
-    pack_id?: unknown;
     content_hash?: unknown;
   },
 >(trace: T): asserts trace is T & TraceIdentityFields {
   assertNonEmptyString(trace.trace_id, "Trace trace_id");
-  assertNonEmptyString(trace.pack_id, "Trace pack_id");
   assertNonEmptyString(trace.content_hash, "Trace content_hash");
 }
 

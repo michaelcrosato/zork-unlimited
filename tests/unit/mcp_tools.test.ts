@@ -2911,7 +2911,6 @@ describe("MCP tools — replay + path confinement", () => {
 
     const trace = recordTrace(rules, state0, actions, {
       trace_id: "tr_mcp",
-      pack_id: compiled.compiled.pack.meta.id,
       content_hash: compiled.compiled.contentHash,
       worldQuestId: "sunken_barrow",
     });
@@ -2923,7 +2922,6 @@ describe("MCP tools — replay + path confinement", () => {
     const generatedRules = buildRpgRules(generatedIndex);
     const generatedTrace = recordTrace(generatedRules, initStateForRpgPack(generatedIndex, 7), [], {
       trace_id: "tr_mcp_generated",
-      pack_id: generatedPack.meta.id,
       content_hash: hashState(generatedPack),
       generatedRpgSeed: 3,
     });

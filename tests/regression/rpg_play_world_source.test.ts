@@ -76,6 +76,7 @@ describe("RPG play CLI world quest source", () => {
     expect(trace.trace_id).toBe("tr_rpg_play");
     expect(trace.source_ref).toEqual(["wq", "sunken_barrow"]);
     expect(trace.worldQuestId).toBe("sunken_barrow");
+    expect("pack_id" in trace).toBe(false);
 
     const replay = runBin("bin/replay.ts", [RECORDED_TRACE]);
     const replayOutput = outputOf(replay);

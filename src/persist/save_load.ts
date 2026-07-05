@@ -237,7 +237,7 @@ function assertGeneratedRpgSeed(seed: unknown, label: string): asserts seed is n
 }
 
 function saveSourceRef(packId: string, metadata: SaveMetadata): SaveSourceRef {
-  const sourceRef = compactSourceRefFromMetadata(packId, metadata, SAVE_SOURCE_LABELS);
+  const sourceRef = compactSourceRefFromMetadata(metadata, SAVE_SOURCE_LABELS);
   if (!sourceRef.ok) throw new SaveIntegrityError(sourceRef.error);
   return sourceRef.sourceRef;
 }

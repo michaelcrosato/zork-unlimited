@@ -68,7 +68,6 @@ beforeAll(() => {
   const rules = buildRpgRules(index);
   const meta = {
     trace_id: "tr_0190",
-    pack_id: compiled.compiled.pack.meta.id,
     content_hash: compiled.compiled.contentHash,
     worldQuestId: "sunken_barrow",
   };

@@ -65,7 +65,6 @@ beforeAll(() => {
   const rules = buildRpgRules(index);
   cleanTrace = recordTrace(rules, initStateForRpgPack(index, 1), ACTIONS, {
     trace_id: "tr_0143",
-    pack_id: compiled.compiled.pack.meta.id,
     content_hash: compiled.compiled.contentHash,
     worldQuestId: "sunken_barrow",
   });

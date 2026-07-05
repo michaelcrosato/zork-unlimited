@@ -55,7 +55,6 @@ export function assertTraceMode<A extends EngineAction>(
 export function assertTraceMode(trace: {
   mode?: unknown;
   trace_id?: unknown;
-  pack_id?: unknown;
   content_hash?: unknown;
   seed?: unknown;
   initial_state?: unknown;
@@ -74,7 +73,6 @@ export function assertTraceMode(trace: {
 export function assertTraceMode(trace: {
   mode?: unknown;
   trace_id?: unknown;
-  pack_id?: unknown;
   content_hash?: unknown;
   seed?: unknown;
   initial_state?: unknown;

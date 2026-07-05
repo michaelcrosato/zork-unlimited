@@ -73,7 +73,18 @@ describe("RPG owns the live content/runtime contract", () => {
     expect(saveLoad).toContain("source_ref: SaveSourceRef;");
     expect(traceRecord).toContain("export type Trace<A extends EngineAction = RpgAction>");
     expect(traceRecord).toContain("source_ref: TraceSourceRef;");
+    expect(traceRecord).not.toContain("pack_id");
     expect(traceReplay).toContain("trace: Trace<A>");
+  });
+
+  it("does not require package ids for trace identity", () => {
+    const traceIntegrity = readFileSync("src/trace/integrity.ts", "utf8");
+    const traceReplay = readFileSync("src/trace/replay.ts", "utf8");
+
+    expect(traceIntegrity).toContain("export type TraceIdentityFields");
+    expect(traceIntegrity).not.toContain("pack_id");
+    expect(traceIntegrity).not.toContain("Trace pack_id");
+    expect(traceReplay).not.toContain("pack_id");
   });
 
   it("does not admit package ids as compact save or trace source refs", () => {

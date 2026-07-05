@@ -175,7 +175,6 @@ async function main(): Promise<void> {
   if (record) {
     const trace = recordTrace(rules, initStateForRpgPack(index, seed), taken, {
       trace_id: "tr_rpg_play",
-      pack_id: loaded.compiled.pack.meta.id,
       content_hash: loaded.compiled.contentHash,
       worldQuestId: source.node.id,
     });

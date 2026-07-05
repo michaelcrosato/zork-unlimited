@@ -37,7 +37,6 @@ import {
   MICRO_ACTIONS,
   microRules,
   microInitState,
-  MICRO_PACK_ID,
   MICRO_CONTENT_HASH,
 } from "../../src/demo/micro.js";
 import type { RpgAction } from "../../src/api/types.js";
@@ -57,7 +56,6 @@ type RpgTrace = Trace<RpgAction>;
 function newTrace(): RpgTrace {
   return recordTrace(microRules, microInitState(), WIN, {
     trace_id: "tr_0290_regression",
-    pack_id: MICRO_PACK_ID,
     content_hash: MICRO_CONTENT_HASH,
     worldQuestId: "micro_divergence",
   });
@@ -102,7 +100,6 @@ beforeAll(() => {
   const rules = buildRpgRules(index);
   cleanTraceMcp = recordTrace(rules, initStateForRpgPack(index, 1), ACTIONS_RPG, {
     trace_id: "tr_0290_mcp",
-    pack_id: compiled.compiled.pack.meta.id,
     content_hash: compiled.compiled.contentHash,
     worldQuestId: "sunken_barrow",
   });

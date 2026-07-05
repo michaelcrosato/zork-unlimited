@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 421 -->
+<!-- historical_cycle_count: 422 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - trace_pack_id_retired
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: trace recording, replay integrity, and canonical RPG trace fixtures no longer require or emit package-era `pack_id`.
+- Loop effect: replayable trace identity now flows through compact `source_ref` plus content hash, reducing package identity available to leak back into CLI/MCP/debug paths.
+- Guard: focused save/trace, world-source, MCP trace, trace CLI, play CLI, trace divergence, trace load-integrity, stage4, and schema-standalone regressions passed.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused trace/source regressions, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - pack_source_ref_retired
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: repeated compact-state polling avoids rebuilding public state scalars, lists, object summaries, and quest stages while keeping returned MCP payloads detached.
 - Guard: session cache invalidation/freeze coverage, compact-state tool cache use, and response-mutation regression passed.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused unit tests, `npm test`, and `npm run health` passed.
-
-### Cycle result - blind_compact_state_audits
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: blind MCP prompt/protocol/smoke now load `get_state` up front and prescribe `compact_state: true` for mechanical audits, reserving raw `include_state` for engine-state debugging.
-- Loop effect: blind agents can verify state/hash freshness without pulling full reducer snapshots, and the no-LLM smoke path proves compact state plus unchanged polling.
-- Guard: focused blind runner/docs/MCP registration contracts, blind smoke, and schema-size budget passed.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused regressions, `npm run blind:smoke`, `npm test`, and `npm run health` passed.

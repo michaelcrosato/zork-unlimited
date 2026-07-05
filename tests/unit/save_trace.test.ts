@@ -40,7 +40,6 @@ function traceOptions(overrides: Partial<RecordOptions> = {}): RecordOptions {
       : {};
   return {
     trace_id: "tr_test",
-    pack_id: MICRO_PACK_ID,
     content_hash: MICRO_CONTENT_HASH,
     ...source,
     ...overrides,
@@ -262,6 +261,7 @@ describe("trace record / replay (§8.8)", () => {
     expect(trace.mode).toBe(SAVE_MODE);
     expect(trace.source_ref).toEqual(["wq", MICRO_WORLD_QUEST_ID]);
     expect(trace.worldQuestId).toBe(MICRO_WORLD_QUEST_ID);
+    expect("pack_id" in trace).toBe(false);
     expect(trace.expected_final_hash).toBeDefined();
     const result = replayTrace(trace, microRules);
     expect(result.ok).toBe(true);
@@ -271,7 +271,6 @@ describe("trace record / replay (§8.8)", () => {
   it("round-trips generated RPG trace identity", () => {
     const trace = recordTrace(microRules, microInitState(), WIN, {
       trace_id: "tr_generated",
-      pack_id: MICRO_PACK_ID,
       content_hash: MICRO_CONTENT_HASH,
       generatedRpgSeed: 3,
     });
@@ -290,18 +289,16 @@ describe("trace record / replay (§8.8)", () => {
     expect(() => replayTrace(withoutMode as typeof trace, microRules)).toThrow(/Trace mode/);
   });
 
-  it("rejects package-only source fallback at the recording boundary", () => {
+  it("rejects traces without source identity at the recording boundary", () => {
     expect(() =>
       recordTrace(microRules, microInitState(), WIN, {
         trace_id: "tr_test",
-        pack_id: MICRO_PACK_ID,
         content_hash: MICRO_CONTENT_HASH,
       }),
     ).toThrow(SaveIntegrityError);
     expect(() =>
       recordTrace(microRules, microInitState(), WIN, {
         trace_id: "tr_test",
-        pack_id: MICRO_PACK_ID,
         content_hash: MICRO_CONTENT_HASH,
       }),
     ).toThrow(/worldQuestId or generatedRpgSeed/);
@@ -320,7 +317,7 @@ describe("trace record / replay (§8.8)", () => {
   it("rejects malformed trace identity at the recording boundary", () => {
     const base = traceOptions();
 
-    for (const field of ["trace_id", "pack_id", "content_hash"] as const) {
+    for (const field of ["trace_id", "content_hash"] as const) {
       for (const value of ["", 12, null]) {
         const malformed = { ...base, [field]: value } as typeof base;
 
@@ -335,7 +332,7 @@ describe("trace record / replay (§8.8)", () => {
   it("rejects malformed trace identity at the replay boundary", () => {
     const trace = recordTrace(microRules, microInitState(), WIN, traceOptions());
 
-    for (const field of ["trace_id", "pack_id", "content_hash"] as const) {
+    for (const field of ["trace_id", "content_hash"] as const) {
       for (const value of ["", 12, null]) {
         const malformed = { ...trace, [field]: value } as unknown as typeof trace;
 
@@ -407,7 +404,6 @@ describe("trace record / replay (§8.8)", () => {
     expect(() =>
       recordTrace(microRules, microInitState(), WIN, {
         trace_id: "tr_test",
-        pack_id: MICRO_PACK_ID,
         content_hash: MICRO_CONTENT_HASH,
         worldQuestId: "sunken_barrow",
         generatedRpgSeed: 3,
@@ -419,7 +415,6 @@ describe("trace record / replay (§8.8)", () => {
     expect(() =>
       recordTrace(microRules, microInitState(), WIN, {
         trace_id: "tr_test",
-        pack_id: MICRO_PACK_ID,
         content_hash: MICRO_CONTENT_HASH,
         generatedRpgSeed: UNSAFE_GENERATED_RPG_SEED,
       }),
@@ -429,7 +424,6 @@ describe("trace record / replay (§8.8)", () => {
   it("rejects conflicting compact trace source identity at the replay boundary", () => {
     const trace = recordTrace(microRules, microInitState(), WIN, {
       trace_id: "tr_generated",
-      pack_id: MICRO_PACK_ID,
       content_hash: MICRO_CONTENT_HASH,
       generatedRpgSeed: 3,
     });
@@ -449,7 +443,6 @@ describe("trace record / replay (§8.8)", () => {
   it("rejects malformed generated trace metadata at the replay boundary", () => {
     const trace = recordTrace(microRules, microInitState(), WIN, {
       trace_id: "tr_generated",
-      pack_id: MICRO_PACK_ID,
       content_hash: MICRO_CONTENT_HASH,
       generatedRpgSeed: 3,
     });

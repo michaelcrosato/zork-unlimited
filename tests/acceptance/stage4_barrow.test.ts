@@ -93,7 +93,6 @@ describe("Stage 4 — The Sunken Barrow", () => {
     const { state, actions } = playToVictory(1);
     const trace = recordTrace(rules, initStateForRpgPack(index, 1), actions, {
       trace_id: "tr_barrow_victory",
-      pack_id: compiled.pack.meta.id,
       content_hash: compiled.contentHash,
       worldQuestId: "sunken_barrow",
     });

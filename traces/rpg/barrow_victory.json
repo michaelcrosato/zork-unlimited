@@ -6,7 +6,6 @@
   ],
   "worldQuestId": "sunken_barrow",
   "trace_id": "tr_barrow_victory",
-  "pack_id": "sunken_barrow_v1",
   "content_hash": "1400a6d4d3e3f9eb3443b9c0daf1ebb539754c293da8e531a133de815bbd2a9a",
   "seed": 1,
   "initial_state": {

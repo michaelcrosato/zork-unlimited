@@ -36,7 +36,6 @@ export type CompactSourceRefConsistencyResult =
   | { ok: false; error: string };
 
 export function compactSourceRefFromMetadata(
-  _fallbackPackId: string,
   metadata: CompactSourceMetadata,
   labels: CompactSourceMetadataLabels,
 ): CompactSourceRefResult {
