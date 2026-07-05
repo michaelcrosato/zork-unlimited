@@ -212,7 +212,7 @@ export function cloneTranscriptSummary<Summary extends PublicTranscriptSummary>(
 }
 
 function transcriptTurnLimit(args: Pick<TranscriptArgs, "turn_limit">, total: number): number {
-  if (args.turn_limit === undefined) return total;
+  if (args.turn_limit === undefined) return Math.min(TRANSCRIPT_TURN_LIMIT_DEFAULT, total);
   if (!Number.isInteger(args.turn_limit) || args.turn_limit < 0) {
     throw new Error(`Transcript turn_limit must be a non-negative integer.`);
   }
@@ -235,7 +235,7 @@ function transcriptTurnWindow<Args extends TranscriptArgs>(
     omitted,
     keySuffix:
       args.turn_limit === undefined
-        ? `all:from:${firstReturned}:of:${total}`
+        ? `default:${limit}:from:${firstReturned}:of:${total}`
         : `last:${limit}:from:${firstReturned}:of:${total}`,
   };
 }

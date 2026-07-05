@@ -10,7 +10,11 @@ import {
   type TranscriptSummary,
   type TranscriptTurn,
 } from "../../src/mcp/sessions.js";
-import { transcriptTurnsFor, transcriptTurnsOmitted } from "../../src/mcp/transcript_projection.js";
+import {
+  TRANSCRIPT_TURN_LIMIT_DEFAULT,
+  transcriptTurnsFor,
+  transcriptTurnsOmitted,
+} from "../../src/mcp/transcript_projection.js";
 import { runRpgGetTranscript } from "../../src/mcp/rpg_session_tools.js";
 import type { RpgActionOption } from "../../src/rpg/legal_actions.js";
 import type { RpgObservation } from "../../src/rpg/observation.js";
@@ -352,6 +356,38 @@ describe("SessionStore", () => {
       [3, "scene_3", "action_3", "scene_4"],
     ]);
     expect(transcriptTurnsOmitted(session, { session_id: session.id, turn_limit: 2 })).toBe(2);
+  });
+
+  it("caps default transcript turn windows while allowing explicit retained reads", () => {
+    const store = new SessionStore(MCP_SESSION_STORE_LIMIT, TRANSCRIPT_TURN_LIMIT_DEFAULT + 4);
+    const session = store.create(sessionInit());
+    const turns = Array.from({ length: TRANSCRIPT_TURN_LIMIT_DEFAULT + 2 }, (_, index) =>
+      transcriptTurn(index),
+    );
+
+    for (const turn of turns) store.appendTranscript(session.id, turn);
+
+    const defaultTurns = transcriptTurnsFor(store, session, {
+      session_id: session.id,
+      compact_turns: true,
+    });
+    expect(defaultTurns).toHaveLength(TRANSCRIPT_TURN_LIMIT_DEFAULT);
+    expect(defaultTurns[0]?.[0]).toBe(2);
+    expect(transcriptTurnsOmitted(session, { session_id: session.id })).toBe(2);
+
+    const fullRetainedTurns = transcriptTurnsFor(store, session, {
+      session_id: session.id,
+      compact_turns: true,
+      turn_limit: turns.length,
+    });
+    expect(fullRetainedTurns).toHaveLength(turns.length);
+    expect(fullRetainedTurns[0]?.[0]).toBe(0);
+    expect(
+      transcriptTurnsOmitted(session, {
+        session_id: session.id,
+        turn_limit: turns.length,
+      }),
+    ).toBe(0);
   });
 
   it("rebuilds transcript retention and aggregate stats on replacement", () => {
