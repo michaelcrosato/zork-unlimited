@@ -67,6 +67,31 @@ export type RpgTraceSource = TracePackSource & {
   compiled: CompiledRpgPack;
 };
 
+export const RPG_SOURCE_RUNTIME_CACHE_LIMIT = 8;
+
+function refreshSourceCacheEntry<Key, Entry>(cache: Map<Key, Entry>, key: Key): Entry | undefined {
+  const cached = cache.get(key);
+  if (cached === undefined) return undefined;
+  cache.delete(key);
+  cache.set(key, cached);
+  return cached;
+}
+
+function rememberSourceCacheEntry<Key, Entry>(
+  cache: Map<Key, Entry>,
+  key: Key,
+  entry: Entry,
+  maxEntries = RPG_SOURCE_RUNTIME_CACHE_LIMIT,
+): void {
+  cache.delete(key);
+  cache.set(key, entry);
+  while (cache.size > maxEntries) {
+    const oldest = cache.keys().next();
+    if (oldest.done) break;
+    cache.delete(oldest.value);
+  }
+}
+
 function schemaFindings(
   packPath: string,
   error: { issues: { message: string; path: (string | number)[] }[] },
@@ -89,7 +114,7 @@ export class RpgSourceRuntime {
   loadAndReport(packPath: string): RpgLoadResult {
     const abs = safeResolve(this.root, packPath);
     const stat = statSync(abs);
-    const cached = this.packLoadCache.get(abs);
+    const cached = refreshSourceCacheEntry(this.packLoadCache, abs);
     if (cached && cached.mtimeMs === stat.mtimeMs && cached.size === stat.size) {
       return cached.result;
     }
@@ -108,7 +133,11 @@ export class RpgSourceRuntime {
           },
         ]),
       };
-      this.packLoadCache.set(abs, { mtimeMs: stat.mtimeMs, size: stat.size, result });
+      rememberSourceCacheEntry(this.packLoadCache, abs, {
+        mtimeMs: stat.mtimeMs,
+        size: stat.size,
+        result,
+      });
       return result;
     }
     const compileRes = compileRpgPack(source);
@@ -117,13 +146,21 @@ export class RpgSourceRuntime {
         ok: false,
         report: makeReport(packPath, schemaFindings(packPath, compileRes.error)),
       };
-      this.packLoadCache.set(abs, { mtimeMs: stat.mtimeMs, size: stat.size, result });
+      rememberSourceCacheEntry(this.packLoadCache, abs, {
+        mtimeMs: stat.mtimeMs,
+        size: stat.size,
+        result,
+      });
       return result;
     }
     const pack = compileRes.compiled.pack;
     const report = validateRpg(pack);
     result = { ok: true, compiled: compileRes.compiled, report };
-    this.packLoadCache.set(abs, { mtimeMs: stat.mtimeMs, size: stat.size, result });
+    rememberSourceCacheEntry(this.packLoadCache, abs, {
+      mtimeMs: stat.mtimeMs,
+      size: stat.size,
+      result,
+    });
     return result;
   }
 
@@ -137,12 +174,12 @@ export class RpgSourceRuntime {
   }
 
   generatedRpg(seed: number): GeneratedRpgCacheEntry {
-    const cached = this.generatedRpgCache.get(seed);
+    const cached = refreshSourceCacheEntry(this.generatedRpgCache, seed);
     if (cached) return cached;
     const pack = generateRpgPack(seed);
     const report = validateRpg(pack);
     const entry = { compiled: { pack, contentHash: hashState(pack) }, report };
-    this.generatedRpgCache.set(seed, entry);
+    rememberSourceCacheEntry(this.generatedRpgCache, seed, entry);
     return entry;
   }
 
