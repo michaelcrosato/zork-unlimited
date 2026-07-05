@@ -142,9 +142,40 @@ function transcriptStatsWithTurn(stats: TranscriptStats, turn: TranscriptTurn): 
   return freezeTranscriptStats(nextStats);
 }
 
-function deepFreeze<T>(value: T): T {
-  if (value === null || typeof value !== "object" || Object.isFrozen(value)) return value;
-  for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
+function rejectSessionCacheMutation(): never {
+  throw new TypeError("MCP session cache values are immutable.");
+}
+
+function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
+  if (value === null || (typeof value !== "object" && typeof value !== "function")) return value;
+  const object = value as object;
+  if (seen.has(object) || Object.isFrozen(object)) return value;
+  seen.add(object);
+
+  if (value instanceof Map) {
+    for (const [key, child] of value.entries()) {
+      deepFreeze(key, seen);
+      deepFreeze(child, seen);
+    }
+    Object.defineProperties(value, {
+      set: { value: rejectSessionCacheMutation, writable: false, configurable: false },
+      delete: { value: rejectSessionCacheMutation, writable: false, configurable: false },
+      clear: { value: rejectSessionCacheMutation, writable: false, configurable: false },
+    });
+    return Object.freeze(value);
+  }
+
+  if (value instanceof Set) {
+    for (const child of value.values()) deepFreeze(child, seen);
+    Object.defineProperties(value, {
+      add: { value: rejectSessionCacheMutation, writable: false, configurable: false },
+      delete: { value: rejectSessionCacheMutation, writable: false, configurable: false },
+      clear: { value: rejectSessionCacheMutation, writable: false, configurable: false },
+    });
+    return Object.freeze(value);
+  }
+
+  for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child, seen);
   return Object.freeze(value);
 }
 

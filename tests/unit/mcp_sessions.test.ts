@@ -883,6 +883,10 @@ describe("SessionStore", () => {
     const transcriptProjection = store.transcriptProjection(session.id, "turns", () => [
       { step: 0, events: [{ type: "narrated", text: "Start." }] },
     ]);
+    const collectionProjection = store.observationProjection(session.id, "collections", () => ({
+      map: new Map([["town", { flags: new Set(["visited"]) }]]),
+      set: new Set([{ id: "site" }]),
+    }));
 
     expect(Object.isFrozen(legal)).toBe(true);
     expect(Object.isFrozen(legal[0])).toBe(true);
@@ -906,6 +910,18 @@ describe("SessionStore", () => {
     expect(Object.isFrozen(summaryProjection.scenes)).toBe(true);
     expect(Object.isFrozen(transcriptProjection)).toBe(true);
     expect(Object.isFrozen(transcriptProjection[0]!.events)).toBe(true);
+    expect(Object.isFrozen(collectionProjection.map)).toBe(true);
+    expect(Object.isFrozen(collectionProjection.map.get("town"))).toBe(true);
+    expect(Object.isFrozen(collectionProjection.map.get("town")!.flags)).toBe(true);
+    expect(Object.isFrozen(collectionProjection.set)).toBe(true);
+    expect(Object.isFrozen([...collectionProjection.set][0])).toBe(true);
+    expect(() =>
+      collectionProjection.map.set("next", {
+        flags: new Set(),
+      }),
+    ).toThrow(TypeError);
+    expect(() => collectionProjection.map.get("town")!.flags.add("mutated")).toThrow(TypeError);
+    expect(() => collectionProjection.set.add({ id: "other" })).toThrow(TypeError);
   });
 
   it("caches transcript summaries until transcript or state changes", () => {
