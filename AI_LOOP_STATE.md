@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 408 -->
+<!-- historical_cycle_count: 409 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - mcp_play_compact_context
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: `scripts/mcp_play.ts` now calls the MCP server with compact hidden-graph RPG args and renders `context` instead of stale full observations.
+- Loop effect: the external MCP play harness exercises the same compact payload path blind agents use, including compact step events and action ids.
+- Guard: blind-runner contract now asserts compact harness args/context shape, and a live `npx tsx scripts/mcp_play.ts breaking_weir --seed 1` MCP round trip passed.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused regression, `npm test`, and `npm run health` passed.
 
 ### Cycle result - compact_state_projection_cached
 
@@ -115,13 +123,5 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
 - Engine/loop surface: stale-reactive room-item audit now maps shipped packs through the canonical world graph and emits `worldQuestId` instead of raw pack paths.
 - Loop effect: AFK structural candidate evidence names `world_quest_id:*` targets, keeping raw pack paths internal to loading while preserving room/object stale-prose triage.
-- Guard: focused Prettier, typecheck, stale-reactive audit, assessor, and RPG schema-standalone tests passed over the cleanup.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - stale_reactive_audit_pack_id_removed
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: stale-reactive room-item audit sites no longer carry unused pack metadata; site payloads keep only pack path plus room/object evidence needed for triage.
-- Loop effect: AFK structural candidates avoid another raw pack identity field while preserving deterministic stale-prose evidence for engine-side follow-up.
 - Guard: focused Prettier, typecheck, stale-reactive audit, assessor, and RPG schema-standalone tests passed over the cleanup.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.

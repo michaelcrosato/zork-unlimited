@@ -11,35 +11,56 @@
  */
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import type { RpgCompactObservation } from "../src/mcp/compact_rpg_observation.js";
 
-type Obs = {
-  mode: "rpg";
-  room: string;
-  title: string;
-  description: string;
-  inventory: string[];
-  state: { flags: string[]; vars: Record<string, number>; journal: string[] };
-  enemies_present: { id: string; name: string; hp: number }[];
-  stats: { hp: number; attack: number; defense: number };
-  available_actions: {
-    id: string;
-    command: string;
-    skill_check?: { skill: string; difficulty: number; die: string };
-  }[];
-  ended: boolean;
-  ending_id: string | null;
-  ending: { title: string; text: string; death: boolean } | null;
-};
+const COMPACT_RPG_ARGS = {
+  hide_graph: true,
+  compact_actions: true,
+  compact_observation: true,
+} as const;
+
+const COMPACT_STEP_ARGS = {
+  ...COMPACT_RPG_ARGS,
+  compact_events: true,
+} as const;
 
 function parseResult(res: unknown): {
   session_id?: string;
-  observation: Obs;
+  context: RpgCompactObservation;
   state_hash: string;
   ok?: boolean;
   rejection_reason?: string;
 } {
   const content = (res as { content: { type: string; text: string }[] }).content;
   return JSON.parse(content[0]!.text);
+}
+
+function printCompactContext(current: RpgCompactObservation): void {
+  const [room, title] = current.here;
+  const [hp, attack, defense, score, maxScore] = current.vitals;
+
+  console.log(`\n=== ${title} (${room}) ===`);
+  console.log(current.text.trim());
+  console.log(`\n[hp ${hp} | attack ${attack} | defense ${defense} | score ${score}/${maxScore}]`);
+  if (current.enemies?.length) {
+    console.log(
+      `[enemies: ${current.enemies.map((enemy) => `${enemy[1]} hp${enemy[2]}`).join(", ")}]`,
+    );
+  }
+  if (current.inv?.length) console.log(`[inventory: ${current.inv.join(", ")}]`);
+  if (current.journal?.length) {
+    console.log(
+      `[journal: ${current.journal.length} entries - latest: "${current.journal.at(-1)}"]`,
+    );
+  }
+  if (current.ended) {
+    const endingTitle = current.ending?.title ?? current.ending_id;
+    console.log(`\n*** THE END - ${endingTitle} ***`);
+    return;
+  }
+
+  console.log("\nAvailable action ids:");
+  for (const action of current.actions ?? []) console.log(`  - ${action}`);
 }
 
 async function main(): Promise<void> {
@@ -59,51 +80,26 @@ async function main(): Promise<void> {
   const game = parseResult(
     await client.callTool({
       name: "start_world_quest",
-      arguments: { world_quest_id: questId, seed },
+      arguments: { world_quest_id: questId, seed, ...COMPACT_RPG_ARGS },
     }),
   );
   const sessionId = game.session_id!;
-  let current = game.observation;
+  let current = game.context;
 
   for (const action_id of actions) {
     const r = parseResult(
       await client.callTool({
         name: "step_action",
-        arguments: { session_id: sessionId, action_id },
+        arguments: { session_id: sessionId, action_id, ...COMPACT_STEP_ARGS },
       }),
     );
     if (r.ok === false) {
       console.log(`! rejected "${action_id}": ${r.rejection_reason}`);
     }
-    current = r.observation;
+    current = r.context;
   }
 
-  console.log(`\n=== ${current.title} (${current.room}) ===`);
-  console.log(current.description.trim());
-  console.log(
-    `\n[hp ${current.stats.hp} | attack ${current.stats.attack} | defense ${current.stats.defense}]`,
-  );
-  if (current.enemies_present.length)
-    console.log(
-      `[enemies: ${current.enemies_present.map((e) => `${e.name} hp${e.hp}`).join(", ")}]`,
-    );
-  if (current.inventory.length) console.log(`[inventory: ${current.inventory.join(", ")}]`);
-  if (current.state.journal.length)
-    console.log(
-      `[journal: ${current.state.journal.length} entries — latest: "${current.state.journal.at(-1)}"]`,
-    );
-  if (current.ended) {
-    const endingTitle = current.ending?.title ?? current.ending_id;
-    console.log(`\n*** THE END — ${endingTitle} ***`);
-  } else {
-    console.log("\nAvailable actions:");
-    for (const a of current.available_actions) {
-      const roll = a.skill_check
-        ? ` [${a.skill_check.die} ${a.skill_check.skill} vs ${a.skill_check.difficulty}]`
-        : "";
-      console.log(`  - ${a.id}: ${a.command}${roll}`);
-    }
-  }
+  printCompactContext(current);
 
   await client.close();
 }

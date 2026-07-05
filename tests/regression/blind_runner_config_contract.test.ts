@@ -58,6 +58,10 @@ describe("blind runner MCP config contract", () => {
     expect(mcpHarness).toContain("<world_quest_id>");
     expect(mcpHarness).toContain('"start_world_quest"');
     expect(mcpHarness).toContain("world_quest_id: questId");
+    expect(mcpHarness).toContain("compact_observation: true");
+    expect(mcpHarness).toContain("compact_events: true");
+    expect(mcpHarness).toContain("context: RpgCompactObservation");
+    expect(mcpHarness).not.toContain("observation: Obs");
     expect(mcpHarness).not.toContain('"new_game"');
     expect(mcpHarness).not.toContain("pack_path");
   });
