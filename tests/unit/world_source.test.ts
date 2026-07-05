@@ -94,6 +94,30 @@ describe("world source resolution", () => {
     expect(loadOverworldManifest(ROOT)).toBe(loadOverworldManifest(ROOT));
   });
 
+  it("keeps cached canonical manifests immutable across callers", () => {
+    const world = loadWorldManifest(ROOT);
+    const overworldManifest = loadOverworldManifest(ROOT);
+    const worldNodeName = world.graph.nodes[0]!.name;
+    const overworldNodeName = overworldManifest.nodes[0]!.name;
+
+    expect(Object.isFrozen(world)).toBe(true);
+    expect(Object.isFrozen(world.graph)).toBe(true);
+    expect(Object.isFrozen(world.graph.nodes)).toBe(true);
+    expect(Object.isFrozen(world.graph.nodes[0])).toBe(true);
+    expect(Object.isFrozen(overworldManifest)).toBe(true);
+    expect(Object.isFrozen(overworldManifest.nodes)).toBe(true);
+    expect(Object.isFrozen(overworldManifest.nodes[0])).toBe(true);
+
+    expect(() => {
+      world.graph.nodes[0]!.name = "Mutated Hub";
+    }).toThrow(TypeError);
+    expect(() => {
+      overworldManifest.nodes[0]!.name = "Mutated Town";
+    }).toThrow(TypeError);
+    expect(loadWorldManifest(ROOT).graph.nodes[0]!.name).toBe(worldNodeName);
+    expect(loadOverworldManifest(ROOT).nodes[0]!.name).toBe(overworldNodeName);
+  });
+
   it("falls back only when the canonical world manifest is absent, not malformed", () => {
     withTempRoot((root) => {
       expect(loadWorldManifest(root).graph.hub).toBe("charterhaven");

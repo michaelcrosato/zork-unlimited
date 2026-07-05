@@ -100,6 +100,12 @@ export type GeneratedGameSource = Extract<GamePackSource, { kind: "generated" }>
 const worldManifestCache = new Map<string, WorldManifest>();
 const overworldManifestCache = new Map<string, OverworldManifest>();
 
+function deepFreeze<T>(value: T): T {
+  if (value === null || typeof value !== "object" || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
+  return Object.freeze(value);
+}
+
 function assertGenerateRpgSeed(seed: unknown, operation: string): asserts seed is number {
   if (typeof seed !== "number" || !Number.isInteger(seed)) {
     throw new Error(
@@ -305,6 +311,7 @@ export function loadWorldManifest(root: string): WorldManifest {
   if (loadedFromDisk) {
     assertWorldQuestPackCoverage(world, discoverShippedRpgPackPaths(root));
   }
+  deepFreeze(world);
   worldManifestCache.set(root, world);
   return world;
 }
@@ -352,6 +359,7 @@ export function loadOverworldManifest(root: string): OverworldManifest {
   const overworld = parseOverworldManifest(raw);
   assertOverworldIntegrity(overworld);
   assertOverworldQuestSourceBindings(loadWorldManifest(root), overworld);
+  deepFreeze(overworld);
   overworldManifestCache.set(root, overworld);
   return overworld;
 }
