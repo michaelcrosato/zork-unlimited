@@ -308,7 +308,7 @@ export const RpgMetaSchema = z
     title: z.string().min(1),
     world: WorldBindingSchema.optional(),
     start_room: z.string().min(1),
-    vars_init: z.record(z.string(), z.number()).default({}),
+    vars_init: z.record(z.string(), z.number().finite()).default({}),
     flags_init: z.array(z.string()).default([]),
     max_score: z.number().int().nonnegative().default(0),
     combat_guaranteed: z.boolean().optional(),

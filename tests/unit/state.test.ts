@@ -14,4 +14,20 @@ describe("GameState seed domain", () => {
       Number.MAX_SAFE_INTEGER,
     );
   });
+
+  it("rejects non-finite initial vars before runtime state creation", () => {
+    expect(() => initState({ seed: 1, start: "room", varsInit: { hp: Infinity } })).toThrow(
+      /varsInit\.hp.*finite/,
+    );
+    expect(() => initState({ seed: 1, start: "room", varsInit: { score: NaN } })).toThrow(
+      /varsInit\.score.*finite/,
+    );
+  });
+
+  it("keeps finite initial vars valid", () => {
+    expect(initState({ seed: 1, start: "room", varsInit: { hp: 20, debt: -3 } }).vars).toEqual({
+      hp: 20,
+      debt: -3,
+    });
+  });
 });

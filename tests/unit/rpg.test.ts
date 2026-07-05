@@ -13,7 +13,7 @@ import { evalCondition } from "../../src/core/conditions.js";
 import { initState, type GameState } from "../../src/core/state.js";
 import { resolveSkillCheck } from "../../src/core/skill_check.js";
 import { resolveAttack, enemyHp, enemyAlive } from "../../src/rpg/combat.js";
-import { enemyHpVar, type Enemy } from "../../src/rpg/schema.js";
+import { enemyHpVar, RpgPackSchema, type Enemy } from "../../src/rpg/schema.js";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { buildRpgRules, indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
 import type { RpgAction } from "../../src/api/types.js";
@@ -35,6 +35,20 @@ const wight: Enemy = {
   death_ending: "ending_fallen",
   on_defeat: [{ set_flag: "spoils" }],
 };
+
+function minimalPackWithVars(varsInit: Record<string, number>) {
+  return {
+    meta: {
+      id: "vars_fixture",
+      title: "Vars Fixture",
+      start_room: "room",
+      vars_init: varsInit,
+    },
+    rooms: [{ id: "room", name: "Room", description: "A room." }],
+    win_conditions: [{ id: "win", conditions: [{ has_flag: "won" }], ending: "ending_win" }],
+    endings: [{ id: "ending_win", title: "Win", text: "Done." }],
+  };
+}
 
 describe("gated DSL: quest stages (§13, §14)", () => {
   it("set_quest_stage writes questStage and quest_stage reads it", () => {
@@ -130,5 +144,20 @@ describe("RPG action boundary", () => {
     const result = makeStep(rules)(state, legacyAction);
     expect(result.ok).toBe(false);
     expect(result.state).toBe(state);
+  });
+});
+
+describe("RPG pack state initialization boundary", () => {
+  it("rejects non-finite meta.vars_init values before engine state creation", () => {
+    expect(RpgPackSchema.safeParse(minimalPackWithVars({ hp: Infinity })).success).toBe(false);
+    expect(RpgPackSchema.safeParse(minimalPackWithVars({ hp: NaN })).success).toBe(false);
+  });
+
+  it("accepts finite meta.vars_init values", () => {
+    const parsed = RpgPackSchema.safeParse(minimalPackWithVars({ hp: 20, attack: 4 }));
+
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.meta.vars_init).toEqual({ hp: 20, attack: 4 });
   });
 });

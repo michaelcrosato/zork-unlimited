@@ -24,6 +24,15 @@ export function assertRuntimeSeed(seed: unknown, label: string): asserts seed is
   if (!isRuntimeSeed(seed)) throw new Error(runtimeSeedValidationMessage(label, seed));
 }
 
+function assertFiniteVars(vars: Record<string, number> | undefined, label: string): void {
+  if (vars === undefined) return;
+  for (const [name, value] of Object.entries(vars)) {
+    if (!Number.isFinite(value)) {
+      throw new Error(`${label}.${name} must be finite, got ${String(value)}.`);
+    }
+  }
+}
+
 export type ObjectRuntime = {
   open?: boolean;
   locked?: boolean;
@@ -66,6 +75,7 @@ export type InitOptions = {
 /** Build a fresh GameState. Pure: no clock, no global RNG. */
 export function initState(opts: InitOptions): GameState {
   assertRuntimeSeed(opts.seed, "GameState seed");
+  assertFiniteVars(opts.varsInit, "GameState varsInit");
   const flags: Record<string, boolean> = {};
   for (const f of opts.flagsInit ?? []) flags[f] = true;
   return {
