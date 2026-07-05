@@ -87,10 +87,7 @@ import {
   type OverworldSessionViewModelSourceState,
 } from "./session_view_state.js";
 import { planOverworldSessionRoadRoute } from "./session_route_lifecycle.js";
-import {
-  applyOverworldSessionEventResolution,
-  planOverworldSessionEventResolution,
-} from "./session_event_lifecycle.js";
+import { applyOverworldSessionEventResolutionFromState } from "./session_event_lifecycle.js";
 import {
   applyOverworldSessionCurrentAreaForTown,
   applyOverworldSessionLocalDiscoveryForTown,
@@ -715,28 +712,22 @@ export class OverworldSession {
     const current = this.currentNode();
     return this.applyLocalActionWithDiscovery(
       current,
-      applyOverworldSessionEventResolution(
-        {
-          ...this.actionJournalState(),
-          resolvedEventIds: this.resolvedEventIds,
-          resolvedEventHomeIds: this.resolvedEventHomeIds,
-          regionRenown: this.regionRenown,
-          regionalArcsByRegion: this.regionalArcsByRegion,
-          completedRegionalArcIds: this.completedRegionalArcIds,
-        },
-        planOverworldSessionEventResolution({
-          eventId,
-          eventsById: this.localEventsById,
-          currentTownId: this.currentId,
-          currentTownName: current.name,
-          currentRegion: current.region,
-          currentAreaId: this.currentAreaIdOrThrow(),
-          resolvedEventIds: this.resolvedEventIds,
-          journalEntries: this.journalEntriesById,
-          poisByArea: this.poisByArea,
-          charactersByArea: this.charactersByArea,
-        }),
-      ),
+      applyOverworldSessionEventResolutionFromState({
+        ...this.actionJournalState(),
+        eventId,
+        eventsById: this.localEventsById,
+        currentTownId: this.currentId,
+        currentTownName: current.name,
+        currentRegion: current.region,
+        currentAreaId: this.currentAreaIdOrThrow(),
+        resolvedEventIds: this.resolvedEventIds,
+        resolvedEventHomeIds: this.resolvedEventHomeIds,
+        regionRenown: this.regionRenown,
+        regionalArcsByRegion: this.regionalArcsByRegion,
+        completedRegionalArcIds: this.completedRegionalArcIds,
+        poisByArea: this.poisByArea,
+        charactersByArea: this.charactersByArea,
+      }),
     );
   }
 

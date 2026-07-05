@@ -38,6 +38,12 @@ export type MutableOverworldSessionEventResolutionState = OverworldActionJournal
   completedRegionalArcIds: Set<string>;
 };
 
+export type OverworldSessionEventResolutionState = Omit<
+  OverworldSessionEventResolutionPlanState,
+  "journalEntries"
+> &
+  MutableOverworldSessionEventResolutionState;
+
 export function planOverworldSessionEventResolution(
   state: OverworldSessionEventResolutionPlanState,
 ): OverworldEventResolutionPlan {
@@ -83,4 +89,16 @@ export function applyOverworldSessionEventResolution(
     );
   }
   return applied;
+}
+
+export function applyOverworldSessionEventResolutionFromState(
+  state: OverworldSessionEventResolutionState,
+): OverworldSessionActionApplication {
+  return applyOverworldSessionEventResolution(
+    state,
+    planOverworldSessionEventResolution({
+      ...state,
+      journalEntries: state.journalEntriesById,
+    }),
+  );
 }
