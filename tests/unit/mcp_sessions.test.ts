@@ -85,6 +85,20 @@ describe("SessionStore", () => {
     );
   });
 
+  it("bounds stored sessions and keeps recently accessed sessions", () => {
+    const store = new SessionStore(2);
+
+    const first = store.create(sessionInit({ packId: "first" }));
+    const second = store.create(sessionInit({ packId: "second" }));
+    expect(store.get(first.id)).toBe(first);
+
+    const third = store.create(sessionInit({ packId: "third" }));
+
+    expect(store.get(first.id)).toBe(first);
+    expect(store.get(third.id)).toBe(third);
+    expect(() => store.get(second.id)).toThrow('Unknown session "sess_2".');
+  });
+
   it("updates only the addressed session while preserving session metadata", () => {
     const store = new SessionStore();
     const transcript = [

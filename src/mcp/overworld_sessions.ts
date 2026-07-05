@@ -122,6 +122,41 @@ export type OverworldMcpExportSuccess = {
   snapshot: OverworldSessionSnapshot;
 };
 
+export const OVERWORLD_MCP_SESSION_STORE_LIMIT = 64;
+
+function assertOverworldSessionStoreLimit(maxSessions: number): number {
+  if (!Number.isInteger(maxSessions) || maxSessions < 1) {
+    throw new Error("Overworld MCP session store limit must be a positive integer.");
+  }
+  return maxSessions;
+}
+
+function refreshOverworldSessionEntry<Key, Entry>(
+  sessions: Map<Key, Entry>,
+  key: Key,
+): Entry | undefined {
+  const session = sessions.get(key);
+  if (session === undefined) return undefined;
+  sessions.delete(key);
+  sessions.set(key, session);
+  return session;
+}
+
+function rememberOverworldSessionEntry<Key, Entry>(
+  sessions: Map<Key, Entry>,
+  key: Key,
+  entry: Entry,
+  maxEntries: number,
+): void {
+  sessions.delete(key);
+  sessions.set(key, entry);
+  while (sessions.size > maxEntries) {
+    const oldest = sessions.keys().next();
+    if (oldest.done) break;
+    sessions.delete(oldest.value);
+  }
+}
+
 export type OverworldMcpExportResponse<Args extends OverworldMcpExportArgs> = Args extends {
   expected_snapshot_hash: string;
 }
@@ -155,24 +190,29 @@ export class OverworldMcpSessionStore {
   private counter = 0;
   private readonly sessions = new Map<string, OverworldSession>();
 
-  constructor(private readonly loadManifest: () => OverworldManifest) {}
+  constructor(
+    private readonly loadManifest: () => OverworldManifest,
+    private readonly maxSessions = OVERWORLD_MCP_SESSION_STORE_LIMIT,
+  ) {
+    assertOverworldSessionStoreLimit(maxSessions);
+  }
 
   create(): OverworldMcpSessionEntry {
     const session = new OverworldSession(this.loadManifest());
     const session_id = `oworld_${++this.counter}`;
-    this.sessions.set(session_id, session);
+    rememberOverworldSessionEntry(this.sessions, session_id, session, this.maxSessions);
     return { session_id, session };
   }
 
   restore(snapshot: unknown): OverworldMcpSessionEntry {
     const session = OverworldSession.restore(this.loadManifest(), snapshot);
     const session_id = `oworld_${++this.counter}`;
-    this.sessions.set(session_id, session);
+    rememberOverworldSessionEntry(this.sessions, session_id, session, this.maxSessions);
     return { session_id, session };
   }
 
   get(sessionId: string): OverworldSession {
-    const session = this.sessions.get(sessionId);
+    const session = refreshOverworldSessionEntry(this.sessions, sessionId);
     if (!session) throw new Error(`Unknown overworld session "${sessionId}".`);
     return session;
   }

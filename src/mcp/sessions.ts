@@ -48,6 +48,38 @@ export type TranscriptSummary = {
 
 export type RpgStep = (state: GameState, action: RpgAction) => StepResult;
 
+export const MCP_SESSION_STORE_LIMIT = 64;
+
+function assertSessionStoreLimit(maxSessions: number): number {
+  if (!Number.isInteger(maxSessions) || maxSessions < 1) {
+    throw new Error("MCP session store limit must be a positive integer.");
+  }
+  return maxSessions;
+}
+
+function refreshSessionEntry<Key, Entry>(sessions: Map<Key, Entry>, key: Key): Entry | undefined {
+  const session = sessions.get(key);
+  if (session === undefined) return undefined;
+  sessions.delete(key);
+  sessions.set(key, session);
+  return session;
+}
+
+function rememberSessionEntry<Key, Entry>(
+  sessions: Map<Key, Entry>,
+  key: Key,
+  entry: Entry,
+  maxEntries: number,
+): void {
+  sessions.delete(key);
+  sessions.set(key, entry);
+  while (sessions.size > maxEntries) {
+    const oldest = sessions.keys().next();
+    if (oldest.done) break;
+    sessions.delete(oldest.value);
+  }
+}
+
 export type Session = SessionRuntimeCaches<TranscriptSummary> & {
   id: string;
   packId: string;
@@ -94,6 +126,10 @@ export class SessionStore {
   private counter = 0;
   private readonly sessions = new Map<string, Session>();
 
+  constructor(private readonly maxSessions = MCP_SESSION_STORE_LIMIT) {
+    assertSessionStoreLimit(maxSessions);
+  }
+
   create(init: SessionInit): Session {
     const id = `sess_${++this.counter}`;
     const session: Session = {
@@ -102,12 +138,12 @@ export class SessionStore {
       stateHash: hashState(init.state),
       transcriptLogHash: hashState(init.transcript),
     };
-    this.sessions.set(id, session);
+    rememberSessionEntry(this.sessions, id, session, this.maxSessions);
     return session;
   }
 
   get(id: string): Session {
-    const session = this.sessions.get(id);
+    const session = refreshSessionEntry(this.sessions, id);
     if (!session) throw new Error(`Unknown session "${id}".`);
     return session;
   }
