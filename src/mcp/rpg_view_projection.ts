@@ -95,10 +95,16 @@ export function observationProjectionSuffix(
   return `hide:${opts.hideGraph === true ? 1 : 0}:intro:${opts.includeWorldIntro === true ? 1 : 0}:${extra}`;
 }
 
+type RpgObservationSource = RpgObservation | (() => RpgObservation);
+
+function observationFrom(source: RpgObservationSource): RpgObservation {
+  return typeof source === "function" ? source() : source;
+}
+
 export function rpgViewField<Args extends RpgViewOptions>(
   sessions: SessionStore,
   session: Session,
-  obs: RpgObservation,
+  obs: RpgObservationSource,
   args: Args,
   opts: RpgObservationViewOptions = {},
 ): RpgViewField<Args> {
@@ -107,11 +113,13 @@ export function rpgViewField<Args extends RpgViewOptions>(
       context: sessions.observationProjection(
         session.id,
         `${OBSERVATION_PROJECTION_COMPACT}:${observationProjectionSuffix(opts, "ids")}`,
-        () =>
-          compactRpgObservation(
-            obs,
-            obs.available_actions.map((action) => action.id),
-          ),
+        () => {
+          const built = observationFrom(obs);
+          return compactRpgObservation(
+            built,
+            built.available_actions.map((action) => action.id),
+          );
+        },
       ),
     } as RpgViewField<Args>;
   }
@@ -122,7 +130,7 @@ export function rpgViewField<Args extends RpgViewOptions>(
         opts,
         `compact-actions:${args.compact_actions === true ? 1 : 0}`,
       )}`,
-      () => publicObservation(obs, publicObservationOptions(args)),
+      () => publicObservation(observationFrom(obs), publicObservationOptions(args)),
     ),
   } as RpgViewField<Args>;
 }

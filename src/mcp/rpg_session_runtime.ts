@@ -98,13 +98,20 @@ export class RpgMcpSessionRuntime {
     );
   }
 
-  observationOf(session: Session, opts: ObservationOptions = {}): RpgObservation {
-    return this.sessions.observation(session.id, opts, () =>
-      buildRpgObservation(session.index, session.state, {
-        ...opts,
-        availableActions: this.legalActionsFor(session),
-      }),
-    );
+  private buildObservation(session: Session, opts: ObservationOptions = {}): RpgObservation {
+    return buildRpgObservation(session.index, session.state, {
+      ...opts,
+      availableActions: this.legalActionsFor(session),
+    });
+  }
+
+  observationOf(
+    session: Session,
+    opts: ObservationOptions = {},
+    cacheObservation = true,
+  ): RpgObservation {
+    if (!cacheObservation) return this.buildObservation(session, opts);
+    return this.sessions.observation(session.id, opts, () => this.buildObservation(session, opts));
   }
 
   startSession(
@@ -154,8 +161,9 @@ export class RpgMcpSessionRuntime {
   openingObservationOf(
     session: Session,
     opts = this.openingObservationOptions(session),
+    cacheObservation = true,
   ): RpgObservation {
-    return this.observationOf(session, opts);
+    return this.observationOf(session, opts, cacheObservation);
   }
 
   startRpgSession<Args extends RpgViewOptions>(
@@ -178,7 +186,7 @@ export class RpgMcpSessionRuntime {
       ...rpgViewField(
         this.sessions,
         session,
-        this.openingObservationOf(session, openingOpts),
+        () => this.openingObservationOf(session, openingOpts, args.compact_observation !== true),
         args,
         openingOpts,
       ),

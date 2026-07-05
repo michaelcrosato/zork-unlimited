@@ -147,9 +147,14 @@ export function runRpgGetObservation<Args extends RpgGetObservationToolArgs>(
   const obsOpts = {
     hideGraph: args.hide_graph ?? s.hideGraph ?? false,
   };
-  const obs = rpgRuntime.observationOf(s, obsOpts);
   return {
-    ...rpgViewField(sessions, s, obs, args, obsOpts),
+    ...rpgViewField(
+      sessions,
+      s,
+      () => rpgRuntime.observationOf(s, obsOpts, args.compact_observation !== true),
+      args,
+      obsOpts,
+    ),
     state_hash: stateHash,
   } as RpgObservationToolResponse<Args>;
 }

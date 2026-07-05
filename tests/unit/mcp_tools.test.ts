@@ -2204,6 +2204,9 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(JSON.stringify(compactStart.context).length).toBeLessThan(
       JSON.stringify(fullStart.observation).length,
     );
+    const compactStartSession = a.sessions.get(compactStart.session_id);
+    expect(compactStartSession.observationCache).toBeUndefined();
+    expect(compactStartSession.observationProjectionCaches?.size).toBe(1);
 
     const compactWorldQuest = a.start_world_quest({
       world_quest_id: "sunken_barrow",
@@ -2214,6 +2217,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(compactWorldQuest.context.here[0]).toBe(fullStart.observation.room);
     expect("observation" in compactWorldQuest).toBe(false);
     expect("mode" in compactWorldQuest.context).toBe(false);
+    expect(a.sessions.get(compactWorldQuest.session_id).observationCache).toBeUndefined();
 
     const compactObservation = a.get_observation({
       session_id: fullStart.session_id,

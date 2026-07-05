@@ -110,7 +110,12 @@ export function runRpgLoadGame<Args extends RpgLoadGameToolArgs>(
     ...rpgViewField(
       deps.sessions,
       session,
-      deps.rpgRuntime.openingObservationOf(session, openingOpts),
+      () =>
+        deps.rpgRuntime.openingObservationOf(
+          session,
+          openingOpts,
+          args.compact_observation !== true,
+        ),
       args,
       openingOpts,
     ),

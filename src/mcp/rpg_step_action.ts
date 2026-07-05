@@ -65,7 +65,6 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
     const beforeObsOpts = {
       hideGraph: args.hide_graph ?? s.hideGraph ?? false,
     };
-    const before = rpgRuntime.observationOf(s, beforeObsOpts);
     return {
       ok: false,
       rejection_reason: "That action is not available right now.",
@@ -74,7 +73,13 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
         args,
       ),
       ...rpgStepEventVersion(args),
-      ...rpgViewField(sessions, s, before, args, beforeObsOpts),
+      ...rpgViewField(
+        sessions,
+        s,
+        () => rpgRuntime.observationOf(s, beforeObsOpts, args.compact_observation !== true),
+        args,
+        beforeObsOpts,
+      ),
       state_hash: currentStateHash,
     } as RpgStepActionResponse<Args>;
   }
@@ -83,7 +88,7 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
   const afterObsOpts = {
     hideGraph: args.hide_graph ?? s.hideGraph ?? false,
   };
-  const after = rpgRuntime.observationOf(s, afterObsOpts);
+  const after = rpgRuntime.observationOf(s, afterObsOpts, args.compact_observation !== true);
   sessions.appendTranscript(s.id, {
     step: beforeStep,
     scene_id: beforeSceneId,
