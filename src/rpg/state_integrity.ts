@@ -91,6 +91,43 @@ function collectVarTargets(node: unknown, acc: Set<string>): Set<string> {
   return acc;
 }
 
+type ObjectRuntimeTargets = {
+  open: Set<string>;
+  locked: Map<string, Set<boolean>>;
+};
+
+function addLockedRuntimeTarget(
+  acc: ObjectRuntimeTargets["locked"],
+  id: string,
+  value: boolean,
+): void {
+  const values = acc.get(id) ?? new Set<boolean>();
+  values.add(value);
+  acc.set(id, values);
+}
+
+function collectObjectRuntimeTargets(
+  node: unknown,
+  acc: ObjectRuntimeTargets,
+): ObjectRuntimeTargets {
+  if (Array.isArray(node)) {
+    for (const el of node) collectObjectRuntimeTargets(el, acc);
+  } else if (node !== null && typeof node === "object") {
+    for (const [k, v] of Object.entries(node)) {
+      if (k === "open_object" && typeof v === "string") {
+        acc.open.add(v);
+      } else if (k === "set_object_locked" && v !== null && typeof v === "object") {
+        const ref = v as Record<string, unknown>;
+        if (typeof ref.id === "string" && typeof ref.locked === "boolean") {
+          addLockedRuntimeTarget(acc.locked, ref.id, ref.locked);
+        }
+      }
+      collectObjectRuntimeTargets(v, acc);
+    }
+  }
+  return acc;
+}
+
 /**
  * Pack-aware referential-integrity gate for loaded RPG state. The generic save
  * schema can prove shape/finiteness, but only the RPG index can prove that
@@ -105,9 +142,20 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   const questStages = collectQuestStageTargets(index.pack, new Map<string, Set<string>>());
   const flags = collectFlagTargets(index.pack, new Set(index.pack.meta.flags_init));
   const vars = collectVarTargets(index.pack, new Set(Object.keys(index.pack.meta.vars_init)));
+  const objectRuntimeTargets = collectObjectRuntimeTargets(index.pack, {
+    open: new Set<string>(),
+    locked: new Map<string, Set<boolean>>(),
+  });
   const dialogueVars = new Map<string, { room: string; maxOrdinal: number }>();
   const enemyHpVars = new Map<string, number>();
   for (const id of objects) items.add(id);
+  // Built-in OPEN/UNLOCK actions write sparse runtime state; static defaults do not.
+  for (const object of index.pack.objects) {
+    if (object.openable) objectRuntimeTargets.open.add(object.id);
+    if (object.locked && object.key_id !== undefined) {
+      addLockedRuntimeTarget(objectRuntimeTargets.locked, object.id, false);
+    }
+  }
   for (const npc of index.pack.npcs) {
     const key = dlgVar(npc.id);
     vars.add(key);
@@ -156,14 +204,29 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
       throw new SaveIntegrityError(`Save references invalid enemy hp var "${id}" (${value}).`);
     }
   }
+  const inventory = new Set<string>();
   for (const id of state.inventory) {
     if (!items.has(id)) {
       throw new SaveIntegrityError(`Save references unknown item "${id}".`);
     }
+    if (inventory.has(id)) {
+      throw new SaveIntegrityError(`Save references duplicate inventory item "${id}".`);
+    }
+    inventory.add(id);
   }
   for (const [id, runtime] of Object.entries(state.objectState)) {
     if (!objects.has(id)) {
       throw new SaveIntegrityError(`Save references unknown object "${id}".`);
+    }
+    if (runtime.open !== undefined) {
+      if (runtime.open !== true || !objectRuntimeTargets.open.has(id)) {
+        throw new SaveIntegrityError(`Save references invalid object open state for "${id}".`);
+      }
+    }
+    if (runtime.locked !== undefined) {
+      if (objectRuntimeTargets.locked.get(id)?.has(runtime.locked) !== true) {
+        throw new SaveIntegrityError(`Save references invalid object lock state for "${id}".`);
+      }
     }
     if (runtime.room !== undefined && !locations.has(runtime.room)) {
       throw new SaveIntegrityError(

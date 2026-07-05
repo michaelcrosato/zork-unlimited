@@ -26,6 +26,9 @@
 import { describe, it, expect } from "vitest";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { SaveIntegrityError } from "../../src/persist/save_load.js";
+import { assertRpgStateReferences } from "../../src/rpg/state_integrity.js";
+import { indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
+import { RpgPackSchema } from "../../src/rpg/schema.js";
 
 const ROOT = process.cwd();
 const WORLD_QUEST_ID = "sunken_barrow";
@@ -81,6 +84,59 @@ function playSunkenBarrowToVictory(a: ReturnType<typeof api>, sessionId: string)
   }
   stepByCommand(a, sessionId, "go down");
   return stepByCommand(a, sessionId, "take Barrow");
+}
+
+function runtimeStateFixtureIndex() {
+  return indexRpgPack(
+    RpgPackSchema.parse({
+      meta: {
+        id: "object_runtime_fixture",
+        title: "Object Runtime Fixture",
+        start_room: "room",
+        vars_init: {},
+      },
+      rooms: [
+        {
+          id: "room",
+          name: "Room",
+          description: "A room with a chest, key, and lamp.",
+          objects: ["chest", "small_key", "lamp"],
+        },
+      ],
+      objects: [
+        {
+          id: "chest",
+          name: "chest",
+          description: "A locked chest.",
+          container: true,
+          openable: true,
+          locked: true,
+          key_id: "small_key",
+        },
+        {
+          id: "small_key",
+          name: "small key",
+          description: "A small key.",
+          takeable: true,
+        },
+        {
+          id: "lamp",
+          name: "lamp",
+          description: "A lamp.",
+          interactions: [
+            {
+              verb: "USE",
+              target: "lamp",
+              effects: [{ set_object_locked: { id: "lamp", locked: true } }],
+            },
+          ],
+        },
+      ],
+      win_conditions: [{ id: "win", conditions: [{ visited: "room" }], ending: "ending_win" }],
+      endings: [{ id: "ending_win", title: "Done", text: "Done." }],
+      enemies: [],
+    }),
+  );
 }
 
 describe("save/load referential integrity — forged-reference REJECTION (§16)", () => {
@@ -156,12 +212,36 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     expect(() => api().load_game({ save: forged })).toThrow(/unknown item/);
   });
 
+  it("RPG: a duplicated inventory item is a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      s.inventory = ["iron_bar", "iron_bar"];
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/duplicate inventory item/);
+  });
+
   it("RPG: a phantom objectState key is a hard SaveIntegrityError", () => {
     const forged = forgeSave((s) => {
       s.objectState = { no_such_object: { open: true } };
     });
     expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
     expect(() => api().load_game({ save: forged })).toThrow(/unknown object/);
+  });
+
+  it("RPG: impossible object open runtime state is a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      s.objectState = { iron_bar: { open: true } };
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/invalid object open state/);
+  });
+
+  it("RPG: impossible object lock runtime state is a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      s.objectState = { iron_bar: { locked: false } };
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/invalid object lock state/);
   });
 
   it("RPG: a moved object in a phantom room is a hard SaveIntegrityError", () => {
@@ -225,6 +305,21 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
     const reloaded = a.load_game({ save: saved.save });
     expect(saved.state_hash).toBe(before);
     expect(reloaded.state_hash).toBe(before);
+  });
+
+  it("pack-creatable object open/lock runtime writes still pass integrity", () => {
+    const index = runtimeStateFixtureIndex();
+    const state = initStateForRpgPack(index, 1);
+    expect(() =>
+      assertRpgStateReferences(index, {
+        ...state,
+        inventory: ["small_key"],
+        objectState: {
+          chest: { open: true, locked: false },
+          lamp: { locked: true },
+        },
+      }),
+    ).not.toThrow();
   });
 
   it("an RPG save with a legitimate active dialogue still loads", () => {
