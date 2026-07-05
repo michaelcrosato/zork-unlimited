@@ -88,4 +88,76 @@ describe("overworld session view clone", () => {
     expect(fresh.routeOptions[0]!.steps[0]!.to.name).toBe(originalStepToName);
     expect(fresh.routeOptions[0]!.steps[0]!.roadEvent?.title).toBe(originalStepEventTitle);
   });
+
+  it("keeps returned direct route plans from mutating route indexes", () => {
+    const session = new OverworldSession(world);
+    const route = session.planRoute("colonie_town");
+    const originalDestinationName = route.destination.name;
+    const originalStepToName = route.steps[0]!.to.name;
+    const originalStepRoute = route.steps[0]!.edge.route;
+
+    route.destination.name = "mutated_by_test";
+    route.steps[0]!.to.name = "mutated_by_test";
+    route.steps[0]!.edge.route = "mutated_by_test";
+
+    const fresh = session.planRoute("colonie_town");
+
+    expect(fresh.destination.name).toBe(originalDestinationName);
+    expect(fresh.steps[0]!.to.name).toBe(originalStepToName);
+    expect(fresh.steps[0]!.edge.route).toBe(originalStepRoute);
+  });
+
+  it("keeps returned action results from mutating session journals or discoveries", () => {
+    const session = new OverworldSession(world);
+    const before = session.view();
+    const result = session.scoutPoi(before.pois[0]!.id);
+    const originalJournalTitle = result.entry.title;
+    const originalSiteTitle = result.discoveredSites?.[0]?.title;
+    const originalJobTitle = result.discoveredJobs?.[0]?.title;
+
+    result.entry.title = "mutated_by_test";
+    if (result.discoveredSites?.[0]) result.discoveredSites[0].title = "mutated_by_test";
+    if (result.discoveredJobs?.[0]) result.discoveredJobs[0].title = "mutated_by_test";
+
+    const fresh = session.view();
+
+    expect(fresh.journal[0]?.title).toBe(originalJournalTitle);
+    expect(fresh.sites[0]?.title).toBe(originalSiteTitle);
+    expect(fresh.jobs[0]?.title).toBe(originalJobTitle);
+  });
+
+  it("keeps returned travel, encounter, and service results detached", () => {
+    const session = new OverworldSession(world);
+    const eventRoad = session
+      .view()
+      .exits.find((exit) => world.road_events.some((event) => event.edge === exit.id));
+    expect(eventRoad).toBeDefined();
+
+    const travel = session.travel(eventRoad!.id);
+    const originalTravelRoute = travel.route;
+    const originalTravelEventTitle = travel.roadEvent?.title;
+    travel.route = "mutated_by_test";
+    if (travel.roadEvent) travel.roadEvent.title = "mutated_by_test";
+
+    const afterTravel = session.view();
+    expect(afterTravel.log[0]?.route).toBe(originalTravelRoute);
+    expect(afterTravel.log[0]?.roadEvent?.title).toBe(originalTravelEventTitle);
+
+    const encounter = session.resolveRoadEncounter("press_on");
+    const originalEncounterJournalTitle = encounter.entry.title;
+    const originalEncounterEventTitle = encounter.encounter.event.title;
+    encounter.entry.title = "mutated_by_test";
+    encounter.encounter.event.title = "mutated_by_test";
+
+    const afterEncounter = session.view();
+    expect(afterEncounter.journal[0]?.title).toBe(originalEncounterJournalTitle);
+    expect(afterEncounter.log[0]?.roadEvent?.title).toBe(originalEncounterEventTitle);
+
+    const service = session.resupplyAtTown();
+    expect(service.entry).toBeDefined();
+    const originalServiceJournalTitle = service.entry!.title;
+    service.entry!.title = "mutated_by_test";
+
+    expect(session.view().journal[0]?.title).toBe(originalServiceJournalTitle);
+  });
 });

@@ -21,6 +21,7 @@ import {
   type OverworldRoadEncounterStrategy,
 } from "./travel_mechanics.js";
 import {
+  cloneOverworldRouteOption,
   type OverworldRoutePlannerIndex,
   type OverworldSessionRoutePlan,
 } from "./session_routes.js";
@@ -74,6 +75,15 @@ import {
 import { cloneOverworldView } from "./session_view_clone.js";
 import type { OverworldView } from "./session_view.js";
 import { buildOverworldSessionIndexes } from "./session_indices.js";
+import {
+  cloneOverworldActionResult,
+  cloneOverworldAreaTravelResult,
+  cloneOverworldQuestCompletionResult,
+  cloneOverworldQuestView,
+  cloneOverworldRoadEncounterResult,
+  cloneOverworldServiceResult,
+  cloneOverworldTravelLogEntry,
+} from "./session_result_clone.js";
 import {
   buildOverworldSessionSnapshotFromState,
   restoreOverworldSessionSnapshotIntoState,
@@ -425,7 +435,7 @@ export class OverworldSession {
       this.applyResourceClockState(applied);
       this.clearSnapshotCache();
     }
-    return applied.result;
+    return cloneOverworldServiceResult(applied.result);
   }
 
   private setCurrentAreaForTown(nodeId: string): void {
@@ -464,7 +474,9 @@ export class OverworldSession {
     current: OverworldNode,
     applied: OverworldSessionActionApplication,
   ): OverworldActionResult {
-    return this.withLocalDiscovery(this.applyActionApplication(applied), current.id);
+    return cloneOverworldActionResult(
+      this.withLocalDiscovery(this.applyActionApplication(applied), current.id),
+    );
   }
 
   private cachedCompactView(): OverworldCompactView {
@@ -559,7 +571,9 @@ export class OverworldSession {
   }
 
   previewQuestStart(questId: string): OverworldQuestView {
-    return previewOverworldSessionQuestStart(this.questStartState(questId));
+    return cloneOverworldQuestView(
+      previewOverworldSessionQuestStart(this.questStartState(questId)),
+    );
   }
 
   startQuest(questId: string): OverworldQuestView {
@@ -568,7 +582,7 @@ export class OverworldSession {
     if (applied.stateChanged) {
       this.clearSnapshotCache();
     }
-    return applied.quest;
+    return cloneOverworldQuestView(applied.quest);
   }
 
   completeQuest(
@@ -589,7 +603,7 @@ export class OverworldSession {
     if (applied.stateChanged) {
       this.clearSnapshotCache();
     }
-    return applied.result;
+    return cloneOverworldQuestCompletionResult(applied.result);
   }
 
   scoutPoi(poiId: string): OverworldActionResult {
@@ -639,13 +653,13 @@ export class OverworldSession {
     });
     this.applyCurrentAreaTravelState(applied);
     this.clearSnapshotCache();
-    return {
+    return cloneOverworldAreaTravelResult({
       from: applied.from,
       to: applied.to,
       route: applied.route,
       minutes: applied.minutes,
       arrivedAt: applied.arrivedAt,
-    };
+    });
   }
 
   workLocalJob(jobId: string): OverworldActionResult {
@@ -774,16 +788,18 @@ export class OverworldSession {
 
   planRoute(destinationId: string): OverworldSessionRoutePlan {
     this.assertNoPendingRoadEncounter("planning another road route");
-    return planOverworldSessionRoadRoute({
-      destinationId,
-      routePlannerIndex: this.routePlannerIndex,
-      currentId: this.currentId,
-      discoveredIds: this.discoveredIds,
-      resources: {
-        fatigue: this.fatigue,
-        supplies: this.supplies,
-      },
-    });
+    return cloneOverworldRouteOption(
+      planOverworldSessionRoadRoute({
+        destinationId,
+        routePlannerIndex: this.routePlannerIndex,
+        currentId: this.currentId,
+        discoveredIds: this.discoveredIds,
+        resources: {
+          fatigue: this.fatigue,
+          supplies: this.supplies,
+        },
+      }),
+    );
   }
 
   resolveRoadEncounter(strategy: OverworldRoadEncounterStrategy): OverworldRoadEncounterResult {
@@ -803,7 +819,7 @@ export class OverworldSession {
     this.applyResourceClockState(applied);
     this.applyPendingRoadEncounterState(applied);
     this.clearSnapshotCache();
-    return applied.result;
+    return cloneOverworldRoadEncounterResult(applied.result);
   }
 
   travel(edgeId: string): TravelLogEntry {
@@ -833,6 +849,6 @@ export class OverworldSession {
     this.applyCurrentAreaState(recorded);
     this.applyPendingRoadEncounterState(recorded);
     this.clearSnapshotCache();
-    return recorded.entry;
+    return cloneOverworldTravelLogEntry(recorded.entry);
   }
 }
