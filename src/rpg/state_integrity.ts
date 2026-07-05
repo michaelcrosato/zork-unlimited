@@ -53,17 +53,27 @@ function collectQuestStageTargets(
   return acc;
 }
 
-function collectFlagTargets(node: unknown, acc: Set<string>): Set<string> {
+type BooleanRuntimeTargets = Map<string, Set<boolean>>;
+
+function addBooleanRuntimeTarget(acc: BooleanRuntimeTargets, id: string, value: boolean): void {
+  const values = acc.get(id) ?? new Set<boolean>();
+  values.add(value);
+  acc.set(id, values);
+}
+
+function collectFlagTargets(node: unknown, acc: BooleanRuntimeTargets): BooleanRuntimeTargets {
   if (Array.isArray(node)) {
     for (const el of node) collectFlagTargets(el, acc);
   } else if (node !== null && typeof node === "object") {
     for (const [k, v] of Object.entries(node)) {
-      if ((k === "set_flag" || k === "clear_flag") && typeof v === "string") {
-        acc.add(v);
+      if (k === "set_flag" && typeof v === "string") {
+        addBooleanRuntimeTarget(acc, v, true);
+      } else if (k === "clear_flag" && typeof v === "string") {
+        addBooleanRuntimeTarget(acc, v, false);
       } else if (k === "unlock_exit" && v !== null && typeof v === "object") {
         const edge = v as Record<string, unknown>;
         if (typeof edge.from === "string" && typeof edge.to === "string") {
-          acc.add(exitFlag(edge.from, edge.to));
+          addBooleanRuntimeTarget(acc, exitFlag(edge.from, edge.to), true);
         }
       }
       collectFlagTargets(v, acc);
@@ -140,7 +150,7 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   const endings = new Set<string>(index.pack.endings.map((e) => e.id));
   const objects = new Set<string>(index.objects.keys());
   const questStages = collectQuestStageTargets(index.pack, new Map<string, Set<string>>());
-  const flags = collectFlagTargets(index.pack, new Set(index.pack.meta.flags_init));
+  const flags = collectFlagTargets(index.pack, new Map<string, Set<boolean>>());
   const vars = collectVarTargets(index.pack, new Set(Object.keys(index.pack.meta.vars_init)));
   const objectRuntimeTargets = collectObjectRuntimeTargets(index.pack, {
     open: new Set<string>(),
@@ -148,6 +158,7 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   });
   const dialogueVars = new Map<string, { room: string; maxOrdinal: number }>();
   const enemyHpVars = new Map<string, number>();
+  for (const id of index.pack.meta.flags_init) addBooleanRuntimeTarget(flags, id, true);
   for (const id of objects) items.add(id);
   // Built-in OPEN/UNLOCK actions write sparse runtime state; static defaults do not.
   for (const object of index.pack.objects) {
@@ -162,7 +173,7 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
     dialogueVars.set(key, { room: npc.room, maxOrdinal: npc.dialogue.nodes.length });
   }
   for (const enemy of index.pack.enemies) {
-    if (enemy.defeat_flag !== undefined) flags.add(enemy.defeat_flag);
+    if (enemy.defeat_flag !== undefined) addBooleanRuntimeTarget(flags, enemy.defeat_flag, true);
     const key = enemyHpVar(enemy.id);
     vars.add(key);
     enemyHpVars.set(key, enemy.hp);
@@ -178,9 +189,18 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   if (state.endingId !== null && !endings.has(state.endingId)) {
     throw new SaveIntegrityError(`Save references unknown ending "${state.endingId}".`);
   }
-  for (const id of Object.keys(state.flags)) {
-    if (!flags.has(id)) {
+  for (const id of index.pack.meta.flags_init) {
+    if (state.flags[id] === undefined) {
+      throw new SaveIntegrityError(`Save is missing initialized flag "${id}".`);
+    }
+  }
+  for (const [id, value] of Object.entries(state.flags)) {
+    const values = flags.get(id);
+    if (values === undefined) {
       throw new SaveIntegrityError(`Save references unknown flag "${id}".`);
+    }
+    if (!values.has(value)) {
+      throw new SaveIntegrityError(`Save references invalid flag state "${id}" (${value}).`);
     }
   }
   for (const [id, value] of Object.entries(state.vars)) {

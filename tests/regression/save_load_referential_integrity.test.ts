@@ -94,6 +94,7 @@ function runtimeStateFixtureIndex() {
         title: "Object Runtime Fixture",
         start_room: "room",
         vars_init: {},
+        flags_init: ["warded"],
       },
       rooms: [
         {
@@ -127,7 +128,10 @@ function runtimeStateFixtureIndex() {
             {
               verb: "USE",
               target: "lamp",
-              effects: [{ set_object_locked: { id: "lamp", locked: true } }],
+              effects: [
+                { set_object_locked: { id: "lamp", locked: true } },
+                { clear_flag: "warded" },
+              ],
             },
           ],
         },
@@ -174,6 +178,25 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     });
     expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
     expect(() => api().load_game({ save: forged })).toThrow(/unknown flag/);
+  });
+
+  it("RPG: an impossible runtime flag value is a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      s.flags = { ...(s.flags as Record<string, boolean>), wight_slain: false };
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/invalid flag state/);
+  });
+
+  it("RPG: a missing initialized runtime flag is a hard SaveIntegrityError", () => {
+    const index = runtimeStateFixtureIndex();
+    const state = initStateForRpgPack(index, 1);
+    expect(() => assertRpgStateReferences(index, { ...state, flags: {} })).toThrow(
+      SaveIntegrityError,
+    );
+    expect(() => assertRpgStateReferences(index, { ...state, flags: {} })).toThrow(
+      /missing initialized flag/,
+    );
   });
 
   it("RPG: a phantom runtime var is a hard SaveIntegrityError", () => {
@@ -329,6 +352,7 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
     expect(() =>
       assertRpgStateReferences(index, {
         ...state,
+        flags: { warded: false },
         inventory: ["small_key"],
         objectState: {
           chest: { open: true, locked: false },
