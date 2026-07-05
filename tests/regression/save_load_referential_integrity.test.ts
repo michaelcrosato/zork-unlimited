@@ -147,6 +147,22 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
     expect(() => api().load_game({ save: forged })).toThrow(/unknown contained object/);
   });
+
+  it("RPG: a phantom questStage quest is a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      s.questStage = { no_such_quest: "slab_moved" };
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/unknown quest stage/);
+  });
+
+  it("RPG: a phantom questStage value is a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      s.questStage = { barrow: "no_such_stage" };
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/unknown quest stage/);
+  });
 });
 
 describe("save/load referential integrity — GREEN false-rejection guards", () => {
@@ -200,6 +216,21 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
     const reloaded = a.load_game({ save: saved.save });
     expect(saved.state_hash).toBe(before);
     expect(reloaded.state_hash).toBe(before);
+  });
+
+  it("an RPG save with a legitimately advanced quest stage still loads", () => {
+    const a = api();
+    const game = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
+    playSunkenBarrowToVictory(a, game.session_id);
+    const ended = a.get_observation({ session_id: game.session_id });
+    const saved = a.save_game({ session_id: game.session_id });
+    const bundle = JSON.parse(saved.save) as {
+      state: { questStage: Record<string, string> };
+    };
+    expect(bundle.state.questStage.barrow).toBe("slab_moved");
+    const reloaded = a.load_game({ save: saved.save });
+    expect(saved.state_hash).toBe(ended.state_hash);
+    expect(reloaded.state_hash).toBe(ended.state_hash);
   });
 
   it("an ended RPG save still loads", () => {

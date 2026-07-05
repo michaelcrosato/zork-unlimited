@@ -19,6 +19,37 @@ function collectAddItemTargets(node: unknown, acc: Set<string>): Set<string> {
   return acc;
 }
 
+function addQuestStageTarget(acc: Map<string, Set<string>>, quest: string, stage: string): void {
+  const stages = acc.get(quest) ?? new Set<string>();
+  stages.add(stage);
+  acc.set(quest, stages);
+}
+
+/**
+ * Collect quest stages that can legitimately appear in runtime state through
+ * authored effects. Fresh state starts with an empty questStage map, so any
+ * persisted entry must correspond to a set_quest_stage effect in the active pack.
+ */
+function collectQuestStageTargets(
+  node: unknown,
+  acc: Map<string, Set<string>>,
+): Map<string, Set<string>> {
+  if (Array.isArray(node)) {
+    for (const el of node) collectQuestStageTargets(el, acc);
+  } else if (node !== null && typeof node === "object") {
+    for (const [k, v] of Object.entries(node)) {
+      if (k === "set_quest_stage" && v !== null && typeof v === "object") {
+        const stageRef = v as Record<string, unknown>;
+        if (typeof stageRef.quest === "string" && typeof stageRef.stage === "string") {
+          addQuestStageTarget(acc, stageRef.quest, stageRef.stage);
+        }
+      }
+      collectQuestStageTargets(v, acc);
+    }
+  }
+  return acc;
+}
+
 /**
  * Pack-aware referential-integrity gate for loaded RPG state. The generic save
  * schema can prove shape/finiteness, but only the RPG index can prove that
@@ -30,6 +61,7 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   const locations = new Set<string>(index.rooms.keys());
   const endings = new Set<string>(index.pack.endings.map((e) => e.id));
   const objects = new Set<string>(index.objects.keys());
+  const questStages = collectQuestStageTargets(index.pack, new Map<string, Set<string>>());
   for (const id of objects) items.add(id);
   if (!locations.has(state.current)) {
     throw new SaveIntegrityError(`Save references unknown room "${state.current}".`);
@@ -62,6 +94,11 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
           `Save references unknown contained object "${childId}" for "${id}".`,
         );
       }
+    }
+  }
+  for (const [quest, stage] of Object.entries(state.questStage)) {
+    if (questStages.get(quest)?.has(stage) !== true) {
+      throw new SaveIntegrityError(`Save references unknown quest stage "${quest}:${stage}".`);
     }
   }
 }
