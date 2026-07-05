@@ -57,14 +57,16 @@ import {
 import {
   applyOverworldAreaTravel,
   applyOverworldAreaExploration,
-  applyOverworldLocalJobCompletion,
-  applyOverworldSiteExploration,
   applyOverworldTownVisit,
   planOverworldAreaExploration,
-  planOverworldLocalJobCompletion,
-  planOverworldSiteExploration,
   type OverworldAreaTravelResult,
 } from "./session_local_actions.js";
+import {
+  applyOverworldSessionLocalJob,
+  applyOverworldSessionSite,
+  planOverworldSessionLocalJob,
+  planOverworldSessionSite,
+} from "./session_local_lifecycle.js";
 import {
   OverworldSessionSnapshotSchema,
   cloneOverworldSessionSnapshot,
@@ -713,32 +715,27 @@ export class OverworldSession {
   workLocalJob(jobId: string): OverworldActionResult {
     this.assertNoPendingRoadEncounter("working a local job");
     const current = this.currentNode();
-    const plan = planOverworldLocalJobCompletion({
-      jobId,
-      jobsById: this.jobsById,
-      areasById: this.areasById,
-      currentTownId: this.currentId,
-      currentRegion: current.region,
-      currentAreaId: this.currentAreaIdOrThrow(),
-      discoveredJobIds: this.discoveredJobIds,
-      completedJobIds: this.completedJobIds,
-      journalEntries: this.journalEntriesById,
-    });
-    if (plan.alreadyKnown) {
-      return this.alreadyKnownLocalAction(plan.entry);
-    }
-
-    const result = this.recordLocalAction(plan.action, current.name);
-    if (!result.alreadyKnown) {
-      applyOverworldLocalJobCompletion(
+    const result = this.applyActionApplication(
+      applyOverworldSessionLocalJob(
         {
-          completedJobIds: this.completedJobIds,
+          ...this.actionJournalState(),
           regionRenown: this.regionRenown,
+          completedJobIds: this.completedJobIds,
         },
-        plan,
-      );
-      this.clearSnapshotCache();
-    }
+        planOverworldSessionLocalJob({
+          jobId,
+          jobsById: this.jobsById,
+          areasById: this.areasById,
+          currentTownId: this.currentId,
+          currentRegion: current.region,
+          currentAreaId: this.currentAreaIdOrThrow(),
+          discoveredJobIds: this.discoveredJobIds,
+          completedJobIds: this.completedJobIds,
+          journalEntries: this.journalEntriesById,
+        }),
+        current.name,
+      ),
+    );
     return this.withLocalDiscovery(result, current.id);
   }
 
@@ -803,28 +800,25 @@ export class OverworldSession {
   exploreSite(siteId: string): OverworldActionResult {
     this.assertNoPendingRoadEncounter("exploring a site");
     const current = this.currentNode();
-    const plan = planOverworldSiteExploration({
-      siteId,
-      sitesById: this.sitesById,
-      currentTownId: this.currentId,
-      currentAreaId: this.currentAreaIdOrThrow(),
-      discoveredSiteIds: this.discoveredSiteIds,
-      exploredSiteIds: this.exploredSiteIds,
-      journalEntries: this.journalEntriesById,
-    });
-    if (plan.alreadyKnown) return this.alreadyKnownLocalAction(plan.entry);
-
-    const result = this.recordLocalAction(plan.action, current.name);
-    if (!result.alreadyKnown) {
-      applyOverworldSiteExploration(
+    const result = this.applyActionApplication(
+      applyOverworldSessionSite(
         {
-          exploredSiteIds: this.exploredSiteIds,
+          ...this.actionJournalState(),
           regionRenown: this.regionRenown,
+          exploredSiteIds: this.exploredSiteIds,
         },
-        plan,
-      );
-      this.clearSnapshotCache();
-    }
+        planOverworldSessionSite({
+          siteId,
+          sitesById: this.sitesById,
+          currentTownId: this.currentId,
+          currentAreaId: this.currentAreaIdOrThrow(),
+          discoveredSiteIds: this.discoveredSiteIds,
+          exploredSiteIds: this.exploredSiteIds,
+          journalEntries: this.journalEntriesById,
+        }),
+        current.name,
+      ),
+    );
     return this.withLocalDiscovery(result, current.id);
   }
 
