@@ -43,6 +43,12 @@ export type MutableOverworldSessionQuestCompletionState = OverworldActionJournal
   completedQuestIds: Set<string>;
 };
 
+export type OverworldSessionQuestStartState = OverworldSessionQuestStartPlanState &
+  MutableOverworldSessionQuestStartState;
+
+export type OverworldSessionQuestCompletionState = OverworldSessionQuestCompletionPlanState &
+  MutableOverworldSessionQuestCompletionState;
+
 export type OverworldAppliedSessionQuestStart = OverworldSessionActionApplication & {
   quest: OverworldQuestView;
 };
@@ -65,6 +71,12 @@ export function planOverworldSessionQuestCompletion(
   return planOverworldQuestCompletion(state);
 }
 
+export function previewOverworldSessionQuestStart(
+  state: OverworldSessionQuestStartPlanState,
+): OverworldQuestView {
+  return planOverworldSessionQuestStart(state).quest;
+}
+
 export function applyOverworldSessionQuestStart(
   state: MutableOverworldSessionQuestStartState,
   plan: OverworldQuestStartPlan,
@@ -77,6 +89,12 @@ export function applyOverworldSessionQuestStart(
     ...applied,
     quest: plan.quest,
   };
+}
+
+export function applyOverworldSessionQuestStartFromState(
+  state: OverworldSessionQuestStartState,
+): OverworldAppliedSessionQuestStart {
+  return applyOverworldSessionQuestStart(state, planOverworldSessionQuestStart(state));
 }
 
 export function applyOverworldSessionQuestCompletion(
@@ -99,4 +117,10 @@ export function applyOverworldSessionQuestCompletion(
     minutesAfter: applied.minutesAfter,
     stateChanged: applied.stateChanged,
   };
+}
+
+export function applyOverworldSessionQuestCompletionFromState(
+  state: OverworldSessionQuestCompletionState,
+): OverworldAppliedSessionQuestCompletion {
+  return applyOverworldSessionQuestCompletion(state, planOverworldSessionQuestCompletion(state));
 }
