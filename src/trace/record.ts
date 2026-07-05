@@ -12,6 +12,7 @@ import type { RpgAction, StepResult } from "../api/types.js";
 import type { EngineAction, Rules } from "../core/engine.js";
 import { makeStep } from "../core/engine.js";
 import { SAVE_MODE, type SaveMode } from "../persist/save_load.js";
+import { assertTraceIdentityFields } from "./integrity.js";
 import {
   compactSourceLegacyMetadata,
   compactSourceRefFromMetadata,
@@ -108,6 +109,7 @@ export function recordTrace<A extends EngineAction>(
   actions: A[],
   opts: RecordOptions,
 ): Trace<A> {
+  assertTraceIdentityFields(opts);
   const run = runActions(rules, initialState, actions);
   const sourceRef = traceSourceRef(opts);
   const sourceMetadata = compactSourceLegacyMetadata(sourceRef);

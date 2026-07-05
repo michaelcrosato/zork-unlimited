@@ -245,6 +245,42 @@ describe("trace record / replay (§8.8)", () => {
     expect(() => replayTrace(withoutMode as typeof trace, microRules)).toThrow(/Trace mode/);
   });
 
+  it("rejects malformed trace identity at the recording boundary", () => {
+    const base = {
+      trace_id: "tr_test",
+      pack_id: MICRO_PACK_ID,
+      content_hash: MICRO_CONTENT_HASH,
+    };
+
+    for (const field of ["trace_id", "pack_id", "content_hash"] as const) {
+      for (const value of ["", 12, null]) {
+        const malformed = { ...base, [field]: value } as typeof base;
+
+        expect(() => recordTrace(microRules, microInitState(), WIN, malformed)).toThrow(
+          SaveIntegrityError,
+        );
+        expect(() => recordTrace(microRules, microInitState(), WIN, malformed)).toThrow(field);
+      }
+    }
+  });
+
+  it("rejects malformed trace identity at the replay boundary", () => {
+    const trace = recordTrace(microRules, microInitState(), WIN, {
+      trace_id: "tr_test",
+      pack_id: MICRO_PACK_ID,
+      content_hash: MICRO_CONTENT_HASH,
+    });
+
+    for (const field of ["trace_id", "pack_id", "content_hash"] as const) {
+      for (const value of ["", 12, null]) {
+        const malformed = { ...trace, [field]: value } as unknown as typeof trace;
+
+        expect(() => replayTrace(malformed, microRules)).toThrow(SaveIntegrityError);
+        expect(() => replayTrace(malformed, microRules)).toThrow(field);
+      }
+    }
+  });
+
   it("rejects ambiguous trace source metadata", () => {
     expect(() =>
       recordTrace(microRules, microInitState(), WIN, {

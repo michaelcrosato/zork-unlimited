@@ -12,6 +12,7 @@ import { hashState } from "../core/hash.js";
 import type { EngineAction, Rules } from "../core/engine.js";
 import { runActions, type Trace } from "./record.js";
 import { SAVE_MODE, SaveIntegrityError } from "../persist/save_load.js";
+import { assertTraceIdentityFields, type TraceIdentityFields } from "./integrity.js";
 
 export type ReplayResult = {
   ok: boolean;
@@ -38,12 +39,16 @@ function firstDivergentStep(actual: string[], baseline: string[]): number {
 
 export function assertTraceMode(trace: {
   mode?: unknown;
-}): asserts trace is { mode: typeof SAVE_MODE } {
+  trace_id?: unknown;
+  pack_id?: unknown;
+  content_hash?: unknown;
+}): asserts trace is { mode: typeof SAVE_MODE } & TraceIdentityFields {
   if (trace.mode !== SAVE_MODE) {
     throw new SaveIntegrityError(
       `Trace mode must be "${SAVE_MODE}", got ${JSON.stringify(trace.mode)}.`,
     );
   }
+  assertTraceIdentityFields(trace);
 }
 
 /**
