@@ -53,7 +53,7 @@ type TranscriptCompactMore = readonly [
   flags?: number,
   journal?: number,
 ];
-type TranscriptCompactSummary = Omit<
+export type TranscriptCompactSummary = Omit<
   TranscriptSummary,
   "ending_id" | "inventory" | "flags" | "journal"
 > & {
@@ -62,6 +62,15 @@ type TranscriptCompactSummary = Omit<
   flags?: string[];
   journal?: string[];
   more?: TranscriptCompactMore;
+};
+export type TranscriptSummarySource = Omit<
+  TranscriptSummary,
+  "scenes" | "inventory" | "flags" | "journal"
+> & {
+  scenes: readonly string[];
+  inventory: readonly string[];
+  flags: readonly string[];
+  journal: readonly string[];
 };
 type TranscriptSummaryFor<Args extends TranscriptArgs> = Args extends { compact_summary: true }
   ? TranscriptCompactSummary
@@ -106,7 +115,7 @@ export type TranscriptResponse<Args extends TranscriptArgs> = Args extends {
 const TRANSCRIPT_PROJECTION_COMPACT_TURNS = "compact-turns:v1";
 const TRANSCRIPT_PROJECTION_VISIBLE_EVENTS = "visible-events:v1";
 const TRANSCRIPT_PROJECTION_COMPACT_EVENTS = `compact-events:v${RPG_COMPACT_EVENT_VERSION}`;
-const TRANSCRIPT_SUMMARY_PROJECTION_COMPACT = "compact-summary:v1";
+export const TRANSCRIPT_SUMMARY_PROJECTION_COMPACT = "compact-summary:v1";
 const TRANSCRIPT_SUMMARY_LIST_LIMIT = 16;
 const TRANSCRIPT_SUMMARY_JOURNAL_LIMIT = 5;
 export const TRANSCRIPT_TURN_LIMIT_DEFAULT = 64;
@@ -129,7 +138,9 @@ export function hashTranscript(session: Session, stateHash: string): string {
   });
 }
 
-function compactTranscriptSummary(summary: TranscriptSummary): TranscriptCompactSummary {
+export function compactTranscriptSummary(
+  summary: TranscriptSummarySource,
+): TranscriptCompactSummary {
   const scenes = compactHead(summary.scenes, TRANSCRIPT_SUMMARY_LIST_LIMIT);
   const inventory = compactHead(summary.inventory, TRANSCRIPT_SUMMARY_LIST_LIMIT);
   const flags = compactHead(summary.flags, TRANSCRIPT_SUMMARY_LIST_LIMIT);

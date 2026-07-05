@@ -328,6 +328,37 @@ describe("SessionStore", () => {
     expect("turns" in transcript).toBe(false);
   });
 
+  it("keeps compact transcript summary reads out of the full-summary cache", () => {
+    const store = new SessionStore();
+    const journal = Array.from({ length: 10 }, (_, index) => `journal_${index}`);
+    const session = store.create(
+      sessionInit({
+        state: {
+          ...state(),
+          journal,
+        },
+      }),
+    );
+
+    const compact = runRpgGetTranscript(
+      { sessions: store },
+      { session_id: session.id, summary_only: true, compact_summary: true },
+    );
+
+    expect(compact.summary.journal).toEqual(journal.slice(-5));
+    expect(compact.summary.more).toEqual([0, 0, 0, 5]);
+    expect(session.transcriptSummaryCache).toBeUndefined();
+    expect(session.transcriptSummaryProjectionCaches?.size).toBe(1);
+
+    const full = runRpgGetTranscript(
+      { sessions: store },
+      { session_id: session.id, summary_only: true },
+    );
+
+    expect(full.summary.journal).toEqual(journal);
+    expect(session.transcriptSummaryCache?.summary.journal).toEqual(journal);
+  });
+
   it("caches legal actions until the session state is replaced", () => {
     const store = new SessionStore();
     const session = store.create(sessionInit());

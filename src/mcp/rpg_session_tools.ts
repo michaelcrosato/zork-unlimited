@@ -15,11 +15,12 @@ import {
   type RpgStateHashRejection,
   type RpgStateUnchanged,
 } from "./rpg_state_guards.js";
-import type { SessionStore } from "./sessions.js";
+import type { Session, SessionStore, TranscriptSummary } from "./sessions.js";
 import {
+  TRANSCRIPT_SUMMARY_PROJECTION_COMPACT,
+  compactTranscriptSummary,
   hashTranscript,
   transcriptEventVersion,
-  transcriptSummaryFor,
   transcriptTurnsFor,
   transcriptTurnsOmitted,
   transcriptUnchanged,
@@ -103,6 +104,36 @@ type RpgSessionToolDeps = {
   rpgRuntime: RpgMcpSessionRuntime;
 };
 
+function visibleTranscriptFlags(state: GameState): string[] {
+  return Object.keys(state.flags)
+    .filter((flag) => state.flags[flag] === true && !flag.startsWith("__"))
+    .sort();
+}
+
+function fullTranscriptSummary(session: Session): TranscriptSummary {
+  return {
+    steps: session.transcriptStats.actionTurns,
+    scenes: [...session.transcriptStats.scenes].sort(),
+    ended: session.state.ended,
+    ending_id: session.state.endingId,
+    inventory: [...session.state.inventory],
+    flags: visibleTranscriptFlags(session.state),
+    journal: [...session.state.journal],
+  };
+}
+
+function compactTranscriptSummaryForSession(session: Session) {
+  return compactTranscriptSummary({
+    steps: session.transcriptStats.actionTurns,
+    scenes: [...session.transcriptStats.scenes].sort(),
+    ended: session.state.ended,
+    ending_id: session.state.endingId,
+    inventory: session.state.inventory,
+    flags: visibleTranscriptFlags(session.state),
+    journal: session.state.journal,
+  });
+}
+
 export function runRpgGetObservation<Args extends RpgGetObservationToolArgs>(
   deps: RpgSessionToolDeps,
   args: Args,
@@ -163,17 +194,12 @@ export function runRpgGetTranscript<Args extends TranscriptArgs>(
   if (args.if_transcript_hash !== undefined && args.if_transcript_hash === currentTranscriptHash) {
     return transcriptUnchanged(stateHash, currentTranscriptHash) as TranscriptResponse<Args>;
   }
-  const summary = sessions.transcriptSummary(s.id, () => ({
-    steps: s.transcriptStats.actionTurns,
-    scenes: [...s.transcriptStats.scenes].sort(),
-    ended: s.state.ended,
-    ending_id: s.state.endingId,
-    inventory: [...s.state.inventory],
-    flags: Object.keys(s.state.flags)
-      .filter((f) => s.state.flags[f] === true && !f.startsWith("__"))
-      .sort(),
-    journal: [...s.state.journal],
-  }));
+  const summary =
+    args.compact_summary === true
+      ? sessions.transcriptSummaryProjection(s.id, TRANSCRIPT_SUMMARY_PROJECTION_COMPACT, () =>
+          compactTranscriptSummaryForSession(s),
+        )
+      : sessions.transcriptSummary(s.id, () => fullTranscriptSummary(s));
   const turnsOmitted = args.summary_only ? 0 : transcriptTurnsOmitted(s, args);
   const response = {
     session_id: s.id,
@@ -187,7 +213,7 @@ export function runRpgGetTranscript<Args extends TranscriptArgs>(
           ...(turnsOmitted > 0 ? { turns_omitted: turnsOmitted } : {}),
           turns: transcriptTurnsFor(sessions, s, args),
         }),
-    summary: transcriptSummaryFor(sessions, s, args, summary),
+    summary,
   };
   return response as unknown as TranscriptResponse<Args>;
 }
