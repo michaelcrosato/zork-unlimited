@@ -153,6 +153,27 @@ export type OverworldSessionEventInvestigationState = OverworldActionJournalStat
     currentTownName: string;
   };
 
+export type OverworldSessionAreaState = Omit<OverworldSessionAreaPlanState, "journalEntries"> &
+  MutableOverworldSessionAreaState & {
+    currentTownName: string;
+    journalEntriesById: ReadonlyMap<string, OverworldJournalEntry>;
+  };
+
+export type OverworldSessionLocalJobState = Omit<
+  OverworldSessionLocalJobPlanState,
+  "journalEntries"
+> &
+  MutableOverworldSessionLocalJobState & {
+    currentTownName: string;
+    journalEntriesById: ReadonlyMap<string, OverworldJournalEntry>;
+  };
+
+export type OverworldSessionSiteState = Omit<OverworldSessionSitePlanState, "journalEntries"> &
+  MutableOverworldSessionSiteState & {
+    currentTownName: string;
+    journalEntriesById: ReadonlyMap<string, OverworldJournalEntry>;
+  };
+
 export function planOverworldSessionArea(
   state: OverworldSessionAreaPlanState,
 ): OverworldAreaExplorationPlan {
@@ -313,6 +334,19 @@ export function applyOverworldSessionArea(
   return applied;
 }
 
+export function applyOverworldSessionAreaFromState(
+  state: OverworldSessionAreaState,
+): OverworldSessionActionApplication {
+  return applyOverworldSessionArea(
+    state,
+    planOverworldSessionArea({
+      ...state,
+      journalEntries: state.journalEntriesById,
+    }),
+    state.currentTownName,
+  );
+}
+
 export function applyOverworldSessionLocalJob(
   state: MutableOverworldSessionLocalJobState,
   plan: OverworldLocalJobCompletionPlan,
@@ -343,6 +377,19 @@ export function applyOverworldSessionLocalJob(
   return applied;
 }
 
+export function applyOverworldSessionLocalJobFromState(
+  state: OverworldSessionLocalJobState,
+): OverworldSessionActionApplication {
+  return applyOverworldSessionLocalJob(
+    state,
+    planOverworldSessionLocalJob({
+      ...state,
+      journalEntries: state.journalEntriesById,
+    }),
+    state.currentTownName,
+  );
+}
+
 export function applyOverworldSessionSite(
   state: MutableOverworldSessionSiteState,
   plan: OverworldSiteExplorationPlan,
@@ -371,4 +418,17 @@ export function applyOverworldSessionSite(
     );
   }
   return applied;
+}
+
+export function applyOverworldSessionSiteFromState(
+  state: OverworldSessionSiteState,
+): OverworldSessionActionApplication {
+  return applyOverworldSessionSite(
+    state,
+    planOverworldSessionSite({
+      ...state,
+      journalEntries: state.journalEntriesById,
+    }),
+    state.currentTownName,
+  );
 }

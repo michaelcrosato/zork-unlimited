@@ -50,18 +50,15 @@ import {
 } from "./session_service_lifecycle.js";
 import { type OverworldAreaTravelResult } from "./session_local_actions.js";
 import {
-  applyOverworldSessionArea,
+  applyOverworldSessionAreaFromState,
   applyOverworldSessionAreaTravel,
   applyOverworldSessionContactTalkFromState,
   applyOverworldSessionEventInvestigationFromState,
-  applyOverworldSessionLocalJob,
+  applyOverworldSessionLocalJobFromState,
   applyOverworldSessionPoiScoutFromState,
-  applyOverworldSessionSite,
+  applyOverworldSessionSiteFromState,
   applyOverworldSessionTownVisit,
-  planOverworldSessionArea,
   planOverworldSessionAreaTravel,
-  planOverworldSessionLocalJob,
-  planOverworldSessionSite,
 } from "./session_local_lifecycle.js";
 import {
   OverworldSessionSnapshotSchema,
@@ -619,22 +616,17 @@ export class OverworldSession {
     const current = this.currentNode();
     return this.applyLocalActionWithDiscovery(
       current,
-      applyOverworldSessionArea(
-        {
-          ...this.actionJournalState(),
-          visitedAreaIds: this.visitedAreaIds,
-        },
-        planOverworldSessionArea({
-          areaId,
-          areasById: this.areasById,
-          currentTownId: this.currentId,
-          currentAreaId: this.currentArea()?.id ?? null,
-          discoveredAreaIds: this.discoveredAreaIds,
-          visitedAreaIds: this.visitedAreaIds,
-          journalEntries: this.journalEntriesById,
-        }),
-        current.name,
-      ),
+      applyOverworldSessionAreaFromState({
+        ...this.actionJournalState(),
+        areaId,
+        areasById: this.areasById,
+        currentTownId: this.currentId,
+        currentAreaId: this.currentArea()?.id ?? null,
+        discoveredAreaIds: this.discoveredAreaIds,
+        visitedAreaIds: this.visitedAreaIds,
+        journalEntriesById: this.journalEntriesById,
+        currentTownName: current.name,
+      }),
     );
   }
 
@@ -669,25 +661,20 @@ export class OverworldSession {
     const current = this.currentNode();
     return this.applyLocalActionWithDiscovery(
       current,
-      applyOverworldSessionLocalJob(
-        {
-          ...this.actionJournalState(),
-          regionRenown: this.regionRenown,
-          completedJobIds: this.completedJobIds,
-        },
-        planOverworldSessionLocalJob({
-          jobId,
-          jobsById: this.jobsById,
-          areasById: this.areasById,
-          currentTownId: this.currentId,
-          currentRegion: current.region,
-          currentAreaId: this.currentAreaIdOrThrow(),
-          discoveredJobIds: this.discoveredJobIds,
-          completedJobIds: this.completedJobIds,
-          journalEntries: this.journalEntriesById,
-        }),
-        current.name,
-      ),
+      applyOverworldSessionLocalJobFromState({
+        ...this.actionJournalState(),
+        jobId,
+        jobsById: this.jobsById,
+        areasById: this.areasById,
+        currentTownId: this.currentId,
+        currentRegion: current.region,
+        currentAreaId: this.currentAreaIdOrThrow(),
+        discoveredJobIds: this.discoveredJobIds,
+        completedJobIds: this.completedJobIds,
+        journalEntriesById: this.journalEntriesById,
+        regionRenown: this.regionRenown,
+        currentTownName: current.name,
+      }),
     );
   }
 
@@ -758,23 +745,18 @@ export class OverworldSession {
     const current = this.currentNode();
     return this.applyLocalActionWithDiscovery(
       current,
-      applyOverworldSessionSite(
-        {
-          ...this.actionJournalState(),
-          regionRenown: this.regionRenown,
-          exploredSiteIds: this.exploredSiteIds,
-        },
-        planOverworldSessionSite({
-          siteId,
-          sitesById: this.sitesById,
-          currentTownId: this.currentId,
-          currentAreaId: this.currentAreaIdOrThrow(),
-          discoveredSiteIds: this.discoveredSiteIds,
-          exploredSiteIds: this.exploredSiteIds,
-          journalEntries: this.journalEntriesById,
-        }),
-        current.name,
-      ),
+      applyOverworldSessionSiteFromState({
+        ...this.actionJournalState(),
+        siteId,
+        sitesById: this.sitesById,
+        currentTownId: this.currentId,
+        currentAreaId: this.currentAreaIdOrThrow(),
+        discoveredSiteIds: this.discoveredSiteIds,
+        exploredSiteIds: this.exploredSiteIds,
+        journalEntriesById: this.journalEntriesById,
+        regionRenown: this.regionRenown,
+        currentTownName: current.name,
+      }),
     );
   }
 
