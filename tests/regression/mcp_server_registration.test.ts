@@ -300,7 +300,7 @@ describe("MCP server registration", () => {
     expect(rpgDefaults).toContain("hide_graph: true");
     expect(rpgDefaults.indexOf("hide_graph: true")).toBeLessThan(rpgDefaults.indexOf("...input"));
     const rpgViewOptions = toolApiSourceBlock("type RpgViewOptions", "type RpgEventOptions");
-    const rpgEventOptions = toolApiSourceBlock("type RpgEventOptions", "type OverworldViewField");
+    const rpgEventOptions = toolApiSourceBlock("type RpgEventOptions", "type RpgViewField");
     const viewOnlyRpgArgs = [
       toolApiSourceBlock("type RpgNewGameArgs", "type RpgStartWorldQuestArgs"),
       toolApiSourceBlock("type RpgStartWorldQuestArgs", "type RpgGetObservationArgs"),
