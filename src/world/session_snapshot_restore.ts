@@ -50,6 +50,7 @@ export type OverworldSessionSnapshotRestorePlan = {
   currentAreaByTown: ReadonlyMap<string, string>;
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
   regionRenown: ReadonlyMap<string, number>;
+  resolvedEventHomeIds: ReadonlySet<string>;
   travelLog: readonly TravelLogEntry[];
 };
 
@@ -68,6 +69,7 @@ export type OverworldSessionSnapshotRestoreState = {
   journalEntriesById: Map<string, OverworldJournalEntry>;
   regionRenown: Map<string, number>;
   resolvedEventIds: Set<string>;
+  resolvedEventHomeIds: Set<string>;
   startedQuestIds: Set<string>;
   travelLog: TravelLogEntry[];
   visitedAreaIds: Set<string>;
@@ -124,6 +126,7 @@ export function applyOverworldSessionSnapshotRestore(
   replaceStringSet(state.exploredSiteIds, snapshot.exploredSiteIds);
   replaceNumberMap(state.regionRenown, plan.regionRenown);
   replaceStringSet(state.completedRegionalArcIds, snapshot.completedRegionalArcIds);
+  replaceStringSet(state.resolvedEventHomeIds, [...plan.resolvedEventHomeIds]);
 
   return {
     currentIdAfter: snapshot.currentId,
@@ -216,6 +219,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     snapshot.resolvedEventIds,
     indexes.eventIds,
   );
+  const resolvedEventHomeIds = resolvedOverworldEventHomeIds(resolvedEventIds, indexes.eventsById);
   const completedRegionalArcIds = assertKnownIds(
     "completed regional arc id",
     snapshot.completedRegionalArcIds,
@@ -363,10 +367,24 @@ export function planOverworldSessionSnapshotRestore(args: {
     currentAreaByTown,
     pendingRoadEncounter,
     regionRenown,
+    resolvedEventHomeIds,
     travelLog: restoreOverworldTravelLogEntries(snapshot.travelLog, {
       edgesById: indexes.edgesById,
       nodesById: indexes.nodesById,
       roadEventsByEdgeId: indexes.roadEventsByEdgeId,
     }),
   };
+}
+
+function resolvedOverworldEventHomeIds(
+  resolvedEventIds: ReadonlySet<string>,
+  eventsById: ReadonlyMap<string, { home: string }>,
+): ReadonlySet<string> {
+  const homeIds = new Set<string>();
+  for (const eventId of resolvedEventIds) {
+    const event = eventsById.get(eventId);
+    if (!event) throw new Error(`Overworld session snapshot has unknown event "${eventId}".`);
+    homeIds.add(event.home);
+  }
+  return homeIds;
 }

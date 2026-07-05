@@ -81,6 +81,7 @@ function restorePlan(
     currentAreaByTown: new Map([["town_b", "area_b"]]),
     pendingRoadEncounter: null,
     regionRenown: new Map([["Region", 3]]),
+    resolvedEventHomeIds: new Set(["town_b"]),
     travelLog: [travelEntry()],
     ...overrides,
   };
@@ -112,6 +113,7 @@ function restoreState(
     journalEntriesById: new Map([[staleJournalEntry.id, staleJournalEntry]]),
     regionRenown: new Map([["Old Region", 99]]),
     resolvedEventIds: new Set(["old_event"]),
+    resolvedEventHomeIds: new Set(["old_town"]),
     startedQuestIds: new Set(["old_quest"]),
     travelLog: [travelEntry({ edgeId: "old_road" })],
     visitedAreaIds: new Set(["old_area"]),
@@ -152,6 +154,7 @@ describe("overworld session snapshot restore application", () => {
     expect([...state.exploredSiteIds]).toEqual(["site_b"]);
     expect([...state.regionRenown]).toEqual([["Region", 3]]);
     expect([...state.completedRegionalArcIds]).toEqual(["arc_b"]);
+    expect([...state.resolvedEventHomeIds]).toEqual(["town_b"]);
     expect(state.journalEntries).toEqual(sourceSnapshot.journalEntries);
     expect(state.journalEntries[0]).not.toBe(sourceSnapshot.journalEntries[0]);
     expect(state.journalEntriesById.get("area:area_b")).toEqual(sourceSnapshot.journalEntries[0]);

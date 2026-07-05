@@ -330,6 +330,7 @@ export class OverworldSession {
       journalEntries: this.journalEntries,
       journalEntriesById: this.journalEntriesById,
       resolvedEventIds: this.resolvedEventIds,
+      resolvedEventHomeIds: this.resolvedEventHomeIds,
       discoveredAreaIds: this.discoveredAreaIds,
       visitedAreaIds: this.visitedAreaIds,
       discoveredJobIds: this.discoveredJobIds,
@@ -361,17 +362,8 @@ export class OverworldSession {
     this.applyCurrentTownState(applied);
     this.applyCurrentAreaState(applied);
     this.applyResourceClockState(applied);
-    this.rebuildResolvedEventHomeIds();
     this.applyPendingRoadEncounterState(applied);
     this.clearSnapshotCache();
-  }
-
-  private rebuildResolvedEventHomeIds(): void {
-    this.resolvedEventHomeIds.clear();
-    for (const eventId of this.resolvedEventIds) {
-      const event = this.localEventsById.get(eventId);
-      if (event) this.resolvedEventHomeIds.add(event.home);
-    }
   }
 
   private markSeen(nodeId: string): void {
