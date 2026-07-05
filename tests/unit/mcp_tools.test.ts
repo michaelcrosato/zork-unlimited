@@ -1025,7 +1025,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       JSON.stringify(compact).length,
     );
 
-    expect(compact.context.v).toBe(6);
+    expect(compact.context.v).toBe(7);
     expect(compact.context.here).toEqual([
       full.current.id,
       full.current.name,

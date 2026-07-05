@@ -6,13 +6,14 @@ import { compactText } from "../core/compact_text.js";
 
 export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
 export const OVERWORLD_COMPACT_ROUTE_LIMIT = 8;
+export const OVERWORLD_COMPACT_ROUTE_STEP_LIMIT = 12;
 export const OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT = 5;
 export const OVERWORLD_COMPACT_ID_LIST_LIMIT = 16;
 export const OVERWORLD_COMPACT_LOCAL_REF_LIMIT = 12;
 export const OVERWORLD_COMPACT_LABEL_CHAR_LIMIT = 96;
 export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 6 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 7 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactQuestRef = readonly [id: string, title: string];
@@ -169,6 +170,7 @@ export type OverworldCompactView = {
   area_routes?: OverworldCompactAreaRoute[];
   route_options: OverworldCompactRouteOption[];
   route_options_truncated?: true;
+  route_paths_truncated?: true;
   areas: OverworldCompactRef[];
   poi: OverworldCompactRef[];
   contacts: OverworldCompactRef[];
@@ -286,9 +288,13 @@ export function compactOverworldRenownEntries(
   return compact;
 }
 
-export function compactRouteOption(plan: OverworldSessionRoutePlan): OverworldCompactRouteOption {
+export function compactRouteOption(
+  plan: OverworldSessionRoutePlan,
+  roadIdLimit = plan.steps.length,
+): OverworldCompactRouteOption {
   const roadIds: string[] = [];
-  for (const step of plan.steps) roadIds.push(step.edge.id);
+  const capped = Math.min(plan.steps.length, roadIdLimit);
+  for (let index = 0; index < capped; index += 1) roadIds.push(plan.steps[index]!.edge.id);
   return [
     plan.destination.id,
     plan.estimate.elapsedMinutes,
@@ -303,9 +309,18 @@ export function compactOverworldRouteOptions(
 ): OverworldCompactRouteOption[] {
   const compact: OverworldCompactRouteOption[] = [];
   for (let index = 0; index < plans.length && index < OVERWORLD_COMPACT_ROUTE_LIMIT; index += 1) {
-    compact.push(compactRouteOption(plans[index]!));
+    compact.push(compactRouteOption(plans[index]!, OVERWORLD_COMPACT_ROUTE_STEP_LIMIT));
   }
   return compact;
+}
+
+export function compactOverworldRoutePathsTruncated(
+  plans: readonly OverworldSessionRoutePlan[],
+): boolean {
+  for (let index = 0; index < plans.length && index < OVERWORLD_COMPACT_ROUTE_LIMIT; index += 1) {
+    if (plans[index]!.steps.length > OVERWORLD_COMPACT_ROUTE_STEP_LIMIT) return true;
+  }
+  return false;
 }
 
 type OverworldCompactRouteSource = {
@@ -525,6 +540,7 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
 
   if (view.area_routes) clone.area_routes = cloneTupleList(view.area_routes);
   if (view.route_options_truncated) clone.route_options_truncated = true;
+  if (view.route_paths_truncated) clone.route_paths_truncated = true;
   if (view.jobs) clone.jobs = cloneTupleList(view.jobs);
   if (view.sites) clone.sites = cloneTupleList(view.sites);
   if (view.quests) clone.quests = cloneTupleList(view.quests);
@@ -548,6 +564,7 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
 
 export function compactOverworldView(view: OverworldView): OverworldCompactView {
   const routeOptions = compactOverworldRouteOptions(view.routeOptions);
+  const routePathsTruncated = compactOverworldRoutePathsTruncated(view.routeOptions);
   const travelLog = compactOverworldTravelLog(view.log);
   const areaRoutes = compactOverworldAreaRoutes(view.areaExits);
   const jobs = compactOverworldTitleRefs(view.jobs);
@@ -605,6 +622,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     ...(view.routeOptions.length > routeOptions.length
       ? { route_options_truncated: true as const }
       : {}),
+    ...(routePathsTruncated ? { route_paths_truncated: true as const } : {}),
     areas: compactOverworldRefs(view.areas),
     poi: compactOverworldTitleRefs(view.pois),
     contacts: compactOverworldRefs(view.characters),

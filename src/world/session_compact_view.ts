@@ -9,6 +9,7 @@ import {
   compactOverworldRenownEntries,
   compactOverworldRoads,
   compactOverworldRouteOptions,
+  compactOverworldRoutePathsTruncated,
   compactOverworldTitleRefs,
   compactOverworldTravelLog,
   compactPendingRoad,
@@ -76,6 +77,7 @@ export function buildOverworldSessionCompactView(
 ): OverworldCompactView {
   const areaRoutes = compactOverworldAreaRoutes(state.areaExits);
   const compactRouteOptions = compactOverworldRouteOptions(state.routeOptions);
+  const routePathsTruncated = compactOverworldRoutePathsTruncated(state.routeOptions);
   const idPayload = compactOverworldSessionIdPayload(state.ids);
   const jobs = compactOverworldTitleRefs(state.jobs);
   const sites = compactOverworldTitleRefs(state.sites);
@@ -129,6 +131,7 @@ export function buildOverworldSessionCompactView(
     ...(state.routeOptions.length > compactRouteOptions.length
       ? { route_options_truncated: true as const }
       : {}),
+    ...(routePathsTruncated ? { route_paths_truncated: true as const } : {}),
     areas,
     poi,
     contacts,
