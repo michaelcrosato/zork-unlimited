@@ -18,8 +18,6 @@ import {
   describeOverworldContactAction,
   describeOverworldEventAction,
   describeOverworldPoiAction,
-  type OverworldLocalActionDescriptor,
-  type OverworldLocalActionKind,
 } from "./local_actions.js";
 import { cloneOverworldCompactView, type OverworldCompactView } from "./compact_view.js";
 import {
@@ -36,18 +34,12 @@ import {
   applyOverworldRoadEncounter,
   type OverworldRoadEncounterResult,
 } from "./session_road_encounters.js";
-import {
-  recordOverworldAction,
-  recordOverworldLocalAction,
-  type OverworldActionJournalState,
-  type OverworldRecordedActionResult,
-} from "./session_action_recording.js";
+import { type OverworldActionJournalState } from "./session_action_recording.js";
 import {
   applyOverworldEventResolution,
   planOverworldEventResolution,
 } from "./session_event_resolution.js";
 import {
-  emptyOverworldLocalDiscovery,
   type OverworldLocalDiscoveryResult,
   type OverworldQuestView,
 } from "./session_local_discovery.js";
@@ -63,7 +55,6 @@ import {
 } from "./session_quests.js";
 import { type OverworldSnapshotManifestIndex } from "./session_manifest_index.js";
 import {
-  applyOverworldServicePlan,
   planOverworldTownRest,
   planOverworldTownResupply,
   type OverworldServicePlan,
@@ -124,6 +115,16 @@ import {
   visibleOverworldSessionAreaExits,
   type MutableOverworldSessionLocalState,
 } from "./session_local_state.js";
+import {
+  alreadyKnownOverworldSessionLocalAction,
+  applyOverworldSessionServicePlan,
+  recordOverworldSessionAction,
+  recordOverworldSessionLocalAction,
+  withOverworldSessionLocalDiscovery,
+  type OverworldActionResult,
+  type OverworldSessionActionApplication,
+  type OverworldSessionLocalAction,
+} from "./session_action_application.js";
 
 export type {
   OverworldRoadEncounterOption,
@@ -148,17 +149,7 @@ export type {
   TravelLogEntry,
   TravelLogEntrySnapshot,
 } from "./session_snapshot.js";
-
-export type OverworldActionResult = {
-  minutes: number;
-  alreadyKnown: boolean;
-  entry: OverworldJournalEntry;
-  discoveredAreas?: OverworldArea[];
-  discoveredJobs?: OverworldLocalJob[];
-  discoveredSites?: OverworldExplorationSite[];
-  discoveredQuests?: OverworldQuestView[];
-};
-
+export type { OverworldActionResult } from "./session_action_application.js";
 export type { OverworldView } from "./session_view.js";
 
 type OverworldClockState = {
@@ -456,51 +447,39 @@ export class OverworldSession {
     };
   }
 
-  private applyRecordedAction(recorded: OverworldRecordedActionResult): OverworldActionResult {
-    this.applyClockState(recorded);
-    if (recorded.stateChanged) this.clearSnapshotCache();
-    return {
-      minutes: recorded.minutes,
-      alreadyKnown: recorded.alreadyKnown,
-      entry: recorded.entry,
-    };
+  private applyActionApplication(
+    applied: OverworldSessionActionApplication,
+  ): OverworldActionResult {
+    this.applyClockState(applied);
+    if (applied.stateChanged) this.clearSnapshotCache();
+    return applied.result;
   }
 
   private recordAction(
     entry: Omit<OverworldJournalEntry, "recordedAt">,
     minutes: number,
   ): OverworldActionResult {
-    return this.applyRecordedAction(
-      recordOverworldAction(this.actionJournalState(), entry, minutes),
+    return this.applyActionApplication(
+      recordOverworldSessionAction(this.actionJournalState(), entry, minutes),
     );
   }
 
-  private recordLocalAction<Kind extends OverworldLocalActionKind>(
-    action: OverworldLocalActionDescriptor<Kind>,
+  private recordLocalAction(
+    action: OverworldSessionLocalAction,
     town: string,
   ): OverworldActionResult {
-    return this.applyRecordedAction(
-      recordOverworldLocalAction(this.actionJournalState(), action, town),
+    return this.applyActionApplication(
+      recordOverworldSessionLocalAction(this.actionJournalState(), action, town),
     );
   }
 
   private applyServicePlan(plan: OverworldServicePlan): OverworldServiceResult {
-    const applied = applyOverworldServicePlan(this.actionJournalState(), plan);
+    const applied = applyOverworldSessionServicePlan(this.actionJournalState(), plan);
     if (applied.stateChanged) {
       this.applyResourceClockState(applied);
       this.clearSnapshotCache();
     }
-    return {
-      action: applied.action,
-      minutes: applied.minutes,
-      changed: applied.changed,
-      suppliesBefore: applied.suppliesBefore,
-      suppliesAfter: applied.suppliesAfter,
-      fatigueBefore: applied.fatigueBefore,
-      fatigueAfter: applied.fatigueAfter,
-      message: applied.message,
-      entry: applied.entry,
-    };
+    return applied.result;
   }
 
   private localAreas(nodeId: string): OverworldArea[] {
@@ -546,22 +525,14 @@ export class OverworldSession {
   }
 
   private withLocalDiscovery(result: OverworldActionResult, nodeId: string): OverworldActionResult {
-    const discovery = result.alreadyKnown
-      ? emptyOverworldLocalDiscovery()
-      : this.discoverLocalProgressForTown(nodeId);
-    return {
-      ...result,
-      ...discovery,
-    };
+    return withOverworldSessionLocalDiscovery(
+      result,
+      result.alreadyKnown ? null : this.discoverLocalProgressForTown(nodeId),
+    );
   }
 
   private alreadyKnownLocalAction(entry: OverworldJournalEntry): OverworldActionResult {
-    return {
-      minutes: 0,
-      alreadyKnown: true,
-      entry,
-      ...emptyOverworldLocalDiscovery(),
-    };
+    return alreadyKnownOverworldSessionLocalAction(entry);
   }
 
   private cachedCompactView(): OverworldCompactView {
