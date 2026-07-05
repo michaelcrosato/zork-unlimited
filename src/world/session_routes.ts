@@ -6,6 +6,11 @@ import type {
   OverworldRouteStep,
 } from "./overworld.js";
 import {
+  cloneOverworldEdge,
+  cloneOverworldNode,
+  cloneOverworldRoadEvent,
+} from "./overworld_clone.js";
+import {
   resolveOverworldTravelLeg,
   travelCondition,
   type OverworldTravelResourceState,
@@ -175,7 +180,15 @@ export function cloneOverworldRouteOption(
 ): OverworldSessionRoutePlan {
   return {
     ...plan,
-    steps: [...plan.steps],
+    from: cloneOverworldNode(plan.from),
+    destination: cloneOverworldNode(plan.destination),
+    steps: plan.steps.map((step) => ({
+      ...step,
+      from: cloneOverworldNode(step.from),
+      to: cloneOverworldNode(step.to),
+      edge: cloneOverworldEdge(step.edge),
+      roadEvent: step.roadEvent ? cloneOverworldRoadEvent(step.roadEvent) : null,
+    })),
     estimate: { ...plan.estimate },
   };
 }

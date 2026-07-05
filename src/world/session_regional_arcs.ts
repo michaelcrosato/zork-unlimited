@@ -1,4 +1,5 @@
 import type { OverworldNode, OverworldRegionalArc } from "./overworld.js";
+import { cloneOverworldNode } from "./overworld_clone.js";
 import { timeLabel } from "./session_journal_codec.js";
 import { addOverworldJournalEntry } from "./session_journal_store.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
@@ -105,8 +106,8 @@ export function cloneOverworldRegionalArcProgress(
 ): OverworldRegionalArcProgress {
   return {
     ...arc,
-    anchorTowns: [...arc.anchorTowns],
-    resolvedAnchorTowns: [...arc.resolvedAnchorTowns],
+    anchorTowns: arc.anchorTowns.map(cloneOverworldNode),
+    resolvedAnchorTowns: arc.resolvedAnchorTowns.map(cloneOverworldNode),
   };
 }
 

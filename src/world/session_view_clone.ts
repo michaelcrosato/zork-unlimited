@@ -1,3 +1,15 @@
+import {
+  cloneOverworldArea,
+  cloneOverworldAreaExit,
+  cloneOverworldCharacter,
+  cloneOverworldExit,
+  cloneOverworldExplorationSite,
+  cloneOverworldLocalEvent,
+  cloneOverworldLocalJob,
+  cloneOverworldNode,
+  cloneOverworldPoi,
+  cloneOverworldRoadEvent,
+} from "./overworld_clone.js";
 import { cloneOverworldRouteOption } from "./session_routes.js";
 import { cloneOverworldRegionalArcProgress } from "./session_regional_arcs.js";
 import type { OverworldView } from "./session_view.js";
@@ -5,17 +17,19 @@ import type { OverworldView } from "./session_view.js";
 export function cloneOverworldView(view: OverworldView): OverworldView {
   return {
     ...view,
-    areaExits: view.areaExits.map((exit) => ({ ...exit })),
-    exits: view.exits.map((exit) => ({ ...exit })),
-    areas: [...view.areas],
-    pois: [...view.pois],
-    characters: [...view.characters],
-    events: [...view.events],
-    jobs: [...view.jobs],
-    sites: [...view.sites],
+    current: cloneOverworldNode(view.current),
+    currentArea: view.currentArea ? cloneOverworldArea(view.currentArea) : null,
+    areaExits: view.areaExits.map(cloneOverworldAreaExit),
+    exits: view.exits.map(cloneOverworldExit),
+    areas: view.areas.map(cloneOverworldArea),
+    pois: view.pois.map(cloneOverworldPoi),
+    characters: view.characters.map(cloneOverworldCharacter),
+    events: view.events.map(cloneOverworldLocalEvent),
+    jobs: view.jobs.map(cloneOverworldLocalJob),
+    sites: view.sites.map(cloneOverworldExplorationSite),
     quests: view.quests.map((quest) => ({ ...quest })),
     routeOptions: view.routeOptions.map((plan) => cloneOverworldRouteOption(plan)),
-    discovered: [...view.discovered],
+    discovered: view.discovered.map(cloneOverworldNode),
     journal: view.journal.map((entry) => ({ ...entry })),
     discoveredAreaIds: [...view.discoveredAreaIds],
     discoveredJobIds: [...view.discoveredJobIds],
@@ -33,9 +47,13 @@ export function cloneOverworldView(view: OverworldView): OverworldView {
     pendingRoadEncounter: view.pendingRoadEncounter
       ? {
           ...view.pendingRoadEncounter,
+          event: cloneOverworldRoadEvent(view.pendingRoadEncounter.event),
           options: view.pendingRoadEncounter.options.map((option) => ({ ...option })),
         }
       : null,
-    log: view.log.map((entry) => ({ ...entry })),
+    log: view.log.map((entry) => ({
+      ...entry,
+      roadEvent: entry.roadEvent ? cloneOverworldRoadEvent(entry.roadEvent) : null,
+    })),
   };
 }
