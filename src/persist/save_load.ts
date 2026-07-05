@@ -123,6 +123,14 @@ export type SaveMetadata = {
   generatedRpgSeed?: number | null;
 };
 
+function assertNonEmptyString(value: unknown, label: string): asserts value is string {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new SaveIntegrityError(
+      `${label} must be a non-empty string, got ${JSON.stringify(value)}.`,
+    );
+  }
+}
+
 function deepFreezeSaveBundle<T>(value: T, seen = new WeakSet<object>()): T {
   if (value === null || (typeof value !== "object" && typeof value !== "function")) return value;
   const object = value as object;
@@ -178,6 +186,8 @@ export function save(
   metadata: SaveMetadata = {},
 ): string {
   assertRpgMode(mode, "Save mode");
+  assertNonEmptyString(packId, "Save packId");
+  assertNonEmptyString(contentHash, "Save contentHash");
   assertWellFormedState(state);
   const sourceRef = saveSourceRef(packId, metadata);
   const sourceMetadata = compactSourceLegacyMetadata(sourceRef);
@@ -281,6 +291,8 @@ export function load(
   }
   assertRpgMode((bundle as { mode?: unknown }).mode, "Save mode");
   assertOptionalRpgMode(expectedMode, "Expected mode");
+  assertNonEmptyString((bundle as { packId?: unknown }).packId, "Save packId");
+  assertNonEmptyString((bundle as { contentHash?: unknown }).contentHash, "Save contentHash");
   if (
     "worldQuestId" in (bundle as Record<string, unknown>) &&
     typeof (bundle as { worldQuestId?: unknown }).worldQuestId !== "string"

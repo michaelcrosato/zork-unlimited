@@ -82,9 +82,34 @@ describe("save / load (§8.7)", () => {
     expect(write).toThrow(/malformed or non-finite/);
   });
 
+  it("rejects malformed save envelope identity at the write boundary", () => {
+    expect(() => save(microInitState(), "", MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
+    expect(() => save(microInitState(), MICRO_PACK_ID, "")).toThrow(SaveIntegrityError);
+    expect(() => save(microInitState(), 12 as unknown as string, MICRO_CONTENT_HASH)).toThrow(
+      SaveIntegrityError,
+    );
+    expect(() => save(microInitState(), MICRO_PACK_ID, 12 as unknown as string)).toThrow(
+      SaveIntegrityError,
+    );
+  });
+
   it("rejects a content-hash mismatch as a hard error", () => {
     const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH);
     expect(() => load(bytes, "deadbeef")).toThrow(SaveIntegrityError);
+  });
+
+  it("rejects malformed save envelope identity at the load boundary", () => {
+    for (const field of ["packId", "contentHash"] as const) {
+      for (const value of ["", 12, null]) {
+        const bundle = JSON.parse(save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH)) as {
+          [key: string]: unknown;
+        };
+        bundle[field] = value;
+
+        expect(() => load(JSON.stringify(bundle))).toThrow(SaveIntegrityError);
+        expect(() => load(JSON.stringify(bundle))).toThrow(field);
+      }
+    }
   });
 
   it("checks a loaded save bundle against a resolved pack hash", () => {
