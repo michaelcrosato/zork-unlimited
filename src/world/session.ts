@@ -261,7 +261,7 @@ export class OverworldSession {
     return session;
   }
 
-  private clearSnapshotCache(): void {
+  private clearSessionCaches(): void {
     clearOverworldSessionCaches(this.caches);
   }
 
@@ -363,7 +363,7 @@ export class OverworldSession {
     this.applyCurrentAreaState(applied);
     this.applyResourceClockState(applied);
     this.applyPendingRoadEncounterState(applied);
-    this.clearSnapshotCache();
+    this.clearSessionCaches();
   }
 
   private markSeen(nodeId: string): void {
@@ -378,7 +378,7 @@ export class OverworldSession {
       visitedIds: this.visitedIds,
     });
     this.applyCurrentAreaState(applied);
-    if (applied.stateChanged) this.clearSnapshotCache();
+    if (applied.stateChanged) this.clearSessionCaches();
   }
 
   private currentNode(): OverworldNode {
@@ -424,7 +424,7 @@ export class OverworldSession {
     applied: OverworldSessionActionApplication,
   ): OverworldActionResult {
     this.applyClockState(applied);
-    if (applied.stateChanged) this.clearSnapshotCache();
+    if (applied.stateChanged) this.clearSessionCaches();
     return applied.result;
   }
 
@@ -433,7 +433,7 @@ export class OverworldSession {
   ): OverworldServiceResult {
     if (applied.stateChanged) {
       this.applyResourceClockState(applied);
-      this.clearSnapshotCache();
+      this.clearSessionCaches();
     }
     return cloneOverworldServiceResult(applied.result);
   }
@@ -441,14 +441,14 @@ export class OverworldSession {
   private setCurrentAreaForTown(nodeId: string): void {
     const applied = applyOverworldSessionCurrentAreaForTown(this.localState(), nodeId);
     this.applyCurrentAreaState(applied);
-    if (applied.stateChanged) this.clearSnapshotCache();
+    if (applied.stateChanged) this.clearSessionCaches();
   }
 
   private currentArea(): OverworldArea | null {
     const resolution = resolveOverworldSessionCurrentArea(this.localState());
     if (resolution.applied) {
       this.applyCurrentAreaState(resolution.applied);
-      if (resolution.applied.stateChanged) this.clearSnapshotCache();
+      if (resolution.applied.stateChanged) this.clearSessionCaches();
     }
     return resolution.area;
   }
@@ -459,7 +459,7 @@ export class OverworldSession {
 
   private discoverLocalProgressForTown(nodeId: string): OverworldLocalDiscoveryResult {
     const applied = applyOverworldSessionLocalDiscoveryForTown(this.localState(), nodeId);
-    if (applied.stateChanged) this.clearSnapshotCache();
+    if (applied.stateChanged) this.clearSessionCaches();
     return applied.discovery;
   }
 
@@ -580,7 +580,7 @@ export class OverworldSession {
     const applied = applyOverworldSessionQuestStartFromState(this.questStartState(questId));
     this.applyClockState(applied);
     if (applied.stateChanged) {
-      this.clearSnapshotCache();
+      this.clearSessionCaches();
     }
     return cloneOverworldQuestView(applied.quest);
   }
@@ -601,7 +601,7 @@ export class OverworldSession {
     });
     this.applyClockState(applied);
     if (applied.stateChanged) {
-      this.clearSnapshotCache();
+      this.clearSessionCaches();
     }
     return cloneOverworldQuestCompletionResult(applied.result);
   }
@@ -652,7 +652,7 @@ export class OverworldSession {
       discoveredAreaIds: this.discoveredAreaIds,
     });
     this.applyCurrentAreaTravelState(applied);
-    this.clearSnapshotCache();
+    this.clearSessionCaches();
     return cloneOverworldAreaTravelResult({
       from: applied.from,
       to: applied.to,
@@ -818,7 +818,7 @@ export class OverworldSession {
     );
     this.applyResourceClockState(applied);
     this.applyPendingRoadEncounterState(applied);
-    this.clearSnapshotCache();
+    this.clearSessionCaches();
     return cloneOverworldRoadEncounterResult(applied.result);
   }
 
@@ -848,7 +848,7 @@ export class OverworldSession {
     this.applyCurrentTownState(recorded);
     this.applyCurrentAreaState(recorded);
     this.applyPendingRoadEncounterState(recorded);
-    this.clearSnapshotCache();
+    this.clearSessionCaches();
     return cloneOverworldTravelLogEntry(recorded.entry);
   }
 }

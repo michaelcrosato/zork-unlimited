@@ -1196,6 +1196,48 @@ describe("MCP tools — validate / load (§9.4)", () => {
     );
   });
 
+  it("invalidates cached compact overworld context after local discovery actions", () => {
+    const a = api();
+    const started = a.start_overworld();
+    const poi = started.observation.pois[0]!;
+    const before = a.get_overworld_session_context({ session_id: started.session_id });
+
+    expect(before.snapshot_hash).toBe(started.snapshot_hash);
+    expect("journal" in before.context).toBe(false);
+    expect("discovered_jobs" in before.context.ids).toBe(false);
+    expect("discovered_sites" in before.context.ids).toBe(false);
+
+    const scouted = a.scout_overworld_session_poi({
+      session_id: started.session_id,
+      poi_id: poi.id,
+      compact_context: true,
+    });
+    const discoveredJobIds = scouted.result.discoveredJobs?.map((job) => job.id) ?? [];
+    const discoveredSiteIds = scouted.result.discoveredSites?.map((site) => site.id) ?? [];
+
+    expect(scouted.snapshot_hash).not.toBe(before.snapshot_hash);
+    expect(discoveredJobIds.length).toBeGreaterThan(0);
+    expect(discoveredSiteIds.length).toBeGreaterThan(0);
+    expect(scouted.context.ids.discovered_jobs).toEqual(discoveredJobIds);
+    expect(scouted.context.ids.discovered_sites).toEqual(discoveredSiteIds);
+    expect(scouted.context.journal?.[0]).toEqual([
+      scouted.result.entry.kind,
+      scouted.result.entry.title,
+      scouted.result.entry.recordedAt,
+    ]);
+
+    const changed = a.get_overworld_session_context({
+      session_id: started.session_id,
+      if_snapshot_hash: before.snapshot_hash,
+    });
+    expect("unchanged" in changed).toBe(false);
+    if ("unchanged" in changed) throw new Error("expected changed compact context");
+    expect(changed.snapshot_hash).toBe(scouted.snapshot_hash);
+    expect(changed.context.ids.discovered_jobs).toEqual(discoveredJobIds);
+    expect(changed.context.ids.discovered_sites).toEqual(discoveredSiteIds);
+    expect(changed.context.journal).toEqual(scouted.context.journal);
+  });
+
   it("returns compact overworld action results when requested", () => {
     const a = api();
     const fullAreaStart = a.start_overworld();
