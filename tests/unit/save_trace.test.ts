@@ -296,6 +296,54 @@ describe("trace record / replay (§8.8)", () => {
     }
   });
 
+  it("rejects malformed trace initial state at the replay boundary", () => {
+    const trace = recordTrace(microRules, microInitState(), WIN, {
+      trace_id: "tr_test",
+      pack_id: MICRO_PACK_ID,
+      content_hash: MICRO_CONTENT_HASH,
+    });
+    const malformed = {
+      ...trace,
+      initial_state: {
+        ...trace.initial_state,
+        vars: { ...trace.initial_state.vars, hp: Number.POSITIVE_INFINITY },
+      },
+    } as unknown as typeof trace;
+
+    expect(() => replayTrace(malformed, microRules)).toThrow(SaveIntegrityError);
+    expect(() => replayTrace(malformed, microRules)).toThrow(/initial_state|non-finite/);
+  });
+
+  it("rejects traces whose reported seed is detached from initial_state.seed", () => {
+    const trace = recordTrace(microRules, microInitState(), WIN, {
+      trace_id: "tr_test",
+      pack_id: MICRO_PACK_ID,
+      content_hash: MICRO_CONTENT_HASH,
+    });
+
+    for (const value of [trace.seed + 1, Number.MAX_SAFE_INTEGER + 1, 3.5, null]) {
+      const malformed = { ...trace, seed: value } as unknown as typeof trace;
+
+      expect(() => replayTrace(malformed, microRules)).toThrow(SaveIntegrityError);
+      expect(() => replayTrace(malformed, microRules)).toThrow(/seed/);
+    }
+  });
+
+  it("rejects malformed expected final hashes at the replay boundary", () => {
+    const trace = recordTrace(microRules, microInitState(), WIN, {
+      trace_id: "tr_test",
+      pack_id: MICRO_PACK_ID,
+      content_hash: MICRO_CONTENT_HASH,
+    });
+
+    for (const value of ["", null, 12, ["not-a-hash"]]) {
+      const malformed = { ...trace, expected_final_hash: value } as unknown as typeof trace;
+
+      expect(() => replayTrace(malformed, microRules)).toThrow(SaveIntegrityError);
+      expect(() => replayTrace(malformed, microRules)).toThrow(/expected_final_hash/);
+    }
+  });
+
   it("rejects ambiguous trace source metadata", () => {
     expect(() =>
       recordTrace(microRules, microInitState(), WIN, {

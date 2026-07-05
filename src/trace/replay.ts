@@ -14,10 +14,14 @@ import { runActions, type Trace } from "./record.js";
 import { SAVE_MODE, SaveIntegrityError } from "../persist/save_load.js";
 import {
   assertTraceActions,
+  assertTraceExpectedFinalHash,
   assertTraceIdentityFields,
+  assertTraceState,
   assertTraceStepHashes,
   type TraceActionFields,
+  type TraceExpectedFinalHashFields,
   type TraceIdentityFields,
+  type TraceStateFields,
   type TraceStepHashFields,
 } from "./integrity.js";
 
@@ -48,10 +52,15 @@ export function assertTraceMode(trace: {
   trace_id?: unknown;
   pack_id?: unknown;
   content_hash?: unknown;
+  seed?: unknown;
+  initial_state?: unknown;
   actions?: unknown;
+  expected_final_hash?: unknown;
   per_step_hashes?: unknown;
 }): asserts trace is { mode: typeof SAVE_MODE } & TraceIdentityFields &
   TraceActionFields &
+  TraceStateFields &
+  TraceExpectedFinalHashFields &
   TraceStepHashFields {
   if (trace.mode !== SAVE_MODE) {
     throw new SaveIntegrityError(
@@ -59,7 +68,9 @@ export function assertTraceMode(trace: {
     );
   }
   assertTraceIdentityFields(trace);
+  assertTraceState(trace);
   assertTraceActions(trace);
+  assertTraceExpectedFinalHash(trace);
   assertTraceStepHashes(trace);
 }
 

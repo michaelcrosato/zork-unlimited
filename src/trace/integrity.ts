@@ -1,4 +1,5 @@
-import { SaveIntegrityError } from "../persist/save_load.js";
+import { isRuntimeSeed, type GameState } from "../core/state.js";
+import { assertWellFormedState, SaveIntegrityError } from "../persist/save_load.js";
 
 export type TraceIdentityFields = {
   trace_id: string;
@@ -12,6 +13,15 @@ export type TraceStepHashFields = {
 
 export type TraceActionFields = {
   actions: unknown[];
+};
+
+export type TraceStateFields = {
+  seed: number;
+  initial_state: GameState;
+};
+
+export type TraceExpectedFinalHashFields = {
+  expected_final_hash?: string;
 };
 
 function assertNonEmptyString(value: unknown, label: string): asserts value is string {
@@ -40,6 +50,33 @@ export function assertTraceActions<T extends { actions?: unknown }>(
   if (!Array.isArray(trace.actions)) {
     throw new SaveIntegrityError("Trace actions must be an array.");
   }
+}
+
+export function assertTraceState<T extends { seed?: unknown; initial_state?: unknown }>(
+  trace: T,
+): asserts trace is T & TraceStateFields {
+  if (!isRuntimeSeed(trace.seed)) {
+    throw new SaveIntegrityError(
+      `Trace seed must be an integer within JavaScript's safe range, got ${JSON.stringify(
+        trace.seed,
+      )}.`,
+    );
+  }
+  const state = assertWellFormedState(trace.initial_state);
+  if (state.seed !== trace.seed) {
+    throw new SaveIntegrityError(
+      `Trace seed ${JSON.stringify(trace.seed)} must match initial_state.seed ${JSON.stringify(
+        state.seed,
+      )}.`,
+    );
+  }
+}
+
+export function assertTraceExpectedFinalHash<T extends { expected_final_hash?: unknown }>(
+  trace: T,
+): asserts trace is T & TraceExpectedFinalHashFields {
+  if (trace.expected_final_hash === undefined) return;
+  assertNonEmptyString(trace.expected_final_hash, "Trace expected_final_hash");
 }
 
 export function assertTraceStepHashes<
