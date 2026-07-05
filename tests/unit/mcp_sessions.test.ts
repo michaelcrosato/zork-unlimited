@@ -138,13 +138,20 @@ describe("SessionStore", () => {
     const updated = store.update(first.id, nextState);
 
     expect(updated).toBe(first);
-    expect(store.get(first.id).state).toBe(nextState);
+    expect(store.get(first.id).state).toEqual(nextState);
+    expect(store.get(first.id).state).not.toBe(nextState);
     expect(store.get(first.id).stateHash).toBe(hashState(nextState));
-    expect(store.get(first.id).transcript).toBe(transcript);
+    expect(store.get(first.id).transcript).toEqual(transcript);
+    expect(store.get(first.id).transcript).not.toBe(transcript);
     expect(store.get(first.id).hideGraph).toBe(true);
     expect(store.get(second.id).state.current).toBe("other");
     expect(store.get(second.id).stateHash).toBe(hashState(store.get(second.id).state));
     expect(store.get(second.id).packId).toBe("other");
+
+    nextState.current = "mutated_after_update";
+    transcript[0]!.scene_id = "mutated_after_create";
+    expect(store.get(first.id).state.current).toBe("next");
+    expect(store.get(first.id).transcript[0]?.scene_id).toBe("start");
   });
 
   it("preserves state-derived caches when the canonical state hash is unchanged", () => {
@@ -178,7 +185,8 @@ describe("SessionStore", () => {
     const updated = store.update(session.id, equalState);
 
     expect(updated).toBe(session);
-    expect(session.state).toBe(equalState);
+    expect(session.state).toEqual(equalState);
+    expect(session.state).not.toBe(equalState);
     expect(session.stateHash).toBe(stateHash);
     expect(session.legalActionsCache).toBeDefined();
     expect(session.legalActionProjectionCaches).toBeDefined();
@@ -245,12 +253,15 @@ describe("SessionStore", () => {
     };
     store.appendTranscript(session.id, turn);
     expect(session.transcript).toEqual([turn]);
+    expect(session.transcript[0]).not.toBe(turn);
     expect(session.transcriptLogHash).toBe(
       hashState({
         previous: emptyHash,
         turn,
       }),
     );
+    turn.scene_id = "mutated_after_append";
+    expect(session.transcript[0]?.scene_id).toBe("start");
 
     store.replaceTranscript(session.id, []);
     expect(session.transcript).toEqual([]);
@@ -304,11 +315,15 @@ describe("SessionStore", () => {
     store.replaceTranscript(session.id, turns);
 
     expect(session.transcript).toEqual(turns.slice(-2));
+    expect(session.transcript[0]).not.toBe(turns[1]);
+    expect(session.transcript[1]).not.toBe(turns[2]);
     expect(session.transcriptLogHash).toBe(hashState(turns));
     expect(session.transcriptStats.turns).toBe(3);
     expect(session.transcriptStats.actionTurns).toBe(2);
     expect(session.transcriptStats.scenes).toEqual(["scene_0", "scene_1", "scene_2", "scene_3"]);
     expect(transcriptTurnsOmitted(session, { session_id: session.id })).toBe(1);
+    turns[2]!.scene_id = "mutated_after_replace";
+    expect(session.transcript[1]?.scene_id).toBe("scene_2");
   });
 
   it("reports transcript summaries from aggregate stats when old rows are pruned", () => {

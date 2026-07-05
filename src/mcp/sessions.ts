@@ -7,6 +7,7 @@
  * counter (no clock/RNG), which keeps handler tests reproducible.
  */
 import type { GameState } from "../core/state.js";
+import { cloneGameState } from "../core/state.js";
 import type { Rules } from "../core/engine.js";
 import type { GameEvent } from "../core/events.js";
 import type { RpgAction, StepResult } from "../api/types.js";
@@ -120,6 +121,27 @@ function retainedTranscript(transcript: TranscriptTurn[], maxTurns: number): Tra
   return transcript.length > maxTurns ? transcript.slice(transcript.length - maxTurns) : transcript;
 }
 
+function cloneEventValue<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(cloneEventValue) as T;
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nested]) => [key, cloneEventValue(nested)]),
+    ) as T;
+  }
+  return value;
+}
+
+function cloneTranscriptTurn(turn: TranscriptTurn): TranscriptTurn {
+  return {
+    ...turn,
+    events: turn.events.map((event) => cloneEventValue(event) as GameEvent),
+  };
+}
+
+function cloneTranscriptRows(transcript: readonly TranscriptTurn[]): TranscriptTurn[] {
+  return transcript.map(cloneTranscriptTurn);
+}
+
 export type Session = SessionRuntimeCaches<TranscriptSummary> & {
   id: string;
   packId: string;
@@ -178,13 +200,16 @@ export class SessionStore {
 
   create(init: SessionInit): Session {
     const id = `sess_${++this.counter}`;
+    const state = cloneGameState(init.state);
+    const transcript = cloneTranscriptRows(init.transcript);
     const session: Session = {
       id,
       ...init,
-      stateHash: hashState(init.state),
-      transcript: retainedTranscript(init.transcript, this.maxTranscriptTurns),
-      transcriptLogHash: hashState(init.transcript),
-      transcriptStats: transcriptStatsFor(init.transcript),
+      state,
+      stateHash: hashState(state),
+      transcript: retainedTranscript(transcript, this.maxTranscriptTurns),
+      transcriptLogHash: hashState(transcript),
+      transcriptStats: transcriptStatsFor(transcript),
     };
     rememberSessionEntry(this.sessions, id, session, this.maxSessions);
     return session;
@@ -199,7 +224,7 @@ export class SessionStore {
   update(id: string, state: GameState): Session {
     const session = this.get(id);
     const stateHash = state === session.state ? session.stateHash : hashState(state);
-    session.state = state;
+    session.state = cloneGameState(state);
     if (stateHash === session.stateHash) {
       return session;
     }
@@ -332,12 +357,13 @@ export class SessionStore {
 
   appendTranscript(id: string, turn: TranscriptTurn): Session {
     const session = this.get(id);
-    session.transcript.push(turn);
-    recordTranscriptTurn(session.transcriptStats, turn);
+    const storedTurn = cloneTranscriptTurn(turn);
+    session.transcript.push(storedTurn);
+    recordTranscriptTurn(session.transcriptStats, storedTurn);
     session.transcript = retainedTranscript(session.transcript, this.maxTranscriptTurns);
     session.transcriptLogHash = hashState({
       previous: session.transcriptLogHash,
-      turn,
+      turn: storedTurn,
     });
     invalidateSessionTranscriptCaches(session);
     return session;
@@ -345,9 +371,10 @@ export class SessionStore {
 
   replaceTranscript(id: string, transcript: TranscriptTurn[]): Session {
     const session = this.get(id);
-    session.transcript = retainedTranscript(transcript, this.maxTranscriptTurns);
-    session.transcriptLogHash = hashState(transcript);
-    session.transcriptStats = transcriptStatsFor(transcript);
+    const storedTranscript = cloneTranscriptRows(transcript);
+    session.transcript = retainedTranscript(storedTranscript, this.maxTranscriptTurns);
+    session.transcriptLogHash = hashState(storedTranscript);
+    session.transcriptStats = transcriptStatsFor(storedTranscript);
     invalidateSessionTranscriptCaches(session);
     return session;
   }
