@@ -148,6 +148,10 @@ function deepFreeze<T>(value: T): T {
   return Object.freeze(value);
 }
 
+function cloneFrozenGameState(state: GameState): GameState {
+  return deepFreeze(cloneGameState(state));
+}
+
 function transcriptLogHashFor(transcript: readonly TranscriptTurn[]): string {
   return transcript.reduce((previous, turn) => hashState({ previous, turn }), hashState([]));
 }
@@ -234,7 +238,7 @@ export class SessionStore {
 
   create(init: SessionInit): Session {
     const id = `sess_${++this.counter}`;
-    const state = cloneGameState(init.state);
+    const state = cloneFrozenGameState(init.state);
     const transcript = cloneTranscriptRows(init.transcript);
     const session: Session = {
       id,
@@ -257,7 +261,7 @@ export class SessionStore {
 
   update(id: string, state: GameState): Session {
     const session = this.get(id);
-    const nextState = cloneGameState(state);
+    const nextState = cloneFrozenGameState(state);
     const stateHash = hashState(nextState);
     session.state = nextState;
     if (stateHash === session.stateHash) {

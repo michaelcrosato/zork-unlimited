@@ -256,7 +256,7 @@ describe("SessionStore", () => {
     expect(rebuilds).toBe(0);
   });
 
-  it("rehashes same-reference updates before deciding whether caches are fresh", () => {
+  it("freezes session state snapshots against external mutation", () => {
     const store = new SessionStore();
     const session = store.create(sessionInit());
     const actions: RpgActionOption[] = [{ id: "look", command: "look", action: { type: "LOOK" } }];
@@ -264,15 +264,28 @@ describe("SessionStore", () => {
     store.observation(session.id, {}, () => observation("start"));
 
     const previousHash = session.stateHash;
-    const liveState = session.state;
-    liveState.current = "mutated_in_place";
-    const updated = store.update(session.id, liveState);
+    expect(Object.isFrozen(session.state)).toBe(true);
+    expect(Object.isFrozen(session.state.visited)).toBe(true);
+    expect(Object.isFrozen(session.state.inventory)).toBe(true);
+    expect(Object.isFrozen(session.state.objectState)).toBe(true);
+    expect(() => {
+      session.state.current = "mutated_in_place";
+    }).toThrow();
+    expect(() => {
+      session.state.inventory.push("mutated_item");
+    }).toThrow();
+
+    const updated = store.update(session.id, {
+      ...session.state,
+      current: "mutated_through_update",
+    });
 
     expect(updated).toBe(session);
-    expect(session.state).toEqual(liveState);
-    expect(session.state).not.toBe(liveState);
+    expect(session.state.current).toBe("mutated_through_update");
     expect(session.stateHash).toBe(hashState(session.state));
     expect(session.stateHash).not.toBe(previousHash);
+    expect(Object.isFrozen(session.state)).toBe(true);
+    expect(Object.isFrozen(session.state.inventory)).toBe(true);
     expect(session.legalActionsCache).toBeUndefined();
     expect(session.observationCache).toBeUndefined();
   });
