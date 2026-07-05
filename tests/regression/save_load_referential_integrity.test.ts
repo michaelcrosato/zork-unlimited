@@ -135,6 +135,12 @@ function runtimeStateFixtureIndex() {
             },
           ],
         },
+        {
+          id: "field_kit",
+          name: "field kit",
+          description: "A field kit carried from the start.",
+          held: true,
+        },
       ],
       win_conditions: [{ id: "win", conditions: [{ visited: "room" }], ending: "ending_win" }],
       endings: [{ id: "ending_win", title: "Done", text: "Done." }],
@@ -277,6 +283,24 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     expect(() => api().load_game({ save: forged })).toThrow(/duplicate inventory item/);
   });
 
+  it("RPG: a missing held starting item is a hard SaveIntegrityError", () => {
+    const index = runtimeStateFixtureIndex();
+    const state = initStateForRpgPack(index, 1);
+    expect(state.inventory).toContain("field_kit");
+    expect(() =>
+      assertRpgStateReferences(index, {
+        ...state,
+        inventory: state.inventory.filter((id) => id !== "field_kit"),
+      }),
+    ).toThrow(SaveIntegrityError);
+    expect(() =>
+      assertRpgStateReferences(index, {
+        ...state,
+        inventory: state.inventory.filter((id) => id !== "field_kit"),
+      }),
+    ).toThrow(/missing held item/);
+  });
+
   it("RPG: a phantom objectState key is a hard SaveIntegrityError", () => {
     const forged = forgeSave((s) => {
       s.objectState = { no_such_object: { open: true } };
@@ -387,7 +411,7 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
       assertRpgStateReferences(index, {
         ...state,
         flags: { warded: false },
-        inventory: ["small_key"],
+        inventory: ["field_kit", "small_key"],
         objectState: {
           chest: { open: true, locked: false },
           lamp: { locked: true },

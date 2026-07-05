@@ -152,6 +152,7 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   const questStages = collectQuestStageTargets(index.pack, new Map<string, Set<string>>());
   const flags = collectFlagTargets(index.pack, new Map<string, Set<boolean>>());
   const vars = collectVarTargets(index.pack, new Set(Object.keys(index.pack.meta.vars_init)));
+  const heldItems = new Set<string>();
   const objectRuntimeTargets = collectObjectRuntimeTargets(index.pack, {
     open: new Set<string>(),
     locked: new Map<string, Set<boolean>>(),
@@ -162,6 +163,7 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   // Built-in OPEN/UNLOCK actions write sparse runtime state; static defaults do not.
   for (const object of index.pack.objects) {
     if (object.takeable || object.held) items.add(object.id);
+    if (object.held) heldItems.add(object.id);
     if (object.openable) objectRuntimeTargets.open.add(object.id);
     if (object.locked && object.key_id !== undefined) {
       addLockedRuntimeTarget(objectRuntimeTargets.locked, object.id, false);
@@ -245,6 +247,11 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
       throw new SaveIntegrityError(`Save references duplicate inventory item "${id}".`);
     }
     inventory.add(id);
+  }
+  for (const id of heldItems) {
+    if (!inventory.has(id)) {
+      throw new SaveIntegrityError(`Save is missing held item "${id}".`);
+    }
   }
   for (const [id, runtime] of Object.entries(state.objectState)) {
     if (!objects.has(id)) {
