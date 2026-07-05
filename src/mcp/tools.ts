@@ -70,7 +70,10 @@ import {
   type OverworldMcpStartResponse,
   type OverworldMcpViewField,
 } from "./overworld_sessions.js";
-import { overworldQuestCompletionFromRpgSession } from "./overworld_quest_completion.js";
+import {
+  overworldQuestCompletionFromRpgSession,
+  startOverworldQuestThroughRpg,
+} from "./overworld_quest_bridge.js";
 import type { WorldBinding, WorldManifest } from "../world/schema.js";
 import {
   normalizePackPath,
@@ -1161,25 +1164,24 @@ export function createToolApi(opts: { root: string }) {
         return guarded as OverworldQuestStartResponse<Args>;
       }
       const { session } = guarded;
-      const quest = session.previewQuestStart(args.quest_id);
-      const rpgSession = this.start_world_quest({
-        world_quest_id: quest.id,
-        ...(args.seed !== undefined ? { seed: args.seed } : {}),
-        ...(args.hide_graph ? { hide_graph: true } : {}),
-        ...(args.compact_actions ? { compact_actions: true } : {}),
-        ...(args.compact_observation ? { compact_observation: true } : {}),
-      } as RpgStartWorldQuestArgs & Args);
-      const startedQuest = session.startQuest(quest.id);
-      sessions.get(rpgSession.session_id).overworldSessionId = args.session_id;
+      const started = startOverworldQuestThroughRpg({
+        session,
+        overworldSessionId: args.session_id,
+        questId: args.quest_id,
+        startOptions: args,
+        sessions,
+        startWorldQuest: (startArgs) =>
+          this.start_world_quest(startArgs as RpgStartWorldQuestArgs & Args),
+      });
       const questResult =
-        args.compact_result === true ? compactOverworldQuestRef(startedQuest) : startedQuest;
+        args.compact_result === true ? compactOverworldQuestRef(started.quest) : started.quest;
       return {
         ok: true,
         session_id: args.session_id,
         snapshot_hash: overworldSessions.snapshotHash(session),
         quest: questResult,
-        rpg_session_id: rpgSession.session_id,
-        rpg_session: rpgSession,
+        rpg_session_id: started.rpgSession.session_id,
+        rpg_session: started.rpgSession,
         ...overworldSessions.viewField(args, session),
       } as unknown as OverworldQuestStartResponse<Args>;
     },
