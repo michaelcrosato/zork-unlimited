@@ -381,6 +381,7 @@ describe("MCP server registration", () => {
     expect(block).toContain("include_state");
     expect(block).toContain("State hash");
     expect(block).not.toContain("include_state === true");
+    expect(registeredToolBlock("save_game")).toContain("IF_STATE_HASH");
   });
 
   it("keeps retired static overworld compatibility helpers out of ToolApi and MCP", () => {

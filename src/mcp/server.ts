@@ -483,8 +483,8 @@ tool(
 );
 tool(
   "save_game",
-  "Serialize save; stale hash rejects.",
-  { ...SESSION, ...EXPECTED_STATE_HASH },
+  "Serialize save; hash guards.",
+  { ...SESSION, ...EXPECTED_STATE_HASH, ...IF_STATE_HASH },
   (a) => api.save_game(a),
 );
 tool(

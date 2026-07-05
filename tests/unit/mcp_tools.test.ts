@@ -2573,6 +2573,16 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     expect(saved.state_hash).toBe(after);
     expect(a.load_game({ save: saved.save }).state_hash).toBe(after);
     expect(JSON.stringify(stale).length).toBeLessThan(JSON.stringify(saved).length);
+
+    const unchanged = a.save_game({
+      session_id: game.session_id,
+      expected_state_hash: after,
+      if_state_hash: after,
+    });
+    expect(unchanged).toEqual({ state_hash: after, unchanged: true });
+    expect("ok" in unchanged).toBe(false);
+    expect("save" in unchanged).toBe(false);
+    expect(JSON.stringify(unchanged).length).toBeLessThan(JSON.stringify(saved).length);
   });
 
   it("can reload saves into compact RPG context for resumed MCP loops", () => {

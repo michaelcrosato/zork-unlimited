@@ -236,6 +236,7 @@ type RpgStateResponse<Args extends RpgGetStateArgs> = Args extends { if_state_ha
 type RpgSaveArgs = {
   session_id: string;
   expected_state_hash?: string;
+  if_state_hash?: string;
 };
 
 type RpgSaveSuccess = {
@@ -247,9 +248,12 @@ type RpgSaveSuccess = {
 
 type RpgSaveRejection = RpgStateHashRejection;
 
-type RpgSaveResponse<Args extends RpgSaveArgs> = Args extends { expected_state_hash: string }
-  ? RpgSaveSuccess | RpgSaveRejection
-  : RpgSaveSuccess;
+type RpgSaveUnchanged = RpgStateUnchanged;
+
+type RpgSaveResponse<Args extends RpgSaveArgs> =
+  | RpgSaveSuccess
+  | (Args extends { expected_state_hash: string } ? RpgSaveRejection : never)
+  | (Args extends { if_state_hash: string } ? RpgSaveUnchanged : never);
 
 export function createToolApi(opts: { root: string }) {
   const root = opts.root;

@@ -91,6 +91,7 @@ export type RpgStateToolResponse<Args extends RpgGetStateToolArgs> = Args extend
 export type RpgSaveToolArgs = {
   session_id: string;
   expected_state_hash?: string;
+  if_state_hash?: string;
 };
 
 type RpgSaveToolSuccess = {
@@ -102,11 +103,22 @@ type RpgSaveToolSuccess = {
   generated_rpg_seed?: number;
 };
 
-export type RpgSaveToolResponse<Args extends RpgSaveToolArgs> = Args extends {
+type RpgSaveToolRejected<Args extends RpgSaveToolArgs> = Args extends {
   expected_state_hash: string;
 }
-  ? RpgSaveToolSuccess | RpgStateHashRejection
-  : RpgSaveToolSuccess;
+  ? RpgStateHashRejection
+  : never;
+
+type RpgSaveToolUnchanged<Args extends RpgSaveToolArgs> = Args extends {
+  if_state_hash: string;
+}
+  ? RpgStateUnchanged
+  : never;
+
+export type RpgSaveToolResponse<Args extends RpgSaveToolArgs> =
+  | RpgSaveToolSuccess
+  | RpgSaveToolRejected<Args>
+  | RpgSaveToolUnchanged<Args>;
 
 type RpgSessionToolDeps = {
   sessions: SessionStore;
@@ -244,6 +256,9 @@ export function runRpgSaveGame<Args extends RpgSaveToolArgs>(
   const stateHash = s.stateHash;
   if (args.expected_state_hash !== undefined && args.expected_state_hash !== stateHash) {
     return rpgStateHashRejection(stateHash) as RpgSaveToolResponse<Args>;
+  }
+  if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
+    return rpgStateUnchanged(stateHash) as RpgSaveToolResponse<Args>;
   }
   const saveMetadata = {
     ...(s.worldQuestId ? { worldQuestId: s.worldQuestId } : {}),
