@@ -214,8 +214,9 @@ export class SessionStore {
 
   update(id: string, state: GameState): Session {
     const session = this.get(id);
-    const stateHash = state === session.state ? session.stateHash : hashState(state);
-    session.state = cloneGameState(state);
+    const nextState = cloneGameState(state);
+    const stateHash = hashState(nextState);
+    session.state = nextState;
     if (stateHash === session.stateHash) {
       return session;
     }

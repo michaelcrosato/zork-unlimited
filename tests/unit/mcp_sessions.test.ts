@@ -235,6 +235,27 @@ describe("SessionStore", () => {
     expect(rebuilds).toBe(0);
   });
 
+  it("rehashes same-reference updates before deciding whether caches are fresh", () => {
+    const store = new SessionStore();
+    const session = store.create(sessionInit());
+    const actions: RpgActionOption[] = [{ id: "look", command: "look", action: { type: "LOOK" } }];
+    store.legalActions(session.id, () => actions);
+    store.observation(session.id, {}, () => observation("start"));
+
+    const previousHash = session.stateHash;
+    const liveState = session.state;
+    liveState.current = "mutated_in_place";
+    const updated = store.update(session.id, liveState);
+
+    expect(updated).toBe(session);
+    expect(session.state).toEqual(liveState);
+    expect(session.state).not.toBe(liveState);
+    expect(session.stateHash).toBe(hashState(session.state));
+    expect(session.stateHash).not.toBe(previousHash);
+    expect(session.legalActionsCache).toBeUndefined();
+    expect(session.observationCache).toBeUndefined();
+  });
+
   it("keeps transcript log hashes in sync with store-owned writes", () => {
     const store = new SessionStore();
     const session = store.create(sessionInit());
