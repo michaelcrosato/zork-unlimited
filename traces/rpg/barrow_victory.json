@@ -1,5 +1,9 @@
 {
   "mode": "rpg",
+  "source_ref": [
+    "wq",
+    "sunken_barrow"
+  ],
   "worldQuestId": "sunken_barrow",
   "trace_id": "tr_barrow_victory",
   "pack_id": "sunken_barrow_v1",

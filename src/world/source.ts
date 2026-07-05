@@ -458,9 +458,11 @@ function traceEmbeddedSource(
   return consistency.metadata;
 }
 
-function traceSourceRef(trace: Trace, operation: string): TraceSourceRef | undefined {
+function traceSourceRef(trace: Trace, operation: string): TraceSourceRef {
   const sourceRef = (trace as { source_ref?: unknown }).source_ref;
-  if (sourceRef === undefined) return undefined;
+  if (sourceRef === undefined) {
+    throw new SaveIntegrityError(`${operation} trace source_ref is required.`);
+  }
   const error = compactSourceRefValidationError(sourceRef, `${operation} trace source_ref`);
   if (error !== undefined) throw new SaveIntegrityError(error);
   return sourceRef as TraceSourceRef;

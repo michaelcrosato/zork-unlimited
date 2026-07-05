@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 417 -->
+<!-- historical_cycle_count: 418 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - trace_source_ref_required
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: trace replay and trace source resolution now require compact `source_ref` before accepting persisted trace identity.
+- Loop effect: loose legacy `worldQuestId`/`generatedRpgSeed` fields no longer drive CLI/MCP replay or inspect alone, while explicit historical `["pack", id]` trace refs remain replay-compatible.
+- Guard: focused trace replay, world-source, MCP trace, and CLI trace regressions cover missing, conflicting, generated, shipped, and historical source refs.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused trace/source regressions, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - save_source_ref_required
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: ToolSearch reads for generation, authoring, and content-patch operations spend fewer tokens before the agent reaches actual engine/tool payloads.
 - Guard: focused Prettier, MCP registration schema-size regression, and typecheck passed.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused regression, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - trace_cli_duplicate_world_source_removed
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: CLI replay/inspect trace summaries no longer repeat world quest identity after `source: world_quest_id:*`; trace diagnostics keep trace id, source, seed/steps, hashes, and replay status.
-- Loop effect: trace debugging output stays world-bound while dropping a duplicate package-era source axis from every replay/inspect trace read.
-- Guard: focused Prettier, typecheck, trace CLI, RPG play source, and replay smoke checks passed over the cleanup.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.

@@ -32,7 +32,7 @@ export type TraceExpectedFinalHashFields = {
 };
 
 export type TraceSourceRefFields = {
-  source_ref?: CompactSourceRef;
+  source_ref: CompactSourceRef;
   worldQuestId?: string;
   generatedRpgSeed?: number;
 };
@@ -170,7 +170,9 @@ export function assertTraceSourceRefConsistency<
       "Trace source cannot carry both worldQuestId and generatedRpgSeed.",
     );
   }
-  if (trace.source_ref === undefined) return;
+  if (trace.source_ref === undefined) {
+    throw new SaveIntegrityError("Trace source_ref is required.");
+  }
   const error = compactSourceRefValidationError(trace.source_ref, "Trace source_ref");
   if (error !== undefined) throw new SaveIntegrityError(error);
   const consistency = compactSourceRefLegacyConsistency(

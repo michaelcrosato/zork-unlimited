@@ -544,13 +544,31 @@ describe("world source resolution", () => {
     delete (traceWithoutWorldQuest as { source_ref?: unknown }).source_ref;
 
     expect(() => resolveTracePackSource(ROOT, {}, traceWithoutWorldQuest, "trace_test")).toThrow(
-      /worldQuestId\/generatedRpgSeed/,
+      /source_ref/,
     );
     expect(() => resolveTraceGameSource(ROOT, {}, traceWithoutWorldQuest, "trace_test")).toThrow(
-      /worldQuestId\/generatedRpgSeed/,
+      /source_ref/,
     );
     expect(() => resolveSaveGameSource(ROOT, {}, {}, "save_test")).toThrow(
       /worldQuestId\/generatedRpgSeed/,
+    );
+  });
+
+  it("rejects loose legacy trace source metadata without source_ref", () => {
+    const traceWithoutSourceRef = { ...trace };
+    delete (traceWithoutSourceRef as { source_ref?: unknown }).source_ref;
+
+    expect(() => resolveTracePackSource(ROOT, {}, traceWithoutSourceRef, "trace_test")).toThrow(
+      SaveIntegrityError,
+    );
+    expect(() => resolveTracePackSource(ROOT, {}, traceWithoutSourceRef, "trace_test")).toThrow(
+      /source_ref/,
+    );
+    expect(() => resolveTraceGameSource(ROOT, {}, traceWithoutSourceRef, "trace_test")).toThrow(
+      SaveIntegrityError,
+    );
+    expect(() => resolveTraceGameSource(ROOT, {}, traceWithoutSourceRef, "trace_test")).toThrow(
+      /source_ref/,
     );
   });
 });

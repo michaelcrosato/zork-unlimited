@@ -310,6 +310,16 @@ describe("trace record / replay (§8.8)", () => {
     ).toThrow(/worldQuestId or generatedRpgSeed/);
   });
 
+  it("rejects traces without compact source identity at the replay boundary", () => {
+    const trace = recordTrace(microRules, microInitState(), WIN, traceOptions());
+    const { source_ref: _drop, ...withoutSourceRef } = trace;
+
+    expect(() => replayTrace(withoutSourceRef as typeof trace, microRules)).toThrow(
+      SaveIntegrityError,
+    );
+    expect(() => replayTrace(withoutSourceRef as typeof trace, microRules)).toThrow(/source_ref/);
+  });
+
   it("rejects malformed trace identity at the recording boundary", () => {
     const base = traceOptions();
 

@@ -49,6 +49,9 @@ function firstDivergentStep(actual: string[], baseline: string[]): number {
   return -1;
 }
 
+export function assertTraceMode<A extends EngineAction>(
+  trace: Trace<A>,
+): asserts trace is Trace<A> & { mode: typeof SAVE_MODE } & TraceSourceRefFields;
 export function assertTraceMode(trace: {
   mode?: unknown;
   trace_id?: unknown;
@@ -67,7 +70,21 @@ export function assertTraceMode(trace: {
   TraceStateFields &
   TraceExpectedFinalHashFields &
   TraceStepHashFields &
-  TraceSourceRefFields {
+  TraceSourceRefFields;
+export function assertTraceMode(trace: {
+  mode?: unknown;
+  trace_id?: unknown;
+  pack_id?: unknown;
+  content_hash?: unknown;
+  seed?: unknown;
+  initial_state?: unknown;
+  actions?: unknown;
+  expected_final_hash?: unknown;
+  per_step_hashes?: unknown;
+  source_ref?: unknown;
+  worldQuestId?: unknown;
+  generatedRpgSeed?: unknown;
+}): void {
   if (trace.mode !== SAVE_MODE) {
     throw new SaveIntegrityError(
       `Trace mode must be "${SAVE_MODE}", got ${JSON.stringify(trace.mode)}.`,

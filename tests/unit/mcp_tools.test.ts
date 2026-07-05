@@ -3044,6 +3044,22 @@ describe("MCP tools — replay + path confinement", () => {
     ).toThrow(/not pack_path/);
   });
 
+  it("trace tools reject loose legacy source metadata without source_ref", () => {
+    const trace = JSON.parse(readFileSync("traces/mcp_replay.json", "utf8")) as {
+      source_ref?: unknown;
+    };
+    delete trace.source_ref;
+    writeFileSync("traces/mcp_replay_missing_source_ref.json", JSON.stringify(trace));
+
+    const a = api();
+    expect(() =>
+      a.replay_trace({ trace_path: "traces/mcp_replay_missing_source_ref.json" }),
+    ).toThrow(/source_ref/);
+    expect(() =>
+      a.inspect_trace({ trace_path: "traces/mcp_replay_missing_source_ref.json" }),
+    ).toThrow(/source_ref/);
+  });
+
   it("trace tools reject a source that conflicts with the trace world quest id", () => {
     const a = api();
     expect(() =>
