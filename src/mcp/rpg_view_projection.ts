@@ -50,7 +50,7 @@ export function publicActions(
   return actions.map((option) => ({
     id: option.id,
     ...(opts.compactActions ? {} : { command: option.command }),
-    ...(option.skill_check ? { skill_check: option.skill_check } : {}),
+    ...(option.skill_check ? { skill_check: { ...option.skill_check } } : {}),
   }));
 }
 
@@ -71,20 +71,92 @@ export function legalActionRowsFor<Args extends RpgLegalActionsArgs>(
   actions: readonly RpgActionOption[],
   args: Args,
 ): RpgLegalActionRows<Args> {
-  return sessions.legalActionProjection(
+  const rows = sessions.legalActionProjection(
     session.id,
     `${LEGAL_ACTION_ROWS_PROJECTION}:compact:${args.compact_actions === true ? 1 : 0}`,
     () => publicActionRows(actions, args),
   );
+  return cloneLegalActionRows(rows) as RpgLegalActionRows<Args>;
 }
 
 export function publicObservation(
   obs: RpgObservation,
   opts: PublicObservationOptions = {},
 ): McpObservation {
-  return {
+  return cloneMcpObservation({
     ...obs,
     available_actions: publicActions(obs.available_actions, opts),
+  });
+}
+
+export function cloneMcpObservation(obs: McpObservation): McpObservation {
+  return {
+    ...obs,
+    ...(obs.world !== undefined ? { world: obs.world ? { ...obs.world } : null } : {}),
+    visible_objects: obs.visible_objects.map((object) => ({ ...object })),
+    npcs_present: obs.npcs_present.map((npc) => ({ ...npc })),
+    exits: obs.exits.map((exit) => ({ ...exit })),
+    blocked_exits: obs.blocked_exits.map((exit) => ({ ...exit })),
+    inventory: [...obs.inventory],
+    state: {
+      flags: [...obs.state.flags],
+      vars: { ...obs.state.vars },
+      journal: [...obs.state.journal],
+    },
+    dialogue: obs.dialogue ? { ...obs.dialogue } : null,
+    enemies_present: obs.enemies_present.map((enemy) => ({ ...enemy })),
+    stats: { ...obs.stats },
+    available_actions: obs.available_actions.map((action) => ({
+      ...action,
+      ...(action.skill_check ? { skill_check: { ...action.skill_check } } : {}),
+    })),
+    ending: obs.ending ? { ...obs.ending } : null,
+  };
+}
+
+function cloneLegalActionRows(
+  rows: readonly (string | McpActionOption)[],
+): (string | McpActionOption)[] {
+  return rows.map((row) =>
+    typeof row === "string"
+      ? row
+      : {
+          ...row,
+          ...(row.skill_check ? { skill_check: { ...row.skill_check } } : {}),
+        },
+  );
+}
+
+function cloneCompactTupleList<Tuple extends readonly unknown[]>(
+  values: readonly Tuple[],
+): Tuple[] {
+  return values.map((value) => [...value] as unknown as Tuple);
+}
+
+export function cloneCompactRpgObservation(context: RpgCompactObservation): RpgCompactObservation {
+  return {
+    ...context,
+    here: [...context.here],
+    vitals: [...context.vitals],
+    ...(context.exits
+      ? {
+          exits: context.exits.map((exit) =>
+            typeof exit === "string" ? exit : ([...exit] as typeof exit),
+          ),
+        }
+      : {}),
+    ...(context.actions ? { actions: [...context.actions] } : {}),
+    ...(context.objects ? { objects: cloneCompactTupleList(context.objects) } : {}),
+    ...(context.npcs ? { npcs: cloneCompactTupleList(context.npcs) } : {}),
+    ...(context.blocked ? { blocked: cloneCompactTupleList(context.blocked) } : {}),
+    ...(context.inv ? { inv: [...context.inv] } : {}),
+    ...(context.flags ? { flags: [...context.flags] } : {}),
+    ...(context.vars ? { vars: { ...context.vars } } : {}),
+    ...(context.journal ? { journal: [...context.journal] } : {}),
+    ...(context.more ? { more: [...context.more] } : {}),
+    ...(context.dialogue ? { dialogue: [...context.dialogue] } : {}),
+    ...(context.enemies ? { enemies: cloneCompactTupleList(context.enemies) } : {}),
+    ...(context.ending ? { ending: { ...context.ending } } : {}),
   };
 }
 
@@ -109,28 +181,30 @@ export function rpgViewField<Args extends RpgViewOptions>(
   opts: RpgObservationViewOptions = {},
 ): RpgViewField<Args> {
   if (args.compact_observation === true) {
+    const context = sessions.observationProjection(
+      session.id,
+      `${OBSERVATION_PROJECTION_COMPACT}:${observationProjectionSuffix(opts, "ids")}`,
+      () => {
+        const built = observationFrom(obs);
+        return compactRpgObservation(
+          built,
+          built.available_actions.map((action) => action.id),
+        );
+      },
+    );
     return {
-      context: sessions.observationProjection(
-        session.id,
-        `${OBSERVATION_PROJECTION_COMPACT}:${observationProjectionSuffix(opts, "ids")}`,
-        () => {
-          const built = observationFrom(obs);
-          return compactRpgObservation(
-            built,
-            built.available_actions.map((action) => action.id),
-          );
-        },
-      ),
+      context: cloneCompactRpgObservation(context),
     } as RpgViewField<Args>;
   }
+  const observation = sessions.observationProjection(
+    session.id,
+    `${OBSERVATION_PROJECTION_PUBLIC}:${observationProjectionSuffix(
+      opts,
+      `compact-actions:${args.compact_actions === true ? 1 : 0}`,
+    )}`,
+    () => publicObservation(observationFrom(obs), publicObservationOptions(args)),
+  );
   return {
-    observation: sessions.observationProjection(
-      session.id,
-      `${OBSERVATION_PROJECTION_PUBLIC}:${observationProjectionSuffix(
-        opts,
-        `compact-actions:${args.compact_actions === true ? 1 : 0}`,
-      )}`,
-      () => publicObservation(observationFrom(obs), publicObservationOptions(args)),
-    ),
+    observation: cloneMcpObservation(observation),
   } as RpgViewField<Args>;
 }

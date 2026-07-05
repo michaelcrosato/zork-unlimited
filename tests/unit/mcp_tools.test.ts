@@ -2038,9 +2038,22 @@ describe("MCP tools — the play loop (§9.1)", () => {
       session_id: game.session_id,
       compact_actions: true,
     });
-    expect(repeatedCompactListed.actions).toBe(compactListed.actions);
+    expect(repeatedCompactListed.actions).toEqual(compactListed.actions);
+    expect(repeatedCompactListed.actions).not.toBe(compactListed.actions);
     const repeatedListed = a.list_legal_actions({ session_id: game.session_id });
-    expect(repeatedListed.actions).toBe(listed.actions);
+    expect(repeatedListed.actions).toEqual(listed.actions);
+    expect(repeatedListed.actions).not.toBe(listed.actions);
+    compactListed.actions.push("mutated_action");
+    listed.actions[0]!.id = "mutated_action";
+    const afterActionMutation = a.list_legal_actions({
+      session_id: game.session_id,
+      compact_actions: true,
+    });
+    expect(afterActionMutation.actions).toEqual(repeatedCompactListed.actions);
+    expect(afterActionMutation.actions).not.toContain("mutated_action");
+    const afterFullActionMutation = a.list_legal_actions({ session_id: game.session_id });
+    expect(afterFullActionMutation.actions).toEqual(repeatedListed.actions);
+    expect(afterFullActionMutation.actions[0]?.id).not.toBe("mutated_action");
     const unchangedMenu = a.list_legal_actions({
       session_id: game.session_id,
       compact_actions: true,
@@ -2233,7 +2246,20 @@ describe("MCP tools — the play loop (§9.1)", () => {
       hide_graph: true,
       compact_observation: true,
     });
-    expect(repeatedCompactObservation.context).toBe(compactObservation.context);
+    expect(repeatedCompactObservation.context).toEqual(compactObservation.context);
+    expect(repeatedCompactObservation.context).not.toBe(compactObservation.context);
+    expect(repeatedCompactObservation.context.here).not.toBe(compactObservation.context.here);
+    const compactRoom = compactObservation.context.here[0];
+    const compactActions = [...(compactObservation.context.actions ?? [])];
+    (repeatedCompactObservation.context.here as [string, string])[0] = "mutated_room";
+    repeatedCompactObservation.context.actions?.push("mutated_action");
+    const afterCompactObservationMutation = a.get_observation({
+      session_id: fullStart.session_id,
+      hide_graph: true,
+      compact_observation: true,
+    });
+    expect(afterCompactObservationMutation.context.here[0]).toBe(compactRoom);
+    expect(afterCompactObservationMutation.context.actions).toEqual(compactActions);
 
     const fullObservation = a.get_observation({
       session_id: fullStart.session_id,
@@ -2243,7 +2269,28 @@ describe("MCP tools — the play loop (§9.1)", () => {
       session_id: fullStart.session_id,
       hide_graph: true,
     });
-    expect(repeatedFullObservation.observation).toBe(fullObservation.observation);
+    expect(repeatedFullObservation.observation).toEqual(fullObservation.observation);
+    expect(repeatedFullObservation.observation).not.toBe(fullObservation.observation);
+    expect(repeatedFullObservation.observation.exits).not.toBe(fullObservation.observation.exits);
+    expect(repeatedFullObservation.observation.state.flags).not.toBe(
+      fullObservation.observation.state.flags,
+    );
+    expect(repeatedFullObservation.observation.available_actions).not.toBe(
+      fullObservation.observation.available_actions,
+    );
+    const fullExitDirection = fullObservation.observation.exits[0]?.direction;
+    const fullFlags = [...fullObservation.observation.state.flags];
+    const fullActionId = fullObservation.observation.available_actions[0]?.id;
+    repeatedFullObservation.observation.exits[0]!.direction = "mutated_direction";
+    repeatedFullObservation.observation.state.flags.push("mutated_flag");
+    repeatedFullObservation.observation.available_actions[0]!.id = "mutated_action";
+    const afterFullObservationMutation = a.get_observation({
+      session_id: fullStart.session_id,
+      hide_graph: true,
+    });
+    expect(afterFullObservationMutation.observation.exits[0]?.direction).toBe(fullExitDirection);
+    expect(afterFullObservationMutation.observation.state.flags).toEqual(fullFlags);
+    expect(afterFullObservationMutation.observation.available_actions[0]?.id).toBe(fullActionId);
 
     const unchangedObservation = a.get_observation({
       session_id: fullStart.session_id,
