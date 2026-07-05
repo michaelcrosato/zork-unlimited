@@ -1,4 +1,11 @@
+function assertCompactTextLimit(limit: number): void {
+  if (!Number.isInteger(limit) || limit < 0) {
+    throw new Error("Compact text limit must be a non-negative finite integer.");
+  }
+}
+
 export function compactText(value: string, limit: number): string {
+  assertCompactTextLimit(limit);
   if (value.length <= limit) return value;
   if (limit <= 0) return "";
   let omitted = value.length;

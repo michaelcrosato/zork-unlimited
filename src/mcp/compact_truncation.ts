@@ -1,6 +1,13 @@
 export { compactText } from "../core/compact_text.js";
 
+function assertCompactListLimit(limit: number): void {
+  if (!Number.isInteger(limit) || limit < 0) {
+    throw new Error("Compact list limit must be a non-negative finite integer.");
+  }
+}
+
 export function compactHead<T>(values: readonly T[], limit: number): T[] {
+  assertCompactListLimit(limit);
   const compact: T[] = [];
   for (let index = 0; index < values.length && index < limit; index += 1) {
     compact.push(values[index]!);
@@ -9,6 +16,7 @@ export function compactHead<T>(values: readonly T[], limit: number): T[] {
 }
 
 export function compactRecent<T>(values: readonly T[], limit: number): T[] {
+  assertCompactListLimit(limit);
   const compact: T[] = [];
   const start = Math.max(0, values.length - limit);
   for (let index = start; index < values.length; index += 1) compact.push(values[index]!);

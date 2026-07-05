@@ -14,7 +14,16 @@ describe("compact truncation helpers", () => {
 
     expect(compactHead(values, 2)).toEqual(["a", "b"]);
     expect(compactRecent(values, 2)).toEqual(["c", "d"]);
+    expect(compactHead(values, 0)).toEqual([]);
+    expect(compactRecent(values, 0)).toEqual([]);
     expect(values).toEqual(["a", "b", "c", "d"]);
+  });
+
+  it("rejects invalid list limits before they can bypass compaction", () => {
+    for (const limit of [Number.NaN, Number.POSITIVE_INFINITY, -1, 1.5]) {
+      expect(() => compactHead(["a"], limit)).toThrow(/non-negative finite integer/);
+      expect(() => compactRecent(["a"], limit)).toThrow(/non-negative finite integer/);
+    }
   });
 
   it("reports omitted counts only when compaction drops values", () => {
@@ -38,5 +47,11 @@ describe("compact truncation helpers", () => {
     expect(compact).toMatch(/\.\.\.\(\+\d+ chars\)$/);
     expect(compactText(value, value.length)).toBe(value);
     expect(compactText(value, 0)).toBe("");
+  });
+
+  it("rejects invalid text limits before truncation", () => {
+    for (const limit of [Number.NaN, Number.POSITIVE_INFINITY, -1, 1.5]) {
+      expect(() => compactText("abc", limit)).toThrow(/non-negative finite integer/);
+    }
   });
 });
