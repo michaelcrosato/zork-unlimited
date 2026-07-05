@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { writeFileSync, mkdirSync, readFileSync } from "node:fs";
 import { createToolApi } from "../../src/mcp/tools.js";
+import { RPG_COMPACT_OBSERVATION_VERSION } from "../../src/mcp/compact_rpg_observation.js";
 import { PathEscapeError } from "../../src/mcp/paths.js";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
@@ -2409,7 +2410,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect("observation" in compactStart).toBe(false);
     expect("mode" in compactStart.context).toBe(false);
     expect(compactStart.context).toMatchObject({
-      v: 9,
+      v: RPG_COMPACT_OBSERVATION_VERSION,
       here: [fullStart.observation.room, fullStart.observation.title],
     });
     expect(compactStart.context.vitals).toEqual([

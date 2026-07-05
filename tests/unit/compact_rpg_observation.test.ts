@@ -7,8 +7,15 @@ import {
   COMPACT_EXIT_LIMIT,
   COMPACT_VAR_LIMIT,
   COMPACT_VISIBLE_REF_LIMIT,
+  RPG_COMPACT_OBSERVATION_VERSION,
   compactRpgObservation,
 } from "../../src/mcp/compact_rpg_observation.js";
+import {
+  MCP_ACTION_LABEL_CHAR_LIMIT,
+  MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT,
+  MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT,
+  MCP_TRANSCRIPT_TITLE_CHAR_LIMIT,
+} from "../../src/mcp/action_labels.js";
 import type { RpgObservation } from "../../src/rpg/observation.js";
 
 function ids(prefix: string, count: number): string[] {
@@ -48,7 +55,7 @@ describe("compactRpgObservation", () => {
     const obs = observationWithLargeState();
     const compact = compactRpgObservation(obs, ["look"]);
 
-    expect(compact.v).toBe(9);
+    expect(compact.v).toBe(RPG_COMPACT_OBSERVATION_VERSION);
     expect("mode" in compact).toBe(false);
     expect(compact.inv).toEqual(ids("item", 16));
     expect(compact.flags).toEqual(ids("flag", 16));
@@ -241,5 +248,69 @@ describe("compactRpgObservation", () => {
     expect(obs.dialogue?.npc_text).toBe(longDialogue);
     expect(obs.blocked_exits[0]?.message).toBe(longBlockedExit);
     expect(obs.ending?.text).toBe(longEndingText);
+  });
+
+  it("caps compact scalar identity fields while preserving executable action ids", () => {
+    const longRoom = `room_${"x".repeat(400)}a`;
+    const longTitle = `Room ${"x".repeat(400)}a`;
+    const longId = `id_${"x".repeat(400)}a`;
+    const longName = `Name ${"x".repeat(400)}a`;
+    const longActionId = `action_${"x".repeat(400)}a`;
+    const longJournal = `Journal ${"x".repeat(400)}a`;
+    const longVar = `var_${"x".repeat(400)}a`;
+    const obs: RpgObservation = {
+      ...observationWithLargeState(),
+      room: longRoom,
+      title: longTitle,
+      inventory: [longId],
+      state: {
+        flags: [longId],
+        vars: { hp: 8, attack: 2, defense: 1, [longVar]: 7 },
+        journal: [longJournal],
+      },
+      exits: [{ direction: longId, to: longRoom }],
+      visible_objects: [{ id: longId, name: longName }],
+      npcs_present: [{ id: longId, name: longName }],
+      blocked_exits: [{ direction: longId, message: "blocked" }],
+      dialogue: { npc: longId, npc_text: "hello" },
+      enemies_present: [{ id: longId, name: longName, hp: 4 }],
+      ended: true,
+      ending_id: longId,
+      ending: {
+        id: longId,
+        title: longTitle,
+        text: "done",
+        death: false,
+      },
+    };
+
+    const compact = compactRpgObservation(obs, [longActionId]);
+    const compactExit = compact.exits?.[0];
+    const compactVarKey = Object.keys(compact.vars ?? {})[0];
+
+    expect(compact.actions).toEqual([longActionId]);
+    expect(compact.here[0]).toHaveLength(MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT);
+    expect(compact.here[1]).toHaveLength(MCP_TRANSCRIPT_TITLE_CHAR_LIMIT);
+    expect(compact.inv?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(compact.flags?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(compact.journal?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(compactVarKey).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(compactExit).toEqual([
+      expect.stringMatching(/\.\.\.\(\+\d+ chars\)#[0-9a-f]{12}$/),
+      expect.stringMatching(/\.\.\.\(\+\d+ chars\)#[0-9a-f]{12}$/),
+    ]);
+    expect(compact.objects?.[0]?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(compact.objects?.[0]?.[1]).toHaveLength(MCP_ACTION_LABEL_CHAR_LIMIT);
+    expect(compact.npcs?.[0]?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(compact.npcs?.[0]?.[1]).toHaveLength(MCP_ACTION_LABEL_CHAR_LIMIT);
+    expect(compact.blocked?.[0]?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(compact.dialogue?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(compact.enemies?.[0]?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(compact.enemies?.[0]?.[1]).toHaveLength(MCP_ACTION_LABEL_CHAR_LIMIT);
+    expect(compact.ending_id).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(compact.ending?.id).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(compact.ending?.title).toHaveLength(MCP_TRANSCRIPT_TITLE_CHAR_LIMIT);
+    const { actions: _actions, ...nonActionContext } = compact;
+    expect(JSON.stringify(nonActionContext)).not.toContain("x".repeat(300));
   });
 });

@@ -6,6 +6,12 @@ import {
   compactTrailingOmissionCounts,
   omittedCount,
 } from "./compact_truncation.js";
+import {
+  compactMcpActionLabel,
+  compactMcpTranscriptSceneId,
+  compactMcpTranscriptSummaryValue,
+  compactMcpTranscriptTitle,
+} from "./action_labels.js";
 const CORE_STATE_VARS = new Set(["attack", "defense", "hp", "max_score", "score"]);
 export const COMPACT_ACTION_LIMIT = 24;
 export const COMPACT_EXIT_LIMIT = 12;
@@ -20,7 +26,7 @@ const COMPACT_DESCRIPTION_CHAR_LIMIT = 900;
 const COMPACT_DIALOGUE_CHAR_LIMIT = 700;
 const COMPACT_BLOCKED_EXIT_CHAR_LIMIT = 320;
 const COMPACT_ENDING_TEXT_CHAR_LIMIT = 900;
-export const RPG_COMPACT_OBSERVATION_VERSION = 9 as const;
+export const RPG_COMPACT_OBSERVATION_VERSION = 10 as const;
 
 export type RpgCompactRef = readonly [id: string, name: string];
 export type RpgCompactExit = string | readonly [direction: string, to: string];
@@ -74,6 +80,8 @@ function compactEnding(ending: RpgObservation["ending"]): RpgObservation["ending
     ? null
     : {
         ...ending,
+        id: compactMcpTranscriptSummaryValue(ending.id),
+        title: compactMcpTranscriptTitle(ending.title),
         text: compactText(ending.text, COMPACT_ENDING_TEXT_CHAR_LIMIT),
       };
 }
@@ -91,7 +99,7 @@ function compactVars(vars: Record<string, number>): CompactVarsResult {
   const capped = Math.min(keys.length, COMPACT_VAR_LIMIT);
   for (let index = 0; index < capped; index += 1) {
     const key = keys[index]!;
-    compact[key] = vars[key]!;
+    compact[compactMcpTranscriptSummaryValue(key)] = vars[key]!;
   }
   return {
     ...(capped > 0 ? { vars: compact } : {}),
@@ -105,9 +113,15 @@ export function compactRpgObservation(
 ): RpgCompactObservation {
   const vars = compactVars(obs.state.vars);
   const actions = compactHead(actionIds, COMPACT_ACTION_LIMIT);
-  const inv = compactHead(obs.inventory, COMPACT_INVENTORY_LIMIT);
-  const flags = compactHead(obs.state.flags, COMPACT_FLAG_LIMIT);
-  const journal = compactRecent(obs.state.journal, COMPACT_JOURNAL_LIMIT);
+  const inv = compactHead(obs.inventory, COMPACT_INVENTORY_LIMIT).map(
+    compactMcpTranscriptSummaryValue,
+  );
+  const flags = compactHead(obs.state.flags, COMPACT_FLAG_LIMIT).map(
+    compactMcpTranscriptSummaryValue,
+  );
+  const journal = compactRecent(obs.state.journal, COMPACT_JOURNAL_LIMIT).map(
+    compactMcpTranscriptSummaryValue,
+  );
   const compactExits = compactHead(obs.exits, COMPACT_EXIT_LIMIT);
   const compactObjects = compactHead(obs.visible_objects, COMPACT_VISIBLE_REF_LIMIT);
   const compactNpcs = compactHead(obs.npcs_present, COMPACT_VISIBLE_REF_LIMIT);
@@ -124,18 +138,34 @@ export function compactRpgObservation(
   const omittedEnemies = omittedCount(obs.enemies_present, compactEnemies);
   const exits: RpgCompactExit[] = [];
   for (const exit of compactExits) {
-    exits.push(exit.to === undefined ? exit.direction : [exit.direction, exit.to]);
+    const direction = compactMcpTranscriptSummaryValue(exit.direction);
+    exits.push(
+      exit.to === undefined ? direction : [direction, compactMcpTranscriptSceneId(exit.to)],
+    );
   }
   const objects: RpgCompactRef[] = [];
-  for (const object of compactObjects) objects.push([object.id, object.name]);
+  for (const object of compactObjects) {
+    objects.push([compactMcpTranscriptSummaryValue(object.id), compactMcpActionLabel(object.name)]);
+  }
   const npcs: RpgCompactRef[] = [];
-  for (const npc of compactNpcs) npcs.push([npc.id, npc.name]);
+  for (const npc of compactNpcs) {
+    npcs.push([compactMcpTranscriptSummaryValue(npc.id), compactMcpActionLabel(npc.name)]);
+  }
   const blocked: RpgCompactBlockedExit[] = [];
   for (const exit of compactBlockedExits) {
-    blocked.push([exit.direction, compactText(exit.message, COMPACT_BLOCKED_EXIT_CHAR_LIMIT)]);
+    blocked.push([
+      compactMcpTranscriptSummaryValue(exit.direction),
+      compactText(exit.message, COMPACT_BLOCKED_EXIT_CHAR_LIMIT),
+    ]);
   }
   const enemies: RpgCompactEnemy[] = [];
-  for (const enemy of compactEnemies) enemies.push([enemy.id, enemy.name, enemy.hp]);
+  for (const enemy of compactEnemies) {
+    enemies.push([
+      compactMcpTranscriptSummaryValue(enemy.id),
+      compactMcpActionLabel(enemy.name),
+      enemy.hp,
+    ]);
+  }
   const more = compactTrailingOmissionCounts([
     omittedInv ?? 0,
     omittedFlags ?? 0,
@@ -150,7 +180,7 @@ export function compactRpgObservation(
   ]) as RpgCompactMore | undefined;
   return {
     v: RPG_COMPACT_OBSERVATION_VERSION,
-    here: [obs.room, obs.title],
+    here: [compactMcpTranscriptSceneId(obs.room), compactMcpTranscriptTitle(obs.title)],
     text: compactText(obs.description, COMPACT_DESCRIPTION_CHAR_LIMIT),
     ...(exits.length > 0 ? { exits } : {}),
     vitals: [obs.stats.hp, obs.stats.attack, obs.stats.defense, obs.score, obs.max_score],
@@ -166,14 +196,14 @@ export function compactRpgObservation(
     ...(obs.dialogue
       ? {
           dialogue: [
-            obs.dialogue.npc,
+            compactMcpTranscriptSummaryValue(obs.dialogue.npc),
             compactText(obs.dialogue.npc_text, COMPACT_DIALOGUE_CHAR_LIMIT),
           ] as const,
         }
       : {}),
     ...(enemies.length > 0 ? { enemies } : {}),
     ...(obs.ended ? { ended: true as const } : {}),
-    ...(obs.ending_id ? { ending_id: obs.ending_id } : {}),
+    ...(obs.ending_id ? { ending_id: compactMcpTranscriptSummaryValue(obs.ending_id) } : {}),
     ...(obs.ending ? { ending: compactEnding(obs.ending) } : {}),
   };
 }
