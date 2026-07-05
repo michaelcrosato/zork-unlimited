@@ -44,11 +44,12 @@ import {
 } from "./session_quest_lifecycle.js";
 import { type OverworldSnapshotManifestIndex } from "./session_manifest_index.js";
 import {
-  planOverworldTownRest,
-  planOverworldTownResupply,
+  applyOverworldSessionTownServicePlan,
+  planOverworldSessionTownRest,
+  planOverworldSessionTownResupply,
   type OverworldServicePlan,
   type OverworldServiceResult,
-} from "./session_services.js";
+} from "./session_service_lifecycle.js";
 import { type OverworldAreaTravelResult } from "./session_local_actions.js";
 import {
   applyOverworldSessionArea,
@@ -106,7 +107,6 @@ import {
   type MutableOverworldSessionLocalState,
 } from "./session_local_state.js";
 import {
-  applyOverworldSessionServicePlan,
   withOverworldSessionLocalDiscovery,
   type OverworldActionResult,
   type OverworldSessionActionApplication,
@@ -123,7 +123,7 @@ export type {
 export type { OverworldRouteEstimate, OverworldSessionRoutePlan } from "./session_routes.js";
 export type { OverworldRoadEncounterResult } from "./session_road_encounters.js";
 export type { OverworldRegionalArcProgress } from "./session_regional_arcs.js";
-export type { OverworldServiceResult } from "./session_services.js";
+export type { OverworldServiceResult } from "./session_service_lifecycle.js";
 export type { OverworldQuestView } from "./session_local_discovery.js";
 export type { OverworldQuestCompletionResult } from "./session_quests.js";
 export type { OverworldAreaTravelResult } from "./session_local_actions.js";
@@ -438,7 +438,7 @@ export class OverworldSession {
   }
 
   private applyServicePlan(plan: OverworldServicePlan): OverworldServiceResult {
-    const applied = applyOverworldSessionServicePlan(this.actionJournalState(), plan);
+    const applied = applyOverworldSessionTownServicePlan(this.actionJournalState(), plan);
     if (applied.stateChanged) {
       this.applyResourceClockState(applied);
       this.clearSnapshotCache();
@@ -803,11 +803,10 @@ export class OverworldSession {
     this.assertNoPendingRoadEncounter("resting at town");
     const current = this.currentNode();
     return this.applyServicePlan(
-      planOverworldTownRest({
+      planOverworldSessionTownRest({
+        currentTown: current,
         fatigue: this.fatigue,
-        services: current.services,
         supplies: this.supplies,
-        townName: current.name,
       }),
     );
   }
@@ -816,11 +815,10 @@ export class OverworldSession {
     this.assertNoPendingRoadEncounter("resupplying at town");
     const current = this.currentNode();
     return this.applyServicePlan(
-      planOverworldTownResupply({
+      planOverworldSessionTownResupply({
+        currentTown: current,
         fatigue: this.fatigue,
-        services: current.services,
         supplies: this.supplies,
-        townName: current.name,
       }),
     );
   }
