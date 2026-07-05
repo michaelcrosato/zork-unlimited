@@ -19,12 +19,20 @@ export type ValidationReport = {
   findings: Finding[];
 };
 
+function freezeFinding(finding: Finding): Finding {
+  return Object.freeze({
+    ...finding,
+    where: Object.freeze([...finding.where]) as string[],
+  });
+}
+
 export function makeReport(packId: string, findings: Finding[]): ValidationReport {
-  return {
+  const frozenFindings = Object.freeze(findings.map(freezeFinding)) as Finding[];
+  return Object.freeze({
     pack_id: packId,
-    ok: !findings.some((f) => f.severity === "error"),
-    findings,
-  };
+    ok: !frozenFindings.some((f) => f.severity === "error"),
+    findings: frozenFindings,
+  });
 }
 
 type FormatReportOptions = {
