@@ -19,6 +19,7 @@ import {
   countTautologyAssertions,
   detectLoopStateOverflow,
   detectForbiddenPathPatterns,
+  detectForbiddenLegacyImports,
   detectCountRegressions,
   parseGuardConstants,
   detectGuardWeakening,
@@ -186,6 +187,48 @@ describe("detectForbiddenPathPatterns — retired test families stay gone", () =
       "tests/property/parser_determinism.test.ts",
     ]);
     expect(findings.every((f) => f.code === "FORBIDDEN_PATH_PATTERN")).toBe(true);
+  });
+});
+
+describe("detectForbiddenLegacyImports — live source stays RPG-only", () => {
+  it("blocks imports of retired CYOA/parser modules in runtime code", () => {
+    const findings = detectForbiddenLegacyImports([
+      {
+        path: "src/rpg/runner.ts",
+        text: [
+          'import { build } from "../parser/model.js";',
+          'export { choose } from "./cyoa/engine.js";',
+          'const validator = await import("../validate/parser_validator.js");',
+          'import { hashState } from "../core/hash.js";',
+        ].join("\n"),
+      },
+    ]);
+
+    expect(findings.map((f) => f.code)).toEqual([
+      "FORBIDDEN_LEGACY_IMPORT",
+      "FORBIDDEN_LEGACY_IMPORT",
+      "FORBIDDEN_LEGACY_IMPORT",
+    ]);
+    expect(findings.map((f) => f.where)).toEqual([
+      "src/rpg/runner.ts:1",
+      "src/rpg/runner.ts:2",
+      "src/rpg/runner.ts:3",
+    ]);
+  });
+
+  it("allows RPG/core imports and prose references", () => {
+    const findings = detectForbiddenLegacyImports([
+      {
+        path: "src/rpg/schema.ts",
+        text: [
+          'import { hashState } from "../core/hash.js";',
+          'import { buildRpgRules } from "./runner.js";',
+          'const note = "legacy parser text is allowed in prose, not imports";',
+        ].join("\n"),
+      },
+    ]);
+
+    expect(findings).toEqual([]);
   });
 });
 

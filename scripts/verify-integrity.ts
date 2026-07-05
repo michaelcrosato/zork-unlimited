@@ -165,6 +165,11 @@ export const MAX_LIVE_LOOP_STATE_ENTRIES = ROTATE_KEEP;
  *  not matched — the actual and expected must be IDENTICAL. */
 const TAUTOLOGY_RE =
   /\bexpect\s*\(\s*(true|false|null|undefined|\d[\d.]*|"[^"]*"|'[^']*'|`[^`]*`|[A-Za-z_$][A-Za-z0-9_$.]*)\s*\)\s*\.\s*(?:toBe|toEqual|toStrictEqual)\s*\(\s*\1\s*\)/g;
+const SOURCE_FILE_RE = /\.(?:ts|tsx|js|jsx|mjs|cjs)$/;
+const RUNTIME_SOURCE_DIRS = ["src", "bin", "scripts", "agents", "ui/src", "blind-tester"];
+const DYNAMIC_IMPORT_RE = /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g;
+const FORBIDDEN_LEGACY_IMPORT_RE =
+  /(?:^|[\\/])(?:cyoa|parser)(?:[\\/]|$)|(?:^|[\\/])(?:cyoa|parser)_(?:generator|validator)(?:\.|$)/i;
 
 /** Detect count-preserving semantic tautologies: assertions that keep a STRONG
  *  matcher (so the strong-matcher count is unchanged) but make it vacuous by
@@ -232,6 +237,65 @@ export function detectForbiddenPathPatterns(
   return findings;
 }
 
+export function detectForbiddenLegacyImports(files: { path: string; text: string }[]): Finding[] {
+  const findings: Finding[] = [];
+  for (const f of files) {
+    for (const hit of importSpecifiers(f.text)) {
+      const specifier = hit.specifier;
+      if (!FORBIDDEN_LEGACY_IMPORT_RE.test(specifier)) continue;
+      const lineNo = f.text.slice(0, hit.index).split("\n").length;
+      findings.push({
+        severity: "error",
+        code: "FORBIDDEN_LEGACY_IMPORT",
+        message: `live source must not import retired CYOA/parser modules in the RPG-only runtime: ${specifier}`,
+        where: `${f.path}:${lineNo}`,
+      });
+    }
+  }
+  return findings;
+}
+
+function importSpecifiers(text: string): { specifier: string; index: number }[] {
+  const hits: { specifier: string; index: number }[] = [];
+  const lines = text.split("\n");
+  let offset = 0;
+  let pending: { text: string; index: number } | null = null;
+
+  for (const line of lines) {
+    const trimmed = line.trimStart();
+    const lineOffset = offset;
+    offset += line.length + 1;
+
+    if (!trimmed.startsWith("//")) {
+      let dynamic: RegExpExecArray | null;
+      const dynamicRe = new RegExp(DYNAMIC_IMPORT_RE.source, DYNAMIC_IMPORT_RE.flags);
+      while ((dynamic = dynamicRe.exec(line)) !== null) {
+        hits.push({ specifier: dynamic[1]!, index: lineOffset + dynamic.index });
+      }
+    }
+
+    if (pending === null) {
+      if (trimmed.startsWith("//")) continue;
+      if (!/^(?:import\b(?!\s*\()|export\s+(?:\*|\{))/.test(trimmed)) continue;
+      pending = { text: line, index: lineOffset };
+    } else {
+      pending.text += `\n${line}`;
+    }
+
+    const sideEffectImport = /^\s*import\s+["']([^"']+)["']/.exec(pending.text);
+    const fromImport = /\bfrom\s+["']([^"']+)["']/.exec(pending.text);
+    const specifier = sideEffectImport?.[1] ?? fromImport?.[1];
+    if (specifier !== undefined) {
+      hits.push({ specifier, index: pending.index });
+      pending = null;
+      continue;
+    }
+    if (/;\s*(?:\/\/.*)?$/.test(line)) pending = null;
+  }
+
+  return hits;
+}
+
 function listFiles(root: string, dir: string, match: (p: string) => boolean): string[] {
   const abs = join(root, dir);
   if (!existsSync(abs)) return [];
@@ -249,6 +313,14 @@ function listFiles(root: string, dir: string, match: (p: string) => boolean): st
 
 export function listTestFiles(root: string): string[] {
   return listFiles(root, "tests", (p) => /\.test\.ts$/.test(p));
+}
+
+export function listRuntimeSourceFiles(root: string): string[] {
+  return [
+    ...new Set(
+      RUNTIME_SOURCE_DIRS.flatMap((dir) => listFiles(root, dir, (p) => SOURCE_FILE_RE.test(p))),
+    ),
+  ].sort();
 }
 
 /** Test files that contain a disabled/focused marker. Pure over the given texts. */
@@ -306,6 +378,8 @@ export function runStatic(root: string): { ok: boolean; findings: Finding[] } {
         where: f,
       });
   }
+  const sourceFiles = readAll(root, listRuntimeSourceFiles(root));
+  findings.push(...detectForbiddenLegacyImports(sourceFiles));
   const testPaths = listTestFiles(root);
   findings.push(...detectForbiddenPathPatterns(testPaths));
   const testFiles = readAll(root, testPaths);
