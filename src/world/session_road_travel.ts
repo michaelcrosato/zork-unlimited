@@ -3,6 +3,10 @@ import {
   applyOverworldRoadEncounter,
   type OverworldAppliedRoadEncounter,
 } from "./session_road_encounters.js";
+import {
+  applyOverworldSessionTownVisit,
+  type MutableOverworldSessionTownVisitState,
+} from "./session_local_lifecycle.js";
 import type { OverworldJournalEntry, OverworldPendingRoadEncounter } from "./session_snapshot.js";
 import {
   applyOverworldTravelLeg,
@@ -32,6 +36,14 @@ export type OverworldSessionRoadTravelState = {
   supplies: number;
   fatigue: number;
   travelLog: OverworldRecordedTravelLeg["entry"][];
+};
+
+export type OverworldSessionRoadTravelArrivalState = OverworldSessionRoadTravelState &
+  Omit<MutableOverworldSessionTownVisitState, "nodeId">;
+
+export type OverworldRecordedRoadTravelArrival = OverworldRecordedTravelLeg & {
+  currentAreaIdAfter: string | null;
+  stateChanged: true;
 };
 
 export function applyOverworldSessionRoadEncounter(
@@ -67,4 +79,26 @@ export function applyOverworldSessionRoadTravel(
     supplies: state.supplies,
   });
   return recordOverworldTravelLeg({ travelLog: state.travelLog }, applied);
+}
+
+export function applyOverworldSessionRoadTravelArrival(
+  state: OverworldSessionRoadTravelArrivalState,
+  edgeId: string,
+): OverworldRecordedRoadTravelArrival {
+  const recorded = applyOverworldSessionRoadTravel(state, edgeId);
+  const arrival = applyOverworldSessionTownVisit({
+    nodeId: recorded.currentIdAfter,
+    areasByTown: state.areasByTown,
+    roadExitsByTown: state.roadExitsByTown,
+    currentAreaId: state.currentAreaId,
+    currentAreaByTown: state.currentAreaByTown,
+    discoveredAreaIds: state.discoveredAreaIds,
+    discoveredIds: state.discoveredIds,
+    visitedIds: state.visitedIds,
+  });
+  return {
+    ...recorded,
+    currentAreaIdAfter: arrival.currentAreaIdAfter,
+    stateChanged: true,
+  };
 }

@@ -112,7 +112,7 @@ import {
 } from "./session_action_application.js";
 import {
   applyOverworldSessionRoadEncounter,
-  applyOverworldSessionRoadTravel,
+  applyOverworldSessionRoadTravelArrival,
 } from "./session_road_travel.js";
 
 export type {
@@ -857,13 +857,20 @@ export class OverworldSession {
   }
 
   travel(edgeId: string): TravelLogEntry {
-    const recorded = applyOverworldSessionRoadTravel(
+    const recorded = applyOverworldSessionRoadTravelArrival(
       {
         pendingRoadEncounter: this.pendingRoadEncounter,
         current: this.currentNode(),
         currentId: this.currentId,
         roadExitsByTownAndId: this.roadExitsByTownAndId,
         roadEventsByEdgeId: this.roadEventsByEdgeId,
+        areasByTown: this.areasByTown,
+        roadExitsByTown: this.roadExitsByTown,
+        currentAreaId: this.currentAreaId,
+        currentAreaByTown: this.currentAreaByTown,
+        discoveredAreaIds: this.discoveredAreaIds,
+        discoveredIds: this.discoveredIds,
+        visitedIds: this.visitedIds,
         minutes: this.minutes,
         supplies: this.supplies,
         fatigue: this.fatigue,
@@ -873,7 +880,7 @@ export class OverworldSession {
     );
     this.applyResourceClockState(recorded);
     this.applyCurrentTownState(recorded);
-    this.markSeen(this.currentId);
+    this.applyCurrentAreaState(recorded);
     this.applyPendingRoadEncounterState(recorded);
     this.clearSnapshotCache();
     return recorded.entry;
