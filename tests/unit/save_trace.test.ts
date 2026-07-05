@@ -331,6 +331,22 @@ describe("trace v2: per-step divergence localization (§8.8)", () => {
     expect(trace.per_step_hashes).toHaveLength(WIN.length);
   });
 
+  it("rejects malformed per-step baselines instead of comparing only their overlap", () => {
+    const trace = newTrace();
+    const hashes = trace.per_step_hashes!;
+    const malformed = [
+      { ...trace, per_step_hashes: hashes.slice(0, -1) },
+      { ...trace, per_step_hashes: [...hashes, hashes[0]!] },
+      { ...trace, per_step_hashes: "not-an-array" },
+      { ...trace, per_step_hashes: hashes.map((hash, i) => (i === 1 ? "" : hash)) },
+    ] as unknown as (typeof trace)[];
+
+    for (const candidate of malformed) {
+      expect(() => replayTrace(candidate, microRules)).toThrow(SaveIntegrityError);
+      expect(() => replayTrace(candidate, microRules)).toThrow(/per_step_hashes/);
+    }
+  });
+
   it("a faithful replay reports no divergence", () => {
     const result = replayTrace(newTrace(), microRules);
     expect(result.ok).toBe(true);

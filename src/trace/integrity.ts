@@ -6,6 +6,10 @@ export type TraceIdentityFields = {
   content_hash: string;
 };
 
+export type TraceStepHashFields = {
+  per_step_hashes?: string[];
+};
+
 function assertNonEmptyString(value: unknown, label: string): asserts value is string {
   if (typeof value !== "string" || value.length === 0) {
     throw new SaveIntegrityError(
@@ -14,12 +18,37 @@ function assertNonEmptyString(value: unknown, label: string): asserts value is s
   }
 }
 
-export function assertTraceIdentityFields(trace: {
-  trace_id?: unknown;
-  pack_id?: unknown;
-  content_hash?: unknown;
-}): asserts trace is TraceIdentityFields {
+export function assertTraceIdentityFields<
+  T extends {
+    trace_id?: unknown;
+    pack_id?: unknown;
+    content_hash?: unknown;
+  },
+>(trace: T): asserts trace is T & TraceIdentityFields {
   assertNonEmptyString(trace.trace_id, "Trace trace_id");
   assertNonEmptyString(trace.pack_id, "Trace pack_id");
   assertNonEmptyString(trace.content_hash, "Trace content_hash");
+}
+
+export function assertTraceStepHashes<
+  T extends {
+    actions?: unknown;
+    per_step_hashes?: unknown;
+  },
+>(trace: T): asserts trace is T & TraceStepHashFields {
+  if (trace.per_step_hashes === undefined) return;
+  if (!Array.isArray(trace.per_step_hashes)) {
+    throw new SaveIntegrityError("Trace per_step_hashes must be an array when present.");
+  }
+  if (!Array.isArray(trace.actions)) {
+    throw new SaveIntegrityError("Trace actions must be an array when per_step_hashes is present.");
+  }
+  if (trace.per_step_hashes.length !== trace.actions.length) {
+    throw new SaveIntegrityError(
+      `Trace per_step_hashes length ${trace.per_step_hashes.length} must match actions length ${trace.actions.length}.`,
+    );
+  }
+  trace.per_step_hashes.forEach((hash, i) => {
+    assertNonEmptyString(hash, `Trace per_step_hashes[${i}]`);
+  });
 }

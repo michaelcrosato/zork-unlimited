@@ -12,7 +12,12 @@ import { hashState } from "../core/hash.js";
 import type { EngineAction, Rules } from "../core/engine.js";
 import { runActions, type Trace } from "./record.js";
 import { SAVE_MODE, SaveIntegrityError } from "../persist/save_load.js";
-import { assertTraceIdentityFields, type TraceIdentityFields } from "./integrity.js";
+import {
+  assertTraceIdentityFields,
+  assertTraceStepHashes,
+  type TraceIdentityFields,
+  type TraceStepHashFields,
+} from "./integrity.js";
 
 export type ReplayResult = {
   ok: boolean;
@@ -28,10 +33,9 @@ export type ReplayResult = {
   message?: string;
 };
 
-/** First index where two hash arrays differ, comparing only the overlap; -1 if none. */
+/** First index where two same-length hash arrays differ; -1 if none. */
 function firstDivergentStep(actual: string[], baseline: string[]): number {
-  const n = Math.min(actual.length, baseline.length);
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < actual.length; i++) {
     if (actual[i] !== baseline[i]) return i;
   }
   return -1;
@@ -42,13 +46,16 @@ export function assertTraceMode(trace: {
   trace_id?: unknown;
   pack_id?: unknown;
   content_hash?: unknown;
-}): asserts trace is { mode: typeof SAVE_MODE } & TraceIdentityFields {
+  actions?: unknown;
+  per_step_hashes?: unknown;
+}): asserts trace is { mode: typeof SAVE_MODE } & TraceIdentityFields & TraceStepHashFields {
   if (trace.mode !== SAVE_MODE) {
     throw new SaveIntegrityError(
       `Trace mode must be "${SAVE_MODE}", got ${JSON.stringify(trace.mode)}.`,
     );
   }
   assertTraceIdentityFields(trace);
+  assertTraceStepHashes(trace);
 }
 
 /**
