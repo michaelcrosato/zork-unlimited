@@ -181,10 +181,16 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   if (!locations.has(state.current)) {
     throw new SaveIntegrityError(`Save references unknown room "${state.current}".`);
   }
-  for (const id of Object.keys(state.visited)) {
+  for (const [id, value] of Object.entries(state.visited)) {
     if (!locations.has(id)) {
       throw new SaveIntegrityError(`Save references unknown visited room "${id}".`);
     }
+    if (value !== true) {
+      throw new SaveIntegrityError(`Save references invalid visited state "${id}" (${value}).`);
+    }
+  }
+  if (state.visited[state.current] !== true) {
+    throw new SaveIntegrityError(`Save current room "${state.current}" is not marked visited.`);
   }
   if (state.endingId !== null && !endings.has(state.endingId)) {
     throw new SaveIntegrityError(`Save references unknown ending "${state.endingId}".`);

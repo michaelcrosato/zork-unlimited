@@ -162,6 +162,22 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     expect(() => api().load_game({ save: forged })).toThrow(/unknown visited room/);
   });
 
+  it("RPG: a false visited room is a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      s.visited = { ...(s.visited as Record<string, boolean>), barrow_mouth: false };
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/invalid visited state/);
+  });
+
+  it("RPG: current must be marked visited in loaded state", () => {
+    const forged = forgeSave((s) => {
+      s.current = "entry_hall";
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/not marked visited/);
+  });
+
   it("RPG: a fabricated `endingId` is a hard SaveIntegrityError", () => {
     // The benchmark-credibility witness: a forged save that CLAIMS an ending the
     // pack never declares. endingId is a valid nullable string to bug_0181's gate.
