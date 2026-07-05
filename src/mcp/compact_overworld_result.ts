@@ -8,9 +8,11 @@ import type {
 } from "../world/session.js";
 import {
   compactOverworldJournalEntries,
+  compactOverworldLabel,
   compactOverworldQuestRef,
   compactOverworldQuestRefs,
   compactOverworldRefs,
+  compactOverworldTitle,
   compactOverworldTitleRefs,
   compactPendingRoad,
   type OverworldCompactJournalEntry,
@@ -136,7 +138,7 @@ export function compactOverworldQuestCompletionResult(
     m: result.minutes,
     ...(result.alreadyKnown ? { known: true as const } : {}),
     quest: compactOverworldQuestRef(result.quest),
-    ending: [result.endingId, result.endingTitle],
+    ending: [result.endingId, compactOverworldTitle(result.endingTitle)],
     entry: compactOverworldJournalEntry(result.entry),
   };
 }
@@ -147,7 +149,7 @@ export function compactOverworldAreaTravelResult(
   return {
     from: compactOverworldRefs([result.from])[0]!,
     to: compactOverworldRefs([result.to])[0]!,
-    route: result.route,
+    route: compactOverworldLabel(result.route),
     m: result.minutes,
     at: result.arrivedAt,
   };
