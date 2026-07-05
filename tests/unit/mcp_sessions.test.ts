@@ -53,6 +53,10 @@ function transcriptTurn(step: number, actionId: string | null = `action_${step}`
   };
 }
 
+function rollingTranscriptHash(turns: readonly TranscriptTurn[]): string {
+  return turns.reduce((previous, turn) => hashState({ previous, turn }), hashState([]));
+}
+
 function observation(room: string): RpgObservation {
   return {
     mode: "rpg",
@@ -360,13 +364,29 @@ describe("SessionStore", () => {
     expect(session.transcript).toEqual(turns.slice(-2));
     expect(session.transcript[0]).not.toBe(turns[1]);
     expect(session.transcript[1]).not.toBe(turns[2]);
-    expect(session.transcriptLogHash).toBe(hashState(turns));
+    expect(session.transcriptLogHash).toBe(rollingTranscriptHash(turns));
     expect(session.transcriptStats.turns).toBe(3);
     expect(session.transcriptStats.actionTurns).toBe(2);
     expect(session.transcriptStats.scenes).toEqual(["scene_0", "scene_1", "scene_2", "scene_3"]);
     expect(transcriptTurnsOmitted(session, { session_id: session.id })).toBe(1);
     turns[2]!.scene_id = "mutated_after_replace";
     expect(session.transcript[1]?.scene_id).toBe("scene_2");
+  });
+
+  it("uses the same transcript log hash for create, append, and replacement paths", () => {
+    const turns = [transcriptTurn(0, null), transcriptTurn(1), transcriptTurn(2)];
+    const created = new SessionStore().create(sessionInit({ transcript: turns }));
+    const appendStore = new SessionStore();
+    const replaceStore = new SessionStore();
+    const appended = appendStore.create(sessionInit());
+    const replaced = replaceStore.create(sessionInit());
+
+    for (const turn of turns) appendStore.appendTranscript(appended.id, turn);
+    replaceStore.replaceTranscript(replaced.id, turns);
+
+    expect(created.transcriptLogHash).toBe(rollingTranscriptHash(turns));
+    expect(appended.transcriptLogHash).toBe(created.transcriptLogHash);
+    expect(replaced.transcriptLogHash).toBe(created.transcriptLogHash);
   });
 
   it("reports transcript summaries from aggregate stats when old rows are pruned", () => {

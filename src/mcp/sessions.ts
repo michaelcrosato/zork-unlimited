@@ -122,6 +122,10 @@ function retainedTranscript(transcript: TranscriptTurn[], maxTurns: number): Tra
   return transcript.length > maxTurns ? transcript.slice(transcript.length - maxTurns) : transcript;
 }
 
+function transcriptLogHashFor(transcript: readonly TranscriptTurn[]): string {
+  return transcript.reduce((previous, turn) => hashState({ previous, turn }), hashState([]));
+}
+
 function cloneTranscriptTurn(turn: TranscriptTurn): TranscriptTurn {
   return {
     ...turn,
@@ -199,7 +203,7 @@ export class SessionStore {
       state,
       stateHash: hashState(state),
       transcript: retainedTranscript(transcript, this.maxTranscriptTurns),
-      transcriptLogHash: hashState(transcript),
+      transcriptLogHash: transcriptLogHashFor(transcript),
       transcriptStats: transcriptStatsFor(transcript),
     };
     rememberSessionEntry(this.sessions, id, session, this.maxSessions);
@@ -365,7 +369,7 @@ export class SessionStore {
     const session = this.get(id);
     const storedTranscript = cloneTranscriptRows(transcript);
     session.transcript = retainedTranscript(storedTranscript, this.maxTranscriptTurns);
-    session.transcriptLogHash = hashState(storedTranscript);
+    session.transcriptLogHash = transcriptLogHashFor(storedTranscript);
     session.transcriptStats = transcriptStatsFor(storedTranscript);
     invalidateSessionTranscriptCaches(session);
     return session;
