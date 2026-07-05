@@ -271,6 +271,14 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     expect(() => api().load_game({ save: forged })).toThrow(/invalid score var/);
   });
 
+  it("RPG: a forged journal entry is a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      s.journal = ["Injected lore that no authored RPG effect produced."];
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/unknown journal entry/);
+  });
+
   it("RPG: active dialogue cannot be forged from outside the NPC room", () => {
     const forged = forgeSave((s) => {
       s.vars = { ...(s.vars as Record<string, number>), __dlg_reaver_shade: 1 };

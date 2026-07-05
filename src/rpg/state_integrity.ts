@@ -101,6 +101,18 @@ function collectVarTargets(node: unknown, acc: Set<string>): Set<string> {
   return acc;
 }
 
+function collectJournalTargets(node: unknown, acc: Set<string>): Set<string> {
+  if (Array.isArray(node)) {
+    for (const el of node) collectJournalTargets(el, acc);
+  } else if (node !== null && typeof node === "object") {
+    for (const [k, v] of Object.entries(node)) {
+      if (k === "add_journal" && typeof v === "string") acc.add(v);
+      collectJournalTargets(v, acc);
+    }
+  }
+  return acc;
+}
+
 function assertNonnegativeIntegerVar(id: string, value: number, label: string): void {
   if (!Number.isInteger(value) || value < 0) {
     throw new SaveIntegrityError(`Save references invalid ${label} var "${id}" (${value}).`);
@@ -158,6 +170,7 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   const questStages = collectQuestStageTargets(index.pack, new Map<string, Set<string>>());
   const flags = collectFlagTargets(index.pack, new Map<string, Set<boolean>>());
   const vars = collectVarTargets(index.pack, new Set(Object.keys(index.pack.meta.vars_init)));
+  const journals = collectJournalTargets(index.pack, new Set<string>());
   const heldItems = new Set<string>();
   const objectRuntimeTargets = collectObjectRuntimeTargets(index.pack, {
     open: new Set<string>(),
@@ -254,6 +267,11 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
     const enemyMaxHp = enemyHpVars.get(id);
     if (enemyMaxHp !== undefined && (!Number.isInteger(value) || value < 0 || value > enemyMaxHp)) {
       throw new SaveIntegrityError(`Save references invalid enemy hp var "${id}" (${value}).`);
+    }
+  }
+  for (const entry of state.journal) {
+    if (!journals.has(entry)) {
+      throw new SaveIntegrityError(`Save references unknown journal entry "${entry}".`);
     }
   }
   const inventory = new Set<string>();
