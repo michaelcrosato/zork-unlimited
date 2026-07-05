@@ -3,7 +3,7 @@ import { dlgVar } from "../core/dialogue_state.js";
 import { exitFlag } from "../core/effects.js";
 import { SaveIntegrityError } from "../persist/save_load.js";
 import type { RpgIndex } from "./runner.js";
-import { enemyHpVar } from "./schema.js";
+import { ATTACK_VAR, DEFENSE_VAR, HP_VAR, SCORE_VAR, enemyHpVar } from "./schema.js";
 
 /**
  * Collect item ids that can legitimately enter inventory through authored effects.
@@ -99,6 +99,12 @@ function collectVarTargets(node: unknown, acc: Set<string>): Set<string> {
     }
   }
   return acc;
+}
+
+function assertNonnegativeIntegerVar(id: string, value: number, label: string): void {
+  if (!Number.isInteger(value) || value < 0) {
+    throw new SaveIntegrityError(`Save references invalid ${label} var "${id}" (${value}).`);
+  }
 }
 
 type ObjectRuntimeTargets = {
@@ -219,6 +225,19 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   for (const [id, value] of Object.entries(state.vars)) {
     if (!vars.has(id)) {
       throw new SaveIntegrityError(`Save references unknown var "${id}".`);
+    }
+    if (id === HP_VAR) {
+      assertNonnegativeIntegerVar(id, value, "player hp");
+      if (!state.ended && value === 0) {
+        throw new SaveIntegrityError(`Save references invalid player hp var "${id}" (${value}).`);
+      }
+    } else if (id === ATTACK_VAR || id === DEFENSE_VAR) {
+      assertNonnegativeIntegerVar(id, value, "player stat");
+    } else if (id === SCORE_VAR) {
+      assertNonnegativeIntegerVar(id, value, "score");
+      if (value > index.pack.meta.max_score) {
+        throw new SaveIntegrityError(`Save references invalid score var "${id}" (${value}).`);
+      }
     }
     const dialogue = dialogueVars.get(id);
     if (

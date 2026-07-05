@@ -247,6 +247,30 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     expect(() => api().load_game({ save: forged })).toThrow(/invalid enemy hp var/);
   });
 
+  it("RPG: zero player HP in an active save is a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      s.vars = { ...(s.vars as Record<string, number>), hp: 0 };
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/invalid player hp var/);
+  });
+
+  it("RPG: fractional player combat stats are a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      s.vars = { ...(s.vars as Record<string, number>), attack: 4.5 };
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/invalid player stat var/);
+  });
+
+  it("RPG: score above the declared maximum is a hard SaveIntegrityError", () => {
+    const forged = forgeSave((s) => {
+      s.vars = { ...(s.vars as Record<string, number>), score: 999 };
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/invalid score var/);
+  });
+
   it("RPG: active dialogue cannot be forged from outside the NPC room", () => {
     const forged = forgeSave((s) => {
       s.vars = { ...(s.vars as Record<string, number>), __dlg_reaver_shade: 1 };
