@@ -56,14 +56,14 @@ import {
 } from "./session_services.js";
 import {
   applyOverworldAreaTravel,
-  applyOverworldAreaExploration,
   applyOverworldTownVisit,
-  planOverworldAreaExploration,
   type OverworldAreaTravelResult,
 } from "./session_local_actions.js";
 import {
+  applyOverworldSessionArea,
   applyOverworldSessionLocalJob,
   applyOverworldSessionSite,
+  planOverworldSessionArea,
   planOverworldSessionLocalJob,
   planOverworldSessionSite,
 } from "./session_local_lifecycle.js";
@@ -109,7 +109,6 @@ import {
   type MutableOverworldSessionLocalState,
 } from "./session_local_state.js";
 import {
-  alreadyKnownOverworldSessionLocalAction,
   applyOverworldSessionServicePlan,
   recordOverworldSessionAction,
   recordOverworldSessionLocalAction,
@@ -511,10 +510,6 @@ export class OverworldSession {
     );
   }
 
-  private alreadyKnownLocalAction(entry: OverworldJournalEntry): OverworldActionResult {
-    return alreadyKnownOverworldSessionLocalAction(entry);
-  }
-
   private cachedCompactView(): OverworldCompactView {
     if (this.caches.compactView) return this.caches.compactView;
     this.caches.compactView = this.buildCompactView();
@@ -667,23 +662,24 @@ export class OverworldSession {
   exploreArea(areaId: string): OverworldActionResult {
     this.assertNoPendingRoadEncounter("exploring a local area");
     const current = this.currentNode();
-    const plan = planOverworldAreaExploration({
-      areaId,
-      areasById: this.areasById,
-      currentTownId: this.currentId,
-      currentAreaId: this.currentArea()?.id ?? null,
-      discoveredAreaIds: this.discoveredAreaIds,
-      visitedAreaIds: this.visitedAreaIds,
-      journalEntries: this.journalEntriesById,
-    });
-    if (plan.alreadyKnown) {
-      return this.alreadyKnownLocalAction(plan.entry);
-    }
-
-    const result = this.recordLocalAction(plan.action, current.name);
-    if (!result.alreadyKnown) {
-      applyOverworldAreaExploration({ visitedAreaIds: this.visitedAreaIds }, plan);
-    }
+    const result = this.applyActionApplication(
+      applyOverworldSessionArea(
+        {
+          ...this.actionJournalState(),
+          visitedAreaIds: this.visitedAreaIds,
+        },
+        planOverworldSessionArea({
+          areaId,
+          areasById: this.areasById,
+          currentTownId: this.currentId,
+          currentAreaId: this.currentArea()?.id ?? null,
+          discoveredAreaIds: this.discoveredAreaIds,
+          visitedAreaIds: this.visitedAreaIds,
+          journalEntries: this.journalEntriesById,
+        }),
+        current.name,
+      ),
+    );
     return this.withLocalDiscovery(result, current.id);
   }
 
