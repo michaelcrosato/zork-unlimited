@@ -310,6 +310,47 @@ describe("SessionStore", () => {
     expect(session.transcriptLogHash).toBe(hashState([]));
   });
 
+  it("freezes retained transcript rows against external mutation", () => {
+    const store = new SessionStore(MCP_SESSION_STORE_LIMIT, 2);
+    const session = store.create(sessionInit());
+    const event = {
+      type: "state_change",
+      effect: "custom_payload",
+      value: { nested: ["original"] },
+    } as const;
+
+    store.appendTranscript(session.id, {
+      ...transcriptTurn(1),
+      events: [event],
+    });
+
+    expect(Object.isFrozen(session.transcript)).toBe(true);
+    expect(Object.isFrozen(session.transcript[0])).toBe(true);
+    expect(Object.isFrozen(session.transcript[0]?.events)).toBe(true);
+    expect(Object.isFrozen((session.transcript[0]?.events[0] as typeof event).value.nested)).toBe(
+      true,
+    );
+    expect(() => {
+      (session.transcript as TranscriptTurn[]).push(transcriptTurn(99));
+    }).toThrow();
+    expect(() => {
+      session.transcript[0]!.scene_id = "mutated_session_row";
+    }).toThrow();
+    expect(() => {
+      ((session.transcript[0]?.events[0] as typeof event).value.nested as unknown as string[]).push(
+        "mutated_event",
+      );
+    }).toThrow();
+
+    store.appendTranscript(session.id, transcriptTurn(2));
+    expect(session.transcript.map((turn) => turn.step)).toEqual([1, 2]);
+
+    store.replaceTranscript(session.id, [transcriptTurn(3)]);
+    expect(session.transcript.map((turn) => turn.step)).toEqual([3]);
+    expect(Object.isFrozen(session.transcript)).toBe(true);
+    expect(Object.isFrozen(session.transcript[0])).toBe(true);
+  });
+
   it("keeps transcript reads detached from retained nested event payloads", () => {
     const store = new SessionStore();
     const session = store.create(sessionInit());

@@ -142,10 +142,6 @@ function transcriptStatsWithTurn(stats: TranscriptStats, turn: TranscriptTurn): 
   return freezeTranscriptStats(nextStats);
 }
 
-function retainedTranscript(transcript: TranscriptTurn[], maxTurns: number): TranscriptTurn[] {
-  return transcript.length > maxTurns ? transcript.slice(transcript.length - maxTurns) : transcript;
-}
-
 function deepFreeze<T>(value: T): T {
   if (value === null || typeof value !== "object" || Object.isFrozen(value)) return value;
   for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
@@ -167,6 +163,19 @@ function cloneTranscriptRows(transcript: readonly TranscriptTurn[]): TranscriptT
   return transcript.map(cloneTranscriptTurn);
 }
 
+function freezeTranscriptRows(transcript: readonly TranscriptTurn[]): readonly TranscriptTurn[] {
+  return deepFreeze(cloneTranscriptRows(transcript));
+}
+
+function retainedTranscript(
+  transcript: readonly TranscriptTurn[],
+  maxTurns: number,
+): readonly TranscriptTurn[] {
+  const retained =
+    transcript.length > maxTurns ? transcript.slice(transcript.length - maxTurns) : transcript;
+  return freezeTranscriptRows(retained);
+}
+
 export type Session = SessionRuntimeCaches<TranscriptSummary> & {
   id: string;
   packId: string;
@@ -185,7 +194,7 @@ export type Session = SessionRuntimeCaches<TranscriptSummary> & {
   step: RpgStep;
   state: GameState;
   stateHash: string;
-  transcript: TranscriptTurn[];
+  transcript: readonly TranscriptTurn[];
   transcriptLogHash: string;
   transcriptStats: TranscriptStats;
   /** Difficulty: when true, the agent-facing observation hides each exit's
@@ -384,9 +393,11 @@ export class SessionStore {
   appendTranscript(id: string, turn: TranscriptTurn): Session {
     const session = this.get(id);
     const storedTurn = cloneTranscriptTurn(turn);
-    session.transcript.push(storedTurn);
     session.transcriptStats = transcriptStatsWithTurn(session.transcriptStats, storedTurn);
-    session.transcript = retainedTranscript(session.transcript, this.maxTranscriptTurns);
+    session.transcript = retainedTranscript(
+      [...session.transcript, storedTurn],
+      this.maxTranscriptTurns,
+    );
     session.transcriptLogHash = hashState({
       previous: session.transcriptLogHash,
       turn: storedTurn,
