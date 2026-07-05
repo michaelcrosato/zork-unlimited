@@ -51,14 +51,13 @@ import {
 import { type OverworldAreaTravelResult } from "./session_local_actions.js";
 import {
   applyOverworldSessionAreaFromState,
-  applyOverworldSessionAreaTravel,
+  applyOverworldSessionAreaTravelFromState,
   applyOverworldSessionContactTalkFromState,
   applyOverworldSessionEventInvestigationFromState,
   applyOverworldSessionLocalJobFromState,
   applyOverworldSessionPoiScoutFromState,
   applyOverworldSessionSiteFromState,
   applyOverworldSessionTownVisit,
-  planOverworldSessionAreaTravel,
 } from "./session_local_lifecycle.js";
 import {
   OverworldSessionSnapshotSchema,
@@ -629,19 +628,15 @@ export class OverworldSession {
 
   moveArea(areaRouteId: string): OverworldAreaTravelResult {
     this.assertNoPendingRoadEncounter("moving between local areas");
-    const applied = applyOverworldSessionAreaTravel(
-      {
-        currentAreaByTown: this.currentAreaByTown,
-        currentTownId: this.currentId,
-        minutes: this.minutes,
-      },
-      planOverworldSessionAreaTravel({
-        areaRouteId,
-        currentArea: this.currentArea(),
-        areaExitsByAreaAndId: this.areaExitsByAreaAndId,
-        discoveredAreaIds: this.discoveredAreaIds,
-      }),
-    );
+    const applied = applyOverworldSessionAreaTravelFromState({
+      currentAreaByTown: this.currentAreaByTown,
+      currentTownId: this.currentId,
+      minutes: this.minutes,
+      areaRouteId,
+      currentArea: this.currentArea(),
+      areaExitsByAreaAndId: this.areaExitsByAreaAndId,
+      discoveredAreaIds: this.discoveredAreaIds,
+    });
     this.applyCurrentAreaTravelState(applied);
     this.clearSnapshotCache();
     return {

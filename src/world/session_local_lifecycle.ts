@@ -174,6 +174,9 @@ export type OverworldSessionSiteState = Omit<OverworldSessionSitePlanState, "jou
     journalEntriesById: ReadonlyMap<string, OverworldJournalEntry>;
   };
 
+export type OverworldSessionAreaTravelState = OverworldSessionAreaTravelPlanState &
+  MutableOverworldSessionAreaTravelState;
+
 export function planOverworldSessionArea(
   state: OverworldSessionAreaPlanState,
 ): OverworldAreaExplorationPlan {
@@ -291,6 +294,12 @@ export function applyOverworldSessionAreaTravel(
   plan: OverworldSessionAreaTravelPlan,
 ): OverworldAppliedAreaTravel {
   return applyOverworldAreaTravel(plan.currentArea, plan.edge, state);
+}
+
+export function applyOverworldSessionAreaTravelFromState(
+  state: OverworldSessionAreaTravelState,
+): OverworldAppliedAreaTravel {
+  return applyOverworldSessionAreaTravel(state, planOverworldSessionAreaTravel(state));
 }
 
 export function applyOverworldSessionTownVisit(
