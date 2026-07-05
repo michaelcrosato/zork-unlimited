@@ -108,8 +108,14 @@ function assertSessionSourceIdentity(init: SessionInit): void {
   if (init.generatedRpgSeed !== undefined && init.packPath !== undefined) {
     throw new Error("MCP session source cannot carry both packPath and generatedRpgSeed.");
   }
+  if (init.packPath !== undefined && init.worldQuestId === undefined) {
+    throw new Error("MCP session packPath requires worldQuestId.");
+  }
   if (init.overworldSessionId !== undefined && init.worldQuestId === undefined) {
     throw new Error("MCP session overworldSessionId requires worldQuestId.");
+  }
+  if (init.worldQuestId === undefined && init.generatedRpgSeed === undefined) {
+    throw new Error("MCP session source requires worldQuestId or generatedRpgSeed.");
   }
 }
 

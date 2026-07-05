@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 415 -->
+<!-- historical_cycle_count: 416 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - session_source_required
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: `SessionStore.create` now requires canonical `worldQuestId` or `generatedRpgSeed` before retaining an MCP RPG session.
+- Loop effect: pack-only sessions fail at the session boundary instead of surviving until save serialization, and disk `packPath` remains valid only when bound to a world quest.
+- Guard: focused MCP session/tool/generated-pack regressions cover source-less, pack-path-only, overworld, world, and generated session paths.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused MCP/session tests, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - write_source_pack_fallback_retired
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/loop surface: `npm run inspect -- <world_quest_id>` no longer prints internal `Pack:` identifiers; quest summaries keep world quest id, title, counts, stats, enemies, and hash.
 - Loop effect: shipped quest diagnostics drop the package-era id while preserving internal pack ids for author/generated diagnostics.
 - Guard: focused Prettier, typecheck, trace CLI, and report-format checks passed over the cleanup.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - validate_cli_pack_line_removed
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: `npm run validate` no longer prints internal `Pack:` identifiers for shipped world quests; each report stays keyed by world quest id plus content hash.
-- Loop effect: the recurring validation gate drops another package-era identity line per quest while preserving internal pack ids for author/generated diagnostics.
-- Guard: focused Prettier, typecheck, validation-bar, and report-format checks passed over the cleanup.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused tests, `npm test`, and `npm run health` passed after loop-state rotation.

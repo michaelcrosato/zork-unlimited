@@ -33,20 +33,32 @@ const rules: Rules<RpgAction> = {
   resolve: () => null,
 };
 
+type SessionInitOverrides = Omit<Partial<SessionInit>, "worldQuestId"> & {
+  worldQuestId?: string | undefined;
+};
+
 function state(current = "start"): GameState {
   return initState({ seed: 7, start: current });
 }
 
-function sessionInit(overrides: Partial<SessionInit> = {}): SessionInit {
+function sessionInit(overrides: SessionInitOverrides = {}): SessionInit {
+  const hasExplicitWorldQuestId = Object.prototype.hasOwnProperty.call(overrides, "worldQuestId");
+  const { worldQuestId, ...restOverrides } = overrides;
+  const sourceDefaults =
+    overrides.generatedRpgSeed !== undefined || hasExplicitWorldQuestId
+      ? {}
+      : { worldQuestId: "test_quest" };
   return {
     packId: "test-pack",
     contentHash: "0".repeat(64),
+    ...sourceDefaults,
     index: {} as RpgIndex,
     rules,
     step: makeStep(rules),
     state: state(),
     transcript: [],
-    ...overrides,
+    ...restOverrides,
+    ...(worldQuestId !== undefined ? { worldQuestId } : {}),
   };
 }
 
@@ -147,9 +159,17 @@ describe("SessionStore", () => {
     expect(() =>
       store.create(sessionInit({ packPath: "content/rpg/pack/test.yaml", generatedRpgSeed: 9 })),
     ).toThrow(/packPath and generatedRpgSeed/);
-    expect(() => store.create(sessionInit({ overworldSessionId: "ow_1" }))).toThrow(
-      /requires worldQuestId/,
+    expect(() => store.create(sessionInit({ worldQuestId: undefined }))).toThrow(
+      /requires worldQuestId or generatedRpgSeed/,
     );
+    expect(() =>
+      store.create(
+        sessionInit({ packPath: "content/rpg/pack/test.yaml", worldQuestId: undefined }),
+      ),
+    ).toThrow(/packPath requires worldQuestId/);
+    expect(() =>
+      store.create(sessionInit({ overworldSessionId: "ow_1", worldQuestId: undefined })),
+    ).toThrow(/requires worldQuestId/);
     expect(() =>
       store.create(sessionInit({ generatedRpgSeed: Number.MAX_SAFE_INTEGER + 1 })),
     ).toThrow(/safe range/);
