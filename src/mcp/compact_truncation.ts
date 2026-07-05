@@ -6,6 +6,12 @@ function assertCompactListLimit(limit: number): void {
   }
 }
 
+function assertCompactOmissionCount(count: number): void {
+  if (!Number.isInteger(count) || count < 0) {
+    throw new Error("Compact omission count must be a non-negative finite integer.");
+  }
+}
+
 export function compactHead<T>(values: readonly T[], limit: number): T[] {
   assertCompactListLimit(limit);
   const compact: T[] = [];
@@ -28,6 +34,8 @@ export function omittedCount<T>(values: readonly T[], compacted: readonly T[]): 
 }
 
 export function compactTrailingOmissionCounts(counts: readonly number[]): number[] | undefined {
+  for (const count of counts) assertCompactOmissionCount(count);
+
   let end = counts.length;
   while (end > 0 && counts[end - 1] === 0) end -= 1;
   if (end === 0) return undefined;

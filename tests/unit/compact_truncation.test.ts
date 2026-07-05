@@ -36,6 +36,10 @@ describe("compact truncation helpers", () => {
     expect(compactTrailingOmissionCounts([4, 4, 0])).toEqual([4, 4]);
     expect(compactTrailingOmissionCounts([0, 0, 5])).toEqual([0, 0, 5]);
     expect(compactTrailingOmissionCounts([0, 0, 0])).toBeUndefined();
+
+    for (const count of [Number.NaN, Number.POSITIVE_INFINITY, -1, 1.5]) {
+      expect(() => compactTrailingOmissionCounts([count])).toThrow(/non-negative finite integer/);
+    }
   });
 
   it("caps long text with deterministic omission metadata", () => {
