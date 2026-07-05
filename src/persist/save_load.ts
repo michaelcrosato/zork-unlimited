@@ -7,7 +7,7 @@
  * load"). This prevents replaying a save against edited content and corrupting it.
  */
 import { z } from "zod";
-import { MAX_ENGINE_STEP, isRuntimeSeed, type GameState } from "../core/state.js";
+import { MAX_ENGINE_STEP, cloneGameState, isRuntimeSeed, type GameState } from "../core/state.js";
 import { canonicalize } from "../core/hash.js";
 import { generatedRpgSeedValidationMessage, isGeneratedRpgSeed } from "../gen/seed.js";
 import {
@@ -122,6 +122,30 @@ export type SaveMetadata = {
   worldQuestId?: string | null;
   generatedRpgSeed?: number | null;
 };
+
+function deepFreezeSaveBundle<T>(value: T, seen = new WeakSet<object>()): T {
+  if (value === null || (typeof value !== "object" && typeof value !== "function")) return value;
+  const object = value as object;
+  if (seen.has(object) || Object.isFrozen(object)) return value;
+  seen.add(object);
+  for (const child of Object.values(value as Record<string, unknown>)) {
+    deepFreezeSaveBundle(child, seen);
+  }
+  return Object.freeze(value);
+}
+
+function cloneSaveSourceRef(sourceRef: SaveSourceRef | undefined): SaveSourceRef | undefined {
+  return sourceRef ? ([sourceRef[0], sourceRef[1]] as SaveSourceRef) : undefined;
+}
+
+function immutableLoadedSaveBundle(bundle: SaveBundle): SaveBundle {
+  const sourceRef = cloneSaveSourceRef(bundle.source_ref);
+  return deepFreezeSaveBundle({
+    ...bundle,
+    state: cloneGameState(bundle.state),
+    ...(sourceRef ? { source_ref: sourceRef } : {}),
+  });
+}
 
 const SAVE_SOURCE_LABELS = {
   source: "Save source",
@@ -285,13 +309,13 @@ export function load(
   if (expectedContentHash !== undefined) assertSaveContentHash(bundle, expectedContentHash);
   // §16 integrity at load: the state must be a well-formed, FINITE GameState
   // before it is handed back to the engine. Reject (never coerce) — a poisoned
-  // save is an integrity failure, not a value to repair. We validate WITHOUT
-  // substituting parsedState.data, so a valid state's bytes/hash stay identical.
+  // save is an integrity failure, not a value to repair. We validate before
+  // cloning/freezing, so a valid state's bytes/hash stay identical.
   const parsedState = GameStateSchema.safeParse((bundle as { state?: unknown }).state);
   if (!parsedState.success) {
     throw new SaveIntegrityError(
       `Save state is malformed or non-finite: ${parsedState.error.message}`,
     );
   }
-  return bundle;
+  return immutableLoadedSaveBundle(bundle);
 }

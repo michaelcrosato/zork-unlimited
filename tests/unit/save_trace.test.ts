@@ -37,6 +37,41 @@ describe("save / load (§8.7)", () => {
     expect(loaded.source_ref).toEqual(["pack", MICRO_PACK_ID]);
   });
 
+  it("returns immutable loaded bundles after validation", () => {
+    const bytes = save(
+      {
+        ...microInitState(),
+        inventory: ["torch"],
+        objectState: { chest: { contents: ["ruby"] } },
+      },
+      MICRO_PACK_ID,
+      MICRO_CONTENT_HASH,
+      SAVE_MODE,
+      { worldQuestId: "sunken_barrow" },
+    );
+    const loaded = load(bytes, MICRO_CONTENT_HASH);
+
+    expect(Object.isFrozen(loaded)).toBe(true);
+    expect(Object.isFrozen(loaded.source_ref)).toBe(true);
+    expect(Object.isFrozen(loaded.state)).toBe(true);
+    expect(Object.isFrozen(loaded.state.inventory)).toBe(true);
+    expect(Object.isFrozen(loaded.state.objectState)).toBe(true);
+    expect(Object.isFrozen(loaded.state.objectState["chest"])).toBe(true);
+    expect(Object.isFrozen(loaded.state.objectState["chest"]?.contents)).toBe(true);
+    expect(() => {
+      loaded.contentHash = "deadbeef";
+    }).toThrow(TypeError);
+    expect(() => {
+      (loaded.source_ref as [string, string])[1] = "cold_forge";
+    }).toThrow(TypeError);
+    expect(() => {
+      loaded.state.inventory.push("mutated");
+    }).toThrow(TypeError);
+    expect(() => {
+      loaded.state.objectState["chest"]!.contents!.push("mutated");
+    }).toThrow(TypeError);
+  });
+
   it("rejects malformed state at the save write boundary", () => {
     const poisoned = {
       ...microInitState(),
