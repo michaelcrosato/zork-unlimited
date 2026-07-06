@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 453 -->
+<!-- historical_cycle_count: 454 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - rpg_generated_start_compact_default
+
+- Pre-cycle: `C:\dev\agent-cleaner` passed; optional secret scanner remains absent.
+- Engine/loop surface: ToolApi `new_game` now defaults to compact RPG context; generated full start observations require `compact_observation: false`.
+- Loop effect: direct generated-RPG starts no longer emit full opening room/action/state observations before compact reads take over.
+- Self-critique: generated-start path only; `step_action` and `load_game` direct defaults remain follow-up surfaces.
+- Guard: generated RPG/MCP regressions keep full-start readers explicit while pinning the no-flag compact generated start.
+- VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused generated RPG/MCP regressions, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - rpg_start_compact_default
 
@@ -125,11 +134,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: legal actions, combat, scoring, and state initialization share one indexed source reference instead of carrying a redundant alias through the hot runtime object.
 - Guard: focused RPG unit regression asserts `indexRpgPack` returns the original `pack` reference without a `rpgPack` runtime field.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused RPG regression, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - validation_report_source_id
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: `ValidationReport` now carries `source_id` and formats optional `Source:` diagnostics instead of package-era `pack_id` / `Pack:` identity.
-- Loop effect: MCP validation, load, generation, and patch responses no longer serialize report-level `pack_id`; recurring validate/inspect CLI outputs stay keyed by `world_quest_id` without report source headers.
-- Guard: focused report, MCP tool, assessor, author CLI, validation-bar, and trace CLI regressions pin `source_id` plus absence of public report `pack_id`.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused report/MCP/CLI regressions, `npm test`, and `npm run health` passed after loop-state rotation.

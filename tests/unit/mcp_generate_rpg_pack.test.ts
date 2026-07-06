@@ -21,6 +21,7 @@ import { describe, it, expect } from "vitest";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { generateRpgPack } from "../../src/gen/rpg_generator.js";
 import { hashState } from "../../src/core/hash.js";
+import { RPG_COMPACT_OBSERVATION_VERSION } from "../../src/mcp/compact_rpg_observation.js";
 
 const ROOT = process.cwd();
 const api = () => createToolApi({ root: ROOT });
@@ -84,8 +85,21 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
     );
   });
 
-  it("starts a session on a generated RPG pack with no file on disk", () => {
+  it("defaults generated RPG starts to compact context", () => {
     const g = api().new_game({ generate_rpg_seed: 3 });
+    expect("observation" in g).toBe(false);
+    expect(g.context.v).toBe(RPG_COMPACT_OBSERVATION_VERSION);
+    expect(g.context.here[0]).toEqual(expect.any(String));
+    expect(g.context.vitals).toEqual([20, 4, 2, 0, expect.any(Number)]);
+    expect(g.generated_rpg_seed).toBe(3);
+    expect(g.state_hash).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("starts a session on a generated RPG pack with no file on disk", () => {
+    const g = api().new_game({
+      generate_rpg_seed: 3,
+      compact_observation: false,
+    });
     expect("mode" in g).toBe(false);
     expect("pack_path" in g).toBe(false);
     expect("world_quest_id" in g).toBe(false);

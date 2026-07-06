@@ -435,8 +435,16 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    new_game<Args extends RpgNewGameArgs>(args: Args): RpgSessionPayload<Args> {
-      return runRpgNewGame({ root, rpgRuntime, rpgSources }, args);
+    new_game<Args extends RpgNewGameArgs>(
+      args: Args,
+    ): RpgSessionPayload<DefaultCompactRpgView<Args>> {
+      const responseOptions = {
+        compact_observation: true,
+        ...args,
+      } as DefaultCompactRpgView<Args>;
+      return runRpgNewGame({ root, rpgRuntime, rpgSources }, responseOptions) as RpgSessionPayload<
+        DefaultCompactRpgView<Args>
+      >;
     },
 
     start_world_quest<Args extends RpgStartWorldQuestArgs>(
